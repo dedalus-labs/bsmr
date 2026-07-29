@@ -1,53 +1,48 @@
-# Contributing to Buck2
+# Contributing
 
-We want to make contributing to this project as easy and transparent as
-possible.
+`origin` is the Dedalus repository. `upstream` is the Buck2 repository and is
+fetch-only.
 
-## Our Development Process
+Configure a new clone once:
 
-Buck2 is currently developed in Meta's internal repositories. Code that is
-developed internally gets reviewed, sent through CI, committed, and then
-automatically mirrored out to GitHub every 15 minutes. Code that arrives through
-a PR is reviewed by a Meta developer on GitHub, then once accepted, moved into
-our internal workflow where it is reviewed, sent through CI, committed and added
-to the repo. We maintain both external CI (the results of which are visible on
-GitHub) and a more thorough internal CI (building internal projects etc). Alas,
-our full test suite is not yet mirrored to the open source repo, but we hope to
-fix that in due course.
+```sh
+git remote add upstream https://github.com/facebook/buck2.git
+git remote set-url --push upstream DISABLED
+git fetch upstream --tags --prune
+```
 
-## Pull Requests
+All changes target `main` through pull requests. Start each branch from the
+current Dedalus main branch:
 
-We actively welcome your pull requests.
+```sh
+git fetch origin
+git switch main
+git pull --ff-only origin main
+git switch -c feat/eng-123-short-description
+```
 
-1. Fork the repo and create your branch from `main`.
-2. If you've added code that should be tested, add tests.
-3. If you've changed APIs, update the documentation.
-4. Ensure the test suite passes.
-5. Make sure your code passes any lints.
-6. If you haven't already, complete the Contributor License Agreement ("CLA").
+## Upstream syncs
 
-## Contributor License Agreement ("CLA")
+Sync an explicit Buck2 release tag. Do not merge a moving `upstream/main`
+without recording the exact commit under review.
 
-In order to accept your pull request, we need you to submit a CLA. You only need
-to do this once to work on any of Meta's open source projects.
+```sh
+upstream_release=2026-07-15
+git fetch upstream "refs/tags/${upstream_release}:refs/tags/${upstream_release}"
+git switch -c chore/eng-123-sync-buck2 origin/main
+git merge --no-ff "${upstream_release}"
+```
 
-Complete your CLA here: <https://code.facebook.com/cla>
+An upstream-sync pull request must record:
 
-## Issues
+- the previous and proposed upstream commits;
+- the Dedalus patches carried across the sync;
+- merge conflicts and their resolutions;
+- upstream, Dedalus, and performance tests run.
 
-We use GitHub issues to track public bugs. Please ensure your description is
-clear and has sufficient instructions to be able to reproduce the issue.
+Keep `upstream` push-disabled. Cite exact Bazel sources when adopting Bazel
+designs; a permanent Bazel remote is unnecessary because its history is not
+part of this repository's ancestry.
 
-Meta has a [bounty program](https://www.facebook.com/whitehat/) for the safe
-disclosure of security bugs. In those cases, please go through the process
-outlined on that page and do not file a public issue.
-
-## Coding Style, Compiling, and Hacking Pro-tips
-
-See [here](./docs/developers/basics.md) for the nitty gritty on how to contribute.
-
-## License
-
-By contributing to Buck2, you agree that your contributions will be licensed
-under both the [LICENSE-MIT](LICENSE-MIT) and [LICENSE-APACHE](LICENSE-APACHE)
-files in the root directory of this source tree.
+Contributions remain licensed under [MIT](LICENSE-MIT) and
+[Apache-2.0](LICENSE-APACHE).
