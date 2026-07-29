@@ -8,6 +8,6 @@ rust_library(
         ["src/**/*.rs"],
     ),
     deps = [
-        "//buck2/gazebo/dupe_derive:dupe_derive",
+        "//buck2/packages/rust/gazebo/dupe_derive:dupe_derive",
     ],
 )

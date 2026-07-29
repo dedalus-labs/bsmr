@@ -19,8 +19,8 @@ rust_library(
         "//buck2/dice/dice:dice",
         "//buck2/dice/dice_error:dice_error",
         "//buck2/dice/dice_futures:dice_futures",
-        "//buck2/gazebo/dupe:dupe",
-        "//buck2/gazebo/gazebo:gazebo",
+        "//buck2/packages/rust/gazebo/dupe:dupe",
+        "//buck2/packages/rust/gazebo/gazebo:gazebo",
         "//buck2/pagable:pagable",
     ],
 )
@@ -37,7 +37,7 @@ rust_binary(
         "//buck2/allocative/allocative:allocative",
         "//buck2/dice/dice:dice",
         "//buck2/dice/dice_futures:dice_futures",
-        "//buck2/gazebo/dupe:dupe",
+        "//buck2/packages/rust/gazebo/dupe:dupe",
         "//buck2/pagable:pagable",
     ],
 )
@@ -54,7 +54,7 @@ rust_binary(
         "//buck2/allocative/allocative:allocative",
         "//buck2/dice/dice:dice",
         "//buck2/dice/dice_futures:dice_futures",
-        "//buck2/gazebo/dupe:dupe",
+        "//buck2/packages/rust/gazebo/dupe:dupe",
         "//buck2/pagable:pagable",
     ],
 )
@@ -74,7 +74,7 @@ rust_binary(
         "//buck2/allocative/allocative:allocative",
         "//buck2/dice/dice:dice",
         "//buck2/dice/dice_futures:dice_futures",
-        "//buck2/gazebo/dupe:dupe",
+        "//buck2/packages/rust/gazebo/dupe:dupe",
         "//buck2/pagable:pagable",
     ],
 )
@@ -102,7 +102,7 @@ rust_binary(
         "//buck2/allocative/allocative:allocative",
         "//buck2/dice/dice:dice",
         "//buck2/dice/dice_futures:dice_futures",
-        "//buck2/gazebo/dupe:dupe",
+        "//buck2/packages/rust/gazebo/dupe:dupe",
         "//buck2/pagable:pagable",
         "//common/rust/json_value:json_value",
     ],
