@@ -126,12 +126,12 @@ members = [
   "app/buck2_worker_proto",
   "app/buck2_wrapper_common",
   "buck2_sketches",
-  "dice/dice",
-  "dice/dice_error",
-  "dice/dice_examples",
-  "dice/dice_futures",
-  "dice/dice_tests",
-  "dice/read_dump",
+  "packages/rust/dice/dice",
+  "packages/rust/dice/dice_error",
+  "packages/rust/dice/dice_examples",
+  "packages/rust/dice/dice_futures",
+  "packages/rust/dice/dice_tests",
+  "packages/rust/dice/read_dump",
   "games",
   "packages/rust/gazebo/cmp_any",
   "packages/rust/gazebo/display_container",
@@ -300,9 +300,9 @@ dashmap = { version = "6.2.1", features = ["rayon", "serde"] }
 debugserver-types = "0.5.0"
 derivative = "2.2"
 derive_more = { version = "1.0.0", features = ["full"] }
-dice = { path = "dice/dice", features = ["pagable"] }
-dice_error = { path = "dice/dice_error" }
-dice_futures = { path = "dice/dice_futures" }
+dice = { path = "packages/rust/dice/dice", features = ["pagable"] }
+dice_error = { path = "packages/rust/dice/dice_error" }
+dice_futures = { path = "packages/rust/dice/dice_futures" }
 digest = { version = "0.10", features = ["rand_core"] }
 dirs = "6.0"
 display_container = { path = "packages/rust/gazebo/display_container" }

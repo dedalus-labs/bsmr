@@ -42,7 +42,7 @@ rust_unittest(
         "//buck2/app/buck2_test_api:buck2_test_api",
         "//buck2/app/buck2_transition:buck2_transition",
         "//buck2/app/buck2_util:buck2_util",
-        "//buck2/dice/dice:dice",
+        "//buck2/packages/rust/dice/dice:dice",
         "//buck2/packages/rust/gazebo/dupe:dupe",
         "//buck2/packages/rust/gazebo/gazebo:gazebo",
         "//buck2/pagable:pagable",

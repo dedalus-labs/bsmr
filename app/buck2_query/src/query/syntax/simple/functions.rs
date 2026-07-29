@@ -496,9 +496,9 @@ impl<Env: QueryEnvironment> DefaultQueryFunctionsModule<Env> {
     ///
     /// For example:
     /// ```text
-    /// $ buck2 uquery "inputs(//buck2/dice/...)"
+    /// $ buck2 uquery "inputs(//buck2/packages/rust/dice/...)"
     /// ```
-    /// returns the direct inputs for the `//buck2/dice/...` targets.
+    /// returns the direct inputs for the `//buck2/packages/rust/dice/...` targets.
     async fn inputs(&self, targets: TargetSet<Env::Target>) -> QueryFuncResult<Env> {
         Ok(self.implementation.inputs(&targets)?.into())
     }
@@ -581,9 +581,9 @@ impl<Env: QueryEnvironment> DefaultQueryFunctionsModule<Env> {
     /// For example following uquery:
     ///
     /// ```text
-    /// $ buck2 uquery "rdeps(//buck2/..., //buck2/dice/dice:dice, 1)"
+    /// $ buck2 uquery "rdeps(//buck2/..., //buck2/packages/rust/dice/dice:dice, 1)"
     /// ```
-    /// returns all targets under `//buck2/...` that depend on `//buck2/dice/dice:dice`.
+    /// returns all targets under `//buck2/...` that depend on `//buck2/packages/rust/dice/dice:dice`.
     async fn rdeps(
         &self,
         evaluator: &QueryEvaluator<'_, Env>,
@@ -612,12 +612,12 @@ impl<Env: QueryEnvironment> DefaultQueryFunctionsModule<Env> {
     ///
     /// For example:
     /// ```text
-    /// $ buck2 uquery "testsof(set(//buck2/dice/dice:dice //buck2/app/buck2:buck2))"
+    /// $ buck2 uquery "testsof(set(//buck2/packages/rust/dice/dice:dice //buck2/app/buck2:buck2))"
     ///
-    /// //buck2/dice/dice:dice-unittest
+    /// //buck2/packages/rust/dice/dice:dice-unittest
     /// //buck2/app/buck2:buck2-unittest
     /// ```
-    /// returns the tests associated with both `//buck2/dice/dice:dice` and `//buck2/app/buck2:buck2`.
+    /// returns the tests associated with both `//buck2/packages/rust/dice/dice:dice` and `//buck2/app/buck2:buck2`.
     ///
     /// To obtain all the tests associated with the target and its dependencies,
     /// you can combine the `testsof()` function with the [`deps()`](#deps) function.
