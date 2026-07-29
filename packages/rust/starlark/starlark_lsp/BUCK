@@ -25,7 +25,7 @@ rust_library(
         "fbsource//third-party/rust:thiserror",
         "fbsource//third-party/rust:tower-lsp-server",
         "//buck2/packages/rust/gazebo/dupe:dupe",
-        "//buck2/starlark-rust/starlark:starlark",
-        "//buck2/starlark-rust/starlark_syntax:starlark_syntax",
+        "//buck2/packages/rust/starlark/starlark:starlark",
+        "//buck2/packages/rust/starlark/starlark_syntax:starlark_syntax",
     ],
 )

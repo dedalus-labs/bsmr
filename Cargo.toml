@@ -156,13 +156,13 @@ members = [
   "shed/setsketch",
   "shed/static_interner",
   "shed/three_billion_instructions",
-  "starlark-rust/starlark",
-  "starlark-rust/starlark_bin",
-  "starlark-rust/starlark_derive",
-  "starlark-rust/starlark_js_example",
-  "starlark-rust/starlark_lsp",
-  "starlark-rust/starlark_map",
-  "starlark-rust/starlark_syntax",
+  "packages/rust/starlark/starlark",
+  "packages/rust/starlark/starlark_bin",
+  "packages/rust/starlark/starlark_derive",
+  "packages/rust/starlark/starlark_js_example",
+  "packages/rust/starlark/starlark_lsp",
+  "packages/rust/starlark/starlark_map",
+  "packages/rust/starlark/starlark_syntax",
   "superconsole",
 ]
 resolver = "2"
@@ -418,10 +418,10 @@ slab = "0.4.12"
 slog = { version = "2.8.2", features = ["max_level_trace", "nested-values"] }
 smallvec = { version = "1.15.2", features = ["const_generics", "impl_bincode", "serde", "specialization", "union", "write"] }
 sorted_vector_map = "0.2.1"
-starlark = { path = "starlark-rust/starlark" }
-starlark_lsp = { path = "starlark-rust/starlark_lsp" }
-starlark_map = { path = "starlark-rust/starlark_map", features = ["pagable_dep"] }
-starlark_syntax = { path = "starlark-rust/starlark_syntax" }
+starlark = { path = "packages/rust/starlark/starlark" }
+starlark_lsp = { path = "packages/rust/starlark/starlark_lsp" }
+starlark_map = { path = "packages/rust/starlark/starlark_map", features = ["pagable_dep"] }
+starlark_syntax = { path = "packages/rust/starlark/starlark_syntax" }
 static_assertions = "1.1.0"
 static_interner = { path = "shed/static_interner", features = ["allocative", "dupe", "strong_hash"] }
 strong_hash = { path = "packages/rust/gazebo/strong_hash", features = ["num-bigint", "triomphe"] }

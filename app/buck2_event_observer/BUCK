@@ -29,7 +29,7 @@ rust_library(
         "//buck2/app/buck2_wrapper_common:buck2_wrapper_common",
         "//buck2/packages/rust/gazebo/dupe:dupe",
         "//buck2/packages/rust/gazebo/gazebo:gazebo",
-        "//buck2/starlark-rust/starlark_map:starlark_map",
+        "//buck2/packages/rust/starlark/starlark_map:starlark_map",
         "//buck2/superconsole:superconsole",
     ],
 )

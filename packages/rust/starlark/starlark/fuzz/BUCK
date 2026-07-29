@@ -11,6 +11,6 @@ rust_library(
     unittests = False,  # There is no main
     deps = [
         "fbsource//third-party/rust:libfuzzer-sys",
-        "//buck2/starlark-rust/starlark:starlark",
+        "//buck2/packages/rust/starlark/starlark:starlark",
     ],
 )

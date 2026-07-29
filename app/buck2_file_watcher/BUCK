@@ -69,7 +69,7 @@ rust_library(
         "//buck2/app/buck2_util:buck2_util",
         "//buck2/packages/rust/dice/dice:dice",
         "//buck2/packages/rust/gazebo/dupe:dupe",
-        "//buck2/starlark-rust/starlark_map:starlark_map",
+        "//buck2/packages/rust/starlark/starlark_map:starlark_map",
         # @oss-disable[end= ]: "//common/rust/shed/detect_eden:detect_eden",
         "//common/rust/shed/fbinit:fbinit",
         "//watchman/rust/watchman_client:watchman_client",

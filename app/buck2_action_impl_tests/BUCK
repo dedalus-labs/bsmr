@@ -18,6 +18,6 @@ rust_unittest(
         "//buck2/app/buck2_interpreter:buck2_interpreter",
         "//buck2/app/buck2_interpreter_for_build:buck2_interpreter_for_build",
         "//buck2/packages/rust/gazebo/dupe:dupe",
-        "//buck2/starlark-rust/starlark:starlark",
+        "//buck2/packages/rust/starlark/starlark:starlark",
     ],
 )

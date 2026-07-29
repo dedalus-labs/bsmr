@@ -31,7 +31,7 @@ rust_library(
         # If you need some feature requiring working with syntax tree, like a linter,
         # please implement it inside the `starlark` crate.
         # For codemods, use libCST.
-        "//buck2/starlark-rust/...",
+        "//buck2/packages/rust/starlark/...",
         # For faster incremental compilation of buck2,
         # we pull `starlark::Error` from this crate rather than from `starlark`.
         "//buck2/app/buck2_error/...",
@@ -50,6 +50,6 @@ rust_library(
         "//buck2/allocative/allocative:allocative",
         "//buck2/packages/rust/gazebo/dupe:dupe",
         "//buck2/pagable:pagable",
-        "//buck2/starlark-rust/starlark_map:starlark_map",
+        "//buck2/packages/rust/starlark/starlark_map:starlark_map",
     ],
 )

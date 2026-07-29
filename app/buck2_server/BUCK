@@ -95,8 +95,8 @@ rust_library(
         "//buck2/packages/rust/gazebo/dupe:dupe",
         "//buck2/packages/rust/gazebo/gazebo:gazebo",
         "//buck2/host_sharing:host_sharing",
-        "//buck2/starlark-rust/starlark:starlark",
-        "//buck2/starlark-rust/starlark_lsp:starlark_lsp",
+        "//buck2/packages/rust/starlark/starlark:starlark",
+        "//buck2/packages/rust/starlark/starlark_lsp:starlark_lsp",
         # @oss-disable[end= ]: "//common/rust/shed/detect_eden:detect_eden",
         "//common/rust/shed/fbinit:fbinit",
     ] + select({
