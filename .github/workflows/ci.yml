@@ -82,7 +82,7 @@ jobs:
         run: |-
           "$RUNNER_TEMP/osv-scanner" scan source --lockfile Cargo.lock --lockfile tools/build/third-party/rust/Cargo.lock --no-resolve --format json --output-file "$RUNNER_TEMP/osv.json" . || [ "$?" -eq 1 ]
           jq -e '[.results[].packages[].vulnerabilities[] | select(any(.affected[]; .database_specific.informational? != "unmaintained"))] as $v | if ($v | length) == 0 then true else ($v | map({id, summary})), false end' "$RUNNER_TEMP/osv.json"
-      - name: Build Bessemer
+      - name: Build test binary
         run: cargo build --locked --bin bsmr
       - name: Install pinned DotSlash
         run: |-

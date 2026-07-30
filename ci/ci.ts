@@ -117,7 +117,7 @@ export const ci = workflow({
 					].join("\n"),
 				},
 				{
-					name: "Build Bessemer",
+					name: "Build test binary",
 					run: "cargo build --locked --bin bsmr",
 				},
 				{
