@@ -13,7 +13,7 @@ rust_library(
         "fbsource//third-party/rust:tempfile",
         "fbsource//third-party/rust:tokio-stream",
         "//buck2/app/buck2_util:buck2_util",
-        "//buck2/gazebo/dupe:dupe",
+        "//buck2/packages/rust/gazebo/dupe:dupe",
     ],
     deps = [
         "fbsource//third-party/rust:async-trait",
@@ -43,7 +43,7 @@ rust_library(
         "ovr_config//os:windows": [
             "fbsource//third-party/rust:windows-sys",
             "//buck2/app/buck2_wrapper_common:buck2_wrapper_common",
-            "//buck2/gazebo/dupe:dupe",
+            "//buck2/packages/rust/gazebo/dupe:dupe",
         ],
     }),
 )

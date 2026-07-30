@@ -23,6 +23,6 @@ rust_unittest(
         "fbsource//third-party/rust:anyhow",
         "//buck2/app/buck2_error:buck2_error",
         "//buck2/app/buck2_util:buck2_util",
-        "//buck2/starlark-rust/starlark:starlark",
+        "//buck2/packages/rust/starlark/starlark:starlark",
     ],
 )

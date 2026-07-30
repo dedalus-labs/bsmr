@@ -126,22 +126,22 @@ members = [
   "app/buck2_worker_proto",
   "app/buck2_wrapper_common",
   "buck2_sketches",
-  "dice/dice",
-  "dice/dice_error",
-  "dice/dice_examples",
-  "dice/dice_futures",
-  "dice/dice_tests",
-  "dice/read_dump",
+  "packages/rust/dice/dice",
+  "packages/rust/dice/dice_error",
+  "packages/rust/dice/dice_examples",
+  "packages/rust/dice/dice_futures",
+  "packages/rust/dice/dice_tests",
+  "packages/rust/dice/read_dump",
   "games",
-  "gazebo/cmp_any",
-  "gazebo/display_container",
-  "gazebo/dupe",
-  "gazebo/dupe_derive",
-  "gazebo/gazebo",
-  "gazebo/gazebo_derive",
-  "gazebo/strong_hash",
-  "gazebo/strong_hash_derive",
-  "gazebo/strong_hash_tests",
+  "packages/rust/gazebo/cmp_any",
+  "packages/rust/gazebo/display_container",
+  "packages/rust/gazebo/dupe",
+  "packages/rust/gazebo/dupe_derive",
+  "packages/rust/gazebo/gazebo",
+  "packages/rust/gazebo/gazebo_derive",
+  "packages/rust/gazebo/strong_hash",
+  "packages/rust/gazebo/strong_hash_derive",
+  "packages/rust/gazebo/strong_hash_tests",
   "host_sharing",
   "integrations/resources/rust",
   "integrations/rust-project",
@@ -156,13 +156,13 @@ members = [
   "shed/setsketch",
   "shed/static_interner",
   "shed/three_billion_instructions",
-  "starlark-rust/starlark",
-  "starlark-rust/starlark_bin",
-  "starlark-rust/starlark_derive",
-  "starlark-rust/starlark_js_example",
-  "starlark-rust/starlark_lsp",
-  "starlark-rust/starlark_map",
-  "starlark-rust/starlark_syntax",
+  "packages/rust/starlark/starlark",
+  "packages/rust/starlark/starlark_bin",
+  "packages/rust/starlark/starlark_derive",
+  "packages/rust/starlark/starlark_js_example",
+  "packages/rust/starlark/starlark_lsp",
+  "packages/rust/starlark/starlark_map",
+  "packages/rust/starlark/starlark_syntax",
   "superconsole",
 ]
 resolver = "2"
@@ -284,7 +284,7 @@ bytesize = "2.4.2"
 chrono = { version = "0.4.45", features = ["clock", "serde", "std"], default-features = false }
 clap = { version = "4.6.0", features = ["derive", "env", "string", "unicode", "wrap_help"] }
 clap_complete = { version = "4.6.5", features = ["unstable-dynamic"] }
-cmp_any = { path = "gazebo/cmp_any" }
+cmp_any = { path = "packages/rust/gazebo/cmp_any" }
 common-path = "1.0.0"
 compact_str = { version = "0.9.1", features = ["serde"] }
 console = "0.15.11"
@@ -300,14 +300,14 @@ dashmap = { version = "6.2.1", features = ["rayon", "serde"] }
 debugserver-types = "0.5.0"
 derivative = "2.2"
 derive_more = { version = "1.0.0", features = ["full"] }
-dice = { path = "dice/dice", features = ["pagable"] }
-dice_error = { path = "dice/dice_error" }
-dice_futures = { path = "dice/dice_futures" }
+dice = { path = "packages/rust/dice/dice", features = ["pagable"] }
+dice_error = { path = "packages/rust/dice/dice_error" }
+dice_futures = { path = "packages/rust/dice/dice_futures" }
 digest = { version = "0.10", features = ["rand_core"] }
 dirs = "6.0"
-display_container = { path = "gazebo/display_container" }
+display_container = { path = "packages/rust/gazebo/display_container" }
 dunce = "1.0.5"
-dupe = { path = "gazebo/dupe" }
+dupe = { path = "packages/rust/gazebo/dupe" }
 either = "1.16.0"
 elf = "0.8"
 enum-iterator = "2.3.0"
@@ -324,7 +324,7 @@ futures = { version = "0.3.31", features = ["async-await", "compat"] }
 futures-intrusive = "0.4.2"
 fxhash = "0.2.1"
 games = { path = "games" }
-gazebo = { path = "gazebo/gazebo", features = ["str_pattern_extensions"] }
+gazebo = { path = "packages/rust/gazebo/gazebo", features = ["str_pattern_extensions"] }
 glob = "0.3.2"
 globset = { version = "0.4.13", features = ["serde1"] }
 hashbrown = "0.17.1"
@@ -418,13 +418,13 @@ slab = "0.4.12"
 slog = { version = "2.8.2", features = ["max_level_trace", "nested-values"] }
 smallvec = { version = "1.15.2", features = ["const_generics", "impl_bincode", "serde", "specialization", "union", "write"] }
 sorted_vector_map = "0.2.1"
-starlark = { path = "starlark-rust/starlark" }
-starlark_lsp = { path = "starlark-rust/starlark_lsp" }
-starlark_map = { path = "starlark-rust/starlark_map", features = ["pagable_dep"] }
-starlark_syntax = { path = "starlark-rust/starlark_syntax" }
+starlark = { path = "packages/rust/starlark/starlark" }
+starlark_lsp = { path = "packages/rust/starlark/starlark_lsp" }
+starlark_map = { path = "packages/rust/starlark/starlark_map", features = ["pagable_dep"] }
+starlark_syntax = { path = "packages/rust/starlark/starlark_syntax" }
 static_assertions = "1.1.0"
 static_interner = { path = "shed/static_interner", features = ["allocative", "dupe", "strong_hash"] }
-strong_hash = { path = "gazebo/strong_hash", features = ["num-bigint", "triomphe"] }
+strong_hash = { path = "packages/rust/gazebo/strong_hash", features = ["num-bigint", "triomphe"] }
 strsim = "0.11.1"
 strum = { version = "0.28.0", features = ["derive"] }
 superconsole = { path = "superconsole" }
