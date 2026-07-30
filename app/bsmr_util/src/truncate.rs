@@ -90,10 +90,10 @@ mod tests {
     fn test_truncate() {
         assert_eq!(&truncate(MSG, 0), "<<omitted>>");
         assert_eq!(&truncate(MSG, TRUNCATION_MSG.len()), "<<omitted>>");
-        assert_eq!(&truncate(MSG, 30), "rdeps(set<<omitted>>li:bsmr)");
+        assert_eq!(&truncate(MSG, 30), "rdeps(set<<omitted>>cli:bsmr)");
         assert_eq!(
             &truncate(MSG, 50),
-            "rdeps(set(fbcode//b<<omitted>>e//bsmr/cli:bsmr)"
+            "rdeps(set(fbcode//b<<omitted>>ode//bsmr/cli:bsmr)"
         );
     }
 
