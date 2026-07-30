@@ -1,5 +1,4 @@
-load("@fbcode//buck2:proto_defs.bzl", "proto_srcs", "rust_protobuf_library")
-load("@fbcode//grpc_fb/codegen:buck_macros.bzl", "grpc_library")
+load("@char_build//rules:rust.bzl", "proto_srcs", "rust_protobuf_library")
 
 oncall("build_infra")
 
@@ -14,14 +13,4 @@ proto_srcs(
     name = "buck2_install_proto.proto",
     srcs = ["install.proto"],
     visibility = ["PUBLIC"],
-)
-
-grpc_library(
-    name = "install",
-    srcs = [
-        "install.proto",
-    ],
-    languages = [
-        "py",
-    ],
 )

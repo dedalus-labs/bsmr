@@ -1,4 +1,4 @@
-load("@fbcode_macros//build_defs:native_rules.bzl", "buck_filegroup")
+load("@char_build//rules:native_rules.bzl", "buck_filegroup")
 # @oss-disable[end= ]: load("//buck2/tests/e2e_util/api:visibility.fb.bzl", "visibility")
 
 oncall("build_infra")

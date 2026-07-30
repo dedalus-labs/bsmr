@@ -7,10 +7,8 @@
 # above-listed licenses.
 
 load("@fbcode//buck2/app:modifier.bzl", "buck2_modifiers")
-load("@fbcode_macros//build_defs:native_rules.bzl", "buck_filegroup")
+load("@char_build//rules:native_rules.bzl", "buck_filegroup")
 load("@fbcode_macros//build_defs:python_pytest.bzl", "python_pytest")
-load("@fbsource//tools/target_determinator/macros:ci.bzl", "ci")
-load("@fbsource//tools/target_determinator/macros:ci_hint.bzl", "ci_hint")
 
 def buck_e2e_test(
     name,
@@ -33,8 +31,6 @@ def buck_e2e_test(
     serialize_test_cases = None,
     require_nano_prelude = None,
     cfg_modifiers = None,
-    ci_srcs = [],
-    ci_deps = [],
     compatible_with = None,
 ):
     """
@@ -126,11 +122,6 @@ def buck_e2e_test(
     if not "conftest.py" in resources.values():
         resources["fbcode//buck2/tests/e2e_util:conftest.py"] = "conftest.py"
 
-    if "darwin" in skip_for_os:
-        labels += ci.remove_labels(ci.mac(ci.aarch64(ci.opt())))
-    if "windows" in skip_for_os:
-        labels += ci.remove_labels(ci.windows(ci.opt()))
-
     python_pytest(
         name = name,
         base_module = base_module,
@@ -149,36 +140,6 @@ def buck_e2e_test(
         modifiers = cfg_modifiers,
         compatible_with = compatible_with,
     )
-
-    if e2e_flavor == "buck2_non_isolated":
-        # These are buck2's own non-isolated e2e tests. Add a ci hint indicating
-        # that they depend on many of the macros in the repo. Intentionally
-        # don't do this for other users of `buck2_e2e_test` in the repo
-        BUCK2_E2E_TEST_CI_SRCS = [
-            "fbandroid/buck2/**",
-            "fbcode/buck2/cfg/**",
-            "fbcode/buck2/prelude/**",
-            "fbcode/buck2/platform/**",
-            "fbcode/buck2/toolchains/**",
-            "fbcode/buck2/tests/targets/**",
-            "fbobjc/buck2/**",
-            "xplat/buck2/**",
-            "xplat/toolchains/**",
-            "fbcode/hermetic_infra/fdb/**",
-            "tools/build_defs/**",
-            "arvr/tools/build_defs/config/**",
-            ".buckconfig",
-            "tools/buckconfigs/**",
-        ]
-        ci_srcs = ci_srcs + BUCK2_E2E_TEST_CI_SRCS
-    if ci_srcs or ci_deps:
-        ci_hint(
-            ci_srcs = ci_srcs,
-            ci_deps = ci_deps,
-            reason = "Non isolated buck2 e2e tests depend heavily on macros",
-            target = name,
-            compatible_with = compatible_with,
-        )
 
 def buck2_e2e_test(
     name,
@@ -204,8 +165,6 @@ def buck2_e2e_test(
     pytest_confcutdir = None,
     serialize_test_cases = None,
     require_nano_prelude = None,
-    ci_srcs = [],
-    ci_deps = [],
     compatible_with = None,
 ):
     """
@@ -235,8 +194,6 @@ def buck2_e2e_test(
     """
     kwargs = {
         "base_module": base_module,
-        "ci_deps": ci_deps,
-        "ci_srcs": ci_srcs,
         "compatible_with": compatible_with,
         "contacts": contacts,
         "data": data,

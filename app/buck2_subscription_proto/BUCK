@@ -1,6 +1,5 @@
-load("@fbcode//buck2:proto_defs.bzl", "proto_srcs", "rust_protobuf_library")
-load("@fbcode//grpc_fb/codegen:buck_macros.bzl", "grpc_library")
-load("@fbcode_macros//build_defs:export_files.bzl", "export_file")
+load("@char_build//rules:rust.bzl", "proto_srcs", "rust_protobuf_library")
+load("@char_build//rules:export_files.bzl", "export_file")
 
 oncall("build_infra")
 
@@ -20,16 +19,6 @@ proto_srcs(
     name = "buck2_subscription_proto.proto",
     srcs = ["subscription.proto"],
     visibility = ["PUBLIC"],
-)
-
-grpc_library(
-    name = "subscription",
-    srcs = [
-        "subscription.proto",
-    ],
-    languages = [
-        "py",
-    ],
 )
 
 export_file(

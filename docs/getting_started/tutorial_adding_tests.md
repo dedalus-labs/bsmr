@@ -78,9 +78,9 @@ Next, we need to tell Buck2 about our test file and how to run it.
 <FbInternalOnly>
 
 ```python
-load("@fbsource//tools/build_defs:rust_library.bzl", "rust_library")
+load("@char_build//rules:rust.bzl", "rust_library")
 # Load the rust_unittest rule
-load("@fbsource//tools/build_defs:rust_unittest.bzl", "rust_unittest")
+load("@char_build//rules:rust.bzl", "rust_unittest")
 
 
 rust_library(
@@ -106,7 +106,7 @@ rust_unittest(
 
 Key additions and explanations:
 
-- `load("@fbsource//tools/build_defs:rust_unittest.bzl", "rust_unittest"):`
+- `load("@char_build//rules:rust.bzl", "rust_unittest"):`
   - This line imports the `rust_unittest` rule, which knows how to build and run
     Rust tests.
 

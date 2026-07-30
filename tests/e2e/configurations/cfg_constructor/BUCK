@@ -1,6 +1,6 @@
 # @noautodeps
 load("@fbcode//buck2/tests:buck_e2e.bzl", "buck2_e2e_test")
-load("@fbcode_macros//build_defs:python_library.bzl", "python_library")
+load("@char_build//rules:python_library.bzl", "python_library")
 load("@prelude//cfg/modifier:name.bzl", "NAMED_CONSTRAINT_SETTINGS")
 load(":constraint_setting_group.bzl", "constraint_setting_group")
 

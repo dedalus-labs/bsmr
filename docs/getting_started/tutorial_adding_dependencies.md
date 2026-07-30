@@ -93,7 +93,7 @@ message.
 <FbInternalOnly>
 
 ```python
-load("@fbsource//tools/build_defs:rust_library.bzl", "rust_library")
+load("@char_build//rules:rust.bzl", "rust_library")
 
 rust_library(
     name = "library",
@@ -189,7 +189,7 @@ BUCK file.
 <FbInternalOnly>
 
 ```python
-load("@fbsource//tools/build_defs:rust_binary.bzl", "rust_binary")
+load("@char_build//rules:rust.bzl", "rust_binary")
 
 rust_binary(
     name = "main",
@@ -283,7 +283,7 @@ Now, modify `buck2_lab/greeter_lib/BUCK` to declare a dependency on
 <FbInternalOnly>
 
 ```python
-load("@fbsource//tools/build_defs:rust_library.bzl", "rust_library")
+load("@char_build//rules:rust.bzl", "rust_library")
 
 rust_library(
     name = "library",
@@ -424,7 +424,7 @@ dependency on `logging_lib`.
 <FbInternalOnly>
 
 ```python
-load("@fbsource//tools/build_defs:rust_binary.bzl", "rust_binary")
+load("@char_build//rules:rust.bzl", "rust_binary")
 
 rust_binary(
     name = "main",

@@ -6,11 +6,6 @@
 # of this source tree. You may select, at your option, one of the
 # above-listed licenses.
 
-load(
-    "@shim//:shims.bzl",
-    _proto_srcs = "proto_srcs",
-    _rust_protobuf_library = "rust_protobuf_library",
-)
-
-rust_protobuf_library = _rust_protobuf_library
-proto_srcs = _proto_srcs
+def python_binary(srcs = [], **kwargs):
+    # @lint-ignore BUCKLINT: avoid "Direct usage of native rules is not allowed."
+    native.python_binary(srcs = srcs, **kwargs)

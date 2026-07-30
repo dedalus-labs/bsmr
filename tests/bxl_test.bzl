@@ -7,7 +7,7 @@
 # above-listed licenses.
 
 load("@fbcode//buck2/tests:buck_e2e.bzl", "buck2_e2e_test")
-load("@fbcode_macros//build_defs:export_files.bzl", "export_file")
+load("@char_build//rules:export_files.bzl", "export_file")
 
 def bxl_test(src, name = None, labels = None, buck_args: list[str] | None = None, bxl_args: list[str] | None = None, env: dict[str, str] | None = None, **kwargs):
     """

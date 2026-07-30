@@ -6,7 +6,7 @@
 # of this source tree. You may select, at your option, one of the
 # above-listed licenses.
 
-# @oss-disable[end= ]: load("@fbsource//tools/build_defs:fb_native_wrapper.bzl", _fb_native = "fb_native")
+# @oss-disable[end= ]: load("@char_build//rules:fb_native_wrapper.bzl", _fb_native = "fb_native")
 load("@prelude//:native.bzl", _fb_native = "native") # @oss-enable
 
 fb_native = _fb_native

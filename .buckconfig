@@ -1,9 +1,9 @@
 [cells]
-gh_facebook_buck2 = .
-gh_facebook_buck2_shims_meta = shim
+char = .
+char_build = tools/build
 
 [cell_aliases]
-root = gh_facebook_buck2
+root = char
 
 [oss]
 internal_cell = fbcode
@@ -11,7 +11,6 @@ stripped_root_dirs = buck2
 
 [project]
 ignore = \
-    app/buck2_explain, \
     examples, \
     tools/rust-project/tests, \
     tests, \

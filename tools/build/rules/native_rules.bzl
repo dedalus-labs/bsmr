@@ -10,9 +10,6 @@ def buck_genrule(visibility = ["PUBLIC"], **kwargs):
     # @lint-ignore BUCKLINT: avoid "native is forbidden in fbcode"
     native.genrule(visibility = visibility, **kwargs)
 
-def buck_command_alias(**_):
-    pass
-
 def buck_filegroup(visibility = ["PUBLIC"], **kwargs):
     # @lint-ignore BUCKLINT: avoid "native is forbidden in fbcode"
     native.filegroup(visibility = visibility, **kwargs)

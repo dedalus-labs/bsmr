@@ -1,4 +1,4 @@
-load("@fbsource//tools/build_defs:fb_native_wrapper.bzl", "fb_native")
+load("@char_build//rules:fb_native_wrapper.bzl", "fb_native")
 load("@prelude//cfg/modifier:conditional_modifier.bzl", "conditional_modifier")
 
 oncall("build_infra")

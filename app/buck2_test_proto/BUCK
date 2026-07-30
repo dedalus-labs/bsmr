@@ -1,5 +1,5 @@
-load("@fbcode//buck2:proto_defs.bzl", "proto_srcs", "rust_protobuf_library")
-load("@fbcode_macros//build_defs/lib:oss.bzl", "translate_target")
+load("@char_build//rules:rust.bzl", "proto_srcs", "rust_protobuf_library")
+load("@char_build//rules:targets.bzl", "translate_target")
 
 oncall("build_infra")
 

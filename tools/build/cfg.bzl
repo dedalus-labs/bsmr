@@ -9,9 +9,9 @@
 load("@prelude//cfg/modifier:cfg_constructor.bzl", "cfg_constructor_post_constraint_analysis", "cfg_constructor_pre_constraint_analysis")
 load("@prelude//cfg/modifier:common.bzl", "MODIFIER_METADATA_KEY")
 
-SHIM_ALIASES = {
-    "fedora": "shim//os/linux/distro/constraints:fedora",
-    "ubuntu": "shim//os/linux/distro/constraints:ubuntu",
+BUILD_ALIASES = {
+    "fedora": "char_build//os/linux/distro/constraints:fedora",
+    "ubuntu": "char_build//os/linux/distro/constraints:ubuntu",
 }
 
 def set_cfg_constructor(aliases = dict()):
@@ -26,15 +26,15 @@ def set_cfg_constructor(aliases = dict()):
             extra_data = struct(),
         )
 
-def get_shim_modifiers():
+def get_build_modifiers():
     modifiers = []
 
     linux_distro = read_config("linux", "distro")
 
     if linux_distro:
-        modifiers.append("shim//os/linux/distro/constraints:{}".format(linux_distro))
+        modifiers.append("char_build//os/linux/distro/constraints:{}".format(linux_distro))
 
     known_broken = read_config("oss", "known_broken", "disable")
-    modifiers.append("shim//opensource/macros/broken_in_oss/constraints:{}".format(known_broken))
+    modifiers.append("char_build//opensource/macros/broken_in_oss/constraints:{}".format(known_broken))
 
     return modifiers

@@ -1,4 +1,4 @@
-load("@fbcode_macros//build_defs:native_rules.bzl", "buck_filegroup")
+load("@char_build//rules:native_rules.bzl", "buck_filegroup")
 
 oncall("build_infra")
 

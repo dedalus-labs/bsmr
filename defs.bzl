@@ -6,8 +6,7 @@
 # of this source tree. You may select, at your option, one of the
 # above-listed licenses.
 
-load("@fbcode_macros//build_defs:platform_utils.bzl", "platform_utils")
-load("@fbcode_macros//build_defs/lib:oss.bzl", "translate_target")
+load("@char_build//rules:targets.bzl", "translate_target")
 load("@prelude//decls:common.bzl", "buck")
 load("@prelude//os_lookup:defs.bzl", "Os", "OsLookup")
 
@@ -62,13 +61,11 @@ _buck2_bundle = rule(
 )
 
 def buck2_bundle(buck2, buck2_client, buck2_health_check, tpx, **kwargs):
-    cxx_platform = platform_utils.get_cxx_platform_for_base_path(native.package_name())
     _buck2_bundle(
         buck2 = translate_target(buck2),
         buck2_client = translate_target(buck2_client),
         # @oss-disable[end= ]: buck2_health_check = buck2_health_check,
         # @oss-disable[end= ]: tpx = tpx,
-        default_target_platform = cxx_platform.target_platform,
         **kwargs,
     )
 
@@ -102,12 +99,8 @@ _pagable_transition_alias = rule(
     cfg = _pagable_transition,
 )
 
-def pagable_transition_alias(name: str, actual, labels):
-    platform = platform_utils.get_cxx_platform_for_base_path(native.package_name())
-    default_target_platform = platform.target_platform
+def pagable_transition_alias(name: str, actual):
     _pagable_transition_alias(
         name = name,
         actual = translate_target(actual),
-        labels = labels,
-        default_target_platform = default_target_platform,
     )

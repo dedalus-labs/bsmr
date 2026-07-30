@@ -7,9 +7,8 @@
 # above-listed licenses.
 
 load("@fbcode//buck2/tests:buck_e2e.bzl", "buck2_e2e_test")
-load("@fbcode_macros//build_defs:native_rules.bzl", "buck_genrule")
+load("@char_build//rules:native_rules.bzl", "buck_genrule")
 load("@fbsource//tools/build_defs/windows:powershell.bzl", "powershell_cmd_exe")
-load("@fbsource//tools/target_determinator/macros:ci.bzl", "ci")
 
 # This is meant to be Open-source friendly. In our e2e tests, we invoke a variant from
 # tools/build_defs/check_dependencies_test.bzl that passes additional arguments for meta specific allowlist.
@@ -220,7 +219,6 @@ def check_mutually_exclusive_dependencies_test(
         target_deps: If True, only check target_deps() (default: True)
         build_mode: Optional build mode flagfile for the BXL cquery. Use this to analyze
             dependencies for a specific platform (e.g., Android) while running the test on Linux.
-            When specified, CI labels are automatically set to run the test only once on Linux.
             Example: "fbsource//arvr/mode/android/linux/opt"
     """
 
@@ -230,17 +228,12 @@ def check_mutually_exclusive_dependencies_test(
     # Build mode flagfile is passed directly to buck2 as an argfile
     # The flagfile contains --target-platforms and other config flags
     build_mode_argfile = ""
-    ci_labels = []
     if build_mode:
         # Ensure the build mode has the @ prefix for argfile syntax
         if build_mode.startswith("@"):
             build_mode_argfile = build_mode
         else:
             build_mode_argfile = "@" + build_mode
-
-        # When build_mode is specified, the test will produce the same result
-        # regardless of which Linux CI mode runs it. Add CI labels to run only once.
-        ci_labels = [ci.overwrite(), ci.linux()]
 
     _check_dependencies_test(
         name = name,
@@ -255,7 +248,7 @@ def check_mutually_exclusive_dependencies_test(
             "TARGET": target,
             "TARGET_DEPS": str(target_deps).lower(),
         },
-        labels = ci_labels + labels + ["check_mutually_exclusive_dependencies_test"],
+        labels = labels + ["check_mutually_exclusive_dependencies_test"],
         deps = deps,
         # The test binary uses Python/pytest which doesn't work on platforms like android
         compatible_with = ["ovr_config//os:linux", "ovr_config//os:macos", "ovr_config//os:windows"],

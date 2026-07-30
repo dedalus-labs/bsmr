@@ -1,5 +1,5 @@
-load("@fbsource//tools/build_defs:rust_binary.bzl", "rust_binary")
-load("@fbsource//tools/build_defs:rust_library.bzl", "rust_library")
+load("@char_build//rules:rust.bzl", "rust_binary")
+load("@char_build//rules:rust.bzl", "rust_library")
 
 oncall("rust_foundation")
 

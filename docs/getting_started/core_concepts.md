@@ -343,7 +343,7 @@ graph TD
 <FbInternalOnly>
 You might have noticed that the first line in the main BUCK file is a load function:
 
-<code>load("@fbsource//tools/build_defs:rust_binary.bzl", "rust_binary")</code>
+<code>load("@char_build//rules:rust.bzl", "rust_binary")</code>
 
 Load imports the <code>rust_binary</code> macro from a rust_binary.bzl file. You
 can inspect the content of it under

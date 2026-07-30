@@ -1,5 +1,4 @@
-load("@fbcode_macros//build_defs:native_rules.bzl", "alias")
-load("@fbsource//tools/target_determinator/macros:ci.bzl", "ci")
+load("@char_build//rules:native_rules.bzl", "alias")
 load(":defs.bzl", "buck2_bundle", "pagable_transition_alias")
 
 oncall("build_infra")
@@ -9,7 +8,6 @@ oncall("build_infra")
 pagable_transition_alias(
     name = "buck2",
     actual = "//buck2/app/buck2:buck2-bin",
-    labels = [ci.aarch64(ci.skip_test())],
 )
 
 buck2_bundle(

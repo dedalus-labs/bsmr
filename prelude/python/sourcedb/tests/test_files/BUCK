@@ -1,4 +1,4 @@
-load("@fbcode_macros//build_defs:python_library.bzl", fbcode_python_library = "python_library")
+load("@char_build//rules:python_library.bzl", fbcode_python_library = "python_library")
 load("@prelude//utils:source_listing.bzl", "source_listing")
 
 oncall("pyre")

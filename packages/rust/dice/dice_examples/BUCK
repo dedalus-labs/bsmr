@@ -1,6 +1,5 @@
-load("@fbcode_macros//build_defs:native_rules.bzl", "buck_command_alias")
-load("@fbsource//tools/build_defs:rust_binary.bzl", "rust_binary")
-load("@fbsource//tools/build_defs:rust_library.bzl", "rust_library")
+load("@char_build//rules:rust.bzl", "rust_binary")
+load("@char_build//rules:rust.bzl", "rust_library")
 
 oncall("build_infra")
 
@@ -122,13 +121,4 @@ rust_binary(
         "fbsource//third-party/rust:serde_json",
         "//common/rust/json_value:json_value",
     ],
-)
-
-buck_command_alias(
-    name = "run_hydration_bench",
-    compatible_with = ["ovr_config//os:linux"],
-    env = {
-        "PAGABLE_BIN": "$(exe :hydration_bench)",
-    },
-    exe = ":bench_runner",
 )

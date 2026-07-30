@@ -28,7 +28,7 @@ Next, use `reindeer` to buckify dependencies:
 
 ```sh
 cd buck2/
-./tools/bin/reindeer --third-party-dir shim/third-party/rust buckify
+./tools/bin/reindeer --third-party-dir tools/build/third-party/rust buckify
 ```
 
 Build a copy of `buck2` with `buck2`:

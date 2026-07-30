@@ -6,12 +6,8 @@
 # of this source tree. You may select, at your option, one of the
 # above-listed licenses.
 
-load("@fbsource//tools/target_determinator/macros:ci.bzl", "ci")
+load("@prelude//rust:linkable_symbol.bzl", prelude_rust_linkable_symbol = "rust_linkable_symbol")
+load("@char_build//rules:rust.bzl", _rust_library = "rust_library")
 
-# We want to test most things on all platforms we support, but for various reasons,
-# this PACKAGE should be treated as Linux-only.
-def ci_linux_only():
-    ci.package(
-        [ci.linux()],
-        overwrite = True,
-    )
+def rust_linkable_symbol(visibility = ["PUBLIC"], **kwargs):
+    prelude_rust_linkable_symbol(visibility = visibility, rust_library_macro = _rust_library, **kwargs)

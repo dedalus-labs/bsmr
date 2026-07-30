@@ -1,4 +1,4 @@
-load("@fbcode//buck2:buck_rust_binary.bzl", "buck_rust_binary")
+load("@char_build//rules:rust.bzl", buck_rust_binary = "rust_binary")
 
 oncall("build_infra")
 

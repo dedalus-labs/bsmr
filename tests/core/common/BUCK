@@ -1,4 +1,4 @@
-load("@fbcode_macros//build_defs:python_library.bzl", "python_library")
+load("@char_build//rules:python_library.bzl", "python_library")
 
 oncall("build_infra")
 

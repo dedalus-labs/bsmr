@@ -47,9 +47,8 @@ ACTIVE_CELL = native.get_cell_name()
 # that reference this cell
 ROOT_CELL = read_config("cell_aliases", "root", "root")
 
-# The cell this file and the rest of the shim directory belong to, generally
-# "shim" and does not need to be set.
-SHIM_CELL = read_config("oss", "shim_cell", "shim")
+# The cell containing this build-support layer.
+BUILD_CELL = read_config("oss", "build_cell", "char_build")
 
 # The internal cell this project originally belonged to.
 #
@@ -60,7 +59,7 @@ INTERNAL_CELL = read_config("oss", "internal_cell", "fbcode")
 
 # There can be situations where a target specifies a cell explicitly and the
 # path is part of the local checkout, rather than potentially needing to be
-# shimmed. In this case, we want to rewrite the target to use the root cell.
+# translated. In this case, we want to rewrite the target to use the root cell.
 #
 # If a target's cell is unspecified or matches the internal cell, and the path
 # starts with an entry in this list, The cell replaced with the ROOT_CELL.
@@ -117,8 +116,8 @@ PREFIX_MAPPINGS = _parse_prefix_mappings(
 )
 
 # Hardcoded rewrite rules that apply to many projects and only produce targets
-# within the shim cell. They are applied after the rules from .buckconfig, and
-# will not be applied if any other rules match.
+# within the build-support cell. They are applied after the rules from
+# .buckconfig and only when no configured rule matches.
 IMPLICIT_REWRITE_RULES = {
     "fbcode": struct(
         exact = {
@@ -126,10 +125,6 @@ IMPLICIT_REWRITE_RULES = {
             "common/rust/shed/sorted_vector_map:sorted_vector_map": "third-party/rust:sorted_vector_map",
             "watchman/rust/watchman_client:watchman_client": "third-party/rust:watchman_client",
         },
-        dirs = [
-            ("third-party-buck/platform010/build/supercaml", "third-party/ocaml"),
-            ("third-party-buck/platform010/build", "third-party"),
-        ],
     ),
     "fbsource": struct(
         dirs = [
@@ -153,7 +148,7 @@ DEFAULT_REWRITE_CTX = struct(
     cells = struct(
         active = ACTIVE_CELL,
         root = ROOT_CELL,
-        shim = SHIM_CELL,
+        build = BUILD_CELL,
         internal = INTERNAL_CELL,
     ),
     project_dirs = PROJECT_DIRS,
@@ -167,7 +162,7 @@ Rewrite an internal target string to one that is compatible with this OSS
 project.
 
 Some example use cases for this:
-- Map dependency targets to shim targets in this dir
+- Map dependency targets to build-support targets in this directory
 - Handle mismatching buck roots between internal and oss
   (eg: internal/oss-project/... is exposed externally as oss-project/...)
 - Handle submodules that result in filepaths that do not match internal
@@ -209,15 +204,15 @@ def translate_target(target: str, ctx = DEFAULT_REWRITE_CTX) -> str:
 
     exact = getattr(rules, "exact", {}).get(path)
     if exact != None:
-        return ctx.cells.shim + "//" + exact
+        return ctx.cells.build + "//" + exact
 
     for match_root_dir, fn in getattr(rules, "dynamic", []):
         if _path_rooted_in_dir(path, match_root_dir):
-            return ctx.cells.shim + "//" + fn(path)
+            return ctx.cells.build + "//" + fn(path)
 
     for match_root_dir, replace_root_dir in getattr(rules, "dirs", []):
         if _path_rooted_in_dir(path, match_root_dir):
-            return ctx.cells.shim + "//" + _swap_root_dir_for_path(path, match_root_dir, replace_root_dir)
+            return ctx.cells.build + "//" + _swap_root_dir_for_path(path, match_root_dir, replace_root_dir)
 
     return target
 
