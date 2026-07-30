@@ -141,7 +141,7 @@ mod tests {
             context_lines,
             [
                 "",
-                "    rdeps(set(fbcode//bsmr/... fbsour<<omitted>>ck2/...), fbcode//bsmr/cli:bsmr)",
+                "    rdeps(set(fbcode//bsmr/... fbsourc<<omitted>>/bsmr/...), fbcode//bsmr/cli:bsmr)",
                 "    ^-----------------------------------------------------------------------------^",
                 "",
             ]
