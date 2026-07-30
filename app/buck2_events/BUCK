@@ -40,7 +40,7 @@ rust_library(
         "fbsource//third-party/rust:smallvec",
         "fbsource//third-party/rust:tokio",
         "fbsource//third-party/rust:uuid",
-        "//buck2/allocative/allocative:allocative",
+        "//buck2/packages/rust/allocative/allocative:allocative",
         "//buck2/app/buck2_build_info:buck2_build_info",
         "//buck2/app/buck2_cli_proto:buck2_cli_proto",
         "//buck2/app/buck2_core:buck2_core",

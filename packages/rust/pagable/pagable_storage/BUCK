@@ -25,6 +25,6 @@ rust_library(
         "fbsource//third-party/rust:rusqlite",
         "fbsource//third-party/rust:sled",
         "fbsource//third-party/rust:tokio",
-        "//buck2/pagable:pagable",
+        "//buck2/packages/rust/pagable/pagable:pagable",
     ],
 )

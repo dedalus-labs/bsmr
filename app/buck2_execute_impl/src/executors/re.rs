@@ -559,7 +559,7 @@ fn is_timeout_error(err: &remote_execution::TStatus) -> bool {
 fn is_re_queue_full(e: &buck2_error::Error) -> bool {
     #[cfg(all(fbcode_build, target_os = "linux"))]
     let enabled = justknobs::eval(
-        "buck2/remote_execution:re_queue_full_as_cancelled",
+        "buck2/packages/rust/remote_execution:re_queue_full_as_cancelled",
         None,
         None,
     )

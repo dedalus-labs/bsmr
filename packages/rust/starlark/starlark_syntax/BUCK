@@ -47,9 +47,9 @@ rust_library(
         "fbsource//third-party/rust:num-bigint",
         "fbsource//third-party/rust:num-traits",
         "fbsource//third-party/rust:thiserror",
-        "//buck2/allocative/allocative:allocative",
+        "//buck2/packages/rust/allocative/allocative:allocative",
         "//buck2/packages/rust/gazebo/dupe:dupe",
-        "//buck2/pagable:pagable",
+        "//buck2/packages/rust/pagable/pagable:pagable",
         "//buck2/packages/rust/starlark/starlark_map:starlark_map",
     ],
 )

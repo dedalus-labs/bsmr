@@ -33,6 +33,6 @@ rust_library(
         "//buck2/app/buck2_util:buck2_util",
         "//buck2/packages/rust/gazebo/dupe:dupe",
         "//buck2/packages/rust/gazebo/gazebo:gazebo",
-        "//buck2/remote_execution/oss/re_grpc_proto:re_grpc_proto",
+        "//buck2/packages/rust/remote_execution/oss/re_grpc_proto:re_grpc_proto",
     ],
 )

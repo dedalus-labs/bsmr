@@ -14,7 +14,7 @@ rust_library(
         "fbsource//third-party/rust:serde",
         "fbsource//third-party/rust:sysinfo",
         "fbsource//third-party/rust:uuid",
-        "//buck2/allocative/allocative:allocative",
+        "//buck2/packages/rust/allocative/allocative:allocative",
         "//buck2/app/buck2_error:buck2_error",
         "//buck2/app/buck2_hash:buck2_hash",
         "//buck2/packages/rust/gazebo/dupe:dupe",
