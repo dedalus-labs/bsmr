@@ -132,7 +132,6 @@ members = [
   "packages/rust/dice/dice_futures",
   "packages/rust/dice/dice_tests",
   "packages/rust/dice/read_dump",
-  "games",
   "packages/rust/gazebo/cmp_any",
   "packages/rust/gazebo/display_container",
   "packages/rust/gazebo/dupe",
@@ -323,7 +322,6 @@ fs4 = { version = "0.9.1", features = ["sync"] }
 futures = { version = "0.3.31", features = ["async-await", "compat"] }
 futures-intrusive = "0.4.2"
 fxhash = "0.2.1"
-games = { path = "games" }
 gazebo = { path = "packages/rust/gazebo/gazebo", features = ["str_pattern_extensions"] }
 glob = "0.3.2"
 globset = { version = "0.4.13", features = ["serde1"] }
