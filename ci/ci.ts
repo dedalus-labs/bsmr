@@ -18,6 +18,7 @@ export const ci = workflow({
 	on: {
 		push: { branches: ["main"] },
 		pull_request: {},
+		merge_group: { types: ["checks_requested"] },
 		workflow_dispatch: {},
 	},
 	permissions: {},
