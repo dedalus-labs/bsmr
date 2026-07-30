@@ -100,7 +100,7 @@ On first use, or whenever you change a Conan dependency or the toolchain
 configuration you must regenerate the import targets. For example:
 
 ```
-$ buck2 run //:update
+$ bsmr run //:update
 ```
 
 Then you can depend on Conan provided packages defined in the generated file,
@@ -121,38 +121,38 @@ add it to the `conanfile.txt` and update the import targets.
 
 ### Example
 
-See `examples/prelude/cpp/conan` in the Buck2 source repository for a full
+See `examples/prelude/cpp/conan` in the Bessemer source repository for a full
 working example.
 
 ## Motivation
 
-Buck2 has the ability to build C/C++ libraries natively. However, some C/C++
+Bessemer has the ability to build C/C++ libraries natively. However, some C/C++
 projects have complex build systems and are difficult to migrate to a native
-Buck2 build. Other programming languages often have established standard
-package managers and such dependencies can be imported into a Buck2 project
+Bessemer build. Other programming languages often have established standard
+package managers and such dependencies can be imported into a Bessemer project
 with the help of that package manager. This module provides such an integration
 for C/C++ with the help of the Conan package manager.
 
 Conan offers a relatively large [community package set][conan-center] and is
 compatible with Linux, MacOS, and Windows. It also allows for sufficient
-control to support an integration into Buck2, supports toolchain configuration
+control to support an integration into Bessemer, supports toolchain configuration
 and cross-compilation, and provides a Python extension API.
 
 [conan-center]: https://conan.io/center/
 
 ## Design Goals
 
-The Buck2 integration of Conan should fulfill the following design goals:
+The Bessemer integration of Conan should fulfill the following design goals:
 
-* The overall build should be controlled by Buck2:
+* The overall build should be controlled by Bessemer:
 
     Which packages are built at which point, which compiler toolchain and
     configuration is used, where build artifacts are stored, and where
     dependencies are looked up.
 
-    This enables the use of Buck2's own incremental build and caching
+    This enables the use of Bessemer's own incremental build and caching
     functionality. It also enables cross-platform and cross-compilation with
-    the help of Buck2's platforms and toolchains.
+    the help of Bessemer's platforms and toolchains.
 
 * Conan should provide transitive dependencies:
 
@@ -164,7 +164,7 @@ The Buck2 integration of Conan should fulfill the following design goals:
 ## Integration
 
 Conan provides a number of control and integration points that are relevant to
-the Buck2 integration:
+the Bessemer integration:
 
 * Conanfile
 
@@ -184,7 +184,7 @@ the Buck2 integration:
     an individual package in the context of a given lockfile. Conan will build
     only this package, provided that the package's dependencies have been built
     before and are available in Conan's cache directory. The integration uses
-    this capability to build Conan packages in separate Buck2 build actions.
+    this capability to build Conan packages in separate Bessemer build actions.
 
 * Install Location
 
@@ -192,7 +192,7 @@ the Buck2 integration:
     directory, which is configurable with the `CONAN_USER_HOME` environment
     variable. Package dependencies, newly built packages, and other resources
     must be available under this path. The integration configures a Conan home
-    directory under Buck2's output directory and copies needed dependencies
+    directory under Bessemer's output directory and copies needed dependencies
     into place before the build and extracts relevant build results into
     dedicated output paths after the build.
 
@@ -200,7 +200,7 @@ the Buck2 integration:
 
     Conan profiles can configure the operating system and architecture to
     target or build on, the compiler and its version, and other tools and
-    settings. The integration uses profiles to expose Buck2's own cxx toolchain
+    settings. The integration uses profiles to expose Bessemer's own cxx toolchain
     and other configuration to Conan.
 
 * Generators
@@ -210,8 +210,8 @@ the Buck2 integration:
     system used by all projects. Conan generators can access package metadata,
     such as exposed libraries or header files, and can generate files to be
     read by another build system to import Conan built packages. Buckler is a
-    Conan generator that creates Buck2 targets that import Conan built packages
-    and can be depended upon by native Buck2 C/C++ targets.
+    Conan generator that creates Bessemer targets that import Conan built packages
+    and can be depended upon by native Bessemer C/C++ targets.
 
 """
 
@@ -299,7 +299,7 @@ def conan_component(
     """Import a Conan package component.
 
     Extracts the relevant files from the Conan package directory and exposes
-    them as a target that can be depended on by native Buck2 C/C++ targets such
+    them as a target that can be depended on by native Bessemer C/C++ targets such
     as `cxx_library`.
     """
 
@@ -471,7 +471,7 @@ conan_generate = rule(
         "_conan_init": attrs.dep(providers = [ConanInitInfo], default = "toolchains//:conan-init"),
         "_conan_toolchain": attrs.default_only(attrs.toolchain_dep(default = "toolchains//:conan", providers = [ConanToolchainInfo])),
     },
-    doc = "Generate Buck2 import targets for Conan packages using the Buckler generator.",
+    doc = "Generate Bessemer import targets for Conan packages using the Buckler generator.",
 )
 
 def _conan_init_impl(ctx: AnalysisContext) -> list[Provider]:
@@ -642,7 +642,7 @@ conan_package = rule(
 
 def _profile_env_var(name, value) -> cmd_args:
     # TODO[AH] Do we need `quote = "shell"` here?
-    #   Setting it causes Buck2 to escape the `$PROFILE_DIR` prefix set in the
+    #   Setting it causes Bessemer to escape the `$PROFILE_DIR` prefix set in the
     #   very end which causes failures in Conan package builds.
     return cmd_args([name, cmd_args(value, delimiter = " ")], delimiter = "=")
 

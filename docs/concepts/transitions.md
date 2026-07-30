@@ -6,7 +6,7 @@ title: Configuration transitions
 Configuration transition is a mechanism for changing the configuration when
 depending on a target.
 
-Currently, Buck2 has incoming and outgoing transitions:
+Currently, Bessemer has incoming and outgoing transitions:
 
 - **Incoming** transitions are specified per-target and take effect when
   depending on that target.

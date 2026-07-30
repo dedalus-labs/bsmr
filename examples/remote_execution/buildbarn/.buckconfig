@@ -1,7 +1,7 @@
 [cells]
 root = .
 
-[buck2_re_client]
+[bsmr_re_client]
 action_cache_address = grpc://localhost:8980
 engine_address = grpc://localhost:8980
 cas_address = grpc://localhost:8980

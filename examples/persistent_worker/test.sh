@@ -13,9 +13,9 @@ echo "::group::Local build without persistent worker" >&2
 cat >.buckconfig.local <<EOF
 <file:.buckconfig.no-workers>
 EOF
-buck2 clean; buck2 build : -vstderr
-echo "# Verifying Buck2 log" >&2
-buck2 log what-ran --show-std-err --format json \
+bsmr clean; bsmr build : -vstderr
+echo "# Verifying Bessemer log" >&2
+bsmr log what-ran --show-std-err --format json \
   | jq -s '
       [
         .[]
@@ -39,9 +39,9 @@ echo "::group::Local build with persistent worker" >&2
 cat >.buckconfig.local <<EOF
 <file:.buckconfig.local-persistent-workers>
 EOF
-buck2 clean; buck2 build : -vstderr
-echo "# Verifying Buck2 log" >&2
-buck2 log what-ran --show-std-err --format json \
+bsmr clean; bsmr build : -vstderr
+echo "# Verifying Bessemer log" >&2
+bsmr log what-ran --show-std-err --format json \
   | jq -s '
       [
         .[]
@@ -53,7 +53,7 @@ buck2 log what-ran --show-std-err --format json \
           error("expected 5 demo targets, got " + (length | tostring))
         end
       | .[]
-      | if (.reproducer.executor == "Worker" or .reproducer.executor == "WorkerInit") and (.std_err | startswith("Buck2 persistent worker")) then
+      | if (.reproducer.executor == "Worker" or .reproducer.executor == "WorkerInit") and (.std_err | startswith("Bessemer persistent worker")) then
           true
         else
           error("expected local without persistent worker, got " + ([.reproducer.executor, .std_err] | tostring))
@@ -71,9 +71,9 @@ else
 [build]
 cache_silo_key=$(date +%s.%N).${GITHUB_RUN_ID-0}
 EOF
-  buck2 clean; buck2 build : -vstderr
-  echo "# Verifying Buck2 log" >&2
-  buck2 log what-ran --show-std-err --format json \
+  bsmr clean; bsmr build : -vstderr
+  echo "# Verifying Bessemer log" >&2
+  bsmr log what-ran --show-std-err --format json \
     | jq -s '
         [
           .[]
@@ -104,9 +104,9 @@ else
 [build]
 cache_silo_key=$(date +%s.%N).${GITHUB_RUN_ID-0}
 EOF
-  buck2 clean; buck2 build : -vstderr
-  echo "# Verifying Buck2 log" >&2
-  buck2 log what-ran --show-std-err --format json \
+  bsmr clean; bsmr build : -vstderr
+  echo "# Verifying Bessemer log" >&2
+  bsmr log what-ran --show-std-err --format json \
     | jq -s '
         [
           .[]

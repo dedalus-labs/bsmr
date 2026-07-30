@@ -18,5 +18,5 @@ ignore=ignored
   lazy_cycle_detector = true
   execution_platforms = //:execution_platforms
 
-[buck2]
+[bsmr]
   detect_cycles = disabled

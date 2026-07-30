@@ -1,0 +1,370 @@
+/*
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
+ *
+ * This source code is dual-licensed under either the MIT license found in the
+ * LICENSE-MIT file in the root directory of this source tree or the Apache
+ * License, Version 2.0 found in the LICENSE-APACHE file in the root directory
+ * of this source tree. You may select, at your option, one of the
+ * above-listed licenses.
+ */
+
+use std::borrow::Cow;
+use std::slice;
+use std::sync::Arc;
+
+use allocative::Allocative;
+use async_trait::async_trait;
+use bsmr_artifact::artifact::build_artifact::BuildArtifact;
+use bsmr_build_api::actions::Action;
+use bsmr_build_api::actions::ActionExecutionCtx;
+use bsmr_build_api::actions::UnregisteredAction;
+use bsmr_build_api::actions::execute::action_executor::ActionExecutionKind;
+use bsmr_build_api::actions::execute::action_executor::ActionExecutionMetadata;
+use bsmr_build_api::actions::execute::action_executor::ActionOutputs;
+use bsmr_build_api::actions::execute::error::ExecuteError;
+use bsmr_build_api::artifact_groups::ArtifactGroup;
+use bsmr_build_signals::env::WaitingData;
+use bsmr_common::file_ops::metadata::FileDigest;
+use bsmr_common::file_ops::metadata::FileMetadata;
+use bsmr_common::file_ops::metadata::TrackedFileDigest;
+use bsmr_common::io::trace::TracingIoProvider;
+use bsmr_core::category::CategoryRef;
+use bsmr_core::execution_types::executor_config::RemoteExecutorUseCase;
+use bsmr_core::soft_error;
+use bsmr_error::BuckErrorContext;
+use bsmr_error::internal_error;
+use bsmr_execute::artifact_value::ArtifactValue;
+use bsmr_execute::digest::CasDigestToReExt;
+use bsmr_execute::directory::ActionDirectoryEntry;
+use bsmr_execute::directory::INTERNER;
+use bsmr_execute::directory::re_directory_to_re_tree;
+use bsmr_execute::directory::re_tree_to_directory;
+use bsmr_execute::execute::command_executor::ActionExecutionTimingData;
+use bsmr_execute::materialize::materializer::CasDownloadInfo;
+use bsmr_execute::materialize::materializer::DeclareArtifactPayload;
+use bsmr_hash::BuckIndexSet;
+use chrono::DateTime;
+use chrono::TimeZone;
+use chrono::Utc;
+use dupe::Dupe;
+use pagable::Pagable;
+use pagable::pagable_typetag;
+use remote_execution as RE;
+use starlark::values::OwnedFrozenValue;
+
+use crate::actions::impls::offline;
+
+#[derive(Debug, bsmr_error::Error)]
+enum CasArtifactActionDeclarationError {
+    #[error("CAS artifact action should have exactly 1 output, got {0}")]
+    #[bsmr(tag = ReCasArtifactWrongNumberOfOutputs)]
+    WrongNumberOfOutputs(usize),
+}
+
+#[derive(Debug, bsmr_error::Error)]
+enum CasArtifactActionExecutionError {
+    #[error(
+        "The digest `{digest}` was declared to expire after `{declared_expiration}`, but it was set to expire at `{effective_expiration}`{}"
+    , (if .effective_expiration != .updated_expiration {format!(" (updated to {})", .updated_expiration)} else {"".to_owned()}))]
+    #[bsmr(tag = ReCasArtifactInvalidExpiration)]
+    InvalidExpiration {
+        digest: FileDigest,
+        declared_expiration: DateTime<Utc>,
+        effective_expiration: DateTime<Utc>,
+        updated_expiration: DateTime<Utc>,
+    },
+}
+
+#[derive(Debug, Allocative, Clone, Dupe, Copy, Pagable)]
+pub(crate) enum DirectoryKind {
+    Directory,
+    Tree,
+}
+
+#[derive(Debug, Allocative, Pagable)]
+pub(crate) enum ArtifactKind {
+    Directory(DirectoryKind),
+    File,
+}
+
+/// This is an action that lets you reference a CAS artifact. Notionally it's a bit like
+/// download_file. When the action executes it'll just verify that the content exists. You have to
+/// provide an minimum expiration timestamp when you add this to force users to think about the TTL
+/// of the artifacts they are referencing (though admittedly this was also an issue in
+/// download_file).
+#[derive(Debug, Allocative, Pagable)]
+pub(crate) struct UnregisteredCasArtifactAction {
+    pub(crate) digest: FileDigest,
+    pub(crate) re_use_case: RemoteExecutorUseCase,
+    /// We require the caller to declare when this digest will expire. The intention is to force
+    /// callers to pay some modicum of attention to when their digests expire.
+    #[allocative(skip)]
+    #[pagable(flatten_serde)]
+    pub(crate) expires_after: DateTime<Utc>,
+    pub(crate) executable: bool,
+    pub(crate) kind: ArtifactKind,
+}
+
+impl UnregisteredAction for UnregisteredCasArtifactAction {
+    fn register(
+        self: Box<Self>,
+        outputs: BuckIndexSet<BuildArtifact>,
+        _starlark_data: Option<OwnedFrozenValue>,
+        _error_handler: Option<OwnedFrozenValue>,
+    ) -> bsmr_error::Result<Box<dyn Action>> {
+        Ok(Box::new(CasArtifactAction::new(outputs, *self)?))
+    }
+}
+
+#[derive(Debug, Allocative, Pagable)]
+struct CasArtifactAction {
+    output: BuildArtifact,
+    inner: UnregisteredCasArtifactAction,
+}
+
+impl CasArtifactAction {
+    fn new(
+        outputs: BuckIndexSet<BuildArtifact>,
+        inner: UnregisteredCasArtifactAction,
+    ) -> bsmr_error::Result<Self> {
+        let outputs_len = outputs.len();
+        let mut outputs = outputs.into_iter();
+
+        let output = match (outputs.next(), outputs.next()) {
+            (Some(output), None) => output,
+            _ => {
+                return Err(
+                    CasArtifactActionDeclarationError::WrongNumberOfOutputs(outputs_len).into(),
+                );
+            }
+        };
+
+        Ok(Self { output, inner })
+    }
+
+    async fn execute_for_offline(
+        &self,
+        ctx: &mut dyn ActionExecutionCtx,
+    ) -> bsmr_error::Result<(ActionOutputs, ActionExecutionMetadata)> {
+        let outputs = offline::declare_copy_from_offline_cache(ctx, &[&self.output]).await?;
+
+        Ok((
+            outputs,
+            ActionExecutionMetadata {
+                execution_kind: ActionExecutionKind::Deferred,
+                timing: ActionExecutionTimingData::default(),
+                input_files_bytes: None,
+                waiting_data: WaitingData::new(),
+            },
+        ))
+    }
+}
+
+#[pagable_typetag]
+#[async_trait]
+impl Action for CasArtifactAction {
+    fn kind(&self) -> bsmr_data::ActionKind {
+        bsmr_data::ActionKind::CasArtifact
+    }
+
+    fn inputs(&self) -> bsmr_error::Result<Cow<'_, [ArtifactGroup]>> {
+        Ok(Cow::Borrowed(&[]))
+    }
+
+    fn outputs(&self) -> Cow<'_, [BuildArtifact]> {
+        Cow::Borrowed(slice::from_ref(&self.output))
+    }
+
+    fn first_output(&self) -> &BuildArtifact {
+        &self.output
+    }
+
+    fn category(&self) -> CategoryRef<'_> {
+        CategoryRef::unchecked_new("cas_artifact")
+    }
+
+    fn identifier(&self) -> Option<&str> {
+        Some(self.output.get_path().path().as_str())
+    }
+
+    async fn execute(
+        &self,
+        ctx: &mut dyn ActionExecutionCtx,
+        waiting_data: WaitingData,
+    ) -> Result<(ActionOutputs, ActionExecutionMetadata), ExecuteError> {
+        // If running in offline environment, try to restore from cached outputs.
+        if ctx.run_action_knobs().use_network_action_output_cache {
+            return self.execute_for_offline(ctx).await.map_err(Into::into);
+        }
+
+        let re_client = ctx.re_client().with_use_case(self.inner.re_use_case);
+
+        let get_expiration = || async {
+            bsmr_error::Ok(
+                re_client
+                    .get_digest_expirations(vec![self.inner.digest.to_re()])
+                    .await
+                    .with_buck_error_context(|| {
+                        format!(
+                            "Error accessing digest expiration for: `{}`",
+                            self.inner.digest,
+                        )
+                    })?
+                    .into_iter()
+                    .next()
+                    .ok_or_else(|| {
+                        internal_error!("get_digest_expirations did not return anything")
+                    })
+                    .tag(bsmr_error::ErrorTag::ReCasArtifactGetDigestExpirationError)?
+                    .1,
+            )
+        };
+
+        let expiration = get_expiration().await?;
+
+        if expiration < self.inner.expires_after {
+            // The expires_after mechanism is intended to support users storing prebuilt artifacts in cas and asserting that their builds will continue
+            // working for some minimum time period (typically years).
+            //
+            // If the observed expiration is too short, we'll log a soft error and try to extend it.
+            //
+            // TODO(cjhopman): It would be reasonable for this behavior to be more configurable, there just hasn't been need for it yet.
+            let now = Utc::now();
+
+            // Adds a small buffer to avoid minor clock skew issues.
+            let new_ttl =
+                self.inner.expires_after.signed_duration_since(now) + chrono::Duration::minutes(5);
+
+            re_client
+                .extend_digest_ttl(
+                    vec![self.inner.digest.to_re()],
+                    new_ttl
+                        .to_std()
+                        .map_err(|e| internal_error!("casting ttl to std duration `{}`", e))?,
+                )
+                .await?;
+
+            // We were able to extend the ttl, so this won't be failing builds, but we need to report it so we can track it.
+            let new_expiration = get_expiration().await?;
+            let error: bsmr_error::Error = CasArtifactActionExecutionError::InvalidExpiration {
+                digest: self.inner.digest.dupe(),
+                declared_expiration: self.inner.expires_after,
+                effective_expiration: expiration,
+                updated_expiration: new_expiration,
+            }
+            .into();
+            soft_error!("cas_artifact_invalid_expiration", error, quiet: true).ok();
+        }
+
+        let value = match self.inner.kind {
+            ArtifactKind::Directory(directory_kind) => {
+                // TODO: should honor the semaphore here from OutputTreesDownloadConfig.
+
+                let tree = match directory_kind {
+                    DirectoryKind::Tree => re_client
+                        .download_typed_blobs::<RE::Tree>(None, vec![self.inner.digest.to_re()])
+                        .await
+                        .and_then(|trees| {
+                            trees
+                                .into_iter()
+                                .next()
+                                .ok_or_else(|| internal_error!("RE response was empty"))
+                        })
+                        .with_buck_error_context(|| {
+                            format!("Error downloading tree: {}", self.inner.digest)
+                        })?,
+                    DirectoryKind::Directory => {
+                        let root_directory = re_client
+                            .download_typed_blobs::<RE::Directory>(
+                                None,
+                                vec![self.inner.digest.to_re()],
+                            )
+                            .await
+                            .and_then(|dirs| {
+                                dirs.into_iter()
+                                    .next()
+                                    .ok_or_else(|| internal_error!("RE response was empty"))
+                            })
+                            .with_buck_error_context(|| {
+                                format!("Error downloading dir: {}", self.inner.digest)
+                            })?;
+                        re_directory_to_re_tree(root_directory, &re_client).await?
+                    }
+                };
+
+                // NOTE: We assign a zero timestamp here because we didn't check the nodes in the tree,
+                // just the tree itself. Perhaps we should, but some of the prospective users for this
+                // have very large trees so that might not be wise.
+                let dir = re_tree_to_directory(
+                    &tree,
+                    &Utc.timestamp_opt(0, 0).unwrap(),
+                    ctx.digest_config(),
+                    ctx.output_trees_download_config()
+                        .fingerprint_re_output_trees_eagerly(),
+                )
+                .buck_error_context("Invalid directory")?;
+
+                ArtifactValue::new(
+                    ActionDirectoryEntry::Dir(
+                        dir.fingerprint(ctx.digest_config().as_directory_serializer())
+                            .shared(&*INTERNER),
+                    ),
+                    None,
+                )
+            }
+            ArtifactKind::File => {
+                let digest = TrackedFileDigest::new_expires(
+                    self.inner.digest.dupe(),
+                    expiration,
+                    ctx.digest_config().cas_digest_config(),
+                );
+                let metadata = FileMetadata {
+                    digest,
+                    is_executable: self.inner.executable,
+                };
+                ArtifactValue::file(metadata)
+            }
+        };
+
+        let path = ctx.fs().resolve_build(
+            self.output.get_path(),
+            if self.output.get_path().is_content_based_path() {
+                Some(value.content_based_path_hash())
+            } else {
+                None
+            }
+            .as_ref(),
+        )?;
+        let configuration_path = ctx
+            .materializer()
+            .maybe_eager_configuration_path(ctx.fs(), self.output.get_path())?;
+        ctx.materializer()
+            .declare_cas_many(
+                Arc::new(CasDownloadInfo::new_declared(self.inner.re_use_case)),
+                vec![DeclareArtifactPayload {
+                    path,
+                    artifact: value.dupe(),
+                    configuration_path,
+                }],
+            )
+            .await?;
+
+        let io_provider = ctx.io_provider();
+        if let Some(tracer) = TracingIoProvider::from_io(&*io_provider) {
+            let offline_cache_path =
+                offline::declare_copy_to_offline_output_cache(ctx, &self.output, value.dupe())
+                    .await?;
+            tracer.add_buck_out_entry(offline_cache_path);
+        }
+
+        Ok((
+            ActionOutputs::from_single(self.output.get_path().dupe(), value),
+            ActionExecutionMetadata {
+                execution_kind: ActionExecutionKind::Deferred,
+                timing: ActionExecutionTimingData::default(),
+                input_files_bytes: None,
+                waiting_data,
+            },
+        ))
+    }
+}

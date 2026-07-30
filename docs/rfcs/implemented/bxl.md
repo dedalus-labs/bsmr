@@ -2,22 +2,22 @@ import { FbInternalOnly } from 'docusaurus-plugin-internaldocs-fb/internal';
 
 # Buck Extension Language (BXL)
 
-Buck2 will allow more complex introspection and interaction with its graphs via
+Bessemer will allow more complex introspection and interaction with its graphs via
 the `bxl` feature. BXL will be a starlark script that allows integrators to
 interact with `buck` commands like build and query within starlark, creating a
 sequence of operations that introspect, build, and extend the build graph.
 
 <FbInternalOnly>
 
-https://fb.workplace.com/groups/buck2prototyping/permalink/2404233936540759/.
+https://fb.workplace.com/groups/bsmrprototyping/permalink/2404233936540759/.
 
 </FbInternalOnly>
 
 These are essentially custom buck operations, defined in Starlark, that still
-follow the constraints of Buck2, which will enable the same level of
-incrementality and caching as native buck2 operations. Furthermore, bxl will
+follow the constraints of Bessemer, which will enable the same level of
+incrementality and caching as native bsmr operations. Furthermore, bxl will
 have subscriptions enabled in the future, where based on the incrementality
-tracking, buck2 can provide "updated" bxl executions when its known that its
+tracking, bsmr can provide "updated" bxl executions when its known that its
 dependencies change, and even when generated sources need to be regenerated.
 
 The following proposes a basic set of bxl api and building blocks that are
@@ -61,11 +61,11 @@ With bxl, the graph traversals can be written in starlark, allowing propagation
 of information down the graph, accessing targets’ attributes to analyze
 dependencies, and access providers for artifacts and action information needed
 to output the project file. Project generation also performs directory listings
-that buck2’s dice already performs and caches (I think, need to confirm). Bxl
+that bsmr’s dice already performs and caches (I think, need to confirm). Bxl
 poses the interesting possibility that we can expose a limited set of IO
 operations that are tracked by dice so bxl can access the same cached file
-operations as rest of buck2. Android project generation currently doesn’t write
-project files to buck-out, which prevents it from using buck2 actions. It will
+operations as rest of bsmr. Android project generation currently doesn’t write
+project files to buck-out, which prevents it from using bsmr actions. It will
 have to rely on an external script to process the graph information printed by
 buck and write the actual project files. If it moves to `buck-out` based, then
 it can take advantage of creating actions directly using the graph information
@@ -78,7 +78,7 @@ iOS is currently being implemented as a series of queries that are aggregated by
 an external python script, that then invokes builds of subtargets. The same can
 be achieved in bxl, but with the entire sequence being cacheable and
 subscribable so that when the graph is updated, or even when generated files
-need updating, buck2 can automatically push the updates. However, it is
+need updating, bsmr can automatically push the updates. However, it is
 uncertain whether xcode itself can make use of push updates.
 
 <FbInternalOnly>
@@ -107,7 +107,7 @@ move project generation directly into bxl.
 ## Goals
 
 From the above use cases, BXL should offer a simple Starlark API that allows
-easy introspection of the buck2 graph at unconfigured, configured, providers,
+easy introspection of the bsmr graph at unconfigured, configured, providers,
 and actions stage, maintaining incremental behaviour of the BXL evaluation
 itself.
 
@@ -146,10 +146,10 @@ func2 = bxl_main(
 
 ```
 
-To invoke buck2 for that bxl, we can have the command line as follows.
+To invoke bsmr for that bxl, we can have the command line as follows.
 
 ```shell
-buck2 bxl sample.bxl::func1 -- --arg1 foo bar baz
+bsmr bxl sample.bxl::func1 -- --arg1 foo bar baz
 ```
 
 For bxl functions to read the arguments, a similar api to rule attrs is used
@@ -233,7 +233,7 @@ for t in targets:
 
 All computations requested by a bxl function will be treated as inputs. So if a
 bxl function calls uquery, then uses the result to do a cquery, and then a
-build, if buck2 detects that any of the recorded calls to uquery, cquery, and
+build, if bsmr detects that any of the recorded calls to uquery, cquery, and
 build changes, the entire bxl will be reran, with no early cutoff. The
 computations itself will still be cached via DICE, so no major performance
 issues are expected. However, in the event that a bxl function is

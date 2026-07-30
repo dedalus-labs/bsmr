@@ -23,11 +23,11 @@ DistInfo = provider(
         # nonessential runtime files, such as external debuginfo which one would
         # need in order to run the executable in a debugger.
         #
-        # When an executable is the end goal of a build (i.e. `buck2 build :main`)
+        # When an executable is the end goal of a build (i.e. `bsmr build :main`)
         # and `--materializations=none` has not been passed, then all of
         # `other_outputs` is what gets materialized. For convenience to developers,
         # we choose to make this include external debuginfo, rather than requiring
-        # them to build something like `buck2 build :main :main[debuginfo]` in order
+        # them to build something like `bsmr build :main :main[debuginfo]` in order
         # to have an executable that is debuggable locally.
         #
         # In contrast, `nondebug_runtime_files` are the things required always in

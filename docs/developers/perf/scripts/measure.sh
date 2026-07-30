@@ -12,7 +12,7 @@
 # heap profile.
 #
 # Usage:
-#   measure.sh <bin> <tag> -- <buck2 args...>
+#   measure.sh <bin> <tag> -- <bsmr args...>
 #
 # Example:
 #   measure.sh /tmp/b2a a -- build //some/target -v0 --console=none
@@ -25,14 +25,14 @@
 #   <OUT_DIR>/<tag>_warmup.txt       client stderr from the warmup build
 #   <OUT_DIR>/<tag>_measure.txt      client stderr from the measurement build (with /usr/bin/time -v)
 #   <OUT_DIR>/<tag>_rss.txt          /proc/<pid>/status excerpt for the daemon
-#   <OUT_DIR>/<tag>_stats.json       buck2 debug allocator-stats
-#   <OUT_DIR>/<tag>_heap.prof        buck2 debug heap-dump
+#   <OUT_DIR>/<tag>_stats.json       bsmr debug allocator-stats
+#   <OUT_DIR>/<tag>_heap.prof        bsmr debug heap-dump
 
 set -u
 OUT_DIR=${OUT_DIR:-/tmp}
 
 if [ "$#" -lt 3 ] || [ "$3" != "--" ]; then
-  echo "usage: $0 <bin> <tag> -- <buck2 args...>" >&2
+  echo "usage: $0 <bin> <tag> -- <bsmr args...>" >&2
   exit 2
 fi
 BIN=$1

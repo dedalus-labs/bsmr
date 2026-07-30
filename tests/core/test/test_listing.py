@@ -11,10 +11,10 @@
 from enum import Enum
 from typing import Any, Dict, List
 
-from buck2.tests.e2e_util.api.buck import Buck
-from buck2.tests.e2e_util.asserts import expect_failure
-from buck2.tests.e2e_util.buck_workspace import buck_test, env
-from buck2.tests.e2e_util.helper.utils import filter_events, random_string
+from bsmr.tests.e2e_util.api.buck import Buck
+from bsmr.tests.e2e_util.asserts import expect_failure
+from bsmr.tests.e2e_util.buck_workspace import buck_test, env
+from bsmr.tests.e2e_util.helper.utils import filter_events, random_string
 
 
 class TestDiscovery(Enum):
@@ -125,7 +125,7 @@ async def test_discovery_cached_on_re(buck: Buck) -> None:
 
 
 @buck_test()
-@env("BUCK2_TEST_SKIP_ACTION_CACHE_WRITE", "true")
+@env("BSMR_TEST_SKIP_ACTION_CACHE_WRITE", "true")
 async def test_local_discovery_uploaded_to_cache(buck: Buck) -> None:
     seed = random_string()
     args = [

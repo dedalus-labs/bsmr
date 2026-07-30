@@ -8,7 +8,7 @@
 
 # `native` is fine to use in the prelude for v2
 
-# This is buck2's shim import. Any public symbols here will be available within
+# This is bsmr's shim import. Any public symbols here will be available within
 # **all** interpreted files.
 
 load("@prelude//:is_full_meta_repo.bzl", "is_full_meta_repo")
@@ -183,7 +183,7 @@ def _at_most_one(*items):
     return res
 
 def _get_valid_cpu_filters(cpu_filters: [list[str], None]) -> list[str]:
-    if read_root_config("buck2", "android_force_single_default_cpu") in ("True", "true"):
+    if read_root_config("bsmr", "android_force_single_default_cpu") in ("True", "true"):
         return [CPU_FILTER_FOR_DEFAULT_PLATFORM]
 
     cpu_abis_config_string = read_root_config("ndk", "cpu_abis")
@@ -469,7 +469,7 @@ __overridden_builtins__ = (
     else {}
 )
 
-__shimmed_native__ = __struct_to_dict(__buck2_builtins__)
+__shimmed_native__ = __struct_to_dict(__bsmr_builtins__)
 __shimmed_native__.update(__overridden_builtins__)
 __shimmed_native__.update(__rules__)
 __shimmed_native__.update(_user_rules)

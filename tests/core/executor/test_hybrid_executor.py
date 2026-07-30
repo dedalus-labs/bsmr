@@ -12,11 +12,11 @@
 from typing import Optional
 
 import pytest
-from buck2.tests.e2e_util.api.buck import Buck
-from buck2.tests.e2e_util.api.buck_result import BuckException, InvocationRecord
-from buck2.tests.e2e_util.asserts import expect_failure
-from buck2.tests.e2e_util.buck_workspace import buck_test, env
-from buck2.tests.e2e_util.helper.utils import json_get, random_string, read_what_ran
+from bsmr.tests.e2e_util.api.buck import Buck
+from bsmr.tests.e2e_util.api.buck_result import BuckException, InvocationRecord
+from bsmr.tests.e2e_util.asserts import expect_failure
+from bsmr.tests.e2e_util.buck_workspace import buck_test, env
+from bsmr.tests.e2e_util.helper.utils import json_get, random_string, read_what_ran
 
 
 @buck_test()
@@ -383,7 +383,7 @@ async def test_hybrid_executor_remote_queuing_fallback(buck: Buck) -> None:
 
     record = await build(
         "slower_remotely_and_works_on_both_fallback_only",
-        env={"BUCK2_TEST_RE_QUEUE_ESTIMATE_S": "0"},
+        env={"BSMR_TEST_RE_QUEUE_ESTIMATE_S": "0"},
     )
     assert record["run_local_count"] == 0
     assert record["run_remote_count"] == 1
@@ -394,7 +394,7 @@ async def test_hybrid_executor_remote_queuing_fallback(buck: Buck) -> None:
         "slower_remotely_and_works_on_both_fallback_only",
         "-c",
         "build.remote_execution_fallback_on_estimated_queue_time_exceeds_s=10",
-        env={"BUCK2_TEST_RE_QUEUE_ESTIMATE_S": "100"},
+        env={"BSMR_TEST_RE_QUEUE_ESTIMATE_S": "100"},
     )
     assert record["run_local_count"] == 1
     assert record["run_remote_count"] == 0

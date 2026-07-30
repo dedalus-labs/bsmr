@@ -275,7 +275,7 @@ class Ksp2Step(
      *
      * Similar to compile_kotlin.py's _get_jdk_home() which uses jdk_locator, this invokes the java
      * binary with -XshowSettings:properties to discover java.home at action time. The java binary
-     * is a declared Buck2 input (from java_toolchain.java), making this hermetic.
+     * is a declared Bessemer input (from java_toolchain.java), making this hermetic.
      *
      * Result is cached per java binary path (subprocess runs at most once per distinct binary).
      */

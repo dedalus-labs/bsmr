@@ -8,7 +8,7 @@
 
 # pyre-strict
 
-from buck2.tests.e2e_util.api.buck import Buck
+from bsmr.tests.e2e_util.api.buck import Buck
 
 
 async def get_cfg(buck: Buck, *args: str) -> str:

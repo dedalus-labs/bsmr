@@ -15,7 +15,7 @@ prelude.cxx_library(
 
 go_package(
     name = "golib",
-    package_name = "buck2/tests/prelude/go/cgo/include_dir/golib",
+    package_name = "bsmr/tests/prelude/go/cgo/include_dir/golib",
     cgo = True,
     deps = [":clib"],
 )

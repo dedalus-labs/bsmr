@@ -65,15 +65,15 @@ class Test(unittest.TestCase):
         self.assertEqual(
             focused_paths,
             [
-                "buck-out/v2/gen/fbsource/56628b5feecfab0a/fbobjc/buck2/samples/focused_debugging/__Foo__/libFoo.a(Foo.mm.o)",
+                "buck-out/v2/gen/fbsource/56628b5feecfab0a/fbobjc/bsmr/samples/focused_debugging/__Foo__/libFoo.a(Foo.mm.o)",
             ],
         )
         self.assertEqual(
             scrubbed_paths,
             [
-                "buck-out/v2/gen/fbsource/56628b5feecfab0a/fbobjc/buck2/samples/focused_debugging/__HelloWorld__/__objects__/srcs/AppDelegate.m.o",
-                "buck-out/v2/gen/fbsource/56628b5feecfab0a/fbobjc/buck2/samples/focused_debugging/__HelloWorld__/__objects__/srcs/RootViewController.m.o",
-                "buck-out/v2/gen/fbsource/56628b5feecfab0a/fbobjc/buck2/samples/focused_debugging/__HelloWorld__/__objects__/srcs/main.m.o",
+                "buck-out/v2/gen/fbsource/56628b5feecfab0a/fbobjc/bsmr/samples/focused_debugging/__HelloWorld__/__objects__/srcs/AppDelegate.m.o",
+                "buck-out/v2/gen/fbsource/56628b5feecfab0a/fbobjc/bsmr/samples/focused_debugging/__HelloWorld__/__objects__/srcs/RootViewController.m.o",
+                "buck-out/v2/gen/fbsource/56628b5feecfab0a/fbobjc/bsmr/samples/focused_debugging/__HelloWorld__/__objects__/srcs/main.m.o",
             ],
         )
 
@@ -85,15 +85,15 @@ class Test(unittest.TestCase):
         self.assertEqual(
             focused_paths,
             [
-                "buck-out/v2/gen/fbsource/56628b5feecfab0a/fbobjc/buck2/samples/focused_debugging/__Foo__/libFoo.a(Foo.mm.o)",
+                "buck-out/v2/gen/fbsource/56628b5feecfab0a/fbobjc/bsmr/samples/focused_debugging/__Foo__/libFoo.a(Foo.mm.o)",
             ],
         )
         self.assertEqual(
             scrubbed_paths,
             [
-                "buck-out/v2/gen/fbsource/56628b5feecfab0a/fbobjc/buck2/samples/focused_debugging/__HelloWorld__/__objects__/srcs/AppDelegate.m.o",
-                "buck-out/v2/gen/fbsource/56628b5feecfab0a/fbobjc/buck2/samples/focused_debugging/__HelloWorld__/__objects__/srcs/RootViewController.m.o",
-                "buck-out/v2/gen/fbsource/56628b5feecfab0a/fbobjc/buck2/samples/focused_debugging/__HelloWorld__/__objects__/srcs/main.m.o",
+                "buck-out/v2/gen/fbsource/56628b5feecfab0a/fbobjc/bsmr/samples/focused_debugging/__HelloWorld__/__objects__/srcs/AppDelegate.m.o",
+                "buck-out/v2/gen/fbsource/56628b5feecfab0a/fbobjc/bsmr/samples/focused_debugging/__HelloWorld__/__objects__/srcs/RootViewController.m.o",
+                "buck-out/v2/gen/fbsource/56628b5feecfab0a/fbobjc/bsmr/samples/focused_debugging/__HelloWorld__/__objects__/srcs/main.m.o",
             ],
         )
 
@@ -123,7 +123,7 @@ class Test(unittest.TestCase):
             output_paths = load_focused_targets_output_paths(str(targets_json_file))
 
         self.assertEqual(
-            output_paths, {"fbobjc/buck2/samples/focused_debugging/__Foo__"}
+            output_paths, {"fbobjc/bsmr/samples/focused_debugging/__Foo__"}
         )
 
     def test_spec_targets_regex_all(self):
@@ -133,10 +133,10 @@ class Test(unittest.TestCase):
         self.assertEqual(
             focused_paths,
             [
-                "buck-out/v2/gen/fbsource/56628b5feecfab0a/fbobjc/buck2/samples/focused_debugging/__HelloWorld__/__objects__/srcs/AppDelegate.m.o",
-                "buck-out/v2/gen/fbsource/56628b5feecfab0a/fbobjc/buck2/samples/focused_debugging/__HelloWorld__/__objects__/srcs/RootViewController.m.o",
-                "buck-out/v2/gen/fbsource/56628b5feecfab0a/fbobjc/buck2/samples/focused_debugging/__HelloWorld__/__objects__/srcs/main.m.o",
-                "buck-out/v2/gen/fbsource/56628b5feecfab0a/fbobjc/buck2/samples/focused_debugging/__Foo__/libFoo.a(Foo.mm.o)",
+                "buck-out/v2/gen/fbsource/56628b5feecfab0a/fbobjc/bsmr/samples/focused_debugging/__HelloWorld__/__objects__/srcs/AppDelegate.m.o",
+                "buck-out/v2/gen/fbsource/56628b5feecfab0a/fbobjc/bsmr/samples/focused_debugging/__HelloWorld__/__objects__/srcs/RootViewController.m.o",
+                "buck-out/v2/gen/fbsource/56628b5feecfab0a/fbobjc/bsmr/samples/focused_debugging/__HelloWorld__/__objects__/srcs/main.m.o",
+                "buck-out/v2/gen/fbsource/56628b5feecfab0a/fbobjc/bsmr/samples/focused_debugging/__Foo__/libFoo.a(Foo.mm.o)",
             ],
         )
         self.assertEqual(
@@ -156,10 +156,10 @@ class Test(unittest.TestCase):
         self.assertEqual(
             scrubbed_paths,
             [
-                "buck-out/v2/gen/fbsource/56628b5feecfab0a/fbobjc/buck2/samples/focused_debugging/__HelloWorld__/__objects__/srcs/AppDelegate.m.o",
-                "buck-out/v2/gen/fbsource/56628b5feecfab0a/fbobjc/buck2/samples/focused_debugging/__HelloWorld__/__objects__/srcs/RootViewController.m.o",
-                "buck-out/v2/gen/fbsource/56628b5feecfab0a/fbobjc/buck2/samples/focused_debugging/__HelloWorld__/__objects__/srcs/main.m.o",
-                "buck-out/v2/gen/fbsource/56628b5feecfab0a/fbobjc/buck2/samples/focused_debugging/__Foo__/libFoo.a(Foo.mm.o)",
+                "buck-out/v2/gen/fbsource/56628b5feecfab0a/fbobjc/bsmr/samples/focused_debugging/__HelloWorld__/__objects__/srcs/AppDelegate.m.o",
+                "buck-out/v2/gen/fbsource/56628b5feecfab0a/fbobjc/bsmr/samples/focused_debugging/__HelloWorld__/__objects__/srcs/RootViewController.m.o",
+                "buck-out/v2/gen/fbsource/56628b5feecfab0a/fbobjc/bsmr/samples/focused_debugging/__HelloWorld__/__objects__/srcs/main.m.o",
+                "buck-out/v2/gen/fbsource/56628b5feecfab0a/fbobjc/bsmr/samples/focused_debugging/__Foo__/libFoo.a(Foo.mm.o)",
             ],
         )
 

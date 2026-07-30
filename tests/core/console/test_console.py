@@ -16,8 +16,8 @@ import re
 from pathlib import Path
 from typing import Any
 
-from buck2.tests.e2e_util.api.buck import Buck
-from buck2.tests.e2e_util.buck_workspace import buck_test, env
+from bsmr.tests.e2e_util.api.buck import Buck
+from bsmr.tests.e2e_util.buck_workspace import buck_test, env
 
 
 def fixture(name: str) -> str:
@@ -166,18 +166,18 @@ def _get(data: dict[str, Any], *key: str) -> dict[str, Any] | None:
 @buck_test()
 async def test_super_console_changes(buck: Buck) -> None:
     res = await buck.log("replay", fixture("my_genrule1"))
-    assert "File changed: fbcode//buck2/dir1/file1" in res.stderr
-    assert "Directory changed: fbcode//buck2/dir1" in res.stderr
+    assert "File changed: fbcode//bsmr/dir1/file1" in res.stderr
+    assert "Directory changed: fbcode//bsmr/dir1" in res.stderr
 
 
 @buck_test(
     extra_buck_config={
-        "buck2_system_warning": {
+        "bsmr_system_warning": {
             "memory_pressure_threshold_percent": "1",
         },
     },
 )
-@env("BUCK2_TEST_FAKE_SYSTEM_TOTAL_MEMORY", "1000")
+@env("BSMR_TEST_FAKE_SYSTEM_TOTAL_MEMORY", "1000")
 async def test_system_memory_exceeded_warning(buck: Buck) -> None:
     res = await buck.build("//:slow", "--console=simple")
     assert "High memory pressure" in res.stderr

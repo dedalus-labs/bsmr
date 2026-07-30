@@ -11,8 +11,8 @@
 import json
 import typing
 
-from buck2.tests.e2e_util.api.buck import Buck
-from buck2.tests.e2e_util.buck_workspace import buck_test
+from bsmr.tests.e2e_util.api.buck import Buck
+from bsmr.tests.e2e_util.buck_workspace import buck_test
 
 
 @buck_test(skip_for_os=["darwin", "windows"], disable_daemon_cgroup=False)
@@ -22,7 +22,7 @@ async def test_if_available_fallback_no_user_session(buck: Buck) -> None:
     instead of failing with DAEMON_STARTUP_FAILED."""
 
     with open(buck.cwd / ".buckconfig", "a") as buckconfig:
-        buckconfig.write("[buck2_resource_control]\n")
+        buckconfig.write("[bsmr_resource_control]\n")
         buckconfig.write("status = if_available\n")
 
     # Strip the env vars that systemd-run --user needs to find the D-Bus

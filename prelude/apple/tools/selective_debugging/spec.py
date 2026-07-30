@@ -26,13 +26,13 @@ class BuildTargetPatternOutputPathMatcher:
         elif package_and_name.endswith(":"):
             # package pattern
             package, _ = package_and_name.split(":")
-            # This assumes the output path created by buck2, which if
+            # This assumes the output path created by bsmr, which if
             # modified, would break this logic.
             output_path = f"{package}/__"
         else:
             # target pattern
             package, name = package_and_name.split(":")
-            # This assumes the output path created by buck2, which if
+            # This assumes the output path created by bsmr, which if
             # modified, would break this logic.
             output_path = f"{package}/__{name}__"
 

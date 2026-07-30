@@ -1,5 +1,5 @@
 This page contains notes and tips to assist you in understanding the different
-tools used when migrating Buck2 to Windows.
+tools used when migrating Bessemer to Windows.
 
 ## CMD, Powershell, Bash Command Comparison
 

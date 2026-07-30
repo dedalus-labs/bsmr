@@ -15,7 +15,7 @@
 # Applications: 34
 #
 # To regenerate this file, run:
-#   python3 buck2/prelude/erlang/toolchain/generate_otp_versions.py <output_file>
+#   python3 bsmr/prelude/erlang/toolchain/generate_otp_versions.py <output_file>
 
 _OTP_APPLICATIONS = [
     {"name": "asn1", "version": "5.3.1"},

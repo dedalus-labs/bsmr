@@ -11,8 +11,8 @@
 
 import json
 
-from buck2.tests.e2e_util.api.buck import Buck
-from buck2.tests.e2e_util.buck_workspace import buck_test
+from bsmr.tests.e2e_util.api.buck import Buck
+from bsmr.tests.e2e_util.buck_workspace import buck_test
 
 
 @buck_test()
@@ -28,7 +28,7 @@ async def test_daemon_buster(buck: Buck) -> None:
     assert pid1 == pid0
 
     with open(buck.cwd / ".buckconfig", "a") as f:
-        f.write("[buck2]\n")
+        f.write("[bsmr]\n")
         f.write("daemon_buster = 1\n")
 
     await buck.build(":")
@@ -40,7 +40,7 @@ async def test_daemon_buster(buck: Buck) -> None:
     assert pid3 == pid2
 
     with open(buck.cwd / ".buckconfig", "a") as f:
-        f.write("[buck2]\n")
+        f.write("[bsmr]\n")
         f.write("daemon_buster = 2\n")
 
     await buck.build(":")

@@ -7,7 +7,7 @@ replacement for `labels`.
 
 In buck1 we have `labels` builtin rule attribute, which is a list of strings.
 
-In buck2 we have `labels` attribute which is configured in prelude, it does not
+In bsmr we have `labels` attribute which is configured in prelude, it does not
 have special meaning.
 
 ## Context: package values
@@ -18,7 +18,7 @@ serializable as JSON.
 
 ## Context: metadata we use or we need
 
-There are several spaces where we use or need metadata to be stored in buck2
+There are several spaces where we use or need metadata to be stored in bsmr
 target graph.
 
 - fbcode uses per-package values to switch code to new clang

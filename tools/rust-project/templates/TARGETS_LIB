@@ -1,0 +1,7 @@
+load("@bsmr_build//rules:rust.bzl", "rust_library")
+
+rust_library(
+    name = "__NAME_PLACEHOLDER__",
+    srcs = glob(["src/**/*.rs"]),
+    deps = [],
+)

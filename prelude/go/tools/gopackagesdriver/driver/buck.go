@@ -117,8 +117,8 @@ func fixRePath(platform Platform, file string) error {
 
 func (b *buckShell) run(ctx context.Context, args []string) ([]byte, error) {
 	args = append([]string{"--client-metadata=id=gopackagesdriver"}, args...)
-	slog.Debug("running 'buck2'", "args", args)
-	out, err := b.cmder.Exec(ctx, "buck2", args...)
+	slog.Debug("running 'bsmr'", "args", args)
+	out, err := b.cmder.Exec(ctx, "bsmr", args...)
 	if err != nil {
 		return nil, err
 	}

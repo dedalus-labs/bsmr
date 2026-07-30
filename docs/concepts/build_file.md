@@ -6,7 +6,7 @@ title: Build File
 # Build File
 
 A _build file_ is a file, typically named `BUCK`, that defines one or more
-[build rule](build_rule.md)s. Buck2 takes a `BUCK` file as input and evaluates
+[build rule](build_rule.md)s. Bessemer takes a `BUCK` file as input and evaluates
 the file to declare [target](build_target.md)s, which are then used to create a
 graph of dependencies and to derive the actions that must be completed to build
 intermediate and final software outputs.
@@ -79,13 +79,13 @@ of the target.
 
 ### Build file naming configuration
 
-- You can change the name that Buck2 uses for the build file in the `buildfile`
+- You can change the name that Bessemer uses for the build file in the `buildfile`
   section of [buckconfig](glossary.md#buckconfig).
 
 ## Cross-referencing (source files & packages)
 
-Understanding Buck2's referencing model is crucial for building correct and
-efficient projects. Buck2 approaches dependencies from two essential
+Understanding Bessemer's referencing model is crucial for building correct and
+efficient projects. Bessemer approaches dependencies from two essential
 perspectives:
 
 1. **Source file referencing** - Defines which build file has authority over
@@ -93,7 +93,7 @@ perspectives:
 2. **Build package dependencies** - Establishes how targets from different
    packages can depend on each other
 
-These rules ensure clean dependency management and enable Buck2 to create
+These rules ensure clean dependency management and enable Bessemer to create
 efficient, reproducible builds.
 
 ### Source file referencing

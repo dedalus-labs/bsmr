@@ -8,5 +8,5 @@ ignore=ignored
 root = .
 prelude = prelude
 
-[buck2]
+[bsmr]
 materializations = deferred

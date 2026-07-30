@@ -38,7 +38,7 @@ are available:
 ### Writing a prelude-compatible toolchain
 
 People will often first encounter toolchains when they want to switch off of the
-demo toolchains that `buck2 init` uses by default. For example, one might want
+demo toolchains that `bsmr init` uses by default. For example, one might want
 to tweak which compiler is used, which flags are passed to it, or where it is
 fetched from.
 
@@ -94,7 +94,7 @@ supported by the prelude.
 ### Exposing execution dependencies from a toolchain
 
 Toolchains typically expose their tools (compilers, linters, etc.) as
-`attrs.exec_dep()` attributes. This lets Buck2 configure them for the execution
+`attrs.exec_dep()` attributes. This lets Bessemer configure them for the execution
 platform and include them in
 [execution platform resolution](configurations.md#toolchain-deps). Here is an
 example:
@@ -140,7 +140,7 @@ foo_toolchain(
 ```
 
 A working example of this pattern can be found in
-`tests/targets/toolchain_deps/` in the Buck2 repository.
+`tests/targets/toolchain_deps/` in the Bessemer repository.
 
 The [Accessing a toolchain in a build rule
 implementation](#accessing-a-toolchain-in-a-build-rule-implementation) section
@@ -182,7 +182,7 @@ foo_binary = rule(
 
 ## Writing a hermetic toolchain
 
-One of the benefits of Buck2 is that it makes it quite easy to write a hermetic
+One of the benefits of Bessemer is that it makes it quite easy to write a hermetic
 toolchain, meaning one that does not look up tools in the environment, but
 instead explicitly downloads and tracks them as part of the build.
 

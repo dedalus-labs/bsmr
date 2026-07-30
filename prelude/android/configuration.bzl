@@ -11,12 +11,12 @@ load("@prelude//android:min_sdk_version.bzl", "get_min_sdk_version_constraint_va
 load("@prelude//cfg/modifier:name.bzl", "cfg_name")
 load("@prelude//utils:expect.bzl", "expect")
 
-# Android binaries (APKs or AABs) can be built for one or more different platforms. buck2 supports
+# Android binaries (APKs or AABs) can be built for one or more different platforms. bsmr supports
 # building Android binaries for arm32, arm64, x86, and x86_64. The platform(s) that we are building
 # for are specified by the `cpu_filters` attribute on the binary rule.
 
 # In order to build our native libraries for the correct platform(s), we do a (split) transition
-# (https://www.internalfb.com/intern/staticdocs/buck2/docs/rule_authors/configuration_transitions)
+# (https://www.internalfb.com/intern/staticdocs/bsmr/docs/rule_authors/configuration_transitions)
 # on the `deps` of the binary, and have each of the resulting configured sub-graphs be responsible
 # for building the native libraries for one of the specified platforms.
 
@@ -165,8 +165,8 @@ cpu_transition = transition(
     ],
 )
 
-FORCE_SINGLE_CPU = read_root_config("buck2", "android_force_single_cpu") in ("True", "true")
-FORCE_SINGLE_DEFAULT_CPU = read_root_config("buck2", "android_force_single_default_cpu") in ("True", "true")
+FORCE_SINGLE_CPU = read_root_config("bsmr", "android_force_single_cpu") in ("True", "true")
+FORCE_SINGLE_DEFAULT_CPU = read_root_config("bsmr", "android_force_single_default_cpu") in ("True", "true")
 
 # Common attributes required by any rule that uses cpu_transition or cpu_split_transition.
 CPU_TRANSITION_ATTRS = {

@@ -13,10 +13,10 @@ import shutil
 from os.path import exists, islink
 from pathlib import Path
 
-from buck2.tests.e2e_util.api.buck import Buck
-from buck2.tests.e2e_util.asserts import expect_failure
-from buck2.tests.e2e_util.buck_workspace import buck_test, env
-from buck2.tests.e2e_util.helper.utils import read_timestamps
+from bsmr.tests.e2e_util.api.buck import Buck
+from bsmr.tests.e2e_util.asserts import expect_failure
+from bsmr.tests.e2e_util.buck_workspace import buck_test, env
+from bsmr.tests.e2e_util.helper.utils import read_timestamps
 
 
 def _setup_sandbox(buck: Buck) -> None:
@@ -55,7 +55,7 @@ async def test_success_install(buck: Buck, tmp_path: Path) -> None:
 
 
 @buck_test(write_invocation_record=True)
-@env("BUCK_LOG", "buck2_server_commands::commands::install=debug")
+@env("BUCK_LOG", "bsmr_server_commands::commands::install=debug")
 async def test_install_logging(buck: Buck, tmp_path: Path) -> None:
     _setup_sandbox(buck)
     tmp_dir = tmp_path / "install_test"
@@ -105,7 +105,7 @@ async def test_install_logs_target_rule_type_names(buck: Buck, tmp_path: Path) -
 
 
 @buck_test()
-@env("BUCK2_INSTALLER_SEND_TIMEOUT_S", "1")
+@env("BSMR_INSTALLER_SEND_TIMEOUT_S", "1")
 async def test_send_file_timeout(buck: Buck, tmp_path: Path) -> None:
     _setup_sandbox(buck)
     await expect_failure(

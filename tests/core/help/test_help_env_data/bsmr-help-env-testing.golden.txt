@@ -1,0 +1,96 @@
+# This file is @generated, regenerate by re-running test with `-- --env BSMR_UPDATE_GOLDEN=1` appended to the test command
+
+Name                                           Type                       Default
+BSMR_ACTION_DIGEST_TRACE_LG_SAMPLE_RATE       u32
+BSMR_ARG0                                     String
+BSMR_CLIENT_METADATA                          String
+BSMR_CONSOLE_OUTPUT_LIMIT                     u64
+BSMR_DEBUG_RAWOUTPUT_CHUNK_SIZE               usize                      DEFAULT_CHUNK_SIZE
+BSMR_DICE_DUMP_ON_PANIC                       bool                       false
+BSMR_DICE_SNAPSHOT_INTERVAL_MS                u64                        500
+BSMR_DISABLE_EDEN_HEALTH_CHECK                bool                       false
+BSMR_DISABLE_FILE_ATTR                        bool                       false
+BSMR_DISABLE_MACOS_QOS                        bool                       false
+BSMR_DUMP_FBS                                 String
+BSMR_EDEN_SEMAPHORE                           usize                      DEFAULT_MAX_OUTSTANDING_REQUESTS
+BSMR_ENABLE_EDEN_THRIFT_READ                  bool                       false
+BSMR_HARD_ERROR                               String
+BSMR_IGNORE_VERSION_EXTRACTION_FAILURE        bool                       false
+BSMR_INSTALLER_SEND_TIMEOUT_S                 u64
+BSMR_INSTALLER_TIMEOUT_S                      u64
+BSMR_IO_SEMAPHORE                             usize                      bsmr_util::threads::available_parallelism()
+BSMR_IO_THREADS                               usize                      4
+BSMR_KEEP_DEP_FILE_DIRECTORIES                bool                       false
+BSMR_LIB_BACKTRACE                            String
+BSMR_MAX_BLOCKING_THREADS                     usize
+BSMR_PARANOID_PATH                            String
+BSMR_RE_DOWNLOAD_CONCURRENCY                  usize                      256
+BSMR_RUNTIME_THREADS                          usize
+BSMR_SCRIBE_CATEGORY                          String
+BSMR_SELF_TEST_TIMEOUT_S                      u64
+BSMR_SHOW_SOFT_ERRORS                         String
+BSMR_TERMINATE_AFTER                          u64
+BSMR_TESTING_CHECKER_INTERVAL_SECONDS         u64
+BSMR_TESTING_INACTIVITY_TIMEOUT               bool                       false
+BSMR_TEST_BLOCK_ON_UPLOAD                     bool                       false
+BSMR_TEST_BUILD_ERROR                         bool                       false
+BSMR_TEST_DAEMON_ORIGINATING_CGROUP           String
+BSMR_TEST_DAEMON_STARTUP_SIGNAL               bool                       false
+BSMR_TEST_DISABLE_CACHING                     bool
+BSMR_TEST_DISABLE_DAEMON_CGROUP               bool
+BSMR_TEST_DISABLE_LOG_UPLOAD                  bool                       false
+BSMR_TEST_ERROR_ON_CACHE_UPLOAD               bool                       false
+BSMR_TEST_EXTRA_EXTERNAL_CONFIG               String
+BSMR_TEST_FAIL_BUCKD_AUTH                     bool                       false
+BSMR_TEST_FAIL_CONNECT                        bool                       false
+BSMR_TEST_FAIL_RE_DOWNLOADS                   bool                       false
+BSMR_TEST_FAIL_RE_EXECUTE                     bool                       false
+BSMR_TEST_FAIL_RE_RESOURCE_EXHAUSTED          bool                       false
+BSMR_TEST_FAIL_STREAMING                      bool                       false
+BSMR_TEST_FAKE_SYSTEM_TOTAL_MEMORY            u64
+BSMR_TEST_FORCE_CACHE_UPLOAD                  bool                       false
+BSMR_TEST_FORCE_DECLARE_MISMATCH              bool                       false
+BSMR_TEST_INIT_DAEMON_ERROR                   bool                       false
+BSMR_TEST_INIT_DATA_SLEEP_SECS                u64
+BSMR_TEST_INJECTED_MISSING_DIGESTS            Vec<FileDigest>
+BSMR_TEST_MANIFOLD_CHUNK_BYTES                u64
+BSMR_TEST_MANIFOLD_TTL_S                      u64
+BSMR_TEST_ONLY_REMOTE_DEP_FILE_CACHE          bool                       false
+BSMR_TEST_RESOURCE_CONTROL_CONFIG             String
+BSMR_TEST_RE_QUEUE_ESTIMATE_S                 u64
+BSMR_TEST_SKIP_ACTION_CACHE_WRITE             bool                       false
+BSMR_TEST_SKIP_DEFAULT_EXTERNAL_CONFIG        bool                       false
+BSMR_TEST_SKIP_DICE_CLEAR_ON_MERGEBASE_CHANGE bool                       false
+BSMR_TEST_STDIN_BUFFER_SIZE                   usize
+BSMR_TEST_TOMBSTONED_DIGESTS                  StdBuckHashSet<FileDigest>
+BSMR_TEST_TPX_USE_TCP                         bool                       false
+BSMR_WATCHMAN_TIMEOUT                         u64                        57
+BUCKD_STARTUP_INIT_TIMEOUT                     u64
+BUCKD_STARTUP_TIMEOUT                          u64
+BUCK_CONSOLE                                   String
+BUCK_DAEMON_LOG_TO_FILE                        u8
+BUCK_DEFAULT_DIGEST_ALGORITHM                  DigestAlgorithmFamily
+BUCK_DISABLE_EXPANDED_PROGRESS                 bool                       false
+BUCK_LOG                                       String
+BUCK_NO_INTERACTIVE_CONSOLE                    String
+BUCK_OFFLINE_BUILD                             String
+BUCK_PARANOID                                  bool
+BUCK_PREFER_REMOTE                             String
+BUCK_VERBOSE                                   String
+BUCK_WRAPPER_START_TIME                        u64
+CI                                             bool                       false
+CODING_AGENT_METADATA                          String
+COMPLETION_VERIFY_LOCKFILE                     String
+DICE_DETECT_CYCLES_UNSTABLE                    DetectCycles
+ENFORCE_DISPATCHER_SET                         bool                       false
+FORCE_WANT_RESTART                             bool                       false
+SANDCASTLE                                     String
+SANDCASTLE_ALIAS                               String
+SANDCASTLE_ID                                  String
+SANDCASTLE_INSTANCE_ID                         u64
+SANDCASTLE_JOB_INFO                            String
+SANDCASTLE_SCHEDULE_TYPE                       String
+SANDCASTLE_TYPE                                String
+SCHEDULE_TYPE                                  String
+SKYCASTLE_WORKFLOW_ALIAS                       String
+SKYCASTLE_WORKFLOW_RUN_ID                      String

@@ -1,11 +1,11 @@
-## An example showing how Buck2 can be used in Visual Studio Code on Windows
+## An example showing how Bessemer can be used in Visual Studio Code on Windows
 
 After completing the setup, below, click F5 to run with the debugger attached.
 You can also use Ctrl + Shift + B to build. By default it compiles with the
-"debug" configuration. To compile in release pass "-c release" to Buck2's build
+"debug" configuration. To compile in release pass "-c release" to Bessemer's build
 command.
 
 ## Setup
 
-Run `buck2 init --git`. Open this folder in Visual Studio Code and install the
+Run `bsmr init --git`. Open this folder in Visual Studio Code and install the
 recommended extensions.

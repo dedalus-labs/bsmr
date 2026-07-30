@@ -216,7 +216,7 @@ Note select on defaults mentioned in the original RFC are still planned to be su
 
 ### Background
 
-Currently in Buck2, [`ConfigurationInfo`](https://buck2.build/docs/api/build/ConfigurationInfo/) exposes `.constraints` as a dictionary attribute that can be directly accessed and manipulated. With unified constraint, a constraint setting can now declare a default constraint value that should be used when the constraint is not explicitly set.
+Currently in Bessemer, [`ConfigurationInfo`](https://buck2.build/docs/api/build/ConfigurationInfo/) exposes `.constraints` as a dictionary attribute that can be directly accessed and manipulated. With unified constraint, a constraint setting can now declare a default constraint value that should be used when the constraint is not explicitly set.
 
 ### Problem
 

@@ -1,8 +1,8 @@
-# This file is @generated, regenerate by re-running test with `-- --env BUCK2_UPDATE_GOLDEN=1` appended to the test command
+# This file is @generated, regenerate by re-running test with `-- --env BSMR_UPDATE_GOLDEN=1` appended to the test command
 
 [
   {
-    "buck.error":"Upgraded warning to failure via $BUCK2_HARD_ERROR\n\nCaused by:\n    root//c:depends_on_incompatible (root//:linux_platform#<HASH>) does not pass compatibility check (will be error in future) because its transitive dep root//c:macos_only_target\n        is incompatible with root//:linux_platform#<HASH> (root//:macos unsatisfied), check the target's compatibility attributes"
+    "buck.error":"Upgraded warning to failure via $BSMR_HARD_ERROR\n\nCaused by:\n    root//c:depends_on_incompatible (root//:linux_platform#<HASH>) does not pass compatibility check (will be error in future) because its transitive dep root//c:macos_only_target\n        is incompatible with root//:linux_platform#<HASH> (root//:macos unsatisfied), check the target's compatibility attributes"
   },
   {
     "buck.target":"root//a:target1",

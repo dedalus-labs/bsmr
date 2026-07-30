@@ -1,0 +1,29 @@
+load("@bsmr_build//rules:rust.bzl", "rust_library")
+
+oncall("build_infra")
+
+rust_library(
+    name = "bsmr_log_common",
+    srcs = glob([
+        "src/**/*.rs",
+    ]),
+    deps = [
+        "fbsource//third-party/rust:clap",
+        "fbsource//third-party/rust:derive_more",
+        "fbsource//third-party/rust:flate2",
+        "fbsource//third-party/rust:futures",
+        "fbsource//third-party/rust:serde",
+        "fbsource//third-party/rust:serde_json",
+        "fbsource//third-party/rust:tokio-stream",
+        "//bsmr/app/bsmr_client_ctx:bsmr_client_ctx",
+        "//bsmr/app/bsmr_common:bsmr_common",
+        "//bsmr/app/bsmr_data:bsmr_data",
+        "//bsmr/app/bsmr_error:bsmr_error",
+        "//bsmr/app/bsmr_event_log:bsmr_event_log",
+        "//bsmr/app/bsmr_event_observer:bsmr_event_observer",
+        "//bsmr/app/bsmr_events:bsmr_events",
+        "//bsmr/app/bsmr_fs:bsmr_fs",
+        "//bsmr/app/bsmr_hash:bsmr_hash",
+        "//bsmr/packages/rust/gazebo/dupe:dupe",
+    ],
+)

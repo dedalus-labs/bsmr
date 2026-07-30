@@ -7,7 +7,7 @@
 # of this source tree. You may select, at your option, one of the
 # above-listed licenses.
 
-"""Diff two jemalloc heap dumps from (potentially different) buck2
+"""Diff two jemalloc heap dumps from (potentially different) bsmr
 binaries. Aggregates each by allocation site with proper per-stack
 scaling and prints the top growers and shrinkers.
 

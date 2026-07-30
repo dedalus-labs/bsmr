@@ -38,7 +38,7 @@ filegroup(
 ```
 
 The target being referenced must expose a `DefaultInfo` (i.e. it must be
-`buck2 build`able).
+`bsmr build`able).
 
 ## `$(location_exec //path/to:target)`
 
@@ -49,7 +49,7 @@ can be useful when using `genrule` to wrap another build system with
 buck.
 
 The target being referenced must expose a `DefaultInfo` (i.e. it must be
-`buck2 build`able).
+`bsmr build`able).
 
 ## `$(source relative/path/to/source)`
 
@@ -84,7 +84,7 @@ target platform, use `$(exe_target my_dependency)` instead, which will stick to
 the same platform as the target.
 
 The target being referenced must expose a `RunInfo` (i.e. it must be
-`buck2 run`able).
+`bsmr run`able).
 
 ## `$(exe_target //path/to:target)`
 
@@ -109,7 +109,7 @@ sh_test(
 ```
 
 The target being referenced must expose a `RunInfo` (i.e. it must be
-`buck2 run`able).
+`bsmr run`able).
 
 ## `$(query_targets queryfunction(//path/to:target))`
 

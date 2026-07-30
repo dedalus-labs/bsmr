@@ -130,7 +130,7 @@ BOOL checkPlistValueMatch(
           "This error was generated when running locally. To debug, check the following:\n"
           "1) The command being executed\n"
           "2) The selected Xcode version\n"
-          "3) Did you select a different Xcode _after_ a buck2 daemon was launched?\n"
+          "3) Did you select a different Xcode _after_ a bsmr daemon was launched?\n"
           "4) The execution platform constraints\n"
           "5) The tools specified for the `apple_toolchain()`\n");
     }

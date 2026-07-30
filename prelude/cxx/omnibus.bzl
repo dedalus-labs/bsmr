@@ -576,7 +576,7 @@ def _create_omnibus(
             category_suffix = "omnibus",
             # TODO(T110378138): As with static C++ links, omnibus links are
             # currently too large for RE, so run them locally for now (e.g.
-            # https://fb.prod.workplace.com/groups/buck2dev/posts/2953023738319012/).
+            # https://fb.prod.workplace.com/groups/bsmrdev/posts/2953023738319012/).
             # NB: We explicitly pass a value here to override
             # the linker_info.link_libraries_locally that's used by `cxx_link_shared_library`.
             # That's because we do not want to apply the linking behavior universally,

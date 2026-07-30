@@ -521,7 +521,7 @@ construct_diff_spec([CommonItem | _] = LCS, AppSrcValue, [AddItem | TargetValue]
 
 construct_diff(Spec) ->
     Header = [
-        io_lib:format("           .app.src                           buck2 target~n", []),
+        io_lib:format("           .app.src                           bsmr target~n", []),
         io_lib:format("           ========                           ============~n", [])
     ],
     construct_diff(Spec, Header).

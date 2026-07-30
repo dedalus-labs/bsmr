@@ -15,16 +15,16 @@ import signal
 import time
 from pathlib import Path
 
-from buck2.tests.e2e_util.api.buck import Buck
-from buck2.tests.e2e_util.asserts import expect_failure
-from buck2.tests.e2e_util.buck_workspace import buck_test, env
-from buck2.tests.e2e_util.helper.golden import (
+from bsmr.tests.e2e_util.api.buck import Buck
+from bsmr.tests.e2e_util.asserts import expect_failure
+from bsmr.tests.e2e_util.buck_workspace import buck_test, env
+from bsmr.tests.e2e_util.helper.golden import (
     golden,
     sanitize_daemon_stderr,
     sanitize_stacktrace,
     sanitize_stderr,
 )
-from buck2.tests.e2e_util.helper.utils import (
+from bsmr.tests.e2e_util.helper.utils import (
     is_running_on_linux,
     is_running_on_windows,
     read_invocation_record,
@@ -42,7 +42,7 @@ async def test_action_error(buck: Buck) -> None:
     # This test is unfortunately liable to break as a result of refactorings, since this is not
     # stable. Feel free to delete it if it becomes a problem.
     assert error["source_location"].startswith(
-        "buck2_build_api/src/actions/error.rs::ActionError::"
+        "bsmr_build_api/src/actions/error.rs::ActionError::"
     )
 
 
@@ -66,8 +66,8 @@ async def test_bad_url(buck: Buck) -> None:
     error = res.invocation_record().single_error()
     # Also liable to break as a result of refactorings, feel free to update
     # FIXME(minglunli): This is a regression from before, the commented line is better and we should fix this
-    assert "buck2_http/src/lib.rs" in error["source_location"]
-    # assert error["source_location"] == "buck2_http/src/lib.rs::HttpError::SendRequest"
+    assert "bsmr_http/src/lib.rs" in error["source_location"]
+    # assert error["source_location"] == "bsmr_http/src/lib.rs::HttpError::SendRequest"
 
 
 @buck_test(write_invocation_record=True)
@@ -82,16 +82,16 @@ async def test_attr_coercion(buck: Buck) -> None:
 
 
 @buck_test(write_invocation_record=True)
-async def test_buck2_fail(buck: Buck) -> None:
+async def test_bsmr_fail(buck: Buck) -> None:
     res = await expect_failure(
-        buck.build("//buck2_fail:foobar"),
-        stderr_regex="evaluating build file: `root//buck2_fail:TARGETS.fixture`",
+        buck.build("//bsmr_fail:foobar"),
+        stderr_regex="evaluating build file: `root//bsmr_fail:TARGETS.fixture`",
     )
     error = res.invocation_record().single_error()
     # Just make sure that despite there being no context on the error, we still report the right
     # metadata
     assert error["source_location"].startswith(
-        "buck2_interpreter_for_build/src/interpreter/functions/internals.rs::BuckFail::"
+        "bsmr_interpreter_for_build/src/interpreter/functions/internals.rs::BuckFail::"
     )
 
 
@@ -103,7 +103,7 @@ async def test_starlark_fail_error_categorization(buck: Buck) -> None:
     )
     error = res.invocation_record().single_error()
     assert "StarlarkError::Fail::" in error["source_location"]
-    assert error["source_area"] == "BUCK2"
+    assert error["source_area"] == "BSMR"
     assert error["category"] == "USER"
 
 
@@ -116,7 +116,7 @@ async def test_starlark_parse_error_categorization(buck: Buck) -> None:
     error = res.invocation_record().single_error()
     assert "StarlarkError::Parser::" in error["source_location"]
     assert error["tags"] == ["STARLARK_PARSER"]
-    assert error["source_area"] == "BUCK2"
+    assert error["source_area"] == "BSMR"
     assert error["category"] == "USER"
 
 
@@ -129,7 +129,7 @@ async def test_starlark_scope_error_categorization(buck: Buck) -> None:
     error = res.invocation_record().single_error()
     assert "StarlarkError::Scope::" in error["source_location"]
     assert error["tags"] == ["STARLARK_SCOPE"]
-    assert error["source_area"] == "BUCK2"
+    assert error["source_area"] == "BSMR"
     assert error["category"] == "USER"
 
 
@@ -297,13 +297,13 @@ async def test_download_failure(buck: Buck) -> None:
     res = await expect_failure(
         buck.build(
             "//:run_action",
-            env={"BUCK2_TEST_FAIL_RE_DOWNLOADS": "true"},
+            env={"BSMR_TEST_FAIL_RE_DOWNLOADS": "true"},
         )
     )
     error = res.invocation_record().single_error()
     assert error["category_key"] == "RE_NOT_FOUND:UNKNOWN"
     assert (
-        "Your build requires materializing an artifact that has expired in the RE CAS and Buck does not have it. This likely happened because your Buck daemon has been online for a long time. This error is currently unrecoverable. To proceed, you should restart Buck using `buck2 killall`."
+        "Your build requires materializing an artifact that has expired in the RE CAS and Buck does not have it. This likely happened because your Buck daemon has been online for a long time. This error is currently unrecoverable. To proceed, you should restart Buck using `bsmr killall`."
         in res.stderr
     )
 
@@ -317,7 +317,7 @@ async def test_re_execute_failure(buck: Buck) -> None:
         buck.build(
             "//:run_action",
             "--no-remote-cache",
-            env={"BUCK2_TEST_FAIL_RE_EXECUTE": "true"},
+            env={"BSMR_TEST_FAIL_RE_EXECUTE": "true"},
         )
     )
     error = res.invocation_record().single_error()
@@ -343,7 +343,7 @@ async def test_local_incompatible(buck: Buck) -> None:
 
 
 @buck_test(write_invocation_record=True)
-@env("BUCK2_TEST_INIT_DAEMON_ERROR", "true")
+@env("BSMR_TEST_INIT_DAEMON_ERROR", "true")
 async def test_daemon_startup_error(buck: Buck) -> None:
     res = await expect_failure(buck.targets(":"))
     assert "Injected init daemon error" in res.stderr
@@ -360,7 +360,7 @@ async def test_daemon_startup_error(buck: Buck) -> None:
 
 
 @buck_test(skip_for_os=["windows"], write_invocation_record=True)
-@env("BUCK2_TEST_DAEMON_STARTUP_SIGNAL", "true")
+@env("BSMR_TEST_DAEMON_STARTUP_SIGNAL", "true")
 async def test_daemon_startup_signal(buck: Buck) -> None:
     res = await expect_failure(buck.targets(":"))
     error = res.invocation_record().single_error()
@@ -375,7 +375,7 @@ async def test_daemon_startup_signal(buck: Buck) -> None:
 @buck_test(
     setup_eden=True,
     extra_buck_config={
-        "buck2": {
+        "bsmr": {
             "allow_eden_io": "false",
         }
     },
@@ -396,7 +396,7 @@ async def test_eden_io_error_tagging(buck: Buck) -> None:
 
 
 @buck_test(write_invocation_record=True)
-@env("BUCK2_TEST_FAIL_STREAMING", "true")
+@env("BSMR_TEST_FAIL_STREAMING", "true")
 async def test_client_streaming_error(buck: Buck) -> None:
     res = await expect_failure(buck.targets(":"))
     assert "Injected client streaming error" in res.stderr
@@ -423,7 +423,7 @@ async def test_action_error_has_categorization(buck: Buck) -> None:
 
 
 @buck_test(write_invocation_record=True, skip_for_os=["windows"])
-@env("BUCK2_TEST_INIT_DATA_SLEEP_SECS", "120")
+@env("BSMR_TEST_INIT_DATA_SLEEP_SECS", "120")
 @env("BUCKD_STARTUP_INIT_TIMEOUT", "5")
 async def test_init_data_timeout(buck: Buck) -> None:
     res = await expect_failure(buck.targets(":"))

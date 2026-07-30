@@ -2,6 +2,6 @@
     root = .
 [buildfile]
     name = TARGETS.fixture
-[buck2]
+[bsmr]
     directories_to_allow_relative_paths = \
         //foo

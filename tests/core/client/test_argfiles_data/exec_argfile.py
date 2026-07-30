@@ -17,6 +17,6 @@ if __name__ == "__main__":
     ns = parser.parse_args()
 
     assert ns.flavors == "iphonesimulator-x86_64"
-    assert os.environ["BUCK2_ARG_FILE"] == "1"
+    assert os.environ["BSMR_ARG_FILE"] == "1"
 
     print("--config=foo.bar=1")

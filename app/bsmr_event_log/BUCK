@@ -1,0 +1,43 @@
+load("@bsmr_build//rules:rust.bzl", "rust_library")
+
+oncall("build_infra")
+
+rust_library(
+    name = "bsmr_event_log",
+    srcs = glob(["src/**/*.rs"]),
+    test_deps = [
+        "fbsource//third-party/rust:maplit",
+        "fbsource//third-party/rust:tempfile",
+        "//bsmr/app/bsmr_hash:bsmr_hash",
+    ],
+    deps = [
+        "fbsource//third-party/rust:async-compression",
+        "fbsource//third-party/rust:chrono",
+        "fbsource//third-party/rust:futures",
+        "fbsource//third-party/rust:itertools",
+        "fbsource//third-party/rust:pin-project",
+        "fbsource//third-party/rust:prost",
+        "fbsource//third-party/rust:prost-types",
+        "fbsource//third-party/rust:regex",
+        "fbsource//third-party/rust:serde",
+        "fbsource//third-party/rust:serde_json",
+        "fbsource//third-party/rust:shlex",
+        "fbsource//third-party/rust:tokio",
+        "fbsource//third-party/rust:tokio-stream",
+        "fbsource//third-party/rust:tokio-util",
+        "fbsource//third-party/rust:tracing",
+        "//bsmr/packages/rust/allocative/allocative:allocative",
+        "//bsmr/app/bsmr_cli_proto:bsmr_cli_proto",
+        "//bsmr/app/bsmr_common:bsmr_common",
+        "//bsmr/app/bsmr_core:bsmr_core",
+        "//bsmr/app/bsmr_data:bsmr_data",
+        "//bsmr/app/bsmr_error:bsmr_error",
+        "//bsmr/app/bsmr_event_observer:bsmr_event_observer",
+        "//bsmr/app/bsmr_events:bsmr_events",
+        "//bsmr/app/bsmr_fs:bsmr_fs",
+        "//bsmr/app/bsmr_util:bsmr_util",
+        "//bsmr/app/bsmr_wrapper_common:bsmr_wrapper_common",
+        "//bsmr/packages/rust/gazebo/dupe:dupe",
+        "//bsmr/packages/rust/gazebo/gazebo:gazebo",
+    ],
+)

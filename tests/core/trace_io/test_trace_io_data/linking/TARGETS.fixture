@@ -1,6 +1,6 @@
 load("//:defs.bzl", "my_binary", "my_library")
 
-oncall("buck2")
+oncall("bsmr")
 
 my_binary(
     name = "root",

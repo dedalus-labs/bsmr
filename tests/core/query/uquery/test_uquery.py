@@ -13,17 +13,16 @@ import json
 import re
 from pathlib import Path
 
-from buck2.tests.e2e_util.api.buck import Buck
-from buck2.tests.e2e_util.api.buck_result import BuckResult
-from buck2.tests.e2e_util.asserts import expect_failure
-from buck2.tests.e2e_util.buck_workspace import buck_test
-from buck2.tests.e2e_util.helper.golden import golden
-from manifold.clients.python.manifold_client_deprecated import Client as ManifoldClient
+from bsmr.tests.e2e_util.api.buck import Buck
+from bsmr.tests.e2e_util.api.buck_result import BuckResult
+from bsmr.tests.e2e_util.asserts import expect_failure
+from bsmr.tests.e2e_util.buck_workspace import buck_test
+from bsmr.tests.e2e_util.helper.golden import golden
 
 """
-If you need to add a directory that's isolated in buck2/test/targets
+If you need to add a directory that's isolated in bsmr/test/targets
 (ex. some test of form @buck_test( data_dir=some_new_directory)),
-then you will need to update isolated_targets in buck2/test/targets/TARGETS.
+then you will need to update isolated_targets in bsmr/test/targets/TARGETS.
 Otherwise the test will fail because it cannot recognize the new directory.
 """
 
@@ -445,18 +444,6 @@ async def test_dot_compact(buck: Buck) -> None:
         output=out.stdout,
         rel_path="bxl_simple/expected/dot_compact/subgraph.golden",
     )
-
-
-@buck_test(data_dir="bxl_simple")
-async def test_html(buck: Buck) -> None:
-    uuid = "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee"
-    await buck.uquery(
-        "--output-format=html",
-        "deps(root//bin:the_binary, 100, target_deps())",
-        env={"BUCK_WRAPPER_UUID": uuid},
-    )
-    with ManifoldClient({"bucket": "buck2_logs", "apikey": "buck2_logs-key"}) as client:
-        assert client.exists(bucket="buck2_logs", path=f"flat/{uuid}-graph.html")
 
 
 # Tests for "%Ss" uses

@@ -1,0 +1,31 @@
+load("@bsmr_build//rules:rust.bzl", "rust_library")
+
+oncall("build_infra")
+
+rust_library(
+    name = "bsmr_configured",
+    srcs = glob(
+        ["src/**/*.rs"],
+    ),
+    deps = [
+        "fbsource//third-party/rust:async-trait",
+        "fbsource//third-party/rust:derive_more",
+        "fbsource//third-party/rust:futures",
+        "fbsource//third-party/rust:itertools",
+        "fbsource//third-party/rust:ref-cast",
+        "//bsmr/packages/rust/allocative/allocative:allocative",
+        "//bsmr/app/bsmr_build_api:bsmr_build_api",
+        "//bsmr/app/bsmr_build_signals:bsmr_build_signals",
+        "//bsmr/app/bsmr_common:bsmr_common",
+        "//bsmr/app/bsmr_core:bsmr_core",
+        "//bsmr/app/bsmr_error:bsmr_error",
+        "//bsmr/app/bsmr_node:bsmr_node",
+        "//bsmr/app/bsmr_util:bsmr_util",
+        "//bsmr/packages/rust/dice/dice:dice",
+        "//bsmr/packages/rust/dice/dice_futures:dice_futures",
+        "//bsmr/packages/rust/gazebo/dupe:dupe",
+        "//bsmr/packages/rust/gazebo/gazebo:gazebo",
+        "//bsmr/packages/rust/pagable/pagable:pagable",
+        "//bsmr/packages/rust/starlark/starlark_map:starlark_map",
+    ],
+)

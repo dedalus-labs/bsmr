@@ -245,7 +245,7 @@ public class ErrorInterceptor extends PrintStream {
   // Creates a clickable hyperlink in the terminal using OSC 8 escape sequences.
   // Supports both VS Code and Android Studio links based on ANDROID_EDITOR environment variable.
   private static String createHyperlink(String file, int line, String text) {
-    // Keep in sync with fbcode/buck2/prelude/java/tools/utils.py
+    // Keep in sync with fbcode/bsmr/prelude/java/tools/utils.py
     boolean isVsCode =
         "vscode".equals(System.getenv("TERM_PROGRAM"))
             || "od".equals(System.getenv("FBVSCODE_REMOTE_ENV_NAME"));

@@ -13,8 +13,8 @@ import json
 import platform
 from pathlib import Path
 
-from buck2.tests.e2e_util.api.buck import Buck
-from buck2.tests.e2e_util.buck_workspace import buck_test
+from bsmr.tests.e2e_util.api.buck import Buck
+from bsmr.tests.e2e_util.buck_workspace import buck_test
 
 
 # TODO(marwhal): Fix and enable on Windows
@@ -26,7 +26,7 @@ async def test_no_quotes(buck: Buck) -> None:
         "--filename",
         str(
             buck.cwd.parent
-            / "fbcode/buck2/tests/targets/cpp_gen_cdb/basic/src/main.cpp"
+            / "fbcode/bsmr/tests/targets/cpp_gen_cdb/basic/src/main.cpp"
         ),
         "--os",
         platform.system().lower(),

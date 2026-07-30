@@ -11,7 +11,7 @@ simple "Hello, World!" application. Now, we'll take it a step further by
 learning how to create and adding dependencies in our project. This is a common
 scenario where you separate concerns into different modules or libraries.
 
-Our goal is to understand how Buck2 manages dependencies.
+Our goal is to understand how Bessemer manages dependencies.
 
 ## What We'll Do:
 
@@ -34,19 +34,19 @@ Our goal is to understand how Buck2 manages dependencies.
 <FbInternalOnly>
 
 Navigate to the directory that contains your `greeter_bin` folder, i.e.
-`<FBSOURCE>/fbcode/scripts/$USER/buck2_lab`.
+`<FBSOURCE>/fbcode/scripts/$USER/bsmr_lab`.
 
 In your fbsource root,
 
 ```bash
-cd fbcode/scripts/$USER/buck2_lab
+cd fbcode/scripts/$USER/bsmr_lab
 ```
 
 </FbInternalOnly>
 
 <OssOnly>
 
-Navigate to the `buck2_lab` folder we created in the
+Navigate to the `bsmr_lab` folder we created in the
 [previous tutorial](../tutorial_first_build).
 
 </OssOnly>
@@ -61,7 +61,7 @@ mkdir greeter_lib/src
 Your project should be like this
 
 ```
-buck2_lab
+bsmr_lab
 ├── greeter_bin
 │   ├── BUCK
 │   └── src
@@ -93,7 +93,7 @@ message.
 <FbInternalOnly>
 
 ```python
-load("@fbsource//tools/build_defs:rust_library.bzl", "rust_library")
+load("@bsmr_build//rules:rust.bzl", "rust_library")
 
 rust_library(
     name = "library",
@@ -118,7 +118,7 @@ rust_library(
 
 </OssOnly>
 
-- `rust_library`: This Buck2 rule is used for compiling Rust libraries.
+- `rust_library`: This Bessemer rule is used for compiling Rust libraries.
 - `name = "library"`: We're naming our library target "library". This name will
   also be used by default as the crate name for Rust.
 - `srcs = ["src/lib.rs"]`: Specifies the source file for this library.
@@ -133,7 +133,7 @@ folder
 
 ```bash
 cd greeter_lib
-buck2 build :library --show-full-output
+bsmr build :library --show-full-output
 ```
 
 You will see an output like this:
@@ -143,7 +143,7 @@ You will see an output like this:
 ```
 ...
 BUILD SUCCEEDED
-fbcode//scripts/$USER/buck2_lab/greeter_lib:library /.../greeter_lib/__library__/out/LPPMD/liblibrary-1527a50c.rmeta
+fbcode//scripts/$USER/bsmr_lab/greeter_lib:library /.../greeter_lib/__library__/out/LPPMD/liblibrary-1527a50c.rmeta
 ```
 
 </FbInternalOnly>
@@ -153,7 +153,7 @@ fbcode//scripts/$USER/buck2_lab/greeter_lib:library /.../greeter_lib/__library__
 ```
 ...
 BUILD SUCCEEDED
-root//buck2_lab/greeter_lib:library /.../greeter_lib/__library__/out/LPPMD/liblibrary-1527a50c.rmeta
+root//bsmr_lab/greeter_lib:library /.../greeter_lib/__library__/out/LPPMD/liblibrary-1527a50c.rmeta
 ```
 
 </OssOnly>
@@ -175,7 +175,7 @@ For `greeter_bin/src/main.rs`, update the code to use `greet` function in
 
 ```rust
 fn main() {
-    let s = library::greet("buck2");
+    let s = library::greet("bsmr");
     println!("{}", s);
 }
 
@@ -183,19 +183,19 @@ fn main() {
 
 2. Update the binary's BUCK file:
 
-In the `greeter_bin` directory (i.e., `buck2_lab/greeter_bin/BUCK`), update the
+In the `greeter_bin` directory (i.e., `bsmr_lab/greeter_bin/BUCK`), update the
 BUCK file.
 
 <FbInternalOnly>
 
 ```python
-load("@fbsource//tools/build_defs:rust_binary.bzl", "rust_binary")
+load("@bsmr_build//rules:rust.bzl", "rust_binary")
 
 rust_binary(
     name = "main",
     srcs = ["src/main.rs"],
     # Add the dep to our library
-    deps = ["fbcode//scripts/$USER/buck2_lab/greeter_lib:library"],
+    deps = ["fbcode//scripts/$USER/bsmr_lab/greeter_lib:library"],
 )
 ```
 
@@ -208,22 +208,22 @@ rust_binary(
     name = "main",
     srcs = ["src/main.rs"],
     # Add the dep to our library
-    deps = ["root//buck2_lab/greeter_lib:library"],
+    deps = ["root//bsmr_lab/greeter_lib:library"],
 )
 ```
 
 </OssOnly>
 
 export const TARGET_NAME = isInternal() ?
-<code>fbcode//scripts/$USER/buck2_lab/greeter_lib:library</code> :
-<code>root//buck2_lab/greeter_lib:library</code>;
+<code>fbcode//scripts/$USER/bsmr_lab/greeter_lib:library</code> :
+<code>root//bsmr_lab/greeter_lib:library</code>;
 
-You can also use `buck2 targets :` command in `greeter_lib` folder to get the
+You can also use `bsmr targets :` command in `greeter_lib` folder to get the
 full target name of the library.
 
 - { isInternal() ? <code>deps =
-  ["fbcode//scripts/$USER/buck2_lab/greeter_lib:library"]</code> :
-  <code>deps = ["root//buck2_lab/greeter_lib:library"]</code> }: This is the
+  ["fbcode//scripts/$USER/bsmr_lab/greeter_lib:library"]</code> :
+  <code>deps = ["root//bsmr_lab/greeter_lib:library"]</code> }: This is the
   crucial new part!
   - `deps` declares dependencies for this target. It accepts a list of targets.
 
@@ -231,15 +231,15 @@ full target name of the library.
 
 Now, let's build and run our binary application, with dependencies {
 isInternal() ?
-<code>fbcode//scripts/$USER/buck2_lab/greeter_lib:library</code> :
-<code>root//buck2_lab/greeter_lib:library</code> }.
+<code>fbcode//scripts/$USER/bsmr_lab/greeter_lib:library</code> :
+<code>root//bsmr_lab/greeter_lib:library</code> }.
 
 1. Run the binary:
 
 <FbInternalOnly>
 
 ```bash
-buck2 run fbcode//scripts/$USER/buck2_lab/greeter_bin:main
+bsmr run fbcode//scripts/$USER/bsmr_lab/greeter_bin:main
 ```
 
 </FbInternalOnly>
@@ -247,7 +247,7 @@ buck2 run fbcode//scripts/$USER/buck2_lab/greeter_bin:main
 <OssOnly>
 
 ```bash
-buck2 run root//buck2_lab/greeter_bin:main
+bsmr run root//bsmr_lab/greeter_bin:main
 ```
 
 </OssOnly>
@@ -259,7 +259,7 @@ You should see the following output:
 ```
 ...
 BUILD SUCCEEDED - starting your binary
-Hello, buck2!
+Hello, bsmr!
 ```
 
 ## Step 6: Adding a logging dependency to our application
@@ -268,22 +268,22 @@ Imagine that as our application grows, we realize we want to log information
 about what's happening inside our functions. This is a common need for debugging
 or just understanding the flow. To help with this, let's say we've prepared a
 simple, shared logging library for you. <FbInternalOnly> The library is
-`fbcode//buck2/docs/buck2_lab/logging_lib:logging_lib`. </FbInternalOnly>
+`fbcode//bsmr/docs/bsmr_lab/logging_lib:logging_lib`. </FbInternalOnly>
 <OssOnly> You can find it at
 https://github.com/facebook/buck2/tree/main/docs/buck2_lab/logging_lib and copy
-the folder into `buck2_lab` folder. </OssOnly>
+the folder into `bsmr_lab` folder. </OssOnly>
 
 Our first step is to make our existing greeter_lib use this new logging_lib.
 
 1. Update `greeter_lib/BUCK`:
 
-Now, modify `buck2_lab/greeter_lib/BUCK` to declare a dependency on
+Now, modify `bsmr_lab/greeter_lib/BUCK` to declare a dependency on
 `logging_lib`.
 
 <FbInternalOnly>
 
 ```python
-load("@fbsource//tools/build_defs:rust_library.bzl", "rust_library")
+load("@bsmr_build//rules:rust.bzl", "rust_library")
 
 rust_library(
     name = "library",
@@ -291,7 +291,7 @@ rust_library(
     visibility = ["PUBLIC"],
     deps = [
         # Add the dep to our logging_lib
-        "fbcode//buck2/docs/buck2_lab/logging_lib:logging_lib",
+        "fbcode//bsmr/docs/bsmr_lab/logging_lib:logging_lib",
     ],
 )
 ```
@@ -307,7 +307,7 @@ rust_library(
     visibility = ["PUBLIC"],
     deps = [
         # Add the dep to our logging_lib
-        "root//buck2_lab/logging_lib:logging_lib",
+        "root//bsmr_lab/logging_lib:logging_lib",
     ],
 )
 ```
@@ -334,7 +334,7 @@ pub fn greet(name: &str) -> String {
 fn main() {
     logging_lib::info("Starting...");
 
-    let message = library::greet("Buck2");
+    let message = library::greet("Bessemer");
     println!("{}", message);
 
     logging_lib::info("Exit.");
@@ -361,7 +361,7 @@ Let's try to run `main`:
 <FbInternalOnly>
 
 ```bash
-buck2 run fbcode//scripts/$USER/buck2_lab/greeter_bin:main
+bsmr run fbcode//scripts/$USER/bsmr_lab/greeter_bin:main
 ```
 
 </FbInternalOnly>
@@ -369,7 +369,7 @@ buck2 run fbcode//scripts/$USER/buck2_lab/greeter_bin:main
 <OssOnly>
 
 ```bash
-buck2 run root//buck2_lab/greeter_bin:main
+bsmr run root//bsmr_lab/greeter_bin:main
 ```
 
 </OssOnly>
@@ -380,7 +380,7 @@ You will encounter a compile-time error like this:
 
 ```
 error[E0433]: failed to resolve: use of unresolved module or unlinked crate `logging_lib`
- --> fbcode/scripts/$USER/buck2_lab/greeter_bin/src/main.rs:4:5
+ --> fbcode/scripts/$USER/bsmr_lab/greeter_bin/src/main.rs:4:5
   |
 4 |     logging_lib::info("Starting...");
   |     ^^^^^^^^^^^ use of unresolved module or unlinked crate `logging_lib`
@@ -389,7 +389,7 @@ error[E0433]: failed to resolve: use of unresolved module or unlinked crate `log
 
 
 error[E0433]: failed to resolve: use of unresolved module or unlinked crate `logging_lib`
- --> fbcode/scripts/$USER/buck2_lab/greeter_bin/src/main.rs:9:5
+ --> fbcode/scripts/$USER/bsmr_lab/greeter_bin/src/main.rs:9:5
   |
 9 |     logging_lib::info("Exit.");
   |     ^^^^^^^^^^^ use of unresolved module or unlinked crate `logging_lib`
@@ -416,7 +416,7 @@ This means that `logging_lib` cannot be found in our `main` binary.
 
 ## Step 9: Fixing the Build - Declaring the Direct Dependency
 
-To fix this, we need to tell Buck2 that `greeter_bin` also has a direct
+To fix this, we need to tell Bessemer that `greeter_bin` also has a direct
 dependency on `logging_lib`.
 
 1. Update `greeter_bin/BUCK`:
@@ -424,14 +424,14 @@ dependency on `logging_lib`.
 <FbInternalOnly>
 
 ```python
-load("@fbsource//tools/build_defs:rust_binary.bzl", "rust_binary")
+load("@bsmr_build//rules:rust.bzl", "rust_binary")
 
 rust_binary(
     name = "main",
     srcs = ["src/main.rs"],
     deps = [
-        "fbcode//scripts/$USER/buck2_lab/greeter_lib:library",
-        "fbcode//buck2/docs/buck2_lab/logging_lib:logging_lib",  # Add this line
+        "fbcode//scripts/$USER/bsmr_lab/greeter_lib:library",
+        "fbcode//bsmr/docs/bsmr_lab/logging_lib:logging_lib",  # Add this line
     ],
 )
 ```
@@ -445,8 +445,8 @@ rust_binary(
     name = "main",
     srcs = ["src/main.rs"],
     deps = [
-        "root//buck2_lab/greeter_lib:library",
-        "root//buck2_lab/logging_lib:logging_lib",  # Add this line
+        "root//bsmr_lab/greeter_lib:library",
+        "root//bsmr_lab/logging_lib:logging_lib",  # Add this line
     ],
 )
 ```
@@ -458,7 +458,7 @@ rust_binary(
 <FbInternalOnly>
 
 ```bash
-buck2 run fbcode//scripts/$USER/buck2_lab/greeter_bin:main
+bsmr run fbcode//scripts/$USER/bsmr_lab/greeter_bin:main
 ```
 
 </FbInternalOnly>
@@ -466,7 +466,7 @@ buck2 run fbcode//scripts/$USER/buck2_lab/greeter_bin:main
 <OssOnly>
 
 ```bash
-buck2 run root//buck2_lab/greeter_bin:main
+bsmr run root//bsmr_lab/greeter_bin:main
 ```
 
 </OssOnly>
@@ -479,7 +479,7 @@ BUILD SUCCEEDED - starting your binary
 [INFO] Starting...
 [INFO] Entered greet function in library
 [INFO] Exiting greet function in library
-Hello, Buck2!
+Hello, Bessemer!
 [INFO] Exit.
 ```
 
@@ -497,7 +497,7 @@ graph TD
 
 Congratulations! 🥳
 
-You've successfully created a multi-target Rust project with Buck2, where a
+You've successfully created a multi-target Rust project with Bessemer, where a
 binary depends multiple targets!
 
 We've covered:

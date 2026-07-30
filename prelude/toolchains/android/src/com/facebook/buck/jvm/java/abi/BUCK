@@ -63,7 +63,7 @@ buck_java_binary(
     ],
 )
 
-# This is a prebuilt jar so that it can be part of the buck2 bootstrap toolchain.
+# This is a prebuilt jar so that it can be part of the bsmr bootstrap toolchain.
 buck_prebuilt_jar(
     name = "api-stubber_prebuilt",
     _dex_toolchain = "toolchains//:empty_dex",

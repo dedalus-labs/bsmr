@@ -4,7 +4,7 @@
     prelude = root
 [buildfile]
     name = TARGETS.fixture
-[buck2]
+[bsmr]
   materializations = deferred
 
 [agent_context]
@@ -13,7 +13,7 @@
 [agent_context#intent]
   required = true
   values = build|test|query|fix|investigate
-  description = The purpose of this buck2 invocation
+  description = The purpose of this bsmr invocation
 
 [agent_context#attempt]
   required = true

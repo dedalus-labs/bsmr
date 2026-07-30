@@ -10,15 +10,15 @@
 # pyre-strict
 
 
-from buck2.tests.e2e_util.api.buck import Buck
-from buck2.tests.e2e_util.asserts import expect_failure
-from buck2.tests.e2e_util.buck_workspace import buck_test, env
+from bsmr.tests.e2e_util.api.buck import Buck
+from bsmr.tests.e2e_util.asserts import expect_failure
+from bsmr.tests.e2e_util.buck_workspace import buck_test, env
 
 
 @buck_test()
 @env(
-    "BUCK2_ALLOW_INTERNAL_TEST_RUNNER_DO_NOT_USE", "1"
-)  # needed to avoid failure on missing buck2-tpx in buck-out
+    "BSMR_ALLOW_INTERNAL_TEST_RUNNER_DO_NOT_USE", "1"
+)  # needed to avoid failure on missing bsmr-tpx in buck-out
 async def test_test_skip_incompatible_targets(buck: Buck) -> None:
     targetA = "root//:compatible-with-A"
     targetB = "root//:compatible-with-B"

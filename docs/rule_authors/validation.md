@@ -3,20 +3,20 @@ id: validation
 title: Validations
 ---
 
-Validations let a rule author declare additional pass/fail checks that Buck2
+Validations let a rule author declare additional pass/fail checks that Bessemer
 enforces whenever the target is in a requested build's transitive closure.
 A validation succeeds when the action that produces its result artifact
 writes a JSON document signalling success; otherwise the build fails.
 
 ## When validations run
 
-A validation attached to target `//A:a` runs whenever a `buck2 build` or
-`buck2 test` request resolves a graph that contains `//A:a` as a transitive
+A validation attached to target `//A:a` runs whenever a `bsmr build` or
+`bsmr test` request resolves a graph that contains `//A:a` as a transitive
 dependency. Validations execute in parallel with the rest of the build —
-they only need to finish before Buck2 reports the requested target complete.
+they only need to finish before Bessemer reports the requested target complete.
 
 Validations are *not* re-run when the producing action's inputs are
-unchanged (standard Buck2 caching).
+unchanged (standard Bessemer caching).
 
 ## Declaring a validation
 
@@ -70,14 +70,14 @@ expected schema works. The schema:
 | `data.status`  | string | yes      | `"success"` or `"failure"`.                 |
 | `data.message` | string | no       | Shown to the user; supply on failure.       |
 
-Buck2 reports three distinct errors if the file is malformed: invalid JSON,
+Bessemer reports three distinct errors if the file is malformed: invalid JSON,
 incompatible version, or schema mismatch.
 
 Additional fields outside the required ones are tolerated and ignored by
-Buck2 — both at the top level (alongside `version` / `data`) and inside
+Bessemer — both at the top level (alongside `version` / `data`) and inside
 `data` (alongside `status` / `message`). This is a deliberate extension
 point: attach structured debug or diagnostic info (timings, tool versions,
-dashboard URLs, anything you want to keep with the verdict) and Buck2
+dashboard URLs, anything you want to keep with the verdict) and Bessemer
 will pass it through unread.
 
 The required fields still define the machine contract — keep them stable.
@@ -97,7 +97,7 @@ Optional validations are skipped by default. Users opt in per-name on the
 CLI:
 
 ```shell
-buck2 build //A:a --enable-optional-validations slow_lint
+bsmr build //A:a --enable-optional-validations slow_lint
 ```
 
 Use this for expensive or noisy checks you don't want to gate every build on.

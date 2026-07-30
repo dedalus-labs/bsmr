@@ -1648,7 +1648,7 @@ apple_spm_package = prelude_rule(
     name = "apple_spm_package",
     docs = """
         An `apple_spm_package()` rule packages a set of dependencies into a Swift Package
-        Manager (SPM) compatible package. This enables distributing buck2-built libraries
+        Manager (SPM) compatible package. This enables distributing bsmr-built libraries
         in a format that can be consumed by SPM-based projects.
     """,
     impl = apple_spm_package_impl,

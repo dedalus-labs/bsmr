@@ -184,7 +184,7 @@ R_ARGS=()
 for arg in "${ARGS[@]}"; do
     # Normalize Windows-style backslash path separators to forward slashes for
     # artifact paths (identified by the prefix placeholder). This handles the case
-    # where Buck2 runs on Windows but this trampoline executes on Linux via RE.
+    # where Bessemer runs on Windows but this trampoline executes on Linux via RE.
     if [[ "$arg" == *BUCK_COMMAND_ALIAS_ABSOLUTE_PREFIX* ]]; then arg="${arg//\\\\//}"; fi
     R_ARGS+=("${arg//BUCK_COMMAND_ALIAS_ABSOLUTE_PREFIX/$BASE}")
 done

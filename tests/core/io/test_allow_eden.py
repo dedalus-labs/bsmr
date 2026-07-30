@@ -10,10 +10,10 @@
 
 import json
 
-from buck2.tests.e2e_util.api.buck import Buck
-from buck2.tests.e2e_util.buck_workspace import buck_test
+from bsmr.tests.e2e_util.api.buck import Buck
+from bsmr.tests.e2e_util.buck_workspace import buck_test
 
-# This file acts as both a test of `buck2.allow_eden_io` as well as a self-test
+# This file acts as both a test of `bsmr.allow_eden_io` as well as a self-test
 # of the `setup_eden` logic in the test runner
 
 
@@ -28,7 +28,7 @@ async def _check_io_provider(buck: Buck, name: str) -> None:
 @buck_test(
     setup_eden=False,
     extra_buck_config={
-        "buck2": {
+        "bsmr": {
             "allow_eden_io": "false",
         }
     },
@@ -40,7 +40,7 @@ async def test_no_eden(buck: Buck) -> None:
 @buck_test(
     setup_eden=False,
     extra_buck_config={
-        "buck2": {
+        "bsmr": {
             "allow_eden_io": "true",
         }
     },
@@ -52,7 +52,7 @@ async def test_allow_eden_io_ignored_on_fs_io(buck: Buck) -> None:
 @buck_test(
     setup_eden=True,
     extra_buck_config={
-        "buck2": {
+        "bsmr": {
             "allow_eden_io": "false",
         }
     },
@@ -64,7 +64,7 @@ async def test_allow_eden_io_respected(buck: Buck) -> None:
 @buck_test(
     setup_eden=True,
     extra_buck_config={
-        "buck2": {
+        "bsmr": {
             "allow_eden_io": "true",
         }
     },

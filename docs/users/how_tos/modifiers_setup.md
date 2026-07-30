@@ -23,7 +23,7 @@ native.set_cfg_constructor(
 )
 ```
 
-`set_cfg_constructor` is a Buck2 builtin used to setup configuration modifiers.
+`set_cfg_constructor` is a Bessemer builtin used to setup configuration modifiers.
 It supports a few configuration points:
 
 - `stage0` and `stage1` are used to resolve modifiers from the
@@ -87,6 +87,6 @@ constraint, we can build it in debug and release mode from the command line
 using the `-m`/`--modifier` flag:
 
 ```sh
-buck2 build :my_target -m debug
-buck2 build :my_target -m release
+bsmr build :my_target -m debug
+bsmr build :my_target -m release
 ```

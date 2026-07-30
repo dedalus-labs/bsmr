@@ -230,7 +230,7 @@ get_listing(TestInfo, OutputDir) ->
     [buck_ct_provider:do_terminate(Provider) || Provider <- Providers2],
     Listing.
 
-%% rudimantary implementation for running tests with buck2 open-sourced test runner
+%% rudimantary implementation for running tests with bsmr open-sourced test runner
 
 -spec list_and_run(Args, OutputDir) -> boolean() when
     Args :: list_and_run_args(),

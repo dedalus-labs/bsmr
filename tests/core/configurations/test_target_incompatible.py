@@ -12,9 +12,9 @@
 import re
 
 import pytest
-from buck2.tests.e2e_util.api.buck import Buck
-from buck2.tests.e2e_util.asserts import expect_failure
-from buck2.tests.e2e_util.buck_workspace import buck_test
+from bsmr.tests.e2e_util.api.buck import Buck
+from bsmr.tests.e2e_util.asserts import expect_failure
+from bsmr.tests.e2e_util.buck_workspace import buck_test
 
 
 @buck_test()
@@ -100,7 +100,7 @@ async def test_error_on_dep_only_incompatible(
 ) -> None:
     args = [
         "-c",
-        f"buck2.error_on_dep_only_incompatible=//some/...,{target_pattern}",
+        f"bsmr.error_on_dep_only_incompatible=//some/...,{target_pattern}",
         "//dep_incompatible:dep_incompatible",
     ]
     if soft_error:
@@ -127,7 +127,7 @@ async def test_error_on_dep_only_incompatible_conf(buck: Buck) -> None:
 async def test_error_on_dep_only_incompatible_excluded(buck: Buck) -> None:
     args = [
         "-c",
-        "buck2.error_on_dep_only_incompatible_excluded=//dep_incompatible:dep_incompatible_conf2",
+        "bsmr.error_on_dep_only_incompatible_excluded=//dep_incompatible:dep_incompatible_conf2",
         "//dep_incompatible:dep_incompatible_conf2",
     ]
     await check_dep_only_incompatible_soft_err(buck, args)
@@ -154,7 +154,7 @@ async def test_dep_only_incompatible_custom_soft_errors_with_exclusions(
 ) -> None:
     args = [
         "-c",
-        "buck2.dep_only_incompatible_info=//dep_incompatible/dep_only_incompatible_info:dep_only_incompatible_info_with_exclusions",
+        "bsmr.dep_only_incompatible_info=//dep_incompatible/dep_only_incompatible_info:dep_only_incompatible_info_with_exclusions",
     ]
     await buck.cquery("//dep_incompatible:dep_incompatible", *args)
     result = await buck.log("show")

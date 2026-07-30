@@ -1,4 +1,4 @@
-load("@fbsource//tools/build_defs:fb_native_wrapper.bzl", "fb_native")
+load("@bsmr_build//rules:fb_native_wrapper.bzl", "fb_native")
 load("@prelude//cfg/modifier:conditional_modifier.bzl", "conditional_modifier")
 
 oncall("build_infra")
@@ -23,7 +23,7 @@ conditional_modifier(
     modifier = {
         # Test different types of relative target labels for modifiers
         "DEFAULT": ":test1",
-        "ovr_config//os:linux": "//buck2/tests/e2e/configurations/cfg_constructor/conditional_modifier:test2",
+        "ovr_config//os:linux": "//bsmr/tests/e2e/configurations/cfg_constructor/conditional_modifier:test2",
     },
 )
 

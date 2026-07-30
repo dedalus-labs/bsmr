@@ -325,5 +325,5 @@ _INIT_REQUEST = {
     "processId": None,
     "rootUri": "file:///INVALID",
     "trace": "off",
-    "workspaceFolders": [{"name": "buck2", "uri": "file:///INVALID"}],
+    "workspaceFolders": [{"name": "bsmr", "uri": "file:///INVALID"}],
 }

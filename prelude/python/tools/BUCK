@@ -120,7 +120,7 @@ prelude.python_bootstrap_binary(
 )
 
 # Run the test suite with this command:
-# buck2 run prelude//python/tools:wheel_tests --target-platforms prelude//platforms:default
+# bsmr run prelude//python/tools:wheel_tests --target-platforms prelude//platforms:default
 prelude.sh_binary(
     name = "wheel_tests",
     main = "tests/main.sh",

@@ -19,7 +19,7 @@ is.
 ## What is Dice?
 
 So first, what is Dice? Dice is, you know… We first named this before we started
-the buck2 word; we call it Distributed Incremental Computation Engine. So what
+the bsmr word; we call it Distributed Incremental Computation Engine. So what
 does that mean? Computation Engine part. This is, with Dice, you configure this
 with Dice by sort of providing us with leaf data and then define a set of
 functions that the engine is going to manage for you, right? And then you make a

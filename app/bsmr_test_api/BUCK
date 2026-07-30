@@ -1,0 +1,42 @@
+load("@bsmr_build//rules:rust.bzl", "rust_library")
+
+oncall("build_infra")
+
+rust_library(
+    name = "bsmr_test_api",
+    srcs = glob(
+        ["src/**/*.rs"],
+    ),
+    test_deps = [
+        "fbsource//third-party/rust:assert_matches",
+    ],
+    deps = [
+        "fbsource//third-party/rust:async-trait",
+        "fbsource//third-party/rust:derivative",
+        "fbsource//third-party/rust:derive_more",
+        "fbsource//third-party/rust:futures",
+        "fbsource//third-party/rust:prost-types",
+        "fbsource//third-party/rust:sorted_vector_map",
+        "fbsource//third-party/rust:tokio",
+        "fbsource//third-party/rust:tonic",
+        "fbsource//third-party/rust:tower-layer",
+        "fbsource//third-party/rust:tower-service",
+        "fbsource//third-party/rust:tracing",
+        "//bsmr/packages/rust/allocative/allocative:allocative",
+        "//bsmr/app/bsmr_core:bsmr_core",
+        "//bsmr/app/bsmr_data:bsmr_data",
+        "//bsmr/app/bsmr_downward_api:bsmr_downward_api",
+        "//bsmr/app/bsmr_downward_api_proto:bsmr_downward_api_proto",
+        "//bsmr/app/bsmr_error:bsmr_error",
+        "//bsmr/app/bsmr_events:bsmr_events",
+        "//bsmr/app/bsmr_fs:bsmr_fs",
+        "//bsmr/app/bsmr_grpc:bsmr_grpc",
+        "//bsmr/app/bsmr_hash:bsmr_hash",
+        "//bsmr/app/bsmr_host_sharing_proto:bsmr_host_sharing_proto",
+        "//bsmr/app/bsmr_test_proto:bsmr_test_proto",
+        "//bsmr/packages/rust/gazebo/dupe:dupe",
+        "//bsmr/packages/rust/gazebo/gazebo:gazebo",
+        "//bsmr/packages/rust/host_sharing:host_sharing",
+        "//bsmr/packages/rust/pagable/pagable:pagable",
+    ],
+)

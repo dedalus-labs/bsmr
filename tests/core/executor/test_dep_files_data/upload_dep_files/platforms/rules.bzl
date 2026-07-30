@@ -36,7 +36,7 @@ def _platform(ctx):
             use_limited_hybrid = ctx.attrs.use_limited_hybrid,
             allow_limited_hybrid_fallbacks = ctx.attrs.allow_hybrid_fallbacks_on_failure,
             allow_hybrid_fallbacks_on_failure = ctx.attrs.allow_hybrid_fallbacks_on_failure,
-            remote_execution_use_case = "buck2-testing",
+            remote_execution_use_case = "bsmr-testing",
             allow_cache_uploads = ctx.attrs.allow_cache_uploads,
             remote_dep_file_cache_enabled = ctx.attrs.remote_dep_file_cache_enabled and read_config("test", "remote_dep_file_cache_enabled", "true") == "true",
             max_cache_upload_mebibytes = 1,

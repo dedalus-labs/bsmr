@@ -12,8 +12,8 @@
 import asyncio
 import tempfile
 
-from buck2.tests.e2e_util.api.buck import Buck
-from buck2.tests.e2e_util.buck_workspace import buck_test
+from bsmr.tests.e2e_util.api.buck import Buck
+from bsmr.tests.e2e_util.buck_workspace import buck_test
 
 
 @buck_test(inplace=True)
@@ -26,11 +26,11 @@ async def test_health_check_with_request_hang(buck: Buck) -> None:
 
     env = {
         # Set the CLI_PATH to `echo` making it effectively a no-op since we want buck to use the test server and not spawn a new one.
-        "BUCK2_HEALTH_CHECK_CLI_PATH": "echo",
-        "BUCK2_HEALTH_CHECK_STATE_INFO_PATH": health_check_state_file,
+        "BSMR_HEALTH_CHECK_CLI_PATH": "echo",
+        "BSMR_HEALTH_CHECK_STATE_INFO_PATH": health_check_state_file,
     }
     await buck.build(
-        "fbcode//buck2/tests/targets/rules/rust/hello_world:welcome",
+        "fbcode//bsmr/tests/targets/rules/rust/hello_world:welcome",
         env=env,
     )
     with open(server_output, "r") as f:
@@ -53,7 +53,7 @@ async def start_health_check_server(
     # Start the server before the build begins to ensure that the server is ready to accept requests.
     # This is necessary since the run_request_hang_server.sh script may need to build the server target.
     cmd = buck.run(
-        "fbcode//buck2/tests/e2e/health_check:health_check_server_bin",
+        "fbcode//bsmr/tests/e2e/health_check:health_check_server_bin",
         "--",
         "--isolation-dir",  # Avoids interference with the build of test target
         "health_check_server",

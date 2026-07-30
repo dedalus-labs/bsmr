@@ -10,7 +10,7 @@
 
 package main
 
-import _ "buck2/tests/prelude/go/go_exported_library/cgo"
+import _ "bsmr/tests/prelude/go/go_exported_library/cgo"
 
 // empty main func is needed when building go with buildmode=c-shared;
 func main() {

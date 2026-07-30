@@ -21,9 +21,9 @@ ThirdPartyBuild = record(
     exported_env = field(dict[str, str], {}),
 )
 
-# Work-around for buck2 bug causing "transitive values must be of the same
+# Work-around for bsmr bug causing "transitive values must be of the same
 # transitive set type" errors:
-# https://fb.prod.workplace.com/groups/buck2users/posts/3637287806527574/
+# https://fb.prod.workplace.com/groups/bsmrusers/posts/3637287806527574/
 ThirdPartyBuildTSet = transitive_set()
 ThirdPartyBuildInfo = provider(
     fields = {

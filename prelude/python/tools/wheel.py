@@ -149,7 +149,7 @@ class WheelBuilder(contextlib.AbstractContextManager):
             self._dist_info("WHEEL"),
             f"""\
 Wheel-Version: 1.0
-Generator: buck2
+Generator: bsmr
 Root-Is-Purelib: {root_is_purelib}
 Tag: {self._python_tag}-{self._abi_tag}-{self._platform_tag}
 """,

@@ -321,7 +321,7 @@ def complete_distributed_link_with_expanded_archive_link_data(
                 raw_link_data.append(data)
             elif isinstance(linkable, FrameworksLinkable) or isinstance(linkable, SwiftmoduleLinkable):
                 # These linkables are handled separately for flag deduplication purposes, as in append_linkable_args:
-                # https://www.internalfb.com/code/fbsource/[c6d2c820b394]/fbcode/buck2/prelude/linking/link_info.bzl?lines=271-278
+                # https://www.internalfb.com/code/fbsource/[c6d2c820b394]/fbcode/bsmr/prelude/linking/link_info.bzl?lines=271-278
                 pass
             else:
                 fail("Unhandled linkable type: {}".format(str(linkable)))
@@ -701,7 +701,7 @@ def generate_shared_library_interface(
                 append_linkable_args(dynamic_libraries, linkable)
             elif isinstance(linkable, FrameworksLinkable) or isinstance(linkable, SwiftmoduleLinkable):
                 # These linkables are handled separately for flag deduplication purposes, as in append_linkable_args:
-                # https://www.internalfb.com/code/fbsource/[c6d2c820b394]/fbcode/buck2/prelude/linking/link_info.bzl?lines=271-278
+                # https://www.internalfb.com/code/fbsource/[c6d2c820b394]/fbcode/bsmr/prelude/linking/link_info.bzl?lines=271-278
                 pass
             else:
                 fail("Unhandled linkable type: {}".format(str(linkable)))

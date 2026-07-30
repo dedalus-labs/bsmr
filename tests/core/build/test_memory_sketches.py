@@ -13,8 +13,8 @@ import os
 import subprocess
 from pathlib import Path
 
-from buck2.tests.e2e_util.api.buck import Buck
-from buck2.tests.e2e_util.buck_workspace import buck_test
+from bsmr.tests.e2e_util.api.buck import Buck
+from bsmr.tests.e2e_util.buck_workspace import buck_test
 
 
 def _get_sketch_cardinality(sketch_str: str) -> float:
@@ -93,7 +93,7 @@ async def _build_and_extract_sketches(
 
     Args:
         sketch_field: The field name in the build report (e.g., "retained_analysis_memory_sketch")
-        config_key: The buckconfig key to enable (e.g., "buck2.log_retained_analysis_memory_sketch")
+        config_key: The buckconfig key to enable (e.g., "bsmr.log_retained_analysis_memory_sketch")
     """
     report = tmp_path / "build-report.json"
 
@@ -136,7 +136,7 @@ async def _get_retained_sketches(
         tmp_path,
         targets,
         "retained_analysis_memory_sketch",
-        "buck2.log_retained_analysis_memory_sketch",
+        "bsmr.log_retained_analysis_memory_sketch",
     )
 
 
@@ -148,7 +148,7 @@ async def _get_analysis_peak_sketches(
         tmp_path,
         targets,
         "peak_analysis_memory_sketch",
-        "buck2.log_peak_analysis_memory_sketch",
+        "bsmr.log_peak_analysis_memory_sketch",
     )
 
 
@@ -160,7 +160,7 @@ async def _get_load_peak_sketches(
         tmp_path,
         targets,
         "peak_load_memory_sketch",
-        "buck2.log_peak_load_memory_sketch",
+        "bsmr.log_peak_load_memory_sketch",
     )
 
 
@@ -373,9 +373,9 @@ async def test_peak_analysis_memory_sketch_gte_retained(
     await buck.build(
         "//:target1",
         "-c",
-        "buck2.log_peak_analysis_memory_sketch=true",
+        "bsmr.log_peak_analysis_memory_sketch=true",
         "-c",
-        "buck2.log_retained_analysis_memory_sketch=true",
+        "bsmr.log_retained_analysis_memory_sketch=true",
         "--build-report",
         str(report),
     )
@@ -415,9 +415,9 @@ async def test_analysis_memory_peak_captures_temporaries(
     await buck.build(
         "//:target_peak_only",
         "-c",
-        "buck2.log_peak_analysis_memory_sketch=true",
+        "bsmr.log_peak_analysis_memory_sketch=true",
         "-c",
-        "buck2.log_retained_analysis_memory_sketch=true",
+        "bsmr.log_retained_analysis_memory_sketch=true",
         "--build-report",
         str(report),
     )
@@ -513,9 +513,9 @@ async def test_load_and_analysis_peak_sketches(buck: Buck, tmp_path: Path) -> No
         "//:target_with_load_memory",
         "//:target1",
         "-c",
-        "buck2.log_peak_load_memory_sketch=true",
+        "bsmr.log_peak_load_memory_sketch=true",
         "-c",
-        "buck2.log_peak_analysis_memory_sketch=true",
+        "bsmr.log_peak_analysis_memory_sketch=true",
         "--build-report",
         str(report),
     )

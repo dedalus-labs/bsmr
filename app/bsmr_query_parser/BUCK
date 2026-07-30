@@ -1,0 +1,18 @@
+load("@bsmr_build//rules:rust.bzl", "rust_library")
+
+oncall("build_infra")
+
+rust_library(
+    name = "bsmr_query_parser",
+    srcs = glob(["src/**/*.rs"]),
+    deps = [
+        "fbsource//third-party/rust:derive_more",
+        "fbsource//third-party/rust:enum-map",
+        "fbsource//third-party/rust:nom",
+        "fbsource//third-party/rust:nom-language",
+        "//bsmr/app/bsmr_error:bsmr_error",
+        "//bsmr/app/bsmr_util:bsmr_util",
+        "//bsmr/packages/rust/gazebo/dupe:dupe",
+        "//bsmr/packages/rust/gazebo/gazebo:gazebo",
+    ],
+)

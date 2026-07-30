@@ -5,7 +5,7 @@ title: Configuration modifiers
 
 Modifiers (also referred to as configuration modifiers) are a feature that lets
 users add [constraints](../rule_authors/configurations.md) to individual
-directories, target definitions and individual `buck2` invocations.
+directories, target definitions and individual `bsmr` invocations.
 
 They are the recommended to customize build configurations when building
 targets directly. If you need to customize parts of your build graph

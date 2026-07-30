@@ -5,7 +5,7 @@
 # License, Version 2.0 found in the LICENSE-APACHE file in the root directory
 # of this source tree.
 {
-  description = "A flake for hacking on and building buck2";
+  description = "A flake for hacking on and building bsmr";
   inputs = {
     nixpkgs.url = "github:nixos/nixpkgs/nixpkgs-unstable";
     flake-utils.url = "github:numtide/flake-utils";
@@ -41,8 +41,8 @@
         packages = [ my-rust-bin pkgs.dotslash pkgs.python3 pkgs.lld_20 pkgs.clang_20 pkgs.yarn ];
         shellHook =
           ''
-            export BUCK2_BUILD_PROTOC=${pkgs.protobuf}/bin/protoc
-            export BUCK2_BUILD_PROTOC_INCLUDE=${pkgs.protobuf}/include
+            export BSMR_BUILD_PROTOC=${pkgs.protobuf}/bin/protoc
+            export BSMR_BUILD_PROTOC_INCLUDE=${pkgs.protobuf}/include
           ''
           # enable mold for linux users, for more tolerable link times
           # we have to specify tokio_unstable in the RUSTFLAGS here since they override

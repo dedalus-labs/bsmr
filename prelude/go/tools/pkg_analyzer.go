@@ -9,7 +9,7 @@
  */
 
 // pkg_analyzer is a tool that provides package analysis generation
-// for Go packages. It serves as a replacement for "go list" in Buck2 builds,
+// for Go packages. It serves as a replacement for "go list" in Bessemer builds,
 // providing the exact output format expected by go_list.bzl.
 //
 // Usage:

@@ -28,111 +28,109 @@ inherits = "release"
 
 [workspace]
 members = [
-  "allocative/allocative",
-  "allocative/allocative_derive",
-  "app/buck2",
-  "app/buck2_action_impl",
-  "app/buck2_action_impl_tests",
-  "app/buck2_action_metadata_proto",
-  "app/buck2_analysis",
-  "app/buck2_anon_target",
-  "app/buck2_artifact",
-  "app/buck2_build_api",
-  "app/buck2_build_api_derive",
-  "app/buck2_build_api_tests",
-  "app/buck2_build_info",
-  "app/buck2_build_signals",
-  "app/buck2_build_signals_impl",
-  "app/buck2_bxl",
-  "app/buck2_certs",
-  "app/buck2_cfg_constructor",
-  "app/buck2_cli_proto",
-  "app/buck2_client",
-  "app/buck2_client_ctx",
-  "app/buck2_cmd_audit_client",
-  "app/buck2_cmd_audit_server",
-  "app/buck2_cmd_completion_client",
-  "app/buck2_cmd_debug_client",
-  "app/buck2_cmd_docs_client",
-  "app/buck2_cmd_docs_server",
-  "app/buck2_cmd_log_client",
-  "app/buck2_cmd_query_server",
-  "app/buck2_cmd_rage_client",
-  "app/buck2_cmd_starlark_client",
-  "app/buck2_cmd_starlark_server",
-  "app/buck2_cmd_targets_server",
-  "app/buck2_common",
-  "app/buck2_configured",
-  "app/buck2_core",
-  "app/buck2_critical_path",
-  "app/buck2_daemon",
-  "app/buck2_data",
-  "app/buck2_directory",
-  "app/buck2_downward_api",
-  "app/buck2_downward_api_proto",
-  "app/buck2_env",
-  "app/buck2_error",
-  "app/buck2_error_derive",
-  "app/buck2_error_tests",
-  "app/buck2_errorformat",
-  "app/buck2_event_log",
-  "app/buck2_event_observer",
-  "app/buck2_events",
-  "app/buck2_execute",
-  "app/buck2_execute_impl",
-  "app/buck2_execute_local",
-  "app/buck2_external_cells",
-  "app/buck2_external_cells_bundled",
-  "app/buck2_file_watcher",
-  "app/buck2_forkserver",
-  "app/buck2_forkserver_proto",
-  "app/buck2_fs",
-  "app/buck2_grpc",
-  "app/buck2_hash",
-  "app/buck2_health_check",
-  "app/buck2_health_check_proto",
-  "app/buck2_host_sharing_proto",
-  "app/buck2_http",
-  "app/buck2_install_proto",
-  "app/buck2_interpreter",
-  "app/buck2_interpreter_for_build",
-  "app/buck2_interpreter_for_build_tests",
-  "app/buck2_log_common",
-  "app/buck2_miniperf",
-  "app/buck2_miniperf_proto",
-  "app/buck2_node",
-  "app/buck2_node_tests",
-  "app/buck2_offline_archive",
-  "app/buck2_profile",
-  "app/buck2_protoc_dev",
-  "app/buck2_query",
-  "app/buck2_query_derive",
-  "app/buck2_query_impls",
-  "app/buck2_query_parser",
-  "app/buck2_re_configuration",
-  "app/buck2_resource_control",
-  "app/buck2_server",
-  "app/buck2_server_commands",
-  "app/buck2_server_ctx",
-  "app/buck2_server_starlark_debug",
-  "app/buck2_subscription_proto",
-  "app/buck2_test",
-  "app/buck2_test_api",
-  "app/buck2_test_proto",
-  "app/buck2_test_runner",
-  "app/buck2_transition",
-  "app/buck2_util",
-  "app/buck2_validation",
-  "app/buck2_worker_proto",
-  "app/buck2_wrapper_common",
-  "buck2_sketches",
+  "packages/rust/allocative/allocative",
+  "packages/rust/allocative/allocative_derive",
+  "app/bsmr",
+  "app/bsmr_action_impl",
+  "app/bsmr_action_impl_tests",
+  "app/bsmr_action_metadata_proto",
+  "app/bsmr_analysis",
+  "app/bsmr_anon_target",
+  "app/bsmr_artifact",
+  "app/bsmr_build_api",
+  "app/bsmr_build_api_derive",
+  "app/bsmr_build_api_tests",
+  "app/bsmr_build_info",
+  "app/bsmr_build_signals",
+  "app/bsmr_build_signals_impl",
+  "app/bsmr_bxl",
+  "app/bsmr_certs",
+  "app/bsmr_cfg_constructor",
+  "app/bsmr_cli_proto",
+  "app/bsmr_client",
+  "app/bsmr_client_ctx",
+  "app/bsmr_cmd_audit_client",
+  "app/bsmr_cmd_audit_server",
+  "app/bsmr_cmd_completion_client",
+  "app/bsmr_cmd_debug_client",
+  "app/bsmr_cmd_docs_client",
+  "app/bsmr_cmd_docs_server",
+  "app/bsmr_cmd_log_client",
+  "app/bsmr_cmd_query_server",
+  "app/bsmr_cmd_starlark_client",
+  "app/bsmr_cmd_starlark_server",
+  "app/bsmr_cmd_targets_server",
+  "app/bsmr_common",
+  "app/bsmr_configured",
+  "app/bsmr_core",
+  "app/bsmr_critical_path",
+  "app/bsmr_daemon",
+  "app/bsmr_data",
+  "app/bsmr_directory",
+  "app/bsmr_downward_api",
+  "app/bsmr_downward_api_proto",
+  "app/bsmr_env",
+  "app/bsmr_error",
+  "app/bsmr_error_derive",
+  "app/bsmr_error_tests",
+  "app/bsmr_errorformat",
+  "app/bsmr_event_log",
+  "app/bsmr_event_observer",
+  "app/bsmr_events",
+  "app/bsmr_execute",
+  "app/bsmr_execute_impl",
+  "app/bsmr_execute_local",
+  "app/bsmr_external_cells",
+  "app/bsmr_external_cells_bundled",
+  "app/bsmr_file_watcher",
+  "app/bsmr_forkserver",
+  "app/bsmr_forkserver_proto",
+  "app/bsmr_fs",
+  "app/bsmr_grpc",
+  "app/bsmr_hash",
+  "app/bsmr_health_check",
+  "app/bsmr_health_check_proto",
+  "app/bsmr_host_sharing_proto",
+  "app/bsmr_http",
+  "app/bsmr_install_proto",
+  "app/bsmr_interpreter",
+  "app/bsmr_interpreter_for_build",
+  "app/bsmr_interpreter_for_build_tests",
+  "app/bsmr_log_common",
+  "app/bsmr_miniperf",
+  "app/bsmr_miniperf_proto",
+  "app/bsmr_node",
+  "app/bsmr_node_tests",
+  "app/bsmr_offline_archive",
+  "app/bsmr_profile",
+  "app/bsmr_protoc_dev",
+  "app/bsmr_query",
+  "app/bsmr_query_derive",
+  "app/bsmr_query_impls",
+  "app/bsmr_query_parser",
+  "app/bsmr_re_configuration",
+  "app/bsmr_resource_control",
+  "app/bsmr_server",
+  "app/bsmr_server_commands",
+  "app/bsmr_server_ctx",
+  "app/bsmr_server_starlark_debug",
+  "app/bsmr_subscription_proto",
+  "app/bsmr_test",
+  "app/bsmr_test_api",
+  "app/bsmr_test_proto",
+  "app/bsmr_test_runner",
+  "app/bsmr_transition",
+  "app/bsmr_util",
+  "app/bsmr_validation",
+  "app/bsmr_worker_proto",
+  "app/bsmr_wrapper_common",
+  "app/bsmr_sketches",
   "packages/rust/dice/dice",
   "packages/rust/dice/dice_error",
   "packages/rust/dice/dice_examples",
   "packages/rust/dice/dice_futures",
   "packages/rust/dice/dice_tests",
   "packages/rust/dice/read_dump",
-  "games",
   "packages/rust/gazebo/cmp_any",
   "packages/rust/gazebo/display_container",
   "packages/rust/gazebo/dupe",
@@ -142,20 +140,19 @@ members = [
   "packages/rust/gazebo/strong_hash",
   "packages/rust/gazebo/strong_hash_derive",
   "packages/rust/gazebo/strong_hash_tests",
-  "host_sharing",
-  "integrations/resources/rust",
-  "integrations/rust-project",
-  "pagable",
-  "pagable_derive",
-  "pagable_storage",
-  "remote_execution/oss/re_grpc",
-  "remote_execution/oss/re_grpc_proto",
-  "shed/lock_free_hashtable",
-  "shed/lock_free_vec",
-  "shed/provider",
-  "shed/setsketch",
-  "shed/static_interner",
-  "shed/three_billion_instructions",
+  "packages/rust/host_sharing",
+  "packages/rust/buck-resources",
+  "tools/rust-project",
+  "packages/rust/pagable/pagable",
+  "packages/rust/pagable/pagable_derive",
+  "packages/rust/pagable/pagable_storage",
+  "packages/rust/remote_execution/oss/re_grpc",
+  "packages/rust/remote_execution/oss/re_grpc_proto",
+  "packages/rust/lock_free_hashtable",
+  "packages/rust/lock_free_vec",
+  "packages/rust/setsketch",
+  "packages/rust/static_interner",
+  "tools/testing/three-billion-instructions",
   "packages/rust/starlark/starlark",
   "packages/rust/starlark/starlark_bin",
   "packages/rust/starlark/starlark_derive",
@@ -163,7 +160,7 @@ members = [
   "packages/rust/starlark/starlark_lsp",
   "packages/rust/starlark/starlark_map",
   "packages/rust/starlark/starlark_syntax",
-  "superconsole",
+  "packages/rust/superconsole",
 ]
 resolver = "2"
 
@@ -171,10 +168,10 @@ resolver = "2"
 version = "0.1.0"
 edition = "2024"
 license = "MIT OR Apache-2.0"
-repository = "https://github.com/facebook/buck2"
+repository = "https://github.com/dedalus-labs/bsmr"
 
 [workspace.dependencies]
-allocative = { path = "allocative/allocative", features = ["anyhow", "bumpalo", "chrono", "compact_str", "dashmap", "either", "futures", "hashbrown", "indexmap", "num-bigint", "once_cell", "parking_lot", "prost-types", "serde_json", "slab", "smallvec", "sorted_vector_map", "tokio", "triomphe"] }
+allocative = { path = "packages/rust/allocative/allocative", features = ["anyhow", "bumpalo", "chrono", "compact_str", "dashmap", "either", "futures", "hashbrown", "indexmap", "num-bigint", "once_cell", "parking_lot", "prost-types", "serde_json", "slab", "smallvec", "sorted_vector_map", "tokio", "triomphe"] }
 anyhow = "1.0.103"
 anymap3 = "1.1.0"
 arc-swap = { version = "1.9.2", features = ["weak"] }
@@ -189,95 +186,94 @@ backtrace = "0.3"
 base64 = { version = "0.22.1", features = ["alloc"] }
 bincode = { version = "2", features = ["serde"] }
 blake3 = { version = "=1.8.2", features = ["mmap", "rayon", "traits-preview"] }
-buck2_action_impl = { path = "app/buck2_action_impl" }
-buck2_action_metadata_proto = { path = "app/buck2_action_metadata_proto" }
-buck2_analysis = { path = "app/buck2_analysis" }
-buck2_anon_target = { path = "app/buck2_anon_target" }
-buck2_artifact = { path = "app/buck2_artifact" }
-buck2_build_api = { path = "app/buck2_build_api" }
-buck2_build_api_derive = { path = "app/buck2_build_api_derive" }
-buck2_build_info = { path = "app/buck2_build_info" }
-buck2_build_signals = { path = "app/buck2_build_signals" }
-buck2_build_signals_impl = { path = "app/buck2_build_signals_impl" }
-buck2_bxl = { path = "app/buck2_bxl" }
-buck2_certs = { path = "app/buck2_certs" }
-buck2_cfg_constructor = { path = "app/buck2_cfg_constructor" }
-buck2_cli_proto = { path = "app/buck2_cli_proto" }
-buck2_client = { path = "app/buck2_client" }
-buck2_client_ctx = { path = "app/buck2_client_ctx" }
-buck2_cmd_audit_client = { path = "app/buck2_cmd_audit_client" }
-buck2_cmd_audit_server = { path = "app/buck2_cmd_audit_server" }
-buck2_cmd_completion_client = { path = "app/buck2_cmd_completion_client" }
-buck2_cmd_debug_client = { path = "app/buck2_cmd_debug_client" }
-buck2_cmd_docs_client = { path = "app/buck2_cmd_docs_client" }
-buck2_cmd_docs_server = { path = "app/buck2_cmd_docs_server" }
-buck2_cmd_log_client = { path = "app/buck2_cmd_log_client" }
-buck2_cmd_query_server = { path = "app/buck2_cmd_query_server" }
-buck2_cmd_rage_client = { path = "app/buck2_cmd_rage_client" }
-buck2_cmd_starlark_client = { path = "app/buck2_cmd_starlark_client" }
-buck2_cmd_starlark_server = { path = "app/buck2_cmd_starlark_server" }
-buck2_cmd_targets_server = { path = "app/buck2_cmd_targets_server" }
-buck2_common = { path = "app/buck2_common" }
-buck2_configured = { path = "app/buck2_configured" }
-buck2_core = { path = "app/buck2_core" }
-buck2_critical_path = { path = "app/buck2_critical_path" }
-buck2_daemon = { path = "app/buck2_daemon" }
-buck2_data = { path = "app/buck2_data" }
-buck2_directory = { path = "app/buck2_directory" }
-buck2_downward_api = { path = "app/buck2_downward_api" }
-buck2_downward_api_proto = { path = "app/buck2_downward_api_proto" }
-buck2_env = { path = "app/buck2_env" }
-buck2_error = { path = "app/buck2_error" }
-buck2_error_derive = { path = "app/buck2_error_derive" }
-buck2_errorformat = { path = "app/buck2_errorformat" }
-buck2_event_log = { path = "app/buck2_event_log" }
-buck2_event_observer = { path = "app/buck2_event_observer" }
-buck2_events = { path = "app/buck2_events" }
-buck2_execute = { path = "app/buck2_execute" }
-buck2_execute_impl = { path = "app/buck2_execute_impl" }
-buck2_execute_local = { path = "app/buck2_execute_local" }
-buck2_external_cells = { path = "app/buck2_external_cells" }
-buck2_external_cells_bundled = { path = "app/buck2_external_cells_bundled" }
-buck2_file_watcher = { path = "app/buck2_file_watcher" }
-buck2_forkserver = { path = "app/buck2_forkserver" }
-buck2_forkserver_proto = { path = "app/buck2_forkserver_proto" }
-buck2_fs = { path = "app/buck2_fs" }
-buck2_grpc = { path = "app/buck2_grpc" }
-buck2_hash = { path = "app/buck2_hash" }
-buck2_health_check = { path = "app/buck2_health_check" }
-buck2_health_check_proto = { path = "app/buck2_health_check_proto" }
-buck2_host_sharing_proto = { path = "app/buck2_host_sharing_proto" }
-buck2_http = { path = "app/buck2_http" }
-buck2_install_proto = { path = "app/buck2_install_proto" }
-buck2_interpreter = { path = "app/buck2_interpreter" }
-buck2_interpreter_for_build = { path = "app/buck2_interpreter_for_build" }
-buck2_log_common = { path = "app/buck2_log_common" }
-buck2_miniperf_proto = { path = "app/buck2_miniperf_proto" }
-buck2_node = { path = "app/buck2_node" }
-buck2_offline_archive = { path = "app/buck2_offline_archive" }
-buck2_profile = { path = "app/buck2_profile" }
-buck2_protoc_dev = { path = "app/buck2_protoc_dev" }
-buck2_query = { path = "app/buck2_query" }
-buck2_query_derive = { path = "app/buck2_query_derive" }
-buck2_query_impls = { path = "app/buck2_query_impls" }
-buck2_query_parser = { path = "app/buck2_query_parser" }
-buck2_re_configuration = { path = "app/buck2_re_configuration" }
-buck2_resource_control = { path = "app/buck2_resource_control" }
-buck2_server = { path = "app/buck2_server" }
-buck2_server_commands = { path = "app/buck2_server_commands" }
-buck2_server_ctx = { path = "app/buck2_server_ctx" }
-buck2_server_starlark_debug = { path = "app/buck2_server_starlark_debug" }
-buck2_sketches = { path = "buck2_sketches" }
-buck2_subscription_proto = { path = "app/buck2_subscription_proto" }
-buck2_test = { path = "app/buck2_test" }
-buck2_test_api = { path = "app/buck2_test_api" }
-buck2_test_proto = { path = "app/buck2_test_proto" }
-buck2_test_runner = { path = "app/buck2_test_runner" }
-buck2_transition = { path = "app/buck2_transition" }
-buck2_util = { path = "app/buck2_util" }
-buck2_validation = { path = "app/buck2_validation" }
-buck2_worker_proto = { path = "app/buck2_worker_proto" }
-buck2_wrapper_common = { path = "app/buck2_wrapper_common" }
+bsmr_action_impl = { path = "app/bsmr_action_impl" }
+bsmr_action_metadata_proto = { path = "app/bsmr_action_metadata_proto" }
+bsmr_analysis = { path = "app/bsmr_analysis" }
+bsmr_anon_target = { path = "app/bsmr_anon_target" }
+bsmr_artifact = { path = "app/bsmr_artifact" }
+bsmr_build_api = { path = "app/bsmr_build_api" }
+bsmr_build_api_derive = { path = "app/bsmr_build_api_derive" }
+bsmr_build_info = { path = "app/bsmr_build_info" }
+bsmr_build_signals = { path = "app/bsmr_build_signals" }
+bsmr_build_signals_impl = { path = "app/bsmr_build_signals_impl" }
+bsmr_bxl = { path = "app/bsmr_bxl" }
+bsmr_certs = { path = "app/bsmr_certs" }
+bsmr_cfg_constructor = { path = "app/bsmr_cfg_constructor" }
+bsmr_cli_proto = { path = "app/bsmr_cli_proto" }
+bsmr_client = { path = "app/bsmr_client" }
+bsmr_client_ctx = { path = "app/bsmr_client_ctx" }
+bsmr_cmd_audit_client = { path = "app/bsmr_cmd_audit_client" }
+bsmr_cmd_audit_server = { path = "app/bsmr_cmd_audit_server" }
+bsmr_cmd_completion_client = { path = "app/bsmr_cmd_completion_client" }
+bsmr_cmd_debug_client = { path = "app/bsmr_cmd_debug_client" }
+bsmr_cmd_docs_client = { path = "app/bsmr_cmd_docs_client" }
+bsmr_cmd_docs_server = { path = "app/bsmr_cmd_docs_server" }
+bsmr_cmd_log_client = { path = "app/bsmr_cmd_log_client" }
+bsmr_cmd_query_server = { path = "app/bsmr_cmd_query_server" }
+bsmr_cmd_starlark_client = { path = "app/bsmr_cmd_starlark_client" }
+bsmr_cmd_starlark_server = { path = "app/bsmr_cmd_starlark_server" }
+bsmr_cmd_targets_server = { path = "app/bsmr_cmd_targets_server" }
+bsmr_common = { path = "app/bsmr_common" }
+bsmr_configured = { path = "app/bsmr_configured" }
+bsmr_core = { path = "app/bsmr_core" }
+bsmr_critical_path = { path = "app/bsmr_critical_path" }
+bsmr_daemon = { path = "app/bsmr_daemon" }
+bsmr_data = { path = "app/bsmr_data" }
+bsmr_directory = { path = "app/bsmr_directory" }
+bsmr_downward_api = { path = "app/bsmr_downward_api" }
+bsmr_downward_api_proto = { path = "app/bsmr_downward_api_proto" }
+bsmr_env = { path = "app/bsmr_env" }
+bsmr_error = { path = "app/bsmr_error" }
+bsmr_error_derive = { path = "app/bsmr_error_derive" }
+bsmr_errorformat = { path = "app/bsmr_errorformat" }
+bsmr_event_log = { path = "app/bsmr_event_log" }
+bsmr_event_observer = { path = "app/bsmr_event_observer" }
+bsmr_events = { path = "app/bsmr_events" }
+bsmr_execute = { path = "app/bsmr_execute" }
+bsmr_execute_impl = { path = "app/bsmr_execute_impl" }
+bsmr_execute_local = { path = "app/bsmr_execute_local" }
+bsmr_external_cells = { path = "app/bsmr_external_cells" }
+bsmr_external_cells_bundled = { path = "app/bsmr_external_cells_bundled" }
+bsmr_file_watcher = { path = "app/bsmr_file_watcher" }
+bsmr_forkserver = { path = "app/bsmr_forkserver" }
+bsmr_forkserver_proto = { path = "app/bsmr_forkserver_proto" }
+bsmr_fs = { path = "app/bsmr_fs" }
+bsmr_grpc = { path = "app/bsmr_grpc" }
+bsmr_hash = { path = "app/bsmr_hash" }
+bsmr_health_check = { path = "app/bsmr_health_check" }
+bsmr_health_check_proto = { path = "app/bsmr_health_check_proto" }
+bsmr_host_sharing_proto = { path = "app/bsmr_host_sharing_proto" }
+bsmr_http = { path = "app/bsmr_http" }
+bsmr_install_proto = { path = "app/bsmr_install_proto" }
+bsmr_interpreter = { path = "app/bsmr_interpreter" }
+bsmr_interpreter_for_build = { path = "app/bsmr_interpreter_for_build" }
+bsmr_log_common = { path = "app/bsmr_log_common" }
+bsmr_miniperf_proto = { path = "app/bsmr_miniperf_proto" }
+bsmr_node = { path = "app/bsmr_node" }
+bsmr_offline_archive = { path = "app/bsmr_offline_archive" }
+bsmr_profile = { path = "app/bsmr_profile" }
+bsmr_protoc_dev = { path = "app/bsmr_protoc_dev" }
+bsmr_query = { path = "app/bsmr_query" }
+bsmr_query_derive = { path = "app/bsmr_query_derive" }
+bsmr_query_impls = { path = "app/bsmr_query_impls" }
+bsmr_query_parser = { path = "app/bsmr_query_parser" }
+bsmr_re_configuration = { path = "app/bsmr_re_configuration" }
+bsmr_resource_control = { path = "app/bsmr_resource_control" }
+bsmr_server = { path = "app/bsmr_server" }
+bsmr_server_commands = { path = "app/bsmr_server_commands" }
+bsmr_server_ctx = { path = "app/bsmr_server_ctx" }
+bsmr_server_starlark_debug = { path = "app/bsmr_server_starlark_debug" }
+bsmr_sketches = { path = "app/bsmr_sketches" }
+bsmr_subscription_proto = { path = "app/bsmr_subscription_proto" }
+bsmr_test = { path = "app/bsmr_test" }
+bsmr_test_api = { path = "app/bsmr_test_api" }
+bsmr_test_proto = { path = "app/bsmr_test_proto" }
+bsmr_test_runner = { path = "app/bsmr_test_runner" }
+bsmr_transition = { path = "app/bsmr_transition" }
+bsmr_util = { path = "app/bsmr_util" }
+bsmr_validation = { path = "app/bsmr_validation" }
+bsmr_worker_proto = { path = "app/bsmr_worker_proto" }
+bsmr_wrapper_common = { path = "app/bsmr_wrapper_common" }
 bumpalo = { version = "3.20.3", features = ["allocator_api", "collections"] }
 bytes = { version = "1.12.1", features = ["serde"] }
 bytesize = "2.4.2"
@@ -323,13 +319,12 @@ fs4 = { version = "0.9.1", features = ["sync"] }
 futures = { version = "0.3.31", features = ["async-await", "compat"] }
 futures-intrusive = "0.4.2"
 fxhash = "0.2.1"
-games = { path = "games" }
 gazebo = { path = "packages/rust/gazebo/gazebo", features = ["str_pattern_extensions"] }
 glob = "0.3.2"
 globset = { version = "0.4.13", features = ["serde1"] }
 hashbrown = "0.17.1"
 hex = { version = "0.4.3", features = ["alloc"] }
-host_sharing = { path = "host_sharing" }
+host_sharing = { path = "packages/rust/host_sharing" }
 hostname = "0.4.2"
 http = "1.4.2"
 http-body = "1.1.0"
@@ -347,7 +342,7 @@ image = { version = "0.25.10", features = ["bmp", "dds", "ff", "gif", "hdr", "ic
 indent_write = "2.2.0"
 indexmap = { version = "2.14.0", features = ["arbitrary", "rayon", "serde"] }
 indoc = "2.0.2"
-inferno = { version = "0.11.21", default-features = false }
+inferno = { version = "0.12.8", default-features = false }
 internment = { version = "0.8.6", features = ["arc", "serde"] }
 inventory = "0.3.24"
 ipnetwork = "0.20.0"
@@ -356,8 +351,8 @@ itertools = "0.15.0"
 libc = "0.2.186"
 linked-hash-map = { version = "0.5", features = ["serde_impl"] }
 linkme = { version = "0.3.36", features = ["used_linker"] }
-lock_free_hashtable = { path = "shed/lock_free_hashtable", features = ["allocative"] }
-lock_free_vec = { path = "shed/lock_free_vec" }
+lock_free_hashtable = { path = "packages/rust/lock_free_hashtable", features = ["allocative"] }
+lock_free_vec = { path = "packages/rust/lock_free_vec" }
 lru = { version = "0.16.4", default-features = false }
 lsp-server = "0.7.9"
 lsp-types = "0.97"
@@ -374,8 +369,8 @@ num-bigint = { version = "0.4.8", features = ["rand", "serde"] }
 num_enum = "0.7.6"
 object = { version = "0.36.7", features = ["read", "write"] }
 os_str_bytes = { version = "6.6.1", features = ["conversions"] }
-pagable = { path = "pagable", features = ["tokio"] }
-pagable_storage = { path = "pagable_storage", features = ["tokio"] }
+pagable = { path = "packages/rust/pagable/pagable", features = ["tokio"] }
+pagable_storage = { path = "packages/rust/pagable/pagable_storage", features = ["tokio"] }
 parking_lot = { version = "0.12.1", features = ["arc_lock", "send_guard"] }
 paste = "1.0.14"
 pathdiff = "0.2"
@@ -388,16 +383,16 @@ prost = { version = "0.14.4", default-features = false }
 prost-types = { version = "0.14.4", default-features = false }
 protoc-bin-vendored = "3.0.0"
 psutil = "3.3.0"
-quick-xml = { version = "0.37", features = ["overlapped-lists", "serialize"] }
+quick-xml = { version = "0.41", features = ["overlapped-lists", "serialize"] }
 quote = "1.0.46"
 rand = "0.10.2"
 rand_chacha = "0.10"
 rand_distr = "0.6"
 rand_xoshiro = "0.8.1"
-re_grpc_proto = { path = "remote_execution/oss/re_grpc_proto" }
+re_grpc_proto = { path = "packages/rust/remote_execution/oss/re_grpc_proto" }
 ref-cast = "1.0.18"
 regex = "1.13.0"
-remote_execution = { path = "remote_execution/oss/re_grpc" }
+remote_execution = { path = "packages/rust/remote_execution/oss/re_grpc" }
 rusqlite = { version = "0.37.0", features = ["backup", "blob", "bundled", "column_decltype", "functions", "limits", "modern_sqlite", "serde_json"] }
 rustc-hash = "2.1.3"
 rustls = { version = "0.23.37", features = ["ring"] }
@@ -408,7 +403,7 @@ sequence_trie = { version = "0.3.6", features = ["serde"] }
 serde = { version = "1.0.219", features = ["derive", "rc"] }
 serde_json = { version = "1.0.140", features = ["alloc", "float_roundtrip", "raw_value", "unbounded_depth"] }
 serde_path_to_error = "0.1.20"
-setsketch = { path = "shed/setsketch" }
+setsketch = { path = "packages/rust/setsketch" }
 sha1 = "0.10.7"
 sha2 = "0.10.6"
 shlex = "1.3"
@@ -423,11 +418,11 @@ starlark_lsp = { path = "packages/rust/starlark/starlark_lsp" }
 starlark_map = { path = "packages/rust/starlark/starlark_map", features = ["pagable_dep"] }
 starlark_syntax = { path = "packages/rust/starlark/starlark_syntax" }
 static_assertions = "1.1.0"
-static_interner = { path = "shed/static_interner", features = ["allocative", "dupe", "strong_hash"] }
+static_interner = { path = "packages/rust/static_interner", features = ["allocative", "dupe", "strong_hash"] }
 strong_hash = { path = "packages/rust/gazebo/strong_hash", features = ["num-bigint", "triomphe"] }
 strsim = "0.11.1"
 strum = { version = "0.28.0", features = ["derive"] }
-superconsole = { path = "superconsole" }
+superconsole = { path = "packages/rust/superconsole" }
 syn = { version = "2.0.118", features = ["extra-traits", "fold", "full", "visit", "visit-mut"] }
 sync_wrapper = "1.0.2"
 sys-info = "0.9.1"
@@ -442,7 +437,7 @@ test-case = "3.3.1"
 textwrap = { version = "0.16.0", features = ["terminal_size"] }
 thiserror = "2.0.18"
 threadpool = "1.8.1"
-three_billion_instructions = { path = "shed/three_billion_instructions" }
+three_billion_instructions = { path = "tools/testing/three-billion-instructions" }
 tikv-jemallocator = "0.6.1"
 tokio = { version = "1.52.3", features = ["full", "test-util", "tracing"] }
 tokio-retry = "0.3.2"
@@ -473,4 +468,4 @@ xattr = "1.6.1"
 zstd = { version = "0.13.3", features = ["experimental", "zstdmt"] }
 
 [workspace.lints.rust]
-unexpected_cfgs = { level = "allow", check-cfg = ["cfg(fbcode_build)", "cfg(buck_build)", "cfg(client_only)", "cfg(tokio_unstable)"]}
+unexpected_cfgs = { level = "allow", check-cfg = ["cfg(fbcode_build)", "cfg(buck_build)", "cfg(client_only)", "cfg(tokio_unstable)", "cfg(bsmr_memfrag)"]}

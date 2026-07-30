@@ -383,7 +383,7 @@ To fix this:
 
 1. Generate OTP version information from your Erlang installation:
 
-   $ python3 buck2/prelude/erlang/toolchain/generate_otp_versions.py my_otp_versions.bzl
+   $ python3 bsmr/prelude/erlang/toolchain/generate_otp_versions.py my_otp_versions.bzl
 
 2. Commit the generated file and load it in your BUCK file:
 

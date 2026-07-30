@@ -14,11 +14,11 @@ import json
 import signal
 from pathlib import Path
 
-from buck2.tests.e2e_util.api.buck import Buck
-from buck2.tests.e2e_util.asserts import expect_failure
-from buck2.tests.e2e_util.buck_workspace import buck_test
-from buck2.tests.e2e_util.helper.golden import golden, sanitize_stderr
-from buck2.tests.e2e_util.helper.utils import read_invocation_record
+from bsmr.tests.e2e_util.api.buck import Buck
+from bsmr.tests.e2e_util.asserts import expect_failure
+from bsmr.tests.e2e_util.buck_workspace import buck_test
+from bsmr.tests.e2e_util.helper.golden import golden, sanitize_stderr
+from bsmr.tests.e2e_util.helper.utils import read_invocation_record
 
 # FIXME(JakobDegen): Flakey in CI
 if False:
@@ -130,7 +130,7 @@ async def test_client_metadata_env(buck: Buck) -> None:
     res = await buck.build(
         "--client-metadata=foo=bar",
         "--client-metadata=id=baz",
-        env={"BUCK2_CLIENT_METADATA": "env_foo=env_bar,id=foobar"},
+        env={"BSMR_CLIENT_METADATA": "env_foo=env_bar,id=foobar"},
     )
 
     record = res.invocation_record()

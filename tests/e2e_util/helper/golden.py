@@ -18,7 +18,7 @@ GOLDEN_DIRECTORY = "fixtures/"
 def _prepend_header(content: str) -> str:
     return (
         f"# This file is {'@'}generated, "
-        f"regenerate by re-running test with `-- --env BUCK2_UPDATE_GOLDEN=1` appended to the test command\n\n{content}"
+        f"regenerate by re-running test with `-- --env BSMR_UPDATE_GOLDEN=1` appended to the test command\n\n{content}"
     )
 
 
@@ -72,7 +72,7 @@ def _unified_diff(
 
 
 def _is_update_invocation() -> bool:
-    return os.getenv("BUCK2_UPDATE_GOLDEN") is not None
+    return os.getenv("BSMR_UPDATE_GOLDEN") is not None
 
 
 # Output is a map of `rel_path`-relative files to their expected values
@@ -132,7 +132,7 @@ def golden(*, output: str, rel_path: str) -> None:
         raise AssertionError(
             f"Expected golden file to match actual\n"
             f"\n\n{unified_diff}\n\n"
-            "Re-run test with `-- --env BUCK2_UPDATE_GOLDEN=1` appended to the test command to regenerate the files"
+            "Re-run test with `-- --env BSMR_UPDATE_GOLDEN=1` appended to the test command to regenerate the files"
         )
 
 
@@ -169,7 +169,7 @@ def sanitize_hashes(s: str) -> str:
     return re.sub(r"\b[0-9a-f]{40}:[0-9]{1,3}\b", "<DIGEST>", s)
 
 
-# C++ libraries linked into buck2 (and the tools it spawns) can emit glog-format
+# C++ libraries linked into bsmr (and the tools it spawns) can emit glog-format
 # lines such as `I0623 15:40:41.926481 128942 Hash.cpp:327] tiHash seed: ...ull`
 # to stderr during process init. Their timestamps, PIDs, and source locations
 # vary between runs, so they leak non-deterministically into captured stderr and

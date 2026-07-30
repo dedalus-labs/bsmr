@@ -427,7 +427,7 @@ def _impl(ctx: AnalysisContext) -> list[Provider]:
         #  * https://packaging.python.org/en/latest/specifications/recording-installed-packages/#the-dist-info-directory
         #  * https://packaging.python.org/en/latest/specifications/name-normalization/
         #
-        # Equivalent to fbcode/buck2/prelude/python/tools/wheel.py#normalize_name()
+        # Equivalent to fbcode/bsmr/prelude/python/tools/wheel.py#normalize_name()
         # but need to do it here since we need to set output path
 
         # PEP503 name normalization

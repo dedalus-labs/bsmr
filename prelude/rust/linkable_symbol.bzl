@@ -42,9 +42,9 @@ with a mapped_srcs in your Rust target is that your slow genrule does not have
 to get built when you're doing typecheck-only builds of the Rust code. That
 applies to all of the following situations:
 
-  - `arc rust-check` a.k.a. `buck2 build :whoa[check]`
+  - `arc rust-check` a.k.a. `bsmr build :whoa[check]`
 
-  - documentation builds: `buck2 build :whoa[doc]`
+  - documentation builds: `bsmr build :whoa[doc]`
 
   - all building performed by IDE
 """
@@ -52,7 +52,7 @@ applies to all of the following situations:
 load("@prelude//rust:link_info.bzl", "RustLinkInfo") # @oss-enable
 load("@prelude//prelude.bzl", prelude = "native") # @oss-enable
 load("@prelude//rust:sources.bzl", "RustSources") # @oss-enable
-# @oss-disable[end= ]: load("@fbcode//buck2/facebook:autodeps_hacks.bzl", "RustLinkInfo", "RustSources", "prelude")
+# @oss-disable[end= ]: load("@fbcode//bsmr/facebook:autodeps_hacks.bzl", "RustLinkInfo", "RustSources", "prelude")
 
 def _remove_rust_providers_impl(ctx: AnalysisContext) -> list[Provider]:
     out = []

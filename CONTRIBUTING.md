@@ -1,53 +1,29 @@
-# Contributing to Buck2
+# Contributing to Bessemer
 
-We want to make contributing to this project as easy and transparent as
-possible.
+Thanks for helping improve Bessemer.
 
-## Our Development Process
+## Pull requests
 
-Buck2 is currently developed in Meta's internal repositories. Code that is
-developed internally gets reviewed, sent through CI, committed, and then
-automatically mirrored out to GitHub every 15 minutes. Code that arrives through
-a PR is reviewed by a Meta developer on GitHub, then once accepted, moved into
-our internal workflow where it is reviewed, sent through CI, committed and added
-to the repo. We maintain both external CI (the results of which are visible on
-GitHub) and a more thorough internal CI (building internal projects etc). Alas,
-our full test suite is not yet mirrored to the open source repo, but we hope to
-fix that in due course.
+Keep each pull request focused on one behavior. Explain why the change is
+needed and include the commands that prove it works.
 
-## Pull Requests
+Before opening a pull request:
 
-We actively welcome your pull requests.
+```sh
+cargo fmt --all -- --check
+cargo build --locked --bin bsmr
+python3 test.py --ci --git --bsmr=target/debug/bsmr
+pnpm install --frozen-lockfile --ignore-scripts
+pnpm run ci:check
+```
 
-1. Fork the repo and create your branch from `main`.
-2. If you've added code that should be tested, add tests.
-3. If you've changed APIs, update the documentation.
-4. Ensure the test suite passes.
-5. Make sure your code passes any lints.
-6. If you haven't already, complete the Contributor License Agreement ("CLA").
+Update tests when behavior changes. Update documentation when a public
+interface changes.
 
-## Contributor License Agreement ("CLA")
-
-In order to accept your pull request, we need you to submit a CLA. You only need
-to do this once to work on any of Meta's open source projects.
-
-Complete your CLA here: <https://code.facebook.com/cla>
-
-## Issues
-
-We use GitHub issues to track public bugs. Please ensure your description is
-clear and has sufficient instructions to be able to reproduce the issue.
-
-Meta has a [bounty program](https://www.facebook.com/whitehat/) for the safe
-disclosure of security bugs. In those cases, please go through the process
-outlined on that page and do not file a public issue.
-
-## Coding Style, Compiling, and Hacking Pro-tips
-
-See [here](./docs/developers/basics.md) for the nitty gritty on how to contribute.
+Report vulnerabilities through the private process in
+[`SECURITY.md`](SECURITY.md), never through a public issue.
 
 ## License
 
-By contributing to Buck2, you agree that your contributions will be licensed
-under both the [LICENSE-MIT](LICENSE-MIT) and [LICENSE-APACHE](LICENSE-APACHE)
-files in the root directory of this source tree.
+Contributions are licensed under both the [MIT license](LICENSE-MIT) and the
+[Apache License 2.0](LICENSE-APACHE).

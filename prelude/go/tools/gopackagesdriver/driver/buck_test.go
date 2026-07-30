@@ -117,7 +117,7 @@ func TestFixQuery(t *testing.T) {
 }
 
 func TestRetriveActionErrors(t *testing.T) {
-	buckStderr := []byte(`[2024-09-12T07:57:42.799-07:00] Buck UI: https://www.internalfb.com/buck2/86f93efa-c28e-4a34-94a8-129da2fc5336
+	buckStderr := []byte(`[2024-09-12T07:57:42.799-07:00] Buck UI: https://www.internalfb.com/bsmr/86f93efa-c28e-4a34-94a8-129da2fc5336
 [2024-09-12T07:57:42.799-07:00] RE Session: reSessionID-21f215ea-c9f9-47db-a8d5-93787b9c3c7b
 [2024-09-12T07:57:42.880-07:00] Action failed: fbcode//scripts/user1/helloworld/greeting:greeting (cfg:linux-x86_64-fbcode-platform010-clang17-asan-ubsan-dev#0b9c1ba57ab15e90) (go_compile greeting)
 [2024-09-12T07:57:42.880-07:00] Local command returned non-zero exit code 2

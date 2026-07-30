@@ -24,7 +24,7 @@ def _platforms(ctx):
                 "OSFamily": "linux",
                 "container-image": "docker://ghcr.io/catthehacker/ubuntu:act-22.04@sha256:5f9c35c25db1d51a8ddaae5c0ba8d3c163c5e9a4a6cc97acd409ac7eae239448",
             },
-            remote_execution_use_case = "buck2-default",
+            remote_execution_use_case = "bsmr-default",
             remote_output_paths = "output_paths",
         ),
     )

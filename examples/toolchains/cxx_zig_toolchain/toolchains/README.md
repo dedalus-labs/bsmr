@@ -1,6 +1,6 @@
 This example tests the `zig cc` based self-contained C/C++ toolchain.
 
-To build it within the open source tree of buck2 to you need to
+To build it within the open source tree of bsmr to you need to
 
 - Create a symlink for the prelude
   ```

@@ -1,4 +1,4 @@
-# This file is @generated, regenerate by re-running test with `-- --env BUCK2_UPDATE_GOLDEN=1` appended to the test command
+# This file is @generated, regenerate by re-running test with `-- --env BSMR_UPDATE_GOLDEN=1` appended to the test command
 
 digraph result_graph {
   "root//bin:the_binary" [style=filled,color="#DFECDF",buck_name=the_binary,buck_cmd="[\"$(exe root//:bin)\", \"$(location root//:data)\"]",buck_deps="[\"root//lib:lib1\", \"root//lib:lib2\", \"root//lib:lib3\"]"];

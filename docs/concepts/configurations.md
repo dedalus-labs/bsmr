@@ -264,13 +264,13 @@ For example:
 
 ```sh
 # Build this target with the default configuration.
-buck2 build :my_target
+bsmr build :my_target
 # Build it with an entirely different configuration.
-buck2 build :my_target --target-platforms //my/other:platform
+bsmr build :my_target --target-platforms //my/other:platform
 # Build it with the default configuration, plus release mode.
-buck2 build :my_target?release
+bsmr build :my_target?release
 # Equivalent to the above, but applies to all targets if multiple were built.
-buck2 build :my_target -m release
+bsmr build :my_target -m release
 ```
 
 See the [configurations for rule authors](../rule_authors/configurations.md)
@@ -304,7 +304,7 @@ java_library(
 )
 ```
 
-When running `buck2 build //binaries:cats //binaries:dogs`, the
+When running `bsmr build //binaries:cats //binaries:dogs`, the
 `//binaries:cats` binary will be built in the
 `//platforms:windows-arm64-dev` configuration and the `//binaries:dogs`
 binary will be built in the `//platforms:mac-x86-dev` configuration.
@@ -319,7 +319,7 @@ Note that `//libs:common` will be built twice, once for each
 configuration.
 
 When running
-`buck2 build //binaries:cats //binaries:dogs --target-platforms //platforms:mac-x86-opt`,
+`bsmr build //binaries:cats //binaries:dogs --target-platforms //platforms:mac-x86-opt`,
 both `//binaries:cats` and `//binaries:dogs` will be built in the
 `//platforms:mac-x86-opt` configuration, use the same dependencies,
 which would only be built once.
@@ -357,8 +357,8 @@ Build configurations are uniquely identified by their hash, which is not
 human friendly.
 
 To determine what constraints are part of a configuration, run
-`buck2 cquery //...` sot that Buck will discover all existing
-configurations, then run `buck2 audit configurations`.
+`bsmr cquery //...` sot that Buck will discover all existing
+configurations, then run `bsmr audit configurations`.
 
 This will list all available configurations and print their composing
 contraints.
@@ -372,15 +372,15 @@ target's attributes with the configuration applied. The `uquery` command
 will not apply a configuration.
 
 Here is a heavily trimmed version of the outputs of invoking `uquery`
-and `cquery` on `//buck2/app/buck2_core:buck2_core`.
+and `cquery` on `//bsmr/app/bsmr_core:bsmr_core`.
 
 ```sh
-> buck2 uquery -A '"//buck2/app/buck2_core:buck2_core"'
+> bsmr uquery -A '"//bsmr/app/bsmr_core:bsmr_core"'
 {
-  "fbcode//buck2/app/buck2_core:buck2_core": {
+  "fbcode//bsmr/app/bsmr_core:bsmr_core": {
     "buck.type": "rust_library",
-    "buck.package": "fbcode//buck2/app/buck2_core:TARGETS",
-    "name": "buck2_core",
+    "buck.package": "fbcode//bsmr/app/bsmr_core:TARGETS",
+    "name": "bsmr_core",
     "visibility": [
       "PUBLIC"
     ],
@@ -414,14 +414,14 @@ and `cquery` on `//buck2/app/buck2_core:buck2_core`.
 ```
 
 ```sh
-> buck2 cquery -A '"//buck2/app/buck2_core:buck2_core"'
+> bsmr cquery -A '"//bsmr/app/bsmr_core:bsmr_core"'
 {
-  "fbcode//buck2/app/buck2_core:buck2_core (ovr_config//platform/linux:<OMITTED>)": {
+  "fbcode//bsmr/app/bsmr_core:bsmr_core (ovr_config//platform/linux:<OMITTED>)": {
     "buck.type": "rust_library",
-    "buck.package": "fbcode//buck2/app/buck2_core:TARGETS",
+    "buck.package": "fbcode//bsmr/app/bsmr_core:TARGETS",
     "buck.target_configuration": "ovr_config//platform/linux:<OMITTED>",
-    "buck.execution_platform": "fbcode//buck2/platform/<OMITTED>",
-    "name": "buck2_core",
+    "buck.execution_platform": "fbcode//bsmr/platform/<OMITTED>",
+    "name": "bsmr_core",
     "visibility": [
       "PUBLIC"
     ],

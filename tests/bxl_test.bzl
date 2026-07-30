@@ -6,22 +6,22 @@
 # of this source tree. You may select, at your option, one of the
 # above-listed licenses.
 
-load("@fbcode//buck2/tests:buck_e2e.bzl", "buck2_e2e_test")
-load("@fbcode_macros//build_defs:export_files.bzl", "export_file")
+load("@fbcode//bsmr/tests:buck_e2e.bzl", "bsmr_e2e_test")
+load("@bsmr_build//rules:export_files.bzl", "export_file")
 
 def bxl_test(src, name = None, labels = None, buck_args: list[str] | None = None, bxl_args: list[str] | None = None, env: dict[str, str] | None = None, **kwargs):
     """
-    Creates a test target from a buck2 bxl script. BXL script must use "test" as entry
+    Creates a test target from a bsmr bxl script. BXL script must use "test" as entry
     point.
 
     Parameters:
         src: source path of BXL script. This cannot be a target since bxl
             can only be invoked from the repo and not from buck-out.
         name: Name of the test target. If unspecified, use src as the name.
-        buck_args: Arguments to `buck2 bxl` invocation for buck specifically.
+        buck_args: Arguments to `bsmr bxl` invocation for buck specifically.
             Common examples are `--config` flags and `---modifier` flags.
             Ex. buck_args = ["--config", "build.use_limited_hybrid=false"]
-        bxl_args: Arguments to `buck2 bxl` invocation after `--`. These are
+        bxl_args: Arguments to `bsmr bxl` invocation after `--`. These are
             arguments to bxl script specifically.
         env: Additional environment variables to pass to the test. These are
             merged with the internally-constructed env, with user-provided
@@ -58,13 +58,13 @@ def bxl_test(src, name = None, labels = None, buck_args: list[str] | None = None
     if env:
         merged_env.update(env)
 
-    buck2_e2e_test(
+    bsmr_e2e_test(
         name = name,
         env = merged_env,
-        srcs = {"fbcode//buck2/tests/e2e_util:test_bxl_template.py": "test_bxl_template.py"},
+        srcs = {"fbcode//bsmr/tests/e2e_util:test_bxl_template.py": "test_bxl_template.py"},
         labels = ["bxl_test"] + (labels if labels else []),
-        test_with_compiled_buck2 = False,
-        test_with_deployed_buck2 = True,
-        skip_deployed_buck2_version_dep = True,
+        test_with_compiled_bsmr = False,
+        test_with_deployed_bsmr = True,
+        skip_deployed_bsmr_version_dep = True,
         **kwargs,
     )

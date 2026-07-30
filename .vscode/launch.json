@@ -7,11 +7,11 @@
         {
             "type": "lldb",
             "request": "launch",
-            "name": "Debug buck2",
+            "name": "Debug bsmr",
             "cargo": {
                 "args": [
                     "build",
-                    "--bin=buck2",
+                    "--bin=bsmr",
                     "--package=cli"
                 ],
                 "env": {
@@ -20,20 +20,20 @@
                     "CARGO_PROFILE_DEV_DEBUG": "true"
                 },
                 "filter": {
-                    "name": "buck2",
+                    "name": "bsmr",
                     "kind": "bin"
                 }
             },
             "args": [
                 "build",
-                "fbcode//buck2:buck2"
+                "fbcode//bsmr:bsmr"
             ],
             "cwd": "${workspaceFolder}"
         },
         {
             "type": "lldb",
             "request": "attach",
-            "name": "Debug buck2d",
+            "name": "Debug bsmrd",
             "cwd": "${workspaceFolder}",
             "pid": "${command:pickMyProcess}",
         },

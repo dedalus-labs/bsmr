@@ -8,7 +8,7 @@
 # above-listed licenses.
 
 """
-See explanation in buck2/prelude/rust/cargo_buildscript.bzl:_make_cc_shim
+See explanation in bsmr/prelude/rust/cargo_buildscript.bzl:_make_cc_shim
 """
 
 import argparse

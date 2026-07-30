@@ -78,13 +78,13 @@ script modifiers.
 ## Examples
 
 Examples can be found at 'tests/core/bxl/test_anon_bxl_data/anon_bxl.bxl' of
-buck2 repro folder.
+bsmr repro folder.
 
 Run such command at `tests/core/bxl/test_anon_bxl_data` to run the example bxl
 script
 
 ```sh
-buck2 bxl anon_bxl.bxl:eval_anon_bxl
+bsmr bxl anon_bxl.bxl:eval_anon_bxl
 ```
 
 ## Further Reading

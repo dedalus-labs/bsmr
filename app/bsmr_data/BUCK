@@ -1,0 +1,43 @@
+load("@bsmr_build//rules:rust.bzl", "proto_srcs", "rust_protobuf_library")
+load("@bsmr_build//rules:export_files.bzl", "export_file")
+load("@bsmr_build//rules:targets.bzl", "translate_target")
+
+oncall("build_infra")
+
+rust_protobuf_library(
+    name = "bsmr_data",
+    srcs = glob(["src/**/*.rs"]),
+    build_script = "build.rs",
+    proto_srcs = ":data_proto",
+    deps = [
+        "fbsource//third-party/rust:derive_more",
+        "fbsource//third-party/rust:hex",
+        "fbsource//third-party/rust:prost-types",
+        "fbsource//third-party/rust:serde",
+        "//bsmr/packages/rust/allocative/allocative:allocative",
+        "//bsmr/app/bsmr_host_sharing_proto:bsmr_host_sharing_proto",
+        "//bsmr/packages/rust/gazebo/dupe:dupe",
+        "//bsmr/packages/rust/gazebo/gazebo:gazebo",
+        "//bsmr/packages/rust/pagable/pagable:pagable",
+    ],
+)
+
+proto_srcs(
+    name = "data_proto",
+    srcs = [
+        "data.proto",
+        "error.proto",
+    ],
+    visibility = ["PUBLIC"],
+    deps = [
+        translate_target("//bsmr/app/bsmr_host_sharing_proto:host_sharing.proto"),
+    ],
+)
+
+export_file(
+    name = "error.proto",
+)
+
+export_file(
+    name = "data.proto",
+)

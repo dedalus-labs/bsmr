@@ -35,8 +35,8 @@ from typing import (
 
 import __manifest__
 import pytest
-from buck2.tests.e2e_util.api.buck import Buck
-from buck2.tests.e2e_util.api.executable import WindowsCmdOption
+from bsmr.tests.e2e_util.api.buck import Buck
+from bsmr.tests.e2e_util.api.executable import WindowsCmdOption
 from decorator import decorator
 
 BuckTestMarker = namedtuple(
@@ -71,39 +71,39 @@ async def buck_fixture(  # noqa C901 : "too complex"
 
     # allow_soft_errors will override any existing environment variable behavior
     if marker.allow_soft_errors or marker.inplace:
-        env["BUCK2_HARD_ERROR"] = "false"
+        env["BSMR_HARD_ERROR"] = "false"
 
     # Use a very small stdin buffer to catch any scenarios in which we
     # don't properly handle partial input.
-    env["BUCK2_TEST_STDIN_BUFFER_SIZE"] = "8"
+    env["BSMR_TEST_STDIN_BUFFER_SIZE"] = "8"
     # Explicitly disable log uploading, we don't care about stats for tests.
-    env["BUCK2_TEST_DISABLE_LOG_UPLOAD"] = "true"
+    env["BSMR_TEST_DISABLE_LOG_UPLOAD"] = "true"
     # But still block on it, because the upload process also writes
     # locally, and we want that to be synchronous instead of backgrounded.
-    env["BUCK2_TEST_BLOCK_ON_UPLOAD"] = "true"
+    env["BSMR_TEST_BLOCK_ON_UPLOAD"] = "true"
     # Require the events dispatcher to be set for e2e tests.
     env["ENFORCE_DISPATCHER_SET"] = "true"
     # Inform buck of the test timeout
-    env["BUCK2_SELF_TEST_TIMEOUT_S"] = "600"
+    env["BSMR_SELF_TEST_TIMEOUT_S"] = "600"
     # Timeout Watchman requests because we often see it hang and crash.
-    env["BUCK2_WATCHMAN_TIMEOUT"] = "30"
-    env["BUCK2_RUNTIME_THREADS"] = "8"
+    env["BSMR_WATCHMAN_TIMEOUT"] = "30"
+    env["BSMR_RUNTIME_THREADS"] = "8"
     # Avoid noise in stderr.
-    env["BUCK2_IGNORE_VERSION_EXTRACTION_FAILURE"] = "true"
+    env["BSMR_IGNORE_VERSION_EXTRACTION_FAILURE"] = "true"
     env["SUPERCONSOLE_TESTING_WIDTH"] = "100"
     env["SUPERCONSOLE_TESTING_HEIGHT"] = "100"
     # Don't try to assign to a new cgroup during tests.
     if marker.disable_daemon_cgroup:
-        env["BUCK2_TEST_DISABLE_DAEMON_CGROUP"] = "true"
+        env["BSMR_TEST_DISABLE_DAEMON_CGROUP"] = "true"
 
-    assert "BUCK2_RUNTIME_THREADS" in env, (
-        "BUCK2_RUNTIME_THREADS should be set by the test macros"
+    assert "BSMR_RUNTIME_THREADS" in env, (
+        "BSMR_RUNTIME_THREADS should be set by the test macros"
     )
-    assert "BUCK2_MAX_BLOCKING_THREADS" in env, (
-        "BUCK2_MAX_BLOCKING_THREADS should be set by the test macros"
+    assert "BSMR_MAX_BLOCKING_THREADS" in env, (
+        "BSMR_MAX_BLOCKING_THREADS should be set by the test macros"
     )
     # Windows uses blocking threads for subprocess I/O so we can't do this there.
-    del env["BUCK2_MAX_BLOCKING_THREADS"]
+    del env["BSMR_MAX_BLOCKING_THREADS"]
 
     # Filter out some environment variables that may interfere with the
     # running of tests. Notably, since this framework is used to write
@@ -119,7 +119,7 @@ async def buck_fixture(  # noqa C901 : "too complex"
     isolation_prefix = None
     keep_temp = os.environ.get("BUCK_E2E_KEEP_TEMP") == "1"
 
-    env["BUCK2_TEST_SKIP_DEFAULT_EXTERNAL_CONFIG"] = "true"
+    env["BSMR_TEST_SKIP_DEFAULT_EXTERNAL_CONFIG"] = "true"
 
     # Because we may change the working directory, create an absolute path to the test data srcs if
     # the exist and make it available in a different envvar. This is used by golden tests
@@ -130,9 +130,9 @@ async def buck_fixture(  # noqa C901 : "too complex"
     # Create a temporary file to store all lines of extra buck config values.
     extra_config_lines = []
 
-    # Override all RE use cases to use buck2-testing, which has an isolated
+    # Override all RE use cases to use bsmr-testing, which has an isolated
     # CAS namespace (cas_store_version offset by TEST_OFFSET=200).
-    extra_config_lines.append("[buck2_re_client]\noverride_use_case = buck2-testing\n")
+    extra_config_lines.append("[bsmr_re_client]\noverride_use_case = bsmr-testing\n")
 
     project_dir = base_dir / "project"
 
@@ -165,7 +165,7 @@ async def buck_fixture(  # noqa C901 : "too complex"
             isolation_prefix = hashlib.sha256(current_test.encode("utf-8")).hexdigest()[
                 :40
             ]
-            # FIXME(T136079642): Buck2 on Windows has problem with relative symlinks over 260 chars, shorten the hash
+            # FIXME(T136079642): Bessemer on Windows has problem with relative symlinks over 260 chars, shorten the hash
             if is_windows:
                 isolation_prefix = isolation_prefix[:5]
             else:
@@ -179,7 +179,7 @@ async def buck_fixture(  # noqa C901 : "too complex"
             if sys.platform == "linux":
                 extra_config_lines.append("[host_features]\ngvfs = true\n")
             # NOTE: This buckconfig is depended on by our CI validation for
-            # CLI modifiers in tools/build_defs/buck2/cfg/validation/validation.bzl. If
+            # CLI modifiers in tools/build_defs/bsmr/cfg/validation/validation.bzl. If
             # the name of this buckconfig ever changes, please update the validation
             # as well.
             extra_config_lines.append("[buildfile]\nextra_for_test = TARGETS.test\n")
@@ -204,10 +204,10 @@ async def buck_fixture(  # noqa C901 : "too complex"
             # use edenfs watcher whenever possible in test, otherwise use `fs_hash_crawler`
             # FYI: if you remove this, make sure to remove it from external_buckconfig tests too
             if marker.setup_eden:
-                extra_config_lines.append("[buck2]\nfile_watcher = edenfs\n")
-                extra_config_lines.append("[buck2]\nallow_eden_io = true\n")
+                extra_config_lines.append("[bsmr]\nfile_watcher = edenfs\n")
+                extra_config_lines.append("[bsmr]\nallow_eden_io = true\n")
             else:
-                extra_config_lines.append("[buck2]\nfile_watcher = fs_hash_crawler\n")
+                extra_config_lines.append("[bsmr]\nfile_watcher = fs_hash_crawler\n")
 
             buck_cwd = project_dir
 
@@ -220,7 +220,7 @@ async def buck_fixture(  # noqa C901 : "too complex"
         with open(extra_config, "w") as f:
             for line in extra_config_lines:
                 f.write(line)
-        env["BUCK2_TEST_EXTRA_EXTERNAL_CONFIG"] = extra_config
+        env["BSMR_TEST_EXTRA_EXTERNAL_CONFIG"] = extra_config
 
         buck = Buck(
             Path(test_executable),
@@ -448,7 +448,7 @@ def _copytree(
 
 def _maybe_setup_prelude_and_ovr_config(path: Path) -> None:
     if "PRELUDE" in os.environ or "OVR_CONFIG" in os.environ:
-        if os.environ.get("BUCK2_E2E_TEST_FLAVOR") == "isolated":
+        if os.environ.get("BSMR_E2E_TEST_FLAVOR") == "isolated":
             raise Exception(
                 "Don't set `PRELUDE` or `OVR_CONFIG` in `tests/core` - these tests are always isolated"
             )
@@ -566,7 +566,7 @@ def buck_test(
             A optional dict of extra buck config to add to the test.
             The key is the section name, the value is a dict of key value pairs.
         skip_final_kill:
-            Don't run a `buck2 kill` or `buck2 clean` at the end of the test
+            Don't run a `bsmr kill` or `bsmr clean` at the end of the test
         setup_eden:
             Whether or not to set up an EdenFS repo for this test. Only matters for inplace=False.
             Note that this will slow the test down, so it should not be widely enabled.
@@ -575,7 +575,7 @@ def buck_test(
     if inplace and data_dir == "":
         data_dir = None
 
-    if os.environ.get("BUCK2_E2E_TEST_FLAVOR") == "isolated":
+    if os.environ.get("BSMR_E2E_TEST_FLAVOR") == "isolated":
         if inplace is not None:
             raise Exception(
                 "Don't set `inplace` in `tests/core` - these tests are always isolated"
@@ -650,20 +650,20 @@ def windows_cmd_option(key: WindowsCmdOption, value: bool) -> Callable[..., Any]
     return inner_decorator
 
 
-def is_deployed_buck2() -> bool:
+def is_deployed_bsmr() -> bool:
     """
-    This function detects whether or not you are using a deployed version of buck2
-    so you can skip certain rule tests to only use deployed buck2.
-    This may break deployed buck2, so please make sure this only affects tests for rules
-    that buck2 users are not using.
+    This function detects whether or not you are using a deployed version of bsmr
+    so you can skip certain rule tests to only use deployed bsmr.
+    This may break deployed bsmr, so please make sure this only affects tests for rules
+    that bsmr users are not using.
 
-    Example of skipping test case with deployed buck2:
+    Example of skipping test case with deployed bsmr:
         @pytest.mark.skipif(
-            is_deployed_buck2(),
-            reason="Skip if testing with deployed buck2",
+            is_deployed_bsmr(),
+            reason="Skip if testing with deployed bsmr",
         )
     """
-    return os.environ.get("TEST_EXECUTABLE") == "buck2"
+    return os.environ.get("TEST_EXECUTABLE") == "bsmr"
 
 
 def get_mode_from_platform(

@@ -12,7 +12,7 @@ Wrappers for native rules that use a minimal "bootstrap" toolchain instead of th
 Use these to break cycles when a target used in a toolchain needs that toolchain to compile. Such targets
 provide functionality that is not strictly required in order to build, and thus can be omitted from the
 bootstrap toolchain. For example, an ABI generator for Java can be written in Java and compiled with a
-bootstrap toolchain that does not include an ABI generator. While using that bootstrap toolchain, buck2
+bootstrap toolchain that does not include an ABI generator. While using that bootstrap toolchain, bsmr
 will just use the full JARs as ABI jars, which will be slower and result in some unnecessary recompilation,
 but still produce valid results.
 """

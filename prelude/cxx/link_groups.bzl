@@ -982,7 +982,7 @@ def _stub_library(
 ) -> LinkInfos:
     # When link_libraries_locally is active, explicitly request remote execution
     # for stub libraries to avoid I/O contention from hundreds of trivial local
-    # links. Otherwise, use "any" to let Buck2 choose (default behavior).
+    # links. Otherwise, use "any" to let Bessemer choose (default behavior).
     stub_execution_preference = LinkExecutionPreference("remote") if link_libraries_locally else LinkExecutionPreference("any")
     link_result = cxx_link_shared_library(
         ctx = ctx,

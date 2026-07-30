@@ -15,10 +15,10 @@ from pathlib import Path
 from typing import Any
 
 import pytest
-from buck2.tests.e2e_util.api.buck import Buck
-from buck2.tests.e2e_util.buck_workspace import buck_test
-from buck2.tests.e2e_util.helper.golden import golden
-from buck2.tests.e2e_util.helper.utils import replace_digest, replace_hash
+from bsmr.tests.e2e_util.api.buck import Buck
+from bsmr.tests.e2e_util.buck_workspace import buck_test
+from bsmr.tests.e2e_util.helper.golden import golden
+from bsmr.tests.e2e_util.helper.utils import replace_digest, replace_hash
 
 
 def _sanitize_timing_fields(obj: Any) -> None:
@@ -69,11 +69,11 @@ async def _get_sketch_cardinalities_from_report(
         "--build-report",
         str(report_path),
         "-c",
-        "buck2.log_artifact_count_sketch=true",
+        "bsmr.log_artifact_count_sketch=true",
         "-c",
-        "buck2.log_artifact_size_sketch=true",
+        "bsmr.log_artifact_size_sketch=true",
         "-c",
-        "buck2.log_sketch_cardinalities=true",
+        "bsmr.log_sketch_cardinalities=true",
     ]
     if extra_args:
         args.extend(extra_args)
@@ -95,7 +95,7 @@ build_report_test(
     [
         "//:simple",
         "-c",
-        "buck2.log_artifact_count_sketch=true",
+        "bsmr.log_artifact_count_sketch=true",
     ],
 )
 
@@ -104,7 +104,7 @@ build_report_test(
     [
         "//:simple",
         "-c",
-        "buck2.log_artifact_size_sketch=true",
+        "bsmr.log_artifact_size_sketch=true",
     ],
 )
 
@@ -114,9 +114,9 @@ build_report_test(
         "//:simple",
         "//:with_dep",
         "-c",
-        "buck2.log_artifact_count_sketch=true",
+        "bsmr.log_artifact_count_sketch=true",
         "-c",
-        "buck2.log_artifact_size_sketch=true",
+        "bsmr.log_artifact_size_sketch=true",
     ],
 )
 

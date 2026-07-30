@@ -11,14 +11,14 @@
 import os
 import tempfile
 
-from buck2.tests.e2e_util.api.buck import Buck
-from buck2.tests.e2e_util.asserts import expect_failure
-from buck2.tests.e2e_util.buck_workspace import buck_test, env
-from buck2.tests.e2e_util.helper.utils import filter_events, random_string
+from bsmr.tests.e2e_util.api.buck import Buck
+from bsmr.tests.e2e_util.asserts import expect_failure
+from bsmr.tests.e2e_util.buck_workspace import buck_test, env
+from bsmr.tests.e2e_util.helper.utils import filter_events, random_string
 
 
 @buck_test()
-@env("BUCK2_TEST_FAIL_CONNECT", "true")
+@env("BSMR_TEST_FAIL_CONNECT", "true")
 async def test_re_connection_failure_no_retry(buck: Buck) -> None:
     out = await expect_failure(
         buck.build(
@@ -64,7 +64,7 @@ async def test_re_use_case_override_with_arg(buck: Buck) -> None:
         "--remote-only",
         "--no-remote-cache",
     )
-    await assert_re_use_case(buck, "buck2-testing")
+    await assert_re_use_case(buck, "bsmr-testing")
     # Change the target input
     with open(buck.cwd / "input.txt", "w") as f:
         f.write(random_string())
@@ -73,9 +73,9 @@ async def test_re_use_case_override_with_arg(buck: Buck) -> None:
         "--remote-only",
         "--no-remote-cache",
         "--config",
-        "buck2_re_client.override_use_case=buck2-user",
+        "bsmr_re_client.override_use_case=bsmr-user",
     )
-    await assert_re_use_case(buck, "buck2-user")
+    await assert_re_use_case(buck, "bsmr-user")
 
 
 @buck_test()
@@ -88,19 +88,19 @@ async def test_re_use_case_override_with_config(buck: Buck) -> None:
         "--remote-only",
         "--no-remote-cache",
     )
-    await assert_re_use_case(buck, "buck2-testing")
+    await assert_re_use_case(buck, "bsmr-testing")
     # Change the target input
     with open(buck.cwd / "input.txt", "w") as f:
         f.write(random_string())
     with open(buck.cwd / ".buckconfig.local", "w") as f:
-        f.write("[buck2_re_client]\n")
-        f.write("override_use_case = buck2-user\n")
+        f.write("[bsmr_re_client]\n")
+        f.write("override_use_case = bsmr-user\n")
     await buck.build(
         "root//:simple",
         "--remote-only",
         "--no-remote-cache",
     )
-    await assert_re_use_case(buck, "buck2-user")
+    await assert_re_use_case(buck, "bsmr-user")
 
 
 @buck_test()
@@ -113,13 +113,13 @@ async def test_re_use_case_override_with_external_config(buck: Buck) -> None:
         "--remote-only",
         "--no-remote-cache",
     )
-    await assert_re_use_case(buck, "buck2-testing")
+    await assert_re_use_case(buck, "bsmr-testing")
     # Change the target input
     with open(buck.cwd / "input.txt", "w") as f:
         f.write(random_string())
     with tempfile.NamedTemporaryFile("w", delete=False) as f:
-        f.write("[buck2_re_client]\n")
-        f.write("override_use_case = buck2-user\n")
+        f.write("[bsmr_re_client]\n")
+        f.write("override_use_case = bsmr-user\n")
         f.close()
         await buck.build(
             "root//:simple",
@@ -128,14 +128,14 @@ async def test_re_use_case_override_with_external_config(buck: Buck) -> None:
             "--config-file",
             f.name,
         )
-    await assert_re_use_case(buck, "buck2-user")
+    await assert_re_use_case(buck, "bsmr-user")
 
 
 @buck_test()
 async def test_re_use_case_override_with_external_config_source(buck: Buck) -> None:
     with tempfile.NamedTemporaryFile("w", delete=False) as temp:
         env = os.environ.copy()
-        env["BUCK2_TEST_EXTRA_EXTERNAL_CONFIG"] = temp.name
+        env["BSMR_TEST_EXTRA_EXTERNAL_CONFIG"] = temp.name
         # Make sure action is not cached
         with open(buck.cwd / "input.txt", "w") as f:
             f.write(random_string())
@@ -145,12 +145,12 @@ async def test_re_use_case_override_with_external_config_source(buck: Buck) -> N
             "--no-remote-cache",
             env=env,
         )
-        await assert_re_use_case(buck, "buck2-default")
+        await assert_re_use_case(buck, "bsmr-default")
         # Change the target input
         with open(buck.cwd / "input.txt", "w") as f:
             f.write(random_string())
-        temp.write("[buck2_re_client]\n")
-        temp.write("override_use_case = buck2-user\n")
+        temp.write("[bsmr_re_client]\n")
+        temp.write("override_use_case = bsmr-user\n")
         temp.flush()
         await buck.build(
             "root//:simple",
@@ -158,4 +158,4 @@ async def test_re_use_case_override_with_external_config_source(buck: Buck) -> N
             "--no-remote-cache",
             env=env,
         )
-        await assert_re_use_case(buck, "buck2-user")
+        await assert_re_use_case(buck, "bsmr-user")

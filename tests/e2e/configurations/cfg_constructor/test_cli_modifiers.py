@@ -7,13 +7,13 @@
 # above-listed licenses.
 
 
-from buck2.tests.e2e.configurations.cfg_constructor.modifiers_util import get_cfg
-from buck2.tests.e2e_util.api.buck import Buck
-from buck2.tests.e2e_util.asserts import expect_failure
-from buck2.tests.e2e_util.buck_workspace import buck_test
+from bsmr.tests.e2e.configurations.cfg_constructor.modifiers_util import get_cfg
+from bsmr.tests.e2e_util.api.buck import Buck
+from bsmr.tests.e2e_util.asserts import expect_failure
+from bsmr.tests.e2e_util.buck_workspace import buck_test
 
 DATA_DIR = (
-    "fbcode//buck2/tests/e2e/configurations/cfg_constructor/test_cli_modifiers_data"
+    "fbcode//bsmr/tests/e2e/configurations/cfg_constructor/test_cli_modifiers_data"
 )
 TARGET = f"{DATA_DIR}:test_target"
 CONSTRAINT_A = f"{DATA_DIR}:A_1"
@@ -23,7 +23,7 @@ BUCK_TEST_MARKER = buck_test(
     extra_buck_config={
         # CLI modifier validation is disabled for users and enabled for CI. To make sure this test case always has CLI modifier validation enabled,
         # explicitly enable it here.
-        "buck2": {"skip_cli_modifier_validation_DO_NOT_SET_TO_TRUE_ON_CI": ""}
+        "bsmr": {"skip_cli_modifier_validation_DO_NOT_SET_TO_TRUE_ON_CI": ""}
     },
 )
 

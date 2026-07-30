@@ -1,23 +1,23 @@
-load("@fbcode//buck2/tests:buck_e2e.bzl", "buck2_core_tests")
+load("@fbcode//bsmr/tests:buck_e2e.bzl", "bsmr_core_tests")
 
 oncall("build_infra")
 
-buck2_core_tests(
+bsmr_core_tests(
     target_extra_attrs = {
         "test_artifact_path_sketch": {
             # TODO(scottcao): Extend these to mac/windows
             "compatible_with": ["ovr_config//os:linux"],
         },
         "test_critical_path": {
-            "use_compiled_buck2_client_and_tpx": True,
+            "use_compiled_bsmr_client_and_tpx": True,
         },
         "test_memory_sketches": {
             "env": {
-                "SKETCH_SIZE_BIN": "$(location fbcode//buck2/shed/setsketch:sketch_size)",
+                "SKETCH_SIZE_BIN": "$(location fbcode//bsmr/packages/rust/setsketch:sketch_size)",
             },
         },
         "test_paranoid": {
-            "data": "//buck2/tests/targets:isolated_targets",
+            "data": "//bsmr/tests/targets:isolated_targets",
         },
         "test_uncategorized": {
             "env": {

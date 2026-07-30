@@ -9,12 +9,12 @@ takes relatively long time to setup it prior to test execution. When tests are
 executed remotely resources initialization and allocation could be preemptively
 managed by remote execution tier which is not the case for local execution. To
 effectively manage such resources needed for local execution of tests there is a
-separate Buck2 feature backed by `LocalResourceInfo` provider.
+separate Bessemer feature backed by `LocalResourceInfo` provider.
 
 ## `LocalResourceInfo` provider
 
 This provider describes how to initialize and clean up a pool of homogeneous
-local resources. Management of initialized resources is done by Buck2 itself
+local resources. Management of initialized resources is done by Bessemer itself
 when it executes tests requiring such resources.
 
 Fields:
@@ -56,7 +56,7 @@ For a general context on how tests are executed, see
 [Test Execution](test_execution.md).
 
 A decision whether certain local resource is required for specific test is made
-by a test runner. List of required resources is then passed to Buck2 in
+by a test runner. List of required resources is then passed to Bessemer in
 `required_local_resources` field of `ExecuteRequest2` test API protobuf message.
 
 If resource is required for a certain test execution and test could potentially
@@ -76,7 +76,7 @@ across all tests pointing to the same configured target label containing
 `LocalResourceInfo` provider (normally that means pool is shared for tests
 requiring same resource type). A resource is acquired (with potential queuing)
 from that pool prior single test is executed and is returned back to the pool
-when test finished execution. After `buck2 test` command is finished, cleanup is
+when test finished execution. After `bsmr test` command is finished, cleanup is
 performed when SIGTERM is sent to each process holding a pool of resources.
 
 ## Example Usage
@@ -114,7 +114,7 @@ Running a `:broker` via `setup` command produces the following JSON:
 }
 ```
 
-When Buck2 locally executes a test which requires this particular type of local
+When Bessemer locally executes a test which requires this particular type of local
 resource, it reserves one resource from the pool (e.g.
 `{"socket_address": "bar:2"}`) and add environment variable representing this
 resource to execution command (e.g. `IDB_COMPANION=bar:2`). In our examples

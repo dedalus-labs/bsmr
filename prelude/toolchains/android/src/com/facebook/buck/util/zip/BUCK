@@ -70,7 +70,7 @@ fb_native.alias(
     visibility = ["PUBLIC"],
 )
 
-# This is a prebuilt jar so that it can be part of the buck2 bootstrap toolchain.
+# This is a prebuilt jar so that it can be part of the bsmr bootstrap toolchain.
 # To rebuild the jar, do:
 # `buck build prelude//toolchains/android/src/com/facebook/buck/util/zip:zip_scrubber_main --out xplat/toolchains/android/sdk/src/com/facebook/buck/util/zip/zip_scrubber_main.jar`
 buck_prebuilt_jar(
@@ -118,7 +118,7 @@ fb_native.alias(
     visibility = ["PUBLIC"],
 )
 
-# This is a prebuilt jar so that it can be part of the buck2 bootstrap toolchain.
+# This is a prebuilt jar so that it can be part of the bsmr bootstrap toolchain.
 buck_prebuilt_jar(
     name = "jar_builder_prebuilt",
     _dex_toolchain = "toolchains//:empty_dex",

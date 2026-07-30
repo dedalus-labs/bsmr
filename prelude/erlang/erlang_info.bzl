@@ -48,7 +48,7 @@ ErlangAppInfo = provider(
         # additional targets that the application depends on, the
         # default output will end up in priv/
         "resources",
-        # applications that are in path but not build by buck2 are virtual
+        # applications that are in path but not build by bsmr are virtual
         # the use-case for virtual apps are OTP applications that are shipeped
         # with the Erlang distribution
         "virtual",

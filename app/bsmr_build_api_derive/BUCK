@@ -1,0 +1,18 @@
+load("@bsmr_build//rules:rust.bzl", "rust_library")
+
+oncall("build_infra")
+
+rust_library(
+    name = "bsmr_build_api_derive",
+    srcs = glob(
+        ["src/**/*.rs"],
+    ),
+    proc_macro = True,
+    deps = [
+        "fbsource//third-party/rust:convert_case",
+        "fbsource//third-party/rust:proc-macro2",
+        "fbsource//third-party/rust:quote",
+        "fbsource//third-party/rust:syn",
+        "//bsmr/packages/rust/gazebo/gazebo:gazebo",
+    ],
+)

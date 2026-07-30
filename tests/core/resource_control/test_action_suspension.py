@@ -15,10 +15,10 @@ from pathlib import Path
 from tempfile import TemporaryDirectory
 
 import pytest
-from buck2.tests.e2e_util.api.buck import Buck
-from buck2.tests.e2e_util.api.buck_result import BuckResult
-from buck2.tests.e2e_util.buck_workspace import buck_test, env
-from buck2.tests.e2e_util.helper.utils import filter_events
+from bsmr.tests.e2e_util.api.buck import Buck
+from bsmr.tests.e2e_util.api.buck_result import BuckResult
+from bsmr.tests.e2e_util.buck_workspace import buck_test, env
+from bsmr.tests.e2e_util.helper.utils import filter_events
 
 
 # To not fail listing on Mac or Windows
@@ -28,7 +28,7 @@ def test_dummy() -> None:
 
 def _configure(buck: Buck, kill_and_retry: bool) -> None:
     with open(buck.cwd / ".buckconfig.local", "w") as f:
-        f.write("[buck2_resource_control]\n")
+        f.write("[bsmr_resource_control]\n")
         if kill_and_retry:
             f.write("preferred_action_suspend_strategy = kill_and_retry\n")
         else:
@@ -120,7 +120,7 @@ async def _check_suspends(  # noqa C901
 
 
 @buck_test(skip_for_os=["darwin", "windows"], disable_daemon_cgroup=False)
-@env("BUCK2_HARD_ERROR", "panic")
+@env("BSMR_HARD_ERROR", "panic")
 @pytest.mark.parametrize("kill_and_retry", [True, False])
 async def test_action_suspend(
     buck: Buck,
@@ -156,7 +156,7 @@ async def test_action_suspend(
 
 
 @buck_test(skip_for_os=["darwin", "windows"], disable_daemon_cgroup=False)
-@env("BUCK2_HARD_ERROR", "panic")
+@env("BSMR_HARD_ERROR", "panic")
 @pytest.mark.parametrize("kill_and_retry", [True, False])
 async def test_action_suspend_stress_test(
     buck: Buck,

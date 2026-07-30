@@ -15,7 +15,7 @@ You can generate compilation databases for consumption by tools such as clangd
 and clang-tidy by running the following BXL script:
 
 ```sh
-buck2 bxl prelude//cxx/tools/compilation_database.bxl:generate -- --targets ...
+bsmr bxl prelude//cxx/tools/compilation_database.bxl:generate -- --targets ...
 ```
 
 The script will generate a compilation database for all source and header inputs
@@ -28,7 +28,7 @@ when the file being linted has several entries.
 It is common to symlink the resulting data at the root of the repository:
 
 ```sh
-ln -sf $(buck2 bxl prelude//cxx/tools/compilation_database.bxl:generate -- --targets ...) $(git rev-parse --show-toplevel)
+ln -sf $(bsmr bxl prelude//cxx/tools/compilation_database.bxl:generate -- --targets ...) $(git rev-parse --show-toplevel)
 ```
 
 Since the path to the script is rather long, consider setting up an alias in
@@ -43,11 +43,11 @@ gen = generate
 ```
 
 ```sh
-ln -sf $(buck2 bxl comp_db.bxl:gen -- --targets ...) $(git rev-parse --show-toplevel)
+ln -sf $(bsmr bxl comp_db.bxl:gen -- --targets ...) $(git rev-parse --show-toplevel)
 ```
 
 Providing better ergonomics for BXL scripts (such as enabling something like
-`buck2 comp_db`) is being discussed
+`bsmr comp_db`) is being discussed
 [here](https://github.com/facebook/buck2/issues/86).
 
 ## Tools jumping to `buck-out`

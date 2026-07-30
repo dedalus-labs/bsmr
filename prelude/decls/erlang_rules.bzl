@@ -42,11 +42,11 @@ common_shell_attributes = {
     ),
     "shell_libs": attrs.set(
         attrs.dep(providers = [ErlangAppInfo]),
-        default = ["prelude//erlang/shell:buck2_shell_utils"],
+        default = ["prelude//erlang/shell:bsmr_shell_utils"],
         doc = """
             This attribute allows to define additional dependencies for the shell. By default this is
-            set to `["prelude//erlang/shell:buck2_shell_utils"]` which includes a `user_default` module
-            that loads and compiles modules with buck2 mechanisms.
+            set to `["prelude//erlang/shell:bsmr_shell_utils"]` which includes a `user_default` module
+            that loads and compiles modules with bsmr mechanisms.
         """,
     ),
 }
@@ -65,7 +65,7 @@ common_application_attributes = {
         OTP applications are specified with the target path `prelude//erlang/applications:<application>`.
 
         **NOTE**: _If you use the `app_src` field and the references application resource file template specifies
-        `applications` or `included_applications` buck2 checks that the target definitions and information in the template are
+        `applications` or `included_applications` bsmr checks that the target definitions and information in the template are
         equivalent to prevent these definitions from drifting apart during migration._
     """,
     ),
@@ -104,15 +104,15 @@ rules_attributes = {
             default = None,
             doc = """
                 The `app_src` field allows to optionally reference a `*.app.src` template file. This template file will then be used by
-                buck2 to generate the `*.app` output file in the applications `ebin/` directory. This is useful during the migration from
-                rebar3 to buck2 to avoid duplicated entries, of e.g. the `version`.
+                bsmr to generate the `*.app` output file in the applications `ebin/` directory. This is useful during the migration from
+                rebar3 to bsmr to avoid duplicated entries, of e.g. the `version`.
 
-                Buck2 will use or check all fields present in the template, and fill out the fields with the information provided in the
-                target, e.g. if the `version` is specified in both, buck2 will check that they are identical. Otherwise, it uses the
+                Bessemer will use or check all fields present in the template, and fill out the fields with the information provided in the
+                target, e.g. if the `version` is specified in both, bsmr will check that they are identical. Otherwise, it uses the
                 information from the template if the target doesn't specify it, and vice versa.
 
                 **NOTE**: _If you use the `app_src` field and the references application resource file template specifies `applications`
-                or `included_applications` buck2 checks that the target definitions and information in the template are equivalent to
+                or `included_applications` bsmr checks that the target definitions and information in the template are equivalent to
                 prevent these definitions from drifting apart during migration._
             """,
         ),
@@ -120,7 +120,7 @@ rules_attributes = {
             default = "git",
             doc = """
                 The version placeholder used in the `app_src` and `appup_src` templates. When the `vsn` field of `app_src` (or the
-                version element of `appup_src`) matches this placeholder, either as an atom or as a string, buck2 substitutes the
+                version element of `appup_src`) matches this placeholder, either as an atom or as a string, bsmr substitutes the
                 value from the `version` field. Defaults to `"git"`, matching rebar3's convention.
             """,
         ),
@@ -129,7 +129,7 @@ rules_attributes = {
             default = None,
             doc = """
                 The `appup_src` field allows to optionally reference a `*.appup.src` template file used to generate the application's
-                `*.appup` file in the `ebin/` directory. The template's first element is the application version, which buck2 substitutes
+                `*.appup` file in the `ebin/` directory. The template's first element is the application version, which bsmr substitutes
                 using the same placeholder convention as `app_src_vsn`.
             """,
         ),
@@ -520,7 +520,7 @@ erlang_app = prelude_rule(
         macro, that takes as attributes the same attributes as this rule. You should always use the
         `erlang_application` macro instead of using this rule directly.
 
-        Erlang Applications are the basic building block of our buck2 integration and used by many other Erlang
+        Erlang Applications are the basic building block of our bsmr integration and used by many other Erlang
         targets, e.g. `erlang_escript`, `erlang_test`, or `erlang_release`.
 
         The `erlang_application` targets build OTP applications and as such many attributes that are used have
@@ -766,16 +766,16 @@ erlang_test = prelude_rule(
           of the tests.
 
         One can call
-        - `buck2 build //my_app:test_SUITE` to compile the test files together with its dependencies.
-        - `buck2 test //my_app:other_test_SUITE` to run the test.
-        - `buck2 run //my_app:other_test_SUITE` to open an interactive test shell, where tests can be run iteratively.
+        - `bsmr build //my_app:test_SUITE` to compile the test files together with its dependencies.
+        - `bsmr test //my_app:other_test_SUITE` to run the test.
+        - `bsmr run //my_app:other_test_SUITE` to open an interactive test shell, where tests can be run iteratively.
 
-        buck2 test will rely on tpx to run the suite. To get access to tpx commands, add `--` after the
+        bsmr test will rely on tpx to run the suite. To get access to tpx commands, add `--` after the
         target. For example:
 
-        - `buck2 test //my_app:other_test_SUITE -- --help` will print the list of tpx available
+        - `bsmr test //my_app:other_test_SUITE -- --help` will print the list of tpx available
         command line parameters.
-        - `buck2 test //my_app:other_test_SUITE -- group.mycase` will only run those test cases
+        - `bsmr test //my_app:other_test_SUITE -- group.mycase` will only run those test cases
         that match the pattern `group.mycase`
     """,
     examples = """

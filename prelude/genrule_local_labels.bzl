@@ -14,8 +14,8 @@ Handle labels used to opt-out genrules from running remotely.
 
 # Some rules have to be run locally for various reasons listed next to the label.
 _GENRULE_LOCAL_LABELS = set([
-    # Used for buck2 tests that want to run locally
-    "buck2_test_local_exec",
+    # Used for bsmr tests that want to run locally
+    "bsmr_test_local_exec",
     # Split dwarf merge rules currently don't properly list their inputs.
     "dwp",
     # Bolt and hottext post-processing rules operate on a large statically
@@ -75,7 +75,7 @@ _GENRULE_LOCAL_LABELS = set([
     # Unity license client needs to be set up on RE workers for this to work, and maybe further debugging.
     "uses_unity",
     # mksquashfs isn't available in RE, so run these locally
-    # (https://fb.workplace.com/groups/buck2users/permalink/3023630007893360/)
+    # (https://fb.workplace.com/groups/bsmrusers/permalink/3023630007893360/)
     "uses_mksquashfs",
     # PXL rules can't yet run on RE.
     "pxl",

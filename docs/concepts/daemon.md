@@ -5,11 +5,11 @@ title: Daemon (buckd)
 
 import { FbInternalOnly } from 'docusaurus-plugin-internaldocs-fb/internal';
 
-The first time that a Buck2 command is run, Buck2 starts a daemon process for
-the current project. For subsequent commands, Buck2 checks for the running
+The first time that a Bessemer command is run, Bessemer starts a daemon process for
+the current project. For subsequent commands, Bessemer checks for the running
 daemon process and, if found, uses the daemon to execute the command. Using the
-Buck2 daemon can save significant time as it enables Buck to share cache between
-Buck2 invocations.
+Bessemer daemon can save significant time as it enables Buck to share cache between
+Bessemer invocations.
 
 By default, there is 1 daemon per [project](./glossary.md#project) root, you can
 run multiple daemons in the same project by specifying an
@@ -21,20 +21,20 @@ file system that are specified in the `[project].ignore` setting of
 `.buckconfig`.
 
 You can see detailed information about the status of the daemon by running
-`buck2 status`.
+`bsmr status`.
 
 ## Killing or disabling the Buck daemon
 
-The Buck daemon process is killed if `buck2 clean` or `buck2 kill` commands are
+The Buck daemon process is killed if `bsmr clean` or `bsmr kill` commands are
 run. Note that they won't kill the daemon associated with custom isolation dirs.
 To do that, run using the `--isolation-dir` option
-(`buck2 --isolation-dir <dir> <command>`)
+(`bsmr --isolation-dir <dir> <command>`)
 
 <FbInternalOnly>
 
 The Daemon is also killed when:
 
-- The `buck2 killall` command is run.
-- A new buck2 version is available.
+- The `bsmr killall` command is run.
+- A new bsmr version is available.
 
 </FbInternalOnly>

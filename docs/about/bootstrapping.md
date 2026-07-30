@@ -1,14 +1,14 @@
 ---
 id: bootstrapping
-title: Bootstrapping Buck2
+title: Bootstrapping Bessemer
 ---
 
-# Bootstrapping Buck2
+# Bootstrapping Bessemer
 
-Buck2 can be built with `cargo` or `buck2`. The source repository includes
-[DotSlash](https://dotslash-cli.com) files for `buck2` itself, so that you can
-quickly self-bootstrap the build. This is particularly useful if you're writing
-patches and need to test both builds.
+Bessemer can be built with `cargo` or Bessemer itself. The source repository
+includes an upstream [Buck2](https://github.com/facebook/buck2) binary through
+[DotSlash](https://dotslash-cli.com), so a clean checkout can build its first
+`bsmr` binary.
 
 For dependencies on Rust crates from [crates.io](https://crates.io), we use
 [reindeer](https://github.com/facebookincubator/reindeer) to automatically
@@ -27,12 +27,12 @@ cargo install --locked dotslash
 Next, use `reindeer` to buckify dependencies:
 
 ```sh
-cd buck2/
-./bootstrap/reindeer --third-party-dir shim/third-party/rust buckify
+cd bsmr/
+./tools/bin/reindeer --third-party-dir tools/build/third-party/rust buckify
 ```
 
-Build a copy of `buck2` with `buck2`:
+Build the first copy of `bsmr` with the upstream bootstrap binary:
 
 ```sh
-./bootstrap/buck2 build //:buck2
+./tools/bootstrap/upstream-buck2 build //:bsmr
 ```

@@ -12,7 +12,7 @@ import json
 from asyncio import StreamWriter, subprocess, wait_for
 from typing import Any, Self
 
-from buck2.tests.e2e_util.api.process import Process
+from bsmr.tests.e2e_util.api.process import Process
 
 
 class SubscribeClient(contextlib.AbstractAsyncContextManager):

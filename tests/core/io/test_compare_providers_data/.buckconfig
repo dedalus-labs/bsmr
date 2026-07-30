@@ -1,5 +1,5 @@
 [cells]
   root = .
 
-[buck2]
+[bsmr]
   digest_algorithms = BLAKE3-KEYED,SHA1

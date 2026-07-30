@@ -1,8 +1,8 @@
-load("@fbcode//buck2/tests:buck_e2e.bzl", "buck2_core_tests")
+load("@fbcode//bsmr/tests:buck_e2e.bzl", "bsmr_core_tests")
 
 oncall("build_infra")
 
-buck2_core_tests(
+bsmr_core_tests(
     target_extra_attrs = {
         "test_agent_host_guard": {
             "compatible_with": [

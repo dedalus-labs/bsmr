@@ -1,9 +1,9 @@
-# Distributed ThinLTO in Buck2
+# Distributed ThinLTO in Bessemer
 
 Sean Gillespie, April 2022
 
-This document is a technical overview into Buck2's implementation of a
-distributed ThinLTO. Like all rules in Buck2, this implementation is written
+This document is a technical overview into Bessemer's implementation of a
+distributed ThinLTO. Like all rules in Bessemer, this implementation is written
 entirely in Starlark, contained in `dist_lto.bzl` (in this same directory).
 
 ## Motivation
@@ -161,20 +161,20 @@ expensive optimization passes to be run, which can further improve code quality
 near that of a monolithic LTO.
 
 This is all great, and ThinLTO has been in use at Meta for some time. However,
-Buck2 has the ability to take a step further than Buck1 could ever have - Buck2
+Bessemer has the ability to take a step further than Buck1 could ever have - Bessemer
 can distribute parallel `opt` actions across many machines via Remote Execution
 to achieve drastic speedups in ThinLTO wall clock time, memory usage, and
 incrementality.
 
-## Buck2's Implementation
+## Bessemer's Implementation
 
-Buck2's role in a distributed ThinLTO compilation is to construct a graph of
+Bessemer's role in a distributed ThinLTO compilation is to construct a graph of
 actions that directly mirrors the graph that the `index` step outputs. The graph
 that the `index` step outputs is entirely dynamic and, as such, the build system
 is only aware of what the graph could be after the `index` step is complete.
-Unlike Buck1 (or even Blaze/Bazel), Buck2 has explicit support for this paradigm
+Unlike Buck1 (or even Blaze/Bazel), Bessemer has explicit support for this paradigm
 [("dynamic dependencies")](https://fburl.com/gdoc/zklwhkll). Therefore, for
-Buck2, the basic strategy looks like:
+Bessemer, the basic strategy looks like:
 
 1. Invoke `clang` to act as `index`. `index` will output a file for every object
    file that indicates what other modules need to be present when running `opt`
@@ -185,12 +185,12 @@ Buck2, the basic strategy looks like:
    final binary.
 
 Action `2` is inherently dynamic, since it must read the contents of files
-produced as part of action `1`. Furthermore, Buck2's support of `1` is
-complicated by the fact that certain Buck2 rules can produce an archive of
-object files as an output (namely, the Rust compiler). As a result, Buck2's
+produced as part of action `1`. Furthermore, Bessemer's support of `1` is
+complicated by the fact that certain Bessemer rules can produce an archive of
+object files as an output (namely, the Rust compiler). As a result, Bessemer's
 implementation of Distributed ThinLTO is highly dynamic.
 
-Buck2's implementation contains four phases of actions:
+Bessemer's implementation contains four phases of actions:
 
 1. `thin_lto_prepare`, which specifically handles archives containing LLVM IR
    and prepares them to be inputs to `thin_lto_index`,
@@ -202,11 +202,11 @@ Buck2's implementation contains four phases of actions:
 
 ### thin_lto_prepare
 
-It is a reality of Buck2 today that some rules don't produce a statically-known
+It is a reality of Bessemer today that some rules don't produce a statically-known
 list of object files. The list of object files is known _a priori_ during C/C++
 compilation, since they have a one-to-one correspondence to source files;
 however, the Rust compiler emits an archive of object files; without inspecting
-the archive, Buck2 has no way of knowing what the contents of the archive are,
+the archive, Bessemer has no way of knowing what the contents of the archive are,
 or even if they contain bitcode at all.
 
 Future steps (particularly `thin_lto_index`) are defined to only operate on a
@@ -215,7 +215,7 @@ list of object files - a limitation
 Therefore, it is the job of `thin_lto_prepare` to turn an archive into a list of
 objects - namely, by extracting the archive into a directory.
 
-Buck2 dispatches a `thin_lto_prepare` action for every archive. Each prepare
+Bessemer dispatches a `thin_lto_prepare` action for every archive. Each prepare
 action has two outputs:
 
 1. An **output directory** (called `objects` in the code), a directory that
@@ -225,24 +225,24 @@ action has two outputs:
 
 The core logic of this action is implemented in the Python script
 `dist_lto_prepare.py`, contained in the `tools` directory. In addition to
-unpacking each archive, Buck2 keeps track of the list of archives as a Starlark
+unpacking each archive, Bessemer keeps track of the list of archives as a Starlark
 array that will be referenced by index in later steps.
 
 ### thin_lto_index
 
 With all archives prepared, the next step is to invoke LLVM's ThinLTO indexer.
-For the purposes of Buck2, the indexer looks like a linker; because of this,
-Buck2 must construct a reasonable link line. Buck2 does this by iterating over
+For the purposes of Bessemer, the indexer looks like a linker; because of this,
+Bessemer must construct a reasonable link line. Bessemer does this by iterating over
 the list of linkables that it has been given and constructing a link line from
-them. Uniquely for distributed ThinLTO, Buck2 must wrap all objects that were
+them. Uniquely for distributed ThinLTO, Bessemer must wrap all objects that were
 derived from `thin_lto_prepare` (i.e. were extracted from archives) with
 `-Wl,--start-lib` and `-Wl,--end-lib` to ensure that they are still treated as
 if they were archives by the indexer.
 
-Invoking the indexer is relatively straightforward in that Buck2 invokes it like
-it would any other linker. However, once the indexer returns, Buck2 must
-post-process its output into a format that Buck2's Starlark can understand and
-translate into a graph of dynamic `opt` actions. The first thing that Buck2 is
+Invoking the indexer is relatively straightforward in that Bessemer invokes it like
+it would any other linker. However, once the indexer returns, Bessemer must
+post-process its output into a format that Bessemer's Starlark can understand and
+translate into a graph of dynamic `opt` actions. The first thing that Bessemer is
 write a "meta file" to disk, which communicates inputs and outputs of
 `thin_lto_index` to a Python script, `dist_lto_planner.py`. The meta file
 contains a list of 7-tuples, whose members are:
@@ -293,9 +293,9 @@ archive manifest.
 
 ### thin_lto_opt
 
-After `thin_lto_index` completes, Buck2 launches `thin_lto_opt` actions for
-every object file and for every archive. For each object file, Buck2 reads that
-object file's optimization plan. At this phase, it is Buck2's responsibility to
+After `thin_lto_index` completes, Bessemer launches `thin_lto_opt` actions for
+every object file and for every archive. For each object file, Bessemer reads that
+object file's optimization plan. At this phase, it is Bessemer's responsibility to
 declare dependencies on every object file referenced by that object's
 compilation plan; it does so here by adding `hidden` dependencies on every
 object file and archive that the archive plan says that this object depends on.
@@ -305,9 +305,9 @@ where LTO fatal errors don't prevent `clang` from returning an exit code of
 zero. The Python script wraps `clang` and exits with a non-zero exit code if
 `clang` produced an empty object file.
 
-For each archive, Buck2 reads the archive's optimization plan and constructs
+For each archive, Bessemer reads the archive's optimization plan and constructs
 additional `thin_lto_opt` actions for each object file contained in the archive.
-Buck2 creates a directory of symlinks (`opt_objects`) that either contains
+Bessemer creates a directory of symlinks (`opt_objects`) that either contains
 symlinks to optimized object files (if the object file contained bitcode) or the
 original object file (if it didn't). The purpose of this symlink directory is to
 allow the final link to consume object files directly from this directory
@@ -318,6 +318,6 @@ are passed to the link step via the optimization manifest (`opt_manifest`).
 
 The final link step. Similar to `thin_lto_index`, this involves creating a link
 line to feed to the linker that uses the optimized artifacts that we just
-calculated. In cases where Buck2 would put an archive on the link line, it
+calculated. In cases where Bessemer would put an archive on the link line, it
 instead inserts `-Wl,--start-lib`, `-Wl,--end-lib`, and references to the
 objects in `opt_objects`.

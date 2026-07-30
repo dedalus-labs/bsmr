@@ -21,7 +21,7 @@ def _execution_platform(ctx):
             remote_execution_properties = {
                 "platform": "linux-remote-execution",
             },
-            remote_execution_use_case = "buck2-testing",
+            remote_execution_use_case = "bsmr-testing",
             remote_execution_dependencies = ctx.attrs.remote_execution_dependencies,
         ),
     )

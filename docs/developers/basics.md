@@ -2,9 +2,9 @@
 oncalls: ['build_infra']
 ---
 
-# Buck2 Developer Basics
+# Bessemer Developer Basics
 
-This file is `docs/developers/basics.md`. It is required reading for working on buck2 itself.
+This file is `docs/developers/basics.md`. It is required reading for working on bsmr itself.
 
 This file is optimized for both humans and LLMs and must be kept short. Detailed explanations belong
 in adjacent files in this directory or other documentation from which humans or LLMs can pull as
@@ -12,30 +12,30 @@ needed.
 
 ## Validation
 
-buck2 is built with buck2 internally at Meta. Cargo builds are primarily for OSS. To validate
+bsmr is built with bsmr internally at Meta. Cargo builds are primarily for OSS. To validate
 changes:
 
 ```bash
 # Check that things compile
-# Required for LLMs making changes to `buck2/app`
-arc rust-check fbcode//buck2/app/...
+# Required for LLMs making changes to `bsmr/app`
+arc rust-check fbcode//bsmr/app/...
 # Run clippy
-arc rust-clippy fbcode//buck2/app/...
+arc rust-clippy fbcode//bsmr/app/...
 # Run lints and apply fixes
 arc lint -a
 # Format code. Usually unnecessary, performed by IDEs and hooks
 arc f
 ```
 
-Buck2 has standard Rust unittests and integration tests at `tests/core`.
+Bessemer has standard Rust unittests and integration tests at `tests/core`.
 
 ```bash
 # Run an integration test
-buck2 test fbcode//buck2/tests/core/analysis:test_cmd_args
+bsmr test fbcode//bsmr/tests/core/analysis:test_cmd_args
 # Discover more information about writing and executing integration tests
 cat tests/core/README.md
 # Run some unittests
-buck2 test fbcode//buck2/app/buck2_core:buck2_core
+bsmr test fbcode//bsmr/app/bsmr_core:bsmr_core
 ```
 
 In OSS, standard cargo tooling mostly applies. Exceptions are that integration tests do not run in
@@ -48,7 +48,7 @@ of nearby code.
 
 Standard `rustfmt` conventions apply. Beyond that:
 
-- **HashMaps**: use `buck2_hash::BuckHashMap`, not `fxhash::FxHashMap`.
+- **HashMaps**: use `bsmr_hash::BuckHashMap`, not `fxhash::FxHashMap`.
 - **Cloning**: prefer `.dupe()` over `.clone()` for types that implement `Dupe`
   (e.g. `Arc`-wrapped types). Use `gazebo` utilities — particularly `dupe` —
   where they fit.
@@ -71,16 +71,16 @@ Standard `rustfmt` conventions apply. Beyond that:
 
 ## Error handling
 
-Buck2 uses `buck2_error` replacing both `anyhow` and `thiserror`. The must-knows:
+Bessemer uses `bsmr_error` replacing both `anyhow` and `thiserror`. The must-knows:
 
-- Return `buck2_error::Result<T>`.
-- Define error types with `#[derive(Debug, buck2_error::Error)]` and tag them
-  with `#[buck2(tag = ...)]` (no `thiserror::Error`).
-- Use the `buck2_error!` macro for ad-hoc errors.
+- Return `bsmr_error::Result<T>`.
+- Define error types with `#[derive(Debug, bsmr_error::Error)]` and tag them
+  with `#[bsmr(tag = ...)]` (no `thiserror::Error`).
+- Use the `bsmr_error!` macro for ad-hoc errors.
 - `.expect()`, `.unwrap()`, etc. are ok for file-local invariant violations/"this should never
   happen" cases. If not file-local, prefer `internal_error!()`, `.internal_error("...")?` or
   `.with_internal_error(|| ...)` if possible.
-- Inspecting or creating `buck2_error::Error`s in non-error codepaths is strongly discouraged.
+- Inspecting or creating `bsmr_error::Error`s in non-error codepaths is strongly discouraged.
   Represent states that are not errors using types that are not errors or at least dedicated,
   semantically clear error types.
 
@@ -94,7 +94,7 @@ Code is generally the same internally and externally, exceptions will be locally
 ## Rust Dependencies
 
 When modifying dependencies internally at Meta, change BUCK files. Almost all of our Cargo.toml
-files are maintained by autocargo, run `arc autocargo -p buck2` to update them.
+files are maintained by autocargo, run `arc autocargo -p bsmr` to update them.
 
 Autocargo is not available outside Meta. Hand-edit Cargo files if needed, we will deal with it on
 import.
@@ -104,10 +104,10 @@ At Meta, common third party Rust libraries are generally just available.
 # Debugging
 
 ```bash
-# Build buck2
-buck2 build @fbcode//mode/opt fbcode//buck2:buck2 --out /tmp/buck2_dest
-# Build buck2 from source and run a command with it in a different isolation dir
-./buck2.py build :foo
+# Build bsmr
+bsmr build @fbcode//mode/opt fbcode//bsmr:bsmr --out /tmp/bsmr_dest
+# Build bsmr from source and run a command with it in a different isolation dir
+./bsmr.py build :foo
 ```
 
 Further information at [debugging.md](./debugging.md)

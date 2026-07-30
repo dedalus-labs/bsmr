@@ -20,7 +20,7 @@ import org.kohsuke.args4j.CmdLineException;
 import org.kohsuke.args4j.CmdLineParser;
 
 /**
- * Main entry point for executing {@code Installs for buck2 android}.
+ * Main entry point for executing {@code Installs for bsmr android}.
  *
  * <p>Expected usage: {@code this_binary options}.
  */

@@ -1,7 +1,7 @@
-Buck2 logs all the commands it runs. So, after you've run a build, you can query
-Buck2 to get access to the exact command it used.
+Bessemer logs all the commands it runs. So, after you've run a build, you can query
+Bessemer to get access to the exact command it used.
 
-To do so, do your build as normal, then run `buck2 log what-ran`.
+To do so, do your build as normal, then run `bsmr log what-ran`.
 
 ## What Ran output format
 
@@ -36,7 +36,7 @@ Use What Ran as follows:
 - Once you found it, reproduce as follows:
   - If the executor was `local`, the command is in the output, so just run it.
     It's expected that you'll do this from the root of your project (use
-    `buck2 root --kind project` to find where that is).
+    `bsmr root --kind project` to find where that is).
   - If the executor was `re` or `cache`, you're provided a RE digest of the form
     `HASH:SIZE`.
 

@@ -1,0 +1,72 @@
+load("@bsmr_build//rules:rust.bzl", "rust_library")
+
+oncall("build_infra")
+
+rust_library(
+    name = "bsmr_events",
+    srcs = glob(
+        ["src/**/*.rs"],
+    ),
+    autocargo = {
+        "cargo_toml_config": {
+            "dependencies_override": {
+                "dependencies": {
+                    "fbinit": {
+                        "path": None,
+                        "version": "0.2",
+                    },
+                },
+            },
+            "extra_buck_dependencies": {
+                "dependencies": [
+                    (None, "//common/rust/shed/hostcaps:hostcaps"),
+                ],
+            },
+        },
+    },
+    test_deps = ["fbsource//third-party/rust:tokio"],
+    deps = [
+        "fbsource//third-party/rust:async-trait",
+        "fbsource//third-party/rust:console",
+        "fbsource//third-party/rust:crossbeam-channel",
+        "fbsource//third-party/rust:derive_more",
+        "fbsource//third-party/rust:futures",
+        "fbsource//third-party/rust:hostname",
+        "fbsource//third-party/rust:is_proc_translated",
+        "fbsource//third-party/rust:pin-project",
+        # @oss-disable[end= ]: "fbsource//third-party/rust:prost",
+        "fbsource//third-party/rust:serde",
+        # @oss-disable[end= ]: "fbsource//third-party/rust:serde_json",
+        "fbsource//third-party/rust:smallvec",
+        "fbsource//third-party/rust:tokio",
+        "fbsource//third-party/rust:uuid",
+        "//bsmr/packages/rust/allocative/allocative:allocative",
+        "//bsmr/app/bsmr_build_info:bsmr_build_info",
+        "//bsmr/app/bsmr_cli_proto:bsmr_cli_proto",
+        "//bsmr/app/bsmr_core:bsmr_core",
+        "//bsmr/app/bsmr_data:bsmr_data",
+        "//bsmr/app/bsmr_error:bsmr_error",
+        "//bsmr/app/bsmr_hash:bsmr_hash",
+        "//bsmr/app/bsmr_util:bsmr_util",
+        "//bsmr/app/bsmr_wrapper_common:bsmr_wrapper_common",
+        "//bsmr/packages/rust/gazebo/dupe:dupe",
+        "//bsmr/packages/rust/gazebo/gazebo:gazebo",
+        # @oss-disable[end= ]: "//common/rust/devserver_fingerprint/devserver_fingerprint:devserver_fingerprint",
+        "//common/rust/shed/fbinit:fbinit",
+        # @oss-disable[end= ]: "//common/rust/shed/hostcaps:hostcaps",
+        # @oss-disable[end= ]: "//common/rust/user:user",
+        # @oss-disable[end= ]: "//devx_www/cross_env_session_id:cross_env_session_id",
+        # @oss-disable[end= ]: "//devx_www/devx_session_id_rust:devx_session_id",
+    ] + select({
+        "DEFAULT": [],
+        "ovr_config//os:linux": [
+            "fbsource//third-party/rust:sys-info",
+        ],
+        "ovr_config//os:macos": [
+            "fbsource//third-party/rust:sys-info",
+        ],
+        "ovr_config//os:windows": [
+            "fbsource//third-party/rust:winver",
+        ],
+    }),
+)

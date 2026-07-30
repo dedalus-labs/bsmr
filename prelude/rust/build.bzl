@@ -1614,7 +1614,7 @@ def _rustc_invoke(
             identifier += " "
         identifier += "[incr]"
 
-    # None defers the choice to the `buck2.default_allow_cache_upload` config; an
+    # None defers the choice to the `bsmr.default_allow_cache_upload` config; an
     # explicit False overrides it. Actions without a preference pass None.
     if allow_cache_upload or deferred_link_cmd != None:
         # Opted in, or a deferred link. In the latter rustc compiles objects
@@ -1646,7 +1646,7 @@ def _rustc_invoke(
             prefer_local = prefer_local,
             category = "deferred_link",
             identifier = identifier,
-            # Defer to `buck2.default_allow_cache_upload` unless explicitly opted in.
+            # Defer to `bsmr.default_allow_cache_upload` unless explicitly opted in.
             allow_cache_upload = allow_cache_upload or None,
         )
 

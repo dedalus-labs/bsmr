@@ -10,9 +10,9 @@
 
 from pathlib import Path
 
-from buck2.tests.e2e_util.api.buck import Buck
-from buck2.tests.e2e_util.asserts import expect_failure
-from buck2.tests.e2e_util.buck_workspace import buck_test
+from bsmr.tests.e2e_util.api.buck import Buck
+from bsmr.tests.e2e_util.asserts import expect_failure
+from bsmr.tests.e2e_util.buck_workspace import buck_test
 
 
 @buck_test(data_dir="include_external")
@@ -51,7 +51,7 @@ async def test_changing_external_include(buck: Buck) -> None:
 
     # Start the daemon and build once
     await buck.audit_config(
-        "--all-cells", env={"BUCK2_TEST_EXTRA_EXTERNAL_CONFIG": str(extra)}
+        "--all-cells", env={"BSMR_TEST_EXTRA_EXTERNAL_CONFIG": str(extra)}
     )
 
     # Change the file and build again

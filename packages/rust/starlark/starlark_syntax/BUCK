@@ -1,5 +1,5 @@
-load("@fbcode_macros//build_defs:native_rules.bzl", "buck_filegroup")
-load("@fbsource//tools/build_defs:rust_library.bzl", "rust_library")
+load("@bsmr_build//rules:native_rules.bzl", "buck_filegroup")
+load("@bsmr_build//rules:rust.bzl", "rust_library")
 
 oncall("build_infra")
 
@@ -31,10 +31,10 @@ rust_library(
         # If you need some feature requiring working with syntax tree, like a linter,
         # please implement it inside the `starlark` crate.
         # For codemods, use libCST.
-        "//buck2/packages/rust/starlark/...",
-        # For faster incremental compilation of buck2,
+        "//bsmr/packages/rust/starlark/...",
+        # For faster incremental compilation of bsmr,
         # we pull `starlark::Error` from this crate rather than from `starlark`.
-        "//buck2/app/buck2_error/...",
+        "//bsmr/app/bsmr_error/...",
     ],
     deps = [
         "fbsource//third-party/rust:annotate-snippets",
@@ -47,9 +47,9 @@ rust_library(
         "fbsource//third-party/rust:num-bigint",
         "fbsource//third-party/rust:num-traits",
         "fbsource//third-party/rust:thiserror",
-        "//buck2/allocative/allocative:allocative",
-        "//buck2/packages/rust/gazebo/dupe:dupe",
-        "//buck2/pagable:pagable",
-        "//buck2/packages/rust/starlark/starlark_map:starlark_map",
+        "//bsmr/packages/rust/allocative/allocative:allocative",
+        "//bsmr/packages/rust/gazebo/dupe:dupe",
+        "//bsmr/packages/rust/pagable/pagable:pagable",
+        "//bsmr/packages/rust/starlark/starlark_map:starlark_map",
     ],
 )

@@ -28,7 +28,7 @@ def xcode_command_alias(name, xcode_version = None, xcode_product_build = None, 
         # in which case we can reset the caches by setting a unique env var.
         # Since the env var is part of the cache key, that means that any actions
         # depending on selected Xcode will get recomputed.
-        env["BUCK2_XCODE_CACHE_SEED"] = xcode_cache_seed
+        env["BSMR_XCODE_CACHE_SEED"] = xcode_cache_seed
 
     # This setup means that all `xcode_command_alias()` would effectively become:
     #   xcode_version_checker VERSION ORIGINAL_COMMAND ORIGINAL_COMMAND_ARGS

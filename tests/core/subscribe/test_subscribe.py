@@ -14,9 +14,9 @@ import json
 import os
 
 import pytest
-from buck2.tests.e2e_util.api.buck import Buck
-from buck2.tests.e2e_util.api.buck_result import BuckException
-from buck2.tests.e2e_util.buck_workspace import buck_test, env
+from bsmr.tests.e2e_util.api.buck import Buck
+from bsmr.tests.e2e_util.api.buck_result import BuckException
+from bsmr.tests.e2e_util.buck_workspace import buck_test, env
 
 
 # Length-prefixed protobuf frame for:
@@ -24,7 +24,7 @@ from buck2.tests.e2e_util.buck_workspace import buck_test, env
 # This test intentionally uses the raw frame to verify stdin requests keep the
 # daemon alive without going through the CLI's `--active-commands` helper. The
 # wire shape is stable enough for this test: the subscription API is part of
-# Buck2's client/daemon protocol, and the existing field number for
+# Bessemer's client/daemon protocol, and the existing field number for
 # `subscribe_to_active_commands` must remain backward-compatible.
 SUBSCRIBE_TO_ACTIVE_COMMANDS_REQUEST = b"\x02\x22\x00"
 
@@ -33,12 +33,12 @@ SUBSCRIBE_TO_ACTIVE_COMMANDS_REQUEST = b"\x02\x22\x00"
 async def test_subscribe(buck: Buck) -> None:
     path = (await buck.targets("//:stage1", "--show-output")).stdout.strip().split()[1]
 
-    # Buck2 wants normalized paths here.
+    # Bessemer wants normalized paths here.
     path = path.replace("\\", "/")
 
-    expect = os.environ["BUCK2_EXPECT"]
+    expect = os.environ["BSMR_EXPECT"]
     args = [
-        "--buck2",
+        "--bsmr",
         buck.path_to_executable,
         path,
     ]
@@ -87,7 +87,7 @@ async def test_disconnect_eof(buck: Buck) -> None:
 
 
 @buck_test()
-@env("BUCK2_TESTING_INACTIVITY_TIMEOUT", "true")
+@env("BSMR_TESTING_INACTIVITY_TIMEOUT", "true")
 async def test_requests_keep_daemon_alive(buck: Buck) -> None:
     async with await buck.subscribe() as subscribe:
         subscribe.stdin.write(SUBSCRIBE_TO_ACTIVE_COMMANDS_REQUEST)

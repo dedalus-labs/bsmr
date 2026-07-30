@@ -1,6 +1,6 @@
-# buck2 core tests
+# bsmr core tests
 
-The primary integration tests for buck2.
+The primary integration tests for bsmr.
 
 The best way to write new tests is to copy-paste from an existing one and modify it.
 

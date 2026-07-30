@@ -77,7 +77,7 @@ enum AnnotationProcessingTool {
   JAVAC = 1;
 }
 
-/** Model for metadata provided by Buck2 incremental action see:
+/** Model for metadata provided by Bessemer incremental action see:
  * https://buck2.build/docs/rule_authors/incremental_actions */
 message ActionMetadata {
   Metadata previousMetadata = 1;

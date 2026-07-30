@@ -12,10 +12,10 @@
 import json
 from pathlib import Path
 
-from buck2.tests.e2e_util.api.buck import Buck
-from buck2.tests.e2e_util.asserts import expect_failure
-from buck2.tests.e2e_util.buck_workspace import buck_test
-from buck2.tests.e2e_util.helper.utils import random_string, read_what_ran
+from bsmr.tests.e2e_util.api.buck import Buck
+from bsmr.tests.e2e_util.asserts import expect_failure
+from bsmr.tests.e2e_util.buck_workspace import buck_test
+from bsmr.tests.e2e_util.helper.utils import random_string, read_what_ran
 
 
 @buck_test()
@@ -32,7 +32,7 @@ async def test_executor_with_dependencies(buck: Buck) -> None:
             f"test.cache_buster={random_string()}",
         ),
         # Full error message looks like this: P1217423393
-        stderr_regex='facebook::remote_execution::scheduler::TaskCancelledException: Error acquiring dependency TaskDependencyRequest { dependency: TDependency { smc_tier: "buck2_smoke_test_tier", id: "dep_a"',
+        stderr_regex='facebook::remote_execution::scheduler::TaskCancelledException: Error acquiring dependency TaskDependencyRequest { dependency: TDependency { smc_tier: "bsmr_smoke_test_tier", id: "dep_a"',
     )
 
 

@@ -151,7 +151,7 @@ def generate_bzl_content(
         f"# Applications: {len(applications)}",
         "#",
         "# To regenerate this file, run:",
-        "#   python3 buck2/prelude/erlang/toolchain/generate_otp_versions.py <output_file>",
+        "#   python3 bsmr/prelude/erlang/toolchain/generate_otp_versions.py <output_file>",
         "",
     ]
 

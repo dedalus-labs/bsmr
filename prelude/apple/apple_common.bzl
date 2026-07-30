@@ -299,7 +299,7 @@ def _asset_catalogs_compilation_options_arg():
     }
 
 def _apple_installer_arg():
-    installer_target = "fbsource//xplat/buck2/platform/apple/python_installer:apple_installer"
+    installer_target = "fbsource//xplat/bsmr/platform/apple/python_installer:apple_installer"
     return {
         "installer": attrs.default_only(attrs.exec_dep(default = installer_target)),
     }

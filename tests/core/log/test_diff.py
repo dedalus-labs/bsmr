@@ -12,19 +12,19 @@ import json
 import tempfile
 import typing
 
-from buck2.tests.e2e_util.api.buck import Buck
-from buck2.tests.e2e_util.buck_workspace import buck_test
-from buck2.tests.e2e_util.helper.utils import filter_events
+from bsmr.tests.e2e_util.api.buck import Buck
+from bsmr.tests.e2e_util.buck_workspace import buck_test
+from bsmr.tests.e2e_util.helper.utils import filter_events
 
 
-def with_buck2_output(output: str) -> typing.List[str]:
+def with_bsmr_output(output: str) -> typing.List[str]:
     return [
         "-c",
-        f"test.buck2_output={output}",
+        f"test.bsmr_output={output}",
     ]
 
 
-def with_buck2_key_value(key: str, value: str) -> typing.List[str]:
+def with_bsmr_key_value(key: str, value: str) -> typing.List[str]:
     return [
         "-c",
         f"test.{key}={value}",
@@ -39,10 +39,10 @@ def parse_json_diffs(stdout: str) -> typing.List[dict]:
 
 @buck_test()
 async def test_no_action_divergence_command(buck: Buck) -> None:
-    await buck.build("//:simple", *with_buck2_output("foo"))
+    await buck.build("//:simple", *with_bsmr_output("foo"))
     out1 = await buck.log("last")
     path1 = out1.stdout.strip()
-    await buck.build("//:simple", *with_buck2_output("foo"))
+    await buck.build("//:simple", *with_bsmr_output("foo"))
     out2 = await buck.log("last")
     path2 = out2.stdout.strip()
     out = await buck.log(
@@ -54,8 +54,8 @@ async def test_no_action_divergence_command(buck: Buck) -> None:
 
 @buck_test()
 async def test_action_divergence_command(buck: Buck) -> None:
-    await buck.build("//:non_det", *with_buck2_output("foo"))
-    await buck.build("//:non_det", *with_buck2_output("bar"))
+    await buck.build("//:non_det", *with_bsmr_output("foo"))
+    await buck.build("//:non_det", *with_bsmr_output("bar"))
     out = await buck.log(
         "diff", "action-divergence", "--recent1", "0", "--recent2", "1"
     )
@@ -68,10 +68,10 @@ async def test_action_divergence_command(buck: Buck) -> None:
 
 @buck_test()
 async def test_no_config_diff_command(buck: Buck) -> None:
-    await buck.build("//:simple", *with_buck2_output("foo"))
+    await buck.build("//:simple", *with_bsmr_output("foo"))
     out1 = await buck.log("last")
     path1 = out1.stdout.strip()
-    await buck.build("//:simple", *with_buck2_output("foo"))
+    await buck.build("//:simple", *with_bsmr_output("foo"))
     out2 = await buck.log("last")
     path2 = out2.stdout.strip()
     out = await buck.log(
@@ -91,17 +91,17 @@ async def test_no_config_diff_command(buck: Buck) -> None:
 async def test_diff_order_config_diff_command(buck: Buck) -> None:
     await buck.build(
         "//:simple",
-        *with_buck2_output("out"),
-        *with_buck2_key_value("key_a", "1"),
-        *with_buck2_key_value("key_b", "2"),
+        *with_bsmr_output("out"),
+        *with_bsmr_key_value("key_a", "1"),
+        *with_bsmr_key_value("key_b", "2"),
     )
     out1 = await buck.log("last")
     path1 = out1.stdout.strip()
     await buck.build(
         "//:simple",
-        *with_buck2_output("out"),
-        *with_buck2_key_value("key_b", "2"),
-        *with_buck2_key_value("key_a", "1"),
+        *with_bsmr_output("out"),
+        *with_bsmr_key_value("key_b", "2"),
+        *with_bsmr_key_value("key_a", "1"),
     )
     out2 = await buck.log("last")
     path2 = out2.stdout.strip()
@@ -137,9 +137,9 @@ async def test_diff_order_config_diff_command(buck: Buck) -> None:
 async def test_config_diff_command_command_line(buck: Buck) -> None:
     await buck.build(
         "//:simple",
-        *with_buck2_output("changed_old"),
-        *with_buck2_key_value("first", "x"),
-        *with_buck2_key_value("first", "overwrite_x"),
+        *with_bsmr_output("changed_old"),
+        *with_bsmr_key_value("first", "x"),
+        *with_bsmr_key_value("first", "overwrite_x"),
     )
     out1 = await buck.log("last")
     path1 = out1.stdout.strip()
@@ -149,7 +149,7 @@ async def test_config_diff_command_command_line(buck: Buck) -> None:
         f.close()
     await buck.build(
         "//:simple",
-        *with_buck2_output("changed_new"),
+        *with_bsmr_output("changed_new"),
         "--config-file",
         f.name,
     )
@@ -168,7 +168,7 @@ async def test_config_diff_command_command_line(buck: Buck) -> None:
     assert len(summary_diffs) == 3
 
     assert (
-        summary_diffs[0]["Changed"]["key"] == "test.buck2_output"
+        summary_diffs[0]["Changed"]["key"] == "test.bsmr_output"
         and summary_diffs[0]["Changed"]["old_value"] == "changed_old"
         and summary_diffs[0]["Changed"]["new_value"] == "changed_new"
     )
@@ -187,7 +187,7 @@ async def test_config_diff_command_command_line(buck: Buck) -> None:
 async def test_config_diff_command_project_relative(buck: Buck) -> None:
     await buck.build(
         "//:simple",
-        *with_buck2_output("out"),
+        *with_bsmr_output("out"),
         "@root//mode/my_mode_a",
         "@root//mode/my_mode_c",
     )
@@ -195,7 +195,7 @@ async def test_config_diff_command_project_relative(buck: Buck) -> None:
     path1 = out1.stdout.strip()
     await buck.build(
         "//:simple",
-        *with_buck2_output("out"),
+        *with_bsmr_output("out"),
         "@root//mode/my_mode_b",
         "@root//mode/my_mode_c",
         "@root//mode/my_mode_b",
@@ -225,12 +225,12 @@ async def test_config_diff_command_project_relative(buck: Buck) -> None:
 async def test_config_diff_tracker_modfile_change(buck: Buck) -> None:
     await buck.build(
         "//:simple",
-        *with_buck2_output("out"),
+        *with_bsmr_output("out"),
         "@root//mode/my_mode_a",
     )
     res = await buck.build(
         "//:simple",
-        *with_buck2_output("out"),
+        *with_bsmr_output("out"),
         "@root//mode/my_mode_b",
     )
     cell_config_diffs = await filter_events(
@@ -245,12 +245,12 @@ async def test_config_diff_tracker_modfile_change(buck: Buck) -> None:
 async def test_config_diff_tracker_no_change(buck: Buck) -> None:
     await buck.build(
         "//:simple",
-        *with_buck2_output("out"),
+        *with_bsmr_output("out"),
         "@root//mode/my_mode_a",
     )
     res = await buck.build(
         "//:simple",
-        *with_buck2_output("out"),
+        *with_bsmr_output("out"),
         "@root//mode/my_mode_a",
     )
     cell_config_diffs = await filter_events(

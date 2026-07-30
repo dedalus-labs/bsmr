@@ -67,8 +67,8 @@ pub struct TypeInstanceId(pub(crate) u64);
 /// unique tag for the *kind* of nominal type, mixed into the id so two kinds
 /// whose identity bytes coincide still get distinct ids.
 ///
-/// Embedders implement this for their own kinds (e.g. buck2 providers); each
-/// [`tag`](Self::tag) must be namespaced (e.g. `"buck2.provider"`) so domains
+/// Embedders implement this for their own kinds (e.g. bsmr providers); each
+/// [`tag`](Self::tag) must be namespaced (e.g. `"bsmr.provider"`) so domains
 /// from different crates cannot collide.
 pub trait TypeIdDomain {
     /// A stable, globally unique, namespaced discriminator for this kind.

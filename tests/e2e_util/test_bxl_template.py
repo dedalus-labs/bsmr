@@ -8,12 +8,12 @@
 
 import os
 
-from buck2.tests.e2e_util.api.buck import Buck
-from buck2.tests.e2e_util.api.buck_result import BuckException
-from buck2.tests.e2e_util.buck_workspace import buck_test
+from bsmr.tests.e2e_util.api.buck import Buck
+from bsmr.tests.e2e_util.api.buck_result import BuckException
+from bsmr.tests.e2e_util.buck_workspace import buck_test
 
 
-# This is just a template test case for `bxl_test` to use buck2's e2e test framework.
+# This is just a template test case for `bxl_test` to use bsmr's e2e test framework.
 # It does not need to be edited for new `bxl_test`.
 
 

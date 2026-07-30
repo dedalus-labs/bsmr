@@ -13,8 +13,8 @@ import os
 import platform
 from typing import Iterable
 
-from buck2.tests.e2e_util.api.buck import Buck
-from buck2.tests.e2e_util.buck_workspace import buck_test
+from bsmr.tests.e2e_util.api.buck import Buck
+from bsmr.tests.e2e_util.buck_workspace import buck_test
 
 
 @buck_test()
@@ -105,7 +105,7 @@ def _assert_all_paths_do_not_exist(paths: Iterable[str]) -> None:
 
 @buck_test()
 async def test_clean_background(buck: Buck) -> None:
-    """Test that buck2 clean --background moves buck-out to trash and deletes it."""
+    """Test that bsmr clean --background moves buck-out to trash and deletes it."""
     build_result = await buck.build("root//:trivial_build")
     build_report = build_result.get_build_report()
     build_report_outputs = [
@@ -120,7 +120,7 @@ async def test_clean_background(buck: Buck) -> None:
     assert "Buck-out moved to trash. Now cleaning up..." in clean_result.stderr
     assert "Tip: Use Ctrl-Z to put this in the background" in clean_result.stderr
     assert (
-        "You can run other buck2 commands while this completes." in clean_result.stderr
+        "You can run other bsmr commands while this completes." in clean_result.stderr
     )
 
     # Verify all build outputs are eventually deleted

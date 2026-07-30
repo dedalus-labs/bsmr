@@ -380,7 +380,7 @@ config_arg(ConfigFiles) -> [~"-config" | ConfigFiles].
 Create a set up a home dir in the output directory.
 Each test execution will have a separate home dir with a
 erlang default cookie file, setting the default cookie to
-buck2-test-runner-cookie
+bsmr-test-runner-cookie
 """.
 -spec set_home_dir(file:filename_all()) -> file:filename_all().
 set_home_dir(OutputDir) ->
@@ -428,12 +428,12 @@ try_setup_dotslash_cache(FakeHomeDir) ->
 
 -spec cookie() -> atom().
 cookie() ->
-    'buck2-test-runner-cookie'.
+    'bsmr-test-runner-cookie'.
 
 -spec project_root() -> file:filename().
 project_root() ->
     {ok, CWD} = prim_file:get_cwd(),
-    Command = "buck2 root --kind=project",
+    Command = "bsmr root --kind=project",
     Dir = string:trim(os:cmd(Command)),
     ?LOG_INFO(#{command => Command, result => Dir, cwd => CWD}),
     case filelib:is_dir(Dir, ?raw_file_access) of

@@ -15,7 +15,7 @@ def _impl(ctx):
     # FIXME(JakobDegen): The rules themselves do not need any of the exec configured providers.
     # They only ever access the `RustProcMacroMarker` provider and do everything else through
     # plugins. However, we cannot return just that provider, since it results in
-    # `buck2 build :proc_macro` building nothing. We would get the right behavior out of the
+    # `bsmr build :proc_macro` building nothing. We would get the right behavior out of the
     # command line build invocation by taking a regular target dep on the aliased target and
     # returning those targets. However, that also does not work because it would result the target
     # configuration for a Rust library needing to be compatible with the target configuration for

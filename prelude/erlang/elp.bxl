@@ -290,6 +290,6 @@ elp_config = bxl_main(
     },
 )
 
-# Run with `buck2 bxl prelude//erlang/elp.bxl:elp_config`
+# Run with `bsmr bxl prelude//erlang/elp.bxl:elp_config`
 # e.g.
-# buck2 bxl prelude//erlang/elp.bxl:elp_config -- --included_targets cell//...
+# bsmr bxl prelude//erlang/elp.bxl:elp_config -- --included_targets cell//...

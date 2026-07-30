@@ -593,7 +593,7 @@ def _compile_single_cxx(
     EXECUTION PHASE: Creates compilation actions for a single source file.
 
     This function runs INSIDE the dynamic action callback (`_cxx_dynamic_compile`),
-    meaning it only executes when Buck2 determines the compilation is actually needed.
+    meaning it only executes when Bessemer determines the compilation is actually needed.
 
     ## Relationship to Declaration Phase
     The output artifacts passed here were declared earlier by `_prepare_cxx_compilation`
@@ -934,8 +934,8 @@ def _cxx_dynamic_compile(
     """
     DYNAMIC ACTION CALLBACK: The bridge between declaration and execution phases.
 
-    This function is the implementation for Buck2's `dynamic_output_new` API. It runs
-    LAZILY—only when Buck2 determines that one or more of the declared outputs are
+    This function is the implementation for Bessemer's `dynamic_output_new` API. It runs
+    LAZILY—only when Bessemer determines that one or more of the declared outputs are
     actually needed by the build. This is the key to memory optimization: action
     graphs are not materialized until necessary.
 

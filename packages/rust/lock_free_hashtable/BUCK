@@ -1,0 +1,25 @@
+load("@bsmr_build//rules:rust.bzl", "rust_binary")
+load("@bsmr_build//rules:rust.bzl", "rust_library")
+
+oncall("build_infra")
+
+rust_library(
+    name = "lock_free_hashtable",
+    srcs = glob(["src/**/*.rs"]),
+    crate_root = "src/lib.rs",
+    features = ["allocative"],
+    deps = [
+        "fbsource//third-party/rust:atomic",
+        "fbsource//third-party/rust:parking_lot",
+        "//bsmr/packages/rust/allocative/allocative:allocative",
+    ],
+)
+
+rust_binary(
+    name = "stress",
+    srcs = ["examples/stress.rs"],
+    deps = [
+        "fbsource//third-party/rust:num_cpus",
+        ":lock_free_hashtable",
+    ],
+)

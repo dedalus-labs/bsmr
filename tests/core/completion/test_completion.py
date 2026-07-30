@@ -14,8 +14,8 @@ import subprocess
 import typing
 from pathlib import Path
 
-from buck2.tests.e2e_util.api.buck import Buck
-from buck2.tests.e2e_util.buck_workspace import buck_test
+from bsmr.tests.e2e_util.api.buck import Buck
+from bsmr.tests.e2e_util.buck_workspace import buck_test
 
 IS_LINUX: bool = platform.system() == "Linux"
 
@@ -30,7 +30,7 @@ def completion_test(
     shells: list[str] = SHELLS,
     options_only: bool = False,
     cwd: str = "",
-    bin: str = "buck2",
+    bin: str = "bsmr",
 ) -> None:
     for shell in shells:
         if shell == "fish" and not IS_LINUX:
@@ -42,7 +42,7 @@ def completion_test(
             tmp_path = Path(buck.cwd).parent / "tmp"
             tmp_path.mkdir(exist_ok=True)
 
-            verify_bin = Path(os.environ["BUCK2_COMPLETION_VERIFY"])
+            verify_bin = Path(os.environ["BSMR_COMPLETION_VERIFY"])
 
             get_completions = await buck.completion(
                 shell, *(["--options-only"] if options_only else [])
@@ -59,7 +59,7 @@ def completion_test(
                     "#!/bin/bash",
                     "shopt -s dotglob",
                     f'export PATH="{buck.path_to_executable.parent.absolute()}:$PATH"',
-                    "export BUCK2_COMPLETION_TIMEOUT=30000",
+                    "export BSMR_COMPLETION_TIMEOUT=30000",
                     f"if [ -n \"$( ls -A '{shell_home}' )\" ]; then",
                     f"    rm -r -- {shell_home}/*",
                     "fi",

@@ -10,7 +10,7 @@ test_rule(
     default_target_platform = "ovr_config//platform:base",
     modifiers = [
         "ovr_config//os:linux",
-        "fbcode//buck2/tests/e2e/configurations/cfg_constructor/test_clear_package_modifiers_data/test_cfg_constructor_data:some_constraint_value",
+        "fbcode//bsmr/tests/e2e/configurations/cfg_constructor/test_clear_package_modifiers_data/test_cfg_constructor_data:some_constraint_value",
     ],
 )
 

@@ -13,11 +13,11 @@ import asyncio
 import json
 from pathlib import Path
 
-from buck2.tests.e2e_util.api.buck import Buck
-from buck2.tests.e2e_util.api.buck_result import ExitCodeV2
-from buck2.tests.e2e_util.asserts import expect_failure
-from buck2.tests.e2e_util.buck_workspace import buck_test, env
-from buck2.tests.e2e_util.helper.golden import golden
+from bsmr.tests.e2e_util.api.buck import Buck
+from bsmr.tests.e2e_util.api.buck_result import ExitCodeV2
+from bsmr.tests.e2e_util.asserts import expect_failure
+from bsmr.tests.e2e_util.buck_workspace import buck_test, env
+from bsmr.tests.e2e_util.helper.golden import golden
 
 
 def command_report_test(name: str, command: list[str]) -> None:
@@ -45,8 +45,8 @@ command_report_test("test_command_report_build_errors", [":fail1", ":fail2"])
 
 
 # Set Watchman timeout to 0 to mimic a Watchman Timeout error.
-@buck_test(extra_buck_config={"buck2": {"file_watcher": "watchman"}})
-@env("BUCK2_WATCHMAN_TIMEOUT", "0")
+@buck_test(extra_buck_config={"bsmr": {"file_watcher": "watchman"}})
+@env("BSMR_WATCHMAN_TIMEOUT", "0")
 async def test_command_report_watchman_error(buck: Buck, tmp_path: Path) -> None:
     report = tmp_path / "command_report.json"
     await expect_failure(
@@ -62,7 +62,7 @@ async def test_command_report_watchman_error(buck: Buck, tmp_path: Path) -> None
 
 # Early client error that doesn't show up in invocation records
 @buck_test()
-@env("BUCK2_TEST_INIT_DAEMON_ERROR", "true")
+@env("BSMR_TEST_INIT_DAEMON_ERROR", "true")
 async def test_command_report_init_daemon_error(buck: Buck, tmp_path: Path) -> None:
     report = tmp_path / "command_report.json"
     await expect_failure(
@@ -78,12 +78,12 @@ async def test_command_report_init_daemon_error(buck: Buck, tmp_path: Path) -> N
 
 # Deliberately cause a daemon connection failure.
 @buck_test(write_invocation_record=True)
-@env("BUCK2_TEST_FAIL_BUCKD_AUTH", "true")
+@env("BSMR_TEST_FAIL_BUCKD_AUTH", "true")
 # This test case spawns a loose daemon that we can't connect to. On windows
 # this loose daemon will keep holding onto buck-out files after test case finishes
 # and prevent other processes from changing them, so set a termination timeout
 # of 20 seconds so that this loose daemon gets killed before test case finishes.
-@env("BUCK2_TERMINATE_AFTER", "15")
+@env("BSMR_TERMINATE_AFTER", "15")
 async def test_exit_result_connection_error(buck: Buck, tmp_path: Path) -> None:
     report = tmp_path / "command_report.json"
     res = await expect_failure(
@@ -109,7 +109,7 @@ async def test_exit_result_connection_error(buck: Buck, tmp_path: Path) -> None:
 
 # Late client error takes precedence over action errors
 @buck_test(write_invocation_record=True)
-@env("BUCK2_TEST_BUILD_ERROR", "true")
+@env("BSMR_TEST_BUILD_ERROR", "true")
 async def test_command_report_post_build_client_error(
     buck: Buck, tmp_path: Path
 ) -> None:

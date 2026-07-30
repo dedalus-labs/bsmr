@@ -13,13 +13,13 @@ import glob
 import json
 from typing import Any, Dict, List
 
-from buck2.tests.e2e_util.api.buck import Buck
-from buck2.tests.e2e_util.asserts import expect_failure
-from buck2.tests.e2e_util.buck_workspace import buck_test
-from buck2.tests.e2e_util.helper.utils import read_what_ran
+from bsmr.tests.e2e_util.api.buck import Buck
+from bsmr.tests.e2e_util.asserts import expect_failure
+from bsmr.tests.e2e_util.buck_workspace import buck_test
+from bsmr.tests.e2e_util.helper.utils import read_what_ran
 
 
-package = "fbcode//buck2/tests/targets/rules/worker_grpc"
+package = "fbcode//bsmr/tests/targets/rules/worker_grpc"
 
 worker_args = [
     "-c",
@@ -64,7 +64,7 @@ async def test_worker_shared(buck: Buck) -> None:
     # Check worker is shared between multiple actions.
     res = await buck.build(*worker_args, package + ":gen_worker_deps")
     trace_id = json.loads(res.stdout)["trace_id"]
-    worker_dirs = glob.glob(f"/tmp/buck2_worker/{trace_id}*/stderr")
+    worker_dirs = glob.glob(f"/tmp/bsmr_worker/{trace_id}*/stderr")
     num_workers = len(worker_dirs)
     assert num_workers == 1, f"expected 1 worker, found {worker_dirs} for {trace_id}"
     assert len(await _read_what_ran_for_executor(buck, "WorkerInit")) == 1

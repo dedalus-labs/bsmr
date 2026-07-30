@@ -6,7 +6,7 @@
 # of this source tree. You may select, at your option, one of the
 # above-listed licenses.
 
-# We don't want e.g. Apple simulator and Android emulator targets to be configured differently and handled as a different resource broker by buck2 core.
+# We don't want e.g. Apple simulator and Android emulator targets to be configured differently and handled as a different resource broker by bsmr core.
 # By clearing the platform we make sure there is only a single configured target for each resource broker which manages resources of certain type.
 def _transition_impl(platform: PlatformInfo, refs: struct) -> PlatformInfo:
     # buildifier: disable=unused-variable

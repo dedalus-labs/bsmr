@@ -12,8 +12,8 @@ import json
 import tempfile
 from typing import Final
 
-from buck2.tests.e2e_util.api.buck import Buck
-from buck2.tests.e2e_util.buck_workspace import buck_test
+from bsmr.tests.e2e_util.api.buck import Buck
+from bsmr.tests.e2e_util.buck_workspace import buck_test
 
 FBCODE_TARGET: Final[str] = "fbcode//testinfra/playground/cpp/tests:test_example"
 ARVR_TARGET: Final[str] = (
@@ -146,7 +146,7 @@ async def test_config(buck: Buck) -> None:
 
     # some configs are dropped
     buck_config = await execute_test_with_args(
-        buck, ["-c", "buck2.log_configured_graph_size=true"], target=FBCODE_TARGET
+        buck, ["-c", "bsmr.log_configured_graph_size=true"], target=FBCODE_TARGET
     )
     assert_buck_args_config_equal(
         buck_config,

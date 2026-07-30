@@ -16,7 +16,7 @@ import com.facebook.buck.jvm.cd.workertool.grpc.WorkerGrpcServer;
 import java.io.IOException;
 
 /**
- * JavaCD grpc worker tool daemon, for use by buck2
+ * JavaCD grpc worker tool daemon, for use by bsmr
  *
  * <p>This starts a grpc service over a uds socket, that accepts javacd compilation commands
  */

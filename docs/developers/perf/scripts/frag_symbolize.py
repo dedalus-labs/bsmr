@@ -10,16 +10,16 @@
 """Symbolize a raw fragmentation-attribution dump from the mem_frag profiler.
 
 The daemon dumps raw instruction pointers (in-process symbolization via
-gimli/addr2line takes minutes on buck2's multi-GB binary). This resolves them
+gimli/addr2line takes minutes on bsmr's multi-GB binary). This resolves them
 offline with `nm` + binary search, the same fast path heap_aggregate.py uses.
 
 Two dump formats are auto-detected:
  - the default cross-class attribution (size-class table + top sites by waste);
- - a focus dump (`BUCK2_MEMFRAG_FOCUS=<size>`), which captured one size class at
+ - a focus dump (`BSMR_MEMFRAG_FOCUS=<size>`), which captured one size class at
    rate 1 and gets the exact cohort/mixed split and per-slab leaf mixtures.
 
 Usage:
-  frag_symbolize.py <binary> <dump>      # dump from $BUCK2_MEMFRAG_TRIGGER.<pid>.out
+  frag_symbolize.py <binary> <dump>      # dump from $BSMR_MEMFRAG_TRIGGER.<pid>.out
   frag_symbolize.py <binary> - < dump
   frag_symbolize.py <binary> <dump> --top 30 --ctx 6
 
@@ -27,7 +27,7 @@ By default symbols are shortened to `crate~Type` (middle modules replaced with
 `~`, crate and final name kept) so the type/method survives; pass --full for the
 complete symbols, no eliding or truncation.
 
-buck2 is a non-PIE executable, so the raw runtime addresses match `nm`
+bsmr is a non-PIE executable, so the raw runtime addresses match `nm`
 addresses directly (no load-base adjustment), as for jemalloc heap dumps.
 """
 
@@ -319,7 +319,7 @@ def main():
         )
     print(
         "(exact cohort/mixed composition per class: rerun with "
-        "BUCK2_MEMFRAG_FOCUS=<size>)"
+        "BSMR_MEMFRAG_FOCUS=<size>)"
     )
     print()
 

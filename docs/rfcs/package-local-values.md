@@ -1,6 +1,6 @@
 # Package-local values
 
-This RFC proposes to extend buck2 Starlark with package-local values.
+This RFC proposes to extend bsmr Starlark with package-local values.
 
 ## Why
 
@@ -30,7 +30,7 @@ Proposed per-package properties can replace `get_modes` mechanism.
 
 ### `PACKAGE` files
 
-Before evaluating `BUCK` file, buck2 will evaluate all `PACKAGE` files in the
+Before evaluating `BUCK` file, bsmr will evaluate all `PACKAGE` files in the
 same directory and all parent directories. Absent `PACKAGE` files are treated as
 empty files.
 

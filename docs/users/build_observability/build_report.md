@@ -74,7 +74,7 @@ BuildReport {
     build_metrics: AllTargetsBuildMetrics,
 
     # Set sketch of configured target graph stored in a hex string.
-    # Enabled by setting `-c buck2.log_total_configured_graph_sketch=true`.
+    # Enabled by setting `-c bsmr.log_total_configured_graph_sketch=true`.
     total_configured_graph_sketch: Optional[str],
 }
 
@@ -118,7 +118,7 @@ ConfiguredBuildReportEntry {
 
     # The number of targets in the configured dependency graph of this target.
     #
-    # This is only included if `-c buck2.log_configured_graph_size=true` is set.
+    # This is only included if `-c bsmr.log_configured_graph_size=true` is set.
     # Otherwise, it is left as None.
     configured_graph_size: Optional[uint],
 
@@ -127,21 +127,21 @@ ConfiguredBuildReportEntry {
     artifact_info: dict[str, ArtifactInfoFile | ArtifactInfoSymlink | ArtifactInfoExternalSymlink],
 
     # Set sketch of configured target graph stored in a hex string.
-    # Enabled by setting `-c buck2.log_configured_graph_sketch=true`.
+    # Enabled by setting `-c bsmr.log_configured_graph_sketch=true`.
     configured_graph_sketch: Optional[str],
 
     # Set sketch of retained analysis memory utilization stored in a hex string.
     #
     # Computing the cardinality of this sketch returns an (approximate) number of bytes.
     #
-    # Enabled by setting `-c buck2.log_retained_analysis_memory_sketch=true`
+    # Enabled by setting `-c bsmr.log_retained_analysis_memory_sketch=true`
     retained_analysis_memory_sketch: Optional[str],
 
     # Set sketch of peak analysis memory utilization stored in a hex string.
     #
     # Computing the cardinality of this sketch returns an (approximate) number of bytes.
     #
-    # Enabled by setting `-c buck2.log_peak_analysis_memory_sketch=true`
+    # Enabled by setting `-c bsmr.log_peak_analysis_memory_sketch=true`
     peak_analysis_memory_sketch: Optional[str],
 
     # Set sketch of distinct artifact paths stored in a hex string.
@@ -149,23 +149,23 @@ ConfiguredBuildReportEntry {
     # Computing the cardinality of this sketch returns an (approximate) count
     # of distinct artifact file paths.
     #
-    # Enabled by setting `-c buck2.log_artifact_count_sketch=true`.
+    # Enabled by setting `-c bsmr.log_artifact_count_sketch=true`.
     artifact_count_sketch: Optional[str],
 
     # Set sketch of artifact path sizes stored in a hex string. Each path is
     # weighted by its file size in bytes; computing the cardinality returns an
     # (approximate) total artifact size in bytes.
     #
-    # Enabled by setting `-c buck2.log_artifact_size_sketch=true`.
+    # Enabled by setting `-c bsmr.log_artifact_size_sketch=true`.
     artifact_size_sketch: Optional[str],
 
     # Estimated cardinality of `artifact_count_sketch`. Populated only when
-    # `-c buck2.log_sketch_cardinalities=true` is set; the corresponding sketch
+    # `-c bsmr.log_sketch_cardinalities=true` is set; the corresponding sketch
     # field is left intact in both cases.
     artifact_count_sketch_cardinality: Optional[float],
 
     # Estimated cardinality of `artifact_size_sketch`. Populated only when
-    # `-c buck2.log_sketch_cardinalities=true` is set; the corresponding sketch
+    # `-c bsmr.log_sketch_cardinalities=true` is set; the corresponding sketch
     # field is left intact in both cases.
     artifact_size_sketch_cardinality: Optional[float],
 
@@ -248,7 +248,7 @@ Error {
     cause_index: uint,
 
     # List of error tags associated with the error. The error tags provide hints to the error category
-    # that the error is associated to as determined by Buck2 internally. This is meant to classify errors
+    # that the error is associated to as determined by Bessemer internally. This is meant to classify errors
     # more precisely, helping developers better understand the nature of the error.
     error_tags: list[str],
 
@@ -306,7 +306,7 @@ ActionSubError {
     # Name of the error category. The category should be finer grain error categorizations
     # provided by the rule authors, and tend to be language specific. These should not be
     # any kind of shared concepts among all errors for all languages/rules. For example,
-    # timeouts and infra errors should not go here - buck2 tries to categorize these types
+    # timeouts and infra errors should not go here - bsmr tries to categorize these types
     # of errors automatically. An example of a finer grain error category may be the error
     # code for rustc outputs.
     category: str,

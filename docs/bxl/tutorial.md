@@ -25,11 +25,11 @@ This tutorial has 4 parts:
 ## Environment
 
 For all following tutorial, we assume you are in [`examples/bxl_tutorial`](
-<FbInternalOnly>https://www.internalfb.com/code/fbsource/fbcode/buck2/examples/bxl_tutorial/</FbInternalOnly>
+<FbInternalOnly>https://www.internalfb.com/code/fbsource/fbcode/bsmr/examples/bxl_tutorial/</FbInternalOnly>
 <OssOnly>https://github.com/facebook/buck2/tree/main/examples/bxl_tutorial</OssOnly>
 ) folder.
 
-This folder contains a buck2 [project](../../concepts/glossary/#project) with
+This folder contains a bsmr [project](../../concepts/glossary/#project) with
 several targets. These targets form this dependency graph:
 
 <img src={useBaseUrl('/img/bxl_tutorial/target_dependencies_graph.png')}
@@ -42,7 +42,7 @@ define a function that receives arguments from the CLI and how to run it.
 
 First, let's create a file named `hello_world.bxl` and open it.
 
-Then, we define a bxl function which can be called by `buck2 bxl`:
+Then, we define a bxl function which can be called by `bsmr bxl`:
 
 ```python
 main = bxl_main(
@@ -57,11 +57,11 @@ main = bxl_main(
 2. `cli_args` we can define the arguments here
 
 Lets run the bxl script to give it a try. The command is in the format
-`buck2 bxl [file_path_to_bxl_file]:[bxl_main_function_name]`. For this case it
+`bsmr bxl [file_path_to_bxl_file]:[bxl_main_function_name]`. For this case it
 looks like this:
 
 ```
-buck2 bxl hello_world.bxl:main
+bsmr bxl hello_world.bxl:main
 ```
 
 As expected, we get this error:
@@ -91,7 +91,7 @@ main = bxl_main(
 )
 ```
 
-Now if we run `buck2 bxl hello_world.bxl:main`, we will see the `Hello world!`
+Now if we run `bsmr bxl hello_world.bxl:main`, we will see the `Hello world!`
 in the console.
 
 For this, function `_main` must be defined to accept the argument `ctx` with
@@ -118,10 +118,10 @@ main = bxl_main(
 We can call bxl like this:
 
 ```shell
-buck2 bxl hello_world.bxl:main -- --project-name buck2
+bsmr bxl hello_world.bxl:main -- --project-name bsmr
 ```
 
-We will see `Hello buck2!` in the console.
+We will see `Hello bsmr!` in the console.
 
 ## Part 1:
 
@@ -160,7 +160,7 @@ main = bxl_main(
 We use this command to run our script:
 
 ```shell
-buck2 bxl generate_index.bxl:main -- --target //:bin
+bsmr bxl generate_index.bxl:main -- --target //:bin
 ```
 
 We need to get all the deps of this target, we do that using the
@@ -219,7 +219,7 @@ Note that `root//:data_a` is no longer in the list, since it's a resource
 target.
 
 You can find the complete code for this tutorial in [`part1.bxl`](
-<FbInternalOnly>https://www.internalfb.com/code/fbsource/fbcode/buck2/examples/bxl_tutorial/part1.bxl</FbInternalOnly>
+<FbInternalOnly>https://www.internalfb.com/code/fbsource/fbcode/bsmr/examples/bxl_tutorial/part1.bxl</FbInternalOnly>
 <OssOnly>https://github.com/facebook/buck2/blob/main/examples/bxl_tutorial/part1.bxl</OssOnly>
 ).
 
@@ -283,7 +283,7 @@ You'll see output like this:
 ```
 
 You can find the complete code for this tutorial in [`part2.bxl`](
-<FbInternalOnly>https://www.internalfb.com/code/fbsource/fbcode/buck2/examples/bxl_tutorial/part2.bxl</FbInternalOnly>
+<FbInternalOnly>https://www.internalfb.com/code/fbsource/fbcode/bsmr/examples/bxl_tutorial/part2.bxl</FbInternalOnly>
 <OssOnly>https://github.com/facebook/buck2/blob/main/examples/bxl_tutorial/part2.bxl</OssOnly>
 ).
 
@@ -345,7 +345,7 @@ ctx.output.ensure_multiple(index_outputs)
 Now we can confirm these index files are available on our disk.
 
 You can find the complete code for this tutorial in [`part3.bxl`](
-<FbInternalOnly>https://www.internalfb.com/code/fbsource/fbcode/buck2/examples/bxl_tutorial/part3.bxl</FbInternalOnly>
+<FbInternalOnly>https://www.internalfb.com/code/fbsource/fbcode/bsmr/examples/bxl_tutorial/part3.bxl</FbInternalOnly>
 <OssOnly>https://github.com/facebook/buck2/blob/main/examples/bxl_tutorial/part3.bxl</OssOnly>
 ).
 

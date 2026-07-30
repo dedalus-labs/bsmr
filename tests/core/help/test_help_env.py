@@ -9,9 +9,9 @@
 # pyre-strict
 
 
-from buck2.tests.e2e_util.api.buck import Buck
-from buck2.tests.e2e_util.buck_workspace import buck_test
-from buck2.tests.e2e_util.helper.golden import golden
+from bsmr.tests.e2e_util.api.buck import Buck
+from bsmr.tests.e2e_util.buck_workspace import buck_test
+from bsmr.tests.e2e_util.helper.golden import golden
 
 
 @buck_test()
@@ -19,10 +19,10 @@ async def test_help(buck: Buck) -> None:
     result = await buck.help_env()
     golden(
         output=result.stdout,
-        rel_path="buck2-help-env.golden.txt",
+        rel_path="bsmr-help-env.golden.txt",
     )
     result = await buck.help_env("--self-testing")
     golden(
         output=result.stdout,
-        rel_path="buck2-help-env-testing.golden.txt",
+        rel_path="bsmr-help-env-testing.golden.txt",
     )

@@ -1,6 +1,9 @@
 /target/
 Cargo.lock
+!/Cargo.lock
+!/tools/build/third-party/rust/Cargo.lock
 buck-out
+/node_modules/
 /.direnv
 .buckconfig.local
 .envrc.local

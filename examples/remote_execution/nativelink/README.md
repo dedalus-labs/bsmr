@@ -46,7 +46,7 @@ More information is available in the
 Configure the `NativeLink` endpoint as follows:
 
 ```ini
-[buck2_re_client]
+[bsmr_re_client]
 action_cache_address = grpc://localhost:50051
 engine_address = grpc://localhost:50051
 cas_address = grpc://localhost:50051

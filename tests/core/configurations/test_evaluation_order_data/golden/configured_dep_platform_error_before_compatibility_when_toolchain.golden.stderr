@@ -1,4 +1,4 @@
-# This file is @generated, regenerate by re-running test with `-- --env BUCK2_UPDATE_GOLDEN=1` appended to the test command
+# This file is @generated, regenerate by re-running test with `-- --env BSMR_UPDATE_GOLDEN=1` appended to the test command
 
 Command failed: 
 Error in configured node dependency, dependency chain follows (-> indicates depends on, ^ indicates same configuration as previous):
@@ -41,6 +41,6 @@ Caused by:
          root//:with_broken_dtp
        
        To see all 33 targets, run:
-         buck2 uquery --reuse-current-config root//:
+         bsmr uquery --reuse-current-config root//:
        
        

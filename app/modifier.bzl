@@ -6,16 +6,16 @@
 # of this source tree. You may select, at your option, one of the
 # above-listed licenses.
 
-load("@fbcode//buck2/cfg/experimental:modifiers.bzl", "modifiers")
+load(":modifiers.bzl", "modifiers")
 
-def buck2_modifiers():
-    # **WARNING**: This is not vetted for correctness and should only be used in fbcode/buck2.
+def bsmr_modifiers():
+    # **WARNING**: This is not vetted for correctness and should only be used in fbcode/bsmr.
     # A somewhat hacked together list of modifiers to enable mode-free builds and opt-by-default-cxx builds.
     # This currently only works for linux and mac but not for cross-building (ex. build mac from linux)
     # - Mode-free builds: Users can use `-m opt` or `--modifier opt` instead of `@fbcode//mode/opt` to trigger builds
-    #   E2e tests build with opt buck2 by default.
-    # - Opt-by-default cxx: Dev mode builds of buck2 comes with optimized, sanitizer-free cxx deps by default, making
-    #   dev mode buck2 significantly more usable
+    #   E2e tests build with opt bsmr by default.
+    # - Opt-by-default cxx: Dev mode builds of bsmr comes with optimized, sanitizer-free cxx deps by default, making
+    #   dev mode bsmr significantly more usable
     #
     # This is a demo that all of this could be done with modifiers. Most of these modifiers should be set on higher-level
     # PACKAGE files like fbcode/PACKAGE or fbsource/PACKAGE.
@@ -126,5 +126,5 @@ def buck2_modifiers():
         }),
     ]
 
-def disable_buck2_modifiers():
+def disable_bsmr_modifiers():
     return ["ovr_config//build_mode/default_opt_cxx:disabled"]

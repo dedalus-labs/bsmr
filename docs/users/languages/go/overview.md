@@ -5,31 +5,31 @@ title: Overview
 
 # Overview
 
-This is an overview of using Buck2 to build Go projects. It assumes you have a
-basic understanding of Buck2 and Go. If you are completely new to Buck2, see the
-[Buck2 Getting Started](../../../getting_started/index.md) to learn the basic
+This is an overview of using Bessemer to build Go projects. It assumes you have a
+basic understanding of Bessemer and Go. If you are completely new to Bessemer, see the
+[Bessemer Getting Started](../../../getting_started/index.md) to learn the basic
 concepts.
 
 ## Just need an example?
 
 Check out the
 **[examples/toolchains/go_toolchain](https://github.com/facebook/buck2/tree/main/examples/toolchains/go_toolchain)**
-project for an example of a Go project using Buck2. This example supports
+project for an example of a Go project using Bessemer. This example supports
 hermetic toolchains, third-party dependency management, cross-compilation, and
 multiple execution platforms.
 
-## The UX differences between Buck2 and `go build`
+## The UX differences between Bessemer and `go build`
 
-Buck2 is a general-purpose build system, so you need to provide more information
+Bessemer is a general-purpose build system, so you need to provide more information
 about your project:
 
-- You need to tell Buck2 that specific code is Go code. This is done by
+- You need to tell Bessemer that specific code is Go code. This is done by
   declaring targets like `go_binary` in `BUCK` files.
-- You need to tell Buck2 where dependencies of a particular target are. This is
+- You need to tell Bessemer where dependencies of a particular target are. This is
   done by adding `deps` to the target definition.
-- You need to configure Buck2 where to find the Go compiler and other tools by
+- You need to configure Bessemer where to find the Go compiler and other tools by
   adding `go_toolchain` to the `toolchains` cell. You also need to map some
-  Buck2 configuration options to Go options like GOOS/GOARCH.
+  Bessemer configuration options to Go options like GOOS/GOARCH.
 
 ## The types of targets
 
@@ -41,7 +41,7 @@ about your project:
 
 ## How to write Go targets
 
-Buck2 offers lots of flexibility in how you can write your targets, but it makes
+Bessemer offers lots of flexibility in how you can write your targets, but it makes
 sense to stick to the following conventions for better compatibility with the
 rest of the Go ecosystem:
 
@@ -72,12 +72,12 @@ go_test(
 )
 ```
 
-## How to pass options to `buck2` commands
+## How to pass options to `bsmr` commands
 
 ### Envs GOOS and GOARCH
 
 Compilation for different platforms is done by passing `--target-platforms` or
-`-m` (`--modifier`) flags to `buck2` commands.
+`-m` (`--modifier`) flags to `bsmr` commands.
 
 You need to specify what target platforms you support by declaring them with the
 `platform()` rule, or you can avoid pre-declaring them by using configuration
@@ -89,22 +89,22 @@ For example, to build for linux/amd64, the following commands are equivalent
 
 ```sh
 $ GOOS=linux GOARCH=amd64 go build example.com/foo/bar
-$ buck2 build --target-platforms root//platforms:linux_x86_64 root//foo/bar:bar
-$ buck2 build -m config//os:linux -m config//arch:x86_64 root//foo/bar:bar
+$ bsmr build --target-platforms root//platforms:linux_x86_64 root//foo/bar:bar
+$ bsmr build -m config//os:linux -m config//arch:x86_64 root//foo/bar:bar
 ```
 
 ### Test options like `-test.bench`
 
-To pass test options, use `--` to separate buck2 options from test options:
+To pass test options, use `--` to separate bsmr options from test options:
 
 <OssOnly>
 ```sh
-$ buck2 test root//foo/bar:bar -- -test.bench=.
+$ bsmr test root//foo/bar:bar -- -test.bench=.
 ```
 </OssOnly>
 <FbInternalOnly>
 > **Note:** You need to use `run` instead of `test` otherwise you'll be passing options to TPX
 ```sh
-$ buck2 run root//foo/bar:bar -- -test.bench=.
+$ bsmr run root//foo/bar:bar -- -test.bench=.
 ```
 </FbInternalOnly>

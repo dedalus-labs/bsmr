@@ -17,7 +17,7 @@ cxx_binary(
         "-lc",
     ],
     tests = [
-        "fbsource//xplat/buck2/tests/apple/rules/dist_lto:main-alias-iphonesimulator-arm64-pika-fat-lld-platform-distributed-thin-lto",
+        "fbsource//xplat/bsmr/tests/apple/rules/dist_lto:main-alias-iphonesimulator-arm64-pika-fat-lld-platform-distributed-thin-lto",
     ],
     visibility = ["PUBLIC"],
     deps = [

@@ -65,7 +65,7 @@ def _main(bxl_ctx):
 
     References:
     https://buck2.build/docs/api/bxl/bxl.ConfiguredTargetNode/#bxlconfiguredtargetnoderesolved_attrs_eager
-    https://fb.workplace.com/groups/buck2dev/permalink/3745100652444646/
+    https://fb.workplace.com/groups/bsmrdev/permalink/3745100652444646/
     https://buck2.build/docs/developers/dynamic_output/#dynamic-output
     """
     actions = bxl_ctx.bxl_actions().actions
@@ -91,7 +91,7 @@ def _main(bxl_ctx):
         for package_path, _ in error_map.items():
             log_debug("Failed to configure target {}, skipping", package_path, bxl_ctx = bxl_ctx)
 
-        # Pass along modifiers as required by API to get same configuration as buck2 build.
+        # Pass along modifiers as required by API to get same configuration as bsmr build.
         # bxl_ctx.modifiers includes modifiers from both command line and mode file.
         def configured_target_with_modifiers(target: bxl.UnconfiguredTargetNode) -> bxl.Lazy:
             return bxl_ctx.lazy.configured_target_node(target, modifiers = bxl_ctx.modifiers)

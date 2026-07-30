@@ -47,13 +47,13 @@ You cannot use this API for artifacts declared in BXL.
 ## Examples
 
 Examples can be found at
-`tests/core/bxl/test_lazy_build_artifact_data/lazy_build_artifact.bxl` of buck2
+`tests/core/bxl/test_lazy_build_artifact_data/lazy_build_artifact.bxl` of bsmr
 repo folder.
 
 Run such command at `tests/core/bxl/test_lazy_build_artifact_data` to run the
 example bxl script
 
 ```sh
-buck2 bxl lazy_build_artifact.bxl:build_artifact
-buck2 bxl lazy_build_artifact.bxl:build_artifact_fail
+bsmr bxl lazy_build_artifact.bxl:build_artifact
+bsmr bxl lazy_build_artifact.bxl:build_artifact_fail
 ```

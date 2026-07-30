@@ -1,4 +1,4 @@
-load("@fbcode//buck2/tests/prelude:py_assertion.bzl", "py_assertion")
+load("@fbcode//bsmr/tests/prelude:py_assertion.bzl", "py_assertion")
 
 oncall("golang")
 
@@ -20,7 +20,7 @@ py_assertion(
 import subprocess
 import sys
 result = subprocess.check_output([sys.argv[1]], stderr=subprocess.STDOUT, text=True)
-assert "coverage: 100.0% of statements in buck2/tests/prelude/go/go_test/coverage" in result
+assert "coverage: 100.0% of statements in bsmr/tests/prelude/go/go_test/coverage" in result
 """,
     script_args = ["$(location_exec :test)"],
 )

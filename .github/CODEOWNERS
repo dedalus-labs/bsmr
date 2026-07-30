@@ -1,0 +1,10 @@
+/.github/ @windsornguyen @cathydi
+/ci/ @windsornguyen @cathydi
+/Cargo.lock @windsornguyen @cathydi
+/Cargo.toml @windsornguyen @cathydi
+/package.json @windsornguyen @cathydi
+/pnpm-lock.yaml @windsornguyen @cathydi
+/rust-toolchain @windsornguyen @cathydi
+/SECURITY.md @windsornguyen @cathydi
+/tools/build/third-party/rust/Cargo.lock @windsornguyen @cathydi
+/tools/build/third-party/rust/Cargo.toml @windsornguyen @cathydi

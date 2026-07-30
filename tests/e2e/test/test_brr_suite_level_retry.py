@@ -13,9 +13,9 @@ import re
 from pathlib import Path
 from typing import cast
 
-from buck2.tests.e2e_util.api.buck import Buck
-from buck2.tests.e2e_util.api.buck_result import BuckException
-from buck2.tests.e2e_util.buck_workspace import buck_test, get_mode_from_platform
+from bsmr.tests.e2e_util.api.buck import Buck
+from bsmr.tests.e2e_util.api.buck_result import BuckException
+from bsmr.tests.e2e_util.buck_workspace import buck_test, get_mode_from_platform
 
 
 def remove_ansi_escape_sequences(ansi_str: str) -> str:
@@ -110,14 +110,14 @@ def print_testrun_url(label: str, output: str) -> None:
     print(f"[BRR-contract] {label}: {url}")
 
 
-PYTHON_TEST_TARGET: str = "fbcode//buck2/tests/targets/rules/python/test:test"
+PYTHON_TEST_TARGET: str = "fbcode//bsmr/tests/targets/rules/python/test:test"
 
 # Bundle-mode target with 3 test cases (test_a, test_b, test_c). Used for
 # the SRR `--exact` tests below because the SRR path needs to demonstrate
 # both single-test selection and suite-level expansion against a target
 # with multiple discoverable tests.
 PYTHON_MULTI_TESTS_TARGET: str = (
-    "fbcode//buck2/tests/targets/rules/python/test:multi_tests"
+    "fbcode//bsmr/tests/targets/rules/python/test:multi_tests"
 )
 
 
@@ -127,7 +127,7 @@ PYTHON_MULTI_TESTS_TARGET: str = (
 # python unittest listing parser (tpx-buck/src/listing/python.rs).
 TEST_A_MATCH_NAME: str = (
     f"{PYTHON_MULTI_TESTS_TARGET} - test_a "
-    "(buck2.tests.targets.rules.python.test.multi_tests.TestCase)"
+    "(bsmr.tests.targets.rules.python.test.multi_tests.TestCase)"
 )
 MAIN_MATCH_NAME: str = f"{PYTHON_MULTI_TESTS_TARGET} - main"
 

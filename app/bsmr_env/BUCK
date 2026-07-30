@@ -1,0 +1,21 @@
+load("@bsmr_build//rules:rust.bzl", "rust_library")
+
+oncall("build_infra")
+
+rust_library(
+    name = "bsmr_env",
+    srcs = glob(
+        ["src/**/*.rs"],
+    ),
+    test_deps = [
+        "fbsource//third-party/rust:assert_matches",
+    ],
+    deps = [
+        "fbsource//third-party/rust:arc-swap",
+        "fbsource//third-party/rust:linkme",
+        "fbsource//third-party/rust:tracing",
+        "//bsmr/app/bsmr_error:bsmr_error",
+        "//bsmr/packages/rust/gazebo/dupe:dupe",
+        "//bsmr/packages/rust/starlark/starlark_map:starlark_map",
+    ],
+)

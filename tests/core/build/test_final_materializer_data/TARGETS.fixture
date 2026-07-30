@@ -43,7 +43,7 @@ artifact_generator(
 )
 
 # Configurable target for performance testing
-# Usage: buck2 build //:configurable -c test.artifacts_per_node=1 -c test.nodes_per_tset=100 -c test.number_of_tsets=100
+# Usage: bsmr build //:configurable -c test.artifacts_per_node=1 -c test.nodes_per_tset=100 -c test.number_of_tsets=100
 artifact_generator(
     name = "configurable",
     artifacts_per_node = int(read_config("test", "artifacts_per_node", "1")),

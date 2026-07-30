@@ -708,7 +708,7 @@ python_bootstrap_binary = prelude_rule(
     name = "python_bootstrap_binary",
     docs = """
         A `python_bootstrap_binary()` rule declares a Python binary intended
-        to be used in scripts that bootstrap other aspects of the Buck2
+        to be used in scripts that bootstrap other aspects of the Bessemer
         prelude. Python bootstrap binaries do not use the Python toolchain
         and, as such, are highly restricted in what they can and can't do.
         In particular, bootstrap binaries can only depend on

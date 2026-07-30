@@ -7,14 +7,14 @@
 # of this source tree. You may select, at your option, one of the
 # above-listed licenses.
 
-# Run a buck2 command in the background, poll the daemon's VmRSS every
+# Run a bsmr command in the background, poll the daemon's VmRSS every
 # few seconds, and trigger `debug heap-dump` whenever a new high-water
 # mark is reached. The last dump approximates the peak heap profile.
 # After the command exits, sleep briefly and take a final "retained"
 # dump too.
 #
 # Usage:
-#   peak_watch.sh <bin> <tag> -- <buck2 args...>
+#   peak_watch.sh <bin> <tag> -- <bsmr args...>
 #
 # Example:
 #   peak_watch.sh /tmp/b2x x -- targets fbcode//... --num-threads=30 --no-cache
@@ -45,7 +45,7 @@ POLL_S=${POLL_S:-5}
 SLEEP_S=${SLEEP_S:-10}
 
 if [ "$#" -lt 3 ] || [ "$3" != "--" ]; then
-  echo "usage: $0 <bin> <tag> -- <buck2 args...>" >&2
+  echo "usage: $0 <bin> <tag> -- <bsmr args...>" >&2
   exit 2
 fi
 BIN=$1

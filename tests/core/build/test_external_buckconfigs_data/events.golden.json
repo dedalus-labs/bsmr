@@ -1,10 +1,10 @@
-# This file is @generated, regenerate by re-running test with `-- --env BUCK2_UPDATE_GOLDEN=1` appended to the test command
+# This file is @generated, regenerate by re-running test with `-- --env BSMR_UPDATE_GOLDEN=1` appended to the test command
 
 [
   {
     "key": "file_watcher",
     "origin": "tmp-path/extra.bcfg",
-    "section": "buck2",
+    "section": "bsmr",
     "value": "fs_hash_crawler"
   },
   {

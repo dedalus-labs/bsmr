@@ -1,0 +1,14 @@
+load("@bsmr_build//rules:rust.bzl", "rust_library")
+
+oncall("build_infra")
+
+rust_library(
+    name = "bsmr_downward_api",
+    srcs = glob(["src/**/*.rs"]),
+    deps = [
+        "fbsource//third-party/rust:async-trait",
+        "fbsource//third-party/rust:tracing",
+        "//bsmr/app/bsmr_error:bsmr_error",
+        "//bsmr/app/bsmr_hash:bsmr_hash",
+    ],
+)

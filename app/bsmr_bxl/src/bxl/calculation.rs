@@ -1,0 +1,104 @@
+/*
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
+ *
+ * This source code is dual-licensed under either the MIT license found in the
+ * LICENSE-MIT file in the root directory of this source tree or the Apache
+ * License, Version 2.0 found in the LICENSE-APACHE file in the root directory
+ * of this source tree. You may select, at your option, one of the
+ * above-listed licenses.
+ */
+
+use std::sync::Arc;
+
+use async_trait::async_trait;
+use bsmr_build_api::bxl::calculation::BXL_CALCULATION_IMPL;
+use bsmr_build_api::bxl::calculation::BxlCalculationDyn;
+use bsmr_build_api::bxl::calculation::BxlComputeResult;
+use bsmr_core::deferred::base_deferred_key::BaseDeferredKeyBxl;
+use dice::DiceComputations;
+use dice::Key;
+use dice::OkPagableValueSerialize;
+use dice::ValueSerialize;
+use dice_futures::cancellation::CancellationContext;
+use dupe::Dupe;
+use futures::future::FutureExt;
+
+use crate::bxl;
+use crate::bxl::eval::eval;
+use crate::bxl::key::BxlKey;
+
+#[derive(Debug)]
+struct BxlCalculationImpl;
+
+#[async_trait]
+impl BxlCalculationDyn for BxlCalculationImpl {
+    async fn eval_bxl(
+        &self,
+        ctx: &mut DiceComputations<'_>,
+        bxl: BaseDeferredKeyBxl,
+    ) -> bsmr_error::Result<BxlComputeResult> {
+        eval_bxl(ctx, BxlKey::from_base_deferred_key_dyn_impl_err(bxl)?)
+            .await
+            .map_err(|e| e.error)
+    }
+}
+
+pub(crate) fn init_bxl_calculation_impl() {
+    BXL_CALCULATION_IMPL.init(&BxlCalculationImpl);
+}
+
+pub(crate) async fn eval_bxl(
+    ctx: &mut DiceComputations<'_>,
+    bxl: BxlKey,
+) -> bxl::eval::Result<BxlComputeResult> {
+    match ctx.compute(&internal::BxlComputeKey(bxl)).await {
+        Ok(res) => res,
+        Err(e) => Err(bsmr_error::Error::from(e).into()),
+    }
+}
+
+#[async_trait]
+impl Key for internal::BxlComputeKey {
+    type Value = bxl::eval::Result<BxlComputeResult>;
+
+    async fn compute(
+        &self,
+        ctx: &mut DiceComputations,
+        cancellation: &CancellationContext,
+    ) -> Self::Value {
+        let key = self.0.dupe();
+        // TODO(cjhopman): send analysis started/finished events for bxl to support detailed aggregated metrics
+        cancellation
+            .with_structured_cancellation(|observer| {
+                async move {
+                    eval(ctx, key, observer)
+                        .await
+                        .map(|(result, _)| BxlComputeResult(Arc::new(result)))
+                }
+                .boxed()
+            })
+            .await
+    }
+
+    fn equality(_: &Self::Value, _: &Self::Value) -> bool {
+        false
+    }
+
+    fn value_serialize() -> impl ValueSerialize<Value = Self::Value> {
+        OkPagableValueSerialize::<Self::Value>::new()
+    }
+}
+
+mod internal {
+    use allocative::Allocative;
+    use derive_more::Display;
+    use dupe::Dupe;
+    use pagable::Pagable;
+    use pagable::pagable_typetag;
+
+    use crate::bxl::key::BxlKey;
+
+    #[derive(Clone, Dupe, Display, Debug, Eq, Hash, PartialEq, Allocative, Pagable)]
+    #[pagable_typetag(dice::DiceKeyDyn)]
+    pub(crate) struct BxlComputeKey(pub(crate) BxlKey);
+}

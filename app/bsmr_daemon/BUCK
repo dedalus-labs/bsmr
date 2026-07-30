@@ -1,0 +1,61 @@
+load("@bsmr_build//rules:rust.bzl", "rust_library")
+
+oncall("build_infra")
+
+# Opt-in allocation-site fragmentation profiler (facebook/mem_frag), enabled
+# with `-c bsmr_dev.memfrag=true`. The dump watcher must be started post-fork from
+# the daemon, so this crate gets the dep + cfg too.
+_memfrag = read_config("bsmr_dev", "memfrag", "") == "true"
+
+rust_library(
+    name = "bsmr_daemon",
+    srcs = glob(["src/**/*.rs"]),
+    rustc_flags = ["--cfg=bsmr_memfrag"] if _memfrag else [],
+    test_deps = [
+        "//bsmr/app/bsmr_certs:bsmr_certs",
+        "//common/rust/shed/fbinit:fbinit",
+    ],
+    deps = (
+        [
+            "//bsmr/facebook/mem_frag:mem_frag",
+        ]
+        if _memfrag
+        else []
+    )
+    + [
+        "fbsource//third-party/rust:clap",
+        "fbsource//third-party/rust:futures",
+        "fbsource//third-party/rust:libc",
+        "fbsource//third-party/rust:rand",
+        "fbsource//third-party/rust:serde_json",
+        "fbsource//third-party/rust:tokio",
+        "fbsource//third-party/rust:tokio-stream",
+        "fbsource//third-party/rust:tracing",
+        "//bsmr/packages/rust/allocative/allocative:allocative",
+        "//bsmr/app/bsmr_cli_proto:bsmr_cli_proto",
+        "//bsmr/app/bsmr_client_ctx:bsmr_client_ctx",
+        "//bsmr/app/bsmr_common:bsmr_common",
+        "//bsmr/app/bsmr_core:bsmr_core",
+        "//bsmr/app/bsmr_data:bsmr_data",
+        "//bsmr/app/bsmr_error:bsmr_error",
+        "//bsmr/app/bsmr_events:bsmr_events",
+        "//bsmr/app/bsmr_fs:bsmr_fs",
+        "//bsmr/app/bsmr_resource_control:bsmr_resource_control",
+        "//bsmr/app/bsmr_server:bsmr_server",
+        "//bsmr/app/bsmr_util:bsmr_util",
+        "//bsmr/packages/rust/dice/dice:dice",
+        "//bsmr/packages/rust/gazebo/dupe:dupe",
+        # @oss-disable[end= ]: "//common/rust/gflags:gflags",
+    ]
+    + select({
+        "DEFAULT": [],
+        "ovr_config//os:linux": [
+            "fbsource//third-party/rust:nix",
+            # @oss-disable[end= ]: "//bpfjailer/client:bpfjailer_client_rs",
+            # @oss-disable[end= ]: "//bpfjailer/client:bpfjailer_handler_polyglot-rs_bindings",
+        ],
+        "ovr_config//os:macos": [
+            "fbsource//third-party/rust:nix",
+        ],
+    }),
+)

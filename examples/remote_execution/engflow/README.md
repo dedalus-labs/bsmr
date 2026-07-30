@@ -11,7 +11,7 @@ First, the EngFlow endpoint and certificate should be configured as the
 following:
 
 ```ini
-[buck2_re_client]
+[bsmr_re_client]
 engine_address       = $ENGFLOW_ENDPOINT
 action_cache_address = $ENGFLOW_ENDPOINT
 cas_address          = $ENGFLOW_ENDPOINT
@@ -21,7 +21,7 @@ tls_client_cert      = $ENGFLOW_CERTIFICATE
 Additionally, set the `digest_algorithm` config to `SHA256`.
 
 ```ini
-[buck2]
+[bsmr]
 digest_algorithms = SHA256
 ```
 

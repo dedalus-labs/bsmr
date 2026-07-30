@@ -113,15 +113,15 @@ def _run_genrule(ctx: AnalysisContext, out_name: str, extra_env_vars: dict, iden
     # again (thus making the label useless). So, when a local-only label is
     # set, we make the action *different*.
     if local_only:
-        env_vars["__BUCK2_LOCAL_ONLY_CACHE_BUSTER"] = ""
+        env_vars["__BSMR_LOCAL_ONLY_CACHE_BUSTER"] = ""
 
     # see comment above
     if prefer_local:
-        env_vars["__BUCK2_PREFER_LOCAL_CACHE_BUSTER"] = ""
+        env_vars["__BSMR_PREFER_LOCAL_CACHE_BUSTER"] = ""
 
     # For now, when uploads are enabled, be safe and avoid sharing cache hits.
     if cacheable and _get_cache_mode(ctx).cache_bust_genrules:
-        env_vars["__BUCK2_ALLOW_CACHE_UPLOADS_CACHE_BUSTER"] = ""
+        env_vars["__BSMR_ALLOW_CACHE_UPLOADS_CACHE_BUSTER"] = ""
 
     for key, value in extra_env_vars.items():
         env_vars[key] = value

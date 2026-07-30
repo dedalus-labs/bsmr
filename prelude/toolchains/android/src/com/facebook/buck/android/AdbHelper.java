@@ -268,15 +268,15 @@ public class AdbHelper implements AndroidDevicesHelper {
       throws InterruptedException {
     String packageName =
         tryToExtractPackageNameFromManifest(isolatedApkInfo.getManifestPath().getPath());
-    Optional<String> buck2BuildUuid =
-        Optional.ofNullable(EnvVariablesProvider.getSystemEnv().get("BUCK2_UUID"));
+    Optional<String> bsmrBuildUuid =
+        Optional.ofNullable(EnvVariablesProvider.getSystemEnv().get("BSMR_UUID"));
 
     AtomicBoolean success = new AtomicBoolean();
 
     if (optionalIsolatedExopackageInfo.isPresent()) {
       IsolatedExopackageInfo isolatedExopackageInfo = optionalIsolatedExopackageInfo.get();
       installApkExopackageWithRetries(
-          rootPath, isolatedExopackageInfo, isolatedApkInfo, packageName, quiet, buck2BuildUuid);
+          rootPath, isolatedExopackageInfo, isolatedApkInfo, packageName, quiet, bsmrBuildUuid);
     } else {
       installApkDirectly(
           installViaSd,
@@ -285,7 +285,7 @@ public class AdbHelper implements AndroidDevicesHelper {
           fullyQualifiedName,
           packageName,
           setDebugAppMode,
-          buck2BuildUuid);
+          bsmrBuildUuid);
     }
     success.set(true);
   }
@@ -739,13 +739,13 @@ public class AdbHelper implements AndroidDevicesHelper {
       IsolatedApkInfo isolatedApkInfo,
       String packageName,
       boolean quiet,
-      Optional<String> buck2BuildUuid)
+      Optional<String> bsmrBuildUuid)
       throws InterruptedException {
     int attempt = 1;
     while (true) {
       try {
         installApkExopackage(
-            rootPath, isolatedExopackageInfo, isolatedApkInfo, packageName, quiet, buck2BuildUuid);
+            rootPath, isolatedExopackageInfo, isolatedApkInfo, packageName, quiet, bsmrBuildUuid);
         LOG.info("Installing the APK using exopackage succeeded on attempt %d", attempt);
         return;
       } catch (RuntimeException e) {
@@ -770,7 +770,7 @@ public class AdbHelper implements AndroidDevicesHelper {
       IsolatedApkInfo isolatedApkInfo,
       String packageName,
       boolean quiet,
-      Optional<String> buck2BuildUuid)
+      Optional<String> bsmrBuildUuid)
       throws InterruptedException {
     adbCall(
         "install exopackage apk",
@@ -782,7 +782,7 @@ public class AdbHelper implements AndroidDevicesHelper {
                   packageName,
                   device,
                   skipMetadataIfNoInstalls,
-                  buck2BuildUuid)
+                  bsmrBuildUuid)
               .doInstall(isolatedApkInfo, setDebugAppMode);
           return true;
         },
@@ -796,7 +796,7 @@ public class AdbHelper implements AndroidDevicesHelper {
       String buildTarget,
       String packageName,
       SetDebugAppMode setDebugAppMode,
-      Optional<String> buck2BuildUuid)
+      Optional<String> bsmrBuildUuid)
       throws InterruptedException {
     File apk = isolatedApkInfo.getApkPath().toFile();
     if (setDebugAppMode == SetDebugAppMode.SET) {
@@ -823,12 +823,12 @@ public class AdbHelper implements AndroidDevicesHelper {
         },
         quiet);
 
-    if (buck2BuildUuid.isPresent()) {
+    if (bsmrBuildUuid.isPresent()) {
       adbCall(
           "install build_uuid.txt",
           (device) ->
               device.installBuildUuidFile(
-                  BUILD_METADATA_INSTALL_ROOT, packageName, buck2BuildUuid.get()),
+                  BUILD_METADATA_INSTALL_ROOT, packageName, bsmrBuildUuid.get()),
           true);
     }
   }

@@ -9,9 +9,9 @@
 # pyre-strict
 
 
-from buck2.tests.e2e_util.api.buck import Buck
-from buck2.tests.e2e_util.asserts import expect_failure
-from buck2.tests.e2e_util.buck_workspace import buck_test
+from bsmr.tests.e2e_util.api.buck import Buck
+from bsmr.tests.e2e_util.asserts import expect_failure
+from bsmr.tests.e2e_util.buck_workspace import buck_test
 
 
 @buck_test()
@@ -72,7 +72,7 @@ async def test_agent_context_enforced_invalid_value(buck: Buck) -> None:
         ),
         stderr_regex=(
             r"Invalid agent-context value `invalid_value` for key `intent`\."
-            r"\s+intent: The purpose of this buck2 invocation"
+            r"\s+intent: The purpose of this bsmr invocation"
             r"\s+Valid values: build, test, query, fix, investigate"
         ),
     )
@@ -110,7 +110,7 @@ async def test_agent_context_enforced_missing_required(buck: Buck) -> None:
         stderr_regex=(
             r"Missing required agent-context field\(s\):"
             r"\s+- attempt: Which attempt number this is for the same logical task"
-            r"\s+- intent: The purpose of this buck2 invocation"
+            r"\s+- intent: The purpose of this bsmr invocation"
         ),
     )
 
@@ -130,7 +130,7 @@ async def test_agent_context_enforced_empty_value_counts_as_missing(
         ),
         stderr_regex=(
             r"Missing required agent-context field\(s\):"
-            r"\s+- intent: The purpose of this buck2 invocation"
+            r"\s+- intent: The purpose of this bsmr invocation"
         ),
     )
 

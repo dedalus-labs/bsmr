@@ -32,7 +32,7 @@ import java.util.stream.Collectors;
 @Nullsafe(Nullsafe.Mode.LOCAL)
 public class DepFileUtils {
 
-  /** Maps used-classes.json files to a dep-file that can be used by buck2. */
+  /** Maps used-classes.json files to a dep-file that can be used by bsmr. */
   public static void usedClassesToDepFile(
       List<Path> usedClassesMapPaths,
       Path depFileOutput,

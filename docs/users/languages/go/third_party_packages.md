@@ -5,7 +5,7 @@ title: Third-Party Packages
 
 # Third-Party Packages
 
-Buck2 treats third-party Go packages the same way as first-party packages. There
+Bessemer treats third-party Go packages the same way as first-party packages. There
 are multiple ways to add third-party packages to your project, but we recommend
 the following approach:
 
@@ -41,7 +41,7 @@ Your project doesn't have to be fully compatible with `go.mod`:
 
 ```sh
 $ (cd ./path/to/go-mod-dir && go mod vendor)
-$ buck2 run prelude//go/tools/gobuckify:gobuckify -- ./path/to/go-mod-dir
+$ bsmr run prelude//go/tools/gobuckify:gobuckify -- ./path/to/go-mod-dir
 ```
 
 See a complete example in

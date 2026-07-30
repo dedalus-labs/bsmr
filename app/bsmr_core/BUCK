@@ -1,0 +1,86 @@
+load("@bsmr_build//rules:rust.bzl", "rust_library")
+load("@bsmr_build//rules:rust.bzl", "rust_unittest")
+
+oncall("build_infra")
+
+rust_library(
+    name = "bsmr_core",
+    srcs = glob(
+        ["src/**/*.rs"],
+    )
+    + ["src/pattern/target_pattern.md"],
+    doc_deps = [
+        "fbsource//third-party/rust:maplit",
+    ],
+    doctests = select({
+        "DEFAULT": True,
+        # ```
+        # The command line is too long.
+        # Couldn't compile the test.
+        # ```
+        "ovr_config//os:windows": False,
+    }),
+    test_deps = [
+        "fbsource//third-party/rust:assert_matches",
+        "fbsource//third-party/rust:serde_json",
+        "fbsource//third-party/rust:test-case",
+    ],
+    deps = [
+        "fbsource//third-party/rust:blake3",
+        "fbsource//third-party/rust:derivative",
+        "fbsource//third-party/rust:derive_more",
+        "fbsource//third-party/rust:equivalent",
+        "fbsource//third-party/rust:futures",
+        "fbsource//third-party/rust:hex",
+        "fbsource//third-party/rust:hostname",
+        "fbsource//third-party/rust:indent_write",
+        "fbsource//third-party/rust:itertools",
+        "fbsource//third-party/rust:memchr",
+        "fbsource//third-party/rust:os_str_bytes",
+        "fbsource//third-party/rust:pin-project",
+        "fbsource//third-party/rust:rand",
+        "fbsource//third-party/rust:ref-cast",
+        "fbsource//third-party/rust:regex",
+        "fbsource//third-party/rust:sequence_trie",
+        "fbsource//third-party/rust:serde",
+        "fbsource//third-party/rust:smallvec",
+        "fbsource//third-party/rust:static_assertions",
+        "fbsource//third-party/rust:tempfile",
+        "fbsource//third-party/rust:tokio",
+        "fbsource//third-party/rust:tracing",
+        "fbsource//third-party/rust:tracing-subscriber",
+        "fbsource//third-party/rust:triomphe",
+        "//bsmr/packages/rust/allocative/allocative:allocative",
+        "//bsmr/app/bsmr_data:bsmr_data",
+        "//bsmr/app/bsmr_env:bsmr_env",
+        "//bsmr/app/bsmr_error:bsmr_error",
+        "//bsmr/app/bsmr_fs:bsmr_fs",
+        "//bsmr/app/bsmr_hash:bsmr_hash",
+        "//bsmr/app/bsmr_util:bsmr_util",
+        "//bsmr/packages/rust/gazebo/cmp_any:cmp_any",
+        "//bsmr/packages/rust/gazebo/dupe:dupe",
+        "//bsmr/packages/rust/gazebo/gazebo:gazebo",
+        "//bsmr/packages/rust/gazebo/strong_hash:strong_hash",
+        "//bsmr/packages/rust/pagable/pagable:pagable",
+        "//bsmr/packages/rust/lock_free_hashtable:lock_free_hashtable",
+        "//bsmr/packages/rust/static_interner:static_interner",
+        "//bsmr/packages/rust/starlark/starlark_map:starlark_map",
+        # @oss-disable[end= ]: "//common/rust/user:user",
+    ] + select({
+        "DEFAULT": [],
+        "ovr_config//os:windows": [
+            "fbsource//third-party/rust:common-path",
+        ],
+    }),
+)
+
+rust_unittest(
+    name = "soft_error",
+    srcs = [
+        "tests/soft_error.rs",
+    ],
+    deps = [
+        ":bsmr_core",
+        "//bsmr/app/bsmr_error:bsmr_error",
+    ],
+)

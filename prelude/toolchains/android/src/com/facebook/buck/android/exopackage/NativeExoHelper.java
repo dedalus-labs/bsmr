@@ -137,7 +137,7 @@ public class NativeExoHelper implements ExoHelper {
       RelPath relativePath = nativeLibsDir.relativize(entry.getValue());
       Preconditions.checkState(
           relativePath.getNameCount() == 2 || relativePath.getNameCount() == 3,
-          "relativePath should be of the form x86/foo.so (for buck2) or either libs/x86/foo.so or"
+          "relativePath should be of the form x86/foo.so (for bsmr) or either libs/x86/foo.so or"
               + " assetLibs/x86/foo.so (for buck1), but was: "
               + relativePath);
       if (relativePath.getNameCount() == 3) {

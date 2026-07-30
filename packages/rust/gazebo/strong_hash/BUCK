@@ -1,4 +1,4 @@
-load("@fbsource//tools/build_defs:rust_library.bzl", "rust_library")
+load("@bsmr_build//rules:rust.bzl", "rust_library")
 
 oncall("build_infra")
 
@@ -13,6 +13,6 @@ rust_library(
         "fbsource//third-party/rust:num-bigint",
         "fbsource//third-party/rust:ref-cast",
         "fbsource//third-party/rust:triomphe",
-        "//buck2/packages/rust/gazebo/strong_hash_derive:strong_hash_derive",
+        "//bsmr/packages/rust/gazebo/strong_hash_derive:strong_hash_derive",
     ],
 )

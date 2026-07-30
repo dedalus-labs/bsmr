@@ -1,20 +1,18 @@
 [cells]
-gh_facebook_buck2 = .
-gh_facebook_buck2_shims_meta = shim
+bsmr = .
+bsmr_build = tools/build
 
 [cell_aliases]
-root = gh_facebook_buck2
+root = bsmr
 
 [oss]
 internal_cell = fbcode
-stripped_root_dirs = buck2
+stripped_root_dirs = bsmr
 
 [project]
 ignore = \
-    app/buck2_explain, \
-    app_dep_graph_rules, \
     examples, \
-    integrations/rust-project/tests, \
+    tools/rust-project/tests, \
     tests, \
     .jj, \
     .git, \

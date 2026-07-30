@@ -4,5 +4,5 @@
 [buildfile]
   name=TARGETS.fixture
 
-[buck2]
+[bsmr]
   defer_write_actions = true

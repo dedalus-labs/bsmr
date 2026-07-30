@@ -1,0 +1,45 @@
+load("@bsmr_build//rules:rust.bzl", "rust_library")
+
+oncall("build_infra")
+
+rust_library(
+    name = "bsmr_server_commands",
+    srcs = glob([
+        "src/**/*.rs",
+        "src/commands/explain/*",
+    ]),
+    deps = [
+        "fbsource//third-party/rust:async-trait",
+        "fbsource//third-party/rust:chrono",
+        "fbsource//third-party/rust:futures",
+        "fbsource//third-party/rust:itertools",
+        "fbsource//third-party/rust:tokio",
+        "fbsource//third-party/rust:tokio-stream",
+        "fbsource//third-party/rust:tonic",
+        "fbsource//third-party/rust:tracing",
+        "//bsmr/app/bsmr_artifact:bsmr_artifact",
+        "//bsmr/app/bsmr_build_api:bsmr_build_api",
+        "//bsmr/app/bsmr_certs:bsmr_certs",
+        "//bsmr/app/bsmr_cli_proto:bsmr_cli_proto",
+        "//bsmr/app/bsmr_common:bsmr_common",
+        "//bsmr/app/bsmr_core:bsmr_core",
+        "//bsmr/app/bsmr_data:bsmr_data",
+        "//bsmr/app/bsmr_directory:bsmr_directory",
+        "//bsmr/app/bsmr_error:bsmr_error",
+        "//bsmr/app/bsmr_event_log:bsmr_event_log",
+        "//bsmr/app/bsmr_event_observer:bsmr_event_observer",
+        "//bsmr/app/bsmr_events:bsmr_events",
+        "//bsmr/app/bsmr_execute:bsmr_execute",
+        "//bsmr/app/bsmr_fs:bsmr_fs",
+        "//bsmr/app/bsmr_hash:bsmr_hash",
+        "//bsmr/app/bsmr_install_proto:bsmr_install_proto",
+        "//bsmr/app/bsmr_interpreter:bsmr_interpreter",
+        "//bsmr/app/bsmr_node:bsmr_node",
+        "//bsmr/app/bsmr_query:bsmr_query",
+        "//bsmr/app/bsmr_server_ctx:bsmr_server_ctx",
+        "//bsmr/app/bsmr_util:bsmr_util",
+        "//bsmr/packages/rust/dice/dice:dice",
+        "//bsmr/packages/rust/gazebo/dupe:dupe",
+        "//bsmr/packages/rust/starlark/starlark_map:starlark_map",
+    ],
+)

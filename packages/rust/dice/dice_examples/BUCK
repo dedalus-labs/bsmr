@@ -1,6 +1,5 @@
-load("@fbcode_macros//build_defs:native_rules.bzl", "buck_command_alias")
-load("@fbsource//tools/build_defs:rust_binary.bzl", "rust_binary")
-load("@fbsource//tools/build_defs:rust_library.bzl", "rust_library")
+load("@bsmr_build//rules:rust.bzl", "rust_binary")
+load("@bsmr_build//rules:rust.bzl", "rust_library")
 
 oncall("build_infra")
 
@@ -15,13 +14,13 @@ rust_library(
         "fbsource//third-party/rust:derive_more",
         "fbsource//third-party/rust:futures",
         "fbsource//third-party/rust:ref-cast",
-        "//buck2/allocative/allocative:allocative",
-        "//buck2/packages/rust/dice/dice:dice",
-        "//buck2/packages/rust/dice/dice_error:dice_error",
-        "//buck2/packages/rust/dice/dice_futures:dice_futures",
-        "//buck2/packages/rust/gazebo/dupe:dupe",
-        "//buck2/packages/rust/gazebo/gazebo:gazebo",
-        "//buck2/pagable:pagable",
+        "//bsmr/packages/rust/allocative/allocative:allocative",
+        "//bsmr/packages/rust/dice/dice:dice",
+        "//bsmr/packages/rust/dice/dice_error:dice_error",
+        "//bsmr/packages/rust/dice/dice_futures:dice_futures",
+        "//bsmr/packages/rust/gazebo/dupe:dupe",
+        "//bsmr/packages/rust/gazebo/gazebo:gazebo",
+        "//bsmr/packages/rust/pagable/pagable:pagable",
     ],
 )
 
@@ -34,11 +33,11 @@ rust_binary(
         "fbsource//third-party/rust:derive_more",
         "fbsource//third-party/rust:futures",
         "fbsource//third-party/rust:tokio",
-        "//buck2/allocative/allocative:allocative",
-        "//buck2/packages/rust/dice/dice:dice",
-        "//buck2/packages/rust/dice/dice_futures:dice_futures",
-        "//buck2/packages/rust/gazebo/dupe:dupe",
-        "//buck2/pagable:pagable",
+        "//bsmr/packages/rust/allocative/allocative:allocative",
+        "//bsmr/packages/rust/dice/dice:dice",
+        "//bsmr/packages/rust/dice/dice_futures:dice_futures",
+        "//bsmr/packages/rust/gazebo/dupe:dupe",
+        "//bsmr/packages/rust/pagable/pagable:pagable",
     ],
 )
 
@@ -51,11 +50,11 @@ rust_binary(
         "fbsource//third-party/rust:derive_more",
         "fbsource//third-party/rust:futures",
         "fbsource//third-party/rust:tokio",
-        "//buck2/allocative/allocative:allocative",
-        "//buck2/packages/rust/dice/dice:dice",
-        "//buck2/packages/rust/dice/dice_futures:dice_futures",
-        "//buck2/packages/rust/gazebo/dupe:dupe",
-        "//buck2/pagable:pagable",
+        "//bsmr/packages/rust/allocative/allocative:allocative",
+        "//bsmr/packages/rust/dice/dice:dice",
+        "//bsmr/packages/rust/dice/dice_futures:dice_futures",
+        "//bsmr/packages/rust/gazebo/dupe:dupe",
+        "//bsmr/packages/rust/pagable/pagable:pagable",
     ],
 )
 
@@ -71,11 +70,11 @@ rust_binary(
         "fbsource//third-party/rust:derive_more",
         "fbsource//third-party/rust:futures",
         "fbsource//third-party/rust:tokio",
-        "//buck2/allocative/allocative:allocative",
-        "//buck2/packages/rust/dice/dice:dice",
-        "//buck2/packages/rust/dice/dice_futures:dice_futures",
-        "//buck2/packages/rust/gazebo/dupe:dupe",
-        "//buck2/pagable:pagable",
+        "//bsmr/packages/rust/allocative/allocative:allocative",
+        "//bsmr/packages/rust/dice/dice:dice",
+        "//bsmr/packages/rust/dice/dice_futures:dice_futures",
+        "//bsmr/packages/rust/gazebo/dupe:dupe",
+        "//bsmr/packages/rust/pagable/pagable:pagable",
     ],
 )
 
@@ -99,11 +98,11 @@ rust_binary(
         "fbsource//third-party/rust:libc",
         "fbsource//third-party/rust:serde_json",
         "fbsource//third-party/rust:tokio",
-        "//buck2/allocative/allocative:allocative",
-        "//buck2/packages/rust/dice/dice:dice",
-        "//buck2/packages/rust/dice/dice_futures:dice_futures",
-        "//buck2/packages/rust/gazebo/dupe:dupe",
-        "//buck2/pagable:pagable",
+        "//bsmr/packages/rust/allocative/allocative:allocative",
+        "//bsmr/packages/rust/dice/dice:dice",
+        "//bsmr/packages/rust/dice/dice_futures:dice_futures",
+        "//bsmr/packages/rust/gazebo/dupe:dupe",
+        "//bsmr/packages/rust/pagable/pagable:pagable",
         "//common/rust/json_value:json_value",
     ],
 )
@@ -122,13 +121,4 @@ rust_binary(
         "fbsource//third-party/rust:serde_json",
         "//common/rust/json_value:json_value",
     ],
-)
-
-buck_command_alias(
-    name = "run_hydration_bench",
-    compatible_with = ["ovr_config//os:linux"],
-    env = {
-        "PAGABLE_BIN": "$(exe :hydration_bench)",
-    },
-    exe = ":bench_runner",
 )

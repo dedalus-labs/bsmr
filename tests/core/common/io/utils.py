@@ -11,7 +11,7 @@
 
 import json
 
-from buck2.tests.e2e_util.api.buck import Buck
+from bsmr.tests.e2e_util.api.buck import Buck
 
 
 async def get_files(buck: Buck) -> list[str]:

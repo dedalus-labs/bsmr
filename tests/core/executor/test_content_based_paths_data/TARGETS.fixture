@@ -109,7 +109,7 @@ cas_artifact_with_content_based_path(
     name = "empty_cas_artifact_with_content_based_path",
     # The empty file is guaranteed to exist in RE.
     digest = "da39a3ee5e6b4b0d3255bfef95601890afd80709:0",
-    use_case = "buck2-testing",
+    use_case = "bsmr-testing",
     expires_after_timestamp = 0,
 )
 

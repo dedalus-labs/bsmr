@@ -16,7 +16,7 @@ import dep_file_utils
 
 def rewrite_dep_file(src_path, dst_path):
     """
-    Convert a makefile to a depfile suitable for use by Buck2. The files we
+    Convert a makefile to a depfile suitable for use by Bessemer. The files we
     rewrite look like P488268797.
     """
 

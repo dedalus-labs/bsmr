@@ -216,7 +216,7 @@ pub enum ExprP<P: AstPayload> {
 pub struct TypeExprP<P: AstPayload> {
     /// Currently it is an expr.
     /// Planning to restrict it.
-    /// [Context](https://fb.workplace.com/groups/buck2eng/posts/3196541547309990).
+    /// [Context](https://fb.workplace.com/groups/bsmreng/posts/3196541547309990).
     pub expr: AstExprP<P>,
     pub payload: P::TypeExprPayload,
 }

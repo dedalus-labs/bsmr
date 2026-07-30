@@ -11,5 +11,5 @@
 [buildfile]
   name = TARGETS.fixture
 
-[buck2]
+[bsmr]
   materializations = deferred

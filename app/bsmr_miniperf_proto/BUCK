@@ -1,0 +1,16 @@
+load("@bsmr_build//rules:rust.bzl", "rust_library")
+
+oncall("build_infra")
+
+rust_library(
+    name = "bsmr_miniperf_proto",
+    srcs = glob(["src/**/*.rs"]),
+    test_deps = [
+        "fbsource//third-party/rust:bincode",
+    ],
+    deps = [
+        "fbsource//third-party/rust:serde",
+        "//bsmr/app/bsmr_data:bsmr_data",
+        "//bsmr/packages/rust/gazebo/dupe:dupe",
+    ],
+)

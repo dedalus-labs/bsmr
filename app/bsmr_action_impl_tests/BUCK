@@ -1,0 +1,23 @@
+load("@bsmr_build//rules:rust.bzl", "rust_unittest")
+
+oncall("build_infra")
+
+rust_unittest(
+    name = "bsmr_action_impl_tests",
+    srcs = glob(["src/**/*.rs"]),
+    deps = [
+        "fbsource//third-party/rust:ctor",
+        "fbsource//third-party/rust:indoc",
+        "fbsource//third-party/rust:maplit",
+        "//bsmr/app/bsmr_action_impl:bsmr_action_impl",
+        "//bsmr/app/bsmr_anon_target:bsmr_anon_target",
+        "//bsmr/app/bsmr_build_api:bsmr_build_api",
+        "//bsmr/app/bsmr_core:bsmr_core",
+        "//bsmr/app/bsmr_error:bsmr_error",
+        "//bsmr/app/bsmr_execute:bsmr_execute",
+        "//bsmr/app/bsmr_interpreter:bsmr_interpreter",
+        "//bsmr/app/bsmr_interpreter_for_build:bsmr_interpreter_for_build",
+        "//bsmr/packages/rust/gazebo/dupe:dupe",
+        "//bsmr/packages/rust/starlark/starlark:starlark",
+    ],
+)

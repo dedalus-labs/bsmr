@@ -11,9 +11,9 @@
 
 import sys
 
-from buck2.tests.e2e_util.api.buck import Buck
-from buck2.tests.e2e_util.buck_workspace import buck_test
-from buck2.tests.e2e_util.helper.golden import golden
+from bsmr.tests.e2e_util.api.buck import Buck
+from bsmr.tests.e2e_util.buck_workspace import buck_test
+from bsmr.tests.e2e_util.helper.golden import golden
 
 
 async def _run_test(buck: Buck, name: str) -> None:
@@ -37,7 +37,7 @@ async def _run_test(buck: Buck, name: str) -> None:
             "file_metadata/symlinks/external/traverse",
         ]
 
-    await buck.build()  # Start Buck2
+    await buck.build()  # Start Bessemer
 
     res = await buck.debug("file-status", "--show-matches", *targets)
     golden(output=res.stdout, rel_path=f"golden/{name}.{kind}.out")
@@ -47,7 +47,7 @@ async def _run_test(buck: Buck, name: str) -> None:
 @buck_test(
     setup_eden=True,
     extra_buck_config={
-        "buck2": {
+        "bsmr": {
             "allow_eden_io": "false",
             "source_digest_algorithm": "SHA1",
         }
@@ -60,7 +60,7 @@ async def test_default(buck: Buck) -> None:
 @buck_test(
     setup_eden=True,
     extra_buck_config={
-        "buck2": {
+        "bsmr": {
             "allow_eden_io": "true",
             "source_digest_algorithm": "SHA1",
         }
@@ -73,7 +73,7 @@ async def test_eden(buck: Buck) -> None:
 @buck_test(
     setup_eden=True,
     extra_buck_config={
-        "buck2": {
+        "bsmr": {
             "allow_eden_io": "false",
             "source_digest_algorithm": "BLAKE3-KEYED",
         }
@@ -86,7 +86,7 @@ async def test_blake3(buck: Buck) -> None:
 @buck_test(
     setup_eden=True,
     extra_buck_config={
-        "buck2": {
+        "bsmr": {
             "source_digest_algorithm": "BLAKE3-KEYED",
         }
     },
@@ -101,7 +101,7 @@ async def test_eden_blake3(buck: Buck) -> None:
 # @buck_test(
 #     setup_eden=True,
 #     extra_buck_config={
-#         "buck2": {
+#         "bsmr": {
 #             "allow_eden_io": "true",
 #             "use_eden_thrift_read": "true",
 #         }
@@ -117,7 +117,7 @@ async def test_eden_blake3(buck: Buck) -> None:
 #         # This will result in a .buckconfig file to actually be valid, so an error should
 #         # either be a size issue or it should succeed
 #         while writes > 0:
-#             f.write("[buck2]\n")
+#             f.write("[bsmr]\n")
 #             f.write("compute_action_inputs_hash_enabled = false\n")
 #             writes -= 1
 

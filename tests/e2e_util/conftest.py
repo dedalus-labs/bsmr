@@ -10,7 +10,7 @@
 import inspect
 
 import pytest
-from buck2.tests.e2e_util.buck_workspace import buck  # noqa F401
+from bsmr.tests.e2e_util.buck_workspace import buck  # noqa F401
 
 
 def pytest_collection_modifyitems(items):

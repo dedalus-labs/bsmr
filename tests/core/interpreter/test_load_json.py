@@ -11,12 +11,12 @@
 import ast
 from typing import Any
 
-from buck2.tests.e2e_util.api.buck import Buck
-from buck2.tests.e2e_util.buck_workspace import buck_test
+from bsmr.tests.e2e_util.api.buck import Buck
+from bsmr.tests.e2e_util.buck_workspace import buck_test
 
 
 def extract_test_output(stderr: str) -> dict[str, Any]:
-    """Extract the DATA_LOAD_TEST_OUTPUT dict from buck2 stderr."""
+    """Extract the DATA_LOAD_TEST_OUTPUT dict from bsmr stderr."""
     marker = "DATA_LOAD_TEST_OUTPUT: "
     for line in stderr.splitlines():
         idx = line.find(marker)

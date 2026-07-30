@@ -11,7 +11,7 @@ target that uses it, even incorporating a shared `logging_lib`. Now, let's
 ensure our `library` target works as expected by adding unit tests. Writing
 tests helps us catch bugs early and refactor with confidence.
 
-Our goal is to learn how to define and run Rust unit tests within the Buck2.
+Our goal is to learn how to define and run Rust unit tests within the Bessemer.
 
 ## What We'll Do:
 
@@ -19,7 +19,7 @@ Our goal is to learn how to define and run Rust unit tests within the Buck2.
 2. Write a simple unit test for the greet function in `greeter_lib`.
 3. Update `greeter_lib/BUCK` to define a test target using { isInternal() ?
    <code>rust_unittest</code> : <code>rust_test</code> }.
-4. Run the tests using Buck2 and see the results.
+4. Run the tests using Bessemer and see the results.
 
 ## Prerequisites
 
@@ -59,7 +59,7 @@ mod tests {
     #[test]
     fn test_greet() {
         assert_eq!(library::greet("World"), "Hello, World!");
-        assert_eq!(library::greet("Buck2"), "Hello, Buck2!");
+        assert_eq!(library::greet("Bessemer"), "Hello, Bessemer!");
     }
 
     #[test]
@@ -71,16 +71,16 @@ mod tests {
 
 ## Step 3: Updating greeter_lib/BUCK to Define the Test Target
 
-Next, we need to tell Buck2 about our test file and how to run it.
+Next, we need to tell Bessemer about our test file and how to run it.
 
 1. Edit `greeter_lib/BUCK`:
 
 <FbInternalOnly>
 
 ```python
-load("@fbsource//tools/build_defs:rust_library.bzl", "rust_library")
+load("@bsmr_build//rules:rust.bzl", "rust_library")
 # Load the rust_unittest rule
-load("@fbsource//tools/build_defs:rust_unittest.bzl", "rust_unittest")
+load("@bsmr_build//rules:rust.bzl", "rust_unittest")
 
 
 rust_library(
@@ -88,7 +88,7 @@ rust_library(
     srcs = ["src/lib.rs"],
     visibility = ["PUBLIC"],
     deps = [
-        "fbcode//buck2/docs/buck2_lab/logging_lib:logging_lib",
+        "fbcode//bsmr/docs/bsmr_lab/logging_lib:logging_lib",
     ],
 )
 
@@ -106,15 +106,15 @@ rust_unittest(
 
 Key additions and explanations:
 
-- `load("@fbsource//tools/build_defs:rust_unittest.bzl", "rust_unittest"):`
+- `load("@bsmr_build//rules:rust.bzl", "rust_unittest"):`
   - This line imports the `rust_unittest` rule, which knows how to build and run
     Rust tests.
 
 - `rust_unittest(...)`:
   - `name = "test"`: We're naming our test target "test".
-  - `srcs = ["tests/test.rs"]`: Specifies our test source file. Buck2 will
+  - `srcs = ["tests/test.rs"]`: Specifies our test source file. Bessemer will
     compile this as a separate test binary.
-  - `deps = [":library"]`: This is crucial. It tells Buck2 that our test code
+  - `deps = [":library"]`: This is crucial. It tells Bessemer that our test code
     depends on the `:library` target (our `greeter_lib:library`). This makes
     `library` target available to be imported and used within test.rs.
 
@@ -141,9 +141,9 @@ Key additions and explanations:
 
 - `rust_test(...)`:
   - `name = "test"`: We're naming our test target "test".
-  - `srcs = ["tests/test.rs"]`: Specifies our test source file. Buck2 will
+  - `srcs = ["tests/test.rs"]`: Specifies our test source file. Bessemer will
     compile this as a separate test binary.
-  - `deps = [":library"]`: This is crucial. It tells Buck2 that our test code
+  - `deps = [":library"]`: This is crucial. It tells Bessemer that our test code
     depends on the `:library` target (our `greeter_lib:library`). This makes
     `library` target available to be imported and used within test.rs.
 
@@ -154,13 +154,13 @@ Key additions and explanations:
 With the BUCK file updated, let's run our tests!
 
 1. Navigate to the `greeter_lib` directory.
-2. Run test using `buck2 test`:
+2. Run test using `bsmr test`:
 
 ```bash
-buck2 test :test
+bsmr test :test
 ```
 
-- `buck2 test` is the command to run test targets.
+- `bsmr test` is the command to run test targets.
 - `:test` refers to the { isInternal() ? <code>rust_unittest</code> :
   <code>rust_test</code> } target named `test` that we defined in the current
   directory's `BUCK` file.
@@ -181,14 +181,14 @@ The key is seeing "Pass" and a summary indicating that all your test cases
 Congratulations! ✅
 
 You've successfully added unit tests to your `library` target and run them using
-Buck2!
+Bessemer!
 
 We've learned how to:
 
 - Define a test target using { isInternal() ? <code>rust_unittest</code> :
   <code>rust_test</code> } for a Rust library.
-- Execute tests using `buck2 test` command.
+- Execute tests using `bsmr test` command.
 
-Testing is a vital skill, and now you know how to integrate it into your Buck2
+Testing is a vital skill, and now you know how to integrate it into your Bessemer
 Rust workflow. This allows you to build more robust and reliable libraries and
 applications.

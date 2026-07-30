@@ -1,0 +1,7 @@
+load("@bsmr_build//rules:export_files.bzl", "export_file")
+
+oncall("build_infra")
+
+export_file(
+    name = "download.sh",
+)

@@ -1,4 +1,4 @@
-load("@fbsource//tools/build_defs:rust_library.bzl", "rust_library")
+load("@bsmr_build//rules:rust.bzl", "rust_library")
 
 oncall("build_infra")
 
@@ -11,6 +11,6 @@ rust_library(
     unittests = False,  # There is no main
     deps = [
         "fbsource//third-party/rust:libfuzzer-sys",
-        "//buck2/packages/rust/starlark/starlark:starlark",
+        "//bsmr/packages/rust/starlark/starlark:starlark",
     ],
 )

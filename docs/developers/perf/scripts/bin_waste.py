@@ -27,14 +27,14 @@ this script only needs the bin-level counters jemalloc already keeps.
 Usage:
   bin_waste.py [stats.json]          # parse a saved stats dump
   bin_waste.py -                     # read stats JSON from stdin
-  bin_waste.py --daemon              # run `buck2 debug allocator-stats` for you
-  bin_waste.py --daemon --buck2 ./buck2 --isolation-dir v2
+  bin_waste.py --daemon              # run `bsmr debug allocator-stats` for you
+  bin_waste.py --daemon --bsmr ./bsmr --isolation-dir v2
 
 The JSON must include per-arena bin stats, i.e. NOT be produced with the
 default `Jmdablxg` options (which suppress them). `--daemon` requests the
 right options automatically; if you capture by hand use `-o J`:
 
-  buck2 debug allocator-stats -o J > stats.json
+  bsmr debug allocator-stats -o J > stats.json
 
 Caveat (tcache): a region sitting in a per-thread tcache still counts in
 `curregs`, so it looks live even though the application has freed it. That
@@ -52,7 +52,7 @@ import sys
 def load_stats(args):
     """Return the parsed `jemalloc` stats object."""
     if args.daemon:
-        cmd = [args.buck2]
+        cmd = [args.bsmr]
         if args.isolation_dir:
             cmd += ["--isolation-dir", args.isolation_dir]
         cmd += ["debug", "allocator-stats", "-o", "J"]
@@ -223,9 +223,9 @@ def main():
     ap.add_argument(
         "--daemon",
         action="store_true",
-        help="run `buck2 debug allocator-stats -o J` to capture stats",
+        help="run `bsmr debug allocator-stats -o J` to capture stats",
     )
-    ap.add_argument("--buck2", default="buck2", help="buck2 binary for --daemon")
+    ap.add_argument("--bsmr", default="bsmr", help="bsmr binary for --daemon")
     ap.add_argument("--isolation-dir", default=None, help="isolation dir for --daemon")
     ap.add_argument("--top", type=int, default=20, help="size classes to show")
     args = ap.parse_args()

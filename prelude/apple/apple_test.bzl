@@ -257,14 +257,14 @@ def _get_test_info(
     env = {"XCTEST_BUNDLE": xctest_bundle}
 
     if test_host_app_bundle == None:
-        tpx_label = "tpx:apple_test:buck2:logicTest"
+        tpx_label = "tpx:apple_test:bsmr:logicTest"
     else:
         env["HOST_APP_BUNDLE"] = test_host_app_bundle
-        tpx_label = "tpx:apple_test:buck2:appTest"
+        tpx_label = "tpx:apple_test:bsmr:appTest"
 
     if ui_test_target_app_bundle != None:
         env["TARGET_APP_BUNDLE"] = ui_test_target_app_bundle
-        tpx_label = "tpx:apple_test:buck2:uiTest"
+        tpx_label = "tpx:apple_test:bsmr:uiTest"
 
     labels = ctx.attrs.labels
     labels.append(tpx_label)

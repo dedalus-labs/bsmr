@@ -17,7 +17,7 @@ range — every benchmark needs many iterations.
 
 ```bash
 # See `--help` for details
-buck2 build @fbcode//mode/opt fbsource//third-party/rust:absh-absh --out /tmp/absh
+bsmr build @fbcode//mode/opt fbsource//third-party/rust:absh-absh --out /tmp/absh
 ```
 
 ## Per-iteration variance
@@ -35,7 +35,7 @@ paired-difference setup across many iterations.
 ## absh flag reference
 
 ```sh
-absh -a 'buck2 ...A...' -b 'buck2 ...B...' -i -r -m -n 30
+absh -a 'bsmr ...A...' -b 'bsmr ...B...' -i -r -m -n 30
 ```
 
 | Flag             | Effect                                                |
@@ -58,7 +58,7 @@ gRPC client; for real daemon RSS you'd need
 
 ## Two-binary comparison
 
-When `A` and `B` are different `buck2` binaries:
+When `A` and `B` are different `bsmr` binaries:
 
 - For `--no-buckd` benchmarks (the typical case for wall-time and peak
   RSS), each invocation is fresh — no daemon state to manage.
@@ -75,11 +75,11 @@ runs in another.
 
 | Question                            | Metric                                                              |
 |-------------------------------------|---------------------------------------------------------------------|
-| "How long does buck2 take?"         | Wall time (`absh` reports it; `/usr/bin/time` works for `--no-buckd`) |
+| "How long does bsmr take?"         | Wall time (`absh` reports it; `/usr/bin/time` works for `--no-buckd`) |
 | "How much memory at peak?"          | `--no-buckd` + absh `-m`, or `VmHWM` from daemon `/proc` in daemon mode |
 | "How much is the daemon retaining?" | `allocator-stats.allocated`, daemon mode only                       |
 | "How much CPU?"                     | User+sys time across daemon + client + forkserver                   |
-| "Is buck2 doing more I/O?"          | Page faults / `/proc/<pid>/io`                                      |
+| "Is bsmr doing more I/O?"          | Page faults / `/proc/<pid>/io`                                      |
 
 Reporting "client max RSS" via `time -v` while in daemon mode is the most
 common mistake — it's nearly constant regardless of build complexity

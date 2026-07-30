@@ -11,7 +11,7 @@
 [buildfile]
   name = TARGETS.fixture
 
-[buck2]
+[bsmr]
   create_unhashed_links = true
 
 [build]

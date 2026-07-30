@@ -14,7 +14,7 @@ is inferred exactly like the CLI.
 
 For all other cases, take the following query as an example:
 
-`buck2 cquery "rdeps(deps(//example:foo), deps(//example:bar))"`
+`bsmr cquery "rdeps(deps(//example:foo), deps(//example:bar))"`
 
 The target universe here should be constructed from the all the target literals
 and their transitive deps, which is to say `deps(//example:foo, //example:bar)`.

@@ -24,13 +24,13 @@ gotchas and sampling math; this page is the workflow on top.
 
 [`scripts/measure.sh`](scripts/measure.sh) wraps this. Internally:
 
-1. `buck2 kill`
+1. `bsmr kill`
 2. Warmup build with `MALLOC_CONF=prof:true,prof_active:true,prof_final:false`
-3. `buck2 kill` (DICE was warm; restart for a clean retained-memory baseline)
+3. `bsmr kill` (DICE was warm; restart for a clean retained-memory baseline)
 4. Measurement build (same MALLOC_CONF)
 5. Capture `VmHWM`/`VmRSS` from `/proc/<daemon-pid>/status`
-6. `buck2 debug allocator-stats > B_stats.json`
-7. `buck2 debug heap-dump --path B.heap`
+6. `bsmr debug allocator-stats > B_stats.json`
+7. `bsmr debug heap-dump --path B.heap`
 
 For peak attribution use [`scripts/peak_watch.sh`](scripts/peak_watch.sh)
 instead — the heap dump from step 7 is post-build retained, not peak.
@@ -38,14 +38,14 @@ instead — the heap dump from step 7 is post-build retained, not peak.
 ## Diff
 
 ```sh
-python3 scripts/heap_diff.py /path/to/buck2_a A.heap /path/to/buck2_b B.heap a b
+python3 scripts/heap_diff.py /path/to/bsmr_a A.heap /path/to/bsmr_b B.heap a b
 ```
 
 Symbol names are stable across unrelated binary changes, so leaves align
 even after refactors. To pull the full call chain for a specific leaf:
 
 ```sh
-python3 scripts/heap_stacks.py /path/to/buck2_b B.heap "<leaf-substring>"
+python3 scripts/heap_stacks.py /path/to/bsmr_b B.heap "<leaf-substring>"
 ```
 
 Substring matches against both mangled and demangled forms. **Demangled

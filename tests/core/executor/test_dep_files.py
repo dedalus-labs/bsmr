@@ -15,11 +15,11 @@ from pathlib import Path
 from typing import Any
 
 import pytest
-from buck2.tests.e2e_util.api.buck import Buck
-from buck2.tests.e2e_util.api.buck_result import BuckException
-from buck2.tests.e2e_util.asserts import expect_failure
-from buck2.tests.e2e_util.buck_workspace import buck_test, env
-from buck2.tests.e2e_util.helper.utils import (
+from bsmr.tests.e2e_util.api.buck import Buck
+from bsmr.tests.e2e_util.api.buck_result import BuckException
+from bsmr.tests.e2e_util.asserts import expect_failure
+from bsmr.tests.e2e_util.buck_workspace import buck_test, env
+from bsmr.tests.e2e_util.helper.utils import (
     expect_exec_count,
     filter_events,
     random_string,
@@ -456,7 +456,7 @@ async def test_dep_file_hit_with_action_key_change(buck: Buck) -> None:
 # This test tombstones the hash of the dep file produced by this action.
 @buck_test(data_dir="dep_files", skip_for_os=["darwin", "windows"])
 @env(
-    "BUCK2_TEST_TOMBSTONED_DIGESTS",
+    "BSMR_TEST_TOMBSTONED_DIGESTS",
     "e537c6611d7e2ba1c9b71248f7a0ca506e5a0f9a:78",
 )
 async def test_dep_files_ignore_missing_digests(buck: Buck, tmp_path: Path) -> None:
@@ -472,7 +472,7 @@ async def test_dep_files_ignore_missing_digests(buck: Buck, tmp_path: Path) -> N
             dep_file_hash = hashlib.sha1(dep_file).hexdigest()
             dep_file_len = len(dep_file)
             raise Exception(
-                f"Misconfigured test, BUCK2_TEST_TOMBSTONED_DIGESTS to {dep_file_hash}:{dep_file_len}",
+                f"Misconfigured test, BSMR_TEST_TOMBSTONED_DIGESTS to {dep_file_hash}:{dep_file_len}",
             )
 
     touch(buck, "app/other.h")
@@ -537,7 +537,7 @@ async def _dep_file_key_from_executions(buck: Buck) -> str:
 
 
 async def _check_uploaded_dep_file_key(buck: Buck, dep_file_key: str) -> None:
-    # BUCK2_TEST_SKIP_ACTION_CACHE_WRITE causes action result writes for dep files to always pass.
+    # BSMR_TEST_SKIP_ACTION_CACHE_WRITE causes action result writes for dep files to always pass.
     # This is to allow testing without action cache write permission.
     dep_file_uploads = [
         upload for upload in await _dep_file_uploads(buck) if upload["success"]
@@ -548,8 +548,8 @@ async def _check_uploaded_dep_file_key(buck: Buck, dep_file_key: str) -> None:
 
 
 @buck_test(data_dir="upload_dep_files")
-@env("BUCK_LOG", "buck2_execute_impl::executors::caching=debug")
-@env("BUCK2_TEST_SKIP_ACTION_CACHE_WRITE", "true")
+@env("BUCK_LOG", "bsmr_execute_impl::executors::caching=debug")
+@env("BSMR_TEST_SKIP_ACTION_CACHE_WRITE", "true")
 async def test_re_dep_file_uploads_same_key(buck: Buck) -> None:
     # Test all the cases where the remote dep file key should stay the same
     target = "root//:dep_files"
@@ -585,8 +585,8 @@ async def test_re_dep_file_uploads_same_key(buck: Buck) -> None:
 
 
 @buck_test(data_dir="upload_dep_files")
-@env("BUCK_LOG", "buck2_execute_impl::executors::caching=debug")
-@env("BUCK2_TEST_SKIP_ACTION_CACHE_WRITE", "true")
+@env("BUCK_LOG", "bsmr_execute_impl::executors::caching=debug")
+@env("BSMR_TEST_SKIP_ACTION_CACHE_WRITE", "true")
 async def test_re_dep_file_uploads_different_key(buck: Buck) -> None:
     # TODO: Mergebase is currently not set in this test.
     # Include it so we can test for the case where the mergebase differs
@@ -648,8 +648,8 @@ async def test_re_dep_file_uploads_different_key(buck: Buck) -> None:
 
 
 @buck_test(data_dir="upload_dep_files")
-@env("BUCK_LOG", "buck2_execute_impl::executors::caching=debug")
-@env("BUCK2_TEST_SKIP_ACTION_CACHE_WRITE", "true")
+@env("BUCK_LOG", "bsmr_execute_impl::executors::caching=debug")
+@env("BSMR_TEST_SKIP_ACTION_CACHE_WRITE", "true")
 async def test_dep_file_does_not_upload_when_allow_cache_upload_is_true(
     buck: Buck,
 ) -> None:
@@ -672,9 +672,9 @@ async def test_dep_file_does_not_upload_when_allow_cache_upload_is_true(
 
 
 @buck_test(data_dir="upload_dep_files")
-@env("BUCK_LOG", "buck2_execute_impl::executors::caching=debug")
-@env("BUCK2_TEST_SKIP_ACTION_CACHE_WRITE", "true")
-@env("BUCK2_TEST_ONLY_REMOTE_DEP_FILE_CACHE", "true")
+@env("BUCK_LOG", "bsmr_execute_impl::executors::caching=debug")
+@env("BSMR_TEST_SKIP_ACTION_CACHE_WRITE", "true")
+@env("BSMR_TEST_ONLY_REMOTE_DEP_FILE_CACHE", "true")
 async def test_only_do_cache_lookup_when_dep_file_upload_is_enabled(
     buck: Buck,
 ) -> None:
@@ -710,8 +710,8 @@ async def test_only_do_cache_lookup_when_dep_file_upload_is_enabled(
 
 
 @buck_test(data_dir="upload_dep_files")
-@env("BUCK_LOG", "buck2_execute_impl::executors::caching=debug")
-@env("BUCK2_TEST_SKIP_ACTION_CACHE_WRITE", "true")
+@env("BUCK_LOG", "bsmr_execute_impl::executors::caching=debug")
+@env("BSMR_TEST_SKIP_ACTION_CACHE_WRITE", "true")
 async def test_re_dep_file_remote_upload(buck: Buck) -> None:
     target = [
         "root//:dep_files",
@@ -729,8 +729,8 @@ async def test_re_dep_file_remote_upload(buck: Buck) -> None:
 
 
 @buck_test(data_dir="upload_dep_files", write_invocation_record=True)
-@env("BUCK_LOG", "buck2_action_impl=debug,buck2_execute_impl::executors::caching=debug")
-@env("BUCK2_TEST_SKIP_ACTION_CACHE_WRITE", "true")
+@env("BUCK_LOG", "bsmr_action_impl=debug,bsmr_execute_impl::executors::caching=debug")
+@env("BSMR_TEST_SKIP_ACTION_CACHE_WRITE", "true")
 async def test_re_dep_file_cache_hit_upload(buck: Buck) -> None:
     target = [
         "root//:dep_files",
@@ -811,10 +811,10 @@ async def check_remote_dep_file_cache_query_took_place(buck: Buck) -> str:
 @buck_test(data_dir="upload_dep_files")
 @env(
     "BUCK_LOG",
-    "buck2_execute_impl::executors::caching=debug,buck2_execute_impl::executors::action_cache=debug,buck2_action_impl=debug",
+    "bsmr_execute_impl::executors::caching=debug,bsmr_execute_impl::executors::action_cache=debug,bsmr_action_impl=debug",
 )
 # Disable the regular action cache query so that we actually hit the remote dep file cache query.
-@env("BUCK2_TEST_ONLY_REMOTE_DEP_FILE_CACHE", "true")
+@env("BSMR_TEST_ONLY_REMOTE_DEP_FILE_CACHE", "true")
 async def test_re_dep_file_query_change_tagged_unused_file(buck: Buck) -> None:
     target = "root//:dep_files"
     # Tagged for depfile0, and exists in depfile0
@@ -907,10 +907,10 @@ async def test_re_dep_file_query_change_tagged_unused_file(buck: Buck) -> None:
 @buck_test(data_dir="upload_dep_files")
 @env(
     "BUCK_LOG",
-    "buck2_execute_impl::executors::caching=debug,buck2_execute_impl::executors::action_cache=debug,buck2_action_impl=debug",
+    "bsmr_execute_impl::executors::caching=debug,bsmr_execute_impl::executors::action_cache=debug,bsmr_action_impl=debug",
 )
 # Disable the regular action cache query so that we actually hit the remote dep file cache query.
-@env("BUCK2_TEST_ONLY_REMOTE_DEP_FILE_CACHE", "true")
+@env("BSMR_TEST_ONLY_REMOTE_DEP_FILE_CACHE", "true")
 async def test_re_dep_file_query_change_tagged_used_file(buck: Buck) -> None:
     target = "root//:dep_files"
     # Tagged for depfile0, and exists in depfile0

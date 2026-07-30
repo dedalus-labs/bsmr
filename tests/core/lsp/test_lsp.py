@@ -17,12 +17,12 @@ from pathlib import Path
 from typing import Any, Optional
 
 import pytest
-from buck2.tests.e2e_util.api.buck import Buck
-from buck2.tests.e2e_util.api.buck_result import BuckException
-from buck2.tests.e2e_util.api.fixtures import Fixture, Span
-from buck2.tests.e2e_util.api.lsp import LSPResponseError
-from buck2.tests.e2e_util.buck_workspace import buck_test, env
-from buck2.tests.e2e_util.helper.utils import daemon_is_alive
+from bsmr.tests.e2e_util.api.buck import Buck
+from bsmr.tests.e2e_util.api.buck_result import BuckException
+from bsmr.tests.e2e_util.api.fixtures import Fixture, Span
+from bsmr.tests.e2e_util.api.lsp import LSPResponseError
+from bsmr.tests.e2e_util.buck_workspace import buck_test, env
+from bsmr.tests.e2e_util.helper.utils import daemon_is_alive
 
 
 def _assert_range(range: dict[str, Any], expected: Optional[Span]) -> None:
@@ -165,7 +165,7 @@ async def test_lsp_stdin_eof_clears_server_command(
 
 
 @buck_test()
-@env("BUCK2_TESTING_INACTIVITY_TIMEOUT", "true")
+@env("BSMR_TESTING_INACTIVITY_TIMEOUT", "true")
 async def test_lsp_does_not_exit_when_daemon_times_out(buck: Buck) -> None:
     await buck.server()
     status = await buck.status()
@@ -189,7 +189,7 @@ async def test_lsp_does_not_exit_when_daemon_times_out(buck: Buck) -> None:
 
 
 @buck_test(skip_for_os=["windows"])
-@env("BUCK2_TESTING_INACTIVITY_TIMEOUT", "true")
+@env("BSMR_TESTING_INACTIVITY_TIMEOUT", "true")
 @env("BUCKD_STARTUP_TIMEOUT", "90")
 async def test_lsp_daemon_inactivity_shutdown_currently_times_out_before_recovering_different_user_version(
     buck: Buck,
@@ -247,7 +247,7 @@ async def test_lsp_exits_when_daemon_disappears(buck: Buck) -> None:
 
 
 @buck_test()
-@env("BUCK2_TESTING_INACTIVITY_TIMEOUT", "true")
+@env("BSMR_TESTING_INACTIVITY_TIMEOUT", "true")
 async def test_lsp_requests_keep_daemon_alive(buck: Buck) -> None:
     async with await buck.lsp() as lsp:
         await lsp.init_connection()

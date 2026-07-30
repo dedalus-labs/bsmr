@@ -5,7 +5,7 @@ title: Memory Profiling
 
 [basics.md](basics.md) covers the headline metrics, the daemon model, and the
 `debug allocator-stats` / `debug heap-dump` / `kill` commands. This page is
-the additional, mostly buck2-specific things that the heap-profiling tool
+the additional, mostly bsmr-specific things that the heap-profiling tool
 chain will trip you up on.
 
 This page is about *where allocations happen* (the heap profile). For the
@@ -18,7 +18,7 @@ by survivors, which a heap profile cannot see — see
 The daemon must be **started** with profiling on:
 
 ```sh
-MALLOC_CONF=prof:true,prof_active:true,prof_final:false buck2 <cmd>
+MALLOC_CONF=prof:true,prof_active:true,prof_final:false bsmr <cmd>
 ```
 
 `prof_final:false` is the important non-default — it suppresses the auto-dump
@@ -83,7 +83,7 @@ per-stack scaling.
 
 ## Don't use jeprof
 
-`jeprof` shells out to `addr2line`. On a full-debug `buck2` binary that's
+`jeprof` shells out to `addr2line`. On a full-debug `bsmr` binary that's
 many minutes per profile because the DWARF section is huge and the binary
 contains references to missing `.dwo` files. `eu-addr2line` is no faster.
 
@@ -119,8 +119,8 @@ re-pipe the offending symbol on its own to demangle it.
 
 For "what is reachable from object X" rather than "where was X allocated",
 use [`allocative`](https://github.com/facebookincubator/allocative) (already
-integrated into buck2). The DICE state implements `Allocative`;
-`buck2 debug allocative` serializes a graph for offline analysis. This is
+integrated into bsmr). The DICE state implements `Allocative`;
+`bsmr debug allocative` serializes a graph for offline analysis. This is
 the right tool when a heap profile shows lots of attribution to upstream
 constructors but you actually want to know which DICE keys are retaining
 the data.

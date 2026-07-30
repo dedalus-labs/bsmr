@@ -31,8 +31,8 @@ log for your build file. Run a uquery command for your target and then inspect
 the event log:
 
 ```bash
-buck2 uquery //path/to/your:target --output-all-attributes
-buck2 log show
+bsmr uquery //path/to/your:target --output-all-attributes
+bsmr log show
 ```
 
 Here is an example entry from the event log showing that a target uses 1.5GB:
@@ -54,7 +54,7 @@ troubleshooting.
 There are many reasons why Starlark's evaluation of your build file might use a
 lot of memory. We list a few common cases below but there might be more
 cases.<FbInternalOnly> See
-[this post](https://fb.workplace.com/groups/buck2eng/permalink/3309329642697846/)
+[this post](https://fb.workplace.com/groups/bsmreng/permalink/3309329642697846/)
 for a few real world examples of debugging Starlark peak memory usage of core
 Android macros that have saved over 5.7GB peak memory!</FbInternalOnly>
 
@@ -172,6 +172,6 @@ memory.
 
 If you still can not figure out how to reduce Starlark memory footprint of your
 build files, <FbInternalOnly>please post in
-[Buck2 Users](https://fb.workplace.com/groups/buck2users)</FbInternalOnly><OssOnly>raise
+[Bessemer Users](https://fb.workplace.com/groups/bsmrusers)</FbInternalOnly><OssOnly>raise
 [an issue](https://github.com/facebook/buck2/issues) in our Github
 project</OssOnly>.

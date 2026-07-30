@@ -17,7 +17,7 @@ import time
 from concurrent import futures
 
 import grpc
-from buck2.app.buck2_health_check_proto import health_check_pb2, health_check_pb2_grpc
+from bsmr.app.bsmr_health_check_proto import health_check_pb2, health_check_pb2_grpc
 
 
 class HealthChecker(health_check_pb2_grpc.HealthCheckServicer):
@@ -83,7 +83,7 @@ def serve(args: argparse.Namespace) -> None:
     with open(args.state_info_file, "w+") as f:
         f.write(str(listen_addr))
 
-    # This server is started by a shell scrip from the buck2 binary.
+    # This server is started by a shell scrip from the bsmr binary.
     # Since we don't have the process reference in tests, we need to send the SIGTERM instead of SIGINT.
     signal.signal(signal.SIGTERM, lambda x, y: shutdown(stop_event))
     signal.signal(signal.SIGINT, lambda x, y: shutdown(stop_event))

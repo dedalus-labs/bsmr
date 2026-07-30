@@ -8,7 +8,7 @@ ignore=ignored
 root = .
 prelude = prelude
 
-[buck2]
+[bsmr]
   materializations = deferred
   hash_all_commands = true
   declare_match_in_depfiles = true

@@ -6,14 +6,14 @@ title: IDE/Tools Integration (gopackagesdriver)
 # IDE/Linter Integration
 
 [The Go packages driver protocol](https://pkg.go.dev/golang.org/x/tools/go/packages)
-is the standard way to integrate build systems with Go tools. Buck2 implements
+is the standard way to integrate build systems with Go tools. Bessemer implements
 this protocol using BXL API, enabling
 [golang.org/x/tools/go/packages.Load()](https://pkg.go.dev/golang.org/x/tools/go/packages#Load)
-based tools to work with Buck2.
+based tools to work with Bessemer.
 
 ## How to use it? (golangci-lint example)
 
-Set the `GOPACKAGESDRIVER` environment variable to Buck2's gopackagesdriver
+Set the `GOPACKAGESDRIVER` environment variable to Bessemer's gopackagesdriver
 binary path and use your Go tool as usual.
 
 There's no precise specification on how CLI tools should process input
@@ -26,7 +26,7 @@ Let's see a [`golangci-lint`](https://github.com/golangci/golangci-lint)
 example:
 
 ```
-$ export GOPACKAGESDRIVER=$(buck2 build prelude//go/tools/gopackagesdriver:gopackagesdriver --show-full-simple-output)
+$ export GOPACKAGESDRIVER=$(bsmr build prelude//go/tools/gopackagesdriver:gopackagesdriver --show-full-simple-output)
 $ golangci-lint run foo/bar/baz.go
 $ golangci-lint run file=foo/bar/baz.go # use file= if previous command doesn't work
 $ golangci-lint run root//foo/bar:bar
@@ -37,7 +37,7 @@ $ golangci-lint run pattern=root//foo/bar:bar # use pattern= if previous command
 
 Here's an example of using
 [gopls](https://github.com/golang/tools/tree/master/gopls) and VSCode with
-Buck2. You can use the same approach for other IDEs and tools.
+Bessemer. You can use the same approach for other IDEs and tools.
 
 1. Install
    [Go VSCode extension](https://marketplace.visualstudio.com/items?itemName=golang.go).
@@ -46,7 +46,7 @@ Buck2. You can use the same approach for other IDEs and tools.
 
 ```sh
 #!/usr/bin/env bash
-exec buck2 run prelude//go/tools/gopackagesdriver:gopackagesdriver -- "${@}"
+exec bsmr run prelude//go/tools/gopackagesdriver:gopackagesdriver -- "${@}"
 ```
 
 3. Configure VSCode to use the driver.
@@ -96,8 +96,8 @@ approach.
 
 The driver is configured via environment variables:
 
-- `GOPACKAGESDRIVER_BUCK_OPTIONS` - options passed to `buck2 bxl` and
-  `buck2 run` commands.
+- `GOPACKAGESDRIVER_BUCK_OPTIONS` - options passed to `bsmr bxl` and
+  `bsmr run` commands.
 - `GOPACKAGESDRIVER_BUCK_ALL_PACKAGES_TARGET_EXPRS` - a list of target
   expressions separated by space, useful to replace `./...` query that `gopls`
   does on startup.

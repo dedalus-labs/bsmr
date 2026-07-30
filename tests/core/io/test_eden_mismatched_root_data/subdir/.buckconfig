@@ -8,7 +8,7 @@
 [external_cells]
   nano_prelude = bundled
 
-[buck2]
+[bsmr]
   allow_eden_io = true
 
 [buildfile]

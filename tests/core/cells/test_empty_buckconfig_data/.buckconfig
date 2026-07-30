@@ -1,2 +1,2 @@
-# buckconfig is empty, but buck2 should still create a root cell,
+# buckconfig is empty, but bsmr should still create a root cell,
 # and report missing prelude cell.

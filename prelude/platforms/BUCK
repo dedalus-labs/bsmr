@@ -68,7 +68,7 @@ prelude.constraint_value(
 # instances of that rule type as incompatible with a fat platform. Ideally,
 # toolchains could affect the target compatibility of their users directly but
 # toolchains are currently all exec deps and so cannot do that. We'd like
-# buck2 to support a form of dep that inherited its users execution platform
+# bsmr to support a form of dep that inherited its users execution platform
 # so that toolchains could basically get visibility and affect both target and
 # execution configuration, but that's not implemented yet.
 export_file(

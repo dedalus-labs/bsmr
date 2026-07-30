@@ -1,0 +1,24 @@
+load("@bsmr_build//rules:rust.bzl", "rust_library")
+
+oncall("build_infra")
+
+rust_library(
+    name = "static_interner",
+    srcs = glob(["src/**/*.rs"]),
+    crate_root = "src/lib.rs",
+    # bsmr uses every integration impl (`Allocative`, `Dupe`, `StrongHash`) on
+    # `Intern<T>`, so enable all features. OSS users on crates.io opt in via
+    # cargo features as needed; default is no impls.
+    features = [
+        "allocative",
+        "dupe",
+        "strong_hash",
+    ],
+    deps = [
+        "fbsource//third-party/rust:equivalent",
+        "//bsmr/packages/rust/allocative/allocative:allocative",
+        "//bsmr/packages/rust/gazebo/dupe:dupe",
+        "//bsmr/packages/rust/gazebo/strong_hash:strong_hash",
+        "//bsmr/packages/rust/lock_free_hashtable:lock_free_hashtable",
+    ],
+)

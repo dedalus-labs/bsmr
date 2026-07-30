@@ -1,5 +1,5 @@
-load("@fbcode//buck2/tests/prelude:py_assertion.bzl", "py_assertion")
-load("@fbsource//tools/build_defs:selects.bzl", "selects")
+load("@fbcode//bsmr/tests/prelude:py_assertion.bzl", "py_assertion")
+load("@bsmr_build//rules:selects.bzl", "selects")
 
 oncall("build_infra")
 
