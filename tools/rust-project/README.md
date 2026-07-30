@@ -1,29 +1,19 @@
 # rust-project
 
-The `rust-project` tool is intended to read dependency information from `buck`,
-and generate a
+`rust-project` reads dependency information from Buck and generates a
 [rust-project.json](https://rust-analyzer.github.io/manual.html#non-cargo-based-projects)
-file for use with `rust-analyzer`.
-
-The primary motivation for this tool is that there are some projects that fail
-to work with `autocargo`. Therefore, to use `rust-analyzer` with those projects,
-another solution is needed to provide it with the project structure.
+file for `rust-analyzer`.
 
 # Usage
 
-To generate a `rust-project.json` file using `rust-project`, supply it with one
-or more `buck` targets. Assuming that the current working directory is
-`fbcode//common/rust/tools/rust-project`, the following command will create a
-`rust-project.json` in the directory corresponding to the above target:
+Run the tool from the repository root with one or more Buck targets:
 
 ```bash
-./fbcode/common/rust/tools/rust-project/rust-project develop fbcode//common/rust/tools/rust-project:rust-project
+./tools/bin/rust-project develop //app/buck2:buck2
 ```
 
-The `develop` command will write to the current working directory.
-
-Placing `rust-project.json` at the root of the Rust project directory will allow
-`rust-analyzer`-the-LSP-engine to find and use it for analysis.
+The command writes `rust-project.json` to the current directory, where
+`rust-analyzer` can discover it.
 
 To emit logs, set the environment variable `RUST_LOG` to a value. Supported
 syntax is described

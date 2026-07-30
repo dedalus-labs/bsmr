@@ -16,7 +16,6 @@ use std::path::PathBuf;
 use std::process::Command;
 use std::process::ExitStatus;
 use std::process::Output;
-use std::process::Stdio;
 
 use anyhow::Context;
 use rustc_hash::FxHashMap;
@@ -544,7 +543,6 @@ impl Buck {
         cmd.args(["--isolation-dir", ".rust-analyzer"]);
         cmd.arg(CLIENT_METADATA_RUST_PROJECT);
         cmd.args(subcommands);
-        cmd.args(["--oncall", "rust_devx"]);
 
         if let Some(root) = &self.project_root {
             cmd.current_dir(root);
@@ -566,27 +564,6 @@ impl Buck {
         }
 
         Ok(stdout.into())
-    }
-
-    pub(crate) fn resolve_sysroot_src(&self) -> Result<PathBuf, anyhow::Error> {
-        let mut command = self.command(["audit", "config"]);
-        command.args(["--json", "--", "rust.sysroot_src_path"]);
-        command
-            .stderr(Stdio::null())
-            .stdout(Stdio::piped())
-            .stderr(Stdio::piped());
-
-        // the `spawn()` here is load-bearing to allow spawning
-        // this command concurrently with rustc.
-        let child = command.spawn().context("Unable to spawn command")?;
-
-        #[derive(Deserialize)]
-        struct BuckConfig {
-            #[serde(rename = "rust.sysroot_src_path")]
-            sysroot_src_path: PathBuf,
-        }
-        let cfg: BuckConfig = deserialize_output(child.wait_with_output(), &command)?;
-        Ok(cfg.sysroot_src_path)
     }
 
     /// Determines the owning target(s) of the saved file and builds them.
@@ -712,42 +689,6 @@ impl Buck {
         }
 
         Ok(alias_map)
-    }
-
-    /// Work out which items in `sysroot_package` (e.g. `fbsource//xplat/rust/toolchain/sysroot/1.93.0:`) are
-    /// visible to `universe_targets` (e.g. `fbcode//your/wonderful:project`).
-    pub(crate) fn query_sysroot_targets(
-        &self,
-        sysroot_package: &str,
-        universe_targets: &[Target],
-    ) -> Vec<Target> {
-        let mut command = self.command(["cquery"]);
-        if let Some(mode) = &self.mode {
-            command.arg(mode);
-        }
-
-        command.args(["--json", sysroot_package]);
-
-        let universe_arg = universe_targets
-            .iter()
-            .map(|t| format!("{t}"))
-            .collect::<Vec<_>>()
-            .join(",");
-        command.args(["--target-universe", &universe_arg]);
-
-        let mut sysroot_targets =
-            match deserialize_output::<Vec<Target>>(command.output(), &command) {
-                Ok(targets) => targets,
-                Err(e) => {
-                    tracing::warn!("Failed to query sysroot targets: {e:?}");
-                    vec![Target::new(sysroot_package)]
-                }
-            };
-
-        sysroot_targets.sort();
-        sysroot_targets.dedup();
-
-        sysroot_targets
     }
 
     /// Given a list of targets, for all targets that are aliases, return the targets
@@ -1060,15 +1001,7 @@ pub(crate) fn truncate_line_ending(s: &mut String) {
 }
 
 pub(crate) fn select_mode(mode: Option<&str>) -> Option<String> {
-    if let Some(mode) = mode {
-        Some(mode.to_owned())
-    } else if cfg!(all(fbcode_build, target_os = "windows")) {
-        Some("@fbcode//mode/win".to_owned())
-    } else {
-        // fallback to the platform default mode. This is likely slower than optimal, but
-        // `rust-project check` will work.
-        None
-    }
+    mode.map(str::to_owned)
 }
 
 fn remove_duplicates_preserve_order(paths: Vec<PathBuf>) -> Vec<PathBuf> {
@@ -1430,27 +1363,24 @@ fn test_cfg_scoped_to_first_party() {
         rustc_flags: vec![],
     };
 
-    let global_extra_cfgs = &["fbcode_build".to_owned()];
+    let global_extra_cfgs = &[];
     let first_party_extra_cfgs = &["test".to_owned()];
 
-    // First-party crate gets both `test` and `fbcode_build`, regardless of
-    // workspace membership (`in_workspace` is false here).
+    // First-party crates get `test` regardless of workspace membership.
     let first_party = crate_cfg(
         &make_info("fbcode//buck2/tools/rust-project:rust-project"),
         global_extra_cfgs,
         first_party_extra_cfgs,
     );
     assert!(first_party.contains(&"test".to_owned()));
-    assert!(first_party.contains(&"fbcode_build".to_owned()));
 
-    // Reindeer-vendored third-party crate keeps `fbcode_build` but not `test`.
+    // Reindeer-vendored third-party crates do not get `test`.
     let vendored = crate_cfg(
         &make_info("fbsource//third-party/rust/vendor/tokio:1"),
         global_extra_cfgs,
         first_party_extra_cfgs,
     );
     assert!(!vendored.contains(&"test".to_owned()));
-    assert!(vendored.contains(&"fbcode_build".to_owned()));
 }
 
 #[test]
@@ -1550,28 +1480,9 @@ fn alias_of_existing_target() {
 
 #[test]
 fn test_select_mode() {
-    // Test default behavior without the fbcode_build cfg
-    if cfg!(not(fbcode_build)) {
-        assert_eq!(select_mode(None), None);
-        assert_eq!(
-            select_mode(Some("custom-mode")),
-            Some("custom-mode".to_owned())
-        );
-    }
-
-    if cfg!(all(fbcode_build, target_os = "windows")) {
-        assert_eq!(select_mode(None), Some("@fbcode//mode/win".to_owned()));
-        assert_eq!(
-            select_mode(Some("custom-mode")),
-            Some("custom-mode".to_owned())
-        );
-    }
-
-    if cfg!(all(fbcode_build, not(target_os = "windows"))) {
-        assert_eq!(select_mode(None), None);
-        assert_eq!(
-            select_mode(Some("custom-mode")),
-            Some("custom-mode".to_owned())
-        );
-    }
+    assert_eq!(select_mode(None), None);
+    assert_eq!(
+        select_mode(Some("custom-mode")),
+        Some("custom-mode".to_owned())
+    );
 }

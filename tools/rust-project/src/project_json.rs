@@ -77,8 +77,7 @@ pub(crate) struct Crate {
     pub(crate) source: Option<Source>,
     /// The set of cfgs activated for a given crate.
     ///
-    /// With how fb imports crates into fbsource/third-party,
-    /// the answer is "all of them".
+    /// Reindeer imports third-party crates with every declared cfg.
     pub(crate) cfg: Vec<String>,
     /// The target triple for a given crate.
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -106,21 +105,21 @@ pub(crate) struct Crate {
 ///
 /// ```json
 /// "target_spec": {
-///     "manifest_file": "/Users/dbarsky/fbsource/fbcode/buck2/tools/rust-project/TARGETS",
-///     "target_label": "fbcode//buck2/tools/rust-project:rust-project",
+///     "manifest_file": "/workspace/tools/rust-project/BUCK",
+///     "target_label": "root//tools/rust-project:rust-project",
 ///     "target_kind": "bin",
 ///     "runnables": {
 ///         "check": [
 ///            "build",
-///            "fbcode//buck2/tools/rust-project:rust-project"
+///            "root//tools/rust-project:rust-project"
 ///         ],
 ///         "run": [
 ///             "run",
-///             "fbcode//buck2/tools/rust-project:rust-project"
+///             "root//tools/rust-project:rust-project"
 ///         ],
 ///         "test": [
 ///             "test",
-///             "fbcode//buck2/tools/rust-project:rust-project",
+///             "root//tools/rust-project:rust-project",
 ///             "--",
 ///             "{test_id}",
 ///             "--print-passing-details"
@@ -128,7 +127,7 @@ pub(crate) struct Crate {
 ///     },
 ///     "flycheck_command": [
 ///         "build",
-///         "fbcode//buck2/tools/rust-project:rust-project"
+///         "root//tools/rust-project:rust-project"
 ///     ]
 /// }
 /// ```
@@ -234,25 +233,15 @@ pub(crate) struct Sysroot {
     /// like `std` and `core` and binaries like `rust-analyzer-proc-macro-srv`,
     /// which enable rust-analyzer to expand procedural macros.
     ///
-    /// For example, a `sysroot` is `~/fbsource/fbcode/third-party-buck/platform010/build/rust/`.
-    ///
     /// `rust-analyzer` relies on an external binary to expand procedural
     /// macros and the source code location can be predictably inferred.
-    /// Assuming the example sysroot above, the source code would be located in
-    /// `/lib/rustlib/src/rust/`.
     pub(crate) sysroot: PathBuf,
-    /// Legacy sysroot config containing only the source code of libraries such
-    /// as `std` and core`.
-    ///
-    /// Inside Meta, this is necessary on non-Linux platforms since the sources
-    /// are packaged separately from binaries such as `rust-analyzer-proc-macro-srv`.
+    /// Optional source-only sysroot for toolchains that package source
+    /// separately from binaries.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub(crate) sysroot_src: Option<PathBuf>,
-    /// A nested rust-project for the sysroot itself. If not provided, rust-analyzer
-    /// will attempt to compute the sysroot layout with Cargo.
-    ///
-    /// Inside Meta, we have a Buck-ified rust toolchain and we can provide the
-    /// sysroot layout directly with Buck.
+    /// A nested rust-project for the sysroot itself. If absent, rust-analyzer
+    /// computes the layout with Cargo.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub(crate) sysroot_project: Option<ProjectJson>,
 }

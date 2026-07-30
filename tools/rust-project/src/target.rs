@@ -262,10 +262,7 @@ impl TargetInfo {
 
     /// Is this a reindeer-vendored third-party crate?
     ///
-    /// Reindeer buckifies vendored crates under a fixed set of package roots,
-    /// authoritatively defined by `_assert_is_allowed_third_party_root` in
-    /// `fbsource//tools/build_defs/third_party:rust_third_party.bzl` (the
-    /// `rust_third_party` macros fail the build outside these roots).
+    /// Reindeer buckifies vendored crates under `third-party/rust`.
     pub(crate) fn is_reindeer_third_party(&self) -> bool {
         // Strip the cell (e.g. `fbsource//`) and the target name (`:foo`) to get
         // the buck package path.
@@ -278,7 +275,6 @@ impl TargetInfo {
         package == "third-party/rust"
             || package == "third-party/rust/top"
             || package.starts_with("third-party/rust/vendor/")
-            || package.starts_with("xplat/rust/toolchain/sysroot")
     }
 }
 
@@ -406,13 +402,9 @@ mod tests {
         assert!(with_label("fbsource//third-party/rust/vendor/tokio:1").is_reindeer_third_party());
         assert!(with_label("fbsource//third-party/rust:tokio").is_reindeer_third_party());
         assert!(with_label("fbsource//third-party/rust/top:rustc").is_reindeer_third_party());
-        assert!(
-            with_label("fbsource//xplat/rust/toolchain/sysroot:core").is_reindeer_third_party()
-        );
 
         assert!(
-            !with_label("fbcode//buck2/tools/rust-project:rust-project")
-                .is_reindeer_third_party()
+            !with_label("fbcode//buck2/tools/rust-project:rust-project").is_reindeer_third_party()
         );
         // A first-party crate that merely lives under a similarly-named path is
         // not a reindeer root.

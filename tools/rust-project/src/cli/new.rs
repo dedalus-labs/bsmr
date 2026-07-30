@@ -107,7 +107,7 @@ struct MainFile;
 impl MainFile {
     fn render(&self) -> String {
         "fn main() {
-    println!(\"Hello from Rust at Meta!\");
+    println!(\"Hello from Rust!\");
 }
 "
         .into()

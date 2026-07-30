@@ -42,7 +42,7 @@ pub(crate) fn canonicalize_to_vcs_path(path: &Path, project_root: &Path) -> Path
     // directory.
     //
     // ```text
-    // $ ls -l ~/fbsource/buck-out/.rust-analyzer/gen/abc123/my_project/__foo_type_defs-rust__/__srcs/
+    // $ ls -l buck-out/.rust-analyzer/gen/abc123/my_project/__generated-rust__/__srcs/
     // consts.rs -> ../../__foo_type_defs-rust-foo_type_defs.thrift__/out/gen-rust/consts.rs
     // docs.md -> ../../__foo_type_defs-rust-crate__/out/types.md
     // lib.rs -> ../../__foo_type_defs-rust-foo_type_defs.thrift__/out/gen-rust/types.rs
@@ -51,7 +51,7 @@ pub(crate) fn canonicalize_to_vcs_path(path: &Path, project_root: &Path) -> Path
     //
     // In this example, expanding the symlink to the root module
     // (lib.rs) would mean that we'd use
-    // ~/fbsource/buck-out/.rust-analyzer/gen/fbcode/abc123/my_project/__foo_type_defs-rust-foo_type_defs.thrift__/out/gen-rust/
+    // buck-out/.rust-analyzer/gen/abc123/my_project/__generated-rust__/out/gen-rust/
     // as the crate root, which does not contain a lib.rs file.
     if let Ok(rel) = canonical_path.strip_prefix(project_root) {
         // The file was generated, use the original path, don't expand

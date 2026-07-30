@@ -38,7 +38,6 @@ impl Check {
     }
 
     pub(crate) fn run(&self) -> Result<(), anyhow::Error> {
-        let start = std::time::Instant::now();
         let buck = &self.buck;
 
         let check_output = buck.check_saved_file(self.use_clippy, &self.saved_file)?;
@@ -59,8 +58,6 @@ impl Check {
             let out = serde_json::to_string(&diagnostic)?;
             println!("{out}");
         }
-
-        crate::scuba::log_check(start.elapsed(), &self.saved_file, self.use_clippy);
 
         Ok(())
     }
@@ -106,13 +103,11 @@ fn drop_minor_details(message: &diagnostics::Message) -> diagnostics::Message {
     }
 }
 
-/// rustc returns diagnostics with relative paths. For example, the path for
-/// `lib.rs` in `fbcode//common/rust/tracing-scuba:tracing-scuba` will be shown
-/// as `fbcode/common/rust/tracing-scuba/src/lib.rs`.
+/// rustc returns diagnostics with paths relative to the project root.
 ///
 /// Unfortunately, the user's working directory may not be the project
-/// root. They might open their editor at the cell root (e.g. fbsource/fbcode/)
-/// or a more specific subdirectory. As a result, rust-analyzer won't be able to
+/// root. They might open their editor at a cell root or a more specific
+/// subdirectory. As a result, rust-analyzer won't be able to
 /// find the file referenced in the diagnostic.
 ///
 /// By converting relative paths to absolute paths, rust-analyzer will always be
