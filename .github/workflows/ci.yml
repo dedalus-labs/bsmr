@@ -14,6 +14,22 @@ concurrency:
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 jobs:
+  dependencies:
+    name: Dependency review
+    if: ${{ github.event_name == 'pull_request' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - name: Review dependencies
+        uses: actions/dependency-review-action@a1d282b36b6f3519aa1f3fc636f609c47dddb294
+        with:
+          fail-on-severity: high
   workflows:
     name: Generated workflows
     runs-on: ubuntu-24.04
@@ -21,11 +37,11 @@ jobs:
     permissions:
       contents: read
     steps:
-      - name: Checkout (v7.0.1)
+      - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           persist-credentials: false
-      - name: Set up Node (v6.5.0)
+      - name: Set up Node
         uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38
         with:
           node-version: 24.18.0
@@ -46,13 +62,13 @@ jobs:
     env:
       CARGO_INCREMENTAL: "0"
     steps:
-      - name: Checkout (v7.0.1)
+      - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           persist-credentials: false
       - name: Install pinned Rust toolchain
         run: rustup toolchain install nightly-2026-04-11 --profile minimal --component clippy --component llvm-tools-preview --component rust-src --no-self-update
-      - name: Restore Rust cache (v2)
+      - name: Restore Rust cache
         uses: Swatinem/rust-cache@e18b497796c12c097a38f9edb9d0641fb99eee32
         with:
           prefix-key: char-v1
