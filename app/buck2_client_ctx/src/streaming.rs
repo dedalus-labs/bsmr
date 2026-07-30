@@ -38,11 +38,9 @@ use crate::events_ctx::EventsCtx;
 use crate::exit_result::ExitResult;
 use crate::path_arg::PathArg;
 use crate::signal_handler::with_simple_sigint_handler;
-use crate::subscribers::build_graph_stats::BuildGraphStats;
 use crate::subscribers::build_id_writer::BuildIdWriter;
 use crate::subscribers::event_log::EventLog;
 use crate::subscribers::health_check_subscriber::HealthCheckSubscriber;
-use crate::subscribers::re_log::ReLog;
 use crate::subscribers::subscriber::EventSubscriber;
 use crate::subscribers::superconsole::timekeeper::RealtimeClock;
 use crate::subscribers::superconsole::timekeeper::Timekeeper;
@@ -109,9 +107,6 @@ fn update_events_ctx<T: StreamingCommand>(
     events_ctx.used_superconsole = used_superconsole;
 
     if let Some(paths) = paths {
-        let re_log_subscriber = ReLog::new(paths.isolation.clone());
-        subscribers.push(Box::new(re_log_subscriber));
-
         if !event_log_opts.no_event_log {
             let event_log_subscriber =
                 get_event_log_subscriber(cmd, ctx, log_size_counter_bytes.clone(), paths);
@@ -123,9 +118,6 @@ fn update_events_ctx<T: StreamingCommand>(
     }
     if let Some(test_id_writer) = get_test_id_writer(cmd, ctx) {
         subscribers.push(test_id_writer)
-    }
-    if let Some(build_graph_stats) = get_build_graph_stats(cmd, ctx) {
-        subscribers.push(build_graph_stats)
     }
     let representative_config_flags = if ctx.paths().is_ok() {
         matches.get_representative_config_flags()
@@ -355,26 +347,4 @@ fn get_test_id_writer<T: StreamingCommand>(
     } else {
         None
     }
-}
-
-fn get_build_graph_stats<T: StreamingCommand>(
-    cmd: &T,
-    ctx: &ClientCommandContext,
-) -> Option<Box<dyn EventSubscriber>> {
-    if should_handle_build_graph_stats(cmd) {
-        Some(Box::new(BuildGraphStats::new(
-            ctx.fbinit(),
-            ctx.trace_id.dupe(),
-        )))
-    } else {
-        None
-    }
-}
-
-fn should_handle_build_graph_stats<T: StreamingCommand>(cmd: &T) -> bool {
-    // Currently, we only care about graph size info in BuildResponse which build command produces
-    cmd.build_config_opts()
-        .config_values
-        .contains(&"buck2.log_configured_graph_size=true".to_owned())
-        && cmd.logging_name() == "build"
 }

@@ -32,11 +32,9 @@ use crate::internal_version::InternalVersionCommand;
 use crate::log_perf::LogPerfCommand;
 use crate::materialize::MaterializeCommand;
 use crate::paranoid::ParanoidCommand;
-use crate::persist_event_logs::PersistEventLogsCommand;
 use crate::set_log_filter::SetLogFilterCommand;
 use crate::thread_dump::ThreadDumpCommand;
 use crate::trace_io::TraceIoCommand;
-use crate::upload_re_logs::UploadReLogsCommand;
 
 mod allocative;
 mod allocator_stats;
@@ -54,11 +52,9 @@ mod internal_version;
 mod log_perf;
 mod materialize;
 mod paranoid;
-mod persist_event_logs;
 mod set_log_filter;
 mod thread_dump;
 mod trace_io;
-mod upload_re_logs;
 
 #[derive(Debug, clap::Parser)]
 #[clap(about = "Hidden debug commands useful for testing buck2")]
@@ -80,8 +76,6 @@ pub enum DebugCommand {
     FlushPgoProfile(FlushPgoProfileCommand),
     /// Forces materialization of a path, even on the deferred materializer
     Materialize(MaterializeCommand),
-    // Upload RE logs given an RE session ID
-    UploadReLogs(UploadReLogsCommand),
     /// Validates that Buck2 and disk agree on the state of files.
     FileStatus(FileStatusCommand),
     /// Prints buck2 daemon directory (`~/.buckd/xxx`).
@@ -94,8 +88,6 @@ pub enum DebugCommand {
     LogPerf(LogPerfCommand),
     /// Interact with I/O tracing of the daemon.
     TraceIo(TraceIoCommand),
-    #[doc(hidden)]
-    PersistEventLogs(PersistEventLogsCommand),
     #[clap(subcommand)]
     Paranoid(ParanoidCommand),
     Eval(EvalCommand),
@@ -123,7 +115,6 @@ impl DebugCommand {
             DebugCommand::FlushDepFiles(cmd) => ctx.exec(cmd, matches, events_ctx),
             DebugCommand::FlushPgoProfile(cmd) => ctx.exec(cmd, matches, events_ctx),
             DebugCommand::Materialize(cmd) => ctx.exec(cmd, matches, events_ctx),
-            DebugCommand::UploadReLogs(cmd) => ctx.exec(cmd, matches, events_ctx),
             DebugCommand::DaemonDir(cmd) => cmd.exec(matches, ctx),
             DebugCommand::Exe(cmd) => cmd.exec(matches, ctx),
             DebugCommand::Allocative(cmd) => ctx.exec(cmd, matches, events_ctx),
@@ -131,7 +122,6 @@ impl DebugCommand {
             DebugCommand::FileStatus(cmd) => ctx.exec(cmd, matches, events_ctx),
             DebugCommand::LogPerf(cmd) => cmd.exec(matches, ctx),
             DebugCommand::TraceIo(cmd) => ctx.exec(cmd, matches, events_ctx),
-            DebugCommand::PersistEventLogs(cmd) => cmd.exec(matches, ctx, events_ctx),
             DebugCommand::Paranoid(cmd) => cmd.exec(matches, ctx),
             DebugCommand::Eval(cmd) => ctx.exec(cmd, matches, events_ctx),
             DebugCommand::ThreadDump(cmd) => cmd.exec(matches, ctx),

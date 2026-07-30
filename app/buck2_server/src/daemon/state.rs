@@ -34,7 +34,6 @@ use buck2_common::sqlite::sqlite_db::SqliteDb;
 use buck2_common::sqlite::sqlite_db::SqliteIdentity;
 use buck2_core::buck2_env;
 use buck2_core::cells::name::CellName;
-use buck2_core::facebook_only;
 use buck2_core::fs::project::ProjectRoot;
 use buck2_core::fs::project_rel_path::ProjectRelativePathBuf;
 use buck2_core::is_open_source;
@@ -43,11 +42,8 @@ use buck2_core::tag_result;
 use buck2_error::BuckErrorContext;
 use buck2_error::ErrorTag;
 use buck2_error::buck2_error;
-use buck2_events::EventSinkWithStats;
 use buck2_events::daemon_id::DaemonId;
 use buck2_events::dispatch::EventDispatcher;
-use buck2_events::sink::remote;
-use buck2_events::sink::tee::TeeSink;
 use buck2_events::source::ChannelEventSource;
 use buck2_execute::digest_config::DigestConfig;
 use buck2_execute::execute::blocking::BlockingExecutor;
@@ -80,11 +76,9 @@ use buck2_server_ctx::concurrency::ConcurrencyHandler;
 use buck2_server_ctx::ctx::LockedPreviousCommandData;
 use buck2_wrapper_common::invocation_id::TraceId;
 use dupe::Dupe;
-use fbinit::FacebookInit;
 use gazebo::prelude::*;
 use gazebo::variants::VariantName;
 use host_sharing::NamedSemaphores;
-use remote::ScribeConfig;
 use tokio::runtime::Handle;
 use tokio::sync::Mutex;
 use tracing::Instrument;
@@ -149,9 +143,6 @@ pub struct DaemonStateData {
     pub(crate) materializer: Arc<dyn Materializer>,
 
     pub(crate) forkserver: ForkserverAccess,
-
-    #[allocative(skip)]
-    pub scribe_sink: Option<Arc<dyn EventSinkWithStats>>,
 
     /// Whether to consult the offline-cache buck-out dir for network action
     /// outputs prior to running them. If no cached output exists, the action
@@ -314,43 +305,6 @@ impl DaemonState {
             let root_config = &legacy_cells
                 .parse_single_cell(cells.root_cell(), &fs)
                 .await?;
-
-            let buffer_size = root_config
-                .parse(BuckconfigKeyRef {
-                    section: "buck2",
-                    property: "event_log_buffer_size",
-                })?
-                .unwrap_or(10000);
-            let retry_backoff = Duration::from_millis(
-                root_config
-                    .parse(BuckconfigKeyRef {
-                        section: "buck2",
-                        property: "event_log_retry_backoff_duration_ms",
-                    })?
-                    .unwrap_or(500),
-            );
-            let retry_attempts = root_config
-                .parse(BuckconfigKeyRef {
-                    section: "buck2",
-                    property: "event_log_retry_attempts",
-                })?
-                .unwrap_or(5);
-            let message_batch_size = root_config.parse(BuckconfigKeyRef {
-                section: "buck2",
-                property: "event_log_message_batch_size",
-            })?;
-            tracing::info!("Initializing scribe sink...");
-            let scribe_sink = Self::init_scribe_sink(
-                fb,
-                ScribeConfig {
-                    buffer_size,
-                    retry_backoff,
-                    retry_attempts,
-                    message_batch_size,
-                    thrift_timeout: Duration::from_secs(1),
-                },
-            )
-            .buck_error_context("failed to init scribe sink")?;
 
             let default_digest_algorithm =
                 buck2_env!("BUCK_DEFAULT_DIGEST_ALGORITHM", type=DigestAlgorithmFamily)?;
@@ -576,14 +530,7 @@ impl DaemonState {
                 paths.buck_out_path(),
                 init_ctx.daemon_startup_config.paranoid,
             ));
-            // Used only to dispatch events to scribe that are not associated with a specific command (ex. materializer clean up events)
-            let daemon_dispatcher = if let Some(sink) = scribe_sink.dupe() {
-                EventDispatcher::new(TraceId::null(), daemon_id.dupe(), sink.to_event_sync())
-            } else {
-                // If needed this could log to a sink that redirects to a daemon event log (maybe `~/.buck/buckd/repo-path/event-log`)
-                // but for now seems fine to drop events if scribe isn't enabled.
-                EventDispatcher::null()
-            };
+            let daemon_dispatcher = EventDispatcher::null();
             let materializer = Self::create_materializer(
                 io.project_root().dupe(),
                 digest_config,
@@ -733,7 +680,6 @@ impl DaemonState {
                 blocking_executor,
                 materializer,
                 forkserver,
-                scribe_sink,
                 use_network_action_output_cache,
                 disk_state_options,
                 start_time: std::time::Instant::now(),
@@ -789,34 +735,13 @@ impl DaemonState {
         }
     }
 
-    fn init_scribe_sink(
-        fb: FacebookInit,
-        config: ScribeConfig,
-    ) -> buck2_error::Result<Option<Arc<dyn EventSinkWithStats>>> {
-        facebook_only();
-        remote::new_remote_event_sink_if_enabled(fb, config)
-            .map(|maybe_scribe| maybe_scribe.map(|scribe| Arc::new(scribe) as _))
-    }
-
-    /// Prepares an event stream for a request by bootstrapping an event source and EventDispatcher pair. The given
-    /// EventDispatcher will log to the returned EventSource and (optionally) to Scribe if enabled via buckconfig.
+    /// Prepares an event stream for a request.
     pub async fn prepare_events(
         &self,
         trace_id: TraceId,
     ) -> buck2_error::Result<(ChannelEventSource, EventDispatcher)> {
-        // facebook only: logging events to Scribe.
-        facebook_only();
         let (events, sink) = buck2_events::create_source_sink_pair();
-        let data = self.data();
-        let dispatcher = if let Some(scribe_sink) = data.scribe_sink.dupe() {
-            EventDispatcher::new(
-                trace_id,
-                self.data.daemon_id.dupe(),
-                TeeSink::new(scribe_sink.to_event_sync(), sink),
-            )
-        } else {
-            EventDispatcher::new(trace_id, self.data.daemon_id.dupe(), sink)
-        };
+        let dispatcher = EventDispatcher::new(trace_id, self.data.daemon_id.dupe(), sink);
         Ok((events, dispatcher))
     }
 

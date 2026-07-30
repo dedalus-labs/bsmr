@@ -8,7 +8,6 @@
  * above-listed licenses.
  */
 
-pub(crate) mod build_graph_stats;
 pub(crate) mod build_id_writer;
 pub(crate) mod classify_server_stderr;
 pub(crate) mod console_output_limit;
@@ -19,7 +18,6 @@ pub(crate) mod health_check_subscriber;
 pub(crate) mod observer;
 #[cfg(target_os = "linux")]
 pub(crate) mod oom;
-pub mod re_log;
 pub mod recorder;
 pub(crate) mod simpleconsole;
 pub mod stdout_stderr_forwarder;

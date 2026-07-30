@@ -49,7 +49,6 @@ use buck2_client_ctx::version::BuckVersion;
 use buck2_cmd_audit_client::AuditCommand;
 use buck2_cmd_debug_client::DebugCommand;
 use buck2_cmd_log_client::LogCommand;
-use buck2_cmd_rage_client::rage::RageCommand;
 use buck2_cmd_starlark_client::StarlarkCommand;
 use buck2_common::argv::Argv;
 use buck2_common::invocation_paths_result::InvocationPathsResult;
@@ -75,7 +74,7 @@ use crate::process_context::ProcessContext;
 mod check_user_allowed;
 mod cli_style;
 pub(crate) mod commands;
-pub mod panic;
+pub mod error_reporting;
 pub mod process_context;
 
 fn parse_isolation_dir(s: &str) -> buck2_error::Result<FileNameBuf> {
@@ -387,8 +386,6 @@ pub(crate) enum CommandKind {
     Docs(buck2_cmd_docs_client::DocsCommand),
     #[clap(subcommand)]
     Profile(ProfileCommand),
-    #[clap(hide(true))] // @oss-enable
-    Rage(RageCommand),
     Clean(CleanCommand),
     #[clap(subcommand)]
     Log(LogCommand),
@@ -552,7 +549,6 @@ impl CommandKind {
             CommandKind::Completion(cmd) => cmd.exec(Opt::command(), matches, command_ctx),
             CommandKind::Docs(cmd) => cmd.exec(Opt::command(), matches, command_ctx, events_ctx),
             CommandKind::Profile(cmd) => cmd.exec(matches, command_ctx, events_ctx),
-            CommandKind::Rage(cmd) => cmd.exec(matches, command_ctx),
             CommandKind::Init(cmd) => cmd.exec(matches, command_ctx),
             CommandKind::Explain(cmd) => command_ctx.exec(cmd, matches, events_ctx),
             CommandKind::Install(cmd) => command_ctx.exec(cmd, matches, events_ctx),
@@ -596,7 +592,6 @@ impl CommandKind {
             CommandKind::Completion(_) => "completion",
             CommandKind::Docs(_) => "docs",
             CommandKind::Profile(_) => "profile",
-            CommandKind::Rage(_) => "rage",
             CommandKind::Init(_) => "init",
             CommandKind::Explain(cmd) => cmd.logging_name(),
             CommandKind::Install(cmd) => cmd.logging_name(),

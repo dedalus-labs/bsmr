@@ -43,5 +43,4 @@ pub mod subscribers;
 pub mod thread_dump;
 pub mod ticker;
 pub mod tokio_runtime_setup;
-pub mod upload_re_logs;
 pub mod version;

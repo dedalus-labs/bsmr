@@ -16,8 +16,8 @@ use std::path::PathBuf;
 use std::sync::Arc;
 use std::time::SystemTime;
 
+use buck2::error_reporting;
 use buck2::exec;
-use buck2::panic;
 use buck2::process_context::ClientRuntime;
 use buck2::process_context::ProcessContext;
 use buck2::process_context::SharedProcessContext;
@@ -76,16 +76,6 @@ fn init_logging() -> buck2_error::Result<Arc<dyn LogConfigurationReloadHandle>> 
         }
         _ => init_tracing_for_writer(io::stderr),
     }?;
-
-    #[cfg(fbcode_build)]
-    {
-        use buck2_event_log::should_upload_log;
-        use buck2_events::sink::remote;
-
-        if !should_upload_log()? {
-            remote::disable();
-        }
-    }
 
     Ok(handle)
 }
@@ -187,7 +177,7 @@ fn main() -> ! {
     buck2_certs::certs::setup_cryptography_or_fail();
 
     fn init_shared_context() -> buck2_error::Result<SharedProcessContext> {
-        panic::initialize()?;
+        error_reporting::initialize()?;
         check_cargo();
 
         // Log the start timestamp

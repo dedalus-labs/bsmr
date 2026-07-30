@@ -45,7 +45,6 @@ use buck2_error::classify::ErrorLike;
 use buck2_error::classify::source_area;
 use buck2_error::internal_error;
 use buck2_error::source_location::SourceLocation;
-use buck2_event_log::ttl::manifold_event_log_ttl;
 use buck2_event_observer::action_stats;
 use buck2_event_observer::cache_hit_rate::total_cache_hit_rate;
 use buck2_event_observer::last_command_execution_kind;
@@ -53,8 +52,6 @@ use buck2_event_observer::last_command_execution_kind::LastCommandExecutionKind;
 use buck2_event_observer::last_command_execution_kind::get_last_command_execution_time;
 use buck2_events::BuckEvent;
 use buck2_events::daemon_id::DaemonId;
-use buck2_events::sink::remote::ScribeConfig;
-use buck2_events::sink::remote::new_remote_event_sink_if_enabled;
 use buck2_fs::error::IoResultExt;
 use buck2_fs::fs_util;
 use buck2_fs::paths::abs_path::AbsPathBuf;
@@ -1158,7 +1155,7 @@ impl InvocationRecorder {
             install_device_metadata: self.install_device_metadata.drain(..).collect(),
             installer_log_url: self.installer_log_url.take(),
             peak_process_memory_bytes: self.peak_process_memory_bytes.take(),
-            event_log_manifold_ttl_s: manifold_event_log_ttl().ok().map(|t| t.as_secs()),
+            event_log_manifold_ttl_s: None,
             total_disk_space_bytes: self.system_info.total_disk_space_bytes.take(),
             peak_used_disk_space_bytes: self.peak_used_disk_space_bytes.take(),
             peak_normalized_system_load1: self.peak_normalized_system_load1.take(),
@@ -1304,12 +1301,10 @@ impl InvocationRecorder {
     fn default_metadata() -> buck2_data::TypedMetadata {
         let mut ints = StdBuckHashMap::default();
         ints.insert("is_tty".to_owned(), std::io::stderr().is_tty() as i64);
-        let mut strings = StdBuckHashMap::default();
-        #[cfg(all(fbcode_build, target_os = "linux"))]
-        if let Some(agent_identity) = identity_env::agent_identity_from_env() {
-            strings.insert("client_agent_identity_from_env".to_owned(), agent_identity);
+        buck2_data::TypedMetadata {
+            ints,
+            strings: StdBuckHashMap::default(),
         }
-        buck2_data::TypedMetadata { ints, strings }
     }
 
     fn handle_command_start(
@@ -2569,26 +2564,10 @@ impl EventSubscriber for InvocationRecorder {
     }
 
     async fn finalize(mut self: Box<Self>) -> buck2_error::Result<()> {
-        // Can't set this before the daemon forks.
-        // Typically initialized already unless the command failed early.
-        let fb = buck2_common::fbinit::get_or_init_fbcode_globals();
-        let event = self.create_record_event();
-        if let Some(scribe_sink) = new_remote_event_sink_if_enabled(
-            fb,
-            ScribeConfig {
-                buffer_size: 1,
-                retry_backoff: Duration::from_millis(500),
-                retry_attempts: 5,
-                message_batch_size: None,
-                thrift_timeout: Duration::from_secs(2),
-            },
-        )? {
-            tracing::info!("Recording invocation to Scribe: {:?}", &event);
-            scribe_sink.send_now(event).await
-        } else {
-            tracing::info!("Invocation record is not sent to Scribe: {:?}", &event);
-            Err(internal_error!("Scribe sink not enabled"))
+        if self.write_to_path.is_some() {
+            self.create_record_event();
         }
+        Ok(())
     }
 
     fn as_error_observer(&self) -> Option<&dyn ErrorObserver> {

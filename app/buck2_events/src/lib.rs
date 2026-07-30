@@ -199,55 +199,6 @@ pub enum Event {
     Buck(BuckEvent),
 }
 
-/// Statistics from this event sink on how messages were processed.
-#[derive(Clone, Debug)]
-pub struct EventSinkStats {
-    /// Count of number of successful messages (e.g. those that have been processed by their downstream destination).
-    pub successes: u64,
-    // Count of messages that failed to be submitted and will not be retried.
-    pub failures_invalid_request: u64,
-    pub failures_unauthorized: u64,
-    pub failures_rate_limited: u64,
-    pub failures_pushed_back: u64,
-    pub failures_enqueue_failed: u64,
-    pub failures_internal_error: u64,
-    pub failures_timed_out: u64,
-    pub failures_unknown: u64,
-    /// How many messages are currently buffered by this sink.
-    pub buffered: u64,
-    /// How many messages were not even enqueued by this sink.
-    pub dropped: u64,
-    /// How many bytes were written into this sink.
-    pub bytes_written: u64,
-}
-
-impl EventSinkStats {
-    pub fn failures(&self) -> u64 {
-        let EventSinkStats {
-            successes: _,
-            failures_invalid_request,
-            failures_unauthorized,
-            failures_rate_limited,
-            failures_pushed_back,
-            failures_enqueue_failed,
-            failures_internal_error,
-            failures_timed_out,
-            failures_unknown,
-            buffered: _,
-            dropped: _,
-            bytes_written: _,
-        } = self;
-        *failures_invalid_request
-            + *failures_unauthorized
-            + *failures_rate_limited
-            + *failures_pushed_back
-            + *failures_enqueue_failed
-            + *failures_internal_error
-            + *failures_timed_out
-            + *failures_unknown
-    }
-}
-
 /// A sink for events, easily plumbable to the guts of systems that intend to produce events consumeable by
 /// higher-level clients. Sending an event is synchronous.
 #[async_trait]
@@ -257,21 +208,10 @@ pub trait EventSink: Send + Sync {
     /// recovery; callers of EventSink are not expected to handle failures.
     fn send(&self, event: Event);
 
-    /// Like `send`, but bypasses any internal buffering and delivers the event
-    /// as directly as possible. For the scribe sink this means calling thrift
-    /// synchronously instead of going through the producer queue. This is
-    /// useful for high-priority events that must be delivered even under memory
-    /// pressure. The default implementation falls back to `send`.
+    /// Sends a high-priority event immediately.
     async fn send_now(&self, event: Event) {
         self.send(event);
     }
-}
-
-pub trait EventSinkWithStats: Send + Sync {
-    fn to_event_sync(self: Arc<Self>) -> Arc<dyn EventSink>;
-
-    /// Collects stats on this sink (e.g. messages accepted, rejected).
-    fn stats(&self) -> EventSinkStats;
 }
 
 #[async_trait]

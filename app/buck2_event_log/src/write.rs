@@ -9,7 +9,6 @@
  */
 
 use std::mem;
-use std::process::Stdio;
 use std::sync::Arc;
 use std::sync::atomic::AtomicU64;
 use std::time::SystemTime;
@@ -28,18 +27,14 @@ use prost::Message;
 use serde::Serialize;
 use tokio::fs::OpenOptions;
 
-use crate::FutureChildOutput;
 use crate::file_names::get_logfile_name;
 use crate::file_names::remove_old_logs;
 use crate::read::EventLogPathBuf;
-use crate::should_block_on_log_upload;
-use crate::should_upload_log;
 use crate::stream_value::StreamValue;
 use crate::user_event_types::try_get_user_event;
 use crate::utils::Encoding;
 use crate::utils::EventLogErrors;
 use crate::utils::Invocation;
-use crate::wait_for_child_and_log;
 use crate::writer::EventLogType;
 use crate::writer::NamedEventLogWriter;
 use crate::writer::SerializeForLog;
@@ -178,10 +173,10 @@ impl WriteEventLog {
             path: logdir.as_abs_path().join(file_name),
             encoding,
         };
-        let writer = start_persist_event_log_subprocess(
+        let writer = open_event_log_for_writing(
             path,
-            event.trace_id()?.clone(),
             self.log_size_counter_bytes.clone(),
+            EventLogType::System,
         )
         .await?;
         let mut writers = vec![writer];
@@ -239,74 +234,8 @@ impl WriteEventLog {
             for writer in writers.iter_mut() {
                 writer.shutdown().await
             }
-
-            // NOTE: We call `into_iter()` here and that implicitly drops the `writer.file`, which
-            // is necessary for an actual `close` call to be send to the child FD (it is a bit of
-            // an odd behavior in Tokio that `shutdown` doesn't do that).
-            let futs = writers
-                .into_iter()
-                .filter_map(|w| w.child())
-                .map(|proc| wait_for_child_and_log(proc, "Event Log"));
-
-            futures::future::join_all(futs).await;
         }
     }
-}
-
-async fn start_persist_event_log_subprocess(
-    path: EventLogPathBuf,
-    trace_id: TraceId,
-    bytes_written: Option<Arc<AtomicU64>>,
-) -> buck2_error::Result<NamedEventLogWriter> {
-    let current_exe = std::env::current_exe().buck_error_context("No current_exe")?;
-    let mut command = buck2_util::process::async_background_command(current_exe);
-    // @oss-disable: #[cfg(unix)]
-    #[cfg(all(tokio_unstable, unix))] // @oss-enable
-    {
-        // Ensure that if we get CTRL-C, the persist-event-logs process does not get it.
-        command.process_group(0);
-    }
-    let manifold_name = &format!("{}{}", trace_id, path.extension());
-    // TODO T184566736: detach subprocess
-    command
-        .args(["debug", "persist-event-logs"])
-        .args(["--manifold-name", manifold_name])
-        .args(["--local-path".as_ref(), path.path.as_os_str()])
-        .args(["--trace-id", &trace_id.to_string()]);
-    if !should_upload_log()? {
-        command.arg("--no-upload");
-    };
-    command.stdout(Stdio::null()).stdin(Stdio::piped());
-
-    let block = should_block_on_log_upload()?;
-    if block {
-        command.stderr(Stdio::piped());
-    } else {
-        command.stderr(Stdio::null());
-    }
-
-    let mut child = command.spawn().with_buck_error_context(|| {
-        format!(
-            "Failed to open event log subprocess for writing at `{}`",
-            path.path.display()
-        )
-    })?;
-    let pipe = child.stdin.take().expect("stdin was piped");
-
-    // Only spawn this if we are going to wait.
-    let process_to_wait_for = if block {
-        Some(FutureChildOutput::new(child))
-    } else {
-        None
-    };
-
-    Ok(NamedEventLogWriter::new(
-        path,
-        pipe,
-        bytes_written,
-        EventLogType::System,
-        process_to_wait_for,
-    ))
 }
 
 async fn open_event_log_for_writing(
@@ -331,7 +260,6 @@ async fn open_event_log_for_writing(
         file,
         bytes_written,
         event_log_type,
-        None,
     ))
 }
 
@@ -490,7 +418,7 @@ where
             )
         })?;
 
-    let mut writer = NamedEventLogWriter::new(output_log, file, None, EventLogType::System, None);
+    let mut writer = NamedEventLogWriter::new(output_log, file, None, EventLogType::System);
 
     let mut buf = Vec::new();
     writer.write_events(&mut buf, &[&invocation]).await?;
