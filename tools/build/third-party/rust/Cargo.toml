@@ -107,7 +107,6 @@ hyper = { version = "1.9.0", features = ["client", "http1", "http2"] }
 hyper-0-14 = { package = "hyper", version = "0.14.32", features = ["client", "http1", "http2", "stream"] }
 hyper-http-proxy = "1.0"
 hyperlocal = { version = "0.9", features = ["client"] }
-hyper-proxy2 = { version = "0.1", features = ["rustls"], default-features = false }
 hyper-rustls = { version = "0.27.7", default-features = false, features = ["http1", "http2", "logging", "native-tokio", "ring", "tls12"] }
 hyper-timeout = "0.5.2"
 hyper-util = { version = "0.1.20", features = ["client-legacy", "http1", "http2", "server-auto", "service", "tokio"] }
@@ -117,7 +116,7 @@ indenter = "0.3.4"
 index_vec = "0.1.4"
 indexmap = { version = "2.13.0", features = ["arbitrary", "rayon", "serde"] }
 indoc = "2.0.2"
-inferno = { version = "0.11.21", default-features = false }
+inferno = { version = "0.12.8", default-features = false }
 internment = { version = "0.8.6", features = ["arc", "serde"] }
 inventory = "0.3.24"
 ipnetwork = "0.20.0"
@@ -171,7 +170,7 @@ prost-build = { version = "0.14.3", features = ["cleanup-markdown"] }
 protoc-bin-vendored = "3.0.0"
 psutil = "3.3.0"
 ptyprocess = "0.4.1"
-quick-xml = { version = "0.37", features = ["overlapped-lists", "serialize"] }
+quick-xml = { version = "0.41", features = ["overlapped-lists", "serialize"] }
 quickcheck = "1.1"
 quote = "1.0.45"
 rand = "0.10"
@@ -186,7 +185,6 @@ rusqlite = { version = "0.37.0", features = ["backup", "blob", "bundled", "colum
 rustc-hash = "2.1.2"
 rustls = { version = "0.23.37", features = ["logging", "ring", "std", "tls12"], default-features = false }
 rustls-native-certs = "0.8.3"
-rustls-pemfile = "2.2.0"
 rustls-pki-types = { version = "1.14.0", features = ["alloc", "std"] }
 rustyline = { version = "18.0.0", features = ["derive"] }
 scopeguard = "1.2.0"
@@ -205,7 +203,6 @@ smallvec = { version = "1.15", features = ["impl_bincode", "serde", "specializat
 sorted_vector_map = "0.2.1"
 static_assertions = "1.1.0"
 strsim = "0.11.1"
-structopt = "0.3.26"
 strum = { version = "0.27.1", features = ["derive"] }
 syn = { version = "2.0.117", features = ["extra-traits", "fold", "full", "visit", "visit-mut"] }
 syn1 = { package = "syn", version = "1.0.109", features = ["extra-traits", "fold", "full", "visit", "visit-mut"] }

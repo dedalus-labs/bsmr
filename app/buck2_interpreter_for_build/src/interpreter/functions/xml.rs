@@ -9,6 +9,8 @@
  */
 
 use quick_xml::Reader;
+use quick_xml::XmlVersion;
+use quick_xml::escape::unescape;
 use quick_xml::events::BytesStart;
 use quick_xml::events::Event;
 use starlark::environment::GlobalsBuilder;
@@ -70,7 +72,7 @@ fn parse_attrs(
             let key = String::from_utf8(a.key.as_ref().to_vec())
                 .map_err(|_| XmlDecodeError::Utf8Error)?;
             let val = a
-                .decode_and_unescape_value(reader.decoder())
+                .decoded_and_normalized_value(XmlVersion::Implicit1_0, reader.decoder())
                 .map_err(|e| XmlDecodeError::XmlError(e.to_string()))?
                 .into_owned();
             Ok((key, val))
@@ -78,19 +80,33 @@ fn parse_attrs(
         .collect()
 }
 
+fn flush_text(stack: &mut [XmlElement], pending: &mut String) -> Result<(), XmlDecodeError> {
+    if let Some(current) = stack.last_mut() {
+        let raw = pending.trim_matches([' ', '\t', '\n', '\r']);
+        let text = unescape(raw).map_err(|e| XmlDecodeError::XmlError(e.to_string()))?;
+        current.text.push_str(&text);
+    }
+    pending.clear();
+    Ok(())
+}
+
 /// Parse an XML string into a tree of `XmlElement`s using quick-xml's streaming reader.
 fn parse_xml(input: &str) -> Result<XmlElement, XmlDecodeError> {
     let mut reader = Reader::from_str(input);
-    reader.config_mut().trim_text(true);
 
     let mut stack: Vec<XmlElement> = Vec::new();
     let mut root: Option<XmlElement> = None;
+    let mut pending_text = String::new();
 
     loop {
-        match reader
+        let event = reader
             .read_event()
-            .map_err(|e| XmlDecodeError::XmlError(e.to_string()))?
-        {
+            .map_err(|e| XmlDecodeError::XmlError(e.to_string()))?;
+        if !matches!(&event, Event::Text(_) | Event::GeneralRef(_)) {
+            flush_text(&mut stack, &mut pending_text)?;
+        }
+
+        match event {
             Event::Start(e) => {
                 let tag = String::from_utf8(e.name().as_ref().to_vec())
                     .map_err(|_| XmlDecodeError::Utf8Error)?;
@@ -128,12 +144,18 @@ fn parse_xml(input: &str) -> Result<XmlElement, XmlDecodeError> {
             }
             Event::Text(e) => {
                 let text = e
-                    .unescape()
+                    .decode()
                     .map_err(|e| XmlDecodeError::XmlError(e.to_string()))?
                     .into_owned();
-                if let Some(current) = stack.last_mut() {
-                    current.text.push_str(&text);
-                }
+                pending_text.push_str(&text);
+            }
+            Event::GeneralRef(e) => {
+                let reference = e
+                    .decode()
+                    .map_err(|e| XmlDecodeError::XmlError(e.to_string()))?;
+                pending_text.push('&');
+                pending_text.push_str(&reference);
+                pending_text.push(';');
             }
             Event::CData(e) => {
                 let text = String::from_utf8(e.into_inner().to_vec())
@@ -211,6 +233,18 @@ mod tests {
         assert_with_xml().eq(
             "__internal__.xml.decode('<msg>hello world</msg>')[\"text\"]",
             "'hello world'",
+        );
+    }
+
+    #[test]
+    fn test_xml_decode_entities() {
+        assert_with_xml().eq(
+            "__internal__.xml.decode('<msg label=\"a &amp; b\"/>')[\"attrs\"][\"label\"]",
+            "'a & b'",
+        );
+        assert_with_xml().eq(
+            "__internal__.xml.decode('<msg>a &lt; b</msg>')[\"text\"]",
+            "'a < b'",
         );
     }
 
