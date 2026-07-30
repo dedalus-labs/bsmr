@@ -64,10 +64,13 @@ export const ci = workflow({
 					name: "Set up Node",
 					uses: "actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38",
 					with: {
-						"node-version": "24.18.0",
+						"node-version": "26.5.1",
 					},
 				},
-				{ name: "Enable pnpm", run: "corepack enable" },
+				{
+					name: "Set up pnpm",
+					uses: "pnpm/action-setup@0e279bb959325dab635dd2c09392533439d90093",
+				},
 				{
 					name: "Install dependencies",
 					run: "pnpm install --frozen-lockfile --ignore-scripts",
