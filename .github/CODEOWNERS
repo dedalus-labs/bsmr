@@ -1,10 +1,5 @@
+# Add ownership only when Dedalus maintains the entire directory.
 /.github/ @windsornguyen
 /ci/ @windsornguyen
-/Cargo.lock @windsornguyen
-/Cargo.toml @windsornguyen
-/package.json @windsornguyen
-/pnpm-lock.yaml @windsornguyen
-/rust-toolchain @windsornguyen
-/SECURITY.md @windsornguyen
-/tools/build/third-party/rust/Cargo.lock @windsornguyen
-/tools/build/third-party/rust/Cargo.toml @windsornguyen
+/app/bsmr/ @windsornguyen
+/bsmr_build/ @windsornguyen
