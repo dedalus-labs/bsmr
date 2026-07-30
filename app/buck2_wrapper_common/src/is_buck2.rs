@@ -28,6 +28,10 @@ pub(crate) fn is_buck2_exe(path: &Path, who_is_asking: WhoIsAsking) -> bool {
     };
     // On linux when the running executable is deleted or unlinked the string ' (deleted)' is appended to symlinked file in /proc/<pid>/exe
     if [
+        OsStr::new("bsmr"),
+        OsStr::new("bsmr (deleted)"),
+        OsStr::new("bsmr-daemon"),
+        OsStr::new("bsmr-daemon (deleted)"),
         OsStr::new("buck2"),
         OsStr::new("buck2 (deleted)"),
         OsStr::new("buck2-daemon"),
@@ -67,14 +71,14 @@ mod tests {
 
     #[test]
     fn test_is_buck2_exe() {
-        let (fake_buck, other_path) = if cfg!(windows) {
-            ("C:\\dir\\buck2.exe", "C:\\dir\\other.exe")
+        let (fake_bsmr, other_path) = if cfg!(windows) {
+            ("C:\\dir\\bsmr.exe", "C:\\dir\\other.exe")
         } else {
-            ("/dir/buck2", "/dir/other")
+            ("/dir/bsmr", "/dir/other")
         };
 
-        assert!(is_buck2_exe(Path::new(fake_buck), WhoIsAsking::Buck2));
-        assert!(is_buck2_exe(Path::new(fake_buck), WhoIsAsking::BuckWrapper));
+        assert!(is_buck2_exe(Path::new(fake_bsmr), WhoIsAsking::Buck2));
+        assert!(is_buck2_exe(Path::new(fake_bsmr), WhoIsAsking::BuckWrapper));
 
         let current_exe = env::current_exe().unwrap();
 

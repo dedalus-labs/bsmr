@@ -1,6 +1,6 @@
 [cells]
 char = .
-char_build = tools/build
+bsmr_build = tools/build
 
 [cell_aliases]
 root = char

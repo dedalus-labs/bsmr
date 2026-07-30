@@ -7,7 +7,7 @@
 # above-listed licenses.
 
 load("@fbcode//buck2/app:modifier.bzl", "buck2_modifiers")
-load("@char_build//rules:native_rules.bzl", "buck_filegroup")
+load("@bsmr_build//rules:native_rules.bzl", "buck_filegroup")
 load("@fbcode_macros//build_defs:python_pytest.bzl", "python_pytest")
 
 def buck_e2e_test(

@@ -34,5 +34,5 @@ prebuilt_cxx_library = "third_party_rust_prebuilt_cxx_library"
 buckfile_imports = """
 load("@prelude//rust:cargo_buildscript.bzl", "buildscript_run")
 load("@prelude//rust:cargo_package.bzl", "cargo")
-load("@char_build//third-party/macros:rust_third_party.bzl", "third_party_rust_prebuilt_cxx_library")
+load("@bsmr_build//third-party/macros:rust_third_party.bzl", "third_party_rust_prebuilt_cxx_library")
 """

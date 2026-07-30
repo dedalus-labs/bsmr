@@ -1,5 +1,5 @@
-load("@char_build//rules:rust.bzl", "proto_srcs", "rust_protobuf_library")
-load("@char_build//rules:export_files.bzl", "export_file")
+load("@bsmr_build//rules:rust.bzl", "proto_srcs", "rust_protobuf_library")
+load("@bsmr_build//rules:export_files.bzl", "export_file")
 
 oncall("build_infra")
 

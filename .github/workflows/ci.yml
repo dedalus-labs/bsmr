@@ -55,7 +55,7 @@ jobs:
         run: pnpm run ci:check
   rust:
     name: Rust
-    runs-on: blacksmith-16vcpu-ubuntu-2404
+    runs-on: ubuntu-24.04
     timeout-minutes: 60
     permissions:
       contents: read
@@ -71,7 +71,7 @@ jobs:
       - name: Restore Rust cache
         uses: Swatinem/rust-cache@e18b497796c12c097a38f9edb9d0641fb99eee32
         with:
-          prefix-key: char-v1
+          prefix-key: bsmr-v1
           save-if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
       - name: Install pinned OSV Scanner
         run: |-
@@ -82,8 +82,8 @@ jobs:
         run: |-
           "$RUNNER_TEMP/osv-scanner" scan source --lockfile Cargo.lock --lockfile tools/build/third-party/rust/Cargo.lock --no-resolve --format json --output-file "$RUNNER_TEMP/osv.json" . || [ "$?" -eq 1 ]
           jq -e '[.results[].packages[].vulnerabilities[] | select(any(.affected[]; .database_specific.informational? != "unmaintained"))] as $v | if ($v | length) == 0 then true else ($v | map({id, summary})), false end' "$RUNNER_TEMP/osv.json"
-      - name: Build Char
-        run: cargo build --locked --bin buck2
+      - name: Build Bessemer
+        run: cargo build --locked --bin bsmr
       - name: Install pinned DotSlash
         run: |-
           curl --proto '=https' --tlsv1.2 --fail --location --silent --show-error https://github.com/facebook/dotslash/releases/download/v0.5.9/dotslash-linux-musl.x86_64.v0.5.9.tar.gz --output "$RUNNER_TEMP/dotslash.tar.gz"
@@ -93,8 +93,8 @@ jobs:
       - name: Generate Rust build dependencies
         run: ./tools/bin/reindeer --third-party-dir tools/build/third-party/rust buckify
       - name: Run upstream Rust checks
-        run: python3 test.py --ci --git --buck2=target/debug/buck2
+        run: python3 test.py --ci --git --buck2=target/debug/bsmr
       - name: Validate self-host graph
         run: |-
-          target/debug/buck2 --isolation-dir=ci uquery 'deps(//app/...)'
-          target/debug/buck2 --isolation-dir=ci targets 'char_build//...'
+          target/debug/bsmr --isolation-dir=ci uquery 'deps(//app/...)'
+          target/debug/bsmr --isolation-dir=ci targets 'bsmr_build//...'

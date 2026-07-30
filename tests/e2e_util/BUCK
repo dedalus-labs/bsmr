@@ -1,5 +1,5 @@
-load("@char_build//rules:export_files.bzl", "export_file")
-load("@char_build//rules:python_library.bzl", "python_library")
+load("@bsmr_build//rules:export_files.bzl", "export_file")
+load("@bsmr_build//rules:python_library.bzl", "python_library")
 
 oncall("build_infra")
 

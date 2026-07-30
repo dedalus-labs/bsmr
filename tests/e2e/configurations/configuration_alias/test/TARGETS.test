@@ -1,4 +1,4 @@
-load("@char_build//rules:fb_native_wrapper.bzl", "fb_native")
+load("@bsmr_build//rules:fb_native_wrapper.bzl", "fb_native")
 
 oncall("build_infra")
 

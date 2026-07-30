@@ -7,7 +7,7 @@
 # above-listed licenses.
 
 load("@prelude//rust:linkable_symbol.bzl", prelude_rust_linkable_symbol = "rust_linkable_symbol")
-load("@char_build//rules:rust.bzl", _rust_library = "rust_library")
+load("@bsmr_build//rules:rust.bzl", _rust_library = "rust_library")
 
 def rust_linkable_symbol(visibility = ["PUBLIC"], **kwargs):
     prelude_rust_linkable_symbol(visibility = visibility, rust_library_macro = _rust_library, **kwargs)

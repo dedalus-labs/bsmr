@@ -1,4 +1,4 @@
-load("@char_build//rules:native_rules.bzl", "alias")
+load("@bsmr_build//rules:native_rules.bzl", "alias")
 load(":defs.bzl", "buck2_bundle", "pagable_transition_alias")
 
 oncall("build_infra")

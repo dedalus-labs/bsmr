@@ -134,7 +134,7 @@ using a `BUCK` file.
 <FbInternalOnly>
 
 ```python
-load("@char_build//rules:rust.bzl", "rust_binary")
+load("@bsmr_build//rules:rust.bzl", "rust_binary")
 
 rust_binary(
     name = "main",

@@ -1,5 +1,5 @@
-load("@char_build//rules:rust.bzl", "rust_library")
-load("@char_build//rules:rust_linkable_symbol.bzl", "rust_linkable_symbol")
+load("@bsmr_build//rules:rust.bzl", "rust_library")
+load("@bsmr_build//rules:rust_linkable_symbol.bzl", "rust_linkable_symbol")
 
 oncall("build_infra")
 

@@ -1,4 +1,4 @@
-# @oss-disable[end= ]: load("@char_build//rules:rust.bzl", "rust_library")
+# @oss-disable[end= ]: load("@bsmr_build//rules:rust.bzl", "rust_library")
 
 oncall("build_infra")
 

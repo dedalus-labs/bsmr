@@ -1,6 +1,6 @@
-load("@char_build//rules:rust.bzl", buck_rust_binary = "rust_binary")
-# @oss-disable[end= ]: load("@char_build//rules:platform_utils.bzl", "platform_utils")
-load("@char_build//rules:rust.bzl", "rust_library")
+load("@bsmr_build//rules:rust.bzl", buck_rust_binary = "rust_binary")
+# @oss-disable[end= ]: load("@bsmr_build//rules:platform_utils.bzl", "platform_utils")
+load("@bsmr_build//rules:rust.bzl", "rust_library")
 load(":transition.bzl", "buck2_client_transition_alias")
 
 oncall("build_infra")

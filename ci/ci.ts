@@ -77,7 +77,7 @@ export const ci = workflow({
 		}),
 		rust: job({
 			name: "Rust",
-			"runs-on": "blacksmith-16vcpu-ubuntu-2404",
+			"runs-on": "ubuntu-24.04",
 			"timeout-minutes": 60,
 			permissions: { contents: "read" },
 			env: {
@@ -97,7 +97,7 @@ export const ci = workflow({
 					name: "Restore Rust cache",
 					uses: "Swatinem/rust-cache@e18b497796c12c097a38f9edb9d0641fb99eee32",
 					with: {
-						"prefix-key": "char-v1",
+						"prefix-key": "bsmr-v1",
 						"save-if": saveRustCache,
 					},
 				},
@@ -117,8 +117,8 @@ export const ci = workflow({
 					].join("\n"),
 				},
 				{
-					name: "Build Char",
-					run: "cargo build --locked --bin buck2",
+					name: "Build Bessemer",
+					run: "cargo build --locked --bin bsmr",
 				},
 				{
 					name: "Install pinned DotSlash",
@@ -135,11 +135,11 @@ export const ci = workflow({
 				},
 				{
 					name: "Run upstream Rust checks",
-					run: "python3 test.py --ci --git --buck2=target/debug/buck2",
+					run: "python3 test.py --ci --git --buck2=target/debug/bsmr",
 				},
 				{
 					name: "Validate self-host graph",
-					run: "target/debug/buck2 --isolation-dir=ci uquery 'deps(//app/...)'\ntarget/debug/buck2 --isolation-dir=ci targets 'char_build//...'",
+					run: "target/debug/bsmr --isolation-dir=ci uquery 'deps(//app/...)'\ntarget/debug/bsmr --isolation-dir=ci targets 'bsmr_build//...'",
 				},
 			],
 		}),

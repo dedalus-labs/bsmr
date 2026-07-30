@@ -1,5 +1,5 @@
-load("@char_build//rules:native_rules.bzl", "alias", "buck_filegroup")
-load("@char_build//rules:rust.bzl", "rust_library")
+load("@bsmr_build//rules:native_rules.bzl", "alias", "buck_filegroup")
+load("@bsmr_build//rules:rust.bzl", "rust_library")
 
 oncall("build_infra")
 

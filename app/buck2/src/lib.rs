@@ -161,16 +161,16 @@ struct BeforeSubcommandOptions {
 #[rustfmt::skip] // Formatting in internal and in OSS versions disagree after oss markers applied.
 fn help() -> &'static str {
     concat!(
-        "A build system\n",
+        "Bessemer build system\n",
         "\n",
-        "Documentation: https://buck2.build/docs/\n", // @oss-enable
+        "Documentation: https://github.com/dedalus-labs/bsmr\n", // @oss-enable
         // @oss-disable: "Documentation: https://internalfb.com/intern/staticdocs/buck2/docs/\n",
     )
 }
 
 #[derive(Debug, clap::Parser)]
 #[clap(
-    name = "buck2",
+    name = "bsmr",
     about(Some(help())),
     version(BuckVersion::get_version_for_clap()),
     styles = cli_style::get_styles(),

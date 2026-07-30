@@ -13,7 +13,7 @@ For a list of the API functions available, see the
 
 :::note
 
-Rules such as `@char_build//rules:native_rules.bzl buck_genrule` are not
+Rules such as `@bsmr_build//rules:native_rules.bzl buck_genrule` are not
 actually rules, they are _macros_ (Starlark functions that eventually call out
 the underlying `genrule` _rule_). Macros in Buck2 are mostly compatible with
 Buck1 and should be written in the same way.

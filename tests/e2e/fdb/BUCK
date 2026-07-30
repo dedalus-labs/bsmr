@@ -1,5 +1,5 @@
 load("@fbcode//buck2/tests:buck_e2e.bzl", "buck2_e2e_test")
-load("@char_build//rules:python_library.bzl", "python_library")
+load("@bsmr_build//rules:python_library.bzl", "python_library")
 
 oncall("tae")
 

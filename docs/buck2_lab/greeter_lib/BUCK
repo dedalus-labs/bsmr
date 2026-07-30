@@ -1,7 +1,7 @@
 # @nolint 
 
-# @oss-disable[end= ]: load("@char_build//rules:rust.bzl", "rust_library")
-# @oss-disable[end= ]: load("@char_build//rules:rust.bzl", "rust_unittest")
+# @oss-disable[end= ]: load("@bsmr_build//rules:rust.bzl", "rust_library")
+# @oss-disable[end= ]: load("@bsmr_build//rules:rust.bzl", "rust_unittest")
 
 
 oncall("build_infra")

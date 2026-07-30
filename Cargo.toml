@@ -168,7 +168,7 @@ resolver = "2"
 version = "0.1.0"
 edition = "2024"
 license = "MIT OR Apache-2.0"
-repository = "https://github.com/facebook/buck2"
+repository = "https://github.com/dedalus-labs/bsmr"
 
 [workspace.dependencies]
 allocative = { path = "packages/rust/allocative/allocative", features = ["anyhow", "bumpalo", "chrono", "compact_str", "dashmap", "either", "futures", "hashbrown", "indexmap", "num-bigint", "once_cell", "parking_lot", "prost-types", "serde_json", "slab", "smallvec", "sorted_vector_map", "tokio", "triomphe"] }

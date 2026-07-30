@@ -48,7 +48,7 @@ ACTIVE_CELL = native.get_cell_name()
 ROOT_CELL = read_config("cell_aliases", "root", "root")
 
 # The cell containing this build-support layer.
-BUILD_CELL = read_config("oss", "build_cell", "char_build")
+BUILD_CELL = read_config("oss", "build_cell", "bsmr_build")
 
 # The internal cell this project originally belonged to.
 #

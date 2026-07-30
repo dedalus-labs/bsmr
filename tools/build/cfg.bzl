@@ -10,8 +10,8 @@ load("@prelude//cfg/modifier:cfg_constructor.bzl", "cfg_constructor_post_constra
 load("@prelude//cfg/modifier:common.bzl", "MODIFIER_METADATA_KEY")
 
 BUILD_ALIASES = {
-    "fedora": "char_build//os/linux/distro/constraints:fedora",
-    "ubuntu": "char_build//os/linux/distro/constraints:ubuntu",
+    "fedora": "bsmr_build//os/linux/distro/constraints:fedora",
+    "ubuntu": "bsmr_build//os/linux/distro/constraints:ubuntu",
 }
 
 def set_cfg_constructor(aliases = dict()):
@@ -32,9 +32,9 @@ def get_build_modifiers():
     linux_distro = read_config("linux", "distro")
 
     if linux_distro:
-        modifiers.append("char_build//os/linux/distro/constraints:{}".format(linux_distro))
+        modifiers.append("bsmr_build//os/linux/distro/constraints:{}".format(linux_distro))
 
     known_broken = read_config("oss", "known_broken", "disable")
-    modifiers.append("char_build//opensource/macros/broken_in_oss/constraints:{}".format(known_broken))
+    modifiers.append("bsmr_build//opensource/macros/broken_in_oss/constraints:{}".format(known_broken))
 
     return modifiers

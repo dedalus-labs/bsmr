@@ -1,4 +1,4 @@
-load("@char_build//rules:native_rules.bzl", "buck_filegroup")
+load("@bsmr_build//rules:native_rules.bzl", "buck_filegroup")
 
 oncall("build_infra")
 

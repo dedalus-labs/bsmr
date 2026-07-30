@@ -1,5 +1,5 @@
-load("@char_build//rules:native_rules.bzl", "alias")
-load("@char_build//rules:rust.bzl", "rust_library")
+load("@bsmr_build//rules:native_rules.bzl", "alias")
+load("@bsmr_build//rules:rust.bzl", "rust_library")
 
 oncall("rust_foundation")
 

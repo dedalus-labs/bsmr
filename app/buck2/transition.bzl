@@ -6,7 +6,7 @@
 # of this source tree. You may select, at your option, one of the
 # above-listed licenses.
 
-load("@char_build//rules:targets.bzl", "translate_target")
+load("@bsmr_build//rules:targets.bzl", "translate_target")
 
 def _transition_impl(platform: PlatformInfo, refs: struct) -> PlatformInfo:
     val = refs.val[ConstraintValueInfo]

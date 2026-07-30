@@ -164,7 +164,7 @@ fn test_render() {
         name: String::from("a-rust-library"),
     };
 
-    let expected = r#"load("@char_build//rules:rust.bzl", "rust_library")
+    let expected = r#"load("@bsmr_build//rules:rust.bzl", "rust_library")
 
 rust_library(
     name = "a-rust-library",
@@ -179,7 +179,7 @@ rust_library(
         name: String::from("a-rust-binary"),
     };
 
-    let expected = r#"load("@char_build//rules:rust.bzl", "rust_binary")
+    let expected = r#"load("@bsmr_build//rules:rust.bzl", "rust_binary")
 
 rust_binary(
     name = "a-rust-binary",

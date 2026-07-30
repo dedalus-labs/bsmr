@@ -7,7 +7,7 @@
 # above-listed licenses.
 
 load("@fbcode//buck2/tests:buck_e2e.bzl", "buck2_e2e_test")
-load("@char_build//rules:native_rules.bzl", "buck_genrule")
+load("@bsmr_build//rules:native_rules.bzl", "buck_genrule")
 load("@fbsource//tools/build_defs/windows:powershell.bzl", "powershell_cmd_exe")
 
 # This is meant to be Open-source friendly. In our e2e tests, we invoke a variant from

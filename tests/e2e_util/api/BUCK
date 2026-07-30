@@ -1,4 +1,4 @@
-load("@char_build//rules:python_library.bzl", "python_library")
+load("@bsmr_build//rules:python_library.bzl", "python_library")
 # @oss-disable[end= ]: load(":visibility.fb.bzl", "visibility")
 
 oncall("build_infra")

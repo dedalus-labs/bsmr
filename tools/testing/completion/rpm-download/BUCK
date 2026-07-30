@@ -1,4 +1,4 @@
-load("@char_build//rules:export_files.bzl", "export_file")
+load("@bsmr_build//rules:export_files.bzl", "export_file")
 
 oncall("build_infra")
 

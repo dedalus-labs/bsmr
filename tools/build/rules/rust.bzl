@@ -11,7 +11,7 @@
 # public prelude directly.
 
 load("@prelude//utils:type_defs.bzl", "is_select")
-load("@char_build//rules:targets.bzl", "translate_target")
+load("@bsmr_build//rules:targets.bzl", "translate_target")
 
 prelude = native
 
@@ -103,15 +103,15 @@ def rust_protobuf_library(
 
     build_env = build_env or {}
     build_env.update({
-        "PROTOC": "$(exe char_build//third-party/proto:protoc)",
-        "PROTOC_INCLUDE": "$(location char_build//third-party/proto:google_protobuf)",
+        "PROTOC": "$(exe bsmr_build//third-party/proto:protoc)",
+        "PROTOC_INCLUDE": "$(location bsmr_build//third-party/proto:google_protobuf)",
     })
     if proto_srcs:
         build_env["BUCK_PROTO_SRCS"] = "$(location {})".format(proto_srcs)
 
     prelude.genrule(
         name = proto_name,
-        srcs = (protos or []) + ["char_build//third-party/proto:google_protobuf"],
+        srcs = (protos or []) + ["bsmr_build//third-party/proto:google_protobuf"],
         out = ".",
         cmd = "$(exe :" + build_name + ")",
         env = build_env,

@@ -9,7 +9,7 @@
 # Stub `testpilot_defs.bzl` for the OSS buck2 build.
 #
 # `prelude/toolchains/android/test/com/facebook/buck/testrunner/BUCK`
-# loads this file from `@char_build//rules:testpilot_defs.bzl` to
+# loads this file from `@bsmr_build//rules:testpilot_defs.bzl` to
 # get a `tpx_labels` struct (used as `labels = [tpx_labels.long_running]`).
 # `fbsource` resolves to the build-support cell, so the load
 # resolves here. The fbcode-internal version provides Test Pilot label

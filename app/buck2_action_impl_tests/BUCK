@@ -1,4 +1,4 @@
-load("@char_build//rules:rust.bzl", "rust_unittest")
+load("@bsmr_build//rules:rust.bzl", "rust_unittest")
 
 oncall("build_infra")
 
