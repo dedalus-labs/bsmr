@@ -37,21 +37,21 @@ def _modifiers_match(matcher: dict[str, Modifier]) -> ModifiersMatch:
     If None is specified, then a modifier will not be added.
 
     `modifiers.match`s can be stacked. For example,
-    suppose this modifier is specified in fbcode/PACKAGE
+    suppose this modifier is specified in a parent `PACKAGE`
     ```
     modifier = modifiers.match({
         "cfg//os:windows": "cfg//compiler:msvc",
         "DEFAULT": None,
     })
     ```
-    Suppose this modifier is specified in fbcode/project/PACKAGE
+    Suppose this modifier is specified in a child `project/PACKAGE`
     ```
     modifier = modifiers.match({
         "cfg//os:linux": "cfg//compiler:clang",
         "DEFAULT": None,
     })
     ```
-    For any target covered by fbcode/project/PACKAGE, this is
+    For any target covered by `project/PACKAGE`, this is
     equivalent to one modifier in that specifies
     ```
     modifiers.match({

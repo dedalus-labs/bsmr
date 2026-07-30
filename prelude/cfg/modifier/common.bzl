@@ -258,7 +258,7 @@ def resolve_alias(modifier: Modifier, aliases: struct) -> list[Modifier]:
     resolved = getattr(aliases, modifier, None)
     if resolved:
         return resolved if isinstance(resolved, list) else [resolved]
-    fail("Found invalid modifier alias `{}`. A list of valid modifier aliases is in buck2/cfg/experimental/alias.bzl".format(modifier))
+    fail("Found invalid modifier alias `{}`.".format(modifier))
 
 def _get_constraint_setting_deps(modifier_info: ModifierInfo) -> list[TargetLabel]:
     deps = []

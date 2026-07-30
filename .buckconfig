@@ -12,7 +12,6 @@ stripped_root_dirs = buck2
 [project]
 ignore = \
     app/buck2_explain, \
-    app_dep_graph_rules, \
     examples, \
     tools/rust-project/tests, \
     tests, \
