@@ -13,10 +13,10 @@ import json
 from pathlib import Path
 from typing import List
 
-from buck2.tests.e2e_util.api.buck import Buck
-from buck2.tests.e2e_util.asserts import expect_failure
-from buck2.tests.e2e_util.buck_workspace import buck_test
-from buck2.tests.e2e_util.helper.golden import (
+from bsmr.tests.e2e_util.api.buck import Buck
+from bsmr.tests.e2e_util.asserts import expect_failure
+from bsmr.tests.e2e_util.buck_workspace import buck_test
+from bsmr.tests.e2e_util.helper.golden import (
     golden,
     sanitize_build_report,
     sanitize_build_report_error,

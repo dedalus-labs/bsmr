@@ -13,9 +13,9 @@ import json
 from typing import Any, List
 
 import pytest
-from buck2.tests.e2e_util.api.buck import Buck
-from buck2.tests.e2e_util.asserts import expect_failure
-from buck2.tests.e2e_util.buck_workspace import buck_test
+from bsmr.tests.e2e_util.api.buck import Buck
+from bsmr.tests.e2e_util.asserts import expect_failure
+from bsmr.tests.e2e_util.buck_workspace import buck_test
 
 
 @buck_test(inplace=True)
@@ -35,15 +35,15 @@ async def testname_formatting(
 
     await expect_failure(
         buck.test(
-            f"fbcode//buck2/tests/targets/rules/python/test_name_formatting:{target}",
+            f"fbcode//bsmr/tests/targets/rules/python/test_name_formatting:{target}",
         )
     )
     log = (await buck.log("show")).stdout.strip().splitlines()
     actual_tests = get_events_test_names(log)
     expected_tests = [
-        "test_failure (buck2.tests.targets.rules.python.test_name_formatting.test_name_formatting.TestCase)",
-        "test_nested_test_class (buck2.tests.targets.rules.python.test_name_formatting.test_name_formatting.TestCase)",
-        "test_success (buck2.tests.targets.rules.python.test_name_formatting.test_name_formatting.TestCase)",
+        "test_failure (bsmr.tests.targets.rules.python.test_name_formatting.test_name_formatting.TestCase)",
+        "test_nested_test_class (bsmr.tests.targets.rules.python.test_name_formatting.test_name_formatting.TestCase)",
+        "test_success (bsmr.tests.targets.rules.python.test_name_formatting.test_name_formatting.TestCase)",
     ]
     assert expected_tests == actual_tests
 

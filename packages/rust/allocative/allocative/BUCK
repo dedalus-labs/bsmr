@@ -95,7 +95,7 @@ rust_library(
         "fbsource//third-party/rust:smallvec",
         "fbsource//third-party/rust:sorted_vector_map",
         "fbsource//third-party/rust:triomphe",
-        "//buck2/packages/rust/allocative/allocative_derive:allocative_derive",
+        "//bsmr/packages/rust/allocative/allocative_derive:allocative_derive",
     ] + select({
         "DEFAULT": ["fbsource//third-party/rust:tokio"],
         # @oss-disable[end= ]: "ovr_config//runtime/constraints:wasm": [],

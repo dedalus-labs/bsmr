@@ -6189,7 +6189,7 @@ public class StubJarTest {
         .addStubJarToClasspath()
         .setSourceFile(
             "A.java",
-            "package com.example.buck2;", // Note: different package
+            "package com.example.bsmr;", // Note: different package
             "import com.example.buck.Outer;", // Inner class becomes available
             "public class A {",
             "  private Outer.Inner field;", // Reference the inner class
@@ -6408,7 +6408,7 @@ public class StubJarTest {
         .addStubJarToClasspath()
         .setSourceFile(
             "A.java",
-            "package com.example.buck2;",
+            "package com.example.bsmr;",
             "import com.example.buck.Outer;",
             "public class A {",
             "  public void testMethod() {",
@@ -6436,7 +6436,7 @@ public class StubJarTest {
         .addStubJarToClasspath()
         .setSourceFile(
             "A.java",
-            "package com.example.buck2;",
+            "package com.example.bsmr;",
             "import com.example.buck.Outer;",
             "public class A {",
             "  public String testMethod() {",
@@ -6462,7 +6462,7 @@ public class StubJarTest {
         .addStubJarToClasspath()
         .setSourceFile(
             "A.java",
-            "package com.example.buck2;",
+            "package com.example.bsmr;",
             "import com.example.buck.Outer;",
             "public class A {",
             "  private Outer.Inner.Nested field;",
@@ -6486,7 +6486,7 @@ public class StubJarTest {
         .addStubJarToClasspath()
         .setSourceFile(
             "A.java",
-            "package com.example.buck2;",
+            "package com.example.bsmr;",
             "import com.example.buck.Test;",
             "public class A {",
             "  public void test() {",
@@ -6513,7 +6513,7 @@ public class StubJarTest {
         .addStubJarToClasspath()
         .setSourceFile(
             "A.java",
-            "package com.example.buck2;",
+            "package com.example.bsmr;",
             "import com.example.buck.Test;",
             "public class A {",
             "  public void test() {",
@@ -6549,7 +6549,7 @@ public class StubJarTest {
         .addStubJarToClasspath()
         .setSourceFile(
             "A.java",
-            "package com.example.buck2;",
+            "package com.example.bsmr;",
             "import com.example.buck.TestComparator;",
             "import com.example.buck.TestGenericInterface;",
             "public class A {",
@@ -6577,7 +6577,7 @@ public class StubJarTest {
         .addStubJarToClasspath()
         .setSourceFile(
             "A.java",
-            "package com.example.buck2;",
+            "package com.example.bsmr;",
             "import com.example.buck.TestEnum;",
             "public class A {",
             "  TestEnum testEnum = TestEnum.Value1;",
@@ -6598,7 +6598,7 @@ public class StubJarTest {
         .addStubJarToClasspath()
         .setSourceFile(
             "A.java",
-            "package com.example.buck2;",
+            "package com.example.bsmr;",
             "import com.example.buck.GenericClass;",
             "public class A {",
             "  public void test() {",
@@ -6622,7 +6622,7 @@ public class StubJarTest {
         .addStubJarToClasspath()
         .setSourceFile(
             "A.java",
-            "package com.example.buck2;",
+            "package com.example.bsmr;",
             "import com.example.buck.GenericClass;",
             "public class A<T, M> extends GenericClass<T> {",
             "  public M otherField;",
@@ -6658,7 +6658,7 @@ public class StubJarTest {
         .addStubJarToClasspath()
         .setSourceFile(
             "A.java",
-            "package com.example.buck2;",
+            "package com.example.bsmr;",
             "import com.example.buck.PrivateTest;",
             "public class A {",
             "  public void foo() {",

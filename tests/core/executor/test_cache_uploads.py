@@ -11,9 +11,9 @@
 
 import sys
 
-from buck2.tests.e2e_util.api.buck import Buck
-from buck2.tests.e2e_util.buck_workspace import buck_test
-from buck2.tests.e2e_util.helper.utils import json_get, random_string
+from bsmr.tests.e2e_util.api.buck import Buck
+from bsmr.tests.e2e_util.buck_workspace import buck_test
+from bsmr.tests.e2e_util.helper.utils import json_get, random_string
 
 
 async def _assert_locally_executed_upload_attempted(buck: Buck, count: int = 1) -> None:
@@ -95,7 +95,7 @@ async def test_re_uploads_default(buck: Buck) -> None:
         "-c",
         f"write.text={random_string()}",
         "-c",
-        "buck2.default_allow_cache_upload=true",
+        "bsmr.default_allow_cache_upload=true",
     ]
     await buck.build("root//:write_default", *args)
     await _assert_locally_executed_upload_attempted(buck, 1)

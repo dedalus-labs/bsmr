@@ -86,7 +86,7 @@ get_source(Options) ->
 get_mapping(Options) ->
     Source = get_source(Options),
     BaseMapping = #{filename:basename(Source) => {true, Source}},
-    case os:getenv("BUCK2_FILE_MAPPING") of
+    case os:getenv("BSMR_FILE_MAPPING") of
         false ->
             BaseMapping;
         MappingFile ->

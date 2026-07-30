@@ -8,12 +8,12 @@
 
 # Rule with no attrs that may produce an output non-deterministically based on the path provided in buckconfig
 def _non_det_build(ctx):
-    return [DefaultInfo(default_output = ctx.actions.write("foo.txt", ctx.attrs.buck2_output, has_content_based_path = False))]
+    return [DefaultInfo(default_output = ctx.actions.write("foo.txt", ctx.attrs.bsmr_output, has_content_based_path = False))]
 
 non_det_build = rule(
     impl = _non_det_build,
     attrs = {
-        "buck2_output": attrs.string(),
+        "bsmr_output": attrs.string(),
     },
 )
 

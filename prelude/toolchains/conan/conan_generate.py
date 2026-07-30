@@ -49,7 +49,7 @@ def extract_generated(install_folder, targets_out):
 def main():
     parser = argparse.ArgumentParser(
         prog="conan_generate",
-        description="Generate Buck2 imports of Conan built packages.",
+        description="Generate Bessemer imports of Conan built packages.",
     )
     parser.add_argument(
         "--conan",

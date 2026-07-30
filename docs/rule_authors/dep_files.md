@@ -7,9 +7,9 @@ Dep files allow commands to declare which subset of their inputs were used when
 the command executed.
 
 When a command produces a dep file and is later invalidated due to an inputs
-change, Buck2 uses the dep file to check whether the inputs that changed were in
+change, Bessemer uses the dep file to check whether the inputs that changed were in
 the set that the command reported as having used. If none of the inputs that
-changed were in that set, Buck2 omits re-running the command and reuses the
+changed were in that set, Bessemer omits re-running the command and reuses the
 previous result.
 
 ## Use Cases
@@ -30,7 +30,7 @@ To use dep files, you need to do the following:
 - Declare what output is a dep file and associate it with your command.
 - Declare which inputs are covered by the dep file (this can be a subset of your
   inputs).
-- Have your command produce the dep file in a format Buck2 can use.
+- Have your command produce the dep file in a format Bessemer can use.
 
 ## Declaring the dep files and associating inputs
 
@@ -68,14 +68,14 @@ ctx.actions.run(
 
 ## Producing the dep file
 
-Your command must produce dep files in the format Buck2 expects, which is simply
+Your command must produce dep files in the format Bessemer expects, which is simply
 a list of all the inputs that were used, one per line.
 
-The paths must be the paths Buck2 would use for your inputs, which means paths
+The paths must be the paths Bessemer would use for your inputs, which means paths
 relative to the project root.
 
 If this is not the format your tool produces, use a wrapper to take whatever
-output your command produces and rewrite it in the format Buck2 expects.
+output your command produces and rewrite it in the format Bessemer expects.
 
 ## Testing dep files
 
@@ -83,7 +83,7 @@ When writing a command that produces a dep file, you should test it! At a
 minimum, check that the inputs you expect are tagged properly.
 
 To do so, build your target, then use
-`buck2 audit dep-files TARGET CATEGORY IDENTIFIER`, which will show you the set
+`bsmr audit dep-files TARGET CATEGORY IDENTIFIER`, which will show you the set
 of inputs your command used and how they're tagged.
 
 ## Extra notes to the implementer
@@ -91,14 +91,14 @@ of inputs your command used and how they're tagged.
 ### Limitations
 
 Dep files only work if a previous invocation of the command is known to your
-Buck2 daemon. Dep files are dropped when the daemon restarts or when you run
-`buck2 debug flush-dep-files`.
+Bessemer daemon. Dep files are dropped when the daemon restarts or when you run
+`bsmr debug flush-dep-files`.
 
 This means that, for example, if you change an unused header, then run a build
-on a fresh daemon, Buck2 will still need to execute this command in order to
+on a fresh daemon, Bessemer will still need to execute this command in order to
 identify that the header was in fact unused. In contrast, if you did the build
 (and got a remote cache hit on the command), then applied your change and
-re-built, Buck2 would use the dep file on the second execution, and you wouldn't
+re-built, Bessemer would use the dep file on the second execution, and you wouldn't
 need to execute anything.
 
 ### Dep files don't need to be covering
@@ -112,33 +112,33 @@ when they change, and you'll get stale output.
 
 ### Dep files are lazy
 
-Dep files aren't parsed by Buck2 unless the command needs to re-run. If the
+Dep files aren't parsed by Bessemer unless the command needs to re-run. If the
 command ran on RE, they aren't even downloaded until then. This ensures dep
 files don't cause a performance hit unless they are used, at which point they
 stand a chance of giving a performance boost instead.
 
-This means that if you produce an invalid dep file, Buck2 will not report this
-until your command runs again, at which point Buck2 will report that the dep
+This means that if you produce an invalid dep file, Bessemer will not report this
+until your command runs again, at which point Bessemer will report that the dep
 file is invalid and refuse to proceed (note: you can unblock yourself using
-`buck2 debug flush-dep-files`).
+`bsmr debug flush-dep-files`).
 
 To flush out issues during development, you can pass `--eager-dep-files` to
-Buck2 to force Buck2 to parse your dep files as they are produced.
+Bessemer to force Bessemer to parse your dep files as they are produced.
 
 ## Dep files will traverse symlinks
 
-If your dep file reports that a symlink was used, Buck2 will track the symlink's
+If your dep file reports that a symlink was used, Bessemer will track the symlink's
 target as covered by this dep file.
 
 ## Remote dep files
 
 Since dep files only work if a previous invocation of the command is known to
-your Buck2 daemon, Buck2 also supports "remote dep files". For actions with
-`allow_dep_file_cache_upload = True`, Buck2 will upload dep files to the remote
+your Bessemer daemon, Bessemer also supports "remote dep files". For actions with
+`allow_dep_file_cache_upload = True`, Bessemer will upload dep files to the remote
 cache. The dep file is keyed on the current version control revision, in
 addition to information about the action itself.
 
-For those same actions, Buck2 will look for a "remote dep file", and if it finds
+For those same actions, Bessemer will look for a "remote dep file", and if it finds
 one it will download dep file and use it exactly as it would if it found one
 locally (i.e. it compares the inputs to see if only unused inputs have changed
 and it can therefore skip the action execution)

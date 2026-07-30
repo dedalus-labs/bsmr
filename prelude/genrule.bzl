@@ -25,8 +25,8 @@ GENRULE_OUT_DIR = "out"
 # rule implementations in v2, rather then using `genrule`s.
 # TODO: Roll out root based genrules everywhere and flip the default to get rid of this logic.
 _BUILD_ROOT_LABELS = set([
-    # The buck2 test suite
-    "buck2_test_build_root",
+    # The bsmr test suite
+    "bsmr_test_build_root",
     "antlir_macros",
     "rust_bindgen",
     "haskell_hsc",
@@ -77,7 +77,7 @@ def _prefers_local(ctx: AnalysisContext) -> bool:
     return genrule_labels_prefer_local(ctx.attrs.labels)
 
 def _ignore_artifacts(ctx: AnalysisContext) -> bool:
-    return "buck2_ignore_artifacts" in ctx.attrs.labels
+    return "bsmr_ignore_artifacts" in ctx.attrs.labels
 
 def _requires_no_srcs_environment(ctx: AnalysisContext) -> bool:
     return _NO_SRCS_ENVIRONMENT_LABEL in ctx.attrs.labels
@@ -124,7 +124,7 @@ def genrule_impl(ctx: AnalysisContext) -> list[Provider]:
     #   out - where outputs go
     # `src` is the current directory
     # Buck1 uses `.` as output, but that won't work since
-    # Buck2 clears the output directory before execution, and thus src/sh too.
+    # Bessemer clears the output directory before execution, and thus src/sh too.
     return process_genrule(ctx, ctx.attrs.out, ctx.attrs.outs)
 
 def _project_output(out: Artifact, path: str) -> Artifact:
@@ -284,7 +284,7 @@ def process_genrule(
 
     if type(ctx.attrs.srcs) == type([]):
         # FIXME: We should always use the short_path, but currently that is sometimes blank.
-        # See fbcode//buck2/tests/targets/rules/genrule:genrule-dot-input for a test that exposes it.
+        # See fbcode//bsmr/tests/targets/rules/genrule:genrule-dot-input for a test that exposes it.
         symlinks = {src.short_path: src for src in ctx.attrs.srcs}
 
         if len(symlinks) != len(ctx.attrs.srcs):
@@ -324,17 +324,17 @@ def process_genrule(
     # again (thus making the label useless). So, when a local-only label is
     # set, we make the action *different*.
     if local_only:
-        env_vars["__BUCK2_LOCAL_ONLY_CACHE_BUSTER"] = ""
+        env_vars["__BSMR_LOCAL_ONLY_CACHE_BUSTER"] = ""
 
     # see comment above
     if prefer_local:
-        env_vars["__BUCK2_PREFER_LOCAL_CACHE_BUSTER"] = ""
+        env_vars["__BSMR_PREFER_LOCAL_CACHE_BUSTER"] = ""
 
     # For now, when uploads are enabled, be safe and avoid sharing cache hits.
     cache_bust = _get_cache_mode(ctx).cache_bust_genrules
 
     if cacheable and cache_bust:
-        env_vars["__BUCK2_ALLOW_CACHE_UPLOADS_CACHE_BUSTER"] = ""
+        env_vars["__BSMR_ALLOW_CACHE_UPLOADS_CACHE_BUSTER"] = ""
 
     if _requires_no_srcs_environment(ctx):
         env_vars.pop("SRCS")

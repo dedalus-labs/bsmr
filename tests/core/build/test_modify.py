@@ -13,10 +13,10 @@ import fileinput
 import os
 from pathlib import Path
 
-from buck2.tests.e2e_util.api.buck import Buck
-from buck2.tests.e2e_util.asserts import expect_failure
-from buck2.tests.e2e_util.buck_workspace import buck_test
-from buck2.tests.e2e_util.helper.utils import random_string
+from bsmr.tests.e2e_util.api.buck import Buck
+from bsmr.tests.e2e_util.asserts import expect_failure
+from bsmr.tests.e2e_util.buck_workspace import buck_test
+from bsmr.tests.e2e_util.helper.utils import random_string
 
 
 @buck_test(data_dir="modify")
@@ -50,7 +50,7 @@ async def test_modify_src(buck: Buck) -> None:
 @buck_test(data_dir="modify")
 async def test_modify_genrule_notify(buck: Buck) -> None:
     with open(buck.cwd / ".buckconfig", "a") as buckconfig:
-        buckconfig.write("\n[buck2]\nfile_watcher = notify")
+        buckconfig.write("\n[bsmr]\nfile_watcher = notify")
     await buck.kill()  # Ensure the config gets picked up
     await test_modify_genrule(buck)
 

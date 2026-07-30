@@ -1,13 +1,13 @@
-# buck2 e2e tests
+# bsmr e2e tests
 
-This directory contains tests for buck2. Primary constituents:
+This directory contains tests for bsmr. Primary constituents:
 
- - `core/` - the primary and fully endorsed set of integration tests for buck2 core code. If you're
-   working on buck2 itself, this is probably what you want.
+ - `core/` - the primary and fully endorsed set of integration tests for bsmr core code. If you're
+   working on bsmr itself, this is probably what you want.
  - `e2e_util/` - the test framework for the integration tests.
- - `e2e/` and `meta_only/e2e` - a hodgepodge of tests covering a combination of buck2 itself, the
+ - `e2e/` and `meta_only/e2e` - a hodgepodge of tests covering a combination of bsmr itself, the
    prelude, some macros, and various integrations. Avoid if possible. Strongly avoid in favor of
-   `core/` if testing buck2 core.
+   `core/` if testing bsmr core.
  - `targets/` - target definitions accessed by `e2e` tests.
  - `prelude/` - there is currently no fully endorsed testing strategy for the prelude. This
    directory is an attempt at creating one, however its still immature and there are gaps.

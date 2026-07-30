@@ -5,7 +5,7 @@ oncall("build_infra")
 
 # Constraint controlling the "pagable" Cargo feature of the starlark crate.
 # When enabled, pagable serialization/deserialization support for starlark values is enabled.
-# Buck2 internal targets set this to "enabled" via package modifier in buck2/PACKAGE.
+# Bessemer internal targets set this to "enabled" via package modifier in bsmr/PACKAGE.
 # External consumers get "disabled" by default.
 constraint(
     name = "pagable",
@@ -20,7 +20,7 @@ constraint(
 
 alias(
     name = "starlark-bin",
-    actual = "//buck2/packages/rust/starlark/starlark_bin:starlark_bin",
+    actual = "//bsmr/packages/rust/starlark/starlark_bin:starlark_bin",
 )
 
 buck_filegroup(
@@ -91,14 +91,14 @@ rust_library(
         "fbsource//third-party/rust:strsim",
         "fbsource//third-party/rust:textwrap",
         "fbsource//third-party/rust:thiserror",
-        "//buck2/packages/rust/allocative/allocative:allocative",
-        "//buck2/packages/rust/gazebo/cmp_any:cmp_any",
-        "//buck2/packages/rust/gazebo/display_container:display_container",
-        "//buck2/packages/rust/gazebo/dupe:dupe",
-        "//buck2/packages/rust/gazebo/strong_hash:strong_hash",
-        "//buck2/packages/rust/pagable/pagable:pagable",
-        "//buck2/packages/rust/starlark/starlark_derive:starlark_derive",
-        "//buck2/packages/rust/starlark/starlark_map:starlark_map",
-        "//buck2/packages/rust/starlark/starlark_syntax:starlark_syntax",
+        "//bsmr/packages/rust/allocative/allocative:allocative",
+        "//bsmr/packages/rust/gazebo/cmp_any:cmp_any",
+        "//bsmr/packages/rust/gazebo/display_container:display_container",
+        "//bsmr/packages/rust/gazebo/dupe:dupe",
+        "//bsmr/packages/rust/gazebo/strong_hash:strong_hash",
+        "//bsmr/packages/rust/pagable/pagable:pagable",
+        "//bsmr/packages/rust/starlark/starlark_derive:starlark_derive",
+        "//bsmr/packages/rust/starlark/starlark_map:starlark_map",
+        "//bsmr/packages/rust/starlark/starlark_syntax:starlark_syntax",
     ],
 )

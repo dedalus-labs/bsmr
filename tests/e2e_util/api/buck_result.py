@@ -16,7 +16,7 @@ from enum import auto, Enum
 from pathlib import Path
 from typing import Any, Dict, Iterable, List, Optional, Tuple
 
-from buck2.tests.e2e_util.api.result import Result
+from bsmr.tests.e2e_util.api.result import Result
 
 
 class ExitCode(Enum):
@@ -41,7 +41,7 @@ class ExitCode(Enum):
 
 
 class ExitCodeV2(Enum):
-    """Enum for exit codes of Buck2"""
+    """Enum for exit codes of Bessemer"""
 
     SUCCESS = 0
     UNKNOWN_ERROR = 1
@@ -77,7 +77,7 @@ class ResultType(AutoName):
 
 
 class InvocationRecord:
-    """Parsed invocation record from a Buck2 command."""
+    """Parsed invocation record from a Bessemer command."""
 
     def __init__(self, path: Path) -> None:
         record_json = json.loads(path.read_text(encoding="utf-8"))
@@ -337,7 +337,7 @@ class BuildResult(BuckResult):
         Returns a dictionary of action key to number of cache misses.
         Populates this dictionary by going through stdout looking for logs of compute calls.
 
-        Currently, there is no unique identifier for the action in buck2, so the action key
+        Currently, there is no unique identifier for the action in bsmr, so the action key
         is just a tuple of configured target name and analysis id.
         """
         action_to_cache_miss_count: Dict[str, int] = defaultdict(int)

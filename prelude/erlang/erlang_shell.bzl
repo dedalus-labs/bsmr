@@ -61,7 +61,7 @@ def _do_build_run_info(
 
     start_shell_content = cmd_args(
         "#!/usr/bin/env bash",
-        "export REPO_ROOT=$(buck2 root --kind=project)",
+        "export REPO_ROOT=$(bsmr root --kind=project)",
         erl_args,
         "",
     )

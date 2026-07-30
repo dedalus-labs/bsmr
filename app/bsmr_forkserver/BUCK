@@ -1,0 +1,48 @@
+load("@bsmr_build//rules:rust.bzl", "rust_library")
+load("@bsmr_build//rules:rust_linkable_symbol.bzl", "rust_linkable_symbol")
+
+oncall("build_infra")
+
+rust_library(
+    name = "bsmr_forkserver",
+    srcs = glob(
+        ["src/**/*.rs"],
+    ),
+    compatible_with = [
+        "ovr_config//os:linux",
+        "ovr_config//os:macos",
+    ],
+    deps = [
+        "fbsource//third-party/rust:arc-swap",
+        "fbsource//third-party/rust:async-trait",
+        "fbsource//third-party/rust:futures",
+        "fbsource//third-party/rust:libc",
+        "fbsource//third-party/rust:rand",
+        "fbsource//third-party/rust:tokio",
+        "fbsource//third-party/rust:tokio-stream",
+        "fbsource//third-party/rust:tonic",
+        "//bsmr/packages/rust/allocative/allocative:allocative",
+        "//bsmr/app/bsmr_common:bsmr_common",
+        "//bsmr/app/bsmr_core:bsmr_core",
+        "//bsmr/app/bsmr_data:bsmr_data",
+        "//bsmr/app/bsmr_error:bsmr_error",
+        "//bsmr/app/bsmr_execute_local:bsmr_execute_local",
+        "//bsmr/app/bsmr_forkserver_proto:bsmr_forkserver_proto",
+        "//bsmr/app/bsmr_fs:bsmr_fs",
+        "//bsmr/app/bsmr_grpc:bsmr_grpc",
+        "//bsmr/app/bsmr_resource_control:bsmr_resource_control",
+        "//bsmr/app/bsmr_util:bsmr_util",
+        "//bsmr/packages/rust/gazebo/dupe:dupe",
+    ] + select({
+        "DEFAULT": [],
+        "ovr_config//os:linux": [
+            "fbsource//third-party/rust:nix",
+            ":bsmr_miniperf_data",
+        ],
+    }),
+)
+
+rust_linkable_symbol(
+    name = "bsmr_miniperf_data",
+    content_bytes = "//bsmr/app/bsmr_miniperf:bsmr_miniperf",
+)

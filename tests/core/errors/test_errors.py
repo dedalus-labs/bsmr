@@ -9,10 +9,10 @@
 # pyre-strict
 import re
 
-from buck2.tests.e2e_util.api.buck import Buck
-from buck2.tests.e2e_util.asserts import expect_failure
-from buck2.tests.e2e_util.buck_workspace import buck_test, env
-from buck2.tests.e2e_util.helper.golden import golden, strip_glog_lines
+from bsmr.tests.e2e_util.api.buck import Buck
+from bsmr.tests.e2e_util.asserts import expect_failure
+from bsmr.tests.e2e_util.buck_workspace import buck_test, env
+from bsmr.tests.e2e_util.helper.golden import golden, strip_glog_lines
 
 
 @buck_test()
@@ -23,7 +23,7 @@ async def test_soft_error(buck: Buck) -> None:
 
 
 @buck_test()
-@env("BUCK2_HARD_ERROR", "false")
+@env("BSMR_HARD_ERROR", "false")
 async def test_soft_error_quiet(buck: Buck) -> None:
     res = await buck.targets("quiet:", ":")
     assert "starlark_raised_soft_error" in res.stderr
@@ -31,7 +31,7 @@ async def test_soft_error_quiet(buck: Buck) -> None:
 
 
 @buck_test()
-@env("BUCK2_HARD_ERROR", "false")
+@env("BSMR_HARD_ERROR", "false")
 async def test_soft_error_no_stack(buck: Buck) -> None:
     res = await buck.targets(":")
     assert "Traceback" in res.stderr
@@ -44,7 +44,7 @@ async def test_soft_error_no_stack(buck: Buck) -> None:
     # windows errors are slightly different, just skip for now
     skip_for_os=["windows"],
 )
-@env("BUCK2_HARD_ERROR", "false")
+@env("BSMR_HARD_ERROR", "false")
 async def test_package_listing_errors(buck: Buck) -> None:
     outs = []
     for target in [

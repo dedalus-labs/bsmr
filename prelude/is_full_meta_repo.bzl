@@ -7,4 +7,4 @@
 # above-listed licenses.
 
 def is_full_meta_repo() -> bool:
-    return read_root_config("buck2", "is_full_meta_repo", None) == "true"
+    return read_root_config("bsmr", "is_full_meta_repo", None) == "true"

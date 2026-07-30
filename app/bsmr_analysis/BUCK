@@ -1,0 +1,35 @@
+load("@bsmr_build//rules:rust.bzl", "rust_library")
+
+oncall("build_infra")
+
+rust_library(
+    name = "bsmr_analysis",
+    srcs = glob(["src/**/*.rs"]),
+    deps = [
+        "fbsource//third-party/rust:async-trait",
+        "fbsource//third-party/rust:derive_more",
+        "fbsource//third-party/rust:either",
+        "fbsource//third-party/rust:futures",
+        "fbsource//third-party/rust:smallvec",
+        "//bsmr/packages/rust/allocative/allocative:allocative",
+        "//bsmr/app/bsmr_artifact:bsmr_artifact",
+        "//bsmr/app/bsmr_build_api:bsmr_build_api",
+        "//bsmr/app/bsmr_build_signals:bsmr_build_signals",
+        "//bsmr/app/bsmr_core:bsmr_core",
+        "//bsmr/app/bsmr_data:bsmr_data",
+        "//bsmr/app/bsmr_error:bsmr_error",
+        "//bsmr/app/bsmr_events:bsmr_events",
+        "//bsmr/app/bsmr_execute:bsmr_execute",
+        "//bsmr/app/bsmr_hash:bsmr_hash",
+        "//bsmr/app/bsmr_interpreter:bsmr_interpreter",
+        "//bsmr/app/bsmr_node:bsmr_node",
+        "//bsmr/app/bsmr_query:bsmr_query",
+        "//bsmr/app/bsmr_util:bsmr_util",
+        "//bsmr/packages/rust/dice/dice:dice",
+        "//bsmr/packages/rust/gazebo/dupe:dupe",
+        "//bsmr/packages/rust/gazebo/gazebo:gazebo",
+        "//bsmr/packages/rust/pagable/pagable:pagable",
+        "//bsmr/packages/rust/starlark/starlark:starlark",
+        "//bsmr/packages/rust/starlark/starlark_map:starlark_map",
+    ],
+)

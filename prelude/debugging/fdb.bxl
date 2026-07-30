@@ -16,7 +16,7 @@
 #   1) traverse targets and rules based on  //some:target
 #   2) inspect rule providers and extract information required for seamless debugging setup
 # Example:
-# buck2 bxl prelude//debugging/fdb.bxl:inspect_target -- --target=//some:target
+# bsmr bxl prelude//debugging/fdb.bxl:inspect_target -- --target=//some:target
 # This outputs file containing JSON serialized `ExecInfo` (see types.bzl)
 
 load("@prelude//debugging:common.bzl", "rule_type")

@@ -1,0 +1,33 @@
+load("@bsmr_build//rules:rust.bzl", "rust_library")
+
+oncall("build_infra")
+
+rust_library(
+    name = "bsmr_server_starlark_debug",
+    srcs = glob(["src/**/*.rs"]),
+    test_deps = [],
+    deps = [
+        "fbsource//third-party/rust:async-trait",
+        "fbsource//third-party/rust:debugserver-types",
+        "fbsource//third-party/rust:derive_more",
+        "fbsource//third-party/rust:futures",
+        "fbsource//third-party/rust:itertools",
+        "fbsource//third-party/rust:serde",
+        "fbsource//third-party/rust:serde_json",
+        "fbsource//third-party/rust:tokio",
+        "fbsource//third-party/rust:tokio-stream",
+        "fbsource//third-party/rust:tracing",
+        "//bsmr/app/bsmr_cli_proto:bsmr_cli_proto",
+        "//bsmr/app/bsmr_core:bsmr_core",
+        "//bsmr/app/bsmr_data:bsmr_data",
+        "//bsmr/app/bsmr_error:bsmr_error",
+        "//bsmr/app/bsmr_events:bsmr_events",
+        "//bsmr/app/bsmr_fs:bsmr_fs",
+        "//bsmr/app/bsmr_hash:bsmr_hash",
+        "//bsmr/app/bsmr_interpreter:bsmr_interpreter",
+        "//bsmr/app/bsmr_server_ctx:bsmr_server_ctx",
+        "//bsmr/app/bsmr_util:bsmr_util",
+        "//bsmr/packages/rust/gazebo/dupe:dupe",
+        "//bsmr/packages/rust/starlark/starlark:starlark",
+    ],
+)

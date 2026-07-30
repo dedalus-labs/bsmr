@@ -780,10 +780,10 @@ def _default_providers(
         use_project_relative_paths = True,
     )
 
-    # Always let the user run doctests via `buck2 test :crate[doc]`
+    # Always let the user run doctests via `bsmr test :crate[doc]`
     sub_targets["doc"].append(rustdoc_test_info)
 
-    # But only run it as a part of `buck2 test :crate` if it's not disabled
+    # But only run it as a part of `bsmr test :crate` if it's not disabled
     if doctests_enabled:
         providers.append(rustdoc_test_info)
 

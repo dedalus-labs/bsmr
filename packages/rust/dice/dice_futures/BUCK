@@ -17,6 +17,6 @@ rust_library(
         "fbsource//third-party/rust:slab",
         "fbsource//third-party/rust:thiserror",
         "fbsource//third-party/rust:tokio",
-        "//buck2/packages/rust/gazebo/dupe:dupe",
+        "//bsmr/packages/rust/gazebo/dupe:dupe",
     ],
 )

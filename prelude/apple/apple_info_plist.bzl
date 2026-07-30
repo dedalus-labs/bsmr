@@ -151,7 +151,7 @@ def _info_plist_additional_keys(ctx: AnalysisContext) -> dict[str, typing.Any]:
         identify_build_system = ctx.attrs.info_plist_identify_build_system
     if identify_build_system and ctx.attrs.extension == "app":
         # Only top-level .app bundle will contain special key.
-        result["FBBuck2"] = True
+        result["FBBsmr"] = True
 
     return result
 

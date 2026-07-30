@@ -1,6 +1,6 @@
 # Bxl Actions and Build API
 
-Bxl allows integrators to write Starlark snippets that introspect the buck2
+Bxl allows integrators to write Starlark snippets that introspect the bsmr
 graph, and perform various operations on them within Starlark to accomplish
 complex operations, as previously proposed in [bxl RFC](../bxl))
 
@@ -20,7 +20,7 @@ Bxl allows users to build targets and actions. However, when creating actions,
 they are not bound/buildable until the artifact/action factories are finalized.
 As such, we will introduce the limitation that bxl cannot build artifacts that
 they themselves declared within the bxl. Instead, they will return a set of
-artifacts to expose to users, which buck2 will automatically build after
+artifacts to expose to users, which bsmr will automatically build after
 finalizing the action factory. For dynamic-ness, bxl users will use the standard
 dynamic output api. There is an issue that during the dynamic output api's
 lambda, bxl functions will not be able to access the regular bxl functions for

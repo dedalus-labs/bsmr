@@ -9,10 +9,10 @@
 # pyre-strict
 
 
-from buck2.tests.e2e_util.api.buck import Buck
-from buck2.tests.e2e_util.api.buck_result import BuckResult
-from buck2.tests.e2e_util.buck_workspace import buck_test
-from buck2.tests.e2e_util.helper.utils import filter_events, random_string
+from bsmr.tests.e2e_util.api.buck import Buck
+from bsmr.tests.e2e_util.api.buck_result import BuckResult
+from bsmr.tests.e2e_util.buck_workspace import buck_test
+from bsmr.tests.e2e_util.helper.utils import filter_events, random_string
 
 
 # Incremental actions use the output of previous actions, mimic this behavior by
@@ -664,7 +664,7 @@ async def test_incremental_action_multi_outputs_with_daemon_restart_and_content_
 
 
 @buck_test(
-    extra_buck_config={"buck2": {"sqlite_incremental_state": "false"}},
+    extra_buck_config={"bsmr": {"sqlite_incremental_state": "false"}},
 )
 async def test_incremental_action_db_disabled(
     buck: Buck,

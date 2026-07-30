@@ -1,11 +1,11 @@
 [cells]
 root = .
 
-[buck2]
+[bsmr]
 # Adjust as needed.
 digest_algorithms = SHA256
 
-[buck2_re_client]
+[bsmr_re_client]
 # Adjust as needed
 # ENGFLOW_ENDPOINT: an address to EngFlow
 # ENGFLOW_CERTIFICATE: a .pem certificate

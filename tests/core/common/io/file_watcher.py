@@ -13,8 +13,8 @@ from enum import Enum
 from pathlib import Path
 from typing import Optional
 
-from buck2.tests.e2e_util.api.buck import Buck
-from buck2.tests.e2e_util.helper.utils import filter_events
+from bsmr.tests.e2e_util.api.buck import Buck
+from bsmr.tests.e2e_util.helper.utils import filter_events
 
 
 class FileWatcherProvider(Enum):
@@ -70,7 +70,7 @@ class FileWatcherEvent:
 #         {
 #           "event": 1,
 #           "kind": 0,
-#           "path": "fbcode//buck2/tests/core/io/test_watchman.py"
+#           "path": "fbcode//bsmr/tests/core/io/test_watchman.py"
 #         }
 #       ],
 #       "incomplete_events_reason": null,

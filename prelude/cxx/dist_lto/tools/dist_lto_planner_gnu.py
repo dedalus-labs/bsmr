@@ -8,7 +8,7 @@
 # above-listed licenses.
 
 """
-A simple wrapper around a distributed thinlto index command to fit into buck2's
+A simple wrapper around a distributed thinlto index command to fit into bsmr's
 distributed thinlto build.
 
 This reads in a couple of things:
@@ -95,7 +95,7 @@ def _enable_core_dumps() -> None:
     # The index step runs the system linker, which -- unlike Meta binaries --
     # installs no userspace crash handler, so a crash only leaves a core dump if
     # the kernel writes one, and the kernel writes nothing while the RLIMIT_CORE
-    # soft limit is 0. buck2 sets no per-action rlimits, so raise the soft limit
+    # soft limit is 0. bsmr sets no per-action rlimits, so raise the soft limit
     # to the inherited hard limit here (best effort: a no-op when the hard limit
     # is itself 0, which needs a host/container-level change instead).
     try:

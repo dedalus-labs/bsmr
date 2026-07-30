@@ -1,0 +1,7 @@
+stub(
+    name = "bsmr",
+)
+
+stub(
+    name = "symlinked_bsmr_and_tpx",
+)

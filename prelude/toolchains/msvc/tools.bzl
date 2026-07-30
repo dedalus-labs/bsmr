@@ -85,8 +85,8 @@ def _find_msvc_tools_impl(ctx: AnalysisContext) -> list[Provider]:
         )
 
     return [
-        # Supports `buck2 run prelude//toolchains/msvc:msvc_tools[cl.exe]`
-        # and `buck2 build prelude//toolchains/msvc:msvc_tools[cl.exe][json]`
+        # Supports `bsmr run prelude//toolchains/msvc:msvc_tools[cl.exe]`
+        # and `bsmr build prelude//toolchains/msvc:msvc_tools[cl.exe][json]`
         DefaultInfo(
             sub_targets = {
                 "cl.exe": [

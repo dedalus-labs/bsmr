@@ -3,7 +3,7 @@ id: content_based_paths
 title: Content-Based Paths
 ---
 
-Content-based paths are a mechanism that enables Buck2 to deduplicate work
+Content-based paths are a mechanism that enables Bessemer to deduplicate work
 across different configurations of a target.
 
 ## Actions and configurations
@@ -27,7 +27,7 @@ For example:
   configurations that don't affect that particular action (because the
   differing constraints exist solely to affect some other actions).
 
-Historically, Buck2 included the hash of the configuration in the
+Historically, Bessemer included the hash of the configuration in the
 output path of every output [artifact](../concepts/glossary.md#artifact), so
 that artifacts produced under different configurations land in different
 locations:
@@ -39,7 +39,7 @@ buck-out/v2/art/<configuration-hash>/<cell>/__<target>__/<output>
 The output paths of an action are part of the command line and therefore
 part of the hash of an action, which is the cache key. This means that
 even if a target's actions *do not* do anything special
-depending on the configuration, like `-O2`, Buck2 would
+depending on the configuration, like `-O2`, Bessemer would
 still execute (and cache) those actions separately — once per
 configuration.
 
@@ -106,7 +106,7 @@ gcc -c foo.c -o libfoo.o
 gcc libfoo.o main.o -o exe
 ```
 
-First we will focus on the first action, compiling `libfoo.o`. The diagram shows Buck2 calculating an Action that represents compiling `libfoo.o`, looking it up in the Action Cache, and either:
+First we will focus on the first action, compiling `libfoo.o`. The diagram shows Bessemer calculating an Action that represents compiling `libfoo.o`, looking it up in the Action Cache, and either:
 
 - **cache miss**: executing the action and populating its entry in the action cache, finally materializing
   `libfoo.o` locally; or
@@ -120,7 +120,7 @@ experiencing deduplication. The point is it doesn't matter.
 ```mermaid
 sequenceDiagram
     autonumber
-    participant B as Buck2
+    participant B as Bessemer
     participant AC as Action Cache
     participant CAS as Content Addressed Storage
     participant RE as Remote Executor
@@ -235,7 +235,7 @@ You can configure `declare_output` to default to content-based paths project-wid
 in your [`.buckconfig`](../concepts/buckconfig.md):
 
 ```ini
-[buck2]
+[bsmr]
   declare_output_has_content_based_path_default = true
 ```
 
@@ -244,7 +244,7 @@ being passed a string name instead of a declared artifact (e.g.
 `ctx.actions.write("header.h", ...)`):
 
 ```ini
-[buck2]
+[bsmr]
   action_has_content_based_path_default = true
 ```
 
@@ -284,7 +284,7 @@ If any input or output is not eligible, the action will still be executed once
 per configuration by virtue of one of the paths including a configuration hash.
 
 The `run()` action accepts an optional `expect_eligible_for_dedupe = True`
-parameter. When set, Buck2 will verify at analysis time that the action is fully
+parameter. When set, Bessemer will verify at analysis time that the action is fully
 eligible for deduplication, and produce a clear error if it is not:
 
 ```python
@@ -300,7 +300,7 @@ ctx.actions.run(
 This can help you enable content based paths across a build graph and eliminate
 the causes of duplication.
 
-You can also use `buck2 aquery` to investigate eligibility directly. Each action
+You can also use `bsmr aquery` to investigate eligibility directly. Each action
 exposes attributes that report its dedupe status:
 
 - `buck.all_outputs_are_content_based` — whether every output is content-based.
@@ -308,7 +308,7 @@ exposes attributes that report its dedupe status:
 - `buck.all_ineligible_for_dedup_inputs` — the specific inputs that are not
   eligible (only present when there is at least one).
 
-For example, `buck2 aquery <target> --output-attribute 'buck\..*'` will print
+For example, `bsmr aquery <target> --output-attribute 'buck\..*'` will print
 these attributes for each action, pointing you directly at the outputs or inputs
 that are keeping the action from being deduplicated.
 
@@ -327,7 +327,7 @@ artifact = ctx.actions.assert_has_content_based_path(artifact)
 ```
 
 If the resolved artifact does not match the assertion (e.g. the anon target
-switches from content-based to configuration-based paths), Buck2 will fail with a
+switches from content-based to configuration-based paths), Bessemer will fail with a
 descriptive error.
 
 ## Configuration-hash paths and symlinks
@@ -336,16 +336,16 @@ Content-based paths are great for deduplication, but they are not predictable:
 you cannot know an output's path until its contents have been hashed. That makes
 them awkward for anything that needs to refer to a build output by path.
 
-For this reason, the paths Buck2 reports to the outside world are still
+For this reason, the paths Bessemer reports to the outside world are still
 *configuration-hash* paths, of the form
 `buck-out/v2/art/<configuration-hash>/<cell>/__<target>__/<output>`. These are
 what you get from:
 
-- `buck2 build --show-output` (and `--show-full-output`, `--build-report`)
-- `buck2 targets --show-output`
+- `bsmr build --show-output` (and `--show-full-output`, `--build-report`)
+- `bsmr targets --show-output`
 - BXL, e.g. the artifact paths returned by `ctx.output.ensure(...)`
 
-Whenever Buck2 materializes a content-based artifact locally — because it is one
+Whenever Bessemer materializes a content-based artifact locally — because it is one
 of the requested outputs of the build, because it is needed as an input to a
 locally run action, or because it is an output of a locally run action — it also
 creates a symlink at the configuration-hash path that points to the real

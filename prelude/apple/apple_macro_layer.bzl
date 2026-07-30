@@ -111,7 +111,7 @@ def apple_metal_library_macro_impl(apple_metal_library_rule = None, **kwargs):
     if "exec_compatible_with" in kwargs:
         fail("Cannot set `exec_compatible_with` for apple_metal_library()")
     kwargs["exec_compatible_with"] = [
-        # It's possible a buck2 daemon host machine has the correct Xcode
+        # It's possible a bsmr daemon host machine has the correct Xcode
         # version selected but does not have the Metal toolchain installed.
         # Because this would lead to a build failure, we have to send actions
         # remotely where we it's guaranteed the Metal toolchain will be

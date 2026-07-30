@@ -28,7 +28,7 @@ def normalize_and_write_deps(deps, dst_path):
                 # The dep file included a path to something outside the
                 # build root. That's bad (actions shouldn't depend on
                 # anything outside the build root), but that dependency is
-                # therefore not tracked by Buck2 (which can only see things
+                # therefore not tracked by Bessemer (which can only see things
                 # in the build root), so it cannot be represented as a
                 # dependency and therefore we don't include it (event if we
                 # could include it, this could never cause a miss).

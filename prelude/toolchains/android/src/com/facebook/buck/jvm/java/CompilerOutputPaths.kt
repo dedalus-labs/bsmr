@@ -26,7 +26,7 @@ data class CompilerOutputPaths(
   companion object {
     /**
      * Returns a path to a file that contains dependencies used in the compilation to be consumed by
-     * buck2
+     * bsmr
      */
     @JvmStatic
     fun getDepFilePath(outputJarDirPath: RelPath): RelPath {

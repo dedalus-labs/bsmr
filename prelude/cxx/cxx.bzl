@@ -392,17 +392,17 @@ def cxx_binary_impl(ctx: AnalysisContext) -> list[Provider]:
     )
 
     # When an executable is the output of a build, also materialize all the
-    # unpacked external debuginfo that goes with it. This makes `buck2 build
-    # :main` equivalent to `buck2 build :main :main[debuginfo]`.
+    # unpacked external debuginfo that goes with it. This makes `bsmr build
+    # :main` equivalent to `bsmr build :main :main[debuginfo]`.
     #
     # This is wasted work if we are building an executable together with its dwp
-    # subtarget (`buck2 build :main :main[dwp]`) in which case a large number of
+    # subtarget (`bsmr build :main :main[dwp]`) in which case a large number of
     # unpacked debuginfo files can end up being materialized redundantly. LLDB
     # will ignore them and obtain debuginfo via the single packed debuginfo file
     # instead.
     #
     # But materializing unpacked debuginfo is the right tradeoff because it
-    # means the output of `buck2 build :main` is always immediately usable in a
+    # means the output of `bsmr build :main` is always immediately usable in a
     # debugger.
     #
     # External debuginfo is *not* materialized when an executable is depended on
@@ -1086,7 +1086,7 @@ def cxx_test_impl(ctx: AnalysisContext) -> list[Provider]:
                 # We implicitly make this test via the project root, instead of
                 # the cell root (e.g. fbcode root). `network_access` is carried on
                 # the executor config (see `get_re_executors_from_props`).
-                run_from_project_root = ("buck2_run_from_project_root" in (ctx.attrs.labels or []) or re_executors.run_from_project_root),
+                run_from_project_root = ("bsmr_run_from_project_root" in (ctx.attrs.labels or []) or re_executors.run_from_project_root),
                 use_project_relative_paths = re_executors.use_project_relative_paths,
                 supports_test_execution_caching = ctx.attrs.supports_test_execution_caching,
             ),

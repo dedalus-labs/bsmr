@@ -13,6 +13,6 @@ rust_library(
         "fbsource//third-party/rust:num-bigint",
         "fbsource//third-party/rust:ref-cast",
         "fbsource//third-party/rust:triomphe",
-        "//buck2/packages/rust/gazebo/strong_hash_derive:strong_hash_derive",
+        "//bsmr/packages/rust/gazebo/strong_hash_derive:strong_hash_derive",
     ],
 )

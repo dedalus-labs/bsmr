@@ -17,9 +17,9 @@ import re
 import subprocess
 from pathlib import Path
 
-from buck2.tests.e2e_util.api.buck import Buck
-from buck2.tests.e2e_util.buck_workspace import buck_test, eden_remove, env
-from buck2.tests.e2e_util.helper.golden import golden, sanitize_daemon_stderr
+from bsmr.tests.e2e_util.api.buck import Buck
+from bsmr.tests.e2e_util.buck_workspace import buck_test, eden_remove, env
+from bsmr.tests.e2e_util.helper.golden import golden, sanitize_daemon_stderr
 
 
 def _is_process_alive(pid: int) -> bool:
@@ -39,7 +39,7 @@ def _is_process_alive(pid: int) -> bool:
 
 
 @buck_test(setup_eden=True, skip_final_kill=True)
-@env("BUCK2_TESTING_CHECKER_INTERVAL_SECONDS", "1")
+@env("BSMR_TESTING_CHECKER_INTERVAL_SECONDS", "1")
 async def test_daemon_killed_on_checkout_removal(buck: Buck) -> None:
     # Start the daemon and capture its PID and daemon dir before removal.
     await buck.server()

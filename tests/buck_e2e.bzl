@@ -6,7 +6,7 @@
 # of this source tree. You may select, at your option, one of the
 # above-listed licenses.
 
-load("@fbcode//buck2/app:modifier.bzl", "buck2_modifiers")
+load("@fbcode//bsmr/app:modifier.bzl", "bsmr_modifiers")
 load("@bsmr_build//rules:native_rules.bzl", "buck_filegroup")
 load("@fbcode_macros//build_defs:python_pytest.bzl", "python_pytest")
 
@@ -34,7 +34,7 @@ def buck_e2e_test(
     compatible_with = None,
 ):
     """
-    Custom macro for buck2/buckaemon end-to-end tests using pytest.
+    Custom macro for bsmr/buckaemon end-to-end tests using pytest.
     """
     srcs = srcs or []
     labels = labels or []
@@ -61,12 +61,12 @@ def buck_e2e_test(
 
     # For autodeps
     read_package_value = getattr(native, "read_package_value", None)
-    e2e_flavor = read_package_value and read_package_value("buck2_e2e_test.flavor")
+    e2e_flavor = read_package_value and read_package_value("bsmr_e2e_test.flavor")
     if e2e_flavor == "isolated":
-        env["BUCK2_E2E_TEST_FLAVOR"] = "isolated"
+        env["BSMR_E2E_TEST_FLAVOR"] = "isolated"
         serialize_test_cases = serialize_test_cases or False
     else:
-        env["BUCK2_E2E_TEST_FLAVOR"] = "any"
+        env["BSMR_E2E_TEST_FLAVOR"] = "any"
         serialize_test_cases = serialize_test_cases if serialize_test_cases != None else True
     heavyweight_label = "heavyweight8_experimental"
     heavyweight_threads = "8"
@@ -77,8 +77,8 @@ def buck_e2e_test(
     labels.append(heavyweight_label)
 
     # Use little threads. We don't do much work in tests but we do run lots of Bucks.
-    env["BUCK2_RUNTIME_THREADS"] = heavyweight_threads
-    env["BUCK2_MAX_BLOCKING_THREADS"] = heavyweight_threads
+    env["BSMR_RUNTIME_THREADS"] = heavyweight_threads
+    env["BSMR_MAX_BLOCKING_THREADS"] = heavyweight_threads
 
     if serialize_test_cases:
         # This lets us pass stress runs by making all test cases inside of a test file serial
@@ -106,21 +106,21 @@ def buck_e2e_test(
     if require_nano_prelude == None:
         require_nano_prelude = data_dir != None
     if require_nano_prelude:
-        env["NANO_PRELUDE"] = "$(location fbcode//buck2/tests/e2e_util/nano_prelude:nano_prelude)"
+        env["NANO_PRELUDE"] = "$(location fbcode//bsmr/tests/e2e_util/nano_prelude:nano_prelude)"
 
     deps += [
         "fbsource//third-party/pypi/pytest:pytest",
         "fbsource//third-party/pypi/pytest-asyncio:pytest-asyncio",
-        "fbcode//buck2/tests/e2e_util:utilities",
+        "fbcode//bsmr/tests/e2e_util:utilities",
     ]
     if use_buck_api:
-        deps += ["fbcode//buck2/tests/e2e_util/api:api"]
+        deps += ["fbcode//bsmr/tests/e2e_util/api:api"]
     resources = resources or {}
 
     # Let users of the macro define their own configuration for pytest. This allow for reusing all
     # the fixture code for tools building e2e tests that also need a working buck environment.
     if not "conftest.py" in resources.values():
-        resources["fbcode//buck2/tests/e2e_util:conftest.py"] = "conftest.py"
+        resources["fbcode//bsmr/tests/e2e_util:conftest.py"] = "conftest.py"
 
     python_pytest(
         name = name,
@@ -141,13 +141,13 @@ def buck_e2e_test(
         compatible_with = compatible_with,
     )
 
-def buck2_e2e_test(
+def bsmr_e2e_test(
     name,
-    test_with_compiled_buck2 = True,
-    test_with_deployed_buck2 = False,
-    test_with_reverted_buck2 = False,
-    use_compiled_buck2_client_and_tpx = False,
-    skip_deployed_buck2_version_dep = False,
+    test_with_compiled_bsmr = True,
+    test_with_deployed_bsmr = False,
+    test_with_reverted_bsmr = False,
+    use_compiled_bsmr_client_and_tpx = False,
+    skip_deployed_bsmr_version_dep = False,
     deps = (),
     env = None,
     skip_for_os = (),
@@ -168,27 +168,27 @@ def buck2_e2e_test(
     compatible_with = None,
 ):
     """
-    Custom macro for buck2 end-to-end tests using pytest. All tests are run against buck2 compiled in-repo (compiled buck2).
+    Custom macro for bsmr end-to-end tests using pytest. All tests are run against bsmr compiled in-repo (compiled bsmr).
 
-    test_with_compiled_buck2:
-        A boolean for whether to run tests with the compiled buck2.
+    test_with_compiled_bsmr:
+        A boolean for whether to run tests with the compiled bsmr.
         Default is True.
         Should typically be unset when testing things that are not expected to be disproportionately
-        sensitive to buck2 core changes. Unsetting this also simplifies the CI setup, as testing
-        with buck2 core requires always using opt mode.
-    test_with_deployed_buck2:
-        A boolean for whether to run tests with the deployed buck2.
+        sensitive to bsmr core changes. Unsetting this also simplifies the CI setup, as testing
+        with bsmr core requires always using opt mode.
+    test_with_deployed_bsmr:
+        A boolean for whether to run tests with the deployed bsmr.
         Default is False.
-        Should typically be set for tests of UDRs and other things that are not "core buck2 functionality"
-    test_with_reverted_buck2:
-        Like `test_with_deployed_buck2`, but for the previous version
-    use_compiled_buck2_client_and_tpx:
-        A full prod archive is distinct from a normal build of buck2 in that it uses a client-only
+        Should typically be set for tests of UDRs and other things that are not "core bsmr functionality"
+    test_with_reverted_bsmr:
+        Like `test_with_deployed_bsmr`, but for the previous version
+    use_compiled_bsmr_client_and_tpx:
+        A full prod archive is distinct from a normal build of bsmr in that it uses a client-only
         binary and additionally makes TPX available. Needed if you want to be able to `buck.test`
         Default is False.
-    skip_deployed_buck2_version_dep:
-        A boolean for whether to skip adding the dependency on tools/buck2-versions:stable when
-        test_with_deployed_buck2 is True. This is useful for tests that don't need the version
+    skip_deployed_bsmr_version_dep:
+        A boolean for whether to skip adding the dependency on tools/bsmr-versions:stable when
+        test_with_deployed_bsmr is True. This is useful for tests that don't need the version
         dependency for Target Determinator purposes (e.g., bxl tests that test Starlark logic).
         Default is False.
     """
@@ -211,39 +211,39 @@ def buck2_e2e_test(
     }
 
     env = env or {}
-    if not test_with_compiled_buck2 and not test_with_deployed_buck2:
-        fail("Must set one of `test_with_compiled_buck2` or `test_with_deployed_buck2` for " + name)
+    if not test_with_compiled_bsmr and not test_with_deployed_bsmr:
+        fail("Must set one of `test_with_compiled_bsmr` or `test_with_deployed_bsmr` for " + name)
 
-    # soft errors should always be allowed on tests with deployed buck2, or with reverted buck
+    # soft errors should always be allowed on tests with deployed bsmr, or with reverted buck
     deployed_env = dict(env)
-    deployed_env["BUCK2_HARD_ERROR"] = "false"
+    deployed_env["BSMR_HARD_ERROR"] = "false"
 
-    if test_with_compiled_buck2:
+    if test_with_compiled_bsmr:
         compiled_env = dict(env)
 
-        # TODO(ctolliday) use BUCK2_HARD_ERROR=panic
-        compiled_env["BUCK2_HARD_ERROR"] = "true"
-        compiled_env["BUCK2_TPX"] = "$BUCK2_BINARY_DIR/buck2-tpx"
+        # TODO(ctolliday) use BSMR_HARD_ERROR=panic
+        compiled_env["BSMR_HARD_ERROR"] = "true"
+        compiled_env["BSMR_TPX"] = "$BSMR_BINARY_DIR/bsmr-tpx"
 
-        if use_compiled_buck2_client_and_tpx:
-            base_exe = "$(location fbcode//buck2:symlinked_buck2_and_tpx)/buck2"
+        if use_compiled_bsmr_client_and_tpx:
+            base_exe = "$(location fbcode//bsmr:symlinked_bsmr_and_tpx)/bsmr"
             exe = select({
                 "DEFAULT": base_exe,
                 "ovr_config//os:windows": base_exe + ".exe",
             })
         else:
-            exe = "$(location fbcode//buck2:buck2)"
+            exe = "$(location fbcode//bsmr:bsmr)"
 
         buck_e2e_test(
-            # deployed buck2 test target retains the original target name so that when user runs `buck test <test target>`,
-            # it only runs the deployed buck2 tests and not the compiled buck2 tests.
+            # deployed bsmr test target retains the original target name so that when user runs `buck test <test target>`,
+            # it only runs the deployed bsmr tests and not the compiled bsmr tests.
             # This will make it much quicker for rule writers to run their tests locally.
-            name = name + ("_with_compiled_buck2" if test_with_deployed_buck2 else ""),
+            name = name + ("_with_compiled_bsmr" if test_with_deployed_bsmr else ""),
             env = compiled_env,
             executable = exe,
             skip_for_os = skip_for_os,
             deps = deps,
-            cfg_modifiers = buck2_modifiers()
+            cfg_modifiers = bsmr_modifiers()
             + [
                 # Always run these tests under rust opt build
                 "ovr_config//build_mode:opt",
@@ -251,23 +251,23 @@ def buck2_e2e_test(
             **kwargs,
         )
 
-    if test_with_deployed_buck2:
+    if test_with_deployed_bsmr:
         deps = deps or []
 
-        # Add a buck2 version file as dep so we can run deployed buck2 tests on version bumps.
-        # Skip this dependency if skip_deployed_buck2_version_dep is True (e.g., for bxl tests).
-        if not skip_deployed_buck2_version_dep:
-            deps += ["fbsource//tools/buck2-versions:stable"]
-        buck_e2e_test(name = name, env = deployed_env, executable = "buck2", skip_for_os = skip_for_os, deps = deps, **kwargs)
+        # Add a bsmr version file as dep so we can run deployed bsmr tests on version bumps.
+        # Skip this dependency if skip_deployed_bsmr_version_dep is True (e.g., for bxl tests).
+        if not skip_deployed_bsmr_version_dep:
+            deps += ["fbsource//tools/bsmr-versions:stable"]
+        buck_e2e_test(name = name, env = deployed_env, executable = "bsmr", skip_for_os = skip_for_os, deps = deps, **kwargs)
 
-    if test_with_reverted_buck2:
+    if test_with_reverted_bsmr:
         previous_env = dict(deployed_env)
-        previous_env["BUCK2_CHANNEL"] = "previous"
-        buck_e2e_test(name = name + "_with_reverted_buck2", env = previous_env, executable = "buck2", skip_for_os = skip_for_os, deps = deps, **kwargs)
+        previous_env["BSMR_CHANNEL"] = "previous"
+        buck_e2e_test(name = name + "_with_reverted_bsmr", env = previous_env, executable = "bsmr", skip_for_os = skip_for_os, deps = deps, **kwargs)
 
-def buck2_core_tests(extra_attrs = {}, target_extra_attrs = {}):
+def bsmr_core_tests(extra_attrs = {}, target_extra_attrs = {}):
     """
-    A little wrapper that generates `buck2_e2e_test`s for core tests.
+    A little wrapper that generates `bsmr_e2e_test`s for core tests.
 
     extra_attrs:
         Extra attributes that are applied to all generated targets.
@@ -308,13 +308,13 @@ def buck2_core_tests(extra_attrs = {}, target_extra_attrs = {}):
                 attrs["srcs"] = [item]
 
             IMPLICIT_DEPS = [
-                "//buck2/tests/e2e_util:utils",
-                "//buck2/tests/e2e_util:golden",
+                "//bsmr/tests/e2e_util:utils",
+                "//bsmr/tests/e2e_util:golden",
             ]
             attrs["deps"] = list(attrs.get("deps") or [])
             attrs["deps"].extend(IMPLICIT_DEPS)
 
-            buck2_e2e_test(name = target, **attrs)
+            bsmr_e2e_test(name = target, **attrs)
             continue
         fail("Expected all directory entries to look like `test_*_data` or `test_*.py`, not {}".format(item))
 

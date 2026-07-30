@@ -18,12 +18,12 @@ import subprocess
 from pathlib import Path
 
 import pytest
-from buck2.tests.e2e_util.api.buck import Buck
-from buck2.tests.e2e_util.api.buck_result import BuckException
-from buck2.tests.e2e_util.asserts import expect_failure
-from buck2.tests.e2e_util.buck_workspace import buck_test
-from buck2.tests.e2e_util.helper.utils import (
-    get_buck2_re_use_case,
+from bsmr.tests.e2e_util.api.buck import Buck
+from bsmr.tests.e2e_util.api.buck_result import BuckException
+from bsmr.tests.e2e_util.asserts import expect_failure
+from bsmr.tests.e2e_util.buck_workspace import buck_test
+from bsmr.tests.e2e_util.helper.utils import (
+    get_bsmr_re_use_case,
     json_get,
     read_what_ran,
 )
@@ -148,7 +148,7 @@ async def test_upload_all_actions(buck: Buck) -> None:
 
     # Now, download the action. This will succeed only if we uploaded it.
     digest = what_ran[0]["reproducer"]["details"]["digest"]
-    use_case = await get_buck2_re_use_case(buck)
+    use_case = await get_bsmr_re_use_case(buck)
     subprocess.check_call(
         [
             "dotslash",
@@ -371,7 +371,7 @@ async def test_log_action_keys(buck: Buck) -> None:
 
     # Run on RE
     await buck.build(
-        ":test", "-c", f"test.seed={seed}", "-c", "buck2.log_action_keys=true"
+        ":test", "-c", f"test.seed={seed}", "-c", "bsmr.log_action_keys=true"
     )
     assert await read_action_keys() == [("Re", action_key)]
 
@@ -379,7 +379,7 @@ async def test_log_action_keys(buck: Buck) -> None:
 
     # Run on RE again, get a cache hit this time
     await buck.build(
-        ":test", "-c", f"test.seed={seed}", "-c", "buck2.log_action_keys=true"
+        ":test", "-c", f"test.seed={seed}", "-c", "bsmr.log_action_keys=true"
     )
 
     assert await read_action_keys() == [("Cache", action_key)]

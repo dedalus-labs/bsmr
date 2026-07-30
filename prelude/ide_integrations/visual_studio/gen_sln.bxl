@@ -153,7 +153,7 @@ def gen_sln(targets, vs_settings_list, explicit_targets, startup_target_label: T
     nested_projects = {}  # project guid => parent guid
 
     # Ideally this should have some amount of uniqueness built in, but it isn't clear what a good algorithm for doing this would be
-    solution_guid = gen_guid("Buck2 vsgo solution file")
+    solution_guid = gen_guid("Bessemer vsgo solution file")
     sln_content = """Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17

@@ -13,7 +13,7 @@ python_binary(
     main = "persistent_worker.py",
     deps = [
         "//proto/bazel:worker_protocol_pb2",
-        "//proto/buck2:worker_pb2",
+        "//proto/bsmr:worker_pb2",
     ],
 )
 

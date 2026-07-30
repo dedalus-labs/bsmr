@@ -9,7 +9,7 @@
 [buildfile]
   name = TARGETS.fixture
 
-[buck2]
+[bsmr]
   materializations = deferred
   sqlite_materializer_state = true
 

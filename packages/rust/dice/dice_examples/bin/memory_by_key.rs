@@ -8,7 +8,7 @@
  * above-listed licenses.
  */
 
-//! Measure DICE per-key memory cost. Just `buck2 run` it and read the
+//! Measure DICE per-key memory cost. Just `bsmr run` it and read the
 //! report at the bottom — there are no flags.
 //!
 //! What it does, in order:

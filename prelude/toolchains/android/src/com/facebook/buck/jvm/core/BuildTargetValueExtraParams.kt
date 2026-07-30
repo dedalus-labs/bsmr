@@ -114,11 +114,11 @@ data class BuildTargetValueExtraParams(
 
     @JvmStatic
     fun of(buildTargetValue: BuildTargetValue, buckOut: RelPath): BuildTargetValueExtraParams {
-      // in buck1: cell//base_path:target#flavor vs. in buck2: cell//base_path:target[flavor]
+      // in buck1: cell//base_path:target#flavor vs. in bsmr: cell//base_path:target[flavor]
       val buck1Style = "(#(.*))"
-      val buck2Style = "(\\[([^\\]]*)\\])"
+      val bsmrStyle = "(\\[([^\\]]*)\\])"
       val pattern =
-          Pattern.compile(String.format("(.*)//([^:]*):([^#\\[]*)(%s|%s)?", buck1Style, buck2Style))
+          Pattern.compile(String.format("(.*)//([^:]*):([^#\\[]*)(%s|%s)?", buck1Style, bsmrStyle))
       val matcher = pattern.matcher(buildTargetValue.fullyQualifiedName)
       if (!matcher.matches()) {
         throw RuntimeException(

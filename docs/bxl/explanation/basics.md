@@ -4,7 +4,7 @@ title: BXL Basics
 ---
 
 This page is a primer on common BXL functionalities and data types. Ramping up
-in BXL may be challenging without much prior knowledge of Buck2 building blocks
+in BXL may be challenging without much prior knowledge of Bessemer building blocks
 (ex: targets, configurations, queries), so please take a look at the
 [Concepts](../../concepts/concept_map.md) documentation before reading on.
 
@@ -30,9 +30,9 @@ below).
 
 ### Query
 
-Buck2 supports a couple different query types: querying the unconfigured graph
-(`buck2 uquery`), the configured graph (`buck2 cquery`), or the action graph
-(`buck2 aquery`). These queries are all available in BXL as well:
+Bessemer supports a couple different query types: querying the unconfigured graph
+(`bsmr uquery`), the configured graph (`bsmr cquery`), or the action graph
+(`bsmr aquery`). These queries are all available in BXL as well:
 
 - `ctx.uquery()` returns a [`bxl.UqueryContext`](../../../api/bxl/UqueryContext)
 - `ctx.cquery()` returns a [`bxl.CqueryContext`](../../../api/bxl/CqueryContext)
@@ -43,7 +43,7 @@ queries that are common between uquery, cquery, and aquery, but cquery and
 aquery will have extra queries unique to the configured graph or the action
 graph. One more thing to call out is the `eval()` query, which is a special
 query that takes in the entire query as a string literal. A common use for
-`eval()` is to migrate a complex query from Buck2 CLI to BXL by dropping the
+`eval()` is to migrate a complex query from Bessemer CLI to BXL by dropping the
 entire query string directly into `eval()`.
 
 The query results are target sets (iterable container) of
@@ -73,7 +73,7 @@ inputs.
 #### Aquery
 
 Aquery is a quite different from uquery and cquery. It is used to query the
-action graph, which is constructed after Buck2 runs analysis on the targets and
+action graph, which is constructed after Bessemer runs analysis on the targets and
 produces the list of providers and actions needed to build the target.
 
 ### Actions

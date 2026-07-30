@@ -10,6 +10,6 @@ rust_binary(
         "fbsource//third-party/rust:bincode",
         "fbsource//third-party/rust:clap",
         "fbsource//third-party/rust:serde_json",
-        "//buck2/packages/rust/dice/dice:dice",
+        "//bsmr/packages/rust/dice/dice:dice",
     ],
 )

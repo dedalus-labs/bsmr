@@ -57,7 +57,7 @@ copy_to_dir = rule(
 )
 
 def _download(ctx: AnalysisContext):
-    url = "https://interncache-all.fbcdn.net/manifold/buck_build_test/tree/buck2_test/http_archive/test.tgz"
+    url = "https://interncache-all.fbcdn.net/manifold/buck_build_test/tree/bsmr_test/http_archive/test.tgz"
     sha1 = "1a45666759704bf08fc670aa96118a0415c470fc"
     download = ctx.actions.download_file("download", url, sha1 = sha1, has_content_based_path = False)
     return [
@@ -89,7 +89,7 @@ cas_artifact = rule(
         "expires_after_timestamp": attrs.int(default = 0),
         "is_directory": attrs.bool(default = False),
         "is_tree": attrs.bool(default = False),
-        "use_case": attrs.string(default = "buck2-testing"),
+        "use_case": attrs.string(default = "bsmr-testing"),
     },
 )
 

@@ -262,7 +262,7 @@ def _kotlin_compiler_plugins():
                  E.g.
 
                 ```
-fbcode/buck2/prelude/decls/jvm_common.bzl
+fbcode/bsmr/prelude/decls/jvm_common.bzl
                 kotlin_compiler_plugins = {
                     "somePluginSourcePath": {
                         "plugin:somePluginId:somePluginOptionKey": "somePluginOptionValue",

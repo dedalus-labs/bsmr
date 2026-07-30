@@ -1,7 +1,7 @@
 [repositories]
 root = .
 prelude = prelude
-[buck2]
+[bsmr]
 allow_eden_io = false
 [buildfile]
 name = TARGETS.fixture

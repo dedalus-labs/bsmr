@@ -109,7 +109,7 @@ def gen_vcxproj(target: bxl.ConfiguredTargetNode, vs_settings: dict, cli_args, b
     import_mode_configs = _gen_import_mode_configs(vs_settings, target)
 
     # Why are we using cmd_args instead of strings? Because bxl resolved_attrs does not support string manipulation (as of July 2024)
-    # See https://fb.workplace.com/groups/buck2users/permalink/3703593843230303/ for more context
+    # See https://fb.workplace.com/groups/bsmrusers/permalink/3703593843230303/ for more context
     vcxproj_content = cmd_args(
         """<?xml version="1.0" encoding="utf-8"?>""",
         """<Project DefaultTargets="Build" ToolsVersion="17.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">""",

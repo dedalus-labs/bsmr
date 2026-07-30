@@ -151,7 +151,7 @@ async fn main() -> anyhow::Result<()> {
     }
 
     let mut builder = Dice::builder();
-    if let Ok(path) = std::env::var("BUCK2_DICE_DB_PATH") {
+    if let Ok(path) = std::env::var("BSMR_DICE_DB_PATH") {
         let storage = dice::DiceStorage::open(std::path::Path::new(&path))?;
         builder.set_pagable_storage(storage);
     }

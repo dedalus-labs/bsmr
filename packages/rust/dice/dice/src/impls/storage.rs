@@ -110,7 +110,7 @@ impl DiceStorage {
         // Process this many keys in parallel at a time, limit peak RSS
         const CHUNK_SIZE: usize = 32768;
         let finished: Arc<DashMap<usize, Arc<ArcSerSlot>>> = Arc::new(DashMap::new());
-        let num_workers = env_concurrency("BUCK2_DICE_PAGE_OUT_WORKERS");
+        let num_workers = env_concurrency("BSMR_DICE_PAGE_OUT_WORKERS");
 
         let mut remaining = keys;
         while !remaining.is_empty() {
@@ -216,7 +216,7 @@ impl DiceStorage {
         if keys.is_empty() {
             return Ok(());
         }
-        let num_workers = env_concurrency("BUCK2_DICE_PAGE_IN_WORKERS");
+        let num_workers = env_concurrency("BSMR_DICE_PAGE_IN_WORKERS");
         let worker_size = keys.len().div_ceil(num_workers);
 
         let handles: Vec<_> = keys

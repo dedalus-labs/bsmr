@@ -65,7 +65,7 @@ def erlang_extract_otp_app_error_handler(ctx: ActionErrorCtx) -> list[ActionSubE
 
  2. Regenerate your toolchain's otp_versions.bzl file:
 
-    $ python3 buck2/prelude/erlang/toolchain/generate_otp_versions.py my_otp_versions.bzl
+    $ python3 bsmr/prelude/erlang/toolchain/generate_otp_versions.py my_otp_versions.bzl
 
  Common causes:
    - The application is not part of your OTP version (e.g., jinterface was removed in OTP 27)

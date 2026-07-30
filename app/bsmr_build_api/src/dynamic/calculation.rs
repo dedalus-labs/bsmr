@@ -1,0 +1,53 @@
+/*
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
+ *
+ * This source code is dual-licensed under either the MIT license found in the
+ * LICENSE-MIT file in the root directory of this source tree or the Apache
+ * License, Version 2.0 found in the LICENSE-APACHE file in the root directory
+ * of this source tree. You may select, at your option, one of the
+ * above-listed licenses.
+ */
+
+use std::sync::Arc;
+
+use allocative::Allocative;
+use async_trait::async_trait;
+use bsmr_core::deferred::dynamic::DynamicLambdaResultsKey;
+use bsmr_util::late_binding::LateBinding;
+use dice::DiceComputations;
+use pagable::Pagable;
+
+use crate::analysis::registry::RecordedAnalysisValues;
+
+#[derive(Allocative, Pagable)]
+pub struct DynamicLambdaResult {
+    pub analysis_values: RecordedAnalysisValues,
+}
+
+impl DynamicLambdaResult {
+    pub(crate) fn analysis_values(&self) -> &crate::analysis::registry::RecordedAnalysisValues {
+        &self.analysis_values
+    }
+}
+
+#[async_trait]
+pub trait DynamicLambdaCalculation: Sync + 'static {
+    async fn dynamic_lambda_result(
+        &self,
+        dice: &mut DiceComputations<'_>,
+        key: &DynamicLambdaResultsKey,
+    ) -> bsmr_error::Result<Arc<DynamicLambdaResult>>;
+}
+
+pub static DYNAMIC_LAMBDA_CALCULATION_IMPL: LateBinding<&'static dyn DynamicLambdaCalculation> =
+    LateBinding::new("DYNAMIC_LAMBDA_CALCULATION_IMPL");
+
+pub async fn dynamic_lambda_result(
+    dice: &mut DiceComputations<'_>,
+    key: &DynamicLambdaResultsKey,
+) -> bsmr_error::Result<Arc<DynamicLambdaResult>> {
+    DYNAMIC_LAMBDA_CALCULATION_IMPL
+        .get()?
+        .dynamic_lambda_result(dice, key)
+        .await
+}

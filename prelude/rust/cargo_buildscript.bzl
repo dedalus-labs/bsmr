@@ -125,7 +125,7 @@ def _make_cc_shim(ctx: AnalysisContext, name: str, cmd: cmd_args) -> cmd_args:
     appropriate value after learning the buildscript-selected working directory.
 
         python3 \
-        fbcode/buck2/prelude/rust/tools/from_any_dir.py \
+        fbcode/bsmr/prelude/rust/tools/from_any_dir.py \
         --cwd=/re_cwd/buck-out/v2/art/fbsource/eef091ffd45259ca/third-party/rust/vendor/gmp-mpfr-sys/__1-build-script-run__/cwd \
         ${..}/buck-out/v2/art/fbcode/tools/build/buck/wrappers/__fbcc__/0cdd64957fa390c4/fbcc \
         -resource-dir \

@@ -6,7 +6,7 @@
 # of this source tree. You may select, at your option, one of the
 # above-listed licenses.
 
-load("@fbcode//buck2/tests:buck_e2e.bzl", "buck2_e2e_test")
+load("@fbcode//bsmr/tests:buck_e2e.bzl", "bsmr_e2e_test")
 load("@bsmr_build//rules:native_rules.bzl", "buck_genrule")
 load("@fbsource//tools/build_defs/windows:powershell.bzl", "powershell_cmd_exe")
 
@@ -14,15 +14,15 @@ load("@fbsource//tools/build_defs/windows:powershell.bzl", "powershell_cmd_exe")
 # tools/build_defs/check_dependencies_test.bzl that passes additional arguments for meta specific allowlist.
 
 def _check_dependencies_test(name, target, contacts, env, labels: list[str], deps, compatible_with = None, **kwargs):
-    buck2_e2e_test(
+    bsmr_e2e_test(
         contacts = contacts,
         name = name,
-        srcs = {"fbcode//buck2/tests/e2e_util:test_bxl_check_dependencies_template.py": "test_bxl_check_dependencies_template.py"},
+        srcs = {"fbcode//bsmr/tests/e2e_util:test_bxl_check_dependencies_template.py": "test_bxl_check_dependencies_template.py"},
         env = env,
         labels = labels,
-        test_with_compiled_buck2 = False,
-        test_with_deployed_buck2 = True,
-        skip_deployed_buck2_version_dep = True,
+        test_with_compiled_bsmr = False,
+        test_with_deployed_bsmr = True,
+        skip_deployed_bsmr_version_dep = True,
         use_buck_api = False,
         # In order for target determinator to trigger this test when the `target` specified has changed, we need to introduce a dep on `target`.
         # However, we cannot introduce a configured dep, because the `target` may not be compatible with platform of dependencies test.
@@ -55,7 +55,7 @@ def check_dependencies_test(
     **kwargs,
 ):
     """
-    Creates a test target from a buck2 bxl script. BXL script must use "test" as entry
+    Creates a test target from a bsmr bxl script. BXL script must use "test" as entry
     point.
 
     There are two modes: "allowlist" mode, "blocklist" mode
@@ -89,7 +89,7 @@ def check_dependencies_test(
         (for example, allowlist: //testing/jest/.*).
     """
 
-    bxl_main = "fbcode//buck2/tests/check_dependencies_test.bxl:test"
+    bxl_main = "fbcode//bsmr/tests/check_dependencies_test.bxl:test"
     allowlist_patterns = ",".join(allowlist_patterns) if allowlist_patterns else ""
     blocklist_patterns = ",".join(blocklist_patterns) if blocklist_patterns else ""
     if not (expect_failure_msg == None or len(expect_failure_msg) > 0):
@@ -139,7 +139,7 @@ def check_dependencies_test(
 
 def assert_dependencies_test(name, target, contacts, expected_deps, expect_failure_msg = None, deps = None, labels = [], **kwargs):
     """
-    Creates a test target fromfbcode//buck2/tests/assert_dependencies_test.bxl:test bxl script.
+    Creates a test target fromfbcode//bsmr/tests/assert_dependencies_test.bxl:test bxl script.
 
     Parameters:
         name: Name of the test target.
@@ -152,7 +152,7 @@ def assert_dependencies_test(name, target, contacts, expected_deps, expect_failu
         target = target,
         contacts = contacts,
         env = {
-            "BXL_MAIN": "fbcode//buck2/tests/assert_dependencies_test.bxl:test",
+            "BXL_MAIN": "fbcode//bsmr/tests/assert_dependencies_test.bxl:test",
             "DEPS": ",".join(expected_deps),
             "EXPECT_FAILURE_MSG": expect_failure_msg or "",
             "FLAVOR": "assert_dependencies_test",
@@ -165,7 +165,7 @@ def assert_dependencies_test(name, target, contacts, expected_deps, expect_failu
 
 def audit_dependents_test(name, target, contacts, source_target, allowlist_patterns, expect_failure_msg = None, deps = None, **kwargs):
     """
-    Creates a test target from a buck2 bxl script. BXL script must use "test" as entry
+    Creates a test target from a bsmr bxl script. BXL script must use "test" as entry
     point.
 
     Parameters:
@@ -182,7 +182,7 @@ def audit_dependents_test(name, target, contacts, source_target, allowlist_patte
         contacts = contacts,
         env = {
             "ALLOWLIST": ",".join(allowlist_patterns) if allowlist_patterns else "",
-            "BXL_MAIN": "fbcode//buck2/tests/audit_dependents_test.bxl:test",
+            "BXL_MAIN": "fbcode//bsmr/tests/audit_dependents_test.bxl:test",
             "EXPECT_FAILURE_MSG": expect_failure_msg or "",
             "FLAVOR": "audit_dependents_test",
             "SOURCE_TARGET": source_target,
@@ -197,7 +197,7 @@ def check_mutually_exclusive_dependencies_test(
     name, target, contacts, mutually_exclusive_group, expect_failure_msg = None, deps = None, labels = [], target_deps = True, build_mode = None, **kwargs
 ):
     """
-    Creates a test target from a buck2 bxl script that checks for mutually exclusive dependencies.
+    Creates a test target from a bsmr bxl script that checks for mutually exclusive dependencies.
 
     This test verifies that the target does not depend on more than one dependency from the
     mutually exclusive group. For example, if your group is:
@@ -225,7 +225,7 @@ def check_mutually_exclusive_dependencies_test(
     # Convert list to comma-separated string for BXL
     group_str = ",".join(mutually_exclusive_group)
 
-    # Build mode flagfile is passed directly to buck2 as an argfile
+    # Build mode flagfile is passed directly to bsmr as an argfile
     # The flagfile contains --target-platforms and other config flags
     build_mode_argfile = ""
     if build_mode:
@@ -241,7 +241,7 @@ def check_mutually_exclusive_dependencies_test(
         contacts = contacts,
         env = {
             "BUILD_MODE_ARGFILE": build_mode_argfile,
-            "BXL_MAIN": "fbcode//buck2/tests/check_mutually_exclusive_dependencies_test.bxl:test",
+            "BXL_MAIN": "fbcode//bsmr/tests/check_mutually_exclusive_dependencies_test.bxl:test",
             "EXPECT_FAILURE_MSG": expect_failure_msg or "",
             "FLAVOR": "check_mutually_exclusive_dependencies_test",
             "MUTUALLY_EXCLUSIVE_GROUP": group_str,

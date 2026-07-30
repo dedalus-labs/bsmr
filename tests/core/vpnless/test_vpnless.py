@@ -13,8 +13,8 @@ from __future__ import annotations
 
 import json
 
-from buck2.tests.e2e_util.api.buck import Buck
-from buck2.tests.e2e_util.buck_workspace import buck_test, env
+from bsmr.tests.e2e_util.api.buck import Buck
+from bsmr.tests.e2e_util.buck_workspace import buck_test, env
 
 # Note: for test scenarios where we want to ensure the `cpe` crate reports no
 # vpnless support, we have to define the env var but =0. Otherwise these

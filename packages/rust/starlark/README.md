@@ -14,7 +14,7 @@ This project provides a Rust implementation of the
 Starlark (formerly codenamed Skylark) is a deterministic language inspired by
 Python3, used for configuration in the build systems
 [Bazel](https://bazel.build), [Buck](https://buck.build) and
-[Buck2](https://buck2.build), of which Buck2 depends on this library. This
+[Bessemer](https://buck2.build), of which Bessemer depends on this library. This
 project was originally developed
 [in this repo](https://github.com/google/starlark-rust), which contains a more
 extensive history.

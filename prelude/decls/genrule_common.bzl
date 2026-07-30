@@ -248,7 +248,7 @@ def _allow_offline_output_cache_arg():
                 Enables caching of this genrule's outputs for offline builds.
 
                  When set to `True`, the genrule's outputs are cached during trace builds
-                 (via `buck2 debug trace-io`) and restored during offline builds without
+                 (via `bsmr debug trace-io`) and restored during offline builds without
                  re-executing the command.
 
                  This is intended for genrules that read from the network (e.g., downloads,
@@ -260,7 +260,7 @@ def _allow_offline_output_cache_arg():
                  offline cache, they are restored without running the genrule; otherwise
                  the genrule executes normally (graceful fallback).
 
-                 Requires `buck2.use_network_action_output_cache=true` config to take effect.
+                 Requires `bsmr.use_network_action_output_cache=true` config to take effect.
 
                  Example use case: caching network downloads in containerized offline build environments.
             """,

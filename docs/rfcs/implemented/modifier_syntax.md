@@ -8,13 +8,13 @@
 
 The following is copied from the command-line modifiers section of the original [modifiers RFC](https://docs.google.com/document/d/1yfb2mwnsphGiz9FhftkIGwMorK8is1qq3f_gYOEmkMA/edit?tab=t.0).
 
-Modifiers from `?` syntax are specified as `buck2 build <target pattern>?<modifiers separated by plus signs>`.
+Modifiers from `?` syntax are specified as `bsmr build <target pattern>?<modifiers separated by plus signs>`.
 
-For example, `buck2 build repo//foo:bar?prelude//constraints/sanitizer:asan` applies asan modifier on the command line. `buck2 build repo//foo:bar?prelude//constraints/os:linux+prelude//constraints/sanitizer:asan` will apply linux and asan modifiers.
+For example, `bsmr build repo//foo:bar?prelude//constraints/sanitizer:asan` applies asan modifier on the command line. `bsmr build repo//foo:bar?prelude//constraints/os:linux+prelude//constraints/sanitizer:asan` will apply linux and asan modifiers.
 
-Modifiers can be specified for any target pattern, so `buck2 build repo//foo/...?asan` and `buck2 build repo//foo:?asan` are both valid.
+Modifiers can be specified for any target pattern, so `bsmr build repo//foo/...?asan` and `bsmr build repo//foo:?asan` are both valid.
 
-When specifying a subtarget and modifier with `?`, subtarget should go before the modifier, ex. `buck2 build repo//foo:bar[comp-db]?asan`. This configures `repo//foo:bar` against `asan` modifier and then builds just the `comp-db` subtarget.
+When specifying a subtarget and modifier with `?`, subtarget should go before the modifier, ex. `bsmr build repo//foo:bar[comp-db]?asan`. This configures `repo//foo:bar` against `asan` modifier and then builds just the `comp-db` subtarget.
 
 It is prohibited to specify both `--modifier` flag and `?` on CLI. This restriction may be removed in the future after implementation of this RFC provided we see good motivation for it.
 
@@ -22,39 +22,39 @@ It is prohibited to specify both `--modifier` flag and `?` on CLI. This restrict
 
 ## `--show-output`
 
-Buck’s build commands accept a set of `--show-output` flags (ex. `--show-output` and `--show-full-output`) that prints the output location of targets specified on CLI. For example, invoking `buck2 build fbcode//buck2:buck2 –show-output` prints
+Buck’s build commands accept a set of `--show-output` flags (ex. `--show-output` and `--show-full-output`) that prints the output location of targets specified on CLI. For example, invoking `bsmr build fbcode//bsmr:bsmr –show-output` prints
 
 ```python
-fbcode//buck2:buck2 buck-out/v2/gen/fbcode/57b1cdd23074b8c3/buck2/buck2
+fbcode//bsmr:bsmr buck-out/v2/gen/fbcode/57b1cdd23074b8c3/bsmr/bsmr
 ```
 
-Likewise, invoking build in a different mode like `buck2 build fbcode//buck2:buck2 -m opt` will print a different path
+Likewise, invoking build in a different mode like `bsmr build fbcode//bsmr:bsmr -m opt` will print a different path
 
 ```python
-fbcode//buck2:buck2 buck-out/v2/gen/fbcode/b706492dec65e54c/buck2/buck2
+fbcode//bsmr:bsmr buck-out/v2/gen/fbcode/b706492dec65e54c/bsmr/bsmr
 ```
 
-With `?`-syntax, users would be able to invoke `buck2 build fbcode//buck2:buck2 fbcode//buck2:buck2?opt` in the same invocation. For that, we propose to use the following output structure.
+With `?`-syntax, users would be able to invoke `bsmr build fbcode//bsmr:bsmr fbcode//bsmr:bsmr?opt` in the same invocation. For that, we propose to use the following output structure.
 
 ```python
-fbcode//buck2:buck2 buck-out/v2/gen/fbcode/57b1cdd23074b8c3/buck2/buck2
-fbcode//buck2:buck2?opt buck-out/v2/gen/fbcode/b706492dec65e54c/buck2/buck2
+fbcode//bsmr:bsmr buck-out/v2/gen/fbcode/57b1cdd23074b8c3/bsmr/bsmr
+fbcode//bsmr:bsmr?opt buck-out/v2/gen/fbcode/b706492dec65e54c/bsmr/bsmr
 ```
 
 This preserves modifiers in the exact same way that is specified from the CLI invocation, which allows users to differentiate which path belongs to dev modifier and which path belongs to opt modifier, without needing to understand very much about modifiers.
 
 ## Build Report
 
-Current build report for `buck2 build fbcode//buck2:buck2` looks as follows. For readability, we will skip irrelevant fields.
+Current build report for `bsmr build fbcode//bsmr:bsmr` looks as follows. For readability, we will skip irrelevant fields.
 
 ```python
 {
   "results": {
-    "fbcode//buck2:buck2": {
+    "fbcode//bsmr:bsmr": {
       "success": "SUCCESS",
       "outputs": {
         "DEFAULT": [
-          "buck-out/v2/gen/fbcode/57b1cdd23074b8c3/buck2/buck2"
+          "buck-out/v2/gen/fbcode/57b1cdd23074b8c3/bsmr/bsmr"
         ]
       },
       "other_outputs": {},
@@ -64,7 +64,7 @@ Current build report for `buck2 build fbcode//buck2:buck2` looks as follows. For
           "success": "SUCCESS",
           "outputs": {
             "DEFAULT": [
-              "buck-out/v2/gen/fbcode/57b1cdd23074b8c3/buck2/buck2"
+              "buck-out/v2/gen/fbcode/57b1cdd23074b8c3/bsmr/bsmr"
             ]
           },
           "other_outputs": {}
@@ -77,16 +77,16 @@ Current build report for `buck2 build fbcode//buck2:buck2` looks as follows. For
 }
 ```
 
-When `?`-syntax is used, we will also preserve the modifiers in the build report results key. For example, this is what the build report looks like with `buck2 build fbcode//buck2:buck2 fbcode//buck2:buck2?opt`.
+When `?`-syntax is used, we will also preserve the modifiers in the build report results key. For example, this is what the build report looks like with `bsmr build fbcode//bsmr:bsmr fbcode//bsmr:bsmr?opt`.
 
 ```python
 {
   "results": {
-    "fbcode//buck2:buck2": {
+    "fbcode//bsmr:bsmr": {
       "success": "SUCCESS",
       "outputs": {
         "DEFAULT": [
-          "buck-out/v2/gen/fbcode/57b1cdd23074b8c3/buck2/buck2"
+          "buck-out/v2/gen/fbcode/57b1cdd23074b8c3/bsmr/bsmr"
         ]
       },
       "other_outputs": {},
@@ -96,20 +96,20 @@ When `?`-syntax is used, we will also preserve the modifiers in the build report
           "success": "SUCCESS",
           "outputs": {
             "DEFAULT": [
-              "buck-out/v2/gen/fbcode/57b1cdd23074b8c3/buck2/buck2"
+              "buck-out/v2/gen/fbcode/57b1cdd23074b8c3/bsmr/bsmr"
             ]
           },
           "other_outputs": {}
         }
       },
       "errors": [],
-      "target_label": "fbcode//buck2:buck2"
+      "target_label": "fbcode//bsmr:bsmr"
     },
-    "fbcode//buck2:buck2?opt": {
+    "fbcode//bsmr:bsmr?opt": {
       "success": "SUCCESS",
       "outputs": {
         "DEFAULT": [
-          "buck-out/v2/gen/fbcode/b706492dec65e54c/buck2/buck2"
+          "buck-out/v2/gen/fbcode/b706492dec65e54c/bsmr/bsmr"
         ]
       },
       "other_outputs": {},
@@ -119,21 +119,21 @@ When `?`-syntax is used, we will also preserve the modifiers in the build report
           "success": "SUCCESS",
           "outputs": {
             "DEFAULT": [
-              "buck-out/v2/gen/fbcode/b706492dec65e54c/buck2/buck2"
+              "buck-out/v2/gen/fbcode/b706492dec65e54c/bsmr/bsmr"
             ]
           },
           "other_outputs": {}
         }
       },
       "errors": [],
-      "target_label": "fbcode//buck2:buck2"
+      "target_label": "fbcode//bsmr:bsmr"
     }
   },
   # other fields
 }
 ```
 
-The keys in `results` are `fbcode//buck2:buck2` and `fbcode//buck2:buck2?opt`. Since `fbcode//buck2:buck2?opt` is not a proper target label, we add a key called “target_label” which will display the target label without any modifiers (in this case `fbcode//buck2:buck2`). We will also add a ?`modifiers` key that will resolve to a list of all modifiers applied after `?`.
+The keys in `results` are `fbcode//bsmr:bsmr` and `fbcode//bsmr:bsmr?opt`. Since `fbcode//bsmr:bsmr?opt` is not a proper target label, we add a key called “target_label” which will display the target label without any modifiers (in this case `fbcode//bsmr:bsmr`). We will also add a ?`modifiers` key that will resolve to a list of all modifiers applied after `?`.
 
 ### Alternate Design
 
@@ -142,11 +142,11 @@ A possible alternate design is that we add a `per_target_modifiers` section of t
 ```python
 {
   "results": {
-    "fbcode//buck2:buck2": {
+    "fbcode//bsmr:bsmr": {
       "success": "SUCCESS",
       "outputs": {
         "DEFAULT": [
-          "buck-out/v2/gen/fbcode/57b1cdd23074b8c3/buck2/buck2"
+          "buck-out/v2/gen/fbcode/57b1cdd23074b8c3/bsmr/bsmr"
         ]
       },
       "other_outputs": {},
@@ -156,7 +156,7 @@ A possible alternate design is that we add a `per_target_modifiers` section of t
           "success": "SUCCESS",
           "outputs": {
             "DEFAULT": [
-              "buck-out/v2/gen/fbcode/57b1cdd23074b8c3/buck2/buck2"
+              "buck-out/v2/gen/fbcode/57b1cdd23074b8c3/bsmr/bsmr"
             ]
           },
           "other_outputs": {}
@@ -166,7 +166,7 @@ A possible alternate design is that we add a `per_target_modifiers` section of t
           "success": "SUCCESS",
           "outputs": {
             "DEFAULT": [
-              "buck-out/v2/gen/fbcode/b706492dec65e54c/buck2/buck2"
+              "buck-out/v2/gen/fbcode/b706492dec65e54c/bsmr/bsmr"
             ]
           },
           "other_outputs": {}
@@ -179,7 +179,7 @@ A possible alternate design is that we add a `per_target_modifiers` section of t
           "success": "SUCCESS",
           "outputs": {
             "DEFAULT": [
-              "buck-out/v2/gen/fbcode/57b1cdd23074b8c3/buck2/buck2"
+              "buck-out/v2/gen/fbcode/57b1cdd23074b8c3/bsmr/bsmr"
             ]
           },
           "other_outputs": {}
@@ -189,7 +189,7 @@ A possible alternate design is that we add a `per_target_modifiers` section of t
           "success": "SUCCESS",
           "outputs": {
             "DEFAULT": [
-              "buck-out/v2/gen/fbcode/b706492dec65e54c/buck2/buck2"
+              "buck-out/v2/gen/fbcode/b706492dec65e54c/bsmr/bsmr"
             ]
           },
           "other_outputs": {}
@@ -201,22 +201,22 @@ A possible alternate design is that we add a `per_target_modifiers` section of t
 }
 ```
 
-The main reason to prefer approach #1 is that it better accommodates tools that wrap a user’s buck build invocation and do extra processing on the build report. With approach #2, if a user passes in `fbcode//buck2:buck2?opt` as the target pattern to build, then the wrapper tool needs to understand that `?opt` specifies a modifier and that it needs to do a string split on `?` to find the correct section of the build report. With approach #1, it can look up `fbcode//buck2:buck2?opt` directly from the build report without understanding that a modifier was used.
+The main reason to prefer approach #1 is that it better accommodates tools that wrap a user’s buck build invocation and do extra processing on the build report. With approach #2, if a user passes in `fbcode//bsmr:bsmr?opt` as the target pattern to build, then the wrapper tool needs to understand that `?opt` specifies a modifier and that it needs to do a string split on `?` to find the correct section of the build report. With approach #1, it can look up `fbcode//bsmr:bsmr?opt` directly from the build report without understanding that a modifier was used.
 
 The benefit of approach #2 is that the `configured` section looks more understandable in this approach than the previous approach, and in general it leads to a shorter build report.
 
 ## Target Universe
 
-A [target universe](https://buck2.build/docs/concepts/glossary/#target-universe) is a set of configured targets and their transitive deps that Buck looks up from to resolve unconfigured target labels. For example, `buck2 build fbcode//folly:singleton --target-universe=fbcode//buck2:buck2` will build all configured variants of `fbcode//folly:singleton` in transitive deps of `fbcode//buck2:buck2`. This section applies to all commands that can explicitly use the `--target-universe` flag like `audit providers` and `aquery`.
+A [target universe](https://buck2.build/docs/concepts/glossary/#target-universe) is a set of configured targets and their transitive deps that Buck looks up from to resolve unconfigured target labels. For example, `bsmr build fbcode//folly:singleton --target-universe=fbcode//bsmr:bsmr` will build all configured variants of `fbcode//folly:singleton` in transitive deps of `fbcode//bsmr:bsmr`. This section applies to all commands that can explicitly use the `--target-universe` flag like `audit providers` and `aquery`.
 
 ### Explicit target universe
 
 If `--target-universe` flag is specified on CLI, then `?` can only be used in `--target-universe` flag. In other words,
 
-- `buck2 build fbcode//folly:singleton --target-universe=fbcode//buck2:buck2?asan` is allowed.
-- Likewise, `buck2 build fbcode//folly:singleton --target-universe=fbcode//buck2:buck2+fbcode//buck2:buck2?asan` is allowed.
-- `buck2 build fbcode//folly:singleton?asan --target-universe=fbcode//buck2:buck2?asan` is not allowed.
-- Likewise, `buck2 build fbcode//folly:singleton?asan --target-universe=fbcode//buck2:buck2` is also not allowed.
+- `bsmr build fbcode//folly:singleton --target-universe=fbcode//bsmr:bsmr?asan` is allowed.
+- Likewise, `bsmr build fbcode//folly:singleton --target-universe=fbcode//bsmr:bsmr+fbcode//bsmr:bsmr?asan` is allowed.
+- `bsmr build fbcode//folly:singleton?asan --target-universe=fbcode//bsmr:bsmr?asan` is not allowed.
+- Likewise, `bsmr build fbcode//folly:singleton?asan --target-universe=fbcode//bsmr:bsmr` is also not allowed.
 
 The above examples all look at builds, but the same principles apply to other commands that can use `--target-universe` like `audit providers` and `cquery`.
 
@@ -228,51 +228,51 @@ This is probably not the most ideal behavior, but it is probably the more restri
 
 In cquery, ?-syntax will *only* be allowed in `--target-universe`. This means that
 
-- `buck2 cquery fbcode//folly:singleton --target-universe=fbcode//buck2:buck2?asan` is allowed
-- `buck2 cquery fbcode//folly:singleton?asan –target-universe=fbcode//buck2:buck2?asan` and `buck2 cquery fbcode//folly:singleton?asan --target-universe=fbcode//buck2:buck2` are disallowed.
-- Additionally, `buck2 cquery fbcode//folly:singleton?asan` is *disallowed*. The reason for this is that cquery [infers a target universe](https://buck2.build/docs/bxl/explanation/bxl_cquery_vs_cli_cquery/#cli-buck2-cquery) from all target literals specified in the query when explicit `--target-universe` is not specified. Thus `buck2 cquery fbcode//folly:singleton?asan` naturally expands to `buck2 cquery fbcode//folly:singleton?asan --target-universe=fbcode//folly:singleton?asan`.
+- `bsmr cquery fbcode//folly:singleton --target-universe=fbcode//bsmr:bsmr?asan` is allowed
+- `bsmr cquery fbcode//folly:singleton?asan –target-universe=fbcode//bsmr:bsmr?asan` and `bsmr cquery fbcode//folly:singleton?asan --target-universe=fbcode//bsmr:bsmr` are disallowed.
+- Additionally, `bsmr cquery fbcode//folly:singleton?asan` is *disallowed*. The reason for this is that cquery [infers a target universe](https://buck2.build/docs/bxl/explanation/bxl_cquery_vs_cli_cquery/#cli-buck2-cquery) from all target literals specified in the query when explicit `--target-universe` is not specified. Thus `bsmr cquery fbcode//folly:singleton?asan` naturally expands to `bsmr cquery fbcode//folly:singleton?asan --target-universe=fbcode//folly:singleton?asan`.
 
 ### Possible relaxation
 
-Not being able to specify `?` in cquery outside of `--target-universe` is rather unintuitive behavior, and it’s ironic that a `cquery` command cannot easily customize configurations of targets. It’s possible that we may allow  `buck2 cquery fbcode//folly:singleton?asan` and by extension `buck2 cquery fbcode//folly:singleton?asan --target-universe=fbcode//folly:singleton?asan` in the future.
+Not being able to specify `?` in cquery outside of `--target-universe` is rather unintuitive behavior, and it’s ironic that a `cquery` command cannot easily customize configurations of targets. It’s possible that we may allow  `bsmr cquery fbcode//folly:singleton?asan` and by extension `bsmr cquery fbcode//folly:singleton?asan --target-universe=fbcode//folly:singleton?asan` in the future.
 
 One possible relaxation is that if a literal in a query expression is specified with a `?modifier`, then that target literal will resolve in the target universe according to its modifiers applied instead of matching configured targets with the same unconfigured target label in the target universe.
 
-Take the example of `buck2 cquery set(fbcode//buck2:buck2 fbcode//folly:singleton)`. This will print multiple variants of `fbcode//folly:singleton` in different configurations because `fbcode//folly:singleton` shows up in deps of `fbcode//buck2:buck2` and will be configured once in its default configuration. Let’s assume the output looks something like this.
+Take the example of `bsmr cquery set(fbcode//bsmr:bsmr fbcode//folly:singleton)`. This will print multiple variants of `fbcode//folly:singleton` in different configurations because `fbcode//folly:singleton` shows up in deps of `fbcode//bsmr:bsmr` and will be configured once in its default configuration. Let’s assume the output looks something like this.
 
 ```python
-fbcode//buck2:buck2 (cfg1)
+fbcode//bsmr:bsmr (cfg1)
 fbcode//folly:singleton (cfg1)
 fbcode//folly:singleton (cfg2)
 ```
 
-If a user invokes `buck2 cquery set(fbcode//buck2:buck2 fbcode//folly:singleton?asan)`, then `fbcode//folly:singleton?asan` will not resolve to any copies of folly in deps of `fbcode//buck2:buck2`, so output will look like this.
+If a user invokes `bsmr cquery set(fbcode//bsmr:bsmr fbcode//folly:singleton?asan)`, then `fbcode//folly:singleton?asan` will not resolve to any copies of folly in deps of `fbcode//bsmr:bsmr`, so output will look like this.
 
 ```python
-fbcode//buck2:buck2 (cfg1)
+fbcode//bsmr:bsmr (cfg1)
 fbcode//folly:singleton (cfg3)
 ```
 
-Note that all literals with modifiers applied still go through target universe resolution. If a user invokes `buck2 cquery “set(fbcode//buck2:buck2?asan fbcode//folly:singleton)”`, then `fbcode//folly:singleton` will continue to be resolved in the target universe of `fbcode//buck2:buck2?asan`, so the output will look like
+Note that all literals with modifiers applied still go through target universe resolution. If a user invokes `bsmr cquery “set(fbcode//bsmr:bsmr?asan fbcode//folly:singleton)”`, then `fbcode//folly:singleton` will continue to be resolved in the target universe of `fbcode//bsmr:bsmr?asan`, so the output will look like
 
 ```python
-fbcode//buck2:buck2 (cfg4)
+fbcode//bsmr:bsmr (cfg4)
 fbcode//folly:singleton (cfg2)
 fbcode//folly:singleton (cfg4)
 ```
 
 To list the exact behavior in this scenario,
 
-- `buck2 cquery fbcode//folly:singleton?asan --target-universe=fbcode//folly:singleton?asan` is allowed.
-- `buck2 cquery fbcode//folly:singleton?asan –target-universe=fbcode//buck2:buck2` is not allowed because `fbcode//folly:singleton?asan` is not directly specified in the target universe.
+- `bsmr cquery fbcode//folly:singleton?asan --target-universe=fbcode//folly:singleton?asan` is allowed.
+- `bsmr cquery fbcode//folly:singleton?asan –target-universe=fbcode//bsmr:bsmr` is not allowed because `fbcode//folly:singleton?asan` is not directly specified in the target universe.
 
 We may consider relaxing to this behavior in the future if there are demands for it.
 
 ### Another possible relaxation
 
-Additionally, it’s possible that we allow `buck2 cquery fbcode//folly:singleton?asan –target-universe=fbcode//buck2:buck2 `to resolve `fbcode//folly:singleton` to its configuration with asan applied possibly outside of target universe of `fbcode//buck2:buck2` in the future. Unfortunately, this is unintuitive in a couple ways.
+Additionally, it’s possible that we allow `bsmr cquery fbcode//folly:singleton?asan –target-universe=fbcode//bsmr:bsmr `to resolve `fbcode//folly:singleton` to its configuration with asan applied possibly outside of target universe of `fbcode//bsmr:bsmr` in the future. Unfortunately, this is unintuitive in a couple ways.
 
-- `fbcode//folly:singleton?asan` likely resolves to a configured target outside of the target universe of `fbcode//buck2:buck2?asan`. If we were to respect `asan` modifier when resolving `fbcode//folly:singleton`, then the build command will build nothing. If we don’t respect `asan` modifier on `fbcode//folly:singleton`, then we will be ignoring the modifiers specified and building all folly singletons that show up in deps of buck2. Neither behavior would be intuitive for the average user.
+- `fbcode//folly:singleton?asan` likely resolves to a configured target outside of the target universe of `fbcode//bsmr:bsmr?asan`. If we were to respect `asan` modifier when resolving `fbcode//folly:singleton`, then the build command will build nothing. If we don’t respect `asan` modifier on `fbcode//folly:singleton`, then we will be ignoring the modifiers specified and building all folly singletons that show up in deps of bsmr. Neither behavior would be intuitive for the average user.
 - With :`foo?modifiers`, Buck will actively configure `:foo` outside of the target universe. With just `:foo`, buck will not attempt to do that. This behavior is inconsistent and a bit unintuitive.
 
 ## Commands that receive unconfigured targets
@@ -301,9 +301,9 @@ CLI modifiers column today tracks a list of modifiers used on CLI with `--modifi
 
 For example,
 
-- `buck2 build fbcode//buck2:buck2?asan+opt` will populate a normvector of `[“asan,opt”]`.
-- `buck2 build fbcode//buck2:buck2?asan+opt fbcode//buck2:buck2?dev` will populate a normvector of `[“asan,opt”, “dev”]`.
-- `buck2 build fbcode//buck2:buck2?asan+opt fbcode//buck2:buck2` will populate a normvector of `[“”, “asan,opt”]`.
-- `buck2 build fbcode//buck2:buck2` will set the column to null (?).
+- `bsmr build fbcode//bsmr:bsmr?asan+opt` will populate a normvector of `[“asan,opt”]`.
+- `bsmr build fbcode//bsmr:bsmr?asan+opt fbcode//bsmr:bsmr?dev` will populate a normvector of `[“asan,opt”, “dev”]`.
+- `bsmr build fbcode//bsmr:bsmr?asan+opt fbcode//bsmr:bsmr` will populate a normvector of `[“”, “asan,opt”]`.
+- `bsmr build fbcode//bsmr:bsmr` will set the column to null (?).
 
 Note when `?modifiers` is used, the CLI modifiers column will be null. Likewise, when `-m modifier` is used, the Per-Target CLI Modifiers column will be set to null.

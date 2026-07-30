@@ -40,8 +40,8 @@ def link_execution_preference_attr():
         doc = """
     The execution preference for linking. Options are:
 
-    - any : No preference is set, and the link action will be performed based on buck2's executor configuration.
-    - full_hybrid : The link action will execute both locally and remotely, regardless of buck2's executor configuration (if
+    - any : No preference is set, and the link action will be performed based on bsmr's executor configuration.
+    - full_hybrid : The link action will execute both locally and remotely, regardless of bsmr's executor configuration (if
         the executor is capable of hybrid execution). The use_limited_hybrid setting of the hybrid executor is ignored.
     - local : The link action will execute locally if compatible on current host platform.
     - local_only : The link action will execute locally, and error if the current platform is not compatible.

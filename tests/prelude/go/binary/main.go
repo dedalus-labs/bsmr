@@ -11,7 +11,7 @@
 package main
 
 import (
-	"buck2/tests/prelude/go/binary/library"
+	"bsmr/tests/prelude/go/binary/library"
 	"fmt"
 )
 

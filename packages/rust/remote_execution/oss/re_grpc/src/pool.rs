@@ -18,7 +18,7 @@ use std::task::Poll;
 use std::time::Duration;
 
 use anyhow::Context as _;
-use buck2_re_configuration::Buck2OssReConfiguration;
+use bsmr_re_configuration::BsmrOssReConfiguration;
 use http_body::Body;
 use http_body::Frame;
 use http_body_util::combinators::UnsyncBoxBody;
@@ -89,7 +89,7 @@ fn substitute_env_vars_impl(
 }
 
 impl ChannelConfig {
-    pub async fn new(opts: &Buck2OssReConfiguration) -> anyhow::Result<Self> {
+    pub async fn new(opts: &BsmrOssReConfiguration) -> anyhow::Result<Self> {
         let tls_config = if opts.tls {
             Some(Self::create_tls_config(opts).await?)
         } else {
@@ -104,7 +104,7 @@ impl ChannelConfig {
         })
     }
 
-    async fn create_tls_config(opts: &Buck2OssReConfiguration) -> anyhow::Result<ClientTlsConfig> {
+    async fn create_tls_config(opts: &BsmrOssReConfiguration) -> anyhow::Result<ClientTlsConfig> {
         let config = ClientTlsConfig::new().with_enabled_roots();
 
         let config = match opts.tls_ca_certs.as_ref() {

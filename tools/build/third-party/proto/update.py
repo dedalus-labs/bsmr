@@ -11,7 +11,7 @@
 Use this script to update the releases.bzl file that contains metadata about
 protoc releases.
 
-This script is not executed during the regular Buck2 build.
+This script is not executed during the regular Bessemer build.
 """
 
 import aiohttp

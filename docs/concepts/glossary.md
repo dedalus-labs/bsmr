@@ -6,7 +6,7 @@ title: Glossary of Terms
 ## .buckconfig
 
 The root of your [project](#project) must contain a configuration file named
-`.buckconfig`. Before executing, Buck2 reads this file to incorporate specified
+`.buckconfig`. Before executing, Bessemer reads this file to incorporate specified
 customizations. See [.buckconfig](buckconfig.md) for more info.
 
 ## Action
@@ -26,7 +26,7 @@ action inputs and to check for cache hits
 ## Action graph
 
 The dependency graph of all [actions](#action) belonging to a target: it can be
-queried with `buck2 aquery`.
+queried with `bsmr aquery`.
 
 ## Artifact
 
@@ -46,8 +46,8 @@ type.
 ## BUCK file
 
 A `BUCK` file (the name is configurable, some projects use `TARGETS`) is the
-main configuration file that tells Buck2 what to build, what their dependencies
-are, and how to build them. Buck2 takes a `BUCK` file as input and evaluates the
+main configuration file that tells Bessemer what to build, what their dependencies
+are, and how to build them. Bessemer takes a `BUCK` file as input and evaluates the
 file to declare [targets](#target), which are then used to create a graph of
 dependencies and to derive the [actions](#action) that must be completed to
 build intermediate and final software outputs. A `BUCK` file marks a directory
@@ -57,7 +57,7 @@ and any sub-directories not containing a `BUCK` file as a [package](#package).
 
 BXL ([Buck eXtension Language](../../bxl)) scripts are written in
 [Starlark](#starlark) (a restricted subset of Python) and give integrators the
-ability to inspect and interact directly with the buck2 graph.
+ability to inspect and interact directly with the bsmr graph.
 
 BXL scripts can query the [action graph](#action-graph),
 [configured graph](#configured-graph), and
@@ -112,7 +112,7 @@ library to use, etc.
 ## Daemon
 
 The Daemon process lives between invocations and is designed to allow for cache
-reuse between Buck2 invocations, which can considerably speed up builds. For
+reuse between Bessemer invocations, which can considerably speed up builds. For
 more information, see [Daemon (buckd)](daemon.md).
 
 ## Dependency
@@ -131,7 +131,7 @@ uploads, which allows users to get cache hits for things that executed locally.
 
 ## Hybrid execution
 
-Allows Buck2 to race local and remote execution and get whichever finishes first
+Allows Bessemer to race local and remote execution and get whichever finishes first
 (unless there's a cache hit, then it will get output from cache). This can
 provide substantial speedup by eliminating the overhead of going to
 [remote execution](#remote-execution-re) when there is enough capacity to
@@ -139,9 +139,9 @@ service the build locally.
 
 ## Isolation dir
 
-Instances of Buck2 share a [daemon](#daemon) if and only if their isolation
+Instances of Bessemer share a [daemon](#daemon) if and only if their isolation
 directory is identical. The isolation directory also influences the output paths
-provided by Buck2. See [Isolation dir](isolation_dir.md) for more info.
+provided by Bessemer. See [Isolation dir](isolation_dir.md) for more info.
 
 ## Modifiers
 
@@ -154,26 +154,26 @@ unified way to specify build settings on a [project](#project),
 
 ## Package
 
-A directory that contains a Buck2 [BUCK file](#buck-file) and all source files
+A directory that contains a Bessemer [BUCK file](#buck-file) and all source files
 belonging to the same directory as the BUCK file, or any of its subdirectories
 that do not contain a BUCK file themselves.
 
 ## Prelude
 
-The prelude is a unique `.bzl` file located at `prelude//prelude.bzl`. Buck2
+The prelude is a unique `.bzl` file located at `prelude//prelude.bzl`. Bessemer
 implicitly loads all the symbols defined in the prelude whenever it loads a
 [`BUCK`](#buck-file) file. Symbols defined outside the prelude can be imported
 via a `load()` statement.
 
-When you create a Buck2 project using `buck2 init --git`, it will contain the
-same prelude used internally at Meta by Buck2 users. It is viewable at
+When you create a Bessemer project using `bsmr init --git`, it will contain the
+prelude inherited from Buck2. The upstream version is viewable at
 https://github.com/facebook/buck2/tree/main/prelude.
 
 ## Project
 
 The Outermost directory where there is a [.buckconfig](#buckconfig): also known
 as the [root cell](#cell). The .buckconfig for the project specifies the
-[cells](#cell) that constitute the Buck2 project. Specifically, these cells are
+[cells](#cell) that constitute the Bessemer project. Specifically, these cells are
 specified in the '[cells]' section of the `.buckconfig`. All command invocations
 are executed from the project root.
 
@@ -193,7 +193,7 @@ environment. E.g. `cpu=x86_64, os=windows`
 
 Distributed execution of [actions](#action) on remote workers. It can speed up
 builds significantly by scaling the nodes available for parallel actions, and by
-caching action outputs across Buck2 users.
+caching action outputs across Bessemer users.
 
 ## Rule
 
@@ -205,10 +205,10 @@ rule implementation receives the [attributes](#attribute) of a [target](#target)
 and the [providers](#provider) of its [dependencies](#dependency). It can
 declare new [actions](#action) and [artifacts](#artifact) and must return
 [providers](#provider) that can be used to pass data to its dependents or to
-Buck2 itself.
+Bessemer itself.
 
 Rules are instantiated in [BUCK files](#buck-file) to declare targets and set
-their attributes. The rule implementation is called when Buck2 needs its
+their attributes. The rule implementation is called when Bessemer needs its
 providers, which can happen when the target is built, or when one of its
 dependents is.
 
@@ -219,21 +219,21 @@ As an example, the `cxx_binary` rule could be used to create a C++ binary, but
 
 Starlark is a dialect of Python originally developed by Google for the
 [Bazel build tool](https://bazel.build/rules/language). It is the configuration
-language of the Buck2 build system and the language you use in `.bzl` and
+language of the Bessemer build system and the language you use in `.bzl` and
 [`BUCK` files](#buck-file) to define and instantiate [rules](#rule).
 
 There are many reasons why Meta has chosen Starlark, as detailed in
 [The Rust Starlark library](https://developers.facebook.com/blog/post/2021/04/08/rust-starlark-library/)
 article.
 
-The Buck2 project maintains and uses an open source
+The Bessemer project maintains and uses an open source
 [Starlark interpreter in Rust](https://github.com/facebook/starlark-rust).
 
 ## Subtarget
 
 Collection of [providers](#provider) that can be accessed by name. The
 subtargets can have their own subtargets as well, which can be accessed by
-chaining them, e.g.: `buck2 build cell//foo:bar[baz][qux]`.
+chaining them, e.g.: `bsmr build cell//foo:bar[baz][qux]`.
 
 ## Target
 
@@ -254,21 +254,21 @@ directory that contains the [BUCK file](#buck-file) declaring the target
 ## Target pattern
 
 A string that resolves to a set of [targets](#target). They can be used as
-arguments to commands such as `buck2 build` and `buck2 uquery`. They can also be
+arguments to commands such as `bsmr build` and `bsmr uquery`. They can also be
 used in the [visibility](#visibility) argument of a [rule](#rule). For more
 information, see [Target pattern](./target_pattern.md).
 
 ## Target platform
 
 Represents the [platform](#platform) that the final output is built for residing
-and executing. If buck2 is a chef, and the output is the meal, the target
+and executing. If bsmr is a chef, and the output is the meal, the target
 platform would be the people that eat the meal.
 
 ## Target universe
 
 A set of configured targets and their transitive deps. In the context of cquery
-and build in the Buck2 CLI, any literals are resolved to all matching targets
-within the universe. Target universe can be passed explicitly on the Buck2 CLI
+and build in the Bessemer CLI, any literals are resolved to all matching targets
+within the universe. Target universe can be passed explicitly on the Bessemer CLI
 via `--target-universe`. If omitted, the target universe will be inferred by
 constructing a universe using all the target literals (and their transitive
 deps) within the query string for cquery.
@@ -283,7 +283,7 @@ using X too. By using a transition, you can produce X to configure B instead.
 ## Unconfigured graph
 
 A graph of [targets](#target) before [configurations](#configuration) are
-applied. Can be queried via `buck2 uquery`.
+applied. Can be queried via `bsmr uquery`.
 
 ## Visibility
 

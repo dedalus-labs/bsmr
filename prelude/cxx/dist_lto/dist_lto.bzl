@@ -520,7 +520,7 @@ def cxx_gnu_dist_link(
         # TODO(T117513091) - dynamic_output does not allow for an empty list of dynamic inputs. If we have no archives
         # to process, we will have no dynamic inputs, and the plan action can be non-dynamic.
         #
-        # However, buck2 disallows `dynamic_output` with a empty input list. We also can't call our `plan` function
+        # However, bsmr disallows `dynamic_output` with a empty input list. We also can't call our `plan` function
         # directly, since it uses `ctx.outputs` to bind its outputs. Instead of doing Starlark hacks to work around
         # the lack of `ctx.outputs`, we declare an empty file as a dynamic input.
         plan_inputs.append(ctx.actions.write(output.short_path + ".plan_hack.txt", "", has_content_based_path = False))

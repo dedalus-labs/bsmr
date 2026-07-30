@@ -1,0 +1,16 @@
+load("@bsmr_build//rules:rust.bzl", "rust_library")
+
+oncall("build_infra")
+
+rust_library(
+    name = "bsmr_errorformat",
+    srcs = glob(
+        ["src/**/*.rs"],
+    ),
+    deps = [
+        "fbsource//third-party/rust:fancy-regex",
+        "fbsource//third-party/rust:nom",
+        "fbsource//third-party/rust:tracing",
+        "//bsmr/app/bsmr_error:bsmr_error",
+    ],
+)

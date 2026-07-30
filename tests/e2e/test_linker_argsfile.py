@@ -11,14 +11,14 @@
 
 import os
 
-from buck2.tests.e2e_util.api.buck import Buck
-from buck2.tests.e2e_util.buck_workspace import buck_test, get_mode_from_platform
+from bsmr.tests.e2e_util.api.buck import Buck
+from bsmr.tests.e2e_util.buck_workspace import buck_test, get_mode_from_platform
 
 
 @buck_test(inplace=True)
 async def test_linker_argsfile_valid(buck: Buck) -> None:
     args = [
-        "fbcode//buck2/tests/targets/rules/cxx/hello_world:welcome[linker.argsfile]",
+        "fbcode//bsmr/tests/targets/rules/cxx/hello_world:welcome[linker.argsfile]",
         "--show-full-output",
         get_mode_from_platform(),
     ]

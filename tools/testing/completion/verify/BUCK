@@ -2,7 +2,7 @@ load("@bsmr_build//rules:rust.bzl", "rust_binary")
 
 oncall("build_infra")
 
-# Small binary to verify shell completion works correctly. Used in e2e tests of buck2.
+# Small binary to verify shell completion works correctly. Used in e2e tests of bsmr.
 rust_binary(
     name = "completion_verify",
     srcs = glob(["src/**/*.rs"]),
@@ -13,8 +13,8 @@ rust_binary(
     resources = select({
         "DEFAULT": {},
         "ovr_config//os:linux": {
-            "fish": "//buck2/tools/testing/completion/verify/packages:fish",
-            "zsh": "//buck2/tools/testing/completion/verify/packages:zsh",
+            "fish": "//bsmr/tools/testing/completion/verify/packages:fish",
+            "zsh": "//bsmr/tools/testing/completion/verify/packages:zsh",
         },
     }),
     deps = [

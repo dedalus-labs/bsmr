@@ -10,10 +10,10 @@
 import typing
 
 import pytest
-from buck2.tests.e2e_util.api.buck import Buck
-from buck2.tests.e2e_util.asserts import expect_failure
-from buck2.tests.e2e_util.buck_workspace import buck_test
-from buck2.tests.e2e_util.helper.utils import json_get
+from bsmr.tests.e2e_util.api.buck import Buck
+from bsmr.tests.e2e_util.asserts import expect_failure
+from bsmr.tests.e2e_util.buck_workspace import buck_test
+from bsmr.tests.e2e_util.helper.utils import json_get
 
 
 async def get_detailed_metrics(buck: Buck) -> typing.Any:
@@ -49,14 +49,14 @@ def parse_metrics(metrics: typing.Any) -> tuple[typing.Any, dict[str, typing.Any
 
 @buck_test()
 async def test_disabled(buck: Buck) -> None:
-    await buck.build("//:foo4", "-c", "buck2.detailed_aggregated_metrics=false")
+    await buck.build("//:foo4", "-c", "bsmr.detailed_aggregated_metrics=false")
     message = await get_detailed_metrics(buck)
     assert message is None
 
 
 @buck_test()
 async def test_enabled(buck: Buck) -> None:
-    await buck.build("//:foo4", "-c", "buck2.detailed_aggregated_metrics=true")
+    await buck.build("//:foo4", "-c", "bsmr.detailed_aggregated_metrics=true")
     message = await get_detailed_metrics(buck)
     assert message is not None
     all_targets_metrics, per_target_metrics = parse_metrics(message)
@@ -73,7 +73,7 @@ async def test_incomplete_graph(buck: Buck) -> None:
         buck.build(
             "//:foo4",
             "-c",
-            "buck2.detailed_aggregated_metrics=true",
+            "bsmr.detailed_aggregated_metrics=true",
             "-c",
             "user.dyn_input_good=0",
         )
@@ -90,7 +90,7 @@ async def test_incomplete_graph(buck: Buck) -> None:
 
 @buck_test()
 async def test_wall_clock_completion(buck: Buck) -> None:
-    await buck.build("//:foo4", "-c", "buck2.detailed_aggregated_metrics=true")
+    await buck.build("//:foo4", "-c", "bsmr.detailed_aggregated_metrics=true")
     message = await get_detailed_metrics(buck)
     assert message is not None
     _all_targets_metrics, per_target_metrics = parse_metrics(message)
@@ -105,7 +105,7 @@ async def test_wall_clock_completion_on_timeout(buck: Buck) -> None:
         buck.build(
             "//:slow",
             "-c",
-            "buck2.detailed_aggregated_metrics=true",
+            "bsmr.detailed_aggregated_metrics=true",
             "--overall-timeout",
             "1s",
         ),
@@ -125,7 +125,7 @@ async def test_wall_clock_completion_on_failure(buck: Buck) -> None:
         buck.build(
             "//:foo4",
             "-c",
-            "buck2.detailed_aggregated_metrics=true",
+            "bsmr.detailed_aggregated_metrics=true",
             "-c",
             "user.dyn_input_good=0",
         )
@@ -141,7 +141,7 @@ async def test_wall_clock_completion_on_failure(buck: Buck) -> None:
 @buck_test()
 async def test_amortization(buck: Buck) -> None:
     await buck.build(
-        "//:foo4", "//:foo5", "-c", "buck2.detailed_aggregated_metrics=true"
+        "//:foo4", "//:foo5", "-c", "bsmr.detailed_aggregated_metrics=true"
     )
     message = await get_detailed_metrics(buck)
     assert message is not None
@@ -173,7 +173,7 @@ async def test_enabled_after_analysis_soft_errors(buck: Buck) -> None:
     # command can't produce complete metrics, so we expect a soft error and empty
     # metrics rather than partial ones.
     await buck.build("//:foo4")
-    await buck.build("//:foo4", "-c", "buck2.detailed_aggregated_metrics=true")
+    await buck.build("//:foo4", "-c", "bsmr.detailed_aggregated_metrics=true")
     log = (await buck.log("show")).stdout
     assert "detailed_aggregated_metrics_enabled_after_analysis" in log
     message = await get_detailed_metrics(buck)

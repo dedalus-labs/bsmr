@@ -40,7 +40,7 @@ def _not_a_test(ctx):
     return [DefaultInfo(default_output = ctx.actions.write("out", "not_a_test", has_content_based_path = False))]
 
 # A non-test rule. Mirrors macro-generated sibling targets (e.g. genrules)
-# that users sometimes accidentally pass to `buck2 test`. Before this stack
+# that users sometimes accidentally pass to `bsmr test`. Before this stack
 # such invocations logged empty target_rule_type_names.
 not_a_test = rule(
     impl = _not_a_test,

@@ -190,7 +190,7 @@ def android_instrumentation_test_impl(ctx: AnalysisContext):
 
     test_info, run_info = inject_test_run_info(ctx, test_info)
 
-    # We append additional args so that "buck2 run" will work with sane defaults
+    # We append additional args so that "bsmr run" will work with sane defaults
     run_info.args.add(cmd_args(["--auto-run-on-connected-device", "--output", ".", "--adb-executable-path", "adb"]))
     return [
         test_info,
@@ -248,7 +248,7 @@ def _compute_executor_overrides(ctx: AnalysisContext, instrumentation_test_can_r
             remote_execution_properties = {
                 "platform": "linux-remote-execution",
             },
-            remote_execution_use_case = "buck2-default",
+            remote_execution_use_case = "bsmr-default",
         ),
         "test-execution": test_execution_executor_override,
     }

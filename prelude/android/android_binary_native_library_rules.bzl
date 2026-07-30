@@ -221,7 +221,7 @@ def get_android_binary_native_library_info(
             expect(glue_link_graph != None, "native_library_merge_glue (`{}`) should be a linkable target", glue.label)
             glue_linkable = glue_link_graph.nodes.value.linkable
             expect(glue_linkable != None, "native_library_merge_glue (`{}`) should be a linkable target", glue.label)
-            expect(glue_linkable.preferred_linkage == Linkage("static"), "buck2 currently only supports preferred_linkage='static' native_library_merge_glue")
+            expect(glue_linkable.preferred_linkage == Linkage("static"), "bsmr currently only supports preferred_linkage='static' native_library_merge_glue")
             glue_linkables[platform] = (glue.label, glue_linkable.link_infos[LibOutputStyle("pic_archive")].default)
 
     linkable_nodes_by_platform = {}
@@ -2123,7 +2123,7 @@ def relink_libraries(ctx: AnalysisContext, libraries_by_platform: dict[str, dict
                 expect(red_link_graph != None, "relinker_extra_deps (`{}`) should be a linkable target", red.label)
                 red_linkable = red_link_graph.nodes.value.linkable
                 expect(red_linkable != None, "relinker_extra_deps (`{}`) should be a linkable target", red.label)
-                expect(red_linkable.preferred_linkage == Linkage("static"), "buck2 currently only supports preferred_linkage='static' relinker_extra_deps")
+                expect(red_linkable.preferred_linkage == Linkage("static"), "bsmr currently only supports preferred_linkage='static' relinker_extra_deps")
                 if platform not in red_linkables:
                     red_linkables[platform] = []
                 red_linkables[platform].append((red.label, red_linkable.link_infos[LibOutputStyle("pic_archive")].default))

@@ -18,14 +18,14 @@ from pathlib import Path
 from typing import List
 
 import pytest
-from buck2.tests.e2e_util.api.buck import Buck
-from buck2.tests.e2e_util.asserts import expect_failure
-from buck2.tests.e2e_util.buck_workspace import buck_test, env
-from buck2.tests.e2e_util.helper.assert_occurrences import (
+from bsmr.tests.e2e_util.api.buck import Buck
+from bsmr.tests.e2e_util.asserts import expect_failure
+from bsmr.tests.e2e_util.buck_workspace import buck_test, env
+from bsmr.tests.e2e_util.helper.assert_occurrences import (
     assert_occurrences,
     assert_occurrences_regex,
 )
-from buck2.tests.e2e_util.helper.utils import random_string, read_what_ran
+from bsmr.tests.e2e_util.helper.utils import random_string, read_what_ran
 
 
 # Eden materializer only available on Linux
@@ -387,7 +387,7 @@ async def test_toolchain_deps(buck: Buck) -> None:
 )
 async def test_http_deferral(buck: Buck, digest_algorithm: str) -> None:
     with open(buck.cwd / ".buckconfig", "a") as f:
-        f.write("[buck2]\n")
+        f.write("[bsmr]\n")
         f.write(f"digest_algorithms = {digest_algorithm}\n")
 
     target = "//:download"
@@ -404,7 +404,7 @@ async def test_http_deferral(buck: Buck, digest_algorithm: str) -> None:
 
 @buck_test(inplace=False, data_dir="http_deferral")
 @env(
-    "BUCK2_TEST_INJECTED_MISSING_DIGESTS",
+    "BSMR_TEST_INJECTED_MISSING_DIGESTS",
     "1a45666759704bf08fc670aa96118a0415c470fc:221",
 )
 async def test_http_deferral_uploads(buck: Buck) -> None:
@@ -595,7 +595,7 @@ async def test_executable_bit(buck: Buck) -> None:
 @buck_test(inplace=False, data_dir="execution_platforms")
 async def test_symlink_output(buck: Buck) -> None:
     with open(buck.cwd / ".buckconfig.local", "w") as f:
-        f.write("[buck2_re_client]\n")
+        f.write("[bsmr_re_client]\n")
         f.write("respect_file_symlinks = false\n")
     await buck.build(
         "root//executor_symlink_tests:check_not_symlink",
@@ -604,7 +604,7 @@ async def test_symlink_output(buck: Buck) -> None:
     )
     await buck.kill()
     with open(buck.cwd / ".buckconfig.local", "w") as f:
-        f.write("[buck2_re_client]\n")
+        f.write("[bsmr_re_client]\n")
         f.write("respect_file_symlinks = true\n")
     await buck.build(
         "root//executor_symlink_tests:check_symlink",

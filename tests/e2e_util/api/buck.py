@@ -15,7 +15,7 @@ from asyncio import subprocess
 from pathlib import Path
 from typing import Any, Dict, Iterable, Optional, Tuple
 
-from buck2.tests.e2e_util.api.buck_result import (
+from bsmr.tests.e2e_util.api.buck_result import (
     AuditConfigResult,
     BuckException,
     BuckResult,
@@ -23,11 +23,11 @@ from buck2.tests.e2e_util.api.buck_result import (
     TargetsResult,
     TestResult,
 )
-from buck2.tests.e2e_util.api.executable import Executable
-from buck2.tests.e2e_util.api.lsp import LspClient
-from buck2.tests.e2e_util.api.process import Process
-from buck2.tests.e2e_util.api.result import R, Result
-from buck2.tests.e2e_util.api.subscribe import SubscribeClient
+from bsmr.tests.e2e_util.api.executable import Executable
+from bsmr.tests.e2e_util.api.lsp import LspClient
+from bsmr.tests.e2e_util.api.process import Process
+from bsmr.tests.e2e_util.api.result import R, Result
+from bsmr.tests.e2e_util.api.subscribe import SubscribeClient
 
 
 class Buck(Executable):
@@ -273,7 +273,7 @@ class Buck(Executable):
         test_argv = argv_list[argv_separator_idx + 1 :]
 
         if test_executor is None:
-            test_executor = os.environ.get("BUCK2_TPX")
+            test_executor = os.environ.get("BSMR_TPX")
 
         if test_executor is not None:
             buck_argv = [
@@ -360,7 +360,7 @@ class Buck(Executable):
         """
 
         my_env = {} if env is None else env.copy()
-        my_env["BUCK2_COMPLETION_TIMEOUT"] = "30000"
+        my_env["BSMR_COMPLETION_TIMEOUT"] = "30000"
 
         return self._run_buck_command(
             "complete",
@@ -609,7 +609,7 @@ class Buck(Executable):
         Returns a Process with BuckResult type using a process created with the
         profile command and any additional arguments
 
-        args: Arguments to pass to buck2 profile.
+        args: Arguments to pass to bsmr profile.
         rel_cwd: Optional Path specifying the workding directive to run
         the command relative to the root.
         env: Optional dictionary for environment variables to run command with.

@@ -14,5 +14,5 @@ nano_prelude = bundled
 [project]
 ignore = package_listing/*red/**
 
-[buck2]
+[bsmr]
 allow_eden_io = false

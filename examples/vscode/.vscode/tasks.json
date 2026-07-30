@@ -4,7 +4,7 @@
         {
             "label": "Build Main",
             "type": "shell",
-            "command": "buck2",
+            "command": "bsmr",
             "args": [
                 "build",
                 "--console",
@@ -18,17 +18,17 @@
                 "-ExecutionPolicy",
                 "Bypass",
                 "-File",
-                "buck2_utils/install.ps1",
+                "bsmr_utils/install.ps1",
                 "install"
             ]
         },
         {
             "label": "Create compilation database",
             "type": "shell",
-            "command": "buck2",
+            "command": "bsmr",
             "args": [
                 "bxl",
-                "buck2_utils/create_compile_commands.bxl:gen_compilation_database",
+                "bsmr_utils/create_compile_commands.bxl:gen_compilation_database",
                 "--",
                 "--directory",
                 "${workspaceFolder}",
@@ -37,7 +37,7 @@
                 "-ExecutionPolicy",
                 "Bypass",
                 "-File",
-                "buck2_utils/copy.ps1"
+                "bsmr_utils/copy.ps1"
             ]
         },
         {

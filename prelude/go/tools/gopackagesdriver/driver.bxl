@@ -49,7 +49,7 @@ PackageError = record(
 #
 # It can't be used on it's own, it need a thin go-wrapper that
 # - parses input args
-# - invokes `buck2 bxl prelude//go/tools/gopackagesdriver:driver.bxl:driver`
+# - invokes `bsmr bxl prelude//go/tools/gopackagesdriver:driver.bxl:driver`
 # - fixes output, i.e RE paths in cgo files
 # - handles standard library packages
 #

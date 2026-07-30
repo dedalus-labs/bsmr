@@ -12,8 +12,8 @@
 import json
 from pathlib import Path
 
-from buck2.tests.e2e_util.api.buck import Buck
-from buck2.tests.e2e_util.buck_workspace import buck_test
+from bsmr.tests.e2e_util.api.buck import Buck
+from bsmr.tests.e2e_util.buck_workspace import buck_test
 
 from .test_coverage_utils import collect_coverage_for
 
@@ -23,7 +23,7 @@ async def test_cpp_test_coverage(buck: Buck, tmp_path: Path) -> None:
     coverage_file = tmp_path / "coverage.txt"
     await buck.test(
         "@fbcode//mode/dbgo-cov",
-        "fbcode//buck2/tests/targets/rules/cxx:cpp_test_pass",
+        "fbcode//bsmr/tests/targets/rules/cxx:cpp_test_pass",
         "--",
         "--collect-coverage",
         f"--coverage-output={coverage_file}",
@@ -33,7 +33,7 @@ async def test_cpp_test_coverage(buck: Buck, tmp_path: Path) -> None:
         for line in results:
             paths.append(json.loads(line)["filepath"])
 
-    assert "fbcode/buck2/tests/targets/rules/cxx/cpp_test_pass.cpp" in paths, str(paths)
+    assert "fbcode/bsmr/tests/targets/rules/cxx/cpp_test_pass.cpp" in paths, str(paths)
     assert "fbcode/common/gtest/LightMain.cpp" in paths, str(paths)
 
 
@@ -43,7 +43,7 @@ async def test_cpp_test_coverage_filter_by_path_outside_target(
     tmp_path: Path,
 ) -> None:
     paths = await collect_coverage_for(
-        buck, tmp_path, "fbcode//buck2/tests/targets/rules/cxx:cpp_test_pass", ["folly"]
+        buck, tmp_path, "fbcode//bsmr/tests/targets/rules/cxx:cpp_test_pass", ["folly"]
     )
 
     expected_paths = [p for p in paths if p.startswith("fbcode/folly")]
@@ -67,13 +67,13 @@ async def test_cpp_test_coverage_filter_by_path_of_target(
     paths = await collect_coverage_for(
         buck,
         tmp_path,
-        "fbcode//buck2/tests/targets/rules/cxx:cpp_test_pass",
-        ["buck2/tests"],
+        "fbcode//bsmr/tests/targets/rules/cxx:cpp_test_pass",
+        ["bsmr/tests"],
     )
 
-    expected_paths = [p for p in paths if p.startswith("fbcode/buck2/tests")]
+    expected_paths = [p for p in paths if p.startswith("fbcode/bsmr/tests")]
     assert len(expected_paths) > 0, str(paths)
-    unexpected_paths = [p for p in paths if not p.startswith("fbcode/buck2/tests")]
+    unexpected_paths = [p for p in paths if not p.startswith("fbcode/bsmr/tests")]
     assert len(unexpected_paths) == 0, str(paths)
 
 
@@ -85,14 +85,14 @@ async def test_cpp_test_coverage_filter_by_path_of_target_with_dev_lg(
     paths = await collect_coverage_for(
         buck,
         tmp_path,
-        "fbcode//buck2/tests/targets/rules/cxx:cpp_test_pass",
+        "fbcode//bsmr/tests/targets/rules/cxx:cpp_test_pass",
         mode="@fbcode//mode/dev-lg",
-        filter=["buck2/tests"],
+        filter=["bsmr/tests"],
     )
 
-    expected_paths = [p for p in paths if p.startswith("fbcode/buck2/tests")]
+    expected_paths = [p for p in paths if p.startswith("fbcode/bsmr/tests")]
     assert len(expected_paths) > 0, str(paths)
-    unexpected_paths = [p for p in paths if not p.startswith("fbcode/buck2/tests")]
+    unexpected_paths = [p for p in paths if not p.startswith("fbcode/bsmr/tests")]
     assert len(unexpected_paths) == 0, str(paths)
 
 
@@ -104,7 +104,7 @@ async def test_cpp_test_coverage_filter_by_path_in_link_group_with_dev_lg(
     paths = await collect_coverage_for(
         buck,
         tmp_path,
-        "fbcode//buck2/tests/targets/rules/cxx:cpp_test_pass",
+        "fbcode//bsmr/tests/targets/rules/cxx:cpp_test_pass",
         mode="@fbcode//mode/dev-lg",
         filter=["folly"],
     )
@@ -126,11 +126,11 @@ async def test_cpp_test_coverage_filter_by_file_of_target_with_dev_lg(
     buck: Buck,
     tmp_path: Path,
 ) -> None:
-    source_name = "buck2/tests/targets/rules/cxx/cpp_test_pass.cpp"
+    source_name = "bsmr/tests/targets/rules/cxx/cpp_test_pass.cpp"
     paths = await collect_coverage_for(
         buck,
         tmp_path,
-        "fbcode//buck2/tests/targets/rules/cxx:cpp_test_pass",
+        "fbcode//bsmr/tests/targets/rules/cxx:cpp_test_pass",
         mode="@fbcode//mode/dev-lg",
         filter=[source_name],
     )
@@ -151,7 +151,7 @@ async def test_cpp_test_coverage_filter_by_source_file_in_link_group_with_dev_lg
     paths = await collect_coverage_for(
         buck,
         tmp_path,
-        "fbcode//buck2/tests/targets/rules/cxx:cpp_test_pass",
+        "fbcode//bsmr/tests/targets/rules/cxx:cpp_test_pass",
         mode="@fbcode//mode/dev-lg",
         filter=[source_name],
     )
@@ -298,11 +298,11 @@ async def test_cpp_test_coverage_filter_by_header_file_defined_in_one_link_group
 
 @buck_test(inplace=True)
 async def test_cpp_test_coverage_filter_by_file(buck: Buck, tmp_path: Path) -> None:
-    source_name = "buck2/tests/targets/rules/cxx/cpp_test_pass.cpp"
+    source_name = "bsmr/tests/targets/rules/cxx/cpp_test_pass.cpp"
     paths = await collect_coverage_for(
         buck,
         tmp_path,
-        "fbcode//buck2/tests/targets/rules/cxx:cpp_test_pass",
+        "fbcode//bsmr/tests/targets/rules/cxx:cpp_test_pass",
         [source_name],
     )
 
@@ -437,11 +437,11 @@ async def test_cpp_test_coverage_filter_by_file_with_opt_mode(
     buck: Buck,
     tmp_path: Path,
 ) -> None:
-    source_name = "buck2/tests/targets/rules/cxx/cpp_test_pass.cpp"
+    source_name = "bsmr/tests/targets/rules/cxx/cpp_test_pass.cpp"
     paths = await collect_coverage_for(
         buck,
         tmp_path,
-        target="fbcode//buck2/tests/targets/rules/cxx:cpp_test_pass",
+        target="fbcode//bsmr/tests/targets/rules/cxx:cpp_test_pass",
         filter=[source_name],
         mode="@fbcode//mode/opt",
     )
@@ -454,11 +454,11 @@ async def test_cpp_test_coverage_filter_by_file_with_opt_mode(
 async def test_cpp_test_coverage_filter_by_file_and_path(
     buck: Buck, tmp_path: Path
 ) -> None:
-    source_name = "buck2/tests/targets/rules/cxx/cpp_test_pass.cpp"
+    source_name = "bsmr/tests/targets/rules/cxx/cpp_test_pass.cpp"
     paths = await collect_coverage_for(
         buck,
         tmp_path,
-        "fbcode//buck2/tests/targets/rules/cxx:cpp_test_pass",
+        "fbcode//bsmr/tests/targets/rules/cxx:cpp_test_pass",
         [source_name, "folly"],
     )
 

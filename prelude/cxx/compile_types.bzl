@@ -58,7 +58,7 @@ DepFileType = enum(
 
 HeadersDepFiles = record(
     # An executable to wrap the actual command with for post-processing of dep
-    # files into the format that Buck2 recognizes (i.e. one artifact per line).
+    # files into the format that Bessemer recognizes (i.e. one artifact per line).
     processor = field(cmd_args),
     # The tag that was added to headers.
     tag = field(ArtifactTag),

@@ -1,0 +1,14 @@
+load("@bsmr_build//rules:rust.bzl", "rust_library")
+
+oncall("build_infra")
+
+rust_library(
+    name = "bsmr_re_configuration",
+    srcs = glob(["src/**/*.rs"]),
+    deps = [
+        "//bsmr/packages/rust/allocative/allocative:allocative",
+        "//bsmr/app/bsmr_common:bsmr_common",
+        "//bsmr/app/bsmr_core:bsmr_core",
+        "//bsmr/app/bsmr_error:bsmr_error",
+    ],
+)

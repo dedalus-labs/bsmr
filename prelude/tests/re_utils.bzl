@@ -42,7 +42,7 @@ def _get_re_arg(ctx: AnalysisContext) -> ReArg:
         # Even if the value is None we still follow. Adding force.local to give users
         # some means of bypassing.
         # Example usecase: SGW wants to run kotlin_test targets on MBP/OSX locally
-        # eg: buck2 test --local-only -c fbcode.disable_re_tests=True //signals/cloudbridge/v2/libs/cb-meters:test
+        # eg: bsmr test --local-only -c fbcode.disable_re_tests=True //signals/cloudbridge/v2/libs/cb-meters:test
         return ReArg(re_props = None, default_run_as_bundle = False)
 
     if ctx.attrs.remote_execution != None:

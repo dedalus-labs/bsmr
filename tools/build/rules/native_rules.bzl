@@ -15,8 +15,8 @@ def buck_filegroup(visibility = ["PUBLIC"], **kwargs):
     native.filegroup(visibility = visibility, **kwargs)
 
 def alias(actual, visibility = ["PUBLIC"], **kwargs):
-    if actual.startswith("//buck2/"):
-        actual = "root//" + actual.removeprefix("//buck2/")
+    if actual.startswith("//bsmr/"):
+        actual = "root//" + actual.removeprefix("//bsmr/")
     native.alias(actual = actual, visibility = visibility, **kwargs)
 
 def buck_sh_binary(visibility = ["PUBLIC"], **kwargs):

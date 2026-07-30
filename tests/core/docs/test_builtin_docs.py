@@ -8,9 +8,9 @@
 
 # pyre-strict
 
-from buck2.tests.e2e_util.api.buck import Buck
-from buck2.tests.e2e_util.buck_workspace import buck_test
-from buck2.tests.e2e_util.helper.golden import golden_dir
+from bsmr.tests.e2e_util.api.buck import Buck
+from bsmr.tests.e2e_util.buck_workspace import buck_test
+from bsmr.tests.e2e_util.helper.golden import golden_dir
 
 
 @buck_test()
@@ -27,4 +27,4 @@ async def test_builtin_docs_golden(buck: Buck) -> None:
         rel_path = file.relative_to(output)
         outputs[str(rel_path)] = s
 
-    golden_dir(output=outputs, rel_path="buck2-golden-docs")
+    golden_dir(output=outputs, rel_path="bsmr-golden-docs")

@@ -15,12 +15,12 @@ buck = none
 
 
 [parser]
-target_platform_detector_spec = target:root//...->root//buck2_utils/platforms:windows_debug
+target_platform_detector_spec = target:root//...->root//bsmr_utils/platforms:windows_debug
 
 [build]
-execution_platforms = root//buck2_utils/platforms:default
+execution_platforms = root//bsmr_utils/platforms:default
 
-[buck2_re_client]
+[bsmr_re_client]
 action_cache_address = grpc://localhost:8980
 engine_address = grpc://localhost:8980
 cas_address = grpc://localhost:8980

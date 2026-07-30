@@ -3,12 +3,12 @@ id: cheat_sheet
 title: Cheat Sheet
 ---
 
-# Buck2 Cheat Sheet
+# Bessemer Cheat Sheet
 
 This section provides example command lines that you can use to obtain
-information about Buck2 and about your build. These techniques can help you to
+information about Bessemer and about your build. These techniques can help you to
 understand how your build works and to troubleshoot issues with your build.
-These examples use the [`buck2 cquery`](../query/cquery) command. We recommend
+These examples use the [`bsmr cquery`](../query/cquery) command. We recommend
 cquery over uquery in most cases because cquery operates on the configured
 graph, which means that targets have had the expected configurations applied on
 them.
@@ -16,7 +16,7 @@ them.
 ---
 
 - How do I find all the targets for a package?
-- How do I specify more than one target to `buck2 cquery`?
+- How do I specify more than one target to `bsmr cquery`?
 - How do I get the attribute names and values for the targets that result from a
   query?
 - How do I perform a query inside of a rule?
@@ -33,22 +33,22 @@ them.
 Specify a _build target pattern_ that represents the targets in the package.
 
 ```sh
-buck2 cquery path/to/dir/...
+bsmr cquery path/to/dir/...
 ```
 
-The `buck2 cquery` command can accept a
+The `bsmr cquery` command can accept a
 [build target pattern](../../concepts/target_pattern) as a parameter. If you
-specify a build target pattern, Buck2 evaluates this pattern and shows all the
+specify a build target pattern, Bessemer evaluates this pattern and shows all the
 build targets that match it.
 
-### How do I specify more than one target to `buck2 cquery`?
+### How do I specify more than one target to `bsmr cquery`?
 
-Use the `buck2 cquery set()` operator. The following command line returns the
-target `main` in the build file in the root of the Buck2 project and all the
+Use the `bsmr cquery set()` operator. The following command line returns the
+target `main` in the build file in the root of the Bessemer project and all the
 targets from the build file in the `myclass` subdirectory of the root.
 
 ```sh
-buck2 cquery "set( ':main' 'myclass:' )"
+bsmr cquery "set( ':main' 'myclass:' )"
 ```
 
 ### How do I get the attribute names and values for the targets returned by a query?
@@ -58,15 +58,15 @@ the command line, followed by regular expressions that represent the attributes
 of interest.
 
 ```sh
-buck2 cquery "deps(foo:bar)" --output-attribute 'name' 'exported_headers'
+bsmr cquery "deps(foo:bar)" --output-attribute 'name' 'exported_headers'
 ```
 
-The `--output-attribute` option enables you to specify which attributes Buck2
+The `--output-attribute` option enables you to specify which attributes Bessemer
 should return. Instead of returning the names of the targets that match the
-query expression, Buck2 returns the names and values of the specified attributes
+query expression, Bessemer returns the names and values of the specified attributes
 for those targets in JSON format. Attributes are specified as regular
 expressions. For example, `'.*'` matches all attributes. See the
-[`buck2 cquery` docs](../query/cquery) for more details. The output for the
+[`bsmr cquery` docs](../query/cquery) for more details. The output for the
 example query above might look something like the following.
 
 ```json
@@ -81,7 +81,7 @@ example query above might look something like the following.
 
 ### How do I perform a query** \***inside**\* **of a rule?
 
-Buck2 supports certain string parameter macros to be used when defining a
+Bessemer supports certain string parameter macros to be used when defining a
 target. You can use the query macros as such:
 
 ```sh
@@ -99,9 +99,9 @@ type `attrs.arg`, such as [`genrule`](../../prelude/rules/core/genrule) and
 Use the `deps()` operator.
 
 ```sh
-buck2 cquery "deps('foo:bar')"
-buck2 cquery "deps('foo:bar', 1, first_order_deps())"
-buck2 cquery "deps(set('foo:bar' 'foo:lib' 'foo/baz:util'))"
+bsmr cquery "deps('foo:bar')"
+bsmr cquery "deps('foo:bar', 1, first_order_deps())"
+bsmr cquery "deps(set('foo:bar' 'foo:lib' 'foo/baz:util'))"
 ```
 
 The `deps` operator finds the dependencies of the specified targets. The first
@@ -113,13 +113,13 @@ specified targets. For example, `1`, as shown in the example above, returns only
 the direct dependencies. If you do not provide this argument, the output is the
 complete set of transitive dependencies. How do I find the reverse-dependencies
 for a target, that is, the targets that** \***depend on**\* **a specified
-target? Use the `buck2 cquery rdeps()` (reverse dependencies) operator. The
+target? Use the `bsmr cquery rdeps()` (reverse dependencies) operator. The
 following example, returns the targets in the
 [transitive closure](https://en.wikipedia.org/wiki/Transitive_closure) of
 `foo:bar` that depend directly on `example:baz`.
 
 ```sh
-buck2 cquery "rdeps('foo:bar', 'example:baz', 1)"
+bsmr cquery "rdeps('foo:bar', 'example:baz', 1)"
 ```
 
 ### How do I find the buildfile that contains the target that owns a source file?
@@ -128,13 +128,13 @@ In order to find the build file associated with a source file, combine the
 `owner` operator with `buildfile`. For example,
 
 ```sh
-buck2 uquery "buildfile(owner('foo/bar/main.cpp'))"
+bsmr uquery "buildfile(owner('foo/bar/main.cpp'))"
 ```
 
 or alternatively
 
 ```
-buck2 cquery "buildfile(owner('foo/bar/main.cpp'))" --target-universe 'foo:baz'
+bsmr cquery "buildfile(owner('foo/bar/main.cpp'))" --target-universe 'foo:baz'
 ```
 
 These two commands first find the targets that _own_ `foo/bar/main.cpp` and then

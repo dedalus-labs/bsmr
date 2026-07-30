@@ -36,7 +36,7 @@ impl StateProcessor {
 
         let processor_counters = counters.clone();
         std::thread::Builder::new()
-            .name("buck2-dice".to_owned())
+            .name("bsmr-dice".to_owned())
             .spawn(move || {
                 StateProcessor {
                     state,

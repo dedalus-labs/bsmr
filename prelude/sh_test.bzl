@@ -51,8 +51,8 @@ def sh_test_impl(ctx: AnalysisContext) -> list[Provider]:
 
     # We implicitly make the target run from the project root if remote
     # execution options were specified
-    run_from_project_root = "buck2_run_from_project_root" in (ctx.attrs.labels or []) or re_executors.run_from_project_root
-    use_project_relative_paths = "buck2_run_from_project_root" in (ctx.attrs.labels or []) or re_executors.use_project_relative_paths
+    run_from_project_root = "bsmr_run_from_project_root" in (ctx.attrs.labels or []) or re_executors.run_from_project_root
+    use_project_relative_paths = "bsmr_run_from_project_root" in (ctx.attrs.labels or []) or re_executors.use_project_relative_paths
 
     # TODO support default info and runinfo properly by writing a sh script that invokes the command properly
 

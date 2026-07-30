@@ -9,9 +9,9 @@
 # pyre-strict
 
 
-from buck2.tests.e2e_util.api.buck import Buck
-from buck2.tests.e2e_util.buck_workspace import buck_test, env
-from buck2.tests.e2e_util.helper.utils import filter_events, random_string
+from bsmr.tests.e2e_util.api.buck import Buck
+from bsmr.tests.e2e_util.buck_workspace import buck_test, env
+from bsmr.tests.e2e_util.helper.utils import filter_events, random_string
 
 
 async def get_action_digest_traces(buck: Buck) -> list[dict[str, object]]:
@@ -27,7 +27,7 @@ async def get_action_digest_traces(buck: Buck) -> list[dict[str, object]]:
 
 
 @buck_test()
-@env("BUCK2_ACTION_DIGEST_TRACE_LG_SAMPLE_RATE", "0")  # Sample all digests
+@env("BSMR_ACTION_DIGEST_TRACE_LG_SAMPLE_RATE", "0")  # Sample all digests
 async def test_action_digest_trace_cache_miss(buck: Buck) -> None:
     """Test that cache miss events are traced."""
     # Make sure action is not cached by using a random input
@@ -53,7 +53,7 @@ async def test_action_digest_trace_cache_miss(buck: Buck) -> None:
 
 
 @buck_test()
-@env("BUCK2_ACTION_DIGEST_TRACE_LG_SAMPLE_RATE", "0")  # Sample all digests
+@env("BSMR_ACTION_DIGEST_TRACE_LG_SAMPLE_RATE", "0")  # Sample all digests
 async def test_action_digest_trace_cache_hit(buck: Buck) -> None:
     """Test that cache hit events are traced."""
     # First build to populate cache
@@ -86,7 +86,7 @@ async def test_action_digest_trace_cache_hit(buck: Buck) -> None:
 
 @buck_test()
 @env(
-    "BUCK2_ACTION_DIGEST_TRACE_LG_SAMPLE_RATE", "64"
+    "BSMR_ACTION_DIGEST_TRACE_LG_SAMPLE_RATE", "64"
 )  # Sample rate so high nothing is sampled
 async def test_action_digest_trace_sampling(buck: Buck) -> None:
     """Test that sampling works - with very high rate, nothing should be sampled."""

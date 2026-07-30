@@ -12,10 +12,10 @@ import asyncio
 import json
 from pathlib import Path
 
-from buck2.tests.e2e_util.api.buck import Buck
-from buck2.tests.e2e_util.api.buck_result import ExitCodeV2
-from buck2.tests.e2e_util.asserts import expect_failure
-from buck2.tests.e2e_util.buck_workspace import buck_test
+from bsmr.tests.e2e_util.api.buck import Buck
+from bsmr.tests.e2e_util.api.buck_result import ExitCodeV2
+from bsmr.tests.e2e_util.asserts import expect_failure
+from bsmr.tests.e2e_util.buck_workspace import buck_test
 
 
 @buck_test()
@@ -64,7 +64,7 @@ async def test_overall_timeout_with_artifact_path_sketch(
                     "--overall-timeout",
                     "1s",
                     "-c",
-                    "buck2.log_artifact_size_sketch=true",
+                    "bsmr.log_artifact_size_sketch=true",
                     "--build-report",
                     str(build_report),
                 ),

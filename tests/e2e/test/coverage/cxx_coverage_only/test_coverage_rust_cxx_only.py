@@ -14,8 +14,8 @@ import re
 from pathlib import Path
 from typing import List
 
-from buck2.tests.e2e_util.api.buck import Buck
-from buck2.tests.e2e_util.buck_workspace import buck_test
+from bsmr.tests.e2e_util.api.buck import Buck
+from bsmr.tests.e2e_util.buck_workspace import buck_test
 
 from .test_coverage_utils import collect_coverage_for
 
@@ -25,7 +25,7 @@ async def test_rust_test_coverage(buck: Buck, tmp_path: Path) -> None:
     coverage_file = tmp_path / "coverage.txt"
     await buck.test(
         "@fbcode//mode/dbgo-cov",
-        "fbcode//buck2/tests/targets/rules/rust:tests_pass",
+        "fbcode//bsmr/tests/targets/rules/rust:tests_pass",
         "--",
         "--collect-coverage",
         f"--coverage-output={coverage_file}",
@@ -34,7 +34,7 @@ async def test_rust_test_coverage(buck: Buck, tmp_path: Path) -> None:
     with open(coverage_file) as results:
         for line in results:
             paths.append(json.loads(line)["filepath"])
-    assert "fbcode/buck2/tests/targets/rules/rust/tests_pass.rs" in paths, str(paths)
+    assert "fbcode/bsmr/tests/targets/rules/rust/tests_pass.rs" in paths, str(paths)
 
 
 @buck_test(inplace=True)
@@ -45,11 +45,11 @@ async def test_rust_test_coverage_filtering_by_path_of_target(
     paths = await collect_coverage_for(
         buck,
         tmp_path,
-        "fbcode//buck2/tests/targets/rules/rust:tests_pass",
-        ["buck2/tests"],
+        "fbcode//bsmr/tests/targets/rules/rust:tests_pass",
+        ["bsmr/tests"],
     )
 
-    unexpected_paths = [p for p in paths if not p.startswith("fbcode/buck2/tests")]
+    unexpected_paths = [p for p in paths if not p.startswith("fbcode/bsmr/tests")]
     assert len(unexpected_paths) == 0, str(paths)
 
 
@@ -61,7 +61,7 @@ async def test_rust_test_coverage_of_rust_library_filtering_by_path_outside_of_t
     paths = await collect_coverage_for(
         buck,
         tmp_path,
-        "buck2/tests/targets/rules/rust/coverage/test_with_rust_library_outside_targets_path:test",
+        "bsmr/tests/targets/rules/rust/coverage/test_with_rust_library_outside_targets_path:test",
         ["testing_frameworks"],
     )
 

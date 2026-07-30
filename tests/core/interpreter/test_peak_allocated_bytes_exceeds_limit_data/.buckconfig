@@ -4,5 +4,5 @@ name=TARGETS.fixture
 [repositories]
 prelude = .
 
-[buck2]
+[bsmr]
 check_starlark_peak_memory = true

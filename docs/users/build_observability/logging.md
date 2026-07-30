@@ -5,9 +5,9 @@ title: Logging
 
 import { FbInternalOnly } from 'docusaurus-plugin-internaldocs-fb/internal';
 
-Buck2 produces detailed event logs for each invocation, which follow a schema
-outlined in `app/buck2_data/data.proto` in the buck2 parent directory. The event
-logs that Buck2 produces automatically are always in protobuf zstd-compressed
+Bessemer produces detailed event logs for each invocation, which follow a schema
+outlined in `app/bsmr_data/data.proto` in the bsmr parent directory. The event
+logs that Bessemer produces automatically are always in protobuf zstd-compressed
 format (see [Viewing the event log](#viewing-the-event-log) for more details).
 
 ## Event log format
@@ -25,9 +25,9 @@ Invocation {
     command_line_args: List[str],
     # Expanded CLI args, which expand any argsfiles
     expanded_command_line_args: List[str],
-    # Absolute path of the current working directory of the Buck2 command
+    # Absolute path of the current working directory of the Bessemer command
     working_dir: str,
-    # UUID of the Buck2 command
+    # UUID of the Bessemer command
     trace_id: str,
 }
 ```
@@ -62,7 +62,7 @@ Event {
     # When the event was fired. This is always a 2-item list, where the first
     # value is seconds since the Unix epoch, second value is nanoseconds
     timestamp: List[u64],
-    # UUID of the Buck2 command, same one as the invocation header
+    # UUID of the Bessemer command, same one as the invocation header
     trace_id: str,
     # A trace-unique 64-bit integer identifying this event's span ID,
     # if this event begins a new span or belongs to one.
@@ -124,33 +124,33 @@ and DICE metrics.
 
 ## Viewing the event log
 
-Event logs can be accessed using commands under `buck2 log show`, which outputs
-the event logs in JSONL format. You can run `buck2 log show --help` to see all
+Event logs can be accessed using commands under `bsmr log show`, which outputs
+the event logs in JSONL format. You can run `bsmr log show --help` to see all
 available options. Some useful commands:
 
-- Show the logs for the most recent Buck2 command:
+- Show the logs for the most recent Bessemer command:
 
 ```sh
-buck2 log show
+bsmr log show
 ```
 
-- Show the logs for a specific Buck2 command, given the command's UUID:
+- Show the logs for a specific Bessemer command, given the command's UUID:
 
 ```sh
-buck2 log show --trace-id <UUID>
+bsmr log show --trace-id <UUID>
 ```
 
-- Show the logs for a recent Buck2 command:
+- Show the logs for a recent Bessemer command:
 
 ```sh
-buck2 log show --recent <NUMBER>
+bsmr log show --recent <NUMBER>
 ```
 
 <FbInternalOnly>
 
-You can also download the logs locally from Buck2 UI. The logs will be
+You can also download the logs locally from Bessemer UI. The logs will be
 downloaded from Manifold in protobuf zstd-compressed format, and you can view
-them in JSONL format by passing the path into `buck2 log show`.
+them in JSONL format by passing the path into `bsmr log show`.
 </FbInternalOnly>
 
 The JSON schema is derived from the protobuf types, and the log itself could be
@@ -159,7 +159,7 @@ things. For example, this jq script shows the max event delay between a snapshot
 event creation on the daemon side, and when the client receives it.
 
 ```sh
-buck2 log show | jq -s '
+bsmr log show | jq -s '
   map(
     .Event.data.Instant.data.Snapshot.this_event_client_delay_ms
       | select(. != null)

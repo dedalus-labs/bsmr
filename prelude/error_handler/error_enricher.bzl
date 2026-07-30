@@ -7,7 +7,7 @@
 # above-listed licenses.
 
 """
-Unified error enrichment framework for Buck2 structured build errors.
+Unified error enrichment framework for Bessemer structured build errors.
 
 This module provides a shared abstraction for matching and enriching build errors
 across different languages.

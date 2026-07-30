@@ -13,7 +13,7 @@ use std::io::Write;
 use std::sync::Mutex;
 use std::sync::OnceLock;
 
-// Some code is adapted from buck2_util::process_stats, consider moving into shed and sharing it.
+// Some code is adapted from bsmr_util::process_stats, consider moving into shed and sharing it.
 
 /// Returns ticks per second from sysconf(_SC_CLK_TCK).
 fn sc_clk_tck() -> u64 {
@@ -91,7 +91,7 @@ pub fn reset_peak_rss() -> anyhow::Result<()> {
 }
 
 pub fn db_size_bytes() -> u64 {
-    let Ok(path) = std::env::var("BUCK2_DICE_DB_PATH") else {
+    let Ok(path) = std::env::var("BSMR_DICE_DB_PATH") else {
         return 0;
     };
     let mut total = 0u64;

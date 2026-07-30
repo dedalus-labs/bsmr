@@ -1,11 +1,11 @@
 [cells]
 root = .
 
-[buck2]
+[bsmr]
 # Adjust as needed.
 digest_algorithms = SHA1
 
-[buck2_re_client]
+[bsmr_re_client]
 # Adjust as needed.
 engine_address = $ENGINE_ADDRESS
 action_cache_address = $ACTION_CACHE_ADDRESS

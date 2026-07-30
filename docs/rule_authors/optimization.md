@@ -6,26 +6,26 @@ title: Observability and Optimization
 import { FbInternalOnly } from 'docusaurus-plugin-internaldocs-fb/internal';
 
 Optimization involves the use of techniques for determining and improving the
-performance of Buck2 and specific actions performed by Buck2. This page covers
-the internals for developers of Buck2 and provides details of Starlark that are
+performance of Bessemer and specific actions performed by Bessemer. This page covers
+the internals for developers of Bessemer and provides details of Starlark that are
 likely to be relevant to end users.
 
 ## Starlark profiling
 
-`buck2` supports profiling of the evaluation of specific `BUCK` files and
+`bsmr` supports profiling of the evaluation of specific `BUCK` files and
 profiling of the analysis of specific targets.
 
-There are three `buck2` profiling commands:
+There are three `bsmr` profiling commands:
 
-- `buck2 profile loading`
-- `buck2 profile analysis`
-- `buck2 profile bxl`
+- `bsmr profile loading`
+- `bsmr profile analysis`
+- `bsmr profile bxl`
 
 For example:
 
 ```shell
-buck2 profile loading --mode=heap-summary-allocated -o heap-summary.csv //some/package:
-buck2 profile analysis --mode=heap-summary-allocated -o heap-summary.csv //some/package:target
+bsmr profile loading --mode=heap-summary-allocated -o heap-summary.csv //some/package:
+bsmr profile analysis --mode=heap-summary-allocated -o heap-summary.csv //some/package:target
 ```
 
 Possible values for profiling modes are as follows:
@@ -144,9 +144,9 @@ can download an example [here](https://www.internalfb.com/intern/px/p/1Mz2W)).
 
 - Profiling on Linux can be done with
   `perf record -g --call-graph=dwarf,20000 ...` and `perf report --call-graph`
-  - Don't profile the `buck2` process directly unless you are interested in
-    profiling the CLI; you likely want to profile the `buck2` daemon process.
-    You can find the pid with `buck2 status` and attach `perf` to that PID.
+  - Don't profile the `bsmr` process directly unless you are interested in
+    profiling the CLI; you likely want to profile the `bsmr` daemon process.
+    You can find the pid with `bsmr status` and attach `perf` to that PID.
 - Profiling on Mac can be done with `Instruments`<FbInternalOnly> (for details,
   see the Wiki article
   [Running and Testing Builds](https://www.internalfb.com/intern/wiki/GraphQL/Build_Infra/Running_and_Testing_Builds/#profiling-the-rust-code))</FbInternalOnly>.

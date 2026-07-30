@@ -136,7 +136,7 @@ class DB:
 def query_buck(test_target: str) -> Any:
     result = subprocess.run(
         [
-            "buck2",
+            "bsmr",
             "bxl",
             "--reuse-current-config",
             "prelude//python/sourcedb/pyrefly.bxl:main",
@@ -151,7 +151,7 @@ def query_buck(test_target: str) -> Any:
     if result.returncode != 0:
         stderr = result.stderr.decode("utf-8")
         raise Exception(
-            f"Pyrefly execution with Buck2 resulted in non-zero exit: {result.returncode}\n"
+            f"Pyrefly execution with Bessemer resulted in non-zero exit: {result.returncode}\n"
             + f"STDOUT: ```\n{stdout}```\nSTDERR: ```\n{stderr}```\nCOMMAND: `{result.args}`"
         )
 

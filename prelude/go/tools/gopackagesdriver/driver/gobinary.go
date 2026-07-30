@@ -18,7 +18,7 @@ import (
 	"strings"
 )
 
-// getGoBinary creates a temporary Go binary wrapper that uses Buck2
+// getGoBinary creates a temporary Go binary wrapper that uses Bessemer
 // Won't work on Windows
 func getGoBinary() (string, func(), error) {
 	tmpDir, err := os.MkdirTemp("", "go-bin-*")
@@ -30,7 +30,7 @@ func getGoBinary() (string, func(), error) {
 	scriptContent := fmt.Sprintf(`#!/usr/bin/env bash
 # remove the current directory from the path to avoid infinite recursion on system_go_toolchain
 export PATH=${PATH//$(dirname "$0"):/}
-exec buck2 run %s 'toolchains//:go[go]' -- "$@"
+exec bsmr run %s 'toolchains//:go[go]' -- "$@"
 `, strings.Join(buckOpts, " "))
 
 	goBinaryPath := filepath.Join(tmpDir, "go")

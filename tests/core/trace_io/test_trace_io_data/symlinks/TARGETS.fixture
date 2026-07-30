@@ -1,6 +1,6 @@
 load("//:defs.bzl", "my_binary")
 
-oncall("buck2")
+oncall("bsmr")
 
 my_binary(
     name = "relative_link",

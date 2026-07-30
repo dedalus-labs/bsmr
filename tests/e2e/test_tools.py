@@ -12,8 +12,8 @@
 import re
 import sys
 
-from buck2.tests.e2e_util.api.buck import Buck
-from buck2.tests.e2e_util.buck_workspace import buck_test, env
+from bsmr.tests.e2e_util.api.buck import Buck
+from bsmr.tests.e2e_util.buck_workspace import buck_test, env
 
 
 # builds targets in an fbcode target configuration, unsupported on mac RE workers
@@ -30,7 +30,7 @@ if fbcode_linux_only():
         )
 
     @buck_test(inplace=True)
-    @env("BUCK2_KEEP_DEP_FILE_DIRECTORIES", "true")
+    @env("BSMR_KEEP_DEP_FILE_DIRECTORIES", "true")
     async def test_arvr_cuda_dep_files(buck: Buck) -> None:
         target = "fbsource//arvr/tools/buck/tests/cuda:test_cuda_arvr"
         mode_file = "@fbsource//arvr/mode/platform010/cuda12_5/opt"

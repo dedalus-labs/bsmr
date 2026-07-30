@@ -1,4 +1,4 @@
-load("@fbcode//buck2/tests/prelude:py_assertion.bzl", "py_assertion")
+load("@fbcode//bsmr/tests/prelude:py_assertion.bzl", "py_assertion")
 
 oncall("golang")
 
@@ -8,7 +8,7 @@ prelude.go_binary(
     name = "bin",
     srcs = ["main.go"],
     deps = [
-        "//buck2/tests/prelude/go/binary/library:lib",
+        "//bsmr/tests/prelude/go/binary/library:lib",
     ],
 )
 

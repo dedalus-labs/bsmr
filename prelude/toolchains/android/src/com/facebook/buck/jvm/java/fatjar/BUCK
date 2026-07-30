@@ -46,7 +46,7 @@ buck_java_library(
 )
 
 # Binary used to collect all class files from dependencies, used for creating
-# fatjars with buck2.
+# fatjars with bsmr.
 buck_java_binary(
     name = "fat-jar-main-binary",
     visibility = [

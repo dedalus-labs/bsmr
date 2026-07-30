@@ -8,11 +8,11 @@
 
 import os
 
-from buck2.tests.e2e_util.asserts import expect_failure
-from buck2.tests.e2e_util.buck_workspace import buck_test, get_mode_from_platform
+from bsmr.tests.e2e_util.asserts import expect_failure
+from bsmr.tests.e2e_util.buck_workspace import buck_test, get_mode_from_platform
 
 
-# This is just a template test case for `check_dependencies_test` to use buck2's e2e test framework.
+# This is just a template test case for `check_dependencies_test` to use bsmr's e2e test framework.
 # It does not need to be edited for new `check_dependencies_test`.
 
 FLAVOR = os.environ["FLAVOR"]
@@ -67,9 +67,9 @@ if FLAVOR == "check_dependencies_test":  # noqa: C901
                 else []
             ),
             env={
-                "BUCK2_TEST_DISABLE_LOG_UPLOAD": "false",
-                "BUCK2_RUNTIME_THREADS": "8",
-                "BUCK2_MAX_BLOCKING_THREADS": "8",
+                "BSMR_TEST_DISABLE_LOG_UPLOAD": "false",
+                "BSMR_RUNTIME_THREADS": "8",
+                "BSMR_MAX_BLOCKING_THREADS": "8",
             },
         )
         if expect_failure_msg == "":
@@ -99,7 +99,7 @@ elif FLAVOR == "audit_dependents_test":
             "--allowlist_patterns",
             *allow_list,
             env={
-                "BUCK2_TEST_DISABLE_LOG_UPLOAD": "false",
+                "BSMR_TEST_DISABLE_LOG_UPLOAD": "false",
             },
         )
         if expect_failure_msg == "":
@@ -125,7 +125,7 @@ elif FLAVOR == "assert_dependencies_test":
             os.environ["TARGET"],
             *dep_list,
             env={
-                "BUCK2_TEST_DISABLE_LOG_UPLOAD": "false",
+                "BSMR_TEST_DISABLE_LOG_UPLOAD": "false",
             },
         )
         if expect_failure_msg == "":
@@ -139,7 +139,7 @@ elif FLAVOR == "check_mutually_exclusive_dependencies_test":
     async def test_check_mutually_exclusive_dependencies_bxl(buck) -> None:
         expect_failure_msg = os.environ["EXPECT_FAILURE_MSG"]
 
-        # Build mode argfile is passed directly to buck2 as an argfile
+        # Build mode argfile is passed directly to bsmr as an argfile
         # e.g., "@fbsource//arvr/mode/android/linux/opt"
         build_mode_argfile = os.environ.get("BUILD_MODE_ARGFILE", "")
         additional_args = []
@@ -157,9 +157,9 @@ elif FLAVOR == "check_mutually_exclusive_dependencies_test":
             "--target_deps",
             os.environ["TARGET_DEPS"],
             env={
-                "BUCK2_TEST_DISABLE_LOG_UPLOAD": "false",
-                "BUCK2_RUNTIME_THREADS": "8",
-                "BUCK2_MAX_BLOCKING_THREADS": "8",
+                "BSMR_TEST_DISABLE_LOG_UPLOAD": "false",
+                "BSMR_RUNTIME_THREADS": "8",
+                "BSMR_MAX_BLOCKING_THREADS": "8",
             },
         )
         if expect_failure_msg == "":

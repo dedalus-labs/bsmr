@@ -13,10 +13,10 @@ import sys
 from os.path import exists, islink
 from pathlib import Path
 
-from buck2.tests.e2e_util.api.buck import Buck
-from buck2.tests.e2e_util.asserts import expect_failure
-from buck2.tests.e2e_util.buck_workspace import buck_test, env
-from buck2.tests.e2e_util.helper.utils import read_timestamps
+from bsmr.tests.e2e_util.api.buck import Buck
+from bsmr.tests.e2e_util.asserts import expect_failure
+from bsmr.tests.e2e_util.buck_workspace import buck_test, env
+from bsmr.tests.e2e_util.helper.utils import read_timestamps
 
 
 # Currently installer grpc doesn't compile on Mac
@@ -32,7 +32,7 @@ if linux_only():
         tmp_dir.mkdir()
         args = ["--dst", f"{tmp_dir}/"]
         await buck.install(
-            "fbcode//buck2/tests/targets/rules/install:installer_test", "--", *args
+            "fbcode//bsmr/tests/targets/rules/install:installer_test", "--", *args
         )
         assert exists(f"{tmp_dir}/artifact_a")
         assert exists(f"{tmp_dir}/artifact_b")
@@ -40,14 +40,14 @@ if linux_only():
         assert not islink(f"{tmp_dir}/etc_hosts")
 
     @buck_test(inplace=True, write_invocation_record=True)
-    @env("BUCK_LOG", "buck2_server_commands::commands::install=debug")
+    @env("BUCK_LOG", "bsmr_server_commands::commands::install=debug")
     async def test_install_logging(buck: Buck, tmp_path: Path) -> None:
         tmp_dir = tmp_path / "install_test"
         tmp_dir.mkdir()
         args = ["--dst", f"{tmp_dir}/"]
         args += ["--delay", "1"]
         res = await buck.install(
-            "fbcode//buck2/tests/targets/rules/install:installer_test",
+            "fbcode//bsmr/tests/targets/rules/install:installer_test",
             "--",
             *args,
         )
@@ -77,11 +77,11 @@ if linux_only():
         ]
 
     @buck_test(inplace=True)
-    @env("BUCK2_INSTALLER_SEND_TIMEOUT_S", "1")
+    @env("BSMR_INSTALLER_SEND_TIMEOUT_S", "1")
     async def test_send_file_timeout(buck: Buck, tmp_path: Path) -> None:
         await expect_failure(
             buck.install(
-                "fbcode//buck2/tests/targets/rules/install:installer_single_artifact",
+                "fbcode//bsmr/tests/targets/rules/install:installer_single_artifact",
                 "--",
                 "--delay",
                 "30",
@@ -93,7 +93,7 @@ if linux_only():
     async def test_artifact_fails_to_install(buck: Buck) -> None:
         res = await expect_failure(
             buck.install(
-                "fbcode//buck2/tests/targets/rules/install:installer_server_sends_error",
+                "fbcode//bsmr/tests/targets/rules/install:installer_server_sends_error",
             ),
             stderr_regex=r"Interaction with installer failed",
         )
@@ -121,7 +121,7 @@ if linux_only():
     async def test_fail_to_build_artifact(buck: Buck) -> None:
         res = await expect_failure(
             buck.install(
-                "fbcode//buck2/tests/targets/rules/install:bad_artifacts",
+                "fbcode//bsmr/tests/targets/rules/install:bad_artifacts",
             ),
             stderr_regex=r"Failed to build",
         )
@@ -133,7 +133,7 @@ if linux_only():
     async def test_install_id_mismatch(buck: Buck) -> None:
         res = await expect_failure(
             buck.install(
-                "fbcode//buck2/tests/targets/rules/install:installer_server_sends_wrong_install_info_response",
+                "fbcode//bsmr/tests/targets/rules/install:installer_server_sends_wrong_install_info_response",
             ),
             stderr_regex=r"doesn't match with the sent one",
         )
@@ -145,7 +145,7 @@ if linux_only():
     async def test_installer_needs_forwarded_params(buck: Buck) -> None:
         res = await expect_failure(
             buck.install(
-                "fbcode//buck2/tests/targets/rules/install:installer_server_requires_forwarded_params",
+                "fbcode//bsmr/tests/targets/rules/install:installer_server_requires_forwarded_params",
             ),
             stderr_regex=r"-r_-e_-d_-s_-x_-a_-i_-w_-u_-k_must_be_passed_to_installer",
         )
@@ -169,7 +169,7 @@ if linux_only():
             "-w",
             "-u",
             "-k",
-            "fbcode//buck2/tests/targets/rules/install:installer_server_requires_forwarded_params",
+            "fbcode//bsmr/tests/targets/rules/install:installer_server_requires_forwarded_params",
         )
 
     @buck_test(inplace=True)
@@ -188,7 +188,7 @@ if linux_only():
             "--wait-for-debugger",
             "--uninstall",
             "--keep",
-            "fbcode//buck2/tests/targets/rules/install:installer_server_requires_forwarded_params",
+            "fbcode//bsmr/tests/targets/rules/install:installer_server_requires_forwarded_params",
         )
 
     @buck_test(inplace=True)
@@ -197,7 +197,7 @@ if linux_only():
     ) -> None:
         await buck.install(
             "-r",
-            "fbcode//buck2/tests/targets/rules/install:installer_validates_extra_args_order",
+            "fbcode//bsmr/tests/targets/rules/install:installer_validates_extra_args_order",
             "--",
             "--",
             "--expected-extra-arg",
@@ -208,7 +208,7 @@ if linux_only():
 async def test_fail_to_build_installer(buck: Buck) -> None:
     res = await expect_failure(
         buck.install(
-            "fbcode//buck2/tests/targets/rules/install:bad_installer_target",
+            "fbcode//bsmr/tests/targets/rules/install:bad_installer_target",
         ),
         stderr_regex=r"Failed to build installer",
     )

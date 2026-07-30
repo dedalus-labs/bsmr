@@ -42,7 +42,7 @@ when it is enabled but not used.
 
 Note there are several copies of this project on GitHub due to how Meta monorepo
 is synchronized to GitHub. The main copy is in
-[facebook/buck2](https://github.com/facebook/buck2).
+[dedalus-labs/bsmr](https://github.com/dedalus-labs/bsmr).
 
 ## License
 

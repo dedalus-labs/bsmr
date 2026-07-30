@@ -15,7 +15,7 @@ from pathlib import Path
 from typing import Awaitable, Optional, Type, TypeVar, Union
 
 import pytest
-from buck2.tests.e2e_util.api.buck_result import (
+from bsmr.tests.e2e_util.api.buck_result import (
     BuckException,
     BuckResult,
     ExitCode,

@@ -16,7 +16,7 @@ globby = glob
 
 srcs = globby(
     ["**"],
-    # Context: https://fb.workplace.com/groups/buck2users/posts/3121903854732641/
+    # Context: https://fb.workplace.com/groups/bsmrusers/posts/3121903854732641/
     exclude = [
         "**/.pyre_configuration.local",
         # Unfortunately, using modifiers require loading bzl files in outside of prelude,
@@ -28,7 +28,7 @@ srcs = globby(
 )
 
 # Re-export filegroups that are behind package boundary violations for
-# Buck2.
+# Bessemer.
 prelude.filegroup(
     name = "files",
     srcs = srcs,

@@ -153,7 +153,7 @@ func WithTelemetry(t Telemetry) Option {
 	}
 }
 
-// Run parses the command line arguments and stdin, then runs buck2 and `go list` and writes results to stdout
+// Run parses the command line arguments and stdin, then runs bsmr and `go list` and writes results to stdout
 func Run(ctx context.Context, opts ...Option) error {
 	options := &RunOptions{
 		telemetry: &NoopTelemetry{},

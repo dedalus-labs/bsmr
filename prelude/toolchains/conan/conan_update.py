@@ -14,10 +14,10 @@ import subprocess
 
 
 def find_root():
-    """Find the repository root using `buck2 root`."""
-    # TODO[AH] This assumes that buck2 is in PATH when executing the script via `buck2 run`.
-    #   Consider making the name/path `buck2` configurable via an environment variable.
-    return subprocess.check_output(["buck2", "root"], text=True).strip()
+    """Find the repository root using `bsmr root`."""
+    # TODO[AH] This assumes that bsmr is in PATH when executing the script via `bsmr run`.
+    #   Consider making the name/path `bsmr` configurable via an environment variable.
+    return subprocess.check_output(["bsmr", "root"], text=True).strip()
 
 
 def write_lockfile(lockfile, lockfile_out):
@@ -28,7 +28,7 @@ def write_lockfile(lockfile, lockfile_out):
 def write_targets(update_label, lock_generate, conan_generate, targets_out):
     header = """\
 # {at}generated
-# Update using `buck2 run {update_label}`
+# Update using `bsmr run {update_label}`
 
 load(
     "@prelude//toolchains/conan:defs.bzl",
@@ -51,7 +51,7 @@ load(
 def main():
     parser = argparse.ArgumentParser(
         prog="conan_update",
-        description="Update the Conan lock-file and the Buck2 package imports.",
+        description="Update the Conan lock-file and the Bessemer package imports.",
     )
     parser.add_argument(
         "--update-label",

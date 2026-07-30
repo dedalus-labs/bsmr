@@ -122,7 +122,7 @@ public class FatJarMain {
   }
 
   private static Path getRootDirectory() throws IOException, InterruptedException {
-    // TODO: @classpath_args are relative to repo root for buck2
+    // TODO: @classpath_args are relative to repo root for bsmr
     String command = "hg root";
     Process process = Runtime.getRuntime().exec(command);
     Path path;

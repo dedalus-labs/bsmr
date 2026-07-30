@@ -35,7 +35,7 @@ This exposes `your_function_name` as a function, with whatever arguments you
 defined it, so that on the command line you can invoke:
 
 ```sh
-buck2 bxl //myscript.bxl:your_function_name -- --bool_arg true --list-type 1 --list-type 2 --target //foo:bar
+bsmr bxl //myscript.bxl:your_function_name -- --bool_arg true --list-type 1 --list-type 2 --target //foo:bar
 ```
 
 The implementation function takes a single context as parameter (see the
@@ -46,10 +46,10 @@ of a BXL function.
 
 ## Running a BXL
 
-To run a BXL function, invoke the buck2 command:
+To run a BXL function, invoke the bsmr command:
 
 ```text
-buck2 bxl <bxl function> -- <function args>
+bsmr bxl <bxl function> -- <function args>
 ```
 
 Where `<bxl function>` is of the form `<cell path to function>:<function name>`,
@@ -59,11 +59,11 @@ command line.
 The documentation for a BXL function can be seen by running:
 
 ```text
- buck2 bxl <bxl function> -- --help
+ bsmr bxl <bxl function> -- --help
 ```
 
-Note that this is different from `buck2 bxl --help`, which generates the help
-for the buck2 command instead of the function.
+Note that this is different from `bsmr bxl --help`, which generates the help
+for the bsmr command instead of the function.
 
 ## Return information from BXL
 
@@ -102,7 +102,7 @@ example = bxl_main(
 On the command line, you can invoke the arguments as follows:
 
 ```sh
-buck2 bxl //myscript.bxl:example -- --bool_arg true --list_type 1 --list_type 2 --target //foo:bar
+bsmr bxl //myscript.bxl:example -- --bool_arg true --list_type 1 --list_type 2 --target //foo:bar
 ```
 
 For BXL functions, to read the arguments, use them as attributes from the
@@ -296,7 +296,7 @@ def bxl.ctarget_set(nodes: None | list[bxl.ConfiguredTargetNode]) -> bxl.Configu
 
 ## Profiling, Testing, and Debugging a BXL script
 
-You can use `buck2 bxl profiler`, with various measurements, to determine where
+You can use `bsmr bxl profiler`, with various measurements, to determine where
 the script is least efficient.
 
 To time individual pieces of the script, you can use BXL’s timestamp methods:
@@ -316,11 +316,11 @@ def _impl_example(_ctx):
 <FbInternalOnly>
 
 - **Debugger** - to use the debugger you can follow these instructions
-  [here](https://fb.workplace.com/groups/buck2eng/permalink/3562907607330619/).
+  [here](https://fb.workplace.com/groups/bsmreng/permalink/3562907607330619/).
 
       1. `fdb --starlark-kill-buck attach buck`
       2. place a breakpoint to the bxl file
-      3. run the buck2 bxl command
+      3. run the bsmr bxl command
 
 </FbInternalOnly>
 

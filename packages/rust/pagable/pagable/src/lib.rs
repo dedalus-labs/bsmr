@@ -83,5 +83,5 @@ pub mod __internal {
     pub use static_assertions;
 }
 
-// @patternlint-disable-next-line buck2-no-use-anyhow
+// @patternlint-disable-next-line bsmr-no-use-anyhow
 pub use anyhow::anyhow;

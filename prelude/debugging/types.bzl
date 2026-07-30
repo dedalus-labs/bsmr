@@ -10,7 +10,7 @@ load("@prelude//utils:arglike.bzl", "ArgLike")  # @unused Used as a type
 
 # Types in this file represent a contract between a BXL script (see fdb.bxl) and internal debugging tool.
 # These most likely will change as the BXL integration evolves over time to be more generic
-# Right now the internal tool is making a call "buck2 bxl @mode prelude//debugging:fdb.bxl --target //some_target --arg=arg1 --arg=2"
+# Right now the internal tool is making a call "bsmr bxl @mode prelude//debugging:fdb.bxl --target //some_target --arg=arg1 --arg=2"
 # And fdb.bxl is expected to output artifact with serialized ExecInfo
 # This information will be used to build debug configuration (primarily VSCode launch configuration but in some cases CLI invocations or Android Studio requests)
 

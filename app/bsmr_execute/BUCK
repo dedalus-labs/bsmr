@@ -1,0 +1,97 @@
+load("@bsmr_build//rules:rust.bzl", "rust_library")
+
+oncall("build_infra")
+
+rust_library(
+    name = "bsmr_execute",
+    srcs = glob(
+        ["src/**/*.rs"],
+    ),
+    # `//bsmr/packages/rust/remote_execution:remote_execution` is an alias selecting between
+    # the internal and OSS impls; autocargo doesn't follow aliases, so point at
+    # the OSS rust_library directly for cargo's sake.
+    autocargo = {
+        "cargo_toml_config": {
+            "dependencies_override": {
+                "dependencies": {
+                    "fbinit": {
+                        "path": None,
+                        "version": "0.2",
+                    },
+                },
+            },
+            "extra_buck_dependencies": {
+                "dependencies": [
+                    "fbcode//bsmr/packages/rust/remote_execution/oss/re_grpc:remote_execution",
+                ],
+            },
+        },
+    },
+    test_deps = [
+        "fbsource//third-party/rust:assert_matches",
+        "fbsource//third-party/rust:prost-types",
+        "fbsource//third-party/rust:tempfile",
+    ],
+    deps = [
+        "fbsource//third-party/rust:anyhow",
+        "fbsource//third-party/rust:async-recursion",
+        "fbsource//third-party/rust:async-trait",
+        "fbsource//third-party/rust:bytes",
+        "fbsource//third-party/rust:chrono",
+        "fbsource//third-party/rust:crossbeam-channel",
+        "fbsource//third-party/rust:ctor",
+        "fbsource//third-party/rust:derivative",
+        "fbsource//third-party/rust:derive_more",
+        "fbsource//third-party/rust:digest",
+        "fbsource//third-party/rust:either",
+        "fbsource//third-party/rust:faccess",
+        "fbsource//third-party/rust:futures",
+        "fbsource//third-party/rust:hex",
+        "fbsource//third-party/rust:http",
+        "fbsource//third-party/rust:hyper",
+        "fbsource//third-party/rust:itertools",
+        "fbsource//third-party/rust:pathdiff",
+        "fbsource//third-party/rust:prost",
+        "fbsource//third-party/rust:ref-cast",
+        "fbsource//third-party/rust:serde",
+        "fbsource//third-party/rust:serde_json",
+        "fbsource//third-party/rust:sha1",
+        "fbsource//third-party/rust:sha2",
+        "fbsource//third-party/rust:slog",
+        "fbsource//third-party/rust:smallvec",
+        "fbsource//third-party/rust:sorted_vector_map",
+        "fbsource//third-party/rust:tokio",
+        "fbsource//third-party/rust:tokio-util",
+        "fbsource//third-party/rust:tracing",
+        "//bsmr/packages/rust/allocative/allocative:allocative",
+        "//bsmr/app/bsmr_action_metadata_proto:bsmr_action_metadata_proto",
+        "//bsmr/app/bsmr_build_info:bsmr_build_info",
+        "//bsmr/app/bsmr_build_signals:bsmr_build_signals",
+        "//bsmr/app/bsmr_cli_proto:bsmr_cli_proto",
+        "//bsmr/app/bsmr_common:bsmr_common",
+        "//bsmr/app/bsmr_core:bsmr_core",
+        "//bsmr/app/bsmr_data:bsmr_data",
+        "//bsmr/app/bsmr_directory:bsmr_directory",
+        "//bsmr/app/bsmr_error:bsmr_error",
+        "//bsmr/app/bsmr_events:bsmr_events",
+        "//bsmr/app/bsmr_fs:bsmr_fs",
+        "//bsmr/app/bsmr_hash:bsmr_hash",
+        "//bsmr/app/bsmr_http:bsmr_http",
+        "//bsmr/app/bsmr_miniperf_proto:bsmr_miniperf_proto",
+        "//bsmr/app/bsmr_re_configuration:bsmr_re_configuration",
+        "//bsmr/app/bsmr_util:bsmr_util",
+        "//bsmr/app/bsmr_wrapper_common:bsmr_wrapper_common",
+        "//bsmr/packages/rust/dice/dice:dice",
+        "//bsmr/packages/rust/dice/dice_futures:dice_futures",
+        # @oss-disable[end= ]: "//bsmr/facebook/test_env_allowlist:test_env_allowlist",
+        "//bsmr/packages/rust/gazebo/dupe:dupe",
+        "//bsmr/packages/rust/gazebo/gazebo:gazebo",
+        "//bsmr/packages/rust/gazebo/strong_hash:strong_hash",
+        "//bsmr/packages/rust/host_sharing:host_sharing",
+        "//bsmr/packages/rust/pagable/pagable:pagable",
+        "//bsmr/packages/rust/remote_execution:remote_execution",
+        "//bsmr/packages/rust/static_interner:static_interner",
+        "//bsmr/packages/rust/starlark/starlark_map:starlark_map",
+        "//common/rust/shed/fbinit:fbinit",
+    ],
+)

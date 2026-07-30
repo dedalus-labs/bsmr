@@ -91,7 +91,7 @@ public class InstallerServer extends ServerTransportFilter {
     } while (!this.grpcServer.awaitTermination(10, TimeUnit.SECONDS));
   }
 
-  /** Called when buck2 connects */
+  /** Called when bsmr connects */
   public Attributes transportReady(Attributes transportAttrs) {
     if (this.clientConnected) {
       this.LOG.log(
@@ -102,7 +102,7 @@ public class InstallerServer extends ServerTransportFilter {
     return transportAttrs;
   }
 
-  /** Called when buck2 disconnects */
+  /** Called when bsmr disconnects */
   public void transportTerminated(Attributes transportAttrs) {
     this.LOG.log(Level.SEVERE, "Client disconnected, shutting down");
     stopServer();

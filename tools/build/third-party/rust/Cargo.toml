@@ -6,8 +6,8 @@
 # of this source tree. You may select, at your option, one of the
 # above-listed licenses.
 
-# Definitions of third-party libraries used for buck2 build of buck2.
-# This file is **not** used by cargo build of buck2.
+# Definitions of third-party libraries used for bsmr build of bsmr.
+# This file is **not** used by cargo build of bsmr.
 # See the <project_root>/docs/bootstrapping.md for more details.
 
 [workspace]

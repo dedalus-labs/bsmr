@@ -8,6 +8,6 @@ ignore=ignored
 root = .
 prelude = prelude
 
-[buck2]
+[bsmr]
   materializations = deferred
   hash_all_commands = true

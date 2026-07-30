@@ -481,13 +481,13 @@ impl Buck {
         tracing::info!(?project_root, "Project root was set");
 
         Buck {
-            command: command.unwrap_or_else(|| "buck2".into()),
+            command: command.unwrap_or_else(|| "bsmr".into()),
             mode,
             project_root,
         }
     }
 
-    /// Invoke `buck2` with the given subcommands.
+    /// Invoke `bsmr` with the given subcommands.
     ///
     /// Care should be taken to ensure that buck is invoked with the same set
     /// options and configuration to avoid invalidating caches.
@@ -508,7 +508,7 @@ impl Buck {
             // Buck probably didn't intend to allow this pattern: it doesn't work when you
             // use `srcs = glob()`, but it does work for srcs with explicit paths.
             //
-            // The intent of package_boundary_exceptions (added to buck2 in D34073360,
+            // The intent of package_boundary_exceptions (added to bsmr in D34073360,
             // rolled out in D4339610) was to enforce boundaries with an explicit opt-out
             // list.
             //
@@ -534,7 +534,7 @@ impl Buck {
         let mut cmd = Command::new(&self.command);
 
         // rust-analyzer invokes the check-on-save command with `RUST_BACKTRACE=short`
-        // set. Unfortunately, buck2 doesn't handle that well and becomes extremely
+        // set. Unfortunately, bsmr doesn't handle that well and becomes extremely
         // slow when the daemon is started with backtrace variables set. Until that is
         // fixed, just unset them here.
         cmd.env_remove("RUST_BACKTRACE")
@@ -1368,7 +1368,7 @@ fn test_cfg_scoped_to_first_party() {
 
     // First-party crates get `test` regardless of workspace membership.
     let first_party = crate_cfg(
-        &make_info("fbcode//buck2/tools/rust-project:rust-project"),
+        &make_info("fbcode//bsmr/tools/rust-project:rust-project"),
         global_extra_cfgs,
         first_party_extra_cfgs,
     );

@@ -24,7 +24,7 @@ def python_bootstrap_library_impl(ctx: AnalysisContext) -> list[Provider]:
 def python_bootstrap_binary_impl(ctx: AnalysisContext) -> list[Provider]:
     """
     Declares a Python binary that is intended to be used in scripts that
-    bootstrap other aspects of the Buck2 prelude. Python bootstrap binaries do
+    bootstrap other aspects of the Bessemer prelude. Python bootstrap binaries do
     not use the Python toolchain and, as such, are highly restricted in what
     they can and can't do. In particular, bootstrap binaries can only depend on
     bootstrap libraries and can only consist of a single file.

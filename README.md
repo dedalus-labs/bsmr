@@ -18,7 +18,7 @@ target/debug/bsmr --version
 ## Test
 
 ```sh
-python3 test.py --ci --git --buck2=target/debug/bsmr
+python3 test.py --ci --git --bsmr=target/debug/bsmr
 ```
 
 The GitHub workflows are generated from typed

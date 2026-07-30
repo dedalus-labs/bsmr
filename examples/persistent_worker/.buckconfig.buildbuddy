@@ -1,7 +1,7 @@
-[buck2]
+[bsmr]
 digest_algorithms = SHA256
 
-[buck2_re_client]
+[bsmr_re_client]
 engine_address       = grpc://remote.buildbuddy.io
 action_cache_address = grpc://remote.buildbuddy.io
 cas_address          = grpc://remote.buildbuddy.io

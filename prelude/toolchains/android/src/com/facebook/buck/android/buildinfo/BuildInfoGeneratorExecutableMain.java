@@ -22,8 +22,8 @@ import org.kohsuke.args4j.Option;
 
 /**
  * Writes {@code <output-dir>/assets/BuildInfo.json} = {@code {"build_uuid": "<BUCK_BUILD_ID>"}} so
- * an installed build can be resolved back to the buck2 build that produced the APK (and from there
- * to its source commit). {@code BUCK_BUILD_ID} is the buck2 trace id that buck2 sets on every
+ * an installed build can be resolved back to the bsmr build that produced the APK (and from there
+ * to its source commit). {@code BUCK_BUILD_ID} is the bsmr trace id that bsmr sets on every
  * action's environment.
  *
  * <p>The {@code apk_build} action invokes this tool, so the baked id refreshes when the APK content
@@ -51,7 +51,7 @@ public class BuildInfoGeneratorExecutableMain {
   private void run() throws IOException {
     String buildId = Objects.requireNonNullElse(System.getenv("BUCK_BUILD_ID"), "");
     Path assetsDir = Files.createDirectories(Paths.get(outputDir).resolve("assets"));
-    // BUCK_BUILD_ID is a buck2 trace id (a UUID), so it needs no JSON escaping.
+    // BUCK_BUILD_ID is a bsmr trace id (a UUID), so it needs no JSON escaping.
     Files.writeString(assetsDir.resolve("BuildInfo.json"), "{\"build_uuid\": \"" + buildId + "\"}");
   }
 }

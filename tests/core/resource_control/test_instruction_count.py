@@ -12,9 +12,9 @@
 import os
 from typing import Any, Dict, List
 
-from buck2.tests.e2e_util.api.buck import Buck
-from buck2.tests.e2e_util.buck_workspace import buck_test
-from buck2.tests.e2e_util.helper.utils import filter_events, random_string
+from bsmr.tests.e2e_util.api.buck import Buck
+from bsmr.tests.e2e_util.buck_workspace import buck_test
+from bsmr.tests.e2e_util.helper.utils import filter_events, random_string
 
 
 def helper_bin_flags() -> List[str]:
@@ -29,7 +29,7 @@ async def test_instruction_count_disabled(buck: Buck) -> None:
     await buck.build(
         "root//:three_billion_instructions",
         "-c",
-        "buck2.miniperf2=false",
+        "bsmr.miniperf2=false",
         "--no-remote-cache",
         "--local-only",
         "-c",
@@ -72,7 +72,7 @@ async def test_instruction_count_enabled(buck: Buck) -> None:
     await buck.build(
         "root//:three_billion_instructions",
         "-c",
-        "buck2.miniperf2=true",
+        "bsmr.miniperf2=true",
         "--no-remote-cache",
         "--local-only",
         "-c",

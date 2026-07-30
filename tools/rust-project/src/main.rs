@@ -95,9 +95,9 @@ enum Command {
         #[clap(long)]
         check_cycles: bool,
 
-        /// Command used to run `buck2`. Defaults to `"buck2"`.
+        /// Command used to run `bsmr`. Defaults to `"bsmr"`.
         #[clap(long)]
-        buck2_command: Option<String>,
+        bsmr_command: Option<String>,
 
         #[clap(long, default_value = "50", env = "RUST_PROJECT_EXTRA_TARGETS")]
         max_extra_targets: Option<usize>,
@@ -121,9 +121,9 @@ enum Command {
         #[clap(short = 'm', long)]
         mode: Option<String>,
 
-        /// Command used to run `buck2`. Defaults to `"buck2"`.
+        /// Command used to run `bsmr`. Defaults to `"bsmr"`.
         #[clap(long)]
-        buck2_command: Option<String>,
+        bsmr_command: Option<String>,
 
         #[clap(long, default_value = "50", env = "RUST_PROJECT_EXTRA_TARGETS")]
         max_extra_targets: Option<usize>,
@@ -139,9 +139,9 @@ enum Command {
         #[clap(short = 'c', long, default_value = "true", action = ArgAction::Set)]
         use_clippy: bool,
 
-        /// Command used to run `buck2`. Defaults to `"buck2"`.
+        /// Command used to run `bsmr`. Defaults to `"bsmr"`.
         #[clap(long)]
-        buck2_command: Option<String>,
+        bsmr_command: Option<String>,
 
         /// The file saved by the user. `rust-project` will infer the owning target(s) of the saved file and build them.
         saved_file: PathBuf,
@@ -291,13 +291,13 @@ fn main() -> Result<(), anyhow::Error> {
             mode,
             use_clippy,
             saved_file,
-            buck2_command,
+            bsmr_command,
             ..
         } => {
             let subscriber = tracing_subscriber::registry().with(fmt.with_filter(filter));
             tracing::subscriber::set_global_default(subscriber)?;
 
-            let buck = Buck::new(buck2_command, mode, project_root);
+            let buck = Buck::new(bsmr_command, mode, project_root);
 
             cli::Check::new(buck, use_clippy, saved_file).run()
         }
@@ -374,12 +374,12 @@ fn test_parse_use_clippy() {
 
 #[test]
 fn json_args_pass() {
-    let args = JsonArguments::Path(PathBuf::from("buck2/tools/rust-project/src/main.rs"));
+    let args = JsonArguments::Path(PathBuf::from("bsmr/tools/rust-project/src/main.rs"));
     let expected = Opt {
         command: Some(Command::DevelopJson {
             args,
             sysroot_mode: SysrootMode::Rustc,
-            buck2_command: None,
+            bsmr_command: None,
             max_extra_targets: Some(50),
             mode: None,
         }),
@@ -388,17 +388,17 @@ fn json_args_pass() {
     let actual = Opt::try_parse_from([
         "rust-project",
         "develop-json",
-        "{\"path\":\"buck2/tools/rust-project/src/main.rs\"}",
+        "{\"path\":\"bsmr/tools/rust-project/src/main.rs\"}",
     ])
     .expect("Unable to parse args");
     assert_eq!(actual, expected);
 
-    let args = JsonArguments::Label("//buck2/tools/rust-project:rust-project".to_owned());
+    let args = JsonArguments::Label("//bsmr/tools/rust-project:rust-project".to_owned());
     let expected = Opt {
         command: Some(Command::DevelopJson {
             args,
             sysroot_mode: SysrootMode::Rustc,
-            buck2_command: None,
+            bsmr_command: None,
             max_extra_targets: Some(50),
             mode: None,
         }),
@@ -407,17 +407,17 @@ fn json_args_pass() {
     let actual = Opt::try_parse_from([
         "rust-project",
         "develop-json",
-        "{\"label\":\"//buck2/tools/rust-project:rust-project\"}",
+        "{\"label\":\"//bsmr/tools/rust-project:rust-project\"}",
     ])
     .expect("Unable to parse args");
     assert_eq!(actual, expected);
 
-    let args = JsonArguments::Buildfile(PathBuf::from("buck2/tools/rust-project/BUCK"));
+    let args = JsonArguments::Buildfile(PathBuf::from("bsmr/tools/rust-project/BUCK"));
     let expected = Opt {
         command: Some(Command::DevelopJson {
             args,
             sysroot_mode: SysrootMode::Rustc,
-            buck2_command: None,
+            bsmr_command: None,
             max_extra_targets: Some(50),
             mode: None,
         }),
@@ -426,7 +426,7 @@ fn json_args_pass() {
     let actual = Opt::try_parse_from([
         "rust-project",
         "develop-json",
-        "{\"buildfile\":\"buck2/tools/rust-project/BUCK\"}",
+        "{\"buildfile\":\"bsmr/tools/rust-project/BUCK\"}",
     ])
     .expect("Unable to parse args");
     assert_eq!(actual, expected);

@@ -27,5 +27,5 @@ pattern followed by the modifiers delimited by `+` (see
 [?modifier](./question_mark_modifier.md) page for more information):
 
 ```sh
-buck2 build :my_target?debug+linux
+bsmr build :my_target?debug+linux
 ```

@@ -1,0 +1,8 @@
+# This file is @generated, regenerate by re-running test with `-- --env BSMR_UPDATE_GOLDEN=1` appended to the test command
+
+Print this message or the help of the given subcommand(s)
+
+Usage: bsmr log help [COMMAND]...
+
+Arguments:
+  [COMMAND]...  Print help for the subcommand(s)

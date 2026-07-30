@@ -9,8 +9,8 @@
 # pyre-strict
 
 
-from buck2.tests.e2e_util.api.buck import Buck
-from buck2.tests.e2e_util.buck_workspace import buck_test
+from bsmr.tests.e2e_util.api.buck import Buck
+from bsmr.tests.e2e_util.buck_workspace import buck_test
 
 
 @buck_test(inplace=True)
@@ -18,12 +18,12 @@ async def test_re_resource_exhausted_reported_as_infra_failure(buck: Buck) -> No
     result = await buck.test(
         "--remote-only",
         "--no-remote-cache",
-        "fbcode//buck2/tests/targets/rules/sh_test:test_remote_explicit",
+        "fbcode//bsmr/tests/targets/rules/sh_test:test_remote_explicit",
         "--",
         "--experiment",
         "classify_re_error_as_infra",
         env={
-            "BUCK2_TEST_FAIL_RE_RESOURCE_EXHAUSTED": "true",
+            "BSMR_TEST_FAIL_RE_RESOURCE_EXHAUSTED": "true",
         },
     )
     assert "FATAL" not in result.stderr
@@ -41,11 +41,11 @@ async def test_cancel_test_if_re_queue_longer_than_threshold(buck: Buck) -> None
     ]
     result = await buck.test(
         *args,
-        "fbcode//buck2/tests/targets/rules/sh_test:test_remote_explicit_stays_in_queue",
-        env={"BUCK2_TEST_RE_QUEUE_ESTIMATE_S": "100"},
+        "fbcode//bsmr/tests/targets/rules/sh_test:test_remote_explicit_stays_in_queue",
+        env={"BSMR_TEST_RE_QUEUE_ESTIMATE_S": "100"},
     )
     assert (
-        "Omitted: fbcode//buck2/tests/targets/rules/sh_test:test_remote_explicit_stays_in_queue - unmanaged"
+        "Omitted: fbcode//bsmr/tests/targets/rules/sh_test:test_remote_explicit_stays_in_queue - unmanaged"
         in result.stderr
     )
     assert (

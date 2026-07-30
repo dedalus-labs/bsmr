@@ -36,14 +36,14 @@ def get_mode_hashes(
 ):
     # Resolve sample_target to full target label to match the BXL script output.
     sample_target = subprocess.check_output(
-        ["buck2", "targets", sample_target], text=True, cwd=subprocess_cwd
+        ["bsmr", "targets", sample_target], text=True, cwd=subprocess_cwd
     ).strip()
 
     mode_hashes = {}
     default_mode_file = mode_files[0]
     for mode_file in mode_files:
         bxl_cmds = [
-            "buck2",
+            "bsmr",
         ]
         if mode_file != default_mode_file:
             bxl_cmds += ["--isolation-dir", "vsgo-" + mode_file.split("/")[-1]]
@@ -97,7 +97,7 @@ def gen_mode_configs(bxl_path, mode_files, fbsource, debug, subprocess_cwd=None)
     default_mode_file = mode_files[0]
     for mode_file in mode_files:
         bxl_cmds = [
-            "buck2",
+            "bsmr",
         ]
         if mode_file != default_mode_file:
             bxl_cmds += ["--isolation-dir", "vsgo-" + mode_file.split("/")[-1]]
@@ -166,7 +166,7 @@ def main(
     default_mode_file = mode_files[0]
     bxl_cmds = (
         [
-            "buck2",
+            "bsmr",
             "bxl",
             "@" + default_mode_file,
         ]

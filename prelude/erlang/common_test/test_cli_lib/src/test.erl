@@ -79,7 +79,7 @@ Print a description of all available commands.
 """.
 -spec help() -> ok.
 help() ->
-    io:format("Buck2 Common Test Runner Shell Interface~n~n"),
+    io:format("Bessemer Common Test Runner Shell Interface~n~n"),
     [
         print_help(F, A)
      || {F, A} <- ?MODULE:module_info(exports),
@@ -200,7 +200,7 @@ run(RegExOrId) ->
             {0, 0};
         ToRun ->
             Suites = [maps:get(suite, TestMap) || TestMap <- ToRun],
-            case shell_buck2_utils:rebuild_modules(Suites) of
+            case shell_bsmr_utils:rebuild_modules(Suites) of
                 ok ->
                     io:format("Reloading all changed modules... "),
                     case ct_daemon:load_changed() of

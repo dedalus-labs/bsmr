@@ -9,7 +9,7 @@ file for `rust-analyzer`.
 Run the tool from the repository root with one or more Buck targets:
 
 ```bash
-./tools/bin/rust-project develop //app/buck2:buck2
+./tools/bin/rust-project develop //app/bsmr:bsmr
 ```
 
 The command writes `rust-project.json` to the current directory, where

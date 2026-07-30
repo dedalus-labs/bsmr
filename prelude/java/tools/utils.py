@@ -224,7 +224,7 @@ def _hyperlink(file: str, line: int, text: str) -> str:
     Returns:
         A string containing the hyperlinked text with terminal escape sequences
     """
-    # Keep in sync with fbcode/buck2/prelude/toolchains/android/src/com/facebook/buck/jvm/cd/ErrorInterceptor.java
+    # Keep in sync with fbcode/bsmr/prelude/toolchains/android/src/com/facebook/buck/jvm/cd/ErrorInterceptor.java
     isVsCode = (
         os.environ.get("FBVSCODE_REMOTE_ENV_NAME") == "od"
         or os.environ.get("TERM_PROGRAM") == "vscode"

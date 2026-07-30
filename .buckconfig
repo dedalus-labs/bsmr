@@ -1,13 +1,13 @@
 [cells]
-char = .
+bsmr = .
 bsmr_build = tools/build
 
 [cell_aliases]
-root = char
+root = bsmr
 
 [oss]
 internal_cell = fbcode
-stripped_root_dirs = buck2
+stripped_root_dirs = bsmr
 
 [project]
 ignore = \

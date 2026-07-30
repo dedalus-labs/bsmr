@@ -1,32 +1,32 @@
 load("@bsmr_build//rules:native_rules.bzl", "alias")
-load(":defs.bzl", "buck2_bundle", "pagable_transition_alias")
+load(":defs.bzl", "bsmr_bundle", "pagable_transition_alias")
 
 oncall("build_infra")
 
-# Need a custom transition here so that buck2 is always built with pagable enabled,
+# Need a custom transition here so that bsmr is always built with pagable enabled,
 # even if its parent does not have pagable enabled.
 pagable_transition_alias(
-    name = "buck2",
-    actual = "//buck2/app/buck2:buck2-bin",
+    name = "bsmr",
+    actual = "//bsmr/app/bsmr:bsmr-bin",
 )
 
-buck2_bundle(
-    name = "buck2_bundle",
-    buck2 = "//buck2:buck2",
-    buck2_client = "//buck2/app/buck2:buck2_client-bin",
-    buck2_health_check = "//buck2/buck2_health_check_cli:buck2_health_check_cli",
-    tpx = "//buck2/buck2_tpx_cli:buck2_tpx_cli",
+bsmr_bundle(
+    name = "bsmr_bundle",
+    bsmr = "//bsmr:bsmr",
+    bsmr_client = "//bsmr/app/bsmr:bsmr_client-bin",
+    bsmr_health_check = "//bsmr/bsmr_health_check_cli:bsmr_health_check_cli",
+    tpx = "//bsmr/bsmr_tpx_cli:bsmr_tpx_cli",
     visibility = ["PUBLIC"],
 )
 
 # For backcompat with bash aliases and so forth
-# You can use this target to test custom builds of buck2.
+# You can use this target to test custom builds of bsmr.
 #
-# Step 1: `buck2 build @fbcode//mode/opt fbcode//buck2:symlinked_buck2_and_tpx --out ~/buck2`
-# Step 2: Use the buck2 binary from `~/buck2/buck2`
+# Step 1: `bsmr build @fbcode//mode/opt fbcode//bsmr:symlinked_bsmr_and_tpx --out ~/bsmr`
+# Step 2: Use the bsmr binary from `~/bsmr/bsmr`
 #
 # If you're testing on macOS, use `@fbcode//mode/opt-mac-arm64`
 alias(
-    name = "symlinked_buck2_and_tpx",
-    actual = ":buck2_bundle",
+    name = "symlinked_bsmr_and_tpx",
+    actual = ":bsmr_bundle",
 )

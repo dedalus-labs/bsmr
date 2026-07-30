@@ -49,7 +49,7 @@ def parse_lockfile(lockfile):
 
 
 def generate_targets(lockfile_label, pkgs, targets_out):
-    """Write Buck2 targets for the packages to bzl_out."""
+    """Write Bessemer targets for the packages to bzl_out."""
     package_template = """\
 
 conan_package(
@@ -80,7 +80,7 @@ conan_package(
                     #   required information per package will only invalidate those
                     #   packages that were affected by a change. Note, the lock
                     #   file also contains the Conan profile, which defines the
-                    #   Buck2 provided C/C++ toolchain. This information would need
+                    #   Bessemer provided C/C++ toolchain. This information would need
                     #   to be included in a minimal lockfile.
                     lockfile=lockfile_label,
                     reference=reference,
@@ -94,7 +94,7 @@ conan_package(
 def main():
     parser = argparse.ArgumentParser(
         prog="lock_generate",
-        description="Generate Buck2 build targets for Conan packages.",
+        description="Generate Bessemer build targets for Conan packages.",
     )
     parser.add_argument(
         "--lockfile",
@@ -108,7 +108,7 @@ def main():
         metavar="LABEL",
         type=str,
         required=False,
-        help="Buck2 label for the Conan lock-file.",
+        help="Bessemer label for the Conan lock-file.",
     )
     parser.add_argument(
         "--targets-out",

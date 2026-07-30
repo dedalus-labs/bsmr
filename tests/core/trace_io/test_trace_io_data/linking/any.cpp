@@ -8,6 +8,6 @@
  * above-listed licenses.
  */
 
-#include "buck2/tests/targets/rules/cxx/linking/any.h"
+#include "bsmr/tests/targets/rules/cxx/linking/any.h"
 
 void any() {}

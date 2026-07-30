@@ -23,7 +23,7 @@ from typing import (
     Union,
 )
 
-from buck2.tests.e2e_util.api.result import E, ExceptionType, R, ResultType
+from bsmr.tests.e2e_util.api.result import E, ExceptionType, R, ResultType
 
 
 class Process(Generic[R, E], Awaitable[R]):

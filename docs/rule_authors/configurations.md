@@ -59,7 +59,7 @@ There are three main concepts to understand about execution platforms:
 
 ### Execution platforms
 
-The simplest execution platform setup is the one `buck2 init` uses. This
+The simplest execution platform setup is the one `bsmr init` uses. This
 setup gathers constraints from the host machine Buck is running on.
 
 ```ini
@@ -121,7 +121,7 @@ execution_platform(
     local_enabled = host_info().os.is_macos,
     remote_enabled = True,
     use_limited_hybrid = False,
-    remote_execution_use_case = "buck2-build",
+    remote_execution_use_case = "bsmr-build",
     remote_execution_properties = {
         "platform": "mac-re"
     },
@@ -282,7 +282,7 @@ macros share two main properties:
    resolution of the dependent target. This means the exec deps of the
    toolchain behave as if they were attached directly to the dependent
    target. They participate in exec platform resolution for the dependent,
-   so Buck2 finds an exec platform that is compatible with all the tools
+   so Bessemer finds an exec platform that is compatible with all the tools
    in the toolchain.
 
 This has many benefits:

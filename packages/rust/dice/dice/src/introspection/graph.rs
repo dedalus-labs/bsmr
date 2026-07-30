@@ -230,7 +230,7 @@ pub struct AnyKey {
 
 /// Shorten a type name like
 /// ```ignore
-/// <dice::ctx::DiceComputations as buck2_interpreter::extra::buckconfig::HasLegacyBuckConfigForStarlark>
+/// <dice::ctx::DiceComputations as bsmr_interpreter::extra::buckconfig::HasLegacyBuckConfigForStarlark>
 ///     ::get_legacy_buck_config_for_starlark::{{closure}}::LegacyBuckConfigForStarlarkKey
 /// ```
 /// to

@@ -32,7 +32,7 @@ active), essentially **all** of it small-bin slab waste.
 counters and ranks size classes by `active - allocated`:
 
 ```sh
-buck2 debug allocator-stats -o J > stats.json   # -o J: do NOT suppress bin stats
+bsmr debug allocator-stats -o J > stats.json   # -o J: do NOT suppress bin stats
 scripts/bin_waste.py stats.json
 # or: scripts/bin_waste.py --daemon
 ```
@@ -98,7 +98,7 @@ Reporting cohort/mixed from sampled data is actively misleading, so the
 size-class table does not.
 
 Instead, **focus mode** captures *one* size class at rate 1
-(`BUCK2_MEMFRAG_FOCUS=<size>`, nothing else sampled, so the side table stays
+(`BSMR_MEMFRAG_FOCUS=<size>`, nothing else sampled, so the side table stays
 bounded). Every region of that class is observed, so the cohort/mixed split and
 the per-slab *leaf mixture* are exact. `frag_symbolize.py` auto-detects a focus
 dump and prints: the exact cohort vs mixed fraction; the top leaf-*sets* by slab
@@ -121,14 +121,14 @@ a dense control that allocates a lot but wastes nothing) and runs the
 attribution:
 
 ```sh
-buck2 run fbcode//buck2/facebook/mem_frag:harness
+bsmr run fbcode//bsmr/facebook/mem_frag:harness
 ```
 
 It samples at rate 1 (exact) and additionally re-derives the total from a 1/64
 subsample, demonstrating the estimator converges. Expected: the sparse sites top
 the ranking, the dense control gets ~0, surv/slab is 1 for the 256 class and 8
 for the 96 class, and the subsample total lands within a few percent of exact.
-`BUCK2_MEMFRAG_FOCUS=256 buck2 run …` exercises focus mode (expect all-cohort).
+`BSMR_MEMFRAG_FOCUS=256 bsmr run …` exercises focus mode (expect all-cohort).
 
 ### Caveats
 
@@ -154,24 +154,24 @@ for the 96 class, and the subsample total lands within a few percent of exact.
 
 ## Step 3 — running against the real daemon
 
-`SamplingAlloc` is wired into the daemon behind `-c buck2_dev.memfrag=true` (off by
-default; normal builds are byte-for-byte unaffected). `bin/buck2.rs` calls
+`SamplingAlloc` is wired into the daemon behind `-c bsmr_dev.memfrag=true` (off by
+default; normal builds are byte-for-byte unaffected). `bin/bsmr.rs` calls
 `mem_frag::init()` at process start to enable sampling *before* the daemonizing
 fork (the side table must exist when fork copies the heap), and
-`buck2_daemon` calls `mem_frag::start_dump_watcher()` *after* daemonizing —
-buck2 double-forks and threads do not survive fork, so a watcher started at
+`bsmr_daemon` calls `mem_frag::start_dump_watcher()` *after* daemonizing —
+bsmr double-forks and threads do not survive fork, so a watcher started at
 entry would be lost.
 
 ```sh
-# Build a profiling buck2 (opt, so jemalloc + its mallctls are linked; dev/dbgo
+# Build a profiling bsmr (opt, so jemalloc + its mallctls are linked; dev/dbgo
 # do not use jemalloc). Build in one checkout, run daemons in another.
-buck2 build @fbcode//mode/opt fbcode//buck2:buck2 -c buck2_dev.memfrag=true --out /tmp/b2
+bsmr build @fbcode//mode/opt fbcode//bsmr:bsmr -c bsmr_dev.memfrag=true --out /tmp/b2
 
 # Start the daemon with sampling on. tcache:false makes the utilization query
 # exact; shift N samples 1/2^N of allocations (6-10 is a good range).
 cd <other-checkout>
-env MALLOC_CONF=tcache:false BUCK2_MEMFRAG_SHIFT=6 \
-    BUCK2_MEMFRAG_TRIGGER=/tmp/memfrag /tmp/b2 cquery 'deps(//foo/...)'  # warm up
+env MALLOC_CONF=tcache:false BSMR_MEMFRAG_SHIFT=6 \
+    BSMR_MEMFRAG_TRIGGER=/tmp/memfrag /tmp/b2 cquery 'deps(//foo/...)'  # warm up
 
 # Trigger a dump (writes a raw report per process; pick the daemon's pid).
 touch /tmp/memfrag; sleep 5; rm /tmp/memfrag
@@ -181,8 +181,8 @@ scripts/frag_symbolize.py /tmp/b2 /tmp/memfrag.$DPID.out --top 20
 # For the exact cohort/mixed composition of a hot class (e.g. 192), restart the
 # daemon in focus mode and re-run the workload, then trigger + symbolize as
 # above (frag_symbolize auto-detects the focus dump):
-env MALLOC_CONF=tcache:false BUCK2_MEMFRAG_FOCUS=192 \
-    BUCK2_MEMFRAG_TRIGGER=/tmp/memfrag /tmp/b2 cquery 'deps(//foo/...)'
+env MALLOC_CONF=tcache:false BSMR_MEMFRAG_FOCUS=192 \
+    BSMR_MEMFRAG_TRIGGER=/tmp/memfrag /tmp/b2 cquery 'deps(//foo/...)'
 ```
 
 Cross-check the attributed total against `bin_waste.py` for the same daemon;
@@ -191,7 +191,7 @@ sampled sites) and should agree to within sampling error.
 
 ### Worked example
 
-On a daemon after a `cquery` over buck2's own graph, the ~1.2 GiB of small-bin
+On a daemon after a `cquery` over bsmr's own graph, the ~1.2 GiB of small-bin
 waste attributed almost entirely to **`TargetNode` construction during
 load/coerce** (cumulative by leaf): coerced deps (`ThinBoxSlice<TargetLabel>`,
 `Vec2<ProvidersLabel, …>`), `CoercedAttr::coerce`, `AttrValues`, the

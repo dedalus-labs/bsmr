@@ -24,7 +24,7 @@ from util import (
 
 class LiveBuilder(ParBuilder):
     def __init__(self, options, manifest, mode=0o755, linktree_suffix="#linktree"):
-        # Default to "default" warnings, as per buck1/buck2.
+        # Default to "default" warnings, as per buck1/bsmr.
         super().__init__(options, manifest, mode)
         # foo.par -> foo#linktree
         # foo.bar.par -> foo.bar#linktree

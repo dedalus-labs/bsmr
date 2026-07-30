@@ -17,14 +17,14 @@ import time
 from pathlib import Path
 
 import pytest
-from buck2.tests.e2e_util.api.buck import Buck
-from buck2.tests.e2e_util.asserts import expect_failure
-from buck2.tests.e2e_util.buck_workspace import buck_test, env
-from buck2.tests.e2e_util.helper.utils import daemon_is_alive
+from bsmr.tests.e2e_util.api.buck import Buck
+from bsmr.tests.e2e_util.asserts import expect_failure
+from bsmr.tests.e2e_util.buck_workspace import buck_test, env
+from bsmr.tests.e2e_util.helper.utils import daemon_is_alive
 
 
 @buck_test()
-@env("BUCK2_TESTING_INACTIVITY_TIMEOUT", "true")
+@env("BSMR_TESTING_INACTIVITY_TIMEOUT", "true")
 async def test_inactivity_timeout(buck: Buck) -> None:
     #######################################################
     # Recommend running this test in opt mode
@@ -77,7 +77,7 @@ async def test_server_status_snapshot_output(buck: Buck) -> None:
     status = json.loads(result.stdout)
     snapshot = status["snapshot"]
     assert snapshot is not None
-    assert "buck2_max_rss" in snapshot
+    assert "bsmr_max_rss" in snapshot
 
 
 @buck_test()
@@ -117,10 +117,10 @@ async def test_process_title(buck: Buck) -> None:
 
     if platform.system() == "Darwin":
         out = subprocess.check_output(["ps", "-o", "comm=", str(pid)]).strip()
-        assert out.startswith(b"buck2d[")
+        assert out.startswith(b"bsmrd[")
     elif platform.system() == "Linux":
         out = subprocess.check_output(["ps", "-o", "cmd=", str(pid)]).strip()
-        assert out.startswith(b"buck2d[")
+        assert out.startswith(b"bsmrd[")
     elif platform.system() == "Windows":
         # We guarantee no value there.
         pass
@@ -157,7 +157,7 @@ async def test_status_all(buck: Buck) -> None:
 
 
 @buck_test()
-@env("BUCK_LOG", "buck2_client_ctx::daemon::client::kill=debug")
+@env("BUCK_LOG", "bsmr_client_ctx::daemon::client::kill=debug")
 async def test_no_buckd_kills_existing_daemon(buck: Buck) -> None:
     await buck.audit("cell")  # Start the daemon
     result = await buck.audit("cell", "--no-buckd")  # Kill the existing daemon

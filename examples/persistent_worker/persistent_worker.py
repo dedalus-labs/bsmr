@@ -7,10 +7,10 @@
 # of this source tree. You may select, at your option, one of the
 # above-listed licenses.
 
-"""Buck2 local and remote persistent worker and action runner.
+"""Bessemer local and remote persistent worker and action runner.
 
 This script can:
-- Execute build requests as a Buck2 local persistent worker.
+- Execute build requests as a Bessemer local persistent worker.
 - Execute build requests as a remote persistent worker through Bazel protocol.
 """
 
@@ -26,20 +26,20 @@ from dataclasses import dataclass
 import google.protobuf.proto as proto
 import grpc
 import proto.bazel.worker_protocol_pb2 as bazel_pb2
-import proto.buck2.worker_pb2 as buck2_pb2
-import proto.buck2.worker_pb2_grpc as buck2_pb2_grpc
+import proto.bsmr.worker_pb2 as bsmr_pb2
+import proto.bsmr.worker_pb2_grpc as bsmr_pb2_grpc
 
 
 @dataclass
 class Request:
-    """Universal worker request, independent of Buck2 or Bazel protocol."""
+    """Universal worker request, independent of Bessemer or Bazel protocol."""
 
     argv: list[str]
 
 
 @dataclass
 class Response:
-    """Universal worker response, independent of Buck2 or Bazel protocol."""
+    """Universal worker response, independent of Bessemer or Bazel protocol."""
 
     exit_code: int
     stderr: str
@@ -55,7 +55,7 @@ class RecoverableArgumentParser(argparse.ArgumentParser):
 
 
 class Implementation:
-    """Universal worker implementation, independent of Buck2 or Bazel protocol."""
+    """Universal worker implementation, independent of Bessemer or Bazel protocol."""
 
     def __init__(self):
         self.parser = RecoverableArgumentParser(
@@ -92,24 +92,24 @@ class Implementation:
             return Response(exit_code=2, stderr=str(e))
 
 
-class Buck2Servicer(buck2_pb2_grpc.WorkerServicer):
-    """Buck2 remote persistent worker implementation."""
+class BsmrServicer(bsmr_pb2_grpc.WorkerServicer):
+    """Bessemer remote persistent worker implementation."""
 
     def __init__(self):
         self.impl = Implementation()
 
     def Execute(self, request, context):
         _ = context
-        print("BUCK2", request, file=sys.stderr)
+        print("BSMR", request, file=sys.stderr)
         # Decode arguments as UTF-8 strings.
         argv = [arg.decode("utf-8") for arg in request.argv]
         response = self.impl.execute(Request(argv=argv))
         host = socket.gethostname()
         pid = os.getpid()
         cwd = os.getcwd()
-        return buck2_pb2.ExecuteResponse(
+        return bsmr_pb2.ExecuteResponse(
             exit_code=response.exit_code,
-            stderr=f"Buck2 persistent worker {host} {pid} {cwd}\n" + response.stderr,
+            stderr=f"Bessemer persistent worker {host} {pid} {cwd}\n" + response.stderr,
         )
 
 
@@ -136,7 +136,7 @@ def main():
     parser = argparse.ArgumentParser(
         fromfile_prefix_chars="@",
         prog="worker",
-        description="Buck2/Bazel Local/Remote Persistent Worker",
+        description="Bessemer/Bazel Local/Remote Persistent Worker",
     )
     parser.add_argument(
         "--persistent_worker",
@@ -147,8 +147,8 @@ def main():
     (args, rest) = parser.parse_known_args()
 
     if socket_path := os.getenv("WORKER_SOCKET"):
-        # Buck2 persistent worker mode
-        print("BUCK2 WORKER START", file=sys.stderr)
+        # Bessemer persistent worker mode
+        print("BSMR WORKER START", file=sys.stderr)
         if rest:
             rest_joined = " ".join(map(shlex.quote, rest))
             print(f"Unexpected arguments: {rest_joined}\n", file=sys.stderr)
@@ -158,7 +158,7 @@ def main():
         server = grpc.server(
             futures.ThreadPoolExecutor(max_workers=os.cpu_count() or 1)
         )
-        buck2_pb2_grpc.add_WorkerServicer_to_server(Buck2Servicer(), server)
+        bsmr_pb2_grpc.add_WorkerServicer_to_server(BsmrServicer(), server)
         server.add_insecure_port(f"unix://{socket_path}")
         server.start()
         server.wait_for_termination()

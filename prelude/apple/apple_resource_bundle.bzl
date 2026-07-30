@@ -64,7 +64,7 @@ def _is_resources_toolchain_enabled() -> bool:
     is_arvr_query_mode = read_root_config("fb", "arvr_query_mode") in ("True", "true")
     is_xplat_query_mode = read_root_config("mode", "is_xplat_mode_query") in ("True", "true")
     if is_arvr_query_mode or is_xplat_query_mode:
-        # Avoid returning buck2-only targets
+        # Avoid returning bsmr-only targets
         return False
 
     return read_root_config("apple", "resources_toolchain_enabled", "true").lower() == "true"

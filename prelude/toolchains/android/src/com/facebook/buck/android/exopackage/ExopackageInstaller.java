@@ -70,7 +70,7 @@ public class ExopackageInstaller {
   private final AbsPath rootPath;
   private final AndroidDevice device;
   private final String packageName;
-  private final Optional<String> buck2BuildUuid;
+  private final Optional<String> bsmrBuildUuid;
   private final Path dataRoot;
   private final boolean skipMetadataIfNoInstalls;
 
@@ -81,7 +81,7 @@ public class ExopackageInstaller {
       String packageName,
       AndroidDevice device,
       boolean skipMetadataIfNoInstalls,
-      Optional<String> buck2BuildUuid) {
+      Optional<String> bsmrBuildUuid) {
     this.exoInfo = exoInfo;
     this.androidPrinter = androidPrinter;
     this.rootPath = rootPath;
@@ -89,7 +89,7 @@ public class ExopackageInstaller {
     this.packageName = packageName;
     this.dataRoot = EXOPACKAGE_INSTALL_ROOT.resolve(packageName);
     this.skipMetadataIfNoInstalls = skipMetadataIfNoInstalls;
-    this.buck2BuildUuid = buck2BuildUuid;
+    this.bsmrBuildUuid = bsmrBuildUuid;
 
     Preconditions.checkArgument(AdbHelper.PACKAGE_NAME_PATTERN.matcher(packageName).matches());
   }
@@ -107,9 +107,9 @@ public class ExopackageInstaller {
       installMissingExopackageFiles(presentFiles);
       finishExoFileInstallation(presentFiles);
     }
-    if (buck2BuildUuid.isPresent()) {
+    if (bsmrBuildUuid.isPresent()) {
       device.installBuildUuidFile(
-          AdbHelper.BUILD_METADATA_INSTALL_ROOT, packageName, buck2BuildUuid.get());
+          AdbHelper.BUILD_METADATA_INSTALL_ROOT, packageName, bsmrBuildUuid.get());
     }
     installAndRestartApk(isolatedApkInfo);
   }

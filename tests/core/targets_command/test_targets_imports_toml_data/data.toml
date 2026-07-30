@@ -1,7 +1,7 @@
 # Coverage for TOML types handled by toml_value_to_json:
 # String, Integer, Float, Boolean, Array, Table
 # (Datetime is tested in test_load_toml but omitted here because
-# Buck2's Rust TOML parser doesn't support bare datetime values.)
+# Bessemer's Rust TOML parser doesn't support bare datetime values.)
 
 title = "toml type coverage"
 

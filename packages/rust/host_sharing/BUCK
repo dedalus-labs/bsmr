@@ -10,8 +10,8 @@ rust_library(
         "fbsource//third-party/rust:anyhow",
         "fbsource//third-party/rust:dashmap",
         "fbsource//third-party/rust:futures-intrusive",
-        "//buck2/packages/rust/allocative/allocative:allocative",
-        "//buck2/packages/rust/pagable/pagable:pagable",
-        "//buck2/packages/rust/starlark/starlark_map:starlark_map",
+        "//bsmr/packages/rust/allocative/allocative:allocative",
+        "//bsmr/packages/rust/pagable/pagable:pagable",
+        "//bsmr/packages/rust/starlark/starlark_map:starlark_map",
     ],
 )

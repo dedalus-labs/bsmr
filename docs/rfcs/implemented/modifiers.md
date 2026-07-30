@@ -190,9 +190,9 @@ Internally, we recommend using per-PACKAGE modifiers over per-target modifiers w
 
 ### Input Modifier
 
-On the command line, modifiers are specified as `buck2 build <target>?<modifiers separated by plus signs>`. For example, `buck2 build repo//foo:bar?prelude//constraints/sanitizer:asan` applies asan modifier on the command line. `buck2 build repo//foo:bar?prelude//constraints/os:linux+prelude//constraints/sanitizer:asan` will apply linux and asan modifiers.
+On the command line, modifiers are specified as `bsmr build <target>?<modifiers separated by plus signs>`. For example, `bsmr build repo//foo:bar?prelude//constraints/sanitizer:asan` applies asan modifier on the command line. `bsmr build repo//foo:bar?prelude//constraints/os:linux+prelude//constraints/sanitizer:asan` will apply linux and asan modifiers.
 
-To make constraints easier to type, alias strings can be specified for modifier targets and used on the command line. `buck2 build repo//foo:bar?asan` is valid provided the following aliases are specified.
+To make constraints easier to type, alias strings can be specified for modifier targets and used on the command line. `bsmr build repo//foo:bar?asan` is valid provided the following aliases are specified.
 
 ```python
 ALIASES = struct(
@@ -202,23 +202,23 @@ ALIASES = struct(
 # ALIASES are registered in a global starlark function call
 ```
 
-**For internal usage**: aliases are currently registered in `tools/build_defs/buck2/cfg/alias.bzl`.
+**For internal usage**: aliases are currently registered in `tools/build_defs/bsmr/cfg/alias.bzl`.
 
-Modifiers can be specified for any target pattern, so `buck2 build repo//foo/...?asan` and `buck2 build repo//foo:?asan` are both valid.
+Modifiers can be specified for any target pattern, so `bsmr build repo//foo/...?asan` and `bsmr build repo//foo:?asan` are both valid.
 
-When specifying a subtarget and modifier with `?`, subtarget should go before the modifier, ex. `buck2 build repo//foo:bar[comp-db]?asan`.
+When specifying a subtarget and modifier with `?`, subtarget should go before the modifier, ex. `bsmr build repo//foo:bar[comp-db]?asan`.
 
-To specify modifiers to a list of target patterns on the command line, you can use the `--modifier` or `-m` flag. For example, `buck2 build repo//foo:bar repo//foo:baz -m release` is equivalent to `buck2 build repo//foo:bar?release //foo:baz?release`.
+To specify modifiers to a list of target patterns on the command line, you can use the `--modifier` or `-m` flag. For example, `bsmr build repo//foo:bar repo//foo:baz -m release` is equivalent to `bsmr build repo//foo:bar?release //foo:baz?release`.
 
 `--modifier` flag can be specified multiple times to add multiple modifier, so
 
-`buck2 build --modifier=linux --modifier=release repo//foo:bar` is equivalent to `buck2 build repo//foo:bar?linux+release`.
+`bsmr build --modifier=linux --modifier=release repo//foo:bar` is equivalent to `bsmr build repo//foo:bar?linux+release`.
 
 It is prohibited to specify both `--modifier` flag and `?` in a target pattern. This restriction can be lifted in the future if there is a need.
 
-When two modifiers of the same constraint setting are specified, then the later one overrides the earlier one. For example, `buck2 build repo//foo:bar?dev+release` is equivalent to
+When two modifiers of the same constraint setting are specified, then the later one overrides the earlier one. For example, `bsmr build repo//foo:bar?dev+release` is equivalent to
 
-`buck2 build repo//foo:bar?release`.
+`bsmr build repo//foo:bar?release`.
 
 On command line, a `config_setting` target can be specified as a collection of
 
@@ -307,7 +307,7 @@ Target platform (`--target-platforms` flag or `default_target_platform` attribut
 
 Because many layers of modifiers can be applied before obtaining a final configuration, it is important that modifier resolution is easy to debug and understand. Here are some ways that modifier resolution can be interpreted.
 
-1. *`buck2 audit modifiers`** command*. There will be a `buck2 audit modifiers` command to show all PACKAGE, target, and required modifiers for a target. It can also show configuration changes from the modifier resolution process if requested by the user.
+1. *`bsmr audit modifiers`** command*. There will be a `bsmr audit modifiers` command to show all PACKAGE, target, and required modifiers for a target. It can also show configuration changes from the modifier resolution process if requested by the user.
 2. *Starlark print or debugger support*. The modifier resolution process will be implemented in Starlark in the prelude. This means that any user can use any of the existing ways to debug starlark (ex. print statements, Starlark debugger in VSCode) to debug the resolution process.
 
 ## How configuration modifiers differ from transitions

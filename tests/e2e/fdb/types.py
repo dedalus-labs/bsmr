@@ -14,7 +14,7 @@ import os
 from dataclasses import dataclass
 from typing import Any, Dict, Type, TypeVar, Union
 
-from buck2.tests.e2e_util.api.buck_result import BuckResult
+from bsmr.tests.e2e_util.api.buck_result import BuckResult
 
 
 T = TypeVar("T")

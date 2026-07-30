@@ -42,8 +42,8 @@ ocaml_binary(
 # (1) Generate elaborated source files (suffix: .pp.ml)
 #
 # ```
-# loc=$("$BUCK2" build //ocaml/ppx:ppx-record-selectors-test --show-output | awk '{ print $2; }')
-# $BUCK2 build //ocaml/ppx:'ppx-record-selectors-test[expand]'
+# loc=$("$BSMR" build //ocaml/ppx:ppx-record-selectors-test --show-output | awk '{ print $2; }')
+# $BSMR build //ocaml/ppx:'ppx-record-selectors-test[expand]'
 # ```
 
 # (2) Print the elaborated version of 'ppx_record_selectors_test.ml'.

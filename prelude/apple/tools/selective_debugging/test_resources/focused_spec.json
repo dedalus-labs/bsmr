@@ -1,6 +1,6 @@
 {
     "include_build_target_patterns": [
-        "//fbobjc/buck2/samples/focused_debugging:Foo"
+        "//fbobjc/bsmr/samples/focused_debugging:Foo"
     ],
     "include_regular_expressions": [],
     "exclude_build_target_patterns": [],

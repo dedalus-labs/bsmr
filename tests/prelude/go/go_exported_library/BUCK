@@ -1,4 +1,4 @@
-load("@fbcode//buck2/tests/prelude:py_assertion.bzl", "py_assertion")
+load("@fbcode//bsmr/tests/prelude:py_assertion.bzl", "py_assertion")
 
 oncall("golang")
 
@@ -6,7 +6,7 @@ prelude = native
 
 prelude.go_library(
     name = "cgo",
-    package_name = "buck2/tests/prelude/go/go_exported_library/cgo",
+    package_name = "bsmr/tests/prelude/go/go_exported_library/cgo",
     srcs = ["lib.go"],
 )
 

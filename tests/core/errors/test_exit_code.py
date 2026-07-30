@@ -11,10 +11,10 @@
 
 import asyncio
 
-from buck2.tests.e2e_util.api.buck import Buck
-from buck2.tests.e2e_util.api.buck_result import ExitCodeV2
-from buck2.tests.e2e_util.asserts import expect_failure
-from buck2.tests.e2e_util.buck_workspace import buck_test, env
+from bsmr.tests.e2e_util.api.buck import Buck
+from bsmr.tests.e2e_util.api.buck_result import ExitCodeV2
+from bsmr.tests.e2e_util.asserts import expect_failure
+from bsmr.tests.e2e_util.buck_workspace import buck_test, env
 
 
 @buck_test()
@@ -32,12 +32,12 @@ async def test_exit_code_build_fail(buck: Buck) -> None:
 
 # Deliberately cause a daemon connection failure.
 @buck_test()
-@env("BUCK2_TEST_FAIL_BUCKD_AUTH", "true")
+@env("BSMR_TEST_FAIL_BUCKD_AUTH", "true")
 # This test case spawns a loose daemon that we can't connect to. On windows
 # this loose daemon will keep holding onto buck-out files after test case finishes
 # and prevent other processes from changing them, so set a termination timeout
 # of 20 seconds so that this loose daemon gets killed before test case finishes.
-@env("BUCK2_TERMINATE_AFTER", "15")
+@env("BSMR_TERMINATE_AFTER", "15")
 async def test_exit_code_fail_buckd_auth_for_unknown_reason(buck: Buck) -> None:
     await expect_failure(
         buck.build(":build_success"), exit_code=ExitCodeV2.CONNECT_ERROR

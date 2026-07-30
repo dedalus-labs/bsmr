@@ -49,7 +49,7 @@ To request the projection, you must compute the base via
 `DiceComputations::compute_opaque(Key)` which returns a `OpaqueValue`. Then,
 request the projection via `OpaqueValue::projection(ProjectionKey)`.
 
-Similar to normal keys, buck2 often hides the keys to make code look more
+Similar to normal keys, bsmr often hides the keys to make code look more
 natural via traits.
 
 ```rust

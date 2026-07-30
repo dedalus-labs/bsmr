@@ -10,16 +10,16 @@
 # pyre-strict
 
 
-from buck2.tests.e2e_util.api.buck import Buck
-from buck2.tests.e2e_util.asserts import expect_failure
-from buck2.tests.e2e_util.buck_workspace import buck_test, env
+from bsmr.tests.e2e_util.api.buck import Buck
+from bsmr.tests.e2e_util.asserts import expect_failure
+from bsmr.tests.e2e_util.buck_workspace import buck_test, env
 
 # Empty test executor forces internal test executor to be used.
 INTERNAL_TEST_EXECUTOR = ""
 
 
 @buck_test()
-@env("BUCK2_ALLOW_INTERNAL_TEST_RUNNER_DO_NOT_USE", "1")
+@env("BSMR_ALLOW_INTERNAL_TEST_RUNNER_DO_NOT_USE", "1")
 async def test_internal_test_executor(buck: Buck) -> None:
     await buck.test(
         ":trivial_pass",
@@ -29,7 +29,7 @@ async def test_internal_test_executor(buck: Buck) -> None:
 
 @buck_test()
 @env("TEST_VAR", "BAD_VALUE")
-@env("BUCK2_ALLOW_INTERNAL_TEST_RUNNER_DO_NOT_USE", "1")
+@env("BSMR_ALLOW_INTERNAL_TEST_RUNNER_DO_NOT_USE", "1")
 async def test_internal_test_executor_env(buck: Buck) -> None:
     await buck.test(
         ":check_env",
@@ -41,7 +41,7 @@ async def test_internal_test_executor_env(buck: Buck) -> None:
 
 
 @buck_test()
-@env("BUCK2_ALLOW_INTERNAL_TEST_RUNNER_DO_NOT_USE", "1")
+@env("BSMR_ALLOW_INTERNAL_TEST_RUNNER_DO_NOT_USE", "1")
 async def test_internal_test_executor_timeout(buck: Buck) -> None:
     await expect_failure(
         buck.test(

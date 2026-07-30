@@ -1,5 +1,5 @@
 # @generated
-# Update using `buck2 run self//cpp/conan:update`
+# Update using `bsmr run self//cpp/conan:update`
 
 load(
     "@prelude//toolchains/conan:defs.bzl",

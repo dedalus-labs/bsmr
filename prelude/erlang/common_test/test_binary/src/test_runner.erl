@@ -120,7 +120,7 @@ run_test(TestEnv, Timeout) ->
                     test_run_fail(
                         TestEnv,
                         io_lib:format(
-                            "unexpected exception in the buck2 Common Test runner:\n"
+                            "unexpected exception in the bsmr Common Test runner:\n"
                             "                        application test_exec crashed (~tp ~tp) ~n",
                             [Object, Info]
                         ),

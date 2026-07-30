@@ -10,8 +10,8 @@ buck_rust_binary(
     crate_root = "src/main.rs",
     deps = [
         "fbsource//third-party/rust:clap",
-        "//buck2/packages/rust/starlark/starlark:starlark",
-        "//buck2/packages/rust/starlark/starlark_syntax:starlark_syntax",
+        "//bsmr/packages/rust/starlark/starlark:starlark",
+        "//bsmr/packages/rust/starlark/starlark_syntax:starlark_syntax",
     ] + select({
         "DEFAULT": [],
         "ovr_config//os:linux": [

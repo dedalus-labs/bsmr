@@ -1,0 +1,22 @@
+load("@bsmr_build//rules:rust.bzl", "rust_library")
+
+oncall("build_infra")
+
+rust_library(
+    name = "bsmr_certs",
+    srcs = glob(["src/**/*.rs"]),
+    test_env = {"TEST_CERT_LOCATIONS": "$(source test/testdata)"},
+    deps = [
+        "fbsource//third-party/rust:rustls",
+        "fbsource//third-party/rust:rustls-native-certs",
+        "fbsource//third-party/rust:rustls-pki-types",
+        "fbsource//third-party/rust:tokio",
+        "fbsource//third-party/rust:tracing",
+        "fbsource//third-party/rust:x509-parser",
+        "//bsmr/app/bsmr_error:bsmr_error",
+        "//bsmr/app/bsmr_util:bsmr_util",
+        # @oss-disable[end= ]: "//bsmr/facebook/find_certs:find_certs",
+        "//bsmr/packages/rust/gazebo/dupe:dupe",
+        # @oss-disable[end= ]: "//common/rust/cpe:cpe",
+    ],
+)

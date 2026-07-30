@@ -18,8 +18,8 @@ import subprocess
 from pathlib import Path
 from tempfile import NamedTemporaryFile, TemporaryDirectory
 
-from buck2.tests.e2e_util.api.buck import Buck
-from buck2.tests.e2e_util.buck_workspace import buck_test, env
+from bsmr.tests.e2e_util.api.buck import Buck
+from bsmr.tests.e2e_util.buck_workspace import buck_test, env
 
 
 def assert_path_in_manifest(path: str, manifest_paths: list[str]) -> None:
@@ -60,7 +60,7 @@ def hg_config_reponame(cwd: Path) -> None:
 def _setup_buckconfig_digest_algorithms(buck: Buck) -> None:
     # The digests in `//cas_artifact:` require the buckconfig.
     with open(buck.cwd / ".buckconfig", "a") as buckconfig:
-        buckconfig.write("[buck2]\n")
+        buckconfig.write("[bsmr]\n")
         buckconfig.write("digest_algorithms = BLAKE3-KEYED,SHA1\n")
 
 
@@ -94,7 +94,7 @@ async def test_external_buckconfig_path_included_in_manifest(buck: Buck) -> None
         tmpname = tmp.name
         tmp.writelines(
             [
-                "[buck2]",
+                "[bsmr]",
                 "  foo = bar",
             ]
         )
@@ -150,7 +150,7 @@ async def test_multiple_builds(buck: Buck) -> None:
 
 # Symlinks should show up in the *_symlinks attributes of the manifest.
 @buck_test(setup_eden=True, skip_for_os=["windows"])
-@env("BUCK2_HARD_ERROR", "false")
+@env("BSMR_HARD_ERROR", "false")
 async def test_symlinks(buck: Buck) -> None:
     hg_config_reponame(cwd=buck.cwd)
 
@@ -243,9 +243,9 @@ async def test_no_tracing_does_not_write_offline_cache_for_http_archive(
 # offline-cache action output instead of fetching from the network.
 @buck_test(
     skip_for_os=["windows"],
-    extra_buck_config={"buck2": {"sqlite_materializer_state": "false"}},
+    extra_buck_config={"bsmr": {"sqlite_materializer_state": "false"}},
 )
-@env("BUCK_LOG", "buck2_execute_impl::materializers=trace")
+@env("BUCK_LOG", "bsmr_execute_impl::materializers=trace")
 async def test_fake_offline_http_archive_uses_offline_cache(buck: Buck) -> None:
     hg_init(cwd=buck.cwd)
 
@@ -280,7 +280,7 @@ async def test_fake_offline_http_archive_uses_offline_cache(buck: Buck) -> None:
     result = await buck.build(
         "root//http_archive:test_zip",
         "--config",
-        "buck2.use_network_action_output_cache=true",
+        "bsmr.use_network_action_output_cache=true",
         "--no-remote-cache",
         "--local-only",
     )
@@ -327,9 +327,9 @@ async def test_no_tracing_does_not_write_offline_cache_for_cas_artifact(
 # offline-cache action output instead of fetching from the network.
 @buck_test(
     skip_for_os=["windows"],
-    extra_buck_config={"buck2": {"sqlite_materializer_state": "false"}},
+    extra_buck_config={"bsmr": {"sqlite_materializer_state": "false"}},
 )
-@env("BUCK_LOG", "buck2_execute_impl::materializers=trace")
+@env("BUCK_LOG", "bsmr_execute_impl::materializers=trace")
 async def test_fake_offline_cas_artifact_uses_offline_cache(buck: Buck) -> None:
     hg_init(cwd=buck.cwd)
 
@@ -365,7 +365,7 @@ async def test_fake_offline_cas_artifact_uses_offline_cache(buck: Buck) -> None:
     result = await buck.build(
         target,
         "--config",
-        "buck2.use_network_action_output_cache=true",
+        "bsmr.use_network_action_output_cache=true",
         "--no-remote-cache",
         "--local-only",
     )
@@ -375,7 +375,7 @@ async def test_fake_offline_cas_artifact_uses_offline_cache(buck: Buck) -> None:
 
 # Validate that all lists in the exported manifest are sorted.
 @buck_test(setup_eden=True, skip_for_os=["windows"])
-@env("BUCK2_HARD_ERROR", "false")
+@env("BSMR_HARD_ERROR", "false")
 async def test_manifest_lists_are_sorted(buck: Buck) -> None:
     hg_config_reponame(cwd=buck.cwd)
 
@@ -415,12 +415,12 @@ async def test_manifest_lists_are_sorted(buck: Buck) -> None:
 
         with NamedTemporaryFile("w", delete=False) as tmp1:
             tmpname1 = tmp1.name
-            tmp1.write("[buck2]\n")
+            tmp1.write("[bsmr]\n")
             tmp1.write("  foo = bar\n")
 
         with NamedTemporaryFile("w", delete=False) as tmp2:
             tmpname2 = tmp2.name
-            tmp2.write("[buck2]\n")
+            tmp2.write("[bsmr]\n")
             tmp2.write("  baz = qux\n")
 
         try:
@@ -471,9 +471,9 @@ async def test_manifest_lists_are_sorted(buck: Buck) -> None:
 
 @buck_test(
     skip_for_os=["windows"],
-    extra_buck_config={"buck2": {"sqlite_materializer_state": "false"}},
+    extra_buck_config={"bsmr": {"sqlite_materializer_state": "false"}},
 )
-@env("BUCK_LOG", "buck2_execute_impl::materializers=trace")
+@env("BUCK_LOG", "bsmr_execute_impl::materializers=trace")
 async def test_run_action_with_allow_offline_output_cache(buck: Buck) -> None:
     """Test RunAction caching when allow_offline_output_cache=True."""
     hg_init(cwd=buck.cwd)
@@ -511,7 +511,7 @@ async def test_run_action_with_allow_offline_output_cache(buck: Buck) -> None:
     result = await buck.build(
         target,
         "--config",
-        "buck2.use_network_action_output_cache=true",
+        "bsmr.use_network_action_output_cache=true",
         "--no-remote-cache",
         "--local-only",
     )
@@ -564,9 +564,9 @@ async def test_run_action_cache_includes_in_manifest(buck: Buck) -> None:
 
 @buck_test(
     skip_for_os=["windows"],
-    extra_buck_config={"buck2": {"sqlite_materializer_state": "false"}},
+    extra_buck_config={"bsmr": {"sqlite_materializer_state": "false"}},
 )
-@env("BUCK_LOG", "buck2_execute_impl::materializers=trace")
+@env("BUCK_LOG", "bsmr_execute_impl::materializers=trace")
 async def test_genrule_with_allow_offline_output_cache(buck: Buck) -> None:
     """Test genrule caching when allow_offline_output_cache=True."""
     hg_init(cwd=buck.cwd)
@@ -604,7 +604,7 @@ async def test_genrule_with_allow_offline_output_cache(buck: Buck) -> None:
     result = await buck.build(
         target,
         "--config",
-        "buck2.use_network_action_output_cache=true",
+        "bsmr.use_network_action_output_cache=true",
         "--no-remote-cache",
         "--local-only",
     )

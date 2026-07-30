@@ -171,7 +171,7 @@ if "PYTHONPROFILEIMPORTTIME" in os.environ and platform.python_implementation() 
     args[1:1] = ["-X", "importtime"]
 
 # Save the variables that will be restored back into the environment by
-# fbcode/buck2/prelude/python/tools/make_par/sitecustomize.py
+# fbcode/bsmr/prelude/python/tools/make_par/sitecustomize.py
 for env in ("PYTHONPATH", "LD_LIBRARY_PATH", "LD_PRELOAD",
             "DYLD_LIBRARY_PATH", "DYLD_INSERT_LIBRARIES"):
     if env in os.environ:

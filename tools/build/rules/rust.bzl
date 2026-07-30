@@ -98,7 +98,7 @@ def rust_protobuf_library(
         name = build_name,
         srcs = [build_script],
         crate_root = build_script,
-        deps = ["//buck2/app/buck2_protoc_dev:buck2_protoc_dev"],
+        deps = ["//bsmr/app/bsmr_protoc_dev:bsmr_protoc_dev"],
     )
 
     build_env = build_env or {}

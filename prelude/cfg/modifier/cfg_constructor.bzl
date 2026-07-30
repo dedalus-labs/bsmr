@@ -43,7 +43,7 @@ def _get_buckconfig_backed_modifiers(extra_data: struct, configuring_exec_dep: b
 def cfg_constructor_pre_constraint_analysis(
     *,
     legacy_platform: PlatformInfo | None,
-    # dict[str, typing.Any] is JSON dictionary form of `TaggedModifier` passed from buck2 core
+    # dict[str, typing.Any] is JSON dictionary form of `TaggedModifier` passed from bsmr core
     package_modifiers: list[dict[str, typing.Any]] | None,
     # typing.Any is JSON form of modifier
     target_modifiers: list[Modifier] | None,

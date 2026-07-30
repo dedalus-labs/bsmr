@@ -66,7 +66,7 @@ impl Develop {
             pretty,
             mode,
             check_cycles,
-            buck2_command,
+            bsmr_command,
             include_all_buildfiles,
             max_extra_targets,
             ..
@@ -85,7 +85,7 @@ impl Develop {
             };
 
             let mode = select_mode(mode.as_deref());
-            let buck = buck::Buck::new(buck2_command.clone(), mode, project_root.clone());
+            let buck = buck::Buck::new(bsmr_command.clone(), mode, project_root.clone());
 
             let develop = Develop {
                 sysroot,
@@ -114,7 +114,7 @@ impl Develop {
         if let crate::Command::DevelopJson {
             sysroot_mode,
             args,
-            buck2_command,
+            bsmr_command,
             max_extra_targets,
             mode,
             ..
@@ -135,7 +135,7 @@ impl Develop {
             };
 
             let mode = select_mode(mode.as_deref());
-            let buck = buck::Buck::new(buck2_command.clone(), mode, project_root);
+            let buck = buck::Buck::new(bsmr_command.clone(), mode, project_root);
 
             let develop = Develop {
                 sysroot,

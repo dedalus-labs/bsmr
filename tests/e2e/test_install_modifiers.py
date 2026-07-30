@@ -12,9 +12,9 @@ import sys
 from os.path import exists
 from pathlib import Path
 
-from buck2.tests.e2e_util.api.buck import Buck
-from buck2.tests.e2e_util.asserts import expect_failure
-from buck2.tests.e2e_util.buck_workspace import buck_test
+from bsmr.tests.e2e_util.api.buck import Buck
+from bsmr.tests.e2e_util.asserts import expect_failure
+from bsmr.tests.e2e_util.buck_workspace import buck_test
 
 
 # Currently installer grpc doesn't compile on Mac
@@ -31,7 +31,7 @@ if linux_only():
         args = ["--dst", f"{tmp_dir}/"]
 
         await buck.install(
-            "fbcode//buck2/tests/targets/rules/install:installer_modifiers_test",
+            "fbcode//bsmr/tests/targets/rules/install:installer_modifiers_test",
             "--",
             *args,
         )
@@ -43,7 +43,7 @@ if linux_only():
         args = ["--dst", f"{tmp_dir}/"]
 
         await buck.install(
-            "fbcode//buck2/tests/targets/rules/install:installer_modifiers_test?asan",
+            "fbcode//bsmr/tests/targets/rules/install:installer_modifiers_test?asan",
             "--",
             *args,
         )
@@ -60,7 +60,7 @@ async def test_install_fails_with_global_modifiers(buck: Buck, tmp_path: Path) -
         buck.install(
             "--modifier",
             "asan",
-            "fbcode//buck2/tests/targets/rules/install:installer_modifiers_test?asan",
+            "fbcode//bsmr/tests/targets/rules/install:installer_modifiers_test?asan",
             "--",
             *args,
         ),

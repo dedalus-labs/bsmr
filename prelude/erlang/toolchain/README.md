@@ -9,7 +9,7 @@ This directory contains utilities for generating OTP application version informa
 Run the script to extract version information from your Erlang installation:
 
 ```bash
-python3 buck2/prelude/erlang/toolchain/generate_otp_versions.py my_otp_versions.bzl
+python3 bsmr/prelude/erlang/toolchain/generate_otp_versions.py my_otp_versions.bzl
 ```
 
 This creates a `.bzl` file containing version information for all OTP applications.
@@ -62,7 +62,7 @@ For releases without bundled ERTS (`include_erts=False`, the default), version i
 When you upgrade your Erlang/OTP installation, regenerate the version file:
 
 ```bash
-$ python3 buck2/prelude/erlang/toolchain/generate_otp_versions.py my_otp_versions.bzl
+$ python3 bsmr/prelude/erlang/toolchain/generate_otp_versions.py my_otp_versions.bzl
 $ git add my_otp_versions.bzl
 $ git commit -m "Update OTP versions for Erlang/OTP 28"
 ```

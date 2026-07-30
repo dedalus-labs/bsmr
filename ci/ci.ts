@@ -135,7 +135,7 @@ export const ci = workflow({
 				},
 				{
 					name: "Run upstream Rust checks",
-					run: "python3 test.py --ci --git --buck2=target/debug/bsmr",
+					run: "python3 test.py --ci --git --bsmr=target/debug/bsmr",
 				},
 				{
 					name: "Validate self-host graph",

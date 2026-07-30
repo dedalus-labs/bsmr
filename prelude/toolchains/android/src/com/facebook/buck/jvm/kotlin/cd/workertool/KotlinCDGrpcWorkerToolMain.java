@@ -16,7 +16,7 @@ import com.facebook.buck.jvm.cd.workertool.grpc.WorkerGrpcServer;
 import java.io.IOException;
 
 /**
- * KotlinCD grpc worker tool daemon, for use by buck2
+ * KotlinCD grpc worker tool daemon, for use by bsmr
  *
  * <p>This starts a grpc service over a uds socket, that accepts kotlincd compilation commands
  */

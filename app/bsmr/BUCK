@@ -1,0 +1,198 @@
+load("@bsmr_build//rules:rust.bzl", buck_rust_binary = "rust_binary")
+# @oss-disable[end= ]: load("@bsmr_build//rules:platform_utils.bzl", "platform_utils")
+load("@bsmr_build//rules:rust.bzl", "rust_library")
+load(":transition.bzl", "bsmr_client_transition_alias")
+
+oncall("build_infra")
+
+prelude = native
+
+# Opt-in allocation-site fragmentation profiler (facebook/mem_frag). Enable with
+# `-c bsmr_dev.memfrag=true`; off by default so normal builds are unaffected.
+_memfrag = read_config("bsmr_dev", "memfrag", "") == "true"
+
+rust_library(
+    name = "bsmr",
+    srcs = glob(["src/**/*.rs"]),
+    # Cargo-only deps used in `bin/bsmr.rs` under `#[cfg(not(buck_build))]`.
+    # On linux/macos cargo uses jemalloc as the global allocator; buck builds
+    # rely on fbcode.default_allocator instead.
+    autocargo = {
+        "cargo_toml_config": {
+            "dependencies_override": {
+                "dependencies": {
+                    "fbinit": {
+                        "path": None,
+                        "version": "0.2",
+                    },
+                },
+            },
+            "extra_buck_dependencies": {
+                "target": {
+                    '\'cfg(any(target_os = "linux", target_os = "macos"))\'': {
+                        "dependencies": [
+                            "fbsource//third-party/rust:jemallocator",
+                        ],
+                    },
+                },
+            },
+            "extra_check_cfgs": ["cfg(bsmr_memfrag)"],
+        },
+    },
+    rustc_flags = select({
+        ":bsmr_client_only_build": ["--cfg=client_only"],
+        "DEFAULT": [],
+    }),
+    deps = [
+        "fbsource//third-party/rust:clap",
+        "fbsource//third-party/rust:tokio",
+        "fbsource//third-party/rust:tracing",
+        "//bsmr/app/bsmr_client:bsmr_client",
+        "//bsmr/app/bsmr_client_ctx:bsmr_client_ctx",
+        "//bsmr/app/bsmr_cmd_audit_client:bsmr_cmd_audit_client",
+        "//bsmr/app/bsmr_cmd_completion_client:bsmr_cmd_completion_client",
+        "//bsmr/app/bsmr_cmd_debug_client:bsmr_cmd_debug_client",
+        "//bsmr/app/bsmr_cmd_docs_client:bsmr_cmd_docs_client",
+        "//bsmr/app/bsmr_cmd_log_client:bsmr_cmd_log_client",
+        "//bsmr/app/bsmr_cmd_starlark_client:bsmr_cmd_starlark_client",
+        "//bsmr/app/bsmr_common:bsmr_common",
+        "//bsmr/app/bsmr_core:bsmr_core",
+        "//bsmr/app/bsmr_data:bsmr_data",
+        "//bsmr/app/bsmr_error:bsmr_error",
+        "//bsmr/app/bsmr_event_observer:bsmr_event_observer",
+        "//bsmr/app/bsmr_events:bsmr_events",
+        "//bsmr/app/bsmr_fs:bsmr_fs",
+        "//bsmr/app/bsmr_hash:bsmr_hash",
+        "//bsmr/app/bsmr_util:bsmr_util",
+        "//bsmr/app/bsmr_wrapper_common:bsmr_wrapper_common",
+        "//bsmr/packages/rust/gazebo/dupe:dupe",
+        "//bsmr/packages/rust/superconsole:superconsole",
+        "//common/rust/shed/fbinit:fbinit",
+    ]
+    + select({
+        ":bsmr_client_only_build": [],
+        "DEFAULT": [
+            "//bsmr/app/bsmr_daemon:bsmr_daemon",
+            "//bsmr/app/bsmr_server:bsmr_server",
+            "//bsmr/app/bsmr_test_runner:bsmr_test_runner",
+        ],
+    })
+    + select({
+        "DEFAULT": [],
+        "ovr_config//os:linux": [
+            "fbsource//third-party/rust:dirs",
+            "fbsource//third-party/rust:libc",
+            "fbsource//third-party/rust:nix",
+            "//bsmr/app/bsmr_forkserver:bsmr_forkserver",
+        ],
+        "ovr_config//os:macos": [
+            "fbsource//third-party/rust:dirs",
+            "fbsource//third-party/rust:libc",
+            "fbsource//third-party/rust:nix",
+            "//bsmr/app/bsmr_forkserver:bsmr_forkserver",
+        ],
+        "ovr_config//os:windows": [
+            "fbsource//third-party/rust:windows-sys",
+        ],
+    }),
+)
+
+buck_rust_binary(
+    name = "bsmr-bin",
+    srcs = ["bin/bsmr.rs"],
+    allow_cache_upload = True,
+    crate = "bsmr",
+    crate_root = "bin/bsmr.rs",
+    env = {
+        # This is only set for release builds.
+        "BSMR_RELEASE_TIMESTAMP": read_config("buck", "release_timestamp", ""),
+        # This config value is set by the upload script, and controls the output of `--version`. We
+        # would like to use build info for this, but it is unfortunately not reliably available, see
+        # T140147872.
+        "BSMR_SET_EXPLICIT_VERSION": read_config("buck", "set_explicit_version", ""),
+        # This config value is set by the upload script, and controls the output of `--internal-version` on windows
+        "BSMR_WIN_INTERNAL_VERSION": read_config("buck", "win_internal_version", ""),
+    },
+    # Set via -c bsmr.emit_relocs=true in the deploy script to produce a
+    # binary with ELF relocations for BOLT post-link optimization.
+    linker_flags = ["-Wl,--emit-relocs"] if read_config("bsmr", "emit_relocs", "") == "true" else [],
+    rustc_flags = (["--cfg=bsmr_memfrag"] if _memfrag else [])
+    + select({
+        ":bsmr_client_only_build": ["--cfg=client_only"],
+        "DEFAULT": [],
+    }),
+    unittests = False,
+    deps = [
+        "fbsource//third-party/rust:tracing",
+        "//bsmr/app/bsmr:bsmr",
+        "//bsmr/app/bsmr_build_info:bsmr_build_info",
+        "//bsmr/app/bsmr_certs:bsmr_certs",
+        "//bsmr/app/bsmr_client_ctx:bsmr_client_ctx",
+        "//bsmr/app/bsmr_core:bsmr_core",
+        "//bsmr/app/bsmr_error:bsmr_error",
+        "//bsmr/app/bsmr_event_log:bsmr_event_log",
+        "//bsmr/app/bsmr_events:bsmr_events",
+        "//bsmr/app/bsmr_fs:bsmr_fs",
+        "//bsmr/app/bsmr_wrapper_common:bsmr_wrapper_common",
+        "//bsmr/packages/rust/gazebo/dupe:dupe",
+        "//bsmr/packages/rust/superconsole:superconsole",
+    ]
+    + select({
+        "DEFAULT": [],
+        "ovr_config//os:windows": [
+            "fbsource//third-party/rust:mimalloc",
+        ],
+    })
+    + select({
+        ":bsmr_client_only_build": [],
+        "DEFAULT": [
+            "//bsmr/app/bsmr_action_impl:bsmr_action_impl",
+            "//bsmr/app/bsmr_analysis:bsmr_analysis",
+            "//bsmr/app/bsmr_anon_target:bsmr_anon_target",
+            "//bsmr/app/bsmr_build_api:bsmr_build_api",
+            "//bsmr/app/bsmr_build_signals_impl:bsmr_build_signals_impl",
+            "//bsmr/app/bsmr_bxl:bsmr_bxl",
+            "//bsmr/app/bsmr_cfg_constructor:bsmr_cfg_constructor",
+            "//bsmr/app/bsmr_cmd_audit_server:bsmr_cmd_audit_server",
+            "//bsmr/app/bsmr_cmd_docs_server:bsmr_cmd_docs_server",
+            "//bsmr/app/bsmr_cmd_query_server:bsmr_cmd_query_server",
+            "//bsmr/app/bsmr_cmd_starlark_server:bsmr_cmd_starlark_server",
+            "//bsmr/app/bsmr_cmd_targets_server:bsmr_cmd_targets_server",
+            "//bsmr/app/bsmr_configured:bsmr_configured",
+            "//bsmr/app/bsmr_external_cells:bsmr_external_cells",
+            "//bsmr/app/bsmr_interpreter_for_build:bsmr_interpreter_for_build",
+            "//bsmr/app/bsmr_query_impls:bsmr_query_impls",
+            "//bsmr/app/bsmr_server_commands:bsmr_server_commands",
+            "//bsmr/app/bsmr_test:bsmr_test",
+            "//bsmr/app/bsmr_transition:bsmr_transition",
+            "//bsmr/app/bsmr_validation:bsmr_validation",
+        ],
+    })
+    + (
+        [
+            "//bsmr/facebook/mem_frag:mem_frag",
+        ]
+        if _memfrag
+        else []
+    ),
+)
+
+platform_utils = None # @oss-enable
+
+_dtp = platform_utils.get_cxx_platform_for_base_path(prelude.package_name()).target_platform if platform_utils else None
+
+prelude.constraint_setting(
+    name = "bsmr_client_only_setting",
+)
+
+prelude.constraint_value(
+    name = "bsmr_client_only_build",
+    constraint_setting = ":bsmr_client_only_setting",
+)
+
+bsmr_client_transition_alias(
+    name = "bsmr_client-bin",
+    actual = ":bsmr-bin",
+    default_target_platform = _dtp,
+    visibility = ["PUBLIC"],
+)

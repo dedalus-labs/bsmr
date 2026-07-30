@@ -12,8 +12,8 @@
 import json
 import tempfile
 
-from buck2.tests.e2e_util.api.buck import Buck
-from buck2.tests.e2e_util.buck_workspace import buck_test
+from bsmr.tests.e2e_util.api.buck import Buck
+from bsmr.tests.e2e_util.buck_workspace import buck_test
 
 
 @buck_test(inplace=True)
@@ -21,7 +21,7 @@ async def test_python_coverage(buck: Buck) -> None:
     with tempfile.NamedTemporaryFile("w") as covfile:
         await buck.test(
             "@fbcode//mode/dbgo-cov",
-            "fbcode//buck2/tests/targets/rules/python/coverage:test",
+            "fbcode//bsmr/tests/targets/rules/python/coverage:test",
             "--",
             "--collect-coverage",
             f"--coverage-output={covfile.name}",
@@ -30,18 +30,18 @@ async def test_python_coverage(buck: Buck) -> None:
         with open(covfile.name) as results:
             for line in results:
                 paths.append(json.loads(line)["filepath"])
-    assert "fbcode/buck2/tests/targets/rules/python/coverage/lib.py" in paths, str(
+    assert "fbcode/bsmr/tests/targets/rules/python/coverage/lib.py" in paths, str(
         paths
     )
 
 
 @buck_test(inplace=True)
 async def test_python_coverage_filtering_by_folder(buck: Buck) -> None:
-    folder_to_collect = "buck2/tests/targets/rules/python/coverage"
+    folder_to_collect = "bsmr/tests/targets/rules/python/coverage"
     with tempfile.NamedTemporaryFile("w") as covfile:
         await buck.test(
             "@fbcode//mode/dbgo-cov",
-            "fbcode//buck2/tests/targets/rules/python/coverage:test",
+            "fbcode//bsmr/tests/targets/rules/python/coverage:test",
             "-c",
             f"fbcode.cxx_coverage_only={folder_to_collect}",
             "--",

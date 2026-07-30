@@ -1,0 +1,34 @@
+load("@bsmr_build//rules:rust.bzl", "rust_library")
+
+oncall("build_infra")
+
+rust_library(
+    name = "bsmr_cmd_debug_client",
+    srcs = glob([
+        "src/**/*.rs",
+    ]),
+    deps = [
+        "fbsource//third-party/rust:async-trait",
+        "fbsource//third-party/rust:clap",
+        "fbsource//third-party/rust:humantime",
+        "fbsource//third-party/rust:prost",
+        "fbsource//third-party/rust:serde_json",
+        "fbsource//third-party/rust:tokio",
+        "fbsource//third-party/rust:tokio-stream",
+        "fbsource//third-party/rust:tracing",
+        "//bsmr/packages/rust/allocative/allocative:allocative",
+        "//bsmr/app/bsmr_cli_proto:bsmr_cli_proto",
+        "//bsmr/app/bsmr_client_ctx:bsmr_client_ctx",
+        "//bsmr/app/bsmr_common:bsmr_common",
+        "//bsmr/app/bsmr_core:bsmr_core",
+        "//bsmr/app/bsmr_data:bsmr_data",
+        "//bsmr/app/bsmr_error:bsmr_error",
+        "//bsmr/app/bsmr_event_log:bsmr_event_log",
+        "//bsmr/app/bsmr_events:bsmr_events",
+        "//bsmr/app/bsmr_fs:bsmr_fs",
+        "//bsmr/app/bsmr_log_common:bsmr_log_common",
+        "//bsmr/app/bsmr_offline_archive:bsmr_offline_archive",
+        "//bsmr/app/bsmr_wrapper_common:bsmr_wrapper_common",
+        "//bsmr/packages/rust/gazebo/gazebo:gazebo",
+    ],
+)

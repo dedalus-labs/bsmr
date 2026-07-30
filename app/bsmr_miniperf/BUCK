@@ -1,0 +1,55 @@
+load("@bsmr_build//rules:rust.bzl", "rust_binary")
+load("@bsmr_build//rules:rust.bzl", "rust_library")
+
+oncall("build_infra")
+
+rust_binary(
+    name = "bsmr_miniperf",
+    srcs = glob(
+        ["src/**/*.rs"],
+    ),
+    allocator = "malloc",
+    allow_cache_upload = True,
+    # JEMalloc isn't super lean (and we don't actually allocate anything here),
+    # so dont use it.
+    default_strip_mode = "full",
+    # Must be statically linked because the binary is embedded in the forkserver
+    # and written to disk without its shared library dependencies.
+    link_style = "static",
+    deps = [
+        "fbsource//third-party/rust:anyhow",
+    ] + select({
+        # Ideally we'd use compatible_with, but TD does not understand that.
+        "DEFAULT": [],
+        "ovr_config//os:linux": [
+            "fbsource//third-party/rust:bincode",
+            "fbsource//third-party/rust:perf-event",
+            "fbsource//third-party/rust:smallvec",
+            "fbsource//third-party/rust:thiserror",
+            "//bsmr/app/bsmr_miniperf_proto:bsmr_miniperf_proto",
+        ],
+    }),
+)
+
+# TODO
+rust_library(
+    name = "bsmr_miniperf_test",
+    srcs = glob(
+        ["test/**/*.rs"],
+    ),
+    autocargo = {"ignore_rule": True},
+    test_deps = select({
+        # Ideally we'd use compatible_with, but TD does not understand that.
+        "DEFAULT": [],
+        "ovr_config//os:linux": [
+            "fbsource//third-party/rust:anyhow",
+            "fbsource//third-party/rust:bincode",
+            "fbsource//third-party/rust:tempfile",
+            "//bsmr/app/bsmr_miniperf_proto:bsmr_miniperf_proto",
+        ],
+    }),
+    test_env = {
+        "MINIPERF": "$(exe_target :bsmr_miniperf)",
+        "THREE_BILLION_INSTRUCTIONS": "$(exe_target //bsmr/tools/testing/three-billion-instructions:three_billion_instructions-bin)",
+    },
+)

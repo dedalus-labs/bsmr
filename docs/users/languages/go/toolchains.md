@@ -5,7 +5,7 @@ title: Toolchains
 
 # Toolchains
 
-Go toolchains in Buck2 come in two types: "regular" and "bootstrap".
+Go toolchains in Bessemer come in two types: "regular" and "bootstrap".
 
 - **Regular toolchains** are used to build Go code.
 - **Bootstrap toolchains** are used to build the tools required to build Go

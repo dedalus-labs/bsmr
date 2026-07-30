@@ -7,7 +7,7 @@ root = .
 [build]
   execution_platforms = root//platforms:platforms
 
-[buck2]
+[bsmr]
   materializations = deferred
   verbose_materializer_event_log = true
   eager_materialization_enabled = true

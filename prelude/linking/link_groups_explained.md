@@ -1,6 +1,6 @@
 # Link Groups Explained
 
-This document explains in detail how Buck2's link groups system works — all the
+This document explains in detail how Bessemer's link groups system works — all the
 options, how they interact, and what the resulting binaries look like. It's meant
 to be read top-to-bottom, with each section building on the previous.
 

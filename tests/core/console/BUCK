@@ -1,16 +1,16 @@
-load("@fbcode//buck2/tests:buck_e2e.bzl", "buck2_core_tests")
+load("@fbcode//bsmr/tests:buck_e2e.bzl", "bsmr_core_tests")
 
 oncall("build_infra")
 
-buck2_core_tests(
+bsmr_core_tests(
     target_extra_attrs = {
         "test_console": {
             "env": {
-                "FIXTURES": "$(location //buck2/tests/core/console/fixtures:fixtures)",
+                "FIXTURES": "$(location //bsmr/tests/core/console/fixtures:fixtures)",
             },
         },
         "test_console_output_limit": {
-            "use_compiled_buck2_client_and_tpx": True,
+            "use_compiled_bsmr_client_and_tpx": True,
         },
     },
 )

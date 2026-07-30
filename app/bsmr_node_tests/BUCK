@@ -1,0 +1,17 @@
+load("@bsmr_build//rules:rust.bzl", "rust_unittest")
+
+oncall("build_infra")
+
+rust_unittest(
+    name = "bsmr_node_tests",
+    srcs = glob(["src/**/*.rs"]),
+    crate_root = "src/lib.rs",
+    deps = [
+        "//bsmr/app/bsmr_core:bsmr_core",
+        "//bsmr/app/bsmr_error:bsmr_error",
+        "//bsmr/app/bsmr_fs:bsmr_fs",
+        "//bsmr/app/bsmr_node:bsmr_node",
+        "//bsmr/app/bsmr_util:bsmr_util",
+        "//bsmr/packages/rust/gazebo/dupe:dupe",
+    ],
+)

@@ -47,7 +47,7 @@ func QueryGoList(workDir, rootModuleName, goOS, goArch string, extraArgs ...stri
 		defer close(pkgChan)
 		defer close(errChan)
 		cmdArgs := slices.Concat(
-			[]string{"buck2", "run", "toolchains//:go[go]", "--", "list", "-C", workDir, "-e", "-json=Name,ImportPath,Imports,EmbedFiles,Standard,Module"},
+			[]string{"bsmr", "run", "toolchains//:go[go]", "--", "list", "-C", workDir, "-e", "-json=Name,ImportPath,Imports,EmbedFiles,Standard,Module"},
 			extraArgs,
 			[]string{"all"},
 		)

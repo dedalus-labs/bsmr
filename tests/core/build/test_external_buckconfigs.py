@@ -14,10 +14,10 @@ import tempfile
 from dataclasses import dataclass
 from typing import Optional
 
-from buck2.tests.e2e_util.api.buck import Buck
-from buck2.tests.e2e_util.buck_workspace import buck_test
-from buck2.tests.e2e_util.helper.golden import golden_replace_temp_path
-from buck2.tests.e2e_util.helper.utils import filter_events
+from bsmr.tests.e2e_util.api.buck import Buck
+from bsmr.tests.e2e_util.buck_workspace import buck_test
+from bsmr.tests.e2e_util.helper.golden import golden_replace_temp_path
+from bsmr.tests.e2e_util.helper.utils import filter_events
 
 
 @buck_test(
@@ -70,14 +70,14 @@ async def test_external_buckconfigs(buck: Buck) -> None:
     external_path_configs = external_configs[0]["data"]["GlobalExternalConfigFile"]
     assert (
         external_path_configs["origin_path"]
-        == buck._env["BUCK2_TEST_EXTRA_EXTERNAL_CONFIG"]
+        == buck._env["BSMR_TEST_EXTRA_EXTERNAL_CONFIG"]
     )
     assert len(external_path_configs["values"]) == 2
 
     # Our tests inject file_watcher to external configs in test setup stage
     local_config_value = external_path_configs["values"][external_index]
     assert (
-        local_config_value["section"] == "buck2"
+        local_config_value["section"] == "bsmr"
         and local_config_value["key"] == "file_watcher"
         and local_config_value["value"] == "fs_hash_crawler"
         and not local_config_value["is_cli"]
@@ -279,8 +279,8 @@ async def test_log_external_configs(buck: Buck) -> None:
     expected = [
         # Our tests inject file_watcher to external configs in test setup stage
         ExternalConfigsLog(
-            descriptor="buck2.file_watcher = fs_hash_crawler",
-            origin=buck._env["BUCK2_TEST_EXTRA_EXTERNAL_CONFIG"],
+            descriptor="bsmr.file_watcher = fs_hash_crawler",
+            origin=buck._env["BSMR_TEST_EXTRA_EXTERNAL_CONFIG"],
         ),
         ExternalConfigsLog(
             descriptor="my_mode.bcfg",
@@ -324,7 +324,7 @@ async def test_log_external_configs_json(buck: Buck) -> None:
     )
     external_configs = [json.loads(e) for e in external_configs]
 
-    tmp_path = os.path.dirname(buck._env["BUCK2_TEST_EXTRA_EXTERNAL_CONFIG"])
+    tmp_path = os.path.dirname(buck._env["BSMR_TEST_EXTRA_EXTERNAL_CONFIG"])
     golden_replace_temp_path(
         output=json.dumps(external_configs, sort_keys=True, indent=2),
         rel_path="events.golden.json",

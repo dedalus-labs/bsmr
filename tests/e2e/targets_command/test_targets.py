@@ -17,9 +17,9 @@ import tempfile
 from typing import List
 
 import pytest
-from buck2.tests.e2e_util.api.buck import Buck
-from buck2.tests.e2e_util.api.buck_result import BuckResult
-from buck2.tests.e2e_util.buck_workspace import buck_test
+from bsmr.tests.e2e_util.api.buck import Buck
+from bsmr.tests.e2e_util.api.buck_result import BuckResult
+from bsmr.tests.e2e_util.buck_workspace import buck_test
 
 FOO_UNMODIFIED = ["4", "5", "6", "7"]
 BAR_UNMODIFIED = ["1", "2", "3", "4", "5"]
@@ -52,7 +52,7 @@ async def test_configured_target_hashing(
     unmodified: List[str],
     src_changed: str,
 ) -> None:
-    target = "fbcode//buck2/tests/targets/target_hashing:rule{}".format(rule)
+    target = "fbcode//bsmr/tests/targets/target_hashing:rule{}".format(rule)
     result = await buck.targets(
         target,
         "--show-target-hash",
@@ -71,7 +71,7 @@ async def test_configured_target_hashing(
         "PATHS_ONLY",
         "--target-hash-recursive=true",
         "--target-hash-modified-paths",
-        "buck2/tests/targets/target_hashing/{}".format(src_changed),
+        "bsmr/tests/targets/target_hashing/{}".format(src_changed),
     )
     output = json.loads(result.stdout)
     modified_output = json.loads(modified_result.stdout)
@@ -85,7 +85,7 @@ async def test_configured_target_hashing(
 
 @buck_test(inplace=True)
 async def test_configured_ignores_unconfigured(buck: Buck) -> None:
-    target = "fbcode//buck2/tests/targets/target_hashing:rule8"
+    target = "fbcode//bsmr/tests/targets/target_hashing:rule8"
     pre_unconfigured = await buck.targets(
         target, "--show-unconfigured-target-hash", "--json"
     )
@@ -110,7 +110,7 @@ async def test_configured_ignores_unconfigured(buck: Buck) -> None:
 
 @buck_test(inplace=True)
 async def test_non_recursive_target_hash(buck: Buck) -> None:
-    target = "fbcode//buck2/tests/targets/target_hashing:rule9"
+    target = "fbcode//bsmr/tests/targets/target_hashing:rule9"
     pre_recursive = await buck.targets(
         target, "--show-target-hash", "--json", "--target-hash-recursive=true"
     )
@@ -137,14 +137,14 @@ async def test_non_recursive_target_hash(buck: Buck) -> None:
 
 @buck_test(inplace=True)
 async def test_show_inputs(buck: Buck) -> None:
-    target = "fbcode//buck2/tests/targets/target_hashing:rule1"
+    target = "fbcode//bsmr/tests/targets/target_hashing:rule1"
     result = await buck.targets(target, "--json")
     assert (
-        "fbcode//buck2/tests/targets/target_hashing:rule5"
+        "fbcode//bsmr/tests/targets/target_hashing:rule5"
         in json.loads(result.stdout)[0]["buck.deps"]
     )
     assert json.loads(result.stdout)[0]["buck.inputs"] == [
-        "fbcode//buck2/tests/targets/target_hashing/foo.txt"
+        "fbcode//bsmr/tests/targets/target_hashing/foo.txt"
     ]
 
 
@@ -153,7 +153,7 @@ async def test_streaming_uncached(buck: Buck) -> None:
     # This test aims to check the kind of things TD might do - the streaming plus other related features
     with tempfile.NamedTemporaryFile() as file:
         await buck.targets(
-            "fbcode//buck2:buck2",
+            "fbcode//bsmr:bsmr",
             "--json-lines",
             "--streaming",
             "--imports",
@@ -166,8 +166,8 @@ async def test_streaming_uncached(buck: Buck) -> None:
         found = 0
         for x in file.readlines():
             x = json.loads(x)
-            if x.get("buck.package") == "fbcode//buck2":
-                if x.get("name") == "buck2":
+            if x.get("buck.package") == "fbcode//bsmr":
+                if x.get("name") == "bsmr":
                     assert re.match("^[0-9a-f]+$", x["buck.target_hash"])
                     found += 1
                 elif "buck.imports" in x:
@@ -179,12 +179,12 @@ async def test_streaming_uncached(buck: Buck) -> None:
 @buck_test(inplace=True)
 async def test_compression(buck: Buck) -> None:
     with tempfile.TemporaryDirectory() as name:
-        await buck.targets("fbcode//buck2:", "--output=" + name + "/out.txt")
+        await buck.targets("fbcode//bsmr:", "--output=" + name + "/out.txt")
         await buck.targets(
-            "fbcode//buck2:", "--output=" + name + "/out.txt.gz", "--compression=gzip"
+            "fbcode//bsmr:", "--output=" + name + "/out.txt.gz", "--compression=gzip"
         )
         await buck.targets(
-            "fbcode//buck2:", "--output=" + name + "/out.txt.zst", "--compression=zstd"
+            "fbcode//bsmr:", "--output=" + name + "/out.txt.zst", "--compression=zstd"
         )
         with open(name + "/out.txt", "rb") as file:
             out_uncompressed = file.read()

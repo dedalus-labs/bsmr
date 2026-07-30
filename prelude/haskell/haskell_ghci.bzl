@@ -548,7 +548,7 @@ def _symlink_ghci_binary(ctx, haskell_toolchain: HaskellToolchainInfo, ghci_bin:
         ghci_bin_dep = haskell_toolchain.ghci_ghc_path
 
     # NOTE: In the buck1 version we'd symlink the binary only if a custom one
-    # was provided, but in buck2 we're always setting `ghci_bin_dep` (i.e.
+    # was provided, but in bsmr we're always setting `ghci_bin_dep` (i.e.
     # to default one if custom wasn't provided).
     src = ghci_bin_dep[DefaultInfo].default_outputs[0]
     ctx.actions.symlink_file(ghci_bin.as_output(), src)

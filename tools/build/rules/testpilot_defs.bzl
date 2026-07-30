@@ -6,7 +6,7 @@
 # of this source tree. You may select, at your option, one of the
 # above-listed licenses.
 
-# Stub `testpilot_defs.bzl` for the OSS buck2 build.
+# Stub `testpilot_defs.bzl` for the OSS bsmr build.
 #
 # `prelude/toolchains/android/test/com/facebook/buck/testrunner/BUCK`
 # loads this file from `@bsmr_build//rules:testpilot_defs.bzl` to

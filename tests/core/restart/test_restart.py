@@ -14,9 +14,9 @@ import json
 import os
 import signal
 
-from buck2.tests.e2e_util.api.buck import Buck
-from buck2.tests.e2e_util.asserts import expect_failure
-from buck2.tests.e2e_util.buck_workspace import buck_test
+from bsmr.tests.e2e_util.api.buck import Buck
+from bsmr.tests.e2e_util.asserts import expect_failure
+from bsmr.tests.e2e_util.buck_workspace import buck_test
 
 TEST_DIGEST = "76f7aea8c1fc400287312b9608ceb24848ba02ac:14"
 
@@ -61,9 +61,9 @@ async def test_restart_cas_missing(buck: Buck) -> None:
 
     # Start a daemon with the `src` file tombstoned. This means we cannot download it from RE.
     # This is just the hash of `src`.
-    await buck.build(env={"BUCK2_TEST_TOMBSTONED_DIGESTS": TEST_DIGEST})
+    await buck.build(env={"BSMR_TEST_TOMBSTONED_DIGESTS": TEST_DIGEST})
 
-    # Now build //:stage2. Buck2 must try to download the file, fail, then
+    # Now build //:stage2. Bessemer must try to download the file, fail, then
     # restart the daemon.
     res = await buck.build("//:stage2")
     assert "Your command will now restart" in res.stderr
@@ -105,12 +105,12 @@ async def test_restart_disabled(buck: Buck) -> None:
     await buck.kill()
 
     with open(buck.cwd / ".buckconfig", "a") as f:
-        f.write("[buck2]\nrestarter = false")
+        f.write("[bsmr]\nrestarter = false")
 
     result = await expect_failure(
         buck.build(
             "//:stage2",
-            env={"BUCK2_TEST_TOMBSTONED_DIGESTS": TEST_DIGEST},
+            env={"BSMR_TEST_TOMBSTONED_DIGESTS": TEST_DIGEST},
         ),
     )
     assert "Your command will now restart" not in result.stderr

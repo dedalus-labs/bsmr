@@ -1,0 +1,35 @@
+load("@bsmr_build//rules:rust.bzl", "rust_library")
+
+oncall("build_infra")
+
+rust_library(
+    name = "bsmr_event_observer",
+    srcs = glob(["src/**/*.rs"]),
+    test_deps = [
+        "fbsource//third-party/rust:assert_matches",
+    ],
+    deps = [
+        "fbsource//third-party/rust:clap",
+        "fbsource//third-party/rust:derivative",
+        "fbsource//third-party/rust:derive_more",
+        "fbsource//third-party/rust:linked-hash-map",
+        "fbsource//third-party/rust:prost-types",
+        "fbsource//third-party/rust:regex",
+        "fbsource//third-party/rust:shlex",
+        "fbsource//third-party/rust:termwiz",
+        "fbsource//third-party/rust:tracing",
+        "//bsmr/app/bsmr_common:bsmr_common",
+        "//bsmr/app/bsmr_core:bsmr_core",
+        "//bsmr/app/bsmr_data:bsmr_data",
+        "//bsmr/app/bsmr_error:bsmr_error",
+        "//bsmr/app/bsmr_events:bsmr_events",
+        "//bsmr/app/bsmr_hash:bsmr_hash",
+        "//bsmr/app/bsmr_test_api:bsmr_test_api",
+        "//bsmr/app/bsmr_util:bsmr_util",
+        "//bsmr/app/bsmr_wrapper_common:bsmr_wrapper_common",
+        "//bsmr/packages/rust/gazebo/dupe:dupe",
+        "//bsmr/packages/rust/gazebo/gazebo:gazebo",
+        "//bsmr/packages/rust/starlark/starlark_map:starlark_map",
+        "//bsmr/packages/rust/superconsole:superconsole",
+    ],
+)

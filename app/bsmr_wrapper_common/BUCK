@@ -1,0 +1,33 @@
+load("@bsmr_build//rules:rust.bzl", "rust_library")
+
+oncall("build_infra")
+
+rust_library(
+    name = "bsmr_wrapper_common",
+    srcs = glob(["src/**/*.rs"]),
+    test_deps = [
+        "fbsource//third-party/rust:serde_json",
+        "//bsmr/app/bsmr_util:bsmr_util",
+    ],
+    deps = [
+        "fbsource//third-party/rust:derive_more",
+        "fbsource//third-party/rust:serde",
+        "fbsource//third-party/rust:sysinfo",
+        "fbsource//third-party/rust:uuid",
+        "//bsmr/packages/rust/allocative/allocative:allocative",
+        "//bsmr/app/bsmr_error:bsmr_error",
+        "//bsmr/app/bsmr_hash:bsmr_hash",
+        "//bsmr/packages/rust/gazebo/dupe:dupe",
+    ] + select({
+        "DEFAULT": [],
+        "ovr_config//os:linux": [
+            "fbsource//third-party/rust:nix",
+        ],
+        "ovr_config//os:macos": [
+            "fbsource//third-party/rust:nix",
+        ],
+        "ovr_config//os:windows": [
+            "fbsource//third-party/rust:windows-sys",
+        ],
+    }),
+)

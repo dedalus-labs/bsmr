@@ -34,12 +34,12 @@ load("@prelude//utils:utils.bzl", "flatten")
 # graph" from "deps" information that is propagated up through AndroidPackageableInfo.
 # In buck1 we use the underlying "TargetGraph" object that is based on the raw target
 # definitions. This results in some slightly different behavior for `provided_deps` - in
-# buck2, we (correctly) ignore `provided_deps`, since they do not influence the packaging of
+# bsmr, we (correctly) ignore `provided_deps`, since they do not influence the packaging of
 # the APK, whereas in `buck1`, we treat `provided_deps` the same as `deps`.
-# In practice, this rarely affects the module assignments, but can mean that `buck2` will
+# In practice, this rarely affects the module assignments, but can mean that `bsmr` will
 # put a target inside a module whereas `buck1` will put it into the main APK (since `buck1`
 # can find a path from an "always in main APK seed" to the target via some `provided_dep`,
-# whereas `buck2` does not).
+# whereas `bsmr` does not).
 #
 # For (2), we package up secondary DEX files and native libs into `assets/module_name` (see
 # dex_rules.bzl and android_binary_native_rules.bzl for more information on how we do that).

@@ -12,15 +12,15 @@
 import os
 import subprocess
 
-from buck2.tests.core.common.io.file_watcher import (
+from bsmr.tests.core.common.io.file_watcher import (
     FileWatcherProvider,
     get_file_watcher_events,
 )
-from buck2.tests.core.common.io.file_watcher_tests import (
+from bsmr.tests.core.common.io.file_watcher_tests import (
     FileSystemType,
     setup_file_watcher_test,
 )
-from buck2.tests.e2e_util.api.buck import Buck
+from bsmr.tests.e2e_util.api.buck import Buck
 
 
 # Setup repo structure to test these conditions: https://www.internalfb.com/excalidraw/EX346258

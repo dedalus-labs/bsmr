@@ -54,7 +54,7 @@ import java.util.stream.Collectors;
  * <p>The workflow:
  *
  * <ol>
- *   <li>client (buck2) sends `install` request with install id and file map. It could be multiple
+ *   <li>client (bsmr) sends `install` request with install id and file map. It could be multiple
  *       targets that would have different install id associated with them.
  *   <li>client sends multiple `fileReady` requests (file data + install id)
  *   <li>{@link InstallerService} tracks all received `fileReady` requests associated with the same

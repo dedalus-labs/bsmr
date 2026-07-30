@@ -10,8 +10,8 @@
 
 import hashlib
 
-from buck2.tests.e2e_util.api.buck import Buck
-from buck2.tests.e2e_util.buck_workspace import buck_test, get_mode_from_platform
+from bsmr.tests.e2e_util.api.buck import Buck
+from bsmr.tests.e2e_util.buck_workspace import buck_test, get_mode_from_platform
 
 
 def sha256_file(path: str) -> str:
@@ -26,7 +26,7 @@ def sha256_file(path: str) -> str:
 # to generate different crate hashes.
 @buck_test(inplace=True)
 async def test_rust_build_reproducibility(buck: Buck) -> None:
-    target = "fbcode//buck2/tests/targets/rules/rust/source_map_consistency/repro:repro"
+    target = "fbcode//bsmr/tests/targets/rules/rust/source_map_consistency/repro:repro"
 
     # Build 1: remote execution
     result_remote = await buck.build_without_report(

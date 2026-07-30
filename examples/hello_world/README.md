@@ -1,6 +1,6 @@
-## A simple Hello World project using the buck2-prelude
+## A simple Hello World project using the bsmr-prelude
 
-This example demonstrates how a simple C++ project might be built with Buck2
+This example demonstrates how a simple C++ project might be built with Bessemer
 using the prelude.
 
 In the `toolchains` cell, we define two toolchains needed:
@@ -18,25 +18,25 @@ target_platform_detector_spec = target:root//...->prelude//platforms:default \
 
 ## Setup
 
-Run `buck2 init --git`.
+Run `bsmr init --git`.
 
 ## Sample commands
 
 To view all targets in the project,
 
 ```bash
-buck2 targets //...
+bsmr targets //...
 ```
 
 To build the main C++ binary,
 
 ```bash
-buck2 build //:main
+bsmr build //:main
 ```
 
 To run the main C++ binary,
 
 ```bash
 # Should print "Hello from C++!"
-buck2 run //:main
+bsmr run //:main
 ```

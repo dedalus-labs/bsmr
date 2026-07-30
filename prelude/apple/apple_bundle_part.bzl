@@ -358,7 +358,7 @@ def assemble_bundle(
     env = {}
     cache_buster = ctx.attrs._bundling_cache_buster
     if cache_buster:
-        env["BUCK2_BUNDLING_CACHE_BUSTER"] = cache_buster
+        env["BSMR_BUNDLING_CACHE_BUSTER"] = cache_buster
 
     force_local_bundling = codesign_type.value != "skip"
     ctx.actions.run(

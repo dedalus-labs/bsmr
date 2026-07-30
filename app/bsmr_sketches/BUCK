@@ -1,0 +1,12 @@
+load("@bsmr_build//rules:rust.bzl", "rust_library")
+
+oncall("build_infra")
+
+rust_library(
+    name = "bsmr_sketches",
+    srcs = glob(["src/**/*.rs"]),
+    deps = [
+        "fbsource//third-party/rust:base64",
+        "//bsmr/packages/rust/setsketch:setsketch",
+    ],
+)

@@ -1,4 +1,4 @@
-# This file is @generated, regenerate by re-running test with `-- --env BUCK2_UPDATE_GOLDEN=1` appended to the test command
+# This file is @generated, regenerate by re-running test with `-- --env BSMR_UPDATE_GOLDEN=1` appended to the test command
 
 Command failed: 
 Error looking up configured node root//:select_keys_error_before_compatibility (root//:p-cat#80a6d043e3330ec7)
@@ -40,6 +40,6 @@ Caused by:
          root//:with_broken_dtp
        
        To see all 33 targets, run:
-         buck2 uquery --reuse-current-config root//:
+         bsmr uquery --reuse-current-config root//:
        
        

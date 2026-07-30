@@ -9,9 +9,9 @@
 # pyre-strict
 
 
-from buck2.tests.e2e_util.api.buck import Buck
-from buck2.tests.e2e_util.buck_workspace import buck_test
-from buck2.tests.e2e_util.helper.utils import (
+from bsmr.tests.e2e_util.api.buck import Buck
+from bsmr.tests.e2e_util.buck_workspace import buck_test
+from bsmr.tests.e2e_util.helper.utils import (
     expect_exec_count,
     random_string,
     read_what_ran,
@@ -20,7 +20,7 @@ from buck2.tests.e2e_util.helper.utils import (
 
 @buck_test(inplace=True)
 async def test_remote_worker(buck: Buck) -> None:
-    target = "fbcode//buck2/tests/targets/rules/remote_worker:run_two_worker_rules"
+    target = "fbcode//bsmr/tests/targets/rules/remote_worker:run_two_worker_rules"
     result = await buck.build(
         target,
         "-c",
@@ -51,7 +51,7 @@ async def test_remote_worker(buck: Buck) -> None:
 
 @buck_test(inplace=True)
 async def test_remote_worker_caches(buck: Buck) -> None:
-    target = "fbcode//buck2/tests/targets/rules/remote_worker:run_remote_worker_1"
+    target = "fbcode//bsmr/tests/targets/rules/remote_worker:run_remote_worker_1"
     args = [
         target,
     ]

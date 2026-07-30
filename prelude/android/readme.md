@@ -1,9 +1,9 @@
-# Buck2 Android Prelude
+# Bessemer Android Prelude
 
 ## 1. 🧭 Overview
 
-The Buck2 Android Prelude is a comprehensive build system for Android
-applications and libraries within Meta's Buck2 build system. It provides a
+The Bessemer Android Prelude is a comprehensive build system for Android
+applications and libraries with Bessemer. It provides a
 complete set of build rules, toolchain integrations, and utilities for building
 Android APKs, AABs (Android App Bundles), libraries, and running tests.
 
@@ -28,9 +28,9 @@ Android APKs, AABs (Android App Bundles), libraries, and running tests.
 
 ### Technologies Used
 
-- **Language**: Starlark (Buck2's build language), Python (utility tools), Java
+- **Language**: Starlark (Bessemer's build language), Python (utility tools), Java
   (toolchain components)
-- **Framework**: Buck2 build system with Android SDK integration
+- **Framework**: Bessemer build system with Android SDK integration
 - **Tools**: AAPT2, D8/R8, ProGuard, Android SDK tools, zipalign
 - **Infrastructure**: Remote execution support, caching, and distributed builds
 
@@ -164,7 +164,7 @@ structured data flow.
 **Depends On**:
 
 - Internal: Java providers, transitive set utilities
-- External: Buck2 provider framework
+- External: Bessemer provider framework
 
 ### Component: DEX Processing (`dex_rules.bzl`)
 
@@ -272,7 +272,7 @@ comprehensive workflow in the Android build system.
 ```mermaid
 sequenceDiagram
     participant Dev as Developer
-    participant Buck as Buck2 Engine
+    participant Buck as Bessemer Engine
     participant APK as android_apk_impl
     participant Binary as get_binary_info
     participant DEX as DEX Processing
@@ -423,7 +423,7 @@ sequenceDiagram
   - Used by binary rules for packaging decisions
   - Contains transitive sets for efficient dependency management
 
-- **Notes**: Core provider for dependency aggregation using Buck2's transitive
+- **Notes**: Core provider for dependency aggregation using Bessemer's transitive
   set system
 
 ### Entity: AndroidToolchainInfo

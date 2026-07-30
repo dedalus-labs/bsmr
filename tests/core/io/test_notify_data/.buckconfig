@@ -4,7 +4,7 @@
 [buildfile]
   name = TARGETS.fixture
 
-[buck2]
+[bsmr]
   file_watcher = notify
 
 [project]

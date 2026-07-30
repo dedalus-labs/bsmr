@@ -27,8 +27,8 @@ use async_compression::tokio::bufread::DeflateDecoder;
 use async_compression::tokio::bufread::DeflateEncoder;
 use async_compression::tokio::bufread::ZstdDecoder;
 use async_compression::tokio::bufread::ZstdEncoder;
-use buck2_re_configuration::Buck2OssReConfiguration;
-use buck2_re_configuration::HttpHeader;
+use bsmr_re_configuration::BsmrOssReConfiguration;
+use bsmr_re_configuration::HttpHeader;
 use dupe::Dupe;
 use futures::Stream;
 use futures::future::BoxFuture;
@@ -165,7 +165,7 @@ pub struct RECapabilities {
     supported_compressors: Vec<Compressor>,
 }
 
-/// Contains runtime options for the remote execution client as set under `buck2_re_client`
+/// Contains runtime options for the remote execution client as set under `bsmr_re_client`
 pub struct RERuntimeOpts {
     /// Use the Meta version of the request metadata
     use_fbcode_metadata: bool,
@@ -228,7 +228,7 @@ impl Compressor {
 pub struct REClientBuilder;
 
 impl REClientBuilder {
-    pub async fn build_and_connect(opts: &Buck2OssReConfiguration) -> anyhow::Result<REClient> {
+    pub async fn build_and_connect(opts: &BsmrOssReConfiguration) -> anyhow::Result<REClient> {
         // Create channel config once (reads TLS files)
         let channel_config = ChannelConfig::new(opts)
             .await
@@ -469,7 +469,7 @@ pub struct REClient {
     pool: ChannelPool,
     capabilities: RECapabilities,
     instance_name: InstanceName,
-    // buck2 calls find_missing for same blobs
+    // bsmr calls find_missing for same blobs
     find_missing_cache: Mutex<FindMissingCache>,
     bystream_compressor: Option<Compressor>,
     max_decoding_msg_size: usize,
@@ -1495,7 +1495,7 @@ where
         })
     });
 
-    buck2_util::future::try_join_all(writes).await?;
+    bsmr_util::future::try_join_all(writes).await?;
 
     Ok(DownloadResponse {
         inlined_blobs: Some(inlined_blobs),
@@ -1754,7 +1754,7 @@ fn with_re_metadata<T>(
     // fbcode builds within Meta. So there doesn't need to be a separate CI
     // check.
     //
-    // However, we don't need it for FOSS builds of Buck2. And in theory we
+    // However, we don't need it for FOSS builds of Bessemer. And in theory we
     // could test the OSS Bazel API in the upstream GitHub CI, but doing it this
     // way is only a little ugly, it's hidden, and it helps ensure the internal
     // Meta builds catch those issues earlier.
@@ -1791,7 +1791,7 @@ fn with_re_metadata<T>(
         let mut encoded = Vec::new();
         RequestMetadata {
             tool_details: Some(ToolDetails {
-                tool_name: "buck2".to_owned(),
+                tool_name: "bsmr".to_owned(),
                 // TODO(#503): Pull the BuckVersion::get_unique_id() from BuckDaemon
                 tool_version: "0.1.0".to_owned(),
             }),

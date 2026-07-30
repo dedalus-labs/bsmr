@@ -12,9 +12,9 @@
 import os
 import tempfile
 
-from buck2.tests.e2e_util.api.buck import Buck
-from buck2.tests.e2e_util.buck_workspace import buck_test
-from buck2.tests.e2e_util.helper.utils import filter_events
+from bsmr.tests.e2e_util.api.buck import Buck
+from bsmr.tests.e2e_util.buck_workspace import buck_test
+from bsmr.tests.e2e_util.helper.utils import filter_events
 
 
 async def check_dice_equality(buck: Buck) -> None:
@@ -61,21 +61,21 @@ async def check_config_is_different(buck: Buck) -> None:
 
 @buck_test()
 async def test_ignore_state_invalidation_with_re_override_in_arg(buck: Buck) -> None:
-    # Add arg to switch to buck2-user
+    # Add arg to switch to bsmr-user
     await buck.build(
         "root//:simple",
         "--config",
-        "buck2_re_client.override_use_case=buck2-user",
+        "bsmr_re_client.override_use_case=bsmr-user",
     )
-    # No arg, default is buck2-default
+    # No arg, default is bsmr-default
     await buck.build("root//:simple")
     await check_dice_equality(buck)
     await check_config_is_the_same(buck)
-    # Add arg to switch to buck2-user again
+    # Add arg to switch to bsmr-user again
     await buck.build(
         "root//:simple",
         "--config",
-        "buck2_re_client.override_use_case=buck2-user",
+        "bsmr_re_client.override_use_case=bsmr-user",
     )
     await check_dice_equality(buck)
     await check_config_is_the_same(buck)
@@ -83,18 +83,18 @@ async def test_ignore_state_invalidation_with_re_override_in_arg(buck: Buck) -> 
 
 @buck_test()
 async def test_ignore_state_invalidation_with_re_override_in_config(buck: Buck) -> None:
-    # Default is buck2-default
+    # Default is bsmr-default
     await buck.build("root//:simple")
-    # Add config to switch to buck2-user
+    # Add config to switch to bsmr-user
     with open(buck.cwd / ".buckconfig.local", "w") as f:
-        f.write("[buck2_re_client]\n")
-        f.write("override_use_case = buck2-user\n")
+        f.write("[bsmr_re_client]\n")
+        f.write("override_use_case = bsmr-user\n")
     await buck.build("root//:simple")
     await check_config_is_different(buck)
-    # Add config to return to buck2-default
+    # Add config to return to bsmr-default
     with open(buck.cwd / ".buckconfig.local", "w") as f:
-        f.write("[buck2_re_client]\n")
-        f.write("override_use_case = buck2-default\n")
+        f.write("[bsmr_re_client]\n")
+        f.write("override_use_case = bsmr-default\n")
     await buck.build("root//:simple")
     await check_config_is_different(buck)
 
@@ -103,19 +103,19 @@ async def test_ignore_state_invalidation_with_re_override_in_config(buck: Buck) 
 async def test_ignore_state_invalidation_with_re_override_in_external_config(
     buck: Buck,
 ) -> None:
-    # Default is buck2-default
+    # Default is bsmr-default
     await buck.build("root//:simple")
-    # Add config to switch to buck2-user
+    # Add config to switch to bsmr-user
     with tempfile.NamedTemporaryFile("w", delete=False) as f:
-        f.write("[buck2_re_client]\n")
-        f.write("override_use_case = buck2-user\n")
+        f.write("[bsmr_re_client]\n")
+        f.write("override_use_case = bsmr-user\n")
         f.close()
         await buck.build("root//:simple", "--config-file", f.name)
     await check_config_is_different(buck)
-    # Add config to return to buck2-default
+    # Add config to return to bsmr-default
     with tempfile.NamedTemporaryFile("w", delete=False) as f:
-        f.write("[buck2_re_client]\n")
-        f.write("override_use_case = buck2-default\n")
+        f.write("[bsmr_re_client]\n")
+        f.write("override_use_case = bsmr-default\n")
         f.close()
         await buck.build("root//:simple", "--config-file", f.name)
     await check_config_is_different(buck)
@@ -127,23 +127,23 @@ async def test_ignore_state_invalidation_with_re_override_in_external_config_sou
 ) -> None:
     with tempfile.NamedTemporaryFile("w", delete=False) as temp:
         env = os.environ.copy()
-        env["BUCK2_TEST_EXTRA_EXTERNAL_CONFIG"] = temp.name
+        env["BSMR_TEST_EXTRA_EXTERNAL_CONFIG"] = temp.name
 
-        # Default is buck2-default
+        # Default is bsmr-default
         await buck.build("root//:simple", env=env)
 
-        # Add config to switch to buck2-user
-        temp.write("[buck2_re_client]\n")
-        temp.write("override_use_case = buck2-user\n")
+        # Add config to switch to bsmr-user
+        temp.write("[bsmr_re_client]\n")
+        temp.write("override_use_case = bsmr-user\n")
         temp.flush()
         await buck.build("root//:simple", env=env)
         await check_config_is_different(buck)
 
-        # Add config to return to buck2-default
+        # Add config to return to bsmr-default
         temp.seek(0)
         temp.truncate()
-        temp.write("[buck2_re_client]\n")
-        temp.write("override_use_case = buck2-default\n")
+        temp.write("[bsmr_re_client]\n")
+        temp.write("override_use_case = bsmr-default\n")
         temp.flush()
         await buck.build("root//:simple", env=env)
         await check_dice_equality(buck)

@@ -8,7 +8,7 @@ to drive a hie-bios "bios" cradle.
 
 To print the list of GHC flags and targets for a Haskell source file:
 
-buck2 bxl prelude//haskell/ide/ide.bxl -- --bios true --file
+bsmr bxl prelude//haskell/ide/ide.bxl -- --bios true --file
 <repo_relative_path_to_source_file>
 
 To integrate with hie_bios, copy `hie.yaml` to your repo root

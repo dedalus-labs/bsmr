@@ -40,7 +40,7 @@ fb_native.alias(
     visibility = ["PUBLIC"],
 )
 
-# This is a prebuilt jar so that it can be part of the buck2 bootstrap toolchain.
+# This is a prebuilt jar so that it can be part of the bsmr bootstrap toolchain.
 buck_prebuilt_jar(
     name = "cp_snapshot_generator_prebuilt",
     binary_jar = ":cp_snapshot_generator.jar",

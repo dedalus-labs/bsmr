@@ -1,0 +1,30 @@
+load("@bsmr_build//rules:rust.bzl", "rust_library")
+
+oncall("build_infra")
+
+rust_library(
+    name = "bsmr_health_check",
+    srcs = glob(
+        ["src/**/*.rs"],
+    ),
+    test_deps = [
+        "fbsource//third-party/rust:tempfile",
+        "fbsource//third-party/rust:tokio",
+    ],
+    deps = [
+        "fbsource//third-party/rust:async-trait",
+        "fbsource//third-party/rust:futures",
+        "fbsource//third-party/rust:prost-types",
+        "fbsource//third-party/rust:tokio",
+        "fbsource//third-party/rust:tonic",
+        "fbsource//third-party/rust:tracing",
+        "//bsmr/app/bsmr_common:bsmr_common",
+        "//bsmr/app/bsmr_core:bsmr_core",
+        "//bsmr/app/bsmr_data:bsmr_data",
+        "//bsmr/app/bsmr_error:bsmr_error",
+        "//bsmr/app/bsmr_fs:bsmr_fs",
+        "//bsmr/app/bsmr_health_check_proto:bsmr_health_check_proto",
+        "//bsmr/app/bsmr_util:bsmr_util",
+        "//bsmr/packages/rust/gazebo/dupe:dupe",
+    ],
+)

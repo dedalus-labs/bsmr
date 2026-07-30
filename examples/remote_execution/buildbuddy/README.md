@@ -11,7 +11,7 @@ First, the BuildBuddy endpoint and api key should be configured as the
 following:
 
 ```ini
-[buck2_re_client]
+[bsmr_re_client]
 engine_address       = $BUILDBUDDY_ENDPOINT
 action_cache_address = $BUILDBUDDY_ENDPOINT
 cas_address          = $BUILDBUDDY_ENDPOINT

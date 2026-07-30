@@ -11,7 +11,7 @@
 package main
 
 import (
-	"buck2/tests/prelude/go/cgo/include_dir/golib"
+	"bsmr/tests/prelude/go/cgo/include_dir/golib"
 )
 
 func main() {

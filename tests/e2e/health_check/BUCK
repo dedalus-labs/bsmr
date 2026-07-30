@@ -1,4 +1,4 @@
-load("@fbcode//buck2/tests:buck_e2e.bzl", "buck2_e2e_test")
+load("@fbcode//bsmr/tests:buck_e2e.bzl", "bsmr_e2e_test")
 load("@bsmr_build//rules:python_binary.bzl", "python_binary")
 
 oncall("build_infra")
@@ -9,21 +9,21 @@ python_binary(
     srcs = [
         "health_check_server.py",
     ],
-    main_function = "buck2.tests.e2e.health_check.health_check_server.main",
+    main_function = "bsmr.tests.e2e.health_check.health_check_server.main",
     visibility = ["PUBLIC"],
     deps = [
-        "fbcode//buck2/app/buck2_health_check_proto:health_check-py",
+        "fbcode//bsmr/app/bsmr_health_check_proto:health_check-py",
         "fbsource//third-party/grpc/src/python/grpcio/grpc:grpcio",
     ],
 )
 
-buck2_e2e_test(
+bsmr_e2e_test(
     name = "test_health_check",
     srcs = ["test_health_check.py"],
     skip_for_os = [
         "windows",
     ],
     deps = [
-        "fbcode//buck2/tests/e2e_util:utils",
+        "fbcode//bsmr/tests/e2e_util:utils",
     ],
 )

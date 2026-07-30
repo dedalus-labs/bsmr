@@ -3,11 +3,11 @@ id: remote_execution
 title: Remote Execution
 ---
 
-Buck2 can use services that expose
+Bessemer can use services that expose
 [Bazel's remote execution API](https://github.com/bazelbuild/remote-apis) in
 order to run actions remotely.
 
-Buck2 projects have been successfully tested for remote execution against
+Bessemer projects have been successfully tested for remote execution against
 [EngFlow](https://www.engflow.com/),
 [BuildBarn](https://github.com/buildbarn/bb-remote-execution) and
 [BuildBuddy](https://www.buildbuddy.io). Sample project configurations for those
@@ -16,7 +16,7 @@ providers are available under
 
 ## RE configuration in `.buckconfig`
 
-Configuration for remote execution can be found under `[buck2_re_client]` in
+Configuration for remote execution can be found under `[bsmr_re_client]` in
 `.buckconfig`.
 
 Keys supported include:
@@ -39,11 +39,11 @@ Keys supported include:
 - `instance_name` - an instance name to pass on execution, action cache, and CAS
   requests.
 
-Buck2 uses `SHA256` for all its hashing by default. If your RE engine requires
+Bessemer uses `SHA256` for all its hashing by default. If your RE engine requires
 something else, this can be configured in `.buckconfig` as follows:
 
 ```ini
-[buck2]
+[bsmr]
 # Accepts BLAKE3, SHA1, or SHA256
 digest_algorithms = BLAKE3
 ```

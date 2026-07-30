@@ -13,7 +13,7 @@ import json
 import os
 import subprocess
 
-from buck2.tests.e2e_util.buck_workspace import buck_test
+from bsmr.tests.e2e_util.buck_workspace import buck_test
 
 
 @buck_test(inplace=True)
@@ -21,7 +21,7 @@ async def test_rust_binary() -> None:
     rust_project_bin = os.environ["RUST_PROJECT_BIN"]
 
     env = os.environ.copy()
-    env["BUCK2_HARD_ERROR"] = "false"
+    env["BSMR_HARD_ERROR"] = "false"
 
     result = subprocess.run(
         [
@@ -29,7 +29,7 @@ async def test_rust_binary() -> None:
             "develop",
             "--stdout",
             "--pretty",
-            "fbcode//buck2/tests/targets/rules/rust/hello_world:welcome",
+            "fbcode//bsmr/tests/targets/rules/rust/hello_world:welcome",
         ],
         stdout=subprocess.PIPE,
         env=env,

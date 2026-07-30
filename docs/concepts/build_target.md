@@ -6,9 +6,9 @@ title: Build Target
 # Build Target
 
 A _build target_ is a string that identifies a build target in your project.
-Build targets are used as arguments to Buck2 commands, such as
-[`buck2 build`](../../users/commands/build) and
-[`buck2 run`](../../users/commands/run). Build targets are also used as
+Build targets are used as arguments to Bessemer commands, such as
+[`bsmr build`](../../users/commands/build) and
+[`bsmr run`](../../users/commands/run). Build targets are also used as
 arguments to [build rules](build_rule.md) to enable one target to reference
 another. For example, a build rule might use a build target to reference another
 target in order to specify that target as a _dependency_.
@@ -34,7 +34,7 @@ A fully-qualified build target has three components:
    rule.
 
 Note that the name of the build file itself—usually BUCK—does _not_ occur in the
-build target. All build files within a given Buck2 project must have the same
+build target. All build files within a given Bessemer project must have the same
 name—defined in the `[buildfile].name` entry of `.buckconfig`. Therefore, it is
 unnecessary to include the name in the target. The full regular expression for a
 fully-qualified build target is as follows:
@@ -44,15 +44,15 @@ fully-qualified build target is as follows:
 |- cell name -|  | package path | |--- target name ----|
 ```
 
-In Buck2, a _cell_ defines a directory tree of one or more Buck2 packages. For
-more information about Buck2 cells and their relationship to packages and
+In Bessemer, a _cell_ defines a directory tree of one or more Bessemer packages. For
+more information about Bessemer cells and their relationship to packages and
 projects, see the [Key Concepts](key_concepts.md) topic. **NOTE:** All target
-paths are assumed to start from the root of the Buck2 project. Buck2 does not
+paths are assumed to start from the root of the Bessemer project. Bessemer does not
 support specifying a target path that starts from a directory below the root.
 Although the double forward slash (`//`) that prefixes target paths can be
 omitted when specifying a target from the command line (see **Pro Tips** below),
-Buck2 still assumes that the path is from the root. Buck2 does support
-_relative_ build paths, but in Buck2, that concept refers to specifying build
+Bessemer still assumes that the path is from the root. Bessemer does support
+_relative_ build paths, but in Bessemer, that concept refers to specifying build
 targets _from within_ a build file. See **Relative build targets** below for
 more details.
 
@@ -85,34 +85,34 @@ java_binary(
 ## Command-line Pro Tips
 
 Here are some ways that you can reduce your typing when you specify build
-targets as command-line arguments to the `buck2 build` or `buck2 run` commands.
+targets as command-line arguments to the `bsmr build` or `bsmr run` commands.
 Consider the following example of a fully-qualified build target used with the
-`buck2 build` command:
+`bsmr build` command:
 
 ```sh
-buck2 build cell//java/com/facebook/share:share
+bsmr build cell//java/com/facebook/share:share
 ```
 
-Although Buck2 is always strict when parsing build targets in build files, Buck2
+Although Bessemer is always strict when parsing build targets in build files, Bessemer
 is flexible when parsing build targets on the command-line. Specifically, the
 leading `//` is optional on the command line, so the above could be:
 
 ```sh
-buck2 build java/com/facebook/share:share
+bsmr build java/com/facebook/share:share
 ```
 
 Also, if there is a forward slash before the colon, it is ignored, so this could
 also be written as:
 
 ```sh
-buck2 build java/com/facebook/share/:share
+bsmr build java/com/facebook/share/:share
 ```
 
 which enables you to produce the red text shown below using tab-completion,
 which dramatically reduces how much you need to type:
 
 ```sh
-buck2 build java/com/facebook/share/:share
+bsmr build java/com/facebook/share/:share
 ```
 
 Finally, if the final path element matches the value specified after the colon,
@@ -120,7 +120,7 @@ it can be omitted:
 
 ```sh
 # This is treated as //java/com/facebook/share:share.
-buck2 build java/com/facebook/share/
+bsmr build java/com/facebook/share/
 ```
 
 which makes the build target even easier to tab-complete. For this reason, the
@@ -130,8 +130,8 @@ command-line with less typing.
 
 ## See also
 
-Buck2 supports the ability to define **_aliases_ for build targets**; using
-aliases can improve brevity when specifying targets on the Buck2 command line.
+Bessemer supports the ability to define **_aliases_ for build targets**; using
+aliases can improve brevity when specifying targets on the Bessemer command line.
 For more information, see the [`[alias]`](buckconfig.md#alias) section in the
 documentation for [`.buckconfig`](buckconfig.md). A
 [**build target pattern**](target_pattern.md) is a string that describes a set

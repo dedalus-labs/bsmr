@@ -5,8 +5,8 @@ title: Deferred Materialization
 
 import { OssOnly } from 'docusaurus-plugin-internaldocs-fb/internal';
 
-When using [Remote Execution](../remote_execution.md), Buck2 operates with
-Deferred Materialization, which means that Buck2 will avoid downloading outputs
+When using [Remote Execution](../remote_execution.md), Bessemer operates with
+Deferred Materialization, which means that Bessemer will avoid downloading outputs
 until they are required by a local action.
 
 This can provide very substantial performance savings on builds that execute
@@ -18,7 +18,7 @@ to make real-world builds finish approximately 2.5 times faster.
 
 ## Pitfalls
 
-Buck2's deferred materialization makes assumptions about your Remote Execution
+Bessemer's deferred materialization makes assumptions about your Remote Execution
 backend. In particular, it expects that the TTL returned from action cache
 entries by your Remote Execution backend always exceeds the TTL of all output
 artifacts it references.
@@ -28,7 +28,7 @@ backend. When that happens, builds using Deferred Materialization may fail if
 those artifacts are needed locally.
 
 A kill is necessary to recover from those builds. However, the
-[Restarter](restarter.md) can be used to mitigate this issue by restarting Buck2
+[Restarter](restarter.md) can be used to mitigate this issue by restarting Bessemer
 daemon when it encounters an expired artifact.
 
 <OssOnly>
@@ -37,41 +37,41 @@ At Meta, artifacts get periodically refreshed, but open source RE backends do no
 
 ## On-disk state
 
-Buck2 can also optionally track its state on disk in a SQLite database. This
-allows Buck2 to remember what files are on disk across restarts.
+Bessemer can also optionally track its state on disk in a SQLite database. This
+allows Bessemer to remember what files are on disk across restarts.
 
-This can allow Buck2 to avoid re-downloading outputs from your Remote Execution
+This can allow Bessemer to avoid re-downloading outputs from your Remote Execution
 backend if they are already on disk.
 
 To enable, add this to your Buckconfig:
 
 ```ini
-[buck2]
+[bsmr]
 sqlite_materializer_state = true
 ```
 
 ## Deferring Write Actions
 
-To further speedup builds, Buck2 can also be instructed to not execute any
+To further speedup builds, Bessemer can also be instructed to not execute any
 writes on the critical path for a build.
 
 To enable, add this to your Buckconfig:
 
 ```ini
-[buck2]
+[bsmr]
 defer_write_actions = true
 ```
 
 This mechanism is recommended if you're using the On-disk State, since it means
 Buck can omit writes entirely if the same content is already on disk.
 
-## `buck2 clean --stale`
+## `bsmr clean --stale`
 
 The deferred materializer can be configured to continuously delete stale
 artifacts, that haven't been recently accessed, or untracked artifacts, that
 exist in buck-out but not in the materalizer state.
 
-Unlike `buck2 clean` this does not fully wipe buck-out but it should not
+Unlike `bsmr clean` this does not fully wipe buck-out but it should not
 negatively impact build performance if you are building and rebasing regularly.
 
 Enabling this requires enabling [on-disk state](#on-disk-state) and
@@ -79,14 +79,14 @@ Enabling this requires enabling [on-disk state](#on-disk-state) and
 Buckconfig:
 
 ```ini
-[buck2]
+[bsmr]
 clean_stale_enabled = true
 ```
 
 It can be further configured by changing these default values:
 
 ```ini
-[buck2]
+[bsmr]
 # one week
 clean_stale_artifact_ttl_hours = 24 * 7
 clean_stale_period_hours = 24
@@ -105,7 +105,7 @@ clean_stale_start_offset_hours = 12
 - `clean_stale_low_disk_artifact_ttl_hours` (default 48) sets a shorter fixed
   TTL to use while free disk is at or below the threshold.
 - `clean_stale_low_disk_adaptive_enabled` (default false) replaces the fixed
-  shorter TTL with adaptive cleaning: buck2 keeps promoting the oldest retained
+  shorter TTL with adaptive cleaning: bsmr keeps promoting the oldest retained
   artifacts to stale until projected free disk rises back above the threshold,
   while protecting any artifact younger than
   `clean_stale_low_disk_adaptive_min_ttl_hours` (default 12).
@@ -115,4 +115,4 @@ to materialize artifacts, the clean will be interrupted and not run again until
 after the next scheduled period, but it should be able to make gradual progress
 and prevent long term accumulation of artifacts.
 
-If needed, a clean can be manually triggered by calling `buck2 clean --stale`.
+If needed, a clean can be manually triggered by calling `bsmr clean --stale`.

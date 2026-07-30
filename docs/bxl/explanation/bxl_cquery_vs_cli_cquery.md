@@ -1,11 +1,11 @@
 ---
 id: bxl_cquery_vs_cli_cquery
-title: BXL cquery vs. Buck2 CLI cquery - Divergence in Configuration Handling
+title: BXL cquery vs. Bessemer CLI cquery - Divergence in Configuration Handling
 ---
 
 ## Overview
 
-The command `buck2 cquery` and function `cquery` in bxl share the same goal but
+The command `bsmr cquery` and function `cquery` in bxl share the same goal but
 sometimes yield different results. This document explains why these commands
 might produce divergent results for identical-looking queries and how their
 underlying mechanisms diverge. By contrasting their approaches to configuration
@@ -25,12 +25,12 @@ Imagine we have:
 Assume that our goal is to determine the direct reverse dependencies of `X`
 within `root//path/...`. Let's look at two approaches:
 
-### `buck2 cquery`
+### `bsmr cquery`
 
 We can do a query like this:
 
 ```shell
-buck2 cquery 'rdeps(root//path/..., X, 1)`
+bsmr cquery 'rdeps(root//path/..., X, 1)`
 ```
 
 It will return `A (cfg_b)`, `C (cfg_b)` and `X(cfg_b)`
@@ -54,7 +54,7 @@ It will return empty.
 
 ## Core Difference
 
-### CLI `buck2 cquery`
+### CLI `bsmr cquery`
 
 When no [target universe](../../concepts/glossary.md#target-universe) is
 provided via the `--target-universe` CLI argument, it constructs the
@@ -107,7 +107,7 @@ Thus, the final result is `A (cfg_b)`, `C (cfg_b)`, and `X (cfg_b)`.
 
 ### `cquery` in bxl
 
-The bxl logic differs from the `buck2 cquery` approach.
+The bxl logic differs from the `bsmr cquery` approach.
 
 #### Phase 1: resolve arguments to configured target nodes if needed
 
@@ -119,7 +119,7 @@ If the arguments are not configured target(s), apply the default target platform
 
 #### Phase 2: run rdeps function
 
-This phase follows the same logic of "Phase 2" in CLI `buck2 cquery`
+This phase follows the same logic of "Phase 2" in CLI `bsmr cquery`
 
 But in this case, the second argument is different, it only has `X (cfg_a)`.
 Since `A (cfg_b)`, `B (cfg_b)` and `C (cfg_b)` do not directly depend on

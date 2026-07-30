@@ -1,0 +1,26 @@
+load("@bsmr_build//rules:rust.bzl", "proto_srcs", "rust_protobuf_library")
+load("@bsmr_build//rules:export_files.bzl", "export_file")
+
+oncall("build_infra")
+
+rust_protobuf_library(
+    name = "bsmr_subscription_proto",
+    srcs = glob(["src/**/*.rs"]),
+    build_script = "build.rs",
+    proto_srcs = ":bsmr_subscription_proto.proto",
+    deps = [
+        "fbsource//third-party/rust:derive_more",
+        "fbsource//third-party/rust:serde",
+        "//bsmr/packages/rust/allocative/allocative:allocative",
+    ],
+)
+
+proto_srcs(
+    name = "bsmr_subscription_proto.proto",
+    srcs = ["subscription.proto"],
+    visibility = ["PUBLIC"],
+)
+
+export_file(
+    name = "subscription.proto",
+)

@@ -8,7 +8,7 @@
 %% @format
 -module(buck_ct_provider).
 -moduledoc """
-behavior module defining callbacks for buck2 test providers
+behavior module defining callbacks for bsmr test providers
 """.
 -compile(warn_missing_spec_all).
 

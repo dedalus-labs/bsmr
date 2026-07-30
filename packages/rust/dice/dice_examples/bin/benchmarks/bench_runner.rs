@@ -97,7 +97,7 @@ impl Benchmark {
         } else {
             Command::new(&self.bin)
         };
-        cmd.env("BUCK2_DICE_DB_PATH", &self.db_path);
+        cmd.env("BSMR_DICE_DB_PATH", &self.db_path);
         if self.jeprof_dot {
             cmd.env("MALLOC_CONF", "prof:true");
             cmd.args(["--heap-dump", &self.output]);

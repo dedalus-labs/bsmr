@@ -11,8 +11,8 @@
 import json
 from pathlib import Path
 
-from buck2.tests.e2e_util.api.buck import Buck
-from buck2.tests.e2e_util.buck_workspace import buck_test
+from bsmr.tests.e2e_util.api.buck import Buck
+from bsmr.tests.e2e_util.buck_workspace import buck_test
 
 
 @buck_test(inplace=True)
@@ -22,7 +22,7 @@ async def test_cpp_test_coverage_with_network_sandboxing(
     coverage_file = tmp_path / "coverage.txt"
     await buck.test(
         "@fbcode//mode/dbgo-cov",
-        "fbcode//buck2/tests/targets/rules/cxx:cpp_test_pass",
+        "fbcode//bsmr/tests/targets/rules/cxx:cpp_test_pass",
         "-c",
         # We need to build the llvm coverage wrapper from source because otherwise this is served
         # via msdk which will fail to download the wrapper when wrapped in an `unshare` call.
@@ -37,5 +37,5 @@ async def test_cpp_test_coverage_with_network_sandboxing(
         for line in results:
             paths.append(json.loads(line)["filepath"])
 
-    assert "fbcode/buck2/tests/targets/rules/cxx/cpp_test_pass.cpp" in paths, str(paths)
+    assert "fbcode/bsmr/tests/targets/rules/cxx/cpp_test_pass.cpp" in paths, str(paths)
     assert "fbcode/common/gtest/LightMain.cpp" in paths, str(paths)

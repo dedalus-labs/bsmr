@@ -188,7 +188,7 @@ def list_starlark_files(git: bool):
     return starlark_files
 
 
-def rustfmt(buck2_dir: Path, ci: bool, git: bool) -> None:
+def rustfmt(bsmr_dir: Path, ci: bool, git: bool) -> None:
     """
     Make the formatting consistent, using the custom rustfmt,
     which is a pre-release of rustfmt 2.0.
@@ -208,7 +208,7 @@ def rustfmt(buck2_dir: Path, ci: bool, git: bool) -> None:
     ).stdout.strip()
     env = os.environ.copy()
     env["RUSTFMT"] = str(
-        buck2_dir.parent.parent / "tools" / "third-party" / "rustfmt" / "rustfmt"
+        bsmr_dir.parent.parent / "tools" / "third-party" / "rustfmt" / "rustfmt"
     )
 
     if run([cargo_fmt, "--"], env=env).returncode != 0:
@@ -221,7 +221,7 @@ def rustfmt(buck2_dir: Path, ci: bool, git: bool) -> None:
 
 
 RUSTC_ALLOW = {
-    # These are not in the shared-with-buck2 lists because they only appear in third-party deps.
+    # These are not in the shared-with-bsmr lists because they only appear in third-party deps.
     # Normally cargo would suppress those, but we do vendored builds and so it doesn't.
     "unfulfilled-lint-expectations",
     "unknown-lints",
@@ -298,7 +298,7 @@ def clippy(package_args: list[str], fix: bool, target_args: list[str]) -> None:
     )
 
 
-def starlark_linter(buck2: str, git: bool) -> None:
+def starlark_linter(bsmr: str, git: bool) -> None:
     if git:
         print_warn("Skipping starlark linter on git")
         return
@@ -310,7 +310,7 @@ def starlark_linter(buck2: str, git: bool) -> None:
         fp.flush()
         run(
             [
-                buck2,
+                bsmr,
                 "--isolation-dir=starlark-linter",
                 "starlark",
                 "lint",
@@ -366,9 +366,9 @@ def rustdoc(package_args: list[str], target_args: list[str]) -> None:
         if line.get("reason") != "compiler-message":
             continue
 
-        # If it's not from buck2 itself (e.g. a dep), ignore.
+        # If it's not from bsmr itself (e.g. a dep), ignore.
         target = line.get("target", {}).get("src_path", "")
-        if "/buck2/" not in target:
+        if "/bsmr/" not in target:
             continue
 
         # If it's not a doc warning, ignore it. The `message` field will
@@ -421,10 +421,10 @@ def main() -> None:
         help="Use `git` to check repo state, the script defaults to `hg`",
     )
     parser.add_argument(
-        "--buck2",
+        "--bsmr",
         action="store",
-        default="buck2",
-        help="Path to a buck2 binary",
+        default="bsmr",
+        help="Path to a bsmr binary",
     )
     parser.add_argument(
         "--lint-only",
@@ -487,9 +487,9 @@ def main() -> None:
     )
     args = parser.parse_args()
 
-    # Change to buck2 directory
-    buck2_dir = Path(__file__).parent.absolute()
-    os.chdir(str(buck2_dir))
+    # Change to bsmr directory
+    bsmr_dir = Path(__file__).parent.absolute()
+    os.chdir(str(bsmr_dir))
 
     package_args = [f"--package={p.rstrip('/')}" for p in args.packages]
     if args.exclude:
@@ -502,7 +502,7 @@ def main() -> None:
         args.lint_rust_only or args.rustfmt_only or args.rustdoc_only or args.test_only
     ):
         with timing():
-            starlark_linter(args.buck2, args.git)
+            starlark_linter(args.bsmr, args.git)
 
     if not (
         args.rustfmt_only
@@ -515,7 +515,7 @@ def main() -> None:
 
     if not (args.lint_starlark_only or args.rustdoc_only or args.test_only):
         with timing():
-            rustfmt(buck2_dir, args.ci, args.git)
+            rustfmt(bsmr_dir, args.ci, args.git)
 
     if not (
         args.lint_only

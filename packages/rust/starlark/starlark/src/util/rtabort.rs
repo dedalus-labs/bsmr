@@ -21,7 +21,7 @@ use std::process;
 
 /// Like `panic!`, but aborts the process instead of unwinding.
 ///
-/// Although we compile buck2 with `panic=abort`, this is safer because
+/// Although we compile bsmr with `panic=abort`, this is safer because
 /// others may copy-paste code.
 macro_rules! rtabort {
     ($m:literal) => {

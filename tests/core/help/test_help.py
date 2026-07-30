@@ -12,18 +12,18 @@
 import asyncio
 import re
 
-from buck2.tests.e2e_util.api.buck import Buck
-from buck2.tests.e2e_util.buck_workspace import buck_test
-from buck2.tests.e2e_util.helper.golden import golden
+from bsmr.tests.e2e_util.api.buck import Buck
+from bsmr.tests.e2e_util.buck_workspace import buck_test
+from bsmr.tests.e2e_util.helper.golden import golden
 
 
 def _normalize(s: str) -> str:
     s = re.sub(
-        r"buck2 [a-z0-9]{16,64} (<build-id>|<exe-hash>)",
-        "buck2 <version> <version-source>",
+        r"bsmr [a-z0-9]{16,64} (<build-id>|<exe-hash>)",
+        "bsmr <version> <version-source>",
         s,
     )
-    s = re.sub(r"buck2\.exe", "buck2", s)
+    s = re.sub(r"bsmr\.exe", "bsmr", s)
     return "\n".join([x.rstrip() for x in s.splitlines()]) + "\n"
 
 
@@ -44,7 +44,7 @@ async def _test_help(buck: Buck, command_stack: list[str]) -> int:
     name = "-".join(["help", *command_stack])
     golden(
         output=_normalize(result.stdout),
-        rel_path=f"buck2-{name}.golden.txt",
+        rel_path=f"bsmr-{name}.golden.txt",
     )
 
     subcommands = _find_subcommands(result.stdout)

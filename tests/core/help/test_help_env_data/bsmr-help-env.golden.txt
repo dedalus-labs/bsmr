@@ -1,0 +1,58 @@
+# This file is @generated, regenerate by re-running test with `-- --env BSMR_UPDATE_GOLDEN=1` appended to the test command
+
+Name                             Type                  Default
+BSMR_ARG0                       String
+BSMR_CLIENT_METADATA            String
+BSMR_CONSOLE_OUTPUT_LIMIT       u64
+BSMR_DEBUG_RAWOUTPUT_CHUNK_SIZE usize                 DEFAULT_CHUNK_SIZE
+BSMR_DICE_DUMP_ON_PANIC         bool                  false
+BSMR_DICE_SNAPSHOT_INTERVAL_MS  u64                   500
+BSMR_DISABLE_EDEN_HEALTH_CHECK  bool                  false
+BSMR_DISABLE_FILE_ATTR          bool                  false
+BSMR_DISABLE_MACOS_QOS          bool                  false
+BSMR_EDEN_SEMAPHORE             usize                 DEFAULT_MAX_OUTSTANDING_REQUESTS
+BSMR_ENABLE_EDEN_THRIFT_READ    bool                  false
+BSMR_HARD_ERROR                 String
+BSMR_INSTALLER_SEND_TIMEOUT_S   u64
+BSMR_INSTALLER_TIMEOUT_S        u64
+BSMR_IO_SEMAPHORE               usize                 bsmr_util::threads::available_parallelism()
+BSMR_IO_THREADS                 usize                 4
+BSMR_KEEP_DEP_FILE_DIRECTORIES  bool                  false
+BSMR_LIB_BACKTRACE              String
+BSMR_MAX_BLOCKING_THREADS       usize
+BSMR_PARANOID_PATH              String
+BSMR_RE_DOWNLOAD_CONCURRENCY    usize                 256
+BSMR_RUNTIME_THREADS            usize
+BSMR_SCRIBE_CATEGORY            String
+BSMR_SHOW_SOFT_ERRORS           String
+BSMR_TEST_BLOCK_ON_UPLOAD       bool                  false
+BSMR_TEST_TPX_USE_TCP           bool                  false
+BSMR_WATCHMAN_TIMEOUT           u64                   57
+BUCKD_STARTUP_INIT_TIMEOUT       u64
+BUCKD_STARTUP_TIMEOUT            u64
+BUCK_CONSOLE                     String
+BUCK_DAEMON_LOG_TO_FILE          u8
+BUCK_DEFAULT_DIGEST_ALGORITHM    DigestAlgorithmFamily
+BUCK_DISABLE_EXPANDED_PROGRESS   bool                  false
+BUCK_LOG                         String
+BUCK_NO_INTERACTIVE_CONSOLE      String
+BUCK_OFFLINE_BUILD               String
+BUCK_PARANOID                    bool
+BUCK_PREFER_REMOTE               String
+BUCK_VERBOSE                     String
+BUCK_WRAPPER_START_TIME          u64
+CI                               bool                  false
+CODING_AGENT_METADATA            String
+DICE_DETECT_CYCLES_UNSTABLE      DetectCycles
+ENFORCE_DISPATCHER_SET           bool                  false
+FORCE_WANT_RESTART               bool                  false
+SANDCASTLE                       String
+SANDCASTLE_ALIAS                 String
+SANDCASTLE_ID                    String
+SANDCASTLE_INSTANCE_ID           u64
+SANDCASTLE_JOB_INFO              String
+SANDCASTLE_SCHEDULE_TYPE         String
+SANDCASTLE_TYPE                  String
+SCHEDULE_TYPE                    String
+SKYCASTLE_WORKFLOW_ALIAS         String
+SKYCASTLE_WORKFLOW_RUN_ID        String

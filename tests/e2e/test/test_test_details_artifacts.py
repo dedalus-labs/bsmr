@@ -13,8 +13,8 @@ import os
 import re
 from pathlib import Path
 
-from buck2.tests.e2e_util.api.buck import Buck
-from buck2.tests.e2e_util.buck_workspace import buck_test
+from bsmr.tests.e2e_util.api.buck import Buck
+from bsmr.tests.e2e_util.buck_workspace import buck_test
 from tae.testx.py.testx_helpers import TestXClient
 
 
@@ -42,7 +42,7 @@ def extract_test_run_id(haystack: str) -> int:
 @buck_test(inplace=True)
 async def test_passing_test_details_uploaded_to_artifacts(buck: Buck) -> None:
     output = await buck.test(
-        "fbcode//buck2/tests/targets/rules/python_test:test_produce_test_details",
+        "fbcode//bsmr/tests/targets/rules/python_test:test_produce_test_details",
         "--remote-only",
         "--",
         "--upload-passing-details",

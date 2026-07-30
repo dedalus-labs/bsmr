@@ -13,7 +13,7 @@ import json
 from pathlib import Path
 from typing import List, Optional
 
-from buck2.tests.e2e_util.api.buck import Buck
+from bsmr.tests.e2e_util.api.buck import Buck
 
 
 async def collect_coverage_for(

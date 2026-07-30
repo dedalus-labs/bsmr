@@ -50,7 +50,7 @@ import java.util.stream.Collectors;
 public class WorkerGrpcServer implements ServerInterceptor {
   private static final Logger LOG = Logger.get(WorkerGrpcServer.class);
 
-  // The gRPC server handles sequential compilation requests from a single buck2 client
+  // The gRPC server handles sequential compilation requests from a single bsmr client
   // over UDS, so minimal threads suffice. Default Netty thread count is 2x CPU cores
   // (~144 on production hosts), which wastes ~140MB of memory on thread stacks.
   static final int EVENT_LOOP_THREADS = 1;

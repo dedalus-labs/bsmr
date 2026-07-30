@@ -3,8 +3,8 @@ id: restarter
 title: Restarter
 ---
 
-The Restarter can automatically restart Buck2 when Buck2 detects that it hit a
-condition that may be recovered by restarting the Buck2 daemon.
+The Restarter can automatically restart Bessemer when Bessemer detects that it hit a
+condition that may be recovered by restarting the Bessemer daemon.
 
 This is particularly useful with
 [Deferred Materialization](deferred_materialization.md), which may require a
@@ -16,6 +16,6 @@ your Remote Execution backend.
 To enable, add this to your Buckconfig:
 
 ```ini
-[buck2]
+[bsmr]
 restarter = true
 ```

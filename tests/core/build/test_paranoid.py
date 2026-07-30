@@ -16,19 +16,19 @@ import string
 from pathlib import Path
 from typing import Any
 
-from buck2.tests.e2e_util.api.buck import Buck
-from buck2.tests.e2e_util.asserts import expect_failure
-from buck2.tests.e2e_util.buck_workspace import buck_test
+from bsmr.tests.e2e_util.api.buck import Buck
+from bsmr.tests.e2e_util.asserts import expect_failure
+from bsmr.tests.e2e_util.buck_workspace import buck_test
 
 # FIXME(JakobDegen): Give these tests their own data dir, instead of sharing one
 
 # TODO(T184317763): either those tests are flaky or paranoid mode is broken,
-# to repro uncomment and run `buck2 test '@fbcode//mode/opt-asan' fbcode//buck2/tests/e2e/build:test_paranoid -- --exact 'buck2/tests/e2e/build:test_paranoid - test_paranoid.py::test_paranoid_allows_fallback_after_re_failure' --run-disabled`
+# to repro uncomment and run `bsmr test '@fbcode//mode/opt-asan' fbcode//bsmr/tests/e2e/build:test_paranoid -- --exact 'bsmr/tests/e2e/build:test_paranoid - test_paranoid.py::test_paranoid_allows_fallback_after_re_failure' --run-disabled`
 # @buck_test(
 #     data_dir="execution_platforms",
 #     skip_for_os=["windows"],
 # )
-# @env("BUCK2_TEST_FAIL_RE_DOWNLOADS", "true")
+# @env("BSMR_TEST_FAIL_RE_DOWNLOADS", "true")
 # async def test_paranoid_allows_fallback_after_re_failure(
 #     buck: Buck,
 # ) -> None:
@@ -85,7 +85,7 @@ async def test_paranoid_ignores_preferences(
 
 
 # TODO(T184317763): either those tests are flaky or paranoid mode is broken,
-# to repro uncomment and run `buck2 test '@fbcode//mode/opt-asan' fbcode//buck2/tests/e2e/build:test_paranoid -- --exact 'buck2/tests/e2e/build:test_paranoid - test_paranoid.py::test_paranoid_forces_fallback_on_failure' --run-disabled`
+# to repro uncomment and run `bsmr test '@fbcode//mode/opt-asan' fbcode//bsmr/tests/e2e/build:test_paranoid -- --exact 'bsmr/tests/e2e/build:test_paranoid - test_paranoid.py::test_paranoid_forces_fallback_on_failure' --run-disabled`
 # @buck_test(
 #     data_dir="execution_platforms",
 #     skip_for_os=["windows"],
@@ -145,7 +145,7 @@ async def test_paranoid_enable_disable(
     buck: Buck,
     tmp_path: Path,
 ) -> None:
-    env = {"BUCK2_PARANOID_PATH": str(tmp_path / "paranoid.info")}
+    env = {"BSMR_PARANOID_PATH": str(tmp_path / "paranoid.info")}
 
     # Start the daemon
     await buck.build(env=env)

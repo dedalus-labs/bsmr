@@ -1,15 +1,15 @@
-## Build buck2 with Cargo
+## Build bsmr with Cargo
 
-From buck2 project root, run the following to build buck2 with cargo
+From bsmr project root, run the following to build bsmr with cargo
 
 ```sh
-cargo install --path=app/buck2 --root=/tmp
-export BUCK2="/tmp/bin/buck2"
+cargo install --path=app/bsmr --root=/tmp
+export BSMR="/tmp/bin/bsmr"
 ```
 
-## Run `buck2 init --git`
+## Run `bsmr init --git`
 
-Run `buck2 init` to initialize the prelude directory.
+Run `bsmr init` to initialize the prelude directory.
 
 Now all targets aside from OCaml related ones are ready to be built.
 
@@ -28,6 +28,6 @@ overwritten.
 **_NOTE:_** These commands are currently only supported on Linux and macOS.
 
 ```sh
-$BUCK2 build //ocaml/...
-$BUCK2 run //python/hello_world:main
+$BSMR build //ocaml/...
+$BSMR run //python/hello_world:main
 ```

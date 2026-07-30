@@ -102,7 +102,7 @@ pub(crate) enum Kind {
 #[derive(Debug, Clone, Deserialize, PartialEq, Eq)]
 pub(crate) struct TargetInfo {
     pub(crate) name: String,
-    /// The target identifier, e.g. `fbcode//buck2/tools/rust-project:rust-project`.
+    /// The target identifier, e.g. `fbcode//bsmr/tools/rust-project:rust-project`.
     ///
     /// See also <https://buck2.build/docs/concepts/labels/>
     pub(crate) label: String,
@@ -128,7 +128,7 @@ pub(crate) struct TargetInfo {
     pub(crate) deps: Vec<Target>,
     #[serde(rename = "tests")]
     pub(crate) test_deps: Vec<Target>,
-    // Optional set of renamed crates. in buck2, these are not unified with
+    // Optional set of renamed crates. in bsmr, these are not unified with
     // `buck.direct_dependencies` and are instead a separate entry.
     #[serde(deserialize_with = "deserialize_named_deps")]
     pub(crate) named_deps: FxHashMap<String, Target>,
@@ -404,7 +404,7 @@ mod tests {
         assert!(with_label("fbsource//third-party/rust/top:rustc").is_reindeer_third_party());
 
         assert!(
-            !with_label("fbcode//buck2/tools/rust-project:rust-project").is_reindeer_third_party()
+            !with_label("fbcode//bsmr/tools/rust-project:rust-project").is_reindeer_third_party()
         );
         // A first-party crate that merely lives under a similarly-named path is
         // not a reindeer root.

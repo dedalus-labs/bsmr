@@ -1,0 +1,25 @@
+# @nolint 
+
+# @oss-disable[end= ]: load("@bsmr_build//rules:rust.bzl", "rust_library")
+# @oss-disable[end= ]: load("@bsmr_build//rules:rust.bzl", "rust_unittest")
+
+
+oncall("build_infra")
+
+rust_library(
+    name = "library",
+    srcs = ["src/lib.rs"],
+    visibility = ["PUBLIC"],
+    deps = [
+        "fbcode//bsmr/docs/bsmr_lab/logging_lib:logging_lib",
+    ],
+)
+
+# @oss-disable: rust_unittest(
+    rust_test( # @oss-enable
+    name = "test",
+    srcs = ["tests/test.rs"],
+    deps = [
+        ":library",
+    ],
+)

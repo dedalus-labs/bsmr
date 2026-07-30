@@ -11,8 +11,8 @@
 import csv
 import json
 
-from buck2.tests.e2e_util.api.buck import Buck
-from buck2.tests.e2e_util.buck_workspace import buck_test
+from bsmr.tests.e2e_util.api.buck import Buck
+from bsmr.tests.e2e_util.buck_workspace import buck_test
 
 
 @buck_test()
@@ -48,7 +48,7 @@ async def test_what_materialized_sorted(buck: Buck) -> None:
 @buck_test()
 async def test_what_materialized_aggregated(buck: Buck) -> None:
     await buck.build("//:my_rule")
-    # buck2 log what-materialized --aggregate-by-ext has the following output:
+    # bsmr log what-materialized --aggregate-by-ext has the following output:
     # <empty>	cas	1	1
     out = await buck.log("what-materialized", "--aggregate-by-ext")
     out = [line.split() for line in out.stdout.splitlines() if line]

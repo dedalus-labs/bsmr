@@ -12,10 +12,10 @@
 import json
 from pathlib import Path
 
-from buck2.tests.e2e_util.api.buck import Buck
-from buck2.tests.e2e_util.asserts import expect_failure
-from buck2.tests.e2e_util.buck_workspace import buck_test
-from buck2.tests.e2e_util.helper.golden import (
+from bsmr.tests.e2e_util.api.buck import Buck
+from bsmr.tests.e2e_util.asserts import expect_failure
+from bsmr.tests.e2e_util.buck_workspace import buck_test
+from bsmr.tests.e2e_util.helper.golden import (
     golden,
     GOLDEN_DIRECTORY,
     sanitize_build_report,
@@ -106,11 +106,11 @@ async def test_build_modifiers_that_lead_to_same_configured(buck: Buck) -> None:
         mac_first,
         arm_first,
         "-c",
-        "buck2.detailed_aggregated_metrics=true",
+        "bsmr.detailed_aggregated_metrics=true",
         "-c",
-        "buck2.log_configured_graph_sketch=true",
+        "bsmr.log_configured_graph_sketch=true",
         "-c",
-        "buck2.log_configured_graph_unconfigured_sketch=true",
+        "bsmr.log_configured_graph_unconfigured_sketch=true",
     )
 
     report = json.loads(result.stdout)
