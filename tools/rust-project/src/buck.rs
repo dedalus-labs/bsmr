@@ -1436,7 +1436,7 @@ fn test_cfg_scoped_to_first_party() {
     // First-party crate gets both `test` and `fbcode_build`, regardless of
     // workspace membership (`in_workspace` is false here).
     let first_party = crate_cfg(
-        &make_info("fbcode//buck2/integrations/rust-project:rust-project"),
+        &make_info("fbcode//buck2/tools/rust-project:rust-project"),
         global_extra_cfgs,
         first_party_extra_cfgs,
     );

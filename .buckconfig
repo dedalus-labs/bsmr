@@ -14,7 +14,7 @@ ignore = \
     app/buck2_explain, \
     app_dep_graph_rules, \
     examples, \
-    integrations/rust-project/tests, \
+    tools/rust-project/tests, \
     tests, \
     .jj, \
     .git, \

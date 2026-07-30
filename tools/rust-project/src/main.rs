@@ -442,7 +442,7 @@ fn test_parse_use_clippy() {
 #[cfg(fbcode_build)]
 #[test]
 fn json_args_pass() {
-    let args = JsonArguments::Path(PathBuf::from("buck2/integrations/rust-project/src/main.rs"));
+    let args = JsonArguments::Path(PathBuf::from("buck2/tools/rust-project/src/main.rs"));
     let expected = Opt {
         command: Some(Command::DevelopJson {
             args,
@@ -457,12 +457,12 @@ fn json_args_pass() {
     let actual = Opt::try_parse_from([
         "rust-project",
         "develop-json",
-        "{\"path\":\"buck2/integrations/rust-project/src/main.rs\"}",
+        "{\"path\":\"buck2/tools/rust-project/src/main.rs\"}",
     ])
     .expect("Unable to parse args");
     assert_eq!(actual, expected);
 
-    let args = JsonArguments::Label("//buck2/integrations/rust-project:rust-project".to_owned());
+    let args = JsonArguments::Label("//buck2/tools/rust-project:rust-project".to_owned());
     let expected = Opt {
         command: Some(Command::DevelopJson {
             args,
@@ -477,12 +477,12 @@ fn json_args_pass() {
     let actual = Opt::try_parse_from([
         "rust-project",
         "develop-json",
-        "{\"label\":\"//buck2/integrations/rust-project:rust-project\"}",
+        "{\"label\":\"//buck2/tools/rust-project:rust-project\"}",
     ])
     .expect("Unable to parse args");
     assert_eq!(actual, expected);
 
-    let args = JsonArguments::Buildfile(PathBuf::from("buck2/integrations/rust-project/BUCK"));
+    let args = JsonArguments::Buildfile(PathBuf::from("buck2/tools/rust-project/BUCK"));
     let expected = Opt {
         command: Some(Command::DevelopJson {
             args,
@@ -497,7 +497,7 @@ fn json_args_pass() {
     let actual = Opt::try_parse_from([
         "rust-project",
         "develop-json",
-        "{\"buildfile\":\"buck2/integrations/rust-project/BUCK\"}",
+        "{\"buildfile\":\"buck2/tools/rust-project/BUCK\"}",
     ])
     .expect("Unable to parse args");
     assert_eq!(actual, expected);

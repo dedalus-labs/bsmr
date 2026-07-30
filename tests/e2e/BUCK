@@ -11,7 +11,7 @@ buck2_e2e_test(
     name = "test_rust_project",
     srcs = ["test_rust_project.py"],
     env = {
-        "RUST_PROJECT_BIN": "$(location fbcode//buck2/integrations/rust-project:rust-project)",
+        "RUST_PROJECT_BIN": "$(location fbcode//buck2/tools/rust-project:rust-project)",
     },
 )
 
