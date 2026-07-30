@@ -81,8 +81,7 @@ use buck2_error::internal_error;
 /// There are two alternatives to late binding, that can be used in similar situations.
 /// These are similar to trait downcasting, which is not supported natively in the Rust language.
 ///
-/// * `Provider` from `shed/provider` crate
-/// * Starlark's `StarlarkValue`/`Value` support similar API to `provider::Provider`
+/// * Starlark's `StarlarkValue`/`Value` support a similar API
 ///
 /// # Drawbacks
 ///

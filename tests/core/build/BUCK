@@ -13,7 +13,7 @@ buck2_core_tests(
         },
         "test_memory_sketches": {
             "env": {
-                "SKETCH_SIZE_BIN": "$(location fbcode//buck2/shed/setsketch:sketch_size)",
+                "SKETCH_SIZE_BIN": "$(location fbcode//buck2/packages/rust/setsketch:sketch_size)",
             },
         },
         "test_paranoid": {

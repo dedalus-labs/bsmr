@@ -148,12 +148,11 @@ members = [
   "packages/rust/pagable/pagable_storage",
   "packages/rust/remote_execution/oss/re_grpc",
   "packages/rust/remote_execution/oss/re_grpc_proto",
-  "shed/lock_free_hashtable",
-  "shed/lock_free_vec",
-  "shed/provider",
-  "shed/setsketch",
-  "shed/static_interner",
-  "shed/three_billion_instructions",
+  "packages/rust/lock_free_hashtable",
+  "packages/rust/lock_free_vec",
+  "packages/rust/setsketch",
+  "packages/rust/static_interner",
+  "tools/testing/three-billion-instructions",
   "packages/rust/starlark/starlark",
   "packages/rust/starlark/starlark_bin",
   "packages/rust/starlark/starlark_derive",
@@ -352,8 +351,8 @@ itertools = "0.15.0"
 libc = "0.2.186"
 linked-hash-map = { version = "0.5", features = ["serde_impl"] }
 linkme = { version = "0.3.36", features = ["used_linker"] }
-lock_free_hashtable = { path = "shed/lock_free_hashtable", features = ["allocative"] }
-lock_free_vec = { path = "shed/lock_free_vec" }
+lock_free_hashtable = { path = "packages/rust/lock_free_hashtable", features = ["allocative"] }
+lock_free_vec = { path = "packages/rust/lock_free_vec" }
 lru = { version = "0.16.4", default-features = false }
 lsp-server = "0.7.9"
 lsp-types = "0.97"
@@ -404,7 +403,7 @@ sequence_trie = { version = "0.3.6", features = ["serde"] }
 serde = { version = "1.0.219", features = ["derive", "rc"] }
 serde_json = { version = "1.0.140", features = ["alloc", "float_roundtrip", "raw_value", "unbounded_depth"] }
 serde_path_to_error = "0.1.20"
-setsketch = { path = "shed/setsketch" }
+setsketch = { path = "packages/rust/setsketch" }
 sha1 = "0.10.7"
 sha2 = "0.10.6"
 shlex = "1.3"
@@ -419,7 +418,7 @@ starlark_lsp = { path = "packages/rust/starlark/starlark_lsp" }
 starlark_map = { path = "packages/rust/starlark/starlark_map", features = ["pagable_dep"] }
 starlark_syntax = { path = "packages/rust/starlark/starlark_syntax" }
 static_assertions = "1.1.0"
-static_interner = { path = "shed/static_interner", features = ["allocative", "dupe", "strong_hash"] }
+static_interner = { path = "packages/rust/static_interner", features = ["allocative", "dupe", "strong_hash"] }
 strong_hash = { path = "packages/rust/gazebo/strong_hash", features = ["num-bigint", "triomphe"] }
 strsim = "0.11.1"
 strum = { version = "0.28.0", features = ["derive"] }
@@ -438,7 +437,7 @@ test-case = "3.3.1"
 textwrap = { version = "0.16.0", features = ["terminal_size"] }
 thiserror = "2.0.18"
 threadpool = "1.8.1"
-three_billion_instructions = { path = "shed/three_billion_instructions" }
+three_billion_instructions = { path = "tools/testing/three-billion-instructions" }
 tikv-jemallocator = "0.6.1"
 tokio = { version = "1.52.3", features = ["full", "test-util", "tracing"] }
 tokio-retry = "0.3.2"

@@ -7,7 +7,7 @@ repository = { workspace = true }
 version = "0.1.3"
 
 [dependencies]
-allocative = { version = "0.3.6", path = "../../packages/rust/allocative/allocative", default-features = false, optional = true }
+allocative = { version = "0.3.6", path = "../allocative/allocative", default-features = false, optional = true }
 dupe = { workspace = true, optional = true }
 equivalent = { workspace = true }
 lock_free_hashtable = { workspace = true }

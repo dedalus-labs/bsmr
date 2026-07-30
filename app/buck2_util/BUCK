@@ -8,7 +8,7 @@ rust_library(
         ["src/**/*.rs"],
     ),
     test_deps = [
-        "fbcode//buck2/shed/three_billion_instructions:three_billion_instructions",
+        "fbcode//buck2/tools/testing/three-billion-instructions:three_billion_instructions",
         "fbsource//third-party/rust:serde_json",
     ],
     deps = [
