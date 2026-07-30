@@ -48,14 +48,12 @@ impl DiffEventLogOptions {
             path: self.path1.clone(),
             trace_id: self.trace_id1.clone(),
             no_remote: false,
-            allow_remote: true,
         };
         let options2 = &EventLogOptions {
             recent: self.recent2,
             path: self.path2.clone(),
             trace_id: self.trace_id2.clone(),
             no_remote: false,
-            allow_remote: true,
         };
 
         let log_path1 = options1.get(ctx).await?;

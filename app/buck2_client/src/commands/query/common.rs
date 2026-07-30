@@ -27,7 +27,6 @@ enum QueryOutputFormatArg {
     Json,
     DotCompact,
     Starlark,
-    Html,
 }
 
 /// Args common to all the query commands
@@ -58,9 +57,8 @@ pub(crate) struct CommonQueryOptions {
            dot_compact - compact alternative to dot format. \n
            json - JSON format. \n
            starlark - targets are printed like starlark code that would produce them.
-           html - html file containing interactive target graph.
          ",
-        value_name = "dot|dot_compact|json|starlark|html",
+        value_name = "dot|dot_compact|json|starlark",
         value_enum
     )]
     output_format: Option<QueryOutputFormatArg>,
@@ -93,7 +91,6 @@ impl CommonQueryOptions {
             Some(QueryOutputFormatArg::Dot) => QueryOutputFormat::Dot,
             Some(QueryOutputFormatArg::DotCompact) => QueryOutputFormat::DotCompact,
             Some(QueryOutputFormatArg::Starlark) => QueryOutputFormat::Starlark,
-            Some(QueryOutputFormatArg::Html) => QueryOutputFormat::Html,
             None => {
                 if self.json {
                     QueryOutputFormat::Json

@@ -14,7 +14,6 @@ use std::path::PathBuf;
 use async_trait::async_trait;
 use buck2_cli_proto::BuildRequest;
 use buck2_cli_proto::BuildTarget;
-use buck2_cli_proto::TargetCfg;
 use buck2_cli_proto::build_request::BuildProviders;
 use buck2_cli_proto::build_request::ResponseOptions;
 use buck2_cli_proto::build_request::build_providers;
@@ -185,18 +184,6 @@ impl BuildCommand {
             return build_providers::Action::BuildIfAvailable;
         }
         build_providers::Action::Skip
-    }
-
-    pub(crate) fn patterns(&self) -> &Vec<String> {
-        &self.patterns
-    }
-
-    pub(crate) fn target_universe(&self) -> &Vec<String> {
-        &self.target_cfg.target_universe
-    }
-
-    pub(crate) fn target_cfg(&self) -> TargetCfg {
-        self.target_cfg.target_cfg.target_cfg().clone()
     }
 }
 

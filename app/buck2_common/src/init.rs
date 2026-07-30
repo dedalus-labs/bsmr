@@ -463,7 +463,6 @@ impl ResourceControlConfig {
 
 #[derive(Allocative, Clone, Debug, Serialize, Deserialize, PartialEq, Eq)]
 pub enum LogDownloadMethod {
-    Manifold,
     Curl(String),
     None,
 }
@@ -533,37 +532,20 @@ impl DaemonStartupConfig {
     pub fn new(config: &LegacyBuckConfig) -> buck2_error::Result<Self> {
         // Intepreted client side because we need the value here.
 
-        let log_download_method = {
-            // Determine the log download method to use. Only default to
-            // manifold in fbcode contexts, or when specifically asked.
-            let use_manifold_default = cfg!(fbcode_build);
-            let use_manifold = config
-                .parse(BuckconfigKeyRef {
-                    section: "buck2",
-                    property: "log_use_manifold",
-                })?
-                .unwrap_or(use_manifold_default);
-
-            if use_manifold {
-                Ok(LogDownloadMethod::Manifold)
+        let log_download_method = if let Some(log_url) = config.get(BuckconfigKeyRef {
+            section: "buck2",
+            property: "log_url",
+        }) {
+            if log_url.is_empty() {
+                Err(buck2_error::buck2_error!(
+                    buck2_error::ErrorTag::Input,
+                    "log_url is empty"
+                ))
             } else {
-                let log_url = config.get(BuckconfigKeyRef {
-                    section: "buck2",
-                    property: "log_url",
-                });
-                if let Some(log_url) = log_url {
-                    if log_url.is_empty() {
-                        Err(buck2_error::buck2_error!(
-                            buck2_error::ErrorTag::Input,
-                            "log_url is empty, but log_use_manifold is false"
-                        ))
-                    } else {
-                        Ok(LogDownloadMethod::Curl(log_url.to_owned()))
-                    }
-                } else {
-                    Ok(LogDownloadMethod::None)
-                }
+                Ok(LogDownloadMethod::Curl(log_url.to_owned()))
             }
+        } else {
+            Ok(LogDownloadMethod::None)
         }?;
 
         Ok(Self {
@@ -660,11 +642,7 @@ impl DaemonStartupConfig {
             materializations: None,
             http: HttpConfig::default(),
             resource_control: ResourceControlConfig::testing_default(),
-            log_download_method: if cfg!(fbcode_build) {
-                LogDownloadMethod::Manifold
-            } else {
-                LogDownloadMethod::None
-            },
+            log_download_method: LogDownloadMethod::None,
             health_check_config: HealthCheckConfig::default(),
             retained_event_logs: DEFAULT_RETAINED_EVENT_LOGS,
             macos_qos_class: None,

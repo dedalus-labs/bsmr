@@ -71,13 +71,7 @@ impl EventSubscriber for EventLog {
         // TODO(nga): currently we mostly ignore buckd stderr.
         //   It is very important to investigate crashes of buckd.
         //
-        //   We attach truncated log to Scuba since D53337966
-        //   (although we probably shouldn't do that).
-        //
-        //   Regardless of that we should do either or both of the following:
-        //   - write it to event log if it is interesting (e.g. crash)
-        //   - upload it to manifold unconditionally as a separate file
-        //     (but only relevant part, since command start)
+        // Write interesting daemon errors, such as crashes, to the event log.
         Ok(())
     }
 

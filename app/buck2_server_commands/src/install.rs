@@ -41,9 +41,6 @@ use buck2_cli_proto::InstallResponse;
 use buck2_common::client_utils::get_channel_tcp;
 use buck2_common::client_utils::retrying;
 use buck2_common::file_ops::metadata::FileDigest;
-use buck2_common::manifold::Bucket;
-use buck2_common::manifold::ManifoldClient;
-use buck2_common::manifold::Ttl;
 use buck2_common::pattern::parse_from_cli::parse_patterns_with_modifiers_from_cli_args;
 use buck2_common::pattern::resolve::ResolveTargetPatterns;
 use buck2_core::buck2_env;
@@ -865,40 +862,16 @@ async fn handle_install_request(
         Err(e) => (None, Vec::new(), Err(e)),
     };
 
-    let mut log_url = None;
-    let log_location = match upload_installer_logs(&log_path).await {
-        Ok(url) => {
-            log_url = Some(url.clone());
-            url
-        }
-        Err(err) => {
-            let _unused = soft_error!("installer_log_upload_failed", err.clone());
-            log_path.to_string()
-        }
-    };
+    let log_location = log_path.to_string();
 
     result = result.map_err(|err| append_installer_context(err, &stderr_log_path, &log_location));
 
     get_dispatcher().instant_event(buck2_data::InstallFinished {
         duration: install_duration.and_then(|d| d.try_into().ok()),
         device_metadata,
-        log_url,
+        log_url: None,
     });
     result
-}
-
-async fn upload_installer_logs(log_path: &AbsNormPathBuf) -> buck2_error::Result<String> {
-    let manifold = ManifoldClient::new().await?;
-    let trace_id: &str = &get_dispatcher().trace_id().to_string();
-    let manifold_filename = format!("flat/{trace_id}.log");
-    manifold
-        .upload_file(
-            log_path,
-            manifold_filename,
-            Bucket::INSTALLER_LOGS,
-            Ttl::from_days(14),
-        )
-        .await
 }
 
 async fn build_launch_installer(

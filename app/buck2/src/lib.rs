@@ -17,7 +17,6 @@ use buck2_client::commands::bxl::BxlCommand;
 use buck2_client::commands::clean::CleanCommand;
 use buck2_client::commands::ctargets::ConfiguredTargetsCommand;
 use buck2_client::commands::expand_external_cell::ExpandExternalCellsCommand;
-use buck2_client::commands::explain::ExplainCommand;
 use buck2_client::commands::help_env::HelpEnvCommand;
 use buck2_client::commands::init::InitCommand;
 use buck2_client::commands::install::InstallCommand;
@@ -360,7 +359,6 @@ pub(crate) enum CommandKind {
     Test(TestCommand),
     Cquery(CqueryCommand),
     Init(InitCommand),
-    Explain(ExplainCommand),
     ExpandExternalCell(ExpandExternalCellsCommand),
     Install(InstallCommand),
     Kill(KillCommand),
@@ -550,7 +548,6 @@ impl CommandKind {
             CommandKind::Docs(cmd) => cmd.exec(Opt::command(), matches, command_ctx, events_ctx),
             CommandKind::Profile(cmd) => cmd.exec(matches, command_ctx, events_ctx),
             CommandKind::Init(cmd) => cmd.exec(matches, command_ctx),
-            CommandKind::Explain(cmd) => command_ctx.exec(cmd, matches, events_ctx),
             CommandKind::Install(cmd) => command_ctx.exec(cmd, matches, events_ctx),
             CommandKind::Log(cmd) => cmd.exec(matches, command_ctx, events_ctx),
             CommandKind::Lsp(cmd) => command_ctx.exec(cmd, matches, events_ctx),
@@ -593,7 +590,6 @@ impl CommandKind {
             CommandKind::Docs(_) => "docs",
             CommandKind::Profile(_) => "profile",
             CommandKind::Init(_) => "init",
-            CommandKind::Explain(cmd) => cmd.logging_name(),
             CommandKind::Install(cmd) => cmd.logging_name(),
             CommandKind::Log(cmd) => cmd.command_name(),
             CommandKind::Lsp(cmd) => cmd.logging_name(),

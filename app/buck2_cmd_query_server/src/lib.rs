@@ -21,7 +21,6 @@ use buck2_server_ctx::late_bindings::QueryServerCommands;
 use buck2_server_ctx::partial_result_dispatcher::PartialResultDispatcher;
 
 pub(crate) mod dot;
-pub(crate) mod html;
 pub(crate) mod query;
 mod query_output_format;
 

@@ -51,11 +51,7 @@ pub struct EventLogOptions {
     #[clap(long, group = "event_log", value_name = "ID")]
     pub trace_id: Option<TraceId>,
 
-    /// This option does nothing.
-    #[clap(long, requires = "trace_id")]
-    pub allow_remote: bool,
-
-    /// Do not allow downloading the log from manifold if it's not found locally.
+    /// Do not download the log if it is not found locally.
     #[clap(long, requires = "trace_id")]
     pub no_remote: bool,
 
@@ -129,27 +125,6 @@ impl EventLogOptions {
         // Delete the file on failure.
         let temp_path = TempPath::new_path(temp_path);
         let (command_name, command) = match ctx.log_download_method()? {
-            LogDownloadMethod::Manifold => {
-                let args = [
-                    "get",
-                    &format!("buck2_logs/flat/{log_file_name}"),
-                    temp_path
-                        .path()
-                        .as_os_str()
-                        .to_str()
-                        .ok_or_else(|| internal_error!("temp_path is not valid UTF-8"))?,
-                ];
-                crate::eprintln!("Spawning: manifold {}", args.join(" "))?;
-                (
-                    "Manifold",
-                    async_background_command("manifold")
-                        .args(args)
-                        .stdin(Stdio::null())
-                        .stdout(Stdio::null())
-                        .stderr(Stdio::piped())
-                        .spawn()?,
-                )
-            }
             LogDownloadMethod::Curl(log_url) => {
                 let log_url = log_url.trim_end_matches('/');
 

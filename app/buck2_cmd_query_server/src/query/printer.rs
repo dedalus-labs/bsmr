@@ -42,7 +42,6 @@ use serde::ser::SerializeSeq;
 use crate::dot::Dot;
 use crate::dot::DotCompact;
 use crate::dot::targets::DotTargetGraph;
-use crate::html::Html;
 use crate::query::QueryCommandError;
 use crate::query::query_target_ext::QueryCommandTarget;
 use crate::query_output_format::QueryOutputFormatInfo;
@@ -226,14 +225,17 @@ impl<'a> QueryResultPrinter<'a> {
         resolver: &'a CellResolver,
         attributes: &[String],
         output_format: i32,
-        trace_id: String,
+        _trace_id: String,
     ) -> buck2_error::Result<Self> {
-        Self::from_options(
-            resolver,
-            attributes,
-            QueryOutputFormatInfo::from_protobuf_int(output_format, trace_id)
-                .expect("cli should send a valid output_format enum"),
-        )
+        let output_format =
+            QueryOutputFormatInfo::from_protobuf_int(output_format).ok_or_else(|| {
+                buck2_error::buck2_error!(
+                    buck2_error::ErrorTag::Input,
+                    "unsupported query output format `{}`",
+                    output_format
+                )
+            })?;
+        Self::from_options(resolver, attributes, output_format)
     }
 
     pub(crate) fn from_options(
@@ -404,9 +406,6 @@ impl<'a> QueryResultPrinter<'a> {
                         &mut output,
                     )?;
                 }
-                QueryOutputFormatInfo::Html(trace_id) => {
-                    Html::render(targets, &mut output, trace_id.clone()).await?
-                }
                 QueryOutputFormatInfo::DotCompact => {
                     DotCompact::render(
                         &DotTargetGraph {
@@ -453,12 +452,6 @@ impl<'a> QueryResultPrinter<'a> {
                         return Err(buck2_error::buck2_error!(
                             buck2_error::ErrorTag::Unimplemented,
                             "dot_compact output for files not implemented yet"
-                        ));
-                    }
-                    QueryOutputFormatInfo::Html(..) => {
-                        return Err(buck2_error::buck2_error!(
-                            buck2_error::ErrorTag::Unimplemented,
-                            "html output for files not implemented yet"
                         ));
                     }
                 }

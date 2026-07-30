@@ -30,7 +30,6 @@ rust_library(
         "//buck2/app/buck2_event_observer:buck2_event_observer",
         "//buck2/app/buck2_events:buck2_events",
         "//buck2/app/buck2_execute:buck2_execute",
-        # @oss-disable[end= ]: "//buck2/app/buck2_explain:buck2_explain",
         "//buck2/app/buck2_fs:buck2_fs",
         "//buck2/app/buck2_hash:buck2_hash",
         "//buck2/app/buck2_install_proto:buck2_install_proto",
