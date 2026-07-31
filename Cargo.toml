@@ -345,7 +345,7 @@ indoc = "2.0.2"
 inferno = { version = "0.12.8", default-features = false }
 internment = { version = "0.8.6", features = ["arc", "serde"] }
 inventory = "0.3.24"
-ipnetwork = "0.20.0"
+ipnetwork = "0.21.1"
 is_proc_translated = "0.1.1"
 itertools = "0.15.0"
 libc = "0.2.186"
