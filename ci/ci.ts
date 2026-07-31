@@ -1,4 +1,4 @@
-import { and, eq, format, github, job, workflow } from "@dedalus-labs/hollywood";
+import { and, eq, expr, format, github, job, workflow } from "@dedalus-labs/hollywood";
 
 const saveRustCache = and(
 	eq(github.eventName, "push"),
@@ -12,6 +12,55 @@ const dotSlashUrl =
 	"https://github.com/facebook/dotslash/releases/download/v0.5.9/dotslash-linux-musl.x86_64.v0.5.9.tar.gz";
 const dotSlashSha256 =
 	"4c75c6eb7890ae35993b962073f6d9bbe78b42b81a5691303ad70f63bfbf7196";
+const checkout = {
+	name: "Checkout",
+	uses: "actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1",
+	with: { "persist-credentials": false },
+} as const;
+const installRust = {
+	name: "Install pinned Rust toolchain",
+	run: "rustup toolchain install nightly-2026-04-11 --profile minimal --component clippy --component llvm-tools-preview --component rust-src --no-self-update",
+} as const;
+const rustCache = (save: boolean | typeof saveRustCache) =>
+	({
+		name: "Restore Rust cache",
+		uses: "Swatinem/rust-cache@e18b497796c12c097a38f9edb9d0641fb99eee32",
+		with: {
+			"prefix-key": "bsmr-v1",
+			"save-if": save,
+			"shared-key": "rust",
+		},
+	}) as const;
+const rustEnvironment = {
+	CARGO_INCREMENTAL: "0",
+} as const;
+const rustPermissions = {
+	contents: "read",
+} as const;
+const installOsvScanner = {
+	name: "Install pinned OSV Scanner",
+	run: [
+		`curl --proto '=https' --tlsv1.2 --fail --location --silent --show-error ${osvScannerUrl} --output "$RUNNER_TEMP/osv-scanner"`,
+		`echo "${osvScannerSha256}  $RUNNER_TEMP/osv-scanner" | sha256sum --check`,
+		'chmod 500 "$RUNNER_TEMP/osv-scanner"',
+	].join("\n"),
+} as const;
+const auditRustDependencies = {
+	name: "Audit Rust dependencies",
+	run: [
+		'"$RUNNER_TEMP/osv-scanner" scan source --lockfile Cargo.lock --lockfile tools/build/third-party/rust/Cargo.lock --no-resolve --format json --output-file "$RUNNER_TEMP/osv.json" . || [ "$?" -eq 1 ]',
+		"jq -e '[.results[].packages[].vulnerabilities[] | select(any(.affected[]; .database_specific.informational? != \"unmaintained\"))] as $v | if ($v | length) == 0 then true else ($v | map({id, summary})), false end' \"$RUNNER_TEMP/osv.json\"",
+	].join("\n"),
+} as const;
+const installDotSlash = {
+	name: "Install pinned DotSlash",
+	run: [
+		`curl --proto '=https' --tlsv1.2 --fail --location --silent --show-error ${dotSlashUrl} --output "$RUNNER_TEMP/dotslash.tar.gz"`,
+		`echo "${dotSlashSha256}  $RUNNER_TEMP/dotslash.tar.gz" | sha256sum --check`,
+		'tar -xzf "$RUNNER_TEMP/dotslash.tar.gz" -C "$RUNNER_TEMP"',
+		'echo "$RUNNER_TEMP" >> "$GITHUB_PATH"',
+	].join("\n"),
+} as const;
 
 export const ci = workflow({
 	name: "CI",
@@ -79,71 +128,82 @@ export const ci = workflow({
 				{ name: "Check workflow source", run: "pnpm run ci:check" },
 			],
 		}),
-		rust: job({
-			name: "Rust",
+		rust_audit: job({
+			name: "Rust / Dependencies",
 			"runs-on": "ubuntu-24.04",
-			"timeout-minutes": 60,
-			permissions: { contents: "read" },
-			env: {
-				CARGO_INCREMENTAL: "0",
-			},
+			"timeout-minutes": 10,
+			permissions: rustPermissions,
+			steps: [checkout, installOsvScanner, auditRustDependencies],
+		}),
+		rust_quality: job({
+			name: "Rust / Quality",
+			"runs-on": "blacksmith-8vcpu-ubuntu-2404",
+			"timeout-minutes": 30,
+			permissions: rustPermissions,
+			env: rustEnvironment,
 			steps: [
+				checkout,
+				installRust,
+				rustCache(false),
 				{
-					name: "Checkout",
-					uses: "actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1",
-					with: { "persist-credentials": false },
+					name: "Check Rust quality",
+					run: "python3 test.py --ci --git --lint-rust-only\npython3 test.py --ci --git --rustdoc-only",
 				},
+			],
+		}),
+		rust_tests: job({
+			name: "Rust / Tests",
+			"runs-on": "blacksmith-16vcpu-ubuntu-2404",
+			"timeout-minutes": 30,
+			permissions: rustPermissions,
+			env: rustEnvironment,
+			steps: [
+				checkout,
+				installRust,
+				rustCache(saveRustCache),
 				{
-					name: "Install pinned Rust toolchain",
-					run: "rustup toolchain install nightly-2026-04-11 --profile minimal --component clippy --component llvm-tools-preview --component rust-src --no-self-update",
+					name: "Run Rust tests",
+					run: "python3 test.py --ci --git --test-only",
 				},
-				{
-					name: "Restore Rust cache",
-					uses: "Swatinem/rust-cache@e18b497796c12c097a38f9edb9d0641fb99eee32",
-					with: {
-						"prefix-key": "bsmr-v1",
-						"save-if": saveRustCache,
-					},
-				},
-				{
-					name: "Install pinned OSV Scanner",
-					run: [
-						`curl --proto '=https' --tlsv1.2 --fail --location --silent --show-error ${osvScannerUrl} --output "$RUNNER_TEMP/osv-scanner"`,
-						`echo "${osvScannerSha256}  $RUNNER_TEMP/osv-scanner" | sha256sum --check`,
-						'chmod 500 "$RUNNER_TEMP/osv-scanner"',
-					].join("\n"),
-				},
-				{
-					name: "Audit Rust dependencies",
-					run: [
-						'"$RUNNER_TEMP/osv-scanner" scan source --lockfile Cargo.lock --lockfile tools/build/third-party/rust/Cargo.lock --no-resolve --format json --output-file "$RUNNER_TEMP/osv.json" . || [ "$?" -eq 1 ]',
-						"jq -e '[.results[].packages[].vulnerabilities[] | select(any(.affected[]; .database_specific.informational? != \"unmaintained\"))] as $v | if ($v | length) == 0 then true else ($v | map({id, summary})), false end' \"$RUNNER_TEMP/osv.json\"",
-					].join("\n"),
-				},
-				{
-					name: "Build test binary",
-					run: "cargo build --locked --bin bsmr",
-				},
-				{
-					name: "Install pinned DotSlash",
-					run: [
-						`curl --proto '=https' --tlsv1.2 --fail --location --silent --show-error ${dotSlashUrl} --output "$RUNNER_TEMP/dotslash.tar.gz"`,
-						`echo "${dotSlashSha256}  $RUNNER_TEMP/dotslash.tar.gz" | sha256sum --check`,
-						'tar -xzf "$RUNNER_TEMP/dotslash.tar.gz" -C "$RUNNER_TEMP"',
-						'echo "$RUNNER_TEMP" >> "$GITHUB_PATH"',
-					].join("\n"),
-				},
+			],
+		}),
+		rust_self_host: job({
+			name: "Rust / Self-host",
+			"runs-on": "blacksmith-8vcpu-ubuntu-2404",
+			"timeout-minutes": 30,
+			permissions: rustPermissions,
+			env: rustEnvironment,
+			steps: [
+				checkout,
+				installRust,
+				rustCache(false),
+				{ name: "Build BSMR", run: "cargo build --locked --bin bsmr" },
+				installDotSlash,
 				{
 					name: "Generate Rust build dependencies",
 					run: "./tools/bin/reindeer --third-party-dir tools/build/third-party/rust buckify",
 				},
 				{
-					name: "Run upstream Rust checks",
-					run: "python3 test.py --ci --git --bsmr=target/debug/bsmr",
+					name: "Check Starlark",
+					run: "python3 test.py --ci --git --bsmr=target/debug/bsmr --lint-starlark-only",
 				},
 				{
 					name: "Validate self-host graph",
 					run: "target/debug/bsmr --isolation-dir=ci uquery 'deps(//app/...)'\ntarget/debug/bsmr --isolation-dir=ci targets 'bsmr_build//...'",
+				},
+			],
+		}),
+		rust: job({
+			name: "Rust",
+			if: expr<boolean>("always()"),
+			needs: ["rust_audit", "rust_quality", "rust_tests", "rust_self_host"],
+			"runs-on": "ubuntu-24.04",
+			"timeout-minutes": 5,
+			permissions: {},
+			steps: [
+				{
+					name: "Require every Rust lane",
+					run: `test "\${{ join(needs.*.result, ' ') }}" = "success success success success"`,
 				},
 			],
 		}),

@@ -3,10 +3,11 @@
 	"private": true,
 	"type": "module",
 	"scripts": {
-		"ci:check": "pnpm run ci:typecheck && pnpm run ci:check:generated && pnpm run ci:check:security",
+		"ci:check": "pnpm run ci:typecheck && pnpm run ci:test && pnpm run ci:check:generated && pnpm run ci:check:security",
 		"ci:check:generated": "hollywood check --generated --source-root ci --output .",
 		"ci:check:security": "hollywood check --workflow-security --source-root .github/workflows --output .",
 		"ci:generate": "hollywood generate \"ci/**/*.ts\" --output .",
+		"ci:test": "node --experimental-strip-types --test ci/ci.test.ts",
 		"ci:typecheck": "tsc --noEmit"
 	},
 	"devDependencies": {
