@@ -2,6 +2,19 @@
 
 Thanks for helping improve Bessemer.
 
+## Getting vouched
+
+Bessemer accepts external contributions from vouched contributors. Being
+listed in `VOUCHED.td` records that a maintainer verified your GitHub account
+and your acceptance of the [CLA](CLA.md).
+
+1. Open a "Vouch request" issue.
+2. Confirm that you have read and accept `CLA.md`.
+3. Link public work or ask an existing vouched contributor to sponsor you.
+4. Wait for a maintainer to add your GitHub handle to `VOUCHED.td`.
+
+Do not add yourself to `VOUCHED.td`. That file is maintainer-owned trust state.
+
 ## Pull requests
 
 Keep each pull request focused on one behavior. Explain why the change is
