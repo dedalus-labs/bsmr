@@ -19,6 +19,7 @@ env:
 jobs:
   affected:
     name: Affected paths
+    if: ${{ github.repository == 'dedalus-labs/bsmr' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository) }}
     runs-on: ubuntu-24.04
     timeout-minutes: 5
     permissions:
@@ -40,7 +41,7 @@ jobs:
           head-sha: ${{ github.event.pull_request.head.sha }}
   dependencies:
     name: Dependency review
-    if: ${{ github.event_name == 'pull_request' }}
+    if: ${{ github.repository == 'dedalus-labs/bsmr' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository) && github.event_name == 'pull_request' }}
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     permissions:
@@ -56,6 +57,7 @@ jobs:
           fail-on-severity: high
   workflows:
     name: Generated workflows
+    if: ${{ github.repository == 'dedalus-labs/bsmr' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository) }}
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     permissions:
@@ -80,7 +82,7 @@ jobs:
   rust_audit:
     name: Rust / Dependencies
     needs: affected
-    if: ${{ needs.affected.outputs.rust == 'true' }}
+    if: ${{ github.repository == 'dedalus-labs/bsmr' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository) && needs.affected.outputs.rust == 'true' }}
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     permissions:
@@ -102,7 +104,7 @@ jobs:
   rust_quality:
     name: Rust / Quality
     needs: affected
-    if: ${{ needs.affected.outputs.rust == 'true' }}
+    if: ${{ github.repository == 'dedalus-labs/bsmr' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository) && needs.affected.outputs.rust == 'true' }}
     runs-on: blacksmith-8vcpu-ubuntu-2404
     timeout-minutes: 30
     permissions:
@@ -129,7 +131,7 @@ jobs:
   rust_tests:
     name: Rust / Tests
     needs: affected
-    if: ${{ needs.affected.outputs.rust == 'true' }}
+    if: ${{ github.repository == 'dedalus-labs/bsmr' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository) && needs.affected.outputs.rust == 'true' }}
     runs-on: blacksmith-16vcpu-ubuntu-2404
     timeout-minutes: 30
     permissions:
@@ -154,7 +156,7 @@ jobs:
   rust_self_host:
     name: Rust / Self-host
     needs: affected
-    if: ${{ needs.affected.outputs.rust == 'true' }}
+    if: ${{ github.repository == 'dedalus-labs/bsmr' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository) && needs.affected.outputs.rust == 'true' }}
     runs-on: blacksmith-8vcpu-ubuntu-2404
     timeout-minutes: 30
     permissions:
@@ -192,7 +194,7 @@ jobs:
           target/debug/bsmr --isolation-dir=ci targets 'bsmr_build//...'
   rust:
     name: Rust
-    if: ${{ always() }}
+    if: ${{ always() && github.repository == 'dedalus-labs/bsmr' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository) }}
     needs:
       - affected
       - rust_audit

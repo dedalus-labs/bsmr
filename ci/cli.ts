@@ -19,7 +19,7 @@ const buildActions: ProcessSpec = {
 const typecheck: ProcessSpec = { file: "pnpm", args: ["exec", "tsc", "--noEmit"] };
 const test: ProcessSpec = {
 	file: "node",
-	args: ["--test", "ci/ci.test.ts", "ci/cli.test.ts"],
+	args: ["--test", "ci/ci.test.ts", "ci/cli.test.ts", "test/contributors.test.ts"],
 };
 const generated: ProcessSpec = {
 	file: "pnpm",
