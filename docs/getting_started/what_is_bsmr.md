@@ -15,6 +15,6 @@ It provides:
 - a shared prelude for common language toolchains.
 
 Bessemer is derived from
-[Buck2](https://github.com/facebook/buck2). The project retains upstream
-copyright notices and licenses while developing under its own name and public
-interfaces.
+[Buck2](https://github.com/facebook/buck2). Bessemer's collective work and
+Dedalus-authored contributions use Apache-2.0. Buck2-derived and third-party
+files retain their original copyright and license notices.

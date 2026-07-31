@@ -1,6 +1,6 @@
 //===----------------------------------------------------------------------===//
 // Copyright 2026 Dedalus Labs, Inc.
-// SPDX-License-Identifier: MIT OR Apache-2.0
+// SPDX-License-Identifier: Apache-2.0
 //
 // Routes repository CI commands through Hollywood's typed process executor.
 //===----------------------------------------------------------------------===//
