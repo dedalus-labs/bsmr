@@ -14,6 +14,8 @@ and your acceptance of the [CLA](CLA.md).
 4. Wait for a maintainer to add your GitHub handle to `VOUCHED.td`.
 
 Do not add yourself to `VOUCHED.td`. That file is maintainer-owned trust state.
+Fork pull requests run only the contributor checks. A maintainer moves vouched
+work to a repository branch before running the full CI suite.
 
 ## Pull requests
 

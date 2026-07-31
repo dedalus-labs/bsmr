@@ -8,26 +8,32 @@ import { ci } from "./ci.ts";
 
 const jobs = ci.jobs;
 const rustLanes = ["rust_audit", "rust_quality", "rust_tests", "rust_self_host"] as const;
+const trustedCiRun =
+	"github.repository == 'dedalus-labs/bsmr' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository)";
 
 test("Rust remains the required aggregate check", () => {
 	assert.equal(jobs.rust?.name, "Rust");
 	assert.equal(jobs.rust?.["runs-on"], "ubuntu-24.04");
-	assert.equal(jobs.rust?.if, "${{ always() }}");
+	assert.equal(jobs.rust?.if, `\${{ always() && ${trustedCiRun} }}`);
 	assert.deepEqual(jobs.rust?.needs, ["affected", ...rustLanes]);
 	const steps = jobs.rust?.steps ?? [];
 	assert.deepEqual(steps.map((step) => ("run" in step ? step.run : null)), ["true", "exit 1"]);
 	assert.match(steps[1]?.if ?? "", /!\(needs\.affected\.result == 'success'/);
 });
 
-test("Rust lanes run only for affected pull requests", () => {
+test("Rust lanes run only for trusted affected changes", () => {
 	assert.equal(jobs.affected?.["runs-on"], "ubuntu-24.04");
+	assert.equal(jobs.affected?.if, `\${{ ${trustedCiRun} }}`);
 	assert.equal(jobs.affected?.outputs?.rust, "${{ steps.check.outputs.rust }}");
 	const check = jobs.affected?.steps.at(-1);
 	assert.ok(check !== undefined && "uses" in check);
 	assert.equal(check.uses, "./.github/actions/ci/rust-affected");
 	for (const id of rustLanes) {
 		assert.equal(jobs[id]?.needs, "affected");
-		assert.equal(jobs[id]?.if, "${{ needs.affected.outputs.rust == 'true' }}");
+		assert.equal(
+			jobs[id]?.if,
+			`\${{ ${trustedCiRun} && needs.affected.outputs.rust == 'true' }}`,
+		);
 	}
 });
 

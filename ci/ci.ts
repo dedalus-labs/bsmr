@@ -6,6 +6,9 @@ import {
 
 import { rustAffectedAction } from "./affected.ts";
 
+const trustedCiRun = expr<boolean>(
+	"github.repository == 'dedalus-labs/bsmr' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository)",
+);
 const saveRustCache = and(
 	eq(github.eventName, "push"),
 	eq(github.ref, "refs/heads/main"),
@@ -108,6 +111,7 @@ export const ci = workflow({
 	jobs: {
 		affected: job({
 			name: "Affected paths",
+			if: trustedCiRun,
 			"runs-on": "ubuntu-24.04",
 			"timeout-minutes": 5,
 			permissions: rustPermissions,
@@ -129,7 +133,7 @@ export const ci = workflow({
 		}),
 		dependencies: job({
 			name: "Dependency review",
-			if: eq(github.eventName, "pull_request"),
+			if: and(trustedCiRun, eq(github.eventName, "pull_request")),
 			"runs-on": "ubuntu-24.04",
 			"timeout-minutes": 10,
 			permissions: { contents: "read" },
@@ -148,6 +152,7 @@ export const ci = workflow({
 		}),
 		workflows: job({
 			name: "Generated workflows",
+			if: trustedCiRun,
 			"runs-on": "ubuntu-24.04",
 			"timeout-minutes": 10,
 			permissions: { contents: "read" },
@@ -173,7 +178,7 @@ export const ci = workflow({
 		rust_audit: job({
 			name: "Rust / Dependencies",
 			needs: "affected",
-			if: rustAffected,
+			if: and(trustedCiRun, rustAffected),
 			"runs-on": "ubuntu-24.04",
 			"timeout-minutes": 10,
 			permissions: rustPermissions,
@@ -182,7 +187,7 @@ export const ci = workflow({
 		rust_quality: job({
 			name: "Rust / Quality",
 			needs: "affected",
-			if: rustAffected,
+			if: and(trustedCiRun, rustAffected),
 			"runs-on": "blacksmith-8vcpu-ubuntu-2404",
 			"timeout-minutes": 30,
 			permissions: rustPermissions,
@@ -200,7 +205,7 @@ export const ci = workflow({
 		rust_tests: job({
 			name: "Rust / Tests",
 			needs: "affected",
-			if: rustAffected,
+			if: and(trustedCiRun, rustAffected),
 			"runs-on": "blacksmith-16vcpu-ubuntu-2404",
 			"timeout-minutes": 30,
 			permissions: rustPermissions,
@@ -218,7 +223,7 @@ export const ci = workflow({
 		rust_self_host: job({
 			name: "Rust / Self-host",
 			needs: "affected",
-			if: rustAffected,
+			if: and(trustedCiRun, rustAffected),
 			"runs-on": "blacksmith-8vcpu-ubuntu-2404",
 			"timeout-minutes": 30,
 			permissions: rustPermissions,
@@ -245,7 +250,7 @@ export const ci = workflow({
 		}),
 		rust: job({
 			name: "Rust",
-			if: always(),
+			if: and(always(), trustedCiRun),
 			needs: ["affected", ...rustLaneIds],
 			"runs-on": "ubuntu-24.04",
 			"timeout-minutes": 5,
