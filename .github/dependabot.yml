@@ -10,6 +10,10 @@ updates:
       semver-minor-days: 7
       semver-patch-days: 3
     open-pull-requests-limit: 5
+    groups:
+      rust-workspace:
+        applies-to: version-updates
+        patterns: ["*"]
   - package-ecosystem: cargo
     directory: /tools/build/third-party/rust
     schedule:
@@ -20,6 +24,10 @@ updates:
       semver-minor-days: 7
       semver-patch-days: 3
     open-pull-requests-limit: 5
+    groups:
+      rust-third-party:
+        applies-to: version-updates
+        patterns: ["*"]
   - package-ecosystem: npm
     directory: /
     schedule:
@@ -30,3 +38,7 @@ updates:
       semver-minor-days: 7
       semver-patch-days: 3
     open-pull-requests-limit: 5
+    groups:
+      node-tooling:
+        applies-to: version-updates
+        patterns: ["*"]
