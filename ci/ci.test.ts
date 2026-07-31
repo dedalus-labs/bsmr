@@ -1,6 +1,9 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
+import type { ScriptExec } from "@dedalus-labs/hollywood";
+
+import { pullRequestFiles, rustAffected } from "./affected.ts";
 import { ci } from "./ci.ts";
 
 const jobs = ci.jobs;
@@ -10,7 +13,63 @@ test("Rust remains the required aggregate check", () => {
 	assert.equal(jobs.rust?.name, "Rust");
 	assert.equal(jobs.rust?.["runs-on"], "ubuntu-24.04");
 	assert.equal(jobs.rust?.if, "${{ always() }}");
-	assert.deepEqual(jobs.rust?.needs, rustLanes);
+	assert.deepEqual(jobs.rust?.needs, ["affected", ...rustLanes]);
+	const steps = jobs.rust?.steps ?? [];
+	assert.deepEqual(steps.map((step) => ("run" in step ? step.run : null)), ["true", "exit 1"]);
+	assert.match(steps[1]?.if ?? "", /!\(needs\.affected\.result == 'success'/);
+});
+
+test("Rust lanes run only for affected pull requests", () => {
+	assert.equal(jobs.affected?.["runs-on"], "ubuntu-24.04");
+	assert.equal(jobs.affected?.outputs?.rust, "${{ steps.check.outputs.rust }}");
+	const check = jobs.affected?.steps.at(-1);
+	assert.ok(check !== undefined && "uses" in check);
+	assert.equal(check.uses, "./.github/actions/ci/rust-affected");
+	for (const id of rustLanes) {
+		assert.equal(jobs[id]?.needs, "affected");
+		assert.equal(jobs[id]?.if, "${{ needs.affected.outputs.rust == 'true' }}");
+	}
+});
+
+test("Rust affected paths fail closed", () => {
+	assert.equal(rustAffected([".github/dependabot.yml"]), false);
+	assert.equal(rustAffected(["docs/users/getting_started.md"]), false);
+	assert.equal(rustAffected(["README.md", ".github/CODEOWNERS"]), false);
+	assert.equal(rustAffected(["Cargo.lock"]), true);
+	assert.equal(rustAffected(["app/bsmr/src/main.rs"]), true);
+	assert.equal(rustAffected(["app/bsmr_core/src/pattern/target_pattern.md"]), true);
+	assert.equal(rustAffected(["prelude/rust/rust_binary.bzl"]), true);
+	assert.equal(rustAffected(["ci/ci.ts"]), true);
+	assert.equal(rustAffected([]), true);
+});
+
+test("Pull request paths preserve both sides of a rename", async () => {
+	const base = "a".repeat(40);
+	const head = "b".repeat(40);
+	const mergeBase = "c".repeat(40);
+	const calls: string[][] = [];
+	const exec: ScriptExec = async (file, args) => {
+		calls.push([file, ...args]);
+		return {
+			exitCode: 0,
+			stderr: "",
+			stdout:
+				args[0] === "merge-base"
+					? mergeBase
+					: "app/bsmr/src/renamed.rs\0docs/renamed.md\0",
+		};
+	};
+	const files = await pullRequestFiles(exec, base, head);
+	assert.equal(rustAffected(files), true);
+	assert.deepEqual(calls, [
+		["git", "merge-base", base, head],
+		["git", "diff", "--name-only", "--no-renames", "-z", mergeBase, head],
+	]);
+});
+
+test("Pull request paths require immutable commit IDs", async () => {
+	const fail: ScriptExec = async () => assert.fail("exec must not run");
+	await assert.rejects(pullRequestFiles(fail, "main", "b".repeat(40)), /base SHA/);
 });
 
 test("Rust compilation uses sized Blacksmith runners", () => {

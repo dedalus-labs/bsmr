@@ -1,4 +1,10 @@
-import { and, eq, expr, format, github, job, workflow } from "@dedalus-labs/hollywood";
+import {
+	GitHubJobResult, always, and, eq, expr, format, github, job, needsOutput, needsResultIs,
+	not, or, stepOutput, uses, workflow,
+	type GitHubJobResultValue,
+} from "@dedalus-labs/hollywood";
+
+import { rustAffectedAction } from "./affected.ts";
 
 const saveRustCache = and(
 	eq(github.eventName, "push"),
@@ -16,6 +22,11 @@ const checkout = {
 	name: "Checkout",
 	uses: "actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1",
 	with: { "persist-credentials": false },
+} as const;
+const setupNode = {
+	name: "Set up Node",
+	uses: "actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38",
+	with: { "node-version": "26.5.1" },
 } as const;
 const installRust = {
 	name: "Install pinned Rust toolchain",
@@ -37,6 +48,22 @@ const rustEnvironment = {
 const rustPermissions = {
 	contents: "read",
 } as const;
+const rustLaneIds = ["rust_audit", "rust_quality", "rust_tests", "rust_self_host"] as const;
+const rustAffected = eq(needsOutput("affected", "rust"), "true");
+const rustLanesHave = (result: GitHubJobResultValue) =>
+	and(
+		needsResultIs("rust_audit", result),
+		needsResultIs("rust_quality", result),
+		needsResultIs("rust_tests", result),
+		needsResultIs("rust_self_host", result),
+	);
+const rustResultsAccepted = and(
+	needsResultIs("affected", GitHubJobResult.Success),
+	or(
+		rustLanesHave(GitHubJobResult.Success),
+		rustLanesHave(GitHubJobResult.Skipped),
+	),
+);
 const installOsvScanner = {
 	name: "Install pinned OSV Scanner",
 	run: [
@@ -79,6 +106,27 @@ export const ci = workflow({
 		FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true,
 	},
 	jobs: {
+		affected: job({
+			name: "Affected paths",
+			"runs-on": "ubuntu-24.04",
+			"timeout-minutes": 5,
+			permissions: rustPermissions,
+			outputs: { rust: stepOutput<string>("check", "rust") },
+			steps: [
+				{
+					...checkout,
+					with: { ...checkout.with, "fetch-depth": 0 },
+				},
+				uses(rustAffectedAction, {
+					id: "check",
+					with: {
+						eventName: github.eventName,
+						baseSha: expr<string>("github.event.pull_request.base.sha"),
+						headSha: expr<string>("github.event.pull_request.head.sha"),
+					},
+				}),
+			],
+		}),
 		dependencies: job({
 			name: "Dependency review",
 			if: eq(github.eventName, "pull_request"),
@@ -109,13 +157,7 @@ export const ci = workflow({
 					uses: "actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1",
 					with: { "persist-credentials": false },
 				},
-				{
-					name: "Set up Node",
-					uses: "actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38",
-					with: {
-						"node-version": "26.5.1",
-					},
-				},
+				setupNode,
 				{
 					name: "Set up pnpm",
 					uses: "pnpm/action-setup@0e279bb959325dab635dd2c09392533439d90093",
@@ -130,6 +172,8 @@ export const ci = workflow({
 		}),
 		rust_audit: job({
 			name: "Rust / Dependencies",
+			needs: "affected",
+			if: rustAffected,
 			"runs-on": "ubuntu-24.04",
 			"timeout-minutes": 10,
 			permissions: rustPermissions,
@@ -137,6 +181,8 @@ export const ci = workflow({
 		}),
 		rust_quality: job({
 			name: "Rust / Quality",
+			needs: "affected",
+			if: rustAffected,
 			"runs-on": "blacksmith-8vcpu-ubuntu-2404",
 			"timeout-minutes": 30,
 			permissions: rustPermissions,
@@ -153,6 +199,8 @@ export const ci = workflow({
 		}),
 		rust_tests: job({
 			name: "Rust / Tests",
+			needs: "affected",
+			if: rustAffected,
 			"runs-on": "blacksmith-16vcpu-ubuntu-2404",
 			"timeout-minutes": 30,
 			permissions: rustPermissions,
@@ -169,6 +217,8 @@ export const ci = workflow({
 		}),
 		rust_self_host: job({
 			name: "Rust / Self-host",
+			needs: "affected",
+			if: rustAffected,
 			"runs-on": "blacksmith-8vcpu-ubuntu-2404",
 			"timeout-minutes": 30,
 			permissions: rustPermissions,
@@ -195,15 +245,21 @@ export const ci = workflow({
 		}),
 		rust: job({
 			name: "Rust",
-			if: expr<boolean>("always()"),
-			needs: ["rust_audit", "rust_quality", "rust_tests", "rust_self_host"],
+			if: always(),
+			needs: ["affected", ...rustLaneIds],
 			"runs-on": "ubuntu-24.04",
 			"timeout-minutes": 5,
 			permissions: {},
 			steps: [
 				{
-					name: "Require every Rust lane",
-					run: `test "\${{ join(needs.*.result, ' ') }}" = "success success success success"`,
+					name: "Accept complete Rust CI",
+					if: rustResultsAccepted,
+					run: "true",
+				},
+				{
+					name: "Reject incomplete Rust CI",
+					if: not(rustResultsAccepted),
+					run: "exit 1",
 				},
 			],
 		}),

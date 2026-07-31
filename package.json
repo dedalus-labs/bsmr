@@ -3,16 +3,19 @@
 	"private": true,
 	"type": "module",
 	"scripts": {
-		"ci:check": "pnpm run ci:typecheck && pnpm run ci:test && pnpm run ci:check:generated && pnpm run ci:check:security",
+		"ci:build:actions": "esbuild .github/actions/ci/rust-affected/src/index.ts --bundle --define:import.meta.vitest=undefined --format=esm --minify --platform=node --target=node24 --banner:js='import { createRequire } from \"node:module\";const require=createRequire(import.meta.url);' --outfile=.github/actions/ci/rust-affected/dist/index.js",
+		"ci:check": "pnpm run ci:typecheck && pnpm run ci:test && pnpm run ci:check:generated && pnpm run ci:check:actions && pnpm run ci:check:security",
+		"ci:check:actions": "pnpm run ci:build:actions && git diff --exit-code -- .github/actions",
 		"ci:check:generated": "hollywood check --generated --source-root ci --output .",
 		"ci:check:security": "hollywood check --workflow-security --source-root .github/workflows --output .",
-		"ci:generate": "hollywood generate \"ci/**/*.ts\" --output .",
+		"ci:generate": "hollywood generate \"ci/**/*.ts\" --output . && pnpm run ci:build:actions",
 		"ci:test": "node --experimental-strip-types --test ci/ci.test.ts",
 		"ci:typecheck": "tsc --noEmit"
 	},
 	"devDependencies": {
 		"@dedalus-labs/hollywood": "0.0.1",
 		"@types/node": "26.0.1",
+		"esbuild": "0.28.1",
 		"typescript": "6.0.3"
 	},
 	"engines": {
