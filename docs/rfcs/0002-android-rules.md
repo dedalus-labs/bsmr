@@ -2,8 +2,8 @@
 rfc: "0002"
 title: "First-party Android rules"
 authors: ["@windsornguyen"]
-state: ideation
-discussion: null
+state: discussion
+discussion: "https://github.com/dedalus-labs/bsmr/pull/19"
 labels: [android, rules, toolchains]
 ---
 
