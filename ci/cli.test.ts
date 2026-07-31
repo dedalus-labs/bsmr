@@ -1,3 +1,10 @@
+//===----------------------------------------------------------------------===//
+// Copyright 2026 Dedalus Labs, Inc.
+// SPDX-License-Identifier: MIT OR Apache-2.0
+//
+// Verifies CLI command selection, ordering, and fail-fast execution.
+//===----------------------------------------------------------------------===//
+
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import { test } from "node:test";
@@ -8,6 +15,12 @@ import { type CliContext, runCli } from "./cli.ts";
 
 type Invocation = Readonly<{ file: string; args: readonly string[]; cwd: string | undefined }>;
 
+/**
+ * Create an isolated CLI context that records process invocations.
+ *
+ * @param exec - Optional process executor used to exercise failures.
+ * @returns The test context and its ordered invocation log.
+ */
 function harness(exec?: ScriptExec): { context: CliContext; invocations: Invocation[] } {
 	const invocations: Invocation[] = [];
 	return {
