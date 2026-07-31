@@ -78,10 +78,13 @@ test("Pull request paths require immutable commit IDs", async () => {
 	await assert.rejects(pullRequestFiles(fail, "main", "b".repeat(40)), /base SHA/);
 });
 
-test("Rust compilation uses sized Blacksmith runners", () => {
-	assert.equal(jobs.rust_quality?.["runs-on"], "blacksmith-8vcpu-ubuntu-2404");
-	assert.equal(jobs.rust_tests?.["runs-on"], "blacksmith-16vcpu-ubuntu-2404");
-	assert.equal(jobs.rust_self_host?.["runs-on"], "blacksmith-8vcpu-ubuntu-2404");
+test("Public CI does not hydrate organization-wide runner state", () => {
+	for (const configuredJob of Object.values(jobs)) {
+		assert.doesNotMatch(String(configuredJob["runs-on"]), /^blacksmith-/);
+	}
+});
+
+test("Self-host lane validates Starlark", () => {
 	assert.ok(
 		jobs.rust_self_host?.steps.some(
 			(step) => "run" in step && step.run.includes("--lint-starlark-only"),
