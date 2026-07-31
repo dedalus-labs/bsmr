@@ -39,7 +39,6 @@ use lsp_server::ProtocolError;
 use lsp_server::Request;
 use lsp_server::RequestId;
 use lsp_server::Response;
-use lsp_server::ResponseError;
 use lsp_types::CompletionItem;
 use lsp_types::CompletionItemKind;
 use lsp_types::CompletionOptions;
@@ -1398,20 +1397,8 @@ where
     T: serde::Serialize,
 {
     match params {
-        Ok(params) => Response {
-            id,
-            result: Some(serde_json::to_value(params).unwrap()),
-            error: None,
-        },
-        Err(e) => Response {
-            id,
-            result: None,
-            error: Some(ResponseError {
-                code: 0,
-                message: e.format(),
-                data: None,
-            }),
-        },
+        Ok(params) => Response::new_ok(id, params),
+        Err(e) => Response::new_err(id, 0, e.format()),
     }
 }
 

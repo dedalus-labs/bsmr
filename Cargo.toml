@@ -354,7 +354,7 @@ linkme = { version = "0.3.36", features = ["used_linker"] }
 lock_free_hashtable = { path = "packages/rust/lock_free_hashtable", features = ["allocative"] }
 lock_free_vec = { path = "packages/rust/lock_free_vec" }
 lru = { version = "0.16.4", default-features = false }
-lsp-server = "0.7.9"
+lsp-server = "0.10.0"
 lsp-types = "0.97"
 maplit = "1.0"
 memchr = "2.8.3"
