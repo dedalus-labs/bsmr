@@ -6,9 +6,9 @@
 # of this source tree. You may select, at your option, one of the
 # above-listed licenses.
 
-load("@fbcode//bsmr/app:modifier.bzl", "bsmr_modifiers")
+load("@root//app:modifier.bzl", "bsmr_modifiers")
 load("@bsmr_build//rules:native_rules.bzl", "buck_filegroup")
-load("@fbcode_macros//build_defs:python_pytest.bzl", "python_pytest")
+load("@upstream//build_defs:python_pytest.bzl", "python_pytest")
 
 def buck_e2e_test(
     name,
@@ -106,21 +106,21 @@ def buck_e2e_test(
     if require_nano_prelude == None:
         require_nano_prelude = data_dir != None
     if require_nano_prelude:
-        env["NANO_PRELUDE"] = "$(location fbcode//bsmr/tests/e2e_util/nano_prelude:nano_prelude)"
+        env["NANO_PRELUDE"] = "$(location root//tests/e2e_util/nano_prelude:nano_prelude)"
 
     deps += [
-        "fbsource//third-party/pypi/pytest:pytest",
-        "fbsource//third-party/pypi/pytest-asyncio:pytest-asyncio",
-        "fbcode//bsmr/tests/e2e_util:utilities",
+        "upstream//third-party/pypi/pytest:pytest",
+        "upstream//third-party/pypi/pytest-asyncio:pytest-asyncio",
+        "root//tests/e2e_util:utilities",
     ]
     if use_buck_api:
-        deps += ["fbcode//bsmr/tests/e2e_util/api:api"]
+        deps += ["root//tests/e2e_util/api:api"]
     resources = resources or {}
 
     # Let users of the macro define their own configuration for pytest. This allow for reusing all
     # the fixture code for tools building e2e tests that also need a working buck environment.
     if not "conftest.py" in resources.values():
-        resources["fbcode//bsmr/tests/e2e_util:conftest.py"] = "conftest.py"
+        resources["root//tests/e2e_util:conftest.py"] = "conftest.py"
 
     python_pytest(
         name = name,
@@ -226,13 +226,13 @@ def bsmr_e2e_test(
         compiled_env["BSMR_TPX"] = "$BSMR_BINARY_DIR/bsmr-tpx"
 
         if use_compiled_bsmr_client_and_tpx:
-            base_exe = "$(location fbcode//bsmr:symlinked_bsmr_and_tpx)/bsmr"
+            base_exe = "$(location root//:symlinked_bsmr_and_tpx)/bsmr"
             exe = select({
                 "DEFAULT": base_exe,
                 "ovr_config//os:windows": base_exe + ".exe",
             })
         else:
-            exe = "$(location fbcode//bsmr:bsmr)"
+            exe = "$(location root//:bsmr)"
 
         buck_e2e_test(
             # deployed bsmr test target retains the original target name so that when user runs `buck test <test target>`,
@@ -257,7 +257,7 @@ def bsmr_e2e_test(
         # Add a bsmr version file as dep so we can run deployed bsmr tests on version bumps.
         # Skip this dependency if skip_deployed_bsmr_version_dep is True (e.g., for bxl tests).
         if not skip_deployed_bsmr_version_dep:
-            deps += ["fbsource//tools/bsmr-versions:stable"]
+            deps += ["upstream//tools/bsmr-versions:stable"]
         buck_e2e_test(name = name, env = deployed_env, executable = "bsmr", skip_for_os = skip_for_os, deps = deps, **kwargs)
 
     if test_with_reverted_bsmr:
@@ -308,8 +308,8 @@ def bsmr_core_tests(extra_attrs = {}, target_extra_attrs = {}):
                 attrs["srcs"] = [item]
 
             IMPLICIT_DEPS = [
-                "//bsmr/tests/e2e_util:utils",
-                "//bsmr/tests/e2e_util:golden",
+                "root//tests/e2e_util:utils",
+                "root//tests/e2e_util:golden",
             ]
             attrs["deps"] = list(attrs.get("deps") or [])
             attrs["deps"].extend(IMPLICIT_DEPS)

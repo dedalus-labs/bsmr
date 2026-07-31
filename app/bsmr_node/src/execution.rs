@@ -11,7 +11,7 @@
 use std::sync::Arc;
 
 use async_trait::async_trait;
-use bsmr_common::legacy_configs::key::BuckconfigKeyRef;
+use bsmr_common::legacy_configs::key::BsmrconfigKeyRef;
 use bsmr_core::execution_types::execution::ExecutionPlatformResolutionPartial;
 use bsmr_core::execution_types::execution_platforms::ExecutionPlatforms;
 use bsmr_core::target::label::label::TargetLabel;
@@ -22,7 +22,7 @@ use dice::DiceComputations;
 use crate::configuration::calculation::CellNameForConfigurationResolution;
 use crate::configuration::resolved::ConfigurationSettingKey;
 
-pub const EXECUTION_PLATFORMS_BUCKCONFIG: BuckconfigKeyRef = BuckconfigKeyRef {
+pub const EXECUTION_PLATFORMS_BSMRCONFIG: BsmrconfigKeyRef = BsmrconfigKeyRef {
     section: "build",
     property: "execution_platforms",
 };
@@ -50,7 +50,7 @@ pub static GET_EXECUTION_PLATFORMS: LateBinding<&'static dyn GetExecutionPlatfor
 #[allow(async_fn_in_trait)]
 pub trait GetExecutionPlatforms: Send {
     /// Returns a list of the configured execution platforms. This looks up the providers on the target
-    /// configured **in the root cell's buckconfig** with key `build.execution_platforms`. If there's no
+    /// configured **in the root cell's bsmrconfig** with key `build.execution_platforms`. If there's no
     /// value configured, it will return `None` which indicates we should fallback to the legacy execution
     /// platform behavior.
     async fn get_execution_platforms(&mut self) -> bsmr_error::Result<Option<ExecutionPlatforms>>;

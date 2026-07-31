@@ -27,8 +27,8 @@ use crate::transform_format;
 const CLI: &str = "cli";
 /// Display the values and origins of external configs for a selected command.
 ///
-/// Buckconfigs are computed by joining together values from various inputs (repo, well-known directories, CLI flags). Each of these is
-/// logged in the given order, with later components overriding earlier ones. For config files originating from the repo (i.e. project-relative paths), except .buckconfig.local,
+/// Bsmrconfigs are computed by joining together values from various inputs (repo, well-known directories, CLI flags). Each of these is
+/// logged in the given order, with later components overriding earlier ones. For config files originating from the repo (i.e. project-relative paths), except .bsmrconfig.local,
 /// we log the path, not the actual values.
 #[derive(Debug, clap::Parser)]
 pub struct ExternalConfigsCommand {
@@ -60,7 +60,7 @@ impl BuckSubcommand for ExternalConfigsCommand {
         while let Some(event) = events.try_next().await? {
             if let StreamValue::Event(event) = event
                 && let Some(bsmr_data::buck_event::Data::Instant(instant)) = event.data
-                && let Some(bsmr_data::instant_event::Data::BuckconfigInputValues(configs)) =
+                && let Some(bsmr_data::instant_event::Data::BsmrconfigInputValues(configs)) =
                     instant.data
             {
                 log_external_configs(&configs.components, format.clone()).await?;
@@ -170,14 +170,14 @@ fn write_config_file(
 }
 
 async fn log_external_configs(
-    components: &[bsmr_data::BuckconfigComponent],
+    components: &[bsmr_data::BsmrconfigComponent],
     format: LogCommandOutputFormat,
 ) -> bsmr_error::Result<()> {
     bsmr_client_ctx::stdio::print_with_writer::<bsmr_error::Error, _>(async move |w| {
         let mut log_writer = transform_format(format, w);
 
         for component in components {
-            use bsmr_data::buckconfig_component::Data;
+            use bsmr_data::bsmrconfig_component::Data;
             use bsmr_data::config_file::Data as CData;
             match &component.data {
                 Some(Data::ConfigValue(config_value)) => {

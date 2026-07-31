@@ -77,12 +77,12 @@ For example, an invocation to check visibility on the transitive closure of
 fbobjc can be
 
 ```shell
-bsmr audit visibility fbsource//fbobjc/...
+bsmr audit visibility upstream//fbobjc/...
 ```
 
 It cannot be used to check that a target has a valid visibility with respect to
 targets outside of the transitive closure of its deps. For example,
-`bsmr audit visibility fbcode//bsmr/packages/rust/starlark/starlark:starlark` will just
+`bsmr audit visibility root//packages/rust/starlark/starlark:starlark` will just
 check that all transitive deps of `starlark` target (including `starlark`
 target) have valid visibility with respect to each other. It will not check that
 any targets that depend on `starlark` respect `starlark` target's visibility

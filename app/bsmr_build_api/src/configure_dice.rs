@@ -13,9 +13,9 @@ use std::sync::Arc;
 use bsmr_common::dice::cells::SetCellResolver;
 use bsmr_common::dice::data::SetIoProvider;
 use bsmr_common::io::IoProvider;
-use bsmr_common::legacy_configs::configs::LegacyBuckConfig;
+use bsmr_common::legacy_configs::configs::LegacyBsmrConfig;
 use bsmr_common::legacy_configs::dice::SetLegacyConfigs;
-use bsmr_common::legacy_configs::key::BuckconfigKeyRef;
+use bsmr_common::legacy_configs::key::BsmrconfigKeyRef;
 use bsmr_common::tenting::SetTentingAclProvider;
 use bsmr_common::tenting::TentingAclProvider;
 use bsmr_core::rollout_percentage::RolloutPercentage;
@@ -34,7 +34,7 @@ use crate::build::detailed_aggregated_metrics::events::DetailedAggregatedMetrics
 pub async fn configure_dice_for_buck(
     io: Arc<dyn IoProvider>,
     digest_config: DigestConfig,
-    root_config: Option<&LegacyBuckConfig>,
+    root_config: Option<&LegacyBsmrConfig>,
     detect_cycles: Option<DetectCycles>,
     tenting_acl_provider: Option<Arc<dyn TentingAclProvider>>,
 ) -> bsmr_error::Result<Arc<Dice>> {
@@ -42,7 +42,7 @@ pub async fn configure_dice_for_buck(
         || {
             root_config
                 .and_then(|c| {
-                    c.parse::<DetectCycles>(BuckconfigKeyRef {
+                    c.parse::<DetectCycles>(BsmrconfigKeyRef {
                         section: "bsmr",
                         property: "detect_cycles",
                     })
@@ -59,7 +59,7 @@ pub async fn configure_dice_for_buck(
     dice.set_tenting_acl_provider(tenting_acl_provider);
     let invalidation_tracking_enabled = match root_config {
         Some(c) => c
-            .parse::<RolloutPercentage>(BuckconfigKeyRef {
+            .parse::<RolloutPercentage>(BsmrconfigKeyRef {
                 section: "bsmr",
                 property: "invalidation_tracking_enabled",
             })?

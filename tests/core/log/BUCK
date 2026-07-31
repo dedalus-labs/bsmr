@@ -1,4 +1,4 @@
-load("@fbcode//bsmr/tests:buck_e2e.bzl", "bsmr_core_tests")
+load("@root//tests:buck_e2e.bzl", "bsmr_core_tests")
 
 oncall("build_infra")
 

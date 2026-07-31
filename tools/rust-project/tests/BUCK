@@ -1,4 +1,4 @@
-load("@fbcode//bsmr/tests:buck_e2e.bzl", "bsmr_e2e_test")
+load("@root//tests:buck_e2e.bzl", "bsmr_e2e_test")
 
 bsmr_e2e_test(
     name = "test_rust_project",
@@ -8,6 +8,6 @@ bsmr_e2e_test(
     test_with_compiled_bsmr = False,
     test_with_deployed_bsmr = True,
     deps = [
-        "//bsmr/tests/e2e_util:utils",  # @autodeps2-fixme-manual
+        "root//tests/e2e_util:utils",  # @autodeps2-fixme-manual
     ],
 )

@@ -11,7 +11,7 @@ load("@prelude//android:android_toolchain.bzl", "AndroidToolchainInfo")
 load("@prelude//java:java_library.bzl", "compile_to_jar")
 load("@prelude//java:java_providers.bzl", "JavaLibraryInfo", "single_library_compiling_deps")
 load("@prelude//utils:argfile.bzl", "argfile")
-load("@prelude//utils:buckconfig.bzl", "read_bool")
+load("@prelude//utils:bsmrconfig.bzl", "read_bool")
 
 _optimized_resource_processing = read_bool("android", "optimized_resource_processing", default = False, root_cell = True)
 

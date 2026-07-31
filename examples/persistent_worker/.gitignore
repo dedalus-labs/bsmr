@@ -1,4 +1,4 @@
-.buckconfig.local
+.bsmrconfig.local
 .direnv
 .envrc.private
 prelude

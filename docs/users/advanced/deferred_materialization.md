@@ -43,7 +43,7 @@ allows Bessemer to remember what files are on disk across restarts.
 This can allow Bessemer to avoid re-downloading outputs from your Remote Execution
 backend if they are already on disk.
 
-To enable, add this to your Buckconfig:
+To enable, add this to your Bsmrconfig:
 
 ```ini
 [bsmr]
@@ -55,7 +55,7 @@ sqlite_materializer_state = true
 To further speedup builds, Bessemer can also be instructed to not execute any
 writes on the critical path for a build.
 
-To enable, add this to your Buckconfig:
+To enable, add this to your Bsmrconfig:
 
 ```ini
 [bsmr]
@@ -76,7 +76,7 @@ negatively impact build performance if you are building and rebasing regularly.
 
 Enabling this requires enabling [on-disk state](#on-disk-state) and
 [deferred write actions](#deferring-write-actions), and adding this to your
-Buckconfig:
+Bsmrconfig:
 
 ```ini
 [bsmr]

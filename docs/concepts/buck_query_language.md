@@ -19,7 +19,7 @@ could be:
 
 - An explicit [build target](build_target.md)
 - A [build target pattern](target_pattern.md)
-- A [.buckconfig alias](buckconfig.md)
+- A [.bsmrconfig alias](bsmrconfig.md)
 - The set of targets returned by another Buck query operator
 
 **Tip:** You can pass an alias directly to the `bsmr query` command line to see

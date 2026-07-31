@@ -18,9 +18,9 @@ use bsmr_cmd_audit_client::config::LocationStyle;
 use bsmr_cmd_audit_client::config::OutputFormat;
 use bsmr_cmd_audit_client::config::ValueStyle;
 use bsmr_common::dice::cells::HasCellResolver;
-use bsmr_common::legacy_configs::configs::LegacyBuckConfig;
-use bsmr_common::legacy_configs::configs::LegacyBuckConfigLocation;
-use bsmr_common::legacy_configs::configs::LegacyBuckConfigValue;
+use bsmr_common::legacy_configs::configs::LegacyBsmrConfig;
+use bsmr_common::legacy_configs::configs::LegacyBsmrConfigLocation;
+use bsmr_common::legacy_configs::configs::LegacyBsmrConfigValue;
 use bsmr_common::legacy_configs::dice::HasLegacyConfigs;
 use bsmr_core::cells::CellAliasResolver;
 use bsmr_core::cells::name::CellName;
@@ -36,7 +36,7 @@ use crate::ServerAuditSubcommand;
 
 fn print_location_string(
     writer: &mut impl Write,
-    location: &LegacyBuckConfigLocation,
+    location: &LegacyBsmrConfigLocation,
     keyword: &str,
 ) -> bsmr_error::Result<()> {
     writeln!(writer, "  ({keyword} {location})")?;
@@ -45,7 +45,7 @@ fn print_location_string(
 
 fn print_location(
     writer: &mut impl Write,
-    value: &LegacyBuckConfigValue,
+    value: &LegacyBsmrConfigValue,
     style: LocationStyle,
 ) -> bsmr_error::Result<()> {
     match style {
@@ -74,7 +74,7 @@ fn print_value(
     writer: &mut impl Write,
     inline_section: Option<&str>,
     key: &str,
-    value: &LegacyBuckConfigValue,
+    value: &LegacyBsmrConfigValue,
     style: ValueStyle,
 ) -> bsmr_error::Result<()> {
     let (prefix, sep) = match inline_section {
@@ -197,7 +197,7 @@ trait CellConfigRenderer {
         cell: CellName,
         section: &str,
         key: &str,
-        value: LegacyBuckConfigValue<'_>,
+        value: LegacyBsmrConfigValue<'_>,
     ) -> bsmr_error::Result<()>;
     fn flush(&mut self) -> bsmr_error::Result<()>;
 }
@@ -233,7 +233,7 @@ impl CellConfigRenderer for SimpleCellConfigRenderer<'_> {
         _cell: CellName,
         section: &str,
         key: &str,
-        value: LegacyBuckConfigValue<'_>,
+        value: LegacyBsmrConfigValue<'_>,
     ) -> bsmr_error::Result<()> {
         let inline_section = if self.inline_section {
             Some(section)
@@ -278,7 +278,7 @@ impl CellConfigRenderer for JsonCellConfigRenderer<'_> {
         cell: CellName,
         _section: &str,
         _key: &str,
-        value: LegacyBuckConfigValue<'_>,
+        value: LegacyBsmrConfigValue<'_>,
     ) -> bsmr_error::Result<()> {
         let key = if self.scope_keys_to_cell && !spec.contains("//") {
             format!("{cell}//{spec}")
@@ -302,7 +302,7 @@ fn render_cell_config(
     renderer: &mut dyn CellConfigRenderer,
     relevant_cell: Option<CellName>,
     cell: CellName,
-    cell_config: LegacyBuckConfig,
+    cell_config: LegacyBsmrConfig,
     specs: &Matches<'_>,
 ) -> bsmr_error::Result<()> {
     let mut rendered_cell_header = false;

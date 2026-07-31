@@ -11,8 +11,8 @@
 use std::collections::HashSet;
 use std::future::Future;
 
-use bsmr_common::legacy_configs::configs::LegacyBuckConfig;
-use bsmr_common::legacy_configs::key::BuckconfigKeyRef;
+use bsmr_common::legacy_configs::configs::LegacyBsmrConfig;
+use bsmr_common::legacy_configs::key::BsmrconfigKeyRef;
 use bsmr_core::deferred::key::DeferredHolderKey;
 use bsmr_core::fs::artifact_path_resolver::ArtifactFs;
 use bsmr_core::provider::label::ConfiguredProvidersLabel;
@@ -53,7 +53,7 @@ pub trait HasDetailedAggregatedMetrics {
     /// start; latches on for the daemon's lifetime.
     fn maybe_enable_detailed_aggregated_metrics(
         &self,
-        config: &LegacyBuckConfig,
+        config: &LegacyBsmrConfig,
     ) -> bsmr_error::Result<()>;
     fn compute_detailed_metrics(
         &self,
@@ -103,7 +103,7 @@ impl HasDetailedAggregatedMetrics for DiceComputations<'_> {
 
     fn maybe_enable_detailed_aggregated_metrics(
         &self,
-        config: &LegacyBuckConfig,
+        config: &LegacyBsmrConfig,
     ) -> bsmr_error::Result<()> {
         if detailed_aggregated_metrics_requested(config)? {
             get_detailed_aggregated_metrics_handle(self)?.enable();
@@ -213,10 +213,10 @@ fn get_detailed_aggregated_metrics_handle<'a>(
 
 /// Whether `config` requests a tracker consumer. (Artifact-path sketches compute
 /// from DICE directly and don't read the tracker.)
-fn detailed_aggregated_metrics_requested(config: &LegacyBuckConfig) -> bsmr_error::Result<bool> {
+fn detailed_aggregated_metrics_requested(config: &LegacyBsmrConfig) -> bsmr_error::Result<bool> {
     for property in ["detailed_aggregated_metrics", "log_action_graph_sketch"] {
         if config
-            .parse::<bool>(BuckconfigKeyRef {
+            .parse::<bool>(BsmrconfigKeyRef {
                 section: "bsmr",
                 property,
             })?

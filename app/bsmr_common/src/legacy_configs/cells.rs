@@ -40,7 +40,7 @@ use crate::legacy_configs::aggregator::CellsAggregator;
 use crate::legacy_configs::args::ResolvedLegacyConfigArg;
 use crate::legacy_configs::args::resolve_config_args;
 use crate::legacy_configs::args::to_proto_config_args;
-use crate::legacy_configs::configs::LegacyBuckConfig;
+use crate::legacy_configs::configs::LegacyBsmrConfig;
 use crate::legacy_configs::dice::HasInjectedLegacyConfigs;
 use crate::legacy_configs::file_ops::ConfigDirEntry;
 use crate::legacy_configs::file_ops::ConfigParserFileOps;
@@ -48,34 +48,34 @@ use crate::legacy_configs::file_ops::ConfigPath;
 use crate::legacy_configs::file_ops::DefaultConfigParserFileOps;
 use crate::legacy_configs::file_ops::DiceConfigFileOps;
 use crate::legacy_configs::file_ops::push_all_files_from_a_directory;
-use crate::legacy_configs::key::BuckconfigKeyRef;
+use crate::legacy_configs::key::BsmrconfigKeyRef;
 use crate::legacy_configs::parser::LegacyConfigParser;
 use crate::legacy_configs::path::DEFAULT_EXTERNAL_CONFIG_SOURCES;
 use crate::legacy_configs::path::DEFAULT_PROJECT_CONFIG_SOURCES;
-use crate::legacy_configs::path::DOT_BUCKCONFIG_LOCAL;
+use crate::legacy_configs::path::DOT_BSMRCONFIG_LOCAL;
 use crate::legacy_configs::path::ExternalConfigSource;
 use crate::legacy_configs::path::ProjectConfigSource;
 
-/// Buckconfigs can partially be loaded from within dice. However, some parts of what makes up the
-/// buckconfig comes from outside the buildgraph, and this type represents those parts.
+/// Bsmrconfigs can partially be loaded from within dice. However, some parts of what makes up the
+/// bsmrconfig comes from outside the buildgraph, and this type represents those parts.
 #[derive(Clone, PartialEq, Eq, Allocative, Pagable)]
-pub struct ExternalBuckconfigData {
-    // The result of parsing the buckconfigs coming from either global (e.g. /etc/buckconfig.d) or
-    // user (e.g. ~/.buckconfig.d or $home_dir/.buckconfig.local) files/dirs outside of the repo
+pub struct ExternalBsmrconfigData {
+    // The result of parsing the bsmrconfigs coming from either global (e.g. /etc/bsmrconfig.d) or
+    // user (e.g. ~/.bsmrconfig.d or $home_dir/.bsmrconfig.local) files/dirs outside of the repo
     // The order matters here and reflects the same order these are processed in buck, see
     // https://fburl.com/code/8ue78p1j
-    external_path_configs: Vec<ExternalPathBuckconfigData>,
-    // The result of parsing the buckconfigs coming from command line args (e.g. --config or --config-file)
+    external_path_configs: Vec<ExternalPathBsmrconfigData>,
+    // The result of parsing the bsmrconfigs coming from command line args (e.g. --config or --config-file)
     args: Vec<ResolvedLegacyConfigArg>,
 }
 
 #[derive(PartialEq, Eq, Allocative, Clone, Pagable)]
-pub struct ExternalPathBuckconfigData {
+pub struct ExternalPathBsmrconfigData {
     pub(crate) parse_state: LegacyConfigParser,
     pub(crate) origin_path: ConfigPath,
 }
 
-impl ExternalBuckconfigData {
+impl ExternalBsmrconfigData {
     pub fn testing_default() -> Self {
         Self {
             external_path_configs: Vec::new(),
@@ -85,13 +85,13 @@ impl ExternalBuckconfigData {
 
     pub fn filter_values<F>(self, filter: F) -> Self
     where
-        F: Fn(&BuckconfigKeyRef) -> bool,
+        F: Fn(&BsmrconfigKeyRef) -> bool,
     {
         Self {
             external_path_configs: self
                 .external_path_configs
                 .into_iter()
-                .map(|o| ExternalPathBuckconfigData {
+                .map(|o| ExternalPathBsmrconfigData {
                     parse_state: o.parse_state.filter_values(&filter),
                     origin_path: o.origin_path,
                 })
@@ -102,7 +102,7 @@ impl ExternalBuckconfigData {
                 .filter(|arg| match arg {
                     ResolvedLegacyConfigArg::Flag(flag) => {
                         flag.cell.is_some()
-                            || filter(&BuckconfigKeyRef {
+                            || filter(&BsmrconfigKeyRef {
                                 section: &flag.section,
                                 property: &flag.key,
                             })
@@ -115,17 +115,17 @@ impl ExternalBuckconfigData {
 
     async fn get_local_config_components(
         project_root: &ProjectRoot,
-    ) -> Vec<bsmr_data::BuckconfigComponent> {
-        use bsmr_data::buckconfig_component::Data::GlobalExternalConfigFile;
+    ) -> Vec<bsmr_data::BsmrconfigComponent> {
+        use bsmr_data::bsmrconfig_component::Data::GlobalExternalConfigFile;
         let file_ops = &mut DefaultConfigParserFileOps {
             project_fs: project_root.dupe(),
         };
         let mut local_config_components = Vec::new();
         if let Ok(legacy_cells) =
-            BuckConfigBasedCells::parse_with_config_args(project_root, &[]).await
+            BsmrConfigBasedCells::parse_with_config_args(project_root, &[]).await
         {
-            let path = ForwardRelativePath::new(DOT_BUCKCONFIG_LOCAL).expect(
-                "Internal error: .buckconfig.local should always be a valid forward relative path",
+            let path = ForwardRelativePath::new(DOT_BSMRCONFIG_LOCAL).expect(
+                "Internal error: .bsmrconfig.local should always be a valid forward relative path",
             );
             for (_cell, cell_instance) in legacy_cells.cell_resolver.cells() {
                 let relative_path = cell_instance.path().as_project_relative_path().join(path);
@@ -140,10 +140,10 @@ impl ExternalBuckconfigData {
                 {
                     let values = parser.to_proto_external_config_values(false);
                     if values.is_empty() {
-                        // Don't create an empty component for cells with non-existing .buckconfig.local
+                        // Don't create an empty component for cells with non-existing .bsmrconfig.local
                         continue;
                     }
-                    local_config_components.push(bsmr_data::BuckconfigComponent {
+                    local_config_components.push(bsmr_data::BsmrconfigComponent {
                         data: Some(GlobalExternalConfigFile(bsmr_data::GlobalExternalConfig {
                             values,
                             origin_path,
@@ -155,12 +155,12 @@ impl ExternalBuckconfigData {
         local_config_components
     }
 
-    pub async fn get_buckconfig_components(
+    pub async fn get_bsmrconfig_components(
         &self,
         project_root: &ProjectRoot,
-    ) -> Vec<bsmr_data::BuckconfigComponent> {
-        use bsmr_data::buckconfig_component::Data::GlobalExternalConfigFile;
-        let mut res: Vec<bsmr_data::BuckconfigComponent> = self
+    ) -> Vec<bsmr_data::BsmrconfigComponent> {
+        use bsmr_data::bsmrconfig_component::Data::GlobalExternalConfigFile;
+        let mut res: Vec<bsmr_data::BsmrconfigComponent> = self
             .external_path_configs
             .clone()
             .into_iter()
@@ -169,7 +169,7 @@ impl ExternalBuckconfigData {
                     values: o.parse_state.to_proto_external_config_values(false),
                     origin_path: o.origin_path.to_string(),
                 };
-                bsmr_data::BuckconfigComponent {
+                bsmr_data::BsmrconfigComponent {
                     data: Some(GlobalExternalConfigFile(external_file)),
                 }
             })
@@ -182,26 +182,26 @@ impl ExternalBuckconfigData {
 }
 
 /// Used for creating a CellResolver in a buckv1-compatible way based on values
-/// in .buckconfig in each cell.
+/// in .bsmrconfig in each cell.
 ///
 /// We'll traverse the structure of the `[cells]` sections starting from
-/// the root .buckconfig. All aliases found in the root config will also be
+/// the root .bsmrconfig. All aliases found in the root config will also be
 /// available in all other cells (v1 provides that same behavior).
 ///
 /// We don't (currently) enforce that all aliases appear in the root config, but
 /// unlike v1, our cells implementation works just fine if that isn't the case.
-pub struct BuckConfigBasedCells {
+pub struct BsmrConfigBasedCells {
     pub cell_resolver: CellResolver,
-    pub root_config: LegacyBuckConfig,
+    pub root_config: LegacyBsmrConfig,
     pub config_paths: StdBuckHashSet<ConfigPath>,
-    pub external_data: ExternalBuckconfigData,
+    pub external_data: ExternalBsmrconfigData,
 }
 
-impl BuckConfigBasedCells {
+impl BsmrConfigBasedCells {
     /// In the client and one place in the daemon, we need access to the alias resolver for the cwd
     /// in some places where we don't have normal dice access
     ///
-    /// This function reads buckconfigs to compute an appropriate cell alias resolver to make that
+    /// This function reads bsmrconfigs to compute an appropriate cell alias resolver to make that
     /// possible.
     pub async fn get_cell_alias_resolver_for_cwd_fast(
         &self,
@@ -227,8 +227,8 @@ impl BuckConfigBasedCells {
 
         let follow_includes = false;
 
-        let config_paths = get_project_buckconfig_paths(cell_path, file_ops).await?;
-        let config = LegacyBuckConfig::finish_parse(
+        let config_paths = get_project_bsmrconfig_paths(cell_path, file_ops).await?;
+        let config = LegacyBsmrConfig::finish_parse(
             self.external_data.external_path_configs.clone(),
             &config_paths,
             cell_path,
@@ -241,7 +241,7 @@ impl BuckConfigBasedCells {
         CellAliasResolver::new_for_non_root_cell(
             cell_name,
             self.cell_resolver.root_cell_cell_alias_resolver(),
-            BuckConfigBasedCells::get_cell_aliases_from_config(&config)?,
+            BsmrConfigBasedCells::get_cell_aliases_from_config(&config)?,
         )
     }
 
@@ -323,8 +323,8 @@ impl BuckConfigBasedCells {
         // NOTE: This will _not_ perform IO unless it needs to.
         let processed_config_args = resolve_config_args(config_args, &mut file_ops).await?;
 
-        let external_paths = get_external_buckconfig_paths(&mut file_ops).await?;
-        let started_parse = LegacyBuckConfig::start_parse_for_external_files(
+        let external_paths = get_external_bsmrconfig_paths(&mut file_ops).await?;
+        let started_parse = LegacyBsmrConfig::start_parse_for_external_files(
             &external_paths,
             &mut file_ops,
             follow_includes,
@@ -333,11 +333,11 @@ impl BuckConfigBasedCells {
 
         let root_path = CellRootPathBuf::new(ProjectRelativePath::empty().to_owned());
 
-        let buckconfig_paths = get_project_buckconfig_paths(&root_path, &mut file_ops).await?;
+        let bsmrconfig_paths = get_project_bsmrconfig_paths(&root_path, &mut file_ops).await?;
 
-        let root_config = LegacyBuckConfig::finish_parse(
+        let root_config = LegacyBsmrConfig::finish_parse(
             started_parse.clone(),
-            buckconfig_paths.as_slice(),
+            bsmrconfig_paths.as_slice(),
             &root_path,
             &mut file_ops,
             &processed_config_args,
@@ -404,7 +404,7 @@ impl BuckConfigBasedCells {
             cell_resolver,
             root_config,
             config_paths: file_ops.trace,
-            external_data: ExternalBuckconfigData {
+            external_data: ExternalBsmrconfigData {
                 external_path_configs: started_parse,
                 args: processed_config_args,
             },
@@ -412,7 +412,7 @@ impl BuckConfigBasedCells {
     }
 
     pub(crate) fn get_cell_aliases_from_config(
-        config: &LegacyBuckConfig,
+        config: &LegacyBsmrConfig,
     ) -> bsmr_error::Result<impl Iterator<Item = (NonEmptyCellAlias, NonEmptyCellAlias)> + use<>>
     {
         let mut aliases = Vec::new();
@@ -432,11 +432,11 @@ impl BuckConfigBasedCells {
     pub(crate) async fn parse_single_cell_with_dice(
         ctx: &mut DiceComputations<'_>,
         cell_path: &CellRootPath,
-    ) -> bsmr_error::Result<LegacyBuckConfig> {
+    ) -> bsmr_error::Result<LegacyBsmrConfig> {
         let resolver = ctx.get_cell_resolver().await?;
         let io_provider = ctx.global_data().get_io_provider();
         let project_fs = io_provider.project_root();
-        let external_data = ctx.get_injected_external_buckconfig_data().await?;
+        let external_data = ctx.get_injected_external_bsmrconfig_data().await?;
 
         let mut file_ops = DiceConfigFileOps::new(ctx, project_fs, &resolver);
 
@@ -447,7 +447,7 @@ impl BuckConfigBasedCells {
         &self,
         cell: CellName,
         project_fs: &ProjectRoot,
-    ) -> bsmr_error::Result<LegacyBuckConfig> {
+    ) -> bsmr_error::Result<LegacyBsmrConfig> {
         self.parse_single_cell_with_file_ops(
             cell,
             &mut DefaultConfigParserFileOps {
@@ -461,7 +461,7 @@ impl BuckConfigBasedCells {
         &self,
         cell: CellName,
         file_ops: &mut dyn ConfigParserFileOps,
-    ) -> bsmr_error::Result<LegacyBuckConfig> {
+    ) -> bsmr_error::Result<LegacyBsmrConfig> {
         Self::parse_single_cell_with_file_ops_inner(
             &self.external_data,
             file_ops,
@@ -471,12 +471,12 @@ impl BuckConfigBasedCells {
     }
 
     async fn parse_single_cell_with_file_ops_inner(
-        external_data: &ExternalBuckconfigData,
+        external_data: &ExternalBsmrconfigData,
         file_ops: &mut dyn ConfigParserFileOps,
         cell_path: &CellRootPath,
-    ) -> bsmr_error::Result<LegacyBuckConfig> {
-        let config_paths = get_project_buckconfig_paths(cell_path, file_ops).await?;
-        LegacyBuckConfig::finish_parse(
+    ) -> bsmr_error::Result<LegacyBsmrConfig> {
+        let config_paths = get_project_bsmrconfig_paths(cell_path, file_ops).await?;
+        LegacyBsmrConfig::finish_parse(
             external_data.external_path_configs.clone(),
             &config_paths,
             cell_path,
@@ -490,20 +490,20 @@ impl BuckConfigBasedCells {
     fn parse_external_cell_origin(
         cell: CellName,
         value: &str,
-        config: &LegacyBuckConfig,
+        config: &LegacyBsmrConfig,
     ) -> bsmr_error::Result<ExternalCellOrigin> {
         #[derive(bsmr_error::Error, Debug)]
         #[bsmr(tag = Input)]
         enum ExternalCellOriginParseError {
             #[error("Unknown external cell origin `{0}`")]
             Unknown(String),
-            #[error("Missing buckconfig `{0}.{1}` for external cell configuration")]
+            #[error("Missing bsmrconfig `{0}.{1}` for external cell configuration")]
             MissingConfiguration(String, String),
         }
 
         let get_config = |section: &str, property: &str| {
             config
-                .get(crate::legacy_configs::key::BuckconfigKeyRef { section, property })
+                .get(crate::legacy_configs::key::BsmrconfigKeyRef { section, property })
                 .ok_or_else(|| {
                     ExternalCellOriginParseError::MissingConfiguration(
                         section.to_owned(),
@@ -541,7 +541,7 @@ impl BuckConfigBasedCells {
     }
 }
 
-async fn get_external_buckconfig_paths(
+async fn get_external_bsmrconfig_paths(
     file_ops: &mut dyn ConfigParserFileOps,
 ) -> bsmr_error::Result<Vec<ConfigPath>> {
     let skip_default_external_config = bsmr_env!(
@@ -550,42 +550,42 @@ async fn get_external_buckconfig_paths(
         applicability = testing
     )?;
 
-    let mut buckconfig_paths: Vec<ConfigPath> = Vec::new();
+    let mut bsmrconfig_paths: Vec<ConfigPath> = Vec::new();
 
     if !skip_default_external_config {
-        for buckconfig in DEFAULT_EXTERNAL_CONFIG_SOURCES {
-            match buckconfig {
+        for bsmrconfig in DEFAULT_EXTERNAL_CONFIG_SOURCES {
+            match bsmrconfig {
                 ExternalConfigSource::UserFile(file) => {
                     let home_dir = dirs::home_dir();
                     if let Some(home_dir_path) = home_dir {
-                        let buckconfig_path = ForwardRelativePath::new(file)?;
-                        buckconfig_paths.push(ConfigPath::Global(
-                            AbsPath::new(&home_dir_path)?.join(buckconfig_path.as_str()),
+                        let bsmrconfig_path = ForwardRelativePath::new(file)?;
+                        bsmrconfig_paths.push(ConfigPath::Global(
+                            AbsPath::new(&home_dir_path)?.join(bsmrconfig_path.as_str()),
                         ));
                     }
                 }
                 ExternalConfigSource::UserFolder(folder) => {
                     let home_dir = dirs::home_dir();
                     if let Some(home_dir_path) = home_dir {
-                        let buckconfig_path = ForwardRelativePath::new(folder)?;
-                        let buckconfig_folder_abs_path =
-                            AbsPath::new(&home_dir_path)?.join(buckconfig_path.as_str());
+                        let bsmrconfig_path = ForwardRelativePath::new(folder)?;
+                        let bsmrconfig_folder_abs_path =
+                            AbsPath::new(&home_dir_path)?.join(bsmrconfig_path.as_str());
                         push_all_files_from_a_directory(
-                            &mut buckconfig_paths,
-                            &ConfigPath::Global(buckconfig_folder_abs_path),
+                            &mut bsmrconfig_paths,
+                            &ConfigPath::Global(bsmrconfig_folder_abs_path),
                             file_ops,
                         )
                         .await?;
                     }
                 }
                 ExternalConfigSource::GlobalFile(file) => {
-                    buckconfig_paths.push(ConfigPath::Global(AbsPath::new(*file)?.to_owned()));
+                    bsmrconfig_paths.push(ConfigPath::Global(AbsPath::new(*file)?.to_owned()));
                 }
                 ExternalConfigSource::GlobalFolder(folder) => {
-                    let buckconfig_folder_abs_path = AbsPath::new(*folder)?.to_owned();
+                    let bsmrconfig_folder_abs_path = AbsPath::new(*folder)?.to_owned();
                     push_all_files_from_a_directory(
-                        &mut buckconfig_paths,
-                        &ConfigPath::Global(buckconfig_folder_abs_path),
+                        &mut bsmrconfig_paths,
+                        &ConfigPath::Global(bsmrconfig_folder_abs_path),
                         file_ops,
                     )
                     .await?;
@@ -598,33 +598,33 @@ async fn get_external_buckconfig_paths(
         bsmr_env!("BSMR_TEST_EXTRA_EXTERNAL_CONFIG", applicability = testing)?;
 
     if let Some(f) = extra_external_config {
-        buckconfig_paths.push(ConfigPath::Global(AbsPath::new(f)?.to_owned()));
+        bsmrconfig_paths.push(ConfigPath::Global(AbsPath::new(f)?.to_owned()));
     }
 
-    Ok(buckconfig_paths)
+    Ok(bsmrconfig_paths)
 }
 
-async fn get_project_buckconfig_paths(
+async fn get_project_bsmrconfig_paths(
     path: &CellRootPath,
     file_ops: &mut dyn ConfigParserFileOps,
 ) -> bsmr_error::Result<Vec<ConfigPath>> {
-    let mut buckconfig_paths: Vec<ConfigPath> = Vec::new();
+    let mut bsmrconfig_paths: Vec<ConfigPath> = Vec::new();
 
-    for buckconfig in DEFAULT_PROJECT_CONFIG_SOURCES {
-        match buckconfig {
+    for bsmrconfig in DEFAULT_PROJECT_CONFIG_SOURCES {
+        match bsmrconfig {
             ProjectConfigSource::CellRelativeFile(file) => {
-                let buckconfig_path = ForwardRelativePath::new(file)?;
-                buckconfig_paths.push(ConfigPath::Project(
-                    path.as_project_relative_path().join(buckconfig_path),
+                let bsmrconfig_path = ForwardRelativePath::new(file)?;
+                bsmrconfig_paths.push(ConfigPath::Project(
+                    path.as_project_relative_path().join(bsmrconfig_path),
                 ));
             }
             ProjectConfigSource::CellRelativeFolder(folder) => {
-                let buckconfig_folder_path = ForwardRelativePath::new(folder)?;
-                let buckconfig_folder_path =
-                    path.as_project_relative_path().join(buckconfig_folder_path);
+                let bsmrconfig_folder_path = ForwardRelativePath::new(folder)?;
+                let bsmrconfig_folder_path =
+                    path.as_project_relative_path().join(bsmrconfig_folder_path);
                 push_all_files_from_a_directory(
-                    &mut buckconfig_paths,
-                    &ConfigPath::Project(buckconfig_folder_path),
+                    &mut bsmrconfig_paths,
+                    &ConfigPath::Project(bsmrconfig_folder_path),
                     file_ops,
                 )
                 .await?;
@@ -632,7 +632,7 @@ async fn get_project_buckconfig_paths(
         }
     }
 
-    Ok(buckconfig_paths)
+    Ok(bsmrconfig_paths)
 }
 
 #[cfg(test)]
@@ -651,16 +651,16 @@ mod tests {
     use crate::external_cells::EXTERNAL_CELLS_IMPL;
     use crate::external_cells::ExternalCellsImpl;
     use crate::file_ops::delegate::FileOpsDelegate;
-    use crate::legacy_configs::cells::BuckConfigBasedCells;
+    use crate::legacy_configs::cells::BsmrConfigBasedCells;
     use crate::legacy_configs::configs::testing::TestConfigParserFileOps;
     use crate::legacy_configs::configs::tests::assert_config_value;
-    use crate::legacy_configs::key::BuckconfigKeyRef;
+    use crate::legacy_configs::key::BsmrconfigKeyRef;
 
     #[tokio::test]
     async fn test_cells() -> bsmr_error::Result<()> {
         let mut file_ops = TestConfigParserFileOps::new(&[
             (
-                ".buckconfig",
+                ".bsmrconfig",
                 indoc!(
                     r#"
                             [cells]
@@ -672,7 +672,7 @@ mod tests {
                 ),
             ),
             (
-                "other/.buckconfig",
+                "other/.bsmrconfig",
                 indoc!(
                     r#"
                             [cells]
@@ -683,7 +683,7 @@ mod tests {
                 ),
             ),
             (
-                "third_party/.buckconfig",
+                "third_party/.bsmrconfig",
                 indoc!(
                     r#"
                             [cells]
@@ -693,7 +693,7 @@ mod tests {
             ),
         ])?;
 
-        let cells = BuckConfigBasedCells::testing_parse_with_file_ops(&mut file_ops, &[]).await?;
+        let cells = BsmrConfigBasedCells::testing_parse_with_file_ops(&mut file_ops, &[]).await?;
 
         let resolver = &cells.cell_resolver;
 
@@ -729,7 +729,7 @@ mod tests {
     async fn test_multi_cell_with_config_file() -> bsmr_error::Result<()> {
         let mut file_ops = TestConfigParserFileOps::new(&[
             (
-                ".buckconfig",
+                ".bsmrconfig",
                 indoc!(
                     r#"
                             [cells]
@@ -741,7 +741,7 @@ mod tests {
                 ),
             ),
             (
-                "other/.buckconfig",
+                "other/.bsmrconfig",
                 indoc!(
                     r#"
                             [cells]
@@ -754,7 +754,7 @@ mod tests {
                 ),
             ),
             (
-                "third_party/.buckconfig",
+                "third_party/.bsmrconfig",
                 indoc!(
                     r#"
                             [cells]
@@ -776,7 +776,7 @@ mod tests {
             ),
         ])?;
 
-        let cells = BuckConfigBasedCells::testing_parse_with_file_ops(
+        let cells = BsmrConfigBasedCells::testing_parse_with_file_ops(
             &mut file_ops,
             &[ConfigOverride::file(
                 "cli-conf",
@@ -796,21 +796,21 @@ mod tests {
             .await?;
 
         assert_eq!(
-            root_config.get(BuckconfigKeyRef {
+            root_config.get(BsmrconfigKeyRef {
                 section: "foo",
                 property: "bar"
             }),
             Some("blah")
         );
         assert_eq!(
-            other_config.get(BuckconfigKeyRef {
+            other_config.get(BsmrconfigKeyRef {
                 section: "foo",
                 property: "bar"
             }),
             Some("blah")
         );
         assert_eq!(
-            tp_config.get(BuckconfigKeyRef {
+            tp_config.get(BsmrconfigKeyRef {
                 section: "foo",
                 property: "bar"
             }),
@@ -824,7 +824,7 @@ mod tests {
     async fn test_multi_cell_no_repositories_in_non_root_cell() -> bsmr_error::Result<()> {
         let mut file_ops = TestConfigParserFileOps::new(&[
             (
-                ".buckconfig",
+                ".bsmrconfig",
                 indoc!(
                     r#"
                             [cells]
@@ -834,7 +834,7 @@ mod tests {
                 ),
             ),
             (
-                "other/.buckconfig",
+                "other/.bsmrconfig",
                 indoc!(
                     r#"
                             [foo]
@@ -844,14 +844,14 @@ mod tests {
             ),
         ])?;
 
-        let cells = BuckConfigBasedCells::testing_parse_with_file_ops(&mut file_ops, &[]).await?;
+        let cells = BsmrConfigBasedCells::testing_parse_with_file_ops(&mut file_ops, &[]).await?;
 
         let other_config = cells
             .parse_single_cell_with_file_ops(CellName::testing_new("other"), &mut file_ops)
             .await?;
 
         assert_eq!(
-            other_config.get(BuckconfigKeyRef {
+            other_config.get(BsmrconfigKeyRef {
                 section: "foo",
                 property: "bar"
             }),
@@ -865,7 +865,7 @@ mod tests {
     async fn test_multi_cell_with_cell_relative() -> bsmr_error::Result<()> {
         let mut file_ops = TestConfigParserFileOps::new(&[
             (
-                ".buckconfig",
+                ".bsmrconfig",
                 indoc!(
                     r#"
                             [cells]
@@ -884,7 +884,7 @@ mod tests {
                 ),
             ),
             (
-                "other/.buckconfig",
+                "other/.bsmrconfig",
                 indoc!(
                     r#"
                             [cells]
@@ -906,7 +906,7 @@ mod tests {
             ),
         ])?;
 
-        let cells = BuckConfigBasedCells::testing_parse_with_file_ops(
+        let cells = BsmrConfigBasedCells::testing_parse_with_file_ops(
             &mut file_ops,
             &[
                 ConfigOverride::file("app-conf", Some(CellRootPathBuf::testing_new("other"))),
@@ -920,14 +920,14 @@ mod tests {
             .await?;
 
         assert_eq!(
-            other_config.get(BuckconfigKeyRef {
+            other_config.get(BsmrconfigKeyRef {
                 section: "apple",
                 property: "ide"
             }),
             Some("Xcode")
         );
         assert_eq!(
-            other_config.get(BuckconfigKeyRef {
+            other_config.get(BsmrconfigKeyRef {
                 section: "apple",
                 property: "test_tool"
             }),
@@ -941,7 +941,7 @@ mod tests {
     async fn test_local_config_file_overwrite_config_file() -> bsmr_error::Result<()> {
         let mut file_ops = TestConfigParserFileOps::new(&[
             (
-                ".buckconfig",
+                ".bsmrconfig",
                 indoc!(
                     r#"
                             [cells]
@@ -953,7 +953,7 @@ mod tests {
                 ),
             ),
             (
-                ".buckconfig.local",
+                ".bsmrconfig.local",
                 indoc!(
                     r#"
                             [orange]
@@ -966,7 +966,7 @@ mod tests {
             ),
         ])?;
 
-        let cells = BuckConfigBasedCells::testing_parse_with_file_ops(&mut file_ops, &[]).await?;
+        let cells = BsmrConfigBasedCells::testing_parse_with_file_ops(&mut file_ops, &[]).await?;
 
         let config = cells
             .parse_single_cell_with_file_ops(CellName::testing_new("root"), &mut file_ops)
@@ -987,7 +987,7 @@ mod tests {
     async fn test_multi_cell_local_config_file_overwrite_config_file() -> bsmr_error::Result<()> {
         let mut file_ops = TestConfigParserFileOps::new(&[
             (
-                ".buckconfig",
+                ".bsmrconfig",
                 indoc!(
                     r#"
                             [cells]
@@ -1000,7 +1000,7 @@ mod tests {
                 ),
             ),
             (
-                ".buckconfig.local",
+                ".bsmrconfig.local",
                 indoc!(
                     r#"
                             [orange]
@@ -1012,7 +1012,7 @@ mod tests {
                 ),
             ),
             (
-                "other/.buckconfig",
+                "other/.bsmrconfig",
                 indoc!(
                     r#"
                             [cells]
@@ -1025,7 +1025,7 @@ mod tests {
                 ),
             ),
             (
-                "other/.buckconfig.local",
+                "other/.bsmrconfig.local",
                 indoc!(
                     r#"
                             [orange]
@@ -1038,7 +1038,7 @@ mod tests {
             ),
         ])?;
 
-        let cells = BuckConfigBasedCells::testing_parse_with_file_ops(&mut file_ops, &[]).await?;
+        let cells = BsmrConfigBasedCells::testing_parse_with_file_ops(&mut file_ops, &[]).await?;
 
         let root_config = cells
             .parse_single_cell_with_file_ops(CellName::testing_new("root"), &mut file_ops)
@@ -1069,9 +1069,9 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_config_arg_with_no_buckconfig() -> bsmr_error::Result<()> {
+    async fn test_config_arg_with_no_bsmrconfig() -> bsmr_error::Result<()> {
         let mut file_ops = TestConfigParserFileOps::new(&[(
-            ".buckconfig",
+            ".bsmrconfig",
             indoc!(
                 r#"
                         [repositories]
@@ -1081,7 +1081,7 @@ mod tests {
             ),
         )])?;
 
-        let cells = BuckConfigBasedCells::testing_parse_with_file_ops(
+        let cells = BsmrConfigBasedCells::testing_parse_with_file_ops(
             &mut file_ops,
             &[ConfigOverride::flag_no_cell("some_section.key=value1")],
         )
@@ -1098,7 +1098,7 @@ mod tests {
     #[tokio::test]
     async fn test_cell_config_section_name() -> bsmr_error::Result<()> {
         let mut file_ops = TestConfigParserFileOps::new(&[(
-            ".buckconfig",
+            ".bsmrconfig",
             indoc!(
                 r#"
                             [repositories]
@@ -1110,7 +1110,7 @@ mod tests {
             ),
         )])?;
 
-        let resolver = BuckConfigBasedCells::testing_parse_with_file_ops(&mut file_ops, &[])
+        let resolver = BsmrConfigBasedCells::testing_parse_with_file_ops(&mut file_ops, &[])
             .await?
             .cell_resolver;
 
@@ -1177,7 +1177,7 @@ mod tests {
         initialize_external_cells_impl();
 
         let mut file_ops = TestConfigParserFileOps::new(&[(
-            ".buckconfig",
+            ".bsmrconfig",
             indoc!(
                 r#"
                     [cells]
@@ -1192,7 +1192,7 @@ mod tests {
             ),
         )])?;
 
-        let resolver = BuckConfigBasedCells::testing_parse_with_file_ops(&mut file_ops, &[])
+        let resolver = BsmrConfigBasedCells::testing_parse_with_file_ops(&mut file_ops, &[])
             .await?
             .cell_resolver;
 
@@ -1229,7 +1229,7 @@ mod tests {
         initialize_external_cells_impl();
 
         let mut file_ops = TestConfigParserFileOps::new(&[(
-            ".buckconfig",
+            ".bsmrconfig",
             indoc!(
                 r#"
                     [cells]
@@ -1242,7 +1242,7 @@ mod tests {
             ),
         )])?;
 
-        BuckConfigBasedCells::testing_parse_with_file_ops(&mut file_ops, &[])
+        BsmrConfigBasedCells::testing_parse_with_file_ops(&mut file_ops, &[])
             .await
             .err()
             .unwrap();
@@ -1255,7 +1255,7 @@ mod tests {
         initialize_external_cells_impl();
 
         let mut file_ops = TestConfigParserFileOps::new(&[(
-            ".buckconfig",
+            ".bsmrconfig",
             indoc!(
                 r#"
                     [cells]
@@ -1268,7 +1268,7 @@ mod tests {
             ),
         )])?;
 
-        let e = BuckConfigBasedCells::testing_parse_with_file_ops(&mut file_ops, &[])
+        let e = BsmrConfigBasedCells::testing_parse_with_file_ops(&mut file_ops, &[])
             .await
             .err()
             .unwrap();
@@ -1284,7 +1284,7 @@ mod tests {
         initialize_external_cells_impl();
 
         let mut file_ops = TestConfigParserFileOps::new(&[(
-            ".buckconfig",
+            ".bsmrconfig",
             indoc!(
                 r#"
                     [cells]
@@ -1299,7 +1299,7 @@ mod tests {
             ),
         )])?;
 
-        let resolver = BuckConfigBasedCells::testing_parse_with_file_ops(&mut file_ops, &[])
+        let resolver = BsmrConfigBasedCells::testing_parse_with_file_ops(&mut file_ops, &[])
             .await?
             .cell_resolver;
 
@@ -1322,7 +1322,7 @@ mod tests {
         initialize_external_cells_impl();
 
         let mut file_ops = TestConfigParserFileOps::new(&[(
-            ".buckconfig",
+            ".bsmrconfig",
             indoc!(
                 r#"
                     [cells]
@@ -1337,7 +1337,7 @@ mod tests {
             ),
         )])?;
 
-        let e = BuckConfigBasedCells::testing_parse_with_file_ops(&mut file_ops, &[])
+        let e = BsmrConfigBasedCells::testing_parse_with_file_ops(&mut file_ops, &[])
             .await
             .err()
             .unwrap();

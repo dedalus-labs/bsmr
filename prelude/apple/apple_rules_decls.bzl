@@ -66,7 +66,7 @@ load("@prelude//linking:execution_preference.bzl", "link_execution_preference_at
 load("@prelude//linking:link_info.bzl", "LinkOrdering")
 load("@prelude//linking:types.bzl", "Linkage")
 load("@prelude//transitions:constraint_overrides.bzl", "constraint_overrides")
-load("@prelude//utils:buckconfig.bzl", "read_bool")
+load("@prelude//utils:bsmrconfig.bzl", "read_bool")
 load("@prelude//xplugins:attrs.bzl", "xplugins_common")
 load(":apple_app_intents.bzl", "apple_app_intents_impl")
 load(":apple_asset_catalog.bzl", "apple_asset_catalog_impl")
@@ -254,8 +254,8 @@ apple_binary = prelude_rule(
         Buck enables you to override components of the Apple toolchain with
         alternate tools, either from the Xcode search paths or from directories
         that you specify.
-        See `.buckconfig`
-        and `.buckconfig`
+        See `.bsmrconfig`
+        and `.bsmrconfig`
         for more information.
     """,
     examples = """
@@ -576,8 +576,8 @@ apple_library = prelude_rule(
         Buck enables you to override components of the Apple toolchain with
         alternate tools, either from the Xcode search paths or from directories
         that you specify.
-        See `.buckconfig`
-        and `.buckconfig`
+        See `.bsmrconfig`
+        and `.bsmrconfig`
         for more information.
     """,
     examples = """
@@ -819,8 +819,8 @@ apple_package = prelude_rule(
         an `apple_bundle()` rule and compresses it in
         an IPA (iOS App Store Package) file.
 
-        This rule can be customized using the config options `.buckconfig`
-        and `.buckconfig`
+        This rule can be customized using the config options `.bsmrconfig`
+        and `.bsmrconfig`
         .
     """,
     examples = """

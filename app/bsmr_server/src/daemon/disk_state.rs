@@ -12,8 +12,8 @@ use std::sync::Arc;
 
 use allocative::Allocative;
 use bsmr_common::invocation_paths::InvocationPaths;
-use bsmr_common::legacy_configs::configs::LegacyBuckConfig;
-use bsmr_common::legacy_configs::key::BuckconfigKeyRef;
+use bsmr_common::legacy_configs::configs::LegacyBsmrConfig;
+use bsmr_common::legacy_configs::key::BsmrconfigKeyRef;
 use bsmr_core::rollout_percentage::RolloutPercentage;
 use bsmr_error::BuckErrorContext;
 use bsmr_error::internal_error;
@@ -44,7 +44,7 @@ pub struct DiskStateOptions {
 
 impl DiskStateOptions {
     pub fn new(
-        root_config: &LegacyBuckConfig,
+        root_config: &LegacyBsmrConfig,
         materialization_method: MaterializationMethod,
     ) -> bsmr_error::Result<Self> {
         let sqlite_materializer_state = matches!(
@@ -52,7 +52,7 @@ impl DiskStateOptions {
             materialization_method,
             MaterializationMethod::Deferred | MaterializationMethod::DeferredSkipFinalArtifacts
         ) && root_config
-            .parse::<RolloutPercentage>(BuckconfigKeyRef {
+            .parse::<RolloutPercentage>(BsmrconfigKeyRef {
                 section: "bsmr",
                 property: "sqlite_materializer_state",
             })?
@@ -65,7 +65,7 @@ impl DiskStateOptions {
 }
 
 fn sqlite_db_setup_metadata_and_versions(
-    root_config: &LegacyBuckConfig,
+    root_config: &LegacyBsmrConfig,
     schema_version: String,
     version_config: &str,
     deferred_materializer_config: Option<&DeferredMaterializerConfigs>,
@@ -85,11 +85,11 @@ fn sqlite_db_setup_metadata_and_versions(
         );
     }
 
-    if let Some(buckconfig_version) = root_config.parse(BuckconfigKeyRef {
+    if let Some(bsmrconfig_version) = root_config.parse(BsmrconfigKeyRef {
         section: "bsmr",
         property: version_config,
     })? {
-        versions.insert("buckconfig_version".to_owned(), buckconfig_version);
+        versions.insert("bsmrconfig_version".to_owned(), bsmrconfig_version);
     }
     if let Some(hostname) = metadata.get("hostname") {
         versions.insert("hostname".to_owned(), hostname.to_owned());
@@ -102,7 +102,7 @@ pub(crate) async fn maybe_initialize_materializer_sqlite_db(
     options: &DiskStateOptions,
     paths: InvocationPaths,
     io_executor: Arc<dyn BlockingExecutor>,
-    root_config: &LegacyBuckConfig,
+    root_config: &LegacyBsmrConfig,
     deferred_materializer_configs: &DeferredMaterializerConfigs,
     digest_config: DigestConfig,
     init_ctx: &BuckdServerInitPreferences,
@@ -152,12 +152,12 @@ pub(crate) async fn maybe_initialize_materializer_sqlite_db(
 pub(crate) async fn maybe_initialize_incremental_sqlite_db(
     paths: InvocationPaths,
     io_executor: Arc<dyn BlockingExecutor>,
-    root_config: &LegacyBuckConfig,
+    root_config: &LegacyBsmrConfig,
     daemon_id: &DaemonId,
 ) -> bsmr_error::Result<IncrementalDbState> {
     // Rolling it out by default, but giving an option to disable in case something goes horribly wrong
     if !root_config
-        .parse(BuckconfigKeyRef {
+        .parse(BsmrconfigKeyRef {
             section: "bsmr",
             property: "sqlite_incremental_state",
         })?

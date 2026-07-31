@@ -38,20 +38,20 @@ targets: unconfigured and configured. You can refer
 see these two phase in a bsmr build.
 
 **Unconfigured** components are configuration independent representations. Think
-of them as the blueprint of your targets. For example, `//bsmr:bsmr` is the
+of them as the blueprint of your targets. For example, `root//:bsmr` is the
 representation of `bsmr`'s unconfigured target label.
 
 **Configured** components, on the other hand, include all the platform-specific
 details and other configurations needed for actual building. They have the
 necessary information about how to build it for a specific platform or
-configuration. For example, `//bsmr:bsmr (cfg:linux-x86_64-xxxxxx)` is the
+configuration. For example, `root//:bsmr (cfg:linux-x86_64-xxxxxx)` is the
 representation of `bsmr`'s configured target label.
 
 ### Labels vs Nodes
 
 **Labels** are identifiers that uniquely reference targets in your build graph.
 They're like addresses that tell Bessemer which target you're talking about. For
-example, `//bsmr:bsmr` is an unconfigured label that points to a specific
+example, `root//:bsmr` is an unconfigured label that points to a specific
 target.
 
 **Nodes** contain the actual information about targets. They hold the data about
@@ -60,10 +60,10 @@ what a target is, what it depends on, what attributes it has, etc.
 ### Target Labels vs Provider Labels
 
 **Target labels** (both configured and unconfigured) identify complete build
-targets. For example, `//bsmr:bsmr` refers to an entire target.
+targets. For example, `root//:bsmr` refers to an entire target.
 
 **Provider labels** (both configured and unconfigured) represents a specific
-part of a target. For example, `//bsmr:bsmr[llvm_ir]` represents `bsmr`
+part of a target. For example, `root//:bsmr[llvm_ir]` represents `bsmr`
 target's `llvm_ir` sub-target
 
 ## Label and Nodes Conversion

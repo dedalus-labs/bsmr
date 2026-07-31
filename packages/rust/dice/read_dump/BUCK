@@ -6,10 +6,10 @@ rust_binary(
     name = "read_dump",
     srcs = ["src/main.rs"],
     deps = [
-        "fbsource//third-party/rust:anyhow",
-        "fbsource//third-party/rust:bincode",
-        "fbsource//third-party/rust:clap",
-        "fbsource//third-party/rust:serde_json",
-        "//bsmr/packages/rust/dice/dice:dice",
+        "bsmr_build//third-party/rust:anyhow",
+        "bsmr_build//third-party/rust:bincode",
+        "bsmr_build//third-party/rust:clap",
+        "bsmr_build//third-party/rust:serde_json",
+        "root//packages/rust/dice/dice:dice",
     ],
 )

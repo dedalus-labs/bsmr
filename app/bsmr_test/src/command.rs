@@ -41,7 +41,7 @@ use bsmr_cli_proto::representative_config_flag;
 use bsmr_common::dice::cells::HasCellResolver;
 use bsmr_common::events::HasEvents;
 use bsmr_common::legacy_configs::dice::HasLegacyConfigs;
-use bsmr_common::legacy_configs::key::BuckconfigKeyRef;
+use bsmr_common::legacy_configs::key::BsmrconfigKeyRef;
 use bsmr_common::liveliness_observer::LivelinessGuard;
 use bsmr_common::liveliness_observer::LivelinessObserver;
 use bsmr_common::liveliness_observer::LivelinessObserverExt;
@@ -353,7 +353,7 @@ async fn test(
     let test_executor_config = ctx
         .get_legacy_config_property(
             cell_resolver.root_cell(),
-            BuckconfigKeyRef {
+            BsmrconfigKeyRef {
                 section: "test",
                 property: "v2_test_executor",
             },
@@ -680,7 +680,7 @@ async fn test_targets(
     let internal_test_timeout = ctx
         .get_legacy_config_property(
             cell_resolver.root_cell(),
-            BuckconfigKeyRef {
+            BsmrconfigKeyRef {
                 section: "test",
                 property: "timeout_default_s",
             },
@@ -693,7 +693,7 @@ async fn test_targets(
     let internal_runner_config = InternalRunnerConfig::parse(
         ctx.get_legacy_config_property(
             cell_resolver.root_cell(),
-            BuckconfigKeyRef {
+            BsmrconfigKeyRef {
                 section: "test",
                 property: "use_internal_runner",
             },

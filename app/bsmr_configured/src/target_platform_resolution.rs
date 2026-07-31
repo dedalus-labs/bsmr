@@ -14,7 +14,7 @@ use allocative::Allocative;
 use async_trait::async_trait;
 use bsmr_common::dice::cells::HasCellResolver;
 use bsmr_common::legacy_configs::dice::HasLegacyConfigs;
-use bsmr_common::legacy_configs::key::BuckconfigKeyRef;
+use bsmr_common::legacy_configs::key::BsmrconfigKeyRef;
 use bsmr_core::configuration::data::ConfigurationData;
 use bsmr_core::global_cfg_options::GlobalCfgOptions;
 use bsmr_core::target::configured_target_label::ConfiguredTargetLabel;
@@ -46,7 +46,7 @@ async fn get_target_platform_detector(
     ctx: &mut DiceComputations<'_>,
 ) -> bsmr_error::Result<Arc<TargetPlatformDetector>> {
     // This requires a bit of computation so cache it on the graph.
-    // TODO(cjhopman): Should we construct this (and similar buckconfig-derived objects) as part of the buck config itself?
+    // TODO(cjhopman): Should we construct this (and similar bsmrconfig-derived objects) as part of the buck config itself?
     #[derive(Clone, Display, Debug, Dupe, Eq, Hash, PartialEq, Allocative, Pagable)]
     #[display("TargetPlatformDetectorKey")]
     #[pagable_typetag(dice::DiceKeyDyn)]
@@ -70,7 +70,7 @@ async fn get_target_platform_detector(
                 match ctx
                     .get_legacy_config_property(
                         root_cell,
-                        BuckconfigKeyRef {
+                        BsmrconfigKeyRef {
                             section: "parser",
                             property: "target_platform_detector_spec",
                         },
@@ -111,7 +111,7 @@ async fn get_default_platform(
     if let Some(target) = detector.detect(target) {
         return get_platform_configuration(ctx, target).await;
     }
-    // TODO(cjhopman): This needs to implement buck1's approach to determining target platform, it's currently missing the fallback to buckconfig parser.target_platform.
+    // TODO(cjhopman): This needs to implement buck1's approach to determining target platform, it's currently missing the fallback to bsmrconfig parser.target_platform.
     Ok(ConfigurationData::unspecified())
 }
 

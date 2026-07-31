@@ -20,7 +20,7 @@ from bsmr.tests.e2e_util.buck_workspace import buck_test, env
 
 
 def modify_acess_times_updates(buck: Buck, new_status: str) -> None:
-    config_file = buck.cwd / ".buckconfig"
+    config_file = buck.cwd / ".bsmrconfig"
     replace_in_file(
         "update_access_times = full",
         f"update_access_times = {new_status}",
@@ -200,9 +200,9 @@ async def test_clean_stale_declared(buck: Buck) -> None:
 
 @buck_test()
 async def test_clean_stale_scheduled(buck: Buck) -> None:
-    # Need to write to .buckconfig instead of passing cmd line args because
+    # Need to write to .bsmrconfig instead of passing cmd line args because
     # the config used when creating daemon state does not include cmd line args (but maybe it should).
-    config_file = buck.cwd / ".buckconfig.local"
+    config_file = buck.cwd / ".bsmrconfig.local"
     with open(config_file, "w") as f:
         f.write(
             """
@@ -231,9 +231,9 @@ clean_stale_period_hours = 0.0001
 
 @buck_test(skip_for_os=["windows"])
 async def test_clean_stale_scheduled_high_disk_usage(buck: Buck) -> None:
-    # Need to write to .buckconfig instead of passing cmd line args because
+    # Need to write to .bsmrconfig instead of passing cmd line args because
     # the config used when creating daemon state does not include cmd line args (but maybe it should).
-    config_file = buck.cwd / ".buckconfig.local"
+    config_file = buck.cwd / ".bsmrconfig.local"
     with open(config_file, "w") as f:
         f.write(
             """
@@ -267,7 +267,7 @@ async def test_clean_stale_scheduled_adaptive_high_disk_usage(buck: Buck) -> Non
     # Threshold of 100.0 guarantees free disk % is always "below" it, so the
     # adaptive loop must promote retained, non-active artifacts to stale even
     # though the regular ttl (8h) would have kept them.
-    config_file = buck.cwd / ".buckconfig.local"
+    config_file = buck.cwd / ".bsmrconfig.local"
     with open(config_file, "w") as f:
         f.write(
             """
@@ -296,7 +296,7 @@ clean_stale_low_disk_adaptive_min_ttl_hours = 0
 async def test_clean_stale_scheduled_adaptive_threshold_not_tripped(buck: Buck) -> None:
     # Threshold of 0.0 guarantees free disk % is always above it, so the
     # adaptive loop must never engage and the retained artifact survives.
-    config_file = buck.cwd / ".buckconfig.local"
+    config_file = buck.cwd / ".bsmrconfig.local"
     with open(config_file, "w") as f:
         f.write(
             """
@@ -328,7 +328,7 @@ async def test_clean_stale_scheduled_adaptive_min_ttl_protects_recent(
     # Threshold of 100.0 always trips adaptive promotion, but the freshly
     # built artifact is well within the 24h adaptive min-TTL floor — it must
     # survive even though disk pressure persists.
-    config_file = buck.cwd / ".buckconfig.local"
+    config_file = buck.cwd / ".bsmrconfig.local"
     with open(config_file, "w") as f:
         f.write(
             """

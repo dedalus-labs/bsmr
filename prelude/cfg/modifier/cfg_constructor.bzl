@@ -8,7 +8,7 @@
 
 load(
     ":common.bzl",
-    "apply_buckconfig_backed_modifiers",
+    "apply_bsmrconfig_backed_modifiers",
     "get_and_insert_modifier_info",
     "json_to_tagged_modifiers",
     "modifier_to_refs",
@@ -18,7 +18,7 @@ load(
 
 load(
     ":types.bzl",
-    "BuckconfigBackedModifierInfo",
+    "BsmrconfigBackedModifierInfo",
     "Modifier",  # @unused
     "ModifierCliLocation",
     "ModifierTargetLocation",
@@ -34,11 +34,11 @@ PostConstraintAnalysisParams = record(
     configuring_exec_dep = bool,
 )
 
-def _get_buckconfig_backed_modifiers(extra_data: struct, configuring_exec_dep: bool) -> str | None:
-    # If we are configuring an exec dep, we don't want to apply any modifiers from buckconfig.
+def _get_bsmrconfig_backed_modifiers(extra_data: struct, configuring_exec_dep: bool) -> str | None:
+    # If we are configuring an exec dep, we don't want to apply any modifiers from bsmrconfig.
     if configuring_exec_dep:
         return None
-    return getattr(extra_data, "buckconfig_backed_modifiers", None)
+    return getattr(extra_data, "bsmrconfig_backed_modifiers", None)
 
 def cfg_constructor_pre_constraint_analysis(
     *,
@@ -93,9 +93,9 @@ def cfg_constructor_pre_constraint_analysis(
     cli_modifiers = [resolved_modifier for modifier in cli_modifiers for resolved_modifier in resolve_alias(modifier, aliases)]
 
     refs = []
-    buckconfig_backed_modifiers = _get_buckconfig_backed_modifiers(extra_data, configuring_exec_dep)
-    if buckconfig_backed_modifiers:
-        refs.append(buckconfig_backed_modifiers)
+    bsmrconfig_backed_modifiers = _get_bsmrconfig_backed_modifiers(extra_data, configuring_exec_dep)
+    if bsmrconfig_backed_modifiers:
+        refs.append(bsmrconfig_backed_modifiers)
 
     for tagged_modifiers in package_modifiers:
         for modifier in tagged_modifiers.modifiers:
@@ -140,20 +140,20 @@ def cfg_constructor_post_constraint_analysis(*, refs: dict[str, ProviderCollecti
 
     constraint_setting_to_modifier_infos = {}
     cli_modifier_validation = getattr(params.extra_data, "cli_modifier_validation", None)
-    buckconfig_backed_modifiers = _get_buckconfig_backed_modifiers(params.extra_data, params.configuring_exec_dep)
+    bsmrconfig_backed_modifiers = _get_bsmrconfig_backed_modifiers(params.extra_data, params.configuring_exec_dep)
 
-    if buckconfig_backed_modifiers:
-        apply_buckconfig_backed_modifiers(
-            constraint_setting_to_modifier_infos, refs[buckconfig_backed_modifiers][BuckconfigBackedModifierInfo].pre_platform_modifiers
+    if bsmrconfig_backed_modifiers:
+        apply_bsmrconfig_backed_modifiers(
+            constraint_setting_to_modifier_infos, refs[bsmrconfig_backed_modifiers][BsmrconfigBackedModifierInfo].pre_platform_modifiers
         )
 
     if params.legacy_platform:
         for constraint_setting, constraint_value_info in params.legacy_platform.configuration.constraints.items():
             constraint_setting_to_modifier_infos[constraint_setting] = [constraint_value_info]
 
-    if buckconfig_backed_modifiers:
-        apply_buckconfig_backed_modifiers(
-            constraint_setting_to_modifier_infos, refs[buckconfig_backed_modifiers][BuckconfigBackedModifierInfo].post_platform_modifiers
+    if bsmrconfig_backed_modifiers:
+        apply_bsmrconfig_backed_modifiers(
+            constraint_setting_to_modifier_infos, refs[bsmrconfig_backed_modifiers][BsmrconfigBackedModifierInfo].post_platform_modifiers
         )
 
     for tagged_modifiers in params.package_modifiers:
@@ -175,9 +175,9 @@ def cfg_constructor_post_constraint_analysis(*, refs: dict[str, ProviderCollecti
                 location = ModifierTargetLocation(),
             )
 
-    if buckconfig_backed_modifiers:
-        apply_buckconfig_backed_modifiers(
-            constraint_setting_to_modifier_infos, refs[buckconfig_backed_modifiers][BuckconfigBackedModifierInfo].pre_cli_modifiers
+    if bsmrconfig_backed_modifiers:
+        apply_bsmrconfig_backed_modifiers(
+            constraint_setting_to_modifier_infos, refs[bsmrconfig_backed_modifiers][BsmrconfigBackedModifierInfo].pre_cli_modifiers
         )
 
     for modifier in params.cli_modifiers:

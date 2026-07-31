@@ -9,12 +9,12 @@ rust_library(
     ),
     proc_macro = True,
     visibility = [
-        "//bsmr/packages/rust/starlark/...",
+        "root//packages/rust/starlark/...",
     ],
     deps = [
-        "fbsource//third-party/rust:proc-macro2",
-        "fbsource//third-party/rust:quote",
-        "fbsource//third-party/rust:syn",
-        "//bsmr/packages/rust/gazebo/dupe:dupe",
+        "bsmr_build//third-party/rust:proc-macro2",
+        "bsmr_build//third-party/rust:quote",
+        "bsmr_build//third-party/rust:syn",
+        "root//packages/rust/gazebo/dupe:dupe",
     ],
 )

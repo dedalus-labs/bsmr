@@ -17,7 +17,7 @@ range — every benchmark needs many iterations.
 
 ```bash
 # See `--help` for details
-bsmr build @fbcode//mode/opt fbsource//third-party/rust:absh-absh --out /tmp/absh
+bsmr build @upstream//mode/opt bsmr_build//third-party/rust:absh-absh --out /tmp/absh
 ```
 
 ## Per-iteration variance

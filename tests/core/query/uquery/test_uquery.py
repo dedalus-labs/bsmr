@@ -167,7 +167,7 @@ async def test_uquery_owner(buck: Buck) -> None:
     assert result.stdout == ""
 
     # there's a buildfile here, but no target owns the file
-    result = await buck.uquery("""owner(.buckconfig)""")
+    result = await buck.uquery("""owner(.bsmrconfig)""")
     assert "No owner" in result.stderr
     assert result.stdout == ""
 

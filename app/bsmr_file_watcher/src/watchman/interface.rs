@@ -14,8 +14,8 @@ use allocative::Allocative;
 use async_trait::async_trait;
 use bsmr_common::file_ops::dice::FileChangeTracker;
 use bsmr_common::ignores::ignore_set::IgnoreSet;
-use bsmr_common::legacy_configs::configs::LegacyBuckConfig;
-use bsmr_common::legacy_configs::key::BuckconfigKeyRef;
+use bsmr_common::legacy_configs::configs::LegacyBsmrConfig;
+use bsmr_common::legacy_configs::key::BsmrconfigKeyRef;
 use bsmr_core::cells::CellResolver;
 use bsmr_core::cells::name::CellName;
 use bsmr_core::fs::project_rel_path::ProjectRelativePath;
@@ -354,12 +354,12 @@ pub(crate) struct WatchmanFileWatcher {
 impl WatchmanFileWatcher {
     pub(crate) fn new(
         project_root: &AbsNormPath,
-        root_config: &LegacyBuckConfig,
+        root_config: &LegacyBsmrConfig,
         cells: CellResolver,
         ignore_specs: StdBuckHashMap<CellName, IgnoreSet>,
     ) -> bsmr_error::Result<Self> {
         let watchman_merge_base = root_config
-            .get(BuckconfigKeyRef {
+            .get(BsmrconfigKeyRef {
                 section: "project",
                 property: "watchman_merge_base",
             })
@@ -368,7 +368,7 @@ impl WatchmanFileWatcher {
         let empty_on_fresh_instance = if watchman_merge_base.is_some() {
             // double negative here because we'd prefer that rollout changes config value from false->true.
             !root_config
-                .parse::<RolloutPercentage>(BuckconfigKeyRef {
+                .parse::<RolloutPercentage>(BsmrconfigKeyRef {
                     section: "bsmr",
                     property: "disable_watchman_empty_on_fresh_instance",
                 })?
@@ -384,7 +384,7 @@ impl WatchmanFileWatcher {
         };
 
         let report_global_rev = root_config
-            .parse::<bool>(BuckconfigKeyRef {
+            .parse::<bool>(BsmrconfigKeyRef {
                 section: "bsmr",
                 property: "watchman_report_global_rev",
             })?

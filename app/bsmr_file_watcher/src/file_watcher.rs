@@ -13,8 +13,8 @@ use std::sync::Arc;
 use allocative::Allocative;
 use async_trait::async_trait;
 use bsmr_common::ignores::ignore_set::IgnoreSet;
-use bsmr_common::legacy_configs::configs::LegacyBuckConfig;
-use bsmr_common::legacy_configs::key::BuckconfigKeyRef;
+use bsmr_common::legacy_configs::configs::LegacyBsmrConfig;
+use bsmr_common::legacy_configs::key::BsmrconfigKeyRef;
 use bsmr_core::bsmr_env;
 use bsmr_core::cells::CellResolver;
 use bsmr_core::cells::name::CellName;
@@ -42,13 +42,13 @@ pub trait FileWatcher: Allocative + Send + Sync + 'static {
     ) -> bsmr_error::Result<(DiceTransactionUpdater, Mergebase)>;
 }
 
-/// Parse the `dice_clear_on_mergebase_change` config, honoring both the buckconfig
+/// Parse the `dice_clear_on_mergebase_change` config, honoring both the bsmrconfig
 /// and the `BSMR_TEST_SKIP_DICE_CLEAR_ON_MERGEBASE_CHANGE` env var override.
 pub(crate) fn dice_clear_on_mergebase_change(
-    root_config: &LegacyBuckConfig,
+    root_config: &LegacyBsmrConfig,
 ) -> bsmr_error::Result<bool> {
     let config_value = root_config
-        .parse::<bool>(BuckconfigKeyRef {
+        .parse::<bool>(BsmrconfigKeyRef {
             section: "bsmr",
             property: "dice_clear_on_mergebase_change",
         })
@@ -69,7 +69,7 @@ impl dyn FileWatcher {
     pub fn new(
         fb: fbinit::FacebookInit,
         project_root: &ProjectRoot,
-        root_config: &LegacyBuckConfig,
+        root_config: &LegacyBsmrConfig,
         cells: CellResolver,
         ignore_specs: StdBuckHashMap<CellName, IgnoreSet>,
     ) -> bsmr_error::Result<Arc<dyn FileWatcher>> {
@@ -95,7 +95,7 @@ impl dyn FileWatcher {
         let _allow_unused = fb;
 
         let watcher_conf = root_config
-            .get(BuckconfigKeyRef {
+            .get(BsmrconfigKeyRef {
                 section: "bsmr",
                 property: "file_watcher",
             })

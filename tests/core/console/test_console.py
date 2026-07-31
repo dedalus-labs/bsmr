@@ -166,12 +166,12 @@ def _get(data: dict[str, Any], *key: str) -> dict[str, Any] | None:
 @buck_test()
 async def test_super_console_changes(buck: Buck) -> None:
     res = await buck.log("replay", fixture("my_genrule1"))
-    assert "File changed: fbcode//bsmr/dir1/file1" in res.stderr
-    assert "Directory changed: fbcode//bsmr/dir1" in res.stderr
+    assert "File changed: root//dir1/file1" in res.stderr
+    assert "Directory changed: root//dir1" in res.stderr
 
 
 @buck_test(
-    extra_buck_config={
+    extra_bsmr_config={
         "bsmr_system_warning": {
             "memory_pressure_threshold_percent": "1",
         },

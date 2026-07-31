@@ -25,19 +25,19 @@ use pagable::Pagable;
 use regex::Regex;
 use starlark_map::sorted_map::SortedMap;
 
-use super::cells::ExternalPathBuckconfigData;
+use super::cells::ExternalPathBsmrconfigData;
 use crate::legacy_configs::args::ResolvedConfigFlag;
 use crate::legacy_configs::configs::ConfigArgumentParseError;
 use crate::legacy_configs::configs::ConfigData;
 use crate::legacy_configs::configs::ConfigFileLocation;
 use crate::legacy_configs::configs::ConfigFileLocationWithLine;
 use crate::legacy_configs::configs::ConfigValue;
-use crate::legacy_configs::configs::LegacyBuckConfig;
-use crate::legacy_configs::configs::LegacyBuckConfigSection;
+use crate::legacy_configs::configs::LegacyBsmrConfig;
+use crate::legacy_configs::configs::LegacyBsmrConfigSection;
 use crate::legacy_configs::configs::Location;
 use crate::legacy_configs::file_ops::ConfigParserFileOps;
 use crate::legacy_configs::file_ops::ConfigPath;
-use crate::legacy_configs::key::BuckconfigKeyRef;
+use crate::legacy_configs::key::BsmrconfigKeyRef;
 use crate::legacy_configs::parser::resolver::ConfigResolver;
 
 mod resolver;
@@ -57,7 +57,7 @@ enum ConfigError {
         "Couldn't parse line. Expected include directive (`<file:/file.bcfg>`), section(`[some_section]`), or key assignment (`some_key = some_value`). Got `{0}`"
     )]
     InvalidLine(String),
-    #[error("Detected cycles in buckconfig $(config) references: {}", format_cycle(.0))]
+    #[error("Detected cycles in bsmrconfig $(config) references: {}", format_cycle(.0))]
     ReferenceCycle(Vec<(String, String)>),
 }
 
@@ -74,22 +74,22 @@ struct SectionBuilder {
 }
 
 impl SectionBuilder {
-    fn finish(self) -> LegacyBuckConfigSection {
-        LegacyBuckConfigSection {
+    fn finish(self) -> LegacyBsmrConfigSection {
+        LegacyBsmrConfigSection {
             values: SortedMap::from_iter(self.values),
         }
     }
 }
 
-/// Represents the state associated with a buckconfig that is being parsed right now.
+/// Represents the state associated with a bsmrconfig that is being parsed right now.
 ///
-/// A buckconfig will generally be parsed by combining multiple command args and files
+/// A bsmrconfig will generally be parsed by combining multiple command args and files
 #[derive(Debug, Clone, PartialEq, Eq, Allocative, Pagable)]
 pub(crate) struct LegacyConfigParser {
     values: BTreeMap<String, SectionBuilder>,
 }
 
-/// Represents the state associated with parsing a single file into a buckconfig.
+/// Represents the state associated with parsing a single file into a bsmrconfig.
 struct LegacyConfigFileParser<'p> {
     include_stack: Vec<ConfigFileLocationWithLine>,
     current_file: Option<Arc<ConfigFileLocation>>,
@@ -125,7 +125,7 @@ impl LegacyConfigParser {
         file_parser
             .parse_file_on_stack(path, follow_includes, file_ops)
             .await
-            .with_buck_error_context(|| format!("Error parsing buckconfig `{path}`"))?;
+            .with_buck_error_context(|| format!("Error parsing bsmrconfig `{path}`"))?;
         file_parser.finish_file();
 
         Ok(())
@@ -159,12 +159,12 @@ impl LegacyConfigParser {
         Ok(())
     }
 
-    pub(crate) fn finish(self) -> bsmr_error::Result<LegacyBuckConfig> {
+    pub(crate) fn finish(self) -> bsmr_error::Result<LegacyBsmrConfig> {
         let LegacyConfigParser { values } = self;
 
         let values = ConfigResolver::resolve(values)?;
 
-        Ok(LegacyBuckConfig(Arc::new(ConfigData { values })))
+        Ok(LegacyBsmrConfig(Arc::new(ConfigData { values })))
     }
 
     pub(crate) fn join(&mut self, other: &LegacyConfigParser) {
@@ -181,11 +181,11 @@ impl LegacyConfigParser {
 
     pub(crate) fn filter_values<F>(mut self, filter: F) -> Self
     where
-        F: Fn(&BuckconfigKeyRef) -> bool,
+        F: Fn(&BsmrconfigKeyRef) -> bool,
     {
         for (section, section_builder) in self.values.iter_mut() {
             section_builder.values.retain(|key, _| {
-                filter(&BuckconfigKeyRef {
+                filter(&BsmrconfigKeyRef {
                     section,
                     property: key,
                 })
@@ -211,7 +211,7 @@ impl LegacyConfigParser {
             })
             .collect()
     }
-    pub(crate) fn combine(external_path_configs: Vec<ExternalPathBuckconfigData>) -> Self {
+    pub(crate) fn combine(external_path_configs: Vec<ExternalPathBsmrconfigData>) -> Self {
         let mut parser = LegacyConfigParser::new();
         external_path_configs
             .into_iter()

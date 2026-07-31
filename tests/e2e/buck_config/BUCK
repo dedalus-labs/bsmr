@@ -1,9 +1,0 @@
-load("@fbcode//bsmr/tests:buck_e2e.bzl", "bsmr_e2e_test")
-
-oncall("build_infra")
-
-bsmr_e2e_test(
-    name = "test_buck_config_logging.py",
-    srcs = ["test_buck_config_logging.py"],
-    data_dir = "test_buck_config_log_data",
-)

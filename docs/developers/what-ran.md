@@ -51,7 +51,7 @@ Use What Ran as follows:
 The following ran locally:
 
 ```bash
-build  fbcode//scripts/torozco/getenv:getenv-san-conf-__generated-lib__ (archive_thin libgetenv-san-conf-__generated-lib__.pic.a)  local  fbcode/third-party-buck/platform010/build/llvm-fb/bin/llvm-ar qcsTD buck-out/v2/gen/fbcode/d839c731f5505c62/scripts/torozco/getenv/__getenv-san-conf-__generated-lib____/libgetenv-san-conf-__generated-lib__.pic.a buck-out/v2/gen/fbcode/d839c731f5505c62/scripts/torozco/getenv/__getenv-san-conf-__generated-lib____/__objects__/san-conf.c.pic.o
+build  upstream//scripts/torozco/getenv:getenv-san-conf-__generated-lib__ (archive_thin libgetenv-san-conf-__generated-lib__.pic.a)  local  fbcode/third-party-buck/platform010/build/llvm-fb/bin/llvm-ar qcsTD buck-out/v2/gen/fbcode/d839c731f5505c62/scripts/torozco/getenv/__getenv-san-conf-__generated-lib____/libgetenv-san-conf-__generated-lib__.pic.a buck-out/v2/gen/fbcode/d839c731f5505c62/scripts/torozco/getenv/__getenv-san-conf-__generated-lib____/__objects__/san-conf.c.pic.o
 ```
 
 To repro, you'd run:
@@ -63,7 +63,7 @@ fbcode/third-party-buck/platform010/build/llvm-fb/bin/llvm-ar qcsTD buck-out/v2/
 The following ran on RE:
 
 ```bash
-build  fbcode//common/init:kill (cxx_compile Kill.cpp (pic))  re  97feca9d014155a80ec55fe27e6bb17f9d2f8574:94
+build  upstream//common/init:kill (cxx_compile Kill.cpp (pic))  re  97feca9d014155a80ec55fe27e6bb17f9d2f8574:94
 ```
 
 <FbInternalOnly>

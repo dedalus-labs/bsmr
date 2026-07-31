@@ -8,7 +8,7 @@ rust_library(
         ["src/**/*.rs"],
     ),
     deps = [
-        "fbsource//third-party/rust:either",
-        "fbsource//third-party/rust:indenter",
+        "bsmr_build//third-party/rust:either",
+        "bsmr_build//third-party/rust:indenter",
     ],
 )

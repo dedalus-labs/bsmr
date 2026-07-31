@@ -93,7 +93,7 @@ async def _build_and_extract_sketches(
 
     Args:
         sketch_field: The field name in the build report (e.g., "retained_analysis_memory_sketch")
-        config_key: The buckconfig key to enable (e.g., "bsmr.log_retained_analysis_memory_sketch")
+        config_key: The bsmrconfig key to enable (e.g., "bsmr.log_retained_analysis_memory_sketch")
     """
     report = tmp_path / "build-report.json"
 

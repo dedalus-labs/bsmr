@@ -1012,7 +1012,7 @@ android_library = prelude_rule(
                  files. These files can be loaded via [Class.getResource()](http://docs.oracle.com/javase/7/docs/api/java/lang/Class.html#getResource(java.lang.String)).
 
                 **Note:** Buck uses the `src_roots` property in
-                 `.buckconfig`
+                 `.bsmrconfig`
                  to help determine where resources should be placed within the generated JAR file.
             """,
             ),
@@ -1044,7 +1044,7 @@ android_library = prelude_rule(
                 default = [],
                 doc = """
                 List of additional arguments to pass into the Java compiler. These
-                 arguments follow the ones specified in `.buckconfig`.
+                 arguments follow the ones specified in `.bsmrconfig`.
             """,
             ),
             "extra_kotlinc_arguments": attrs.list(
@@ -1061,7 +1061,7 @@ android_library = prelude_rule(
                 Specifies the version of Java (as a string) to interpret source
                  files as.
                  Overrides the value in "source\\_level" in the "java" section
-                 of `.buckconfig`.
+                 of `.bsmrconfig`.
             """,
             ),
             "target": attrs.option(
@@ -1071,7 +1071,7 @@ android_library = prelude_rule(
                 Specifies the version of Java (as a string) for which to
                  generate code.
                  Overrides the value in "target\\_level" in the "java" section
-                 of `.buckconfig`.
+                 of `.bsmrconfig`.
             """,
             ),
         }

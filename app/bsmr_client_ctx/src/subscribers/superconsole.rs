@@ -151,12 +151,12 @@ impl Default for SuperConsoleConfig {
     }
 }
 
-struct BuckRootComponent<'s> {
+struct BsmrRootComponent<'s> {
     header: &'s str,
     state: &'s SuperConsoleState,
 }
 
-impl Component for BuckRootComponent<'_> {
+impl Component for BsmrRootComponent<'_> {
     type Error = bsmr_error::Error;
 
     fn draw_unchecked(&self, dimensions: Dimensions, mode: DrawMode) -> bsmr_error::Result<Lines> {
@@ -838,7 +838,7 @@ impl StatefulSuperConsoleImpl {
         self.state.timekeeper.tick(*tick);
         self.try_update_active_warnings();
 
-        self.super_console.render(&BuckRootComponent {
+        self.super_console.render(&BsmrRootComponent {
             header: &self.header,
             state: &self.state,
         })?;
@@ -862,7 +862,7 @@ impl StatefulSuperConsoleImpl {
     ) {
         let err = self
             .super_console
-            .finalize(&BuckRootComponent {
+            .finalize(&BsmrRootComponent {
                 header: &self.header,
                 state: &self.state,
             })

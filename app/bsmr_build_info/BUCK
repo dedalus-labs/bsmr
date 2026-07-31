@@ -6,7 +6,7 @@ rust_library(
     name = "bsmr_build_info",
     srcs = glob(["src/**/*.rs"]),
     deps = [
-        "//bsmr/app/bsmr_util:bsmr_util",
+        "root//app/bsmr_util:bsmr_util",
         # @oss-disable[end= ]: "//common/rust/build_info:build_info",
     ],
 )

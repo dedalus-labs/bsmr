@@ -754,8 +754,8 @@ impl Buck {
 
         // Fetch all aliases used by transitive deps. This is so we
         // can translate an apparent dependency of e.g.
-        // fbsource//third-party/rust:once_cell to the actual target
-        // name of fbsource//third-party/rust:once_cell-1.15. This
+        // bsmr_build//third-party/rust:once_cell to the actual target
+        // name of bsmr_build//third-party/rust:once_cell-1.15. This
         // query also fetches non-Rust aliases, but they shouldn't
         // hurt anything.
         if let Some(mode) = &self.mode {
@@ -1368,7 +1368,7 @@ fn test_cfg_scoped_to_first_party() {
 
     // First-party crates get `test` regardless of workspace membership.
     let first_party = crate_cfg(
-        &make_info("fbcode//bsmr/tools/rust-project:rust-project"),
+        &make_info("root//tools/rust-project:rust-project"),
         global_extra_cfgs,
         first_party_extra_cfgs,
     );
@@ -1376,7 +1376,7 @@ fn test_cfg_scoped_to_first_party() {
 
     // Reindeer-vendored third-party crates do not get `test`.
     let vendored = crate_cfg(
-        &make_info("fbsource//third-party/rust/vendor/tokio:1"),
+        &make_info("bsmr_build//third-party/rust/vendor/tokio:1"),
         global_extra_cfgs,
         first_party_extra_cfgs,
     );

@@ -354,7 +354,7 @@ def _supports_merged_linking():
             default = None,
             doc = """
     Whether this rule supports building with the merged linking strategy when building for non-native
-     binaries (e.g. when using `.buckconfig`
+     binaries (e.g. when using `.bsmrconfig`
     s `merged` setting).
 """,
         ),

@@ -24,8 +24,8 @@ from .test_coverage_utils import collect_coverage_for
 async def test_rust_test_coverage(buck: Buck, tmp_path: Path) -> None:
     coverage_file = tmp_path / "coverage.txt"
     await buck.test(
-        "@fbcode//mode/dbgo-cov",
-        "fbcode//bsmr/tests/targets/rules/rust:tests_pass",
+        "@upstream//mode/dbgo-cov",
+        "root//tests/targets/rules/rust:tests_pass",
         "--",
         "--collect-coverage",
         f"--coverage-output={coverage_file}",
@@ -45,7 +45,7 @@ async def test_rust_test_coverage_filtering_by_path_of_target(
     paths = await collect_coverage_for(
         buck,
         tmp_path,
-        "fbcode//bsmr/tests/targets/rules/rust:tests_pass",
+        "root//tests/targets/rules/rust:tests_pass",
         ["bsmr/tests"],
     )
 

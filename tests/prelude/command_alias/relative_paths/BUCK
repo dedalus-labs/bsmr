@@ -1,4 +1,4 @@
-load("@fbcode//bsmr/tests/prelude:py_assertion.bzl", "py_assertion")
+load("@root//tests/prelude:py_assertion.bzl", "py_assertion")
 load("@bsmr_build//rules:selects.bzl", "selects")
 
 oncall("build_infra")

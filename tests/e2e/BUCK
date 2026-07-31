@@ -1,4 +1,4 @@
-load("@fbcode//bsmr/tests:buck_e2e.bzl", "bsmr_e2e_test")
+load("@root//tests:buck_e2e.bzl", "bsmr_e2e_test")
 
 oncall("build_infra")
 
@@ -11,7 +11,7 @@ bsmr_e2e_test(
     name = "test_rust_project",
     srcs = ["test_rust_project.py"],
     env = {
-        "RUST_PROJECT_BIN": "$(location fbcode//bsmr/tools/rust-project:rust-project)",
+        "RUST_PROJECT_BIN": "$(location root//tools/rust-project:rust-project)",
     },
 )
 
@@ -41,6 +41,6 @@ bsmr_e2e_test(
     name = "test_install_modifiers",
     srcs = ["test_install_modifiers.py"],
     deps = [
-        "fbcode//bsmr/tests/e2e_util:utils",
+        "root//tests/e2e_util:utils",
     ],
 )

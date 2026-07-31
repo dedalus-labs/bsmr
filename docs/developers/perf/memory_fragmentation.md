@@ -121,7 +121,7 @@ a dense control that allocates a lot but wastes nothing) and runs the
 attribution:
 
 ```sh
-bsmr run fbcode//bsmr/facebook/mem_frag:harness
+bsmr run root//facebook/mem_frag:harness
 ```
 
 It samples at rate 1 (exact) and additionally re-derives the total from a 1/64
@@ -165,7 +165,7 @@ entry would be lost.
 ```sh
 # Build a profiling bsmr (opt, so jemalloc + its mallctls are linked; dev/dbgo
 # do not use jemalloc). Build in one checkout, run daemons in another.
-bsmr build @fbcode//mode/opt fbcode//bsmr:bsmr -c bsmr_dev.memfrag=true --out /tmp/b2
+bsmr build @upstream//mode/opt root//:bsmr -c bsmr_dev.memfrag=true --out /tmp/b2
 
 # Start the daemon with sampling on. tcache:false makes the utilization query
 # exact; shift N samples 1/2^N of allocations (6-10 is a good range).

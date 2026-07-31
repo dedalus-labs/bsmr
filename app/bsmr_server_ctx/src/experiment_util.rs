@@ -8,18 +8,18 @@
  * above-listed licenses.
  */
 
-use bsmr_wrapper_common::DOT_BUCKCONFIG_D;
+use bsmr_wrapper_common::DOT_BSMRCONFIG_D;
 use bsmr_wrapper_common::EXPERIMENTS_FILENAME;
 use const_format::concatcp;
 
-const EXPERIMENT_PATH_SUFFIX: &str = concatcp!("/", DOT_BUCKCONFIG_D, "/", EXPERIMENTS_FILENAME);
+const EXPERIMENT_PATH_SUFFIX: &str = concatcp!("/", DOT_BSMRCONFIG_D, "/", EXPERIMENTS_FILENAME);
 
 const EXPERIMENTS: &str = "experiments";
 
-pub fn get_experiment_tags(components: &[bsmr_data::BuckconfigComponent]) -> Vec<String> {
+pub fn get_experiment_tags(components: &[bsmr_data::BsmrconfigComponent]) -> Vec<String> {
     let mut init = Vec::new();
     for component in components {
-        use bsmr_data::buckconfig_component::Data;
+        use bsmr_data::bsmrconfig_component::Data;
         if let Some(Data::GlobalExternalConfigFile(external_config_file)) = &component.data
             && external_config_file
                 .origin_path

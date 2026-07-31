@@ -6,12 +6,12 @@ rust_library(
     name = "c",
     srcs = ["lib.rs"],
     visibility = ["PUBLIC"],
-    deps = ["//bsmr/tools/rust-project/tests/targets/foo:e"],
+    deps = ["root//tools/rust-project/tests/targets/foo:e"],
 )
 
 rust_library(
     name = "d",
     srcs = ["lib.rs"],
     visibility = ["PUBLIC"],
-    deps = ["//bsmr/tools/rust-project/tests/targets/foo:e"],
+    deps = ["root//tools/rust-project/tests/targets/foo:e"],
 )

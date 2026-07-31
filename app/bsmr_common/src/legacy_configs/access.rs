@@ -17,15 +17,15 @@ use bsmr_util::env_vars::substitute_env_vars;
 use gazebo::eq_chain;
 
 use crate::legacy_configs::configs::ConfigValue;
-use crate::legacy_configs::configs::LegacyBuckConfig;
-use crate::legacy_configs::configs::LegacyBuckConfigSection;
-use crate::legacy_configs::configs::LegacyBuckConfigValue;
-use crate::legacy_configs::key::BuckconfigKeyRef;
-use crate::legacy_configs::view::LegacyBuckConfigView;
+use crate::legacy_configs::configs::LegacyBsmrConfig;
+use crate::legacy_configs::configs::LegacyBsmrConfigSection;
+use crate::legacy_configs::configs::LegacyBsmrConfigValue;
+use crate::legacy_configs::key::BsmrconfigKeyRef;
+use crate::legacy_configs::view::LegacyBsmrConfigView;
 
-/// Read the `[bsmr_metadata]` section from a `LegacyBuckConfig` and resolve any `$VAR`
+/// Read the `[bsmr_metadata]` section from a `LegacyBsmrConfig` and resolve any `$VAR`
 /// references. Entries whose env vars are not set are skipped with a warning.
-pub fn parse_buckconfig_metadata(config: &LegacyBuckConfig) -> StdBuckHashMap<String, String> {
+pub fn parse_bsmrconfig_metadata(config: &LegacyBsmrConfig) -> StdBuckHashMap<String, String> {
     let mut map = StdBuckHashMap::default();
     let Some(section) = config.get_section("bsmr_metadata") else {
         return map;
@@ -43,13 +43,13 @@ pub fn parse_buckconfig_metadata(config: &LegacyBuckConfig) -> StdBuckHashMap<St
     map
 }
 
-impl LegacyBuckConfigView for &LegacyBuckConfig {
-    fn get(&mut self, key: BuckconfigKeyRef) -> bsmr_error::Result<Option<Arc<str>>> {
-        Ok(LegacyBuckConfig::get(self, key).map(|v| v.to_owned().into()))
+impl LegacyBsmrConfigView for &LegacyBsmrConfig {
+    fn get(&mut self, key: BsmrconfigKeyRef) -> bsmr_error::Result<Option<Arc<str>>> {
+        Ok(LegacyBsmrConfig::get(self, key).map(|v| v.to_owned().into()))
     }
 }
 
-impl LegacyBuckConfigSection {
+impl LegacyBsmrConfigSection {
     /// configs are equal if the data they resolve in is equal, regardless of the origin of the config
     pub(crate) fn compare(&self, other: &Self) -> bool {
         eq_chain!(
@@ -61,33 +61,33 @@ impl LegacyBuckConfigSection {
         )
     }
 
-    pub fn iter(&self) -> impl Iterator<Item = (&str, LegacyBuckConfigValue<'_>)> {
+    pub fn iter(&self) -> impl Iterator<Item = (&str, LegacyBsmrConfigValue<'_>)> {
         self.values
             .iter()
-            .map(move |(key, value)| (key.as_str(), LegacyBuckConfigValue { value }))
+            .map(move |(key, value)| (key.as_str(), LegacyBsmrConfigValue { value }))
     }
 
     pub fn keys(&self) -> impl Iterator<Item = &String> {
         self.values.keys()
     }
 
-    pub fn get(&self, key: &str) -> Option<LegacyBuckConfigValue<'_>> {
+    pub fn get(&self, key: &str) -> Option<LegacyBsmrConfigValue<'_>> {
         self.values
             .get(key)
-            .map(move |value| LegacyBuckConfigValue { value })
+            .map(move |value| LegacyBsmrConfigValue { value })
     }
 }
 
-impl LegacyBuckConfig {
-    fn get_config_value(&self, key: BuckconfigKeyRef) -> Option<&ConfigValue> {
-        let BuckconfigKeyRef { section, property } = key;
+impl LegacyBsmrConfig {
+    fn get_config_value(&self, key: BsmrconfigKeyRef) -> Option<&ConfigValue> {
+        let BsmrconfigKeyRef { section, property } = key;
         self.0
             .values
             .get(section)
             .and_then(|s| s.values.get(property))
     }
 
-    pub fn get(&self, key: BuckconfigKeyRef) -> Option<&str> {
+    pub fn get(&self, key: BsmrconfigKeyRef) -> Option<&str> {
         self.get_config_value(key).map(|s| s.as_str())
     }
 
@@ -104,17 +104,17 @@ impl LegacyBuckConfig {
         })
     }
 
-    fn parse_impl<T: FromStr>(key: BuckconfigKeyRef, value: &str) -> bsmr_error::Result<T>
+    fn parse_impl<T: FromStr>(key: BsmrconfigKeyRef, value: &str) -> bsmr_error::Result<T>
     where
         bsmr_error::Error: From<<T as FromStr>::Err>,
     {
-        let BuckconfigKeyRef { section, property } = key;
+        let BsmrconfigKeyRef { section, property } = key;
         value
             .parse()
             .map_err(bsmr_error::Error::from)
             .with_buck_error_context(|| {
                 format!(
-                    "Invalid value for buckconfig `{}.{}`: conversion to {} failed, value as `{}`",
+                    "Invalid value for bsmrconfig `{}.{}`: conversion to {} failed, value as `{}`",
                     section.to_owned(),
                     property.to_owned(),
                     std::any::type_name::<T>(),
@@ -123,21 +123,21 @@ impl LegacyBuckConfig {
             })
     }
 
-    pub fn parse<T: FromStr>(&self, key: BuckconfigKeyRef) -> bsmr_error::Result<Option<T>>
+    pub fn parse<T: FromStr>(&self, key: BsmrconfigKeyRef) -> bsmr_error::Result<Option<T>>
     where
         bsmr_error::Error: From<<T as FromStr>::Err>,
     {
         self.get_config_value(key)
             .map(|s| {
                 Self::parse_impl(key, s.as_str()).with_buck_error_context(|| {
-                    format!("Defined {}", s.source.as_legacy_buck_config_location())
+                    format!("Defined {}", s.source.as_legacy_bsmr_config_location())
                 })
             })
             .transpose()
     }
 
     pub fn parse_value<T: FromStr>(
-        key: BuckconfigKeyRef,
+        key: BsmrconfigKeyRef,
         value: Option<&str>,
     ) -> bsmr_error::Result<Option<T>>
     where
@@ -148,7 +148,7 @@ impl LegacyBuckConfig {
 
     pub fn parse_list<T: FromStr>(
         &self,
-        key: BuckconfigKeyRef,
+        key: BsmrconfigKeyRef,
     ) -> bsmr_error::Result<Option<Vec<T>>>
     where
         bsmr_error::Error: From<<T as FromStr>::Err>,
@@ -157,7 +157,7 @@ impl LegacyBuckConfig {
     }
 
     pub fn parse_list_value<T: FromStr>(
-        key: BuckconfigKeyRef,
+        key: BsmrconfigKeyRef,
         value: Option<&str>,
     ) -> bsmr_error::Result<Option<Vec<T>>>
     where
@@ -186,11 +186,11 @@ impl LegacyBuckConfig {
         self.0.values.keys()
     }
 
-    pub fn all_sections(&self) -> impl Iterator<Item = (&String, &LegacyBuckConfigSection)> + '_ {
+    pub fn all_sections(&self) -> impl Iterator<Item = (&String, &LegacyBsmrConfigSection)> + '_ {
         self.0.values.iter()
     }
 
-    pub fn get_section(&self, section: &str) -> Option<&LegacyBuckConfigSection> {
+    pub fn get_section(&self, section: &str) -> Option<&LegacyBsmrConfigSection> {
         self.0.values.get(section)
     }
 

@@ -35,7 +35,7 @@ A fully-qualified build target has three components:
 
 Note that the name of the build file itself—usually BUCK—does _not_ occur in the
 build target. All build files within a given Bessemer project must have the same
-name—defined in the `[buildfile].name` entry of `.buckconfig`. Therefore, it is
+name—defined in the `[buildfile].name` entry of `.bsmrconfig`. Therefore, it is
 unnecessary to include the name in the target. The full regular expression for a
 fully-qualified build target is as follows:
 
@@ -132,8 +132,8 @@ command-line with less typing.
 
 Bessemer supports the ability to define **_aliases_ for build targets**; using
 aliases can improve brevity when specifying targets on the Bessemer command line.
-For more information, see the [`[alias]`](buckconfig.md#alias) section in the
-documentation for [`.buckconfig`](buckconfig.md). A
+For more information, see the [`[alias]`](bsmrconfig.md#alias) section in the
+documentation for [`.bsmrconfig`](bsmrconfig.md). A
 [**build target pattern**](target_pattern.md) is a string that describes a set
 of one or more build targets. For example, the pattern `//...` is used to build
 an entire project. For more information, see the **Build Target Pattern** topic.

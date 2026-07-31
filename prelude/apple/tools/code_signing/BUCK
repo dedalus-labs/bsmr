@@ -64,7 +64,7 @@ meta_python_test(
         "test_resources/*",
     ]),
     deps = [
-        "fbsource//third-party/pypi/setuptools:setuptools",
+        "upstream//third-party/pypi/setuptools:setuptools",
         ":lib",
     ],
 )
@@ -74,7 +74,7 @@ python_binary(
     main = "main.py",
     visibility = ["PUBLIC"],
     deps = [
-        "fbsource//third-party/pypi/typed-argument-parser:typed-argument-parser",
+        "upstream//third-party/pypi/typed-argument-parser:typed-argument-parser",
         ":lib",
     ],
 )

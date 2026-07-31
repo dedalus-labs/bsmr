@@ -1,5 +1,5 @@
-# @oss-disable[end= ]: load("@fbcode_macros//build_defs:go_library.bzl", "go_library")
-# @oss-disable[end= ]: load("@fbcode_macros//build_defs:go_unittest.bzl", "go_unittest")
+# @oss-disable[end= ]: load("@upstream//build_defs:go_library.bzl", "go_library")
+# @oss-disable[end= ]: load("@upstream//build_defs:go_unittest.bzl", "go_unittest")
 load("@prelude//utils:source_listing.bzl", "source_listing")
 
 oncall("golang")

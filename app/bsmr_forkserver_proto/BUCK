@@ -9,10 +9,10 @@ rust_protobuf_library(
     build_script = "build.rs",
     proto_srcs = ":bsmr_forkserver_proto.proto",
     deps = [
-        "fbsource//third-party/rust:derive_more",
-        "fbsource//third-party/rust:prost-types",
-        "//bsmr/app/bsmr_data:bsmr_data",
-        "//bsmr/packages/rust/gazebo/gazebo:gazebo",
+        "bsmr_build//third-party/rust:derive_more",
+        "bsmr_build//third-party/rust:prost-types",
+        "root//app/bsmr_data:bsmr_data",
+        "root//packages/rust/gazebo/gazebo:gazebo",
     ],
 )
 
@@ -21,6 +21,6 @@ proto_srcs(
     srcs = ["forkserver.proto"],
     visibility = ["PUBLIC"],
     deps = [
-        translate_target("//bsmr/app/bsmr_data:data_proto"),
+        translate_target("root//app/bsmr_data:data_proto"),
     ],
 )

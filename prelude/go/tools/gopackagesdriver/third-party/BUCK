@@ -1,4 +1,4 @@
-# @oss-disable[end= ]: load("@fbsource//tools/target_determinator/macros:ci.bzl", "ci")
+# @oss-disable[end= ]: load("@upstream//tools/target_determinator/macros:ci.bzl", "ci")
 load("@prelude//utils:source_listing.bzl", "source_listing")
 
 oncall("golang")

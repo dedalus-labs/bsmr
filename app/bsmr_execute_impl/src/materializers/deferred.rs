@@ -187,7 +187,7 @@ pub enum AccessTimesUpdates {
 #[bsmr(tag = Input)]
 pub enum AccessTimesUpdatesError {
     #[error(
-        "Invalid value for buckconfig `[bsmr] update_access_times`. Got `{0}`. Expected one of `full`, `partial`  or `disabled`."
+        "Invalid value for bsmrconfig `[bsmr] update_access_times`. Got `{0}`. Expected one of `full`, `partial`  or `disabled`."
     )]
     InvalidValueForConfig(String),
 }

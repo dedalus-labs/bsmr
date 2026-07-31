@@ -1,14 +1,14 @@
-load("@fbcode//bsmr/tests:buck_e2e.bzl", "bsmr_e2e_test")
+load("@root//tests:buck_e2e.bzl", "bsmr_e2e_test")
 
 oncall("testing_frameworks")
 
 bsmr_e2e_test(
     name = "test_test_inplace",
     srcs = ["test_test_inplace.py"],
-    data = "//bsmr/tests/targets:isolated_targets",
+    data = "root//tests/targets:isolated_targets",
     test_with_deployed_bsmr = True,
     use_compiled_bsmr_client_and_tpx = True,
-    deps = ["//bsmr/tests/e2e_util:utils"],
+    deps = ["root//tests/e2e_util:utils"],
 )
 
 bsmr_e2e_test(
@@ -16,7 +16,7 @@ bsmr_e2e_test(
     srcs = ["test_test_artifacts.py"],
     compatible_with = ["ovr_config//os:linux"],
     env = {
-        "TESTX_BIN": "$(exe_target fbcode//tae/testx:testx)",
+        "TESTX_BIN": "$(exe_target upstream//tae/testx:testx)",
     },
     skip_for_os = [
         "darwin",
@@ -25,7 +25,7 @@ bsmr_e2e_test(
     test_with_deployed_bsmr = True,
     use_compiled_bsmr_client_and_tpx = True,
     deps = [
-        "//bsmr/tests/e2e_util:utils",
+        "root//tests/e2e_util:utils",
         "//remote_execution/client_lib/wrappers/python:py_re_client_lib",
         "//remote_execution/lib/if:common-py3-types",
         "//remote_execution/lib/if:common-python-types",
@@ -39,7 +39,7 @@ bsmr_e2e_test(
     srcs = ["test_test_details_artifacts.py"],
     compatible_with = ["ovr_config//os:linux"],
     env = {
-        "TESTX_BIN": "$(exe_target fbcode//tae/testx:testx)",
+        "TESTX_BIN": "$(exe_target upstream//tae/testx:testx)",
     },
     skip_for_os = [
         "darwin",
@@ -48,7 +48,7 @@ bsmr_e2e_test(
     test_with_deployed_bsmr = False,
     use_compiled_bsmr_client_and_tpx = True,
     deps = [
-        "//bsmr/tests/e2e_util:utils",
+        "root//tests/e2e_util:utils",
         "//tae/testx:py",
     ],
 )
@@ -71,7 +71,7 @@ bsmr_e2e_test(
 bsmr_e2e_test(
     name = "test_test_remote_execution",
     srcs = ["test_test_remote_execution.py"],
-    data = "//bsmr/tests/targets:isolated_targets",
+    data = "root//tests/targets:isolated_targets",
     test_with_deployed_bsmr = False,
     use_compiled_bsmr_client_and_tpx = True,
 )
@@ -86,8 +86,8 @@ bsmr_e2e_test(
     test_with_deployed_bsmr = False,
     use_compiled_bsmr_client_and_tpx = True,
     deps = [
-        "//bsmr/tests/e2e_util:utilities",
-        "//bsmr/tests/e2e_util/api:api",
+        "root//tests/e2e_util:utilities",
+        "root//tests/e2e_util/api:api",
     ],
 )
 

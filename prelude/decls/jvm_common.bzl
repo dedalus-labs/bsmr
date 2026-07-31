@@ -37,8 +37,8 @@ def _resources_arg():
      via [Class.getResource()](http://docs.oracle.com/javase/7/docs/api/java/lang/Class.html#getResource(java.lang.String)).
 
     **Note:** If `resources_root` isn't set,
-     Buck uses the ``.buckconfig``
-     property in `.buckconfig` to
+     Buck uses the ``.bsmrconfig``
+     property in `.bsmrconfig` to
      determine where resources should be placed within the generated JAR
      file.
 """,
@@ -49,7 +49,7 @@ def _resources_arg():
             doc = """
     The path that resources are resolved against. For example, if `resources_root` is `"res"` and
      `resources` contains the file `"res/com/example/foo.txt"`, that file will end up as `"com/example/foo.txt"` in the output JAR. This parameter
-     overrides the ``.buckconfig`` property in `.buckconfig`.
+     overrides the ``.bsmrconfig`` property in `.bsmrconfig`.
 """,
         ),
     }
@@ -163,7 +163,7 @@ def _abi_generation_mode():
             attrs.enum(AbiGenerationMode),
             default = None,
             doc = """
-    Overrides `.buckconfig`
+    Overrides `.bsmrconfig`
     for this rule.
 """,
         ),
@@ -295,7 +295,7 @@ fbcode/bsmr/prelude/decls/jvm_common.bzl
                 )
 
                 # Note you probably want to set
-                # maven_repo=http://jcenter.bintray.com/ in your .buckconfig until
+                # maven_repo=http://jcenter.bintray.com/ in your .bsmrconfig until
                 # https://github.com/Kotlin/kotlinx.serialization/issues/64
                 # is closed.
                 remote_file(
@@ -347,7 +347,7 @@ def _javac():
             Specifies the Java compiler program to use for this rule.
                 The value is a source path or an execution dep (e.g., //foo/bar:bar).
                 Overrides the value in "javac" in the "tools" section
-                of `.buckconfig`.
+                of `.bsmrconfig`.
             """,
         ),
     }

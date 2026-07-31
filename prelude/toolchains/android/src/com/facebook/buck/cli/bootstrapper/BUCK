@@ -9,8 +9,8 @@ buck_java_binary(
     name = "bootstrapper",
     main_class = "com.facebook.buck.cli.bootstrapper.ClassLoaderBootstrapper",
     visibility = [
-        "fbcode//bsmr/platform/...",
-        "fbsource//xplat/bsmr/platform/...",
+        "root//platform/...",
+        "upstream//xplat/bsmr/platform/...",
         "prelude//toolchains/android/config:",
         "prelude//toolchains/android/meta_only/src/com/facebook/buck/jvm/remote_worker/...",
         "prelude//toolchains/android/src/com/facebook/buck/jvm/java/stepsbuilder/javacd/worker:",

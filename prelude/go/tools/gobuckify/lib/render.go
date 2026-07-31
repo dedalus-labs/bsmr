@@ -85,7 +85,7 @@ var TargetTemplate = `
 `
 
 type TemplateData struct {
-	Config BuckConfig
+	Config BsmrConfig
 	Target *BuckTarget
 }
 

@@ -31,7 +31,7 @@ pub struct HelpEnvCommand {
 
 impl HelpEnvCommand {
     pub fn exec(self, _matches: BuckArgMatches<'_>, _ctx: ClientCommandContext<'_>) -> ExitResult {
-        // TODO(nga): print special buckconfigs too.
+        // TODO(nga): print special bsmrconfigs too.
 
         // This command depends on `linkme` aggregating all the environment variables.
         if let Some(res) = ExitResult::retry_command_with_full_binary()? {

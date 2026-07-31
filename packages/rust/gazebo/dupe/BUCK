@@ -8,6 +8,6 @@ rust_library(
         ["src/**/*.rs"],
     ),
     deps = [
-        "//bsmr/packages/rust/gazebo/dupe_derive:dupe_derive",
+        "root//packages/rust/gazebo/dupe_derive:dupe_derive",
     ],
 )

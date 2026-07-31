@@ -9,10 +9,10 @@ rust_library(
     ),
     proc_macro = True,
     deps = [
-        "fbsource//third-party/rust:convert_case",
-        "fbsource//third-party/rust:proc-macro2",
-        "fbsource//third-party/rust:quote",
-        "fbsource//third-party/rust:syn",
-        "//bsmr/packages/rust/gazebo/gazebo:gazebo",
+        "bsmr_build//third-party/rust:convert_case",
+        "bsmr_build//third-party/rust:proc-macro2",
+        "bsmr_build//third-party/rust:quote",
+        "bsmr_build//third-party/rust:syn",
+        "root//packages/rust/gazebo/gazebo:gazebo",
     ],
 )

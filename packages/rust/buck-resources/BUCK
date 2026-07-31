@@ -10,14 +10,14 @@ rust_library(
         "src/manifest.rs",
     ],
     # Prefer to use the published version of this library through crates.io,
-    # instead of this target. fbsource//third-party/rust:buck-resources
+    # instead of this target. bsmr_build//third-party/rust:buck-resources
     visibility = [],
     deps = [
-        "fbsource//third-party/rust:dunce",
-        "fbsource//third-party/rust:once_cell",
-        "fbsource//third-party/rust:serde",
-        "fbsource//third-party/rust:serde_json",
-        "fbsource//third-party/rust:thiserror",
+        "bsmr_build//third-party/rust:dunce",
+        "bsmr_build//third-party/rust:once_cell",
+        "bsmr_build//third-party/rust:serde",
+        "bsmr_build//third-party/rust:serde_json",
+        "bsmr_build//third-party/rust:thiserror",
     ],
 )
 

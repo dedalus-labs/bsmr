@@ -13,7 +13,7 @@ use bsmr_interpreter_for_build::interpreter::testing::Tester;
 use indoc::indoc;
 
 #[test]
-fn configuration_info_validates_buckconfigs() -> bsmr_error::Result<()> {
+fn configuration_info_validates_bsmrconfigs() -> bsmr_error::Result<()> {
     let mut tester = Tester::new().unwrap();
     tester.additional_globals(register_rule_defs);
     tester.run_starlark_bzl_test_expecting_error(

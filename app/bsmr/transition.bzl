@@ -22,7 +22,7 @@ def _transition_impl(platform: PlatformInfo, refs: struct) -> PlatformInfo:
 _transition_func = transition(
     impl = _transition_impl,
     refs = {
-        "val": translate_target("//bsmr/app/bsmr:bsmr_client_only_build"),
+        "val": translate_target("root//app/bsmr:bsmr_client_only_build"),
     },
 )
 

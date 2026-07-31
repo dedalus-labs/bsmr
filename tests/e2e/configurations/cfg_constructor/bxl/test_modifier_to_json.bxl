@@ -13,7 +13,7 @@ load("@prelude//cfg/modifier:types.bzl", "ModifierPackageLocation", "ModifierTar
 
 def _impl(_ctx: bxl.Context):
     for location in (
-        ModifierPackageLocation(package_path = "fbcode//bsmr/PACKAGE"),
+        ModifierPackageLocation(package_path = "root//PACKAGE"),
         ModifierTargetLocation(),
     ):
         tagged_modifiers = TaggedModifiers(

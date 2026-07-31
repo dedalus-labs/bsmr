@@ -10,13 +10,13 @@
 
 # IMPORTANT: Don't land your change without running these tests!
 # ```
-# bsmr build --num-threads 4 $(bsmr uquery "kind('ocaml_binary', 'fbcode//hphp/...')")
+# bsmr build --num-threads 4 $(bsmr uquery "kind('ocaml_binary', 'upstream//hphp/...')")
 # ```
 #
 # If you are really, really keen, this command builds all hack, not just the
 # OCaml binaries.
 # ```
-# bsmr build --num-threads 4 fbcode//hphp/hack/...
+# bsmr build --num-threads 4 upstream//hphp/hack/...
 # ```
 
 # To avoid name collisions (where '/' designates the build output

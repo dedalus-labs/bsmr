@@ -19,8 +19,8 @@ use bsmr_fs::paths::abs_norm_path::AbsNormPathBuf;
 use serde::Deserialize;
 use serde::Serialize;
 
-use crate::legacy_configs::configs::LegacyBuckConfig;
-use crate::legacy_configs::key::BuckconfigKeyRef;
+use crate::legacy_configs::configs::LegacyBsmrConfig;
+use crate::legacy_configs::key::BsmrconfigKeyRef;
 
 pub const DEFAULT_RETAINED_EVENT_LOGS: usize = 12;
 
@@ -65,30 +65,30 @@ pub struct HttpConfig {
 }
 
 impl HttpConfig {
-    pub fn from_config(config: &LegacyBuckConfig) -> bsmr_error::Result<Self> {
-        let connect_timeout_ms = config.parse(BuckconfigKeyRef {
+    pub fn from_config(config: &LegacyBsmrConfig) -> bsmr_error::Result<Self> {
+        let connect_timeout_ms = config.parse(BsmrconfigKeyRef {
             section: "http",
             property: "connect_timeout_ms",
         })?;
-        let read_timeout_ms = config.parse(BuckconfigKeyRef {
+        let read_timeout_ms = config.parse(BsmrconfigKeyRef {
             section: "http",
             property: "read_timeout_ms",
         })?;
-        let write_timeout_ms = config.parse(BuckconfigKeyRef {
+        let write_timeout_ms = config.parse(BsmrconfigKeyRef {
             section: "http",
             property: "write_timeout_ms",
         })?;
-        let max_redirects = config.parse(BuckconfigKeyRef {
+        let max_redirects = config.parse(BsmrconfigKeyRef {
             section: "http",
             property: "max_redirects",
         })?;
         let http2 = config
-            .parse(BuckconfigKeyRef {
+            .parse(BsmrconfigKeyRef {
                 section: "http",
                 property: "http2",
             })?
             .unwrap_or(true);
-        let max_concurrent_requests = config.parse(BuckconfigKeyRef {
+        let max_concurrent_requests = config.parse(BsmrconfigKeyRef {
             section: "http",
             property: "max_concurrent_requests",
         })?;
@@ -141,22 +141,22 @@ impl HttpConfig {
 pub struct SystemWarningConfig {
     /// A threshold that is used to determine the percent of memory bsmr uses to display memory pressure warnings.
     /// If None, we don't warn the user.
-    /// The corresponding buckconfig is `bsmr_system_warning.memory_pressure_threshold_percent`.
+    /// The corresponding bsmrconfig is `bsmr_system_warning.memory_pressure_threshold_percent`.
     pub memory_pressure_threshold_percent: Option<u64>,
     /// A threshold that is used to determine remaining disk space bsmr uses to display disk space warnings.
     /// If None, we don't warn the user.
-    /// The corresponding buckconfig is `bsmr_system_warning.remaining_disk_space_threshold`.
+    /// The corresponding bsmrconfig is `bsmr_system_warning.remaining_disk_space_threshold`.
     pub remaining_disk_space_threshold_gb: Option<u64>,
     /// Minimum number of bytes downloaded to measure average download speed.
     /// If None, we don't warn the user.
-    /// The corresponding buckconfig is `bsmr_system_warning.min_re_download_bytes_threshold`.
+    /// The corresponding bsmrconfig is `bsmr_system_warning.min_re_download_bytes_threshold`.
     pub min_re_download_bytes_threshold: Option<u64>,
     /// A threshold that is used to determine if download speed is too low and display a warning.
     /// If None, we don't warn the user.
-    /// The corresponding buckconfig is `bsmr_system_warning.avg_re_download_bytes_per_sec_threshold`.
+    /// The corresponding bsmrconfig is `bsmr_system_warning.avg_re_download_bytes_per_sec_threshold`.
     pub avg_re_download_bytes_per_sec_threshold: Option<u64>,
     /// A regex that controls which targets are opted into the vpn check.
-    /// The corresponding buckconfig is `bsmr_health_check.optin_vpn_check_targets_regex`.
+    /// The corresponding bsmrconfig is `bsmr_health_check.optin_vpn_check_targets_regex`.
     pub optin_vpn_check_targets_regex: Option<String>,
     /// Whether to enable the stable revision check.
     pub enable_stable_revision_check: Option<bool>,
@@ -165,32 +165,32 @@ pub struct SystemWarningConfig {
 }
 
 impl SystemWarningConfig {
-    pub fn from_config(config: &LegacyBuckConfig) -> bsmr_error::Result<Self> {
-        let memory_pressure_threshold_percent = config.parse(BuckconfigKeyRef {
+    pub fn from_config(config: &LegacyBsmrConfig) -> bsmr_error::Result<Self> {
+        let memory_pressure_threshold_percent = config.parse(BsmrconfigKeyRef {
             section: "bsmr_system_warning",
             property: "memory_pressure_threshold_percent",
         })?;
-        let remaining_disk_space_threshold_gb = config.parse(BuckconfigKeyRef {
+        let remaining_disk_space_threshold_gb = config.parse(BsmrconfigKeyRef {
             section: "bsmr_system_warning",
             property: "remaining_disk_space_threshold_gb",
         })?;
-        let min_re_download_bytes_threshold = config.parse(BuckconfigKeyRef {
+        let min_re_download_bytes_threshold = config.parse(BsmrconfigKeyRef {
             section: "bsmr_system_warning",
             property: "min_re_download_bytes_threshold",
         })?;
-        let avg_re_download_bytes_per_sec_threshold = config.parse(BuckconfigKeyRef {
+        let avg_re_download_bytes_per_sec_threshold = config.parse(BsmrconfigKeyRef {
             section: "bsmr_system_warning",
             property: "avg_re_download_bytes_per_sec_threshold",
         })?;
-        let optin_vpn_check_targets_regex = config.parse(BuckconfigKeyRef {
+        let optin_vpn_check_targets_regex = config.parse(BsmrconfigKeyRef {
             section: "bsmr_health_check",
             property: "optin_vpn_check_targets_regex",
         })?;
-        let enable_stable_revision_check = config.parse(BuckconfigKeyRef {
+        let enable_stable_revision_check = config.parse(BsmrconfigKeyRef {
             section: "bsmr_health_check",
             property: "enable_stable_revision_check",
         })?;
-        let enable_health_check_process_isolation = config.parse(BuckconfigKeyRef {
+        let enable_health_check_process_isolation = config.parse(BsmrconfigKeyRef {
             section: "bsmr_health_check",
             property: "enable_health_check_process_isolation",
         })?;
@@ -218,7 +218,7 @@ impl SystemWarningConfig {
 #[derive(Allocative, Clone, Debug, Serialize, Deserialize, PartialEq, Eq)]
 pub struct ResourceControlConfig {
     /// A config to determine if the resource control should be activated or not.
-    /// The corresponding buckconfig is `bsmr_resource_control.status` that can take
+    /// The corresponding bsmrconfig is `bsmr_resource_control.status` that can take
     /// one of `{off | if_available | required}`.
     pub status: ResourceControlStatus,
     /// If resource control is enabled, buck needs to get a cgroup to run in from somewhere - this is
@@ -228,11 +228,11 @@ pub struct ResourceControlConfig {
     ///
     /// Accepts either a number of bytes or a percentage of the available resources.
     ///
-    /// The corresponding buckconfig is `bsmr_resource_control.memory_max`.
+    /// The corresponding bsmrconfig is `bsmr_resource_control.memory_max`.
     pub memory_max: Option<String>,
     /// Like `memory_max`, but controls cgroupv2's `memory.high`
     ///
-    /// The corresponding buckconfig is `bsmr_resource_control.memory_high`.
+    /// The corresponding bsmrconfig is `bsmr_resource_control.memory_high`.
     pub memory_high: Option<String>,
     /// A memory threshold that any action is allowed to allocate.
     pub memory_max_per_action: Option<String>,
@@ -254,7 +254,7 @@ pub struct ResourceControlConfig {
 
 impl ResourceControlConfig {
     pub fn testing_default() -> Self {
-        Self::from_config(&LegacyBuckConfig::empty()).unwrap()
+        Self::from_config(&LegacyBsmrConfig::empty()).unwrap()
     }
 }
 
@@ -347,31 +347,31 @@ impl FromStr for ResourceControlInit {
 
 /// The current version of the resource control algorithm. Say you have some important change to the
 /// algo that fixes a bug. Incrementing this to `N + 1` and setting the
-/// `bsmr_resource_control.enable_suspension_if_min_algo_version` buckconfig to `N + 1` enables
+/// `bsmr_resource_control.enable_suspension_if_min_algo_version` bsmrconfig to `N + 1` enables
 /// suspension only if your bug fix is actually included in the version of buck in use
 const RESOURCE_CONTROL_ALGO_VERSION: u32 = 6;
 
 /// The current version of the daemon cgroup wrapping logic. Incrementing this to `N + 1` and
-/// setting `bsmr_resource_control.status_if_min_daemon_cgroup_version` buckconfig to `N + 1`
+/// setting `bsmr_resource_control.status_if_min_daemon_cgroup_version` bsmrconfig to `N + 1`
 /// enables daemon cgroup wrapping (status = if_available) only if the bug fix is included in the
 /// version of buck in use.
 const DAEMON_CGROUP_VERSION: u32 = 1;
 
 impl ResourceControlConfig {
-    pub fn from_config(config: &LegacyBuckConfig) -> bsmr_error::Result<Self> {
+    pub fn from_config(config: &LegacyBsmrConfig) -> bsmr_error::Result<Self> {
         if let Some(env_conf) =
             bsmr_env!("BSMR_TEST_RESOURCE_CONTROL_CONFIG", applicability = testing,)?
         {
             Self::deserialize(env_conf)
         } else {
             let status = config
-                .parse(BuckconfigKeyRef {
+                .parse(BsmrconfigKeyRef {
                     section: "bsmr_resource_control",
                     property: "status",
                 })?
                 .unwrap_or(ResourceControlStatus::Off);
             let status_if_min_daemon_cgroup_version: Option<u32> =
-                config.parse(BuckconfigKeyRef {
+                config.parse(BsmrconfigKeyRef {
                     section: "bsmr_resource_control",
                     property: "status_if_min_daemon_cgroup_version",
                 })?;
@@ -383,53 +383,53 @@ impl ResourceControlConfig {
                 status
             };
             let init = config
-                .parse(BuckconfigKeyRef {
+                .parse(BsmrconfigKeyRef {
                     section: "bsmr_resource_control",
                     property: "init",
                 })?
                 .unwrap_or(ResourceControlInit::Systemd);
-            let memory_max = config.parse(BuckconfigKeyRef {
+            let memory_max = config.parse(BsmrconfigKeyRef {
                 section: "bsmr_resource_control",
                 property: "memory_max",
             })?;
-            let memory_high = config.parse(BuckconfigKeyRef {
+            let memory_high = config.parse(BsmrconfigKeyRef {
                 section: "bsmr_resource_control",
                 property: "memory_high",
             })?;
-            let memory_max_per_action = config.parse(BuckconfigKeyRef {
+            let memory_max_per_action = config.parse(BsmrconfigKeyRef {
                 section: "bsmr_resource_control",
                 property: "memory_max_per_action",
             })?;
-            let memory_high_per_action = config.parse(BuckconfigKeyRef {
+            let memory_high_per_action = config.parse(BsmrconfigKeyRef {
                 section: "bsmr_resource_control",
                 property: "memory_high_per_action",
             })?;
-            let memory_high_actions = config.parse(BuckconfigKeyRef {
+            let memory_high_actions = config.parse(BsmrconfigKeyRef {
                 section: "bsmr_resource_control",
                 property: "memory_high_actions",
             })?;
-            let memory_max_actions = config.parse(BuckconfigKeyRef {
+            let memory_max_actions = config.parse(BsmrconfigKeyRef {
                 section: "bsmr_resource_control",
                 property: "memory_max_actions",
             })?;
-            let enable_suspension = config.parse(BuckconfigKeyRef {
+            let enable_suspension = config.parse(BsmrconfigKeyRef {
                 section: "bsmr_resource_control",
                 property: "enable_suspension",
             })?;
             let enable_suspension_if_min_algo_version: Option<u32> =
-                config.parse(BuckconfigKeyRef {
+                config.parse(BsmrconfigKeyRef {
                     section: "bsmr_resource_control",
                     property: "enable_suspension_if_min_algo_version",
                 })?;
             let enable_suspension = enable_suspension.unwrap_or(false)
                 || enable_suspension_if_min_algo_version
                     .is_some_and(|min_version| RESOURCE_CONTROL_ALGO_VERSION >= min_version);
-            let experimental_suspension_algo_variant = config.parse(BuckconfigKeyRef {
+            let experimental_suspension_algo_variant = config.parse(BsmrconfigKeyRef {
                 section: "bsmr_resource_control",
                 property: "experimental_suspension_algo_variant",
             })?;
             let preferred_action_suspend_strategy = config
-                .parse(BuckconfigKeyRef {
+                .parse(BsmrconfigKeyRef {
                     section: "bsmr_resource_control",
                     property: "preferred_action_suspend_strategy",
                 })?
@@ -482,12 +482,12 @@ pub struct HealthCheckConfig {
 }
 
 impl HealthCheckConfig {
-    pub fn from_config(config: &LegacyBuckConfig) -> bsmr_error::Result<Self> {
-        let enable_health_checks = config.parse(BuckconfigKeyRef {
+    pub fn from_config(config: &LegacyBsmrConfig) -> bsmr_error::Result<Self> {
+        let enable_health_checks = config.parse(BsmrconfigKeyRef {
             section: "bsmr_health_check",
             property: "enable_health_checks",
         })?;
-        let disabled_health_check_names = config.parse(BuckconfigKeyRef {
+        let disabled_health_check_names = config.parse(BsmrconfigKeyRef {
             section: "bsmr_health_check",
             property: "disabled_health_check_names",
         })?;
@@ -503,7 +503,7 @@ impl HealthCheckConfig {
 /// Configurations that are used at startup by the daemon. Those are actually read by the client,
 /// and passed on to the daemon.
 ///
-/// The fields here are often raw String we get from the buckconfig, the daemon will do
+/// The fields here are often raw String we get from the bsmrconfig, the daemon will do
 /// deserialization once it receives them. That said, this is not a requirement.
 ///
 /// Backwards compatibility on Serialize / Deserialize is not required: if the client cannot read
@@ -528,10 +528,10 @@ pub struct DaemonStartupConfig {
 }
 
 impl DaemonStartupConfig {
-    pub fn new(config: &LegacyBuckConfig) -> bsmr_error::Result<Self> {
+    pub fn new(config: &LegacyBsmrConfig) -> bsmr_error::Result<Self> {
         // Intepreted client side because we need the value here.
 
-        let log_download_method = if let Some(log_url) = config.get(BuckconfigKeyRef {
+        let log_download_method = if let Some(log_url) = config.get(BsmrconfigKeyRef {
             section: "bsmr",
             property: "log_url",
         }) {
@@ -549,32 +549,32 @@ impl DaemonStartupConfig {
 
         Ok(Self {
             num_tokio_workers: config
-                .parse(BuckconfigKeyRef {
+                .parse(BsmrconfigKeyRef {
                     section: "build",
                     property: "num_tokio_workers",
                 })
                 .unwrap_or(Some(0)),
             daemon_buster: config
-                .get(BuckconfigKeyRef {
+                .get(BsmrconfigKeyRef {
                     section: "bsmr",
                     property: "daemon_buster",
                 })
                 .map(ToOwned::to_owned),
             digest_algorithms: config
-                .get(BuckconfigKeyRef {
+                .get(BsmrconfigKeyRef {
                     section: "bsmr",
                     property: "digest_algorithms",
                 })
                 .map(ToOwned::to_owned),
             source_digest_algorithm: config
-                .get(BuckconfigKeyRef {
+                .get(BsmrconfigKeyRef {
                     section: "bsmr",
                     property: "source_digest_algorithm",
                 })
                 .map(ToOwned::to_owned),
             paranoid: false, // Setup later in ImmediateConfig
             materializations: config
-                .get(BuckconfigKeyRef {
+                .get(BsmrconfigKeyRef {
                     section: "bsmr",
                     property: "materializations",
                 })
@@ -584,7 +584,7 @@ impl DaemonStartupConfig {
             log_download_method,
             health_check_config: HealthCheckConfig::from_config(config)?,
             retained_event_logs: config
-                .get(BuckconfigKeyRef {
+                .get(BsmrconfigKeyRef {
                     section: "bsmr",
                     property: "retained_event_logs",
                 })
@@ -592,7 +592,7 @@ impl DaemonStartupConfig {
                 .unwrap_or(DEFAULT_RETAINED_EVENT_LOGS),
             macos_qos_class: {
                 let from_config = config
-                    .get(BuckconfigKeyRef {
+                    .get(BsmrconfigKeyRef {
                         section: "bsmr",
                         property: "macos_qos_class",
                     })
@@ -603,7 +603,7 @@ impl DaemonStartupConfig {
                         bsmr_error::bsmr_error!(
                             bsmr_error::ErrorTag::Input,
                             "BSMR_DISABLE_MACOS_QOS is deprecated. \
-                             Use `[bsmr] macos_qos_class = skip_lowering` in buckconfig instead. \
+                             Use `[bsmr] macos_qos_class = skip_lowering` in bsmrconfig instead. \
                              This will be the default very soon."
                         ),
                         deprecation: true,
@@ -615,7 +615,7 @@ impl DaemonStartupConfig {
                     from_config
                 }
             },
-            daemon_idle_timeout_s: config.parse(BuckconfigKeyRef {
+            daemon_idle_timeout_s: config.parse(BsmrconfigKeyRef {
                 section: "bsmr",
                 property: "daemon_idle_timeout_s",
             })?,

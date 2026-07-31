@@ -22,20 +22,20 @@ use dupe::Dupe;
 use pagable::Pagable;
 use starlark_map::sorted_map::SortedMap;
 
-use super::cells::ExternalPathBuckconfigData;
+use super::cells::ExternalPathBsmrconfigData;
 use crate::legacy_configs::args::ResolvedConfigFile;
 use crate::legacy_configs::args::ResolvedLegacyConfigArg;
 use crate::legacy_configs::file_ops::ConfigParserFileOps;
 use crate::legacy_configs::file_ops::ConfigPath;
-use crate::legacy_configs::key::BuckconfigKeyRef;
+use crate::legacy_configs::key::BsmrconfigKeyRef;
 use crate::legacy_configs::parser::LegacyConfigParser;
 
 #[derive(Clone, Dupe, Debug, Allocative, Pagable)]
-pub struct LegacyBuckConfig(pub(crate) Arc<ConfigData>);
+pub struct LegacyBsmrConfig(pub(crate) Arc<ConfigData>);
 
 #[derive(Debug, Allocative, Pagable)]
 pub(crate) struct ConfigData {
-    pub(crate) values: SortedMap<String, LegacyBuckConfigSection>,
+    pub(crate) values: SortedMap<String, LegacyBsmrConfigSection>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Allocative, Pagable)]
@@ -67,10 +67,10 @@ pub(crate) enum Location {
 }
 
 impl Location {
-    pub(crate) fn as_legacy_buck_config_location(&self) -> LegacyBuckConfigLocation<'_> {
+    pub(crate) fn as_legacy_bsmr_config_location(&self) -> LegacyBsmrConfigLocation<'_> {
         match self {
-            Self::File(x) => LegacyBuckConfigLocation::File(&x.source_file.path, x.line),
-            Self::CommandLineArgument => LegacyBuckConfigLocation::CommandLineArgument,
+            Self::File(x) => LegacyBsmrConfigLocation::File(&x.source_file.path, x.line),
+            Self::CommandLineArgument => LegacyBsmrConfigLocation::CommandLineArgument,
         }
     }
 }
@@ -138,7 +138,7 @@ pub(crate) struct ConfigValue {
 }
 
 #[derive(Debug, Default, Allocative, Pagable)]
-pub struct LegacyBuckConfigSection {
+pub struct LegacyBsmrConfigSection {
     pub(crate) values: SortedMap<String, ConfigValue>,
 }
 
@@ -174,17 +174,17 @@ impl ConfigValue {
     }
 }
 
-pub struct LegacyBuckConfigValue<'a> {
+pub struct LegacyBsmrConfigValue<'a> {
     pub(crate) value: &'a ConfigValue,
 }
 
 #[derive(PartialEq, Debug)]
-pub enum LegacyBuckConfigLocation<'a> {
+pub enum LegacyBsmrConfigLocation<'a> {
     File(&'a str, usize),
     CommandLineArgument,
 }
 
-impl Display for LegacyBuckConfigLocation<'_> {
+impl Display for LegacyBsmrConfigLocation<'_> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Self::File(file, line) => {
@@ -197,7 +197,7 @@ impl Display for LegacyBuckConfigLocation<'_> {
     }
 }
 
-impl<'a> LegacyBuckConfigValue<'a> {
+impl<'a> LegacyBsmrConfigValue<'a> {
     pub fn as_str(&self) -> &'a str {
         self.value.as_str()
     }
@@ -206,23 +206,23 @@ impl<'a> LegacyBuckConfigValue<'a> {
         self.value.raw_value()
     }
 
-    pub fn location(&self) -> LegacyBuckConfigLocation<'_> {
+    pub fn location(&self) -> LegacyBsmrConfigLocation<'_> {
         match &self.value.source {
             Location::File(file) => {
-                LegacyBuckConfigLocation::File(&file.source_file.path, file.line)
+                LegacyBsmrConfigLocation::File(&file.source_file.path, file.line)
             }
-            Location::CommandLineArgument => LegacyBuckConfigLocation::CommandLineArgument,
+            Location::CommandLineArgument => LegacyBsmrConfigLocation::CommandLineArgument,
         }
     }
 
-    pub fn location_stack(&self) -> Vec<LegacyBuckConfigLocation<'_>> {
+    pub fn location_stack(&self) -> Vec<LegacyBsmrConfigLocation<'_>> {
         let mut res = Vec::new();
         let mut location = Some(&self.value.source);
 
         while let Some(loc) = location.take() {
             match &loc {
                 Location::File(loc) => {
-                    res.push(LegacyBuckConfigLocation::File(
+                    res.push(LegacyBsmrConfigLocation::File(
                         &loc.source_file.path,
                         loc.line,
                     ));
@@ -237,7 +237,7 @@ impl<'a> LegacyBuckConfigValue<'a> {
     }
 }
 
-impl LegacyBuckConfig {
+impl LegacyBsmrConfig {
     pub fn empty() -> Self {
         Self(Arc::new(ConfigData {
             values: SortedMap::new(),
@@ -246,7 +246,7 @@ impl LegacyBuckConfig {
 
     pub fn filter_values<F>(&self, filter: F) -> Self
     where
-        F: Fn(&BuckconfigKeyRef) -> bool,
+        F: Fn(&BsmrconfigKeyRef) -> bool,
     {
         let values = self
             .0
@@ -256,13 +256,13 @@ impl LegacyBuckConfig {
                 let values: SortedMap<_, _> = section_data
                     .values
                     .iter()
-                    .filter(|(property, _)| filter(&BuckconfigKeyRef { section, property }))
+                    .filter(|(property, _)| filter(&BsmrconfigKeyRef { section, property }))
                     .map(|(property, value)| (property.clone(), value.clone()))
                     .collect();
                 if values.is_empty() {
                     None
                 } else {
-                    Some((section.clone(), LegacyBuckConfigSection { values }))
+                    Some((section.clone(), LegacyBsmrConfigSection { values }))
                 }
             })
             .collect();
@@ -273,14 +273,14 @@ impl LegacyBuckConfig {
         config_paths: &[ConfigPath],
         file_ops: &mut dyn ConfigParserFileOps,
         follow_includes: bool,
-    ) -> bsmr_error::Result<Vec<ExternalPathBuckconfigData>> {
+    ) -> bsmr_error::Result<Vec<ExternalPathBsmrconfigData>> {
         let mut external_path_configs = Vec::new();
         for main_config_file in config_paths {
             let mut parser = LegacyConfigParser::new();
             parser
                 .parse_file(main_config_file, None, follow_includes, file_ops)
                 .await?;
-            external_path_configs.push(ExternalPathBuckconfigData {
+            external_path_configs.push(ExternalPathBsmrconfigData {
                 origin_path: main_config_file.clone(),
                 parse_state: parser,
             });
@@ -289,7 +289,7 @@ impl LegacyBuckConfig {
     }
 
     pub(crate) async fn finish_parse(
-        external_path_configs: Vec<ExternalPathBuckconfigData>,
+        external_path_configs: Vec<ExternalPathBsmrconfigData>,
         main_config_files: &[ConfigPath],
         current_cell: &CellRootPath,
         file_ops: &mut dyn ConfigParserFileOps,
@@ -337,7 +337,7 @@ pub mod testing {
     use crate::legacy_configs::args::resolve_config_args;
     use crate::legacy_configs::file_ops::ConfigDirEntry;
 
-    pub fn parse(data: &[(&str, &str)], path: &str) -> bsmr_error::Result<LegacyBuckConfig> {
+    pub fn parse(data: &[(&str, &str)], path: &str) -> bsmr_error::Result<LegacyBsmrConfig> {
         parse_with_config_args(data, path, &[])
     }
 
@@ -345,13 +345,13 @@ pub mod testing {
         data: &[(&str, &str)],
         cell_path: &str,
         config_args: &[ConfigOverride],
-    ) -> bsmr_error::Result<LegacyBuckConfig> {
+    ) -> bsmr_error::Result<LegacyBsmrConfig> {
         let mut file_ops = TestConfigParserFileOps::new(data)?;
         let path = ProjectRelativePath::new(cell_path)?;
         futures::executor::block_on(async {
             // As long as people don't pass config files, making up values here is ok
             let processed_config_args = resolve_config_args(config_args, &mut file_ops).await?;
-            LegacyBuckConfig::finish_parse(
+            LegacyBsmrConfig::finish_parse(
                 Vec::new(),
                 &[ConfigPath::Project(path.to_owned())],
                 CellRootPath::new(ProjectRelativePath::empty()),
@@ -417,7 +417,7 @@ pub mod testing {
             &mut self,
             _path: &ConfigPath,
         ) -> bsmr_error::Result<Vec<ConfigDirEntry>> {
-            // This is only used for listing files in `buckconfig.d` directories, which we can just
+            // This is only used for listing files in `bsmrconfig.d` directories, which we can just
             // say are always empty in tests
             Ok(Vec::new())
         }
@@ -432,10 +432,10 @@ pub(crate) mod tests {
 
     use super::testing::*;
     use super::*;
-    use crate::legacy_configs::key::BuckconfigKeyRef;
+    use crate::legacy_configs::key::BsmrconfigKeyRef;
 
     pub(crate) fn assert_config_value(
-        config: &LegacyBuckConfig,
+        config: &LegacyBsmrConfig,
         section: &str,
         key: &str,
         expected: &str,
@@ -469,7 +469,7 @@ pub(crate) mod tests {
         }
     }
 
-    fn assert_config_value_is_empty(config: &LegacyBuckConfig, section: &str, key: &str) {
+    fn assert_config_value_is_empty(config: &LegacyBsmrConfig, section: &str, key: &str) {
         if let Some(values) = config.get_section(section)
             && let Some(v) = values.get(key)
         {
@@ -522,14 +522,14 @@ pub(crate) mod tests {
 
         assert_eq!(
             None,
-            config.get(BuckconfigKeyRef {
+            config.get(BsmrconfigKeyRef {
                 section: "section",
                 property: "missing"
             })
         );
         assert_eq!(
             None,
-            config.get(BuckconfigKeyRef {
+            config.get(BsmrconfigKeyRef {
                 section: "missing",
                 property: "int"
             })
@@ -767,7 +767,7 @@ pub(crate) mod tests {
         let key_value = apple_section.get("key").unwrap();
         assert_eq!(
             key_value.location(),
-            LegacyBuckConfigLocation::CommandLineArgument
+            LegacyBsmrConfigLocation::CommandLineArgument
         );
 
         Ok(())
@@ -808,7 +808,7 @@ pub(crate) mod tests {
         let config = parse_with_config_args(
             &[
                 (
-                    ".buckconfig",
+                    ".bsmrconfig",
                     indoc!(
                         r#"
                             [cells]
@@ -829,7 +829,7 @@ pub(crate) mod tests {
                     ),
                 ),
             ],
-            ".buckconfig",
+            ".bsmrconfig",
             &config_args,
         )?;
 
@@ -837,7 +837,7 @@ pub(crate) mod tests {
 
         let apple_section = config.get_section("apple").unwrap();
         let key_value = apple_section.get("key").unwrap();
-        let expected_path = LegacyBuckConfigLocation::File("cli-config", 2);
+        let expected_path = LegacyBsmrConfigLocation::File("cli-config", 2);
         assert_eq!(key_value.location(), expected_path);
 
         Ok(())

@@ -16,9 +16,9 @@ use bsmr_common::argv::ArgFilePath;
 use bsmr_common::init::DaemonStartupConfig;
 use bsmr_common::invocation_roots::InvocationRoots;
 use bsmr_common::invocation_roots::find_invocation_roots;
-use bsmr_common::legacy_configs::cells::BuckConfigBasedCells;
+use bsmr_common::legacy_configs::cells::BsmrConfigBasedCells;
 #[cfg(fbcode_build)]
-use bsmr_common::legacy_configs::key::BuckconfigKeyRef;
+use bsmr_common::legacy_configs::key::BsmrconfigKeyRef;
 use bsmr_core::bsmr_env;
 use bsmr_core::cells::CellAliasResolver;
 use bsmr_core::cells::CellResolver;
@@ -46,12 +46,12 @@ struct ImmediateConfig {
 }
 
 impl ImmediateConfig {
-    /// Performs a parse of the root `.buckconfig` for the cell _only_ without following includes
+    /// Performs a parse of the root `.bsmrconfig` for the cell _only_ without following includes
     /// and without parsing any configs for any referenced cells. This means this function might return
-    /// an empty mapping if the root `.buckconfig` does not contain the cell definitions.
+    /// an empty mapping if the root `.bsmrconfig` does not contain the cell definitions.
     fn parse(roots: &InvocationRoots) -> bsmr_error::Result<ImmediateConfig> {
         // This function is non-reentrant, and blocking for a bit should be ok
-        let cells = futures::executor::block_on(BuckConfigBasedCells::parse_with_config_args(
+        let cells = futures::executor::block_on(BsmrConfigBasedCells::parse_with_config_args(
             &roots.project_root,
             &[],
         ))?;
@@ -68,7 +68,7 @@ impl ImmediateConfig {
             #[cfg(fbcode_build)]
             allow_daemon_start_unsandboxed_via_wrapper: cells
                 .root_config
-                .parse::<bool>(BuckconfigKeyRef {
+                .parse::<bool>(BsmrconfigKeyRef {
                     section: "bsmr",
                     property: "allow_daemon_start_unsandboxed_via_wrapper",
                 })?
@@ -76,7 +76,7 @@ impl ImmediateConfig {
             #[cfg(fbcode_build)]
             show_sentiment: cells
                 .root_config
-                .get(BuckconfigKeyRef {
+                .get(BsmrconfigKeyRef {
                     section: "experiments",
                     property: "sentiment",
                 })
@@ -85,7 +85,7 @@ impl ImmediateConfig {
     }
 }
 
-/// Lazy-computed immediate config data. This is produced by reading the root buckconfig (but not
+/// Lazy-computed immediate config data. This is produced by reading the root bsmrconfig (but not
 /// processing any includes).
 struct ImmediateConfigContextData {
     cell_resolver: CellResolver,

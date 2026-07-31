@@ -739,7 +739,7 @@ async def test_shared_content_hash_race(buck: Buck) -> None:
     """
     N = 200
     targets = [f"root//:rust_pattern_consumer_{i}" for i in range(N)]
-    # Embed a distinct seed per iteration via buckconfig so every iteration
+    # Embed a distinct seed per iteration via bsmrconfig so every iteration
     # writes different JSON content and therefore misses the RE action cache
     # and the local materializer cache. All N consumers within an iteration
     # share the same seed, so they share the same content-hash path.

@@ -35,7 +35,7 @@ knowing the format of a digest, it's just a string).
 
 ### Hashes of files
 
-We'll expose the hash to use via a buckconfig. Our
+We'll expose the hash to use via a bsmrconfig. Our
 things-that-produce-hashes-of-files should either use the config to choose how
 they hash, or fail if they cannot provide the right hash format (e.g. that'll be
 true of Eden I/O).

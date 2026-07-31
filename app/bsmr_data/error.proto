@@ -143,7 +143,7 @@ enum ErrorTag {
   // Materialization was cancelled
   MATERIALIZATION_CANCELLED = 2600;
   // Could not find buck project root
-  NO_BUCK_ROOT = 27;
+  NO_BSMR_ROOT = 27;
   // Project root directory no longer exists on disk
   MISSING_PROJECT_ROOT = 2700;
 

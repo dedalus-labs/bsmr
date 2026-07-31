@@ -98,7 +98,7 @@ def rust_protobuf_library(
         name = build_name,
         srcs = [build_script],
         crate_root = build_script,
-        deps = ["//bsmr/app/bsmr_protoc_dev:bsmr_protoc_dev"],
+        deps = ["root//app/bsmr_protoc_dev:bsmr_protoc_dev"],
     )
 
     build_env = build_env or {}
@@ -126,9 +126,9 @@ def rust_protobuf_library(
             "OUT_DIR": "$(location :{})".format(proto_name),
         },
         deps = [
-            "fbsource//third-party/rust:prost",
-            "fbsource//third-party/rust:tonic",
-            "fbsource//third-party/rust:tonic-prost",
+            "bsmr_build//third-party/rust:prost",
+            "bsmr_build//third-party/rust:tonic",
+            "bsmr_build//third-party/rust:tonic-prost",
         ] + (deps or []),
         rustc_flags = ["-Aunused-crate-dependencies"],
     )

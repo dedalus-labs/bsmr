@@ -15,6 +15,6 @@ proto_srcs(
     srcs = ["worker.proto"],
     visibility = ["PUBLIC"],
     deps = [
-        translate_target("//bsmr/app/bsmr_data:data_proto"),
+        translate_target("root//app/bsmr_data:data_proto"),
     ],
 )

@@ -9,9 +9,9 @@ rust_library(
     crate_root = "src/lib.rs",
     features = ["allocative"],
     deps = [
-        "fbsource//third-party/rust:atomic",
-        "fbsource//third-party/rust:parking_lot",
-        "//bsmr/packages/rust/allocative/allocative:allocative",
+        "bsmr_build//third-party/rust:atomic",
+        "bsmr_build//third-party/rust:parking_lot",
+        "root//packages/rust/allocative/allocative:allocative",
     ],
 )
 
@@ -19,7 +19,7 @@ rust_binary(
     name = "stress",
     srcs = ["examples/stress.rs"],
     deps = [
-        "fbsource//third-party/rust:num_cpus",
+        "bsmr_build//third-party/rust:num_cpus",
         ":lock_free_hashtable",
     ],
 )

@@ -217,7 +217,7 @@ func Run(ctx context.Context, opts ...Option) error {
 	defer func() {
 		telemetry.LogEvent(ctx, &RequestFinishedEvent{
 			Duration: time.Since(start),
-			BuckRoot: platform.ProjectDir(),
+			BsmrRoot: platform.ProjectDir(),
 			Request:  req,
 			Patterns: targets,
 			Response: resp,

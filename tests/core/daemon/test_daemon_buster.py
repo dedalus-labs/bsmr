@@ -27,7 +27,7 @@ async def test_daemon_buster(buck: Buck) -> None:
     pid1 = await pid()
     assert pid1 == pid0
 
-    with open(buck.cwd / ".buckconfig", "a") as f:
+    with open(buck.cwd / ".bsmrconfig", "a") as f:
         f.write("[bsmr]\n")
         f.write("daemon_buster = 1\n")
 
@@ -39,7 +39,7 @@ async def test_daemon_buster(buck: Buck) -> None:
     pid3 = await pid()
     assert pid3 == pid2
 
-    with open(buck.cwd / ".buckconfig", "a") as f:
+    with open(buck.cwd / ".bsmrconfig", "a") as f:
         f.write("[bsmr]\n")
         f.write("daemon_buster = 2\n")
 
@@ -47,10 +47,10 @@ async def test_daemon_buster(buck: Buck) -> None:
     pid4 = await pid()
     assert pid4 != pid3
 
-    with open(buck.cwd / ".buckconfig", "r") as f:
+    with open(buck.cwd / ".bsmrconfig", "r") as f:
         config = f.read()
 
-    with open(buck.cwd / ".buckconfig", "w") as f:
+    with open(buck.cwd / ".bsmrconfig", "w") as f:
         f.write(
             "\n".join(
                 line for line in config.splitlines() if "daemon_buster" not in line

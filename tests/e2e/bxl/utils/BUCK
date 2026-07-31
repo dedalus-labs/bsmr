@@ -1,11 +1,11 @@
-load("@fbcode//bsmr/tests:buck_e2e.bzl", "bsmr_e2e_test")
+load("@root//tests:buck_e2e.bzl", "bsmr_e2e_test")
 
 oncall("build_infra")
 
 bsmr_e2e_test(
     name = "test_lazy_utils",
     srcs = ["test_lazy_utils.py"],
-    data = "//bsmr/tests/targets:isolated_targets",
+    data = "root//tests/targets:isolated_targets",
     env = {
         "PRELUDE": "$(location prelude//:prelude)",
     },

@@ -284,7 +284,7 @@ def process_genrule(
 
     if type(ctx.attrs.srcs) == type([]):
         # FIXME: We should always use the short_path, but currently that is sometimes blank.
-        # See fbcode//bsmr/tests/targets/rules/genrule:genrule-dot-input for a test that exposes it.
+        # See root//tests/targets/rules/genrule:genrule-dot-input for a test that exposes it.
         symlinks = {src.short_path: src for src in ctx.attrs.srcs}
 
         if len(symlinks) != len(ctx.attrs.srcs):

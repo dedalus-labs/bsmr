@@ -45,7 +45,7 @@ BuckTestMarker = namedtuple(
         "inplace",
         "data_dir",
         "allow_soft_errors",
-        "extra_buck_config",
+        "extra_bsmr_config",
         "skip_final_kill",
         "setup_eden",
         "disable_daemon_cgroup",
@@ -178,9 +178,9 @@ async def buck_fixture(  # noqa C901 : "too complex"
             # on a host without this, so just make it the default.
             if sys.platform == "linux":
                 extra_config_lines.append("[host_features]\ngvfs = true\n")
-            # NOTE: This buckconfig is depended on by our CI validation for
+            # NOTE: This bsmrconfig is depended on by our CI validation for
             # CLI modifiers in tools/build_defs/bsmr/cfg/validation/validation.bzl. If
-            # the name of this buckconfig ever changes, please update the validation
+            # the name of this bsmrconfig ever changes, please update the validation
             # as well.
             extra_config_lines.append("[buildfile]\nextra_for_test = TARGETS.test\n")
 
@@ -202,7 +202,7 @@ async def buck_fixture(  # noqa C901 : "too complex"
 
             # `edenfs` watcher requires eden to be setup which is too slow to enable on all tests
             # use edenfs watcher whenever possible in test, otherwise use `fs_hash_crawler`
-            # FYI: if you remove this, make sure to remove it from external_buckconfig tests too
+            # FYI: if you remove this, make sure to remove it from external_bsmrconfig tests too
             if marker.setup_eden:
                 extra_config_lines.append("[bsmr]\nfile_watcher = edenfs\n")
                 extra_config_lines.append("[bsmr]\nallow_eden_io = true\n")
@@ -211,7 +211,7 @@ async def buck_fixture(  # noqa C901 : "too complex"
 
             buck_cwd = project_dir
 
-        for section, config in marker.extra_buck_config.items():
+        for section, config in marker.extra_bsmr_config.items():
             extra_config_lines.append(f"[{section}]\n")
             for key, value in config.items():
                 extra_config_lines.append(f"{key} = {value}\n")
@@ -476,20 +476,20 @@ def _maybe_setup_prelude_and_ovr_config(path: Path) -> None:
         Path(path, "tools", "build_defs", "fbcode_macros"),
     )
 
-    with Path(path, ".buckconfig").open("a") as f:
+    with Path(path, ".bsmrconfig").open("a") as f:
         print(
             "", file=f
-        )  # append newline because test `.buckconfig` may not end with newline
+        )  # append newline because test `.bsmrconfig` may not end with newline
         print("# Following lines are added by buck_workspace.py", file=f)
         print("[repositories]", file=f)
         print("ovr_config = arvr/tools/build_defs/config", file=f)
         print("fbcode_macros = tools/build_defs/fbcode_macros", file=f)
         print("config = arvr/tools/build_defs/config", file=f)
-    with Path(path, "arvr", "tools", "build_defs", "config", ".buckconfig").open(
+    with Path(path, "arvr", "tools", "build_defs", "config", ".bsmrconfig").open(
         "w"
     ) as f:
         pass
-    with Path(path, "tools", "build_defs", "fbcode_macros", ".buckconfig").open(
+    with Path(path, "tools", "build_defs", "fbcode_macros", ".bsmrconfig").open(
         "w"
     ) as f:
         pass
@@ -537,7 +537,7 @@ def buck_test(
     # Accepted values are specified in SKIPPABLE_PLATFORMS
     skip_for_os: List[str] = [],  # noqa: B006 value is read-only
     allow_soft_errors: bool = False,
-    extra_buck_config: Optional[Dict[str, Dict[str, str]]] = None,
+    extra_bsmr_config: Optional[Dict[str, Dict[str, str]]] = None,
     skip_final_kill: bool = False,
     setup_eden: bool = False,
     disable_daemon_cgroup: bool = True,
@@ -562,7 +562,7 @@ def buck_test(
             List of OS to skip the test on.
         allow_soft_errors:
             Like it says in the arg name. The default is to hard error.
-        extra_buck_config:
+        extra_bsmr_config:
             A optional dict of extra buck config to add to the test.
             The key is the section name, the value is a dict of key value pairs.
         skip_final_kill:
@@ -605,7 +605,7 @@ def buck_test(
             inplace=inplace,
             data_dir=data_dir,
             allow_soft_errors=allow_soft_errors,
-            extra_buck_config=extra_buck_config or {},
+            extra_bsmr_config=extra_bsmr_config or {},
             skip_final_kill=skip_final_kill,
             setup_eden=setup_eden,
             disable_daemon_cgroup=disable_daemon_cgroup,
@@ -691,6 +691,6 @@ def get_mode_from_platform(
             return "opt"
 
     if prefix:
-        return f"@fbcode//mode/{modefile_basename()}"
+        return f"@upstream//mode/{modefile_basename()}"
 
     return modefile_basename()

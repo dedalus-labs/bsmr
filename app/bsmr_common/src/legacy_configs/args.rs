@@ -19,7 +19,7 @@ use pagable::Pagable;
 
 use crate::legacy_configs::configs::ConfigArgumentParseError;
 use crate::legacy_configs::configs::ConfigSectionAndKey;
-use crate::legacy_configs::configs::LegacyBuckConfig;
+use crate::legacy_configs::configs::LegacyBsmrConfig;
 use crate::legacy_configs::configs::parse_config_section_and_key;
 use crate::legacy_configs::file_ops::ConfigParserFileOps;
 use crate::legacy_configs::file_ops::ConfigPath;
@@ -30,7 +30,7 @@ use crate::legacy_configs::parser::LegacyConfigParser;
 pub(crate) enum ResolvedLegacyConfigArg {
     /// A single config key-value pair (in `a.b=c` format).
     Flag(ResolvedConfigFlag),
-    /// A file containing additional config values (in `.buckconfig` format).
+    /// A file containing additional config values (in `.bsmrconfig` format).
     File(ResolvedConfigFile),
 }
 
@@ -96,7 +96,7 @@ async fn resolve_config_file_arg(
     Ok(ResolvedConfigFile::Global(ExternalConfigFile {
         origin_path: AbsPathBuf::new(arg)?,
         parser: LegacyConfigParser::combine(
-            LegacyBuckConfig::start_parse_for_external_files(
+            LegacyBsmrConfig::start_parse_for_external_files(
                 &[ConfigPath::Global(path.to_owned())],
                 file_ops,
                 // Note that when reading immediate configs that don't follow includes, we don't apply
@@ -142,9 +142,9 @@ pub(crate) async fn resolve_config_args(
 
 pub(crate) fn to_proto_config_args(
     args: &[ResolvedLegacyConfigArg],
-) -> Vec<bsmr_data::BuckconfigComponent> {
-    use bsmr_data::buckconfig_component::Data::ConfigFile;
-    use bsmr_data::buckconfig_component::Data::ConfigValue;
+) -> Vec<bsmr_data::BsmrconfigComponent> {
+    use bsmr_data::bsmrconfig_component::Data::ConfigFile;
+    use bsmr_data::bsmrconfig_component::Data::ConfigValue;
     use bsmr_data::config_file::Data::GlobalExternalConfig;
     use bsmr_data::config_file::Data::ProjectRelativePath;
 
@@ -180,7 +180,7 @@ pub(crate) fn to_proto_config_args(
                     })
                 }
             };
-            bsmr_data::BuckconfigComponent { data: Some(data) }
+            bsmr_data::BsmrconfigComponent { data: Some(data) }
         })
         .collect()
 }

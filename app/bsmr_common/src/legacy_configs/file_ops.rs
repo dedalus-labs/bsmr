@@ -137,7 +137,7 @@ impl ConfigParserFileOps for DefaultConfigParserFileOps {
             Ok(read_dir) => read_dir,
             Err(e) if e.kind() == std::io::ErrorKind::NotFound => return Ok(Vec::new()),
             Err(e) if e.kind() == std::io::ErrorKind::NotADirectory => {
-                tracing::warn!("Expected a directory of buckconfig files at: `{}`", path);
+                tracing::warn!("Expected a directory of bsmrconfig files at: `{}`", path);
                 return Ok(Vec::new());
             }
             Err(e) => return Err(e.into()),
@@ -162,7 +162,7 @@ impl ConfigParserFileOps for DefaultConfigParserFileOps {
                 entries.push(ConfigDirEntry { name, is_dir: true });
             } else {
                 tracing::warn!(
-                    "Expected a directory of buckconfig files at `{}`, but this entry was not a file or directory: `{}`",
+                    "Expected a directory of bsmrconfig files at `{}`, but this entry was not a file or directory: `{}`",
                     path,
                     name,
                 );
@@ -248,7 +248,7 @@ impl ConfigParserFileOps for DiceConfigFileOps<'_, '_> {
 }
 
 pub(crate) fn push_all_files_from_a_directory<'a>(
-    buckconfig_paths: &'a mut Vec<ConfigPath>,
+    bsmrconfig_paths: &'a mut Vec<ConfigPath>,
     folder_path: &'a ConfigPath,
     file_ops: &'a mut dyn ConfigParserFileOps,
 ) -> BoxFuture<'a, bsmr_error::Result<()>> {
@@ -256,9 +256,9 @@ pub(crate) fn push_all_files_from_a_directory<'a>(
         for entry in file_ops.read_dir(folder_path).await? {
             let entry_path = folder_path.join(&entry.name);
             if entry.is_dir {
-                push_all_files_from_a_directory(buckconfig_paths, &entry_path, file_ops).await?;
+                push_all_files_from_a_directory(bsmrconfig_paths, &entry_path, file_ops).await?;
             } else {
-                buckconfig_paths.push(entry_path);
+                bsmrconfig_paths.push(entry_path);
             }
         }
 

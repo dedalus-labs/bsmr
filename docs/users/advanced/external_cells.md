@@ -13,12 +13,12 @@ External cells act much like [normal cells], except that instead of having their
 source files checked into the repo, the source files have some alternative
 origin.
 
-[normal cells]: ../../../concepts/buckconfig#cells
+[normal cells]: ../../../concepts/bsmrconfig#cells
 
 ## Setting up an external cell
 
 Configuring an external cell looks much like configuring a regular cell. First,
-add the cell to the `cells` section of your `.buckconfig` like normal:
+add the cell to the `cells` section of your `.bsmrconfig` like normal:
 
 ```ini
 [cells]
@@ -30,7 +30,7 @@ still need to provide a path for it - this path influences the handling of tree
 files, since those cross cell boundaries. It's also used for
 `expand-external-cells`, more on that below.
 
-Next, add an entry to the `external_cells` buckconfig section that specifies the
+Next, add an entry to the `external_cells` bsmrconfig section that specifies the
 "origin" of the external cell given an alias. This tells bsmr where you want to
 get the cell from, if not files in the source repo.
 
@@ -79,23 +79,23 @@ The `commit_hash` value must be a sha1, it cannot be eg a branch name.
 
 The `disabled` origin indicates that the cell is a normal cell, not an external
 cell. It is equivalent to the cell not being present in the `external_cells`
-buckconfig section.
+bsmrconfig section.
 
 ## Expanding external cells
 
 Because external cells only represent a different way to access source files,
 bsmr provides an `expand-external-cell` command. This command will make a copy
 of the external cell into the path in the repo you specified for your cell. By
-commenting out the `external_cells` buckconfig entry, this allows you to make
+commenting out the `external_cells` bsmrconfig entry, this allows you to make
 direct edits to the cell's files in your repo.
 
 ## Details & Limitations
 
-- External cells can only be configured in the project root's `.buckconfig`.
+- External cells can only be configured in the project root's `.bsmrconfig`.
   This also means that there is no support for "transitive" external cells, ie
   an external cell cannot specify additional external cells to pull in.
 - External cells cannot have nested cells inside them.
-- The `cells` buckconfig section of external cells is ignored. This is done to
+- The `cells` bsmrconfig section of external cells is ignored. This is done to
   ensure that when using an external cell to access some dependency in a git
   repo, that git repo can still be an independently building project that
   specifies its own toolchain and prelude configuration.

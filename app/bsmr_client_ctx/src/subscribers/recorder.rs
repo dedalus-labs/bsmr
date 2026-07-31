@@ -228,7 +228,7 @@ pub struct InvocationRecorder {
     re_avg_download_speed: NetworkSpeedAverage,
     re_avg_upload_speed: NetworkSpeedAverage,
     peak_process_memory_bytes: Option<u64>,
-    has_new_buckconfigs: bool,
+    has_new_bsmrconfigs: bool,
     peak_used_disk_space_bytes: Option<u64>,
     peak_normalized_system_load1: Option<f64>,
     peak_normalized_system_load5: Option<f64>,
@@ -450,7 +450,7 @@ impl InvocationRecorder {
             re_avg_download_speed: NetworkSpeedAverage::default(),
             re_avg_upload_speed: NetworkSpeedAverage::default(),
             peak_process_memory_bytes: None,
-            has_new_buckconfigs: false,
+            has_new_bsmrconfigs: false,
             peak_used_disk_space_bytes: None,
             peak_normalized_system_load1: None,
             peak_normalized_system_load5: None,
@@ -1138,7 +1138,7 @@ impl InvocationRecorder {
             target_rule_type_names: unique_and_sorted(
                 std::mem::take(&mut self.target_rule_type_names).into_iter(),
             ),
-            new_configs_used: Some(self.has_new_buckconfigs),
+            new_configs_used: Some(self.has_new_bsmrconfigs),
             re_max_download_speed: self
                 .re_max_download_speeds
                 .iter()
@@ -2386,7 +2386,7 @@ impl InvocationRecorder {
                         self.handle_concurrent_commands(concurrent_commands)
                     }
                     bsmr_data::instant_event::Data::CellHasNewConfigs(_) => {
-                        self.has_new_buckconfigs = true;
+                        self.has_new_bsmrconfigs = true;
                         Ok(())
                     }
                     bsmr_data::instant_event::Data::InstallFinished(install_finished) => {

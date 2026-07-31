@@ -1,4 +1,4 @@
-load("@fbcode//bsmr/tests:buck_e2e.bzl", "bsmr_core_tests")
+load("@root//tests:buck_e2e.bzl", "bsmr_core_tests")
 
 oncall("build_infra")
 
@@ -6,7 +6,7 @@ bsmr_core_tests(
     target_extra_attrs = {
         "test_action_suspension": {
             "env": {
-                "USE_SOME_MEMORY_BIN": "$(location //bsmr/tools/testing/cgroups/use_some_memory:use_some_memory)",
+                "USE_SOME_MEMORY_BIN": "$(location root//tools/testing/cgroups/use_some_memory:use_some_memory)",
             },
             "skip_for_os": [
                 "darwin",
@@ -27,7 +27,7 @@ bsmr_core_tests(
         },
         "test_hybrid_execution_resource_control": {
             "env": {
-                "USE_SOME_MEMORY_BIN": "$(location //bsmr/tools/testing/cgroups/use_some_memory:use_some_memory)",
+                "USE_SOME_MEMORY_BIN": "$(location root//tools/testing/cgroups/use_some_memory:use_some_memory)",
             },
             "skip_for_os": [
                 "darwin",
@@ -36,12 +36,12 @@ bsmr_core_tests(
         },
         "test_instruction_count": {
             "env": {
-                "THREE_BILLION_INSTRUCTIONS_BIN": "$(location //bsmr/tools/testing/three-billion-instructions:three_billion_instructions-bin)",
+                "THREE_BILLION_INSTRUCTIONS_BIN": "$(location root//tools/testing/three-billion-instructions:three_billion_instructions-bin)",
             },
         },
         "test_memory_reporting": {
             "env": {
-                "USE_SOME_MEMORY_BIN": "$(location //bsmr/tools/testing/cgroups/use_some_memory:use_some_memory)",
+                "USE_SOME_MEMORY_BIN": "$(location root//tools/testing/cgroups/use_some_memory:use_some_memory)",
             },
             "skip_for_os": [
                 "darwin",

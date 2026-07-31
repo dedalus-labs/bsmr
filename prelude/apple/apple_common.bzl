@@ -111,7 +111,7 @@ def _target_sdk_version():
             default = None,
             doc = """
     The minimum OS version that the library target should support, overriding the minimum set in
-     `.buckconfig`. When set, Buck will automatically add flags to both Objective-C and
+     `.bsmrconfig`. When set, Buck will automatically add flags to both Objective-C and
      Swift compilation that will allow the use of the new APIs without guarding code inside availability
      checks.
 """,
@@ -243,7 +243,7 @@ def _apple_sanitizer_compatibility_arg():
         return {}
 
     return {
-        "_sanitizer_compatibility": attrs.default_only(attrs.dep(default = "fbsource//tools/build_defs/apple/sanitizers:sanitizer_compatibility")),
+        "_sanitizer_compatibility": attrs.default_only(attrs.dep(default = "upstream//tools/build_defs/apple/sanitizers:sanitizer_compatibility")),
     }
 
 def _apple_tools_arg():
@@ -299,7 +299,7 @@ def _asset_catalogs_compilation_options_arg():
     }
 
 def _apple_installer_arg():
-    installer_target = "fbsource//xplat/bsmr/platform/apple/python_installer:apple_installer"
+    installer_target = "upstream//xplat/bsmr/platform/apple/python_installer:apple_installer"
     return {
         "installer": attrs.default_only(attrs.exec_dep(default = installer_target)),
     }

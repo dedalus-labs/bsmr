@@ -14,27 +14,27 @@ use bsmr_common::cas_digest::CasDigestConfig;
 use bsmr_common::io::IoProvider;
 use bsmr_common::io::fs::FsIoProvider;
 use bsmr_common::io::trace::TracingIoProvider;
-use bsmr_common::legacy_configs::configs::LegacyBuckConfig;
+use bsmr_common::legacy_configs::configs::LegacyBsmrConfig;
 use bsmr_core::fs::project::ProjectRoot;
 
 pub async fn create_io_provider(
     fb: fbinit::FacebookInit,
     project_fs: ProjectRoot,
-    root_config: &LegacyBuckConfig,
+    root_config: &LegacyBsmrConfig,
     cas_digest_config: CasDigestConfig,
     trace_io: bool,
     _use_eden_thrift_read: bool,
 ) -> bsmr_error::Result<Arc<dyn IoProvider>> {
     #[cfg(fbcode_build)]
     {
-        use bsmr_common::legacy_configs::key::BuckconfigKeyRef;
+        use bsmr_common::legacy_configs::key::BsmrconfigKeyRef;
         use bsmr_core::rollout_percentage::RolloutPercentage;
 
         let allow_eden_io_default =
             RolloutPercentage::from_bool(cfg!(any(target_os = "macos", target_os = "windows")));
 
         let allow_eden_io = root_config
-            .parse(BuckconfigKeyRef {
+            .parse(BsmrconfigKeyRef {
                 section: "bsmr",
                 property: "allow_eden_io",
             })?

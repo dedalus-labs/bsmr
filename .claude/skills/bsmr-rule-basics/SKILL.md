@@ -469,8 +469,8 @@ error. Advance only once they show they understand.
 bsmr targets :
 
 # Expected output shows targets like:
-# fbcode//bsmr/bsmr-tutorial:hello
-# fbcode//bsmr/bsmr-tutorial:goodbye
+# root//bsmr-tutorial:hello
+# root//bsmr-tutorial:goodbye
 ```
 
 **Explain target name anatomy:**
@@ -487,14 +487,14 @@ cell//package/path:target_name
 
 **Examples with explanations:**
 
-- `fbcode//bsmr/bsmr-tutorial:hello`
+- `root//bsmr-tutorial:hello`
   - **Full target name** with all three parts explicitly specified
   - Always valid and unambiguous from anywhere
   - Use this when referring to targets from a different cell/repository
 
-- `//bsmr/bsmr-tutorial:hello`
+- `root//bsmr-tutorial:hello`
   - **Cell name omitted** - defaults to the current repository's cell
-  - Since we're working in the fbcode repository, `//` is shorthand for `fbcode//`
+  - Since we're working in the fbcode repository, `//` is shorthand for `upstream//`
   - Valid when referring to any target in the same repository/cell
   - This is the most common form you'll see in BUCK files
 
@@ -502,7 +502,7 @@ cell//package/path:target_name
   - **Cell and package path omitted** - only the target name
   - Only valid when you're in the same directory/package
   - Shortest form for referring to targets in the current BUCK file
-  - When you run `bsmr build :hello` from the `bsmr-tutorial` directory, Bessemer knows you mean `fbcode//bsmr/bsmr-tutorial:hello`
+  - When you run `bsmr build :hello` from the `bsmr-tutorial` directory, Bessemer knows you mean `root//bsmr-tutorial:hello`
 
 **Now query the targets:**
 
@@ -530,8 +530,8 @@ bsmr cquery :hello --output-attribute=src
 
 **Show the difference:**
 
-- Unconfigured: `fbcode//bsmr/bsmr-tutorial:hello`
-- Configured: `fbcode//bsmr/bsmr-tutorial:hello (cfg:dev-linux-x86_64-...)`
+- Unconfigured: `root//bsmr-tutorial:hello`
+- Configured: `root//bsmr-tutorial:hello (cfg:dev-linux-x86_64-...)`
 
 Notice the configuration suffix `(cfg:...)` is added when Bessemer applies platform-specific settings.
 

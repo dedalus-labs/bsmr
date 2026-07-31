@@ -9,9 +9,9 @@ rust_protobuf_library(
     build_script = "build.rs",
     proto_srcs = ":bsmr_subscription_proto.proto",
     deps = [
-        "fbsource//third-party/rust:derive_more",
-        "fbsource//third-party/rust:serde",
-        "//bsmr/packages/rust/allocative/allocative:allocative",
+        "bsmr_build//third-party/rust:derive_more",
+        "bsmr_build//third-party/rust:serde",
+        "root//packages/rust/allocative/allocative:allocative",
     ],
 )
 

@@ -131,7 +131,7 @@ If include patterns are present, regardless of whether exclude patterns are pres
         long = "build-filtered",
         help = "Whether to build tests that are excluded via labels."
     )]
-    build_filtered_targets: bool, // TODO(bobyf) this flag should always override the buckconfig option when we use it
+    build_filtered_targets: bool, // TODO(bobyf) this flag should always override the bsmrconfig option when we use it
 
     /// Will allow tests that are compatible with RE (setup to run from the repo root and
     /// use relative paths) to run from RE.

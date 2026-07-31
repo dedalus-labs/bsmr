@@ -343,7 +343,7 @@ go_test = prelude_rule(
                 default = None,
                 doc = """
                 Sets the full name of the test package being compiled. This defaults to the path from the buck
-                 root with "\\_test" appended. (e.g. given a ./.buckconfig, a rule in ./a/b/BUCK defaults to package "a/b\\_test")
+                 root with "\\_test" appended. (e.g. given a ./.bsmrconfig, a rule in ./a/b/BUCK defaults to package "a/b\\_test")
 
                  Note: if you want to test packages internally (i.e. same package name), use the `target_under_test`
                  parameter instead of setting `package_name` to include the tested source files.

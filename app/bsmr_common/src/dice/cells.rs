@@ -30,7 +30,7 @@ use dupe::Dupe;
 use pagable::Pagable;
 use pagable::pagable_typetag;
 
-use crate::legacy_configs::cells::BuckConfigBasedCells;
+use crate::legacy_configs::cells::BsmrConfigBasedCells;
 use crate::legacy_configs::dice::HasLegacyConfigs;
 
 #[async_trait]
@@ -133,7 +133,7 @@ impl Key for CellAliasResolverKey {
         CellAliasResolver::new_for_non_root_cell(
             self.0,
             root_aliases,
-            BuckConfigBasedCells::get_cell_aliases_from_config(&config)?,
+            BsmrConfigBasedCells::get_cell_aliases_from_config(&config)?,
         )
     }
 

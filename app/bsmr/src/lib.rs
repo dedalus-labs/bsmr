@@ -131,7 +131,7 @@ struct BeforeSubcommandOptions {
     client_metadata: Vec<ClientMetadata>,
 
     /// Agent context key=value pairs for telemetry.
-    /// Used by AI agents to pass structured metadata. Schema is defined via buckconfig.
+    /// Used by AI agents to pass structured metadata. Schema is defined via bsmrconfig.
     /// Entries can be comma-separated or passed as separate flags.
     /// Examples:
     ///   --agent-context intent=fix,attempt=2,prior_error=missing_target
@@ -353,7 +353,7 @@ pub(crate) enum CommandKind {
     Aquery(AqueryCommand),
     Build(BuildCommand),
     Bxl(BxlCommand),
-    // TODO(nga): implement `bsmr help-buckconfig` too
+    // TODO(nga): implement `bsmr help-bsmrconfig` too
     //   https://www.internalfb.com/tasks/?t=183528129
     HelpEnv(HelpEnvCommand),
     Test(TestCommand),

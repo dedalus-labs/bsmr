@@ -5,7 +5,7 @@ This project provides a small example of what a project that utilizies
 
 In this document, we will go over the key configs used in this setup.
 
-### Relevant configs in .buckconfig
+### Relevant configs in .bsmrconfig
 
 First, the BuildBuddy endpoint and api key should be configured as the
 following:

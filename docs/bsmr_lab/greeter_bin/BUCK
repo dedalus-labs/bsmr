@@ -6,7 +6,7 @@ rust_binary(
     name = "main",
     srcs = ["src/main.rs"],
     deps = [
-        "fbcode//bsmr/docs/bsmr_lab/greeter_lib:library",
-        "fbcode//bsmr/docs/bsmr_lab/logging_lib:logging_lib",
+        "root//docs/bsmr_lab/greeter_lib:library",
+        "root//docs/bsmr_lab/logging_lib:logging_lib",
     ],
 )

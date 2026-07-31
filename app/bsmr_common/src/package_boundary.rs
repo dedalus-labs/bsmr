@@ -33,7 +33,7 @@ use pagable::pagable_typetag;
 use ref_cast::RefCast;
 
 use crate::legacy_configs::dice::HasLegacyConfigs;
-use crate::legacy_configs::key::BuckconfigKeyRef;
+use crate::legacy_configs::key::BsmrconfigKeyRef;
 
 #[derive(PartialEq, Allocative)]
 pub struct PackageBoundaryExceptions(StdBuckHashMap<CellName, CellPackageBoundaryExceptions>);
@@ -60,7 +60,7 @@ impl CellPackageBoundaryExceptions {
             } else {
                 let path = ForwardRelativePath::new(path_str)?;
                 // path.split_first() only returns None if the path is empty.
-                // In the case of the buckconfig `project.package_boundary_exceptions`,
+                // In the case of the bsmrconfig `project.package_boundary_exceptions`,
                 // we only get an empty path if there is an extra newline, in which case
                 // we can just ignore.
                 if let Some((prefix, subpath)) = path.split_first() {
@@ -116,7 +116,7 @@ impl Key for CellPackageBoundaryExceptionsKey {
         let s = ctx
             .get_legacy_config_property(
                 self.0,
-                BuckconfigKeyRef {
+                BsmrconfigKeyRef {
                     section: "project",
                     property: "package_boundary_exceptions",
                 },

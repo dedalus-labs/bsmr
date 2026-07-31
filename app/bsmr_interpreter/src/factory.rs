@@ -11,7 +11,7 @@
 use std::sync::Arc;
 
 use bsmr_common::legacy_configs::dice::HasLegacyConfigs;
-use bsmr_common::legacy_configs::key::BuckconfigKeyRef;
+use bsmr_common::legacy_configs::key::BsmrconfigKeyRef;
 use bsmr_error::conversion::from_any_with_tag;
 use dice::DiceComputations;
 use dice::UserComputationData;
@@ -113,11 +113,11 @@ impl StarlarkEvaluatorProvider {
     ) -> bsmr_error::Result<StarlarkEvaluatorProvider> {
         let profile_mode = ctx.get_starlark_profiler_mode(&eval_kind).await?;
 
-        let root_buckconfig = ctx.get_legacy_root_config_on_dice().await?;
+        let root_bsmrconfig = ctx.get_legacy_root_config_on_dice().await?;
         let profile_listener = ctx.get_profile_event_listener().cloned();
 
         let starlark_max_callstack_size =
-            root_buckconfig.view(ctx).parse::<usize>(BuckconfigKeyRef {
+            root_bsmrconfig.view(ctx).parse::<usize>(BsmrconfigKeyRef {
                 section: "bsmr",
                 property: "starlark_max_callstack_size",
             })?;

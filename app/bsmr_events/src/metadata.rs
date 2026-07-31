@@ -21,7 +21,7 @@ use crate::daemon_id::DaemonId;
 
 /// Collects metadata from the current binary and environment, merged with any extras, suitable for telemetry purposes.
 ///
-/// Extras are user-supplied (e.g. from the `[bsmr_metadata]` buckconfig section) and so are only
+/// Extras are user-supplied (e.g. from the `[bsmr_metadata]` bsmrconfig section) and so are only
 /// applied for keys not already populated by `collect`, ensuring user config cannot shadow trusted
 /// telemetry fields such as `hostname`, `username` or `daemon_uuid`.
 #[cfg(not(fbcode_build))]

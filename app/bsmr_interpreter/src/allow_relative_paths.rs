@@ -17,8 +17,8 @@ use bsmr_common::file_ops::dice::DiceFileComputations;
 use bsmr_common::file_ops::error::FileReadErrorContext;
 use bsmr_common::file_ops::metadata::RawPathMetadata;
 use bsmr_common::legacy_configs::dice::HasLegacyConfigs;
-use bsmr_common::legacy_configs::key::BuckconfigKeyRef;
-use bsmr_common::legacy_configs::view::LegacyBuckConfigView;
+use bsmr_common::legacy_configs::key::BsmrconfigKeyRef;
+use bsmr_common::legacy_configs::view::LegacyBsmrConfigView;
 use bsmr_core::cells::CellAliasResolver;
 use bsmr_core::cells::cell_path::CellPath;
 use bsmr_core::cells::cell_path_with_allowed_relative_dir::CellPathWithAllowedRelativeDir;
@@ -89,7 +89,7 @@ impl HasAllowRelativePaths for DiceComputations<'_> {
 
                 let allowed_relative_dirs_for_current_dir = config
                     .view(ctx)
-                    .parse_list::<String>(BuckconfigKeyRef {
+                    .parse_list::<String>(BsmrconfigKeyRef {
                         section: "bsmr",
                         property: "directories_to_allow_relative_paths",
                     })?

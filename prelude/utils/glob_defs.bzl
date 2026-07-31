@@ -9,7 +9,7 @@
 """Provides utility macros for working with globs."""
 
 load("@prelude//:paths.bzl", "paths")
-load("@prelude//utils:buckconfig.bzl", "read_bool")
+load("@prelude//utils:bsmrconfig.bzl", "read_bool")
 
 DISABLE_STRICT_GLOB_CHECKING = read_bool("build_defs", "disable_strict_glob_checking", False)
 

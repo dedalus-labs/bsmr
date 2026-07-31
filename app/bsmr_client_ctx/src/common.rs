@@ -189,7 +189,7 @@ impl CommonEventLogOptions {
 /// Defines options for config and configuration related things. Any command that involves the build
 /// graph should include these options.
 #[derive(Debug, clap::Parser, serde::Serialize, serde::Deserialize, Default)]
-#[clap(next_help_heading = "Buckconfig Options")]
+#[clap(next_help_heading = "Bsmrconfig Options")]
 pub struct CommonBuildConfigurationOptions {
     #[clap(
         value_name = "SECTION.OPTION=VALUE",
@@ -412,13 +412,13 @@ pub struct CommonStarlarkOptions {
     /// Enables profiling for all evaluations whose evaluation identifier matches one of the provided patterns.
     ///
     /// Some examples identifiers:
-    ///    analysis/cell//bsmr/app/bsmr_action_impl:bsmr_action_impl (cfg:linux-x86_64#27ac5723e0c99706)
+    ///    analysis/root//app/bsmr_action_impl:bsmr_action_impl (cfg:linux-x86_64#27ac5723e0c99706)
     ///    load/cell//build_defs/json.bzl
     ///    load/prelude//playground/test.bxl
     ///    load/cell//build_defs/json.bzl@other_cell
-    ///    load_buildfile/fbcode//third-party-buck/platform010/build/ncurses
-    ///    load_packagefile/fbcode//cli/rust/cli_delegate
-    ///    anon_analysis/anon//:_anon_link_rule (anon: 766183dc9b6f680a) (fbcode//bsmr/platform/execution:linux-x86_64#08961b14cfb182aa)
+    ///    load_buildfile/upstream//third-party-buck/platform010/build/ncurses
+    ///    load_packagefile/upstream//cli/rust/cli_delegate
+    ///    anon_analysis/anon//:_anon_link_rule (anon: 766183dc9b6f680a) (root//platform/execution:linux-x86_64#08961b14cfb182aa)
     ///    bxl/prelude//playground/test.bxl:playground
     ///
     /// You can pass `--profile-patterns=.*` to enable no-op profiling for everything (additionally pass `--profile-patterns-mode=none` to
@@ -494,7 +494,7 @@ impl CommonStarlarkOptions {
 /// Not all the commands have all the options.
 #[derive(Debug, clap::Parser, serde::Serialize, serde::Deserialize, Default)]
 pub struct CommonCommandOptions {
-    /// Buckconfig and similar options.
+    /// Bsmrconfig and similar options.
     #[clap(flatten)]
     pub config_opts: CommonBuildConfigurationOptions,
 

@@ -80,9 +80,9 @@ async def _snapshot_events(buck: Buck) -> list[dict[str, typing.Any]]:
 
 
 def append_tokio_workers_config(buck: Buck) -> None:
-    with open(buck.cwd / ".buckconfig", "a") as buckconfig:
-        buckconfig.write("[build]\n")
-        buckconfig.write("num_tokio_workers = 42")
+    with open(buck.cwd / ".bsmrconfig", "a") as bsmrconfig:
+        bsmrconfig.write("[build]\n")
+        bsmrconfig.write("num_tokio_workers = 42")
 
 
 async def start_daemon_and_get_status(

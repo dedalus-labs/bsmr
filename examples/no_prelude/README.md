@@ -5,7 +5,7 @@ https://github.com/facebook/buck2-prelude. Instead the prelude cell points to a
 `prelude` directory with an empty `prelude.bzl` file, like so:
 
 ```
-#.buckconfig
+#.bsmrconfig
 [cells]
 root = .
 prelude = prelude

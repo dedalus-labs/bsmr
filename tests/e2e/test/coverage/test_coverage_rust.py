@@ -27,7 +27,7 @@ async def query_target_srcs(buck: Buck, target: str) -> List[str]:
         "srcs",
     )
     return [
-        p.replace("fbcode//", "fbcode/")
+        p.replace("upstream//", "fbcode/")
         for p in json.loads(query_result.stdout)[target]["srcs"]
     ]
 
@@ -36,8 +36,8 @@ async def query_target_srcs(buck: Buck, target: str) -> List[str]:
 async def test_rust_test_coverage(buck: Buck, tmp_path: Path) -> None:
     coverage_file = tmp_path / "coverage.txt"
     await buck.test(
-        "@fbcode//mode/dbgo-cov",
-        "fbcode//bsmr/tests/targets/rules/rust:tests_pass",
+        "@upstream//mode/dbgo-cov",
+        "root//tests/targets/rules/rust:tests_pass",
         "--",
         "--collect-coverage",
         f"--coverage-output={coverage_file}",
@@ -57,7 +57,7 @@ async def test_rust_test_coverage_filtering_by_path_of_target(
     paths = await collect_coverage_for(
         buck,
         tmp_path,
-        "fbcode//bsmr/tests/targets/rules/rust:tests_pass",
+        "root//tests/targets/rules/rust:tests_pass",
         folder_filter=["fbcode/bsmr/tests"],
         file_filter=[],
     )
@@ -71,7 +71,7 @@ async def test_rust_test_coverage_filtering_by_path_of_files(
     buck: Buck,
     tmp_path: Path,
 ) -> None:
-    target = "fbcode//bsmr/tests/targets/rules/rust:tests_pass"
+    target = "root//tests/targets/rules/rust:tests_pass"
     file_path = "fbcode/bsmr/tests/targets/rules/rust/tests_pass.rs"
     paths = await collect_coverage_for(
         buck,
@@ -94,7 +94,7 @@ async def test_rust_test_coverage_of_rust_library_filtering_by_file_path_outside
     tmp_path: Path,
 ) -> None:
     file_path = "fbcode/testing_frameworks/code_coverage/adder.rs"
-    lib_target = "fbcode//testing_frameworks/code_coverage:adder"
+    lib_target = "upstream//testing_frameworks/code_coverage:adder"
 
     paths = await collect_coverage_for(
         buck,

@@ -19,7 +19,7 @@ from bsmr.tests.e2e_util.buck_workspace import buck_test
 from bsmr.tests.e2e_util.helper.utils import read_what_ran
 
 
-package = "fbcode//bsmr/tests/targets/rules/worker_grpc"
+package = "root//tests/targets/rules/worker_grpc"
 
 worker_args = [
     "-c",

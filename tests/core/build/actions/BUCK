@@ -1,4 +1,4 @@
-load("@fbcode//bsmr/tests:buck_e2e.bzl", "bsmr_core_tests")
+load("@root//tests:buck_e2e.bzl", "bsmr_core_tests")
 
 oncall("build_infra")
 
@@ -6,7 +6,7 @@ bsmr_core_tests(
     target_extra_attrs = {
         "test_actions": {
             "deps": [
-                "fbsource//third-party/pypi/aiohttp:aiohttp",
+                "upstream//third-party/pypi/aiohttp:aiohttp",
             ],
             "env": {
                 # `cpe::x2p` resolves `localhost` incorrectly, and test fails.

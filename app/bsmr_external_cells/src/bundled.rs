@@ -554,7 +554,7 @@ mod tests {
             &*root_entries,
             &[
                 RawDirEntry {
-                    file_name: ".buckconfig".into(),
+                    file_name: ".bsmrconfig".into(),
                     file_type: FileType::File
                 },
                 RawDirEntry {

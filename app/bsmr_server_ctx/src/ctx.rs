@@ -48,7 +48,7 @@ use crate::stderr_output_guard::StderrOutputGuard;
 
 #[derive(Allocative, Debug)]
 pub struct PreviousCommandDataInternal {
-    pub external_and_local_configs: Vec<bsmr_data::BuckconfigComponent>,
+    pub external_and_local_configs: Vec<bsmr_data::BsmrconfigComponent>,
     pub sanitized_argv: Vec<String>,
     pub trace_id: TraceId,
 }
@@ -62,7 +62,7 @@ impl PreviousCommandData {
     pub fn process_current_command(
         &mut self,
         event_dispatcher: EventDispatcher,
-        current_external_and_local_configs: Vec<bsmr_data::BuckconfigComponent>,
+        current_external_and_local_configs: Vec<bsmr_data::BsmrconfigComponent>,
         current_sanitized_argv: Vec<String>,
         current_trace: TraceId,
     ) {

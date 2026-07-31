@@ -13,7 +13,7 @@ your Remote Execution backend.
 
 ## Enabling the Restarter
 
-To enable, add this to your Buckconfig:
+To enable, add this to your Bsmrconfig:
 
 ```ini
 [bsmr]

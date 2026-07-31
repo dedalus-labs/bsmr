@@ -9,10 +9,10 @@
  */
 
 //! Contains utilities for dealing with buckv1 concepts (ex. buckv1's
-//! .buckconfig files as configuration)
+//! .bsmrconfig files as configuration)
 
 mod access;
-pub use access::parse_buckconfig_metadata;
+pub use access::parse_bsmrconfig_metadata;
 mod aggregator;
 pub mod args;
 pub mod cells;

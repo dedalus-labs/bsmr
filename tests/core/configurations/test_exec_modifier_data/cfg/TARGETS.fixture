@@ -50,9 +50,9 @@ constraint(
     execution_modifier = True,
 )
 
-# Buckconfig backed test constraint - used to test buckconfig_backed_modifiers exclusion from exec deps
+# Bsmrconfig backed test constraint - used to test bsmrconfig_backed_modifiers exclusion from exec deps
 constraint(
-    name = "buckconfig_backed",
+    name = "bsmrconfig_backed",
     values = [
         "enabled",
         "none",

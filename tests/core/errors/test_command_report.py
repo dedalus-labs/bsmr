@@ -45,7 +45,7 @@ command_report_test("test_command_report_build_errors", [":fail1", ":fail2"])
 
 
 # Set Watchman timeout to 0 to mimic a Watchman Timeout error.
-@buck_test(extra_buck_config={"bsmr": {"file_watcher": "watchman"}})
+@buck_test(extra_bsmr_config={"bsmr": {"file_watcher": "watchman"}})
 @env("BSMR_WATCHMAN_TIMEOUT", "0")
 async def test_command_report_watchman_error(buck: Buck, tmp_path: Path) -> None:
     report = tmp_path / "command_report.json"
@@ -155,8 +155,8 @@ async def test_cleanup_timeout(buck: Buck, tmp_path: Path) -> None:
 
 
 # Should match behavior of command report test in buck wrapper
-@buck_test(data_dir="empty_buckconfig")
-async def test_empty_buckconfig(buck: Buck, tmp_path: Path) -> None:
+@buck_test(data_dir="empty_bsmrconfig")
+async def test_empty_bsmrconfig(buck: Buck, tmp_path: Path) -> None:
     uuid = "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee"
     await expect_failure(
         buck.targets(

@@ -96,12 +96,12 @@ def _gen_import_mode_configs(vs_settings: dict, target):
         indent_level = 1,
     )
 
-def gen_vcxproj(target: bxl.ConfiguredTargetNode, vs_settings: dict, cli_args, buck_root):
+def gen_vcxproj(target: bxl.ConfiguredTargetNode, vs_settings: dict, cli_args, bsmr_root):
     log_debug("# Generating vcxproj for {}", target.label.raw_target(), log_level = cli_args.log_level)
 
     project_configurations = _gen_project_configurations(vs_settings["ProjectConfigurations"])
     configuration_type = _gen_configuration_type(vs_settings["ProjectConfigurations"])
-    user_macros = gen_user_macros(target, vs_settings, cli_args, buck_root)
+    user_macros = gen_user_macros(target, vs_settings, cli_args, bsmr_root)
     headers = _gen_headers(vs_settings["Headers"])
     sources = _gen_sources(vs_settings["Sources"])
     compiler_settings = gen_compiler_settings(vs_settings["CompilerSettings"])
@@ -199,11 +199,11 @@ def _main(bxl_ctx):
         vcxproj_artifact = vcxproj_artifact,
         target = target_node,
         cli_args = bxl_ctx.cli_args,
-        buck_root = bxl_ctx.root(),
+        bsmr_root = bxl_ctx.root(),
     ):
         attrs_input = artifacts[attrs_outfile].read_json()
 
-        vs_settings = get_vs_settings(target, cxx_toolchain_target, attrs_input, {}, cli_args, buck_root, ctx)
+        vs_settings = get_vs_settings(target, cxx_toolchain_target, attrs_input, {}, cli_args, bsmr_root, ctx)
         if cxx:
             cxx_input = artifacts[cxx].read_json()
             aggregated_compiler_settings = merge(
@@ -212,7 +212,7 @@ def _main(bxl_ctx):
             )
             vs_settings["CompilerSettings"] = aggregated_compiler_settings
 
-        vcxproj_content = gen_vcxproj(target, vs_settings, cli_args, buck_root)
+        vcxproj_content = gen_vcxproj(target, vs_settings, cli_args, bsmr_root)
         ctx.bxl_actions().actions.write(outputs[vcxproj_artifact].as_output(), vcxproj_content, allow_args = True)
 
     actions.dynamic_output(
@@ -232,7 +232,7 @@ main = bxl_main(
         "extra_buck_options": cli_args.list(cli_args.string(), default = []),
         "immediate_buck_options": cli_args.list(cli_args.string(), default = []),
         "log_level": cli_args.int(default = 30),
-        "mode_files": cli_args.list(cli_args.string(), default = ["fbsource//arvr/mode/win/dev"]),
+        "mode_files": cli_args.list(cli_args.string(), default = ["upstream//arvr/mode/win/dev"]),
         "mode_hashes": cli_args.option(cli_args.json()),  # mode => configuration hash.
         "target": cli_args.target_label(),
     },

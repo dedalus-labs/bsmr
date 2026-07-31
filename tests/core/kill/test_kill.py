@@ -22,7 +22,7 @@ _BUCK_TEST_DECORATOR = buck_test(
     # likely because we don't kill all child processes of the daemon and so the sqlite process
     # is still running and accessing the sqlite db file when being killed. Given this is a
     # pre-existing issue, we disable sqlite state on windows for now.
-    extra_buck_config={
+    extra_bsmr_config={
         "bsmr": {
             "sqlite_materializer_state": "false",
             "sqlite_incremental_state": "false",

@@ -31,7 +31,7 @@ Target Configuration Options:
           A configuration modifier to configure all targets on the command line. This may be a
           constraint value target.
 
-Buckconfig Options:
+Bsmrconfig Options:
   -c, --config <SECTION.OPTION=VALUE>
           List of config options
 
@@ -105,12 +105,12 @@ Starlark Options:
           Enables profiling for all evaluations whose evaluation identifier matches one of the
           provided patterns.
 
-          Some examples identifiers: analysis/cell//bsmr/app/bsmr_action_impl:bsmr_action_impl
+          Some examples identifiers: analysis/root//app/bsmr_action_impl:bsmr_action_impl
           (cfg:linux-x86_64#27ac5723e0c99706) load/cell//build_defs/json.bzl
           load/prelude//playground/test.bxl load/cell//build_defs/json.bzl@other_cell
-          load_buildfile/fbcode//third-party-buck/platform010/build/ncurses
-          load_packagefile/fbcode//cli/rust/cli_delegate anon_analysis/anon//:_anon_link_rule (anon:
-          766183dc9b6f680a) (fbcode//bsmr/platform/execution:linux-x86_64#08961b14cfb182aa)
+          load_buildfile/upstream//third-party-buck/platform010/build/ncurses
+          load_packagefile/upstream//cli/rust/cli_delegate anon_analysis/anon//:_anon_link_rule (anon:
+          766183dc9b6f680a) (root//platform/execution:linux-x86_64#08961b14cfb182aa)
           bxl/prelude//playground/test.bxl:playground
 
           You can pass `--profile-patterns=.*` to enable no-op profiling for everything
@@ -231,6 +231,6 @@ Universal Options:
 
       --agent-context <AGENT_CONTEXT>
           Agent context key=value pairs for telemetry. Used by AI agents to pass structured
-          metadata. Schema is defined via buckconfig. Entries can be comma-separated or passed as
+          metadata. Schema is defined via bsmrconfig. Entries can be comma-separated or passed as
           separate flags. Examples: --agent-context intent=fix,attempt=2,prior_error=missing_target
           --agent-context intent=build --agent-context attempt=1

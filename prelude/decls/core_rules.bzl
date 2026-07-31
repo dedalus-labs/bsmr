@@ -256,7 +256,7 @@ config_setting = prelude_rule(
     name = "config_setting",
     docs = """
         `config_setting()` accepts a list of `constraint_values` and a list of values
-        (buckconfig keys + expected values) and matches if all of those match.
+        (bsmrconfig keys + expected values) and matches if all of those match.
 
         This is implemented as forming a single `ConfigurationInfo` from the union of the
         referenced values and the config keys.
@@ -918,7 +918,7 @@ http_archive = prelude_rule(
         An `http_archive()` rule is used to download and extract archives
         from the Internet to be used as dependencies for other rules. These rules are
         downloaded by running `fetch`, or can be downloaded as part of
-        `build` by setting `.buckconfig`
+        `build` by setting `.bsmrconfig`
     """,
     examples = """
         Using `http_archive()`, third party packages can be downloaded from
@@ -973,7 +973,7 @@ http_file = prelude_rule(
         dependencies for other rules. This rule only downloads single files, and can
         optionally make them executable (see `http_file()executable`)
         These rules are downloaded by running `fetch`, or can
-        be downloaded as part of `build` by setting `.buckconfig`
+        be downloaded as part of `build` by setting `.bsmrconfig`
     """,
     examples = """
         Using `http_file()`, third party packages can be downloaded from
@@ -1092,7 +1092,7 @@ remote_file = prelude_rule(
         A `remote_file()` rule is used to download files from the Internet to be used as
         dependencies for other rules. These rules are downloaded by running `fetch`, or can
         be downloaded as part of `build`. See the note there about the
-         `.buckconfig` setting to configure that.
+         `.bsmrconfig` setting to configure that.
     """,
     examples = """
         Here's an example of a `remote_file()` using an `https` URL.
@@ -1553,7 +1553,7 @@ worker_tool = prelude_rule(
                  to process the same input—with different contents—twice!
             """,
             ),
-            # FIXME: prelude// should be standalone (not refer to fbsource//)
+            # FIXME: prelude// should be standalone (not refer to upstream//)
             "_worker_tool_runner": attrs.default_only(attrs.dep(default = "prelude//js/worker_runner:worker_tool_runner")),
         }
         | buck.licenses_arg()

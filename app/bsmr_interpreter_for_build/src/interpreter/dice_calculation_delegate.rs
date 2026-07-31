@@ -17,7 +17,7 @@ use bsmr_common::dice::cycles::CycleGuard;
 use bsmr_common::file_ops::dice::DiceFileComputations;
 use bsmr_common::file_ops::error::FileReadErrorContext;
 use bsmr_common::legacy_configs::dice::HasLegacyConfigs;
-use bsmr_common::legacy_configs::dice::OpaqueLegacyBuckConfigOnDice;
+use bsmr_common::legacy_configs::dice::OpaqueLegacyBsmrConfigOnDice;
 use bsmr_common::package_boundary::HasPackageBoundaryExceptions;
 use bsmr_common::package_listing::dice::DicePackageListingResolver;
 use bsmr_common::package_listing::listing::PackageListing;
@@ -61,7 +61,7 @@ use starlark::environment::Module;
 use starlark::syntax::AstModule;
 use starlark::values::FrozenHeapName;
 
-use crate::interpreter::buckconfig::ConfigsOnDiceViewForStarlark;
+use crate::interpreter::bsmrconfig::ConfigsOnDiceViewForStarlark;
 use crate::interpreter::cell_info::InterpreterCellInfo;
 use crate::interpreter::check_starlark_stack_size::check_starlark_stack_size;
 use crate::interpreter::cycles::LoadCycleDescriptor;
@@ -183,9 +183,9 @@ pub struct DiceCalculationDelegate<'c, 'd> {
 }
 
 impl<'c, 'd: 'c> DiceCalculationDelegate<'c, 'd> {
-    async fn get_legacy_buck_config_for_starlark(
+    async fn get_legacy_bsmr_config_for_starlark(
         &mut self,
-    ) -> bsmr_error::Result<OpaqueLegacyBuckConfigOnDice> {
+    ) -> bsmr_error::Result<OpaqueLegacyBsmrConfigOnDice> {
         self.ctx
             .get_legacy_config_on_dice(self.build_file_cell.name())
             .await
@@ -342,8 +342,8 @@ impl<'c, 'd: 'c> DiceCalculationDelegate<'c, 'd> {
     ) -> bsmr_error::Result<LoadedModule> {
         let (ast, deps) = self.prepare_eval(starlark_file.into()).await?;
         let loaded_modules = deps.get_loaded_modules();
-        let buckconfig = self.get_legacy_buck_config_for_starlark().await?;
-        let root_buckconfig = self.ctx.get_legacy_root_config_on_dice().await?;
+        let bsmrconfig = self.get_legacy_bsmr_config_for_starlark().await?;
+        let root_bsmrconfig = self.ctx.get_legacy_root_config_on_dice().await?;
 
         let configs = &self.configs;
         let ctx = &mut *self.ctx;
@@ -351,11 +351,11 @@ impl<'c, 'd: 'c> DiceCalculationDelegate<'c, 'd> {
         let eval_kind = StarlarkEvalKind::Load(Arc::new(starlark_file.to_owned()));
         let provider = StarlarkEvaluatorProvider::new(ctx, eval_kind).await?;
 
-        let mut buckconfigs = ConfigsOnDiceViewForStarlark::new(ctx, buckconfig, root_buckconfig);
+        let mut bsmrconfigs = ConfigsOnDiceViewForStarlark::new(ctx, bsmrconfig, root_bsmrconfig);
         let evaluation = configs
             .eval_module(
                 starlark_file,
-                &mut buckconfigs,
+                &mut bsmrconfigs,
                 ast,
                 loaded_modules.clone(),
                 provider,
@@ -483,8 +483,8 @@ impl<'c, 'd: 'c> DiceCalculationDelegate<'c, 'd> {
             }
         };
 
-        let buckconfig = self.get_legacy_buck_config_for_starlark().await?;
-        let root_buckconfig = self.ctx.get_legacy_root_config_on_dice().await?;
+        let bsmrconfig = self.get_legacy_bsmr_config_for_starlark().await?;
+        let root_bsmrconfig = self.ctx.get_legacy_root_config_on_dice().await?;
 
         let configs = &self.configs;
         let ctx = &mut *self.ctx;
@@ -492,14 +492,14 @@ impl<'c, 'd: 'c> DiceCalculationDelegate<'c, 'd> {
         let eval_kind = StarlarkEvalKind::LoadPackageFile(path.dupe());
         let provider = StarlarkEvaluatorProvider::new(ctx, eval_kind).await?;
 
-        let mut buckconfigs = ConfigsOnDiceViewForStarlark::new(ctx, buckconfig, root_buckconfig);
+        let mut bsmrconfigs = ConfigsOnDiceViewForStarlark::new(ctx, bsmrconfig, root_bsmrconfig);
 
         configs
             .eval_package_file(
                 &package_file_path,
                 ast,
                 parent,
-                &mut buckconfigs,
+                &mut bsmrconfigs,
                 deps.get_loaded_modules(),
                 provider,
                 cancellation,
@@ -620,8 +620,8 @@ impl<'c, 'd: 'c> DiceCalculationDelegate<'c, 'd> {
                 .get_package_boundary_exception(package.as_cell_path())
                 .await?
                 .is_some();
-            let buckconfig = self.get_legacy_buck_config_for_starlark().await?;
-            let root_buckconfig = self.ctx.get_legacy_root_config_on_dice().await?;
+            let bsmrconfig = self.get_legacy_bsmr_config_for_starlark().await?;
+            let root_bsmrconfig = self.ctx.get_legacy_root_config_on_dice().await?;
             let module_id = build_file_path.to_string();
             let cell_str = build_file_path.cell().as_str().to_owned();
             let start_event = bsmr_data::LoadBuildFileStart {
@@ -634,14 +634,14 @@ impl<'c, 'd: 'c> DiceCalculationDelegate<'c, 'd> {
 
             now = Some(TimeSpan::start_now());
             let provider = StarlarkEvaluatorProvider::new(ctx, eval_kind).await?;
-            let mut buckconfigs =
-                ConfigsOnDiceViewForStarlark::new(ctx, buckconfig, root_buckconfig);
+            let mut bsmrconfigs =
+                ConfigsOnDiceViewForStarlark::new(ctx, bsmrconfig, root_bsmrconfig);
 
             let (profile_data, eval_result) = span(start_event, move || {
                 let result_with_stats = configs
                     .eval_build_file(
                         &build_file_path,
-                        &mut buckconfigs,
+                        &mut bsmrconfigs,
                         listing,
                         super_package,
                         package_boundary_exception,

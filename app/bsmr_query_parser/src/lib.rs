@@ -33,7 +33,7 @@
 //!        | EXPR ' - ' EXPR
 //!
 //! # word is much broader than a normal identifier-like thing would allow since we don't want to require
-//! # quoting targets "@fbcode//some:target" or common regexes ".*" or filenames "Foo.java".
+//! # quoting targets "@upstream//some:target" or common regexes ".*" or filenames "Foo.java".
 //! WORD ::=
 //!          '\'' not_single_quote * '\''
 //!        | '"' not_double_quote * '"'

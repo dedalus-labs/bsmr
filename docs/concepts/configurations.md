@@ -96,10 +96,10 @@ Once defined, this constraint can used in various ways, such as:
 
 ## Configuration values
 
-`config_setting` can also include values taken from the buckconfig.
-These can ease a migration from a legacy buckconfig setting to a build
+`config_setting` can also include values taken from the bsmrconfig.
+These can ease a migration from a legacy bsmrconfig setting to a build
 constraint by allowing you to `select()` (more on that later) on known
-buckconfig values:
+bsmrconfig values:
 
 ```python
 config_setting(
@@ -110,16 +110,16 @@ config_setting(
 )
 ```
 
-This setting will be satisfied if the associated buckconfig matches,
+This setting will be satisfied if the associated bsmrconfig matches,
 i.e. if the user passes `build.fastmode=true` via the `-c`/`--config`
-CLI flag, or if the following is set in the cell's `.buckconfig` file:
+CLI flag, or if the following is set in the cell's `.bsmrconfig` file:
 
 ```ini
 [build]
 fastmode = true
 ```
 
-This feature only allows reading buckconfig values, not writing them.
+This feature only allows reading bsmrconfig values, not writing them.
 
 They are also incompatible with
 [configuration modifiers](./modifiers.md):
@@ -241,7 +241,7 @@ The build configuration is determined as follows:
        configuration, it is one of the few attributes that are not
        `select`able.
     3. Else, use the default (`parser.target_platform_detector_spec` in
-       the `.buckconfig` file).
+       the `.bsmrconfig` file).
 2. [Configuration modifiers](./modifiers.md) are applied. Those are a
    lightweight way to add constraints on an individual basis (e.g.
    "build with the default configuration/platform, except with a
@@ -347,7 +347,7 @@ builds even when building the Android app in development mode.
 
 For this reason, Buck requires both _target_ platforms and _execution_
 platforms to be defined. The execution platforms are specified via the
-`build.execution_platforms` value in `.buckconfig`.
+`build.execution_platforms` value in `.bsmrconfig`.
 
 ## Queries
 
@@ -372,30 +372,30 @@ target's attributes with the configuration applied. The `uquery` command
 will not apply a configuration.
 
 Here is a heavily trimmed version of the outputs of invoking `uquery`
-and `cquery` on `//bsmr/app/bsmr_core:bsmr_core`.
+and `cquery` on `root//app/bsmr_core:bsmr_core`.
 
 ```sh
-> bsmr uquery -A '"//bsmr/app/bsmr_core:bsmr_core"'
+> bsmr uquery -A '"root//app/bsmr_core:bsmr_core"'
 {
-  "fbcode//bsmr/app/bsmr_core:bsmr_core": {
+  "root//app/bsmr_core:bsmr_core": {
     "buck.type": "rust_library",
-    "buck.package": "fbcode//bsmr/app/bsmr_core:TARGETS",
+    "buck.package": "root//app/bsmr_core:TARGETS",
     "name": "bsmr_core",
     "visibility": [
       "PUBLIC"
     ],
     "deps": {
-      "fbsource//third-party/rust:anyhow",
-      "fbsource//third-party/rust:arc-swap",
-      "fbsource//third-party/rust:blake3",
-      "fbsource//third-party/rust:compact_str",
-      "fbsource//third-party/rust:dashmap",
+      "bsmr_build//third-party/rust:anyhow",
+      "bsmr_build//third-party/rust:arc-swap",
+      "bsmr_build//third-party/rust:blake3",
+      "bsmr_build//third-party/rust:compact_str",
+      "bsmr_build//third-party/rust:dashmap",
       {
         "__type": "selector",
         "entries": {
           "DEFAULT": [],
           "ovr_config//os:windows": [
-            "fbsource//third-party/rust:common-path"
+            "bsmr_build//third-party/rust:common-path"
           ]
         }
       },
@@ -404,7 +404,7 @@ and `cquery` on `//bsmr/app/bsmr_core:bsmr_core`.
         "entries": {
           "DEFAULT": [],
           "ovr_config//os:linux": [
-            "fbsource//third-party/rust:nix"
+            "bsmr_build//third-party/rust:nix"
           ]
         }
       },
@@ -414,24 +414,24 @@ and `cquery` on `//bsmr/app/bsmr_core:bsmr_core`.
 ```
 
 ```sh
-> bsmr cquery -A '"//bsmr/app/bsmr_core:bsmr_core"'
+> bsmr cquery -A '"root//app/bsmr_core:bsmr_core"'
 {
-  "fbcode//bsmr/app/bsmr_core:bsmr_core (ovr_config//platform/linux:<OMITTED>)": {
+  "root//app/bsmr_core:bsmr_core (ovr_config//platform/linux:<OMITTED>)": {
     "buck.type": "rust_library",
-    "buck.package": "fbcode//bsmr/app/bsmr_core:TARGETS",
+    "buck.package": "root//app/bsmr_core:TARGETS",
     "buck.target_configuration": "ovr_config//platform/linux:<OMITTED>",
-    "buck.execution_platform": "fbcode//bsmr/platform/<OMITTED>",
+    "buck.execution_platform": "root//platform/<OMITTED>",
     "name": "bsmr_core",
     "visibility": [
       "PUBLIC"
     ],
     "deps": [
-      "fbsource//third-party/rust:anyhow (ovr_config//platform/linux:<OMITTED>)",
-      "fbsource//third-party/rust:arc-swap (ovr_config//platform/linux:<OMITTED>)",
-      "fbsource//third-party/rust:blake3 (ovr_config//platform/linux:<OMITTED>)",
-      "fbsource//third-party/rust:compact_str (ovr_config//platform/linux:<OMITTED>)",
-      "fbsource//third-party/rust:dashmap (ovr_config//platform/linux:<OMITTED>)",
-      "fbsource//third-party/rust:nix (ovr_config//platform/linux:<OMITTED>)"
+      "bsmr_build//third-party/rust:anyhow (ovr_config//platform/linux:<OMITTED>)",
+      "bsmr_build//third-party/rust:arc-swap (ovr_config//platform/linux:<OMITTED>)",
+      "bsmr_build//third-party/rust:blake3 (ovr_config//platform/linux:<OMITTED>)",
+      "bsmr_build//third-party/rust:compact_str (ovr_config//platform/linux:<OMITTED>)",
+      "bsmr_build//third-party/rust:dashmap (ovr_config//platform/linux:<OMITTED>)",
+      "bsmr_build//third-party/rust:nix (ovr_config//platform/linux:<OMITTED>)"
     ]
 }
 ```

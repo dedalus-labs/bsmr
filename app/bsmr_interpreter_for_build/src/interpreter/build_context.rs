@@ -23,8 +23,8 @@ use bsmr_interpreter::paths::path::StarlarkPath;
 use starlark::any::ProvidesStaticType;
 use starlark::eval::Evaluator;
 
-use crate::interpreter::buckconfig::BuckConfigsViewForStarlark;
-use crate::interpreter::buckconfig::LegacyBuckConfigsForStarlark;
+use crate::interpreter::bsmrconfig::BsmrConfigsViewForStarlark;
+use crate::interpreter::bsmrconfig::LegacyBsmrConfigsForStarlark;
 use crate::interpreter::bzl_eval_ctx::BzlEvalCtx;
 use crate::interpreter::cell_info::InterpreterCellInfo;
 use crate::interpreter::functions::host_info::HostInfo;
@@ -164,7 +164,7 @@ pub struct BuildContext<'a> {
     /// `load()` statements.
     pub cell_info: &'a InterpreterCellInfo,
 
-    pub(crate) buckconfigs: LegacyBuckConfigsForStarlark<'a>,
+    pub(crate) bsmrconfigs: LegacyBsmrConfigsForStarlark<'a>,
 
     pub(crate) host_info: &'a HostInfo,
 
@@ -182,15 +182,15 @@ impl<'a> BuildContext<'a> {
     /// Create a build context for the given module.
     pub(crate) fn new(
         cell_info: &'a InterpreterCellInfo,
-        buckconfigs: &'a mut dyn BuckConfigsViewForStarlark,
+        bsmrconfigs: &'a mut dyn BsmrConfigsViewForStarlark,
         host_info: &'a HostInfo,
         additional: PerFileTypeContext,
         ignore_attrs_for_profiling: bool,
     ) -> BuildContext<'a> {
-        let buckconfigs = LegacyBuckConfigsForStarlark::new(buckconfigs);
+        let bsmrconfigs = LegacyBsmrConfigsForStarlark::new(bsmrconfigs);
         BuildContext {
             cell_info,
-            buckconfigs,
+            bsmrconfigs,
             host_info,
             additional,
             ignore_attrs_for_profiling,

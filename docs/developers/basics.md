@@ -18,9 +18,9 @@ changes:
 ```bash
 # Check that things compile
 # Required for LLMs making changes to `bsmr/app`
-arc rust-check fbcode//bsmr/app/...
+arc rust-check root//app/...
 # Run clippy
-arc rust-clippy fbcode//bsmr/app/...
+arc rust-clippy root//app/...
 # Run lints and apply fixes
 arc lint -a
 # Format code. Usually unnecessary, performed by IDEs and hooks
@@ -31,11 +31,11 @@ Bessemer has standard Rust unittests and integration tests at `tests/core`.
 
 ```bash
 # Run an integration test
-bsmr test fbcode//bsmr/tests/core/analysis:test_cmd_args
+bsmr test root//tests/core/analysis:test_cmd_args
 # Discover more information about writing and executing integration tests
 cat tests/core/README.md
 # Run some unittests
-bsmr test fbcode//bsmr/app/bsmr_core:bsmr_core
+bsmr test root//app/bsmr_core:bsmr_core
 ```
 
 In OSS, standard cargo tooling mostly applies. Exceptions are that integration tests do not run in
@@ -105,7 +105,7 @@ At Meta, common third party Rust libraries are generally just available.
 
 ```bash
 # Build bsmr
-bsmr build @fbcode//mode/opt fbcode//bsmr:bsmr --out /tmp/bsmr_dest
+bsmr build @upstream//mode/opt root//:bsmr --out /tmp/bsmr_dest
 # Build bsmr from source and run a command with it in a different isolation dir
 ./bsmr.py build :foo
 ```

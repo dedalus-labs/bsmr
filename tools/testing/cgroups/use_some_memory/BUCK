@@ -7,6 +7,6 @@ rust_binary(
     srcs = ["use_some_memory.rs"],
     crate_root = "use_some_memory.rs",
     deps = [
-        "fbsource//third-party/rust:clap",
+        "bsmr_build//third-party/rust:clap",
     ],
 )

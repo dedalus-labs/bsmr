@@ -24,14 +24,14 @@ use pagable::Pagable;
 use pagable::pagable_typetag;
 
 use crate::legacy_configs::dice::HasLegacyConfigs;
-use crate::legacy_configs::key::BuckconfigKeyRef;
-use crate::legacy_configs::view::LegacyBuckConfigView;
+use crate::legacy_configs::key::BsmrconfigKeyRef;
+use crate::legacy_configs::view::LegacyBsmrConfigView;
 
 const DEFAULT_BUILDFILES: &[&str] = &["BUCK.v2", "BUCK"];
 
 /// Deal with the `buildfile.name` key (and `name_v2`)
 pub fn parse_buildfile_name(
-    mut config: impl LegacyBuckConfigView,
+    mut config: impl LegacyBsmrConfigView,
 ) -> bsmr_error::Result<Vec<FileNameBuf>> {
     // For bsmr, we support a slightly different mechanism for setting the buildfile to
     // assist with easier migration from v1 to v2.
@@ -42,12 +42,12 @@ pub fn parse_buildfile_name(
     // This scheme provides a natural progression to buckv2, with the ability to use separate
     // buildfiles for the two where necessary.
     let mut base = if let Some(buildfiles_value) =
-        config.parse_list::<String>(BuckconfigKeyRef {
+        config.parse_list::<String>(BsmrconfigKeyRef {
             section: "buildfile",
             property: "name_v2",
         })? {
         buildfiles_value.into_try_map(FileNameBuf::try_from)?
-    } else if let Some(buildfiles_value) = config.parse_list::<String>(BuckconfigKeyRef {
+    } else if let Some(buildfiles_value) = config.parse_list::<String>(BsmrconfigKeyRef {
         section: "buildfile",
         property: "name",
     })? {
@@ -61,7 +61,7 @@ pub fn parse_buildfile_name(
         DEFAULT_BUILDFILES.map(|&n| FileNameBuf::try_from(n.to_owned()).unwrap())
     };
 
-    if let Some(buildfile) = config.parse::<String>(BuckconfigKeyRef {
+    if let Some(buildfile) = config.parse::<String>(BsmrconfigKeyRef {
         section: "buildfile",
         property: "extra_for_test",
     })? {
@@ -130,14 +130,14 @@ mod tests {
     use indoc::indoc;
 
     use crate::buildfiles::parse_buildfile_name;
-    use crate::legacy_configs::cells::BuckConfigBasedCells;
+    use crate::legacy_configs::cells::BsmrConfigBasedCells;
     use crate::legacy_configs::configs::testing::TestConfigParserFileOps;
 
     #[tokio::test]
     async fn test_buildfiles() -> bsmr_error::Result<()> {
         let mut file_ops = TestConfigParserFileOps::new(&[
             (
-                ".buckconfig",
+                ".bsmrconfig",
                 indoc!(
                     r#"
                             [cells]
@@ -148,7 +148,7 @@ mod tests {
                 ),
             ),
             (
-                "other/.buckconfig",
+                "other/.bsmrconfig",
                 indoc!(
                     r#"
                             [cells]
@@ -160,7 +160,7 @@ mod tests {
                 ),
             ),
             (
-                "third_party/.buckconfig",
+                "third_party/.bsmrconfig",
                 indoc!(
                     r#"
                             [cells]
@@ -173,7 +173,7 @@ mod tests {
             ),
         ])?;
 
-        let cells = BuckConfigBasedCells::testing_parse_with_file_ops(&mut file_ops, &[]).await?;
+        let cells = BsmrConfigBasedCells::testing_parse_with_file_ops(&mut file_ops, &[]).await?;
 
         let config = cells
             .parse_single_cell_with_file_ops(CellName::testing_new("root"), &mut file_ops)

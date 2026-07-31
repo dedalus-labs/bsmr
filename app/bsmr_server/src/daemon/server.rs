@@ -36,7 +36,7 @@ use bsmr_common::init::DaemonStartupConfig;
 use bsmr_common::invocation_paths::InvocationPaths;
 use bsmr_common::io::IoProvider;
 use bsmr_common::io::trace::TracingIoProvider;
-use bsmr_common::legacy_configs::configs::LegacyBuckConfig;
+use bsmr_common::legacy_configs::configs::LegacyBsmrConfig;
 use bsmr_common::memory;
 use bsmr_common::sqlite::sqlite_db::SqliteIdentity;
 use bsmr_common::tenting::TentingAclProvider;
@@ -185,7 +185,7 @@ impl BuckdServerInitPreferences {
         &self,
         io: Arc<dyn IoProvider>,
         digest_config: DigestConfig,
-        root_config: &LegacyBuckConfig,
+        root_config: &LegacyBsmrConfig,
         tenting_acl_provider: Option<Arc<dyn TentingAclProvider>>,
     ) -> bsmr_error::Result<Arc<Dice>> {
         configure_dice_for_buck(

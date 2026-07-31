@@ -8,10 +8,10 @@
 
 load("@prelude//:native.bzl", _native = "native")
 load(
-    "@prelude//utils:buckconfig.bzl",
+    "@prelude//utils:bsmrconfig.bzl",
     _read_config = "read_config_with_logging",
     _read_root_config = "read_root_config_with_logging",
-    log_buckconfigs = "LOG_BUCKCONFIGS",
+    log_bsmrconfigs = "LOG_BSMRCONFIGS",
 )
 
 __overridden_builtins__ = (
@@ -19,7 +19,7 @@ __overridden_builtins__ = (
         "read_config": _read_config,
         "read_root_config": _read_root_config,
     }
-    if log_buckconfigs
+    if log_bsmrconfigs
     else {}
 )
 

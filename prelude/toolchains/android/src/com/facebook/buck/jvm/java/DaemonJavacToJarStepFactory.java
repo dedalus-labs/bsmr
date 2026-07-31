@@ -50,7 +50,7 @@ public class DaemonJavacToJarStepFactory extends BaseJavacToJarStepFactory {
                 .contains(compilerParameters.getOutputPaths().getClassesDir()));
 
     // In order to use direct spooling to the Jar:
-    // (1) It must be enabled through a .buckconfig.
+    // (1) It must be enabled through a .bsmrconfig.
     // (2) The target must have 0 postprocessing steps.
     // (3) Tha compile API must be JSR 199.
     boolean isSpoolingToJarEnabled =

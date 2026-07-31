@@ -586,7 +586,7 @@ pub fn register_select_internal(globals: &mut GlobalsBuilder) {
 ///     ],
 /// )
 ///
-/// # Match buckconfig values
+/// # Match bsmrconfig values
 /// config_setting(
 ///     name = "fastmode",
 ///     values = {
@@ -608,7 +608,7 @@ pub fn register_select_internal(globals: &mut GlobalsBuilder) {
 ///
 /// 1. `--target-platforms` command-line flag (highest priority)
 /// 2. `default_target_platform` attribute on the target
-/// 3. Cell's default platform from buckconfig
+/// 3. Cell's default platform from bsmrconfig
 ///
 /// Example:
 /// ```bash

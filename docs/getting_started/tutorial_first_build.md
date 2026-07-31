@@ -188,7 +188,7 @@ With our Rust code and BUCK file in place, let's build the application!
 2. Run the following command:
 
 ```bash
-bsmr build fbcode//scripts/$USER/bsmr_lab/greeter_bin:main --show-output
+bsmr build upstream//scripts/$USER/bsmr_lab/greeter_bin:main --show-output
 ```
 
 </FbInternalOnly>
@@ -216,7 +216,7 @@ bsmr build :main --show-output
 ```
 ...
 BUILD SUCCEEDED
-fbcode//scripts/$USER/bsmr_lab/greeter_bin:main buck-out/v2/gen/fbcode/c32808b9d4f0fdd0/scripts/$USER/bsmr_lab/greeter_bin/__main__/main
+upstream//scripts/$USER/bsmr_lab/greeter_bin:main buck-out/v2/gen/fbcode/c32808b9d4f0fdd0/scripts/$USER/bsmr_lab/greeter_bin/__main__/main
 ```
 
 </FbInternalOnly>
@@ -232,7 +232,7 @@ root//bsmr_lab/greeter_bin:main /.../bsmr_lab/buck-out/v2/gen/root/200212f73efcd
 </OssOnly>
 
 export const TARGET_NAME = isInternal() ?
-<code>fbcode//scripts/$USER/bsmr_lab/greeter_bin:main</code> :
+<code>upstream//scripts/$USER/bsmr_lab/greeter_bin:main</code> :
 <code>root//bsmr_lab/greeter_bin:main</code>;
 
 - `BUILD SUCCEEDED` indicates that Bessemer successfully built our target.
@@ -254,7 +254,7 @@ Since our target is a runnable target, we can run it by `bsmr run`
 1. In your terminal (still in the fbsource root directory), execute:
 
 ```bash
-bsmr run fbcode//scripts/$USER/bsmr_lab/greeter_bin:main
+bsmr run upstream//scripts/$USER/bsmr_lab/greeter_bin:main
 ```
 
 </FbInternalOnly>
@@ -292,7 +292,7 @@ targets you've defined.
    run:
 
 ```bash
-bsmr targets fbcode//scripts/$USER/bsmr_lab/greeter_bin:
+bsmr targets upstream//scripts/$USER/bsmr_lab/greeter_bin:
 ```
 
 </FbInternalOnly>
@@ -315,7 +315,7 @@ This will show all the targets we defined,
 <FbInternalOnly>
 
 ```
-fbcode//scripts/$USER/bsmr_lab/greeter_bin:main
+upstream//scripts/$USER/bsmr_lab/greeter_bin:main
 ... other targets might be listed here ...
 ```
 

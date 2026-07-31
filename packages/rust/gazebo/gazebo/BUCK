@@ -11,7 +11,7 @@ rust_library(
         "str_pattern_extensions",
     ],
     deps = [
-        "//bsmr/packages/rust/gazebo/dupe:dupe",
-        "//bsmr/packages/rust/gazebo/gazebo_derive:gazebo_derive",
+        "root//packages/rust/gazebo/dupe:dupe",
+        "root//packages/rust/gazebo/gazebo_derive:gazebo_derive",
     ],
 )

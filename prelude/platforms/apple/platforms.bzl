@@ -24,7 +24,7 @@ load(
     "watch_platforms",
 )
 load("@prelude//platforms/apple:platforms_map.bzl", "APPLE_PLATFORMS_MAP")
-load("@prelude//utils:buckconfig.bzl", "read")
+load("@prelude//utils:bsmrconfig.bzl", "read")
 
 _SUPPORTED_IOS_PLATFORMS = [
     ios_platforms.IPHONEOS_ARM64,

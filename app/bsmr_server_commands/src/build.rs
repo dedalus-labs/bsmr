@@ -40,7 +40,7 @@ use bsmr_cli_proto::build_request::Uploads;
 use bsmr_cli_proto::build_request::build_providers::Action as BuildProviderAction;
 use bsmr_common::dice::cells::HasCellResolver;
 use bsmr_common::legacy_configs::dice::HasLegacyConfigs;
-use bsmr_common::legacy_configs::key::BuckconfigKeyRef;
+use bsmr_common::legacy_configs::key::BsmrconfigKeyRef;
 use bsmr_common::liveliness_observer::LivelinessObserver;
 use bsmr_common::liveliness_observer::TimeoutLivelinessObserver;
 use bsmr_common::pattern::parse_from_cli::parse_patterns_with_modifiers_from_cli_args;
@@ -236,7 +236,7 @@ async fn build(
     let want_configured_graph_size = ctx
         .parse_legacy_config_property(
             cell_resolver.root_cell(),
-            BuckconfigKeyRef {
+            BsmrconfigKeyRef {
                 section: "bsmr",
                 property: "log_configured_graph_size",
             },
@@ -247,7 +247,7 @@ async fn build(
     let want_configured_graph_sketch = ctx
         .parse_legacy_config_property(
             cell_resolver.root_cell(),
-            BuckconfigKeyRef {
+            BsmrconfigKeyRef {
                 section: "bsmr",
                 property: "log_configured_graph_sketch",
             },
@@ -258,7 +258,7 @@ async fn build(
     let want_total_configured_graph_sketch = ctx
         .parse_legacy_config_property(
             cell_resolver.root_cell(),
-            BuckconfigKeyRef {
+            BsmrconfigKeyRef {
                 section: "bsmr",
                 property: "log_total_configured_graph_sketch",
             },
@@ -269,7 +269,7 @@ async fn build(
     let want_retained_analysis_memory_sketch = ctx
         .parse_legacy_config_property(
             cell_resolver.root_cell(),
-            BuckconfigKeyRef {
+            BsmrconfigKeyRef {
                 section: "bsmr",
                 property: "log_retained_analysis_memory_sketch",
             },
@@ -280,7 +280,7 @@ async fn build(
     let want_action_graph_sketch = ctx
         .parse_legacy_config_property(
             cell_resolver.root_cell(),
-            BuckconfigKeyRef {
+            BsmrconfigKeyRef {
                 section: "bsmr",
                 property: "log_action_graph_sketch",
             },
@@ -291,7 +291,7 @@ async fn build(
     let want_peak_analysis_memory_sketch = ctx
         .parse_legacy_config_property(
             cell_resolver.root_cell(),
-            BuckconfigKeyRef {
+            BsmrconfigKeyRef {
                 section: "bsmr",
                 property: "log_peak_analysis_memory_sketch",
             },
@@ -302,7 +302,7 @@ async fn build(
     let want_peak_load_memory_sketch = ctx
         .parse_legacy_config_property(
             cell_resolver.root_cell(),
-            BuckconfigKeyRef {
+            BsmrconfigKeyRef {
                 section: "bsmr",
                 property: "log_peak_load_memory_sketch",
             },
@@ -313,7 +313,7 @@ async fn build(
     let want_artifact_count_sketch: bool = ctx
         .parse_legacy_config_property(
             cell_resolver.root_cell(),
-            BuckconfigKeyRef {
+            BsmrconfigKeyRef {
                 section: "bsmr",
                 property: "log_artifact_count_sketch",
             },
@@ -324,7 +324,7 @@ async fn build(
     let want_artifact_size_sketch: bool = ctx
         .parse_legacy_config_property(
             cell_resolver.root_cell(),
-            BuckconfigKeyRef {
+            BsmrconfigKeyRef {
                 section: "bsmr",
                 property: "log_artifact_size_sketch",
             },
@@ -335,7 +335,7 @@ async fn build(
     let want_log_sketch_cardinalities: bool = ctx
         .parse_legacy_config_property(
             cell_resolver.root_cell(),
-            BuckconfigKeyRef {
+            BsmrconfigKeyRef {
                 section: "bsmr",
                 property: "log_sketch_cardinalities",
             },
@@ -359,7 +359,7 @@ async fn build(
     let providers_to_skip_in_artifact_path_sketch: HashSet<BuildProviderType> = ctx
         .parse_legacy_config_list_property::<SkipProvider>(
             cell_resolver.root_cell(),
-            BuckconfigKeyRef {
+            BsmrconfigKeyRef {
                 section: "bsmr",
                 property: "providers_to_skip_in_artifact_path_sketch",
             },
@@ -421,7 +421,7 @@ async fn build(
     let want_detailed_metrics = ctx
         .parse_legacy_config_property(
             cell_resolver.root_cell(),
-            BuckconfigKeyRef {
+            BsmrconfigKeyRef {
                 section: "bsmr",
                 property: "detailed_aggregated_metrics",
             },
@@ -700,7 +700,7 @@ async fn process_build_result(
     let should_create_unhashed_links = ctx
         .parse_legacy_config_property(
             cell_resolver.root_cell(),
-            BuckconfigKeyRef {
+            BsmrconfigKeyRef {
                 section: "bsmr",
                 property: "create_unhashed_links",
             },
@@ -1069,7 +1069,7 @@ async fn build_target(
 }
 
 /// Provider types that can be skipped in artifact path sketch computation.
-/// Parsed from `bsmr.providers_to_skip_in_artifact_path_sketch` buckconfig.
+/// Parsed from `bsmr.providers_to_skip_in_artifact_path_sketch` bsmrconfig.
 enum SkipProvider {
     Build,
     Run,

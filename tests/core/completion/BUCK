@@ -1,4 +1,4 @@
-load("@fbcode//bsmr/tests:buck_e2e.bzl", "bsmr_core_tests")
+load("@root//tests:buck_e2e.bzl", "bsmr_core_tests")
 
 oncall("build_infra")
 
@@ -6,7 +6,7 @@ bsmr_core_tests(
     target_extra_attrs = {
         "test_completion": {
             "env": {
-                "BSMR_COMPLETION_VERIFY": "$(location //bsmr/tools/testing/completion/verify:completion_verify)",
+                "BSMR_COMPLETION_VERIFY": "$(location root//tools/testing/completion/verify:completion_verify)",
             },
             "skip_for_os": ["windows"],
         },

@@ -258,7 +258,7 @@ message InstantEvent {
     // attached.
     DebugAdapterSnapshot debug_adapter_snapshot = 27;
 
-    // This is notionally reading from .buckconfig at startup, but since that's
+    // This is notionally reading from .bsmrconfig at startup, but since that's
     // done by the daemon, it needs to come through this way.
     RestartConfiguration restart_configuration = 28;
 
@@ -305,8 +305,8 @@ message InstantEvent {
     // Event sent when creating a new configuration.
     ConfigurationCreated configuration_created = 46;
 
-    // Tracks values of external buckconfigs
-    BuckconfigInputValues buckconfig_input_values = 47;
+    // Tracks values of external bsmrconfigs
+    BsmrconfigInputValues bsmrconfig_input_values = 47;
 
     CellHasNewConfigs cell_has_new_configs = 48;
 
@@ -357,15 +357,15 @@ message EndOfTestResults {
   int32 exit_code = 1;
 }
 
-message BuckconfigInputValues {
-  // Buckconfigs are computed by joining together values from a number of
+message BsmrconfigInputValues {
+  // Bsmrconfigs are computed by joining together values from a number of
   // different inputs (repo, well-known directories, CLI). Each of these is
   // represented as a component, and they are applied in the given order,
   // with later components overriding earlier ones
-  repeated BuckconfigComponent components = 1;
+  repeated BsmrconfigComponent components = 1;
 }
 
-message BuckconfigComponent {
+message BsmrconfigComponent {
   oneof data {
     ConfigValue config_value = 1;
     ConfigFile config_file = 2;
@@ -379,18 +379,18 @@ message ConfigValue {
   string value = 3;
   optional string cell = 4;
   // whether config is provided by the command line (either single arg or config
-  // flag). Set to false for values coming from external buckconfigs (e.g.
-  // /etc/buckconfig.d or $home_dir/.buckconfig.local)
+  // flag). Set to false for values coming from external bsmrconfigs (e.g.
+  // /etc/bsmrconfig.d or $home_dir/.bsmrconfig.local)
   bool is_cli = 5;
 }
 
 message ConfigFile {
   oneof data {
-    // If the config file is project relative (except .buckconfig.local), the
+    // If the config file is project relative (except .bsmrconfig.local), the
     // path of the file. We only store the path, not actual values of
-    // project-relative buckconfigs because they are huge/costly to store
+    // project-relative bsmrconfigs because they are huge/costly to store
     string project_relative_path = 1;
-    // If the config file is external or project-relative .buckconfig.local, we
+    // If the config file is external or project-relative .bsmrconfig.local, we
     // store all the config values in a list along with the path the file is
     // originating from
     GlobalExternalConfig global_external_config = 2;
@@ -1255,7 +1255,7 @@ message CommandStart {
   // Metadata associated with this build. Values in this map have no particular
   // semantics and are useful for logging and telemetry only.
   //
-  // The metadata cannot contain information from buckconfig or dice state
+  // The metadata cannot contain information from bsmrconfig or dice state
   map<string, string> metadata = 1;
 
   repeated string cli_args = 2;
@@ -1309,7 +1309,7 @@ message CommandCriticalStart {
   // Metadata associated with this build. Values in this map have no particular
   // semantics and are useful for logging and telemetry only.
   //
-  // The metadata will contain information from buckconfigs
+  // The metadata will contain information from bsmrconfigs
   map<string, string> metadata = 1;
 
   // DICE transaction version number.
@@ -1413,7 +1413,7 @@ message CommandCriticalEnd {
   // Metadata associated with this command. Values in this map have no
   // particular semantics and are useful for logging and telemetry only.
   //
-  // The metadata will contain information from buckconfigs
+  // The metadata will contain information from bsmrconfigs
   map<string, string> metadata = 1;
 }
 
@@ -2756,7 +2756,7 @@ message InvocationRecord {
   repeated string target_rule_type_names = 80;
   // Time elapsed from a build's start until first test discovery begins.
   optional uint64 time_to_first_test_discovery_ms = 81;
-  // Tracks whether buckconfigs were invalidated between invocations (e.g. due
+  // Tracks whether bsmrconfigs were invalidated between invocations (e.g. due
   // to modefile changes or another buck command in between)
   // For the first command after daemon start or for the first time these
   // configs are observed in each state (cell, command etc.), it will be set

@@ -18,7 +18,7 @@ async def test_re_resource_exhausted_reported_as_infra_failure(buck: Buck) -> No
     result = await buck.test(
         "--remote-only",
         "--no-remote-cache",
-        "fbcode//bsmr/tests/targets/rules/sh_test:test_remote_explicit",
+        "root//tests/targets/rules/sh_test:test_remote_explicit",
         "--",
         "--experiment",
         "classify_re_error_as_infra",
@@ -41,11 +41,11 @@ async def test_cancel_test_if_re_queue_longer_than_threshold(buck: Buck) -> None
     ]
     result = await buck.test(
         *args,
-        "fbcode//bsmr/tests/targets/rules/sh_test:test_remote_explicit_stays_in_queue",
+        "root//tests/targets/rules/sh_test:test_remote_explicit_stays_in_queue",
         env={"BSMR_TEST_RE_QUEUE_ESTIMATE_S": "100"},
     )
     assert (
-        "Omitted: fbcode//bsmr/tests/targets/rules/sh_test:test_remote_explicit_stays_in_queue - unmanaged"
+        "Omitted: root//tests/targets/rules/sh_test:test_remote_explicit_stays_in_queue - unmanaged"
         in result.stderr
     )
     assert (

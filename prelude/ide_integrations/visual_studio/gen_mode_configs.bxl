@@ -53,9 +53,9 @@ def _get_compiler_settings(cxx_toolchain_flags: _CxxToolchainFlags) -> dict:
     compiler_flags = _remove_flags_with_macros(compiler_flags)
     return get_compiler_settings_from_flags(compiler_flags)
 
-def _get_linker_settings(cxx_toolchain_flags: _CxxToolchainFlags, buck_root: str) -> dict:
+def _get_linker_settings(cxx_toolchain_flags: _CxxToolchainFlags, bsmr_root: str) -> dict:
     linker_flags = _remove_flags_with_macros(cxx_toolchain_flags.ldflags)
-    return get_linker_settings_from_flags(linker_flags, buck_root)
+    return get_linker_settings_from_flags(linker_flags, bsmr_root)
 
 def _get_provider_output_path(provider, bxl_ctx):
     default_outputs = provider.default_outputs

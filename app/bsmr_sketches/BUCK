@@ -6,7 +6,7 @@ rust_library(
     name = "bsmr_sketches",
     srcs = glob(["src/**/*.rs"]),
     deps = [
-        "fbsource//third-party/rust:base64",
-        "//bsmr/packages/rust/setsketch:setsketch",
+        "bsmr_build//third-party/rust:base64",
+        "root//packages/rust/setsketch:setsketch",
     ],
 )

@@ -11,7 +11,7 @@ Toolchains are regular rules that:
 
 Toolchain rules are instantiated once in the `toolchains//` cell. The location
 of the `toolchains` cell is determined by the value of `cells.toolchains` in the
-`.buckconfig` file.
+`.bsmrconfig` file.
 
 Regular build rules reference those toolchain targets as
 [`toolchain_dep`](../../api/build/attrs/#toolchain_dep) attrs (often

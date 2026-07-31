@@ -14,7 +14,7 @@ use std::sync::Arc;
 
 use bsmr_common::buildfiles::parse_buildfile_name;
 use bsmr_common::invocation_roots::InvocationRoots;
-use bsmr_common::legacy_configs::cells::BuckConfigBasedCells;
+use bsmr_common::legacy_configs::cells::BsmrConfigBasedCells;
 use bsmr_core::cells::name::CellName;
 use bsmr_fs::fs_util;
 use bsmr_fs::paths::abs_norm_path::AbsNormPath;
@@ -25,13 +25,13 @@ use super::path_sanitizer::SanitizedPath;
 
 pub(crate) struct CompletionResults<'a> {
     roots: &'a InvocationRoots,
-    cell_configs: Arc<BuckConfigBasedCells>,
+    cell_configs: Arc<BsmrConfigBasedCells>,
     buildfiles: StdBuckHashMap<CellName, Vec<FileNameBuf>>,
     results: BTreeSet<String>,
 }
 
 impl<'a> CompletionResults<'a> {
-    pub(crate) fn new(roots: &'a InvocationRoots, cell_configs: Arc<BuckConfigBasedCells>) -> Self {
+    pub(crate) fn new(roots: &'a InvocationRoots, cell_configs: Arc<BsmrConfigBasedCells>) -> Self {
         Self {
             roots,
             cell_configs,

@@ -8,8 +8,8 @@ rust_protobuf_library(
     build_script = "build.rs",
     protos = glob(["proto/**/*.proto"]),
     deps = [
-        "fbsource//third-party/rust:prost-types",
-        "fbsource//third-party/rust:serde",
-        "//bsmr/app/bsmr_data:bsmr_data",
+        "bsmr_build//third-party/rust:prost-types",
+        "bsmr_build//third-party/rust:serde",
+        "root//app/bsmr_data:bsmr_data",
     ],
 )

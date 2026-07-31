@@ -1,4 +1,4 @@
-load("@fbcode//bsmr/tests:buck_e2e.bzl", "bsmr_e2e_test")
+load("@root//tests:buck_e2e.bzl", "bsmr_e2e_test")
 load("@bsmr_build//rules:python_library.bzl", "python_library")
 
 oncall("tae")
@@ -7,7 +7,7 @@ python_library(
     name = "fdb_e2e_types",
     srcs = ["types.py"],
     deps = [
-        "//bsmr/tests/e2e_util/api:api",
+        "root//tests/e2e_util/api:api",
     ],
 )
 
@@ -20,6 +20,6 @@ bsmr_e2e_test(
     test_with_deployed_bsmr = True,
     deps = [
         ":fdb_e2e_types",
-        "//bsmr/tests/e2e_util:utils",  # @autodeps2-fixme-manual
+        "root//tests/e2e_util:utils",  # @autodeps2-fixme-manual
     ],
 )

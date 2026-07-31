@@ -6,7 +6,7 @@
 # of this source tree. You may select, at your option, one of the
 # above-listed licenses.
 
-load("@prelude//utils:buckconfig.bzl", "read_list")
+load("@prelude//utils:bsmrconfig.bzl", "read_list")
 
 allowed_build_tags = read_list("go", "allowed_build_tags", default = [], root_cell = True)
 

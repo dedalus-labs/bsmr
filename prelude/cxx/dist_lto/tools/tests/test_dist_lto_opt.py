@@ -248,7 +248,7 @@ class TestDistLtoOpt(unittest.TestCase):
             "--build-info-build-mode=opt-clang-thinlto",
             "--build-info-build-tool=bsmr",
             "--build-info-compiler=clang",
-            "--build-info-fdo-profile=fbcode//fdo/autofdo/default_profile:autofdo",
+            "--build-info-fdo-profile=upstream//fdo/autofdo/default_profile:autofdo",
             "--build-info-platform=platform010",
             "--build-info-rule=fbcode:unicorn:index_server",
             "--build-info-rule-type=cpp_binary",

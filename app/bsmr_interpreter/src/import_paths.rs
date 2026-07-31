@@ -14,8 +14,8 @@ use allocative::Allocative;
 use async_trait::async_trait;
 use bsmr_common::dice::cells::HasCellResolver;
 use bsmr_common::legacy_configs::dice::HasLegacyConfigs;
-use bsmr_common::legacy_configs::key::BuckconfigKeyRef;
-use bsmr_common::legacy_configs::view::LegacyBuckConfigView;
+use bsmr_common::legacy_configs::key::BsmrconfigKeyRef;
+use bsmr_common::legacy_configs::view::LegacyBsmrConfigView;
 use bsmr_core::bzl::ImportPath;
 use bsmr_core::cells::CellAliasResolver;
 use bsmr_core::cells::build_file_cell::BuildFileCell;
@@ -40,7 +40,7 @@ pub struct ImplicitImportPaths {
 
 impl ImplicitImportPaths {
     pub fn parse(
-        mut config: impl LegacyBuckConfigView,
+        mut config: impl LegacyBsmrConfigView,
         cell_name: BuildFileCell,
         cell_alias_resolver: &CellAliasResolver,
     ) -> bsmr_error::Result<ImplicitImportPaths> {
@@ -48,7 +48,7 @@ impl ImplicitImportPaths {
         // normal imports. e.g. it uses `cell//path/to/file.bzl` instead of
         // `cell//path/to:file.bzl`.
         let root_import = config
-            .get(BuckconfigKeyRef {
+            .get(BsmrconfigKeyRef {
                 section: "buildfile",
                 property: "includes",
             })?
@@ -66,7 +66,7 @@ impl ImplicitImportPaths {
             cell_name,
             cell_alias_resolver.dupe(),
             config
-                .get(BuckconfigKeyRef {
+                .get(BsmrconfigKeyRef {
                     section: "buildfile",
                     property: "package_includes",
                 })?

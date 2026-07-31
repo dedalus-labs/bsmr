@@ -8,23 +8,23 @@
  * above-listed licenses.
  */
 
-use bsmr_common::legacy_configs::configs::LegacyBuckConfig;
+use bsmr_common::legacy_configs::configs::LegacyBsmrConfig;
 use bsmr_execute_impl::executors::local::ForkserverAccess;
 use bsmr_fs::paths::abs_norm_path::AbsNormPath;
 use bsmr_resource_control::buck_cgroup_tree::BuckCgroupTree;
 
 #[cfg(unix)]
 pub async fn maybe_launch_forkserver(
-    root_config: &LegacyBuckConfig,
+    root_config: &LegacyBsmrConfig,
     forkserver_state_dir: &AbsNormPath,
     cgroup_tree: Option<&BuckCgroupTree>,
 ) -> bsmr_error::Result<ForkserverAccess> {
-    use bsmr_common::legacy_configs::key::BuckconfigKeyRef;
+    use bsmr_common::legacy_configs::key::BsmrconfigKeyRef;
     use bsmr_core::rollout_percentage::RolloutPercentage;
     use bsmr_error::BuckErrorContext;
 
     let config = root_config
-        .parse::<RolloutPercentage>(BuckconfigKeyRef {
+        .parse::<RolloutPercentage>(BsmrconfigKeyRef {
             section: "bsmr",
             property: "forkserver",
         })?
@@ -48,7 +48,7 @@ pub async fn maybe_launch_forkserver(
 
 #[cfg(not(unix))]
 pub async fn maybe_launch_forkserver(
-    _root_config: &LegacyBuckConfig,
+    _root_config: &LegacyBsmrConfig,
     _forkserver_state_dir: &AbsNormPath,
     _cgroup_tree: Option<&BuckCgroupTree>,
 ) -> bsmr_error::Result<ForkserverAccess> {

@@ -8,52 +8,52 @@
  * above-listed licenses.
  */
 
-use bsmr_wrapper_common::DOT_BUCKCONFIG_D;
+use bsmr_wrapper_common::DOT_BSMRCONFIG_D;
 
 pub(crate) enum ExternalConfigSource {
-    // Buckconfig file in the user's home directory
+    // Bsmrconfig file in the user's home directory
     UserFile(&'static str),
 
-    // Buckconfig folder in the user's home directory, assuming all files in this folder are buckconfig
+    // Bsmrconfig folder in the user's home directory, assuming all files in this folder are bsmrconfig
     UserFolder(&'static str),
 
-    // Global buckconfig file. Repo related config is not allowed
+    // Global bsmrconfig file. Repo related config is not allowed
     GlobalFile(&'static str),
 
-    // Global buckconfig folder, assuming all files in this folder are buckconfig. Repo related config is not allowed
+    // Global bsmrconfig folder, assuming all files in this folder are bsmrconfig. Repo related config is not allowed
     GlobalFolder(&'static str),
 }
 
 pub(crate) enum ProjectConfigSource {
-    // Buckconfig file in the cell relative to project root, such as .buckconfig or .buckconfig.local
+    // Bsmrconfig file in the cell relative to project root, such as .bsmrconfig or .bsmrconfig.local
     CellRelativeFile(&'static str),
 
-    // Buckconfig folder in the cell, assuming all files in this folder are buckconfig
+    // Bsmrconfig folder in the cell, assuming all files in this folder are bsmrconfig
     CellRelativeFolder(&'static str),
 }
 
-/// The default places from which buckconfigs are sourced.
+/// The default places from which bsmrconfigs are sourced.
 ///
 /// Later entries take precedence over earlier ones, and project configs take precedence over
 /// external configs.
 pub(crate) static DEFAULT_EXTERNAL_CONFIG_SOURCES: &[ExternalConfigSource] = &[
     #[cfg(not(windows))]
-    ExternalConfigSource::GlobalFolder("/etc/buckconfig.d"),
+    ExternalConfigSource::GlobalFolder("/etc/bsmrconfig.d"),
     #[cfg(not(windows))]
-    ExternalConfigSource::GlobalFile("/etc/buckconfig"),
+    ExternalConfigSource::GlobalFile("/etc/bsmrconfig"),
     // TODO: use %PROGRAMDATA% on Windows
     #[cfg(windows)]
-    ExternalConfigSource::GlobalFolder("C:\\ProgramData\\buckconfig.d"),
+    ExternalConfigSource::GlobalFolder("C:\\ProgramData\\bsmrconfig.d"),
     #[cfg(windows)]
-    ExternalConfigSource::GlobalFile("C:\\ProgramData\\buckconfig"),
-    ExternalConfigSource::UserFolder(DOT_BUCKCONFIG_D),
-    ExternalConfigSource::UserFile(DOT_BUCKCONFIG_LOCAL),
+    ExternalConfigSource::GlobalFile("C:\\ProgramData\\bsmrconfig"),
+    ExternalConfigSource::UserFolder(DOT_BSMRCONFIG_D),
+    ExternalConfigSource::UserFile(DOT_BSMRCONFIG_LOCAL),
 ];
 
 pub(crate) static DEFAULT_PROJECT_CONFIG_SOURCES: &[ProjectConfigSource] = &[
-    ProjectConfigSource::CellRelativeFolder(DOT_BUCKCONFIG_D),
-    ProjectConfigSource::CellRelativeFile(".buckconfig"),
-    ProjectConfigSource::CellRelativeFile(DOT_BUCKCONFIG_LOCAL),
+    ProjectConfigSource::CellRelativeFolder(DOT_BSMRCONFIG_D),
+    ProjectConfigSource::CellRelativeFile(".bsmrconfig"),
+    ProjectConfigSource::CellRelativeFile(DOT_BSMRCONFIG_LOCAL),
 ];
 
-pub(crate) static DOT_BUCKCONFIG_LOCAL: &str = ".buckconfig.local";
+pub(crate) static DOT_BSMRCONFIG_LOCAL: &str = ".bsmrconfig.local";

@@ -39,7 +39,7 @@ enum ExternalConfigDiffFormat {
     Json,
 }
 
-/// Identifies the diff between external buckconfigs between two commands.
+/// Identifies the diff between external bsmrconfigs between two commands.
 #[derive(Debug, clap::Parser)]
 pub struct ExternalConfigDiffCommand {
     #[clap(flatten)]
@@ -83,19 +83,19 @@ fn insert_config_values(
         .for_each(|config_value| insert_config_value(dict, order, config_value))
 }
 
-fn process_buckconfig_data(
+fn process_bsmrconfig_data(
     dict: &mut BTreeMap<String, String>,
     order: &mut Vec<String>,
     event: &bsmr_data::BuckEvent,
 ) {
-    use bsmr_data::buckconfig_component::Data::ConfigFile;
-    use bsmr_data::buckconfig_component::Data::ConfigValue;
-    use bsmr_data::buckconfig_component::Data::GlobalExternalConfigFile;
+    use bsmr_data::bsmrconfig_component::Data::ConfigFile;
+    use bsmr_data::bsmrconfig_component::Data::ConfigValue;
+    use bsmr_data::bsmrconfig_component::Data::GlobalExternalConfigFile;
     use bsmr_data::config_file::Data::GlobalExternalConfig;
     use bsmr_data::config_file::Data::ProjectRelativePath;
 
     if let Some(bsmr_data::buck_event::Data::Instant(end)) = event.data.as_ref() {
-        if let Some(bsmr_data::instant_event::Data::BuckconfigInputValues(input)) =
+        if let Some(bsmr_data::instant_event::Data::BsmrconfigInputValues(input)) =
             end.data.as_ref()
         {
             input
@@ -127,14 +127,14 @@ fn process_buckconfig_data(
     }
 }
 
-async fn get_external_buckconfig_dict(
+async fn get_external_bsmrconfig_dict(
     mut events: impl Stream<Item = bsmr_error::Result<StreamValue>> + Unpin + Send,
 ) -> bsmr_error::Result<(BTreeMap<String, String>, Vec<String>)> {
     let mut dict: BTreeMap<String, String> = BTreeMap::new();
     let mut order: Vec<String> = Vec::new();
     while let Some(event) = events.try_next().await? {
         if let StreamValue::Event(event) = event {
-            process_buckconfig_data(&mut dict, &mut order, &event);
+            process_bsmrconfig_data(&mut dict, &mut order, &event);
         }
     }
     Ok((dict, order))
@@ -201,7 +201,7 @@ impl Display for DiffType<'_> {
 }
 
 impl BuckSubcommand for ExternalConfigDiffCommand {
-    const COMMAND_NAME: &'static str = "log-diff-buckconfig";
+    const COMMAND_NAME: &'static str = "log-diff-bsmrconfig";
 
     async fn exec_impl(
         self,
@@ -220,15 +220,15 @@ impl BuckSubcommand for ExternalConfigDiffCommand {
         let (invocation2, events2) = log_path2.unpack_stream().await?;
 
         bsmr_client_ctx::println!(
-            "Identifying the diff of external buckconfigs between: \n{} and \n{}",
+            "Identifying the diff of external bsmrconfigs between: \n{} and \n{}",
             invocation1.display_command_line(),
             invocation2.display_command_line()
         )?;
 
-        // External buckconfigs are stored in the event log in order and can have overrides
+        // External bsmrconfigs are stored in the event log in order and can have overrides
         // We first resolve them into a single dict
-        let (dict1, order1) = get_external_buckconfig_dict(events1).await?;
-        let (dict2, order2) = get_external_buckconfig_dict(events2).await?;
+        let (dict1, order1) = get_external_bsmrconfig_dict(events1).await?;
+        let (dict2, order2) = get_external_bsmrconfig_dict(events2).await?;
         let mut diffs = Vec::new();
         for (key, value) in dict1.iter() {
             if let Some(new_value) = dict2.get(key) {

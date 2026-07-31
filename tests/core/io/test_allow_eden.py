@@ -27,7 +27,7 @@ async def _check_io_provider(buck: Buck, name: str) -> None:
 
 @buck_test(
     setup_eden=False,
-    extra_buck_config={
+    extra_bsmr_config={
         "bsmr": {
             "allow_eden_io": "false",
         }
@@ -39,7 +39,7 @@ async def test_no_eden(buck: Buck) -> None:
 
 @buck_test(
     setup_eden=False,
-    extra_buck_config={
+    extra_bsmr_config={
         "bsmr": {
             "allow_eden_io": "true",
         }
@@ -51,7 +51,7 @@ async def test_allow_eden_io_ignored_on_fs_io(buck: Buck) -> None:
 
 @buck_test(
     setup_eden=True,
-    extra_buck_config={
+    extra_bsmr_config={
         "bsmr": {
             "allow_eden_io": "false",
         }
@@ -63,7 +63,7 @@ async def test_allow_eden_io_respected(buck: Buck) -> None:
 
 @buck_test(
     setup_eden=True,
-    extra_buck_config={
+    extra_bsmr_config={
         "bsmr": {
             "allow_eden_io": "true",
         }

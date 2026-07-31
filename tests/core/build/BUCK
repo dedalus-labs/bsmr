@@ -1,4 +1,4 @@
-load("@fbcode//bsmr/tests:buck_e2e.bzl", "bsmr_core_tests")
+load("@root//tests:buck_e2e.bzl", "bsmr_core_tests")
 
 oncall("build_infra")
 
@@ -13,15 +13,15 @@ bsmr_core_tests(
         },
         "test_memory_sketches": {
             "env": {
-                "SKETCH_SIZE_BIN": "$(location fbcode//bsmr/packages/rust/setsketch:sketch_size)",
+                "SKETCH_SIZE_BIN": "$(location root//packages/rust/setsketch:sketch_size)",
             },
         },
         "test_paranoid": {
-            "data": "//bsmr/tests/targets:isolated_targets",
+            "data": "root//tests/targets:isolated_targets",
         },
         "test_uncategorized": {
             "env": {
-                "RECLI": "$(location fbsource//xplat/remote_execution/dotslash:recli)",
+                "RECLI": "$(location upstream//xplat/remote_execution/dotslash:recli)",
             },
         },
     },

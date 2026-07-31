@@ -10,11 +10,11 @@
 
 use dupe::Dupe;
 
-// TODO(nga): implement `bsmr help-buckconfig`
+// TODO(nga): implement `bsmr help-bsmrconfig`
 //   https://www.internalfb.com/tasks/?t=183528129
 #[derive(derive_more::Display, Debug, Copy, Clone, Dupe, Eq, PartialEq)]
 #[display("{}.{}", section, property)]
-pub struct BuckconfigKeyRef<'a> {
+pub struct BsmrconfigKeyRef<'a> {
     pub section: &'a str,
     pub property: &'a str,
 }

@@ -11,7 +11,7 @@
 ## Constraints
 ## config_setting
 # Match constraints
-# Match buckconfig values
+# Match bsmrconfig values
 # Combine both
 # Platform Selection
 # Target Compatibility

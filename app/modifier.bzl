@@ -12,7 +12,7 @@ def bsmr_modifiers():
     # **WARNING**: This is not vetted for correctness and should only be used in fbcode/bsmr.
     # A somewhat hacked together list of modifiers to enable mode-free builds and opt-by-default-cxx builds.
     # This currently only works for linux and mac but not for cross-building (ex. build mac from linux)
-    # - Mode-free builds: Users can use `-m opt` or `--modifier opt` instead of `@fbcode//mode/opt` to trigger builds
+    # - Mode-free builds: Users can use `-m opt` or `--modifier opt` instead of `@upstream//mode/opt` to trigger builds
     #   E2e tests build with opt bsmr by default.
     # - Opt-by-default cxx: Dev mode builds of bsmr comes with optimized, sanitizer-free cxx deps by default, making
     #   dev mode bsmr significantly more usable
@@ -22,8 +22,8 @@ def bsmr_modifiers():
     #
     # Known problems:
     # - We have to explicitly disable link groups at the moment because link group macros are supposed to only be turned
-    #   on for dev mode and it checks for this by reading the dev mode buckconfig, but the opt modifier also uses dev
-    #   mode buckconfig, and as a result the presence of link group map breaks our opt modifier build.
+    #   on for dev mode and it checks for this by reading the dev mode bsmrconfig, but the opt modifier also uses dev
+    #   mode bsmrconfig, and as a result the presence of link group map breaks our opt modifier build.
 
     return [
         modifiers.conditional({
@@ -95,7 +95,7 @@ def bsmr_modifiers():
             "DEFAULT": None,
             "ovr_config//build_mode/default_opt_cxx:enabled": modifiers.conditional({
                 "DEFAULT": None,
-                "ovr_config//runtime:fbcode": modifiers.conditional({
+                "ovr_config//runtime:bsmr": modifiers.conditional({
                     "ovr_config//cpu:arm64": "ovr_config//runtime/constraints:platform010-aarch64",
                     "ovr_config//cpu:x86_64": modifiers.conditional({
                         "DEFAULT": "ovr_config//runtime/constraints:platform010",
@@ -108,7 +108,7 @@ def bsmr_modifiers():
             "DEFAULT": None,
             "ovr_config//build_mode/default_opt_cxx:enabled": modifiers.conditional({
                 "DEFAULT": None,
-                "ovr_config//runtime:fbcode": modifiers.conditional({
+                "ovr_config//runtime:bsmr": modifiers.conditional({
                     "ovr_config//cpu:arm64": "ovr_config//cpu/constraints:nosve2",
                     "ovr_config//cpu:x86_64": "ovr_config//cpu/constraints:sve2",
                 }),

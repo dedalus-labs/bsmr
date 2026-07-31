@@ -26,9 +26,9 @@ use bsmr_error::bsmr_error;
 
 /// Expand the contents of an external cell into the repo.
 ///
-/// The contents are placed at the path you specified for this cell in your buckconfig.
+/// The contents are placed at the path you specified for this cell in your bsmrconfig.
 ///
-/// If you additionally remove the entry from the `external_cells` section of your buckconfig, you
+/// If you additionally remove the entry from the `external_cells` section of your bsmrconfig, you
 /// can edit the files directly in the repo and see those edits reflected in your build.
 ///
 /// Note that this creates a point-in-time snapshot. The files in the repo will not be updated if
@@ -85,7 +85,7 @@ impl StreamingCommand for ExpandExternalCellsCommand {
         lines.push(String::new());
         lines.push(
             "Reminder: For edits to the expanded cells to take effect on \
-your build, disable the external cells in buckconfig:\n[external_cells]"
+your build, disable the external cells in bsmrconfig:\n[external_cells]"
                 .to_owned(),
         );
         lines.extend(resp.paths.keys().map(|cell| format!("{cell} = disabled")));

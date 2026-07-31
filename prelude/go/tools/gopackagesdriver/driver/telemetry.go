@@ -19,7 +19,7 @@ import (
 
 type RequestFinishedEvent struct {
 	Duration time.Duration
-	BuckRoot string
+	BsmrRoot string
 	Request  *packages.DriverRequest
 	Patterns []string
 	// Note: Response or Error can be nil

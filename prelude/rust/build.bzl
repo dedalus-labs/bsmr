@@ -552,7 +552,7 @@ def rust_compile(
 
         if clippy_toml:
             # Clippy wants to be given a path to a directory containing a
-            # clippy.toml (or .clippy.toml). Our buckconfig accepts an arbitrary
+            # clippy.toml (or .clippy.toml). Our bsmrconfig accepts an arbitrary
             # label like //path/to:my-clippy.toml which may not have the
             # filename that clippy looks for. Here we make a directory that
             # symlinks the requested configuration file under the required name.

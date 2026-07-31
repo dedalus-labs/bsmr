@@ -75,7 +75,7 @@ Instance name                                    Platform properties            
 More information is available in the
 [repo](https://github.com/buildbarn/bb-deployments).
 
-## Relevant configs in .buckconfig
+## Relevant configs in .bsmrconfig
 
 Configure the `Buildbarn` endpoint as follows:
 

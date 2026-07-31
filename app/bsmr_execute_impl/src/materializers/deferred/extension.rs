@@ -460,7 +460,7 @@ impl<T: IoHandler> DeferredMaterializerExtensions for DeferredMaterializerAccess
     ) -> bsmr_error::Result<bsmr_cli_proto::CleanStaleResponse> {
         let dispatcher = get_dispatcher();
         let adaptive_low_disk = args.adaptive_low_disk_threshold.map(|threshold_percent| {
-            // Default min-TTL matches the buckconfig default of 12h.
+            // Default min-TTL matches the bsmrconfig default of 12h.
             let min_ttl = args
                 .adaptive_min_ttl
                 .unwrap_or_else(|| std::time::Duration::from_secs(12 * 60 * 60));

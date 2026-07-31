@@ -28,7 +28,7 @@ use bsmr_client_ctx::events_ctx::EventsCtx;
 use bsmr_client_ctx::exit_result::ExitResult;
 use bsmr_client_ctx::streaming::StreamingCommand;
 use bsmr_common::invocation_roots::InvocationRoots;
-use bsmr_common::legacy_configs::cells::BuckConfigBasedCells;
+use bsmr_common::legacy_configs::cells::BsmrConfigBasedCells;
 use bsmr_fs::working_dir::AbsWorkingDir;
 use futures::FutureExt;
 use futures::future::LocalBoxFuture;
@@ -116,7 +116,7 @@ impl StreamingCommand for CompleteTargetCommand {
 pub(crate) struct TargetCompleter<'a> {
     cwd: AbsWorkingDir,
     roots: &'a InvocationRoots,
-    cell_configs: Arc<BuckConfigBasedCells>,
+    cell_configs: Arc<BsmrConfigBasedCells>,
     target_resolver: &'a mut dyn TargetResolver,
     results: CompletionResults<'a>,
 }
@@ -128,7 +128,7 @@ impl<'a> TargetCompleter<'a> {
         target_resolver: &'a mut dyn TargetResolver,
     ) -> bsmr_error::Result<Self> {
         let cell_configs =
-            Arc::new(BuckConfigBasedCells::parse_with_config_args(&roots.project_root, &[]).await?);
+            Arc::new(BsmrConfigBasedCells::parse_with_config_args(&roots.project_root, &[]).await?);
         Ok(Self {
             cwd: cwd.to_owned(),
             roots,

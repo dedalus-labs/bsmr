@@ -181,4 +181,4 @@ For remote workers, command-line arguments must be passed via an argument file
 
 Workers can be enabled or disabled at the execution platform level via the
 `use_persistent_workers` attribute on `CommandExecutorConfig`, or globally via
-the `build.use_persistent_workers` buckconfig (defaults to `True`).
+the `build.use_persistent_workers` bsmrconfig (defaults to `True`).

@@ -17,7 +17,7 @@ from bsmr.tests.e2e_util.buck_workspace import buck_test
 
 
 @buck_test()
-async def test_buckconfig_works_in_external_cells(buck: Buck) -> None:
+async def test_bsmrconfig_works_in_external_cells(buck: Buck) -> None:
     result = await buck.audit(
         "config", "--cell", "test_bundled_cell", "user_section.key"
     )
@@ -73,10 +73,10 @@ async def test_materialize_source_directly(buck: Buck) -> None:
 @buck_test()
 async def test_expand_external_cell(buck: Buck) -> None:
     await buck.expand_external_cell("test_bundled_cell")
-    assert (buck.cwd / "test_bundled_cell" / ".buckconfig").exists()
+    assert (buck.cwd / "test_bundled_cell" / ".bsmrconfig").exists()
 
     # Remove the external cell declaration
-    (buck.cwd / ".buckconfig_no_external").replace(buck.cwd / ".buckconfig")
+    (buck.cwd / ".bsmrconfig_no_external").replace(buck.cwd / ".bsmrconfig")
     (buck.cwd / "test_bundled_cell" / "dir" / "src.txt").write_text("foobar3\n")
 
     result = await buck.build_without_report(

@@ -27,7 +27,7 @@ OCamlToolchainInfo = provider(
         # configure script
         # (https://github.com/ocaml/ocaml/blob/f27d671b23f5246d37d91571eeccb802d5399a0b/configure.ac).
         #
-        # So far I've found `fbcode//.../binutils:bin/ld` to be a choice that works.
+        # So far I've found `upstream//.../binutils:bin/ld` to be a choice that works.
         # It's in `_mk_ocaml_opt` in `ocaml.bzl` where we make use of this.
         "binutils_ld": provider_field(typing.Any, default = None),
         "binutils_as": provider_field(typing.Any, default = None),
@@ -65,7 +65,7 @@ OCamlLinkInfo = provider(
 OCamlLibraryInfo = record(
     # The library target name: e.g. "`foo`"
     name = str,
-    # The full library target: e.g. "`fbcode//...:foo`"
+    # The full library target: e.g. "`upstream//...:foo`"
     target = Label,
     # .a (C archives e.g. `libfoo_stubs.a`)
     c_libs = list[Artifact],

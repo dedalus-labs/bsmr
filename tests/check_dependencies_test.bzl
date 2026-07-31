@@ -6,9 +6,9 @@
 # of this source tree. You may select, at your option, one of the
 # above-listed licenses.
 
-load("@fbcode//bsmr/tests:buck_e2e.bzl", "bsmr_e2e_test")
+load("@root//tests:buck_e2e.bzl", "bsmr_e2e_test")
 load("@bsmr_build//rules:native_rules.bzl", "buck_genrule")
-load("@fbsource//tools/build_defs/windows:powershell.bzl", "powershell_cmd_exe")
+load("@upstream//tools/build_defs/windows:powershell.bzl", "powershell_cmd_exe")
 
 # This is meant to be Open-source friendly. In our e2e tests, we invoke a variant from
 # tools/build_defs/check_dependencies_test.bzl that passes additional arguments for meta specific allowlist.
@@ -17,7 +17,7 @@ def _check_dependencies_test(name, target, contacts, env, labels: list[str], dep
     bsmr_e2e_test(
         contacts = contacts,
         name = name,
-        srcs = {"fbcode//bsmr/tests/e2e_util:test_bxl_check_dependencies_template.py": "test_bxl_check_dependencies_template.py"},
+        srcs = {"root//tests/e2e_util:test_bxl_check_dependencies_template.py": "test_bxl_check_dependencies_template.py"},
         env = env,
         labels = labels,
         test_with_compiled_bsmr = False,
@@ -89,7 +89,7 @@ def check_dependencies_test(
         (for example, allowlist: //testing/jest/.*).
     """
 
-    bxl_main = "fbcode//bsmr/tests/check_dependencies_test.bxl:test"
+    bxl_main = "root//tests/check_dependencies_test.bxl:test"
     allowlist_patterns = ",".join(allowlist_patterns) if allowlist_patterns else ""
     blocklist_patterns = ",".join(blocklist_patterns) if blocklist_patterns else ""
     if not (expect_failure_msg == None or len(expect_failure_msg) > 0):
@@ -139,7 +139,7 @@ def check_dependencies_test(
 
 def assert_dependencies_test(name, target, contacts, expected_deps, expect_failure_msg = None, deps = None, labels = [], **kwargs):
     """
-    Creates a test target fromfbcode//bsmr/tests/assert_dependencies_test.bxl:test bxl script.
+    Creates a test target from root//tests/assert_dependencies_test.bxl:test bxl script.
 
     Parameters:
         name: Name of the test target.
@@ -152,7 +152,7 @@ def assert_dependencies_test(name, target, contacts, expected_deps, expect_failu
         target = target,
         contacts = contacts,
         env = {
-            "BXL_MAIN": "fbcode//bsmr/tests/assert_dependencies_test.bxl:test",
+            "BXL_MAIN": "root//tests/assert_dependencies_test.bxl:test",
             "DEPS": ",".join(expected_deps),
             "EXPECT_FAILURE_MSG": expect_failure_msg or "",
             "FLAVOR": "assert_dependencies_test",
@@ -182,7 +182,7 @@ def audit_dependents_test(name, target, contacts, source_target, allowlist_patte
         contacts = contacts,
         env = {
             "ALLOWLIST": ",".join(allowlist_patterns) if allowlist_patterns else "",
-            "BXL_MAIN": "fbcode//bsmr/tests/audit_dependents_test.bxl:test",
+            "BXL_MAIN": "root//tests/audit_dependents_test.bxl:test",
             "EXPECT_FAILURE_MSG": expect_failure_msg or "",
             "FLAVOR": "audit_dependents_test",
             "SOURCE_TARGET": source_target,
@@ -219,7 +219,7 @@ def check_mutually_exclusive_dependencies_test(
         target_deps: If True, only check target_deps() (default: True)
         build_mode: Optional build mode flagfile for the BXL cquery. Use this to analyze
             dependencies for a specific platform (e.g., Android) while running the test on Linux.
-            Example: "fbsource//arvr/mode/android/linux/opt"
+            Example: "upstream//arvr/mode/android/linux/opt"
     """
 
     # Convert list to comma-separated string for BXL
@@ -241,7 +241,7 @@ def check_mutually_exclusive_dependencies_test(
         contacts = contacts,
         env = {
             "BUILD_MODE_ARGFILE": build_mode_argfile,
-            "BXL_MAIN": "fbcode//bsmr/tests/check_mutually_exclusive_dependencies_test.bxl:test",
+            "BXL_MAIN": "root//tests/check_mutually_exclusive_dependencies_test.bxl:test",
             "EXPECT_FAILURE_MSG": expect_failure_msg or "",
             "FLAVOR": "check_mutually_exclusive_dependencies_test",
             "MUTUALLY_EXCLUSIVE_GROUP": group_str,

@@ -13,19 +13,19 @@ rust_binary(
     resources = select({
         "DEFAULT": {},
         "ovr_config//os:linux": {
-            "fish": "//bsmr/tools/testing/completion/verify/packages:fish",
-            "zsh": "//bsmr/tools/testing/completion/verify/packages:zsh",
+            "fish": "root//tools/testing/completion/verify/packages:fish",
+            "zsh": "root//tools/testing/completion/verify/packages:zsh",
         },
     }),
     deps = [
-        "fbsource//third-party/rust:buck-resources",
-        "fbsource//third-party/rust:clap",
-        "fbsource//third-party/rust:ptyprocess",
-        "fbsource//third-party/rust:tempfile",
-        "fbsource//third-party/rust:vt100",
+        "bsmr_build//third-party/rust:buck-resources",
+        "bsmr_build//third-party/rust:clap",
+        "bsmr_build//third-party/rust:ptyprocess",
+        "bsmr_build//third-party/rust:tempfile",
+        "bsmr_build//third-party/rust:vt100",
     ] + select({
         "DEFAULT": [],
-        "ovr_config//os:linux": ["fbsource//third-party/rust:nix"],
-        "ovr_config//os:macos": ["fbsource//third-party/rust:nix"],
+        "ovr_config//os:linux": ["bsmr_build//third-party/rust:nix"],
+        "ovr_config//os:macos": ["bsmr_build//third-party/rust:nix"],
     }),
 )

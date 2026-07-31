@@ -398,7 +398,7 @@ async def test_dep_file_hit_identical_action(buck: Buck) -> None:
     await check_no_cache_query(buck)
     # Ignoring any simple actions because there can be either one or two symlink dir actions,
     # with the same dice key,
-    # Not sure why but this feels like a DICE bug triggered by the buckconfig change.
+    # Not sure why but this feels like a DICE bug triggered by the bsmrconfig change.
     await check_execution_kind(
         buck,
         [ACTION_EXECUTION_KIND_LOCAL_ACTION_CACHE],

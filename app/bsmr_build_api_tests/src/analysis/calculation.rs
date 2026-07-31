@@ -20,7 +20,7 @@ use bsmr_build_api::interpreter::rule_defs::provider::registration::register_bui
 use bsmr_build_api::keep_going::HasKeepGoing;
 use bsmr_build_api::spawner::BuckSpawner;
 use bsmr_common::dice::data::testing::SetTestingIoProvider;
-use bsmr_common::legacy_configs::configs::LegacyBuckConfig;
+use bsmr_common::legacy_configs::configs::LegacyBsmrConfig;
 use bsmr_common::package_listing::listing::PackageListing;
 use bsmr_common::package_listing::listing::testing::PackageListingExt;
 use bsmr_configured::execution::ExecutionPlatformsKey;
@@ -78,7 +78,7 @@ async fn test_analysis_calculation() -> bsmr_error::Result<()> {
     let mut interpreter = Tester::with_cells((
         CellAliasResolver::new(CellName::testing_new("cell"), StdBuckHashMap::default())?,
         resolver.dupe(),
-        LegacyBuckConfig::empty(),
+        LegacyBsmrConfig::empty(),
         CellPathWithAllowedRelativeDir::new(CellPath::testing_new("cell//pkg"), None),
     ))?;
     interpreter.additional_globals(register_rule_function);

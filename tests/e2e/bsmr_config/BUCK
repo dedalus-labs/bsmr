@@ -1,0 +1,9 @@
+load("@root//tests:buck_e2e.bzl", "bsmr_e2e_test")
+
+oncall("build_infra")
+
+bsmr_e2e_test(
+    name = "test_bsmr_config_logging.py",
+    srcs = ["test_bsmr_config_logging.py"],
+    data_dir = "test_bsmr_config_log_data",
+)

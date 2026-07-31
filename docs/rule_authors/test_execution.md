@@ -270,7 +270,7 @@ always re-executed so that transient failures don't get stuck in the cache.
 
 When tests run locally (not on RE), listing results can still be uploaded to the
 remote action cache for other builds to benefit from. This is controlled by the
-`test.allow_cache_uploads` buckconfig:
+`test.allow_cache_uploads` bsmrconfig:
 
 ```ini
 [test]
@@ -297,9 +297,9 @@ never uploaded to the action cache.
 
 ### Configuration
 
-The following buckconfigs affect listing caching behavior:
+The following bsmrconfigs affect listing caching behavior:
 
-| Buckconfig | Effect |
+| Bsmrconfig | Effect |
 |---|---|
 | `test.remote_cache_enabled` | Controls whether the RE action cache is checked for listing results. |
 | `test.allow_cache_uploads` | Controls whether locally-executed listing results are uploaded to the RE action cache. |

@@ -57,11 +57,11 @@ def hg_config_reponame(cwd: Path) -> None:
     )
 
 
-def _setup_buckconfig_digest_algorithms(buck: Buck) -> None:
-    # The digests in `//cas_artifact:` require the buckconfig.
-    with open(buck.cwd / ".buckconfig", "a") as buckconfig:
-        buckconfig.write("[bsmr]\n")
-        buckconfig.write("digest_algorithms = BLAKE3-KEYED,SHA1\n")
+def _setup_bsmrconfig_digest_algorithms(buck: Buck) -> None:
+    # The digests in `//cas_artifact:` require the bsmrconfig.
+    with open(buck.cwd / ".bsmrconfig", "a") as bsmrconfig:
+        bsmrconfig.write("[bsmr]\n")
+        bsmrconfig.write("digest_algorithms = BLAKE3-KEYED,SHA1\n")
 
 
 # Tracing I/O not implemented for Windows.
@@ -87,7 +87,7 @@ async def test_simple_binary_build(buck: Buck) -> None:
 
 
 @buck_test(skip_for_os=["windows"])
-async def test_external_buckconfig_path_included_in_manifest(buck: Buck) -> None:
+async def test_external_bsmrconfig_path_included_in_manifest(buck: Buck) -> None:
     hg_init(cwd=buck.cwd)
 
     with NamedTemporaryFile("w") as tmp:
@@ -239,11 +239,11 @@ async def test_no_tracing_does_not_write_offline_cache_for_http_archive(
     )
 
 
-# Validate that when buckconfig use_network_action_output_cache=true is set we use the
+# Validate that when bsmrconfig use_network_action_output_cache=true is set we use the
 # offline-cache action output instead of fetching from the network.
 @buck_test(
     skip_for_os=["windows"],
-    extra_buck_config={"bsmr": {"sqlite_materializer_state": "false"}},
+    extra_bsmr_config={"bsmr": {"sqlite_materializer_state": "false"}},
 )
 @env("BUCK_LOG", "bsmr_execute_impl::materializers=trace")
 async def test_fake_offline_http_archive_uses_offline_cache(buck: Buck) -> None:
@@ -292,7 +292,7 @@ async def test_fake_offline_http_archive_uses_offline_cache(buck: Buck) -> None:
 async def test_includes_cas_artifact_in_manifest(buck: Buck) -> None:
     hg_init(cwd=buck.cwd)
 
-    _setup_buckconfig_digest_algorithms(buck)
+    _setup_bsmrconfig_digest_algorithms(buck)
 
     await buck.debug("trace-io", "enable")
     await buck.build("//cas_artifact:tree")
@@ -315,7 +315,7 @@ async def test_includes_cas_artifact_in_manifest(buck: Buck) -> None:
 async def test_no_tracing_does_not_write_offline_cache_for_cas_artifact(
     buck: Buck,
 ) -> None:
-    _setup_buckconfig_digest_algorithms(buck)
+    _setup_bsmrconfig_digest_algorithms(buck)
 
     await buck.build("//cas_artifact:tree")
     assert not os.path.exists(os.path.join(buck.cwd, "buck-out/offline-cache")), (
@@ -323,17 +323,17 @@ async def test_no_tracing_does_not_write_offline_cache_for_cas_artifact(
     )
 
 
-# Validate that when buckconfig use_network_action_output_cache=true is set we use the
+# Validate that when bsmrconfig use_network_action_output_cache=true is set we use the
 # offline-cache action output instead of fetching from the network.
 @buck_test(
     skip_for_os=["windows"],
-    extra_buck_config={"bsmr": {"sqlite_materializer_state": "false"}},
+    extra_bsmr_config={"bsmr": {"sqlite_materializer_state": "false"}},
 )
 @env("BUCK_LOG", "bsmr_execute_impl::materializers=trace")
 async def test_fake_offline_cas_artifact_uses_offline_cache(buck: Buck) -> None:
     hg_init(cwd=buck.cwd)
 
-    _setup_buckconfig_digest_algorithms(buck)
+    _setup_bsmrconfig_digest_algorithms(buck)
 
     # This should materialize the offline-cache dir.
     target = "root//cas_artifact:tree"
@@ -471,7 +471,7 @@ async def test_manifest_lists_are_sorted(buck: Buck) -> None:
 
 @buck_test(
     skip_for_os=["windows"],
-    extra_buck_config={"bsmr": {"sqlite_materializer_state": "false"}},
+    extra_bsmr_config={"bsmr": {"sqlite_materializer_state": "false"}},
 )
 @env("BUCK_LOG", "bsmr_execute_impl::materializers=trace")
 async def test_run_action_with_allow_offline_output_cache(buck: Buck) -> None:
@@ -564,7 +564,7 @@ async def test_run_action_cache_includes_in_manifest(buck: Buck) -> None:
 
 @buck_test(
     skip_for_os=["windows"],
-    extra_buck_config={"bsmr": {"sqlite_materializer_state": "false"}},
+    extra_bsmr_config={"bsmr": {"sqlite_materializer_state": "false"}},
 )
 @env("BUCK_LOG", "bsmr_execute_impl::materializers=trace")
 async def test_genrule_with_allow_offline_output_cache(buck: Buck) -> None:

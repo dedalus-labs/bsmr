@@ -43,8 +43,8 @@ const TEST_CELL: BundledCell = BundledCell {
     name: "test_bundled_cell",
     files: &[
         BundledFile {
-            path: ".buckconfig",
-            contents: include_bytes!("../test_data/.buckconfig"),
+            path: ".bsmrconfig",
+            contents: include_bytes!("../test_data/.bsmrconfig"),
             is_executable: false,
         },
         BundledFile {
@@ -100,9 +100,9 @@ mod tests {
     #[test]
     fn test_bundled_prelude_data() {
         let c = super::PRELUDE;
-        // Make sure there's a buckconfig
+        // Make sure there's a bsmrconfig
         assert!(c.files.iter().any(|file| {
-            file.path == ".buckconfig"
+            file.path == ".bsmrconfig"
                 && std::str::from_utf8(file.contents)
                     .unwrap()
                     .contains("prelude = .")

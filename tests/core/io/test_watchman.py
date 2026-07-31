@@ -220,7 +220,7 @@ async def test_watchman_restack_with_mergebase_eden(buck: Buck) -> None:
 
 @buck_test(
     setup_eden=True,
-    extra_buck_config={
+    extra_bsmr_config={
         "bsmr": {"disable_watchman_empty_on_fresh_instance": "true"},
     },
 )

@@ -37,7 +37,7 @@ fn wrong_request_type(request_type: &'static str) -> bsmr_error::Error {
 }
 
 impl ConfigOverride {
-    /// Not `fbcode//config.key=value`
+    /// Not `upstream//config.key=value`
     pub fn flag_no_cell(s: &str) -> Self {
         Self::flag(s, None)
     }

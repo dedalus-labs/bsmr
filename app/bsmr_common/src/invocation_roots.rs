@@ -28,12 +28,12 @@ use crate::invocation_paths::InvocationPaths;
 use crate::invocation_paths_result::InvocationPathsResult;
 
 #[derive(Debug, bsmr_error::Error)]
-enum BuckCliError {
+enum BsmrCliError {
     #[error(
-        "Couldn't find a buck project root for directory `{}`. Expected to find a .buckconfig file.", _0.path().display()
+        "Couldn't find a Bessemer project root for directory `{}`. Expected to find a .bsmrconfig file.", _0.path().display()
     )]
-    #[bsmr(tag = NoBuckRoot)]
-    NoBuckRoot(AbsWorkingDir),
+    #[bsmr(tag = NoBsmrRoot)]
+    NoBsmrRoot(AbsWorkingDir),
 }
 
 #[derive(Clone, Allocative)]
@@ -63,19 +63,19 @@ impl InvocationRoots {
 /// Finds the project root.
 ///
 /// This uses a rather liberal definition of "roots". It traverses the directory and its parents
-/// looking for all .buckconfig files and the furthest one (with the shortest path) will be detected
+/// looking for all .bsmrconfig files and the furthest one (with the shortest path) will be detected
 /// as the "project root".
 ///
-/// We also look for .buckroot files, and if we find one of them, we don't traverse further upwards.
-/// The contents of the .buckroot file is entirely ignored.
+/// We also look for .bsmrroot files, and if we find one of them, we don't traverse further upwards.
+/// The contents of the .bsmrroot file is entirely ignored.
 fn get_roots(from: &AbsWorkingDir) -> bsmr_error::Result<Option<InvocationRoots>> {
     let mut project_root = None;
 
     let home_dir = dirs::home_dir();
     for curr in from.path().ancestors() {
-        if fs_util::try_exists(curr.join(FileName::unchecked_new(".buckconfig")))? {
+        if fs_util::try_exists(curr.join(FileName::unchecked_new(".bsmrconfig")))? {
             // Do not allow /home/{unixname}, /home or / to be a cell,
-            // and /home/{unixname}/.buckconfig is used for config override
+            // and /home/{unixname}/.bsmrconfig is used for config override
             if let Some(home_dir_path) = &home_dir {
                 if home_dir_path == curr.as_path() {
                     break;
@@ -84,7 +84,7 @@ fn get_roots(from: &AbsWorkingDir) -> bsmr_error::Result<Option<InvocationRoots>
             project_root = Some(curr.to_owned());
         }
 
-        if fs_util::try_exists(curr.join(FileName::unchecked_new(".buckroot")))? {
+        if fs_util::try_exists(curr.join(FileName::unchecked_new(".bsmrroot")))? {
             break;
         }
     }
@@ -107,7 +107,7 @@ fn get_roots(from: &AbsWorkingDir) -> bsmr_error::Result<Option<InvocationRoots>
 }
 
 pub fn find_invocation_roots(from: &AbsWorkingDir) -> bsmr_error::Result<InvocationRoots> {
-    get_roots(from)?.ok_or_else(|| BuckCliError::NoBuckRoot(from.to_owned()).into())
+    get_roots(from)?.ok_or_else(|| BsmrCliError::NoBsmrRoot(from.to_owned()).into())
 }
 
 pub fn get_invocation_paths_result(
@@ -117,7 +117,7 @@ pub fn get_invocation_paths_result(
     match get_roots(from) {
         Ok(Some(roots)) => InvocationPathsResult::Paths(InvocationPaths { roots, isolation }),
         Ok(None) => {
-            InvocationPathsResult::OutsideOfRepo(BuckCliError::NoBuckRoot(from.to_owned()).into())
+            InvocationPathsResult::OutsideOfRepo(BsmrCliError::NoBsmrRoot(from.to_owned()).into())
         }
         Err(e) => InvocationPathsResult::OtherError(e),
     }

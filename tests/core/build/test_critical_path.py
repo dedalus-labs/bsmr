@@ -83,7 +83,7 @@ async def do_critical_path(buck: Buck) -> None:
 
 @buck_test()
 async def test_critical_path_longest_path_graph(buck: Buck) -> None:
-    with open(buck.cwd / ".buckconfig", "a") as f:
+    with open(buck.cwd / ".bsmrconfig", "a") as f:
         f.write("[bsmr]\n")
         f.write("critical_path_backend2 = longest-path-graph\n")
     await do_critical_path(buck)
@@ -158,7 +158,7 @@ async def test_critical_path_json(buck: Buck) -> None:
 # only inspecting the final critical path output (like other tests).
 @buck_test()
 async def test_dynamic_input_events(buck: Buck) -> None:
-    with open(buck.cwd / ".buckconfig", "a") as f:
+    with open(buck.cwd / ".bsmrconfig", "a") as f:
         f.write("[bsmr]\n")
         f.write("critical_path_backend2 = logging\n")
 
@@ -417,7 +417,7 @@ async def test_critical_path_test_entries(buck: Buck) -> None:
 # still not be just BuildKey -- it should include the analysis that produces the tset.
 @buck_test()
 async def test_critical_path_tset_final_materialization(buck: Buck) -> None:
-    with open(buck.cwd / ".buckconfig", "a") as f:
+    with open(buck.cwd / ".bsmrconfig", "a") as f:
         f.write("[bsmr]\n")
         f.write("critical_path_backend2 = logging\n")
 

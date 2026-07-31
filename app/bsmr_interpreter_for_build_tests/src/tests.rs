@@ -13,7 +13,7 @@ use std::sync::Arc;
 use bsmr_common::dice::cells::SetCellResolver;
 use bsmr_common::dice::data::testing::SetTestingIoProvider;
 use bsmr_common::file_ops::io::initialize_read_dir_cache;
-use bsmr_common::legacy_configs::cells::ExternalBuckconfigData;
+use bsmr_common::legacy_configs::cells::ExternalBsmrconfigData;
 use bsmr_common::legacy_configs::dice::SetLegacyConfigs;
 use bsmr_core::bzl::ImportPath;
 use bsmr_core::cells::CellResolver;
@@ -73,7 +73,7 @@ pub(crate) async fn calculation(fs: &ProjectRootTemp) -> DiceTransaction {
         .unwrap(),
     )
     .unwrap();
-    ctx.set_legacy_config_external_data(ExternalBuckconfigData::testing_default())
+    ctx.set_legacy_config_external_data(ExternalBsmrconfigData::testing_default())
         .unwrap();
     ctx.set_starlark_profiler_configuration(StarlarkProfilerConfiguration::default())
         .unwrap();

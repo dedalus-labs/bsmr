@@ -165,7 +165,7 @@ fn audit_methods(builder: &mut MethodsBuilder) {
         })?)
     }
 
-    /// Query information about the [cells] list in .buckconfig.
+    /// Query information about the [cells] list in .bsmrconfig.
     ///
     /// Takes the following parameters:
     /// * `aliases_to_resolve` - list of cell aliases to query. These aliases will be resolved in the root cell of the BXL script.

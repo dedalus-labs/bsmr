@@ -92,7 +92,7 @@ async def test_re_use_case_override_with_config(buck: Buck) -> None:
     # Change the target input
     with open(buck.cwd / "input.txt", "w") as f:
         f.write(random_string())
-    with open(buck.cwd / ".buckconfig.local", "w") as f:
+    with open(buck.cwd / ".bsmrconfig.local", "w") as f:
         f.write("[bsmr_re_client]\n")
         f.write("override_use_case = bsmr-user\n")
     await buck.build(

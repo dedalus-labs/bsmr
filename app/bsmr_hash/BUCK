@@ -6,9 +6,9 @@ rust_library(
     name = "bsmr_hash",
     srcs = glob(["src/**/*.rs"]),
     deps = [
-        "fbsource//third-party/rust:dashmap",
-        "fbsource//third-party/rust:fxhash",
-        "fbsource//third-party/rust:indexmap",
-        "//bsmr/packages/rust/gazebo/dupe:dupe",
+        "bsmr_build//third-party/rust:dashmap",
+        "bsmr_build//third-party/rust:fxhash",
+        "bsmr_build//third-party/rust:indexmap",
+        "root//packages/rust/gazebo/dupe:dupe",
     ],
 )

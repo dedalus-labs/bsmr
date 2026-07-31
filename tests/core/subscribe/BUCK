@@ -1,4 +1,4 @@
-load("@fbcode//bsmr/tests:buck_e2e.bzl", "bsmr_core_tests")
+load("@root//tests:buck_e2e.bzl", "bsmr_core_tests")
 
 oncall("build_infra")
 
@@ -6,7 +6,7 @@ bsmr_core_tests(
     target_extra_attrs = {
         "test_subscribe": {
             "env": {
-                "BSMR_EXPECT": "$(exe_target fbcode//bsmr/tests/core/subscribe/bsmr_expect:bsmr_expect)",
+                "BSMR_EXPECT": "$(exe_target root//tests/core/subscribe/bsmr_expect:bsmr_expect)",
             },
         },
     },

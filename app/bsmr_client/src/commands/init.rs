@@ -122,55 +122,53 @@ fn exec_impl(
     set_up_project(&absolute, git, !cmd.no_prelude)
 }
 
-fn initialize_buckconfig(repo_root: &AbsPath, prelude: bool, git: bool) -> bsmr_error::Result<()> {
-    let mut buckconfig = std::fs::File::create(repo_root.join(".buckconfig"))?;
-    writeln!(buckconfig, "[cells]")?;
-    writeln!(buckconfig, "  root = .")?;
+fn initialize_bsmrconfig(repo_root: &AbsPath, prelude: bool, git: bool) -> bsmr_error::Result<()> {
+    let mut bsmrconfig = std::fs::File::create(repo_root.join(".bsmrconfig"))?;
+    writeln!(bsmrconfig, "[cells]")?;
+    writeln!(bsmrconfig, "  root = .")?;
 
     // Add additional configs that depend on prelude / no-prelude mode
     if prelude {
-        writeln!(buckconfig, "  prelude = prelude")?;
-        writeln!(buckconfig, "  toolchains = toolchains")?;
-        writeln!(buckconfig, "  none = none")?;
-        writeln!(buckconfig)?;
-        writeln!(buckconfig, "[cell_aliases]")?;
-        writeln!(buckconfig, "  config = prelude")?;
-        writeln!(buckconfig, "  ovr_config = prelude")?;
-        writeln!(buckconfig, "  fbcode = none")?;
-        writeln!(buckconfig, "  fbsource = none")?;
-        writeln!(buckconfig, "  fbcode_macros = none")?;
-        writeln!(buckconfig, "  buck = none")?;
-        writeln!(buckconfig)?;
+        writeln!(bsmrconfig, "  prelude = prelude")?;
+        writeln!(bsmrconfig, "  toolchains = toolchains")?;
+        writeln!(bsmrconfig, "  none = none")?;
+        writeln!(bsmrconfig)?;
+        writeln!(bsmrconfig, "[cell_aliases]")?;
+        writeln!(bsmrconfig, "  config = prelude")?;
+        writeln!(bsmrconfig, "  ovr_config = prelude")?;
+        writeln!(bsmrconfig, "  buck = none")?;
+        writeln!(bsmrconfig, "  upstream = none")?;
+        writeln!(bsmrconfig)?;
         writeln!(
-            buckconfig,
+            bsmrconfig,
             "# Uses a copy of the prelude bundled with the bsmr binary. You can alternatively delete this"
         )?;
         writeln!(
-            buckconfig,
+            bsmrconfig,
             "# section and vendor a copy of the prelude to the `prelude` directory of your project."
         )?;
-        writeln!(buckconfig, "[external_cells]")?;
-        writeln!(buckconfig, "  prelude = bundled")?;
-        writeln!(buckconfig)?;
-        writeln!(buckconfig, "[parser]")?;
+        writeln!(bsmrconfig, "[external_cells]")?;
+        writeln!(bsmrconfig, "  prelude = bundled")?;
+        writeln!(bsmrconfig)?;
+        writeln!(bsmrconfig, "[parser]")?;
         writeln!(
-            buckconfig,
+            bsmrconfig,
             "  target_platform_detector_spec = target:root//...->prelude//platforms:default \\
     target:prelude//...->prelude//platforms:default \\
     target:toolchains//...->prelude//platforms:default"
         )?;
-        writeln!(buckconfig)?;
-        writeln!(buckconfig, "[build]")?;
+        writeln!(bsmrconfig)?;
+        writeln!(bsmrconfig, "[build]")?;
         writeln!(
-            buckconfig,
+            bsmrconfig,
             "  execution_platforms = prelude//platforms:default"
         )?;
     }
 
     if git {
-        writeln!(buckconfig)?;
-        writeln!(buckconfig, "[project]")?;
-        writeln!(buckconfig, "  ignore = .git")?;
+        writeln!(bsmrconfig)?;
+        writeln!(bsmrconfig, "[project]")?;
+        writeln!(bsmrconfig, "  ignore = .git")?;
     }
     Ok(())
 }
@@ -218,13 +216,13 @@ fn set_up_gitignore(repo_root: &AbsPath) -> bsmr_error::Result<()> {
     Ok(())
 }
 
-fn set_up_buckroot(repo_root: &AbsPath) -> bsmr_error::Result<()> {
-    fs_util::write(repo_root.join(".buckroot"), "").categorize_internal()?;
+fn set_up_bsmrroot(repo_root: &AbsPath) -> bsmr_error::Result<()> {
+    fs_util::write(repo_root.join(".bsmrroot"), "").categorize_internal()?;
     Ok(())
 }
 
 fn set_up_project(repo_root: &AbsPath, git: bool, prelude: bool) -> bsmr_error::Result<()> {
-    set_up_buckroot(repo_root)?;
+    set_up_bsmrroot(repo_root)?;
 
     if git {
         if !background_command("git")
@@ -241,15 +239,15 @@ fn set_up_project(repo_root: &AbsPath, git: bool, prelude: bool) -> bsmr_error::
         set_up_gitignore(repo_root)?;
     }
 
-    // If the project already contains a .buckconfig, leave it alone
-    if repo_root.join(".buckconfig").exists() {
+    // If the project already contains a .bsmrconfig, leave it alone
+    if repo_root.join(".bsmrconfig").exists() {
         bsmr_client_ctx::println!(
-            ".buckconfig already exists, not overwriting and not generating toolchains"
+            ".bsmrconfig already exists, not overwriting and not generating toolchains"
         )?;
         return Ok(());
     }
 
-    initialize_buckconfig(repo_root, prelude, git)?;
+    initialize_bsmrconfig(repo_root, prelude, git)?;
     if prelude {
         let toolchains = repo_root.join("toolchains");
         if !toolchains.exists() {
@@ -268,7 +266,7 @@ mod tests {
     use bsmr_fs::fs_util::uncategorized as fs_util;
     use bsmr_fs::paths::abs_path::AbsPath;
 
-    use crate::commands::init::initialize_buckconfig;
+    use crate::commands::init::initialize_bsmrconfig;
     use crate::commands::init::initialize_root_buck;
     use crate::commands::init::set_up_gitignore;
     use crate::commands::init::set_up_project;
@@ -282,7 +280,7 @@ mod tests {
 
         // no git, with prelude
         set_up_project(tempdir_path, false, true)?;
-        assert!(tempdir_path.join(".buckconfig").exists());
+        assert!(tempdir_path.join(".bsmrconfig").exists());
         assert!(tempdir_path.join("toolchains").exists());
         assert!(tempdir_path.join("toolchains/BUCK").exists());
         assert!(tempdir_path.join("BUCK").exists());
@@ -304,14 +302,14 @@ mod tests {
         let expected = "/buck-out\n";
         assert_eq!(actual, expected);
 
-        // If an empty .buckconfig exists (this is the case we would hit after running `git init`), add `buck-out`
+        // If an empty .bsmrconfig exists (this is the case we would hit after running `git init`), add `buck-out`
         fs_util::write(&gitignore_path, "")?;
         set_up_gitignore(tempdir_path)?;
         assert!(gitignore_path.exists());
         let actual = fs_util::read_to_string(&gitignore_path)?;
         assert_eq!(actual, expected);
 
-        // If a non-empty.buckconfig exists, don't touch it
+        // If a non-empty.bsmrconfig exists, don't touch it
         fs_util::write(&gitignore_path, "foo\nbar\n")?;
         set_up_gitignore(tempdir_path)?;
         assert!(gitignore_path.exists());
@@ -322,16 +320,16 @@ mod tests {
     }
 
     #[test]
-    fn test_buckconfig_generation_with_prelude() -> bsmr_error::Result<()> {
+    fn test_bsmrconfig_generation_with_prelude() -> bsmr_error::Result<()> {
         let tempdir = tempfile::tempdir()?;
         let tempdir_path = tempdir.path();
         let tempdir_path = AbsPath::new(tempdir_path)?;
         fs_util::create_dir_all(tempdir_path)?;
 
-        let buckconfig_path = tempdir_path.join(".buckconfig");
-        initialize_buckconfig(tempdir_path, true, true)?;
-        let actual_buckconfig = fs_util::read_to_string(buckconfig_path)?;
-        let expected_buckconfig = "[cells]
+        let bsmrconfig_path = tempdir_path.join(".bsmrconfig");
+        initialize_bsmrconfig(tempdir_path, true, true)?;
+        let actual_bsmrconfig = fs_util::read_to_string(bsmrconfig_path)?;
+        let expected_bsmrconfig = "[cells]
   root = .
   prelude = prelude
   toolchains = toolchains
@@ -340,10 +338,8 @@ mod tests {
 [cell_aliases]
   config = prelude
   ovr_config = prelude
-  fbcode = none
-  fbsource = none
-  fbcode_macros = none
   buck = none
+  upstream = none
 
 # Uses a copy of the prelude bundled with the bsmr binary. You can alternatively delete this
 # section and vendor a copy of the prelude to the `prelude` directory of your project.
@@ -361,24 +357,24 @@ mod tests {
 [project]
   ignore = .git
 ";
-        assert_eq!(actual_buckconfig, expected_buckconfig);
+        assert_eq!(actual_bsmrconfig, expected_bsmrconfig);
         Ok(())
     }
 
     #[test]
-    fn test_buckconfig_generation_without_prelude() -> bsmr_error::Result<()> {
+    fn test_bsmrconfig_generation_without_prelude() -> bsmr_error::Result<()> {
         let tempdir = tempfile::tempdir()?;
         let tempdir_path = tempdir.path();
         let tempdir_path = AbsPath::new(tempdir_path)?;
         fs_util::create_dir_all(tempdir_path)?;
 
-        let buckconfig_path = tempdir_path.join(".buckconfig");
-        initialize_buckconfig(tempdir_path, false, false)?;
-        let actual_buckconfig = fs_util::read_to_string(buckconfig_path)?;
-        let expected_buckconfig = "[cells]
+        let bsmrconfig_path = tempdir_path.join(".bsmrconfig");
+        initialize_bsmrconfig(tempdir_path, false, false)?;
+        let actual_bsmrconfig = fs_util::read_to_string(bsmrconfig_path)?;
+        let expected_bsmrconfig = "[cells]
   root = .
 ";
-        assert_eq!(actual_buckconfig, expected_buckconfig);
+        assert_eq!(actual_bsmrconfig, expected_bsmrconfig);
 
         Ok(())
     }

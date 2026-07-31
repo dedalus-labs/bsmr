@@ -6,11 +6,11 @@ rust_library(
     name = "bsmr_miniperf_proto",
     srcs = glob(["src/**/*.rs"]),
     test_deps = [
-        "fbsource//third-party/rust:bincode",
+        "bsmr_build//third-party/rust:bincode",
     ],
     deps = [
-        "fbsource//third-party/rust:serde",
-        "//bsmr/app/bsmr_data:bsmr_data",
-        "//bsmr/packages/rust/gazebo/dupe:dupe",
+        "bsmr_build//third-party/rust:serde",
+        "root//app/bsmr_data:bsmr_data",
+        "root//packages/rust/gazebo/dupe:dupe",
     ],
 )

@@ -23,7 +23,7 @@ from bsmr.tests.e2e_util.buck_workspace import buck_test
 # FIXME(JakobDegen): Give these tests their own data dir, instead of sharing one
 
 # TODO(T184317763): either those tests are flaky or paranoid mode is broken,
-# to repro uncomment and run `bsmr test '@fbcode//mode/opt-asan' fbcode//bsmr/tests/e2e/build:test_paranoid -- --exact 'bsmr/tests/e2e/build:test_paranoid - test_paranoid.py::test_paranoid_allows_fallback_after_re_failure' --run-disabled`
+# to repro uncomment and run `bsmr test '@upstream//mode/opt-asan' root//tests/e2e/build:test_paranoid -- --exact 'bsmr/tests/e2e/build:test_paranoid - test_paranoid.py::test_paranoid_allows_fallback_after_re_failure' --run-disabled`
 # @buck_test(
 #     data_dir="execution_platforms",
 #     skip_for_os=["windows"],
@@ -85,7 +85,7 @@ async def test_paranoid_ignores_preferences(
 
 
 # TODO(T184317763): either those tests are flaky or paranoid mode is broken,
-# to repro uncomment and run `bsmr test '@fbcode//mode/opt-asan' fbcode//bsmr/tests/e2e/build:test_paranoid -- --exact 'bsmr/tests/e2e/build:test_paranoid - test_paranoid.py::test_paranoid_forces_fallback_on_failure' --run-disabled`
+# to repro uncomment and run `bsmr test '@upstream//mode/opt-asan' root//tests/e2e/build:test_paranoid -- --exact 'bsmr/tests/e2e/build:test_paranoid - test_paranoid.py::test_paranoid_forces_fallback_on_failure' --run-disabled`
 # @buck_test(
 #     data_dir="execution_platforms",
 #     skip_for_os=["windows"],

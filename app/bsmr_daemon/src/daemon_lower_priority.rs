@@ -13,7 +13,7 @@ use bsmr_error::conversion::from_any_with_tag;
 
 /// macOS QoS (Quality of Service) class for the Bessemer daemon process.
 ///
-/// Configurable via `[bsmr] macos_qos_class` in buckconfig.
+/// Configurable via `[bsmr] macos_qos_class` in bsmrconfig.
 /// Defaults to `Utility` if unset.
 ///
 /// Only `utility` and `background` are supported by
@@ -31,7 +31,7 @@ enum MacosQosClass {
 }
 
 impl MacosQosClass {
-    /// Parse a QoS class from a buckconfig string value.
+    /// Parse a QoS class from a bsmrconfig string value.
     ///
     /// Valid values: `utility`, `background`, `skip_lowering`.
     fn from_config(s: &str) -> bsmr_error::Result<Self> {

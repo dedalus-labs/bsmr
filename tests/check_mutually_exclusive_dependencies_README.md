@@ -13,19 +13,19 @@ Add this to your BUCK file:
 
 ```python
 load(
-    "@fbsource//tools/build_defs:check_dependencies_test.bzl",
+    "@upstream//tools/build_defs:check_dependencies_test.bzl",
     "check_mutually_exclusive_dependencies_test",
 )
 
 check_mutually_exclusive_dependencies_test(
     name = "no_conflicting_volk_deps",
-    target = "fbsource//your/target:name",
+    target = "upstream//your/target:name",
     contacts = ["your-oncall@xmail.facebook.com"],
     mutually_exclusive_group = [
         # Only one of these should be present in the dependency tree
-        "fbsource//third-party/volk:volk",
-        "fbsource//third-party/volk:volk-header",
-        "fbsource//third-party/toolchains:vulkan",
+        "upstream//third-party/volk:volk",
+        "upstream//third-party/volk:volk-header",
+        "upstream//third-party/toolchains:vulkan",
     ],
 )
 ```
@@ -37,15 +37,15 @@ Each pattern in the group can be a specific target or a regex pattern:
 ```python
 check_mutually_exclusive_dependencies_test(
     name = "no_mixed_dependencies",
-    target = "fbsource//your/target:name",
+    target = "upstream//your/target:name",
     contacts = ["your-oncall@xmail.facebook.com"],
     mutually_exclusive_group = [
         # Match specific targets
-        "fbsource//third-party/lib-v1:specific_target",
+        "upstream//third-party/lib-v1:specific_target",
         # Use regex to match multiple targets
-        "fbsource//third-party/lib-v2:.*",
+        "upstream//third-party/lib-v2:.*",
         # Another regex pattern
-        "fbsource//third-party/lib-v3/.*",
+        "upstream//third-party/lib-v3/.*",
     ],
 )
 ```

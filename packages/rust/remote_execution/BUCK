@@ -2,8 +2,8 @@ load("@bsmr_build//rules:native_rules.bzl", "alias")
 
 oncall("build_infra")
 
-# @oss-disable[end= ]: actual = "//bsmr/packages/rust/remote_execution/internal:remote_execution"
-actual = "//bsmr/packages/rust/remote_execution/oss/re_grpc:remote_execution" # @oss-enable
+# @oss-disable[end= ]: actual = "root//packages/rust/remote_execution/internal:remote_execution"
+actual = "root//packages/rust/remote_execution/oss/re_grpc:remote_execution" # @oss-enable
 
 alias(
     name = "remote_execution",

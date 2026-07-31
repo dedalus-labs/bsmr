@@ -11,7 +11,7 @@
 use std::sync::Arc;
 
 use allocative::Allocative;
-use bsmr_common::legacy_configs::configs::LegacyBuckConfig;
+use bsmr_common::legacy_configs::configs::LegacyBsmrConfig;
 use bsmr_common::legacy_configs::configs::testing::parse_with_config_args;
 use bsmr_common::package_listing::listing::PackageListing;
 use bsmr_common::package_listing::listing::testing::PackageListingExt;
@@ -47,7 +47,7 @@ use pagable::PagablePanic;
 use pagable::pagable_typetag;
 use starlark::environment::GlobalsBuilder;
 
-use crate::interpreter::buckconfig::LegacyConfigsViewForStarlark;
+use crate::interpreter::bsmrconfig::LegacyConfigsViewForStarlark;
 use crate::interpreter::cell_info::InterpreterCellInfo;
 use crate::interpreter::configuror::AdditionalGlobalsFn;
 use crate::interpreter::configuror::AdditionalGlobalsFnDyn;
@@ -72,7 +72,7 @@ use crate::super_package::package_value::SuperPackageValuesImpl;
 pub struct Tester {
     cell_alias_resolver: CellAliasResolver,
     cell_resolver: CellResolver,
-    root_config: LegacyBuckConfig,
+    root_config: LegacyBsmrConfig,
     loaded_modules: LoadedModules,
     additional_globals: Vec<AdditionalGlobalsFn>,
     prelude_path: Option<PreludePath>,
@@ -83,7 +83,7 @@ pub struct Tester {
 pub type CellsData = (
     CellAliasResolver,
     CellResolver,
-    LegacyBuckConfig,
+    LegacyBsmrConfig,
     CellPathWithAllowedRelativeDir,
 );
 
@@ -267,12 +267,12 @@ impl Tester {
             interpreter.parse(StarlarkPath::LoadFile(path), content.to_owned())??;
         let provider =
             StarlarkEvaluatorProvider::passthrough(StarlarkEvalKind::Unknown("testing".into()));
-        let mut buckconfigs =
+        let mut bsmrconfigs =
             LegacyConfigsViewForStarlark::new(self.root_config.dupe(), self.root_config.dupe());
 
         let env = interpreter.eval_module(
             StarlarkModulePath::LoadFile(path),
-            &mut buckconfigs,
+            &mut bsmrconfigs,
             ast,
             loaded_modules.clone(),
             provider,
@@ -315,11 +315,11 @@ impl Tester {
             interpreter.parse(StarlarkPath::BuildFile(path), content.to_owned())??;
         let provider =
             StarlarkEvaluatorProvider::passthrough(StarlarkEvalKind::Unknown("testing".into()));
-        let mut buckconfigs =
+        let mut bsmrconfigs =
             LegacyConfigsViewForStarlark::new(self.root_config.dupe(), self.root_config.dupe());
         let (_finished_eval, eval_result_with_stats) = interpreter.eval_build_file(
             path,
-            &mut buckconfigs,
+            &mut bsmrconfigs,
             package_listing,
             SuperPackage::empty::<SuperPackageValuesImpl>()?,
             false,

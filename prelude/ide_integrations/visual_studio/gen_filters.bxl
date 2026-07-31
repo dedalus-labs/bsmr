@@ -133,10 +133,10 @@ def _main(bxl_ctx):
         filters_artifact = filters_artifact,
         target = target_node,
         cli_args = bxl_ctx.cli_args,
-        buck_root = bxl_ctx.root(),
+        bsmr_root = bxl_ctx.root(),
     ):
         attrs_input = artifacts[attrs_outfile].read_json()
-        vs_settings = get_vs_settings(target, toolchain, attrs_input, {}, cli_args, buck_root, ctx)
+        vs_settings = get_vs_settings(target, toolchain, attrs_input, {}, cli_args, bsmr_root, ctx)
         content = gen_filters(vs_settings)
         ctx.bxl_actions().actions.write(outputs[filters_artifact].as_output(), content, allow_args = True)
 
@@ -157,7 +157,7 @@ main = bxl_main(
         "extra_buck_options": cli_args.list(cli_args.string(), default = []),
         "immediate_buck_options": cli_args.list(cli_args.string(), default = []),
         "log_level": cli_args.int(default = 30),
-        "mode_files": cli_args.list(cli_args.string(), default = ["fbsource//arvr/mode/win/dev"]),
+        "mode_files": cli_args.list(cli_args.string(), default = ["upstream//arvr/mode/win/dev"]),
         "mode_hashes": cli_args.option(cli_args.json()),  # mode => configuration hash.
         "target": cli_args.target_label(),
     },

@@ -25,8 +25,8 @@ use bsmr_build_signals::node_key::BuildSignalsNodeKeyImpl;
 use bsmr_common::dice::cells::HasCellResolver;
 use bsmr_common::dice::cycles::CycleGuard;
 use bsmr_common::legacy_configs::dice::HasLegacyConfigs;
-use bsmr_common::legacy_configs::key::BuckconfigKeyRef;
-use bsmr_common::legacy_configs::view::LegacyBuckConfigView;
+use bsmr_common::legacy_configs::key::BsmrconfigKeyRef;
+use bsmr_common::legacy_configs::view::LegacyBsmrConfigView;
 use bsmr_core::configuration::compatibility::IncompatiblePlatformReason;
 use bsmr_core::configuration::compatibility::IncompatiblePlatformReasonCause;
 use bsmr_core::configuration::compatibility::MaybeCompatible;
@@ -1342,7 +1342,7 @@ async fn check_target_enabled_for_config(
             let root_conf = ctx.get_legacy_root_config_on_dice().await?;
             let patterns: Vec<String> = root_conf
                 .view(ctx)
-                .parse_list(BuckconfigKeyRef {
+                .parse_list(BsmrconfigKeyRef {
                     section: &self.section,
                     property: &self.property,
                 })?
@@ -1408,7 +1408,7 @@ async fn get_dep_only_incompatible_custom_soft_error(
             let root_cell = cell_resolver.root_cell();
             let alias_resolver = ctx.get_cell_alias_resolver(root_cell).await?;
             let root_conf = ctx.get_legacy_root_config_on_dice().await?;
-            let Some(target) = root_conf.view(ctx).parse::<String>(BuckconfigKeyRef {
+            let Some(target) = root_conf.view(ctx).parse::<String>(BsmrconfigKeyRef {
                 section: "bsmr",
                 property: "dep_only_incompatible_info",
             })?

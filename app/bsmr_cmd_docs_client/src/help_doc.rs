@@ -19,7 +19,7 @@ use regex::Regex;
 const COMMON_OPTION_HEADINGS: &[&str] = &[
     "Universal Options",
     "Event Log Options",
-    "Buckconfig Options",
+    "Bsmrconfig Options",
     "Console Options",
 ];
 

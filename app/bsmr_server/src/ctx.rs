@@ -52,11 +52,11 @@ use bsmr_common::file_ops::io::initialize_read_dir_cache;
 use bsmr_common::http::SetHttpClient;
 use bsmr_common::invocation_paths::InvocationPaths;
 use bsmr_common::io::trace::TracingIoProvider;
-use bsmr_common::legacy_configs::cells::BuckConfigBasedCells;
-use bsmr_common::legacy_configs::configs::LegacyBuckConfig;
+use bsmr_common::legacy_configs::cells::BsmrConfigBasedCells;
+use bsmr_common::legacy_configs::configs::LegacyBsmrConfig;
 use bsmr_common::legacy_configs::dice::HasInjectedLegacyConfigs;
 use bsmr_common::legacy_configs::file_ops::ConfigPath;
-use bsmr_common::legacy_configs::key::BuckconfigKeyRef;
+use bsmr_common::legacy_configs::key::BsmrconfigKeyRef;
 use bsmr_configured::cycle::ConfiguredGraphCycleDescriptor;
 use bsmr_core::execution_types::executor_config::CommandExecutorConfig;
 use bsmr_core::execution_types::executor_config::RemoteExecutorUseCase;
@@ -486,8 +486,8 @@ impl ServerCommandContext<'_> {
     async fn load_new_configs(
         &self,
         dice_ctx: &mut DiceComputations<'_>,
-    ) -> bsmr_error::Result<BuckConfigBasedCells> {
-        let new_configs = BuckConfigBasedCells::parse_with_config_args(
+    ) -> bsmr_error::Result<BsmrConfigBasedCells> {
+        let new_configs = BsmrConfigBasedCells::parse_with_config_args(
             &self.base_context.project_root,
             &self.config_overrides,
         )
@@ -496,7 +496,7 @@ impl ServerCommandContext<'_> {
         self.report_traced_config_paths(&new_configs.config_paths)?;
         if self.reuse_current_config {
             if dice_ctx
-                .is_injected_external_buckconfig_data_key_set()
+                .is_injected_external_bsmrconfig_data_key_set()
                 .await?
             {
                 if !self.config_overrides.is_empty() {
@@ -517,11 +517,11 @@ impl ServerCommandContext<'_> {
                 }
                 // If `--reuse-current-config` is set, use the external config data from the
                 // previous command.
-                Ok(BuckConfigBasedCells {
+                Ok(BsmrConfigBasedCells {
                     cell_resolver: new_configs.cell_resolver,
                     root_config: new_configs.root_config,
                     config_paths: StdBuckHashSet::default(),
-                    external_data: (*dice_ctx.get_injected_external_buckconfig_data().await?)
+                    external_data: (*dice_ctx.get_injected_external_bsmrconfig_data().await?)
                         .clone(),
                 })
             } else {
@@ -597,7 +597,7 @@ impl DiceUpdater for DiceCommandUpdater<'_, '_> {
         let existing_state = &mut ctx.existing_state().await.clone();
         let cells_and_configs = self.cmd_ctx.load_new_configs(existing_state).await?;
 
-        // Validate agent context against buckconfig schema if entries were provided.
+        // Validate agent context against bsmrconfig schema if entries were provided.
         if !self.cmd_ctx.agent_context.is_empty() {
             let schema = AgentContextSchema::from_config(&cells_and_configs.root_config);
             validate_agent_context(
@@ -673,10 +673,10 @@ impl DiceUpdater for DiceCommandUpdater<'_, '_> {
 impl DiceCommandUpdater<'_, '_> {
     fn make_user_computation_data(
         &self,
-        root_config: &LegacyBuckConfig,
+        root_config: &LegacyBsmrConfig,
     ) -> bsmr_error::Result<UserComputationData> {
         let config_threads = root_config
-            .parse(BuckconfigKeyRef {
+            .parse(BsmrconfigKeyRef {
                 section: "build",
                 property: "threads",
             })?
@@ -687,7 +687,7 @@ impl DiceCommandUpdater<'_, '_> {
             .or_else(|| parse_concurrency(config_threads))
             .unwrap_or_else(bsmr_util::threads::available_parallelism_fresh);
 
-        if let Some(max_lines) = root_config.parse(BuckconfigKeyRef {
+        if let Some(max_lines) = root_config.parse(BsmrconfigKeyRef {
             section: "ui",
             property: "thread_line_limit",
         })? {
@@ -697,7 +697,7 @@ impl DiceCommandUpdater<'_, '_> {
         }
 
         let enable_miniperf = root_config
-            .parse::<RolloutPercentage>(BuckconfigKeyRef {
+            .parse::<RolloutPercentage>(BsmrconfigKeyRef {
                 section: "bsmr",
                 property: "miniperf2",
             })?
@@ -705,7 +705,7 @@ impl DiceCommandUpdater<'_, '_> {
             .roll();
 
         let log_action_keys = root_config
-            .parse::<RolloutPercentage>(BuckconfigKeyRef {
+            .parse::<RolloutPercentage>(BsmrconfigKeyRef {
                 section: "bsmr",
                 property: "log_action_keys",
             })?
@@ -713,27 +713,27 @@ impl DiceCommandUpdater<'_, '_> {
             .roll();
 
         let log_configured_graph_size = root_config
-            .parse::<bool>(BuckconfigKeyRef {
+            .parse::<bool>(BsmrconfigKeyRef {
                 section: "bsmr",
                 property: "log_configured_graph_size",
             })?
             .unwrap_or(false);
 
         let persistent_worker_shutdown_timeout_s = root_config
-            .parse::<u32>(BuckconfigKeyRef {
+            .parse::<u32>(BsmrconfigKeyRef {
                 section: "build",
                 property: "persistent_worker_shutdown_timeout_s",
             })?
             .or(Some(10));
 
         let re_cancel_on_estimated_queue_time_exceeds = root_config
-            .parse::<u64>(BuckconfigKeyRef {
+            .parse::<u64>(BsmrconfigKeyRef {
                 section: "build",
                 property: "remote_execution_cancel_on_estimated_queue_time_exceeds_s",
             })?
             .map(Duration::from_secs);
         let re_fallback_on_estimated_queue_time_exceeds = root_config
-            .parse::<u64>(BuckconfigKeyRef {
+            .parse::<u64>(BsmrconfigKeyRef {
                 section: "build",
                 property: "remote_execution_fallback_on_estimated_queue_time_exceeds_s",
             })?
@@ -770,7 +770,7 @@ impl DiceCommandUpdater<'_, '_> {
         ));
 
         let cycle_detector = if root_config
-            .parse::<bool>(BuckconfigKeyRef {
+            .parse::<bool>(BsmrconfigKeyRef {
                 section: "build",
                 property: "lazy_cycle_detector",
             })?
@@ -784,20 +784,20 @@ impl DiceCommandUpdater<'_, '_> {
 
         let mut run_action_knobs = self.run_action_knobs.dupe();
         run_action_knobs.use_network_action_output_cache |= root_config
-            .parse::<bool>(BuckconfigKeyRef {
+            .parse::<bool>(BsmrconfigKeyRef {
                 section: "bsmr",
                 property: "use_network_action_output_cache",
             })?
             .unwrap_or(false);
         run_action_knobs.default_allow_cache_upload |= root_config
-            .parse::<bool>(BuckconfigKeyRef {
+            .parse::<bool>(BsmrconfigKeyRef {
                 section: "bsmr",
                 property: "default_allow_cache_upload",
             })?
             .unwrap_or(false);
 
         if root_config
-            .parse::<bool>(BuckconfigKeyRef {
+            .parse::<bool>(BsmrconfigKeyRef {
                 section: "bsmr",
                 property: "share_action_paths",
             })?
@@ -807,19 +807,19 @@ impl DiceCommandUpdater<'_, '_> {
         }
 
         run_action_knobs.deduplicate_get_digests_ttl_calls |= root_config
-            .parse::<bool>(BuckconfigKeyRef {
+            .parse::<bool>(BsmrconfigKeyRef {
                 section: "bsmr",
                 property: "deduplicate_get_digests_ttl_calls",
             })?
             .unwrap_or(false);
 
-        let output_trees_download_semaphore_size = root_config.parse::<u32>(BuckconfigKeyRef {
+        let output_trees_download_semaphore_size = root_config.parse::<u32>(BsmrconfigKeyRef {
             section: "bsmr",
             property: "output_trees_download_semaphore_size",
         })?;
 
         let fingerprint_re_output_trees_eagerly = root_config
-            .parse::<bool>(BuckconfigKeyRef {
+            .parse::<bool>(BsmrconfigKeyRef {
                 section: "bsmr",
                 property: "fingerprint_re_output_trees_eagerly",
             })?
@@ -832,7 +832,7 @@ impl DiceCommandUpdater<'_, '_> {
 
         bsmr_core::faster_directories::VALUE.store(
             root_config
-                .parse::<bool>(BuckconfigKeyRef {
+                .parse::<bool>(BsmrconfigKeyRef {
                     section: "bsmr",
                     property: "faster_directories",
                 })?
@@ -862,13 +862,13 @@ impl DiceCommandUpdater<'_, '_> {
         let worker_pool = Arc::new(WorkerPool::new(persistent_worker_shutdown_timeout_s));
 
         let critical_path_backend = root_config
-            .parse(BuckconfigKeyRef {
+            .parse(BsmrconfigKeyRef {
                 section: "bsmr",
                 property: "critical_path_backend2",
             })?
             .unwrap_or(CriticalPathBackendName::LongestPathGraph);
 
-        let override_use_case = root_config.parse::<RemoteExecutorUseCase>(BuckconfigKeyRef {
+        let override_use_case = root_config.parse::<RemoteExecutorUseCase>(BsmrconfigKeyRef {
             section: "bsmr_re_client",
             property: "override_use_case",
         })?;
@@ -931,7 +931,7 @@ impl DiceCommandUpdater<'_, '_> {
         initialize_read_dir_cache(&mut data);
         data.spawner = self.cmd_ctx.base_context.daemon.spawner.dupe();
 
-        let clean_stale_config = CleanStaleConfig::from_buck_config(root_config)?;
+        let clean_stale_config = CleanStaleConfig::from_bsmr_config(root_config)?;
         let mut tags = vec![
             format!("lazy-cycle-detector:{}", has_cycle_detector),
             format!("miniperf:{}", enable_miniperf),
@@ -960,14 +960,14 @@ impl DiceCommandUpdater<'_, '_> {
 
 struct ConfigMetadataHolder(StdBuckHashMap<String, String>);
 
-fn collect_config_metadata_into(config: &LegacyBuckConfig, data: &mut UserComputationData) {
+fn collect_config_metadata_into(config: &LegacyBsmrConfig, data: &mut UserComputationData) {
     // Facebook only: metadata collection for Scribe writes
     facebook_only();
 
     fn add_config(
         map: &mut StdBuckHashMap<String, String>,
-        cfg: &LegacyBuckConfig,
-        key: BuckconfigKeyRef<'static>,
+        cfg: &LegacyBsmrConfig,
+        key: BsmrconfigKeyRef<'static>,
         field_name: &'static str,
     ) {
         if let Some(value) = cfg.get(key) {
@@ -976,9 +976,9 @@ fn collect_config_metadata_into(config: &LegacyBuckConfig, data: &mut UserComput
     }
 
     fn extract_scuba_defaults(
-        config: &LegacyBuckConfig,
+        config: &LegacyBsmrConfig,
     ) -> Option<serde_json::Map<String, serde_json::Value>> {
-        let config = config.get(BuckconfigKeyRef {
+        let config = config.get(BsmrconfigKeyRef {
             section: "scuba",
             property: "defaults",
         })?;
@@ -992,7 +992,7 @@ fn collect_config_metadata_into(config: &LegacyBuckConfig, data: &mut UserComput
     add_config(
         &mut metadata,
         config,
-        BuckconfigKeyRef {
+        BsmrconfigKeyRef {
             section: "log",
             property: "repository",
         },
@@ -1029,22 +1029,22 @@ fn collect_config_metadata_into(config: &LegacyBuckConfig, data: &mut UserComput
     add_config(
         &mut metadata,
         config,
-        BuckconfigKeyRef {
+        BsmrconfigKeyRef {
             section: "client",
             property: "id",
         },
         "client",
     );
 
-    // Soft error if client.id is set in buckconfig (deprecated, will become hard error)
-    if let Some(client_id) = config.get(BuckconfigKeyRef {
+    // Soft error if client.id is set in bsmrconfig (deprecated, will become hard error)
+    if let Some(client_id) = config.get(BsmrconfigKeyRef {
         section: "client",
         property: "id",
     }) {
         use bsmr_core::soft_error;
 
         soft_error!(
-            "client_id_in_buckconfig",
+            "client_id_in_bsmrconfig",
             bsmr_error::bsmr_error!(
                 bsmr_error::ErrorTag::Input,
                 "Setting `client.id` via config (`-c|--config client.id={}`) is deprecated \
@@ -1173,7 +1173,7 @@ impl ServerCommandContextTrait for ServerCommandContext<'_> {
         #[cfg(not(fbcode_build))]
         let mut metadata = metadata::collect_with_extras(
             &self.base_context.daemon.daemon_id,
-            &self.base_context.daemon.buckconfig_metadata,
+            &self.base_context.daemon.bsmrconfig_metadata,
         );
 
         metadata.insert(
@@ -1227,7 +1227,7 @@ impl ServerCommandContextTrait for ServerCommandContext<'_> {
         Ok(metadata)
     }
 
-    /// Gathers metadata from buckconfig to attach to events for when a command enters the critical
+    /// Gathers metadata from bsmrconfig to attach to events for when a command enters the critical
     /// section
     async fn config_metadata(
         &self,

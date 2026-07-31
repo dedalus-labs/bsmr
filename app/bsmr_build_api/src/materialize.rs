@@ -17,8 +17,8 @@ use bsmr_build_signals::env::WaitingData;
 use bsmr_cli_proto::build_request::Materializations;
 use bsmr_cli_proto::build_request::Uploads;
 use bsmr_common::legacy_configs::dice::HasLegacyConfigs;
-use bsmr_common::legacy_configs::key::BuckconfigKeyRef;
-use bsmr_common::legacy_configs::view::LegacyBuckConfigView;
+use bsmr_common::legacy_configs::key::BsmrconfigKeyRef;
+use bsmr_common::legacy_configs::view::LegacyBsmrConfigView;
 use bsmr_core::execution_types::executor_config::RemoteExecutorUseCase;
 use bsmr_core::fs::project_rel_path::ProjectRelativePath;
 use bsmr_error::BuckErrorContext;
@@ -195,7 +195,7 @@ async fn ensure_uploaded(
         .get_legacy_root_config_on_dice()
         .await
         .and_then(|cfg| {
-            cfg.view(ctx).get(BuckconfigKeyRef {
+            cfg.view(ctx).get(BsmrconfigKeyRef {
                 section: "build",
                 property: "default_remote_execution_use_case",
             })

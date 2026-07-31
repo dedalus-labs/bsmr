@@ -17,16 +17,16 @@ rust_binary(
     # and written to disk without its shared library dependencies.
     link_style = "static",
     deps = [
-        "fbsource//third-party/rust:anyhow",
+        "bsmr_build//third-party/rust:anyhow",
     ] + select({
         # Ideally we'd use compatible_with, but TD does not understand that.
         "DEFAULT": [],
         "ovr_config//os:linux": [
-            "fbsource//third-party/rust:bincode",
-            "fbsource//third-party/rust:perf-event",
-            "fbsource//third-party/rust:smallvec",
-            "fbsource//third-party/rust:thiserror",
-            "//bsmr/app/bsmr_miniperf_proto:bsmr_miniperf_proto",
+            "bsmr_build//third-party/rust:bincode",
+            "bsmr_build//third-party/rust:perf-event",
+            "bsmr_build//third-party/rust:smallvec",
+            "bsmr_build//third-party/rust:thiserror",
+            "root//app/bsmr_miniperf_proto:bsmr_miniperf_proto",
         ],
     }),
 )
@@ -42,14 +42,14 @@ rust_library(
         # Ideally we'd use compatible_with, but TD does not understand that.
         "DEFAULT": [],
         "ovr_config//os:linux": [
-            "fbsource//third-party/rust:anyhow",
-            "fbsource//third-party/rust:bincode",
-            "fbsource//third-party/rust:tempfile",
-            "//bsmr/app/bsmr_miniperf_proto:bsmr_miniperf_proto",
+            "bsmr_build//third-party/rust:anyhow",
+            "bsmr_build//third-party/rust:bincode",
+            "bsmr_build//third-party/rust:tempfile",
+            "root//app/bsmr_miniperf_proto:bsmr_miniperf_proto",
         ],
     }),
     test_env = {
         "MINIPERF": "$(exe_target :bsmr_miniperf)",
-        "THREE_BILLION_INSTRUCTIONS": "$(exe_target //bsmr/tools/testing/three-billion-instructions:three_billion_instructions-bin)",
+        "THREE_BILLION_INSTRUCTIONS": "$(exe_target root//tools/testing/three-billion-instructions:three_billion_instructions-bin)",
     },
 )

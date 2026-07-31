@@ -232,7 +232,7 @@ ctx.actions.download_file(out, url, sha256 = "...", has_content_based_path = Tru
 ### Setting a project-wide default
 
 You can configure `declare_output` to default to content-based paths project-wide
-in your [`.buckconfig`](../concepts/buckconfig.md):
+in your [`.bsmrconfig`](../concepts/bsmrconfig.md):
 
 ```ini
 [bsmr]

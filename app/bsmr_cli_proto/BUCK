@@ -10,20 +10,20 @@ rust_protobuf_library(
     build_script = "build.rs",
     proto_srcs = ":bsmr_cli_proto.proto",
     test_deps = [
-        "fbsource//third-party/rust:futures",
-        "fbsource//third-party/rust:tokio",
+        "bsmr_build//third-party/rust:futures",
+        "bsmr_build//third-party/rust:tokio",
     ],
     deps = [
-        "fbsource//third-party/rust:bytes",
-        "fbsource//third-party/rust:prost-types",
-        "fbsource//third-party/rust:serde",
-        "fbsource//third-party/rust:tokio-util",
-        "//bsmr/packages/rust/allocative/allocative:allocative",
-        "//bsmr/app/bsmr_core:bsmr_core",
-        "//bsmr/app/bsmr_data:bsmr_data",
-        "//bsmr/app/bsmr_error:bsmr_error",
-        "//bsmr/app/bsmr_fs:bsmr_fs",
-        "//bsmr/app/bsmr_subscription_proto:bsmr_subscription_proto",
+        "bsmr_build//third-party/rust:bytes",
+        "bsmr_build//third-party/rust:prost-types",
+        "bsmr_build//third-party/rust:serde",
+        "bsmr_build//third-party/rust:tokio-util",
+        "root//packages/rust/allocative/allocative:allocative",
+        "root//app/bsmr_core:bsmr_core",
+        "root//app/bsmr_data:bsmr_data",
+        "root//app/bsmr_error:bsmr_error",
+        "root//app/bsmr_fs:bsmr_fs",
+        "root//app/bsmr_subscription_proto:bsmr_subscription_proto",
     ],
 )
 
@@ -32,8 +32,8 @@ proto_srcs(
     srcs = ["daemon.proto"],
     visibility = ["PUBLIC"],
     deps = [
-        translate_target("//bsmr/app/bsmr_data:data_proto"),
-        translate_target("//bsmr/app/bsmr_subscription_proto:bsmr_subscription_proto.proto"),
+        translate_target("root//app/bsmr_data:data_proto"),
+        translate_target("root//app/bsmr_subscription_proto:bsmr_subscription_proto.proto"),
     ],
 )
 

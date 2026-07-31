@@ -12,31 +12,31 @@ use std::fmt::Debug;
 use std::str::FromStr;
 use std::sync::Arc;
 
-use crate::legacy_configs::configs::LegacyBuckConfig;
-use crate::legacy_configs::key::BuckconfigKeyRef;
+use crate::legacy_configs::configs::LegacyBsmrConfig;
+use crate::legacy_configs::key::BsmrconfigKeyRef;
 
-/// Buckconfig trait.
+/// Bsmrconfig trait.
 ///
 /// There are two implementations:
-/// * simple implementation which is backed by a buckconfig object, used in tests
-/// * DICE-backed implementation which records a dependency on buckconfig property in DICE
-pub trait LegacyBuckConfigView: Debug {
-    fn get(&mut self, key: BuckconfigKeyRef) -> bsmr_error::Result<Option<Arc<str>>>;
+/// * simple implementation which is backed by a bsmrconfig object, used in tests
+/// * DICE-backed implementation which records a dependency on bsmrconfig property in DICE
+pub trait LegacyBsmrConfigView: Debug {
+    fn get(&mut self, key: BsmrconfigKeyRef) -> bsmr_error::Result<Option<Arc<str>>>;
 
-    fn parse<T: FromStr>(&mut self, key: BuckconfigKeyRef) -> bsmr_error::Result<Option<T>>
+    fn parse<T: FromStr>(&mut self, key: BsmrconfigKeyRef) -> bsmr_error::Result<Option<T>>
     where
         bsmr_error::Error: From<<T as FromStr>::Err>,
     {
-        LegacyBuckConfig::parse_value(key, self.get(key)?.as_deref())
+        LegacyBsmrConfig::parse_value(key, self.get(key)?.as_deref())
     }
 
     fn parse_list<T: FromStr>(
         &mut self,
-        key: BuckconfigKeyRef,
+        key: BsmrconfigKeyRef,
     ) -> bsmr_error::Result<Option<Vec<T>>>
     where
         bsmr_error::Error: From<<T as FromStr>::Err>,
     {
-        LegacyBuckConfig::parse_list_value(key, self.get(key)?.as_deref())
+        LegacyBsmrConfig::parse_list_value(key, self.get(key)?.as_deref())
     }
 }

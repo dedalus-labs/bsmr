@@ -23,7 +23,7 @@ async def test_conflicting_fbcode_coverage_flags_fail(buck: Buck) -> None:
                 "fbcode.coverage=true",
                 "--config",
                 "fbcode.coverage_selective=true",
-                "fbcode//testing_frameworks/code_coverage/playground:test",
+                "upstream//testing_frameworks/code_coverage/playground:test",
             ]
         ),
         stderr_regex=r"""fbcode.coverage and fbcode.coverage_selective are both true. Pick one.""",
@@ -37,7 +37,7 @@ async def test_fbcode_coverage_selective_require_filters(buck: Buck) -> None:
             *[
                 "--config",
                 "fbcode.coverage_selective=true",
-                "fbcode//testing_frameworks/code_coverage/playground:test",
+                "upstream//testing_frameworks/code_coverage/playground:test",
             ]
         ),
         stderr_regex=r"""fbcode.coverage_selective=true with no filters""",

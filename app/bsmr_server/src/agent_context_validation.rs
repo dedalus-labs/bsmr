@@ -8,9 +8,9 @@
  * above-listed licenses.
  */
 
-//! Validation of `--agent-context` entries against a buckconfig-defined schema.
+//! Validation of `--agent-context` entries against a bsmrconfig-defined schema.
 //!
-//! Schema is defined in buckconfig as:
+//! Schema is defined in bsmrconfig as:
 //! ```ini
 //! [agent_context]
 //! enforced_clients = devmate|claude_code|agentic_runtime
@@ -23,8 +23,8 @@
 
 use std::collections::BTreeMap;
 
-use bsmr_common::legacy_configs::configs::LegacyBuckConfig;
-use bsmr_common::legacy_configs::key::BuckconfigKeyRef;
+use bsmr_common::legacy_configs::configs::LegacyBsmrConfig;
+use bsmr_common::legacy_configs::key::BsmrconfigKeyRef;
 use bsmr_data::AgentContextEntry;
 
 /// Schema for a single agent context field.
@@ -37,7 +37,7 @@ struct FieldSchema {
     description: String,
 }
 
-/// Schema parsed from buckconfig `[agent_context]` + `[agent_context#*]` sections.
+/// Schema parsed from bsmrconfig `[agent_context]` + `[agent_context#*]` sections.
 pub(crate) struct AgentContextSchema {
     /// Client IDs that are subject to strict validation.
     enforced_clients: Vec<String>,
@@ -46,10 +46,10 @@ pub(crate) struct AgentContextSchema {
 }
 
 impl AgentContextSchema {
-    /// Parse the schema from buckconfig.
-    pub(crate) fn from_config(config: &LegacyBuckConfig) -> Self {
+    /// Parse the schema from bsmrconfig.
+    pub(crate) fn from_config(config: &LegacyBsmrConfig) -> Self {
         let enforced_clients = config
-            .get(BuckconfigKeyRef {
+            .get(BsmrconfigKeyRef {
                 section: "agent_context",
                 property: "enforced_clients",
             })
