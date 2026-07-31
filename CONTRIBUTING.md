@@ -14,7 +14,7 @@ cargo fmt --all -- --check
 cargo build --locked --bin bsmr
 python3 test.py --ci --git --bsmr=target/debug/bsmr
 pnpm install --frozen-lockfile --ignore-scripts
-pnpm run ci:check
+pnpm run ci check
 ```
 
 Update tests when behavior changes. Update documentation when a public
