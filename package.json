@@ -8,7 +8,7 @@
 	"devDependencies": {
 		"@dedalus-labs/hollywood": "0.0.1",
 		"@types/node": "26.0.1",
-		"esbuild": "0.28.1",
+		"rolldown": "1.2.1",
 		"typescript": "6.0.3"
 	},
 	"engines": {

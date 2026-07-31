@@ -1,13 +1,12 @@
 {
+	"extends": "./packages/typescript/tsconfig/base.json",
 	"compilerOptions": {
 		"allowImportingTsExtensions": true,
-		"exactOptionalPropertyTypes": true,
+		"erasableSyntaxOnly": true,
 		"module": "NodeNext",
 		"moduleResolution": "NodeNext",
-		"noEmit": true,
-		"strict": true,
 		"target": "ES2024",
 		"types": ["node"]
 	},
-	"include": ["ci/**/*.ts"]
+	"include": ["ci/**/*.ts", "rolldown.config.ts"]
 }

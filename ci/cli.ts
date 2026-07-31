@@ -14,19 +14,7 @@ export type CliContext = Readonly<{
 
 const buildActions: ProcessSpec = {
 	file: "pnpm",
-	args: [
-		"exec",
-		"esbuild",
-		".github/actions/ci/rust-affected/src/index.ts",
-		"--bundle",
-		"--define:import.meta.vitest=undefined",
-		"--format=esm",
-		"--minify",
-		"--platform=node",
-		"--target=node24",
-		'--banner:js=import { createRequire } from "node:module";const require=createRequire(import.meta.url);',
-		"--outfile=.github/actions/ci/rust-affected/dist/index.js",
-	],
+	args: ["exec", "rolldown", "--config", "rolldown.config.ts"],
 };
 const typecheck: ProcessSpec = { file: "pnpm", args: ["exec", "tsc", "--noEmit"] };
 const test: ProcessSpec = {
@@ -54,6 +42,10 @@ const actionDiff: ProcessSpec = {
 	file: "git",
 	args: ["diff", "--exit-code", "--", ".github/actions"],
 };
+const actionSyntax: ProcessSpec = {
+	file: "node",
+	args: ["--check", ".github/actions/ci/rust-affected/dist/index.js"],
+};
 const generate: ProcessSpec = {
 	file: "pnpm",
 	args: ["exec", "hollywood", "generate", "ci/**/*.ts", "--output", "."],
@@ -61,10 +53,10 @@ const generate: ProcessSpec = {
 
 const commands = {
 	"build actions": [buildActions],
-	"check actions": [buildActions, actionDiff],
+	"check actions": [buildActions, actionSyntax, actionDiff],
 	"check generated": [generated],
 	"check security": [security],
-	check: [typecheck, test, generated, buildActions, actionDiff, security],
+	check: [typecheck, test, generated, buildActions, actionSyntax, actionDiff, security],
 	generate: [generate, buildActions],
 	test: [test],
 	typecheck: [typecheck],
