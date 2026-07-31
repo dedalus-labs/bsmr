@@ -17,6 +17,27 @@ concurrency:
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 jobs:
+  affected:
+    name: Affected paths
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    outputs:
+      rust: ${{ steps.check.outputs.rust }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+      - id: check
+        name: Detect Rust changes
+        uses: ./.github/actions/ci/rust-affected
+        with:
+          event-name: ${{ github.event_name }}
+          base-sha: ${{ github.event.pull_request.base.sha }}
+          head-sha: ${{ github.event.pull_request.head.sha }}
   dependencies:
     name: Dependency review
     if: ${{ github.event_name == 'pull_request' }}
@@ -58,6 +79,8 @@ jobs:
         run: pnpm run ci:check
   rust_audit:
     name: Rust / Dependencies
+    needs: affected
+    if: ${{ needs.affected.outputs.rust == 'true' }}
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     permissions:
@@ -78,6 +101,8 @@ jobs:
           jq -e '[.results[].packages[].vulnerabilities[] | select(any(.affected[]; .database_specific.informational? != "unmaintained"))] as $v | if ($v | length) == 0 then true else ($v | map({id, summary})), false end' "$RUNNER_TEMP/osv.json"
   rust_quality:
     name: Rust / Quality
+    needs: affected
+    if: ${{ needs.affected.outputs.rust == 'true' }}
     runs-on: blacksmith-8vcpu-ubuntu-2404
     timeout-minutes: 30
     permissions:
@@ -103,6 +128,8 @@ jobs:
           python3 test.py --ci --git --rustdoc-only
   rust_tests:
     name: Rust / Tests
+    needs: affected
+    if: ${{ needs.affected.outputs.rust == 'true' }}
     runs-on: blacksmith-16vcpu-ubuntu-2404
     timeout-minutes: 30
     permissions:
@@ -126,6 +153,8 @@ jobs:
         run: python3 test.py --ci --git --test-only
   rust_self_host:
     name: Rust / Self-host
+    needs: affected
+    if: ${{ needs.affected.outputs.rust == 'true' }}
     runs-on: blacksmith-8vcpu-ubuntu-2404
     timeout-minutes: 30
     permissions:
@@ -165,6 +194,7 @@ jobs:
     name: Rust
     if: ${{ always() }}
     needs:
+      - affected
       - rust_audit
       - rust_quality
       - rust_tests
@@ -173,5 +203,9 @@ jobs:
     timeout-minutes: 5
     permissions: {}
     steps:
-      - name: Require every Rust lane
-        run: test "${{ join(needs.*.result, ' ') }}" = "success success success success"
+      - name: Accept complete Rust CI
+        if: ${{ needs.affected.result == 'success' && (needs.rust_audit.result == 'success' && needs.rust_quality.result == 'success' && needs.rust_tests.result == 'success' && needs.rust_self_host.result == 'success' || needs.rust_audit.result == 'skipped' && needs.rust_quality.result == 'skipped' && needs.rust_tests.result == 'skipped' && needs.rust_self_host.result == 'skipped') }}
+        run: "true"
+      - name: Reject incomplete Rust CI
+        if: ${{ !(needs.affected.result == 'success' && (needs.rust_audit.result == 'success' && needs.rust_quality.result == 'success' && needs.rust_tests.result == 'success' && needs.rust_self_host.result == 'success' || needs.rust_audit.result == 'skipped' && needs.rust_quality.result == 'skipped' && needs.rust_tests.result == 'skipped' && needs.rust_self_host.result == 'skipped')) }}
+        run: exit 1
