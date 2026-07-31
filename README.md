@@ -38,5 +38,10 @@ that remote should remain disabled.
 
 ## License
 
-Bessemer is available under either the [MIT license](LICENSE-MIT) or the
-[Apache License 2.0](LICENSE-APACHE).
+Bessemer's collective work and Dedalus-authored contributions are licensed
+under the [Apache License 2.0](LICENSE-APACHE).
+
+Buck2-derived and third-party files retain their original copyright and
+license notices. Buck2 files remain available under Meta's MIT OR Apache-2.0
+grant, so [LICENSE-MIT](LICENSE-MIT) remains for those upstream files. See
+[NOTICE](NOTICE) for attribution details.
