@@ -167,7 +167,7 @@ export const ci = workflow({
 					run: "pnpm install --frozen-lockfile --ignore-scripts",
 				},
 				{ name: "Audit dependencies", run: "pnpm audit --audit-level high" },
-				{ name: "Check workflow source", run: "pnpm run ci:check" },
+				{ name: "Check workflow source", run: "pnpm run ci check" },
 			],
 		}),
 		rust_audit: job({

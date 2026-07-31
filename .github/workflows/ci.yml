@@ -76,7 +76,7 @@ jobs:
       - name: Audit dependencies
         run: pnpm audit --audit-level high
       - name: Check workflow source
-        run: pnpm run ci:check
+        run: pnpm run ci check
   rust_audit:
     name: Rust / Dependencies
     needs: affected

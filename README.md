@@ -27,7 +27,7 @@ The GitHub workflows are generated from typed
 ```sh
 corepack enable
 pnpm install --frozen-lockfile --ignore-scripts
-pnpm run ci:check
+pnpm run ci check
 ```
 
 ## Upstream
