@@ -20,6 +20,9 @@ pnpm run ci:check
 Update tests when behavior changes. Update documentation when a public
 interface changes.
 
+Repository policy is managed with Terraform from Dedalus's protected
+repository-controls stack. Do not change GitHub settings manually.
+
 Report vulnerabilities through the private process in
 [`SECURITY.md`](SECURITY.md), never through a public issue.
 
