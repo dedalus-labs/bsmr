@@ -22,8 +22,8 @@ _AGENT_CGROUP = "/user.slice/3pai_sandbox.slice/bsmr.scope"
 _NON_AGENT_CGROUP = "/user.slice/user-1000.slice/bsmr.scope"
 
 
-def _write_buckconfig_local(buck: Buck, contents: str) -> None:
-    with open(buck.cwd / ".buckconfig.local", "w") as f:
+def _write_bsmrconfig_local(buck: Buck, contents: str) -> None:
+    with open(buck.cwd / ".bsmrconfig.local", "w") as f:
         f.write(contents)
 
 
@@ -47,7 +47,7 @@ async def test_agent_host_guard_disabled(buck: Buck) -> None:
 
 @buck_test()
 async def test_agent_host_guard_denied(buck: Buck) -> None:
-    _write_buckconfig_local(
+    _write_bsmrconfig_local(
         buck,
         "[bsmr]\nagent_hostname_fail_v2_glob=*\n",
     )
@@ -65,7 +65,7 @@ async def test_agent_host_guard_denied(buck: Buck) -> None:
 
 @buck_test()
 async def test_agent_host_guard_denied_with_context(buck: Buck) -> None:
-    _write_buckconfig_local(
+    _write_bsmrconfig_local(
         buck,
         "[bsmr]\nagent_hostname_fail_v2_glob=*\nagent_hostname_fail_v2_context=See S123456\n",
     )
@@ -86,7 +86,7 @@ async def test_agent_host_guard_denied_custom_isolation_dir(buck: Buck) -> None:
     # The remediation command must target the daemon's isolation dir. Run under a
     # non-default isolation dir and check the rejection message accounts for it.
     buck.set_isolation_prefix("custom_iso")
-    _write_buckconfig_local(
+    _write_bsmrconfig_local(
         buck,
         "[bsmr]\nagent_hostname_fail_v2_glob=*\n",
     )
@@ -105,7 +105,7 @@ async def test_agent_host_guard_denied_custom_isolation_dir(buck: Buck) -> None:
 @buck_test()
 async def test_agent_host_guard_non_agent_cgroup(buck: Buck) -> None:
     # Hostname matches but the daemon is not agent-originated -> build succeeds.
-    _write_buckconfig_local(
+    _write_bsmrconfig_local(
         buck,
         "[bsmr]\nagent_hostname_fail_v2_glob=*\n",
     )
@@ -118,7 +118,7 @@ async def test_agent_host_guard_non_agent_cgroup(buck: Buck) -> None:
 @buck_test()
 async def test_agent_host_guard_hostname_no_match(buck: Buck) -> None:
     # Agent cgroup but the hostname glob does not match -> build succeeds.
-    _write_buckconfig_local(
+    _write_bsmrconfig_local(
         buck,
         "[bsmr]\nagent_hostname_fail_v2_glob=definitely-not-this-host-*\n",
     )

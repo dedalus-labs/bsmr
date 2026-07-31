@@ -28,7 +28,7 @@ def _normalize_include_exclude_pattern(pattern):
     if pattern.startswith("//"):
         pattern = "fbsource" + pattern
     elif "//" not in pattern:
-        pattern = "fbsource//" + pattern
+        pattern = "upstream//" + pattern
     return pattern.removesuffix("...")
 
 def _match_include_exclude_patterns(target: bxl.ConfiguredTargetNode, exclude_patterns, include_patterns, bxl_ctx):
@@ -75,7 +75,7 @@ def _main(bxl_ctx):
         # Add explicit cell name when it's omitted as otherwise BXL will use cell name of BXL script, i.e., prelude.
         if bxl_ctx.cli_args.fbsource and (":" in ulabel or "..." in ulabel):
             if "//" not in ulabel:
-                ulabel = "fbsource//" + ulabel
+                ulabel = "upstream//" + ulabel
             elif ulabel.startswith("//"):
                 ulabel = "fbsource" + ulabel
 
@@ -187,14 +187,14 @@ def _main(bxl_ctx):
     # Params:
     # ctx, artifacts, outputs: required params by a dynamic output lambda function(see https://buck2.build/docs/rule_authors/dynamic_dependencies/)
     # cli_args: bxl_ctx.cli_args, this is not available inside the lambda function so we have to pass them in as param
-    # buck_root: bxl_ctx.buck_root(), same as above
+    # bsmr_root: bxl_ctx.bsmr_root(), same as above
     def gen_vcxproj_files(
         ctx,
         artifacts,
         outputs,
         # additional arguments that needs binding.
         cli_args = bxl_ctx.cli_args,
-        buck_root = bxl_ctx.root(),
+        bsmr_root = bxl_ctx.root(),
     ):
         # Read in the attrs json file contents. target label => attrs.
         attrs_content_dict = {dep.label: artifacts[attrs_artifact_dict[dep.label]].read_json() for dep in deps}
@@ -212,11 +212,11 @@ def _main(bxl_ctx):
         for dep in deps:
             attrs = attrs_content_dict[dep.label]
             toolchain = get_cxx_toolchain(dep, ctx)
-            vs_settings = get_vs_settings(dep, toolchain, attrs, vs_settings_dict, cli_args, buck_root, ctx)
+            vs_settings = get_vs_settings(dep, toolchain, attrs, vs_settings_dict, cli_args, bsmr_root, ctx)
             vs_settings_dict[dep.label] = vs_settings
 
             if dep.label.raw_target() in deps_with_vcxproj:
-                vcxproj_content = gen_vcxproj(dep, vs_settings, cli_args, buck_root)
+                vcxproj_content = gen_vcxproj(dep, vs_settings, cli_args, bsmr_root)
                 ctx.bxl_actions().actions.write(outputs[vcxproj_artifact_dict[dep.label]].as_output(), vcxproj_content, allow_args = True)
                 filters_content = gen_filters(vs_settings)
                 ctx.bxl_actions().actions.write(outputs[filters_artifact_dict[dep.label]].as_output(), filters_content, allow_args = True)
@@ -290,7 +290,7 @@ main = bxl_main(
         ),
         "mode_files": cli_args.list(
             cli_args.string(),
-            default = ["fbsource//arvr/mode/win/dev"],
+            default = ["upstream//arvr/mode/win/dev"],
             doc = "List of mode files to generate projects for.",
         ),
         "mode_hashes": cli_args.option(

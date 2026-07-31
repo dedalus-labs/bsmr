@@ -19,7 +19,7 @@ use bsmr_common::package_listing::dice::DicePackageListingResolver;
 use bsmr_common::package_listing::resolver::PackageListingResolver;
 use bsmr_common::pattern::resolve::ResolveTargetPatterns;
 use bsmr_common::pattern::resolve::ResolvedPattern;
-use bsmr_common::target_aliases::BuckConfigTargetAliasResolver;
+use bsmr_common::target_aliases::BsmrConfigTargetAliasResolver;
 use bsmr_common::target_aliases::HasTargetAliasResolver;
 use bsmr_core::cells::CellAliasResolver;
 use bsmr_core::cells::CellResolver;
@@ -80,7 +80,7 @@ pub(crate) struct LiteralParser {
     project_root: ProjectRoot,
     cell_resolver: CellResolver,
     cell_alias_resolver: CellAliasResolver,
-    target_alias_resolver: BuckConfigTargetAliasResolver,
+    target_alias_resolver: BsmrConfigTargetAliasResolver,
 }
 
 impl LiteralParser {
@@ -202,7 +202,7 @@ impl DiceQueryData {
         cell_alias_resolver: CellAliasResolver,
         working_dir: &ProjectRelativePath,
         project_root: ProjectRoot,
-        target_alias_resolver: BuckConfigTargetAliasResolver,
+        target_alias_resolver: BsmrConfigTargetAliasResolver,
     ) -> Self {
         let cell_path = cell_resolver.get_cell_path(working_dir);
 

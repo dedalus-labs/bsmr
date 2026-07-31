@@ -8,9 +8,9 @@ rust_protobuf_library(
     build_script = "build.rs",
     proto_srcs = ":bsmr_downward_api_proto.proto",
     deps = [
-        "fbsource//third-party/rust:tracing",
-        "//bsmr/app/bsmr_error:bsmr_error",
-        "//bsmr/app/bsmr_hash:bsmr_hash",
+        "bsmr_build//third-party/rust:tracing",
+        "root//app/bsmr_error:bsmr_error",
+        "root//app/bsmr_hash:bsmr_hash",
     ],
 )
 

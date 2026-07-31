@@ -67,7 +67,7 @@ main input to Bessemer and are syntactically Python.
 Each build file is uniquely identified by the directory in which it's located.
 Since all build files have the same name, there cannot be two build files in the
 same directory. This is usually represented as the relative path from the root
-of the project (the directory where the .buckconfig file is).
+of the project (the directory where the .bsmrconfig file is).
 
 Each build file has a set of targets. These describe the things the user wants
 Bessemer to know about. Each target has a type and a set of named attributes,
@@ -101,7 +101,7 @@ At the end of evaluation, the target nodes are not yet configured. Configuration
 means applying a list of constraints (such as resolving selects to specify the
 right CPU) to make sure the target can be run where it needs to. This is also
 known as target platform resolution, and can be configured within the target,
-the buckconfig, propagated from dependencies, or passed into the CLI. After
+the bsmrconfig, propagated from dependencies, or passed into the CLI. After
 applying configurations, the target nodes are transformed into configured target
 nodes within the Bessemer configured target graph, which is a smaller portion of
 Bessemer’s larger dependency graph.

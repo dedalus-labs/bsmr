@@ -18,7 +18,7 @@ from bsmr.tests.e2e_util.buck_workspace import buck_test, get_mode_from_platform
 @buck_test(inplace=True)
 async def test_linker_argsfile_valid(buck: Buck) -> None:
     args = [
-        "fbcode//bsmr/tests/targets/rules/cxx/hello_world:welcome[linker.argsfile]",
+        "root//tests/targets/rules/cxx/hello_world:welcome[linker.argsfile]",
         "--show-full-output",
         get_mode_from_platform(),
     ]

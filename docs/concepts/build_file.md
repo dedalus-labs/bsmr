@@ -80,7 +80,7 @@ of the target.
 ### Build file naming configuration
 
 - You can change the name that Bessemer uses for the build file in the `buildfile`
-  section of [buckconfig](glossary.md#buckconfig).
+  section of [bsmrconfig](glossary.md#bsmrconfig).
 
 ## Cross-referencing (source files & packages)
 

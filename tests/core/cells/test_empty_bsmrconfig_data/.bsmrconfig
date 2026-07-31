@@ -1,0 +1,2 @@
+# bsmrconfig is empty, but bsmr should still create a root cell,
+# and report missing prelude cell.

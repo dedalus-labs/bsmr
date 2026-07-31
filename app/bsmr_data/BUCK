@@ -10,15 +10,15 @@ rust_protobuf_library(
     build_script = "build.rs",
     proto_srcs = ":data_proto",
     deps = [
-        "fbsource//third-party/rust:derive_more",
-        "fbsource//third-party/rust:hex",
-        "fbsource//third-party/rust:prost-types",
-        "fbsource//third-party/rust:serde",
-        "//bsmr/packages/rust/allocative/allocative:allocative",
-        "//bsmr/app/bsmr_host_sharing_proto:bsmr_host_sharing_proto",
-        "//bsmr/packages/rust/gazebo/dupe:dupe",
-        "//bsmr/packages/rust/gazebo/gazebo:gazebo",
-        "//bsmr/packages/rust/pagable/pagable:pagable",
+        "bsmr_build//third-party/rust:derive_more",
+        "bsmr_build//third-party/rust:hex",
+        "bsmr_build//third-party/rust:prost-types",
+        "bsmr_build//third-party/rust:serde",
+        "root//packages/rust/allocative/allocative:allocative",
+        "root//app/bsmr_host_sharing_proto:bsmr_host_sharing_proto",
+        "root//packages/rust/gazebo/dupe:dupe",
+        "root//packages/rust/gazebo/gazebo:gazebo",
+        "root//packages/rust/pagable/pagable:pagable",
     ],
 )
 
@@ -30,7 +30,7 @@ proto_srcs(
     ],
     visibility = ["PUBLIC"],
     deps = [
-        translate_target("//bsmr/app/bsmr_host_sharing_proto:host_sharing.proto"),
+        translate_target("root//app/bsmr_host_sharing_proto:host_sharing.proto"),
     ],
 )
 

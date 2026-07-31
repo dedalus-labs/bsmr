@@ -10,9 +10,9 @@ rust_library(
         "triomphe",
     ],
     deps = [
-        "fbsource//third-party/rust:num-bigint",
-        "fbsource//third-party/rust:ref-cast",
-        "fbsource//third-party/rust:triomphe",
-        "//bsmr/packages/rust/gazebo/strong_hash_derive:strong_hash_derive",
+        "bsmr_build//third-party/rust:num-bigint",
+        "bsmr_build//third-party/rust:ref-cast",
+        "bsmr_build//third-party/rust:triomphe",
+        "root//packages/rust/gazebo/strong_hash_derive:strong_hash_derive",
     ],
 )

@@ -9,15 +9,15 @@
 load("constants.bxl", "ADDITIONAL_TARGETS", "BY_MODES", "DEBUG_ARGS", "DEBUG_CMD", "DEBUG_ENV", "DEBUG_PWD", "EXTRA_BUCK_OPTIONS", "IMMEDIATE_BUCK_OPTIONS")
 load("utils.bxl", "get_vs_configuration", "h")
 
-def gen_user_macros(target: bxl.ConfiguredTargetNode, vs_settings: dict, _cli_args, buck_root):
+def gen_user_macros(target: bxl.ConfiguredTargetNode, vs_settings: dict, _cli_args, bsmr_root):
     user_macros = []
 
     user_macros.append(
         h(
             "PropertyGroup",
             [
-                h("RepoRoot", buck_root, indent_level = 2),
-                h("ovrsource_root", buck_root, indent_level = 2),  # Keep for backward compatibility
+                h("RepoRoot", bsmr_root, indent_level = 2),
+                h("ovrsource_root", bsmr_root, indent_level = 2),  # Keep for backward compatibility
             ],
             {
                 "Label": "UserMacros",

@@ -143,7 +143,7 @@ You will see an output like this:
 ```
 ...
 BUILD SUCCEEDED
-fbcode//scripts/$USER/bsmr_lab/greeter_lib:library /.../greeter_lib/__library__/out/LPPMD/liblibrary-1527a50c.rmeta
+upstream//scripts/$USER/bsmr_lab/greeter_lib:library /.../greeter_lib/__library__/out/LPPMD/liblibrary-1527a50c.rmeta
 ```
 
 </FbInternalOnly>
@@ -195,7 +195,7 @@ rust_binary(
     name = "main",
     srcs = ["src/main.rs"],
     # Add the dep to our library
-    deps = ["fbcode//scripts/$USER/bsmr_lab/greeter_lib:library"],
+    deps = ["upstream//scripts/$USER/bsmr_lab/greeter_lib:library"],
 )
 ```
 
@@ -215,14 +215,14 @@ rust_binary(
 </OssOnly>
 
 export const TARGET_NAME = isInternal() ?
-<code>fbcode//scripts/$USER/bsmr_lab/greeter_lib:library</code> :
+<code>upstream//scripts/$USER/bsmr_lab/greeter_lib:library</code> :
 <code>root//bsmr_lab/greeter_lib:library</code>;
 
 You can also use `bsmr targets :` command in `greeter_lib` folder to get the
 full target name of the library.
 
 - { isInternal() ? <code>deps =
-  ["fbcode//scripts/$USER/bsmr_lab/greeter_lib:library"]</code> :
+  ["upstream//scripts/$USER/bsmr_lab/greeter_lib:library"]</code> :
   <code>deps = ["root//bsmr_lab/greeter_lib:library"]</code> }: This is the
   crucial new part!
   - `deps` declares dependencies for this target. It accepts a list of targets.
@@ -231,7 +231,7 @@ full target name of the library.
 
 Now, let's build and run our binary application, with dependencies {
 isInternal() ?
-<code>fbcode//scripts/$USER/bsmr_lab/greeter_lib:library</code> :
+<code>upstream//scripts/$USER/bsmr_lab/greeter_lib:library</code> :
 <code>root//bsmr_lab/greeter_lib:library</code> }.
 
 1. Run the binary:
@@ -239,7 +239,7 @@ isInternal() ?
 <FbInternalOnly>
 
 ```bash
-bsmr run fbcode//scripts/$USER/bsmr_lab/greeter_bin:main
+bsmr run upstream//scripts/$USER/bsmr_lab/greeter_bin:main
 ```
 
 </FbInternalOnly>
@@ -268,7 +268,7 @@ Imagine that as our application grows, we realize we want to log information
 about what's happening inside our functions. This is a common need for debugging
 or just understanding the flow. To help with this, let's say we've prepared a
 simple, shared logging library for you. <FbInternalOnly> The library is
-`fbcode//bsmr/docs/bsmr_lab/logging_lib:logging_lib`. </FbInternalOnly>
+`root//docs/bsmr_lab/logging_lib:logging_lib`. </FbInternalOnly>
 <OssOnly> You can find it at
 https://github.com/facebook/buck2/tree/main/docs/buck2_lab/logging_lib and copy
 the folder into `bsmr_lab` folder. </OssOnly>
@@ -291,7 +291,7 @@ rust_library(
     visibility = ["PUBLIC"],
     deps = [
         # Add the dep to our logging_lib
-        "fbcode//bsmr/docs/bsmr_lab/logging_lib:logging_lib",
+        "root//docs/bsmr_lab/logging_lib:logging_lib",
     ],
 )
 ```
@@ -361,7 +361,7 @@ Let's try to run `main`:
 <FbInternalOnly>
 
 ```bash
-bsmr run fbcode//scripts/$USER/bsmr_lab/greeter_bin:main
+bsmr run upstream//scripts/$USER/bsmr_lab/greeter_bin:main
 ```
 
 </FbInternalOnly>
@@ -430,8 +430,8 @@ rust_binary(
     name = "main",
     srcs = ["src/main.rs"],
     deps = [
-        "fbcode//scripts/$USER/bsmr_lab/greeter_lib:library",
-        "fbcode//bsmr/docs/bsmr_lab/logging_lib:logging_lib",  # Add this line
+        "upstream//scripts/$USER/bsmr_lab/greeter_lib:library",
+        "root//docs/bsmr_lab/logging_lib:logging_lib",  # Add this line
     ],
 )
 ```
@@ -458,7 +458,7 @@ rust_binary(
 <FbInternalOnly>
 
 ```bash
-bsmr run fbcode//scripts/$USER/bsmr_lab/greeter_bin:main
+bsmr run upstream//scripts/$USER/bsmr_lab/greeter_bin:main
 ```
 
 </FbInternalOnly>

@@ -16,7 +16,7 @@ use bsmr_build_api::interpreter::rule_defs::provider::builtin::platform_info::Fr
 use bsmr_common::dice::cells::HasCellResolver;
 use bsmr_common::legacy_configs::configs::parse_config_section_and_key;
 use bsmr_common::legacy_configs::dice::HasLegacyConfigs;
-use bsmr_common::legacy_configs::key::BuckconfigKeyRef;
+use bsmr_common::legacy_configs::key::BsmrconfigKeyRef;
 use bsmr_core::configuration::config_setting::ConfigSettingData;
 use bsmr_core::configuration::data::ConfigurationData;
 use bsmr_core::configuration::pair::ConfigurationNoExec;
@@ -95,14 +95,14 @@ async fn configuration_matches(
         }
     }
 
-    // Cell used for buckconfigs is set to cell of target that applies select to match Buck v1 behavior.
+    // Cell used for bsmrconfigs is set to cell of target that applies select to match Buck v1 behavior.
     // Eventually, we want this to be the cell of the platform instead.
-    for (raw_section_and_key, config_value) in &constraints_and_configs.buckconfigs {
+    for (raw_section_and_key, config_value) in &constraints_and_configs.bsmrconfigs {
         let config_section_and_key = parse_config_section_and_key(raw_section_and_key, None)?;
         let v = ctx
             .get_legacy_config_property(
                 target_node_cell.0,
-                BuckconfigKeyRef {
+                BsmrconfigKeyRef {
                     section: &config_section_and_key.section,
                     property: &config_section_and_key.key,
                 },

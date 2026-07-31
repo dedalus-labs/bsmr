@@ -79,7 +79,7 @@ pub struct BuildCommand {
     #[clap(
         long = "materializations",
         short = 'M',
-        help = "Materialize (or skip) the final artifacts, bypassing buckconfig.",
+        help = "Materialize (or skip) the final artifacts, bypassing bsmrconfig.",
         ignore_case = true,
         value_enum
     )]
@@ -469,7 +469,7 @@ fn print_build_rating(
         return Ok(());
     }
 
-    // Gated by the cpe_buck_sentiment GK via [experiments] sentiment buckconfig
+    // Gated by the cpe_buck_sentiment GK via [experiments] sentiment bsmrconfig
     if !ctx.immediate_config.show_sentiment() {
         return Ok(());
     }

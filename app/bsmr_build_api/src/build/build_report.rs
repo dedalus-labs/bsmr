@@ -28,7 +28,7 @@ use bsmr_artifact::artifact::artifact_dump::FileInfo;
 use bsmr_artifact::artifact::artifact_dump::SymlinkInfo;
 use bsmr_cli_proto::CommonBuildOptions;
 use bsmr_common::legacy_configs::dice::HasLegacyConfigs;
-use bsmr_common::legacy_configs::key::BuckconfigKeyRef;
+use bsmr_common::legacy_configs::key::BsmrconfigKeyRef;
 use bsmr_core::cells::CellResolver;
 use bsmr_core::configuration::compatibility::MaybeCompatible;
 use bsmr_core::configuration::data::ConfigurationData;
@@ -173,12 +173,12 @@ pub(crate) struct ConfiguredBuildReportEntry {
     #[serde(skip_serializing_if = "Option::is_none")]
     artifact_size_sketch: Option<String>,
     /// Estimated cardinality of `artifact_count_sketch`. Populated only when the
-    /// `bsmr.log_sketch_cardinalities` buckconfig is set; the corresponding
+    /// `bsmr.log_sketch_cardinalities` bsmrconfig is set; the corresponding
     /// sketch field is left intact in both cases.
     #[serde(skip_serializing_if = "Option::is_none")]
     artifact_count_sketch_cardinality: Option<f64>,
     /// Estimated cardinality of `artifact_size_sketch`. Populated only when the
-    /// `bsmr.log_sketch_cardinalities` buckconfig is set; the corresponding
+    /// `bsmr.log_sketch_cardinalities` bsmrconfig is set; the corresponding
     /// sketch field is left intact in both cases.
     #[serde(skip_serializing_if = "Option::is_none")]
     artifact_size_sketch_cardinality: Option<f64>,
@@ -1132,7 +1132,7 @@ pub async fn build_report_opts<'a>(
         print_unconfigured_section: ctx
             .parse_legacy_config_property(
                 cell_resolver.root_cell(),
-                BuckconfigKeyRef {
+                BsmrconfigKeyRef {
                     section: "build_report",
                     property: "print_unconfigured_section",
                 },

@@ -6,9 +6,9 @@ rust_library(
     name = "bsmr_re_configuration",
     srcs = glob(["src/**/*.rs"]),
     deps = [
-        "//bsmr/packages/rust/allocative/allocative:allocative",
-        "//bsmr/app/bsmr_common:bsmr_common",
-        "//bsmr/app/bsmr_core:bsmr_core",
-        "//bsmr/app/bsmr_error:bsmr_error",
+        "root//packages/rust/allocative/allocative:allocative",
+        "root//app/bsmr_common:bsmr_common",
+        "root//app/bsmr_core:bsmr_core",
+        "root//app/bsmr_error:bsmr_error",
     ],
 )

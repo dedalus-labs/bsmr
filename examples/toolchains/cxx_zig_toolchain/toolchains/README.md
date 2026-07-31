@@ -6,9 +6,9 @@ To build it within the open source tree of bsmr to you need to
   ```
   ln -s ../../../prelude prelude
   ```
-- Remove the top-level `.buckconfig`
+- Remove the top-level `.bsmrconfig`
   ```
-  rm ../../../.buckconfig
+  rm ../../../.bsmrconfig
   ```
 - Apply the following patch to the prelude
 
@@ -18,7 +18,7 @@ To build it within the open source tree of bsmr to you need to
   --- a/prelude/cxx/tools/TARGETS.v2
   +++ b/prelude/cxx/tools/TARGETS.v2
   @@ -1,4 +1,3 @@
-  -load("@fbcode_macros//build_defs/lib:python_common.bzl", "get_ldflags", "get_strip_mode")
+  -load("@upstream//build_defs/lib:python_common.bzl", "get_ldflags", "get_strip_mode")
    load(":defs.bzl", "cxx_hacks", "omnibus_environment")
 
    prelude = native

@@ -15,13 +15,13 @@ from bsmr.tests.e2e_util.buck_workspace import buck_test
 
 
 @buck_test(
-    extra_buck_config={
+    extra_bsmr_config={
         "test": {
             "foo": "bar",
         }
     },
 )
-async def test_extra_buck_config(buck: Buck) -> None:
+async def test_extra_bsmr_config(buck: Buck) -> None:
     """
     Assert that our testing framework works as expected.
     """

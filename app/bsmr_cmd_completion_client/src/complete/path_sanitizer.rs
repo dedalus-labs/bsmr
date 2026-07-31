@@ -12,7 +12,7 @@ use std::borrow::Cow;
 use std::path::Path;
 
 use bsmr_common::invocation_roots::InvocationRoots;
-use bsmr_common::legacy_configs::cells::BuckConfigBasedCells;
+use bsmr_common::legacy_configs::cells::BsmrConfigBasedCells;
 use bsmr_core::cells::CellAliasResolver;
 use bsmr_core::cells::CellResolver;
 use bsmr_core::cells::name::CellName;
@@ -64,7 +64,7 @@ pub(crate) struct PathSanitizer {
 
 impl PathSanitizer {
     pub(crate) async fn new(
-        cell_configs: &BuckConfigBasedCells,
+        cell_configs: &BsmrConfigBasedCells,
         cwd: &AbsWorkingDir,
         cwd_roots: &InvocationRoots,
     ) -> bsmr_error::Result<Self> {
@@ -232,7 +232,7 @@ impl PathSanitizer {
 #[cfg(test)]
 mod tests {
     use bsmr_common::invocation_roots::find_invocation_roots;
-    use bsmr_common::legacy_configs::cells::BuckConfigBasedCells;
+    use bsmr_common::legacy_configs::cells::BsmrConfigBasedCells;
     use paste::paste;
 
     use super::*;
@@ -287,9 +287,9 @@ mod tests {
         Ok(path.to_string())
     }
 
-    fn cell_configs(cwd: &AbsWorkingDir) -> bsmr_error::Result<BuckConfigBasedCells> {
+    fn cell_configs(cwd: &AbsWorkingDir) -> bsmr_error::Result<BsmrConfigBasedCells> {
         let cwd_roots = find_invocation_roots(cwd)?;
-        futures::executor::block_on(BuckConfigBasedCells::parse_with_config_args(
+        futures::executor::block_on(BsmrConfigBasedCells::parse_with_config_args(
             &cwd_roots.project_root,
             &[],
         ))

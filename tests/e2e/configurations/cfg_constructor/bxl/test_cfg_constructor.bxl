@@ -113,7 +113,7 @@ def test_cfg_constructor_with_package_modifiers(test_refs: TestRefs):
         package_modifiers = [
             TaggedModifiers(
                 modifiers = ["ovr_config//cpu/constraints:x86_64", "ovr_config//os/constraints:linux"],
-                location = ModifierPackageLocation(package_path = "fbcode//PACKAGE"),
+                location = ModifierPackageLocation(package_path = "upstream//PACKAGE"),
                 rule_name = None,
             ),
         ],
@@ -134,7 +134,7 @@ def test_cfg_constructor_with_all_modifiers(test_refs: TestRefs):
         package_modifiers = [
             TaggedModifiers(
                 modifiers = ["ovr_config//os/constraints:linux"],
-                location = ModifierPackageLocation(package_path = "fbcode//PACKAGE"),
+                location = ModifierPackageLocation(package_path = "upstream//PACKAGE"),
                 rule_name = None,
             ),
         ],
@@ -161,7 +161,7 @@ def test_cfg_constructor_with_modifiers_match(test_refs: TestRefs):
                 }),
                 "ovr_config//os/constraints:linux",
             ],
-            location = ModifierPackageLocation(package_path = "fbcode//PACKAGE"),
+            location = ModifierPackageLocation(package_path = "upstream//PACKAGE"),
             rule_name = None,
         ),
     ]
@@ -284,7 +284,7 @@ def test_cfg_constructor_with_single_constraint_config_setting_modifier(test_ref
         package_modifiers = [
             TaggedModifiers(
                 modifiers = ["ovr_config//os:linux"],
-                location = ModifierPackageLocation(package_path = "fbcode//PACKAGE"),
+                location = ModifierPackageLocation(package_path = "upstream//PACKAGE"),
                 rule_name = None,
             ),
         ],
@@ -303,12 +303,12 @@ def test_cfg_constructor_with_tagged_modifiers_per_rule1(test_refs: TestRefs):
         package_modifiers = [
             TaggedModifiers(
                 modifiers = ["ovr_config//cpu/constraints:arm64"],
-                location = ModifierPackageLocation(package_path = "fbcode//PACKAGE"),
+                location = ModifierPackageLocation(package_path = "upstream//PACKAGE"),
                 rule_name = None,
             ),
             TaggedModifiers(
                 modifiers = ["ovr_config//cpu/constraints:x86_64"],
-                location = ModifierPackageLocation(package_path = "fbcode//PACKAGE"),
+                location = ModifierPackageLocation(package_path = "upstream//PACKAGE"),
                 rule_name = "python_binary",
             ),
         ],
@@ -328,12 +328,12 @@ def test_cfg_constructor_with_tagged_modifiers_per_rule2(test_refs: TestRefs):
         package_modifiers = [
             TaggedModifiers(
                 modifiers = ["ovr_config//cpu/constraints:arm64"],
-                location = ModifierPackageLocation(package_path = "fbcode//PACKAGE"),
+                location = ModifierPackageLocation(package_path = "upstream//PACKAGE"),
                 rule_name = None,
             ),
             TaggedModifiers(
                 modifiers = ["ovr_config//cpu/constraints:x86_64"],
-                location = ModifierPackageLocation(package_path = "fbcode//PACKAGE"),
+                location = ModifierPackageLocation(package_path = "upstream//PACKAGE"),
                 rule_name = "python_binary",
             ),
         ],
@@ -353,7 +353,7 @@ def test_cfg_constructor_with_multiple_modifier_alias(test_refs: TestRefs):
         package_modifiers = [
             TaggedModifiers(
                 modifiers = ["ovr_config//cpu/constraints:arm64"],
-                location = ModifierPackageLocation(package_path = "fbcode//PACKAGE"),
+                location = ModifierPackageLocation(package_path = "upstream//PACKAGE"),
                 rule_name = None,
             ),
         ],

@@ -22,8 +22,8 @@ from .test_coverage_utils import collect_coverage_for
 async def test_cpp_test_coverage(buck: Buck, tmp_path: Path) -> None:
     coverage_file = tmp_path / "coverage.txt"
     await buck.test(
-        "@fbcode//mode/dbgo-cov",
-        "fbcode//bsmr/tests/targets/rules/cxx:cpp_test_pass",
+        "@upstream//mode/dbgo-cov",
+        "root//tests/targets/rules/cxx:cpp_test_pass",
         "--",
         "--collect-coverage",
         f"--coverage-output={coverage_file}",
@@ -45,7 +45,7 @@ async def test_cpp_test_coverage_filter_by_path_outside_target(
     paths = await collect_coverage_for(
         buck,
         tmp_path,
-        "fbcode//bsmr/tests/targets/rules/cxx:cpp_test_pass",
+        "root//tests/targets/rules/cxx:cpp_test_pass",
         folder_filter=["fbcode/folly"],
         file_filter=[],
     )
@@ -71,7 +71,7 @@ async def test_cpp_test_coverage_filter_by_path_of_target(
     paths = await collect_coverage_for(
         buck,
         tmp_path,
-        "fbcode//bsmr/tests/targets/rules/cxx:cpp_test_pass",
+        "root//tests/targets/rules/cxx:cpp_test_pass",
         folder_filter=["fbcode/bsmr/tests"],
         file_filter=[],
     )
@@ -90,8 +90,8 @@ async def test_cpp_test_coverage_filter_by_path_of_target_with_dev_lg(
     paths = await collect_coverage_for(
         buck,
         tmp_path,
-        "fbcode//bsmr/tests/targets/rules/cxx:cpp_test_pass",
-        mode="@fbcode//mode/dev-lg",
+        "root//tests/targets/rules/cxx:cpp_test_pass",
+        mode="@upstream//mode/dev-lg",
         folder_filter=["fbcode/bsmr/tests"],
         file_filter=[],
     )
@@ -110,8 +110,8 @@ async def test_cpp_test_coverage_filter_by_path_in_link_group_with_dev_lg(
     paths = await collect_coverage_for(
         buck,
         tmp_path,
-        "fbcode//bsmr/tests/targets/rules/cxx:cpp_test_pass",
-        mode="@fbcode//mode/dev-lg",
+        "root//tests/targets/rules/cxx:cpp_test_pass",
+        mode="@upstream//mode/dev-lg",
         folder_filter=["fbcode/folly"],
         file_filter=[],
     )
@@ -137,8 +137,8 @@ async def test_cpp_test_coverage_filter_by_file_of_target_with_dev_lg(
     paths = await collect_coverage_for(
         buck,
         tmp_path,
-        "fbcode//bsmr/tests/targets/rules/cxx:cpp_test_pass",
-        mode="@fbcode//mode/dev-lg",
+        "root//tests/targets/rules/cxx:cpp_test_pass",
+        mode="@upstream//mode/dev-lg",
         folder_filter=[],
         file_filter=[source_name],
     )
@@ -158,8 +158,8 @@ async def test_cpp_test_coverage_filter_by_source_file_in_link_group_with_dev_lg
     paths = await collect_coverage_for(
         buck,
         tmp_path,
-        "fbcode//bsmr/tests/targets/rules/cxx:cpp_test_pass",
-        mode="@fbcode//mode/dev-lg",
+        "root//tests/targets/rules/cxx:cpp_test_pass",
+        mode="@upstream//mode/dev-lg",
         folder_filter=[],
         file_filter=[source_name],
     )
@@ -181,8 +181,8 @@ async def test_cpp_test_coverage_filter_by_header_file_in_link_group_with_dev_lg
     paths = await collect_coverage_for(
         buck,
         tmp_path,
-        "fbcode//testing_frameworks/code_coverage/playground/link_groups:test_with_link_groups",
-        mode="@fbcode//mode/dev-lg",
+        "upstream//testing_frameworks/code_coverage/playground/link_groups:test_with_link_groups",
+        mode="@upstream//mode/dev-lg",
         folder_filter=[],
         file_filter=[header_name],
     )
@@ -233,8 +233,8 @@ async def test_cpp_test_coverage_filter_by_header_file_defined_in_one_link_group
     paths = await collect_coverage_for(
         buck,
         tmp_path,
-        "fbcode//testing_frameworks/code_coverage/playground/link_groups:test_with_header_used_in_different_link_group",
-        mode="@fbcode//mode/dev-lg",
+        "upstream//testing_frameworks/code_coverage/playground/link_groups:test_with_header_used_in_different_link_group",
+        mode="@upstream//mode/dev-lg",
         folder_filter=[],
         file_filter=[header_name],
     )
@@ -274,8 +274,8 @@ async def test_cpp_test_coverage_filter_by_header_file_defined_in_one_link_group
     paths = await collect_coverage_for(
         buck,
         tmp_path,
-        "fbcode//testing_frameworks/code_coverage/playground/link_groups:test_with_header_used_in_different_link_group",
-        mode="@fbcode//mode/dev-lg",
+        "upstream//testing_frameworks/code_coverage/playground/link_groups:test_with_header_used_in_different_link_group",
+        mode="@upstream//mode/dev-lg",
         folder_filter=[],
         file_filter=[header_name],
     )
@@ -312,7 +312,7 @@ async def test_cpp_test_coverage_filter_by_file(buck: Buck, tmp_path: Path) -> N
     paths = await collect_coverage_for(
         buck,
         tmp_path,
-        "fbcode//bsmr/tests/targets/rules/cxx:cpp_test_pass",
+        "root//tests/targets/rules/cxx:cpp_test_pass",
         folder_filter=[],
         file_filter=[source_name],
     )
@@ -329,7 +329,7 @@ async def test_cpp_test_coverage_when_filter_by_test_binary_header_file(
     paths = await collect_coverage_for(
         buck,
         tmp_path,
-        "fbcode//testing_frameworks/code_coverage/playground:test",
+        "upstream//testing_frameworks/code_coverage/playground:test",
         folder_filter=[],
         file_filter=[header_name],
     )
@@ -348,7 +348,7 @@ async def test_cpp_test_coverage_when_filter_by_library_header_file(
     paths = await collect_coverage_for(
         buck,
         tmp_path,
-        "fbcode//testing_frameworks/code_coverage/playground:test",
+        "upstream//testing_frameworks/code_coverage/playground:test",
         folder_filter=[],
         file_filter=[header_name],
     )
@@ -405,7 +405,7 @@ async def test_cpp_test_coverage_when_filter_by_library_private_header_file(
     paths = await collect_coverage_for(
         buck,
         tmp_path,
-        "fbcode//testing_frameworks/code_coverage/playground:test",
+        "upstream//testing_frameworks/code_coverage/playground:test",
         folder_filter=[],
         file_filter=[private_header_name],
     )
@@ -431,7 +431,7 @@ async def test_cpp_test_coverage_when_filter_by_header_file_in_headers_only_libr
     paths = await collect_coverage_for(
         buck,
         tmp_path,
-        "fbcode//testing_frameworks/code_coverage/playground:test_with_dep_with_only_headers",
+        "upstream//testing_frameworks/code_coverage/playground:test_with_dep_with_only_headers",
         folder_filter=[],
         file_filter=[header_name],
     )
@@ -457,10 +457,10 @@ async def test_cpp_test_coverage_filter_by_file_with_opt_mode(
     paths = await collect_coverage_for(
         buck,
         tmp_path,
-        target="fbcode//bsmr/tests/targets/rules/cxx:cpp_test_pass",
+        target="root//tests/targets/rules/cxx:cpp_test_pass",
         folder_filter=[],
         file_filter=[source_name],
-        mode="@fbcode//mode/opt",
+        mode="@upstream//mode/opt",
     )
 
     assert len(paths) == 1, str(paths)
@@ -475,7 +475,7 @@ async def test_cpp_test_coverage_filter_by_file_and_path(
     paths = await collect_coverage_for(
         buck,
         tmp_path,
-        "fbcode//bsmr/tests/targets/rules/cxx:cpp_test_pass",
+        "root//tests/targets/rules/cxx:cpp_test_pass",
         folder_filter=["folly"],
         file_filter=[source_name],
     )
@@ -508,7 +508,7 @@ async def test_cpp_test_coverage_xplat_filter_by_file_path(
     paths = await collect_coverage_for(
         buck,
         tmp_path,
-        "fbsource//xplat/testinfra/playground/cpp:example_testFbcode",
+        "upstream//xplat/testinfra/playground/cpp:example_testFbcode",
         folder_filter=[],
         file_filter=[file_to_collect_coverage],
     )

@@ -162,9 +162,9 @@ async def test_upload_all_actions(buck: Buck) -> None:
     )
 
 
-@buck_test(data_dir="buckroot")
-async def test_buckroot(buck: Buck) -> None:
-    # Test that .buckroot files work
+@buck_test(data_dir="bsmrroot")
+async def test_bsmrroot(buck: Buck) -> None:
+    # Test that .bsmrroot files work
     await buck.build(":inner", rel_cwd=Path("rooted/cell"))
 
 

@@ -26,7 +26,7 @@ load(
     "@prelude//java:java_providers.bzl",
     "JavaPackagingDep",  # @unused Used as type
 )
-load("@prelude//utils:buckconfig.bzl", "read_bool")
+load("@prelude//utils:bsmrconfig.bzl", "read_bool")
 load("@prelude//utils:expect.bzl", "expect")
 load("@prelude//utils:utils.bzl", "flatten")
 

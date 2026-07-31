@@ -14,7 +14,7 @@ load(
     ":types.bzl",
     "ConditionalModifierInfo",
     "Modifier",
-    "ModifierBuckconfigLocation",
+    "ModifierBsmrconfigLocation",
     "ModifierCliLocation",
     "ModifierInfo",
     "ModifierLocation",
@@ -42,8 +42,8 @@ def location_to_string(location: ModifierLocation) -> str:
         return _TARGET_LOCATION_STR
     if isinstance(location, ModifierCliLocation):
         return _CLI_LOCATION_STR
-    if isinstance(location, ModifierBuckconfigLocation):
-        return "buckconfig {}.{}".format(location.section, location.property)
+    if isinstance(location, ModifierBsmrconfigLocation):
+        return "bsmrconfig {}.{}".format(location.section, location.property)
     fail("Internal error. Unrecognized location type `{}` for location `{}`".format(type(location), location))
 
 def get_tagged_modifiers(
@@ -105,9 +105,9 @@ def get_modifier_info(refs: dict[str, ProviderCollection], modifier: Modifier, l
                 cfg_info = refs[key][ConfigurationInfo]
                 if cfg_info.values:
                     soft_error(
-                        "starlark_config_setting_non_empty_buckconfig_values_in_conditional_modifier",
-                        "config_setting `{}` defines buckconfig values {} which are NOT supported in conditional modifiers.\n".format(key, cfg_info.values)
-                        + "These buckconfig values are being IGNORED.\n\n"
+                        "starlark_config_setting_non_empty_bsmrconfig_values_in_conditional_modifier",
+                        "config_setting `{}` defines bsmrconfig values {} which are NOT supported in conditional modifiers.\n".format(key, cfg_info.values)
+                        + "These bsmrconfig values are being IGNORED.\n\n"
                         + "Action required: Remove the `values` parameter from this config_setting {} and use only `constraint_values` instead.\n".format(key)
                         + "Note: This may become a hard error in the future to prevent silent misconfiguration.",
                         quiet = True,
@@ -297,7 +297,7 @@ def get_and_insert_modifier_info(
     add_to_constraint_setting_to_modifier_infos(constraint_setting_to_modifier_infos, constraint_setting_label, modifier_info)
     return (constraint_setting_label, modifier_info)
 
-def apply_buckconfig_backed_modifiers(constraint_setting_to_modifier_infos: dict[TargetLabel, list[ModifierInfo]], modifiers: list[ConditionalModifierInfo]):
+def apply_bsmrconfig_backed_modifiers(constraint_setting_to_modifier_infos: dict[TargetLabel, list[ModifierInfo]], modifiers: list[ConditionalModifierInfo]):
     for conditional_modifier_info in modifiers:
         add_to_constraint_setting_to_modifier_infos(
             constraint_setting_to_modifier_infos = constraint_setting_to_modifier_infos,

@@ -1,4 +1,4 @@
-load("@fbcode//bsmr/tests/prelude:py_assertion.bzl", "py_assertion")
+load("@root//tests/prelude:py_assertion.bzl", "py_assertion")
 
 # Test that the sources can be used in `exe`
 

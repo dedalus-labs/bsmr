@@ -103,17 +103,17 @@ impl<'v, V: ValueLike<'v>> ConfigurationInfoGen<V> {
 
         ConfigSettingData {
             constraints: converted_constraints,
-            buckconfigs: converted_values,
+            bsmrconfigs: converted_values,
         }
     }
 
     pub fn to_configuration_data(&self) -> bsmr_error::Result<ConfigurationDataData> {
         let ConfigSettingData {
             constraints,
-            buckconfigs,
+            bsmrconfigs,
         } = self.to_config_setting_data();
-        if !buckconfigs.is_empty() {
-            return Err(ConfigurationInfoError::BuckConfigsNotAllowed.into());
+        if !bsmrconfigs.is_empty() {
+            return Err(ConfigurationInfoError::BsmrConfigsNotAllowed.into());
         }
         Ok(ConfigurationDataData { constraints })
     }
@@ -159,8 +159,8 @@ impl<'v> ConfigurationInfo<'v> {
 enum ConfigurationInfoError {
     #[error("key `{0}` in constraints dict does not match constraint value `{1}`")]
     ConstraintsKeyValueMismatch(String, String),
-    #[error("`ConfigurationInfo` cannot have buckconfigs when it is used to create a platform")]
-    BuckConfigsNotAllowed,
+    #[error("`ConfigurationInfo` cannot have bsmrconfigs when it is used to create a platform")]
+    BsmrConfigsNotAllowed,
 }
 
 /// Helper function to validate and build a constraints map from dictionary entries.
@@ -235,7 +235,7 @@ fn configuration_info_methods(builder: &mut MethodsBuilder) {
         Ok(this.constraints.to_value())
     }
 
-    /// A dictionary of buckconfig section.key pairs and their values.
+    /// A dictionary of bsmrconfig section.key pairs and their values.
     #[starlark(attribute)]
     fn values<'v>(
         this: &ConfigurationInfo<'v>,

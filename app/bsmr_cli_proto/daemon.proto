@@ -39,7 +39,7 @@ message DaemonConstraints {
   // should just proceed with that daemon and they'll get an error later.
   optional ExtraDaemonConstraints extra = 5;
 
-  // Buckconfigs read by the client then passed to the daemon.
+  // Bsmrconfigs read by the client then passed to the daemon.
   optional string daemon_startup_config = 7;
 }
 

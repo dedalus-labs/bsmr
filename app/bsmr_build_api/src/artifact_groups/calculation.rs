@@ -24,7 +24,7 @@ use bsmr_common::file_ops::dice::DiceFileComputations;
 use bsmr_common::file_ops::metadata::RawPathMetadata;
 use bsmr_common::file_ops::metadata::RawSymlink;
 use bsmr_common::legacy_configs::dice::HasLegacyConfigs;
-use bsmr_common::legacy_configs::key::BuckconfigKeyRef;
+use bsmr_common::legacy_configs::key::BsmrconfigKeyRef;
 use bsmr_common::package_listing::dice::DicePackageListingResolver;
 use bsmr_core::build_file_path::BuildFilePath;
 use bsmr_core::cells::cell_path::CellPath;
@@ -447,7 +447,7 @@ async fn path_artifact_value(
             let use_correct_source_symlink_reading = ctx
                 .parse_legacy_config_property(
                     root_cell,
-                    BuckconfigKeyRef {
+                    BsmrconfigKeyRef {
                         section: "bsmr",
                         property: "use_correct_source_symlink_reading",
                     },

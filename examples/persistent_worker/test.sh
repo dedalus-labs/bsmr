@@ -10,8 +10,8 @@
 set -euo pipefail
 
 echo "::group::Local build without persistent worker" >&2
-cat >.buckconfig.local <<EOF
-<file:.buckconfig.no-workers>
+cat >.bsmrconfig.local <<EOF
+<file:.bsmrconfig.no-workers>
 EOF
 bsmr clean; bsmr build : -vstderr
 echo "# Verifying Bessemer log" >&2
@@ -36,8 +36,8 @@ bsmr log what-ran --show-std-err --format json \
 echo "::endgroup::" >&2
 
 echo "::group::Local build with persistent worker" >&2
-cat >.buckconfig.local <<EOF
-<file:.buckconfig.local-persistent-workers>
+cat >.bsmrconfig.local <<EOF
+<file:.bsmrconfig.local-persistent-workers>
 EOF
 bsmr clean; bsmr build : -vstderr
 echo "# Verifying Bessemer log" >&2
@@ -65,8 +65,8 @@ echo "::group::Remote build without persistent worker" >&2
 if [[ -z ${BUILDBUDDY_API_KEY:+x} ]]; then
   echo "::notice file=$(realpath --relative-to=../.. "${BASH_SOURCE[0]}"),line=${LINENO}::SKIPPED Missing BuildBuddy token. See examples/persistent_worker/README.md" >&2
 else
-  cat >.buckconfig.local <<EOF
-<file:.buckconfig.buildbuddy>
+  cat >.bsmrconfig.local <<EOF
+<file:.bsmrconfig.buildbuddy>
 
 [build]
 cache_silo_key=$(date +%s.%N).${GITHUB_RUN_ID-0}
@@ -98,8 +98,8 @@ echo "::group::Remote build with persistent worker" >&2
 if [[ -z ${BUILDBUDDY_API_KEY:+x} ]]; then
   echo "::notice file=$(realpath --relative-to=../.. "${BASH_SOURCE[0]}"),line=${LINENO}::SKIPPED Missing BuildBuddy token. See examples/persistent_worker/README.md" >&2
 else
-  cat >.buckconfig.local <<EOF
-<file:.buckconfig.buildbuddy-persistent-workers>
+  cat >.bsmrconfig.local <<EOF
+<file:.bsmrconfig.buildbuddy-persistent-workers>
 
 [build]
 cache_silo_key=$(date +%s.%N).${GITHUB_RUN_ID-0}

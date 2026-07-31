@@ -29,7 +29,7 @@ async def test_rust_binary() -> None:
             "develop",
             "--stdout",
             "--pretty",
-            "fbcode//bsmr/tests/targets/rules/rust/hello_world:welcome",
+            "root//tests/targets/rules/rust/hello_world:welcome",
         ],
         stdout=subprocess.PIPE,
         env=env,

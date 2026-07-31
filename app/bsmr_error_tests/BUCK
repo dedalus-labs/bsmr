@@ -20,9 +20,9 @@ rust_unittest(
         "CARGO_MANIFEST_DIR": "$(location :tests)",
     },
     deps = [
-        "fbsource//third-party/rust:anyhow",
-        "//bsmr/app/bsmr_error:bsmr_error",
-        "//bsmr/app/bsmr_util:bsmr_util",
-        "//bsmr/packages/rust/starlark/starlark:starlark",
+        "bsmr_build//third-party/rust:anyhow",
+        "root//app/bsmr_error:bsmr_error",
+        "root//app/bsmr_util:bsmr_util",
+        "root//packages/rust/starlark/starlark:starlark",
     ],
 )

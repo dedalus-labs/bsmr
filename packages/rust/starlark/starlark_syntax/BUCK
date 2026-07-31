@@ -18,7 +18,7 @@ rust_library(
         "--cfg=rust_nightly",
     ],
     test_deps = [
-        "fbsource//third-party/rust:serde_json",
+        "bsmr_build//third-party/rust:serde_json",
     ],
     test_env = {
         # Some of our tests include testcase files relative to CARGO_MANIFEST_DIR.
@@ -31,25 +31,25 @@ rust_library(
         # If you need some feature requiring working with syntax tree, like a linter,
         # please implement it inside the `starlark` crate.
         # For codemods, use libCST.
-        "//bsmr/packages/rust/starlark/...",
+        "root//packages/rust/starlark/...",
         # For faster incremental compilation of bsmr,
         # we pull `starlark::Error` from this crate rather than from `starlark`.
-        "//bsmr/app/bsmr_error/...",
+        "root//app/bsmr_error/...",
     ],
     deps = [
-        "fbsource//third-party/rust:annotate-snippets",
-        "fbsource//third-party/rust:anyhow",
-        "fbsource//third-party/rust:derivative",
-        "fbsource//third-party/rust:derive_more",
-        "fbsource//third-party/rust:logos",
-        "fbsource//third-party/rust:lsp-types",
-        "fbsource//third-party/rust:memchr",
-        "fbsource//third-party/rust:num-bigint",
-        "fbsource//third-party/rust:num-traits",
-        "fbsource//third-party/rust:thiserror",
-        "//bsmr/packages/rust/allocative/allocative:allocative",
-        "//bsmr/packages/rust/gazebo/dupe:dupe",
-        "//bsmr/packages/rust/pagable/pagable:pagable",
-        "//bsmr/packages/rust/starlark/starlark_map:starlark_map",
+        "bsmr_build//third-party/rust:annotate-snippets",
+        "bsmr_build//third-party/rust:anyhow",
+        "bsmr_build//third-party/rust:derivative",
+        "bsmr_build//third-party/rust:derive_more",
+        "bsmr_build//third-party/rust:logos",
+        "bsmr_build//third-party/rust:lsp-types",
+        "bsmr_build//third-party/rust:memchr",
+        "bsmr_build//third-party/rust:num-bigint",
+        "bsmr_build//third-party/rust:num-traits",
+        "bsmr_build//third-party/rust:thiserror",
+        "root//packages/rust/allocative/allocative:allocative",
+        "root//packages/rust/gazebo/dupe:dupe",
+        "root//packages/rust/pagable/pagable:pagable",
+        "root//packages/rust/starlark/starlark_map:starlark_map",
     ],
 )

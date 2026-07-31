@@ -162,5 +162,5 @@ following invocation of `buck targets` show the resulting targets from the
 preceding example, but not the macro that created them.
 
 ```
-buck targets fbsource//fbandroid/apps/messenger/...
+buck targets upstream//fbandroid/apps/messenger/...
 ```

@@ -10,31 +10,31 @@ rust_library(
     ),
     crate_root = "src/lib.rs",
     test_deps = [
-        "fbsource//third-party/rust:anyhow",
-        "fbsource//third-party/rust:derive_more",
+        "bsmr_build//third-party/rust:anyhow",
+        "bsmr_build//third-party/rust:derive_more",
     ],
     deps = [
-        "fbsource//third-party/rust:bytes",
-        "fbsource//third-party/rust:crossbeam-channel",
-        "fbsource//third-party/rust:crossterm",
-        "fbsource//third-party/rust:futures",
-        "fbsource//third-party/rust:itertools",
-        "fbsource//third-party/rust:pin-project",
-        "fbsource//third-party/rust:take_mut",
-        "fbsource//third-party/rust:termwiz",
-        "fbsource//third-party/rust:thiserror",
-        "fbsource//third-party/rust:tokio",
-        "fbsource//third-party/rust:tokio-stream",
-        "fbsource//third-party/rust:tokio-util",
-        "fbsource//third-party/rust:tracing",
-        "fbsource//third-party/rust:unicode-segmentation",
+        "bsmr_build//third-party/rust:bytes",
+        "bsmr_build//third-party/rust:crossbeam-channel",
+        "bsmr_build//third-party/rust:crossterm",
+        "bsmr_build//third-party/rust:futures",
+        "bsmr_build//third-party/rust:itertools",
+        "bsmr_build//third-party/rust:pin-project",
+        "bsmr_build//third-party/rust:take_mut",
+        "bsmr_build//third-party/rust:termwiz",
+        "bsmr_build//third-party/rust:thiserror",
+        "bsmr_build//third-party/rust:tokio",
+        "bsmr_build//third-party/rust:tokio-stream",
+        "bsmr_build//third-party/rust:tokio-util",
+        "bsmr_build//third-party/rust:tracing",
+        "bsmr_build//third-party/rust:unicode-segmentation",
     ] + select({
         "DEFAULT": [],
         "ovr_config//os:linux": [
-            "fbsource//third-party/rust:nix",
+            "bsmr_build//third-party/rust:nix",
         ],
         "ovr_config//os:macos": [
-            "fbsource//third-party/rust:nix",
+            "bsmr_build//third-party/rust:nix",
         ],
     }),
 )
@@ -55,8 +55,8 @@ rust_binary(
     name = "finalization",
     srcs = ["examples/finalization.rs"],
     deps = [
-        "fbsource//third-party/rust:derive_more",
-        "fbsource//third-party/rust:tokio",
+        "bsmr_build//third-party/rust:derive_more",
+        "bsmr_build//third-party/rust:tokio",
         ":superconsole",
     ],
 )
@@ -65,7 +65,7 @@ rust_binary(
     name = "hello_world",
     srcs = ["examples/hello_world.rs"],
     deps = [
-        "fbsource//third-party/rust:tokio",
+        "bsmr_build//third-party/rust:tokio",
         ":superconsole",
     ],
 )
@@ -74,7 +74,7 @@ rust_binary(
     name = "readme",
     srcs = ["examples/readme.rs"],
     deps = [
-        "fbsource//third-party/rust:anyhow",
+        "bsmr_build//third-party/rust:anyhow",
         ":superconsole",
     ],
 )
@@ -83,8 +83,8 @@ rust_binary(
     name = "stylized",
     srcs = ["examples/stylized.rs"],
     deps = [
-        "fbsource//third-party/rust:derive_more",
-        "fbsource//third-party/rust:tokio",
+        "bsmr_build//third-party/rust:derive_more",
+        "bsmr_build//third-party/rust:tokio",
         ":superconsole",
     ],
 )

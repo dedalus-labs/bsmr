@@ -21,8 +21,8 @@ async def test_cpp_test_coverage_with_network_sandboxing(
 ) -> None:
     coverage_file = tmp_path / "coverage.txt"
     await buck.test(
-        "@fbcode//mode/dbgo-cov",
-        "fbcode//bsmr/tests/targets/rules/cxx:cpp_test_pass",
+        "@upstream//mode/dbgo-cov",
+        "root//tests/targets/rules/cxx:cpp_test_pass",
         "-c",
         # We need to build the llvm coverage wrapper from source because otherwise this is served
         # via msdk which will fail to download the wrapper when wrapped in an `unshare` call.

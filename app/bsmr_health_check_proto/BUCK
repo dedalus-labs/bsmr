@@ -9,8 +9,8 @@ rust_protobuf_library(
     build_script = "build.rs",
     proto_srcs = ":bsmr_health_check_proto.proto",
     deps = [
-        "fbsource//third-party/rust:prost-types",
-        "//bsmr/app/bsmr_data:bsmr_data",
+        "bsmr_build//third-party/rust:prost-types",
+        "root//app/bsmr_data:bsmr_data",
     ],
 )
 
@@ -19,6 +19,6 @@ proto_srcs(
     srcs = ["health_check.proto"],
     visibility = ["PUBLIC"],
     deps = [
-        translate_target("//bsmr/app/bsmr_data:data_proto"),
+        translate_target("root//app/bsmr_data:data_proto"),
     ],
 )

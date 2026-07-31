@@ -10,19 +10,19 @@ load("@prelude//:asserts.bzl", "asserts")
 
 def _impl(ctx):
     # special case where fbsource is a project and a cell
-    asserts.true(ctx.fs.exists("fbsource//fbcode"))
-    asserts.false(ctx.fs.exists("fbsource//fake/path"))
-    asserts.true(ctx.fs.is_dir("fbsource//fbcode"))
-    asserts.false(ctx.fs.is_file("fbsource//fbcode"))
+    asserts.true(ctx.fs.exists("upstream//fbcode"))
+    asserts.false(ctx.fs.exists("upstream//fake/path"))
+    asserts.true(ctx.fs.is_dir("upstream//fbcode"))
+    asserts.false(ctx.fs.is_file("upstream//fbcode"))
 
     # test fbcode as well
-    asserts.true(ctx.fs.exists("fbcode//bsmr"))
-    asserts.false(ctx.fs.exists("fbcode//buck100"))
-    asserts.true(ctx.fs.is_dir("fbcode//bsmr"))
-    asserts.false(ctx.fs.is_file("fbcode//bsmr"))
+    asserts.true(ctx.fs.exists("root//"))
+    asserts.false(ctx.fs.exists("upstream//buck100"))
+    asserts.true(ctx.fs.is_dir("root//"))
+    asserts.false(ctx.fs.is_file("root//"))
 
     outputs = []
-    for result in ctx.fs.list("fbcode//bsmr/tests/e2e/bxl/fs/some_folder"):
+    for result in ctx.fs.list("root//tests/e2e/bxl/fs/some_folder"):
         outputs.append(result)
     asserts.equals(len(outputs), 2)
 

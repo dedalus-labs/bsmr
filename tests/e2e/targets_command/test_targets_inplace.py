@@ -19,12 +19,12 @@ from bsmr.tests.e2e_util.buck_workspace import buck_test, get_mode_from_platform
 
 @buck_test(inplace=True)
 async def test_targets(buck: Buck) -> None:
-    result = await buck.targets("fbcode//bsmr/tests/targets/commands:")
+    result = await buck.targets("root//tests/targets/commands:")
 
     targets = [
-        "fbcode//bsmr/tests/targets/commands:dynamic",
-        "fbcode//bsmr/tests/targets/commands:exported",
-        "fbcode//bsmr/tests/targets/commands:lib",
+        "root//tests/targets/commands:dynamic",
+        "root//tests/targets/commands:exported",
+        "root//tests/targets/commands:lib",
     ]
 
     for target in targets:
@@ -35,8 +35,8 @@ async def test_targets(buck: Buck) -> None:
 async def test_targets_errors(buck: Buck) -> None:
     await expect_failure(
         buck.targets(
-            "fbcode//bsmr/tests/targets/commands:",
-            "fbcode//bsmr/tests/targets/non_existent_path:",
+            "root//tests/targets/commands:",
+            "root//tests/targets/non_existent_path:",
         ),
         exit_code=ExitCodeV2.USER_ERROR,
     )
@@ -46,10 +46,10 @@ async def test_targets_errors(buck: Buck) -> None:
 async def test_explicit_targets_errors(buck: Buck) -> None:
     await expect_failure(
         buck.targets(
-            "fbcode//bsmr/tests/targets/commands:notarealtarget",
+            "root//tests/targets/commands:notarealtarget",
         ),
         exit_code=ExitCodeV2.USER_ERROR,
-        stderr_regex="Unknown target `notarealtarget` from package `fbcode//bsmr/tests/targets/commands`",
+        stderr_regex="Unknown target `notarealtarget` from package `root//tests/targets/commands`",
     )
 
 
@@ -58,39 +58,39 @@ async def test_targets_with_config_value(buck: Buck) -> None:
     targets_enabled_result = await buck.targets(
         "--config",
         "user.targets_enabled=true",
-        "fbcode//bsmr/tests/targets/commands:",
+        "root//tests/targets/commands:",
     )
     assert (
-        "fbcode//bsmr/tests/targets/commands:config_defined_target"
+        "root//tests/targets/commands:config_defined_target"
         in targets_enabled_result.stdout
     )
 
     targets_disabled_result = await buck.targets(
         "--config",
         "user.targets_enabled=false",
-        "fbcode//bsmr/tests/targets/commands:",
+        "root//tests/targets/commands:",
     )
     assert (
-        "fbcode//bsmr/tests/targets/commands:config_defined_target"
+        "root//tests/targets/commands:config_defined_target"
         not in targets_disabled_result.stdout
     )
 
     targets_cell_rel_result = await buck.targets(
         "--config",
-        "fbsource//user.targets_enabled=true",
-        "fbcode//bsmr/tests/targets/commands:",
+        "upstream//user.targets_enabled=true",
+        "root//tests/targets/commands:",
     )
     assert targets_cell_rel_result.stdout == targets_disabled_result.stdout
 
 
 @buck_test(inplace=True)
 async def test_targets_root_relative_from_fbcode(buck: Buck) -> None:
-    result = await buck.targets("//bsmr/tests/targets/commands:")
+    result = await buck.targets("root//tests/targets/commands:")
 
     targets = [
-        "fbcode//bsmr/tests/targets/commands:dynamic",
-        "fbcode//bsmr/tests/targets/commands:exported",
-        "fbcode//bsmr/tests/targets/commands:lib",
+        "root//tests/targets/commands:dynamic",
+        "root//tests/targets/commands:exported",
+        "root//tests/targets/commands:lib",
     ]
 
     for target in targets:
@@ -100,8 +100,8 @@ async def test_targets_root_relative_from_fbcode(buck: Buck) -> None:
 @buck_test(inplace=True)
 async def test_targets_show_output(buck: Buck) -> None:
     for target in [
-        "fbcode//bsmr/tests/targets/rules/genrule:executable_helper",
-        "fbcode//bsmr/tests/targets/rules/export_file:exported.txt",
+        "root//tests/targets/rules/genrule:executable_helper",
+        "root//tests/targets/rules/export_file:exported.txt",
     ]:
         build_result = await buck.build(target, "--show-output")
         targets_result = await buck.targets(target, "--show-output")
@@ -120,10 +120,10 @@ async def test_targets_show_output(buck: Buck) -> None:
 
 @buck_test(inplace=True)
 async def test_targets_show_output_subtargets(buck: Buck) -> None:
-    TARGET = "fbcode//bsmr/tests/targets/rules/cxx:my_cpp1"
+    TARGET = "root//tests/targets/rules/cxx:my_cpp1"
     SUBTARGET = "compilation-database"
     TARGET_WITH_SUBTARGET = (
-        "fbcode//bsmr/tests/targets/rules/cxx:my_cpp1[compilation-database]"
+        "root//tests/targets/rules/cxx:my_cpp1[compilation-database]"
     )
 
     build_result = await buck.build(
@@ -149,8 +149,8 @@ async def test_targets_show_output_subtargets(buck: Buck) -> None:
 @buck_test(inplace=True)
 async def test_targets_show_full_output(buck: Buck) -> None:
     for target in [
-        "fbcode//bsmr/tests/targets/rules/genrule:executable_helper",
-        "fbcode//bsmr/tests/targets/rules/export_file:exported.txt",
+        "root//tests/targets/rules/genrule:executable_helper",
+        "root//tests/targets/rules/export_file:exported.txt",
     ]:
         build_result = await buck.build(target, "--show-full-output")
         targets_result = await buck.targets(target, "--show-full-output")

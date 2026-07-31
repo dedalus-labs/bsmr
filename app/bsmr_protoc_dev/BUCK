@@ -12,13 +12,13 @@ rust_library(
         "cargo_toml_config": {
             "extra_buck_dependencies": {
                 "dependencies": [
-                    "fbsource//third-party/rust:dunce",
-                    "fbsource//third-party/rust:protoc-bin-vendored",
+                    "bsmr_build//third-party/rust:dunce",
+                    "bsmr_build//third-party/rust:protoc-bin-vendored",
                 ],
             },
         },
     },
     deps = [
-        "fbsource//third-party/rust:tonic-prost-build",
+        "bsmr_build//third-party/rust:tonic-prost-build",
     ],
 )

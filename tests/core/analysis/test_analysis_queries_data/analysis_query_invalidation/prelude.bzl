@@ -20,7 +20,7 @@ proxy_target = rule(
 )
 
 def _platform(ctx):
-    # Configuration that reads from buckconfig
+    # Configuration that reads from bsmrconfig
     configuration = ConfigurationInfo(
         constraints = {},
         values = ctx.attrs.values,

@@ -12,7 +12,7 @@ use std::sync::Arc;
 
 use bsmr_client_ctx::command_outcome::CommandOutcome;
 use bsmr_common::invocation_roots::InvocationRoots;
-use bsmr_common::legacy_configs::cells::BuckConfigBasedCells;
+use bsmr_common::legacy_configs::cells::BsmrConfigBasedCells;
 use bsmr_fs::working_dir::AbsWorkingDir;
 
 use super::path_completer::PathCompleter;
@@ -22,7 +22,7 @@ use super::results::CompletionResults;
 pub(crate) struct PackageCompleter<'a> {
     cwd: AbsWorkingDir,
     roots: &'a InvocationRoots,
-    cell_configs: Arc<BuckConfigBasedCells>,
+    cell_configs: Arc<BsmrConfigBasedCells>,
     path_sanitizer: PathSanitizer,
     results: CompletionResults<'a>,
 }
@@ -33,7 +33,7 @@ impl<'a> PackageCompleter<'a> {
         roots: &'a InvocationRoots,
     ) -> CommandOutcome<Self> {
         let cell_configs =
-            Arc::new(BuckConfigBasedCells::parse_with_config_args(&roots.project_root, &[]).await?);
+            Arc::new(BsmrConfigBasedCells::parse_with_config_args(&roots.project_root, &[]).await?);
 
         let path_sanitizer = PathSanitizer::new(&cell_configs, cwd, roots).await?;
         let results = CompletionResults::new(roots, cell_configs.clone());

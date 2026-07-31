@@ -90,7 +90,7 @@ impl FromStr for ValueStyle {
 }
 
 #[derive(Debug, clap::Parser, serde::Serialize, serde::Deserialize)]
-#[clap(name = "audit-config", about = "Read and display buckconfig values.")]
+#[clap(name = "audit-config", about = "Read and display bsmrconfig values.")]
 pub struct AuditConfigCommand {
     /// Query config for a specific cell (default: the cell of the current working directory).
     #[clap(long = "cell")]

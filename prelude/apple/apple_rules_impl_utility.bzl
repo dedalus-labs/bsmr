@@ -20,7 +20,7 @@ load("@prelude//cxx:headers.bzl", "CPrecompiledHeaderInfo")
 load("@prelude//ide_integrations/xcode:scheme_settings.bzl", "XCODE_SCHEME_SETTINGS_ATTR_NAME", "XCODE_SCHEME_SETTINGS_ATTR_TYPE")
 load("@prelude//linking:execution_preference.bzl", "link_execution_preference_attr")
 load("@prelude//linking:link_info.bzl", "LinkOrdering")
-load("@prelude//utils:buckconfig.bzl", "read_bool")
+load("@prelude//utils:bsmrconfig.bzl", "read_bool")
 load("@prelude//utils:clear_platform.bzl", "clear_platform_transition")
 
 AppleFrameworkBundleModuleMapType = ["auto"]
@@ -139,7 +139,7 @@ def get_incremental_swiftmodule_action_attrs():
 def _apple_bundle_like_common_attrs():
     # `apple_bundle()` and `apple_test()` share a common set of extra attrs
     attribs = {
-        # Target-level attribute always takes precedence over buckconfigs.
+        # Target-level attribute always takes precedence over bsmrconfigs.
         "code_signing_configuration": attrs.option(attrs.enum(CodeSignConfiguration.values()), default = None),
         "codesign_type": attrs.option(attrs.enum(CodeSignType.values()), default = None),
         "entitlements_verification_check_enabled": attrs.bool(
@@ -172,7 +172,7 @@ def _apple_bundle_like_common_attrs():
         "_incremental_bundling_enabled": attrs.bool(default = False),
         "_no_check_certificates": attrs.bool(default = False),
         "_profile_bundling_enabled": attrs.bool(default = False),
-        "_provisioning_profile_sources": attrs.dep(default = "fbsource//xplat/bsmr/platform/apple:provisioning_profile_sources"),
+        "_provisioning_profile_sources": attrs.dep(default = "upstream//xplat/bsmr/platform/apple:provisioning_profile_sources"),
         "_resource_bundle": attrs.option(attrs.dep(providers = [AppleBundleResourceInfo]), default = None),
         "_skip_adhoc_resigning_scrubbed_frameworks_default": _skip_adhoc_resigning_scrubbed_frameworks_default_attr(),
         "_skip_adhoc_resigning_scrubbed_frameworks_override": attrs.option(attrs.bool(), default = None),
@@ -231,17 +231,17 @@ def apple_test_extra_attrs():
         ),
         "_enable_library_evolution": get_enable_library_evolution(),
         "_ipad_simulator": attrs.transition_dep(
-            cfg = clear_platform_transition, default = "fbsource//xplat/bsmr/platform/apple:ipad_simulator", providers = [LocalResourceInfo]
+            cfg = clear_platform_transition, default = "upstream//xplat/bsmr/platform/apple:ipad_simulator", providers = [LocalResourceInfo]
         ),
         "_iphone_booted_simulator": attrs.transition_dep(
-            cfg = clear_platform_transition, default = "fbsource//xplat/bsmr/platform/apple:iphone_booted_simulator", providers = [LocalResourceInfo]
+            cfg = clear_platform_transition, default = "upstream//xplat/bsmr/platform/apple:iphone_booted_simulator", providers = [LocalResourceInfo]
         ),
         "_iphone_unbooted_simulator": attrs.transition_dep(
-            cfg = clear_platform_transition, default = "fbsource//xplat/bsmr/platform/apple:iphone_unbooted_simulator", providers = [LocalResourceInfo]
+            cfg = clear_platform_transition, default = "upstream//xplat/bsmr/platform/apple:iphone_unbooted_simulator", providers = [LocalResourceInfo]
         ),
         "_swift_enable_testing": attrs.default_only(attrs.bool(default = True)),
         "_watch_simulator": attrs.transition_dep(
-            cfg = clear_platform_transition, default = "fbsource//xplat/bsmr/platform/apple:watch_simulator", providers = [LocalResourceInfo]
+            cfg = clear_platform_transition, default = "upstream//xplat/bsmr/platform/apple:watch_simulator", providers = [LocalResourceInfo]
         ),
     } | validation_common.attrs_validators_arg()
     attribs.update(apple_common.apple_toolchain_arg())

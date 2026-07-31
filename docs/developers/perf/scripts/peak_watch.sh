@@ -17,7 +17,7 @@
 #   peak_watch.sh <bin> <tag> -- <bsmr args...>
 #
 # Example:
-#   peak_watch.sh /tmp/b2x x -- targets fbcode//... --num-threads=30 --no-cache
+#   peak_watch.sh /tmp/b2x x -- targets upstream//... --num-threads=30 --no-cache
 #
 # Run this in a benchmark-only worktree — it kills and restarts the
 # local daemon. See docs/developers/perf/basics.md.

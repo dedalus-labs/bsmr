@@ -61,7 +61,7 @@ def parse_arguments() -> Tuple[argparse.Namespace, List[str]]:
 def get_extra_build_params(args: argparse.Namespace) -> List[str]:
     system_platform = platform.system()
     if system_platform == "Windows":
-        return ["@fbcode//mode/opt-win"]
+        return ["@upstream//mode/opt-win"]
 
     params = ["-m", "opt"]
 
@@ -82,7 +82,7 @@ def build_command(
     cmd = [
         "bsmr",
         "run",
-        # @oss-disable[end= ]: "fbcode//bsmr:bsmr_bundle",
+        # @oss-disable[end= ]: "root//:bsmr_bundle",
         "//:bsmr_bundle", # @oss-enable
     ]
     inner_buck_isolation_dir = (
@@ -106,16 +106,16 @@ def build_command(
 
 # Target whose default output is the TPX test executor that the bsmr bundle
 # materialises as "bsmr-tpx" (see fbcode/bsmr/defs.bzl).
-TPX_TARGET = "fbcode//bsmr/bsmr_tpx_cli:bsmr_tpx_cli"
+TPX_TARGET = "root//bsmr_tpx_cli:bsmr_tpx_cli"
 
 
 def tpx_build_mode() -> str:
     # opt is intentional: a mode/dev TPX fails to run from outside buck-out
     # (missing libunwind.so.8), whereas the opt binary is self-contained.
     return (
-        "@fbcode//mode/opt-win"
+        "@upstream//mode/opt-win"
         if platform.system() == "Windows"
-        else "@fbcode//mode/opt"
+        else "@upstream//mode/opt"
     )
 
 

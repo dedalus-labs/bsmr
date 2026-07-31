@@ -30,7 +30,7 @@ use bsmr_common::dice::data::testing::SetTestingIoProvider;
 use bsmr_common::file_ops::metadata::FileMetadata;
 use bsmr_common::file_ops::metadata::TrackedFileDigest;
 use bsmr_common::file_ops::testing::TestFileOps;
-use bsmr_common::legacy_configs::configs::LegacyBuckConfig;
+use bsmr_common::legacy_configs::configs::LegacyBsmrConfig;
 use bsmr_common::legacy_configs::dice::inject_legacy_config_for_test;
 use bsmr_core::cells::CellResolver;
 use bsmr_core::cells::cell_path::CellPath;
@@ -206,7 +206,7 @@ async fn test_ensure_artifact_group() -> bsmr_error::Result<()> {
     let mut dice = dice_builder.build(extra).unwrap();
     dice.set_cell_resolver(cell_resolver)?;
     dice.set_buck_out_path(None)?;
-    inject_legacy_config_for_test(&mut dice, cell_parent, LegacyBuckConfig::empty())?;
+    inject_legacy_config_for_test(&mut dice, cell_parent, LegacyBsmrConfig::empty())?;
     let mut dice = dice.commit().await;
 
     let result = dice

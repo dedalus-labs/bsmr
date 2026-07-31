@@ -6,28 +6,28 @@ rust_library(
     name = "bsmr_wrapper_common",
     srcs = glob(["src/**/*.rs"]),
     test_deps = [
-        "fbsource//third-party/rust:serde_json",
-        "//bsmr/app/bsmr_util:bsmr_util",
+        "bsmr_build//third-party/rust:serde_json",
+        "root//app/bsmr_util:bsmr_util",
     ],
     deps = [
-        "fbsource//third-party/rust:derive_more",
-        "fbsource//third-party/rust:serde",
-        "fbsource//third-party/rust:sysinfo",
-        "fbsource//third-party/rust:uuid",
-        "//bsmr/packages/rust/allocative/allocative:allocative",
-        "//bsmr/app/bsmr_error:bsmr_error",
-        "//bsmr/app/bsmr_hash:bsmr_hash",
-        "//bsmr/packages/rust/gazebo/dupe:dupe",
+        "bsmr_build//third-party/rust:derive_more",
+        "bsmr_build//third-party/rust:serde",
+        "bsmr_build//third-party/rust:sysinfo",
+        "bsmr_build//third-party/rust:uuid",
+        "root//packages/rust/allocative/allocative:allocative",
+        "root//app/bsmr_error:bsmr_error",
+        "root//app/bsmr_hash:bsmr_hash",
+        "root//packages/rust/gazebo/dupe:dupe",
     ] + select({
         "DEFAULT": [],
         "ovr_config//os:linux": [
-            "fbsource//third-party/rust:nix",
+            "bsmr_build//third-party/rust:nix",
         ],
         "ovr_config//os:macos": [
-            "fbsource//third-party/rust:nix",
+            "bsmr_build//third-party/rust:nix",
         ],
         "ovr_config//os:windows": [
-            "fbsource//third-party/rust:windows-sys",
+            "bsmr_build//third-party/rust:windows-sys",
         ],
     }),
 )

@@ -49,8 +49,8 @@ async def test_modify_src(buck: Buck) -> None:
 
 @buck_test(data_dir="modify")
 async def test_modify_genrule_notify(buck: Buck) -> None:
-    with open(buck.cwd / ".buckconfig", "a") as buckconfig:
-        buckconfig.write("\n[bsmr]\nfile_watcher = notify")
+    with open(buck.cwd / ".bsmrconfig", "a") as bsmrconfig:
+        bsmrconfig.write("\n[bsmr]\nfile_watcher = notify")
     await buck.kill()  # Ensure the config gets picked up
     await test_modify_genrule(buck)
 

@@ -1,5 +1,5 @@
 # @noautodeps
-load("@fbcode//bsmr/tests:buck_e2e.bzl", "bsmr_e2e_test")
+load("@root//tests:buck_e2e.bzl", "bsmr_e2e_test")
 load("@bsmr_build//rules:python_library.bzl", "python_library")
 load("@prelude//cfg/modifier:name.bzl", "NAMED_CONSTRAINT_SETTINGS")
 load(":constraint_setting_group.bzl", "constraint_setting_group")
@@ -52,5 +52,5 @@ bsmr_e2e_test(
 python_library(
     name = "modifiers_util",
     srcs = ["modifiers_util.py"],
-    deps = ["//bsmr/tests/e2e_util/api:api"],
+    deps = ["root//tests/e2e_util/api:api"],
 )

@@ -6,14 +6,14 @@ rust_library(
     name = "bsmr_critical_path",
     srcs = glob(["src/**/*.rs"]),
     test_deps = [
-        "fbsource//third-party/rust:rand",
-        "fbsource//third-party/rust:rand_chacha",
-        "fbsource//third-party/rust:rand_distr",
+        "bsmr_build//third-party/rust:rand",
+        "bsmr_build//third-party/rust:rand_chacha",
+        "bsmr_build//third-party/rust:rand_distr",
     ],
     deps = [
-        "fbsource//third-party/rust:crossbeam",
-        "fbsource//third-party/rust:derive_more",
-        "//bsmr/app/bsmr_error:bsmr_error",
-        "//bsmr/packages/rust/starlark/starlark_map:starlark_map",
+        "bsmr_build//third-party/rust:crossbeam",
+        "bsmr_build//third-party/rust:derive_more",
+        "root//app/bsmr_error:bsmr_error",
+        "root//packages/rust/starlark/starlark_map:starlark_map",
     ],
 )

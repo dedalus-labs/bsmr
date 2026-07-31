@@ -19,7 +19,7 @@ audit` and `bsmr debug`, which can be helpful.
 is run in a different isolation dir, to prevent the command from stepping on your existing buck
 daemon. This means large builds will get no cache hits and be very slow.
 
-Alternatively, `bsmr build @fbcode//mode/opt fbcode//bsmr:bsmr --out /tmp/bsmr` to build bsmr
+Alternatively, `bsmr build @upstream//mode/opt root//:bsmr --out /tmp/bsmr` to build bsmr
 on its own. Then, use `/tmp/bsmr` to run builds in a *different* checkout of fbsource from the one
 you're editing code in.
 
@@ -63,7 +63,7 @@ own Tpx and then have Bessemer use it, as follows:
 
 ```bash
 # Build Tpx
-bsmr build @fbcode//mode/opt fbcode//bsmr/bsmr_tpx_cli:bsmr_tpx_cli --out /tmp/tpx
+bsmr build @upstream//mode/opt root//bsmr_tpx_cli:bsmr_tpx_cli --out /tmp/tpx
 
 # Use Tpx
 bsmr test -c test.v2_test_executor=/tmp/tpx

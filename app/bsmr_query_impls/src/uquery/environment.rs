@@ -94,7 +94,7 @@ pub(crate) trait UqueryDelegate: Send + Sync {
 
     // Get all enclosing packages needed to compute owner function.
     // This always includes the immediate enclosing package of the path but can also include
-    // all parent packages if the package matches `project.package_boundary_exceptions` buckconfig.
+    // all parent packages if the package matches `project.package_boundary_exceptions` bsmrconfig.
     async fn get_enclosing_packages(
         &self,
         path: &CellPath,

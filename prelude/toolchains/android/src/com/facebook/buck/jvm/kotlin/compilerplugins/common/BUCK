@@ -13,7 +13,7 @@ buck_kotlin_library(
         "prelude//toolchains/android/third-party:kotlin-compiler",
     ],
     tests = [
-        "fbsource//fbandroid/javatests/com/facebook/kotlin/compilerplugins/common:common",
+        "upstream//fbandroid/javatests/com/facebook/kotlin/compilerplugins/common:common",
     ],
     visibility = [
         "PUBLIC",

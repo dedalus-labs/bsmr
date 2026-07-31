@@ -1227,7 +1227,7 @@ def cxx_library_parameterized(ctx: AnalysisContext, impl_params: CxxRuleConstruc
     if impl_params.generate_providers.template_placeholders:
         templ_vars = {}
 
-        # Some rules, e.g. fbcode//thrift/lib/cpp:thrift-core-module
+        # Some rules, e.g. upstream//thrift/lib/cpp:thrift-core-module
         # define preprocessor flags as things like: -DTHRIFT_PLATFORM_CONFIG=<thrift/facebook/PlatformConfig.h>
         # and unless they get quoted, they break shell syntax.
         cxx_compiler_info = get_cxx_toolchain_info(ctx).cxx_compiler_info

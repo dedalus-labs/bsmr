@@ -8,7 +8,7 @@ Commands:
   action-divergence  Identifies the first divergent action between two builds. Divergence is
                      identified by the same action having differing outputs. Useful for identifying
                      non-determinism
-  external-configs   Identifies the diff between external buckconfigs between two commands
+  external-configs   Identifies the diff between external bsmrconfigs between two commands
   help               Print this message or the help of the given subcommand(s)
 
 Options:
@@ -51,6 +51,6 @@ Universal Options:
 
       --agent-context <AGENT_CONTEXT>
           Agent context key=value pairs for telemetry. Used by AI agents to pass structured
-          metadata. Schema is defined via buckconfig. Entries can be comma-separated or passed as
+          metadata. Schema is defined via bsmrconfig. Entries can be comma-separated or passed as
           separate flags. Examples: --agent-context intent=fix,attempt=2,prior_error=missing_target
           --agent-context intent=build --agent-context attempt=1

@@ -53,7 +53,7 @@ pub struct BxlCommandOptions {
     #[clap(
         long = "materializations",
         short = 'M',
-        help = "Materialize (or skip) the final artifacts, bypassing buckconfig.",
+        help = "Materialize (or skip) the final artifacts, bypassing bsmrconfig.",
         ignore_case = true,
         value_enum
     )]

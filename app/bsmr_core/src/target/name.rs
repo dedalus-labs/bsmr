@@ -30,7 +30,7 @@ pub(crate) const TARGET_NAME_VALID_CHARS_SET: AsciiCharSet =
     AsciiCharSet::new(TARGET_NAME_VALID_CHARS);
 
 /// 'TargetName' is the name given to a particular target.
-/// e.g. `foo` in the label `fbsource//package/path:foo`.
+/// e.g. `foo` in the label `upstream//package/path:foo`.
 #[derive(
     Clone,
     Debug,

@@ -9,13 +9,13 @@ buck_rust_binary(
     ),
     crate_root = "src/main.rs",
     deps = [
-        "fbsource//third-party/rust:clap",
-        "//bsmr/packages/rust/starlark/starlark:starlark",
-        "//bsmr/packages/rust/starlark/starlark_syntax:starlark_syntax",
+        "bsmr_build//third-party/rust:clap",
+        "root//packages/rust/starlark/starlark:starlark",
+        "root//packages/rust/starlark/starlark_syntax:starlark_syntax",
     ] + select({
         "DEFAULT": [],
         "ovr_config//os:linux": [
-            "fbsource//third-party/rust:libc",
+            "bsmr_build//third-party/rust:libc",
         ],
     }),
 )

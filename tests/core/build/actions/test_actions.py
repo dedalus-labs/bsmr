@@ -338,12 +338,12 @@ async def test_download_file_timeout_after_retries(buck: Buck) -> None:
     port = sock.getsockname()[1]
     url = f"http://localhost:{port}"
 
-    # These are daemon startup configs, need these to be written in a buckconfig rather
+    # These are daemon startup configs, need these to be written in a bsmrconfig rather
     # than passed as an invocation config.
     #
     # Add an aggressive read timeout.
-    with open(buck.cwd / ".buckconfig", "a") as buckconfig:
-        buckconfig.write("[http]\nread_timeout_ms = 50\n")
+    with open(buck.cwd / ".bsmrconfig", "a") as bsmrconfig:
+        bsmrconfig.write("[http]\nread_timeout_ms = 50\n")
 
     await expect_failure(
         buck.build(
@@ -370,11 +370,11 @@ async def test_download_file_timeout_after_retries(buck: Buck) -> None:
 
 @buck_test(data_dir="actions")
 async def test_cas_artifact(buck: Buck) -> None:
-    # The digests in `//cas_artifact:` require the buckconfig.
-    # NB: cannot use `extra_buck_config` attrib of `@buck_test()``
-    with open(buck.cwd / ".buckconfig", "a") as buckconfig:
-        buckconfig.write("[bsmr]\n")
-        buckconfig.write("digest_algorithms = BLAKE3-KEYED,SHA1\n")
+    # The digests in `//cas_artifact:` require the bsmrconfig.
+    # NB: cannot use `extra_bsmr_config` attrib of `@buck_test()``
+    with open(buck.cwd / ".bsmrconfig", "a") as bsmrconfig:
+        bsmrconfig.write("[bsmr]\n")
+        bsmrconfig.write("digest_algorithms = BLAKE3-KEYED,SHA1\n")
 
     # Setting a use case override to test that it is not used.
     result = await buck.build(
@@ -511,11 +511,11 @@ async def test_remote_action_has_input_size(buck: Buck) -> None:
 
 @buck_test(data_dir="actions")
 async def test_action_invalidation_tracking(buck: Buck) -> None:
-    with open(buck.cwd / ".buckconfig", "a") as buckconfig:
-        buckconfig.write("[bsmr]\n")
-        buckconfig.write("invalidation_tracking_enabled = true\n")
-        buckconfig.write("[bsmr]\n")
-        buckconfig.write("invalidation_tracking_enabled = true\n")
+    with open(buck.cwd / ".bsmrconfig", "a") as bsmrconfig:
+        bsmrconfig.write("[bsmr]\n")
+        bsmrconfig.write("invalidation_tracking_enabled = true\n")
+        bsmrconfig.write("[bsmr]\n")
+        bsmrconfig.write("invalidation_tracking_enabled = true\n")
 
     await buck.build("//run:runs_simple_script")
     invalidation_info = await filter_events(

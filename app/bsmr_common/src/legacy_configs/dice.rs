@@ -37,36 +37,36 @@ use pagable::Pagable;
 use pagable::pagable_typetag;
 
 use crate::dice::cells::HasCellResolver;
-use crate::legacy_configs::cells::BuckConfigBasedCells;
-use crate::legacy_configs::cells::ExternalBuckconfigData;
-use crate::legacy_configs::configs::LegacyBuckConfig;
-use crate::legacy_configs::key::BuckconfigKeyRef;
-use crate::legacy_configs::view::LegacyBuckConfigView;
+use crate::legacy_configs::cells::BsmrConfigBasedCells;
+use crate::legacy_configs::cells::ExternalBsmrconfigData;
+use crate::legacy_configs::configs::LegacyBsmrConfig;
+use crate::legacy_configs::key::BsmrconfigKeyRef;
+use crate::legacy_configs::view::LegacyBsmrConfigView;
 
-/// Buckconfig view which queries buckconfig entry from DICE.
+/// Bsmrconfig view which queries bsmrconfig entry from DICE.
 #[derive(Clone, Dupe)]
-pub struct OpaqueLegacyBuckConfigOnDice {
-    config: Arc<OpaqueValue<LegacyBuckConfigForCellKey>>,
+pub struct OpaqueLegacyBsmrConfigOnDice {
+    config: Arc<OpaqueValue<LegacyBsmrConfigForCellKey>>,
 }
 
-impl std::fmt::Debug for OpaqueLegacyBuckConfigOnDice {
+impl std::fmt::Debug for OpaqueLegacyBsmrConfigOnDice {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("LegacyBuckConfigOnDice")
+        f.debug_struct("LegacyBsmrConfigOnDice")
             .field("config", &self.config)
             .finish()
     }
 }
 
-impl OpaqueLegacyBuckConfigOnDice {
+impl OpaqueLegacyBsmrConfigOnDice {
     pub fn lookup(
         &self,
         ctx: &mut DiceComputations,
-        key: BuckconfigKeyRef,
+        key: BsmrconfigKeyRef,
     ) -> bsmr_error::Result<Option<Arc<str>>> {
-        let BuckconfigKeyRef { section, property } = key;
+        let BsmrconfigKeyRef { section, property } = key;
         Ok(ctx.projection(
             &*self.config,
-            &LegacyBuckConfigPropertyProjectionKey {
+            &LegacyBsmrConfigPropertyProjectionKey {
                 section: section.to_owned(),
                 property: property.to_owned(),
             },
@@ -76,83 +76,83 @@ impl OpaqueLegacyBuckConfigOnDice {
     pub fn view<'a, 'd>(
         &'a self,
         ctx: &'a mut DiceComputations<'d>,
-    ) -> LegacyBuckConfigOnDice<'a, 'd> {
-        LegacyBuckConfigOnDice { ctx, config: self }
+    ) -> LegacyBsmrConfigOnDice<'a, 'd> {
+        LegacyBsmrConfigOnDice { ctx, config: self }
     }
 }
 
-pub struct LegacyBuckConfigOnDice<'a, 'd> {
+pub struct LegacyBsmrConfigOnDice<'a, 'd> {
     ctx: &'a mut DiceComputations<'d>,
-    config: &'a OpaqueLegacyBuckConfigOnDice,
+    config: &'a OpaqueLegacyBsmrConfigOnDice,
 }
 
-impl LegacyBuckConfigOnDice<'_, '_> {
-    pub fn parse<T: FromStr>(&mut self, key: BuckconfigKeyRef) -> bsmr_error::Result<Option<T>>
+impl LegacyBsmrConfigOnDice<'_, '_> {
+    pub fn parse<T: FromStr>(&mut self, key: BsmrconfigKeyRef) -> bsmr_error::Result<Option<T>>
     where
         bsmr_error::Error: From<<T as FromStr>::Err>,
     {
-        LegacyBuckConfig::parse_value(key, self.get(key)?.as_deref())
+        LegacyBsmrConfig::parse_value(key, self.get(key)?.as_deref())
     }
 }
 
-impl std::fmt::Debug for LegacyBuckConfigOnDice<'_, '_> {
+impl std::fmt::Debug for LegacyBsmrConfigOnDice<'_, '_> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("LegacyBuckConfigOnDice")
+        f.debug_struct("LegacyBsmrConfigOnDice")
             .field("config", &self.config)
             .finish()
     }
 }
 
-impl LegacyBuckConfigView for LegacyBuckConfigOnDice<'_, '_> {
-    fn get(&mut self, key: BuckconfigKeyRef) -> bsmr_error::Result<Option<Arc<str>>> {
+impl LegacyBsmrConfigView for LegacyBsmrConfigOnDice<'_, '_> {
+    fn get(&mut self, key: BsmrconfigKeyRef) -> bsmr_error::Result<Option<Arc<str>>> {
         self.config.lookup(self.ctx, key)
     }
 }
 
 pub trait HasInjectedLegacyConfigs {
-    fn get_injected_external_buckconfig_data(
+    fn get_injected_external_bsmrconfig_data(
         &mut self,
-    ) -> impl Future<Output = bsmr_error::Result<Arc<ExternalBuckconfigData>>>;
+    ) -> impl Future<Output = bsmr_error::Result<Arc<ExternalBsmrconfigData>>>;
 
-    fn is_injected_external_buckconfig_data_key_set(
+    fn is_injected_external_bsmrconfig_data_key_set(
         &mut self,
     ) -> impl Future<Output = bsmr_error::Result<bool>>;
 }
 
 #[async_trait]
 pub trait HasLegacyConfigs {
-    /// Get buckconfigs.
+    /// Get bsmrconfigs.
     ///
-    /// This operation does not record buckconfig as a dependency of current computation.
-    /// Accessing specific buckconfig property, records that key as dependency.
+    /// This operation does not record bsmrconfig as a dependency of current computation.
+    /// Accessing specific bsmrconfig property, records that key as dependency.
     async fn get_legacy_config_on_dice(
         &mut self,
         cell_name: CellName,
-    ) -> bsmr_error::Result<OpaqueLegacyBuckConfigOnDice>;
+    ) -> bsmr_error::Result<OpaqueLegacyBsmrConfigOnDice>;
 
     async fn get_legacy_root_config_on_dice(
         &mut self,
-    ) -> bsmr_error::Result<OpaqueLegacyBuckConfigOnDice>;
+    ) -> bsmr_error::Result<OpaqueLegacyBsmrConfigOnDice>;
 
     /// Use this function carefully: a computation which fetches this key will be recomputed
-    /// if any buckconfig property changes.
+    /// if any bsmrconfig property changes.
     ///
     /// Consider using `get_legacy_config_property` instead.
     async fn get_legacy_config_for_cell(
         &mut self,
         cell_name: CellName,
-    ) -> bsmr_error::Result<LegacyBuckConfig>;
+    ) -> bsmr_error::Result<LegacyBsmrConfig>;
 
     async fn get_legacy_config_property(
         &mut self,
         cell_name: CellName,
-        key: BuckconfigKeyRef<'_>,
+        key: BsmrconfigKeyRef<'_>,
     ) -> bsmr_error::Result<Option<Arc<str>>>;
 
     async fn parse_legacy_config_property<T: FromStr>(
         &mut self,
         cell_name: CellName,
-        key: BuckconfigKeyRef<'_>,
+        key: BsmrconfigKeyRef<'_>,
     ) -> bsmr_error::Result<Option<T>>
     where
         bsmr_error::Error: From<<T as FromStr>::Err>,
@@ -161,7 +161,7 @@ pub trait HasLegacyConfigs {
     async fn parse_legacy_config_list_property<T: FromStr>(
         &mut self,
         cell_name: CellName,
-        key: BuckconfigKeyRef<'_>,
+        key: BsmrconfigKeyRef<'_>,
     ) -> bsmr_error::Result<Option<Vec<T>>>
     where
         bsmr_error::Error: From<<T as FromStr>::Err>,
@@ -171,7 +171,7 @@ pub trait HasLegacyConfigs {
 pub trait SetLegacyConfigs {
     fn set_legacy_config_external_data(
         &mut self,
-        overrides: ExternalBuckconfigData,
+        overrides: ExternalBsmrconfigData,
     ) -> bsmr_error::Result<()>;
 
     fn set_none_legacy_config_external_data(&mut self) -> bsmr_error::Result<()>;
@@ -180,10 +180,10 @@ pub trait SetLegacyConfigs {
 #[derive(Clone, Dupe, Display, Debug, Eq, Hash, PartialEq, Allocative, Pagable)]
 #[display("{:?}", self)]
 #[pagable_typetag(dice::DiceKeyDyn)]
-struct LegacyExternalBuckConfigDataKey;
+struct LegacyExternalBsmrConfigDataKey;
 
-impl InjectedKey for LegacyExternalBuckConfigDataKey {
-    type Value = Option<Arc<ExternalBuckconfigData>>;
+impl InjectedKey for LegacyExternalBsmrConfigDataKey {
+    type Value = Option<Arc<ExternalBsmrconfigData>>;
 
     fn equality(x: &Self::Value, y: &Self::Value) -> bool {
         x == y
@@ -195,27 +195,27 @@ impl InjectedKey for LegacyExternalBuckConfigDataKey {
 }
 
 #[derive(Clone, Display, Debug, Hash, Eq, PartialEq, Allocative, Pagable)]
-#[display("LegacyBuckConfigForCellKey({})", self.cell_name)]
+#[display("LegacyBsmrConfigForCellKey({})", self.cell_name)]
 #[pagable_typetag(dice::DiceKeyDyn)]
-struct LegacyBuckConfigForCellKey {
+struct LegacyBsmrConfigForCellKey {
     cell_name: CellName,
 }
 
 #[async_trait]
-impl Key for LegacyBuckConfigForCellKey {
-    type Value = bsmr_error::Result<LegacyBuckConfig>;
+impl Key for LegacyBsmrConfigForCellKey {
+    type Value = bsmr_error::Result<LegacyBsmrConfig>;
 
     async fn compute(
         &self,
         ctx: &mut DiceComputations,
         _cancellations: &CancellationContext,
-    ) -> bsmr_error::Result<LegacyBuckConfig> {
+    ) -> bsmr_error::Result<LegacyBsmrConfig> {
         let cells = ctx.get_cell_resolver().await?;
         let this_cell = cells.get(self.cell_name)?;
-        let config = BuckConfigBasedCells::parse_single_cell_with_dice(ctx, this_cell.path())
+        let config = BsmrConfigBasedCells::parse_single_cell_with_dice(ctx, this_cell.path())
             .await
             .with_buck_error_context(|| {
-                format!("Computing legacy buckconfigs for cell `{}`", self.cell_name)
+                format!("Computing legacy bsmrconfigs for cell `{}`", self.cell_name)
             })?;
         let config = config.filter_values(is_config_invisible_to_dice);
 
@@ -239,24 +239,24 @@ impl Key for LegacyBuckConfigForCellKey {
     }
 }
 
-/// The computation `LegacyBuckConfigForCellKey` computation might encounter an error.
+/// The computation `LegacyBsmrConfigForCellKey` computation might encounter an error.
 ///
 /// We can't return that error immediately, because we only compute the opaque value. We could
-/// return the error when doing the projection to the buckconfig values, but that would result in us
+/// return the error when doing the projection to the bsmrconfig values, but that would result in us
 /// increasing the size of the value returned from that computation. Instead, we'll use a different
 /// projection key to extract just the error from the cell computation, and compute that when
-/// constructing the `OpaqueLegacyBuckConfigOnDice`.
+/// constructing the `OpaqueLegacyBsmrConfigOnDice`.
 #[derive(Debug, Display, Hash, Eq, PartialEq, Clone, Allocative, Pagable)]
 #[pagable_typetag(dice::DiceProjectionDyn)]
-struct LegacyBuckConfigErrorKey();
+struct LegacyBsmrConfigErrorKey();
 
-impl ProjectionKey for LegacyBuckConfigErrorKey {
-    type DeriveFromKey = LegacyBuckConfigForCellKey;
+impl ProjectionKey for LegacyBsmrConfigErrorKey {
+    type DeriveFromKey = LegacyBsmrConfigForCellKey;
     type Value = Option<bsmr_error::Error>;
 
     fn compute(
         &self,
-        config: &bsmr_error::Result<LegacyBuckConfig>,
+        config: &bsmr_error::Result<LegacyBsmrConfig>,
         _ctx: &DiceProjectionComputations,
     ) -> Option<bsmr_error::Error> {
         config.as_ref().err().cloned()
@@ -269,7 +269,7 @@ impl ProjectionKey for LegacyBuckConfigErrorKey {
     fn value_serialize() -> impl ValueSerialize<Value = Self::Value> {
         struct T;
         impl ValueSerialize for T {
-            type Value = <LegacyBuckConfigErrorKey as ProjectionKey>::Value;
+            type Value = <LegacyBsmrConfigErrorKey as ProjectionKey>::Value;
 
             fn pagable_serialize_value(
                 &self,
@@ -296,24 +296,24 @@ impl ProjectionKey for LegacyBuckConfigErrorKey {
 #[derive(Debug, Display, Hash, Eq, PartialEq, Clone, Allocative, Pagable)]
 #[display("{}.{}", section, property)]
 #[pagable_typetag(dice::DiceProjectionDyn)]
-struct LegacyBuckConfigPropertyProjectionKey {
+struct LegacyBsmrConfigPropertyProjectionKey {
     section: String,
     property: String,
 }
 
-impl ProjectionKey for LegacyBuckConfigPropertyProjectionKey {
-    type DeriveFromKey = LegacyBuckConfigForCellKey;
+impl ProjectionKey for LegacyBsmrConfigPropertyProjectionKey {
+    type DeriveFromKey = LegacyBsmrConfigForCellKey;
     type Value = Option<Arc<str>>;
 
     fn compute(
         &self,
-        config: &bsmr_error::Result<LegacyBuckConfig>,
+        config: &bsmr_error::Result<LegacyBsmrConfig>,
         _ctx: &DiceProjectionComputations,
     ) -> Option<Arc<str>> {
-        // See the comment in `LegacyBuckConfigErrorKey` for why this is safe
+        // See the comment in `LegacyBsmrConfigErrorKey` for why this is safe
         let config = config.as_ref().unwrap();
         config
-            .get(BuckconfigKeyRef {
+            .get(BsmrconfigKeyRef {
                 section: &self.section,
                 property: &self.property,
             })
@@ -330,17 +330,17 @@ impl ProjectionKey for LegacyBuckConfigPropertyProjectionKey {
 }
 
 impl HasInjectedLegacyConfigs for DiceComputations<'_> {
-    async fn get_injected_external_buckconfig_data(
+    async fn get_injected_external_bsmrconfig_data(
         &mut self,
-    ) -> bsmr_error::Result<Arc<ExternalBuckconfigData>> {
-        self.compute(&LegacyExternalBuckConfigDataKey).await?.ok_or_else(|| internal_error!(
-            "Tried to retrieve LegacyExternalBuckConfigDataKey from the graph, but key has None value"
+    ) -> bsmr_error::Result<Arc<ExternalBsmrconfigData>> {
+        self.compute(&LegacyExternalBsmrConfigDataKey).await?.ok_or_else(|| internal_error!(
+            "Tried to retrieve LegacyExternalBsmrConfigDataKey from the graph, but key has None value"
         ))
     }
 
-    async fn is_injected_external_buckconfig_data_key_set(&mut self) -> bsmr_error::Result<bool> {
+    async fn is_injected_external_bsmrconfig_data_key_set(&mut self) -> bsmr_error::Result<bool> {
         Ok(self
-            .compute(&LegacyExternalBuckConfigDataKey)
+            .compute(&LegacyExternalBsmrConfigDataKey)
             .await?
             .is_some())
     }
@@ -349,10 +349,10 @@ impl HasInjectedLegacyConfigs for DiceComputations<'_> {
 pub fn inject_legacy_config_for_test(
     dice: &mut DiceTransactionUpdater,
     cell_name: CellName,
-    configs: LegacyBuckConfig,
+    configs: LegacyBsmrConfig,
 ) -> bsmr_error::Result<()> {
-    dice.changed_to([(LegacyBuckConfigForCellKey { cell_name }, Ok(configs))])?;
-    dice.changed_to([(LegacyExternalBuckConfigDataKey, None)])?;
+    dice.changed_to([(LegacyBsmrConfigForCellKey { cell_name }, Ok(configs))])?;
+    dice.changed_to([(LegacyExternalBsmrConfigDataKey, None)])?;
     Ok(())
 }
 
@@ -361,21 +361,21 @@ impl HasLegacyConfigs for DiceComputations<'_> {
     async fn get_legacy_config_on_dice(
         &mut self,
         cell_name: CellName,
-    ) -> bsmr_error::Result<OpaqueLegacyBuckConfigOnDice> {
+    ) -> bsmr_error::Result<OpaqueLegacyBsmrConfigOnDice> {
         let config = self
-            .compute_opaque(&LegacyBuckConfigForCellKey { cell_name })
+            .compute_opaque(&LegacyBsmrConfigForCellKey { cell_name })
             .await?;
-        if let Some(error) = self.projection(&config, &LegacyBuckConfigErrorKey())? {
+        if let Some(error) = self.projection(&config, &LegacyBsmrConfigErrorKey())? {
             return Err(error);
         }
-        Ok(OpaqueLegacyBuckConfigOnDice {
+        Ok(OpaqueLegacyBsmrConfigOnDice {
             config: Arc::new(config),
         })
     }
 
     async fn get_legacy_root_config_on_dice(
         &mut self,
-    ) -> bsmr_error::Result<OpaqueLegacyBuckConfigOnDice> {
+    ) -> bsmr_error::Result<OpaqueLegacyBsmrConfigOnDice> {
         let cell_resolver = self.get_cell_resolver().await?;
         self.get_legacy_config_on_dice(cell_resolver.root_cell())
             .await
@@ -384,15 +384,15 @@ impl HasLegacyConfigs for DiceComputations<'_> {
     async fn get_legacy_config_for_cell(
         &mut self,
         cell_name: CellName,
-    ) -> bsmr_error::Result<LegacyBuckConfig> {
-        self.compute(&LegacyBuckConfigForCellKey { cell_name })
+    ) -> bsmr_error::Result<LegacyBsmrConfig> {
+        self.compute(&LegacyBsmrConfigForCellKey { cell_name })
             .await?
     }
 
     async fn get_legacy_config_property(
         &mut self,
         cell_name: CellName,
-        key: BuckconfigKeyRef<'_>,
+        key: BsmrconfigKeyRef<'_>,
     ) -> bsmr_error::Result<Option<Arc<str>>> {
         self.get_legacy_config_on_dice(cell_name)
             .await?
@@ -402,13 +402,13 @@ impl HasLegacyConfigs for DiceComputations<'_> {
     async fn parse_legacy_config_property<T: FromStr>(
         &mut self,
         cell_name: CellName,
-        key: BuckconfigKeyRef<'_>,
+        key: BsmrconfigKeyRef<'_>,
     ) -> bsmr_error::Result<Option<T>>
     where
         bsmr_error::Error: From<<T as FromStr>::Err>,
         T: Send + Sync + 'static,
     {
-        LegacyBuckConfig::parse_value(
+        LegacyBsmrConfig::parse_value(
             key,
             self.get_legacy_config_property(cell_name, key)
                 .await?
@@ -419,13 +419,13 @@ impl HasLegacyConfigs for DiceComputations<'_> {
     async fn parse_legacy_config_list_property<T: FromStr>(
         &mut self,
         cell_name: CellName,
-        key: BuckconfigKeyRef<'_>,
+        key: BsmrconfigKeyRef<'_>,
     ) -> bsmr_error::Result<Option<Vec<T>>>
     where
         bsmr_error::Error: From<<T as FromStr>::Err>,
         T: Send + Sync + 'static,
     {
-        LegacyBuckConfig::parse_list_value(
+        LegacyBsmrConfig::parse_list_value(
             key,
             self.get_legacy_config_property(cell_name, key)
                 .await?
@@ -437,33 +437,33 @@ impl HasLegacyConfigs for DiceComputations<'_> {
 impl SetLegacyConfigs for DiceTransactionUpdater {
     fn set_legacy_config_external_data(
         &mut self,
-        data: ExternalBuckconfigData,
+        data: ExternalBsmrconfigData,
     ) -> bsmr_error::Result<()> {
         let data = data.filter_values(is_config_invisible_to_dice);
         Ok(self.changed_to(vec![(
-            LegacyExternalBuckConfigDataKey,
+            LegacyExternalBsmrConfigDataKey,
             Some(Arc::new(data)),
         )])?)
     }
 
     fn set_none_legacy_config_external_data(&mut self) -> bsmr_error::Result<()> {
-        Ok(self.changed_to(vec![(LegacyExternalBuckConfigDataKey, None)])?)
+        Ok(self.changed_to(vec![(LegacyExternalBsmrConfigDataKey, None)])?)
     }
 }
 
-fn is_config_invisible_to_dice(key: &BuckconfigKeyRef) -> bool {
+fn is_config_invisible_to_dice(key: &BsmrconfigKeyRef) -> bool {
     !CONFIGS_INVISIBLE_TO_DICE.contains(key)
 }
 
-/// A set of buckconfigs that are visibile outside of dice, but not within it. Importantly, changes
+/// A set of bsmrconfigs that are visibile outside of dice, but not within it. Importantly, changes
 /// to these configs do not cause state invalidations.
 // FIXME(JakobDegen): Error if someone tries to read any of these from in dice
-const CONFIGS_INVISIBLE_TO_DICE: &[BuckconfigKeyRef<'static>] = &[
-    BuckconfigKeyRef {
+const CONFIGS_INVISIBLE_TO_DICE: &[BsmrconfigKeyRef<'static>] = &[
+    BsmrconfigKeyRef {
         section: "bsmr_re_client",
         property: "override_use_case",
     },
-    BuckconfigKeyRef {
+    BsmrconfigKeyRef {
         section: "scuba",
         property: "defaults",
     },

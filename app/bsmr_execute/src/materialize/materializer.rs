@@ -703,7 +703,7 @@ pub enum MaterializationMethod {
 #[bsmr(tag = Input)]
 pub enum MaterializationMethodError {
     #[error(
-        "Invalid value for buckconfig `[bsmr] materializations`. Got `{0}`. Expected one of `all`, `deferred`, or `deferred_skip_final_artifacts`."
+        "Invalid value for bsmrconfig `[bsmr] materializations`. Got `{0}`. Expected one of `all`, `deferred`, or `deferred_skip_final_artifacts`."
     )]
     InvalidValueForConfig(String),
 }

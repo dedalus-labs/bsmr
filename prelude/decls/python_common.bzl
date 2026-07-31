@@ -11,7 +11,7 @@
 # the generated docs, and so those should be verified to be accurate and
 # well-formatted (and then delete this TODO)
 
-PythonBuckConfigPackageStyle = ["standalone", "inplace", "outplace"]
+PythonBsmrConfigPackageStyle = ["standalone", "inplace", "outplace"]
 
 def _srcs_arg():
     return {
@@ -61,7 +61,7 @@ def _linker_flags_arg():
             doc = """
     Additional linker flags that should be applied to any linking which is specific to this rule.
      Note that whether these flags are used is dependent on the native link strategy selected in
-     `.buckconfig` and currently applies only to the merged `.buckconfig`;
+     `.bsmrconfig` and currently applies only to the merged `.bsmrconfig`;
      the `separate` link strategy pulls in shared libraries that are linked in the
      context of the rules that own them, such as `cxx_library()`.
 """,
@@ -71,10 +71,10 @@ def _linker_flags_arg():
 def _package_style_arg():
     return {
         "package_style": attrs.option(
-            attrs.enum(PythonBuckConfigPackageStyle),
+            attrs.enum(PythonBsmrConfigPackageStyle),
             default = None,
             doc = """
-    Used to override the global packaging style that is set in `[`.buckconfig`
+    Used to override the global packaging style that is set in `[`.bsmrconfig`
     ]`.
 """,
         ),
@@ -100,7 +100,7 @@ def _exclude_deps_from_merged_linking_arg():
         "exclude_deps_from_merged_linking": attrs.bool(
             default = False,
             doc = """
-    When linking the top-level binary with a `merged` ``.buckconfig``,
+    When linking the top-level binary with a `merged` ``.bsmrconfig``,
      do not merge or re-link any native transitive deps of this library. This is useful if
      this library wraps prebuilt native extensions which cannot be re-linked as part of
      library merging.
@@ -113,7 +113,7 @@ def _deduplicate_merged_link_roots():
         "deduplicate_merged_link_roots": attrs.bool(
             default = True,
             doc = """
-    When linking multiple top-level binaries with the `merged` ``.buckconfig``,
+    When linking multiple top-level binaries with the `merged` ``.bsmrconfig``,
      coalesce root link rules which are identical across independent merged links.
 """,
         ),

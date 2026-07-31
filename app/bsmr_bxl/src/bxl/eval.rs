@@ -17,7 +17,7 @@ use bsmr_build_api::bxl::result::BxlResult;
 use bsmr_build_api::bxl::types::BxlFunctionLabel;
 use bsmr_common::events::HasEvents;
 use bsmr_common::scope::scope_and_collect_with_dice;
-use bsmr_common::target_aliases::BuckConfigTargetAliasResolver;
+use bsmr_common::target_aliases::BsmrConfigTargetAliasResolver;
 use bsmr_core::cells::CellAliasResolver;
 use bsmr_core::cells::CellResolver;
 use bsmr_core::global_cfg_options::GlobalCfgOptions;
@@ -380,7 +380,7 @@ pub(crate) fn get_bxl_callable(
 }
 
 pub(crate) struct CliResolutionCtx<'a> {
-    pub(crate) target_alias_resolver: BuckConfigTargetAliasResolver,
+    pub(crate) target_alias_resolver: BsmrConfigTargetAliasResolver,
     pub(crate) cell_resolver: CellResolver,
     pub(crate) cell_alias_resolver: CellAliasResolver,
     pub(crate) relative_dir: PackageLabel,

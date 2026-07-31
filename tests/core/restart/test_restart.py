@@ -104,7 +104,7 @@ async def test_restart_disabled(buck: Buck) -> None:
     # Ensure no daemon
     await buck.kill()
 
-    with open(buck.cwd / ".buckconfig", "a") as f:
+    with open(buck.cwd / ".bsmrconfig", "a") as f:
         f.write("[bsmr]\nrestarter = false")
 
     result = await expect_failure(

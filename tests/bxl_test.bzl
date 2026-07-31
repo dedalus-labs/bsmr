@@ -6,7 +6,7 @@
 # of this source tree. You may select, at your option, one of the
 # above-listed licenses.
 
-load("@fbcode//bsmr/tests:buck_e2e.bzl", "bsmr_e2e_test")
+load("@root//tests:buck_e2e.bzl", "bsmr_e2e_test")
 load("@bsmr_build//rules:export_files.bzl", "export_file")
 
 def bxl_test(src, name = None, labels = None, buck_args: list[str] | None = None, bxl_args: list[str] | None = None, env: dict[str, str] | None = None, **kwargs):
@@ -61,7 +61,7 @@ def bxl_test(src, name = None, labels = None, buck_args: list[str] | None = None
     bsmr_e2e_test(
         name = name,
         env = merged_env,
-        srcs = {"fbcode//bsmr/tests/e2e_util:test_bxl_template.py": "test_bxl_template.py"},
+        srcs = {"root//tests/e2e_util:test_bxl_template.py": "test_bxl_template.py"},
         labels = ["bxl_test"] + (labels if labels else []),
         test_with_compiled_bsmr = False,
         test_with_deployed_bsmr = True,

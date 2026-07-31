@@ -1,4 +1,4 @@
-load("@fbcode//bsmr/tests:buck_e2e.bzl", "bsmr_core_tests")
+load("@root//tests:buck_e2e.bzl", "bsmr_core_tests")
 
 oncall("build_infra")
 
@@ -6,10 +6,10 @@ bsmr_core_tests(
     target_extra_attrs = {
         "test_install": {
             "env": {
-                "EARLY_EXIT_INSTALLER_BIN": "$(location fbcode//bsmr/tests/targets/rules/install:early_exit_installer)",
-                "EXTRA_ARGS_VALIDATOR_BIN": "$(location fbcode//bsmr/tests/targets/rules/install:server_validates_extra_args_order)",
-                "FORWARDED_PARAMS_INSTALLER_BIN": "$(location fbcode//bsmr/tests/targets/rules/install:server_requires_forwarded_params)",
-                "INSTALLER_BIN": "$(location fbcode//bsmr/tests/targets/rules/install:installer)",
+                "EARLY_EXIT_INSTALLER_BIN": "$(location root//tests/targets/rules/install:early_exit_installer)",
+                "EXTRA_ARGS_VALIDATOR_BIN": "$(location root//tests/targets/rules/install:server_validates_extra_args_order)",
+                "FORWARDED_PARAMS_INSTALLER_BIN": "$(location root//tests/targets/rules/install:server_requires_forwarded_params)",
+                "INSTALLER_BIN": "$(location root//tests/targets/rules/install:installer)",
             },
             "skip_for_os": [
                 "darwin",

@@ -25,7 +25,7 @@
 
 def _rust_pattern_producer_impl(ctx):
     # Stable content that does NOT depend on configuration. A per-test-run
-    # seed (via buckconfig) invalidates the RE cache between runs, but
+    # seed (via bsmrconfig) invalidates the RE cache between runs, but
     # every configuration within one run produces the same JSON, so every
     # analysis resolves to the same content-hash path.
     out = ctx.actions.write_json(

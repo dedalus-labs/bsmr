@@ -7,13 +7,13 @@ rust_library(
     name = "setsketch",
     srcs = glob(["src/**/*.rs"]),
     test_deps = [
-        "fbsource//third-party/rust:fnv",
+        "bsmr_build//third-party/rust:fnv",
     ],
     deps = [
-        "fbsource//third-party/rust:base64",
-        "fbsource//third-party/rust:rand",
-        "fbsource//third-party/rust:rand_distr",
-        "fbsource//third-party/rust:rand_xoshiro",
+        "bsmr_build//third-party/rust:base64",
+        "bsmr_build//third-party/rust:rand",
+        "bsmr_build//third-party/rust:rand_distr",
+        "bsmr_build//third-party/rust:rand_xoshiro",
     ],
 )
 
@@ -22,7 +22,7 @@ rust_binary(
     srcs = ["bin/sketch_size.rs"],
     crate_root = "bin/sketch_size.rs",
     deps = [
-        "fbsource//third-party/rust:anyhow",
+        "bsmr_build//third-party/rust:anyhow",
         ":setsketch",
     ],
 )

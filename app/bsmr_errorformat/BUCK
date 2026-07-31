@@ -8,9 +8,9 @@ rust_library(
         ["src/**/*.rs"],
     ),
     deps = [
-        "fbsource//third-party/rust:fancy-regex",
-        "fbsource//third-party/rust:nom",
-        "fbsource//third-party/rust:tracing",
-        "//bsmr/app/bsmr_error:bsmr_error",
+        "bsmr_build//third-party/rust:fancy-regex",
+        "bsmr_build//third-party/rust:nom",
+        "bsmr_build//third-party/rust:tracing",
+        "root//app/bsmr_error:bsmr_error",
     ],
 )

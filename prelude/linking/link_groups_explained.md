@@ -371,7 +371,7 @@ Multiple filters on a mapping use AND semantics (all must match).
 | `label:REGEX`                  | Target's labels/tags           | `label:vendor`               |
 | `tag:REGEX`                    | Same as `label:`               | `tag:third_party`            |
 | `target_regex:REGEX`           | Target's `raw_target()` string | `target_regex:caffe2/.*`     |
-| `pattern:BUILD_TARGET_PATTERN` | Buck target pattern            | `pattern:fbcode//caffe2/...` |
+| `pattern:BUILD_TARGET_PATTERN` | Buck target pattern            | `pattern:upstream//caffe2/...` |
 
 ### Filter interaction with tree traversal
 
@@ -389,7 +389,7 @@ During discovery, the DFS visits nodes and checks the filter at each node:
 
 ```
 link_group_map = [
-    ("group_a", [(":root", "tree", "pattern:fbcode//vendor/...", None)]),
+    ("group_a", [(":root", "tree", "pattern:upstream//vendor/...", None)]),
 ]
 
     root                           Traversal during _find_targets_in_mapping:
@@ -799,8 +799,8 @@ to the link group that now contains lib_c's code.
 
 ```python
 link_group_map = [
-    ("caffe2", [(None, "tree", "pattern:fbcode//caffe2/...", None)]),
-    ("velox",  [(None, "tree", "pattern:fbcode//velox/...", None)]),
+    ("caffe2", [(None, "tree", "pattern:upstream//caffe2/...", None)]),
+    ("velox",  [(None, "tree", "pattern:upstream//velox/...", None)]),
 ]
 ```
 
@@ -812,7 +812,7 @@ targets matching the pattern in the full graph.
 
 ```python
 link_group_map = [
-    ("libs", [(None, "subfolders", "pattern:fbcode//large_dep/...", None)]),
+    ("libs", [(None, "subfolders", "pattern:upstream//large_dep/...", None)]),
 ]
 ```
 
@@ -837,7 +837,7 @@ link_group_map = [
 ```python
 link_group_map = [
     ("NO_MATCH", [(":critical_lib", "node", None, None)]),
-    ("everything_else", [(None, "tree", "pattern:fbcode//...", None)]),
+    ("everything_else", [(None, "tree", "pattern:upstream//...", None)]),
 ]
 ```
 

@@ -89,7 +89,7 @@ def parse_defines_from_flags(flags):
 
     return dedupe_by_value(defines), dedupe_by_value(undefines), filtered_flags
 
-def get_linker_settings_from_flags(flags, buck_root):
+def get_linker_settings_from_flags(flags, bsmr_root):
     linker_settings = {}
 
     additional_library_directories = []
@@ -118,7 +118,7 @@ def get_linker_settings_from_flags(flags, buck_root):
             pass
         elif flag.startswith("/PDBSOURCEPATH"):
             # Overwrite the /PDBSOURCEPATH to the buck root instead of using the default
-            additional_options.append("/PDBSOURCEPATH:" + buck_root)
+            additional_options.append("/PDBSOURCEPATH:" + bsmr_root)
         elif flag.startswith("/INCLUDE:"):
             if "ForceSymbolReferences" not in linker_settings:
                 linker_settings["ForceSymbolReferences"] = []

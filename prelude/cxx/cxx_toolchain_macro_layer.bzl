@@ -10,7 +10,7 @@ def cxx_toolchain_macro_impl(cxx_toolchain_rule = None, **kwargs):
     # `generate_linker_maps` set in order of priority:
     # - Explicit attribute on the cxx_toolchain() target
     # - Constraint on the target platform
-    # - `cxx.linker_map_enabled` buckconfig
+    # - `cxx.linker_map_enabled` bsmrconfig
     if "generate_linker_maps" not in kwargs:
         linker_map_enabled = read_root_config("cxx", "linker_map_enabled", "").lower() == "true"
         kwargs["generate_linker_maps"] = select({

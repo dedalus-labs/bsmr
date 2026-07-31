@@ -86,7 +86,7 @@ def _package_name_arg():
             default = None,
             doc = """
     Sets the full name of the package being compiled. This defaults to the path from the buck root.
-     (e.g. given a ./.buckconfig, a rule in ./a/b/BUCK defaults to package "a/b")
+     (e.g. given a ./.bsmrconfig, a rule in ./a/b/BUCK defaults to package "a/b")
 """,
         ),
     }

@@ -15,6 +15,6 @@ from bsmr.tests.e2e_util.buck_workspace import buck_test
 
 
 @buck_test()
-async def test_root_cell_with_ignored_buckconfig(buck: Buck) -> None:
+async def test_root_cell_with_ignored_bsmrconfig(buck: Buck) -> None:
     r = await buck.root("--kind=cell", rel_cwd=Path("abc"))
     assert r.stdout.strip() == str(buck.cwd)

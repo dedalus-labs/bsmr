@@ -772,11 +772,11 @@ mod tests {
 
         // NOTE: This disables the forkserver since it uses the current
         // executable and that's not gonna be available in a test like this.
-        let buckconfig = ProjectRelativePath::unchecked_new(".buckconfig");
+        let bsmrconfig = ProjectRelativePath::unchecked_new(".bsmrconfig");
         project_root
             .path()
             .write_file(
-                buckconfig,
+                bsmrconfig,
                 "[cells]\nroot = .\n[bsmr]\nforkserver = false\n",
                 false,
             )

@@ -18,4 +18,4 @@ set -e
 # Change to this directory
 cd -- "$(dirname -- "$0")"
 
-arc rust-project develop fbcode//bsmr:bsmr --out ../../rust-project.json
+arc rust-project develop root//:bsmr --out ../../rust-project.json

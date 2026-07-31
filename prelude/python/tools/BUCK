@@ -140,7 +140,7 @@ prelude.command_alias(
     name = "patchelf",
     args = [
         "--patchelf",
-        # @oss-disable[end= ]: "$(exe_target fbsource//third-party/patchelf:patchelf)",
+        # @oss-disable[end= ]: "$(exe_target upstream//third-party/patchelf:patchelf)",
         "patchelf", # @oss-enable
     ],
     exe = ":patchelf.py",

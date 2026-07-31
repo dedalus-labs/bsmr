@@ -21,7 +21,7 @@ rust_library(
         "cargo_toml_config": {
             "extra_buck_dependencies": {
                 "build-dependencies": [
-                    "fbsource//third-party/rust:walkdir",
+                    "bsmr_build//third-party/rust:walkdir",
                 ],
             },
         },

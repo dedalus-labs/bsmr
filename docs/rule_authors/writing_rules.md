@@ -44,7 +44,7 @@ To add a rule for a language, say `pascal`:
    project. Note, Apple tests are currently located at
    `xplat/bsmr/tests/apple/...`.
 
-4. Test your code with `bsmr build fbcode//bsmr/tests/targets/rules/pascal:`.
+4. Test your code with `bsmr build root//tests/targets/rules/pascal:`.
    They should succeed with no actual output produced.
 
 5. Now implement the rules (see the rest of this page).
@@ -86,7 +86,7 @@ In the above snippet:
 - **Rule** is `pascal_binary`, which is implemented by `pascal_binary_impl`. The
   rule says how to build things.
 - **Target** will be something like
-  `fbcode//bsmr/tests/targets/rules/pascal:my_binary`. The rule implementation
+  `root//tests/targets/rules/pascal:my_binary`. The rule implementation
   `pascal_binary_impl` will be called once per target.
 - **Attributes** are the fields on the target (for example, you might have
   `out`, which can be accessed via `ctx.attrs.out`).
@@ -257,8 +257,8 @@ isolation, outside of Bessemer.
 ## Debugging
 
 The functions `fail`, `print` and `pprint` are your friends. To get started, a
-`bsmr build fbcode//bsmr/tests/targets/rules/pascal:` builds everything or
-`bsmr run fbcode//bsmr/tests/targets/rules/pascal:my_binary` runs a specific
+`bsmr build root//tests/targets/rules/pascal:` builds everything or
+`bsmr run root//tests/targets/rules/pascal:my_binary` runs a specific
 binary that returns a `RunInfo`.
 
 ## Testing Rules

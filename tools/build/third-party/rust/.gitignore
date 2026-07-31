@@ -15,7 +15,7 @@
 # Various cruft in vendored packages
 vendor/*/target
 vendor/*/Cargo.lock
-vendor/**/.buckconfig
+vendor/**/.bsmrconfig
 vendor/**/BUCK
 vendor/**/OWNERS
 vendor/**/*~

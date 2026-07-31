@@ -1,5 +1,5 @@
-load("@fbcode//bsmr/tests/prelude:py_assertion.bzl", "py_assertion")
-load("@fbcode_macros//build_defs:go_binary.bzl", "go_binary")
+load("@root//tests/prelude:py_assertion.bzl", "py_assertion")
+load("@upstream//build_defs:go_binary.bzl", "go_binary")
 
 oncall("golang")
 

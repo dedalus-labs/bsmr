@@ -171,7 +171,7 @@ fn tag_metadata(tag: ErrorTag) -> TagMetadata {
         ErrorTag::ServerMemoryPressure => rank!(environment),
         ErrorTag::DaemonOomKilled => rank!(environment).exit_code(ExitCode::FatalOom),
         // Note: This is only true internally due to buckwrapper
-        ErrorTag::NoBuckRoot => rank!(environment),
+        ErrorTag::NoBsmrRoot => rank!(environment),
         ErrorTag::InstallerEnvironment => rank!(environment).hidden(),
         ErrorTag::IoNotConnected => rank!(environment), // This typically means eden is not mounted
         // Typically due to poor network performance and large artifacts.

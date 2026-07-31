@@ -21,7 +21,7 @@ This is one of the most important concepts to understand when using Bessemer. It
 a precise way to identify any buildable unit in your codebase.
 
 In the tutorials, you encountered the following target label like
-[<FbInternalOnly> `fbcode//scripts/$USER/bsmr_lab/greeter_bin:main` </FbInternalOnly> <OssOnly> `root//bsmr_lab/greeter_bin:main` </OssOnly>](../tutorial_adding_dependencies/#step-5-run-the-binary).
+[<FbInternalOnly> `upstream//scripts/$USER/bsmr_lab/greeter_bin:main` </FbInternalOnly> <OssOnly> `root//bsmr_lab/greeter_bin:main` </OssOnly>](../tutorial_adding_dependencies/#step-5-run-the-binary).
 
 Here is the anatomy of a target label:
 
@@ -56,17 +56,17 @@ Here is the anatomy of a target label:
 [Cell](../../concepts/key_concepts/#cells) defines a directory tree of one or
 more buck [packages](../../concepts/key_concepts/#packages). The root of a buck
 cell contains a global configuration file called
-[**`.buckconfig`**](../../concepts/buckconfig).
+[**`.bsmrconfig`**](../../concepts/bsmrconfig).
 
 <FbInternalOnly>
 
-For the lab you just did, fbcode is the cell root where .buckconfig resides. If
+For the lab you just did, fbcode is the cell root where .bsmrconfig resides. If
 you are developing in other projects like ARVR, android and ios, then fbsource
 is the buck cell root.
 
 #### Tips:
 
-- Do not modify .buckconfig and do not create .buckconfig without consulting
+- Do not modify .bsmrconfig and do not create .bsmrconfig without consulting
   buck or devx team!
 - Be aware that buck does enforce package boundaries, so a source file only
   belongs to its nearest BUCK file.
@@ -478,7 +478,7 @@ As you become more adept, you can explore other powerful buck commands, such as:
 
 - Sometimes you’ll see options like `@mode/opt` in the command, the mode file
   (path is `cell/mode/opt`) contains a set of buck configs that are extensions
-  of `.buckconfig`, see some examples in
+  of `.bsmrconfig`, see some examples in
   [this wiki](https://www.internalfb.com/wiki/Buck/Buck-users/fbcode-repo/C++/running-buck-in-different-modes/)
   for C++ build mode;
 

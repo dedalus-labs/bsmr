@@ -6,7 +6,7 @@ rust_unittest(
     name = "strong_hash_tests",
     srcs = glob(["src/**/*.rs"]),
     deps = [
-        "fbsource//third-party/rust:blake3",
-        "//bsmr/packages/rust/gazebo/strong_hash:strong_hash",
+        "bsmr_build//third-party/rust:blake3",
+        "root//packages/rust/gazebo/strong_hash:strong_hash",
     ],
 )

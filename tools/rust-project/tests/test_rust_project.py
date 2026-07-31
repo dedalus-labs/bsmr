@@ -36,22 +36,22 @@ async def test_workspaces(buck: Buck) -> None:
         "prelude//rust/rust-analyzer/resolve_deps.bxl:resolve_targets",
         "--",
         "--targets",
-        "//bsmr/tools/rust-project/tests/targets/foo:e",
+        "root//tools/rust-project/tests/targets/foo:e",
     )
     result: Dict[str, Any] = json.load(open(result_raw.stdout.rstrip()))
     assert result["expanded_targets"] == [
-        "fbcode//bsmr/tools/rust-project/tests/targets/bar:d",
-        "fbcode//bsmr/tools/rust-project/tests/targets/foo:a",
+        "root//tools/rust-project/tests/targets/bar:d",
+        "root//tools/rust-project/tests/targets/foo:a",
     ]
     target_and_in_workspace = {
         t: v["in_workspace"] for t, v in result["resolved_deps"].items()
     }
     expected_subset = {
-        "fbcode//bsmr/tools/rust-project/tests/targets/foo:a": True,
-        "fbcode//bsmr/tools/rust-project/tests/targets/bar:c": False,
-        "fbcode//bsmr/tools/rust-project/tests/targets/bar:d": True,
-        "fbcode//bsmr/tools/rust-project/tests/targets/foo:e": True,
-        "fbcode//bsmr/tools/rust-project/tests/targets/foo:f": True,
+        "root//tools/rust-project/tests/targets/foo:a": True,
+        "root//tools/rust-project/tests/targets/bar:c": False,
+        "root//tools/rust-project/tests/targets/bar:d": True,
+        "root//tools/rust-project/tests/targets/foo:e": True,
+        "root//tools/rust-project/tests/targets/foo:f": True,
     }
     assert expected_subset.items() <= target_and_in_workspace.items()
 
@@ -60,20 +60,20 @@ async def test_workspaces(buck: Buck) -> None:
         "prelude//rust/rust-analyzer/resolve_deps.bxl:resolve_targets",
         "--",
         "--targets",
-        "//bsmr/tools/rust-project/tests/targets/bar:c",
+        "root//tools/rust-project/tests/targets/bar:c",
     )
     result: Dict[str, Any] = json.load(open(result_raw.stdout.rstrip()))
     assert result["expanded_targets"] == [
-        "fbcode//bsmr/tools/rust-project/tests/targets/bar:c"
+        "root//tools/rust-project/tests/targets/bar:c"
     ]
     target_and_in_workspace = {
         t: v["in_workspace"] for t, v in result["resolved_deps"].items()
     }
 
     expected_subset = {
-        "fbcode//bsmr/tools/rust-project/tests/targets/bar:c": True,
-        "fbcode//bsmr/tools/rust-project/tests/targets/foo:e": False,
-        "fbcode//bsmr/tools/rust-project/tests/targets/foo:f": False,
+        "root//tools/rust-project/tests/targets/bar:c": True,
+        "root//tools/rust-project/tests/targets/foo:e": False,
+        "root//tools/rust-project/tests/targets/foo:f": False,
     }
 
     assert expected_subset.items() <= target_and_in_workspace.items()
@@ -85,12 +85,12 @@ async def test_alias(buck: Buck) -> None:
         "prelude//rust/rust-analyzer/resolve_deps.bxl:resolve_targets",
         "--",
         "--targets",
-        "fbcode//bsmr/tools/rust-project/tests/targets/alias/...",
+        "root//tools/rust-project/tests/targets/alias/...",
     )
     result: Dict[str, Any] = json.load(open(result_raw.stdout.rstrip()))
     assert result["expanded_targets"] == [
-        "fbcode//bsmr/tools/rust-project/tests/targets/alias:l",
-        "fbcode//bsmr/tools/rust-project/tests/targets/alias:l_alias",
+        "root//tools/rust-project/tests/targets/alias:l",
+        "root//tools/rust-project/tests/targets/alias:l_alias",
     ]
 
 
@@ -113,8 +113,8 @@ async def test_resolve_owning_buildfile_no_extra_targets(buck: Buck) -> None:
     )
     owners.sort()
     assert owners == [
-        "fbcode//bsmr/tools/rust-project/tests/targets/foo:f",
-        "fbcode//bsmr/tools/rust-project/tests/targets/foo:f-unittest",
+        "root//tools/rust-project/tests/targets/foo:f",
+        "root//tools/rust-project/tests/targets/foo:f-unittest",
     ]
 
 
@@ -124,12 +124,12 @@ async def test_exclude_workspaces(buck: Buck) -> None:
         "prelude//rust/rust-analyzer/resolve_deps.bxl:resolve_targets",
         "--",
         "--targets",
-        "//bsmr/tools/rust-project/tests/targets/foo:e",
+        "root//tools/rust-project/tests/targets/foo:e",
         "--exclude_workspaces=true",
     )
     result: Dict[str, Any] = json.load(open(result_raw.stdout.rstrip()))
     assert result["expanded_targets"] == [
-        "fbcode//bsmr/tools/rust-project/tests/targets/foo:e",
+        "root//tools/rust-project/tests/targets/foo:e",
     ]
 
 
@@ -139,7 +139,7 @@ async def test_fallback_compatible_with(buck: Buck) -> None:
         "prelude//rust/rust-analyzer/resolve_deps.bxl:resolve_targets",
         "--",
         "--targets",
-        "//bsmr/tools/rust-project/tests/targets/foo:g_with_compatibility",
+        "root//tools/rust-project/tests/targets/foo:g_with_compatibility",
     )
     result: Dict[str, Any] = json.load(open(result_raw.stdout.rstrip()))
 

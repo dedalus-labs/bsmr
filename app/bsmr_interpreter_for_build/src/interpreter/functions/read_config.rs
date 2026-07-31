@@ -20,10 +20,10 @@ use crate::interpreter::build_context::BuildContext;
 
 #[starlark_module]
 pub(crate) fn register_read_config(globals: &mut GlobalsBuilder) {
-    /// Read a configuration value from the .buckconfig for the current
+    /// Read a configuration value from the .bsmrconfig for the current
     /// cell of the `BUCK` file that started evaluation of this code.
     ///
-    /// As an example, if the current cell's .buckconfig contains:
+    /// As an example, if the current cell's .bsmrconfig contains:
     ///
     /// ```toml
     /// [package_options]
@@ -38,7 +38,7 @@ pub(crate) fn register_read_config(globals: &mut GlobalsBuilder) {
     /// read_config("package_options", "linker", "a_default") == "a_default"
     /// ```
     ///
-    /// In general the use of `.buckconfig` is discouraged in favour of `select`,
+    /// In general the use of `.bsmrconfig` is discouraged in favour of `select`,
     /// but it can still be useful.
     #[starlark(speculative_exec_safe)]
     fn read_config<'v>(
@@ -47,14 +47,14 @@ pub(crate) fn register_read_config(globals: &mut GlobalsBuilder) {
         default: Option<Value<'v>>,
         eval: &mut Evaluator<'v, '_, '_>,
     ) -> starlark::Result<Value<'v>> {
-        let buckconfigs = &BuildContext::from_context(eval)?.buckconfigs;
-        match buckconfigs.current_cell_get(section, key, eval)? {
+        let bsmrconfigs = &BuildContext::from_context(eval)?.bsmrconfigs;
+        match bsmrconfigs.current_cell_get(section, key, eval)? {
             Some(v) => Ok(v.to_value()),
             None => Ok(default.unwrap_or_else(Value::new_none)),
         }
     }
 
-    /// Like `read_config` but the project root `.buckconfig` is always consulted,
+    /// Like `read_config` but the project root `.bsmrconfig` is always consulted,
     /// regardless of the cell of the originating `BUCK` file.
     #[starlark(speculative_exec_safe)]
     fn read_root_config<'v>(
@@ -64,8 +64,8 @@ pub(crate) fn register_read_config(globals: &mut GlobalsBuilder) {
         #[starlark(require = pos, default = NoneOr::None)] default: NoneOr<StringValue<'v>>,
         eval: &mut Evaluator<'v, '_, '_>,
     ) -> starlark::Result<NoneOr<StringValue<'v>>> {
-        let buckconfigs = &BuildContext::from_context(eval)?.buckconfigs;
-        match buckconfigs.root_cell_get(section, key, eval)? {
+        let bsmrconfigs = &BuildContext::from_context(eval)?.bsmrconfigs;
+        match bsmrconfigs.root_cell_get(section, key, eval)? {
             Some(v) => Ok(NoneOr::Other(v.to_string_value())),
             None => Ok(default),
         }

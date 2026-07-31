@@ -102,7 +102,7 @@ pub(crate) enum Kind {
 #[derive(Debug, Clone, Deserialize, PartialEq, Eq)]
 pub(crate) struct TargetInfo {
     pub(crate) name: String,
-    /// The target identifier, e.g. `fbcode//bsmr/tools/rust-project:rust-project`.
+    /// The target identifier, e.g. `root//tools/rust-project:rust-project`.
     ///
     /// See also <https://buck2.build/docs/concepts/labels/>
     pub(crate) label: String,
@@ -264,7 +264,7 @@ impl TargetInfo {
     ///
     /// Reindeer buckifies vendored crates under `third-party/rust`.
     pub(crate) fn is_reindeer_third_party(&self) -> bool {
-        // Strip the cell (e.g. `fbsource//`) and the target name (`:foo`) to get
+        // Strip the cell (e.g. `upstream//`) and the target name (`:foo`) to get
         // the buck package path.
         let package = self
             .label
@@ -399,16 +399,16 @@ mod tests {
             rustc_flags: vec![],
         };
 
-        assert!(with_label("fbsource//third-party/rust/vendor/tokio:1").is_reindeer_third_party());
-        assert!(with_label("fbsource//third-party/rust:tokio").is_reindeer_third_party());
-        assert!(with_label("fbsource//third-party/rust/top:rustc").is_reindeer_third_party());
-
         assert!(
-            !with_label("fbcode//bsmr/tools/rust-project:rust-project").is_reindeer_third_party()
+            with_label("bsmr_build//third-party/rust/vendor/tokio:1").is_reindeer_third_party()
         );
+        assert!(with_label("bsmr_build//third-party/rust:tokio").is_reindeer_third_party());
+        assert!(with_label("bsmr_build//third-party/rust/top:rustc").is_reindeer_third_party());
+
+        assert!(!with_label("root//tools/rust-project:rust-project").is_reindeer_third_party());
         // A first-party crate that merely lives under a similarly-named path is
         // not a reindeer root.
-        assert!(!with_label("fbcode//third-party/rust-tools/foo:foo").is_reindeer_third_party());
+        assert!(!with_label("upstream//third-party/rust-tools/foo:foo").is_reindeer_third_party());
     }
 
     #[test]

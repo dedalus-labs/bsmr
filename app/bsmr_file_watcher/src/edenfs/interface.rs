@@ -16,8 +16,8 @@ use allocative::Allocative;
 use async_trait::async_trait;
 use bsmr_common::file_ops::dice::FileChangeTracker;
 use bsmr_common::ignores::ignore_set::IgnoreSet;
-use bsmr_common::legacy_configs::configs::LegacyBuckConfig;
-use bsmr_common::legacy_configs::key::BuckconfigKeyRef;
+use bsmr_common::legacy_configs::configs::LegacyBsmrConfig;
+use bsmr_common::legacy_configs::key::BsmrconfigKeyRef;
 use bsmr_core::cells::CellResolver;
 use bsmr_core::cells::name::CellName;
 use bsmr_core::fs::project::ProjectRoot;
@@ -108,7 +108,7 @@ impl EdenFsFileWatcher {
     pub(crate) fn new(
         fb: FacebookInit,
         project_root: &ProjectRoot,
-        root_config: &LegacyBuckConfig,
+        root_config: &LegacyBsmrConfig,
         cells: CellResolver,
         ignore_specs: StdBuckHashMap<CellName, IgnoreSet>,
     ) -> bsmr_error::Result<Self> {
@@ -128,7 +128,7 @@ impl EdenFsFileWatcher {
         let project_root = manager.get_proj_relative_path().to_owned();
 
         let mergebase_with = root_config
-            .get(BuckconfigKeyRef {
+            .get(BsmrconfigKeyRef {
                 section: "project",
                 property: "watchman_merge_base",
             })

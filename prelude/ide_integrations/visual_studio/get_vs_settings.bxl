@@ -49,7 +49,7 @@ def _get_all_header_files(attrs: dict):
 
 # Buck target can have same file declared in both headers and srcs and buck will work without any problem,
 # while VS will error out: The item "xxx" already exists under the filter "".
-# e.g., fbsource//xplat/QNNPACK:operators
+# e.g., upstream//xplat/QNNPACK:operators
 def _get_headers_and_sources(attrs):
     headers_dict = {h: True for h in _get_all_header_files(attrs)}
     sources_dict = attrs["srcs"]
@@ -112,7 +112,7 @@ def _get_debug_settings(target: bxl.ConfiguredTargetNode, attrs: dict, attrs_laz
         if oxx_runner_path:
             debug_settings[DEBUG_ENV].setdefault("PATH", "%PATH%")
             debug_settings[DEBUG_ENV]["PATH"] = ";".join(oxx_runner_path) + ";" + debug_settings[DEBUG_ENV]["PATH"]
-    elif attrs["buck_type"] == "command_alias" and attrs["exe"] == "fbsource//arvr/tools/buck:launcher":
+    elif attrs["buck_type"] == "command_alias" and attrs["exe"] == "upstream//arvr/tools/buck:launcher":
         # Replicate launcher behavior as it launches binary via child process which Visual Studio cannot debug into. https://fburl.com/code/sb7e6zi7
         exe_path = debug_settings[DEBUG_ARGS][0]
 
@@ -186,7 +186,7 @@ def get_vs_settings_for_toolchain(target: bxl.ConfiguredTargetNode, compiler_set
 
     return vs_settings
 
-def get_vs_settings(target: bxl.ConfiguredTargetNode, toolchain, attrs: dict, vs_settings_dict: dict, cli_args, buck_root, bxl_ctx):
+def get_vs_settings(target: bxl.ConfiguredTargetNode, toolchain, attrs: dict, vs_settings_dict: dict, cli_args, bsmr_root, bxl_ctx):
     log_debug("# Getting VS settings for {}", target.label.raw_target(), log_level = cli_args.log_level)
     mode_files = cli_args.mode_files
 
@@ -212,7 +212,7 @@ def get_vs_settings(target: bxl.ConfiguredTargetNode, toolchain, attrs: dict, vs
     if attrs_lazy.get("reexport_all_header_dependencies"):
         # Turn all normal dependencies to exported dependencies so that dependents on this target can find headers of transitive dependencies.
         # Might bring in additional exported dependencies, but does the job.
-        # e.g., fbsource//arvr/projects/hsr/libraries/common/tooling/code_gen:idl_serializer
+        # e.g., upstream//arvr/projects/hsr/libraries/common/tooling/code_gen:idl_serializer
         exported_deps.extend(deps)
         deps = []
 
@@ -238,7 +238,7 @@ def get_vs_settings(target: bxl.ConfiguredTargetNode, toolchain, attrs: dict, vs
         )
     aggregated_exported_compiler_settings = merge(aggregated_exported_compiler_settings, get_exported_compiler_settings(target, attrs, bxl_ctx))
     vs_settings["ExportedCompilerSettings"] = aggregated_exported_compiler_settings
-    aggregated_exported_linker_settings = merge(aggregated_exported_linker_settings, get_exported_linker_settings(attrs, buck_root))
+    aggregated_exported_linker_settings = merge(aggregated_exported_linker_settings, get_exported_linker_settings(attrs, bsmr_root))
     vs_settings["ExportedLinkerSettings"] = aggregated_exported_linker_settings
 
     # Exported settings are also applicable to current target.
@@ -264,7 +264,7 @@ def get_vs_settings(target: bxl.ConfiguredTargetNode, toolchain, attrs: dict, vs
     )
     vs_settings["LinkerSettings"] = merge(
         aggregated_private_linker_settings,
-        get_linker_settings(attrs, buck_root),
+        get_linker_settings(attrs, bsmr_root),
     )
 
     debug_settings = _get_debug_settings(target, attrs, attrs_lazy, vs_settings_dict, cli_args, bxl_ctx)
@@ -307,7 +307,7 @@ main = bxl_main(
         "extra_buck_options": cli_args.list(cli_args.string(), default = []),
         "immediate_buck_options": cli_args.list(cli_args.string(), default = []),
         "log_level": cli_args.int(default = 30),
-        "mode_files": cli_args.list(cli_args.string(), default = ["fbsource//arvr/mode/win/dev"]),
+        "mode_files": cli_args.list(cli_args.string(), default = ["upstream//arvr/mode/win/dev"]),
         "mode_hashes": cli_args.option(cli_args.json()),  # mode => configuration hash.
         "target": cli_args.target_label(),
     },

@@ -5,7 +5,7 @@ This project provides a small example of what a project that utilizes
 
 In this document, we will go over the key configs used in this setup.
 
-### Relevant configs in .buckconfig
+### Relevant configs in .bsmrconfig
 
 First, the EngFlow endpoint and certificate should be configured as the
 following:

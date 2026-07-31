@@ -8,7 +8,7 @@
  * above-listed licenses.
  */
 
-pub mod buckconfig;
+pub mod bsmrconfig;
 pub mod build_context;
 pub(crate) mod bzl_eval_ctx;
 pub mod calculation;

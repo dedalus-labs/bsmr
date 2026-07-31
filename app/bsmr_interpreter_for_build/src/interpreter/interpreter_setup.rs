@@ -11,7 +11,7 @@
 use std::sync::Arc;
 
 use bsmr_common::dice::cells::SetCellResolver;
-use bsmr_common::legacy_configs::cells::ExternalBuckconfigData;
+use bsmr_common::legacy_configs::cells::ExternalBsmrconfigData;
 use bsmr_common::legacy_configs::dice::SetLegacyConfigs;
 use bsmr_core::cells::CellResolver;
 use bsmr_interpreter::dice::starlark_types::SetStarlarkTypes;
@@ -27,7 +27,7 @@ pub fn setup_interpreter(
     updater: &mut DiceTransactionUpdater,
     cell_resolver: CellResolver,
     configuror: Arc<BuildInterpreterConfiguror>,
-    legacy_config_overrides: ExternalBuckconfigData,
+    legacy_config_overrides: ExternalBsmrconfigData,
     starlark_profiler_instrumentation_override: StarlarkProfilerConfiguration,
     disable_starlark_types: bool,
     unstable_typecheck: bool,
@@ -50,7 +50,7 @@ pub fn setup_interpreter_basic(
         dice,
         cell_resolver,
         configuror,
-        ExternalBuckconfigData::testing_default(),
+        ExternalBsmrconfigData::testing_default(),
         StarlarkProfilerConfiguration::default(),
         false,
         false,

@@ -33,7 +33,7 @@ Configure a local build without persistent workers:
 
 ```
 $ cd examples/persistent_worker
-$ echo '<file:.buckconfig.no-workers>' > .buckconfig.local
+$ echo '<file:.bsmrconfig.no-workers>' > .bsmrconfig.local
 ```
 
 Run a clean build:
@@ -53,7 +53,7 @@ Configure a local build with persistent workers:
 
 ```
 $ cd examples/persistent_worker
-$ echo '<file:.buckconfig.local-persistent-workers>' > .buckconfig.local
+$ echo '<file:.bsmrconfig.local-persistent-workers>' > .bsmrconfig.local
 ```
 
 Run a clean build:
@@ -73,7 +73,7 @@ Configure a remote build without persistent workers:
 
 ```
 $ cd examples/persistent_worker
-$ echo '<file:.buckconfig.buildbuddy>' > .buckconfig.local
+$ echo '<file:.bsmrconfig.buildbuddy>' > .bsmrconfig.local
 ```
 
 Run a clean build:
@@ -93,7 +93,7 @@ Configure a remote build with persistent workers:
 
 ```
 $ cd examples/persistent_worker
-$ echo '<file:.buckconfig.buildbuddy-persistent-workers>' > .buckconfig.local
+$ echo '<file:.bsmrconfig.buildbuddy-persistent-workers>' > .bsmrconfig.local
 ```
 
 Run a clean build:

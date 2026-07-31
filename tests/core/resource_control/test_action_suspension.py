@@ -27,7 +27,7 @@ def test_dummy() -> None:
 
 
 def _configure(buck: Buck, kill_and_retry: bool) -> None:
-    with open(buck.cwd / ".buckconfig.local", "w") as f:
+    with open(buck.cwd / ".bsmrconfig.local", "w") as f:
         f.write("[bsmr_resource_control]\n")
         if kill_and_retry:
             f.write("preferred_action_suspend_strategy = kill_and_retry\n")

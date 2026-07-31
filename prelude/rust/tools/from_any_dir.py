@@ -43,7 +43,7 @@ def main():
     cc = [arg.replace(placeholder, f"{interim_cwd}{os.sep}") for arg in args.cc]
 
     # TODO: figure out where this comes from and why it doesn't work
-    #   Action failed: fbsource//third-party/rust/vendor/aws-lc-sys:0.37-build-script-main-run (buildscript)
+    #   Action failed: bsmr_build//third-party/rust/vendor/aws-lc-sys:0.37-build-script-main-run (buildscript)
     #   COMPILER: buck-out/v2/art/fbsource/220d36cb84017ab6/third-party/rust/vendor/aws-lc-sys/__0.37-build-script-main-run__/__cc_shim.sh
     #   ARGS: ["-Wall", "-Wextra", "-gdwarf-5", "-fembed-bitcode=off", "buck-out/v2/art/fbsource/220d36cb84017ab6/third-party/rust/vendor/aws-lc-sys/__0.37-build-script-main-run__/cwd/aws-lc/tests/compiler_features_tests/memcmp_invalid_stripped_check.c", "-Wno-unused-parameter", "-o", "buck-out/v2/art/fbsource/220d36cb84017ab6/third-party/rust/vendor/aws-lc-sys/__0.37-build-script-main-run__/OUT_DIR/memcmp_invalid_stripped_check"]
     #   ERROR: ld.lld: error: unable to find library -lomp
@@ -52,7 +52,7 @@ def main():
 
     # TODO: figure out why this flag passes `is_flag_supported` and is then rejected by the assembler.
     #
-    #   Action failed: fbsource//third-party/rust/vendor/aws-lc-sys:0.42-build (buildscript)
+    #   Action failed: bsmr_build//third-party/rust/vendor/aws-lc-sys:0.42-build (buildscript)
     #   clang: error: unsupported argument '--debug-prefix-map=/re_cwd/buck-out/v2/art/fbsource/third-party/rust/vendor/aws-lc-sys/__0.42-build__/output_artifacts/cwd=' to option '-Wa,'
     #
     # The relevant code in third-party/rust/vendor/aws-lc-sys-0.42.0/builder/cc_builder.rs is:

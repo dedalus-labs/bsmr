@@ -13,7 +13,7 @@ use std::io::Write;
 use async_trait::async_trait;
 use bsmr_cli_proto::ClientContext;
 use bsmr_cmd_audit_client::execution_platform_resolution::AuditExecutionPlatformResolutionCommand;
-use bsmr_node::execution::EXECUTION_PLATFORMS_BUCKCONFIG;
+use bsmr_node::execution::EXECUTION_PLATFORMS_BSMRCONFIG;
 use bsmr_node::execution::GetExecutionPlatforms;
 use bsmr_node::nodes::configured_frontend::ConfiguredTargetNodeCalculation;
 use bsmr_server_ctx::ctx::ServerCommandContextTrait;
@@ -48,7 +48,7 @@ impl ServerAuditSubcommand for AuditExecutionPlatformResolutionCommand {
                     None => {
                         writeln!(
                             stdout,
-                            "Execution platforms are not configured: {EXECUTION_PLATFORMS_BUCKCONFIG} unset"
+                            "Execution platforms are not configured: {EXECUTION_PLATFORMS_BSMRCONFIG} unset"
                         )?;
                         writeln!(stdout, "Using legacy execution platform")?;
                     }

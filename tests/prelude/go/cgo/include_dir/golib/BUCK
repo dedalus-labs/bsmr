@@ -1,4 +1,4 @@
-load("@fbcode_macros//build_defs:go_package.bzl", "go_package")
+load("@upstream//build_defs:go_package.bzl", "go_package")
 
 oncall("golang")
 

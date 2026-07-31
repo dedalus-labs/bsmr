@@ -27,9 +27,9 @@ pub trait ConfigurationCalculationDyn: Send + Sync + 'static {
     ) -> bsmr_error::Result<ConfigurationData>;
 }
 
-/// For config_settings that need to be resolved when producing a ResolvedConfiguration, the buckconfig values are looked up in
+/// For config_settings that need to be resolved when producing a ResolvedConfiguration, the bsmrconfig values are looked up in
 /// the cell that the configuration is resolving in. This means that for selects that appear in a target, the config_settings in the keys
-/// would resolve based on the buckconfigs from that target's cell.
+/// would resolve based on the bsmrconfigs from that target's cell.
 ///
 /// This is subtle, non-obvious and possibly unintuitive, so we introduce a newtype here just to make it clearer in the places we are
 /// using or passing around a CellName for this purpose.

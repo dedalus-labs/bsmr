@@ -17,13 +17,13 @@ All constraints used in these aliases must also be available in OSS.
 # for the attribute is the fully qualified target. Defining aliases in a struct
 # helps enforce that the alias names do not contain any bad character we cannot use on CLI.
 #
-# We define aliases for modifiers here rather than reusing `alias` section of buckconfig for
+# We define aliases for modifiers here rather than reusing `alias` section of bsmrconfig for
 # several reasons.
 # 1. `alias` buckconconfig is not well-designed. It only supports aliases in a cell and not
 # global aliases and users can override aliases in modefiles.
-# 2. Modifier aliases can point to conditional modifiers, which `alias` buckconfig does not
+# 2. Modifier aliases can point to conditional modifiers, which `alias` bsmrconfig does not
 # suppport.
-# 3. It's unlikely a user has to ever define an alias twice in both the `alias` buckconfig
+# 3. It's unlikely a user has to ever define an alias twice in both the `alias` bsmrconfig
 # and in modifier aliases because a modifier alias is a constraint value/config setting
 # and those don't typically get built on CLI.
 OSS_ALIASES = struct()

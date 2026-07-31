@@ -95,7 +95,7 @@ pub trait QueryTarget: LabeledNode + Dupe + Send + Sync + 'static {
 
     fn name(&self) -> Cow<'_, str>;
 
-    /// Return the path to the buildfile that defines this target, e.g. `fbcode//foo/bar/TARGETS`
+    /// Return the path to the buildfile that defines this target, e.g. `upstream//foo/bar/TARGETS`
     fn buildfile_path(&self) -> &BuildFilePath;
 
     fn deps<'a>(&'a self) -> impl Iterator<Item = &'a Self::Key> + Send + 'a;

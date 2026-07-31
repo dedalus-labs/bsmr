@@ -110,14 +110,14 @@ def print_testrun_url(label: str, output: str) -> None:
     print(f"[BRR-contract] {label}: {url}")
 
 
-PYTHON_TEST_TARGET: str = "fbcode//bsmr/tests/targets/rules/python/test:test"
+PYTHON_TEST_TARGET: str = "root//tests/targets/rules/python/test:test"
 
 # Bundle-mode target with 3 test cases (test_a, test_b, test_c). Used for
 # the SRR `--exact` tests below because the SRR path needs to demonstrate
 # both single-test selection and suite-level expansion against a target
 # with multiple discoverable tests.
 PYTHON_MULTI_TESTS_TARGET: str = (
-    "fbcode//bsmr/tests/targets/rules/python/test:multi_tests"
+    "root//tests/targets/rules/python/test:multi_tests"
 )
 
 
@@ -233,7 +233,7 @@ async def test_brr_suite_level_main_runs_all_tests(buck: Buck, tmp_path: Path) -
         "test_config": {
             "config": "",
             "host": "linux",
-            "mode": "@fbcode//mode/dev",
+            "mode": "@upstream//mode/dev",
         },
     }
     brr_file.write_text(json.dumps(brr_data))
@@ -266,7 +266,7 @@ async def test_brr_suite_level_main_runs_all_tests(buck: Buck, tmp_path: Path) -
 # it reports per-file results and never goes through test-case listing — the same
 # shape as the `:llama4x-static-type-check` target in the original Bug 7 report.
 TYPE_CHECK_UNMANAGED_TARGET: str = (
-    "fbcode//testinfra/playground/python/pytest:pytest_test-library-type-checking"
+    "upstream//testinfra/playground/python/pytest:pytest_test-library-type-checking"
 )
 
 
@@ -312,7 +312,7 @@ async def test_brr_unmanaged_existing_and_synthetic_new_no_phantom(
         "test_config": {
             "config": "",
             "host": "linux",
-            "mode": "@fbcode//mode/dev",
+            "mode": "@upstream//mode/dev",
         },
     }
     brr_file.write_text(json.dumps(brr_data))
@@ -362,7 +362,7 @@ async def test_brr_unmanaged_existing_and_synthetic_new_no_phantom(
 # Landable unmanaged sh_test whose failure is driven on demand by the
 # BRR_SIM_FAIL env var (passes in prod CI; the e2e flips it via `--env`). Used by
 # the two BRR contracts below to simulate a *failing* unmanaged test.
-BRR_SIM_UNMANAGED_TARGET: str = "fbcode//testinfra/playground/sh:brr_sim_unmanaged"
+BRR_SIM_UNMANAGED_TARGET: str = "upstream//testinfra/playground/sh:brr_sim_unmanaged"
 
 
 @buck_test(inplace=True, skip_for_os=["darwin", "windows"])
@@ -407,7 +407,7 @@ async def test_brr_unmanaged_preexisting_failure(buck: Buck, tmp_path: Path) -> 
                 "test_config": {
                     "config": "",
                     "host": "linux",
-                    "mode": "@fbcode//mode/dev",
+                    "mode": "@upstream//mode/dev",
                 },
             }
         )
@@ -457,7 +457,7 @@ async def test_brr_unmanaged_preexisting_failure(buck: Buck, tmp_path: Path) -> 
 # carrying the `tpx:skip-filtering-unmanaged-test-suite` label (cogwheel /
 # audit_dependencies style). Used to prove the *labeled* case below.
 BRR_SIM_UNMANAGED_SKIP_FILTERING_TARGET: str = (
-    "fbcode//testinfra/playground/sh:brr_sim_unmanaged_skip_filtering"
+    "upstream//testinfra/playground/sh:brr_sim_unmanaged_skip_filtering"
 )
 
 
@@ -507,7 +507,7 @@ async def test_brr_unmanaged_cogwheel_label_preexisting_failure_no_phantom(
                 "test_config": {
                     "config": "",
                     "host": "linux",
-                    "mode": "@fbcode//mode/dev",
+                    "mode": "@upstream//mode/dev",
                 },
             }
         )
@@ -576,7 +576,7 @@ async def test_brr_unmanaged_new_does_not_exist(buck: Buck, tmp_path: Path) -> N
 
     # Step 2: BRR file naming a `- unmanaged` entry for a target that does not
     # exist (never discovered on the retry) — i.e. a new unmanaged test.
-    nonexistent_name = "fbcode//testinfra/playground/sh:brr_sim_unmanaged_new_does_not_exist - unmanaged"
+    nonexistent_name = "upstream//testinfra/playground/sh:brr_sim_unmanaged_new_does_not_exist - unmanaged"
     brr_file = tmp_path / "brr_input.json"
     brr_file.write_text(
         json.dumps(
@@ -589,7 +589,7 @@ async def test_brr_unmanaged_new_does_not_exist(buck: Buck, tmp_path: Path) -> N
                 "test_config": {
                     "config": "",
                     "host": "linux",
-                    "mode": "@fbcode//mode/dev",
+                    "mode": "@upstream//mode/dev",
                 },
             }
         )
@@ -630,7 +630,7 @@ async def test_brr_unmanaged_new_does_not_exist(buck: Buck, tmp_path: Path) -> N
 
 
 BROKEN_RUN_AS_BUNDLE_TARGET: str = (
-    "fbcode//testinfra/playground/python/broken_run_as_bundle:broken_run_as_bundle_test"
+    "upstream//testinfra/playground/python/broken_run_as_bundle:broken_run_as_bundle_test"
 )
 
 
@@ -699,7 +699,7 @@ async def test_brr_roundtrip_run_as_bundle_failure(buck: Buck, tmp_path: Path) -
 
 
 BROKEN_LISTING_TARGET: str = (
-    "fbcode//testinfra/playground/python/broken_listing:broken_listing_test"
+    "upstream//testinfra/playground/python/broken_listing:broken_listing_test"
 )
 
 

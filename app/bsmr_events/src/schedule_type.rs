@@ -14,7 +14,7 @@ pub struct SandcastleScheduleType {
     schedule_type: Option<&'static str>,
 }
 
-// TODO iguridi: consolidate with buckconfig
+// TODO iguridi: consolidate with bsmrconfig
 impl SandcastleScheduleType {
     const SCHEDULE_TYPE_CONTINUOUS: &'static str = "continuous";
     const SCHEDULE_TYPE_DIFF: &'static str = "diff";

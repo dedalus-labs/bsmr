@@ -7,11 +7,11 @@ rust_unittest(
     srcs = glob(["src/**/*.rs"]),
     crate_root = "src/lib.rs",
     deps = [
-        "//bsmr/app/bsmr_core:bsmr_core",
-        "//bsmr/app/bsmr_error:bsmr_error",
-        "//bsmr/app/bsmr_fs:bsmr_fs",
-        "//bsmr/app/bsmr_node:bsmr_node",
-        "//bsmr/app/bsmr_util:bsmr_util",
-        "//bsmr/packages/rust/gazebo/dupe:dupe",
+        "root//app/bsmr_core:bsmr_core",
+        "root//app/bsmr_error:bsmr_error",
+        "root//app/bsmr_fs:bsmr_fs",
+        "root//app/bsmr_node:bsmr_node",
+        "root//app/bsmr_util:bsmr_util",
+        "root//packages/rust/gazebo/dupe:dupe",
     ],
 )

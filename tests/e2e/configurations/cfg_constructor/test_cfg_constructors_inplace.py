@@ -25,7 +25,7 @@ async def test_cfg_constructor_without_modifiers_returns_same_configuration(
     buck: Buck,
 ) -> None:
     result = await buck.cquery(
-        "fbcode//bsmr/tests/e2e/configurations/cfg_constructor/test_clear_package_modifiers_data/test_cfg_constructor_data:no_modifiers",
+        "root//tests/e2e/configurations/cfg_constructor/test_clear_package_modifiers_data/test_cfg_constructor_data:no_modifiers",
         "-A",
     )
     result = json.loads(result.stdout)
@@ -39,7 +39,7 @@ async def test_cfg_constructor_without_modifiers_returns_same_configuration(
 @buck_test(inplace=True)
 async def test_cfg_constructor_with_target_modifiers(buck: Buck) -> None:
     result = await buck.cquery(
-        "fbcode//bsmr/tests/e2e/configurations/cfg_constructor/test_clear_package_modifiers_data/test_cfg_constructor_data:has_target_modifier",
+        "root//tests/e2e/configurations/cfg_constructor/test_clear_package_modifiers_data/test_cfg_constructor_data:has_target_modifier",
         "-A",
     )
     result = json.loads(result.stdout)
@@ -50,7 +50,7 @@ async def test_cfg_constructor_with_target_modifiers(buck: Buck) -> None:
 
 @buck_test(
     inplace=True,
-    extra_buck_config={
+    extra_bsmr_config={
         # CLI modifier validation is disabled for users and enabled for CI. To make sure this test case always has CLI modifier validation enabled,
         # explicitly enable it here.
         "bsmr": {"skip_cli_modifier_validation_DO_NOT_SET_TO_TRUE_ON_CI": ""}
@@ -58,13 +58,13 @@ async def test_cfg_constructor_with_target_modifiers(buck: Buck) -> None:
 )
 async def test_invoke_cfg_constructors_with_cli_modifier_validation(buck: Buck) -> None:
     await buck.cquery(
-        "fbcode//bsmr/tests/e2e/configurations/cfg_constructor/test_clear_package_modifiers_data/test_cfg_constructor_data:has_target_modifier",
+        "root//tests/e2e/configurations/cfg_constructor/test_clear_package_modifiers_data/test_cfg_constructor_data:has_target_modifier",
         "--modifier=ovr_config//os:linux",
     )
     await expect_failure(
         buck.cquery(
-            "fbcode//bsmr/tests/e2e/configurations/cfg_constructor/test_clear_package_modifiers_data/test_cfg_constructor_data:has_target_modifier",
-            "--modifier=fbcode//bsmr/tests/e2e/configurations/cfg_constructor/test_clear_package_modifiers_data/test_cfg_constructor_data:some_constraint_value",
+            "root//tests/e2e/configurations/cfg_constructor/test_clear_package_modifiers_data/test_cfg_constructor_data:has_target_modifier",
+            "--modifier=root//tests/e2e/configurations/cfg_constructor/test_clear_package_modifiers_data/test_cfg_constructor_data:some_constraint_value",
         ),
         stderr_regex="Only a select number of modifiers are allowed to be set from CLI on CI",
     )

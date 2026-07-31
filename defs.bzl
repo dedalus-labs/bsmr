@@ -83,7 +83,7 @@ def _pagable_transition_impl(platform: PlatformInfo, refs: struct) -> PlatformIn
 _pagable_transition = transition(
     impl = _pagable_transition_impl,
     refs = {
-        "val": translate_target("//bsmr/packages/rust/starlark/starlark:pagable[enabled]"),
+        "val": translate_target("root//packages/rust/starlark/starlark:pagable[enabled]"),
     },
 )
 

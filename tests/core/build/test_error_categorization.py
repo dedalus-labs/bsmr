@@ -374,7 +374,7 @@ async def test_daemon_startup_signal(buck: Buck) -> None:
 
 @buck_test(
     setup_eden=True,
-    extra_buck_config={
+    extra_bsmr_config={
         "bsmr": {
             "allow_eden_io": "false",
         }

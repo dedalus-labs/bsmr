@@ -41,7 +41,7 @@ nativelink basic_cas.json5
 More information is available in the
 [repo](https://github.com/Tracemachina/nativelink).
 
-## Relevant configs in .buckconfig
+## Relevant configs in .bsmrconfig
 
 Configure the `NativeLink` endpoint as follows:
 

@@ -56,7 +56,7 @@ use bsmr_build_signals::env::WaitingData;
 use bsmr_common::dice::cells::HasCellResolver;
 use bsmr_common::events::HasEvents;
 use bsmr_common::legacy_configs::dice::HasLegacyConfigs;
-use bsmr_common::legacy_configs::key::BuckconfigKeyRef;
+use bsmr_common::legacy_configs::key::BsmrconfigKeyRef;
 use bsmr_common::liveliness_observer::LivelinessObserver;
 use bsmr_common::local_resource_state::LocalResourceState;
 use bsmr_core::cells::cell_root_path::CellRootPathBuf;
@@ -722,7 +722,7 @@ impl Key for TestExecutionKey {
         let config = InternalRunnerConfig::parse(
             ctx.get_legacy_config_property(
                 cell_resolver.root_cell(),
-                BuckconfigKeyRef {
+                BsmrconfigKeyRef {
                     section: "test",
                     property: "use_internal_runner",
                 },

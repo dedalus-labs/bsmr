@@ -149,7 +149,7 @@ cxx_binary(
 
 **Package-level modifier** for `my_clang_compiler`: `root//cfg:sanitizer[asan]`
 
-**Execution platform resolution**: `fbcode//bsmr/platform/execution:linux-x86_64-nosan`
+**Execution platform resolution**: `root//platform/execution:linux-x86_64-nosan`
 
 ### **Behavior Change**
 

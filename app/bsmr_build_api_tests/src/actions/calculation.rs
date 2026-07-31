@@ -50,7 +50,7 @@ use bsmr_common::file_ops::metadata::FileMetadata;
 use bsmr_common::file_ops::metadata::TrackedFileDigest;
 use bsmr_common::file_ops::testing::TestFileOps;
 use bsmr_common::http::SetHttpClient;
-use bsmr_common::legacy_configs::configs::LegacyBuckConfig;
+use bsmr_common::legacy_configs::configs::LegacyBsmrConfig;
 use bsmr_common::legacy_configs::dice::inject_legacy_config_for_test;
 use bsmr_configured::nodes::ConfiguredTargetNodeKey;
 use bsmr_core::category::CategoryRef;
@@ -251,7 +251,7 @@ async fn make_default_dice_state(
     inject_legacy_config_for_test(
         &mut computations,
         CellName::testing_new("root"),
-        LegacyBuckConfig::empty(),
+        LegacyBsmrConfig::empty(),
     )?;
     computations.set_buck_out_path(Some(output_path))?;
     computations.set_cell_resolver(cell_resolver)?;

@@ -6,7 +6,7 @@
 # of this source tree. You may select, at your option, one of the
 # above-listed licenses.
 
-# @oss-disable[end= ]: load("@fbsource//tools/build_defs:python_platform.bzl", "set_platform_decorator_for_python")
+# @oss-disable[end= ]: load("@upstream//tools/build_defs:python_platform.bzl", "set_platform_decorator_for_python")
 load("@prelude//:is_full_meta_repo.bzl", "is_full_meta_repo")
 load("@prelude//:native.bzl", _native = "native")
 
@@ -30,7 +30,7 @@ def apple_oso_scrubber_target():
 
     native_oso_scrubber_enabled_override = read_root_config("apple", "native_oso_scrubber_enabled_override", None)
     if native_oso_scrubber_enabled_override != None:
-        # Override buckconfig takes precedence over everything else
+        # Override bsmrconfig takes precedence over everything else
         native_oso_scrubber_enabled = native_oso_scrubber_enabled_override.lower() == "true"
         return _NATIVE_SCRUBBER if native_oso_scrubber_enabled else _PYTHON_SCRUBBER
 

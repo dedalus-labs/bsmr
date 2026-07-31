@@ -62,7 +62,7 @@ Modifying `PACKAGE` file logically invalidates the `BUCK` file of this
 directory, and all `PACKAGE` and `BUCK` files of sub-`PACKAGE`s. However, `BUCK`
 file evaluation may track which `PACKAGE`-local values were accessed and only
 invalidate `BUCK` files which were potentially affected (similarly to how we do
-it with buckconfigs).
+it with bsmrconfigs).
 
 #### [`read_parent_package_value`](../../api/build#read_parent_package_value)
 
@@ -106,7 +106,7 @@ inherited from the nearest parent `PACKAGE`.
 
 #### [`read_config`](../../api/build#read_config)
 
-`PACKAGE` files are able to call `read_config` to read buckconfigs.
+`PACKAGE` files are able to call `read_config` to read bsmrconfigs.
 
 ### `BUCK`-specific API
 

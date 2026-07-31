@@ -1,4 +1,4 @@
-load("@fbcode//bsmr/tests:buck_e2e.bzl", "bsmr_e2e_test")
+load("@root//tests:buck_e2e.bzl", "bsmr_e2e_test")
 load("@bsmr_build//rules:testpilot_defs.bzl", "tpx_labels")
 
 oncall("build_infra")
@@ -6,16 +6,16 @@ oncall("build_infra")
 bsmr_e2e_test(
     name = "test_build_isolated",
     srcs = ["test_build_isolated.py"],
-    data = "//bsmr/tests/targets:isolated_targets",
+    data = "root//tests/targets:isolated_targets",
     env = {
         "OVR_CONFIG": "1",
         "PRELUDE": "$(location prelude//:prelude)",
     },
     serialize_test_cases = False,
     deps = [
-        "fbcode//bsmr/tests/e2e_util:assert_occurrences",
-        "fbcode//bsmr/tests/e2e_util:utils",
-        "fbsource//third-party/pypi/aiohttp:aiohttp",  # @autodeps2-fixme-manual
+        "root//tests/e2e_util:assert_occurrences",
+        "root//tests/e2e_util:utils",
+        "upstream//third-party/pypi/aiohttp:aiohttp",  # @autodeps2-fixme-manual
     ],
 )
 
@@ -24,7 +24,7 @@ bsmr_e2e_test(
     srcs = ["test_build_inplace.py"],
     require_nano_prelude = True,
     deps = [
-        "//bsmr/tests/e2e_util:utils",
+        "root//tests/e2e_util:utils",
     ],
 )
 
@@ -33,7 +33,7 @@ bsmr_e2e_test(
     srcs = ["test_worker.py"],
     labels = [tpx_labels.long_running],
     deps = [
-        "//bsmr/tests/e2e_util:utils",
+        "root//tests/e2e_util:utils",
     ],
 )
 
@@ -47,7 +47,7 @@ bsmr_e2e_test(
     ],
     test_with_deployed_bsmr = False,
     use_compiled_bsmr_client_and_tpx = True,
-    deps = ["//bsmr/tests/e2e_util:utils"],
+    deps = ["root//tests/e2e_util:utils"],
 )
 
 bsmr_e2e_test(
@@ -63,7 +63,7 @@ bsmr_e2e_test(
     # Changing it will prevent the test from working properly
     test_with_compiled_bsmr = True,
     deps = [
-        "//bsmr/tests/e2e_util:utils",
+        "root//tests/e2e_util:utils",
     ],
 )
 
@@ -72,6 +72,6 @@ bsmr_e2e_test(
     srcs = ["test_rust_build_reproducibility.py"],
     skip_for_os = ["windows"],
     deps = [
-        "//bsmr/tests/e2e_util:utils",
+        "root//tests/e2e_util:utils",
     ],
 )

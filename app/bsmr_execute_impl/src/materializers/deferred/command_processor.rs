@@ -951,7 +951,7 @@ impl<T: IoHandler> DeferredMaterializerCommandProcessor<T> {
                 (Instant::now() - now).as_millis(),
             );
         }
-        "Access time updates are disabled. Consider removing `update_access_times = false` from your .buckconfig".to_owned()
+        "Access time updates are disabled. Consider removing `update_access_times = false` from your .bsmrconfig".to_owned()
     }
 
     fn materialize_many_artifacts(

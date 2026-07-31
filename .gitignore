@@ -5,7 +5,7 @@ Cargo.lock
 buck-out
 /node_modules/
 /.direnv
-.buckconfig.local
+.bsmrconfig.local
 .envrc.local
 
 # symlinks

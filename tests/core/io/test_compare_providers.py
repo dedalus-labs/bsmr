@@ -46,7 +46,7 @@ async def _run_test(buck: Buck, name: str) -> None:
 
 @buck_test(
     setup_eden=True,
-    extra_buck_config={
+    extra_bsmr_config={
         "bsmr": {
             "allow_eden_io": "false",
             "source_digest_algorithm": "SHA1",
@@ -59,7 +59,7 @@ async def test_default(buck: Buck) -> None:
 
 @buck_test(
     setup_eden=True,
-    extra_buck_config={
+    extra_bsmr_config={
         "bsmr": {
             "allow_eden_io": "true",
             "source_digest_algorithm": "SHA1",
@@ -72,7 +72,7 @@ async def test_eden(buck: Buck) -> None:
 
 @buck_test(
     setup_eden=True,
-    extra_buck_config={
+    extra_bsmr_config={
         "bsmr": {
             "allow_eden_io": "false",
             "source_digest_algorithm": "BLAKE3-KEYED",
@@ -85,7 +85,7 @@ async def test_blake3(buck: Buck) -> None:
 
 @buck_test(
     setup_eden=True,
-    extra_buck_config={
+    extra_bsmr_config={
         "bsmr": {
             "source_digest_algorithm": "BLAKE3-KEYED",
         }
@@ -100,7 +100,7 @@ async def test_eden_blake3(buck: Buck) -> None:
 # Thrift Read API is only enabled for MacOS
 # @buck_test(
 #     setup_eden=True,
-#     extra_buck_config={
+#     extra_bsmr_config={
 #         "bsmr": {
 #             "allow_eden_io": "true",
 #             "use_eden_thrift_read": "true",
@@ -112,9 +112,9 @@ async def test_eden_blake3(buck: Buck) -> None:
 #     # String below is ~55 bytes, so this writes ~2.7GB which is comfortably over 2GB
 #     writes = 50000000
 
-#     with open(buck.cwd / ".buckconfig", "a") as f:
+#     with open(buck.cwd / ".bsmrconfig", "a") as f:
 #         # Picked a random config and writing that a bunch of times to make the file large
-#         # This will result in a .buckconfig file to actually be valid, so an error should
+#         # This will result in a .bsmrconfig file to actually be valid, so an error should
 #         # either be a size issue or it should succeed
 #         while writes > 0:
 #             f.write("[bsmr]\n")

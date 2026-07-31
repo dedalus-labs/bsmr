@@ -10,8 +10,8 @@
 
 use bsmr_build_api::interpreter::rule_defs::provider::registration::register_builtin_providers;
 use bsmr_build_api::interpreter::rule_defs::register_rule_defs;
-use bsmr_common::legacy_configs::cells::BuckConfigBasedCells;
-use bsmr_common::legacy_configs::configs::LegacyBuckConfig;
+use bsmr_common::legacy_configs::cells::BsmrConfigBasedCells;
+use bsmr_common::legacy_configs::configs::LegacyBsmrConfig;
 use bsmr_common::legacy_configs::configs::testing::TestConfigParserFileOps;
 use bsmr_common::package_listing::listing::PackageListing;
 use bsmr_common::package_listing::listing::testing::PackageListingExt;
@@ -178,10 +178,10 @@ fn test_eval_build_file() {
 }
 
 fn cells() -> CellsData {
-    let BuckConfigBasedCells { cell_resolver, .. } =
-        futures::executor::block_on(BuckConfigBasedCells::testing_parse_with_file_ops(
+    let BsmrConfigBasedCells { cell_resolver, .. } =
+        futures::executor::block_on(BsmrConfigBasedCells::testing_parse_with_file_ops(
             &mut TestConfigParserFileOps::new(&[(
-                ".buckconfig",
+                ".bsmrconfig",
                 indoc!(
                     r#"
                     [cells]
@@ -199,7 +199,7 @@ fn cells() -> CellsData {
     (
         cell_resolver.root_cell_cell_alias_resolver().dupe(),
         cell_resolver,
-        LegacyBuckConfig::empty(),
+        LegacyBsmrConfig::empty(),
         CellPathWithAllowedRelativeDir::new(
             CellPath::testing_new("cell1//config/foo"),
             Some(CellPath::testing_new("cell1//config")),

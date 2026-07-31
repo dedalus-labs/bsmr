@@ -17,7 +17,7 @@ use crate::AuditSubcommand;
 #[derive(Debug, clap::Parser, serde::Serialize, serde::Deserialize)]
 #[clap(
     name = "audit-cell",
-    about = "Query information about the [cells] list in .buckconfig."
+    about = "Query information about the [cells] list in .bsmrconfig."
 )]
 pub struct AuditCellCommand {
     #[clap(long = "json", help = "Output in JSON format")]

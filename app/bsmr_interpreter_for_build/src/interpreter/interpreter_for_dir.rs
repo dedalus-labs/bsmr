@@ -17,8 +17,8 @@ use std::cell::RefCell;
 use std::sync::Arc;
 
 use allocative::Allocative;
-use bsmr_common::legacy_configs::configs::LegacyBuckConfig;
-use bsmr_common::legacy_configs::key::BuckconfigKeyRef;
+use bsmr_common::legacy_configs::configs::LegacyBsmrConfig;
+use bsmr_common::legacy_configs::key::BsmrconfigKeyRef;
 use bsmr_common::package_listing::listing::PackageListing;
 use bsmr_core::build_file_path::BuildFilePath;
 use bsmr_core::bxl::BxlFilePath;
@@ -64,7 +64,7 @@ use starlark::environment::FrozenModule;
 use starlark::syntax::AstModule;
 use starlark::values::any_complex::StarlarkAnyComplex;
 
-use crate::interpreter::buckconfig::BuckConfigsViewForStarlark;
+use crate::interpreter::bsmrconfig::BsmrConfigsViewForStarlark;
 use crate::interpreter::build_context::BuildContext;
 use crate::interpreter::build_context::PerFileTypeContext;
 use crate::interpreter::bzl_eval_ctx::BzlEvalCtx;
@@ -215,7 +215,7 @@ impl LoadResolver for InterpreterLoadResolver {
             }
         }
 
-        // If you load the same .bzl file twice via different aliases (e.g. fbcode//bsmr/prelude/foo.bzl and prelude.bzl)
+        // If you load the same .bzl file twice via different aliases (e.g. root//prelude/foo.bzl and prelude.bzl)
         // then anything doing pointer equality (t-sets, provider identities) will go wrong.
         let project_path = self
             .config
@@ -490,7 +490,7 @@ impl InterpreterForDir {
         self: &Arc<Self>,
         env: &BuckStarlarkModule,
         ast: AstModule,
-        buckconfigs: &mut dyn BuckConfigsViewForStarlark,
+        bsmrconfigs: &mut dyn BsmrConfigsViewForStarlark,
         loaded_modules: LoadedModules,
         extra_context: PerFileTypeContext,
         eval_provider: StarlarkEvaluatorProvider,
@@ -504,7 +504,7 @@ impl InterpreterForDir {
         let host_info = self.global_state.configuror.host_info();
         let extra = BuildContext::new(
             &self.cell_info,
-            buckconfigs,
+            bsmrconfigs,
             host_info,
             extra_context,
             self.ignore_attrs_for_profiling,
@@ -562,7 +562,7 @@ impl InterpreterForDir {
     pub(crate) fn eval_module(
         self: &Arc<Self>,
         starlark_path: StarlarkModulePath<'_>,
-        buckconfigs: &mut dyn BuckConfigsViewForStarlark,
+        bsmrconfigs: &mut dyn BsmrConfigsViewForStarlark,
         ast: AstModule,
         loaded_modules: LoadedModules,
         eval_provider: StarlarkEvaluatorProvider,
@@ -590,7 +590,7 @@ impl InterpreterForDir {
             let (finished_eval, _) = self.eval(
                 &env,
                 ast,
-                buckconfigs,
+                bsmrconfigs,
                 loaded_modules,
                 extra_context,
                 eval_provider,
@@ -608,7 +608,7 @@ impl InterpreterForDir {
         package_file_path: &PackageFilePath,
         ast: AstModule,
         parent: SuperPackage,
-        buckconfigs: &mut dyn BuckConfigsViewForStarlark,
+        bsmrconfigs: &mut dyn BsmrConfigsViewForStarlark,
         loaded_modules: LoadedModules,
         eval_provider: StarlarkEvaluatorProvider,
         cancellation: &CancellationContext,
@@ -631,7 +631,7 @@ impl InterpreterForDir {
             let (finished_eval, eval_result) = self.eval(
                 &env,
                 ast,
-                buckconfigs,
+                bsmrconfigs,
                 loaded_modules,
                 extra_context,
                 eval_provider,
@@ -667,7 +667,7 @@ impl InterpreterForDir {
     pub(crate) fn eval_build_file(
         self: &Arc<Self>,
         build_file: &BuildFilePath,
-        buckconfigs: &mut dyn BuckConfigsViewForStarlark,
+        bsmrconfigs: &mut dyn BsmrConfigsViewForStarlark,
         listing: PackageListing,
         super_package: SuperPackage,
         package_boundary_exception: bool,
@@ -689,14 +689,14 @@ impl InterpreterForDir {
                 package_boundary_exception,
                 &loaded_modules,
             )?;
-            let buckconfig_key = BuckconfigKeyRef {
+            let bsmrconfig_key = BsmrconfigKeyRef {
                 section: "bsmr",
                 property: "check_starlark_peak_memory",
             };
-            let starlark_peak_mem_config_enabled = LegacyBuckConfig::parse_value(
-                buckconfig_key,
-                buckconfigs
-                    .read_root_cell_config(buckconfig_key)?
+            let starlark_peak_mem_config_enabled = LegacyBsmrConfig::parse_value(
+                bsmrconfig_key,
+                bsmrconfigs
+                    .read_root_cell_config(bsmrconfig_key)?
                     .as_deref(),
             )?
             .unwrap_or(false);
@@ -704,7 +704,7 @@ impl InterpreterForDir {
             let (finished_eval, eval_result) = self.eval(
                 &env,
                 ast,
-                buckconfigs,
+                bsmrconfigs,
                 loaded_modules,
                 PerFileTypeContext::Build(internals),
                 eval_provider,

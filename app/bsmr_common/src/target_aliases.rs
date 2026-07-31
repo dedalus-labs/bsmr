@@ -24,13 +24,13 @@ use pagable::Pagable;
 use pagable::pagable_typetag;
 
 use crate::dice::cells::HasCellResolver;
-use crate::legacy_configs::configs::LegacyBuckConfig;
+use crate::legacy_configs::configs::LegacyBsmrConfig;
 use crate::legacy_configs::dice::HasLegacyConfigs;
 
 #[derive(bsmr_error::Error, Debug)]
 #[bsmr(tag = Tier0)]
 enum AliasResolutionError {
-    #[error("No [alias] section in buckconfig")]
+    #[error("No [alias] section in bsmrconfig")]
     MissingAliasSection,
     #[error("[alias] section does not contain the requested alias")]
     NotAnAlias,
@@ -41,15 +41,15 @@ enum AliasResolutionError {
 }
 
 #[derive(Debug, Dupe, Clone, Allocative, Pagable)]
-pub struct BuckConfigTargetAliasResolver {
-    config: LegacyBuckConfig,
+pub struct BsmrConfigTargetAliasResolver {
+    config: LegacyBsmrConfig,
 }
 
-impl PartialEq for BuckConfigTargetAliasResolver {
-    fn eq(&self, other: &BuckConfigTargetAliasResolver) -> bool {
-        // `TargetAliasResolver` only uses `alias` section of buckconfig,
+impl PartialEq for BsmrConfigTargetAliasResolver {
+    fn eq(&self, other: &BsmrConfigTargetAliasResolver) -> bool {
+        // `TargetAliasResolver` only uses `alias` section of bsmrconfig,
         // comparing only this section is enough.
-        // Please update this code if `TargetAliasResolver` uses other buckconfigs.
+        // Please update this code if `TargetAliasResolver` uses other bsmrconfigs.
         let self_aliases = self.config.get_section("alias");
         let other_aliases = other.config.get_section("alias");
         match (self_aliases, other_aliases) {
@@ -60,7 +60,7 @@ impl PartialEq for BuckConfigTargetAliasResolver {
     }
 }
 
-impl TargetAliasResolver for BuckConfigTargetAliasResolver {
+impl TargetAliasResolver for BsmrConfigTargetAliasResolver {
     fn get<'a>(&'a self, name: &str) -> bsmr_error::Result<Option<&'a str>> {
         match self.resolve_alias(name) {
             Ok(a) => Ok(Some(a)),
@@ -75,8 +75,8 @@ impl TargetAliasResolver for BuckConfigTargetAliasResolver {
     }
 }
 
-impl BuckConfigTargetAliasResolver {
-    fn new(config: LegacyBuckConfig) -> Self {
+impl BsmrConfigTargetAliasResolver {
+    fn new(config: LegacyBsmrConfig) -> Self {
         Self { config }
     }
 
@@ -131,7 +131,7 @@ impl BuckConfigTargetAliasResolver {
 
 #[async_trait]
 pub trait HasTargetAliasResolver {
-    async fn target_alias_resolver(&mut self) -> bsmr_error::Result<BuckConfigTargetAliasResolver>;
+    async fn target_alias_resolver(&mut self) -> bsmr_error::Result<BsmrConfigTargetAliasResolver>;
 }
 
 #[derive(Debug, Display, Hash, PartialEq, Eq, Clone, Allocative, Pagable)]
@@ -140,16 +140,16 @@ struct TargetAliasResolverKey();
 
 #[async_trait]
 impl Key for TargetAliasResolverKey {
-    type Value = bsmr_error::Result<BuckConfigTargetAliasResolver>;
+    type Value = bsmr_error::Result<BsmrConfigTargetAliasResolver>;
 
     async fn compute(
         &self,
         ctx: &mut DiceComputations,
         _cancellations: &CancellationContext,
-    ) -> bsmr_error::Result<BuckConfigTargetAliasResolver> {
+    ) -> bsmr_error::Result<BsmrConfigTargetAliasResolver> {
         let root_cell = ctx.get_cell_resolver().await?.root_cell();
         let legacy_configs = ctx.get_legacy_config_for_cell(root_cell).await?;
-        Ok(BuckConfigTargetAliasResolver::new(legacy_configs.dupe()))
+        Ok(BsmrConfigTargetAliasResolver::new(legacy_configs.dupe()))
     }
 
     fn equality(x: &Self::Value, y: &Self::Value) -> bool {
@@ -166,7 +166,7 @@ impl Key for TargetAliasResolverKey {
 
 #[async_trait]
 impl HasTargetAliasResolver for DiceComputations<'_> {
-    async fn target_alias_resolver(&mut self) -> bsmr_error::Result<BuckConfigTargetAliasResolver> {
+    async fn target_alias_resolver(&mut self) -> bsmr_error::Result<BsmrConfigTargetAliasResolver> {
         Ok(self.compute(&TargetAliasResolverKey()).await??)
     }
 }
@@ -178,7 +178,7 @@ mod tests {
 
     use crate::legacy_configs;
     use crate::target_aliases::AliasResolutionError;
-    use crate::target_aliases::BuckConfigTargetAliasResolver;
+    use crate::target_aliases::BsmrConfigTargetAliasResolver;
 
     #[test]
     fn test_aliases() -> bsmr_error::Result<()> {
@@ -204,7 +204,7 @@ mod tests {
             "config",
         )?;
 
-        let target_alias_resolver = BuckConfigTargetAliasResolver::new(config);
+        let target_alias_resolver = BsmrConfigTargetAliasResolver::new(config);
 
         assert_eq!("//:foo", target_alias_resolver.resolve_alias("foo")?);
         assert_eq!("//:foo", target_alias_resolver.resolve_alias("bar")?);

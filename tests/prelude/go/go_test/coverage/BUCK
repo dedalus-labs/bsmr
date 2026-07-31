@@ -1,4 +1,4 @@
-load("@fbcode//bsmr/tests/prelude:py_assertion.bzl", "py_assertion")
+load("@root//tests/prelude:py_assertion.bzl", "py_assertion")
 
 oncall("golang")
 
@@ -11,7 +11,7 @@ prelude.go_test(
         "coverage_test.go",
     ],
     coverage_mode = "set",
-    # @oss-disable[end= ]: env = {"GO_TEST2JSON_TOOL": "$(exe_target fbsource//third-party/go:test2json)"},
+    # @oss-disable[end= ]: env = {"GO_TEST2JSON_TOOL": "$(exe_target upstream//third-party/go:test2json)"},
 )
 
 py_assertion(

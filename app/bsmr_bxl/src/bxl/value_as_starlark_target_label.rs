@@ -8,7 +8,7 @@
  * above-listed licenses.
  */
 
-use bsmr_common::target_aliases::BuckConfigTargetAliasResolver;
+use bsmr_common::target_aliases::BsmrConfigTargetAliasResolver;
 use bsmr_core::cells::CellAliasResolver;
 use bsmr_core::cells::CellResolver;
 use bsmr_core::cells::cell_path::CellPathRef;
@@ -35,7 +35,7 @@ impl<'v> ValueAsStarlarkTargetLabel<'v> {
 
     pub(crate) fn parse_target_platforms(
         self,
-        target_alias_resolver: &BuckConfigTargetAliasResolver,
+        target_alias_resolver: &BsmrConfigTargetAliasResolver,
         cell_resolver: &CellResolver,
         cell_alias_resolver: &CellAliasResolver,
         cell_name: CellName,

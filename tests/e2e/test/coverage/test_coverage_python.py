@@ -18,14 +18,14 @@ from bsmr.tests.e2e_util.buck_workspace import buck_test
 
 from .test_coverage_utils import collect_coverage_for
 
-PYTHON_TEST_EXAMPLE_TARGET = "fbcode//bsmr/tests/targets/rules/python/coverage:test"
+PYTHON_TEST_EXAMPLE_TARGET = "root//tests/targets/rules/python/coverage:test"
 
 
 @buck_test(inplace=True)
 async def test_python_coverage(buck: Buck) -> None:
     with tempfile.NamedTemporaryFile("w") as covfile:
         await buck.test(
-            "@fbcode//mode/dbgo-cov",
+            "@upstream//mode/dbgo-cov",
             PYTHON_TEST_EXAMPLE_TARGET,
             "--",
             "--collect-coverage",
@@ -45,7 +45,7 @@ async def test_python_coverage_filtering_by_folder(buck: Buck) -> None:
     folder_to_collect = "fbcode/bsmr/tests/targets/rules/python/coverage"
     with tempfile.NamedTemporaryFile("w") as covfile:
         await buck.test(
-            "@fbcode//mode/dbgo-cov",
+            "@upstream//mode/dbgo-cov",
             PYTHON_TEST_EXAMPLE_TARGET,
             "-c",
             f"code_coverage.folder_path_filter={folder_to_collect}",
@@ -89,7 +89,7 @@ async def test_python_coverage_filtering_by_file_with_base_module_remap(
     result = await collect_coverage_for(
         buck,
         tmp_path,
-        target="fbcode//bsmr/tests/targets/rules/python/coverage:test_using_base_module_remapped_lib",
+        target="root//tests/targets/rules/python/coverage:test_using_base_module_remapped_lib",
         folder_filter=[],
         file_filter=[file_to_collect_coverage],
     )
@@ -110,7 +110,7 @@ async def test_python_coverage_filtering_by_file_with_opt_mode(
         folder_filter=[],
         file_filter=[file_to_collect_coverage],
         target=PYTHON_TEST_EXAMPLE_TARGET,
-        mode="@fbcode//mode/opt",
+        mode="@upstream//mode/opt",
     )
 
     assert set(result) == {file_to_collect_coverage}, (
@@ -130,8 +130,8 @@ async def test_python_standalone_xar_coverage_filtering_by_file(
         tmp_path,
         folder_filter=[],
         file_filter=[file_to_collect_coverage],
-        target="fbcode//testinfra/playground/python/simple:simple_standalone_xar_test",
-        mode="@fbcode//mode/opt",
+        target="upstream//testinfra/playground/python/simple:simple_standalone_xar_test",
+        mode="@upstream//mode/opt",
     )
 
     assert set(result) == {file_to_collect_coverage}, (
@@ -151,8 +151,8 @@ async def test_python_standalone_zip_coverage_filtering_by_file(
         tmp_path,
         folder_filter=[],
         file_filter=[file_to_collect_coverage],
-        target="fbcode//testinfra/playground/python/simple:simple_standalone_test",
-        mode="@fbcode//mode/opt",
+        target="upstream//testinfra/playground/python/simple:simple_standalone_test",
+        mode="@upstream//mode/opt",
     )
 
     assert set(result) == {file_to_collect_coverage}, (
@@ -170,7 +170,7 @@ async def test_python_coverage_filtering_by_file_on_cinder_target(
     result = await collect_coverage_for(
         buck,
         tmp_path,
-        target="fbcode//bsmr/tests/targets/rules/python/coverage:simple_cinder_unittest",
+        target="root//tests/targets/rules/python/coverage:simple_cinder_unittest",
         folder_filter=[],
         file_filter=[file_to_collect_coverage],
     )
@@ -190,7 +190,7 @@ async def test_python_coverage_filtering_by_source_file_on_cpp_dep(
     result = await collect_coverage_for(
         buck,
         tmp_path,
-        target="fbcode//bsmr/tests/targets/rules/python/coverage:test_with_cpp_dep",
+        target="root//tests/targets/rules/python/coverage:test_with_cpp_dep",
         folder_filter=[],
         file_filter=[file_to_collect_coverage],
     )
@@ -209,7 +209,7 @@ async def test_python_coverage_filtering_by_header_file_on_cpp_dep(
     result = await collect_coverage_for(
         buck,
         tmp_path,
-        target="fbcode//bsmr/tests/targets/rules/python/coverage:test_with_cpp_dep",
+        target="root//tests/targets/rules/python/coverage:test_with_cpp_dep",
         folder_filter=[],
         file_filter=[header_file],
     )
@@ -229,7 +229,7 @@ async def test_python_coverage_filtering_by_file_on_ligen_cpp_dep(
     result = await collect_coverage_for(
         buck,
         tmp_path,
-        target="fbcode//bsmr/tests/targets/rules/python/coverage:test_with_ligen_cpp_dep",
+        target="root//tests/targets/rules/python/coverage:test_with_ligen_cpp_dep",
         folder_filter=[],
         file_filter=[file_to_collect_coverage],
     )
@@ -245,10 +245,10 @@ async def test_python_selective_coverage_in_arvr(buck: Buck, tmp_path: Path) -> 
     result = await collect_coverage_for(
         buck,
         tmp_path,
-        target="fbsource//arvr/projects/tcc_playground/python_unittest:test_example",
+        target="upstream//arvr/projects/tcc_playground/python_unittest:test_example",
         folder_filter=[],
         file_filter=[file_to_collect_coverage],
-        mode="@fbsource//arvr/mode/platform010/opt",
+        mode="@upstream//arvr/mode/platform010/opt",
     )
 
     assert set(result) == {file_to_collect_coverage}, (

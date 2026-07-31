@@ -30,12 +30,12 @@ foo_target(
 foo_target(
     name = "badpackage",
     # TODO(cjhopman): This should check a package that's a prefix of the dependent, but bsmr doesn't handle that correctly currently.
-    visibility = ["//bsmr:"],
+    visibility = ["root//:"],
 )
 
 foo_target(
     name = "badrecursive",
-    visibility = ["//bsmr/..."],
+    visibility = ["root//..."],
 )
 
 foo_target(

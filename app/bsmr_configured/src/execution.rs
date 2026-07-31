@@ -45,7 +45,7 @@ use bsmr_node::configuration::resolved::ConfigurationSettingKey;
 use bsmr_node::configuration::resolved::MatchedConfigurationSettingKeysWithCfg;
 use bsmr_node::execution::GetExecutionPlatforms;
 use bsmr_node::execution::GetExecutionPlatformsImpl;
-use bsmr_node::execution::EXECUTION_PLATFORMS_BUCKCONFIG;
+use bsmr_node::execution::EXECUTION_PLATFORMS_BSMRCONFIG;
 use bsmr_node::execution::GET_EXECUTION_PLATFORMS;
 use bsmr_node::nodes::configured::ConfiguredTargetNode;
 use bsmr_node::nodes::configured_frontend::ConfiguredTargetNodeCalculation;
@@ -401,7 +401,7 @@ async fn compute_execution_platforms(
     let cell_alias_resolver = ctx.get_cell_alias_resolver(cells.root_cell()).await?;
 
     let execution_platforms_target = ctx
-        .get_legacy_config_property(cells.root_cell(), EXECUTION_PLATFORMS_BUCKCONFIG)
+        .get_legacy_config_property(cells.root_cell(), EXECUTION_PLATFORMS_BSMRCONFIG)
         .await?;
 
     let execution_platforms_target = match execution_platforms_target {
@@ -675,7 +675,7 @@ async fn resolve_execution_platform_from_constraints(
 pub(crate) struct ExecutionPlatformResolutionKey {
     /// Determining a compatible execution platform requires checking the target and toolchain's
     /// exec_compatible_with. This in turn requires a ResolvedConfiguration, which resolves the
-    /// buckconfig-related config_setting values based on the cell of the target the configuration
+    /// bsmrconfig-related config_setting values based on the cell of the target the configuration
     /// is being resolved for.
     target_node_cell: CellNameForConfigurationResolution,
     exec_compatible_with: Arc<[ConfigurationSettingKey]>,

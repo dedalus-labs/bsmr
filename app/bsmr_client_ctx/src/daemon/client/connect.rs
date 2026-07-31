@@ -393,7 +393,7 @@ impl<'a> BuckdLifecycle<'a> {
         // TODO(nga): We create too many backtraces during `attrs.source()` coercion. Can be
         //   reproduced with this command:
         //   ```
-        //   bsmr --isolation-dir=xx audit providers fbcode//bsmr:bsmr --quiet
+        //   bsmr --isolation-dir=xx audit providers root//:bsmr --quiet
         //   ```
         //   Which regresses from 15s to 80s when `RUST_LIB_BACKTRACE` is set. So we disable
         //   backtraces in the daemon unless the user has explicitly asked for them. We

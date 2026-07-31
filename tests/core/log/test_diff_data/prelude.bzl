@@ -6,7 +6,7 @@
 # of this source tree. You may select, at your option, one of the
 # above-listed licenses.
 
-# Rule with no attrs that may produce an output non-deterministically based on the path provided in buckconfig
+# Rule with no attrs that may produce an output non-deterministically based on the path provided in bsmrconfig
 def _non_det_build(ctx):
     return [DefaultInfo(default_output = ctx.actions.write("foo.txt", ctx.attrs.bsmr_output, has_content_based_path = False))]
 

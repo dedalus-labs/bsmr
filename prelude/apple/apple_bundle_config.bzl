@@ -6,7 +6,7 @@
 # of this source tree. You may select, at your option, one of the
 # above-listed licenses.
 
-load("@prelude//utils:buckconfig.bzl", "read_bool")
+load("@prelude//utils:bsmrconfig.bzl", "read_bool")
 load(":apple_code_signing_types.bzl", "CodeSignConfiguration")
 
 def _read_bool(config: str, default: [None, bool] = None) -> [None, bool]:
@@ -16,7 +16,7 @@ def _get_code_signing_configuration() -> str:
     is_dry_run = _read_bool("dry_run_code_signing", False)
 
     # This is a kill switch for the feature, it can also be disabled by setting
-    # `apple.fast_adhoc_signing_enabled=false` in a global buckconfig file.
+    # `apple.fast_adhoc_signing_enabled=false` in a global bsmrconfig file.
     is_fast_adhoc_signing_enabled = _read_bool("fast_adhoc_signing_enabled", True)
 
     is_codesign_execution_bypass_enabled = _read_bool("codesign_execution_bypass", False)

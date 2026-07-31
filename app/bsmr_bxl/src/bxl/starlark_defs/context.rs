@@ -21,7 +21,7 @@ use bsmr_build_api::analysis::registry::AnalysisRegistry;
 use bsmr_build_api::interpreter::rule_defs::context::AnalysisActions;
 use bsmr_common::dice::cells::HasCellResolver;
 use bsmr_common::dice::data::HasIoProvider;
-use bsmr_common::target_aliases::BuckConfigTargetAliasResolver;
+use bsmr_common::target_aliases::BsmrConfigTargetAliasResolver;
 use bsmr_common::target_aliases::HasTargetAliasResolver;
 use bsmr_core::cells::CellAliasResolver;
 use bsmr_core::cells::CellResolver;
@@ -193,7 +193,7 @@ impl<'v> Deref for BxlContext<'v> {
 pub(crate) struct BxlContextCoreData {
     current_bxl: BxlKey,
     #[derivative(Debug = "ignore")]
-    target_alias_resolver: BuckConfigTargetAliasResolver,
+    target_alias_resolver: BsmrConfigTargetAliasResolver,
     cell_name: CellName,
     cell_root_abs: AbsNormPathBuf,
     #[derivative(Debug = "ignore")]
@@ -254,7 +254,7 @@ impl BxlContextCoreData {
         self.current_bxl.global_cfg_options()
     }
 
-    pub(crate) fn target_alias_resolver(&self) -> &BuckConfigTargetAliasResolver {
+    pub(crate) fn target_alias_resolver(&self) -> &BsmrConfigTargetAliasResolver {
         &self.target_alias_resolver
     }
 

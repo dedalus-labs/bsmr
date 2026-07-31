@@ -33,8 +33,8 @@ prelude.export_file(
 prelude.python_bootstrap_library(
     name = "live_builder",
     srcs = [
-        "fbcode//tools/make_par:errors.py",
-        "fbcode//tools/make_par:util.py",
+        "upstream//tools/make_par:errors.py",
+        "upstream//tools/make_par:util.py",
         "live_builder.py",
         "par_builder.py",
     ],

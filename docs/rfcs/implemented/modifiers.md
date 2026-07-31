@@ -10,19 +10,19 @@ This document proposes a new configuration feature in Buck called modifiers. The
 
 A target often needs to be built in multiple build settings. For example, a single target may be customized with different OSes (ex. linux, mac, windows), architectures (ex. x86, arm), and sanitizers (ex. asan, tsan, ubsan). Buck has 2 main ways of supporting customizations today:
 
-1. Buckconfigs specified through `--config` or `-c` flags. They are global flags and are often aggregated in modefiles (`@<modefile>` on the command line).
+1. Bsmrconfigs specified through `--config` or `-c` flags. They are global flags and are often aggregated in modefiles (`@<modefile>` on the command line).
 2. Platforms specified through `default_target_platform` attribute or `--target-platforms` flag), which become a target's target "configuration". `--target-platforms` flags are also commonly specified via modefiles.
 
 These methods suffer from the following problems.
 
 1. *High discovery cost and cognitive load. *Many targets don't build out of the box and require a dedicated modefile. It’s onerous for users to know the right modefiles to use for a target, and they often don't realize when they are using the wrong modefiles.
 2. *Too many modefiles*. A monorepo can end up with a huge number of project-specific modefiles when each customized project adds its own set of modefiles. Internally, the number of modefiles in our monorepo is on the order of **1000s**.
-3. *Slow incremental builds*. Changing buckconfigs invalidates Buck’s global state and causes Buck to always rerun load and analysis on incremental builds. This adds non-trivial Buck overhead on every incremental build.
-4. *Lack of multi-configuration support*. Different buckconfigs prevent Buck from building in multiple modes in parallel. Platforms support multi-configuration builds.
+3. *Slow incremental builds*. Changing bsmrconfigs invalidates Buck’s global state and causes Buck to always rerun load and analysis on incremental builds. This adds non-trivial Buck overhead on every incremental build.
+4. *Lack of multi-configuration support*. Different bsmrconfigs prevent Buck from building in multiple modes in parallel. Platforms support multi-configuration builds.
 5. *Platform generation is exponential in the number of build settings*. Suppose a repo supports 3 OSes, 2 CPU architectures, and 3 compilers. Using platforms requires generating all 18 permutations of these settings as targets, which is not scalable.
 6. *Platform does not compose well*. Suppose I want to apply ASAN. It's not possible to specify ASAN on top of an existing platform. Instead, a new platform target must be created based on the existing platform and ASAN.
-7. *Poor tooling integration*. Similar to users, it's onerous for tooling to keep track of what modes are needed to build a target with. Additionally, buckconfigs are bad for performance for tools like language servers because it's impossible to request builds of two targets that require different modes to build in parallel.
-8. *Breaks repo-wide queries*. Buckconfigs mean that there is not one unified unconfigured target graph but many variants of it based on different modefiles, and different parts of repo may only be queried with certain modefiles. This prevents simple queries like “what targets in the repo depend on this third-party library” from working in practice.
+7. *Poor tooling integration*. Similar to users, it's onerous for tooling to keep track of what modes are needed to build a target with. Additionally, bsmrconfigs are bad for performance for tools like language servers because it's impossible to request builds of two targets that require different modes to build in parallel.
+8. *Breaks repo-wide queries*. Bsmrconfigs mean that there is not one unified unconfigured target graph but many variants of it based on different modefiles, and different parts of repo may only be queried with certain modefiles. This prevents simple queries like “what targets in the repo depend on this third-party library” from working in practice.
 
 ### Modifier API Goals
 

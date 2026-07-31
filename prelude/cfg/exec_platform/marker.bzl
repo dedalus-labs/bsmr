@@ -14,11 +14,11 @@ def get_exec_platform_marker() -> str:
     """
     Get the exec platform marker constraint value target.
 
-    This reads from buckconfig `[build].exec_platform_marker` and defaults to
+    This reads from bsmrconfig `[build].exec_platform_marker` and defaults to
     `prelude//cfg/exec_platform/marker:is_exec_platform[true]`.
 
     Returns:
         The target label string for the exec platform marker constraint value,
-        unless the buckconfig doesn't exist, then `_DEFAULT_EXEC_PLATFORM_MARKER`.
+        unless the bsmrconfig doesn't exist, then `_DEFAULT_EXEC_PLATFORM_MARKER`.
     """
     return read_root_config("build", "exec_platform_marker", _DEFAULT_EXEC_PLATFORM_MARKER)

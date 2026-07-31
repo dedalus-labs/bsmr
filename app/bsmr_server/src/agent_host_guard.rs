@@ -8,8 +8,8 @@
  * above-listed licenses.
  */
 
-use bsmr_common::legacy_configs::configs::LegacyBuckConfig;
-use bsmr_common::legacy_configs::key::BuckconfigKeyRef;
+use bsmr_common::legacy_configs::configs::LegacyBsmrConfig;
+use bsmr_common::legacy_configs::key::BsmrconfigKeyRef;
 use bsmr_core::bsmr_env;
 use bsmr_core::fs::project::ProjectRoot;
 use bsmr_events::metadata::hostname;
@@ -35,13 +35,13 @@ const DEFAULT_ISOLATION_DIR: &str = "v2";
 /// agent_hostname_fail_v2_glob = bad-host-*.example.com,other-*
 /// agent_hostname_fail_v2_context = See S123456.
 /// ```
-const FAIL_GLOB_KEY: BuckconfigKeyRef = BuckconfigKeyRef {
+const FAIL_GLOB_KEY: BsmrconfigKeyRef = BsmrconfigKeyRef {
     section: "bsmr",
     property: "agent_hostname_fail_v2_glob",
 };
 /// Optional extra context appended to the rejection message, e.g. a SEV link.
 /// Unset/empty just omits it.
-const FAIL_CONTEXT_KEY: BuckconfigKeyRef = BuckconfigKeyRef {
+const FAIL_CONTEXT_KEY: BsmrconfigKeyRef = BsmrconfigKeyRef {
     section: "bsmr",
     property: "agent_hostname_fail_v2_context",
 };
@@ -99,7 +99,7 @@ This restarts the bsmr daemon outside the sandbox, after which all bsmr builds (
 
 /// Reject the build if it originates from a 3pai cgroup and runs on a denylisted host.
 pub(crate) fn check_agent_host_guard(
-    config: &LegacyBuckConfig,
+    config: &LegacyBsmrConfig,
     daemon: &DaemonStateData,
     project_root: &ProjectRoot,
     isolation: &str,

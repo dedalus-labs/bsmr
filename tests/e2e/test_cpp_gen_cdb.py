@@ -21,7 +21,7 @@ from bsmr.tests.e2e_util.buck_workspace import buck_test
 @buck_test(inplace=True, skip_for_os=["windows"])
 async def test_no_quotes(buck: Buck) -> None:
     result = await buck.bxl(
-        "fbcode//tools/build/buck/bxl/cpp_lsp/cpp_gen_cdb.bxl:cpp_gen_cdb",
+        "upstream//tools/build/buck/bxl/cpp_lsp/cpp_gen_cdb.bxl:cpp_gen_cdb",
         "--",
         "--filename",
         str(

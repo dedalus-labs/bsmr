@@ -252,7 +252,7 @@ async def test_testsof(buck: Buck) -> None:
 
 
 # DICE currently may re-evaluate dead nodes ignoring errors, but it cannot ignore panics.
-# The disabling of execution platforms through a buckconfig ended up causing a panic
+# The disabling of execution platforms through a bsmrconfig ended up causing a panic
 # that was the root cause of non-deterministic bsmr failures on 10% of fbcode TD in S303188.
 #
 # TODO(scottcao): Disabling execution platforms is a hack that we need to get rid of

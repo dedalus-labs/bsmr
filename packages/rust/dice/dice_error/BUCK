@@ -8,10 +8,10 @@ rust_library(
         ["src/**/*.rs"],
     ),
     deps = [
-        "fbsource//third-party/rust:derive_more",
-        "fbsource//third-party/rust:thiserror",
-        "//bsmr/packages/rust/allocative/allocative:allocative",
-        "//bsmr/packages/rust/gazebo/cmp_any:cmp_any",
-        "//bsmr/packages/rust/gazebo/dupe:dupe",
+        "bsmr_build//third-party/rust:derive_more",
+        "bsmr_build//third-party/rust:thiserror",
+        "root//packages/rust/allocative/allocative:allocative",
+        "root//packages/rust/gazebo/cmp_any:cmp_any",
+        "root//packages/rust/gazebo/dupe:dupe",
     ],
 )

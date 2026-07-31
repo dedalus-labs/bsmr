@@ -47,7 +47,7 @@ use crate::transform_format;
 ///
 /// The output is presented as a series of tab-delimited records with the following structure:
 ///
-/// build    fbsource//your:target    local    clang foo.c
+/// build    upstream//your:target    local    clang foo.c
 ///
 /// 1: The reason for executing a given command. That's either to build or to test.
 ///

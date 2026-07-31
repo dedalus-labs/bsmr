@@ -14,7 +14,7 @@ use std::sync::LazyLock;
 use regex::Regex;
 use starlark_map::sorted_map::SortedMap;
 
-use crate::legacy_configs::configs::LegacyBuckConfigSection;
+use crate::legacy_configs::configs::LegacyBsmrConfigSection;
 use crate::legacy_configs::configs::ResolvedValue;
 use crate::legacy_configs::configs::parse_config_section_and_key;
 use crate::legacy_configs::parser::ConfigError;
@@ -116,7 +116,7 @@ pub struct ConfigResolver {
 impl ConfigResolver {
     pub fn resolve(
         values: BTreeMap<String, SectionBuilder>,
-    ) -> bsmr_error::Result<SortedMap<String, LegacyBuckConfigSection>> {
+    ) -> bsmr_error::Result<SortedMap<String, LegacyBsmrConfigSection>> {
         let mut resolver = Self { values };
         resolver.resolve_all()?;
         Ok(SortedMap::from_iter(

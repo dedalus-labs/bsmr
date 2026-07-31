@@ -8,14 +8,14 @@ rust_library(
         ["src/**/*.rs"],
     ),
     test_deps = [
-        "fbsource//third-party/rust:assert_matches",
+        "bsmr_build//third-party/rust:assert_matches",
     ],
     deps = [
-        "fbsource//third-party/rust:arc-swap",
-        "fbsource//third-party/rust:linkme",
-        "fbsource//third-party/rust:tracing",
-        "//bsmr/app/bsmr_error:bsmr_error",
-        "//bsmr/packages/rust/gazebo/dupe:dupe",
-        "//bsmr/packages/rust/starlark/starlark_map:starlark_map",
+        "bsmr_build//third-party/rust:arc-swap",
+        "bsmr_build//third-party/rust:linkme",
+        "bsmr_build//third-party/rust:tracing",
+        "root//app/bsmr_error:bsmr_error",
+        "root//packages/rust/gazebo/dupe:dupe",
+        "root//packages/rust/starlark/starlark_map:starlark_map",
     ],
 )

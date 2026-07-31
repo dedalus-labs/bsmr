@@ -12,7 +12,7 @@ buck_java_test(
     name = "remote_worker",
     srcs = glob(["*Test.java"]),
     deps = [
-        "fbcode//remote_execution/lib/if/worker_tool:worker_tool_thrift-java-swift-java17",
+        "upstream//remote_execution/lib/if/worker_tool:worker_tool_thrift-java-swift-java17",
         "prelude//toolchains/android/meta_only/src/com/facebook/buck/jvm/remote_worker:workertool_thrift",
         "prelude//toolchains/android/src/com/facebook/buck/core/util/log:log",
         "prelude//toolchains/android/src/com/facebook/buck/jvm/cd:cd",

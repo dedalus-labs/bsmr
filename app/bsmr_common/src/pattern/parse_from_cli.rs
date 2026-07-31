@@ -22,14 +22,14 @@ use gazebo::prelude::*;
 use crate::dice::cells::HasCellResolver;
 use crate::pattern::resolve::ResolveTargetPatterns;
 use crate::pattern::resolve::ResolvedPattern;
-use crate::target_aliases::BuckConfigTargetAliasResolver;
+use crate::target_aliases::BsmrConfigTargetAliasResolver;
 use crate::target_aliases::HasTargetAliasResolver;
 
 struct PatternParser {
     cell_resolver: CellResolver,
     cell_alias_resolver: CellAliasResolver,
     cwd: CellPath,
-    target_alias_resolver: BuckConfigTargetAliasResolver,
+    target_alias_resolver: BsmrConfigTargetAliasResolver,
 }
 
 impl PatternParser {

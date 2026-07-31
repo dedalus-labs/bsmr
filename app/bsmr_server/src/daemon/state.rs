@@ -27,9 +27,9 @@ use bsmr_common::init::SystemWarningConfig;
 use bsmr_common::init::Timeout;
 use bsmr_common::invocation_paths::InvocationPaths;
 use bsmr_common::io::IoProvider;
-use bsmr_common::legacy_configs::cells::BuckConfigBasedCells;
-use bsmr_common::legacy_configs::key::BuckconfigKeyRef;
-use bsmr_common::legacy_configs::parse_buckconfig_metadata;
+use bsmr_common::legacy_configs::cells::BsmrConfigBasedCells;
+use bsmr_common::legacy_configs::key::BsmrconfigKeyRef;
+use bsmr_common::legacy_configs::parse_bsmrconfig_metadata;
 use bsmr_common::sqlite::sqlite_db::SqliteDb;
 use bsmr_common::sqlite::sqlite_db::SqliteIdentity;
 use bsmr_core::bsmr_env;
@@ -206,7 +206,7 @@ pub struct DaemonStateData {
     #[allocative(skip)]
     pub named_semaphores_for_run_actions: Arc<NamedSemaphores>,
 
-    pub buckconfig_metadata: StdBuckHashMap<String, String>,
+    pub bsmrconfig_metadata: StdBuckHashMap<String, String>,
 }
 
 impl DaemonStateData {
@@ -293,7 +293,7 @@ impl DaemonState {
             let fs = paths.project_root().clone();
 
             tracing::info!("Reading config...");
-            let legacy_cells = BuckConfigBasedCells::parse_with_config_args(&fs, &[]).await?;
+            let legacy_cells = BsmrConfigBasedCells::parse_with_config_args(&fs, &[]).await?;
 
             tracing::info!("Starting...");
 
@@ -352,7 +352,7 @@ impl DaemonState {
                     cell,
                     IgnoreSet::from_ignore_spec(
                         config
-                            .get(BuckconfigKeyRef {
+                            .get(BsmrconfigKeyRef {
                                 section: "project",
                                 property: "ignore",
                             })
@@ -376,7 +376,7 @@ impl DaemonState {
 
             let deferred_materializer_configs = {
                 let defer_write_actions = root_config
-                    .parse::<RolloutPercentage>(BuckconfigKeyRef {
+                    .parse::<RolloutPercentage>(BsmrconfigKeyRef {
                         section: "bsmr",
                         property: "defer_write_actions",
                     })?
@@ -386,21 +386,21 @@ impl DaemonState {
                 // RE will refresh any TTL < 1 hour, so we check twice an hour and refresh any TTL
                 // < 1 hour.
                 let ttl_refresh_frequency = root_config
-                    .parse(BuckconfigKeyRef {
+                    .parse(BsmrconfigKeyRef {
                         section: "bsmr",
                         property: "ttl_refresh_frequency_seconds",
                     })?
                     .unwrap_or(1800);
 
                 let ttl_refresh_min_ttl = root_config
-                    .parse(BuckconfigKeyRef {
+                    .parse(BsmrconfigKeyRef {
                         section: "bsmr",
                         property: "ttl_refresh_min_ttl_seconds",
                     })?
                     .unwrap_or(3600);
 
                 let ttl_refresh_enabled = root_config
-                    .parse::<RolloutPercentage>(BuckconfigKeyRef {
+                    .parse::<RolloutPercentage>(BsmrconfigKeyRef {
                         section: "bsmr",
                         property: "ttl_refresh_enabled",
                     })?
@@ -408,23 +408,23 @@ impl DaemonState {
                     .roll();
 
                 let update_access_times = AccessTimesUpdates::try_new_from_config_value(
-                    root_config.get(BuckconfigKeyRef {
+                    root_config.get(BsmrconfigKeyRef {
                         section: "bsmr",
                         property: "update_access_times",
                     }),
                 )?;
 
                 let verbose_materializer_log = root_config
-                    .parse(BuckconfigKeyRef {
+                    .parse(BsmrconfigKeyRef {
                         section: "bsmr",
                         property: "verbose_materializer_event_log",
                     })?
                     .unwrap_or(false);
 
-                let clean_stale_config = CleanStaleConfig::from_buck_config(root_config)?;
+                let clean_stale_config = CleanStaleConfig::from_bsmr_config(root_config)?;
 
                 let disable_eager_write_dispatch = root_config
-                    .parse::<RolloutPercentage>(BuckconfigKeyRef {
+                    .parse::<RolloutPercentage>(BsmrconfigKeyRef {
                         section: "bsmr",
                         property: "disable_eager_write_dispatch",
                     })?
@@ -432,7 +432,7 @@ impl DaemonState {
                     .roll();
 
                 let eager_materialization_enabled = root_config
-                    .parse::<RolloutPercentage>(BuckconfigKeyRef {
+                    .parse::<RolloutPercentage>(BsmrconfigKeyRef {
                         section: "bsmr",
                         property: "eager_materialization_enabled",
                     })?
@@ -463,7 +463,7 @@ impl DaemonState {
                 deferred_materializer_configs.eager_materialization_enabled;
 
             let use_eden_thrift_read = root_config
-                .parse(BuckconfigKeyRef {
+                .parse(BsmrconfigKeyRef {
                     section: "bsmr",
                     property: "use_eden_thrift_read",
                 })?
@@ -583,7 +583,7 @@ impl DaemonState {
             })?;
 
             let use_network_action_output_cache = root_config
-                .parse(BuckconfigKeyRef {
+                .parse(BsmrconfigKeyRef {
                     section: "bsmr",
                     property: "use_network_action_output_cache",
                 })?
@@ -592,7 +592,7 @@ impl DaemonState {
             let create_unhashed_outputs_lock = Arc::new(Mutex::new(()));
 
             let enable_restarter = root_config
-                .parse::<RolloutPercentage>(BuckconfigKeyRef {
+                .parse::<RolloutPercentage>(BsmrconfigKeyRef {
                     section: "bsmr",
                     property: "restarter",
                 })?
@@ -611,7 +611,7 @@ impl DaemonState {
             };
 
             let remote_dep_files_enabled = root_config
-                .parse(BuckconfigKeyRef {
+                .parse(BsmrconfigKeyRef {
                     section: "build",
                     property: "remote_dep_file_cache_enabled",
                 })?
@@ -650,7 +650,7 @@ impl DaemonState {
             let system_warning_config = SystemWarningConfig::from_config(root_config)?;
 
             let declare_output_has_content_based_path_default =
-                root_config.parse(BuckconfigKeyRef {
+                root_config.parse(BsmrconfigKeyRef {
                     section: "bsmr",
                     property: "declare_output_has_content_based_path_default",
                 })?;
@@ -658,7 +658,7 @@ impl DaemonState {
                 declare_output_has_content_based_path_default,
             )?;
 
-            let action_has_content_based_path_default = root_config.parse(BuckconfigKeyRef {
+            let action_has_content_based_path_default = root_config.parse(BsmrconfigKeyRef {
                 section: "bsmr",
                 property: "action_has_content_based_path_default",
             })?;
@@ -693,7 +693,7 @@ impl DaemonState {
                 daemon_id: daemon_id.dupe(),
                 daemon_originating_cgroup: init_ctx.daemon_originating_cgroup,
                 named_semaphores_for_run_actions: Arc::new(NamedSemaphores::new()),
-                buckconfig_metadata: parse_buckconfig_metadata(root_config),
+                bsmrconfig_metadata: parse_bsmrconfig_metadata(root_config),
             }))
         };
         let daemon_listener_span = tracing::Span::current();
@@ -886,7 +886,7 @@ fn convert_algorithm_kind(kind: DigestAlgorithmFamily) -> bsmr_error::Result<Dig
 
             #[cfg(not(fbcode_build))]
             {
-                // We probably should just add it as a separate buckconfig, there is
+                // We probably should just add it as a separate bsmrconfig, there is
                 // zero reason not to.
                 return Err(bsmr_error::bsmr_error!(
                     bsmr_error::ErrorTag::Input,
@@ -903,7 +903,7 @@ const DEFAULT_MAX_REDIRECTS: usize = 10;
 const DEFAULT_CONNECT_TIMEOUT_MS: u64 = 5000;
 const DEFAULT_READ_TIMEOUT_MS: u64 = 10000;
 
-/// Customize an http client based on http.* legacy buckconfigs.
+/// Customize an http client based on http.* legacy bsmrconfigs.
 async fn http_client_from_startup_config(
     config: &DaemonStartupConfig,
 ) -> bsmr_error::Result<HttpClientBuilder> {

@@ -11,7 +11,7 @@
 //! Handles command concurrency.
 //!
 //! `bsmr` supports limited concurrency for commands.
-//! If there are no buckconfig changes, nor file changes, then commands can be allowed to execute
+//! If there are no bsmrconfig changes, nor file changes, then commands can be allowed to execute
 //! concurrently. Otherwise, `bsmr` will block waiting for other commands to finish.
 
 use std::collections::VecDeque;
@@ -649,13 +649,13 @@ impl ConcurrencyHandler {
         }
 
         if transaction
-            .is_injected_external_buckconfig_data_key_set()
+            .is_injected_external_bsmrconfig_data_key_set()
             .await?
         {
-            let external_configs = transaction.get_injected_external_buckconfig_data().await?;
-            let current_external_and_local_configs: Vec<bsmr_data::BuckconfigComponent> =
+            let external_configs = transaction.get_injected_external_bsmrconfig_data().await?;
+            let current_external_and_local_configs: Vec<bsmr_data::BsmrconfigComponent> =
                 external_configs
-                    .get_buckconfig_components(project_root)
+                    .get_bsmrconfig_components(project_root)
                     .await;
 
             let mut previous_command_data = previous_command_data.data.lock().unwrap();
@@ -670,7 +670,7 @@ impl ConcurrencyHandler {
             event_dispatcher.instant_event(bsmr_data::TagEvent {
                 tags: get_experiment_tags(&current_external_and_local_configs),
             });
-            event_dispatcher.instant_event(bsmr_data::BuckconfigInputValues {
+            event_dispatcher.instant_event(bsmr_data::BsmrconfigInputValues {
                 components: current_external_and_local_configs,
             });
         }

@@ -199,7 +199,7 @@ impl<Env: QueryEnvironment> DefaultQueryFunctionsModule<Env> {
     /// We recommend using it with the `--output-format=dot` parameter to generate a [Graphviz](https://graphviz.org/) [DOT](https://graphviz.org/doc/info/lang.html) file that can then be rendered as an image.
     ///
     /// ```text
-    /// $ bsmr uquery "allpaths(//bsmr:bsmr, //bsmr/app/bsmr_validation:bsmr_validation)" --output-format=dot > result.dot
+    /// $ bsmr uquery "allpaths(root//:bsmr, root//app/bsmr_validation:bsmr_validation)" --output-format=dot > result.dot
     /// $ dot -Tpng result.dot -o image.png
     /// ```
     /// produces the following image:
@@ -236,12 +236,12 @@ impl<Env: QueryEnvironment> DefaultQueryFunctionsModule<Env> {
     /// For example:
     ///
     /// ```text
-    /// $ bsmr uquery 'somepath(//bsmr:bsmr, //bsmr/app/bsmr_node:bsmr_node)'
+    /// $ bsmr uquery 'somepath(root//:bsmr, root//app/bsmr_node:bsmr_node)'
     ///
-    /// //bsmr:bsmr
-    /// //bsmr/app/bsmr:bsmr-bin
-    /// //bsmr/app/bsmr_analysis:bsmr_analysis
-    /// //bsmr/app/bsmr_node:bsmr_node
+    /// root//:bsmr
+    /// root//app/bsmr:bsmr-bin
+    /// root//app/bsmr_analysis:bsmr_analysis
+    /// root//app/bsmr_node:bsmr_node
     /// ```
     async fn somepath(
         &self,
@@ -274,13 +274,13 @@ impl<Env: QueryEnvironment> DefaultQueryFunctionsModule<Env> {
     ///
     /// For example:
     /// ```text
-    /// $ bsmr uquery "attrfilter(deps, '//bsmr/app/bsmr_validation:bsmr_validation', '//...')"
+    /// $ bsmr uquery "attrfilter(deps, 'root//app/bsmr_validation:bsmr_validation', '//...')"
     ///
-    /// //bsmr/app/bsmr:bsmr-bin
-    /// //bsmr/app/bsmr_server:bsmr_server
-    /// //bsmr/app/bsmr_server:bsmr_server-unittest
+    /// root//app/bsmr:bsmr-bin
+    /// root//app/bsmr_server:bsmr_server
+    /// root//app/bsmr_server:bsmr_server-unittest
     /// ```
-    /// returns targets that contain `//bsmr/app/bsmr_validation:bsmr_validation` target in their `deps` attribute.
+    /// returns targets that contain `root//app/bsmr_validation:bsmr_validation` target in their `deps` attribute.
     async fn attrfilter(
         &self,
         attr: String,
@@ -327,9 +327,9 @@ impl<Env: QueryEnvironment> DefaultQueryFunctionsModule<Env> {
     /// ```text
     /// $ bsmr uquery "attrregexfilter(deps, '.+validation$', '//...')"
     ///
-    /// //bsmr/app/bsmr:bsmr-bin
-    /// //bsmr/app/bsmr_server:bsmr_server
-    /// //bsmr/app/bsmr_server:bsmr_server-unittest
+    /// root//app/bsmr:bsmr-bin
+    /// root//app/bsmr_server:bsmr_server
+    /// root//app/bsmr_server:bsmr_server-unittest
     /// ```
     /// returns targets whose `deps` attribute contains at least one target suffixed with 'validation'.
     async fn attrregexfilter(
@@ -350,7 +350,7 @@ impl<Env: QueryEnvironment> DefaultQueryFunctionsModule<Env> {
     ///
     /// For example:
     /// ```text
-    /// $ bsmr uquery 'buildfile(//bsmr:bsmr)'
+    /// $ bsmr uquery 'buildfile(root//:bsmr)'
     ///
     /// bsmr/BUCK
     /// ```
@@ -358,7 +358,7 @@ impl<Env: QueryEnvironment> DefaultQueryFunctionsModule<Env> {
     /// In order to find the build file associated with a source file, combine the owner operator with buildfile.
     /// Examples:
     /// ```text
-    /// $ bsmr uquery "buildfile(//bsmr/app/bsmr_action_impl_tests:bsmr_action_impl_tests)"
+    /// $ bsmr uquery "buildfile(root//app/bsmr_action_impl_tests:bsmr_action_impl_tests)"
     /// ```
     /// and
     /// ```text
@@ -375,7 +375,7 @@ impl<Env: QueryEnvironment> DefaultQueryFunctionsModule<Env> {
     ///
     /// For example:
     /// ```text
-    /// $ bsmr uquery "rbuildfiles(//bsmr/BUCK, //bsmr/defs.bzl)"
+    /// $ bsmr uquery "rbuildfiles(root//BUCK, root//defs.bzl)"
     ///
     /// bsmr/defs.bzl
     /// bsmr/BUCK
@@ -439,9 +439,9 @@ impl<Env: QueryEnvironment> DefaultQueryFunctionsModule<Env> {
     /// For example following uquery:
     ///
     /// ```text
-    /// $ bsmr uquery "deps(//bsmr:bsmr, 1)"
+    /// $ bsmr uquery "deps(root//:bsmr, 1)"
     /// ```
-    /// returns all targets that `//bsmr:bsmr` depends on directly.
+    /// returns all targets that `root//:bsmr` depends on directly.
     async fn deps(
         &self,
         evaluator: &QueryEvaluator<'_, Env>,
@@ -470,11 +470,11 @@ impl<Env: QueryEnvironment> DefaultQueryFunctionsModule<Env> {
     ///
     /// For example:
     /// ```text
-    /// $ bsmr uquery "filter(validation$, //bsmr/app/...)"
+    /// $ bsmr uquery "filter(validation$, root//app/...)"
     ///
-    /// //bsmr/app/bsmr_validation:bsmr_validation
+    /// root//app/bsmr_validation:bsmr_validation
     /// ```
-    /// returns all targets within `//bsmr/app` that have a label with a `validation` suffix.
+    /// returns all targets within `root//app` that have a label with a `validation` suffix.
     async fn filter(&self, regex: String, set: QueryValueSet<Env::Target>) -> QueryFuncResult<Env> {
         match set {
             QueryValueSet::TargetSet(targets) => Ok(self
@@ -496,9 +496,9 @@ impl<Env: QueryEnvironment> DefaultQueryFunctionsModule<Env> {
     ///
     /// For example:
     /// ```text
-    /// $ bsmr uquery "inputs(//bsmr/packages/rust/dice/...)"
+    /// $ bsmr uquery "inputs(root//packages/rust/dice/...)"
     /// ```
-    /// returns the direct inputs for the `//bsmr/packages/rust/dice/...` targets.
+    /// returns the direct inputs for the `root//packages/rust/dice/...` targets.
     async fn inputs(&self, targets: TargetSet<Env::Target>) -> QueryFuncResult<Env> {
         Ok(self.implementation.inputs(&targets)?.into())
     }
@@ -541,8 +541,8 @@ impl<Env: QueryEnvironment> DefaultQueryFunctionsModule<Env> {
     /// ```text
     /// $ bsmr uquery "owner('app/bsmr/src/lib.rs')"
     ///
-    /// //bsmr/app/bsmr:bsmr-unittest
-    /// //bsmr/app/bsmr:bsmr
+    /// root//app/bsmr:bsmr-unittest
+    /// root//app/bsmr:bsmr
     /// ```
     async fn owner(&self, env: &Env, files: FileSet) -> QueryFuncResult<Env> {
         Ok(self.implementation.owner(env, &files).await?.into())
@@ -556,11 +556,11 @@ impl<Env: QueryEnvironment> DefaultQueryFunctionsModule<Env> {
     ///
     /// For example:
     /// ```text
-    /// $ bsmr uquery 'targets_in_buildfile(buildfile(//bsmr:bsmr))'
+    /// $ bsmr uquery 'targets_in_buildfile(buildfile(root//:bsmr))'
     ///
-    /// //bsmr:bsmr
-    /// //bsmr:bsmr_bundle
-    /// //bsmr:symlinked_bsmr_and_tpx
+    /// root//:bsmr
+    /// root//:bsmr_bundle
+    /// root//:symlinked_bsmr_and_tpx
     /// ```
     async fn targets_in_buildfile(&self, env: &Env, files: FileSet) -> QueryFuncResult<Env> {
         Ok(self
@@ -581,9 +581,9 @@ impl<Env: QueryEnvironment> DefaultQueryFunctionsModule<Env> {
     /// For example following uquery:
     ///
     /// ```text
-    /// $ bsmr uquery "rdeps(//bsmr/..., //bsmr/packages/rust/dice/dice:dice, 1)"
+    /// $ bsmr uquery "rdeps(root//..., root//packages/rust/dice/dice:dice, 1)"
     /// ```
-    /// returns all targets under `//bsmr/...` that depend on `//bsmr/packages/rust/dice/dice:dice`.
+    /// returns all targets under `root//...` that depend on `root//packages/rust/dice/dice:dice`.
     async fn rdeps(
         &self,
         evaluator: &QueryEvaluator<'_, Env>,
@@ -612,21 +612,21 @@ impl<Env: QueryEnvironment> DefaultQueryFunctionsModule<Env> {
     ///
     /// For example:
     /// ```text
-    /// $ bsmr uquery "testsof(set(//bsmr/packages/rust/dice/dice:dice //bsmr/app/bsmr:bsmr))"
+    /// $ bsmr uquery "testsof(set(root//packages/rust/dice/dice:dice root//app/bsmr:bsmr))"
     ///
-    /// //bsmr/packages/rust/dice/dice:dice-unittest
-    /// //bsmr/app/bsmr:bsmr-unittest
+    /// root//packages/rust/dice/dice:dice-unittest
+    /// root//app/bsmr:bsmr-unittest
     /// ```
-    /// returns the tests associated with both `//bsmr/packages/rust/dice/dice:dice` and `//bsmr/app/bsmr:bsmr`.
+    /// returns the tests associated with both `root//packages/rust/dice/dice:dice` and `root//app/bsmr:bsmr`.
     ///
     /// To obtain all the tests associated with the target and its dependencies,
     /// you can combine the `testsof()` function with the [`deps()`](#deps) function.
     ///
     /// For example:
     /// ```text
-    /// $ bsmr uquery "testsof(deps(//bsmr/app/bsmr:bsmr))"
+    /// $ bsmr uquery "testsof(deps(root//app/bsmr:bsmr))"
     /// ```
-    /// first finds the transitive closure of `//bsmr/app/bsmr:bsmr`,
+    /// first finds the transitive closure of `root//app/bsmr:bsmr`,
     /// and then lists all the tests associated with the targets in this transitive closure.
     async fn testsof(&self, env: &Env, targets: TargetSet<Env::Target>) -> QueryFuncResult<Env> {
         Ok(self.implementation.testsof(env, &targets).await?.into())

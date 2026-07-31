@@ -9,9 +9,9 @@ rust_protobuf_library(
     build_script = "build.rs",
     proto_srcs = ":bsmr_test_proto.proto",
     deps = [
-        "fbsource//third-party/rust:prost-types",
-        "//bsmr/app/bsmr_data:bsmr_data",
-        "//bsmr/app/bsmr_host_sharing_proto:bsmr_host_sharing_proto",
+        "bsmr_build//third-party/rust:prost-types",
+        "root//app/bsmr_data:bsmr_data",
+        "root//app/bsmr_host_sharing_proto:bsmr_host_sharing_proto",
     ],
 )
 
@@ -20,6 +20,6 @@ proto_srcs(
     srcs = ["test.proto"],
     visibility = ["PUBLIC"],
     deps = [
-        translate_target("//bsmr/app/bsmr_data:data_proto"),
+        translate_target("root//app/bsmr_data:data_proto"),
     ],
 )

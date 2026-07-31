@@ -1202,7 +1202,7 @@ mod tests {
     /// running:
     ///
     /// ```sh
-    /// bsmr run fbcode//remote_execution/rust/recli:recli -- \
+    /// bsmr run upstream//remote_execution/rust/recli:recli -- \
     ///     exec command --out-dir test -- sh -c \
     ///     'mkdir -p test/a/aa test/a/aaa test/b/bb test/d && touch test/a/aa/f test/a/aaa/f test/b/bb/f test/d/f'
     /// ```

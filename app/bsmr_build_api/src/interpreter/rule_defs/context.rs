@@ -56,7 +56,7 @@ use crate::deferred::calculation::GET_PROMISED_ARTIFACT;
 use crate::interpreter::rule_defs::plugins::AnalysisPlugins;
 
 /// Whether `declare_output` defaults `has_content_based_path` to `true`.
-/// Controlled by `[bsmr] declare_output_has_content_based_path_default` buckconfig.
+/// Controlled by `[bsmr] declare_output_has_content_based_path_default` bsmrconfig.
 pub static DECLARE_OUTPUT_HAS_CONTENT_BASED_PATH_DEFAULT: OnceLock<bool> = OnceLock::new();
 
 pub fn init_declare_output_has_content_based_path_default(
@@ -77,7 +77,7 @@ pub fn init_declare_output_has_content_based_path_default(
 /// Whether artifact-creating actions default `has_content_based_path` to `true`
 /// when a string name is passed as the output (i.e., the action implicitly
 /// declares the output).
-/// Controlled by `[bsmr] action_has_content_based_path_default` buckconfig.
+/// Controlled by `[bsmr] action_has_content_based_path_default` bsmrconfig.
 pub static ACTION_HAS_CONTENT_BASED_PATH_DEFAULT: OnceLock<bool> = OnceLock::new();
 
 pub fn init_action_has_content_based_path_default(value: Option<bool>) -> bsmr_error::Result<()> {

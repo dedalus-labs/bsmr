@@ -17,7 +17,7 @@ load(
     "APPLE_ARCHIVE_OBJECTS_LOCALLY_OVERRIDE_ATTR_NAME",
 )
 
-AppleBuckConfigAttributeOverride = record(
+AppleBsmrConfigAttributeOverride = record(
     name = field(str),
     section = field(str, default = "apple"),
     key = field(str),
@@ -27,14 +27,14 @@ AppleBuckConfigAttributeOverride = record(
     skip_if_false = field(bool, default = False),
 )
 
-APPLE_LINK_LIBRARIES_LOCALLY_OVERRIDE = AppleBuckConfigAttributeOverride(
+APPLE_LINK_LIBRARIES_LOCALLY_OVERRIDE = AppleBsmrConfigAttributeOverride(
     name = "link_execution_preference",
     key = "link_libraries_locally_override",
     value_if_true = "local",
     skip_if_false = True,
 )
 
-APPLE_LINK_LIBRARIES_REMOTELY_OVERRIDE = AppleBuckConfigAttributeOverride(
+APPLE_LINK_LIBRARIES_REMOTELY_OVERRIDE = AppleBsmrConfigAttributeOverride(
     name = "link_execution_preference",
     key = "link_libraries_remotely_override",
     value_if_true = "remote",
@@ -44,18 +44,18 @@ APPLE_LINK_LIBRARIES_REMOTELY_OVERRIDE = AppleBuckConfigAttributeOverride(
 _APPLE_LIBRARY_LOCAL_EXECUTION_OVERRIDES = [
     APPLE_LINK_LIBRARIES_LOCALLY_OVERRIDE,
     APPLE_LINK_LIBRARIES_REMOTELY_OVERRIDE,
-    AppleBuckConfigAttributeOverride(name = APPLE_ARCHIVE_OBJECTS_LOCALLY_OVERRIDE_ATTR_NAME, key = "archive_objects_locally_override"),
+    AppleBsmrConfigAttributeOverride(name = APPLE_ARCHIVE_OBJECTS_LOCALLY_OVERRIDE_ATTR_NAME, key = "archive_objects_locally_override"),
 ]
 
 # If both configs are set the last one wins
 _APPLE_BINARY_EXECUTION_OVERRIDES = [
-    AppleBuckConfigAttributeOverride(
+    AppleBsmrConfigAttributeOverride(
         name = "link_execution_preference",
         key = "link_binaries_locally_override",
         value_if_true = "local",
         skip_if_false = True,
     ),
-    AppleBuckConfigAttributeOverride(
+    AppleBsmrConfigAttributeOverride(
         name = "link_execution_preference",
         key = "link_binaries_remotely_override",
         value_if_true = "remote",
@@ -68,7 +68,7 @@ _APPLE_TEST_LOCAL_EXECUTION_OVERRIDES = [
     APPLE_LINK_LIBRARIES_REMOTELY_OVERRIDE,
 ]
 
-def apple_macro_layer_set_bool_override_attrs_from_config(overrides: list[AppleBuckConfigAttributeOverride]) -> dict[str, Select]:
+def apple_macro_layer_set_bool_override_attrs_from_config(overrides: list[AppleBsmrConfigAttributeOverride]) -> dict[str, Select]:
     attribs = {}
     for override in overrides:
         config_value = read_root_config(override.section, override.key, None)
