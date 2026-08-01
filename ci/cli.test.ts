@@ -71,6 +71,14 @@ test("words select nested commands", async () => {
 	assert.deepEqual(state.invocations.map(({ file }) => file), ["pnpm"]);
 });
 
+test("license check uses the provenance verifier", async () => {
+	const state = harness();
+	await runCli(["check", "license"], state.context);
+	assert.deepEqual(state.invocations.map(({ file, args }) => [file, ...args]), [
+		["node", "ci/license.ts", "check"],
+	]);
+});
+
 test("unknown commands fail before execution", async () => {
 	const state = harness();
 	await assert.rejects(runCli(["check-actions"], state.context), /unknown command/);

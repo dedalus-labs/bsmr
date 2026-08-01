@@ -26,8 +26,9 @@ const buildActions: ProcessSpec = {
 const typecheck: ProcessSpec = { file: "pnpm", args: ["exec", "tsc", "--noEmit"] };
 const test: ProcessSpec = {
 	file: "node",
-	args: ["--test", "ci/ci.test.ts", "ci/cli.test.ts", "ci/license-preamble.test.ts", "ci/license-provenance.test.ts", "test/contributors.test.ts"],
+	args: ["--test", "ci/ci.test.ts", "ci/cli.test.ts", "ci/license-preamble.test.ts", "ci/license-provenance.test.ts", "ci/license.test.ts", "test/contributors.test.ts"],
 };
+const license: ProcessSpec = { file: "node", args: ["ci/license.ts", "check"] };
 const generated: ProcessSpec = {
 	file: "pnpm",
 	args: ["exec", "hollywood", "check", "--generated", "--source-root", "ci", "--output", "."],
@@ -62,6 +63,7 @@ const commands = {
 	"build actions": [buildActions],
 	"check actions": [buildActions, actionSyntax, actionDiff],
 	"check generated": [generated],
+	"check license": [license],
 	"check security": [security],
 	check: [typecheck, test, generated, buildActions, actionSyntax, actionDiff, security],
 	generate: [generate, buildActions],
@@ -69,7 +71,7 @@ const commands = {
 	typecheck: [typecheck],
 } as const satisfies Record<string, readonly ProcessSpec[]>;
 
-const usage = `Usage: pnpm run ci <command>\n\nCommands:\n  build actions\n  check\n  check actions\n  check generated\n  check security\n  generate\n  test\n  typecheck\n`;
+const usage = `Usage: pnpm run ci <command>\n\nCommands:\n  build actions\n  check\n  check actions\n  check generated\n  check license\n  check security\n  generate\n  test\n  typecheck\n`;
 
 /**
  * Create the process execution context rooted at the repository.
