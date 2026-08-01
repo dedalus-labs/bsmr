@@ -1448,7 +1448,7 @@ apk_genrule = prelude_rule(
     name = "apk_genrule",
     docs = """
         An `apk_genrule()` rule is used to post-process an APK. What
-        separates an apk\\_genrule from a genrule is apk\\_genrules are known by BUCK to
+        separates an apk\\_genrule from a genrule is apk\\_genrules are known by BUILD.bsmr to
         produce APKs, so commands like `buck install` or
          `buck uninstall` still work. Additionally,
          `apk_genrule()` rules can be inputs to other

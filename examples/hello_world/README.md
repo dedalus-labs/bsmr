@@ -11,7 +11,7 @@ using the prelude.
 
 In the `toolchains` cell, we define two toolchains needed:
 `system_cxx_toolchain` and `system_python_bootstrap_toolchain`, both pulled in
-from the prelude. The `BUCK` file at the project root contain a `cxx_binary`
+from the prelude. The `BUILD.bsmr` file at the project root contain a `cxx_binary`
 target and its `cxx_library` dependency. `.bsmrconfig` contains the
 configuration to set the target platform for the project:
 

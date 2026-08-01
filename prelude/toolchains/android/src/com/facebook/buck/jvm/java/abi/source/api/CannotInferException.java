@@ -1,3 +1,9 @@
+//===----------------------------------------------------------------------===//
+// Upstream-Source: facebook/buck2@1560aca2002865cd73d7cafb22c705cfb640b2bc
+// Modifications Copyright (c) 2026 Dedalus Labs, Inc. and its contributors
+// SPDX-License-Identifier: Apache-2.0
+//===----------------------------------------------------------------------===//
+
 /*
  * Copyright (c) Meta Platforms, Inc. and affiliates.
  *
@@ -27,7 +33,7 @@ public class CannotInferException extends RuntimeException {
         "Buck had to infer the existence of %1$s for source-only ABI generation, and thus cannot"
             + " know the %2$s of the type.\n"
             + "One of three things is happening:\n"
-            + "  1. The BUCK file is missing a dependency for %1$s\n"
+            + "  1. The BUILD.bsmr file is missing a dependency for %1$s\n"
             + "  2. The module containing %1$s needs to be marked with required_for_source_only_abi"
             + " or referenced as a source_only_abi_dep\n"
             + "  3. An annotation processor is accessing a type that it shouldn't be",

@@ -46,7 +46,7 @@ benefits:
     some capacity at the same time.
 - **Correctness** - in Bessemer, rules are hermetic by default. Missing
   dependencies are errors. These restrictions apply to both the user-written
-  `BUCK` files and the language rules.
+  `BUILD.bsmr` files and the language rules.
   - During the process of migrating to Bessemer, a huge number of missing
     dependencies have been fixed. However, during the same process, several
     Buck1 issues were identified that are not going to be fixed in Buck1 (such

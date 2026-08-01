@@ -22,7 +22,7 @@ with Bessemer.
 
 1. Set up a simple project directory.
 2. Write a "Hello, World!" program in Rust.
-3. Create a BUCK file to tell Bessemer how to build our program.
+3. Create a BUILD.bsmr file to tell Bessemer how to build our program.
 4. Build the Rust program using Bessemer.
 5. Run our compiled program using Bessemer.
 6. Briefly inspect the build targets we created.
@@ -127,15 +127,15 @@ This is the main function of our program. It prints "Hello world!" to the
 console. But we are not done yet, we need to tell Bessemer how to build our
 program.
 
-## Step 3: Defining the Build Target in a BUCK File
+## Step 3: Defining the Build Target in a BUILD.bsmr File
 
 Next, we need to tell Bessemer about our program and how to build it. We do this
-using a `BUCK` file.
+using a `BUILD.bsmr` file.
 
 1. In the root of your `greeter_bin` directory (not inside src), create a new
-   file named `BUCK`.
+   file named `BUILD.bsmr`.
 
-2. Add the following content to this BUCK file:
+2. Add the following content to this BUILD.bsmr file:
 
 <FbInternalOnly>
 
@@ -179,14 +179,14 @@ Our project structure should look like this:
 ```
 bsmr_lab
 └── greeter_bin
-    ├── BUCK
+    ├── BUILD.bsmr
     └── src
         └── main.rs
 ```
 
 ## Step 4: Building the Application with Bessemer
 
-With our Rust code and BUCK file in place, let's build the application!
+With our Rust code and BUILD.bsmr file in place, let's build the application!
 
 <FbInternalOnly>
 
@@ -211,7 +211,7 @@ bsmr build :main --show-output
 </OssOnly>
 
 - `bsmr build :main` tells Bessemer to build the target named main. The `:main`
-  part means the target is defined in the BUCK file in the root of this package
+  part means the target is defined in the BUILD.bsmr file in the root of this package
   (`greeter_bin`).
 - `--show-output` tells Bessemer to show the path of our built binary.
 
@@ -347,7 +347,7 @@ Bessemer! We've walked through
 
 - Setting up the project structure.
 - Writing a simple Rust program.
-- Defining a rust_binary target in a BUCK file.
+- Defining a rust_binary target in a BUILD.bsmr file.
 - Using `bsmr build` to compile the code.
 - Using `bsmr run` to execute the program.
 - Using `bsmr targets` to inspect the target.

@@ -930,7 +930,7 @@ def _create_link_group(
     link_exec_pref = spec.group.attrs.link_execution_preference
     if link_exec_pref:
         # If link_exec_pref is an Artifact (source file), extract the basename
-        # This happens when strings are specified in BUCK file attribute dictionaries
+        # This happens when strings are specified in BUILD.bsmr file attribute dictionaries
         link_exec_pref = getattr(link_exec_pref, "basename", link_exec_pref)
         link_execution_preference = LinkExecutionPreference(link_exec_pref)
     else:

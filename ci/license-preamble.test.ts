@@ -11,7 +11,7 @@ import { test } from "node:test";
 import { insertPreamble, renderPreamble, validateSource } from "./license-preamble.ts";
 
 test("preambles use the file's native comment syntax", () => {
-	assert.match(renderPreamble("app/bsmr/BUCK", "dedalus"), /^# ===/);
+	assert.match(renderPreamble("app/bsmr/BUILD.bsmr", "dedalus"), /^# ===/);
 	assert.match(renderPreamble("tool.ml", "upstream-modified"), /^\(\* ===.* \*\)$/m);
 	assert.match(renderPreamble("index.html", "upstream-modified"), /^<!-- ===/);
 });
@@ -37,6 +37,6 @@ test("validation requires a leading provenance block", () => {
 	const preamble = renderPreamble(path, "upstream-modified");
 	assert.match(validateSource({ path, provenance: "upstream-modified", text: `// misplaced\n${preamble}` }) ?? "", /missing canonical/);
 	assert.equal(validateSource({ path, provenance: "upstream-modified", text: preamble }), undefined);
-	const empty = renderPreamble("app/bsmr/BUCK", "dedalus").replace("# Defines build targets for app/bsmr.", "# ");
-	assert.match(validateSource({ path: "app/bsmr/BUCK", provenance: "dedalus", text: empty }) ?? "", /missing source responsibility/);
+	const empty = renderPreamble("app/bsmr/BUILD.bsmr", "dedalus").replace("# Defines build targets for app/bsmr.", "# ");
+	assert.match(validateSource({ path: "app/bsmr/BUILD.bsmr", provenance: "dedalus", text: empty }) ?? "", /missing source responsibility/);
 });

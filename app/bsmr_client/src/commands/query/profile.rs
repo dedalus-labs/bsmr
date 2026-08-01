@@ -23,9 +23,9 @@ use bsmr_client_ctx::path_arg::PathArg;
 pub(crate) struct QueryProfileOptions {
     /// Profile target loading.
     ///
-    /// When this option is enabled, Buck will profile every `BUCK` file loaded during the query
+    /// When this option is enabled, Buck will profile every `BUILD.bsmr` file loaded during the query
     /// and merge the results into a single profile.
-    /// The command may return cached profile data if `BUCK` files were not invalidated.
+    /// The command may return cached profile data if `BUILD.bsmr` files were not invalidated.
     #[clap(long, requires("profile_output"))]
     pub(crate) profile_mode: Option<BuckProfileMode>,
 

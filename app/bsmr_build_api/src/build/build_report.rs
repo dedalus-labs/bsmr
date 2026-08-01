@@ -166,7 +166,7 @@ pub(crate) struct ConfiguredBuildReportEntry {
     /// A sketch of peak memory usage during analysis for this target
     #[serde(skip_serializing_if = "Option::is_none")]
     peak_analysis_memory_sketch: Option<String>,
-    /// A sketch of peak memory usage during BUCK file loading across transitive packages
+    /// A sketch of peak memory usage during BUILD.bsmr file loading across transitive packages
     #[serde(skip_serializing_if = "Option::is_none")]
     peak_load_memory_sketch: Option<String>,
     /// A sketch of the action graph for this target

@@ -139,7 +139,7 @@ create_apks(
 ```
 
 However, instantiating this macro actually creates _two_ targets. For example,
-if you instantiated this macro in the build file, `apps/messenger/BUCK`, it
+if you instantiated this macro in the build file, `apps/messenger/BUILD.bsmr`, it
 would create the following rules:
 
 ```

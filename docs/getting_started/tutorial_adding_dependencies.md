@@ -69,7 +69,7 @@ Your project should be like this
 ```
 bsmr_lab
 ├── greeter_bin
-│   ├── BUCK
+│   ├── BUILD.bsmr
 │   └── src
 │       └── main.rs
 └── greeter_lib
@@ -93,8 +93,8 @@ pub fn greet(name: &str) -> String {
 This is a simple public function greet that takes a name and returns a greeting
 message.
 
-2. Define the library's BUCK file: In the `greeter_lib` directory (i.e.,
-   `greeter_lib/`), create a `BUCK` file. Add the following content:
+2. Define the library's BUILD.bsmr file: In the `greeter_lib` directory (i.e.,
+   `greeter_lib/`), create a `BUILD.bsmr` file. Add the following content:
 
 <FbInternalOnly>
 
@@ -187,10 +187,10 @@ fn main() {
 
 ```
 
-2. Update the binary's BUCK file:
+2. Update the binary's BUILD.bsmr file:
 
-In the `greeter_bin` directory (i.e., `bsmr_lab/greeter_bin/BUCK`), update the
-BUCK file.
+In the `greeter_bin` directory (i.e., `bsmr_lab/greeter_bin/BUILD.bsmr`), update the
+BUILD.bsmr file.
 
 <FbInternalOnly>
 
@@ -281,9 +281,9 @@ the folder into `bsmr_lab` folder. </OssOnly>
 
 Our first step is to make our existing greeter_lib use this new logging_lib.
 
-1. Update `greeter_lib/BUCK`:
+1. Update `greeter_lib/BUILD.bsmr`:
 
-Now, modify `bsmr_lab/greeter_lib/BUCK` to declare a dependency on
+Now, modify `bsmr_lab/greeter_lib/BUILD.bsmr` to declare a dependency on
 `logging_lib`.
 
 <FbInternalOnly>
@@ -411,7 +411,7 @@ This means that `logging_lib` cannot be found in our `main` binary.
 ### Why did this fail?
 
 - `greeter_bin/src/main.rs` directly calls `logging_lib::info()`.
-- However, `greeter_bin/BUCK` only lists `greeter_lib:library` as a direct
+- However, `greeter_bin/BUILD.bsmr` only lists `greeter_lib:library` as a direct
   dependency.
 - Even though `greeter_lib:library` depends on `logging_lib`, this dependency is
   not automatically "passed through" (transitive) or made directly available to
@@ -425,7 +425,7 @@ This means that `logging_lib` cannot be found in our `main` binary.
 To fix this, we need to tell Bessemer that `greeter_bin` also has a direct
 dependency on `logging_lib`.
 
-1. Update `greeter_bin/BUCK`:
+1. Update `greeter_bin/BUILD.bsmr`:
 
 <FbInternalOnly>
 

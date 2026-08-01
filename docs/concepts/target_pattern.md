@@ -29,7 +29,7 @@ build file at the preceding directory path. For example, suppose that the build
 file:
 
 ```sh
-apps/myapp/BUCK
+apps/myapp/BUILD.bsmr
 ```
 
 defines the rules: `app_v1` and `app_v2`, then the following build target
@@ -48,8 +48,8 @@ _all build targets in build files in subdirectories_. For example, suppose that
 you have the following build files:
 
 ```bash
-apps/BUCK
-apps/myapp/BUCK
+apps/BUILD.bsmr
+apps/myapp/BUILD.bsmr
 ```
 
 then the following pattern would match all build targets in both of those files:

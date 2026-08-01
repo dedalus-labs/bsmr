@@ -23,7 +23,7 @@ Our goal is to learn how to define and run Rust unit tests within the Bessemer.
 
 1. Create a dedicated directory for our library's tests.
 2. Write a simple unit test for the greet function in `greeter_lib`.
-3. Update `greeter_lib/BUCK` to define a test target using { isInternal() ?
+3. Update `greeter_lib/BUILD.bsmr` to define a test target using { isInternal() ?
    <code>rust_unittest</code> : <code>rust_test</code> }.
 4. Run the tests using Bessemer and see the results.
 
@@ -45,7 +45,7 @@ Your `greeter_lib` structure should now look like this:
 
 ```
 greeter_lib
-├── BUCK
+├── BUILD.bsmr
 ├── src
 │   └── lib.rs
 └── tests
@@ -75,11 +75,11 @@ mod tests {
 }
 ```
 
-## Step 3: Updating greeter_lib/BUCK to Define the Test Target
+## Step 3: Updating greeter_lib/BUILD.bsmr to Define the Test Target
 
 Next, we need to tell Bessemer about our test file and how to run it.
 
-1. Edit `greeter_lib/BUCK`:
+1. Edit `greeter_lib/BUILD.bsmr`:
 
 <FbInternalOnly>
 
@@ -157,7 +157,7 @@ Key additions and explanations:
 
 ## Step 4: Running Your Tests
 
-With the BUCK file updated, let's run our tests!
+With the BUILD.bsmr file updated, let's run our tests!
 
 1. Navigate to the `greeter_lib` directory.
 2. Run test using `bsmr test`:
@@ -169,7 +169,7 @@ bsmr test :test
 - `bsmr test` is the command to run test targets.
 - `:test` refers to the { isInternal() ? <code>rust_unittest</code> :
   <code>rust_test</code> } target named `test` that we defined in the current
-  directory's `BUCK` file.
+  directory's `BUILD.bsmr` file.
 
 3. Expected Output: You should see something like this:
 

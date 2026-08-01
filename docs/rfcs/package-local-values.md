@@ -36,7 +36,7 @@ Proposed per-package properties can replace `get_modes` mechanism.
 
 ### `PACKAGE` files
 
-Before evaluating `BUCK` file, bsmr will evaluate all `PACKAGE` files in the
+Before evaluating `BUILD.bsmr` file, bsmr will evaluate all `PACKAGE` files in the
 same directory and all parent directories. Absent `PACKAGE` files are treated as
 empty files.
 
@@ -48,10 +48,10 @@ requested) should fail with Starlark call stack.
 
 Each `PACKAGE` file is evaluated at most once (like `bzl` file).
 
-`PACKAGE` files may load arbitrary `bzl` files. `BUCK`-specific functions called
+`PACKAGE` files may load arbitrary `bzl` files. `BUILD.bsmr`-specific functions called
 in `bzl` files (like rule functions) are available, but calling functions from
 `PACKAGE` files is an error. This way, `bzl` files are evaluated only once
-regardless of whether they are loaded from `PACKAGE` or `BUCK` file.
+regardless of whether they are loaded from `PACKAGE` or `BUILD.bsmr` file.
 
 ### API
 
@@ -80,17 +80,17 @@ Written values are frozen when `PACKAGE` file evaluation is finished.
 
 Note `write_package_value` symbol exists in `bzl` globals, and it can be called
 from `bzl` file in context of `PACKAGE` evaluation, but calling
-`write_package_file` is an error on context of `BUCK` evaluation.
+`write_package_file` is an error on context of `BUILD.bsmr` evaluation.
 
-Modifying `PACKAGE` file logically invalidates the `BUCK` file of this package,
-and all `PACKAGE` and `BUCK` files of subpackages. However, `BUCK` file
+Modifying `PACKAGE` file logically invalidates the `BUILD.bsmr` file of this package,
+and all `PACKAGE` and `BUILD.bsmr` files of subpackages. However, `BUILD.bsmr` file
 evaluation may track which package-local values were accessed and only
-invalidate `BUCK` files which were potentially affected (similarly to how we do
+invalidate `BUILD.bsmr` files which were potentially affected (similarly to how we do
 it with bsmrconfigs, with individual properties being projection keys).
 
-#### `BUCK` file API
+#### `BUILD.bsmr` file API
 
-`BUCK` files (and `bzl` files included from `BUCK` files) have a global
+`BUILD.bsmr` files (and `bzl` files included from `BUILD.bsmr` files) have a global
 function:
 
 ```python
@@ -106,7 +106,7 @@ This function is available in `bzl` files, but attempt to call this function in
 context of `PACKAGE` file evaluation results in an error. This restriction can
 be lifted in the future.
 
-Per-package values are **not** accessible as global symbols in `BUCK` files. We
+Per-package values are **not** accessible as global symbols in `BUILD.bsmr` files. We
 may reconsider it in the future.
 
 ### `read_config`

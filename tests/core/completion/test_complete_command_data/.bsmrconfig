@@ -14,4 +14,4 @@
   nano_prelude = bundled
 
 [buildfile]
-    name = BUCK.fixture
+    name = BUILD.bsmr.fixture

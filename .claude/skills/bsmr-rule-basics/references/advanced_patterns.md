@@ -267,10 +267,10 @@ rust_toolchain = rule(
 )
 ```
 
-**3. Create a toolchain target in BUCK:**
+**3. Create a toolchain target in BUILD.bsmr:**
 
 ```starlark
-# In //toolchains/BUCK
+# In //toolchains/BUILD.bsmr
 rust_toolchain(
     name = "rust",
     compiler = ":rustc_wrapper",
@@ -455,7 +455,7 @@ def my_rule_impl(ctx: AnalysisContext):
 ### Pattern: Using select() in Rules
 
 ```starlark
-# In BUCK file, users can use select():
+# In BUILD.bsmr file, users can use select():
 my_rule(
     name = "app",
     srcs = ["main.cpp"],

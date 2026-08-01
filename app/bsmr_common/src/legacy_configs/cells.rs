@@ -766,8 +766,7 @@ mod tests {
                             [cells]
                                 third_party = .
                             [buildfile]
-                                name_v2 = OKAY
-                                name = OKAY_v1
+                                name = OKAY
                         "#
                 ),
             ),

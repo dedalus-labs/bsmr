@@ -160,7 +160,7 @@ def gather_unconfigured_deps(ctx: bxl.Context, targets: list[TargetLabel]) -> di
                 mapped_srcs[t.raw_target()] = t_srcs
 
         abs_buildfile_path = ctx.root() + "/" + target.buildfile_path.cell + "/" + target.buildfile_path.path
-        source_folder = abs_buildfile_path.removesuffix("/TARGETS").removesuffix("/BUCK")
+        source_folder = abs_buildfile_path.removesuffix("/TARGETS").removesuffix("/BUILD.bsmr")
 
         crate_root = _get_attr_no_select(target, "crate_root")
         if not crate_root:

@@ -189,7 +189,7 @@ TodoWrite with 8 items (all pending initially)
 
 ```python
 - Does `uppercase.bzl` exist?
-- Does `BUCK` exist?
+- Does `BUILD.bsmr` exist?
 - Does `input.txt` exist?
 - If yes, read them to determine current step
 ```
@@ -212,7 +212,7 @@ AskUserQuestion:
 **What to do:**
 
 1. Create `uppercase.bzl` with minimal implementation
-2. Create `BUCK` file with target definition
+2. Create `BUILD.bsmr` file with target definition
 3. Build it with `bsmr build`
 4. Observe success (with warning about no outputs)
 
@@ -233,7 +233,7 @@ uppercase = rule(
 )
 ```
 
-`BUCK`:
+`BUILD.bsmr`:
 
 ```starlark
 load(":uppercase.bzl", "uppercase")
@@ -272,7 +272,7 @@ show they understand.
 **What to do:**
 
 1. Update `uppercase.bzl` to add `src` attribute
-2. Update `BUCK` to pass a source file
+2. Update `BUILD.bsmr` to pass a source file
 3. Create `input.txt` test file
 4. Build again
 
@@ -293,7 +293,7 @@ uppercase = rule(
 )
 ```
 
-**Update `BUCK`:**
+**Update `BUILD.bsmr`:**
 
 ```starlark
 load(":uppercase.bzl", "uppercase")
@@ -487,7 +487,7 @@ A full Bessemer target name has three parts:
 cell//package/path:target_name
 └─┬┘ └─────┬──────┘ └────┬────┘
   │        │             └─ Target name (from 'name' attribute)
-  │        └─────────────── Package path (directory containing BUCK file)
+  │        └─────────────── Package path (directory containing BUILD.bsmr file)
   └──────────────────────── Cell name (repository root)
 ```
 
@@ -502,12 +502,12 @@ cell//package/path:target_name
   - **Cell name omitted** - defaults to the current repository's cell
   - Since we're working in the fbcode repository, `//` is shorthand for `upstream//`
   - Valid when referring to any target in the same repository/cell
-  - This is the most common form you'll see in BUCK files
+  - This is the most common form you'll see in BUILD.bsmr files
 
 - `:hello`
   - **Cell and package path omitted** - only the target name
   - Only valid when you're in the same directory/package
-  - Shortest form for referring to targets in the current BUCK file
+  - Shortest form for referring to targets in the current BUILD.bsmr file
   - When you run `bsmr build :hello` from the `bsmr-tutorial` directory, Bessemer knows you mean `root//bsmr-tutorial:hello`
 
 **Now query the targets:**
@@ -524,7 +524,7 @@ bsmr cquery :hello --output-attribute=src
 
 **Unconfigured Target** (`//path:name`):
 
-- Raw definition from BUCK file
+- Raw definition from BUILD.bsmr file
 - `select()` expressions not yet resolved
 - No platform-specific settings applied
 
@@ -599,7 +599,7 @@ uppercase = rule(
 )
 ```
 
-**Update `BUCK` to use select():**
+**Update `BUILD.bsmr` to use select():**
 
 ```starlark
 load(":uppercase.bzl", "uppercase")
@@ -718,7 +718,7 @@ uppercase = rule(
 )
 ```
 
-**Add to `BUCK`:**
+**Add to `BUILD.bsmr`:**
 
 ```starlark
 # Create input2.txt first
@@ -802,7 +802,7 @@ def uppercase_macro(name, src, prefix = "UPPER", **kwargs):
     )
 ```
 
-**Add to `BUCK`:**
+**Add to `BUILD.bsmr`:**
 
 ```starlark
 uppercase_macro(
@@ -897,7 +897,7 @@ rule - one that does nothing but is valid.
 I'll create two files:
 
 - `uppercase.bzl` - The rule definition
-- `BUCK` - How to use the rule
+- `BUILD.bsmr` - How to use the rule
 
 [Creates files and builds]
 
@@ -934,7 +934,7 @@ again.]
 6. **Connect concepts**: "Remember in Step 2 when we learned about artifacts?
    Here's where that matters..."
 7. **Show file changes after each step**: After creating or modifying files, briefly list what changed:
-   - Example: "I just created `uppercase.bzl` with the rule definition and updated `BUCK` to use it."
+   - Example: "I just created `uppercase.bzl` with the rule definition and updated `BUILD.bsmr` to use it."
    - Example: "I modified `uppercase.bzl` to add the `src` attribute."
 8. **Remind users about the editor**: Tell users they can open the files in their editor to see the complete code:
    - Example: "You can open `uppercase.bzl` in your editor to see the full implementation."

@@ -27,7 +27,7 @@ use crate::interpreter::build_context::BuildContext;
 #[starlark_module]
 pub(crate) fn register_read_config(globals: &mut GlobalsBuilder) {
     /// Read a configuration value from the .bsmrconfig for the current
-    /// cell of the `BUCK` file that started evaluation of this code.
+    /// cell of the `BUILD.bsmr` file that started evaluation of this code.
     ///
     /// As an example, if the current cell's .bsmrconfig contains:
     ///
@@ -61,7 +61,7 @@ pub(crate) fn register_read_config(globals: &mut GlobalsBuilder) {
     }
 
     /// Like `read_config` but the project root `.bsmrconfig` is always consulted,
-    /// regardless of the cell of the originating `BUCK` file.
+    /// regardless of the cell of the originating `BUILD.bsmr` file.
     #[starlark(speculative_exec_safe)]
     fn read_root_config<'v>(
         #[starlark(require = pos)] section: StringValue,

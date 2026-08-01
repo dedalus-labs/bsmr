@@ -26,7 +26,7 @@ who want to go beyond the basic tutorial.
 
 Bessemer uses a **declarative, graph-based build model**:
 
-1. **Load Phase**: Read and evaluate BUCK/BUILD files, create unconfigured
+1. **Load Phase**: Read and evaluate BUILD.bsmr/BUILD files, create unconfigured
    targets
 2. **Configuration Phase**: Apply configurations to targets, resolve `select()`
    expressions
@@ -46,12 +46,12 @@ should be run. Bessemer decides when to actually run them.
 
 #### 1. Unconfigured Target
 
-- **What it is:** A target as written in BUCK files, before configuration is
+- **What it is:** A target as written in BUILD.bsmr files, before configuration is
   applied
 - **Identifier:** `//package:name` (no configuration suffix)
 - **Query tool:** `bsmr uquery`
 - **Characteristics:**
-  - Has all attributes from BUCK file
+  - Has all attributes from BUILD.bsmr file
   - `select()` expressions are **not** resolved (still conditional)
   - No platform-specific information applied
   - Same for all configurations
@@ -59,7 +59,7 @@ should be run. Bessemer decides when to actually run them.
 **Example:**
 
 ```starlark
-# BUCK file
+# BUILD.bsmr file
 cpp_binary(
     name = "app",
     srcs = select({
@@ -165,7 +165,7 @@ Artifacts represent files in Bessemer's build model.
 - **Characteristics:**
   - Immutable (within a build)
   - No action produces them
-  - Directly referenced in BUCK files
+  - Directly referenced in BUILD.bsmr files
 
 #### 2. Build Artifacts
 
@@ -402,19 +402,19 @@ A target can only access providers from its dependencies (targets listed in its
 **Example dependency chain:**
 
 ```starlark
-# BUCK file for //app:main
+# BUILD.bsmr file for //app:main
 my_binary(
     name = "main",
     deps = ["//lib:utils"],  # main depends on utils
 )
 
-# BUCK file for //lib:utils
+# BUILD.bsmr file for //lib:utils
 my_library(
     name = "utils",
     deps = ["//third-party:json"],  # utils depends on json
 )
 
-# BUCK file for //third-party:json
+# BUILD.bsmr file for //third-party:json
 my_library(
     name = "json",
 )

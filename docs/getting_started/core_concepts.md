@@ -15,7 +15,7 @@ import { FbInternalOnly, OssOnly, isInternal } from
 import TargetDiagram from '@site/src/components/TargetDiagram'; import
 TutorialMermaidDiagram from '@site/src/components/TutorialMermaidDiagram';
 
-In the previous tutorials, we’ve created buck files, defined a couple of buck
+In the previous tutorials, we've created build files, defined a couple of build
 targets and successfully built and ran the “Hello World” rust binary and even
 wrote and ran a test. Great job done! Now, let’s go through the journey again,
 weaving in the core concepts as we go along to see what gets involved during
@@ -75,7 +75,7 @@ is the buck cell root.
 - Do not modify .bsmrconfig and do not create .bsmrconfig without consulting
   buck or devx team!
 - Be aware that buck does enforce package boundaries, so a source file only
-  belongs to its nearest BUCK file.
+  belongs to its nearest BUILD.bsmr file.
 
 </FbInternalOnly>
 
@@ -83,9 +83,9 @@ You can run `bsmr audit cell` to inspect the abs path of each cell root.
 
 ## Package
 
-The existence of a [BUCK file](#buck-file) ({ isInternal() ?
-<code>scripts/$USER/bsmr_lab/greeter_bin/BUCK</code> :
-<code>bsmr_lab/greeter_bin/BUCK</code> }) defines a buck
+The existence of a [build manifest](#build-manifest) ({ isInternal() ?
+<code>scripts/$USER/bsmr_lab/greeter_bin/BUILD.bsmr</code> :
+<code>bsmr_lab/greeter_bin/BUILD.bsmr</code> }) defines a buck
 [package](../../concepts/key_concepts/#packages) { isInternal() ?
 <code>scripts/$USER/bsmr_lab/greeter_bin</code> :
 <code>bsmr_lab/greeter_bin</code> } isn't just a directory. If a buck target
@@ -94,7 +94,7 @@ source.
 
 ## Target name
 
-The name of the target in the package. It is the name we defined in the BUCK
+The name of the target in the package. It is the name we defined in the BUILD.bsmr
 file.
 
 ```python
@@ -107,20 +107,20 @@ rust_binary(
 
 It should be unique within the package.
 
-## Buck File
+## Build Manifest
 
 In the lab, you’ve already created three
 [build files](../../concepts/build_file/):
 
-- `greeter_bin/BUCK`
-- `greeter_lib/BUCK`
-- `logging_lib/BUCK`
+- `greeter_bin/BUILD.bsmr`
+- `greeter_lib/BUILD.bsmr`
+- `logging_lib/BUILD.bsmr`
 
-Although configurable, the name of the build file normally is just BUCK.
-<FbInternalOnly> Buck file within Meta could be `BUCK` or `TARGETS` (fbcode
+Although configurable, the name of the build file normally is just BUILD.bsmr.
+<FbInternalOnly> Build files within Meta could be `BUILD.bsmr` or `TARGETS` (fbcode
 only)</FbInternalOnly>
 
-In these BUCK files, you’ve written a couple of
+In these BUILD.bsmr files, you’ve written a couple of
 [buck targets](../../concepts/build_target/), `:main`, `:library`,
 `:logging_lib` and `:test`. Buck targets are instances of
 [build rules](../../concepts/build_rule/), which defines how the target should
@@ -130,7 +130,7 @@ be a binary that’s runnable, while `:library`, `:logging_lib` are of rule type
 [rust_library](../../prelude/rules/rust/rust_library/), the output of which will
 be a library that can be linked to the binary.
 
-Referring to buck targets in BUCK files and CLI commands need to follow a
+Referring to buck targets in BUILD.bsmr files and CLI commands need to follow a
 special [target pattern](../../concepts/target_pattern/), which looks like:
 
 <code>cell//path/to/dir:target</code> or <code>cell//path/to/dir/...</code>
@@ -172,17 +172,17 @@ graph TD
     A --> C[greeter_lib/]
     A --> D[logging_lib/]
 
-    B --> B1[BUCK]
+    B --> B1[BUILD.bsmr]
     B --> B2[src/]
     B2 --> B3[main.rs]
 
-    C --> C1[BUCK]
+    C --> C1[BUILD.bsmr]
     C --> C2[src/]
     C --> C3[tests/]
     C2 --> C4[lib.rs]
     C3 --> C5[test.rs]
 
-    D --> D1[BUCK]
+    D --> D1[BUILD.bsmr]
     D --> D2[src/]
     D2 --> D3[lib.rs]
 
@@ -198,16 +198,16 @@ graph TD
 
 ### From Files to Targets
 
-Now that we understand packages and target concepts, let's see how your BUCK
+Now that we understand packages and target concepts, let's see how your BUILD.bsmr
 files define targets and their relationships:
 
 <TutorialMermaidDiagram>
 {`
 graph TD
-    A["greeter_bin/BUCK"] --> A1@{ shape: circle, label: "**🎯 :main**</br> (rust_binary)"}
-    B["greeter_lib/BUCK"] --> B1@{ shape: circle, label: "**🎯 :library** </br> (rust_library)"}
+    A["greeter_bin/BUILD.bsmr"] --> A1@{ shape: circle, label: "**🎯 :main**</br> (rust_binary)"}
+    B["greeter_lib/BUILD.bsmr"] --> B1@{ shape: circle, label: "**🎯 :library** </br> (rust_library)"}
     B --> B2@{ shape: circle, label: "**🎯 :test** </br> (rust_test)"}
-    C["logging_lib/BUCK"] --> C1@{ shape: circle, label: "**🎯 :logging_lib** </br> (rust_library)"}
+    C["logging_lib/BUILD.bsmr"] --> C1@{ shape: circle, label: "**🎯 :logging_lib** </br> (rust_library)"}
 
     A1 -.-> A2["srcs: [src/main.rs]"]
     A1 -.-> A3["deps: [:library, :logging_lib]"]
@@ -246,7 +246,7 @@ graph TD
     A --> D["📁 logging_lib/<br/>(Package)"]
 
     %% greeter_bin package
-    B --> B1["📄 BUCK"]
+    B --> B1["📄 BUILD.bsmr"]
     B --> B2["📁 src/"]
     B2 --> B3["📄 main.rs"]
     B1 -.-> B4(("🎯 **:main**<br/>(rust_binary)"))
@@ -254,7 +254,7 @@ graph TD
 
 
     %% greeter_lib package
-    C --> C1["📄 BUCK"]
+    C --> C1["📄 BUILD.bsmr"]
     C --> C2["📁 src/"]
     C --> C3["📁 tests/"]
     C2 --> C4["📄 lib.rs"]
@@ -265,7 +265,7 @@ graph TD
     C9@{ shape: braces, label: "srcs: test.rs<br/>deps: :library"}
 
     %% logging_lib package
-    D --> D1["📄 BUCK"]
+    D --> D1["📄 BUILD.bsmr"]
     D --> D2["📁 src/"]
     D2 --> D3["📄 lib.rs"]
     D1 -.-> D4(("🎯 **:logging_lib**<br/>(rust_library)"))
@@ -336,18 +336,18 @@ graph TD
 
 **Diagram Legend:**
 
-- **Dotted arrows**: Show how BUCK files define targets
+- **Dotted arrows**: Show how BUILD.bsmr files define targets
 - **Thick arrows**: Show dependency relationships between targets
 - **Double circles**: Represent Bessemer targets with 🎯 icon
 - **Curly braces**: Contain target attributes and configurations
 - **Subgraphs**: Group targets with their attributes
 - **📁 Icons**: Represent directories and packages
-- **📄 Icons**: Represent files (BUCK files and source files)
+- **📄 Icons**: Represent files (BUILD.bsmr files and source files)
 
 ## Load Function and Attributes
 
 <FbInternalOnly>
-You might have noticed that the first line in the main BUCK file is a load function:
+You might have noticed that the first line in the main BUILD.bsmr file is a load function:
 
 <code>load("@bsmr_build//rules:rust.bzl", "rust_binary")</code>
 
@@ -361,8 +361,8 @@ using the right rule/macro is the first step for a successful build.
 
 <OssOnly>
 
-Some buck file starts with one or more load functions, which load macros from
-.bzl files for this buck file to use, this is similar to load or include
+Some build files start with one or more load functions, which load macros from
+.bzl files for that build file to use. This is similar to load or include
 functions in other programming languages, load function takes the following
 syntax: <code>load("@cell//path/to/bzl:some_bzl.bzl", "some_macro")</code>
 
@@ -503,7 +503,7 @@ graph TD
     B -->|run| D[bsmr run :main]
     B -->|test| E[bsmr test :test]
 
-    C --> F[Parse BUCK files]
+    C --> F[Parse BUILD.bsmr files]
     D --> F
     E --> F
 
@@ -558,7 +558,7 @@ buck-out,it has the following characteristics:
 
 <FbInternalOnly>
 
-- **Do NOT** use buck-out directory path in your source or BUCK file, you should
+- **Do NOT** use buck-out directory path in your source or BUILD.bsmr file, you should
   not assume where artifacts will be stored, see more information in
   [this wiki](https://www.internalfb.com/wiki/Buck/Buck-users/faq_trick_tip/Dealing_with_buck-out/);
 - Buck-out can grow very big and consumes your disk space, you can run buck

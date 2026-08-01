@@ -31,7 +31,7 @@ pub(crate) struct Environment {
     /// The globals that are driven from Rust.
     pub(crate) globals: Globals,
     /// The path to the prelude, if the prelude is loaded in this file.
-    /// Note that in a BUCK file the `native` value is also exploded into the top-level.
+    /// Note that in a BUILD.bsmr file the `native` value is also exploded into the top-level.
     prelude: Option<PreludePath>,
     /// A path that is implicitly loaded as additional globals.
     preload: Option<ImportPath>,

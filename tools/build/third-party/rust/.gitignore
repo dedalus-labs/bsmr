@@ -16,7 +16,7 @@
 vendor/*/target
 vendor/*/Cargo.lock
 vendor/**/.bsmrconfig
-vendor/**/BUCK
+vendor/**/BUILD.bsmr
 vendor/**/OWNERS
 vendor/**/*~
 vendor/**/*.bzl

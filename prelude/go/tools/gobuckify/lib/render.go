@@ -116,10 +116,10 @@ func RenderBuckFiles(cfg *Config, thirdPartyDir string, buckTargets BuckTargets)
 			sem <- struct{}{}
 			defer func() { <-sem }()
 
-			buckFile := filepath.Join(thirdPartyDir, "vendor", target.ImportPath, "BUCK")
+			buckFile := filepath.Join(thirdPartyDir, "vendor", target.ImportPath, "BUILD.bsmr")
 			f, err := os.Create(buckFile)
 			if err != nil {
-				errors <- fmt.Errorf("can't create BUCK file: %w", err)
+				errors <- fmt.Errorf("can't create BUILD.bsmr file: %w", err)
 				return
 			}
 			defer f.Close()

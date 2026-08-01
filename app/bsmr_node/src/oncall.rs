@@ -1,3 +1,9 @@
+//===----------------------------------------------------------------------===//
+// Upstream-Source: facebook/buck2@1560aca2002865cd73d7cafb22c705cfb640b2bc
+// Modifications Copyright (c) 2026 Dedalus Labs, Inc. and its contributors
+// SPDX-License-Identifier: Apache-2.0
+//===----------------------------------------------------------------------===//
+
 /*
  * Copyright (c) Meta Platforms, Inc. and affiliates.
  *
@@ -15,7 +21,7 @@ use dupe::Dupe;
 use pagable::Pagable;
 use strong_hash::StrongHash;
 
-/// The `oncall` annotation for a `BUCK` file.
+/// The `oncall` annotation for a `BUILD.bsmr` file.
 #[derive(
     Debug, Hash, StrongHash, Allocative, Eq, PartialEq, Dupe, Clone, Pagable
 )]

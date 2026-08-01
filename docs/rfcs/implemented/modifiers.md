@@ -47,10 +47,10 @@ The Modifier API introduces a unified way to specify build settings on a target 
 
 A configuration is a collection of `constraint_value` targets. Each individual constraint value is keyed by a `constraint_setting` (commonly referred to as just constraint), so there can only be one constraint value of a constraint in a configuration.
 
-For example, the following BUCK file defines `prelude//constraints/os:_` as a constraint setting with constraint values `prelude//constraints/os:linux`, `prelude//constraints/os:macos`, and `prelude//constraints/os:windows`.
+For example, the following BUILD.bsmr file defines `prelude//constraints/os:_` as a constraint setting with constraint values `prelude//constraints/os:linux`, `prelude//constraints/os:macos`, and `prelude//constraints/os:windows`.
 
 ```python
-# prelude//constraints/os/BUCK
+# prelude//constraints/os/BUILD.bsmr
 
 constraint_setting(name = "os")
 
@@ -155,7 +155,7 @@ set_cfg_modifiers(cfg_modifiers = [
 On a target, modifiers can be specified on the `modifiers` attribute. For example, the following specifies modifiers for `repo//foo:bar`.
 
 ```python
-# repo/foo/BUCK
+# repo/foo/BUILD.bsmr
 
 python_binary(
   name = "bar",
@@ -170,7 +170,7 @@ python_binary(
 Note that for legacy reasons, we also support modifiers defined on the `metadata` attribute via “buck.cfg_modifiers” key.
 
 ```python
-# repo/foo/BUCK
+# repo/foo/BUILD.bsmr
 
 python_binary(
   name = "bar",
@@ -188,7 +188,7 @@ python_binary(
 
 Internally, we recommend using per-PACKAGE modifiers over per-target modifiers when possible for a couple reasons.
 
-*Per-target modifiers may require changing or debugging complicated bzl files* whereas *per-PACKAGE modifiers do not.* While all native buck rules like `cxx_binary` and `genrule` support per-target modifiers, oftentimes you will find that a “rule” you are using in a BUCK file may not support modifiers. This is because you are most likely using an internal macro that wraps the native rules. Using modifiers in a new macro will require plumbing the `metadata` or `modifiers` attribute down many layers of macro until it reaches the native rule, and many users often *get this wrong*, leading to hard-to-debug scenarios where certain generated targets are missing modifiers or some modifiers get unintentionally overwritten by someone else. Per-PACKAGE modifiers don’t have this problem.
+*Per-target modifiers may require changing or debugging complicated bzl files* whereas *per-PACKAGE modifiers do not.* While all native buck rules like `cxx_binary` and `genrule` support per-target modifiers, oftentimes you will find that a “rule” you are using in a BUILD.bsmr file may not support modifiers. This is because you are most likely using an internal macro that wraps the native rules. Using modifiers in a new macro will require plumbing the `metadata` or `modifiers` attribute down many layers of macro until it reaches the native rule, and many users often *get this wrong*, leading to hard-to-debug scenarios where certain generated targets are missing modifiers or some modifiers get unintentionally overwritten by someone else. Per-PACKAGE modifiers don’t have this problem.
 
 *Per-PACKAGE modifiers enforce that modifiers are consistently applied across the entire project. *While people usually know to apply modifiers to binaries, they often forget to apply them to library/test targets. This could cause unintentional behavior differences when building libraries or tests. Even when there is no behavior difference, this will still cause an increase in configured target graph size. An increase in graph size will increase buck daemon memory usage and make it more likely for builds to OOM.
 
@@ -253,7 +253,7 @@ set_cfg_modifiers(cfg_modifiers = [
 
 set_cfg_modifiers(cfg_modifiers = ["cfg//os:macos"])
 
-# repo/foo/BUCK
+# repo/foo/BUILD.bsmr
 
 python_binary(
   name = "bar",

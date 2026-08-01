@@ -39,6 +39,9 @@ function validateProject(root: string, inventory_: Inventory, cargo: CargoMetada
 	if (readFileSync(join(root, "LICENSE"), "utf8") !== readFileSync(join(root, "LICENSE-APACHE"), "utf8")) {
 		errors.push("LICENSE must match LICENSE-APACHE byte-for-byte");
 	}
+	for (const path of inventory_.tracked.filter((file) => ["BUCK", "BUCK.v2"].includes(basename(file)))) {
+		errors.push(`${path}: rename legacy build manifest to BUILD.bsmr`);
+	}
 	for (const path of inventory_.tracked.filter((file) => basename(file) === "package.json")) {
 		if (isExact(inventory_.changes.get(path))) continue;
 		const manifest = JSON.parse(readFileSync(join(root, path), "utf8")) as { license?: string };

@@ -1,3 +1,9 @@
+# ===----------------------------------------------------------------------===
+# Upstream-Source: facebook/buck2@1560aca2002865cd73d7cafb22c705cfb640b2bc
+# Modifications Copyright (c) 2026 Dedalus Labs, Inc. and its contributors
+# SPDX-License-Identifier: Apache-2.0
+# ===----------------------------------------------------------------------===
+
 # Copyright (c) Meta Platforms, Inc. and affiliates.
 #
 # This source code is licensed under both the MIT license found in the
@@ -7,7 +13,7 @@
 
 def rust_library_from_crates(name):
     # @lint-ignore BUCKLINT: avoid "Direct usage of native rules is not allowed."
-    native.export_file(name = name, src = "BUCK", visibility = ["PUBLIC"])
+    native.export_file(name = name, src = "BUILD.bsmr", visibility = ["PUBLIC"])
 
 def rust_binary_from_crates(name):
     # @lint-ignore BUCKLINT: avoid "Direct usage of native rules is not allowed."

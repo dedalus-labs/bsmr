@@ -409,7 +409,7 @@ pub struct CommonStarlarkOptions {
     #[clap(long = "stack")]
     pub target_call_stacks: bool,
 
-    /// If there are targets with duplicate names in `BUCK` file,
+    /// If there are targets with duplicate names in `BUILD.bsmr` file,
     /// skip all the duplicates but the first one.
     /// This is a hack for TD. Do not use this option.
     #[clap(long, hide = true)]

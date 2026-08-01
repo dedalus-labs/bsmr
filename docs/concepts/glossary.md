@@ -18,7 +18,7 @@ customizations. See [.bsmrconfig](bsmrconfig.md) for more info.
 ## Action
 
 An individual, cacheable, ideally hermetic command that's run during the
-[build](#buck-file). It takes [artifacts](#artifact) as inputs and produces
+[build](#build-manifest). It takes [artifacts](#artifact) as inputs and produces
 other artifacts as outputs. An example command could be `gcc -o main main.c`,
 which takes the artifact `main.c` (a source file) and produces the artifact
 called `main` (the compiled binary).
@@ -49,15 +49,15 @@ copts, which declare a target's source files, dependencies, and custom compiler
 options, respectively. The available attributes for a target depend on its rule
 type.
 
-## BUCK file
+## Build manifest
 
-A `BUCK` file (the name is configurable, some projects use `TARGETS`) is the
+A `BUILD.bsmr` file (the name is configurable, some projects use `TARGETS`) is the
 main configuration file that tells Bessemer what to build, what their dependencies
-are, and how to build them. Bessemer takes a `BUCK` file as input and evaluates the
+are, and how to build them. Bessemer takes a `BUILD.bsmr` file as input and evaluates the
 file to declare [targets](#target), which are then used to create a graph of
 dependencies and to derive the [actions](#action) that must be completed to
-build intermediate and final software outputs. A `BUCK` file marks a directory
-and any sub-directories not containing a `BUCK` file as a [package](#package).
+build intermediate and final software outputs. A `BUILD.bsmr` file marks a directory
+and any sub-directories not containing a `BUILD.bsmr` file as a [package](#package).
 
 ## BXL
 
@@ -160,15 +160,15 @@ unified way to specify build settings on a [project](#project),
 
 ## Package
 
-A directory that contains a Bessemer [BUCK file](#buck-file) and all source files
-belonging to the same directory as the BUCK file, or any of its subdirectories
-that do not contain a BUCK file themselves.
+A directory that contains a Bessemer [build manifest](#build-manifest) and all source files
+belonging to the same directory as the BUILD.bsmr file, or any of its subdirectories
+that do not contain a BUILD.bsmr file themselves.
 
 ## Prelude
 
 The prelude is a unique `.bzl` file located at `prelude//prelude.bzl`. Bessemer
 implicitly loads all the symbols defined in the prelude whenever it loads a
-[`BUCK`](#buck-file) file. Symbols defined outside the prelude can be imported
+[`BUILD.bsmr`](#build-manifest) file. Symbols defined outside the prelude can be imported
 via a `load()` statement.
 
 When you create a Bessemer project using `bsmr init --git`, it will contain the
@@ -213,7 +213,7 @@ declare new [actions](#action) and [artifacts](#artifact) and must return
 [providers](#provider) that can be used to pass data to its dependents or to
 Bessemer itself.
 
-Rules are instantiated in [BUCK files](#buck-file) to declare targets and set
+Rules are instantiated in [BUILD.bsmr files](#build-manifest) to declare targets and set
 their attributes. The rule implementation is called when Bessemer needs its
 providers, which can happen when the target is built, or when one of its
 dependents is.
@@ -226,7 +226,7 @@ As an example, the `cxx_binary` rule could be used to create a C++ binary, but
 Starlark is a dialect of Python originally developed by Google for the
 [Bazel build tool](https://bazel.build/rules/language). It is the configuration
 language of the Bessemer build system and the language you use in `.bzl` and
-[`BUCK` files](#buck-file) to define and instantiate [rules](#rule).
+[`BUILD.bsmr` files](#build-manifest) to define and instantiate [rules](#rule).
 
 There are many reasons why Meta has chosen Starlark, as detailed in
 [The Rust Starlark library](https://developers.facebook.com/blog/post/2021/04/08/rust-starlark-library/)
@@ -243,7 +243,7 @@ chaining them, e.g.: `bsmr build cell//foo:bar[baz][qux]`.
 
 ## Target
 
-An object that is defined in a [BUCK file](#buck-file). Targets represent the
+An object that is defined in a [BUILD.bsmr file](#build-manifest). Targets represent the
 buildable units of a build from the perspective of the end user. Declared by
 instantiating a [rule](#rule) with attributes. A target has
 [dependencies](#dependency), which are references to other targets.
@@ -254,7 +254,7 @@ The identifier for a [target](#target). Structured as
 `cell_alias//path/to/package:target`, where `cell_alias//` maps to a
 [cell root](#cell) path (as defined in the [./bsmrconfig](#bsmrconfig) of the
 cell this target belongs to), `path/to/package` is the [package](#package)
-directory that contains the [BUCK file](#buck-file) declaring the target
+directory that contains the [BUILD.bsmr file](#build-manifest) declaring the target
 (relative to the mapped cell alias), and `:target` is the target's name.
 
 ## Target pattern
