@@ -1,11 +1,10 @@
 Bessemer
-Copyright 2026 Dedalus Labs, Inc.
+Copyright (c) 2026 Dedalus Labs, Inc. and its contributors
 
 Bessemer is derived from Buck2, copyright Meta Platforms, Inc. and affiliates.
-Buck2-derived files retain their original copyright and license notices. Meta
-makes those files available under MIT OR Apache-2.0; LICENSE-MIT is retained
-for those upstream files. Bessemer's collective work and Dedalus-authored
-contributions are licensed under Apache-2.0 in LICENSE-APACHE.
+Except where an inherited notice states otherwise, Bessemer is licensed under
+Apache-2.0. Buck2-derived and third-party files retain their original
+copyright, license, and attribution notices.
 
 The code in `app/bsmr_error_derive` is adapted from thiserror (https://github.com/dtolnay/thiserror).
 
