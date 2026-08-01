@@ -1,3 +1,9 @@
+<!-- ===----------------------------------------------------------------------=== -->
+<!-- Upstream-Source: facebook/buck2@1560aca2002865cd73d7cafb22c705cfb640b2bc -->
+<!-- Modifications Copyright (c) 2026 Dedalus Labs, Inc. and its contributors -->
+<!-- SPDX-License-Identifier: Apache-2.0 -->
+<!-- ===----------------------------------------------------------------------=== -->
+
 This directory is a place for documentation about how to work on and contribute to bsmr. While it
 is designed for use by humans in addition to LLMs, everything is optimized assuming at least LLM
 assistance. In particular, background information that will be well known to LLMs is left out.

@@ -1,3 +1,9 @@
+# ===----------------------------------------------------------------------===
+# Upstream-Source: facebook/buck2@1560aca2002865cd73d7cafb22c705cfb640b2bc
+# Modifications Copyright (c) 2026 Dedalus Labs, Inc. and its contributors
+# SPDX-License-Identifier: Apache-2.0
+# ===----------------------------------------------------------------------===
+
 # @generated
 def maven_dependencies(callback):
     callback({"artifact": "antlr:antlr:2.7.6", "lang": "java", "sha1": "cf4f67dae5df4f9932ae7810f4548ef3e14dd35e", "repository": "https://repo.maven.apache.org/maven2/", "name": "antlr_antlr", "actual": "@antlr_antlr//jar", "bind": "jar/antlr/antlr"})

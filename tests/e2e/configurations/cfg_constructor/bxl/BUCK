@@ -1,3 +1,9 @@
+# ===----------------------------------------------------------------------===
+# Upstream-Source: facebook/buck2@1560aca2002865cd73d7cafb22c705cfb640b2bc
+# Modifications Copyright (c) 2026 Dedalus Labs, Inc. and its contributors
+# SPDX-License-Identifier: Apache-2.0
+# ===----------------------------------------------------------------------===
+
 load("@root//tests:bxl_test.bzl", "bxl_test")
 load("@prelude//cfg/modifier:bsmrconfig_backed_modifiers.bzl", "BsmrconfigBackedModifier", "bsmrconfig_backed_modifiers")
 load(":test_platform_rule.bzl", "test_platform")

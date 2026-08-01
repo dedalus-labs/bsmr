@@ -1,4 +1,15 @@
+//===----------------------------------------------------------------------===//
+// Copyright (c) 2026 Dedalus Labs, Inc. and its contributors
+// SPDX-License-Identifier: Apache-2.0
+//===----------------------------------------------------------------------===//
+
+// Bundles Bessemer's local GitHub Actions.
+
 import { defineConfig } from "rolldown";
+
+import { renderPreamble } from "./ci/license-preamble.ts";
+
+const actionPath = ".github/actions/ci/rust-affected/dist/index.js";
 
 export default defineConfig({
 	input: "./.github/actions/ci/rust-affected/src/index.ts",
@@ -9,8 +20,9 @@ export default defineConfig({
 		target: "node24",
 	},
 	output: {
-		file: ".github/actions/ci/rust-affected/dist/index.js",
+		file: actionPath,
 		format: "esm",
 		minify: true,
+		postBanner: renderPreamble(actionPath, "dedalus").trimEnd(),
 	},
 });

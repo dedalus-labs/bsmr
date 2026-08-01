@@ -2,6 +2,13 @@
 id: what_is_bsmr
 title: What is Bessemer?
 ---
+<!-- ===----------------------------------------------------------------------=== -->
+<!-- Copyright (c) 2026 Dedalus Labs, Inc. and its contributors -->
+<!-- SPDX-License-Identifier: Apache-2.0 -->
+<!-- ===----------------------------------------------------------------------=== -->
+
+<!-- Introduces Bessemer and its core capabilities. -->
+
 
 Bessemer (`bsmr`) is a build system for repositories that contain many
 languages and many dependent targets.

@@ -1,3 +1,10 @@
+<!-- ===----------------------------------------------------------------------=== -->
+<!-- Copyright (c) 2026 Dedalus Labs, Inc. and its contributors -->
+<!-- SPDX-License-Identifier: Apache-2.0 -->
+<!-- ===----------------------------------------------------------------------=== -->
+
+<!-- Defines the contributor license agreement. -->
+
 # Individual Contributor License Agreement ("Agreement") v1.0
 
 Thank you for your interest in this project (the "Project"), owned and

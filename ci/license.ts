@@ -68,11 +68,20 @@ export async function runLicensePolicy(mode: "apply" | "check", root: string, ex
 	if (errors.length !== 0) throw new Error(`source license policy failed (${errors.length}):\n${errors.join("\n")}`);
 }
 
+/** Add the canonical preamble to Hollywood's generated TypeScript entrypoint. */
+function licenseGeneratedEntrypoint(root: string): void {
+	const path = ".github/actions/ci/rust-affected/src/index.ts";
+	const text = readFileSync(join(root, path), "utf8");
+	writeFileSync(join(root, path), insertPreamble({ path, provenance: "dedalus", text }));
+}
+
 /** Execute the requested license-policy mode. */
 async function main(arguments_: readonly string[] = process.argv): Promise<number> {
 	const mode = arguments_[2];
-	if (mode !== "apply" && mode !== "check") throw new Error("usage: node ci/license.ts <apply|check>");
-	await runLicensePolicy(mode, resolve(dirname(fileURLToPath(import.meta.url)), ".."), nodeExec);
+	if (mode !== "apply" && mode !== "check" && mode !== "generated") throw new Error("usage: node ci/license.ts <apply|check|generated>");
+	const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
+	if (mode === "generated") licenseGeneratedEntrypoint(root);
+	else await runLicensePolicy(mode, root, nodeExec);
 	return 0;
 }
 

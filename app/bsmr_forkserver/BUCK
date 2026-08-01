@@ -1,3 +1,10 @@
+# ===----------------------------------------------------------------------===
+# Copyright (c) 2026 Dedalus Labs, Inc. and its contributors
+# SPDX-License-Identifier: Apache-2.0
+# ===----------------------------------------------------------------------===
+
+# Defines build targets for app/bsmr_forkserver.
+
 load("@bsmr_build//rules:rust.bzl", "rust_library")
 load("@bsmr_build//rules:rust_linkable_symbol.bzl", "rust_linkable_symbol")
 
