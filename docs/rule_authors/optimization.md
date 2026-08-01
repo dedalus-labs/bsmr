@@ -18,7 +18,7 @@ likely to be relevant to end users.
 
 ## Starlark profiling
 
-`bsmr` supports profiling of the evaluation of specific `BUCK` files and
+`bsmr` supports profiling of the evaluation of specific `BUILD.bsmr` files and
 profiling of the analysis of specific targets.
 
 There are three `bsmr` profiling commands:
@@ -62,7 +62,7 @@ Possible values for profiling modes are as follows:
 The first profiling mode (`heap-summary-allocated`) provides the time spent
 within a function and the allocations that are performed.
 
-As an example, running over a folly BUCK file, produces a CSV file whose
+As an example, running over a folly BUILD.bsmr file, produces a CSV file whose
 top-left corner is:
 
 ```text
@@ -97,7 +97,7 @@ mode may consume significantly more memory.
 ### Statement profiling
 
 The second profiling mode tells us which statements spent most time executing.
-Running it over a structured-logger `BUCK` file gives us a CSV file starting
+Running it over a structured-logger `BUILD.bsmr` file gives us a CSV file starting
 with:
 
 ```text

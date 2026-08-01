@@ -1,3 +1,9 @@
+//===----------------------------------------------------------------------===//
+// Upstream-Source: facebook/buck2@1560aca2002865cd73d7cafb22c705cfb640b2bc
+// Modifications Copyright (c) 2026 Dedalus Labs, Inc. and its contributors
+// SPDX-License-Identifier: Apache-2.0
+//===----------------------------------------------------------------------===//
+
 /*
  * Copyright (c) Meta Platforms, Inc. and affiliates.
  *
@@ -26,7 +32,7 @@ public class CopyResourcesStepTest {
   @Test
   public void testAddResourceCommandsWithBuildFileParentOfSrcDirectory() {
     // Files:
-    // android/java/BUCK
+    // android/java/BUILD.bsmr
     // android/java/src/com/facebook/base/data.json
     // android/java/src/com/facebook/common/util/data.json
 
@@ -60,7 +66,7 @@ public class CopyResourcesStepTest {
   @Test
   public void testAddResourceCommandsWithBuildFileParentOfJavaPackage() {
     // Files:
-    // android/java/src/BUCK
+    // android/java/src/BUILD.bsmr
     // android/java/src/com/facebook/base/data.json
     // android/java/src/com/facebook/common/util/data.json
 
@@ -94,7 +100,7 @@ public class CopyResourcesStepTest {
   @Test
   public void testAddResourceCommandsWithBuildFileInJavaPackage() {
     // Files:
-    // android/java/src/com/facebook/BUCK
+    // android/java/src/com/facebook/BUILD.bsmr
     // android/java/src/com/facebook/base/data.json
     // android/java/src/com/facebook/common/util/data.json
 

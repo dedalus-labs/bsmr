@@ -24,7 +24,7 @@ When specifying a subtarget and modifier with `?`, subtarget should go before th
 
 It is prohibited to specify both `--modifier` flag and `?` on CLI. This restriction may be removed in the future after implementation of this RFC provided we see good motivation for it.
 
-`?modifier` syntax is only allowed on CLI and certain parts of BXL that are CLI-like. It is only meant to express convenient configurations on CLI. It will be strictly prohibited on any non-CLI surfaces like BUCK files.
+`?modifier` syntax is only allowed on CLI and certain parts of BXL that are CLI-like. It is only meant to express convenient configurations on CLI. It will be strictly prohibited on any non-CLI surfaces like BUILD.bsmr files.
 
 ## `--show-output`
 

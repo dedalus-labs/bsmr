@@ -1,3 +1,9 @@
+//===----------------------------------------------------------------------===//
+// Upstream-Source: facebook/buck2@1560aca2002865cd73d7cafb22c705cfb640b2bc
+// Modifications Copyright (c) 2026 Dedalus Labs, Inc. and its contributors
+// SPDX-License-Identifier: Apache-2.0
+//===----------------------------------------------------------------------===//
+
 /*
  * Copyright (c) Meta Platforms, Inc. and affiliates.
  *
@@ -46,9 +52,9 @@ func main() {
 		os.Exit(1)
 	}
 
-	slog.Info("Rendering BUCK files")
+	slog.Info("Rendering BUILD.bsmr files")
 	if err := lib.RenderBuckFiles(cfg, thirdPartyDir, result.BuckTargets); err != nil {
-		slog.Error("Error rendering BUCK files", "err", err)
+		slog.Error("Error rendering BUILD.bsmr files", "err", err)
 		os.Exit(1)
 	}
 }

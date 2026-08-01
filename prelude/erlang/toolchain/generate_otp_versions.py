@@ -30,7 +30,7 @@ Example:
     OTP release: 27
     Applications: 34
 
-Then in your BUCK file:
+Then in your BUILD.bsmr file:
     load(":my_otp_versions.bzl", "get_otp_applications", "get_erts_version")
 
     erlang_toolchain(

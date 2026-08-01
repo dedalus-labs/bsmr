@@ -32,7 +32,7 @@ function commentStyle(path: string): CommentStyle {
 
 /** Describe source that lacked a first-party responsibility comment. */
 function brief(path: string): string {
-	if (basename(path) === "BUCK") return `Defines build targets for ${dirname(path) === "." ? "the root" : dirname(path)}.`;
+	if (basename(path) === "BUILD.bsmr") return `Defines build targets for ${dirname(path) === "." ? "the root" : dirname(path)}.`;
 	const known = new Map([
 		[".bsmrconfig", "Configures the root Bessemer cell."],
 		[".bsmrconfig.d/common.bsmrconfig", "Defines configuration shared by Bessemer cells."],

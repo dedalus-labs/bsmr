@@ -1,3 +1,9 @@
+//===----------------------------------------------------------------------===//
+// Upstream-Source: facebook/buck2@1560aca2002865cd73d7cafb22c705cfb640b2bc
+// Modifications Copyright (c) 2026 Dedalus Labs, Inc. and its contributors
+// SPDX-License-Identifier: Apache-2.0
+//===----------------------------------------------------------------------===//
+
 /*
  * Copyright (c) Meta Platforms, Inc. and affiliates.
  *
@@ -370,7 +376,7 @@ class ClassVisitorDriverFromElement {
           String.format(
               "Could not find the annotation %1$s.\n"
                   + "This can happen for one of two reasons:\n"
-                  + "1. A dependency is missing in the BUCK file for the current target. "
+                  + "1. A dependency is missing in the BUILD.bsmr file for the current target. "
                   + "Try building the current rule without the #source-only-abi flavor, "
                   + "fix any errors that are reported, and then build this flavor again.\n"
                   + "2. The rule that owns %1$s is not marked with "

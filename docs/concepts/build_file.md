@@ -11,8 +11,8 @@ title: Build File
 
 # Build File
 
-A _build file_ is a file, typically named `BUCK`, that defines one or more
-[build rule](build_rule.md)s. Bessemer takes a `BUCK` file as input and evaluates
+A _build file_ is a file, typically named `BUILD.bsmr`, that defines one or more
+[build rule](build_rule.md)s. Bessemer takes a `BUILD.bsmr` file as input and evaluates
 the file to declare [target](build_target.md)s, which are then used to create a
 graph of dependencies and to derive the actions that must be completed to build
 intermediate and final software outputs.
@@ -44,7 +44,7 @@ the following restrictions:
 - Custom functions must be defined in `.bzl` files and loaded explicitly at the
   top of the build file.
 
-### Mini BUCK example
+### Mini BUILD.bsmr example
 
 Here is a mini example of a build file containing two targets, one refers to a
 file `main.c` as its inputs and the other two files `greeting.c` and
@@ -111,21 +111,21 @@ build file, where:
 - If a source file has a build file as a sibling, then that is its nearest
   ancestor.
 
-For example, if your project had the following `BUCK` files:
+For example, if your project had the following `BUILD.bsmr` files:
 
 ```
-java/com/facebook/base/BUCK
-java/com/facebook/common/BUCK
-java/com/facebook/common/collect/BUCK
+java/com/facebook/base/BUILD.bsmr
+java/com/facebook/common/BUILD.bsmr
+java/com/facebook/common/collect/BUILD.bsmr
 ```
 
 Then your build rules would have the following constraints:
 
-- Rules in `java/com/facebook/base/BUCK` can reference any file under
+- Rules in `java/com/facebook/base/BUILD.bsmr` can reference any file under
   `java/com/facebook/base/`.
-- Rules in `java/com/facebook/common/BUCK` can reference any files under that
+- Rules in `java/com/facebook/common/BUILD.bsmr` can reference any files under that
   directory, except for those under `java/com/facebook/common/collect/`, as
-  those "belong" to the `BUCK` file in the `collect` directory.
+  those "belong" to the `BUILD.bsmr` file in the `collect` directory.
 
 ### Packages dependencies
 
@@ -139,7 +139,7 @@ Going back to the previous example, suppose code in
 `java/com/facebook/common/concurrent/` wants to depend on code in
 `java/com/facebook/common/collect/`.
 
-First, the `java/com/facebook/common/collect/BUCK` file would have a build rule
+First, the `java/com/facebook/common/collect/BUILD.bsmr` file would have a build rule
 like:
 
 ```python
@@ -150,7 +150,7 @@ java_library(
 )
 ```
 
-Then `java/com/facebook/common/BUCK` could have a rule like:
+Then `java/com/facebook/common/BUILD.bsmr` could have a rule like:
 
 ```python
 java_library(

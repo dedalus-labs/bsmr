@@ -45,7 +45,7 @@ def create_compilation_database_entry(directory, buildfile_folder, argsfiles, ac
     identifier = paths.basename(argsfile.replace("\\", "/"))
 
     # Get the path of the source file relative to the project root by appending the identifier
-    # to the directory of the BUCK file.
+    # to the directory of the BUILD.bsmr file.
     project_rel_path = paths.join(buildfile_folder, action.attrs.identifier.value())
 
     # Using the previously computed list of argfiles referenced by this target, find the one
@@ -73,8 +73,8 @@ def gen_compilation_database_impl(ctx):
         target_actions = list(aquery.all_actions(target.label))
 
         # The individual compilation actions only identify the source files relative to where
-        # the BUCK file is.  So to build a path relative to the root of the project, we need
-        # to get the BUCK file path and append the source file path to it.
+        # the BUILD.bsmr file is.  So to build a path relative to the root of the project, we need
+        # to get the BUILD.bsmr file path and append the source file path to it.
         buildfile_path = ctx.fs.project_rel_path(target.buildfile_path)
         buildfile_folder = paths.dirname(buildfile_path)
 

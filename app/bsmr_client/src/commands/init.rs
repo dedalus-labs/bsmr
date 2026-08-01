@@ -179,9 +179,10 @@ fn initialize_bsmrconfig(repo_root: &AbsPath, prelude: bool, git: bool) -> bsmr_
     Ok(())
 }
 
-fn initialize_toolchains_buck(repo_root: &AbsPath) -> bsmr_error::Result<()> {
+/// Write the demo toolchain manifest for a new project.
+fn initialize_toolchains_manifest(repo_root: &AbsPath) -> bsmr_error::Result<()> {
     std::fs::write(
-        repo_root.join("BUCK"),
+        repo_root.join("BUILD.bsmr"),
         r#"
 load("@prelude//toolchains:demo.bzl", "system_demo_toolchains")
 
@@ -194,20 +195,21 @@ system_demo_toolchains()
     Ok(())
 }
 
-fn initialize_root_buck(repo_root: &AbsPath, prelude: bool) -> bsmr_error::Result<()> {
-    let mut buck = std::fs::File::create(repo_root.join("BUCK"))?;
+/// Write the root package manifest for a new project.
+fn initialize_root_manifest(repo_root: &AbsPath, prelude: bool) -> bsmr_error::Result<()> {
+    let mut manifest = std::fs::File::create(repo_root.join("BUILD.bsmr"))?;
 
     if prelude {
         writeln!(
-            buck,
+            manifest,
             "# A list of available rules and their signatures can be found here: https://buck2.build/docs/prelude/globals/"
         )?;
-        writeln!(buck)?;
-        writeln!(buck, "genrule(")?;
-        writeln!(buck, "    name = \"hello_world\",")?;
-        writeln!(buck, "    out = \"out.txt\",")?;
-        writeln!(buck, "    cmd = \"echo BUILT BY BSMR> $OUT\",")?;
-        writeln!(buck, ")")?;
+        writeln!(manifest)?;
+        writeln!(manifest, "genrule(")?;
+        writeln!(manifest, "    name = \"hello_world\",")?;
+        writeln!(manifest, "    out = \"out.txt\",")?;
+        writeln!(manifest, "    cmd = \"echo BUILT BY BSMR> $OUT\",")?;
+        writeln!(manifest, ")")?;
     }
     // TODO: Add a doc pointers for rules
     Ok(())
@@ -258,11 +260,11 @@ fn set_up_project(repo_root: &AbsPath, git: bool, prelude: bool) -> bsmr_error::
         let toolchains = repo_root.join("toolchains");
         if !toolchains.exists() {
             fs_util::create_dir(&toolchains).categorize_internal()?;
-            initialize_toolchains_buck(&toolchains)?;
+            initialize_toolchains_manifest(&toolchains)?;
         }
     }
-    if !repo_root.join("BUCK").exists() {
-        initialize_root_buck(repo_root, prelude)?;
+    if !repo_root.join("BUILD.bsmr").exists() {
+        initialize_root_manifest(repo_root, prelude)?;
     }
     Ok(())
 }
@@ -273,7 +275,7 @@ mod tests {
     use bsmr_fs::paths::abs_path::AbsPath;
 
     use crate::commands::init::initialize_bsmrconfig;
-    use crate::commands::init::initialize_root_buck;
+    use crate::commands::init::initialize_root_manifest;
     use crate::commands::init::set_up_gitignore;
     use crate::commands::init::set_up_project;
 
@@ -288,8 +290,8 @@ mod tests {
         set_up_project(tempdir_path, false, true)?;
         assert!(tempdir_path.join(".bsmrconfig").exists());
         assert!(tempdir_path.join("toolchains").exists());
-        assert!(tempdir_path.join("toolchains/BUCK").exists());
-        assert!(tempdir_path.join("BUCK").exists());
+        assert!(tempdir_path.join("toolchains/BUILD.bsmr").exists());
+        assert!(tempdir_path.join("BUILD.bsmr").exists());
         Ok(())
     }
 
@@ -386,16 +388,16 @@ mod tests {
     }
 
     #[test]
-    fn test_buckfile_generation_with_prelude() -> bsmr_error::Result<()> {
+    fn test_manifest_generation_with_prelude() -> bsmr_error::Result<()> {
         let tempdir = tempfile::tempdir()?;
         let tempdir_path = tempdir.path();
         let tempdir_path = AbsPath::new(tempdir_path)?;
         fs_util::create_dir_all(tempdir_path)?;
 
-        let buck_path = tempdir_path.join("BUCK");
-        initialize_root_buck(tempdir_path, true)?;
-        let actual_buck = fs_util::read_to_string(buck_path)?;
-        let expected_buck = "# A list of available rules and their signatures can be found here: https://buck2.build/docs/prelude/globals/
+        let manifest_path = tempdir_path.join("BUILD.bsmr");
+        initialize_root_manifest(tempdir_path, true)?;
+        let actual_manifest = fs_util::read_to_string(manifest_path)?;
+        let expected_manifest = "# A list of available rules and their signatures can be found here: https://buck2.build/docs/prelude/globals/
 
 genrule(
     name = \"hello_world\",
@@ -403,7 +405,7 @@ genrule(
     cmd = \"echo BUILT BY BSMR> $OUT\",
 )
 ";
-        assert_eq!(actual_buck, expected_buck);
+        assert_eq!(actual_manifest, expected_manifest);
         Ok(())
     }
 }

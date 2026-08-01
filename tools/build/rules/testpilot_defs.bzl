@@ -14,13 +14,13 @@
 
 # Stub `testpilot_defs.bzl` for the OSS bsmr build.
 #
-# `prelude/toolchains/android/test/com/facebook/buck/testrunner/BUCK`
+# `prelude/toolchains/android/test/com/facebook/buck/testrunner/BUILD.bsmr`
 # loads this file from `@bsmr_build//rules:testpilot_defs.bzl` to
 # get a `tpx_labels` struct (used as `labels = [tpx_labels.long_running]`).
 # `fbsource` resolves to the build-support cell, so the load
 # resolves here. The fbcode-internal version provides Test Pilot label
 # constants; in OSS we don't run via Test Pilot, so just expose the
-# string literals the prelude references so that BUCK file parses.
+# string literals the prelude references so that BUILD.bsmr file parses.
 
 tpx_labels = struct(
     long_running = "long_running",

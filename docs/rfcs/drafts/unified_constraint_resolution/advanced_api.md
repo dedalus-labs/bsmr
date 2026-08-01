@@ -26,7 +26,7 @@ One UX problem with `resolution` is that it requires all resolution logic to liv
 To avoid hard-to-read selects, we'll introduce a `constraint_resolution` rule. It lets you factor a chunk of resolution logic into its own target and reference it from `resolution`. For example, cpp optimization level could look like:
 
 ```python
-# cfg//cpp/BUCK
+# cfg//cpp/BUILD.bsmr
 
 constraint(
   name = "opt_level",
@@ -42,7 +42,7 @@ constraint(
   }),
 )
 
-# root//project_foo/cfg/BUCK
+# root//project_foo/cfg/BUILD.bsmr
 
 constraint_resolution(
   name = "opt_level",
@@ -71,7 +71,7 @@ Additionally, we'll make a configuration with the default value set equivalent t
 There are also use cases where you want more inputs than return values. For example, in the NCCL example, certain projects may not want to bump their NCCL version when sanitizer is enabled. This can be supported by adding pin values that hold the NCCL version regardless of sanitizer state.
 
 ```python
-# cfg//nccl/BUCK file
+# cfg//nccl/BUILD.bsmr file
 
 constraint(
   name = "version",
@@ -102,7 +102,7 @@ constraint(
 NCCL only works on linux. The cleanest way to encode that in `resolution` is to fail when the OS isn't linux, using `select_fail` or `select_incompatible` (both supported in `resolution`).
 
 ```python
-# cfg//nccl/BUCK file
+# cfg//nccl/BUILD.bsmr file
 
 constraint(
   name = "version",
@@ -125,7 +125,7 @@ This lets users concentrate incompatibilities between constraints at a single lo
 Suppose we want to record the version of NCCL used to build a binary directly into the binary for auditing purposes (internally known as "build info"). With `select_fail` or `select_incompatible`, reading NCCL version on a non-linux build would fail outright, but for build info, we'd rather not fail on non-relevant configurations. We can add a `not_applicable` return value instead:
 
 ```python
-# cfg//nccl/BUCK file
+# cfg//nccl/BUILD.bsmr file
 
 constraint(
   name = "version",
@@ -156,7 +156,7 @@ There are tradeoffs between the `select_fail`/`select_incompatible` approach and
 Internally, we like to enable ASAN on linux dev mode by default to catch bugs. However, many projects are incompatible with ASAN, so users are welcome to override that behavior for their projects to build with no sanitizer. Encoding this in the sanitizer constraint requires a dedicated input value for the default behavior.
 
 ```python
-# cfg//BUCK
+# cfg//BUILD.bsmr
 
 constraint(
   name = "sanitizer",
@@ -195,7 +195,7 @@ Sub-constraints will be implemented in the unified `constraint()` rule as separa
 Here's how the earlier [conditional sanitizer default](#conditional-defaults) could expose an opt-out toggle via a sub-constraint:
 
 ```python
-# cfg//BUCK
+# cfg//BUILD.bsmr
 
 constraint(
   name = "sanitizer",
@@ -244,7 +244,7 @@ apple_bundle(
 `target_sdk_version_transition` (in `prelude/apple/user/target_sdk_version_transition.bzl`) reads `attrs.minimum_os_version` and writes the `target-sdk-version` constraint. The per-OS branching can move into the constraint via a sub-constraint per OS:
 
 ```python
-# cfg//apple/BUCK
+# cfg//apple/BUILD.bsmr
 
 constraint(
   name = "version",
@@ -282,7 +282,7 @@ A common conditional-modifier workflow is gating a new behavior behind a constra
 For example, gating the [NCCL latest-when-sanitized resolution](main.md#resolution-api) behind a rollout sub-constraint:
 
 ```python
-# cfg//nccl/BUCK file
+# cfg//nccl/BUILD.bsmr file
 
 constraint(
   name = "version",
@@ -327,7 +327,7 @@ The unified `constraint()` rule packs two concerns into one target: input values
 Keep the existing `constraint()` rule. The author writes two targets, one for the input value and one for the resolved return value. Because they are independent constraints, the return target's `resolution` selects on the input target directly.
 
 ```python
-# cfg//nccl/BUCK
+# cfg//nccl/BUILD.bsmr
 
 constraint(
   name = "version_modifier",
@@ -388,7 +388,7 @@ Variants A and B share additional pros and cons listed at the end of this sectio
 Introduce a dedicated pair of rules. `input_constraint()` owns `values` and `default`; `resolved_constraint()` owns `resolution` and its own `return_values`.
 
 ```python
-# cfg//nccl/BUCK
+# cfg//nccl/BUILD.bsmr
 
 input_constraint(
   name = "version_modifiers",
@@ -432,7 +432,7 @@ The tradeoff is that this API requires splitting every existing constraint targe
 This is essentially the RFC I'm suggesting, except `constraint()` only has `values` (shared between inputs and returns), not separate `input_values` and `return_values`. Use cases that need different input and return values fall back to either separate constraints or extending values directly.
 
 ```python
-# cfg//nccl/BUCK
+# cfg//nccl/BUILD.bsmr
 
 constraint(
   name = "version",
@@ -452,7 +452,7 @@ The pro is that this is simpler than the RFC as presented. There are no separate
 The con shows up when input and return value sets need to diverge. Take the [conditional sanitizer default](#conditional-defaults) from earlier, rewritten in this variant:
 
 ```python
-# cfg//BUCK
+# cfg//BUILD.bsmr
 
 constraint(
   name = "sanitizer",

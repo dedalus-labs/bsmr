@@ -15,7 +15,7 @@
 A configuration is a collection of constraints. There are two components of a constraint, constraint setting (the key) and constraint value (value for a key). Below is an example of an OS constraint with linux, macos, and windows as values.
 
 ```python
-# cfg//BUCK
+# cfg//BUILD.bsmr
 
 constraint_setting(name = "os")  # this is constraint key
 
@@ -39,14 +39,14 @@ constraint_value(
 There are two ergonomic problems with the way that constraint values are currently defined.
 
 1. As shown in the previous example, defining a single constraint is rather verbose.
-2. It's not possible for a user to see all the possible values of a constraint setting. For example, it’s possible to define an OS constraint value in a different BUCK file from the OS constraint setting.
+2. It's not possible for a user to see all the possible values of a constraint setting. For example, it’s possible to define an OS constraint value in a different BUILD.bsmr file from the OS constraint setting.
 
 ### Proposal
 
 Instead, consider the following syntax for OS.
 
 ```python
-# cfg//BUCK
+# cfg//BUILD.bsmr
 
 constraint(
   name = "os",
@@ -84,7 +84,7 @@ set_cfg_modifiers(cfg_modifiers = [
   "cfg//:os[linux]",
 ])
 
-# BUCK file
+# BUILD.bsmr file
 platform(
   name = "linux",
   constraint_values = [
@@ -110,7 +110,7 @@ configuration_alias(
   actual = ":os[linux]",
 )
 
-# In some other BUCK file
+# In some other BUILD.bsmr file
 deps = select({
   "DEFAULT": [],
   "cfg//:linux": [":linux-only-dep"],

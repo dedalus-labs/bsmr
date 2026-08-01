@@ -98,7 +98,7 @@ conan_update(
     conan_generate = ":conan-generate",
     conanfile = "conanfile.txt",
     lockfile_name = "conan.lock",
-    targets_name = "conan/BUCK",
+    targets_name = "conan/BUILD.bsmr",
 )
 ```
 

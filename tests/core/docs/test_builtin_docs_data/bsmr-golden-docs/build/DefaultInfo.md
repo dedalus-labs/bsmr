@@ -2,7 +2,7 @@
 
 # DefaultInfo
 # //foo_binary.bzl
-# //subdir/BUCK
+# //subdir/BUILD.bsmr
 # ":gen_stuff" pulls the default_outputs for //subdir:gen_stuff
 # Builds just 'foo' binary. The strip command is never invoked.
 # builds the 'foo' binary, because it is needed by the 'strip' command. Ensures that

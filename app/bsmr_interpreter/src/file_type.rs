@@ -28,7 +28,7 @@ pub enum StarlarkFileType {
     Toml,
 }
 
-/// What type of file are we parsing - a `.bzl` file, `.bxl` file, or a `BUCK`/`TARGETS` file.
+/// What type of file are we parsing - a `.bzl` file, `.bxl` file, or a `BUILD.bsmr`/`TARGETS` file.
 impl StarlarkFileType {
     pub fn dialect(&self, disable_starlark_types: bool) -> Dialect {
         let enable_f_strings = bsmr_core::is_open_source();

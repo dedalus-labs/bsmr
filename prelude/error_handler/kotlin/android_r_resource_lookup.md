@@ -47,7 +47,7 @@ Returns the correct **package** for imports and **Buck target** for dependencies
    - If multiple packages are returned, try passing the `app` parameter to narrow down (e.g., `app="ig4a"`)
    - If still ambiguous, investigate which package is correct by checking existing code references in your module
 2. **Import**: Use the returned package (e.g., `import com.instagram.icons.R`)
-3. **Run AutodepsTool**: It will automatically add the correct BUCK dependency
+3. **Run AutodepsTool**: It will automatically add the correct BUILD.bsmr dependency
 
 ### Fixing Unresolved R Reference Build Failures
 
@@ -65,29 +65,29 @@ When creating new resources (e.g., adding drawables to XML), `FindResourcePackag
 **To determine the package for new resources:**
 
 1. **Check existing resources in the same target**: Look at how other resources in that `android_res` target are referenced in code
-2. **Check the BUCK file**: Look for `custom_package` attribute in the `android_resource` rule
+2. **Check the BUILD.bsmr file**: Look for `custom_package` attribute in the `android_resource` rule
 3. **Check the package from path**: Often follows the pattern `fbandroid/android_res/com/facebook/feature` → `com.facebook.R`
 
 **Example**: Adding a new drawable to `fbandroid/android_res/com/instagram/icons/`
-- Check BUCK file or existing code references for this target
+- Check BUILD.bsmr file or existing code references for this target
 - This target uses `com.facebook.R` (not `com.instagram.icons.R`)
 - Reference as: `com.facebook.R.drawable.my_new_icon`
 
-### Adding the BUCK dependency for new resources
+### Adding the BUILD.bsmr dependency for new resources
 
-After determining the correct R package, you must manually add the resource target to your module's BUCK file (AutodepsTool won't have new resources in its index):
+After determining the correct R package, you must manually add the resource target to your module's BUILD.bsmr file (AutodepsTool won't have new resources in its index):
 
 1. **Find the resource dependency**:
    - Take the R import package (e.g., `com.facebook.samples.litho` from `import com.facebook.samples.litho.R`)
-   - Search for a BUCK file that defines `fb_android_resource` or `android_resource` with that package value
-   - Example search: `package = "com.facebook.samples.litho"` in BUCK files
-   - Note the target name (e.g., `name = "res"`) and its path (e.g., `sample/BUCK`)
+   - Search for a BUILD.bsmr file that defines `fb_android_resource` or `android_resource` with that package value
+   - Example search: `package = "com.facebook.samples.litho"` in BUILD.bsmr files
+   - Note the target name (e.g., `name = "res"`) and its path (e.g., `sample/BUILD.bsmr`)
    - Check if there's a constant for this target in `.bzl` files (search for the target path)
-2. **Update your module's BUCK file**:
+2. **Update your module's BUILD.bsmr file**:
    - Add the dependency constant to the `load()` statement if using a constant
    - Add the dependency to the `deps` list
 
-**Example BUCK update**:
+**Example BUILD.bsmr update**:
 ```python
 # Using a constant (preferred if available)
 load("//path/to/defs.bzl", "LITHO_SAMPLE_RES")

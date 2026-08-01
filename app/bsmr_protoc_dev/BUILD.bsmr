@@ -13,7 +13,7 @@ rust_library(
     name = "bsmr_protoc_dev",
     srcs = glob(["src/**/*.rs"]),
     # Used only under `#[cfg(not(bsmr_build))]` (i.e. cargo builds) to locate
-    # the protoc binary at runtime. BUCK sets `--cfg=bsmr_build` and gets the
+    # the protoc binary at runtime. BUILD.bsmr sets `--cfg=bsmr_build` and gets the
     # paths via env vars instead, so these aren't real buck deps.
     autocargo = {
         "cargo_toml_config": {

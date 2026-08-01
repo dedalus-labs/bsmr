@@ -80,15 +80,15 @@ use crate::pattern::pattern::Modifiers;
 /// if it is a directory, but does not have a build file).
 ///
 /// A **valid** Bessemer package is defined by:
-/// - A `BUCK` file that designates the root of the package.
-/// - All files in the BUCK file’s directory and its subdirectories,
-///   provided that none of those subdirectories contain their own `BUCK` file.
-///   (If a subdirectory does contain a BUCK file, it forms a new, separate package.)
+/// - A `BUILD.bsmr` file that designates the root of the package.
+/// - All files in the BUILD.bsmr file’s directory and its subdirectories,
+///   provided that none of those subdirectories contain their own `BUILD.bsmr` file.
+///   (If a subdirectory does contain a BUILD.bsmr file, it forms a new, separate package.)
 ///
 /// You can find the example above
 ///
-/// a valid `PackageLabel` is the `CellPath` that points to a folder containing a `BUCK` file.
-/// e.g. `root//path/to/package` is a valid `PackageLabel` if `root//path/to/package/BUCK` exists.
+/// a valid `PackageLabel` is the `CellPath` that points to a folder containing a `BUILD.bsmr` file.
+/// e.g. `root//path/to/package` is a valid `PackageLabel` if `root//path/to/package/BUILD.bsmr` exists.
 #[derive(
     Copy, Clone, Dupe, Debug, Display, Eq, PartialEq, Hash, Ord, PartialOrd, Allocative,
     StrongHash, Pagable

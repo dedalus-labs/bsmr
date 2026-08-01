@@ -202,7 +202,7 @@ mod tests {
         assert!(
             ignores
                 .check(UncheckedCellRelativePath::unchecked_new(
-                    "trailing_slash/BUCK"
+                    "trailing_slash/BUILD.bsmr"
                 ))
                 .is_ignored()
         );

@@ -41,7 +41,7 @@ Get Bessemer installed and ready to use on your development machine.
 ### 3. [Tutorial: Your First Bessemer Application](./tutorial_first_build.md)
 
 Build your first "Hello, World!" Rust application with Bessemer. Learn the basics
-of creating BUCK files, defining targets, and building projects.
+of creating BUILD.bsmr files, defining targets, and building projects.
 
 ### 4. [Tutorial: Adding Dependencies](./tutorial_adding_dependencies.md)
 

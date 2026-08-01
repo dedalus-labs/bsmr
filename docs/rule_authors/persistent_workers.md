@@ -62,7 +62,7 @@ worker = rule(
 - **`concurrency`**: Optional maximum number of concurrent commands the worker
   can handle. When `None`, Bessemer sends one command at a time.
 
-Instantiate this in your `BUCK` file:
+Instantiate this in your `BUILD.bsmr` file:
 
 ```python
 worker(

@@ -14,7 +14,7 @@ built with the former.
 
 1. Build or install `bsmr` with Cargo
 2. This project assumes Rust, Clang, and Python to be present. See
-   `toolchains/BUCK` for how we pull those in from the system.
+   `toolchains/BUILD.bsmr` for how we pull those in from the system.
 3. Run `bsmr init --git`
 4. Run commands: e.g. `bsmr run :hello_world`, `bsmr build //...`
 

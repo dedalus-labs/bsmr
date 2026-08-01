@@ -260,7 +260,7 @@ following query functions:
   separated, so arguments which contain white space must be quoted.
 - **Are nested quotes allowed?** A single level of nested quotes is allowed,
   such as `"My name is 'Buck'."` or `'My name is "Buck".'`. Note that when you
-  use a macro in a BUCK file, you must ensure that quotes are properly escaped,
+  use a macro in a BUILD.bsmr file, you must ensure that quotes are properly escaped,
   so that the shell command that uses the macro forms a proper string.
 
 ## Extended Backus-Naur form

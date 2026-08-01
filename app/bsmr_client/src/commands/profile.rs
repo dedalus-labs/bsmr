@@ -84,7 +84,7 @@ pub struct ProfileBxlCommand {
     profile_common_opts: ProfileCommonOptions,
 }
 
-/// Profile `BUCK` file evaluation.
+/// Profile `BUILD.bsmr` file evaluation.
 #[derive(Debug, clap::Parser)]
 pub struct ProfileLoadingCommand {
     #[clap(flatten)]

@@ -26,5 +26,5 @@ buck_java_library(
     visibility = [
         "PUBLIC",
     ],
-    deps = [],  # This list is to remain empty. See src/com/facebook/buck/testrunner/BUCK.
+    deps = [],  # This list is to remain empty. See src/com/facebook/buck/testrunner/BUILD.bsmr.
 )

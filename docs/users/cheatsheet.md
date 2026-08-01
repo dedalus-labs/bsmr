@@ -144,7 +144,7 @@ bsmr cquery "buildfile(owner('foo/bar/main.cpp'))" --target-universe 'foo:baz'
 ```
 
 These two commands first find the targets that _own_ `foo/bar/main.cpp` and then
-return the build files, such as `foo/bar/BUCK`, that define those targets.
+return the build files, such as `foo/bar/BUILD.bsmr`, that define those targets.
 
 `cquery` requires a `--target-universe` to be passed when the query has no
 target literals. See more in

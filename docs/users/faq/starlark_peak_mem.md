@@ -17,7 +17,7 @@ import { FbInternalOnly, OssOnly } from
 Peak memory is the maximum amount of memory used during evaluation of that
 particular Starlark file. The memory is usually released after we finish the
 evaluation of the file. Because Starlark is only garbage collected in between
-top-level statements in the BUCK file, but not garbage collected inside function
+top-level statements in the BUILD.bsmr file, but not garbage collected inside function
 calls/macros, on large servers with 64 hardware threads (or more), memory usage
 might accumulate, causing slowdowns or OOMs <FbInternalOnly> or even SEVs (e.g.
 S372092). See
@@ -44,7 +44,7 @@ bsmr log show
 Here is an example entry from the event log showing that a target uses 1.5GB:
 
 ```json
-{"Event":{..."data":{"Load":{"module_id":"target:BUCK","cell":"...","error":null,"starlark_peak_allocated_bytes":1610608640}}}}
+{"Event":{..."data":{"Load":{"module_id":"target:BUILD.bsmr","cell":"...","error":null,"starlark_peak_allocated_bytes":1610608640}}}}
 ```
 
 ## Profiler to the rescue!
