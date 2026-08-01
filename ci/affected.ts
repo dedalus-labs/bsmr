@@ -1,3 +1,10 @@
+//===----------------------------------------------------------------------===//
+// Copyright (c) 2026 Dedalus Labs, Inc. and its contributors
+// SPDX-License-Identifier: Apache-2.0
+//===----------------------------------------------------------------------===//
+
+// Determines whether a change requires Rust CI.
+
 import {
 	action, choiceInput, stringInput, stringOutput,
 	type ActionInputValues, type ScriptExec,

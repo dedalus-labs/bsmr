@@ -1,3 +1,9 @@
+# ===----------------------------------------------------------------------===
+# Upstream-Source: facebook/buck2@1560aca2002865cd73d7cafb22c705cfb640b2bc
+# Modifications Copyright (c) 2026 Dedalus Labs, Inc. and its contributors
+# SPDX-License-Identifier: Apache-2.0
+# ===----------------------------------------------------------------------===
+
 # @generated
 load("@io_bazel_rules_go//go/private:go_repository.bzl", "env_execute")
 load("@io_bazel_rules_go//go/private:common.bzl", "declare_file")

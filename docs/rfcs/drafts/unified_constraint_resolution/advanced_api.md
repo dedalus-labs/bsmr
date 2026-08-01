@@ -1,3 +1,9 @@
+<!-- ===----------------------------------------------------------------------=== -->
+<!-- Upstream-Source: facebook/buck2@1560aca2002865cd73d7cafb22c705cfb640b2bc -->
+<!-- Modifications Copyright (c) 2026 Dedalus Labs, Inc. and its contributors -->
+<!-- SPDX-License-Identifier: Apache-2.0 -->
+<!-- ===----------------------------------------------------------------------=== -->
+
 # Advanced API
 
 This tab covers the rest of the API surface of the RFC, common use cases for the input/return value split, and migration concerns. Read the [RFC at a glance tab](main.md) first for the problem statement and the high level `resolution` API. Everything below builds on that foundation.

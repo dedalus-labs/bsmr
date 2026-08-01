@@ -2,6 +2,12 @@
 id: modifiers_package
 title: Add configuration modifiers to entire directories
 ---
+<!-- ===----------------------------------------------------------------------=== -->
+<!-- Upstream-Source: facebook/buck2@1560aca2002865cd73d7cafb22c705cfb640b2bc -->
+<!-- Modifications Copyright (c) 2026 Dedalus Labs, Inc. and its contributors -->
+<!-- SPDX-License-Identifier: Apache-2.0 -->
+<!-- ===----------------------------------------------------------------------=== -->
+
 
 Modifiers can be set in [`PACKAGE` files](../../rule_authors/package.md) using
 the prelude's `set_cfg_modifiers`. In this case they will be applied to all

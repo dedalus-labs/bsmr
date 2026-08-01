@@ -1,3 +1,10 @@
+# ===----------------------------------------------------------------------===
+# Copyright (c) 2026 Dedalus Labs, Inc. and its contributors
+# SPDX-License-Identifier: Apache-2.0
+# ===----------------------------------------------------------------------===
+
+# Defines build targets for app/bsmr_build_api_derive.
+
 load("@bsmr_build//rules:rust.bzl", "rust_library")
 
 oncall("build_infra")

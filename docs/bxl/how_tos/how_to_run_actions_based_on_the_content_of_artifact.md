@@ -2,6 +2,12 @@
 id: how_to_run_actions_based_on_the_content_of_artifact
 title: How to run actions based on the content of artifact
 ---
+<!-- ===----------------------------------------------------------------------=== -->
+<!-- Upstream-Source: facebook/buck2@1560aca2002865cd73d7cafb22c705cfb640b2bc -->
+<!-- Modifications Copyright (c) 2026 Dedalus Labs, Inc. and its contributors -->
+<!-- SPDX-License-Identifier: Apache-2.0 -->
+<!-- ===----------------------------------------------------------------------=== -->
+
 
 This guide shows you how to run actions that need to read artifact contents
 first. You'll learn how to use

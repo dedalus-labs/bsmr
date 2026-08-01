@@ -2,6 +2,12 @@
 id: how_to_handle_errors
 title: How to Handle Errors
 ---
+<!-- ===----------------------------------------------------------------------=== -->
+<!-- Upstream-Source: facebook/buck2@1560aca2002865cd73d7cafb22c705cfb640b2bc -->
+<!-- Modifications Copyright (c) 2026 Dedalus Labs, Inc. and its contributors -->
+<!-- SPDX-License-Identifier: Apache-2.0 -->
+<!-- ===----------------------------------------------------------------------=== -->
+
 
 This guide shows you how to handle failures in BXL script when running bxl
 operations, like analysis, queries, build artifact and other operations. You can
