@@ -2,6 +2,12 @@
 id: loading_data
 title: Loading Data in Starlark
 ---
+<!-- ===----------------------------------------------------------------------=== -->
+<!-- Upstream-Source: facebook/buck2@1560aca2002865cd73d7cafb22c705cfb640b2bc -->
+<!-- Modifications Copyright (c) 2026 Dedalus Labs, Inc. and its contributors -->
+<!-- SPDX-License-Identifier: Apache-2.0 -->
+<!-- ===----------------------------------------------------------------------=== -->
+
 
 You can load static data from within `BUCK` or `.bzl` files, as long as that
 static data is stored in a JSON or TOML file in a package.

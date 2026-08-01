@@ -1,3 +1,9 @@
+@REM ===----------------------------------------------------------------------===
+@REM Upstream-Source: facebook/buck2@1560aca2002865cd73d7cafb22c705cfb640b2bc
+@REM Modifications Copyright (c) 2026 Dedalus Labs, Inc. and its contributors
+@REM SPDX-License-Identifier: Apache-2.0
+@REM ===----------------------------------------------------------------------===
+
 @REM Copyright (c) Meta Platforms, Inc. and affiliates.
 @REM
 @REM This source code is dual-licensed under either the MIT license found in the

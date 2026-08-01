@@ -1,3 +1,10 @@
+//===----------------------------------------------------------------------===//
+// Copyright (c) 2026 Dedalus Labs, Inc. and its contributors
+// SPDX-License-Identifier: Apache-2.0
+//===----------------------------------------------------------------------===//
+
+// Verifies the generated CI workflow contract.
+
 import assert from "node:assert/strict";
 import test from "node:test";
 
@@ -87,6 +94,13 @@ test("Rust compilation uses sized Blacksmith runners", () => {
 			(step) => "run" in step && step.run.includes("--lint-starlark-only"),
 		),
 	);
+});
+
+test("workflow checks retain the provenance boundary", () => {
+	const workflowCheckout = jobs.workflows?.steps[0];
+	assert.ok(workflowCheckout !== undefined && "with" in workflowCheckout);
+	assert.ok("fetch-depth" in workflowCheckout.with);
+	assert.equal(workflowCheckout.with["fetch-depth"], 0);
 });
 
 test("Rust lanes share one trusted cache writer", () => {

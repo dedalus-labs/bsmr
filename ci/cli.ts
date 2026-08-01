@@ -29,10 +29,7 @@ const test: ProcessSpec = {
 	args: ["--test", "ci/ci.test.ts", "ci/cli.test.ts", "ci/license-preamble.test.ts", "ci/license-provenance.test.ts", "ci/license.test.ts", "test/contributors.test.ts"],
 };
 const license: ProcessSpec = { file: "node", args: ["ci/license.ts", "check"] };
-const generated: ProcessSpec = {
-	file: "pnpm",
-	args: ["exec", "hollywood", "check", "--generated", "--source-root", "ci", "--output", "."],
-};
+const licenseGenerated: ProcessSpec = { file: "node", args: ["ci/license.ts", "generated"] };
 const security: ProcessSpec = {
 	file: "pnpm",
 	args: [
@@ -46,9 +43,9 @@ const security: ProcessSpec = {
 		".",
 	],
 };
-const actionDiff: ProcessSpec = {
+const generatedDiff: ProcessSpec = {
 	file: "git",
-	args: ["diff", "--exit-code", "--", ".github/actions"],
+	args: ["diff", "--exit-code", "--", ".github/actions", ".github/workflows"],
 };
 const actionSyntax: ProcessSpec = {
 	file: "node",
@@ -61,12 +58,12 @@ const generate: ProcessSpec = {
 
 const commands = {
 	"build actions": [buildActions],
-	"check actions": [buildActions, actionSyntax, actionDiff],
-	"check generated": [generated],
+	"check actions": [buildActions, actionSyntax, generatedDiff],
+	"check generated": [generate, licenseGenerated, buildActions, generatedDiff],
 	"check license": [license],
 	"check security": [security],
-	check: [typecheck, test, generated, buildActions, actionSyntax, actionDiff, security],
-	generate: [generate, buildActions],
+	check: [typecheck, test, generate, licenseGenerated, buildActions, license, actionSyntax, generatedDiff, security],
+	generate: [generate, licenseGenerated, buildActions],
 	test: [test],
 	typecheck: [typecheck],
 } as const satisfies Record<string, readonly ProcessSpec[]>;

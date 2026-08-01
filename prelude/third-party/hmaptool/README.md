@@ -1,3 +1,9 @@
+<!-- ===----------------------------------------------------------------------=== -->
+<!-- Upstream-Source: facebook/buck2@1560aca2002865cd73d7cafb22c705cfb640b2bc -->
+<!-- Modifications Copyright (c) 2026 Dedalus Labs, Inc. and its contributors -->
+<!-- SPDX-License-Identifier: Apache-2.0 -->
+<!-- ===----------------------------------------------------------------------=== -->
+
 # hmaptool
 
 This tool was copied from llvm-project. See https://github.com/llvm/llvm-project/blob/main/clang/utils/hmaptool/hmaptool

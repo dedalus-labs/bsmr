@@ -2,6 +2,12 @@
 id: anon_targets
 title: Anonymous Targets
 ---
+<!-- ===----------------------------------------------------------------------=== -->
+<!-- Upstream-Source: facebook/buck2@1560aca2002865cd73d7cafb22c705cfb640b2bc -->
+<!-- Modifications Copyright (c) 2026 Dedalus Labs, Inc. and its contributors -->
+<!-- SPDX-License-Identifier: Apache-2.0 -->
+<!-- ===----------------------------------------------------------------------=== -->
+
 
 An anonymous target is defined by the hash of its attributes, rather than its
 name. During analysis, rules can define and access the providers of anonymous

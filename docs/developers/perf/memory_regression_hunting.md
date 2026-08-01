@@ -2,6 +2,12 @@
 id: perf_regression_hunting
 title: Hunting a Regression Between Two Binaries
 ---
+<!-- ===----------------------------------------------------------------------=== -->
+<!-- Upstream-Source: facebook/buck2@1560aca2002865cd73d7cafb22c705cfb640b2bc -->
+<!-- Modifications Copyright (c) 2026 Dedalus Labs, Inc. and its contributors -->
+<!-- SPDX-License-Identifier: Apache-2.0 -->
+<!-- ===----------------------------------------------------------------------=== -->
+
 
 A checklist, not a tutorial. [memory.md](memory.md) covers the per-script
 gotchas and sampling math; this page is the workflow on top.
