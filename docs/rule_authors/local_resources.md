@@ -2,6 +2,12 @@
 id: local_resources
 title: Local Resources For Tests Execution
 ---
+<!-- ===----------------------------------------------------------------------=== -->
+<!-- Upstream-Source: facebook/buck2@1560aca2002865cd73d7cafb22c705cfb640b2bc -->
+<!-- Modifications Copyright (c) 2026 Dedalus Labs, Inc. and its contributors -->
+<!-- SPDX-License-Identifier: Apache-2.0 -->
+<!-- ===----------------------------------------------------------------------=== -->
+
 
 Executing a test might require an external resource which is expensive to
 create. For example running an iOS UI test requires an iOS simulator and it

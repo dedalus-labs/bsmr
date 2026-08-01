@@ -2,6 +2,12 @@
 id: package_files
 title: PACKAGE Files
 ---
+<!-- ===----------------------------------------------------------------------=== -->
+<!-- Upstream-Source: facebook/buck2@1560aca2002865cd73d7cafb22c705cfb640b2bc -->
+<!-- Modifications Copyright (c) 2026 Dedalus Labs, Inc. and its contributors -->
+<!-- SPDX-License-Identifier: Apache-2.0 -->
+<!-- ===----------------------------------------------------------------------=== -->
+
 
 `PACKAGE` files are per-directory configuration files which are accessible from
 Starlark rules/macros. It supports things like per-directory properties, reading

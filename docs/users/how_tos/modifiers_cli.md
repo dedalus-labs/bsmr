@@ -2,6 +2,12 @@
 id: modifiers_cli
 title: Specify configuration modifiers from the CLI
 ---
+<!-- ===----------------------------------------------------------------------=== -->
+<!-- Upstream-Source: facebook/buck2@1560aca2002865cd73d7cafb22c705cfb640b2bc -->
+<!-- Modifications Copyright (c) 2026 Dedalus Labs, Inc. and its contributors -->
+<!-- SPDX-License-Identifier: Apache-2.0 -->
+<!-- ===----------------------------------------------------------------------=== -->
+
 
 Modifiers can be specified on the command line to override the values set in
 `PACKAGE` files or on targets directly. To do so, pass constraint targets via

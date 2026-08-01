@@ -1,3 +1,9 @@
+<!-- ===----------------------------------------------------------------------=== -->
+<!-- Upstream-Source: facebook/buck2@1560aca2002865cd73d7cafb22c705cfb640b2bc -->
+<!-- Modifications Copyright (c) 2026 Dedalus Labs, Inc. and its contributors -->
+<!-- SPDX-License-Identifier: Apache-2.0 -->
+<!-- ===----------------------------------------------------------------------=== -->
+
 # Contributing to Bessemer
 
 Thanks for helping improve Bessemer.
@@ -44,5 +50,5 @@ Report vulnerabilities through the private process in
 ## License
 
 Unless explicitly stated otherwise, contributions submitted to Bessemer are
-licensed under the [Apache License 2.0](LICENSE-APACHE). Preserve every
+licensed under the [Apache License 2.0](LICENSE). Preserve every
 copyright, license, and attribution notice in inherited files.

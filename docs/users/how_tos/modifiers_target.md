@@ -2,6 +2,12 @@
 id: modifiers_target
 title: Add configuration modifiers to a specific target
 ---
+<!-- ===----------------------------------------------------------------------=== -->
+<!-- Upstream-Source: facebook/buck2@1560aca2002865cd73d7cafb22c705cfb640b2bc -->
+<!-- Modifications Copyright (c) 2026 Dedalus Labs, Inc. and its contributors -->
+<!-- SPDX-License-Identifier: Apache-2.0 -->
+<!-- ===----------------------------------------------------------------------=== -->
+
 
 Modifiers can be added to individual targets via the `modifiers` attribute which
 is exposed by all rules (this is handled by Bessemer itself, so rule authors do not
