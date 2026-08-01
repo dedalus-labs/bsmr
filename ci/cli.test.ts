@@ -1,9 +1,9 @@
 //===----------------------------------------------------------------------===//
-// Copyright 2026 Dedalus Labs, Inc.
+// Copyright (c) 2026 Dedalus Labs, Inc. and its contributors
 // SPDX-License-Identifier: Apache-2.0
-//
-// Verifies CLI command selection, ordering, and fail-fast execution.
 //===----------------------------------------------------------------------===//
+
+// Verifies CLI command selection, ordering, and fail-fast execution.
 
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";

@@ -5,7 +5,7 @@ Bessemer code should be obvious to inspect, operate, and extend.
 ## Source documentation
 
 - Start every new Dedalus-owned source file with the repository preamble below.
-- State the file's responsibility in one sentence inside the preamble.
+- State the file's responsibility in one sentence below the legal header, after one blank line.
 - Preserve existing Meta and third-party notices exactly. Claim Dedalus copyright only for Dedalus-authored work.
 - Mark modifications when an inherited file's license requires it; never replace the original notice.
 - Document every named function in new or materially modified code with the language's native documentation syntax.
@@ -16,11 +16,11 @@ Bessemer code should be obvious to inspect, operate, and extend.
 
 ```text
 //===----------------------------------------------------------------------===//
-// Copyright 2026 Dedalus Labs, Inc.
+// Copyright (c) 2026 Dedalus Labs, Inc. and its contributors
 // SPDX-License-Identifier: Apache-2.0
-//
-// Describe this file's single responsibility.
 //===----------------------------------------------------------------------===//
+
+// Describe this file's single responsibility.
 ```
 
 ## Engineering
