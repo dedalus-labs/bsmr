@@ -1,0 +1,9 @@
+# ===----------------------------------------------------------------------===
+# Copyright (c) 2026 Dedalus Labs, Inc. and its contributors
+# SPDX-License-Identifier: Apache-2.0
+# ===----------------------------------------------------------------------===
+
+# Defines pnpm 11 dependency-build trust policy for BSMR's development tools.
+
+allowBuilds:
+  esbuild: false
