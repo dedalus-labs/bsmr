@@ -1,3 +1,9 @@
+//===----------------------------------------------------------------------===//
+// Upstream-Source: facebook/buck2@1560aca2002865cd73d7cafb22c705cfb640b2bc
+// Modifications Copyright (c) 2026 Dedalus Labs, Inc. and its contributors
+// SPDX-License-Identifier: Apache-2.0
+//===----------------------------------------------------------------------===//
+
 /*
  * Copyright (c) Meta Platforms, Inc. and affiliates.
  *
@@ -12,6 +18,6 @@ package com.facebook.buck.test.selectors;
 
 /**
  * Defining @Nullable locally here because we cannot import javax.annotation.Nullable; according to
- * comment in src/com/facebook/buck/test/selectors/BUCK
+ * comment in src/com/facebook/buck/test/selectors/BUILD.bsmr
  */
 public @interface Nullable {}

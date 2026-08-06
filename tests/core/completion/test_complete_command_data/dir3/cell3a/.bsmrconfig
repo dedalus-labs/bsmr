@@ -7,4 +7,4 @@
     cell3b = ../cell3b
 
 [buildfile]
-    name = BUCK.fixture
+    name = BUILD.bsmr.fixture

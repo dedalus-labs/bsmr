@@ -53,7 +53,7 @@ You can:
 When this skill is activated, follow these critical rules:
 
 1. **Always start by assessing state**
-   - Check for existing `uppercase.bzl`, `BUCK`, `input.txt`
+   - Check for existing `uppercase.bzl`, `BUILD.bsmr`, `input.txt`
    - Read files to determine current progress
    - Ask user if starting fresh or continuing
 
@@ -108,7 +108,7 @@ Goal → What to do → Code to write → Test → Key concepts → Confirm befo
 - **CHANGELOG.md** - History of changes and fixes
 - **assets/** - Reference files for the tutorial
   - **rule_template.bzl** - Generic rule template for reference
-  - **BUCK.example** - Example BUCK file showing various patterns
+  - **BUILD.bsmr.example** - Example BUILD.bsmr file showing various patterns
   - **test_input.txt** - Sample input for testing
 - **references/** - Additional documentation
   - **advanced_patterns.md** - Advanced Bessemer patterns

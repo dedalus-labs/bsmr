@@ -15,7 +15,7 @@ This test is particularly useful for enforcing rules like:
 
 ### Basic Example
 
-Add this to your BUCK file:
+Add this to your BUILD.bsmr file:
 
 ```python
 load(

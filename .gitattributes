@@ -2,5 +2,6 @@
 # never will for PACKAGE):
 # https://github.com/github-linguist/linguist/pull/7562
 *.bxl linguist-language=Starlark
+BUILD.bsmr linguist-language=Starlark
 PACKAGE linguist-language=Starlark
 .github/actions/**/dist/** linguist-generated=true -whitespace

@@ -45,9 +45,9 @@ pub struct ConfiguredTargetsCommand {
     #[clap(long, conflicts_with = "json")]
     json_report: bool,
 
-    /// Skip missing targets from `BUCK` files when non-glob pattern is specified.
+    /// Skip missing targets from `BUILD.bsmr` files when non-glob pattern is specified.
     /// This option does not skip missing packages
-    /// and does not ignore errors of `BUCK` file evaluation.
+    /// and does not ignore errors of `BUILD.bsmr` file evaluation.
     #[clap(long)]
     skip_missing_targets: bool,
 

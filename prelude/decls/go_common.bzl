@@ -51,9 +51,9 @@ def _package_root_arg():
             attrs.string(),
             default = None,
             doc = """
-    Sets Go package direactory (relative to BUCK file).
+    Sets Go package direactory (relative to BUILD.bsmr file).
     By default (or if None passes) package_root is being detected automatically.
-    Empty string of Go package is on the same level as BUCK file otherwise the subdirectory name.
+    Empty string of Go package is on the same level as BUILD.bsmr file otherwise the subdirectory name.
     Example for srcs = ["foo/bar.go"], package_root = "foo"
 """,
         ),
@@ -92,7 +92,7 @@ def _package_name_arg():
             default = None,
             doc = """
     Sets the full name of the package being compiled. This defaults to the path from the buck root.
-     (e.g. given a ./.bsmrconfig, a rule in ./a/b/BUCK defaults to package "a/b")
+     (e.g. given a ./.bsmrconfig, a rule in ./a/b/BUILD.bsmr defaults to package "a/b")
 """,
         ),
     }

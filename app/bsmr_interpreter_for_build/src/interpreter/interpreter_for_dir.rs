@@ -84,7 +84,7 @@ use crate::super_package::eval_ctx::PackageFileEvalCtx;
 const DEFAULT_STARLARK_MEMORY_USAGE_LIMIT: u64 = 2 * (1 << 30);
 
 #[derive(Debug, bsmr_error::Error)]
-#[error("Tabs are not allowed in Buck files: `{0}`")]
+#[error("Tabs are not allowed in build files: `{0}`")]
 #[bsmr(input)]
 struct StarlarkTabsError(OwnedStarlarkPath);
 
@@ -161,7 +161,7 @@ pub(crate) struct InterpreterForDir {
     /// When true, rule function creates a node with no attributes.
     /// (Which won't work correctly, but useful for profiling of starlark).
     ignore_attrs_for_profiling: bool,
-    /// Implicit imports. These are only used for build files (e.g. `BUCK`),
+    /// Implicit imports. These are only used for build files (e.g. `BUILD.bsmr`),
     /// not for `bzl` or other files, because we only have implicit imports for build files.
     implicit_import_paths: Arc<ImplicitImportPaths>,
     /// Enable relative imports for the current dir

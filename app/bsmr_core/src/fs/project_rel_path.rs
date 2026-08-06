@@ -46,16 +46,16 @@
 //!     AbsNormPathBuf::from("C:\\open\\fbsource\\".into())?
 //! };
 //! let some_path = if cfg!(not(windows)) {
-//!     AbsNormPath::new("/usr/local/fbsource/buck/BUCK")?
+//!     AbsNormPath::new("/usr/local/fbsource/buck/BUILD.bsmr")?
 //! } else {
-//!     AbsNormPath::new("c:/open/fbsource/buck/BUCK")?
+//!     AbsNormPath::new("c:/open/fbsource/buck/BUILD.bsmr")?
 //! };
 //!
 //! let fs = ProjectRoot::new_unchecked(root);
 //! let project_rel = fs.relativize(some_path)?;
 //!
 //! assert_eq!(
-//!     Cow::Borrowed(ProjectRelativePath::new("buck/BUCK")?),
+//!     Cow::Borrowed(ProjectRelativePath::new("buck/BUILD.bsmr")?),
 //!     project_rel
 //! );
 //! assert_eq!(some_path.to_buf(), fs.resolve(project_rel.as_ref()));

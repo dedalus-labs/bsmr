@@ -203,7 +203,7 @@ load/coerce** (cumulative by leaf): coerced deps (`ThinBoxSlice<TargetLabel>`,
 `Vec2<ProvidersLabel, …>`), `CoercedAttr::coerce`, `AttrValues`, the
 `Arc<HeaderSlice<[CoercedAttr]>>` and target-label `Arc`s, `TargetNode::new`,
 and `ArcStrInterner`. These are long-lived graph nodes allocated amid the
-transient churn of evaluating each `BUCK` file — the survivors-pinning-slabs
+transient churn of evaluating each `BUILD.bsmr` file — the survivors-pinning-slabs
 shape, and a candidate for a per-package arena freed when the package's targets
 are invalidated.
 

@@ -216,7 +216,7 @@ fn cells() -> CellsData {
 #[test]
 fn test_find_imports() {
     let tester = Tester::with_cells(cells()).unwrap();
-    let path = BuildFilePath::testing_new("cell1//config/foo:BUCK");
+    let path = BuildFilePath::testing_new("cell1//config/foo:BUILD.bsmr");
     let parse_result = tester.parse(
         StarlarkPath::BuildFile(&path),
         indoc!(
@@ -297,7 +297,7 @@ fn test_root_import() {
         )
         .unwrap();
 
-    let build_path = BuildFilePath::testing_new("root//some/package:BUCK");
+    let build_path = BuildFilePath::testing_new("root//some/package:BUILD.bsmr");
     let eval_result = tester
         .eval_build_file(
             &build_path,
@@ -394,7 +394,7 @@ fn test_package_import() -> bsmr_error::Result<()> {
         ),
     )?;
 
-    let build_path = BuildFilePath::testing_new("root//src/package:BUCK");
+    let build_path = BuildFilePath::testing_new("root//src/package:BUILD.bsmr");
     let eval_result = tester.eval_build_file(
         &build_path,
         indoc!(

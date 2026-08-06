@@ -34,7 +34,7 @@ Configuration constraints are enum-like constructs. Here is an example
 definition:
 
 ```python
-# //config/BUCK
+# //config/BUILD.bsmr
 
 constraint(
     name = "build_mode",
@@ -54,7 +54,7 @@ main `constraint` definition. However, this is deprecated and will be
 removed in the future.
 
 ```python
-# //somewhere/else/BUCK
+# //somewhere/else/BUILD.bsmr
 
 constraint_value(
     name = "release_no_debug_info",
@@ -184,8 +184,8 @@ that other's constraints. The "most refined" of a set is then the
 condition that refines all the others.
 
 Note that `select()` is resolved during configuration. This happens
-after the evaluation of the BUCK file is completed, and so Starlark code
-run during BUCK file evaluation does not have access to the resolved
+after the evaluation of the BUILD.bsmr file is completed, and so Starlark code
+run during BUILD.bsmr file evaluation does not have access to the resolved
 value. This can make it difficult to have macros that do extensive
 modification or inspection of attributes (which should be done in rules
 instead). However, some functions

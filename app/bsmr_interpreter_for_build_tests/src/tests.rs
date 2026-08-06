@@ -195,7 +195,7 @@ async fn test_eval_build_file() {
     fs.write_file("pkg/file1.java", "");
     fs.write_file("pkg/file2.java", "");
     fs.write_file(
-        "pkg/BUCK",
+        "pkg/BUILD.bsmr",
         indoc!(
             r#"
                 load("//imports:one.bzl", "some_macro")

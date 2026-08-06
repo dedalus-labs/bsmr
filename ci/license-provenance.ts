@@ -16,7 +16,7 @@ const sourceExtensions = new Set([
 	".kt", ".kts", ".m", ".md", ".mjs", ".mk", ".ml", ".mli", ".mll", ".mly", ".nix", ".proto", ".ps1",
 	".py", ".pyi", ".rs", ".s", ".sh", ".star", ".ts", ".tsx", ".zsh",
 ]);
-const sourceNames = new Set([".envrc", "BUCK", "Dockerfile", "Makefile", "PACKAGE", "TARGETS"]);
+const sourceNames = new Set([".envrc", "BUILD.bsmr", "Dockerfile", "Makefile", "PACKAGE", "TARGETS"]);
 const fixture = /(?:^|\/)(?:fixtures|[^/]+_data)(?:\/|$)/;
 const comment = "(?:\\/\\/|#|--|%|\\/\\*|\\*|<!--|@REM)";
 const upstreamCopyright = new RegExp(`^\\s*(?:${comment}\\s*)?Copyright[^\\n]*(?:Meta Platforms|Facebook)`, "im");

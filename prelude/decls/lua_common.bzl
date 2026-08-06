@@ -1,3 +1,9 @@
+# ===----------------------------------------------------------------------===
+# Upstream-Source: facebook/buck2@1560aca2002865cd73d7cafb22c705cfb640b2bc
+# Modifications Copyright (c) 2026 Dedalus Labs, Inc. and its contributors
+# SPDX-License-Identifier: Apache-2.0
+# ===----------------------------------------------------------------------===
+
 # Copyright (c) Meta Platforms, Inc. and affiliates.
 #
 # This source code is dual-licensed under either the MIT license found in the
@@ -31,7 +37,7 @@ def _base_module_arg():
             doc = """
     The package for which the given specified sources and resources should reside in their final
      location in the top-level binary. If unset, the project relative directory that houses the
-     BUCK file is used.
+     BUILD.bsmr file is used.
 """,
         ),
     }

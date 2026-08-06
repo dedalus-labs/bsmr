@@ -30,7 +30,7 @@ Bessemer is a general-purpose build system, so you need to provide more informat
 about your project:
 
 - You need to tell Bessemer that specific code is Go code. This is done by
-  declaring targets like `go_binary` in `BUCK` files.
+  declaring targets like `go_binary` in `BUILD.bsmr` files.
 - You need to tell Bessemer where dependencies of a particular target are. This is
   done by adding `deps` to the target definition.
 - You need to configure Bessemer where to find the Go compiler and other tools by
@@ -54,11 +54,11 @@ rest of the Go ecosystem:
 - Keep a single Go package per directory. For example, for a Go library, all
   non-test `.go` files should belong to a single `go_library` and all
   `*_test.go` files to a single `go_test`.
-- Put a `BUCK` file in the same directory as the Go package, unless you have a
+- Put a `BUILD.bsmr` file in the same directory as the Go package, unless you have a
   reason not to.
 
 ```python
-# File: foo/BUCK
+# File: foo/BUILD.bsmr
 
 go_library(
     name = "foo",

@@ -41,11 +41,10 @@ prelude.filegroup(
     visibility = ["PUBLIC"],
 )
 
-# Tests want BUCK.v2 instead of TARGETS.v2
 prelude.genrule(
     name = "copy_android_constraint",
-    out = "BUCK",
-    cmd = "cp $(location prelude//android/constraints:files)/BUCK $OUT",
+    out = "BUILD.bsmr",
+    cmd = "cp $(location prelude//android/constraints:files)/BUILD.bsmr $OUT",
     visibility = ["PUBLIC"],
 )
 
@@ -53,9 +52,9 @@ prelude.filegroup(
     name = "prelude",
     srcs = {
         "": ":files",
-        "android/constraints/BUCK": ":copy_android_constraint",
+        "android/constraints/BUILD.bsmr": ":copy_android_constraint",
         # explicitly include files that fall off the glob due to package boundary violations
-        "cfg/exec_platform/marker/BUCK": "//cfg/exec_platform/marker:buck_file",
+        "cfg/exec_platform/marker/BUILD.bsmr": "//cfg/exec_platform/marker:build_manifest",
         # @oss-disable[end= ]: "python/meta_only/config.bzl": "//python/meta_only:config.bzl",
         "rust/tools/attrs.bzl": "//rust/tools:attrs.bzl",
     },

@@ -391,7 +391,7 @@ To fix this:
 
    $ python3 bsmr/prelude/erlang/toolchain/generate_otp_versions.py my_otp_versions.bzl
 
-2. Commit the generated file and load it in your BUCK file:
+2. Commit the generated file and load it in your BUILD.bsmr file:
 
    load(":my_otp_versions.bzl", "get_otp_applications", "get_erts_version")
 

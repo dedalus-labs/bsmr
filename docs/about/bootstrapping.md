@@ -11,34 +11,34 @@ title: Bootstrapping Bessemer
 
 # Bootstrapping Bessemer
 
-Bessemer can be built with `cargo` or Bessemer itself. The source repository
-includes an upstream [Buck2](https://github.com/facebook/buck2) binary through
-[DotSlash](https://dotslash-cli.com), so a clean checkout can build its first
-`bsmr` binary.
+Bessemer's first binary is built with Cargo. Once compiled, its manifest
+resolver can load the repository's `BUILD.bsmr` files.
 
 For dependencies on Rust crates from [crates.io](https://crates.io), we use
 [reindeer](https://github.com/facebookincubator/reindeer) to automatically
-generate `BUCK` files.
+generate `BUILD.bsmr` files.
 
-Note that the resulting binary will be compiled without optimisations or
-[jemalloc](https://github.com/jemalloc/jemalloc), so we recommend using the
-Cargo-produced binary in further development.
+First, build `bsmr` with Cargo:
 
-First, install `dotslash` with `Cargo`:
+```sh
+cargo build --locked --bin bsmr
+```
+
+Next, install [DotSlash](https://dotslash-cli.com) with Cargo:
 
 ```sh
 cargo install --locked dotslash
 ```
 
-Next, use `reindeer` to buckify dependencies:
+Use `reindeer` to generate build manifests for Rust dependencies:
 
 ```sh
 cd bsmr/
 ./tools/bin/reindeer --third-party-dir tools/build/third-party/rust buckify
 ```
 
-Build the first copy of `bsmr` with the upstream bootstrap binary:
+Verify that Bessemer can load the generated dependency graph:
 
 ```sh
-./tools/bootstrap/upstream-buck2 build //:bsmr
+target/debug/bsmr targets 'bsmr_build//...'
 ```

@@ -13,7 +13,7 @@ title: Build Rule
 
 A _build rule_ is a procedure for producing output files from a set of input
 files in the context of a specified build configuration. Build rules are
-specified in [build files](build_file.md)—typically named BUCK.
+specified in [build files](build_file.md)—typically named BUILD.bsmr.
 
 > **Note:** A build rule must explicitly specify, in its arguments, all of its
 > required inputs in order for Bessemer to be able to build the rule's output in a
@@ -49,9 +49,9 @@ To support specifying these files:
 
 In Bessemer, source files are organized within _packages_:
 
-- A **package** is defined by a BUCK file and includes:
-  - The directory containing that BUCK file
-  - All subdirectories that don't themselves contain BUCK files
+- A **package** is defined by a BUILD.bsmr file and includes:
+  - The directory containing that BUILD.bsmr file
+  - All subdirectories that don't themselves contain BUILD.bsmr files
 - For more details on packages, see the [Key Concepts](key_concepts.md) topic
 
 #### Package Access Rules
@@ -59,7 +59,7 @@ In Bessemer, source files are organized within _packages_:
 Bessemer enforces these rules regarding source file access:
 
 1. **Basic Rule**: A build rule can only use source files from its own package
-   - A rule in a BUCK file cannot specify source files from outside its package
+   - A rule in a BUILD.bsmr file cannot specify source files from outside its package
 
 2. **Header File Exception**: A rule can access header files from another
    package if:

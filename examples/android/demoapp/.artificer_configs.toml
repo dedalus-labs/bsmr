@@ -15,5 +15,5 @@ central = 'https://repo1.maven.org/maven2/'
 google-maven = 'https://maven.google.com/'
 
 [buck]
-# Artificer generates BUCK files at this location.
+# Artificer generates BUILD.bsmr files at this location.
 base_path = "//app/libs"

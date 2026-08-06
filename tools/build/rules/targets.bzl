@@ -26,7 +26,7 @@ def _strip_third_party_rust_version(target: str) -> str:
             break
     return "-".join(xs)
 
-# Cell the BUCK file being processed belongs to
+# Cell the BUILD.bsmr file being processed belongs to
 ACTIVE_CELL = native.get_cell_name()
 
 # The cell containing this build-support layer.

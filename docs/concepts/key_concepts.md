@@ -26,30 +26,30 @@ Bessemer has a number of fundamental concepts:
   build rule. It can be thought of as a URI for the build rule within the Bessemer
   project.
 - A [**_build file_**](build_rule.md) defines one or more build rules. In Bessemer,
-  build files are typically named `BUCK`. A `BUCK` file is analogous to the
+  build files are typically named `BUILD.bsmr`. A `BUILD.bsmr` file is analogous to the
   `Makefile` used by the Make utility. In your project, you will usually have a
-  separate `BUCK` file for each buildable unit of software—such as a binary or
-  library. For large projects, you could have hundreds of `BUCK` files.
+  separate `BUILD.bsmr` file for each buildable unit of software—such as a binary or
+  library. For large projects, you could have hundreds of `BUILD.bsmr` files.
 
 ### Packages
 
 A Bessemer **_package_** is defined by:
 
-- A Bessemer build file (a `BUCK` file) that marks the root of the package
-- All files in the same directory as this `BUCK` file
+- A Bessemer build file (a `BUILD.bsmr` file) that marks the root of the package
+- All files in the same directory as this `BUILD.bsmr` file
 - All files in subdirectories, _unless_ those subdirectories contain their own
-  `BUCK` files
+  `BUILD.bsmr` files
 
-In other words, Bessemer packages are hierarchical and non-overlapping: Each `BUCK`
+In other words, Bessemer packages are hierarchical and non-overlapping: Each `BUILD.bsmr`
 file creates a new package boundary. A package does not include subdirectories
-that contain their own `BUCK` files. Those subdirectories with `BUCK` files
+that contain their own `BUILD.bsmr` files. Those subdirectories with `BUILD.bsmr` files
 become roots of their own separate packages.
 
-For example, in the following diagram, the BUCK file in directory `app-dir-1`
+For example, in the following diagram, the BUILD.bsmr file in directory `app-dir-1`
 defines that directory as the root of a package—which is labeled **Package A**
 in the diagram. The directory `app-dir-2` is part of Package A because it is a
-subdirectory of `app-dir-1`, but does not itself contain a BUCK file. Now,
-consider directory `app-dir-3`. Because `app-dir-3` contains a BUCK file it is
+subdirectory of `app-dir-1`, but does not itself contain a BUILD.bsmr file. Now,
+consider directory `app-dir-3`. Because `app-dir-3` contains a BUILD.bsmr file it is
 the root of a new package (**Package B**). Although `app-dir-3` is a
 subdirectory of `app-dir-1`, it is _not_ part of Package A.
 

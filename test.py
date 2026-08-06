@@ -152,7 +152,6 @@ def list_starlark_files(git: bool):
         "**.bxl",
         "**.bzl",
         "**/TARGETS",
-        "**/TARGETS.v2",
     ]
     excludes = [
         "packages/rust/starlark/starlark/testcases/",
@@ -163,8 +162,7 @@ def list_starlark_files(git: bool):
         "**.bsmrconfig",
         "**.bcfg",
         "**/targets/**",  # TODO(lmvasquezg) Exclude only non-starlark files here
-        "**/BUCK",  # TODO(lmvasquezg)  fix starlark linter to accept these
-        "**/BUCK.v2",
+        "**/BUILD.bsmr",  # TODO(lmvasquezg)  fix starlark linter to accept these
     ]
 
     if git:
