@@ -26,7 +26,16 @@ const buildActions: ProcessSpec = {
 const typecheck: ProcessSpec = { file: "pnpm", args: ["exec", "tsc", "--noEmit"] };
 const test: ProcessSpec = {
 	file: "node",
-	args: ["--test", "ci/ci.test.ts", "ci/cli.test.ts", "ci/license-preamble.test.ts", "ci/license-provenance.test.ts", "ci/license.test.ts", "test/contributors.test.ts"],
+	args: [
+		"--test",
+		"ci/ci.test.ts",
+		"ci/cli.test.ts",
+		"ci/license-preamble.test.ts",
+		"ci/license-provenance.test.ts",
+		"ci/license.test.ts",
+		"prelude/toolchains/pnpm/runner.test.mjs",
+		"test/contributors.test.ts",
+	],
 };
 const license: ProcessSpec = { file: "node", args: ["ci/license.ts", "check"] };
 const licenseGenerated: ProcessSpec = { file: "node", args: ["ci/license.ts", "generated"] };
