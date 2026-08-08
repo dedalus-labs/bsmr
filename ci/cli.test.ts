@@ -1,9 +1,9 @@
 //===----------------------------------------------------------------------===//
-// Copyright 2026 Dedalus Labs, Inc.
-// SPDX-License-Identifier: MIT OR Apache-2.0
-//
-// Verifies CLI command selection, ordering, and fail-fast execution.
+// Copyright (c) 2026 Dedalus Labs, Inc. and its contributors
+// SPDX-License-Identifier: Apache-2.0
 //===----------------------------------------------------------------------===//
+
+// Verifies CLI command selection, ordering, and fail-fast execution.
 
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";

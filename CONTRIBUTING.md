@@ -43,5 +43,6 @@ Report vulnerabilities through the private process in
 
 ## License
 
-Contributions are licensed under both the [MIT license](LICENSE-MIT) and the
-[Apache License 2.0](LICENSE-APACHE).
+Unless explicitly stated otherwise, contributions submitted to Bessemer are
+licensed under the [Apache License 2.0](LICENSE-APACHE). Preserve every
+copyright, license, and attribution notice in inherited files.
