@@ -30,11 +30,11 @@ derive_more.workspace = true
 display_container = { workspace = true }
 dupe = { workspace = true }
 either = "1.8"
-erased-serde = "0.3.12"
-hashbrown = { version = "0.16.1" }
+erased-serde = "0.4.10"
+hashbrown = { version = "0.17.1" }
 indexmap = "2.2"
 inventory = "0.3.8"
-itertools = "0.14.0"
+itertools = "0.15.0"
 maplit = "1.0.2"
 num-bigint = { workspace = true }
 num-traits = "0.2"
@@ -50,7 +50,7 @@ starlark_syntax = { version = "0.14.2", path = "../starlark_syntax" }
 static_assertions = "1.1.0"
 strong_hash = { workspace = true }
 strsim = "0.11.1"
-textwrap = "0.11"
+textwrap = "0.16"
 thiserror = "2.0.18"
 
 allocative = { workspace = true, features = ["bumpalo", "dashmap", "num-bigint"] }
@@ -58,7 +58,7 @@ cmp_any = { workspace = true }
 pagable = { workspace = true }
 
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
-rustyline = "14.0"
+rustyline = "18.0"
 
 [dev-dependencies]
 rand = "0.10"
