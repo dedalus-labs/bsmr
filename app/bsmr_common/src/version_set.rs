@@ -3,6 +3,8 @@
 // SPDX-License-Identifier: Apache-2.0
 //===----------------------------------------------------------------------===//
 
+// Gives an immutable dependency version set a canonical CAS identity.
+
 //! Gives an immutable dependency version set a canonical CAS identity.
 //!
 //! Ecosystem adapters encode semantic graph nodes and edges as a Merkle DAG,
