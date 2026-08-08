@@ -16,7 +16,7 @@ Bessemer code should be obvious to inspect, operate, and extend.
 - Keep byte-identical Buck2 descendants with a file-local legal notice unchanged. Add the canonical provenance header to descendants without one. Mark modified descendants with the upstream commit, Dedalus modifications copyright, and Apache-2.0 SPDX identifier; never replace the original notice.
 - Treat source added after the Buck2 fork point as Dedalus-owned unless it retains a Meta copyright notice.
 - Emit the same preamble from generators; never patch generated output by hand.
-- Exclude behavioral inputs in `fixtures` and `*_data` directories because comments may change the tested bytes.
+- Exclude behavioral inputs in `fixtures` and `*_data` directories and `*.golden` test outputs because comments may change the tested bytes.
 - Run `pnpm run ci check license` after adding, renaming, or changing source files.
 - Document every named function in new or materially modified code with the language's native documentation syntax.
 - In TypeScript, use JSDoc with a summary and `@param`, `@returns`, and `@throws` when they clarify the contract.
