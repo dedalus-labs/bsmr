@@ -24,6 +24,7 @@ test("source selection excludes behavioral fixtures", () => {
 	assert.equal(isSource("tests/core/console/fixtures/my_genrule0.proto"), false);
 	assert.equal(isSource("packages/rust/starlark/starlark/src/docs/tests/golden/native.golden.md"), false);
 	assert.equal(isSource("packages/rust/starlark/starlark/src/tests/bc/golden/expr_fstring.golden"), false);
+	assert.equal(isSource("packages/rust/starlark/starlark/src/tests/fstring/golden/escape.err.golden.md"), false);
 	assert.equal(isSource("package.json"), false);
 });
 
