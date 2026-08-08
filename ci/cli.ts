@@ -1,3 +1,10 @@
+//===----------------------------------------------------------------------===//
+// Copyright 2026 Dedalus Labs, Inc.
+// SPDX-License-Identifier: MIT OR Apache-2.0
+//
+// Routes repository CI commands through Hollywood's typed process executor.
+//===----------------------------------------------------------------------===//
+
 import { realpathSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -64,6 +71,11 @@ const commands = {
 
 const usage = `Usage: pnpm run ci <command>\n\nCommands:\n  build actions\n  check\n  check actions\n  check generated\n  check security\n  generate\n  test\n  typecheck\n`;
 
+/**
+ * Create the process execution context rooted at the repository.
+ *
+ * @returns The production CLI context.
+ */
 function defaultContext(): CliContext {
 	return {
 		root: resolve(dirname(fileURLToPath(import.meta.url)), ".."),
@@ -73,6 +85,14 @@ function defaultContext(): CliContext {
 	};
 }
 
+/**
+ * Run the CI command selected by its command-line words.
+ *
+ * @param arguments_ - Command words after the CLI entrypoint.
+ * @param context - Process execution and output dependencies.
+ * @returns A promise that resolves after every command succeeds.
+ * @throws An error when the command is unknown or a process fails.
+ */
 export async function runCli(arguments_: readonly string[], context: CliContext): Promise<void> {
 	const name = arguments_.join(" ");
 	const specs = commands[name as keyof typeof commands];
@@ -84,6 +104,13 @@ export async function runCli(arguments_: readonly string[], context: CliContext)
 	}
 }
 
+/**
+ * Parse process arguments and translate execution into a process exit code.
+ *
+ * @param arguments_ - Complete process argument vector.
+ * @param context - Process execution and output dependencies.
+ * @returns Zero on success or one when command execution fails.
+ */
 export async function main(
 	arguments_: readonly string[] = process.argv,
 	context: CliContext = defaultContext(),
