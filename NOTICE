@@ -1,3 +1,11 @@
+Bessemer
+Copyright (c) 2026 Dedalus Labs, Inc. and its contributors
+
+Bessemer is derived from Buck2, copyright Meta Platforms, Inc. and affiliates.
+Except where an inherited notice states otherwise, Bessemer is licensed under
+Apache-2.0. Buck2-derived and third-party files retain their original
+copyright, license, and attribution notices.
+
 The code in `app/bsmr_error_derive` is adapted from thiserror (https://github.com/dtolnay/thiserror).
 
 The code in `tools/testing/completion/verify/src/runtime` is adapted from `complete_pty`

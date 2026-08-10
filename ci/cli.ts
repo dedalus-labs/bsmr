@@ -1,9 +1,9 @@
 //===----------------------------------------------------------------------===//
-// Copyright 2026 Dedalus Labs, Inc.
-// SPDX-License-Identifier: MIT OR Apache-2.0
-//
-// Routes repository CI commands through Hollywood's typed process executor.
+// Copyright (c) 2026 Dedalus Labs, Inc. and its contributors
+// SPDX-License-Identifier: Apache-2.0
 //===----------------------------------------------------------------------===//
+
+// Routes repository CI commands through Hollywood's typed process executor.
 
 import { realpathSync } from "node:fs";
 import { dirname, resolve } from "node:path";
