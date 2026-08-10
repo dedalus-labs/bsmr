@@ -165,7 +165,7 @@ export const ci = workflow({
 				setupNode,
 				{
 					name: "Set up pnpm",
-					uses: "pnpm/action-setup@0e279bb959325dab635dd2c09392533439d90093",
+					run: "npm install --global pnpm@10.30.3",
 				},
 				{
 					name: "Install dependencies",
