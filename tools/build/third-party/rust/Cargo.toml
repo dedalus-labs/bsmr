@@ -1,3 +1,9 @@
+# ===----------------------------------------------------------------------===
+# Upstream-Source: facebook/buck2@1560aca2002865cd73d7cafb22c705cfb640b2bc
+# Modifications Copyright (c) 2026 Dedalus Labs, Inc. and its contributors
+# SPDX-License-Identifier: Apache-2.0
+# ===----------------------------------------------------------------------===
+
 # Copyright (c) Meta Platforms, Inc. and affiliates.
 #
 # This source code is dual-licensed under either the MIT license found in the
@@ -252,6 +258,7 @@ windows-sys = { version = "0.61.2", features = ["Win32_Foundation", "Win32_Globa
 windows_x86_64_msvc = "=0.48.0" # our fixup only works if we are on precisely 0.48.0
 x509-parser = "0.18.1"
 xattr = "1.6.1"
+yaml-rust2 = { version = "0.10.4", default-features = false }
 zip = { version = "8.5.1", features = ["aes-crypto", "bzip2", "deflate", "time"] }
 zstd = { version = "0.13.3", features = ["experimental", "zstdmt"] }
 
