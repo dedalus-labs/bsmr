@@ -7,7 +7,7 @@
 
 import { spawnSync } from "node:child_process";
 import { access, cp, lstat, mkdir, readdir, readFile, readlink, rm, writeFile } from "node:fs/promises";
-import { delimiter, dirname, isAbsolute, join, resolve, sep } from "node:path";
+import { dirname, isAbsolute, join, resolve, sep } from "node:path";
 
 const requiredArguments = new Set([
 	"--node-version",
@@ -269,14 +269,13 @@ async function requireRelocatableExecutables(output) {
  */
 function install(pnpmCli, output, pnpmVersion, paths) {
 	const environment = {
-		...process.env,
 		COREPACK_HOME: paths.corepackHome,
 		HOME: paths.home,
 		// pnpm 10 and 11 use different settings to forbid toolchain replacement.
 		NPM_CONFIG_MANAGE_PACKAGE_MANAGER_VERSIONS: "false",
 		NPM_CONFIG_UPDATE_NOTIFIER: "false",
 		NPM_CONFIG_USERCONFIG: paths.userconfig,
-		PATH: `${dirname(process.execPath)}${delimiter}${process.env.PATH ?? ""}`,
+		PATH: dirname(process.execPath),
 		PNPM_HOME: paths.pnpmHome,
 		XDG_CACHE_HOME: paths.xdgCacheHome,
 		XDG_CONFIG_HOME: paths.xdgConfigHome,

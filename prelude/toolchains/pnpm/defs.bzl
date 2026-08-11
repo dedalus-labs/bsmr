@@ -20,6 +20,7 @@ NodeDistributionInfo = provider(fields = {
 PnpmDistributionInfo = provider(fields = {
     "cli": provider_field(Artifact),
     "package_manager": provider_field(str),
+    "root": provider_field(Artifact),
     "version": provider_field(str),
 })
 
@@ -28,6 +29,7 @@ PnpmToolchainInfo = provider(fields = {
     "node_version": provider_field(str),
     "package_manager": provider_field(str),
     "pnpm_cli": provider_field(Artifact),
+    "pnpm_root": provider_field(Artifact),
 })
 
 PnpmInstallInfo = provider(fields = {
@@ -96,6 +98,7 @@ def _pnpm_distribution_impl(ctx: AnalysisContext) -> list[Provider]:
         PnpmDistributionInfo(
             cli = cli,
             package_manager = ctx.attrs.package_manager,
+            root = ctx.attrs.root,
             version = version,
         ),
     ]
@@ -121,6 +124,7 @@ def _pnpm_toolchain_impl(ctx: AnalysisContext) -> list[Provider]:
             node_version = node.version,
             package_manager = pnpm.package_manager,
             pnpm_cli = pnpm.cli,
+            pnpm_root = pnpm.root,
         ),
     ]
 
@@ -169,22 +173,26 @@ def _pnpm_install_impl(ctx: AnalysisContext) -> list[Provider]:
     )
     workspace = ctx.actions.declare_output(ctx.label.name, dir = True, has_content_based_path = False)
     toolchain = ctx.attrs._pnpm_toolchain[PnpmToolchainInfo]
-    command = cmd_args([
-        toolchain.node,
-        ctx.attrs._runner,
-        "--source",
-        source_tree,
-        "--output",
-        workspace.as_output(),
-        "--pnpm-cli",
-        toolchain.pnpm_cli,
-        "--package-manager",
-        toolchain.package_manager,
-        "--node-version",
-        toolchain.node_version,
-    ])
+    command = cmd_args(
+        [
+            toolchain.node,
+            ctx.attrs._runner,
+            "--source",
+            source_tree,
+            "--output",
+            workspace.as_output(),
+            "--pnpm-cli",
+            toolchain.pnpm_cli,
+            "--package-manager",
+            toolchain.package_manager,
+            "--node-version",
+            toolchain.node_version,
+        ],
+        hidden = [toolchain.pnpm_root],
+    )
     ctx.actions.run(
         command,
+        allow_cache_upload = True,
         category = "pnpm_install",
         identifier = ctx.label.name,
         local_only = True,
