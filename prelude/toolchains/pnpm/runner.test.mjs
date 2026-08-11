@@ -54,7 +54,7 @@ writeFileSync(".pnpm-invocation.json", JSON.stringify({
   args: process.argv.slice(2),
   cwd: process.cwd(),
   execPath: process.execPath,
-  env: {
+	  env: {
     corepackHome: process.env.COREPACK_HOME,
     home: process.env.HOME,
     npmConfigManagePackageManagerVersions: process.env.NPM_CONFIG_MANAGE_PACKAGE_MANAGER_VERSIONS,
@@ -66,8 +66,9 @@ writeFileSync(".pnpm-invocation.json", JSON.stringify({
     pnpmConfigPmOnFail: process.env.pnpm_config_pm_on_fail,
     pnpmConfigUpdateNotifier: process.env.pnpm_config_update_notifier,
     xdgCacheHome: process.env.XDG_CACHE_HOME,
-    xdgConfigHome: process.env.XDG_CONFIG_HOME,
-  },
+	    xdgConfigHome: process.env.XDG_CONFIG_HOME,
+	    undeclared: process.env.BSMR_UNDECLARED ?? null,
+	  },
 }));
 `,
 	);
@@ -101,6 +102,7 @@ function runRunner(state, expectedPackageManager = packageManager) {
 			encoding: "utf8",
 			env: {
 				...process.env,
+				BSMR_UNDECLARED: "ambient",
 				BUCK_SCRATCH_PATH: state.scratch,
 				HOME: join(state.root, "ambient-home"),
 				NPM_CONFIG_USERCONFIG: join(state.root, "ambient-npmrc"),
@@ -141,6 +143,7 @@ test("installs once with the exact toolchain and action-local state", async (con
 		pnpmConfigUpdateNotifier: "false",
 		xdgCacheHome: join(state.scratch, "pnpm", "xdg-cache"),
 		xdgConfigHome: join(state.scratch, "pnpm", "xdg-config"),
+		undeclared: null,
 	});
 	assert.equal(await readFile(join(state.output, "input.txt"), "utf8"), "declared input\n");
 	assert.equal(await readFile(join(state.output, "node_modules", "installed.txt"), "utf8"), "installed\n");
