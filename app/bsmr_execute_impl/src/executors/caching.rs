@@ -40,6 +40,8 @@ use bsmr_execute::execute::cache_uploader::DepFileCacheUploadOutcome;
 use bsmr_execute::execute::cache_uploader::IntoRemoteDepFile;
 use bsmr_execute::execute::cache_uploader::UploadCache;
 use bsmr_execute::execute::result::CommandExecutionResult;
+use bsmr_execute::materialize::materializer::CasDownloadInfo;
+use bsmr_execute::materialize::materializer::DeclareArtifactPayload;
 use bsmr_execute::materialize::materializer::Materializer;
 use bsmr_execute::re::client::ActionCacheWriteType;
 use bsmr_execute::re::manager::ManagedRemoteExecutionClient;
@@ -101,6 +103,36 @@ impl CacheUploader {
             cache_upload_permission_checker,
             deduplicate_get_digests_ttl_calls,
         }
+    }
+
+    /// Retains a CAS recipe for outputs after their successful cache upload.
+    async fn declare_uploaded_outputs(
+        &self,
+        result: &CommandExecutionResult,
+    ) -> bsmr_error::Result<()> {
+        let artifacts = result
+            .outputs
+            .iter()
+            .map(|(output, artifact)| {
+                let content_hash = output
+                    .has_content_based_path()
+                    .then(|| artifact.content_based_path_hash());
+                Ok(DeclareArtifactPayload {
+                    path: output
+                        .as_ref()
+                        .resolve(&self.artifact_fs, content_hash.as_ref())?
+                        .into_path(),
+                    artifact: artifact.dupe(),
+                    configuration_path: None,
+                })
+            })
+            .collect::<bsmr_error::Result<Vec<_>>>()?;
+        self.materializer
+            .declare_cas_many(
+                Arc::new(CasDownloadInfo::new_declared(self.re_client.use_case)),
+                artifacts,
+            )
+            .await
     }
 
     /// Upload an action result to the RE action cache, assuming conditions for the upload are met:
@@ -168,7 +200,7 @@ impl CacheUploader {
                     }
 
                     // upload ActionResult to ActionCache
-                    let result: TActionResult2 = match self
+                    let action_result: TActionResult2 = match self
                         .upload_files_and_directories(
                             result,
                             &mut file_digests,
@@ -184,13 +216,13 @@ impl CacheUploader {
                         }
                     };
                     // Skip expensive clone if it's not needed
-                    let result_for_dep_file = has_depfile_entry.then(|| result.clone());
+                    let result_for_dep_file = has_depfile_entry.then(|| action_result.clone());
 
                     if let Err(error) = self
                         .re_client
                         .write_action_result(
                             digest,
-                            result,
+                            action_result,
                             &self.platform.to_re_platform(),
                             ActionCacheWriteType::LocalCacheUpload,
                         )
@@ -202,6 +234,10 @@ impl CacheUploader {
                             },
                             None,
                         );
+                    }
+
+                    if let Err(error) = self.declare_uploaded_outputs(result).await {
+                        return (CacheUploadOutcome::FailedOther { error }, None);
                     }
 
                     (CacheUploadOutcome::Success, result_for_dep_file)

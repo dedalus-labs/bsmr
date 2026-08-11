@@ -532,9 +532,16 @@ pub(super) fn create_ttl_refresh(
     let ttl_deadline = Utc::now() + min_ttl;
 
     for data in tree.iter_without_paths() {
-        if let ArtifactMaterializationStage::Declared { entry, method } = &data.stage
-            && let ArtifactMaterializationMethod::CasDownload { info } = method.as_ref()
-        {
+        let (entry, method) = match &data.stage {
+            ArtifactMaterializationStage::Declared { entry, method } => (entry, method),
+            ArtifactMaterializationStage::Materialized {
+                metadata,
+                method: Some(method),
+                ..
+            } => (metadata, method),
+            ArtifactMaterializationStage::Materialized { method: None, .. } => continue,
+        };
+        if let ArtifactMaterializationMethod::CasDownload { info } = method.as_ref() {
             let mut walk = unordered_entry_walk(entry.as_ref().map_dir(Directory::as_ref));
             while let Some((_entry_path, entry)) = walk.next() {
                 if let DirectoryEntry::Leaf(ActionDirectoryMember::File(file)) = entry {

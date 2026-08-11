@@ -195,6 +195,8 @@ pub enum ArtifactMaterializationStage {
         /// We can throw away most of the entry and just keep some metadata used to
         /// check if materialized artifact matches declared artifact.
         metadata: ArtifactMetadata,
+        /// Latest recipe known to reproduce this artifact if files disappear.
+        method: Option<Arc<ArtifactMaterializationMethod>>,
         /// Used to clean older artifacts from buck-out.
         last_access_time: DateTime<Utc>,
         /// Artifact declared by running daemon.
@@ -303,6 +305,7 @@ impl ArtifactTree {
                         deps: None,
                         stage: ArtifactMaterializationStage::Materialized {
                             metadata,
+                            method: None,
                             last_access_time,
                             active: false,
                         },

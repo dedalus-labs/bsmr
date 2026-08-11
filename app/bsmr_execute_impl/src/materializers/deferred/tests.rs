@@ -620,6 +620,50 @@ mod state_machine {
         .await
     }
 
+    #[tokio::test]
+    async fn test_redeclare_retains_rematerialization_method() -> bsmr_error::Result<()> {
+        ignore_stack_overflow_checks_for_future(async {
+            let (mut dm, _) = make_processor(Default::default());
+            let path = make_path("foo/bar");
+            let content = b"cached output";
+            let value = ArtifactValue::file(FileMetadata {
+                digest: TrackedFileDigest::from_content(
+                    content,
+                    dm.io.digest_config().cas_digest_config(),
+                ),
+                is_executable: false,
+            });
+            let write = || {
+                ArtifactMaterializationMethod::Write(Arc::new(WriteFile {
+                    compressed_data: zstd::bulk::compress(content, 0).unwrap().into_boxed_slice(),
+                    decompressed_size: content.len(),
+                    is_executable: false,
+                }))
+            };
+
+            dm.testing_declare_with_method(&path, value.dupe(), write());
+            assert_eq!(dm.io.take_log(), &[(Op::Clean, path.clone())]);
+            let result = dm
+                .materialize_artifact(&path, EventDispatcher::null())
+                .ok_or_else(|| internal_error!("Expected initial materialization"))?
+                .await;
+            assert_eq!(dm.io.take_log(), &[(Op::Materialize, path.clone())]);
+            dm.testing_materialization_finished(path.clone(), Utc::now(), result);
+
+            dm.testing_declare_with_method(&path, value, write());
+            assert_eq!(dm.io.take_log(), &[]);
+            fs_util::remove_file(dm.io.fs.resolve(&path))?;
+            let result = dm
+                .materialize_artifact(&path, EventDispatcher::null())
+                .ok_or_else(|| internal_error!("Expected rematerialization"))?
+                .await;
+            assert_eq!(dm.io.take_log(), &[(Op::Materialize, path)]);
+            assert!(result.is_ok(), "rematerialization failed: {result:?}");
+            Ok(())
+        })
+        .await
+    }
+
     fn make_artifact_value_with_symlink_dep(
         target_path: &ProjectRelativePathBuf,
         target_from_symlink: &RelativePathBuf,
