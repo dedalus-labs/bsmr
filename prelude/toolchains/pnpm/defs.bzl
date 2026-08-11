@@ -171,7 +171,7 @@ def _pnpm_install_impl(ctx: AnalysisContext) -> list[Provider]:
         sources,
         has_content_based_path = False,
     )
-    workspace = ctx.actions.declare_output(ctx.label.name, dir = True, has_content_based_path = False)
+    workspace = ctx.actions.declare_output(ctx.label.name, dir = True, has_content_based_path = True)
     toolchain = ctx.attrs._pnpm_toolchain[PnpmToolchainInfo]
     command = cmd_args(
         [

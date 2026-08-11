@@ -111,7 +111,7 @@ def _typescript_typecheck_impl(ctx: AnalysisContext) -> list[Provider]:
 
 def _typescript_library_impl(ctx: AnalysisContext) -> list[Provider]:
     """Run the package-local locked tsdown compiler into a cached directory."""
-    output = ctx.actions.declare_output(ctx.label.name, dir = True, has_content_based_path = False)
+    output = ctx.actions.declare_output(ctx.label.name, dir = True, has_content_based_path = True)
     _run_typescript(ctx, "library", output)
     return [DefaultInfo(default_output = output)]
 
