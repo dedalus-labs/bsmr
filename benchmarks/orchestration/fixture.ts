@@ -80,8 +80,7 @@ const buildManifest = (trace: string): string => {
 		const args = deps.map((dep) => `--dep $(location :${dep})`).join(" ");
 		return `genrule(\n    name = "${name}",\n    srcs = ["scripts/build.mjs", "packages/${name}/src.txt"],\n    cmd = '$(location toolchains//:node) $SRCDIR/scripts/build.mjs --name ${name} --input $SRCDIR/packages/${name}/src.txt ${args} --output $OUT --trace "${trace}"',\n    out = "output.json",\n    labels = ["large_copy"],\n)\n`;
 	});
-	const outputs = packageNames.map((name) => `"${name}.json": ":${name}"`).join(", ");
-	return `${rules.join("\n")}\nfilegroup(name = "all", srcs = {${outputs}})\n`;
+	return `${rules.join("\n")}\n`;
 };
 
 /** Generates one isolated runner fixture and returns its absolute trace path. */
