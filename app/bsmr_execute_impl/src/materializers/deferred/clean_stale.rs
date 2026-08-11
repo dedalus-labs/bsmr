@@ -649,6 +649,7 @@ impl<T: IoHandler> StaleFinder<'_, T> {
                             active: false,
                             last_access_time,
                             metadata,
+                            ..
                         },
                     ..
                 }) if *last_access_time < self.keep_since_time => {
@@ -666,6 +667,7 @@ impl<T: IoHandler> StaleFinder<'_, T> {
                             active: false,
                             last_access_time,
                             metadata,
+                            ..
                         },
                     ..
                 }) => {

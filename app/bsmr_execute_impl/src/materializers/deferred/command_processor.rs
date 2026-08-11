@@ -361,6 +361,12 @@ enum EntryDetails {
     DepsOnly,
 }
 
+enum ArtifactPresence {
+    Present,
+    Missing,
+    WrongType,
+}
+
 impl EntryDetails {
     fn kind(&self) -> &'static str {
         match self {
@@ -1006,6 +1012,7 @@ impl<T: IoHandler> DeferredMaterializerCommandProcessor<T> {
                 deps: value.deps().duped(),
                 stage: ArtifactMaterializationStage::Materialized {
                     metadata,
+                    method: None,
                     last_access_time: Utc::now(),
                     active: true,
                 },
@@ -1055,6 +1062,7 @@ impl<T: IoHandler> DeferredMaterializerCommandProcessor<T> {
                         let deps = value.deps().duped();
                         data.stage = ArtifactMaterializationStage::Materialized {
                             metadata: metadata.dupe(),
+                            method: Some(Arc::from(method)),
                             last_access_time: *last_access_time,
                             active: true,
                         };
@@ -1214,6 +1222,7 @@ impl<T: IoHandler> DeferredMaterializerCommandProcessor<T> {
                 metadata: _,
                 last_access_time,
                 active,
+                ..
             } => {
                 // Treat this case much like a `declare_existing`
                 *active = true;
@@ -1376,17 +1385,37 @@ impl<T: IoHandler> DeferredMaterializerCommandProcessor<T> {
             ArtifactMaterializationStage::Materialized {
                 last_access_time,
                 metadata,
+                method,
                 ..
-            } => match check_deps {
-                true => EntryDetails::DepsOnly,
-                false => {
-                    if !Self::artifact_is_present(&io, path, metadata)? {
-                        return Err(bsmr_error!(
+            } => match match method.as_deref() {
+                #[cfg(test)]
+                Some(ArtifactMaterializationMethod::Test) => ArtifactPresence::Present,
+                _ => Self::artifact_presence(&io, path, metadata)?,
+            } {
+                ArtifactPresence::Missing => {
+                    let method = method.dupe().ok_or_else(|| {
+                        bsmr_error!(
                             ErrorTag::MaterializationError,
-                            "materialized artifact `{}` is missing from disk or has the wrong file type; run `bsmr clean` to invalidate daemon materialization state",
+                            "materialized artifact `{}` is missing from disk and has no reproducible materialization method",
                             path,
-                        ));
-                    }
+                        )
+                    })?;
+                    let entry = metadata.dupe();
+                    data.stage = ArtifactMaterializationStage::Declared {
+                        entry: entry.dupe(),
+                        method: method.dupe(),
+                    };
+                    EntryDetails::Entry { entry, method }
+                }
+                ArtifactPresence::WrongType => {
+                    return Err(bsmr_error!(
+                        ErrorTag::MaterializationError,
+                        "materialized artifact `{}` has the wrong file type; run `bsmr clean` to invalidate daemon materialization state",
+                        path,
+                    ));
+                }
+                ArtifactPresence::Present if check_deps => EntryDetails::DepsOnly,
+                ArtifactPresence::Present => {
                     if let Some(ref mut buffer) = self.access_times_buffer.as_mut() {
                         // TODO (torozco): Why is it legal for something to be Materialized + Cleaning?
                         let timestamp = Utc::now();
@@ -1513,24 +1542,24 @@ impl<T: IoHandler> DeferredMaterializerCommandProcessor<T> {
     }
 
     /// Checks that every declared artifact entry still exists with its expected file type.
-    fn artifact_is_present(
+    fn artifact_presence(
         io: &T,
         path: &ProjectRelativePath,
         metadata: &ArtifactMetadata,
-    ) -> bsmr_error::Result<bool> {
+    ) -> bsmr_error::Result<ArtifactPresence> {
         let root = io.fs().resolve(path);
         let Some(root_metadata) = fs_util::symlink_metadata_if_exists(&root)? else {
-            return Ok(false);
+            return Ok(ArtifactPresence::Missing);
         };
         if matches!(metadata, DirectoryEntry::Dir(_)) != root_metadata.is_dir() {
-            return Ok(false);
+            return Ok(ArtifactPresence::WrongType);
         }
 
         let mut entries = unordered_entry_walk(metadata.as_ref().map_dir(Directory::as_ref));
         while let Some((relative, entry)) = entries.next() {
             let Some(actual) = fs_util::symlink_metadata_if_exists(root.join(relative.get()))?
             else {
-                return Ok(false);
+                return Ok(ArtifactPresence::Missing);
             };
             let matches = match entry {
                 DirectoryEntry::Dir(_) => actual.is_dir(),
@@ -1540,10 +1569,10 @@ impl<T: IoHandler> DeferredMaterializerCommandProcessor<T> {
                 ) => actual.file_type().is_symlink(),
             };
             if !matches {
-                return Ok(false);
+                return Ok(ArtifactPresence::WrongType);
             }
         }
-        Ok(true)
+        Ok(ArtifactPresence::Present)
     }
 
     async fn perform_materialization(
@@ -1694,10 +1723,7 @@ impl<T: IoHandler> DeferredMaterializerCommandProcessor<T> {
                             tracing::debug!("artifact is already materialized");
                             None
                         }
-                        ArtifactMaterializationStage::Declared {
-                            entry,
-                            method: _method,
-                        } => {
+                        ArtifactMaterializationStage::Declared { entry, method } => {
                             let metadata = entry.dupe();
                             // NOTE: We only insert this artifact if there isn't an in-progress cleanup
                             // future on this path.
@@ -1712,6 +1738,7 @@ impl<T: IoHandler> DeferredMaterializerCommandProcessor<T> {
 
                             Some(ArtifactMaterializationStage::Materialized {
                                 metadata,
+                                method: Some(method.dupe()),
                                 last_access_time: timestamp,
                                 active: true,
                             })
@@ -1847,6 +1874,13 @@ pub(super) trait TestingDeferredMaterializerCommandProcessor<T> {
 
     fn testing_declare(&mut self, path: &ProjectRelativePath, value: ArtifactValue);
 
+    fn testing_declare_with_method(
+        &mut self,
+        path: &ProjectRelativePath,
+        value: ArtifactValue,
+        method: ArtifactMaterializationMethod,
+    );
+
     fn testing_process_one_command(&mut self, command: MaterializerCommand<T>);
 
     fn testing_materialization_finished(
@@ -1902,13 +1936,17 @@ impl<T: IoHandler> TestingDeferredMaterializerCommandProcessor<T>
     }
 
     fn testing_declare(&mut self, path: &ProjectRelativePath, value: ArtifactValue) {
+        self.testing_declare_with_method(path, value, ArtifactMaterializationMethod::Test)
+    }
+
+    fn testing_declare_with_method(
+        &mut self,
+        path: &ProjectRelativePath,
+        value: ArtifactValue,
+        method: ArtifactMaterializationMethod,
+    ) {
         let dispatcher = self.daemon_dispatcher.dupe();
-        self.declare(
-            path,
-            value,
-            Box::new(ArtifactMaterializationMethod::Test),
-            &dispatcher,
-        )
+        self.declare(path, value, Box::new(method), &dispatcher)
     }
 
     fn testing_process_one_command(&mut self, command: MaterializerCommand<T>) {
