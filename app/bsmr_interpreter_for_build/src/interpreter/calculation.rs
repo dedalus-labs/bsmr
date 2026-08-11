@@ -21,7 +21,6 @@ use std::sync::Arc;
 use allocative::Allocative;
 use async_trait::async_trait;
 use bsmr_common::package_listing::dice::DicePackageListingResolver;
-use bsmr_core::build_file_path::BuildFilePath;
 use bsmr_core::bzl::ImportPath;
 use bsmr_core::package::PackageLabel;
 use bsmr_events::dispatch::async_record_root_spans;
@@ -34,7 +33,6 @@ use bsmr_interpreter::paths::module::OwnedStarlarkModulePath;
 use bsmr_interpreter::paths::module::StarlarkModulePath;
 use bsmr_interpreter::paths::package::PackageFilePath;
 use bsmr_interpreter::paths::path::OwnedStarlarkPath;
-use bsmr_interpreter::paths::path::StarlarkPath;
 use bsmr_interpreter::prelude_path::PreludePath;
 use bsmr_node::nodes::eval_result::EvaluationResult;
 use bsmr_node::nodes::frontend::TARGET_GRAPH_CALCULATION_IMPL;
@@ -202,11 +200,9 @@ impl InterpreterCalculationImpl for InterpreterCalculationInstance {
         ctx: &mut DiceComputations<'_>,
         package: PackageLabel,
     ) -> bsmr_error::Result<ModuleDeps> {
-        let build_file_name = DicePackageListingResolver(ctx)
+        let listing = DicePackageListingResolver(ctx)
             .resolve_package_listing(package.dupe())
-            .await?
-            .buildfile()
-            .to_owned();
+            .await?;
 
         let mut calc = ctx
             .get_interpreter_calculator(OwnedStarlarkPath::PackageFile(
@@ -214,11 +210,8 @@ impl InterpreterCalculationImpl for InterpreterCalculationInstance {
             ))
             .await?;
 
-        let (_module, module_deps) = calc
-            .prepare_eval(StarlarkPath::BuildFile(&BuildFilePath::new(
-                package.dupe(),
-                build_file_name,
-            )))
+        let (_build_file_path, _module, module_deps) = calc
+            .prepare_build_file_eval(package.dupe(), &listing)
             .await?;
 
         Ok(module_deps)

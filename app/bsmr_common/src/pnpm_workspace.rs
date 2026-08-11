@@ -16,10 +16,15 @@ use bsmr_core::target::name::TargetName;
 use bsmr_error::internal_error;
 use serde::Deserialize;
 
+mod dice;
 mod manifest;
+mod native_build;
 
+pub use dice::HasPnpmWorkspaceGraph;
 pub use manifest::PnpmWorkspace;
 pub use manifest::PnpmWorkspaceError;
+pub use native_build::NativeTypeScriptBuildError;
+pub use native_build::render_typescript_build_file;
 
 /// Failure to parse one workspace `package.json`.
 #[derive(Debug, bsmr_error::Error)]
@@ -38,7 +43,17 @@ pub enum PackageManifestError {
 }
 
 /// The manifest section that contributed an internal build edge.
-#[derive(Clone, Copy, Debug, Eq, Ord, PartialEq, PartialOrd)]
+#[derive(
+    Clone,
+    Copy,
+    Debug,
+    Eq,
+    Ord,
+    PartialEq,
+    PartialOrd,
+    allocative::Allocative,
+    pagable::Pagable
+)]
 pub enum DependencySection {
     /// Runtime dependency.
     Dependency,
@@ -50,7 +65,7 @@ pub enum DependencySection {
     PeerDependency,
 }
 
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, Eq, PartialEq, allocative::Allocative, pagable::Pagable)]
 struct DependencyDeclaration {
     section: DependencySection,
     specifier: String,
@@ -71,7 +86,7 @@ struct PackageJson {
 }
 
 /// One parsed package manifest and its cell-relative workspace root.
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, Eq, PartialEq, allocative::Allocative, pagable::Pagable)]
 pub struct WorkspacePackage {
     root: CellRelativePathBuf,
     name: String,
@@ -182,14 +197,14 @@ pub enum WorkspaceGraphError {
 }
 
 /// One normalized package node in the workspace graph.
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, Eq, PartialEq, allocative::Allocative, pagable::Pagable)]
 pub struct WorkspaceProject {
     root: CellRelativePathBuf,
     dependencies: BTreeMap<String, WorkspaceDependency>,
 }
 
 /// One internal edge with its exact manifest declarations.
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, Eq, PartialEq, allocative::Allocative, pagable::Pagable)]
 pub struct WorkspaceDependency {
     declarations: BTreeMap<DependencySection, String>,
 }
@@ -227,7 +242,7 @@ impl WorkspaceProject {
 }
 
 /// A deterministic directed acyclic graph of pnpm workspace packages.
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, Eq, PartialEq, allocative::Allocative, pagable::Pagable)]
 pub struct WorkspaceGraph {
     packages: BTreeMap<String, WorkspaceProject>,
 }
@@ -311,6 +326,14 @@ impl WorkspaceGraph {
     /// Returns one package's internal dependencies in canonical lexical order.
     pub fn dependencies(&self, name: &str) -> Option<impl ExactSizeIterator<Item = &str>> {
         self.package(name).map(WorkspaceProject::dependencies)
+    }
+
+    /// Returns the package name owning one normalized workspace root.
+    pub fn package_name_at_root(&self, root: &CellRelativePathBuf) -> Option<&str> {
+        self.packages
+            .iter()
+            .find(|(_, project)| &project.root == root)
+            .map(|(name, _)| name.as_str())
     }
 
     /// Lowers package roots and edges into BSMR's native target-label IR.

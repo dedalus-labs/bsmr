@@ -25,8 +25,11 @@ use bsmr_common::file_ops::error::FileReadErrorContext;
 use bsmr_common::legacy_configs::dice::HasLegacyConfigs;
 use bsmr_common::legacy_configs::dice::OpaqueLegacyBsmrConfigOnDice;
 use bsmr_common::package_boundary::HasPackageBoundaryExceptions;
+use bsmr_common::package_listing::PackageBuildSource;
 use bsmr_common::package_listing::dice::DicePackageListingResolver;
 use bsmr_common::package_listing::listing::PackageListing;
+use bsmr_common::pnpm_workspace::HasPnpmWorkspaceGraph;
+use bsmr_common::pnpm_workspace::render_typescript_build_file;
 use bsmr_core::build_file_path::BuildFilePath;
 use bsmr_core::cells::build_file_cell::BuildFileCell;
 use bsmr_core::cells::cell_path::CellPath;
@@ -76,6 +79,15 @@ use crate::interpreter::interpreter_for_dir::InterpreterForDir;
 use crate::interpreter::interpreter_for_dir::ParseData;
 use crate::interpreter::interpreter_for_dir::ParseResult;
 use crate::super_package::package_value::SuperPackageValuesImpl;
+
+#[derive(Debug, bsmr_error::Error)]
+#[bsmr(tag = Input)]
+enum NativeBuildFileError {
+    #[error(
+        "native Cargo manifests require BSMR's Reindeer graph adapter, which is not enabled for this build"
+    )]
+    CargoAdapterUnavailable,
+}
 
 fn toml_value_to_json(value: toml::Value) -> serde_json::Value {
     match value {
@@ -251,6 +263,49 @@ impl<'c, 'd: 'c> DiceCalculationDelegate<'c, 'd> {
             .into_result(self.ctx)
             .await???;
         Ok((ast, deps))
+    }
+
+    /// Parses either an explicit Starlark file or a native ecosystem manifest.
+    pub(super) async fn prepare_build_file_eval(
+        &mut self,
+        package: PackageLabel,
+        listing: &PackageListing,
+    ) -> bsmr_error::Result<(BuildFilePath, AstModule, ModuleDeps)> {
+        let build_file_path = BuildFilePath::new(package.dupe(), listing.buildfile().to_owned());
+        let (ast, deps) = match listing.build_source() {
+            PackageBuildSource::Starlark => {
+                self.prepare_eval(StarlarkPath::BuildFile(&build_file_path))
+                    .await?
+            }
+            PackageBuildSource::Native => {
+                if listing
+                    .get_file(PackageRelativePath::new("package.json")?)
+                    .is_none()
+                {
+                    return Err(NativeBuildFileError::CargoAdapterUnavailable.into());
+                }
+                let graph = self
+                    .ctx
+                    .get_pnpm_workspace_graph(package.cell_name())
+                    .await?;
+                let source = render_typescript_build_file(
+                    &graph,
+                    package.as_cell_path().path().to_owned(),
+                    listing,
+                )?;
+                let ParseData(ast, imports) = self.prepare_eval_with_content(
+                    StarlarkPath::BuildFile(&build_file_path),
+                    source,
+                )??;
+                let deps = CycleGuard::<LoadCycleDescriptor>::new(self.ctx)?
+                    .guard_this(Self::eval_deps(self.ctx, &imports))
+                    .await
+                    .into_result(self.ctx)
+                    .await???;
+                (ast, deps)
+            }
+        };
+        Ok((build_file_path, ast, deps))
     }
 
     pub fn prepare_eval_with_content(
@@ -612,10 +667,8 @@ impl<'c, 'd: 'c> DiceCalculationDelegate<'c, 'd> {
                 )
                 .await?;
 
-            let build_file_path =
-                BuildFilePath::new(package.dupe(), listing.buildfile().to_owned());
-            let (ast, deps) = self
-                .prepare_eval(StarlarkPath::BuildFile(&build_file_path))
+            let (build_file_path, ast, deps) = self
+                .prepare_build_file_eval(package.dupe(), &listing)
                 .await?;
             let super_package = self
                 .eval_package_file_for_build_file(package.dupe(), &listing)
