@@ -61,7 +61,7 @@ const configs = Object.fromEntries((["bsmr", "turbo", "nx"] as const).map((runne
 })) as Record<Runner, Pick<RunnerConfig, "cwd" | "trace">>;
 for (const runner of ["turbo", "nx"] as const) execute("pnpm", ["install", "--no-frozen-lockfile"], configs[runner].cwd);
 const runners: Record<Runner, RunnerConfig> = {
-	bsmr: { ...configs.bsmr, executable: resolve(binary), args: ["build", "-M", "all", "//:all", "--console=simple"] },
+	bsmr: { ...configs.bsmr, executable: resolve(binary), args: ["build", "-M", "all", ...packageNames.map((name) => `//:${name}`), "--console=simple"] },
 	turbo: { ...configs.turbo, executable: join(configs.turbo.cwd, "node_modules/.bin/turbo"), args: ["run", "build", `--concurrency=${concurrency}`, "--output-logs=errors-only"] },
 	nx: { ...configs.nx, executable: join(configs.nx.cwd, "node_modules/.bin/nx"), args: ["run-many", "-t", "build", "--all", `--parallel=${concurrency}`, "--outputStyle=static"] },
 };
@@ -118,7 +118,7 @@ const measure = (runner: Runner, regime: string, iteration: number, expectedExec
 /** Removes materialized outputs while preserving each tool's reusable cache. */
 const removeOutputs = (runner: Runner): void => {
 	if (runner === "bsmr") {
-		execute(resolve(binary), ["clean"], runners.bsmr.cwd);
+		for (const output of outputs(runner)) rmSync(output);
 		return;
 	}
 	for (const name of packageNames) rmSync(join(runners[runner].cwd, `packages/${name}/dist`), { force: true, recursive: true });
