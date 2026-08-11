@@ -25,6 +25,11 @@ use bsmr_core::fs::project_rel_path::ProjectRelativePath;
 use bsmr_core::fs::project_rel_path::ProjectRelativePathBuf;
 use bsmr_core::soft_error;
 use bsmr_data::error::ErrorTag;
+use bsmr_directory::directory::directory::Directory;
+use bsmr_directory::directory::directory_iterator::DirectoryIterator;
+use bsmr_directory::directory::directory_iterator::DirectoryIteratorPathStack;
+use bsmr_directory::directory::entry::DirectoryEntry;
+use bsmr_directory::directory::walk::unordered_entry_walk;
 use bsmr_error::BuckErrorContext;
 use bsmr_error::bsmr_error;
 use bsmr_events::dispatch::EventDispatcher;
@@ -33,12 +38,14 @@ use bsmr_events::dispatch::with_dispatcher_async;
 use bsmr_events::span::SpanId;
 use bsmr_execute::artifact_value::ArtifactValue;
 use bsmr_execute::directory::ActionDirectoryEntry;
+use bsmr_execute::directory::ActionDirectoryMember;
 use bsmr_execute::directory::ActionSharedDirectory;
 use bsmr_execute::materialize::materializer::ArtifactNotMaterializedReason;
 use bsmr_execute::materialize::materializer::DeclareArtifactPayload;
 use bsmr_execute::materialize::materializer::MaterializationError;
 use bsmr_execute::materialize::utils::dynamic_priority_handle::DynamicPriorityHandle;
 use bsmr_execute::materialize::utils::priority_semaphore::Priority;
+use bsmr_fs::fs_util;
 use bsmr_fs::fs_util::disk_space_stats;
 use bsmr_fs::paths::abs_path::AbsPath;
 use bsmr_fs::paths::abs_path::AbsPathBuf;
@@ -1321,6 +1328,7 @@ impl<T: IoHandler> DeferredMaterializerCommandProcessor<T> {
     ) -> bsmr_error::Result<Option<MaterializingFuture>> {
         // TODO(nga): rewrite without recursion or figure out why we overflow stack here.
         check_stack_overflow().tag(ErrorTag::ServerStackOverflow)?;
+        let io = self.io.dupe();
 
         // Get the data about the artifact, or return early if materializing/materialized
         let (path, data) = match Self::find_artifact_containing_path(&mut self.tree, path) {
@@ -1366,10 +1374,19 @@ impl<T: IoHandler> DeferredMaterializerCommandProcessor<T> {
                 method: method.dupe(),
             },
             ArtifactMaterializationStage::Materialized {
-                last_access_time, ..
+                last_access_time,
+                metadata,
+                ..
             } => match check_deps {
                 true => EntryDetails::DepsOnly,
                 false => {
+                    if !Self::artifact_is_present(&io, path, metadata)? {
+                        return Err(bsmr_error!(
+                            ErrorTag::MaterializationError,
+                            "materialized artifact `{}` is missing from disk or has the wrong file type; run `bsmr clean` to invalidate daemon materialization state",
+                            path,
+                        ));
+                    }
                     if let Some(ref mut buffer) = self.access_times_buffer.as_mut() {
                         // TODO (torozco): Why is it legal for something to be Materialized + Cleaning?
                         let timestamp = Utc::now();
@@ -1493,6 +1510,40 @@ impl<T: IoHandler> DeferredMaterializerCommandProcessor<T> {
         );
 
         Ok(Some(task))
+    }
+
+    /// Checks that every declared artifact entry still exists with its expected file type.
+    fn artifact_is_present(
+        io: &T,
+        path: &ProjectRelativePath,
+        metadata: &ArtifactMetadata,
+    ) -> bsmr_error::Result<bool> {
+        let root = io.fs().resolve(path);
+        let Some(root_metadata) = fs_util::symlink_metadata_if_exists(&root)? else {
+            return Ok(false);
+        };
+        if matches!(metadata, DirectoryEntry::Dir(_)) != root_metadata.is_dir() {
+            return Ok(false);
+        }
+
+        let mut entries = unordered_entry_walk(metadata.as_ref().map_dir(Directory::as_ref));
+        while let Some((relative, entry)) = entries.next() {
+            let Some(actual) = fs_util::symlink_metadata_if_exists(root.join(relative.get()))?
+            else {
+                return Ok(false);
+            };
+            let matches = match entry {
+                DirectoryEntry::Dir(_) => actual.is_dir(),
+                DirectoryEntry::Leaf(ActionDirectoryMember::File(_)) => actual.is_file(),
+                DirectoryEntry::Leaf(
+                    ActionDirectoryMember::Symlink(_) | ActionDirectoryMember::ExternalSymlink(_),
+                ) => actual.file_type().is_symlink(),
+            };
+            if !matches {
+                return Ok(false);
+            }
+        }
+        Ok(true)
     }
 
     async fn perform_materialization(

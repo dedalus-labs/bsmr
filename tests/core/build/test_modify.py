@@ -62,6 +62,35 @@ async def test_modify_genrule_notify(buck: Buck) -> None:
 
 
 @buck_test(data_dir="modify")
+async def test_notify_observes_rapid_source_edits(buck: Buck) -> None:
+    """Require every build to observe the source state present at invocation."""
+    with open(buck.cwd / ".bsmrconfig", "a") as bsmrconfig:
+        bsmrconfig.write("\n[bsmr]\nfile_watcher = notify")
+    await buck.kill()
+
+    source = buck.cwd / "src.txt"
+    for revision in range(128):
+        expected = f"VALUE-{revision:08x}\n"
+        source.write_text(expected)
+        result = await buck.build("//:mysrcrule")
+        output = result.get_build_report().output_for_target("root//:mysrcrule")
+        assert Path(output).read_text() == expected
+
+
+@buck_test(data_dir="modify")
+async def test_deleted_materialized_output_is_rejected(buck: Buck) -> None:
+    """Reject a cached success when its promised output is absent from disk."""
+    result = await buck.build("//:mysrcrule")
+    output = result.get_build_report().output_for_target("root//:mysrcrule")
+    Path(output).unlink()
+
+    await expect_failure(
+        buck.build("//:mysrcrule"),
+        stderr_regex="materialized artifact.*is missing from disk",
+    )
+
+
+@buck_test(data_dir="modify")
 async def test_modify_directory(buck: Buck) -> None:
     # Test for the bug reported in T99593442
     os.mkdir(buck.cwd / "a_dir")

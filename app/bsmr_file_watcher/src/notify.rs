@@ -15,8 +15,11 @@
  */
 
 use std::mem;
+use std::path::PathBuf;
 use std::sync::Arc;
+use std::sync::Condvar;
 use std::sync::Mutex;
+use std::time::Duration;
 
 use allocative::Allocative;
 use async_trait::async_trait;
@@ -45,6 +48,7 @@ use notify::event::RemoveKind;
 use starlark_map::ordered_set::OrderedSet;
 use tracing::debug;
 use tracing::info;
+use uuid::Uuid;
 
 use crate::file_watcher::FileWatcher;
 use crate::mergebase::Mergebase;
@@ -270,6 +274,12 @@ impl NotifyFileData {
     }
 }
 
+#[derive(Default)]
+struct NotifyEventBarrier {
+    expected: Option<PathBuf>,
+    observed: bool,
+}
+
 #[derive(Allocative)]
 pub struct NotifyFileWatcher {
     #[allocative(skip)]
@@ -277,6 +287,12 @@ pub struct NotifyFileWatcher {
     // FIXME(JakobDegen): Clarify if this just needs to be kept alive or can be removed?
     watcher: RecommendedWatcher,
     data: Arc<Mutex<bsmr_error::Result<NotifyFileData>>>,
+    #[allocative(skip)]
+    barrier: Arc<(Mutex<NotifyEventBarrier>, Condvar)>,
+    #[allocative(skip)]
+    barrier_dir: PathBuf,
+    #[allocative(skip)]
+    sync_lock: Mutex<()>,
 }
 
 impl NotifyFileWatcher {
@@ -288,25 +304,110 @@ impl NotifyFileWatcher {
         let data = Arc::new(Mutex::new(Ok(NotifyFileData::new())));
         let data2 = data.dupe();
         let root2 = root.dupe();
-        let mut watcher = notify::recommended_watcher(move |event| {
-            let mut guard = data2.lock().unwrap();
-            if let Ok(state) = &mut *guard {
-                if let Err(e) = state.process(event, &root2, &cells, &ignore_specs) {
-                    *guard = Err(e);
+        let barrier = Arc::new((Mutex::new(NotifyEventBarrier::default()), Condvar::new()));
+        let barrier2 = barrier.dupe();
+        let barrier_dir = root
+            .root()
+            .as_path()
+            .join(InvocationPaths::buck_out_dir_prefix().as_str());
+        std::fs::create_dir_all(&barrier_dir)
+            .map_err(|e| from_any_with_tag(e, bsmr_error::ErrorTag::NotifyWatcher))?;
+        let mut watcher =
+            notify::recommended_watcher(move |event: notify::Result<notify::Event>| {
+                let observed_barrier = event.as_ref().ok().and_then(|event| {
+                    let barrier = barrier2.0.lock().unwrap();
+                    barrier
+                        .expected
+                        .as_ref()
+                        .filter(|expected| event.paths.iter().any(|path| path == *expected))
+                        .cloned()
+                });
+                let mut guard = data2.lock().unwrap();
+                if let Ok(state) = &mut *guard {
+                    if let Err(e) = state.process(event, &root2, &cells, &ignore_specs) {
+                        *guard = Err(e);
+                    }
                 }
-            }
-        })
-        .map_err(|e| from_any_with_tag(e, bsmr_error::ErrorTag::NotifyWatcher))?;
+                drop(guard);
+
+                if let Some(observed_barrier) = observed_barrier {
+                    let mut barrier = barrier2.0.lock().unwrap();
+                    if barrier.expected.as_ref() == Some(&observed_barrier) {
+                        barrier.observed = true;
+                        barrier2.1.notify_all();
+                    }
+                }
+            })
+            .map_err(|e| from_any_with_tag(e, bsmr_error::ErrorTag::NotifyWatcher))?;
         watcher
             .watch(root.root().as_path(), notify::RecursiveMode::Recursive)
             .map_err(|e| from_any_with_tag(e, bsmr_error::ErrorTag::NotifyWatcher))?;
-        Ok(Self { watcher, data })
+        Ok(Self {
+            watcher,
+            data,
+            barrier,
+            barrier_dir,
+            sync_lock: Mutex::new(()),
+        })
+    }
+
+    /// Waits until the watcher callback has processed every event queued before this call.
+    fn synchronize_events(&self) -> bsmr_error::Result<()> {
+        let marker = self
+            .barrier_dir
+            .join(format!(".bsmr-notify-barrier-{}", Uuid::new_v4()));
+        {
+            let mut barrier = self.barrier.0.lock().unwrap();
+            barrier.expected = Some(marker.clone());
+            barrier.observed = false;
+        }
+
+        if let Err(error) = std::fs::OpenOptions::new()
+            .write(true)
+            .create_new(true)
+            .open(&marker)
+        {
+            self.barrier.0.lock().unwrap().expected = None;
+            return Err(from_any_with_tag(
+                error,
+                bsmr_error::ErrorTag::NotifyWatcher,
+            ));
+        }
+
+        let barrier = self.barrier.0.lock().unwrap();
+        let (mut barrier, timeout) = self
+            .barrier
+            .1
+            .wait_timeout_while(barrier, Duration::from_secs(10), |state| !state.observed)
+            .unwrap();
+        let observed = barrier.observed;
+        barrier.expected = None;
+        barrier.observed = false;
+        drop(barrier);
+
+        let remove_result = std::fs::remove_file(&marker)
+            .map_err(|e| from_any_with_tag(e, bsmr_error::ErrorTag::NotifyWatcher));
+        if timeout.timed_out() && !observed {
+            return Err(from_any_with_tag(
+                std::io::Error::new(
+                    std::io::ErrorKind::TimedOut,
+                    format!(
+                        "notify did not observe its synchronization marker `{}`",
+                        marker.display()
+                    ),
+                ),
+                bsmr_error::ErrorTag::NotifyWatcher,
+            ));
+        }
+        remove_result
     }
 
     fn sync2(
         &self,
         mut dice: DiceTransactionUpdater,
     ) -> bsmr_error::Result<(bsmr_data::FileWatcherStats, DiceTransactionUpdater)> {
+        let _sync = self.sync_lock.lock().unwrap();
+        self.synchronize_events()?;
         let old = {
             let mut guard = self.data.lock().unwrap();
             mem::replace(&mut *guard, Ok(NotifyFileData::new()))
