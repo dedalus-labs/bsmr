@@ -1,3 +1,10 @@
+<!-- ===----------------------------------------------------------------------=== -->
+<!-- Copyright (c) 2026 Dedalus Labs, Inc. and its contributors -->
+<!-- SPDX-License-Identifier: Apache-2.0 -->
+<!-- ===----------------------------------------------------------------------=== -->
+
+<!-- Defines the lifecycle, numbering, and review contract for Bessemer RFCs. -->
+
 # Requests for Comments
 
 RFCs record consequential Bessemer decisions: public interfaces, architecture,

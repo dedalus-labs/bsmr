@@ -1,3 +1,9 @@
+//===----------------------------------------------------------------------===//
+// Upstream-Source: facebook/buck2@1560aca2002865cd73d7cafb22c705cfb640b2bc
+// Modifications Copyright (c) 2026 Dedalus Labs, Inc. and its contributors
+// SPDX-License-Identifier: Apache-2.0
+//===----------------------------------------------------------------------===//
+
 /*
  * Copyright 2018 The Starlark in Rust Authors.
  * Copyright (c) Facebook, Inc. and its affiliates.
@@ -23,9 +29,23 @@ use anyhow::Context;
 
 const REGENERATE_VAR_NAME: &str = "STARLARK_RUST_REGENERATE_GOLDEN_TESTS";
 
+/// Legal preamble carried by Markdown golden files, which are policy-scope
+/// sources; regenerating it keeps checked-in goldens byte-identical to output.
+const MARKDOWN_LICENSE_PREAMBLE: &str =
+    "<!-- ===----------------------------------------------------------------------=== -->
+<!-- Upstream-Source: facebook/buck2@1560aca2002865cd73d7cafb22c705cfb640b2bc -->
+<!-- Modifications Copyright (c) 2026 Dedalus Labs, Inc. and its contributors -->
+<!-- SPDX-License-Identifier: Apache-2.0 -->
+<!-- ===----------------------------------------------------------------------=== -->
+
+";
+
 #[allow(clippy::write_literal)] // We mark generated files as generated, but not this file.
-fn make_golden(output: &str) -> String {
+fn make_golden(golden_rel_path: &str, output: &str) -> String {
     let mut golden = String::new();
+    if golden_rel_path.ends_with(".md") {
+        golden.push_str(MARKDOWN_LICENSE_PREAMBLE);
+    }
     writeln!(golden, "# {at}generated", at = "@").unwrap();
     writeln!(golden, "# To regenerate, run:").unwrap();
     writeln!(golden, "# ```").unwrap();
@@ -51,7 +71,7 @@ pub fn golden_test_template(golden_rel_path: &str, output: &str) {
 
     let golden_file_path = format!("{manifest_dir}/{golden_rel_path}");
 
-    let output_with_prefix = make_golden(output);
+    let output_with_prefix = make_golden(golden_rel_path, output);
 
     if env::var(REGENERATE_VAR_NAME).is_ok() {
         fs::write(&golden_file_path, &output_with_prefix)

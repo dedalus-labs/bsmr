@@ -1,3 +1,10 @@
+//===----------------------------------------------------------------------===//
+// Copyright (c) 2026 Dedalus Labs, Inc. and its contributors
+// SPDX-License-Identifier: Apache-2.0
+//===----------------------------------------------------------------------===//
+
+// Defines the generated contributor-validation workflow.
+
 import { job, workflow } from "@dedalus-labs/hollywood";
 
 export const checkContributor = String.raw`set -euo pipefail

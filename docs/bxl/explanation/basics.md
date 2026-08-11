@@ -2,6 +2,12 @@
 id: basics
 title: BXL Basics
 ---
+<!-- ===----------------------------------------------------------------------=== -->
+<!-- Upstream-Source: facebook/buck2@1560aca2002865cd73d7cafb22c705cfb640b2bc -->
+<!-- Modifications Copyright (c) 2026 Dedalus Labs, Inc. and its contributors -->
+<!-- SPDX-License-Identifier: Apache-2.0 -->
+<!-- ===----------------------------------------------------------------------=== -->
+
 
 This page is a primer on common BXL functionalities and data types. Ramping up
 in BXL may be challenging without much prior knowledge of Bessemer building blocks

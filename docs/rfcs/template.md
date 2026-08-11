@@ -6,6 +6,12 @@ state: ideation
 discussion: null
 labels: []
 ---
+<!-- ===----------------------------------------------------------------------=== -->
+<!-- Copyright (c) 2026 Dedalus Labs, Inc. and its contributors -->
+<!-- SPDX-License-Identifier: Apache-2.0 -->
+<!-- ===----------------------------------------------------------------------=== -->
+
+<!-- Provides the canonical structure for a numbered Bessemer RFC. -->
 
 # Title
 

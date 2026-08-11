@@ -1,3 +1,9 @@
+<!-- ===----------------------------------------------------------------------=== -->
+<!-- Upstream-Source: facebook/buck2@1560aca2002865cd73d7cafb22c705cfb640b2bc -->
+<!-- Modifications Copyright (c) 2026 Dedalus Labs, Inc. and its contributors -->
+<!-- SPDX-License-Identifier: Apache-2.0 -->
+<!-- ===----------------------------------------------------------------------=== -->
+
 # Shortcomings with Existing Features
 
 Below are the four potential approaches for handling the [nccl version + sanitizer problem](main.md) and where each one falls short.

@@ -1,3 +1,10 @@
+//===----------------------------------------------------------------------===//
+// Copyright (c) 2026 Dedalus Labs, Inc. and its contributors
+// SPDX-License-Identifier: Apache-2.0
+//===----------------------------------------------------------------------===//
+
+// Defines Bessemer's generated CI workflow.
+
 import {
 	GitHubJobResult, always, and, eq, expr, format, github, job, needsOutput, needsResultIs,
 	not, or, stepOutput, uses, workflow,
@@ -158,9 +165,8 @@ export const ci = workflow({
 			permissions: { contents: "read" },
 			steps: [
 				{
-					name: "Checkout",
-					uses: "actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1",
-					with: { "persist-credentials": false },
+					...checkout,
+					with: { ...checkout.with, "fetch-depth": 0 },
 				},
 				setupNode,
 				{

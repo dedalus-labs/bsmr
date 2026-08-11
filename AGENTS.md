@@ -1,3 +1,10 @@
+<!-- ===----------------------------------------------------------------------=== -->
+<!-- Copyright (c) 2026 Dedalus Labs, Inc. and its contributors -->
+<!-- SPDX-License-Identifier: Apache-2.0 -->
+<!-- ===----------------------------------------------------------------------=== -->
+
+<!-- Directs coding agents working in Bessemer. -->
+
 # Agent instructions
 
 - Read and follow [@STYLE.md](STYLE.md) before changing code or documentation.
