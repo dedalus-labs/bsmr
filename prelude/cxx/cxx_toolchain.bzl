@@ -381,9 +381,8 @@ def cxx_toolchain_extra_attributes(is_toolchain_rule):
                         # to fail, so I need a DEFAULT here when some target without cpu constraint tries to configure against the
                         # windows exec platform.
                         "DEFAULT": None,
-                        # FIXME: prelude// should be standalone (not refer to upstream//)
-                        "ovr_config//cpu:x86_32": "upstream//third-party/toolchains/visual_studio:cl_x86_and_tools",
-                        "ovr_config//cpu:x86_64": "upstream//third-party/toolchains/visual_studio:cl_x64_and_tools",
+                        "ovr_config//cpu:x86_32": "none//third-party/toolchains/visual_studio:cl_x86_and_tools",
+                        "ovr_config//cpu:x86_64": "none//third-party/toolchains/visual_studio:cl_x64_and_tools",
                     }),
                 })
                 if is_full_meta_repo()

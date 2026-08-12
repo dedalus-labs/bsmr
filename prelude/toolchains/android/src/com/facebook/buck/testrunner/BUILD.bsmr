@@ -81,8 +81,8 @@ fb_native.kotlin_library(
         "prelude//toolchains/android/test/com/facebook/buck/testrunner:per_test_coverage_base_test",
     ],
     visibility = [
-        "upstream//fbandroid/java/com/facebook/testing/instrumentation/...",
-        "upstream//fbandroid/javatests/com/facebook/testing/instrumentation/...",
+        "none//fbandroid/java/com/facebook/testing/instrumentation/...",
+        "none//fbandroid/javatests/com/facebook/testing/instrumentation/...",
         "prelude//toolchains/android/src/com/facebook/buck/testrunner:junit",
         "prelude//toolchains/android/test/com/facebook/buck/testrunner:per_test_coverage_base_test",
         "prelude//toolchains/android/test/com/facebook/buck/testrunner:per_test_coverage_listener_test",
@@ -178,7 +178,7 @@ buck_kotlin_library(
         "prelude//toolchains/android/test/com/facebook/buck/testrunner:testrunner",
     ],
     visibility = [
-        "upstream//fbandroid/instrumentation_tests/com/meta/instrumentation/host/...",
+        "none//fbandroid/instrumentation_tests/com/meta/instrumentation/host/...",
         "prelude//toolchains/android/test/com/facebook/buck/testrunner:testrunner",
     ],
     deps = [

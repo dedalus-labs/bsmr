@@ -249,7 +249,7 @@ def _apple_sanitizer_compatibility_arg():
         return {}
 
     return {
-        "_sanitizer_compatibility": attrs.default_only(attrs.dep(default = "upstream//tools/build_defs/apple/sanitizers:sanitizer_compatibility")),
+        "_sanitizer_compatibility": attrs.default_only(attrs.dep(default = "none//tools/build_defs/apple/sanitizers:sanitizer_compatibility")),
     }
 
 def _apple_tools_arg():
@@ -305,7 +305,7 @@ def _asset_catalogs_compilation_options_arg():
     }
 
 def _apple_installer_arg():
-    installer_target = "upstream//xplat/bsmr/platform/apple/python_installer:apple_installer"
+    installer_target = "none//xplat/bsmr/platform/apple/python_installer:apple_installer"
     return {
         "installer": attrs.default_only(attrs.exec_dep(default = installer_target)),
     }

@@ -19,7 +19,7 @@ config = ovr_config
 [ovrsource]
 
 [java]
-  bootclasspath_8 = upstream//xplat/third-party/java/jdk8:jce-stub upstream//xplat/third-party/java/jdk8:jsse-stub upstream//xplat/third-party/java/jdk8:rt-stub
+  bootclasspath_8 = none//xplat/third-party/java/jdk8:jce-stub none//xplat/third-party/java/jdk8:jsse-stub none//xplat/third-party/java/jdk8:rt-stub
   javacd_dep_files = per_class
   source_level = 8
   src_roots = /fbandroid/instrumentation_tests/, src, test, java, javatests, src-gen, src-test, tests, javatestgen, testgen

@@ -435,7 +435,7 @@ third_party_jar(
     sha1 = "1820c0968dba3a11a1b30669bb1f01978a91dedc",
     url = "mvn:org.hamcrest:hamcrest:jar:2.2",
     visibility = [
-        "upstream//xplat/toolchains/android/sdk/third-party/...",
+        "none//xplat/toolchains/android/sdk/third-party/...",
         "prelude//toolchains/android/src/...",
         "prelude//toolchains/android/test/...",
     ],
@@ -1277,7 +1277,7 @@ third_party_jar(
     sha1 = "635c873fadd853c084f84fdc3cbd58c5dd8537f9",
     url = "mvn:net.bytebuddy:byte-buddy:jar:1.15.10",
     visibility = [
-        "upstream//xplat/toolchains/android/sdk/third-party/...",
+        "none//xplat/toolchains/android/sdk/third-party/...",
         "prelude//toolchains/android/test/...",
     ],
 )
@@ -1288,7 +1288,7 @@ third_party_jar(
     sha1 = "0e8eb255b2c378b9a6c7341e7b0e12f0a5636377",
     url = "mvn:net.bytebuddy:byte-buddy-agent:jar:1.15.10",
     visibility = [
-        "upstream//xplat/toolchains/android/sdk/third-party/...",
+        "none//xplat/toolchains/android/sdk/third-party/...",
         "prelude//toolchains/android/test/...",
     ],
 )
@@ -1332,7 +1332,7 @@ third_party_jar(
     sha1 = "1049c09f1de4331e8193e579448d0916d75b7631",
     url = "mvn:org.objenesis:objenesis:jar:3.3",
     visibility = [
-        "upstream//xplat/toolchains/android/sdk/third-party/...",
+        "none//xplat/toolchains/android/sdk/third-party/...",
         "prelude//toolchains/android/test/...",
     ],
 )

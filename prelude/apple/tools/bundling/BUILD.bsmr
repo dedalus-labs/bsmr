@@ -55,7 +55,7 @@ meta_python_test(
         "test_resources/*",
     ]),
     deps = [
-        "upstream//third-party/pypi/setuptools:setuptools",
+        "none//third-party/pypi/setuptools:setuptools",
         ":lib",
     ],
 )

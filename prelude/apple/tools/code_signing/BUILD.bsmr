@@ -70,7 +70,7 @@ meta_python_test(
         "test_resources/*",
     ]),
     deps = [
-        "upstream//third-party/pypi/setuptools:setuptools",
+        "none//third-party/pypi/setuptools:setuptools",
         ":lib",
     ],
 )
@@ -80,7 +80,7 @@ python_binary(
     main = "main.py",
     visibility = ["PUBLIC"],
     deps = [
-        "upstream//third-party/pypi/typed-argument-parser:typed-argument-parser",
+        "none//third-party/pypi/typed-argument-parser:typed-argument-parser",
         ":lib",
     ],
 )

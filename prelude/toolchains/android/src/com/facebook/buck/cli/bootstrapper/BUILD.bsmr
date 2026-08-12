@@ -16,7 +16,7 @@ buck_java_binary(
     main_class = "com.facebook.buck.cli.bootstrapper.ClassLoaderBootstrapper",
     visibility = [
         "root//platform/...",
-        "upstream//xplat/bsmr/platform/...",
+        "none//xplat/bsmr/platform/...",
         "prelude//toolchains/android/config:",
         "prelude//toolchains/android/meta_only/src/com/facebook/buck/jvm/remote_worker/...",
         "prelude//toolchains/android/src/com/facebook/buck/jvm/java/stepsbuilder/javacd/worker:",
