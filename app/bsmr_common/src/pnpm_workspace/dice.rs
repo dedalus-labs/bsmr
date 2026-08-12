@@ -24,6 +24,7 @@ use futures::FutureExt;
 use pagable::Pagable;
 use pagable::pagable_typetag;
 
+use super::PnpmLock;
 use super::PnpmWorkspace;
 use super::WorkspaceGraph;
 use super::WorkspacePackage;
@@ -114,7 +115,24 @@ impl Key for PnpmWorkspaceGraphKey {
                 .boxed()
             })
             .await?;
-        Ok(Arc::new(WorkspaceGraph::build(packages)?))
+        let lock_path = PackageRelativePath::new("pnpm-lock.yaml")?;
+        let lock = match listing.get_file(lock_path) {
+            Some(path) => {
+                let source = DiceFileComputations::read_file(
+                    ctx,
+                    CellPath::new(self.0, CellRelativePathBuf::unchecked_new(path.to_string()))
+                        .as_ref(),
+                )
+                .await
+                .without_package_context_information()?;
+                Some(PnpmLock::parse(&source)?)
+            }
+            None => None,
+        };
+        Ok(Arc::new(WorkspaceGraph::build_with_lock(
+            packages,
+            lock.as_ref(),
+        )?))
     }
 
     fn equality(x: &Self::Value, y: &Self::Value) -> bool {

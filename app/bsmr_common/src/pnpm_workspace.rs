@@ -12,11 +12,13 @@ use bsmr_core::cells::paths::CellRelativePathBuf;
 use serde::Deserialize;
 
 mod dice;
+mod lockfile;
 mod manifest;
 mod native_build;
 mod toolchain;
 
 pub use dice::HasPnpmWorkspaceGraph;
+use lockfile::PnpmLock;
 use manifest::PnpmWorkspace;
 pub use native_build::NativeTypeScriptBuildError;
 pub use native_build::render_typescript_build_file;
@@ -246,8 +248,17 @@ impl NodeWorkspaceToolchain {
 
 impl WorkspaceGraph {
     /// Resolves explicit workspace edges and rejects ambiguous or cyclic graphs.
+    #[cfg(test)]
     fn build(
         packages: impl IntoIterator<Item = WorkspacePackage>,
+    ) -> Result<Self, WorkspaceGraphError> {
+        Self::build_with_lock(packages, None)
+    }
+
+    /// Resolves one graph using the frozen lockfile for ambiguous semver edges.
+    fn build_with_lock(
+        packages: impl IntoIterator<Item = WorkspacePackage>,
+        lock: Option<&PnpmLock>,
     ) -> Result<Self, WorkspaceGraphError> {
         let packages = index_packages(packages)?;
         let node_toolchain = packages
@@ -265,7 +276,7 @@ impl WorkspaceGraph {
                     package_manager,
                 },
             );
-        let projects = resolve_projects(&packages)?;
+        let projects = resolve_projects(&packages, lock)?;
         ensure_acyclic(&projects)?;
         Ok(Self {
             packages: projects,
@@ -315,11 +326,12 @@ fn index_packages(
 /// Resolves workspace-protocol declarations into typed internal edges.
 fn resolve_projects(
     packages: &BTreeMap<String, WorkspacePackage>,
+    lock: Option<&PnpmLock>,
 ) -> Result<BTreeMap<String, WorkspaceProject>, WorkspaceGraphError> {
     packages
         .iter()
         .map(|(name, package)| {
-            let dependencies = resolve_dependencies(package, packages)?;
+            let dependencies = resolve_dependencies(package, packages, lock)?;
             Ok((
                 name.clone(),
                 WorkspaceProject {
@@ -335,12 +347,41 @@ fn resolve_projects(
 fn resolve_dependencies(
     package: &WorkspacePackage,
     packages: &BTreeMap<String, WorkspacePackage>,
+    lock: Option<&PnpmLock>,
 ) -> Result<BTreeMap<String, WorkspaceDependency>, WorkspaceGraphError> {
     let mut resolved = BTreeMap::new();
     for (dependency, declarations) in &package.dependencies {
         for declaration in declarations {
             let Some(range) = declaration.specifier.strip_prefix("workspace:") else {
                 if packages.contains_key(dependency) {
+                    if lock.is_some_and(|lock| {
+                        lock.resolves_to_workspace(
+                            &package.root,
+                            declaration.section,
+                            dependency,
+                            &declaration.specifier,
+                            &packages[dependency].root,
+                        )
+                    }) {
+                        resolved
+                            .entry(dependency.clone())
+                            .or_insert_with(|| WorkspaceDependency {
+                                declarations: BTreeMap::new(),
+                            })
+                            .declarations
+                            .insert(declaration.section, declaration.specifier.clone());
+                        continue;
+                    }
+                    if lock.is_some_and(|lock| {
+                        lock.resolves_to_registry(
+                            &package.root,
+                            declaration.section,
+                            dependency,
+                            &declaration.specifier,
+                        )
+                    }) {
+                        continue;
+                    }
                     return Err(WorkspaceGraphError::AmbiguousLocalDependency {
                         package: package.name.clone(),
                         dependency: dependency.clone(),
@@ -432,6 +473,7 @@ mod tests {
     use bsmr_core::cells::paths::CellRelativePathBuf;
 
     use super::DependencySection;
+    use super::PnpmLock;
     use super::PnpmWorkspace;
     use super::WorkspaceGraph;
     use super::WorkspaceGraphError;
@@ -598,6 +640,48 @@ mod tests {
             error,
             WorkspaceGraphError::AmbiguousLocalDependency { .. }
         ));
+    }
+
+    #[test]
+    fn invariant_lockfile_distinguishes_registry_and_workspace_semver_dependencies() {
+        let app = package(
+            "apps/api",
+            r#"{
+                "name": "@acme/api",
+                "dependencies": {
+                    "@acme/core": "^1.0.0",
+                    "@acme/registry": "^1.0.0"
+                }
+            }"#,
+        );
+        let core = package("packages/core", r#"{"name":"@acme/core"}"#);
+        let registry = package("packages/registry", r#"{"name":"@acme/registry"}"#);
+        let lock = PnpmLock::parse(
+            r#"
+lockfileVersion: '9.0'
+importers:
+  apps/api:
+    dependencies:
+      '@acme/core':
+        specifier: ^1.0.0
+        version: link:../../packages/core
+      '@acme/registry':
+        specifier: ^1.0.0
+        version: 1.2.3
+"#,
+        )
+        .unwrap();
+
+        let graph = WorkspaceGraph::build_with_lock([app, core, registry], Some(&lock)).unwrap();
+
+        assert_eq!(
+            graph
+                .package("@acme/api")
+                .unwrap()
+                .dependencies()
+                .collect::<Vec<_>>(),
+            ["@acme/core"]
+        );
     }
 
     #[test]

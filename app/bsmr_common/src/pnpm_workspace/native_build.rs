@@ -79,10 +79,9 @@ pub fn render_typescript_build_file(
     }
 
     let package_files = package_files(graph, &package_root, listing);
-    let has_typescript = package_files.iter().any(|file| is_typescript(file));
     let has_tsconfig = package_files.contains(&"tsconfig.json");
     let has_tsdown = package_files.contains(&"tsdown.config.ts");
-    if has_typescript && (!has_tsconfig || !has_tsdown) {
+    if has_tsdown && !has_tsconfig {
         return Err(NativeTypeScriptBuildError::MissingCompilerConfig(
             package_root,
         ));
@@ -92,7 +91,7 @@ pub fn render_typescript_build_file(
     if package_root.is_empty() {
         render_install(graph, listing, &mut output)?;
     }
-    if !has_typescript {
+    if !has_tsdown {
         return Ok(output);
     }
 
@@ -210,14 +209,6 @@ fn is_generated_path(path: &str) -> bool {
     [".bsmr", ".git", "dist", "node_modules"]
         .into_iter()
         .any(|root| path == root || path.starts_with(&format!("{root}/")))
-}
-
-/// Recognizes TypeScript source modules without guessing JavaScript packages.
-fn is_typescript(path: &str) -> bool {
-    [".ts", ".tsx", ".mts", ".cts"]
-        .into_iter()
-        .any(|extension| path.ends_with(extension))
-        && path != "tsdown.config.ts"
 }
 
 /// Joins a package-local file to its workspace-relative path.
@@ -390,6 +381,34 @@ mod tests {
         assert!(build.contains("pnpm-11.20.0.tgz"));
         assert!(build.contains("\"packages/api/package.json\""));
         assert!(!build.contains("packages/api/src/index.ts"));
+    }
+
+    /// Tooling scripts do not turn a workspace root into an emitted package.
+    #[test]
+    fn invariant_workspace_root_without_tsdown_is_not_an_emitted_package() {
+        let graph = WorkspaceGraph::build([package(
+            "",
+            r#"{"name":"@acme/root","engines":{"node":">=26"},"packageManager":"pnpm@11.20.0+sha512.9a6f330a95b66446ea088faf1521405a8a01f07fde7124cc9958dfed52d4bb436737e65b08f85f37b46fcba375092558ac51262b816844b22f63406ed166bfee"}"#,
+        )])
+        .unwrap();
+        let listing = PackageListing::testing_files(&[
+            "Cargo.toml",
+            "ci/action.ts",
+            "package.json",
+            "pnpm-lock.yaml",
+            "tsconfig.json",
+            "types.d.ts",
+        ]);
+
+        let build = render_typescript_build_file(
+            &graph,
+            CellRelativePathBuf::unchecked_new(String::new()),
+            &listing,
+        )
+        .unwrap();
+
+        assert!(build.contains("pnpm_install("));
+        assert!(!build.contains("typescript_library("));
     }
 
     #[test]
