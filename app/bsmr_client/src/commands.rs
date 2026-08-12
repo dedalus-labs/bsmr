@@ -20,6 +20,11 @@ pub mod clean;
 pub mod clean_stale;
 pub mod ctargets;
 pub mod expand_external_cell;
+pub mod go;
+pub(crate) mod go_graph;
+pub(crate) mod go_graph_error;
+pub(crate) mod go_manifest;
+pub(crate) mod go_toolchain;
 pub mod help_env;
 pub mod init;
 pub mod install;
@@ -35,3 +40,12 @@ pub mod status;
 pub mod subscribe;
 pub mod targets;
 pub mod test;
+
+#[cfg(test)]
+mod go_graph_tests;
+#[cfg(test)]
+mod go_manifest_tests;
+#[cfg(test)]
+mod go_tests;
+#[cfg(test)]
+mod go_toolchain_tests;

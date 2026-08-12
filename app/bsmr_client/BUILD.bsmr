@@ -12,11 +12,11 @@ oncall("build_infra")
 rust_library(
     name = "bsmr_client",
     srcs = glob([
+        "src/**/*.go",
         "src/**/*.rs",
     ]),
     test_deps = [
         "bsmr_build//third-party/rust:assert_matches",
-        "bsmr_build//third-party/rust:tempfile",
     ],
     deps = [
         "bsmr_build//third-party/rust:async-recursion",
@@ -32,6 +32,7 @@ rust_library(
         "bsmr_build//third-party/rust:serde",
         "bsmr_build//third-party/rust:serde_json",
         "bsmr_build//third-party/rust:shlex",
+        "bsmr_build//third-party/rust:tempfile",
         "bsmr_build//third-party/rust:threadpool",
         "bsmr_build//third-party/rust:tokio",
         "bsmr_build//third-party/rust:tokio-stream",
@@ -49,6 +50,7 @@ rust_library(
         "root//app/bsmr_event_log:bsmr_event_log",
         "root//app/bsmr_fs:bsmr_fs",
         "root//app/bsmr_hash:bsmr_hash",
+        "root//app/bsmr_http:bsmr_http",
         "root//app/bsmr_query_parser:bsmr_query_parser",
         "root//app/bsmr_subscription_proto:bsmr_subscription_proto",
         "root//app/bsmr_util:bsmr_util",

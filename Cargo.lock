@@ -1083,6 +1083,7 @@ dependencies = [
  "bsmr_event_log",
  "bsmr_fs",
  "bsmr_hash",
+ "bsmr_http",
  "bsmr_query_parser",
  "bsmr_subscription_proto",
  "bsmr_util",

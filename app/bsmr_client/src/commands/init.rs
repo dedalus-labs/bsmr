@@ -143,7 +143,6 @@ fn initialize_bsmrconfig(repo_root: &AbsPath, prelude: bool, git: bool) -> bsmr_
         writeln!(bsmrconfig, "  config = prelude")?;
         writeln!(bsmrconfig, "  ovr_config = prelude")?;
         writeln!(bsmrconfig, "  buck = none")?;
-        writeln!(bsmrconfig, "  upstream = none")?;
         writeln!(bsmrconfig)?;
         writeln!(
             bsmrconfig,
@@ -347,7 +346,6 @@ mod tests {
   config = prelude
   ovr_config = prelude
   buck = none
-  upstream = none
 
 # Uses a copy of the prelude bundled with the bsmr binary. You can alternatively delete this
 # section and vendor a copy of the prelude to the `prelude` directory of your project.

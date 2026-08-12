@@ -1,3 +1,9 @@
+# ===----------------------------------------------------------------------===
+# Upstream-Source: facebook/buck2@1560aca2002865cd73d7cafb22c705cfb640b2bc
+# Modifications Copyright (c) 2026 Dedalus Labs, Inc. and its contributors
+# SPDX-License-Identifier: Apache-2.0
+# ===----------------------------------------------------------------------===
+
 # Copyright (c) Meta Platforms, Inc. and affiliates.
 #
 # This source code is dual-licensed under either the MIT license found in the
@@ -42,10 +48,13 @@ android_hack_alias = rule(
     },
 )
 
-def system_demo_toolchains():
+def system_demo_toolchains(include_go = True):
     """
     All the default toolchains, suitable for a quick demo or early prototyping.
     Most real projects should copy/paste the implementation to configure them.
+
+    Args:
+        include_go: Whether to register host-discovered Go toolchains.
     """
     android_sdk_tools(
         name = "android_sdk_tools",
@@ -91,15 +100,16 @@ def system_demo_toolchains():
         visibility = ["PUBLIC"],
     )
 
-    system_go_toolchain(
-        name = "go",
-        visibility = ["PUBLIC"],
-    )
+    if include_go:
+        system_go_toolchain(
+            name = "go",
+            visibility = ["PUBLIC"],
+        )
 
-    system_go_bootstrap_toolchain(
-        name = "go_bootstrap",
-        visibility = ["PUBLIC"],
-    )
+        system_go_bootstrap_toolchain(
+            name = "go_bootstrap",
+            visibility = ["PUBLIC"],
+        )
 
     system_haskell_toolchain(
         name = "haskell",
