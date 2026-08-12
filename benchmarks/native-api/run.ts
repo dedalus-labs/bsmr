@@ -50,7 +50,6 @@ none = none
 [cell_aliases]
 config = prelude
 ovr_config = prelude
-buck = none
 upstream = none
 toolchains = root
 

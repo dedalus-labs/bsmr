@@ -141,7 +141,6 @@ fn initialize_bsmrconfig(repo_root: &AbsPath, prelude: bool, git: bool) -> bsmr_
         writeln!(bsmrconfig, "[cell_aliases]")?;
         writeln!(bsmrconfig, "  config = prelude")?;
         writeln!(bsmrconfig, "  ovr_config = prelude")?;
-        writeln!(bsmrconfig, "  buck = none")?;
         writeln!(bsmrconfig, "  upstream = none")?;
         writeln!(bsmrconfig, "  toolchains = root")?;
         writeln!(bsmrconfig)?;
@@ -295,7 +294,6 @@ mod tests {
 [cell_aliases]
   config = prelude
   ovr_config = prelude
-  buck = none
   upstream = none
   toolchains = root
 
