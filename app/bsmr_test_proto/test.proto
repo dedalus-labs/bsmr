@@ -1,3 +1,9 @@
+//===----------------------------------------------------------------------===//
+// Upstream-Source: facebook/buck2@1560aca2002865cd73d7cafb22c705cfb640b2bc
+// Modifications Copyright (c) 2026 Dedalus Labs, Inc. and its contributors
+// SPDX-License-Identifier: Apache-2.0
+//===----------------------------------------------------------------------===//
+
 /*
  * Copyright (c) Meta Platforms, Inc. and affiliates.
  *
@@ -95,6 +101,7 @@ message TestResult {
   google.protobuf.Duration duration = 7; // Optional
   string details = 8; // Required
   optional uint64 max_memory_used_bytes = 9;
+  optional buck.data.TestAttempt attempt = 10;
 }
 
 message ReportTestResultRequest {

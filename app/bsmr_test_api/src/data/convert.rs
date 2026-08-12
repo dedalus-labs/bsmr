@@ -413,6 +413,7 @@ impl TryFrom<bsmr_test_proto::TestResult> for TestResult {
             duration,
             details,
             max_memory_used_bytes,
+            attempt,
         } = s;
 
         let duration = duration
@@ -431,6 +432,7 @@ impl TryFrom<bsmr_test_proto::TestResult> for TestResult {
             duration,
             max_memory_used_bytes,
             details,
+            attempt,
         })
     }
 }
@@ -456,6 +458,7 @@ impl TryInto<bsmr_test_proto::TestResult> for TestResult {
             msg: self.msg.map(|msg| OptionalMsg { msg }),
             duration: self.duration.try_map(|d| d.try_into())?,
             max_memory_used_bytes: self.max_memory_used_bytes,
+            attempt: self.attempt,
         })
     }
 }
@@ -1347,6 +1350,29 @@ mod tests {
             command_execution: None,
         };
         assert_roundtrips::<bsmr_test_proto::ExecutionResult2, ExecutionResult2>(&result);
+    }
+
+    /// Verifies that action identity survives the test-result RPC boundary.
+    #[test]
+    fn test_result_attempt_roundtrips() {
+        let result = TestResult {
+            target: ConfiguredTargetHandle(42),
+            name: "case".to_owned(),
+            status: TestStatus::PASS,
+            msg: None,
+            duration: Some(Duration::from_millis(7)),
+            max_memory_used_bytes: None,
+            details: String::new(),
+            attempt: Some(bsmr_data::TestAttempt {
+                action_digest: "action:42".to_owned(),
+                suite: "unit".to_owned(),
+                variant: None,
+                attempt: 1,
+                execution_kind: bsmr_data::ActionExecutionKind::Local.into(),
+            }),
+        };
+
+        assert_roundtrips::<bsmr_test_proto::TestResult, TestResult>(&result);
     }
 
     fn dummy_local_execution_command() -> LocalExecutionCommand {

@@ -1219,6 +1219,15 @@ enum TestStatus {
   INFRA_FAILURE = 11;
 }
 
+// Exact execution identity for an individual test result.
+message TestAttempt {
+  string action_digest = 1;
+  string suite = 2;
+  optional string variant = 3;
+  uint32 attempt = 4;
+  ActionExecutionKind execution_kind = 5;
+}
+
 message TestResult {
   message OptionalMsg {
     string msg = 1; // Required
@@ -1231,6 +1240,7 @@ message TestResult {
   string details = 8; // Required
   ConfiguredTargetLabel target_label = 9;
   optional uint64 max_memory_used_bytes = 10;
+  optional TestAttempt attempt = 11;
 }
 
 // At the beginning of discovery, the test orchestrator will advertise
