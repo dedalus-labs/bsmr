@@ -1,0 +1,6 @@
+<!-- Copyright (c) 2026 Dedalus Labs, Inc. and its contributors -->
+<!-- SPDX-License-Identifier: Apache-2.0 -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Bessemer">
+  <path fill="#f3f6f8" d="M12 11h27c9 0 14 5 14 12 0 5-3 9-8 11 6 2 9 6 9 12 0 8-6 13-16 13H12V11Zm12 10v9h13c3 0 5-2 5-5s-2-4-5-4H24Zm0 18v10h14c4 0 6-2 6-5s-2-5-6-5H24Z"/>
+  <path fill="#ff6b35" d="m8 7 7 4v48l-7-4V7Z"/>
+</svg>
