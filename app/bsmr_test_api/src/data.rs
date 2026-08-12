@@ -133,6 +133,8 @@ pub struct TestResult {
     pub max_memory_used_bytes: Option<u64>,
     // the output of the test execution (combining stdout and stderr)
     pub details: String,
+    // exact identity of the execution that produced this result
+    pub attempt: Option<bsmr_data::TestAttempt>,
 }
 
 /// different possible test results
@@ -472,6 +474,118 @@ pub struct ExecutionResult2 {
     pub command_execution: Option<bsmr_data::CommandExecution>,
 }
 
+#[derive(Debug, bsmr_error::Error)]
+enum TestExecutionIdentityError {
+    #[error("test execution result is missing its command execution kind")]
+    #[bsmr(tag = bsmr_error::ErrorTag::InvalidEvent)]
+    MissingCommandKind,
+    #[error("test execution attempt must be greater than zero")]
+    #[bsmr(tag = bsmr_error::ErrorTag::InvalidEvent)]
+    ZeroAttempt,
+    #[error("worker initialization does not identify a completed test action")]
+    #[bsmr(tag = bsmr_error::ErrorTag::InvalidEvent)]
+    WorkerInitialization,
+    #[error("test execution result contains an empty action digest")]
+    #[bsmr(tag = bsmr_error::ErrorTag::InvalidEvent)]
+    EmptyActionDigest,
+    #[error("remote test execution has invalid cache-hit type `{0}`")]
+    #[bsmr(tag = bsmr_error::ErrorTag::InvalidEvent)]
+    InvalidRemoteCacheHitType(i32),
+    #[error("remote test execution is missing execution details")]
+    #[bsmr(tag = bsmr_error::ErrorTag::InvalidEvent)]
+    MissingRemoteExecutionDetails,
+}
+
+impl ExecutionResult2 {
+    /// Returns the stable identity of this completed test execution.
+    pub fn test_attempt(
+        &self,
+        suite: String,
+        variant: Option<String>,
+        attempt: u32,
+    ) -> bsmr_error::Result<bsmr_data::TestAttempt> {
+        if attempt == 0 {
+            return Err(TestExecutionIdentityError::ZeroAttempt.into());
+        }
+        let command = self
+            .command_execution
+            .as_ref()
+            .and_then(|execution| execution.details.as_ref())
+            .and_then(|details| details.command_kind.as_ref())
+            .and_then(|kind| kind.command.as_ref())
+            .ok_or(TestExecutionIdentityError::MissingCommandKind)?;
+        let (action_digest, execution_kind) = test_execution_identity(command)?;
+        Ok(bsmr_data::TestAttempt {
+            action_digest: action_digest.to_owned(),
+            suite,
+            variant,
+            attempt,
+            execution_kind: execution_kind.into(),
+        })
+    }
+}
+
+/// Extracts an action digest and execution kind from a completed command.
+fn test_execution_identity(
+    command: &bsmr_data::command_execution_kind::Command,
+) -> bsmr_error::Result<(&str, bsmr_data::ActionExecutionKind)> {
+    use bsmr_data::command_execution_kind::Command;
+
+    let identity = match command {
+        Command::LocalCommand(command) => (
+            command.action_digest.as_str(),
+            bsmr_data::ActionExecutionKind::Local,
+        ),
+        Command::OmittedLocalCommand(command) => (
+            command.action_digest.as_str(),
+            bsmr_data::ActionExecutionKind::Local,
+        ),
+        Command::WorkerCommand(command) => (
+            command.action_digest.as_str(),
+            bsmr_data::ActionExecutionKind::LocalWorker,
+        ),
+        Command::RemoteCommand(command) => remote_test_execution_identity(command)?,
+        Command::WorkerInitCommand(_) => {
+            return Err(TestExecutionIdentityError::WorkerInitialization.into());
+        }
+    };
+    if identity.0.is_empty() {
+        return Err(TestExecutionIdentityError::EmptyActionDigest.into());
+    }
+    Ok(identity)
+}
+
+/// Classifies a remote command without conflating execution and cache hits.
+fn remote_test_execution_identity(
+    command: &bsmr_data::RemoteCommand,
+) -> bsmr_error::Result<(&str, bsmr_data::ActionExecutionKind)> {
+    let kind = if command.cache_hit {
+        match bsmr_data::CacheHitType::try_from(command.cache_hit_type) {
+            Ok(bsmr_data::CacheHitType::ActionCache) => bsmr_data::ActionExecutionKind::ActionCache,
+            Ok(bsmr_data::CacheHitType::RemoteDepFileCache) => {
+                bsmr_data::ActionExecutionKind::RemoteDepFileCache
+            }
+            _ => {
+                return Err(TestExecutionIdentityError::InvalidRemoteCacheHitType(
+                    command.cache_hit_type,
+                )
+                .into());
+            }
+        }
+    } else {
+        match command.details.as_ref() {
+            Some(details) if details.persistent_worker => {
+                bsmr_data::ActionExecutionKind::RemoteWorker
+            }
+            Some(_) => bsmr_data::ActionExecutionKind::Remote,
+            None => {
+                return Err(TestExecutionIdentityError::MissingRemoteExecutionDetails.into());
+            }
+        }
+    };
+    Ok((&command.action_digest, kind))
+}
+
 pub enum CancellationReason {
     NotSpecified,
     ReQueueTimeout,
@@ -567,5 +681,43 @@ mod tests {
     fn test_parse_status_unknown_value() {
         let err = TestStatus::parse("NOT_A_STATUS").unwrap_err();
         assert!(err.to_string().contains("Unknown test status"), "{}", err);
+    }
+
+    /// Verifies that completed local tests retain their exact action identity.
+    #[test]
+    fn local_attempt_preserves_action_identity() -> bsmr_error::Result<()> {
+        let result = ExecutionResult2 {
+            status: ExecutionStatus::Finished { exitcode: 0 },
+            stdout: ExecutionStream::Inline(Vec::new()),
+            stderr: ExecutionStream::Inline(Vec::new()),
+            outputs: Default::default(),
+            start_time: SystemTime::UNIX_EPOCH,
+            execution_time: Duration::ZERO,
+            max_memory_used_bytes: None,
+            execution_details: ExecutionDetails::default(),
+            command_execution: Some(bsmr_data::CommandExecution {
+                details: Some(bsmr_data::CommandExecutionDetails {
+                    command_kind: Some(bsmr_data::CommandExecutionKind {
+                        command: Some(bsmr_data::command_execution_kind::Command::LocalCommand(
+                            bsmr_data::LocalCommand {
+                                action_digest: "action:42".to_owned(),
+                                ..Default::default()
+                            },
+                        )),
+                    }),
+                    ..Default::default()
+                }),
+                ..Default::default()
+            }),
+        };
+
+        let attempt = result.test_attempt("unit".to_owned(), None, 1)?;
+
+        assert_eq!(attempt.action_digest, "action:42");
+        assert_eq!(
+            attempt.execution_kind,
+            bsmr_data::ActionExecutionKind::Local as i32
+        );
+        Ok(())
     }
 }

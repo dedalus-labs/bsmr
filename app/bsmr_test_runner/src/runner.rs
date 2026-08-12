@@ -87,6 +87,7 @@ impl BsmrTestRunner {
                     spec.target.cell, spec.target.package, spec.target.target
                 );
                 let target_handle = spec.target.handle.to_owned();
+                let suite = spec.target.target.clone();
 
                 let execution_response = self
                     .execute_test_from_spec(spec)
@@ -98,7 +99,7 @@ impl BsmrTestRunner {
                     ExecuteResponse::Cancelled(_) => return Ok(TestStatus::OMITTED),
                 };
 
-                let test_result = get_test_result(name, target_handle, execution_result);
+                let test_result = get_test_result(name, target_handle, suite, execution_result)?;
                 let test_status = test_result.status.clone();
 
                 self.report_test_result(test_result)
@@ -216,11 +217,14 @@ impl BsmrTestRunner {
     }
 }
 
+/// Converts a completed execution into the runner's single-test report.
 fn get_test_result(
     name: String,
     target: ConfiguredTargetHandle,
+    suite: String,
     execution_result: ExecutionResult2,
-) -> TestResult {
+) -> bsmr_error::Result<TestResult> {
+    let attempt = execution_result.test_attempt(suite, None, 1)?;
     let status = match execution_result.status {
         ExecutionStatus::Finished { exitcode } => match exitcode {
             0 => TestStatus::PASS,
@@ -228,7 +232,7 @@ fn get_test_result(
         },
         ExecutionStatus::TimedOut { .. } => TestStatus::TIMEOUT,
     };
-    TestResult {
+    Ok(TestResult {
         target,
         name,
         status,
@@ -239,7 +243,8 @@ fn get_test_result(
             execution_result.stdout, execution_result.stderr
         ),
         max_memory_used_bytes: execution_result.max_memory_used_bytes,
-    }
+        attempt: Some(attempt),
+    })
 }
 
 #[derive(Debug)]

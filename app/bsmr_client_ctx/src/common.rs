@@ -157,6 +157,10 @@ pub struct CommonEventLogOptions {
     #[clap(long, value_name = "PATH")]
     pub(crate) write_build_id: Option<PathArg>,
 
+    /// Write stable, versioned build observations as JSON Lines.
+    #[clap(long, value_name = "PATH")]
+    pub(crate) build_event_jsonl: Option<PathArg>,
+
     /// Write the invocation record (as JSON) to this path. No guarantees whatsoever are made
     /// regarding the stability of the format.
     #[clap(long, value_name = "PATH")]
@@ -174,6 +178,7 @@ impl CommonEventLogOptions {
             event_log: None,
             no_event_log: false,
             write_build_id: None,
+            build_event_jsonl: None,
             command_report_path: None,
             unstable_write_invocation_record: None,
         };
@@ -185,6 +190,7 @@ impl CommonEventLogOptions {
             event_log: None,
             no_event_log: true,
             write_build_id: None,
+            build_event_jsonl: None,
             command_report_path: None,
             unstable_write_invocation_record: None,
         };
@@ -614,11 +620,25 @@ mod tests {
     use bsmr_core::cells::cell_path::CellPath;
     use bsmr_core::fs::project::ProjectRootTemp;
     use bsmr_fs::paths::forward_rel_path::ForwardRelativePathBuf;
+    use clap::Parser;
 
     use super::*;
 
     fn source(flag: RepresentativeConfigFlagSource) -> RepresentativeConfigFlag {
         RepresentativeConfigFlag { source: Some(flag) }
+    }
+
+    /// Verifies that streaming commands can request the stable event artifact.
+    #[test]
+    fn build_event_jsonl_option_parses() -> bsmr_error::Result<()> {
+        let options = CommonEventLogOptions::try_parse_from([
+            "bsmr",
+            "--build-event-jsonl",
+            "build-events.jsonl",
+        ])?;
+
+        assert!(options.build_event_jsonl.is_some());
+        Ok(())
     }
 
     #[test]

@@ -175,6 +175,7 @@ pub async fn run_internal_test(
     while let Some((entry_name, test_response)) = futures.next().await {
         match test_response {
             Ok(ExecuteResponse::Result(result)) => {
+                let attempt = result.test_attempt(suite.clone(), None, 1)?;
                 let exit_code = match result.status {
                     ExecutionStatus::Finished { exitcode } => exitcode,
                     ExecutionStatus::TimedOut { .. } => {
@@ -187,6 +188,7 @@ pub async fn run_internal_test(
                             duration: Some(result.execution_time),
                             details: format_execution_output(&result.stdout, &result.stderr),
                             max_memory_used_bytes: result.max_memory_used_bytes,
+                            attempt: Some(attempt),
                         };
                         orchestrator
                             .report_test_result(test_result)
@@ -226,6 +228,7 @@ pub async fn run_internal_test(
                         duration: Some(result.execution_time),
                         details: format_execution_output(&result.stdout, &result.stderr),
                         max_memory_used_bytes: result.max_memory_used_bytes,
+                        attempt: Some(attempt),
                     };
                     orchestrator
                         .report_test_result(test_result)
@@ -241,6 +244,7 @@ pub async fn run_internal_test(
                             duration: res.duration,
                             details: res.details.unwrap_or_default(),
                             max_memory_used_bytes: result.max_memory_used_bytes,
+                            attempt: Some(attempt.clone()),
                         };
                         orchestrator
                             .report_test_result(test_result)
@@ -258,6 +262,7 @@ pub async fn run_internal_test(
                     duration: None,
                     details: String::new(),
                     max_memory_used_bytes: None,
+                    attempt: None,
                 };
                 orchestrator
                     .report_test_result(test_result)
@@ -273,6 +278,7 @@ pub async fn run_internal_test(
                     duration: None,
                     details: String::new(),
                     max_memory_used_bytes: None,
+                    attempt: None,
                 };
                 orchestrator
                     .report_test_result(test_result)

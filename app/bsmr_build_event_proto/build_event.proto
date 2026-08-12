@@ -1,0 +1,78 @@
+//===----------------------------------------------------------------------===//
+// Copyright (c) 2026 Dedalus Labs, Inc. and its contributors
+// SPDX-License-Identifier: Apache-2.0
+//===----------------------------------------------------------------------===//
+
+// Defines Bessemer's stable, vendor-neutral build observation protocol.
+
+syntax = "proto3";
+
+package bsmr.build.v1;
+
+message BuildEvent {
+  // Version of this public contract, independent from BSMR's internal event schema.
+  uint32 schema_version = 1;
+  // UUID shared by every observation from one BSMR command.
+  string invocation_id = 2;
+  // Monotonic position among observations written for this invocation.
+  uint64 sequence_number = 3;
+  uint64 event_time_unix_millis = 4;
+
+  oneof payload {
+    TestAttemptCompleted test_attempt_completed = 10;
+  }
+}
+
+message TestAttemptCompleted {
+  TestId test = 1;
+  // Opaque content identity for the exact command, inputs, and declared environment.
+  string action_digest = 2;
+  uint32 attempt = 3;
+  TestOutcome outcome = 4;
+  ExecutionKind execution_kind = 5;
+  uint64 duration_millis = 6;
+  optional string message = 7;
+  optional Digest details_digest = 8;
+  optional uint64 max_memory_used_bytes = 9;
+}
+
+message TestId {
+  // Fully-qualified configured target label.
+  string target = 1;
+  string configuration = 2;
+  // Native test framework identifiers; consumers must not parse these strings.
+  string suite = 3;
+  string case = 4;
+  optional string variant = 5;
+}
+
+message Digest {
+  string algorithm = 1;
+  string hash = 2;
+  uint64 size_bytes = 3;
+}
+
+enum TestOutcome {
+  TEST_OUTCOME_UNSPECIFIED = 0;
+  TEST_OUTCOME_PASS = 1;
+  TEST_OUTCOME_FAIL = 2;
+  TEST_OUTCOME_SKIP = 3;
+  TEST_OUTCOME_FATAL = 4;
+  TEST_OUTCOME_TIMEOUT = 5;
+  TEST_OUTCOME_UNKNOWN = 6;
+  TEST_OUTCOME_INFRA_FAILURE = 7;
+}
+
+enum ExecutionKind {
+  EXECUTION_KIND_UNSPECIFIED = 0;
+  EXECUTION_KIND_LOCAL = 1;
+  EXECUTION_KIND_REMOTE = 2;
+  EXECUTION_KIND_ACTION_CACHE = 3;
+  EXECUTION_KIND_SIMPLE = 4;
+  EXECUTION_KIND_DEFERRED = 5;
+  EXECUTION_KIND_LOCAL_DEP_FILE = 6;
+  EXECUTION_KIND_LOCAL_WORKER = 7;
+  EXECUTION_KIND_REMOTE_DEP_FILE_CACHE = 8;
+  EXECUTION_KIND_LOCAL_ACTION_CACHE = 9;
+  EXECUTION_KIND_REMOTE_WORKER = 10;
+}
