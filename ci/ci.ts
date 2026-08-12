@@ -205,14 +205,19 @@ export const ci = workflow({
 			steps: [
 				{
 					...checkout,
-					with: { ...checkout.with, "fetch-depth": 0 },
+					with: {
+						...checkout.with,
+						"fetch-depth": 0,
+						"sparse-checkout": ".github/actions/ci/rust-affected",
+					},
 				},
 				uses(rustAffectedAction, {
 					id: "check",
 					with: {
 						eventName: github.eventName,
 						baseSha: expr<string>("github.event.pull_request.base.sha"),
-						headSha: expr<string>("github.event.pull_request.head.sha"),
+						mergeGroupBaseSha: expr<string>("github.event.merge_group.base_sha"),
+						headSha: expr<string>("github.event.pull_request.head.sha || github.sha"),
 					},
 				}),
 			],

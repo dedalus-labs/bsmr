@@ -32,13 +32,15 @@ jobs:
         with:
           persist-credentials: false
           fetch-depth: 0
+          sparse-checkout: .github/actions/ci/rust-affected
       - id: check
         name: Detect Rust changes
         uses: ./.github/actions/ci/rust-affected
         with:
           event-name: ${{ github.event_name }}
           base-sha: ${{ github.event.pull_request.base.sha }}
-          head-sha: ${{ github.event.pull_request.head.sha }}
+          merge-group-base-sha: ${{ github.event.merge_group.base_sha }}
+          head-sha: ${{ github.event.pull_request.head.sha || github.sha }}
   dependencies:
     name: Dependency review
     if: ${{ github.repository == 'dedalus-labs/bsmr' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository) && github.event_name == 'pull_request' }}

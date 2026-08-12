@@ -16,7 +16,8 @@ const inputs = {
 		options: ["pull_request", "push", "merge_group", "workflow_dispatch"] as const,
 	}),
 	baseSha: stringInput({ description: "Pull request base commit.", default: "" }),
-	headSha: stringInput({ description: "Pull request head commit.", default: "" }),
+	mergeGroupBaseSha: stringInput({ description: "Merge-group base commit.", default: "" }),
+	headSha: stringInput({ description: "Candidate head commit.", default: "" }),
 } as const;
 
 type Inputs = ActionInputValues<typeof inputs>;
@@ -52,9 +53,25 @@ export const pullRequestFiles = async (
 	return diff.stdout.split("\0").filter(Boolean);
 };
 
+const mergeGroupFiles = async (
+	exec: ScriptExec,
+	baseSha: string,
+	headSha: string,
+): Promise<readonly string[]> => {
+	const base = requireSha("merge-group base SHA", baseSha);
+	const head = requireSha("head SHA", headSha);
+	const diff = await exec("git", ["diff", "--name-only", "--no-renames", "-z", base, head]);
+	return diff.stdout.split("\0").filter(Boolean);
+};
+
 export const rustAffectedForEvent = async (exec: ScriptExec, input: Inputs): Promise<boolean> => {
-	if (input.eventName !== "pull_request") return true;
-	return rustAffected(await pullRequestFiles(exec, input.baseSha, input.headSha));
+	if (input.eventName === "pull_request") {
+		return rustAffected(await pullRequestFiles(exec, input.baseSha, input.headSha));
+	}
+	if (input.eventName === "merge_group") {
+		return rustAffected(await mergeGroupFiles(exec, input.mergeGroupBaseSha, input.headSha));
+	}
+	return true;
 };
 
 export const rustAffectedAction = action({

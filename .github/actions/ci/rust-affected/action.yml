@@ -10,8 +10,12 @@ inputs:
     description: Pull request base commit.
     required: false
     default: ""
+  merge-group-base-sha:
+    description: Merge-group base commit.
+    required: false
+    default: ""
   head-sha:
-    description: Pull request head commit.
+    description: Candidate head commit.
     required: false
     default: ""
 outputs:
