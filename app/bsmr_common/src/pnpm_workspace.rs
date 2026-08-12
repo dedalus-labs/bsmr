@@ -809,7 +809,7 @@ mod tests {
     }
 
     #[test]
-    fn invariant_workspace_manifest_requires_explicit_package_patterns() {
+    fn invariant_workspace_manifest_supports_explicit_and_root_only_workspaces() {
         let workspace = PnpmWorkspace::parse(
             r#"
 packages:
@@ -820,7 +820,27 @@ packages:
         .unwrap();
 
         assert_eq!(workspace.patterns(), ["apps/*", "packages/typescript/**"]);
-        assert!(PnpmWorkspace::parse("packages: []").is_err());
+        let root_only = PnpmWorkspace::parse("allowBuilds:\n  esbuild: false").unwrap();
+        assert!(root_only.patterns().is_empty());
+        assert_eq!(
+            root_only
+                .select_package_roots(
+                    ["packages/core", ""]
+                        .map(|path| CellRelativePathBuf::try_from(path.to_owned()).unwrap())
+                )
+                .unwrap()
+                .iter()
+                .map(|path| path.as_str())
+                .collect::<Vec<_>>(),
+            [""]
+        );
+        assert!(
+            PnpmWorkspace::parse("packages: []")
+                .unwrap()
+                .patterns()
+                .is_empty()
+        );
+        assert!(PnpmWorkspace::parse("packages: packages/*").is_err());
     }
 
     #[test]
