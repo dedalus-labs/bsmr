@@ -67,8 +67,8 @@ pub struct PylockTomlPackage {
     pub requires_python: Option<String>,
     #[serde(default, rename = "dependencies")]
     _dependencies: Vec<toml::Table>,
-    pub vcs: Option<toml::Table>,
-    pub directory: Option<toml::Table>,
+    pub vcs: Option<PylockTomlVcs>,
+    pub directory: Option<PylockTomlDirectory>,
     pub archive: Option<PylockTomlArtifact>,
     pub sdist: Option<PylockTomlArtifact>,
     #[serde(default)]
@@ -98,6 +98,27 @@ pub struct PylockTomlArtifact {
     pub upload_time: Option<toml::value::Datetime>,
     pub subdirectory: Option<String>,
     pub hashes: BTreeMap<String, String>,
+}
+
+/// An immutable VCS source selected by its resolved commit identity.
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "kebab-case")]
+pub struct PylockTomlVcs {
+    #[serde(rename = "type")]
+    pub kind: String,
+    pub url: Option<String>,
+    pub path: Option<String>,
+    pub requested_revision: Option<String>,
+    pub commit_id: String,
+    pub subdirectory: Option<String>,
+}
+
+/// A local Python source tree referenced relative to its lockfile.
+#[derive(Debug, Deserialize)]
+pub struct PylockTomlDirectory {
+    pub path: String,
+    pub editable: Option<bool>,
+    pub subdirectory: Option<String>,
 }
 
 /// The resolve identity encoded by a standard PEP 751 filename.
@@ -260,6 +281,31 @@ mod tests {
         assert!(matches!(
             PylockName::from_path(Path::new(path)),
             Err(PylockTomlError::FileName(_))
+        ));
+    }
+
+    /// Immutable VCS identity must survive the wire boundary as typed data.
+    #[test]
+    fn invariant_vcs_commit_is_preserved() {
+        let input = format!(
+            "{HEADER}[[packages]]\nname = \"demo\"\n[packages.vcs]\ntype = \"git\"\nurl = \"https://example.org/demo.git\"\ncommit-id = \"deadbeef\"\n"
+        );
+        let lock = PylockToml::parse(&input).unwrap();
+        let vcs = lock.packages[0].vcs.as_ref().unwrap();
+
+        assert_eq!(vcs.kind, "git");
+        assert_eq!(vcs.commit_id, "deadbeef");
+    }
+
+    /// Required source identity must fail before acquisition or package execution.
+    #[test_case("[packages.vcs]\ntype = \"git\""; "missing_commit")]
+    #[test_case("[packages.directory]\neditable = true"; "missing_directory_path")]
+    fn invariant_source_required_fields_are_rejected(source: &str) {
+        let input = format!("{HEADER}[[packages]]\nname = \"demo\"\n{source}\n");
+
+        assert!(matches!(
+            PylockToml::parse(&input),
+            Err(PylockTomlError::Deserialize(_))
         ));
     }
 }
