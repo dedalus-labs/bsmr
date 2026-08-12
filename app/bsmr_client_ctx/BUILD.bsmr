@@ -74,6 +74,7 @@ rust_library(
         "bsmr_build//third-party/rust:tokio-util",
         "bsmr_build//third-party/rust:tonic",
         "bsmr_build//third-party/rust:tracing",
+        "root//app/bsmr_build_event_proto:bsmr_build_event_proto",
         "root//app/bsmr_build_info:bsmr_build_info",
         "root//app/bsmr_cli_proto:bsmr_cli_proto",
         "root//app/bsmr_common:bsmr_common",

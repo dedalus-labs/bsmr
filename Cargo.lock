@@ -1133,6 +1133,7 @@ dependencies = [
  "async-compression",
  "async-trait",
  "blake3",
+ "bsmr_build_event_proto",
  "bsmr_build_info",
  "bsmr_cli_proto",
  "bsmr_common",
