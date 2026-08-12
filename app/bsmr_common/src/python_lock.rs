@@ -6,6 +6,8 @@
 // Parses PEP 751 lock data without assuming responsibility for Python resolution.
 
 use std::collections::BTreeMap;
+use std::path::Path;
+use std::path::PathBuf;
 
 use serde::Deserialize;
 
@@ -98,12 +100,52 @@ pub struct PylockTomlArtifact {
     pub hashes: BTreeMap<String, String>,
 }
 
+/// The resolve identity encoded by a standard PEP 751 filename.
+#[derive(Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
+pub enum PylockName {
+    Default,
+    Named(String),
+}
+
+impl PylockName {
+    /// Parses the exact standard filename and preserves a named resolve verbatim.
+    pub fn from_path(path: &Path) -> Result<Self, PylockTomlError> {
+        let Some(filename) = path.file_name().and_then(|filename| filename.to_str()) else {
+            return Err(PylockTomlError::FileName(path.to_path_buf()));
+        };
+        if filename == "pylock.toml" {
+            return Ok(Self::Default);
+        }
+        let Some(resolve) = filename
+            .strip_prefix("pylock.")
+            .and_then(|filename| filename.strip_suffix(".toml"))
+            .filter(|resolve| !resolve.is_empty() && !resolve.contains('.'))
+        else {
+            return Err(PylockTomlError::FileName(path.to_path_buf()));
+        };
+        Ok(Self::Named(resolve.to_owned()))
+    }
+
+    /// Returns the named resolve, or `None` for the default lock.
+    pub fn resolve(&self) -> Option<&str> {
+        match self {
+            Self::Default => None,
+            Self::Named(resolve) => Some(resolve),
+        }
+    }
+}
+
 /// Failures that prevent a lock from entering Bessemer's Python frontend.
 #[derive(Debug, bsmr_error::Error)]
 #[bsmr(tag = Input)]
 pub enum PylockTomlError {
     #[error("Invalid pylock.toml: {0}")]
     Deserialize(toml::de::Error),
+    #[error(
+        "Invalid PEP 751 lock filename `{}`; expected `pylock.toml` or `pylock.<name>.toml`",
+        .0.display()
+    )]
+    FileName(PathBuf),
 }
 
 /// Accepts future minor revisions while rejecting unsupported lock major versions.
@@ -132,9 +174,12 @@ fn sorted_unique(mut values: Vec<String>) -> Vec<String> {
 
 #[cfg(test)]
 mod tests {
+    use std::path::Path;
+
     use indoc::indoc;
     use test_case::test_case;
 
+    use super::PylockName;
     use super::PylockToml;
     use super::PylockTomlError;
 
@@ -194,6 +239,27 @@ mod tests {
         assert!(matches!(
             PylockToml::parse(&input),
             Err(PylockTomlError::Deserialize(_))
+        ));
+    }
+
+    /// Standard and named lock filenames must map to unambiguous resolve identities.
+    #[test_case("pylock.toml", None)]
+    #[test_case("pylock.ci.toml", Some("ci"))]
+    fn invariant_lock_filename_maps_to_one_resolve(path: &str, expected: Option<&str>) {
+        let name = PylockName::from_path(Path::new(path)).unwrap();
+
+        assert_eq!(name.resolve(), expected);
+    }
+
+    /// Non-standard filenames must not silently become Bessemer resolves.
+    #[test_case("requirements.txt"; "requirements")]
+    #[test_case("Pylock.toml"; "uppercase_prefix")]
+    #[test_case("pylock..toml"; "empty_name")]
+    #[test_case("pylock.dev.test.toml"; "dotted_name")]
+    fn invariant_nonstandard_lock_filename_is_rejected(path: &str) {
+        assert!(matches!(
+            PylockName::from_path(Path::new(path)),
+            Err(PylockTomlError::FileName(_))
         ));
     }
 }
