@@ -67,7 +67,7 @@ The following environment variables configure one explicit implementation path:
 
 This suite measures graph scheduling, invalidation, task-result caching, and output
 restoration after setup. It does not measure package resolution or dependency
-installation. BSMR restores from the configured REAPI CAS after `bsmr clean`,
-including daemon restart; Nx and Turborepo restore from their local task caches.
-Those are each tool's configured cache semantics, but backend latency must be
-reported when comparing restoration numbers across machines.
+installation. BSMR restores missing leaves from the configured REAPI CAS while
+retaining its daemon; Nx and Turborepo restore from their local task caches.
+Backend latency must be reported when comparing restoration numbers across
+machines.
