@@ -90,3 +90,52 @@ runs in another.
 Reporting "client max RSS" via `time -v` while in daemon mode is the most
 common mistake — it's nearly constant regardless of build complexity
 because the client is just a gRPC shim.
+
+## Go builds
+
+The Go suite compares native BSMR actions with Bazel 9.2.0 and rules_go 0.62.0
+on equivalent pure-Go or cgo graphs:
+
+```text
+shared -> 8 core packages -> 16 libraries -> 8 applications
+```
+
+Both runners use the same host Go release. BSMR acquires the exact verified
+official SDK, while rules_go selects the host SDK. They target the same local
+REAPI service under separate instances and materialize every requested binary.
+The suite measures cold compilation, no-op builds, private implementation
+edits, exported API edits, unrelated documentation edits, output restoration,
+and remote action-cache hits from clean roots.
+
+Every sample is rejected unless:
+
+- all eight executables run and produce the same logical output;
+- every clean checkout produces the exact final populated-cache output;
+- cold and source-edit samples execute Go actions;
+- no-op, documentation, and restoration samples execute no Go actions; and
+- private and exported edits invalidate the same number of actions in both systems.
+
+Build BSMR, start `bazel-remote`, and provide Bazelisk or Bazel explicitly:
+
+```shell
+cargo build --release -p bsmr --bin bsmr
+BSMR_GO_BENCH_BINARY="$PWD/target/release/bsmr" \
+BSMR_GO_BENCH_BAZEL=/path/to/bazelisk \
+node benchmarks/go/run.ts
+```
+
+Set `BSMR_GO_BENCH_MODE=cgo` to exercise native compilation and external
+linking; the default is `pure`. `BSMR_GO_BENCH_CACHE_NAMESPACE` may reuse the
+untimed SDK and native-toolchain cache when those toolchains are unchanged; a
+unique module path keeps measured project actions cold.
+
+The command prints a unique `results.json` path containing all samples,
+medians, action counts, output digests, host details, tool versions, and the
+cache endpoint. `BSMR_GO_BENCH_RUNS` defaults to three and rejects smaller
+values. `BSMR_GO_BENCH_REMOTE_CACHE` and `BSMR_GO_BENCH_ROOT` select the REAPI
+endpoint and output parent.
+
+This suite measures graph orchestration, Go and optional host-native C
+compilation and linking, invalidation, and cache restoration after SDK and
+toolchain priming. It does not measure module resolution, SDK download,
+cross-compilation, remote execution, or sandbox overhead.
