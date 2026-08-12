@@ -57,6 +57,26 @@ test("check uses one typed command tree", async () => {
 			["pnpm", "exec", "hollywood"],
 		],
 	);
+	assert.deepEqual(state.invocations[1]?.args, [
+		"--test",
+		"ci/ci.test.ts",
+		"ci/cli.test.ts",
+		"ci/license-preamble.test.ts",
+		"ci/license-provenance.test.ts",
+		"ci/license.test.ts",
+		"prelude/typescript/runner.test.ts",
+		"prelude/toolchains/pnpm/runner.test.ts",
+		"test/contributors.test.ts",
+	]);
+	assert.deepEqual(state.invocations[7]?.args, [
+		"diff",
+		"--exit-code",
+		"--",
+		".github/actions",
+		".github/workflows",
+		"prelude/toolchains/pnpm/runner.mjs",
+		"prelude/typescript/runner.mjs",
+	]);
 	assert.ok(state.invocations.every(({ cwd }) => cwd === "/repo"));
 });
 

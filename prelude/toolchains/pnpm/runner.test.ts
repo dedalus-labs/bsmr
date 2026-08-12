@@ -6,31 +6,41 @@
 // Verifies the pnpm install runner's toolchain, manifest, and state-isolation invariants.
 
 import assert from "node:assert/strict";
-import { spawnSync } from "node:child_process";
+import { spawnSync, type SpawnSyncReturns } from "node:child_process";
 import { access, mkdtemp, mkdir, readFile, readlink, realpath, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { test } from "node:test";
+import { test, type TestContext } from "node:test";
 import { fileURLToPath } from "node:url";
 
 const packageManager = `pnpm@11.20.0+sha512.${"a".repeat(128)}`;
 const pnpm10PackageManager = `pnpm@10.30.3+sha512.${"b".repeat(128)}`;
 const runner = fileURLToPath(new URL("./runner.mjs", import.meta.url));
 
+type Fixture = Readonly<{ root: string; source: string; output: string; scratch: string; cli: string }>;
+type Invocation = Readonly<{
+	args: string[];
+	cwd: string;
+	execPath: string;
+	env: Readonly<Record<string, string | null>>;
+}>;
+
 /**
  * Create an isolated pnpm project and recording CLI.
  *
- * @param {import("node:test").TestContext} context - Active test context.
- * @param {string} [projectPackageManager] - Exact pnpm pin written to package.json.
- * @returns {Promise<{ root: string, source: string, output: string, scratch: string, cli: string }>}
+ * @param context - Active test context.
+ * @param projectPackageManager - Exact pnpm pin written to package.json.
+ * @returns Paths for the isolated fixture.
  */
-async function fixture(context, projectPackageManager = packageManager) {
+async function fixture(context: TestContext, projectPackageManager = packageManager): Promise<Fixture> {
 	const root = await mkdtemp(join(tmpdir(), "bsmr-pnpm-runner-"));
 	context.after(() => rm(root, { force: true, recursive: true }));
 	const source = join(root, "source");
 	const output = join(root, "output");
 	const scratch = join(root, "scratch");
 	const cli = join(root, "pnpm.cjs");
+	const cliVersion = /^pnpm@(\d+\.\d+\.\d+)/.exec(projectPackageManager)?.[1];
+	if (cliVersion === undefined) throw new Error(`test package manager '${projectPackageManager}' is invalid`);
 	await mkdir(source);
 	await writeFile(
 		join(source, "package.json"),
@@ -42,7 +52,7 @@ async function fixture(context, projectPackageManager = packageManager) {
 		cli,
 		`const { mkdirSync, symlinkSync, writeFileSync } = require("node:fs");
 if (["--version", "with current --version"].includes(process.argv.slice(2).join(" "))) {
-  console.log("${projectPackageManager.match(/^pnpm@(\d+\.\d+\.\d+)/)[1]}");
+  console.log("${cliVersion}");
   process.exit(0);
 }
 mkdirSync("node_modules/.bin", { recursive: true });
@@ -78,11 +88,11 @@ writeFileSync(".pnpm-invocation.json", JSON.stringify({
 /**
  * Execute the runner with the current exact Node runtime.
  *
- * @param {{ root: string, source: string, output: string, scratch: string, cli: string }} state - Test fixture paths.
- * @param {string} [expectedPackageManager] - Manifest pin the runner must require.
- * @returns {import("node:child_process").SpawnSyncReturns<string>}
+ * @param state - Test fixture paths.
+ * @param expectedPackageManager - Manifest pin the runner must require.
+ * @returns The completed runner process.
  */
-function runRunner(state, expectedPackageManager = packageManager) {
+function runRunner(state: Fixture, expectedPackageManager = packageManager): SpawnSyncReturns<string> {
 	return spawnSync(
 		process.execPath,
 		[
@@ -117,7 +127,7 @@ test("installs once with the exact toolchain and action-local state", async (con
 	const result = runRunner(state);
 	assert.equal(result.status, 0, result.stderr);
 
-	const invocation = JSON.parse(await readFile(join(state.output, ".pnpm-invocation.json"), "utf8"));
+	const invocation = JSON.parse(await readFile(join(state.output, ".pnpm-invocation.json"), "utf8")) as Invocation;
 	assert.deepEqual(invocation.args, [
 		"with",
 		"current",
@@ -159,7 +169,7 @@ test("uses pnpm 10 without the pnpm 11 toolchain bypass", async (context) => {
 	const result = runRunner(state, pnpm10PackageManager);
 	assert.equal(result.status, 0, result.stderr);
 
-	const invocation = JSON.parse(await readFile(join(state.output, ".pnpm-invocation.json"), "utf8"));
+	const invocation = JSON.parse(await readFile(join(state.output, ".pnpm-invocation.json"), "utf8")) as Invocation;
 	assert.deepEqual(invocation.args, [
 		"install",
 		"--frozen-lockfile",
