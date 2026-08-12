@@ -11,6 +11,52 @@ title: Toolchains
 
 # Toolchains
 
+## Native frontend setup
+
+Native Go repositories should let Bessemer select and acquire the toolchain:
+
+```shell
+bsmr go toolchain
+bsmr go toolchain --check
+```
+
+The command selects the latest stable Go release when no lock exists and
+otherwise acquires the committed release. `--update` moves an existing lock to
+the latest stable release; `--version` selects an exact release such as `1.26`
+or `1.26.5`. It
+commits the official archive names, SHA-256 digests, and byte lengths for
+supported hosts, then materializes and verifies the current host SDK as a
+repository-local ignored input. The check command is offline and rejects lock,
+generated IR, acquisition-metadata, or SDK-version drift.
+
+The committed `.bsmr-go-toolchain.json` is intentionally small. Each field
+protects a different part of the toolchain contract:
+
+| Field | Purpose |
+| --- | --- |
+| `generated_by` | Establishes ownership before Bessemer overwrites generated configuration; it is not an artifact digest. |
+| `schema` | Prevents a lock written with newer semantics from being accepted by an incompatible reader. |
+| `version` | Fixes the Go language, package-selection, compiler, linker, and standard-library behavior. |
+| `archives[].os` / `archives[].arch` | Selects runnable SDK bytes for the execution host, independently of the build target. |
+| `archives[].filename` | Constrains the go.dev URL to the canonical archive name for the locked version and host. |
+| `archives[].sha256` | Authenticates archive content and gives it a stable content identity. |
+| `archives[].size` | Rejects incomplete downloads before extraction. |
+
+Execution host and build target are separate dimensions. A Darwin arm64 runner,
+for example, must execute the Darwin arm64 SDK tools even when those tools emit a
+pure-Go Linux amd64 binary. The generated toolchain therefore selects the archive
+from the execution platform and derives `GOOS` and `GOARCH` from the target
+platform. Host-native cgo cannot cross that boundary because its C/C++ toolchain
+and sysroot are host inputs.
+
+The ignored SDK and wrapper directories each contain a
+`.bsmr-metadata.json` marker with the generator identity, acquisition state,
+version, host tuple, and archive digest. Bessemer requires the complete marker to
+match the lock before using the tools, and requires its ownership identity before
+replacing either directory.
+
+The remaining sections document the underlying rules for custom toolchains.
+
 Go toolchains in Bessemer come in two types: "regular" and "bootstrap".
 
 - **Regular toolchains** are used to build Go code.
@@ -86,7 +132,7 @@ go_toolchain(
 ```
 
 For a complete example using `http_archive`, see
-[examples/toolchains/go_toolchain](https://github.com/facebook/buck2/blob/main/examples/toolchains/go_toolchain/toolchains/BUCK).
+[examples/toolchains/go_toolchain](https://github.com/dedalus-labs/bsmr/blob/main/examples/toolchains/go_toolchain/toolchains/BUILD.bsmr).
 
 ### Advanced: Multi-platform Toolchains
 
