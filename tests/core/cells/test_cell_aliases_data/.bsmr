@@ -1,0 +1,8 @@
+[project]
+root = .
+
+[repositories]
+  root = .
+  prelude = .
+  foo = foo
+  bar = bar

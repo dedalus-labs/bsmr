@@ -86,7 +86,7 @@ async def _snapshot_events(buck: Buck) -> list[dict[str, typing.Any]]:
 
 
 def append_tokio_workers_config(buck: Buck) -> None:
-    with open(buck.cwd / ".bsmrconfig", "a") as bsmrconfig:
+    with open(buck.cwd / ".bsmr", "a") as bsmrconfig:
         bsmrconfig.write("[build]\n")
         bsmrconfig.write("num_tokio_workers = 42")
 

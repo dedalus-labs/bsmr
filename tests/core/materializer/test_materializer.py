@@ -238,7 +238,7 @@ async def test_sqlite_materializer_state_bsmrconfig_version_change(
     replace_in_file(
         "sqlite_materializer_state_version = 0",
         "sqlite_materializer_state_version = 1",
-        buck.cwd / ".bsmrconfig",
+        buck.cwd / ".bsmr",
     )
 
     # just starting the bsmr daemon should delete the sqlite materializer state
@@ -279,7 +279,7 @@ async def test_materializer_command_events_have_parent_id(buck: Buck) -> None:
     """MaterializerCommand instant events emitted on the synchronous command
     processing thread should be parented to the span that sent the command,
     not appear as root events with parent_id == 0.  This requires
-    verbose_materializer_event_log = true in .bsmrconfig."""
+    verbose_materializer_event_log = true in .bsmr."""
     await buck.build("//:check")
 
     command_events = await filter_events(
@@ -303,7 +303,7 @@ async def test_materializer_command_events_have_parent_id(buck: Buck) -> None:
 
 
 def disable_sqlite_materializer_state(buck: Buck) -> None:
-    config_file = buck.cwd / ".bsmrconfig"
+    config_file = buck.cwd / ".bsmr"
     replace_in_file(
         "sqlite_materializer_state = true",
         "sqlite_materializer_state = false",

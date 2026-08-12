@@ -5,7 +5,7 @@ Perform lower level queries
 Usage: bsmr audit [OPTIONS] <COMMAND>
 
 Commands:
-  cell                           Query information about the [cells] list in .bsmrconfig.
+  cell                           Query information about the [cells] list in .bsmr.
   file-package                   Map file paths to fully qualified package names.
   classpath                      Prints out a target's classpaths if it has one.
                                      This command is deprecated and currently available for

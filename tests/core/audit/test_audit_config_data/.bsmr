@@ -1,0 +1,16 @@
+[project]
+root = .
+
+[foo]
+  a = $(config bar.a)
+  b = $(config foo.a)
+
+[test]
+  is_root = yes
+
+[cells]
+  root = .
+  code = code
+  source = source
+
+<file:included.bcfg>

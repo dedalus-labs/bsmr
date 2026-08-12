@@ -348,7 +348,7 @@ async def test_download_file_timeout_after_retries(buck: Buck) -> None:
     # than passed as an invocation config.
     #
     # Add an aggressive read timeout.
-    with open(buck.cwd / ".bsmrconfig", "a") as bsmrconfig:
+    with open(buck.cwd / ".bsmr", "a") as bsmrconfig:
         bsmrconfig.write("[http]\nread_timeout_ms = 50\n")
 
     await expect_failure(
@@ -378,7 +378,7 @@ async def test_download_file_timeout_after_retries(buck: Buck) -> None:
 async def test_cas_artifact(buck: Buck) -> None:
     # The digests in `//cas_artifact:` require the bsmrconfig.
     # NB: cannot use `extra_bsmr_config` attrib of `@buck_test()``
-    with open(buck.cwd / ".bsmrconfig", "a") as bsmrconfig:
+    with open(buck.cwd / ".bsmr", "a") as bsmrconfig:
         bsmrconfig.write("[bsmr]\n")
         bsmrconfig.write("digest_algorithms = BLAKE3-KEYED,SHA1\n")
 
@@ -517,7 +517,7 @@ async def test_remote_action_has_input_size(buck: Buck) -> None:
 
 @buck_test(data_dir="actions")
 async def test_action_invalidation_tracking(buck: Buck) -> None:
-    with open(buck.cwd / ".bsmrconfig", "a") as bsmrconfig:
+    with open(buck.cwd / ".bsmr", "a") as bsmrconfig:
         bsmrconfig.write("[bsmr]\n")
         bsmrconfig.write("invalidation_tracking_enabled = true\n")
         bsmrconfig.write("[bsmr]\n")

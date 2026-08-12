@@ -1,6 +1,6 @@
 ---
 id: bsmrconfig
-title: .bsmrconfig
+title: .bsmr
 ---
 <!-- ===----------------------------------------------------------------------=== -->
 <!-- Upstream-Source: facebook/buck2@1560aca2002865cd73d7cafb22c705cfb640b2bc -->
@@ -9,9 +9,13 @@ title: .bsmrconfig
 <!-- ===----------------------------------------------------------------------=== -->
 
 
-The root of your [project](glossary.md#project) must contain a configuration
-file named `.bsmrconfig`. Before executing, Bessemer reads this file to incorporate
-any customizations it specifies.
+The root of your [project](glossary.md#project) must contain one canonical
+project file named `.bsmr`. The nearest `.bsmr` containing `[project] root = .`
+identifies the project root and contains its configuration; no separate root
+marker or generated build-system manifest is required. Cell-local `.bsmr` files
+without that declaration contribute configuration without creating nested
+projects. Before executing, Bessemer reads the files to incorporate their
+customizations.
 
 ## Performance impact of Bessemer configuration changes
 
@@ -23,12 +27,12 @@ those artifacts, which can impact your build time.
 These configuration changes can happen when modifying configuration files and
 command line args. [See more](#precedence-of-bsmr-configuration-specifications)
 
-## The .bsmrconfig file uses the INI file format
+## The .bsmr file uses the INI file format
 
-The `.bsmrconfig` file uses the
+The `.bsmr` file uses the
 [INI file format](http://en.wikipedia.org/wiki/INI_file). That is, it is divided
 into _sections_ where each section contains a collection of key _names_ and key
-_values_. The `.bsmrconfig` implementation supports some modifications to the
+_values_. The `.bsmr` implementation supports some modifications to the
 INI file format; these are discussed below.
 
 ### Other INI file parsers
@@ -57,7 +61,7 @@ key names in other contexts such as the `--config` command-line parameter.
 
 ## Character encoding
 
-To ensure that any character can be encoded in a `.bsmrconfig` key value, you
+To ensure that any character can be encoded in a `.bsmr` key value, you
 can use escape sequences to encode characters that would otherwise be
 problematic. The following escape sequences are supported.
 
@@ -113,35 +117,35 @@ For example, to use the `[go].vendor_path` in a custom setting:
 ## Comments
 
 In addition to the semicolon (`;`), you can use the pound sign (`#`), as a
-comment character in `.bsmrconfig`.
+comment character in `.bsmr`.
 
-## .bsmrconfig.local
+## .bsmr.local
 
 The root of your [project](glossary.md#project) may contain a second
-configuration file named `.bsmrconfig.local`. Its format is the same as that of
-`.bsmrconfig`, but settings in `.bsmrconfig.local` override those in
-`.bsmrconfig`. In practice, `.bsmrconfig` is a version-controlled file that
+configuration file named `.bsmr.local`. Its format is the same as that of
+`.bsmr`, but settings in `.bsmr.local` override those in
+`.bsmr`. In practice, `.bsmr` is a version-controlled file that
 contains settings that are applicable to all team members, whereas
-`.bsmrconfig.local` is excluded from version control to allow users to define
+`.bsmr.local` is excluded from version control to allow users to define
 personal settings, such as personal aliases.
 
 ## Other initialization files
 
-In addition to the `.bsmrconfig` and `.bsmrconfig.local` files in the project
+In addition to the `.bsmr` and `.bsmr.local` files in the project
 root, Bessemer reads configuration settings from the following additional
 locations, some of which are actually directories:
 
-1. Directory `.bsmrconfig.d` located in the project root directory.
-2. File `.bsmrconfig` and directory `.bsmrconfig.d` located in the current
+1. Directory `.bsmr.d` located in the project root directory.
+2. File `.bsmr` and directory `.bsmr.d` located in the current
    user's home directory which, on Unix-like systems, is available from the
    `HOME` environment variable or through the `~` symbol.
 3. File `bsmrconfig` and directory `bsmrconfig.d` located in system directory
    `/etc/`.
 
 Bessemer treats _any_ file—irrespective of name—in a
-`.bsmrconfig.d`(`bsmrconfig.d`) directory (excluding files found in
+`.bsmr.d`(`bsmrconfig.d`) directory (excluding files found in
 subdirectories) as a Bessemer configuration file, provided that it adheres to
-`.bsmrconfig` syntax. Note that a `.bsmrconfig.d` directory is distinct from the
+`.bsmr` syntax. Note that a `.bsmr.d` directory is distinct from the
 similarly-named `.buckd` directory which is used by the
 [Bessemer Daemon (`buckd`)](daemon.md) . For a description of how Bessemer resolves
 collisions between settings in these configuration files, see the section
@@ -164,21 +168,21 @@ _mode files_ or _at_ (`@`) files.
 The following list shows the order of precedence for how Bessemer interprets its
 configuration specifications. Settings specified using a method closer to the
 top of the list have higher precedence and will override those lower on the
-list. For example, the `.bsmrconfig` file in the repo overrides a `.bsmrconfig`
+list. For example, the `.bsmr` file in the repo overrides a `.bsmr`
 file in the user's `HOME` directory.
 
 1. Configuration specified on the command line using `--config` (`-c`),
    `--config-file` and `--flagfile`. Configuration specified later on the
    command line overrides configuration specified earlier.
-1. `.bsmrconfig.local` in the repo.
-1. `.bsmrconfig` in the repo.
-1. Files in a `.bsmrconfig.d` folder of the repo.
-1. `.bsmrconfig.local` in user's `HOME` directory.
-1. Files in a `.bsmrconfig.d` folder in user's `HOME` directory.
+1. `.bsmr.local` in the repo.
+1. `.bsmr` in the repo.
+1. Files in a `.bsmr.d` folder of the repo.
+1. `.bsmr.local` in user's `HOME` directory.
+1. Files in a `.bsmr.d` folder in user's `HOME` directory.
 1. The global file `/etc/bsmrconfig`
 1. Files in the global directory `/etc/bsmrconfig.d`
 
-Files in a `.bsmrconfig.d` (`bsmrconfig.d`) directory have precedence according
+Files in a `.bsmr.d` (`bsmrconfig.d`) directory have precedence according
 to the lexicographical order of their file names. Files _later_ in the
 lexicographical order have precedence over files earlier in that order.
 
@@ -186,7 +190,7 @@ lexicographical order have precedence over files earlier in that order.
 
 Any of the configuration files that we've discussed so far can also include by
 reference other files that contain configuration information. These included
-files can contain complete `.bsmrconfig` sections or they can contain a group of
+files can contain complete `.bsmr` sections or they can contain a group of
 key name/value pairs that constitute part of a section. In this second use case,
 you'll need to ensure that the _included_ file is referenced beneath the
 appropriate section in the _including_ file. Because of this additional
@@ -211,15 +215,15 @@ question mark (`?`).
 
 If you use this prefix, it is not an error condition if the file does not exist;
 Bessemer just silently continues to process the rest of the configuration file. In
-the following example, the `.bsmrconfig` file includes the file
+the following example, the `.bsmr` file includes the file
 `cxx-other-platform.include` which exists in the subdirectory
-`cxx-other-platform`. The `.bsmrconfig` file will also include the file
+`cxx-other-platform`. The `.bsmr` file will also include the file
 `future-platform` from the directory `future-platform.include` if that file
 exists.
 
 ```ini
 #
-# .bsmrconfig
+# .bsmr
 #
 [cxx]
   cxxppflags="-D MYMACRO=\"Buck\""
@@ -258,7 +262,7 @@ $ bsmr test apptest
 ## [cells]
 
 Lists the cells that constitute the Bessemer project. Bessemer builds that are part of
-this project—that is, which use this `.bsmrconfig`—can access the cells
+this project—that is, which use this `.bsmr`—can access the cells
 specified in this section.
 
 ```ini
@@ -269,7 +273,7 @@ specified in this section.
 
 The string on the left-hand side of the equals sign is the _alias_ for the cell.
 The string on the right-hand side of the equals sign is the path to the cell
-from the directory that contains this `.bsmrconfig` file. It is not necessary to
+from the directory that contains this `.bsmr` file. It is not necessary to
 include the current cell in this section, but we consider it a best practice to
 do so:
 

@@ -1,0 +1,12 @@
+[cells]
+  cell = .
+
+[buildfile]
+  name = TARGETS.fixture
+
+[bsmr]
+  file_watcher = edenfs
+
+[project]
+root = .
+  watchman_merge_base = main

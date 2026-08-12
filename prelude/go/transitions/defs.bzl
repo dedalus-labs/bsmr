@@ -67,7 +67,7 @@ def _tags_transition(platform, refs, attrs):
     for build_tag in attrs.build_tags:
         ref_name = "tag_{}__set".format(build_tag)
         if not hasattr(refs, ref_name):
-            fail("Add build_tag '{}' to .bsmrconfig attribute `go.allowed_build_tags` to allow using it".format(build_tag))
+            fail("Add build_tag '{}' to .bsmr attribute `go.allowed_build_tags` to allow using it".format(build_tag))
 
         tag_value = getattr(refs, ref_name)[ConstraintValueInfo]
         configuration.insert(tag_value)

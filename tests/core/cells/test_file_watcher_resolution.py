@@ -24,7 +24,7 @@ async def test_changing_cell_location_bug(buck: Buck) -> None:
     await buck.targets("foo//:", "bar//:")
 
     # Switch the location of the 2 cells
-    (buck.cwd / ".bsmrconfig").write_text(
+    (buck.cwd / ".bsmr").write_text(
         "[cells]\nfoo=bar\nbar=foo\nroot=.\nprelude=.\n"
     )
 

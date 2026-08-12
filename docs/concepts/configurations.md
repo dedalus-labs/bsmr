@@ -118,7 +118,7 @@ config_setting(
 
 This setting will be satisfied if the associated bsmrconfig matches,
 i.e. if the user passes `build.fastmode=true` via the `-c`/`--config`
-CLI flag, or if the following is set in the cell's `.bsmrconfig` file:
+CLI flag, or if the following is set in the cell's `.bsmr` file:
 
 ```ini
 [build]
@@ -247,7 +247,7 @@ The build configuration is determined as follows:
        configuration, it is one of the few attributes that are not
        `select`able.
     3. Else, use the default (`parser.target_platform_detector_spec` in
-       the `.bsmrconfig` file).
+       the `.bsmr` file).
 2. [Configuration modifiers](./modifiers.md) are applied. Those are a
    lightweight way to add constraints on an individual basis (e.g.
    "build with the default configuration/platform, except with a
@@ -353,7 +353,7 @@ builds even when building the Android app in development mode.
 
 For this reason, Buck requires both _target_ platforms and _execution_
 platforms to be defined. The execution platforms are specified via the
-`build.execution_platforms` value in `.bsmrconfig`.
+`build.execution_platforms` value in `.bsmr`.
 
 ## Queries
 

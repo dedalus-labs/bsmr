@@ -1,7 +1,0 @@
-[repositories]
-    root = .
-[buildfile]
-    name = TARGETS.fixture
-[bsmr]
-    directories_to_allow_relative_paths = \
-        //foo

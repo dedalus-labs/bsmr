@@ -29,7 +29,7 @@ from bsmr.tests.e2e_util.helper.utils import read_what_ran
 #   2: Wait for bvb that contains #1 to land. To be safe, wait for a second to land
 #      as well so you're guaranteed that the first bump can no longer be
 #      fast-reverted.
-#   3: Activate the flag via .bsmrconfig (Ex. D59648609)
+#   3: Activate the flag via .bsmr (Ex. D59648609)
 #       3.1: Fix/followup on any CI failures caused by cache invalidation
 #   4: Observe for a couple of days to ensure that there are no issues
 #   5. Remove the code associated with the config flag but NOT the config itself,

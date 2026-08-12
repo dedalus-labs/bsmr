@@ -201,8 +201,8 @@ cxx_genrule = prelude_rule(
 
         The information exposed through these tools and configuration options is a reflection of:
         Buck's built-in settings,
-        the settings in `.bsmrconfig`
-        and `.bsmrconfig.local`,
+        the settings in `.bsmr`
+        and `.bsmr.local`,
         and the result of various command-line overrides specified through
         the `common_parameters` command-line option.
 
@@ -563,7 +563,7 @@ cxx_library = prelude_rule(
         include one of these top-level targets in order for Buck to build
         the `cxx_library`. Note that you could specify the top-level target
         implicitly using a `build target pattern` or you could also specify
-        the top-level target using a bsmrconfig `alias` defined in `.bsmrconfig`.
+        the top-level target using a bsmrconfig `alias` defined in `.bsmr`.
 
         *How* Buck builds the library also depends on the specified top-level target.
         For example, a C/C++ binary (`cxx_binary`) would require a static non-PIC build of the library,

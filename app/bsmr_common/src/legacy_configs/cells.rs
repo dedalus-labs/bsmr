@@ -58,6 +58,7 @@ use crate::legacy_configs::key::BsmrconfigKeyRef;
 use crate::legacy_configs::parser::LegacyConfigParser;
 use crate::legacy_configs::path::DEFAULT_EXTERNAL_CONFIG_SOURCES;
 use crate::legacy_configs::path::DEFAULT_PROJECT_CONFIG_SOURCES;
+use crate::legacy_configs::path::DOT_BSMR;
 use crate::legacy_configs::path::DOT_BSMRCONFIG_LOCAL;
 use crate::legacy_configs::path::ExternalConfigSource;
 use crate::legacy_configs::path::ProjectConfigSource;
@@ -67,7 +68,7 @@ use crate::legacy_configs::path::ProjectConfigSource;
 #[derive(Clone, PartialEq, Eq, Allocative, Pagable)]
 pub struct ExternalBsmrconfigData {
     // The result of parsing the bsmrconfigs coming from either global (e.g. /etc/bsmrconfig.d) or
-    // user (e.g. ~/.bsmrconfig.d or $home_dir/.bsmrconfig.local) files/dirs outside of the repo
+    // user (e.g. ~/.bsmr.d or $home_dir/.bsmr.local) files/dirs outside of the repo
     // The order matters here and reflects the same order these are processed in buck, see
     // https://fburl.com/code/8ue78p1j
     external_path_configs: Vec<ExternalPathBsmrconfigData>,
@@ -131,7 +132,7 @@ impl ExternalBsmrconfigData {
             BsmrConfigBasedCells::parse_with_config_args(project_root, &[]).await
         {
             let path = ForwardRelativePath::new(DOT_BSMRCONFIG_LOCAL).expect(
-                "Internal error: .bsmrconfig.local should always be a valid forward relative path",
+                "Internal error: .bsmr.local should always be a valid forward relative path",
             );
             for (_cell, cell_instance) in legacy_cells.cell_resolver.cells() {
                 let relative_path = cell_instance.path().as_project_relative_path().join(path);
@@ -146,7 +147,7 @@ impl ExternalBsmrconfigData {
                 {
                     let values = parser.to_proto_external_config_values(false);
                     if values.is_empty() {
-                        // Don't create an empty component for cells with non-existing .bsmrconfig.local
+                        // Don't create an empty component for cells with non-existing .bsmr.local
                         continue;
                     }
                     local_config_components.push(bsmr_data::BsmrconfigComponent {
@@ -188,10 +189,10 @@ impl ExternalBsmrconfigData {
 }
 
 /// Used for creating a CellResolver in a buckv1-compatible way based on values
-/// in .bsmrconfig in each cell.
+/// in .bsmr in each cell.
 ///
 /// We'll traverse the structure of the `[cells]` sections starting from
-/// the root .bsmrconfig. All aliases found in the root config will also be
+/// the root .bsmr. All aliases found in the root config will also be
 /// available in all other cells (v1 provides that same behavior).
 ///
 /// We don't (currently) enforce that all aliases appear in the root config, but
@@ -618,6 +619,12 @@ async fn get_project_bsmrconfig_paths(
 
     for bsmrconfig in DEFAULT_PROJECT_CONFIG_SOURCES {
         match bsmrconfig {
+            ProjectConfigSource::CellConfigFile => {
+                bsmrconfig_paths.push(ConfigPath::Project(
+                    path.as_project_relative_path()
+                        .join(ForwardRelativePath::new(DOT_BSMR)?),
+                ));
+            }
             ProjectConfigSource::CellRelativeFile(file) => {
                 let bsmrconfig_path = ForwardRelativePath::new(file)?;
                 bsmrconfig_paths.push(ConfigPath::Project(
@@ -666,7 +673,7 @@ mod tests {
     async fn test_cells() -> bsmr_error::Result<()> {
         let mut file_ops = TestConfigParserFileOps::new(&[
             (
-                ".bsmrconfig",
+                ".bsmr",
                 indoc!(
                     r#"
                             [cells]
@@ -678,7 +685,7 @@ mod tests {
                 ),
             ),
             (
-                "other/.bsmrconfig",
+                "other/.bsmr",
                 indoc!(
                     r#"
                             [cells]
@@ -689,7 +696,7 @@ mod tests {
                 ),
             ),
             (
-                "third_party/.bsmrconfig",
+                "third_party/.bsmr",
                 indoc!(
                     r#"
                             [cells]
@@ -735,7 +742,7 @@ mod tests {
     async fn test_multi_cell_with_config_file() -> bsmr_error::Result<()> {
         let mut file_ops = TestConfigParserFileOps::new(&[
             (
-                ".bsmrconfig",
+                ".bsmr",
                 indoc!(
                     r#"
                             [cells]
@@ -747,7 +754,7 @@ mod tests {
                 ),
             ),
             (
-                "other/.bsmrconfig",
+                "other/.bsmr",
                 indoc!(
                     r#"
                             [cells]
@@ -760,7 +767,7 @@ mod tests {
                 ),
             ),
             (
-                "third_party/.bsmrconfig",
+                "third_party/.bsmr",
                 indoc!(
                     r#"
                             [cells]
@@ -830,7 +837,7 @@ mod tests {
     async fn test_multi_cell_no_repositories_in_non_root_cell() -> bsmr_error::Result<()> {
         let mut file_ops = TestConfigParserFileOps::new(&[
             (
-                ".bsmrconfig",
+                ".bsmr",
                 indoc!(
                     r#"
                             [cells]
@@ -840,7 +847,7 @@ mod tests {
                 ),
             ),
             (
-                "other/.bsmrconfig",
+                "other/.bsmr",
                 indoc!(
                     r#"
                             [foo]
@@ -871,7 +878,7 @@ mod tests {
     async fn test_multi_cell_with_cell_relative() -> bsmr_error::Result<()> {
         let mut file_ops = TestConfigParserFileOps::new(&[
             (
-                ".bsmrconfig",
+                ".bsmr",
                 indoc!(
                     r#"
                             [cells]
@@ -890,7 +897,7 @@ mod tests {
                 ),
             ),
             (
-                "other/.bsmrconfig",
+                "other/.bsmr",
                 indoc!(
                     r#"
                             [cells]
@@ -947,7 +954,7 @@ mod tests {
     async fn test_local_config_file_overwrite_config_file() -> bsmr_error::Result<()> {
         let mut file_ops = TestConfigParserFileOps::new(&[
             (
-                ".bsmrconfig",
+                ".bsmr",
                 indoc!(
                     r#"
                             [cells]
@@ -959,7 +966,7 @@ mod tests {
                 ),
             ),
             (
-                ".bsmrconfig.local",
+                ".bsmr.local",
                 indoc!(
                     r#"
                             [orange]
@@ -993,7 +1000,7 @@ mod tests {
     async fn test_multi_cell_local_config_file_overwrite_config_file() -> bsmr_error::Result<()> {
         let mut file_ops = TestConfigParserFileOps::new(&[
             (
-                ".bsmrconfig",
+                ".bsmr",
                 indoc!(
                     r#"
                             [cells]
@@ -1006,7 +1013,7 @@ mod tests {
                 ),
             ),
             (
-                ".bsmrconfig.local",
+                ".bsmr.local",
                 indoc!(
                     r#"
                             [orange]
@@ -1018,7 +1025,7 @@ mod tests {
                 ),
             ),
             (
-                "other/.bsmrconfig",
+                "other/.bsmr",
                 indoc!(
                     r#"
                             [cells]
@@ -1031,7 +1038,7 @@ mod tests {
                 ),
             ),
             (
-                "other/.bsmrconfig.local",
+                "other/.bsmr.local",
                 indoc!(
                     r#"
                             [orange]
@@ -1077,7 +1084,7 @@ mod tests {
     #[tokio::test]
     async fn test_config_arg_with_no_bsmrconfig() -> bsmr_error::Result<()> {
         let mut file_ops = TestConfigParserFileOps::new(&[(
-            ".bsmrconfig",
+            ".bsmr",
             indoc!(
                 r#"
                         [repositories]
@@ -1104,7 +1111,7 @@ mod tests {
     #[tokio::test]
     async fn test_cell_config_section_name() -> bsmr_error::Result<()> {
         let mut file_ops = TestConfigParserFileOps::new(&[(
-            ".bsmrconfig",
+            ".bsmr",
             indoc!(
                 r#"
                             [repositories]
@@ -1183,7 +1190,7 @@ mod tests {
         initialize_external_cells_impl();
 
         let mut file_ops = TestConfigParserFileOps::new(&[(
-            ".bsmrconfig",
+            ".bsmr",
             indoc!(
                 r#"
                     [cells]
@@ -1235,7 +1242,7 @@ mod tests {
         initialize_external_cells_impl();
 
         let mut file_ops = TestConfigParserFileOps::new(&[(
-            ".bsmrconfig",
+            ".bsmr",
             indoc!(
                 r#"
                     [cells]
@@ -1261,7 +1268,7 @@ mod tests {
         initialize_external_cells_impl();
 
         let mut file_ops = TestConfigParserFileOps::new(&[(
-            ".bsmrconfig",
+            ".bsmr",
             indoc!(
                 r#"
                     [cells]
@@ -1290,7 +1297,7 @@ mod tests {
         initialize_external_cells_impl();
 
         let mut file_ops = TestConfigParserFileOps::new(&[(
-            ".bsmrconfig",
+            ".bsmr",
             indoc!(
                 r#"
                     [cells]
@@ -1328,7 +1335,7 @@ mod tests {
         initialize_external_cells_impl();
 
         let mut file_ops = TestConfigParserFileOps::new(&[(
-            ".bsmrconfig",
+            ".bsmr",
             indoc!(
                 r#"
                     [cells]

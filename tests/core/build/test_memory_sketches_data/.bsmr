@@ -1,0 +1,8 @@
+[project]
+root = .
+
+[repositories]
+    root = .
+
+[buildfile]
+    name = TARGETS.fixture

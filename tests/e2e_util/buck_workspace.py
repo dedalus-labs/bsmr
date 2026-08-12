@@ -482,20 +482,20 @@ def _maybe_setup_prelude_and_ovr_config(path: Path) -> None:
         Path(path, "tools", "build_defs", "fbcode_macros"),
     )
 
-    with Path(path, ".bsmrconfig").open("a") as f:
+    with Path(path, ".bsmr").open("a") as f:
         print(
             "", file=f
-        )  # append newline because test `.bsmrconfig` may not end with newline
+        )  # append newline because test `.bsmr` may not end with newline
         print("# Following lines are added by buck_workspace.py", file=f)
         print("[repositories]", file=f)
         print("ovr_config = arvr/tools/build_defs/config", file=f)
         print("fbcode_macros = tools/build_defs/fbcode_macros", file=f)
         print("config = arvr/tools/build_defs/config", file=f)
-    with Path(path, "arvr", "tools", "build_defs", "config", ".bsmrconfig").open(
+    with Path(path, "arvr", "tools", "build_defs", "config", ".bsmr").open(
         "w"
     ) as f:
         pass
-    with Path(path, "tools", "build_defs", "fbcode_macros", ".bsmrconfig").open(
+    with Path(path, "tools", "build_defs", "fbcode_macros", ".bsmr").open(
         "w"
     ) as f:
         pass

@@ -166,7 +166,7 @@ function packageManagerState(output) {
 }
 
 /**
- * Reject a project input that occupies BSMR's reserved workspace path.
+ * Reject BSMR's project-control file from the install action input tree.
  *
  * @param {string} output - Writable copy of declared project inputs.
  * @returns {Promise<void>}
@@ -179,7 +179,7 @@ async function requireReservedPathAbsent(output) {
 		if (error.code === "ENOENT") return;
 		throw error;
 	}
-	throw new Error("project inputs may not contain the reserved '.bsmr' path");
+	throw new Error("project inputs may not contain BSMR's '.bsmr' project-control path");
 }
 
 /**
@@ -189,7 +189,7 @@ async function requireReservedPathAbsent(output) {
  * @param {string} output - Declared action output directory.
  * @param {string} state - BSMR-owned scratch directory for mutable package-manager state.
  * @returns {Promise<{ corepackHome: string, home: string, pnpmHome: string, store: string, userconfig: string, xdgCacheHome: string, xdgConfigHome: string }>}
- * @throws {Error} When inputs use BSMR's reserved state directory.
+ * @throws {Error} When inputs include BSMR's project-control file.
  */
 async function prepareWorkspace(source, output, state) {
 	await requireAbsent(output);

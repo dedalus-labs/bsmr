@@ -1,0 +1,10 @@
+[project]
+root = .
+
+[repositories]
+root = .
+prelude = prelude
+[bsmr]
+allow_eden_io = false
+[buildfile]
+name = TARGETS.fixture

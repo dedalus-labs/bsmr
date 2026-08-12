@@ -67,7 +67,8 @@ def _linker_flags_arg():
             doc = """
     Additional linker flags that should be applied to any linking which is specific to this rule.
      Note that whether these flags are used is dependent on the native link strategy selected in
-     `.bsmrconfig` and currently applies only to the merged `.bsmrconfig`;
+     the `.bsmr` project configuration and currently applies only to the merged
+     native-link strategy;
      the `separate` link strategy pulls in shared libraries that are linked in the
      context of the rules that own them, such as `cxx_library()`.
 """,
@@ -80,8 +81,7 @@ def _package_style_arg():
             attrs.enum(PythonBsmrConfigPackageStyle),
             default = None,
             doc = """
-    Used to override the global packaging style that is set in `[`.bsmrconfig`
-    ]`.
+    Overrides the global packaging style selected by the `.bsmr` project configuration.
 """,
         ),
     }
@@ -106,7 +106,7 @@ def _exclude_deps_from_merged_linking_arg():
         "exclude_deps_from_merged_linking": attrs.bool(
             default = False,
             doc = """
-    When linking the top-level binary with a `merged` ``.bsmrconfig``,
+    When linking the top-level binary with the `merged` native-link strategy,
      do not merge or re-link any native transitive deps of this library. This is useful if
      this library wraps prebuilt native extensions which cannot be re-linked as part of
      library merging.
@@ -119,7 +119,7 @@ def _deduplicate_merged_link_roots():
         "deduplicate_merged_link_roots": attrs.bool(
             default = True,
             doc = """
-    When linking multiple top-level binaries with the `merged` ``.bsmrconfig``,
+    When linking multiple top-level binaries with the `merged` native-link strategy,
      coalesce root link rules which are identical across independent merged links.
 """,
         ),

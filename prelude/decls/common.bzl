@@ -188,7 +188,7 @@ def _test_rule_timeout_ms():
             doc = """
     If set specifies the maximum amount of time (in milliseconds) in which all of the tests in this
      rule should complete. This overrides the default `rule_timeout` if any has been
-     specified in `.bsmrconfig`
+     specified in `.bsmr`
     .
 """,
         ),

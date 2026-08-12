@@ -673,7 +673,7 @@ def generate_install_data(ctx: AnalysisContext, plist_path: str, populate_rule_s
         "fullyQualifiedName": ctx.label,
         "info_plist": plist_path,
         "platform_name": get_apple_sdk_name(ctx),
-        ## TODO(T110665037): read from .bsmrconfig
+        ## TODO(T110665037): read from .bsmr
         # We require the user to have run `xcode-select` and `/var/db/xcode_select_link` to symlink
         # to the selected Xcode. e.g: `/Applications/Xcode_14.2.app/Contents/Developer`
         "xcode_developer_path": "/var/db/xcode_select_link",

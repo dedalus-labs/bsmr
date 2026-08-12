@@ -778,7 +778,7 @@ mod tests {
 
         // NOTE: This disables the forkserver since it uses the current
         // executable and that's not gonna be available in a test like this.
-        let bsmrconfig = ProjectRelativePath::unchecked_new(".bsmrconfig");
+        let bsmrconfig = ProjectRelativePath::unchecked_new(".bsmr");
         project_root
             .path()
             .write_file(

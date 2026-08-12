@@ -11,7 +11,7 @@ export const forkPoint = "1560aca2002865cd73d7cafb22c705cfb640b2bc";
 export const upstreamSource = `Upstream-Source: facebook/buck2@${forkPoint}`;
 
 const sourceExtensions = new Set([
-	".bash", ".bat", ".bsmrconfig", ".bxl", ".bzl", ".c", ".cc", ".cjs", ".cpp",
+	".bash", ".bat", ".bsmr", ".bxl", ".bzl", ".c", ".cc", ".cjs", ".cpp",
 	".erl", ".fish", ".go", ".h", ".hpp", ".hrl", ".hs", ".html", ".java", ".js", ".jsx",
 	".kt", ".kts", ".m", ".md", ".mjs", ".mk", ".ml", ".mli", ".mll", ".mly", ".nix", ".proto", ".ps1",
 	".py", ".pyi", ".rs", ".s", ".sh", ".star", ".ts", ".tsx", ".zsh",
@@ -44,7 +44,7 @@ export function parseChanges(output: string): ReadonlyMap<string, GitChange> {
 /** Return whether a tracked path is source rather than fixture or data. */
 export function isSource(path: string): boolean {
 	if (fixture.test(path)) return false;
-	return sourceExtensions.has(extname(path)) || path.endsWith(".bsmrconfig") || sourceNames.has(basename(path));
+	return sourceExtensions.has(extname(path)) || path.endsWith(".bsmr") || sourceNames.has(basename(path));
 }
 
 /** Return whether a path is byte-identical to its upstream origin. */

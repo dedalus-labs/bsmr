@@ -1,0 +1,12 @@
+[cells]
+  root = .
+
+[buildfile]
+  name = TARGETS.fixture
+
+[bsmr]
+  file_watcher = watchman
+
+[project]
+root = .
+  watchman_merge_base = main

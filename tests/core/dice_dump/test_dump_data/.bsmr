@@ -1,0 +1,6 @@
+[project]
+root = .
+
+[repositories]
+    root = .
+    prelude = .

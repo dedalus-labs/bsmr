@@ -152,7 +152,7 @@ def _validate_project_path(path: str) -> None:
     if "" in components or "." in components or ".." in components:
         fail("pnpm project input path '{}' must be normalized".format(path))
     if components[0] == ".bsmr":
-        fail("pnpm project inputs may not use BSMR's reserved '.bsmr' path")
+        fail("pnpm project inputs may not include BSMR's '.bsmr' project-control path")
 
 def _pnpm_install_impl(ctx: AnalysisContext) -> list[Provider]:
     """Run one frozen pnpm install over the complete declared project tree."""

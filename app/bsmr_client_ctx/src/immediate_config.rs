@@ -52,9 +52,9 @@ struct ImmediateConfig {
 }
 
 impl ImmediateConfig {
-    /// Performs a parse of the root `.bsmrconfig` for the cell _only_ without following includes
+    /// Performs a parse of the root `.bsmr` for the cell _only_ without following includes
     /// and without parsing any configs for any referenced cells. This means this function might return
-    /// an empty mapping if the root `.bsmrconfig` does not contain the cell definitions.
+    /// an empty mapping if the root `.bsmr` does not contain the cell definitions.
     fn parse(roots: &InvocationRoots) -> bsmr_error::Result<ImmediateConfig> {
         // This function is non-reentrant, and blocking for a bit should be ok
         let cells = futures::executor::block_on(BsmrConfigBasedCells::parse_with_config_args(

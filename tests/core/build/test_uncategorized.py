@@ -168,9 +168,9 @@ async def test_upload_all_actions(buck: Buck) -> None:
     )
 
 
-@buck_test(data_dir="bsmrroot")
-async def test_bsmrroot(buck: Buck) -> None:
-    # Test that .bsmrroot files work
+@buck_test(data_dir="unified_root")
+async def test_unified_root(buck: Buck) -> None:
+    # The nearest .bsmr must shield the invocation from an invalid parent config.
     await buck.build(":inner", rel_cwd=Path("rooted/cell"))
 
 

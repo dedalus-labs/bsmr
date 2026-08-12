@@ -27,7 +27,7 @@ async def test_if_available_fallback_no_user_session(buck: Buck) -> None:
     user session bus, the daemon should start successfully without cgroups
     instead of failing with DAEMON_STARTUP_FAILED."""
 
-    with open(buck.cwd / ".bsmrconfig", "a") as bsmrconfig:
+    with open(buck.cwd / ".bsmr", "a") as bsmrconfig:
         bsmrconfig.write("[bsmr_resource_control]\n")
         bsmrconfig.write("status = if_available\n")
 

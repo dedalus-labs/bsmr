@@ -403,7 +403,7 @@ async def test_returns_file_contents_for_starlark_types(buck: Buck) -> None:
         assert res["contents"] is None
 
         with pytest.raises(LSPResponseError):
-            await lsp.file_contents((lsp.cwd / ".bsmrconfig").as_uri())
+            await lsp.file_contents((lsp.cwd / ".bsmr").as_uri())
 
 
 @buck_test()

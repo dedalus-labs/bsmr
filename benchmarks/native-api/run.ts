@@ -41,8 +41,7 @@ const write = (path: string, contents: string): void => {
 /** Serializes deterministic fixture JSON with a trailing newline. */
 const json = (value: unknown): string => `${JSON.stringify(value, null, 2)}\n`;
 
-write(".bsmrroot", "\n");
-write(".bsmrconfig", `[cells]
+write(".bsmr", `[cells]
 root = .
 prelude = prelude
 none = none

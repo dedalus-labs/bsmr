@@ -50,7 +50,7 @@ async def test_external_bsmrconfigs(buck: Buck) -> None:
         with open(buck.cwd / "src", "w") as src:
             src.write("test")
 
-        with open(buck.cwd / ".bsmrconfig.local", "w") as localconfig:
+        with open(buck.cwd / ".bsmr.local", "w") as localconfig:
             localconfig.write("[local_section]\n")
             localconfig.write("local_key = local_value\n")
             localconfig.write("<file:included.bcfg>\n")
@@ -100,7 +100,7 @@ async def test_external_bsmrconfigs(buck: Buck) -> None:
     # Next comes the values from the bsmrconfig.local file (which may include other files https://fburl.com/wd54jnpu)
     local_path_configs = external_configs[1]["data"]["GlobalExternalConfigFile"]
     assert len(local_path_configs["values"]) == 2
-    assert local_path_configs["origin_path"] == ".bsmrconfig.local"
+    assert local_path_configs["origin_path"] == ".bsmr.local"
     # Note that buck parses configfiles ordered by section: https://fburl.com/rnzlt05n
     # That's why, we first have the values from the included file,
     included_config_value = local_path_configs["values"][0]
@@ -110,7 +110,7 @@ async def test_external_bsmrconfigs(buck: Buck) -> None:
         and included_config_value["value"] == "included_value"
         and not included_config_value["is_cli"]
     )
-    # The second one is for the values in the .bsmrconfig.local file
+    # The second one is for the values in the .bsmr.local file
     local_config_value = local_path_configs["values"][1]
     assert (
         local_config_value["section"] == "local_section"
@@ -211,8 +211,8 @@ async def test_previous_command_with_mismatched_config(
         and sanitized_argv[4] == "-c"
         and sanitized_argv[5] == "my_section.my_key=my_value"
     )
-    # Make a change to .bsmrconfig
-    with open(buck.cwd / ".bsmrconfig", "a") as bsmrconfig:
+    # Make a change to .bsmr
+    with open(buck.cwd / ".bsmr", "a") as bsmrconfig:
         bsmrconfig.write("\n[test_section]\ntest_key = test_value\n")
         await buck.build(
             "@root//mode/my_mode",
@@ -237,8 +237,8 @@ async def test_previous_command_with_mismatched_config(
     assert len(previous_invalidating_command) == 0
     assert res.invocation_record()["new_configs_used"] == 1
 
-    # Make a change to .bsmrconfig.local
-    with open(buck.cwd / ".bsmrconfig.local", "w") as localconfig:
+    # Make a change to .bsmr.local
+    with open(buck.cwd / ".bsmr.local", "w") as localconfig:
         localconfig.write("\n[local_section]\nlocal_key = local_value\n")
     await buck.build(
         "@root//mode/my_mode",

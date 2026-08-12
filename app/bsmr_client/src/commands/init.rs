@@ -129,7 +129,13 @@ fn exec_impl(
 }
 
 fn initialize_bsmrconfig(repo_root: &AbsPath, prelude: bool, git: bool) -> bsmr_error::Result<()> {
-    let mut bsmrconfig = std::fs::File::create(repo_root.join(".bsmrconfig"))?;
+    let mut bsmrconfig = std::fs::File::create(repo_root.join(".bsmr"))?;
+    writeln!(bsmrconfig, "[project]")?;
+    writeln!(bsmrconfig, "  root = .")?;
+    if git {
+        writeln!(bsmrconfig, "  ignore = .git")?;
+    }
+    writeln!(bsmrconfig)?;
     writeln!(bsmrconfig, "[cells]")?;
     writeln!(bsmrconfig, "  root = .")?;
 
@@ -170,11 +176,6 @@ fn initialize_bsmrconfig(repo_root: &AbsPath, prelude: bool, git: bool) -> bsmr_
         )?;
     }
 
-    if git {
-        writeln!(bsmrconfig)?;
-        writeln!(bsmrconfig, "[project]")?;
-        writeln!(bsmrconfig, "  ignore = .git")?;
-    }
     Ok(())
 }
 
@@ -187,14 +188,7 @@ fn set_up_gitignore(repo_root: &AbsPath) -> bsmr_error::Result<()> {
     Ok(())
 }
 
-fn set_up_bsmrroot(repo_root: &AbsPath) -> bsmr_error::Result<()> {
-    fs_util::write(repo_root.join(".bsmrroot"), "").categorize_internal()?;
-    Ok(())
-}
-
 fn set_up_project(repo_root: &AbsPath, git: bool, prelude: bool) -> bsmr_error::Result<()> {
-    set_up_bsmrroot(repo_root)?;
-
     if git {
         if !background_command("git")
             .arg("init")
@@ -210,9 +204,9 @@ fn set_up_project(repo_root: &AbsPath, git: bool, prelude: bool) -> bsmr_error::
         set_up_gitignore(repo_root)?;
     }
 
-    // If the project already contains a .bsmrconfig, leave it alone
-    if repo_root.join(".bsmrconfig").exists() {
-        bsmr_client_ctx::println!(".bsmrconfig already exists, not overwriting")?;
+    // If the project already contains a .bsmr, leave it alone.
+    if repo_root.join(".bsmr").exists() {
+        bsmr_client_ctx::println!(".bsmr already exists, not overwriting")?;
         return Ok(());
     }
 
@@ -237,7 +231,9 @@ mod tests {
 
         // no git, with prelude
         set_up_project(tempdir_path, false, true)?;
-        assert!(tempdir_path.join(".bsmrconfig").exists());
+        assert!(tempdir_path.join(".bsmr").exists());
+        assert!(!tempdir_path.join(".bsmrconfig").exists());
+        assert!(!tempdir_path.join(".bsmrroot").exists());
         assert!(!tempdir_path.join("toolchains").exists());
         assert!(!tempdir_path.join("BUILD.bsmr").exists());
         assert!(!tempdir_path.join("BUCK").exists());
@@ -259,14 +255,14 @@ mod tests {
         let expected = "/buck-out\n";
         assert_eq!(actual, expected);
 
-        // If an empty .bsmrconfig exists (this is the case we would hit after running `git init`), add `buck-out`
+        // If an empty .gitignore exists (this is the case after running `git init`), add `buck-out`.
         fs_util::write(&gitignore_path, "")?;
         set_up_gitignore(tempdir_path)?;
         assert!(gitignore_path.exists());
         let actual = fs_util::read_to_string(&gitignore_path)?;
         assert_eq!(actual, expected);
 
-        // If a non-empty.bsmrconfig exists, don't touch it
+        // If a non-empty .gitignore exists, don't touch it.
         fs_util::write(&gitignore_path, "foo\nbar\n")?;
         set_up_gitignore(tempdir_path)?;
         assert!(gitignore_path.exists());
@@ -283,10 +279,14 @@ mod tests {
         let tempdir_path = AbsPath::new(tempdir_path)?;
         fs_util::create_dir_all(tempdir_path)?;
 
-        let bsmrconfig_path = tempdir_path.join(".bsmrconfig");
+        let bsmrconfig_path = tempdir_path.join(".bsmr");
         initialize_bsmrconfig(tempdir_path, true, true)?;
         let actual_bsmrconfig = fs_util::read_to_string(bsmrconfig_path)?;
-        let expected_bsmrconfig = "[cells]
+        let expected_bsmrconfig = "[project]
+  root = .
+  ignore = .git
+
+[cells]
   root = .
   prelude = prelude
   none = none
@@ -309,9 +309,6 @@ mod tests {
 
 [build]
   execution_platforms = prelude//platforms:default
-
-[project]
-  ignore = .git
 ";
         assert_eq!(actual_bsmrconfig, expected_bsmrconfig);
         Ok(())
@@ -324,10 +321,13 @@ mod tests {
         let tempdir_path = AbsPath::new(tempdir_path)?;
         fs_util::create_dir_all(tempdir_path)?;
 
-        let bsmrconfig_path = tempdir_path.join(".bsmrconfig");
+        let bsmrconfig_path = tempdir_path.join(".bsmr");
         initialize_bsmrconfig(tempdir_path, false, false)?;
         let actual_bsmrconfig = fs_util::read_to_string(bsmrconfig_path)?;
-        let expected_bsmrconfig = "[cells]
+        let expected_bsmrconfig = "[project]
+  root = .
+
+[cells]
   root = .
 ";
         assert_eq!(actual_bsmrconfig, expected_bsmrconfig);

@@ -359,9 +359,7 @@ def _supports_merged_linking():
             attrs.bool(),
             default = None,
             doc = """
-    Whether this rule supports building with the merged linking strategy when building for non-native
-     binaries (e.g. when using `.bsmrconfig`
-    s `merged` setting).
+    Whether this rule supports the merged linking strategy when building non-native binaries.
 """,
         ),
     }

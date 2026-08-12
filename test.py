@@ -160,7 +160,7 @@ def list_starlark_files(git: bool):
         "tests/e2e/**/test_*_data/**",
         "**.rs",
         "**.fixture",
-        "**.bsmrconfig",
+        "**.bsmr",
         "**.bcfg",
         "**/targets/**",  # TODO(lmvasquezg) Exclude only non-starlark files here
         "**/BUCK",  # TODO(lmvasquezg)  fix starlark linter to accept these

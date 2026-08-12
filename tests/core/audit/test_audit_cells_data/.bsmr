@@ -1,0 +1,11 @@
+[project]
+root = .
+
+[cells]
+  source = fbs
+  code = fbc
+  root = .
+
+[cell_aliases]
+  a = source
+  z = code

@@ -1,0 +1,47 @@
+# ===----------------------------------------------------------------------===
+# Upstream-Source: facebook/buck2@1560aca2002865cd73d7cafb22c705cfb640b2bc
+# Modifications Copyright (c) 2026 Dedalus Labs, Inc. and its contributors
+# SPDX-License-Identifier: Apache-2.0
+# ===----------------------------------------------------------------------===
+
+[project]
+root = .
+
+# Copyright (c) Meta Platforms, Inc. and affiliates.
+#
+# This source code is licensed under both the MIT license found in the
+# LICENSE-MIT file in the root directory of this source tree and the Apache
+# License, Version 2.0 found in the LICENSE-APACHE file in the root directory
+# of this source tree.
+
+[buildfile]
+# see <https://github.com/facebook/buck2/pull/956> -- this helps us make
+# error messages when the user doesn't run "reindeer" much more obvious,
+# because the default BUCK file just errors out. We then make reindeer generate
+# BUCK.reindeer to override that.
+name = BUCK.reindeer,BUCK
+
+[cells]
+bsmr_build = .
+
+[cell_aliases]
+root = bsmr_build
+
+# A cell reads its own configuration, so repeat the aliases that its build
+# support files use.
+[cells]
+prelude = prelude
+none = none
+
+[cell_aliases]
+config = prelude
+ovr_config = prelude
+toolchains = bsmr_build
+# Optional targets retained by the upstream prelude resolve to a disabled cell.
+upstream = none
+
+[external_cells]
+prelude = disabled
+
+[parser]
+target_platform_detector_spec = target:root//...->prelude//platforms:default target:bsmr_build//...->prelude//platforms:default

@@ -106,7 +106,7 @@ def bsmrconfig_backed_modifiers(
     having all builds specifying these bsmrconfigs to specify modifiers for them instead.
 
     Bsmrconfigs are read from `toolchains` cell in order to identify bsmrconfigs
-    specified in modefiles on CLI, as opposed to bsmrconfigs specified in .bsmrconfig files per cells.
+    specified in modefiles on CLI, as opposed to bsmrconfigs specified in .bsmr files per cells.
 
     Each `BsmrconfigBackedModifier` entry can specify `modifiers` (individual constraint value targets)
     and/or `platforms` (platform targets whose constraints are applied). At least one must be non-empty.

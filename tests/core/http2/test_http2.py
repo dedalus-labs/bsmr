@@ -32,7 +32,7 @@ async def test_http2_enabled(buck: Buck) -> None:
     assert status["http2"] is True, "http2 is enabled by default"
 
     # Insert necessary bsmrconfig to pick up http2 configuration.
-    with open(f"{buck.cwd}/.bsmrconfig", "a") as bsmrconfig:
+    with open(f"{buck.cwd}/.bsmr", "a") as bsmrconfig:
         bsmrconfig.writelines(["[http]\n", "http2 = false\n"])
 
     # Get a daemon to start

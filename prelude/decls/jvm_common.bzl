@@ -42,11 +42,9 @@ def _resources_arg():
      These files can be loaded
      via [Class.getResource()](http://docs.oracle.com/javase/7/docs/api/java/lang/Class.html#getResource(java.lang.String)).
 
-    **Note:** If `resources_root` isn't set,
-     Buck uses the ``.bsmrconfig``
-     property in `.bsmrconfig` to
-     determine where resources should be placed within the generated JAR
-     file.
+    **Note:** If `resources_root` isn't set, Buck uses the corresponding value
+     from `.bsmr` to determine where resources should be placed within the
+     generated JAR file.
 """,
         ),
         "resources_root": attrs.option(
@@ -55,7 +53,7 @@ def _resources_arg():
             doc = """
     The path that resources are resolved against. For example, if `resources_root` is `"res"` and
      `resources` contains the file `"res/com/example/foo.txt"`, that file will end up as `"com/example/foo.txt"` in the output JAR. This parameter
-     overrides the ``.bsmrconfig`` property in `.bsmrconfig`.
+     overrides the corresponding project setting in `.bsmr`.
 """,
         ),
     }
@@ -169,7 +167,7 @@ def _abi_generation_mode():
             attrs.enum(AbiGenerationMode),
             default = None,
             doc = """
-    Overrides `.bsmrconfig`
+    Overrides `.bsmr`
     for this rule.
 """,
         ),
@@ -301,7 +299,7 @@ fbcode/bsmr/prelude/decls/jvm_common.bzl
                 )
 
                 # Note you probably want to set
-                # maven_repo=http://jcenter.bintray.com/ in your .bsmrconfig until
+                # maven_repo=http://jcenter.bintray.com/ in your .bsmr until
                 # https://github.com/Kotlin/kotlinx.serialization/issues/64
                 # is closed.
                 remote_file(
@@ -353,7 +351,7 @@ def _javac():
             Specifies the Java compiler program to use for this rule.
                 The value is a source path or an execution dep (e.g., //foo/bar:bar).
                 Overrides the value in "javac" in the "tools" section
-                of `.bsmrconfig`.
+                of `.bsmr`.
             """,
         ),
     }

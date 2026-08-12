@@ -260,9 +260,7 @@ apple_binary = prelude_rule(
         Buck enables you to override components of the Apple toolchain with
         alternate tools, either from the Xcode search paths or from directories
         that you specify.
-        See `.bsmrconfig`
-        and `.bsmrconfig`
-        for more information.
+        See the `.bsmr` project configuration for more information.
     """,
     examples = """
         ```
@@ -582,9 +580,7 @@ apple_library = prelude_rule(
         Buck enables you to override components of the Apple toolchain with
         alternate tools, either from the Xcode search paths or from directories
         that you specify.
-        See `.bsmrconfig`
-        and `.bsmrconfig`
-        for more information.
+        See the `.bsmr` project configuration for more information.
     """,
     examples = """
         ```
@@ -825,9 +821,7 @@ apple_package = prelude_rule(
         an `apple_bundle()` rule and compresses it in
         an IPA (iOS App Store Package) file.
 
-        This rule can be customized using the config options `.bsmrconfig`
-        and `.bsmrconfig`
-        .
+        This rule can be customized through the `.bsmr` project configuration.
     """,
     examples = """
         ```

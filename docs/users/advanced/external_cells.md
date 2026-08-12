@@ -24,7 +24,7 @@ origin.
 ## Setting up an external cell
 
 Configuring an external cell looks much like configuring a regular cell. First,
-add the cell to the `cells` section of your `.bsmrconfig` like normal:
+add the cell to the `cells` section of your `.bsmr` like normal:
 
 ```ini
 [cells]
@@ -97,7 +97,7 @@ direct edits to the cell's files in your repo.
 
 ## Details & Limitations
 
-- External cells can only be configured in the project root's `.bsmrconfig`.
+- External cells can only be configured in the project root's `.bsmr`.
   This also means that there is no support for "transitive" external cells, ie
   an external cell cannot specify additional external cells to pull in.
 - External cells cannot have nested cells inside them.

@@ -34,7 +34,7 @@ const CLI: &str = "cli";
 /// Display the values and origins of external configs for a selected command.
 ///
 /// Bsmrconfigs are computed by joining together values from various inputs (repo, well-known directories, CLI flags). Each of these is
-/// logged in the given order, with later components overriding earlier ones. For config files originating from the repo (i.e. project-relative paths), except .bsmrconfig.local,
+/// logged in the given order, with later components overriding earlier ones. For config files originating from the repo (i.e. project-relative paths), except .bsmr.local,
 /// we log the path, not the actual values.
 #[derive(Debug, clap::Parser)]
 pub struct ExternalConfigsCommand {

@@ -15,7 +15,7 @@
  */
 
 //! Contains utilities for dealing with buckv1 concepts (ex. buckv1's
-//! .bsmrconfig files as configuration)
+//! .bsmr files as configuration)
 
 mod access;
 pub use access::parse_bsmrconfig_metadata;

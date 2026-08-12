@@ -118,9 +118,9 @@ async def test_eden_blake3(buck: Buck) -> None:
 #     # String below is ~55 bytes, so this writes ~2.7GB which is comfortably over 2GB
 #     writes = 50000000
 
-#     with open(buck.cwd / ".bsmrconfig", "a") as f:
+#     with open(buck.cwd / ".bsmr", "a") as f:
 #         # Picked a random config and writing that a bunch of times to make the file large
-#         # This will result in a .bsmrconfig file to actually be valid, so an error should
+#         # This will result in a .bsmr file to actually be valid, so an error should
 #         # either be a size issue or it should succeed
 #         while writes > 0:
 #             f.write("[bsmr]\n")

@@ -1,0 +1,11 @@
+[project]
+root = .
+
+[cells]
+  root = .
+
+[buildfile]
+  name = TARGETS.fixture
+
+[bsmr_resource_control]
+  status = required

@@ -1,0 +1,28 @@
+# ===----------------------------------------------------------------------===
+# Upstream-Source: facebook/buck2@1560aca2002865cd73d7cafb22c705cfb640b2bc
+# Modifications Copyright (c) 2026 Dedalus Labs, Inc. and its contributors
+# SPDX-License-Identifier: Apache-2.0
+# ===----------------------------------------------------------------------===
+
+[project]
+root = .
+
+[cells]
+root = .
+prelude = prelude
+toolchains = toolchains
+bootstrap = bootstrap
+none = none
+
+[cell_aliases]
+config = prelude
+ovr_config = prelude
+buck = none
+fbcode = none
+fbsource = none
+
+[external_cells]
+  prelude = bundled
+
+[parser]
+target_platform_detector_spec = target:root//...->bootstrap//platform:default

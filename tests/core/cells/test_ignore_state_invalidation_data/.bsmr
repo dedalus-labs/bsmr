@@ -1,0 +1,8 @@
+[project]
+root = .
+
+[buildfile]
+name=TARGETS.fixture
+
+[cells]
+root = .

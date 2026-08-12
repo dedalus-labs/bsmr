@@ -924,7 +924,7 @@ http_archive = prelude_rule(
         An `http_archive()` rule is used to download and extract archives
         from the Internet to be used as dependencies for other rules. These rules are
         downloaded by running `fetch`, or can be downloaded as part of
-        `build` by setting `.bsmrconfig`
+        `build` by setting `.bsmr`
     """,
     examples = """
         Using `http_archive()`, third party packages can be downloaded from
@@ -979,7 +979,7 @@ http_file = prelude_rule(
         dependencies for other rules. This rule only downloads single files, and can
         optionally make them executable (see `http_file()executable`)
         These rules are downloaded by running `fetch`, or can
-        be downloaded as part of `build` by setting `.bsmrconfig`
+        be downloaded as part of `build` by setting `.bsmr`
     """,
     examples = """
         Using `http_file()`, third party packages can be downloaded from
@@ -1098,7 +1098,7 @@ remote_file = prelude_rule(
         A `remote_file()` rule is used to download files from the Internet to be used as
         dependencies for other rules. These rules are downloaded by running `fetch`, or can
         be downloaded as part of `build`. See the note there about the
-         `.bsmrconfig` setting to configure that.
+         `.bsmr` setting to configure that.
     """,
     examples = """
         Here's an example of a `remote_file()` using an `https` URL.

@@ -1,0 +1,7 @@
+[project]
+root = .
+
+[cells]
+  root = .
+
+<file:../extra>

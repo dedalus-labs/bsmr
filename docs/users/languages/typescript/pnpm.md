@@ -86,7 +86,7 @@ The install action also fails before pnpm starts unless these invariants hold:
 - the configured pnpm version and SHA-512 digest exactly match
   `packageManager`;
 - the lockfile exists and a frozen install accepts it;
-- BSMR's `.bsmr` state directory is absent from the declared project inputs;
+- BSMR's `.bsmr` project-control file is absent from the install action inputs;
   and
 - the declared output does not already exist.
 

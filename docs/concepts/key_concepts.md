@@ -60,7 +60,7 @@ subdirectory of `app-dir-1`, it is _not_ part of Package A.
 A Bessemer **_cell_** is:
 
 - A directory tree containing one or more Bessemer packages
-- Configured by a [**`.bsmrconfig`**](bsmrconfig.md) file at **its root**
+- Configured by a [**`.bsmr`**](bsmrconfig.md) file at **its root**
   ```
   [cells]
   cell_name = path_to_cell
@@ -68,23 +68,23 @@ A Bessemer **_cell_** is:
   ```
 - Often (but not necessarily) corresponding to a repository
 
-Note that although the cell root should contain a `.bsmrconfig`, the presence of
-a `.bsmrconfig` file doesn't in itself define a cell. Rather, _the cells
+Note that although the cell root should contain a `.bsmr`, the presence of
+a `.bsmr` file doesn't in itself define a cell. Rather, _the cells
 involved in a build are defined at the time Bessemer is invoked_; they are
-specified in the `.bsmrconfig` for the Bessemer _project_ (see below).
+specified in the `.bsmr` for the Bessemer _project_ (see below).
 
 ### Projects
 
 A Bessemer **_project_** is:
 
 - The entry point for Bessemer builds
-- Defined by the `.bsmrconfig` file in the directory where Bessemer is invoked (or
-  in the nearest ancestor directory),
+- Defined by `[project] root = .` in the nearest `.bsmr` file in the invocation
+  directory or one of its ancestors,
 - The container that specifies which cells are part of the build
 
-**_How cells and projects relate._** The project's `.bsmrconfig` specifies all
+**_How cells and projects relate._** The project's `.bsmr` specifies all
 cells in the [cells](bsmrconfig.md#cells) section. The directory containing the
-project's `.bsmrconfig` is automatically considered a cell. While not required,
+project's `.bsmr` is automatically considered a cell. While not required,
 it's good practice to explicitly list the project cell in the configuration.
 
 ### Bessemer's dependency graph

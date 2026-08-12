@@ -73,7 +73,7 @@ main input to Bessemer and are syntactically Python.
 Each build file is uniquely identified by the directory in which it's located.
 Since all build files have the same name, there cannot be two build files in the
 same directory. This is usually represented as the relative path from the root
-of the project (the directory where the .bsmrconfig file is).
+of the project (the directory where the .bsmr file is).
 
 Each build file has a set of targets. These describe the things the user wants
 Bessemer to know about. Each target has a type and a set of named attributes,

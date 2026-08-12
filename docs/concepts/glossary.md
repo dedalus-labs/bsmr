@@ -9,11 +9,11 @@ title: Glossary of Terms
 <!-- ===----------------------------------------------------------------------=== -->
 
 
-## .bsmrconfig
+## .bsmr
 
 The root of your [project](#project) must contain a configuration file named
-`.bsmrconfig`. Before executing, Bessemer reads this file to incorporate specified
-customizations. See [.bsmrconfig](bsmrconfig.md) for more info.
+`.bsmr`. Before executing, Bessemer reads this file to incorporate specified
+customizations. See [.bsmr](bsmrconfig.md) for more info.
 
 ## Action
 
@@ -73,9 +73,9 @@ BXL scripts can query the [action graph](#action-graph),
 ## Cell
 
 Originally intended to allow for migration of repositories with different setups
-into one monorepo. The cell root always contains a [.bsmrconfig](#bsmrconfig),
-although the presence of a .bsmrconfig file doesn't in itself define a cell.
-Cells are specified in the .bsmrconfig for the Buck [project](#project).
+into one monorepo. The cell root always contains a [.bsmr](#bsmr),
+although the presence of a .bsmr file doesn't in itself define a cell.
+Cells are specified in the .bsmr for the Buck [project](#project).
 
 ## Configuration
 
@@ -156,7 +156,7 @@ It's a modification of a constraint from the existing
 unified way to specify build settings on a [project](#project),
 [target](#target), and command line level. It is intended to replace
 [target platforms](#target-platform) and most use cases of
-[.bsmrconfigs](#bsmrconfig).
+[project configuration](#bsmr).
 
 ## Package
 
@@ -177,10 +177,10 @@ https://github.com/facebook/buck2/tree/main/prelude.
 
 ## Project
 
-The Outermost directory where there is a [.bsmrconfig](#bsmrconfig): also known
-as the [root cell](#cell). The .bsmrconfig for the project specifies the
+The nearest ancestor containing a project-marked [`.bsmr`](#bsmr) is also known
+as the [root cell](#cell). The `.bsmr` for the project specifies the
 [cells](#cell) that constitute the Bessemer project. Specifically, these cells are
-specified in the '[cells]' section of the `.bsmrconfig`. All command invocations
+specified in the '[cells]' section of the `.bsmr`. All command invocations
 are executed from the project root.
 
 ## Provider
@@ -252,7 +252,7 @@ instantiating a [rule](#rule) with attributes. A target has
 
 The identifier for a [target](#target). Structured as
 `cell_alias//path/to/package:target`, where `cell_alias//` maps to a
-[cell root](#cell) path (as defined in the [./bsmrconfig](#bsmrconfig) of the
+[cell root](#cell) path (as defined in the [`.bsmr`](#bsmr) of the
 cell this target belongs to), `path/to/package` is the [package](#package)
 directory that contains the [BUCK file](#buck-file) declaring the target
 (relative to the mapped cell alias), and `:target` is the target's name.

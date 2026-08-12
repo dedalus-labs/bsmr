@@ -292,7 +292,7 @@ test("reserves the action-local state path", async (context) => {
 	await mkdir(join(state.source, ".bsmr"));
 	const result = runRunner(state);
 	assert.equal(result.status, 1);
-	assert.match(result.stderr, /reserved '.bsmr'/);
+	assert.match(result.stderr, /'.bsmr' project-control path/);
 	await assert.rejects(access(join(state.output, ".pnpm-invocation.json")));
 });
 
