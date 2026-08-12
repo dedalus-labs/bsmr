@@ -8,5 +8,5 @@
 		"target": "ES2024",
 		"types": ["node"]
 	},
-	"include": ["ci/**/*.ts", "test/**/*.ts", "rolldown.config.ts"]
+	"include": ["benchmarks/**/*.ts", "ci/**/*.ts", "test/**/*.ts", "rolldown.config.ts"]
 }
