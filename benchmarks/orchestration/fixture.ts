@@ -108,12 +108,11 @@ export const generateFixture = (
 	}
 	if (runner !== "bsmr") return trace;
 	write(root, ".bsmrroot", "\n");
-	write(root, ".bsmrconfig", `[cells]\nroot = .\nprelude = prelude\ntoolchains = toolchains\nnone = none\n[cell_aliases]\nconfig = prelude\novr_config = prelude\nbuck = none\nfbcode = none\nfbcode_macros = none\nfbsource = none\nupstream = none\n[external_cells]\nprelude = disabled\n[buildfile]\nname = BUILD.bsmr\n[bsmr]\ndigest_algorithms = SHA256\n[bsmr_re_client]\naction_cache_address = ${remoteCache}\nengine_address = ${remoteCache}\ncas_address = ${remoteCache}\ntls = false\ninstance_name = bsmr-orchestration-v1\n[build]\nexecution_platforms = //platforms:default\n[parser]\ntarget_platform_detector_spec = target:root//...->//platforms:default target:toolchains//...->//platforms:default\n`);
-	write(root, "toolchains/.bsmrconfig", "[buildfile]\nname = BUILD.bsmr\n");
-	write(root, "toolchains/BUILD.bsmr", `load("@prelude//toolchains:genrule.bzl", "system_genrule_toolchain")\nsystem_genrule_toolchain(name = "genrule", visibility = ["PUBLIC"])\nexport_file(name = "node", src = "node", visibility = ["PUBLIC"])\n`);
+	write(root, ".bsmrconfig", `[cells]\nroot = .\nprelude = prelude\ntoolchains = toolchains\nnone = none\n[cell_aliases]\nconfig = prelude\novr_config = prelude\nbuck = none\nfbcode = none\nfbcode_macros = none\nfbsource = none\nupstream = none\n[external_cells]\nprelude = disabled\n[bsmr]\ndigest_algorithms = SHA256\n[bsmr_re_client]\naction_cache_address = ${remoteCache}\nengine_address = ${remoteCache}\ncas_address = ${remoteCache}\ntls = false\ninstance_name = bsmr-orchestration-v1\n[build]\nexecution_platforms = //platforms:default\n[parser]\ntarget_platform_detector_spec = target:root//...->//platforms:default target:toolchains//...->//platforms:default\n`);
+	write(root, "toolchains/BUCK", `load("@prelude//toolchains:genrule.bzl", "system_genrule_toolchain")\nsystem_genrule_toolchain(name = "genrule", visibility = ["PUBLIC"])\nexport_file(name = "node", src = "node", visibility = ["PUBLIC"])\n`);
 	write(root, "platforms/defs.bzl", platform());
-	write(root, "platforms/BUILD.bsmr", `load("@prelude//platforms:defs.bzl", "host_configuration")\nload(":defs.bzl", "cache_platform")\ncache_platform(name = "default", cpu = host_configuration.cpu, os = host_configuration.os, visibility = ["PUBLIC"])\n`);
-	write(root, "BUILD.bsmr", buildManifest(trace));
+	write(root, "platforms/BUCK", `load("@prelude//platforms:defs.bzl", "host_configuration")\nload(":defs.bzl", "cache_platform")\ncache_platform(name = "default", cpu = host_configuration.cpu, os = host_configuration.os, visibility = ["PUBLIC"])\n`);
+	write(root, "BUCK", buildManifest(trace));
 	symlinkSync(join(repository, "prelude"), join(root, "prelude"), "dir");
 	symlinkSync(process.execPath, join(root, "toolchains/node"), "file");
 	return trace;
