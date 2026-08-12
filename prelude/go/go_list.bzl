@@ -1,3 +1,9 @@
+# ===----------------------------------------------------------------------===
+# Upstream-Source: facebook/buck2@1560aca2002865cd73d7cafb22c705cfb640b2bc
+# Modifications Copyright (c) 2026 Dedalus Labs, Inc. and its contributors
+# SPDX-License-Identifier: Apache-2.0
+# ===----------------------------------------------------------------------===
+
 # Copyright (c) Meta Platforms, Inc. and affiliates.
 #
 # This source code is dual-licensed under either the MIT license found in the
@@ -18,6 +24,7 @@ GoListOut = record(
     name = field(str),
     imports = field(list[str], default = []),
     test_imports = field(list[str], default = []),
+    x_test_imports = field(list[str], default = []),
     go_files = field(list[Artifact], default = []),
     h_files = field(list[Artifact], default = []),
     c_files = field(list[Artifact], default = []),
@@ -33,6 +40,7 @@ GoListOut = record(
     cgo_cppflags = field(list[str], default = []),
     embed_patterns = field(list[str], default = []),
     test_embed_patterns = field(list[str], default = []),
+    x_test_embed_patterns = field(list[str], default = []),
     error = field(GoListError | None, default = None),
 )
 
@@ -76,6 +84,7 @@ def go_list(
     return go_list_out
 
 def parse_go_list_out(srcs: list[Artifact], package_root: str, go_list_out: ArtifactValue) -> GoListOut:
+    """Maps analyzer JSON fields back to their declared source artifacts."""
     go_list = go_list_out.read_json()
     go_files, cgo_files, h_files, c_files, cxx_files, s_files, syso_files, test_go_files, x_test_go_files, ignored_go_files, ignored_other_files = (
         [],
@@ -120,16 +129,19 @@ def parse_go_list_out(srcs: list[Artifact], package_root: str, go_list_out: Arti
     name = go_list.get("Name", "")
     imports = go_list.get("Imports", [])
     test_imports = go_list.get("TestImports", [])
+    x_test_imports = go_list.get("XTestImports", [])
     cgo_cflags = go_list.get("CgoCFLAGS", [])
     cgo_cppflags = go_list.get("CgoCPPFLAGS", [])
     embed_patterns = go_list.get("EmbedPatterns", [])
     test_embed_patterns = go_list.get("TestEmbedPatterns", [])
+    x_test_embed_patterns = go_list.get("XTestEmbedPatterns", [])
     error = _parse_error(go_list.get("Error", None))
 
     return GoListOut(
         name = name,
         imports = imports,
         test_imports = test_imports,
+        x_test_imports = x_test_imports,
         go_files = go_files,
         h_files = h_files,
         c_files = c_files,
@@ -145,6 +157,7 @@ def parse_go_list_out(srcs: list[Artifact], package_root: str, go_list_out: Arti
         ignored_other_files = ignored_other_files,
         embed_patterns = embed_patterns,
         test_embed_patterns = test_embed_patterns,
+        x_test_embed_patterns = x_test_embed_patterns,
         error = error,
     )
 
