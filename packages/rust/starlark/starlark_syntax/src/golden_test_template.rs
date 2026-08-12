@@ -1,5 +1,4 @@
 //===----------------------------------------------------------------------===//
-// Upstream-Source: facebook/buck2@1560aca2002865cd73d7cafb22c705cfb640b2bc
 // Modifications Copyright (c) 2026 Dedalus Labs, Inc. and its contributors
 // SPDX-License-Identifier: Apache-2.0
 //===----------------------------------------------------------------------===//
@@ -33,7 +32,6 @@ const REGENERATE_VAR_NAME: &str = "STARLARK_RUST_REGENERATE_GOLDEN_TESTS";
 /// sources; regenerating it keeps checked-in goldens byte-identical to output.
 const MARKDOWN_LICENSE_PREAMBLE: &str =
     "<!-- ===----------------------------------------------------------------------=== -->
-<!-- Upstream-Source: facebook/buck2@1560aca2002865cd73d7cafb22c705cfb640b2bc -->
 <!-- Modifications Copyright (c) 2026 Dedalus Labs, Inc. and its contributors -->
 <!-- SPDX-License-Identifier: Apache-2.0 -->
 <!-- ===----------------------------------------------------------------------=== -->

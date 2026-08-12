@@ -12,23 +12,26 @@ import { fileURLToPath } from "node:url";
 import { nodeExec, type ScriptExec } from "@dedalus-labs/hollywood";
 
 import { insertPreamble, type Source, validateSource } from "./license-preamble.ts";
-import { classify, forkPoint, type GitChange, isExact, isSource, parseChanges } from "./license-provenance.ts";
+import { classify, type GitChange, isExact, isSource, parseChanges, parseForkPoint } from "./license-provenance.ts";
 
 type Inventory = Readonly<{ changes: ReadonlyMap<string, GitChange>; sources: readonly Source[]; tracked: readonly string[] }>;
 type CargoMetadata = Readonly<{ packages: readonly Readonly<{ license: string | null; manifest_path: string; source: string | null }>[] }>;
 
 /** Build the complete source inventory with one bounded Git diff. */
 async function inventory(root: string, exec: ScriptExec): Promise<Inventory> {
+	const forkPoint = parseForkPoint(readFileSync(join(root, "NOTICE"), "utf8"));
 	await exec("git", ["cat-file", "-e", `${forkPoint}^{commit}`], { cwd: root });
-	const [tracked, diff] = await Promise.all([
+	const [tracked, diff, forkTree] = await Promise.all([
 		exec("git", ["ls-files", "-z"], { cwd: root }),
 		exec("git", ["-c", "diff.renameLimit=999999", "diff", "--name-status", "-z", "-M50%", "-C50%", "--find-copies-harder", `${forkPoint}..HEAD`, "--"], { cwd: root }),
+		exec("git", ["ls-tree", "-r", "--name-only", "-z", forkPoint], { cwd: root }),
 	]);
 	const changes = parseChanges(diff.stdout);
+	const forkPaths = new Set(forkTree.stdout.split("\0").filter(Boolean));
 	const paths = tracked.stdout.split("\0").filter(Boolean);
 	const sources = paths.filter(isSource).map((path) => {
 		const text = readFileSync(join(root, path), "utf8");
-		return { path, provenance: classify(text, changes.get(path)), text };
+		return { path, provenance: classify(text, changes.get(path), forkPaths.has(path)), text };
 	});
 	return { changes, sources, tracked: paths };
 }

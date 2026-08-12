@@ -21,11 +21,13 @@ test("policy accepts canonical source and package licenses", async () => {
 		mkdirSync(join(root, "app"));
 		writeFileSync(join(root, "LICENSE"), "Apache\n");
 		writeFileSync(join(root, "LICENSE-APACHE"), "Apache\n");
+		writeFileSync(join(root, "NOTICE"), `Bessemer began from facebook/buck2 commit\n${"a".repeat(40)}.\n`);
 		writeFileSync(join(root, "app/BUILD.bsmr"), "# ===----------------------------------------------------------------------===\n# Copyright (c) 2026 Dedalus Labs, Inc. and its contributors\n# SPDX-License-Identifier: Apache-2.0\n# ===----------------------------------------------------------------------===\n\n# Defines build targets for app.\n");
 		writeFileSync(join(root, "package.json"), '{"license":"Apache-2.0"}\n');
 		let tracked = "app/BUILD.bsmr\0package.json\0";
 		const exec: ScriptExec = async (_file, args) => {
 			if (args.includes("ls-files")) return { exitCode: 0, stdout: tracked, stderr: "" };
+			if (args.includes("ls-tree")) return { exitCode: 0, stdout: "", stderr: "" };
 			if (args.includes("--name-status")) return { exitCode: 0, stdout: "A\0app/BUILD.bsmr\0A\0package.json\0", stderr: "" };
 			if (args[0] === "metadata") return { exitCode: 0, stdout: '{"packages":[]}', stderr: "" };
 			return { exitCode: 0, stdout: "", stderr: "" };

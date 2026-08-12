@@ -13,8 +13,9 @@ Bessemer code should be obvious to inspect, operate, and extend.
 - Start every new Dedalus-owned source file with the repository preamble below.
 - State the file's responsibility in one sentence below the legal header, after one blank line.
 - Preserve existing Meta and third-party notices exactly. Claim Dedalus copyright only for Dedalus-authored work.
-- Keep byte-identical Buck2 descendants with a file-local legal notice unchanged. Mark modified descendants with the Dedalus modifications copyright and Apache-2.0 SPDX identifier; never replace the original notice. Record upstream commit boundaries once in `NOTICE` and `UPSTREAM_CHANGELOG.md`, not in every file.
+- Keep byte-identical Buck2 descendants with a file-local legal notice unchanged. Mark modified descendants with the Dedalus modifications copyright and Apache-2.0 SPDX identifier; never replace the original notice. Record the initial fork point once in `NOTICE`, not in every file.
 - Treat source added after the Buck2 fork point as Dedalus-owned unless it retains a Meta copyright notice.
+- Use the Dedalus-owned preamble for a wholly rewritten file only when no upstream expression or notice remains.
 - Emit the same preamble from generators; never patch generated output by hand.
 - Exclude behavioral inputs in `fixtures` and `*_data` directories and `*.golden` test outputs because comments may change the tested bytes.
 - Run `pnpm run ci check license` after adding, renaming, or changing source files.

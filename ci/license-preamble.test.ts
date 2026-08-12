@@ -12,7 +12,9 @@ import { insertPreamble, renderPreamble, validateSource } from "./license-preamb
 
 test("preambles use the file's native comment syntax", () => {
 	assert.match(renderPreamble("app/bsmr/BUILD.bsmr", "dedalus"), /^# ===/);
-	assert.match(renderPreamble("tool.ml", "upstream-modified"), /^\(\* ===.* \*\)$/m);
+	const modified = renderPreamble("tool.ml", "upstream-modified");
+	assert.match(modified, /^\(\* ===.* \*\)$/m);
+	assert.doesNotMatch(modified, /Upstream-Source/);
 	assert.match(renderPreamble("index.html", "upstream-modified"), /^<!-- ===/);
 });
 

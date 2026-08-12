@@ -7,7 +7,7 @@
 
 import { basename, dirname, extname } from "node:path";
 
-import { type Provenance, upstreamSource } from "./license-provenance.ts";
+import type { Provenance } from "./license-provenance.ts";
 
 const copyright = "Copyright (c) 2026 Dedalus Labs, Inc. and its contributors";
 const apacheSpdx = "SPDX-License-Identifier: Apache-2.0";
@@ -54,13 +54,18 @@ function brief(path: string): string {
 		["ci/license-provenance.ts", "Derives source ownership from Bessemer's immutable Buck2 fork boundary."],
 		["ci/license.test.ts", "Verifies the license policy against an isolated source inventory."],
 		["ci/license.ts", "Audits source provenance, legal preambles, and package license metadata."],
+		["docs/getting_started/quickstart.md", "Shows the shortest path from project initialization to a successful build."],
 		["docs/getting_started/what_is_bsmr.md", "Introduces Bessemer and its core capabilities."],
+		["docs/reference/configuration.md", "Documents optional project configuration after the beginner workflow."],
+		["docs/reference/index.md", "Directs readers to Bessemer's complete technical reference."],
 		["prelude/toolchains/pnpm/runner.mjs", "Runs the generated hermetic pnpm install adapter."],
 		["prelude/typescript/runner.mjs", "Runs the generated hermetic TypeScript action adapter."],
-		["rolldown.config.ts", "Bundles Bessemer's generated Node runtime artifacts."],
+		["README.md", "Introduces Bessemer's interface, supported ecosystems, and development workflow."],
+		["rolldown.config.ts", "Bundles Bessemer's local GitHub Actions."],
 		["test/contributors.test.ts", "Verifies the vouched-contributor trust policy."],
 		["tools/build/README.md", "Documents the self-hosted build cell."],
 		["tools/rust-project/README.md", "Documents Rust project generation."],
+		["UPSTREAM_CHANGELOG.md", "Records later upstream Buck2 integrations after Bessemer's initial fork."],
 	]);
 	const responsibility = known.get(path);
 	if (responsibility === undefined) throw new Error(`missing source responsibility for ${path}`);
@@ -74,7 +79,7 @@ function renderLegalPreamble(path: string, provenance: Exclude<Provenance, "upst
 	const separator = style.prefix === "// " ? "//===----------------------------------------------------------------------===//" : line("===----------------------------------------------------------------------===");
 	const legal = provenance === "dedalus"
 		? [copyright, apacheSpdx]
-		: [upstreamSource, `Modifications ${copyright}`, apacheSpdx];
+		: [`Modifications ${copyright}`, apacheSpdx];
 	return [separator, ...legal.map(line), separator].join("\n");
 }
 

@@ -7,8 +7,7 @@
 
 import { basename, extname } from "node:path";
 
-export const forkPoint = "1560aca2002865cd73d7cafb22c705cfb640b2bc";
-export const upstreamSource = `Upstream-Source: facebook/buck2@${forkPoint}`;
+const forkCommit = /facebook\/buck2 commit\s+([0-9a-f]{40})/g;
 
 const sourceExtensions = new Set([
 	".bash", ".bat", ".bsmr", ".bxl", ".bzl", ".c", ".cc", ".cjs", ".cpp",
@@ -21,11 +20,21 @@ const fixture = /(?:^|\/)(?:fixtures|golden|[^/]+_data)(?:\/|$)/;
 const golden = /\.golden(?:\.|$)/;
 const comment = "(?:\\/\\/|#|--|%|\\/\\*|\\*|<!--|@REM)";
 const upstreamCopyright = new RegExp(`^\\s*(?:${comment}\\s*)?Copyright[^\\n]*(?:Meta Platforms|Facebook)`, "im");
+const dedalusCopyright = new RegExp(`^\\s*(?:${comment}\\s*)?Copyright \\(c\\) 2026 Dedalus Labs, Inc\\. and its contributors`, "im");
+const modifiedCopyright = new RegExp(`^\\s*(?:${comment}\\s*)?Modifications Copyright \\(c\\) 2026 Dedalus Labs, Inc\\. and its contributors`, "im");
 const legalNotice = new RegExp(`^\\s*(?:${comment}\\s*)?(?:Copyright|SPDX-License-Identifier|Licensed under|This source code[^\\n]*licens)`, "im");
-const upstreamMarker = new RegExp(`^(?://|#|--|%|\\(\\*|/\\*|<!--|@REM) ${upstreamSource}(?: \\*\\/| -->)?$`, "m");
 
 export type Provenance = "dedalus" | "upstream" | "upstream-modified";
 export type GitChange = Readonly<{ oldPath?: string; status: string }>;
+
+/** Read the repository's one canonical Buck2 fork commit from NOTICE. */
+export function parseForkPoint(notice: string): string {
+	const matches = [...notice.matchAll(forkCommit)];
+	if (matches.length !== 1 || matches[0]?.[1] === undefined) {
+		throw new Error("NOTICE must record exactly one Buck2 fork commit");
+	}
+	return matches[0][1];
+}
 
 /** Parse NUL-delimited `git diff --name-status` output by destination path. */
 export function parseChanges(output: string): ReadonlyMap<string, GitChange> {
@@ -55,10 +64,10 @@ export function isExact(change?: GitChange): boolean {
 }
 
 /** Derive the file's ownership boundary from the immutable Buck2 fork point. */
-export function classify(text: string, change?: GitChange): Provenance {
+export function classify(text: string, change: GitChange | undefined, existedAtFork: boolean): Provenance {
 	const header = text.slice(0, 4096);
-	if (upstreamMarker.test(header)) return "upstream-modified";
-	if (change?.status === "A" && !upstreamCopyright.test(header)) return "dedalus";
+	if (dedalusCopyright.test(header) && !upstreamCopyright.test(header)) return "dedalus";
+	if (change?.status === "A" && !existedAtFork && !upstreamCopyright.test(header) && !modifiedCopyright.test(header)) return "dedalus";
 	if (isExact(change)) return legalNotice.test(header) ? "upstream" : "upstream-modified";
 	return "upstream-modified";
 }

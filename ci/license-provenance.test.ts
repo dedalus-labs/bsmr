@@ -8,7 +8,13 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 
-import { classify, isSource, parseChanges } from "./license-provenance.ts";
+import { classify, isSource, parseChanges, parseForkPoint } from "./license-provenance.ts";
+
+test("the immutable fork point comes from NOTICE", () => {
+	const hash = "a".repeat(40);
+	assert.equal(parseForkPoint(`Bessemer began from facebook/buck2 commit\n${hash}.\n`), hash);
+	assert.throws(() => parseForkPoint("no fork recorded\n"), /exactly one Buck2 fork commit/);
+});
 
 test("changes preserve destination and origin paths", () => {
 	const changes = parseChanges("A\0new.ts\0R100\0old.rs\0new.rs\0M\0same.py\0");
@@ -29,11 +35,16 @@ test("source selection excludes behavioral fixtures", () => {
 });
 
 test("classification follows the immutable fork boundary", () => {
+	const dedalus = "// Copyright (c) 2026 Dedalus Labs, Inc. and its contributors";
 	const meta = "// Copyright (c) Meta Platforms, Inc. and affiliates.";
-	assert.equal(classify("new", { status: "A" }), "dedalus");
-	assert.equal(classify(meta, { status: "A" }), "upstream-modified");
-	assert.equal(classify(meta, { oldPath: "old.rs", status: "R100" }), "upstream");
-	assert.equal(classify(meta, { oldPath: "old.rs", status: "R099" }), "upstream-modified");
-	assert.equal(classify(meta), "upstream");
-	assert.equal(classify("load(\"//rules:defs.bzl\", \"rule\")\n"), "upstream-modified");
+	const modified = "// Modifications Copyright (c) 2026 Dedalus Labs, Inc. and its contributors";
+	assert.equal(classify("new", { status: "A" }, false), "dedalus");
+	assert.equal(classify(dedalus, { status: "M" }, true), "dedalus");
+	assert.equal(classify("restored", { status: "A" }, true), "upstream-modified");
+	assert.equal(classify(modified, { status: "A" }, false), "upstream-modified");
+	assert.equal(classify(meta, { status: "A" }, false), "upstream-modified");
+	assert.equal(classify(meta, { oldPath: "old.rs", status: "R100" }, false), "upstream");
+	assert.equal(classify(meta, { oldPath: "old.rs", status: "R099" }, false), "upstream-modified");
+	assert.equal(classify(meta, undefined, true), "upstream");
+	assert.equal(classify("load(\"//rules:defs.bzl\", \"rule\")\n", undefined, true), "upstream-modified");
 });
