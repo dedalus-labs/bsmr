@@ -170,7 +170,7 @@ fn help() -> &'static str {
     concat!(
         "Bessemer build system\n",
         "\n",
-        "Documentation: https://github.com/dedalus-labs/bsmr\n", // @oss-enable
+        "Documentation: https://oss.dedaluslabs.ai/bsmr\n", // @oss-enable
         // @oss-disable: "Documentation: https://internalfb.com/intern/staticdocs/bsmr/docs/\n",
     )
 }
@@ -187,6 +187,24 @@ pub(crate) struct Opt {
     cmd: CommandKind,
     #[clap(flatten)]
     common_opts: BeforeSubcommandOptions,
+}
+
+const BEGINNER_COMMANDS: &[&str] = &["build", "clean", "init"];
+
+/// Builds the complete parser or the beginner help view selected by `-h`.
+fn command_for_args(args: &[String]) -> clap::Command {
+    let command = Opt::command();
+    if !matches!(args, [_, flag] if flag == "-h") {
+        return command;
+    }
+
+    command
+        .mut_args(|arg| arg.hide(true))
+        .mut_subcommands(|command| {
+            let show = BEGINNER_COMMANDS.contains(&command.get_name());
+            command.hide(!show)
+        })
+        .after_help("Run `bsmr --help` to show every command and global option.")
 }
 
 impl Opt {
@@ -226,7 +244,7 @@ pub fn exec(process: ProcessContext<'_>) -> ExitResult {
         expanded_argv: expanded_args,
     };
 
-    let clap = Opt::command();
+    let clap = command_for_args(&process.shared.args);
     let matches = match clap.try_get_matches_from(argv.expanded_argv.args()) {
         Ok(matches) => matches,
         Err(e) => {
@@ -606,5 +624,45 @@ impl CommandKind {
             CommandKind::ExpandExternalCell(cmd) => cmd.logging_name(),
             CommandKind::Go(_) => "go",
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use clap::error::ErrorKind;
+
+    use super::command_for_args;
+
+    fn help(args: &[&str]) -> String {
+        let args = args.iter().map(ToString::to_string).collect::<Vec<_>>();
+        let error = command_for_args(&args)
+            .try_get_matches_from(&args)
+            .expect_err("help must stop argument parsing");
+        assert_eq!(ErrorKind::DisplayHelp, error.kind());
+        error.to_string()
+    }
+
+    #[test]
+    fn short_help_only_shows_beginner_commands() {
+        let help = help(&["bsmr", "-h"]);
+
+        for command in ["build", "clean", "init"] {
+            assert!(help.contains(&format!("  {command} ")), "{help}");
+        }
+        for command in ["audit", "cquery", "run", "starlark", "targets", "test"] {
+            assert!(!help.contains(&format!("  {command} ")), "{help}");
+        }
+        assert!(help.contains("bsmr --help"), "{help}");
+        assert!(!help.contains("--isolation-dir"), "{help}");
+    }
+
+    #[test]
+    fn long_help_shows_the_complete_interface() {
+        let help = help(&["bsmr", "--help"]);
+
+        for command in ["audit", "build", "cquery", "starlark", "targets"] {
+            assert!(help.contains(&format!("  {command} ")), "{help}");
+        }
+        assert!(help.contains("--isolation-dir"), "{help}");
     }
 }
