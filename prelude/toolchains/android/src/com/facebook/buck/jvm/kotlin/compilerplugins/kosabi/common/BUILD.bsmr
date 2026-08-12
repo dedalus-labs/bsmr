@@ -15,10 +15,10 @@ kotlin_bootstrap_library(
     name = "common",
     srcs = glob(["*.kt"]),
     tests = [
-        "upstream//fbandroid/javatests/com/facebook/kotlin/compilerplugins/kosabi/common:common",
+        "none//fbandroid/javatests/com/facebook/kotlin/compilerplugins/kosabi/common:common",
     ],
     visibility = [
-        "upstream//fbandroid/javatests/...",
+        "none//fbandroid/javatests/...",
         "prelude//toolchains/android/src/com/facebook/buck/jvm/kotlin/compilerplugins/...",
     ],
 )

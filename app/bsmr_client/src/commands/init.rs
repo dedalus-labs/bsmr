@@ -33,6 +33,23 @@ use bsmr_fs::fs_util;
 use bsmr_fs::paths::abs_path::AbsPath;
 use bsmr_util::process::background_command;
 
+/// Initial root manifest that native frontends may replace only when byte-identical.
+pub(crate) const INITIAL_ROOT_MANIFEST: &str = r#"# A list of available rules and their signatures can be found here: https://buck2.build/docs/prelude/globals/
+
+genrule(
+    name = "hello_world",
+    out = "out.txt",
+    cmd = "echo BUILT BY BSMR> $OUT",
+)
+"#;
+
+/// Initial toolchain manifest that native frontends may replace only when byte-identical.
+pub(crate) const INITIAL_TOOLCHAINS_MANIFEST: &str = r#"load("@prelude//toolchains:demo.bzl", "system_demo_toolchains")
+
+# All the default toolchains, suitable for a quick demo or early prototyping.
+# Most real projects should copy/paste the implementation to configure them.
+system_demo_toolchains()"#;
+
 /// Initializes a bsmr project at the provided path.
 #[derive(Debug, clap::Parser)]
 #[clap(name = "init", about = "Initialize a bsmr project")]
@@ -143,7 +160,6 @@ fn initialize_bsmrconfig(repo_root: &AbsPath, prelude: bool, git: bool) -> bsmr_
         writeln!(bsmrconfig, "  config = prelude")?;
         writeln!(bsmrconfig, "  ovr_config = prelude")?;
         writeln!(bsmrconfig, "  buck = none")?;
-        writeln!(bsmrconfig, "  upstream = none")?;
         writeln!(bsmrconfig)?;
         writeln!(
             bsmrconfig,
@@ -181,36 +197,16 @@ fn initialize_bsmrconfig(repo_root: &AbsPath, prelude: bool, git: bool) -> bsmr_
 
 /// Write the demo toolchain manifest for a new project.
 fn initialize_toolchains_manifest(repo_root: &AbsPath) -> bsmr_error::Result<()> {
-    std::fs::write(
-        repo_root.join("BUILD.bsmr"),
-        r#"
-load("@prelude//toolchains:demo.bzl", "system_demo_toolchains")
-
-# All the default toolchains, suitable for a quick demo or early prototyping.
-# Most real projects should copy/paste the implementation to configure them.
-system_demo_toolchains()
-"#
-        .trim(),
-    )?;
+    std::fs::write(repo_root.join("BUILD.bsmr"), INITIAL_TOOLCHAINS_MANIFEST)?;
     Ok(())
 }
 
 /// Write the root package manifest for a new project.
 fn initialize_root_manifest(repo_root: &AbsPath, prelude: bool) -> bsmr_error::Result<()> {
-    let mut manifest = std::fs::File::create(repo_root.join("BUILD.bsmr"))?;
-
-    if prelude {
-        writeln!(
-            manifest,
-            "# A list of available rules and their signatures can be found here: https://buck2.build/docs/prelude/globals/"
-        )?;
-        writeln!(manifest)?;
-        writeln!(manifest, "genrule(")?;
-        writeln!(manifest, "    name = \"hello_world\",")?;
-        writeln!(manifest, "    out = \"out.txt\",")?;
-        writeln!(manifest, "    cmd = \"echo BUILT BY BSMR> $OUT\",")?;
-        writeln!(manifest, ")")?;
-    }
+    std::fs::write(
+        repo_root.join("BUILD.bsmr"),
+        if prelude { INITIAL_ROOT_MANIFEST } else { "" },
+    )?;
     // TODO: Add a doc pointers for rules
     Ok(())
 }
@@ -347,7 +343,6 @@ mod tests {
   config = prelude
   ovr_config = prelude
   buck = none
-  upstream = none
 
 # Uses a copy of the prelude bundled with the bsmr binary. You can alternatively delete this
 # section and vendor a copy of the prelude to the `prelude` directory of your project.

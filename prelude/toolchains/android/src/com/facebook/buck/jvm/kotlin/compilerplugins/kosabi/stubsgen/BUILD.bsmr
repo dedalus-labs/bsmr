@@ -51,15 +51,15 @@ buck_kotlin_library(
     resources = glob(["plugin/stubsgen_k2/resources/**"]),
     resources_root = "plugin/stubsgen_k2/resources",
     tests = [
-        "upstream//fbandroid/javatests/com/facebook/kotlin/compilerplugins/kosabi/integrationtest:integration-test",
-        "upstream//fbandroid/javatests/com/facebook/kotlin/compilerplugins/kosabi/stubsgen:stubsgen",
+        "none//fbandroid/javatests/com/facebook/kotlin/compilerplugins/kosabi/integrationtest:integration-test",
+        "none//fbandroid/javatests/com/facebook/kotlin/compilerplugins/kosabi/stubsgen:stubsgen",
     ],
     visibility = [
         "PUBLIC",
     ],
     deps = [
-        "upstream//fbandroid/java/com/facebook/kotlin/compilercompat:compilercompat",
-        "upstream//fbandroid/java/com/facebook/kotlin/compilercompat:compilercompat_with_ka",
+        "none//fbandroid/java/com/facebook/kotlin/compilercompat:compilercompat",
+        "none//fbandroid/java/com/facebook/kotlin/compilercompat:compilercompat_with_ka",
     ],
     exported_deps = [
         ":kosabi-common",

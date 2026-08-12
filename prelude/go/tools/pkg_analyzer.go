@@ -38,24 +38,25 @@ import (
 // go list results and embedcfg for the Go compiler.
 type AnalyzerOutput struct {
 	// Package information (matches go list -json output expected by go_list.bzl)
-	Name              string   `json:"Name"`
-	Imports           []string `json:"Imports,omitempty"`
-	TestImports       []string `json:"TestImports,omitempty"`
-	XTestImports      []string `json:"XTestImports,omitempty"`
-	GoFiles           []string `json:"GoFiles,omitempty"`
-	HFiles            []string `json:"HFiles,omitempty"`
-	CFiles            []string `json:"CFiles,omitempty"`
-	CXXFiles          []string `json:"CXXFiles,omitempty"`
-	CgoFiles          []string `json:"CgoFiles,omitempty"`
-	SFiles            []string `json:"SFiles,omitempty"`
-	TestGoFiles       []string `json:"TestGoFiles,omitempty"`
-	XTestGoFiles      []string `json:"XTestGoFiles,omitempty"`
-	IgnoredGoFiles    []string `json:"IgnoredGoFiles,omitempty"`
-	IgnoredOtherFiles []string `json:"IgnoredOtherFiles,omitempty"`
-	CgoCFLAGS         []string `json:"CgoCFLAGS,omitempty"`
-	CgoCPPFLAGS       []string `json:"CgoCPPFLAGS,omitempty"`
-	EmbedPatterns     []string `json:"EmbedPatterns,omitempty"`
-	TestEmbedPatterns []string `json:"TestEmbedPatterns,omitempty"`
+	Name               string   `json:"Name"`
+	Imports            []string `json:"Imports,omitempty"`
+	TestImports        []string `json:"TestImports,omitempty"`
+	XTestImports       []string `json:"XTestImports,omitempty"`
+	GoFiles            []string `json:"GoFiles,omitempty"`
+	HFiles             []string `json:"HFiles,omitempty"`
+	CFiles             []string `json:"CFiles,omitempty"`
+	CXXFiles           []string `json:"CXXFiles,omitempty"`
+	CgoFiles           []string `json:"CgoFiles,omitempty"`
+	SFiles             []string `json:"SFiles,omitempty"`
+	TestGoFiles        []string `json:"TestGoFiles,omitempty"`
+	XTestGoFiles       []string `json:"XTestGoFiles,omitempty"`
+	IgnoredGoFiles     []string `json:"IgnoredGoFiles,omitempty"`
+	IgnoredOtherFiles  []string `json:"IgnoredOtherFiles,omitempty"`
+	CgoCFLAGS          []string `json:"CgoCFLAGS,omitempty"`
+	CgoCPPFLAGS        []string `json:"CgoCPPFLAGS,omitempty"`
+	EmbedPatterns      []string `json:"EmbedPatterns,omitempty"`
+	TestEmbedPatterns  []string `json:"TestEmbedPatterns,omitempty"`
+	XTestEmbedPatterns []string `json:"XTestEmbedPatterns,omitempty"`
 
 	// Error information (matches go list -e output)
 	Error *PackageError `json:"Error,omitempty"`
@@ -66,6 +67,7 @@ type PackageError struct {
 	Err string `json:"Err"`
 }
 
+// main analyzes one package using the requested Go build context.
 func main() {
 	tags := flag.String("tags", "", "Build tags (comma-separated)")
 	cgoEnabled := flag.Bool("cgo", false, "Enable CGO")
@@ -162,7 +164,9 @@ Flags:
 		out.TestGoFiles = pkg.TestGoFiles
 		out.XTestGoFiles = pkg.XTestGoFiles
 		out.TestImports = pkg.TestImports
+		out.XTestImports = pkg.XTestImports
 		out.TestEmbedPatterns = pkg.TestEmbedPatterns
+		out.XTestEmbedPatterns = pkg.XTestEmbedPatterns
 	}
 
 	jsonData, err := json.MarshalIndent(out, "", "\t")

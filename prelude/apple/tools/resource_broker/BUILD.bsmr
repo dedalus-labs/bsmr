@@ -38,7 +38,7 @@ python_library(
         ],
     ),
     deps = [
-        "upstream//third-party/pypi/dataclasses-json:dataclasses-json",
-        "upstream//third-party/pypi/packaging:packaging",
+        "none//third-party/pypi/dataclasses-json:dataclasses-json",
+        "none//third-party/pypi/packaging:packaging",
     ],
 )

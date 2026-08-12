@@ -44,7 +44,7 @@ meta_python_test(
         "test_resources/*",
     ]),
     deps = [
-        "upstream//third-party/pypi/importlib-resources:importlib-resources",
+        "none//third-party/pypi/importlib-resources:importlib-resources",
         ":lib",
     ],
 )

@@ -19,6 +19,7 @@ bsmr_error.workspace = true
 bsmr_event_log.workspace = true
 bsmr_fs.workspace = true
 bsmr_hash.workspace = true
+bsmr_http.workspace = true
 bsmr_query_parser.workspace = true
 bsmr_subscription_proto.workspace = true
 bsmr_util.workspace = true
@@ -37,6 +38,7 @@ serde.workspace = true
 serde_json.workspace = true
 shlex.workspace = true
 superconsole.workspace = true
+tempfile.workspace = true
 threadpool.workspace = true
 tokio.workspace = true
 tokio-stream.workspace = true
@@ -48,7 +50,6 @@ walkdir.workspace = true
 
 [dev-dependencies]
 assert_matches.workspace = true
-tempfile.workspace = true
 
 [lints]
 workspace = true
