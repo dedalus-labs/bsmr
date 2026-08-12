@@ -11,6 +11,8 @@ use bsmr_core::cells::paths::CellRelativePathBuf;
 use bsmr_core::package::package_relative_path::PackageRelativePath;
 
 use super::WorkspaceGraph;
+use super::toolchain::TOOLCHAIN_TARGET;
+use super::toolchain::render_toolchain;
 use crate::package_listing::listing::PackageListing;
 
 const SOURCES_TARGET: &str = "__bsmr_sources";
@@ -37,6 +39,18 @@ pub enum NativeTypeScriptBuildError {
     /// The workspace root owns the one frozen install action.
     #[error("pnpm workspace root is missing pnpm-lock.yaml")]
     MissingLockfile,
+    /// Native builds require exact root toolchain requirements.
+    #[error("workspace package.json must declare engines.node and packageManager")]
+    MissingToolchain,
+    /// The Node requirement must use npm's semver grammar.
+    #[error("invalid engines.node requirement `{requirement}`: {error}")]
+    InvalidNodeRequirement { requirement: String, error: String },
+    /// BSMR's release-pinned Node runtime must satisfy the project requirement.
+    #[error("BSMR Node 26.5.1 does not satisfy engines.node `{0}`")]
+    UnsupportedNodeRequirement(String),
+    /// Package-manager distributions are deliberately finite and digest-pinned.
+    #[error("unsupported packageManager `{0}`; BSMR supports exact pnpm 10.30.3 and 11.20.0 pins")]
+    UnsupportedPackageManager(String),
     /// Formatting internal Starlark into a string should be infallible.
     #[error("failed to render native TypeScript build graph")]
     Render(std::fmt::Error),
@@ -66,8 +80,8 @@ pub fn render_typescript_build_file(
 
     let package_files = package_files(graph, &package_root, listing);
     let has_typescript = package_files.iter().any(|file| is_typescript(file));
-    let has_tsconfig = package_files.iter().any(|file| *file == "tsconfig.json");
-    let has_tsdown = package_files.iter().any(|file| *file == "tsdown.config.ts");
+    let has_tsconfig = package_files.contains(&"tsconfig.json");
+    let has_tsdown = package_files.contains(&"tsdown.config.ts");
     if has_typescript && (!has_tsconfig || !has_tsdown) {
         return Err(NativeTypeScriptBuildError::MissingCompilerConfig(
             package_root,
@@ -76,7 +90,7 @@ pub fn render_typescript_build_file(
 
     let mut output = String::new();
     if package_root.is_empty() {
-        render_install(listing, &mut output)?;
+        render_install(graph, listing, &mut output)?;
     }
     if !has_typescript {
         return Ok(output);
@@ -166,11 +180,25 @@ fn package_files<'a>(
         .map(PackageRelativePath::as_str)
         .filter(|file| {
             !graph.packages.values().any(|project| {
-                project.root != *package_root
-                    && !project.root.is_empty()
-                    && file
-                        .strip_prefix(project.root.as_str())
-                        .is_some_and(|suffix| suffix.starts_with('/'))
+                if project.root == *package_root {
+                    return false;
+                }
+                let nested_root = if package_root.is_empty() {
+                    Some(project.root.as_str())
+                } else {
+                    project
+                        .root
+                        .as_str()
+                        .strip_prefix(package_root.as_str())
+                        .and_then(|suffix| suffix.strip_prefix('/'))
+                };
+                nested_root.is_some_and(|root| {
+                    !root.is_empty()
+                        && (*file == root
+                            || file
+                                .strip_prefix(root)
+                                .is_some_and(|suffix| suffix.starts_with('/')))
+                })
             })
         })
         .filter(|file| !is_generated_path(file))
@@ -203,6 +231,7 @@ fn workspace_path(package_root: &CellRelativePathBuf, file: &str) -> String {
 
 /// Renders the workspace's single frozen pnpm installation target.
 fn render_install(
+    graph: &WorkspaceGraph,
     listing: &PackageListing,
     output: &mut String,
 ) -> Result<(), NativeTypeScriptBuildError> {
@@ -214,6 +243,7 @@ fn render_install(
     if !files.contains(&"pnpm-lock.yaml") {
         return Err(NativeTypeScriptBuildError::MissingLockfile);
     }
+    render_toolchain(graph, output)?;
     writeln!(
         output,
         "load(\"@prelude//toolchains/pnpm:defs.bzl\", \"pnpm_install\")\n"
@@ -225,6 +255,8 @@ fn render_install(
     writeln!(output, "    package_json = \"package.json\",")
         .map_err(NativeTypeScriptBuildError::Render)?;
     writeln!(output, "    pnpm_lock = \"pnpm-lock.yaml\",")
+        .map_err(NativeTypeScriptBuildError::Render)?;
+    writeln!(output, "    toolchain = \":{TOOLCHAIN_TARGET}\",")
         .map_err(NativeTypeScriptBuildError::Render)?;
     writeln!(output, "    srcs = {{").map_err(NativeTypeScriptBuildError::Render)?;
     for file in files.into_iter().filter(|file| is_install_input(file)) {
@@ -297,9 +329,43 @@ mod tests {
     }
 
     #[test]
+    fn invariant_nested_workspace_package_is_not_an_input_of_its_parent() {
+        let graph = WorkspaceGraph::build([
+            package("apps/api", r#"{"name":"@acme/api"}"#),
+            package("apps/api/plugins/auth", r#"{"name":"@acme/auth-plugin"}"#),
+        ])
+        .unwrap();
+        let listing = PackageListing::testing_files(&[
+            "package.json",
+            "src/index.ts",
+            "tsconfig.json",
+            "tsdown.config.ts",
+            "plugins/auth/package.json",
+            "plugins/auth/src/index.ts",
+        ]);
+
+        let build = render_typescript_build_file(
+            &graph,
+            CellRelativePathBuf::unchecked_new("apps/api".to_owned()),
+            &listing,
+        )
+        .unwrap();
+
+        assert!(!build.contains("plugins/auth/package.json"));
+        assert!(!build.contains("plugins/auth/src/index.ts"));
+    }
+
+    #[test]
     fn invariant_workspace_install_uses_manifests_not_source_tree() {
         let graph = WorkspaceGraph::build([
-            package("", r#"{"name":"@acme/root"}"#),
+            package(
+                "",
+                r#"{
+                    "name":"@acme/root",
+                    "engines":{"node":"26.5.1"},
+                    "packageManager":"pnpm@11.20.0+sha512.9a6f330a95b66446ea088faf1521405a8a01f07fde7124cc9958dfed52d4bb436737e65b08f85f37b46fcba375092558ac51262b816844b22f63406ed166bfee"
+                }"#,
+            ),
             package("packages/api", r#"{"name":"@acme/api"}"#),
         ])
         .unwrap();
@@ -319,7 +385,85 @@ mod tests {
         .unwrap();
 
         assert!(build.contains("name = \"__bsmr_dependencies\""));
+        assert!(build.contains("name = \"__bsmr_pnpm_toolchain\""));
+        assert!(build.contains("node-v26.5.1-linux-arm64.tar.gz"));
+        assert!(build.contains("pnpm-11.20.0.tgz"));
         assert!(build.contains("\"packages/api/package.json\""));
         assert!(!build.contains("packages/api/src/index.ts"));
+    }
+
+    #[test]
+    fn invariant_pnpm_10_accepts_a_compatible_node_range() {
+        let graph = WorkspaceGraph::build([package(
+            "",
+            r#"{
+                "name":"@acme/root",
+                "engines":{"node":">=24.0.0"},
+                "packageManager":"pnpm@10.30.3+sha512.c961d1e0a2d8e354ecaa5166b822516668b7f44cb5bd95122d590dd81922f606f5473b6d23ec4a5be05e7fcd18e8488d47d978bbe981872f1145d06e9a740017"
+            }"#,
+        )])
+        .unwrap();
+        let listing = PackageListing::testing_files(&[
+            "package.json",
+            "pnpm-lock.yaml",
+            "pnpm-workspace.yaml",
+        ]);
+
+        let build = render_typescript_build_file(
+            &graph,
+            CellRelativePathBuf::unchecked_new(String::new()),
+            &listing,
+        )
+        .unwrap();
+
+        assert!(build.contains("pnpm-10.30.3.tgz"));
+        assert!(build.contains("node_requirement = \">=24.0.0\""));
+    }
+
+    #[test]
+    fn invariant_native_toolchain_rejects_unsupported_versions() {
+        let graph = WorkspaceGraph::build([package(
+            "",
+            r#"{
+                "name":"@acme/root",
+                "engines":{"node":">=27.0.0"},
+                "packageManager":"pnpm@12.0.0"
+            }"#,
+        )])
+        .unwrap();
+        let listing = PackageListing::testing_files(&["package.json", "pnpm-lock.yaml"]);
+
+        let error = render_typescript_build_file(
+            &graph,
+            CellRelativePathBuf::unchecked_new(String::new()),
+            &listing,
+        )
+        .unwrap_err();
+
+        assert_eq!(
+            error.to_string(),
+            "BSMR Node 26.5.1 does not satisfy engines.node `>=27.0.0`"
+        );
+
+        let graph = WorkspaceGraph::build([package(
+            "",
+            r#"{
+                "name":"@acme/root",
+                "engines":{"node":"26.5.1"},
+                "packageManager":"pnpm@12.0.0"
+            }"#,
+        )])
+        .unwrap();
+        let error = render_typescript_build_file(
+            &graph,
+            CellRelativePathBuf::unchecked_new(String::new()),
+            &listing,
+        )
+        .unwrap_err();
+
+        assert_eq!(
+            error.to_string(),
+            "unsupported packageManager `pnpm@12.0.0`; BSMR supports exact pnpm 10.30.3 and 11.20.0 pins"
+        );
     }
 }

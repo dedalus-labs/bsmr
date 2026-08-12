@@ -10,6 +10,7 @@ import { access, cp, lstat, mkdir, readdir, readFile, readlink, rm, writeFile } 
 import { dirname, isAbsolute, join, resolve, sep } from "node:path";
 
 const requiredArguments = new Set([
+	"--node-requirement",
 	"--node-version",
 	"--output",
 	"--package-manager",
@@ -38,6 +39,7 @@ function parseArguments(arguments_) {
 		if (!values.has(name)) throw new Error(`missing required argument '${name}'`);
 	}
 	return {
+		nodeRequirement: values.get("--node-requirement"),
 		nodeVersion: values.get("--node-version"),
 		output: values.get("--output"),
 		packageManager: values.get("--package-manager"),
@@ -72,11 +74,12 @@ async function readManifest(source) {
  *
  * @param {Record<string, unknown>} manifest - Parsed package.json object.
  * @param {string} nodeVersion - Exact configured Node version.
+ * @param {string} nodeRequirement - Root manifest requirement validated by the native frontend.
  * @param {string} packageManager - Exact configured Corepack-style pnpm pin.
  * @returns {string} Exact pnpm version encoded in the package-manager pin.
  * @throws {Error} When any version or integrity invariant is violated.
  */
-function validateToolchain(manifest, nodeVersion, packageManager) {
+function validateToolchain(manifest, nodeVersion, nodeRequirement, packageManager) {
 	if (!/^\d+\.\d+\.\d+$/.test(nodeVersion)) {
 		throw new Error(`Node version '${nodeVersion}' is not an exact semantic version`);
 	}
@@ -93,8 +96,8 @@ function validateToolchain(manifest, nodeVersion, packageManager) {
 	}
 	const engines = manifest.engines;
 	const manifestNode = engines !== null && typeof engines === "object" ? engines.node : undefined;
-	if (manifestNode !== nodeVersion) {
-		throw new Error(`package.json engines.node '${manifestNode ?? ""}' does not match configured version '${nodeVersion}'`);
+	if (manifestNode !== nodeRequirement) {
+		throw new Error(`package.json engines.node '${manifestNode ?? ""}' does not match configured requirement '${nodeRequirement}'`);
 	}
 	if (manifest.packageManager !== packageManager) {
 		throw new Error(
@@ -322,7 +325,7 @@ function install(pnpmCli, output, pnpmVersion, paths) {
 /**
  * Validate inputs and perform one frozen install.
  *
- * @param {{ nodeVersion: string, output: string, packageManager: string, pnpmCli: string, source: string }} options - Parsed runner options.
+ * @param {{ nodeRequirement: string, nodeVersion: string, output: string, packageManager: string, pnpmCli: string, source: string }} options - Parsed runner options.
  * @returns {Promise<void>}
  * @throws {Error} When a declared input or install invariant fails.
  */
@@ -331,7 +334,7 @@ async function run(options) {
 	const output = resolve(options.output);
 	const pnpmCli = resolve(options.pnpmCli);
 	const manifest = await readManifest(source);
-	const pnpmVersion = validateToolchain(manifest, options.nodeVersion, options.packageManager);
+	const pnpmVersion = validateToolchain(manifest, options.nodeVersion, options.nodeRequirement, options.packageManager);
 	await access(join(source, "pnpm-lock.yaml"));
 	await access(pnpmCli);
 	const paths = await prepareWorkspace(source, output, packageManagerState(output));

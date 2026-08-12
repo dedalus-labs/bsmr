@@ -38,6 +38,7 @@ fs4.workspace = true
 futures.workspace = true
 gazebo.workspace = true
 globset.workspace = true
+node-semver.workspace = true
 hex.workspace = true
 hyper.workspace = true
 itertools.workspace = true

@@ -71,3 +71,19 @@ installation. BSMR restores missing leaves from the configured REAPI CAS while
 retaining its daemon; Nx and Turborepo restore from their local task caches.
 Backend latency must be reported when comparing restoration numbers across
 machines.
+
+## Native package API
+
+The native API suite generates a zero-build-file pnpm workspace and compares
+`bsmr targets apps/api` with the explicit-label control
+`bsmr targets root//apps/api:api`. Alternating paired samples cancel ordering
+drift, both commands must resolve the same target, and the run fails when the
+median native-path overhead exceeds one millisecond.
+
+```shell
+BSMR_BENCH_BINARY="$PWD/target/release/bsmr" node benchmarks/native-api/run.ts
+```
+
+`BSMR_BENCH_RUNS` configures the paired sample count and must be at least 15.
+`BSMR_BENCH_MAX_NATIVE_OVERHEAD_MS` can tighten the default one-millisecond
+regression budget; raising it invalidates comparisons with the checked-in gate.

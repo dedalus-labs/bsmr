@@ -19,6 +19,7 @@ use serde::Deserialize;
 mod dice;
 mod manifest;
 mod native_build;
+mod toolchain;
 
 pub use dice::HasPnpmWorkspaceGraph;
 pub use manifest::PnpmWorkspace;
@@ -75,6 +76,8 @@ struct DependencyDeclaration {
 #[serde(rename_all = "camelCase")]
 struct PackageJson {
     name: Option<String>,
+    engines: Option<PackageEngines>,
+    package_manager: Option<String>,
     #[serde(default)]
     dependencies: BTreeMap<String, String>,
     #[serde(default)]
@@ -85,11 +88,18 @@ struct PackageJson {
     peer_dependencies: BTreeMap<String, String>,
 }
 
+#[derive(Debug, Deserialize)]
+struct PackageEngines {
+    node: Option<String>,
+}
+
 /// One parsed package manifest and its cell-relative workspace root.
 #[derive(Clone, Debug, Eq, PartialEq, allocative::Allocative, pagable::Pagable)]
 pub struct WorkspacePackage {
     root: CellRelativePathBuf,
     name: String,
+    node_requirement: Option<String>,
+    package_manager: Option<String>,
     dependencies: BTreeMap<String, Vec<DependencyDeclaration>>,
 }
 
@@ -128,6 +138,8 @@ impl WorkspacePackage {
         Ok(Self {
             root,
             name,
+            node_requirement: manifest.engines.and_then(|engines| engines.node),
+            package_manager: manifest.package_manager,
             dependencies,
         })
     }
@@ -245,6 +257,28 @@ impl WorkspaceProject {
 #[derive(Clone, Debug, Eq, PartialEq, allocative::Allocative, pagable::Pagable)]
 pub struct WorkspaceGraph {
     packages: BTreeMap<String, WorkspaceProject>,
+    node_toolchain: Option<NodeWorkspaceToolchain>,
+}
+
+/// Exact native Node workspace requirements read from the root package manifest.
+#[derive(Clone, Debug, Eq, PartialEq, allocative::Allocative, pagable::Pagable)]
+pub struct NodeWorkspaceToolchain {
+    node_requirement: String,
+    package_manager: String,
+}
+
+impl NodeWorkspaceToolchain {
+    /// Returns the npm-compatible Node version requirement.
+    #[must_use]
+    pub fn node_requirement(&self) -> &str {
+        &self.node_requirement
+    }
+
+    /// Returns the exact Corepack-style package-manager identity.
+    #[must_use]
+    pub fn package_manager(&self) -> &str {
+        &self.package_manager
+    }
 }
 
 /// A conventional target inferred for every TypeScript workspace project.
@@ -307,9 +341,27 @@ impl WorkspaceGraph {
         packages: impl IntoIterator<Item = WorkspacePackage>,
     ) -> Result<Self, WorkspaceGraphError> {
         let packages = index_packages(packages)?;
+        let node_toolchain = packages
+            .values()
+            .find(|package| package.root.is_empty())
+            .and_then(|package| {
+                package
+                    .node_requirement
+                    .clone()
+                    .zip(package.package_manager.clone())
+            })
+            .map(
+                |(node_requirement, package_manager)| NodeWorkspaceToolchain {
+                    node_requirement,
+                    package_manager,
+                },
+            );
         let projects = resolve_projects(&packages)?;
         ensure_acyclic(&projects)?;
-        Ok(Self { packages: projects })
+        Ok(Self {
+            packages: projects,
+            node_toolchain,
+        })
     }
 
     /// Returns package names in canonical lexical order.
@@ -334,6 +386,12 @@ impl WorkspaceGraph {
             .iter()
             .find(|(_, project)| &project.root == root)
             .map(|(name, _)| name.as_str())
+    }
+
+    /// Returns the root manifest's exact native Node toolchain requirements.
+    #[must_use]
+    pub fn node_toolchain(&self) -> Option<&NodeWorkspaceToolchain> {
+        self.node_toolchain.as_ref()
     }
 
     /// Lowers package roots and edges into BSMR's native target-label IR.
@@ -630,6 +688,27 @@ mod tests {
         assert_eq!(
             targets[3].label().to_string(),
             "root//packages/core:typecheck"
+        );
+    }
+
+    #[test]
+    fn invariant_root_manifest_owns_the_exact_node_toolchain_contract() {
+        let graph = WorkspaceGraph::build([package(
+            "",
+            r#"{
+                "name": "@acme/root",
+                "engines": {"node": ">=24.0.0"},
+                "packageManager": "pnpm@10.30.3+sha512.c961d1e0a2d8e354ecaa5166b822516668b7f44cb5bd95122d590dd81922f606f5473b6d23ec4a5be05e7fcd18e8488d47d978bbe981872f1145d06e9a740017"
+            }"#,
+        )])
+        .unwrap();
+
+        let toolchain = graph.node_toolchain().unwrap();
+
+        assert_eq!(toolchain.node_requirement(), ">=24.0.0");
+        assert_eq!(
+            toolchain.package_manager(),
+            "pnpm@10.30.3+sha512.c961d1e0a2d8e354ecaa5166b822516668b7f44cb5bd95122d590dd81922f606f5473b6d23ec4a5be05e7fcd18e8488d47d978bbe981872f1145d06e9a740017"
         );
     }
 

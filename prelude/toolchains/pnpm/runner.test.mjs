@@ -97,6 +97,8 @@ function runRunner(state, expectedPackageManager = packageManager) {
 			expectedPackageManager,
 			"--node-version",
 			process.versions.node,
+			"--node-requirement",
+			process.versions.node,
 		],
 		{
 			encoding: "utf8",
@@ -254,6 +256,8 @@ test("rejects a Node mismatch before invoking pnpm", async (context) => {
 			packageManager,
 			"--node-version",
 			"0.0.0",
+			"--node-requirement",
+			process.versions.node,
 		],
 		{ encoding: "utf8" },
 	);

@@ -41,7 +41,7 @@ pub struct InitCommand {
     #[clap(default_value = ".")]
     path: PathArg,
 
-    /// Don't include the standard prelude or generate toolchain definitions.
+    /// Don't include the standard prelude.
     #[clap(long)]
     no_prelude: bool,
 
@@ -136,7 +136,6 @@ fn initialize_bsmrconfig(repo_root: &AbsPath, prelude: bool, git: bool) -> bsmr_
     // Add additional configs that depend on prelude / no-prelude mode
     if prelude {
         writeln!(bsmrconfig, "  prelude = prelude")?;
-        writeln!(bsmrconfig, "  toolchains = toolchains")?;
         writeln!(bsmrconfig, "  none = none")?;
         writeln!(bsmrconfig)?;
         writeln!(bsmrconfig, "[cell_aliases]")?;
@@ -144,6 +143,7 @@ fn initialize_bsmrconfig(repo_root: &AbsPath, prelude: bool, git: bool) -> bsmr_
         writeln!(bsmrconfig, "  ovr_config = prelude")?;
         writeln!(bsmrconfig, "  buck = none")?;
         writeln!(bsmrconfig, "  upstream = none")?;
+        writeln!(bsmrconfig, "  toolchains = root")?;
         writeln!(bsmrconfig)?;
         writeln!(
             bsmrconfig,
@@ -176,40 +176,6 @@ fn initialize_bsmrconfig(repo_root: &AbsPath, prelude: bool, git: bool) -> bsmr_
         writeln!(bsmrconfig, "[project]")?;
         writeln!(bsmrconfig, "  ignore = .git")?;
     }
-    Ok(())
-}
-
-fn initialize_toolchains_buck(repo_root: &AbsPath) -> bsmr_error::Result<()> {
-    std::fs::write(
-        repo_root.join("BUCK"),
-        r#"
-load("@prelude//toolchains:demo.bzl", "system_demo_toolchains")
-
-# All the default toolchains, suitable for a quick demo or early prototyping.
-# Most real projects should copy/paste the implementation to configure them.
-system_demo_toolchains()
-"#
-        .trim(),
-    )?;
-    Ok(())
-}
-
-fn initialize_root_buck(repo_root: &AbsPath, prelude: bool) -> bsmr_error::Result<()> {
-    let mut buck = std::fs::File::create(repo_root.join("BUCK"))?;
-
-    if prelude {
-        writeln!(
-            buck,
-            "# A list of available rules and their signatures can be found here: https://buck2.build/docs/prelude/globals/"
-        )?;
-        writeln!(buck)?;
-        writeln!(buck, "genrule(")?;
-        writeln!(buck, "    name = \"hello_world\",")?;
-        writeln!(buck, "    out = \"out.txt\",")?;
-        writeln!(buck, "    cmd = \"echo BUILT BY BSMR> $OUT\",")?;
-        writeln!(buck, ")")?;
-    }
-    // TODO: Add a doc pointers for rules
     Ok(())
 }
 
@@ -247,24 +213,11 @@ fn set_up_project(repo_root: &AbsPath, git: bool, prelude: bool) -> bsmr_error::
 
     // If the project already contains a .bsmrconfig, leave it alone
     if repo_root.join(".bsmrconfig").exists() {
-        bsmr_client_ctx::println!(
-            ".bsmrconfig already exists, not overwriting and not generating toolchains"
-        )?;
+        bsmr_client_ctx::println!(".bsmrconfig already exists, not overwriting")?;
         return Ok(());
     }
 
-    initialize_bsmrconfig(repo_root, prelude, git)?;
-    if prelude {
-        let toolchains = repo_root.join("toolchains");
-        if !toolchains.exists() {
-            fs_util::create_dir(&toolchains).categorize_internal()?;
-            initialize_toolchains_buck(&toolchains)?;
-        }
-    }
-    if !repo_root.join("BUCK").exists() {
-        initialize_root_buck(repo_root, prelude)?;
-    }
-    Ok(())
+    initialize_bsmrconfig(repo_root, prelude, git)
 }
 
 #[cfg(test)]
@@ -273,7 +226,6 @@ mod tests {
     use bsmr_fs::paths::abs_path::AbsPath;
 
     use crate::commands::init::initialize_bsmrconfig;
-    use crate::commands::init::initialize_root_buck;
     use crate::commands::init::set_up_gitignore;
     use crate::commands::init::set_up_project;
 
@@ -287,9 +239,9 @@ mod tests {
         // no git, with prelude
         set_up_project(tempdir_path, false, true)?;
         assert!(tempdir_path.join(".bsmrconfig").exists());
-        assert!(tempdir_path.join("toolchains").exists());
-        assert!(tempdir_path.join("toolchains/BUCK").exists());
-        assert!(tempdir_path.join("BUCK").exists());
+        assert!(!tempdir_path.join("toolchains").exists());
+        assert!(!tempdir_path.join("BUILD.bsmr").exists());
+        assert!(!tempdir_path.join("BUCK").exists());
         Ok(())
     }
 
@@ -338,7 +290,6 @@ mod tests {
         let expected_bsmrconfig = "[cells]
   root = .
   prelude = prelude
-  toolchains = toolchains
   none = none
 
 [cell_aliases]
@@ -346,6 +297,7 @@ mod tests {
   ovr_config = prelude
   buck = none
   upstream = none
+  toolchains = root
 
 # Uses a copy of the prelude bundled with the bsmr binary. You can alternatively delete this
 # section and vendor a copy of the prelude to the `prelude` directory of your project.
@@ -382,28 +334,6 @@ mod tests {
 ";
         assert_eq!(actual_bsmrconfig, expected_bsmrconfig);
 
-        Ok(())
-    }
-
-    #[test]
-    fn test_buckfile_generation_with_prelude() -> bsmr_error::Result<()> {
-        let tempdir = tempfile::tempdir()?;
-        let tempdir_path = tempdir.path();
-        let tempdir_path = AbsPath::new(tempdir_path)?;
-        fs_util::create_dir_all(tempdir_path)?;
-
-        let buck_path = tempdir_path.join("BUCK");
-        initialize_root_buck(tempdir_path, true)?;
-        let actual_buck = fs_util::read_to_string(buck_path)?;
-        let expected_buck = "# A list of available rules and their signatures can be found here: https://buck2.build/docs/prelude/globals/
-
-genrule(
-    name = \"hello_world\",
-    out = \"out.txt\",
-    cmd = \"echo BUILT BY BSMR> $OUT\",
-)
-";
-        assert_eq!(actual_buck, expected_buck);
         Ok(())
     }
 }

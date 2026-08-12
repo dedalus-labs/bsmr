@@ -14,6 +14,7 @@ declared project inputs, mutable state, action key, and cached install output.
 
 NodeDistributionInfo = provider(fields = {
     "node": provider_field(RunInfo),
+    "requirement": provider_field(str),
     "version": provider_field(str),
 })
 
@@ -26,6 +27,7 @@ PnpmDistributionInfo = provider(fields = {
 
 PnpmToolchainInfo = provider(fields = {
     "node": provider_field(RunInfo),
+    "node_requirement": provider_field(str),
     "node_version": provider_field(str),
     "package_manager": provider_field(str),
     "pnpm_cli": provider_field(Artifact),
@@ -33,6 +35,7 @@ PnpmToolchainInfo = provider(fields = {
 })
 
 PnpmInstallInfo = provider(fields = {
+    "node": provider_field(RunInfo),
     "node_modules": provider_field(Artifact),
     "workspace": provider_field(Artifact),
 })
@@ -75,6 +78,7 @@ def _node_distribution_impl(ctx: AnalysisContext) -> list[Provider]:
         DefaultInfo(default_output = node),
         NodeDistributionInfo(
             node = RunInfo(args = [node]),
+            requirement = ctx.attrs.node_requirement,
             version = ctx.attrs.version,
         ),
     ]
@@ -83,6 +87,7 @@ node_distribution = rule(
     impl = _node_distribution_impl,
     attrs = {
         "executable": attrs.string(default = "bin/node", doc = "Node executable path relative to the distribution root."),
+        "node_requirement": attrs.string(doc = "Exact engines.node requirement validated by BSMR's native frontend."),
         "root": attrs.source(allow_directory = True, doc = "Node distribution extracted from a digest-verified archive."),
         "version": attrs.string(doc = "Exact Node version exposed by the distribution."),
     },
@@ -121,6 +126,7 @@ def _pnpm_toolchain_impl(ctx: AnalysisContext) -> list[Provider]:
         DefaultInfo(),
         PnpmToolchainInfo(
             node = node.node,
+            node_requirement = node.requirement,
             node_version = node.version,
             package_manager = pnpm.package_manager,
             pnpm_cli = pnpm.cli,
@@ -172,7 +178,7 @@ def _pnpm_install_impl(ctx: AnalysisContext) -> list[Provider]:
         has_content_based_path = False,
     )
     workspace = ctx.actions.declare_output(ctx.label.name, dir = True, has_content_based_path = True)
-    toolchain = ctx.attrs._pnpm_toolchain[PnpmToolchainInfo]
+    toolchain = ctx.attrs.toolchain[PnpmToolchainInfo]
     command = cmd_args(
         [
             toolchain.node,
@@ -187,6 +193,8 @@ def _pnpm_install_impl(ctx: AnalysisContext) -> list[Provider]:
             toolchain.package_manager,
             "--node-version",
             toolchain.node_version,
+            "--node-requirement",
+            toolchain.node_requirement,
         ],
         hidden = [toolchain.pnpm_root],
     )
@@ -201,7 +209,7 @@ def _pnpm_install_impl(ctx: AnalysisContext) -> list[Provider]:
     node_modules = workspace.project("node_modules", hide_prefix = True)
     return [
         DefaultInfo(default_output = node_modules, other_outputs = [workspace]),
-        PnpmInstallInfo(node_modules = node_modules, workspace = workspace),
+        PnpmInstallInfo(node = toolchain.node, node_modules = node_modules, workspace = workspace),
     ]
 
 pnpm_install = rule(
@@ -215,7 +223,7 @@ pnpm_install = rule(
             default = [],
             doc = "All remaining project sources, optionally mapped to explicit project-relative paths.",
         ),
-        "_pnpm_toolchain": attrs.default_only(attrs.toolchain_dep(default = "toolchains//:pnpm", providers = [PnpmToolchainInfo])),
+        "toolchain": attrs.toolchain_dep(providers = [PnpmToolchainInfo]),
         "_runner": attrs.source(default = "prelude//toolchains/pnpm:runner"),
     },
     doc = "Materializes one cached pnpm workspace from a frozen lockfile.",
