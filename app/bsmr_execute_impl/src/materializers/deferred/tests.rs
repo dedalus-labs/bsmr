@@ -664,6 +664,39 @@ mod state_machine {
         .await
     }
 
+    #[tokio::test]
+    async fn test_missing_materialized_artifact_without_method_fails() -> bsmr_error::Result<()> {
+        ignore_stack_overflow_checks_for_future(async {
+            let (mut dm, _) = make_processor(Default::default());
+            let path = make_path("foo/bar");
+            let content = b"uncached output";
+            let value = ArtifactValue::file(FileMetadata {
+                digest: TrackedFileDigest::from_content(
+                    content,
+                    dm.io.digest_config().cas_digest_config(),
+                ),
+                is_executable: false,
+            });
+
+            dm.io.fs.write_file(&path, content, false)?;
+            dm.testing_declare_existing(&path, value);
+            fs_util::remove_file(dm.io.fs.resolve(&path))?;
+            let result = dm
+                .materialize_artifact(&path, EventDispatcher::null())
+                .ok_or_else(|| internal_error!("Expected missing-artifact failure"))?
+                .await;
+
+            assert_matches!(
+                result,
+                Err(SharedMaterializingError::Error(error))
+                    if format!("{error:#}").contains("has no reproducible materialization method")
+            );
+            assert_eq!(dm.io.take_log(), &[]);
+            Ok(())
+        })
+        .await
+    }
+
     fn make_artifact_value_with_symlink_dep(
         target_path: &ProjectRelativePathBuf,
         target_from_symlink: &RelativePathBuf,

@@ -78,16 +78,15 @@ async def test_notify_observes_rapid_source_edits(buck: Buck) -> None:
 
 
 @buck_test(data_dir="modify")
-async def test_deleted_materialized_output_is_rejected(buck: Buck) -> None:
-    """Reject a cached success when its promised output is absent from disk."""
+async def test_deleted_materialized_output_is_restored(buck: Buck) -> None:
+    """Restore a deleted output from its retained content-addressed recipe."""
     result = await buck.build("//:mysrcrule")
     output = result.get_build_report().output_for_target("root//:mysrcrule")
     Path(output).unlink()
 
-    await expect_failure(
-        buck.build("//:mysrcrule"),
-        stderr_regex="materialized artifact.*is missing from disk",
-    )
+    result = await buck.build("//:mysrcrule")
+    output = result.get_build_report().output_for_target("root//:mysrcrule")
+    assert Path(output).read_text() == "HELLO\n"
 
 
 @buck_test(data_dir="modify")
