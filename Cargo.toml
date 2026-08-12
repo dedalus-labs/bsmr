@@ -40,6 +40,7 @@ members = [
   "app/bsmr_build_api",
   "app/bsmr_build_api_derive",
   "app/bsmr_build_api_tests",
+  "app/bsmr_build_event_proto",
   "app/bsmr_build_info",
   "app/bsmr_build_signals",
   "app/bsmr_build_signals_impl",
@@ -193,6 +194,7 @@ bsmr_anon_target = { path = "app/bsmr_anon_target" }
 bsmr_artifact = { path = "app/bsmr_artifact" }
 bsmr_build_api = { path = "app/bsmr_build_api" }
 bsmr_build_api_derive = { path = "app/bsmr_build_api_derive" }
+bsmr_build_event_proto = { path = "app/bsmr_build_event_proto" }
 bsmr_build_info = { path = "app/bsmr_build_info" }
 bsmr_build_signals = { path = "app/bsmr_build_signals" }
 bsmr_build_signals_impl = { path = "app/bsmr_build_signals_impl" }
