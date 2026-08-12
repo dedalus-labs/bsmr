@@ -217,6 +217,7 @@ impl BsmrTestRunner {
     }
 }
 
+/// Converts a completed execution into the runner's single-test report.
 fn get_test_result(
     name: String,
     target: ConfiguredTargetHandle,

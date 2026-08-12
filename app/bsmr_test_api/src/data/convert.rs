@@ -1354,7 +1354,7 @@ mod tests {
 
     /// Verifies that action identity survives the test-result RPC boundary.
     #[test]
-    fn test_result_attempt_roundtrips() {
+    fn test_result_attempt_survives_rpc_roundtrip() {
         let result = TestResult {
             target: ConfiguredTargetHandle(42),
             name: "case".to_owned(),

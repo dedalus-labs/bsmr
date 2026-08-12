@@ -630,7 +630,7 @@ mod tests {
 
     /// Verifies that streaming commands can request the stable event artifact.
     #[test]
-    fn test_build_event_jsonl_option() -> bsmr_error::Result<()> {
+    fn build_event_jsonl_option_parses() -> bsmr_error::Result<()> {
         let options = CommonEventLogOptions::try_parse_from([
             "bsmr",
             "--build-event-jsonl",

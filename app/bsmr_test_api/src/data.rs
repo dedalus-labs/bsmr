@@ -476,12 +476,24 @@ pub struct ExecutionResult2 {
 
 #[derive(Debug, bsmr_error::Error)]
 enum TestExecutionIdentityError {
-    #[error("test execution result is missing `{field}`")]
+    #[error("test execution result is missing its command execution kind")]
     #[bsmr(tag = bsmr_error::ErrorTag::InvalidEvent)]
-    Missing { field: &'static str },
+    MissingCommandKind,
     #[error("test execution attempt must be greater than zero")]
     #[bsmr(tag = bsmr_error::ErrorTag::InvalidEvent)]
     ZeroAttempt,
+    #[error("worker initialization does not identify a completed test action")]
+    #[bsmr(tag = bsmr_error::ErrorTag::InvalidEvent)]
+    WorkerInitialization,
+    #[error("test execution result contains an empty action digest")]
+    #[bsmr(tag = bsmr_error::ErrorTag::InvalidEvent)]
+    EmptyActionDigest,
+    #[error("remote test execution has invalid cache-hit type `{0}`")]
+    #[bsmr(tag = bsmr_error::ErrorTag::InvalidEvent)]
+    InvalidRemoteCacheHitType(i32),
+    #[error("remote test execution is missing execution details")]
+    #[bsmr(tag = bsmr_error::ErrorTag::InvalidEvent)]
+    MissingRemoteExecutionDetails,
 }
 
 impl ExecutionResult2 {
@@ -501,9 +513,7 @@ impl ExecutionResult2 {
             .and_then(|execution| execution.details.as_ref())
             .and_then(|details| details.command_kind.as_ref())
             .and_then(|kind| kind.command.as_ref())
-            .ok_or(TestExecutionIdentityError::Missing {
-                field: "command execution kind",
-            })?;
+            .ok_or(TestExecutionIdentityError::MissingCommandKind)?;
         let (action_digest, execution_kind) = test_execution_identity(command)?;
         Ok(bsmr_data::TestAttempt {
             action_digest: action_digest.to_owned(),
@@ -536,17 +546,11 @@ fn test_execution_identity(
         ),
         Command::RemoteCommand(command) => remote_test_execution_identity(command)?,
         Command::WorkerInitCommand(_) => {
-            return Err(TestExecutionIdentityError::Missing {
-                field: "action digest for worker initialization",
-            }
-            .into());
+            return Err(TestExecutionIdentityError::WorkerInitialization.into());
         }
     };
     if identity.0.is_empty() {
-        return Err(TestExecutionIdentityError::Missing {
-            field: "action digest",
-        }
-        .into());
+        return Err(TestExecutionIdentityError::EmptyActionDigest.into());
     }
     Ok(identity)
 }
@@ -562,9 +566,9 @@ fn remote_test_execution_identity(
                 bsmr_data::ActionExecutionKind::RemoteDepFileCache
             }
             _ => {
-                return Err(TestExecutionIdentityError::Missing {
-                    field: "valid remote cache-hit type",
-                }
+                return Err(TestExecutionIdentityError::InvalidRemoteCacheHitType(
+                    command.cache_hit_type,
+                )
                 .into());
             }
         }
@@ -575,10 +579,7 @@ fn remote_test_execution_identity(
             }
             Some(_) => bsmr_data::ActionExecutionKind::Remote,
             None => {
-                return Err(TestExecutionIdentityError::Missing {
-                    field: "remote execution details",
-                }
-                .into());
+                return Err(TestExecutionIdentityError::MissingRemoteExecutionDetails.into());
             }
         }
     };
@@ -684,7 +685,7 @@ mod tests {
 
     /// Verifies that completed local tests retain their exact action identity.
     #[test]
-    fn test_attempt_preserves_local_action_identity() -> bsmr_error::Result<()> {
+    fn local_attempt_preserves_action_identity() -> bsmr_error::Result<()> {
         let result = ExecutionResult2 {
             status: ExecutionStatus::Finished { exitcode: 0 },
             stdout: ExecutionStream::Inline(Vec::new()),
