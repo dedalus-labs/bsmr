@@ -83,12 +83,6 @@ impl PnpmWorkspace {
         Ok(Self { patterns })
     }
 
-    /// Returns selectors in declaration order for source-fidelity and diagnostics.
-    #[must_use]
-    pub fn patterns(&self) -> &[String] {
-        &self.patterns
-    }
-
     /// Selects candidate package roots with pnpm-style positive and negative globs.
     pub fn select_package_roots(
         &self,

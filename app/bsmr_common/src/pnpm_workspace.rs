@@ -8,12 +8,7 @@
 use std::collections::BTreeMap;
 use std::collections::BTreeSet;
 
-use bsmr_core::cells::name::CellName;
 use bsmr_core::cells::paths::CellRelativePathBuf;
-use bsmr_core::package::PackageLabel;
-use bsmr_core::target::label::label::TargetLabel;
-use bsmr_core::target::name::TargetName;
-use bsmr_error::internal_error;
 use serde::Deserialize;
 
 mod dice;
@@ -22,15 +17,14 @@ mod native_build;
 mod toolchain;
 
 pub use dice::HasPnpmWorkspaceGraph;
-pub use manifest::PnpmWorkspace;
-pub use manifest::PnpmWorkspaceError;
+use manifest::PnpmWorkspace;
 pub use native_build::NativeTypeScriptBuildError;
 pub use native_build::render_typescript_build_file;
 
 /// Failure to parse one workspace `package.json`.
 #[derive(Debug, bsmr_error::Error)]
 #[bsmr(tag = Input)]
-pub enum PackageManifestError {
+enum PackageManifestError {
     /// The manifest is not valid JSON or has a dependency with a non-string specifier.
     #[error("invalid package manifest at `{root}`")]
     InvalidJson {
@@ -55,7 +49,7 @@ pub enum PackageManifestError {
     allocative::Allocative,
     pagable::Pagable
 )]
-pub enum DependencySection {
+enum DependencySection {
     /// Runtime dependency.
     Dependency,
     /// Development-only dependency needed to build or test the package.
@@ -95,7 +89,7 @@ struct PackageEngines {
 
 /// One parsed package manifest and its cell-relative workspace root.
 #[derive(Clone, Debug, Eq, PartialEq, allocative::Allocative, pagable::Pagable)]
-pub struct WorkspacePackage {
+struct WorkspacePackage {
     root: CellRelativePathBuf,
     name: String,
     node_requirement: Option<String>,
@@ -105,7 +99,7 @@ pub struct WorkspacePackage {
 
 impl WorkspacePackage {
     /// Parses a package manifest while preserving dependency-section provenance.
-    pub fn parse(root: CellRelativePathBuf, source: &str) -> Result<Self, PackageManifestError> {
+    fn parse(root: CellRelativePathBuf, source: &str) -> Result<Self, PackageManifestError> {
         let manifest: PackageJson =
             serde_json::from_str(source).map_err(|source| PackageManifestError::InvalidJson {
                 root: root.clone(),
@@ -143,18 +137,6 @@ impl WorkspacePackage {
             dependencies,
         })
     }
-
-    /// Returns the package's stable npm name.
-    #[must_use]
-    pub fn name(&self) -> &str {
-        &self.name
-    }
-
-    /// Returns the package's normalized cell-relative root.
-    #[must_use]
-    pub fn root(&self) -> &CellRelativePathBuf {
-        &self.root
-    }
 }
 
 /// Adds one manifest section to the package's dependency declarations.
@@ -174,7 +156,7 @@ fn extend_dependencies(
 /// A package dependency graph cannot be normalized without resolving this invariant.
 #[derive(Clone, Debug, Eq, PartialEq, bsmr_error::Error)]
 #[bsmr(tag = Input)]
-pub enum WorkspaceGraphError {
+enum WorkspaceGraphError {
     /// Two roots cannot own the same npm package identity.
     #[error("workspace package `{name}` is declared by both `{first_root}` and `{second_root}`")]
     DuplicatePackageName {
@@ -210,46 +192,27 @@ pub enum WorkspaceGraphError {
 
 /// One normalized package node in the workspace graph.
 #[derive(Clone, Debug, Eq, PartialEq, allocative::Allocative, pagable::Pagable)]
-pub struct WorkspaceProject {
+struct WorkspaceProject {
     root: CellRelativePathBuf,
     dependencies: BTreeMap<String, WorkspaceDependency>,
 }
 
 /// One internal edge with its exact manifest declarations.
 #[derive(Clone, Debug, Eq, PartialEq, allocative::Allocative, pagable::Pagable)]
-pub struct WorkspaceDependency {
+struct WorkspaceDependency {
     declarations: BTreeMap<DependencySection, String>,
-}
-
-impl WorkspaceDependency {
-    /// Returns contributing manifest sections in canonical order.
-    pub fn sections(&self) -> impl ExactSizeIterator<Item = DependencySection> + '_ {
-        self.declarations.keys().copied()
-    }
-
-    /// Returns the exact workspace protocol specifier from one manifest section.
-    #[must_use]
-    pub fn specifier(&self, section: DependencySection) -> Option<&str> {
-        self.declarations.get(&section).map(String::as_str)
-    }
 }
 
 impl WorkspaceProject {
     /// Returns the package's normalized cell-relative root.
     #[must_use]
-    pub fn root(&self) -> &CellRelativePathBuf {
+    fn root(&self) -> &CellRelativePathBuf {
         &self.root
     }
 
     /// Returns internal dependencies in canonical npm-name order.
-    pub fn dependencies(&self) -> impl ExactSizeIterator<Item = &str> {
+    fn dependencies(&self) -> impl ExactSizeIterator<Item = &str> {
         self.dependencies.keys().map(String::as_str)
-    }
-
-    /// Returns one internal edge and its source declarations.
-    #[must_use]
-    pub fn dependency(&self, dependency: &str) -> Option<&WorkspaceDependency> {
-        self.dependencies.get(dependency)
     }
 }
 
@@ -262,7 +225,7 @@ pub struct WorkspaceGraph {
 
 /// Exact native Node workspace requirements read from the root package manifest.
 #[derive(Clone, Debug, Eq, PartialEq, allocative::Allocative, pagable::Pagable)]
-pub struct NodeWorkspaceToolchain {
+struct NodeWorkspaceToolchain {
     node_requirement: String,
     package_manager: String,
 }
@@ -270,74 +233,20 @@ pub struct NodeWorkspaceToolchain {
 impl NodeWorkspaceToolchain {
     /// Returns the npm-compatible Node version requirement.
     #[must_use]
-    pub fn node_requirement(&self) -> &str {
+    fn node_requirement(&self) -> &str {
         &self.node_requirement
     }
 
     /// Returns the exact Corepack-style package-manager identity.
     #[must_use]
-    pub fn package_manager(&self) -> &str {
+    fn package_manager(&self) -> &str {
         &self.package_manager
-    }
-}
-
-/// A conventional target inferred for every TypeScript workspace project.
-#[derive(Clone, Copy, Debug, Eq, Ord, PartialEq, PartialOrd)]
-pub enum WorkspaceTargetKind {
-    /// JavaScript and declaration emission.
-    Library,
-    /// Semantic checking without JavaScript emission.
-    Typecheck,
-}
-
-impl WorkspaceTargetKind {
-    /// Returns the conventional target name for this capability.
-    fn target_name(self) -> &'static str {
-        match self {
-            Self::Library => "lib",
-            Self::Typecheck => "typecheck",
-        }
-    }
-
-    /// Returns the stable slot used by the compact per-project label table.
-    fn index(self) -> usize {
-        match self {
-            Self::Library => 0,
-            Self::Typecheck => 1,
-        }
-    }
-}
-
-/// One native BSMR target plus its directed workspace dependencies.
-#[derive(Clone, Debug, Eq, PartialEq)]
-pub struct WorkspaceTarget {
-    kind: WorkspaceTargetKind,
-    label: TargetLabel,
-    dependencies: Vec<TargetLabel>,
-}
-
-impl WorkspaceTarget {
-    /// Returns the capability implemented by this target.
-    #[must_use]
-    pub fn kind(&self) -> WorkspaceTargetKind {
-        self.kind
-    }
-
-    /// Returns the canonical unconfigured BSMR target label.
-    #[must_use]
-    pub fn label(&self) -> &TargetLabel {
-        &self.label
-    }
-
-    /// Returns dependency labels in canonical npm-name order.
-    pub fn dependencies(&self) -> impl ExactSizeIterator<Item = &TargetLabel> {
-        self.dependencies.iter()
     }
 }
 
 impl WorkspaceGraph {
     /// Resolves explicit workspace edges and rejects ambiguous or cyclic graphs.
-    pub fn build(
+    fn build(
         packages: impl IntoIterator<Item = WorkspacePackage>,
     ) -> Result<Self, WorkspaceGraphError> {
         let packages = index_packages(packages)?;
@@ -364,24 +273,14 @@ impl WorkspaceGraph {
         })
     }
 
-    /// Returns package names in canonical lexical order.
-    pub fn package_names(&self) -> impl ExactSizeIterator<Item = &str> {
-        self.packages.keys().map(String::as_str)
-    }
-
     /// Returns one package node by its npm name.
     #[must_use]
-    pub fn package(&self, name: &str) -> Option<&WorkspaceProject> {
+    fn package(&self, name: &str) -> Option<&WorkspaceProject> {
         self.packages.get(name)
     }
 
-    /// Returns one package's internal dependencies in canonical lexical order.
-    pub fn dependencies(&self, name: &str) -> Option<impl ExactSizeIterator<Item = &str>> {
-        self.package(name).map(WorkspaceProject::dependencies)
-    }
-
     /// Returns the package name owning one normalized workspace root.
-    pub fn package_name_at_root(&self, root: &CellRelativePathBuf) -> Option<&str> {
+    fn package_name_at_root(&self, root: &CellRelativePathBuf) -> Option<&str> {
         self.packages
             .iter()
             .find(|(_, project)| &project.root == root)
@@ -390,71 +289,9 @@ impl WorkspaceGraph {
 
     /// Returns the root manifest's exact native Node toolchain requirements.
     #[must_use]
-    pub fn node_toolchain(&self) -> Option<&NodeWorkspaceToolchain> {
+    fn node_toolchain(&self) -> Option<&NodeWorkspaceToolchain> {
         self.node_toolchain.as_ref()
     }
-
-    /// Lowers package roots and edges into BSMR's native target-label IR.
-    pub fn lower(&self, cell: CellName) -> bsmr_error::Result<Vec<WorkspaceTarget>> {
-        const KINDS: [WorkspaceTargetKind; 2] =
-            [WorkspaceTargetKind::Library, WorkspaceTargetKind::Typecheck];
-        let labels = self
-            .packages
-            .iter()
-            .map(|(name, project)| {
-                Ok((
-                    name.clone(),
-                    [
-                        target_label(cell, project, WorkspaceTargetKind::Library)?,
-                        target_label(cell, project, WorkspaceTargetKind::Typecheck)?,
-                    ],
-                ))
-            })
-            .collect::<bsmr_error::Result<BTreeMap<_, _>>>()?;
-        let mut targets = Vec::with_capacity(labels.len() * KINDS.len());
-        for (name, project) in &self.packages {
-            for kind in KINDS {
-                let label = labels.get(name).ok_or_else(|| {
-                    internal_error!(
-                        "lowered package `{name}` has no `{}` label",
-                        kind.target_name()
-                    )
-                })?[kind.index()]
-                .clone();
-                let dependencies = project
-                    .dependencies()
-                    .map(|dependency| {
-                        labels
-                            .get(dependency)
-                            .map(|labels| labels[kind.index()].clone())
-                            .ok_or_else(|| {
-                                internal_error!(
-                                    "lowered dependency `{dependency}` has no `{}` label",
-                                    kind.target_name()
-                                )
-                            })
-                    })
-                    .collect::<bsmr_error::Result<_>>()?;
-                targets.push(WorkspaceTarget {
-                    kind,
-                    label,
-                    dependencies,
-                });
-            }
-        }
-        Ok(targets)
-    }
-}
-
-/// Derives one conventional capability target label from a workspace project.
-fn target_label(
-    cell: CellName,
-    project: &WorkspaceProject,
-    kind: WorkspaceTargetKind,
-) -> bsmr_error::Result<TargetLabel> {
-    let target_name = TargetName::new(kind.target_name())?;
-    let package = PackageLabel::new(cell, &project.root)?;
-    Ok(TargetLabel::new(package, target_name.as_ref()))
 }
 
 /// Indexes packages by npm name while retaining both roots in duplicate diagnostics.
@@ -592,7 +429,6 @@ fn ensure_acyclic(
 
 #[cfg(test)]
 mod tests {
-    use bsmr_core::cells::name::CellName;
     use bsmr_core::cells::paths::CellRelativePathBuf;
 
     use super::DependencySection;
@@ -600,7 +436,6 @@ mod tests {
     use super::WorkspaceGraph;
     use super::WorkspaceGraphError;
     use super::WorkspacePackage;
-    use super::WorkspaceTargetKind;
 
     /// Parses one package fixture rooted at a normalized workspace path.
     fn package(root: &str, manifest: &str) -> WorkspacePackage {
@@ -632,62 +467,38 @@ mod tests {
         let graph = WorkspaceGraph::build([testkit, app, core]).unwrap();
 
         assert_eq!(
-            graph.package_names().collect::<Vec<_>>(),
+            graph
+                .packages
+                .keys()
+                .map(String::as_str)
+                .collect::<Vec<_>>(),
             ["@acme/api", "@acme/core", "@acme/testkit"]
         );
         assert_eq!(
-            graph.dependencies("@acme/api").unwrap().collect::<Vec<_>>(),
+            graph
+                .package("@acme/api")
+                .unwrap()
+                .dependencies()
+                .collect::<Vec<_>>(),
             ["@acme/core", "@acme/testkit"]
         );
-        assert_eq!(graph.dependencies("@acme/core").unwrap().count(), 0);
+        assert_eq!(
+            graph.package("@acme/core").unwrap().dependencies().count(),
+            0
+        );
         let sections = graph
             .package("@acme/api")
             .unwrap()
-            .dependency("@acme/testkit")
+            .dependencies
+            .get("@acme/testkit")
             .unwrap();
-        assert_eq!(sections.sections().count(), 1);
+        assert_eq!(sections.declarations.len(), 1);
         assert_eq!(
-            sections.specifier(DependencySection::DevDependency),
+            sections
+                .declarations
+                .get(&DependencySection::DevDependency)
+                .map(String::as_str),
             Some("workspace:*")
-        );
-    }
-
-    #[test]
-    fn invariant_native_targets_use_bsmr_package_labels() {
-        let app = package(
-            "apps/api",
-            r#"{
-                "name": "@acme/api",
-                "dependencies": {"@acme/core": "workspace:*"}
-            }"#,
-        );
-        let core = package("packages/core", r#"{"name":"@acme/core"}"#);
-        let graph = WorkspaceGraph::build([app, core]).unwrap();
-
-        let targets = graph.lower(CellName::testing_new("root")).unwrap();
-
-        assert_eq!(targets[0].kind(), WorkspaceTargetKind::Library);
-        assert_eq!(targets[0].label().to_string(), "root//apps/api:lib");
-        assert_eq!(
-            targets[0]
-                .dependencies()
-                .map(ToString::to_string)
-                .collect::<Vec<_>>(),
-            ["root//packages/core:lib"]
-        );
-        assert_eq!(targets[1].kind(), WorkspaceTargetKind::Typecheck);
-        assert_eq!(targets[1].label().to_string(), "root//apps/api:typecheck");
-        assert_eq!(
-            targets[1]
-                .dependencies()
-                .map(ToString::to_string)
-                .collect::<Vec<_>>(),
-            ["root//packages/core:typecheck"]
-        );
-        assert_eq!(targets[2].label().to_string(), "root//packages/core:lib");
-        assert_eq!(
-            targets[3].label().to_string(),
-            "root//packages/core:typecheck"
         );
     }
 
@@ -819,9 +630,23 @@ packages:
         )
         .unwrap();
 
-        assert_eq!(workspace.patterns(), ["apps/*", "packages/typescript/**"]);
+        assert_eq!(
+            workspace
+                .select_package_roots(
+                    [
+                        "apps/api",
+                        "packages/typescript/core",
+                        "packages/python/core"
+                    ]
+                    .map(|path| CellRelativePathBuf::try_from(path.to_owned()).unwrap())
+                )
+                .unwrap()
+                .iter()
+                .map(|path| path.as_str())
+                .collect::<Vec<_>>(),
+            ["apps/api", "packages/typescript/core"]
+        );
         let root_only = PnpmWorkspace::parse("allowBuilds:\n  esbuild: false").unwrap();
-        assert!(root_only.patterns().is_empty());
         assert_eq!(
             root_only
                 .select_package_roots(
@@ -834,11 +659,18 @@ packages:
                 .collect::<Vec<_>>(),
             [""]
         );
-        assert!(
+        assert_eq!(
             PnpmWorkspace::parse("packages: []")
                 .unwrap()
-                .patterns()
-                .is_empty()
+                .select_package_roots(
+                    ["", "apps/api"]
+                        .map(|path| CellRelativePathBuf::try_from(path.to_owned()).unwrap())
+                )
+                .unwrap()
+                .iter()
+                .map(|path| path.as_str())
+                .collect::<Vec<_>>(),
+            [""]
         );
         assert!(PnpmWorkspace::parse("packages: packages/*").is_err());
     }
