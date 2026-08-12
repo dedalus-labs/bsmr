@@ -15,6 +15,7 @@
  */
 
 pub(crate) mod build_event;
+pub(crate) mod build_event_writer;
 pub(crate) mod build_id_writer;
 pub(crate) mod classify_server_stderr;
 pub(crate) mod console_output_limit;
