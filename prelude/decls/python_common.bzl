@@ -54,7 +54,7 @@ def _base_module_arg():
             doc = """
     The package in which the specified source files and resources should reside in their final
      location in the top-level binary. If unset, Buck uses the project-relative directory
-     that contains the BUCK file.
+     that contains the BUILD.bsmr file.
 """,
         ),
     }

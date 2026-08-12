@@ -43,8 +43,7 @@
                 "filenames": [
                     "BUILD",
                     "WORKSPACE",
-                    "BUCK",
-                    "BUCK.v2",
+                    "BUILD.bsmr",
                     "BUILD_DEFS",
                     "DEFS",
                     "TARGETS",

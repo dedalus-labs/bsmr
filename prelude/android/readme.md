@@ -111,7 +111,7 @@ graph TB
 ### Component Explanations
 
 - **Build Rules Layer**: High-level build rules that developers use in their
-  BUCK files
+  BUILD.bsmr files
 - **Processing Layer**: Core logic for transforming inputs (Java bytecode,
   resources, native libs) into Android-specific formats
 - **Provider Layer**: Data structures that pass information between build rules
@@ -129,7 +129,7 @@ graph TB
 
 ### Component: Build Rules (`android.bzl`)
 
-**Purpose**: Defines the main Android build rules that developers use in BUCK
+**Purpose**: Defines the main Android build rules that developers use in BUILD.bsmr
 files. Acts as the entry point and orchestrates the entire Android build
 process.
 

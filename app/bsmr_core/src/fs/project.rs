@@ -130,16 +130,16 @@ impl ProjectRoot {
     ///     let fs = ProjectRoot::new_unchecked(root);
     ///
     ///     assert_eq!(
-    ///         AbsNormPathBuf::from("/usr/local/fbsource/buck/BUCK".into())?,
-    ///         fs.resolve(ProjectRelativePath::new("buck/BUCK")?)
+    ///         AbsNormPathBuf::from("/usr/local/fbsource/buck/BUILD.bsmr".into())?,
+    ///         fs.resolve(ProjectRelativePath::new("buck/BUILD.bsmr")?)
     ///     );
     /// } else {
     ///     let root = AbsNormPathBuf::from("c:/open/fbsource/".into())?;
     ///     let fs = ProjectRoot::new_unchecked(root);
     ///
     ///     assert_eq!(
-    ///         AbsNormPathBuf::from("c:/open/fbsource/buck/BUCK".into())?,
-    ///         fs.resolve(ProjectRelativePath::new("buck/BUCK")?)
+    ///         AbsNormPathBuf::from("c:/open/fbsource/buck/BUILD.bsmr".into())?,
+    ///         fs.resolve(ProjectRelativePath::new("buck/BUILD.bsmr")?)
     ///     );
     /// }
     ///
@@ -167,8 +167,8 @@ impl ProjectRoot {
     /// let fs = ProjectRoot::new_unchecked(root);
     ///
     /// assert_eq!(
-    ///     PathBuf::from("buck/BUCK"),
-    ///     fs.as_relative_path(ProjectRelativePath::new("buck/BUCK")?)
+    ///     PathBuf::from("buck/BUILD.bsmr"),
+    ///     fs.as_relative_path(ProjectRelativePath::new("buck/BUILD.bsmr")?)
     /// );
     ///
     /// # bsmr_error::Ok(())

@@ -1,5 +1,5 @@
 [buildfile]
-name=TARGETS.test
+name=TARGETS.fixture
 
 [repositories]
 root = .

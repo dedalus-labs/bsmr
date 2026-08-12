@@ -12,7 +12,7 @@
 # of this source tree. You may select, at your option, one of the
 # above-listed licenses.
 
-# Buck's own BUCK files still use Meta's Rust macro schema. Keep this adapter
+# Buck's own BUILD.bsmr files still use Meta's Rust macro schema. Keep this adapter
 # limited to the rules required to build Buck; new targets should use the
 # public prelude directly.
 

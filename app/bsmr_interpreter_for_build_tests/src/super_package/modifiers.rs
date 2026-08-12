@@ -35,7 +35,7 @@ async fn test_set_package_cfg_modifiers() {
     fs.write_file("rules.bzl", RULES_BZL);
     fs.write_file("foo/PACKAGE", "set_modifiers(['aaabbbccc'])");
     fs.write_file(
-        "foo/BUCK",
+        "foo/BUILD.bsmr",
         indoc!(
             r#"
                 load("//:rules.bzl", "simple")
@@ -70,7 +70,7 @@ async fn test_get_parent_package_cfg_modifiers() {
         "set_modifiers(get_parent_modifiers() + ['bbb'])",
     );
     fs.write_file(
-        "foo/BUCK",
+        "foo/BUILD.bsmr",
         indoc!(
             r#"
                 load("//:rules.bzl", "simple")

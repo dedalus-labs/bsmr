@@ -14,14 +14,14 @@ same name `//apps/myapp:app`.
 
 A target pattern that ends with a colon matches all targets in the build file at
 the preceding directory path. For example, suppose that the build file
-`apps/myapp/BUCK` defines the rules: app_debug and app_release, then the target
+`apps/myapp/BUILD.bsmr` defines the rules: app_debug and app_release, then the target
 pattern `//apps/myapp:` matches `//apps/myapp:app_debug` and
 `//apps/myapp:app_release`.
 
 A target pattern that ends with an ellipsis "/..." matches all targets in the
 build file in the directory that precedes the ellipsis and also all targets in
 build files in subdirectories (within the same cell). For example, suppose that
-you have the following build files: `apps/BUCK`, `apps/myapp/BUCK`. Then the
+you have the following build files: `apps/BUILD.bsmr`, `apps/myapp/BUILD.bsmr`. Then the
 target pattern `//apps/...` would match (for example) `//apps:common` and
 `//apps/myapp:app`. The pattern `//...` would match the same (even though
 there's no build file in the root directory).
@@ -34,8 +34,8 @@ of the directory in which the command is invoked.
 
 If `~/project` and `~/project/cell` are both cells with names `project` and
 `cell` respectively, then `//some:target` would resolve to
-`project//some:target` if it appears in `~/project/BUCK` and `cell//some:target`
-if it appears in `~/project/cell/BUCK`.
+`project//some:target` if it appears in `~/project/BUILD.bsmr` and `cell//some:target`
+if it appears in `~/project/cell/BUILD.bsmr`.
 
 ## Relative patterns
 

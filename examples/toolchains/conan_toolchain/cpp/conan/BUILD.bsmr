@@ -45,7 +45,7 @@ conan_update(
     lock_generate = ":lock-generate",
     lockfile = ":lock",
     lockfile_name = "conan.lock",
-    targets_name = "import/BUCK",
+    targets_name = "import/BUILD.bsmr",
 )
 
 cxx_binary(

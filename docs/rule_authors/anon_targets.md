@@ -310,7 +310,7 @@ package and both list it, or it gets export_file'd), then that file is compiled
 just once:
 
 ```python
-## BUCK ##############
+## BUILD.bsmr ##############
 @load(":silly.bzl", "silly_binary")
 
 silly_binary(

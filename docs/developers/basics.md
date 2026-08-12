@@ -99,7 +99,7 @@ Code is generally the same internally and externally, exceptions will be locally
 
 ## Rust Dependencies
 
-When modifying dependencies internally at Meta, change BUCK files. Almost all of our Cargo.toml
+When modifying dependencies internally at Meta, change BUILD.bsmr files. Almost all of our Cargo.toml
 files are maintained by autocargo, run `arc autocargo -p bsmr` to update them.
 
 Autocargo is not available outside Meta. Hand-edit Cargo files if needed, we will deal with it on

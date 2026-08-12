@@ -1,3 +1,9 @@
+# ===----------------------------------------------------------------------===
+# Upstream-Source: facebook/buck2@1560aca2002865cd73d7cafb22c705cfb640b2bc
+# Modifications Copyright (c) 2026 Dedalus Labs, Inc. and its contributors
+# SPDX-License-Identifier: Apache-2.0
+# ===----------------------------------------------------------------------===
+
 # Copyright (c) Meta Platforms, Inc. and affiliates.
 #
 # This source code is dual-licensed under either the MIT license found in the
@@ -107,7 +113,7 @@ def to_framework_name(framework_path: str) -> str:
 
 def _library_name(library: str) -> str:
     if ":" in library:
-        fail("Invalid library: {}. Use the field 'linker_flags' with $(location ) macro if you want to pass in a BUCK target for libraries.".format(library))
+        fail("Invalid library: {}. Use the field 'linker_flags' with $(location ) macro if you want to pass in a BUILD.bsmr target for libraries.".format(library))
 
     name = paths.basename(library)
     if not name.startswith("lib"):

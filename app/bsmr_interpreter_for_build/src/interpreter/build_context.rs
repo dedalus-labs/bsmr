@@ -65,7 +65,7 @@ enum BuildContextError {
 #[allow(clippy::large_enum_variant)]
 #[derive(Debug)]
 pub enum PerFileTypeContext {
-    /// Context for evaluating `BUCK` files.
+    /// Context for evaluating `BUILD.bsmr` files.
     Build(ModuleInternals),
     /// Context for evaluating `PACKAGE` files.
     Package(PackageFileEvalCtx),
@@ -91,7 +91,7 @@ impl PerFileTypeContext {
 
     /// Gets base path from buildfile or PACKAGE file context.
     /// For example, for `foo//bar/PACKAGE` this returns `foo//bar`.
-    /// For `foo//bar/baz/BUCK` this returns `foo//bar/baz`.
+    /// For `foo//bar/baz/BUILD.bsmr` this returns `foo//bar/baz`.
     /// Throws an error if it's used in any other context.
     fn base_path(&self) -> bsmr_error::Result<CellPath> {
         match self {
@@ -159,7 +159,7 @@ impl PerFileTypeContext {
 pub struct BuildContext<'a> {
     /// The CellInfo for the top-level module being interpreted. Note that this
     /// is not necessarily the same as the file currently being processed
-    /// (i.e. if `cell1//BUCK` loads `cell2//defs.bzl` the cell info when
+    /// (i.e. if `cell1//BUILD.bsmr` loads `cell2//defs.bzl` the cell info when
     /// loading `cell2//defs.bzl` will be based on `cell1`).
     ///
     /// This cell_info is used only for things that should be resolved in the

@@ -1,6 +1,6 @@
 # This file is @generated, regenerate by re-running test with `-- --env BSMR_UPDATE_GOLDEN=1` appended to the test command
 
-Profile `BUCK` file evaluation
+Profile `BUILD.bsmr` file evaluation
 
 Usage: bsmr profile loading [OPTIONS] --output <PATH> --mode <MODE> [TARGET_PATTERNS]...
 

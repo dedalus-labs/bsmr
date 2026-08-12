@@ -441,15 +441,15 @@ mod tests {
             let tester = TestPatternResolver::new(
                 &[("root", ""), ("child", "child/cell")],
                 &[
-                    ("BUCK"),
-                    ("other/BUCK"),
-                    ("other/a/bit/deeper/BUCK"),
-                    ("other/a/bit/deeper/and/deeper/BUCK"),
-                    ("some/thing/dir/a/BUCK"),
-                    ("some/thing/dir/a/b/BUCK"),
-                    ("some/thing/extra/BUCK"),
-                    ("child/cell/BUCK"),
-                    ("child/cell/foo/BUCK"),
+                    ("BUILD.bsmr"),
+                    ("other/BUILD.bsmr"),
+                    ("other/a/bit/deeper/BUILD.bsmr"),
+                    ("other/a/bit/deeper/and/deeper/BUILD.bsmr"),
+                    ("some/thing/dir/a/BUILD.bsmr"),
+                    ("some/thing/dir/a/b/BUILD.bsmr"),
+                    ("some/thing/extra/BUILD.bsmr"),
+                    ("child/cell/BUILD.bsmr"),
+                    ("child/cell/foo/BUILD.bsmr"),
                 ],
             )
             .unwrap();
@@ -626,15 +626,15 @@ mod tests {
             let tester = TestPatternResolver::new(
                 &[("root", ""), ("child", "child/cell")],
                 &[
-                    ("BUCK"),
-                    ("other/BUCK"),
-                    ("other/a/bit/deeper/BUCK"),
-                    ("other/a/bit/deeper/and/deeper/BUCK"),
-                    ("some/thing/dir/a/BUCK"),
-                    ("some/thing/dir/a/b/BUCK"),
-                    ("some/thing/extra/BUCK"),
-                    ("child/cell/BUCK"),
-                    ("child/cell/foo/BUCK"),
+                    ("BUILD.bsmr"),
+                    ("other/BUILD.bsmr"),
+                    ("other/a/bit/deeper/BUILD.bsmr"),
+                    ("other/a/bit/deeper/and/deeper/BUILD.bsmr"),
+                    ("some/thing/dir/a/BUILD.bsmr"),
+                    ("some/thing/dir/a/b/BUILD.bsmr"),
+                    ("some/thing/extra/BUILD.bsmr"),
+                    ("child/cell/BUILD.bsmr"),
+                    ("child/cell/foo/BUILD.bsmr"),
                 ],
             )
             .unwrap();

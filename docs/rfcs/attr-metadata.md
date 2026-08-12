@@ -34,7 +34,7 @@ target graph.
 - it is likely that per-target `metadata` attribute should be used in
   configuration factory function.
 - TD wants to declare CI trigger jobs per-target or per-package, and this logic
-  is to be specified in `BUCK` or `PACKAGE` files — as metadata
+  is to be specified in `BUILD.bsmr` or `PACKAGE` files — as metadata
 
 ## Proposal: metadata attribute
 

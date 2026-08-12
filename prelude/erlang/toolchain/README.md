@@ -20,7 +20,7 @@ python3 bsmr/prelude/erlang/toolchain/generate_otp_versions.py my_otp_versions.b
 
 This creates a `.bzl` file containing version information for all OTP applications.
 
-### 2. Use in Your BUCK File
+### 2. Use in Your BUILD.bsmr File
 
 Load the generated file and configure your toolchain:
 

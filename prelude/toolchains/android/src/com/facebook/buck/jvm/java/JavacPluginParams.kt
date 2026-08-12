@@ -1,3 +1,9 @@
+//===----------------------------------------------------------------------===//
+// Upstream-Source: facebook/buck2@1560aca2002865cd73d7cafb22c705cfb640b2bc
+// Modifications Copyright (c) 2026 Dedalus Labs, Inc. and its contributors
+// SPDX-License-Identifier: Apache-2.0
+//===----------------------------------------------------------------------===//
+
 /*
  * Copyright (c) Meta Platforms, Inc. and affiliates.
  *
@@ -20,7 +26,7 @@ import java.net.URL
  *
  * Javac Plugins involves a set of plugin properties, their classpath(s), and a few other
  * command-line options for javac. We want to be able to specify all this various information in a
- * BUCK configuration file and use it when we generate the javac command. This facilitates threading
+ * BUILD.bsmr configuration file and use it when we generate the javac command. This facilitates threading
  * the information through buck in a more descriptive package rather than passing all the components
  * separately.
  */

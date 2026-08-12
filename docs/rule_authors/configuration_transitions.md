@@ -135,7 +135,7 @@ transition on a target by passing the transition target to the built-in
 `incoming_transition` attribute, like this:
 
 ```python
-# BUCK
+# BUILD.bsmr
 transition_to_watchos(
     name = "transition_to_watchos",
 )

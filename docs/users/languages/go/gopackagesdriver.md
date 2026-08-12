@@ -65,8 +65,8 @@ exec bsmr run prelude//go/tools/gopackagesdriver:gopackagesdriver -- "${@}"
     "GOPACKAGESDRIVER_BUCK_ALL_PACKAGES_TARGET_EXPRS": "root//..." # (optional) index all packages on gopls startup (might be slow and unreliable)
   },
   "gopls": {
-    "build.workspaceFiles": [ # (required) to handle changes in BUCK files
-      "**/BUCK",
+    "build.workspaceFiles": [ # (required) to handle changes in BUILD.bsmr files
+      "**/BUILD.bsmr",
       "**/PACKAGE",
       "**/*.bzl",
       "**/.bsmrconfig"

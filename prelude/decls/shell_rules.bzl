@@ -26,7 +26,7 @@ sh_binary = prelude_rule(
         This sh\\_binary() just cats a sample data file back at the user.
 
         ```
-        # $REPO/BUCK
+        # $REPO/BUILD.bsmr
         sh_binary(
             name = "script",
             main = "script.sh",
@@ -120,7 +120,7 @@ sh_test = prelude_rule(
         This sh\\_test() fails if a string does not match a value.
 
         ```
-        # $REPO/BUCK
+        # $REPO/BUILD.bsmr
         sh_test(
             name = "script_pass",
             test = "script.sh",

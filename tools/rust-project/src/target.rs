@@ -369,7 +369,7 @@ mod tests {
             features: vec!["foo_feature".to_owned()],
             env: FxHashMap::default(),
             source_folder: PathBuf::from("/tmp"),
-            project_relative_buildfile: PathBuf::from("bar/BUCK"),
+            project_relative_buildfile: PathBuf::from("bar/BUILD.bsmr"),
             in_workspace: false,
             rustc_flags: vec!["--cfg=foo_cfg".to_owned(), "--other".to_owned()],
         };
@@ -400,7 +400,7 @@ mod tests {
             features: vec![],
             env: FxHashMap::default(),
             source_folder: PathBuf::from("/tmp"),
-            project_relative_buildfile: PathBuf::from("foo/BUCK"),
+            project_relative_buildfile: PathBuf::from("foo/BUILD.bsmr"),
             in_workspace: false,
             rustc_flags: vec![],
         };
@@ -437,7 +437,7 @@ mod tests {
             features: vec![],
             env: FxHashMap::default(),
             source_folder: PathBuf::from("/tmp"),
-            project_relative_buildfile: PathBuf::from("third-party/BUCK"),
+            project_relative_buildfile: PathBuf::from("third-party/BUILD.bsmr"),
             in_workspace: false,
             rustc_flags: vec![],
         };
@@ -464,7 +464,7 @@ mod tests {
             features: vec![],
             env: FxHashMap::default(),
             source_folder: PathBuf::from("/tmp"),
-            project_relative_buildfile: PathBuf::from("third-party/BUCK"),
+            project_relative_buildfile: PathBuf::from("third-party/BUILD.bsmr"),
             in_workspace: false,
             rustc_flags: vec![],
         };
@@ -491,7 +491,7 @@ mod tests {
             features: vec![],
             env: FxHashMap::default(),
             source_folder: PathBuf::from("/tmp"),
-            project_relative_buildfile: PathBuf::from("third-party/BUCK"),
+            project_relative_buildfile: PathBuf::from("third-party/BUILD.bsmr"),
             in_workspace: false,
             rustc_flags: vec![],
         };
@@ -518,7 +518,7 @@ mod tests {
             features: vec![],
             env: FxHashMap::default(),
             source_folder: PathBuf::from("/tmp"),
-            project_relative_buildfile: PathBuf::from("foo/BUCK"),
+            project_relative_buildfile: PathBuf::from("foo/BUILD.bsmr"),
             in_workspace: false,
             rustc_flags: vec![],
         };

@@ -53,7 +53,7 @@ The following is an example of exposing custom aliases for build constraints. We
 create a `build_mode` constraint with 2 values (`debug` and `release`), which
 would most likely be `select`ed in a toolchain definition.
 
-`BUCK`:
+`BUILD.bsmr`:
 
 ```python
 constraint_setting(name = "build_mode")
