@@ -156,12 +156,13 @@ fn synchronizes_owned_manifests_only() {
 #[test]
 fn rejects_user_owned_manifest_index() {
     let root = tempfile::tempdir().expect("temporary repository");
-    fs::write(root.path().join(".bsmr-go-manifests"), "pkg/BUCK\n").expect("user-owned index");
+    fs::write(root.path().join(".bsmr-go-manifests"), "pkg/BUILD.bsmr\n")
+        .expect("user-owned index");
 
     let error = sync_manifests(
         root.path(),
         &graph(root.path()),
-        "BUCK",
+        "BUILD.bsmr",
         &[],
         false,
         SyncMode::Write,
@@ -176,15 +177,15 @@ fn rejects_user_owned_manifest_index() {
 fn migrates_untouched_init_manifest() {
     let root = tempfile::tempdir().expect("temporary repository");
     fs::write(
-        root.path().join("BUCK"),
-        crate::commands::init::LEGACY_ROOT_BUCK,
+        root.path().join("BUILD.bsmr"),
+        crate::commands::init::INITIAL_ROOT_MANIFEST,
     )
     .expect("init manifest");
 
     sync_manifests(
         root.path(),
         &root_graph(root.path()),
-        "BUCK",
+        "BUILD.bsmr",
         &[],
         false,
         SyncMode::Write,
@@ -192,7 +193,7 @@ fn migrates_untouched_init_manifest() {
     .expect("migrate init manifest");
 
     assert!(
-        fs::read_to_string(root.path().join("BUCK"))
+        fs::read_to_string(root.path().join("BUILD.bsmr"))
             .expect("generated manifest")
             .contains("go_binary(")
     );

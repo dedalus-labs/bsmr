@@ -21,8 +21,6 @@ use std::path::PathBuf;
 pub(crate) use acquisition::acquired_go;
 pub(crate) use acquisition::install_sdk;
 pub(crate) use acquisition::prepare_acquisition;
-#[cfg(test)]
-pub(crate) use manifest::LEGACY_TOOLCHAINS_BUCK;
 pub(crate) use manifest::write_configuration;
 use serde::Deserialize;
 use serde::Serialize;

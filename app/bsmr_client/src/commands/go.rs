@@ -228,7 +228,9 @@ pub(super) fn select_buildfile(
     name_v2: Option<Vec<String>>,
     name: Option<Vec<String>>,
 ) -> Result<String, GoCommandError> {
-    let configured = name_v2.or(name).unwrap_or_else(|| vec!["BUCK".to_owned()]);
+    let configured = name_v2
+        .or(name)
+        .unwrap_or_else(|| vec!["BUILD.bsmr".to_owned()]);
     if configured.len() != 1 {
         return Err(GoCommandError::AmbiguousBuildfiles(configured));
     }

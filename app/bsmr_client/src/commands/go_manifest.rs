@@ -224,7 +224,7 @@ fn remove_stale(stale: &BTreeSet<PathBuf>) -> Result<usize, GoManifestError> {
 /// Recognizes only the exact generated preamble owned by this frontend.
 fn is_generated(content: &str) -> bool {
     content.lines().nth(5) == Some(GENERATED_MARKER)
-        || content == crate::commands::init::LEGACY_ROOT_BUCK
+        || content == crate::commands::init::INITIAL_ROOT_MANIFEST
 }
 
 /// Reads the prior relative-path ownership index.

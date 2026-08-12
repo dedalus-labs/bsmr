@@ -14,8 +14,8 @@ use crate::commands::go::validate_build_tags;
 
 /// Confirms synchronization follows the active Bessemer build-file convention.
 #[test]
-fn selects_configured_or_legacy_default_buildfile() {
-    assert_eq!(select_buildfile(None, None).expect("default"), "BUCK");
+fn selects_configured_or_canonical_default_buildfile() {
+    assert_eq!(select_buildfile(None, None).expect("default"), "BUILD.bsmr");
     assert_eq!(
         select_buildfile(Some(vec!["BUILD.bsmr".to_owned()]), None).expect("v2 name"),
         "BUILD.bsmr"
@@ -29,8 +29,11 @@ fn selects_configured_or_legacy_default_buildfile() {
 /// Confirms one synchronization cannot silently write multiple manifest schemes.
 #[test]
 fn rejects_ambiguous_buildfile_configuration() {
-    let error = select_buildfile(None, Some(vec!["BUCK".to_owned(), "TARGETS".to_owned()]))
-        .expect_err("multiple build files require an override");
+    let error = select_buildfile(
+        None,
+        Some(vec!["BUILD.bsmr".to_owned(), "TARGETS".to_owned()]),
+    )
+    .expect_err("multiple build files require an override");
 
     assert!(error.to_string().contains("--buildfile"));
 }
