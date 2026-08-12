@@ -57,7 +57,7 @@ tree for third-party packages.
 Commit the native Go metadata and generated IR:
 
 - `.bsmr-go-toolchain.json`;
-- `toolchains/bsmr_go_toolchain.bzl` and the updated `toolchains/BUCK`;
+- `toolchains/bsmr_go_toolchain.bzl` and the updated `toolchains/BUILD.bsmr`;
 - `.bsmr-go-manifests`;
 - generated package build files; and
 - `go.mod`, `go.sum`, `vendor/modules.txt`, and the vendor tree.

@@ -67,5 +67,5 @@ different workloads. Bessemer benchmarks them separately and rejects a timing
 sample when the compared tools did not build equivalent outputs.
 
 See the repository's
-[benchmark contract](https://github.com/dedalus-labs/bsmr/blob/main/benchmarks/README.md)
+[benchmark contract](https://github.com/dedalus-labs/bsmr/blob/main/docs/developers/perf/benchmarking.md)
 for the reproducible methodology.
