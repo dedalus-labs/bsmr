@@ -18,6 +18,9 @@ use std::sync::Arc;
 
 use allocative::Allocative;
 use async_trait::async_trait;
+use bsmr_common::cargo_workspace::parse_rust_toolchain;
+use bsmr_common::cargo_workspace::render_cargo_build_file;
+use bsmr_common::cargo_workspace::select_rust_toolchain_file;
 use bsmr_common::dice::cells::HasCellResolver;
 use bsmr_common::dice::cycles::CycleGuard;
 use bsmr_common::file_ops::dice::DiceFileComputations;
@@ -33,12 +36,14 @@ use bsmr_common::pnpm_workspace::render_typescript_build_file;
 use bsmr_core::build_file_path::BuildFilePath;
 use bsmr_core::cells::build_file_cell::BuildFileCell;
 use bsmr_core::cells::cell_path::CellPath;
+use bsmr_core::cells::paths::CellRelativePathBuf;
 use bsmr_core::package::PackageLabel;
 use bsmr_core::package::package_relative_path::PackageRelativePath;
 use bsmr_error::BuckErrorContext;
 use bsmr_error::internal_error;
 use bsmr_events::dispatch::span;
 use bsmr_events::dispatch::span_async_simple;
+use bsmr_fs::paths::forward_rel_path::ForwardRelativePath;
 use bsmr_interpreter::allow_relative_paths::HasAllowRelativePaths;
 use bsmr_interpreter::dice::starlark_provider::StarlarkEvalKind;
 use bsmr_interpreter::factory::StarlarkEvaluatorProvider;
@@ -83,10 +88,10 @@ use crate::super_package::package_value::SuperPackageValuesImpl;
 #[derive(Debug, bsmr_error::Error)]
 #[bsmr(tag = Input)]
 enum NativeBuildFileError {
-    #[error(
-        "native Cargo manifests require BSMR's Reindeer graph adapter, which is not enabled for this build"
-    )]
-    CargoAdapterUnavailable,
+    #[error("native Cargo builds require Cargo.toml at the BSMR project root")]
+    MissingWorkspaceManifest,
+    #[error("native build source contains neither package.json nor Cargo.toml")]
+    MissingNativeManifest,
 }
 
 fn toml_value_to_json(value: toml::Value) -> serde_json::Value {
@@ -278,21 +283,30 @@ impl<'c, 'd: 'c> DiceCalculationDelegate<'c, 'd> {
                     .await?
             }
             PackageBuildSource::Native => {
+                let mut source = String::new();
                 if listing
                     .get_file(PackageRelativePath::new("package.json")?)
-                    .is_none()
+                    .is_some()
                 {
-                    return Err(NativeBuildFileError::CargoAdapterUnavailable.into());
+                    let graph = self
+                        .ctx
+                        .get_pnpm_workspace_graph(package.cell_name())
+                        .await?;
+                    source.push_str(&render_typescript_build_file(
+                        &graph,
+                        package.as_cell_path().path().to_owned(),
+                        listing,
+                    )?);
                 }
-                let graph = self
-                    .ctx
-                    .get_pnpm_workspace_graph(package.cell_name())
-                    .await?;
-                let source = render_typescript_build_file(
-                    &graph,
-                    package.as_cell_path().path().to_owned(),
-                    listing,
-                )?;
+                if listing
+                    .get_file(PackageRelativePath::new("Cargo.toml")?)
+                    .is_some()
+                {
+                    source.push_str(&self.render_native_cargo(package).await?);
+                }
+                if source.is_empty() {
+                    return Err(NativeBuildFileError::MissingNativeManifest.into());
+                }
                 let ParseData(ast, imports) = self.prepare_eval_with_content(
                     StarlarkPath::BuildFile(&build_file_path),
                     source,
@@ -306,6 +320,43 @@ impl<'c, 'd: 'c> DiceCalculationDelegate<'c, 'd> {
             }
         };
         Ok((build_file_path, ast, deps))
+    }
+
+    /// Renders one Cargo manifest against the project root's shared workspace inputs.
+    async fn render_native_cargo(&mut self, package: PackageLabel) -> bsmr_error::Result<String> {
+        let root_path = CellRelativePathBuf::unchecked_new(String::new());
+        let root = PackageLabel::new(package.cell_name(), &root_path)?;
+        let workspace_listing = DicePackageListingResolver(self.ctx)
+            .resolve_package_listing(root)
+            .await?;
+        if workspace_listing
+            .get_file(PackageRelativePath::new("Cargo.toml")?)
+            .is_none()
+        {
+            return Err(NativeBuildFileError::MissingWorkspaceManifest.into());
+        }
+        let manifest = self.read_package_file(package, "Cargo.toml").await?;
+        let toolchain_file = select_rust_toolchain_file(&workspace_listing)?;
+        let toolchain = self.read_package_file(root, toolchain_file).await?;
+        let toolchain = parse_rust_toolchain(&toolchain)?;
+        Ok(render_cargo_build_file(
+            package.cell_relative_path().to_owned(),
+            &manifest,
+            &workspace_listing,
+            &toolchain,
+        )?)
+    }
+
+    /// Reads one package-relative source through DICE so edits invalidate analysis.
+    async fn read_package_file(
+        &mut self,
+        package: PackageLabel,
+        file: &str,
+    ) -> bsmr_error::Result<String> {
+        let path = package.to_cell_path().join(ForwardRelativePath::new(file)?);
+        DiceFileComputations::read_file(self.ctx, path.as_ref())
+            .await
+            .with_package_context_information(path.to_string())
     }
 
     pub fn prepare_eval_with_content(
