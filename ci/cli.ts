@@ -33,7 +33,8 @@ const test: ProcessSpec = {
 		"ci/license-preamble.test.ts",
 		"ci/license-provenance.test.ts",
 		"ci/license.test.ts",
-		"prelude/toolchains/pnpm/runner.test.mjs",
+		"prelude/typescript/runner.test.ts",
+		"prelude/toolchains/pnpm/runner.test.ts",
 		"test/contributors.test.ts",
 	],
 };
@@ -54,7 +55,15 @@ const security: ProcessSpec = {
 };
 const generatedDiff: ProcessSpec = {
 	file: "git",
-	args: ["diff", "--exit-code", "--", ".github/actions", ".github/workflows"],
+	args: [
+		"diff",
+		"--exit-code",
+		"--",
+		".github/actions",
+		".github/workflows",
+		"prelude/toolchains/pnpm/runner.mjs",
+		"prelude/typescript/runner.mjs",
+	],
 };
 const actionSyntax: ProcessSpec = {
 	file: "node",

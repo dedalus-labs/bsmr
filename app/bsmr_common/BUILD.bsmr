@@ -72,6 +72,7 @@ rust_library(
         "bsmr_build//third-party/rust:toml",
         "bsmr_build//third-party/rust:tonic",
         "bsmr_build//third-party/rust:tracing",
+        "bsmr_build//third-party/rust:yaml-rust2",
         # @oss-disable[end= ]: "//blake3:blake3-constants-rust-nothrift",
         "root//packages/rust/allocative/allocative:allocative",
         "root//app/bsmr_cli_proto:bsmr_cli_proto",
