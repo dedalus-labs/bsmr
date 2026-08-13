@@ -17,7 +17,8 @@ const sourceExtensions = new Set([
 	".py", ".pyi", ".rs", ".s", ".sh", ".star", ".ts", ".tsx", ".zsh",
 ]);
 const sourceNames = new Set([".envrc", "BUILD.bsmr", "Dockerfile", "Makefile", "PACKAGE", "TARGETS"]);
-const fixture = /(?:^|\/)(?:fixtures|[^/]+_data)(?:\/|$)/;
+const fixture = /(?:^|\/)(?:fixtures|golden|[^/]+_data)(?:\/|$)/;
+const golden = /\.golden(?:\.|$)/;
 const comment = "(?:\\/\\/|#|--|%|\\/\\*|\\*|<!--|@REM)";
 const upstreamCopyright = new RegExp(`^\\s*(?:${comment}\\s*)?Copyright[^\\n]*(?:Meta Platforms|Facebook)`, "im");
 const legalNotice = new RegExp(`^\\s*(?:${comment}\\s*)?(?:Copyright|SPDX-License-Identifier|Licensed under|This source code[^\\n]*licens)`, "im");
@@ -43,7 +44,7 @@ export function parseChanges(output: string): ReadonlyMap<string, GitChange> {
 
 /** Return whether a tracked path is source rather than fixture or data. */
 export function isSource(path: string): boolean {
-	if (fixture.test(path)) return false;
+	if (fixture.test(path) || golden.test(basename(path))) return false;
 	return sourceExtensions.has(extname(path)) || path.endsWith(".bsmrconfig") || sourceNames.has(basename(path));
 }
 
