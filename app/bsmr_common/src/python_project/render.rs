@@ -30,6 +30,7 @@ mod target {
 }
 
 struct PackageRender<'a> {
+    config_settings: &'a BTreeMap<String, super::BuildConfigSetting>,
     package_root: &'a CellRelativePathBuf,
     listing: &'a PackageListing,
     target_name: &'a str,
@@ -68,11 +69,17 @@ pub fn render_python_build_file(
 
     let mut output = String::new();
     if package_root.is_empty() {
-        render_environment(&mut output, root_files, &target_name)?;
+        render_environment(
+            &mut output,
+            root_files,
+            &target_name,
+            &manifest.tool.uv.config_settings,
+        )?;
     }
     render_package(
         &mut output,
         &PackageRender {
+            config_settings: &manifest.tool.uv.config_settings,
             package_root: &package_root,
             listing,
             target_name: &target_name,
@@ -126,6 +133,7 @@ fn render_environment(
     output: &mut String,
     root_files: &PythonRootFiles,
     root_target: &str,
+    config_settings: &BTreeMap<String, super::BuildConfigSetting>,
 ) -> Result<(), NativePythonBuildError> {
     writeln!(
         output,
@@ -139,7 +147,7 @@ fn render_environment(
     .map_err(NativePythonBuildError::Render)?;
     writeln!(output, "python_native_toolchain()\n").map_err(NativePythonBuildError::Render)?;
     render_vcs(output, root_files)?;
-    render_dependency_environments(output, root_files)?;
+    render_dependency_environments(output, root_files, config_settings)?;
     render_workspace_environment(output, root_files, root_target)
 }
 
@@ -179,6 +187,7 @@ fn render_vcs(
 fn render_dependency_environments(
     output: &mut String,
     root_files: &PythonRootFiles,
+    config_settings: &BTreeMap<String, super::BuildConfigSetting>,
 ) -> Result<(), NativePythonBuildError> {
     let environments = [
         (target::ENVIRONMENT, "pylock.toml"),
@@ -193,7 +202,7 @@ fn render_dependency_environments(
             .map(|lock| (lock.environment.clone(), lock.file.clone())),
     );
     for (name, lock) in environments {
-        render_dependency_environment(output, &name, &lock)?;
+        render_dependency_environment(output, &name, &lock, config_settings)?;
     }
     Ok(())
 }
@@ -203,10 +212,12 @@ fn render_dependency_environment(
     output: &mut String,
     name: &str,
     lock: &str,
+    config_settings: &BTreeMap<String, super::BuildConfigSetting>,
 ) -> Result<(), NativePythonBuildError> {
     writeln!(output, "python_environment(").map_err(NativePythonBuildError::Render)?;
     writeln!(output, "    name = {name:?},").map_err(NativePythonBuildError::Render)?;
     writeln!(output, "    lock = {lock:?},").map_err(NativePythonBuildError::Render)?;
+    render_config_settings(output, config_settings)?;
     writeln!(output, "    python = \":__bsmr_python_distribution\",")
         .map_err(NativePythonBuildError::Render)?;
     writeln!(output, "    uv = \":__bsmr_uv_distribution\",")
@@ -221,6 +232,22 @@ fn render_dependency_environment(
     }
     writeln!(output, "    visibility = [\"PUBLIC\"],").map_err(NativePythonBuildError::Render)?;
     writeln!(output, ")\n").map_err(NativePythonBuildError::Render)
+}
+
+/// Emits PEP 517 settings in canonical key and repetition order.
+fn render_config_settings(
+    output: &mut String,
+    settings: &BTreeMap<String, super::BuildConfigSetting>,
+) -> Result<(), NativePythonBuildError> {
+    if settings.is_empty() {
+        return Ok(());
+    }
+    writeln!(output, "    config_settings = {{").map_err(NativePythonBuildError::Render)?;
+    for (name, setting) in settings {
+        writeln!(output, "        {name:?}: {:?},", setting.values())
+            .map_err(NativePythonBuildError::Render)?;
+    }
+    writeln!(output, "    }},").map_err(NativePythonBuildError::Render)
 }
 
 /// Emits the environment that overlays all first-party wheels.
@@ -328,6 +355,7 @@ fn render_quality_target(
     if target_spec.rule == "python_wheel" {
         writeln!(output, "    visibility = [\"PUBLIC\"],")
             .map_err(NativePythonBuildError::Render)?;
+        render_config_settings(output, package.config_settings)?;
     }
     if target_spec.needs_environment {
         let environment = if target_spec.rule == "python_wheel" {

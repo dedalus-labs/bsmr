@@ -29,6 +29,7 @@ def _arguments() -> argparse.Namespace:
         "mode", choices=("environment", "ruff", "ty", "wheel", "wheel-environment")
     )
     parser.add_argument("--build-environment", type=Path)
+    parser.add_argument("--config-setting", action="append", default=[])
     parser.add_argument("--environment", type=Path)
     parser.add_argument("--lock", type=Path)
     parser.add_argument("--output", type=Path, required=True)
@@ -177,6 +178,7 @@ def _environment(
             "--color",
             "never",
             "--no-progress",
+            *(f"--config-setting={setting}" for setting in args.config_setting),
         ],
         process_environment,
     )
@@ -255,7 +257,6 @@ def _project(
         process_environment["GIT_WORK_TREE"] = str(source)
         _run(["git", "read-tree", "HEAD"], process_environment, cwd=source)
     if args.mode == "wheel":
-        del process_environment["UV_NO_CONFIG"]
         uv = Path(_required(args.uv, "--uv")).resolve()
         environment = _activate_environment(
             Path(_required(args.environment, "--environment")),
@@ -277,6 +278,7 @@ def _project(
             "--color",
             "never",
             "--no-progress",
+            *(f"--config-setting={setting}" for setting in args.config_setting),
             ".",
         ]
     elif args.mode == "ruff":

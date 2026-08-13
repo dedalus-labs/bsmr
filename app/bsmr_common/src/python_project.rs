@@ -44,6 +44,8 @@ pub enum NativePythonBuildError {
 #[serde(rename_all = "kebab-case")]
 struct Manifest {
     project: Option<Project>,
+    #[serde(default)]
+    tool: ToolConfiguration,
 }
 
 #[derive(Deserialize)]
@@ -55,6 +57,36 @@ struct Project {
     requires_python: Option<String>,
     #[serde(default)]
     scripts: BTreeMap<String, String>,
+}
+
+#[derive(Default, Deserialize)]
+struct ToolConfiguration {
+    #[serde(default)]
+    uv: UvConfiguration,
+}
+
+#[derive(Default, Deserialize)]
+#[serde(rename_all = "kebab-case")]
+struct UvConfiguration {
+    #[serde(default)]
+    config_settings: BTreeMap<String, BuildConfigSetting>,
+}
+
+#[derive(Deserialize)]
+#[serde(untagged)]
+enum BuildConfigSetting {
+    One(String),
+    Many(Vec<String>),
+}
+
+impl BuildConfigSetting {
+    /// Returns PEP 517 values in their declared repetition order.
+    fn values(&self) -> &[String] {
+        match self {
+            Self::One(value) => std::slice::from_ref(value),
+            Self::Many(values) => values,
+        }
+    }
 }
 
 /// Git metadata files that make dynamic project versions explicit action inputs.
@@ -236,7 +268,7 @@ fn is_analysis_input(path: &str) -> bool {
         || path.ends_with(".ipynb")
         || matches!(
             path.rsplit('/').next(),
-            Some(".gitignore" | "pyproject.toml" | "ruff.toml" | "ty.toml")
+            Some(".gitignore" | ".ruff.toml" | "pyproject.toml" | "ruff.toml" | "ty.toml")
         )
 }
 
@@ -301,10 +333,14 @@ mod tests {
     #[test]
     fn invariant_root_project_gets_standard_zero_configuration_targets() {
         let listing = PackageListing::testing_files(&[
+            ".ruff.toml",
             "pyproject.toml",
             "pylock.toml",
+            "ruff.toml",
             "src/demo/__init__.py",
             "src/demo/__pycache__/ignored.pyc",
+            "ty.toml",
+            "uv.toml",
             "examples/pyproject.toml",
             "README.md",
             ".venv/ignored.py",
@@ -339,6 +375,10 @@ mod tests {
         assert!(!build.contains(".custom-env"));
         assert!(!build.contains("__pycache__"));
         assert_eq!(build.matches("\"examples/pyproject.toml\"").count(), 4);
+        assert_eq!(build.matches("\".ruff.toml\"").count(), 4);
+        assert_eq!(build.matches("\"ruff.toml\"").count(), 4);
+        assert_eq!(build.matches("\"ty.toml\"").count(), 4);
+        assert_eq!(build.matches("\"uv.toml\"").count(), 2);
         assert_eq!(build.matches("\"README.md\"").count(), 2);
     }
 
@@ -379,6 +419,48 @@ mod tests {
         assert!(typecheck.contains("__bsmr_ty_distribution"));
         assert!(!typecheck.contains("__bsmr_uv_distribution"));
         assert!(!typecheck.contains("__bsmr_ruff_distribution"));
+    }
+
+    #[test]
+    fn invariant_pep517_config_settings_are_typed_action_inputs() {
+        let listing = PackageListing::testing_files(&["pyproject.toml", "src/demo/__init__.py"]);
+        let build = render_python_build_file(
+            CellRelativePathBuf::unchecked_new(String::new()),
+            "[project]\nname = 'demo'\nrequires-python = '>=3.12'\n[tool.uv]\nconfig-settings = { editable-mode = 'strict', build-option = ['one', 'two'] }\n",
+            &listing,
+            &PythonRootFiles::default(),
+        )
+        .unwrap();
+
+        assert_eq!(build.matches("    config_settings = {\n").count(), 3);
+        assert_eq!(
+            build
+                .matches("        \"build-option\": [\"one\", \"two\"],\n")
+                .count(),
+            3
+        );
+        assert_eq!(
+            build
+                .matches("        \"editable-mode\": [\"strict\"],\n")
+                .count(),
+            3
+        );
+    }
+
+    #[test]
+    fn invariant_pep517_config_settings_reject_untyped_values() {
+        let listing = PackageListing::testing_files(&["pyproject.toml"]);
+        let build = render_python_build_file(
+            CellRelativePathBuf::unchecked_new(String::new()),
+            "[project]\nname = 'demo'\nrequires-python = '>=3.12'\n[tool.uv]\nconfig-settings = { jobs = 4 }\n",
+            &listing,
+            &PythonRootFiles::default(),
+        );
+
+        assert!(matches!(
+            build,
+            Err(NativePythonBuildError::InvalidManifest(_))
+        ));
     }
 
     #[test]
