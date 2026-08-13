@@ -32,7 +32,16 @@ use bsmr_common::package_listing::PackageBuildSource;
 use bsmr_common::package_listing::dice::DicePackageListingResolver;
 use bsmr_common::package_listing::listing::PackageListing;
 use bsmr_common::pnpm_workspace::HasPnpmWorkspaceGraph;
+use bsmr_common::pnpm_workspace::is_native_pnpm_workspace;
 use bsmr_common::pnpm_workspace::render_typescript_build_file;
+use bsmr_common::python_lock::PylockToml;
+use bsmr_common::python_project::PythonRootFiles;
+use bsmr_common::python_project::PythonVcsFiles;
+use bsmr_common::python_project::PythonWorkspaceMember;
+use bsmr_common::python_project::python_project_name;
+use bsmr_common::python_project::python_test_locks;
+use bsmr_common::python_project::python_workspace_manifest_paths;
+use bsmr_common::python_project::render_python_build_file;
 use bsmr_core::build_file_path::BuildFilePath;
 use bsmr_core::cells::build_file_cell::BuildFileCell;
 use bsmr_core::cells::cell_path::CellPath;
@@ -89,9 +98,13 @@ use crate::super_package::package_value::SuperPackageValuesImpl;
 #[bsmr(tag = Input)]
 enum NativeBuildFileError {
     #[error("native Cargo builds require Cargo.toml at the BSMR project root")]
-    MissingWorkspaceManifest,
-    #[error("native build source contains neither package.json nor Cargo.toml")]
-    MissingNativeManifest,
+    CargoWorkspaceManifestRequired,
+    #[error("native Python builds require pylock.toml at the BSMR project root")]
+    PythonRuntimeLockRequired,
+    #[error("native Python builds require pylock.build.toml at the BSMR project root")]
+    PythonBuildLockRequired,
+    #[error("native build source contains none of package.json, Cargo.toml, or pyproject.toml")]
+    NoSupportedManifest,
 }
 
 fn toml_value_to_json(value: toml::Value) -> serde_json::Value {
@@ -287,6 +300,7 @@ impl<'c, 'd: 'c> DiceCalculationDelegate<'c, 'd> {
                 if listing
                     .get_file(PackageRelativePath::new("package.json")?)
                     .is_some()
+                    && self.root_is_pnpm_workspace(package).await?
                 {
                     let graph = self
                         .ctx
@@ -304,8 +318,21 @@ impl<'c, 'd: 'c> DiceCalculationDelegate<'c, 'd> {
                 {
                     source.push_str(&self.render_native_cargo(package).await?);
                 }
+                if listing
+                    .get_file(PackageRelativePath::new("pyproject.toml")?)
+                    .is_some()
+                {
+                    let manifest = self.read_package_file(package, "pyproject.toml").await?;
+                    if python_project_name(&manifest)?.is_some() {
+                        source.push_str(
+                            &self
+                                .render_native_python(package, listing, &manifest)
+                                .await?,
+                        );
+                    }
+                }
                 if source.is_empty() {
-                    return Err(NativeBuildFileError::MissingNativeManifest.into());
+                    return Err(NativeBuildFileError::NoSupportedManifest.into());
                 }
                 let ParseData(ast, imports) = self.prepare_eval_with_content(
                     StarlarkPath::BuildFile(&build_file_path),
@@ -333,7 +360,7 @@ impl<'c, 'd: 'c> DiceCalculationDelegate<'c, 'd> {
             .get_file(PackageRelativePath::new("Cargo.toml")?)
             .is_none()
         {
-            return Err(NativeBuildFileError::MissingWorkspaceManifest.into());
+            return Err(NativeBuildFileError::CargoWorkspaceManifestRequired.into());
         }
         let manifest = self.read_package_file(package, "Cargo.toml").await?;
         let toolchain_file = select_rust_toolchain_file(&workspace_listing)?;
@@ -345,6 +372,117 @@ impl<'c, 'd: 'c> DiceCalculationDelegate<'c, 'd> {
             &workspace_listing,
             &toolchain,
         )?)
+    }
+
+    /// Validates the root PEP 751 lock and renders one standard Python project.
+    async fn render_native_python(
+        &mut self,
+        package: PackageLabel,
+        listing: &PackageListing,
+        manifest: &str,
+    ) -> bsmr_error::Result<String> {
+        let root_path = CellRelativePathBuf::unchecked_new(String::new());
+        let root = PackageLabel::new(package.cell_name(), &root_path)?;
+        let workspace_listing = DicePackageListingResolver(self.ctx)
+            .resolve_package_listing(root)
+            .await?;
+        if workspace_listing
+            .get_file(PackageRelativePath::new("pylock.toml")?)
+            .is_none()
+        {
+            return Err(NativeBuildFileError::PythonRuntimeLockRequired.into());
+        }
+        let lock = self.read_package_file(root, "pylock.toml").await?;
+        PylockToml::parse(&lock)?;
+        if workspace_listing
+            .get_file(PackageRelativePath::new("pylock.build.toml")?)
+            .is_none()
+        {
+            return Err(NativeBuildFileError::PythonBuildLockRequired.into());
+        }
+        let build_lock = self.read_package_file(root, "pylock.build.toml").await?;
+        PylockToml::parse(&build_lock)?;
+        let vcs = self.python_vcs_files(root).await?;
+        let test_locks = python_test_locks(&workspace_listing)?;
+        for test_lock in &test_locks {
+            let lock = self.read_package_file(root, &test_lock.file).await?;
+            PylockToml::parse(&lock)?;
+        }
+        let members = self
+            .python_workspace_members(root, &workspace_listing)
+            .await?;
+        Ok(render_python_build_file(
+            package.cell_relative_path().to_owned(),
+            manifest,
+            listing,
+            &PythonRootFiles {
+                members,
+                test_locks,
+                vcs,
+            },
+        )?)
+    }
+
+    /// Maps nested standard projects to their generated first-party wheel labels.
+    async fn python_workspace_members(
+        &mut self,
+        root: PackageLabel,
+        listing: &PackageListing,
+    ) -> bsmr_error::Result<Vec<PythonWorkspaceMember>> {
+        let mut members = Vec::new();
+        for file in python_workspace_manifest_paths(listing) {
+            let manifest = self.read_package_file(root, file).await?;
+            let Some(target) = python_project_name(&manifest)? else {
+                continue;
+            };
+            members.push(PythonWorkspaceMember {
+                package: file
+                    .strip_suffix("/pyproject.toml")
+                    .expect("filtered Python project path")
+                    .to_owned(),
+                target,
+            });
+        }
+        Ok(members)
+    }
+
+    /// Discovers only the Git database components consumed by read-only version queries.
+    async fn python_vcs_files(
+        &mut self,
+        root: PackageLabel,
+    ) -> bsmr_error::Result<Option<PythonVcsFiles>> {
+        let path = |file: &str| {
+            root.to_cell_path()
+                .join(ForwardRelativePath::new(file).expect("static Git path is valid"))
+        };
+        if DiceFileComputations::read_file_if_exists(self.ctx, path(".git/HEAD").as_ref())
+            .await?
+            .is_none()
+        {
+            return Ok(None);
+        }
+        let packed_refs = path(".git/packed-refs");
+        let packed_refs = DiceFileComputations::read_file_if_exists(self.ctx, packed_refs.as_ref())
+            .await?
+            .is_some();
+        let shallow = path(".git/shallow");
+        let shallow = DiceFileComputations::read_file_if_exists(self.ctx, shallow.as_ref())
+            .await?
+            .is_some();
+        Ok(Some(PythonVcsFiles {
+            packed_refs,
+            shallow,
+        }))
+    }
+
+    /// Tests the root pnpm contract without promoting incidental package metadata.
+    async fn root_is_pnpm_workspace(&mut self, package: PackageLabel) -> bsmr_error::Result<bool> {
+        let root_path = CellRelativePathBuf::unchecked_new(String::new());
+        let root = PackageLabel::new(package.cell_name(), &root_path)?;
+        let listing = DicePackageListingResolver(self.ctx)
+            .resolve_package_listing(root)
+            .await?;
+        Ok(is_native_pnpm_workspace(&listing))
     }
 
     /// Reads one package-relative source through DICE so edits invalidate analysis.

@@ -33,12 +33,14 @@ pub(crate) fn find_build_source(
     if !allow_native {
         return None;
     }
-    ["package.json", "Cargo.toml"].into_iter().find_map(|name| {
-        dir_listing
-            .iter()
-            .any(|entry| entry.file_name == name)
-            .then(|| (FileNameBuf::unchecked_new(name), PackageBuildSource::Native))
-    })
+    ["pyproject.toml", "Cargo.toml", "package.json"]
+        .into_iter()
+        .find_map(|name| {
+            dir_listing
+                .iter()
+                .any(|entry| entry.file_name == name)
+                .then(|| (FileNameBuf::unchecked_new(name), PackageBuildSource::Native))
+        })
 }
 
 #[cfg(test)]
@@ -97,6 +99,19 @@ mod tests {
             source,
             Some((
                 FileNameBuf::unchecked_new("Cargo.toml"),
+                PackageBuildSource::Native,
+            ))
+        );
+    }
+
+    #[test]
+    fn invariant_pyproject_toml_defines_a_requested_package() {
+        let source = find_build_source(&[], &listing(&["pyproject.toml"]), true);
+
+        assert_eq!(
+            source,
+            Some((
+                FileNameBuf::unchecked_new("pyproject.toml"),
                 PackageBuildSource::Native,
             ))
         );

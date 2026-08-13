@@ -21,6 +21,7 @@ pub use dice::HasPnpmWorkspaceGraph;
 use lockfile::PnpmLock;
 use manifest::PnpmWorkspace;
 pub use native_build::NativeTypeScriptBuildError;
+pub use native_build::is_native_pnpm_workspace;
 pub use native_build::render_typescript_build_file;
 
 /// Failure to parse one workspace `package.json`.
