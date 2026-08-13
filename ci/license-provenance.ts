@@ -44,6 +44,7 @@ export function parseChanges(output: string): ReadonlyMap<string, GitChange> {
 
 /** Return whether a tracked path is source rather than fixture or data. */
 export function isSource(path: string): boolean {
+	// Golden outputs are compared byte-for-byte by test harnesses, so a preamble changes the tested bytes.
 	if (fixture.test(path) || golden.test(basename(path))) return false;
 	return sourceExtensions.has(extname(path)) || path.endsWith(".bsmrconfig") || sourceNames.has(basename(path));
 }
