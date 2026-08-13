@@ -74,8 +74,8 @@ const TEST_CELL: BundledCell = BundledCell {
             is_executable: true,
         },
         BundledFile {
-            path: "dir/BUCK.fixture",
-            contents: include_bytes!("../test_data/dir/BUCK.fixture"),
+            path: "dir/BUILD.bsmr.fixture",
+            contents: include_bytes!("../test_data/dir/BUILD.bsmr.fixture"),
             is_executable: false,
         },
         BundledFile {

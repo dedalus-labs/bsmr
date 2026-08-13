@@ -17,7 +17,7 @@ Bessemer is a build system whose core is written in Rust. Starlark, which is a
 deterministic, immutable version of Python, is used to extend the Bessemer build
 system, enabling Bessemer to be language-agnostic.
 
-The high-level flow starts with a user creating a build file (a `BUCK` file)
+The high-level flow starts with a user creating a build file (a `BUILD.bsmr` file)
 containing one or more targets, which is specified by the target label, its
 inputs (sources, attributes, configurations, and dependencies), and the type of
 macro or rule to use.
@@ -67,7 +67,7 @@ following sub-sections.
 
 ### State 0 - Build Files
 
-Build files (commonly referred to as `BUCK` files, their default name) are the
+Build files (commonly referred to as `BUILD.bsmr` files, their default name) are the
 main input to Bessemer and are syntactically Python.
 
 Each build file is uniquely identified by the directory in which it's located.

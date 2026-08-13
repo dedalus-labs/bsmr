@@ -32,7 +32,7 @@ function commentStyle(path: string): CommentStyle {
 
 /** Describe source that lacked a first-party responsibility comment. */
 function brief(path: string): string {
-	if (basename(path) === "BUCK") return `Defines build targets for ${dirname(path) === "." ? "the root" : dirname(path)}.`;
+	if (basename(path) === "BUILD.bsmr") return `Defines build targets for ${dirname(path) === "." ? "the root" : dirname(path)}.`;
 	const known = new Map([
 		[".bsmr", "Configures the root Bessemer cell."],
 		[".github/actions/ci/rust-affected/dist/index.js", "Runs the generated Rust affected-paths action."],
@@ -55,7 +55,9 @@ function brief(path: string): string {
 		["ci/license.test.ts", "Verifies the license policy against an isolated source inventory."],
 		["ci/license.ts", "Audits source provenance, legal preambles, and package license metadata."],
 		["docs/getting_started/what_is_bsmr.md", "Introduces Bessemer and its core capabilities."],
-		["rolldown.config.ts", "Bundles Bessemer's local GitHub Actions."],
+		["prelude/toolchains/pnpm/runner.mjs", "Runs the generated hermetic pnpm install adapter."],
+		["prelude/typescript/runner.mjs", "Runs the generated hermetic TypeScript action adapter."],
+		["rolldown.config.ts", "Bundles Bessemer's generated Node runtime artifacts."],
 		["test/contributors.test.ts", "Verifies the vouched-contributor trust policy."],
 		["tools/build/README.md", "Documents the self-hosted build cell."],
 		["tools/rust-project/README.md", "Documents Rust project generation."],

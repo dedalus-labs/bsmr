@@ -19,7 +19,7 @@ This page provides an overview of the programming languages supported by Besseme
 | C/C++ (windows)      | ✅                | Complex Setup | ❌         |                               |
 | C#                   | ✅                | Unavailable   | ❌         |                               |
 | Erlang               | ✅                | Easy Setup    | ❌         | GitHub: michalmuskala         |
-| Go                   | ✅                | Easy Setup    | ❌         | GitHub: podtserkovskiy        |
+| Go                   | ✅                | Native Sync   | ✅         | Dedalus Labs                  |
 | Haskell              | ✅                | Easy Setup    | ❌         |                               |
 | Java                 | ✅                | Complex Setup | ❌         |                               |
 | Java (Mobile)        | ✅                | Complex Setup | ❌         | GitHub: NavidQar & IanChilds  |
@@ -41,6 +41,7 @@ This page provides an overview of the programming languages supported by Besseme
   - **Easy Setup**: Basic installation required, usually searching the path for
     tools
   - **Complex Setup**: Requires additional setup beyond simply installation
+  - **Native Sync**: Native ecosystem metadata generates Bessemer targets
   - **Unavailable**: Rules are using tools that are not available
 - **Documented**: Indicates the level of documentation available for using this
   language with Bessemer.

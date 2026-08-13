@@ -60,3 +60,4 @@ pub mod starlark_profiler;
 pub mod target_aliases;
 pub mod temp_path;
 pub mod tenting;
+pub mod version_set;

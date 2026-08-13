@@ -513,7 +513,7 @@ impl<'c, 'd: 'c> DiceCalculationDelegate<'c, 'd> {
         /// We need to do this to make sure to work with case-sensitive file paths.
         //   * `read_path_metadata` would not tell us if the file name is `PACKAGE`
         //     and not `package` on case-insensitive filesystems.
-        //     We do case-sensitive comparison for `BUCK` files, so we do the same here.
+        //     We do case-sensitive comparison for `BUILD.bsmr` files, so we do the same here.
         //   * we fail here if `PACKAGE` (but not `package`) exists, and it is not a file.
 
         // package file results capture starlark values and so cannot be checked for equality. This means we

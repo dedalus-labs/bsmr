@@ -1,7 +1,7 @@
 {
   "db": {
     "prelude//python/sourcedb/tests/test_files/triton_collision/a:b": {
-      "buildfile_path": "prelude/python/sourcedb/tests/test_files/triton_collision/a/BUCK",
+      "buildfile_path": "prelude/python/sourcedb/tests/test_files/triton_collision/a/BUILD.bsmr",
       "deps": [],
       "python_platform": "linux",
       "python_version": "3.12",
@@ -9,7 +9,7 @@
       "srcs": {}
     },
     "prelude//python/sourcedb/tests/test_files/triton_collision/a:b_lib": {
-      "buildfile_path": "prelude/python/sourcedb/tests/test_files/triton_collision/a/BUCK",
+      "buildfile_path": "prelude/python/sourcedb/tests/test_files/triton_collision/a/BUILD.bsmr",
       "deps": [
         "prelude//python/sourcedb/tests/test_files/triton_collision/a:b_py"
       ],
@@ -19,7 +19,7 @@
       "srcs": {}
     },
     "prelude//python/sourcedb/tests/test_files/triton_collision/a:b_py": {
-      "buildfile_path": "prelude/python/sourcedb/tests/test_files/triton_collision/a/BUCK",
+      "buildfile_path": "prelude/python/sourcedb/tests/test_files/triton_collision/a/BUILD.bsmr",
       "deps": [
         "prelude//python/sourcedb/tests/test_files/triton_collision/a:b"
       ],
@@ -33,7 +33,7 @@
       }
     },
     "prelude//python/sourcedb/tests/test_files/triton_collision:a_b": {
-      "buildfile_path": "prelude/python/sourcedb/tests/test_files/triton_collision/BUCK",
+      "buildfile_path": "prelude/python/sourcedb/tests/test_files/triton_collision/BUILD.bsmr",
       "deps": [],
       "python_platform": "linux",
       "python_version": "3.12",
@@ -41,7 +41,7 @@
       "srcs": {}
     },
     "prelude//python/sourcedb/tests/test_files/triton_collision:a_b_lib": {
-      "buildfile_path": "prelude/python/sourcedb/tests/test_files/triton_collision/BUCK",
+      "buildfile_path": "prelude/python/sourcedb/tests/test_files/triton_collision/BUILD.bsmr",
       "deps": [
         "prelude//python/sourcedb/tests/test_files/triton_collision:a_b_py"
       ],
@@ -51,7 +51,7 @@
       "srcs": {}
     },
     "prelude//python/sourcedb/tests/test_files/triton_collision:a_b_py": {
-      "buildfile_path": "prelude/python/sourcedb/tests/test_files/triton_collision/BUCK",
+      "buildfile_path": "prelude/python/sourcedb/tests/test_files/triton_collision/BUILD.bsmr",
       "deps": [
         "prelude//python/sourcedb/tests/test_files/triton_collision:a_b"
       ],
@@ -68,7 +68,7 @@
       "alias": "prelude//python/sourcedb/tests/test_files:alias_lib"
     },
     "prelude//python/sourcedb/tests/test_files:alias_lib": {
-      "buildfile_path": "prelude/python/sourcedb/tests/test_files/BUCK",
+      "buildfile_path": "prelude/python/sourcedb/tests/test_files/BUILD.bsmr",
       "deps": [],
       "python_platform": "linux",
       "python_version": "3.12",
@@ -80,7 +80,7 @@
       }
     },
     "prelude//python/sourcedb/tests/test_files:generated_file": {
-      "buildfile_path": "prelude/python/sourcedb/tests/test_files/BUCK",
+      "buildfile_path": "prelude/python/sourcedb/tests/test_files/BUILD.bsmr",
       "deps": [],
       "python_platform": "linux",
       "python_version": "3.12",
@@ -92,7 +92,7 @@
       }
     },
     "prelude//python/sourcedb/tests/test_files:generated_files": {
-      "buildfile_path": "prelude/python/sourcedb/tests/test_files/BUCK",
+      "buildfile_path": "prelude/python/sourcedb/tests/test_files/BUILD.bsmr",
       "deps": [],
       "python_platform": "linux",
       "python_version": "3.12",
@@ -107,7 +107,7 @@
       }
     },
     "prelude//python/sourcedb/tests/test_files:lib": {
-      "buildfile_path": "prelude/python/sourcedb/tests/test_files/BUCK",
+      "buildfile_path": "prelude/python/sourcedb/tests/test_files/BUILD.bsmr",
       "deps": [
         "prelude//python/sourcedb/tests/test_files:alias",
         "prelude//python/sourcedb/tests/test_files:generated_file",
@@ -123,7 +123,7 @@
       }
     },
     "prelude//python/sourcedb/tests/test_files:main": {
-      "buildfile_path": "prelude/python/sourcedb/tests/test_files/BUCK",
+      "buildfile_path": "prelude/python/sourcedb/tests/test_files/BUILD.bsmr",
       "deps": [
         "prelude//python/sourcedb/tests/test_files/triton_collision/a:b_lib",
         "prelude//python/sourcedb/tests/test_files/triton_collision:a_b_lib",
@@ -142,7 +142,7 @@
       }
     },
     "prelude//python/sourcedb/tests/test_files:my_extension": {
-      "buildfile_path": "prelude/python/sourcedb/tests/test_files/BUCK",
+      "buildfile_path": "prelude/python/sourcedb/tests/test_files/BUILD.bsmr",
       "deps": [
         "prelude//python/sourcedb/tests/test_files:my_extension_stub"
       ],
@@ -152,7 +152,7 @@
       "srcs": {}
     },
     "prelude//python/sourcedb/tests/test_files:my_extension_lib": {
-      "buildfile_path": "prelude/python/sourcedb/tests/test_files/BUCK",
+      "buildfile_path": "prelude/python/sourcedb/tests/test_files/BUILD.bsmr",
       "deps": [
         "prelude//python/sourcedb/tests/test_files:my_extension"
       ],
@@ -166,7 +166,7 @@
       }
     },
     "prelude//python/sourcedb/tests/test_files:my_extension_stub": {
-      "buildfile_path": "prelude/python/sourcedb/tests/test_files/BUCK",
+      "buildfile_path": "prelude/python/sourcedb/tests/test_files/BUILD.bsmr",
       "deps": [],
       "python_platform": "linux",
       "python_version": "3.12",
@@ -178,7 +178,7 @@
       }
     },
     "prelude//python/sourcedb/tests/test_files:reexported_genrule": {
-      "buildfile_path": "prelude/python/sourcedb/tests/test_files/BUCK",
+      "buildfile_path": "prelude/python/sourcedb/tests/test_files/BUILD.bsmr",
       "deps": [],
       "python_platform": "linux",
       "python_version": "3.12",
@@ -186,7 +186,7 @@
       "srcs": {}
     },
     "prelude//python/sourcedb/tests/test_files:reexported_genrule_lib": {
-      "buildfile_path": "prelude/python/sourcedb/tests/test_files/BUCK",
+      "buildfile_path": "prelude/python/sourcedb/tests/test_files/BUILD.bsmr",
       "deps": [
         "prelude//python/sourcedb/tests/test_files:reexported_genrule",
         "prelude//python/sourcedb/tests/test_files:reexported_genrule",
@@ -205,7 +205,7 @@
       }
     },
     "prelude//python/sourcedb/tests/test_files:subdir": {
-      "buildfile_path": "prelude/python/sourcedb/tests/test_files/BUCK",
+      "buildfile_path": "prelude/python/sourcedb/tests/test_files/BUILD.bsmr",
       "deps": [
         "prelude//python/sourcedb/tests/test_files:generated_files"
       ],
@@ -224,7 +224,7 @@
       }
     },
     "prelude//python/sourcedb/tests/test_files:triton_test": {
-      "buildfile_path": "prelude/python/sourcedb/tests/test_files/BUCK",
+      "buildfile_path": "prelude/python/sourcedb/tests/test_files/BUILD.bsmr",
       "deps": [],
       "python_platform": "linux",
       "python_version": "3.12",
@@ -232,7 +232,7 @@
       "srcs": {}
     },
     "prelude//python/sourcedb/tests/test_files:triton_test_lib": {
-      "buildfile_path": "prelude/python/sourcedb/tests/test_files/BUCK",
+      "buildfile_path": "prelude/python/sourcedb/tests/test_files/BUILD.bsmr",
       "deps": [
         "prelude//python/sourcedb/tests/test_files:triton_test_py"
       ],
@@ -242,7 +242,7 @@
       "srcs": {}
     },
     "prelude//python/sourcedb/tests/test_files:triton_test_py": {
-      "buildfile_path": "prelude/python/sourcedb/tests/test_files/BUCK",
+      "buildfile_path": "prelude/python/sourcedb/tests/test_files/BUILD.bsmr",
       "deps": [
         "prelude//python/sourcedb/tests/test_files:triton_test"
       ],

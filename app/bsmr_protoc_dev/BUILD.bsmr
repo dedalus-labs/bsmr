@@ -1,0 +1,31 @@
+# ===----------------------------------------------------------------------===
+# Copyright (c) 2026 Dedalus Labs, Inc. and its contributors
+# SPDX-License-Identifier: Apache-2.0
+# ===----------------------------------------------------------------------===
+
+# Defines build targets for app/bsmr_protoc_dev.
+
+load("@bsmr_build//rules:rust.bzl", "rust_library")
+
+oncall("build_infra")
+
+rust_library(
+    name = "bsmr_protoc_dev",
+    srcs = glob(["src/**/*.rs"]),
+    # Used only under `#[cfg(not(bsmr_build))]` (i.e. cargo builds) to locate
+    # the protoc binary at runtime. BUILD.bsmr sets `--cfg=bsmr_build` and gets the
+    # paths via env vars instead, so these aren't real buck deps.
+    autocargo = {
+        "cargo_toml_config": {
+            "extra_buck_dependencies": {
+                "dependencies": [
+                    "bsmr_build//third-party/rust:dunce",
+                    "bsmr_build//third-party/rust:protoc-bin-vendored",
+                ],
+            },
+        },
+    },
+    deps = [
+        "bsmr_build//third-party/rust:tonic-prost-build",
+    ],
+)

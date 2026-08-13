@@ -15,7 +15,7 @@ parent `PACKAGE` values (`read_parent_package_value()`), writing `PACKAGE`
 values (`write_package_value()`), loading helper `bzl` files, and you can also
 inspect `PACKAGE` values via `bsmr audit package-values`.
 
-Before evaluating `BUCK` file, bsmr will evaluate all `PACKAGE` files in the
+Before evaluating `BUILD.bsmr` file, bsmr will evaluate all `PACKAGE` files in the
 same directory and all parent directories. Absent `PACKAGE` files are treated as
 empty files.
 
@@ -27,10 +27,10 @@ requested) should fail with Starlark call stack.
 
 Each `PACKAGE` file is evaluated at most once (like `bzl` files).
 
-`PACKAGE` files may load arbitrary `bzl` files. `BUCK`-specific functions called
+`PACKAGE` files may load arbitrary `bzl` files. `BUILD.bsmr`-specific functions called
 in `bzl` files (like rule functions) are available, but calling functions from
 `PACKAGE` files is an error. This way, `bzl` files are evaluated only once
-regardless of whether they are loaded from `PACKAGE` or `BUCK` file.
+regardless of whether they are loaded from `PACKAGE` or `BUILD.bsmr` file.
 
 ## APIs
 
@@ -62,12 +62,12 @@ Written values are frozen when `PACKAGE` file evaluation is finished.
 
 Note `write_package_value` symbol exists in `bzl` globals, and it can be called
 from `bzl` file in context of `PACKAGE` evaluation, but calling
-`write_package_file` is an error on context of `BUCK` evaluation.
+`write_package_file` is an error on context of `BUILD.bsmr` evaluation.
 
-Modifying `PACKAGE` file logically invalidates the `BUCK` file of this
-directory, and all `PACKAGE` and `BUCK` files of sub-`PACKAGE`s. However, `BUCK`
+Modifying `PACKAGE` file logically invalidates the `BUILD.bsmr` file of this
+directory, and all `PACKAGE` and `BUILD.bsmr` files of sub-`PACKAGE`s. However, `BUILD.bsmr`
 file evaluation may track which `PACKAGE`-local values were accessed and only
-invalidate `BUCK` files which were potentially affected (similarly to how we do
+invalidate `BUILD.bsmr` files which were potentially affected (similarly to how we do
 it with bsmrconfigs).
 
 #### [`read_parent_package_value`](../../api/build#read_parent_package_value)
@@ -114,7 +114,7 @@ inherited from the nearest parent `PACKAGE`.
 
 `PACKAGE` files are able to call `read_config` to read bsmrconfigs.
 
-### `BUCK`-specific API
+### `BUILD.bsmr`-specific API
 
 #### [`read_package_value`](../../api/build#read_package_value)
 
@@ -124,8 +124,8 @@ def read_package_value(
 ): ...
 ```
 
-This global API is only available in `BUCK` files, or `bzl` files included in
-`BUCK` files.
+This global API is only available in `BUILD.bsmr` files, or `bzl` files included in
+`BUILD.bsmr` files.
 
 This function returns the nearest `name` value registered per `PACKAGE`, or
 `None` is such value does not exist.

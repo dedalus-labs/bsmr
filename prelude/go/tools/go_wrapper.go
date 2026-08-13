@@ -1,3 +1,9 @@
+//===----------------------------------------------------------------------===//
+// Upstream-Source: facebook/buck2@1560aca2002865cd73d7cafb22c705cfb640b2bc
+// Modifications Copyright (c) 2026 Dedalus Labs, Inc. and its contributors
+// SPDX-License-Identifier: Apache-2.0
+//===----------------------------------------------------------------------===//
+
 /*
  * Copyright (c) Meta Platforms, Inc. and affiliates.
  *
@@ -23,6 +29,7 @@ import (
 	"strings"
 )
 
+// loadArgs expands response files into the wrapped tool's argument vector.
 func loadArgs(args []string) []string {
 	newArgs := make([]string, 0, 0)
 	for _, arg := range args {
@@ -40,6 +47,7 @@ func loadArgs(args []string) []string {
 	return newArgs
 }
 
+// jsonStreamToArray converts concatenated Go JSON values into one JSON array.
 func jsonStreamToArray(r io.Reader, w io.Writer) error {
 	var objs []any
 	for dec := json.NewDecoder(r); dec.More(); {
@@ -55,6 +63,7 @@ func jsonStreamToArray(r io.Reader, w io.Writer) error {
 	return nil
 }
 
+// main runs one Go tool with only declared toolchain and scratch environment.
 func main() {
 	os.Args = loadArgs(os.Args)
 	var wrappedBinary = flag.String("go", "", "wrapped go binary")
@@ -72,13 +81,29 @@ func main() {
 
 	absWrappedBinary, err := filepath.Abs(*wrappedBinary)
 	if err != nil {
-		log.Fatal("Failed to resolve wrapped binary: %s", err)
+		log.Fatalf("Failed to resolve wrapped binary: %s", err)
 	}
 
-	envs := make(map[string]string)
-	for _, e := range os.Environ() {
-		pair := strings.SplitN(e, "=", 2)
-		envs[pair[0]] = pair[1]
+	envs := map[string]string{
+		"GOENV":       "off",
+		"GOFLAGS":     "",
+		"GOTOOLCHAIN": "local",
+	}
+	for _, name := range []string{
+		"BUCK_SCRATCH_PATH",
+		"CC",
+		"CGO_ENABLED",
+		"GO111MODULE",
+		"GOARCH",
+		"GOARM",
+		"GODEBUG",
+		"GOEXPERIMENT",
+		"GOOS",
+		"GOROOT",
+	} {
+		if value, ok := os.LookupEnv(name); ok {
+			envs[name] = value
+		}
 	}
 
 	goroot := *goRoot
@@ -96,7 +121,7 @@ func main() {
 	if goroot != "" {
 		absGoroot, err := filepath.Abs(goroot)
 		if err != nil {
-			log.Fatal("Failed to resolve GOROOT: %s", err)
+			log.Fatalf("Failed to resolve GOROOT: %s", err)
 		}
 		envs["GOROOT"] = absGoroot
 	}
@@ -104,7 +129,7 @@ func main() {
 	if buckScratchPath, ok := envs["BUCK_SCRATCH_PATH"]; ok {
 		absBuckScratchPath, err := filepath.Abs(buckScratchPath)
 		if err != nil {
-			log.Fatal("Failed to resolve BUCK_SCRATCH_PATH: %s", err)
+			log.Fatalf("Failed to resolve BUCK_SCRATCH_PATH: %s", err)
 		}
 		envs["GOCACHE"] = absBuckScratchPath
 		envs["TMPDIR"] = absBuckScratchPath
@@ -112,7 +137,7 @@ func main() {
 
 	cwd, err := os.Getwd()
 	if err != nil {
-		log.Fatal("Failed to get current working directory: %s", err)
+		log.Fatalf("Failed to get current working directory: %s", err)
 	}
 
 	for i, arg := range unknownArgs {

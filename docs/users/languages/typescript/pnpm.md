@@ -12,7 +12,7 @@ title: TypeScript and pnpm
 # TypeScript and pnpm
 
 BSMR builds a pnpm workspace from its native ecosystem files. You do not need a
-`BUCK`, `BUILD.bsmr`, or handwritten Starlark file for the conventional path.
+`BUILD.bsmr` or handwritten Starlark file for the conventional path.
 BSMR reads the authoritative workspace graph, lowers it into its internal target
 graph, and keeps that generated representation private.
 

@@ -14,7 +14,7 @@ Modifiers can be specified on the command line to override the values set in
 the `-m`/`--modifiers` flag:
 
 ```sh
-# Assuming that `//constraints:BUCK` contains the appropriate constraint
+# Assuming that `//constraints:BUILD.bsmr` contains the appropriate constraint
 # definitions.
 buck build :my_target -m //constraints:debug
 buck build :my_target -m //constraints:release

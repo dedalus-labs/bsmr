@@ -25,7 +25,7 @@ use pagable::Pagable;
 /// Represents the path to a PACKAGE file.
 ///
 /// Each package can define local configuration
-/// by providing a PACKAGE file. This file is evaluated prior to the BUCK file and
+/// by providing a PACKAGE file. This file is evaluated prior to the BUILD.bsmr file and
 /// can specify per-package values accessible via Starlark.
 ///
 /// Example of a valid PACKAGE file path: `upstream//path/to/PACKAGE`

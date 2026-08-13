@@ -1,0 +1,42 @@
+# ===----------------------------------------------------------------------===
+# Upstream-Source: facebook/buck2@1560aca2002865cd73d7cafb22c705cfb640b2bc
+# Modifications Copyright (c) 2026 Dedalus Labs, Inc. and its contributors
+# SPDX-License-Identifier: Apache-2.0
+# ===----------------------------------------------------------------------===
+
+load("@prelude//utils:source_listing.bzl", "source_listing")
+
+oncall("ios_pika")
+
+source_listing()
+
+cxx_binary(
+    name = "native_dist_lto_planner",
+    srcs = [
+        "dist_lto_planner.cpp",
+    ],
+    compiler_flags = [
+        "-Wno-deprecated-declarations",
+        "-O2",
+    ],
+    linker_flags = [
+        "-lc",
+    ],
+    tests = [
+        "none//xplat/bsmr/tests/apple/rules/dist_lto:main-alias-iphonesimulator-arm64-pika-fat-lld-platform-distributed-thin-lto",
+    ],
+    visibility = ["PUBLIC"],
+    deps = [
+        "none//common/files:files",
+        "none//folly:file_util",
+        "none//folly:json",
+        "none//folly:subprocess",
+        "none//folly/coro:blocking_wait",
+        "none//folly/coro:collect",
+        "none//folly/coro:shared_mutex",
+        "none//folly/coro:task",
+        "none//folly/executors:global_executor",
+        "none//folly/executors:io_thread_pool_executor",
+        "none//folly/init:init",
+    ],
+)

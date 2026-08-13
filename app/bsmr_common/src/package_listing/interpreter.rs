@@ -218,7 +218,7 @@ impl std::fmt::Display for GatherPackageListingError {
             path `upstream//foo/target/x` is a file, not a directory
 
          package `upstream//foo/target/x/y/lmnop:` does not exist
-             missing `TARGETS` file (also missing alternatives `TARGETS.v2`, `BUCK`, `BUCK.v2`)
+             missing `BUILD.bsmr` file
 
          error loading package `upstream//foo/target/x/y/lmnop:`
               ... # just display the bsmr_error for now

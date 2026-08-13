@@ -121,7 +121,7 @@ use crate::interpreter::rule_defs::provider::collection::FrozenProviderCollectio
 ///         debug_info = name + ".debug_info",
 ///     )
 ///
-/// # //subdir/BUCK
+/// # //subdir/BUILD.bsmr
 /// load("//:foo_binary.bzl", "foo_binary_wrapper")
 ///
 /// genrule(name = "gen_stuff", ...., default_outs = ["foo.cpp"])

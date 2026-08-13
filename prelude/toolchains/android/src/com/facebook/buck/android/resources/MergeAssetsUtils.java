@@ -1,3 +1,9 @@
+//===----------------------------------------------------------------------===//
+// Upstream-Source: facebook/buck2@1560aca2002865cd73d7cafb22c705cfb640b2bc
+// Modifications Copyright (c) 2026 Dedalus Labs, Inc. and its contributors
+// SPDX-License-Identifier: Apache-2.0
+//===----------------------------------------------------------------------===//
+
 /*
  * Copyright (c) Meta Platforms, Inc. and affiliates.
  *
@@ -215,7 +221,7 @@ public class MergeAssetsUtils {
                 throws IOException {
               Preconditions.checkState(
                   !Files.getFileExtension(file.toString()).equals("gz"),
-                  "BUCK doesn't support adding .gz files to assets (%s).",
+                  "BUILD.bsmr doesn't support adding .gz files to assets (%s).",
                   file);
               Path normalized = file.normalize();
               assets.put(absolutePath.getPath().relativize(normalized), normalized);

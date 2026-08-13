@@ -72,5 +72,5 @@ AutodepsTool(
 
 - ❌ **Never skip `AutodepsTool`** after import changes
 - ❌ **Never run `validate_changes` before `AutodepsTool`**
-- ⚠️ **Never manually edit BUCK files for non-resource dependencies** - use `AutodepsTool` instead. Manual BUCK edits are ONLY allowed for adding resource (`R`) dependencies (see the `android_r_resource_lookup` skill for details).
+- ⚠️ **Never manually edit BUILD.bsmr files for non-resource dependencies** - use `AutodepsTool` instead. Manual BUILD.bsmr edits are ONLY allowed for adding resource (`R`) dependencies (see the `android_r_resource_lookup` skill for details).
 - ❌ **Never set `remove_unused_deps=true`** - only add dependencies, never remove

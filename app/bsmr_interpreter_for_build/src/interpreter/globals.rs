@@ -147,7 +147,7 @@ fn register_all_internals(builder: &mut GlobalsBuilder) {
 
 /// The standard set of globals that is available in all files.
 ///
-/// This does not include the implicit prelude and cell imports which are only available in `BUCK`
+/// This does not include the implicit prelude and cell imports which are only available in `BUILD.bsmr`
 /// files, but does include everything else.
 ///
 /// Note: As long as starlark/buck have any notion of reference equality, it is important for

@@ -12,7 +12,7 @@ title: Rust and Cargo
 # Rust and Cargo
 
 BSMR builds conventional Cargo workspaces directly from their native ecosystem
-files. You do not need a `BUCK`, `BUILD.bsmr`, or handwritten Starlark file.
+files. You do not need a `BUILD.bsmr` or handwritten Starlark file.
 BSMR lowers Cargo metadata into its private action graph; `Cargo.toml` and
 `Cargo.lock` remain authoritative.
 

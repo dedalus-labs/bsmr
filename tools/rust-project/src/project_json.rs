@@ -111,7 +111,7 @@ pub(crate) struct Crate {
 ///
 /// ```json
 /// "target_spec": {
-///     "manifest_file": "/workspace/tools/rust-project/BUCK",
+///     "manifest_file": "/workspace/tools/rust-project/BUILD.bsmr",
 ///     "target_label": "root//tools/rust-project:rust-project",
 ///     "target_kind": "bin",
 ///     "runnables": {
@@ -140,7 +140,7 @@ pub(crate) struct Crate {
 #[derive(Serialize, Deserialize, Debug, Default, Clone, PartialEq, Eq)]
 pub(crate) struct Build {
     pub(crate) label: Target,
-    /// `build_file` corresponds to the `BUCK`/`TARGETS` file.
+    /// `build_file` corresponds to the `BUILD.bsmr`/`TARGETS` file.
     pub(crate) build_file: PathBuf,
     pub(crate) target_kind: TargetKind,
 }

@@ -1236,28 +1236,28 @@ test_suite = prelude_rule(
         This test\\_suite() sets up two different sets of tests to run, 'all' tests and 'slow' tests. Note that `all_tests` can depend on `slow_tests`, and all three tests are run.
 
         ```
-        # instrumentation_tests/BUCK:
+        # instrumentation_tests/BUILD.bsmr:
         sh_test(
             name = "instrumentation_tests",
             test = "instrumentation_tests.sh",
             visibility = ["PUBLIC"],
         )
 
-        # integration_tests/BUCK:
+        # integration_tests/BUILD.bsmr:
         sh_test(
             name = "integration_tests",
             test = "integration_tests.sh",
             visibility = ["PUBLIC"],
         )
 
-        # unit_tests/BUCK:
+        # unit_tests/BUILD.bsmr:
         sh_test(
             name = "unit_tests",
             test = "unit_tests.sh",
             visibility = ["PUBLIC"],
         )
 
-        # BUCK:
+        # BUILD.bsmr:
         test_suite(
             name = "slow_tests",
             tests = [

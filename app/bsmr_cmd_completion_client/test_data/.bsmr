@@ -10,4 +10,4 @@ root = .
     cell3b = dir3/cell3b
 
 [buildfile]
-    name = BUCK.fixture
+    name = BUILD.bsmr.fixture

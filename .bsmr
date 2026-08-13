@@ -16,8 +16,6 @@ root = bsmr
 config = prelude
 ovr_config = prelude
 toolchains = bsmr_build
-# Optional targets retained by the upstream prelude resolve to a disabled cell.
-upstream = none
 
 [external_cells]
 prelude = disabled

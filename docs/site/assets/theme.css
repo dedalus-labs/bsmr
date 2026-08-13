@@ -1,0 +1,94 @@
+/* Copyright (c) 2026 Dedalus Labs, Inc. and its contributors */
+/* SPDX-License-Identifier: Apache-2.0 */
+
+/* Bessemer documentation theme: structural steel with a furnace-orange accent. */
+
+:root {
+  --bsmr-ink: #16202a;
+  --bsmr-steel: #263746;
+  --bsmr-steel-light: #5f7487;
+  --bsmr-cloud: #f3f6f8;
+  --bsmr-ember: #e9582b;
+  --bsmr-ember-bright: #ff6b35;
+  --bsmr-border: #d7e0e6;
+}
+
+[data-md-color-scheme="default"] {
+  --md-primary-fg-color: var(--bsmr-steel);
+  --md-accent-fg-color: var(--bsmr-ember);
+  --md-default-fg-color: var(--bsmr-ink);
+  --md-default-bg-color: #ffffff;
+  --md-typeset-a-color: #c8421c;
+  --md-code-bg-color: var(--bsmr-cloud);
+}
+
+[data-md-color-scheme="slate"] {
+  --md-primary-fg-color: #111a22;
+  --md-accent-fg-color: var(--bsmr-ember-bright);
+  --md-default-fg-color: #edf2f5;
+  --md-default-bg-color: #111820;
+  --md-typeset-a-color: #ff875f;
+  --md-code-bg-color: #1b2630;
+}
+
+.md-header {
+  border-bottom: 3px solid var(--bsmr-ember);
+}
+
+.md-header .md-logo img {
+  height: 1.55rem;
+}
+
+.bsmr-hero {
+  background:
+    linear-gradient(120deg, rgba(38, 55, 70, 0.08), transparent 60%),
+    repeating-linear-gradient(135deg, transparent 0 18px, rgba(95, 116, 135, 0.06) 18px 19px);
+  border-bottom: 1px solid var(--bsmr-border);
+  border-top: 4px solid var(--bsmr-ember);
+  margin-bottom: 2rem;
+  padding: 1.6rem 1.8rem;
+}
+
+.bsmr-hero h1 {
+  color: var(--bsmr-steel);
+  font-size: 2.5rem;
+  font-weight: 720;
+  letter-spacing: -0.04em;
+  margin-bottom: 0.2rem;
+}
+
+.bsmr-kicker {
+  color: var(--bsmr-ember);
+  font-size: 1.08rem;
+  font-weight: 700;
+  margin: 0 0 1rem;
+}
+
+.md-typeset h2 {
+  border-bottom: 1px solid var(--bsmr-border);
+  padding-bottom: 0.3rem;
+}
+
+.md-typeset table:not([class]) th {
+  background: var(--bsmr-steel);
+  color: white;
+}
+
+[data-md-color-scheme="slate"] .bsmr-hero {
+  background:
+    linear-gradient(120deg, rgba(95, 116, 135, 0.2), transparent 60%),
+    repeating-linear-gradient(135deg, transparent 0 18px, rgba(243, 246, 248, 0.04) 18px 19px);
+  border-bottom-color: #344554;
+}
+
+[data-md-color-scheme="slate"] .bsmr-hero h1 {
+  color: #f3f6f8;
+}
+
+[data-md-color-scheme="slate"] .md-typeset h2 {
+  border-bottom-color: #344554;
+}
+
+::selection {
+  background: rgba(233, 88, 43, 0.25);
+}

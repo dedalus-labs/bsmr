@@ -188,7 +188,7 @@ async def buck_fixture(  # noqa C901 : "too complex"
             # CLI modifiers in tools/build_defs/bsmr/cfg/validation/validation.bzl. If
             # the name of this bsmrconfig ever changes, please update the validation
             # as well.
-            extra_config_lines.append("[buildfile]\nextra_for_test = TARGETS.test\n")
+            extra_config_lines.append("[buildfile]\nname = TARGETS.fixture\n")
 
         else:
             if marker.data_dir is not None:

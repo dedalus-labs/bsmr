@@ -358,7 +358,7 @@ impl<Env: QueryEnvironment> DefaultQueryFunctionsModule<Env> {
     /// ```text
     /// $ bsmr uquery 'buildfile(root//:bsmr)'
     ///
-    /// bsmr/BUCK
+    /// bsmr/BUILD.bsmr
     /// ```
     ///
     /// In order to find the build file associated with a source file, combine the owner operator with buildfile.
@@ -381,10 +381,10 @@ impl<Env: QueryEnvironment> DefaultQueryFunctionsModule<Env> {
     ///
     /// For example:
     /// ```text
-    /// $ bsmr uquery "rbuildfiles(root//BUCK, root//defs.bzl)"
+    /// $ bsmr uquery "rbuildfiles(root//BUILD.bsmr, root//defs.bzl)"
     ///
     /// bsmr/defs.bzl
-    /// bsmr/BUCK
+    /// bsmr/BUILD.bsmr
     /// ```
     async fn rbuildfiles(
         &self,
@@ -409,7 +409,7 @@ impl<Env: QueryEnvironment> DefaultQueryFunctionsModule<Env> {
     /// ```text
     /// $ bsmr uquery 'allbuildfiles(//foo:bar)'
     ///
-    /// foo/BUCK
+    /// foo/BUILD.bsmr
     /// foo/defs_dependent_on_utils.bzl
     /// baz/utils.bzl
     /// ```

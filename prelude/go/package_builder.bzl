@@ -1,3 +1,9 @@
+# ===----------------------------------------------------------------------===
+# Upstream-Source: facebook/buck2@1560aca2002865cd73d7cafb22c705cfb640b2bc
+# Modifications Copyright (c) 2026 Dedalus Labs, Inc. and its contributors
+# SPDX-License-Identifier: Apache-2.0
+# ===----------------------------------------------------------------------===
+
 # Copyright (c) Meta Platforms, Inc. and affiliates.
 #
 # This source code is dual-licensed under either the MIT license found in the
@@ -147,13 +153,15 @@ def _build_package_action_impl(
     out_x: OutputArtifact,
     test_go_files_argsfile: OutputArtifact,
 ):
+    """Compiles one ordinary or external-test package from analyzed sources."""
     go_list = parse_go_list_out(sources.srcs, sources.package_root, go_list_out)
 
     if go_list.error != None:
         fail("Invalid go package: {}", go_list.error.err)
 
-    if len(go_list.x_test_go_files) > 0:
-        fail("External tests are not supported, remove suffix '_test' from package declaration '{}': {}", go_list.name, target_label)
+    external_tests = len(go_list.x_test_go_files) > 0
+    if external_tests and len(go_list.go_files + go_list.test_go_files) > 0:
+        fail("External Go tests must be compiled separately from package '{}' in {}", go_list.name, target_label)
 
     go_stdlib_value = go_stdlib_value.providers[GoStdlibDynamicValue]
 
@@ -162,7 +170,7 @@ def _build_package_action_impl(
         target_label = target_label,
         go_toolchain = go_toolchain,
         cgo_build_context = cgo_build_context,
-        go_list = go_list_for_build(go_list, config.with_tests),
+        go_list = go_list_for_build(go_list, config.with_tests, external_tests),
         params = BuildPackageParams(
             main = main,
             standard = False,
@@ -178,7 +186,8 @@ def _build_package_action_impl(
         ),
     )
 
-    actions.write(test_go_files_argsfile, cmd_args((go_list.test_go_files if config.with_tests else []), ""))
+    test_go_files = go_list.x_test_go_files if external_tests else go_list.test_go_files
+    actions.write(test_go_files_argsfile, cmd_args((test_go_files if config.with_tests else []), ""))
     actions.copy_dir(cgo_gen_dir, result.cgo_gen_dir)
 
     actions.copy_file(out_x, result.x_file)
@@ -230,7 +239,22 @@ BuildPackageGoList = record(
     cgo_cppflags = field(list[str]),
 )
 
-def go_list_for_build(go_list_out: GoListOut, with_tests: bool) -> BuildPackageGoList:
+def go_list_for_build(go_list_out: GoListOut, with_tests: bool, external_tests: bool = False) -> BuildPackageGoList:
+    """Selects the source and import set for one package compilation."""
+    if external_tests:
+        return BuildPackageGoList(
+            pkg_name = go_list_out.name + "_test",
+            go_files = go_list_out.x_test_go_files,
+            cgo_files = [],
+            s_files = [],
+            h_files = [],
+            c_cxx_files = [],
+            syso_files = [],
+            imports = set(go_list_out.x_test_imports),
+            embed_patterns = go_list_out.x_test_embed_patterns,
+            cgo_cflags = [],
+            cgo_cppflags = [],
+        )
     imports = set(go_list_out.imports + (go_list_out.test_imports if with_tests else []))
     embed_patterns = go_list_out.embed_patterns + (go_list_out.test_embed_patterns if with_tests else [])
     go_files = go_list_out.go_files + (go_list_out.test_go_files if with_tests else [])

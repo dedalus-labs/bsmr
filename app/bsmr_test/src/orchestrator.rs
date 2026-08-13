@@ -2630,6 +2630,7 @@ mod tests {
                     duration: Some(Duration::from_micros(1)),
                     details: "1".to_owned(),
                     max_memory_used_bytes: None,
+                    attempt: None,
                 })
                 .await?;
 
@@ -2642,6 +2643,7 @@ mod tests {
                     duration: Some(Duration::from_micros(2)),
                     details: "2".to_owned(),
                     max_memory_used_bytes: None,
+                    attempt: None,
                 })
                 .await?;
 
@@ -2664,6 +2666,7 @@ mod tests {
                     duration: Some(Duration::from_micros(1)),
                     details: "1".to_owned(),
                     max_memory_used_bytes: None,
+                    attempt: None,
                 }),
                 ExecutorMessage::TestResult(TestResult {
                     target,
@@ -2674,6 +2677,7 @@ mod tests {
                     duration: Some(Duration::from_micros(2)),
                     details: "2".to_owned(),
                     max_memory_used_bytes: None,
+                    attempt: None,
                 }),
                 ExecutorMessage::ExitCode(0),
             ]

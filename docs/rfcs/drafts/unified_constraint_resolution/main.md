@@ -19,7 +19,7 @@ This RFC uses the NCCL (NVIDIA Collective Communication Library) version constra
 Suppose NCCL and sanitizer constraints are defined as follows.
 
 ```python
-# cfg//nccl/BUCK file
+# cfg//nccl/BUILD.bsmr file
 
 constraint(
   name = "version",
@@ -27,7 +27,7 @@ constraint(
   default = "stable",
 )
 
-# cfg//BUCK file
+# cfg//BUILD.bsmr file
 
 constraint(
   name = "sanitizer",
@@ -50,7 +50,7 @@ This RFC introduces a new `resolution` attr to the [unified constraint rule](htt
 To solve the example NCCL problem, resolution on the NCCL version can be defined as follows.
 
 ```python
-# cfg//nccl/BUCK file
+# cfg//nccl/BUILD.bsmr file
 
 constraint(
   name = "version",
@@ -107,7 +107,7 @@ Every value produced by `resolution`'s select must either be `SELF` or one of `r
 It's also possible to define values for nccl as follows.
 
 ```python
-# cfg//nccl/BUCK file
+# cfg//nccl/BUILD.bsmr file
 
 constraint(
   name = "version",
@@ -163,7 +163,7 @@ is an error.
 The earlier nccl `resolution` repeats `"latest"` once per sanitizer key. That's verbose, and adding a new sanitizer means hunting down every select in the repo that branches on it. We can fix this by deriving a new constraint from the sanitizer constraint.
 
 ```python
-# cfg//BUCK
+# cfg//BUILD.bsmr
 
 constraint(
   name = "is_sanitizer_enabled",
@@ -180,7 +180,7 @@ constraint(
 Now nccl version can branch on `is_sanitizer_enabled` instead of enumerating every sanitizer:
 
 ```python
-# cfg//nccl/BUCK file
+# cfg//nccl/BUILD.bsmr file
 
 constraint(
   name = "version",

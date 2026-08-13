@@ -190,7 +190,7 @@ impl FromStr for SysrootMode {
 enum JsonArguments {
     /// Path to a Rust source file.
     Path(PathBuf),
-    /// Path to BUCK file.
+    /// Path to BUILD.bsmr file.
     Buildfile(PathBuf),
     /// A named buck target.
     Label(String),
@@ -418,7 +418,7 @@ fn json_args_pass() {
     .expect("Unable to parse args");
     assert_eq!(actual, expected);
 
-    let args = JsonArguments::Buildfile(PathBuf::from("bsmr/tools/rust-project/BUCK"));
+    let args = JsonArguments::Buildfile(PathBuf::from("bsmr/tools/rust-project/BUILD.bsmr"));
     let expected = Opt {
         command: Some(Command::DevelopJson {
             args,
@@ -432,7 +432,7 @@ fn json_args_pass() {
     let actual = Opt::try_parse_from([
         "rust-project",
         "develop-json",
-        "{\"buildfile\":\"bsmr/tools/rust-project/BUCK\"}",
+        "{\"buildfile\":\"bsmr/tools/rust-project/BUILD.bsmr\"}",
     ])
     .expect("Unable to parse args");
     assert_eq!(actual, expected);

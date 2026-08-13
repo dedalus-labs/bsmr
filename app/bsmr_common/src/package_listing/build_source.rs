@@ -63,10 +63,10 @@ mod tests {
 
     #[test]
     fn invariant_explicit_build_file_wins_over_native_manifests() {
-        let candidates = [FileNameBuf::unchecked_new("BUCK")];
+        let candidates = [FileNameBuf::unchecked_new("BUILD.bsmr")];
         let source = find_build_source(
             &candidates,
-            &listing(&["Cargo.toml", "package.json", "BUCK"]),
+            &listing(&["Cargo.toml", "package.json", "BUILD.bsmr"]),
             true,
         );
 

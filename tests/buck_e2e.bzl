@@ -288,7 +288,7 @@ def bsmr_core_tests(extra_attrs = {}, target_extra_attrs = {}):
     generated_targets = []
 
     for item in items:
-        if item in ["TARGETS", "TARGETS.v2", "BUCK", "BUCK.v2"]:
+        if item in ["TARGETS", "BUILD.bsmr"]:
             continue
         if item.startswith("test_") and item.endswith("_data"):
             # Just make sure the associated test exists

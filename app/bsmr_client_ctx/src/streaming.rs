@@ -44,6 +44,7 @@ use crate::events_ctx::EventsCtx;
 use crate::exit_result::ExitResult;
 use crate::path_arg::PathArg;
 use crate::signal_handler::with_simple_sigint_handler;
+use crate::subscribers::build_event_writer::BuildEventWriter;
 use crate::subscribers::build_id_writer::BuildIdWriter;
 use crate::subscribers::event_log::EventLog;
 use crate::subscribers::health_check_subscriber::HealthCheckSubscriber;
@@ -121,6 +122,9 @@ fn update_events_ctx<T: StreamingCommand>(
     }
     if let Some(build_id_writer) = get_build_id_writer(cmd.event_log_opts(), ctx) {
         subscribers.push(build_id_writer)
+    }
+    if let Some(build_event_writer) = get_build_event_writer(cmd.event_log_opts(), ctx) {
+        subscribers.push(build_event_writer)
     }
     if let Some(test_id_writer) = get_test_id_writer(cmd, ctx) {
         subscribers.push(test_id_writer)
@@ -340,6 +344,16 @@ fn get_build_id_writer(
     } else {
         None
     }
+}
+
+/// Creates the stable build-event subscriber when explicitly requested.
+fn get_build_event_writer(
+    opts: &CommonEventLogOptions,
+    ctx: &ClientCommandContext,
+) -> Option<Box<dyn EventSubscriber>> {
+    opts.build_event_jsonl.as_ref().map(|path| {
+        Box::new(BuildEventWriter::new(path.resolve(&ctx.working_dir))) as Box<dyn EventSubscriber>
+    })
 }
 
 fn get_test_id_writer<T: StreamingCommand>(

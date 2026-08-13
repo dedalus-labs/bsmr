@@ -1,3 +1,9 @@
+//===----------------------------------------------------------------------===//
+// Upstream-Source: facebook/buck2@1560aca2002865cd73d7cafb22c705cfb640b2bc
+// Modifications Copyright (c) 2026 Dedalus Labs, Inc. and its contributors
+// SPDX-License-Identifier: Apache-2.0
+//===----------------------------------------------------------------------===//
+
 /*
  * Copyright (c) Meta Platforms, Inc. and affiliates.
  *
@@ -110,7 +116,7 @@ constructor(
 
       val timeoutMessage =
           "Test timed out after ${timeoutMs}ms. " +
-              "If your test needs to run longer than ${timeoutMs / 1000} seconds, add the tpx long_running or glacial tag in the labels section of the BUCK target. " +
+              "If your test needs to run longer than ${timeoutMs / 1000} seconds, add the tpx long_running or glacial tag in the labels section of the BUILD.bsmr target. " +
               "See https://fb.workplace.com/groups/android.testing.fyi/permalink/2679204925789466/ for more details" +
               "\n\n=== Thread Dump ===\n$threadDump"
 

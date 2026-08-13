@@ -32,14 +32,14 @@ A fully-qualified build target has three components:
 1. The `cell//` prefix indicates that the subsequent path is from the _root_ of
    `cell`.
 2. The `java/com/facebook/share` between the `//` prefix and the colon (`:`)
-   indicates that the [build file](build_file.md) (usually named `BUCK`) is
+   indicates that the [build file](build_file.md) (usually named `BUILD.bsmr`) is
    located in the directory `java/com/facebook/share`.
 3. The `ui` after the colon (`:`) indicates the name of the build target within
    the build file. Build target names must be unique within a build file. By
    _name_ we mean, more formally, the value of the `name` argument to the build
    rule.
 
-Note that the name of the build file itself—usually BUCK—does _not_ occur in the
+Note that the name of the build file itself—usually BUILD.bsmr—does _not_ occur in the
 build target. All build files within a given Bessemer project must have the same
 name—defined in the `[buildfile].name` entry of `.bsmr`. Therefore, it is
 unnecessary to include the name in the target. The full regular expression for a
@@ -76,7 +76,7 @@ component (or _short name_) of the fully-qualified build target. The following
 snippet from a build file shows an example of using a relative path.
 
 ```python
-## Assume this target is in //java/com/facebook/share/BUCK#
+## Assume this target is in //java/com/facebook/share/BUILD.bsmr#
 java_binary(
   name = 'ui_jar',
   deps = [

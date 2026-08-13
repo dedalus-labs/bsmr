@@ -12,6 +12,7 @@ import type { ScriptExec } from "@dedalus-labs/hollywood";
 
 import { pullRequestFiles, rustAffected } from "./affected.ts";
 import { ci } from "./ci.ts";
+import { docs } from "./docs.ts";
 
 const jobs = ci.jobs;
 const rustLanes = ["rust_audit", "rust_quality", "rust_tests", "rust_self_host"] as const;
@@ -120,4 +121,21 @@ test("Rust lanes share one trusted cache writer", () => {
 				: false,
 		);
 	}
+});
+
+test("docs deploy only from a trusted main build", () => {
+	assert.deepEqual(docs.on.pull_request, {
+		branches: ["main"],
+		paths: ["ci/docs.ts", "docs/**", "mkdocs.yml", "README.md"],
+	});
+	assert.equal(docs.jobs.build?.if, `\${{ ${trustedCiRun} }}`);
+	assert.equal(
+		docs.jobs.deploy?.if,
+		"github.event_name == 'push' && github.ref == 'refs/heads/main'",
+	);
+	assert.equal(docs.jobs.deploy?.needs, "build");
+	assert.deepEqual(docs.jobs.deploy?.permissions, {
+		pages: "write",
+		"id-token": "write",
+	});
 });

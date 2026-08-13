@@ -14,13 +14,6 @@ root = .
 # License, Version 2.0 found in the LICENSE-APACHE file in the root directory
 # of this source tree.
 
-[buildfile]
-# see <https://github.com/facebook/buck2/pull/956> -- this helps us make
-# error messages when the user doesn't run "reindeer" much more obvious,
-# because the default BUCK file just errors out. We then make reindeer generate
-# BUCK.reindeer to override that.
-name = BUCK.reindeer,BUCK
-
 [cells]
 bsmr_build = .
 
@@ -37,8 +30,6 @@ none = none
 config = prelude
 ovr_config = prelude
 toolchains = bsmr_build
-# Optional targets retained by the upstream prelude resolve to a disabled cell.
-upstream = none
 
 [external_cells]
 prelude = disabled

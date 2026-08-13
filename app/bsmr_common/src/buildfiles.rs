@@ -24,8 +24,6 @@ use dice::DiceComputations;
 use dice::Key;
 use dice::OkPagableValueSerialize;
 use dice::ValueSerialize;
-use gazebo::prelude::SliceExt as _;
-use gazebo::prelude::VecExt as _;
 use pagable::Pagable;
 use pagable::pagable_typetag;
 
@@ -33,48 +31,33 @@ use crate::legacy_configs::dice::HasLegacyConfigs;
 use crate::legacy_configs::key::BsmrconfigKeyRef;
 use crate::legacy_configs::view::LegacyBsmrConfigView;
 
-const DEFAULT_BUILDFILES: &[&str] = &["BUCK.v2", "BUCK"];
+const DEFAULT_BUILDFILE: &str = "BUILD.bsmr";
 
-/// Deal with the `buildfile.name` key (and `name_v2`)
+/// Resolve the cell's single package build-file name.
 pub fn parse_buildfile_name(
     mut config: impl LegacyBsmrConfigView,
 ) -> bsmr_error::Result<Vec<FileNameBuf>> {
-    // For bsmr, we support a slightly different mechanism for setting the buildfile to
-    // assist with easier migration from v1 to v2.
-    // First, we check the key `buildfile.name_v2`, if this is provided, we use it.
-    // Second, if that wasn't provided, we will use `buildfile.name` like buck1 does,
-    // but for every entry `FOO` we will insert a preceding `FOO.v2`.
-    // If neither of those is provided, we will use the default of `["BUCK.v2", "BUCK"]`.
-    // This scheme provides a natural progression to buckv2, with the ability to use separate
-    // buildfiles for the two where necessary.
-    let mut base = if let Some(buildfiles_value) =
-        config.parse_list::<String>(BsmrconfigKeyRef {
+    if config
+        .parse::<String>(BsmrconfigKeyRef {
             section: "buildfile",
             property: "name_v2",
-        })? {
-        buildfiles_value.into_try_map(FileNameBuf::try_from)?
-    } else if let Some(buildfiles_value) = config.parse_list::<String>(BsmrconfigKeyRef {
-        section: "buildfile",
-        property: "name",
-    })? {
-        let mut buildfiles = Vec::new();
-        for buildfile in buildfiles_value {
-            buildfiles.push(FileNameBuf::try_from(format!("{buildfile}.v2"))?);
-            buildfiles.push(FileNameBuf::try_from(buildfile)?);
-        }
-        buildfiles
-    } else {
-        DEFAULT_BUILDFILES.map(|&n| FileNameBuf::try_from(n.to_owned()).unwrap())
-    };
-
-    if let Some(buildfile) = config.parse::<String>(BsmrconfigKeyRef {
-        section: "buildfile",
-        property: "extra_for_test",
-    })? {
-        base.push(FileNameBuf::try_from(buildfile)?);
+        })?
+        .is_some()
+    {
+        return Err(bsmr_error::bsmr_error!(
+            bsmr_error::ErrorTag::Input,
+            "`buildfile.name_v2` is no longer supported; use `buildfile.name`"
+        ));
     }
 
-    Ok(base)
+    let buildfile = config
+        .parse::<String>(BsmrconfigKeyRef {
+            section: "buildfile",
+            property: "name",
+        })?
+        .unwrap_or_else(|| DEFAULT_BUILDFILE.to_owned());
+
+    Ok(vec![FileNameBuf::try_from(buildfile)?])
 }
 
 pub trait HasBuildfiles {
@@ -161,7 +144,6 @@ mod tests {
                                 other = .
                             [buildfile]
                                 name = TARGETS
-                                extra_for_test = TARGETS.test
                         "#
                 ),
             ),
@@ -173,7 +155,6 @@ mod tests {
                                 third_party = .
                             [buildfile]
                                 name_v2 = OKAY
-                                name = OKAY_v1
                         "#
                 ),
             ),
@@ -185,7 +166,7 @@ mod tests {
             .parse_single_cell_with_file_ops(CellName::testing_new("root"), &mut file_ops)
             .await?;
         assert_eq!(
-            vec!["BUCK.v2", "BUCK"],
+            vec!["BUILD.bsmr"],
             parse_buildfile_name(&config)?.map(|f| f.as_str()),
         );
 
@@ -193,16 +174,18 @@ mod tests {
             .parse_single_cell_with_file_ops(CellName::testing_new("other"), &mut file_ops)
             .await?;
         assert_eq!(
-            vec!["TARGETS.v2", "TARGETS", "TARGETS.test"],
+            vec!["TARGETS"],
             parse_buildfile_name(&config)?.map(|f| f.as_str()),
         );
 
         let config = cells
             .parse_single_cell_with_file_ops(CellName::testing_new("third_party"), &mut file_ops)
             .await?;
-        assert_eq!(
-            vec!["OKAY"],
-            parse_buildfile_name(&config)?.map(|f| f.as_str()),
+        let error = parse_buildfile_name(&config).unwrap_err();
+        assert!(
+            error
+                .to_string()
+                .contains("`buildfile.name_v2` is no longer supported")
         );
 
         Ok(())

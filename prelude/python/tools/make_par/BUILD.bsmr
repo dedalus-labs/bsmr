@@ -1,0 +1,69 @@
+# ===----------------------------------------------------------------------===
+# Upstream-Source: facebook/buck2@1560aca2002865cd73d7cafb22c705cfb640b2bc
+# Modifications Copyright (c) 2026 Dedalus Labs, Inc. and its contributors
+# SPDX-License-Identifier: Apache-2.0
+# ===----------------------------------------------------------------------===
+
+load("@prelude//utils:source_listing.bzl", "source_listing")
+
+oncall("plf_experience")
+
+prelude = native
+
+source_listing()
+
+prelude.export_file(
+    name = "__run_lpar_main__.py",
+    src = "__run_lpar_main__.py",
+    visibility = ["PUBLIC"],
+)
+
+prelude.export_file(
+    name = "sitecustomize.py",
+    src = "sitecustomize.py",
+    visibility = ["PUBLIC"],
+)
+
+prelude.export_file(
+    name = "_lpar_bootstrap.sh.template",
+    src = "_lpar_bootstrap.sh.template",
+    visibility = ["PUBLIC"],
+)
+
+prelude.export_file(
+    name = "live_builder.py",
+    src = "live_builder.py",
+    visibility = ["PUBLIC"],
+)
+
+prelude.python_bootstrap_library(
+    name = "live_builder",
+    srcs = [
+        "none//tools/make_par:errors.py",
+        "none//tools/make_par:util.py",
+        "live_builder.py",
+        "par_builder.py",
+    ],
+)
+
+prelude.export_file(
+    name = "par_builder.py",
+    src = "par_builder.py",
+    visibility = ["PUBLIC"],
+)
+
+prelude.python_bootstrap_binary(
+    name = "gen_lpar_bootstrap_bin",
+    main = "gen_lpar_bootstrap.py",
+    deps = [":live_builder"],
+)
+
+prelude.command_alias(
+    name = "gen_lpar_bootstrap",
+    args = [
+        "--template",
+        "$(location :_lpar_bootstrap.sh.template)",
+    ],
+    exe = ":gen_lpar_bootstrap_bin",
+    visibility = ["PUBLIC"],
+)

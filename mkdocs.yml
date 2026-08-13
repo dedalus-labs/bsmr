@@ -1,0 +1,123 @@
+# Copyright (c) 2026 Dedalus Labs, Inc. and its contributors
+# SPDX-License-Identifier: Apache-2.0
+
+site_name: Bessemer
+site_description: Hermetic builds at monorepo scale.
+site_url: https://oss.dedaluslabs.ai/bsmr
+repo_url: https://github.com/dedalus-labs/bsmr
+repo_name: dedalus-labs/bsmr
+site_author: Dedalus Labs
+docs_dir: docs/site
+edit_uri: edit/main/docs/site/
+
+theme:
+  name: material
+  logo: assets/logo.svg
+  favicon: assets/logo.svg
+  palette:
+    - media: "(prefers-color-scheme)"
+      toggle:
+        icon: material/theme-light-dark
+        name: "Theme: automatic"
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      toggle:
+        icon: material/weather-sunny
+        name: "Theme: light"
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      toggle:
+        icon: material/weather-night
+        name: "Theme: dark"
+  features:
+    - navigation.footer
+    - navigation.indexes
+    - navigation.instant
+    - navigation.instant.prefetch
+    - navigation.instant.progress
+    - navigation.path
+    - navigation.sections
+    - navigation.top
+    - navigation.tracking
+    - content.code.annotate
+    - content.code.copy
+    - content.tabs.link
+    - search.highlight
+    - search.suggest
+    - toc.follow
+  icon:
+    repo: fontawesome/brands/github
+
+plugins:
+  - search
+  - llmstxt:
+      full_output: llms-full.txt
+      markdown_description: |
+        Bessemer is an open-source hermetic build system derived from Buck2.
+        It provides content-addressed actions, incremental dependency graphs,
+        output restoration, remote caching, and native ecosystem frontends.
+      sections:
+        Overview:
+          - index.md
+        Guides:
+          - getting-started.md
+          - languages/go.md
+        Concepts:
+          - concepts/caching.md
+          - concepts/test-observability.md
+          - roadmap.md
+  - llmstxt-md:
+      enable_markdown_urls: true
+      enable_llms_txt: false
+      enable_llms_full: false
+      enable_copy_button: true
+      copy_button_text: "Copy page"
+      sections:
+        All:
+          - "*.md"
+          - "**/*.md"
+
+markdown_extensions:
+  - admonition
+  - attr_list
+  - md_in_html
+  - pymdownx.details
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.inlinehilite
+  - pymdownx.keys
+  - pymdownx.snippets
+  - pymdownx.superfences
+  - pymdownx.tabbed:
+      alternate_style: true
+  - pymdownx.tasklist:
+      custom_checkbox: true
+  - tables
+  - toc:
+      anchorlink: true
+      permalink: true
+
+nav:
+  - Home: index.md
+  - Getting Started: getting-started.md
+  - Ecosystems:
+      - Go: languages/go.md
+  - Concepts:
+      - Caching and Hermeticity: concepts/caching.md
+      - Test Observability: concepts/test-observability.md
+  - Roadmap: roadmap.md
+
+extra_css:
+  - assets/theme.css
+
+extra:
+  social:
+    - icon: fontawesome/brands/github
+      link: https://github.com/dedalus-labs/bsmr
+
+copyright: Copyright 2026 Dedalus Labs, Inc. and its contributors
+
+validation:
+  absolute_links: warn
+  omitted_files: warn
+  unrecognized_links: warn

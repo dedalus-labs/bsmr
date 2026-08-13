@@ -4,7 +4,7 @@
 # = How is this used? =
 # Unlike Gradle, bsmr does not have native support for external dependency management.
 # For Java/Android projects at Meta we use a tool called Artificer to resolve the dependency tree
-# and generate BUCK files with targets that other modules can depend on.
+# and generate BUILD.bsmr files with targets that other modules can depend on.
 #
 # Artificer code is not open-sourced yet, but we plan to do so. A runnable jar is available for
 # download on the GitHub releases page:

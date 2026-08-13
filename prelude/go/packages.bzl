@@ -1,3 +1,9 @@
+# ===----------------------------------------------------------------------===
+# Upstream-Source: facebook/buck2@1560aca2002865cd73d7cafb22c705cfb640b2bc
+# Modifications Copyright (c) 2026 Dedalus Labs, Inc. and its contributors
+# SPDX-License-Identifier: Apache-2.0
+# ===----------------------------------------------------------------------===
+
 # Copyright (c) Meta Platforms, Inc. and affiliates.
 #
 # This source code is dual-licensed under either the MIT license found in the
@@ -139,7 +145,7 @@ def make_compile_importcfg(
         provided_pkgs.add(name_)
 
     if len(provided_pkgs) != len(required_pkgs):
-        message = "cannot find package(s) when building '{}' (is your BUCK target missing deps?)\n".format(pkg_import_path)
+        message = "cannot find package(s) when building '{}' (is your BUILD.bsmr target missing deps?)\n".format(pkg_import_path)
         for imp in required_pkgs.difference(provided_pkgs):
             message += "  - " + imp + "\n"
 

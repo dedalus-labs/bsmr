@@ -835,7 +835,7 @@ def rust_compile(
 # Third element of returned tuple is a mapping from crate names back to target
 # label, needed for applying autofixes for rustc's unused_crate_dependencies
 # lint by tracing Rust crate names in the compiler diagnostic back to which
-# dependency entry in the BUCK file needs to be removed.
+# dependency entry in the BUILD.bsmr file needs to be removed.
 #
 # The `compile_ctx` may be omitted if there are no dependencies with dynamic
 # crate names.

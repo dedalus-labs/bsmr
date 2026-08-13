@@ -106,7 +106,7 @@ async fn test_analysis_calculation() -> bsmr_error::Result<()> {
             LoadedModules::default(),
         )?;
 
-    let buildfile = BuildFilePath::testing_new("cell//pkg:BUCK");
+    let buildfile = BuildFilePath::testing_new("cell//pkg:BUILD.bsmr");
     let eval_res = interpreter.eval_build_file_with_loaded_modules(
         &buildfile,
         indoc!(
@@ -136,7 +136,7 @@ async fn test_analysis_calculation() -> bsmr_error::Result<()> {
                 module.dupe(),
             )]),
         },
-        PackageListing::testing_new(&[], "BUCK"),
+        PackageListing::testing_new(&[], "BUILD.bsmr"),
     )?;
 
     let fs = ProjectRootTemp::new()?;
