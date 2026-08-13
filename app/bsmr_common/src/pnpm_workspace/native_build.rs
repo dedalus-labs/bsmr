@@ -18,6 +18,14 @@ use crate::package_listing::listing::PackageListing;
 const SOURCES_TARGET: &str = "__bsmr_sources";
 const INSTALL_TARGET: &str = "__bsmr_dependencies";
 
+/// Returns whether the root declares pnpm's authoritative frozen input.
+#[must_use]
+pub fn is_native_pnpm_workspace(listing: &PackageListing) -> bool {
+    listing
+        .get_file(PackageRelativePath::unchecked_new("pnpm-lock.yaml"))
+        .is_some()
+}
+
 /// A native TypeScript package cannot be lowered without satisfying these invariants.
 #[derive(Debug, bsmr_error::Error)]
 #[bsmr(tag = Input)]
@@ -274,6 +282,7 @@ fn is_install_input(path: &str) -> bool {
 mod tests {
     use bsmr_core::cells::paths::CellRelativePathBuf;
 
+    use super::is_native_pnpm_workspace;
     use super::render_typescript_build_file;
     use crate::package_listing::listing::PackageListing;
     use crate::package_listing::listing::testing::PackageListingExt;
@@ -287,6 +296,13 @@ mod tests {
             manifest,
         )
         .unwrap()
+    }
+
+    #[test]
+    fn invariant_incidental_package_json_does_not_activate_pnpm() {
+        let listing = PackageListing::testing_files(&["package.json", "pyproject.toml"]);
+
+        assert!(!is_native_pnpm_workspace(&listing));
     }
 
     #[test]
