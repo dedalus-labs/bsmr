@@ -88,6 +88,7 @@ class EnvironmentTest(unittest.TestCase):
             build_environment = _empty_environment(root / "build-environment")
             args = Namespace(
                 build_environment=build_environment,
+                config_setting=["--global-option=--quiet"],
                 lock=root / "pylock.toml",
                 output=output,
                 python=root / "python",
@@ -102,6 +103,7 @@ class EnvironmentTest(unittest.TestCase):
             command = run.call_args.args[0]
             self.assertIn("--no-build-isolation", command)
             self.assertNotIn("--no-build", command)
+            self.assertIn("--config-setting=--global-option=--quiet", command)
             self.assertEqual(
                 process_environment["PYTHONPATH"],
                 str(build_environment.resolve()),
@@ -140,6 +142,7 @@ class ProjectActionTest(unittest.TestCase):
             output = root / "typecheck.check"
             args = Namespace(
                 environment=environment,
+                config_setting=[],
                 mode="ty",
                 output=output,
                 project_root=".",
@@ -161,13 +164,15 @@ class ProjectActionTest(unittest.TestCase):
     def test_tool_failure_propagates_without_a_wrapper_traceback(self) -> None:
         """The native tool owns diagnostics; the runner owns only its status."""
         completed = subprocess.CompletedProcess(["tool"], returncode=7)
-        with patch.object(runner.subprocess, "run", return_value=completed):
-            with self.assertRaises(SystemExit) as raised:
-                runner._run(["tool"], {})
+        with (
+            patch.object(runner.subprocess, "run", return_value=completed),
+            self.assertRaises(SystemExit) as raised,
+        ):
+            runner._run(["tool"], {})
 
         self.assertEqual(raised.exception.code, 7)
 
-    def test_wheel_uses_declared_project_configuration_without_ambient_git(
+    def test_wheel_uses_declared_project_configuration_without_ambient_state(
         self,
     ) -> None:
         """PEP 517 constraints are inputs while an ancestor checkout is not."""
@@ -182,6 +187,7 @@ class ProjectActionTest(unittest.TestCase):
             (root / "scratch").mkdir()
             args = Namespace(
                 environment=environment,
+                config_setting=["editable-mode=strict", "--build-option=--quiet"],
                 mode="wheel",
                 output=root / "wheel",
                 project_root=".",
@@ -198,7 +204,7 @@ class ProjectActionTest(unittest.TestCase):
                 runner._project(args, process_environment, root / "scratch")
 
             action_environment = run.call_args.args[1]
-            self.assertNotIn("UV_NO_CONFIG", action_environment)
+            self.assertEqual(action_environment["UV_NO_CONFIG"], "1")
             self.assertEqual(
                 action_environment["GIT_CEILING_DIRECTORIES"],
                 str(source.resolve().parent),
@@ -213,6 +219,14 @@ class ProjectActionTest(unittest.TestCase):
                 )
             )
             self.assertIn("--no-build-isolation", run.call_args.args[0])
+            self.assertEqual(
+                run.call_args.args[0][-3:],
+                [
+                    "--config-setting=editable-mode=strict",
+                    "--config-setting=--build-option=--quiet",
+                    ".",
+                ],
+            )
             git_directory = root / "scratch" / "git"
             self.assertEqual(action_environment["GIT_DIR"], str(git_directory))
             self.assertEqual(

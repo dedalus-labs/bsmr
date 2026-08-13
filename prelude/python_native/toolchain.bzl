@@ -17,7 +17,7 @@ _PYTHON_VERSION = "3.14.7"
 _PYTHON_RELEASE = "20260807"
 _UV_VERSION = "0.12.3"
 _RUFF_VERSION = "0.16.2"
-_TY_VERSION = "0.0.70"
+_TY_VERSION = "0.0.71"
 
 _ARTIFACT_PLATFORMS = {
     "linux-arm64": "aarch64-unknown-linux-gnu",
@@ -40,10 +40,10 @@ _ARCHIVES = {
         "macos-x86_64": ("6648fa7a7c95b087c5b9d269d8b9a567fae091bdef3993f77cc7531a01bd7266", 10678791),
     },
     "ty": {
-        "linux-arm64": ("5996a7bdd7eb93548030ce084006cc722d3fb984dd38e5b403f4e2e99ae87d38", 11697395),
-        "linux-x86_64": ("6e44d58998d7b16b630d6229f1002a6b2ed28e56cc856d16c996ed257e1e7fde", 12456363),
-        "macos-arm64": ("50076094d3ebbf98749ac395b9fb6fcc25cb9ba84a419ca9d5956e221b37302a", 11133591),
-        "macos-x86_64": ("4ebfac284659a7050b24e97ba0575a2d66dbb62190015f1275c78706a4d089f3", 11811011),
+        "linux-arm64": ("a5c443b05515f31e5471f059bcde8d56b388378091093881f22531e647497625", 11598079),
+        "linux-x86_64": ("2f92b0763f7e983800357383987551dce77ad9eb7d6136e9af493659ee6694ba", 12292731),
+        "macos-arm64": ("9b59a9bd1ea39318de73684899b7787d6a23c04d0c1e48b8463ababc127ec307", 11511214),
+        "macos-x86_64": ("a25c9a8a4feaf10cb6a15264c23de2d35e7af4db88d1ffe8e5994ca2befb41a9", 11838614),
     },
     "uv": {
         "linux-arm64": ("bb66cb52e7b1823aed1183630d8d8e5c958840d584a4c55ec10a4cfc168dcca2", 20423730),

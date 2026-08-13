@@ -93,11 +93,18 @@ def _runner_command(ctx: AnalysisContext, mode: str, output: Artifact):
         fail("unknown native Python action mode '{}'".format(mode))
     return command, python_version, version
 
+def _add_config_settings(command, settings: dict) -> None:
+    """Adds typed PEP 517 settings without exposing shell interpretation."""
+    for name, values in settings.items():
+        for value in values:
+            command.add(["--config-setting={}={}".format(name, value)])
+
 def _python_environment_impl(ctx: AnalysisContext) -> list[Provider]:
     """Materializes the exact PEP 751 installation set with pinned uv."""
     root = ctx.actions.declare_output(ctx.label.name, dir = True, has_content_based_path = True)
     command, python_version, uv_version = _runner_command(ctx, "environment", root)
     command.add(["--lock", ctx.attrs.lock])
+    _add_config_settings(command, ctx.attrs.config_settings)
     if ctx.attrs.build_environment != None:
         command.add([
             "--build-environment",
@@ -122,6 +129,7 @@ python_environment = rule(
             attrs.dep(providers = [PythonEnvironmentInfo]),
             default = None,
         ),
+        "config_settings": attrs.dict(attrs.string(), attrs.list(attrs.string()), default = {}),
         "lock": attrs.source(doc = "Canonical PEP 751 installation set."),
         "python": attrs.exec_dep(providers = [PythonNativeDistributionInfo]),
         "uv": attrs.exec_dep(providers = [PythonNativeDistributionInfo]),
@@ -176,6 +184,8 @@ def _project_action(ctx: AnalysisContext, mode: str, output: Artifact) -> None:
         command.add(["--environment", environment.root])
     if mode == "wheel" and ctx.attrs.vcs != None:
         command.add(["--vcs", ctx.attrs.vcs[PythonVcsInfo].tree])
+    if mode == "wheel":
+        _add_config_settings(command, ctx.attrs.config_settings)
     ctx.actions.run(
         command,
         allow_cache_upload = True,
@@ -210,6 +220,7 @@ def _project_attrs(tool: str, needs_environment: bool = False) -> dict:
     if needs_environment:
         attrs_by_name["environment"] = attrs.dep(providers = [PythonEnvironmentInfo])
     if tool == "uv":
+        attrs_by_name["config_settings"] = attrs.dict(attrs.string(), attrs.list(attrs.string()), default = {})
         attrs_by_name["vcs"] = attrs.option(attrs.dep(providers = [PythonVcsInfo]), default = None)
     return attrs_by_name
 
