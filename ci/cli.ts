@@ -33,6 +33,7 @@ const test: ProcessSpec = {
 		"ci/license-preamble.test.ts",
 		"ci/license-provenance.test.ts",
 		"ci/license.test.ts",
+		"prelude/typescript/runner.test.mjs",
 		"prelude/toolchains/pnpm/runner.test.mjs",
 		"test/contributors.test.ts",
 	],
