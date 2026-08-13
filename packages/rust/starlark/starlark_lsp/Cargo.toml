@@ -18,13 +18,13 @@ anyhow = "1.0.65"
 derivative = "2.2"
 derive_more.workspace = true
 dupe = { workspace = true }
-itertools = "0.14.0"
+itertools = "0.15.0"
 lsp-server = "0.10.0"
 lsp-types = "0.97.0"
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 thiserror = "2.0.18"
-tower-lsp-server = "0.22.1"
+tower-lsp-server = "0.23.0"
 
 starlark = { version = "0.14.2", path = "../starlark" }
 starlark_syntax = { version = "0.14.2", path = "../starlark_syntax" }
@@ -32,4 +32,4 @@ starlark_syntax = { version = "0.14.2", path = "../starlark_syntax" }
 [dev-dependencies]
 maplit = "1.0.2"
 regex = "1.5.4"
-textwrap = "0.11"
+textwrap = "0.16"

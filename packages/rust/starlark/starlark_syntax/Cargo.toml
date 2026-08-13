@@ -14,11 +14,11 @@ repository = "https://github.com/facebook/starlark-rust"
 version = "0.14.2"
 
 [dependencies]
-annotate-snippets = { version = "0.9.0", features = [] }
+annotate-snippets = { version = "0.12.16", features = [] }
 anyhow = { workspace = true }
 derivative = { workspace = true }
 derive_more = { workspace = true }
-logos = "0.15"
+logos = "0.16"
 lsp-types = "0.97.0"
 memchr = { workspace = true }
 num-bigint = { workspace = true }

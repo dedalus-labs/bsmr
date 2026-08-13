@@ -184,9 +184,9 @@ async-scoped = { version = "0.9", features = ["use-tokio"] }
 async-stream = "0.3"
 async-trait = "0.1.86"
 backtrace = "0.3"
-base64 = { version = "0.22.1", features = ["alloc"] }
+base64 = { version = "0.23.1", features = ["alloc"] }
 bincode = { version = "2", features = ["serde"] }
-blake3 = { version = "=1.8.2", features = ["mmap", "rayon", "traits-preview"] }
+blake3 = { version = "=1.8.6", features = ["mmap", "rayon", "traits-preview"] }
 bsmr_action_impl = { path = "app/bsmr_action_impl" }
 bsmr_action_metadata_proto = { path = "app/bsmr_action_metadata_proto" }
 bsmr_analysis = { path = "app/bsmr_analysis" }
@@ -285,9 +285,9 @@ clap_complete = { version = "4.6.5", features = ["unstable-dynamic"] }
 cmp_any = { path = "packages/rust/gazebo/cmp_any" }
 common-path = "1.0.0"
 compact_str = { version = "0.10.0", features = ["serde"] }
-console = "0.15.11"
+console = "0.16.4"
 const_format = "0.2.36"
-constant_time_eq = "0.3.1"
+constant_time_eq = "0.4.2"
 convert_case = "0.11"
 crossbeam = "0.8"
 crossbeam-channel = "0.5.16"
@@ -297,11 +297,11 @@ ctor = "1.0.8"
 dashmap = { version = "6.2.1", features = ["rayon", "serde"] }
 debugserver-types = "0.5.0"
 derivative = "2.2"
-derive_more = { version = "1.0.0", features = ["full"] }
+derive_more = { version = "2.1.1", features = ["full"] }
 dice = { path = "packages/rust/dice/dice", features = ["pagable"] }
 dice_error = { path = "packages/rust/dice/dice_error" }
 dice_futures = { path = "packages/rust/dice/dice_futures" }
-digest = { version = "0.10", features = ["rand_core"] }
+digest = { version = "0.11", features = ["rand_core"] }
 dirs = "6.0"
 display_container = { path = "packages/rust/gazebo/display_container" }
 dunce = "1.0.5"
@@ -312,14 +312,14 @@ enum-iterator = "2.3.0"
 enum-map = "2.7.3"
 equivalent = "1.0.2"
 faccess = "0.2.4"
-fancy-regex = "0.16.2"
+fancy-regex = "0.19.0"
 fbinit = "0.2"
 flate2 = { version = "1.0.33", features = ["rust_backend"], default-features = false }
 fnv = "1.0"
 form_urlencoded = "1.2.1"
-fs4 = { version = "0.9.1", features = ["sync"] }
+fs4 = { version = "1.1.0", features = ["sync"] }
 futures = { version = "0.3.31", features = ["async-await", "compat"] }
-futures-intrusive = "0.4.2"
+futures-intrusive = "0.5.0"
 fxhash = "0.2.1"
 gazebo = { path = "packages/rust/gazebo/gazebo", features = ["str_pattern_extensions"] }
 glob = "0.3.2"
@@ -362,15 +362,15 @@ maplit = "1.0"
 memchr = "2.8.3"
 memmap2 = "0.9.11"
 mimalloc = { version = "0.1.52", default-features = false }
-multimap = "0.8.3"
-nix = { version = "0.30.1", features = ["dir", "event", "hostname", "inotify", "ioctl", "mman", "mount", "net", "poll", "ptrace", "reboot", "resource", "sched", "signal", "term", "time", "user", "zerocopy"] }
+multimap = "0.10.1"
+nix = { version = "0.31.3", features = ["dir", "event", "hostname", "inotify", "ioctl", "mman", "mount", "net", "poll", "ptrace", "reboot", "resource", "sched", "signal", "term", "time", "user", "zerocopy"] }
 nom = "8"
 nom-language = "0.1"
 notify = "8.2.0"
 num-bigint = { version = "0.4.8", features = ["rand", "serde"] }
 num_enum = "0.7.6"
-object = { version = "0.36.7", features = ["read", "write"] }
-os_str_bytes = { version = "6.6.1", features = ["conversions"] }
+object = { version = "0.40.0", features = ["read", "write"] }
+os_str_bytes = { version = "7.2.0", features = ["conversions"] }
 pagable = { path = "packages/rust/pagable/pagable", features = ["tokio"] }
 pagable_storage = { path = "packages/rust/pagable/pagable_storage", features = ["tokio"] }
 parking_lot = { version = "0.12.1", features = ["arc_lock", "send_guard"] }
@@ -395,7 +395,7 @@ re_grpc_proto = { path = "packages/rust/remote_execution/oss/re_grpc_proto" }
 ref-cast = "1.0.18"
 regex = "1.13.0"
 remote_execution = { path = "packages/rust/remote_execution/oss/re_grpc" }
-rusqlite = { version = "0.37.0", features = ["backup", "blob", "bundled", "column_decltype", "functions", "limits", "modern_sqlite", "serde_json"] }
+rusqlite = { version = "0.40.1", features = ["backup", "blob", "bundled", "column_decltype", "functions", "limits", "modern_sqlite", "serde_json"] }
 rustc-hash = "2.1.3"
 rustls = { version = "0.23.37", features = ["ring"] }
 rustls-native-certs = "0.8.3"
@@ -406,10 +406,10 @@ serde = { version = "1.0.219", features = ["derive", "rc"] }
 serde_json = { version = "1.0.140", features = ["alloc", "float_roundtrip", "raw_value", "unbounded_depth"] }
 serde_path_to_error = "0.1.20"
 setsketch = { path = "packages/rust/setsketch" }
-sha1 = "0.10.7"
-sha2 = "0.10.6"
-shlex = "1.3"
-similar = { version = "2.2.0", features = ["bytes", "inline"] }
+sha1 = "0.11.0"
+sha2 = "0.11.0"
+shlex = "2.0"
+similar = { version = "3.1.1", features = ["bytes", "inline"] }
 siphasher = "1.0.3"
 slab = "0.4.12"
 slog = { version = "2.8.2", features = ["max_level_trace", "nested-values"] }
@@ -428,11 +428,11 @@ superconsole = { path = "packages/rust/superconsole" }
 syn = { version = "2.0.118", features = ["extra-traits", "fold", "full", "visit", "visit-mut"] }
 sync_wrapper = "1.0.2"
 sys-info = "0.9.1"
-sysinfo = "0.38.4"
+sysinfo = "0.39.6"
 take_mut = "0.2"
 tar = "0.4.46"
 tempfile = "3.27.0"
-termimad = "0.34.1"
+termimad = "0.35.1"
 termios = "0.3"
 termwiz = { git = "https://github.com/wezterm/wezterm.git", rev = "05343b387085842b434d267f91b6b0ec157e4331", features = ["use_serde", "widgets"], default-features = false }
 test-case = "3.3.1"
@@ -440,7 +440,7 @@ textwrap = { version = "0.16.0", features = ["terminal_size"] }
 thiserror = "2.0.18"
 threadpool = "1.8.1"
 three_billion_instructions = { path = "tools/testing/three-billion-instructions" }
-tikv-jemallocator = "0.6.1"
+tikv-jemallocator = "0.7.0"
 tokio = { version = "1.52.3", features = ["full", "test-util", "tracing"] }
 tokio-retry = "0.3.2"
 tokio-rustls = { version = "0.26.4", features = ["logging", "ring", "tls12"], default-features = false }
@@ -452,12 +452,12 @@ tonic-prost = "0.14.6"
 tonic-prost-build = "0.14.6"
 tower = { version = "0.5.3", features = ["util"] }
 tower-layer = "0.3.3"
-tower-lsp-server = "0.22.1"
+tower-lsp-server = "0.23.0"
 tower-service = "0.3.3"
 tracing = { version = "0.1.41", features = ["attributes", "valuable"] }
 tracing-subscriber = { version = "0.3.23", features = ["chrono", "env-filter", "json", "local-time", "parking_lot", "registry"] }
 triomphe = { version = "0.1.16", features = ["arc-swap"] }
-twox-hash = "1.6.1"
+twox-hash = "2.1.2"
 typed-arena = "2"
 uuid = { version = "1.23.5", features = ["rng-getrandom", "serde", "v4", "v5", "v6", "v7", "v8"] }
 walkdir = "2.3"
@@ -467,7 +467,7 @@ windows-sys = { version = "0.61.2", features = ["Win32_Foundation", "Win32_Globa
 winver = "1"
 x509-parser = "0.18.1"
 xattr = "1.6.1"
-yaml-rust2 = { version = "0.10.4", default-features = false }
+yaml-rust2 = { version = "0.11.0", default-features = false }
 zstd = { version = "0.13.3", features = ["experimental", "zstdmt"] }
 
 [workspace.lints.rust]
