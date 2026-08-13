@@ -6,23 +6,32 @@
 // Verifies hermetic TypeScript actions against a manifest-only pnpm installation.
 
 import assert from "node:assert/strict";
-import { spawnSync } from "node:child_process";
+import { spawnSync, type SpawnSyncReturns } from "node:child_process";
 import { access, mkdir, mkdtemp, readFile, realpath, rm, symlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
-import { test } from "node:test";
+import { test, type TestContext } from "node:test";
 import { fileURLToPath } from "node:url";
 
 const runner = fileURLToPath(new URL("./runner.mjs", import.meta.url));
 
+type Fixture = Readonly<{
+	install: string;
+	output: string;
+	packageRoot: string;
+	root: string;
+	scratch: string;
+	source: string;
+}>;
+type Mode = "library" | "typecheck";
+
 /**
  * Write one file after creating its parent directory.
  *
- * @param {string} path - Absolute destination path.
- * @param {string} contents - UTF-8 file contents.
- * @returns {Promise<void>}
+ * @param path - Absolute destination path.
+ * @param contents - UTF-8 file contents.
  */
-async function write(path, contents) {
+async function write(path: string, contents: string): Promise<void> {
 	await mkdir(dirname(path), { recursive: true });
 	await writeFile(path, contents);
 }
@@ -30,13 +39,12 @@ async function write(path, contents) {
 /**
  * Represent one declared source as the symlink emitted by a BSMR source tree.
  *
- * @param {string} source - Symlink-tree root.
- * @param {string} declared - Real declared-file root.
- * @param {string} path - Workspace-relative source path.
- * @param {string} contents - UTF-8 file contents.
- * @returns {Promise<void>}
+ * @param source - Symlink-tree root.
+ * @param declared - Real declared-file root.
+ * @param path - Workspace-relative source path.
+ * @param contents - UTF-8 file contents.
  */
-async function declare(source, declared, path, contents) {
+async function declare(source: string, declared: string, path: string, contents: string): Promise<void> {
 	const input = join(declared, path);
 	const output = join(source, path);
 	await write(input, contents);
@@ -47,11 +55,11 @@ async function declare(source, declared, path, contents) {
 /**
  * Create source and install trees with one internal workspace dependency.
  *
- * @param {import("node:test").TestContext} context - Active test context.
- * @param {string} [packageRoot] - Workspace-relative package root, or an empty string for the workspace root.
- * @returns {Promise<{ install: string, output: string, packageRoot: string, root: string, scratch: string, source: string }>}
+ * @param context - Active test context.
+ * @param packageRoot - Workspace-relative package root, or an empty string for the workspace root.
+ * @returns Paths for the isolated fixture.
  */
-async function fixture(context, packageRoot = "packages/app") {
+async function fixture(context: TestContext, packageRoot = "packages/app"): Promise<Fixture> {
 	const root = await mkdtemp(join(tmpdir(), "bsmr-typescript-runner-"));
 	context.after(() => rm(root, { force: true, recursive: true }));
 	const install = join(root, "install");
@@ -112,11 +120,11 @@ await writeFile(join(args[3], "index.js"), "export const answer = 42;\\n");
 /**
  * Execute one runner mode with the exact current Node runtime.
  *
- * @param {{ install: string, output: string, packageRoot: string, root: string, scratch: string, source: string }} state - Fixture paths.
- * @param {"library" | "typecheck"} mode - TypeScript action mode.
- * @returns {import("node:child_process").SpawnSyncReturns<string>}
+ * @param state - Fixture paths.
+ * @param mode - TypeScript action mode.
+ * @returns The completed runner process.
  */
-function runRunner(state, mode) {
+function runRunner(state: Fixture, mode: Mode): SpawnSyncReturns<string> {
 	const config = mode === "library" ? "tsdown.config.ts" : "tsconfig.json";
 	return spawnSync(
 		process.execPath,
