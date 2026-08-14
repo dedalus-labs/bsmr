@@ -34,6 +34,7 @@ use tokio::sync::Semaphore;
 use crate::file_ops::trait_::DiceFileOps;
 use crate::file_ops::trait_::FileOps;
 use crate::package_listing::find_build_source;
+use crate::package_listing::is_python_virtual_environment;
 
 /// Resolves a list of CellPath to a stream of Package representing all the
 /// packages recursively contained in the paths (used for resolving patterns
@@ -138,6 +139,10 @@ pub async fn collect_package_roots<E>(
                 }
             }
         };
+
+        if is_python_virtual_environment(&listing) {
+            continue;
+        }
 
         if find_build_source(&buildfile_candidates, &listing, true).is_some() {
             collector(PackageLabel::from_cell_path(path.as_ref()))?;

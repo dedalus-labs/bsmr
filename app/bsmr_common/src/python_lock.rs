@@ -29,12 +29,48 @@ pub struct PylockToml {
     pub default_groups: Vec<String>,
     pub packages: Vec<PylockTomlPackage>,
     pub tool: Option<toml::Table>,
+    #[serde(skip)]
+    raw: toml::Table,
+}
+
+/// One self-contained PEP 751 input for a normalized package action.
+#[derive(Debug, Eq, PartialEq)]
+pub struct PylockInstallationFragment {
+    pub package: String,
+    pub contents: String,
+    pub acquisition: PylockAcquisition,
+}
+
+/// The artifact forms available to uv for one locked distribution.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum PylockAcquisition {
+    Wheel,
+    Source,
+    WheelOrSource,
+}
+
+impl PylockAcquisition {
+    /// Returns whether the selected distribution may need a PEP 517 build.
+    pub fn permits_source(self) -> bool {
+        matches!(self, Self::Source | Self::WheelOrSource)
+    }
+
+    /// Returns the stable Starlark spelling consumed by the native rule.
+    pub fn as_str(self) -> &'static str {
+        match self {
+            Self::Wheel => "wheel",
+            Self::Source => "source",
+            Self::WheelOrSource => "wheel-or-source",
+        }
+    }
 }
 
 impl PylockToml {
     /// Parses and canonically orders a PEP 751 lock without resolving an environment.
     pub fn parse(input: &str) -> Result<Self, PylockTomlError> {
         let mut lock = toml::from_str::<Self>(input).map_err(PylockTomlError::Deserialize)?;
+        lock.raw = toml::from_str(input).map_err(PylockTomlError::Deserialize)?;
+        lock.validate()?;
         lock.environments = sorted_unique(lock.environments);
         lock.extras = sorted_unique(lock.extras);
         lock.dependency_groups = sorted_unique(lock.dependency_groups);
@@ -53,6 +89,75 @@ impl PylockToml {
     /// Returns the accepted PEP 751 format version.
     pub fn lock_version(&self) -> &str {
         &self.lock_version
+    }
+
+    /// Splits the lock into canonical per-package installation inputs.
+    pub fn installation_fragments(
+        &self,
+    ) -> Result<Vec<PylockInstallationFragment>, PylockTomlError> {
+        let mut base = self.raw.clone();
+        let packages = base
+            .remove("packages")
+            .and_then(|packages| packages.as_array().cloned())
+            .expect("typed PEP 751 parsing requires a package array");
+        canonicalize_selection_metadata(&mut base, self);
+        canonicalize_table(&mut base);
+        let mut groups = BTreeMap::<String, (bool, bool, bool, Vec<toml::Value>)>::new();
+        for package in packages {
+            let mut package = package
+                .as_table()
+                .cloned()
+                .expect("typed PEP 751 parsing requires package tables");
+            let name = package
+                .get("name")
+                .and_then(toml::Value::as_str)
+                .expect("typed PEP 751 parsing requires package names")
+                .to_owned();
+            let (has_wheel, has_source) = package_artifact_forms(&package);
+            let has_universal_wheel = package_has_universal_wheel(&package);
+            package.remove("dependencies");
+            canonicalize_table(&mut package);
+            let group = groups
+                .entry(name)
+                .or_insert_with(|| (false, false, true, Vec::new()));
+            group.0 |= has_wheel;
+            group.1 |= has_source;
+            group.2 &= has_universal_wheel;
+            group.3.push(toml::Value::Table(package));
+        }
+        groups
+            .into_iter()
+            .map(
+                |(package, (has_wheel, has_source, universal, mut variants))| {
+                    variants.sort_by_cached_key(toml::Value::to_string);
+                    let mut fragment = base.clone();
+                    fragment.insert("packages".to_owned(), toml::Value::Array(variants));
+                    Ok(PylockInstallationFragment {
+                        package,
+                        contents: toml::to_string(&fragment).map_err(PylockTomlError::Serialize)?,
+                        acquisition: match (has_wheel, has_source, universal) {
+                            (true, _, true) => PylockAcquisition::Wheel,
+                            (true, true, false) => PylockAcquisition::WheelOrSource,
+                            (true, false, false) => PylockAcquisition::Wheel,
+                            (false, true, false) => PylockAcquisition::Source,
+                            (false, true, true) => {
+                                unreachable!("a universal wheel is a wheel artifact")
+                            }
+                            (false, false, _) => {
+                                unreachable!("a package always has one artifact form")
+                            }
+                        },
+                    })
+                },
+            )
+            .collect()
+    }
+
+    /// Rejects lock data that cannot identify one reproducible installation.
+    fn validate(&self) -> Result<(), PylockTomlError> {
+        self.packages
+            .iter()
+            .try_for_each(PylockTomlPackage::validate)
     }
 }
 
@@ -85,6 +190,62 @@ impl PylockTomlPackage {
             (&left.name, &left.path, &left.url).cmp(&(&right.name, &right.path, &right.url))
         });
     }
+
+    /// Validates one package's normalized identity and acquisition source.
+    fn validate(&self) -> Result<(), PylockTomlError> {
+        if normalize_package_name(&self.name).as_deref() != Some(&self.name) {
+            return Err(self.invalid("name must be normalized"));
+        }
+        let source_count = usize::from(self.vcs.is_some())
+            + usize::from(self.directory.is_some())
+            + usize::from(self.archive.is_some())
+            + usize::from(self.sdist.is_some() || !self.wheels.is_empty());
+        if source_count == 0 {
+            return Err(self.invalid("acquisition source is required"));
+        }
+        if source_count > 1 {
+            return Err(self.invalid("acquisition sources are mutually exclusive"));
+        }
+        if let Some(vcs) = &self.vcs {
+            vcs.validate(self)?;
+        }
+        if self
+            .directory
+            .as_ref()
+            .is_some_and(|directory| directory.path.is_empty())
+        {
+            return Err(self.invalid("directory path must not be empty"));
+        }
+        for (kind, artifact) in self.artifacts() {
+            artifact.validate(self, kind)?;
+        }
+        if self.attestation_identities.iter().any(|identity| {
+            identity
+                .get("kind")
+                .and_then(toml::Value::as_str)
+                .is_none_or(str::is_empty)
+        }) {
+            return Err(self.invalid("attestation identity kind is required"));
+        }
+        Ok(())
+    }
+
+    /// Iterates over every artifact form with its PEP 751 field name.
+    fn artifacts(&self) -> impl Iterator<Item = (&'static str, &PylockTomlArtifact)> {
+        self.archive
+            .iter()
+            .map(|artifact| ("archive", artifact))
+            .chain(self.sdist.iter().map(|artifact| ("sdist", artifact)))
+            .chain(self.wheels.iter().map(|artifact| ("wheel", artifact)))
+    }
+
+    /// Associates a semantic lock failure with the offending package.
+    fn invalid(&self, reason: &'static str) -> PylockTomlError {
+        PylockTomlError::Package {
+            package: self.name.clone(),
+            reason,
+        }
+    }
 }
 
 /// Acquisition metadata for one locked Python distribution artifact.
@@ -100,6 +261,40 @@ pub struct PylockTomlArtifact {
     pub hashes: BTreeMap<String, String>,
 }
 
+impl PylockTomlArtifact {
+    /// Requires one address and one nonempty immutable digest.
+    fn validate(
+        &self,
+        package: &PylockTomlPackage,
+        kind: &'static str,
+    ) -> Result<(), PylockTomlError> {
+        let located = self.url.as_deref().is_some_and(|url| !url.is_empty())
+            || self.path.as_deref().is_some_and(|path| !path.is_empty());
+        if !located {
+            return Err(package.invalid(match kind {
+                "archive" => "archive URL or path is required",
+                "sdist" => "sdist URL or path is required",
+                "wheel" => "wheel URL or path is required",
+                _ => unreachable!("artifact kinds are finite"),
+            }));
+        }
+        if self.hashes.is_empty()
+            || self
+                .hashes
+                .iter()
+                .any(|(algorithm, digest)| algorithm.is_empty() || digest.is_empty())
+        {
+            return Err(package.invalid(match kind {
+                "archive" => "archive hashes must not be empty",
+                "sdist" => "sdist hashes must not be empty",
+                "wheel" => "wheel hashes must not be empty",
+                _ => unreachable!("artifact kinds are finite"),
+            }));
+        }
+        Ok(())
+    }
+}
+
 /// An immutable VCS source selected by its resolved commit identity.
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "kebab-case")]
@@ -111,6 +306,24 @@ pub struct PylockTomlVcs {
     pub requested_revision: Option<String>,
     pub commit_id: String,
     pub subdirectory: Option<String>,
+}
+
+impl PylockTomlVcs {
+    /// Requires an immutable revision and an address for its source tree.
+    fn validate(&self, package: &PylockTomlPackage) -> Result<(), PylockTomlError> {
+        if self.kind.is_empty() {
+            return Err(package.invalid("VCS type must not be empty"));
+        }
+        if self.commit_id.is_empty() {
+            return Err(package.invalid("VCS commit ID must not be empty"));
+        }
+        let located = self.url.as_deref().is_some_and(|url| !url.is_empty())
+            || self.path.as_deref().is_some_and(|path| !path.is_empty());
+        if !located {
+            return Err(package.invalid("VCS URL or path is required"));
+        }
+        Ok(())
+    }
 }
 
 /// A local Python source tree referenced relative to its lockfile.
@@ -162,11 +375,18 @@ impl PylockName {
 pub enum PylockTomlError {
     #[error("Invalid pylock.toml: {0}")]
     Deserialize(toml::de::Error),
+    #[error("Unable to serialize canonical pylock.toml fragment: {0}")]
+    Serialize(toml::ser::Error),
     #[error(
         "Invalid PEP 751 lock filename `{}`; expected `pylock.toml` or `pylock.<name>.toml`",
         .0.display()
     )]
     FileName(PathBuf),
+    #[error("Invalid pylock.toml package `{package}`: {reason}")]
+    Package {
+        package: String,
+        reason: &'static str,
+    },
 }
 
 /// Accepts future minor revisions while rejecting unsupported lock major versions.
@@ -193,6 +413,110 @@ fn sorted_unique(mut values: Vec<String>) -> Vec<String> {
     values
 }
 
+/// Rewrites set-like selection arrays to their validated canonical order.
+fn canonicalize_selection_metadata(table: &mut toml::Table, lock: &PylockToml) {
+    for (name, values) in [
+        ("environments", &lock.environments),
+        ("extras", &lock.extras),
+        ("dependency-groups", &lock.dependency_groups),
+        ("default-groups", &lock.default_groups),
+    ] {
+        if table.contains_key(name) || !values.is_empty() {
+            table.insert(
+                name.to_owned(),
+                toml::Value::Array(values.iter().cloned().map(toml::Value::String).collect()),
+            );
+        }
+    }
+}
+
+/// Returns whether a package offers wheel and source installation forms.
+fn package_artifact_forms(package: &toml::Table) -> (bool, bool) {
+    let has_wheel = package
+        .get("wheels")
+        .and_then(toml::Value::as_array)
+        .is_some_and(|wheels| !wheels.is_empty());
+    let has_source = package.contains_key("vcs")
+        || package.contains_key("directory")
+        || package.contains_key("archive")
+        || package.contains_key("sdist")
+        || !has_wheel;
+    (has_wheel, has_source)
+}
+
+/// Returns whether a package offers a platform-independent Python 3 wheel.
+fn package_has_universal_wheel(package: &toml::Table) -> bool {
+    package
+        .get("wheels")
+        .and_then(toml::Value::as_array)
+        .is_some_and(|wheels| wheels.iter().any(universal_wheel))
+}
+
+/// Recognizes wheel tags that every supported CPython 3 toolchain accepts.
+fn universal_wheel(wheel: &toml::Value) -> bool {
+    let Some(wheel) = wheel.as_table() else {
+        return false;
+    };
+    ["name", "path", "url"]
+        .into_iter()
+        .filter_map(|field| wheel.get(field).and_then(toml::Value::as_str))
+        .map(|location| location.split(['?', '#']).next().unwrap_or(location))
+        .any(|location| {
+            location.ends_with("-py3-none-any.whl") || location.ends_with("-py2.py3-none-any.whl")
+        })
+}
+
+/// Recursively sorts TOML table keys without reordering semantic arrays.
+fn canonicalize_table(table: &mut toml::Table) {
+    let mut entries = std::mem::take(table).into_iter().collect::<Vec<_>>();
+    entries.sort_by(|(left, _), (right, _)| left.cmp(right));
+    for (name, mut value) in entries {
+        canonicalize_value(&mut value);
+        table.insert(name, value);
+    }
+}
+
+/// Canonicalizes nested extension tables while preserving their array order.
+fn canonicalize_value(value: &mut toml::Value) {
+    match value {
+        toml::Value::Table(table) => canonicalize_table(table),
+        toml::Value::Array(values) => values.iter_mut().for_each(canonicalize_value),
+        _ => {}
+    }
+}
+
+/// Applies the Python distribution-name normalization algorithm.
+fn normalize_package_name(name: &str) -> Option<String> {
+    if name.is_empty()
+        || name
+            .as_bytes()
+            .first()
+            .is_none_or(|character| !character.is_ascii_alphanumeric())
+        || name
+            .as_bytes()
+            .last()
+            .is_none_or(|character| !character.is_ascii_alphanumeric())
+    {
+        return None;
+    }
+    let mut normalized = String::with_capacity(name.len());
+    let mut separator = false;
+    for character in name.chars() {
+        if character.is_ascii_alphanumeric() {
+            normalized.push(character.to_ascii_lowercase());
+            separator = false;
+        } else if matches!(character, '-' | '_' | '.') {
+            if !separator {
+                normalized.push('-');
+                separator = true;
+            }
+        } else {
+            return None;
+        }
+    }
+    Some(normalized)
+}
+
 #[cfg(test)]
 mod tests {
     use std::path::Path;
@@ -200,6 +524,7 @@ mod tests {
     use indoc::indoc;
     use test_case::test_case;
 
+    use super::PylockAcquisition;
     use super::PylockName;
     use super::PylockToml;
     use super::PylockTomlError;
@@ -228,6 +553,17 @@ mod tests {
         url = "https://example.org/typing.whl"
         hashes = { sha256 = "t" }
     "#};
+
+    /// Asserts one semantic package failure without accepting a parser error.
+    fn assert_package_error(input: &str, expected_package: &str, expected: &str) {
+        match PylockToml::parse(input) {
+            Err(PylockTomlError::Package { package, reason }) => {
+                assert_eq!(package, expected_package);
+                assert_eq!(reason, expected);
+            }
+            result => panic!("expected package error, got {result:?}"),
+        }
+    }
 
     /// Package and artifact order must not leak into downstream action identities.
     #[test]
@@ -286,15 +622,20 @@ mod tests {
 
     /// Immutable VCS identity must survive the wire boundary as typed data.
     #[test]
-    fn invariant_vcs_commit_is_preserved() {
+    fn invariant_vcs_commit_and_stable_version_are_preserved() {
         let input = format!(
-            "{HEADER}[[packages]]\nname = \"demo\"\n[packages.vcs]\ntype = \"git\"\nurl = \"https://example.org/demo.git\"\ncommit-id = \"deadbeef\"\n"
+            "{HEADER}[[packages]]\nname = \"demo\"\nversion = \"1.0\"\n[packages.vcs]\ntype = \"git\"\nurl = \"https://example.org/demo.git\"\ncommit-id = \"deadbeef\"\n"
         );
         let lock = PylockToml::parse(&input).unwrap();
         let vcs = lock.packages[0].vcs.as_ref().unwrap();
 
+        assert_eq!(lock.packages[0].version.as_deref(), Some("1.0"));
         assert_eq!(vcs.kind, "git");
         assert_eq!(vcs.commit_id, "deadbeef");
+        assert_eq!(
+            lock.installation_fragments().unwrap()[0].acquisition,
+            PylockAcquisition::Source
+        );
     }
 
     /// Required source identity must fail before acquisition or package execution.
@@ -307,5 +648,153 @@ mod tests {
             PylockToml::parse(&input),
             Err(PylockTomlError::Deserialize(_))
         ));
+    }
+
+    /// Package names must already carry their canonical distribution identity.
+    #[test]
+    fn invariant_package_name_is_normalized() {
+        let input = format!(
+            "{HEADER}[[packages]]\nname = \"Typing_Extensions\"\n[[packages.wheels]]\nurl = \"https://example.org/demo.whl\"\nhashes = {{ sha256 = \"demo\" }}\n"
+        );
+
+        assert_package_error(&input, "Typing_Extensions", "name must be normalized");
+    }
+
+    /// One package entry cannot select incompatible acquisition mechanisms.
+    #[test_case("[packages.vcs]\ntype = \"git\"\nurl = \"https://example.org/demo.git\"\ncommit-id = \"deadbeef\"\n[[packages.wheels]]\nurl = \"https://example.org/demo.whl\"\nhashes = { sha256 = \"demo\" }"; "vcs_and_wheel")]
+    #[test_case("[packages.archive]\nurl = \"https://example.org/demo.zip\"\nhashes = { sha256 = \"archive\" }\n[packages.sdist]\nurl = \"https://example.org/demo.tar.gz\"\nhashes = { sha256 = \"sdist\" }"; "archive_and_sdist")]
+    #[test_case("[packages.directory]\npath = \"demo\"\n[packages.archive]\npath = \"demo.zip\"\nhashes = { sha256 = \"archive\" }"; "directory_and_archive")]
+    fn invariant_package_source_is_unambiguous(source: &str) {
+        let input = format!("{HEADER}[[packages]]\nname = \"demo\"\n{source}\n");
+
+        assert_package_error(&input, "demo", "acquisition sources are mutually exclusive");
+    }
+
+    /// Every installable package needs one replayable acquisition source.
+    #[test]
+    fn invariant_package_source_is_required() {
+        let input = format!("{HEADER}[[packages]]\nname = \"demo\"\nversion = \"1.0\"\n");
+
+        assert_package_error(&input, "demo", "acquisition source is required");
+    }
+
+    /// Every selected artifact needs both a location and immutable hash identity.
+    #[test_case("url = \"https://example.org/demo.whl\"\nhashes = {}", "wheel hashes must not be empty"; "empty_hashes")]
+    #[test_case("hashes = { sha256 = \"demo\" }", "wheel URL or path is required"; "missing_location")]
+    fn invariant_artifact_is_replayable(artifact: &str, expected: &str) {
+        let input =
+            format!("{HEADER}[[packages]]\nname = \"demo\"\n[[packages.wheels]]\n{artifact}\n");
+
+        assert_package_error(&input, "demo", expected);
+    }
+
+    /// VCS entries need an immutable revision and one acquisition location.
+    #[test_case("url = \"https://example.org/demo.git\"\ncommit-id = \"\"", "VCS commit ID must not be empty"; "empty_commit")]
+    #[test_case("commit-id = \"deadbeef\"", "VCS URL or path is required"; "missing_location")]
+    fn invariant_vcs_source_is_replayable(vcs: &str, expected: &str) {
+        let input = format!(
+            "{HEADER}[[packages]]\nname = \"demo\"\n[packages.vcs]\ntype = \"git\"\n{vcs}\n"
+        );
+
+        assert_package_error(&input, "demo", expected);
+    }
+
+    /// Attestation entries without an identity kind cannot support provenance.
+    #[test]
+    fn invariant_attestation_identity_has_kind() {
+        let input = format!(
+            "{HEADER}[[packages]]\nname = \"demo\"\n[[packages.wheels]]\nurl = \"https://example.org/demo.whl\"\nhashes = {{ sha256 = \"demo\" }}\n[[packages.attestation-identities]]\npublisher = \"example\"\n"
+        );
+
+        assert_package_error(&input, "demo", "attestation identity kind is required");
+    }
+
+    /// Installation fragments isolate package changes while retaining marker variants.
+    #[test]
+    fn invariant_installation_fragments_are_package_granular() {
+        let input = format!(
+            "{}future-top-level = 'kept'\n{}{}{}",
+            HEADER,
+            TYPING,
+            ATTRS,
+            TYPING.replace(
+                "name = \"typing-extensions\"",
+                "name = \"typing-extensions\"\nmarker = \"python_version < '3.13'\"\nfuture-package-field = 'kept'"
+            )
+        );
+        let lock = PylockToml::parse(&input).unwrap();
+        let fragments = lock.installation_fragments().unwrap();
+
+        assert_eq!(
+            fragments
+                .iter()
+                .map(|fragment| fragment.package.as_str())
+                .collect::<Vec<_>>(),
+            ["attrs", "typing-extensions"]
+        );
+        assert_eq!(fragments[0].contents.matches("[[packages]]").count(), 1);
+        assert_eq!(fragments[1].contents.matches("[[packages]]").count(), 2);
+        assert!(!fragments[0].contents.contains("typing-extensions"));
+        assert!(!fragments[0].contents.contains("dependencies"));
+        assert!(fragments[1].contents.contains("future-top-level"));
+        assert!(fragments[1].contents.contains("future-package-field"));
+        assert_eq!(fragments[0].acquisition, PylockAcquisition::Wheel);
+        assert_eq!(fragments[1].acquisition, PylockAcquisition::Wheel);
+        PylockToml::parse(&fragments[0].contents).unwrap();
+        PylockToml::parse(&fragments[1].contents).unwrap();
+    }
+
+    /// A mixed lock delegates platform-tag selection to the pinned uv action.
+    #[test]
+    fn invariant_wheel_with_sdist_requires_explicit_selection() {
+        let input = format!(
+            "{HEADER}[[packages]]\nname = 'demo'\n[packages.sdist]\nurl = 'https://example.org/demo.tar.gz'\nhashes = {{ sha256 = 'source' }}\n[[packages.wheels]]\nurl = 'https://example.org/demo.whl'\nhashes = {{ sha256 = 'wheel' }}\n"
+        );
+
+        assert_eq!(
+            PylockToml::parse(&input)
+                .unwrap()
+                .installation_fragments()
+                .unwrap()[0]
+                .acquisition,
+            PylockAcquisition::WheelOrSource
+        );
+    }
+
+    /// A Python 3 universal wheel cannot require platform-sensitive selection.
+    #[test]
+    fn invariant_universal_wheel_bypasses_explicit_selection() {
+        let input = format!(
+            "{HEADER}[[packages]]\nname = 'demo'\n[packages.sdist]\nurl = 'https://example.org/demo.tar.gz'\nhashes = {{ sha256 = 'source' }}\n[[packages.wheels]]\nurl = 'https://example.org/demo-1.0-py3-none-any.whl'\nhashes = {{ sha256 = 'wheel' }}\n"
+        );
+
+        assert_eq!(
+            PylockToml::parse(&input)
+                .unwrap()
+                .installation_fragments()
+                .unwrap()[0]
+                .acquisition,
+            PylockAcquisition::Wheel
+        );
+    }
+
+    /// Unrelated lock edits must not invalidate another package action identity.
+    #[test]
+    fn invariant_installation_fragment_ignores_unrelated_packages() {
+        let before = PylockToml::parse(&format!("{HEADER}{ATTRS}{TYPING}"))
+            .unwrap()
+            .installation_fragments()
+            .unwrap();
+        let after = PylockToml::parse(&format!(
+            "{HEADER}{ATTRS}{}",
+            TYPING.replace("typing.whl", "typing-repacked.whl")
+        ))
+        .unwrap()
+        .installation_fragments()
+        .unwrap();
+
+        assert_eq!(before[0].package, "attrs");
+        assert_eq!(before[0].contents, after[0].contents);
+        assert_ne!(before[1].contents, after[1].contents);
     }
 }

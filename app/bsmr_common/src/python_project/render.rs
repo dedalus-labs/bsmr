@@ -15,10 +15,20 @@ use super::Manifest;
 use super::NativePythonBuildError;
 use super::PythonRootFiles;
 use super::PythonTestLock;
+use super::manifest_uses_vcs;
 use super::normalize_project_name;
 use super::project_files;
+use super::validate_test_command;
 use super::workspace_path;
 use crate::package_listing::listing::PackageListing;
+
+mod environment;
+
+use environment::render_config_settings;
+use environment::render_environment;
+use environment::render_package_build_variables;
+use environment::render_package_config_settings;
+use environment::render_workspace_environment;
 
 mod target {
     pub(super) const ANALYSIS_SOURCES: &str = "__bsmr_python_analysis_sources";
@@ -31,12 +41,17 @@ mod target {
 
 struct PackageRender<'a> {
     config_settings: &'a BTreeMap<String, super::BuildConfigSetting>,
+    package_config_settings: &'a BTreeMap<String, BTreeMap<String, super::BuildConfigSetting>>,
+    package_build_variables: &'a BTreeMap<String, BTreeMap<String, String>>,
     package_root: &'a CellRelativePathBuf,
     listing: &'a PackageListing,
     target_name: &'a str,
-    dynamic_version: bool,
+    uses_vcs: bool,
+    installable: bool,
+    members: &'a [super::PythonWorkspaceMember],
     test_locks: &'a [PythonTestLock],
     scripts: &'a BTreeMap<String, String>,
+    test_command: Option<&'a [String]>,
 }
 
 impl PackageRender<'_> {
@@ -60,11 +75,16 @@ pub fn render_python_build_file(
 ) -> Result<String, NativePythonBuildError> {
     let manifest =
         toml::from_str::<Manifest>(manifest).map_err(NativePythonBuildError::InvalidManifest)?;
-    let project = manifest
-        .project
-        .filter(|project| project.requires_python.is_some())
-        .ok_or(NativePythonBuildError::MissingProjectMetadata)?;
+    let uses_vcs = manifest_uses_vcs(&manifest);
+    let Some(project) = manifest.project else {
+        return render_workspace_root(&package_root, root_files, &manifest);
+    };
+    if project.requires_python.is_none() {
+        return Err(NativePythonBuildError::MissingProjectMetadata);
+    }
     let target_name = normalize_project_name(&project.name);
+    let installable = manifest.tool.uv.package != Some(false);
+    validate_test_command(manifest.tool.bsmr.python.test_command.as_deref())?;
     validate_target_names(&package_root, &target_name, &project.scripts, root_files)?;
 
     let mut output = String::new();
@@ -72,21 +92,49 @@ pub fn render_python_build_file(
         render_environment(
             &mut output,
             root_files,
-            &target_name,
+            installable.then_some(target_name.as_str()),
             &manifest.tool.uv.config_settings,
+            &manifest.tool.uv.config_settings_package,
+            &manifest.tool.uv.extra_build_variables,
         )?;
     }
     render_package(
         &mut output,
         &PackageRender {
             config_settings: &manifest.tool.uv.config_settings,
+            package_config_settings: &manifest.tool.uv.config_settings_package,
+            package_build_variables: &manifest.tool.uv.extra_build_variables,
             package_root: &package_root,
             listing,
             target_name: &target_name,
-            dynamic_version: project.dynamic.iter().any(|field| field == "version"),
+            uses_vcs,
+            installable,
+            members: &root_files.members,
             test_locks: &root_files.test_locks,
             scripts: &project.scripts,
+            test_command: manifest.tool.bsmr.python.test_command.as_deref(),
         },
+    )?;
+    Ok(output)
+}
+
+/// Renders shared Python infrastructure from a non-installable workspace root.
+fn render_workspace_root(
+    package_root: &CellRelativePathBuf,
+    root_files: &PythonRootFiles,
+    manifest: &Manifest,
+) -> Result<String, NativePythonBuildError> {
+    if !package_root.is_empty() {
+        return Err(NativePythonBuildError::MissingProjectMetadata);
+    }
+    let mut output = String::new();
+    render_environment(
+        &mut output,
+        root_files,
+        None,
+        &manifest.tool.uv.config_settings,
+        &manifest.tool.uv.config_settings_package,
+        &manifest.tool.uv.extra_build_variables,
     )?;
     Ok(output)
 }
@@ -128,168 +176,33 @@ fn is_reserved_target(name: &str, test_locks: &[PythonTestLock]) -> bool {
             .any(|lock| name == lock.environment || name == lock.target)
 }
 
-/// Emits the root toolchain, lock environments, and first-party wheel closure.
-fn render_environment(
-    output: &mut String,
-    root_files: &PythonRootFiles,
-    root_target: &str,
-    config_settings: &BTreeMap<String, super::BuildConfigSetting>,
-) -> Result<(), NativePythonBuildError> {
-    writeln!(
-        output,
-        "load(\"@prelude//python_native:defs.bzl\", \"python_environment\", \"python_wheel_environment\")"
-    )
-    .map_err(NativePythonBuildError::Render)?;
-    writeln!(
-        output,
-        "load(\"@prelude//python_native:toolchain.bzl\", \"python_native_toolchain\")\n"
-    )
-    .map_err(NativePythonBuildError::Render)?;
-    writeln!(output, "python_native_toolchain()\n").map_err(NativePythonBuildError::Render)?;
-    render_vcs(output, root_files)?;
-    render_dependency_environments(output, root_files, config_settings)?;
-    render_workspace_environment(output, root_files, root_target)
-}
-
-/// Emits declared Git database inputs for dynamic project versions.
-fn render_vcs(
-    output: &mut String,
-    root_files: &PythonRootFiles,
-) -> Result<(), NativePythonBuildError> {
-    let Some(vcs) = &root_files.vcs else {
-        return Ok(());
-    };
-    writeln!(
-        output,
-        "load(\"@prelude//python_native:defs.bzl\", \"python_vcs\")\n"
-    )
-    .map_err(NativePythonBuildError::Render)?;
-    writeln!(output, "python_vcs(").map_err(NativePythonBuildError::Render)?;
-    writeln!(output, "    name = {:?},", target::VCS).map_err(NativePythonBuildError::Render)?;
-    writeln!(output, "    srcs = {{").map_err(NativePythonBuildError::Render)?;
-    for path in ["HEAD", "objects", "refs"]
-        .into_iter()
-        .chain(vcs.packed_refs.then_some("packed-refs"))
-        .chain(vcs.shallow.then_some("shallow"))
-    {
-        writeln!(
-            output,
-            "        {path:?}: {git_path:?},",
-            git_path = format!(".git/{path}")
-        )
-        .map_err(NativePythonBuildError::Render)?;
-    }
-    writeln!(output, "    }},\n    visibility = [\"PUBLIC\"],\n)\n")
-        .map_err(NativePythonBuildError::Render)
-}
-
-/// Emits one dependency environment for each authoritative PEP 751 lock.
-fn render_dependency_environments(
-    output: &mut String,
-    root_files: &PythonRootFiles,
-    config_settings: &BTreeMap<String, super::BuildConfigSetting>,
-) -> Result<(), NativePythonBuildError> {
-    let environments = [
-        (target::ENVIRONMENT, "pylock.toml"),
-        (target::BUILD_ENVIRONMENT, "pylock.build.toml"),
-    ]
-    .into_iter()
-    .map(|(name, file)| (name.to_owned(), file.to_owned()))
-    .chain(
-        root_files
-            .test_locks
-            .iter()
-            .map(|lock| (lock.environment.clone(), lock.file.clone())),
-    );
-    for (name, lock) in environments {
-        render_dependency_environment(output, &name, &lock, config_settings)?;
-    }
-    Ok(())
-}
-
-/// Emits one exact lock installation as a CAS directory target.
-fn render_dependency_environment(
-    output: &mut String,
-    name: &str,
-    lock: &str,
-    config_settings: &BTreeMap<String, super::BuildConfigSetting>,
-) -> Result<(), NativePythonBuildError> {
-    writeln!(output, "python_environment(").map_err(NativePythonBuildError::Render)?;
-    writeln!(output, "    name = {name:?},").map_err(NativePythonBuildError::Render)?;
-    writeln!(output, "    lock = {lock:?},").map_err(NativePythonBuildError::Render)?;
-    render_config_settings(output, config_settings)?;
-    writeln!(output, "    python = \":__bsmr_python_distribution\",")
-        .map_err(NativePythonBuildError::Render)?;
-    writeln!(output, "    uv = \":__bsmr_uv_distribution\",")
-        .map_err(NativePythonBuildError::Render)?;
-    if name != target::BUILD_ENVIRONMENT {
-        writeln!(
-            output,
-            "    build_environment = \":{}\",",
-            target::BUILD_ENVIRONMENT
-        )
-        .map_err(NativePythonBuildError::Render)?;
-    }
-    writeln!(output, "    visibility = [\"PUBLIC\"],").map_err(NativePythonBuildError::Render)?;
-    writeln!(output, ")\n").map_err(NativePythonBuildError::Render)
-}
-
-/// Emits PEP 517 settings in canonical key and repetition order.
-fn render_config_settings(
-    output: &mut String,
-    settings: &BTreeMap<String, super::BuildConfigSetting>,
-) -> Result<(), NativePythonBuildError> {
-    if settings.is_empty() {
-        return Ok(());
-    }
-    writeln!(output, "    config_settings = {{").map_err(NativePythonBuildError::Render)?;
-    for (name, setting) in settings {
-        writeln!(output, "        {name:?}: {:?},", setting.values())
-            .map_err(NativePythonBuildError::Render)?;
-    }
-    writeln!(output, "    }},").map_err(NativePythonBuildError::Render)
-}
-
-/// Emits the environment that overlays all first-party wheels.
-fn render_workspace_environment(
-    output: &mut String,
-    root_files: &PythonRootFiles,
-    root_target: &str,
-) -> Result<(), NativePythonBuildError> {
-    writeln!(output, "python_wheel_environment(").map_err(NativePythonBuildError::Render)?;
-    writeln!(output, "    name = {:?},", target::WORKSPACE_ENVIRONMENT)
-        .map_err(NativePythonBuildError::Render)?;
-    writeln!(output, "    python = \":__bsmr_python_distribution\",")
-        .map_err(NativePythonBuildError::Render)?;
-    writeln!(output, "    uv = \":__bsmr_uv_distribution\",")
-        .map_err(NativePythonBuildError::Render)?;
-    writeln!(output, "    wheels = [").map_err(NativePythonBuildError::Render)?;
-    writeln!(output, "        {:?},", format!(":{root_target}"))
-        .map_err(NativePythonBuildError::Render)?;
-    for member in &root_files.members {
-        writeln!(
-            output,
-            "        {label:?},",
-            label = format!("//{}:{}", member.package, member.target)
-        )
-        .map_err(NativePythonBuildError::Render)?;
-    }
-    writeln!(output, "    ],\n    visibility = [\"PUBLIC\"],\n)\n")
-        .map_err(NativePythonBuildError::Render)
-}
-
 /// Emits source, wheel, Ruff, ty, test, and entry-point targets for one project.
 fn render_package(
     output: &mut String,
     package: &PackageRender<'_>,
 ) -> Result<(), NativePythonBuildError> {
-    writeln!(output, "load(\"@prelude//python_native:defs.bzl\", \"python_entry_point\", \"python_sources\", \"python_test\", \"python_wheel\", \"ruff_check\", \"ty_check\")\n")
+    writeln!(output, "load(\"@prelude//python_native:defs.bzl\", \"python_entry_point\", \"python_sources\", \"python_test\", \"python_wheel\", \"python_wheel_environment\", \"ruff_check\", \"ty_check\")\n")
         .map_err(NativePythonBuildError::Render)?;
+    if !package.package_root.is_empty() && package.has_workspace_environment() {
+        render_workspace_environment(
+            output,
+            package.members,
+            package.installable.then_some(package.target_name),
+            false,
+        )?;
+    }
     render_sources(output, package, target::SOURCES, false)?;
     render_sources(output, package, target::ANALYSIS_SOURCES, true)?;
     render_quality_targets(output, package)?;
     render_test_targets(output, package)?;
     render_entry_points(output, package)
+}
+
+impl PackageRender<'_> {
+    /// Returns whether this package needs a first-party wheel layer.
+    fn has_workspace_environment(&self) -> bool {
+        self.installable || !self.members.is_empty()
+    }
 }
 
 /// Emits wheel construction plus the opinionated Ruff and ty analysis targets.
@@ -320,6 +233,9 @@ fn render_quality_targets(
             true,
         ),
     ] {
+        if rule == "python_wheel" && !package.installable {
+            continue;
+        }
         render_quality_target(
             output,
             package,
@@ -356,17 +272,38 @@ fn render_quality_target(
         writeln!(output, "    visibility = [\"PUBLIC\"],")
             .map_err(NativePythonBuildError::Render)?;
         render_config_settings(output, package.config_settings)?;
+        render_package_config_settings(
+            output,
+            package.package_config_settings,
+            Some(package.target_name),
+        )?;
+        render_package_build_variables(
+            output,
+            package.package_build_variables,
+            Some(package.target_name),
+        )?;
     }
     if target_spec.needs_environment {
-        let environment = if target_spec.rule == "python_wheel" {
-            target::BUILD_ENVIRONMENT
-        } else {
-            target::ENVIRONMENT
-        };
-        writeln!(output, "    environment = \"root//:{environment}\",")
+        if target_spec.rule == "python_wheel" {
+            writeln!(
+                output,
+                "    environment = \"root//:{}\",",
+                target::BUILD_ENVIRONMENT
+            )
             .map_err(NativePythonBuildError::Render)?;
+        } else {
+            let environment = package
+                .test_locks
+                .iter()
+                .find(|lock| lock.target == "test")
+                .map_or(target::ENVIRONMENT, |lock| lock.environment.as_str());
+            writeln!(output, "    environments = [").map_err(NativePythonBuildError::Render)?;
+            writeln!(output, "        \"root//:{environment}\",")
+                .map_err(NativePythonBuildError::Render)?;
+            writeln!(output, "    ],").map_err(NativePythonBuildError::Render)?;
+        }
     }
-    if target_spec.rule == "python_wheel" && package.dynamic_version {
+    if target_spec.rule == "python_wheel" && package.uses_vcs {
         writeln!(output, "    vcs = \"root//:{}\",", target::VCS)
             .map_err(NativePythonBuildError::Render)?;
     }
@@ -392,6 +329,10 @@ fn render_test_targets(
         writeln!(output, "python_test(").map_err(NativePythonBuildError::Render)?;
         writeln!(output, "    name = {:?},", lock.target)
             .map_err(NativePythonBuildError::Render)?;
+        if let Some(command) = package.test_command {
+            writeln!(output, "    test_command = {command:?},")
+                .map_err(NativePythonBuildError::Render)?;
+        }
         render_runtime_attributes(output, package, &lock.environment)?;
         writeln!(output, ")\n").map_err(NativePythonBuildError::Render)?;
     }
@@ -425,12 +366,7 @@ fn render_runtime_attributes(
     environment: &str,
 ) -> Result<(), NativePythonBuildError> {
     writeln!(output, "    environments = [").map_err(NativePythonBuildError::Render)?;
-    writeln!(
-        output,
-        "        \"root//:{}\",",
-        target::WORKSPACE_ENVIRONMENT
-    )
-    .map_err(NativePythonBuildError::Render)?;
+    render_workspace_environment_label(output, package)?;
     writeln!(output, "        \"root//:{environment}\",")
         .map_err(NativePythonBuildError::Render)?;
     writeln!(output, "    ],").map_err(NativePythonBuildError::Render)?;
@@ -443,6 +379,22 @@ fn render_runtime_attributes(
     .map_err(NativePythonBuildError::Render)?;
     writeln!(output, "    sources = \":{}\",", target::SOURCES)
         .map_err(NativePythonBuildError::Render)
+}
+
+/// Emits the package-local first-party layer when the project requires one.
+fn render_workspace_environment_label(
+    output: &mut String,
+    package: &PackageRender<'_>,
+) -> Result<(), NativePythonBuildError> {
+    if !package.has_workspace_environment() {
+        return Ok(());
+    }
+    let label = if package.package_root.is_empty() {
+        format!("root//:{}", target::WORKSPACE_ENVIRONMENT)
+    } else {
+        format!(":{}", target::WORKSPACE_ENVIRONMENT)
+    };
+    writeln!(output, "        {label:?},").map_err(NativePythonBuildError::Render)
 }
 
 /// Emits one source set at the exact invalidation granularity its consumers need.
@@ -461,6 +413,6 @@ fn render_sources(
         let path = workspace_path(package.package_root, file);
         writeln!(output, "        {path:?}: {file:?},").map_err(NativePythonBuildError::Render)?;
     }
-    writeln!(output, "    }},\n    visibility = [\"PUBLIC\"],\n)\n")
-        .map_err(NativePythonBuildError::Render)
+    writeln!(output, "    }},").map_err(NativePythonBuildError::Render)?;
+    writeln!(output, "    visibility = [\"PUBLIC\"],\n)\n").map_err(NativePythonBuildError::Render)
 }

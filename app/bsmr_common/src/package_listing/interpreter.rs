@@ -36,6 +36,7 @@ use crate::io::DirectoryDoesNotExistSuggestion;
 use crate::io::ReadDirError;
 use crate::package_listing::PackageBuildSource;
 use crate::package_listing::find_build_source;
+use crate::package_listing::is_python_virtual_environment;
 use crate::package_listing::listing::PackageListing;
 use crate::package_listing::resolver::PackageListingResolver;
 
@@ -409,6 +410,9 @@ impl Directory {
             .await
             .map_err(|e| GatherPackageListingError::from_read_dir(cell_path.as_ref(), e))?
             .included;
+        if !is_root && is_python_virtual_environment(&entries) {
+            return Ok(None);
+        }
         let buildfile = find_build_source(buildfile_candidates, &entries, is_root);
 
         match (is_root, buildfile.as_ref()) {

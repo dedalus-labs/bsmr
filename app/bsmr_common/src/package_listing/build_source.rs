@@ -43,12 +43,20 @@ pub(crate) fn find_build_source(
         })
 }
 
+/// Returns whether a directory is the root of a standard Python virtual environment.
+pub(crate) fn is_python_virtual_environment(dir_listing: &[SimpleDirEntry]) -> bool {
+    dir_listing
+        .iter()
+        .any(|entry| entry.file_name == "pyvenv.cfg" && entry.file_type.is_file())
+}
+
 #[cfg(test)]
 mod tests {
     use bsmr_fs::paths::file_name::FileNameBuf;
 
     use super::PackageBuildSource;
     use super::find_build_source;
+    use super::is_python_virtual_environment;
     use crate::file_ops::metadata::FileType;
     use crate::file_ops::metadata::SimpleDirEntry;
 
@@ -123,5 +131,13 @@ mod tests {
             find_build_source(&[], &listing(&["Cargo.toml", "package.json"]), false),
             None
         );
+    }
+
+    #[test]
+    fn invariant_pyvenv_cfg_identifies_virtual_environment_roots() {
+        assert!(is_python_virtual_environment(&listing(&["pyvenv.cfg"])));
+        assert!(!is_python_virtual_environment(&listing(&[
+            "pyproject.toml"
+        ])));
     }
 }

@@ -39,9 +39,13 @@ use bsmr_common::python_project::PythonRootFiles;
 use bsmr_common::python_project::PythonVcsFiles;
 use bsmr_common::python_project::PythonWorkspaceMember;
 use bsmr_common::python_project::python_project_name;
+use bsmr_common::python_project::python_project_uses_vcs;
 use bsmr_common::python_project::python_test_locks;
+use bsmr_common::python_project::python_workspace_closure;
 use bsmr_common::python_project::python_workspace_manifest_paths;
+use bsmr_common::python_project::python_workspace_member;
 use bsmr_common::python_project::render_python_build_file;
+use bsmr_common::python_project::validate_python_build_requirements;
 use bsmr_core::build_file_path::BuildFilePath;
 use bsmr_core::cells::build_file_cell::BuildFileCell;
 use bsmr_core::cells::cell_path::CellPath;
@@ -297,25 +301,30 @@ impl<'c, 'd: 'c> DiceCalculationDelegate<'c, 'd> {
             }
             PackageBuildSource::Native => {
                 let mut source = String::new();
+                let mut handled_manifest = false;
                 if listing
                     .get_file(PackageRelativePath::new("package.json")?)
                     .is_some()
                     && self.root_is_pnpm_workspace(package).await?
                 {
+                    handled_manifest = true;
                     let graph = self
                         .ctx
                         .get_pnpm_workspace_graph(package.cell_name())
                         .await?;
-                    source.push_str(&render_typescript_build_file(
+                    if let Some(typescript) = render_typescript_build_file(
                         &graph,
                         package.as_cell_path().path().to_owned(),
                         listing,
-                    )?);
+                    )? {
+                        source.push_str(&typescript);
+                    }
                 }
                 if listing
                     .get_file(PackageRelativePath::new("Cargo.toml")?)
                     .is_some()
                 {
+                    handled_manifest = true;
                     source.push_str(&self.render_native_cargo(package).await?);
                 }
                 if listing
@@ -323,15 +332,15 @@ impl<'c, 'd: 'c> DiceCalculationDelegate<'c, 'd> {
                     .is_some()
                 {
                     let manifest = self.read_package_file(package, "pyproject.toml").await?;
-                    if python_project_name(&manifest)?.is_some() {
-                        source.push_str(
-                            &self
-                                .render_native_python(package, listing, &manifest)
-                                .await?,
-                        );
+                    if let Some(python) = self
+                        .render_native_python(package, listing, &manifest)
+                        .await?
+                    {
+                        handled_manifest = true;
+                        source.push_str(&python);
                     }
                 }
-                if source.is_empty() {
+                if !handled_manifest {
                     return Err(NativeBuildFileError::NoSupportedManifest.into());
                 }
                 let ParseData(ast, imports) = self.prepare_eval_with_content(
@@ -374,18 +383,25 @@ impl<'c, 'd: 'c> DiceCalculationDelegate<'c, 'd> {
         )?)
     }
 
-    /// Validates the root PEP 751 lock and renders one standard Python project.
+    /// Validates root Python inputs and renders one project or workspace root.
     async fn render_native_python(
         &mut self,
         package: PackageLabel,
         listing: &PackageListing,
         manifest: &str,
-    ) -> bsmr_error::Result<String> {
+    ) -> bsmr_error::Result<Option<String>> {
+        let is_project = python_project_name(manifest)?.is_some();
         let root_path = CellRelativePathBuf::unchecked_new(String::new());
         let root = PackageLabel::new(package.cell_name(), &root_path)?;
         let workspace_listing = DicePackageListingResolver(self.ctx)
             .resolve_package_listing(root)
             .await?;
+        let (members, workspace_uses_vcs) = self
+            .python_workspace_members(root, &workspace_listing)
+            .await?;
+        if !is_project && (!package.cell_relative_path().is_empty() || members.is_empty()) {
+            return Ok(None);
+        }
         if workspace_listing
             .get_file(PackageRelativePath::new("pylock.toml")?)
             .is_none()
@@ -393,7 +409,8 @@ impl<'c, 'd: 'c> DiceCalculationDelegate<'c, 'd> {
             return Err(NativeBuildFileError::PythonRuntimeLockRequired.into());
         }
         let lock = self.read_package_file(root, "pylock.toml").await?;
-        PylockToml::parse(&lock)?;
+        let lock = PylockToml::parse(&lock)?;
+        let runtime_packages = lock.installation_fragments()?;
         if workspace_listing
             .get_file(PackageRelativePath::new("pylock.build.toml")?)
             .is_none()
@@ -401,26 +418,32 @@ impl<'c, 'd: 'c> DiceCalculationDelegate<'c, 'd> {
             return Err(NativeBuildFileError::PythonBuildLockRequired.into());
         }
         let build_lock = self.read_package_file(root, "pylock.build.toml").await?;
-        PylockToml::parse(&build_lock)?;
-        let vcs = self.python_vcs_files(root).await?;
-        let test_locks = python_test_locks(&workspace_listing)?;
-        for test_lock in &test_locks {
+        let build_lock = PylockToml::parse(&build_lock)?;
+        let build_packages = build_lock.installation_fragments()?;
+        let vcs = if workspace_uses_vcs || python_project_uses_vcs(manifest)? {
+            self.python_vcs_files(root).await?
+        } else {
+            None
+        };
+        let mut test_locks = python_test_locks(&workspace_listing)?;
+        for test_lock in &mut test_locks {
             let lock = self.read_package_file(root, &test_lock.file).await?;
-            PylockToml::parse(&lock)?;
+            test_lock.packages = PylockToml::parse(&lock)?.installation_fragments()?;
         }
-        let members = self
-            .python_workspace_members(root, &workspace_listing)
-            .await?;
-        Ok(render_python_build_file(
+        let members = python_workspace_closure(manifest, &members)?;
+        validate_python_build_requirements(manifest, &members, &lock, &build_lock)?;
+        Ok(Some(render_python_build_file(
             package.cell_relative_path().to_owned(),
             manifest,
             listing,
             &PythonRootFiles {
+                runtime_packages,
+                build_packages,
                 members,
                 test_locks,
                 vcs,
             },
-        )?)
+        )?))
     }
 
     /// Maps nested standard projects to their generated first-party wheel labels.
@@ -428,22 +451,24 @@ impl<'c, 'd: 'c> DiceCalculationDelegate<'c, 'd> {
         &mut self,
         root: PackageLabel,
         listing: &PackageListing,
-    ) -> bsmr_error::Result<Vec<PythonWorkspaceMember>> {
+    ) -> bsmr_error::Result<(Vec<PythonWorkspaceMember>, bool)> {
         let mut members = Vec::new();
-        for file in python_workspace_manifest_paths(listing) {
+        let mut uses_vcs = false;
+        let root_manifest = self.read_package_file(root, "pyproject.toml").await?;
+        for file in python_workspace_manifest_paths(&root_manifest, listing)? {
             let manifest = self.read_package_file(root, file).await?;
-            let Some(target) = python_project_name(&manifest)? else {
+            uses_vcs |= python_project_uses_vcs(&manifest)?;
+            let Some(package) = file.strip_suffix("/pyproject.toml") else {
+                return Err(internal_error!(
+                    "filtered Python workspace manifest `{file}` has no manifest suffix"
+                ));
+            };
+            let Some(member) = python_workspace_member(package.to_owned(), &manifest)? else {
                 continue;
             };
-            members.push(PythonWorkspaceMember {
-                package: file
-                    .strip_suffix("/pyproject.toml")
-                    .expect("filtered Python project path")
-                    .to_owned(),
-                target,
-            });
+            members.push(member);
         }
-        Ok(members)
+        Ok((members, uses_vcs))
     }
 
     /// Discovers only the Git database components consumed by read-only version queries.

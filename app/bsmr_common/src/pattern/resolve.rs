@@ -529,6 +529,41 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn invariant_recursive_native_patterns_prune_python_virtual_environments()
+    -> bsmr_error::Result<()> {
+        let tester = TestPatternResolver::new(
+            &[("root", "")],
+            &[
+                "pyproject.toml",
+                "packages/member/pyproject.toml",
+                ".venv/pyvenv.cfg",
+                ".venv/lib/python3.14/site-packages/gradio/package.json",
+            ],
+        )?;
+
+        tester
+            .resolve::<TargetPatternExtra>(&["//..."])
+            .await?
+            .assert_eq(&[
+                (
+                    PackageLabelWithModifiers {
+                        package: PackageLabel::testing_parse("root//"),
+                        modifiers: Modifiers::new(None),
+                    },
+                    PackageSpec::All(),
+                ),
+                (
+                    PackageLabelWithModifiers {
+                        package: PackageLabel::testing_parse("root//packages/member"),
+                        modifiers: Modifiers::new(None),
+                    },
+                    PackageSpec::All(),
+                ),
+            ]);
+        Ok(())
+    }
+
+    #[tokio::test]
     async fn test_simple_specs_targets_with_modifiers() -> bsmr_error::Result<()> {
         let tester = TestPatternResolver::new(&[("root", ""), ("child", "child/cell")], &[])?;
 

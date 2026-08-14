@@ -8,6 +8,13 @@
 load(":toolchain.bzl", "PythonNativeDistributionInfo")
 
 PythonEnvironmentInfo = provider(fields = {
+    "manifest": provider_field(Artifact),
+    "roots": provider_field(list[Artifact]),
+})
+
+PythonLockedPackageInfo = provider(fields = {
+    "manifest": provider_field(Artifact),
+    "name": provider_field(str),
     "root": provider_field(Artifact),
 })
 
@@ -38,7 +45,11 @@ def _python_sources_impl(ctx: AnalysisContext) -> list[Provider]:
     """Materializes one declared first-party source tree."""
     for path in ctx.attrs.srcs:
         _validate_project_path(path)
-    tree = ctx.actions.symlinked_dir(ctx.label.name, ctx.attrs.srcs, has_content_based_path = False)
+    tree = ctx.actions.symlinked_dir(
+        ctx.label.name,
+        ctx.attrs.srcs,
+        has_content_based_path = False,
+    )
     return [
         DefaultInfo(default_output = tree),
         PythonSourcesInfo(files = ctx.attrs.srcs, tree = tree),
@@ -46,7 +57,9 @@ def _python_sources_impl(ctx: AnalysisContext) -> list[Provider]:
 
 python_sources = rule(
     impl = _python_sources_impl,
-    attrs = {"srcs": attrs.dict(attrs.string(), attrs.source())},
+    attrs = {
+        "srcs": attrs.dict(attrs.string(), attrs.source()),
+    },
     doc = "Defines one Python project's source-controlled files.",
 )
 
@@ -66,7 +79,7 @@ def _tool_arg(dependency: Dependency):
     tool = dependency[PythonNativeDistributionInfo]
     return cmd_args(tool.binary, hidden = [tool.root]), tool.version
 
-def _runner_command(ctx: AnalysisContext, mode: str, output: Artifact):
+def _runner_command(ctx: AnalysisContext, mode: str, output):
     """Constructs one action command from only the tools consumed by its mode."""
     python, python_version = _tool_arg(ctx.attrs.python)
     command = cmd_args(
@@ -75,14 +88,16 @@ def _runner_command(ctx: AnalysisContext, mode: str, output: Artifact):
             ctx.attrs._runner,
             mode,
             "--output",
-            output.as_output(),
+            output,
             "--python",
             python,
         ],
     )
-    if mode in ["environment", "wheel", "wheel-environment"]:
+    if mode in ["locked-package", "select-package", "wheel", "wheel-environment"]:
         tool, version = _tool_arg(ctx.attrs.uv)
         command.add(["--uv", tool])
+    elif mode == "compose-environment":
+        version = python_version
     elif mode == "ruff":
         tool, version = _tool_arg(ctx.attrs.ruff)
         command.add(["--ruff", tool])
@@ -99,49 +114,178 @@ def _add_config_settings(command, settings: dict) -> None:
         for value in values:
             command.add(["--config-setting={}={}".format(name, value)])
 
-def _python_environment_impl(ctx: AnalysisContext) -> list[Provider]:
-    """Materializes the exact PEP 751 installation set with pinned uv."""
-    root = ctx.actions.declare_output(ctx.label.name, dir = True, has_content_based_path = True)
-    command, python_version, uv_version = _runner_command(ctx, "environment", root)
-    command.add(["--lock", ctx.attrs.lock])
-    _add_config_settings(command, ctx.attrs.config_settings)
-    if ctx.attrs.build_environment != None:
-        command.add([
-            "--build-environment",
-            ctx.attrs.build_environment[PythonEnvironmentInfo].root,
-        ])
-    ctx.actions.run(
-        command,
-        allow_cache_upload = True,
-        category = "python_environment",
-        identifier = "python-{}-uv-{}".format(python_version, uv_version),
-        local_only = True,
+def _locked_package_command(ctx: AnalysisContext, root, manifest, lock: Artifact, source: bool):
+    """Constructs one wheel or source installation with exact cache semantics."""
+    command, python_version, uv_version = _runner_command(ctx, "locked-package", root)
+    command.add(["--lock", lock, "--manifest", manifest])
+    if source:
+        if ctx.attrs.build_environment == None:
+            fail("source package '{}' requires a declared build environment".format(ctx.attrs.package))
+        _add_config_settings(command, ctx.attrs.config_settings)
+        for setting in ctx.attrs.package_config_settings:
+            command.add(["--package-config-setting", setting])
+        for variable in ctx.attrs.package_build_variables:
+            command.add(["--package-build-variable", variable])
+        environment = ctx.attrs.build_environment[PythonEnvironmentInfo]
+        for build_root in environment.roots:
+            command.add(["--build-environment", build_root])
+        command.add(cmd_args(hidden = [environment.manifest]))
+    return command, python_version, uv_version
+
+def _register_locked_package(ctx: AnalysisContext, actions, root, manifest, lock: Artifact, source: bool) -> None:
+    """Registers one package action after artifact selection is final."""
+    command, python_version, uv_version = _locked_package_command(
+        ctx,
+        root,
+        manifest,
+        lock,
+        source,
     )
+    actions.run(
+        command,
+        # PEP 517 builds still consume the local execution-platform compiler.
+        allow_cache_upload = not source,
+        category = "python_locked_package",
+        identifier = "python-{}-uv-{}".format(python_version, uv_version),
+        local_only = source,
+    )
+
+def _selected_locked_package(ctx: AnalysisContext, artifacts, outputs, selection: Artifact, root: Artifact, manifest: Artifact, lock: Artifact) -> None:
+    """Binds a mixed package to uv's exact wheel-or-source decision."""
+    selected = artifacts[selection].read_string()
+    if selected == "wheel\n":
+        source = False
+    elif selected == "source\n":
+        source = True
+    else:
+        fail("uv emitted invalid package selection {!r}".format(selected))
+    _register_locked_package(
+        ctx,
+        ctx.actions,
+        outputs[root].as_output(),
+        outputs[manifest].as_output(),
+        lock,
+        source,
+    )
+
+def _python_locked_package_impl(ctx: AnalysisContext) -> list[Provider]:
+    """Materializes one normalized package from a canonical PEP 751 fragment."""
+    root = ctx.actions.declare_output(ctx.label.name, dir = True, has_content_based_path = True)
+    manifest = ctx.actions.declare_output("{}.manifest.json".format(ctx.label.name), has_content_based_path = True)
+    lock = ctx.actions.write("pylock.{}.toml".format(ctx.label.name), ctx.attrs.lock)
+    if ctx.attrs.acquisition == "wheel-or-source":
+        selection = ctx.actions.declare_output("{}.selection".format(ctx.label.name))
+        command, python_version, uv_version = _runner_command(
+            ctx,
+            "select-package",
+            selection.as_output(),
+        )
+        command.add(["--lock", lock, "--distribution", ctx.attrs.package])
+        ctx.actions.run(
+            command,
+            allow_cache_upload = True,
+            category = "python_package_selection",
+            identifier = "python-{}-uv-{}".format(python_version, uv_version),
+        )
+        ctx.actions.dynamic_output(
+            dynamic = [selection],
+            inputs = [],
+            outputs = [root.as_output(), manifest.as_output()],
+            f = lambda dynamic_ctx, artifacts, outputs: _selected_locked_package(
+                dynamic_ctx,
+                artifacts,
+                outputs,
+                selection,
+                root,
+                manifest,
+                lock,
+            ),
+        )
+    else:
+        _register_locked_package(
+            ctx,
+            ctx.actions,
+            root.as_output(),
+            manifest.as_output(),
+            lock,
+            ctx.attrs.acquisition == "source",
+        )
     return [
-        DefaultInfo(default_output = root),
-        PythonEnvironmentInfo(root = root),
+        DefaultInfo(default_output = root, other_outputs = [manifest]),
+        PythonLockedPackageInfo(
+            manifest = manifest,
+            name = ctx.attrs.package,
+            root = root,
+        ),
     ]
 
-python_environment = rule(
-    impl = _python_environment_impl,
+python_locked_package = rule(
+    impl = _python_locked_package_impl,
     attrs = {
+        "acquisition": attrs.enum(["source", "wheel", "wheel-or-source"]),
         "build_environment": attrs.option(
             attrs.dep(providers = [PythonEnvironmentInfo]),
             default = None,
         ),
         "config_settings": attrs.dict(attrs.string(), attrs.list(attrs.string()), default = {}),
-        "lock": attrs.source(doc = "Canonical PEP 751 installation set."),
+        "lock": attrs.string(doc = "Canonical one-package PEP 751 installation set."),
+        "package": attrs.string(doc = "Normalized Python distribution name."),
+        "package_build_variables": attrs.list(attrs.string(), default = []),
+        "package_config_settings": attrs.list(attrs.string(), default = []),
         "python": attrs.exec_dep(providers = [PythonNativeDistributionInfo]),
         "uv": attrs.exec_dep(providers = [PythonNativeDistributionInfo]),
         "_runner": attrs.source(default = "prelude//python_native:runner"),
     },
-    doc = "Materializes one cached environment from a PEP 751 lock and explicit build closure.",
+    doc = "Materializes one package-granular CAS tree with pinned uv.",
+)
+
+def _python_environment_impl(ctx: AnalysisContext) -> list[Provider]:
+    """Composes package CAS artifacts into one deterministic import root."""
+    overlay = ctx.actions.declare_output(
+        "{}.overlay".format(ctx.label.name),
+        dir = True,
+        has_content_based_path = True,
+    )
+    manifest = ctx.actions.declare_output(
+        "{}.manifest.json".format(ctx.label.name),
+        has_content_based_path = True,
+    )
+    command, python_version, _ = _runner_command(
+        ctx,
+        "compose-environment",
+        overlay.as_output(),
+    )
+    command.add(["--manifest", manifest.as_output()])
+    for package in ctx.attrs.packages:
+        package = package[PythonLockedPackageInfo]
+        command.add(["--package", package.name, package.manifest, package.root])
+    ctx.actions.run(
+        command,
+        allow_cache_upload = True,
+        category = "python_environment",
+        identifier = "python-{}".format(python_version),
+    )
+    return [
+        DefaultInfo(default_output = manifest, other_outputs = [overlay]),
+        PythonEnvironmentInfo(manifest = manifest, roots = [overlay]),
+    ]
+
+python_environment = rule(
+    impl = _python_environment_impl,
+    attrs = {
+        "packages": attrs.list(attrs.dep(providers = [PythonLockedPackageInfo])),
+        "python": attrs.exec_dep(providers = [PythonNativeDistributionInfo]),
+        "_runner": attrs.source(default = "prelude//python_native:runner"),
+    },
+    doc = "Composes package-granular Python trees with recorded precedence.",
 )
 
 def _python_wheel_environment_impl(ctx: AnalysisContext) -> list[Provider]:
     """Materializes exact first-party wheels independently of locked dependencies."""
     root = ctx.actions.declare_output(ctx.label.name, dir = True, has_content_based_path = True)
-    command, python_version, uv_version = _runner_command(ctx, "wheel-environment", root)
+    manifest = ctx.actions.declare_output("{}.manifest.json".format(ctx.label.name), has_content_based_path = True)
+    command, python_version, uv_version = _runner_command(ctx, "wheel-environment", root.as_output())
+    command.add(["--manifest", manifest.as_output()])
     for wheel in ctx.attrs.wheels:
         command.add(["--wheel-dir", wheel[PythonWheelInfo].directory])
     ctx.actions.run(
@@ -152,8 +296,8 @@ def _python_wheel_environment_impl(ctx: AnalysisContext) -> list[Provider]:
         local_only = True,
     )
     return [
-        DefaultInfo(default_output = root),
-        PythonEnvironmentInfo(root = root),
+        DefaultInfo(default_output = root, other_outputs = [manifest]),
+        PythonEnvironmentInfo(manifest = manifest, roots = [root]),
     ]
 
 python_wheel_environment = rule(
@@ -172,23 +316,36 @@ def _project_action(ctx: AnalysisContext, mode: str, output: Artifact) -> None:
     if ctx.attrs.project_root != ".":
         _validate_project_path(ctx.attrs.project_root)
     sources = ctx.attrs.sources[PythonSourcesInfo]
-    command, _, version = _runner_command(ctx, mode, output)
+    command, _, version = _runner_command(ctx, mode, output.as_output())
     command.add([
         "--project-root",
         ctx.attrs.project_root,
         "--source",
         sources.tree,
     ])
-    if mode in ["ty", "wheel"]:
+    if mode == "wheel":
         environment = ctx.attrs.environment[PythonEnvironmentInfo]
-        command.add(["--environment", environment.root])
+        for root in environment.roots:
+            command.add(["--environment", root])
+        command.add(cmd_args(hidden = [environment.manifest]))
+    elif mode == "ty":
+        for environment in ctx.attrs.environments:
+            environment = environment[PythonEnvironmentInfo]
+            for root in environment.roots:
+                command.add(["--environment", root])
+            command.add(cmd_args(hidden = [environment.manifest]))
     if mode == "wheel" and ctx.attrs.vcs != None:
         command.add(["--vcs", ctx.attrs.vcs[PythonVcsInfo].tree])
     if mode == "wheel":
         _add_config_settings(command, ctx.attrs.config_settings)
+        for setting in ctx.attrs.package_config_settings:
+            command.add(["--package-config-setting", setting])
+        for variable in ctx.attrs.package_build_variables:
+            command.add(["--package-build-variable", variable])
     ctx.actions.run(
         command,
-        allow_cache_upload = True,
+        # PEP 517 outputs are not remotely reusable until the native toolchain is declared.
+        allow_cache_upload = mode != "wheel",
         category = "python_{}".format(mode),
         identifier = version,
         local_only = mode == "wheel",
@@ -218,9 +375,14 @@ def _project_attrs(tool: str, needs_environment: bool = False) -> dict:
         "_runner": attrs.source(default = "prelude//python_native:runner"),
     }
     if needs_environment:
-        attrs_by_name["environment"] = attrs.dep(providers = [PythonEnvironmentInfo])
+        if tool == "ty":
+            attrs_by_name["environments"] = attrs.list(attrs.dep(providers = [PythonEnvironmentInfo]))
+        else:
+            attrs_by_name["environment"] = attrs.dep(providers = [PythonEnvironmentInfo])
     if tool == "uv":
         attrs_by_name["config_settings"] = attrs.dict(attrs.string(), attrs.list(attrs.string()), default = {})
+        attrs_by_name["package_build_variables"] = attrs.list(attrs.string(), default = [])
+        attrs_by_name["package_config_settings"] = attrs.list(attrs.string(), default = [])
         attrs_by_name["vcs"] = attrs.option(attrs.dep(providers = [PythonVcsInfo]), default = None)
     return attrs_by_name
 
@@ -248,7 +410,10 @@ def _runtime_command(ctx: AnalysisContext, mode: str) -> cmd_args:
         ctx.attrs._runtime,
     ])
     for environment in ctx.attrs.environments:
-        command.add(["--environment", environment[PythonEnvironmentInfo].root])
+        environment = environment[PythonEnvironmentInfo]
+        for root in environment.roots:
+            command.add(["--environment", root])
+        command.add(cmd_args(hidden = [environment.manifest]))
     command.add([
         "--project-root",
         ctx.attrs.project_root,
@@ -257,10 +422,13 @@ def _runtime_command(ctx: AnalysisContext, mode: str) -> cmd_args:
     ])
     if mode == "entry":
         command.add(["--entry", ctx.attrs.entry])
+    elif mode == "test":
+        for argument in ctx.attrs.test_command:
+            command.add(["--test-command={}".format(argument)])
     command.add(mode)
     return command
 
-def _runtime_attrs(entry: bool = False) -> dict:
+def _runtime_attrs(entry: bool = False, test: bool = False) -> dict:
     """Returns the closed schema for Python tests and entry points."""
     result = {
         "environments": attrs.list(attrs.dep(providers = [PythonEnvironmentInfo])),
@@ -271,6 +439,11 @@ def _runtime_attrs(entry: bool = False) -> dict:
     }
     if entry:
         result["entry"] = attrs.string()
+    if test:
+        result["test_command"] = attrs.list(
+            attrs.string(),
+            default = ["-m", "pytest"],
+        )
     return result
 
 def _python_entry_point_impl(ctx: AnalysisContext) -> list[Provider]:
@@ -297,6 +470,6 @@ def _python_test_impl(ctx: AnalysisContext) -> list[Provider]:
 
 python_test = rule(
     impl = _python_test_impl,
-    attrs = _runtime_attrs(),
-    doc = "Runs pytest from a named PEP 751 test environment.",
+    attrs = _runtime_attrs(test = True),
+    doc = "Runs one declared Python test command from a named PEP 751 environment.",
 )

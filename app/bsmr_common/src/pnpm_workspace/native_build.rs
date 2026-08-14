@@ -30,9 +30,6 @@ pub fn is_native_pnpm_workspace(listing: &PackageListing) -> bool {
 #[derive(Debug, bsmr_error::Error)]
 #[bsmr(tag = Input)]
 pub enum NativeTypeScriptBuildError {
-    /// The requested package must be selected by the authoritative workspace manifest.
-    #[error("package `{0}` is not selected by pnpm-workspace.yaml")]
-    UnknownPackage(CellRelativePathBuf),
     /// The path selector's inferred target must be a valid, unambiguous package name.
     #[error(
         "package `{0}` has no usable path component or npm package name for its default target"
@@ -64,14 +61,18 @@ pub enum NativeTypeScriptBuildError {
     Render(std::fmt::Error),
 }
 
-/// Renders the private Starlark bridge consumed by BSMR's build interpreter.
+/// Renders the private Starlark bridge for an authoritative pnpm package.
+///
+/// Returns `None` when `package_root` is outside the workspace graph. This lets
+/// polyglot repositories retain incidental `package.json` files without
+/// turning them into native TypeScript packages.
 pub fn render_typescript_build_file(
     graph: &WorkspaceGraph,
     package_root: CellRelativePathBuf,
     listing: &PackageListing,
-) -> Result<String, NativeTypeScriptBuildError> {
+) -> Result<Option<String>, NativeTypeScriptBuildError> {
     let Some(package_name) = graph.package_name_at_root(&package_root) else {
-        return Err(NativeTypeScriptBuildError::UnknownPackage(package_root));
+        return Ok(None);
     };
     let target_name = default_target_name(&package_root, package_name)
         .ok_or_else(|| NativeTypeScriptBuildError::MissingTargetName(package_root.clone()))?;
@@ -100,7 +101,7 @@ pub fn render_typescript_build_file(
         render_install(graph, listing, &mut output)?;
     }
     if !has_tsdown {
-        return Ok(output);
+        return Ok(Some(output));
     }
 
     writeln!(
@@ -159,7 +160,7 @@ pub fn render_typescript_build_file(
             .map_err(NativeTypeScriptBuildError::Render)?;
         writeln!(output, ")\n").map_err(NativeTypeScriptBuildError::Render)?;
     }
-    Ok(output)
+    Ok(Some(output))
 }
 
 /// Returns the target inferred by BSMR's relaxed path selector.
@@ -306,6 +307,22 @@ mod tests {
     }
 
     #[test]
+    fn invariant_package_json_outside_the_workspace_is_not_a_typescript_package() {
+        let graph =
+            WorkspaceGraph::build([package("packages/api", r#"{"name":"@acme/api"}"#)]).unwrap();
+        let listing = PackageListing::testing_files(&["package.json"]);
+
+        let build = render_typescript_build_file(
+            &graph,
+            CellRelativePathBuf::unchecked_new(".github/actions/src".to_owned()),
+            &listing,
+        )
+        .unwrap();
+
+        assert_eq!(build, None);
+    }
+
+    #[test]
     fn invariant_native_package_uses_path_api_and_exact_dependency_sources() {
         let graph = WorkspaceGraph::build([
             package(
@@ -327,6 +344,7 @@ mod tests {
             CellRelativePathBuf::unchecked_new("apps/api".to_owned()),
             &listing,
         )
+        .unwrap()
         .unwrap();
 
         assert!(build.contains("name = \"api\""));
@@ -356,6 +374,7 @@ mod tests {
             CellRelativePathBuf::unchecked_new("apps/api".to_owned()),
             &listing,
         )
+        .unwrap()
         .unwrap();
 
         assert!(!build.contains("plugins/auth/package.json"));
@@ -389,6 +408,7 @@ mod tests {
             CellRelativePathBuf::unchecked_new(String::new()),
             &listing,
         )
+        .unwrap()
         .unwrap();
 
         assert!(build.contains("name = \"__bsmr_dependencies\""));
@@ -421,6 +441,7 @@ mod tests {
             CellRelativePathBuf::unchecked_new(String::new()),
             &listing,
         )
+        .unwrap()
         .unwrap();
 
         assert!(build.contains("pnpm_install("));
@@ -449,6 +470,7 @@ mod tests {
             CellRelativePathBuf::unchecked_new(String::new()),
             &listing,
         )
+        .unwrap()
         .unwrap();
 
         assert!(build.contains("pnpm-10.30.3.tgz"));

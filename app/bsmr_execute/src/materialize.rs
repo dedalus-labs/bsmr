@@ -9,6 +9,7 @@
  */
 
 pub mod http;
+mod http_cache;
 
 pub mod materializer;
 pub mod nodisk;
