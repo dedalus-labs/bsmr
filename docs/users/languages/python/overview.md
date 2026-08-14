@@ -132,6 +132,17 @@ fake root distribution. Package-local environments contain only the transitive
 first-party wheels declared by that package; unrelated workspace members do
 not invalidate its build or tests.
 
+A PEP 751 `packages.directory` entry must identify the root project or one of
+those selected workspace members by normalized distribution name and exact
+root-relative path. BSMR reuses that project's declared wheel action; it does
+not create a second editable installation of the same mutable tree. Absolute,
+parent-relative, host-specific, marker-varying, and undeclared local paths fail
+during analysis. The lock's `editable` flag records authoring intent but does
+not alter the immutable production graph. Local directory build requirements
+are rejected because making a first-party wheel part of its own shared build
+environment would introduce a cycle; publish or vendor a wheel or source
+archive instead.
+
 ## Configuration
 
 BSMR deliberately uses each tool's native configuration rather than defining a
@@ -238,14 +249,22 @@ The current implementation is the pinned-uv differential baseline from
 final native materializer.
 
 Portable offline artifact replay after an action-cache miss is implemented for
-complete HTTP(S) wheel records: each compatible candidate is a separately
-acquired, checksum-verified action input, and its repository-independent HTTP
-cache entry is revalidated on every restoration. Python and platform selects
-are part of the action graph, so one compiled package consumes only the
-candidates for its exact configured Python line and execution platform. A cold
-action for an sdist, VCS dependency, local archive, or wheel with incomplete
-download metadata may still ask uv to fetch the exact artifact selected by its
-PEP 751 fragment. Native materialization for those remaining forms,
+complete HTTP(S) wheel, sdist, and archive records. Each compatible candidate
+is a separately acquired, size- and checksum-verified action input, and its
+repository-independent HTTP cache entry is revalidated on every restoration.
+Python and platform selects are part of the action graph, so one compiled
+package consumes only the candidates for its exact configured Python line and
+execution platform. Credential-free HTTPS Git sources pinned to a full object
+ID are acquired as separate source-tree actions. Pinned uv consumes every
+acquired source offline and BSMR verifies the resulting distribution name and
+version before admitting it to the package graph.
+
+Local directory sources map to declared first-party wheel targets as described
+above. A cold action for a local archive path, local VCS path, unsupported VCS,
+marker-varying source, or artifact with incomplete acquisition metadata may
+still ask uv to consume the canonical one-package PEP 751 fragment. Replacing
+that compatibility path with typed pre-execution failures, pinning the Git
+client itself, native wheel materialization without a uv subprocess,
 import-level ownership and closure inference, and provenance queries remain
 release gates.
 
