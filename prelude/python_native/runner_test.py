@@ -155,6 +155,7 @@ class EnvironmentTest(unittest.TestCase):
                 lock=root / "pylock.toml",
                 output=root / "selection",
                 python=root / "python",
+                python_platform="aarch64-apple-darwin",
                 uv=root / "uv",
             )
             completed = subprocess.CompletedProcess(
@@ -167,6 +168,11 @@ class EnvironmentTest(unittest.TestCase):
             self.assertEqual(args.output.read_text(encoding="utf-8"), "wheel\n")
             command = run.call_args.args[0]
             self.assertIn("--dry-run", command)
+            self.assertIn("--offline", command)
+            self.assertEqual(
+                command[command.index("--python-platform") + 1],
+                "aarch64-apple-darwin",
+            )
             self.assertEqual(command[command.index("--only-binary") + 1], ":all:")
             self.assertEqual(command.count("--preview-features"), 1)
             self.assertEqual(command[command.index("--preview-features") + 1], "pylock")
@@ -180,6 +186,7 @@ class EnvironmentTest(unittest.TestCase):
                 lock=root / "pylock.toml",
                 output=root / "selection",
                 python=root / "python",
+                python_platform="aarch64-apple-darwin",
                 uv=root / "uv",
             )
             completed = subprocess.CompletedProcess(
@@ -207,6 +214,7 @@ class EnvironmentTest(unittest.TestCase):
                 lock=root / "pylock.toml",
                 output=root / "selection",
                 python=root / "python",
+                python_platform="aarch64-apple-darwin",
                 uv=root / "uv",
             )
             completed = subprocess.CompletedProcess(
@@ -236,6 +244,7 @@ class EnvironmentTest(unittest.TestCase):
                 output=output,
                 manifest=root / "environment.json",
                 python=root / "python",
+                python_platform="aarch64-apple-darwin",
                 uv=root / "uv",
                 wheel_dir=[wheel_directory],
             )
@@ -249,6 +258,10 @@ class EnvironmentTest(unittest.TestCase):
             self.assertIn("--no-index", install)
             self.assertIn("--no-python-downloads", install)
             self.assertIn("--offline", install)
+            self.assertEqual(
+                install[install.index("--python-platform") + 1],
+                "aarch64-apple-darwin",
+            )
 
     def test_source_builds_use_only_the_declared_build_environment(self) -> None:
         """A lock containing sdists must never resolve ambient build requirements."""
@@ -266,6 +279,7 @@ class EnvironmentTest(unittest.TestCase):
                 manifest=root / "package.json",
                 output=output,
                 python=root / "python",
+                python_platform="aarch64-apple-darwin",
                 uv=root / "uv",
                 wheel_dir=[],
             )
@@ -278,6 +292,10 @@ class EnvironmentTest(unittest.TestCase):
             command = run.call_args.args[0]
             self.assertIn("--no-build-isolation", command)
             self.assertNotIn("--no-build", command)
+            self.assertEqual(
+                command[command.index("--python-platform") + 1],
+                "aarch64-apple-darwin",
+            )
             self.assertIn("--config-setting=--global-option=--quiet", command)
             self.assertIn(
                 "--config-settings-package=numpy:setup-args=-Dblas=blas", command
@@ -314,6 +332,7 @@ class EnvironmentTest(unittest.TestCase):
                 manifest=root / "package.json",
                 output=root / "environment",
                 python=root / "python",
+                python_platform="aarch64-apple-darwin",
                 uv=root / "uv",
             )
 
@@ -327,6 +346,10 @@ class EnvironmentTest(unittest.TestCase):
             self.assertIn("--no-deps", command)
             self.assertIn("--no-build", command)
             self.assertIn("--offline", command)
+            self.assertEqual(
+                command[command.index("--python-platform") + 1],
+                "aarch64-apple-darwin",
+            )
 
     def test_locked_package_manifests_compose_one_complete_environment(self) -> None:
         """Package granularity must not leak into the runtime import search path."""

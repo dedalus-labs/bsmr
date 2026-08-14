@@ -9,6 +9,7 @@ load("@prelude//:prelude.bzl", "native")
 
 PythonNativeDistributionInfo = provider(fields = {
     "binary": provider_field(Artifact),
+    "platform": provider_field(str),
     "root": provider_field(Artifact),
     "version": provider_field(str),
 })
@@ -74,13 +75,14 @@ def _distribution_impl(ctx: AnalysisContext) -> list[Provider]:
     binary = ctx.attrs.root.project(ctx.attrs.executable)
     return [
         DefaultInfo(default_output = binary),
-        PythonNativeDistributionInfo(binary = binary, root = ctx.attrs.root, version = ctx.attrs.version),
+        PythonNativeDistributionInfo(binary = binary, platform = ctx.attrs.platform, root = ctx.attrs.root, version = ctx.attrs.version),
     ]
 
 _distribution = rule(
     impl = _distribution_impl,
     attrs = {
         "executable": attrs.string(),
+        "platform": attrs.string(),
         "root": attrs.source(allow_directory = True),
         "version": attrs.string(),
     },
@@ -133,7 +135,8 @@ def python_native_toolchain() -> None:
             "https://github.com/astral-sh/{tool}/releases/download/{{version}}/{tool}-{{platform}}.tar.gz".format(tool = tool),
             "{}-{{platform}}".format(tool),
         )
-    _distribution(name = "__bsmr_python_distribution", executable = "bin/python3", root = ":__bsmr_python_archive", version = python_version, visibility = ["PUBLIC"])
-    _distribution(name = "__bsmr_uv_distribution", executable = "uv", root = ":__bsmr_uv_archive", version = _UV_VERSION, visibility = ["PUBLIC"])
-    _distribution(name = "__bsmr_ruff_distribution", executable = "ruff", root = ":__bsmr_ruff_archive", version = _RUFF_VERSION, visibility = ["PUBLIC"])
-    _distribution(name = "__bsmr_ty_distribution", executable = "ty", root = ":__bsmr_ty_archive", version = _TY_VERSION, visibility = ["PUBLIC"])
+    platform = _platform_value(_ARTIFACT_PLATFORMS)
+    _distribution(name = "__bsmr_python_distribution", executable = "bin/python3", platform = platform, root = ":__bsmr_python_archive", version = python_version, visibility = ["PUBLIC"])
+    _distribution(name = "__bsmr_uv_distribution", executable = "uv", platform = platform, root = ":__bsmr_uv_archive", version = _UV_VERSION, visibility = ["PUBLIC"])
+    _distribution(name = "__bsmr_ruff_distribution", executable = "ruff", platform = platform, root = ":__bsmr_ruff_archive", version = _RUFF_VERSION, visibility = ["PUBLIC"])
+    _distribution(name = "__bsmr_ty_distribution", executable = "ty", platform = platform, root = ":__bsmr_ty_archive", version = _TY_VERSION, visibility = ["PUBLIC"])

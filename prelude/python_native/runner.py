@@ -98,6 +98,7 @@ def _arguments() -> argparse.Namespace:
     parser.add_argument("--package", action="append", default=[], nargs=3)
     parser.add_argument("--project-root")
     parser.add_argument("--python", type=Path, required=True)
+    parser.add_argument("--python-platform", required=True)
     parser.add_argument("--ruff", type=Path)
     parser.add_argument("--source", type=Path)
     parser.add_argument("--ty", type=Path)
@@ -346,6 +347,8 @@ def _locked_package(
             str(packages),
             "--python",
             str(args.python),
+            "--python-platform",
+            args.python_platform,
             "--no-python-downloads",
             "--no-build",
             "--no-deps",
@@ -375,6 +378,8 @@ def _locked_package(
                 str(packages),
                 "--python",
                 str(args.python),
+                "--python-platform",
+                args.python_platform,
                 "--no-python-downloads",
                 *build_flags,
                 "--strict",
@@ -410,7 +415,10 @@ def _select_locked_package(
         str(scratch / "target"),
         "--python",
         str(args.python),
+        "--python-platform",
+        args.python_platform,
         "--dry-run",
+        "--offline",
         "--only-binary",
         ":all:",
         "--no-python-downloads",
@@ -610,6 +618,8 @@ def _wheel_environment(
             str(packages),
             "--python",
             str(args.python),
+            "--python-platform",
+            args.python_platform,
             "--no-python-downloads",
             "--no-build",
             "--no-deps",
