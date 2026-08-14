@@ -62,6 +62,7 @@ tokio.workspace = true
 toml.workspace = true
 tonic.workspace = true
 tracing.workspace = true
+uv-pep508.workspace = true
 yaml-rust2.workspace = true
 
 [dev-dependencies]

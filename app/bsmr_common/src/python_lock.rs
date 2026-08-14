@@ -8,8 +8,26 @@
 use std::collections::BTreeMap;
 use std::path::Path;
 use std::path::PathBuf;
+use std::str::FromStr;
+use std::sync::LazyLock;
 
 use serde::Deserialize;
+use uv_pep508::MarkerTree;
+
+/// Exact environment facts shared by every platform in the native Python catalog.
+static SUPPORTED_PYTHON_DOMAIN: LazyLock<MarkerTree> = LazyLock::new(|| {
+    MarkerTree::from_str(concat!(
+        "implementation_name == 'cpython' and ",
+        "platform_python_implementation == 'CPython' and ",
+        "os_name == 'posix' and (",
+        "(sys_platform == 'darwin' and platform_system == 'Darwin' and ",
+        "(platform_machine == 'arm64' or platform_machine == 'x86_64')) or ",
+        "(sys_platform == 'linux' and platform_system == 'Linux' and ",
+        "(platform_machine == 'aarch64' or platform_machine == 'x86_64'))",
+        ")",
+    ))
+    .expect("the native Python toolchain domain is a valid PEP 508 marker")
+});
 
 /// A parsed PEP 751 lock in deterministic wire order.
 #[derive(Debug, Deserialize)]
@@ -210,6 +228,13 @@ impl PylockTomlPackage {
     fn validate(&self) -> Result<(), PylockTomlError> {
         if normalize_package_name(&self.name).as_deref() != Some(&self.name) {
             return Err(self.invalid("name must be normalized"));
+        }
+        if self
+            .marker
+            .as_deref()
+            .is_some_and(|marker| MarkerTree::from_str(marker).is_err())
+        {
+            return Err(self.invalid("marker must be a valid PEP 508 expression"));
         }
         let source_count = usize::from(self.vcs.is_some())
             + usize::from(self.directory.is_some())
@@ -484,7 +509,12 @@ fn universal_wheel(wheel: &toml::Value) -> bool {
 /// Extracts one directly downloadable universal wheel from a single lock variant.
 fn direct_universal_wheel(package: &toml::Value) -> Option<PylockArtifact> {
     let package = package.as_table()?;
-    if package.contains_key("marker") || package.contains_key("requires-python") {
+    if package.contains_key("requires-python")
+        || package
+            .get("marker")
+            .and_then(toml::Value::as_str)
+            .is_some_and(|marker| !marker_covers_supported_python(marker))
+    {
         return None;
     }
     let wheels = package.get("wheels")?.as_array()?;
@@ -534,6 +564,12 @@ fn direct_universal_wheel(package: &toml::Value) -> Option<PylockArtifact> {
         size,
         url: url.to_owned(),
     })
+}
+
+/// Proves that a package marker selects every native BSMR Python platform.
+fn marker_covers_supported_python(marker: &str) -> bool {
+    MarkerTree::from_str(marker)
+        .is_ok_and(|marker| SUPPORTED_PYTHON_DOMAIN.implies(marker).is_true())
 }
 
 /// Recursively sorts TOML table keys without reordering semantic arrays.
@@ -752,6 +788,16 @@ mod tests {
         assert_package_error(&input, "Typing_Extensions", "name must be normalized");
     }
 
+    /// Package selection markers must use Astral's exact PEP 508 grammar.
+    #[test]
+    fn invariant_package_marker_is_valid() {
+        let input = format!(
+            "{HEADER}[[packages]]\nname = 'demo'\nmarker = 'sys_platform === linux'\n[[packages.wheels]]\nurl = 'https://example.org/demo.whl'\nhashes = {{ sha256 = 'demo' }}\n"
+        );
+
+        assert_package_error(&input, "demo", "marker must be a valid PEP 508 expression");
+    }
+
     /// One package entry cannot select incompatible acquisition mechanisms.
     #[test_case("[packages.vcs]\ntype = \"git\"\nurl = \"https://example.org/demo.git\"\ncommit-id = \"deadbeef\"\n[[packages.wheels]]\nurl = \"https://example.org/demo.whl\"\nhashes = { sha256 = \"demo\" }"; "vcs_and_wheel")]
     #[test_case("[packages.archive]\nurl = \"https://example.org/demo.zip\"\nhashes = { sha256 = \"archive\" }\n[packages.sdist]\nurl = \"https://example.org/demo.tar.gz\"\nhashes = { sha256 = \"sdist\" }"; "archive_and_sdist")]
@@ -941,8 +987,21 @@ mod tests {
         assert_eq!(direct_fragment("", &wheels).artifact, None);
     }
 
+    /// A marker that covers BSMR's complete Python platform domain is not a selection.
+    #[test_case("sys_platform == 'darwin' or sys_platform == 'linux'"; "operating_system")]
+    #[test_case("(platform_python_implementation != 'PyPy' and sys_platform == 'darwin') or (platform_python_implementation != 'PyPy' and sys_platform == 'linux')"; "implementation")]
+    fn invariant_direct_wheel_accepts_supported_platform_domain(marker: &str) {
+        let fragment = direct_fragment(
+            &format!("marker = {marker:?}\n"),
+            &locked_wheel("https://example.org/demo-1-py3-none-any.whl"),
+        );
+
+        assert!(fragment.artifact.is_some());
+    }
+
     /// Direct acquisition cannot bypass package-level environment selection.
-    #[test_case("marker = \"python_version >= '3.14'\""; "marker")]
+    #[test_case("marker = \"sys_platform == 'darwin'\""; "platform_marker")]
+    #[test_case("marker = \"python_version >= '3.14'\""; "version_marker")]
     #[test_case("requires-python = '>=3.14'"; "requires_python")]
     fn invariant_direct_wheel_rejects_package_selection(selection: &str) {
         assert_eq!(
