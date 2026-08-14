@@ -85,6 +85,7 @@ def _tool_arg(dependency: Dependency):
 
 def _runner_command(ctx: AnalysisContext, mode: str, output):
     """Constructs one action command from only the tools consumed by its mode."""
+    python_toolchain = ctx.attrs.python[PythonNativeDistributionInfo]
     python, python_version = _tool_arg(ctx.attrs.python)
     command = cmd_args(
         [
@@ -95,6 +96,8 @@ def _runner_command(ctx: AnalysisContext, mode: str, output):
             output,
             "--python",
             python,
+            "--python-platform",
+            python_toolchain.platform,
         ],
     )
     if mode in ["locked-package", "select-package", "wheel", "wheel-environment"]:
