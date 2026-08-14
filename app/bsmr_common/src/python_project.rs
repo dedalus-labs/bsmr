@@ -639,6 +639,7 @@ mod tests {
                 ),
                 acquisition: PylockAcquisition::Wheel,
                 artifact: None,
+                source_artifact: None,
                 artifacts: BTreeMap::new(),
             })
             .collect()
@@ -844,6 +845,31 @@ mod tests {
         assert!(build.contains("filename = \"attrs-25.3.0-py3-none-any.whl\""));
         assert!(build.contains("size = 42"));
         assert!(build.contains("artifact = \":__bsmr_python_artifact__"));
+    }
+
+    #[test]
+    fn invariant_source_distributions_are_declared_download_inputs() {
+        let listing = PackageListing::testing_files(&["pyproject.toml"]);
+        let lock = PylockToml::parse(&format!(
+            "lock-version = '1.0'\ncreated-by = 'test'\n[[packages]]\nname = 'demo'\nversion = '1'\n[packages.sdist]\nurl = 'https://example.org/demo-1.tar.gz'\nsize = 42\nhashes = {{ sha256 = '{}' }}\n",
+            "0".repeat(64),
+        ))
+        .unwrap();
+        let root_files = PythonRootFiles {
+            runtime_packages: lock.installation_fragments().unwrap(),
+            ..PythonRootFiles::default()
+        };
+
+        let build = render_python_build_file(
+            CellRelativePathBuf::unchecked_new(String::new()),
+            "[project]\nname = 'demo'\nversion = '1'\nrequires-python = '>=3.14'\n",
+            &listing,
+            &root_files,
+        )
+        .unwrap();
+
+        assert!(build.contains("filename = \"demo-1.tar.gz\""));
+        assert!(build.contains("source_artifact = \":__bsmr_python_artifact__"));
     }
 
     #[test]

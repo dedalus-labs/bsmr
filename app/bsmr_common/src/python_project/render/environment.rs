@@ -124,6 +124,9 @@ fn render_dependency_environments(
         if let Some(artifact) = &package.artifact {
             artifacts.insert(locked_artifact_target(artifact), artifact);
         }
+        if let Some(artifact) = &package.source_artifact {
+            artifacts.insert(locked_artifact_target(artifact), artifact);
+        }
         for artifact in package.artifacts.values().flatten() {
             artifacts.insert(locked_artifact_target(artifact), artifact);
         }
@@ -174,7 +177,7 @@ fn render_dependency_environments(
     Ok(())
 }
 
-/// Emits one digest-verified wheel acquisition action.
+/// Emits one digest-verified distribution acquisition action.
 fn render_locked_artifact(
     output: &mut String,
     name: &str,
@@ -269,6 +272,14 @@ fn render_locked_package(
         )
         .map_err(NativePythonBuildError::Render)?;
     }
+    if let Some(artifact) = &package.source_artifact {
+        writeln!(
+            output,
+            "    source_artifact = {:?},",
+            format!(":{}", locked_artifact_target(artifact))
+        )
+        .map_err(NativePythonBuildError::Render)?;
+    }
     if !package.artifacts.is_empty() {
         writeln!(
             output,
@@ -311,7 +322,7 @@ fn render_locked_package(
     writeln!(output, ")\n").map_err(NativePythonBuildError::Render)
 }
 
-/// Returns the stable target identity for one downloadable wheel.
+/// Returns the stable target identity for one downloadable distribution.
 fn locked_artifact_target(artifact: &PylockArtifact) -> String {
     let mut digest = Sha256::new();
     for value in [

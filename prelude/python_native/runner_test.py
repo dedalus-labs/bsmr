@@ -362,6 +362,7 @@ class EnvironmentTest(unittest.TestCase):
                 python=root / "python",
                 python_platform="aarch64-apple-darwin",
                 requirement=None,
+                source_artifact=None,
                 uv=root / "uv",
                 wheel_dir=[],
             )
@@ -397,6 +398,42 @@ class EnvironmentTest(unittest.TestCase):
                 )
             )
 
+    def test_source_builds_install_the_verified_artifact_offline(self) -> None:
+        """PEP 517 must consume acquired bytes without lock or index access."""
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            artifact = root / "demo-1.tar.gz"
+            artifact.touch()
+            args = Namespace(
+                absent=False,
+                artifact=[],
+                build_environment=[_empty_environment(root / "build-environment")],
+                config_setting=[],
+                package_config_setting=[],
+                package_build_variable=[],
+                lock=root / "pylock.toml",
+                manifest=root / "package.json",
+                output=root / "environment",
+                python=root / "python",
+                python_platform="aarch64-apple-darwin",
+                requirement=None,
+                source_artifact=artifact,
+                uv=root / "uv",
+            )
+
+            with patch.object(runner, "_run") as run:
+                (root / "scratch").mkdir()
+                runner._locked_package(args, {"PATH": "/usr/bin"}, root / "scratch")
+
+            command = run.call_args.args[0]
+            self.assertEqual(command[1:4], ["pip", "install", str(artifact.resolve())])
+            self.assertNotIn(str(args.lock), command)
+            self.assertIn("--no-build-isolation", command)
+            self.assertNotIn("--no-build", command)
+            self.assertIn("--no-deps", command)
+            self.assertIn("--no-index", command)
+            self.assertIn("--offline", command)
+
     def test_locked_wheel_installs_from_its_verified_artifact(self) -> None:
         """A directly acquired wheel must not perform index or lock resolution."""
         with tempfile.TemporaryDirectory() as temporary:
@@ -416,6 +453,7 @@ class EnvironmentTest(unittest.TestCase):
                 python=root / "python",
                 python_platform="aarch64-apple-darwin",
                 requirement=None,
+                source_artifact=None,
                 uv=root / "uv",
             )
 
@@ -457,6 +495,7 @@ class EnvironmentTest(unittest.TestCase):
                 python=root / "python",
                 python_platform="aarch64-apple-darwin",
                 requirement="demo==1",
+                source_artifact=None,
                 uv=root / "uv",
             )
 
@@ -488,6 +527,7 @@ class EnvironmentTest(unittest.TestCase):
                 python=root / "python",
                 python_platform="aarch64-apple-darwin",
                 requirement=None,
+                source_artifact=None,
                 uv=root / "uv",
             )
 
