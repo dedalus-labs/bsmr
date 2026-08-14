@@ -12,6 +12,7 @@ use std::str::FromStr;
 use std::sync::LazyLock;
 
 use serde::Deserialize;
+use uv_distribution_filename::SourceDistFilename;
 use uv_distribution_filename::WheelFilename;
 use uv_pep508::MarkerTree;
 use uv_platform_tags::Arch;
@@ -65,11 +66,13 @@ pub struct PylockInstallationFragment {
     pub acquisition: PylockAcquisition,
     /// One unconditionally compatible wheel that bypasses selection.
     pub artifact: Option<PylockArtifact>,
+    /// One immutable source archive acquired before a PEP 517 action.
+    pub source_artifact: Option<PylockArtifact>,
     /// Exact wheel candidates keyed by Python line and execution platform.
     pub artifacts: BTreeMap<String, Vec<PylockArtifact>>,
 }
 
-/// One locked wheel that BSMR can acquire without index resolution.
+/// One locked distribution artifact BSMR can acquire without index resolution.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct PylockArtifact {
     pub filename: String,
@@ -176,6 +179,14 @@ impl PylockToml {
                     } else {
                         platform_wheels(&package, &variants)?
                     };
+                    let source_artifact = if has_source && !universal {
+                        match variants.as_slice() {
+                            [variant] => direct_source_artifact(variant),
+                            _ => None,
+                        }
+                    } else {
+                        None
+                    };
                     let mut fragment = base.clone();
                     fragment.insert("packages".to_owned(), toml::Value::Array(variants));
                     Ok(PylockInstallationFragment {
@@ -194,6 +205,7 @@ impl PylockToml {
                             }
                         },
                         artifact,
+                        source_artifact,
                         artifacts,
                     })
                 },
@@ -654,31 +666,21 @@ fn native_python_tags() -> Vec<(String, Tags)> {
         .collect()
 }
 
-/// Returns the declared wheel filename without trusting URL query data.
-fn locked_artifact_filename(wheel: &toml::Value) -> Option<&str> {
-    let wheel = wheel.as_table()?;
+/// Returns the declared artifact filename without trusting URL query data.
+fn locked_artifact_filename(artifact: &toml::Value) -> Option<&str> {
+    let artifact = artifact.as_table()?;
     ["name", "path", "url"]
         .into_iter()
-        .find_map(|field| wheel.get(field).and_then(toml::Value::as_str))?
+        .find_map(|field| artifact.get(field).and_then(toml::Value::as_str))?
         .split(['?', '#'])
         .next()?
         .rsplit('/')
         .next()
 }
 
-/// Converts one compatible wheel into an independently authenticated download.
-fn downloadable_wheel(
-    package: &str,
-    version: &str,
-    filename: &str,
-    wheel: &toml::Value,
-) -> Option<PylockArtifact> {
-    let parsed = WheelFilename::from_str(filename).ok()?;
-    if parsed.name.to_string() != package || parsed.version.to_string() != version {
-        return None;
-    }
-    let wheel = wheel.as_table()?;
-    let url = wheel.get("url")?.as_str()?;
+/// Converts one locked remote artifact into an authenticated acquisition input.
+fn downloadable_artifact(filename: &str, artifact: &toml::Table) -> Option<PylockArtifact> {
+    let url = artifact.get("url")?.as_str()?;
     let location = url
         .strip_prefix("https://")
         .or_else(|| url.strip_prefix("http://"))?;
@@ -693,12 +695,12 @@ fn downloadable_wheel(
     {
         return None;
     }
-    let hashes = wheel.get("hashes")?.as_table()?;
+    let hashes = artifact.get("hashes")?.as_table()?;
     let sha256 = hashes.get("sha256")?.as_str()?;
     if sha256.len() != 64 || !sha256.bytes().all(|byte| byte.is_ascii_hexdigit()) {
         return None;
     }
-    let size = wheel
+    let size = artifact
         .get("size")
         .and_then(toml::Value::as_integer)
         .and_then(|size| u64::try_from(size).ok())?;
@@ -708,6 +710,50 @@ fn downloadable_wheel(
         size,
         url: url.to_owned(),
     })
+}
+
+/// Converts one compatible wheel into an independently authenticated download.
+fn downloadable_wheel(
+    package: &str,
+    version: &str,
+    filename: &str,
+    wheel: &toml::Value,
+) -> Option<PylockArtifact> {
+    let parsed = WheelFilename::from_str(filename).ok()?;
+    if parsed.name.to_string() != package || parsed.version.to_string() != version {
+        return None;
+    }
+    let wheel = wheel.as_table()?;
+    downloadable_artifact(filename, wheel)
+}
+
+/// Extracts one directly downloadable sdist from an unconditional variant.
+fn direct_source_artifact(package: &toml::Value) -> Option<PylockArtifact> {
+    let package = package.as_table()?;
+    if package.contains_key("requires-python")
+        || package
+            .get("marker")
+            .and_then(toml::Value::as_str)
+            .is_some_and(|marker| !marker_covers_supported_python(marker))
+    {
+        return None;
+    }
+    let source = package.get("sdist")?;
+    if source
+        .get("subdirectory")
+        .and_then(toml::Value::as_str)
+        .is_some()
+    {
+        return None;
+    }
+    let filename = locked_artifact_filename(source)?;
+    let parsed = SourceDistFilename::parsed_normalized_filename(filename).ok()?;
+    if parsed.name.to_string() != package.get("name")?.as_str()?
+        || parsed.version.to_string() != package.get("version")?.as_str()?
+    {
+        return None;
+    }
+    downloadable_artifact(filename, source.as_table()?)
 }
 
 /// Extracts one directly downloadable universal wheel from a single lock variant.
@@ -753,21 +799,7 @@ fn direct_universal_wheel(package: &toml::Value) -> Option<PylockArtifact> {
     {
         return None;
     }
-    let hashes = wheel.get("hashes")?.as_table()?;
-    let sha256 = hashes.get("sha256")?.as_str()?;
-    if sha256.len() != 64 || !sha256.bytes().all(|byte| byte.is_ascii_hexdigit()) {
-        return None;
-    }
-    let size = wheel
-        .get("size")
-        .and_then(toml::Value::as_integer)
-        .and_then(|size| u64::try_from(size).ok())?;
-    Some(PylockArtifact {
-        filename: filename.to_owned(),
-        sha256: sha256.to_owned(),
-        size,
-        url: url.to_owned(),
-    })
+    downloadable_artifact(filename, wheel)
 }
 
 /// Proves that a package marker selects every native BSMR Python platform.
@@ -1121,6 +1153,48 @@ mod tests {
                 size: 42,
                 url: "https://example.org/demo-1-py3-none-any.whl".to_owned(),
             })
+        );
+    }
+
+    /// A complete remote sdist becomes a verified input before PEP 517 executes.
+    #[test]
+    fn invariant_remote_sdist_is_declared_acquisition_input() {
+        let input = format!(
+            "{HEADER}[[packages]]\nname = 'demo'\nversion = '1'\nmarker = \"sys_platform == 'darwin' or sys_platform == 'linux'\"\n[packages.sdist]\nurl = 'https://example.org/demo-1.tar.gz'\nsize = 42\nhashes = {{ sha256 = {SHA256:?} }}\n"
+        );
+        let fragment = &PylockToml::parse(&input)
+            .unwrap()
+            .installation_fragments()
+            .unwrap()[0];
+
+        assert_eq!(fragment.acquisition, PylockAcquisition::Source);
+        assert_eq!(
+            fragment.source_artifact,
+            Some(PylockArtifact {
+                filename: "demo-1.tar.gz".to_owned(),
+                sha256: SHA256.to_owned(),
+                size: 42,
+                url: "https://example.org/demo-1.tar.gz".to_owned(),
+            })
+        );
+    }
+
+    /// Direct sdist acquisition requires the locked identity and archive root.
+    #[test_case("other-1.tar.gz", ""; "distribution")]
+    #[test_case("demo-2.tar.gz", ""; "version")]
+    #[test_case("demo-1.tar.gz", "subdirectory = 'package'\n"; "subdirectory")]
+    fn invariant_direct_sdist_matches_lock_identity(filename: &str, fields: &str) {
+        let input = format!(
+            "{HEADER}[[packages]]\nname = 'demo'\nversion = '1'\n[packages.sdist]\nurl = 'https://example.org/{filename}'\nsize = 42\nhashes = {{ sha256 = {SHA256:?} }}\n{fields}"
+        );
+
+        assert_eq!(
+            PylockToml::parse(&input)
+                .unwrap()
+                .installation_fragments()
+                .unwrap()[0]
+                .source_artifact,
+            None
         );
     }
 

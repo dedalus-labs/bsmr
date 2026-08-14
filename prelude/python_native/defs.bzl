@@ -142,6 +142,8 @@ def _locked_package_command(ctx: AnalysisContext, root, manifest, lock: Artifact
     if source:
         if ctx.attrs.build_environment == None:
             fail("source package '{}' requires a declared build environment".format(ctx.attrs.package))
+        if ctx.attrs.source_artifact != None:
+            command.add(["--source-artifact", ctx.attrs.source_artifact[PythonLockedArtifactInfo].file])
         _add_config_settings(command, ctx.attrs.config_settings)
         for setting in ctx.attrs.package_config_settings:
             command.add(["--package-config-setting", setting])
@@ -221,6 +223,8 @@ def _python_locked_package_impl(ctx: AnalysisContext) -> list[Provider]:
         fail("a direct wheel artifact requires wheel acquisition")
     if ctx.attrs.artifact != None and ctx.attrs.artifacts != None:
         fail("direct and selected wheel artifacts are mutually exclusive")
+    if ctx.attrs.source_artifact != None and ctx.attrs.acquisition == "wheel":
+        fail("a source artifact requires source acquisition")
     root = ctx.actions.declare_output(ctx.label.name, dir = True, has_content_based_path = True)
     manifest = ctx.actions.declare_output("{}.manifest.json".format(ctx.label.name), has_content_based_path = True)
     lock = ctx.actions.write("pylock.{}.toml".format(ctx.label.name), ctx.attrs.lock)
@@ -297,6 +301,10 @@ python_locked_package = rule(
         "package_build_variables": attrs.list(attrs.string(), default = []),
         "package_config_settings": attrs.list(attrs.string(), default = []),
         "python": attrs.exec_dep(providers = [PythonNativeDistributionInfo]),
+        "source_artifact": attrs.option(
+            attrs.dep(providers = [PythonLockedArtifactInfo]),
+            default = None,
+        ),
         "uv": attrs.exec_dep(providers = [PythonNativeDistributionInfo]),
         "_runner": attrs.source(default = "prelude//python_native:runner"),
     },
@@ -329,7 +337,7 @@ python_locked_artifact = rule(
         "size": attrs.int(),
         "url": attrs.string(),
     },
-    doc = "Downloads one digest-verified locked wheel.",
+    doc = "Downloads one digest-verified locked distribution artifact.",
 )
 
 def _python_environment_impl(ctx: AnalysisContext) -> list[Provider]:

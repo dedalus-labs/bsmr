@@ -110,6 +110,7 @@ def _arguments() -> argparse.Namespace:
     parser.add_argument("--requirement")
     parser.add_argument("--ruff", type=Path)
     parser.add_argument("--source", type=Path)
+    parser.add_argument("--source-artifact", type=Path)
     parser.add_argument("--source-permitted", action="store_true")
     parser.add_argument("--ty", type=Path)
     parser.add_argument("--uv", type=Path)
@@ -371,9 +372,16 @@ def _locked_package(
     packages.mkdir()
     if args.requirement is not None and not args.artifact:
         raise ValueError("an exact requirement requires locked wheel artifacts")
+    if args.source_artifact is not None and (
+        args.artifact or args.requirement is not None
+    ):
+        raise ValueError("wheel and source artifacts are mutually exclusive")
+    if args.source_artifact is not None and not args.build_environment:
+        raise ValueError("a source artifact requires a declared build environment")
     if args.absent:
         if (
             args.artifact
+            or args.source_artifact is not None
             or args.build_environment
             or args.config_setting
             or args.package_config_setting
@@ -426,7 +434,6 @@ def _locked_package(
         ]
         _run(command, process_environment)
     else:
-        lock = _required(args.lock, "--lock")
         build_flags = ["--no-build"]
         if args.build_environment:
             for environment in args.build_environment:
@@ -435,13 +442,36 @@ def _locked_package(
                 args.python_platform, process_environment, scratch
             )
             build_flags = ["--no-build-isolation"]
-        _run(
-            [
+        if args.source_artifact is not None:
+            command = [
+                str(uv),
+                *_uv_config_arguments(args, scratch),
+                "pip",
+                "install",
+                str(args.source_artifact.resolve()),
+                "--target",
+                str(packages),
+                "--python",
+                str(args.python),
+                "--python-platform",
+                args.python_platform,
+                "--no-python-downloads",
+                *build_flags,
+                "--no-deps",
+                "--no-index",
+                "--offline",
+                "--strict",
+                "--color",
+                "never",
+                "--no-progress",
+            ]
+        else:
+            command = [
                 str(uv),
                 *_uv_config_arguments(args, scratch),
                 "pip",
                 "sync",
-                str(lock),
+                str(_required(args.lock, "--lock")),
                 "--target",
                 str(packages),
                 "--python",
@@ -456,12 +486,14 @@ def _locked_package(
                 "--color",
                 "never",
                 "--no-progress",
-                *(f"--config-setting={setting}" for setting in args.config_setting),
-                *(
-                    f"--config-settings-package={setting}"
-                    for setting in args.package_config_setting
-                ),
-            ],
+            ]
+        command.extend(f"--config-setting={setting}" for setting in args.config_setting)
+        command.extend(
+            f"--config-settings-package={setting}"
+            for setting in args.package_config_setting
+        )
+        _run(
+            command,
             process_environment,
         )
     _normalize_entry_points(packages)
