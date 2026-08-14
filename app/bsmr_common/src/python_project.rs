@@ -649,6 +649,7 @@ mod tests {
                 ),
                 acquisition: PylockAcquisition::Wheel,
                 artifact: None,
+                platform_artifacts: BTreeMap::new(),
                 source_artifact: None,
                 vcs_source: None,
                 directory_source: None,
@@ -1019,6 +1020,33 @@ mod tests {
         assert!(build.contains("python_native_python_platform_value({"));
         assert!(build.contains("\"3.14-macos-arm64\": [\n"));
         assert!(build.contains("artifacts = python_native_python_platform_value({"));
+    }
+
+    /// One unconditional best wheel per platform bypasses dynamic uv selection.
+    #[test]
+    fn invariant_best_platform_wheels_are_direct_artifacts() {
+        let listing = PackageListing::testing_files(&["pyproject.toml"]);
+        let lock = PylockToml::parse(&format!(
+            "lock-version = '1.0'\ncreated-by = 'test'\n[[packages]]\nname = 'demo-wheel'\nversion = '1'\n[packages.sdist]\nurl = 'https://example.org/demo_wheel-1.tar.gz'\nsize = 42\nhashes = {{ sha256 = '2222222222222222222222222222222222222222222222222222222222222222' }}\n[[packages.wheels]]\nurl = 'https://example.org/demo_wheel-1-cp314-cp314-macosx_13_0_arm64.whl'\nsize = 42\nhashes = {{ sha256 = '0000000000000000000000000000000000000000000000000000000000000000' }}\n[[packages.wheels]]\nurl = 'https://example.org/demo_wheel-1-py3-none-any.whl'\nsize = 42\nhashes = {{ sha256 = '1111111111111111111111111111111111111111111111111111111111111111' }}\n"
+        ))
+        .unwrap();
+        let root_files = PythonRootFiles {
+            runtime_packages: lock.installation_fragments().unwrap(),
+            ..PythonRootFiles::default()
+        };
+
+        let build = render_python_build_file(
+            CellRelativePathBuf::unchecked_new(String::new()),
+            "[project]\nname = 'demo'\nversion = '1'\nrequires-python = '>=3.14'\n",
+            &listing,
+            &root_files,
+        )
+        .unwrap();
+
+        assert!(build.contains("artifact = python_native_python_platform_value({"));
+        assert!(!build.contains("artifacts = python_native_python_platform_value({"));
+        assert!(build.contains("    acquisition = \"wheel\","));
+        assert!(!build.contains("    source_artifact = "));
     }
 
     #[test]

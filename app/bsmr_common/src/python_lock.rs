@@ -12,6 +12,7 @@ use std::str::FromStr;
 use std::sync::LazyLock;
 
 use serde::Deserialize;
+use uv_distribution_filename::BuildTag;
 use uv_distribution_filename::SourceDistExtension;
 use uv_distribution_filename::SourceDistFilename;
 use uv_distribution_filename::WheelFilename;
@@ -19,6 +20,8 @@ use uv_pep508::MarkerTree;
 use uv_platform_tags::Arch;
 use uv_platform_tags::Os;
 use uv_platform_tags::Platform;
+use uv_platform_tags::TagCompatibility;
+use uv_platform_tags::TagPriority;
 use uv_platform_tags::Tags;
 use uv_platform_tags::TagsOptions;
 
@@ -67,6 +70,8 @@ pub struct PylockInstallationFragment {
     pub acquisition: PylockAcquisition,
     /// One unconditionally compatible wheel that bypasses selection.
     pub artifact: Option<PylockArtifact>,
+    /// One unconditionally selected wheel per supported Python platform.
+    pub platform_artifacts: BTreeMap<String, PylockArtifact>,
     /// One immutable source archive acquired before a PEP 517 action.
     pub source_artifact: Option<PylockSourceArtifact>,
     /// One immutable VCS tree acquired before a PEP 517 action.
@@ -212,12 +217,18 @@ impl PylockToml {
                         [variant] => direct_universal_wheel(variant),
                         _ => None,
                     };
-                    let artifacts = if artifact.is_some() {
+                    let platform_artifacts = if artifact.is_some() {
+                        BTreeMap::new()
+                    } else {
+                        direct_platform_wheels(&package, &variants)?
+                    };
+                    let direct_wheel = artifact.is_some() || !platform_artifacts.is_empty();
+                    let artifacts = if direct_wheel {
                         BTreeMap::new()
                     } else {
                         platform_wheels(&package, &variants)?
                     };
-                    let source_artifact = if has_source && !universal {
+                    let source_artifact = if has_source && !universal && !direct_wheel {
                         match variants.as_slice() {
                             [variant] => direct_source_artifact(variant),
                             _ => None,
@@ -225,7 +236,7 @@ impl PylockToml {
                     } else {
                         None
                     };
-                    let vcs_source = if has_source && !universal {
+                    let vcs_source = if has_source && !universal && !direct_wheel {
                         match variants.as_slice() {
                             [variant] => direct_vcs_source(variant),
                             _ => None,
@@ -233,7 +244,7 @@ impl PylockToml {
                     } else {
                         None
                     };
-                    let directory_source = if has_source && !universal {
+                    let directory_source = if has_source && !universal && !direct_wheel {
                         match variants.as_slice() {
                             [variant] => direct_directory_source(variant),
                             _ => None,
@@ -258,7 +269,7 @@ impl PylockToml {
                     Ok(PylockInstallationFragment {
                         package,
                         contents: toml::to_string(&fragment).map_err(PylockTomlError::Serialize)?,
-                        acquisition: match (has_wheel, has_source, universal) {
+                        acquisition: match (has_wheel, has_source, universal || direct_wheel) {
                             (true, _, true) => PylockAcquisition::Wheel,
                             (true, true, false) => PylockAcquisition::WheelOrSource,
                             (true, false, false) => PylockAcquisition::Wheel,
@@ -271,6 +282,7 @@ impl PylockToml {
                             }
                         },
                         artifact,
+                        platform_artifacts,
                         source_artifact,
                         vcs_source,
                         directory_source,
@@ -623,6 +635,93 @@ fn universal_wheel(wheel: &toml::Value) -> bool {
         .any(|location| {
             location.ends_with("-py3-none-any.whl") || location.ends_with("-py2.py3-none-any.whl")
         })
+}
+
+/// Selects uv's unique best wheel for every supported Python platform.
+fn direct_platform_wheels(
+    package: &str,
+    variants: &[toml::Value],
+) -> Result<BTreeMap<String, PylockArtifact>, PylockTomlError> {
+    let [variant] = variants else {
+        return Ok(BTreeMap::new());
+    };
+    let Some(variant) = variant.as_table() else {
+        return Ok(BTreeMap::new());
+    };
+    if variant.contains_key("requires-python")
+        || variant
+            .get("marker")
+            .and_then(toml::Value::as_str)
+            .is_some_and(|marker| !marker_covers_supported_python(marker))
+    {
+        return Ok(BTreeMap::new());
+    }
+    let Some(version) = variant.get("version").and_then(toml::Value::as_str) else {
+        return Ok(BTreeMap::new());
+    };
+    let Some(wheels) = variant.get("wheels").and_then(toml::Value::as_array) else {
+        return Ok(BTreeMap::new());
+    };
+    type Candidate = ((TagPriority, Option<BuildTag>), PylockArtifact, bool);
+    let tags = native_python_tags();
+    let mut candidates = tags
+        .iter()
+        .map(|(platform, _)| (platform.clone(), None::<Candidate>))
+        .collect::<BTreeMap<_, _>>();
+    let mut identities = BTreeMap::<String, PylockArtifact>::new();
+    for wheel in wheels {
+        let Some(filename) = locked_artifact_filename(wheel) else {
+            return Ok(BTreeMap::new());
+        };
+        let Ok(parsed) = WheelFilename::from_str(filename) else {
+            return Ok(BTreeMap::new());
+        };
+        let Some(artifact) = downloadable_wheel(package, version, filename, wheel) else {
+            return Ok(BTreeMap::new());
+        };
+        if identities
+            .insert(filename.to_owned(), artifact.clone())
+            .is_some_and(|existing| existing != artifact)
+        {
+            return Err(PylockTomlError::Package {
+                package: package.to_owned(),
+                reason: "wheel filename identifies multiple artifacts",
+            });
+        }
+        for (platform, tags) in &tags {
+            let TagCompatibility::Compatible(tag_priority) = parsed.compatibility(tags) else {
+                continue;
+            };
+            let priority = (tag_priority, parsed.build_tag().cloned());
+            let selected = candidates
+                .get_mut(platform)
+                .expect("native platform keys originate from the same catalog");
+            match selected {
+                None => *selected = Some((priority, artifact.clone(), true)),
+                Some((best, current, unique)) if priority == *best => {
+                    *unique &= *current == artifact;
+                }
+                Some((best, _, _)) if priority > *best => {
+                    *selected = Some((priority, artifact.clone(), true));
+                }
+                Some(_) => {}
+            }
+        }
+    }
+    if candidates
+        .values()
+        .any(|candidate| !candidate.as_ref().is_some_and(|(_, _, unique)| *unique))
+    {
+        return Ok(BTreeMap::new());
+    }
+    Ok(candidates
+        .into_iter()
+        .map(|(platform, candidate)| {
+            let (_, artifact, _) =
+                candidate.expect("every supported platform has one unique best wheel");
+            (platform, artifact)
+        })
+        .collect())
 }
 
 /// Partitions exact wheel candidates by BSMR's finite execution-platform catalog.
@@ -1545,15 +1644,64 @@ mod tests {
         );
     }
 
-    /// Platform alternatives stay delegated to uv's wheel-tag ordering.
+    /// Platform alternatives follow uv's wheel-tag priority before acquisition.
     #[test]
-    fn invariant_direct_wheel_requires_one_artifact_candidate() {
+    fn invariant_direct_platform_wheel_matches_uv_tag_priority() {
         let mut wheels = locked_wheel("https://example.org/demo-1-py3-none-any.whl");
         wheels.push_str(&locked_wheel(
-            "https://example.org/demo-1-cp314-cp314-macosx_15_0_arm64.whl",
+            "https://example.org/demo-1-cp314-cp314-macosx_13_0_arm64.whl",
         ));
 
-        assert_eq!(direct_fragment("", &wheels).artifact, None);
+        let fragment = direct_fragment("", &wheels);
+
+        assert_eq!(fragment.artifact, None);
+        assert!(fragment.artifacts.is_empty());
+        assert_eq!(
+            fragment.platform_artifacts["3.14-macos-arm64"].filename,
+            "demo-1-cp314-cp314-macosx_13_0_arm64.whl"
+        );
+        for (platform, artifact) in fragment.platform_artifacts {
+            if platform != "3.14-macos-arm64" {
+                assert_eq!(artifact.filename, "demo-1-py3-none-any.whl");
+            }
+        }
+    }
+
+    /// Build tags break equal wheel-tag compatibility exactly as uv specifies.
+    #[test]
+    fn invariant_direct_platform_wheel_matches_uv_build_tag_priority() {
+        let mut wheels = locked_wheel("https://example.org/demo-1-1-py3-none-any.whl");
+        wheels.push_str(&locked_wheel(
+            "https://example.org/demo-1-2-py3-none-any.whl",
+        ));
+
+        let fragment = direct_fragment("", &wheels);
+
+        assert!(fragment.artifacts.is_empty());
+        assert!(
+            fragment
+                .platform_artifacts
+                .values()
+                .all(|artifact| artifact.filename == "demo-1-2-py3-none-any.whl")
+        );
+    }
+
+    /// An equal best priority stays delegated to pinned uv.
+    #[test]
+    fn invariant_tied_platform_wheels_require_uv_selection() {
+        let wheels = [
+            "demo-1-cp314.cp313-abi3-macosx_13_0_arm64.whl",
+            "demo-1-cp314-abi3-macosx_13_0_arm64.whl",
+            "demo-1-py3-none-any.whl",
+        ]
+        .into_iter()
+        .map(|filename| locked_wheel(&format!("https://example.org/{filename}")))
+        .collect::<String>();
+
+        let fragment = direct_fragment("", &wheels);
+
+        assert!(fragment.platform_artifacts.is_empty());
+        assert_eq!(fragment.artifacts["3.14-macos-arm64"].len(), 3);
     }
 
     /// Every target receives only wheels compatible with one supported CPython line.
@@ -1570,7 +1718,7 @@ mod tests {
         .map(|filename| locked_wheel(&format!("https://example.org/{filename}")))
         .collect::<String>();
 
-        let fragment = direct_fragment("", &wheels);
+        let fragment = direct_fragment("requires-python = '>=3.13'\n", &wheels);
 
         for version in ["3.13", "3.14"] {
             assert_eq!(
