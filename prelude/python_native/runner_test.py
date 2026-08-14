@@ -354,6 +354,7 @@ class EnvironmentTest(unittest.TestCase):
                 artifact=[],
                 build_environment=[build_environment],
                 config_setting=["--global-option=--quiet"],
+                distribution=None,
                 package_config_setting=["numpy:setup-args=-Dblas=blas"],
                 package_build_variable=["numpy:NPY_DISABLE_CPU_FEATURES=AVX512"],
                 lock=root / "pylock.toml",
@@ -363,7 +364,10 @@ class EnvironmentTest(unittest.TestCase):
                 python_platform="aarch64-apple-darwin",
                 requirement=None,
                 source_artifact=None,
+                source_subdirectory=None,
+                source_tree=None,
                 uv=root / "uv",
+                version=None,
                 wheel_dir=[],
             )
             process_environment = {"PATH": "/usr/bin"}
@@ -409,6 +413,7 @@ class EnvironmentTest(unittest.TestCase):
                 artifact=[],
                 build_environment=[_empty_environment(root / "build-environment")],
                 config_setting=[],
+                distribution="demo",
                 package_config_setting=[],
                 package_build_variable=[],
                 lock=root / "pylock.toml",
@@ -418,10 +423,18 @@ class EnvironmentTest(unittest.TestCase):
                 python_platform="aarch64-apple-darwin",
                 requirement=None,
                 source_artifact=artifact,
+                source_subdirectory=None,
+                source_tree=None,
                 uv=root / "uv",
+                version="1",
             )
 
-            with patch.object(runner, "_run") as run:
+            def install(*_: object) -> None:
+                metadata = args.output / "demo-1.dist-info" / "METADATA"
+                metadata.parent.mkdir()
+                metadata.write_text("Name: demo\nVersion: 1\n", encoding="utf-8")
+
+            with patch.object(runner, "_run", side_effect=install) as run:
                 (root / "scratch").mkdir()
                 runner._locked_package(args, {"PATH": "/usr/bin"}, root / "scratch")
 
@@ -434,6 +447,49 @@ class EnvironmentTest(unittest.TestCase):
             self.assertIn("--no-index", command)
             self.assertIn("--offline", command)
 
+    def test_source_builds_reject_mismatched_distribution_metadata(self) -> None:
+        """An archive may not install a different project than its lock entry."""
+        with tempfile.TemporaryDirectory() as temporary:
+            packages = Path(temporary)
+            metadata = packages / "other-2.dist-info" / "METADATA"
+            metadata.parent.mkdir()
+            metadata.write_text("Name: other\nVersion: 2\n", encoding="utf-8")
+
+            with self.assertRaisesRegex(
+                RuntimeError,
+                "expected demo==1, installed other==2",
+            ):
+                runner._validate_distribution_identity(packages, "demo", "1")
+
+    def test_source_archive_subdirectory_is_encoded_without_changing_path(self) -> None:
+        """A locked project root remains data inside one local file URL."""
+        with tempfile.TemporaryDirectory() as temporary:
+            artifact = Path(temporary) / "source archive.zip"
+            artifact.touch()
+
+            reference = runner._source_artifact_reference(
+                artifact, "python/package name"
+            )
+
+            self.assertEqual(
+                reference,
+                f"{artifact.resolve().as_uri()}#subdirectory=python/package%20name",
+            )
+
+    def test_source_tree_subdirectory_is_contained_by_the_acquired_root(self) -> None:
+        """A VCS project root resolves inside its declared CAS tree."""
+        with tempfile.TemporaryDirectory() as temporary:
+            tree = Path(temporary)
+            source = tree / "python" / "package"
+            source.mkdir(parents=True)
+
+            self.assertEqual(
+                runner._source_tree_reference(tree, "python/package"),
+                str(source.resolve()),
+            )
+            with self.assertRaisesRegex(ValueError, "normalized relative path"):
+                runner._source_tree_reference(tree, "../package")
+
     def test_locked_wheel_installs_from_its_verified_artifact(self) -> None:
         """A directly acquired wheel must not perform index or lock resolution."""
         with tempfile.TemporaryDirectory() as temporary:
@@ -445,6 +501,7 @@ class EnvironmentTest(unittest.TestCase):
                 artifact=[artifact],
                 build_environment=[],
                 config_setting=[],
+                distribution=None,
                 package_build_variable=[],
                 package_config_setting=[],
                 lock=root / "pylock.toml",
@@ -454,7 +511,10 @@ class EnvironmentTest(unittest.TestCase):
                 python_platform="aarch64-apple-darwin",
                 requirement=None,
                 source_artifact=None,
+                source_subdirectory=None,
+                source_tree=None,
                 uv=root / "uv",
+                version=None,
             )
 
             with patch.object(runner, "_run") as run:
@@ -487,6 +547,7 @@ class EnvironmentTest(unittest.TestCase):
                 artifact=candidates,
                 build_environment=[],
                 config_setting=[],
+                distribution=None,
                 package_build_variable=[],
                 package_config_setting=[],
                 lock=root / "pylock.toml",
@@ -496,7 +557,10 @@ class EnvironmentTest(unittest.TestCase):
                 python_platform="aarch64-apple-darwin",
                 requirement="demo==1",
                 source_artifact=None,
+                source_subdirectory=None,
+                source_tree=None,
                 uv=root / "uv",
+                version=None,
             )
 
             with patch.object(runner, "_run") as run:
@@ -519,6 +583,7 @@ class EnvironmentTest(unittest.TestCase):
                 artifact=[],
                 build_environment=[],
                 config_setting=[],
+                distribution=None,
                 package_build_variable=[],
                 package_config_setting=[],
                 lock=root / "pylock.toml",
@@ -528,7 +593,10 @@ class EnvironmentTest(unittest.TestCase):
                 python_platform="aarch64-apple-darwin",
                 requirement=None,
                 source_artifact=None,
+                source_subdirectory=None,
+                source_tree=None,
                 uv=root / "uv",
+                version=None,
             )
 
             with patch.object(runner, "_run") as run:

@@ -6,6 +6,7 @@
 # Defines BSMR's finite, digest-pinned native Python toolchain catalog.
 
 load("@prelude//:prelude.bzl", "native")
+load("@prelude//toolchains:python.bzl", "python_bootstrap_toolchain")
 
 PythonNativeDistributionInfo = provider(fields = {
     "binary": provider_field(Artifact),
@@ -81,6 +82,7 @@ def _distribution_impl(ctx: AnalysisContext) -> list[Provider]:
     return [
         DefaultInfo(default_output = binary),
         PythonNativeDistributionInfo(binary = binary, platform = ctx.attrs.platform, root = ctx.attrs.root, version = ctx.attrs.version),
+        RunInfo(args = [binary]),
     ]
 
 _distribution = rule(
@@ -155,6 +157,7 @@ def python_native_toolchain() -> None:
         )
     platform = python_native_platform_value(_ARTIFACT_PLATFORMS)
     _distribution(name = "__bsmr_python_distribution", executable = "bin/python3", platform = platform, root = ":__bsmr_python_archive", version = python_version, visibility = ["PUBLIC"])
+    python_bootstrap_toolchain(name = "python_bootstrap", interpreter = ":__bsmr_python_distribution", visibility = ["PUBLIC"])
     _distribution(name = "__bsmr_uv_distribution", executable = "uv", platform = platform, root = ":__bsmr_uv_archive", version = _UV_VERSION, visibility = ["PUBLIC"])
     _distribution(name = "__bsmr_ruff_distribution", executable = "ruff", platform = platform, root = ":__bsmr_ruff_archive", version = _RUFF_VERSION, visibility = ["PUBLIC"])
     _distribution(name = "__bsmr_ty_distribution", executable = "ty", platform = platform, root = ":__bsmr_ty_archive", version = _TY_VERSION, visibility = ["PUBLIC"])
