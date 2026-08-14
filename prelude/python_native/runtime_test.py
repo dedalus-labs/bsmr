@@ -22,8 +22,10 @@ import runtime
 class RuntimeTest(unittest.TestCase):
     """Exercise workspace import-root and entry-point semantics."""
 
-    def test_workspace_members_are_importable_without_installation(self) -> None:
-        """A uv-style member must be visible through its standard project root."""
+    def test_only_the_requested_project_and_installed_wheels_are_importable(
+        self,
+    ) -> None:
+        """Unselected workspace members must not leak into a runtime profile."""
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)
             source = root / "source"
@@ -31,11 +33,16 @@ class RuntimeTest(unittest.TestCase):
             member.mkdir(parents=True)
             (source / "pyproject.toml").write_text("[project]\n", encoding="utf-8")
             (member / "pyproject.toml").write_text("[project]\n", encoding="utf-8")
+            (member / "member_only.py").touch()
             environment = root / "environment"
             overlay = root / "overlay"
             environment.mkdir()
             overlay.mkdir()
             (environment / "dependency.py").touch()
+            plugins = environment / "plugins"
+            plugins.mkdir()
+            (plugins / "pth_dependency.py").touch()
+            (environment / "dependency.pth").write_text("plugins\n", encoding="utf-8")
             (overlay / "first_party.py").touch()
             args = Namespace(
                 environment=[overlay, environment],
@@ -53,10 +60,9 @@ class RuntimeTest(unittest.TestCase):
 
                 self.assertEqual(Path.cwd(), source.resolve())
                 self.assertEqual(
-                    runtime.sys.path[:4],
+                    runtime.sys.path[:3],
                     [
                         str(source.resolve()),
-                        str(member.resolve()),
                         str(overlay.resolve()),
                         str(environment.resolve()),
                     ],
@@ -64,7 +70,6 @@ class RuntimeTest(unittest.TestCase):
                 self.assertEqual(os.environ["HOME"], str(root / "scratch" / "home"))
                 declared = [
                     str(source.resolve()),
-                    str(member.resolve()),
                     str(overlay.resolve()),
                     str(environment.resolve()),
                 ]
@@ -89,7 +94,7 @@ class RuntimeTest(unittest.TestCase):
                     [
                         str(runtime_bin / "python"),
                         "-c",
-                        "import dependency, first_party",
+                        "import dependency, first_party, pth_dependency",
                     ],
                     check=False,
                     capture_output=True,
@@ -97,6 +102,14 @@ class RuntimeTest(unittest.TestCase):
                     text=True,
                 )
                 self.assertEqual(child.returncode, 0, child.stderr)
+                undeclared = subprocess.run(
+                    [str(runtime_bin / "python"), "-c", "import member_only"],
+                    check=False,
+                    capture_output=True,
+                    env={"HOME": os.environ["HOME"], "PATH": os.environ["PATH"]},
+                    text=True,
+                )
+                self.assertNotEqual(undeclared.returncode, 0)
                 self.assertFalse((source / ".bsmr-home").exists())
             finally:
                 os.chdir(previous_directory)
@@ -124,6 +137,25 @@ class RuntimeTest(unittest.TestCase):
             invalid.touch()
             with self.assertRaises(RuntimeError):
                 runtime._environment_root(invalid)
+
+    def test_declared_test_command_uses_the_pinned_child_interpreter(self) -> None:
+        """A non-pytest suite must remain inside the declared runtime."""
+        runtime_bin = Path("/runtime/bin")
+
+        self.assertEqual(
+            runtime._test_command(
+                runtime_bin,
+                ["tests/runtests.py", "--verbosity", "1"],
+                ["auth_tests"],
+            ),
+            [
+                Path("/runtime/bin/python"),
+                "tests/runtests.py",
+                "--verbosity",
+                "1",
+                "auth_tests",
+            ],
+        )
 
 
 if __name__ == "__main__":

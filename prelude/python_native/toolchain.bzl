@@ -13,10 +13,10 @@ PythonNativeDistributionInfo = provider(fields = {
     "version": provider_field(str),
 })
 
-_PYTHON_VERSION = "3.14.7"
+_DEFAULT_PYTHON_VERSION = "3.14.7"
 _PYTHON_RELEASE = "20260807"
-_UV_VERSION = "0.12.3"
-_RUFF_VERSION = "0.16.2"
+_UV_VERSION = "0.12.4"
+_RUFF_VERSION = "0.16.3"
 _TY_VERSION = "0.0.71"
 
 _ARTIFACT_PLATFORMS = {
@@ -26,18 +26,34 @@ _ARTIFACT_PLATFORMS = {
     "macos-x86_64": "x86_64-apple-darwin",
 }
 
-_ARCHIVES = {
-    "python": {
+_PYTHON_VERSIONS = {
+    "3.13": "3.13.15",
+    "3.13.15": "3.13.15",
+    "3.14": "3.14.7",
+    "3.14.7": "3.14.7",
+}
+
+_PYTHON_ARCHIVES = {
+    "3.13.15": {
+        "linux-arm64": ("1dfc9565c26f8892a33202b5966bdf9ff45c56a57b06e8fa65fecf05030afe5b", 29253383),
+        "linux-x86_64": ("faae10a9faa9bec06da009ac69326cc1d9691dc138fec6a1b69159dff1781f35", 34822151),
+        "macos-arm64": ("dbadb0ffe46f8bace50daaf8a0c5fc6903c003690776da9eb5269e33c856bb53", 25156281),
+        "macos-x86_64": ("187eed2282e9c3a5b6b14953d564ee25a9f35cf2c209c9fa292186ee48b0e4a1", 24927967),
+    },
+    "3.14.7": {
         "linux-arm64": ("4dba8d7e06199f841a9d6b54e4eb58d446a5c20c65085a916190dd0162c6e93b", 30243151),
         "linux-x86_64": ("a2478d654ed51d443bae21ec20ad927f116b4f5aae4094ab74918a6aa38f0575", 35940499),
         "macos-arm64": ("532645be202d3df8510ab318ca5faed92060a694c8327144e14fa81f31af0f6d", 26499186),
         "macos-x86_64": ("9964e2d618ebea03be8ea3e65ab0ecc0f2b030ce203345b8f92654641fd4de66", 26601297),
     },
+}
+
+_ARCHIVES = {
     "ruff": {
-        "linux-arm64": ("b2a2a2573455cc33af98f8a8fb49294c02d4e2e4a7f9e81844411f0a57f30318", 10434638),
-        "linux-x86_64": ("3d2c355e641ceb5b608a158c603768fcc908c5009c56c6e78da7487da033b92a", 11078307),
-        "macos-arm64": ("fbf6cbc23d254b0bc03a6fb2b1b04efb917fe5ce068d027e735ce7ed65b9bed6", 10048909),
-        "macos-x86_64": ("6648fa7a7c95b087c5b9d269d8b9a567fae091bdef3993f77cc7531a01bd7266", 10678791),
+        "linux-arm64": ("b9cc833f5db856484b38718c9da195a6ec990707307bda30530913a09705419a", 10126329),
+        "linux-x86_64": ("7ab3b978d2c0b1c96b2323d4e5c4f35284ae1cdf35d2f7399595c74c805f5fa3", 10649747),
+        "macos-arm64": ("136a4db6512d9b16dda56ac8604696ed65c3b1a914a142de029e7f8d5006f1d9", 9944235),
+        "macos-x86_64": ("05c2a6705e7c0c056d6d93ff538978583f0c47b4c28d334ab9d58d2e8daf4c24", 10742637),
     },
     "ty": {
         "linux-arm64": ("a5c443b05515f31e5471f059bcde8d56b388378091093881f22531e647497625", 11598079),
@@ -46,10 +62,10 @@ _ARCHIVES = {
         "macos-x86_64": ("a25c9a8a4feaf10cb6a15264c23de2d35e7af4db88d1ffe8e5994ca2befb41a9", 11838614),
     },
     "uv": {
-        "linux-arm64": ("bb66cb52e7b1823aed1183630d8d8e5c958840d584a4c55ec10a4cfc168dcca2", 20423730),
-        "linux-x86_64": ("600cf9a742aca00d292673b16b5acffaa7b8c269a364ad0c2e79498dcb1fe101", 21721441),
-        "macos-arm64": ("546f7f8a6c70ff13a3a9d2bc958db3427298cebf3e0cb756f9177133b7068843", 17686637),
-        "macos-x86_64": ("4c9f52262a14da336e4a42ed24992d12d0c956acde87619e4611d321dffa602b", 19547702),
+        "linux-arm64": ("49d881b3403187e1f1789720881e77e4251ad4259d86c4844862657d2a35d13f", 21476892),
+        "linux-x86_64": ("c8c60f47e6f88d18dbf6f33d7279fb1fbf7ae76631768152cf5578c3d65729b4", 22913818),
+        "macos-arm64": ("99a913b606194867b43086404412c1afe079547fee72ecfb6af7e7b0dd54b0c6", 18632192),
+        "macos-x86_64": ("e603f1eb634ca97a2a125539b983891f53235e901511ed10c32c08c86e253ecd", 20796751),
     },
 }
 
@@ -83,25 +99,31 @@ def _platform_value(values: dict):
         }),
     })
 
-def _archive(name: str, tool: str, version: str, url: str, strip_prefix: str) -> None:
+def _archive(name: str, tool: str, version: str, url: str, strip_prefix: str, archives = None) -> None:
     """Declares one digest-verified platform distribution."""
+    archives = archives if archives != None else _ARCHIVES[tool]
     native.http_archive(
         name = name,
         has_content_based_path = True,
-        sha256 = _platform_value({platform: value[0] for platform, value in _ARCHIVES[tool].items()}),
-        size_bytes = _platform_value({platform: value[1] for platform, value in _ARCHIVES[tool].items()}),
-        strip_prefix = _platform_value({platform: strip_prefix.format(platform = _ARTIFACT_PLATFORMS[platform]) for platform in _ARCHIVES[tool]}),
-        urls = [_platform_value({platform: url.format(platform = _ARTIFACT_PLATFORMS[platform], version = version) for platform in _ARCHIVES[tool]})],
+        sha256 = _platform_value({platform: value[0] for platform, value in archives.items()}),
+        size_bytes = _platform_value({platform: value[1] for platform, value in archives.items()}),
+        strip_prefix = _platform_value({platform: strip_prefix.format(platform = _ARTIFACT_PLATFORMS[platform]) for platform in archives}),
+        urls = [_platform_value({platform: url.format(platform = _ARTIFACT_PLATFORMS[platform], version = version) for platform in archives})],
     )
 
 def python_native_toolchain() -> None:
     """Declares independently addressable latest-stable Python tools."""
+    requested_python = native.read_root_config("python", "version", _DEFAULT_PYTHON_VERSION)
+    python_version = _PYTHON_VERSIONS.get(requested_python)
+    if python_version == None:
+        fail("unsupported Python version '{}'; supported versions are {}".format(requested_python, sorted(_PYTHON_VERSIONS)))
     _archive(
         "__bsmr_python_archive",
         "python",
-        _PYTHON_VERSION,
+        python_version,
         "https://github.com/astral-sh/python-build-standalone/releases/download/{release}/cpython-{version}%2B{release}-{platform}-install_only_stripped.tar.gz".format(release = _PYTHON_RELEASE, version = "{version}", platform = "{platform}"),
         "python",
+        archives = _PYTHON_ARCHIVES[python_version],
     )
     for tool, version in [("uv", _UV_VERSION), ("ruff", _RUFF_VERSION), ("ty", _TY_VERSION)]:
         _archive(
@@ -111,7 +133,7 @@ def python_native_toolchain() -> None:
             "https://github.com/astral-sh/{tool}/releases/download/{{version}}/{tool}-{{platform}}.tar.gz".format(tool = tool),
             "{}-{{platform}}".format(tool),
         )
-    _distribution(name = "__bsmr_python_distribution", executable = "bin/python3", root = ":__bsmr_python_archive", version = _PYTHON_VERSION, visibility = ["PUBLIC"])
+    _distribution(name = "__bsmr_python_distribution", executable = "bin/python3", root = ":__bsmr_python_archive", version = python_version, visibility = ["PUBLIC"])
     _distribution(name = "__bsmr_uv_distribution", executable = "uv", root = ":__bsmr_uv_archive", version = _UV_VERSION, visibility = ["PUBLIC"])
     _distribution(name = "__bsmr_ruff_distribution", executable = "ruff", root = ":__bsmr_ruff_archive", version = _RUFF_VERSION, visibility = ["PUBLIC"])
     _distribution(name = "__bsmr_ty_distribution", executable = "ty", root = ":__bsmr_ty_archive", version = _TY_VERSION, visibility = ["PUBLIC"])

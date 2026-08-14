@@ -1954,6 +1954,7 @@ dependencies = [
  "dice",
  "dice_futures",
  "digest",
+ "dirs",
  "dupe",
  "either",
  "faccess",

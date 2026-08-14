@@ -6,15 +6,25 @@
 // Renders private Python rules from standard project metadata.
 
 use std::collections::BTreeMap;
+use std::collections::BTreeSet;
 
 use bsmr_core::cells::paths::CellRelativePathBuf;
 use bsmr_core::package::package_relative_path::PackageRelativePath;
-use serde::Deserialize;
+use globset::GlobBuilder;
+use globset::GlobSet;
+use globset::GlobSetBuilder;
 
 use crate::package_listing::listing::PackageListing;
-
+mod build_requirements;
+mod manifest;
 mod render;
 
+use build_requirements::manifest_build_requirements;
+pub use build_requirements::validate_python_build_requirements;
+use manifest::BuildConfigSetting;
+use manifest::ExtraBuildDependency;
+use manifest::Manifest;
+use manifest::Project;
 pub use render::render_python_build_file;
 
 /// A native Python package cannot be lowered without satisfying these invariants.
@@ -30,63 +40,45 @@ pub enum NativePythonBuildError {
     /// Project metadata must remain valid TOML.
     #[error("Invalid pyproject.toml: {0}")]
     InvalidManifest(toml::de::Error),
+    /// PEP 508 dependency names must be statically identifiable for workspace graph edges.
+    #[error("invalid PEP 508 dependency `{0}`")]
+    InvalidRequirement(String),
+    /// Two workspace members cannot own the same normalized distribution name.
+    #[error("duplicate Python workspace project `{0}`")]
+    DuplicateWorkspaceProject(String),
+    /// Dynamic metadata needs a supported backend adapter before analysis can be exact.
+    #[error("Python project `{0}` has dynamic dependencies BSMR cannot resolve exactly")]
+    UnsupportedDynamicDependencies(String),
+    /// Every PEP 517 and compatibility requirement must be in the frozen build lock.
+    #[error("pylock.build.toml does not contain required build package `{0}`")]
+    MissingBuildRequirement(String),
+    /// uv match-runtime packages must have one identical version in both locks.
+    #[error("build package `{package}` has versions {build:?} but runtime lock has {runtime:?}")]
+    BuildRequirementVersionMismatch {
+        package: String,
+        runtime: Vec<String>,
+        build: Vec<String>,
+    },
     /// Test profile names become target labels and therefore use one portable spelling.
     #[error(
         "Python test lock `{0}` must use pylock.test.toml or pylock.test-<name>.toml with lowercase ASCII letters, digits, and hyphens"
     )]
     InvalidTestLockName(String),
+    /// A test runner is executable argv, never an empty or shell-interpreted string.
+    #[error("[tool.bsmr.python].test-command must contain only nonempty argv entries")]
+    InvalidTestCommand,
+    /// uv workspace membership must be representable by BSMR's deterministic matcher.
+    #[error("invalid uv workspace pattern `{pattern}`: {error}")]
+    InvalidWorkspacePattern {
+        pattern: String,
+        error: globset::Error,
+    },
+    /// The compiled workspace selector exceeded the glob engine's limits.
+    #[error("invalid uv workspace pattern set: {0}")]
+    InvalidWorkspacePatternSet(globset::Error),
     /// Formatting internal Starlark into a string should be infallible.
     #[error("failed to render native Python build graph")]
     Render(std::fmt::Error),
-}
-
-#[derive(Deserialize)]
-#[serde(rename_all = "kebab-case")]
-struct Manifest {
-    project: Option<Project>,
-    #[serde(default)]
-    tool: ToolConfiguration,
-}
-
-#[derive(Deserialize)]
-#[serde(rename_all = "kebab-case")]
-struct Project {
-    name: String,
-    #[serde(default)]
-    dynamic: Vec<String>,
-    requires_python: Option<String>,
-    #[serde(default)]
-    scripts: BTreeMap<String, String>,
-}
-
-#[derive(Default, Deserialize)]
-struct ToolConfiguration {
-    #[serde(default)]
-    uv: UvConfiguration,
-}
-
-#[derive(Default, Deserialize)]
-#[serde(rename_all = "kebab-case")]
-struct UvConfiguration {
-    #[serde(default)]
-    config_settings: BTreeMap<String, BuildConfigSetting>,
-}
-
-#[derive(Deserialize)]
-#[serde(untagged)]
-enum BuildConfigSetting {
-    One(String),
-    Many(Vec<String>),
-}
-
-impl BuildConfigSetting {
-    /// Returns PEP 517 values in their declared repetition order.
-    fn values(&self) -> &[String] {
-        match self {
-            Self::One(value) => std::slice::from_ref(value),
-            Self::Many(values) => values,
-        }
-    }
 }
 
 /// Git metadata files that make dynamic project versions explicit action inputs.
@@ -100,6 +92,10 @@ pub struct PythonVcsFiles {
 /// Root-only Python files that alter which private graph nodes are available.
 #[derive(Default)]
 pub struct PythonRootFiles {
+    /// Package-granular actions derived from the default runtime lock.
+    pub runtime_packages: Vec<crate::python_lock::PylockInstallationFragment>,
+    /// Package-granular actions derived from the isolated PEP 517 build lock.
+    pub build_packages: Vec<crate::python_lock::PylockInstallationFragment>,
     /// First-party wheels overlaid into each runnable environment.
     pub members: Vec<PythonWorkspaceMember>,
     /// Named dependency closures that become generated test targets.
@@ -114,25 +110,296 @@ pub struct PythonTestLock {
     pub environment: String,
     /// Root-relative PEP 751 lock consumed by the environment action.
     pub file: String,
+    /// Package-granular actions derived from this named lock.
+    pub packages: Vec<crate::python_lock::PylockInstallationFragment>,
     /// Public test label derived from the lock's portable profile name.
     pub target: String,
 }
 
-/// One first-party distribution materialized into shared runtime environments.
+/// One first-party distribution available to package-local runtime environments.
+#[derive(Clone, Debug)]
 pub struct PythonWorkspaceMember {
     /// Root-relative package containing the member project.
     pub package: String,
     /// Canonical wheel target generated from the member's project name.
     pub target: String,
+    /// PEP 508 dependency requirements declared by the member's effective metadata.
+    pub dependencies: Vec<String>,
+    /// Optional PEP 508 requirements keyed by normalized extra name.
+    pub optional_dependencies: BTreeMap<String, Vec<String>>,
+    /// Build packages required before this member's backend executes.
+    pub build_requirements: Vec<String>,
+    /// Whether the build backend computes dependencies dynamically.
+    pub dynamic_dependencies: bool,
+    /// Whether the build backend computes optional dependencies dynamically.
+    pub dynamic_optional_dependencies: bool,
 }
 
-/// Returns the canonical target name when a manifest declares an installable project.
+/// Returns the canonical target name when a manifest declares a Python project.
 #[must_use = "the generated target name determines whether this manifest joins the build graph"]
 pub fn python_project_name(manifest: &str) -> Result<Option<String>, NativePythonBuildError> {
     let manifest =
         toml::from_str::<Manifest>(manifest).map_err(NativePythonBuildError::InvalidManifest)?;
-    manifest
+    manifest_project_name(manifest.project.as_ref())
+}
+
+/// Returns the wheel target for a project that uv considers installable.
+#[must_use = "workspace environments must contain only installable distributions"]
+pub fn python_distribution_name(manifest: &str) -> Result<Option<String>, NativePythonBuildError> {
+    let manifest =
+        toml::from_str::<Manifest>(manifest).map_err(NativePythonBuildError::InvalidManifest)?;
+    if manifest.tool.uv.package == Some(false) {
+        return Ok(None);
+    }
+    manifest_project_name(manifest.project.as_ref())
+}
+
+/// Returns whether a declared dynamic-version provider consumes Git state.
+#[must_use = "VCS-derived wheels must declare their Git inputs"]
+pub fn python_project_uses_vcs(manifest: &str) -> Result<bool, NativePythonBuildError> {
+    let manifest =
+        toml::from_str::<Manifest>(manifest).map_err(NativePythonBuildError::InvalidManifest)?;
+    Ok(manifest_uses_vcs(&manifest))
+}
+
+/// Returns whether the parsed project delegates its dynamic version to Git.
+fn manifest_uses_vcs(manifest: &Manifest) -> bool {
+    let dynamic_version = manifest
         .project
+        .as_ref()
+        .is_some_and(|project| project.dynamic.iter().any(|field| field == "version"));
+    if !dynamic_version {
+        return false;
+    }
+    manifest.tool.uv_dynamic_versioning.is_some()
+        || manifest.tool.setuptools_scm.is_some()
+        || manifest
+            .tool
+            .hatch
+            .version
+            .as_ref()
+            .and_then(|version| version.source.as_deref())
+            .is_some_and(|source| matches!(source, "vcs" | "uv-dynamic-versioning"))
+}
+
+/// Parses one installable uv workspace member and its first-party edge candidates.
+#[must_use = "workspace metadata defines the first-party dependency graph"]
+pub fn python_workspace_member(
+    package: String,
+    manifest: &str,
+) -> Result<Option<PythonWorkspaceMember>, NativePythonBuildError> {
+    let manifest =
+        toml::from_str::<Manifest>(manifest).map_err(NativePythonBuildError::InvalidManifest)?;
+    if manifest.tool.uv.package == Some(false) {
+        return Ok(None);
+    }
+    let Some(project) = manifest.project.as_ref() else {
+        return Ok(None);
+    };
+    let target = manifest_project_name(Some(project))?
+        .ok_or(NativePythonBuildError::MissingProjectMetadata)?;
+    let dynamic_dependencies = project.dynamic.iter().any(|field| field == "dependencies");
+    let dynamic_optional_dependencies = project
+        .dynamic
+        .iter()
+        .any(|field| field == "optional-dependencies");
+    Ok(Some(PythonWorkspaceMember {
+        package,
+        target,
+        dependencies: manifest_dependencies(&manifest)
+            .map(<[String]>::to_vec)
+            .unwrap_or_default(),
+        optional_dependencies: manifest_optional_dependencies(&manifest)
+            .map(|dependencies| {
+                dependencies
+                    .iter()
+                    .map(|(extra, requirements)| {
+                        (normalize_project_name(extra), requirements.to_owned())
+                    })
+                    .collect()
+            })
+            .unwrap_or_default(),
+        build_requirements: manifest_build_requirements(&manifest)?,
+        dynamic_dependencies: dynamic_dependencies && manifest_dependencies(&manifest).is_none(),
+        dynamic_optional_dependencies: dynamic_optional_dependencies
+            && manifest_optional_dependencies(&manifest).is_none(),
+    }))
+}
+
+/// Selects the transitive first-party wheel closure for one Python project.
+#[must_use = "runtime environments must contain the complete first-party closure"]
+pub fn python_workspace_closure(
+    manifest: &str,
+    members: &[PythonWorkspaceMember],
+) -> Result<Vec<PythonWorkspaceMember>, NativePythonBuildError> {
+    let manifest =
+        toml::from_str::<Manifest>(manifest).map_err(NativePythonBuildError::InvalidManifest)?;
+    let Some(project) = manifest.project.as_ref() else {
+        return Ok(Vec::new());
+    };
+    let project_name = normalize_project_name(&project.name);
+    let mut by_name = BTreeMap::new();
+    for member in members {
+        if by_name.insert(member.target.as_str(), member).is_some() {
+            return Err(NativePythonBuildError::DuplicateWorkspaceProject(
+                member.target.to_owned(),
+            ));
+        }
+    }
+    let dependencies = manifest_dependencies(&manifest).ok_or_else(|| {
+        NativePythonBuildError::UnsupportedDynamicDependencies(project_name.clone())
+    })?;
+    let mut selected = BTreeSet::new();
+    let mut selected_extras = BTreeMap::<String, BTreeSet<String>>::new();
+    let mut pending = workspace_requirements(dependencies)?;
+    while let Some(requirement) = pending.pop() {
+        let Some(member) = by_name.get(requirement.name.as_str()) else {
+            continue;
+        };
+        let first = selected.insert(member.target.as_str());
+        let extras = selected_extras.entry(member.target.clone()).or_default();
+        let new_extras = requirement
+            .extras
+            .into_iter()
+            .filter(|extra| extras.insert(extra.clone()))
+            .collect::<Vec<_>>();
+        if !first && new_extras.is_empty() {
+            continue;
+        }
+        if member.dynamic_dependencies {
+            return Err(NativePythonBuildError::UnsupportedDynamicDependencies(
+                member.target.clone(),
+            ));
+        }
+        if first {
+            pending.extend(workspace_requirements(&member.dependencies)?);
+        }
+        if member.dynamic_optional_dependencies && !new_extras.is_empty() {
+            return Err(NativePythonBuildError::UnsupportedDynamicDependencies(
+                member.target.clone(),
+            ));
+        }
+        for extra in new_extras {
+            if let Some(dependencies) = member.optional_dependencies.get(&extra) {
+                pending.extend(workspace_requirements(dependencies)?);
+            }
+        }
+    }
+    Ok(members
+        .iter()
+        .filter(|member| member.target != project_name && selected.contains(member.target.as_str()))
+        .cloned()
+        .collect())
+}
+
+/// One workspace edge extracted from the name and extras of a PEP 508 requirement.
+struct WorkspaceRequirement {
+    name: String,
+    extras: BTreeSet<String>,
+}
+
+/// Returns the exact base dependencies exposed by static PEP 621 or Hatch metadata.
+fn manifest_dependencies(manifest: &Manifest) -> Option<&[String]> {
+    let project = manifest.project.as_ref()?;
+    if !project.dynamic.iter().any(|field| field == "dependencies") {
+        return Some(&project.dependencies);
+    }
+    manifest
+        .tool
+        .hatch
+        .metadata
+        .as_ref()?
+        .hooks
+        .uv_dynamic_versioning
+        .as_ref()
+        .map(|metadata| metadata.dependencies.as_slice())
+}
+
+/// Returns exact optional dependencies exposed by static PEP 621 or Hatch metadata.
+fn manifest_optional_dependencies(manifest: &Manifest) -> Option<&BTreeMap<String, Vec<String>>> {
+    let project = manifest.project.as_ref()?;
+    if !project
+        .dynamic
+        .iter()
+        .any(|field| field == "optional-dependencies")
+    {
+        return Some(&project.optional_dependencies);
+    }
+    manifest
+        .tool
+        .hatch
+        .metadata
+        .as_ref()?
+        .hooks
+        .uv_dynamic_versioning
+        .as_ref()
+        .map(|metadata| &metadata.optional_dependencies)
+}
+
+/// Parses only the distribution identity and requested extras needed by the workspace graph.
+fn workspace_requirements(
+    requirements: &[String],
+) -> Result<Vec<WorkspaceRequirement>, NativePythonBuildError> {
+    requirements
+        .iter()
+        .map(|requirement| {
+            let requirement = requirement.trim_start();
+            let name_end = requirement
+                .char_indices()
+                .take_while(|(_, character)| {
+                    character.is_ascii_alphanumeric() || matches!(character, '-' | '_' | '.')
+                })
+                .last()
+                .map(|(index, character)| index + character.len_utf8())
+                .filter(|_| {
+                    requirement
+                        .as_bytes()
+                        .first()
+                        .is_some_and(|byte| byte.is_ascii_alphanumeric())
+                })
+                .ok_or_else(|| {
+                    NativePythonBuildError::InvalidRequirement(requirement.to_owned())
+                })?;
+            let mut remainder = requirement[name_end..].trim_start();
+            let mut extras = BTreeSet::new();
+            if let Some(after_open) = remainder.strip_prefix('[') {
+                let (contents, after_close) = after_open.split_once(']').ok_or_else(|| {
+                    NativePythonBuildError::InvalidRequirement(requirement.to_owned())
+                })?;
+                for extra in contents.split(',') {
+                    let extra = extra.trim();
+                    if extra.is_empty()
+                        || !extra.chars().all(|character| {
+                            character.is_ascii_alphanumeric()
+                                || matches!(character, '-' | '_' | '.')
+                        })
+                    {
+                        return Err(NativePythonBuildError::InvalidRequirement(
+                            requirement.to_owned(),
+                        ));
+                    }
+                    extras.insert(normalize_project_name(extra));
+                }
+                remainder = after_close.trim_start();
+            }
+            if remainder.starts_with(']') {
+                return Err(NativePythonBuildError::InvalidRequirement(
+                    requirement.to_owned(),
+                ));
+            }
+            Ok(WorkspaceRequirement {
+                name: normalize_project_name(&requirement[..name_end]),
+                extras,
+            })
+        })
+        .collect()
+}
+
+/// Validates and normalizes one parsed PEP 621 project name.
+fn manifest_project_name(
+    project: Option<&Project>,
+) -> Result<Option<String>, NativePythonBuildError> {
+    project
         .map(|project| {
             project
                 .requires_python
@@ -141,6 +408,14 @@ pub fn python_project_name(manifest: &str) -> Result<Option<String>, NativePytho
             Ok(normalize_project_name(&project.name))
         })
         .transpose()
+}
+
+/// Returns canonical distribution names from PEP 508 dependency strings.
+fn requirement_names(requirements: &[String]) -> Result<Vec<String>, NativePythonBuildError> {
+    Ok(workspace_requirements(requirements)?
+        .into_iter()
+        .map(|requirement| requirement.name)
+        .collect())
 }
 
 /// Discovers deterministic test profiles from root-level PEP 751 lock names.
@@ -172,6 +447,7 @@ pub fn python_test_locks(
             Ok(PythonTestLock {
                 environment: format!("__bsmr_python_{target}_environment"),
                 file: file.to_owned(),
+                packages: Vec::new(),
                 target: target.to_owned(),
             })
         })
@@ -184,15 +460,50 @@ pub fn python_test_locks(
 
 /// Returns nested project manifests after pruning structurally detected virtual environments.
 #[must_use = "workspace manifests must be lowered into first-party wheel dependencies"]
-pub fn python_workspace_manifest_paths(listing: &PackageListing) -> Vec<&str> {
+pub fn python_workspace_manifest_paths<'a>(
+    manifest: &str,
+    listing: &'a PackageListing,
+) -> Result<Vec<&'a str>, NativePythonBuildError> {
+    let manifest =
+        toml::from_str::<Manifest>(manifest).map_err(NativePythonBuildError::InvalidManifest)?;
+    let Some(workspace) = manifest.tool.uv.workspace else {
+        return Ok(Vec::new());
+    };
+    let members = compile_workspace_patterns(&workspace.members)?;
+    let exclusions = compile_workspace_patterns(&workspace.exclude)?;
     let virtual_environments = virtual_environment_roots(listing);
-    listing
+    Ok(listing
         .files()
         .files()
         .map(PackageRelativePath::as_str)
         .filter(|path| *path != "pyproject.toml" && path.ends_with("/pyproject.toml"))
         .filter(|path| !is_generated_path(path, &virtual_environments))
-        .collect()
+        .filter(|path| {
+            let root = path
+                .strip_suffix("/pyproject.toml")
+                .expect("filtered workspace manifest path");
+            members.is_match(root) && !exclusions.is_match(root)
+        })
+        .collect())
+}
+
+/// Compiles uv workspace member and exclusion patterns with path-aware glob semantics.
+fn compile_workspace_patterns(patterns: &[String]) -> Result<GlobSet, NativePythonBuildError> {
+    let mut builder = GlobSetBuilder::new();
+    for pattern in patterns {
+        let glob = GlobBuilder::new(pattern)
+            .literal_separator(true)
+            .backslash_escape(false)
+            .build()
+            .map_err(|error| NativePythonBuildError::InvalidWorkspacePattern {
+                pattern: pattern.to_owned(),
+                error,
+            })?;
+        builder.add(glob);
+    }
+    builder
+        .build()
+        .map_err(NativePythonBuildError::InvalidWorkspacePatternSet)
 }
 
 /// Converts a distribution name into its canonical PEP 503 spelling.
@@ -211,6 +522,16 @@ fn normalize_project_name(name: &str) -> String {
         }
     }
     normalized
+}
+
+/// Rejects a test command that cannot name a Python program or module.
+fn validate_test_command(command: Option<&[String]>) -> Result<(), NativePythonBuildError> {
+    if command.is_some_and(|command| {
+        command.is_empty() || command.iter().any(|argument| argument.is_empty())
+    }) {
+        return Err(NativePythonBuildError::InvalidTestCommand);
+    }
+    Ok(())
 }
 
 /// Selects source-controlled project files and rejects generated state.
@@ -290,18 +611,129 @@ mod tests {
     use super::PythonTestLock;
     use super::PythonVcsFiles;
     use super::PythonWorkspaceMember;
+    use super::python_distribution_name;
     use super::python_project_name;
+    use super::python_project_uses_vcs;
     use super::python_test_locks;
+    use super::python_workspace_closure;
     use super::python_workspace_manifest_paths;
+    use super::python_workspace_member;
     use super::render_python_build_file;
+    use super::validate_python_build_requirements;
     use crate::package_listing::listing::PackageListing;
     use crate::package_listing::listing::testing::PackageListingExt;
+    use crate::python_lock::PylockAcquisition;
+    use crate::python_lock::PylockInstallationFragment;
+    use crate::python_lock::PylockToml;
+
+    fn package_fragments(packages: &[&str]) -> Vec<PylockInstallationFragment> {
+        packages
+            .iter()
+            .map(|package| PylockInstallationFragment {
+                package: (*package).to_owned(),
+                contents: format!(
+                    "lock-version = '1.0'\ncreated-by = 'test'\n[[packages]]\nname = '{package}'\n"
+                ),
+                acquisition: PylockAcquisition::Wheel,
+            })
+            .collect()
+    }
+
+    fn wheel_lock(packages: &[(&str, &str)]) -> PylockToml {
+        let mut contents = "lock-version = '1.0'\ncreated-by = 'test'\n".to_owned();
+        for (name, version) in packages {
+            contents.push_str(&format!(
+                "[[packages]]\nname = '{name}'\nversion = '{version}'\n[[packages.wheels]]\nurl = 'https://example.org/{name}-{version}-py3-none-any.whl'\nhashes = {{ sha256 = '0000000000000000000000000000000000000000000000000000000000000000' }}\n"
+            ));
+        }
+        PylockToml::parse(&contents).unwrap()
+    }
+
+    fn root_files_with_packages(packages: &[&str]) -> PythonRootFiles {
+        PythonRootFiles {
+            runtime_packages: package_fragments(packages),
+            build_packages: package_fragments(packages),
+            ..PythonRootFiles::default()
+        }
+    }
+
+    fn root_files_with_source_package(package: &str) -> PythonRootFiles {
+        let mut files = root_files_with_packages(&[package]);
+        files.runtime_packages[0].acquisition = PylockAcquisition::Source;
+        files
+    }
+
+    fn root_files_with_source_packages(packages: &[&str]) -> PythonRootFiles {
+        let mut files = PythonRootFiles {
+            runtime_packages: package_fragments(packages),
+            ..PythonRootFiles::default()
+        };
+        for package in &mut files.runtime_packages {
+            package.acquisition = PylockAcquisition::Source;
+        }
+        files
+    }
 
     #[test]
     fn invariant_tool_only_manifests_are_not_workspace_projects() {
         let project = python_project_name("[tool.ruff]\nline-length = 88\n").unwrap();
 
         assert_eq!(project, None);
+    }
+
+    #[test]
+    fn invariant_tool_only_root_hosts_workspace_infrastructure() {
+        let listing = PackageListing::testing_files(&["pyproject.toml"]);
+        let build = render_python_build_file(
+            CellRelativePathBuf::unchecked_new(String::new()),
+            "[tool.ruff]\nline-length = 88\n",
+            &listing,
+            &PythonRootFiles {
+                runtime_packages: Vec::new(),
+                build_packages: Vec::new(),
+                members: vec![PythonWorkspaceMember {
+                    package: "packages/member".to_owned(),
+                    target: "member".to_owned(),
+                    dependencies: Vec::new(),
+                    optional_dependencies: Default::default(),
+                    build_requirements: Vec::new(),
+                    dynamic_dependencies: false,
+                    dynamic_optional_dependencies: false,
+                }],
+                test_locks: Vec::new(),
+                vcs: None,
+            },
+        )
+        .unwrap();
+
+        assert!(build.contains("python_native_toolchain()"));
+        assert!(build.contains("name = \"__bsmr_python_environment\""));
+        assert!(build.contains("\"//packages/member:member\""));
+        assert!(!build.contains("python_wheel(\n"));
+        assert!(!build.contains("name = \"lint\""));
+    }
+
+    #[test]
+    fn invariant_non_package_projects_run_checks_without_building_a_wheel() {
+        let listing = PackageListing::testing_files(&["pyproject.toml", "src/runtime/__init__.py"]);
+        let build = render_python_build_file(
+            CellRelativePathBuf::unchecked_new("apps/runtime".to_owned()),
+            "[project]\nname = 'runtime'\nversion = '1'\nrequires-python = '>=3.14'\n[tool.uv]\npackage = false\n",
+            &listing,
+            &PythonRootFiles::default(),
+        )
+        .unwrap();
+
+        assert!(build.contains("name = \"lint\""));
+        assert!(build.contains("name = \"typecheck\""));
+        assert!(!build.contains("python_wheel(\n"));
+        assert_eq!(
+            python_distribution_name(
+                "[project]\nname = 'runtime'\nrequires-python = '>=3.14'\n[tool.uv]\npackage = false\n"
+            )
+            .unwrap(),
+            None
+        );
     }
 
     #[test]
@@ -352,7 +784,7 @@ mod tests {
             CellRelativePathBuf::unchecked_new(String::new()),
             "[project]\nname = 'Demo_Project'\nrequires-python = '>=3.12'\n",
             &listing,
-            &PythonRootFiles::default(),
+            &root_files_with_source_package("demo"),
         )
         .unwrap();
 
@@ -363,7 +795,8 @@ mod tests {
         assert!(build.contains("python_wheel_environment("));
         assert_eq!(build.matches("    wheels = [").count(), 1);
         assert!(build.contains("name = \"__bsmr_python_build_environment\""));
-        assert!(build.contains("lock = \"pylock.build.toml\""));
+        assert!(build.contains("name = \"__bsmr_python_package__demo__"));
+        assert!(build.contains("package = \"demo\""));
         assert_eq!(
             build
                 .matches("build_environment = \":__bsmr_python_build_environment\"")
@@ -389,7 +822,7 @@ mod tests {
             CellRelativePathBuf::unchecked_new(String::new()),
             "[project]\nname = 'demo'\nrequires-python = '>=3.12'\n",
             &listing,
-            &PythonRootFiles::default(),
+            &root_files_with_packages(&["demo"]),
         )
         .unwrap();
         let body = |rule: &str| {
@@ -415,7 +848,9 @@ mod tests {
         assert!(!lint.contains("__bsmr_ty_distribution"));
 
         let typecheck = body("ty_check");
-        assert!(typecheck.contains("environment ="));
+        assert!(typecheck.contains("environments ="));
+        assert!(typecheck.contains("root//:__bsmr_python_environment"));
+        assert!(!typecheck.contains("__bsmr_python_workspace_environment"));
         assert!(typecheck.contains("__bsmr_ty_distribution"));
         assert!(!typecheck.contains("__bsmr_uv_distribution"));
         assert!(!typecheck.contains("__bsmr_ruff_distribution"));
@@ -428,7 +863,7 @@ mod tests {
             CellRelativePathBuf::unchecked_new(String::new()),
             "[project]\nname = 'demo'\nrequires-python = '>=3.12'\n[tool.uv]\nconfig-settings = { editable-mode = 'strict', build-option = ['one', 'two'] }\n",
             &listing,
-            &PythonRootFiles::default(),
+            &root_files_with_source_packages(&["demo", "numpy"]),
         )
         .unwrap();
 
@@ -464,13 +899,65 @@ mod tests {
     }
 
     #[test]
+    fn invariant_package_build_settings_are_typed_action_inputs() {
+        let listing = PackageListing::testing_files(&["pyproject.toml"]);
+        let build = render_python_build_file(
+            CellRelativePathBuf::unchecked_new(String::new()),
+            "[project]\nname = 'demo'\nrequires-python = '>=3.12'\n[tool.uv.config-settings-package.numpy]\nsetup-args = ['-Dblas=blas', '-Dlapack=lapack']\n[tool.uv.config-settings-package.demo]\neditable-mode = 'compat'\n",
+            &listing,
+            &root_files_with_source_packages(&["demo", "numpy"]),
+        )
+        .unwrap();
+
+        assert_eq!(
+            build
+                .matches("        \"numpy:setup-args=-Dblas=blas\",\n")
+                .count(),
+            1
+        );
+        assert_eq!(
+            build
+                .matches("        \"demo:editable-mode=compat\",\n")
+                .count(),
+            2
+        );
+    }
+
+    #[test]
+    fn invariant_package_build_variables_are_typed_action_inputs() {
+        let listing = PackageListing::testing_files(&["pyproject.toml"]);
+        let build = render_python_build_file(
+            CellRelativePathBuf::unchecked_new(String::new()),
+            "[project]\nname = 'demo'\nrequires-python = '>=3.12'\n[tool.uv.extra-build-variables.numpy]\nNPY_DISABLE_CPU_FEATURES = 'AVX512'\n[tool.uv.extra-build-variables.demo]\nDEMO_BUILD = 'strict'\n",
+            &listing,
+            &root_files_with_source_packages(&["demo", "numpy"]),
+        )
+        .unwrap();
+
+        assert_eq!(
+            build
+                .matches("        \"numpy:NPY_DISABLE_CPU_FEATURES=AVX512\",\n")
+                .count(),
+            1
+        );
+        assert_eq!(
+            build
+                .matches("        \"demo:DEMO_BUILD=strict\",\n")
+                .count(),
+            2
+        );
+    }
+
+    #[test]
     fn invariant_dynamic_versions_depend_on_declared_git_state() {
         let listing = PackageListing::testing_files(&["pyproject.toml", "src/demo/__init__.py"]);
         let build = render_python_build_file(
             CellRelativePathBuf::unchecked_new(String::new()),
-            "[project]\nname = 'demo'\ndynamic = ['version']\nrequires-python = '>=3.12'\n",
+            "[project]\nname = 'demo'\ndynamic = ['version']\nrequires-python = '>=3.12'\n[tool.hatch.version]\nsource = 'uv-dynamic-versioning'\n",
             &listing,
             &PythonRootFiles {
+                runtime_packages: Vec::new(),
+                build_packages: Vec::new(),
                 members: Vec::new(),
                 test_locks: Vec::new(),
                 vcs: Some(PythonVcsFiles {
@@ -489,6 +976,32 @@ mod tests {
     }
 
     #[test]
+    fn invariant_only_declared_vcs_version_providers_receive_git_state() {
+        assert!(!python_project_uses_vcs(
+            "[project]\nname = 'demo'\ndynamic = ['version']\nrequires-python = '>=3.12'\n[tool.setuptools.dynamic]\nversion = { attr = 'demo.__version__' }\n",
+        )
+        .unwrap());
+        assert!(python_project_uses_vcs(
+            "[project]\nname = 'demo'\ndynamic = ['version']\nrequires-python = '>=3.12'\n[tool.hatch.version]\nsource = 'uv-dynamic-versioning'\n[tool.uv-dynamic-versioning]\nvcs = 'git'\n",
+        )
+        .unwrap());
+    }
+
+    #[test]
+    fn invariant_dynamic_non_vcs_versions_do_not_reference_an_absent_vcs_target() {
+        let listing = PackageListing::testing_files(&["pyproject.toml", "demo/__init__.py"]);
+        let build = render_python_build_file(
+            CellRelativePathBuf::unchecked_new(String::new()),
+            "[project]\nname = 'demo'\ndynamic = ['version']\nrequires-python = '>=3.12'\n[tool.setuptools.dynamic]\nversion = { attr = 'demo.__version__' }\n",
+            &listing,
+            &PythonRootFiles::default(),
+        )
+        .unwrap();
+
+        assert!(!build.contains("__bsmr_python_vcs"));
+    }
+
+    #[test]
     fn invariant_standard_metadata_creates_test_and_entry_point_targets() {
         let listing = PackageListing::testing_files(&[
             "pyproject.toml",
@@ -497,22 +1010,31 @@ mod tests {
         ]);
         let build = render_python_build_file(
             CellRelativePathBuf::unchecked_new(String::new()),
-            "[project]\nname = 'demo'\nversion = '1'\nrequires-python = '>=3.12'\n[project.scripts]\ndemo = 'demo:main'\n",
+            "[project]\nname = 'demo'\nversion = '1'\nrequires-python = '>=3.12'\n[project.scripts]\ndemo = 'demo:main'\n[tool.bsmr.python]\ntest-command = ['tests/runtests.py', '--verbosity', '1']\n",
             &listing,
             &PythonRootFiles {
+                runtime_packages: Vec::new(),
+                build_packages: Vec::new(),
                 members: vec![PythonWorkspaceMember {
                     package: "packages/member".to_owned(),
                     target: "member".to_owned(),
+                    dependencies: Vec::new(),
+                    optional_dependencies: Default::default(),
+                    build_requirements: Vec::new(),
+                    dynamic_dependencies: false,
+                    dynamic_optional_dependencies: false,
                 }],
                 test_locks: vec![
                     PythonTestLock {
                         environment: "__bsmr_python_test_environment".to_owned(),
                         file: "pylock.test.toml".to_owned(),
+                        packages: package_fragments(&["pytest"]),
                         target: "test".to_owned(),
                     },
                     PythonTestLock {
                         environment: "__bsmr_python_test-all_environment".to_owned(),
                         file: "pylock.test-all.toml".to_owned(),
+                        packages: package_fragments(&["pytest", "pytest-xdist"]),
                         target: "test-all".to_owned(),
                     },
                 ],
@@ -521,16 +1043,67 @@ mod tests {
         )
         .unwrap();
 
-        assert!(build.contains("lock = \"pylock.test.toml\""));
-        assert!(build.contains("lock = \"pylock.test-all.toml\""));
+        assert!(build.contains("package = \"pytest\""));
+        assert!(build.contains("package = \"pytest-xdist\""));
         assert!(build.contains("python_test(\n    name = \"test\""));
         assert!(build.contains("python_test(\n    name = \"test-all\""));
+        assert!(build.contains(
+            "ty_check(\n    name = \"typecheck\",\n    environments = [\n        \"root//:__bsmr_python_test_environment\",\n    ],"
+        ));
         assert!(build.contains(
             "    environments = [\n        \"root//:__bsmr_python_workspace_environment\",\n        \"root//:__bsmr_python_test_environment\",\n    ],"
         ));
         assert!(build.contains("entry = \"demo:main\""));
         assert!(build.contains("python_entry_point(\n    name = \"run\""));
         assert!(build.contains("\"//packages/member:member\""));
+        assert_eq!(
+            build
+                .matches("    test_command = [\"tests/runtests.py\", \"--verbosity\", \"1\"],\n")
+                .count(),
+            2
+        );
+    }
+
+    #[test]
+    fn invariant_test_commands_are_nonempty_argv() {
+        let listing = PackageListing::testing_files(&["pyproject.toml"]);
+
+        assert!(matches!(
+            render_python_build_file(
+                CellRelativePathBuf::unchecked_new(String::new()),
+                "[project]\nname = 'demo'\nversion = '1'\nrequires-python = '>=3.12'\n[tool.bsmr.python]\ntest-command = []\n",
+                &listing,
+                &root_files_with_source_packages(&[]),
+            ),
+            Err(NativePythonBuildError::InvalidTestCommand)
+        ));
+    }
+
+    #[test]
+    fn invariant_identical_packages_are_shared_across_lock_profiles() {
+        let listing = PackageListing::testing_files(&["pyproject.toml"]);
+        let packages = package_fragments(&["attrs"]);
+        let build = render_python_build_file(
+            CellRelativePathBuf::unchecked_new(String::new()),
+            "[project]\nname = 'demo'\nversion = '1'\nrequires-python = '>=3.12'\n",
+            &listing,
+            &PythonRootFiles {
+                runtime_packages: package_fragments(&["attrs"]),
+                build_packages: Vec::new(),
+                members: Vec::new(),
+                test_locks: vec![PythonTestLock {
+                    environment: "__bsmr_python_test_environment".to_owned(),
+                    file: "pylock.test.toml".to_owned(),
+                    packages,
+                    target: "test".to_owned(),
+                }],
+                vcs: None,
+            },
+        )
+        .unwrap();
+
+        assert_eq!(build.matches("python_locked_package(\n").count(), 1);
+        assert_eq!(build.matches("    package = \"attrs\",\n").count(), 1);
     }
 
     #[test]
@@ -572,13 +1145,182 @@ mod tests {
         ]);
 
         assert_eq!(
-            python_workspace_manifest_paths(&listing),
+            python_workspace_manifest_paths(
+                "[tool.uv.workspace]\nmembers = ['packages/*', '.arbitrary-name/*']\n",
+                &listing,
+            )
+            .unwrap(),
             vec!["packages/member/pyproject.toml"]
         );
     }
 
     #[test]
-    fn invariant_nested_project_reuses_the_root_environment() {
+    fn invariant_uv_workspace_membership_excludes_incidental_projects() {
+        let listing = PackageListing::testing_files(&[
+            "pyproject.toml",
+            "apps/api/pyproject.toml",
+            "apps/private/pyproject.toml",
+            "packages/typescript/tests/pyproject.toml",
+        ]);
+
+        assert_eq!(
+            python_workspace_manifest_paths(
+                "[tool.uv.workspace]\nmembers = ['apps/*']\nexclude = ['apps/private']\n",
+                &listing,
+            )
+            .unwrap(),
+            vec!["apps/api/pyproject.toml"]
+        );
+    }
+
+    #[test]
+    fn invariant_workspace_closure_is_transitive_and_package_granular() {
+        let members = [
+            python_workspace_member(
+                "packages/auth".to_owned(),
+                "[project]\nname = 'dedalus-auth'\nrequires-python = '>=3.14'\ndependencies = ['dedalus-io[fast]>=1; sys_platform == \"darwin\"']\n",
+            )
+            .unwrap()
+            .unwrap(),
+            python_workspace_member(
+                "packages/io".to_owned(),
+                "[project]\nname = 'dedalus-io'\nrequires-python = '>=3.14'\n",
+            )
+            .unwrap()
+            .unwrap(),
+            python_workspace_member(
+                "tools/cind".to_owned(),
+                "[project]\nname = 'cind'\nrequires-python = '>=3.14'\n",
+            )
+            .unwrap()
+            .unwrap(),
+        ];
+
+        let closure = python_workspace_closure(
+            "[project]\nname = 'api'\nrequires-python = '>=3.14'\ndependencies = ['dedalus-auth']\n",
+            &members,
+        )
+        .unwrap();
+
+        assert_eq!(
+            closure
+                .iter()
+                .map(|member| member.target.as_str())
+                .collect::<Vec<_>>(),
+            ["dedalus-auth", "dedalus-io"]
+        );
+    }
+
+    #[test]
+    fn invariant_hatch_dynamic_metadata_selects_only_requested_workspace_extras() {
+        let manifests = [
+            (
+                "pydantic_ai_slim",
+                "[project]\nname = 'pydantic-ai-slim'\nrequires-python = '>=3.14'\ndynamic = ['dependencies', 'optional-dependencies']\n[tool.hatch.metadata.hooks.uv-dynamic-versioning]\ndependencies = ['pydantic-graph']\n[tool.hatch.metadata.hooks.uv-dynamic-versioning.optional-dependencies]\nevals = ['pydantic-evals']\n",
+            ),
+            (
+                "pydantic_evals",
+                "[project]\nname = 'pydantic-evals'\nrequires-python = '>=3.14'\n",
+            ),
+            (
+                "pydantic_graph",
+                "[project]\nname = 'pydantic-graph'\nrequires-python = '>=3.14'\n",
+            ),
+            (
+                "examples",
+                "[project]\nname = 'pydantic-ai-examples'\nrequires-python = '>=3.14'\n",
+            ),
+            (
+                "clai",
+                "[project]\nname = 'clai'\nrequires-python = '>=3.14'\n",
+            ),
+        ];
+        let members = manifests
+            .into_iter()
+            .map(|(package, manifest)| {
+                python_workspace_member(package.to_owned(), manifest)
+                    .unwrap()
+                    .unwrap()
+            })
+            .collect::<Vec<_>>();
+
+        let closure = python_workspace_closure(
+            "[project]\nname = 'pydantic-ai'\nrequires-python = '>=3.14'\ndynamic = ['dependencies']\n[tool.hatch.metadata.hooks.uv-dynamic-versioning]\ndependencies = ['pydantic-ai-slim[evals,openai]']\n",
+            &members,
+        )
+        .unwrap();
+
+        assert_eq!(
+            closure
+                .iter()
+                .map(|member| member.target.as_str())
+                .collect::<Vec<_>>(),
+            ["pydantic-ai-slim", "pydantic-evals", "pydantic-graph"]
+        );
+    }
+
+    #[test]
+    fn invariant_unknown_dynamic_dependencies_fail_before_graph_analysis() {
+        let error = python_workspace_closure(
+            "[project]\nname = 'opaque'\nrequires-python = '>=3.14'\ndynamic = ['dependencies']\n",
+            &[],
+        )
+        .unwrap_err();
+
+        assert!(matches!(
+            error,
+            NativePythonBuildError::UnsupportedDynamicDependencies(project)
+                if project == "opaque"
+        ));
+    }
+
+    #[test]
+    fn invariant_build_lock_covers_pep517_and_uv_compatibility_requirements() {
+        let manifest = "[project]\nname = 'api'\nrequires-python = '>=3.14'\n[build-system]\nrequires = ['hatchling>=1.28']\nbuild-backend = 'hatchling.build'\n[tool.uv.extra-build-dependencies]\npyroaring = ['cython>=3']\n";
+        let lock = wheel_lock(&[("cython", "3.2.9"), ("hatchling", "1.32.0")]);
+
+        validate_python_build_requirements(manifest, &[], &lock, &lock).unwrap();
+    }
+
+    #[test]
+    fn invariant_missing_build_requirement_fails_before_rendering() {
+        let lock = wheel_lock(&[("hatchling", "1.32.0")]);
+        let error = validate_python_build_requirements(
+            "[project]\nname = 'api'\nrequires-python = '>=3.14'\n[tool.uv.extra-build-dependencies]\npyroaring = ['cython>=3']\n",
+            &[],
+            &lock,
+            &lock,
+        )
+        .unwrap_err();
+
+        assert!(matches!(
+            error,
+            NativePythonBuildError::MissingBuildRequirement(requirement)
+                if requirement == "cython"
+        ));
+    }
+
+    #[test]
+    fn invariant_match_runtime_build_dependencies_have_identical_versions() {
+        let manifest = "[project]\nname = 'demo'\nrequires-python = '>=3.14'\n[tool.uv.extra-build-dependencies]\nflash-attn = [{ requirement = 'torch', match-runtime = true }]\n";
+        let runtime = wheel_lock(&[("torch", "2.10.0")]);
+        let build = wheel_lock(&[("torch", "2.9.0")]);
+
+        let error =
+            validate_python_build_requirements(manifest, &[], &runtime, &build).unwrap_err();
+
+        assert!(matches!(
+            error,
+            NativePythonBuildError::BuildRequirementVersionMismatch {
+                package,
+                runtime,
+                build,
+            } if package == "torch" && runtime == ["2.10.0"] && build == ["2.9.0"]
+        ));
+    }
+
+    #[test]
+    fn invariant_nested_project_owns_its_first_party_environment() {
         let listing = PackageListing::testing_files(&["pyproject.toml", "pkg/__init__.py"]);
         let build = render_python_build_file(
             CellRelativePathBuf::unchecked_new("packages/api".to_owned()),
@@ -588,7 +1330,11 @@ mod tests {
         )
         .unwrap();
 
-        assert!(build.contains("environment = \"root//:__bsmr_python_environment\""));
+        assert!(build.contains("\"root//:__bsmr_python_environment\""));
+        assert!(build.contains("python_wheel_environment("));
+        assert!(build.contains("\":api\""));
+        assert!(build.contains("python = \"root//:__bsmr_python_distribution\""));
+        assert!(build.contains("uv = \"root//:__bsmr_uv_distribution\""));
         assert!(!build.contains("python_environment("));
         assert!(build.contains("\"packages/api/pkg/__init__.py\""));
     }

@@ -10,7 +10,9 @@
 from __future__ import annotations
 
 import csv
+import json
 import os
+import runpy
 import subprocess
 import tempfile
 import unittest
@@ -46,15 +48,180 @@ class NormalizeEntryPointsTest(unittest.TestCase):
 
             data = script.read_bytes()
             self.assertTrue(data.startswith(b"#!/usr/bin/env python3\n"))
+            self.assertNotIn(b"/tmp/action/python", data)
             row = next(csv.reader(record.read_text(encoding="utf-8").splitlines()))
             self.assertEqual(
                 row, ["bin/demo", runner._record_digest(data), str(len(data))]
             )
             self.assertFalse((packages / ".lock").exists())
 
+    def test_uv_shell_trampoline_is_removed(self) -> None:
+        """uv's absolute interpreter trampoline must not enter a CAS artifact."""
+        with tempfile.TemporaryDirectory() as temporary:
+            packages = Path(temporary)
+            script = packages / "bin" / "demo"
+            script.parent.mkdir()
+            script.write_bytes(
+                b"#!/tmp/action/python\n"
+                b"'''exec' '/tmp/action/python' \"$0\" \"$@\"\n"
+                b"' '''\n"
+                b"from demo import main\nmain()\n"
+            )
+            record = packages / "demo-1.0.dist-info" / "RECORD"
+            record.parent.mkdir()
+            record.write_text("bin/demo,sha256=old,1\n", encoding="utf-8")
+
+            runner._normalize_entry_points(packages)
+
+            data = script.read_bytes()
+            self.assertEqual(
+                data,
+                b"#!/usr/bin/env python3\nfrom demo import main\nmain()\n",
+            )
+            row = next(csv.reader(record.read_text(encoding="utf-8").splitlines()))
+            self.assertEqual(
+                row, ["bin/demo", runner._record_digest(data), str(len(data))]
+            )
+
+
+class SysconfigTest(unittest.TestCase):
+    """Exercise relocation of python-build-standalone compiler metadata."""
+
+    def test_build_metadata_uses_the_materialized_interpreter_and_host_tools(
+        self,
+    ) -> None:
+        """PEP 517 builds must not retain the archive producer's paths."""
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary) / "python"
+            python = root / "bin" / "python3"
+            python.parent.mkdir(parents=True)
+            python.touch()
+            data = root / "lib" / "python3.14" / "_sysconfigdata__darwin.py"
+            data.parent.mkdir(parents=True)
+            data.write_text(
+                "build_time_vars = {"
+                "'AR': '/tmp/build/tools/llvm/bin/llvm-ar', "
+                "'CC': 'clang -pthread', "
+                "'CXX': 'clang++ -pthread', "
+                "'LDSHARED': 'clang -bundle -isysroot /tmp/MacOSX.sdk', "
+                "'prefix': '/install', "
+                "'INCLUDEPY': '/install/include/python3.14'"
+                "}\n",
+                encoding="utf-8",
+            )
+            scratch = Path(temporary) / "scratch"
+            scratch.mkdir()
+            environment = {"PYTHONPATH": "/declared/packages"}
+
+            runner._configure_sysconfig(python, scratch, environment)
+
+            patched = runpy.run_path(
+                str(scratch / "sysconfig" / "_bsmr_sysconfigdata.py")
+            )["build_time_vars"]
+            self.assertEqual(patched["AR"], "ar")
+            self.assertEqual(patched["CC"], "cc -pthread")
+            self.assertEqual(patched["CXX"], "c++ -pthread")
+            self.assertEqual(patched["LDSHARED"], "cc -bundle")
+            self.assertEqual(patched["prefix"], str(root.resolve()))
+            self.assertEqual(
+                patched["INCLUDEPY"],
+                str(root.resolve() / "include" / "python3.14"),
+            )
+            self.assertEqual(patched["PYTHON_BUILD_STANDALONE"], 1)
+            self.assertEqual(
+                environment["_PYTHON_SYSCONFIGDATA_NAME"], "_bsmr_sysconfigdata"
+            )
+            self.assertEqual(
+                environment["_PYTHON_SYSCONFIGDATA_PATH"],
+                str(scratch / "sysconfig"),
+            )
+            self.assertEqual(environment["PYTHONPATH"], "/declared/packages")
+
+    def test_unknown_compiler_metadata_fails_closed(self) -> None:
+        """A new standalone toolchain layout requires an explicit BSMR update."""
+        with self.assertRaisesRegex(RuntimeError, "unsupported CC value"):
+            runner._patch_sysconfig_values({"CC": "/mystery/compiler"}, Path("/p"))
+
 
 class EnvironmentTest(unittest.TestCase):
     """Exercise composition of third- and first-party locked artifacts."""
+
+    def test_uv_selects_a_compatible_locked_wheel(self) -> None:
+        """A successful binary-only dry run commits the remote-cacheable path."""
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            args = Namespace(
+                distribution="attrs",
+                lock=root / "pylock.toml",
+                output=root / "selection",
+                python=root / "python",
+                uv=root / "uv",
+            )
+            completed = subprocess.CompletedProcess(
+                [], returncode=0, stdout="", stderr=""
+            )
+
+            with patch.object(runner.subprocess, "run", return_value=completed) as run:
+                runner._select_locked_package(args, {}, root / "scratch")
+
+            self.assertEqual(args.output.read_text(encoding="utf-8"), "wheel\n")
+            command = run.call_args.args[0]
+            self.assertIn("--dry-run", command)
+            self.assertEqual(command[command.index("--only-binary") + 1], ":all:")
+            self.assertEqual(command.count("--preview-features"), 1)
+            self.assertEqual(command[command.index("--preview-features") + 1], "pylock")
+
+    def test_uv_selects_locked_source_when_no_wheel_is_compatible(self) -> None:
+        """Only uv's pinned no-binary result may commit the local source path."""
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            args = Namespace(
+                distribution="pyarrow",
+                lock=root / "pylock.toml",
+                output=root / "selection",
+                python=root / "python",
+                uv=root / "uv",
+            )
+            completed = subprocess.CompletedProcess(
+                [],
+                returncode=2,
+                stdout="",
+                stderr=(
+                    "Using Python\n"
+                    "error: Package `pyarrow` can't be installed because it is marked "
+                    "as `--no-build` but has no binary distribution\n"
+                ),
+            )
+
+            with patch.object(runner.subprocess, "run", return_value=completed):
+                runner._select_locked_package(args, {}, root / "scratch")
+
+            self.assertEqual(args.output.read_text(encoding="utf-8"), "source\n")
+
+    def test_uv_selection_failure_cannot_be_misclassified_as_source(self) -> None:
+        """Network, lock, and interpreter failures must remain uv failures."""
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            args = Namespace(
+                distribution="demo",
+                lock=root / "pylock.toml",
+                output=root / "selection",
+                python=root / "python",
+                uv=root / "uv",
+            )
+            completed = subprocess.CompletedProcess(
+                [], returncode=2, stdout="", stderr="error: corrupted lock\n"
+            )
+
+            with (
+                patch.object(runner.subprocess, "run", return_value=completed),
+                patch.object(runner.sys.stderr, "write"),
+                self.assertRaises(SystemExit) as raised,
+            ):
+                runner._select_locked_package(args, {}, root / "scratch")
+
+            self.assertEqual(raised.exception.code, 2)
+            self.assertFalse(args.output.exists())
 
     def test_first_party_wheels_are_installed_without_resolution(self) -> None:
         """Runtime metadata must come from exact wheel outputs, never editable sources."""
@@ -67,6 +234,7 @@ class EnvironmentTest(unittest.TestCase):
             wheel.touch()
             args = Namespace(
                 output=output,
+                manifest=root / "environment.json",
                 python=root / "python",
                 uv=root / "uv",
                 wheel_dir=[wheel_directory],
@@ -87,9 +255,12 @@ class EnvironmentTest(unittest.TestCase):
             output = root / "environment"
             build_environment = _empty_environment(root / "build-environment")
             args = Namespace(
-                build_environment=build_environment,
+                build_environment=[build_environment],
                 config_setting=["--global-option=--quiet"],
+                package_config_setting=["numpy:setup-args=-Dblas=blas"],
+                package_build_variable=["numpy:NPY_DISABLE_CPU_FEATURES=AVX512"],
                 lock=root / "pylock.toml",
+                manifest=root / "package.json",
                 output=output,
                 python=root / "python",
                 uv=root / "uv",
@@ -98,12 +269,22 @@ class EnvironmentTest(unittest.TestCase):
             process_environment = {"PATH": "/usr/bin"}
 
             with patch.object(runner, "_run") as run:
-                runner._environment(args, process_environment, root / "scratch")
+                (root / "scratch").mkdir()
+                runner._locked_package(args, process_environment, root / "scratch")
 
             command = run.call_args.args[0]
             self.assertIn("--no-build-isolation", command)
             self.assertNotIn("--no-build", command)
             self.assertIn("--config-setting=--global-option=--quiet", command)
+            self.assertIn(
+                "--config-settings-package=numpy:setup-args=-Dblas=blas", command
+            )
+            config = Path(command[command.index("--config-file") + 1])
+            self.assertEqual(
+                config.read_text(encoding="utf-8"),
+                '[extra-build-variables."numpy"]\n'
+                '"NPY_DISABLE_CPU_FEATURES" = "AVX512"\n',
+            )
             self.assertEqual(
                 process_environment["PYTHONPATH"],
                 str(build_environment.resolve()),
@@ -113,6 +294,200 @@ class EnvironmentTest(unittest.TestCase):
                     str((build_environment / "bin").resolve())
                 )
             )
+
+    def test_locked_package_manifests_compose_one_complete_environment(self) -> None:
+        """Package granularity must not leak into the runtime import search path."""
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            attrs = root / "attrs"
+            typing = root / "typing-extensions"
+            (attrs / "namespace").mkdir(parents=True)
+            (typing / "namespace").mkdir(parents=True)
+            (attrs / "attrs").mkdir()
+            (typing / "typing_extensions.py").write_text(
+                "VALUE = 'typing-extension'\n", encoding="utf-8"
+            )
+            (attrs / "attrs" / "__init__.py").write_text(
+                "VALUE = 'attrs-package'\n", encoding="utf-8"
+            )
+            (attrs / "namespace" / "attrs.py").write_text(
+                "VALUE = 'attrs'\n", encoding="utf-8"
+            )
+            (typing / "namespace" / "typing.py").write_text(
+                "VALUE = 'typing'\n", encoding="utf-8"
+            )
+            script = attrs / "bin" / "attrs"
+            script.parent.mkdir()
+            script.write_text("#!/usr/bin/env python3\n", encoding="utf-8")
+            script.chmod(0o755)
+            attrs_manifest = root / "attrs.json"
+            typing_manifest = root / "typing.json"
+            runner._write_package_manifest(attrs, attrs_manifest)
+            runner._write_package_manifest(typing, typing_manifest)
+            output = root / "overlay"
+            manifest = root / "environment.json"
+
+            runner._compose_environment(
+                Namespace(
+                    output=output,
+                    manifest=manifest,
+                    package=[
+                        ["typing-extensions", typing_manifest, typing],
+                        ["attrs", attrs_manifest, attrs],
+                    ],
+                )
+            )
+
+            self.assertEqual(
+                (output / "namespace" / "attrs.py").read_text(encoding="utf-8"),
+                "VALUE = 'attrs'\n",
+            )
+            self.assertEqual(
+                (output / "namespace" / "typing.py").read_text(encoding="utf-8"),
+                "VALUE = 'typing'\n",
+            )
+            self.assertEqual(
+                (output / "attrs" / "__init__.py").read_text(encoding="utf-8"),
+                "VALUE = 'attrs-package'\n",
+            )
+            self.assertEqual(
+                (output / "typing_extensions.py").read_text(encoding="utf-8"),
+                "VALUE = 'typing-extension'\n",
+            )
+            provenance = json.loads(manifest.read_text(encoding="utf-8"))
+            self.assertEqual(
+                provenance["overlay"],
+                {
+                    "attrs/__init__.py": "attrs",
+                    "bin/attrs": "attrs",
+                    "namespace/attrs.py": "attrs",
+                    "namespace/typing.py": "typing-extensions",
+                    "typing_extensions.py": "typing-extensions",
+                },
+            )
+            self.assertTrue(attrs.exists())
+            self.assertTrue(typing.exists())
+
+    def test_locked_package_collision_fails_closed(self) -> None:
+        """Different distributions may not silently replace the same import file."""
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            left = root / "left"
+            right = root / "right"
+            left.mkdir()
+            right.mkdir()
+            (left / "module.py").write_text("OWNER = 'left'\n", encoding="utf-8")
+            (right / "module.py").write_text("OWNER = 'right'\n", encoding="utf-8")
+            left_manifest = root / "left.json"
+            right_manifest = root / "right.json"
+            manifest = root / "environment.json"
+            runner._write_package_manifest(left, left_manifest)
+            runner._write_package_manifest(right, right_manifest)
+
+            with self.assertRaisesRegex(
+                RuntimeError,
+                "module.py.*left.*right",
+            ):
+                runner._compose_environment(
+                    Namespace(
+                        output=root / "overlay",
+                        manifest=manifest,
+                        package=[
+                            ["right", right_manifest, right],
+                            ["left", left_manifest, left],
+                        ],
+                    )
+                )
+
+    def test_locked_package_identical_files_record_every_owner(self) -> None:
+        """Byte-identical shared files deduplicate without losing provenance."""
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            left = root / "left"
+            right = root / "right"
+            for package in (left, right):
+                package.mkdir()
+                (package / "namespace.py").write_text("VALUE = 1\n", encoding="utf-8")
+            left_manifest = root / "left.json"
+            right_manifest = root / "right.json"
+            manifest = root / "environment.json"
+            runner._write_package_manifest(left, left_manifest)
+            runner._write_package_manifest(right, right_manifest)
+
+            runner._compose_environment(
+                Namespace(
+                    output=root / "overlay",
+                    manifest=manifest,
+                    package=[
+                        ["right", right_manifest, right],
+                        ["left", left_manifest, left],
+                    ],
+                )
+            )
+
+            provenance = json.loads(manifest.read_text(encoding="utf-8"))
+            self.assertEqual(provenance["paths"]["namespace.py"], ["left", "right"])
+
+    def test_locked_package_console_script_collision_matches_uv_precedence(
+        self,
+    ) -> None:
+        """The first canonical package owns a console script, matching uv."""
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            left = root / "left"
+            right = root / "right"
+            for package, owner in ((left, "left"), (right, "right")):
+                script = package / "bin" / "demo"
+                script.parent.mkdir(parents=True)
+                script.write_text(f"#!/bin/sh\necho {owner}\n", encoding="utf-8")
+                script.chmod(0o755)
+            left_manifest = root / "left.json"
+            right_manifest = root / "right.json"
+            runner._write_package_manifest(left, left_manifest)
+            runner._write_package_manifest(right, right_manifest)
+            output = root / "overlay"
+            manifest = root / "environment.json"
+
+            runner._compose_environment(
+                Namespace(
+                    output=output,
+                    manifest=manifest,
+                    package=[
+                        ["right", right_manifest, right],
+                        ["left", left_manifest, left],
+                    ],
+                )
+            )
+
+            self.assertEqual(
+                (output / "bin" / "demo").read_text(encoding="utf-8"),
+                "#!/bin/sh\necho left\n",
+            )
+            provenance = json.loads(manifest.read_text(encoding="utf-8"))
+            self.assertEqual(provenance["overlay"]["bin/demo"], "left")
+            self.assertEqual(provenance["paths"]["bin/demo"], ["left", "right"])
+
+    def test_package_manifest_cannot_escape_the_environment_root(self) -> None:
+        """Cached package metadata must not create paths outside its CAS output."""
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            package = root / "package"
+            package.mkdir()
+            manifest = root / "package.json"
+            manifest.write_text(
+                json.dumps([["../escaped", "directory"]]), encoding="utf-8"
+            )
+
+            with self.assertRaisesRegex(RuntimeError, "not normalized"):
+                runner._compose_environment(
+                    Namespace(
+                        output=root / "overlay",
+                        manifest=root / "environment.json",
+                        package=[["demo", manifest, package]],
+                    )
+                )
+
+            self.assertFalse((root / "escaped").exists())
 
     def test_environment_tree_rejects_symlinks(self) -> None:
         """A CAS tree must contain only unambiguous regular files and directories."""
@@ -132,16 +507,17 @@ class EnvironmentTest(unittest.TestCase):
 class ProjectActionTest(unittest.TestCase):
     """Exercise process boundaries shared by build and analysis actions."""
 
-    def test_typecheck_uses_the_materialized_project_as_its_import_root(self) -> None:
-        """Relative imports must resolve against the cached source tree."""
+    def test_typecheck_uses_native_project_scope_and_import_roots(self) -> None:
+        """ty must honor configured sources while resolving cached environments."""
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)
             source = root / "source"
             source.mkdir()
             environment = _empty_environment(root / "environment.zip")
+            workspace = _empty_environment(root / "workspace.zip")
             output = root / "typecheck.check"
             args = Namespace(
-                environment=environment,
+                environment=[environment, workspace],
                 config_setting=[],
                 mode="ty",
                 output=output,
@@ -158,7 +534,46 @@ class ProjectActionTest(unittest.TestCase):
                 runner._project(args, {"PATH": "/usr/bin"}, root / "scratch")
 
             command = run.call_args.args[0]
-            self.assertEqual(command[-1], ".")
+            self.assertEqual(command.count("--extra-search-path"), 2)
+            self.assertIn(str(environment.resolve()), command)
+            self.assertIn(str(workspace.resolve()), command)
+            self.assertEqual(command.count("--output-format"), 1)
+            self.assertIn("concise", command)
+            self.assertNotIn(".", command)
+            self.assertEqual(run.call_args.kwargs["cwd"], source.resolve())
+
+    def test_ruff_uses_native_project_scope(self) -> None:
+        """Ruff must select files from pyproject.toml rather than a CLI override."""
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            source = root / "source"
+            source.mkdir()
+            args = Namespace(
+                environment=[],
+                mode="ruff",
+                output=root / "lint.check",
+                project_root=".",
+                python=root / "python",
+                source=source,
+                ty=None,
+                uv=None,
+                ruff=root / "ruff",
+                vcs=None,
+            )
+
+            with patch.object(runner, "_run") as run:
+                runner._project(args, {"PATH": "/usr/bin"}, root / "scratch")
+
+            self.assertEqual(
+                run.call_args.args[0],
+                [
+                    str((root / "ruff").resolve()),
+                    "check",
+                    "--no-cache",
+                    "--output-format",
+                    "concise",
+                ],
+            )
             self.assertEqual(run.call_args.kwargs["cwd"], source.resolve())
 
     def test_tool_failure_propagates_without_a_wrapper_traceback(self) -> None:
@@ -186,8 +601,10 @@ class ProjectActionTest(unittest.TestCase):
             (vcs / "HEAD").write_text("ref: refs/heads/main\n", encoding="utf-8")
             (root / "scratch").mkdir()
             args = Namespace(
-                environment=environment,
+                environment=[environment],
                 config_setting=["editable-mode=strict", "--build-option=--quiet"],
+                package_config_setting=["demo:editable-mode=compat"],
+                package_build_variable=["demo:DEMO_BUILD=strict"],
                 mode="wheel",
                 output=root / "wheel",
                 project_root=".",
@@ -220,12 +637,20 @@ class ProjectActionTest(unittest.TestCase):
             )
             self.assertIn("--no-build-isolation", run.call_args.args[0])
             self.assertEqual(
-                run.call_args.args[0][-3:],
+                run.call_args.args[0][-4:],
                 [
                     "--config-setting=editable-mode=strict",
                     "--config-setting=--build-option=--quiet",
+                    "--config-settings-package=demo:editable-mode=compat",
                     ".",
                 ],
+            )
+            config = Path(
+                run.call_args.args[0][run.call_args.args[0].index("--config-file") + 1]
+            )
+            self.assertEqual(
+                config.read_text(encoding="utf-8"),
+                '[extra-build-variables."demo"]\n"DEMO_BUILD" = "strict"\n',
             )
             git_directory = root / "scratch" / "git"
             self.assertEqual(action_environment["GIT_DIR"], str(git_directory))

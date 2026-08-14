@@ -12,10 +12,12 @@ from __future__ import annotations
 import argparse
 import importlib
 import os
+import site
+import subprocess
 import sys
 import tempfile
+from collections.abc import Callable
 from pathlib import Path
-from typing import Callable
 
 
 def _arguments() -> argparse.Namespace:
@@ -26,13 +28,9 @@ def _arguments() -> argparse.Namespace:
     parser.add_argument("--environment", action="append", type=Path, required=True)
     parser.add_argument("--project-root", required=True)
     parser.add_argument("--source", type=Path, required=True)
+    parser.add_argument("--test-command", action="append")
     parser.add_argument("arguments", nargs=argparse.REMAINDER)
     return parser.parse_args()
-
-
-def _project_roots(source: Path) -> list[Path]:
-    """Return every declared workspace member as a deterministic import root."""
-    return sorted({manifest.parent for manifest in source.rglob("pyproject.toml")})
 
 
 def _environment_root(path: Path) -> Path:
@@ -43,7 +41,9 @@ def _environment_root(path: Path) -> Path:
     return root
 
 
-def _child_interpreter(scratch: Path, declared: list[str]) -> Path:
+def _child_interpreter(
+    scratch: Path, project_roots: list[Path], environments: list[Path]
+) -> Path:
     """Create a minimal venv whose children inherit only declared import roots."""
     interpreter = Path(sys.executable).resolve()
     runtime_bin = scratch / "bin"
@@ -58,7 +58,12 @@ def _child_interpreter(scratch: Path, declared: list[str]) -> Path:
     )
     site_packages.mkdir(parents=True)
     (site_packages / "bsmr.pth").write_text(
-        "".join(f"{path}\n" for path in declared), encoding="utf-8"
+        "".join(f"{root}\n" for root in project_roots)
+        + "".join(
+            f"import site; site.addsitedir({str(environment)!r})\n"
+            for environment in environments
+        ),
+        encoding="utf-8",
     )
     (scratch / "pyvenv.cfg").write_text(
         f"home = {interpreter.parent}\n"
@@ -81,13 +86,16 @@ def _bootstrap(args: argparse.Namespace, scratch: Path) -> Path:
     environments = [_environment_root(environment) for environment in args.environment]
     home = scratch / "home"
     home.mkdir()
-    declared = [str(root) for root in _project_roots(source)] + [
+    project_roots = [project]
+    declared = [str(root) for root in project_roots] + [
         str(environment) for environment in environments
     ]
-    runtime_bin = _child_interpreter(scratch, declared)
+    runtime_bin = _child_interpreter(scratch, project_roots, environments)
     sys.path[:] = declared + [
         path for path in sys.path if path and path not in declared
     ]
+    for environment in environments:
+        site.addsitedir(str(environment))
     os.environ.update(
         {
             "HOME": str(home),
@@ -105,7 +113,7 @@ def _bootstrap(args: argparse.Namespace, scratch: Path) -> Path:
         }
     )
     os.chdir(project)
-    return project
+    return runtime_bin
 
 
 def _entry(specification: str) -> Callable[[], object]:
@@ -121,17 +129,26 @@ def _entry(specification: str) -> Callable[[], object]:
     return value
 
 
+def _test_command(
+    runtime_bin: Path, command: list[str] | None, arguments: list[str]
+) -> list[str | Path]:
+    """Return one shell-free test invocation under the pinned child runtime."""
+    return [runtime_bin / "python", *(command or ["-m", "pytest"]), *arguments]
+
+
 def main() -> int:
     """Execute one entry point or pytest session and return its exact status."""
     args = _arguments()
     with tempfile.TemporaryDirectory(prefix="bsmr-python-runtime-") as temporary:
-        _bootstrap(args, Path(temporary))
+        runtime_bin = _bootstrap(args, Path(temporary))
         sys.argv[:] = [sys.argv[0], *args.arguments]
         if args.mode == "entry":
             result = _entry(args.entry or "")()
             return result if isinstance(result, int) else 0
-        pytest = importlib.import_module("pytest")
-        return int(pytest.main())
+        return subprocess.run(
+            _test_command(runtime_bin, args.test_command, args.arguments),
+            check=False,
+        ).returncode
 
 
 if __name__ == "__main__":

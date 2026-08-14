@@ -5,6 +5,8 @@ Cargo.lock
 buck-out
 /node_modules/
 /site/
+__pycache__/
+*.py[cod]
 /.direnv
 .bsmrconfig.local
 .envrc.local
