@@ -196,11 +196,14 @@ build outputs, and virtual environments never become first-party source inputs.
 The general package path uses `uv pip sync --strict` against one canonical
 single-package PEP 751 fragment, normalizes console-script shebangs, rejects
 symlinks and special files, and records the immutable result in BSMR's CAS.
-When a lock has one marker-free variant with exactly one size- and
-SHA-256-pinned `py3-none-any` or `py2.py3-none-any` wheel, BSMR declares that
-wheel as a separate download action. Pinned uv installs the local artifact with
-index, dependency, build, and network access disabled. Direct acquisition also
-requires a credential-free HTTP(S) URL and a wheel filename matching the locked
+When a lock has one variant with exactly one size- and SHA-256-pinned
+`py3-none-any` or `py2.py3-none-any` wheel, BSMR declares that wheel as a
+separate download action if its package marker is absent or proven true across
+BSMR's complete native CPython platform domain. The proof uses Astral's
+canonical PEP 508 marker algebra; BSMR does not interpret marker strings with a
+second parser. Pinned uv installs the local artifact with index, dependency,
+build, and network access disabled. Direct acquisition also requires a
+credential-free HTTP(S) URL and a wheel filename matching the locked
 distribution and version. All other wheels and source distributions continue
 through the canonical PEP 751 fragment so uv remains responsible for
 compatibility selection.
@@ -234,8 +237,9 @@ Portable offline artifact replay after an action-cache miss is implemented for
 the universal-wheel subset above: the wheel is a separately acquired,
 checksum-verified action input, and its repository-independent HTTP cache entry
 is revalidated on every restoration. A cold action for a platform-sensitive
-wheel, sdist, VCS dependency, local archive, or marker-qualified variant may
-still ask uv to fetch the exact artifact selected by its PEP 751 fragment.
+wheel, sdist, VCS dependency, local archive, or environment-selecting marker
+variant may still ask uv to fetch the exact artifact selected by its PEP 751
+fragment.
 Native materialization for those remaining forms, import-level ownership and
 closure inference, and provenance queries remain release gates.
 
