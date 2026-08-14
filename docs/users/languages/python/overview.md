@@ -214,14 +214,20 @@ offline, binary-only dry run. The selected exact requirement is installed from
 only those local candidates with index, dependency, build, and network access
 disabled. A source result does not consume or download wheel candidates.
 
-A single `py3-none-any` or `py2.py3-none-any` wheel may bypass selection when
-its package marker is absent or proven true across BSMR's complete native
-CPython platform domain. That proof uses Astral's canonical PEP 508 marker
-algebra; BSMR does not interpret marker strings with a second parser. Direct
-acquisition always requires a credential-free HTTP(S) URL and a wheel filename
-matching the locked distribution and version. Wheels with incomplete download
-metadata and source distributions continue through the canonical PEP 751
-fragment so uv remains responsible for compatibility selection.
+An unconditional package may bypass uv's dry-run selection when BSMR can prove
+one unique best wheel for every supported Python and execution platform. BSMR
+uses Astral's wheel-tag priority followed by the wheel build tag, which is the
+same ordering uv applies. A single `py3-none-any` or
+`py2.py3-none-any` wheel is the simplest instance of this proof. Equal best
+priorities, incomplete platform coverage, package-level `requires-python`,
+and environment-dependent variants remain delegated to pinned uv.
+
+Package-marker proofs use Astral's canonical PEP 508 marker algebra; BSMR does
+not interpret marker strings with a second parser. Direct acquisition always
+requires a credential-free HTTP(S) URL and a wheel filename matching the
+locked distribution and version. Wheels with incomplete download metadata and
+source distributions continue through the canonical PEP 751 fragment so uv
+remains responsible for compatibility selection.
 
 BSMR composes those package trees deterministically, rejects incompatible
 import-file collisions, applies uv-compatible first-package precedence to
@@ -267,6 +273,11 @@ that compatibility path with typed pre-execution failures, pinning the Git
 client itself, native wheel materialization without a uv subprocess,
 import-level ownership and closure inference, and provenance queries remain
 release gates.
+
+Native wheel materialization will replace uv only after differential package,
+artifact, import, entry-point, and failure checks pass and the implementation
+meets explicit cold, warm, no-op, and incremental performance gates. A slower
+language-level reimplementation is not a compatibility fallback.
 
 Pure-Python PEP 517 builds use the exact interpreter and locked build closure.
 BSMR invokes uv offline for first-party wheel construction, but local execution

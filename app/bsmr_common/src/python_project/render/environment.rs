@@ -128,6 +128,9 @@ fn render_dependency_environments(
         if let Some(artifact) = &package.artifact {
             artifacts.insert(locked_artifact_target(artifact), artifact);
         }
+        for artifact in package.platform_artifacts.values() {
+            artifacts.insert(locked_artifact_target(artifact), artifact);
+        }
         if let Some(source) = &package.source_artifact {
             artifacts.insert(locked_artifact_target(&source.artifact), &source.artifact);
         }
@@ -352,6 +355,22 @@ fn render_locked_package(
             format!(":{}", locked_artifact_target(artifact))
         )
         .map_err(NativePythonBuildError::Render)?;
+    }
+    if !package.platform_artifacts.is_empty() {
+        writeln!(
+            output,
+            "    artifact = python_native_python_platform_value({{"
+        )
+        .map_err(NativePythonBuildError::Render)?;
+        for (platform, artifact) in &package.platform_artifacts {
+            writeln!(
+                output,
+                "        {platform:?}: {:?},",
+                format!(":{}", locked_artifact_target(artifact))
+            )
+            .map_err(NativePythonBuildError::Render)?;
+        }
+        writeln!(output, "    }}),").map_err(NativePythonBuildError::Render)?;
     }
     if let Some(source) = &package.source_artifact {
         writeln!(
