@@ -604,6 +604,8 @@ fn workspace_path(package_root: &CellRelativePathBuf, file: &str) -> String {
 
 #[cfg(test)]
 mod tests {
+    use std::collections::BTreeMap;
+
     use bsmr_core::cells::paths::CellRelativePathBuf;
 
     use super::NativePythonBuildError;
@@ -637,6 +639,7 @@ mod tests {
                 ),
                 acquisition: PylockAcquisition::Wheel,
                 artifact: None,
+                artifacts: BTreeMap::new(),
             })
             .collect()
     }
@@ -841,6 +844,31 @@ mod tests {
         assert!(build.contains("filename = \"attrs-25.3.0-py3-none-any.whl\""));
         assert!(build.contains("size = 42"));
         assert!(build.contains("artifact = \":__bsmr_python_artifact__"));
+    }
+
+    #[test]
+    fn invariant_platform_wheels_are_selected_by_execution_platform() {
+        let listing = PackageListing::testing_files(&["pyproject.toml"]);
+        let lock = PylockToml::parse(&format!(
+            "lock-version = '1.0'\ncreated-by = 'test'\n[[packages]]\nname = 'attrs'\nversion = '25.3.0'\n[packages.sdist]\nurl = 'https://example.org/attrs-25.3.0.tar.gz'\nhashes = {{ sha256 = 'source' }}\n[[packages.wheels]]\nurl = 'https://example.org/attrs-25.3.0-cp314-cp314-macosx_13_0_arm64.whl'\nsize = 42\nhashes = {{ sha256 = '0000000000000000000000000000000000000000000000000000000000000000' }}\n"
+        ))
+        .unwrap();
+        let root_files = PythonRootFiles {
+            runtime_packages: lock.installation_fragments().unwrap(),
+            ..PythonRootFiles::default()
+        };
+
+        let build = render_python_build_file(
+            CellRelativePathBuf::unchecked_new(String::new()),
+            "[project]\nname = 'demo'\nversion = '1'\nrequires-python = '>=3.14'\n",
+            &listing,
+            &root_files,
+        )
+        .unwrap();
+
+        assert!(build.contains("python_native_python_platform_value({"));
+        assert!(build.contains("\"3.14-macos-arm64\": [\n"));
+        assert!(build.contains("artifacts = python_native_python_platform_value({"));
     }
 
     #[test]

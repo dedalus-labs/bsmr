@@ -156,16 +156,23 @@ class EnvironmentTest(unittest.TestCase):
                 output=root / "selection",
                 python=root / "python",
                 python_platform="aarch64-apple-darwin",
+                source_permitted=False,
                 uv=root / "uv",
             )
             completed = subprocess.CompletedProcess(
-                [], returncode=0, stdout="", stderr=""
+                [],
+                returncode=0,
+                stdout="",
+                stderr="Would install 1 package\n + attrs==25.4.0\n",
             )
 
             with patch.object(runner.subprocess, "run", return_value=completed) as run:
                 runner._select_locked_package(args, {}, root / "scratch")
 
-            self.assertEqual(args.output.read_text(encoding="utf-8"), "wheel\n")
+            self.assertEqual(
+                json.loads(args.output.read_text(encoding="utf-8")),
+                {"acquisition": "wheel", "requirement": "attrs==25.4.0"},
+            )
             command = run.call_args.args[0]
             self.assertIn("--dry-run", command)
             self.assertIn("--offline", command)
@@ -187,6 +194,7 @@ class EnvironmentTest(unittest.TestCase):
                 output=root / "selection",
                 python=root / "python",
                 python_platform="aarch64-apple-darwin",
+                source_permitted=True,
                 uv=root / "uv",
             )
             completed = subprocess.CompletedProcess(
@@ -203,7 +211,45 @@ class EnvironmentTest(unittest.TestCase):
             with patch.object(runner.subprocess, "run", return_value=completed):
                 runner._select_locked_package(args, {}, root / "scratch")
 
-            self.assertEqual(args.output.read_text(encoding="utf-8"), "source\n")
+            self.assertEqual(
+                json.loads(args.output.read_text(encoding="utf-8")),
+                {"acquisition": "source"},
+            )
+
+            args.output.unlink()
+            args.source_permitted = False
+            with (
+                patch.object(runner.subprocess, "run", return_value=completed),
+                patch.object(runner.sys.stderr, "write"),
+                self.assertRaises(SystemExit),
+            ):
+                runner._select_locked_package(args, {}, root / "scratch")
+            self.assertFalse(args.output.exists())
+
+    def test_uv_selects_absent_marker_variant(self) -> None:
+        """A package excluded by exact lock markers becomes an empty CAS tree."""
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            args = Namespace(
+                distribution="exceptiongroup",
+                lock=root / "pylock.toml",
+                output=root / "selection",
+                python=root / "python",
+                python_platform="aarch64-apple-darwin",
+                source_permitted=True,
+                uv=root / "uv",
+            )
+            completed = subprocess.CompletedProcess(
+                [], returncode=0, stdout="", stderr="Would install 0 packages\n"
+            )
+
+            with patch.object(runner.subprocess, "run", return_value=completed):
+                runner._select_locked_package(args, {}, root / "scratch")
+
+            self.assertEqual(
+                json.loads(args.output.read_text(encoding="utf-8")),
+                {"acquisition": "absent"},
+            )
 
     def test_uv_selection_failure_cannot_be_misclassified_as_source(self) -> None:
         """Network, lock, and interpreter failures must remain uv failures."""
@@ -215,6 +261,7 @@ class EnvironmentTest(unittest.TestCase):
                 output=root / "selection",
                 python=root / "python",
                 python_platform="aarch64-apple-darwin",
+                source_permitted=False,
                 uv=root / "uv",
             )
             completed = subprocess.CompletedProcess(
@@ -270,7 +317,8 @@ class EnvironmentTest(unittest.TestCase):
             output = root / "environment"
             build_environment = _empty_environment(root / "build-environment")
             args = Namespace(
-                artifact=None,
+                absent=False,
+                artifact=[],
                 build_environment=[build_environment],
                 config_setting=["--global-option=--quiet"],
                 package_config_setting=["numpy:setup-args=-Dblas=blas"],
@@ -280,6 +328,7 @@ class EnvironmentTest(unittest.TestCase):
                 output=output,
                 python=root / "python",
                 python_platform="aarch64-apple-darwin",
+                requirement=None,
                 uv=root / "uv",
                 wheel_dir=[],
             )
@@ -323,7 +372,8 @@ class EnvironmentTest(unittest.TestCase):
             artifact = root / "demo-1-py3-none-any.whl"
             artifact.touch()
             args = Namespace(
-                artifact=artifact,
+                absent=False,
+                artifact=[artifact],
                 build_environment=[],
                 config_setting=[],
                 package_build_variable=[],
@@ -333,6 +383,7 @@ class EnvironmentTest(unittest.TestCase):
                 output=root / "environment",
                 python=root / "python",
                 python_platform="aarch64-apple-darwin",
+                requirement=None,
                 uv=root / "uv",
             )
 
@@ -350,6 +401,69 @@ class EnvironmentTest(unittest.TestCase):
                 command[command.index("--python-platform") + 1],
                 "aarch64-apple-darwin",
             )
+
+    def test_locked_wheel_candidates_are_selected_offline(self) -> None:
+        """Pinned local candidates must replace index access for platform wheels."""
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            candidates = [
+                root / "demo-1-cp314-cp314-macosx_13_0_arm64.whl",
+                root / "demo-1-py3-none-any.whl",
+            ]
+            for candidate in candidates:
+                candidate.touch()
+            args = Namespace(
+                absent=False,
+                artifact=candidates,
+                build_environment=[],
+                config_setting=[],
+                package_build_variable=[],
+                package_config_setting=[],
+                lock=root / "pylock.toml",
+                manifest=root / "package.json",
+                output=root / "environment",
+                python=root / "python",
+                python_platform="aarch64-apple-darwin",
+                requirement="demo==1",
+                uv=root / "uv",
+            )
+
+            with patch.object(runner, "_run") as run:
+                runner._locked_package(args, {"PATH": "/usr/bin"}, root / "scratch")
+
+            command = run.call_args.args[0]
+            self.assertIn("demo==1", command)
+            self.assertEqual(command.count("--find-links"), 2)
+            self.assertIn("--no-index", command)
+            self.assertIn("--no-deps", command)
+            self.assertIn("--no-build", command)
+            self.assertIn("--offline", command)
+
+    def test_absent_locked_package_writes_an_empty_manifest(self) -> None:
+        """An excluded marker variant must not invoke uv or consume artifacts."""
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            args = Namespace(
+                absent=True,
+                artifact=[],
+                build_environment=[],
+                config_setting=[],
+                package_build_variable=[],
+                package_config_setting=[],
+                lock=root / "pylock.toml",
+                manifest=root / "package.json",
+                output=root / "environment",
+                python=root / "python",
+                python_platform="aarch64-apple-darwin",
+                requirement=None,
+                uv=root / "uv",
+            )
+
+            with patch.object(runner, "_run") as run:
+                runner._locked_package(args, {"PATH": "/usr/bin"}, root / "scratch")
+
+            run.assert_not_called()
+            self.assertEqual(args.manifest.read_text(encoding="utf-8"), "[]\n")
 
     def test_locked_package_manifests_compose_one_complete_environment(self) -> None:
         """Package granularity must not leak into the runtime import search path."""

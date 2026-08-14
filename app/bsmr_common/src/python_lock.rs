@@ -12,7 +12,13 @@ use std::str::FromStr;
 use std::sync::LazyLock;
 
 use serde::Deserialize;
+use uv_distribution_filename::WheelFilename;
 use uv_pep508::MarkerTree;
+use uv_platform_tags::Arch;
+use uv_platform_tags::Os;
+use uv_platform_tags::Platform;
+use uv_platform_tags::Tags;
+use uv_platform_tags::TagsOptions;
 
 /// Exact environment facts shared by every platform in the native Python catalog.
 static SUPPORTED_PYTHON_DOMAIN: LazyLock<MarkerTree> = LazyLock::new(|| {
@@ -57,10 +63,13 @@ pub struct PylockInstallationFragment {
     pub package: String,
     pub contents: String,
     pub acquisition: PylockAcquisition,
+    /// One unconditionally compatible wheel that bypasses selection.
     pub artifact: Option<PylockArtifact>,
+    /// Exact wheel candidates keyed by Python line and execution platform.
+    pub artifacts: BTreeMap<String, Vec<PylockArtifact>>,
 }
 
-/// One universal wheel that BSMR can acquire without index resolution.
+/// One locked wheel that BSMR can acquire without index resolution.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct PylockArtifact {
     pub filename: String,
@@ -162,6 +171,11 @@ impl PylockToml {
                         [variant] => direct_universal_wheel(variant),
                         _ => None,
                     };
+                    let artifacts = if artifact.is_some() {
+                        BTreeMap::new()
+                    } else {
+                        platform_wheels(&package, &variants)?
+                    };
                     let mut fragment = base.clone();
                     fragment.insert("packages".to_owned(), toml::Value::Array(variants));
                     Ok(PylockInstallationFragment {
@@ -180,6 +194,7 @@ impl PylockToml {
                             }
                         },
                         artifact,
+                        artifacts,
                     })
                 },
             )
@@ -504,6 +519,195 @@ fn universal_wheel(wheel: &toml::Value) -> bool {
         .any(|location| {
             location.ends_with("-py3-none-any.whl") || location.ends_with("-py2.py3-none-any.whl")
         })
+}
+
+/// Partitions exact wheel candidates by BSMR's finite execution-platform catalog.
+fn platform_wheels(
+    package: &str,
+    variants: &[toml::Value],
+) -> Result<BTreeMap<String, Vec<PylockArtifact>>, PylockTomlError> {
+    let tags = native_python_tags();
+    let mut artifacts = tags
+        .iter()
+        .map(|(platform, _)| (platform.clone(), BTreeMap::<String, PylockArtifact>::new()))
+        .collect::<BTreeMap<_, _>>();
+    for variant in variants {
+        let Some(variant) = variant.as_table() else {
+            return Ok(BTreeMap::new());
+        };
+        let Some(version) = variant.get("version").and_then(toml::Value::as_str) else {
+            return Ok(BTreeMap::new());
+        };
+        let Some(wheels) = variant.get("wheels").and_then(toml::Value::as_array) else {
+            continue;
+        };
+        for wheel in wheels {
+            let Some(filename) = locked_artifact_filename(wheel) else {
+                return Ok(BTreeMap::new());
+            };
+            let Ok(parsed) = WheelFilename::from_str(filename) else {
+                return Ok(BTreeMap::new());
+            };
+            let compatible = tags
+                .iter()
+                .filter_map(|(platform, tags)| {
+                    parsed.is_compatible(tags).then_some(platform.as_str())
+                })
+                .collect::<Vec<_>>();
+            if compatible.is_empty() {
+                continue;
+            }
+            let Some(artifact) = downloadable_wheel(package, version, filename, wheel) else {
+                return Ok(BTreeMap::new());
+            };
+            for platform in compatible {
+                let selected = artifacts
+                    .get_mut(platform)
+                    .expect("native platform keys originate from the same catalog");
+                if selected
+                    .insert(filename.to_owned(), artifact.clone())
+                    .is_some_and(|existing| existing != artifact)
+                {
+                    return Err(PylockTomlError::Package {
+                        package: package.to_owned(),
+                        reason: "wheel filename identifies multiple artifacts",
+                    });
+                }
+            }
+        }
+    }
+    if artifacts.values().all(BTreeMap::is_empty) {
+        return Ok(BTreeMap::new());
+    }
+    Ok(artifacts
+        .into_iter()
+        .map(|(platform, artifacts)| (platform, artifacts.into_values().collect()))
+        .collect())
+}
+
+/// Generates the same target-tag domains passed to uv by the native toolchain.
+fn native_python_tags() -> Vec<(String, Tags)> {
+    let platforms = [
+        (
+            "linux-arm64",
+            Platform::new(
+                Os::Manylinux {
+                    major: 2,
+                    minor: 28,
+                },
+                Arch::Aarch64,
+            ),
+        ),
+        (
+            "linux-x86_64",
+            Platform::new(
+                Os::Manylinux {
+                    major: 2,
+                    minor: 28,
+                },
+                Arch::X86_64,
+            ),
+        ),
+        (
+            "macos-arm64",
+            Platform::new(
+                Os::Macos {
+                    major: 13,
+                    minor: 0,
+                },
+                Arch::Aarch64,
+            ),
+        ),
+        (
+            "macos-x86_64",
+            Platform::new(
+                Os::Macos {
+                    major: 13,
+                    minor: 0,
+                },
+                Arch::X86_64,
+            ),
+        ),
+    ];
+    platforms
+        .into_iter()
+        .flat_map(|(name, platform)| {
+            let manylinux_compatible = matches!(platform.os(), Os::Manylinux { .. });
+            [(3, 13), (3, 14)].into_iter().map(move |version| {
+                (
+                    format!("{}.{}-{name}", version.0, version.1),
+                    Tags::from_env(
+                        platform.clone(),
+                        version,
+                        "cpython",
+                        version,
+                        TagsOptions {
+                            manylinux_compatible,
+                            is_cross: true,
+                            ..TagsOptions::default()
+                        },
+                    )
+                    .expect("native Python catalog entries have valid wheel tags"),
+                )
+            })
+        })
+        .collect()
+}
+
+/// Returns the declared wheel filename without trusting URL query data.
+fn locked_artifact_filename(wheel: &toml::Value) -> Option<&str> {
+    let wheel = wheel.as_table()?;
+    ["name", "path", "url"]
+        .into_iter()
+        .find_map(|field| wheel.get(field).and_then(toml::Value::as_str))?
+        .split(['?', '#'])
+        .next()?
+        .rsplit('/')
+        .next()
+}
+
+/// Converts one compatible wheel into an independently authenticated download.
+fn downloadable_wheel(
+    package: &str,
+    version: &str,
+    filename: &str,
+    wheel: &toml::Value,
+) -> Option<PylockArtifact> {
+    let parsed = WheelFilename::from_str(filename).ok()?;
+    if parsed.name.to_string() != package || parsed.version.to_string() != version {
+        return None;
+    }
+    let wheel = wheel.as_table()?;
+    let url = wheel.get("url")?.as_str()?;
+    let location = url
+        .strip_prefix("https://")
+        .or_else(|| url.strip_prefix("http://"))?;
+    let (authority, _) = location.split_once('/')?;
+    if authority.is_empty()
+        || authority.contains(['@', '%', '\\'])
+        || !authority.bytes().all(|byte| byte.is_ascii_graphic())
+        || url.contains(['?', '#'])
+        || !filename.bytes().all(|byte| {
+            byte.is_ascii_alphanumeric() || matches!(byte, b'.' | b'_' | b'-' | b'+' | b'!')
+        })
+    {
+        return None;
+    }
+    let hashes = wheel.get("hashes")?.as_table()?;
+    let sha256 = hashes.get("sha256")?.as_str()?;
+    if sha256.len() != 64 || !sha256.bytes().all(|byte| byte.is_ascii_hexdigit()) {
+        return None;
+    }
+    let size = wheel
+        .get("size")
+        .and_then(toml::Value::as_integer)
+        .and_then(|size| u64::try_from(size).ok())?;
+    Some(PylockArtifact {
+        filename: filename.to_owned(),
+        sha256: sha256.to_owned(),
+        size,
+        url: url.to_owned(),
+    })
 }
 
 /// Extracts one directly downloadable universal wheel from a single lock variant.
@@ -985,6 +1189,42 @@ mod tests {
         ));
 
         assert_eq!(direct_fragment("", &wheels).artifact, None);
+    }
+
+    /// Every target receives only wheels compatible with one supported CPython line.
+    #[test]
+    fn invariant_platform_wheels_are_partitioned_before_acquisition() {
+        let wheels = [
+            "demo-1-cp313-cp313-macosx_13_0_arm64.whl",
+            "demo-1-cp314-cp314-macosx_13_0_arm64.whl",
+            "demo-1-cp313-cp313-manylinux_2_28_x86_64.whl",
+            "demo-1-cp314-cp314-manylinux_2_28_x86_64.whl",
+            "demo-1-py3-none-any.whl",
+        ]
+        .into_iter()
+        .map(|filename| locked_wheel(&format!("https://example.org/{filename}")))
+        .collect::<String>();
+
+        let fragment = direct_fragment("", &wheels);
+
+        for version in ["3.13", "3.14"] {
+            assert_eq!(
+                fragment.artifacts[&format!("{version}-macos-arm64")].len(),
+                2
+            );
+            assert_eq!(
+                fragment.artifacts[&format!("{version}-linux-x86_64")].len(),
+                2
+            );
+            assert_eq!(
+                fragment.artifacts[&format!("{version}-macos-x86_64")].len(),
+                1
+            );
+            assert_eq!(
+                fragment.artifacts[&format!("{version}-linux-arm64")].len(),
+                1
+            );
+        }
     }
 
     /// A marker that covers BSMR's complete Python platform domain is not a selection.

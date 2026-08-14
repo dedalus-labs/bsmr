@@ -85,8 +85,9 @@ def _arguments() -> argparse.Namespace:
             "wheel-environment",
         ),
     )
+    parser.add_argument("--absent", action="store_true")
     parser.add_argument("--build-environment", action="append", default=[], type=Path)
-    parser.add_argument("--artifact", type=Path)
+    parser.add_argument("--artifact", action="append", default=[], type=Path)
     parser.add_argument("--config-setting", action="append", default=[])
     parser.add_argument("--distribution")
     parser.add_argument("--environment", action="append", default=[], type=Path)
@@ -99,8 +100,10 @@ def _arguments() -> argparse.Namespace:
     parser.add_argument("--project-root")
     parser.add_argument("--python", type=Path, required=True)
     parser.add_argument("--python-platform", required=True)
+    parser.add_argument("--requirement")
     parser.add_argument("--ruff", type=Path)
     parser.add_argument("--source", type=Path)
+    parser.add_argument("--source-permitted", action="store_true")
     parser.add_argument("--ty", type=Path)
     parser.add_argument("--uv", type=Path)
     parser.add_argument("--vcs", type=Path)
@@ -330,7 +333,19 @@ def _locked_package(
     uv = _required(args.uv, "--uv")
     packages = args.output.resolve()
     packages.mkdir()
-    if args.artifact is not None:
+    if args.requirement is not None and not args.artifact:
+        raise ValueError("an exact requirement requires locked wheel artifacts")
+    if args.absent:
+        if (
+            args.artifact
+            or args.build_environment
+            or args.config_setting
+            or args.package_config_setting
+            or args.package_build_variable
+            or args.requirement is not None
+        ):
+            raise ValueError("an absent locked package cannot have installation inputs")
+    elif args.artifact:
         if (
             args.build_environment
             or args.config_setting
@@ -338,11 +353,25 @@ def _locked_package(
             or args.package_build_variable
         ):
             raise ValueError("a locked wheel artifact cannot have source-build inputs")
+        if args.requirement is None and len(args.artifact) != 1:
+            raise ValueError(
+                "multiple locked wheel artifacts require an exact requirement"
+            )
+        candidate_arguments = (
+            [
+                argument
+                for artifact in args.artifact
+                for argument in ("--find-links", str(artifact.resolve().parent))
+            ]
+            if args.requirement is not None
+            else []
+        )
         command = [
             str(uv),
             "pip",
             "install",
-            str(args.artifact),
+            args.requirement or str(args.artifact[0]),
+            *candidate_arguments,
             "--target",
             str(packages),
             "--python",
@@ -437,14 +466,51 @@ def _select_locked_package(
         text=True,
     )
     if completed.returncode == 0:
-        args.output.write_text("wheel\n", encoding="utf-8")
+        requirements = [
+            line.removeprefix(" + ")
+            for line in completed.stderr.splitlines()
+            if line.startswith(" + ")
+        ]
+        if not requirements:
+            args.output.write_text('{"acquisition":"absent"}\n', encoding="utf-8")
+            return
+        if len(requirements) != 1:
+            raise RuntimeError(
+                f"uv selected {len(requirements)} packages for locked distribution "
+                f"'{distribution}'"
+            )
+        requirement = requirements[0]
+        name, separator, version = requirement.partition("==")
+        if (
+            name != distribution
+            or not separator
+            or not version
+            or any(character.isspace() for character in version)
+        ):
+            raise RuntimeError(
+                f"uv emitted invalid locked requirement {requirement!r} for "
+                f"'{distribution}'"
+            )
+        args.output.write_text(
+            json.dumps(
+                {"acquisition": "wheel", "requirement": requirement},
+                separators=(",", ":"),
+                sort_keys=True,
+            )
+            + "\n",
+            encoding="utf-8",
+        )
         return
     no_wheel = (
         f"error: Package `{distribution}` can't be installed because it is marked "
         "as `--no-build` but has no binary distribution\n"
     )
-    if completed.returncode == 2 and completed.stderr.endswith(no_wheel):
-        args.output.write_text("source\n", encoding="utf-8")
+    if (
+        args.source_permitted
+        and completed.returncode == 2
+        and completed.stderr.endswith(no_wheel)
+    ):
+        args.output.write_text('{"acquisition":"source"}\n', encoding="utf-8")
         return
     sys.stdout.write(completed.stdout)
     sys.stderr.write(completed.stderr)
