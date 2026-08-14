@@ -86,6 +86,7 @@ def _arguments() -> argparse.Namespace:
         ),
     )
     parser.add_argument("--build-environment", action="append", default=[], type=Path)
+    parser.add_argument("--artifact", type=Path)
     parser.add_argument("--config-setting", action="append", default=[])
     parser.add_argument("--distribution")
     parser.add_argument("--environment", action="append", default=[], type=Path)
@@ -325,42 +326,71 @@ def _locked_package(
     args: argparse.Namespace, process_environment: dict[str, str], scratch: Path
 ) -> None:
     """Install one normalized PEP 751 package against its build closure."""
-    lock = _required(args.lock, "--lock")
     uv = _required(args.uv, "--uv")
     packages = args.output.resolve()
     packages.mkdir()
-    build_flags = ["--no-build"]
-    if args.build_environment:
-        for environment in args.build_environment:
-            _activate_environment(environment, process_environment)
-        build_flags = ["--no-build-isolation"]
-    _run(
-        [
+    if args.artifact is not None:
+        if (
+            args.build_environment
+            or args.config_setting
+            or args.package_config_setting
+            or args.package_build_variable
+        ):
+            raise ValueError("a locked wheel artifact cannot have source-build inputs")
+        command = [
             str(uv),
-            *_uv_config_arguments(args, scratch),
             "pip",
-            "sync",
-            str(lock),
+            "install",
+            str(args.artifact),
             "--target",
             str(packages),
             "--python",
             str(args.python),
             "--no-python-downloads",
-            *build_flags,
+            "--no-build",
+            "--no-deps",
+            "--no-index",
+            "--offline",
             "--strict",
-            "--preview-features",
-            "pylock",
             "--color",
             "never",
             "--no-progress",
-            *(f"--config-setting={setting}" for setting in args.config_setting),
-            *(
-                f"--config-settings-package={setting}"
-                for setting in args.package_config_setting
-            ),
-        ],
-        process_environment,
-    )
+        ]
+        _run(command, process_environment)
+    else:
+        lock = _required(args.lock, "--lock")
+        build_flags = ["--no-build"]
+        if args.build_environment:
+            for environment in args.build_environment:
+                _activate_environment(environment, process_environment)
+            build_flags = ["--no-build-isolation"]
+        _run(
+            [
+                str(uv),
+                *_uv_config_arguments(args, scratch),
+                "pip",
+                "sync",
+                str(lock),
+                "--target",
+                str(packages),
+                "--python",
+                str(args.python),
+                "--no-python-downloads",
+                *build_flags,
+                "--strict",
+                "--preview-features",
+                "pylock",
+                "--color",
+                "never",
+                "--no-progress",
+                *(f"--config-setting={setting}" for setting in args.config_setting),
+                *(
+                    f"--config-settings-package={setting}"
+                    for setting in args.package_config_setting
+                ),
+            ],
+            process_environment,
+        )
     _normalize_entry_points(packages)
     _validate_environment(packages)
     _write_package_manifest(packages, Path(_required(args.manifest, "--manifest")))
@@ -580,9 +610,11 @@ def _wheel_environment(
             str(packages),
             "--python",
             str(args.python),
+            "--no-python-downloads",
             "--no-build",
             "--no-deps",
             "--no-index",
+            "--offline",
             "--strict",
             "--color",
             "never",
@@ -641,6 +673,7 @@ def _project(
             "--python",
             str(python),
             "--no-python-downloads",
+            "--offline",
             "--color",
             "never",
             "--no-progress",

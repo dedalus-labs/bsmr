@@ -193,9 +193,18 @@ separate actions. Source-controlled virtual environments are detected by
 `pyvenv.cfg` and pruned before package discovery. Generated caches, lockfiles,
 build outputs, and virtual environments never become first-party source inputs.
 
-Each package action uses `uv pip sync --strict` against one canonical
+The general package path uses `uv pip sync --strict` against one canonical
 single-package PEP 751 fragment, normalizes console-script shebangs, rejects
 symlinks and special files, and records the immutable result in BSMR's CAS.
+When a lock has one marker-free variant with exactly one size- and
+SHA-256-pinned `py3-none-any` or `py2.py3-none-any` wheel, BSMR declares that
+wheel as a separate download action. Pinned uv installs the local artifact with
+index, dependency, build, and network access disabled. Direct acquisition also
+requires a credential-free HTTP(S) URL and a wheel filename matching the locked
+distribution and version. All other wheels and source distributions continue
+through the canonical PEP 751 fragment so uv remains responsible for
+compatibility selection.
+
 BSMR composes those package trees deterministically, rejects incompatible
 import-file collisions, applies uv-compatible first-package precedence to
 console scripts, and records all owners when identical files are shared.
@@ -221,14 +230,19 @@ The current implementation is the pinned-uv differential baseline from
 [RFC 0004](https://github.com/dedalus-labs/bsmr/discussions/16), not the RFC's
 final native materializer.
 
-A cold package action may still ask uv to fetch its exact locked artifact from
-an index. Package-granular, hash-addressed environment layers are implemented,
-but portable offline artifact replay after an action-cache miss is not: the
-distribution archive itself is not yet a separately acquired CAS object.
-Native PEP 751 materialization, import-level ownership and closure inference,
-and provenance queries remain release gates.
+Portable offline artifact replay after an action-cache miss is implemented for
+the universal-wheel subset above: the wheel is a separately acquired,
+checksum-verified action input, and its repository-independent HTTP cache entry
+is revalidated on every restoration. A cold action for a platform-sensitive
+wheel, sdist, VCS dependency, local archive, or marker-qualified variant may
+still ask uv to fetch the exact artifact selected by its PEP 751 fragment.
+Native materialization for those remaining forms, import-level ownership and
+closure inference, and provenance queries remain release gates.
 
 Pure-Python PEP 517 builds use the exact interpreter and locked build closure.
+BSMR invokes uv offline for first-party wheel construction, but local execution
+does not yet prevent a build backend from opening its own network connection;
+enforced network isolation remains a release gate.
 Native extensions currently use the local execution platform's C/C++ tools;
 those actions run locally and are not uploaded to a remote cache. A declared,
 content-addressed native compiler and sysroot are required before BSMR can call

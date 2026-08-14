@@ -12,6 +12,10 @@ PythonEnvironmentInfo = provider(fields = {
     "roots": provider_field(list[Artifact]),
 })
 
+PythonLockedArtifactInfo = provider(fields = {
+    "file": provider_field(Artifact),
+})
+
 PythonLockedPackageInfo = provider(fields = {
     "manifest": provider_field(Artifact),
     "name": provider_field(str),
@@ -118,6 +122,10 @@ def _locked_package_command(ctx: AnalysisContext, root, manifest, lock: Artifact
     """Constructs one wheel or source installation with exact cache semantics."""
     command, python_version, uv_version = _runner_command(ctx, "locked-package", root)
     command.add(["--lock", lock, "--manifest", manifest])
+    if ctx.attrs.artifact != None:
+        if source:
+            fail("a source package cannot consume a wheel artifact")
+        command.add(["--artifact", ctx.attrs.artifact[PythonLockedArtifactInfo].file])
     if source:
         if ctx.attrs.build_environment == None:
             fail("source package '{}' requires a declared build environment".format(ctx.attrs.package))
@@ -170,6 +178,8 @@ def _selected_locked_package(ctx: AnalysisContext, artifacts, outputs, selection
 
 def _python_locked_package_impl(ctx: AnalysisContext) -> list[Provider]:
     """Materializes one normalized package from a canonical PEP 751 fragment."""
+    if ctx.attrs.artifact != None and ctx.attrs.acquisition != "wheel":
+        fail("a direct wheel artifact requires wheel acquisition")
     root = ctx.actions.declare_output(ctx.label.name, dir = True, has_content_based_path = True)
     manifest = ctx.actions.declare_output("{}.manifest.json".format(ctx.label.name), has_content_based_path = True)
     lock = ctx.actions.write("pylock.{}.toml".format(ctx.label.name), ctx.attrs.lock)
@@ -223,6 +233,10 @@ python_locked_package = rule(
     impl = _python_locked_package_impl,
     attrs = {
         "acquisition": attrs.enum(["source", "wheel", "wheel-or-source"]),
+        "artifact": attrs.option(
+            attrs.dep(providers = [PythonLockedArtifactInfo]),
+            default = None,
+        ),
         "build_environment": attrs.option(
             attrs.dep(providers = [PythonEnvironmentInfo]),
             default = None,
@@ -237,6 +251,35 @@ python_locked_package = rule(
         "_runner": attrs.source(default = "prelude//python_native:runner"),
     },
     doc = "Materializes one package-granular CAS tree with pinned uv.",
+)
+
+def _python_locked_artifact_impl(ctx: AnalysisContext) -> list[Provider]:
+    """Acquires one immutable wheel as a first-class action input."""
+    wheel = ctx.actions.declare_output(
+        ctx.attrs.filename,
+        has_content_based_path = True,
+    )
+    ctx.actions.download_file(
+        wheel.as_output(),
+        ctx.attrs.url,
+        sha256 = ctx.attrs.sha256,
+        size_bytes = ctx.attrs.size,
+        has_content_based_path = True,
+    )
+    return [
+        DefaultInfo(default_output = wheel),
+        PythonLockedArtifactInfo(file = wheel),
+    ]
+
+python_locked_artifact = rule(
+    impl = _python_locked_artifact_impl,
+    attrs = {
+        "filename": attrs.string(),
+        "sha256": attrs.string(),
+        "size": attrs.int(),
+        "url": attrs.string(),
+    },
+    doc = "Downloads one digest-verified locked wheel.",
 )
 
 def _python_environment_impl(ctx: AnalysisContext) -> list[Provider]:
