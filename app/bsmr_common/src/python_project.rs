@@ -640,6 +640,7 @@ mod tests {
                 acquisition: PylockAcquisition::Wheel,
                 artifact: None,
                 source_artifact: None,
+                vcs_source: None,
                 artifacts: BTreeMap::new(),
             })
             .collect()
@@ -870,6 +871,60 @@ mod tests {
 
         assert!(build.contains("filename = \"demo-1.tar.gz\""));
         assert!(build.contains("source_artifact = \":__bsmr_python_artifact__"));
+    }
+
+    #[test]
+    fn invariant_remote_archives_preserve_their_locked_project_root() {
+        let listing = PackageListing::testing_files(&["pyproject.toml"]);
+        let lock = PylockToml::parse(&format!(
+            "lock-version = '1.0'\ncreated-by = 'test'\n[[packages]]\nname = 'demo'\nversion = '1'\n[packages.archive]\nurl = 'https://example.org/source.zip'\nsubdirectory = 'python/package'\nsize = 42\nhashes = {{ sha256 = '{}' }}\n",
+            "0".repeat(64),
+        ))
+        .unwrap();
+        let root_files = PythonRootFiles {
+            runtime_packages: lock.installation_fragments().unwrap(),
+            ..PythonRootFiles::default()
+        };
+
+        let build = render_python_build_file(
+            CellRelativePathBuf::unchecked_new(String::new()),
+            "[project]\nname = 'demo'\nversion = '1'\nrequires-python = '>=3.14'\n",
+            &listing,
+            &root_files,
+        )
+        .unwrap();
+
+        assert!(build.contains("filename = \"source.zip\""));
+        assert!(build.contains("source_subdirectory = \"python/package\""));
+        assert!(build.contains("source_version = \"1\""));
+    }
+
+    #[test]
+    fn invariant_vcs_sources_are_acquired_at_their_locked_commit() {
+        let listing = PackageListing::testing_files(&["pyproject.toml"]);
+        let lock = PylockToml::parse(
+            "lock-version = '1.0'\ncreated-by = 'test'\n[[packages]]\nname = 'demo'\nversion = '1'\n[packages.vcs]\ntype = 'git'\nurl = 'https://example.org/demo.git'\ncommit-id = '0000000000000000000000000000000000000000'\nsubdirectory = 'python/package'\n",
+        )
+        .unwrap();
+        let root_files = PythonRootFiles {
+            runtime_packages: lock.installation_fragments().unwrap(),
+            ..PythonRootFiles::default()
+        };
+
+        let build = render_python_build_file(
+            CellRelativePathBuf::unchecked_new(String::new()),
+            "[project]\nname = 'demo'\nversion = '1'\nrequires-python = '>=3.14'\n",
+            &listing,
+            &root_files,
+        )
+        .unwrap();
+
+        assert!(build.contains("git_fetch(\n"));
+        assert!(build.contains("repo = \"https://example.org/demo.git\""));
+        assert!(build.contains("rev = \"0000000000000000000000000000000000000000\""));
+        assert!(build.contains("source_tree = \":__bsmr_python_vcs__"));
+        assert!(build.contains("source_subdirectory = \"python/package\""));
+        assert!(build.contains("source_version = \"1\""));
     }
 
     #[test]

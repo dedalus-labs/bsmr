@@ -17,6 +17,7 @@ use super::super::PythonWorkspaceMember;
 use super::target;
 use crate::python_lock::PylockArtifact;
 use crate::python_lock::PylockInstallationFragment;
+use crate::python_lock::PylockVcsSource;
 
 /// Emits the root toolchain, lock environments, and first-party wheel closure.
 pub(super) fn render_environment(
@@ -124,8 +125,8 @@ fn render_dependency_environments(
         if let Some(artifact) = &package.artifact {
             artifacts.insert(locked_artifact_target(artifact), artifact);
         }
-        if let Some(artifact) = &package.source_artifact {
-            artifacts.insert(locked_artifact_target(artifact), artifact);
+        if let Some(source) = &package.source_artifact {
+            artifacts.insert(locked_artifact_target(&source.artifact), &source.artifact);
         }
         for artifact in package.artifacts.values().flatten() {
             artifacts.insert(locked_artifact_target(artifact), artifact);
@@ -133,6 +134,14 @@ fn render_dependency_environments(
     }
     for (name, artifact) in artifacts {
         render_locked_artifact(output, &name, artifact)?;
+    }
+    let vcs_sources = actions
+        .values()
+        .filter_map(|(package, _)| package.vcs_source.as_ref())
+        .map(|source| (locked_vcs_target(source), source))
+        .collect::<BTreeMap<_, _>>();
+    for (name, source) in vcs_sources {
+        render_locked_vcs(output, &name, source)?;
     }
     for (name, (package, build_environment)) in actions {
         render_locked_package(
@@ -191,6 +200,23 @@ fn render_locked_artifact(
         .map_err(NativePythonBuildError::Render)?;
     writeln!(output, "    size = {},", artifact.size).map_err(NativePythonBuildError::Render)?;
     writeln!(output, "    url = {:?},", artifact.url).map_err(NativePythonBuildError::Render)?;
+    writeln!(output, ")\n").map_err(NativePythonBuildError::Render)
+}
+
+/// Emits one exact Git commit as a cacheable source-tree acquisition action.
+fn render_locked_vcs(
+    output: &mut String,
+    name: &str,
+    source: &PylockVcsSource,
+) -> Result<(), NativePythonBuildError> {
+    writeln!(output, "git_fetch(").map_err(NativePythonBuildError::Render)?;
+    writeln!(output, "    name = {name:?},").map_err(NativePythonBuildError::Render)?;
+    writeln!(output, "    repo = {:?},", source.url).map_err(NativePythonBuildError::Render)?;
+    writeln!(output, "    rev = {:?},", source.commit).map_err(NativePythonBuildError::Render)?;
+    if source.commit.len() == 64 {
+        writeln!(output, "    object_format = \"sha256\",")
+            .map_err(NativePythonBuildError::Render)?;
+    }
     writeln!(output, ")\n").map_err(NativePythonBuildError::Render)
 }
 
@@ -272,13 +298,33 @@ fn render_locked_package(
         )
         .map_err(NativePythonBuildError::Render)?;
     }
-    if let Some(artifact) = &package.source_artifact {
+    if let Some(source) = &package.source_artifact {
         writeln!(
             output,
             "    source_artifact = {:?},",
-            format!(":{}", locked_artifact_target(artifact))
+            format!(":{}", locked_artifact_target(&source.artifact))
         )
         .map_err(NativePythonBuildError::Render)?;
+        if let Some(subdirectory) = &source.subdirectory {
+            writeln!(output, "    source_subdirectory = {subdirectory:?},")
+                .map_err(NativePythonBuildError::Render)?;
+        }
+        writeln!(output, "    source_version = {:?},", source.version)
+            .map_err(NativePythonBuildError::Render)?;
+    }
+    if let Some(source) = &package.vcs_source {
+        writeln!(
+            output,
+            "    source_tree = {:?},",
+            format!(":{}", locked_vcs_target(source))
+        )
+        .map_err(NativePythonBuildError::Render)?;
+        if let Some(subdirectory) = &source.subdirectory {
+            writeln!(output, "    source_subdirectory = {subdirectory:?},")
+                .map_err(NativePythonBuildError::Render)?;
+        }
+        writeln!(output, "    source_version = {:?},", source.version)
+            .map_err(NativePythonBuildError::Render)?;
     }
     if !package.artifacts.is_empty() {
         writeln!(
@@ -335,6 +381,15 @@ fn locked_artifact_target(artifact: &PylockArtifact) -> String {
     }
     digest.update(artifact.size.to_le_bytes());
     format!("__bsmr_python_artifact__{}", hex::encode(digest.finalize()))
+}
+
+/// Returns the stable target identity for one immutable Git tree.
+fn locked_vcs_target(source: &PylockVcsSource) -> String {
+    let mut digest = Sha256::new();
+    digest.update(source.url.as_bytes());
+    digest.update([0]);
+    digest.update(source.commit.as_bytes());
+    format!("__bsmr_python_vcs__{}", hex::encode(digest.finalize()))
 }
 
 /// Returns one content-derived label for a package action and its build contract.

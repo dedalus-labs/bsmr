@@ -12,6 +12,7 @@ use std::str::FromStr;
 use std::sync::LazyLock;
 
 use serde::Deserialize;
+use uv_distribution_filename::SourceDistExtension;
 use uv_distribution_filename::SourceDistFilename;
 use uv_distribution_filename::WheelFilename;
 use uv_pep508::MarkerTree;
@@ -67,7 +68,9 @@ pub struct PylockInstallationFragment {
     /// One unconditionally compatible wheel that bypasses selection.
     pub artifact: Option<PylockArtifact>,
     /// One immutable source archive acquired before a PEP 517 action.
-    pub source_artifact: Option<PylockArtifact>,
+    pub source_artifact: Option<PylockSourceArtifact>,
+    /// One immutable VCS tree acquired before a PEP 517 action.
+    pub vcs_source: Option<PylockVcsSource>,
     /// Exact wheel candidates keyed by Python line and execution platform.
     pub artifacts: BTreeMap<String, Vec<PylockArtifact>>,
 }
@@ -79,6 +82,30 @@ pub struct PylockArtifact {
     pub sha256: String,
     pub size: u64,
     pub url: String,
+}
+
+/// One source artifact plus the locked build identity it must produce.
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct PylockSourceArtifact {
+    /// Digest-verified archive acquired independently of the build action.
+    pub artifact: PylockArtifact,
+    /// Optional normalized project root within a nonstandard archive.
+    pub subdirectory: Option<String>,
+    /// Exact distribution version the source build must produce.
+    pub version: String,
+}
+
+/// One immutable VCS tree plus the locked build identity it must produce.
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct PylockVcsSource {
+    /// Full immutable Git object identity selected by the lock.
+    pub commit: String,
+    /// Optional normalized project root within the checkout.
+    pub subdirectory: Option<String>,
+    /// Credential-free HTTPS repository address.
+    pub url: String,
+    /// Exact distribution version the source build must produce.
+    pub version: String,
 }
 
 /// The artifact forms available to uv for one locked distribution.
@@ -187,6 +214,14 @@ impl PylockToml {
                     } else {
                         None
                     };
+                    let vcs_source = if has_source && !universal {
+                        match variants.as_slice() {
+                            [variant] => direct_vcs_source(variant),
+                            _ => None,
+                        }
+                    } else {
+                        None
+                    };
                     let mut fragment = base.clone();
                     fragment.insert("packages".to_owned(), toml::Value::Array(variants));
                     Ok(PylockInstallationFragment {
@@ -206,6 +241,7 @@ impl PylockToml {
                         },
                         artifact,
                         source_artifact,
+                        vcs_source,
                         artifacts,
                     })
                 },
@@ -358,6 +394,13 @@ impl PylockTomlArtifact {
                 _ => unreachable!("artifact kinds are finite"),
             }));
         }
+        if self
+            .subdirectory
+            .as_deref()
+            .is_some_and(|path| !normalized_subdirectory(path))
+        {
+            return Err(package.invalid("artifact subdirectory must be a normalized relative path"));
+        }
         Ok(())
     }
 }
@@ -388,6 +431,13 @@ impl PylockTomlVcs {
             || self.path.as_deref().is_some_and(|path| !path.is_empty());
         if !located {
             return Err(package.invalid("VCS URL or path is required"));
+        }
+        if self
+            .subdirectory
+            .as_deref()
+            .is_some_and(|path| !normalized_subdirectory(path))
+        {
+            return Err(package.invalid("VCS subdirectory must be a normalized relative path"));
         }
         Ok(())
     }
@@ -684,10 +734,12 @@ fn downloadable_artifact(filename: &str, artifact: &toml::Table) -> Option<Pyloc
     let location = url
         .strip_prefix("https://")
         .or_else(|| url.strip_prefix("http://"))?;
-    let (authority, _) = location.split_once('/')?;
+    let (authority, path) = location.split_once('/')?;
     if authority.is_empty()
+        || path.is_empty()
         || authority.contains(['@', '%', '\\'])
-        || !authority.bytes().all(|byte| byte.is_ascii_graphic())
+        || !url.bytes().all(|byte| byte.is_ascii_graphic())
+        || url.contains('\\')
         || url.contains(['?', '#'])
         || !filename.bytes().all(|byte| {
             byte.is_ascii_alphanumeric() || matches!(byte, b'.' | b'_' | b'-' | b'+' | b'!')
@@ -727,8 +779,8 @@ fn downloadable_wheel(
     downloadable_artifact(filename, wheel)
 }
 
-/// Extracts one directly downloadable sdist from an unconditional variant.
-fn direct_source_artifact(package: &toml::Value) -> Option<PylockArtifact> {
+/// Extracts one directly downloadable source archive from an unconditional variant.
+fn direct_source_artifact(package: &toml::Value) -> Option<PylockSourceArtifact> {
     let package = package.as_table()?;
     if package.contains_key("requires-python")
         || package
@@ -738,22 +790,76 @@ fn direct_source_artifact(package: &toml::Value) -> Option<PylockArtifact> {
     {
         return None;
     }
-    let source = package.get("sdist")?;
-    if source
+    let (source, standard_sdist) = package
+        .get("sdist")
+        .map(|source| (source, true))
+        .or_else(|| package.get("archive").map(|source| (source, false)))?;
+    let subdirectory = source
         .get("subdirectory")
         .and_then(toml::Value::as_str)
-        .is_some()
-    {
-        return None;
-    }
+        .map(str::to_owned);
     let filename = locked_artifact_filename(source)?;
-    let parsed = SourceDistFilename::parsed_normalized_filename(filename).ok()?;
-    if parsed.name.to_string() != package.get("name")?.as_str()?
-        || parsed.version.to_string() != package.get("version")?.as_str()?
+    let package_name = package.get("name")?.as_str()?;
+    let version = package.get("version")?.as_str()?;
+    if standard_sdist {
+        let parsed = SourceDistFilename::parsed_normalized_filename(filename).ok()?;
+        if subdirectory.is_some()
+            || parsed.name.to_string() != package_name
+            || parsed.version.to_string() != version
+        {
+            return None;
+        }
+    } else {
+        SourceDistExtension::from_path(filename).ok()?;
+    }
+    Some(PylockSourceArtifact {
+        artifact: downloadable_artifact(filename, source.as_table()?)?,
+        subdirectory,
+        version: version.to_owned(),
+    })
+}
+
+/// Extracts one immutable Git tree from an unconditional lock variant.
+fn direct_vcs_source(package: &toml::Value) -> Option<PylockVcsSource> {
+    let package = package.as_table()?;
+    if package.contains_key("requires-python")
+        || package
+            .get("marker")
+            .and_then(toml::Value::as_str)
+            .is_some_and(|marker| !marker_covers_supported_python(marker))
     {
         return None;
     }
-    downloadable_artifact(filename, source.as_table()?)
+    let vcs = package.get("vcs")?.as_table()?;
+    if vcs.get("type").and_then(toml::Value::as_str) != Some("git") || vcs.contains_key("path") {
+        return None;
+    }
+    let url = vcs.get("url")?.as_str()?;
+    let location = url.strip_prefix("https://")?;
+    let (authority, path) = location.split_once('/')?;
+    let commit = vcs.get("commit-id")?.as_str()?;
+    if authority.is_empty()
+        || path.is_empty()
+        || authority.contains(['@', '%', '\\'])
+        || !url.bytes().all(|byte| byte.is_ascii_graphic())
+        || url.contains('\\')
+        || url.contains(['?', '#'])
+        || !matches!(commit.len(), 40 | 64)
+        || !commit
+            .bytes()
+            .all(|byte| byte.is_ascii_digit() || matches!(byte, b'a'..=b'f'))
+    {
+        return None;
+    }
+    Some(PylockVcsSource {
+        commit: commit.to_owned(),
+        subdirectory: vcs
+            .get("subdirectory")
+            .and_then(toml::Value::as_str)
+            .map(str::to_owned),
+        url: url.to_owned(),
+        version: package.get("version")?.as_str()?.to_owned(),
+    })
 }
 
 /// Extracts one directly downloadable universal wheel from a single lock variant.
@@ -859,6 +965,17 @@ fn normalize_package_name(name: &str) -> Option<String> {
     Some(normalized)
 }
 
+/// Accepts only portable non-root paths within an acquired source tree.
+fn normalized_subdirectory(path: &str) -> bool {
+    !path.is_empty()
+        && !path.starts_with('/')
+        && !path.contains('\\')
+        && !(path.len() > 1 && path.as_bytes()[1] == b':')
+        && path
+            .split('/')
+            .all(|component| !component.is_empty() && component != "." && component != "..")
+}
+
 #[cfg(test)]
 mod tests {
     use std::path::Path;
@@ -870,6 +987,7 @@ mod tests {
     use super::PylockArtifact;
     use super::PylockInstallationFragment;
     use super::PylockName;
+    use super::PylockSourceArtifact;
     use super::PylockToml;
     use super::PylockTomlError;
 
@@ -987,18 +1105,41 @@ mod tests {
     /// Immutable VCS identity must survive the wire boundary as typed data.
     #[test]
     fn invariant_vcs_commit_and_stable_version_are_preserved() {
+        let commit = "deadbeefdeadbeefdeadbeefdeadbeefdeadbeef";
         let input = format!(
-            "{HEADER}[[packages]]\nname = \"demo\"\nversion = \"1.0\"\n[packages.vcs]\ntype = \"git\"\nurl = \"https://example.org/demo.git\"\ncommit-id = \"deadbeef\"\n"
+            "{HEADER}[[packages]]\nname = \"demo\"\nversion = \"1.0\"\n[packages.vcs]\ntype = \"git\"\nurl = \"https://example.org/demo.git\"\ncommit-id = \"{commit}\"\n"
         );
         let lock = PylockToml::parse(&input).unwrap();
         let vcs = lock.packages[0].vcs.as_ref().unwrap();
 
         assert_eq!(lock.packages[0].version.as_deref(), Some("1.0"));
         assert_eq!(vcs.kind, "git");
-        assert_eq!(vcs.commit_id, "deadbeef");
+        assert_eq!(vcs.commit_id, commit);
+        let fragment = &lock.installation_fragments().unwrap()[0];
+        assert_eq!(fragment.acquisition, PylockAcquisition::Source);
+        let source = fragment.vcs_source.as_ref().unwrap();
+        assert_eq!(source.commit, commit);
+        assert_eq!(source.url, "https://example.org/demo.git");
+        assert_eq!(source.version, "1.0");
+    }
+
+    /// Direct Git acquisition requires a safe URL and a full object identity.
+    #[test_case("http://example.org/demo.git", "deadbeefdeadbeefdeadbeefdeadbeefdeadbeef"; "insecure")]
+    #[test_case("https://token@example.org/demo.git", "deadbeefdeadbeefdeadbeefdeadbeefdeadbeef"; "credentialed")]
+    #[test_case("https://example.org/demo.git?ref=main", "deadbeefdeadbeefdeadbeefdeadbeefdeadbeef"; "query")]
+    #[test_case("https://example.org/demo.git", "deadbeef"; "abbreviated_commit")]
+    fn invariant_direct_vcs_requires_immutable_safe_inputs(url: &str, commit: &str) {
+        let input = format!(
+            "{HEADER}[[packages]]\nname = 'demo'\nversion = '1'\n[packages.vcs]\ntype = 'git'\nurl = {url:?}\ncommit-id = {commit:?}\n"
+        );
+
         assert_eq!(
-            lock.installation_fragments().unwrap()[0].acquisition,
-            PylockAcquisition::Source
+            PylockToml::parse(&input)
+                .unwrap()
+                .installation_fragments()
+                .unwrap()[0]
+                .vcs_source,
+            None
         );
     }
 
@@ -1060,6 +1201,23 @@ mod tests {
             format!("{HEADER}[[packages]]\nname = \"demo\"\n[[packages.wheels]]\n{artifact}\n");
 
         assert_package_error(&input, "demo", expected);
+    }
+
+    /// Archive project roots cannot escape or ambiguously address their source tree.
+    #[test_case("../package"; "parent")]
+    #[test_case("/package"; "absolute")]
+    #[test_case("package//src"; "empty_component")]
+    #[test_case("package\\src"; "backslash")]
+    fn invariant_artifact_subdirectory_is_normalized(subdirectory: &str) {
+        let input = format!(
+            "{HEADER}[[packages]]\nname = 'demo'\nversion = '1'\n[packages.archive]\nurl = 'https://example.org/source.zip'\nsubdirectory = {subdirectory:?}\nhashes = {{ sha256 = 'demo' }}\n"
+        );
+
+        assert_package_error(
+            &input,
+            "demo",
+            "artifact subdirectory must be a normalized relative path",
+        );
     }
 
     /// VCS entries need an immutable revision and one acquisition location.
@@ -1170,11 +1328,15 @@ mod tests {
         assert_eq!(fragment.acquisition, PylockAcquisition::Source);
         assert_eq!(
             fragment.source_artifact,
-            Some(PylockArtifact {
-                filename: "demo-1.tar.gz".to_owned(),
-                sha256: SHA256.to_owned(),
-                size: 42,
-                url: "https://example.org/demo-1.tar.gz".to_owned(),
+            Some(PylockSourceArtifact {
+                artifact: PylockArtifact {
+                    filename: "demo-1.tar.gz".to_owned(),
+                    sha256: SHA256.to_owned(),
+                    size: 42,
+                    url: "https://example.org/demo-1.tar.gz".to_owned(),
+                },
+                subdirectory: None,
+                version: "1".to_owned(),
             })
         );
     }

@@ -21,8 +21,10 @@ import shutil
 import stat
 import subprocess
 import sys
+from email.parser import Parser
 from pathlib import Path, PurePosixPath
 from typing import Final
+from urllib.parse import quote
 
 _SOURCE_DATE_EPOCH: Final = "315532800"
 # Keep this baseline aligned with uv's Darwin target triples:
@@ -111,15 +113,18 @@ def _arguments() -> argparse.Namespace:
     parser.add_argument("--ruff", type=Path)
     parser.add_argument("--source", type=Path)
     parser.add_argument("--source-artifact", type=Path)
+    parser.add_argument("--source-subdirectory")
+    parser.add_argument("--source-tree", type=Path)
     parser.add_argument("--source-permitted", action="store_true")
     parser.add_argument("--ty", type=Path)
     parser.add_argument("--uv", type=Path)
     parser.add_argument("--vcs", type=Path)
+    parser.add_argument("--version")
     parser.add_argument("--wheel-dir", action="append", default=[], type=Path)
     return parser.parse_args()
 
 
-def _required(value: object | None, name: str) -> object:
+def _required[T](value: T | None, name: str) -> T:
     """Return a mode-specific argument or fail with its exact missing name."""
     if value is None:
         raise ValueError(f"{name} is required for this action")
@@ -336,6 +341,96 @@ def _validate_environment(packages: Path) -> None:
             )
 
 
+def _normalized_source_subdirectory(subdirectory: str) -> PurePosixPath:
+    """Parse one portable project root contained by an acquired source."""
+    path = PurePosixPath(subdirectory)
+    if (
+        not path.parts
+        or path.is_absolute()
+        or ".." in path.parts
+        or "\\" in subdirectory
+        or (len(subdirectory) > 1 and subdirectory[1] == ":")
+        or path.as_posix() != subdirectory
+    ):
+        raise ValueError(
+            f"source subdirectory '{subdirectory}' is not a normalized relative path"
+        )
+    return path
+
+
+def _source_artifact_reference(artifact: Path, subdirectory: str | None) -> str:
+    """Address one acquired archive and an optional normalized project root."""
+    artifact = artifact.resolve()
+    if subdirectory is None:
+        return str(artifact)
+    _normalized_source_subdirectory(subdirectory)
+    return f"{artifact.as_uri()}#subdirectory={quote(subdirectory, safe='/')}"
+
+
+def _source_tree_reference(tree: Path, subdirectory: str | None) -> str:
+    """Select one normalized project root contained by an acquired source tree."""
+    root = tree.resolve()
+    if not root.is_dir():
+        raise RuntimeError(f"acquired source tree '{tree}' is not a directory")
+    source = (
+        root
+        if subdirectory is None
+        else root.joinpath(
+            *_normalized_source_subdirectory(subdirectory).parts
+        ).resolve()
+    )
+    if (source != root and root not in source.parents) or not source.is_dir():
+        raise RuntimeError(
+            f"source project root '{source}' is not a contained directory"
+        )
+    return str(source)
+
+
+def _normalize_distribution_name(name: str) -> str:
+    """Normalize one core-metadata Name using the Python packaging contract."""
+    normalized: list[str] = []
+    separator = False
+    for character in name.lower():
+        if character.isascii() and character.isalnum():
+            normalized.append(character)
+            separator = False
+        elif character in "-_.":
+            if not separator:
+                normalized.append("-")
+                separator = True
+        else:
+            raise RuntimeError(f"distribution metadata has invalid Name {name!r}")
+    value = "".join(normalized)
+    if not value or value.startswith("-") or value.endswith("-"):
+        raise RuntimeError(f"distribution metadata has invalid Name {name!r}")
+    return value
+
+
+def _validate_distribution_identity(
+    packages: Path, distribution: str, version: str
+) -> None:
+    """Require one built wheel to match its locked project identity."""
+    metadata_files = sorted(packages.glob("*.dist-info/METADATA"))
+    if len(metadata_files) != 1:
+        raise RuntimeError(
+            f"expected {distribution}=={version}, installed {len(metadata_files)} metadata records"
+        )
+    metadata = Parser().parsestr(metadata_files[0].read_text(encoding="utf-8"))
+    actual_name = metadata.get("Name")
+    actual_version = metadata.get("Version")
+    if not actual_name or not actual_version:
+        raise RuntimeError(
+            f"expected {distribution}=={version}, installed incomplete metadata"
+        )
+    if (
+        _normalize_distribution_name(actual_name) != distribution
+        or actual_version != version
+    ):
+        raise RuntimeError(
+            f"expected {distribution}=={version}, installed {actual_name}=={actual_version}"
+        )
+
+
 def _activate_environment(root: Path, process_environment: dict[str, str]) -> Path:
     """Expose one exact CAS-backed package tree to a Python process."""
     environment = root.resolve()
@@ -372,16 +467,27 @@ def _locked_package(
     packages.mkdir()
     if args.requirement is not None and not args.artifact:
         raise ValueError("an exact requirement requires locked wheel artifacts")
-    if args.source_artifact is not None and (
-        args.artifact or args.requirement is not None
+    source_inputs = sum(
+        source is not None for source in (args.source_artifact, args.source_tree)
+    )
+    if source_inputs > 1:
+        raise ValueError("source artifacts and source trees are mutually exclusive")
+    source_input = source_inputs == 1
+    if source_input and (args.artifact or args.requirement is not None):
+        raise ValueError("wheel artifacts and source inputs are mutually exclusive")
+    if source_input and not args.build_environment:
+        raise ValueError("a source input requires a declared build environment")
+    if source_input and (args.distribution is None or args.version is None):
+        raise ValueError("a source input requires its locked identity")
+    if not source_input and (
+        args.source_subdirectory is not None or args.version is not None
     ):
-        raise ValueError("wheel and source artifacts are mutually exclusive")
-    if args.source_artifact is not None and not args.build_environment:
-        raise ValueError("a source artifact requires a declared build environment")
+        raise ValueError("source metadata requires a source input")
     if args.absent:
         if (
             args.artifact
             or args.source_artifact is not None
+            or args.source_tree is not None
             or args.build_environment
             or args.config_setting
             or args.package_config_setting
@@ -442,13 +548,20 @@ def _locked_package(
                 args.python_platform, process_environment, scratch
             )
             build_flags = ["--no-build-isolation"]
-        if args.source_artifact is not None:
+        if source_input:
+            source_reference = (
+                _source_artifact_reference(
+                    args.source_artifact, args.source_subdirectory
+                )
+                if args.source_artifact is not None
+                else _source_tree_reference(args.source_tree, args.source_subdirectory)
+            )
             command = [
                 str(uv),
                 *_uv_config_arguments(args, scratch),
                 "pip",
                 "install",
-                str(args.source_artifact.resolve()),
+                source_reference,
                 "--target",
                 str(packages),
                 "--python",
@@ -496,6 +609,12 @@ def _locked_package(
             command,
             process_environment,
         )
+        if source_input:
+            _validate_distribution_identity(
+                packages,
+                str(_required(args.distribution, "--distribution")),
+                str(_required(args.version, "--version")),
+            )
     _normalize_entry_points(packages)
     _validate_environment(packages)
     _write_package_manifest(packages, Path(_required(args.manifest, "--manifest")))
@@ -676,7 +795,9 @@ def _copy_overlay_file(
     if destination.is_dir():
         raise RuntimeError(f"Python environment path '{relative}' changes kind")
     digest = str(entry[3])
-    mode = int(entry[2])
+    mode = entry[2]
+    if not isinstance(mode, int):
+        raise TypeError(f"Python package '{name}' has invalid mode for '{relative}'")
     previous = selected.get(relative)
     if previous is not None:
         previous_name, previous_digest, previous_mode = previous

@@ -144,6 +144,12 @@ def _locked_package_command(ctx: AnalysisContext, root, manifest, lock: Artifact
             fail("source package '{}' requires a declared build environment".format(ctx.attrs.package))
         if ctx.attrs.source_artifact != None:
             command.add(["--source-artifact", ctx.attrs.source_artifact[PythonLockedArtifactInfo].file])
+        elif ctx.attrs.source_tree != None:
+            command.add(["--source-tree", ctx.attrs.source_tree])
+        if ctx.attrs.source_artifact != None or ctx.attrs.source_tree != None:
+            command.add(["--distribution", ctx.attrs.package, "--version", ctx.attrs.source_version])
+            if ctx.attrs.source_subdirectory != None:
+                command.add(["--source-subdirectory", ctx.attrs.source_subdirectory])
         _add_config_settings(command, ctx.attrs.config_settings)
         for setting in ctx.attrs.package_config_settings:
             command.add(["--package-config-setting", setting])
@@ -225,6 +231,15 @@ def _python_locked_package_impl(ctx: AnalysisContext) -> list[Provider]:
         fail("direct and selected wheel artifacts are mutually exclusive")
     if ctx.attrs.source_artifact != None and ctx.attrs.acquisition == "wheel":
         fail("a source artifact requires source acquisition")
+    if ctx.attrs.source_tree != None and ctx.attrs.acquisition == "wheel":
+        fail("a source tree requires source acquisition")
+    if ctx.attrs.source_artifact != None and ctx.attrs.source_tree != None:
+        fail("source artifacts and source trees are mutually exclusive")
+    source_input = ctx.attrs.source_artifact != None or ctx.attrs.source_tree != None
+    if source_input and ctx.attrs.source_version == None:
+        fail("a source input requires its locked version")
+    if not source_input and (ctx.attrs.source_subdirectory != None or ctx.attrs.source_version != None):
+        fail("source metadata requires a source input")
     root = ctx.actions.declare_output(ctx.label.name, dir = True, has_content_based_path = True)
     manifest = ctx.actions.declare_output("{}.manifest.json".format(ctx.label.name), has_content_based_path = True)
     lock = ctx.actions.write("pylock.{}.toml".format(ctx.label.name), ctx.attrs.lock)
@@ -305,6 +320,9 @@ python_locked_package = rule(
             attrs.dep(providers = [PythonLockedArtifactInfo]),
             default = None,
         ),
+        "source_subdirectory": attrs.option(attrs.string(), default = None),
+        "source_tree": attrs.option(attrs.source(allow_directory = True), default = None),
+        "source_version": attrs.option(attrs.string(), default = None),
         "uv": attrs.exec_dep(providers = [PythonNativeDistributionInfo]),
         "_runner": attrs.source(default = "prelude//python_native:runner"),
     },
