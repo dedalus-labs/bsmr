@@ -623,6 +623,7 @@ mod tests {
     use crate::package_listing::listing::PackageListing;
     use crate::package_listing::listing::testing::PackageListingExt;
     use crate::python_lock::PylockAcquisition;
+    use crate::python_lock::PylockArtifact;
     use crate::python_lock::PylockInstallationFragment;
     use crate::python_lock::PylockToml;
 
@@ -635,6 +636,7 @@ mod tests {
                     "lock-version = '1.0'\ncreated-by = 'test'\n[[packages]]\nname = '{package}'\n"
                 ),
                 acquisition: PylockAcquisition::Wheel,
+                artifact: None,
             })
             .collect()
     }
@@ -813,6 +815,32 @@ mod tests {
         assert_eq!(build.matches("\"ty.toml\"").count(), 4);
         assert_eq!(build.matches("\"uv.toml\"").count(), 2);
         assert_eq!(build.matches("\"README.md\"").count(), 2);
+    }
+
+    #[test]
+    fn invariant_universal_wheels_are_declared_download_inputs() {
+        let listing = PackageListing::testing_files(&["pyproject.toml"]);
+        let mut root_files = root_files_with_packages(&["attrs"]);
+        root_files.build_packages.clear();
+        root_files.runtime_packages[0].artifact = Some(PylockArtifact {
+            filename: "attrs-25.3.0-py3-none-any.whl".to_owned(),
+            sha256: "0000000000000000000000000000000000000000000000000000000000000000".to_owned(),
+            size: 42,
+            url: "https://example.org/attrs-25.3.0-py3-none-any.whl".to_owned(),
+        });
+
+        let build = render_python_build_file(
+            CellRelativePathBuf::unchecked_new(String::new()),
+            "[project]\nname = 'demo'\nversion = '1'\nrequires-python = '>=3.14'\n",
+            &listing,
+            &root_files,
+        )
+        .unwrap();
+
+        assert!(build.contains("python_locked_artifact(\n"));
+        assert!(build.contains("filename = \"attrs-25.3.0-py3-none-any.whl\""));
+        assert!(build.contains("size = 42"));
+        assert!(build.contains("artifact = \":__bsmr_python_artifact__"));
     }
 
     #[test]

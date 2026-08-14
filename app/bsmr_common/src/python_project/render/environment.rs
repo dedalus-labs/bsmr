@@ -15,6 +15,7 @@ use super::super::NativePythonBuildError;
 use super::super::PythonRootFiles;
 use super::super::PythonWorkspaceMember;
 use super::target;
+use crate::python_lock::PylockArtifact;
 use crate::python_lock::PylockInstallationFragment;
 
 /// Emits the root toolchain, lock environments, and first-party wheel closure.
@@ -28,7 +29,7 @@ pub(super) fn render_environment(
 ) -> Result<(), NativePythonBuildError> {
     writeln!(
         output,
-        "load(\"@prelude//python_native:defs.bzl\", \"python_environment\", \"python_locked_package\", \"python_wheel_environment\")"
+        "load(\"@prelude//python_native:defs.bzl\", \"python_environment\", \"python_locked_artifact\", \"python_locked_package\", \"python_wheel_environment\")"
     )
     .map_err(NativePythonBuildError::Render)?;
     writeln!(
@@ -118,6 +119,15 @@ fn render_dependency_environments(
             package_build_variables,
         )?;
     }
+    let mut artifacts = BTreeMap::new();
+    for (package, _) in actions.values() {
+        if let Some(artifact) = &package.artifact {
+            artifacts.insert(locked_artifact_target(artifact), artifact);
+        }
+    }
+    for (name, artifact) in artifacts {
+        render_locked_artifact(output, &name, artifact)?;
+    }
     for (name, (package, build_environment)) in actions {
         render_locked_package(
             output,
@@ -159,6 +169,23 @@ fn render_dependency_environments(
         )?;
     }
     Ok(())
+}
+
+/// Emits one digest-verified wheel acquisition action.
+fn render_locked_artifact(
+    output: &mut String,
+    name: &str,
+    artifact: &PylockArtifact,
+) -> Result<(), NativePythonBuildError> {
+    writeln!(output, "python_locked_artifact(").map_err(NativePythonBuildError::Render)?;
+    writeln!(output, "    name = {name:?},").map_err(NativePythonBuildError::Render)?;
+    writeln!(output, "    filename = {:?},", artifact.filename)
+        .map_err(NativePythonBuildError::Render)?;
+    writeln!(output, "    sha256 = {:?},", artifact.sha256)
+        .map_err(NativePythonBuildError::Render)?;
+    writeln!(output, "    size = {},", artifact.size).map_err(NativePythonBuildError::Render)?;
+    writeln!(output, "    url = {:?},", artifact.url).map_err(NativePythonBuildError::Render)?;
+    writeln!(output, ")\n").map_err(NativePythonBuildError::Render)
 }
 
 /// Indexes each distinct package action once across every lock profile.
@@ -231,6 +258,14 @@ fn render_locked_package(
         .map_err(NativePythonBuildError::Render)?;
     writeln!(output, "    package = {:?},", package.package)
         .map_err(NativePythonBuildError::Render)?;
+    if let Some(artifact) = &package.artifact {
+        writeln!(
+            output,
+            "    artifact = {:?},",
+            format!(":{}", locked_artifact_target(artifact))
+        )
+        .map_err(NativePythonBuildError::Render)?;
+    }
     writeln!(
         output,
         "    acquisition = {:?},",
@@ -251,6 +286,21 @@ fn render_locked_package(
             .map_err(NativePythonBuildError::Render)?;
     }
     writeln!(output, ")\n").map_err(NativePythonBuildError::Render)
+}
+
+/// Returns the stable target identity for one downloadable wheel.
+fn locked_artifact_target(artifact: &PylockArtifact) -> String {
+    let mut digest = Sha256::new();
+    for value in [
+        artifact.filename.as_str(),
+        artifact.sha256.as_str(),
+        artifact.url.as_str(),
+    ] {
+        digest.update(value.as_bytes());
+        digest.update([0]);
+    }
+    digest.update(artifact.size.to_le_bytes());
+    format!("__bsmr_python_artifact__{}", hex::encode(digest.finalize()))
 }
 
 /// Returns one content-derived label for a package action and its build contract.

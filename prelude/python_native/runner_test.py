@@ -247,6 +247,8 @@ class EnvironmentTest(unittest.TestCase):
             self.assertIn(str(wheel.resolve()), install)
             self.assertIn("--no-deps", install)
             self.assertIn("--no-index", install)
+            self.assertIn("--no-python-downloads", install)
+            self.assertIn("--offline", install)
 
     def test_source_builds_use_only_the_declared_build_environment(self) -> None:
         """A lock containing sdists must never resolve ambient build requirements."""
@@ -255,6 +257,7 @@ class EnvironmentTest(unittest.TestCase):
             output = root / "environment"
             build_environment = _empty_environment(root / "build-environment")
             args = Namespace(
+                artifact=None,
                 build_environment=[build_environment],
                 config_setting=["--global-option=--quiet"],
                 package_config_setting=["numpy:setup-args=-Dblas=blas"],
@@ -294,6 +297,36 @@ class EnvironmentTest(unittest.TestCase):
                     str((build_environment / "bin").resolve())
                 )
             )
+
+    def test_locked_wheel_installs_from_its_verified_artifact(self) -> None:
+        """A directly acquired wheel must not perform index or lock resolution."""
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            artifact = root / "demo-1-py3-none-any.whl"
+            artifact.touch()
+            args = Namespace(
+                artifact=artifact,
+                build_environment=[],
+                config_setting=[],
+                package_build_variable=[],
+                package_config_setting=[],
+                lock=root / "pylock.toml",
+                manifest=root / "package.json",
+                output=root / "environment",
+                python=root / "python",
+                uv=root / "uv",
+            )
+
+            with patch.object(runner, "_run") as run:
+                runner._locked_package(args, {"PATH": "/usr/bin"}, root / "scratch")
+
+            command = run.call_args.args[0]
+            self.assertEqual(command[1:4], ["pip", "install", str(artifact)])
+            self.assertNotIn(str(args.lock), command)
+            self.assertIn("--no-index", command)
+            self.assertIn("--no-deps", command)
+            self.assertIn("--no-build", command)
+            self.assertIn("--offline", command)
 
     def test_locked_package_manifests_compose_one_complete_environment(self) -> None:
         """Package granularity must not leak into the runtime import search path."""
@@ -636,6 +669,7 @@ class ProjectActionTest(unittest.TestCase):
                 )
             )
             self.assertIn("--no-build-isolation", run.call_args.args[0])
+            self.assertIn("--offline", run.call_args.args[0])
             self.assertEqual(
                 run.call_args.args[0][-4:],
                 [

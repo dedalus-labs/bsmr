@@ -39,6 +39,16 @@ pub struct PylockInstallationFragment {
     pub package: String,
     pub contents: String,
     pub acquisition: PylockAcquisition,
+    pub artifact: Option<PylockArtifact>,
+}
+
+/// One universal wheel that BSMR can acquire without index resolution.
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct PylockArtifact {
+    pub filename: String,
+    pub sha256: String,
+    pub size: u64,
+    pub url: String,
 }
 
 /// The artifact forms available to uv for one locked distribution.
@@ -130,6 +140,10 @@ impl PylockToml {
             .map(
                 |(package, (has_wheel, has_source, universal, mut variants))| {
                     variants.sort_by_cached_key(toml::Value::to_string);
+                    let artifact = match variants.as_slice() {
+                        [variant] => direct_universal_wheel(variant),
+                        _ => None,
+                    };
                     let mut fragment = base.clone();
                     fragment.insert("packages".to_owned(), toml::Value::Array(variants));
                     Ok(PylockInstallationFragment {
@@ -147,6 +161,7 @@ impl PylockToml {
                                 unreachable!("a package always has one artifact form")
                             }
                         },
+                        artifact,
                     })
                 },
             )
@@ -466,6 +481,61 @@ fn universal_wheel(wheel: &toml::Value) -> bool {
         })
 }
 
+/// Extracts one directly downloadable universal wheel from a single lock variant.
+fn direct_universal_wheel(package: &toml::Value) -> Option<PylockArtifact> {
+    let package = package.as_table()?;
+    if package.contains_key("marker") || package.contains_key("requires-python") {
+        return None;
+    }
+    let wheels = package.get("wheels")?.as_array()?;
+    let [wheel] = wheels.as_slice() else {
+        return None;
+    };
+    if !universal_wheel(wheel) {
+        return None;
+    }
+    let wheel = wheel.as_table()?;
+    let url = wheel.get("url")?.as_str()?;
+    let location = url
+        .strip_prefix("https://")
+        .or_else(|| url.strip_prefix("http://"))?;
+    let (authority, path) = location.split_once('/')?;
+    let filename = path.rsplit('/').next()?;
+    let identity = filename
+        .strip_suffix("-py3-none-any.whl")
+        .or_else(|| filename.strip_suffix("-py2.py3-none-any.whl"))?;
+    let (wheel_name, wheel_version) = identity.split_once('-')?;
+    if authority.is_empty()
+        || authority.contains(['@', '%', '\\'])
+        || !authority.bytes().all(|byte| byte.is_ascii_graphic())
+        || url.contains(['?', '#'])
+        || !filename.bytes().all(|byte| {
+            byte.is_ascii_alphanumeric() || matches!(byte, b'.' | b'_' | b'-' | b'+' | b'!')
+        })
+        || wheel_version.contains('-')
+        || normalize_package_name(wheel_name).as_deref()
+            != package.get("name").and_then(toml::Value::as_str)
+        || Some(wheel_version) != package.get("version").and_then(toml::Value::as_str)
+    {
+        return None;
+    }
+    let hashes = wheel.get("hashes")?.as_table()?;
+    let sha256 = hashes.get("sha256")?.as_str()?;
+    if sha256.len() != 64 || !sha256.bytes().all(|byte| byte.is_ascii_hexdigit()) {
+        return None;
+    }
+    let size = wheel
+        .get("size")
+        .and_then(toml::Value::as_integer)
+        .and_then(|size| u64::try_from(size).ok())?;
+    Some(PylockArtifact {
+        filename: filename.to_owned(),
+        sha256: sha256.to_owned(),
+        size,
+        url: url.to_owned(),
+    })
+}
+
 /// Recursively sorts TOML table keys without reordering semantic arrays.
 fn canonicalize_table(table: &mut toml::Table) {
     let mut entries = std::mem::take(table).into_iter().collect::<Vec<_>>();
@@ -525,11 +595,14 @@ mod tests {
     use test_case::test_case;
 
     use super::PylockAcquisition;
+    use super::PylockArtifact;
+    use super::PylockInstallationFragment;
     use super::PylockName;
     use super::PylockToml;
     use super::PylockTomlError;
 
     const HEADER: &str = "lock-version = \"1.0\"\ncreated-by = \"uv\"\n";
+    const SHA256: &str = "0000000000000000000000000000000000000000000000000000000000000000";
     const ATTRS: &str = indoc! {r#"
         [[packages]]
         name = "attrs"
@@ -563,6 +636,25 @@ mod tests {
             }
             result => panic!("expected package error, got {result:?}"),
         }
+    }
+
+    /// Returns one package fragment from concise direct-wheel fixture fields.
+    fn direct_fragment(package_fields: &str, wheels: &str) -> PylockInstallationFragment {
+        let input =
+            format!("{HEADER}[[packages]]\nname = 'demo'\nversion = '1'\n{package_fields}{wheels}");
+        PylockToml::parse(&input)
+            .unwrap()
+            .installation_fragments()
+            .unwrap()
+            .pop()
+            .unwrap()
+    }
+
+    /// Returns one complete size- and SHA-256-pinned wheel table.
+    fn locked_wheel(url: &str) -> String {
+        format!(
+            "[[packages.wheels]]\nurl = {url:?}\nsize = 42\nhashes = {{ sha256 = {SHA256:?} }}\n"
+        )
     }
 
     /// Package and artifact order must not leak into downstream action identities.
@@ -764,8 +856,68 @@ mod tests {
     /// A Python 3 universal wheel cannot require platform-sensitive selection.
     #[test]
     fn invariant_universal_wheel_bypasses_explicit_selection() {
+        let wheels = format!(
+            "[packages.sdist]\nurl = 'https://example.org/demo.tar.gz'\nhashes = {{ sha256 = 'source' }}\n{}",
+            locked_wheel("https://example.org/demo-1-py3-none-any.whl")
+        );
+        let fragment = direct_fragment("", &wheels);
+
+        assert_eq!(fragment.acquisition, PylockAcquisition::Wheel);
+        assert_eq!(
+            fragment.artifact,
+            Some(PylockArtifact {
+                filename: "demo-1-py3-none-any.whl".to_owned(),
+                sha256: SHA256.to_owned(),
+                size: 42,
+                url: "https://example.org/demo-1-py3-none-any.whl".to_owned(),
+            })
+        );
+    }
+
+    /// Direct acquisition requires one unambiguous URL and SHA-256 identity.
+    #[test_case("file:///tmp/demo-1-py3-none-any.whl"; "local")]
+    #[test_case("https://token@example.org/demo-1-py3-none-any.whl"; "credentialed")]
+    #[test_case("https://example.org/demo-1-py3-none-any.whl?token=secret"; "query")]
+    #[test_case("https://example.org/demo%2D1-py3-none-any.whl"; "encoded_filename")]
+    fn invariant_direct_wheel_requires_safe_url(url: &str) {
+        assert_eq!(direct_fragment("", &locked_wheel(url)).artifact, None);
+    }
+
+    /// Missing size or strong digest leaves acquisition with uv.
+    #[test]
+    fn invariant_direct_wheel_requires_complete_metadata() {
+        let url = "https://example.org/demo-1-py3-none-any.whl";
+        for wheel in [
+            format!("[[packages.wheels]]\nurl = {url:?}\nhashes = {{ sha256 = {SHA256:?} }}\n"),
+            format!(
+                "[[packages.wheels]]\nurl = {url:?}\nsize = 42\nhashes = {{ sha256 = 'invalid' }}\n"
+            ),
+        ] {
+            assert_eq!(direct_fragment("", &wheel).artifact, None);
+        }
+    }
+
+    /// A direct wheel must identify the locked distribution and version.
+    #[test_case("other-1-py3-none-any.whl"; "distribution")]
+    #[test_case("demo-2-py3-none-any.whl"; "version")]
+    #[test_case("demo-1-1-py3-none-any.whl"; "build_tag")]
+    fn invariant_direct_wheel_matches_lock_identity(filename: &str) {
+        assert_eq!(
+            direct_fragment(
+                "",
+                &locked_wheel(&format!("https://example.org/{filename}"))
+            )
+            .artifact,
+            None
+        );
+    }
+
+    /// Marker-qualified lock variants stay delegated to uv selection.
+    #[test]
+    fn invariant_direct_wheel_requires_one_lock_variant() {
+        let wheel = locked_wheel("https://example.org/demo-1-py3-none-any.whl");
         let input = format!(
-            "{HEADER}[[packages]]\nname = 'demo'\n[packages.sdist]\nurl = 'https://example.org/demo.tar.gz'\nhashes = {{ sha256 = 'source' }}\n[[packages.wheels]]\nurl = 'https://example.org/demo-1.0-py3-none-any.whl'\nhashes = {{ sha256 = 'wheel' }}\n"
+            "{HEADER}[[packages]]\nname = 'demo'\nversion = '1'\nmarker = \"python_version >= '3.14'\"\n{wheel}[[packages]]\nname = 'demo'\nversion = '1'\nmarker = \"python_version < '3.14'\"\n{wheel}"
         );
 
         assert_eq!(
@@ -773,8 +925,33 @@ mod tests {
                 .unwrap()
                 .installation_fragments()
                 .unwrap()[0]
-                .acquisition,
-            PylockAcquisition::Wheel
+                .artifact,
+            None
+        );
+    }
+
+    /// Platform alternatives stay delegated to uv's wheel-tag ordering.
+    #[test]
+    fn invariant_direct_wheel_requires_one_artifact_candidate() {
+        let mut wheels = locked_wheel("https://example.org/demo-1-py3-none-any.whl");
+        wheels.push_str(&locked_wheel(
+            "https://example.org/demo-1-cp314-cp314-macosx_15_0_arm64.whl",
+        ));
+
+        assert_eq!(direct_fragment("", &wheels).artifact, None);
+    }
+
+    /// Direct acquisition cannot bypass package-level environment selection.
+    #[test_case("marker = \"python_version >= '3.14'\""; "marker")]
+    #[test_case("requires-python = '>=3.14'"; "requires_python")]
+    fn invariant_direct_wheel_rejects_package_selection(selection: &str) {
+        assert_eq!(
+            direct_fragment(
+                &format!("{selection}\n"),
+                &locked_wheel("https://example.org/demo-1-py3-none-any.whl")
+            )
+            .artifact,
+            None
         );
     }
 
