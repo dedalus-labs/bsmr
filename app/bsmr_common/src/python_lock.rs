@@ -71,6 +71,8 @@ pub struct PylockInstallationFragment {
     pub source_artifact: Option<PylockSourceArtifact>,
     /// One immutable VCS tree acquired before a PEP 517 action.
     pub vcs_source: Option<PylockVcsSource>,
+    /// One local source tree represented by a declared first-party target.
+    pub directory_source: Option<PylockDirectorySource>,
     /// Exact wheel candidates keyed by Python line and execution platform.
     pub artifacts: BTreeMap<String, Vec<PylockArtifact>>,
 }
@@ -106,6 +108,15 @@ pub struct PylockVcsSource {
     pub url: String,
     /// Exact distribution version the source build must produce.
     pub version: String,
+}
+
+/// One local source tree that must map to a declared workspace project.
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct PylockDirectorySource {
+    /// Whether the authoring environment requested editable installation semantics.
+    pub editable: bool,
+    /// Normalized project root relative to the lock file.
+    pub path: String,
 }
 
 /// The artifact forms available to uv for one locked distribution.
@@ -222,6 +233,26 @@ impl PylockToml {
                     } else {
                         None
                     };
+                    let directory_source = if has_source && !universal {
+                        match variants.as_slice() {
+                            [variant] => direct_directory_source(variant),
+                            _ => None,
+                        }
+                    } else {
+                        None
+                    };
+                    if directory_source.is_none()
+                        && variants.iter().any(|variant| {
+                            variant
+                                .as_table()
+                                .is_some_and(|variant| variant.contains_key("directory"))
+                        })
+                    {
+                        return Err(PylockTomlError::Package {
+                            package,
+                            reason: "directory sources require one unconditional variant",
+                        });
+                    }
                     let mut fragment = base.clone();
                     fragment.insert("packages".to_owned(), toml::Value::Array(variants));
                     Ok(PylockInstallationFragment {
@@ -242,6 +273,7 @@ impl PylockToml {
                         artifact,
                         source_artifact,
                         vcs_source,
+                        directory_source,
                         artifacts,
                     })
                 },
@@ -312,12 +344,22 @@ impl PylockTomlPackage {
         if let Some(vcs) = &self.vcs {
             vcs.validate(self)?;
         }
-        if self
-            .directory
-            .as_ref()
-            .is_some_and(|directory| directory.path.is_empty())
-        {
-            return Err(self.invalid("directory path must not be empty"));
+        if let Some(directory) = &self.directory {
+            if directory.path.is_empty() {
+                return Err(self.invalid("directory path must not be empty"));
+            }
+            if !normalized_directory_path(&directory.path) {
+                return Err(self.invalid("directory path must be a normalized relative path"));
+            }
+            if directory
+                .subdirectory
+                .as_deref()
+                .is_some_and(|path| !normalized_subdirectory(path))
+            {
+                return Err(
+                    self.invalid("directory subdirectory must be a normalized relative path")
+                );
+            }
         }
         for (kind, artifact) in self.artifacts() {
             artifact.validate(self, kind)?;
@@ -862,6 +904,35 @@ fn direct_vcs_source(package: &toml::Value) -> Option<PylockVcsSource> {
     })
 }
 
+/// Extracts one local project root from an unconditional lock variant.
+fn direct_directory_source(package: &toml::Value) -> Option<PylockDirectorySource> {
+    let package = package.as_table()?;
+    if package.contains_key("requires-python")
+        || package
+            .get("marker")
+            .and_then(toml::Value::as_str)
+            .is_some_and(|marker| !marker_covers_supported_python(marker))
+    {
+        return None;
+    }
+    let directory = package.get("directory")?.as_table()?;
+    let path = directory.get("path")?.as_str()?;
+    let subdirectory = directory.get("subdirectory").and_then(toml::Value::as_str);
+    let path = match (path, subdirectory) {
+        (".", Some(subdirectory)) => subdirectory.to_owned(),
+        (".", None) => String::new(),
+        (path, Some(subdirectory)) => format!("{path}/{subdirectory}"),
+        (path, None) => path.to_owned(),
+    };
+    Some(PylockDirectorySource {
+        editable: directory
+            .get("editable")
+            .and_then(toml::Value::as_bool)
+            .unwrap_or(false),
+        path,
+    })
+}
+
 /// Extracts one directly downloadable universal wheel from a single lock variant.
 fn direct_universal_wheel(package: &toml::Value) -> Option<PylockArtifact> {
     let package = package.as_table()?;
@@ -976,6 +1047,11 @@ fn normalized_subdirectory(path: &str) -> bool {
             .all(|component| !component.is_empty() && component != "." && component != "..")
 }
 
+/// Accepts the lock directory itself or one portable child path.
+fn normalized_directory_path(path: &str) -> bool {
+    path == "." || normalized_subdirectory(path)
+}
+
 #[cfg(test)]
 mod tests {
     use std::path::Path;
@@ -985,6 +1061,7 @@ mod tests {
 
     use super::PylockAcquisition;
     use super::PylockArtifact;
+    use super::PylockDirectorySource;
     use super::PylockInstallationFragment;
     use super::PylockName;
     use super::PylockSourceArtifact;
@@ -1141,6 +1218,58 @@ mod tests {
                 .vcs_source,
             None
         );
+    }
+
+    /// Local directories retain one portable project root for first-party mapping.
+    #[test]
+    fn invariant_directory_sources_preserve_their_workspace_path() {
+        let input = format!(
+            "{HEADER}[[packages]]\nname = 'demo'\n[packages.directory]\npath = 'packages/source'\neditable = true\nsubdirectory = 'python'\n"
+        );
+
+        let fragment = &PylockToml::parse(&input)
+            .unwrap()
+            .installation_fragments()
+            .unwrap()[0];
+
+        assert_eq!(
+            fragment.directory_source,
+            Some(PylockDirectorySource {
+                editable: true,
+                path: "packages/source/python".to_owned(),
+            })
+        );
+    }
+
+    /// Local paths cannot escape the repository or depend on host path syntax.
+    #[test_case("../source"; "parent")]
+    #[test_case("/source"; "absolute")]
+    #[test_case("packages//source"; "empty_component")]
+    #[test_case("packages\\source"; "backslash")]
+    fn invariant_directory_source_path_is_normalized(path: &str) {
+        let input =
+            format!("{HEADER}[[packages]]\nname = 'demo'\n[packages.directory]\npath = {path:?}\n");
+
+        assert_package_error(
+            &input,
+            "demo",
+            "directory path must be a normalized relative path",
+        );
+    }
+
+    /// Platform-varying mutable trees cannot silently enter a frozen build action.
+    #[test]
+    fn invariant_directory_sources_require_one_unconditional_variant() {
+        let input = format!(
+            "{HEADER}[[packages]]\nname = 'demo'\nmarker = \"sys_platform == 'darwin'\"\n[packages.directory]\npath = 'packages/darwin'\n[[packages]]\nname = 'demo'\nmarker = \"sys_platform == 'linux'\"\n[packages.directory]\npath = 'packages/linux'\n"
+        );
+
+        assert!(matches!(
+            PylockToml::parse(&input).unwrap().installation_fragments(),
+            Err(PylockTomlError::Package { package, reason })
+                if package == "demo"
+                    && reason == "directory sources require one unconditional variant"
+        ));
     }
 
     /// Required source identity must fail before acquisition or package execution.

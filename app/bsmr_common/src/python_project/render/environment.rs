@@ -43,6 +43,7 @@ pub(super) fn render_environment(
     render_dependency_environments(
         output,
         root_files,
+        root_target,
         config_settings,
         package_config_settings,
         package_build_variables,
@@ -89,10 +90,12 @@ fn render_vcs(
 fn render_dependency_environments(
     output: &mut String,
     root_files: &PythonRootFiles,
+    root_target: Option<&str>,
     config_settings: &BTreeMap<String, super::super::BuildConfigSetting>,
     package_config_settings: &BTreeMap<String, BTreeMap<String, super::super::BuildConfigSetting>>,
     package_build_variables: &BTreeMap<String, BTreeMap<String, String>>,
 ) -> Result<(), NativePythonBuildError> {
+    validate_directory_sources(root_files, root_target)?;
     let mut actions = BTreeMap::new();
     index_locked_packages(
         &mut actions,
@@ -230,6 +233,9 @@ fn index_locked_packages<'a>(
     package_build_variables: &BTreeMap<String, BTreeMap<String, String>>,
 ) -> Result<(), NativePythonBuildError> {
     for package in packages {
+        if package.directory_source.is_some() {
+            continue;
+        }
         let build_environment = build_environment.filter(|_| package.acquisition.permits_source());
         let name = locked_package_target(
             package,
@@ -257,6 +263,9 @@ fn render_dependency_environment(
     writeln!(output, "    name = {name:?},").map_err(NativePythonBuildError::Render)?;
     writeln!(output, "    packages = [").map_err(NativePythonBuildError::Render)?;
     for package in packages {
+        if package.directory_source.is_some() {
+            continue;
+        }
         let name = locked_package_target(
             package,
             build_environment.filter(|_| package.acquisition.permits_source()),
@@ -272,6 +281,52 @@ fn render_dependency_environment(
         .map_err(NativePythonBuildError::Render)?;
     writeln!(output, "    visibility = [\"PUBLIC\"],").map_err(NativePythonBuildError::Render)?;
     writeln!(output, ")\n").map_err(NativePythonBuildError::Render)
+}
+
+/// Requires every local lock entry to reuse one existing first-party wheel action.
+fn validate_directory_sources(
+    root_files: &PythonRootFiles,
+    root_target: Option<&str>,
+) -> Result<(), NativePythonBuildError> {
+    for package in &root_files.build_packages {
+        if let Some(source) = &package.directory_source {
+            return Err(NativePythonBuildError::LocalDirectoryBuildRequirement {
+                package: package.package.clone(),
+                path: display_directory_path(&source.path),
+            });
+        }
+    }
+    for package in root_files.runtime_packages.iter().chain(
+        root_files
+            .test_locks
+            .iter()
+            .flat_map(|lock| lock.packages.iter()),
+    ) {
+        let Some(source) = &package.directory_source else {
+            continue;
+        };
+        let root_matches = source.path.is_empty() && root_target == Some(&package.package);
+        let member_matches = root_files
+            .members
+            .iter()
+            .any(|member| member.package == source.path && member.target == package.package);
+        if !root_matches && !member_matches {
+            return Err(NativePythonBuildError::UnknownLocalDirectorySource {
+                package: package.package.clone(),
+                path: display_directory_path(&source.path),
+            });
+        }
+    }
+    Ok(())
+}
+
+/// Renders the lock directory itself using its standard relative spelling.
+fn display_directory_path(path: &str) -> String {
+    if path.is_empty() {
+        ".".to_owned()
+    } else {
+        path.to_owned()
+    }
 }
 
 /// Emits one normalized package as an independently cacheable uv action.

@@ -59,6 +59,16 @@ pub enum NativePythonBuildError {
         runtime: Vec<String>,
         build: Vec<String>,
     },
+    /// A local build requirement would make the first-party wheel graph cyclic.
+    #[error(
+        "build package `{package}` is a local directory `{path}`; publish or vendor a wheel or source archive"
+    )]
+    LocalDirectoryBuildRequirement { package: String, path: String },
+    /// Local lock entries must identify one project already represented in the workspace graph.
+    #[error(
+        "Python lock package `{package}` maps local directory `{path}` to no selected workspace project"
+    )]
+    UnknownLocalDirectorySource { package: String, path: String },
     /// Test profile names become target labels and therefore use one portable spelling.
     #[error(
         "Python test lock `{0}` must use pylock.test.toml or pylock.test-<name>.toml with lowercase ASCII letters, digits, and hyphens"
@@ -641,6 +651,7 @@ mod tests {
                 artifact: None,
                 source_artifact: None,
                 vcs_source: None,
+                directory_source: None,
                 artifacts: BTreeMap::new(),
             })
             .collect()
@@ -925,6 +936,64 @@ mod tests {
         assert!(build.contains("source_tree = \":__bsmr_python_vcs__"));
         assert!(build.contains("source_subdirectory = \"python/package\""));
         assert!(build.contains("source_version = \"1\""));
+    }
+
+    #[test]
+    fn invariant_local_directories_reuse_declared_workspace_wheels() {
+        let listing = PackageListing::testing_files(&["pyproject.toml"]);
+        let lock = PylockToml::parse(
+            "lock-version = '1.0'\ncreated-by = 'test'\n[[packages]]\nname = 'helper'\n[packages.directory]\npath = 'packages/helper'\neditable = true\n",
+        )
+        .unwrap();
+        let helper = python_workspace_member(
+            "packages/helper".to_owned(),
+            "[project]\nname = 'helper'\nrequires-python = '>=3.14'\n",
+        )
+        .unwrap()
+        .unwrap();
+        let root_files = PythonRootFiles {
+            runtime_packages: lock.installation_fragments().unwrap(),
+            members: vec![helper],
+            ..PythonRootFiles::default()
+        };
+
+        let build = render_python_build_file(
+            CellRelativePathBuf::unchecked_new(String::new()),
+            "[project]\nname = 'demo'\nversion = '1'\nrequires-python = '>=3.14'\ndependencies = ['helper']\n",
+            &listing,
+            &root_files,
+        )
+        .unwrap();
+
+        assert!(build.contains("\"//packages/helper:helper\""));
+        assert!(!build.contains("package = \"helper\""));
+    }
+
+    #[test]
+    fn invariant_local_directories_require_declared_workspace_projects() {
+        let listing = PackageListing::testing_files(&["pyproject.toml"]);
+        let lock = PylockToml::parse(
+            "lock-version = '1.0'\ncreated-by = 'test'\n[[packages]]\nname = 'helper'\n[packages.directory]\npath = 'vendor/helper'\n",
+        )
+        .unwrap();
+        let root_files = PythonRootFiles {
+            runtime_packages: lock.installation_fragments().unwrap(),
+            ..PythonRootFiles::default()
+        };
+
+        let error = render_python_build_file(
+            CellRelativePathBuf::unchecked_new(String::new()),
+            "[project]\nname = 'demo'\nversion = '1'\nrequires-python = '>=3.14'\n",
+            &listing,
+            &root_files,
+        )
+        .unwrap_err();
+
+        assert!(matches!(
+            error,
+            NativePythonBuildError::UnknownLocalDirectorySource { package, path }
+                if package == "helper" && path == "vendor/helper"
+        ));
     }
 
     #[test]
