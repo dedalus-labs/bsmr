@@ -1585,7 +1585,9 @@ dependencies = [
  "tower",
  "tracing",
  "triomphe",
+ "uv-distribution-filename",
  "uv-pep508",
+ "uv-platform-tags",
  "xattr",
  "yaml-rust2",
 ]
@@ -7048,6 +7050,7 @@ dependencies = [
  "rancor",
  "rend",
  "rkyv_derive",
+ "smallvec",
  "tinyvec",
  "uuid",
 ]
@@ -8863,6 +8866,24 @@ dependencies = [
 ]
 
 [[package]]
+name = "uv-distribution-filename"
+version = "0.0.71"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ee3ead5aed35bd8fb6966b52f196c2e22ee25115cf7ffa1422423380751e4197"
+dependencies = [
+ "memchr",
+ "rkyv",
+ "serde",
+ "smallvec",
+ "thiserror 2.0.19",
+ "uv-cache-key",
+ "uv-normalize",
+ "uv-pep440",
+ "uv-platform-tags",
+ "uv-small-str",
+]
+
+[[package]]
 name = "uv-errors"
 version = "0.0.71"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -8971,6 +8992,21 @@ dependencies = [
  "uv-normalize",
  "uv-pep440",
  "uv-redacted",
+]
+
+[[package]]
+name = "uv-platform-tags"
+version = "0.0.71"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "0ee7ba7f5b1e619c08c6abfa8e78304db0f0b49ad74e5fef4d507f3fca2a6c2b"
+dependencies = [
+ "bitflags 2.13.1",
+ "memchr",
+ "rkyv",
+ "rustc-hash",
+ "serde",
+ "thiserror 2.0.19",
+ "uv-small-str",
 ]
 
 [[package]]

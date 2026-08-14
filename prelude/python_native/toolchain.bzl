@@ -34,6 +34,11 @@ _PYTHON_VERSIONS = {
     "3.14.7": "3.14.7",
 }
 
+_PYTHON_SERIES = {
+    "3.13.15": "3.13",
+    "3.14.7": "3.14",
+}
+
 _PYTHON_ARCHIVES = {
     "3.13.15": {
         "linux-arm64": ("1dfc9565c26f8892a33202b5966bdf9ff45c56a57b06e8fa65fecf05030afe5b", 29253383),
@@ -88,7 +93,7 @@ _distribution = rule(
     },
 )
 
-def _platform_value(values: dict):
+def python_native_platform_value(values: dict):
     """Selects one catalog value for the execution OS and CPU."""
     return select({
         "config//os:linux": select({
@@ -101,24 +106,37 @@ def _platform_value(values: dict):
         }),
     })
 
+def _python_version() -> str:
+    """Returns one supported exact Python version from root configuration."""
+    requested = native.read_root_config("python", "version", _DEFAULT_PYTHON_VERSION)
+    version = _PYTHON_VERSIONS.get(requested)
+    if version == None:
+        fail("unsupported Python version '{}'; supported versions are {}".format(requested, sorted(_PYTHON_VERSIONS)))
+    return version
+
+def python_native_python_platform_value(values: dict):
+    """Selects one value for the configured Python line, execution OS, and CPU."""
+    series = _PYTHON_SERIES[_python_version()]
+    return python_native_platform_value({
+        platform: values["{}-{}".format(series, platform)]
+        for platform in _ARTIFACT_PLATFORMS
+    })
+
 def _archive(name: str, tool: str, version: str, url: str, strip_prefix: str, archives = None) -> None:
     """Declares one digest-verified platform distribution."""
     archives = archives if archives != None else _ARCHIVES[tool]
     native.http_archive(
         name = name,
         has_content_based_path = True,
-        sha256 = _platform_value({platform: value[0] for platform, value in archives.items()}),
-        size_bytes = _platform_value({platform: value[1] for platform, value in archives.items()}),
-        strip_prefix = _platform_value({platform: strip_prefix.format(platform = _ARTIFACT_PLATFORMS[platform]) for platform in archives}),
-        urls = [_platform_value({platform: url.format(platform = _ARTIFACT_PLATFORMS[platform], version = version) for platform in archives})],
+        sha256 = python_native_platform_value({platform: value[0] for platform, value in archives.items()}),
+        size_bytes = python_native_platform_value({platform: value[1] for platform, value in archives.items()}),
+        strip_prefix = python_native_platform_value({platform: strip_prefix.format(platform = _ARTIFACT_PLATFORMS[platform]) for platform in archives}),
+        urls = [python_native_platform_value({platform: url.format(platform = _ARTIFACT_PLATFORMS[platform], version = version) for platform in archives})],
     )
 
 def python_native_toolchain() -> None:
     """Declares independently addressable latest-stable Python tools."""
-    requested_python = native.read_root_config("python", "version", _DEFAULT_PYTHON_VERSION)
-    python_version = _PYTHON_VERSIONS.get(requested_python)
-    if python_version == None:
-        fail("unsupported Python version '{}'; supported versions are {}".format(requested_python, sorted(_PYTHON_VERSIONS)))
+    python_version = _python_version()
     _archive(
         "__bsmr_python_archive",
         "python",
@@ -135,7 +153,7 @@ def python_native_toolchain() -> None:
             "https://github.com/astral-sh/{tool}/releases/download/{{version}}/{tool}-{{platform}}.tar.gz".format(tool = tool),
             "{}-{{platform}}".format(tool),
         )
-    platform = _platform_value(_ARTIFACT_PLATFORMS)
+    platform = python_native_platform_value(_ARTIFACT_PLATFORMS)
     _distribution(name = "__bsmr_python_distribution", executable = "bin/python3", platform = platform, root = ":__bsmr_python_archive", version = python_version, visibility = ["PUBLIC"])
     _distribution(name = "__bsmr_uv_distribution", executable = "uv", platform = platform, root = ":__bsmr_uv_archive", version = _UV_VERSION, visibility = ["PUBLIC"])
     _distribution(name = "__bsmr_ruff_distribution", executable = "ruff", platform = platform, root = ":__bsmr_ruff_archive", version = _RUFF_VERSION, visibility = ["PUBLIC"])

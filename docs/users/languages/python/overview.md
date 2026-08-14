@@ -196,17 +196,21 @@ build outputs, and virtual environments never become first-party source inputs.
 The general package path uses `uv pip sync --strict` against one canonical
 single-package PEP 751 fragment, normalizes console-script shebangs, rejects
 symlinks and special files, and records the immutable result in BSMR's CAS.
-When a lock has one variant with exactly one size- and SHA-256-pinned
-`py3-none-any` or `py2.py3-none-any` wheel, BSMR declares that wheel as a
-separate download action if its package marker is absent or proven true across
-BSMR's complete native CPython platform domain. The proof uses Astral's
-canonical PEP 508 marker algebra; BSMR does not interpret marker strings with a
-second parser. Pinned uv installs the local artifact with index, dependency,
-build, and network access disabled. Direct acquisition also requires a
-credential-free HTTP(S) URL and a wheel filename matching the locked
-distribution and version. All other wheels and source distributions continue
-through the canonical PEP 751 fragment so uv remains responsible for
-compatibility selection.
+BSMR partitions complete size- and SHA-256-pinned wheel metadata by configured
+Python line, execution OS, and CPU using Astral's wheel filename and platform
+tag libraries. Pinned uv then evaluates the lock's markers and versions in an
+offline, binary-only dry run. The selected exact requirement is installed from
+only those local candidates with index, dependency, build, and network access
+disabled. A source result does not consume or download wheel candidates.
+
+A single `py3-none-any` or `py2.py3-none-any` wheel may bypass selection when
+its package marker is absent or proven true across BSMR's complete native
+CPython platform domain. That proof uses Astral's canonical PEP 508 marker
+algebra; BSMR does not interpret marker strings with a second parser. Direct
+acquisition always requires a credential-free HTTP(S) URL and a wheel filename
+matching the locked distribution and version. Wheels with incomplete download
+metadata and source distributions continue through the canonical PEP 751
+fragment so uv remains responsible for compatibility selection.
 
 BSMR composes those package trees deterministically, rejects incompatible
 import-file collisions, applies uv-compatible first-package precedence to
@@ -234,14 +238,16 @@ The current implementation is the pinned-uv differential baseline from
 final native materializer.
 
 Portable offline artifact replay after an action-cache miss is implemented for
-the universal-wheel subset above: the wheel is a separately acquired,
-checksum-verified action input, and its repository-independent HTTP cache entry
-is revalidated on every restoration. A cold action for a platform-sensitive
-wheel, sdist, VCS dependency, local archive, or environment-selecting marker
-variant may still ask uv to fetch the exact artifact selected by its PEP 751
-fragment.
-Native materialization for those remaining forms, import-level ownership and
-closure inference, and provenance queries remain release gates.
+complete HTTP(S) wheel records: each compatible candidate is a separately
+acquired, checksum-verified action input, and its repository-independent HTTP
+cache entry is revalidated on every restoration. Python and platform selects
+are part of the action graph, so one compiled package consumes only the
+candidates for its exact configured Python line and execution platform. A cold
+action for an sdist, VCS dependency, local archive, or wheel with incomplete
+download metadata may still ask uv to fetch the exact artifact selected by its
+PEP 751 fragment. Native materialization for those remaining forms,
+import-level ownership and closure inference, and provenance queries remain
+release gates.
 
 Pure-Python PEP 517 builds use the exact interpreter and locked build closure.
 BSMR invokes uv offline for first-party wheel construction, but local execution

@@ -34,7 +34,7 @@ pub(super) fn render_environment(
     .map_err(NativePythonBuildError::Render)?;
     writeln!(
         output,
-        "load(\"@prelude//python_native:toolchain.bzl\", \"python_native_toolchain\")\n"
+        "load(\"@prelude//python_native:toolchain.bzl\", \"python_native_python_platform_value\", \"python_native_toolchain\")\n"
     )
     .map_err(NativePythonBuildError::Render)?;
     writeln!(output, "python_native_toolchain()\n").map_err(NativePythonBuildError::Render)?;
@@ -122,6 +122,9 @@ fn render_dependency_environments(
     let mut artifacts = BTreeMap::new();
     for (package, _) in actions.values() {
         if let Some(artifact) = &package.artifact {
+            artifacts.insert(locked_artifact_target(artifact), artifact);
+        }
+        for artifact in package.artifacts.values().flatten() {
             artifacts.insert(locked_artifact_target(artifact), artifact);
         }
     }
@@ -265,6 +268,26 @@ fn render_locked_package(
             format!(":{}", locked_artifact_target(artifact))
         )
         .map_err(NativePythonBuildError::Render)?;
+    }
+    if !package.artifacts.is_empty() {
+        writeln!(
+            output,
+            "    artifacts = python_native_python_platform_value({{"
+        )
+        .map_err(NativePythonBuildError::Render)?;
+        for (platform, artifacts) in &package.artifacts {
+            writeln!(output, "        {platform:?}: [").map_err(NativePythonBuildError::Render)?;
+            for artifact in artifacts {
+                writeln!(
+                    output,
+                    "            {:?},",
+                    format!(":{}", locked_artifact_target(artifact))
+                )
+                .map_err(NativePythonBuildError::Render)?;
+            }
+            writeln!(output, "        ],").map_err(NativePythonBuildError::Render)?;
+        }
+        writeln!(output, "    }}),").map_err(NativePythonBuildError::Render)?;
     }
     writeln!(
         output,

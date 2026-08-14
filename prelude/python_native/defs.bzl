@@ -121,10 +121,20 @@ def _add_config_settings(command, settings: dict) -> None:
         for value in values:
             command.add(["--config-setting={}={}".format(name, value)])
 
-def _locked_package_command(ctx: AnalysisContext, root, manifest, lock: Artifact, source: bool):
+def _locked_package_command(ctx: AnalysisContext, root, manifest, lock: Artifact, source: bool, absent: bool, artifacts, requirement):
     """Constructs one wheel or source installation with exact cache semantics."""
     command, python_version, uv_version = _runner_command(ctx, "locked-package", root)
     command.add(["--lock", lock, "--manifest", manifest])
+    if absent:
+        command.add("--absent")
+    if artifacts != None:
+        if ctx.attrs.artifact != None:
+            fail("direct and selected wheel artifacts are mutually exclusive")
+        if source:
+            fail("a source package cannot consume selected wheel artifacts")
+        for artifact in artifacts:
+            command.add(["--artifact", artifact[PythonLockedArtifactInfo].file])
+        command.add(["--requirement", requirement])
     if ctx.attrs.artifact != None:
         if source:
             fail("a source package cannot consume a wheel artifact")
@@ -143,7 +153,7 @@ def _locked_package_command(ctx: AnalysisContext, root, manifest, lock: Artifact
         command.add(cmd_args(hidden = [environment.manifest]))
     return command, python_version, uv_version
 
-def _register_locked_package(ctx: AnalysisContext, actions, root, manifest, lock: Artifact, source: bool) -> None:
+def _register_locked_package(ctx: AnalysisContext, actions, root, manifest, lock: Artifact, source: bool, absent: bool, artifacts, requirement) -> None:
     """Registers one package action after artifact selection is final."""
     command, python_version, uv_version = _locked_package_command(
         ctx,
@@ -151,6 +161,9 @@ def _register_locked_package(ctx: AnalysisContext, actions, root, manifest, lock
         manifest,
         lock,
         source,
+        absent,
+        artifacts,
+        requirement,
     )
     actions.run(
         command,
@@ -163,13 +176,33 @@ def _register_locked_package(ctx: AnalysisContext, actions, root, manifest, lock
 
 def _selected_locked_package(ctx: AnalysisContext, artifacts, outputs, selection: Artifact, root: Artifact, manifest: Artifact, lock: Artifact) -> None:
     """Binds a mixed package to uv's exact wheel-or-source decision."""
-    selected = artifacts[selection].read_string()
-    if selected == "wheel\n":
+    selected = json.decode(artifacts[selection].read_string())
+    if type(selected) != "dict":
+        fail("uv emitted a non-object package selection")
+    acquisition = selected.get("acquisition")
+    if acquisition == "wheel":
+        if sorted(selected.keys()) != ["acquisition", "requirement"] or type(selected["requirement"]) != "string":
+            fail("uv emitted invalid wheel selection {}".format(selected))
         source = False
-    elif selected == "source\n":
+        selected_artifacts = ctx.attrs.artifacts
+        requirement = selected["requirement"] if selected_artifacts != None else None
+        absent = False
+    elif acquisition == "source":
+        if sorted(selected.keys()) != ["acquisition"] or ctx.attrs.acquisition != "wheel-or-source":
+            fail("uv emitted invalid source selection {}".format(selected))
         source = True
+        selected_artifacts = None
+        requirement = None
+        absent = False
+    elif acquisition == "absent":
+        if sorted(selected.keys()) != ["acquisition"]:
+            fail("uv emitted invalid absent selection {}".format(selected))
+        source = False
+        selected_artifacts = None
+        requirement = None
+        absent = True
     else:
-        fail("uv emitted invalid package selection {!r}".format(selected))
+        fail("uv emitted invalid package selection {}".format(selected))
     _register_locked_package(
         ctx,
         ctx.actions,
@@ -177,16 +210,21 @@ def _selected_locked_package(ctx: AnalysisContext, artifacts, outputs, selection
         outputs[manifest].as_output(),
         lock,
         source,
+        absent,
+        selected_artifacts,
+        requirement,
     )
 
 def _python_locked_package_impl(ctx: AnalysisContext) -> list[Provider]:
     """Materializes one normalized package from a canonical PEP 751 fragment."""
     if ctx.attrs.artifact != None and ctx.attrs.acquisition != "wheel":
         fail("a direct wheel artifact requires wheel acquisition")
+    if ctx.attrs.artifact != None and ctx.attrs.artifacts != None:
+        fail("direct and selected wheel artifacts are mutually exclusive")
     root = ctx.actions.declare_output(ctx.label.name, dir = True, has_content_based_path = True)
     manifest = ctx.actions.declare_output("{}.manifest.json".format(ctx.label.name), has_content_based_path = True)
     lock = ctx.actions.write("pylock.{}.toml".format(ctx.label.name), ctx.attrs.lock)
-    if ctx.attrs.acquisition == "wheel-or-source":
+    if ctx.attrs.acquisition == "wheel-or-source" or ctx.attrs.artifacts != None:
         selection = ctx.actions.declare_output("{}.selection".format(ctx.label.name))
         command, python_version, uv_version = _runner_command(
             ctx,
@@ -194,6 +232,8 @@ def _python_locked_package_impl(ctx: AnalysisContext) -> list[Provider]:
             selection.as_output(),
         )
         command.add(["--lock", lock, "--distribution", ctx.attrs.package])
+        if ctx.attrs.acquisition == "wheel-or-source":
+            command.add("--source-permitted")
         ctx.actions.run(
             command,
             allow_cache_upload = True,
@@ -222,6 +262,9 @@ def _python_locked_package_impl(ctx: AnalysisContext) -> list[Provider]:
             manifest.as_output(),
             lock,
             ctx.attrs.acquisition == "source",
+            False,
+            None,
+            None,
         )
     return [
         DefaultInfo(default_output = root, other_outputs = [manifest]),
@@ -238,6 +281,10 @@ python_locked_package = rule(
         "acquisition": attrs.enum(["source", "wheel", "wheel-or-source"]),
         "artifact": attrs.option(
             attrs.dep(providers = [PythonLockedArtifactInfo]),
+            default = None,
+        ),
+        "artifacts": attrs.option(
+            attrs.list(attrs.dep(providers = [PythonLockedArtifactInfo])),
             default = None,
         ),
         "build_environment": attrs.option(
