@@ -25,6 +25,13 @@ from pathlib import Path, PurePosixPath
 from typing import Final
 
 _SOURCE_DATE_EPOCH: Final = "315532800"
+# Keep this baseline aligned with uv's Darwin target triples:
+# https://github.com/astral-sh/uv/blob/0.12.4/crates/uv-configuration/src/target_triple.rs
+_MACOSX_DEPLOYMENT_TARGET: Final = "13.0"
+_MACOSX_TARGETS: Final = {
+    "aarch64-apple-darwin": ("macosx-13.0-arm64", "arm64"),
+    "x86_64-apple-darwin": ("macosx-13.0-x86_64", "x86_64"),
+}
 # Keep this finite catalog aligned with uv's python-build-standalone sysconfig
 # mappings: https://github.com/astral-sh/uv/tree/0.12.4/crates/uv-python/src/sysconfig
 _C_COMPILERS: Final = frozenset(
@@ -144,6 +151,35 @@ def _state(output: Path) -> tuple[Path, dict[str, str]]:
     for path in ("HOME", "UV_CACHE_DIR", "XDG_CACHE_HOME", "XDG_CONFIG_HOME"):
         Path(environment[path]).mkdir()
     return scratch, environment
+
+
+def _configure_target_platform(
+    python_platform: str, environment: dict[str, str], scratch: Path
+) -> None:
+    """Align backend outputs with uv's declared target-platform baseline."""
+    target = _MACOSX_TARGETS.get(python_platform)
+    if target is None:
+        environment.pop("MACOSX_DEPLOYMENT_TARGET", None)
+        environment.pop("_PYTHON_HOST_PLATFORM", None)
+        return
+    host_platform, machine = target
+    environment["MACOSX_DEPLOYMENT_TARGET"] = _MACOSX_DEPLOYMENT_TARGET
+    environment["_PYTHON_HOST_PLATFORM"] = host_platform
+    shim = scratch / "target-platform"
+    shim.mkdir(exist_ok=True)
+    # packaging.tags reads the host kernel through platform.mac_ver(), even
+    # when sysconfig and the compiler already target the declared platform.
+    (shim / "sitecustomize.py").write_text(
+        "import platform\n\n\n"
+        "def _bsmr_mac_ver():\n"
+        f"    return ('{_MACOSX_DEPLOYMENT_TARGET}.0', ('', '', ''), '{machine}')\n"
+        "\n\nplatform.mac_ver = _bsmr_mac_ver\n",
+        encoding="utf-8",
+    )
+    python_path = environment.get("PYTHONPATH")
+    environment["PYTHONPATH"] = os.pathsep.join(
+        path for path in (str(shim), python_path) if path
+    )
 
 
 def _patch_sysconfig_values(
@@ -395,6 +431,9 @@ def _locked_package(
         if args.build_environment:
             for environment in args.build_environment:
                 _activate_environment(environment, process_environment)
+            _configure_target_platform(
+                args.python_platform, process_environment, scratch
+            )
             build_flags = ["--no-build-isolation"]
         _run(
             [
@@ -735,6 +774,7 @@ def _project(
     if args.mode == "wheel":
         uv = Path(_required(args.uv, "--uv")).resolve()
         _project_environments(args, process_environment)
+        _configure_target_platform(args.python_platform, process_environment, scratch)
         output.mkdir()
         command = [
             str(uv),

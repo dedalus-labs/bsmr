@@ -14,6 +14,7 @@ import json
 import os
 import runpy
 import subprocess
+import sys
 import tempfile
 import unittest
 from argparse import Namespace
@@ -86,6 +87,38 @@ class NormalizeEntryPointsTest(unittest.TestCase):
 
 class SysconfigTest(unittest.TestCase):
     """Exercise relocation of python-build-standalone compiler metadata."""
+
+    def test_target_platform_configures_one_canonical_macos_deployment(self) -> None:
+        """Wheel selection and PEP 517 must share the declared Darwin baseline."""
+        with tempfile.TemporaryDirectory() as temporary:
+            environment = {"MACOSX_DEPLOYMENT_TARGET": "host"}
+
+            runner._configure_target_platform(
+                "aarch64-apple-darwin", environment, Path(temporary)
+            )
+
+            self.assertEqual(environment["MACOSX_DEPLOYMENT_TARGET"], "13.0")
+            self.assertEqual(environment["_PYTHON_HOST_PLATFORM"], "macosx-13.0-arm64")
+            output = subprocess.check_output(
+                [
+                    sys.executable,
+                    "-c",
+                    "import platform; print(platform.mac_ver()[0]); print(platform.mac_ver()[2])",
+                ],
+                env=environment,
+                text=True,
+            )
+            self.assertEqual(output, "13.0.0\narm64\n")
+
+            linux_environment = {
+                "MACOSX_DEPLOYMENT_TARGET": "host",
+                "_PYTHON_HOST_PLATFORM": "host",
+            }
+            runner._configure_target_platform(
+                "aarch64-unknown-linux-gnu", linux_environment, Path(temporary)
+            )
+            self.assertNotIn("MACOSX_DEPLOYMENT_TARGET", linux_environment)
+            self.assertNotIn("_PYTHON_HOST_PLATFORM", linux_environment)
 
     def test_build_metadata_uses_the_materialized_interpreter_and_host_tools(
         self,
@@ -355,10 +388,9 @@ class EnvironmentTest(unittest.TestCase):
                 '[extra-build-variables."numpy"]\n'
                 '"NPY_DISABLE_CPU_FEATURES" = "AVX512"\n',
             )
-            self.assertEqual(
-                process_environment["PYTHONPATH"],
-                str(build_environment.resolve()),
-            )
+            python_path = process_environment["PYTHONPATH"].split(os.pathsep)
+            self.assertEqual(python_path[0], str(root / "scratch" / "target-platform"))
+            self.assertEqual(python_path[1], str(build_environment.resolve()))
             self.assertTrue(
                 process_environment["PATH"].startswith(
                     str((build_environment / "bin").resolve())
@@ -779,6 +811,7 @@ class ProjectActionTest(unittest.TestCase):
                 output=root / "wheel",
                 project_root=".",
                 python=root / "python",
+                python_platform="aarch64-apple-darwin",
                 source=source,
                 ty=None,
                 uv=root / "uv",
@@ -797,9 +830,12 @@ class ProjectActionTest(unittest.TestCase):
                 str(source.resolve().parent),
             )
             materialized_environment = environment.resolve()
+            python_path = action_environment["PYTHONPATH"].split(os.pathsep)
             self.assertEqual(
-                action_environment["PYTHONPATH"], str(materialized_environment)
+                Path(python_path[0]).resolve(),
+                (root / "scratch" / "target-platform").resolve(),
             )
+            self.assertEqual(Path(python_path[1]), materialized_environment)
             self.assertTrue(
                 action_environment["PATH"].startswith(
                     str(materialized_environment / "bin")
