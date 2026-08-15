@@ -577,8 +577,12 @@ fn is_generated_path(path: &str, virtual_environments: &[String]) -> bool {
                     | ".ruff_cache"
                     | ".venv"
                     | "__pycache__"
+                    | "buck-out"
                     | "build"
                     | "dist"
+                    | "node_modules"
+                    | "target"
+                    | "target-bsmr"
             ) || component.ends_with(".egg-info")
         })
 }
@@ -796,10 +800,14 @@ mod tests {
             "uv.toml",
             "examples/pyproject.toml",
             "README.md",
+            "buck-out/generated.py",
             ".venv/ignored.py",
             ".custom-env/pyvenv.cfg",
             ".custom-env/lib/python3.14/site-packages/demo/pyproject.toml",
             ".custom-env/lib/python3.14/site-packages/demo/__init__.py",
+            "node_modules/tool/index.py",
+            "target/generated.py",
+            "target-bsmr/environment/package.py",
         ]);
         let build = render_python_build_file(
             CellRelativePathBuf::unchecked_new(String::new()),
@@ -827,6 +835,10 @@ mod tests {
         assert!(build.contains("\"src/demo/__init__.py\""));
         assert!(!build.contains(".venv/ignored.py"));
         assert!(!build.contains(".custom-env"));
+        assert!(!build.contains("buck-out"));
+        assert!(!build.contains("node_modules"));
+        assert!(!build.contains("target-bsmr"));
+        assert!(!build.contains("target/generated.py"));
         assert!(!build.contains("__pycache__"));
         assert_eq!(build.matches("\"examples/pyproject.toml\"").count(), 4);
         assert_eq!(build.matches("\".ruff.toml\"").count(), 4);
