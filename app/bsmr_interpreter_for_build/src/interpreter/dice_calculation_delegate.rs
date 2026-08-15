@@ -109,8 +109,6 @@ enum NativeBuildFileError {
     PythonRuntimeLockRequired,
     #[error("native Python builds require pylock.build.toml at the BSMR project root")]
     PythonBuildLockRequired,
-    #[error("native build source contains none of package.json, Cargo.toml, or pyproject.toml")]
-    NoSupportedManifest,
 }
 
 /// Makes only declared Git database inputs visible to source-attribute coercion.
@@ -313,13 +311,11 @@ impl<'c, 'd: 'c> DiceCalculationDelegate<'c, 'd> {
             }
             PackageBuildSource::Native => {
                 let mut source = String::new();
-                let mut handled_manifest = false;
                 if listing
                     .get_file(PackageRelativePath::new("package.json")?)
                     .is_some()
                     && self.root_is_pnpm_workspace(package).await?
                 {
-                    handled_manifest = true;
                     let graph = self
                         .ctx
                         .get_pnpm_workspace_graph(package.cell_name())
@@ -336,7 +332,6 @@ impl<'c, 'd: 'c> DiceCalculationDelegate<'c, 'd> {
                     .get_file(PackageRelativePath::new("Cargo.toml")?)
                     .is_some()
                 {
-                    handled_manifest = true;
                     source.push_str(&self.render_native_cargo(package).await?);
                 }
                 if listing
@@ -348,12 +343,8 @@ impl<'c, 'd: 'c> DiceCalculationDelegate<'c, 'd> {
                         .render_native_python(package, listing, &manifest)
                         .await?
                     {
-                        handled_manifest = true;
                         source.push_str(&python);
                     }
-                }
-                if !handled_manifest {
-                    return Err(NativeBuildFileError::NoSupportedManifest.into());
                 }
                 let ParseData(ast, imports) = self.prepare_eval_with_content(
                     StarlarkPath::BuildFile(&build_file_path),
