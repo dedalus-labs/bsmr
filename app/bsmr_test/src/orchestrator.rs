@@ -1210,8 +1210,6 @@ impl BuckTestOrchestrator<'_> {
             action_key_suffix: create_action_key_suffix(stage),
         };
 
-        // For test execution, we currently do not do any cache queries
-
         let prepared_action = match executor.prepare_action(&request, digest_config, false) {
             Ok(prepared_action) => prepared_action,
             Err(e) => return Err(ExecuteError::Error(e)),
@@ -1304,25 +1302,50 @@ impl BuckTestOrchestrator<'_> {
                 let start = TestRunStart {
                     suite: test_suite.clone(),
                 };
-                events
+                let (result, upload) = events
                     .span_async(start, async move {
-                        let result = if supports_test_execution_caching {
+                        let (result, cached) = if supports_test_execution_caching {
                             match executor
                                 .action_cache(manager, &prepared_command, cancellation)
                                 .await
                             {
-                                ControlFlow::Continue(manager) => {
+                                ControlFlow::Continue(manager) => (
                                     executor
                                         .exec_cmd(manager, &prepared_command, cancellation)
-                                        .await
-                                }
-                                ControlFlow::Break(result) => result,
+                                        .await,
+                                    false,
+                                ),
+                                ControlFlow::Break(result) => (result, true),
                             }
                         } else {
-                            executor
-                                .exec_cmd(manager, &prepared_command, cancellation)
-                                .await
+                            (
+                                executor
+                                    .exec_cmd(manager, &prepared_command, cancellation)
+                                    .await,
+                                false,
+                            )
                         };
+                        let upload =
+                            if supports_test_execution_caching && !cached && result.was_success() {
+                                let info = CacheUploadInfo {
+                                    target: prepared_command.target,
+                                    digest_config,
+                                    mergebase: &None,
+                                    re_platform: executor.re_platform(),
+                                };
+                                executor
+                                    .cache_upload(
+                                        &info,
+                                        &result,
+                                        None,
+                                        None,
+                                        &prepared_command.prepared_action.action_and_blobs,
+                                    )
+                                    .await
+                                    .map(|_| ())
+                            } else {
+                                Ok(())
+                            };
                         let end = TestRunEnd {
                             suite: test_suite,
                             command_report: Some(
@@ -1336,9 +1359,11 @@ impl BuckTestOrchestrator<'_> {
                             )
                             .ok(),
                         };
-                        (result, end)
+                        ((result, upload), end)
                     })
-                    .await
+                    .await;
+                upload.map_err(ExecuteError::Error)?;
+                result
             }
         };
         let command_execution = Some(
@@ -1498,9 +1523,14 @@ impl BuckTestOrchestrator<'_> {
         let (cache_uploader, action_cache_checker) = match stage {
             TestStage::Listing { .. } => (cache_uploader, action_cache_checker),
             TestStage::Testing { .. } => {
+                let cache_uploader =
+                    if supports_test_execution_caching && cache_uploader.is_local_action_cache() {
+                        cache_uploader
+                    } else {
+                        Arc::new(NoOpCacheUploader {}) as _
+                    };
                 (
-                    // We never upload local test executions
-                    Arc::new(NoOpCacheUploader {}) as _,
+                    cache_uploader,
                     if supports_test_execution_caching {
                         action_cache_checker
                     } else {

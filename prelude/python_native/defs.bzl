@@ -466,6 +466,8 @@ def _project_action(ctx: AnalysisContext, mode: str, output: Artifact) -> None:
         command,
         # PEP 517 outputs are not remotely reusable until the native toolchain is declared.
         allow_cache_upload = mode != "wheel",
+        # The local uploader admits only portable `none-any` wheel results.
+        allow_local_cache_upload = mode == "wheel",
         category = "python_{}".format(mode),
         identifier = version,
         local_only = mode == "wheel",
@@ -589,10 +591,19 @@ def _runtime_attrs(entry: bool = False, test: bool = False) -> dict:
         )
     return result
 
+def _runtime_default_info(ctx: AnalysisContext) -> DefaultInfo:
+    """Makes every runtime source and environment layer a buildable output."""
+    outputs = [ctx.attrs.sources[PythonSourcesInfo].tree]
+    for dependency in ctx.attrs.environments:
+        environment = dependency[PythonEnvironmentInfo]
+        outputs.extend(environment.roots)
+        outputs.append(environment.identity)
+    return DefaultInfo(other_outputs = outputs)
+
 def _python_entry_point_impl(ctx: AnalysisContext) -> list[Provider]:
     """Exposes one PEP 621 console script through ``bsmr run``."""
     command = _runtime_command(ctx, "entry")
-    return [DefaultInfo(), RunInfo(args = command)]
+    return [_runtime_default_info(ctx), RunInfo(args = command)]
 
 python_entry_point = rule(
     impl = _python_entry_point_impl,
@@ -608,8 +619,9 @@ def _python_test_impl(ctx: AnalysisContext) -> list[Provider]:
         contacts = [],
         labels = [],
         run_from_project_root = True,
+        supports_test_execution_caching = True,
     )
-    return [test, RunInfo(args = test.command), DefaultInfo()]
+    return [test, RunInfo(args = test.command), _runtime_default_info(ctx)]
 
 python_test = rule(
     impl = _python_test_impl,
