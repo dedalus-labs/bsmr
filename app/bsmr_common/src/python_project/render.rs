@@ -221,7 +221,7 @@ fn render_quality_targets(
         (
             "ruff_check",
             "lint",
-            target::ANALYSIS_SOURCES,
+            target::SOURCES,
             "ruff = \"root//:__bsmr_ruff_distribution\"",
             false,
         ),
