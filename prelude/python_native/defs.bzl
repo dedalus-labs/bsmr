@@ -100,10 +100,10 @@ def _runner_command(ctx: AnalysisContext, mode: str, output):
             python_toolchain.platform,
         ],
     )
-    if mode in ["locked-package", "select-package", "wheel", "wheel-environment"]:
+    if mode in ["locked-package", "select-package"]:
         tool, version = _tool_arg(ctx.attrs.uv)
         command.add(["--uv", tool])
-    elif mode in ["compose-environment", "validate-environments"]:
+    elif mode in ["compose-environment", "install-wheel", "validate-environments", "wheel", "wheel-environment"]:
         version = python_version
     elif mode == "ruff":
         tool, version = _tool_arg(ctx.attrs.ruff)
@@ -123,7 +123,8 @@ def _add_config_settings(command, settings: dict) -> None:
 
 def _locked_package_command(ctx: AnalysisContext, root, manifest, lock: Artifact, source: bool, absent: bool, artifacts, requirement):
     """Constructs one wheel or source installation with exact cache semantics."""
-    command, python_version, uv_version = _runner_command(ctx, "locked-package", root)
+    mode = "install-wheel" if ctx.attrs.artifact != None else "locked-package"
+    command, python_version, tool_version = _runner_command(ctx, mode, root)
     command.add(["--lock", lock, "--manifest", manifest])
     if absent:
         command.add("--absent")
@@ -159,11 +160,12 @@ def _locked_package_command(ctx: AnalysisContext, root, manifest, lock: Artifact
         for build_root in environment.roots:
             command.add(["--build-environment", build_root])
         command.add(cmd_args(hidden = [environment.identity]))
-    return command, python_version, uv_version
+    identifier = "python-{}".format(python_version) if mode == "install-wheel" else "python-{}-uv-{}".format(python_version, tool_version)
+    return command, identifier
 
 def _register_locked_package(ctx: AnalysisContext, actions, root, manifest, lock: Artifact, source: bool, absent: bool, artifacts, requirement) -> None:
     """Registers one package action after artifact selection is final."""
-    command, python_version, uv_version = _locked_package_command(
+    command, identifier = _locked_package_command(
         ctx,
         root,
         manifest,
@@ -178,7 +180,7 @@ def _register_locked_package(ctx: AnalysisContext, actions, root, manifest, lock
         # PEP 517 builds still consume the local execution-platform compiler.
         allow_cache_upload = not source,
         category = "python_locked_package",
-        identifier = "python-{}-uv-{}".format(python_version, uv_version),
+        identifier = identifier,
         local_only = source,
     )
 
@@ -402,14 +404,14 @@ python_environment = rule(
 def _python_wheel_environment_impl(ctx: AnalysisContext) -> list[Provider]:
     """Materializes exact first-party wheels independently of locked dependencies."""
     root = ctx.actions.declare_output(ctx.label.name, dir = True, has_content_based_path = True)
-    command, python_version, uv_version = _runner_command(ctx, "wheel-environment", root.as_output())
+    command, python_version, _ = _runner_command(ctx, "wheel-environment", root.as_output())
     for wheel in ctx.attrs.wheels:
         command.add(["--wheel-dir", wheel[PythonWheelInfo].directory])
     ctx.actions.run(
         command,
         allow_cache_upload = True,
         category = "python_wheel_environment",
-        identifier = "python-{}-uv-{}".format(python_version, uv_version),
+        identifier = "python-{}".format(python_version),
         local_only = True,
     )
     return [
@@ -421,7 +423,6 @@ python_wheel_environment = rule(
     impl = _python_wheel_environment_impl,
     attrs = {
         "python": attrs.exec_dep(providers = [PythonNativeDistributionInfo]),
-        "uv": attrs.exec_dep(providers = [PythonNativeDistributionInfo]),
         "wheels": attrs.list(attrs.dep(providers = [PythonWheelInfo])),
         "_runner": attrs.source(default = "prelude//python_native:runner"),
     },
@@ -442,6 +443,7 @@ def _project_action(ctx: AnalysisContext, mode: str, output: Artifact) -> None:
     ])
     if mode == "wheel":
         environment = ctx.attrs.environment[PythonEnvironmentInfo]
+        command.add(["--distribution", ctx.attrs.distribution])
         for root in environment.roots:
             command.add(["--environment", root])
         command.add(cmd_args(hidden = [environment.identity]))
@@ -487,22 +489,24 @@ def _check_impl(mode: str):
         return [DefaultInfo(default_output = output)]
     return implementation
 
-def _project_attrs(tool: str, needs_environment: bool = False) -> dict:
+def _project_attrs(tool = None, needs_environment: bool = False) -> dict:
     """Returns the narrow schema for one first-party Python action."""
     attrs_by_name = {
         "python": attrs.exec_dep(providers = [PythonNativeDistributionInfo]),
         "project_root": attrs.string(),
         "sources": attrs.dep(providers = [PythonSourcesInfo]),
-        tool: attrs.exec_dep(providers = [PythonNativeDistributionInfo]),
         "_runner": attrs.source(default = "prelude//python_native:runner"),
     }
+    if tool != None:
+        attrs_by_name[tool] = attrs.exec_dep(providers = [PythonNativeDistributionInfo])
     if needs_environment:
         if tool == "ty":
             attrs_by_name["environments"] = attrs.list(attrs.dep(providers = [PythonEnvironmentInfo]))
         else:
             attrs_by_name["environment"] = attrs.dep(providers = [PythonEnvironmentInfo])
-    if tool == "uv":
+    if tool == None:
         attrs_by_name["config_settings"] = attrs.dict(attrs.string(), attrs.list(attrs.string()), default = {})
+        attrs_by_name["distribution"] = attrs.string(doc = "Normalized first-party distribution name.")
         attrs_by_name["package_build_variables"] = attrs.list(attrs.string(), default = [])
         attrs_by_name["package_config_settings"] = attrs.list(attrs.string(), default = [])
         attrs_by_name["vcs"] = attrs.option(attrs.dep(providers = [PythonVcsInfo]), default = None)
@@ -510,7 +514,7 @@ def _project_attrs(tool: str, needs_environment: bool = False) -> dict:
 
 python_wheel = rule(
     impl = _python_wheel_impl,
-    attrs = _project_attrs("uv", needs_environment = True),
+    attrs = _project_attrs(needs_environment = True),
     doc = "Builds a reproducible PEP 517 wheel.",
 )
 
