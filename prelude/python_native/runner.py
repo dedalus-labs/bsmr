@@ -1058,6 +1058,12 @@ def _project(
 ) -> None:
     """Execute one first-party build, lint, or typecheck action."""
     source = Path(_required(args.source, "--source")).resolve()
+    if args.mode == "wheel":
+        copied_source = scratch / "source"
+        # BSMR materializes source artifacts as relative symlinks into the input
+        # tree. Dereference them so the private backend copy remains complete.
+        shutil.copytree(source, copied_source)
+        source = copied_source.resolve()
     project_root = _required(args.project_root, "--project-root")
     project = (source / str(project_root)).resolve()
     output = args.output.resolve()

@@ -582,7 +582,11 @@ fn is_generated_path(path: &str, virtual_environments: &[String]) -> bool {
             || path
                 .strip_prefix(root)
                 .is_some_and(|suffix| suffix.starts_with('/'))
-    }) || (path.starts_with("pylock.") && path.ends_with(".toml"))
+    }) || path
+        .split('/')
+        .next()
+        .is_some_and(|component| component.starts_with("bazel-"))
+        || (path.starts_with("pylock.") && path.ends_with(".toml"))
         || path == "pylock.toml"
         || path == "uv.lock"
         || path.split('/').any(|component| {
@@ -820,6 +824,7 @@ mod tests {
             "uv.toml",
             "examples/pyproject.toml",
             "README.md",
+            "bazel-demo/generated.py",
             "buck-out/generated.py",
             ".venv/ignored.py",
             ".custom-env/pyvenv.cfg",
@@ -855,6 +860,7 @@ mod tests {
         assert!(build.contains("\"src/demo/__init__.py\""));
         assert!(!build.contains(".venv/ignored.py"));
         assert!(!build.contains(".custom-env"));
+        assert!(!build.contains("bazel-demo"));
         assert!(!build.contains("buck-out"));
         assert!(!build.contains("node_modules"));
         assert!(!build.contains("target-bsmr"));
