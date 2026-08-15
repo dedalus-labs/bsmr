@@ -87,3 +87,67 @@ BSMR_BENCH_BINARY="$PWD/target/release/bsmr" node benchmarks/native-api/run.ts
 `BSMR_BENCH_RUNS` configures the paired sample count and must be at least 15.
 `BSMR_BENCH_MAX_NATIVE_OVERHEAD_MS` can tighten the default one-millisecond
 regression budget; raising it invalidates comparisons with the checked-in gate.
+
+## Python conformance
+
+The Python conformance suite builds one prepared repository through BSMR and
+through BSMR's exact digest-pinned uv and CPython toolchains. It rejects any
+difference in installed distributions, versions, wheel tags, entry-point
+declarations, executable bits, or installed file contents. It then probes the
+same requested imports plus a canonical missing import in both environments.
+Optional first-party builds and repository tests extend the same gate beyond
+third-party installation.
+
+Both paths first materialize and compare `pylock.build.toml`, then use that
+identical closure with build isolation disabled for source distributions and
+first-party PEP 517 builds. On Darwin, the uv control receives BSMR's canonical
+deployment target and platform shim, preventing the host kernel version from
+changing wheel tags.
+
+Installer bookkeeping, bytecode, absolute script shebangs, and uv's executable
+trampoline are the only normalized differences. Source directories are build
+inputs, never import roots, so a passing import cannot hide a broken wheel by
+loading the checkout directly.
+
+The uv control builds first-party projects from a filtered immutable copy. It
+preserves declared source and Git metadata while excluding virtual environments,
+installer metadata, caches, and build outputs. The benchmark therefore cannot
+mutate the repository under test or pass because of state left by an earlier
+backend invocation.
+
+```shell
+BSMR_BENCH_BINARY="$PWD/target/release/bsmr" \
+BSMR_BENCH_REPOSITORY=/path/to/pydantic-ai \
+BSMR_BENCH_PYTHON_PROJECT_ENVIRONMENT=root//:__bsmr_python_workspace_environment \
+BSMR_BENCH_PYTHON_SOURCE_ROOTS=".,pydantic_ai_slim,pydantic_graph,pydantic_evals" \
+BSMR_BENCH_PYTHON_IMPORTS="pydantic_ai,pydantic_graph,pydantic_evals" \
+node benchmarks/python-conformance/run.ts
+```
+
+The command writes raw semantic snapshots and `results.json` beneath a unique
+temporary run directory. The report identifies the machine, target platform,
+cache state, closure size, exact BSMR, CPython, and uv binaries, BSMR's first,
+warm, and resident no-op builds, and each uv build phase. Configuration is
+explicit:
+
+| Variable | Default | Contract |
+| --- | --- | --- |
+| `BSMR_BENCH_BINARY` | required | BSMR binary under test |
+| `BSMR_BENCH_REPOSITORY` | required | Prepared repository root |
+| `BSMR_BENCH_PYTHON_LOCK` | `pylock.toml` | PEP 751 runtime lock |
+| `BSMR_BENCH_PYTHON_BUILD_LOCK` | `pylock.build.toml` | PEP 751 build lock |
+| `BSMR_BENCH_PYTHON_ENVIRONMENT` | root runtime environment | BSMR dependency target |
+| `BSMR_BENCH_PYTHON_BUILD_ENVIRONMENT` | root build environment | BSMR build-dependency target |
+| `BSMR_BENCH_PYTHON_PROJECT_ENVIRONMENT` | unset | Optional BSMR first-party environment target |
+| `BSMR_BENCH_PYTHON_SOURCE_ROOTS` | `.` | Comma-separated projects built by uv |
+| `BSMR_BENCH_PYTHON_IMPORTS` | empty | Comma-separated modules that must import |
+| `BSMR_BENCH_PYTHON_TEST_TARGET` | unset | Optional BSMR test target |
+| `BSMR_BENCH_PYTHON_TEST_COMMAND` | unset | Matching uv-side JSON argv |
+| `BSMR_BENCH_ISOLATION_DIR` | repository default | Explicit BSMR output and daemon isolation used for controlled cold runs |
+| `BSMR_BENCH_CACHE_STATE` | repository local state preserved | Explicit BSMR cache-state label recorded in the report |
+| `BSMR_BENCH_ROOT` | platform temporary directory | Parent for immutable run directories |
+
+The test target and uv-side command are an inseparable pair. Supplying only one
+fails before execution. The suite records timings for diagnostics; performance
+regression gates remain separate benchmarks so correctness cannot be traded for
+a faster but semantically different installation.
