@@ -70,11 +70,7 @@ fn render_vcs(
     writeln!(output, "python_vcs(").map_err(NativePythonBuildError::Render)?;
     writeln!(output, "    name = {:?},", target::VCS).map_err(NativePythonBuildError::Render)?;
     writeln!(output, "    srcs = {{").map_err(NativePythonBuildError::Render)?;
-    for path in ["HEAD", "objects", "refs"]
-        .into_iter()
-        .chain(vcs.packed_refs.then_some("packed-refs"))
-        .chain(vcs.shallow.then_some("shallow"))
-    {
+    for path in &vcs.files {
         writeln!(
             output,
             "        {path:?}: {git_path:?},",

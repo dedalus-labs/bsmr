@@ -14,6 +14,7 @@
  * above-listed licenses.
  */
 
+use std::collections::VecDeque;
 use std::sync::Arc;
 
 use allocative::Allocative;
@@ -35,6 +36,7 @@ use bsmr_common::pnpm_workspace::HasPnpmWorkspaceGraph;
 use bsmr_common::pnpm_workspace::is_native_pnpm_workspace;
 use bsmr_common::pnpm_workspace::render_typescript_build_file;
 use bsmr_common::python_lock::PylockToml;
+use bsmr_common::python_project::NativePythonBuildError;
 use bsmr_common::python_project::PythonRootFiles;
 use bsmr_common::python_project::PythonVcsFiles;
 use bsmr_common::python_project::PythonWorkspaceMember;
@@ -109,6 +111,16 @@ enum NativeBuildFileError {
     PythonBuildLockRequired,
     #[error("native build source contains none of package.json, Cargo.toml, or pyproject.toml")]
     NoSupportedManifest,
+}
+
+/// Makes only declared Git database inputs visible to source-attribute coercion.
+fn declare_python_vcs_sources(listing: &mut PackageListing, vcs: &PythonVcsFiles) {
+    let files = vcs.files.iter().map(|relative| {
+        PackageRelativePath::new(&format!(".git/{relative}"))
+            .expect("Git entries form valid package-relative paths")
+            .to_arc()
+    });
+    *listing = listing.with_explicit_files(files);
 }
 
 fn toml_value_to_json(value: toml::Value) -> serde_json::Value {
@@ -291,7 +303,7 @@ impl<'c, 'd: 'c> DiceCalculationDelegate<'c, 'd> {
     pub(super) async fn prepare_build_file_eval(
         &mut self,
         package: PackageLabel,
-        listing: &PackageListing,
+        listing: &mut PackageListing,
     ) -> bsmr_error::Result<(BuildFilePath, AstModule, ModuleDeps)> {
         let build_file_path = BuildFilePath::new(package.dupe(), listing.buildfile().to_owned());
         let (ast, deps) = match listing.build_source() {
@@ -387,7 +399,7 @@ impl<'c, 'd: 'c> DiceCalculationDelegate<'c, 'd> {
     async fn render_native_python(
         &mut self,
         package: PackageLabel,
-        listing: &PackageListing,
+        listing: &mut PackageListing,
         manifest: &str,
     ) -> bsmr_error::Result<Option<String>> {
         let is_project = python_project_name(manifest)?.is_some();
@@ -420,11 +432,21 @@ impl<'c, 'd: 'c> DiceCalculationDelegate<'c, 'd> {
         let build_lock = self.read_package_file(root, "pylock.build.toml").await?;
         let build_lock = PylockToml::parse(&build_lock)?;
         let build_packages = build_lock.installation_fragments()?;
-        let vcs = if workspace_uses_vcs || python_project_uses_vcs(manifest)? {
-            self.python_vcs_files(root).await?
+        let uses_vcs = workspace_uses_vcs || python_project_uses_vcs(manifest)?;
+        let vcs = if uses_vcs {
+            Some(
+                self.python_vcs_files(root)
+                    .await?
+                    .ok_or(NativePythonBuildError::MissingVcsState)?,
+            )
         } else {
             None
         };
+        if package.cell_relative_path().is_empty() {
+            if let Some(vcs) = &vcs {
+                declare_python_vcs_sources(listing, vcs);
+            }
+        }
         let mut test_locks = python_test_locks(&workspace_listing)?;
         for test_lock in &mut test_locks {
             let lock = self.read_package_file(root, &test_lock.file).await?;
@@ -486,18 +508,51 @@ impl<'c, 'd: 'c> DiceCalculationDelegate<'c, 'd> {
         {
             return Ok(None);
         }
-        let packed_refs = path(".git/packed-refs");
-        let packed_refs = DiceFileComputations::read_file_if_exists(self.ctx, packed_refs.as_ref())
+        let mut files = vec!["HEAD".to_owned()];
+        for optional in ["packed-refs", "shallow"] {
+            if DiceFileComputations::read_file_if_exists(
+                self.ctx,
+                path(&format!(".git/{optional}")).as_ref(),
+            )
             .await?
-            .is_some();
-        let shallow = path(".git/shallow");
-        let shallow = DiceFileComputations::read_file_if_exists(self.ctx, shallow.as_ref())
-            .await?
-            .is_some();
-        Ok(Some(PythonVcsFiles {
-            packed_refs,
-            shallow,
-        }))
+            .is_some()
+            {
+                files.push(optional.to_owned());
+            }
+        }
+        files.extend(self.python_vcs_directory_files(&root, "objects").await?);
+        files.extend(self.python_vcs_directory_files(&root, "refs").await?);
+        files.sort();
+        Ok(Some(PythonVcsFiles { files }))
+    }
+
+    /// Enumerates ignored Git database leaves so actions never consume ignored directories.
+    async fn python_vcs_directory_files(
+        &mut self,
+        root: &PackageLabel,
+        directory: &str,
+    ) -> bsmr_error::Result<Vec<String>> {
+        let mut pending = VecDeque::from([directory.to_owned()]);
+        let mut files = Vec::new();
+        while let Some(relative) = pending.pop_front() {
+            let git_path = format!(".git/{relative}");
+            let path = root.to_cell_path().join(
+                ForwardRelativePath::new(&git_path)
+                    .expect("Git entries form valid forward-relative paths"),
+            );
+            let entries =
+                DiceFileComputations::read_dir_include_ignores(self.ctx, path.as_ref()).await?;
+            for entry in entries.included.iter() {
+                let child = format!("{relative}/{}", entry.file_name);
+                if entry.file_type.is_dir() {
+                    pending.push_back(child);
+                } else {
+                    files.push(child);
+                }
+            }
+        }
+        files.sort();
+        Ok(files)
     }
 
     /// Tests the root pnpm contract without promoting incidental package metadata.
@@ -873,7 +928,7 @@ impl<'c, 'd: 'c> DiceCalculationDelegate<'c, 'd> {
         let mut now = None;
         let eval_kind = StarlarkEvalKind::LoadBuildFile(package.dupe());
         let eval_result: bsmr_error::Result<_> = try {
-            let ((), listing) = self
+            let ((), mut listing) = self
                 .ctx
                 .try_compute2(
                     |ctx| check_starlark_stack_size(ctx).boxed(),
@@ -882,7 +937,7 @@ impl<'c, 'd: 'c> DiceCalculationDelegate<'c, 'd> {
                 .await?;
 
             let (build_file_path, ast, deps) = self
-                .prepare_build_file_eval(package.dupe(), &listing)
+                .prepare_build_file_eval(package.dupe(), &mut listing)
                 .await?;
             let super_package = self
                 .eval_package_file_for_build_file(package.dupe(), &listing)

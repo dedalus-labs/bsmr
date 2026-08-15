@@ -49,6 +49,9 @@ pub enum NativePythonBuildError {
     /// Dynamic metadata needs a supported backend adapter before analysis can be exact.
     #[error("Python project `{0}` has dynamic dependencies BSMR cannot resolve exactly")]
     UnsupportedDynamicDependencies(String),
+    /// A declared Git-derived version requires an ordinary repository database.
+    #[error("Python project declares Git-derived metadata but the repository has no .git/HEAD")]
+    MissingVcsState,
     /// Every PEP 517 and compatibility requirement must be in the frozen build lock.
     #[error("pylock.build.toml does not contain required build package `{0}`")]
     MissingBuildRequirement(String),
@@ -93,10 +96,8 @@ pub enum NativePythonBuildError {
 
 /// Git metadata files that make dynamic project versions explicit action inputs.
 pub struct PythonVcsFiles {
-    /// Whether dynamic versioning may resolve packed rather than loose refs.
-    pub packed_refs: bool,
-    /// Whether Git must preserve a shallow repository boundary during version resolution.
-    pub shallow: bool,
+    /// Git-database paths relative to `.git` that the backend may read.
+    pub files: Vec<String>,
 }
 
 /// Root-only Python files that alter which private graph nodes are available.
@@ -183,6 +184,7 @@ fn manifest_uses_vcs(manifest: &Manifest) -> bool {
     }
     manifest.tool.uv_dynamic_versioning.is_some()
         || manifest.tool.setuptools_scm.is_some()
+        || manifest.tool.uv.cache_keys.iter().any(|key| key.uses_git())
         || manifest
             .tool
             .hatch
@@ -1195,14 +1197,19 @@ mod tests {
                 members: Vec::new(),
                 test_locks: Vec::new(),
                 vcs: Some(PythonVcsFiles {
-                    packed_refs: true,
-                    shallow: false,
+                    files: vec![
+                        "HEAD".to_owned(),
+                        "objects/pack/demo.idx".to_owned(),
+                        "objects/pack/demo.pack".to_owned(),
+                        "packed-refs".to_owned(),
+                    ],
                 }),
             },
         )
         .unwrap();
 
         assert!(build.contains("python_vcs("));
+        assert!(build.contains("\"objects/pack/demo.pack\": \".git/objects/pack/demo.pack\""));
         assert!(build.contains("\"packed-refs\": \".git/packed-refs\""));
         assert!(!build.contains("\"index\": \".git/index\""));
         assert!(!build.contains("\"shallow\": \".git/shallow\""));
@@ -1217,6 +1224,18 @@ mod tests {
         .unwrap());
         assert!(python_project_uses_vcs(
             "[project]\nname = 'demo'\ndynamic = ['version']\nrequires-python = '>=3.12'\n[tool.hatch.version]\nsource = 'uv-dynamic-versioning'\n[tool.uv-dynamic-versioning]\nvcs = 'git'\n",
+        )
+        .unwrap());
+        assert!(python_project_uses_vcs(
+            "[project]\nname = 'demo'\ndynamic = ['version']\nrequires-python = '>=3.12'\n[tool.setuptools.dynamic]\nversion = { attr = 'demo.__version__' }\n[tool.uv]\ncache-keys = [{ git = { commit = true } }]\n",
+        )
+        .unwrap());
+        assert!(python_project_uses_vcs(
+            "[project]\nname = 'demo'\ndynamic = ['version']\nrequires-python = '>=3.12'\n[tool.setuptools.dynamic]\nversion = { attr = 'demo.__version__' }\n[tool.uv]\ncache-keys = [{ git = { tags = true } }]\n",
+        )
+        .unwrap());
+        assert!(!python_project_uses_vcs(
+            "[project]\nname = 'demo'\ndynamic = ['version']\nrequires-python = '>=3.12'\n[tool.setuptools.dynamic]\nversion = { attr = 'demo.__version__' }\n[tool.uv]\ncache-keys = [{ file = 'pyproject.toml' }, { git = { commit = false, tags = false } }]\n",
         )
         .unwrap());
     }
