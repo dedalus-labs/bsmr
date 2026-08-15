@@ -30,6 +30,24 @@ def _empty_environment(path: Path) -> Path:
     return path
 
 
+def _package_with_import_metadata(
+    root: Path, distribution: str, metadata: str, module: str
+) -> tuple[Path, Path]:
+    """Create one installed distribution with explicit PEP 794 ownership."""
+    package = root / distribution
+    package.mkdir()
+    (package / module).write_text(f"OWNER = {distribution!r}\n", encoding="utf-8")
+    metadata_file = package / f"{distribution}-1.dist-info" / "METADATA"
+    metadata_file.parent.mkdir()
+    metadata_file.write_text(
+        f"Metadata-Version: 2.5\nName: {distribution}\nVersion: 1\n{metadata}\n",
+        encoding="utf-8",
+    )
+    manifest = root / f"{distribution}.json"
+    runner._write_package_manifest(package, manifest)
+    return package, manifest
+
+
 class NormalizeEntryPointsTest(unittest.TestCase):
     """Exercise the relocatable console-script contract."""
 
@@ -730,6 +748,154 @@ class EnvironmentTest(unittest.TestCase):
                         ],
                     )
                 )
+
+    def test_pep_794_exclusive_import_collision_fails_before_file_shadowing(
+        self,
+    ) -> None:
+        """Distinct files must not hide two distributions claiming one import."""
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            left, left_manifest = _package_with_import_metadata(
+                root, "left", "Import-Name: shared", "left.py"
+            )
+            right, right_manifest = _package_with_import_metadata(
+                root, "right", "Import-Name: shared", "right.py"
+            )
+
+            with self.assertRaisesRegex(
+                RuntimeError,
+                "import 'shared'.*left.*right",
+            ):
+                runner._compose_environment(
+                    Namespace(
+                        output=root / "overlay",
+                        manifest=root / "environment.json",
+                        package=[
+                            ["right", right_manifest, right],
+                            ["left", left_manifest, left],
+                        ],
+                    )
+                )
+
+    def test_pep_794_shared_namespaces_preserve_every_owner(self) -> None:
+        """Namespace declarations may overlap and remain queryable provenance."""
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            left, left_manifest = _package_with_import_metadata(
+                root, "left", "Import-Namespace: shared", "left.py"
+            )
+            right, right_manifest = _package_with_import_metadata(
+                root, "right", "Import-Namespace: shared", "right.py"
+            )
+            manifest = root / "environment.json"
+
+            runner._compose_environment(
+                Namespace(
+                    output=root / "overlay",
+                    manifest=manifest,
+                    package=[
+                        ["right", right_manifest, right],
+                        ["left", left_manifest, left],
+                    ],
+                )
+            )
+
+            self.assertEqual(
+                json.loads(manifest.read_text(encoding="utf-8"))["imports"],
+                {"shared": {"namespace": ["left", "right"]}},
+            )
+
+    def test_pep_794_exclusive_and_namespace_ownership_conflict(self) -> None:
+        """A namespace may not coexist with another distribution's exclusive name."""
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            exclusive, exclusive_manifest = _package_with_import_metadata(
+                root, "exclusive", "Import-Name: shared ; private", "exclusive.py"
+            )
+            namespace, namespace_manifest = _package_with_import_metadata(
+                root, "namespace", "Import-Namespace: shared", "namespace.py"
+            )
+
+            with self.assertRaisesRegex(
+                RuntimeError,
+                "import 'shared'.*exclusive.*namespace",
+            ):
+                runner._compose_environment(
+                    Namespace(
+                        output=root / "overlay",
+                        manifest=root / "environment.json",
+                        package=[
+                            ["namespace", namespace_manifest, namespace],
+                            ["exclusive", exclusive_manifest, exclusive],
+                        ],
+                    )
+                )
+
+    def test_pep_794_ignores_vendored_distribution_metadata(self) -> None:
+        """Only a wheel's top-level core metadata defines its import ownership."""
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            package, _ = _package_with_import_metadata(
+                root, "demo", "Import-Name: demo", "demo.py"
+            )
+            vendored = package / "demo" / "_vendor" / "shared-1.dist-info" / "METADATA"
+            vendored.parent.mkdir(parents=True)
+            vendored.write_text(
+                "Metadata-Version: 2.5\nName: shared\nVersion: 1\n"
+                "Import-Name: shared\n",
+                encoding="utf-8",
+            )
+            package_manifest = root / "demo.json"
+            runner._write_package_manifest(package, package_manifest)
+            shared, shared_manifest = _package_with_import_metadata(
+                root, "shared", "Import-Name: shared", "shared.py"
+            )
+            manifest = root / "environment.json"
+
+            runner._compose_environment(
+                Namespace(
+                    output=root / "overlay",
+                    manifest=manifest,
+                    package=[
+                        ["demo", package_manifest, package],
+                        ["shared", shared_manifest, shared],
+                    ],
+                )
+            )
+
+            self.assertEqual(
+                json.loads(manifest.read_text(encoding="utf-8"))["imports"],
+                {
+                    "demo": {"exclusive": "demo"},
+                    "shared": {"exclusive": "shared"},
+                },
+            )
+
+    def test_pep_794_invalid_or_ambiguous_ownership_fails_closed(self) -> None:
+        """Malformed qualifiers and dual ownership never enter provenance."""
+        for metadata, expected in (
+            ("Import-Name: shared; public", "invalid Import-Name"),
+            (
+                "Import-Name: shared\nImport-Namespace: shared",
+                "both exclusive and namespace",
+            ),
+        ):
+            with (
+                self.subTest(metadata=metadata),
+                tempfile.TemporaryDirectory() as temporary,
+            ):
+                root = Path(temporary)
+                package, package_manifest = _package_with_import_metadata(
+                    root, "demo", metadata, "demo.py"
+                )
+                with self.assertRaisesRegex(RuntimeError, expected):
+                    runner._compose_environment(
+                        Namespace(
+                            output=root / "overlay",
+                            manifest=root / "environment.json",
+                            package=[["demo", package_manifest, package]],
+                        )
+                    )
 
     def test_locked_package_identical_files_record_every_owner(self) -> None:
         """Byte-identical shared files deduplicate without losing provenance."""
