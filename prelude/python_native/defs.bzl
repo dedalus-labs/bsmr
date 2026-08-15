@@ -103,7 +103,7 @@ def _runner_command(ctx: AnalysisContext, mode: str, output):
     if mode in ["locked-package", "select-package", "wheel", "wheel-environment"]:
         tool, version = _tool_arg(ctx.attrs.uv)
         command.add(["--uv", tool])
-    elif mode == "compose-environment":
+    elif mode in ["compose-environment", "validate-environments"]:
         version = python_version
     elif mode == "ruff":
         tool, version = _tool_arg(ctx.attrs.ruff)
@@ -451,6 +451,9 @@ def _project_action(ctx: AnalysisContext, mode: str, output: Artifact) -> None:
             for root in environment.roots:
                 command.add(["--environment", root])
             command.add(cmd_args(hidden = [environment.identity]))
+    if mode in ["wheel", "ty"]:
+        environments = [ctx.attrs.environment] if mode == "wheel" else ctx.attrs.environments
+        command.add(cmd_args(hidden = [_validate_environment_stack(ctx, environments)]))
     if mode == "wheel" and ctx.attrs.vcs != None:
         command.add(["--vcs", ctx.attrs.vcs[PythonVcsInfo].tree])
     if mode == "wheel":
@@ -508,6 +511,27 @@ python_wheel = rule(
     attrs = _project_attrs("uv", needs_environment = True),
     doc = "Builds a reproducible PEP 517 wheel.",
 )
+
+def _validate_environment_stack(ctx: AnalysisContext, environments: list[Dependency]) -> Artifact:
+    """Registers one cacheable PEP 794 validation across import-search layers."""
+    output = ctx.actions.declare_output("__bsmr_python_environment_stack.json")
+    command, python_version, _ = _runner_command(
+        ctx,
+        "validate-environments",
+        output.as_output(),
+    )
+    for dependency in environments:
+        environment = dependency[PythonEnvironmentInfo]
+        for root in environment.roots:
+            command.add(["--environment", root])
+        command.add(cmd_args(hidden = [environment.identity]))
+    ctx.actions.run(
+        command,
+        allow_cache_upload = True,
+        category = "python_environment_validation",
+        identifier = "python-{}".format(python_version),
+    )
+    return output
 ruff_check = rule(
     impl = _check_impl("ruff"),
     attrs = _project_attrs("ruff"),
@@ -526,6 +550,7 @@ def _runtime_command(ctx: AnalysisContext, mode: str) -> cmd_args:
         python,
         ctx.attrs._runtime,
     ])
+    command.add(cmd_args(hidden = [_validate_environment_stack(ctx, ctx.attrs.environments)]))
     for environment in ctx.attrs.environments:
         environment = environment[PythonEnvironmentInfo]
         for root in environment.roots:
@@ -552,6 +577,7 @@ def _runtime_attrs(entry: bool = False, test: bool = False) -> dict:
         "project_root": attrs.string(),
         "python": attrs.exec_dep(providers = [PythonNativeDistributionInfo]),
         "sources": attrs.dep(providers = [PythonSourcesInfo]),
+        "_runner": attrs.source(default = "prelude//python_native:runner"),
         "_runtime": attrs.source(default = "prelude//python_native:runtime"),
     }
     if entry:

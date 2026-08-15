@@ -88,6 +88,7 @@ def _arguments() -> argparse.Namespace:
             "locked-package",
             "select-package",
             "compose-environment",
+            "validate-environments",
             "ruff",
             "ty",
             "wheel",
@@ -795,12 +796,12 @@ def _is_distribution_metadata(entry: list[object]) -> bool:
 
 def _package_imports(
     package: tuple[str, Path, list[list[object]]],
-) -> tuple[set[str], set[str]]:
+) -> tuple[str, set[str], set[str]]:
     """Read verified PEP 794 ownership from one installed distribution."""
     name, root, entries = package
     metadata_entries = [entry for entry in entries if _is_distribution_metadata(entry)]
     if not metadata_entries:
-        return set(), set()
+        return name, set(), set()
     if len(metadata_entries) != 1:
         raise RuntimeError(
             f"Python package '{name}' contains {len(metadata_entries)} metadata records"
@@ -815,11 +816,21 @@ def _package_imports(
         or _file_digest(metadata_file) != str(entry[3])
     ):
         raise RuntimeError(f"Python package '{name}' does not match '{relative}'")
+    return _metadata_imports(metadata_file, name)
+
+
+def _metadata_imports(
+    metadata_file: Path, expected_name: str | None = None
+) -> tuple[str, set[str], set[str]]:
+    """Return one distribution's verified PEP 794 ownership declarations."""
     metadata = Parser().parsestr(metadata_file.read_text(encoding="utf-8"))
     actual_name = metadata.get("Name")
-    if not actual_name or _normalize_distribution_name(actual_name) != name:
+    if not actual_name:
+        raise RuntimeError(f"Python metadata '{metadata_file}' has no Name")
+    name = _normalize_distribution_name(actual_name)
+    if expected_name is not None and name != expected_name:
         raise RuntimeError(
-            f"Python package '{name}' contains metadata for {actual_name!r}"
+            f"Python package '{expected_name}' contains metadata for {actual_name!r}"
         )
     exclusive = {
         parsed
@@ -837,18 +848,16 @@ def _package_imports(
             f"Python package '{name}' claims import {ambiguous[0]!r} as both "
             "exclusive and namespace ownership"
         )
-    return exclusive, namespaces
+    return name, exclusive, namespaces
 
 
 def _import_owners(
-    packages: list[tuple[str, Path, list[list[object]]]],
+    packages: list[tuple[str, set[str], set[str]]],
 ) -> dict[str, dict[str, str | list[str]]]:
     """Validate PEP 794 collisions and return deterministic provenance."""
     exclusive: dict[str, str] = {}
     namespaces: dict[str, set[str]] = {}
-    for package in packages:
-        owner = package[0]
-        package_exclusive, package_namespaces = _package_imports(package)
+    for owner, package_exclusive, package_namespaces in sorted(packages):
         for name in sorted(package_exclusive):
             conflicts = sorted(
                 {
@@ -879,6 +888,39 @@ def _import_owners(
         )
         for name in sorted(exclusive.keys() | namespaces.keys())
     }
+
+
+def _environment_imports(
+    roots: list[Path],
+) -> list[tuple[str, set[str], set[str]]]:
+    """Read top-level core metadata across immutable environment layers."""
+    packages = []
+    for root in roots:
+        environment = root.resolve()
+        if not environment.is_dir():
+            raise RuntimeError(f"Python environment '{root}' is not a directory")
+        packages.extend(
+            _metadata_imports(metadata)
+            for metadata in sorted(environment.glob("*.dist-info/METADATA"))
+        )
+    names = [name for name, _, _ in packages]
+    if len(names) != len(set(names)):
+        duplicate = next(name for name in sorted(names) if names.count(name) > 1)
+        raise RuntimeError(
+            f"Python environment stack contains duplicate package '{duplicate}'"
+        )
+    return packages
+
+
+def _write_environment_imports(args: argparse.Namespace) -> None:
+    """Validate layered import ownership into one cacheable provenance output."""
+    if not args.environment:
+        raise ValueError("--environment is required for this action")
+    owners = _import_owners(_environment_imports(args.environment))
+    args.output.write_text(
+        json.dumps(owners, sort_keys=True, separators=(",", ":")) + "\n",
+        encoding="utf-8",
+    )
 
 
 def _path_owners(
@@ -932,7 +974,7 @@ def _copy_overlay_file(
 def _compose_environment(args: argparse.Namespace) -> None:
     """Materialize one import root while rejecting ambiguous ownership."""
     packages = _environment_packages(args)
-    import_owners = _import_owners(packages)
+    import_owners = _import_owners([_package_imports(package) for package in packages])
     path_owners = _path_owners(packages)
     output = args.output.resolve()
     output.mkdir()
@@ -1008,6 +1050,7 @@ def _wheel_environment(
     )
     _normalize_entry_points(packages)
     _validate_environment(packages)
+    _import_owners(_environment_imports([packages]))
 
 
 def _project(
@@ -1109,6 +1152,8 @@ def main() -> None:
         _select_locked_package(args, process_environment, scratch)
     elif args.mode == "compose-environment":
         _compose_environment(args)
+    elif args.mode == "validate-environments":
+        _write_environment_imports(args)
     elif args.mode == "wheel-environment":
         _wheel_environment(args, process_environment, scratch)
     else:
