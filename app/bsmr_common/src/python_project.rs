@@ -1131,8 +1131,9 @@ mod tests {
         };
 
         let wheel = body("python_wheel");
-        assert!(wheel.contains("__bsmr_uv_distribution"));
+        assert!(wheel.contains("distribution = \"demo\""));
         assert!(wheel.contains("environment = \"root//:__bsmr_python_build_environment\""));
+        assert!(!wheel.contains("__bsmr_uv_distribution"));
         assert!(!wheel.contains("__bsmr_ruff_distribution"));
         assert!(!wheel.contains("__bsmr_ty_distribution"));
 
@@ -1149,6 +1150,10 @@ mod tests {
         assert!(typecheck.contains("__bsmr_ty_distribution"));
         assert!(!typecheck.contains("__bsmr_uv_distribution"));
         assert!(!typecheck.contains("__bsmr_ruff_distribution"));
+
+        let workspace = body("python_wheel_environment");
+        assert!(workspace.contains("__bsmr_python_distribution"));
+        assert!(!workspace.contains("__bsmr_uv_distribution"));
     }
 
     #[test]
@@ -1376,6 +1381,28 @@ mod tests {
                 .count(),
             2
         );
+    }
+
+    #[test]
+    fn invariant_runtime_does_not_install_its_own_source_target() {
+        let listing = PackageListing::testing_files(&["pyproject.toml", "src/demo/__init__.py"]);
+        let build = render_python_build_file(
+            CellRelativePathBuf::unchecked_new(String::new()),
+            "[project]\nname = 'demo'\nversion = '1'\nrequires-python = '>=3.12'\n[project.scripts]\ndemo = 'demo:main'\n",
+            &listing,
+            &PythonRootFiles::default(),
+        )
+        .unwrap();
+        let entry = build
+            .split_once("python_entry_point(\n")
+            .unwrap()
+            .1
+            .split_once("\n)\n")
+            .unwrap()
+            .0;
+
+        assert!(entry.contains("root//:__bsmr_python_environment"));
+        assert!(!entry.contains("__bsmr_python_workspace_environment"));
     }
 
     #[test]
@@ -1635,7 +1662,7 @@ mod tests {
     }
 
     #[test]
-    fn invariant_nested_project_owns_its_first_party_environment() {
+    fn invariant_nested_project_does_not_install_its_own_source_target() {
         let listing = PackageListing::testing_files(&["pyproject.toml", "pkg/__init__.py"]);
         let root_files = PythonRootFiles {
             config_files: vec![".ruff.toml".to_owned(), "pyproject.toml".to_owned()],
@@ -1650,10 +1677,11 @@ mod tests {
         .unwrap();
 
         assert!(build.contains("\"root//:__bsmr_python_environment\""));
-        assert!(build.contains("python_wheel_environment("));
-        assert!(build.contains("\":api\""));
+        assert!(!build.contains("python_wheel_environment("));
+        assert!(!build.contains("\":api\""));
         assert!(build.contains("python = \"root//:__bsmr_python_distribution\""));
-        assert!(build.contains("uv = \"root//:__bsmr_uv_distribution\""));
+        assert!(build.contains("distribution = \"api\""));
+        assert!(!build.contains("uv = \"root//:__bsmr_uv_distribution\""));
         assert!(!build.contains("python_environment("));
         assert!(build.contains("\"packages/api/pkg/__init__.py\""));
         assert_eq!(

@@ -9,7 +9,10 @@
 
 from __future__ import annotations
 
+import base64
 import csv
+import hashlib
+import io
 import json
 import os
 import runpy
@@ -17,8 +20,9 @@ import subprocess
 import sys
 import tempfile
 import unittest
+import zipfile
 from argparse import Namespace
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 from unittest.mock import patch
 
 import runner
@@ -46,6 +50,41 @@ def _package_with_import_metadata(
     manifest = root / f"{distribution}.json"
     runner._write_package_manifest(package, manifest)
     return package, manifest
+
+
+def _wheel(path: Path, files: dict[str, bytes]) -> Path:
+    """Write one internally verified wheel fixture."""
+    files = files.copy()
+    tag = "-".join(path.stem.split("-")[-3:]).encode()
+    for name, data in files.items():
+        if name.endswith(".dist-info/WHEEL") and b"\nTag:" not in data:
+            files[name] = data.rstrip(b"\n") + b"\nTag: " + tag + b"\n"
+    rows = [
+        [
+            name,
+            "sha256="
+            + base64.urlsafe_b64encode(hashlib.sha256(data).digest())
+            .rstrip(b"=")
+            .decode("ascii"),
+            str(len(data)),
+        ]
+        for name, data in files.items()
+    ]
+    dist_infos = {
+        PurePosixPath(name).parts[0]
+        for name in files
+        if PurePosixPath(name).parts[0].endswith(".dist-info")
+    }
+    if len(dist_infos) != 1:
+        raise ValueError("wheel fixture requires exactly one dist-info directory")
+    record = f"{dist_infos.pop()}/RECORD"
+    rows.append([record, "", ""])
+    output = io.StringIO()
+    csv.writer(output, lineterminator="\n").writerows(rows)
+    with zipfile.ZipFile(path, "w", zipfile.ZIP_DEFLATED) as archive:
+        for name, data in {**files, record: output.getvalue().encode()}.items():
+            archive.writestr(name, data)
+    return path
 
 
 class NormalizeEntryPointsTest(unittest.TestCase):
@@ -209,6 +248,237 @@ class SysconfigTest(unittest.TestCase):
 class EnvironmentTest(unittest.TestCase):
     """Exercise composition of third- and first-party locked artifacts."""
 
+    def test_native_wheel_install_spreads_data_and_writes_entry_points(self) -> None:
+        """Selected wheels must materialize without invoking another resolver."""
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            wheel = _wheel(
+                root / "demo-1-py3-none-any.whl",
+                {
+                    "demo.py": b"def main(): return 0\n",
+                    "demo-1.dist-info/METADATA": (
+                        b"Metadata-Version: 2.5\nName: demo\nVersion: 1\n"
+                    ),
+                    "demo-1.dist-info/WHEEL": (
+                        b"Wheel-Version: 1.0\nRoot-Is-Purelib: true\n"
+                        b"Tag: py3-none-any\n"
+                    ),
+                    "demo-1.dist-info/entry_points.txt": (
+                        b"[console_scripts]\ndemo = demo:main\n"
+                    ),
+                    "demo-1.data/data/share/demo.txt": b"data\n",
+                    "demo-1.data/headers/demo.h": b"header\n",
+                    "demo-1.data/platlib/plat.py": b"PLAT = True\n",
+                    "demo-1.data/purelib/pure.py": b"PURE = True\n",
+                    "demo-1.data/scripts/raw": b"#!python\nprint('raw')\n",
+                },
+            )
+            output = root / "environment"
+
+            runner._install_wheels([wheel], output)
+
+            self.assertEqual((output / "share/demo.txt").read_bytes(), b"data\n")
+            self.assertEqual((output / "include/demo/demo.h").read_bytes(), b"header\n")
+            self.assertEqual((output / "plat.py").read_bytes(), b"PLAT = True\n")
+            self.assertEqual((output / "pure.py").read_bytes(), b"PURE = True\n")
+            self.assertEqual(
+                (output / "bin/raw").read_bytes(),
+                b"#!/usr/bin/env python3\nprint('raw')\n",
+            )
+            script = output / "bin/demo"
+            self.assertTrue(script.stat().st_mode & 0o111)
+            self.assertIn(b"from demo import main", script.read_bytes())
+            record = list(
+                csv.reader(
+                    (output / "demo-1.dist-info/RECORD")
+                    .read_text(encoding="utf-8")
+                    .splitlines()
+                )
+            )
+            self.assertEqual(record, sorted(record))
+            self.assertIn(["demo-1.dist-info/RECORD", "", ""], record)
+            self.assertTrue(any(row[0] == "bin/demo" and row[1] for row in record))
+            self.assertFalse(any("demo-1.data" in row[0] for row in record))
+
+    def test_native_wheel_install_rejects_archive_traversal(self) -> None:
+        """A malicious wheel member must not escape its declared output."""
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            wheel = _wheel(
+                root / "demo-1-py3-none-any.whl",
+                {
+                    "../escaped.py": b"ESCAPED = True\n",
+                    "demo-1.dist-info/METADATA": (
+                        b"Metadata-Version: 2.5\nName: demo\nVersion: 1\n"
+                    ),
+                    "demo-1.dist-info/WHEEL": (
+                        b"Wheel-Version: 1.0\nRoot-Is-Purelib: true\n"
+                        b"Tag: py3-none-any\n"
+                    ),
+                },
+            )
+
+            with self.assertRaisesRegex(RuntimeError, "not normalized"):
+                runner._install_wheels([wheel], root / "environment")
+
+            self.assertFalse((root / "escaped.py").exists())
+
+    def test_native_wheel_install_rejects_record_hash_mismatch(self) -> None:
+        """Artifact verification must extend through every wheel payload file."""
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            wheel = _wheel(
+                root / "demo-1-py3-none-any.whl",
+                {
+                    "demo.py": b"VALUE = 1\n",
+                    "demo-1.dist-info/METADATA": (
+                        b"Metadata-Version: 2.5\nName: demo\nVersion: 1\n"
+                    ),
+                    "demo-1.dist-info/WHEEL": (
+                        b"Wheel-Version: 1.0\nRoot-Is-Purelib: true\n"
+                        b"Tag: py3-none-any\n"
+                    ),
+                },
+            )
+            with zipfile.ZipFile(wheel) as archive:
+                members = {name: archive.read(name) for name in archive.namelist()}
+            members["demo.py"] = b"VALUE = 2\n"
+            with zipfile.ZipFile(wheel, "w", zipfile.ZIP_DEFLATED) as archive:
+                for name, data in members.items():
+                    archive.writestr(name, data)
+
+            with self.assertRaisesRegex(RuntimeError, "hash mismatch"):
+                runner._install_wheels([wheel], root / "environment")
+
+    def test_native_wheel_install_rejects_conflicting_distribution_identity(
+        self,
+    ) -> None:
+        """Filename, metadata directory, and core metadata must name one release."""
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            wheel = _wheel(
+                root / "demo-2-py3-none-any.whl",
+                {
+                    "demo.py": b"VALUE = 1\n",
+                    "demo-1.dist-info/METADATA": (
+                        b"Metadata-Version: 2.5\nName: demo\nVersion: 1\n"
+                    ),
+                    "demo-1.dist-info/WHEEL": (
+                        b"Wheel-Version: 1.0\nRoot-Is-Purelib: true\n"
+                        b"Tag: py3-none-any\n"
+                    ),
+                },
+            )
+
+            with self.assertRaisesRegex(RuntimeError, "conflicting release identity"):
+                runner._install_wheels([wheel], root / "environment")
+
+    def test_native_wheel_install_rejects_conflicting_compatibility_tags(self) -> None:
+        """The filename and WHEEL metadata must advertise the same tag set."""
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            wheel = _wheel(
+                root / "demo-1-py3-none-any.whl",
+                {
+                    "demo.py": b"VALUE = 1\n",
+                    "demo-1.dist-info/METADATA": (
+                        b"Metadata-Version: 2.5\nName: demo\nVersion: 1\n"
+                    ),
+                    "demo-1.dist-info/WHEEL": (
+                        b"Wheel-Version: 1.0\nRoot-Is-Purelib: true\n"
+                        b"Tag: cp314-cp314-macosx_13_0_arm64\n"
+                    ),
+                },
+            )
+
+            with self.assertRaisesRegex(RuntimeError, "compatibility tags"):
+                runner._install_wheels([wheel], root / "environment")
+
+    def test_native_wheel_install_rejects_foreign_data_directory(self) -> None:
+        """A wheel cannot smuggle another distribution's installation scheme."""
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            wheel = _wheel(
+                root / "demo-1-py3-none-any.whl",
+                {
+                    "demo.py": b"VALUE = 1\n",
+                    "other-1.data/purelib/other.py": b"VALUE = 2\n",
+                    "demo-1.dist-info/METADATA": (
+                        b"Metadata-Version: 2.5\nName: demo\nVersion: 1\n"
+                    ),
+                    "demo-1.dist-info/WHEEL": (
+                        b"Wheel-Version: 1.0\nRoot-Is-Purelib: true\n"
+                        b"Tag: py3-none-any\n"
+                    ),
+                },
+            )
+
+            with self.assertRaisesRegex(RuntimeError, "does not match"):
+                runner._install_wheels([wheel], root / "environment")
+
+    def test_native_wheel_install_coalesces_identical_entry_points(self) -> None:
+        """Workspace distributions may own one byte-identical generated script."""
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            wheels = [
+                _wheel(
+                    root / f"{distribution}-1-py3-none-any.whl",
+                    {
+                        f"{distribution}.py": b"def main(): return 0\n",
+                        f"{distribution}-1.dist-info/METADATA": (
+                            f"Metadata-Version: 2.5\nName: {distribution}\nVersion: 1\n".encode()
+                        ),
+                        f"{distribution}-1.dist-info/WHEEL": (
+                            b"Wheel-Version: 1.0\nRoot-Is-Purelib: true\n"
+                        ),
+                        f"{distribution}-1.dist-info/entry_points.txt": (
+                            b"[console_scripts]\nshared = demo:main\n"
+                        ),
+                    },
+                )
+                for distribution in ("demo", "demo_cli")
+            ]
+            output = root / "environment"
+
+            runner._install_wheels(wheels, output)
+
+            for distribution in ("demo", "demo_cli"):
+                rows = list(
+                    csv.reader(
+                        (output / f"{distribution}-1.dist-info/RECORD")
+                        .read_text(encoding="utf-8")
+                        .splitlines()
+                    )
+                )
+                self.assertTrue(any(row[0] == "bin/shared" and row[1] for row in rows))
+
+    def test_native_wheel_install_rejects_conflicting_entry_points(self) -> None:
+        """Two distributions may not assign different programs to one script."""
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            wheels = []
+            for distribution, module in (("demo", "demo"), ("other", "other")):
+                wheels.append(
+                    _wheel(
+                        root / f"{distribution}-1-py3-none-any.whl",
+                        {
+                            f"{distribution}.py": b"def main(): return 0\n",
+                            f"{distribution}-1.dist-info/METADATA": (
+                                f"Metadata-Version: 2.5\nName: {distribution}\nVersion: 1\n".encode()
+                            ),
+                            f"{distribution}-1.dist-info/WHEEL": (
+                                b"Wheel-Version: 1.0\nRoot-Is-Purelib: true\n"
+                            ),
+                            f"{distribution}-1.dist-info/entry_points.txt": (
+                                f"[console_scripts]\nshared = {module}:main\n".encode()
+                            ),
+                        },
+                    )
+                )
+
+            with self.assertRaisesRegex(RuntimeError, "entry point conflicts"):
+                runner._install_wheels(wheels, root / "environment")
+
     def test_uv_selects_a_compatible_locked_wheel(self) -> None:
         """A successful binary-only dry run commits the remote-cacheable path."""
         with tempfile.TemporaryDirectory() as temporary:
@@ -341,40 +611,6 @@ class EnvironmentTest(unittest.TestCase):
             self.assertEqual(raised.exception.code, 2)
             self.assertFalse(args.output.exists())
 
-    def test_first_party_wheels_are_installed_without_resolution(self) -> None:
-        """Runtime metadata must come from exact wheel outputs, never editable sources."""
-        with tempfile.TemporaryDirectory() as temporary:
-            root = Path(temporary)
-            output = root / "environment.zip"
-            wheel_directory = root / "wheel"
-            wheel_directory.mkdir()
-            wheel = wheel_directory / "demo-1-py3-none-any.whl"
-            wheel.touch()
-            args = Namespace(
-                output=output,
-                python=root / "python",
-                python_platform="aarch64-apple-darwin",
-                uv=root / "uv",
-                wheel_dir=[wheel_directory],
-            )
-
-            def install(_: list[str], __: dict[str, str]) -> None:
-                (output / "demo.py").write_text("VALUE = 1\n", encoding="utf-8")
-
-            with patch.object(runner, "_run", side_effect=install) as run:
-                runner._wheel_environment(args, {"PATH": "/usr/bin"}, root / "scratch")
-
-            install = run.call_args.args[0]
-            self.assertIn(str(wheel.resolve()), install)
-            self.assertIn("--no-deps", install)
-            self.assertIn("--no-index", install)
-            self.assertIn("--no-python-downloads", install)
-            self.assertIn("--offline", install)
-            self.assertEqual(
-                install[install.index("--python-platform") + 1],
-                "aarch64-apple-darwin",
-            )
-
     def test_source_builds_use_only_the_declared_build_environment(self) -> None:
         """A lock containing sdists must never resolve ambient build requirements."""
         with tempfile.TemporaryDirectory() as temporary:
@@ -470,6 +706,7 @@ class EnvironmentTest(unittest.TestCase):
             )
 
             def install(*_: object) -> None:
+                """Simulate uv writing the required installed distribution metadata."""
                 metadata = args.output / "demo-1.dist-info" / "METADATA"
                 metadata.parent.mkdir()
                 metadata.write_text("Name: demo\nVersion: 1\n", encoding="utf-8")
@@ -534,8 +771,19 @@ class EnvironmentTest(unittest.TestCase):
         """A directly acquired wheel must not perform index or lock resolution."""
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)
-            artifact = root / "demo-1-py3-none-any.whl"
-            artifact.touch()
+            artifact = _wheel(
+                root / "demo-1-py3-none-any.whl",
+                {
+                    "demo.py": b"VALUE = 1\n",
+                    "demo-1.dist-info/METADATA": (
+                        b"Metadata-Version: 2.5\nName: demo\nVersion: 1\n"
+                    ),
+                    "demo-1.dist-info/WHEEL": (
+                        b"Wheel-Version: 1.0\nRoot-Is-Purelib: true\n"
+                        b"Tag: py3-none-any\n"
+                    ),
+                },
+            )
             args = Namespace(
                 absent=False,
                 artifact=[artifact],
@@ -560,17 +808,8 @@ class EnvironmentTest(unittest.TestCase):
             with patch.object(runner, "_run") as run:
                 runner._locked_package(args, {"PATH": "/usr/bin"}, root / "scratch")
 
-            command = run.call_args.args[0]
-            self.assertEqual(command[1:4], ["pip", "install", str(artifact)])
-            self.assertNotIn(str(args.lock), command)
-            self.assertIn("--no-index", command)
-            self.assertIn("--no-deps", command)
-            self.assertIn("--no-build", command)
-            self.assertIn("--offline", command)
-            self.assertEqual(
-                command[command.index("--python-platform") + 1],
-                "aarch64-apple-darwin",
-            )
+            run.assert_not_called()
+            self.assertEqual((args.output / "demo.py").read_bytes(), b"VALUE = 1\n")
 
     def test_locked_wheel_candidates_are_selected_offline(self) -> None:
         """Pinned local candidates must replace index access for platform wheels."""
@@ -1048,6 +1287,39 @@ class EnvironmentTest(unittest.TestCase):
 class ProjectActionTest(unittest.TestCase):
     """Exercise process boundaries shared by build and analysis actions."""
 
+    def test_backend_process_requires_its_declared_interpreter(self) -> None:
+        """A runner started by another Python must fail before loading a backend."""
+        with (
+            self.assertRaisesRegex(RuntimeError, "runner interpreter"),
+            runner._backend_process(
+                Path("/different/python"), [], [], {}, "aarch64-apple-darwin"
+            ),
+        ):
+            self.fail("mismatched interpreter entered the backend")
+
+    def test_backend_process_rejects_pth_paths_outside_build_environment(self) -> None:
+        """Locked .pth files may not import code from an undeclared host path."""
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            environment = _empty_environment(root / "environment")
+            outside = root / "outside"
+            outside.mkdir()
+            (environment / "escape.pth").write_text(
+                f"{outside.resolve()}\n", encoding="utf-8"
+            )
+
+            with (
+                self.assertRaisesRegex(RuntimeError, "undeclared import path"),
+                runner._backend_process(
+                    Path(sys.executable),
+                    [],
+                    [environment.resolve()],
+                    {},
+                    "aarch64-apple-darwin",
+                ),
+            ):
+                self.fail("undeclared .pth path entered the backend")
+
     def test_typecheck_uses_native_project_scope_and_import_roots(self) -> None:
         """ty must honor configured sources while resolving cached environments."""
         with tempfile.TemporaryDirectory() as temporary:
@@ -1128,17 +1400,30 @@ class ProjectActionTest(unittest.TestCase):
 
         self.assertEqual(raised.exception.code, 7)
 
-    def test_wheel_uses_declared_project_configuration_without_ambient_state(
-        self,
-    ) -> None:
-        """PEP 517 constraints are inputs while an ancestor checkout is not."""
+    def test_wheel_calls_declared_backend_with_uv_configuration_semantics(self) -> None:
+        """The frozen action must call only its backend with uv-compatible inputs."""
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)
             source = root / "source"
             source.mkdir()
+            (source / "pyproject.toml").write_text(
+                "[project]\n"
+                "name = 'demo'\n"
+                "version = '1'\n"
+                "[build-system]\n"
+                "requires = []\n"
+                "build-backend = 'backend:api'\n"
+                "backend-path = ['.']\n",
+                encoding="utf-8",
+            )
             (source / "backing.py").write_text("VALUE = 1\n", encoding="utf-8")
             (source / "module.py").symlink_to("backing.py")
             environment = _empty_environment(root / "environment.zip")
+            extension = environment / "build-extension"
+            extension.mkdir()
+            (environment / "extension.pth").write_text(
+                f"{extension}\n", encoding="utf-8"
+            )
             vcs = root / "vcs"
             vcs.mkdir()
             (vcs / "HEAD").write_text("ref: refs/heads/main\n", encoding="utf-8")
@@ -1148,10 +1433,11 @@ class ProjectActionTest(unittest.TestCase):
                 config_setting=["editable-mode=strict", "--build-option=--quiet"],
                 package_config_setting=["demo:editable-mode=compat"],
                 package_build_variable=["demo:DEMO_BUILD=strict"],
+                distribution="demo",
                 mode="wheel",
                 output=root / "wheel",
                 project_root=".",
-                python=root / "python",
+                python=Path(sys.executable),
                 python_platform="aarch64-apple-darwin",
                 source=source,
                 ty=None,
@@ -1160,45 +1446,118 @@ class ProjectActionTest(unittest.TestCase):
                 vcs=vcs,
             )
             process_environment = {"PATH": "/usr/bin", "UV_NO_CONFIG": "1"}
+            calls: list[tuple[str, object]] = []
 
-            with patch.object(runner, "_run") as run:
+            class Backend:
+                """Record the exact PEP 517 hook contract presented by BSMR."""
+
+                def get_requires_for_build_wheel(
+                    self, config_settings: dict[str, str | list[str]]
+                ) -> list[str]:
+                    """Record dependency discovery if the frozen action calls it."""
+                    calls.append(("requires", config_settings))
+                    return []
+
+                def build_wheel(
+                    self,
+                    wheel_directory: str,
+                    config_settings: dict[str, str | list[str]],
+                    metadata_directory: str | None,
+                ) -> str:
+                    """Record and satisfy the declared wheel hook."""
+                    calls.append(("build", config_settings))
+                    self.assert_backend_environment()
+                    self.assert_backend_import_path()
+                    self.assert_backend_source()
+                    self.assert_metadata_directory(metadata_directory)
+                    filename = "demo-1-py3-none-any.whl"
+                    _wheel(
+                        Path(wheel_directory) / filename,
+                        {
+                            "demo/__init__.py": b"VALUE = 1\n",
+                            "demo-1.dist-info/METADATA": (
+                                b"Metadata-Version: 2.5\nName: demo\nVersion: 1\n"
+                            ),
+                            "demo-1.dist-info/WHEEL": (
+                                b"Wheel-Version: 1.0\nRoot-Is-Purelib: true\n"
+                            ),
+                        },
+                    )
+                    return filename
+
+                @staticmethod
+                def assert_backend_environment() -> None:
+                    """Require only declared build variables and isolated uv state."""
+                    self.assertEqual(os.environ["DEMO_BUILD"], "strict")
+                    self.assertEqual(os.environ["UV_NO_CONFIG"], "1")
+                    self.assertEqual(os.environ["MACOSX_DEPLOYMENT_TARGET"], "13.0")
+
+                @staticmethod
+                def assert_backend_import_path() -> None:
+                    """Require backend, stdlib, and locked environment path ordering."""
+                    paths = [Path(path).resolve() for path in sys.path]
+                    self.assertEqual(paths[0], (root / "scratch" / "source").resolve())
+                    environment_index = paths.index(environment.resolve())
+                    extension_index = paths.index(extension.resolve())
+                    self.assertLess(environment_index, extension_index)
+                    self.assertTrue(
+                        any(
+                            "python" in str(path).lower()
+                            for path in paths[1:environment_index]
+                        )
+                    )
+                    self.assertFalse(
+                        any(
+                            "site-packages" in path.parts
+                            for path in paths[:environment_index]
+                        )
+                    )
+
+                @staticmethod
+                def assert_backend_source() -> None:
+                    """Require the normalized immutable scratch source as cwd."""
+                    self.assertEqual(
+                        Path.cwd(), (root / "scratch" / "source").resolve()
+                    )
+                    self.assertEqual(int(Path("backing.py").stat().st_mtime), 315532800)
+
+                @staticmethod
+                def assert_metadata_directory(metadata_directory: str | None) -> None:
+                    """Require a direct wheel build without an undeclared metadata hook."""
+                    self.assertIsNone(metadata_directory)
+
+            backend = Backend()
+            backend.api = backend
+
+            with (
+                patch.object(runner, "_run") as run,
+                patch.object(runner.importlib, "import_module", return_value=backend),
+            ):
                 runner._project(args, process_environment, root / "scratch")
 
-            action_environment = run.call_args.args[1]
+            action_environment = run.call_args_list[0].args[1]
             self.assertEqual(action_environment["UV_NO_CONFIG"], "1")
             self.assertEqual(
                 action_environment["GIT_CEILING_DIRECTORIES"],
                 str((root / "scratch" / "source").resolve().parent),
             )
             materialized_environment = environment.resolve()
-            python_path = action_environment["PYTHONPATH"].split(os.pathsep)
-            self.assertEqual(
-                Path(python_path[0]).resolve(),
-                (root / "scratch" / "target-platform").resolve(),
-            )
-            self.assertEqual(Path(python_path[1]), materialized_environment)
             self.assertTrue(
                 action_environment["PATH"].startswith(
                     str(materialized_environment / "bin")
                 )
             )
-            self.assertIn("--no-build-isolation", run.call_args.args[0])
-            self.assertIn("--offline", run.call_args.args[0])
             self.assertEqual(
-                run.call_args.args[0][-4:],
+                calls,
                 [
-                    "--config-setting=editable-mode=strict",
-                    "--config-setting=--build-option=--quiet",
-                    "--config-settings-package=demo:editable-mode=compat",
-                    ".",
+                    (
+                        "build",
+                        {
+                            "--build-option": "--quiet",
+                            "editable-mode": ["compat", "strict"],
+                        },
+                    ),
                 ],
-            )
-            config = Path(
-                run.call_args.args[0][run.call_args.args[0].index("--config-file") + 1]
-            )
-            self.assertEqual(
-                config.read_text(encoding="utf-8"),
-                '[extra-build-variables."demo"]\n"DEMO_BUILD" = "strict"\n',
             )
             git_directory = root / "scratch" / "git"
             self.assertEqual(action_environment["GIT_DIR"], str(git_directory))
@@ -1217,7 +1576,7 @@ class ProjectActionTest(unittest.TestCase):
                 "VALUE = 1\n",
             )
             self.assertFalse((copied_source / "module.py").is_symlink())
-            self.assertEqual(run.call_args.kwargs["cwd"], copied_source)
+            self.assertEqual(run.call_args_list[0].kwargs["cwd"], copied_source)
             self.assertEqual(action_environment["GIT_CONFIG_GLOBAL"], os.devnull)
             self.assertEqual(action_environment["GIT_CONFIG_NOSYSTEM"], "1")
             self.assertEqual(
@@ -1226,6 +1585,113 @@ class ProjectActionTest(unittest.TestCase):
             self.assertEqual(
                 run.call_args_list[0].args[0], ["git", "read-tree", "HEAD"]
             )
+
+    def test_wheel_does_not_discover_requirements_after_graph_freeze(self) -> None:
+        """The frozen action consumes the validated build lock without replanning."""
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            source = root / "source"
+            source.mkdir()
+            (source / "pyproject.toml").write_text(
+                "[project]\nname = 'demo'\nversion = '1'\n"
+                "[build-system]\nrequires = []\nbuild-backend = 'backend'\n",
+                encoding="utf-8",
+            )
+            environment = _empty_environment(root / "environment")
+            (root / "scratch").mkdir()
+            args = Namespace(
+                environment=[environment],
+                config_setting=[],
+                package_config_setting=[],
+                package_build_variable=[],
+                distribution="demo",
+                mode="wheel",
+                output=root / "wheel",
+                project_root=".",
+                python=Path(sys.executable),
+                python_platform="aarch64-apple-darwin",
+                source=source,
+                ty=None,
+                uv=None,
+                ruff=None,
+                vcs=None,
+            )
+
+            class Backend:
+                """Fail if the execution phase attempts dependency discovery."""
+
+                @staticmethod
+                def get_requires_for_build_wheel(
+                    _config_settings: dict[str, str | list[str]],
+                ) -> list[str]:
+                    """Reject dependency discovery after graph analysis."""
+                    raise AssertionError("dependency planning entered the frozen build")
+
+                @staticmethod
+                def build_wheel(
+                    wheel_directory: str,
+                    _config_settings: dict[str, str | list[str]],
+                    _metadata_directory: str | None,
+                ) -> str:
+                    """Produce the minimal wheel expected by the frozen action."""
+                    filename = "demo-1-py3-none-any.whl"
+                    _wheel(
+                        Path(wheel_directory) / filename,
+                        {
+                            "demo.py": b"VALUE = 1\n",
+                            "demo-1.dist-info/METADATA": (
+                                b"Metadata-Version: 2.5\nName: demo\nVersion: 1\n"
+                            ),
+                            "demo-1.dist-info/WHEEL": (
+                                b"Wheel-Version: 1.0\nRoot-Is-Purelib: true\n"
+                            ),
+                        },
+                    )
+                    return filename
+
+            with patch.object(
+                runner.importlib, "import_module", return_value=Backend()
+            ):
+                runner._project(args, {"PATH": "/usr/bin"}, root / "scratch")
+
+            self.assertTrue((root / "wheel" / "demo-1-py3-none-any.whl").is_file())
+
+    def test_wheel_rejects_backend_path_outside_immutable_source(self) -> None:
+        """In-tree backends may not import code outside the declared source."""
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            source = root / "source"
+            source.mkdir()
+            (source / "pyproject.toml").write_text(
+                "[project]\nname = 'demo'\nversion = '1'\n"
+                "[build-system]\n"
+                "requires = []\n"
+                "build-backend = 'backend'\n"
+                "backend-path = ['../ambient']\n",
+                encoding="utf-8",
+            )
+            environment = _empty_environment(root / "environment")
+            (root / "scratch").mkdir()
+            args = Namespace(
+                environment=[environment],
+                config_setting=[],
+                package_config_setting=[],
+                package_build_variable=[],
+                distribution="demo",
+                mode="wheel",
+                output=root / "wheel",
+                project_root=".",
+                python=Path(sys.executable),
+                python_platform="aarch64-apple-darwin",
+                source=source,
+                ty=None,
+                uv=None,
+                ruff=None,
+                vcs=None,
+            )
+
+            with self.assertRaisesRegex(RuntimeError, "backend-path"):
+                runner._project(args, {"PATH": "/usr/bin"}, root / "scratch")
 
 
 if __name__ == "__main__":

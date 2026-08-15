@@ -580,12 +580,6 @@ pub(super) fn render_workspace_environment(
         format!("{tool_prefix}__bsmr_python_distribution")
     )
     .map_err(NativePythonBuildError::Render)?;
-    writeln!(
-        output,
-        "    uv = {:?},",
-        format!("{tool_prefix}__bsmr_uv_distribution")
-    )
-    .map_err(NativePythonBuildError::Render)?;
     writeln!(output, "    wheels = [").map_err(NativePythonBuildError::Render)?;
     if let Some(root_target) = root_target {
         writeln!(output, "        {:?},", format!(":{root_target}"))

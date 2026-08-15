@@ -226,7 +226,7 @@ fn render_package(
 impl PackageRender<'_> {
     /// Returns whether this package needs a first-party wheel layer.
     fn has_workspace_environment(&self) -> bool {
-        self.installable || !self.members.is_empty()
+        !self.members.is_empty()
     }
 }
 
@@ -240,21 +240,21 @@ fn render_quality_targets(
             "python_wheel",
             package.target_name,
             target::SOURCES,
-            "uv = \"root//:__bsmr_uv_distribution\"",
+            None,
             true,
         ),
         (
             "ruff_check",
             "lint",
             target::SOURCES,
-            "ruff = \"root//:__bsmr_ruff_distribution\"",
+            Some("ruff = \"root//:__bsmr_ruff_distribution\""),
             false,
         ),
         (
             "ty_check",
             "typecheck",
             target::ANALYSIS_SOURCES,
-            "ty = \"root//:__bsmr_ty_distribution\"",
+            Some("ty = \"root//:__bsmr_ty_distribution\""),
             true,
         ),
     ] {
@@ -280,7 +280,7 @@ struct QualityTarget<'a> {
     rule: &'a str,
     name: &'a str,
     sources: &'a str,
-    tool: &'a str,
+    tool: Option<&'a str>,
     needs_environment: bool,
 }
 
@@ -295,6 +295,8 @@ fn render_quality_target(
         .map_err(NativePythonBuildError::Render)?;
     if target_spec.rule == "python_wheel" {
         writeln!(output, "    visibility = [\"PUBLIC\"],")
+            .map_err(NativePythonBuildError::Render)?;
+        writeln!(output, "    distribution = {:?},", package.target_name)
             .map_err(NativePythonBuildError::Render)?;
         render_config_settings(output, package.config_settings)?;
         render_package_config_settings(
@@ -341,7 +343,9 @@ fn render_quality_target(
         .map_err(NativePythonBuildError::Render)?;
     writeln!(output, "    sources = \":{}\",", target_spec.sources)
         .map_err(NativePythonBuildError::Render)?;
-    writeln!(output, "    {},", target_spec.tool).map_err(NativePythonBuildError::Render)?;
+    if let Some(tool) = target_spec.tool {
+        writeln!(output, "    {tool},").map_err(NativePythonBuildError::Render)?;
+    }
     writeln!(output, ")\n").map_err(NativePythonBuildError::Render)
 }
 
