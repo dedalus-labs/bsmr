@@ -3,6 +3,11 @@
 # SPDX-License-Identifier: Apache-2.0
 # ===----------------------------------------------------------------------===
 
-# Represents one matching installed conformance payload.
+"""Verify the Django import closure through each test runner."""
 
-VALUE = 1
+import django
+from django.conf import global_settings
+
+
+assert django.get_version().startswith("6.2")
+assert global_settings.DEFAULT_CHARSET == "utf-8"
