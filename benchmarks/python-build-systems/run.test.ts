@@ -8,11 +8,11 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 
-import { mkdtempSync, writeFileSync } from "node:fs";
+import { chmodSync, existsSync, mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
-import { changedWheelEntries, median, parseBsmrOutputs, performanceGateResults, runnerOrder, wheelPayload } from "./helpers.ts";
+import { changedWheelEntries, median, parseBsmrOutputs, performanceGateResults, removeReadOnlyTree, runnerOrder, wheelPayload } from "./helpers.ts";
 
 test("runner order alternates without changing membership", () => {
 	assert.deepEqual(runnerOrder(1), ["bsmr", "bazel"]);
@@ -25,6 +25,16 @@ test("median selects the middle sorted observation", () => {
 	assert.throws(() => median([]), /without samples/);
 });
 
+test("read-only Bazel tree artifacts can be removed", () => {
+	const directory = mkdtempSync(join(tmpdir(), "bsmr-read-only-tree-"));
+	const artifact = join(directory, "artifact");
+	mkdirSync(artifact);
+	writeFileSync(join(artifact, "output.whl"), "wheel");
+	chmodSync(artifact, 0o555);
+	removeReadOnlyTree(artifact);
+	assert.equal(existsSync(artifact), false);
+});
+
 test("wheel payload comparison identifies changed and missing paths", () => {
 	const original = [{ crc32: 1, name: "django/a.py", size: 1 }, { crc32: 2, name: "django/b.py", size: 2 }];
 	const edited = [{ crc32: 3, name: "django/a.py", size: 1 }, { crc32: 4, name: "django/c.py", size: 2 }];
@@ -34,14 +44,30 @@ test("wheel payload comparison identifies changed and missing paths", () => {
 test("performance gates reject regressions and missing paired medians", () => {
 	const medians = Object.fromEntries([
 		"acquisition-cold",
+		"leaf-runtime",
+		"leaf-test",
+		"leaf-wheel",
 		"output-restoration",
 		"provisioned-cold",
 		"resident-noop",
 		"shared-cache-fresh-checkout",
 		"test-cached",
 		"test-first",
-	].flatMap((regime) => [[`${regime}:bsmr`, 1], [`${regime}:bazel`, 4]]));
-	assert.ok(performanceGateResults(medians).every(({ pass }) => pass));
+	].flatMap((regime) => [[`${regime}:bsmr`, 1], [`${regime}:bazel`, 10]]));
+	const results = performanceGateResults(medians);
+	assert.deepEqual(results.map(({ regime }) => regime), [
+		"acquisition-cold",
+		"leaf-runtime",
+		"leaf-test",
+		"leaf-wheel",
+		"output-restoration",
+		"provisioned-cold",
+		"resident-noop",
+		"shared-cache-fresh-checkout",
+		"test-cached",
+		"test-first",
+	]);
+	assert.ok(results.every(({ pass }) => pass));
 	medians["resident-noop:bsmr"] = 4;
 	assert.equal(performanceGateResults(medians).find(({ regime }) => regime === "resident-noop")?.pass, false);
 	assert.throws(() => performanceGateResults({}), /missing positive paired medians/);
@@ -49,11 +75,10 @@ test("performance gates reject regressions and missing paired medians", () => {
 
 test("BSMR output parsing requires both semantic artifacts", () => {
 	const output = parseBsmrOutputs(JSON.stringify({
-		"root//:__bsmr_python_workspace_environment": "/tmp/environment",
 		"root//:__bsmr_python_sources": "/tmp/source",
 		"root//:django": "/tmp/wheel",
 	}));
-	assert.deepEqual(output, { environment: "/tmp/environment", source: "/tmp/source", wheel: "/tmp/wheel" });
+	assert.deepEqual(output, { source: "/tmp/source", wheel: "/tmp/wheel" });
 	assert.throws(() => parseBsmrOutputs("{}"), /omitted/);
 });
 

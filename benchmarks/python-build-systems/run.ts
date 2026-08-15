@@ -12,8 +12,9 @@ import { cpus, platform, release, tmpdir, totalmem } from "node:os";
 import { join, relative, resolve, sep } from "node:path";
 import { performance } from "node:perf_hooks";
 
-import { bazelVersion, bazeliskSha256, djangoCommit, rulesPythonVersion } from "./config.ts";
-import { changedWheelEntries, median, parseBsmrOutputs, performanceGateResults, positiveInteger, runnerOrder, targetEnvironment, targetSource, targetWheel, wheelPayload, type BsmrOutputs, type Runner, type WheelEntry } from "./helpers.ts";
+import { bazelPythonVersion, bazelVersion, bazeliskSha256, djangoCommit, rulesPythonVersion } from "./config.ts";
+import { changedWheelEntries, median, parseBsmrOutputs, performanceGateResults, positiveInteger, removeReadOnlyTree, runnerOrder, targetSource, targetWheel, wheelPayload, type BsmrOutputs, type Runner, type WheelEntry } from "./helpers.ts";
+import { fixtureFiles } from "./prepare.ts";
 
 interface CachePaths {
 	action: string;
@@ -47,6 +48,7 @@ interface Observation {
 }
 
 interface Correctness {
+	metadata: readonly WheelEntry[];
 	payload: readonly WheelEntry[];
 	version: string;
 }
@@ -63,6 +65,7 @@ const coldRuns = positiveInteger("BSMR_BENCH_COLD_RUNS", 3, 1);
 const runRoot = join(process.env["BSMR_BENCH_ROOT"] ?? join(tmpdir(), "bsmr-benchmarks"), `python-build-systems-${Date.now()}-${randomUUID()}`);
 const logs = join(runRoot, "logs");
 const observations: Observation[] = [];
+const activeInstances = new Set<Instance>();
 mkdirSync(logs, { recursive: true });
 
 /** Returns one required, nonempty environment setting. */
@@ -126,19 +129,41 @@ function instance(runner: Runner, name: string, cache: CachePaths): Instance {
 		NO_COLOR: "1",
 		USE_BAZEL_VERSION: bazelVersion,
 	};
-	return { cache, cwd, environment, name, outputRoot, runner };
+	const value = { cache, cwd, environment, name, outputRoot, runner };
+	activeInstances.add(value);
+	return value;
 }
 
 /** Returns the exact optimized command for one runner. */
 function command(value: Instance): readonly [string, readonly string[]] {
 	if (value.runner === "bsmr") {
-		return [bsmr, ["--isolation-dir", "benchmark", "build", targetWheel, targetEnvironment, targetEntry, targetSource, "--show-full-json-output", "--console", "none"]];
+		return [bsmr, ["--isolation-dir", "benchmark", "build", targetWheel, targetEntry, targetSource, "--show-full-json-output", "--console", "none"]];
 	}
 	return [bazelisk, [
 		`--output_user_root=${value.outputRoot}`,
 		"build",
 		"//:django-admin",
-		"//:django-wheel",
+		"//:django-pep517-wheel",
+		`--repository_cache=${value.cache.repository}`,
+		`--disk_cache=${value.cache.disk}`,
+		"--experimental_repository_cache_hardlinks",
+		"--incompatible_default_to_explicit_init_py",
+		"--spawn_strategy=local",
+		"--watchfs",
+		"--color=no",
+		"--curses=no",
+	]];
+}
+
+/** Returns the exact source-backed runtime build, excluding distribution packaging. */
+function runtimeCommand(value: Instance): readonly [string, readonly string[]] {
+	if (value.runner === "bsmr") {
+		return [bsmr, ["--isolation-dir", "benchmark", "build", targetEntry, "--console", "none"]];
+	}
+	return [bazelisk, [
+		`--output_user_root=${value.outputRoot}`,
+		"build",
+		"//:django-admin",
 		`--repository_cache=${value.cache.repository}`,
 		`--disk_cache=${value.cache.disk}`,
 		"--experimental_repository_cache_hardlinks",
@@ -158,6 +183,38 @@ function build(value: Instance, regime: string, iteration: number, measured: boo
 	requireSuccess(`${value.runner} ${regime}`, result);
 	if (value.runner === "bsmr") value.outputs = parseBsmrOutputs(result.stdout);
 	if (measured) observations.push({ elapsedMs: result.elapsedMs, iteration, regime, runner: value.runner });
+	return result;
+}
+
+/** Builds and records only the runnable source-backed developer target. */
+function buildRuntime(value: Instance, regime: string, iteration: number): CommandResult {
+	const [executable, args] = runtimeCommand(value);
+	const result = execute(executable, args, value.cwd, value.environment);
+	writeFileSync(join(logs, `${regime}-${iteration}-${value.runner}.log`), `${result.stderr}${result.stdout}`);
+	requireSuccess(`${value.runner} ${regime}`, result);
+	observations.push({ elapsedMs: result.elapsedMs, iteration, regime, runner: value.runner });
+	return result;
+}
+
+/** Builds Bazel's non-PEP-517 archive rule as an explicitly non-equivalent lower bound. */
+function buildArchiveControl(value: Instance, regime: string, iteration: number, measured: boolean): CommandResult {
+	if (value.runner !== "bazel") throw new Error("the archive lower bound is Bazel-only");
+	const result = execute(bazelisk, [
+		`--output_user_root=${value.outputRoot}`,
+		"build",
+		"//:django-wheel",
+		`--repository_cache=${value.cache.repository}`,
+		`--disk_cache=${value.cache.disk}`,
+		"--experimental_repository_cache_hardlinks",
+		"--incompatible_default_to_explicit_init_py",
+		"--spawn_strategy=local",
+		"--watchfs",
+		"--color=no",
+		"--curses=no",
+	], value.cwd, value.environment);
+	writeFileSync(join(logs, `${regime}-${iteration}-bazel.log`), `${result.stderr}${result.stdout}`);
+	requireSuccess(`bazel ${regime}`, result);
+	if (measured) observations.push({ elapsedMs: result.elapsedMs, iteration, regime, runner: "bazel" });
 	return result;
 }
 
@@ -188,10 +245,10 @@ function runTest(value: Instance, regime: string, iteration: number, measured: b
 /** Returns the runnable Django version produced by one completed build. */
 function builtVersion(value: Instance): string {
 	const executable = join(value.cwd, "bazel-bin", "django-admin");
+	if (value.runner === "bazel" && !existsSync(executable)) throw new Error(`Bazel omitted django-admin: ${executable}`);
 	const result = value.runner === "bsmr"
 		? execute(bsmr, ["--isolation-dir", "benchmark", "run", targetEntry, "--", "--version"], value.cwd, value.environment)
 		: execute(executable, ["--version"], value.cwd, value.environment);
-	if (value.runner === "bazel" && !existsSync(executable)) throw new Error(`Bazel omitted django-admin: ${executable}`);
 	requireSuccess(`${value.runner} django-admin --version`, result);
 	return result.stdout.trim().split("\n").at(-1) ?? "";
 }
@@ -199,15 +256,28 @@ function builtVersion(value: Instance): string {
 /** Requires each runner to produce one wheel and the expected executable behavior. */
 function assertCorrect(value: Instance, expected?: Correctness): Correctness {
 	if (value.runner === "bsmr") assertSourceUnmodified(value);
-	const wheelDirectory = value.runner === "bsmr" ? value.outputs?.wheel : join(value.cwd, "bazel-bin");
+	const wheelDirectory = value.runner === "bsmr" ? value.outputs?.wheel : join(value.cwd, "bazel-bin", "django-pep517-wheel");
 	if (!wheelDirectory) throw new Error("BSMR wheel output is unavailable");
 	const wheels = readdirSync(wheelDirectory).filter((name) => name.endsWith(".whl"));
 	if (wheels.length !== 1) throw new Error(`${value.runner} produced ${wheels.length} wheels`);
-	const payload = wheelPayload(join(wheelDirectory, wheels[0]!), "django/");
+	const wheel = join(wheelDirectory, wheels[0]!);
+	const payload = wheelPayload(wheel, "django/");
+	const metadata = wheelPayload(wheel, "").filter(({ name }) => name.includes(".dist-info/"));
 	const version = builtVersion(value);
 	if (expected !== undefined && version !== expected.version) throw new Error(`${value.runner} produced Django ${version}, expected ${expected.version}`);
 	if (expected !== undefined && JSON.stringify(payload) !== JSON.stringify(expected.payload)) throw new Error(`${value.runner} produced a different Django wheel payload`);
-	return { payload, version };
+	if (expected !== undefined && JSON.stringify(metadata) !== JSON.stringify(expected.metadata)) throw new Error(`${value.runner} produced different Django distribution metadata`);
+	return { metadata, payload, version };
+}
+
+/** Requires Bazel's archive-only py_wheel control to preserve the source payload. */
+function assertArchiveControl(value: Instance, expected: Correctness): Correctness {
+	const directory = join(value.cwd, "bazel-bin");
+	const wheels = readdirSync(directory).filter((name) => name.endsWith(".whl"));
+	if (wheels.length !== 1) throw new Error(`Bazel's archive control produced ${wheels.length} wheels`);
+	const payload = wheelPayload(join(directory, wheels[0]!), "django/");
+	if (payload.length !== expected.payload.length) throw new Error("Bazel's archive control changed the Django payload cardinality");
+	return { metadata: [], payload, version: expected.version };
 }
 
 /** Rejects a backend that wrote generated state into BSMR's immutable source input. */
@@ -226,30 +296,37 @@ function assertSourceUnmodified(value: Instance): void {
 }
 
 /** Rewrites one leaf source to a unique but semantically inert benchmark state. */
-function editLeaf(value: Instance, original: string, iteration: number): void {
-	writeFileSync(join(value.cwd, "django/views/generic/base.py"), `${original.trimEnd()}\n# BSMR benchmark leaf ${iteration}.\n`);
+function editLeaf(value: Instance, original: string, phase: string, iteration: number): void {
+	const source = original.replace(/^# BSMR benchmark leaf .*\n/m, "").trimEnd();
+	writeFileSync(join(value.cwd, "django/views/generic/base.py"), `${source}\n# BSMR benchmark leaf ${phase}-${iteration}.\n`);
 }
 
 /** Deletes materialized outputs while preserving each runner's reusable cache. */
 function deleteOutputs(value: Instance): void {
 	if (value.runner === "bsmr") {
 		if (!value.outputs) throw new Error("BSMR outputs are unavailable for restoration");
-		rmSync(value.outputs.environment, { recursive: true });
 		rmSync(value.outputs.wheel, { recursive: true });
 		return;
 	}
 	const directory = join(value.cwd, "bazel-bin");
 	for (const name of readdirSync(directory)) {
-		if (name === "django-admin" || name.startsWith("django-admin.") || name.startsWith("django-")) rmSync(join(directory, name), { force: true, recursive: true });
+		const output = join(directory, name);
+		if (name === "django-pep517-wheel") removeReadOnlyTree(output);
 	}
 }
 
 /** Stops one persistent runner after its final observation. */
 function stop(value: Instance): void {
+	if (!activeInstances.delete(value)) return;
 	const invocation = value.runner === "bsmr"
 		? [bsmr, ["--isolation-dir", "benchmark", "kill"]] as const
 		: [bazelisk, [`--output_user_root=${value.outputRoot}`, "shutdown"]] as const;
 	execute(invocation[0], invocation[1], value.cwd, value.environment);
+}
+
+/** Stops every runner still live after a failed benchmark phase. */
+function stopActiveInstances(): void {
+	for (const value of [...activeInstances]) stop(value);
 }
 
 /** Hashes the complete checked-in benchmark contract. */
@@ -260,7 +337,7 @@ function configurationDigest(): string {
 		join(root, "helpers.ts"),
 		join(root, "prepare.ts"),
 		join(root, "run.ts"),
-		...readdirSync(fixture).map((name) => join(fixture, name)),
+		...fixtureFiles.map((name) => join(fixture, name)),
 	].sort();
 	const hash = createHash("sha256");
 	for (const path of files) hash.update(relative(root, path)).update("\0").update(readFileSync(path)).update("\0");
@@ -271,6 +348,11 @@ function configurationDigest(): string {
 function main(): void {
 	for (const path of [source, bsmr, bazelisk]) if (!existsSync(path)) throw new Error(`benchmark input does not exist: ${path}`);
 	if (sha256(bazelisk) !== bazeliskSha256) throw new Error(`Bazelisk digest does not match v1.29.0: ${bazelisk}`);
+	const module = readFileSync(join(fixture, "MODULE.bazel"), "utf8");
+	if (!module.includes(`bazel_dep(name = "rules_python", version = "${rulesPythonVersion}")`) || !module.includes(`python.toolchain(python_version = "${bazelPythonVersion}")`)) throw new Error("Bazel fixture versions do not match config.ts");
+	const observedBazel = execute(bazelisk, ["--version"], source, { ...process.env, USE_BAZEL_VERSION: bazelVersion });
+	requireSuccess("Bazel version probe", observedBazel);
+	if (observedBazel.stdout.trim() !== `bazel ${bazelVersion}`) throw new Error(`expected Bazel ${bazelVersion}, observed ${observedBazel.stdout.trim()}`);
 	const observedCommit = execute("git", ["rev-parse", "HEAD"], source, process.env).stdout.trim();
 	if (observedCommit !== djangoCommit) throw new Error(`expected Django ${djangoCommit}, observed ${observedCommit}`);
 
@@ -340,18 +422,41 @@ function main(): void {
 	}
 
 	const originalLeaf = readFileSync(join(source, "django/views/generic/base.py"), "utf8");
+	for (let iteration = 1; iteration <= runs; iteration += 1) {
+		for (const runner of runnerOrder(iteration)) {
+			editLeaf(resident[runner], originalLeaf, "runtime", iteration);
+			buildRuntime(resident[runner], "leaf-runtime", iteration);
+			if (builtVersion(resident[runner]) !== expected.version) throw new Error(`${runner} changed Django's version after a runtime leaf edit`);
+		}
+	}
+	for (let iteration = 1; iteration <= runs; iteration += 1) {
+		for (const runner of runnerOrder(iteration)) {
+			editLeaf(resident[runner], originalLeaf, "test", iteration);
+			runTest(resident[runner], "leaf-test", iteration, true);
+		}
+	}
 	let residentExpected = expected;
 	for (let iteration = 1; iteration <= runs; iteration += 1) {
 		let edited: Correctness | undefined;
 		for (const runner of runnerOrder(iteration)) {
-			editLeaf(resident[runner], originalLeaf, iteration);
-			build(resident[runner], "leaf-edit", iteration, true);
+			editLeaf(resident[runner], originalLeaf, "wheel", iteration);
+			build(resident[runner], "leaf-wheel", iteration, true);
 			edited = assertCorrect(resident[runner], edited);
 		}
 		const changed = changedWheelEntries(expected.payload, edited?.payload ?? []);
 		if (JSON.stringify(changed) !== JSON.stringify(["django/views/generic/base.py"])) throw new Error(`the leaf edit changed unexpected Django payload paths: ${changed.join(", ")}`);
 		if (edited !== undefined) residentExpected = edited;
 	}
+	const archiveControl = instance("bazel", "archive-control", shared);
+	buildArchiveControl(archiveControl, "archive-seed", 0, false);
+	for (let iteration = 1; iteration <= runs; iteration += 1) {
+		editLeaf(archiveControl, originalLeaf, "archive", iteration);
+		buildArchiveControl(archiveControl, "archive-only-leaf", iteration, true);
+		const edited = assertArchiveControl(archiveControl, expected);
+		const changed = changedWheelEntries(expected.payload, edited.payload);
+		if (JSON.stringify(changed) !== JSON.stringify(["django/views/generic/base.py"])) throw new Error(`Bazel's archive-only leaf edit changed unexpected payload paths: ${changed.join(", ")}`);
+	}
+	stop(archiveControl);
 	for (let iteration = 1; iteration <= runs; iteration += 1) {
 		for (const runner of runnerOrder(iteration)) {
 			deleteOutputs(resident[runner]);
@@ -367,13 +472,13 @@ function main(): void {
 	if (!processor) throw new Error("the host exposes no logical processors");
 	const report = {
 		configuration: {
-			bazel: { spawnStrategy: "local", version: bazelVersion, watchfs: true },
+			bazel: { archiveLowerBound: "rules_python py_wheel", build: "declared PEP 517 backend", pythonVersion: bazelPythonVersion, spawnStrategy: "local", version: bazelVersion, watchfs: true },
 			bazelisk: { sha256: bazeliskSha256, version: "1.29.0" },
 			contractSha256: configurationDigest(),
 			djangoCommit,
 			rulesPythonVersion,
 		},
-		correctness: { djangoPayloadFiles: expected.payload.length, djangoVersion: expected.version, result: "pass" },
+		correctness: { djangoMetadataFiles: expected.metadata.length, djangoPayloadFiles: expected.payload.length, djangoVersion: expected.version, result: "pass" },
 		machine: { architecture: process.arch, logicalCpus: cpus().length, memoryBytes: totalmem(), node: process.version, operatingSystem: platform(), processor: processor.model, release: release() },
 		medians,
 		observations,
@@ -391,4 +496,10 @@ function main(): void {
 	process.stdout.write(`${output}\n`);
 }
 
-if (import.meta.main) main();
+if (import.meta.main) {
+	try {
+		main();
+	} finally {
+		stopActiveInstances();
+	}
+}

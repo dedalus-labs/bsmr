@@ -13,6 +13,20 @@ import { djangoCommit, djangoRepository } from "./config.ts";
 
 const configuration = "\n[tool.bsmr.python]\ntest-command = [\"benchmark_test.py\"]\n\n[tool.uv]\ncache-keys = [{ file = \"pyproject.toml\" }, { git = { commit = true } }]\n";
 
+export const fixtureFiles = [
+	"BUILD.bazel",
+	"MODULE.bazel",
+	"benchmark_main.py",
+	"benchmark_test.py",
+	"bsmrconfig",
+	"pep517_build.py",
+	"pep517_wheel.bzl",
+	"pylock.build.toml",
+	"pylock.toml",
+	"requirements.build.txt",
+	"requirements.txt",
+] as const;
+
 /** Executes one fixture-creation command and fails with its complete output. */
 const execute = (executable: string, args: readonly string[], cwd: string): string => {
 	try {
@@ -29,7 +43,7 @@ export const applyFixture = (repository: string, fixture = join(import.meta.dirn
 	const pyproject = readFileSync(project, "utf8");
 	if (pyproject.includes("[tool.uv]")) throw new Error("Django fixture unexpectedly declares [tool.uv]");
 	writeFileSync(project, `${pyproject.trimEnd()}\n${configuration}`);
-	for (const name of ["BUILD.bazel", "MODULE.bazel", "benchmark_main.py", "benchmark_test.py", "pylock.build.toml", "pylock.toml", "requirements.txt"]) {
+	for (const name of fixtureFiles.filter((name) => name !== "bsmrconfig")) {
 		cpSync(join(fixture, name), join(repository, name));
 	}
 	cpSync(join(fixture, "pylock.toml"), join(repository, "pylock.test.toml"));
@@ -49,6 +63,8 @@ const main = (): void => {
 	const observed = execute("git", ["rev-parse", "HEAD"], destination);
 	if (observed !== djangoCommit) throw new Error(`expected Django ${djangoCommit}, fetched ${observed}`);
 	applyFixture(destination);
+	const leaf = join(destination, "django/views/generic/base.py");
+	writeFileSync(leaf, `${readFileSync(leaf, "utf8").trimEnd()}\n# BSMR benchmark leaf baseline-0.\n`);
 	process.stdout.write(`${destination}\n`);
 };
 
