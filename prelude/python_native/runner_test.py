@@ -871,6 +871,49 @@ class EnvironmentTest(unittest.TestCase):
                 },
             )
 
+    def test_pep_794_cross_layer_import_collision_fails_closed(self) -> None:
+        """Separate environment layers may not claim one exclusive import."""
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            left, _ = _package_with_import_metadata(
+                root, "left", "Import-Name: shared", "left.py"
+            )
+            right, _ = _package_with_import_metadata(
+                root, "right", "Import-Name: shared", "right.py"
+            )
+
+            with self.assertRaisesRegex(
+                RuntimeError,
+                "import 'shared'.*left.*right",
+            ):
+                runner._write_environment_imports(
+                    Namespace(
+                        environment=[right, left],
+                        output=root / "environment-stack.json",
+                    )
+                )
+
+    def test_pep_794_cross_layer_namespaces_are_cacheable_provenance(self) -> None:
+        """A validated namespace stack writes one deterministic action output."""
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            left, _ = _package_with_import_metadata(
+                root, "left", "Import-Namespace: shared", "left.py"
+            )
+            right, _ = _package_with_import_metadata(
+                root, "right", "Import-Namespace: shared", "right.py"
+            )
+            output = root / "environment-stack.json"
+
+            runner._write_environment_imports(
+                Namespace(environment=[right, left], output=output)
+            )
+
+            self.assertEqual(
+                json.loads(output.read_text(encoding="utf-8")),
+                {"shared": {"namespace": ["left", "right"]}},
+            )
+
     def test_pep_794_invalid_or_ambiguous_ownership_fails_closed(self) -> None:
         """Malformed qualifiers and dual ownership never enter provenance."""
         for metadata, expected in (
