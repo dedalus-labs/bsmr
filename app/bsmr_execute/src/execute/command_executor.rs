@@ -173,6 +173,11 @@ impl CommandExecutor {
             .await
     }
 
+    /// Returns whether this executor publishes into the user-level local cache.
+    pub fn uses_local_action_cache(&self) -> bool {
+        self.0.cache_uploader.is_local_action_cache()
+    }
+
     /// Execute a command.
     ///
     /// This intentionally does not return a Result since we want to capture information about the

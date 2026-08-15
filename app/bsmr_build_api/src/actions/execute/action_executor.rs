@@ -661,6 +661,10 @@ impl ActionExecutionCtx for BuckActionExecutionContext<'_> {
             .await?)
     }
 
+    fn uses_local_action_cache(&self) -> bool {
+        self.executor.command_executor.uses_local_action_cache()
+    }
+
     async fn cleanup_outputs(&mut self) -> bsmr_error::Result<()> {
         // Delete all outputs before we start, so things will be clean.
         let output_paths = self

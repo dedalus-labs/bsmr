@@ -256,6 +256,7 @@ pub(crate) struct UnregisteredRunAction {
     pub(crate) no_outputs_cleanup: bool,
     pub(crate) incremental_remote_outputs: bool,
     pub(crate) allow_cache_upload: Option<bool>,
+    pub(crate) allow_local_cache_upload: Option<bool>,
     pub(crate) allow_dep_file_cache_upload: bool,
     pub(crate) allow_offline_output_cache: bool,
     pub(crate) force_full_hybrid_if_capable: bool,
@@ -1470,6 +1471,10 @@ impl Action for RunAction {
                 None => "None".to_owned(),
                 Some(x) => x.to_string(),
             },
+            "allow_local_cache_upload".to_owned() => match &self.inner.allow_local_cache_upload {
+                None => "None".to_owned(),
+                Some(x) => x.to_string(),
+            },
             "allow_dep_file_cache_upload".to_owned() => self.inner.allow_dep_file_cache_upload.to_string(),
         }
     }
@@ -1585,6 +1590,13 @@ impl Action for RunAction {
             .inner
             .allow_cache_upload
             .unwrap_or_else(|| ctx.run_action_knobs().default_allow_cache_upload);
+        let allow_local_cache_upload = self
+            .inner
+            .allow_local_cache_upload
+            .unwrap_or(allow_cache_upload);
+        let local_cache_upload = allow_local_cache_upload
+            && result.was_locally_executed()
+            && ctx.uses_local_action_cache();
         let supports_remote_dep_files =
             self.inner.allow_dep_file_cache_upload && dep_file_bundle.has_dep_files();
         let incremental_kind = match (
@@ -1600,7 +1612,10 @@ impl Action for RunAction {
         // If there is a dep file entry AND if dep file cache upload is enabled, upload it
         if result.was_success()
             && !result.was_served_by_remote_dep_file_cache()
-            && (allow_cache_upload || supports_remote_dep_files || force_cache_upload()?)
+            && (allow_cache_upload
+                || local_cache_upload
+                || supports_remote_dep_files
+                || force_cache_upload()?)
         {
             let re_result = result.action_result.take();
             let upload_result = ctx

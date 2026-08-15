@@ -214,6 +214,8 @@ def unarchive(
         ),
         category = "http_archive",
         identifier = output_name,
+        # The digest-pinned archive is the semantic input; the extractor is an implementation detail.
+        allow_local_cache_upload = True,
         prefer_local = prefer_local,
     )
 

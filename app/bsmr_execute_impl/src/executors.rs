@@ -14,6 +14,7 @@ pub mod caching;
 pub(crate) mod empty_action_result;
 pub mod hybrid;
 pub mod local;
+pub mod local_cache;
 pub mod re;
 pub mod stacked;
 pub mod to_re_platform;

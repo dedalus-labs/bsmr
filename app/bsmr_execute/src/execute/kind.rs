@@ -40,6 +40,9 @@ pub enum CommandExecutionKind {
         command: Vec<String>,
         env: SortedVectorMap<String, String>,
     },
+    /// This action was restored from the user-level local action cache.
+    #[display("local_action_cache")]
+    LocalActionCache { digest: ActionDigest },
     /// This action was executed via a remote executor.
     #[display("remote")]
     Remote {
@@ -85,6 +88,7 @@ impl CommandExecutionKind {
     pub fn as_enum(&self) -> bsmr_data::ActionExecutionKind {
         match self {
             Self::Local { .. } => bsmr_data::ActionExecutionKind::Local,
+            Self::LocalActionCache { .. } => bsmr_data::ActionExecutionKind::LocalActionCache,
             Self::LocalWorker { .. } | Self::LocalWorkerInit { .. } => {
                 bsmr_data::ActionExecutionKind::LocalWorker
             }
@@ -107,7 +111,10 @@ impl CommandExecutionKind {
             Self::Remote { details, .. }
             | Self::ActionCache { details }
             | Self::RemoteDepFileCache { details } => details,
-            _ => return None,
+            Self::Local { .. }
+            | Self::LocalActionCache { .. }
+            | Self::LocalWorkerInit { .. }
+            | Self::LocalWorker { .. } => return None,
         };
         re_platform_name_from_properties(&details.platform.properties)
     }
@@ -138,6 +145,11 @@ impl CommandExecutionKind {
                             .collect(),
                     })
                 }
+            }
+            Self::LocalActionCache { digest } => {
+                Command::OmittedLocalCommand(bsmr_data::OmittedLocalCommand {
+                    action_digest: digest.to_string(),
+                })
             }
             Self::Remote {
                 details,
