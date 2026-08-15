@@ -307,17 +307,33 @@ worktrees automatically.
 
 The reproducible Django comparison against Bazel 9.1.0 and rules_python 2.2.0
 passed exact source, import, test, entry-point, wheel-payload, incremental, and
-restoration gates. On the reference Apple M5 Max run, BSMR was 2.39x faster for
-a shared-cache fresh checkout, 1.35x faster for a resident no-op, 3.36x faster
-for the first test, 2.53x faster for a cached test, and 9.23x faster when
-restoring deleted outputs. Fully empty acquisition was 1.02x faster; a
-provisioned build without action results was 20% slower.
+restoration gates. On the reference Apple M5 Max run, BSMR was 4.62x faster for
+a shared-cache fresh checkout, 1.55x faster for a resident no-op, 3.48x faster
+for the first test, 1.87x faster for a cached test, and 10.05x faster when
+restoring deleted outputs. Fully empty acquisition was 1.03x faster; a
+provisioned build without action results was 11% slower.
 
-Bazel's direct `py_wheel` leaf edit was 10.35x faster. That rule bypasses the
+Bazel's direct `py_wheel` leaf edit was 11.02x faster. That rule bypasses the
 project's PEP 517 backend and requires duplicated distribution metadata, so the
 number is an informative packaging lower bound rather than equivalent backend
 execution. BSMR will not replace a declared backend with a faster approximation
 silently.
+
+This is also a corpus result, not a Django party trick. The pinned RFC 0004
+gate passes NVIDIA Cosmos Cookbook's `uv_build` project, Dedalus Agents
+Python's Hatchling project, and Pydantic AI's four-project dynamic-version uv
+workspace. Across those checkouts, BSMR and pinned uv agree on 110 runtime
+distributions, 7,776 runtime files, 17 build distributions, 418 build files,
+first-party wheel payloads, imports, entry points, executable bits, and missing
+import failures. Pydantic AI's 7,462-file environment reaches a 42 ms resident
+no-op on the reference machine.
+
+For this native local-project contract, choose BSMR. It removes BUILD-file
+metadata duplication, preserves the project's actual PEP 517 behavior, and
+shares verified results across worktrees while beating the tuned Bazel control
+on the cache-dominant developer paths above. Choose Bazel today when its mature
+remote-execution, sandboxing, query, or IDE ecosystem is itself a requirement;
+those surfaces are outside this benchmark and BSMR does not claim otherwise.
 
 See the [benchmark contract and reproduction
 instructions](https://github.com/dedalus-labs/bsmr/blob/main/benchmarks/README.md#python-build-systems).

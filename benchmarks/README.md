@@ -152,6 +152,40 @@ fails before execution. The suite records timings for diagnostics; performance
 regression gates remain separate benchmarks so correctness cannot be traded for
 a faster but semantically different installation.
 
+### Pinned real-world corpus
+
+The corpus runner turns the RFC 0004 adoption repositories into one repeatable
+gate. It fetches exact commits of NVIDIA Cosmos Cookbook, Dedalus Agents Python,
+and Pydantic AI; exports their existing `uv.lock` files without resolution;
+authors universal, cutoff-bounded PEP 751 build locks; and applies only BSMR's
+root configuration. Mutable default branches and ambient Python tools never
+enter the result.
+
+First obtain BSMR's pinned uv and CPython output paths from any prepared Python
+repository, then create and run the corpus:
+
+```shell
+bsmr build root//:__bsmr_uv_distribution root//:__bsmr_python_distribution \
+  --show-full-json-output
+
+BSMR_BENCH_CORPUS_ROOT=/tmp/bsmr-python-corpus \
+BSMR_BENCH_UV=/absolute/path/from/the/json/uv \
+BSMR_BENCH_PYTHON=/absolute/path/from/the/json/python3 \
+  node benchmarks/python-conformance/prepare.ts
+
+BSMR_BENCH_CORPUS_ROOT=/tmp/bsmr-python-corpus \
+BSMR_BENCH_BINARY="$PWD/target/release/bsmr" \
+  node benchmarks/python-conformance/run-corpus.ts
+```
+
+The 2026-08-15 Apple M5 Max reference run passed all three repositories with
+CPython 3.14.7 and uv 0.12.5. The gate compared 110 runtime distributions,
+7,776 runtime files, 17 build distributions, 418 build files, six first-party
+wheels, the requested imports, entry-point metadata, executable bits, missing
+import failures, and complete installed-file digests. Pydantic AI alone covered
+a four-project uv workspace, 96 runtime distributions, and 7,462 files. Its
+resident BSMR no-op completed in 42 ms.
+
 ## Python build systems
 
 The Python build-system suite compares BSMR's zero-build-file project graph with
@@ -210,19 +244,19 @@ GiB of memory on Darwin 25.5.0. All correctness gates passed.
 
 | Regime | BSMR median | Bazel median | Result |
 | --- | ---: | ---: | ---: |
-| Empty acquisition | 10.944 s | 11.153 s | BSMR 1.02x |
-| Provisioned, no action cache | 10.781 s | 8.972 s | Bazel 1.20x |
-| Shared cache, fresh checkout | 3.417 s | 8.167 s | BSMR 2.39x |
-| Resident no-op | 57 ms | 77 ms | BSMR 1.35x |
-| First test | 422 ms | 1.419 s | BSMR 3.36x |
-| Cached test | 29 ms | 74 ms | BSMR 2.53x |
-| Leaf edit and wheel | 6.669 s | 644 ms | Bazel 10.35x; informational |
-| Deleted-output restoration | 49 ms | 456 ms | BSMR 9.23x |
+| Empty acquisition | 10.218 s | 10.560 s | BSMR 1.03x |
+| Provisioned, no action cache | 9.904 s | 8.951 s | Bazel 1.11x |
+| Shared cache, fresh checkout | 1.854 s | 8.568 s | BSMR 4.62x |
+| Resident no-op | 51 ms | 78 ms | BSMR 1.55x |
+| First test | 401 ms | 1.396 s | BSMR 3.48x |
+| Cached test | 37 ms | 70 ms | BSMR 1.87x |
+| Leaf edit and wheel | 7.121 s | 646 ms | Bazel 11.02x; informational |
+| Deleted-output restoration | 50 ms | 506 ms | BSMR 10.05x |
 
 The exact fixture contract digest was
-`2c019eebc4c3dd838b5e879aee35ba34eeed4297832f2265eb27503c9e3a783a`;
+`af1070c313c20482a9b9e6188614f87479b93056cd4e17fef74b6df972a0f2d0`;
 the BSMR binary digest was
-`a29db668a07b5646ff3e36a0bf56ad66b787e31840077813b257a30b656ef21e`.
+`2428eca66a4c0266f153140e0aa9550b31fd87a1edbd720fa9ad7973eeea4f94`.
 Rerun the suite before using these numbers for another revision or machine.
 
 ### Interpretation boundary
