@@ -17,9 +17,9 @@ PythonNativeDistributionInfo = provider(fields = {
 
 _DEFAULT_PYTHON_VERSION = "3.14.7"
 _PYTHON_RELEASE = "20260807"
-_UV_VERSION = "0.12.4"
+_UV_VERSION = "0.12.5"
 _RUFF_VERSION = "0.16.3"
-_TY_VERSION = "0.0.71"
+_TY_VERSION = "0.0.72"
 
 _ARTIFACT_PLATFORMS = {
     "linux-arm64": "aarch64-unknown-linux-gnu",
@@ -63,16 +63,16 @@ _ARCHIVES = {
         "macos-x86_64": ("05c2a6705e7c0c056d6d93ff538978583f0c47b4c28d334ab9d58d2e8daf4c24", 10742637),
     },
     "ty": {
-        "linux-arm64": ("a5c443b05515f31e5471f059bcde8d56b388378091093881f22531e647497625", 11598079),
-        "linux-x86_64": ("2f92b0763f7e983800357383987551dce77ad9eb7d6136e9af493659ee6694ba", 12292731),
-        "macos-arm64": ("9b59a9bd1ea39318de73684899b7787d6a23c04d0c1e48b8463ababc127ec307", 11511214),
-        "macos-x86_64": ("a25c9a8a4feaf10cb6a15264c23de2d35e7af4db88d1ffe8e5994ca2befb41a9", 11838614),
+        "linux-arm64": ("80e7d05a2620fc3a57335888d4f46f67fef348999eee7e0c515eb8c115009f94", 11614321),
+        "linux-x86_64": ("11087394fa6aeac8d449bce42a30eb03fd76dd9ad8f38e69dd8004785d3f98b0", 12350680),
+        "macos-arm64": ("061ff070c830bd82c960c55352e0f4bce05d9093b44efda16ae2feeeea0032a5", 11574363),
+        "macos-x86_64": ("88e1e344d8f86f05f7041a233b58d93a6ff7ab080232611a5de3ea521f18d833", 11891418),
     },
     "uv": {
-        "linux-arm64": ("49d881b3403187e1f1789720881e77e4251ad4259d86c4844862657d2a35d13f", 21476892),
-        "linux-x86_64": ("c8c60f47e6f88d18dbf6f33d7279fb1fbf7ae76631768152cf5578c3d65729b4", 22913818),
-        "macos-arm64": ("99a913b606194867b43086404412c1afe079547fee72ecfb6af7e7b0dd54b0c6", 18632192),
-        "macos-x86_64": ("e603f1eb634ca97a2a125539b983891f53235e901511ed10c32c08c86e253ecd", 20796751),
+        "linux-arm64": ("9bf43b4d1a07665bf64d4c4e710930b382321a785e0eb10aac07f46471f86a31", 21478307),
+        "linux-x86_64": ("68a509da24b06b4223a1c0175fb5eb5bc79342b76cbeff0cfe51ac3f5b17b6b2", 23015306),
+        "macos-arm64": ("5bb0e5fe008a773c3dbcb97ff79cd89e1241464fe9d2f986d52ad8f1b037bd62", 18518284),
+        "macos-x86_64": ("b3b2137477cf96c9686ebfb71524614cec780c673fd73e59bce099aef02e70e8", 20848713),
     },
 }
 
