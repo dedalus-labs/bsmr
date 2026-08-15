@@ -99,6 +99,8 @@ pub(super) struct HatchDynamicMetadata {
 #[serde(rename_all = "kebab-case")]
 pub(super) struct UvConfiguration {
     #[serde(default)]
+    pub(super) cache_keys: Vec<UvCacheKey>,
+    #[serde(default)]
     pub(super) config_settings: BTreeMap<String, BuildConfigSetting>,
     #[serde(default)]
     pub(super) config_settings_package: BTreeMap<String, BTreeMap<String, BuildConfigSetting>>,
@@ -108,6 +110,26 @@ pub(super) struct UvConfiguration {
     pub(super) extra_build_variables: BTreeMap<String, BTreeMap<String, String>>,
     pub(super) package: Option<bool>,
     pub(super) workspace: Option<UvWorkspace>,
+}
+
+#[derive(Deserialize)]
+pub(super) struct UvCacheKey {
+    pub(super) git: Option<UvGitCacheKey>,
+}
+
+impl UvCacheKey {
+    /// Returns whether this key declares Git state as dynamic build metadata.
+    pub(super) fn uses_git(&self) -> bool {
+        self.git.as_ref().is_some_and(|git| git.commit || git.tags)
+    }
+}
+
+#[derive(Deserialize)]
+pub(super) struct UvGitCacheKey {
+    #[serde(default)]
+    commit: bool,
+    #[serde(default)]
+    tags: bool,
 }
 
 #[derive(Deserialize)]

@@ -200,7 +200,7 @@ impl InterpreterCalculationImpl for InterpreterCalculationInstance {
         ctx: &mut DiceComputations<'_>,
         package: PackageLabel,
     ) -> bsmr_error::Result<ModuleDeps> {
-        let listing = DicePackageListingResolver(ctx)
+        let mut listing = DicePackageListingResolver(ctx)
             .resolve_package_listing(package.dupe())
             .await?;
 
@@ -211,7 +211,7 @@ impl InterpreterCalculationImpl for InterpreterCalculationInstance {
             .await?;
 
         let (_build_file_path, _module, module_deps) = calc
-            .prepare_build_file_eval(package.dupe(), &listing)
+            .prepare_build_file_eval(package.dupe(), &mut listing)
             .await?;
 
         Ok(module_deps)
