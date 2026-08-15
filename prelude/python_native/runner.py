@@ -618,7 +618,6 @@ def _locked_package(
                 str(_required(args.version, "--version")),
             )
     _normalize_entry_points(packages)
-    _validate_environment(packages)
     _write_package_manifest(packages, Path(_required(args.manifest, "--manifest")))
 
 
@@ -894,7 +893,6 @@ def _wheel_environment(
     )
     _normalize_entry_points(packages)
     _validate_environment(packages)
-    _write_package_manifest(packages, Path(_required(args.manifest, "--manifest")))
 
 
 def _project(
