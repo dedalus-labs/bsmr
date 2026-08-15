@@ -143,6 +143,8 @@ def _state(output: Path) -> tuple[Path, dict[str, str]]:
     shutil.rmtree(scratch, ignore_errors=True)
     scratch.mkdir(parents=True)
     environment = {
+        "CFLAGS": "-g0",
+        "CXXFLAGS": "-g0",
         "HOME": str(scratch / "home"),
         "LANG": "C.UTF-8",
         "NO_COLOR": "1",
