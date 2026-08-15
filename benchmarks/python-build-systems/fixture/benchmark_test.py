@@ -3,6 +3,8 @@
 # SPDX-License-Identifier: Apache-2.0
 # ===----------------------------------------------------------------------===
 
+# Verifies the Django import closure through each test runner.
+
 """Verify the Django import closure through each test runner."""
 
 import django
