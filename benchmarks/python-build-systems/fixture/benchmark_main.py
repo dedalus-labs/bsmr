@@ -3,6 +3,8 @@
 # SPDX-License-Identifier: Apache-2.0
 # ===----------------------------------------------------------------------===
 
+# Exercises the Django console entry point built by each system.
+
 """Exercise the Django console entry point built by each system."""
 
 import django
