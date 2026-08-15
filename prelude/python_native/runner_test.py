@@ -1136,6 +1136,8 @@ class ProjectActionTest(unittest.TestCase):
             root = Path(temporary)
             source = root / "source"
             source.mkdir()
+            (source / "backing.py").write_text("VALUE = 1\n", encoding="utf-8")
+            (source / "module.py").symlink_to("backing.py")
             environment = _empty_environment(root / "environment.zip")
             vcs = root / "vcs"
             vcs.mkdir()
@@ -1166,7 +1168,7 @@ class ProjectActionTest(unittest.TestCase):
             self.assertEqual(action_environment["UV_NO_CONFIG"], "1")
             self.assertEqual(
                 action_environment["GIT_CEILING_DIRECTORIES"],
-                str(source.resolve().parent),
+                str((root / "scratch" / "source").resolve().parent),
             )
             materialized_environment = environment.resolve()
             python_path = action_environment["PYTHONPATH"].split(os.pathsep)
@@ -1208,7 +1210,14 @@ class ProjectActionTest(unittest.TestCase):
                 (git_directory / "config").read_text(encoding="utf-8"),
                 "[core]\n\trepositoryformatversion = 0\n\tbare = false\n",
             )
-            self.assertEqual(action_environment["GIT_WORK_TREE"], str(source.resolve()))
+            copied_source = (root / "scratch" / "source").resolve()
+            self.assertEqual(action_environment["GIT_WORK_TREE"], str(copied_source))
+            self.assertEqual(
+                (copied_source / "module.py").read_text(encoding="utf-8"),
+                "VALUE = 1\n",
+            )
+            self.assertFalse((copied_source / "module.py").is_symlink())
+            self.assertEqual(run.call_args.kwargs["cwd"], copied_source)
             self.assertEqual(action_environment["GIT_CONFIG_GLOBAL"], os.devnull)
             self.assertEqual(action_environment["GIT_CONFIG_NOSYSTEM"], "1")
             self.assertEqual(

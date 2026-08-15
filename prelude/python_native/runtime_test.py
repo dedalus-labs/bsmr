@@ -51,6 +51,7 @@ class RuntimeTest(unittest.TestCase):
             )
 
             previous_directory = Path.cwd()
+            previous_bytecode_policy = runtime.sys.dont_write_bytecode
             previous_path = runtime.sys.path[:]
             previous_environment = os.environ.copy()
             try:
@@ -58,6 +59,7 @@ class RuntimeTest(unittest.TestCase):
                 scratch.mkdir()
                 runtime._bootstrap(args, scratch)
 
+                self.assertTrue(runtime.sys.dont_write_bytecode)
                 self.assertEqual(Path.cwd(), source.resolve())
                 self.assertEqual(
                     runtime.sys.path[:3],
@@ -113,6 +115,7 @@ class RuntimeTest(unittest.TestCase):
                 self.assertFalse((source / ".bsmr-home").exists())
             finally:
                 os.chdir(previous_directory)
+                runtime.sys.dont_write_bytecode = previous_bytecode_policy
                 runtime.sys.path[:] = previous_path
                 os.environ.clear()
                 os.environ.update(previous_environment)

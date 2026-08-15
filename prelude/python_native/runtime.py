@@ -91,6 +91,7 @@ def _bootstrap(args: argparse.Namespace, scratch: Path) -> Path:
         str(environment) for environment in environments
     ]
     runtime_bin = _child_interpreter(scratch, project_roots, environments)
+    sys.dont_write_bytecode = True
     sys.path[:] = declared + [
         path for path in sys.path if path and path not in declared
     ]
