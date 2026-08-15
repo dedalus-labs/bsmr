@@ -7,16 +7,24 @@
 
 module(name = "django_benchmark")
 
-bazel_dep(name = "rules_python", version = "2.2.0")
+bazel_dep(name = "rules_python", version = "2.3.0")
 
 python = use_extension("@rules_python//python/extensions:python.bzl", "python")
-python.toolchain(python_version = "3.14")
-use_repo(python, "python_3_14")
+python.toolchain(python_version = "3.14.4")
+use_repo(python, "python_3_14_4")
 
 pip = use_extension("@rules_python//python/extensions:pip.bzl", "pip")
 pip.parse(
     hub_name = "django_pip",
-    python_version = "3.14",
+    python_version = "3.14.4",
     requirements_lock = "//:requirements.txt",
 )
 use_repo(pip, "django_pip")
+
+build_pip = use_extension("@rules_python//python/extensions:pip.bzl", "pip")
+build_pip.parse(
+    hub_name = "django_build_pip",
+    python_version = "3.14.4",
+    requirements_lock = "//:requirements.build.txt",
+)
+use_repo(build_pip, "django_build_pip")

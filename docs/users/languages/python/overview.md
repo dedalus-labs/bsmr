@@ -83,7 +83,8 @@ uv export --locked --format pylock.toml --all-extras --all-groups --no-emit-work
 `pylock.build.in` is an authoring input listing every build backend and any
 explicit compatibility requirement needed by an sdist. It is not a BSMR lock
 format. Keep the resulting standard `pylock.build.toml` authoritative.
-BSMR validates that every `[build-system].requires` and
+First-party wheel targets require an explicit PEP 517 `[build-system]`. BSMR
+validates that every `[build-system].requires` and
 `[tool.uv.extra-build-dependencies]` package in the selected first-party
 closure exists in that frozen build lock before running a backend. A
 `match-runtime = true` requirement must select the same version in the runtime
@@ -148,9 +149,9 @@ archive instead.
 BSMR deliberately uses each tool's native configuration rather than defining a
 second Python DSL:
 
-- uv build backend settings come from
+- PEP 517 backend settings come from uv's native
   [`[tool.uv].config-settings`](https://docs.astral.sh/uv/reference/settings/#config-settings)
-  and are forwarded as typed, repeated PEP 517 `config-settings`;
+  and are forwarded directly as typed, repeated hook `config-settings`;
 - package-specific PEP 517 settings and build variables come from
   [`config-settings-package`](https://docs.astral.sh/uv/reference/settings/#config-settings-package)
   and
@@ -184,15 +185,19 @@ receives only Python sources and its configuration files.
 
 Ruff runs with its local cache disabled because BSMR caches the complete action
 by tool, configuration, and project-source digest. ty receives independently
-cacheable dependency and first-party wheel layers. uv receives the pinned
-interpreter, isolated home and cache directories, disabled Python downloads,
-and no ambient user configuration.
+cacheable dependency and first-party wheel layers. First-party PEP 517 builds
+invoke the declared backend directly inside the pinned interpreter and frozen
+build environment; they do not start uv or rediscover backend requirements.
+The remaining third-party compatibility path gives uv the same interpreter,
+isolated home and cache directories, disabled Python downloads, and no ambient
+user configuration.
 
-All uv settings above are explicit action inputs. Global settings apply to
-each sdist; package-specific settings apply only to their normalized package;
-build variables are written to an isolated generated uv configuration because
-uv does not expose them as command-line flags. Changes invalidate only the
-actions whose declared settings changed.
+All settings above are explicit action inputs. Global settings apply to each
+build; package-specific settings and environment variables apply only to their
+normalized distribution. BSMR presents them directly to first-party backends
+and writes an isolated uv configuration only for third-party builds that still
+use uv's compatibility path. Changes invalidate only the actions whose
+declared settings changed.
 
 A backend that derives a dynamic version from Git must declare Git as native uv
 cache state. BSMR treats the same declaration as an explicit build input:
@@ -218,10 +223,11 @@ and object database are project-local files. A linked worktree whose `.git` is
 an external indirection file fails before backend execution; declaring that
 external Git database hermetically remains a release gate.
 
-Pre-PEP 517 projects are accepted only where uv can build them through its
-legacy PEP 517 adapter with an explicit build closure. This path is discouraged.
-New projects should declare `[build-system]`; existing projects should migrate
-rather than add more undeclared `setup.py` behavior.
+First-party pre-PEP 517 projects fail analysis because their backend contract is
+not explicit. A locked third-party sdist may still use uv's legacy PEP 517
+adapter with an explicit build closure. That compatibility path is discouraged:
+new projects should declare `[build-system]`, and existing projects should
+migrate rather than add more undeclared `setup.py` behavior.
 
 ## Correctness and caching
 
@@ -230,9 +236,15 @@ separate actions. Source-controlled virtual environments are detected by
 `pyvenv.cfg` and pruned before package discovery. Generated caches, lockfiles,
 build outputs, and virtual environments never become first-party source inputs.
 
-The general package path uses `uv pip sync --strict` against one canonical
-single-package PEP 751 fragment, normalizes console-script shebangs, rejects
-symlinks and special files, and records the immutable result in BSMR's CAS.
+For already-selected wheels, BSMR's native installer validates normalized
+archive paths, regular filesystem kinds, a single coherent release identity,
+filename-consistent compatibility tags and build identity, complete strong
+RECORD hashes and sizes, install schemes, and entry points before recording the
+immutable result in BSMR's CAS. It does not start a resolver or installer
+subprocess. Ambiguous wheel sets and source artifacts use `uv pip sync
+--strict` against one canonical single-package PEP 751 fragment, normalize
+console-script shebangs, reject symlinks and special files, and record the same
+immutable result shape.
 BSMR partitions complete size- and SHA-256-pinned wheel metadata by configured
 Python line, execution OS, and CPU using Astral's wheel filename and platform
 tag libraries. Pinned uv then evaluates the lock's markers and versions in an
@@ -258,9 +270,10 @@ remains responsible for compatibility selection.
 BSMR composes those package trees deterministically, rejects incompatible
 import-file collisions, applies uv-compatible first-package precedence to
 console scripts, and records all owners when identical files are shared.
-First-party wheels are built once and overlaid as a separate content-addressed
-layer. Warm no-op builds and deleted-output restoration therefore require no
-Python tool execution.
+First-party wheels are built by their declared PEP 517 hook, verified with the
+same wheel invariants, and overlaid as a separate content-addressed layer. Warm
+no-op builds and deleted-output restoration therefore require no Python tool,
+installer, or backend execution.
 
 Successful Python test commands opt into BSMR's action cache. Repeating the
 same target with the same interpreter, environments, sources, command, and
@@ -305,19 +318,30 @@ as the user-facing contract; pins the Astral tools and interpreter; generates
 the action graph without BUILD files; and shares verified action results across
 worktrees automatically.
 
-The reproducible Django comparison against Bazel 9.1.0 and rules_python 2.2.0
-passed exact source, import, test, entry-point, wheel-payload, incremental, and
-restoration gates. On the reference Apple M5 Max run, BSMR was 4.62x faster for
-a shared-cache fresh checkout, 1.55x faster for a resident no-op, 3.48x faster
-for the first test, 1.87x faster for a cached test, and 10.05x faster when
-restoring deleted outputs. Fully empty acquisition was 1.03x faster; a
-provisioned build without action results was 11% slower.
+The reproducible Django comparison against Bazel 9.2.0 and rules_python 2.3.0
+passed exact source, Git-derived release identity, import, test, entry-point,
+wheel metadata, RECORD, payload, incremental, and restoration gates. It used
+Bazel's latest stable release, the latest rules_python release, and that
+ruleset's pinned CPython 3.14.4 against BSMR's CPython 3.14.7.
 
-Bazel's direct `py_wheel` leaf edit was 11.02x faster. That rule bypasses the
-project's PEP 517 backend and requires duplicated distribution metadata, so the
-number is an informative packaging lower bound rather than equivalent backend
-execution. BSMR will not replace a declared backend with a faster approximation
-silently.
+| Local Django regime | Result |
+| --- | ---: |
+| Empty acquisition | BSMR 1.79x faster |
+| Provisioned, no action results | BSMR 1.63x faster |
+| Shared cache, fresh checkout | BSMR 6.29x faster |
+| Resident no-op | BSMR 8.50x faster |
+| First test | BSMR 2.31x faster |
+| Cached test | BSMR 5.65x faster |
+| Source edit, runtime target | BSMR 2.74x faster |
+| Source edit, test execution | parity; BSMR 1.02x faster |
+| Source edit, full PEP 517 wheel | parity; Bazel 1.08x faster |
+| Deleted wheel restoration | BSMR 4.25x faster |
+
+The parity rows execute the same Python test workload or the same setuptools
+backend. Bazel's separate archive-only `py_wheel` control was 8.12x faster than
+either full PEP 517 build because it skips the backend and duplicates
+distribution metadata in BUILD syntax. That is a useful lower bound, not an
+equivalent build. BSMR will not silently substitute it for the project contract.
 
 This is also a corpus result, not a Django party trick. The pinned RFC 0004
 gate passes NVIDIA Cosmos Cookbook's `uv_build` project, Dedalus Agents
@@ -325,27 +349,31 @@ Python's Hatchling project, and Pydantic AI's four-project dynamic-version uv
 workspace. Across those checkouts, BSMR and pinned uv agree on 110 runtime
 distributions, 7,776 runtime files, 17 build distributions, 418 build files,
 first-party wheel payloads, imports, entry points, executable bits, and missing
-import failures. Pydantic AI's 7,462-file environment reaches a 42 ms resident
+import failures. Pydantic AI's 7,462-file environment reaches a 36 ms resident
 no-op on the reference machine.
 
 For this native local-project contract, choose BSMR. It removes BUILD-file
 metadata duplication, preserves the project's actual PEP 517 behavior, and
 shares verified results across worktrees while beating the tuned Bazel control
-on the cache-dominant developer paths above. Choose Bazel today when its mature
-remote-execution, sandboxing, query, or IDE ecosystem is itself a requirement;
-those surfaces are outside this benchmark and BSMR does not claim otherwise.
+by 1.63x to 8.50x wherever graph construction, invalidation, or caching can
+differentiate the systems. Choose Bazel today when its mature remote-execution,
+sandboxing, query, or IDE ecosystem is itself a requirement; those surfaces are
+outside this benchmark and BSMR does not claim otherwise.
 
 See the [benchmark contract and reproduction
 instructions](https://github.com/dedalus-labs/bsmr/blob/main/benchmarks/README.md#python-build-systems).
-These claims cover the measured local Python path. Bazel still has the broader
-mature sandbox, remote-execution, query, and IDE ecosystem; BSMR does not claim
-parity for surfaces it has not implemented and measured.
+These claims cover the measured local Python path, not unimplemented product
+surfaces.
 
 ## Hermeticity boundary
 
-The current implementation is the pinned-uv differential baseline from
-[RFC 0004](https://github.com/dedalus-labs/bsmr/discussions/16), not the RFC's
-final native materializer.
+The native local path now delivers the central execution design from
+[RFC 0004](https://github.com/dedalus-labs/bsmr/discussions/16): standard
+PEP 751 inputs, digest-pinned tools and artifacts, a package-granular graph,
+native wheel installation, direct frozen PEP 517 execution, and verified local
+CAS reuse. uv remains the lock author and the specialist for compatibility
+selection, source builds, and legacy third-party projects; it is no longer on
+the selected-wheel or first-party wheel critical path.
 
 Portable offline artifact replay after an action-cache miss is implemented for
 complete HTTP(S) wheel, sdist, and archive records. Each compatible candidate
@@ -354,33 +382,36 @@ repository-independent HTTP cache entry is revalidated on every restoration.
 Python and platform selects are part of the action graph, so one compiled
 package consumes only the candidates for its exact configured Python line and
 execution platform. Credential-free HTTPS Git sources pinned to a full object
-ID are acquired as separate source-tree actions. Pinned uv consumes every
-acquired source offline and BSMR verifies the resulting distribution name and
-version before admitting it to the package graph.
+ID are acquired as separate source-tree actions. When a source artifact still
+requires uv, pinned uv consumes it offline and BSMR verifies the resulting
+distribution name and version before admitting it to the package graph.
 
 Local directory sources map to declared first-party wheel targets as described
 above. A cold action for a local archive path, local VCS path, unsupported VCS,
 marker-varying source, or artifact with incomplete acquisition metadata may
-still ask uv to consume the canonical one-package PEP 751 fragment. Replacing
-that compatibility path with typed pre-execution failures, pinning the Git
-client itself, native wheel materialization without a uv subprocess,
-static import inference with the smallest sound dependency closure, and
-provenance queries remain release gates. Declared PEP 794 import ownership and
-cross-layer collision validation are implemented.
-
-Native wheel materialization will replace uv only after differential package,
-artifact, import, entry-point, and failure checks pass and the implementation
-meets explicit cold, warm, no-op, and incremental performance gates. A slower
-language-level reimplementation is not a compatibility fallback.
+still ask uv to consume the canonical one-package PEP 751 fragment. Declared
+PEP 794 import ownership, cross-layer collision validation, native wheel
+materialization, and differential conformance gates are implemented. Static
+import inference for the smallest sound dependency closure and complete
+provenance queries remain RFC work.
 
 Pure-Python PEP 517 builds use the exact interpreter and locked build closure.
 The backend receives a scratch copy rather than the declared source artifact,
 so setuptools-style `build/` and `*.egg-info` writes cannot mutate another
 action's input. Entry points and tests disable bytecode writes before importing
-project code for the same reason. BSMR invokes uv offline for first-party wheel
-construction, but local execution does not yet prevent a build backend from
-opening its own network connection; enforced network isolation remains a
-release gate.
+project code for the same reason. BSMR imports the declared backend through its
+`backend-path`, stdlib, build environment, and `.pth` files in that order, then
+calls `build_wheel` directly. It never calls `get_requires_for_build_wheel`
+after graph freeze. Missing dynamic build requirements therefore fail instead
+of mutating the resolved graph. `.pth` paths must remain inside the declared
+build environment, ambient site packages are excluded, source timestamps are
+normalized, and the running interpreter must match the pinned toolchain.
+
+Local execution does not yet prevent a PEP 517 backend from opening its own
+network connection. Offline artifact acquisition and isolated process state
+make compliant builds reproducible, but kernel-enforced network denial remains
+an RFC gate. The current linked-worktree Git adapter and explicit `uv.lock`
+compatibility provider also remain incomplete.
 
 Native extensions currently use the local execution platform's C/C++ tools;
 those actions run locally and are not uploaded to a remote cache. A declared,
@@ -392,7 +423,9 @@ scratch paths do not make otherwise identical extension modules diverge. A
 Dedalus API fixture with Cython-backed `pyiceberg` and `pyroaring` extensions
 reproduces byte-for-byte across independent cold uv and BSMR build roots.
 
-Until those gates land, describe this surface as a pinned uv, Ruff, and ty
-adapter with deterministic BSMR action caching. Unsupported native toolchains,
-lock schemas, or build closures should fail explicitly; BSMR does not select a
-second package manager or silently resolve a different dependency set.
+The other unfinished RFC surfaces are queryable provenance and dependency
+explanations, general named resolves beyond test profiles, remote reuse for
+native builds, and mature query, IDE, and coverage integrations. Unsupported
+native toolchains, lock schemas, or build closures fail explicitly; BSMR does
+not select a second package manager or silently resolve a different dependency
+set.

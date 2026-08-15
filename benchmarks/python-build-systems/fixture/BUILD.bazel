@@ -6,8 +6,10 @@
 # Defines the hand-authored rules_python control graph.
 
 load("@django_pip//:requirements.bzl", "requirement")
+load("@django_build_pip//:requirements.bzl", build_requirement = "requirement")
 load("@rules_python//python:defs.bzl", "py_binary", "py_library", "py_test")
 load("@rules_python//python:packaging.bzl", "py_package", "py_wheel")
+load(":pep517_wheel.bzl", "pep517_wheel")
 
 package(default_visibility = ["//visibility:public"])
 
@@ -52,4 +54,33 @@ py_wheel(
     distribution = "Django",
     python_tag = "py3",
     version = "6.2.0a0",
+)
+
+py_binary(
+    name = "pep517-builder",
+    srcs = ["pep517_build.py"],
+    main = "pep517_build.py",
+    deps = [build_requirement("setuptools")],
+)
+
+pep517_wheel(
+    name = "django-pep517-wheel",
+    builder = ":pep517-builder",
+    srcs = glob(
+        [
+            "**",
+            ".git/HEAD",
+            ".git/objects/**",
+            ".git/packed-refs",
+            ".git/refs/**",
+            ".git/shallow",
+        ],
+        allow_empty = True,
+        exclude = [
+            ".venv/**",
+            "**/__pycache__/**",
+            "bazel-*/**",
+            "buck-out/**",
+        ],
+    ),
 )

@@ -5,12 +5,11 @@
 
 // Provides pure helpers for the Python build-system benchmark contract.
 
-import { readFileSync } from "node:fs";
+import { chmodSync, readFileSync, rmSync } from "node:fs";
 
 export type Runner = "bazel" | "bsmr";
 
 export interface BsmrOutputs {
-	environment: string;
 	source: string;
 	wheel: string;
 }
@@ -29,16 +28,18 @@ export interface PerformanceGateResult {
 }
 
 const performanceBudgets = {
-	"acquisition-cold": 1.25,
-	"output-restoration": 0.35,
-	"provisioned-cold": 1.25,
-	"resident-noop": 0.9,
-	"shared-cache-fresh-checkout": 0.5,
-	"test-cached": 0.8,
-	"test-first": 0.6,
+	"acquisition-cold": 0.8,
+	"leaf-runtime": 0.75,
+	"leaf-test": 1.1,
+	"leaf-wheel": 1.2,
+	"output-restoration": 0.3,
+	"provisioned-cold": 0.8,
+	"resident-noop": 0.3,
+	"shared-cache-fresh-checkout": 0.3,
+	"test-cached": 0.4,
+	"test-first": 0.5,
 } as const;
 
-export const targetEnvironment = "root//:__bsmr_python_workspace_environment";
 export const targetSource = "root//:__bsmr_python_sources";
 export const targetWheel = "root//:django";
 
@@ -59,6 +60,12 @@ export function median(values: readonly number[]): number {
 	if (values.length === 0) throw new Error("cannot compute a median without samples");
 	const sorted = [...values].sort((left, right) => left - right);
 	return sorted[Math.floor(sorted.length / 2)]!;
+}
+
+/** Removes a read-only directory tree such as a Bazel tree artifact. */
+export function removeReadOnlyTree(path: string): void {
+	chmodSync(path, 0o755);
+	rmSync(path, { recursive: true });
 }
 
 /** Returns payload paths whose presence, size, or content differs. */
@@ -86,8 +93,8 @@ export function parseBsmrOutputs(stdout: string): BsmrOutputs {
 	const value: unknown = JSON.parse(stdout.trim());
 	if (typeof value !== "object" || value === null || Array.isArray(value)) throw new Error("BSMR output must be a JSON object");
 	const outputs = value as Record<string, unknown>;
-	if (typeof outputs[targetWheel] !== "string" || typeof outputs[targetEnvironment] !== "string" || typeof outputs[targetSource] !== "string") throw new Error("BSMR omitted a requested Python output");
-	return { environment: outputs[targetEnvironment], source: outputs[targetSource], wheel: outputs[targetWheel] };
+	if (typeof outputs[targetWheel] !== "string" || typeof outputs[targetSource] !== "string") throw new Error("BSMR omitted a requested Python output");
+	return { source: outputs[targetSource], wheel: outputs[targetWheel] };
 }
 
 /** Reads the central directory without trusting an ambient archive tool. */

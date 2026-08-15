@@ -184,12 +184,12 @@ CPython 3.14.7 and uv 0.12.5. The gate compared 110 runtime distributions,
 wheels, the requested imports, entry-point metadata, executable bits, missing
 import failures, and complete installed-file digests. Pydantic AI alone covered
 a four-project uv workspace, 96 runtime distributions, and 7,462 files. Its
-resident BSMR no-op completed in 42 ms.
+resident BSMR no-op completed in 36 ms.
 
 ## Python build systems
 
 The Python build-system suite compares BSMR's zero-build-file project graph with
-Bazel 9.1.0 and rules_python 2.2.0 on Django commit
+Bazel 9.2.0 and rules_python 2.3.0 on Django commit
 `3436cf9bce84bb1f6877ad96819637366b27b719`. Bazel receives an explicit,
 hand-tuned `MODULE.bazel` and `BUILD.bazel`; BSMR consumes Django's native
 `pyproject.toml` plus PEP 751 locks.
@@ -198,21 +198,28 @@ The harness refuses to report timings unless both systems:
 
 - run the expected Django entry point and import smoke test;
 - produce the same 3,688-file `django/` wheel payload by path, size, and CRC;
+- produce the same eight-file Git-derived `.dist-info` tree, including RECORD;
 - preserve BSMR's declared source artifact without backend or bytecode writes;
+- observe every leaf edit through the built entry point and test process;
 - change only `django/views/generic/base.py` after the leaf edit; and
-- reproduce the final edited wheel after materialized outputs are deleted.
+- reproduce the final edited wheel after its materialized tree is deleted.
 
 It measures acquisition from empty tool, repository, and action caches;
 provisioning with downloaded artifacts but no action results; a fresh checkout
 with a shared action cache; resident no-op; first and cached test execution;
-leaf edits; and output restoration. Runner order alternates on every paired
-sample. Cold acquisition has three samples; every other regime has five.
+source-backed runtime and test leaf edits; a full PEP 517 wheel rebuild; Bazel's
+non-equivalent archive-only wheel lower bound; and output restoration. Runner
+order alternates on every paired sample. Cold acquisition has three samples;
+every other regime has five.
 
-The checked release budgets require BSMR to remain within 25% of Bazel for
-acquisition and provisioned cold builds, and faster for fresh-checkout shared
-cache, resident no-op, test execution, test-result restoration, and output
-restoration. The leaf-edit wheelmaker result is informational for the semantic
-reason below; turning it into a gate requires a Bazel PEP 517 control.
+Every semantics-matched regime is a checked release gate. The budgets require
+BSMR to beat Bazel for acquisition, provisioned cold builds, fresh-checkout
+shared cache, no-op, first and cached tests, source-backed runtime edits, and
+restoration. Edited test execution must remain within 10%; the full wheel
+rebuild must remain within 20%. Those phases execute the same Python workload
+or declared backend, so parity rather than an invented multiplier is the honest
+build-system contract. Bazel's `py_wheel` result remains an informational lower
+bound because it archives sources without executing that backend.
 
 Build BSMR, download the exact Bazelisk 1.29.0 binary for the host, verify its
 SHA-256 against `config.ts`, and prepare the pinned source checkout:
@@ -240,33 +247,38 @@ counts with a minimum of five.
 ### Reference result
 
 The 2026-08-15 reference run used an Apple M5 Max with 18 logical CPUs and 48
-GiB of memory on Darwin 25.5.0. All correctness gates passed.
+GiB of memory on Darwin 25.5.0. Bazel used its rules_python 2.3.0 catalog pin,
+CPython 3.14.4; BSMR used CPython 3.14.7. All correctness gates passed.
 
 | Regime | BSMR median | Bazel median | Result |
 | --- | ---: | ---: | ---: |
-| Empty acquisition | 10.218 s | 10.560 s | BSMR 1.03x |
-| Provisioned, no action cache | 9.904 s | 8.951 s | Bazel 1.11x |
-| Shared cache, fresh checkout | 1.854 s | 8.568 s | BSMR 4.62x |
-| Resident no-op | 51 ms | 78 ms | BSMR 1.55x |
-| First test | 401 ms | 1.396 s | BSMR 3.48x |
-| Cached test | 37 ms | 70 ms | BSMR 1.87x |
-| Leaf edit and wheel | 7.121 s | 646 ms | Bazel 11.02x; informational |
-| Deleted-output restoration | 50 ms | 506 ms | BSMR 10.05x |
+| Empty acquisition | 8.728 s | 15.598 s | BSMR 1.79x |
+| Provisioned, no action result | 8.044 s | 13.105 s | BSMR 1.63x |
+| Shared cache, fresh checkout | 1.319 s | 8.300 s | BSMR 6.29x |
+| Resident no-op | 46 ms | 393 ms | BSMR 8.50x |
+| First test | 622 ms | 1.439 s | BSMR 2.31x |
+| Cached test | 29 ms | 166 ms | BSMR 5.65x |
+| Source edit, runtime target | 95 ms | 260 ms | BSMR 2.74x |
+| Source edit, test execution | 478 ms | 486 ms | parity; BSMR 1.02x |
+| Source edit, PEP 517 wheel | 5.490 s | 5.091 s | parity; Bazel 1.08x |
+| Bazel archive-only lower bound | — | 676 ms | non-equivalent |
+| Deleted wheel restoration | 42 ms | 180 ms | BSMR 4.25x |
 
 The exact fixture contract digest was
-`af1070c313c20482a9b9e6188614f87479b93056cd4e17fef74b6df972a0f2d0`;
+`7dd04a5ab96b87aab372348687afcaf6127c4f0d0fd3b4ac858c3c575c7ef10b`;
 the BSMR binary digest was
-`2428eca66a4c0266f153140e0aa9550b31fd87a1edbd720fa9ad7973eeea4f94`.
+`323e963d809c97dea0f7fc0f08f2ce4091d0ea57b4b0aca47f2e1d3eaeddea50`.
 Rerun the suite before using these numbers for another revision or machine.
 
 ### Interpretation boundary
 
-The Bazel control uses `py_package` and `py_wheel`, which require the benchmark
-to repeat Django's distribution name, version, package selection, and runtime
-dependency edges in BUILD syntax. BSMR invokes Django's declared PEP 517 backend,
-including its dynamic metadata contract. A direct Bazel wheelmaker action can be
-faster than a PEP 517 backend after a leaf edit because it implements less of
-that contract. Treat that timing as a useful lower bound, not semantic parity.
+The semantics-matched Bazel control uses a declared `rules_python` toolchain,
+locked build requirements, an immutable copied source tree, and Django's actual
+PEP 517 backend. Its measured action verifies complete RECORD hash and size
+coverage before admitting the wheel. The separate `py_package` plus `py_wheel`
+target repeats Django's distribution metadata in BUILD syntax and only archives
+the selected sources. Treat that timing as a useful packaging lower bound, not
+semantic parity with either PEP 517 build.
 
 This suite evaluates local Python build correctness and performance. It does not
 claim that BSMR has Bazel's mature remote-execution, sandboxing, query, or IDE
