@@ -88,6 +88,18 @@ class NormalizeEntryPointsTest(unittest.TestCase):
 class SysconfigTest(unittest.TestCase):
     """Exercise relocation of python-build-standalone compiler metadata."""
 
+    def test_native_builds_disable_path_dependent_debug_sections(self) -> None:
+        """Cold actions in different scratch roots must produce identical binaries."""
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            with patch.dict(
+                os.environ, {"BUCK_SCRATCH_PATH": str(root / "scratch")}, clear=True
+            ):
+                _, environment = runner._state(root / "output")
+
+            self.assertEqual(environment["CFLAGS"], "-g0")
+            self.assertEqual(environment["CXXFLAGS"], "-g0")
+
     def test_target_platform_configures_one_canonical_macos_deployment(self) -> None:
         """Wheel selection and PEP 517 must share the declared Darwin baseline."""
         with tempfile.TemporaryDirectory() as temporary:
