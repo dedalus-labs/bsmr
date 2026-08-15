@@ -1000,9 +1000,9 @@ mod tests {
     #[test]
     fn invariant_platform_wheels_are_selected_by_execution_platform() {
         let listing = PackageListing::testing_files(&["pyproject.toml"]);
-        let lock = PylockToml::parse(&format!(
-            "lock-version = '1.0'\ncreated-by = 'test'\n[[packages]]\nname = 'attrs'\nversion = '25.3.0'\n[packages.sdist]\nurl = 'https://example.org/attrs-25.3.0.tar.gz'\nhashes = {{ sha256 = 'source' }}\n[[packages.wheels]]\nurl = 'https://example.org/attrs-25.3.0-cp314-cp314-macosx_13_0_arm64.whl'\nsize = 42\nhashes = {{ sha256 = '0000000000000000000000000000000000000000000000000000000000000000' }}\n"
-        ))
+        let lock = PylockToml::parse(
+            "lock-version = '1.0'\ncreated-by = 'test'\n[[packages]]\nname = 'attrs'\nversion = '25.3.0'\n[packages.sdist]\nurl = 'https://example.org/attrs-25.3.0.tar.gz'\nhashes = { sha256 = 'source' }\n[[packages.wheels]]\nurl = 'https://example.org/attrs-25.3.0-cp314-cp314-macosx_13_0_arm64.whl'\nsize = 42\nhashes = { sha256 = '0000000000000000000000000000000000000000000000000000000000000000' }\n",
+        )
         .unwrap();
         let root_files = PythonRootFiles {
             runtime_packages: lock.installation_fragments().unwrap(),
@@ -1026,9 +1026,9 @@ mod tests {
     #[test]
     fn invariant_best_platform_wheels_are_direct_artifacts() {
         let listing = PackageListing::testing_files(&["pyproject.toml"]);
-        let lock = PylockToml::parse(&format!(
-            "lock-version = '1.0'\ncreated-by = 'test'\n[[packages]]\nname = 'demo-wheel'\nversion = '1'\n[packages.sdist]\nurl = 'https://example.org/demo_wheel-1.tar.gz'\nsize = 42\nhashes = {{ sha256 = '2222222222222222222222222222222222222222222222222222222222222222' }}\n[[packages.wheels]]\nurl = 'https://example.org/demo_wheel-1-cp314-cp314-macosx_13_0_arm64.whl'\nsize = 42\nhashes = {{ sha256 = '0000000000000000000000000000000000000000000000000000000000000000' }}\n[[packages.wheels]]\nurl = 'https://example.org/demo_wheel-1-py3-none-any.whl'\nsize = 42\nhashes = {{ sha256 = '1111111111111111111111111111111111111111111111111111111111111111' }}\n"
-        ))
+        let lock = PylockToml::parse(
+            "lock-version = '1.0'\ncreated-by = 'test'\n[[packages]]\nname = 'demo-wheel'\nversion = '1'\n[packages.sdist]\nurl = 'https://example.org/demo_wheel-1.tar.gz'\nsize = 42\nhashes = { sha256 = '2222222222222222222222222222222222222222222222222222222222222222' }\n[[packages.wheels]]\nurl = 'https://example.org/demo_wheel-1-cp314-cp314-macosx_13_0_arm64.whl'\nsize = 42\nhashes = { sha256 = '0000000000000000000000000000000000000000000000000000000000000000' }\n[[packages.wheels]]\nurl = 'https://example.org/demo_wheel-1-py3-none-any.whl'\nsize = 42\nhashes = { sha256 = '1111111111111111111111111111111111111111111111111111111111111111' }\n",
+        )
         .unwrap();
         let root_files = PythonRootFiles {
             runtime_packages: lock.installation_fragments().unwrap(),
