@@ -103,6 +103,8 @@ pub struct PythonVcsFiles {
 /// Root-only Python files that alter which private graph nodes are available.
 #[derive(Default)]
 pub struct PythonRootFiles {
+    /// Root configuration files inherited by nested native project actions.
+    pub config_files: Vec<String>,
     /// Package-granular actions derived from the default runtime lock.
     pub runtime_packages: Vec<crate::python_lock::PylockInstallationFragment>,
     /// Package-granular actions derived from the isolated PEP 517 build lock.
@@ -113,6 +115,22 @@ pub struct PythonRootFiles {
     pub test_locks: Vec<PythonTestLock>,
     /// Declared Git inputs for projects whose version is computed dynamically.
     pub vcs: Option<PythonVcsFiles>,
+}
+
+/// Returns standard root configurations discovered by Ruff and ty ancestor traversal.
+pub fn python_root_config_files(listing: &PackageListing) -> Vec<String> {
+    listing
+        .files()
+        .files()
+        .map(PackageRelativePath::as_str)
+        .filter(|path| {
+            matches!(
+                *path,
+                ".ruff.toml" | "pyproject.toml" | "ruff.toml" | "ty.toml"
+            )
+        })
+        .map(str::to_owned)
+        .collect()
 }
 
 /// One named PEP 751 installation set exposed as a native test target.
@@ -632,6 +650,7 @@ mod tests {
     use super::python_distribution_name;
     use super::python_project_name;
     use super::python_project_uses_vcs;
+    use super::python_root_config_files;
     use super::python_test_locks;
     use super::python_workspace_closure;
     use super::python_workspace_manifest_paths;
@@ -714,6 +733,7 @@ mod tests {
             "[tool.ruff]\nline-length = 88\n",
             &listing,
             &PythonRootFiles {
+                config_files: Vec::new(),
                 runtime_packages: Vec::new(),
                 build_packages: Vec::new(),
                 members: vec![PythonWorkspaceMember {
@@ -1225,6 +1245,7 @@ mod tests {
             "[project]\nname = 'demo'\ndynamic = ['version']\nrequires-python = '>=3.12'\n[tool.hatch.version]\nsource = 'uv-dynamic-versioning'\n",
             &listing,
             &PythonRootFiles {
+                config_files: Vec::new(),
                 runtime_packages: Vec::new(),
                 build_packages: Vec::new(),
                 members: Vec::new(),
@@ -1299,6 +1320,7 @@ mod tests {
             "[project]\nname = 'demo'\nversion = '1'\nrequires-python = '>=3.12'\n[project.scripts]\ndemo = 'demo:main'\n[tool.bsmr.python]\ntest-command = ['tests/runtests.py', '--verbosity', '1']\n",
             &listing,
             &PythonRootFiles {
+                config_files: Vec::new(),
                 runtime_packages: Vec::new(),
                 build_packages: Vec::new(),
                 members: vec![PythonWorkspaceMember {
@@ -1374,6 +1396,7 @@ mod tests {
             "[project]\nname = 'demo'\nversion = '1'\nrequires-python = '>=3.12'\n",
             &listing,
             &PythonRootFiles {
+                config_files: Vec::new(),
                 runtime_packages: package_fragments(&["attrs"]),
                 build_packages: Vec::new(),
                 members: Vec::new(),
@@ -1608,11 +1631,15 @@ mod tests {
     #[test]
     fn invariant_nested_project_owns_its_first_party_environment() {
         let listing = PackageListing::testing_files(&["pyproject.toml", "pkg/__init__.py"]);
+        let root_files = PythonRootFiles {
+            config_files: vec![".ruff.toml".to_owned(), "pyproject.toml".to_owned()],
+            ..PythonRootFiles::default()
+        };
         let build = render_python_build_file(
             CellRelativePathBuf::unchecked_new("packages/api".to_owned()),
             "[project]\nname = 'api'\nrequires-python = '>=3.12'\n",
             &listing,
-            &PythonRootFiles::default(),
+            &root_files,
         )
         .unwrap();
 
@@ -1623,6 +1650,52 @@ mod tests {
         assert!(build.contains("uv = \"root//:__bsmr_uv_distribution\""));
         assert!(!build.contains("python_environment("));
         assert!(build.contains("\"packages/api/pkg/__init__.py\""));
+        assert_eq!(
+            build
+                .matches("\".ruff.toml\": \"root//:__bsmr_python_config__ruff_toml\"")
+                .count(),
+            2
+        );
+        assert_eq!(
+            build
+                .matches("\"pyproject.toml\": \"root//:__bsmr_python_config_pyproject_toml\"")
+                .count(),
+            2
+        );
+    }
+
+    #[test]
+    fn invariant_only_native_root_analysis_configs_propagate() {
+        let listing = PackageListing::testing_files(&[
+            ".ruff.toml",
+            "pyproject.toml",
+            "ruff.toml",
+            "ty.toml",
+            "unrelated.toml",
+        ]);
+
+        let config_files = python_root_config_files(&listing);
+        assert_eq!(
+            config_files,
+            [".ruff.toml", "pyproject.toml", "ruff.toml", "ty.toml"]
+        );
+        let build = render_python_build_file(
+            CellRelativePathBuf::unchecked_new(String::new()),
+            "[project]\nname = 'demo'\nrequires-python = '>=3.14'\n",
+            &listing,
+            &PythonRootFiles {
+                config_files,
+                ..PythonRootFiles::default()
+            },
+        )
+        .unwrap();
+        for file in [".ruff.toml", "pyproject.toml", "ruff.toml", "ty.toml"] {
+            let target = format!("__bsmr_python_config_{}", file.replace('.', "_"));
+            assert!(build.contains(&format!(
+                "export_file(\n    name = {target:?},\n    src = {file:?},"
+            )));
+        }
+        assert!(!build.contains("src = \"unrelated.toml\","));
     }
 
     #[test]
