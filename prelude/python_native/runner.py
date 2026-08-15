@@ -768,6 +768,119 @@ def _environment_packages(
     return packages
 
 
+def _metadata_import_name(value: str, field: str) -> str | None:
+    """Parse one PEP 794 import declaration into its ownership identity."""
+    name, separator, qualifier = value.partition(";")
+    name = name.strip()
+    if separator and qualifier.strip() != "private":
+        raise RuntimeError(f"Python metadata has invalid {field} value {value!r}")
+    if not name:
+        if field == "Import-Name" and not separator:
+            return None
+        raise RuntimeError(f"Python metadata has invalid {field} value {value!r}")
+    if not all(component.isidentifier() for component in name.split(".")):
+        raise RuntimeError(f"Python metadata has invalid {field} value {value!r}")
+    return name
+
+
+def _is_distribution_metadata(entry: list[object]) -> bool:
+    """Return whether one manifest entry is top-level wheel core metadata."""
+    path = PurePosixPath(_manifest_relative_path(entry[0]))
+    return (
+        len(path.parts) == 2
+        and path.parts[0].endswith(".dist-info")
+        and path.parts[1] == "METADATA"
+    )
+
+
+def _package_imports(
+    package: tuple[str, Path, list[list[object]]],
+) -> tuple[set[str], set[str]]:
+    """Read verified PEP 794 ownership from one installed distribution."""
+    name, root, entries = package
+    metadata_entries = [entry for entry in entries if _is_distribution_metadata(entry)]
+    if not metadata_entries:
+        return set(), set()
+    if len(metadata_entries) != 1:
+        raise RuntimeError(
+            f"Python package '{name}' contains {len(metadata_entries)} metadata records"
+        )
+    entry = metadata_entries[0]
+    relative = _manifest_relative_path(entry[0])
+    metadata_file = root / relative
+    if (
+        len(entry) != 4
+        or entry[1] != "file"
+        or not metadata_file.is_file()
+        or _file_digest(metadata_file) != str(entry[3])
+    ):
+        raise RuntimeError(f"Python package '{name}' does not match '{relative}'")
+    metadata = Parser().parsestr(metadata_file.read_text(encoding="utf-8"))
+    actual_name = metadata.get("Name")
+    if not actual_name or _normalize_distribution_name(actual_name) != name:
+        raise RuntimeError(
+            f"Python package '{name}' contains metadata for {actual_name!r}"
+        )
+    exclusive = {
+        parsed
+        for value in metadata.get_all("Import-Name", [])
+        if (parsed := _metadata_import_name(value, "Import-Name")) is not None
+    }
+    namespaces = {
+        parsed
+        for value in metadata.get_all("Import-Namespace", [])
+        if (parsed := _metadata_import_name(value, "Import-Namespace")) is not None
+    }
+    ambiguous = sorted(exclusive & namespaces)
+    if ambiguous:
+        raise RuntimeError(
+            f"Python package '{name}' claims import {ambiguous[0]!r} as both "
+            "exclusive and namespace ownership"
+        )
+    return exclusive, namespaces
+
+
+def _import_owners(
+    packages: list[tuple[str, Path, list[list[object]]]],
+) -> dict[str, dict[str, str | list[str]]]:
+    """Validate PEP 794 collisions and return deterministic provenance."""
+    exclusive: dict[str, str] = {}
+    namespaces: dict[str, set[str]] = {}
+    for package in packages:
+        owner = package[0]
+        package_exclusive, package_namespaces = _package_imports(package)
+        for name in sorted(package_exclusive):
+            conflicts = sorted(
+                {
+                    *namespaces.get(name, set()),
+                    *([exclusive[name]] if name in exclusive else []),
+                }
+                - {owner}
+            )
+            if conflicts:
+                raise RuntimeError(
+                    f"Python import {name!r} is claimed by incompatible packages "
+                    f"'{conflicts[0]}' and '{owner}'"
+                )
+            exclusive[name] = owner
+        for name in sorted(package_namespaces):
+            conflict = exclusive.get(name)
+            if conflict is not None and conflict != owner:
+                raise RuntimeError(
+                    f"Python import {name!r} is claimed by incompatible packages "
+                    f"'{conflict}' and '{owner}'"
+                )
+            namespaces.setdefault(name, set()).add(owner)
+    return {
+        name: (
+            {"exclusive": exclusive[name]}
+            if name in exclusive
+            else {"namespace": sorted(namespaces[name])}
+        )
+        for name in sorted(exclusive.keys() | namespaces.keys())
+    }
+
+
 def _path_owners(
     packages: list[tuple[str, Path, list[list[object]]]],
 ) -> dict[str, list[str]]:
@@ -819,6 +932,7 @@ def _copy_overlay_file(
 def _compose_environment(args: argparse.Namespace) -> None:
     """Materialize one import root while rejecting ambiguous ownership."""
     packages = _environment_packages(args)
+    import_owners = _import_owners(packages)
     path_owners = _path_owners(packages)
     output = args.output.resolve()
     output.mkdir()
@@ -839,7 +953,8 @@ def _compose_environment(args: argparse.Namespace) -> None:
                 raise RuntimeError(f"Python package path '{relative}' has unknown kind")
     _validate_environment(output)
     provenance = {
-        "format": 2,
+        "format": 3,
+        "imports": import_owners,
         "overlay": {path: owner for path, (owner, _, _) in selected.items()},
         "packages": [name for name, _, _ in packages],
         "paths": path_owners,
