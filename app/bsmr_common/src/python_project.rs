@@ -837,6 +837,27 @@ mod tests {
     }
 
     #[test]
+    fn invariant_ruff_receives_files_selected_by_native_configuration() {
+        let listing = PackageListing::testing_files(&[
+            "pyproject.toml",
+            "src/demo/__init__.py",
+            "templates/check.j2",
+        ]);
+        let build = render_python_build_file(
+            CellRelativePathBuf::unchecked_new(String::new()),
+            "[project]\nname = 'demo'\nversion = '1'\nrequires-python = '>=3.14'\n[tool.ruff]\nextend-include = ['*.j2']\n",
+            &listing,
+            &root_files_with_source_package("demo"),
+        )
+        .unwrap();
+
+        assert_eq!(build.matches("\"templates/check.j2\"").count(), 2);
+        assert!(build.contains(
+            "ruff_check(\n    name = \"lint\",\n    python = \"root//:__bsmr_python_distribution\",\n    project_root = \".\",\n    sources = \":__bsmr_python_sources\","
+        ));
+    }
+
+    #[test]
     fn invariant_universal_wheels_are_declared_download_inputs() {
         let listing = PackageListing::testing_files(&["pyproject.toml"]);
         let mut root_files = root_files_with_packages(&["attrs"]);
