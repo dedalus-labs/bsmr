@@ -39,11 +39,13 @@ use futures::stream::BoxStream;
 use futures::stream::TryStreamExt;
 
 use crate::artifact_value::ArtifactValue;
+use crate::digest_config::DigestConfig;
 use crate::directory::ActionDirectoryEntry;
 use crate::directory::ActionDirectoryMember;
 use crate::directory::ActionImmutableDirectory;
 use crate::directory::ActionSharedDirectory;
 use crate::execute::action_digest::TrackedActionDigest;
+use crate::execute::local_cache::LocalActionCache;
 use crate::materialize::http::Checksum;
 
 /// Opaque guard returned by `Materializer::register_eager_paths`.
@@ -197,6 +199,13 @@ pub trait Materializer: Allocative + Send + Sync + 'static {
     async fn declare_cas_many_impl<'a, 'b>(
         &self,
         info: Arc<CasDownloadInfo>,
+        artifacts: Vec<DeclareArtifactPayload>,
+    ) -> bsmr_error::Result<()>;
+
+    async fn declare_local_cache_many_impl(
+        &self,
+        cache: Arc<LocalActionCache>,
+        digest_config: DigestConfig,
         artifacts: Vec<DeclareArtifactPayload>,
     ) -> bsmr_error::Result<()>;
 
@@ -427,6 +436,23 @@ impl dyn Materializer {
             self.check_declared_external_symlink(value)?;
         }
         self.declare_cas_many_impl(info, artifacts).await
+    }
+
+    /// Declares artifacts whose files can be reconstructed from the local CAS.
+    pub async fn declare_local_cache_many(
+        &self,
+        cache: Arc<LocalActionCache>,
+        digest_config: DigestConfig,
+        artifacts: Vec<DeclareArtifactPayload>,
+    ) -> bsmr_error::Result<()> {
+        for DeclareArtifactPayload {
+            artifact: value, ..
+        } in &artifacts
+        {
+            self.check_declared_external_symlink(value)?;
+        }
+        self.declare_local_cache_many_impl(cache, digest_config, artifacts)
+            .await
     }
 
     /// External symlink is a hack used to resolve the symlink to the correct external hack.
