@@ -269,7 +269,7 @@ impl LocalActionCache {
         let mut input = File::open(source).map_err(|error| io_error("open", source, error))?;
         let mut digester = FileDigest::digester(digest_config.cas_digest_config());
         atomic_publish_immutable(&path, digest.to_re().size_in_bytes, |output| {
-            let mut buffer = [0_u8; 64 * 1024];
+            let mut buffer = vec![0_u8; 64 * 1024].into_boxed_slice();
             loop {
                 let length = input
                     .read(&mut buffer)
