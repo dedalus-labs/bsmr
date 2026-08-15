@@ -1137,13 +1137,15 @@ fn normalize_package_name(name: &str) -> Option<String> {
 
 /// Accepts only portable non-root paths within an acquired source tree.
 fn normalized_subdirectory(path: &str) -> bool {
-    !path.is_empty()
-        && !path.starts_with('/')
-        && !path.contains('\\')
-        && !(path.len() > 1 && path.as_bytes()[1] == b':')
-        && path
-            .split('/')
-            .all(|component| !component.is_empty() && component != "." && component != "..")
+    if path.is_empty()
+        || path.starts_with('/')
+        || path.contains('\\')
+        || (path.len() > 1 && path.as_bytes()[1] == b':')
+    {
+        return false;
+    }
+    path.split('/')
+        .all(|component| !component.is_empty() && component != "." && component != "..")
 }
 
 /// Accepts the lock directory itself or one portable child path.
