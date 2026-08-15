@@ -29,6 +29,7 @@ use bsmr_execute::digest_config::DigestConfig;
 use bsmr_execute::directory::ActionDirectoryEntry;
 use bsmr_execute::directory::ActionDirectoryMember;
 use bsmr_execute::directory::ActionSharedDirectory;
+use bsmr_execute::execute::local_cache::LocalActionCache;
 use bsmr_execute::materialize::materializer::ArtifactNotMaterializedReason;
 use bsmr_execute::materialize::materializer::CasDownloadInfo;
 use bsmr_execute::materialize::materializer::CopiedArtifact;
@@ -230,6 +231,13 @@ pub enum ArtifactMaterializationMethod {
         info: Arc<CasDownloadInfo>,
     },
 
+    /// The files must be restored from BSMR's user-level content store.
+    #[display("local cache")]
+    LocalCache {
+        cache: Arc<LocalActionCache>,
+        digest_config: DigestConfig,
+    },
+
     /// The file must be fetched over HTTP.
     #[display("http download ({})", info)]
     HttpDownload { info: HttpDownloadInfo },
@@ -253,6 +261,9 @@ impl Allocative for ArtifactMaterializationMethod {
             }
             Self::CasDownload { info } => {
                 visitor.visit_field(ident_key!(CasDownload), info);
+            }
+            Self::LocalCache { cache, .. } => {
+                visitor.visit_field(ident_key!(LocalCache), cache);
             }
             Self::HttpDownload { info } => {
                 visitor.visit_field(ident_key!(HttpDownload), info);
@@ -278,6 +289,9 @@ impl MaterializationMethodToProto for ArtifactMaterializationMethod {
             }
             ArtifactMaterializationMethod::CasDownload { .. } => {
                 bsmr_data::MaterializationMethod::CasDownload
+            }
+            ArtifactMaterializationMethod::LocalCache { .. } => {
+                bsmr_data::MaterializationMethod::LocalCache
             }
             ArtifactMaterializationMethod::Write { .. } => bsmr_data::MaterializationMethod::Write,
             ArtifactMaterializationMethod::HttpDownload { .. } => {
@@ -380,6 +394,7 @@ impl ArtifactTree {
                 }
             }
             ArtifactMaterializationMethod::HttpDownload { .. }
+            | ArtifactMaterializationMethod::LocalCache { .. }
             | ArtifactMaterializationMethod::Write { .. } => {
                 // TODO: Do the write directly to RE instead of materializing locally?
                 Err(ArtifactNotMaterializedReason::RequiresMaterialization { path })

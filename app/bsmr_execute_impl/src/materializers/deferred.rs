@@ -59,6 +59,7 @@ use bsmr_execute::directory::ActionDirectoryEntry;
 use bsmr_execute::directory::ActionDirectoryMember;
 use bsmr_execute::directory::ActionSharedDirectory;
 use bsmr_execute::execute::blocking::BlockingExecutor;
+use bsmr_execute::execute::local_cache::LocalActionCache;
 use bsmr_execute::materialize::materializer::ArtifactNotMaterializedReason;
 use bsmr_execute::materialize::materializer::CasDownloadInfo;
 use bsmr_execute::materialize::materializer::CasNotFoundError;
@@ -390,6 +391,27 @@ impl<T: IoHandler + Allocative> Materializer for DeferredMaterializerAccessor<T>
             let cmd = MaterializerCommand::Declare(
                 a,
                 Box::new(ArtifactMaterializationMethod::CasDownload { info: info.dupe() }),
+                get_dispatcher(),
+                current_span(),
+            );
+            self.command_sender.send(cmd)?;
+        }
+        Ok(())
+    }
+
+    async fn declare_local_cache_many_impl(
+        &self,
+        cache: Arc<LocalActionCache>,
+        digest_config: DigestConfig,
+        artifacts: Vec<DeclareArtifactPayload>,
+    ) -> bsmr_error::Result<()> {
+        for artifact in artifacts {
+            let cmd = MaterializerCommand::Declare(
+                artifact,
+                Box::new(ArtifactMaterializationMethod::LocalCache {
+                    cache: cache.dupe(),
+                    digest_config,
+                }),
                 get_dispatcher(),
                 current_span(),
             );

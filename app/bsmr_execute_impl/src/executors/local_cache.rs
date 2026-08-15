@@ -3,7 +3,7 @@
 // SPDX-License-Identifier: Apache-2.0
 //===----------------------------------------------------------------------===//
 
-//! Restores and publishes local command results through the shared disk AC/CAS.
+// Restores and publishes local command results through the shared disk AC/CAS.
 
 use std::collections::BTreeSet;
 use std::ops::ControlFlow;
@@ -13,8 +13,6 @@ use async_trait::async_trait;
 use bsmr_common::file_ops::metadata::FileMetadata;
 use bsmr_common::file_ops::metadata::TrackedFileDigest;
 use bsmr_core::fs::artifact_path_resolver::ArtifactFs;
-use bsmr_core::fs::project::ProjectRoot;
-use bsmr_core::fs::project_rel_path::ProjectRelativePathBuf;
 use bsmr_directory::directory::directory::Directory;
 use bsmr_directory::directory::directory_iterator::DirectoryIterator;
 use bsmr_directory::directory::directory_iterator::DirectoryIteratorPathStack;
@@ -28,7 +26,6 @@ use bsmr_execute::directory::directory_to_re_tree;
 use bsmr_execute::directory::extract_artifact_value;
 use bsmr_execute::directory::re_tree_to_directory;
 use bsmr_execute::execute::blocking::BlockingExecutor;
-use bsmr_execute::execute::blocking::IoRequest;
 use bsmr_execute::execute::cache_uploader::CacheUploadInfo;
 use bsmr_execute::execute::cache_uploader::CacheUploadOutcome;
 use bsmr_execute::execute::cache_uploader::CacheUploadResults;
@@ -42,6 +39,7 @@ use bsmr_execute::execute::local_cache::LocalActionResult;
 use bsmr_execute::execute::local_cache::LocalDigest;
 use bsmr_execute::execute::local_cache::LocalOutputDirectory;
 use bsmr_execute::execute::local_cache::LocalOutputFile;
+use bsmr_execute::execute::local_cache::parallel_cache_io;
 use bsmr_execute::execute::manager::CommandExecutionManager;
 use bsmr_execute::execute::manager::CommandExecutionManagerExt;
 use bsmr_execute::execute::output::CommandStdStreams;
@@ -52,8 +50,6 @@ use bsmr_execute::execute::result::CommandExecutionMetadata;
 use bsmr_execute::execute::result::CommandExecutionResult;
 use bsmr_execute::materialize::materializer::DeclareArtifactPayload;
 use bsmr_execute::materialize::materializer::Materializer;
-use bsmr_fs::error::IoResultExt;
-use bsmr_fs::fs_util;
 use bsmr_fs::paths::forward_rel_path::ForwardRelativePath;
 use bsmr_hash::BuckIndexMap;
 use bsmr_util::time_span::TimeSpan;
@@ -65,7 +61,6 @@ use prost::Message;
 use remote_execution::TActionResult2;
 
 use crate::incremental_actions_helper::save_content_based_incremental_state;
-use crate::materializers::io::materialize_dirs_and_syms;
 
 /// Checks the user-level disk cache before invoking a local command.
 pub struct LocalActionCacheChecker {
@@ -82,7 +77,7 @@ impl PreparedCommandOptionalExecutor for LocalActionCacheChecker {
         &self,
         command: &PreparedCommand<'_, '_>,
         manager: CommandExecutionManager,
-        cancellations: &CancellationContext,
+        _cancellations: &CancellationContext,
     ) -> ControlFlow<CommandExecutionResult, CommandExecutionManager> {
         let action = command.prepared_action.action_and_blobs.action.dupe();
         let result = match executor_stage_async(
@@ -111,11 +106,9 @@ impl PreparedCommandOptionalExecutor for LocalActionCacheChecker {
             restore_result(
                 &self.artifact_fs,
                 self.materializer.as_ref(),
-                self.blocking_executor.as_ref(),
                 self.cache.dupe(),
                 command,
                 result,
-                cancellations,
             ),
         )
         .await;
@@ -229,11 +222,9 @@ impl UploadCache for LocalActionCacheUploader {
 async fn restore_result(
     artifact_fs: &ArtifactFs,
     materializer: &dyn Materializer,
-    blocking_executor: &dyn BlockingExecutor,
     cache: Arc<LocalActionCache>,
     command: &PreparedCommand<'_, '_>,
     result: LocalActionResult,
-    cancellations: &CancellationContext,
 ) -> bsmr_error::Result<(
     BuckIndexMap<CommandExecutionOutput, ArtifactValue>,
     CommandStdStreams,
@@ -321,18 +312,9 @@ async fn restore_result(
         }
     }
 
-    let restore = RestoreOutputs {
-        cache: cache.dupe(),
-        digest_config,
-        outputs: declarations
-            .iter()
-            .map(|declaration| (declaration.path.clone(), declaration.artifact.dupe()))
-            .collect(),
-    };
-    blocking_executor
-        .execute_io(Box::new(restore), cancellations)
+    materializer
+        .declare_local_cache_many(cache.dupe(), digest_config, declarations)
         .await?;
-    materializer.declare_existing(declarations).await?;
 
     let stdout = read_stream(&cache, &result.stdout, digest_config)?;
     let stderr = read_stream(&cache, &result.stderr, digest_config)?;
@@ -395,43 +377,6 @@ fn read_stream(
     })
 }
 
-struct RestoreOutputs {
-    cache: Arc<LocalActionCache>,
-    digest_config: DigestConfig,
-    outputs: Vec<(ProjectRelativePathBuf, ArtifactValue)>,
-}
-
-impl IoRequest for RestoreOutputs {
-    fn execute(self: Box<Self>, project_fs: &ProjectRoot) -> bsmr_error::Result<()> {
-        let mut files = Vec::new();
-        for (path, value) in &self.outputs {
-            let destination = project_fs.resolve(path);
-            fs_util::remove_all(&destination).categorize_internal()?;
-            materialize_dirs_and_syms(
-                value.entry().as_ref().map_dir(Directory::as_ref),
-                &destination,
-            )?;
-            let mut walk = unordered_entry_walk(value.entry().as_ref().map_dir(Directory::as_ref));
-            while let Some((relative, entry)) = walk.next() {
-                let DirectoryEntry::Leaf(ActionDirectoryMember::File(file)) = entry else {
-                    continue;
-                };
-                files.push((
-                    project_fs.resolve(path.join(relative.get())),
-                    file.digest.dupe(),
-                    file.is_executable,
-                ));
-            }
-        }
-        parallel_for_each(&files, |(destination, digest, executable)| {
-            self.cache
-                .restore_blob(digest, destination, self.digest_config)?;
-            fs_util::set_executable(destination, *executable).categorize_internal()?;
-            Ok(())
-        })
-    }
-}
-
 fn publish_result(
     artifact_fs: &ArtifactFs,
     cache: &LocalActionCache,
@@ -491,7 +436,7 @@ fn publish_result(
             }
         }
     }
-    parallel_for_each(&files, |(digest, source)| {
+    parallel_cache_io(&files, |(digest, source)| {
         cache.publish_file(digest, source, digest_config)
     })?;
     for (digest, bytes) in trees {
@@ -577,38 +522,6 @@ fn pure_python_wheel_name(name: &str) -> bool {
         && fields.next().is_some()
 }
 
-fn parallel_for_each<T: Sync>(
-    values: &[T],
-    operation: impl Fn(&T) -> bsmr_error::Result<()> + Sync,
-) -> bsmr_error::Result<()> {
-    let workers = std::thread::available_parallelism()
-        .map_or(1, usize::from)
-        .min(8)
-        .min(values.len());
-    if workers == 0 {
-        return Ok(());
-    }
-    let chunk_size = values.len().div_ceil(workers);
-    std::thread::scope(|scope| -> bsmr_error::Result<()> {
-        let mut threads = Vec::with_capacity(workers);
-        for chunk in values.chunks(chunk_size) {
-            let operation = &operation;
-            threads.push(scope.spawn(move || -> bsmr_error::Result<()> {
-                for value in chunk {
-                    operation(value)?;
-                }
-                Ok(())
-            }));
-        }
-        for thread in threads {
-            thread
-                .join()
-                .expect("local cache I/O worker must not panic")?;
-        }
-        Ok(())
-    })
-}
-
 #[cfg(test)]
 mod tests {
     use std::sync::atomic::AtomicUsize;
@@ -618,7 +531,7 @@ mod tests {
     use bsmr_execute::execute::local_cache::LocalDigest;
     use bsmr_execute::execute::local_cache::LocalOutputFile;
 
-    use super::parallel_for_each;
+    use super::parallel_cache_io;
     use super::pure_python_wheel_name;
     use super::validate_output_paths;
 
@@ -642,7 +555,7 @@ mod tests {
             .map(|_| AtomicUsize::new(0))
             .collect::<Vec<_>>();
 
-        parallel_for_each(&values, |value| {
+        parallel_cache_io(&values, |value| {
             visits[*value].fetch_add(1, Ordering::Relaxed);
             Ok(())
         })?;

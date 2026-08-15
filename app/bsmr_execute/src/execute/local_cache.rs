@@ -3,7 +3,7 @@
 // SPDX-License-Identifier: Apache-2.0
 //===----------------------------------------------------------------------===//
 
-//! Stores action results and immutable blobs in a process-safe local AC/CAS.
+// Stores action results and immutable blobs in a process-safe local AC/CAS.
 
 use std::fs;
 use std::fs::File;
@@ -16,8 +16,12 @@ use std::path::PathBuf;
 use std::sync::atomic::AtomicU64;
 use std::sync::atomic::Ordering;
 
+use allocative::Allocative;
 use bsmr_common::file_ops::metadata::FileDigest;
 use bsmr_common::file_ops::metadata::TrackedFileDigest;
+use bsmr_fs::error::IoResultExt;
+use bsmr_fs::fs_util;
+use bsmr_fs::paths::abs_path::AbsPath;
 use prost::Message;
 use serde::Deserialize;
 use serde::Serialize;
@@ -165,6 +169,7 @@ pub struct LocalActionResult {
 }
 
 /// A repository-independent local action cache.
+#[derive(Allocative, Debug)]
 pub struct LocalActionCache {
     root: PathBuf,
 }
@@ -358,6 +363,20 @@ impl LocalActionCache {
         fs::rename(&temporary, destination)
             .map_err(|error| io_error("publish restoration", destination, error))?;
         Ok(())
+    }
+
+    /// Restores and verifies one artifact's files in parallel.
+    pub fn restore_files(
+        &self,
+        files: &[(PathBuf, TrackedFileDigest, bool)],
+        digest_config: DigestConfig,
+    ) -> bsmr_error::Result<()> {
+        parallel_cache_io(files, |(destination, digest, executable)| {
+            self.restore_blob(digest, destination, digest_config)?;
+            fs_util::set_executable(AbsPath::new(destination)?, *executable)
+                .categorize_internal()?;
+            Ok(())
+        })
     }
 
     fn has_complete_closure(&self, result: &LocalActionResult) -> bsmr_error::Result<bool> {
@@ -559,6 +578,39 @@ fn create_temporary(path: &Path) -> bsmr_error::Result<(PathBuf, File)> {
     }
 }
 
+/// Applies bounded parallelism to independent local-cache I/O operations.
+pub fn parallel_cache_io<T: Sync>(
+    values: &[T],
+    operation: impl Fn(&T) -> bsmr_error::Result<()> + Sync,
+) -> bsmr_error::Result<()> {
+    let workers = std::thread::available_parallelism()
+        .map_or(1, usize::from)
+        .min(8)
+        .min(values.len());
+    if workers == 0 {
+        return Ok(());
+    }
+    let chunk_size = values.len().div_ceil(workers);
+    std::thread::scope(|scope| -> bsmr_error::Result<()> {
+        let mut threads = Vec::with_capacity(workers);
+        for chunk in values.chunks(chunk_size) {
+            let operation = &operation;
+            threads.push(scope.spawn(move || -> bsmr_error::Result<()> {
+                for value in chunk {
+                    operation(value)?;
+                }
+                Ok(())
+            }));
+        }
+        for thread in threads {
+            thread
+                .join()
+                .expect("local cache I/O worker must not panic")?;
+        }
+        Ok(())
+    })
+}
+
 fn io_error(
     operation: &'static str,
     path: impl AsRef<Path>,
@@ -621,6 +673,29 @@ mod tests {
         cache.publish_action_result(&action, &result)?;
 
         assert_eq!(cache.action_result(&action)?, Some(result));
+        Ok(())
+    }
+
+    #[test]
+    fn artifact_files_restore_as_one_verified_batch() -> bsmr_error::Result<()> {
+        let (temporary, cache, digest_config, _action, output, _result) = fixture();
+        let second =
+            TrackedFileDigest::from_content(b"second output", digest_config.cas_digest_config());
+        cache.publish_bytes(&output, b"cached output", digest_config)?;
+        cache.publish_bytes(&second, b"second output", digest_config)?;
+        let first_path = temporary.path().join("restored/first");
+        let second_path = temporary.path().join("restored/second");
+
+        cache.restore_files(
+            &[
+                (first_path.clone(), output, false),
+                (second_path.clone(), second, true),
+            ],
+            digest_config,
+        )?;
+
+        assert_eq!(fs::read(first_path)?, b"cached output");
+        assert_eq!(fs::read(second_path)?, b"second output");
         Ok(())
     }
 

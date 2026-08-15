@@ -254,6 +254,29 @@ impl DefaultIoHandler {
                         })),
                     })?;
             }
+            ArtifactMaterializationMethod::LocalCache {
+                cache,
+                digest_config,
+            } => {
+                let mut files = Vec::new();
+                {
+                    let mut walk = unordered_entry_walk(entry.as_ref().map_dir(Directory::as_ref));
+                    while let Some((entry_path, entry)) = walk.next() {
+                        if let DirectoryEntry::Leaf(ActionDirectoryMember::File(file)) = entry {
+                            stat.file_count += 1;
+                            stat.total_bytes += file.digest.size();
+                            files.push((
+                                self.fs.resolve(path.join(entry_path.get())).into_path_buf(),
+                                file.digest.dupe(),
+                                file.is_executable,
+                            ));
+                        }
+                    }
+                }
+                self.io_executor
+                    .execute_io_inline(|| cache.restore_files(&files, *digest_config))
+                    .await?;
+            }
             ArtifactMaterializationMethod::HttpDownload { info } => {
                 async {
                     let downloaded = http_download(
