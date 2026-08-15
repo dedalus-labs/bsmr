@@ -334,14 +334,16 @@ class EnvironmentTest(unittest.TestCase):
             wheel.touch()
             args = Namespace(
                 output=output,
-                manifest=root / "environment.json",
                 python=root / "python",
                 python_platform="aarch64-apple-darwin",
                 uv=root / "uv",
                 wheel_dir=[wheel_directory],
             )
 
-            with patch.object(runner, "_run") as run:
+            def install(_: list[str], __: dict[str, str]) -> None:
+                (output / "demo.py").write_text("VALUE = 1\n", encoding="utf-8")
+
+            with patch.object(runner, "_run", side_effect=install) as run:
                 runner._wheel_environment(args, {"PATH": "/usr/bin"}, root / "scratch")
 
             install = run.call_args.args[0]
@@ -384,10 +386,18 @@ class EnvironmentTest(unittest.TestCase):
             )
             process_environment = {"PATH": "/usr/bin"}
 
-            with patch.object(runner, "_run") as run:
+            with (
+                patch.object(runner, "_run") as run,
+                patch.object(
+                    runner,
+                    "_validate_environment",
+                    wraps=runner._validate_environment,
+                ) as validate,
+            ):
                 (root / "scratch").mkdir()
                 runner._locked_package(args, process_environment, root / "scratch")
 
+            validate.assert_called_once_with(output.resolve())
             command = run.call_args.args[0]
             self.assertIn("--no-build-isolation", command)
             self.assertNotIn("--no-build", command)

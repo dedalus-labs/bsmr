@@ -8,7 +8,7 @@
 load(":toolchain.bzl", "PythonNativeDistributionInfo")
 
 PythonEnvironmentInfo = provider(fields = {
-    "manifest": provider_field(Artifact),
+    "identity": provider_field(Artifact),
     "roots": provider_field(list[Artifact]),
 })
 
@@ -158,7 +158,7 @@ def _locked_package_command(ctx: AnalysisContext, root, manifest, lock: Artifact
         environment = ctx.attrs.build_environment[PythonEnvironmentInfo]
         for build_root in environment.roots:
             command.add(["--build-environment", build_root])
-        command.add(cmd_args(hidden = [environment.manifest]))
+        command.add(cmd_args(hidden = [environment.identity]))
     return command, python_version, uv_version
 
 def _register_locked_package(ctx: AnalysisContext, actions, root, manifest, lock: Artifact, source: bool, absent: bool, artifacts, requirement) -> None:
@@ -386,7 +386,7 @@ def _python_environment_impl(ctx: AnalysisContext) -> list[Provider]:
     )
     return [
         DefaultInfo(default_output = manifest, other_outputs = [overlay]),
-        PythonEnvironmentInfo(manifest = manifest, roots = [overlay]),
+        PythonEnvironmentInfo(identity = manifest, roots = [overlay]),
     ]
 
 python_environment = rule(
@@ -402,9 +402,7 @@ python_environment = rule(
 def _python_wheel_environment_impl(ctx: AnalysisContext) -> list[Provider]:
     """Materializes exact first-party wheels independently of locked dependencies."""
     root = ctx.actions.declare_output(ctx.label.name, dir = True, has_content_based_path = True)
-    manifest = ctx.actions.declare_output("{}.manifest.json".format(ctx.label.name), has_content_based_path = True)
     command, python_version, uv_version = _runner_command(ctx, "wheel-environment", root.as_output())
-    command.add(["--manifest", manifest.as_output()])
     for wheel in ctx.attrs.wheels:
         command.add(["--wheel-dir", wheel[PythonWheelInfo].directory])
     ctx.actions.run(
@@ -415,8 +413,8 @@ def _python_wheel_environment_impl(ctx: AnalysisContext) -> list[Provider]:
         local_only = True,
     )
     return [
-        DefaultInfo(default_output = root, other_outputs = [manifest]),
-        PythonEnvironmentInfo(manifest = manifest, roots = [root]),
+        DefaultInfo(default_output = root),
+        PythonEnvironmentInfo(identity = root, roots = [root]),
     ]
 
 python_wheel_environment = rule(
@@ -427,7 +425,7 @@ python_wheel_environment = rule(
         "wheels": attrs.list(attrs.dep(providers = [PythonWheelInfo])),
         "_runner": attrs.source(default = "prelude//python_native:runner"),
     },
-    doc = "Materializes first-party wheel metadata as an independently cached runtime layer.",
+    doc = "Materializes first-party wheels as an independently cached runtime layer.",
 )
 
 def _project_action(ctx: AnalysisContext, mode: str, output: Artifact) -> None:
@@ -446,13 +444,13 @@ def _project_action(ctx: AnalysisContext, mode: str, output: Artifact) -> None:
         environment = ctx.attrs.environment[PythonEnvironmentInfo]
         for root in environment.roots:
             command.add(["--environment", root])
-        command.add(cmd_args(hidden = [environment.manifest]))
+        command.add(cmd_args(hidden = [environment.identity]))
     elif mode == "ty":
         for environment in ctx.attrs.environments:
             environment = environment[PythonEnvironmentInfo]
             for root in environment.roots:
                 command.add(["--environment", root])
-            command.add(cmd_args(hidden = [environment.manifest]))
+            command.add(cmd_args(hidden = [environment.identity]))
     if mode == "wheel" and ctx.attrs.vcs != None:
         command.add(["--vcs", ctx.attrs.vcs[PythonVcsInfo].tree])
     if mode == "wheel":
@@ -532,7 +530,7 @@ def _runtime_command(ctx: AnalysisContext, mode: str) -> cmd_args:
         environment = environment[PythonEnvironmentInfo]
         for root in environment.roots:
             command.add(["--environment", root])
-        command.add(cmd_args(hidden = [environment.manifest]))
+        command.add(cmd_args(hidden = [environment.identity]))
     command.add([
         "--project-root",
         ctx.attrs.project_root,
