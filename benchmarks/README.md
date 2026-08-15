@@ -151,3 +151,90 @@ The test target and uv-side command are an inseparable pair. Supplying only one
 fails before execution. The suite records timings for diagnostics; performance
 regression gates remain separate benchmarks so correctness cannot be traded for
 a faster but semantically different installation.
+
+## Python build systems
+
+The Python build-system suite compares BSMR's zero-build-file project graph with
+Bazel 9.1.0 and rules_python 2.2.0 on Django commit
+`3436cf9bce84bb1f6877ad96819637366b27b719`. Bazel receives an explicit,
+hand-tuned `MODULE.bazel` and `BUILD.bazel`; BSMR consumes Django's native
+`pyproject.toml` plus PEP 751 locks.
+
+The harness refuses to report timings unless both systems:
+
+- run the expected Django entry point and import smoke test;
+- produce the same 3,688-file `django/` wheel payload by path, size, and CRC;
+- preserve BSMR's declared source artifact without backend or bytecode writes;
+- change only `django/views/generic/base.py` after the leaf edit; and
+- reproduce the final edited wheel after materialized outputs are deleted.
+
+It measures acquisition from empty tool, repository, and action caches;
+provisioning with downloaded artifacts but no action results; a fresh checkout
+with a shared action cache; resident no-op; first and cached test execution;
+leaf edits; and output restoration. Runner order alternates on every paired
+sample. Cold acquisition has three samples; every other regime has five.
+
+The checked release budgets require BSMR to remain within 25% of Bazel for
+acquisition and provisioned cold builds, and faster for fresh-checkout shared
+cache, resident no-op, test execution, test-result restoration, and output
+restoration. The leaf-edit wheelmaker result is informational for the semantic
+reason below; turning it into a gate requires a Bazel PEP 517 control.
+
+Build BSMR, download the exact Bazelisk 1.29.0 binary for the host, verify its
+SHA-256 against `config.ts`, and prepare the pinned source checkout:
+
+```shell
+cargo build --release -p bsmr
+BSMR_BENCH_REPOSITORY=/tmp/bsmr-python-django \
+  node benchmarks/python-build-systems/prepare.ts
+```
+
+Then run the matrix:
+
+```shell
+BSMR_BENCH_REPOSITORY=/tmp/bsmr-python-django \
+BSMR_BENCH_BINARY="$PWD/target/release/bsmr" \
+BSMR_BENCH_BAZELISK=/absolute/path/to/bazelisk \
+  node benchmarks/python-build-systems/run.ts
+```
+
+The command prints the absolute `results.json` path. `BSMR_BENCH_ROOT` selects
+its parent directory, `BSMR_BENCH_COLD_RUNS` changes the acquisition sample
+count with a minimum of one, and `BSMR_BENCH_RUNS` changes the other sample
+counts with a minimum of five.
+
+### Reference result
+
+The 2026-08-15 reference run used an Apple M5 Max with 18 logical CPUs and 48
+GiB of memory on Darwin 25.5.0. All correctness gates passed.
+
+| Regime | BSMR median | Bazel median | Result |
+| --- | ---: | ---: | ---: |
+| Empty acquisition | 10.944 s | 11.153 s | BSMR 1.02x |
+| Provisioned, no action cache | 10.781 s | 8.972 s | Bazel 1.20x |
+| Shared cache, fresh checkout | 3.417 s | 8.167 s | BSMR 2.39x |
+| Resident no-op | 57 ms | 77 ms | BSMR 1.35x |
+| First test | 422 ms | 1.419 s | BSMR 3.36x |
+| Cached test | 29 ms | 74 ms | BSMR 2.53x |
+| Leaf edit and wheel | 6.669 s | 644 ms | Bazel 10.35x; informational |
+| Deleted-output restoration | 49 ms | 456 ms | BSMR 9.23x |
+
+The exact fixture contract digest was
+`2c019eebc4c3dd838b5e879aee35ba34eeed4297832f2265eb27503c9e3a783a`;
+the BSMR binary digest was
+`a29db668a07b5646ff3e36a0bf56ad66b787e31840077813b257a30b656ef21e`.
+Rerun the suite before using these numbers for another revision or machine.
+
+### Interpretation boundary
+
+The Bazel control uses `py_package` and `py_wheel`, which require the benchmark
+to repeat Django's distribution name, version, package selection, and runtime
+dependency edges in BUILD syntax. BSMR invokes Django's declared PEP 517 backend,
+including its dynamic metadata contract. A direct Bazel wheelmaker action can be
+faster than a PEP 517 backend after a leaf edit because it implements less of
+that contract. Treat that timing as a useful lower bound, not semantic parity.
+
+This suite evaluates local Python build correctness and performance. It does not
+claim that BSMR has Bazel's mature remote-execution, sandboxing, query, or IDE
+ecosystem. Claims in the Python guide are deliberately limited to the measured
+native-project path.

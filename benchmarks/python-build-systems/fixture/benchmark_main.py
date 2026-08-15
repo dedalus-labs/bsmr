@@ -3,6 +3,8 @@
 # SPDX-License-Identifier: Apache-2.0
 # ===----------------------------------------------------------------------===
 
-# Represents one matching installed conformance payload.
+"""Exercise the Django console entry point built by each system."""
 
-VALUE = 1
+import django
+
+print(django.get_version())
