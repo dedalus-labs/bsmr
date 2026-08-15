@@ -42,6 +42,7 @@ use bsmr_common::python_project::PythonVcsFiles;
 use bsmr_common::python_project::PythonWorkspaceMember;
 use bsmr_common::python_project::python_project_name;
 use bsmr_common::python_project::python_project_uses_vcs;
+use bsmr_common::python_project::python_root_config_files;
 use bsmr_common::python_project::python_test_locks;
 use bsmr_common::python_project::python_workspace_closure;
 use bsmr_common::python_project::python_workspace_manifest_paths;
@@ -450,6 +451,7 @@ impl<'c, 'd: 'c> DiceCalculationDelegate<'c, 'd> {
             manifest,
             listing,
             &PythonRootFiles {
+                config_files: python_root_config_files(&workspace_listing),
                 runtime_packages,
                 build_packages,
                 members,

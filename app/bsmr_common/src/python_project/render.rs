@@ -40,6 +40,7 @@ mod target {
 }
 
 struct PackageRender<'a> {
+    config_files: &'a [String],
     config_settings: &'a BTreeMap<String, super::BuildConfigSetting>,
     package_config_settings: &'a BTreeMap<String, BTreeMap<String, super::BuildConfigSetting>>,
     package_build_variables: &'a BTreeMap<String, BTreeMap<String, String>>,
@@ -97,10 +98,12 @@ pub fn render_python_build_file(
             &manifest.tool.uv.config_settings_package,
             &manifest.tool.uv.extra_build_variables,
         )?;
+        render_root_config_files(&mut output, root_files)?;
     }
     render_package(
         &mut output,
         &PackageRender {
+            config_files: &root_files.config_files,
             config_settings: &manifest.tool.uv.config_settings,
             package_config_settings: &manifest.tool.uv.config_settings_package,
             package_build_variables: &manifest.tool.uv.extra_build_variables,
@@ -136,7 +139,29 @@ fn render_workspace_root(
         &manifest.tool.uv.config_settings_package,
         &manifest.tool.uv.extra_build_variables,
     )?;
+    render_root_config_files(&mut output, root_files)?;
     Ok(output)
+}
+
+/// Exposes only standard ancestor configuration files to nested native packages.
+fn render_root_config_files(
+    output: &mut String,
+    root_files: &PythonRootFiles,
+) -> Result<(), NativePythonBuildError> {
+    for file in &root_files.config_files {
+        let target = root_config_target(file);
+        writeln!(
+            output,
+            "export_file(\n    name = {target:?},\n    src = {file:?},\n    visibility = [\"PUBLIC\"],\n)\n"
+        )
+        .map_err(NativePythonBuildError::Render)?;
+    }
+    Ok(())
+}
+
+/// Returns the private target carrying one inherited root configuration file.
+fn root_config_target(file: &str) -> String {
+    format!("__bsmr_python_config_{}", file.replace('.', "_"))
 }
 
 /// Rejects labels that would shadow BSMR's generated target namespace.
@@ -412,6 +437,13 @@ fn render_sources(
     for file in project_files(package.listing, analysis_only) {
         let path = workspace_path(package.package_root, file);
         writeln!(output, "        {path:?}: {file:?},").map_err(NativePythonBuildError::Render)?;
+    }
+    if !package.package_root.is_empty() {
+        for file in package.config_files {
+            let source = format!("root//:{}", root_config_target(file));
+            writeln!(output, "        {file:?}: {source:?},")
+                .map_err(NativePythonBuildError::Render)?;
+        }
     }
     writeln!(output, "    }},").map_err(NativePythonBuildError::Render)?;
     writeln!(output, "    visibility = [\"PUBLIC\"],\n)\n").map_err(NativePythonBuildError::Render)
