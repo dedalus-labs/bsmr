@@ -24,6 +24,6 @@ That ownership matters for a build tool. Repositories must be able to pin one
 version, reproduce a build, inspect the dependency graph, and upgrade without
 depending on another project's moving release channel.
 
-Bessemer is pre-release software. Its current contract is the source and tests
-in this repository; stable releases and compatibility guarantees will be
-documented when they exist.
+Bessemer is pre-1.0 software. Its `0.0.x` releases provide immutable,
+reproducible installation points, while the source and tests in this repository
+remain the compatibility contract.

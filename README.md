@@ -12,8 +12,25 @@ content-addressed cache. It reads `package.json`, `pnpm-lock.yaml`,
 or Starlark.
 
 > [!NOTE]
-> Bessemer is a preview. TypeScript with pnpm is the primary integration. Rust
-> with Cargo is experimental. A stable binary release is not available yet.
+> Bessemer is a preview. Releases in the `0.0.x` series may change their API.
+> TypeScript with pnpm is the primary integration. Rust with Cargo is
+> experimental.
+
+## Install
+
+On macOS or Linux:
+
+```sh
+curl --proto '=https' --tlsv1.2 --fail --location \
+  https://github.com/dedalus-labs/bsmr/releases/latest/download/bsmr-installer.sh \
+  --output bsmr-installer.sh
+sh bsmr-installer.sh
+```
+
+Windows users can download and run `bsmr-installer.ps1` from the
+[latest GitHub release](https://github.com/dedalus-labs/bsmr/releases/latest).
+Every release also includes platform archives, SHA-256 checksums, and build
+provenance attestations.
 
 ## Interface
 

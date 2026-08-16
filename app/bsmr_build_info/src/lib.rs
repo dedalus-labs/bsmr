@@ -16,6 +16,9 @@
 
 use bsmr_util::late_binding::LateBinding;
 
+#[cfg(not(buck_build))]
+const RELEASE_VERSION: &str = include_str!("../../../VERSION");
+
 pub struct BsmrBuildInfo {
     pub revision: Option<&'static str>,
     pub win_internal_version: Option<&'static str>,
@@ -24,14 +27,16 @@ pub struct BsmrBuildInfo {
 
 pub static BSMR_BUILD_INFO: LateBinding<BsmrBuildInfo> = LateBinding::new("BSMR_BUILD_INFO");
 
-/// Get the source control revision for this binary, if available. We provide this externally when
-/// building Bessemer for release.
+/// Get the externally supplied revision or the canonical Cargo release version.
 pub fn revision() -> Option<&'static str> {
-    BSMR_BUILD_INFO
+    let revision = BSMR_BUILD_INFO
         .get()
         .ok()
         .and_then(|i| i.revision)
-        .filter(|s| !s.is_empty())
+        .filter(|s| !s.is_empty());
+    #[cfg(not(buck_build))]
+    let revision = revision.or(Some(RELEASE_VERSION.trim()));
+    revision
 }
 
 /// Get the generated version for the windows binary. We use this for defining bucks internal version
@@ -67,4 +72,21 @@ pub fn release_timestamp() -> Option<&'static str> {
         .ok()
         .and_then(|i| i.release_timestamp)
         .filter(|s| !s.is_empty())
+}
+
+#[cfg(all(test, not(buck_build)))]
+mod tests {
+    use super::RELEASE_VERSION;
+
+    #[test]
+    fn release_version_is_canonical_semver() {
+        let components = RELEASE_VERSION.trim().split('.').collect::<Vec<_>>();
+        assert_eq!(components.len(), 3);
+        assert!(components.iter().all(|part| !part.is_empty()));
+        assert!(
+            components
+                .iter()
+                .all(|part| part.bytes().all(|byte| byte.is_ascii_digit()))
+        );
+    }
 }
