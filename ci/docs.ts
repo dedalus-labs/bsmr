@@ -15,7 +15,15 @@ const setupPythonAction =
 	"actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405"; // v6.2.0
 const uploadPagesArtifactAction =
 	"actions/upload-pages-artifact@7b1f4a764d45c48632c6b24a0339c27f5614fb0b"; // v4.0.0
-const docsPaths = ["ci/docs.ts", "docs/**", "mkdocs.yml", "README.md"] as const;
+
+const docsPaths = [
+	".github/workflows/docs.yml",
+	"ci/docs.test.ts",
+	"ci/docs.ts",
+	"docs/**",
+	"mkdocs.yml",
+	"README.md",
+] as const;
 const trustedCiRun = expr<boolean>(
 	"github.repository == 'dedalus-labs/bsmr' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository)",
 );
@@ -28,7 +36,7 @@ export const docs = workflow({
 		workflow_dispatch: {},
 	},
 	concurrency: {
-		group: "pages",
+		group: "pages-${{ github.ref }}",
 		"cancel-in-progress": false,
 	},
 	permissions: { contents: "read" },

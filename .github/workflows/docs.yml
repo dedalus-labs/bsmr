@@ -6,6 +6,8 @@ on:
     branches:
       - main
     paths:
+      - .github/workflows/docs.yml
+      - ci/docs.test.ts
       - ci/docs.ts
       - docs/**
       - mkdocs.yml
@@ -14,13 +16,15 @@ on:
     branches:
       - main
     paths:
+      - .github/workflows/docs.yml
+      - ci/docs.test.ts
       - ci/docs.ts
       - docs/**
       - mkdocs.yml
       - README.md
   workflow_dispatch: {}
 concurrency:
-  group: pages
+  group: pages-${{ github.ref }}
   cancel-in-progress: false
 permissions:
   contents: read

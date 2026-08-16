@@ -1,34 +1,30 @@
----
-id: install
-title: Installing Bessemer
----
 <!-- ===----------------------------------------------------------------------=== -->
 <!-- Upstream-Source: facebook/buck2@1560aca2002865cd73d7cafb22c705cfb640b2bc -->
 <!-- Modifications Copyright (c) 2026 Dedalus Labs, Inc. and its contributors -->
 <!-- SPDX-License-Identifier: Apache-2.0 -->
 <!-- ===----------------------------------------------------------------------=== -->
 
+# Installation
 
 Bessemer has not published a stable binary release. Build the pinned source
-toolchain instead:
+toolchain:
 
-```sh
+```console
 git clone https://github.com/dedalus-labs/bsmr.git
 cd bsmr
-rustup show
 cargo build --locked --release --bin bsmr
+install target/release/bsmr ~/.local/bin/bsmr
+bsmr --version
 ```
 
-The binary is written to `target/release/bsmr`.
+The repository's `rust-toolchain` file selects the compiler and components.
+`cargo` installs that toolchain through rustup.
 
-For development builds:
+For Bessemer development, keep the debug binary in the repository:
 
-```sh
+```console
 cargo build --locked --bin bsmr
-target/debug/bsmr --help
+target/debug/bsmr -h
 ```
 
-The repository's [`rust-toolchain.toml`](../../rust-toolchain.toml) selects the
-required compiler and components. On platforms without the vendored Protocol
-Buffers compiler, set `BSMR_BUILD_PROTOC` and
-`BSMR_BUILD_PROTOC_INCLUDE` before building.
+Continue with the [Quick Start](quickstart.md).

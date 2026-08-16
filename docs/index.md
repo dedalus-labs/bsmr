@@ -1,6 +1,5 @@
 ---
-id: index
-title: Bessemer
+description: Fast, cached builds from native project files.
 ---
 <!-- ===----------------------------------------------------------------------=== -->
 <!-- Upstream-Source: facebook/buck2@1560aca2002865cd73d7cafb22c705cfb640b2bc -->
@@ -8,18 +7,47 @@ title: Bessemer
 <!-- SPDX-License-Identifier: Apache-2.0 -->
 <!-- ===----------------------------------------------------------------------=== -->
 
+# Bessemer
 
-Bessemer (`bsmr`) is a fast, extensible build system derived from
-[Buck2](https://github.com/facebook/buck2).
+Bessemer (`bsmr`) builds TypeScript, Rust, and Go projects from their native files.
+You keep the ecosystem manifests and lock files your project already uses.
+Bessemer creates the build graph, schedules work, and restores cached outputs.
 
-Start with:
+```console
+bsmr init
+bsmr build apps/api
+```
 
-- [What is Bessemer?](getting_started/what_is_bsmr.md)
-- [Installation](getting_started/install.md)
-- [Core concepts](getting_started/core_concepts.md)
-- [Writing rules](rule_authors/writing_rules.md)
-- [Remote execution](users/remote_execution.md)
+Conventional projects do not need build files or Starlark.
 
-The inherited architecture, prelude, and technical documentation originated
-in Buck2. Bessemer preserves those upstream citations while evolving its own
-CLI, crates, release process, and extension surface.
+## What it does
+
+| Need | Bessemer behavior |
+| --- | --- |
+| Correct builds | Hashes declared inputs, tools, configuration, and dependency edges. |
+| Fast rebuilds | Skips unchanged actions and restores missing outputs from a content-addressed store. |
+| Native setup | Reads pnpm, Cargo, and Go project files directly. |
+| Large repositories | Builds an explicit graph and schedules independent actions concurrently. |
+| Custom behavior | Keeps labels, Starlark rules, queries, and remote execution in the advanced interface. |
+
+## Support today
+
+- **TypeScript and pnpm:** primary integration. Native package builds and
+  typechecking are available.
+- **Rust and Cargo:** experimental integration. Native package builds and local
+  output caching are available.
+- **Go:** experimental integration. Native package synchronization and
+  hermetic pure-Go builds are available.
+- **Python:** planned after Go.
+
+BSMR is a preview. Read each language page before treating an action as fully
+hermetic or remote-cache eligible.
+
+## Start here
+
+- [Quick Start](getting_started/quickstart.md)
+- [TypeScript and pnpm](users/languages/typescript/pnpm.md)
+- [Rust and Cargo](users/languages/rust/cargo.md)
+- [Go](users/languages/go/native.md)
+- [Command-line reference](reference/cli.md)
+- [Configuration](reference/configuration.md)

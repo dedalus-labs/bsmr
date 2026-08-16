@@ -2,13 +2,49 @@
 # SPDX-License-Identifier: Apache-2.0
 
 site_name: Bessemer
-site_description: Hermetic builds at monorepo scale.
+site_description: Fast, cached builds from native project files.
 site_url: https://oss.dedaluslabs.ai/bsmr
 repo_url: https://github.com/dedalus-labs/bsmr
 repo_name: dedalus-labs/bsmr
 site_author: Dedalus Labs
-docs_dir: docs/site
-edit_uri: edit/main/docs/site/
+edit_uri: edit/main/docs/
+
+# Publish only pages that have been rewritten for BSMR. The remaining Markdown
+# files are retained as upstream engineering reference until they are curated.
+exclude_docs: |
+  /*
+  !/index.md
+  !/getting_started/
+  /getting_started/*
+  !/getting_started/index.md
+  !/getting_started/install.md
+  !/getting_started/quickstart.md
+  !/about/
+  /about/*
+  !/about/language_support.md
+  !/concepts/
+  /concepts/*
+  !/concepts/caching.md
+  !/concepts/test-observability.md
+  !/users/
+  /users/*
+  !/users/languages/
+  /users/languages/*
+  !/users/languages/typescript/
+  /users/languages/typescript/*
+  !/users/languages/typescript/pnpm.md
+  !/users/languages/rust/
+  /users/languages/rust/*
+  !/users/languages/rust/cargo.md
+  !/users/languages/go/
+  /users/languages/go/*
+  !/users/languages/go/native.md
+  !/reference/
+  /reference/*
+  !/reference/index.md
+  !/reference/cli.md
+  !/reference/configuration.md
+  !/roadmap.md
 
 theme:
   name: material
@@ -53,19 +89,24 @@ plugins:
   - llmstxt:
       full_output: llms-full.txt
       markdown_description: |
-        Bessemer is an open-source hermetic build system derived from Buck2.
-        It provides content-addressed actions, incremental dependency graphs,
-        output restoration, remote caching, and native ecosystem frontends.
+        Bessemer is a build system that reads native ecosystem manifests,
+        schedules hermetic actions, and restores outputs from a content-addressed cache.
+        TypeScript with pnpm is the primary ecosystem. Rust and Go are experimental.
       sections:
-        Overview:
-          - index.md
-        Guides:
-          - getting-started.md
-          - languages/go.md
+        Getting Started:
+          - getting_started/quickstart.md
+          - getting_started/install.md
+        Languages:
+          - users/languages/typescript/pnpm.md
+          - users/languages/rust/cargo.md
+          - users/languages/go/native.md
         Concepts:
           - concepts/caching.md
           - concepts/test-observability.md
           - roadmap.md
+        Reference:
+          - reference/cli.md
+          - reference/configuration.md
   - llmstxt-md:
       enable_markdown_urls: true
       enable_llms_txt: false
@@ -99,12 +140,22 @@ markdown_extensions:
 
 nav:
   - Home: index.md
-  - Getting Started: getting-started.md
-  - Ecosystems:
-      - Go: languages/go.md
+  - Getting Started:
+      - Overview: getting_started/index.md
+      - Quick Start: getting_started/quickstart.md
+      - Installation: getting_started/install.md
+  - Languages:
+      - TypeScript and pnpm: users/languages/typescript/pnpm.md
+      - Rust and Cargo: users/languages/rust/cargo.md
+      - Go: users/languages/go/native.md
+      - Support status: about/language_support.md
   - Concepts:
       - Caching and Hermeticity: concepts/caching.md
       - Test Observability: concepts/test-observability.md
+  - Reference:
+      - Overview: reference/index.md
+      - Command line: reference/cli.md
+      - Projects and configuration: reference/configuration.md
   - Roadmap: roadmap.md
 
 extra_css:
@@ -118,6 +169,6 @@ extra:
 copyright: Copyright 2026 Dedalus Labs, Inc. and its contributors
 
 validation:
+  omitted_files: ignore
   absolute_links: warn
-  omitted_files: warn
   unrecognized_links: warn

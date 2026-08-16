@@ -1,67 +1,19 @@
----
-id: index
-title: Getting Started with Bessemer
----
 <!-- ===----------------------------------------------------------------------=== -->
 <!-- Upstream-Source: facebook/buck2@1560aca2002865cd73d7cafb22c705cfb640b2bc -->
 <!-- Modifications Copyright (c) 2026 Dedalus Labs, Inc. and its contributors -->
 <!-- SPDX-License-Identifier: Apache-2.0 -->
 <!-- ===----------------------------------------------------------------------=== -->
 
+# Getting started
 
-Welcome to Bessemer! This section will guide you through everything you need to
-know to get started with Bessemer, from basic concepts to building your first
-applications.
+Use Bessemer with an existing pnpm, Cargo, or Go workspace.
 
-## What You'll Learn
+1. [Install Bessemer](install.md).
+2. Run `bsmr init` at the workspace root.
+3. Run `bsmr build <path>` for one package.
 
-This getting started guide covers the essential concepts and skills needed to
-use Bessemer effectively:
+The package path is a normal repository-relative directory such as `apps/api`
+or `packages/rust/dfa`. Bessemer reads the native manifest and includes the
+package's dependencies.
 
-- **Understanding Bessemer**: What it is and why you might want to use it
-- **Installation**: How to set up Bessemer on your system
-- **Core Concepts**: Essential terminology and concepts like targets, packages,
-  and cells
-- **Hands-on Tutorials**: Step-by-step practical examples building real
-  applications
-
-## Learning Path
-
-Follow these documents in order for the best learning experience:
-
-### 1. [What is Bessemer?](./what_is_bsmr.md)
-
-Start here to understand what Bessemer is, its key features, and why you might want
-to use it for your build system needs.
-
-### 2. [Installing Bessemer](./install.md)
-
-Get Bessemer installed and ready to use on your development machine.
-
-### 3. [Tutorial: Your First Bessemer Application](./tutorial_first_build.md)
-
-Build your first "Hello, World!" Rust application with Bessemer. Learn the basics
-of creating BUILD.bsmr files, defining targets, and building projects.
-
-### 4. [Tutorial: Adding Dependencies](./tutorial_adding_dependencies.md)
-
-Expand your knowledge by creating libraries, managing dependencies between
-targets, and working with external dependencies.
-
-### 5. [Tutorial: Adding Tests](./tutorial_adding_tests.md)
-
-Learn how to write and run tests for your Bessemer projects to ensure code quality
-and reliability.
-
-### 6. [From Tutorial to Concepts](./core_concepts.md)
-
-Dive deeper into Bessemer's core concepts by revisiting what you built in the
-tutorials with a focus on understanding the underlying terminology and
-architecture.
-
-## Prerequisites
-
-- Basic familiarity with command line tools
-
-Ready to get started? Begin with [What is Bessemer?](./what_is_bsmr.md) to
-understand the fundamentals, then follow the learning path above.
+Continue with the [Quick Start](quickstart.md).
