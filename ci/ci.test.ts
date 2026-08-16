@@ -134,7 +134,14 @@ test("Rust lanes share one trusted cache writer", () => {
 test("docs deploy only from a trusted main build", () => {
 	assert.deepEqual(docs.on.pull_request, {
 		branches: ["main"],
-		paths: ["ci/docs.ts", "docs/**", "mkdocs.yml", "README.md"],
+		paths: [
+			".github/workflows/docs.yml",
+			"ci/docs.test.ts",
+			"ci/docs.ts",
+			"docs/**",
+			"mkdocs.yml",
+			"README.md",
+		],
 	});
 	assert.equal(docs.jobs.build?.if, `\${{ ${trustedCiRun} }}`);
 	assert.equal(

@@ -1,7 +1,9 @@
 Bessemer
 Copyright (c) 2026 Dedalus Labs, Inc. and its contributors
 
-Bessemer is derived from Buck2, copyright Meta Platforms, Inc. and affiliates.
+Bessemer began from facebook/buck2 commit
+1560aca2002865cd73d7cafb22c705cfb640b2bc, copyright Meta Platforms, Inc. and
+affiliates. `UPSTREAM_CHANGELOG.md` records later upstream integrations.
 Except where an inherited notice states otherwise, Bessemer is licensed under
 Apache-2.0 as recorded in `LICENSE`. Buck2-derived and third-party files retain
 their original copyright, license, and attribution notices.

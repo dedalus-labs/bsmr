@@ -61,6 +61,7 @@ test("check uses one typed command tree", async () => {
 		"--test",
 		"ci/ci.test.ts",
 		"ci/cli.test.ts",
+		"ci/docs.test.ts",
 		"ci/license-preamble.test.ts",
 		"ci/license-provenance.test.ts",
 		"ci/license.test.ts",

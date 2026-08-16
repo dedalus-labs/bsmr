@@ -13,7 +13,7 @@ Bessemer code should be obvious to inspect, operate, and extend.
 - Start every new Dedalus-owned source file with the repository preamble below.
 - State the file's responsibility in one sentence below the legal header, after one blank line.
 - Preserve existing Meta and third-party notices exactly. Claim Dedalus copyright only for Dedalus-authored work.
-- Keep byte-identical Buck2 descendants with a file-local legal notice unchanged. Add the canonical provenance header to descendants without one. Mark modified descendants with the upstream commit, Dedalus modifications copyright, and Apache-2.0 SPDX identifier; never replace the original notice.
+- Keep byte-identical Buck2 descendants with a file-local legal notice unchanged. Mark modified descendants with the Dedalus modifications copyright and Apache-2.0 SPDX identifier; never replace the original notice. Record upstream commit boundaries once in `NOTICE` and `UPSTREAM_CHANGELOG.md`, not in every file.
 - Treat source added after the Buck2 fork point as Dedalus-owned unless it retains a Meta copyright notice.
 - Emit the same preamble from generators; never patch generated output by hand.
 - Exclude behavioral inputs in `fixtures` and `*_data` directories and `*.golden` test outputs because comments may change the tested bytes.
@@ -39,3 +39,12 @@ Bessemer code should be obvious to inspect, operate, and extend.
 - Keep control flow explicit, typed, and fail-fast. Do not add silent fallbacks.
 - Test behavior and invariants, not implementation details.
 - Preserve established local patterns unless this guide intentionally supersedes them.
+
+## Documentation
+
+- Lead with the user outcome and the shortest working example.
+- Use short sentences, active voice, and direct technical English.
+- Keep native package paths in beginner examples. Introduce labels and Starlark only in advanced reference pages.
+- Put one concept on each page. Link to details instead of repeating them.
+- State support and hermeticity boundaries exactly. Do not advertise planned behavior as available.
+- Keep CLI reference derived from the real parser so commands, flags, and defaults cannot drift.
