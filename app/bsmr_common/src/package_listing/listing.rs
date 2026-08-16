@@ -26,6 +26,7 @@ use pagable::Pagable;
 use starlark_map::sorted_set::SortedSet;
 use starlark_map::sorted_vec::SortedVec;
 
+use crate::package_listing::PackageBuildSource;
 use crate::package_listing::file_listing::PackageFileListing;
 
 #[derive(Clone, Dupe, Eq, PartialEq, Debug, Allocative, Pagable)]
@@ -39,6 +40,7 @@ struct PackageListingData {
     directories: SortedSet<ArcS<PackageRelativePath>>,
     subpackages: SortedVec<ArcS<PackageRelativePath>>,
     buildfile: FileNameBuf,
+    build_source: PackageBuildSource,
 }
 
 impl PackageListing {
@@ -47,6 +49,7 @@ impl PackageListing {
         directories: SortedSet<ArcS<PackageRelativePath>>,
         subpackages: SortedVec<ArcS<PackageRelativePath>>,
         buildfile: FileNameBuf,
+        build_source: PackageBuildSource,
     ) -> Self {
         Self {
             listing: Arc::new(PackageListingData {
@@ -54,6 +57,7 @@ impl PackageListing {
                 directories,
                 subpackages,
                 buildfile,
+                build_source,
             }),
         }
     }
@@ -64,6 +68,7 @@ impl PackageListing {
             SortedSet::new(),
             SortedVec::new(),
             buildfile,
+            PackageBuildSource::Starlark,
         )
     }
 
@@ -107,6 +112,26 @@ impl PackageListing {
     pub fn buildfile(&self) -> &FileName {
         &self.listing.buildfile
     }
+
+    /// Returns whether this package is explicit Starlark or native-manifest inferred.
+    #[must_use]
+    pub fn build_source(&self) -> PackageBuildSource {
+        self.listing.build_source
+    }
+
+    /// Adds explicitly declared files hidden from ordinary discovery.
+    pub fn with_explicit_files(
+        &self,
+        files: impl IntoIterator<Item = ArcS<PackageRelativePath>>,
+    ) -> Self {
+        Self::new(
+            SortedSet::from_iter(self.listing.files.files.iter().map(Dupe::dupe).chain(files)),
+            self.listing.directories.clone(),
+            self.listing.subpackages.clone(),
+            self.listing.buildfile.clone(),
+            self.listing.build_source,
+        )
+    }
 }
 
 pub mod testing {
@@ -143,7 +168,42 @@ pub mod testing {
                 SortedSet::new(),
                 SortedVec::new(),
                 FileNameBuf::unchecked_new(buildfile),
+                crate::package_listing::PackageBuildSource::Starlark,
             )
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use bsmr_core::package::package_relative_path::PackageRelativePath;
+
+    use super::PackageListing;
+    use super::testing::PackageListingExt;
+
+    #[test]
+    fn invariant_explicit_hidden_entries_preserve_the_package_listing() {
+        let listing = PackageListing::testing_files(&["pyproject.toml"]).with_explicit_files([
+            PackageRelativePath::new(".git/HEAD").unwrap().to_arc(),
+            PackageRelativePath::new(".git/objects/pack/demo.pack")
+                .unwrap()
+                .to_arc(),
+        ]);
+
+        assert!(
+            listing
+                .get_file(PackageRelativePath::new("pyproject.toml").unwrap())
+                .is_some()
+        );
+        assert!(
+            listing
+                .get_file(PackageRelativePath::new(".git/HEAD").unwrap())
+                .is_some()
+        );
+        assert!(
+            listing
+                .get_file(PackageRelativePath::new(".git/objects/pack/demo.pack").unwrap())
+                .is_some()
+        );
     }
 }

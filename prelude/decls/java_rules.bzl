@@ -345,7 +345,7 @@ java_library = prelude_rule(
                 default = [],
                 doc = """
                 List of additional arguments to pass into the Java compiler. These
-                 arguments follow the ones specified in `.bsmrconfig`.
+                 arguments follow the ones specified in `.bsmr`.
             """,
             ),
             "java_version": attrs.option(
@@ -362,7 +362,7 @@ java_library = prelude_rule(
                 Specifies the version of Java (as a string) to interpret source
                  files as.
                  Overrides the value in "source\\_level" in the "java" section
-                 of `.bsmrconfig`.
+                 of `.bsmr`.
             """,
             ),
             "target": attrs.option(
@@ -372,7 +372,7 @@ java_library = prelude_rule(
                 Specifies the version of Java (as a string) for which to
                  generate code.
                  Overrides the value in "target\\_level" in the "java" section
-                 of `.bsmrconfig`.
+                 of `.bsmr`.
             """,
             ),
         }

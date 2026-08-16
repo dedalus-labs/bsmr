@@ -300,6 +300,9 @@ pub trait ActionExecutionCtx: Send + Sync {
         dep_file_entry: Option<&mut dyn IntoRemoteDepFile>,
     ) -> bsmr_error::Result<CacheUploadResults>;
 
+    /// Returns whether successful local actions can publish into the local action cache.
+    fn uses_local_action_cache(&self) -> bool;
+
     /// Executes a command
     /// TODO(bobyf) this seems like it deserves critical sections?
     async fn exec_cmd(

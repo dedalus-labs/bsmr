@@ -11,7 +11,7 @@ This project provides a small example of what a project that utilizes
 
 In this document, we will go over the key configs used in this setup.
 
-### Relevant configs in .bsmrconfig
+### Relevant configs in .bsmr
 
 First, the EngFlow endpoint and certificate should be configured as the
 following:

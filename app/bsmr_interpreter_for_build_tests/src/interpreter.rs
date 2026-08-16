@@ -187,7 +187,7 @@ fn cells() -> CellsData {
     let BsmrConfigBasedCells { cell_resolver, .. } =
         futures::executor::block_on(BsmrConfigBasedCells::testing_parse_with_file_ops(
             &mut TestConfigParserFileOps::new(&[(
-                ".bsmrconfig",
+                ".bsmr",
                 indoc!(
                     r#"
                     [cells]

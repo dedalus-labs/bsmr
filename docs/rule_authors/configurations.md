@@ -110,7 +110,7 @@ The process for fully specifying your own execution platforms is:
    that will run there. So often you will tell it you want all build
    tools to be built themselves in release mode, so your builds are
    faster.
-2. Configure the `build.execution_platforms` value in your `.bsmrconfig`
+2. Configure the `build.execution_platforms` value in your `.bsmr`
    to point to this target:
 
     ```ini

@@ -90,9 +90,14 @@ writeFileSync(".pnpm-invocation.json", JSON.stringify({
  *
  * @param state - Test fixture paths.
  * @param expectedPackageManager - Manifest pin the runner must require.
+ * @param expectedNodeRequirement - Manifest Node range the runner must require.
  * @returns The completed runner process.
  */
-function runRunner(state: Fixture, expectedPackageManager = packageManager): SpawnSyncReturns<string> {
+function runRunner(
+	state: Fixture,
+	expectedPackageManager = packageManager,
+	expectedNodeRequirement = process.versions.node,
+): SpawnSyncReturns<string> {
 	return spawnSync(
 		process.execPath,
 		[
@@ -107,6 +112,8 @@ function runRunner(state: Fixture, expectedPackageManager = packageManager): Spa
 			expectedPackageManager,
 			"--node-version",
 			process.versions.node,
+			"--node-requirement",
+			expectedNodeRequirement,
 		],
 		{
 			encoding: "utf8",
@@ -178,6 +185,17 @@ test("uses pnpm 10 without the pnpm 11 toolchain bypass", async (context) => {
 		join(state.scratch, "pnpm", "pnpm-store"),
 		"--config.prefer-symlinked-executables=true",
 	]);
+});
+
+test("accepts the Node range validated by the native frontend", async (context) => {
+	const state = await fixture(context);
+	const nodeRequirement = ">=24.0.0";
+	await writeFile(
+		join(state.source, "package.json"),
+		JSON.stringify({ engines: { node: nodeRequirement }, packageManager }),
+	);
+	const result = runRunner(state, packageManager, nodeRequirement);
+	assert.equal(result.status, 0, result.stderr);
 });
 
 test("rejects mutable state inside the cached output", async (context) => {
@@ -264,6 +282,8 @@ test("rejects a Node mismatch before invoking pnpm", async (context) => {
 			packageManager,
 			"--node-version",
 			"0.0.0",
+			"--node-requirement",
+			process.versions.node,
 		],
 		{ encoding: "utf8" },
 	);

@@ -1,0 +1,13 @@
+[buildfile]
+name=TARGETS.fixture
+
+[project]
+root = .
+ignore=ignored
+
+[repositories]
+root = .
+prelude = prelude
+
+[bsmr]
+  materializations = deferred

@@ -69,7 +69,7 @@ use crate::interpreter::rule_defs::provider::builtin::dep_only_incompatible_roll
 ///    ]
 /// ```
 ///
-/// Then register a target of this rule in root .bsmrconfig under `bsmr.dep_only_incompatible_info`
+/// Then register a target of this rule in root .bsmr under `bsmr.dep_only_incompatible_info`
 /// bsmrconfig key. Once registered, soft errors will be fired under category "dep_only_incompatible_foo"
 /// when a target in `root//foo/...` is dep-only incompatible and likewise `dep_only_incompatible_bar` for
 /// a target in `root//bar/...`.

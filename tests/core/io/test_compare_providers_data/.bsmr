@@ -1,0 +1,8 @@
+[project]
+root = .
+
+[cells]
+  root = .
+
+[bsmr]
+  digest_algorithms = BLAKE3-KEYED,SHA1

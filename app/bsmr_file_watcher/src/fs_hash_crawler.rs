@@ -221,7 +221,8 @@ impl FsSnapshot {
         for event in events.into_iter() {
             let ignore = ignore_specs
                 .get(&event.cell_path.cell())
-                .is_some_and(|i| i.is_match(event.cell_path.path()));
+                .is_some_and(|i| i.is_match(event.cell_path.path()))
+                && !crate::is_vcs_identity_path(event.cell_path.path());
 
             if ignore {
                 ignored += 1;

@@ -92,13 +92,13 @@ async def test_ignore_state_invalidation_with_re_override_in_config(buck: Buck) 
     # Default is bsmr-default
     await buck.build("root//:simple")
     # Add config to switch to bsmr-user
-    with open(buck.cwd / ".bsmrconfig.local", "w") as f:
+    with open(buck.cwd / ".bsmr.local", "w") as f:
         f.write("[bsmr_re_client]\n")
         f.write("override_use_case = bsmr-user\n")
     await buck.build("root//:simple")
     await check_config_is_different(buck)
     # Add config to return to bsmr-default
-    with open(buck.cwd / ".bsmrconfig.local", "w") as f:
+    with open(buck.cwd / ".bsmr.local", "w") as f:
         f.write("[bsmr_re_client]\n")
         f.write("override_use_case = bsmr-default\n")
     await buck.build("root//:simple")

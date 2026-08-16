@@ -66,7 +66,7 @@ async def test_noop() -> None:
 
 
 def write_config(buck: Buck, *, resource_control: bool) -> None:
-    with open(buck.cwd / ".bsmrconfig", "a") as bsmrconfig:
+    with open(buck.cwd / ".bsmr", "a") as bsmrconfig:
         bsmrconfig.write("[bsmr_resource_control]\n")
         bsmrconfig.write(f"status = {'required' if resource_control else 'off'}\n")
 

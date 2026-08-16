@@ -1,0 +1,86 @@
+# ===----------------------------------------------------------------------===
+# Copyright (c) 2026 Dedalus Labs, Inc. and its contributors
+# SPDX-License-Identifier: Apache-2.0
+# ===----------------------------------------------------------------------===
+
+# Defines the hand-authored rules_python control graph.
+
+load("@django_pip//:requirements.bzl", "requirement")
+load("@django_build_pip//:requirements.bzl", build_requirement = "requirement")
+load("@rules_python//python:defs.bzl", "py_binary", "py_library", "py_test")
+load("@rules_python//python:packaging.bzl", "py_package", "py_wheel")
+load(":pep517_wheel.bzl", "pep517_wheel")
+
+package(default_visibility = ["//visibility:public"])
+
+py_library(
+    name = "django",
+    srcs = glob(["django/**/*.py"]),
+    data = glob(
+        ["django/**/*"],
+        exclude = ["django/**/*.py"],
+    ),
+    imports = ["."],
+    deps = [
+        requirement("asgiref"),
+        requirement("sqlparse"),
+    ],
+)
+
+py_binary(
+    name = "django-admin",
+    srcs = ["benchmark_main.py"],
+    legacy_create_init = 0,
+    main = "benchmark_main.py",
+    deps = [":django"],
+)
+
+py_test(
+    name = "django-test",
+    srcs = ["benchmark_test.py"],
+    main = "benchmark_test.py",
+    deps = [":django"],
+)
+
+py_package(
+    name = "django-package",
+    deps = [":django"],
+    packages = ["django"],
+)
+
+py_wheel(
+    name = "django-wheel",
+    deps = [":django-package"],
+    distribution = "Django",
+    python_tag = "py3",
+    version = "6.2.0a0",
+)
+
+py_binary(
+    name = "pep517-builder",
+    srcs = ["pep517_build.py"],
+    main = "pep517_build.py",
+    deps = [build_requirement("setuptools")],
+)
+
+pep517_wheel(
+    name = "django-pep517-wheel",
+    builder = ":pep517-builder",
+    srcs = glob(
+        [
+            "**",
+            ".git/HEAD",
+            ".git/objects/**",
+            ".git/packed-refs",
+            ".git/refs/**",
+            ".git/shallow",
+        ],
+        allow_empty = True,
+        exclude = [
+            ".venv/**",
+            "**/__pycache__/**",
+            "bazel-*/**",
+            "buck-out/**",
+        ],
+    ),
+)

@@ -28,7 +28,7 @@ cxx_lua_extension = prelude_rule(
     docs = """
         A cxx\\_lua\\_extension() rule is a variant of a C/C++ library which is built as a Lua module. As such,
         it has a module name formed by the `base_module` parameter and the rule name and implicitly
-        depends on Lua C library (configured via the `.bsmrconfig`
+        depends on Lua C library (configured via the `.bsmr`
         parameter.
     """,
     examples = """

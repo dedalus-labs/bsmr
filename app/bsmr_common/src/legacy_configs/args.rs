@@ -36,7 +36,7 @@ use crate::legacy_configs::parser::LegacyConfigParser;
 pub(crate) enum ResolvedLegacyConfigArg {
     /// A single config key-value pair (in `a.b=c` format).
     Flag(ResolvedConfigFlag),
-    /// A file containing additional config values (in `.bsmrconfig` format).
+    /// A file containing additional config values (in `.bsmr` format).
     File(ResolvedConfigFile),
 }
 

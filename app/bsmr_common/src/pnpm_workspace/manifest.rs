@@ -23,9 +23,9 @@ pub enum PnpmWorkspaceError {
     /// A workspace manifest must contain exactly one YAML document.
     #[error("pnpm workspace manifest contains {0} YAML documents; expected exactly one")]
     DocumentCount(usize),
-    /// The `packages` key is absent, is not a list, or is empty.
-    #[error("pnpm workspace manifest must declare a non-empty `packages` list")]
-    MissingPackagePatterns,
+    /// The optional `packages` key must be a list when present.
+    #[error("pnpm workspace `packages` value must be a list")]
+    InvalidPackagePatterns,
     /// Every package selector must be a non-empty string.
     #[error("pnpm workspace package pattern at index {0} must be a non-empty string")]
     InvalidPackagePattern(usize),
@@ -60,12 +60,15 @@ impl PnpmWorkspace {
         if documents.len() != 1 {
             return Err(PnpmWorkspaceError::DocumentCount(documents.len()));
         }
-        let Some(entries) = documents[0]["packages"].as_vec() else {
-            return Err(PnpmWorkspaceError::MissingPackagePatterns);
-        };
-        if entries.is_empty() {
-            return Err(PnpmWorkspaceError::MissingPackagePatterns);
+        let packages = &documents[0]["packages"];
+        if packages.is_badvalue() {
+            return Ok(Self {
+                patterns: Vec::new(),
+            });
         }
+        let Some(entries) = packages.as_vec() else {
+            return Err(PnpmWorkspaceError::InvalidPackagePatterns);
+        };
         let patterns = entries
             .iter()
             .enumerate()
@@ -80,17 +83,17 @@ impl PnpmWorkspace {
         Ok(Self { patterns })
     }
 
-    /// Returns selectors in declaration order for source-fidelity and diagnostics.
-    #[must_use]
-    pub fn patterns(&self) -> &[String] {
-        &self.patterns
-    }
-
     /// Selects candidate package roots with pnpm-style positive and negative globs.
     pub fn select_package_roots(
         &self,
         candidates: impl IntoIterator<Item = CellRelativePathBuf>,
     ) -> Result<Vec<CellRelativePathBuf>, PnpmWorkspaceError> {
+        if self.patterns.is_empty() {
+            return Ok(candidates
+                .into_iter()
+                .filter(|root| root.is_empty())
+                .collect());
+        }
         let (inclusions, exclusions) = compile_package_patterns(&self.patterns)?;
         Ok(candidates
             .into_iter()

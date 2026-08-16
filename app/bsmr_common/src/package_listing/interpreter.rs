@@ -31,10 +31,12 @@ use starlark_map::sorted_set::SortedSet;
 use starlark_map::sorted_vec::SortedVec;
 
 use crate::file_ops::dice::DiceFileComputations;
-use crate::find_buildfile::find_buildfile;
 use crate::ignores::file_ignores::FileIgnoreReason;
 use crate::io::DirectoryDoesNotExistSuggestion;
 use crate::io::ReadDirError;
+use crate::package_listing::PackageBuildSource;
+use crate::package_listing::find_build_source;
+use crate::package_listing::is_python_virtual_environment;
 use crate::package_listing::listing::PackageListing;
 use crate::package_listing::resolver::PackageListingResolver;
 
@@ -61,7 +63,7 @@ impl PackageListingResolver for InterpreterPackageListingResolver<'_, '_> {
                 let listing = DiceFileComputations::read_dir(self.ctx, path)
                     .await?
                     .included;
-                if find_buildfile(&buildfile_candidates, &listing).is_some() {
+                if find_build_source(&buildfile_candidates, &listing, true).is_some() {
                     return PackageLabel::from_cell_path(path);
                 }
             }
@@ -89,7 +91,7 @@ impl PackageListingResolver for InterpreterPackageListingResolver<'_, '_> {
                 let listing = DiceFileComputations::read_dir(self.ctx, path.dupe())
                     .await?
                     .included;
-                if find_buildfile(&buildfile_candidates, &listing).is_some() {
+                if find_build_source(&buildfile_candidates, &listing, true).is_some() {
                     packages.push(PackageLabel::from_cell_path(path)?);
                 }
             }
@@ -387,7 +389,7 @@ struct Directory {
     files: Vec<ArcS<PackageRelativePath>>,
     subdirs: Vec<Directory>,
     subpackages: Vec<ArcS<PackageRelativePath>>,
-    buildfile: Option<FileNameBuf>,
+    buildfile: Option<(FileNameBuf, PackageBuildSource)>,
 
     recursive_files_count: usize,
     recursive_dirs_count: usize,
@@ -408,9 +410,12 @@ impl Directory {
             .await
             .map_err(|e| GatherPackageListingError::from_read_dir(cell_path.as_ref(), e))?
             .included;
-        let buildfile = find_buildfile(buildfile_candidates, &entries);
+        if !is_root && is_python_virtual_environment(&entries) {
+            return Ok(None);
+        }
+        let buildfile = find_build_source(buildfile_candidates, &entries, is_root);
 
-        match (is_root, buildfile) {
+        match (is_root, buildfile.as_ref()) {
             (true, None) => {
                 return Err(GatherPackageListingError::no_build_file(
                     cell_path.as_ref(),
@@ -452,7 +457,7 @@ impl Directory {
             files,
             subdirs,
             subpackages,
-            buildfile: buildfile.map(|v| v.to_owned()),
+            buildfile,
             recursive_files_count,
             recursive_dirs_count,
             recursive_subpackages_count,
@@ -511,7 +516,7 @@ impl Directory {
     }
 
     fn flatten(mut self) -> PackageListing {
-        let buildfile = self.buildfile.take().unwrap();
+        let (buildfile, build_source) = self.buildfile.take().unwrap();
         let mut files = Vec::with_capacity(self.recursive_files_count);
         let mut dirs = Vec::with_capacity(self.recursive_dirs_count);
         let mut subpackages = Vec::with_capacity(self.recursive_subpackages_count);
@@ -529,6 +534,7 @@ impl Directory {
             SortedSet::from(dirs),
             subpackages,
             buildfile,
+            build_source,
         )
     }
 }

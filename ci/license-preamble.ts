@@ -34,8 +34,7 @@ function commentStyle(path: string): CommentStyle {
 function brief(path: string): string {
 	if (basename(path) === "BUILD.bsmr") return `Defines build targets for ${dirname(path) === "." ? "the root" : dirname(path)}.`;
 	const known = new Map([
-		[".bsmrconfig", "Configures the root Bessemer cell."],
-		[".bsmrconfig.d/common.bsmrconfig", "Defines configuration shared by Bessemer cells."],
+		[".bsmr", "Configures the root Bessemer cell."],
 		[".github/actions/ci/rust-affected/dist/index.js", "Runs the generated Rust affected-paths action."],
 		[".github/actions/ci/rust-affected/src/index.ts", "Implements the Rust affected-paths action."],
 		[".github/pull_request_template.md", "Defines the repository pull request template."],

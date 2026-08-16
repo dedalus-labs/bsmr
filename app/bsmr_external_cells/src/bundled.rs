@@ -560,7 +560,7 @@ mod tests {
             &*root_entries,
             &[
                 RawDirEntry {
-                    file_name: ".bsmrconfig".into(),
+                    file_name: ".bsmr".into(),
                     file_type: FileType::File
                 },
                 RawDirEntry {

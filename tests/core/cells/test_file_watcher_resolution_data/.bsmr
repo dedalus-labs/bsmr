@@ -1,0 +1,8 @@
+[project]
+root = .
+
+[cells]
+  foo = foo
+  bar = bar
+  root = .
+  prelude = .

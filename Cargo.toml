@@ -324,6 +324,7 @@ fxhash = "0.2.1"
 gazebo = { path = "packages/rust/gazebo/gazebo", features = ["str_pattern_extensions"] }
 glob = "0.3.2"
 globset = { version = "0.4.13", features = ["serde1"] }
+node-semver = "2.2.0"
 hashbrown = "0.17.1"
 hex = { version = "0.4.3", features = ["alloc"] }
 host_sharing = { path = "packages/rust/host_sharing" }
@@ -460,6 +461,9 @@ triomphe = { version = "0.1.16", features = ["arc-swap"] }
 twox-hash = "1.6.1"
 typed-arena = "2"
 uuid = { version = "1.23.5", features = ["rng-getrandom", "serde", "v4", "v5", "v6", "v7", "v8"] }
+uv-distribution-filename = "=0.0.71"
+uv-platform-tags = "=0.0.71"
+uv-pep508 = "=0.0.71"
 walkdir = "2.3"
 watchman_client = "0.9.0"
 whoami = "1.5"

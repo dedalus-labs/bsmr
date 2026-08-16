@@ -1,3 +1,9 @@
+//===----------------------------------------------------------------------===//
+// Upstream-Source: facebook/buck2@1560aca2002865cd73d7cafb22c705cfb640b2bc
+// Modifications Copyright (c) 2026 Dedalus Labs, Inc. and its contributors
+// SPDX-License-Identifier: Apache-2.0
+//===----------------------------------------------------------------------===//
+
 /*
  * Copyright (c) Meta Platforms, Inc. and affiliates.
  *
@@ -9,8 +15,13 @@
  */
 
 mod binary_search;
+mod build_source;
 pub mod dice;
 pub mod file_listing;
 pub(crate) mod interpreter;
 pub mod listing;
 pub mod resolver;
+
+pub use build_source::PackageBuildSource;
+pub(crate) use build_source::find_build_source;
+pub(crate) use build_source::is_python_virtual_environment;

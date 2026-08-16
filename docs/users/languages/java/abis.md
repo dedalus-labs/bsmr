@@ -37,7 +37,7 @@ in two important ways:
 ## ABI Generation Modes
 
 Bessemer can create ABI JARs in three different ways, depending on the
-`abi_generation_mode` configuration. You can set this globally in `.bsmrconfig`
+`abi_generation_mode` configuration. You can set this globally in `.bsmr`
 or override it per-rule using the `abi_generation_mode` attribute.
 
 ### Class ABI Generation
@@ -162,7 +162,7 @@ To get the best performance from source-only ABI generation:
 
 ### Global Configuration
 
-Set the default ABI generation mode in `.bsmrconfig`:
+Set the default ABI generation mode in `.bsmr`:
 
 ```ini
 [java]

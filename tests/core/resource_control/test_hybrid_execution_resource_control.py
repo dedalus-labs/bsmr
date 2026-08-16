@@ -41,7 +41,7 @@ def _use_some_memory_args(buck: Buck) -> list[str]:
 async def test_memory_pressure_telemetry(
     buck: Buck,
 ) -> None:
-    with open(buck.cwd / ".bsmrconfig.local", "w") as f:
+    with open(buck.cwd / ".bsmr.local", "w") as f:
         f.write("[bsmr_resource_control]\n")
         f.write("memory_high_per_action = 1048576\n")  # 1 MiB
 
@@ -72,7 +72,7 @@ async def test_memory_pressure_telemetry(
 async def test_resource_control_events_created(
     buck: Buck,
 ) -> None:
-    with open(buck.cwd / ".bsmrconfig.local", "w") as f:
+    with open(buck.cwd / ".bsmr.local", "w") as f:
         f.write("[bsmr_resource_control]\n")
         f.write("status = required\n")
         f.write("enable_action_cgroup_pool_v2 = true\n")

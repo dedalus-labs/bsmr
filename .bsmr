@@ -1,0 +1,40 @@
+# ===----------------------------------------------------------------------===
+# Copyright (c) 2026 Dedalus Labs, Inc. and its contributors
+# SPDX-License-Identifier: Apache-2.0
+# ===----------------------------------------------------------------------===
+
+# Configures the root Bessemer cell.
+
+[cells]
+bsmr = .
+bsmr_build = tools/build
+prelude = prelude
+none = none
+
+[cell_aliases]
+root = bsmr
+config = prelude
+ovr_config = prelude
+toolchains = bsmr_build
+
+[external_cells]
+prelude = disabled
+
+[build]
+execution_platforms = prelude//platforms:default
+
+[parser]
+target_platform_detector_spec = target:root//...->prelude//platforms:default target:bsmr_build//...->prelude//platforms:default
+
+[project]
+root = .
+ignore = \
+    examples, \
+    tools/rust-project/tests, \
+    tests, \
+    .jj, \
+    .git, \
+    target
+
+[rust]
+default_edition = 2024

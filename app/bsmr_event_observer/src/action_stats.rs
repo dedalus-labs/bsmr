@@ -205,4 +205,20 @@ mod tests {
         action_stats.update(&action_execution_end);
         assert_eq!(action_stats.excess_cache_misses, 2);
     }
+
+    #[test]
+    fn local_action_cache_hits_are_reported_as_cached() {
+        let mut action_stats = ActionStats::default();
+        let action = ActionExecutionEnd {
+            kind: ActionKind::Run as i32,
+            execution_kind: bsmr_data::ActionExecutionKind::LocalActionCache as i32,
+            ..Default::default()
+        };
+
+        action_stats.update(&action);
+
+        assert_eq!(action_stats.cached_actions, 1);
+        assert_eq!(action_stats.local_actions, 0);
+        assert_eq!(action_stats.total_cache_hit_percentage(), 100);
+    }
 }

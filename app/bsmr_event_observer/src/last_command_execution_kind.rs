@@ -29,6 +29,9 @@ pub enum LastCommandExecutionKind {
 pub fn get_last_command_execution_kind(
     action: &bsmr_data::ActionExecutionEnd,
 ) -> LastCommandExecutionKind {
+    if action.execution_kind() == bsmr_data::ActionExecutionKind::LocalActionCache {
+        return LastCommandExecutionKind::Cached;
+    }
     let last_command_kind = action
         .commands
         .last()

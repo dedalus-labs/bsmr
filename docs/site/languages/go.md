@@ -42,7 +42,7 @@ marker, and synchronization refuses to overwrite a human-authored build file.
 
 ## Build tags
 
-Declare every selectable tag in `.bsmrconfig` so graph selection and action
+Declare every selectable tag in `.bsmr` so graph selection and action
 identity cannot diverge:
 
 ```ini

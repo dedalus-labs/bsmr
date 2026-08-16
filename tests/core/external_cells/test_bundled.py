@@ -79,10 +79,10 @@ async def test_materialize_source_directly(buck: Buck) -> None:
 @buck_test()
 async def test_expand_external_cell(buck: Buck) -> None:
     await buck.expand_external_cell("test_bundled_cell")
-    assert (buck.cwd / "test_bundled_cell" / ".bsmrconfig").exists()
+    assert (buck.cwd / "test_bundled_cell" / ".bsmr").exists()
 
     # Remove the external cell declaration
-    (buck.cwd / ".bsmrconfig_no_external").replace(buck.cwd / ".bsmrconfig")
+    (buck.cwd / ".bsmr_no_external").replace(buck.cwd / ".bsmr")
     (buck.cwd / "test_bundled_cell" / "dir" / "src.txt").write_text("foobar3\n")
 
     result = await buck.build_without_report(

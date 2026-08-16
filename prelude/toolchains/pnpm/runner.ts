@@ -10,6 +10,7 @@ import { access, cp, lstat, mkdir, readdir, readFile, readlink, rm, writeFile } 
 import { dirname, isAbsolute, join, resolve, sep } from "node:path";
 
 const requiredArguments = new Set([
+	"--node-requirement",
 	"--node-version",
 	"--output",
 	"--package-manager",
@@ -19,6 +20,7 @@ const requiredArguments = new Set([
 
 type JsonObject = Record<string, unknown>;
 type RunnerOptions = Readonly<{
+	nodeRequirement: string;
 	nodeVersion: string;
 	output: string;
 	packageManager: string;
@@ -59,12 +61,14 @@ function parseArguments(arguments_: readonly string[]): RunnerOptions {
 		if (values.has(name)) throw new Error(`argument '${name}' was provided more than once`);
 		values.set(name, value);
 	}
+	const nodeRequirement = requiredArgument(values, "--node-requirement");
 	const nodeVersion = requiredArgument(values, "--node-version");
 	const output = requiredArgument(values, "--output");
 	const packageManager = requiredArgument(values, "--package-manager");
 	const pnpmCli = requiredArgument(values, "--pnpm-cli");
 	const source = requiredArgument(values, "--source");
 	return {
+		nodeRequirement,
 		nodeVersion,
 		output,
 		packageManager,
@@ -104,11 +108,17 @@ async function readManifest(source: string): Promise<JsonObject> {
  *
  * @param manifest - Parsed package.json object.
  * @param nodeVersion - Exact configured Node version.
+ * @param nodeRequirement - Root manifest requirement validated by the native frontend.
  * @param packageManager - Exact configured Corepack-style pnpm pin.
  * @returns Exact pnpm version encoded in the package-manager pin.
  * @throws {Error} When any version or integrity invariant is violated.
  */
-function validateToolchain(manifest: JsonObject, nodeVersion: string, packageManager: string): string {
+function validateToolchain(
+	manifest: JsonObject,
+	nodeVersion: string,
+	nodeRequirement: string,
+	packageManager: string,
+): string {
 	if (!/^\d+\.\d+\.\d+$/.test(nodeVersion)) {
 		throw new Error(`Node version '${nodeVersion}' is not an exact semantic version`);
 	}
@@ -127,8 +137,10 @@ function validateToolchain(manifest: JsonObject, nodeVersion: string, packageMan
 	const manifestNode = engines !== null && typeof engines === "object" && !Array.isArray(engines)
 		? (engines as JsonObject)["node"]
 		: undefined;
-	if (manifestNode !== nodeVersion) {
-		throw new Error(`package.json engines.node '${manifestNode ?? ""}' does not match configured version '${nodeVersion}'`);
+	if (manifestNode !== nodeRequirement) {
+		throw new Error(
+			`package.json engines.node '${manifestNode ?? ""}' does not match configured requirement '${nodeRequirement}'`,
+		);
 	}
 	if (manifest["packageManager"] !== packageManager) {
 		throw new Error(
@@ -359,7 +371,7 @@ async function run(options: RunnerOptions): Promise<void> {
 	const output = resolve(options.output);
 	const pnpmCli = resolve(options.pnpmCli);
 	const manifest = await readManifest(source);
-	const pnpmVersion = validateToolchain(manifest, options.nodeVersion, options.packageManager);
+	const pnpmVersion = validateToolchain(manifest, options.nodeVersion, options.nodeRequirement, options.packageManager);
 	await access(join(source, "pnpm-lock.yaml"));
 	await access(pnpmCli);
 	const paths = await prepareWorkspace(source, output, packageManagerState(output));

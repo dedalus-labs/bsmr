@@ -1,0 +1,19 @@
+[buildfile]
+name=TARGETS.fixture
+
+[repositories]
+root = .
+toolchains = toolchains
+prelude = prelude
+cell = package_listing/cell
+nano_prelude = nano_prelude
+
+[external_cells]
+nano_prelude = bundled
+
+[project]
+root = .
+ignore = package_listing/*red/**
+
+[bsmr]
+allow_eden_io = false

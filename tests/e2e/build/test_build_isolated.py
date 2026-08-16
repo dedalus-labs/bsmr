@@ -392,7 +392,7 @@ async def test_toolchain_deps(buck: Buck) -> None:
     ],
 )
 async def test_http_deferral(buck: Buck, digest_algorithm: str) -> None:
-    with open(buck.cwd / ".bsmrconfig", "a") as f:
+    with open(buck.cwd / ".bsmr", "a") as f:
         f.write("[bsmr]\n")
         f.write(f"digest_algorithms = {digest_algorithm}\n")
 
@@ -600,7 +600,7 @@ async def test_executable_bit(buck: Buck) -> None:
 
 @buck_test(inplace=False, data_dir="execution_platforms")
 async def test_symlink_output(buck: Buck) -> None:
-    with open(buck.cwd / ".bsmrconfig.local", "w") as f:
+    with open(buck.cwd / ".bsmr.local", "w") as f:
         f.write("[bsmr_re_client]\n")
         f.write("respect_file_symlinks = false\n")
     await buck.build(
@@ -609,7 +609,7 @@ async def test_symlink_output(buck: Buck) -> None:
         f"test.cache_buster={random_string()}",
     )
     await buck.kill()
-    with open(buck.cwd / ".bsmrconfig.local", "w") as f:
+    with open(buck.cwd / ".bsmr.local", "w") as f:
         f.write("[bsmr_re_client]\n")
         f.write("respect_file_symlinks = true\n")
     await buck.build(

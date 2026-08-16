@@ -43,6 +43,7 @@ use bsmr_events::daemon_id::DaemonId;
 use bsmr_execute::execute::blocking::BlockingExecutor;
 use bsmr_execute::execute::cache_uploader::NoOpCacheUploader;
 use bsmr_execute::execute::cache_uploader::force_cache_upload;
+use bsmr_execute::execute::local_cache::LocalActionCache;
 use bsmr_execute::execute::prepared::NoOpCommandOptionalExecutor;
 use bsmr_execute::execute::prepared::PreparedCommandExecutor;
 use bsmr_execute::execute::prepared::PreparedCommandOptionalExecutor;
@@ -60,6 +61,8 @@ use bsmr_execute_impl::executors::hybrid::FallbackTracker;
 use bsmr_execute_impl::executors::hybrid::HybridExecutor;
 use bsmr_execute_impl::executors::local::ForkserverAccess;
 use bsmr_execute_impl::executors::local::LocalExecutor;
+use bsmr_execute_impl::executors::local_cache::LocalActionCacheChecker;
+use bsmr_execute_impl::executors::local_cache::LocalActionCacheUploader;
 use bsmr_execute_impl::executors::re::ReExecutor;
 use bsmr_execute_impl::executors::stacked::StackedExecutor;
 use bsmr_execute_impl::executors::to_re_platform::RePlatformFieldsToRePlatform;
@@ -211,6 +214,35 @@ impl HasCommandExecutor for CommandExecutorFactory {
             )
         };
 
+        let local_cache_new = || -> bsmr_error::Result<(
+            Arc<dyn PreparedCommandOptionalExecutor>,
+            Arc<dyn bsmr_execute::execute::cache_uploader::UploadCache>,
+        )> {
+            let cache = Arc::new(LocalActionCache::open()?);
+            let checker: Arc<dyn PreparedCommandOptionalExecutor> = if self.skip_cache_read {
+                Arc::new(NoOpCommandOptionalExecutor {})
+            } else {
+                Arc::new(LocalActionCacheChecker {
+                    artifact_fs: artifact_fs.clone(),
+                    materializer: self.materializer.dupe(),
+                    incremental_db_state: self.incremental_db_state.dupe(),
+                    blocking_executor: self.blocking_executor.dupe(),
+                    cache: cache.dupe(),
+                })
+            };
+            let uploader: Arc<dyn bsmr_execute::execute::cache_uploader::UploadCache> =
+                if self.skip_cache_write {
+                    Arc::new(NoOpCacheUploader {})
+                } else {
+                    Arc::new(LocalActionCacheUploader {
+                        artifact_fs: artifact_fs.clone(),
+                        blocking_executor: self.blocking_executor.dupe(),
+                        cache,
+                    })
+                };
+            Ok((checker, uploader))
+        };
+
         if !bsmr_core::is_open_source() && !cfg!(fbcode_build) {
             static WARN: OnceLock<()> = OnceLock::new();
             WARN.get_or_init(|| {
@@ -221,12 +253,13 @@ impl HasCommandExecutor for CommandExecutorFactory {
                 return Err(ExecutorCompatibilityError::LocalIncompatible(self.strategy).into());
             }
 
+            let (action_cache_checker, cache_uploader) = local_cache_new()?;
             return Ok(CommandExecutorResponse {
                 executor: Arc::new(local_executor_new(&LocalExecutorOptions::default())),
                 platform: Default::default(),
-                action_cache_checker: Arc::new(NoOpCommandOptionalExecutor {}),
+                action_cache_checker,
                 remote_dep_file_cache_checker: Arc::new(NoOpCommandOptionalExecutor {}),
-                cache_uploader: Arc::new(NoOpCacheUploader {}),
+                cache_uploader,
                 output_trees_download_config: self.output_trees_download_config.dupe(),
             });
         }
@@ -267,12 +300,13 @@ impl HasCommandExecutor for CommandExecutorFactory {
                 if self.strategy.ban_local() {
                     None
                 } else {
+                    let (action_cache_checker, cache_uploader) = local_cache_new()?;
                     Some(CommandExecutorResponse {
                         executor: Arc::new(local_executor_new(local)),
                         platform: Default::default(),
-                        action_cache_checker: Arc::new(NoOpCommandOptionalExecutor {}),
+                        action_cache_checker,
                         remote_dep_file_cache_checker: Arc::new(NoOpCommandOptionalExecutor {}),
-                        cache_uploader: Arc::new(NoOpCacheUploader {}),
+                        cache_uploader,
                         output_trees_download_config: self.output_trees_download_config.dupe(),
                     })
                 }

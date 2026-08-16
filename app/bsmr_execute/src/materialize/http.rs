@@ -48,6 +48,7 @@ use sha1::Sha1;
 use sha2::Sha256;
 use smallvec::SmallVec;
 
+use super::http_cache;
 use crate::digest_config::DigestConfig;
 
 #[derive(Debug, Clone, Dupe, Allocative, Pagable)]
@@ -270,8 +271,20 @@ pub async fn http_download(
     if let Some(dir) = abs_path.parent() {
         fs_util::create_dir_all(dir)?;
     }
+    let cache = http_cache::path(checksum)?;
+    if let Some(digest) = http_cache::restore(
+        &cache,
+        &abs_path,
+        checksum,
+        digest_config.cas_digest_config(),
+    )? {
+        if executable {
+            fs.set_executable(path)?;
+        }
+        return Ok(digest);
+    }
 
-    Ok(http_retry(
+    let digest = http_retry(
         || async {
             let response = client
                 .get(url)
@@ -296,20 +309,20 @@ pub async fn http_download(
             )
             .await?;
 
-            if executable {
-                fs.set_executable(path)
-                    .map_err(HttpDownloadError::IoError)?;
-            }
-
-            Result::<_, HttpDownloadError>::Ok(TrackedFileDigest::new(
-                digest,
-                digest_config.cas_digest_config(),
-            ))
+            Result::<_, HttpDownloadError>::Ok(digest)
         },
         vec![2, 4, 8].into_iter().map(Duration::from_secs).collect(),
     )
     .await
-    .map_err(|e| e.into_final())?)
+    .map_err(|e| e.into_final())?;
+    http_cache::publish(&cache, &abs_path)?;
+    if executable {
+        fs.set_executable(path)?;
+    }
+    Ok(TrackedFileDigest::new(
+        digest,
+        digest_config.cas_digest_config(),
+    ))
 }
 
 /// Copy a stream into a writer while producing its digest and checksumming it.

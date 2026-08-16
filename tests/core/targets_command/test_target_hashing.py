@@ -30,7 +30,7 @@ async def test_target_hashing_accepts_backreferencing_relative_paths(
         ":bin",
         "--show-target-hash",
         "--target-hash-file-mode=paths_only",
-        "--target-hash-modified-paths=../.bsmrconfig",
+        "--target-hash-modified-paths=../.bsmr",
         rel_cwd=Path("bin"),
     )
 
@@ -40,7 +40,7 @@ async def test_target_hashing_accepts_backreferencing_relative_paths(
             "bin:bin",
             "--show-target-hash",
             "--target-hash-file-mode=paths_only",
-            "--target-hash-modified-paths=../.bsmrconfig",
+            "--target-hash-modified-paths=../.bsmr",
         ),
         stderr_regex="relativize path.*against project root",
     )
@@ -53,6 +53,6 @@ async def test_target_hashing_accepts_backreferencing_relative_paths(
             ":bin",
             "--show-target-hash",
             "--target-hash-file-mode=paths_only",
-            f"--target-hash-modified-paths={tmp_path}/symlink/.bsmrconfig",
+            f"--target-hash-modified-paths={tmp_path}/symlink/.bsmr",
             rel_cwd=Path("bin"),
         )

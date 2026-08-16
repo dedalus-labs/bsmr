@@ -44,7 +44,7 @@ def _git_commit(cwd: Path) -> str:
 
 
 def _set_revision(rev: str, cwd: Path) -> None:
-    p = cwd / ".bsmrconfig"
+    p = cwd / ".bsmr"
     data = p.read_text().splitlines()[:-2]
     data.append(f"  git_origin = file://{_repo(cwd)}")
     data.append(f"  commit_hash = {rev}")
@@ -66,7 +66,7 @@ async def test_expand_external(buck: Buck) -> None:
     _init_repo(cwd=buck.cwd)
     await buck.expand_external_cell("libfoo")
     assert (buck.cwd / "libfoo" / "src.txt").exists()
-    assert "buildfile" in (buck.cwd / "libfoo" / ".bsmrconfig").read_text()
+    assert "buildfile" in (buck.cwd / "libfoo" / ".bsmr").read_text()
 
 
 @buck_test()

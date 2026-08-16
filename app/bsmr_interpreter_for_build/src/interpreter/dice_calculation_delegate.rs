@@ -14,10 +14,14 @@
  * above-listed licenses.
  */
 
+use std::collections::VecDeque;
 use std::sync::Arc;
 
 use allocative::Allocative;
 use async_trait::async_trait;
+use bsmr_common::cargo_workspace::parse_rust_toolchain;
+use bsmr_common::cargo_workspace::render_cargo_build_file;
+use bsmr_common::cargo_workspace::select_rust_toolchain_file;
 use bsmr_common::dice::cells::HasCellResolver;
 use bsmr_common::dice::cycles::CycleGuard;
 use bsmr_common::file_ops::dice::DiceFileComputations;
@@ -25,17 +29,37 @@ use bsmr_common::file_ops::error::FileReadErrorContext;
 use bsmr_common::legacy_configs::dice::HasLegacyConfigs;
 use bsmr_common::legacy_configs::dice::OpaqueLegacyBsmrConfigOnDice;
 use bsmr_common::package_boundary::HasPackageBoundaryExceptions;
+use bsmr_common::package_listing::PackageBuildSource;
 use bsmr_common::package_listing::dice::DicePackageListingResolver;
 use bsmr_common::package_listing::listing::PackageListing;
+use bsmr_common::pnpm_workspace::HasPnpmWorkspaceGraph;
+use bsmr_common::pnpm_workspace::is_native_pnpm_workspace;
+use bsmr_common::pnpm_workspace::render_typescript_build_file;
+use bsmr_common::python_lock::PylockToml;
+use bsmr_common::python_project::NativePythonBuildError;
+use bsmr_common::python_project::PythonRootFiles;
+use bsmr_common::python_project::PythonVcsFiles;
+use bsmr_common::python_project::PythonWorkspaceMember;
+use bsmr_common::python_project::python_project_name;
+use bsmr_common::python_project::python_project_uses_vcs;
+use bsmr_common::python_project::python_root_config_files;
+use bsmr_common::python_project::python_test_locks;
+use bsmr_common::python_project::python_workspace_closure;
+use bsmr_common::python_project::python_workspace_manifest_paths;
+use bsmr_common::python_project::python_workspace_member;
+use bsmr_common::python_project::render_python_build_file;
+use bsmr_common::python_project::validate_python_build_requirements;
 use bsmr_core::build_file_path::BuildFilePath;
 use bsmr_core::cells::build_file_cell::BuildFileCell;
 use bsmr_core::cells::cell_path::CellPath;
+use bsmr_core::cells::paths::CellRelativePathBuf;
 use bsmr_core::package::PackageLabel;
 use bsmr_core::package::package_relative_path::PackageRelativePath;
 use bsmr_error::BuckErrorContext;
 use bsmr_error::internal_error;
 use bsmr_events::dispatch::span;
 use bsmr_events::dispatch::span_async_simple;
+use bsmr_fs::paths::forward_rel_path::ForwardRelativePath;
 use bsmr_interpreter::allow_relative_paths::HasAllowRelativePaths;
 use bsmr_interpreter::dice::starlark_provider::StarlarkEvalKind;
 use bsmr_interpreter::factory::StarlarkEvaluatorProvider;
@@ -76,6 +100,27 @@ use crate::interpreter::interpreter_for_dir::InterpreterForDir;
 use crate::interpreter::interpreter_for_dir::ParseData;
 use crate::interpreter::interpreter_for_dir::ParseResult;
 use crate::super_package::package_value::SuperPackageValuesImpl;
+
+#[derive(Debug, bsmr_error::Error)]
+#[bsmr(tag = Input)]
+enum NativeBuildFileError {
+    #[error("native Cargo builds require Cargo.toml at the BSMR project root")]
+    CargoWorkspaceManifestRequired,
+    #[error("native Python builds require pylock.toml at the BSMR project root")]
+    PythonRuntimeLockRequired,
+    #[error("native Python builds require pylock.build.toml at the BSMR project root")]
+    PythonBuildLockRequired,
+}
+
+/// Makes only declared Git database inputs visible to source-attribute coercion.
+fn declare_python_vcs_sources(listing: &mut PackageListing, vcs: &PythonVcsFiles) {
+    let files = vcs.files.iter().map(|relative| {
+        PackageRelativePath::new(&format!(".git/{relative}"))
+            .expect("Git entries form valid package-relative paths")
+            .to_arc()
+    });
+    *listing = listing.with_explicit_files(files);
+}
 
 fn toml_value_to_json(value: toml::Value) -> serde_json::Value {
     match value {
@@ -251,6 +296,278 @@ impl<'c, 'd: 'c> DiceCalculationDelegate<'c, 'd> {
             .into_result(self.ctx)
             .await???;
         Ok((ast, deps))
+    }
+
+    /// Parses either an explicit Starlark file or a native ecosystem manifest.
+    pub(super) async fn prepare_build_file_eval(
+        &mut self,
+        package: PackageLabel,
+        listing: &mut PackageListing,
+    ) -> bsmr_error::Result<(BuildFilePath, AstModule, ModuleDeps)> {
+        let build_file_path = BuildFilePath::new(package.dupe(), listing.buildfile().to_owned());
+        let (ast, deps) = match listing.build_source() {
+            PackageBuildSource::Starlark => {
+                self.prepare_eval(StarlarkPath::BuildFile(&build_file_path))
+                    .await?
+            }
+            PackageBuildSource::Native => {
+                let mut source = String::new();
+                if listing
+                    .get_file(PackageRelativePath::new("package.json")?)
+                    .is_some()
+                    && self.root_is_pnpm_workspace(package).await?
+                {
+                    let graph = self
+                        .ctx
+                        .get_pnpm_workspace_graph(package.cell_name())
+                        .await?;
+                    if let Some(typescript) = render_typescript_build_file(
+                        &graph,
+                        package.as_cell_path().path().to_owned(),
+                        listing,
+                    )? {
+                        source.push_str(&typescript);
+                    }
+                }
+                if listing
+                    .get_file(PackageRelativePath::new("Cargo.toml")?)
+                    .is_some()
+                {
+                    source.push_str(&self.render_native_cargo(package).await?);
+                }
+                if listing
+                    .get_file(PackageRelativePath::new("pyproject.toml")?)
+                    .is_some()
+                {
+                    let manifest = self.read_package_file(package, "pyproject.toml").await?;
+                    if let Some(python) = self
+                        .render_native_python(package, listing, &manifest)
+                        .await?
+                    {
+                        source.push_str(&python);
+                    }
+                }
+                let ParseData(ast, imports) = self.prepare_eval_with_content(
+                    StarlarkPath::BuildFile(&build_file_path),
+                    source,
+                )??;
+                let deps = CycleGuard::<LoadCycleDescriptor>::new(self.ctx)?
+                    .guard_this(Self::eval_deps(self.ctx, &imports))
+                    .await
+                    .into_result(self.ctx)
+                    .await???;
+                (ast, deps)
+            }
+        };
+        Ok((build_file_path, ast, deps))
+    }
+
+    /// Renders one Cargo manifest against the project root's shared workspace inputs.
+    async fn render_native_cargo(&mut self, package: PackageLabel) -> bsmr_error::Result<String> {
+        let root_path = CellRelativePathBuf::unchecked_new(String::new());
+        let root = PackageLabel::new(package.cell_name(), &root_path)?;
+        let workspace_listing = DicePackageListingResolver(self.ctx)
+            .resolve_package_listing(root)
+            .await?;
+        if workspace_listing
+            .get_file(PackageRelativePath::new("Cargo.toml")?)
+            .is_none()
+        {
+            return Err(NativeBuildFileError::CargoWorkspaceManifestRequired.into());
+        }
+        let manifest = self.read_package_file(package, "Cargo.toml").await?;
+        let toolchain_file = select_rust_toolchain_file(&workspace_listing)?;
+        let toolchain = self.read_package_file(root, toolchain_file).await?;
+        let toolchain = parse_rust_toolchain(&toolchain)?;
+        Ok(render_cargo_build_file(
+            package.cell_relative_path().to_owned(),
+            &manifest,
+            &workspace_listing,
+            &toolchain,
+        )?)
+    }
+
+    /// Validates root Python inputs and renders one project or workspace root.
+    async fn render_native_python(
+        &mut self,
+        package: PackageLabel,
+        listing: &mut PackageListing,
+        manifest: &str,
+    ) -> bsmr_error::Result<Option<String>> {
+        let is_project = python_project_name(manifest)?.is_some();
+        let root_path = CellRelativePathBuf::unchecked_new(String::new());
+        let root = PackageLabel::new(package.cell_name(), &root_path)?;
+        let workspace_listing = DicePackageListingResolver(self.ctx)
+            .resolve_package_listing(root)
+            .await?;
+        let (members, workspace_uses_vcs) = self
+            .python_workspace_members(root, &workspace_listing)
+            .await?;
+        if !is_project && (!package.cell_relative_path().is_empty() || members.is_empty()) {
+            return Ok(None);
+        }
+        if workspace_listing
+            .get_file(PackageRelativePath::new("pylock.toml")?)
+            .is_none()
+        {
+            return Err(NativeBuildFileError::PythonRuntimeLockRequired.into());
+        }
+        let lock = self.read_package_file(root, "pylock.toml").await?;
+        let lock = PylockToml::parse(&lock)?;
+        let runtime_packages = lock.installation_fragments()?;
+        if workspace_listing
+            .get_file(PackageRelativePath::new("pylock.build.toml")?)
+            .is_none()
+        {
+            return Err(NativeBuildFileError::PythonBuildLockRequired.into());
+        }
+        let build_lock = self.read_package_file(root, "pylock.build.toml").await?;
+        let build_lock = PylockToml::parse(&build_lock)?;
+        let build_packages = build_lock.installation_fragments()?;
+        let uses_vcs = workspace_uses_vcs || python_project_uses_vcs(manifest)?;
+        let vcs = if uses_vcs {
+            Some(
+                self.python_vcs_files(root)
+                    .await?
+                    .ok_or(NativePythonBuildError::MissingVcsState)?,
+            )
+        } else {
+            None
+        };
+        if package.cell_relative_path().is_empty() {
+            if let Some(vcs) = &vcs {
+                declare_python_vcs_sources(listing, vcs);
+            }
+        }
+        let mut test_locks = python_test_locks(&workspace_listing)?;
+        for test_lock in &mut test_locks {
+            let lock = self.read_package_file(root, &test_lock.file).await?;
+            test_lock.packages = PylockToml::parse(&lock)?.installation_fragments()?;
+        }
+        let members = python_workspace_closure(manifest, &members)?;
+        validate_python_build_requirements(manifest, &members, &lock, &build_lock)?;
+        Ok(Some(render_python_build_file(
+            package.cell_relative_path().to_owned(),
+            manifest,
+            listing,
+            &PythonRootFiles {
+                config_files: python_root_config_files(&workspace_listing),
+                runtime_packages,
+                build_packages,
+                members,
+                test_locks,
+                vcs,
+            },
+        )?))
+    }
+
+    /// Maps nested standard projects to their generated first-party wheel labels.
+    async fn python_workspace_members(
+        &mut self,
+        root: PackageLabel,
+        listing: &PackageListing,
+    ) -> bsmr_error::Result<(Vec<PythonWorkspaceMember>, bool)> {
+        let mut members = Vec::new();
+        let mut uses_vcs = false;
+        let root_manifest = self.read_package_file(root, "pyproject.toml").await?;
+        for file in python_workspace_manifest_paths(&root_manifest, listing)? {
+            let manifest = self.read_package_file(root, file).await?;
+            uses_vcs |= python_project_uses_vcs(&manifest)?;
+            let Some(package) = file.strip_suffix("/pyproject.toml") else {
+                return Err(internal_error!(
+                    "filtered Python workspace manifest `{file}` has no manifest suffix"
+                ));
+            };
+            let Some(member) = python_workspace_member(package.to_owned(), &manifest)? else {
+                continue;
+            };
+            members.push(member);
+        }
+        Ok((members, uses_vcs))
+    }
+
+    /// Discovers only the Git database components consumed by read-only version queries.
+    async fn python_vcs_files(
+        &mut self,
+        root: PackageLabel,
+    ) -> bsmr_error::Result<Option<PythonVcsFiles>> {
+        let path = |file: &str| {
+            root.to_cell_path()
+                .join(ForwardRelativePath::new(file).expect("static Git path is valid"))
+        };
+        if DiceFileComputations::read_file_if_exists(self.ctx, path(".git/HEAD").as_ref())
+            .await?
+            .is_none()
+        {
+            return Ok(None);
+        }
+        let mut files = vec!["HEAD".to_owned()];
+        for optional in ["packed-refs", "shallow"] {
+            if DiceFileComputations::read_file_if_exists(
+                self.ctx,
+                path(&format!(".git/{optional}")).as_ref(),
+            )
+            .await?
+            .is_some()
+            {
+                files.push(optional.to_owned());
+            }
+        }
+        files.extend(self.python_vcs_directory_files(&root, "objects").await?);
+        files.extend(self.python_vcs_directory_files(&root, "refs").await?);
+        files.sort();
+        Ok(Some(PythonVcsFiles { files }))
+    }
+
+    /// Enumerates ignored Git database leaves so actions never consume ignored directories.
+    async fn python_vcs_directory_files(
+        &mut self,
+        root: &PackageLabel,
+        directory: &str,
+    ) -> bsmr_error::Result<Vec<String>> {
+        let mut pending = VecDeque::from([directory.to_owned()]);
+        let mut files = Vec::new();
+        while let Some(relative) = pending.pop_front() {
+            let git_path = format!(".git/{relative}");
+            let path = root.to_cell_path().join(
+                ForwardRelativePath::new(&git_path)
+                    .expect("Git entries form valid forward-relative paths"),
+            );
+            let entries =
+                DiceFileComputations::read_dir_include_ignores(self.ctx, path.as_ref()).await?;
+            for entry in entries.included.iter() {
+                let child = format!("{relative}/{}", entry.file_name);
+                if entry.file_type.is_dir() {
+                    pending.push_back(child);
+                } else {
+                    files.push(child);
+                }
+            }
+        }
+        files.sort();
+        Ok(files)
+    }
+
+    /// Tests the root pnpm contract without promoting incidental package metadata.
+    async fn root_is_pnpm_workspace(&mut self, package: PackageLabel) -> bsmr_error::Result<bool> {
+        let root_path = CellRelativePathBuf::unchecked_new(String::new());
+        let root = PackageLabel::new(package.cell_name(), &root_path)?;
+        let listing = DicePackageListingResolver(self.ctx)
+            .resolve_package_listing(root)
+            .await?;
+        Ok(is_native_pnpm_workspace(&listing))
+    }
+
+    /// Reads one package-relative source through DICE so edits invalidate analysis.
+    async fn read_package_file(
+        &mut self,
+        package: PackageLabel,
+        file: &str,
+    ) -> bsmr_error::Result<String> {
+        let path = package.to_cell_path().join(ForwardRelativePath::new(file)?);
+        DiceFileComputations::read_file(self.ctx, path.as_ref())
+            .await
+            .with_package_context_information(path.to_string())
     }
 
     pub fn prepare_eval_with_content(
@@ -604,7 +921,7 @@ impl<'c, 'd: 'c> DiceCalculationDelegate<'c, 'd> {
         let mut now = None;
         let eval_kind = StarlarkEvalKind::LoadBuildFile(package.dupe());
         let eval_result: bsmr_error::Result<_> = try {
-            let ((), listing) = self
+            let ((), mut listing) = self
                 .ctx
                 .try_compute2(
                     |ctx| check_starlark_stack_size(ctx).boxed(),
@@ -612,10 +929,8 @@ impl<'c, 'd: 'c> DiceCalculationDelegate<'c, 'd> {
                 )
                 .await?;
 
-            let build_file_path =
-                BuildFilePath::new(package.dupe(), listing.buildfile().to_owned());
-            let (ast, deps) = self
-                .prepare_eval(StarlarkPath::BuildFile(&build_file_path))
+            let (build_file_path, ast, deps) = self
+                .prepare_build_file_eval(package.dupe(), &mut listing)
                 .await?;
             let super_package = self
                 .eval_package_file_for_build_file(package.dupe(), &listing)

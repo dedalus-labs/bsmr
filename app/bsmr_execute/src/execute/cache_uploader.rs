@@ -237,6 +237,11 @@ pub fn force_cache_upload() -> bsmr_error::Result<bool> {
 /// A single purpose trait to handle cache uploads
 #[async_trait]
 pub trait UploadCache: Send + Sync {
+    /// Whether this uploader is the user-level local action cache.
+    fn is_local_action_cache(&self) -> bool {
+        false
+    }
+
     /// Given information about the command and its result, upload the result
     /// and related items to the cache.
     /// Return information about why the main action upload did or did not occur.

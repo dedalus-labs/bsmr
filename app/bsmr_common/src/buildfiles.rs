@@ -126,7 +126,7 @@ mod tests {
     async fn test_buildfiles() -> bsmr_error::Result<()> {
         let mut file_ops = TestConfigParserFileOps::new(&[
             (
-                ".bsmrconfig",
+                ".bsmr",
                 indoc!(
                     r#"
                             [cells]
@@ -137,7 +137,7 @@ mod tests {
                 ),
             ),
             (
-                "other/.bsmrconfig",
+                "other/.bsmr",
                 indoc!(
                     r#"
                             [cells]
@@ -148,7 +148,7 @@ mod tests {
                 ),
             ),
             (
-                "third_party/.bsmrconfig",
+                "third_party/.bsmr",
                 indoc!(
                     r#"
                             [cells]

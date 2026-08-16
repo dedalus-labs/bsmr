@@ -69,7 +69,7 @@ exec bsmr run prelude//go/tools/gopackagesdriver:gopackagesdriver -- "${@}"
       "**/BUILD.bsmr",
       "**/PACKAGE",
       "**/*.bzl",
-      "**/.bsmrconfig"
+      "**/.bsmr"
     ]
   }
 }

@@ -1,0 +1,21 @@
+# ===----------------------------------------------------------------------===
+# Upstream-Source: facebook/buck2@1560aca2002865cd73d7cafb22c705cfb640b2bc
+# Modifications Copyright (c) 2026 Dedalus Labs, Inc. and its contributors
+# SPDX-License-Identifier: Apache-2.0
+# ===----------------------------------------------------------------------===
+
+[project]
+root = .
+
+[cells]
+root = .
+
+[bsmr_re_client]
+action_cache_address = grpc://localhost:50051
+engine_address = grpc://localhost:50051
+cas_address = grpc://localhost:50051
+tls = false
+instance_name = main
+
+[build]
+  execution_platforms = root//platforms:platforms

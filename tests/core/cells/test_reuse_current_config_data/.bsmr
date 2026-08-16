@@ -1,0 +1,8 @@
+[project]
+root = .
+
+[cells]
+  root = .
+
+[test]
+  key = val

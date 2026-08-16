@@ -258,7 +258,7 @@ message InstantEvent {
     // attached.
     DebugAdapterSnapshot debug_adapter_snapshot = 27;
 
-    // This is notionally reading from .bsmrconfig at startup, but since that's
+    // This is notionally reading from .bsmr at startup, but since that's
     // done by the daemon, it needs to come through this way.
     RestartConfiguration restart_configuration = 28;
 
@@ -380,17 +380,17 @@ message ConfigValue {
   optional string cell = 4;
   // whether config is provided by the command line (either single arg or config
   // flag). Set to false for values coming from external bsmrconfigs (e.g.
-  // /etc/bsmrconfig.d or $home_dir/.bsmrconfig.local)
+  // /etc/bsmrconfig.d or $home_dir/.bsmr.local)
   bool is_cli = 5;
 }
 
 message ConfigFile {
   oneof data {
-    // If the config file is project relative (except .bsmrconfig.local), the
+    // If the config file is project relative (except .bsmr.local), the
     // path of the file. We only store the path, not actual values of
     // project-relative bsmrconfigs because they are huge/costly to store
     string project_relative_path = 1;
-    // If the config file is external or project-relative .bsmrconfig.local, we
+    // If the config file is external or project-relative .bsmr.local, we
     // store all the config values in a list along with the path the file is
     // originating from
     GlobalExternalConfig global_external_config = 2;
@@ -3112,6 +3112,7 @@ enum MaterializationMethod {
   MATERIALIZATION_METHOD_LOCAL_COPY = 1;
   MATERIALIZATION_METHOD_HTTP_DOWNLOAD = 2;
   MATERIALIZATION_METHOD_WRITE = 3;
+  MATERIALIZATION_METHOD_LOCAL_CACHE = 4;
 }
 
 message MaterializationEnd {

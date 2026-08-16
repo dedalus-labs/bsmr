@@ -50,6 +50,7 @@ rust_library(
         "bsmr_build//third-party/rust:derivative",
         "bsmr_build//third-party/rust:derive_more",
         "bsmr_build//third-party/rust:digest",
+        "bsmr_build//third-party/rust:dirs",
         "bsmr_build//third-party/rust:either",
         "bsmr_build//third-party/rust:faccess",
         "bsmr_build//third-party/rust:futures",

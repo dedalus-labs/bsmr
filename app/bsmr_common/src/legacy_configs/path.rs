@@ -31,7 +31,10 @@ pub(crate) enum ExternalConfigSource {
 }
 
 pub(crate) enum ProjectConfigSource {
-    // Bsmrconfig file in the cell relative to project root, such as .bsmrconfig or .bsmrconfig.local
+    // The cell's `.bsmr` configuration file.
+    CellConfigFile,
+
+    // Additional config file relative to the cell root, such as .bsmr.local
     CellRelativeFile(&'static str),
 
     // Bsmrconfig folder in the cell, assuming all files in this folder are bsmrconfig
@@ -58,8 +61,9 @@ pub(crate) static DEFAULT_EXTERNAL_CONFIG_SOURCES: &[ExternalConfigSource] = &[
 
 pub(crate) static DEFAULT_PROJECT_CONFIG_SOURCES: &[ProjectConfigSource] = &[
     ProjectConfigSource::CellRelativeFolder(DOT_BSMRCONFIG_D),
-    ProjectConfigSource::CellRelativeFile(".bsmrconfig"),
+    ProjectConfigSource::CellConfigFile,
     ProjectConfigSource::CellRelativeFile(DOT_BSMRCONFIG_LOCAL),
 ];
 
-pub(crate) static DOT_BSMRCONFIG_LOCAL: &str = ".bsmrconfig.local";
+pub(crate) static DOT_BSMR: &str = ".bsmr";
+pub(crate) static DOT_BSMRCONFIG_LOCAL: &str = ".bsmr.local";

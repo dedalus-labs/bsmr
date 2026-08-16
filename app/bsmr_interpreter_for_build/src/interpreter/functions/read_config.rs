@@ -26,10 +26,10 @@ use crate::interpreter::build_context::BuildContext;
 
 #[starlark_module]
 pub(crate) fn register_read_config(globals: &mut GlobalsBuilder) {
-    /// Read a configuration value from the .bsmrconfig for the current
+    /// Read a configuration value from the .bsmr for the current
     /// cell of the `BUILD.bsmr` file that started evaluation of this code.
     ///
-    /// As an example, if the current cell's .bsmrconfig contains:
+    /// As an example, if the current cell's .bsmr contains:
     ///
     /// ```toml
     /// [package_options]
@@ -44,7 +44,7 @@ pub(crate) fn register_read_config(globals: &mut GlobalsBuilder) {
     /// read_config("package_options", "linker", "a_default") == "a_default"
     /// ```
     ///
-    /// In general the use of `.bsmrconfig` is discouraged in favour of `select`,
+    /// In general the use of `.bsmr` is discouraged in favour of `select`,
     /// but it can still be useful.
     #[starlark(speculative_exec_safe)]
     fn read_config<'v>(
@@ -60,7 +60,7 @@ pub(crate) fn register_read_config(globals: &mut GlobalsBuilder) {
         }
     }
 
-    /// Like `read_config` but the project root `.bsmrconfig` is always consulted,
+    /// Like `read_config` but the project root `.bsmr` is always consulted,
     /// regardless of the cell of the originating `BUILD.bsmr` file.
     #[starlark(speculative_exec_safe)]
     fn read_root_config<'v>(

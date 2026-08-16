@@ -454,7 +454,7 @@ pub(super) enum GoCommandError {
         "multiple Bessemer build-file names are configured ({0:?}); select one with `--buildfile`"
     )]
     AmbiguousBuildfiles(Vec<String>),
-    #[error("Go build tags {0:?} are not declared in `.bsmrconfig` under `go.allowed_build_tags`")]
+    #[error("Go build tags {0:?} are not declared in `.bsmr` under `go.allowed_build_tags`")]
     UnconfiguredBuildTags(Vec<String>),
     #[error("failed to {operation} at `{path:?}`: {message}")]
     Io {

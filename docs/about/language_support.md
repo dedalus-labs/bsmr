@@ -27,9 +27,10 @@ This page provides an overview of the programming languages supported by Besseme
 | Kotlin (Mobile)      | ✅                | Complex Setup | ❌         | GitHub: NavidQar & siaojiecai |
 | Objective-C          | ✅                | Unavailable   | ❌         |                               |
 | OCaml                | ✅                | Easy Setup    | ❌         |                               |
-| Python               | ✅                | Easy Setup    | ❌         | GitHub: zsol                  |
-| Rust                 | ✅                | Easy Setup    | ❌         | GitHub: jakobdegen            |
+| Python               | ✅                | Native uv     | ✅         | Dedalus Labs                  |
+| Rust                 | ✅                | Native Cargo  | ✅         | Dedalus Labs                  |
 | Swift                | ✅                | Unavailable   | ❌         |                               |
+| TypeScript / Node.js | ✅                | Native pnpm   | ✅         | Dedalus Labs                  |
 
 ## Understanding the Table
 

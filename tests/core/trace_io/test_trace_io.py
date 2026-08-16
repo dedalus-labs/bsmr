@@ -65,7 +65,7 @@ def hg_config_reponame(cwd: Path) -> None:
 
 def _setup_bsmrconfig_digest_algorithms(buck: Buck) -> None:
     # The digests in `//cas_artifact:` require the bsmrconfig.
-    with open(buck.cwd / ".bsmrconfig", "a") as bsmrconfig:
+    with open(buck.cwd / ".bsmr", "a") as bsmrconfig:
         bsmrconfig.write("[bsmr]\n")
         bsmrconfig.write("digest_algorithms = BLAKE3-KEYED,SHA1\n")
 

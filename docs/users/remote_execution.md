@@ -20,10 +20,10 @@ Bessemer projects have been successfully tested for remote execution against
 providers are available under
 [examples/remote_execution](https://github.com/facebook/buck2/tree/main/examples/remote_execution).
 
-## RE configuration in `.bsmrconfig`
+## RE configuration in `.bsmr`
 
 Configuration for remote execution can be found under `[bsmr_re_client]` in
-`.bsmrconfig`.
+`.bsmr`.
 
 Keys supported include:
 
@@ -46,7 +46,7 @@ Keys supported include:
   requests.
 
 Bessemer uses `SHA256` for all its hashing by default. If your RE engine requires
-something else, this can be configured in `.bsmrconfig` as follows:
+something else, this can be configured in `.bsmr` as follows:
 
 ```ini
 [bsmr]

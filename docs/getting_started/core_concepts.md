@@ -62,17 +62,17 @@ Here is the anatomy of a target label:
 [Cell](../../concepts/key_concepts/#cells) defines a directory tree of one or
 more buck [packages](../../concepts/key_concepts/#packages). The root of a buck
 cell contains a global configuration file called
-[**`.bsmrconfig`**](../../concepts/bsmrconfig).
+[**`.bsmr`**](../../concepts/bsmrconfig).
 
 <FbInternalOnly>
 
-For the lab you just did, fbcode is the cell root where .bsmrconfig resides. If
+For the lab you just did, fbcode is the cell root where .bsmr resides. If
 you are developing in other projects like ARVR, android and ios, then fbsource
 is the buck cell root.
 
 #### Tips:
 
-- Do not modify .bsmrconfig and do not create .bsmrconfig without consulting
+- Do not modify .bsmr and do not create .bsmr without consulting
   buck or devx team!
 - Be aware that buck does enforce package boundaries, so a source file only
   belongs to its nearest BUILD.bsmr file.
@@ -484,7 +484,7 @@ As you become more adept, you can explore other powerful buck commands, such as:
 
 - Sometimes you’ll see options like `@mode/opt` in the command, the mode file
   (path is `cell/mode/opt`) contains a set of buck configs that are extensions
-  of `.bsmrconfig`, see some examples in
+  of `.bsmr`, see some examples in
   [this wiki](https://www.internalfb.com/wiki/Buck/Buck-users/fbcode-repo/C++/running-buck-in-different-modes/)
   for C++ build mode;
 

@@ -1,8 +1,0 @@
-[buildfile]
-name=TARGETS.fixture
-
-[repositories]
-prelude = .
-
-[bsmr]
-check_starlark_peak_memory = true

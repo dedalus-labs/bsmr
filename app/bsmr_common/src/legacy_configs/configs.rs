@@ -814,7 +814,7 @@ pub(crate) mod tests {
         let config = parse_with_config_args(
             &[
                 (
-                    ".bsmrconfig",
+                    ".bsmr",
                     indoc!(
                         r#"
                             [cells]
@@ -835,7 +835,7 @@ pub(crate) mod tests {
                     ),
                 ),
             ],
-            ".bsmrconfig",
+            ".bsmr",
             &config_args,
         )?;
 

@@ -1,0 +1,12 @@
+[cells]
+  root = .
+
+[buildfile]
+  name = TARGETS.fixture
+
+[bsmr]
+  file_watcher = fs_hash_crawler
+
+[project]
+root = .
+  watchman_merge_base = main

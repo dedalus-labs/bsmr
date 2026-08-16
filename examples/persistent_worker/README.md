@@ -39,7 +39,7 @@ Configure a local build without persistent workers:
 
 ```
 $ cd examples/persistent_worker
-$ echo '<file:.bsmrconfig.no-workers>' > .bsmrconfig.local
+$ echo '<file:.bsmr.no-workers>' > .bsmr.local
 ```
 
 Run a clean build:
@@ -59,7 +59,7 @@ Configure a local build with persistent workers:
 
 ```
 $ cd examples/persistent_worker
-$ echo '<file:.bsmrconfig.local-persistent-workers>' > .bsmrconfig.local
+$ echo '<file:.bsmr.local-persistent-workers>' > .bsmr.local
 ```
 
 Run a clean build:
@@ -79,7 +79,7 @@ Configure a remote build without persistent workers:
 
 ```
 $ cd examples/persistent_worker
-$ echo '<file:.bsmrconfig.buildbuddy>' > .bsmrconfig.local
+$ echo '<file:.bsmr.buildbuddy>' > .bsmr.local
 ```
 
 Run a clean build:
@@ -99,7 +99,7 @@ Configure a remote build with persistent workers:
 
 ```
 $ cd examples/persistent_worker
-$ echo '<file:.bsmrconfig.buildbuddy-persistent-workers>' > .bsmrconfig.local
+$ echo '<file:.bsmr.buildbuddy-persistent-workers>' > .bsmr.local
 ```
 
 Run a clean build:

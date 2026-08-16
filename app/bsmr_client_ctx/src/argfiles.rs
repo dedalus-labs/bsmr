@@ -342,7 +342,10 @@ mod tests {
         let symlinked_project_root = root.join("symlinked-project");
 
         fs_util::create_dir(&project_root)?;
-        fs_util::write(project_root.join(".bsmrconfig"), "[cells]\nroot = .")?;
+        fs_util::write(
+            project_root.join(".bsmr"),
+            "[project]\nroot = .\n\n[cells]\nroot = .",
+        )?;
         fs_util::symlink(&project_root, &symlinked_project_root)?;
 
         let external_mode_file = root.join("mode-file");
@@ -450,7 +453,11 @@ mod tests {
         fs_util::create_dir(root.join("foo/bar")).unwrap();
         fs_util::write(root.join("foo/bar/arg1.txt"), "@bar/arg2.txt").unwrap();
         fs_util::write(root.join("foo/bar/arg2.txt"), "--magic").unwrap();
-        fs_util::write(root.join(".bsmrconfig"), "[cells]\nroot = .").unwrap();
+        fs_util::write(
+            root.join(".bsmr"),
+            "[project]\nroot = .\n\n[cells]\nroot = .",
+        )
+        .unwrap();
         let cwd = AbsWorkingDir::unchecked_new(
             fs_util::canonicalize(root)
                 .unwrap()
@@ -482,7 +489,11 @@ mod tests {
         let arg2_path = root.join("foo/bar/arg2.txt");
         fs_util::write(&arg1_path, "@bar/arg2.txt\n--other-arg").unwrap();
         fs_util::write(&arg2_path, "--magic").unwrap();
-        fs_util::write(root.join(".bsmrconfig"), "[cells]\nroot = .").unwrap();
+        fs_util::write(
+            root.join(".bsmr"),
+            "[project]\nroot = .\n\n[cells]\nroot = .",
+        )
+        .unwrap();
         let cwd = AbsWorkingDir::unchecked_new(
             fs_util::canonicalize(root)
                 .unwrap()

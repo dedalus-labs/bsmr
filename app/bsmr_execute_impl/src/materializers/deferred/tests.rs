@@ -621,27 +621,26 @@ mod state_machine {
     }
 
     #[tokio::test]
-    async fn test_redeclare_retains_rematerialization_method() -> bsmr_error::Result<()> {
+    async fn test_local_cache_hit_retains_rematerialization_method() -> bsmr_error::Result<()> {
         ignore_stack_overflow_checks_for_future(async {
             let (mut dm, _) = make_processor(Default::default());
+            let cache_root = ProjectRootTemp::new()?;
+            let cache = Arc::new(LocalActionCache::at(
+                cache_root.path().root().to_path_buf(),
+            )?);
             let path = make_path("foo/bar");
             let content = b"cached output";
+            let digest_config = dm.io.digest_config();
             let value = ArtifactValue::file(FileMetadata {
-                digest: TrackedFileDigest::from_content(
-                    content,
-                    dm.io.digest_config().cas_digest_config(),
-                ),
+                digest: TrackedFileDigest::from_content(content, digest_config.cas_digest_config()),
                 is_executable: false,
             });
-            let write = || {
-                ArtifactMaterializationMethod::Write(Arc::new(WriteFile {
-                    compressed_data: zstd::bulk::compress(content, 0).unwrap().into_boxed_slice(),
-                    decompressed_size: content.len(),
-                    is_executable: false,
-                }))
+            let local_cache = || ArtifactMaterializationMethod::LocalCache {
+                cache: cache.dupe(),
+                digest_config,
             };
 
-            dm.testing_declare_with_method(&path, value.dupe(), write());
+            dm.testing_declare_with_method(&path, value.dupe(), local_cache());
             assert_eq!(dm.io.take_log(), &[(Op::Clean, path.clone())]);
             let result = dm
                 .materialize_artifact(&path, EventDispatcher::null())
@@ -650,8 +649,9 @@ mod state_machine {
             assert_eq!(dm.io.take_log(), &[(Op::Materialize, path.clone())]);
             dm.testing_materialization_finished(path.clone(), Utc::now(), result);
 
-            dm.testing_declare_with_method(&path, value, write());
+            dm.testing_declare_with_method(&path, value, local_cache());
             assert_eq!(dm.io.take_log(), &[]);
+            dm.io.fs.write_file(&path, content, false)?;
             fs_util::remove_file(dm.io.fs.resolve(&path))?;
             let result = dm
                 .materialize_artifact(&path, EventDispatcher::null())
@@ -659,6 +659,39 @@ mod state_machine {
                 .await;
             assert_eq!(dm.io.take_log(), &[(Op::Materialize, path)]);
             assert!(result.is_ok(), "rematerialization failed: {result:?}");
+            Ok(())
+        })
+        .await
+    }
+
+    #[tokio::test]
+    async fn test_missing_materialized_artifact_without_method_fails() -> bsmr_error::Result<()> {
+        ignore_stack_overflow_checks_for_future(async {
+            let (mut dm, _) = make_processor(Default::default());
+            let path = make_path("foo/bar");
+            let content = b"uncached output";
+            let value = ArtifactValue::file(FileMetadata {
+                digest: TrackedFileDigest::from_content(
+                    content,
+                    dm.io.digest_config().cas_digest_config(),
+                ),
+                is_executable: false,
+            });
+
+            dm.io.fs.write_file(&path, content, false)?;
+            dm.testing_declare_existing(&path, value);
+            fs_util::remove_file(dm.io.fs.resolve(&path))?;
+            let result = dm
+                .materialize_artifact(&path, EventDispatcher::null())
+                .ok_or_else(|| internal_error!("Expected missing-artifact failure"))?
+                .await;
+
+            assert_matches!(
+                result,
+                Err(SharedMaterializingError::Error(error))
+                    if format!("{error:#}").contains("has no reproducible materialization method")
+            );
+            assert_eq!(dm.io.take_log(), &[]);
             Ok(())
         })
         .await

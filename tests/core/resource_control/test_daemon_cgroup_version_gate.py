@@ -27,7 +27,7 @@ async def test_version_gate_enables_cgroup(buck: Buck) -> None:
     binary's DAEMON_CGROUP_VERSION, resource control should be enabled
     (status = if_available)."""
 
-    with open(buck.cwd / ".bsmrconfig", "a") as bsmrconfig:
+    with open(buck.cwd / ".bsmr", "a") as bsmrconfig:
         bsmrconfig.write("[bsmr_resource_control]\n")
         # Version 1 is the current DAEMON_CGROUP_VERSION, so this should enable.
         bsmrconfig.write("status_if_min_daemon_cgroup_version = 1\n")
@@ -41,7 +41,7 @@ async def test_version_gate_disables_cgroup_when_version_too_high(buck: Buck) ->
     """When status_if_min_daemon_cgroup_version is set to a version higher than
     the binary's DAEMON_CGROUP_VERSION, resource control should remain off."""
 
-    with open(buck.cwd / ".bsmrconfig", "a") as bsmrconfig:
+    with open(buck.cwd / ".bsmr", "a") as bsmrconfig:
         bsmrconfig.write("[bsmr_resource_control]\n")
         # Version 9999 is higher than any DAEMON_CGROUP_VERSION, so this should not enable.
         bsmrconfig.write("status_if_min_daemon_cgroup_version = 9999\n")
@@ -55,7 +55,7 @@ async def test_version_gate_not_set_status_off(buck: Buck) -> None:
     """When status_if_min_daemon_cgroup_version is not set and status is off,
     resource control should be off."""
 
-    with open(buck.cwd / ".bsmrconfig", "a") as bsmrconfig:
+    with open(buck.cwd / ".bsmr", "a") as bsmrconfig:
         bsmrconfig.write("[bsmr_resource_control]\n")
         bsmrconfig.write("status = off\n")
 

@@ -43,7 +43,7 @@ use crate::sqlite::tables::incremental_state_table::IncrementalStateSqliteTable;
 ///
 /// If you forget to bump this version,
 /// then you can fix forward by bumping the `bsmr.sqlite_incremental_state_version`
-/// bsmrconfig in the project root's .bsmrconfig.
+/// bsmrconfig in the project root's .bsmr.
 pub const INCREMENTAL_DB_SCHEMA_VERSION: u64 = 0;
 
 pub(crate) type IncrementalState = BuckDashMap<String, Arc<IncrementalPathMap>>;

@@ -1,0 +1,22 @@
+# ===----------------------------------------------------------------------===
+# Copyright (c) 2026 Dedalus Labs, Inc. and its contributors
+# SPDX-License-Identifier: Apache-2.0
+# ===----------------------------------------------------------------------===
+
+# Exposes the native Python action runner and inventories this package's sources.
+
+load("@prelude//utils:source_listing.bzl", "source_listing")
+
+source_listing()
+
+export_file(
+    name = "runner",
+    src = "runner.py",
+    visibility = ["PUBLIC"],
+)
+
+export_file(
+    name = "runtime",
+    src = "runtime.py",
+    visibility = ["PUBLIC"],
+)

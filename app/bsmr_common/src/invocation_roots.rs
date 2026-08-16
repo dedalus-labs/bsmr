@@ -22,6 +22,7 @@ use bsmr_core::fs::project::ProjectRoot;
 use bsmr_core::fs::project_rel_path::ProjectRelativePathBuf;
 use bsmr_error::BuckErrorContext;
 use bsmr_error::internal_error;
+use bsmr_fs::error::IoResultExt;
 use bsmr_fs::fs_util;
 use bsmr_fs::paths::abs_norm_path::AbsNormPath;
 use bsmr_fs::paths::abs_norm_path::AbsNormPathBuf;
@@ -36,7 +37,7 @@ use crate::invocation_paths_result::InvocationPathsResult;
 #[derive(Debug, bsmr_error::Error)]
 enum BsmrCliError {
     #[error(
-        "Couldn't find a Bessemer project root for directory `{}`. Expected to find a .bsmrconfig file.", _0.path().display()
+        "Couldn't find a Bessemer project root for directory `{}`. Expected to find a .bsmr file.", _0.path().display()
     )]
     #[bsmr(tag = NoBsmrRoot)]
     NoBsmrRoot(AbsWorkingDir),
@@ -68,48 +69,50 @@ impl InvocationRoots {
 
 /// Finds the project root.
 ///
-/// This uses a rather liberal definition of "roots". It traverses the directory and its parents
-/// looking for all .bsmrconfig files and the furthest one (with the shortest path) will be detected
-/// as the "project root".
-///
-/// We also look for .bsmrroot files, and if we find one of them, we don't traverse further upwards.
-/// The contents of the .bsmrroot file is entirely ignored.
+/// The nearest `.bsmr` with `[project] root = .` is both config and root marker.
 fn get_roots(from: &AbsWorkingDir) -> bsmr_error::Result<Option<InvocationRoots>> {
-    let mut project_root = None;
-
     let home_dir = dirs::home_dir();
     for curr in from.path().ancestors() {
-        if fs_util::try_exists(curr.join(FileName::unchecked_new(".bsmrconfig")))? {
-            // Do not allow /home/{unixname}, /home or / to be a cell,
-            // and /home/{unixname}/.bsmrconfig is used for config override
-            if let Some(home_dir_path) = &home_dir {
-                if home_dir_path == curr.as_path() {
-                    break;
-                }
-            }
-            project_root = Some(curr.to_owned());
-        }
-
-        if fs_util::try_exists(curr.join(FileName::unchecked_new(".bsmrroot")))? {
+        // Never treat a user's home-level configuration as a project.
+        if home_dir.as_ref().is_some_and(|home| home == curr.as_path()) {
             break;
         }
-    }
-
-    #[allow(clippy::manual_map)]
-    Ok(match project_root {
-        Some(project_root) => {
+        let project_file = curr.join(FileName::unchecked_new(".bsmr"));
+        if fs_util::try_exists(&project_file)?
+            && has_project_marker(&fs_util::read_to_string(&project_file).categorize_internal()?)
+        {
             let rel_cwd = from
                 .path()
-                .strip_prefix(&project_root)
-                .expect("By construction")
+                .strip_prefix(curr)
+                .expect("ancestor must prefix working directory")
                 .into_owned();
-            Some(InvocationRoots {
-                project_root: ProjectRoot::new_unchecked(project_root),
+            return Ok(Some(InvocationRoots {
+                project_root: ProjectRoot::new_unchecked(curr.to_owned()),
                 cwd: rel_cwd.into(),
-            })
+            }));
         }
-        None => None,
-    })
+    }
+    Ok(None)
+}
+
+/// Recognizes the explicit root marker embedded in the canonical project file.
+fn has_project_marker(source: &str) -> bool {
+    let mut in_project_section = false;
+    for line in source.lines() {
+        let line = line.split(['#', ';']).next().unwrap_or("").trim();
+        if line.starts_with('[') && line.ends_with(']') {
+            in_project_section = line == "[project]";
+            continue;
+        }
+        if in_project_section
+            && line
+                .split_once('=')
+                .is_some_and(|(key, value)| key.trim() == "root" && value.trim() == ".")
+        {
+            return true;
+        }
+    }
+    false
 }
 
 pub fn find_invocation_roots(from: &AbsWorkingDir) -> bsmr_error::Result<InvocationRoots> {
@@ -159,4 +162,76 @@ pub(crate) fn home_buck_dir() -> bsmr_error::Result<&'static AbsNormPath> {
     static DIR: LazyLock<bsmr_error::Result<AbsNormPathBuf>> = LazyLock::new(find_dir);
 
     Ok(LazyLock::force(&DIR).as_ref().map_err(dupe::Dupe::dupe)?)
+}
+
+#[cfg(test)]
+mod tests {
+    use bsmr_fs::fs_util::uncategorized as fs_util;
+
+    use super::*;
+
+    /// A working directory without its own config inherits the nearest project root.
+    #[test]
+    fn nearest_unified_config_defines_project_root() -> bsmr_error::Result<()> {
+        let temp = tempfile::tempdir()?;
+        let project = AbsNormPathBuf::new(temp.path().canonicalize()?)?;
+        let nested = project.join(FileName::unchecked_new("nested"));
+        fs_util::create_dir_all(&nested)?;
+        fs_util::write(
+            project.join(FileName::unchecked_new(".bsmr")),
+            "[project]\nroot = .\n",
+        )?;
+
+        let roots = find_invocation_roots(&AbsWorkingDir::unchecked_new(nested))?;
+
+        assert_eq!(roots.project_root.root(), &*project);
+        assert_eq!(
+            roots.cwd,
+            ProjectRelativePathBuf::unchecked_new("nested".to_owned())
+        );
+        Ok(())
+    }
+
+    /// A nested cell config cannot silently replace the enclosing project root.
+    #[test]
+    fn cell_config_without_project_marker_is_not_a_root() -> bsmr_error::Result<()> {
+        let temp = tempfile::tempdir()?;
+        let project = AbsNormPathBuf::new(temp.path().canonicalize()?)?;
+        let cell = project.join(FileName::unchecked_new("cell"));
+        fs_util::create_dir_all(&cell)?;
+        fs_util::write(
+            project.join(FileName::unchecked_new(".bsmr")),
+            "[project]\nroot = .\n",
+        )?;
+        fs_util::write(
+            cell.join(FileName::unchecked_new(".bsmr")),
+            "[cell]\nname = nested\n",
+        )?;
+
+        let roots = find_invocation_roots(&AbsWorkingDir::unchecked_new(cell))?;
+
+        assert_eq!(roots.project_root.root(), &*project);
+        assert_eq!(
+            roots.cwd,
+            ProjectRelativePathBuf::unchecked_new("cell".to_owned())
+        );
+        Ok(())
+    }
+
+    /// Legacy marker files must not silently create a second project-discovery mode.
+    #[test]
+    fn legacy_root_files_are_not_project_markers() -> bsmr_error::Result<()> {
+        let temp = tempfile::tempdir()?;
+        let project = AbsNormPathBuf::new(temp.path().canonicalize()?)?;
+        fs_util::write(
+            project.join(FileName::unchecked_new(".bsmrconfig")),
+            "[cells]\nroot = .\n",
+        )?;
+        fs_util::write(project.join(FileName::unchecked_new(".bsmrroot")), "")?;
+
+        let result = find_invocation_roots(&AbsWorkingDir::unchecked_new(project));
+
+        assert!(result.is_err());
+        Ok(())
+    }
 }

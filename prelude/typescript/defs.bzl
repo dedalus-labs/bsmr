@@ -5,7 +5,7 @@
 
 # Defines cache-separable TypeScript source, typecheck, and library actions.
 
-load("@prelude//toolchains/pnpm:defs.bzl", "PnpmInstallInfo", "PnpmToolchainInfo")
+load("@prelude//toolchains/pnpm:defs.bzl", "PnpmInstallInfo")
 
 TypescriptSourcesInfo = provider(fields = {
     "files": provider_field(dict[str, Artifact]),
@@ -79,9 +79,8 @@ def _run_typescript(ctx: AnalysisContext, mode: str, output: Artifact) -> None:
         has_content_based_path = False,
     )
     install = ctx.attrs.install[PnpmInstallInfo]
-    toolchain = ctx.attrs._pnpm_toolchain[PnpmToolchainInfo]
     command = cmd_args([
-        toolchain.node,
+        install.node,
         ctx.attrs._runner,
         "--config",
         ctx.attrs.config,
@@ -111,7 +110,7 @@ def _typescript_typecheck_impl(ctx: AnalysisContext) -> list[Provider]:
 
 def _typescript_library_impl(ctx: AnalysisContext) -> list[Provider]:
     """Run the package-local locked tsdown compiler into a cached directory."""
-    output = ctx.actions.declare_output(ctx.label.name, dir = True, has_content_based_path = False)
+    output = ctx.actions.declare_output(ctx.label.name, dir = True, has_content_based_path = True)
     _run_typescript(ctx, "library", output)
     return [DefaultInfo(default_output = output)]
 
@@ -122,7 +121,6 @@ def _typescript_action_attrs(default_config: str) -> dict:
         "install": attrs.dep(providers = [PnpmInstallInfo]),
         "package_root": attrs.string(),
         "sources": attrs.dep(providers = [TypescriptSourcesInfo]),
-        "_pnpm_toolchain": attrs.default_only(attrs.toolchain_dep(default = "toolchains//:pnpm", providers = [PnpmToolchainInfo])),
         "_runner": attrs.source(default = "prelude//typescript:runner"),
     }
 

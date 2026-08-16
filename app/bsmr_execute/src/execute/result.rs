@@ -308,7 +308,8 @@ impl CommandExecutionResult {
         matches!(
             self.report.status,
             CommandExecutionStatus::Success {
-                execution_kind: CommandExecutionKind::ActionCache { .. },
+                execution_kind: CommandExecutionKind::ActionCache { .. }
+                    | CommandExecutionKind::LocalActionCache { .. },
             }
         )
     }

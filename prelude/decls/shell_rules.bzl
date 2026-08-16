@@ -215,7 +215,7 @@ sh_test = prelude_rule(
                 attrs.string(),
                 default = None,
                 doc = """
-                If provided, this will be sent to any configured `.bsmrconfig`
+                If provided, this will be sent to any configured `.bsmr`
             """,
             ),
         }

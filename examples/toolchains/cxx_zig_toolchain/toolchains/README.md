@@ -12,9 +12,9 @@ To build it within the open source tree of bsmr to you need to
   ```
   ln -s ../../../prelude prelude
   ```
-- Remove the top-level `.bsmrconfig`
+- Remove the top-level `.bsmr`
   ```
-  rm ../../../.bsmrconfig
+  rm ../../../.bsmr
   ```
 - Apply the following patch to the prelude
 

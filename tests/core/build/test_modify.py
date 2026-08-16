@@ -55,7 +55,7 @@ async def test_modify_src(buck: Buck) -> None:
 
 @buck_test(data_dir="modify")
 async def test_modify_genrule_notify(buck: Buck) -> None:
-    with open(buck.cwd / ".bsmrconfig", "a") as bsmrconfig:
+    with open(buck.cwd / ".bsmr", "a") as bsmrconfig:
         bsmrconfig.write("\n[bsmr]\nfile_watcher = notify")
     await buck.kill()  # Ensure the config gets picked up
     await test_modify_genrule(buck)
@@ -64,7 +64,7 @@ async def test_modify_genrule_notify(buck: Buck) -> None:
 @buck_test(data_dir="modify")
 async def test_notify_observes_rapid_source_edits(buck: Buck) -> None:
     """Require every build to observe the source state present at invocation."""
-    with open(buck.cwd / ".bsmrconfig", "a") as bsmrconfig:
+    with open(buck.cwd / ".bsmr", "a") as bsmrconfig:
         bsmrconfig.write("\n[bsmr]\nfile_watcher = notify")
     await buck.kill()
 
@@ -78,16 +78,15 @@ async def test_notify_observes_rapid_source_edits(buck: Buck) -> None:
 
 
 @buck_test(data_dir="modify")
-async def test_deleted_materialized_output_is_rejected(buck: Buck) -> None:
-    """Reject a cached success when its promised output is absent from disk."""
+async def test_deleted_materialized_output_is_restored(buck: Buck) -> None:
+    """Restore a deleted output from its retained content-addressed recipe."""
     result = await buck.build("//:mysrcrule")
     output = result.get_build_report().output_for_target("root//:mysrcrule")
     Path(output).unlink()
 
-    await expect_failure(
-        buck.build("//:mysrcrule"),
-        stderr_regex="materialized artifact.*is missing from disk",
-    )
+    result = await buck.build("//:mysrcrule")
+    output = result.get_build_report().output_for_target("root//:mysrcrule")
+    assert Path(output).read_text() == "HELLO\n"
 
 
 @buck_test(data_dir="modify")

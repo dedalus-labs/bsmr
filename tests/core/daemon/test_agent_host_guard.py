@@ -29,7 +29,7 @@ _NON_AGENT_CGROUP = "/user.slice/user-1000.slice/bsmr.scope"
 
 
 def _write_bsmrconfig_local(buck: Buck, contents: str) -> None:
-    with open(buck.cwd / ".bsmrconfig.local", "w") as f:
+    with open(buck.cwd / ".bsmr.local", "w") as f:
         f.write(contents)
 
 
