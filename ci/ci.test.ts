@@ -97,6 +97,14 @@ test("Rust compilation uses sized Blacksmith runners", () => {
 	);
 });
 
+test("self-hosting keeps the CLI reference derived from clap", () => {
+	assert.ok(
+		jobs.rust_self_host?.steps.some(
+			(step) => "run" in step && step.run.includes("docs markdown-help-doc all"),
+		),
+	);
+});
+
 test("workflow checks retain the provenance boundary", () => {
 	const workflowCheckout = jobs.workflows?.steps[0];
 	assert.ok(workflowCheckout !== undefined && "with" in workflowCheckout);

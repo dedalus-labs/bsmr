@@ -252,6 +252,10 @@ export const ci = workflow({
 					name: "Validate self-host graph",
 					run: "target/debug/bsmr --isolation-dir=ci uquery 'deps(//app/...)'\ntarget/debug/bsmr --isolation-dir=ci targets 'bsmr_build//...'",
 				},
+				{
+					name: "Check CLI reference",
+					run: 'target/debug/bsmr docs markdown-help-doc all > "$RUNNER_TEMP/cli.md"\ndiff -u docs/reference/cli.md "$RUNNER_TEMP/cli.md"',
+				},
 			],
 		}),
 		rust: job({
