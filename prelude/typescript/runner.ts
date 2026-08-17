@@ -6,7 +6,7 @@
 // Executes pinned TypeScript tools in a source overlay over a frozen pnpm install.
 
 import { spawnSync } from "node:child_process";
-import { lstat, mkdir, readdir, readFile, realpath, rm, symlink, writeFile } from "node:fs/promises";
+import { copyFile, lstat, mkdir, readdir, readFile, realpath, rm, symlink, writeFile } from "node:fs/promises";
 import { isAbsolute, join, relative, resolve, sep } from "node:path";
 
 const requiredArguments = new Set(["--config", "--install", "--mode", "--output", "--package-root", "--source"]);
@@ -110,20 +110,20 @@ function isWithin(directory: string, candidate: string): boolean {
 }
 
 /**
- * Recreate declared source paths as read-only links in the scratch workspace.
+ * Copy declared source paths into the writable scratch workspace.
  *
  * @param source - Declared source tree.
  * @param destination - Scratch workspace directory.
  */
-async function linkSourceTree(source: string, destination: string): Promise<void> {
+async function copySourceTree(source: string, destination: string): Promise<void> {
 	await mkdir(destination, { recursive: true });
 	for (const entry of await readdir(source, { withFileTypes: true })) {
 		const from = join(source, entry.name);
 		const to = join(destination, entry.name);
 		if (entry.isDirectory()) {
-			await linkSourceTree(from, to);
+			await copySourceTree(from, to);
 		} else {
-			await symlink(await realpath(from), to);
+			await copyFile(from, to);
 		}
 	}
 }
@@ -232,7 +232,15 @@ async function resolveTool(packageDirectory: string, tool: string, command: stri
 function runTool(executable: string, arguments_: readonly string[], cwd: string): void {
 	const result = spawnSync(process.execPath, [executable, ...arguments_], {
 		cwd,
-		env: { CI: "1", FORCE_COLOR: "0", LANG: "C", LC_ALL: "C", NO_COLOR: "1", SOURCE_DATE_EPOCH: "0", TZ: "UTC" },
+		env: {
+			CI: "1",
+			FORCE_COLOR: "0",
+			LANG: "C",
+			LC_ALL: "C",
+			NO_COLOR: "1",
+			SOURCE_DATE_EPOCH: "0",
+			TZ: "UTC",
+		},
 		stdio: "inherit",
 	});
 	if (result.error !== undefined) throw result.error;
@@ -254,7 +262,7 @@ async function main(arguments_: readonly string[]): Promise<void> {
 		if (isWithin(input, workspace) || isWithin(workspace, input)) throw new Error(`scratch workspace '${workspace}' overlaps '${input}'`);
 	}
 	await rm(workspace, { force: true, recursive: true });
-	await linkSourceTree(options.source, workspace);
+	await copySourceTree(options.source, workspace);
 	await linkPackageModules(options.install, options.source, workspace);
 	const packageDirectory = join(workspace, options.packageRoot);
 	if (options.mode === "typecheck") {
