@@ -100,9 +100,6 @@ pub fn render_typescript_build_file(
     if package_root.is_empty() {
         render_install(graph, listing, &mut output)?;
     }
-    if !has_tsdown {
-        return Ok(Some(output));
-    }
 
     writeln!(
         output,
@@ -140,6 +137,10 @@ pub fn render_typescript_build_file(
     writeln!(output, "    visibility = [\"PUBLIC\"],")
         .map_err(NativeTypeScriptBuildError::Render)?;
     writeln!(output, ")\n").map_err(NativeTypeScriptBuildError::Render)?;
+
+    if !has_tsdown {
+        return Ok(Some(output));
+    }
 
     let package_root_arg = if package_root.is_empty() {
         "."
@@ -351,6 +352,29 @@ mod tests {
         assert!(build.contains("\"root//packages/core:__bsmr_sources\""));
         assert!(build.contains("\"apps/api/src/index.ts\": \"src/index.ts\""));
         assert!(!build.contains(":lib"));
+    }
+
+    #[test]
+    fn invariant_config_only_workspace_packages_export_their_files() {
+        let graph = WorkspaceGraph::build([package(
+            "packages/tsconfig",
+            r#"{"name":"@acme/tsconfig","main":"base.json"}"#,
+        )])
+        .unwrap();
+        let listing = PackageListing::testing_files(&["base.json", "package.json"]);
+
+        let build = render_typescript_build_file(
+            &graph,
+            CellRelativePathBuf::unchecked_new("packages/tsconfig".to_owned()),
+            &listing,
+        )
+        .unwrap()
+        .unwrap();
+
+        assert!(build.contains("typescript_sources("));
+        assert!(build.contains("\"packages/tsconfig/base.json\": \"base.json\""));
+        assert!(!build.contains("typescript_library("));
+        assert!(!build.contains("typescript_typecheck("));
     }
 
     #[test]

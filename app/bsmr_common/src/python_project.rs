@@ -117,6 +117,14 @@ pub struct PythonRootFiles {
     pub vcs: Option<PythonVcsFiles>,
 }
 
+/// Returns whether the root PEP 751 lock activates native Python analysis.
+#[must_use]
+pub fn is_native_python_workspace(listing: &PackageListing) -> bool {
+    listing
+        .get_file(PackageRelativePath::unchecked_new("pylock.toml"))
+        .is_some()
+}
+
 /// Returns standard root configurations discovered by Ruff and ty ancestor traversal.
 pub fn python_root_config_files(listing: &PackageListing) -> Vec<String> {
     listing
@@ -651,6 +659,7 @@ mod tests {
     use super::PythonTestLock;
     use super::PythonVcsFiles;
     use super::PythonWorkspaceMember;
+    use super::is_native_python_workspace;
     use super::python_distribution_name;
     use super::python_project_name;
     use super::python_project_uses_vcs;
@@ -727,6 +736,15 @@ mod tests {
         let project = python_project_name("[tool.ruff]\nline-length = 88\n").unwrap();
 
         assert_eq!(project, None);
+    }
+
+    #[test]
+    fn design_pep_751_lock_activates_native_python() {
+        let unlocked = PackageListing::testing_files(&["pyproject.toml"]);
+        let locked = PackageListing::testing_files(&["pylock.toml", "pyproject.toml"]);
+
+        assert!(!is_native_python_workspace(&unlocked));
+        assert!(is_native_python_workspace(&locked));
     }
 
     #[test]

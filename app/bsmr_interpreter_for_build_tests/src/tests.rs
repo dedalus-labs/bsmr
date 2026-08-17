@@ -226,3 +226,15 @@ async fn test_eval_build_file() {
 
     assert_eq!(vec!["invoke_some-exported", "java"], target_names);
 }
+
+#[tokio::test]
+async fn invariant_unlocked_python_does_not_activate_native_frontend() {
+    let fs = ProjectRootTemp::new().unwrap();
+    fs.write_file("pyproject.toml", "[project\n");
+
+    let mut ctx = calculation(&fs).await;
+    let package = PackageLabel::testing_parse("root//");
+    let result = ctx.get_interpreter_results(package).await.unwrap();
+
+    assert_eq!(result.targets().len(), 0);
+}
