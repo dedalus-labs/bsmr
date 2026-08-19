@@ -17,6 +17,7 @@ rust_library(
     features = ["allocative"],
     deps = [
         "bsmr_build//third-party/rust:atomic",
+        "bsmr_build//third-party/rust:bytemuck",
         "bsmr_build//third-party/rust:parking_lot",
         "root//packages/rust/allocative/allocative:allocative",
     ],
