@@ -7,7 +7,8 @@
 
 import { createHash } from "node:crypto";
 import { readFile } from "node:fs/promises";
-import { fileURLToPath } from "node:url";
+
+import { action, pathInput, stringInput } from "@dedalus-labs/hollywood/action-runtime";
 
 /** Reject an artifact whose bytes do not match the pinned digest. */
 export async function verifySha256(path: string, expected: string): Promise<void> {
@@ -16,14 +17,17 @@ export async function verifySha256(path: string, expected: string): Promise<void
 	const actual = createHash("sha256").update(contents).digest("hex");
 	if (actual !== expected) throw new Error(`${path}: SHA-256 mismatch: got ${actual}, expected ${expected}`);
 }
-
-/** Parse the command line and verify exactly one artifact. */
-async function main(): Promise<void> {
-	const [path, expected, ...extra] = process.argv.slice(2);
-	if (path === undefined || expected === undefined || extra.length !== 0) {
-		throw new Error("usage: node ci/verify-sha256.ts <path> <sha256>");
-	}
-	await verifySha256(path, expected);
-}
-
-if (process.argv[1] === fileURLToPath(import.meta.url)) await main();
+export const verifySha256Action = action({
+	name: "Verify SHA-256",
+	description: "Reject a downloaded artifact whose digest differs from its pin.",
+	localActionPath: "ci/verify-sha256",
+	inputs: {
+		path: pathInput({ description: "Downloaded artifact path." }),
+		expected: stringInput({ description: "Expected lowercase SHA-256 digest." }),
+	},
+	outputs: {},
+	run: async ({ input }) => {
+		await verifySha256(input.path, input.expected);
+		return {};
+	},
+});

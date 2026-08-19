@@ -76,6 +76,7 @@ export function licenseGeneratedEntrypoints(root: string): void {
 	for (const path of [
 		".github/actions/ci/osv-audit/src/index.ts",
 		".github/actions/ci/rust-affected/src/index.ts",
+		".github/actions/ci/verify-sha256/src/index.ts",
 	]) {
 		const text = readFileSync(join(root, path), "utf8");
 		writeFileSync(join(root, path), insertPreamble({ path, provenance: "dedalus", text }));

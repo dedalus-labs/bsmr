@@ -103,10 +103,10 @@ jobs:
         env:
           HOLLYWOOD_COMMAND_ARG_9: ${{ format('{0}/osv-scanner', runner.temp) }}
       - name: Verify OSV Scanner
-        run: node ci/verify-sha256.ts "$HOLLYWOOD_COMMAND_ARG_1" 15314940c10d26af9c6649f150b8a47c1262e8fc7e17b1d1029b0e479e8ed8a0
-        shell: bash
-        env:
-          HOLLYWOOD_COMMAND_ARG_1: ${{ format('{0}/osv-scanner', runner.temp) }}
+        uses: ./.github/actions/ci/verify-sha256
+        with:
+          path: ${{ format('{0}/osv-scanner', runner.temp) }}
+          expected: 15314940c10d26af9c6649f150b8a47c1262e8fc7e17b1d1029b0e479e8ed8a0
       - name: Make OSV Scanner executable
         run: chmod 500 "$HOLLYWOOD_COMMAND_ARG_1"
         shell: bash
@@ -207,10 +207,10 @@ jobs:
         env:
           HOLLYWOOD_COMMAND_ARG_9: ${{ format('{0}/dotslash.tar.gz', runner.temp) }}
       - name: Verify DotSlash
-        run: node ci/verify-sha256.ts "$HOLLYWOOD_COMMAND_ARG_1" 4c75c6eb7890ae35993b962073f6d9bbe78b42b81a5691303ad70f63bfbf7196
-        shell: bash
-        env:
-          HOLLYWOOD_COMMAND_ARG_1: ${{ format('{0}/dotslash.tar.gz', runner.temp) }}
+        uses: ./.github/actions/ci/verify-sha256
+        with:
+          path: ${{ format('{0}/dotslash.tar.gz', runner.temp) }}
+          expected: 4c75c6eb7890ae35993b962073f6d9bbe78b42b81a5691303ad70f63bfbf7196
       - name: Extract DotSlash
         run: tar -xzf "$HOLLYWOOD_COMMAND_ARG_1" -C "$HOLLYWOOD_COMMAND_ARG_3"
         shell: bash

@@ -13,6 +13,7 @@ import {
 
 import { rustAffectedAction } from "./affected.ts";
 import { osvAuditAction } from "./osv-audit.ts";
+import { verifySha256Action } from "./verify-sha256.ts";
 
 const trustedCiRun = expr<boolean>(
 	"github.repository == 'dedalus-labs/bsmr' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository)",
@@ -119,10 +120,10 @@ const installOsvScanner = [
 			],
 		}),
 	},
-	{
+	uses(verifySha256Action, {
 		name: "Verify OSV Scanner",
-		run: command({ file: "node", args: ["ci/verify-sha256.ts", osvScannerPath, osvScannerSha256] }),
-	},
+		with: { path: osvScannerPath, expected: osvScannerSha256 },
+	}),
 	{
 		name: "Make OSV Scanner executable",
 		run: command({ file: "chmod", args: ["500", osvScannerPath] }),
@@ -147,10 +148,10 @@ const installDotSlash = [
 			],
 		}),
 	},
-	{
+	uses(verifySha256Action, {
 		name: "Verify DotSlash",
-		run: command({ file: "node", args: ["ci/verify-sha256.ts", dotSlashArchivePath, dotSlashSha256] }),
-	},
+		with: { path: dotSlashArchivePath, expected: dotSlashSha256 },
+	}),
 	{
 		name: "Extract DotSlash",
 		run: command({ file: "tar", args: ["-xzf", dotSlashArchivePath, "-C", runnerTemp] }),

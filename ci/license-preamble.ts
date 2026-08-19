@@ -39,6 +39,8 @@ function brief(path: string): string {
 		[".github/actions/ci/osv-audit/src/index.ts", "Implements the Rust dependency-audit action."],
 		[".github/actions/ci/rust-affected/dist/index.js", "Runs the generated Rust affected-paths action."],
 		[".github/actions/ci/rust-affected/src/index.ts", "Implements the Rust affected-paths action."],
+		[".github/actions/ci/verify-sha256/dist/index.js", "Runs the generated artifact checksum action."],
+		[".github/actions/ci/verify-sha256/src/index.ts", "Implements the artifact checksum action."],
 		[".github/pull_request_template.md", "Defines the repository pull request template."],
 		["AGENTS.md", "Directs coding agents working in Bessemer."],
 		["CLA.md", "Defines the contributor license agreement."],

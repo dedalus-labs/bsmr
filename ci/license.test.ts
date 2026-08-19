@@ -21,6 +21,7 @@ test("generated action entrypoints retain canonical preambles", () => {
 		const paths = [
 			".github/actions/ci/osv-audit/src/index.ts",
 			".github/actions/ci/rust-affected/src/index.ts",
+			".github/actions/ci/verify-sha256/src/index.ts",
 		];
 		for (const path of paths) {
 			mkdirSync(join(root, path, ".."), { recursive: true });
