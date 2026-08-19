@@ -23,17 +23,22 @@ const buildActions: ProcessSpec = {
 	file: "pnpm",
 	args: ["exec", "rolldown", "--config", "rolldown.config.ts"],
 };
+const dependabot: ProcessSpec = { file: "node", args: ["ci/dependabot.ts"] };
 const typecheck: ProcessSpec = { file: "pnpm", args: ["exec", "tsc", "--noEmit"] };
 const test: ProcessSpec = {
 	file: "node",
 	args: [
 		"--test",
 		"ci/ci.test.ts",
+		"ci/cli-reference.test.ts",
 		"ci/cli.test.ts",
+		"ci/dependabot.test.ts",
 		"ci/docs.test.ts",
 		"ci/license-preamble.test.ts",
 		"ci/license-provenance.test.ts",
 		"ci/license.test.ts",
+		"ci/osv-audit.test.ts",
+		"ci/verify-sha256.test.ts",
 		"benchmarks/python-build-systems/run.test.ts",
 		"benchmarks/python-conformance/run.test.ts",
 		"benchmarks/python-conformance/snapshot.test.ts",
@@ -63,16 +68,17 @@ const generatedDiff: ProcessSpec = {
 		"diff",
 		"--exit-code",
 		"--",
+		".github/dependabot.yml",
 		".github/actions",
 		".github/workflows",
 		"prelude/toolchains/pnpm/runner.mjs",
 		"prelude/typescript/runner.mjs",
 	],
 };
-const actionSyntax: ProcessSpec = {
+const actionSyntax: readonly ProcessSpec[] = ["osv-audit", "rust-affected"].map((name) => ({
 	file: "node",
-	args: ["--check", ".github/actions/ci/rust-affected/dist/index.js"],
-};
+	args: ["--check", `.github/actions/ci/${name}/dist/index.js`],
+}));
 const generate: ProcessSpec = {
 	file: "pnpm",
 	args: ["exec", "hollywood", "generate", "ci/**/*.ts", "--output", "."],
@@ -80,12 +86,12 @@ const generate: ProcessSpec = {
 
 const commands = {
 	"build actions": [buildActions],
-	"check actions": [buildActions, actionSyntax, generatedDiff],
-	"check generated": [generate, licenseGenerated, buildActions, generatedDiff],
+	"check actions": [buildActions, ...actionSyntax, generatedDiff],
+	"check generated": [generate, dependabot, licenseGenerated, buildActions, generatedDiff],
 	"check license": [license],
 	"check security": [security],
-	check: [typecheck, test, generate, licenseGenerated, buildActions, license, actionSyntax, generatedDiff, security],
-	generate: [generate, licenseGenerated, buildActions],
+	check: [typecheck, test, generate, dependabot, licenseGenerated, buildActions, license, ...actionSyntax, generatedDiff, security],
+	generate: [generate, dependabot, licenseGenerated, buildActions],
 	test: [test],
 	typecheck: [typecheck],
 } as const satisfies Record<string, readonly ProcessSpec[]>;

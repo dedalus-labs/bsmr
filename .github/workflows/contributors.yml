@@ -29,10 +29,7 @@ jobs:
           CONTRIBUTOR_CHECK: CLA
           PR_AUTHOR: ${{ github.event.pull_request.user.login }}
         run: |-
-          set -euo pipefail
-
-          node <<'NODE'
-          const fs = require("node:fs");
+          node -e 'const fs = require("node:fs");
 
           const author = process.env.PR_AUTHOR;
           const check = process.env.CONTRIBUTOR_CHECK;
@@ -98,8 +95,8 @@ jobs:
             "Open a Vouch Request issue, accept CLA.md, and wait for a maintainer to add your handle.",
           ].join("\n"));
           console.error("@" + author + " is not listed in VOUCHED.td");
-          process.exit(1);
-          NODE
+          process.exit(1);'
+        shell: bash
   vouch:
     name: Vouch
     runs-on: ubuntu-24.04
@@ -117,10 +114,7 @@ jobs:
           CONTRIBUTOR_CHECK: Vouch
           PR_AUTHOR: ${{ github.event.pull_request.user.login }}
         run: |-
-          set -euo pipefail
-
-          node <<'NODE'
-          const fs = require("node:fs");
+          node -e 'const fs = require("node:fs");
 
           const author = process.env.PR_AUTHOR;
           const check = process.env.CONTRIBUTOR_CHECK;
@@ -186,5 +180,5 @@ jobs:
             "Open a Vouch Request issue, accept CLA.md, and wait for a maintainer to add your handle.",
           ].join("\n"));
           console.error("@" + author + " is not listed in VOUCHED.td");
-          process.exit(1);
-          NODE
+          process.exit(1);'
+        shell: bash

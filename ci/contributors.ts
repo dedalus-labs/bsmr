@@ -5,12 +5,9 @@
 
 // Defines the generated contributor-validation workflow.
 
-import { job, workflow } from "@dedalus-labs/hollywood";
+import { command, job, workflow } from "@dedalus-labs/hollywood";
 
-export const checkContributor = String.raw`set -euo pipefail
-
-node <<'NODE'
-const fs = require("node:fs");
+export const checkContributor = String.raw`const fs = require("node:fs");
 
 const author = process.env.PR_AUTHOR;
 const check = process.env.CONTRIBUTOR_CHECK;
@@ -76,8 +73,7 @@ appendSummary([
 	"Open a Vouch Request issue, accept CLA.md, and wait for a maintainer to add your handle.",
 ].join("\n"));
 console.error("@" + author + " is not listed in VOUCHED.td");
-process.exit(1);
-NODE`.replaceAll("\t", "  ");
+process.exit(1);`.replaceAll("\t", "  ");
 
 const checkoutTrustedBase = {
 	name: "Checkout trusted base",
@@ -102,7 +98,7 @@ const contributorJob = (check: "CLA" | "Vouch", needs?: string) =>
 					CONTRIBUTOR_CHECK: check,
 					PR_AUTHOR: "${{ github.event.pull_request.user.login }}",
 				},
-				run: checkContributor,
+				run: command({ file: "node", args: ["-e", checkContributor] }),
 			},
 		],
 	});

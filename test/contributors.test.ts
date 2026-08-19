@@ -18,7 +18,7 @@ const runCheck = (vouched: string, author: string) => {
 	const root = mkdtempSync(join(tmpdir(), "bsmr-contributor-"));
 	try {
 		writeFileSync(join(root, "VOUCHED.td"), vouched);
-		return spawnSync("bash", ["-c", checkContributor], {
+		return spawnSync("node", ["-e", checkContributor], {
 			cwd: root,
 			encoding: "utf8",
 			env: {

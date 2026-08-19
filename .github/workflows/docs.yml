@@ -43,8 +43,10 @@ jobs:
           python-version: "3.13"
       - name: Install documentation dependencies
         run: python -m pip install -r docs/requirements.txt
+        shell: bash
       - name: Build documentation
         run: python -m mkdocs build --strict -f mkdocs.yml
+        shell: bash
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@7b1f4a764d45c48632c6b24a0339c27f5614fb0b
         with:
