@@ -240,8 +240,10 @@ jobs:
         run: target/debug/bsmr --isolation-dir=ci targets bsmr_build//...
         shell: bash
       - name: Check CLI reference
-        run: node ci/cli-reference.ts target/debug/bsmr docs/reference/cli.md
-        shell: bash
+        uses: ./.github/actions/ci/cli-reference
+        with:
+          bsmr: target/debug/bsmr
+          expected: docs/reference/cli.md
   rust:
     name: Rust
     if: ${{ always() && github.repository == 'dedalus-labs/bsmr' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository) }}

@@ -35,6 +35,8 @@ function brief(path: string): string {
 	if (basename(path) === "BUILD.bsmr") return `Defines build targets for ${dirname(path) === "." ? "the root" : dirname(path)}.`;
 	const known = new Map([
 		[".bsmr", "Configures the root Bessemer cell."],
+		[".github/actions/ci/cli-reference/dist/index.js", "Runs the generated CLI-reference action."],
+		[".github/actions/ci/cli-reference/src/index.ts", "Implements the CLI-reference action."],
 		[".github/actions/ci/osv-audit/dist/index.js", "Runs the generated Rust dependency-audit action."],
 		[".github/actions/ci/osv-audit/src/index.ts", "Implements the Rust dependency-audit action."],
 		[".github/actions/ci/rust-affected/dist/index.js", "Runs the generated Rust affected-paths action."],

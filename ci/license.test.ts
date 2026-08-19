@@ -19,6 +19,7 @@ test("generated action entrypoints retain canonical preambles", () => {
 	const root = mkdtempSync(join(tmpdir(), "bsmr-generated-license-"));
 	try {
 		const paths = [
+			".github/actions/ci/cli-reference/src/index.ts",
 			".github/actions/ci/osv-audit/src/index.ts",
 			".github/actions/ci/rust-affected/src/index.ts",
 			".github/actions/ci/verify-sha256/src/index.ts",

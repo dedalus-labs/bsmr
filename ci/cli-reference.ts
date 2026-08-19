@@ -5,25 +5,44 @@
 
 // Checks the committed CLI reference against the built parser.
 
-import { spawnSync } from "node:child_process";
-import { readFileSync } from "node:fs";
-import { fileURLToPath } from "node:url";
+import {
+	action,
+	pathInput,
+	type ActionInputValues,
+	type ScriptExec,
+} from "@dedalus-labs/hollywood/action-runtime";
+
+const inputs = {
+	bsmr: pathInput({ description: "Built BSMR executable." }),
+	expected: pathInput({ description: "Committed CLI reference." }),
+} as const;
+
+type Inputs = ActionInputValues<typeof inputs>;
+type ReadText = (path: string) => Promise<string>;
 
 /** Reject any difference between generated and committed CLI documentation. */
 export function verifyCliReference(expected: string, actual: string): void {
 	if (actual !== expected) throw new Error("docs/reference/cli.md is stale; regenerate it from the built BSMR parser");
 }
 
-/** Generate the CLI reference from one built BSMR executable. */
-function main(): void {
-	const [bsmr, expectedPath, ...extra] = process.argv.slice(2);
-	if (bsmr === undefined || expectedPath === undefined || extra.length !== 0) {
-		throw new Error("usage: node ci/cli-reference.ts <bsmr> <expected-markdown>");
-	}
-	const generated = spawnSync(bsmr, ["docs", "markdown-help-doc", "all"], { encoding: "utf8" });
-	if (generated.error !== undefined) throw generated.error;
-	if (generated.status !== 0) throw new Error(`BSMR CLI generation exited ${String(generated.status)}: ${generated.stderr}`);
-	verifyCliReference(readFileSync(expectedPath, "utf8"), generated.stdout);
+/** Generate and compare the CLI reference through typed process execution. */
+export async function checkCliReference(
+	exec: ScriptExec,
+	readText: ReadText,
+	input: Inputs,
+): Promise<void> {
+	const generated = await exec(input.bsmr, ["docs", "markdown-help-doc", "all"]);
+	verifyCliReference(await readText(input.expected), generated.stdout);
 }
 
-if (process.argv[1] === fileURLToPath(import.meta.url)) main();
+export const cliReferenceAction = action({
+	name: "Check CLI reference",
+	description: "Reject CLI documentation that differs from the built parser.",
+	localActionPath: "ci/cli-reference",
+	inputs,
+	outputs: {},
+	run: async ({ exec, fs, input }) => {
+		await checkCliReference(exec, fs.readText, input);
+		return {};
+	},
+});

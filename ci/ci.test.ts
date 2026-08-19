@@ -107,9 +107,7 @@ test("self-hosting keeps the CLI reference derived from clap", () => {
 	assert.ok(
 		jobs.rust_self_host?.steps.some(
 			(step) =>
-				"run" in step &&
-				step.run.kind === "command" &&
-				step.run.args.includes("ci/cli-reference.ts"),
+				"uses" in step && step.uses === "./.github/actions/ci/cli-reference",
 		),
 	);
 });

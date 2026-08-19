@@ -12,6 +12,7 @@ import {
 } from "@dedalus-labs/hollywood";
 
 import { rustAffectedAction } from "./affected.ts";
+import { cliReferenceAction } from "./cli-reference.ts";
 import { osvAuditAction } from "./osv-audit.ts";
 import { verifySha256Action } from "./verify-sha256.ts";
 
@@ -354,13 +355,10 @@ export const ci = workflow({
 						args: ["--isolation-dir=ci", "targets", "bsmr_build//..."],
 					}),
 				},
-				{
+				uses(cliReferenceAction, {
 					name: "Check CLI reference",
-					run: command({
-						file: "node",
-						args: ["ci/cli-reference.ts", "target/debug/bsmr", "docs/reference/cli.md"],
-					}),
-				},
+					with: { bsmr: "target/debug/bsmr", expected: "docs/reference/cli.md" },
+				}),
 			],
 		}),
 		rust: job({

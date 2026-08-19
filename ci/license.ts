@@ -74,6 +74,7 @@ export async function runLicensePolicy(mode: "apply" | "check", root: string, ex
 /** Add canonical preambles to Hollywood's generated TypeScript entrypoints. */
 export function licenseGeneratedEntrypoints(root: string): void {
 	for (const path of [
+		".github/actions/ci/cli-reference/src/index.ts",
 		".github/actions/ci/osv-audit/src/index.ts",
 		".github/actions/ci/rust-affected/src/index.ts",
 		".github/actions/ci/verify-sha256/src/index.ts",
