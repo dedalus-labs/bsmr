@@ -111,7 +111,6 @@ httparse = "1.7.1"
 httptest = "0.16.4"
 humantime = "2.1"
 hyper = { version = "1.9.0", features = ["client", "http1", "http2"] }
-hyper-0-14 = { package = "hyper", version = "0.14.32", features = ["client", "http1", "http2", "stream"] }
 hyper-http-proxy = "1.0"
 hyperlocal = { version = "0.9", features = ["client"] }
 hyper-rustls = { version = "0.27.7", default-features = false, features = ["http1", "http2", "logging", "native-tokio", "ring", "tls12"] }
