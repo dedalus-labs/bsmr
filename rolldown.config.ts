@@ -18,6 +18,24 @@ type Artifact = Readonly<{
 
 const artifacts: readonly Artifact[] = [
 	{
+		input: "./.github/actions/ci/cli-reference/src/index.ts",
+		output: ".github/actions/ci/cli-reference/dist/index.js",
+		target: "node24",
+		define: { "import.meta.vitest": "undefined" },
+	},
+	{
+		input: "./.github/actions/ci/verify-sha256/src/index.ts",
+		output: ".github/actions/ci/verify-sha256/dist/index.js",
+		target: "node24",
+		define: { "import.meta.vitest": "undefined" },
+	},
+	{
+		input: "./.github/actions/ci/osv-audit/src/index.ts",
+		output: ".github/actions/ci/osv-audit/dist/index.js",
+		target: "node24",
+		define: { "import.meta.vitest": "undefined" },
+	},
+	{
 		input: "./.github/actions/ci/rust-affected/src/index.ts",
 		output: ".github/actions/ci/rust-affected/dist/index.js",
 		target: "node24",

@@ -1,31 +1,62 @@
+# @generated from ci/dependabot.ts. Do not edit by hand.
+
 version: 2
 updates:
   - package-ecosystem: cargo
     directory: /
     schedule:
       interval: weekly
+      day: sunday
+      time: "06:00"
+      timezone: America/Los_Angeles
+    open-pull-requests-limit: 2
     cooldown:
       default-days: 7
-      semver-major-days: 30
+      semver-major-days: 14
       semver-minor-days: 7
       semver-patch-days: 3
-    open-pull-requests-limit: 5
     groups:
-      rust-workspace:
+      routine:
         applies-to: version-updates
-        patterns: ["*"]
+        patterns:
+          - "*"
+        update-types:
+          - minor
+          - patch
+      security:
+        applies-to: security-updates
+        patterns:
+          - "*"
+    assignees:
+      - windsornguyen
+    commit-message:
+      prefix: chore(deps)
   - package-ecosystem: cargo
     directory: /tools/build/third-party/rust
     schedule:
       interval: weekly
+      day: sunday
+      time: "06:00"
+      timezone: America/Los_Angeles
+    open-pull-requests-limit: 2
     cooldown:
       default-days: 7
-      semver-major-days: 30
+      semver-major-days: 14
       semver-minor-days: 7
       semver-patch-days: 3
-    open-pull-requests-limit: 5
     groups:
-      rust-third-party:
+      routine:
         applies-to: version-updates
-        patterns: ["*"]
-  # TODO: Re-enable npm updates after Dependabot supports pnpm 11.
+        patterns:
+          - "*"
+        update-types:
+          - minor
+          - patch
+      security:
+        applies-to: security-updates
+        patterns:
+          - "*"
+    assignees:
+      - windsornguyen
+    commit-message:
+      prefix: chore(deps)

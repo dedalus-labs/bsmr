@@ -5,7 +5,7 @@
 
 // Defines Bessemer's generated documentation build and deployment workflow.
 
-import { expr, job, workflow } from "@dedalus-labs/hollywood";
+import { command, expr, job, workflow } from "@dedalus-labs/hollywood";
 
 const checkoutAction =
 	"actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10"; // v6.0.3
@@ -51,9 +51,12 @@ export const docs = workflow({
 				{ uses: setupPythonAction, with: { "python-version": "3.13" } },
 				{
 					name: "Install documentation dependencies",
-					run: "python -m pip install -r docs/requirements.txt",
+					run: command({ file: "python", args: ["-m", "pip", "install", "-r", "docs/requirements.txt"] }),
 				},
-				{ name: "Build documentation", run: "python -m mkdocs build --strict -f mkdocs.yml" },
+				{
+					name: "Build documentation",
+					run: command({ file: "python", args: ["-m", "mkdocs", "build", "--strict", "-f", "mkdocs.yml"] }),
+				},
 				{ name: "Upload Pages artifact", uses: uploadPagesArtifactAction, with: { path: "site" } },
 			],
 		}),

@@ -74,12 +74,16 @@ jobs:
           node-version: 26.5.1
       - name: Set up pnpm
         run: npm install --global pnpm@10.30.3
+        shell: bash
       - name: Install dependencies
         run: pnpm install --frozen-lockfile --ignore-scripts
+        shell: bash
       - name: Audit dependencies
         run: pnpm audit --audit-level high
+        shell: bash
       - name: Check workflow source
         run: pnpm run ci check
+        shell: bash
   rust_audit:
     name: Rust / Dependencies
     needs: affected
@@ -93,15 +97,26 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           persist-credentials: false
-      - name: Install pinned OSV Scanner
-        run: |-
-          curl --proto '=https' --tlsv1.2 --fail --location --silent --show-error https://github.com/google/osv-scanner/releases/download/v2.4.0/osv-scanner_linux_amd64 --output "$RUNNER_TEMP/osv-scanner"
-          echo "15314940c10d26af9c6649f150b8a47c1262e8fc7e17b1d1029b0e479e8ed8a0  $RUNNER_TEMP/osv-scanner" | sha256sum --check
-          chmod 500 "$RUNNER_TEMP/osv-scanner"
+      - name: Download pinned OSV Scanner
+        run: curl --proto =https --tlsv1.2 --fail --location --silent --show-error https://github.com/google/osv-scanner/releases/download/v2.4.0/osv-scanner_linux_amd64 --output "$HOLLYWOOD_COMMAND_ARG_9"
+        shell: bash
+        env:
+          HOLLYWOOD_COMMAND_ARG_9: ${{ format('{0}/osv-scanner', runner.temp) }}
+      - name: Verify OSV Scanner
+        uses: ./.github/actions/ci/verify-sha256
+        with:
+          path: ${{ format('{0}/osv-scanner', runner.temp) }}
+          expected: 15314940c10d26af9c6649f150b8a47c1262e8fc7e17b1d1029b0e479e8ed8a0
+      - name: Make OSV Scanner executable
+        run: chmod 500 "$HOLLYWOOD_COMMAND_ARG_1"
+        shell: bash
+        env:
+          HOLLYWOOD_COMMAND_ARG_1: ${{ format('{0}/osv-scanner', runner.temp) }}
       - name: Audit Rust dependencies
-        run: |-
-          "$RUNNER_TEMP/osv-scanner" scan source --lockfile Cargo.lock --lockfile tools/build/third-party/rust/Cargo.lock --no-resolve --format json --output-file "$RUNNER_TEMP/osv.json" . || [ "$?" -eq 1 ]
-          jq -e '[.results[].packages[].vulnerabilities[] | select(any(.affected[]; .database_specific.informational? != "unmaintained"))] as $v | if ($v | length) == 0 then true else ($v | map({id, summary})), false end' "$RUNNER_TEMP/osv.json"
+        uses: ./.github/actions/ci/osv-audit
+        with:
+          scanner: ${{ format('{0}/osv-scanner', runner.temp) }}
+          report: ${{ format('{0}/osv.json', runner.temp) }}
   rust_quality:
     name: Rust / Quality
     needs: affected
@@ -119,16 +134,19 @@ jobs:
           persist-credentials: false
       - name: Install pinned Rust toolchain
         run: rustup toolchain install nightly-2026-04-11 --profile minimal --component clippy --component llvm-tools-preview --component rust-src --no-self-update
+        shell: bash
       - name: Restore Rust cache
         uses: Swatinem/rust-cache@e18b497796c12c097a38f9edb9d0641fb99eee32
         with:
           prefix-key: bsmr-v1
           save-if: false
           shared-key: rust
-      - name: Check Rust quality
-        run: |-
-          python3 test.py --ci --git --lint-rust-only
-          python3 test.py --ci --git --rustdoc-only
+      - name: Lint Rust
+        run: python3 test.py --ci --git --lint-rust-only
+        shell: bash
+      - name: Check Rust documentation
+        run: python3 test.py --ci --git --rustdoc-only
+        shell: bash
   rust_tests:
     name: Rust / Tests
     needs: affected
@@ -146,6 +164,7 @@ jobs:
           persist-credentials: false
       - name: Install pinned Rust toolchain
         run: rustup toolchain install nightly-2026-04-11 --profile minimal --component clippy --component llvm-tools-preview --component rust-src --no-self-update
+        shell: bash
       - name: Restore Rust cache
         uses: Swatinem/rust-cache@e18b497796c12c097a38f9edb9d0641fb99eee32
         with:
@@ -154,6 +173,7 @@ jobs:
           shared-key: rust
       - name: Run Rust tests
         run: python3 test.py --ci --git --test-only
+        shell: bash
   rust_self_host:
     name: Rust / Self-host
     needs: affected
@@ -171,6 +191,7 @@ jobs:
           persist-credentials: false
       - name: Install pinned Rust toolchain
         run: rustup toolchain install nightly-2026-04-11 --profile minimal --component clippy --component llvm-tools-preview --component rust-src --no-self-update
+        shell: bash
       - name: Restore Rust cache
         uses: Swatinem/rust-cache@e18b497796c12c097a38f9edb9d0641fb99eee32
         with:
@@ -179,24 +200,50 @@ jobs:
           shared-key: rust
       - name: Build BSMR
         run: cargo build --locked --bin bsmr
-      - name: Install pinned DotSlash
+        shell: bash
+      - name: Download pinned DotSlash
+        run: curl --proto =https --tlsv1.2 --fail --location --silent --show-error https://github.com/facebook/dotslash/releases/download/v0.5.9/dotslash-linux-musl.x86_64.v0.5.9.tar.gz --output "$HOLLYWOOD_COMMAND_ARG_9"
+        shell: bash
+        env:
+          HOLLYWOOD_COMMAND_ARG_9: ${{ format('{0}/dotslash.tar.gz', runner.temp) }}
+      - name: Verify DotSlash
+        uses: ./.github/actions/ci/verify-sha256
+        with:
+          path: ${{ format('{0}/dotslash.tar.gz', runner.temp) }}
+          expected: 4c75c6eb7890ae35993b962073f6d9bbe78b42b81a5691303ad70f63bfbf7196
+      - name: Extract DotSlash
+        run: tar -xzf "$HOLLYWOOD_COMMAND_ARG_1" -C "$HOLLYWOOD_COMMAND_ARG_3"
+        shell: bash
+        env:
+          HOLLYWOOD_COMMAND_ARG_1: ${{ format('{0}/dotslash.tar.gz', runner.temp) }}
+          HOLLYWOOD_COMMAND_ARG_3: ${{ runner.temp }}
+      - name: Add DotSlash to PATH
         run: |-
-          curl --proto '=https' --tlsv1.2 --fail --location --silent --show-error https://github.com/facebook/dotslash/releases/download/v0.5.9/dotslash-linux-musl.x86_64.v0.5.9.tar.gz --output "$RUNNER_TEMP/dotslash.tar.gz"
-          echo "4c75c6eb7890ae35993b962073f6d9bbe78b42b81a5691303ad70f63bfbf7196  $RUNNER_TEMP/dotslash.tar.gz" | sha256sum --check
-          tar -xzf "$RUNNER_TEMP/dotslash.tar.gz" -C "$RUNNER_TEMP"
-          echo "$RUNNER_TEMP" >> "$GITHUB_PATH"
+          node -e 'const fs = require("node:fs");
+          const path = process.argv[1];
+          const output = process.env.GITHUB_PATH;
+          if (!path || !output) throw new Error("path and GITHUB_PATH are required");
+          fs.appendFileSync(output, path + "\n");' "$HOLLYWOOD_COMMAND_ARG_2"
+        shell: bash
+        env:
+          HOLLYWOOD_COMMAND_ARG_2: ${{ runner.temp }}
       - name: Generate Rust build dependencies
         run: ./tools/bin/reindeer --third-party-dir tools/build/third-party/rust buckify
+        shell: bash
       - name: Check Starlark
         run: python3 test.py --ci --git --bsmr=target/debug/bsmr --lint-starlark-only
-      - name: Validate self-host graph
-        run: |-
-          target/debug/bsmr --isolation-dir=ci uquery 'deps(//app/...)'
-          target/debug/bsmr --isolation-dir=ci targets 'bsmr_build//...'
+        shell: bash
+      - name: Validate application graph
+        run: target/debug/bsmr --isolation-dir=ci uquery 'deps(//app/...)'
+        shell: bash
+      - name: Validate build-support graph
+        run: target/debug/bsmr --isolation-dir=ci targets bsmr_build//...
+        shell: bash
       - name: Check CLI reference
-        run: |-
-          target/debug/bsmr docs markdown-help-doc all > "$RUNNER_TEMP/cli.md"
-          diff -u docs/reference/cli.md "$RUNNER_TEMP/cli.md"
+        uses: ./.github/actions/ci/cli-reference
+        with:
+          bsmr: target/debug/bsmr
+          expected: docs/reference/cli.md
   rust:
     name: Rust
     if: ${{ always() && github.repository == 'dedalus-labs/bsmr' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository) }}
@@ -213,6 +260,8 @@ jobs:
       - name: Accept complete Rust CI
         if: ${{ needs.affected.result == 'success' && (needs.rust_audit.result == 'success' && needs.rust_quality.result == 'success' && needs.rust_tests.result == 'success' && needs.rust_self_host.result == 'success' || needs.rust_audit.result == 'skipped' && needs.rust_quality.result == 'skipped' && needs.rust_tests.result == 'skipped' && needs.rust_self_host.result == 'skipped') }}
         run: "true"
+        shell: bash
       - name: Reject incomplete Rust CI
         if: ${{ !(needs.affected.result == 'success' && (needs.rust_audit.result == 'success' && needs.rust_quality.result == 'success' && needs.rust_tests.result == 'success' && needs.rust_self_host.result == 'success' || needs.rust_audit.result == 'skipped' && needs.rust_quality.result == 'skipped' && needs.rust_tests.result == 'skipped' && needs.rust_self_host.result == 'skipped')) }}
-        run: exit 1
+        run: "false"
+        shell: bash

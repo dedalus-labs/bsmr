@@ -6,12 +6,15 @@
 // Defines Bessemer's generated CI workflow.
 
 import {
-	GitHubJobResult, always, and, eq, expr, format, github, job, needsOutput, needsResultIs,
-	not, or, stepOutput, uses, workflow,
+	GitHubJobResult, always, and, command, eq, expr, format, github, job, needsOutput,
+	needsResultIs, not, or, stepOutput, uses, workflow,
 	type GitHubJobResultValue,
 } from "@dedalus-labs/hollywood";
 
 import { rustAffectedAction } from "./affected.ts";
+import { cliReferenceAction } from "./cli-reference.ts";
+import { osvAuditAction } from "./osv-audit.ts";
+import { verifySha256Action } from "./verify-sha256.ts";
 
 const trustedCiRun = expr<boolean>(
 	"github.repository == 'dedalus-labs/bsmr' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository)",
@@ -40,7 +43,23 @@ const setupNode = {
 } as const;
 const installRust = {
 	name: "Install pinned Rust toolchain",
-	run: "rustup toolchain install nightly-2026-04-11 --profile minimal --component clippy --component llvm-tools-preview --component rust-src --no-self-update",
+	run: command({
+		file: "rustup",
+		args: [
+			"toolchain",
+			"install",
+			"nightly-2026-04-11",
+			"--profile",
+			"minimal",
+			"--component",
+			"clippy",
+			"--component",
+			"llvm-tools-preview",
+			"--component",
+			"rust-src",
+			"--no-self-update",
+		],
+	}),
 } as const;
 const rustCache = (save: boolean | typeof saveRustCache) =>
 	({
@@ -74,30 +93,75 @@ const rustResultsAccepted = and(
 		rustLanesHave(GitHubJobResult.Skipped),
 	),
 );
-const installOsvScanner = {
-	name: "Install pinned OSV Scanner",
-	run: [
-		`curl --proto '=https' --tlsv1.2 --fail --location --silent --show-error ${osvScannerUrl} --output "$RUNNER_TEMP/osv-scanner"`,
-		`echo "${osvScannerSha256}  $RUNNER_TEMP/osv-scanner" | sha256sum --check`,
-		'chmod 500 "$RUNNER_TEMP/osv-scanner"',
-	].join("\n"),
-} as const;
-const auditRustDependencies = {
-	name: "Audit Rust dependencies",
-	run: [
-		'"$RUNNER_TEMP/osv-scanner" scan source --lockfile Cargo.lock --lockfile tools/build/third-party/rust/Cargo.lock --no-resolve --format json --output-file "$RUNNER_TEMP/osv.json" . || [ "$?" -eq 1 ]',
-		"jq -e '[.results[].packages[].vulnerabilities[] | select(any(.affected[]; .database_specific.informational? != \"unmaintained\"))] as $v | if ($v | length) == 0 then true else ($v | map({id, summary})), false end' \"$RUNNER_TEMP/osv.json\"",
-	].join("\n"),
-} as const;
-const installDotSlash = {
-	name: "Install pinned DotSlash",
-	run: [
-		`curl --proto '=https' --tlsv1.2 --fail --location --silent --show-error ${dotSlashUrl} --output "$RUNNER_TEMP/dotslash.tar.gz"`,
-		`echo "${dotSlashSha256}  $RUNNER_TEMP/dotslash.tar.gz" | sha256sum --check`,
-		'tar -xzf "$RUNNER_TEMP/dotslash.tar.gz" -C "$RUNNER_TEMP"',
-		'echo "$RUNNER_TEMP" >> "$GITHUB_PATH"',
-	].join("\n"),
-} as const;
+const runnerTemp = expr<string>("runner.temp");
+const osvScannerPath = format("{0}/osv-scanner", runnerTemp);
+const osvReportPath = format("{0}/osv.json", runnerTemp);
+const dotSlashArchivePath = format("{0}/dotslash.tar.gz", runnerTemp);
+const addPathProgram = String.raw`const fs = require("node:fs");
+const path = process.argv[1];
+const output = process.env.GITHUB_PATH;
+if (!path || !output) throw new Error("path and GITHUB_PATH are required");
+fs.appendFileSync(output, path + "\n");`;
+const installOsvScanner = [
+	{
+		name: "Download pinned OSV Scanner",
+		run: command({
+			file: "curl",
+			args: [
+				"--proto",
+				"=https",
+				"--tlsv1.2",
+				"--fail",
+				"--location",
+				"--silent",
+				"--show-error",
+				osvScannerUrl,
+				"--output",
+				osvScannerPath,
+			],
+		}),
+	},
+	uses(verifySha256Action, {
+		name: "Verify OSV Scanner",
+		with: { path: osvScannerPath, expected: osvScannerSha256 },
+	}),
+	{
+		name: "Make OSV Scanner executable",
+		run: command({ file: "chmod", args: ["500", osvScannerPath] }),
+	},
+] as const;
+const installDotSlash = [
+	{
+		name: "Download pinned DotSlash",
+		run: command({
+			file: "curl",
+			args: [
+				"--proto",
+				"=https",
+				"--tlsv1.2",
+				"--fail",
+				"--location",
+				"--silent",
+				"--show-error",
+				dotSlashUrl,
+				"--output",
+				dotSlashArchivePath,
+			],
+		}),
+	},
+	uses(verifySha256Action, {
+		name: "Verify DotSlash",
+		with: { path: dotSlashArchivePath, expected: dotSlashSha256 },
+	}),
+	{
+		name: "Extract DotSlash",
+		run: command({ file: "tar", args: ["-xzf", dotSlashArchivePath, "-C", runnerTemp] }),
+	},
+	{
+		name: "Add DotSlash to PATH",
+		run: command({ file: "node", args: ["-e", addPathProgram, runnerTemp] }),
+	},
+] as const;
 
 export const ci = workflow({
 	name: "CI",
@@ -171,14 +235,23 @@ export const ci = workflow({
 				setupNode,
 				{
 					name: "Set up pnpm",
-					run: "npm install --global pnpm@10.30.3",
+					run: command({ file: "npm", args: ["install", "--global", "pnpm@10.30.3"] }),
 				},
 				{
 					name: "Install dependencies",
-					run: "pnpm install --frozen-lockfile --ignore-scripts",
+					run: command({
+						file: "pnpm",
+						args: ["install", "--frozen-lockfile", "--ignore-scripts"],
+					}),
 				},
-				{ name: "Audit dependencies", run: "pnpm audit --audit-level high" },
-				{ name: "Check workflow source", run: "pnpm run ci check" },
+				{
+					name: "Audit dependencies",
+					run: command({ file: "pnpm", args: ["audit", "--audit-level", "high"] }),
+				},
+				{
+					name: "Check workflow source",
+					run: command({ file: "pnpm", args: ["run", "ci", "check"] }),
+				},
 			],
 		}),
 		rust_audit: job({
@@ -188,7 +261,14 @@ export const ci = workflow({
 			"runs-on": "ubuntu-24.04",
 			"timeout-minutes": 10,
 			permissions: rustPermissions,
-			steps: [checkout, installOsvScanner, auditRustDependencies],
+			steps: [
+				checkout,
+				...installOsvScanner,
+				uses(osvAuditAction, {
+					name: "Audit Rust dependencies",
+					with: { scanner: osvScannerPath, report: osvReportPath },
+				}),
+			],
 		}),
 		rust_quality: job({
 			name: "Rust / Quality",
@@ -203,8 +283,12 @@ export const ci = workflow({
 				installRust,
 				rustCache(false),
 				{
-					name: "Check Rust quality",
-					run: "python3 test.py --ci --git --lint-rust-only\npython3 test.py --ci --git --rustdoc-only",
+					name: "Lint Rust",
+					run: command({ file: "python3", args: ["test.py", "--ci", "--git", "--lint-rust-only"] }),
+				},
+				{
+					name: "Check Rust documentation",
+					run: command({ file: "python3", args: ["test.py", "--ci", "--git", "--rustdoc-only"] }),
 				},
 			],
 		}),
@@ -222,7 +306,7 @@ export const ci = workflow({
 				rustCache(saveRustCache),
 				{
 					name: "Run Rust tests",
-					run: "python3 test.py --ci --git --test-only",
+					run: command({ file: "python3", args: ["test.py", "--ci", "--git", "--test-only"] }),
 				},
 			],
 		}),
@@ -238,24 +322,43 @@ export const ci = workflow({
 				checkout,
 				installRust,
 				rustCache(false),
-				{ name: "Build BSMR", run: "cargo build --locked --bin bsmr" },
-				installDotSlash,
+				{
+					name: "Build BSMR",
+					run: command({ file: "cargo", args: ["build", "--locked", "--bin", "bsmr"] }),
+				},
+				...installDotSlash,
 				{
 					name: "Generate Rust build dependencies",
-					run: "./tools/bin/reindeer --third-party-dir tools/build/third-party/rust buckify",
+					run: command({
+						file: "./tools/bin/reindeer",
+						args: ["--third-party-dir", "tools/build/third-party/rust", "buckify"],
+					}),
 				},
 				{
 					name: "Check Starlark",
-					run: "python3 test.py --ci --git --bsmr=target/debug/bsmr --lint-starlark-only",
+					run: command({
+						file: "python3",
+						args: ["test.py", "--ci", "--git", "--bsmr=target/debug/bsmr", "--lint-starlark-only"],
+					}),
 				},
 				{
-					name: "Validate self-host graph",
-					run: "target/debug/bsmr --isolation-dir=ci uquery 'deps(//app/...)'\ntarget/debug/bsmr --isolation-dir=ci targets 'bsmr_build//...'",
+					name: "Validate application graph",
+					run: command({
+						file: "target/debug/bsmr",
+						args: ["--isolation-dir=ci", "uquery", "deps(//app/...)"],
+					}),
 				},
 				{
+					name: "Validate build-support graph",
+					run: command({
+						file: "target/debug/bsmr",
+						args: ["--isolation-dir=ci", "targets", "bsmr_build//..."],
+					}),
+				},
+				uses(cliReferenceAction, {
 					name: "Check CLI reference",
-					run: 'target/debug/bsmr docs markdown-help-doc all > "$RUNNER_TEMP/cli.md"\ndiff -u docs/reference/cli.md "$RUNNER_TEMP/cli.md"',
-				},
+					with: { bsmr: "target/debug/bsmr", expected: "docs/reference/cli.md" },
+				}),
 			],
 		}),
 		rust: job({
@@ -269,12 +372,12 @@ export const ci = workflow({
 				{
 					name: "Accept complete Rust CI",
 					if: rustResultsAccepted,
-					run: "true",
+					run: command({ file: "true", args: [] }),
 				},
 				{
 					name: "Reject incomplete Rust CI",
 					if: not(rustResultsAccepted),
-					run: "exit 1",
+					run: command({ file: "false", args: [] }),
 				},
 			],
 		}),

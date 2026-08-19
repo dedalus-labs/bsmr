@@ -8,7 +8,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import type { ScriptExec } from "@dedalus-labs/hollywood";
+import { command, type ScriptExec } from "@dedalus-labs/hollywood";
 
 import { pullRequestFiles, rustAffected } from "./affected.ts";
 import { ci } from "./ci.ts";
@@ -25,7 +25,10 @@ test("Rust remains the required aggregate check", () => {
 	assert.equal(jobs.rust?.if, `\${{ always() && ${trustedCiRun} }}`);
 	assert.deepEqual(jobs.rust?.needs, ["affected", ...rustLanes]);
 	const steps = jobs.rust?.steps ?? [];
-	assert.deepEqual(steps.map((step) => ("run" in step ? step.run : null)), ["true", "exit 1"]);
+	assert.deepEqual(steps.map((step) => ("run" in step ? step.run : null)), [
+		command({ file: "true", args: [] }),
+		command({ file: "false", args: [] }),
+	]);
 	assert.match(steps[1]?.if ?? "", /!\(needs\.affected\.result == 'success'/);
 });
 
@@ -92,7 +95,10 @@ test("Rust compilation uses sized Blacksmith runners", () => {
 	assert.equal(jobs.rust_self_host?.["runs-on"], "blacksmith-8vcpu-ubuntu-2404");
 	assert.ok(
 		jobs.rust_self_host?.steps.some(
-			(step) => "run" in step && step.run.includes("--lint-starlark-only"),
+			(step) =>
+				"run" in step &&
+				step.run.kind === "command" &&
+				step.run.args.includes("--lint-starlark-only"),
 		),
 	);
 });
@@ -100,7 +106,8 @@ test("Rust compilation uses sized Blacksmith runners", () => {
 test("self-hosting keeps the CLI reference derived from clap", () => {
 	assert.ok(
 		jobs.rust_self_host?.steps.some(
-			(step) => "run" in step && step.run.includes("docs markdown-help-doc all"),
+			(step) =>
+				"uses" in step && step.uses === "./.github/actions/ci/cli-reference",
 		),
 	);
 });

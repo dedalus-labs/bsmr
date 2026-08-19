@@ -1,3 +1,9 @@
+//===----------------------------------------------------------------------===//
+// Upstream-Source: facebook/buck2@1560aca2002865cd73d7cafb22c705cfb640b2bc
+// Modifications Copyright (c) 2026 Dedalus Labs, Inc. and its contributors
+// SPDX-License-Identifier: Apache-2.0
+//===----------------------------------------------------------------------===//
+
 /*
  * Copyright (c) Meta Platforms, Inc. and affiliates.
  *
@@ -57,7 +63,7 @@ impl<T> Deref for Arc<T> {
 }
 
 impl<T> AtomicValue for Arc<T> {
-    type Raw = *const T;
+    type Raw = usize; // *const T
     type Ref<'a>
         = &'a T
     where
@@ -65,26 +71,26 @@ impl<T> AtomicValue for Arc<T> {
 
     #[inline]
     fn null() -> Self::Raw {
-        ptr::null()
+        0
     }
 
     #[inline]
     fn is_null(this: Self::Raw) -> bool {
-        this.is_null()
+        this == 0
     }
 
     #[inline]
     fn into_raw(this: Self) -> Self::Raw {
-        triomphe::Arc::into_raw(this.0)
+        triomphe::Arc::into_raw(this.0).expose_provenance()
     }
 
     #[inline]
     unsafe fn from_raw(raw: Self::Raw) -> Self {
-        Arc(unsafe { triomphe::Arc::from_raw(raw) })
+        Arc(unsafe { triomphe::Arc::from_raw(ptr::with_exposed_provenance(raw)) })
     }
 
     #[inline]
     unsafe fn deref<'a>(raw: Self::Raw) -> Self::Ref<'a> {
-        unsafe { &*raw }
+        unsafe { &*ptr::with_exposed_provenance(raw) }
     }
 }
