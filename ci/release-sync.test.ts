@@ -17,7 +17,6 @@ import {
 	commitReleaseMetadata,
 	consumeReleaseOverride,
 	releaseSyncAction,
-	releaseWorkspace,
 } from "./release-sync.ts";
 
 type Invocation = Readonly<{
@@ -62,10 +61,9 @@ test("changed release metadata is committed to the exact release branch", async 
 	});
 });
 
-test("release synchronization reads GitHub's repository root", () => {
-	assert.deepEqual(Object.keys(releaseSyncAction.inputs), ["branch"]);
-	assert.equal(releaseWorkspace({ GITHUB_WORKSPACE: "/workspace" }), "/workspace");
-	assert.throws(() => releaseWorkspace({}), /GITHUB_WORKSPACE is required/);
+test("release synchronization accepts GitHub's repository root verbatim", () => {
+	assert.deepEqual(Object.keys(releaseSyncAction.inputs), ["branch", "workspace"]);
+	assert.equal(releaseSyncAction.inputs.workspace?.kind, "string");
 });
 
 test("release synchronization consumes the one-shot version", () => {
