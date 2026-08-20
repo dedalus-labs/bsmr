@@ -71,7 +71,12 @@ async function fixture(context: TestContext, packageRoot = "packages/app"): Prom
 	await declare(source, declared, join(packageRoot, "package.json"), '{"name":"@demo/app"}\n');
 	await declare(source, declared, join(packageRoot, "src/index.ts"), "export const answer = 42;\n");
 	await declare(source, declared, join(packageRoot, "tsconfig.json"), '{"extends":"@demo/config/base.json"}\n');
-	await declare(source, declared, join(packageRoot, "tsdown.config.ts"), "export default {};\n");
+	await declare(
+		source,
+		declared,
+		join(packageRoot, "tsdown.config.ts"),
+		'import { defineConfig } from "tsdown";\nexport default defineConfig({});\n',
+	);
 	await declare(source, declared, "packages/config/package.json", '{"name":"@demo/config"}\n');
 	await declare(source, declared, "packages/config/base.json", '{"compilerOptions":{"strict":true}}\n');
 
@@ -94,18 +99,23 @@ if (process.env.BSMR_UNDECLARED !== undefined) process.exit(4);
 	);
 	await write(
 		join(install, "tools/tsdown/package.json"),
-		'{"name":"tsdown","type":"module","bin":{"tsdown":"./dist/run.mjs"}}\n',
+		'{"name":"tsdown","type":"module","exports":"./dist/index.mjs","bin":{"tsdown":"./dist/run.mjs"}}\n',
+	);
+	await write(
+		join(install, "tools/tsdown/dist/index.mjs"),
+		"export const defineConfig = (config) => config;\n",
 	);
 	await write(
 		join(install, "tools/tsdown/dist/run.mjs"),
 		`import { access, mkdir, readFile, writeFile } from "node:fs/promises";
-import { join } from "node:path";
-await access(join(process.cwd(), "src/index.ts"));
-const config = await readFile(join(process.cwd(), "node_modules/@demo/config/base.json"), "utf8");
-if (!config.includes("strict")) process.exit(2);
-const args = process.argv.slice(2);
-if (args.slice(0, 2).join(" ") !== "--config tsdown.config.ts" || args[2] !== "--out-dir") process.exit(3);
-await mkdir(args[3]);
+	import { join } from "node:path";
+	await access(join(process.cwd(), "src/index.ts"));
+	const config = await readFile(join(process.cwd(), "node_modules/@demo/config/base.json"), "utf8");
+	if (!config.includes("strict")) process.exit(2);
+	const args = process.argv.slice(2);
+	if (args.slice(0, 2).join(" ") !== "--config tsdown.config.ts" || args[2] !== "--out-dir") process.exit(3);
+	await import(join(process.cwd(), "tsdown.config.ts"));
+	await mkdir(args[3]);
 await writeFile(join(args[3], "index.js"), "export const answer = 42;\\n");
 `,
 	);
