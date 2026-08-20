@@ -108,7 +108,7 @@ pub(super) fn render_toolchain(
             error: error.to_string(),
         }
     })?;
-    let node = select_node_release(toolchain.node_requirement(), &requirement)?;
+    let node = select_node_release(toolchain, &requirement)?;
     let pnpm = PNPM_ARCHIVES
         .iter()
         .find(|archive| archive.identity == toolchain.package_manager())
@@ -127,11 +127,32 @@ pub(super) fn render_toolchain(
     .map_err(NativeTypeScriptBuildError::Render)
 }
 
-/// Selects the newest catalog entry satisfying `engines.node`.
+/// Selects pnpm's exact runtime or the newest catalog entry satisfying `engines.node`.
 fn select_node_release(
-    node_requirement: &str,
+    toolchain: &super::NodeWorkspaceToolchain,
     requirement: &Range,
 ) -> Result<&'static NodeRelease, NativeTypeScriptBuildError> {
+    if let Some(version) = toolchain.runtime_version() {
+        let parsed = Version::parse(version).map_err(|error| {
+            NativeTypeScriptBuildError::InvalidNodeRuntime {
+                version: version.to_owned(),
+                error: error.to_string(),
+            }
+        })?;
+        if !parsed.satisfies(requirement) {
+            return Err(NativeTypeScriptBuildError::IncompatibleNodeRuntime {
+                version: version.to_owned(),
+                requirement: toolchain.node_requirement().to_owned(),
+            });
+        }
+        return NODE_RELEASES
+            .iter()
+            .find(|release| release.version == version)
+            .ok_or_else(|| NativeTypeScriptBuildError::UnsupportedNodeRuntime {
+                version: version.to_owned(),
+                available: catalog_versions(),
+            });
+    }
     NODE_RELEASES
         .iter()
         .rev()
@@ -141,7 +162,7 @@ fn select_node_release(
                 .satisfies(requirement)
         })
         .ok_or_else(|| NativeTypeScriptBuildError::UnsupportedNodeRequirement {
-            requirement: node_requirement.to_owned(),
+            requirement: toolchain.node_requirement().to_owned(),
             available: catalog_versions(),
         })
 }
@@ -238,9 +259,16 @@ mod tests {
     use node_semver::Range;
 
     use super::select_node_release;
-    fn selected(requirement: &str) -> Result<&'static str, String> {
+    use crate::pnpm_workspace::NodeWorkspaceToolchain;
+
+    fn selected(requirement: &str, runtime: Option<&str>) -> Result<&'static str, String> {
+        let toolchain = NodeWorkspaceToolchain {
+            node_requirement: requirement.to_owned(),
+            package_manager: "pnpm@test".to_owned(),
+            runtime_version: runtime.map(str::to_owned),
+        };
         let requirement = Range::parse(requirement).unwrap();
-        select_node_release("test requirement", &requirement)
+        select_node_release(&toolchain, &requirement)
             .map(|release| release.version)
             .map_err(|error| error.to_string())
     }
@@ -253,7 +281,16 @@ mod tests {
             ("^24.0.0", "24.19.0"),
             (">=24.0.0", "26.7.0"),
         ] {
-            assert_eq!(selected(requirement).unwrap(), expected);
+            assert_eq!(selected(requirement, None).unwrap(), expected);
         }
+    }
+
+    #[test]
+    fn invariant_pnpm_runtime_pin_is_exact_and_engine_compatible() {
+        assert_eq!(selected(">=22.0.0", Some("24.18.0")).unwrap(), "24.18.0");
+        assert_eq!(
+            selected("^24.0.0", Some("22.23.1")).unwrap_err(),
+            "pnpm useNodeVersion `22.23.1` does not satisfy engines.node `^24.0.0`"
+        );
     }
 }

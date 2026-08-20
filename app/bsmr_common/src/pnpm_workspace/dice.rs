@@ -86,7 +86,7 @@ impl Key for PnpmWorkspaceGraphKey {
         }
 
         let workspace_path = PackageRelativePath::new("pnpm-workspace.yaml")?;
-        let roots = match listing.get_file(workspace_path) {
+        let workspace = match listing.get_file(workspace_path) {
             Some(path) => {
                 let source = DiceFileComputations::read_file(
                     ctx,
@@ -95,8 +95,12 @@ impl Key for PnpmWorkspaceGraphKey {
                 )
                 .await
                 .without_package_context_information()?;
-                PnpmWorkspace::parse(&source)?.select_package_roots(candidates)?
+                Some(PnpmWorkspace::parse(&source)?)
             }
+            None => None,
+        };
+        let roots = match &workspace {
+            Some(workspace) => workspace.select_package_roots(candidates)?,
             None => vec![CellRelativePathBuf::unchecked_new(String::new())],
         };
         let packages = ctx
@@ -131,6 +135,7 @@ impl Key for PnpmWorkspaceGraphKey {
         };
         Ok(Arc::new(WorkspaceGraph::build_with_lock(
             packages,
+            workspace.as_ref(),
             lock.as_ref(),
         )?))
     }

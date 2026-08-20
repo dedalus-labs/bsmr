@@ -226,11 +226,12 @@ pub struct WorkspaceGraph {
     node_toolchain: Option<NodeWorkspaceToolchain>,
 }
 
-/// Exact native Node workspace requirements read from the root package manifest.
+/// Native Node requirements read from the root package and workspace manifests.
 #[derive(Clone, Debug, Eq, PartialEq, allocative::Allocative, pagable::Pagable)]
 struct NodeWorkspaceToolchain {
     node_requirement: String,
     package_manager: String,
+    runtime_version: Option<String>,
 }
 
 impl NodeWorkspaceToolchain {
@@ -245,6 +246,12 @@ impl NodeWorkspaceToolchain {
     fn package_manager(&self) -> &str {
         &self.package_manager
     }
+
+    /// Returns pnpm's optional exact project runtime pin.
+    #[must_use]
+    fn runtime_version(&self) -> Option<&str> {
+        self.runtime_version.as_deref()
+    }
 }
 
 impl WorkspaceGraph {
@@ -253,12 +260,13 @@ impl WorkspaceGraph {
     fn build(
         packages: impl IntoIterator<Item = WorkspacePackage>,
     ) -> Result<Self, WorkspaceGraphError> {
-        Self::build_with_lock(packages, None)
+        Self::build_with_lock(packages, None, None)
     }
 
     /// Resolves one graph using the frozen lockfile for ambiguous semver edges.
     fn build_with_lock(
         packages: impl IntoIterator<Item = WorkspacePackage>,
+        workspace: Option<&PnpmWorkspace>,
         lock: Option<&PnpmLock>,
     ) -> Result<Self, WorkspaceGraphError> {
         let packages = index_packages(packages)?;
@@ -275,6 +283,9 @@ impl WorkspaceGraph {
                 |(node_requirement, package_manager)| NodeWorkspaceToolchain {
                     node_requirement,
                     package_manager,
+                    runtime_version: workspace
+                        .and_then(PnpmWorkspace::use_node_version)
+                        .map(str::to_owned),
                 },
             );
         let projects = resolve_projects(&packages, lock)?;
@@ -673,7 +684,8 @@ importers:
         )
         .unwrap();
 
-        let graph = WorkspaceGraph::build_with_lock([app, core, registry], Some(&lock)).unwrap();
+        let graph =
+            WorkspaceGraph::build_with_lock([app, core, registry], None, Some(&lock)).unwrap();
 
         assert_eq!(
             graph
@@ -758,6 +770,7 @@ packages:
             [""]
         );
         assert!(PnpmWorkspace::parse("packages: packages/*").is_err());
+        assert!(PnpmWorkspace::parse("useNodeVersion: []").is_err());
     }
 
     #[test]
