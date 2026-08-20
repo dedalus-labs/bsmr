@@ -5,9 +5,11 @@
 
 // Synchronizes and commits release metadata.
 
+import { readFileSync, writeFileSync } from "node:fs";
+import { join } from "node:path";
+
 import {
 	action,
-	pathInput,
 	stringInput,
 	type ScriptExec,
 } from "@dedalus-labs/hollywood/action-runtime";
@@ -20,8 +22,35 @@ const releasePaths = [
 	"app/bsmr/Cargo.toml",
 	"Cargo.lock",
 	"dist-workspace.toml",
+	"release-please-config.json",
 	"CHANGELOG.md",
 ] as const;
+
+type ReleasePleaseConfig = {
+	packages?: Record<string, Record<string, unknown>>;
+};
+
+/** Resolve the repository root supplied by GitHub Actions. */
+export function releaseWorkspace(environment: NodeJS.ProcessEnv): string {
+	const workspace = environment["GITHUB_WORKSPACE"]?.trim();
+	if (workspace === undefined || workspace.length === 0) throw new Error("GITHUB_WORKSPACE is required");
+	return workspace;
+}
+
+/** Remove the one-shot release version after Release Please consumes it. */
+export function consumeReleaseOverride(workspace: string): boolean {
+	const path = join(workspace, "release-please-config.json");
+	const config = JSON.parse(readFileSync(path, "utf8")) as ReleasePleaseConfig;
+	const packageConfig = config.packages?.["."];
+	if (packageConfig === undefined) return false;
+	const releaseAs = packageConfig["release-as"];
+	if (releaseAs === undefined) return false;
+	const version = readFileSync(join(workspace, "VERSION"), "utf8").trim();
+	if (releaseAs !== version) throw new Error(`release-as: expected ${version}, found ${String(releaseAs)}`);
+	delete packageConfig["release-as"];
+	writeFileSync(path, `${JSON.stringify(config, null, "\t")}\n`);
+	return true;
+}
 
 /** Commit and push synchronized release metadata when it changed. */
 export async function commitReleaseMetadata(exec: ScriptExec, branch: string): Promise<boolean> {
@@ -42,13 +71,12 @@ export const releaseSyncAction = action({
 	name: "Synchronize release version",
 	description: "Synchronize derived versions and push the reviewed release branch.",
 	localActionPath: "ci/release-sync",
-	inputs: {
-		branch: stringInput({ description: "Release Please pull-request branch." }),
-		workspace: pathInput({ description: "Checked-out repository root." }),
-	},
+	inputs: { branch: stringInput({ description: "Release Please pull-request branch." }) },
 	outputs: {},
 	run: async ({ exec, input, log }) => {
-		synchronizeReleaseVersion(input.workspace);
+		const workspace = releaseWorkspace(process.env);
+		synchronizeReleaseVersion(workspace);
+		consumeReleaseOverride(workspace);
 		const committed = await commitReleaseMetadata(exec, input.branch);
 		log.info(committed ? "Committed synchronized release metadata" : "Release metadata already synchronized");
 		return {};

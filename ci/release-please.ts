@@ -63,10 +63,7 @@ export const releasePlease = workflow({
 					env: {
 						GH_TOKEN: expr<string>("github.token"),
 					},
-					with: {
-						branch: releaseBranch,
-						workspace: expr<string>("github.workspace"),
-					},
+					with: { branch: releaseBranch },
 				}),
 				{
 					name: "Run release pull request checks",
