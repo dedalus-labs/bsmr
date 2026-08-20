@@ -40,7 +40,6 @@ test("one product version drives release automation", () => {
 	assert.equal(config["bootstrap-sha"], "1560aca2002865cd73d7cafb22c705cfb640b2bc");
 	assert.deepEqual(config.packages["."], {
 		"release-type": "simple",
-		"release-as": "0.0.1",
 		"version-file": "VERSION",
 		versioning: "always-bump-patch",
 		"include-component-in-tag": false,
@@ -80,7 +79,7 @@ test("release app is not an accidental crates.io package", () => {
 	assert.match(read("app/bsmr/Cargo.toml"), /^publish = false$/m);
 });
 
-test("release preparation dispatches checks before publication", () => {
+test("invariant_release_path_guards_optional_pull_request_output", () => {
 	const prepare = releasePlease.jobs.prepare;
 	assert.deepEqual(prepare?.permissions, {
 		actions: "write",
@@ -94,7 +93,7 @@ test("release preparation dispatches checks before publication", () => {
 	assert.equal(steps[2].uses, "./.github/actions/ci/release-sync");
 	assert.match(steps[2].if ?? "", /steps\.release\.outputs\.prs_created == 'true'/);
 	assert.deepEqual(steps[2].with, {
-		branch: expr<string>("fromJSON(steps.release.outputs.pr).headBranchName"),
+		branch: expr<string>("fromJSON(steps.release.outputs.pr || '{}').headBranchName"),
 		workspace: expr<string>("github.workspace"),
 	});
 	assert.ok(steps[3] !== undefined && "run" in steps[3]);
@@ -105,7 +104,7 @@ test("release preparation dispatches checks before publication", () => {
 			"run",
 			"ci.yml",
 			"--ref",
-			expr<string>("fromJSON(steps.release.outputs.pr).headBranchName"),
+			expr<string>("fromJSON(steps.release.outputs.pr || '{}').headBranchName"),
 		],
 	}));
 	assert.match(steps[4]?.if ?? "", /steps\.release\.outputs\.release_created == 'true'/);
