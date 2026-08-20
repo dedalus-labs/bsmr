@@ -1,4 +1,13 @@
+<!-- ===----------------------------------------------------------------------=== -->
+<!-- Upstream-Source: facebook/buck2@1560aca2002865cd73d7cafb22c705cfb640b2bc -->
+<!-- Modifications Copyright (c) 2026 Dedalus Labs, Inc. and its contributors -->
+<!-- SPDX-License-Identifier: Apache-2.0 -->
+<!-- ===----------------------------------------------------------------------=== -->
+
 # Changelog
+
+Notable changes to Bessemer are recorded here. Release entries are generated
+from conventional commits and reviewed before publication.
 
 ## 0.0.1 (2026-08-20)
 
@@ -40,14 +49,3 @@
 * **benchmarks:** measure warm output restoration ([#54](https://github.com/dedalus-labs/bsmr/issues/54)) ([1945f32](https://github.com/dedalus-labs/bsmr/commit/1945f32eace7e6512a7897c87b2db1372c8d7351))
 * **benchmarks:** run correctness-gated comparisons ([#51](https://github.com/dedalus-labs/bsmr/issues/51)) ([39edf6d](https://github.com/dedalus-labs/bsmr/commit/39edf6de8e39eca273a76f5dd9a05c88c01f6e66))
 * **ci:** parallelize Rust checks ([#22](https://github.com/dedalus-labs/bsmr/issues/22)) ([388201c](https://github.com/dedalus-labs/bsmr/commit/388201cf91e445ee8b8ddf69b8de8889edf4e2b8))
-
-<!-- ===----------------------------------------------------------------------=== -->
-<!-- Upstream-Source: facebook/buck2@1560aca2002865cd73d7cafb22c705cfb640b2bc -->
-<!-- Modifications Copyright (c) 2026 Dedalus Labs, Inc. and its contributors -->
-<!-- SPDX-License-Identifier: Apache-2.0 -->
-<!-- ===----------------------------------------------------------------------=== -->
-
-## Changelog
-
-Notable changes to Bessemer are recorded here. Release entries are generated
-from conventional commits and reviewed before publication.

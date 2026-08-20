@@ -15,6 +15,7 @@ import {
 } from "@dedalus-labs/hollywood/action-runtime";
 
 import { synchronizeReleaseVersion } from "./release-version.ts";
+import { renderPreamble } from "./license-preamble.ts";
 
 const releasePaths = [
 	"VERSION",
@@ -29,6 +30,25 @@ const releasePaths = [
 type ReleasePleaseConfig = {
 	packages?: Record<string, Record<string, unknown>>;
 };
+
+const changelogPreamble = renderPreamble("CHANGELOG.md", "upstream-modified").trimEnd();
+const changelogDescription = "Notable changes to Bessemer are recorded here. Release entries are generated\nfrom conventional commits and reviewed before publication.";
+
+/** Restore the repository preamble after Release Please rewrites the changelog. */
+export function synchronizeChangelog(workspace: string): boolean {
+	const path = join(workspace, "CHANGELOG.md");
+	const contents = readFileSync(path, "utf8");
+	const entries = contents
+		.replaceAll(changelogPreamble, "")
+		.replace(/#{1,6} Changelog\n\nNotable changes to Bessemer are recorded here\. Release entries are generated\nfrom conventional commits and reviewed before publication\.\n?/g, "")
+		.replace(/^# Changelog\s*/, "")
+		.trim();
+	const header = `${changelogPreamble}\n\n# Changelog\n\n${changelogDescription}`;
+	const updated = `${header}${entries === "" ? "" : `\n\n${entries}`}\n`;
+	if (updated === contents) return false;
+	writeFileSync(path, updated);
+	return true;
+}
 
 /** Remove the one-shot release version after Release Please consumes it. */
 export function consumeReleaseOverride(workspace: string): boolean {
@@ -71,6 +91,7 @@ export const releaseSyncAction = action({
 	outputs: {},
 	run: async ({ exec, input, log }) => {
 		synchronizeReleaseVersion(input.workspace);
+		synchronizeChangelog(input.workspace);
 		consumeReleaseOverride(input.workspace);
 		const committed = await commitReleaseMetadata(exec, input.branch);
 		log.info(committed ? "Committed synchronized release metadata" : "Release metadata already synchronized");
