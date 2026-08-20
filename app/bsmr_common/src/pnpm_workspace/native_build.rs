@@ -50,9 +50,14 @@ pub enum NativeTypeScriptBuildError {
     /// The Node requirement must use npm's semver grammar.
     #[error("invalid engines.node requirement `{requirement}`: {error}")]
     InvalidNodeRequirement { requirement: String, error: String },
-    /// BSMR's release-pinned Node runtime must satisfy the project requirement.
-    #[error("BSMR Node 26.5.1 does not satisfy engines.node `{0}`")]
-    UnsupportedNodeRequirement(String),
+    /// At least one cataloged Node runtime must satisfy the project requirement.
+    #[error(
+        "no cataloged Node runtime satisfies engines.node `{requirement}`; available: {available}"
+    )]
+    UnsupportedNodeRequirement {
+        requirement: String,
+        available: String,
+    },
     /// Package-manager distributions are deliberately finite and digest-pinned.
     #[error("unsupported packageManager `{0}`; BSMR supports exact pnpm 10.30.3 and 11.20.0 pins")]
     UnsupportedPackageManager(String),
@@ -523,7 +528,7 @@ mod tests {
 
         assert_eq!(
             error.to_string(),
-            "BSMR Node 26.5.1 does not satisfy engines.node `>=27.0.0`"
+            "no cataloged Node runtime satisfies engines.node `>=27.0.0`; available: 22.23.1, 24.18.0, 24.19.0, 26.5.1, 26.7.0"
         );
 
         let graph = WorkspaceGraph::build([package(
