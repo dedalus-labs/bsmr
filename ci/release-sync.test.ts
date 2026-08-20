@@ -6,10 +6,12 @@
 // Verifies release branch synchronization.
 
 import assert from "node:assert/strict";
-import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { execFileSync } from "node:child_process";
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
 import test from "node:test";
+import { fileURLToPath } from "node:url";
 
 import type { ScriptExec } from "@dedalus-labs/hollywood/action-runtime";
 
@@ -64,6 +66,37 @@ test("changed release metadata is committed to the exact release branch", async 
 test("release synchronization accepts GitHub's repository root verbatim", () => {
 	assert.deepEqual(Object.keys(releaseSyncAction.inputs), ["branch", "workspace"]);
 	assert.equal(releaseSyncAction.inputs.workspace?.kind, "string");
+});
+
+test("bundled release action starts through its runtime entrypoint", () => {
+	const workspace = mkdtempSync(join(tmpdir(), "bsmr-release-action-"));
+	try {
+		mkdirSync(join(workspace, "app", "bsmr"), { recursive: true });
+		writeFileSync(join(workspace, "VERSION"), "0.0.1\n");
+		writeFileSync(join(workspace, ".release-please-manifest.json"), '{".":"0.0.1"}\n');
+		writeFileSync(join(workspace, "Cargo.lock"), '[[package]]\nname = "bsmr"\nversion = "0.0.1"\n');
+		writeFileSync(join(workspace, "dist-workspace.toml"), 'version = "0.0.1"\n');
+		writeFileSync(join(workspace, "app", "bsmr", "Cargo.toml"), 'name = "bsmr"\nversion = "0.0.1"\n');
+		writeFileSync(join(workspace, "release-please-config.json"), '{}\n');
+		writeFileSync(join(workspace, "CHANGELOG.md"), "");
+		execFileSync("git", ["init", "--quiet"], { cwd: workspace });
+		execFileSync("git", ["add", "."], { cwd: workspace });
+		execFileSync("git", ["-c", "user.name=test", "-c", "user.email=test@example.com", "commit", "--quiet", "-m", "fixture"], {
+			cwd: workspace,
+		});
+
+		const root = join(dirname(fileURLToPath(import.meta.url)), "..");
+		execFileSync(process.execPath, [join(root, ".github/actions/ci/release-sync/dist/index.js")], {
+			cwd: workspace,
+			env: {
+				PATH: process.env["PATH"],
+				INPUT_BRANCH: "release-please--branches--main",
+				INPUT_WORKSPACE: workspace,
+			},
+		});
+	} finally {
+		rmSync(workspace, { force: true, recursive: true });
+	}
 });
 
 test("release synchronization consumes the one-shot version", () => {

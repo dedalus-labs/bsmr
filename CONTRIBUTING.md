@@ -47,6 +47,32 @@ repository-controls stack. Do not change GitHub settings manually.
 Report vulnerabilities through the private process in
 [`SECURITY.md`](SECURITY.md), never through a public issue.
 
+## Releases
+
+Release Please owns release pull-request titles, bodies, changelogs, and
+versions. Do not rename or manually edit a release pull request. Release
+Please parses the merged title when creating the GitHub release, so a manual
+rename can produce a tag that disagrees with the reviewed version files.
+
+To correct an open release candidate:
+
+1. Do not merge or replace the existing release pull request.
+2. If only its title or body was edited, run the `Release Please` workflow on
+   `main` and let the bot restore the pull request.
+3. If the proposed version is wrong, add the intended version as `release-as`
+   under `packages["."]` in `release-please-config.json`, merge that fix, and
+   run `Release Please` on `main`.
+4. Wait for the existing release pull request to update. The release sync
+   removes the one-shot `release-as` setting and synchronizes `VERSION`,
+   `.release-please-manifest.json`, `app/bsmr/Cargo.toml`, `Cargo.lock`, and
+   `dist-workspace.toml`.
+5. Verify those files, the changelog, the pull-request title, and all required
+   checks before merging.
+
+If the incorrect release pull request already merged, inspect the tag and
+GitHub Release before changing anything. Never delete or reuse a published
+version. Correct it with a new, unused version through the same process.
+
 ## License
 
 Unless explicitly stated otherwise, contributions submitted to Bessemer are
