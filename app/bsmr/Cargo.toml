@@ -2,7 +2,8 @@
 
 [package]
 name = "bsmr"
-version.workspace = true
+version = "0.0.0"
+publish = false
 edition.workspace = true
 repository.workspace = true
 license.workspace = true
@@ -85,3 +86,6 @@ windows-sys.workspace = true
 
 [lints.rust]
 unexpected_cfgs = { level = "allow", check-cfg = ["cfg(fbcode_build)", "cfg(buck_build)", "cfg(client_only)", "cfg(tokio_unstable)", "cfg(bsmr_memfrag)"]}
+
+[package.metadata.dist]
+dist = true

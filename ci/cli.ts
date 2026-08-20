@@ -38,6 +38,8 @@ const test: ProcessSpec = {
 		"ci/license-provenance.test.ts",
 		"ci/license.test.ts",
 		"ci/osv-audit.test.ts",
+		"ci/release-sync.test.ts",
+		"ci/release.test.ts",
 		"ci/verify-sha256.test.ts",
 		"benchmarks/python-build-systems/run.test.ts",
 		"benchmarks/python-conformance/run.test.ts",
@@ -75,7 +77,7 @@ const generatedDiff: ProcessSpec = {
 		"prelude/typescript/runner.mjs",
 	],
 };
-const actionSyntax: readonly ProcessSpec[] = ["cli-reference", "osv-audit", "rust-affected", "verify-sha256"].map((name) => ({
+const actionSyntax: readonly ProcessSpec[] = ["cli-reference", "osv-audit", "release-sync", "rust-affected", "verify-sha256"].map((name) => ({
 	file: "node",
 	args: ["--check", `.github/actions/ci/${name}/dist/index.js`],
 }));

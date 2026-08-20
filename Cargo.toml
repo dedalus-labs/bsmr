@@ -26,6 +26,11 @@ debug = true
 incremental = true
 inherits = "release"
 
+# The profile that 'dist' will build with
+[profile.dist]
+inherits = "release"
+lto = "thin"
+
 [workspace]
 members = [
   "packages/rust/allocative/allocative",
