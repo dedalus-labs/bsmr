@@ -15,10 +15,12 @@ import { fileURLToPath } from "node:url";
 
 import type { ScriptExec } from "@dedalus-labs/hollywood/action-runtime";
 
+import { renderPreamble } from "./license-preamble.ts";
 import {
 	commitReleaseMetadata,
 	consumeReleaseOverride,
 	releaseSyncAction,
+	synchronizeChangelog,
 } from "./release-sync.ts";
 
 type Invocation = Readonly<{
@@ -78,7 +80,10 @@ test("bundled release action starts through its runtime entrypoint", () => {
 		writeFileSync(join(workspace, "dist-workspace.toml"), 'version = "0.0.1"\n');
 		writeFileSync(join(workspace, "app", "bsmr", "Cargo.toml"), 'name = "bsmr"\nversion = "0.0.1"\n');
 		writeFileSync(join(workspace, "release-please-config.json"), '{}\n');
-		writeFileSync(join(workspace, "CHANGELOG.md"), "");
+		writeFileSync(
+			join(workspace, "CHANGELOG.md"),
+			`${renderPreamble("CHANGELOG.md", "upstream-modified")}# Changelog\n\nNotable changes to Bessemer are recorded here. Release entries are generated\nfrom conventional commits and reviewed before publication.\n`,
+		);
 		execFileSync("git", ["init", "--quiet"], { cwd: workspace });
 		execFileSync("git", ["add", "."], { cwd: workspace });
 		execFileSync("git", ["-c", "user.name=test", "-c", "user.email=test@example.com", "commit", "--quiet", "-m", "fixture"], {
@@ -113,6 +118,26 @@ test("release synchronization consumes the one-shot version", () => {
 		};
 		assert.equal(config.packages["."]?.["release-as"], undefined);
 		assert.equal(consumeReleaseOverride(workspace), false);
+	} finally {
+		rmSync(workspace, { force: true, recursive: true });
+	}
+});
+
+test("invariant_release_sync_restores_the_changelog_preamble_once", () => {
+	const workspace = mkdtempSync(join(tmpdir(), "bsmr-release-changelog-"));
+	try {
+		const preamble = renderPreamble("CHANGELOG.md", "upstream-modified").trimEnd();
+		writeFileSync(
+			join(workspace, "CHANGELOG.md"),
+			`# Changelog\n\n## 0.0.2\n\nFixed.\n\n${preamble}\n\n## Changelog\n\nNotable changes to Bessemer are recorded here. Release entries are generated\nfrom conventional commits and reviewed before publication.\n`,
+		);
+		assert.equal(synchronizeChangelog(workspace), true);
+		const changelog = readFileSync(join(workspace, "CHANGELOG.md"), "utf8");
+		assert.match(changelog, /^<!-- ===-+=== -->\n<!-- Upstream-Source:/);
+		assert.equal(changelog.match(/Upstream-Source:/g)?.length, 1);
+		assert.equal(changelog.match(/^# Changelog$/gm)?.length, 1);
+		assert.match(changelog, /## 0\.0\.2\n\nFixed\./);
+		assert.equal(synchronizeChangelog(workspace), false);
 	} finally {
 		rmSync(workspace, { force: true, recursive: true });
 	}
