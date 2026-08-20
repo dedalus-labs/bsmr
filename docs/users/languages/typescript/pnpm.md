@@ -26,14 +26,15 @@ At the repository root, commit:
 - `pnpm-lock.yaml` accepted by `pnpm install --frozen-lockfile`.
 
 Every buildable package needs a named `package.json`, `tsconfig.json`, and
-`tsdown.config.ts`. Declare internal edges with pnpm's explicit `workspace:`
-protocol so BSMR and pnpm resolve the same graph.
+`tsdown.config.ts`. It must declare `typescript`, `tsdown`, and any compiler
+plugins it imports as package-local dependencies. Declare internal edges with
+pnpm's explicit `workspace:` protocol so BSMR and pnpm resolve the same graph.
 
 ```json title="package.json"
 {
   "name": "@acme/workspace",
   "private": true,
-  "engines": { "node": "26.5.1" },
+  "engines": { "node": "^24.18.0" },
   "packageManager": "pnpm@11.20.0+sha512.9a6f330a95b66446ea088faf1521405a8a01f07fde7124cc9958dfed52d4bb436737e65b08f85f37b46fcba375092558ac51262b816844b22f63406ed166bfee"
 }
 ```
@@ -42,6 +43,7 @@ protocol so BSMR and pnpm resolve the same graph.
 packages:
   - apps/*
   - packages/*
+useNodeVersion: 24.19.0
 ```
 
 ```json title="apps/api/package.json"
@@ -50,6 +52,10 @@ packages:
   "private": true,
   "dependencies": {
     "@acme/core": "workspace:*"
+  },
+  "devDependencies": {
+    "tsdown": "0.22.4",
+    "typescript": "6.0.3"
   }
 }
 ```
@@ -67,6 +73,20 @@ TypeScript semantic checking without emission. A package-path selector resolves
 to one conventional target, while ordinary BSMR labels remain available for
 queries, automation, and advanced rules.
 
+## Integration checklist
+
+Before replacing an existing build command:
+
+1. Run the repository's frozen pnpm install successfully.
+2. Confirm `bsmr targets <package>` exposes the package and `typecheck` targets.
+3. Run both targets from a clean output tree.
+4. Delete the emitted output and confirm BSMR restores or rebuilds it.
+5. Compare the old and new runtime contract: entry names, module format,
+   executable shebangs, external imports, package manifest, and packed files.
+
+Keep the old command authoritative until those checks agree. A successful
+compiler exit alone does not prove package or executable parity.
+
 ## What BSMR owns
 
 BSMR performs one frozen pnpm install for the repository lockfile. It does not
@@ -74,12 +94,17 @@ launch one competing installer per package. Independent compilation,
 typechecking, tests, and packaging actions run above the normalized workspace
 graph, where BSMR can schedule them concurrently and cache them independently.
 
-The built-in toolchain catalog currently provides digest-pinned Node 26.5.1 on
-macOS and Linux for arm64 and x86-64, plus exact pnpm 10.30.3 and 11.20.0
-distributions. The root `packageManager` chooses the pnpm release; the pinned
-Node runtime must satisfy `engines.node`. Unsupported versions and platforms
-fail with a typed error. BSMR never consults system Node, global pnpm, or an
-implicit latest-version fallback.
+The built-in catalog provides SHA-256-pinned Node 22.23.1, 24.18.0, 24.19.0,
+26.5.1, and 26.7.0 on macOS and Linux for arm64 and x86-64. It also provides
+exact pnpm 10.30.3 and 11.20.0 distributions. BSMR selects the newest catalog
+runtime satisfying `engines.node`. pnpm 10's optional `useNodeVersion` selects
+that exact catalog entry instead. pnpm's `nodeVersion` remains its dependency
+engine-compatibility target; it does not select BSMR's runtime.
+
+Unsupported requirements, exact pins, and platforms fail with a typed error.
+BSMR never consults system Node, global pnpm, or an implicit latest-version
+fallback. Per-package runtimes such as `executionEnv.nodeVersion`, and pnpm
+runtime declarations for Node, Deno, or Bun, require an explicit toolchain.
 
 The install action also fails before pnpm starts unless these invariants hold:
 
@@ -90,10 +115,17 @@ The install action also fails before pnpm starts unless these invariants hold:
   and
 - the declared output does not already exist.
 
-The runner copies declared inputs into a writable action output and redirects
-pnpm's store, home, Corepack home, npm cache, and user npm configuration into
-action scratch space. Repository `.npmrc` files remain declared inputs. Ambient
-home configuration and pnpm's global store are never consulted.
+The runner copies declared inputs into a writable action output. It preserves
+repository-relative symlinks that remain inside the workspace and rejects
+absolute or escaping symlinks. It redirects pnpm's store, home, Corepack home,
+npm cache, and user npm configuration into action scratch space. Repository
+`.npmrc` files remain declared inputs. Ambient home configuration and pnpm's
+global store are never consulted.
+
+A native package owns every file beneath its package root except generated
+trees and nested workspace packages. Put buildable applications in dedicated
+workspace packages. Treating a large repository root as one emitted package is
+correct but gives unrelated root files the same cache key.
 
 On POSIX, pnpm emits relative executable symlinks. BSMR removes pnpm metadata
 that contains absolute store paths or wall-clock timestamps before admitting
@@ -121,8 +153,12 @@ not a fully hermetic JavaScript dependency materializer.
 
 ## Custom rules
 
-Explicit Starlark remains available when a repository needs a non-conventional
-target or toolchain. An explicit build file takes precedence over native
-manifest inference for that package. This is an escape hatch, not a second
-implicit implementation: choosing it makes the repository's rule definition
-authoritative.
+The native adapter deliberately runs package-local `tsc` and `tsdown`; it does
+not guess from `scripts.build`. Use an explicit Starlark rule for esbuild,
+tsup, Vite, SWC, custom script pipelines, npm, Yarn, Bun, lifecycle hooks, or a
+runtime outside the built-in catalog. The rule must declare its toolchain,
+inputs, environment, and outputs.
+
+An explicit build file takes precedence over native manifest inference for
+that package. This is one authoritative implementation selected by the
+repository, not a silent fallback from the native adapter.
