@@ -122,3 +122,10 @@ test("release preparation dispatches checks before publication", () => {
 test("dist release builds preserve required Rust cfg flags", () => {
 	assert.match(read(".github/workflows/release.yml"), /^env:\n  RUSTFLAGS: "--cfg tokio_unstable"$/m);
 });
+
+test("dist release publishes within the BSMR repository", () => {
+	const workflow = read(".github/workflows/release.yml");
+	assert.doesNotMatch(read("dist-workspace.toml"), /^github-releases-repo\s*=/m);
+	assert.doesNotMatch(workflow, /GH_RELEASES_TOKEN|external_repo_commit/);
+	assert.match(workflow, /RELEASE_COMMIT: "\$\{\{ github\.sha \}\}"/);
+});
