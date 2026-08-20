@@ -6,6 +6,9 @@ inputs:
   branch:
     description: Release Please pull-request branch.
     required: true
+  workspace:
+    description: Checked-out repository root.
+    required: true
 outputs: {}
 runs:
   using: node24

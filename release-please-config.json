@@ -5,7 +5,7 @@
 		".": {
 			"release-type": "simple",
 			"version-file": "VERSION",
-			"versioning-strategy": "always-bump-patch",
+			"versioning": "always-bump-patch",
 			"include-component-in-tag": false,
 			"include-v-in-tag": true,
 			"include-v-in-release-name": true,

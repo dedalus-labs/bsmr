@@ -41,7 +41,7 @@ test("one product version drives release automation", () => {
 	assert.deepEqual(config.packages["."], {
 		"release-type": "simple",
 		"version-file": "VERSION",
-		"versioning-strategy": "always-bump-patch",
+		versioning: "always-bump-patch",
 		"include-component-in-tag": false,
 		"include-v-in-tag": true,
 		"include-v-in-release-name": true,
@@ -92,6 +92,10 @@ test("release preparation dispatches checks before publication", () => {
 	assert.ok(steps[2] !== undefined && "uses" in steps[2]);
 	assert.equal(steps[2].uses, "./.github/actions/ci/release-sync");
 	assert.match(steps[2].if ?? "", /steps\.release\.outputs\.prs_created == 'true'/);
+	assert.deepEqual(steps[2].with, {
+		branch: expr<string>("fromJSON(steps.release.outputs.pr).headBranchName"),
+		workspace: expr<string>("github.workspace"),
+	});
 	assert.ok(steps[3] !== undefined && "run" in steps[3]);
 	assert.deepEqual(steps[3].run, command({
 		file: "gh",
