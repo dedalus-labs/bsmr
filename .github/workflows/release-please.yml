@@ -31,7 +31,7 @@ jobs:
         if: ${{ steps.release.outputs.prs_created == 'true' }}
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
-          ref: ${{ fromJSON(steps.release.outputs.pr).headBranchName }}
+          ref: ${{ fromJSON(steps.release.outputs.pr || '{}').headBranchName }}
           persist-credentials: false
       - if: ${{ steps.release.outputs.prs_created == 'true' }}
         env:
@@ -39,13 +39,13 @@ jobs:
         name: Synchronize release version
         uses: ./.github/actions/ci/release-sync
         with:
-          branch: ${{ fromJSON(steps.release.outputs.pr).headBranchName }}
+          branch: ${{ fromJSON(steps.release.outputs.pr || '{}').headBranchName }}
           workspace: ${{ github.workspace }}
       - name: Run release pull request checks
         if: ${{ steps.release.outputs.prs_created == 'true' }}
         env:
           GH_TOKEN: ${{ github.token }}
-          HOLLYWOOD_COMMAND_ARG_4: ${{ fromJSON(steps.release.outputs.pr).headBranchName }}
+          HOLLYWOOD_COMMAND_ARG_4: ${{ fromJSON(steps.release.outputs.pr || '{}').headBranchName }}
         run: gh workflow run ci.yml --ref "$HOLLYWOOD_COMMAND_ARG_4"
         shell: bash
       - name: Build and publish release

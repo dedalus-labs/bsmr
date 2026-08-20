@@ -14,7 +14,7 @@ const releasePleaseAction =
 const checkoutAction = "actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1"; // v7.0.1
 const releaseCreated = eq(stepOutput("release", "release_created"), "true");
 const pullRequestCreated = eq(stepOutput("release", "prs_created"), "true");
-const releaseBranch = expr<string>("fromJSON(steps.release.outputs.pr).headBranchName");
+const releaseBranch = expr<string>("fromJSON(steps.release.outputs.pr || '{}').headBranchName");
 
 export const releasePlease = workflow({
 	name: "Release Please",
