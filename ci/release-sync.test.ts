@@ -10,7 +10,7 @@ import test from "node:test";
 
 import type { ScriptExec } from "@dedalus-labs/hollywood/action-runtime";
 
-import { commitReleaseMetadata } from "./release-sync.ts";
+import { commitReleaseMetadata, releaseSyncAction } from "./release-sync.ts";
 
 type Invocation = Readonly<{
 	file: string;
@@ -52,4 +52,8 @@ test("changed release metadata is committed to the exact release branch", async 
 		args: ["push", "origin", "HEAD:release-please--branches--main"],
 		exitPolicy: undefined,
 	});
+});
+
+test("release synchronization requires the checked-out workspace", () => {
+	assert.deepEqual(Object.keys(releaseSyncAction.inputs), ["branch", "workspace"]);
 });

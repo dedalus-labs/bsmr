@@ -7,6 +7,7 @@
 
 import {
 	action,
+	pathInput,
 	stringInput,
 	type ScriptExec,
 } from "@dedalus-labs/hollywood/action-runtime";
@@ -41,10 +42,13 @@ export const releaseSyncAction = action({
 	name: "Synchronize release version",
 	description: "Synchronize derived versions and push the reviewed release branch.",
 	localActionPath: "ci/release-sync",
-	inputs: { branch: stringInput({ description: "Release Please pull-request branch." }) },
+	inputs: {
+		branch: stringInput({ description: "Release Please pull-request branch." }),
+		workspace: pathInput({ description: "Checked-out repository root." }),
+	},
 	outputs: {},
 	run: async ({ exec, input, log }) => {
-		synchronizeReleaseVersion(process.cwd());
+		synchronizeReleaseVersion(input.workspace);
 		const committed = await commitReleaseMetadata(exec, input.branch);
 		log.info(committed ? "Committed synchronized release metadata" : "Release metadata already synchronized");
 		return {};
