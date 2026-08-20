@@ -40,6 +40,7 @@ test("one product version drives release automation", () => {
 	assert.equal(config["bootstrap-sha"], "1560aca2002865cd73d7cafb22c705cfb640b2bc");
 	assert.deepEqual(config.packages["."], {
 		"release-type": "simple",
+		"release-as": "0.0.1",
 		"version-file": "VERSION",
 		versioning: "always-bump-patch",
 		"include-component-in-tag": false,
@@ -94,7 +95,6 @@ test("release preparation dispatches checks before publication", () => {
 	assert.match(steps[2].if ?? "", /steps\.release\.outputs\.prs_created == 'true'/);
 	assert.deepEqual(steps[2].with, {
 		branch: expr<string>("fromJSON(steps.release.outputs.pr).headBranchName"),
-		workspace: expr<string>("github.workspace"),
 	});
 	assert.ok(steps[3] !== undefined && "run" in steps[3]);
 	assert.deepEqual(steps[3].run, command({

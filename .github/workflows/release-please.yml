@@ -40,7 +40,6 @@ jobs:
         uses: ./.github/actions/ci/release-sync
         with:
           branch: ${{ fromJSON(steps.release.outputs.pr).headBranchName }}
-          workspace: ${{ github.workspace }}
       - name: Run release pull request checks
         if: ${{ steps.release.outputs.prs_created == 'true' }}
         env:

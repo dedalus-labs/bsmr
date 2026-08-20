@@ -6,11 +6,19 @@
 // Verifies release branch synchronization.
 
 import assert from "node:assert/strict";
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import test from "node:test";
 
 import type { ScriptExec } from "@dedalus-labs/hollywood/action-runtime";
 
-import { commitReleaseMetadata, releaseSyncAction } from "./release-sync.ts";
+import {
+	commitReleaseMetadata,
+	consumeReleaseOverride,
+	releaseSyncAction,
+	releaseWorkspace,
+} from "./release-sync.ts";
 
 type Invocation = Readonly<{
 	file: string;
@@ -54,6 +62,27 @@ test("changed release metadata is committed to the exact release branch", async 
 	});
 });
 
-test("release synchronization requires the checked-out workspace", () => {
-	assert.deepEqual(Object.keys(releaseSyncAction.inputs), ["branch", "workspace"]);
+test("release synchronization reads GitHub's repository root", () => {
+	assert.deepEqual(Object.keys(releaseSyncAction.inputs), ["branch"]);
+	assert.equal(releaseWorkspace({ GITHUB_WORKSPACE: "/workspace" }), "/workspace");
+	assert.throws(() => releaseWorkspace({}), /GITHUB_WORKSPACE is required/);
+});
+
+test("release synchronization consumes the one-shot version", () => {
+	const workspace = mkdtempSync(join(tmpdir(), "bsmr-release-override-"));
+	try {
+		writeFileSync(join(workspace, "VERSION"), "0.0.1\n");
+		writeFileSync(
+			join(workspace, "release-please-config.json"),
+			'{"packages":{".":{"release-as":"0.0.1","release-type":"simple"}}}\n',
+		);
+		assert.equal(consumeReleaseOverride(workspace), true);
+		const config = JSON.parse(readFileSync(join(workspace, "release-please-config.json"), "utf8")) as {
+			packages: Record<string, Record<string, unknown>>;
+		};
+		assert.equal(config.packages["."]?.["release-as"], undefined);
+		assert.equal(consumeReleaseOverride(workspace), false);
+	} finally {
+		rmSync(workspace, { force: true, recursive: true });
+	}
 });
