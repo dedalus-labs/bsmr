@@ -40,6 +40,7 @@ use bsmr_common::python_project::NativePythonBuildError;
 use bsmr_common::python_project::PythonRootFiles;
 use bsmr_common::python_project::PythonVcsFiles;
 use bsmr_common::python_project::PythonWorkspaceMember;
+use bsmr_common::python_project::is_native_python_workspace;
 use bsmr_common::python_project::python_project_name;
 use bsmr_common::python_project::python_project_uses_vcs;
 use bsmr_common::python_project::python_root_config_files;
@@ -106,8 +107,6 @@ use crate::super_package::package_value::SuperPackageValuesImpl;
 enum NativeBuildFileError {
     #[error("native Cargo builds require Cargo.toml at the BSMR project root")]
     CargoWorkspaceManifestRequired,
-    #[error("native Python builds require pylock.toml at the BSMR project root")]
-    PythonRuntimeLockRequired,
     #[error("native Python builds require pylock.build.toml at the BSMR project root")]
     PythonBuildLockRequired,
 }
@@ -394,23 +393,20 @@ impl<'c, 'd: 'c> DiceCalculationDelegate<'c, 'd> {
         listing: &mut PackageListing,
         manifest: &str,
     ) -> bsmr_error::Result<Option<String>> {
-        let is_project = python_project_name(manifest)?.is_some();
         let root_path = CellRelativePathBuf::unchecked_new(String::new());
         let root = PackageLabel::new(package.cell_name(), &root_path)?;
         let workspace_listing = DicePackageListingResolver(self.ctx)
             .resolve_package_listing(root)
             .await?;
+        if !is_native_python_workspace(&workspace_listing) {
+            return Ok(None);
+        }
+        let is_project = python_project_name(manifest)?.is_some();
         let (members, workspace_uses_vcs) = self
             .python_workspace_members(root, &workspace_listing)
             .await?;
         if !is_project && (!package.cell_relative_path().is_empty() || members.is_empty()) {
             return Ok(None);
-        }
-        if workspace_listing
-            .get_file(PackageRelativePath::new("pylock.toml")?)
-            .is_none()
-        {
-            return Err(NativeBuildFileError::PythonRuntimeLockRequired.into());
         }
         let lock = self.read_package_file(root, "pylock.toml").await?;
         let lock = PylockToml::parse(&lock)?;
