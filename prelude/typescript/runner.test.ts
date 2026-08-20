@@ -7,7 +7,7 @@
 
 import assert from "node:assert/strict";
 import { spawnSync, type SpawnSyncReturns } from "node:child_process";
-import { access, mkdir, mkdtemp, readFile, realpath, rm, symlink, writeFile } from "node:fs/promises";
+import { access, lstat, mkdir, mkdtemp, readFile, realpath, rm, symlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { test, type TestContext } from "node:test";
@@ -16,6 +16,7 @@ import { fileURLToPath } from "node:url";
 const runner = fileURLToPath(new URL("./runner.mjs", import.meta.url));
 
 type Fixture = Readonly<{
+	declared: string;
 	install: string;
 	output: string;
 	packageRoot: string;
@@ -124,7 +125,7 @@ await writeFile(join(args[3], "index.js"), "export const answer = 42;\\n");
 	await symlink(join(install, "tools/typescript"), join(install, packageRoot, "node_modules/typescript"));
 	await symlink(join(install, "tools/tsdown"), join(install, packageRoot, "node_modules/tsdown"));
 	await symlink(join(install, "packages/config"), join(install, packageRoot, "node_modules/@demo/config"));
-	return { install, output, packageRoot: packageRoot || ".", root, scratch, source };
+	return { declared, install, output, packageRoot: packageRoot || ".", root, scratch, source };
 }
 
 /**
@@ -173,6 +174,32 @@ test("typechecks a package at the workspace root", async (context) => {
 	const result = runRunner(state, "typecheck");
 	assert.equal(result.status, 0, result.stderr);
 	assert.equal(await readFile(state.output, "utf8"), "ok\n");
+});
+
+test("invariant_declared_directory_symlinks_are_materialized", async (context) => {
+	const state = await fixture(context);
+	await declare(state.source, state.declared, "tooling/preset.json", '{"strict":true}\n');
+	await symlink("tooling", join(state.declared, "tooling-link"));
+	await symlink(join(state.declared, "tooling-link"), join(state.source, "tooling-link"));
+
+	const result = runRunner(state, "typecheck");
+
+	assert.equal(result.status, 0, result.stderr);
+	const copied = join(state.scratch, "typescript-workspace/tooling-link/preset.json");
+	assert.equal(await readFile(copied, "utf8"), '{"strict":true}\n');
+	assert.equal((await lstat(dirname(copied))).isSymbolicLink(), true);
+});
+
+test("invariant_declared_symlinks_cannot_escape_the_workspace", async (context) => {
+	const state = await fixture(context);
+	await symlink("../../outside", join(state.declared, "escape"));
+	await symlink(join(state.declared, "escape"), join(state.source, "escape"));
+
+	const result = runRunner(state, "typecheck");
+
+	assert.equal(result.status, 1);
+	assert.match(result.stderr, /declared symlink .* escapes the source workspace/);
+	await assert.rejects(access(state.output));
 });
 
 test("emits a library with the package-local locked tsdown binary", async (context) => {

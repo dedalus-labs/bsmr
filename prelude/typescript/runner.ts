@@ -6,8 +6,8 @@
 // Executes pinned TypeScript tools in a source overlay over a frozen pnpm install.
 
 import { spawnSync } from "node:child_process";
-import { copyFile, lstat, mkdir, readdir, readFile, realpath, rm, symlink, writeFile } from "node:fs/promises";
-import { isAbsolute, join, relative, resolve, sep } from "node:path";
+import { copyFile, lstat, mkdir, readdir, readFile, readlink, realpath, rm, symlink, writeFile } from "node:fs/promises";
+import { dirname, isAbsolute, join, relative, resolve, sep } from "node:path";
 
 const requiredArguments = new Set(["--config", "--install", "--mode", "--output", "--package-root", "--source"]);
 
@@ -115,17 +115,46 @@ function isWithin(directory: string, candidate: string): boolean {
  * @param source - Declared source tree.
  * @param destination - Scratch workspace directory.
  */
-async function copySourceTree(source: string, destination: string): Promise<void> {
+async function copySourceTree(source: string, destination: string, workspace = destination): Promise<void> {
 	await mkdir(destination, { recursive: true });
 	for (const entry of await readdir(source, { withFileTypes: true })) {
 		const from = join(source, entry.name);
 		const to = join(destination, entry.name);
 		if (entry.isDirectory()) {
-			await copySourceTree(from, to);
-		} else {
+			await copySourceTree(from, to, workspace);
+		} else if (entry.isFile()) {
 			await copyFile(from, to);
+		} else {
+			await copySourceEntry(from, to, workspace);
 		}
 	}
+}
+
+/**
+ * Copy one declared file or preserve one repository-relative source symlink.
+ *
+ * @param source - Source-tree entry created by BSMR.
+ * @param destination - Writable overlay entry.
+ * @param workspace - Writable overlay root that symlinks may not escape.
+ */
+async function copySourceEntry(source: string, destination: string, workspace: string): Promise<void> {
+	const sourceTarget = resolve(dirname(source), await readlink(source));
+	const declared = await lstat(sourceTarget);
+	if (declared.isFile()) {
+		await copyFile(source, destination);
+		return;
+	}
+	if (declared.isDirectory()) {
+		await copySourceTree(sourceTarget, destination, workspace);
+		return;
+	}
+	if (!declared.isSymbolicLink()) throw new Error(`declared source '${source}' is not a file, directory, or symlink`);
+	const target = await readlink(sourceTarget);
+	const overlayTarget = resolve(dirname(destination), target);
+	if (isAbsolute(target) || !isWithin(workspace, overlayTarget)) {
+		throw new Error(`declared symlink '${source}' escapes the source workspace`);
+	}
+	await symlink(target, destination);
 }
 
 /**
