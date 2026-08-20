@@ -2,7 +2,7 @@
 
 [package]
 name = "bsmr"
-version = "0.0.0"
+version = "0.0.1"
 publish = false
 edition.workspace = true
 repository.workspace = true

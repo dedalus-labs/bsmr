@@ -3,7 +3,7 @@ members = ["cargo:."]
 
 [dist]
 cargo-dist-version = "0.32.0"
-version = "0.0.0"
+version = "0.0.1"
 dist = false
 # Preserve the required tokio_unstable environment in the generated CI workflow.
 allow-dirty = ["ci"]

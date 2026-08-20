@@ -4,7 +4,6 @@
 	"packages": {
 		".": {
 			"release-type": "simple",
-			"release-as": "0.0.1",
 			"version-file": "VERSION",
 			"versioning": "always-bump-patch",
 			"include-component-in-tag": false,
