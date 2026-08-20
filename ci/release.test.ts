@@ -95,6 +95,7 @@ test("release preparation dispatches checks before publication", () => {
 	assert.match(steps[2].if ?? "", /steps\.release\.outputs\.prs_created == 'true'/);
 	assert.deepEqual(steps[2].with, {
 		branch: expr<string>("fromJSON(steps.release.outputs.pr).headBranchName"),
+		workspace: expr<string>("github.workspace"),
 	});
 	assert.ok(steps[3] !== undefined && "run" in steps[3]);
 	assert.deepEqual(steps[3].run, command({

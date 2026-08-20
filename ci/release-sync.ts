@@ -30,13 +30,6 @@ type ReleasePleaseConfig = {
 	packages?: Record<string, Record<string, unknown>>;
 };
 
-/** Resolve the repository root supplied by GitHub Actions. */
-export function releaseWorkspace(environment: NodeJS.ProcessEnv): string {
-	const workspace = environment["GITHUB_WORKSPACE"]?.trim();
-	if (workspace === undefined || workspace.length === 0) throw new Error("GITHUB_WORKSPACE is required");
-	return workspace;
-}
-
 /** Remove the one-shot release version after Release Please consumes it. */
 export function consumeReleaseOverride(workspace: string): boolean {
 	const path = join(workspace, "release-please-config.json");
@@ -71,12 +64,14 @@ export const releaseSyncAction = action({
 	name: "Synchronize release version",
 	description: "Synchronize derived versions and push the reviewed release branch.",
 	localActionPath: "ci/release-sync",
-	inputs: { branch: stringInput({ description: "Release Please pull-request branch." }) },
+	inputs: {
+		branch: stringInput({ description: "Release Please pull-request branch." }),
+		workspace: stringInput({ description: "Checked-out repository root." }),
+	},
 	outputs: {},
 	run: async ({ exec, input, log }) => {
-		const workspace = releaseWorkspace(process.env);
-		synchronizeReleaseVersion(workspace);
-		consumeReleaseOverride(workspace);
+		synchronizeReleaseVersion(input.workspace);
+		consumeReleaseOverride(input.workspace);
 		const committed = await commitReleaseMetadata(exec, input.branch);
 		log.info(committed ? "Committed synchronized release metadata" : "Release metadata already synchronized");
 		return {};
