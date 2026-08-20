@@ -13,7 +13,6 @@ dispatch-releases = true
 pr-run-mode = "plan"
 create-release = false
 hosting = ["github"]
-github-releases-repo = "dedalus-labs/bsmr"
 github-attestations = true
 installers = ["shell", "powershell"]
 checksum = "sha256"
