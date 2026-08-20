@@ -3,7 +3,7 @@
 // SPDX-License-Identifier: Apache-2.0
 //===----------------------------------------------------------------------===//
 
-// Parses and applies pnpm workspace package-selection patterns.
+// Parses pnpm workspace package-selection and runtime settings.
 
 use std::collections::BTreeSet;
 
@@ -29,6 +29,9 @@ pub enum PnpmWorkspaceError {
     /// Every package selector must be a non-empty string.
     #[error("pnpm workspace package pattern at index {0} must be a non-empty string")]
     InvalidPackagePattern(usize),
+    /// The optional runtime pin must be one exact version string.
+    #[error("pnpm workspace `useNodeVersion` must be a non-empty string")]
+    InvalidNodeRuntime,
     /// A selector cannot be represented by BSMR's deterministic glob engine.
     #[error("invalid pnpm workspace package pattern `{pattern}`: {error}")]
     InvalidPackageGlob {
@@ -46,10 +49,11 @@ pub enum PnpmWorkspaceError {
     InvalidPackageGlobSet(globset::Error),
 }
 
-/// The ordered package selectors declared by `pnpm-workspace.yaml`.
+/// Native settings declared by `pnpm-workspace.yaml`.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct PnpmWorkspace {
     patterns: Vec<String>,
+    use_node_version: Option<String>,
 }
 
 impl PnpmWorkspace {
@@ -60,10 +64,13 @@ impl PnpmWorkspace {
         if documents.len() != 1 {
             return Err(PnpmWorkspaceError::DocumentCount(documents.len()));
         }
-        let packages = &documents[0]["packages"];
+        let document = &documents[0];
+        let use_node_version = optional_string(document, "useNodeVersion")?;
+        let packages = &document["packages"];
         if packages.is_badvalue() {
             return Ok(Self {
                 patterns: Vec::new(),
+                use_node_version,
             });
         }
         let Some(entries) = packages.as_vec() else {
@@ -80,7 +87,16 @@ impl PnpmWorkspace {
                     .ok_or(PnpmWorkspaceError::InvalidPackagePattern(index))
             })
             .collect::<Result<_, _>>()?;
-        Ok(Self { patterns })
+        Ok(Self {
+            patterns,
+            use_node_version,
+        })
+    }
+
+    /// Returns pnpm's optional exact project runtime pin.
+    #[must_use]
+    pub fn use_node_version(&self) -> Option<&str> {
+        self.use_node_version.as_deref()
     }
 
     /// Selects candidate package roots with pnpm-style positive and negative globs.
@@ -105,6 +121,22 @@ impl PnpmWorkspace {
             .into_iter()
             .collect())
     }
+}
+
+/// Parses one optional non-empty string setting from the workspace document.
+fn optional_string(
+    document: &yaml_rust2::Yaml,
+    key: &str,
+) -> Result<Option<String>, PnpmWorkspaceError> {
+    let value = &document[key];
+    if value.is_badvalue() {
+        return Ok(None);
+    }
+    value
+        .as_str()
+        .filter(|value| !value.is_empty())
+        .map(|value| Some(value.to_owned()))
+        .ok_or(PnpmWorkspaceError::InvalidNodeRuntime)
 }
 
 /// Compiles pnpm selectors into independent inclusion and exclusion sets.

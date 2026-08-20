@@ -50,6 +50,18 @@ pub enum NativeTypeScriptBuildError {
     /// The Node requirement must use npm's semver grammar.
     #[error("invalid engines.node requirement `{requirement}`: {error}")]
     InvalidNodeRequirement { requirement: String, error: String },
+    /// pnpm's runtime setting must use an exact semantic version.
+    #[error("invalid pnpm useNodeVersion `{version}`: {error}")]
+    InvalidNodeRuntime { version: String, error: String },
+    /// pnpm's exact runtime must remain inside the standard engine contract.
+    #[error("pnpm useNodeVersion `{version}` does not satisfy engines.node `{requirement}`")]
+    IncompatibleNodeRuntime {
+        version: String,
+        requirement: String,
+    },
+    /// pnpm's exact runtime must exist in the finite verified catalog.
+    #[error("pnpm useNodeVersion `{version}` is not cataloged; available: {available}")]
+    UnsupportedNodeRuntime { version: String, available: String },
     /// At least one cataloged Node runtime must satisfy the project requirement.
     #[error(
         "no cataloged Node runtime satisfies engines.node `{requirement}`; available: {available}"
