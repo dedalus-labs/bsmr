@@ -5,9 +5,8 @@
 
 // Synchronizes the product version across release and Cargo metadata.
 
-import { readFileSync, realpathSync, writeFileSync } from "node:fs";
-import { dirname, join, resolve } from "node:path";
-import { fileURLToPath } from "node:url";
+import { readFileSync, writeFileSync } from "node:fs";
+import { join } from "node:path";
 
 const canonicalVersion = /^(?:0|[1-9]\d*)\.(?:0|[1-9]\d*)\.(?:0|[1-9]\d*)$/;
 
@@ -79,12 +78,4 @@ export function synchronizeReleaseVersion(root: string): readonly string[] {
 		changed.push(carrier.path);
 	}
 	return changed;
-}
-
-const invokedPath = process.argv[1];
-if (invokedPath !== undefined && realpathSync(invokedPath) === fileURLToPath(import.meta.url)) {
-	const arguments_ = process.argv.slice(2);
-	if (arguments_.length !== 0) throw new Error("usage: node ci/release-version.ts");
-	const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
-	for (const path of synchronizeReleaseVersion(root)) process.stdout.write(`${path}\n`);
 }
