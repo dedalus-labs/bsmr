@@ -9,6 +9,20 @@
 Notable changes to Bessemer are recorded here. Release entries are generated
 from conventional commits and reviewed before publication.
 
+## [0.0.2](https://github.com/dedalus-labs/bsmr/compare/v0.0.1...v0.0.2) (2026-08-20)
+
+
+### Features
+
+* **node:** catalog active native runtimes ([#118](https://github.com/dedalus-labs/bsmr/issues/118)) ([0ba5a13](https://github.com/dedalus-labs/bsmr/commit/0ba5a13abf88e419ed12ebca8fd0ff78dca91c30))
+* **pnpm:** honor exact workspace node runtime ([#119](https://github.com/dedalus-labs/bsmr/issues/119)) ([13414c6](https://github.com/dedalus-labs/bsmr/commit/13414c6619e183ca316dadcc73fc50629c7b0ecd))
+
+
+### Bug Fixes
+
+* **release:** harden post-release synchronization ([#123](https://github.com/dedalus-labs/bsmr/issues/123)) ([dca546b](https://github.com/dedalus-labs/bsmr/commit/dca546b6e9564360d5c60a5bf1bceea175cfec4c))
+* **typescript:** preserve declared source symlinks ([#120](https://github.com/dedalus-labs/bsmr/issues/120)) ([56ed73f](https://github.com/dedalus-labs/bsmr/commit/56ed73f8309f3835c368e38d2fbe24029c5e5e1e))
+
 ## 0.0.1 (2026-08-20)
 
 
