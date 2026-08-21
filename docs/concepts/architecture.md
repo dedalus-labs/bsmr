@@ -167,7 +167,7 @@ If there is a cache miss, the action needs to be run either remotely or locally.
 If Bessemer decides to run the action remotely, it will first upload all of the
 action's inputs that are missing from the RE's content addressable storage. If
 Bessemer decides to run the action locally, it will first download and materialize
-in `buck-out` all of the action's inputs. These inputs might be outputs of other
+in `bsmr-out` all of the action's inputs. These inputs might be outputs of other
 actions and are stored in RE's content addressable storage but are missing on
 the local machine. Only after those steps will Bessemer schedule the action for
 actual execution.
@@ -177,7 +177,7 @@ process known as racing), and use the result of whichever action finishes first
 to speed up performance. This strategy is known as **hybrid execution**."
 
 Materialization of action outputs (which involves downloading and placing them
-in the correct location in `buck-out`) can be done immediately after the action
+in the correct location in `bsmr-out`) can be done immediately after the action
 has finished executing. Alternatively, it can be deferred until it is actually
 needed for the local execution of another action. There are various
 configurations that a user can set to control how this materialization is

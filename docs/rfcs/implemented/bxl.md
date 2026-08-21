@@ -71,9 +71,9 @@ that bsmr’s dice already performs and caches (I think, need to confirm). Bxl
 poses the interesting possibility that we can expose a limited set of IO
 operations that are tracked by dice so bxl can access the same cached file
 operations as rest of bsmr. Android project generation currently doesn’t write
-project files to buck-out, which prevents it from using bsmr actions. It will
+project files to bsmr-out, which prevents it from using bsmr actions. It will
 have to rely on an external script to process the graph information printed by
-buck and write the actual project files. If it moves to `buck-out` based, then
+buck and write the actual project files. If it moves to `bsmr-out` based, then
 it can take advantage of creating actions directly using the graph information
 processed, and potentially take advantage of incremental actions api to avoid
 writing the entire graph on each subsequent update.

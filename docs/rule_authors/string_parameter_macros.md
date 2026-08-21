@@ -61,7 +61,7 @@ The target being referenced must expose a `DefaultInfo` (i.e. it must be
 
 Expands to the location of the specified source. The difference with using
 `$(location path/to:export_file_target)` is that the path points to the file in
-the source tree, rather than a copy or symlink in `buck-out`.
+the source tree, rather than a copy or symlink in `bsmr-out`.
 
 For example:
 
