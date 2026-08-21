@@ -42,6 +42,7 @@ use bsmr_core::fs::project::ProjectRoot;
 use bsmr_events::daemon_id::DaemonId;
 use bsmr_execute::execute::blocking::BlockingExecutor;
 use bsmr_execute::execute::cache_uploader::NoOpCacheUploader;
+use bsmr_execute::execute::cache_uploader::UploadCache;
 use bsmr_execute::execute::cache_uploader::force_cache_upload;
 use bsmr_execute::execute::local_cache::LocalActionCache;
 use bsmr_execute::execute::prepared::NoOpCommandOptionalExecutor;
@@ -111,6 +112,26 @@ pub struct CommandExecutorFactory {
     firecracker: Option<Arc<FirecrackerExecutor>>,
 }
 
+struct RemoteCacheComponents {
+    action_cache_checker: Arc<dyn PreparedCommandOptionalExecutor>,
+    remote_dep_file_cache_checker: Arc<dyn PreparedCommandOptionalExecutor>,
+    cache_uploader: Arc<dyn UploadCache>,
+}
+
+impl RemoteCacheComponents {
+    fn checkers(
+        &self,
+    ) -> (
+        Arc<dyn PreparedCommandOptionalExecutor>,
+        Arc<dyn PreparedCommandOptionalExecutor>,
+    ) {
+        (
+            self.action_cache_checker.dupe(),
+            self.remote_dep_file_cache_checker.dupe(),
+        )
+    }
+}
+
 impl CommandExecutorFactory {
     pub fn new(
         re_connection: Arc<ReConnectionHandle>,
@@ -174,6 +195,115 @@ impl CommandExecutorFactory {
     ) -> ManagedRemoteExecutionClient {
         let use_case = self.re_use_case_override.unwrap_or(use_case);
         self.re_connection.get_client().with_use_case(use_case)
+    }
+
+    fn remote_cache_components(
+        &self,
+        artifact_fs: &ArtifactFs,
+        options: &RemoteEnabledExecutorOptions,
+        upload_platform: RePlatformFields,
+    ) -> bsmr_error::Result<RemoteCacheComponents> {
+        let disable_caching = bsmr_env!(
+            "BSMR_TEST_DISABLE_CACHING",
+            type = bool,
+            applicability = testing
+        )?
+        .unwrap_or(self.skip_cache_read)
+            || (!options.remote_cache_enabled && !options.remote_dep_file_cache_enabled);
+        let only_remote_dep_file_cache = bsmr_env!(
+            "BSMR_TEST_ONLY_REMOTE_DEP_FILE_CACHE",
+            bool,
+            applicability = testing
+        )?;
+        let (action_cache_checker, remote_dep_file_cache_checker) = self.remote_cache_checkers(
+            artifact_fs,
+            options,
+            disable_caching,
+            only_remote_dep_file_cache,
+        );
+        let cache_uploader =
+            self.remote_cache_uploader(artifact_fs, options, upload_platform, disable_caching)?;
+        Ok(RemoteCacheComponents {
+            action_cache_checker,
+            remote_dep_file_cache_checker,
+            cache_uploader,
+        })
+    }
+
+    fn remote_cache_checkers(
+        &self,
+        artifact_fs: &ArtifactFs,
+        options: &RemoteEnabledExecutorOptions,
+        disable_caching: bool,
+        only_remote_dep_file_cache: bool,
+    ) -> (
+        Arc<dyn PreparedCommandOptionalExecutor>,
+        Arc<dyn PreparedCommandOptionalExecutor>,
+    ) {
+        if disable_caching {
+            return (
+                Arc::new(NoOpCommandOptionalExecutor {}),
+                Arc::new(NoOpCommandOptionalExecutor {}),
+            );
+        }
+        let remote_dep_file_cache_checker: Arc<dyn PreparedCommandOptionalExecutor> =
+            if options.remote_dep_file_cache_enabled {
+                Arc::new(RemoteDepFileCacheChecker {
+                    artifact_fs: artifact_fs.clone(),
+                    materializer: self.materializer.dupe(),
+                    incremental_db_state: self.incremental_db_state.dupe(),
+                    re_client: self.get_prepared_re_client(options.re_use_case),
+                    re_action_key: options.re_action_key.clone(),
+                    upload_all_actions: self.upload_all_actions,
+                    knobs: self.executor_global_knobs.dupe(),
+                    paranoid: self.paranoid.dupe(),
+                    deduplicate_get_digests_ttl_calls: self.deduplicate_get_digests_ttl_calls,
+                    output_trees_download_config: self.output_trees_download_config.dupe(),
+                })
+            } else {
+                Arc::new(NoOpCommandOptionalExecutor {})
+            };
+        let action_cache_checker = if only_remote_dep_file_cache {
+            Arc::new(NoOpCommandOptionalExecutor {}) as _
+        } else {
+            Arc::new(ActionCacheChecker {
+                artifact_fs: artifact_fs.clone(),
+                materializer: self.materializer.dupe(),
+                incremental_db_state: self.incremental_db_state.dupe(),
+                re_client: self.get_prepared_re_client(options.re_use_case),
+                re_action_key: options.re_action_key.clone(),
+                upload_all_actions: self.upload_all_actions,
+                knobs: self.executor_global_knobs.dupe(),
+                paranoid: self.paranoid.dupe(),
+                deduplicate_get_digests_ttl_calls: self.deduplicate_get_digests_ttl_calls,
+                output_trees_download_config: self.output_trees_download_config.dupe(),
+            }) as _
+        };
+        (action_cache_checker, remote_dep_file_cache_checker)
+    }
+
+    fn remote_cache_uploader(
+        &self,
+        artifact_fs: &ArtifactFs,
+        options: &RemoteEnabledExecutorOptions,
+        upload_platform: RePlatformFields,
+        disable_caching: bool,
+    ) -> bsmr_error::Result<Arc<dyn UploadCache>> {
+        let max_bytes = match options.cache_upload_behavior {
+            _ if force_cache_upload()? => None,
+            _ if disable_caching => return Ok(Arc::new(NoOpCacheUploader {})),
+            CacheUploadBehavior::Enabled { max_bytes } => max_bytes,
+            CacheUploadBehavior::Disabled => return Ok(Arc::new(NoOpCacheUploader {})),
+        };
+        Ok(Arc::new(CacheUploader::new(
+            artifact_fs.clone(),
+            self.materializer.dupe(),
+            self.get_prepared_re_client(options.re_use_case),
+            upload_platform,
+            max_bytes,
+            self.cache_upload_permission_checker.dupe(),
+            self.deduplicate_get_digests_ttl_calls,
+        )))
     }
 }
 
@@ -345,71 +475,11 @@ impl HasCommandExecutor for CommandExecutorFactory {
                 }
             }
             Executor::RemoteEnabled(remote_options) => {
-                // NOTE: While we now have a legit flag for this, we keep the env var. This has been used
-                // in remediating prod incidents in the past, and this is the kind of thing that can easily
-                // become tribal knowledge. Keeping this does not hurt us.
-                let disable_caching =
-                    bsmr_env!("BSMR_TEST_DISABLE_CACHING", type=bool, applicability=testing)?
-                        .unwrap_or(self.skip_cache_read);
-
-                let disable_caching = disable_caching
-                    || (!remote_options.remote_cache_enabled
-                        && !remote_options.remote_dep_file_cache_enabled);
-
-                // This is for test only as in real life, it would be silly to only use the remote dep file cache and not the regular cache
-                // This will only do anything if cache is not disabled and remote dep file cache is enabled
-                let only_remote_dep_file_cache = bsmr_env!(
-                    "BSMR_TEST_ONLY_REMOTE_DEP_FILE_CACHE",
-                    bool,
-                    applicability = testing
+                let cache = self.remote_cache_components(
+                    artifact_fs,
+                    remote_options,
+                    remote_options.re_properties.clone(),
                 )?;
-
-                let cache_checker_new = || -> (Arc<dyn PreparedCommandOptionalExecutor>, Arc<dyn PreparedCommandOptionalExecutor>) {
-                    if disable_caching {
-                        return (
-                            Arc::new(NoOpCommandOptionalExecutor {}) as _,
-                            Arc::new(NoOpCommandOptionalExecutor {}) as _,
-                        );
-                    }
-
-                    let remote_dep_file_cache_checker: Arc<dyn PreparedCommandOptionalExecutor> =
-                        if remote_options.remote_dep_file_cache_enabled {
-                            Arc::new(RemoteDepFileCacheChecker {
-                                artifact_fs: artifact_fs.clone(),
-                                materializer: self.materializer.dupe(),
-                                incremental_db_state: self.incremental_db_state.dupe(),
-                                re_client: self.get_prepared_re_client(remote_options.re_use_case),
-                                re_action_key: remote_options.re_action_key.clone(),
-                                upload_all_actions: self.upload_all_actions,
-                                knobs: self.executor_global_knobs.dupe(),
-                                paranoid: self.paranoid.dupe(),
-                                deduplicate_get_digests_ttl_calls: self.deduplicate_get_digests_ttl_calls,
-                                output_trees_download_config: self.output_trees_download_config.dupe(),
-                            }) as _
-                        } else {
-                            Arc::new(NoOpCommandOptionalExecutor {}) as _
-                        };
-
-                    let action_cache_checker: Arc<dyn PreparedCommandOptionalExecutor> =
-                        if only_remote_dep_file_cache {
-                            Arc::new(NoOpCommandOptionalExecutor {}) as _
-                        } else {
-                            Arc::new(ActionCacheChecker {
-                                artifact_fs: artifact_fs.clone(),
-                                materializer: self.materializer.dupe(),
-                                incremental_db_state: self.incremental_db_state.dupe(),
-                                re_client: self.get_prepared_re_client(remote_options.re_use_case),
-                                re_action_key: remote_options.re_action_key.clone(),
-                                upload_all_actions: self.upload_all_actions,
-                                knobs: self.executor_global_knobs.dupe(),
-                                paranoid: self.paranoid.dupe(),
-                                deduplicate_get_digests_ttl_calls: self.deduplicate_get_digests_ttl_calls,
-                                output_trees_download_config: self.output_trees_download_config.dupe(),
-                            }) as _
-                        };
-
-                    (action_cache_checker, remote_dep_file_cache_checker)
-                };
 
                 let executor: Option<Arc<dyn PreparedCommandExecutor>> =
                     match &remote_options.executor {
@@ -454,7 +524,7 @@ impl HasCommandExecutor for CommandExecutorFactory {
                                     .and(ExecutorPreference::DefaultErasePreferences)?;
 
                                 let (action_cache_checker, remote_dep_file_cache_checker) =
-                                    cache_checker_new();
+                                    cache.checkers();
                                 Some(Arc::new(HybridExecutor {
                                     local,
                                     remote: StackedExecutor {
@@ -493,43 +563,15 @@ impl HasCommandExecutor for CommandExecutorFactory {
                             Arc::new(NoOpCommandOptionalExecutor {}) as _,
                         )
                     } else {
-                        cache_checker_new()
+                        cache.checkers()
                     };
-
-                let cache_uploader = if force_cache_upload()? {
-                    Arc::new(CacheUploader::new(
-                        artifact_fs.clone(),
-                        self.materializer.dupe(),
-                        self.get_prepared_re_client(remote_options.re_use_case),
-                        remote_options.re_properties.clone(),
-                        None,
-                        self.cache_upload_permission_checker.dupe(),
-                        self.deduplicate_get_digests_ttl_calls,
-                    )) as _
-                } else if disable_caching {
-                    Arc::new(NoOpCacheUploader {}) as _
-                } else if let CacheUploadBehavior::Enabled { max_bytes } =
-                    remote_options.cache_upload_behavior
-                {
-                    Arc::new(CacheUploader::new(
-                        artifact_fs.clone(),
-                        self.materializer.dupe(),
-                        self.get_prepared_re_client(remote_options.re_use_case),
-                        remote_options.re_properties.clone(),
-                        max_bytes,
-                        self.cache_upload_permission_checker.dupe(),
-                        self.deduplicate_get_digests_ttl_calls,
-                    )) as _
-                } else {
-                    Arc::new(NoOpCacheUploader {}) as _
-                };
 
                 executor.map(|executor| CommandExecutorResponse {
                     executor,
                     platform: remote_options.re_properties.to_re_platform(),
                     action_cache_checker,
                     remote_dep_file_cache_checker,
-                    cache_uploader,
+                    cache_uploader: cache.cache_uploader,
                     output_trees_download_config: self.output_trees_download_config.dupe(),
                 })
             }
