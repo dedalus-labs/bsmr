@@ -1,3 +1,9 @@
+# ===----------------------------------------------------------------------===
+# Upstream-Source: facebook/buck2@1560aca2002865cd73d7cafb22c705cfb640b2bc
+# Modifications Copyright (c) 2026 Dedalus Labs, Inc. and its contributors
+# SPDX-License-Identifier: Apache-2.0
+# ===----------------------------------------------------------------------===
+
 # Copyright (c) Meta Platforms, Inc. and affiliates.
 #
 # This source code is dual-licensed under either the MIT license found in the
@@ -45,8 +51,8 @@ def _get_exported_additional_include_directories(target: bxl.ConfiguredTargetNod
                 name = header_namespace + "/" + name
         name = normcase(name)
 
-        # If file path is in generated buck-out, the file will be either not available or more correct form buck-headers exists.
-        if "buck-out" not in path and path.endswith(name):
+        # If file path is in generated bsmr-out, the file will be either not available or more correct form buck-headers exists.
+        if "bsmr-out" not in path and path.endswith(name):
             # e.g.,
             # header: xplat/ocean/impl/ocean/base:base  https://fburl.com/code/uiyr5ay9
             # usage: xplat/ocean/impl/ocean/math:math  https://fburl.com/code/ebtcvn44

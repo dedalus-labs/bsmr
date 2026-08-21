@@ -1,3 +1,9 @@
+//===----------------------------------------------------------------------===//
+// Upstream-Source: facebook/buck2@1560aca2002865cd73d7cafb22c705cfb640b2bc
+// Modifications Copyright (c) 2026 Dedalus Labs, Inc. and its contributors
+// SPDX-License-Identifier: Apache-2.0
+//===----------------------------------------------------------------------===//
+
 /*
  * Copyright (c) Meta Platforms, Inc. and affiliates.
  *
@@ -15,7 +21,7 @@ import java.nio.file.Paths;
 
 public class BuckConstant {
 
-  public static final String DEFAULT_BUCK_OUT_DIR_NAME = "buck-out";
+  public static final String DEFAULT_BUCK_OUT_DIR_NAME = "bsmr-out";
   private static final Path BUCK_OUTPUT_PATH_DEFAULT =
       Paths.get(System.getProperty("buck.base_buck_out_dir", DEFAULT_BUCK_OUT_DIR_NAME));
 

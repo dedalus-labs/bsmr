@@ -83,7 +83,7 @@ const outputs = (runner: Runner): string[] => {
 			else if (entry.name === "output.json") found.push(path);
 		}
 	};
-	visit(runner === "bsmr" ? join(runners.bsmr.cwd, "buck-out") : join(runners[runner].cwd, "packages"));
+	visit(runner === "bsmr" ? join(runners.bsmr.cwd, "bsmr-out") : join(runners[runner].cwd, "packages"));
 	return found.sort();
 };
 

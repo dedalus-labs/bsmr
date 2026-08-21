@@ -1,3 +1,9 @@
+//===----------------------------------------------------------------------===//
+// Upstream-Source: facebook/buck2@1560aca2002865cd73d7cafb22c705cfb640b2bc
+// Modifications Copyright (c) 2026 Dedalus Labs, Inc. and its contributors
+// SPDX-License-Identifier: Apache-2.0
+//===----------------------------------------------------------------------===//
+
 /*
  * Copyright (c) Meta Platforms, Inc. and affiliates.
  *
@@ -97,10 +103,10 @@ public class ClasspathUtils {
 
   public static boolean assertValidClasspathsPattern(AbsPath absPath) {
     String path = absPath.toString();
-    if (!(path.endsWith(".jar") || path.endsWith(".zip") || path.contains("buck-out/"))) {
+    if (!(path.endsWith(".jar") || path.endsWith(".zip") || path.contains("bsmr-out/"))) {
       throw new AssertionError(
           String.format(
-              "classpath %s is not supported, only jar, zip file or a directory inside `buck-out/`"
+              "classpath %s is not supported, only jar, zip file or a directory inside `bsmr-out/`"
                   + " are allowed",
               path));
     }

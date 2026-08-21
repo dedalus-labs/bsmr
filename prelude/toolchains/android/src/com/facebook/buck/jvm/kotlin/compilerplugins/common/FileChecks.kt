@@ -1,3 +1,9 @@
+//===----------------------------------------------------------------------===//
+// Upstream-Source: facebook/buck2@1560aca2002865cd73d7cafb22c705cfb640b2bc
+// Modifications Copyright (c) 2026 Dedalus Labs, Inc. and its contributors
+// SPDX-License-Identifier: Apache-2.0
+//===----------------------------------------------------------------------===//
+
 /*
  * Copyright (c) Meta Platforms, Inc. and affiliates.
  *
@@ -13,7 +19,7 @@ package com.facebook.kotlin.compilerplugins.common
 import org.jetbrains.kotlin.psi.KtFile
 
 // A file in these directories is either generated and must not be codemoded or is compiler plugin
-const val COMPILATION_PATH: String = "/buck-out/"
+const val COMPILATION_PATH: String = "/bsmr-out/"
 
 // Path fragment indicating a file has been generated from one or more compiler plugins
 const val COMPILER_PLUGIN_MID_FIX: String = "_kotlinc_plugin_generated__/"
@@ -40,7 +46,7 @@ value class SourcePath(val path: String) {
     }
 
     return path
-        .replace(Regex("/buck-out/[a-zA-Z0-9]+/[a-zA-Z0-9]+/fbandroid"), "/fbandroid")
+        .replace(Regex("/bsmr-out/[a-zA-Z0-9]+/[a-zA-Z0-9]+/fbandroid"), "/fbandroid")
         .replace(Regex("/__[a-zA-Z0-9]+_kotlinc_plugin_generated__/"), "/")
   }
 

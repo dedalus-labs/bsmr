@@ -27,7 +27,7 @@ import java.io.IOException;
  * <p>This starts a grpc service over a uds socket, that accepts kotlincd compilation commands
  */
 public class KotlinCDGrpcWorkerToolMain {
-  private static final String LOG_PATH = "buck-out/v2/kotlincd";
+  private static final String LOG_PATH = "bsmr-out/v2/kotlincd";
 
   public static void main(String[] args) throws IOException {
     CompilerDaemonLoggerUtil.setDefaultLogger("kotlincd_grpc_worker", LOG_PATH);

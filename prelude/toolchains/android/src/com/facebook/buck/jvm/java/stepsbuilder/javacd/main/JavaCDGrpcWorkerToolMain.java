@@ -27,7 +27,7 @@ import java.io.IOException;
  * <p>This starts a grpc service over a uds socket, that accepts javacd compilation commands
  */
 public class JavaCDGrpcWorkerToolMain {
-  private static final String LOG_PATH = "buck-out/v2/javacd";
+  private static final String LOG_PATH = "bsmr-out/v2/javacd";
 
   public static void main(String[] args) throws IOException {
     CompilerDaemonLoggerUtil.setDefaultLogger("javacd_grpc_worker", LOG_PATH);

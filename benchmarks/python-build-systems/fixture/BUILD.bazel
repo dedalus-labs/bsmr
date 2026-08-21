@@ -80,7 +80,7 @@ pep517_wheel(
             ".venv/**",
             "**/__pycache__/**",
             "bazel-*/**",
-            "buck-out/**",
+            "bsmr-out/**",
         ],
     ),
 )

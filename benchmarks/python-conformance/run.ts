@@ -48,7 +48,7 @@ const generatedSourceComponents = new Set([
 	".ruff_cache",
 	".venv",
 	"__pycache__",
-	"buck-out",
+	"bsmr-out",
 	"build",
 	"dist",
 	"node_modules",
@@ -85,7 +85,7 @@ export const bsmrBuildArguments = (targets: readonly string[], isolation: string
 export const assertBsmrCacheState = (repository: string, isolation: string | undefined, cacheState: string): void => {
 	if (cacheState !== "empty-isolation") return;
 	if (!isolation) throw new Error("empty-isolation requires BSMR_BENCH_ISOLATION_DIR");
-	const output = join(repository, "buck-out", isolation);
+	const output = join(repository, "bsmr-out", isolation);
 	if (existsSync(output)) throw new Error(`empty BSMR isolation already exists: '${output}'`);
 };
 
