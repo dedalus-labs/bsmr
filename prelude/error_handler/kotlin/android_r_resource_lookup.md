@@ -39,7 +39,7 @@ FindResourcePackage(
 )
 ```
 
-Returns the correct **package** for imports and **Buck target** for dependencies.
+Returns the correct **package** for imports and **Bsmr target** for dependencies.
 
 ## Workflow
 

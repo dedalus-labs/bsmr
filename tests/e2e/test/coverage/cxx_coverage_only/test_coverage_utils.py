@@ -19,11 +19,11 @@ import json
 from pathlib import Path
 from typing import List, Optional
 
-from bsmr.tests.e2e_util.api.buck import Buck
+from bsmr.tests.e2e_util.api.bsmr import Bsmr
 
 
 async def collect_coverage_for(
-    buck: Buck,
+    bsmr: Bsmr,
     tmp_path: Path,
     target: str,
     filter: List[str],
@@ -31,10 +31,10 @@ async def collect_coverage_for(
 ) -> List[str]:
     coverage_file = tmp_path / "coverage.txt"
     filter_str = " ".join(filter)
-    buck_args = []
+    bsmr_args = []
     if mode is not None:
-        buck_args.append(mode)
-    buck_args.extend(
+        bsmr_args.append(mode)
+    bsmr_args.extend(
         [
             "--config",
             "fbcode.coverage_selective=true",
@@ -46,7 +46,7 @@ async def collect_coverage_for(
             f"--coverage-output={coverage_file}",
         ]
     )
-    await buck.test(*buck_args)
+    await bsmr.test(*bsmr_args)
     paths = []
     with open(coverage_file) as results:
         for line in results:

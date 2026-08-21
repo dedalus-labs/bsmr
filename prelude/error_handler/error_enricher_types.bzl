@@ -1,3 +1,9 @@
+# ===----------------------------------------------------------------------===
+# Upstream-Source: facebook/buck2@1560aca2002865cd73d7cafb22c705cfb640b2bc
+# Modifications Copyright (c) 2026 Dedalus Labs, Inc. and its contributors
+# SPDX-License-Identifier: Apache-2.0
+# ===----------------------------------------------------------------------===
+
 # Copyright (c) Meta Platforms, Inc. and affiliates.
 #
 # This source code is dual-licensed under either the MIT license found in the
@@ -13,7 +19,7 @@ Type definitions for the unified error enrichment framework.
 ErrorEnricher = record(
     # Pattern to match against the error message.
     # str performs a case-sensitive substring match.
-    matcher = str | BuckRegex,
+    matcher = str | BsmrRegex,
     # If specified, matcher will only run if the filepath contains this string.
     file_matcher = field([str, None], default = None),
     # Category to set on the error when matched.

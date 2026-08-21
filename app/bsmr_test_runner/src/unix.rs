@@ -18,7 +18,7 @@ use std::os::unix::io::FromRawFd;
 use std::os::unix::io::RawFd;
 use std::os::unix::net::UnixStream as StdUnixStream;
 
-use bsmr_error::BuckErrorContext;
+use bsmr_error::BsmrErrorContext;
 use bsmr_grpc::DuplexChannel;
 use clap::Parser;
 use tokio::net::UnixStream;
@@ -48,11 +48,11 @@ impl BsmrTestRunnerUnix {
         // descriptors at worse, which is basically the best we can do anyway.
         let orchestrator_io =
             UnixStream::from_std(unsafe { StdUnixStream::from_raw_fd(self.orchestrator_fd) })
-                .buck_error_context("Failed to create orchestrator_io")?;
+                .bsmr_error_context("Failed to create orchestrator_io")?;
 
         let executor_io =
             UnixStream::from_std(unsafe { StdUnixStream::from_raw_fd(self.executor_fd) })
-                .buck_error_context("Failed to create executor_io")?;
+                .bsmr_error_context("Failed to create executor_io")?;
 
         let executor_io = {
             let (read, write) = tokio::io::split(executor_io);

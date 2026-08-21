@@ -8,7 +8,7 @@
 
 This directory contains the rules and toolchain interfaces bundled with
 Bessemer. It originated in the
-[Buck2 prelude](https://github.com/facebook/buck2/tree/main/prelude) and
+[upstream prelude](https://github.com/facebook/buck2/tree/main/prelude) and
 retains its upstream copyright notices.
 
 Report issues and send pull requests through the

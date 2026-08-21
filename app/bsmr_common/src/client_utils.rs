@@ -19,14 +19,14 @@ use std::net::Ipv4Addr;
 use std::path::Path;
 use std::time::Duration;
 
-use bsmr_error::BuckErrorContext;
+use bsmr_error::BsmrErrorContext;
 use bsmr_error::ErrorTag;
 use futures::Future;
 use tokio::time::Instant;
 use tonic::transport::Channel;
 use tonic::transport::Endpoint;
 
-pub static UDS_DAEMON_FILENAME: &str = "buckd.uds";
+pub static UDS_DAEMON_FILENAME: &str = "bsmrd.uds";
 
 #[cfg(unix)]
 pub async fn get_channel_uds(
@@ -36,20 +36,20 @@ pub async fn get_channel_uds(
     use bsmr_fs::error::IoResultExt;
     use bsmr_fs::fs_util;
 
-    use crate::home_buck_tmp::home_buck_tmp_dir;
+    use crate::home_temp::home_temp_dir;
     use crate::temp_path::TempPath;
 
     // Symlink to temp file to connect to unix domain socket
     // since the unix domain socket path is limited to 108 characters.
     // https://man7.org/linux/man-pages/man7/unix.7.html
     if change_to_parent_dir {
-        let symlink = TempPath::new_in(home_buck_tmp_dir()?)?;
+        let symlink = TempPath::new_in(home_temp_dir()?)?;
 
         fs_util::symlink(unix_socket, symlink.path()).categorize_internal()?;
 
         let r = get_channel_uds_no_symlink(symlink.path())
             .await
-            .with_buck_error_context(|| {
+            .with_bsmr_error_context(|| {
                 format!(
                     "Failed to connect to unix domain socket `{}` using symlink `{}`",
                     unix_socket.display(),
@@ -63,7 +63,7 @@ pub async fn get_channel_uds(
     } else {
         get_channel_uds_no_symlink(unix_socket)
             .await
-            .with_buck_error_context(|| {
+            .with_bsmr_error_context(|| {
                 format!(
                     "Failed to connect to unix domain socket `{}`",
                     unix_socket.display()
@@ -105,7 +105,7 @@ pub async fn get_channel_tcp(socket_addr: Ipv4Addr, port: u16) -> bsmr_error::Re
         .connect()
         .await
         .tag(ErrorTag::ServerTransportError)
-        .with_buck_error_context(|| format!("failed to connect to port {port}"))
+        .with_bsmr_error_context(|| format!("failed to connect to port {port}"))
 }
 
 #[derive(bsmr_error::Error, Debug)]

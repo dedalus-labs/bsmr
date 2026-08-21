@@ -16,11 +16,11 @@
 
 from pathlib import Path
 
-from bsmr.tests.e2e_util.api.buck import Buck
-from bsmr.tests.e2e_util.buck_workspace import buck_test
+from bsmr.tests.e2e_util.api.bsmr import Bsmr
+from bsmr.tests.e2e_util.bsmr_workspace import bsmr_test
 
 
-@buck_test()
-async def test_root_cell_with_ignored_bsmrconfig(buck: Buck) -> None:
-    r = await buck.root("--kind=cell", rel_cwd=Path("abc"))
-    assert r.stdout.strip() == str(buck.cwd)
+@bsmr_test()
+async def test_root_cell_with_ignored_bsmrconfig(bsmr: Bsmr) -> None:
+    r = await bsmr.root("--kind=cell", rel_cwd=Path("abc"))
+    assert r.stdout.strip() == str(bsmr.cwd)

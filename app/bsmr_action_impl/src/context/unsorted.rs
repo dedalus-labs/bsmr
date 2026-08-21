@@ -21,7 +21,7 @@ use bsmr_build_api::interpreter::rule_defs::context::AnalysisActions;
 use bsmr_build_api::interpreter::rule_defs::digest_config::StarlarkDigestConfig;
 use bsmr_build_api::interpreter::rule_defs::transitive_set::FrozenTransitiveSetDefinition;
 use bsmr_build_api::interpreter::rule_defs::transitive_set::TransitiveSet;
-use bsmr_core::fs::buck_out_path::BuckOutPathKind;
+use bsmr_core::fs::output_path::OutputPathKind;
 use bsmr_execute::execute::request::OutputType;
 use starlark::environment::MethodsBuilder;
 use starlark::eval::Evaluator;
@@ -80,9 +80,9 @@ pub(crate) fn analysis_actions_methods_unsorted(builder: &mut MethodsBuilder) {
                 .unwrap_or(&false),
         );
         let path_resolution_method = if has_content_based_path {
-            BuckOutPathKind::ContentHash
+            OutputPathKind::ContentHash
         } else {
-            BuckOutPathKind::Configuration
+            OutputPathKind::Configuration
         };
         let artifact = this.state()?.declare_output(
             prefix,
@@ -100,7 +100,7 @@ pub(crate) fn analysis_actions_methods_unsorted(builder: &mut MethodsBuilder) {
         ))
     }
 
-    /// Creates a new transitive set. For details, see https://buck2.build/docs/rule_authors/transitive_sets/.
+    /// Creates a new transitive set. For details, see https://oss.dedaluslabs.ai/bsmr/rule_authors/transitive_sets/.
     fn tset<'v>(
         this: &AnalysisActions<'v>,
         #[starlark(require = pos)] definition: FrozenValueTyped<'v, FrozenTransitiveSetDefinition>,

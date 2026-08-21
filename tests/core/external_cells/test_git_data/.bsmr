@@ -20,7 +20,7 @@ root = .
   nano_prelude = bundled
   libfoo = git
 
-# Written by each test before invoking buck
+# Written by each test before invoking bsmr
 [external_cell_libfoo]
   git_origin = <PLACEHOLDER>
   commit_hash = <PLACEHOLDER>

@@ -17,38 +17,38 @@
 
 import json
 
-from bsmr.tests.e2e_util.api.buck import Buck
-from bsmr.tests.e2e_util.buck_workspace import buck_test
+from bsmr.tests.e2e_util.api.bsmr import Bsmr
+from bsmr.tests.e2e_util.bsmr_workspace import bsmr_test
 
 
-@buck_test()
-async def test_keep_going_json(buck: Buck) -> None:
-    result = await buck.targets("//...", "--json", "--keep-going")
+@bsmr_test()
+async def test_keep_going_json(bsmr: Bsmr) -> None:
+    result = await bsmr.targets("//...", "--json", "--keep-going")
     xs = json.loads(result.stdout)
     # I expect six records, one which is an error
     assert len(xs) == 6
     for x in xs:
-        if x["buck.package"] == "root//a":
+        if x["bsmr.package"] == "root//a":
             assert x["name"].startswith("target")
         else:
-            assert x["buck.package"] == "root//b"
-            assert "test_error" in x["buck.error"]
+            assert x["bsmr.package"] == "root//b"
+            assert "test_error" in x["bsmr.error"]
 
 
-@buck_test()
-async def test_keep_going(buck: Buck) -> None:
-    result = await buck.targets("//...", "--keep-going")
+@bsmr_test()
+async def test_keep_going(bsmr: Bsmr) -> None:
+    result = await bsmr.targets("//...", "--keep-going")
     assert "test_error" in result.stderr
 
 
-@buck_test()
-async def test_keep_going_streaming(buck: Buck) -> None:
-    result = await buck.targets("//...", "--streaming", "--keep-going")
+@bsmr_test()
+async def test_keep_going_streaming(bsmr: Bsmr) -> None:
+    result = await bsmr.targets("//...", "--streaming", "--keep-going")
     assert "test_error" in result.stderr
 
 
-@buck_test()
-async def test_streaming_keep_going_missing_targets(buck: Buck) -> None:
+@bsmr_test()
+async def test_streaming_keep_going_missing_targets(bsmr: Bsmr) -> None:
     targets = [
         "//a:target1",
         "//a:target2",
@@ -57,17 +57,17 @@ async def test_streaming_keep_going_missing_targets(buck: Buck) -> None:
         "//a:target5",
         "//d:bogus_package",
     ]
-    result = await buck.targets(*targets, "--json", "--streaming", "--keep-going")
+    result = await bsmr.targets(*targets, "--json", "--streaming", "--keep-going")
     xs = json.loads(result.stdout)
     assert len(xs) == 5  # 3 success, 2 errors
     bad_packages = []
     good_targets = []
     for x in xs:
-        if "buck.error" in x:
-            bad_packages.append(x["buck.package"])
-            if x["buck.package"] == "root//a":
-                assert "`bogus_target`" in x["buck.error"]
-                assert "`worse_target`" in x["buck.error"]
+        if "bsmr.error" in x:
+            bad_packages.append(x["bsmr.package"])
+            if x["bsmr.package"] == "root//a":
+                assert "`bogus_target`" in x["bsmr.error"]
+                assert "`worse_target`" in x["bsmr.error"]
         else:
             good_targets.append(x["name"])
     bad_packages.sort()
@@ -76,30 +76,30 @@ async def test_streaming_keep_going_missing_targets(buck: Buck) -> None:
     assert good_targets == ["target1", "target2", "target5"]
 
 
-@buck_test()
-async def test_streaming_keep_going_with_single_failure(buck: Buck) -> None:
+@bsmr_test()
+async def test_streaming_keep_going_with_single_failure(bsmr: Bsmr) -> None:
     targets = [
         "//a:does_not_exist",
     ]
-    result = await buck.targets(*targets, "--json", "--streaming", "--keep-going")
+    result = await bsmr.targets(*targets, "--json", "--streaming", "--keep-going")
     xs = json.loads(result.stdout)
     assert len(xs) == 1
-    assert xs[0]["buck.package"] == "root//a"
+    assert xs[0]["bsmr.package"] == "root//a"
     assert (
-        xs[0]["buck.error"]
+        xs[0]["bsmr.error"]
         == "Unknown targets `does_not_exist` from package `root//a`."
     )
 
 
-@buck_test()
+@bsmr_test()
 async def test_streaming_keep_going_with_single_failing_target_and_one_other_target_in_different_package(
-    buck: Buck,
+    bsmr: Bsmr,
 ) -> None:
     targets = [
         "//a:target1",
         "//c:does_not_exist",
     ]
-    result = await buck.targets(
+    result = await bsmr.targets(
         *targets,
         "-a",
         "type",
@@ -110,17 +110,17 @@ async def test_streaming_keep_going_with_single_failing_target_and_one_other_tar
     xs = json.loads(result.stdout)
     assert len(xs) == 2
 
-    if "buck.error" in xs[0]:
+    if "bsmr.error" in xs[0]:
         good_target = xs[1]
         bad_target = xs[0]
     else:
         good_target = xs[0]
         bad_target = xs[1]
 
-    assert good_target["buck.type"] == "prelude//prelude.bzl:a_target"
+    assert good_target["bsmr.type"] == "prelude//prelude.bzl:a_target"
 
-    assert bad_target["buck.package"] == "root//c"
+    assert bad_target["bsmr.package"] == "root//c"
     assert (
-        bad_target["buck.error"]
+        bad_target["bsmr.error"]
         == "Unknown targets `does_not_exist` from package `root//c`."
     )

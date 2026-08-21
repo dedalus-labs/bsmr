@@ -15,24 +15,24 @@
 # pyre-strict
 
 
-from bsmr.tests.e2e_util.api.buck import Buck
+from bsmr.tests.e2e_util.api.bsmr import Bsmr
 from bsmr.tests.e2e_util.asserts import expect_failure
-from bsmr.tests.e2e_util.buck_workspace import buck_test
+from bsmr.tests.e2e_util.bsmr_workspace import bsmr_test
 
 
-@buck_test()
-async def test_debug_eval_good(buck: Buck) -> None:
-    await buck.debug(
+@bsmr_test()
+async def test_debug_eval_good(bsmr: Bsmr) -> None:
+    await bsmr.debug(
         "eval",
         "./good.bzl",
         "./good.bxl",
     )
 
 
-@buck_test()
-async def test_debug_eval_bad_bzl(buck: Buck) -> None:
+@bsmr_test()
+async def test_debug_eval_bad_bzl(bsmr: Bsmr) -> None:
     await expect_failure(
-        buck.debug(
+        bsmr.debug(
             "eval",
             "./bad.bzl",
         ),
@@ -40,10 +40,10 @@ async def test_debug_eval_bad_bzl(buck: Buck) -> None:
     )
 
 
-@buck_test()
-async def test_debug_eval_bad_bxl(buck: Buck) -> None:
+@bsmr_test()
+async def test_debug_eval_bad_bxl(bsmr: Bsmr) -> None:
     await expect_failure(
-        buck.debug(
+        bsmr.debug(
             "eval",
             "./bad.bxl",
         ),

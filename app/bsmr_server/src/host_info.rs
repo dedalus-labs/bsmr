@@ -17,7 +17,7 @@
 use bsmr_cli_proto::client_context::HostArchOverride;
 use bsmr_cli_proto::client_context::HostPlatformOverride;
 use bsmr_core::soft_error;
-use bsmr_error::BuckErrorContext;
+use bsmr_error::BsmrErrorContext;
 use bsmr_interpreter::extra::InterpreterHostArchitecture;
 use bsmr_interpreter::extra::InterpreterHostPlatform;
 use bsmr_interpreter::extra::xcode::XcodeVersionInfo;
@@ -65,11 +65,11 @@ pub fn get_host_info(
     let interpreter_xcode_version = match host_xcode_override {
         Some(s) => Some(
             XcodeVersionInfo::from_version_and_build(s.as_str())
-                .buck_error_context("Constructing `XcodeVersionInfo` from string.")?,
+                .bsmr_error_context("Constructing `XcodeVersionInfo` from string.")?,
         ),
         None if interpreter_platform == InterpreterHostPlatform::MacOS => {
             match XcodeVersionInfo::new()
-                .buck_error_context("Constructing `XcodeVersionInfo` using host platform MacOS.")
+                .bsmr_error_context("Constructing `XcodeVersionInfo` using host platform MacOS.")
             {
                 Ok(v) => v,
                 Err(e) => {

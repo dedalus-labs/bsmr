@@ -42,7 +42,7 @@ def _resources_arg():
      These files can be loaded
      via [Class.getResource()](http://docs.oracle.com/javase/7/docs/api/java/lang/Class.html#getResource(java.lang.String)).
 
-    **Note:** If `resources_root` isn't set, Buck uses the corresponding value
+    **Note:** If `resources_root` isn't set, Bsmr uses the corresponding value
      from `.bsmr` to determine where resources should be placed within the
      generated JAR file.
 """,
@@ -152,7 +152,7 @@ def _source_only_abi_deps():
      Typically such dependencies are added when some property of the code in this rule prevents source-only ABI
      generation from being correct without these dependencies being present.
 
-     Having `source_only_abi_deps` prevents Buck from
+     Having `source_only_abi_deps` prevents Bsmr from
      completely flattening the build graph, thus reducing the performance win from source-only
      ABI generation. They should be avoided when possible. Often only a small code change is needed to avoid them.
      For more information on such code changes, read about
@@ -183,7 +183,7 @@ def _required_for_source_only_abi():
      of any rule that depends on it. Typically this is done when a rule contains annotations,
      enums, constants, or interfaces.
 
-     Having rules present on the classpath during source-only ABI generation prevents Buck from
+     Having rules present on the classpath during source-only ABI generation prevents Bsmr from
      completely flattening the build graph, thus reducing the performance win from source-only
      ABI generation. These rules should be kept small (ideally just containing annotations,
      constants, enums, and interfaces) and with minimal dependencies of their own.
@@ -261,7 +261,7 @@ def _kotlin_compiler_plugins():
                  these can be *source paths*, not just strings.
 
                  A special option value is
-                 `__codegen_dir__`, in which case Buck will provide a default codegen folder's path as
+                 `__codegen_dir__`, in which case Bsmr will provide a default codegen folder's path as
                  option value instead.
                  E.g.
 

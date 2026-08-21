@@ -20,8 +20,8 @@ import subprocess
 import typing
 from pathlib import Path
 
-from bsmr.tests.e2e_util.api.buck import Buck
-from bsmr.tests.e2e_util.buck_workspace import buck_test
+from bsmr.tests.e2e_util.api.bsmr import Bsmr
+from bsmr.tests.e2e_util.bsmr_workspace import bsmr_test
 
 IS_LINUX: bool = platform.system() == "Linux"
 
@@ -44,13 +44,13 @@ def completion_test(
             continue
 
         # shell=shell is a trick to get the variable captured by value
-        async def impl(buck: Buck, shell: str = shell) -> None:
-            tmp_path = Path(buck.cwd).parent / "tmp"
+        async def impl(bsmr: Bsmr, shell: str = shell) -> None:
+            tmp_path = Path(bsmr.cwd).parent / "tmp"
             tmp_path.mkdir(exist_ok=True)
 
             verify_bin = Path(os.environ["BSMR_COMPLETION_VERIFY"])
 
-            get_completions = await buck.completion(
+            get_completions = await bsmr.completion(
                 shell, *(["--options-only"] if options_only else [])
             )
             completions_path = tmp_path / f"completion.{shell}"
@@ -59,12 +59,12 @@ def completion_test(
             shell_home = (tmp_path / f"{shell}_tmp").absolute()
             shell_home.mkdir(exist_ok=True)
 
-            # Write this to a script to make it easier to debug with `BUCK_E2E_KEEP_TMP=1`
+            # Write this to a script to make it easier to debug with `BSMR_E2E_KEEP_TMP=1`
             script = "\n".join(
                 [
                     "#!/bin/bash",
                     "shopt -s dotglob",
-                    f'export PATH="{buck.path_to_executable.parent.absolute()}:$PATH"',
+                    f'export PATH="{bsmr.path_to_executable.parent.absolute()}:$PATH"',
                     "export BSMR_COMPLETION_TIMEOUT=30000",
                     f"if [ -n \"$( ls -A '{shell_home}' )\" ]; then",
                     f"    rm -r -- {shell_home}/*",
@@ -79,13 +79,13 @@ def completion_test(
             # Because shells don't report when they're done generating completions, these tests are
             # fundamentally racey. Improve on that a little bit by "warming up" the daemon before
             # doing the actual test.
-            await buck.uquery("//...")
+            await bsmr.uquery("//...")
 
             actual = subprocess.check_output(
                 script_path.absolute(),
                 input=f"{bin} {input}",
                 text=True,
-                cwd=buck.cwd.joinpath(cwd),
+                cwd=bsmr.cwd.joinpath(cwd),
             )
             actual = actual.splitlines()
             if isinstance(expected, list):
@@ -105,7 +105,7 @@ def completion_test(
             else:
                 assert expected(actual), "testing shell: " + shell
 
-        globals()[name + "_" + shell] = buck_test()(impl)
+        globals()[name + "_" + shell] = bsmr_test()(impl)
 
 
 completion_test(
@@ -130,7 +130,7 @@ completion_test(
 )
 
 completion_test(
-    name="test_build_flags_buck_bin",
+    name="test_build_flags_bsmr_bin",
     # Use `--p` so that we don't get too many outputs, which the test framework doesn't handle well
     # on zsh
     input="build --p",
@@ -138,7 +138,7 @@ completion_test(
     expected=lambda actual: (
         "--prefer-local" in actual and "--prefer-remote" in actual
     ),
-    bin="buck",
+    bin="bsmr",
 )
 
 completion_test(

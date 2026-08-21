@@ -31,10 +31,10 @@ use tonic::Request;
 use tonic::codegen::InterceptedService;
 use tonic::transport::Channel;
 
-use crate::daemon::client::BuckdLifecycleLock;
-use crate::daemon::client::connect::BuckAddAuthTokenInterceptor;
-use crate::daemon::client::connect::BuckdProcessInfo;
-use crate::daemon::client::connect::buckd_startup_timeout;
+use crate::daemon::client::BsmrdLifecycleLock;
+use crate::daemon::client::connect::BsmrAddAuthTokenInterceptor;
+use crate::daemon::client::connect::BsmrdProcessInfo;
+use crate::daemon::client::connect::bsmrd_startup_timeout;
 use crate::startup_deadline::StartupDeadline;
 
 const GRACEFUL_SHUTDOWN_TIMEOUT: Duration = Duration::from_secs(4);
@@ -43,31 +43,31 @@ const KILL_REQUEST_TIMEOUT: Duration = Duration::from_secs(3);
 const FORCE_SHUTDOWN_TIMEOUT: Duration = Duration::from_secs(10);
 
 pub async fn kill_command_impl(
-    lifecycle_lock: &BuckdLifecycleLock,
+    lifecycle_lock: &BsmrdLifecycleLock,
     reason: &str,
 ) -> bsmr_error::Result<()> {
-    let process = match BuckdProcessInfo::load(lifecycle_lock.daemon_dir()) {
+    let process = match BsmrdProcessInfo::load(lifecycle_lock.daemon_dir()) {
         Ok(p) => p,
         Err(e) => {
-            tracing::debug!("No BuckdProcessInfo: {:#}", e);
-            crate::eprintln!("no buckd server running")?;
+            tracing::debug!("No BsmrdProcessInfo: {:#}", e);
+            crate::eprintln!("no bsmrd server running")?;
             return Ok(());
         }
     };
 
-    let buckd = tokio::time::timeout(buckd_startup_timeout()?, async {
+    let bsmrd = tokio::time::timeout(bsmrd_startup_timeout()?, async {
         process.create_channel().await?.upgrade().await
     })
     .await;
 
-    let pid = match buckd {
-        Ok(Ok(mut buckd)) => {
-            crate::eprintln!("killing buckd server")?;
-            Some(buckd.kill(reason).await?)
+    let pid = match bsmrd {
+        Ok(Ok(mut bsmrd)) => {
+            crate::eprintln!("killing bsmrd server")?;
+            Some(bsmrd.kill(reason).await?)
         }
         Ok(Err(e)) => {
             // No time out: we just errored out. This is likely indicative that there is no
-            // buckd (i.e. our connection got rejected), so let's check for this and then
+            // bsmrd (i.e. our connection got rejected), so let's check for this and then
             // provide some information.
             let e = e;
 
@@ -76,11 +76,11 @@ pub async fn kill_command_impl(
             if e.has_tag(ErrorTag::ServerTransportError) {
                 // OK, looks like the server
                 tracing::debug!("Connect failed with a Tonic error: {:#}", e);
-                crate::eprintln!("no buckd server running")?;
+                crate::eprintln!("no bsmrd server running")?;
             } else {
                 crate::eprintln!(
                     "unexpected error connecting to Bessemer: {:#} \
-                            (no buckd server running?)",
+                            (no bsmrd server running?)",
                     e
                 )?;
             }
@@ -91,13 +91,13 @@ pub async fn kill_command_impl(
             tracing::debug!("Connect timed out: {:#}", e);
 
             // If we timeout, then considering the generous timeout we give ourselves, then
-            // that must mean we're not getting a reply back from Buck, but that we did
+            // that must mean we're not getting a reply back from Bsmr, but that we did
             // succeed in opening a connection to it (because if we didn't, we'd have
             // errored out).
             //
             // This means the socket is probably open. We can reasonably got and kill this
             // process if both the PID and the port exist.
-            crate::eprintln!("killing unresponsive buckd server")?;
+            crate::eprintln!("killing unresponsive bsmrd server")?;
             process.hard_kill().await?;
             Some(process.pid()?)
         }
@@ -111,7 +111,7 @@ pub async fn kill_command_impl(
 }
 
 pub(crate) async fn kill(
-    client: &mut DaemonApiClient<InterceptedService<Channel, BuckAddAuthTokenInterceptor>>,
+    client: &mut DaemonApiClient<InterceptedService<Channel, BsmrAddAuthTokenInterceptor>>,
     info: &DaemonProcessInfo,
     reason: &str,
 ) -> bsmr_error::Result<()> {

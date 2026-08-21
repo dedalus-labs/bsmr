@@ -19,16 +19,16 @@ import gzip
 import os.path
 from pathlib import Path
 
-from bsmr.tests.e2e_util.api.buck import Buck
-from bsmr.tests.e2e_util.buck_workspace import buck_test
+from bsmr.tests.e2e_util.api.bsmr import Bsmr
+from bsmr.tests.e2e_util.bsmr_workspace import bsmr_test
 
 
-@buck_test()
-async def test_debug_legacy_dice_dump(buck: Buck, tmp_path: Path) -> None:
+@bsmr_test()
+async def test_debug_legacy_dice_dump(bsmr: Bsmr, tmp_path: Path) -> None:
     file_path = tmp_path / "dump"
 
-    await buck.uquery("//...")
-    await buck.debug("dice-dump", "--path", str(file_path))
+    await bsmr.uquery("//...")
+    await bsmr.debug("dice-dump", "--path", str(file_path))
 
     assert os.path.exists(f"{file_path}/nodes.gz")
     assert os.path.exists(f"{file_path}/edges.gz")

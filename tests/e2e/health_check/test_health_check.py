@@ -18,24 +18,24 @@
 import asyncio
 import tempfile
 
-from bsmr.tests.e2e_util.api.buck import Buck
-from bsmr.tests.e2e_util.buck_workspace import buck_test
+from bsmr.tests.e2e_util.api.bsmr import Bsmr
+from bsmr.tests.e2e_util.bsmr_workspace import bsmr_test
 
 
-@buck_test(inplace=True)
-async def test_health_check_with_request_hang(buck: Buck) -> None:
+@bsmr_test(inplace=True)
+async def test_health_check_with_request_hang(bsmr: Bsmr) -> None:
     (
         health_check_state_file,
         server_output,
         server_process,
-    ) = await start_health_check_server(buck, "--with-request-hang")
+    ) = await start_health_check_server(bsmr, "--with-request-hang")
 
     env = {
-        # Set the CLI_PATH to `echo` making it effectively a no-op since we want buck to use the test server and not spawn a new one.
+        # Set the CLI_PATH to `echo` making it effectively a no-op since we want bsmr to use the test server and not spawn a new one.
         "BSMR_HEALTH_CHECK_CLI_PATH": "echo",
         "BSMR_HEALTH_CHECK_STATE_INFO_PATH": health_check_state_file,
     }
-    await buck.build(
+    await bsmr.build(
         "root//tests/targets/rules/rust/hello_world:welcome",
         env=env,
     )
@@ -51,14 +51,14 @@ async def test_health_check_with_request_hang(buck: Buck) -> None:
 
 
 async def start_health_check_server(
-    buck: Buck, request_setup: str
+    bsmr: Bsmr, request_setup: str
 ) -> tuple[str, str, asyncio.subprocess.Process]:
     server_output = tempfile.NamedTemporaryFile("w", delete=False).name
     health_check_state_file = tempfile.NamedTemporaryFile("w", delete=False).name
 
     # Start the server before the build begins to ensure that the server is ready to accept requests.
     # This is necessary since the run_request_hang_server.sh script may need to build the server target.
-    cmd = buck.run(
+    cmd = bsmr.run(
         "root//tests/e2e/health_check:health_check_server_bin",
         "--",
         "--isolation-dir",  # Avoids interference with the build of test target

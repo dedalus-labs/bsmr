@@ -20,12 +20,12 @@ use std::sync::Arc;
 use bsmr_core::async_once_cell::AsyncOnceCell;
 use bsmr_core::execution_types::executor_config::RePlatformFields;
 use bsmr_core::execution_types::executor_config::RemoteExecutorUseCase;
-use bsmr_error::BuckErrorContext;
+use bsmr_error::BsmrErrorContext;
 use bsmr_execute::digest_config::DigestConfig;
 use bsmr_execute::re::client::ActionCacheWriteType;
 use bsmr_execute::re::error::RemoteExecutionError;
 use bsmr_execute::re::manager::ManagedRemoteExecutionClient;
-use bsmr_hash::BuckDashMap;
+use bsmr_hash::BsmrDashMap;
 use dupe::Dupe;
 use remote_execution::TCode;
 
@@ -46,13 +46,13 @@ struct CacheValue {
 pub struct ActionCacheUploadPermissionChecker {
     /// Permission check does not depend on RE use case,
     /// but since we use these to upload, it is safer to cache the result by them.
-    has_permission_to_upload_to_cache: BuckDashMap<CacheKey, Arc<CacheValue>>,
+    has_permission_to_upload_to_cache: BsmrDashMap<CacheKey, Arc<CacheValue>>,
 }
 
 impl ActionCacheUploadPermissionChecker {
     pub fn new() -> ActionCacheUploadPermissionChecker {
         ActionCacheUploadPermissionChecker {
-            has_permission_to_upload_to_cache: BuckDashMap::default(),
+            has_permission_to_upload_to_cache: BsmrDashMap::default(),
         }
     }
 
@@ -121,6 +121,6 @@ impl ActionCacheUploadPermissionChecker {
             ))
             .await
             .cloned()
-            .buck_error_context("Upload for permission check")
+            .bsmr_error_context("Upload for permission check")
     }
 }

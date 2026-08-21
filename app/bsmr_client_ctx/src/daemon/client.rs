@@ -25,7 +25,7 @@ use bsmr_cli_proto::new_generic::NewGenericResponse;
 use bsmr_cli_proto::*;
 use bsmr_common::daemon_dir::DaemonDir;
 use bsmr_data::error::ErrorTag;
-use bsmr_error::BuckErrorContext;
+use bsmr_error::BsmrErrorContext;
 use bsmr_event_log::stream_value::StreamValue;
 use bsmr_fs::error::IoResultExt;
 use bsmr_fs::fs_util;
@@ -44,7 +44,7 @@ use tonic::transport::Channel;
 
 use crate::command_outcome::CommandOutcome;
 use crate::console_interaction_stream::ConsoleInteractionStream;
-use crate::daemon::client::connect::BuckAddAuthTokenInterceptor;
+use crate::daemon::client::connect::BsmrAddAuthTokenInterceptor;
 use crate::events_ctx::DaemonEventsCtx;
 use crate::events_ctx::EventsCtx;
 use crate::events_ctx::PartialResultCtx;
@@ -58,20 +58,20 @@ use crate::startup_deadline::StartupDeadline;
 #[derive(Debug, bsmr_error::Error)]
 #[bsmr(tag = Environment)]
 enum LifecycleError {
-    #[error("Missing `{}` file in `{}` directory", BuckdLifecycleLock::BUCKD_LIFECYCLE, _0.display())]
+    #[error("Missing `{}` file in `{}` directory", BsmrdLifecycleLock::BSMRD_LIFECYCLE, _0.display())]
     MissingLifecycle(AbsNormPathBuf),
 }
 
-/// We need to make sure that all calls to the daemon in buckd flush the tailers after completion.
-/// The connector wraps all buckd calls with flushing.
-pub struct BuckdClientConnector {
-    client: BuckdClient,
+/// We need to make sure that all calls to the daemon in bsmrd flush the tailers after completion.
+/// The connector wraps all bsmrd calls with flushing.
+pub struct BsmrdClientConnector {
+    client: BsmrdClient,
     pub cgroup_path_of_bsmr_daemon: Option<String>,
 }
 
-impl BuckdClientConnector {
-    pub fn with_flushing(&mut self) -> FlushingBuckdClient<'_> {
-        FlushingBuckdClient {
+impl BsmrdClientConnector {
+    pub fn with_flushing(&mut self) -> FlushingBsmrdClient<'_> {
+        FlushingBsmrdClient {
             inner: &mut self.client,
         }
     }
@@ -81,48 +81,48 @@ impl BuckdClientConnector {
     }
 }
 
-pub struct BuckdLifecycleLock {
+pub struct BsmrdLifecycleLock {
     daemon_dir: DaemonDir,
     lock_file: File,
 }
 
 #[derive(Debug, bsmr_error::Error)]
-#[bsmr(tag = BuckdLifecycleLock)]
-#[error("Error locking buckd.lifecycle: {error:#}")]
+#[bsmr(tag = BsmrdLifecycleLock)]
+#[error("Error locking bsmrd.lifecycle: {error:#}")]
 pub struct LifecycleLockError {
     #[source]
     error: bsmr_error::Error,
 }
 
-impl BuckdLifecycleLock {
-    const BUCKD_LIFECYCLE: &'static str = "buckd.lifecycle";
-    const BUCKD_PREV_DIR: &'static str = "prev";
+impl BsmrdLifecycleLock {
+    const BSMRD_LIFECYCLE: &'static str = "bsmrd.lifecycle";
+    const BSMRD_PREV_DIR: &'static str = "prev";
 
     pub async fn lock_with_timeout(
         daemon_dir: DaemonDir,
         deadline: StartupDeadline,
-    ) -> Result<BuckdLifecycleLock, LifecycleLockError> {
+    ) -> Result<BsmrdLifecycleLock, LifecycleLockError> {
         async fn lock_inner(
             daemon_dir: DaemonDir,
             deadline: StartupDeadline,
-        ) -> bsmr_error::Result<BuckdLifecycleLock> {
+        ) -> bsmr_error::Result<BsmrdLifecycleLock> {
             create_dir_all(&daemon_dir.path)?;
             let lifecycle_path = daemon_dir
                 .path
                 .as_path()
-                .join(BuckdLifecycleLock::BUCKD_LIFECYCLE);
+                .join(BsmrdLifecycleLock::BSMRD_LIFECYCLE);
             let file = File::create(lifecycle_path)?;
             let fileref = &file;
             deadline
                 .retrying(
-                    "locking buckd lifecycle",
+                    "locking bsmrd lifecycle",
                     Duration::from_millis(5),
                     Duration::from_millis(100),
                     || async { Ok(fs4::fs_std::FileExt::try_lock_exclusive(fileref)?) },
                 )
                 .await?;
 
-            Ok(BuckdLifecycleLock {
+            Ok(BsmrdLifecycleLock {
                 lock_file: file,
                 daemon_dir,
             })
@@ -133,13 +133,13 @@ impl BuckdLifecycleLock {
             .map_err(|e| LifecycleLockError { error: e })
     }
 
-    /// Remove everything except `buckd.lifecycle` file which is the lock file.
+    /// Remove everything except `bsmrd.lifecycle` file which is the lock file.
     /// If `keep_prev` is true, backup previous daemon logs to `prev` dir for debugging.
     pub fn clean_daemon_dir(&self, keep_prev: bool) -> bsmr_error::Result<()> {
         let prev_daemon_dir = self
             .daemon_dir
             .path
-            .join(FileName::new(Self::BUCKD_PREV_DIR).unwrap());
+            .join(FileName::new(Self::BSMRD_PREV_DIR).unwrap());
         if keep_prev {
             if prev_daemon_dir.is_dir() {
                 fs_util::remove_dir_all(&prev_daemon_dir).categorize_internal()?;
@@ -150,12 +150,12 @@ impl BuckdLifecycleLock {
         let mut seen_lifecycle = false;
         for p in fs_util::read_dir(&self.daemon_dir.path).categorize_internal()? {
             let p = p?;
-            if p.file_name() == Self::BUCKD_LIFECYCLE {
+            if p.file_name() == Self::BSMRD_LIFECYCLE {
                 seen_lifecycle = true;
                 continue;
             }
             if keep_prev {
-                if p.file_name() != Self::BUCKD_PREV_DIR {
+                if p.file_name() != Self::BSMRD_PREV_DIR {
                     let file_name = p.file_name();
                     let file_name = FileName::from_os_string(&file_name)?;
                     fs_util::rename(p.path(), prev_daemon_dir.join(file_name))
@@ -177,10 +177,10 @@ impl BuckdLifecycleLock {
     }
 }
 
-impl Drop for BuckdLifecycleLock {
+impl Drop for BsmrdLifecycleLock {
     fn drop(&mut self) {
         fs4::fs_std::FileExt::unlock(&self.lock_file)
-            .expect("Unexpected failure to unlock buckd.lifecycle file.")
+            .expect("Unexpected failure to unlock bsmrd.lifecycle file.")
     }
 }
 
@@ -188,8 +188,8 @@ impl Drop for BuckdLifecycleLock {
 /// some of the complexity/verbosity of making calls with that. For example, the user
 /// doesn't need to deal with tonic::Response/Request and this may provide functions
 /// that take more primitive types than the protobuf structure itself.
-pub struct BuckdClient {
-    client: DaemonApiClient<InterceptedService<Channel, BuckAddAuthTokenInterceptor>>,
+pub struct BsmrdClient {
+    client: DaemonApiClient<InterceptedService<Channel, BsmrAddAuthTokenInterceptor>>,
     constraints: bsmr_cli_proto::DaemonConstraints,
     pub(crate) daemon_dir: DaemonDir,
 }
@@ -197,7 +197,7 @@ pub struct BuckdClient {
 #[derive(Debug, bsmr_error::Error)]
 #[bsmr(tag = Tier0)]
 enum GrpcToStreamError {
-    #[error("buck daemon returned an empty CommandProgress")]
+    #[error("bsmr daemon returned an empty CommandProgress")]
     EmptyCommandProgress,
 }
 
@@ -258,7 +258,7 @@ fn grpc_to_stream(
     .right_stream()
 }
 
-impl BuckdClient {
+impl BsmrdClient {
     /// Some commands stream events back from the server.
     /// For these commands, we want to be able to manipulate CLI state.
     async fn stream<'i, 'j, T, Res, Handler, Command>(
@@ -271,7 +271,7 @@ impl BuckdClient {
     ) -> bsmr_error::Result<CommandOutcome<Res>>
     where
         Command: for<'b> FnOnce(
-            &'b mut DaemonApiClient<InterceptedService<Channel, BuckAddAuthTokenInterceptor>>,
+            &'b mut DaemonApiClient<InterceptedService<Channel, BsmrAddAuthTokenInterceptor>>,
             Request<T>,
         ) -> BoxFuture<
             'b,
@@ -285,7 +285,7 @@ impl BuckdClient {
         let response = command(client, Request::new(request))
             .await
             .map_err(tonic_status_to_error)
-            .buck_error_context("Error dispatching request");
+            .bsmr_error_context("Error dispatching request");
         let stream = grpc_to_stream(response);
         pin_mut!(stream);
         events_ctx
@@ -329,8 +329,8 @@ impl BuckdClient {
     }
 }
 
-pub struct FlushingBuckdClient<'a> {
-    inner: &'a mut BuckdClient,
+pub struct FlushingBsmrdClient<'a> {
+    inner: &'a mut BsmrdClient,
 }
 
 pub enum NoPartialResult {}
@@ -482,7 +482,7 @@ macro_rules! debug_method {
     };
 }
 
-/// Wrap a method that exists on the BuckdClient, with flushing.
+/// Wrap a method that exists on the BsmrdClient, with flushing.
 macro_rules! wrap_method {
     ($method: ident ($($param: ident : $param_type: ty),*), $res: ty) => {
         pub async fn $method(&mut self, events_ctx: &mut EventsCtx, $($param: $param_type)*) -> bsmr_error::Result<$res> {
@@ -497,7 +497,7 @@ macro_rules! wrap_method {
     };
  }
 
-impl FlushingBuckdClient<'_> {
+impl FlushingBsmrdClient<'_> {
     stream_method!(
         aquery,
         AqueryRequest,
@@ -647,7 +647,7 @@ impl FlushingBuckdClient<'_> {
         stdin: Option<ConsoleInteractionStream<'_>>,
     ) -> bsmr_error::Result<CommandOutcome<NewGenericResponse>> {
         let req = serde_json::to_string(&req)
-            .buck_error_context("Could not serialize `NewGenericRequest`")?;
+            .bsmr_error_context("Could not serialize `NewGenericRequest`")?;
         let req = bsmr_cli_proto::NewGenericRequestMessage {
             context: Some(context),
             new_generic_request: req,
@@ -658,7 +658,7 @@ impl FlushingBuckdClient<'_> {
         match command_outcome {
             CommandOutcome::Success(resp) => {
                 let resp = serde_json::from_str(&resp.new_generic_response)
-                    .buck_error_context("Could not deserialize `NewGenericResponse`")?;
+                    .bsmr_error_context("Could not deserialize `NewGenericResponse`")?;
                 Ok(CommandOutcome::Success(resp))
             }
             CommandOutcome::Failure(code) => Ok(CommandOutcome::Failure(code)),

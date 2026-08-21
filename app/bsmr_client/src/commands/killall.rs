@@ -14,9 +14,9 @@
  * above-listed licenses.
  */
 
-use bsmr_client_ctx::client_ctx::BuckSubcommand;
+use bsmr_client_ctx::client_ctx::BsmrSubcommand;
 use bsmr_client_ctx::client_ctx::ClientCommandContext;
-use bsmr_client_ctx::common::BuckArgMatches;
+use bsmr_client_ctx::common::BsmrArgMatches;
 use bsmr_client_ctx::common::CommonEventLogOptions;
 use bsmr_client_ctx::events_ctx::EventsCtx;
 use bsmr_client_ctx::exit_result::ExitResult;
@@ -29,12 +29,12 @@ pub struct KillallCommand {
     pub(crate) event_log_opts: CommonEventLogOptions,
 }
 
-impl BuckSubcommand for KillallCommand {
+impl BsmrSubcommand for KillallCommand {
     const COMMAND_NAME: &'static str = "killall";
 
     async fn exec_impl(
         self,
-        _matches: BuckArgMatches<'_>,
+        _matches: BsmrArgMatches<'_>,
         _ctx: ClientCommandContext<'_>,
         _events_ctx: &mut EventsCtx,
     ) -> ExitResult {

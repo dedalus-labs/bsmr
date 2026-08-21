@@ -1,3 +1,9 @@
+# ===----------------------------------------------------------------------===
+# Upstream-Source: facebook/buck2@1560aca2002865cd73d7cafb22c705cfb640b2bc
+# Modifications Copyright (c) 2026 Dedalus Labs, Inc. and its contributors
+# SPDX-License-Identifier: Apache-2.0
+# ===----------------------------------------------------------------------===
+
 # Copyright (c) Meta Platforms, Inc. and affiliates.
 #
 # This source code is dual-licensed under either the MIT license found in the
@@ -65,7 +71,7 @@ def srcs_filegroup_arg():
             default = None,
             doc = """
     Directory of sources already combined together from `srcs` + `mapped_srcs`.
-    This allows sources to be located in a different Buck package than the one
+    This allows sources to be located in a different Bsmr package than the one
     containing the rust_library target which compiles those sources.
 
     When using `srcs_filegroup`, the attributes `srcs` and `mapped_srcs` cannot

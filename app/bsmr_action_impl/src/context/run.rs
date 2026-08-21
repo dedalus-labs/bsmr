@@ -38,10 +38,10 @@ use bsmr_core::category::CategoryRef;
 use bsmr_core::deferred::base_deferred_key::BaseDeferredKey;
 use bsmr_core::execution_types::executor_config::ReGangWorker;
 use bsmr_core::execution_types::executor_config::RemoteExecutorDependency;
-use bsmr_error::BuckErrorContext;
+use bsmr_error::BsmrErrorContext;
 use bsmr_error::conversion::from_any_with_tag;
 use bsmr_fs::paths::forward_rel_path::ForwardRelativePathBuf;
-use bsmr_hash::StdBuckHashMap;
+use bsmr_hash::StdBsmrHashMap;
 use bsmr_util::thin_box::ThinBoxSlice;
 use dupe::Dupe;
 use either::Either;
@@ -151,7 +151,7 @@ pub(crate) fn analysis_actions_methods_run(methods: &mut MethodsBuilder) {
     ///       by `metadata_env_var`
     ///     * Both `metadata_env_var` and `metadata_path` are useful when making actions behave in
     ///       an incremental manner (for details, see [Incremental
-    ///       Actions](https://buck2.build/docs/rule_authors/incremental_actions/))
+    ///       Actions](https://oss.dedaluslabs.ai/bsmr/rule_authors/incremental_actions/))
     /// * `dep_files`: a dictionary mapping labels to `ArtifactTag` instances for tracking actual
     ///   dependencies via dependency files (depfiles). This enables precise incremental builds by
     ///   allowing the build tool to report which inputs it actually used.
@@ -215,7 +215,7 @@ pub(crate) fn analysis_actions_methods_run(methods: &mut MethodsBuilder) {
     ///     * The function receives an [`ActionErrorCtx`](../ActionErrorCtx) parameter and should return a list of [`ActionSubError`](../ActionSubError) objects
     ///     * Error handlers enable better error diagnostics and language-specific error categorization
     ///  * `outputs_for_error_handler`: Output files to be provided to the action error handler and read by
-    /// [error handler](https://buck2.build/docs/api/build/ActionErrorCtx/#actionerrorctxoutput_artifacts) in the event of a failure..
+    /// [error handler](https://oss.dedaluslabs.ai/bsmr/api/build/ActionErrorCtx/#actionerrorctxoutput_artifacts) in the event of a failure..
     ///     * The output must also be declared as an output of the action
     ///     * The output artifact must be created if the action fails
     ///     * Nothing will be provided if left empty (Which is the default)
@@ -224,7 +224,7 @@ pub(crate) fn analysis_actions_methods_run(methods: &mut MethodsBuilder) {
     /// actions have exclusive access to their output directory.
     ///
     /// Actions also get exclusive access to a "scratch" path that is exposed via the environment
-    /// variable `BUCK_SCRATCH_PATH`. This path is expressed as a path relative to the working
+    /// variable `BSMR_SCRATCH_PATH`. This path is expressed as a path relative to the working
     /// directory (i.e. relative to the project). This path is guaranteed to exist when the action
     /// executes.
     ///
@@ -315,7 +315,7 @@ pub(crate) fn analysis_actions_methods_run(methods: &mut MethodsBuilder) {
 
         struct RunCommandArtifactVisitor<'v> {
             inner: SimpleCommandLineArtifactVisitor<'v>,
-            tagged_outputs: StdBuckHashMap<ArtifactTag, Vec<OutputArtifact<'v>>>,
+            tagged_outputs: StdBsmrHashMap<ArtifactTag, Vec<OutputArtifact<'v>>>,
             depth: u64,
             dep_file_artifact_tags: Option<SmallSet<&'v ArtifactTag>>,
             inputs_with_multiple_tags_for_dep_files: Vec<(ArtifactGroup, Vec<ArtifactTag>)>,
@@ -334,7 +334,7 @@ pub(crate) fn analysis_actions_methods_run(methods: &mut MethodsBuilder) {
                 };
                 Self {
                     inner: SimpleCommandLineArtifactVisitor::new(),
-                    tagged_outputs: StdBuckHashMap::default(),
+                    tagged_outputs: StdBsmrHashMap::default(),
                     depth: 0,
                     dep_file_artifact_tags,
                     inputs_with_multiple_tags_for_dep_files: Vec::new(),
@@ -434,7 +434,7 @@ pub(crate) fn analysis_actions_methods_run(methods: &mut MethodsBuilder) {
             (None, Some(v)) => WeightClass::Percentage(
                 WeightPercentage::try_new(v)
                     .map_err(|e| from_any_with_tag(e, bsmr_error::ErrorTag::Tier0))
-                    .buck_error_context("Invalid `weight_percentage`")?,
+                    .bsmr_error_context("Invalid `weight_percentage`")?,
             ),
             (Some(..), Some(..)) => {
                 return Err(

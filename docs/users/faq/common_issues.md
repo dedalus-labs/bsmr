@@ -15,7 +15,7 @@ import { FbInternalOnly } from 'docusaurus-plugin-internaldocs-fb/internal';
 
 Bessemer offers an interactive console by default.
 
-To disable either use an env var: `BUCK_NO_INTERACTIVE_CONSOLE` or a flag:
+To disable either use an env var: `BSMR_NO_INTERACTIVE_CONSOLE` or a flag:
 `--no-interactive-console`
 
 ## Where is my output file?
@@ -31,7 +31,7 @@ The resultant path is relative to the root of the repo (such as
 `~/repo_root/...`). For the full path use `--show-full-output` or
 `--show-full-simple-output`.
 
-Note: in Buck1, the path is relative to the enclosing cell (such as
+Note: in Legacy, the path is relative to the enclosing cell (such as
 `~/repo_root/cell/...`).
 
 <FbInternalOnly>
@@ -43,7 +43,7 @@ For Meta, repo_root = fbsource, cell = fbcode/fbobjc/...
 If Bessemer seems to be doing nothing, it could be caused be a cycle in your
 dependencies, which may cause Bessemer to hang (Bessemer does implement a form of
 cycle detection, but it unfortunately has false negatives). You can confirm this
-by running Buck1, which will report cycles properly.
+by running Legacy, which will report cycles properly.
 
 ## How do I get the commands Bessemer executed so I can reproduce them in isolation?
 

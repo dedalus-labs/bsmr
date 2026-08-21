@@ -19,9 +19,9 @@ import glob
 import json
 from typing import Any, Dict, List
 
-from bsmr.tests.e2e_util.api.buck import Buck
+from bsmr.tests.e2e_util.api.bsmr import Bsmr
 from bsmr.tests.e2e_util.asserts import expect_failure
-from bsmr.tests.e2e_util.buck_workspace import buck_test
+from bsmr.tests.e2e_util.bsmr_workspace import bsmr_test
 from bsmr.tests.e2e_util.helper.utils import read_what_ran
 
 
@@ -35,93 +35,93 @@ worker_args = [
 
 
 async def _read_what_ran_for_executor(
-    buck: Buck, executor: str
+    bsmr: Bsmr, executor: str
 ) -> List[Dict[str, Any]]:
     return [
         entry
-        for entry in (await read_what_ran(buck))
+        for entry in (await read_what_ran(bsmr))
         if entry["reproducer"]["executor"] == executor
     ]
 
 
 # disabled on mac due to Python GRPC issues
-@buck_test(inplace=True, skip_for_os=["darwin", "windows"])
-async def test_worker(buck: Buck) -> None:
-    res = await buck.build(*worker_args, package + ":gen_worker_run_out")
+@bsmr_test(inplace=True, skip_for_os=["darwin", "windows"])
+async def test_worker(bsmr: Bsmr) -> None:
+    res = await bsmr.build(*worker_args, package + ":gen_worker_run_out")
     output = res.get_build_report().output_for_target(package + ":gen_worker_run_out")
     assert output.read_text() == "hello worker"
-    assert len(await _read_what_ran_for_executor(buck, "Worker")) == 1
+    assert len(await _read_what_ran_for_executor(bsmr, "Worker")) == 1
 
 
-@buck_test(inplace=True, skip_for_os=["darwin", "windows"])
-async def test_worker_disabled(buck: Buck) -> None:
+@bsmr_test(inplace=True, skip_for_os=["darwin", "windows"])
+async def test_worker_disabled(bsmr: Bsmr) -> None:
     # Check non-worker exe runs if workers are disabled.
     fallback_args = ["-c", "build.use_persistent_workers=false", "--local-only"]
-    res = await buck.build(*fallback_args, package + ":gen_worker_run_fallback")
+    res = await bsmr.build(*fallback_args, package + ":gen_worker_run_fallback")
     output = res.get_build_report().output_for_target(
         package + ":gen_worker_run_fallback"
     )
     assert "hello fallback" in output.read_text()
-    assert len(await _read_what_ran_for_executor(buck, "Worker")) == 0
+    assert len(await _read_what_ran_for_executor(bsmr, "Worker")) == 0
 
 
-@buck_test(inplace=True, skip_for_os=["darwin", "windows"])
-async def test_worker_shared(buck: Buck) -> None:
+@bsmr_test(inplace=True, skip_for_os=["darwin", "windows"])
+async def test_worker_shared(bsmr: Bsmr) -> None:
     # Check worker is shared between multiple actions.
-    res = await buck.build(*worker_args, package + ":gen_worker_deps")
+    res = await bsmr.build(*worker_args, package + ":gen_worker_deps")
     trace_id = json.loads(res.stdout)["trace_id"]
     worker_dirs = glob.glob(f"/tmp/bsmr_worker/{trace_id}*/stderr")
     num_workers = len(worker_dirs)
     assert num_workers == 1, f"expected 1 worker, found {worker_dirs} for {trace_id}"
-    assert len(await _read_what_ran_for_executor(buck, "WorkerInit")) == 1
+    assert len(await _read_what_ran_for_executor(bsmr, "WorkerInit")) == 1
 
 
-@buck_test(inplace=True, skip_for_os=["darwin", "windows"])
-async def test_error_thrown_during_execution(buck: Buck) -> None:
+@bsmr_test(inplace=True, skip_for_os=["darwin", "windows"])
+async def test_error_thrown_during_execution(bsmr: Bsmr) -> None:
     # Check error thrown during worker command execution.
     await expect_failure(
-        buck.build(*worker_args, package + ":gen_worker_run_error"),
+        bsmr.build(*worker_args, package + ":gen_worker_run_error"),
         stderr_regex="compile error",
     )
 
 
-@buck_test(inplace=True, skip_for_os=["darwin", "windows"])
-async def test_error_thrown_during_startup(buck: Buck) -> None:
+@bsmr_test(inplace=True, skip_for_os=["darwin", "windows"])
+async def test_error_thrown_during_startup(bsmr: Bsmr) -> None:
     # Check error thrown on worker start up.
     await expect_failure(
-        buck.build(*worker_args, package + ":gen_worker_init_fail"),
+        bsmr.build(*worker_args, package + ":gen_worker_init_fail"),
         stderr_regex="init error",
     )
 
 
-@buck_test(inplace=True, skip_for_os=["darwin", "windows"])
-async def test_error_thrown_missing_worker(buck: Buck) -> None:
+@bsmr_test(inplace=True, skip_for_os=["darwin", "windows"])
+async def test_error_thrown_missing_worker(bsmr: Bsmr) -> None:
     # Check error thrown by missing worker executable.
     await expect_failure(
-        buck.build(*worker_args, package + ":gen_worker_missing"),
+        bsmr.build(*worker_args, package + ":gen_worker_missing"),
         stderr_regex="Worker failed to spawn",
     )
 
 
-@buck_test(inplace=True, skip_for_os=["darwin", "windows"])
-async def test_connection_error(buck: Buck) -> None:
+@bsmr_test(inplace=True, skip_for_os=["darwin", "windows"])
+async def test_connection_error(bsmr: Bsmr) -> None:
     # Check connection error if worker server can't be connected to.
     await expect_failure(
-        buck.build(*worker_args, package + ":gen_worker_init_deadlock"),
+        bsmr.build(*worker_args, package + ":gen_worker_init_deadlock"),
         stderr_regex="Worker failed to connect",
     )
 
 
 # Streaming is stuck in "initialize_worker" state
-# @buck_test(inplace=True, skip_for_os=["darwin", "windows"])
-# async def test_streaming(buck: Buck) -> None:
+# @bsmr_test(inplace=True, skip_for_os=["darwin", "windows"])
+# async def test_streaming(bsmr: Bsmr) -> None:
 #     # Streaming execution demo
-#     res = await buck.build(*worker_args, package + ":gen_worker_run_out_streaming")
+#     res = await bsmr.build(*worker_args, package + ":gen_worker_run_out_streaming")
 #     output = res.get_build_report().output_for_target(
 #         package + ":gen_worker_run_out_streaming"
 #     )
 #     assert output.read_text() == "hello worker"
-#     assert len(await _read_what_ran_for_executor(buck, "Worker")) == 1
+#     assert len(await _read_what_ran_for_executor(bsmr, "Worker")) == 1
 
 
 # TODO(ctolliday) re-enable once cancellation is in place
@@ -139,7 +139,7 @@ async def test_connection_error(buck: Buck) -> None:
 #     assert what_ran_matching == expected, what_ran
 #
 # assert_executed(
-#     await read_what_ran(buck),
+#     await read_what_ran(bsmr),
 #     [
 #         # TODO(ctolliday) ideally this should use --no-remote-cache and check for "Re" not "Cache".
 #         # Will fail if not cached because RE execution will block on local execution.
@@ -151,11 +151,11 @@ async def test_connection_error(buck: Buck) -> None:
 # )
 
 
-@buck_test(inplace=True, skip_for_os=["darwin", "windows"])
-async def test_worker_exit_handled(buck: Buck) -> None:
+@bsmr_test(inplace=True, skip_for_os=["darwin", "windows"])
+async def test_worker_exit_handled(bsmr: Bsmr) -> None:
     # Check connection error if worker server dies mid-request
     await expect_failure(
-        buck.build(
+        bsmr.build(
             *worker_args,
             package + ":gen_worker_init_self_destruct",
         ),
@@ -163,8 +163,8 @@ async def test_worker_exit_handled(buck: Buck) -> None:
     )
 
 
-@buck_test(inplace=True, skip_for_os=["darwin", "windows"])
-async def test_hybrid_execution(buck: Buck) -> None:
+@bsmr_test(inplace=True, skip_for_os=["darwin", "windows"])
+async def test_hybrid_execution(bsmr: Bsmr) -> None:
     # 1. Check that building `:gen_slow_worker_fast_fallback` first (as dependency) causes remote to succeed and worker to be cancelled.
     # 2. Check that `:gen_fast_worker_slow_fallback` worker execution succeeds, using same worker initialized by 1.
     hybrid_args = [
@@ -173,12 +173,12 @@ async def test_hybrid_execution(buck: Buck) -> None:
         "-c",
         "build.use_limited_hybrid=False",
     ]
-    await buck.build(*hybrid_args, package + ":gen_fast_worker_slow_fallback")
-    assert len(await _read_what_ran_for_executor(buck, "WorkerInit")) == 1
+    await bsmr.build(*hybrid_args, package + ":gen_fast_worker_slow_fallback")
+    assert len(await _read_what_ran_for_executor(bsmr, "WorkerInit")) == 1
 
 
-@buck_test(inplace=True, skip_for_os=["darwin", "windows"])
-async def test_worker_thread_limit(buck: Buck) -> None:
+@bsmr_test(inplace=True, skip_for_os=["darwin", "windows"])
+async def test_worker_thread_limit(bsmr: Bsmr) -> None:
     worker_args = [
         "-c",
         "build.use_persistent_workers=True",
@@ -186,13 +186,13 @@ async def test_worker_thread_limit(buck: Buck) -> None:
         "--no-remote-cache",
     ]
     await expect_failure(
-        buck.build(*worker_args, package + ":gen_worker_concurrent_fail"),
+        bsmr.build(*worker_args, package + ":gen_worker_concurrent_fail"),
         stderr_regex="Concurrency check failed",
     )
-    await buck.build(*worker_args, package + ":gen_worker_concurrent_pass")
+    await bsmr.build(*worker_args, package + ":gen_worker_concurrent_pass")
 
 
-@buck_test(inplace=True)
+@bsmr_test(inplace=True)
 async def test_dummy() -> None:
     # None of the tests in this file pass on Windows or mac and that upsets CI.
     pass

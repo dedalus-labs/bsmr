@@ -28,23 +28,23 @@ It is prohibited to specify both `--modifier` flag and `?` on CLI. This restrict
 
 ## `--show-output`
 
-Buck’s build commands accept a set of `--show-output` flags (ex. `--show-output` and `--show-full-output`) that prints the output location of targets specified on CLI. For example, invoking `bsmr build root//:bsmr –show-output` prints
+Bsmr’s build commands accept a set of `--show-output` flags (ex. `--show-output` and `--show-full-output`) that prints the output location of targets specified on CLI. For example, invoking `bsmr build root//:bsmr –show-output` prints
 
 ```python
-root//:bsmr bsmr-out/v2/gen/fbcode/57b1cdd23074b8c3/bsmr/bsmr
+root//:bsmr bsmr-out/default/gen/fbcode/57b1cdd23074b8c3/bsmr/bsmr
 ```
 
 Likewise, invoking build in a different mode like `bsmr build root//:bsmr -m opt` will print a different path
 
 ```python
-root//:bsmr bsmr-out/v2/gen/fbcode/b706492dec65e54c/bsmr/bsmr
+root//:bsmr bsmr-out/default/gen/fbcode/b706492dec65e54c/bsmr/bsmr
 ```
 
 With `?`-syntax, users would be able to invoke `bsmr build root//:bsmr root//:bsmr?opt` in the same invocation. For that, we propose to use the following output structure.
 
 ```python
-root//:bsmr bsmr-out/v2/gen/fbcode/57b1cdd23074b8c3/bsmr/bsmr
-root//:bsmr?opt bsmr-out/v2/gen/fbcode/b706492dec65e54c/bsmr/bsmr
+root//:bsmr bsmr-out/default/gen/fbcode/57b1cdd23074b8c3/bsmr/bsmr
+root//:bsmr?opt bsmr-out/default/gen/fbcode/b706492dec65e54c/bsmr/bsmr
 ```
 
 This preserves modifiers in the exact same way that is specified from the CLI invocation, which allows users to differentiate which path belongs to dev modifier and which path belongs to opt modifier, without needing to understand very much about modifiers.
@@ -60,7 +60,7 @@ Current build report for `bsmr build root//:bsmr` looks as follows. For readabil
       "success": "SUCCESS",
       "outputs": {
         "DEFAULT": [
-          "bsmr-out/v2/gen/fbcode/57b1cdd23074b8c3/bsmr/bsmr"
+          "bsmr-out/default/gen/fbcode/57b1cdd23074b8c3/bsmr/bsmr"
         ]
       },
       "other_outputs": {},
@@ -70,7 +70,7 @@ Current build report for `bsmr build root//:bsmr` looks as follows. For readabil
           "success": "SUCCESS",
           "outputs": {
             "DEFAULT": [
-              "bsmr-out/v2/gen/fbcode/57b1cdd23074b8c3/bsmr/bsmr"
+              "bsmr-out/default/gen/fbcode/57b1cdd23074b8c3/bsmr/bsmr"
             ]
           },
           "other_outputs": {}
@@ -92,7 +92,7 @@ When `?`-syntax is used, we will also preserve the modifiers in the build report
       "success": "SUCCESS",
       "outputs": {
         "DEFAULT": [
-          "bsmr-out/v2/gen/fbcode/57b1cdd23074b8c3/bsmr/bsmr"
+          "bsmr-out/default/gen/fbcode/57b1cdd23074b8c3/bsmr/bsmr"
         ]
       },
       "other_outputs": {},
@@ -102,7 +102,7 @@ When `?`-syntax is used, we will also preserve the modifiers in the build report
           "success": "SUCCESS",
           "outputs": {
             "DEFAULT": [
-              "bsmr-out/v2/gen/fbcode/57b1cdd23074b8c3/bsmr/bsmr"
+              "bsmr-out/default/gen/fbcode/57b1cdd23074b8c3/bsmr/bsmr"
             ]
           },
           "other_outputs": {}
@@ -115,7 +115,7 @@ When `?`-syntax is used, we will also preserve the modifiers in the build report
       "success": "SUCCESS",
       "outputs": {
         "DEFAULT": [
-          "bsmr-out/v2/gen/fbcode/b706492dec65e54c/bsmr/bsmr"
+          "bsmr-out/default/gen/fbcode/b706492dec65e54c/bsmr/bsmr"
         ]
       },
       "other_outputs": {},
@@ -125,7 +125,7 @@ When `?`-syntax is used, we will also preserve the modifiers in the build report
           "success": "SUCCESS",
           "outputs": {
             "DEFAULT": [
-              "bsmr-out/v2/gen/fbcode/b706492dec65e54c/bsmr/bsmr"
+              "bsmr-out/default/gen/fbcode/b706492dec65e54c/bsmr/bsmr"
             ]
           },
           "other_outputs": {}
@@ -152,7 +152,7 @@ A possible alternate design is that we add a `per_target_modifiers` section of t
       "success": "SUCCESS",
       "outputs": {
         "DEFAULT": [
-          "bsmr-out/v2/gen/fbcode/57b1cdd23074b8c3/bsmr/bsmr"
+          "bsmr-out/default/gen/fbcode/57b1cdd23074b8c3/bsmr/bsmr"
         ]
       },
       "other_outputs": {},
@@ -162,7 +162,7 @@ A possible alternate design is that we add a `per_target_modifiers` section of t
           "success": "SUCCESS",
           "outputs": {
             "DEFAULT": [
-              "bsmr-out/v2/gen/fbcode/57b1cdd23074b8c3/bsmr/bsmr"
+              "bsmr-out/default/gen/fbcode/57b1cdd23074b8c3/bsmr/bsmr"
             ]
           },
           "other_outputs": {}
@@ -172,7 +172,7 @@ A possible alternate design is that we add a `per_target_modifiers` section of t
           "success": "SUCCESS",
           "outputs": {
             "DEFAULT": [
-              "bsmr-out/v2/gen/fbcode/b706492dec65e54c/bsmr/bsmr"
+              "bsmr-out/default/gen/fbcode/b706492dec65e54c/bsmr/bsmr"
             ]
           },
           "other_outputs": {}
@@ -185,7 +185,7 @@ A possible alternate design is that we add a `per_target_modifiers` section of t
           "success": "SUCCESS",
           "outputs": {
             "DEFAULT": [
-              "bsmr-out/v2/gen/fbcode/57b1cdd23074b8c3/bsmr/bsmr"
+              "bsmr-out/default/gen/fbcode/57b1cdd23074b8c3/bsmr/bsmr"
             ]
           },
           "other_outputs": {}
@@ -195,7 +195,7 @@ A possible alternate design is that we add a `per_target_modifiers` section of t
           "success": "SUCCESS",
           "outputs": {
             "DEFAULT": [
-              "bsmr-out/v2/gen/fbcode/b706492dec65e54c/bsmr/bsmr"
+              "bsmr-out/default/gen/fbcode/b706492dec65e54c/bsmr/bsmr"
             ]
           },
           "other_outputs": {}
@@ -207,13 +207,13 @@ A possible alternate design is that we add a `per_target_modifiers` section of t
 }
 ```
 
-The main reason to prefer approach #1 is that it better accommodates tools that wrap a user’s buck build invocation and do extra processing on the build report. With approach #2, if a user passes in `root//:bsmr?opt` as the target pattern to build, then the wrapper tool needs to understand that `?opt` specifies a modifier and that it needs to do a string split on `?` to find the correct section of the build report. With approach #1, it can look up `root//:bsmr?opt` directly from the build report without understanding that a modifier was used.
+The main reason to prefer approach #1 is that it better accommodates tools that wrap a user’s bsmr build invocation and do extra processing on the build report. With approach #2, if a user passes in `root//:bsmr?opt` as the target pattern to build, then the wrapper tool needs to understand that `?opt` specifies a modifier and that it needs to do a string split on `?` to find the correct section of the build report. With approach #1, it can look up `root//:bsmr?opt` directly from the build report without understanding that a modifier was used.
 
 The benefit of approach #2 is that the `configured` section looks more understandable in this approach than the previous approach, and in general it leads to a shorter build report.
 
 ## Target Universe
 
-A [target universe](https://buck2.build/docs/concepts/glossary/#target-universe) is a set of configured targets and their transitive deps that Buck looks up from to resolve unconfigured target labels. For example, `bsmr build upstream//folly:singleton --target-universe=root//:bsmr` will build all configured variants of `upstream//folly:singleton` in transitive deps of `root//:bsmr`. This section applies to all commands that can explicitly use the `--target-universe` flag like `audit providers` and `aquery`.
+A [target universe](https://oss.dedaluslabs.ai/bsmr/concepts/glossary/#target-universe) is a set of configured targets and their transitive deps that Bsmr looks up from to resolve unconfigured target labels. For example, `bsmr build upstream//folly:singleton --target-universe=root//:bsmr` will build all configured variants of `upstream//folly:singleton` in transitive deps of `root//:bsmr`. This section applies to all commands that can explicitly use the `--target-universe` flag like `audit providers` and `aquery`.
 
 ### Explicit target universe
 
@@ -236,7 +236,7 @@ In cquery, ?-syntax will *only* be allowed in `--target-universe`. This means th
 
 - `bsmr cquery upstream//folly:singleton --target-universe=root//:bsmr?asan` is allowed
 - `bsmr cquery upstream//folly:singleton?asan –target-universe=root//:bsmr?asan` and `bsmr cquery upstream//folly:singleton?asan --target-universe=root//:bsmr` are disallowed.
-- Additionally, `bsmr cquery upstream//folly:singleton?asan` is *disallowed*. The reason for this is that cquery [infers a target universe](https://buck2.build/docs/bxl/explanation/bxl_cquery_vs_cli_cquery/#cli-buck2-cquery) from all target literals specified in the query when explicit `--target-universe` is not specified. Thus `bsmr cquery upstream//folly:singleton?asan` naturally expands to `bsmr cquery upstream//folly:singleton?asan --target-universe=upstream//folly:singleton?asan`.
+- Additionally, `bsmr cquery upstream//folly:singleton?asan` is *disallowed*. The reason for this is that cquery [infers a target universe](https://oss.dedaluslabs.ai/bsmr/bxl/explanation/bxl_cquery_vs_cli_cquery/#cli-upstream-cquery) from all target literals specified in the query when explicit `--target-universe` is not specified. Thus `bsmr cquery upstream//folly:singleton?asan` naturally expands to `bsmr cquery upstream//folly:singleton?asan --target-universe=upstream//folly:singleton?asan`.
 
 ### Possible relaxation
 
@@ -279,7 +279,7 @@ We may consider relaxing to this behavior in the future if there are demands for
 Additionally, it’s possible that we allow `bsmr cquery upstream//folly:singleton?asan –target-universe=root//:bsmr `to resolve `upstream//folly:singleton` to its configuration with asan applied possibly outside of target universe of `root//:bsmr` in the future. Unfortunately, this is unintuitive in a couple ways.
 
 - `upstream//folly:singleton?asan` likely resolves to a configured target outside of the target universe of `root//:bsmr?asan`. If we were to respect `asan` modifier when resolving `upstream//folly:singleton`, then the build command will build nothing. If we don’t respect `asan` modifier on `upstream//folly:singleton`, then we will be ignoring the modifiers specified and building all folly singletons that show up in deps of bsmr. Neither behavior would be intuitive for the average user.
-- With :`foo?modifiers`, Buck will actively configure `:foo` outside of the target universe. With just `:foo`, buck will not attempt to do that. This behavior is inconsistent and a bit unintuitive.
+- With :`foo?modifiers`, Bsmr will actively configure `:foo` outside of the target universe. With just `:foo`, bsmr will not attempt to do that. This behavior is inconsistent and a bit unintuitive.
 
 ## Commands that receive unconfigured targets
 

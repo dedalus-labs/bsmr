@@ -30,7 +30,7 @@ pub struct Config {
 
     /// Ignored arg included for backwards compatibility.
     #[clap(long, hide = true)]
-    buck_test_info: String,
+    bsmr_test_info: String,
 
     /// Passthrough argments to test binary.
     /// Available as a workaround for when test features are available.

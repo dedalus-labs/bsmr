@@ -16,7 +16,7 @@
 
 use std::time::Duration;
 
-use bsmr_error::BuckErrorContext;
+use bsmr_error::BsmrErrorContext;
 use bsmr_error::internal_error;
 use bsmr_test_api::data::ArgValue;
 use bsmr_test_api::data::ArgValueContent;
@@ -63,7 +63,7 @@ impl BsmrTestRunner {
         args: Vec<String>,
     ) -> bsmr_error::Result<Self> {
         let config = Config::try_parse_from(args)
-            .buck_error_context("Error parsing test runner arguments")?;
+            .bsmr_error_context("Error parsing test runner arguments")?;
         Ok(Self {
             orchestrator_client,
             spec_receiver: Mutex::new(Some(spec_receiver)),
@@ -92,7 +92,7 @@ impl BsmrTestRunner {
                 let execution_response = self
                     .execute_test_from_spec(spec)
                     .await
-                    .buck_error_context("Test execution request failed")?;
+                    .bsmr_error_context("Test execution request failed")?;
 
                 let execution_result = match execution_response {
                     ExecuteResponse::Result(r) => r,
@@ -104,7 +104,7 @@ impl BsmrTestRunner {
 
                 self.report_test_result(test_result)
                     .await
-                    .buck_error_context("Test result reporting failed")?;
+                    .bsmr_error_context("Test result reporting failed")?;
 
                 Ok(test_status)
             })

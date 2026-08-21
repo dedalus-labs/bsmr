@@ -28,7 +28,7 @@ use allocative::Allocative;
 use bsmr_artifact::artifact::artifact_type::Artifact;
 use bsmr_artifact::artifact::artifact_type::OutputArtifact;
 use bsmr_error::internal_error;
-use bsmr_hash::BuckIndexSet;
+use bsmr_hash::BsmrIndexSet;
 use display_container::display_pair;
 use display_container::fmt_container;
 use display_container::iter_display_chain;
@@ -96,7 +96,7 @@ use crate::interpreter::rule_defs::cmd_args::value::FrozenCommandLineArg;
 pub enum CommandLineError {
     #[error("Artifact(s) {0:?} cannot be used with ignore_artifacts as they are content-based")]
     #[bsmr(input)]
-    ContentBasedIgnoreArtifacts(BuckIndexSet<String>),
+    ContentBasedIgnoreArtifacts(BsmrIndexSet<String>),
 }
 
 /// Fields of `cmd_args`. Abstract mutable and frozen versions.
@@ -254,13 +254,13 @@ impl<'v, F: Fields<'v>> CommandLineArgLike<'v> for FieldsRef<'v, F> {
             }
         } else {
             struct IgnoredArtifactsVisitor {
-                content_based_artifacts: BuckIndexSet<String>,
+                content_based_artifacts: BsmrIndexSet<String>,
             }
 
             impl IgnoredArtifactsVisitor {
                 fn new() -> Self {
                     Self {
-                        content_based_artifacts: BuckIndexSet::default(),
+                        content_based_artifacts: BsmrIndexSet::default(),
                     }
                 }
             }
@@ -1080,7 +1080,7 @@ pub fn register_cmd_args(builder: &mut GlobalsBuilder) {
 )]
 pub struct StarlarkCommandLineInputs {
     #[starlark_pagable(pagable)]
-    pub inputs: BuckIndexSet<ArtifactGroup>,
+    pub inputs: BsmrIndexSet<ArtifactGroup>,
 }
 
 starlark_simple_value!(StarlarkCommandLineInputs);

@@ -16,19 +16,19 @@
 # pyre-strict
 
 
-from bsmr.tests.e2e_util.api.buck import Buck
+from bsmr.tests.e2e_util.api.bsmr import Bsmr
 from bsmr.tests.e2e_util.asserts import expect_failure
-from bsmr.tests.e2e_util.buck_workspace import buck_test
+from bsmr.tests.e2e_util.bsmr_workspace import bsmr_test
 
 
-@buck_test()
-async def test_build_skip_incompatible(buck: Buck) -> None:
+@bsmr_test()
+async def test_build_skip_incompatible(bsmr: Bsmr) -> None:
     targetA = "root//:compatible-with-A"
     targetB = "root//:compatible-with-B"
     platformA = "root//:platA"
 
     await expect_failure(
-        buck.build(
+        bsmr.build(
             targetA,
             targetB,
             f"--target-platforms={platformA}",
@@ -36,7 +36,7 @@ async def test_build_skip_incompatible(buck: Buck) -> None:
         stderr_regex=rf"{targetB}\s*is incompatible with {platformA}",
     )
 
-    result = await buck.build(
+    result = await bsmr.build(
         targetA,
         targetB,
         f"--target-platforms={platformA}",

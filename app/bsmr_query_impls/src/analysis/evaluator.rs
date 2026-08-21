@@ -17,7 +17,7 @@
 //! Implementation of common cquery/uquery pieces.
 
 use bsmr_common::scope::scope_and_collect_with_dispatcher;
-use bsmr_error::BuckErrorContext;
+use bsmr_error::BsmrErrorContext;
 use bsmr_events::dispatch::EventDispatcher;
 use bsmr_query::query::environment::QueryEnvironment;
 use bsmr_query::query::syntax::simple::eval::evaluator::QueryEvaluator;
@@ -110,7 +110,7 @@ where
 
     let mut results = Vec::with_capacity(future_results.len());
     for query_result in future_results {
-        let (i, query, result) = query_result.buck_error_context("scope_and_collect failed")?;
+        let (i, query, result) = query_result.bsmr_error_context("scope_and_collect failed")?;
         results.push((i, query, result));
     }
     results.sort_by_key(|(i, _, _)| *i);

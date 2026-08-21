@@ -13,15 +13,15 @@
 # above-listed licenses.
 
 
-from bsmr.tests.e2e_util.api.buck import Buck
-from bsmr.tests.e2e_util.buck_workspace import buck_test
+from bsmr.tests.e2e_util.api.bsmr import Bsmr
+from bsmr.tests.e2e_util.bsmr_workspace import bsmr_test
 
 
-@buck_test(write_invocation_record=True)
+@bsmr_test(write_invocation_record=True)
 async def test_representative_config_flags_disregards_run_args(
-    buck: Buck,
+    bsmr: Bsmr,
 ) -> None:
-    res = await buck.run(
+    res = await bsmr.run(
         "//:my_rule",
         "--config",
         "foo.bar=baz",
@@ -33,11 +33,11 @@ async def test_representative_config_flags_disregards_run_args(
     assert res.invocation_record()["representative_config_flags"] == ["-c foo.bar=baz"]
 
 
-@buck_test(write_invocation_record=True)
+@bsmr_test(write_invocation_record=True)
 async def test_representative_config_flags_includes_build_args(
-    buck: Buck,
+    bsmr: Bsmr,
 ) -> None:
-    res = await buck.build(
+    res = await bsmr.build(
         "--config",
         "foo.bar=baz",
         # For `build` commands, anything after `--` is a positional arg.

@@ -14,9 +14,9 @@
  * above-listed licenses.
  */
 
-use bsmr_client_ctx::client_ctx::BuckSubcommand;
+use bsmr_client_ctx::client_ctx::BsmrSubcommand;
 use bsmr_client_ctx::client_ctx::ClientCommandContext;
-use bsmr_client_ctx::common::BuckArgMatches;
+use bsmr_client_ctx::common::BsmrArgMatches;
 use bsmr_client_ctx::event_log_options::EventLogOptions;
 use bsmr_client_ctx::events_ctx::EventsCtx;
 use bsmr_client_ctx::exit_result::ExitResult;
@@ -31,12 +31,12 @@ pub struct ShowUserLogCommand {
     event_log: EventLogOptions,
 }
 
-impl BuckSubcommand for ShowUserLogCommand {
+impl BsmrSubcommand for ShowUserLogCommand {
     const COMMAND_NAME: &'static str = "log-show-user";
 
     async fn exec_impl(
         self,
-        _matches: BuckArgMatches<'_>,
+        _matches: BsmrArgMatches<'_>,
         ctx: ClientCommandContext<'_>,
         _events_ctx: &mut EventsCtx,
     ) -> ExitResult {

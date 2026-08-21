@@ -13,5 +13,5 @@
 # above-listed licenses.
 
 def python_binary(srcs = [], **kwargs):
-    # @lint-ignore BUCKLINT: avoid "Direct usage of native rules is not allowed."
+    # @lint-ignore BSMRLINT: avoid "Direct usage of native rules is not allowed."
     native.python_binary(srcs = srcs, **kwargs)

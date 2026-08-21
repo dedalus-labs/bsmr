@@ -1,4 +1,10 @@
 #!/usr/bin/env fbpython -tt
+# ===----------------------------------------------------------------------===
+# Upstream-Source: facebook/buck2@1560aca2002865cd73d7cafb22c705cfb640b2bc
+# Modifications Copyright (c) 2026 Dedalus Labs, Inc. and its contributors
+# SPDX-License-Identifier: Apache-2.0
+# ===----------------------------------------------------------------------===
+
 # Copyright (c) Meta Platforms, Inc. and affiliates.
 #
 # This source code is dual-licensed under either the MIT license found in the
@@ -10,7 +16,7 @@
 # pyre-strict
 
 """
-This file contains the main module code for buck python test programs.
+This file contains the main module code for bsmr python test programs.
 
 By default, this is the main module for all python_test() rules.  However,
 rules can also specify their own custom main_module.  If you write your own
@@ -177,16 +183,16 @@ class CallbackStream:
         return self._fileno
 
 
-class BuckTestResult(unittest.TextTestResult):
+class BsmrTestResult(unittest.TextTestResult):
     """
     Our own TestResult class that outputs data in a format that can be easily
-    parsed by buck's test runner.
+    parsed by bsmr's test runner.
     """
 
     def __init__(
         self, stream, descriptions, verbosity, show_output, main_program, suite
     ):
-        super(BuckTestResult, self).__init__(stream, descriptions, verbosity)
+        super(BsmrTestResult, self).__init__(stream, descriptions, verbosity)
         self._main_program = main_program
         self._suite = suite
         self._results = []
@@ -199,7 +205,7 @@ class BuckTestResult(unittest.TextTestResult):
         return self._results
 
     def startTest(self, test):
-        super(BuckTestResult, self).startTest(test)
+        super(BsmrTestResult, self).startTest(test)
 
         # Pass in the real stdout and stderr filenos.  We can't really do much
         # here to intercept callers who directly operate on these fileno
@@ -239,7 +245,7 @@ class BuckTestResult(unittest.TextTestResult):
         sys.stdout = self._saved_stdout
         sys.stderr = self._saved_stderr
 
-        super(BuckTestResult, self).stopTest(test)
+        super(BsmrTestResult, self).stopTest(test)
 
         # If a failure occurred during module/class setup, then this "test" may
         # actually be a `_ErrorHolder`, which doesn't contain explicit info
@@ -316,27 +322,27 @@ class BuckTestResult(unittest.TextTestResult):
         )
 
     def addSuccess(self, test):
-        super(BuckTestResult, self).addSuccess(test)
+        super(BsmrTestResult, self).addSuccess(test)
         self.setStatus(test, TestStatus.PASSED)
 
     def addError(self, test, err):
-        super(BuckTestResult, self).addError(test, err)
+        super(BsmrTestResult, self).addError(test, err)
         self.setException(test, TestStatus.ABORTED, err)
 
     def addFailure(self, test, err):
-        super(BuckTestResult, self).addFailure(test, err)
+        super(BsmrTestResult, self).addFailure(test, err)
         self.setException(test, TestStatus.FAILED, err)
 
     def addSkip(self, test, reason):
-        super(BuckTestResult, self).addSkip(test, reason)
+        super(BsmrTestResult, self).addSkip(test, reason)
         self.setStatus(test, TestStatus.SKIPPED, "Skipped: %s" % (reason,))
 
     def addExpectedFailure(self, test, err):
-        super(BuckTestResult, self).addExpectedFailure(test, err)
+        super(BsmrTestResult, self).addExpectedFailure(test, err)
         self.setException(test, TestStatus.EXPECTED_FAILURE, err)
 
     def addUnexpectedSuccess(self, test):
-        super(BuckTestResult, self).addUnexpectedSuccess(test)
+        super(BsmrTestResult, self).addUnexpectedSuccess(test)
         self.setStatus(test, TestStatus.UNEXPECTED_SUCCESS, "Unexpected success")
 
     def addStdout(self, val):
@@ -360,15 +366,15 @@ class BuckTestResult(unittest.TextTestResult):
         self.addStderr(string)
 
 
-class BuckTestRunner(unittest.TextTestRunner):
+class BsmrTestRunner(unittest.TextTestRunner):
     def __init__(self, main_program, suite, show_output=True, **kwargs):
-        super(BuckTestRunner, self).__init__(**kwargs)
+        super(BsmrTestRunner, self).__init__(**kwargs)
         self.show_output = show_output
         self._main_program = main_program
         self._suite = suite
 
     def _makeResult(self):
-        return BuckTestResult(
+        return BsmrTestResult(
             self.stream,
             self.descriptions,
             self.verbosity,
@@ -380,7 +386,7 @@ class BuckTestRunner(unittest.TextTestRunner):
 
 def _format_test_name(test_class, attrname):
     """
-    Format the name of the test buck-style.
+    Format the name of the test bsmr-style.
     """
     return "{0}.{1}#{2}".format(test_class.__module__, test_class.__name__, attrname)
 
@@ -430,7 +436,7 @@ class RegexTestLoader(unittest.TestLoader):
         Tries to find and import the module from `name` and discover test cases inside.
 
         NOTE: this function is used by the unittest framework and our unittest
-        adapters to integrate with buck/tpx.
+        adapters to integrate with bsmr/tpx.
         """
         suite = super().loadTestsFromName(name, module)
         for test in suite:
@@ -519,7 +525,7 @@ class MainProgram:
         op.add_option(
             "-o",
             "--output",
-            help="Write results to a file in a JSON format to be read by Buck",
+            help="Write results to a file in a JSON format to be read by Bsmr",
         )
         op.add_option(
             "-f",
@@ -540,7 +546,7 @@ class MainProgram:
             "-L",
             "--list-format",
             dest="list_format",
-            choices=["buck", "python"],
+            choices=["bsmr", "python"],
             default="python",
             help="List tests format",
         )
@@ -689,7 +695,7 @@ class MainProgram:
                     else:
                         name = str(test)
 
-                elif self.options.list_format == "buck":
+                elif self.options.list_format == "bsmr":
                     name = _format_test_name(cls, method_name)
                 else:
                     raise Exception(
@@ -712,7 +718,7 @@ class MainProgram:
         unittest.installHandler()
 
         # Run the tests
-        runner = BuckTestRunner(
+        runner = BsmrTestRunner(
             self,
             test_suite,
             verbosity=self.options.verbosity,

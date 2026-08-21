@@ -20,8 +20,8 @@ use std::sync::Arc;
 
 use allocative::Allocative;
 use async_trait::async_trait;
-use bsmr_core::fs::buck_out_path::BSMR_OUTPUT_ROOT;
-use bsmr_core::fs::buck_out_path::BuckOutPathResolver;
+use bsmr_core::fs::output_path::BSMR_OUTPUT_ROOT;
+use bsmr_core::fs::output_path::OutputPathResolver;
 use bsmr_core::fs::project_rel_path::ProjectRelativePathBuf;
 use derive_more::Display;
 use dice::DiceComputations;
@@ -35,17 +35,16 @@ use pagable::pagable_typetag;
 
 #[async_trait]
 pub trait HasBuildContextData {
-    async fn get_buck_out_path(&mut self) -> bsmr_error::Result<BuckOutPathResolver>;
+    async fn get_output_path(&mut self) -> bsmr_error::Result<OutputPathResolver>;
 }
 
 pub trait SetBuildContextData {
-    fn set_buck_out_path(&mut self, path: Option<ProjectRelativePathBuf>)
-    -> bsmr_error::Result<()>;
+    fn set_output_path(&mut self, path: Option<ProjectRelativePathBuf>) -> bsmr_error::Result<()>;
 }
 
 #[derive(PartialEq, Eq, Allocative, Pagable)]
 pub struct BuildData {
-    buck_out_path: ProjectRelativePathBuf,
+    output_path: ProjectRelativePathBuf,
 }
 
 #[derive(Clone, Dupe, Display, Debug, Eq, Hash, PartialEq, Allocative, Pagable)]
@@ -67,22 +66,19 @@ impl InjectedKey for BuildDataKey {
 
 #[async_trait]
 impl HasBuildContextData for DiceComputations<'_> {
-    async fn get_buck_out_path(&mut self) -> bsmr_error::Result<BuckOutPathResolver> {
+    async fn get_output_path(&mut self) -> bsmr_error::Result<OutputPathResolver> {
         let data = self.compute(&BuildDataKey).await?;
-        Ok(BuckOutPathResolver::new(data.buck_out_path.to_buf()))
+        Ok(OutputPathResolver::new(data.output_path.to_buf()))
     }
 }
 
 impl SetBuildContextData for DiceTransactionUpdater {
-    fn set_buck_out_path(
-        &mut self,
-        path: Option<ProjectRelativePathBuf>,
-    ) -> bsmr_error::Result<()> {
+    fn set_output_path(&mut self, path: Option<ProjectRelativePathBuf>) -> bsmr_error::Result<()> {
         Ok(self.changed_to(vec![(
             BuildDataKey,
             Arc::new(BuildData {
-                buck_out_path: path.unwrap_or_else(|| {
-                    ProjectRelativePathBuf::unchecked_new(format!("{BSMR_OUTPUT_ROOT}/v2"))
+                output_path: path.unwrap_or_else(|| {
+                    ProjectRelativePathBuf::unchecked_new(format!("{BSMR_OUTPUT_ROOT}/default"))
                 }),
             }),
         )])?)

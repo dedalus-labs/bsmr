@@ -1,3 +1,9 @@
+# ===----------------------------------------------------------------------===
+# Upstream-Source: facebook/buck2@1560aca2002865cd73d7cafb22c705cfb640b2bc
+# Modifications Copyright (c) 2026 Dedalus Labs, Inc. and its contributors
+# SPDX-License-Identifier: Apache-2.0
+# ===----------------------------------------------------------------------===
+
 # Copyright (c) Meta Platforms, Inc. and affiliates.
 #
 # This source code is dual-licensed under either the MIT license found in the
@@ -515,7 +521,7 @@ class TestSelection(unittest.TestCase):
             provisioning_profiles=[profile],
             entitlements={
                 # Force included key, even if not present in the profile
-                "application-identifier": "AAAAAAAAAA.com.facebook.BuckApp",
+                "application-identifier": "AAAAAAAAAA.com.facebook.BsmrApp",
                 "keychain-access-groups": ["AAAAAAAAAA.*"],
                 "aps-environment": "production",
             },
@@ -550,7 +556,7 @@ class TestSelection(unittest.TestCase):
             entitlements={
                 "keychain-access-groups": ["AAAAAAAAAA.*"],
                 "aps-environment": "production",
-                "com.made.up.entitlement": "buck",
+                "com.made.up.entitlement": "bsmr",
             },
             platform=ApplePlatform.ios_device,
             strict_search=False,
@@ -559,7 +565,7 @@ class TestSelection(unittest.TestCase):
         self.assertIsNone(selected)
         self.verify_diagnostic_info_candidate_profile(
             diagnostic_info,
-            "Expected entitlement item key `com.made.up.entitlement` with value `buck` not found in provisioning profile.",
+            "Expected entitlement item key `com.made.up.entitlement` with value `bsmr` not found in provisioning profile.",
         )
 
     def test_wildcard_app_entitlement_matches_any_value(self):

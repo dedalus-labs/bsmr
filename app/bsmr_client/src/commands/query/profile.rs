@@ -14,7 +14,7 @@
  * above-listed licenses.
  */
 
-use bsmr_client_ctx::common::profiling::BuckProfileMode;
+use bsmr_client_ctx::common::profiling::BsmrProfileMode;
 use bsmr_client_ctx::path_arg::PathArg;
 
 /// Starlark profiling options
@@ -23,11 +23,11 @@ use bsmr_client_ctx::path_arg::PathArg;
 pub(crate) struct QueryProfileOptions {
     /// Profile target loading.
     ///
-    /// When this option is enabled, Buck will profile every `BUILD.bsmr` file loaded during the query
+    /// When this option is enabled, Bsmr will profile every `BUILD.bsmr` file loaded during the query
     /// and merge the results into a single profile.
     /// The command may return cached profile data if `BUILD.bsmr` files were not invalidated.
     #[clap(long, requires("profile_output"))]
-    pub(crate) profile_mode: Option<BuckProfileMode>,
+    pub(crate) profile_mode: Option<BsmrProfileMode>,
 
     /// Where to write profile output.
     #[clap(long)]

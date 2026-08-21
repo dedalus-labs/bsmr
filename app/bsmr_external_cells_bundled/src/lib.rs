@@ -29,12 +29,12 @@ pub struct BundledCell {
     pub is_testing: bool,
 }
 
-#[cfg(buck_build)]
+#[cfg(bsmr_build)]
 mod prelude {
     include!("prelude/contents.rs");
 }
 
-#[cfg(not(buck_build))]
+#[cfg(not(bsmr_build))]
 mod prelude {
     include!(concat!(env!("OUT_DIR"), "/include.rs"));
 }
@@ -54,8 +54,8 @@ const TEST_CELL: BundledCell = BundledCell {
             is_executable: false,
         },
         BundledFile {
-            path: "BUCK_TREE",
-            contents: include_bytes!("../test_data/BUCK_TREE"),
+            path: "BSMR_TREE",
+            contents: include_bytes!("../test_data/BSMR_TREE"),
             is_executable: false,
         },
         BundledFile {

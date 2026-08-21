@@ -14,21 +14,21 @@
 
 # pyre-strict
 
-from bsmr.tests.e2e_util.api.buck import Buck
-from bsmr.tests.e2e_util.buck_workspace import buck_test
+from bsmr.tests.e2e_util.api.bsmr import Bsmr
+from bsmr.tests.e2e_util.bsmr_workspace import bsmr_test
 
 
-@buck_test(inplace=False, data_dir="bxl/simple")
-async def test_cquery_eval(buck: Buck) -> None:
-    result = await buck.bxl(
+@bsmr_test(inplace=False, data_dir="bxl/simple")
+async def test_cquery_eval(bsmr: Bsmr) -> None:
+    result = await bsmr.bxl(
         "//bxl:lazy_cquery.bxl:eval_query_test",
     )
 
     assert "TARGETS.fixture" in result.stdout
 
 
-@buck_test(inplace=False, data_dir="bxl/simple")
-async def test_eval_query_catch_error(buck: Buck) -> None:
-    await buck.bxl(
+@bsmr_test(inplace=False, data_dir="bxl/simple")
+async def test_eval_query_catch_error(bsmr: Bsmr) -> None:
+    await bsmr.bxl(
         "//bxl:lazy_cquery.bxl:eval_query_catch_error_test",
     )

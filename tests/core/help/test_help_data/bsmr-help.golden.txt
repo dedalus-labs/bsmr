@@ -19,13 +19,13 @@ Commands:
                         mapped to the target graph
   expand-external-cell  Expand the contents of an external cell into the repo
   install               Build and install an application
-  kill                  Kill the buck daemon
+  kill                  Kill the bsmr daemon
   killall               Kill all bsmr processes on the machine
-  root                  Find buck cell, project or package root
+  root                  Find bsmr cell, project or package root
   query                 Alias for `uquery`
   run                   Build and run the selected target
   server                Start, query, and control the http server
-  status                Buckd status
+  status                Bsmrd status
   starlark              Run Starlark operations
   targets               Alias for `utargets`
   utargets              Show details about the specified targets
@@ -58,11 +58,11 @@ Universal Options:
           The isolation directory also influences the output paths provided by Bessemer, and as a
           result using a non-default isolation dir will cause cache misses (and slower builds).
 
-          [env: BUCK_ISOLATION_DIR=]
-          [default: v2]
+          [env: BSMR_ISOLATION_DIR=]
+          [default: default]
 
   -v, --verbose <VERBOSITY>
-          How verbose buck should be while logging.
+          How verbose bsmr should be while logging.
 
           Values: 0 = Quiet, errors only; 1 = Show status. Default; 2 = more info about errors; 3 =
           more info about everything; 4 = more info about everything + stderr;
@@ -71,7 +71,7 @@ Universal Options:
           actions, status, stats, success) to fine-tune the verbosity of the log. Example usage
           "-v=1,stderr"
 
-          [env: BUCK_VERBOSE=]
+          [env: BSMR_VERBOSE=]
           [default: 1]
 
       --oncall <ONCALL>
@@ -89,4 +89,4 @@ Universal Options:
           --agent-context intent=build --agent-context attempt=1
 
       --help-wrapper
-          Print buck wrapper help
+          Print bsmr wrapper help

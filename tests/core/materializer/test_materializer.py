@@ -18,8 +18,8 @@
 import sys
 from pathlib import Path
 
-from bsmr.tests.e2e_util.api.buck import Buck
-from bsmr.tests.e2e_util.buck_workspace import buck_test, env
+from bsmr.tests.e2e_util.api.bsmr import Bsmr
+from bsmr.tests.e2e_util.bsmr_workspace import bsmr_test, env
 from bsmr.tests.e2e_util.helper.utils import filter_events
 
 
@@ -35,37 +35,37 @@ def replace_in_file(old: str, new: str, file: Path, encoding: str = "utf-8") -> 
         f.write(file_content)
 
 
-@buck_test(data_dir="modify_deferred_materialization")
-async def test_modify_input_source(buck: Buck) -> None:
-    await buck.build("//:urandom_dep")
+@bsmr_test(data_dir="modify_deferred_materialization")
+async def test_modify_input_source(bsmr: Bsmr) -> None:
+    await bsmr.build("//:urandom_dep")
 
-    targets_file = buck.cwd / "TARGETS.fixture"
+    targets_file = bsmr.cwd / "TARGETS.fixture"
 
     # Change the label in Targets.
     replace_in_file("__NOT_A_REAL_LABEL__", "bsmr_test_local_exec", file=targets_file)
 
-    await buck.build("//:urandom_dep")
+    await bsmr.build("//:urandom_dep")
 
 
-@buck_test(
+@bsmr_test(
     data_dir="modify_deferred_materialization_deps",
     skip_for_os=["windows"],  # TODO(marwhal): Fix and enable on Windows
 )
-async def test_modify_dep_materialization(buck: Buck) -> None:
+async def test_modify_dep_materialization(bsmr: Bsmr) -> None:
     target = "//:check"
 
     # Build, expect the symlink to work. We'll materialize the first time.
 
-    result = await buck.build(target)
+    result = await bsmr.build(target)
     with open(result.get_build_report().output_for_target(target)) as f:
         assert f.read().strip() == "TEXT"
 
     # Build again, expect the symlink to work. We'll materialize just deps.
 
-    with open(buck.cwd / "text", "w", encoding="utf-8") as f:
+    with open(bsmr.cwd / "text", "w", encoding="utf-8") as f:
         f.write("TEXT2")
 
-    result = await buck.build(target)
+    result = await bsmr.build(target)
     with open(result.get_build_report().output_for_target(target)) as f:
         assert f.read().strip() == "TEXT2"
 
@@ -73,30 +73,30 @@ async def test_modify_dep_materialization(buck: Buck) -> None:
     # again. However this time our state is a little different since the
     # previous future was a check-deps only future.
 
-    with open(buck.cwd / "text", "w", encoding="utf-8") as f:
+    with open(bsmr.cwd / "text", "w", encoding="utf-8") as f:
         f.write("TEXT3")
 
-    result = await buck.build(target)
+    result = await bsmr.build(target)
     with open(result.get_build_report().output_for_target(target)) as f:
         assert f.read().strip() == "TEXT3"
 
 
-@buck_test(
+@bsmr_test(
     data_dir="deferred_materializer_matching_artifact_optimization",
 )
-@env("BUCK_LOG", "bsmr_execute_impl::materializers=trace")
-async def test_matching_artifact_optimization(buck: Buck) -> None:
+@env("BSMR_LOG", "bsmr_execute_impl::materializers=trace")
+async def test_matching_artifact_optimization(bsmr: Bsmr) -> None:
     target = "root//:copy"
-    result = await buck.build(target)
+    result = await bsmr.build(target)
     # Check output is correctly materialized
     assert result.get_build_report().output_for_target(target).exists()
 
     # In this case, modifying `hidden` does not change the output, so the output should not
     # need to be rematerialized
-    with open(buck.cwd / "hidden", "w", encoding="utf-8") as f:
+    with open(bsmr.cwd / "hidden", "w", encoding="utf-8") as f:
         f.write("HIDDEN2")
 
-    result = await buck.build(target)
+    result = await bsmr.build(target)
     # Check output still exists
     assert result.get_build_report().output_for_target(target).exists()
     # Check that materializer did not report any rematerialization
@@ -104,10 +104,10 @@ async def test_matching_artifact_optimization(buck: Buck) -> None:
     assert "materialize artifact" not in result.stderr
 
     # In this case, modifying `src` changes the output, so the output should be rematerialized
-    with open(buck.cwd / "src", "w", encoding="utf-8") as f:
+    with open(bsmr.cwd / "src", "w", encoding="utf-8") as f:
         f.write("SRC2")
 
-    result = await buck.build(target)
+    result = await bsmr.build(target)
     # Check output still exists
     output = result.get_build_report().output_for_target(target)
     assert output.exists()
@@ -115,12 +115,12 @@ async def test_matching_artifact_optimization(buck: Buck) -> None:
         assert f.read().strip() == "SRC2"
 
 
-@buck_test(
+@bsmr_test(
     data_dir="deferred_materializer_matching_artifact_optimization",
 )
-async def test_cache_directory_cleanup(buck: Buck) -> None:
+async def test_cache_directory_cleanup(bsmr: Bsmr) -> None:
     # sqlite materializer state is already enabled
-    cache_dir = Path(buck.cwd, "bsmr-out", "v2", "cache")
+    cache_dir = Path(bsmr.cwd, "bsmr-out", "v2", "cache")
     materializer_state_dir = cache_dir / "materializer_state"
     materializer_state_dir.mkdir(parents=True)
     incremental_state_dir = cache_dir / "incremental_state"
@@ -129,46 +129,46 @@ async def test_cache_directory_cleanup(buck: Buck) -> None:
     command_hashes_dir.mkdir(parents=True)
 
     # Need to run a command to start the daemon.
-    await buck.audit_config()
+    await bsmr.audit_config()
 
     cache_dir_listing = sorted(list(cache_dir.iterdir()))
     assert cache_dir_listing == [incremental_state_dir, materializer_state_dir]
 
-    await buck.kill()
-    disable_sqlite_materializer_state(buck)
-    await buck.audit_config()
+    await bsmr.kill()
+    disable_sqlite_materializer_state(bsmr)
+    await bsmr.audit_config()
 
     cache_dir_listing = list(cache_dir.iterdir())
     assert cache_dir_listing == [incremental_state_dir]
 
 
-@buck_test(
+@bsmr_test(
     data_dir="deferred_materializer_matching_artifact_optimization",
 )
-@env("BUCK_LOG", "bsmr_execute_impl::materializers=trace")
+@env("BSMR_LOG", "bsmr_execute_impl::materializers=trace")
 async def test_sqlite_materializer_state_matching_artifact_optimization(
-    buck: Buck,
+    bsmr: Bsmr,
 ) -> None:
     # sqlite materializer state is already enabled
     target = "root//:copy"
-    res = await buck.build(target)
+    res = await bsmr.build(target)
     # Check output is correctly materialized
     assert res.get_build_report().output_for_target(target).exists()
 
-    await buck.kill()
+    await bsmr.kill()
 
-    res = await buck.build(target)
+    res = await bsmr.build(target)
     # Check that materializer did not report any rematerialization
     assert "already materialized, updating deps only" in res.stderr, res.stderr
     assert "materialize artifact" not in res.stderr
 
-    await buck.kill()
+    await bsmr.kill()
 
     # In this case, modifying `src` changes the output, so the output should be rematerialized
-    with open(buck.cwd / "src", "w", encoding="utf-8") as f:
+    with open(bsmr.cwd / "src", "w", encoding="utf-8") as f:
         f.write("SRC2")
 
-    res = await buck.build(target)
+    res = await bsmr.build(target)
     # Check output still exists
     output = res.get_build_report().output_for_target(target)
     assert output.exists()
@@ -176,86 +176,86 @@ async def test_sqlite_materializer_state_matching_artifact_optimization(
         assert f.read().strip() == "SRC2"
 
 
-@buck_test(
+@bsmr_test(
     data_dir="deferred_materializer_matching_artifact_optimization",
 )
-@env("BUCK_LOG", "bsmr_execute_impl::materializers=trace")
+@env("BSMR_LOG", "bsmr_execute_impl::materializers=trace")
 async def test_download_file_sqlite_matching_artifact_optimization(
-    buck: Buck,
+    bsmr: Bsmr,
 ) -> None:
     # sqlite materializer state is already enabled
     target = "root//:download"
-    res = await buck.build(target)
+    res = await bsmr.build(target)
     # Check output is correctly materialized
     assert res.get_build_report().output_for_target(target).exists()
 
-    await buck.kill()
+    await bsmr.kill()
 
-    res = await buck.build(target)
+    res = await bsmr.build(target)
     # Check that materializer did not report any rematerialization
     assert "already materialized, updating deps only" in res.stderr, res.stderr
     assert "materialize artifact" not in res.stderr
 
 
-@buck_test(
+@bsmr_test(
     data_dir="deferred_materializer_matching_artifact_optimization",
 )
-@env("BUCK_LOG", "bsmr_execute_impl::materializers=trace")
+@env("BSMR_LOG", "bsmr_execute_impl::materializers=trace")
 async def test_sqlite_materializer_state_disabled(
-    buck: Buck,
+    bsmr: Bsmr,
 ) -> None:
-    disable_sqlite_materializer_state(buck)
+    disable_sqlite_materializer_state(bsmr)
 
     target = "root//:copy"
-    result = await buck.build(target)
+    result = await bsmr.build(target)
     # Check output is correctly materialized
     assert result.get_build_report().output_for_target(target).exists()
 
-    await buck.kill()
+    await bsmr.kill()
 
-    result = await buck.build(target)
+    result = await bsmr.build(target)
     # Check that materializer did have to rematerialize the same artifact
     assert "already materialized, updating deps only" not in result.stderr
     assert "materialize artifact" in result.stderr
 
 
-@buck_test(
+@bsmr_test(
     data_dir="deferred_materializer_matching_artifact_optimization",
 )
-@env("BUCK_LOG", "bsmr_execute_impl::materializers=trace")
+@env("BSMR_LOG", "bsmr_execute_impl::materializers=trace")
 async def test_sqlite_materializer_state_bsmrconfig_version_change(
-    buck: Buck,
+    bsmr: Bsmr,
 ) -> None:
     # sqlite materializer state is already enabled
     target = "root//:copy"
-    result = await buck.build(target)
+    result = await bsmr.build(target)
     # Check output is correctly materialized
     assert result.get_build_report().output_for_target(target).exists()
 
-    await buck.kill()
+    await bsmr.kill()
 
     # Bump the bsmrconfig version of sqlite materializer state to invalidate the existing sqlite db
     replace_in_file(
         "sqlite_materializer_state_version = 0",
         "sqlite_materializer_state_version = 1",
-        buck.cwd / ".bsmr",
+        bsmr.cwd / ".bsmr",
     )
 
     # just starting the bsmr daemon should delete the sqlite materializer state
-    await buck.audit_config()
+    await bsmr.audit_config()
 
 
-@buck_test(
+@bsmr_test(
     data_dir="modify_deferred_materialization_deps",
     skip_for_os=["windows"],
 )
-async def test_materialization_spans_have_parent_id(buck: Buck) -> None:
+async def test_materialization_spans_have_parent_id(bsmr: Bsmr) -> None:
     """Materialization spans should be parented to the span that triggered them,
     not appear as root spans with parent_id == 0."""
-    await buck.build("//:check")
+    await bsmr.build("//:check")
 
     materialization_events = await filter_events(
-        buck,
+        bsmr,
         "Event",
         "data",
         "SpanStart",
@@ -271,19 +271,19 @@ async def test_materialization_spans_have_parent_id(buck: Buck) -> None:
         )
 
 
-@buck_test(
+@bsmr_test(
     data_dir="modify_deferred_materialization_deps",
     skip_for_os=["windows"],
 )
-async def test_materializer_command_events_have_parent_id(buck: Buck) -> None:
+async def test_materializer_command_events_have_parent_id(bsmr: Bsmr) -> None:
     """MaterializerCommand instant events emitted on the synchronous command
     processing thread should be parented to the span that sent the command,
     not appear as root events with parent_id == 0.  This requires
     verbose_materializer_event_log = true in .bsmr."""
-    await buck.build("//:check")
+    await bsmr.build("//:check")
 
     command_events = await filter_events(
-        buck,
+        bsmr,
         "Event",
         "data",
         "Instant",
@@ -302,8 +302,8 @@ async def test_materializer_command_events_have_parent_id(buck: Buck) -> None:
         )
 
 
-def disable_sqlite_materializer_state(buck: Buck) -> None:
-    config_file = buck.cwd / ".bsmr"
+def disable_sqlite_materializer_state(bsmr: Bsmr) -> None:
+    config_file = bsmr.cwd / ".bsmr"
     replace_in_file(
         "sqlite_materializer_state = true",
         "sqlite_materializer_state = false",
@@ -311,16 +311,16 @@ def disable_sqlite_materializer_state(buck: Buck) -> None:
     )
 
 
-@buck_test(
+@bsmr_test(
     data_dir="modify_deferred_materialization_deps",
     skip_for_os=["windows"],  # TODO(marwhal): Fix and enable on Windows
 )
-async def test_debug_materialize(buck: Buck) -> None:
-    result = await buck.build("//:remote_text", "--materializations=None")
+async def test_debug_materialize(bsmr: Bsmr) -> None:
+    result = await bsmr.build("//:remote_text", "--materializations=None")
     out = result.get_build_report().output_for_target(
         "root//:remote_text", rel_path=True
     )
-    assert not Path(buck.cwd, out).exists()
+    assert not Path(bsmr.cwd, out).exists()
 
-    await buck.debug("materialize", str(out))
-    assert Path(buck.cwd, out).exists()
+    await bsmr.debug("materialize", str(out))
+    assert Path(bsmr.cwd, out).exists()

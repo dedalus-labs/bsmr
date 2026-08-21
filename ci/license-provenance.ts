@@ -3,7 +3,7 @@
 // SPDX-License-Identifier: Apache-2.0
 //===----------------------------------------------------------------------===//
 
-// Derives source ownership from Bessemer's immutable Buck2 fork boundary.
+// Derives source ownership from Bessemer's immutable upstream fork boundary.
 
 import { basename, extname } from "node:path";
 
@@ -54,7 +54,7 @@ export function isExact(change?: GitChange): boolean {
 	return change === undefined || /^(?:R|C)100$/.test(change.status);
 }
 
-/** Derive the file's ownership boundary from the immutable Buck2 fork point. */
+/** Derive the file's ownership boundary from the immutable upstream fork point. */
 export function classify(text: string, change?: GitChange): Provenance {
 	const header = text.slice(0, 4096);
 	if (upstreamMarker.test(header)) return "upstream-modified";

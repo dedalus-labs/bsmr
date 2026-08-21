@@ -22,14 +22,14 @@ use bsmr_cli_proto::new_generic::NewGenericRequest;
 use bsmr_cli_proto::new_generic::NewGenericResponse;
 use bsmr_client_ctx::client_ctx::ClientCommandContext;
 use bsmr_client_ctx::command_outcome::CommandOutcome;
-use bsmr_client_ctx::common::BuckArgMatches;
+use bsmr_client_ctx::common::BsmrArgMatches;
 use bsmr_client_ctx::common::CommonBuildConfigurationOptions;
 use bsmr_client_ctx::common::CommonEventLogOptions;
 use bsmr_client_ctx::common::CommonStarlarkOptions;
 use bsmr_client_ctx::common::target_cfg::TargetCfgOptions;
 use bsmr_client_ctx::common::ui::CommonConsoleOptions;
-use bsmr_client_ctx::daemon::client::BuckdClientConnector;
-use bsmr_client_ctx::daemon::client::FlushingBuckdClient;
+use bsmr_client_ctx::daemon::client::BsmrdClientConnector;
+use bsmr_client_ctx::daemon::client::FlushingBsmrdClient;
 use bsmr_client_ctx::events_ctx::EventsCtx;
 use bsmr_client_ctx::exit_result::ExitResult;
 use bsmr_client_ctx::streaming::StreamingCommand;
@@ -76,15 +76,15 @@ impl StreamingCommand for CompleteTargetCommand {
 
     async fn exec_impl(
         self,
-        buckd: &mut BuckdClientConnector,
-        matches: BuckArgMatches<'_>,
+        bsmrd: &mut BsmrdClientConnector,
+        matches: BsmrArgMatches<'_>,
         ctx: &mut ClientCommandContext<'_>,
         events_ctx: &mut EventsCtx,
     ) -> ExitResult {
-        let buckd_client = buckd.with_flushing();
+        let bsmrd_client = bsmrd.with_flushing();
         let context = ctx.client_context(matches, &self)?;
         let mut target_resolver = DaemonTargetResolver {
-            buckd_client,
+            bsmrd_client,
             context,
             target_cfg: self.target_cfg,
             events_ctx,
@@ -172,7 +172,7 @@ impl<'a> TargetCompleter<'a> {
 }
 
 struct DaemonTargetResolver<'a> {
-    buckd_client: FlushingBuckdClient<'a>,
+    bsmrd_client: FlushingBsmrdClient<'a>,
     context: ClientContext,
     target_cfg: TargetCfgOptions,
     events_ctx: &'a mut EventsCtx,
@@ -187,7 +187,7 @@ impl TargetResolver for DaemonTargetResolver<'_> {
             target_cfg: self.target_cfg.target_cfg(),
             partial_target,
         });
-        self.buckd_client
+        self.bsmrd_client
             .new_generic(self.context.clone(), request, self.events_ctx, None)
             .then(|res| async move {
                 match res {

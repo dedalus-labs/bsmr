@@ -8,13 +8,13 @@
 
 # [RFC] Modifiers
 
-This document proposes a new configuration feature in Buck called modifiers. The goal is to address problems with the current methods of customizations in Buck by providing a unified, composable way to specify build settings on a project level, on individual targets, and on the command line.
+This document proposes a new configuration feature in Bsmr called modifiers. The goal is to address problems with the current methods of customizations in Bsmr by providing a unified, composable way to specify build settings on a project level, on individual targets, and on the command line.
 
 ## Context
 
 ### Why do we need a new configuration setup?
 
-A target often needs to be built in multiple build settings. For example, a single target may be customized with different OSes (ex. linux, mac, windows), architectures (ex. x86, arm), and sanitizers (ex. asan, tsan, ubsan). Buck has 2 main ways of supporting customizations today:
+A target often needs to be built in multiple build settings. For example, a single target may be customized with different OSes (ex. linux, mac, windows), architectures (ex. x86, arm), and sanitizers (ex. asan, tsan, ubsan). Bsmr has 2 main ways of supporting customizations today:
 
 1. Bsmrconfigs specified through `--config` or `-c` flags. They are global flags and are often aggregated in modefiles (`@<modefile>` on the command line).
 2. Platforms specified through `default_target_platform` attribute or `--target-platforms` flag), which become a target's target "configuration". `--target-platforms` flags are also commonly specified via modefiles.
@@ -23,8 +23,8 @@ These methods suffer from the following problems.
 
 1. *High discovery cost and cognitive load. *Many targets don't build out of the box and require a dedicated modefile. It’s onerous for users to know the right modefiles to use for a target, and they often don't realize when they are using the wrong modefiles.
 2. *Too many modefiles*. A monorepo can end up with a huge number of project-specific modefiles when each customized project adds its own set of modefiles. Internally, the number of modefiles in our monorepo is on the order of **1000s**.
-3. *Slow incremental builds*. Changing bsmrconfigs invalidates Buck’s global state and causes Buck to always rerun load and analysis on incremental builds. This adds non-trivial Buck overhead on every incremental build.
-4. *Lack of multi-configuration support*. Different bsmrconfigs prevent Buck from building in multiple modes in parallel. Platforms support multi-configuration builds.
+3. *Slow incremental builds*. Changing bsmrconfigs invalidates Bsmr’s global state and causes Bsmr to always rerun load and analysis on incremental builds. This adds non-trivial Bsmr overhead on every incremental build.
+4. *Lack of multi-configuration support*. Different bsmrconfigs prevent Bsmr from building in multiple modes in parallel. Platforms support multi-configuration builds.
 5. *Platform generation is exponential in the number of build settings*. Suppose a repo supports 3 OSes, 2 CPU architectures, and 3 compilers. Using platforms requires generating all 18 permutations of these settings as targets, which is not scalable.
 6. *Platform does not compose well*. Suppose I want to apply ASAN. It's not possible to specify ASAN on top of an existing platform. Instead, a new platform target must be created based on the existing platform and ASAN.
 7. *Poor tooling integration*. Similar to users, it's onerous for tooling to keep track of what modes are needed to build a target with. Additionally, bsmrconfigs are bad for performance for tools like language servers because it's impossible to request builds of two targets that require different modes to build in parallel.
@@ -32,18 +32,18 @@ These methods suffer from the following problems.
 
 ### Modifier API Goals
 
-The Modifier API introduces a unified way to specify build settings on a target and on the command line. Like target platforms, it constructs Buck configurations so it supports multi-configuration builds. Our goals with modifiers are as follows.
+The Modifier API introduces a unified way to specify build settings on a target and on the command line. Like target platforms, it constructs Bsmr configurations so it supports multi-configuration builds. Our goals with modifiers are as follows.
 
-1. `buck build` on any target should work without extra flags like `@mode `or `--config`.
-2. `buck build` on any target should work with a small (~10s) set of unified modes like debug, Linux, and asan.
+1. `bsmr build` on any target should work without extra flags like `@mode `or `--config`.
+2. `bsmr build` on any target should work with a small (~10s) set of unified modes like debug, Linux, and asan.
 3. Delete thousands of modefiles in repo.
-4. Eliminate Buck overhead when changing build settings.
+4. Eliminate Bsmr overhead when changing build settings.
 5. Simplify tooling support for tools like language servers.
 6. Make repo-wide queries functional for users and tooling and improve CI effectiveness.
 
 ### Configuration Background
 
-*Feel free to skip this if you already understand Buck configurations.*
+*Feel free to skip this if you already understand Bsmr configurations.*
 
 A configuration is a collection of `constraint_value` targets. Each individual constraint value is keyed by a `constraint_setting` (commonly referred to as just constraint), so there can only be one constraint value of a constraint in a configuration.
 
@@ -89,13 +89,13 @@ deps = select({
 })
 ```
 
-Before building a target specified from the command line (known as a top-level target), Buck needs to know its configuration in order to resolve selects. Modifiers are a new way to resolve a target's configuration for every top-level target.
+Before building a target specified from the command line (known as a top-level target), Bsmr needs to know its configuration in order to resolve selects. Modifiers are a new way to resolve a target's configuration for every top-level target.
 
 Note: for convenience, we will use targets like `prelude//constraints/os:linux` to indicate constraint values without defining them in examples throughout this doc. To use any constraint in practice, you have to define the `constraint_setting` and `constraint_value` targets first.
 
 ## API
 
-Under modifiers, every top-level target will start with an empty configuration, and Buck will apply a list of "modifiers" in a specific order to obtain a configuration. A modifier is a modification of a specific constraint in the configuration. There are two types of modifiers, *conditional* and *unconditional* modifiers.
+Under modifiers, every top-level target will start with an empty configuration, and Bsmr will apply a list of "modifiers" in a specific order to obtain a configuration. A modifier is a modification of a specific constraint in the configuration. There are two types of modifiers, *conditional* and *unconditional* modifiers.
 
 ### Unconditional modifier
 
@@ -112,7 +112,7 @@ modifiers.conditional({
 })
 ```
 
-will insert MSVC constraint into the configuration if the OS is windows or clang constraint otherwise. A `modifiers.conditional` behaves similarly to Buck's `select` but can only be used in a modifier context.
+will insert MSVC constraint into the configuration if the OS is windows or clang constraint otherwise. A `modifiers.conditional` behaves similarly to Bsmr's `select` but can only be used in a modifier context.
 
 A `modifiers.conditional` can only be used to modify a single constraint, so the following example is not valid.
 
@@ -134,7 +134,7 @@ target, or cli level.
 
 ### Per-PACKAGE Modifier
 
-In a `PACKAGE` or `BUCK_TREE` file, modifiers can be specified using the `set_cfg_modifiers` function and would apply to all targets covered under that PACKAGE or BUCK_TREE file. For example, modifiers specified in `repo//PACKAGE` would apply to any target under `repo//…`. Modifiers specified in `repo/foo/PACKAGE` would apply to any target under `repo//foo/…` (for resolution order, see "Modifier Resolution" section).
+In a `PACKAGE` or `BSMR_TREE` file, modifiers can be specified using the `set_cfg_modifiers` function and would apply to all targets covered under that PACKAGE or BSMR_TREE file. For example, modifiers specified in `repo//PACKAGE` would apply to any target under `repo//…`. Modifiers specified in `repo/foo/PACKAGE` would apply to any target under `repo//foo/…` (for resolution order, see "Modifier Resolution" section).
 
 The `set_cfg_modifiers` function takes as input a list of modifiers. The following is an example that sets modifiers for OS and compiler settings for all targets in the repo.
 
@@ -167,7 +167,7 @@ python_binary(
 )
 ```
 
-Note that for legacy reasons, we also support modifiers defined on the `metadata` attribute via “buck.cfg_modifiers” key.
+Note that for legacy reasons, we also support modifiers defined on the `metadata` attribute via “bsmr.cfg_modifiers” key.
 
 ```python
 # repo/foo/BUILD.bsmr
@@ -175,22 +175,22 @@ Note that for legacy reasons, we also support modifiers defined on the `metadata
 python_binary(
   name = "bar",
   # ...
-  metadata = {"buck.cfg_modifiers": [
+  metadata = {"bsmr.cfg_modifiers": [
     "cfg//os:windows",
     "prelude//constraints/compiler:clang",
   ]},
 )
 ```
 
-*Note:* We are in the process of migrating these use cases to the `modifiers` attribute. In the meantime, if a target has both `modifiers` and metadata key “buck.cfg_modifiers” defined, Buck will throw an error at configuration time.
+*Note:* We are in the process of migrating these use cases to the `modifiers` attribute. In the meantime, if a target has both `modifiers` and metadata key “bsmr.cfg_modifiers” defined, Bsmr will throw an error at configuration time.
 
 #### Prefer per-PACKAGE modifiers over per-target modifiers!
 
 Internally, we recommend using per-PACKAGE modifiers over per-target modifiers when possible for a couple reasons.
 
-*Per-target modifiers may require changing or debugging complicated bzl files* whereas *per-PACKAGE modifiers do not.* While all native buck rules like `cxx_binary` and `genrule` support per-target modifiers, oftentimes you will find that a “rule” you are using in a BUILD.bsmr file may not support modifiers. This is because you are most likely using an internal macro that wraps the native rules. Using modifiers in a new macro will require plumbing the `metadata` or `modifiers` attribute down many layers of macro until it reaches the native rule, and many users often *get this wrong*, leading to hard-to-debug scenarios where certain generated targets are missing modifiers or some modifiers get unintentionally overwritten by someone else. Per-PACKAGE modifiers don’t have this problem.
+*Per-target modifiers may require changing or debugging complicated bzl files* whereas *per-PACKAGE modifiers do not.* While all native bsmr rules like `cxx_binary` and `genrule` support per-target modifiers, oftentimes you will find that a “rule” you are using in a BUILD.bsmr file may not support modifiers. This is because you are most likely using an internal macro that wraps the native rules. Using modifiers in a new macro will require plumbing the `metadata` or `modifiers` attribute down many layers of macro until it reaches the native rule, and many users often *get this wrong*, leading to hard-to-debug scenarios where certain generated targets are missing modifiers or some modifiers get unintentionally overwritten by someone else. Per-PACKAGE modifiers don’t have this problem.
 
-*Per-PACKAGE modifiers enforce that modifiers are consistently applied across the entire project. *While people usually know to apply modifiers to binaries, they often forget to apply them to library/test targets. This could cause unintentional behavior differences when building libraries or tests. Even when there is no behavior difference, this will still cause an increase in configured target graph size. An increase in graph size will increase buck daemon memory usage and make it more likely for builds to OOM.
+*Per-PACKAGE modifiers enforce that modifiers are consistently applied across the entire project. *While people usually know to apply modifiers to binaries, they often forget to apply them to library/test targets. This could cause unintentional behavior differences when building libraries or tests. Even when there is no behavior difference, this will still cause an increase in configured target graph size. An increase in graph size will increase bsmr daemon memory usage and make it more likely for builds to OOM.
 
 *Per-PACKAGE modifiers are less verbose. *If you need a modifier, you often need to apply it to a project worth of targets. With per-PACKAGE modifiers, you only need to add the modifier once for a modifier to take effect on an entire directory.
 
@@ -234,7 +234,7 @@ modifiers after `--modifier` or `?`. This will be equivalent to specifying each 
 
 ### Modifier Resolution
 
-Modifiers are applied in order of constraint setting, and for each constraint setting, modifiers for that setting are resolved in order of PACKAGE, target, and command line, with modifiers from parent PACKAGE applied before child PACKAGE. The end of this section will describe how Buck determines the order of constraint setting to resolve.
+Modifiers are applied in order of constraint setting, and for each constraint setting, modifiers for that setting are resolved in order of PACKAGE, target, and command line, with modifiers from parent PACKAGE applied before child PACKAGE. The end of this section will describe how Bsmr determines the order of constraint setting to resolve.
 
 Suppose modifiers for repo//foo:bar are specified as follows.
 
@@ -262,7 +262,7 @@ python_binary(
 )
 ```
 
-At the beginning, the configuration will be empty. When resolving modifiers, Buck will first resolve all modifiers for `cfg//os:_` before resolving all modifiers for `cfg//compiler:_`.
+At the beginning, the configuration will be empty. When resolving modifiers, Bsmr will first resolve all modifiers for `cfg//os:_` before resolving all modifiers for `cfg//compiler:_`.
 
 For OS, the linux modifier from `repo/PACKAGE` will apply first, followed by macos modifier from `repo/foo/PACKAGE` and windows modifier from `repo//foo:bar`'s target modifiers, so `repo//foo:bar` will end up with `prelude//constraints/os:windows` in its configuration. Next, to resolve the compiler modifier, the `modifiers.conditional` from `repo/PACKAGE` will resolve to `prelude//constraints/compiler:msvc` since the existing configuration is windows and apply that as the modifier. The target configuration for `repo//foo:bar` ends up with windows and msvc.
 
@@ -272,14 +272,14 @@ resolving the OS modifier, the linux modifier from cli will override any existin
 
 Because command line modifiers will apply at the end, they are also known as required modifiers. Any modifier specified on the command line will always override any modifier for the same constraint setting specified in the repo.
 
-The ordering of constraint settings to resolve modifiers is determined based on the dependency order of constraints specified in the keys of the `modifiers.conditional` specified. Because some modifiers match on other constraints, modifiers for those constraints must be resolved first. In the previous example, because the compiler modifier matches on OS constraints, Buck will resolve all OS modifiers before resolving compiler modifiers. `modifiers.conditional` that ends up with a cycle of matched constraints (ex. compiler modifier matches on sanitizer but sanitizer modifier also matches on compiler) will be an error.
+The ordering of constraint settings to resolve modifiers is determined based on the dependency order of constraints specified in the keys of the `modifiers.conditional` specified. Because some modifiers match on other constraints, modifiers for those constraints must be resolved first. In the previous example, because the compiler modifier matches on OS constraints, Bsmr will resolve all OS modifiers before resolving compiler modifiers. `modifiers.conditional` that ends up with a cycle of matched constraints (ex. compiler modifier matches on sanitizer but sanitizer modifier also matches on compiler) will be an error.
 
 ### Host Conditional Modifiers
 
 Modifiers have 2 types of conditional modifiers that allow for powerful compositions. Each operator is a function that accepts a dictionary where the keys are the conditionals and values are modifiers.
 
 1. Conditional modifier. Introduced in the previous sections, this is capable of inserting constraints based on constraints in the existing configuration.
-2. Host conditional modifier. This selects based on the host configuration, whereas `modifier.conditional` selects based on the target configuration. This host configuration is constructed when resolving modifiers. `modifiers.match_host` is important to making `buck build` work anywhere on any platform. For example, when the OS to configure is not specified, it's best to assume that the user wants to target the same OS as the host machine.
+2. Host conditional modifier. This selects based on the host configuration, whereas `modifier.conditional` selects based on the target configuration. This host configuration is constructed when resolving modifiers. `modifiers.match_host` is important to making `bsmr build` work anywhere on any platform. For example, when the OS to configure is not specified, it's best to assume that the user wants to target the same OS as the host machine.
 
 **NOTE**: host conditional modifiers are currently not implemented.
 
@@ -301,7 +301,7 @@ set_cfg_modifiers(cfg_modifiers = [
 ])
 ```
 
-On select resolution, Buck's select currently requires unambiguous keys in the dictionary and resolves to the key with the most refined match. The select operators used in modifiers will diverge from this and implement a "first-match" behavior, where select resolves to the first condition that evaluates to true in the dictionary.
+On select resolution, Bsmr's select currently requires unambiguous keys in the dictionary and resolves to the key with the most refined match. The select operators used in modifiers will diverge from this and implement a "first-match" behavior, where select resolves to the first condition that evaluates to true in the dictionary.
 
 ### Legacy Target platform
 

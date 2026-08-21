@@ -15,7 +15,7 @@
  */
 
 //!
-//! bxl is the Buck Extension Language, allowing any integrator to write Starlark code that
+//! bxl is the Bsmr Extension Language, allowing any integrator to write Starlark code that
 //! introspects bsmr internal graphs in a safe, incremental way to perform more complex operations
 
 pub mod build_result;

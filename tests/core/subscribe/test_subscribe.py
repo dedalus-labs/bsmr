@@ -20,9 +20,9 @@ import json
 import os
 
 import pytest
-from bsmr.tests.e2e_util.api.buck import Buck
-from bsmr.tests.e2e_util.api.buck_result import BuckException
-from bsmr.tests.e2e_util.buck_workspace import buck_test, env
+from bsmr.tests.e2e_util.api.bsmr import Bsmr
+from bsmr.tests.e2e_util.api.bsmr_result import BsmrException
+from bsmr.tests.e2e_util.bsmr_workspace import bsmr_test, env
 
 
 # Length-prefixed protobuf frame for:
@@ -35,9 +35,9 @@ from bsmr.tests.e2e_util.buck_workspace import buck_test, env
 SUBSCRIBE_TO_ACTIVE_COMMANDS_REQUEST = b"\x02\x22\x00"
 
 
-@buck_test()
-async def test_subscribe(buck: Buck) -> None:
-    path = (await buck.targets("//:stage1", "--show-output")).stdout.strip().split()[1]
+@bsmr_test()
+async def test_subscribe(bsmr: Bsmr) -> None:
+    path = (await bsmr.targets("//:stage1", "--show-output")).stdout.strip().split()[1]
 
     # Bessemer wants normalized paths here.
     path = path.replace("\\", "/")
@@ -45,15 +45,15 @@ async def test_subscribe(buck: Buck) -> None:
     expect = os.environ["BSMR_EXPECT"]
     args = [
         "--bsmr",
-        buck.path_to_executable,
+        bsmr.path_to_executable,
         path,
     ]
 
-    if buck.isolation_prefix is not None:
+    if bsmr.isolation_prefix is not None:
         args.extend(
             [
                 "--isolation-dir",
-                buck.isolation_prefix,
+                bsmr.isolation_prefix,
             ]
         )
 
@@ -62,11 +62,11 @@ async def test_subscribe(buck: Buck) -> None:
         *args,
         stdout=asyncio.subprocess.PIPE,
         stderr=asyncio.subprocess.PIPE,
-        cwd=buck.cwd,
-        env=buck._env,
+        cwd=bsmr.cwd,
+        env=bsmr._env,
     )
 
-    await buck.build("//:stage2")
+    await bsmr.build("//:stage2")
 
     # We don't expect this to actually take anywhere near 20 seconds, but on CI
     # on a busy host this could take a while.
@@ -75,32 +75,32 @@ async def test_subscribe(buck: Buck) -> None:
     assert stdout.strip().decode("utf-8") == path
 
 
-@buck_test()
-async def test_active_commands(buck: Buck) -> None:
-    async with await buck.subscribe("--active-commands") as subscribe:
+@bsmr_test()
+async def test_active_commands(bsmr: Bsmr) -> None:
+    async with await bsmr.subscribe("--active-commands") as subscribe:
         msg = await subscribe.read_message()
         commands = msg["response"]["ActiveCommandsSnapshot"]["active_commands"]
         assert len(commands) == 1
         assert "subscribe" in commands[0]["argv"]
 
 
-@buck_test()
-async def test_disconnect_eof(buck: Buck) -> None:
-    async with await buck.subscribe() as subscribe:
+@bsmr_test()
+async def test_disconnect_eof(bsmr: Bsmr) -> None:
+    async with await bsmr.subscribe() as subscribe:
         subscribe.stdin.close()
         msg = await subscribe.read_message()
         assert "EOF" in msg["response"]["Goodbye"]["reason"]
 
 
-@buck_test()
+@bsmr_test()
 @env("BSMR_TESTING_INACTIVITY_TIMEOUT", "true")
-async def test_requests_keep_daemon_alive(buck: Buck) -> None:
-    async with await buck.subscribe() as subscribe:
+async def test_requests_keep_daemon_alive(bsmr: Bsmr) -> None:
+    async with await bsmr.subscribe() as subscribe:
         subscribe.stdin.write(SUBSCRIBE_TO_ACTIVE_COMMANDS_REQUEST)
         await subscribe.stdin.drain()
         await subscribe.read_message()
 
-        pid = json.loads((await buck.status()).stdout)["process_info"]["pid"]
+        pid = json.loads((await bsmr.status()).stdout)["process_info"]["pid"]
 
         for _ in range(3):
             await asyncio.sleep(0.6)
@@ -108,23 +108,23 @@ async def test_requests_keep_daemon_alive(buck: Buck) -> None:
             await subscribe.stdin.drain()
             await subscribe.read_message()
 
-        status = json.loads((await buck.status()).stdout)
+        status = json.loads((await bsmr.status()).stdout)
         assert status["process_info"]["pid"] == pid
         assert subscribe._process.returncode is None
 
 
-@buck_test()
-async def test_disconnect_error(buck: Buck) -> None:
-    with pytest.raises(BuckException):
-        async with await buck.subscribe() as subscribe:
+@bsmr_test()
+async def test_disconnect_error(bsmr: Bsmr) -> None:
+    with pytest.raises(BsmrException):
+        async with await bsmr.subscribe() as subscribe:
             subscribe.stdin.write(b"x")
             subscribe.stdin.close()
             msg = await subscribe.read_message()
             assert "Error parsing request" in msg["response"]["Goodbye"]["reason"]
 
 
-@buck_test()
-async def test_unknown_request_error(buck: Buck) -> None:
-    with pytest.raises(BuckException):
-        async with await buck.subscribe() as subscribe:
+@bsmr_test()
+async def test_unknown_request_error(bsmr: Bsmr) -> None:
+    with pytest.raises(BsmrException):
+        async with await bsmr.subscribe() as subscribe:
             subscribe.stdin.write(b"\x00")  # Would decode to a None request

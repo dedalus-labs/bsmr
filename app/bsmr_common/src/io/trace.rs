@@ -19,7 +19,7 @@ use bsmr_core::fs::project::ProjectRoot;
 use bsmr_core::fs::project_rel_path::ProjectRelativePathBuf;
 use bsmr_fs::paths::abs_norm_path::AbsNormPathBuf;
 use bsmr_fs::paths::forward_rel_path::ForwardRelativePath;
-use bsmr_hash::BuckDashSet;
+use bsmr_hash::BsmrDashSet;
 
 use crate::file_ops::metadata::RawPathMetadata;
 use crate::file_ops::metadata::RawSymlink;
@@ -34,19 +34,19 @@ pub struct Symlink {
 
 #[derive(Allocative)]
 pub struct Trace {
-    pub project_entries: BuckDashSet<ProjectRelativePathBuf>,
-    pub buck_out_entries: BuckDashSet<ProjectRelativePathBuf>,
-    pub external_entries: BuckDashSet<AbsNormPathBuf>,
-    pub symlinks: BuckDashSet<Symlink>,
+    pub project_entries: BsmrDashSet<ProjectRelativePathBuf>,
+    pub output_entries: BsmrDashSet<ProjectRelativePathBuf>,
+    pub external_entries: BsmrDashSet<AbsNormPathBuf>,
+    pub symlinks: BsmrDashSet<Symlink>,
 }
 
 impl Trace {
     pub fn new() -> Self {
         Self {
-            project_entries: BuckDashSet::default(),
-            buck_out_entries: BuckDashSet::default(),
-            external_entries: BuckDashSet::default(),
-            symlinks: BuckDashSet::default(),
+            project_entries: BsmrDashSet::default(),
+            output_entries: BsmrDashSet::default(),
+            external_entries: BsmrDashSet::default(),
+            symlinks: BsmrDashSet::default(),
         }
     }
 
@@ -58,8 +58,8 @@ impl Trace {
             .collect()
     }
 
-    pub fn buck_out_entries(&self) -> Vec<ProjectRelativePathBuf> {
-        self.buck_out_entries
+    pub fn output_entries(&self) -> Vec<ProjectRelativePathBuf> {
+        self.output_entries
             .iter()
             .map(|path| path.key().to_buf())
             .collect()
@@ -95,8 +95,8 @@ impl TracingIoProvider {
         self.trace.project_entries.insert(path);
     }
 
-    pub fn add_buck_out_entry(&self, entry: ProjectRelativePathBuf) {
-        self.trace.buck_out_entries.insert(entry);
+    pub fn add_output_entry(&self, entry: ProjectRelativePathBuf) {
+        self.trace.output_entries.insert(entry);
     }
 
     pub fn add_external_path(&self, path: AbsNormPathBuf) {

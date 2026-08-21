@@ -44,7 +44,7 @@ use bsmr_directory::directory::entry::DirectoryEntry;
 use bsmr_directory::directory::find::DirectoryFindError;
 use bsmr_directory::directory::find::find;
 use bsmr_directory::directory::immutable_directory::ImmutableDirectory;
-use bsmr_error::BuckErrorContext;
+use bsmr_error::BsmrErrorContext;
 use bsmr_error::bsmr_error;
 use bsmr_error::conversion::from_any_with_tag;
 use bsmr_error::internal_error;
@@ -76,7 +76,7 @@ use pagable::pagable_typetag;
 fn load_nano_prelude() -> bsmr_error::Result<BundledCell> {
     let path = env::var("NANO_PRELUDE")
         .map_err(|e| from_any_with_tag(e, bsmr_error::ErrorTag::Input))
-        .buck_error_context(
+        .bsmr_error_context(
             "NANO_PRELUDE env var must be set to the location of nano prelude\n\
         Consider `export NANO_PRELUDE=$HOME/fbsource/fbcode/bsmr/tests/e2e_util/nano_prelude`",
         )?;
@@ -87,7 +87,7 @@ fn load_nano_prelude() -> bsmr_error::Result<BundledCell> {
         ));
     }
     let path = AbsPathBuf::new(Path::new(&path))
-        .buck_error_context("NANO_PRELUDE env var must point to absolute path")?;
+        .bsmr_error_context("NANO_PRELUDE env var must point to absolute path")?;
 
     let mut files = Vec::new();
     let mut dir_stack = Vec::new();
@@ -129,7 +129,7 @@ fn load_nano_prelude() -> bsmr_error::Result<BundledCell> {
 fn nano_prelude() -> bsmr_error::Result<BundledCell> {
     static NANO_PRELUDE: OnceLock<BundledCell> = OnceLock::new();
     Ok(*NANO_PRELUDE
-        .get_or_try_init(|| load_nano_prelude().buck_error_context("loading nano_prelude"))?)
+        .get_or_try_init(|| load_nano_prelude().bsmr_error_context("loading nano_prelude"))?)
 }
 
 pub(crate) fn find_bundled_data(cell_name: CellName) -> bsmr_error::Result<BundledCell> {
@@ -397,10 +397,10 @@ async fn declare_all_source_artifacts(
 ) -> bsmr_error::Result<()> {
     let mut requests = Vec::new();
     let artifact_fs = ctx.get_artifact_fs().await?;
-    let buck_out_resolver = artifact_fs.buck_out_path_resolver();
+    let output_resolver = artifact_fs.output_path_resolver();
 
     for (path, entry) in ops.dir.unordered_walk_leaves().with_paths() {
-        let path = buck_out_resolver.resolve_external_cell_source(
+        let path = output_resolver.resolve_external_cell_source(
             CellRelativePath::new(path.as_ref()),
             ExternalCellOrigin::Bundled(cell_name),
         );
@@ -471,13 +471,13 @@ pub(crate) async fn materialize_all(
     cell: CellName,
 ) -> bsmr_error::Result<ProjectRelativePathBuf> {
     let artifact_fs = ctx.get_artifact_fs().await?;
-    let buck_out_resolver = artifact_fs.buck_out_path_resolver();
+    let output_resolver = artifact_fs.output_path_resolver();
 
     let ops = get_file_ops_delegate(ctx, cell).await?;
     let materializer = ctx.per_transaction_data().get_materializer();
     let mut paths = Vec::new();
     for (path, _entry) in ops.dir.unordered_walk_leaves().with_paths() {
-        let path = buck_out_resolver.resolve_external_cell_source(
+        let path = output_resolver.resolve_external_cell_source(
             CellRelativePath::new(path.as_ref()),
             ExternalCellOrigin::Bundled(cell),
         );
@@ -485,7 +485,7 @@ pub(crate) async fn materialize_all(
     }
 
     materializer.ensure_materialized(paths).await?;
-    Ok(buck_out_resolver.resolve_external_cell_source(
+    Ok(output_resolver.resolve_external_cell_source(
         CellRelativePath::unchecked_new(""),
         ExternalCellOrigin::Bundled(cell),
     ))
@@ -564,7 +564,7 @@ mod tests {
                     file_type: FileType::File
                 },
                 RawDirEntry {
-                    file_name: "BUCK_TREE".into(),
+                    file_name: "BSMR_TREE".into(),
                     file_type: FileType::File
                 },
                 RawDirEntry {

@@ -19,9 +19,9 @@ use std::future::pending;
 use std::time::Duration;
 use std::time::SystemTime;
 
-use bsmr_client_ctx::client_ctx::BuckSubcommand;
+use bsmr_client_ctx::client_ctx::BsmrSubcommand;
 use bsmr_client_ctx::client_ctx::ClientCommandContext;
-use bsmr_client_ctx::common::BuckArgMatches;
+use bsmr_client_ctx::common::BsmrArgMatches;
 use bsmr_client_ctx::common::ui::CommonConsoleOptions;
 use bsmr_client_ctx::common::ui::get_console_with_root;
 use bsmr_client_ctx::daemon::client::NoPartialResultHandler;
@@ -101,12 +101,12 @@ pub struct ReplayCommand {
     console_opts: CommonConsoleOptions,
 }
 
-impl BuckSubcommand for ReplayCommand {
+impl BsmrSubcommand for ReplayCommand {
     const COMMAND_NAME: &'static str = "log-replay";
 
     async fn exec_impl(
         self,
-        _matches: BuckArgMatches<'_>,
+        _matches: BsmrArgMatches<'_>,
         mut ctx: ClientCommandContext<'_>,
         _events_ctx: &mut EventsCtx,
     ) -> ExitResult {
@@ -377,8 +377,8 @@ async fn find_next_event_with_delay(
     min_timestamp: Option<prost_types::Timestamp>,
 ) -> Option<(bsmr_error::Result<StreamValue>, prost_types::Timestamp)> {
     while let Some(event) = events.next().await {
-        if let Ok(StreamValue::Event(buck_event)) = &event {
-            let ts = buck_event.timestamp.unwrap();
+        if let Ok(StreamValue::Event(bsmr_event)) = &event {
+            let ts = bsmr_event.timestamp.unwrap();
             if min_timestamp.is_none_or(|min_timestamp| cmp_timestamps(min_timestamp, ts).is_le()) {
                 return Some((event, ts));
             }

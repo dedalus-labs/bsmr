@@ -97,7 +97,7 @@ Options:
 
           The following options are supported:
 
-          `fill-out-failures`: fill out failures the same way Buck1 would.
+          `fill-out-failures`: fill out failures the same way Legacy would.
 
           `package-project-relative-paths`: emit the project-relative path of packages for the
           targets that were built.
@@ -119,7 +119,7 @@ Options:
       --local-only
           Enable only local execution. Will reject actions that cannot execute locally
 
-          [env: BUCK_OFFLINE_BUILD=]
+          [env: BSMR_OFFLINE_BUILD=]
 
       --remote-only
           Enable only remote execution. Will reject actions that cannot execute remotely
@@ -132,7 +132,7 @@ Options:
           Enable hybrid execution. Will prefer executing actions that can execute remotely on RE and
           will avoid racing local and remote execution
 
-          [env: BUCK_PREFER_REMOTE=]
+          [env: BSMR_PREFER_REMOTE=]
 
       --unstable-no-execution
           Experimental: Disable all execution
@@ -142,7 +142,7 @@ Options:
           RE service might still deduplicate actions, so for e.g. benchmarking, using a random
           isolation dir is preferred
 
-          [env: BUCK_OFFLINE_BUILD=]
+          [env: BSMR_OFFLINE_BUILD=]
 
       --write-to-cache-anyway
           Could be used to enable the action cache writes on the RE worker when no_remote_cache is
@@ -165,23 +165,23 @@ Options:
           would unconditionally upload all actions, thus you will not hit any expiration issues.
 
       --fail-fast
-          If Buck hits an error, do as little work as possible before exiting.
+          If Bsmr hits an error, do as little work as possible before exiting.
 
           To illustrate the effect of this flag, consider an invocation of `build :foo :bar`. The
-          default behavior of buck is to do enough work to get a result for the builds of each of
-          `:foo` and `:bar`, and no more. This means that buck will continue to complete the build
+          default behavior of bsmr is to do enough work to get a result for the builds of each of
+          `:foo` and `:bar`, and no more. This means that bsmr will continue to complete the build
           of `:bar` after the build of `:foo` has failed; however, once one dependency of `:foo` has
           failed, other dependencies will be cancelled unless they are needed by `:bar`.
 
-          This flag changes the behavior of buck to not wait on `:bar` to complete once `:foo` has
+          This flag changes the behavior of bsmr to not wait on `:bar` to complete once `:foo` has
           failed. Generally, this flag only has an effect on builds that specify multiple targets.
 
-          `--keep-going` changes the behavior of buck to not only wait on `:bar` once one dependency
+          `--keep-going` changes the behavior of bsmr to not only wait on `:bar` once one dependency
           of `:foo` has failed, but to additionally attempt to build other dependencies of `:foo` if
           possible.
 
       --keep-going
-          If Buck hits an error, continue doing as much work as possible before exiting.
+          If Bsmr hits an error, continue doing as much work as possible before exiting.
 
           See `--fail-fast` for more details.
 
@@ -308,7 +308,7 @@ Starlark Options:
           Some examples identifiers: analysis/root//app/bsmr_action_impl:bsmr_action_impl
           (cfg:linux-x86_64#27ac5723e0c99706) load/cell//build_defs/json.bzl
           load/prelude//playground/test.bxl load/cell//build_defs/json.bzl@other_cell
-          load_buildfile/upstream//third-party-buck/platform010/build/ncurses
+          load_buildfile/upstream//third-party-bsmr/platform010/build/ncurses
           load_packagefile/upstream//cli/rust/cli_delegate anon_analysis/anon//:_anon_link_rule (anon:
           766183dc9b6f680a) (root//platform/execution:linux-x86_64#08961b14cfb182aa)
           bxl/prelude//playground/test.bxl:playground
@@ -354,7 +354,7 @@ Console Options:
       --console <super|simple|...>
           Which console to use for this command
 
-          [env: BUCK_CONSOLE=]
+          [env: BSMR_CONSOLE=]
           [default: auto]
           [possible values: auto, none, simple, simplenotty, simpletty, super]
 
@@ -364,7 +364,7 @@ Console Options:
           Accepts a comma-separated list of superconsole components to add. Possible values are:
 
           dice - shows information about evaluated dice nodes debugevents - shows information about
-          the flow of events from buckd
+          the flow of events from bsmrd
 
           These components can be turned on/off interactively. Press 'h' for help when superconsole
           is active.
@@ -378,7 +378,7 @@ Console Options:
       --no-interactive-console
           Disable console interactions
 
-          [env: BUCK_NO_INTERACTIVE_CONSOLE=]
+          [env: BSMR_NO_INTERACTIVE_CONSOLE=]
 
 Event Log Options:
       --event-log <PATH>
@@ -393,7 +393,7 @@ Event Log Options:
 
       --command-report-path <PATH>
           Write the command report to this path. A command report is always written to
-          `bsmr-out/v2/<uuid>/command_report` even without this flag
+          `bsmr-out/default/<uuid>/command_report` even without this flag
 
 Universal Options:
       --isolation-dir <ISOLATION_DIR>
@@ -405,11 +405,11 @@ Universal Options:
           The isolation directory also influences the output paths provided by Bessemer, and as a
           result using a non-default isolation dir will cause cache misses (and slower builds).
 
-          [env: BUCK_ISOLATION_DIR=]
-          [default: v2]
+          [env: BSMR_ISOLATION_DIR=]
+          [default: default]
 
   -v, --verbose <VERBOSITY>
-          How verbose buck should be while logging.
+          How verbose bsmr should be while logging.
 
           Values: 0 = Quiet, errors only; 1 = Show status. Default; 2 = more info about errors; 3 =
           more info about everything; 4 = more info about everything + stderr;
@@ -418,7 +418,7 @@ Universal Options:
           actions, status, stats, success) to fine-tune the verbosity of the log. Example usage
           "-v=1,stderr"
 
-          [env: BUCK_VERBOSE=]
+          [env: BSMR_VERBOSE=]
           [default: 1]
 
       --oncall <ONCALL>

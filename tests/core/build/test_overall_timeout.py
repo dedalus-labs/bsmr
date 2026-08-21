@@ -18,18 +18,18 @@ import asyncio
 import json
 from pathlib import Path
 
-from bsmr.tests.e2e_util.api.buck import Buck
-from bsmr.tests.e2e_util.api.buck_result import ExitCodeV2
+from bsmr.tests.e2e_util.api.bsmr import Bsmr
+from bsmr.tests.e2e_util.api.bsmr_result import ExitCodeV2
 from bsmr.tests.e2e_util.asserts import expect_failure
-from bsmr.tests.e2e_util.buck_workspace import buck_test
+from bsmr.tests.e2e_util.bsmr_workspace import bsmr_test
 
 
-@buck_test()
-async def test_overall_timeout(buck: Buck, tmp_path: Path) -> None:
+@bsmr_test()
+async def test_overall_timeout(bsmr: Bsmr, tmp_path: Path) -> None:
     build_report = tmp_path / "build-report.json"
 
     await expect_failure(
-        buck.build(
+        bsmr.build(
             ":slow",
             "--overall-timeout",
             "1s",
@@ -50,9 +50,9 @@ async def test_overall_timeout(buck: Buck, tmp_path: Path) -> None:
         assert configured["errors"][0]["error_tags"] == ["BUILD_DEADLINE_EXPIRED"]
 
 
-@buck_test()
+@bsmr_test()
 async def test_overall_timeout_with_artifact_path_sketch(
-    buck: Buck, tmp_path: Path
+    bsmr: Bsmr, tmp_path: Path
 ) -> None:
     # Artifact path sketching runs *after* the build and re-`ensure_artifact_group`s every
     # top-level output. When the deadline fires mid-build, that post-build re-ensure must not
@@ -65,7 +65,7 @@ async def test_overall_timeout_with_artifact_path_sketch(
     try:
         await asyncio.wait_for(
             expect_failure(
-                buck.build(
+                bsmr.build(
                     ":slow",
                     "--overall-timeout",
                     "1s",

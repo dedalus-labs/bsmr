@@ -20,8 +20,8 @@ import re
 import typing
 from pathlib import Path
 
-from bsmr.tests.e2e_util.api.buck import Buck
-from bsmr.tests.e2e_util.buck_workspace import buck_test
+from bsmr.tests.e2e_util.api.bsmr import Bsmr
+from bsmr.tests.e2e_util.bsmr_workspace import bsmr_test
 from bsmr.tests.e2e_util.helper.utils import filter_events
 from facebook.remote_execution.common import thrift_types, types
 from facebook.remote_execution.re_client_lib_if.client.types import (
@@ -44,22 +44,22 @@ USE_CASE_ID = "tpx-default"
 EMBEDDED_CAS_NAME = "tpx"
 
 
-@buck_test(inplace=True)
-async def test_produce_artifacts(buck: Buck) -> None:
-    await buck.test(
+@bsmr_test(inplace=True)
+async def test_produce_artifacts(bsmr: Bsmr) -> None:
+    await bsmr.test(
         "root//tests/targets/rules/python_test:test_produce_artifacts",
     )
 
 
-@buck_test(inplace=True)
-async def test_remote_artifact_directory_is_materialized_by_default(buck: Buck) -> None:
-    await buck.test(
+@bsmr_test(inplace=True)
+async def test_remote_artifact_directory_is_materialized_by_default(bsmr: Bsmr) -> None:
+    await bsmr.test(
         "root//tests/targets/rules/python_test:test_produce_artifacts",
         "--remote-only",
     )
 
     materialized_paths = await filter_events(
-        buck, "Event", "data", "SpanEnd", "data", "Materialization", "path"
+        bsmr, "Event", "data", "SpanEnd", "data", "Materialization", "path"
     )
 
     assert_has_dir(ARTIFACTS_DIR_NAME, materialized_paths)
@@ -67,27 +67,27 @@ async def test_remote_artifact_directory_is_materialized_by_default(buck: Buck) 
     assert_has_dir(TPX_EXEC_DIR, materialized_paths)
 
 
-@buck_test(inplace=True)
+@bsmr_test(inplace=True)
 async def test_remote_artifact_directory_is_not_materialized_when_cas_support_enabled(
-    buck: Buck,
+    bsmr: Bsmr,
 ) -> None:
-    await buck.test(
+    await bsmr.test(
         "root//tests/targets/rules/python_test:test_produce_artifacts_in_cas",
         "--no-remote-cache",
         "--remote-only",
     )
 
     materialized_paths = await filter_events(
-        buck, "Event", "data", "SpanEnd", "data", "Materialization", "path"
+        bsmr, "Event", "data", "SpanEnd", "data", "Materialization", "path"
     )
     assert_has_no_dir(ARTIFACTS_DIR_NAME, materialized_paths)
     assert_has_dir(ANNOTATIONS_DIR_NAME, materialized_paths)
     assert_has_dir(TPX_EXEC_DIR, materialized_paths)
 
 
-@buck_test(inplace=True)
-async def test_remote_artifact_has_cas_handle_with_right_ttl(buck: Buck) -> None:
-    output = await buck.test(
+@bsmr_test(inplace=True)
+async def test_remote_artifact_has_cas_handle_with_right_ttl(bsmr: Bsmr) -> None:
+    output = await bsmr.test(
         "root//tests/targets/rules/python_test:test_produce_artifacts_in_cas",
         "--remote-only",
     )
@@ -145,7 +145,7 @@ def get_testx_binary() -> Path:
 
 
 def get_testx_client() -> TestXClient:
-    return TestXClient(binary=get_testx_binary(), caller="buck-e2e")
+    return TestXClient(binary=get_testx_binary(), caller="bsmr-e2e")
 
 
 def get_re_client(use_case: str) -> REClient:

@@ -18,7 +18,7 @@ use std::collections::BTreeMap;
 
 use bsmr_cli_proto::new_generic::DocsResponse;
 use bsmr_cli_proto::new_generic::DocsStarlarkBuiltinsRequest;
-use bsmr_error::BuckErrorContext;
+use bsmr_error::BsmrErrorContext;
 use bsmr_error::internal_error;
 use bsmr_fs::error::IoResultExt;
 use bsmr_fs::fs_util;

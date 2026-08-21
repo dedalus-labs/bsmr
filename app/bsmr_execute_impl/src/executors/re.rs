@@ -56,7 +56,7 @@ use bsmr_execute::re::manager::ManagedRemoteExecutionClient;
 use bsmr_execute::re::output_trees_download_config::OutputTreesDownloadConfig;
 use bsmr_execute::re::remote_action_result::ExecuteResponseWithQueueStats;
 use bsmr_execute::re::remote_action_result::RemoteActionResult;
-use bsmr_hash::BuckIndexMap;
+use bsmr_hash::BsmrIndexMap;
 use bsmr_util::time_span::TimeSpan;
 use dice_futures::cancellation::CancellationContext;
 use dupe::Dupe;
@@ -295,7 +295,7 @@ impl ReExecutor {
                 // do here is just pass on the error.
                 manager.failure(
                     execution_kind,
-                    BuckIndexMap::default(),
+                    BsmrIndexMap::default(),
                     CommandStdStreams::Local {
                         stdout: Vec::new(),
                         stderr: out.to_owned().into(),
@@ -310,7 +310,7 @@ impl ReExecutor {
             {
                 manager.timeout(
                     execution_kind,
-                    BuckIndexMap::default(),
+                    BsmrIndexMap::default(),
                     // Checked above: we fallthrough to the error path if we didn't set a timeout
                     // and yet received one.
                     request.timeout().unwrap(),

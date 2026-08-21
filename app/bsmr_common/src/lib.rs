@@ -20,13 +20,13 @@
 #![feature(used_with_arg)]
 
 pub mod argv;
-pub mod buckd_connection;
 pub mod build_count;
 pub mod buildfiles;
 pub mod cargo_workspace;
 pub mod cas_digest;
 pub mod client_utils;
 pub mod convert;
+pub mod daemon_connection;
 pub mod daemon_dir;
 pub mod dice;
 pub mod events;
@@ -35,7 +35,7 @@ pub mod external_symlink;
 pub mod fbinit;
 pub mod file_ops;
 pub mod find_buildfile;
-pub mod home_buck_tmp;
+pub mod home_temp;
 pub mod http;
 pub mod ignores;
 pub mod init;

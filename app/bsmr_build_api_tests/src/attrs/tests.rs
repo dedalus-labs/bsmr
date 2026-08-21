@@ -26,14 +26,14 @@ use bsmr_core::cells::name::CellName;
 use bsmr_core::configuration::data::ConfigurationData;
 use bsmr_core::execution_types::executor_config::PathSeparatorKind;
 use bsmr_core::fs::artifact_path_resolver::ArtifactFs;
-use bsmr_core::fs::buck_out_path::BuckOutPathResolver;
+use bsmr_core::fs::output_path::OutputPathResolver;
 use bsmr_core::fs::project::ProjectRoot;
 use bsmr_core::fs::project_rel_path::ProjectRelativePathBuf;
 use bsmr_core::package::PackageLabel;
 use bsmr_core::plugins::PluginKindSet;
 use bsmr_execute::artifact::fs::ExecutorFs;
 use bsmr_fs::paths::abs_norm_path::AbsNormPathBuf;
-use bsmr_hash::BuckHashMap;
+use bsmr_hash::BsmrHashMap;
 use bsmr_interpreter_for_build::attrs::coerce::attr_type::AttrTypeExt;
 use bsmr_interpreter_for_build::attrs::coerce::testing::coercion_ctx;
 use bsmr_interpreter_for_build::attrs::coerce::testing::coercion_ctx_listing;
@@ -997,15 +997,15 @@ fn test_user_placeholders() -> bsmr_error::Result<()> {
                                 "cell_path".into(),
                             )),
                         ),
-                        BuckOutPathResolver::new(ProjectRelativePathBuf::unchecked_new(
-                            "buck_out/v2".into(),
+                        OutputPathResolver::new(ProjectRelativePathBuf::unchecked_new(
+                            "output/v2".into(),
                         )),
                         project_fs,
                     );
                     let executor_fs = ExecutorFs::new(&fs, PathSeparatorKind::Unix);
 
                     let mut cli = Vec::<String>::new();
-                    let artifact_path_mapping = BuckHashMap::default();
+                    let artifact_path_mapping = BsmrHashMap::default();
                     let mut fmt =
                         CommandLineBuilder::new(&mut cli, &artifact_path_mapping, &executor_fs);
                     ValueAsCommandLineLike::unpack_value_err(v)

@@ -50,7 +50,7 @@ pub(crate) fn register_path(builder: &mut GlobalsBuilder) {
     /// The `glob()` call is evaluated against the list of files owned by this `BUILD.bsmr` file.
     /// A file is owned by whichever `BUILD.bsmr` file is closest above it - so given `foo/BUILD.bsmr` and
     /// `foo/bar/BUILD.bsmr` the file `foo/file.txt` would be owned by `foo/BUILD.bsmr` (and available from
-    /// its `glob` results) but the file `foo/bar/file.txt` would be owned by `foo/bar/BUCk`
+    /// its `glob` results) but the file `foo/bar/file.txt` would be owned by `foo/bar/BUILD.bsmr`
     /// and _not_ appear in the glob result of `foo/BUILD.bsmr`, even if you write `glob(["bar/file.txt"])`.
     /// As a consequence of this rule, `glob(["../foo.txt"])` will always return an empty list of files.
     ///
@@ -92,11 +92,11 @@ pub(crate) fn register_path(builder: &mut GlobalsBuilder) {
             .to_string())
     }
 
-    /// Like `get_cell_name()` but prepends a leading `@` for compatibility with Buck1.
+    /// Like `get_cell_name()` but prepends a leading `@` for compatibility with Legacy.
     /// You should call `get_cell_name()` instead, and if you really want the `@`,
     /// prepend it yourself.
     fn repository_name(eval: &mut Evaluator) -> starlark::Result<String> {
-        // In Buck v1 the repository name has a leading `@` on it, so match that with v2.
+        // In Bsmr v1 the repository name has a leading `@` on it, so match that with v2.
         // In practice, most users do `repository_name()[1:]` to drop it.
         Ok(format!(
             "@{}",

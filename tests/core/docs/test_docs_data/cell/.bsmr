@@ -9,6 +9,6 @@ cell = .
 root = ..
 fbcode = ../fbcode
 fbsource = ../fbsource
-buck = ../buck
+bsmr = ../bsmr
 special = ../special
 config = ../config

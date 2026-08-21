@@ -15,29 +15,29 @@
 # pyre-strict
 
 
-from bsmr.tests.e2e_util.api.buck import Buck
+from bsmr.tests.e2e_util.api.bsmr import Bsmr
 from bsmr.tests.e2e_util.asserts import expect_failure
-from bsmr.tests.e2e_util.buck_workspace import buck_test
+from bsmr.tests.e2e_util.bsmr_workspace import bsmr_test
 from bsmr.tests.e2e_util.helper.golden import golden, sanitize_stderr
 
 
-@buck_test(allow_soft_errors=True)
-async def test_unified_constraint_defination(buck: Buck) -> None:
-    await buck.bxl("//test_unified_constraint.bxl:main")
+@bsmr_test(allow_soft_errors=True)
+async def test_unified_constraint_defination(bsmr: Bsmr) -> None:
+    await bsmr.bxl("//test_unified_constraint.bxl:main")
 
 
-@buck_test()
-async def test_unified_constraint_miss_default_fail(buck: Buck) -> None:
+@bsmr_test()
+async def test_unified_constraint_miss_default_fail(bsmr: Bsmr) -> None:
     await expect_failure(
-        buck.targets("//miss_default:"),
+        bsmr.targets("//miss_default:"),
         stderr_regex=".*Missing named-only parameter `default` for call to `constraint`.*",
     )
 
 
-@buck_test()
-async def test_unified_constraint_default_not_appear_in_value_fail(buck: Buck) -> None:
+@bsmr_test()
+async def test_unified_constraint_default_not_appear_in_value_fail(bsmr: Bsmr) -> None:
     await expect_failure(
-        buck.audit("subtargets", "//default_value_not_appear:"),
+        bsmr.audit("subtargets", "//default_value_not_appear:"),
         stderr_regex=r""".*default value 'linux' must be one of the declared values: \["macos", "windows"\].*""",
     )
 
@@ -46,48 +46,48 @@ async def test_unified_constraint_default_not_appear_in_value_fail(buck: Buck) -
 # constraint in the root fixture). Here it is a value but NOT the default, so it must fail as ambiguous.
 # Distinct test names are used because test discovery treats 'default' and 'DEFAULT' as the same name
 # (case-insensitive).
-@buck_test()
+@bsmr_test()
 async def test_unified_constraint_reserved_keyword_default_lowercase_fail(
-    buck: Buck,
+    bsmr: Bsmr,
 ) -> None:
     await expect_failure(
-        buck.audit("subtargets", "//reserved_keyword_default_lowercase:"),
+        bsmr.audit("subtargets", "//reserved_keyword_default_lowercase:"),
         stderr_regex=".*'default' can be used as a constraint value only when it is also the default value.*",
     )
 
 
 # Test reserved keyword 'DEFAULT' (uppercase)
-@buck_test()
+@bsmr_test()
 async def test_unified_constraint_reserved_keyword_default_uppercase_fail(
-    buck: Buck,
+    bsmr: Bsmr,
 ) -> None:
     await expect_failure(
-        buck.audit("subtargets", "//reserved_keyword_default_uppercase:"),
+        bsmr.audit("subtargets", "//reserved_keyword_default_uppercase:"),
         stderr_regex=".*'DEFAULT' is a reserved keyword and cannot be used as a constraint value.*",
     )
 
 
-@buck_test(allow_soft_errors=True)
-async def test_unified_constraint_cfg_transition(buck: Buck) -> None:
-    await buck.bxl("//test_unified_constraint.bxl:test_cfg_transition")
+@bsmr_test(allow_soft_errors=True)
+async def test_unified_constraint_cfg_transition(bsmr: Bsmr) -> None:
+    await bsmr.bxl("//test_unified_constraint.bxl:test_cfg_transition")
 
 
-@buck_test(allow_soft_errors=True)
-async def test_unified_constraint_cfg_transition_v2(buck: Buck) -> None:
-    await buck.bxl("//test_unified_constraint.bxl:test_cfg_transition_v2")
+@bsmr_test(allow_soft_errors=True)
+async def test_unified_constraint_cfg_transition_v2(bsmr: Bsmr) -> None:
+    await bsmr.bxl("//test_unified_constraint.bxl:test_cfg_transition_v2")
 
 
-@buck_test(allow_soft_errors=True)
-async def test_unified_constraint_for_constraint_v2(buck: Buck) -> None:
-    await buck.bxl("//test_unified_constraint.bxl:constraint_v2")
+@bsmr_test(allow_soft_errors=True)
+async def test_unified_constraint_for_constraint_v2(bsmr: Bsmr) -> None:
+    await bsmr.bxl("//test_unified_constraint.bxl:constraint_v2")
 
 
-@buck_test()
+@bsmr_test()
 async def test_unified_constraint_single_value_without_flag_fail(
-    buck: Buck,
+    bsmr: Bsmr,
 ) -> None:
     res = await expect_failure(
-        buck.audit("subtargets", "//single_value_no_flag:", "-v0"),
+        bsmr.audit("subtargets", "//single_value_no_flag:", "-v0"),
     )
     golden(
         output=sanitize_stderr(res.stderr),
@@ -95,15 +95,15 @@ async def test_unified_constraint_single_value_without_flag_fail(
     )
 
 
-@buck_test()
-async def test_unified_constraint_single_value_with_flag(buck: Buck) -> None:
-    await buck.audit("subtargets", "//single_value_with_flag:")
+@bsmr_test()
+async def test_unified_constraint_single_value_with_flag(bsmr: Bsmr) -> None:
+    await bsmr.audit("subtargets", "//single_value_with_flag:")
 
 
-@buck_test()
-async def test_unified_constraint_zero_values_with_flag_fail(buck: Buck) -> None:
+@bsmr_test()
+async def test_unified_constraint_zero_values_with_flag_fail(bsmr: Bsmr) -> None:
     res = await expect_failure(
-        buck.audit("subtargets", "//zero_values_with_flag:", "-v0"),
+        bsmr.audit("subtargets", "//zero_values_with_flag:", "-v0"),
     )
     golden(
         output=sanitize_stderr(res.stderr),
@@ -111,12 +111,12 @@ async def test_unified_constraint_zero_values_with_flag_fail(buck: Buck) -> None
     )
 
 
-@buck_test()
+@bsmr_test()
 async def test_unified_constraint_alias_conflict_with_value_fail(
-    buck: Buck,
+    bsmr: Bsmr,
 ) -> None:
     res = await expect_failure(
-        buck.audit("subtargets", "//alias_conflict_with_value:", "-v0"),
+        bsmr.audit("subtargets", "//alias_conflict_with_value:", "-v0"),
     )
     golden(
         output=sanitize_stderr(res.stderr),
@@ -124,12 +124,12 @@ async def test_unified_constraint_alias_conflict_with_value_fail(
     )
 
 
-@buck_test()
+@bsmr_test()
 async def test_unified_constraint_alias_value_not_declared_fail(
-    buck: Buck,
+    bsmr: Bsmr,
 ) -> None:
     res = await expect_failure(
-        buck.audit("subtargets", "//alias_value_not_declared:", "-v0"),
+        bsmr.audit("subtargets", "//alias_value_not_declared:", "-v0"),
     )
     golden(
         output=sanitize_stderr(res.stderr),
@@ -137,12 +137,12 @@ async def test_unified_constraint_alias_value_not_declared_fail(
     )
 
 
-@buck_test()
+@bsmr_test()
 async def test_unified_constraint_alias_reserved_keyword_fail(
-    buck: Buck,
+    bsmr: Bsmr,
 ) -> None:
     res = await expect_failure(
-        buck.audit("subtargets", "//alias_reserved_keyword:", "-v0"),
+        bsmr.audit("subtargets", "//alias_reserved_keyword:", "-v0"),
     )
     golden(
         output=sanitize_stderr(res.stderr),

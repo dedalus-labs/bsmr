@@ -177,11 +177,11 @@ impl<T: QueryCommandTarget> Serialize for PrintableQueryTarget<'_, T> {
         })?;
 
         if self.target_call_stacks {
-            map.serialize_entry("buck.target_call_stack", &self.value.call_stack())?;
+            map.serialize_entry("bsmr.target_call_stack", &self.value.call_stack())?;
         }
 
         if let Some(providers) = &self.providers {
-            map.serialize_entry("buck.providers", providers)?;
+            map.serialize_entry("bsmr.providers", providers)?;
         }
 
         map.end()
@@ -250,7 +250,7 @@ impl<'a> QueryResultPrinter<'a> {
         output_format: QueryOutputFormatInfo,
     ) -> bsmr_error::Result<Self> {
         let output_format = match (output_format, attributes.is_empty()) {
-            // following buck1's behavior, if any attributes are requested we use json output instead of list output
+            // following legacy's behavior, if any attributes are requested we use json output instead of list output
             (QueryOutputFormatInfo::Default, false) => QueryOutputFormatInfo::Json,
             (v, _) => v,
         };
@@ -277,7 +277,7 @@ impl<'a> QueryResultPrinter<'a> {
     ) -> bsmr_error::Result<()> {
         match (&self.output_format, &self.attributes) {
             // A multi-query only has interesting output with --json output. For non-json output it gets merged together.
-            // TODO(cjhopman): buck1 does this really odd thing that a multi-query that requests any attributes
+            // TODO(cjhopman): legacy does this really odd thing that a multi-query that requests any attributes
             // gets the entire result merged together rather than printed as a multi-query. We match that behavior, but
             // it really doesn't make sense and we should migrate off of that.
             (QueryOutputFormatInfo::Json, None) => {

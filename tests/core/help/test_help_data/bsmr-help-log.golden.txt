@@ -5,12 +5,12 @@ Commands for interacting with bsmr logs
 Usage: bsmr log [OPTIONS] <COMMAND>
 
 Commands:
-  what-ran           Output everything that buck ran from the selected invocation. If no invocation
-                     was specified, use the last buck invocation from this isolation directory
+  what-ran           Output everything that bsmr ran from the selected invocation. If no invocation
+                     was specified, use the last bsmr invocation from this isolation directory
   what-failed        Outputs every command that failed in the selected invocation
   path               Output the path to the selected log
   show               Outputs the log in JSON format from selected invocation
-  cmd                Show buck command line arguments from selected invocation
+  cmd                Show bsmr command line arguments from selected invocation
   what-up            Show the spans that were open when the log ended
   what-materialized  Outputs materializations from selected invocation
   what-uploaded      Outputs stats about uploads to RE from the selected invocation
@@ -39,11 +39,11 @@ Universal Options:
           The isolation directory also influences the output paths provided by Bessemer, and as a
           result using a non-default isolation dir will cause cache misses (and slower builds).
 
-          [env: BUCK_ISOLATION_DIR=]
-          [default: v2]
+          [env: BSMR_ISOLATION_DIR=]
+          [default: default]
 
   -v, --verbose <VERBOSITY>
-          How verbose buck should be while logging.
+          How verbose bsmr should be while logging.
 
           Values: 0 = Quiet, errors only; 1 = Show status. Default; 2 = more info about errors; 3 =
           more info about everything; 4 = more info about everything + stderr;
@@ -52,7 +52,7 @@ Universal Options:
           actions, status, stats, success) to fine-tune the verbosity of the log. Example usage
           "-v=1,stderr"
 
-          [env: BUCK_VERBOSE=]
+          [env: BSMR_VERBOSE=]
           [default: 1]
 
       --oncall <ONCALL>

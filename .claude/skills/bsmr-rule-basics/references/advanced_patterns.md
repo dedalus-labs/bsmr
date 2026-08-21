@@ -223,7 +223,7 @@ def my_binary_impl(ctx: AnalysisContext):
 - **Use manual collection:** Only for simple cases or when learning Bessemer basics
 
 For complete details, see the Bessemer documentation on transitive sets
-(https://buck2.build/docs/rule_authors/transitive_sets/).
+(https://oss.dedaluslabs.ai/bsmr/rule_authors/transitive_sets/).
 
 ---
 

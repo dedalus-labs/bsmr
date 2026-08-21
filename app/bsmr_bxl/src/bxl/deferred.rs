@@ -60,7 +60,7 @@ mod tests {
     impl DeferredOutput for FakeDeferredOutput {}
 
     #[derive(Debug, Allocative)]
-    struct FakeDeferred(usize, BuckIndexSet<DeferredInput>, Arc<AtomicBool>);
+    struct FakeDeferred(usize, BsmrIndexSet<DeferredInput>, Arc<AtomicBool>);
 
     impl provider::Provider for FakeDeferred {
         fn provide<'a>(&'a self, _demand: &mut provider::Demand<'a>) {}
@@ -105,8 +105,8 @@ mod tests {
 
         let executed0 = Arc::new(AtomicBool::new(false));
         let executed1 = Arc::new(AtomicBool::new(false));
-        let data0 = deferred.defer(FakeDeferred(1, BuckIndexSet::default(), executed0.dupe()));
-        let data1 = deferred.defer(FakeDeferred(5, BuckIndexSet::default(), executed1.dupe()));
+        let data0 = deferred.defer(FakeDeferred(1, BsmrIndexSet::default(), executed0.dupe()));
+        let data1 = deferred.defer(FakeDeferred(5, BsmrIndexSet::default(), executed1.dupe()));
         let (deferred_result, analysis_values) = deferred.take_result()?;
 
         let fs = ProjectRootTemp::new()?;

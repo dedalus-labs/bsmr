@@ -4,16 +4,16 @@
 <!-- SPDX-License-Identifier: Apache-2.0 -->
 <!-- ===----------------------------------------------------------------------=== -->
 
-# Buck support to implement `configured_alias`
+# Bsmr support to implement `configured_alias`
 
 ## Intro
 
-Currently, Buck 2 lacks `configured_alias` rule support.
+Currently, Bsmr 2 lacks `configured_alias` rule support.
 
-`configured_alias` is a builtin rule in Buck v1, and it cannot be currently
-implemented as user defined rule in Buck v2.
+`configured_alias` is a builtin rule in Bsmr v1, and it cannot be currently
+implemented as user defined rule in Bsmr v2.
 
-This RFC proposes Buck core support for `configured_alias`.
+This RFC proposes Bsmr core support for `configured_alias`.
 
 ## What is `configured_alias`?
 
@@ -30,7 +30,7 @@ configured_alias(
 When this rule is built, it ignores "current" target configuration, and builds
 the "actual" target with the configuration specified as "platform" argument.
 
-## How to implement it in buck v2?
+## How to implement it in bsmr v2?
 
 ### New rule attribute type: `configured_dep`
 

@@ -28,19 +28,19 @@ BSMR_SHOW_SOFT_ERRORS           String
 BSMR_TEST_BLOCK_ON_UPLOAD       bool                  false
 BSMR_TEST_TPX_USE_TCP           bool                  false
 BSMR_WATCHMAN_TIMEOUT           u64                   57
-BUCKD_STARTUP_INIT_TIMEOUT       u64
-BUCKD_STARTUP_TIMEOUT            u64
-BUCK_CONSOLE                     String
-BUCK_DAEMON_LOG_TO_FILE          u8
-BUCK_DEFAULT_DIGEST_ALGORITHM    DigestAlgorithmFamily
-BUCK_DISABLE_EXPANDED_PROGRESS   bool                  false
-BUCK_LOG                         String
-BUCK_NO_INTERACTIVE_CONSOLE      String
-BUCK_OFFLINE_BUILD               String
-BUCK_PARANOID                    bool
-BUCK_PREFER_REMOTE               String
-BUCK_VERBOSE                     String
-BUCK_WRAPPER_START_TIME          u64
+BSMRD_STARTUP_INIT_TIMEOUT       u64
+BSMRD_STARTUP_TIMEOUT            u64
+BSMR_CONSOLE                     String
+BSMR_DAEMON_LOG_TO_FILE          u8
+BSMR_DEFAULT_DIGEST_ALGORITHM    DigestAlgorithmFamily
+BSMR_DISABLE_EXPANDED_PROGRESS   bool                  false
+BSMR_LOG                         String
+BSMR_NO_INTERACTIVE_CONSOLE      String
+BSMR_OFFLINE_BUILD               String
+BSMR_PARANOID                    bool
+BSMR_PREFER_REMOTE               String
+BSMR_VERBOSE                     String
+BSMR_WRAPPER_START_TIME          u64
 CI                               bool                  false
 CODING_AGENT_METADATA            String
 DICE_DETECT_CYCLES_UNSTABLE      DetectCycles

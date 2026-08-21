@@ -14,45 +14,45 @@
 
 # pyre-strict
 
-from bsmr.tests.e2e_util.api.buck import Buck
-from bsmr.tests.e2e_util.buck_workspace import buck_test
+from bsmr.tests.e2e_util.api.bsmr import Bsmr
+from bsmr.tests.e2e_util.bsmr_workspace import bsmr_test
 
 
-@buck_test()
-async def test_specific_target_success(buck: Buck) -> None:
+@bsmr_test()
+async def test_specific_target_success(bsmr: Bsmr) -> None:
     """Test unconfigured_targets_keep_going with a specific successful target."""
-    await buck.bxl(
+    await bsmr.bxl(
         "//:unconfigured_targets_keep_going.bxl:test_specific_target_success",
     )
 
 
-@buck_test()
-async def test_recursive_pattern_success(buck: Buck) -> None:
+@bsmr_test()
+async def test_recursive_pattern_success(bsmr: Bsmr) -> None:
     """Test unconfigured_targets_keep_going with a recursive pattern that includes only successful packages."""
-    await buck.bxl(
+    await bsmr.bxl(
         "//:unconfigured_targets_keep_going.bxl:test_recursive_pattern_success",
     )
 
 
-@buck_test()
-async def test_recursive_pattern_mixed(buck: Buck) -> None:
+@bsmr_test()
+async def test_recursive_pattern_mixed(bsmr: Bsmr) -> None:
     """Test unconfigured_targets_keep_going with a recursive pattern that includes both successful and failing packages."""
-    await buck.bxl(
+    await bsmr.bxl(
         "//:unconfigured_targets_keep_going.bxl:test_recursive_pattern_mixed",
     )
 
 
-@buck_test()
-async def test_failing_package_only(buck: Buck) -> None:
+@bsmr_test()
+async def test_failing_package_only(bsmr: Bsmr) -> None:
     """Test unconfigured_targets_keep_going with a pattern that only matches a failing package."""
-    await buck.bxl(
+    await bsmr.bxl(
         "//:unconfigured_targets_keep_going.bxl:test_failing_package_only",
     )
 
 
-@buck_test()
-async def test_specific_target_in_failing_package(buck: Buck) -> None:
+@bsmr_test()
+async def test_specific_target_in_failing_package(bsmr: Bsmr) -> None:
     """Test unconfigured_targets_keep_going with a specific target in a failing package."""
-    await buck.bxl(
+    await bsmr.bxl(
         "//:unconfigured_targets_keep_going.bxl:test_specific_target_in_failing_package",
     )

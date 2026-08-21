@@ -6,7 +6,7 @@
 # of this source tree. You may select, at your option, one of the
 # above-listed licenses.
 
-# Configuration for Reindeer to generate Buck targets from Cargo.toml
+# Configuration for Reindeer to generate Bsmr targets from Cargo.toml
 #
 # Overview of available options:
 # https://github.com/facebookincubator/reindeer/blob/main/example/third-party/reindeer.toml
@@ -22,7 +22,7 @@ include_workspace_members = true
 # Support Cargo's unstable "artifact dependencies" functionality, RFC 3028.
 bindeps = true
 
-[buck]
+[bsmr]
 # Name of the generated file.
 file_name = "BUILD.bsmr"
 
@@ -31,7 +31,7 @@ rust_library = "cargo.rust_library"
 rust_binary = "cargo.rust_binary"
 prebuilt_cxx_library = "third_party_rust_prebuilt_cxx_library"
 
-buckfile_imports = """
+bsmrfile_imports = """
 load("@prelude//rust:cargo_buildscript.bzl", "buildscript_run")
 load("@prelude//rust:cargo_package.bzl", "cargo")
 load("@bsmr_build//third-party/macros:rust_third_party.bzl", "third_party_rust_prebuilt_cxx_library")

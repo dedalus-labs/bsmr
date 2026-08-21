@@ -6,7 +6,7 @@ documentation = "https://docs.rs/gazebo_derive"
 edition = "2024"
 license = { workspace = true }
 name = "gazebo_derive"
-repository = "https://github.com/facebook/buck2"
+repository = "https://github.com/dedalus-labs/bsmr"
 version = "0.8.0"
 
 [lib]

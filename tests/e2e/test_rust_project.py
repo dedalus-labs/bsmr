@@ -19,10 +19,10 @@ import json
 import os
 import subprocess
 
-from bsmr.tests.e2e_util.buck_workspace import buck_test
+from bsmr.tests.e2e_util.bsmr_workspace import bsmr_test
 
 
-@buck_test(inplace=True)
+@bsmr_test(inplace=True)
 async def test_rust_binary() -> None:
     rust_project_bin = os.environ["RUST_PROJECT_BIN"]
 

@@ -57,7 +57,7 @@ def generate_r_dot_javas(
 ) -> list[RDotJavaInfo]:
     if not android_resources:
         # d8 will fail if its input contains no classes. Rather than add empty input handling in multiple places,
-        # like buck1 we just generate a stub class if we have no resources.  This will be stripped from release
+        # like legacy we just generate a stub class if we have no resources.  This will be stripped from release
         # builds and have minimal impact on debug builds.
         return [
             _compile_r_dot_java(

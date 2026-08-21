@@ -1,3 +1,9 @@
+# ===----------------------------------------------------------------------===
+# Upstream-Source: facebook/buck2@1560aca2002865cd73d7cafb22c705cfb640b2bc
+# Modifications Copyright (c) 2026 Dedalus Labs, Inc. and its contributors
+# SPDX-License-Identifier: Apache-2.0
+# ===----------------------------------------------------------------------===
+
 # Copyright (c) Meta Platforms, Inc. and affiliates.
 #
 # This source code is dual-licensed under either the MIT license found in the
@@ -22,7 +28,7 @@ main = bxl_main(
     cli_args = {
         "target": cli_args.list(
             cli_args.target_label(),
-            doc = "Buck target(s) to look up the mode hash for the current mode",
+            doc = "Bsmr target(s) to look up the mode hash for the current mode",
         ),
     },
 )

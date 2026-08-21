@@ -20,12 +20,12 @@ use std::path::PathBuf;
 use std::process::Command;
 
 use bsmr_client_ctx::client_ctx::ClientCommandContext;
-use bsmr_client_ctx::common::BuckArgMatches;
+use bsmr_client_ctx::common::BsmrArgMatches;
 use bsmr_common::argv::Argv;
 use bsmr_common::argv::SanitizedArgv;
 use bsmr_common::legacy_configs::cells::BsmrConfigBasedCells;
 use bsmr_common::legacy_configs::key::BsmrconfigKeyRef;
-use bsmr_core::fs::buck_out_path::BSMR_OUTPUT_ROOT;
+use bsmr_core::fs::output_path::BSMR_OUTPUT_ROOT;
 
 use crate::commands::go_graph::GoGraph;
 use crate::commands::go_manifest::SyncMode;
@@ -89,7 +89,7 @@ impl GoCommand {
     /// Executes a native Go command without starting the Bessemer daemon.
     pub fn exec(
         self,
-        _matches: BuckArgMatches<'_>,
+        _matches: BsmrArgMatches<'_>,
         ctx: ClientCommandContext<'_>,
     ) -> bsmr_error::Result<()> {
         ctx.with_runtime(|ctx| async move {

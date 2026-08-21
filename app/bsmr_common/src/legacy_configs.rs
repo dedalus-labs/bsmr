@@ -14,7 +14,7 @@
  * above-listed licenses.
  */
 
-//! Contains utilities for dealing with buckv1 concepts (ex. buckv1's
+//! Contains utilities for dealing with legacy concepts (ex. legacy's
 //! .bsmr files as configuration)
 
 mod access;

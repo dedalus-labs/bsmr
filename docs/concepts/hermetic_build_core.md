@@ -127,6 +127,6 @@ declared inputs.
 ## References
 
 - [Bazel Remote Execution API](https://github.com/bazelbuild/remote-apis)
-- [Buck2 architectural model](https://buck2.build/docs/concepts/architecture/)
+- [upstream architectural model](https://oss.dedaluslabs.ai/bsmr/concepts/architecture/)
 - [Nix content-addressed derivation outputs](https://nix.dev/manual/nix/stable/store/derivation/outputs/content-address.html)
 - [Securely indexing large codebases](https://cursor.com/blog/secure-codebase-indexing)

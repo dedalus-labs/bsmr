@@ -36,12 +36,12 @@ impl From<serde_json::Error> for crate::Error {
 }
 
 /// Trait extension to convert `bsmr_error::Result<T>` to any serde error type.
-pub trait BuckErrorSerde<T> {
+pub trait BsmrErrorSerde<T> {
     /// Convert a `bsmr_error::Result<T>` to `Result<T, E>` where `E: serde::de::Error`.
     fn serde_err<E: serde::de::Error>(self) -> Result<T, E>;
 }
 
-impl<T> BuckErrorSerde<T> for crate::Result<T> {
+impl<T> BsmrErrorSerde<T> for crate::Result<T> {
     fn serde_err<E: serde::de::Error>(self) -> Result<T, E> {
         self.map_err(|e| E::custom(e.to_string()))
     }

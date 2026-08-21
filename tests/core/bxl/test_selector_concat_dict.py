@@ -15,34 +15,34 @@
 
 import json
 
-from bsmr.tests.e2e_util.api.buck import Buck
-from bsmr.tests.e2e_util.buck_workspace import buck_test
+from bsmr.tests.e2e_util.api.bsmr import Bsmr
+from bsmr.tests.e2e_util.bsmr_workspace import bsmr_test
 
 
-@buck_test()
-async def test_not_selector_attr(buck: Buck) -> None:
-    await buck.bxl(
+@bsmr_test()
+async def test_not_selector_attr(bsmr: Bsmr) -> None:
+    await bsmr.bxl(
         "//:selector_concat_dict.bxl:not_selector_attr",
     )
 
 
-@buck_test()
-async def test_selector_dict_attr(buck: Buck) -> None:
-    await buck.bxl(
+@bsmr_test()
+async def test_selector_dict_attr(bsmr: Bsmr) -> None:
+    await bsmr.bxl(
         "//:selector_concat_dict.bxl:selector_dict_attr",
     )
 
 
-@buck_test()
-async def test_selector_concat_attr(buck: Buck) -> None:
-    await buck.bxl(
+@bsmr_test()
+async def test_selector_concat_attr(bsmr: Bsmr) -> None:
+    await bsmr.bxl(
         "//:selector_concat_dict.bxl:selector_concat_attr",
     )
 
 
-@buck_test()
-async def test_selector_dict_write_json(buck: Buck) -> None:
-    res = await buck.bxl(
+@bsmr_test()
+async def test_selector_dict_write_json(bsmr: Bsmr) -> None:
+    res = await bsmr.bxl(
         "//:selector_concat_dict.bxl:selector_dict_write_json",
     )
     file_path = res.stdout.strip()
@@ -59,9 +59,9 @@ async def test_selector_dict_write_json(buck: Buck) -> None:
     assert json.loads(content) == expected_content
 
 
-@buck_test()
-async def test_selector_concat_write_json(buck: Buck) -> None:
-    res = await buck.bxl(
+@bsmr_test()
+async def test_selector_concat_write_json(bsmr: Bsmr) -> None:
+    res = await bsmr.bxl(
         "//:selector_concat_dict.bxl:selector_concat_write_json",
     )
     file_path = res.stdout.strip()

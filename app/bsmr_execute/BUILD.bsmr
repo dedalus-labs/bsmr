@@ -27,7 +27,7 @@ rust_library(
                     },
                 },
             },
-            "extra_buck_dependencies": {
+            "extra_bsmr_dependencies": {
                 "dependencies": [
                     "root//packages/rust/remote_execution/oss/re_grpc:remote_execution",
                 ],

@@ -83,7 +83,7 @@ impl FinishedStarlarkEvaluation {
 
     pub fn freeze_and_finish(
         self,
-        env: BuckStarlarkModule,
+        env: BsmrStarlarkModule,
     ) -> bsmr_error::Result<(
         ProfilingReportedToken,
         FrozenModule,
@@ -111,7 +111,7 @@ impl StarlarkEvaluatorProvider {
     }
 
     /// This constructs an appropriate StarlarkEvaluatorProvider to set up
-    /// profiling/instrumentation/debugging in a starlark Evaluator for buck.
+    /// profiling/instrumentation/debugging in a starlark Evaluator for bsmr.
     /// The kind is used for the thread name when debugging and for enabling pattern-based profiling.
     pub async fn new(
         ctx: &mut DiceComputations<'_>,
@@ -153,7 +153,7 @@ impl StarlarkEvaluatorProvider {
     ///  (3) re-enter evaluation to resolve promises.
     pub fn make_reentrant_evaluator<'v, 'a, 'e>(
         mut self,
-        module: &'a BuckStarlarkModule<'v>,
+        module: &'a BsmrStarlarkModule<'v>,
         cancellation: CancellationPoller,
     ) -> bsmr_error::Result<ReentrantStarlarkEvaluator<'v, 'a, 'e>> {
         let (_, _v) = (bsmr_error::Ok(()), 1);
@@ -182,7 +182,7 @@ impl StarlarkEvaluatorProvider {
     /// when debugging.
     pub fn with_evaluator<'v, 'a, 'e: 'a, R>(
         self,
-        module: &'a BuckStarlarkModule<'v>,
+        module: &'a BsmrStarlarkModule<'v>,
         cancellation: CancellationPoller,
         closure: impl FnOnce(&mut Evaluator<'v, 'a, 'e>, bool) -> bsmr_error::Result<R>,
     ) -> bsmr_error::Result<(FinishedStarlarkEvaluation, R)> {
@@ -280,13 +280,13 @@ impl SetProfileEventListener {
 }
 
 /// A token that simply indicates that profiling has been reported. Used with
-/// BuckStarlarkModule::with_profiling to ensure that profiling is reported.
+/// BsmrStarlarkModule::with_profiling to ensure that profiling is reported.
 pub struct ProfilingReportedToken(());
 
 /// A simple wrapper around a starlark Module that allows us to ensure that profiling is reported.
-pub struct BuckStarlarkModule<'v>(Module<'v>);
+pub struct BsmrStarlarkModule<'v>(Module<'v>);
 
-impl<'v> std::ops::Deref for BuckStarlarkModule<'v> {
+impl<'v> std::ops::Deref for BsmrStarlarkModule<'v> {
     type Target = Module<'v>;
 
     fn deref(&self) -> &Self::Target {
@@ -294,13 +294,13 @@ impl<'v> std::ops::Deref for BuckStarlarkModule<'v> {
     }
 }
 
-impl BuckStarlarkModule<'_> {
+impl BsmrStarlarkModule<'_> {
     /// This function allows us to ensure that profiling is reported (in the successful path) of any starlark evaluation.
     pub fn with_profiling<R, E>(
-        func: impl for<'v> FnOnce(BuckStarlarkModule<'v>) -> Result<(ProfilingReportedToken, R), E>,
+        func: impl for<'v> FnOnce(BsmrStarlarkModule<'v>) -> Result<(ProfilingReportedToken, R), E>,
     ) -> Result<R, E> {
-        // patternlint-disable-next-line bsmr-no-starlark-module: This is `BuckStarlarkModule`
-        match Module::with_temp_heap(|m| func(BuckStarlarkModule(m))) {
+        // patternlint-disable-next-line bsmr-no-starlark-module: This is `BsmrStarlarkModule`
+        match Module::with_temp_heap(|m| func(BsmrStarlarkModule(m))) {
             Ok((ProfilingReportedToken(..), res)) => Ok(res),
             Err(e) => Err(e),
         }
@@ -310,11 +310,11 @@ impl BuckStarlarkModule<'_> {
     pub async fn with_profiling_async<F, R>(func: F) -> bsmr_error::Result<R>
     where
         F: for<'v> AsyncFnOnce(
-            BuckStarlarkModule<'v>,
+            BsmrStarlarkModule<'v>,
         ) -> bsmr_error::Result<(ProfilingReportedToken, R)>,
     {
-        // patternlint-disable-next-line bsmr-no-starlark-module: This is `BuckStarlarkModule`
-        match Module::with_temp_heap_async(async |m| func(BuckStarlarkModule(m)).await).await {
+        // patternlint-disable-next-line bsmr-no-starlark-module: This is `BsmrStarlarkModule`
+        match Module::with_temp_heap_async(async |m| func(BsmrStarlarkModule(m)).await).await {
             Ok((ProfilingReportedToken(..), res)) => Ok(res),
             Err(e) => Err(e),
         }

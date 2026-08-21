@@ -25,29 +25,29 @@
 //! # Usage
 //!
 //! ```
-//! use bsmr_hash::BuckHashMap;
-//! use bsmr_hash::BuckHashSet;
+//! use bsmr_hash::BsmrHashMap;
+//! use bsmr_hash::BsmrHashSet;
 //!
-//! let mut map: BuckHashMap<String, i32> = BuckHashMap::default();
+//! let mut map: BsmrHashMap<String, i32> = BsmrHashMap::default();
 //! map.insert("key".to_string(), 42);
 //!
-//! let mut set: BuckHashSet<i32> = BuckHashSet::default();
+//! let mut set: BsmrHashSet<i32> = BsmrHashSet::default();
 //! set.insert(42);
 //! ```
 //!
-//! For ordered collections that preserve insertion order, use [`BuckIndexMap`]
-//! and [`BuckIndexSet`]:
+//! For ordered collections that preserve insertion order, use [`BsmrIndexMap`]
+//! and [`BsmrIndexSet`]:
 //!
 //! ```
-//! use bsmr_hash::BuckIndexMap;
-//! use bsmr_hash::BuckIndexSet;
+//! use bsmr_hash::BsmrIndexMap;
+//! use bsmr_hash::BsmrIndexSet;
 //!
-//! let mut map: BuckIndexMap<String, i32> = BuckIndexMap::default();
+//! let mut map: BsmrIndexMap<String, i32> = BsmrIndexMap::default();
 //! map.insert("first".to_string(), 1);
 //! map.insert("second".to_string(), 2);
 //! // Iteration order is guaranteed: "first", then "second"
 //!
-//! let mut set: BuckIndexSet<i32> = BuckIndexSet::default();
+//! let mut set: BsmrIndexSet<i32> = BsmrIndexSet::default();
 //! set.insert(42);
 //! ```
 
@@ -76,20 +76,20 @@ use fxhash::FxHasher64;
 /// forwarding method is omitted, calls to it will silently take the slower
 /// byte-serialization path.
 #[derive(Default)]
-pub struct BuckHasher(FxHasher64);
+pub struct BsmrHasher(FxHasher64);
 
-impl BuckHasher {
+impl BsmrHasher {
     /// Creates a new hasher.
     #[inline]
     pub fn new() -> Self {
-        BuckHasher::default()
+        BsmrHasher::default()
     }
 }
 
 // IMPORTANT: `Hasher` wrappers must explicitly forward every `write_*` method
-// to the inner hasher. See the doc comment on `BuckHasher` for details.
+// to the inner hasher. See the doc comment on `BsmrHasher` for details.
 #[allow(clippy::missing_trait_methods)]
-impl Hasher for BuckHasher {
+impl Hasher for BsmrHasher {
     #[inline]
     fn finish(&self) -> u64 {
         self.0.finish()
@@ -131,63 +131,63 @@ impl Hasher for BuckHasher {
     }
 }
 
-/// [`BuildHasher`] implementation which produces [`BuckHasher`].
+/// [`BuildHasher`] implementation which produces [`BsmrHasher`].
 #[derive(Default, Debug, Clone, Copy, Dupe)]
-pub struct BuckHasherBuilder;
+pub struct BsmrHasherBuilder;
 
-impl BuildHasher for BuckHasherBuilder {
-    type Hasher = BuckHasher;
+impl BuildHasher for BsmrHasherBuilder {
+    type Hasher = BsmrHasher;
 
     #[inline]
     fn build_hasher(&self) -> Self::Hasher {
-        BuckHasher::new()
+        BsmrHasher::new()
     }
 }
 
-/// A [`HashMap`](std::collections::HashMap) using [`BuckHasher`].
+/// A [`HashMap`](std::collections::HashMap) using [`BsmrHasher`].
 ///
-/// This is a type alias for `std::collections::HashMap` with [`BuckHasherBuilder`]
+/// This is a type alias for `std::collections::HashMap` with [`BsmrHasherBuilder`]
 /// as the hasher, providing better performance than the default hasher for
 /// internal use cases where security is not a concern.
-pub type BuckHashMap<K, V> = std::collections::HashMap<K, V, BuckHasherBuilder>;
+pub type BsmrHashMap<K, V> = std::collections::HashMap<K, V, BsmrHasherBuilder>;
 
-/// A [`HashSet`](std::collections::HashSet) using [`BuckHasher`].
+/// A [`HashSet`](std::collections::HashSet) using [`BsmrHasher`].
 ///
-/// This is a type alias for `std::collections::HashSet` with [`BuckHasherBuilder`]
+/// This is a type alias for `std::collections::HashSet` with [`BsmrHasherBuilder`]
 /// as the hasher, providing better performance than the default hasher for
 /// internal use cases where security is not a concern.
-pub type BuckHashSet<K> = std::collections::HashSet<K, BuckHasherBuilder>;
+pub type BsmrHashSet<K> = std::collections::HashSet<K, BsmrHasherBuilder>;
 
 /// An [`IndexMap`](indexmap::IndexMap) using the default hasher.
 ///
 /// This is a type alias for `indexmap::IndexMap` that preserves insertion order.
-/// Unlike [`BuckHashMap`], iteration order is guaranteed to match insertion order.
+/// Unlike [`BsmrHashMap`], iteration order is guaranteed to match insertion order.
 ///
 /// This abstraction allows the hasher implementation to be changed centrally
 /// in a future commit.
-pub type BuckIndexMap<K, V> = indexmap::IndexMap<K, V>;
+pub type BsmrIndexMap<K, V> = indexmap::IndexMap<K, V>;
 
 /// An [`IndexSet`](indexmap::IndexSet) using the default hasher.
 ///
 /// This is a type alias for `indexmap::IndexSet` that preserves insertion order.
-/// Unlike [`BuckHashSet`], iteration order is guaranteed to match insertion order.
+/// Unlike [`BsmrHashSet`], iteration order is guaranteed to match insertion order.
 ///
 /// This abstraction allows the hasher implementation to be changed centrally
 /// in a future commit.
-pub type BuckIndexSet<K> = indexmap::IndexSet<K>;
+pub type BsmrIndexSet<K> = indexmap::IndexSet<K>;
 
-/// Creates a [`BuckIndexMap`] from a list of key-value pairs.
+/// Creates a [`BsmrIndexMap`] from a list of key-value pairs.
 ///
 /// This macro mirrors the `indexmap!` macro from the `indexmap` crate but uses
-/// whatever hasher [`BuckIndexMap`] is configured to use, allowing the hasher
+/// whatever hasher [`BsmrIndexMap`] is configured to use, allowing the hasher
 /// to be changed centrally.
 ///
 /// # Example
 ///
 /// ```
-/// use bsmr_hash::buck_indexmap;
+/// use bsmr_hash::bsmr_indexmap;
 ///
-/// let map = buck_indexmap! {
+/// let map = bsmr_indexmap! {
 ///     "a" => 1,
 ///     "b" => 2,
 /// };
@@ -195,40 +195,40 @@ pub type BuckIndexSet<K> = indexmap::IndexSet<K>;
 /// assert_eq!(map["b"], 2);
 /// ```
 #[macro_export]
-macro_rules! buck_indexmap {
+macro_rules! bsmr_indexmap {
     () => {
-        $crate::BuckIndexMap::default()
+        $crate::BsmrIndexMap::default()
     };
     ($($key:expr => $value:expr),+ $(,)?) => {{
-        let mut map = $crate::BuckIndexMap::default();
+        let mut map = $crate::BsmrIndexMap::default();
         $(map.insert($key, $value);)+
         map
     }};
 }
 
-/// Creates a [`BuckIndexSet`] from a list of values.
+/// Creates a [`BsmrIndexSet`] from a list of values.
 ///
 /// This macro mirrors the `indexset!` macro from the `indexmap` crate but uses
-/// whatever hasher [`BuckIndexSet`] is configured to use, allowing the hasher
+/// whatever hasher [`BsmrIndexSet`] is configured to use, allowing the hasher
 /// to be changed centrally.
 ///
 /// # Example
 ///
 /// ```
-/// use bsmr_hash::buck_indexset;
+/// use bsmr_hash::bsmr_indexset;
 ///
-/// let set = buck_indexset![1, 2, 3];
+/// let set = bsmr_indexset![1, 2, 3];
 /// assert!(set.contains(&1));
 /// assert!(set.contains(&2));
 /// assert!(set.contains(&3));
 /// ```
 #[macro_export]
-macro_rules! buck_indexset {
+macro_rules! bsmr_indexset {
     () => {
-        $crate::BuckIndexSet::default()
+        $crate::BsmrIndexSet::default()
     };
     ($($value:expr),+ $(,)?) => {{
-        let mut set = $crate::BuckIndexSet::default();
+        let mut set = $crate::BsmrIndexSet::default();
         $(set.insert($value);)+
         set
     }};
@@ -240,43 +240,43 @@ macro_rules! buck_indexset {
 /// This abstraction allows the hasher implementation to be changed centrally
 /// in a future commit. Currently this is identical to
 /// `std::collections::hash_map::DefaultHasher`.
-pub type BuckDefaultHasher = std::collections::hash_map::DefaultHasher;
+pub type BsmrDefaultHasher = std::collections::hash_map::DefaultHasher;
 
 /// A [`DashMap`](dashmap::DashMap) using the default hasher.
 ///
 /// This is a type alias for `dashmap::DashMap` that provides concurrent access.
 /// This abstraction allows the hasher implementation to be changed centrally
 /// in a future commit.
-pub type BuckDashMap<K, V> = dashmap::DashMap<K, V>;
+pub type BsmrDashMap<K, V> = dashmap::DashMap<K, V>;
 
 /// A [`DashSet`](dashmap::DashSet) using the default hasher.
 ///
 /// This is a type alias for `dashmap::DashSet` that provides concurrent access.
 /// This abstraction allows the hasher implementation to be changed centrally
 /// in a future commit.
-pub type BuckDashSet<K> = dashmap::DashSet<K>;
+pub type BsmrDashSet<K> = dashmap::DashSet<K>;
 
 /// A [`HashMap`](std::collections::HashMap) using the standard library's default hasher.
 ///
 /// This is a type alias for `std::collections::HashMap` with the default `RandomState`
-/// hasher. Unlike [`BuckHashMap`] which uses `FxHasher`, this type preserves the
+/// hasher. Unlike [`BsmrHashMap`] which uses `FxHasher`, this type preserves the
 /// standard library's secure hashing behavior.
 ///
 /// This abstraction allows the hasher implementation to be changed centrally
 /// in a future commit, enabling runtime selection between the original hasher
 /// and a faster alternative.
-pub type StdBuckHashMap<K, V> = std::collections::HashMap<K, V>;
+pub type StdBsmrHashMap<K, V> = std::collections::HashMap<K, V>;
 
 /// A [`HashSet`](std::collections::HashSet) using the standard library's default hasher.
 ///
 /// This is a type alias for `std::collections::HashSet` with the default `RandomState`
-/// hasher. Unlike [`BuckHashSet`] which uses `FxHasher`, this type preserves the
+/// hasher. Unlike [`BsmrHashSet`] which uses `FxHasher`, this type preserves the
 /// standard library's secure hashing behavior.
 ///
 /// This abstraction allows the hasher implementation to be changed centrally
 /// in a future commit, enabling runtime selection between the original hasher
 /// and a faster alternative.
-pub type StdBuckHashSet<K> = std::collections::HashSet<K>;
+pub type StdBsmrHashSet<K> = std::collections::HashSet<K>;
 
 #[cfg(test)]
 mod tests {
@@ -285,29 +285,29 @@ mod tests {
 
     use super::*;
 
-    fn hash_with_buck_hasher<T: Hash>(value: &T) -> u64 {
-        let mut hasher = BuckHasher::new();
+    fn hash_with_bsmr_hasher<T: Hash>(value: &T) -> u64 {
+        let mut hasher = BsmrHasher::new();
         value.hash(&mut hasher);
         hasher.finish()
     }
 
     #[test]
-    fn test_buck_hasher_deterministic() {
-        let h1 = hash_with_buck_hasher(&42u64);
-        let h2 = hash_with_buck_hasher(&42u64);
-        assert_eq!(h1, h2, "BuckHasher should be deterministic");
+    fn test_bsmr_hasher_deterministic() {
+        let h1 = hash_with_bsmr_hasher(&42u64);
+        let h2 = hash_with_bsmr_hasher(&42u64);
+        assert_eq!(h1, h2, "BsmrHasher should be deterministic");
     }
 
     #[test]
-    fn test_buck_hasher_different_values() {
-        let h1 = hash_with_buck_hasher(&42u64);
-        let h2 = hash_with_buck_hasher(&43u64);
+    fn test_bsmr_hasher_different_values() {
+        let h1 = hash_with_bsmr_hasher(&42u64);
+        let h2 = hash_with_bsmr_hasher(&43u64);
         assert_ne!(h1, h2, "Different values should produce different hashes");
     }
 
     #[test]
-    fn test_buck_hash_map() {
-        let mut map: BuckHashMap<String, i32> = BuckHashMap::default();
+    fn test_bsmr_hash_map() {
+        let mut map: BsmrHashMap<String, i32> = BsmrHashMap::default();
         map.insert("key1".to_owned(), 1);
         map.insert("key2".to_owned(), 2);
 
@@ -317,8 +317,8 @@ mod tests {
     }
 
     #[test]
-    fn test_buck_hash_set() {
-        let mut set: BuckHashSet<i32> = BuckHashSet::default();
+    fn test_bsmr_hash_set() {
+        let mut set: BsmrHashSet<i32> = BsmrHashSet::default();
         set.insert(1);
         set.insert(2);
         set.insert(1);
@@ -330,8 +330,8 @@ mod tests {
     }
 
     #[test]
-    fn test_buck_index_map() {
-        let mut map: BuckIndexMap<String, i32> = BuckIndexMap::default();
+    fn test_bsmr_index_map() {
+        let mut map: BsmrIndexMap<String, i32> = BsmrIndexMap::default();
         map.insert("first".to_owned(), 1);
         map.insert("second".to_owned(), 2);
         map.insert("third".to_owned(), 3);
@@ -347,8 +347,8 @@ mod tests {
     }
 
     #[test]
-    fn test_buck_index_set() {
-        let mut set: BuckIndexSet<i32> = BuckIndexSet::default();
+    fn test_bsmr_index_set() {
+        let mut set: BsmrIndexSet<i32> = BsmrIndexSet::default();
         set.insert(3);
         set.insert(1);
         set.insert(2);
@@ -367,11 +367,11 @@ mod tests {
 
     #[test]
     fn test_multi_write_sequence() {
-        let mut h1 = BuckHasher::new();
+        let mut h1 = BsmrHasher::new();
         h1.write_u64(1);
         h1.write_u64(2);
 
-        let mut h2 = BuckHasher::new();
+        let mut h2 = BsmrHasher::new();
         h2.write_u64(1);
         h2.write_u64(2);
 

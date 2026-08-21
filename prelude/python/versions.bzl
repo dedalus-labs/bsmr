@@ -1,3 +1,9 @@
+# ===----------------------------------------------------------------------===
+# Upstream-Source: facebook/buck2@1560aca2002865cd73d7cafb22c705cfb640b2bc
+# Modifications Copyright (c) 2026 Dedalus Labs, Inc. and its contributors
+# SPDX-License-Identifier: Apache-2.0
+# ===----------------------------------------------------------------------===
+
 # Copyright (c) Meta Platforms, Inc. and affiliates.
 #
 # This source code is dual-licensed under either the MIT license found in the
@@ -91,7 +97,7 @@ def _versioned_library_impl(ctx: AnalysisContext) -> list[Provider]:
 
 versioned_library = rule(
     doc = """
-        Represents multiple versions of the same library. This is a less flexible option than simply using [`select()`](https://buck2.build/docs/rule_authors/configurations/) in `deps` attributes of targets, and setting the right constraints on the build to allow [select resolution](https://buck2.build/docs/rule_authors/configurations_by_example/) to resolve the desired version.
+        Represents multiple versions of the same library. This is a less flexible option than simply using [`select()`](https://oss.dedaluslabs.ai/bsmr/rule_authors/configurations/) in `deps` attributes of targets, and setting the right constraints on the build to allow [select resolution](https://oss.dedaluslabs.ai/bsmr/rule_authors/configurations_by_example/) to resolve the desired version.
 
         Most notably, `versioned_library` can only be used with rules that specifically support it, unlike `select()`s which work with every rule.
     """,

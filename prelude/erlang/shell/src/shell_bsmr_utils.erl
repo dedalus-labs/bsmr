@@ -105,18 +105,18 @@ bsmr_query(Query) ->
 bsmr_query(Query, Args) ->
     bsmr_query(Query, [], Args).
 
--spec bsmr_query(Query, BuckArgs, Args) -> {ok, binary()} | error when
+-spec bsmr_query(Query, BsmrArgs, Args) -> {ok, binary()} | error when
     Query :: string() | binary(),
-    BuckArgs :: [string() | binary()],
+    BsmrArgs :: [string() | binary()],
     Args :: [string() | binary()].
-bsmr_query(Query, BuckArgs, Args) ->
+bsmr_query(Query, BsmrArgs, Args) ->
     run_command(
         no_stderr([
             ~"bsmr",
             ~"uquery",
             ~"--reuse-current-config",
             get_bsmr_args_from_env(),
-            BuckArgs,
+            BsmrArgs,
             Query,
             Args
         ])

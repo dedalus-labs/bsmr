@@ -1,3 +1,9 @@
+# ===----------------------------------------------------------------------===
+# Upstream-Source: facebook/buck2@1560aca2002865cd73d7cafb22c705cfb640b2bc
+# Modifications Copyright (c) 2026 Dedalus Labs, Inc. and its contributors
+# SPDX-License-Identifier: Apache-2.0
+# ===----------------------------------------------------------------------===
+
 # Copyright (c) Meta Platforms, Inc. and affiliates.
 #
 # This source code is dual-licensed under either the MIT license found in the
@@ -14,7 +20,7 @@ def kotlincd_toolchain(name, java_binary_for_kotlincd = None, visibility = None)
         java_binary_for_kotlincd = java_binary_for_kotlincd,
         name = name,
         annotation_processing_jar = "prelude//toolchains/android/third-party:kotlin-annotation-processing-embeddable",
-        class_loader_bootstrapper = "prelude//toolchains/android/src/com/facebook/buck/cli/bootstrapper:bootstrapper",
+        class_loader_bootstrapper = "prelude//toolchains/android/src/com/dedalus/bsmr/cli/bootstrapper:bootstrapper",
         compile_kotlin = "prelude//kotlin/tools/compile_kotlin:compile_kotlin",
         dep_files = "none",
         kapt_base64_encoder = "prelude//kotlin/tools/kapt_base64_encoder:kapt_base64_encoder",
@@ -32,9 +38,9 @@ def kotlincd_toolchain(name, java_binary_for_kotlincd = None, visibility = None)
             "prelude//toolchains/android/third-party:kotlinx-coroutines-core-jvm",
         ],
         kotlinc = "prelude//toolchains/android/third-party:kotlin-compiler-binary",
-        kotlincd = "prelude//toolchains/android/src/com/facebook/buck/jvm/kotlin/cd/workertool:kotlincd_tool",
+        kotlincd = "prelude//toolchains/android/src/com/dedalus/bsmr/jvm/kotlin/cd/workertool:kotlincd_tool",
         kotlinc_protocol = "kotlincd",
-        kotlincd_main_class = "com.facebook.buck.jvm.kotlin.cd.workertool.KotlinCDMain",
+        kotlincd_main_class = "com.dedalus.bsmr.jvm.kotlin.cd.workertool.KotlinCDMain",
         visibility = visibility,
     )
 

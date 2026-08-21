@@ -21,7 +21,7 @@ use std::mem;
 use std::ptr;
 use std::sync::Arc;
 
-use bsmr_error::BuckErrorContext;
+use bsmr_error::BsmrErrorContext;
 use bsmr_wrapper_common::win::winapi_handle::WinapiHandle;
 use dupe::Dupe;
 use windows_sys::Win32::Foundation::FALSE;
@@ -53,7 +53,7 @@ impl JobObject {
     pub(crate) fn new() -> bsmr_error::Result<Self> {
         let job_handle = unsafe {
             WinapiHandle::new_check_last_os_error(CreateJobObjectW(ptr::null(), ptr::null()))
-                .buck_error_context("CreateJobObject")?
+                .bsmr_error_context("CreateJobObject")?
         };
 
         let completion_handle = unsafe {
@@ -63,7 +63,7 @@ impl JobObject {
                 0,                    // CompletionKey
                 1,                    // NumberOfConcurrentThreads
             ))
-            .buck_error_context("CreateIoCompletionPort")?
+            .bsmr_error_context("CreateIoCompletionPort")?
         };
 
         associate_job_with_completion_port(&job_handle, &completion_handle)?;

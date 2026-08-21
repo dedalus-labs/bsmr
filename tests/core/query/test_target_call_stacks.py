@@ -14,14 +14,14 @@
 
 # pyre-strict
 
-from bsmr.tests.e2e_util.api.buck import Buck
-from bsmr.tests.e2e_util.buck_workspace import buck_test
+from bsmr.tests.e2e_util.api.bsmr import Bsmr
+from bsmr.tests.e2e_util.bsmr_workspace import bsmr_test
 from bsmr.tests.e2e_util.helper.golden import golden
 
 
-@buck_test()
-async def test_target_call_stacks_default(buck: Buck) -> None:
-    result = await buck.uquery(
+@bsmr_test()
+async def test_target_call_stacks_default(bsmr: Bsmr) -> None:
+    result = await bsmr.uquery(
         "--stack",
         "root//:test",
     )
@@ -29,7 +29,7 @@ async def test_target_call_stacks_default(buck: Buck) -> None:
         output=result.stdout,
         rel_path="golden/uquery.stdout",
     )
-    result = await buck.cquery(
+    result = await bsmr.cquery(
         "--stack",
         "root//:test",
     )

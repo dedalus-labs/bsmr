@@ -25,7 +25,7 @@ All constraints used in these aliases must also be available in OSS.
 #
 # We define aliases for modifiers here rather than reusing `alias` section of bsmrconfig for
 # several reasons.
-# 1. `alias` buckconconfig is not well-designed. It only supports aliases in a cell and not
+# 1. `alias` bsmrconconfig is not well-designed. It only supports aliases in a cell and not
 # global aliases and users can override aliases in modefiles.
 # 2. Modifier aliases can point to conditional modifiers, which `alias` bsmrconfig does not
 # suppport.

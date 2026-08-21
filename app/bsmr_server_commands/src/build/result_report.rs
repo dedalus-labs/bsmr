@@ -37,7 +37,7 @@ use bsmr_core::pattern::pattern::Modifiers;
 use bsmr_core::provider::label::ConfiguredProvidersLabel;
 use bsmr_execute::artifact::artifact_dyn::ArtifactDyn;
 use bsmr_execute::artifact::fs::ExecutorFs;
-use bsmr_hash::BuckHashMap;
+use bsmr_hash::BsmrHashMap;
 use dupe::Dupe;
 use starlark_map::small_map::SmallMap;
 
@@ -133,7 +133,7 @@ impl<'a> ResultReporter<'a> {
             .iter()
             .filter_map(|output| output.inner.as_ref().ok());
 
-        let mut artifact_path_mapping = BuckHashMap::default();
+        let mut artifact_path_mapping = BsmrHashMap::default();
 
         // NOTE: We use an SmallMap here to preserve the order the rule author wrote, all
         // the while avoiding duplicates.
@@ -284,13 +284,13 @@ impl<'a> ResultReporter<'a> {
 }
 
 struct ErrorCountingArtifactPathMapperImpl<'a> {
-    pub map: BuckHashMap<&'a Artifact, ContentBasedPathHash>,
+    pub map: BsmrHashMap<&'a Artifact, ContentBasedPathHash>,
     pub content_based_paths_with_no_hash: Cell<usize>,
     pub scratch_content_based_path_hash: ContentBasedPathHash,
 }
 
 impl<'a> ErrorCountingArtifactPathMapperImpl<'a> {
-    pub fn new(map: BuckHashMap<&'a Artifact, ContentBasedPathHash>) -> Self {
+    pub fn new(map: BsmrHashMap<&'a Artifact, ContentBasedPathHash>) -> Self {
         Self {
             map,
             content_based_paths_with_no_hash: Cell::new(0),

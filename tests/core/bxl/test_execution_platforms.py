@@ -20,14 +20,14 @@ import random
 import string
 from pathlib import Path
 
-from bsmr.tests.e2e_util.api.buck import Buck
+from bsmr.tests.e2e_util.api.bsmr import Bsmr
 from bsmr.tests.e2e_util.asserts import expect_failure
-from bsmr.tests.e2e_util.buck_workspace import buck_test
+from bsmr.tests.e2e_util.bsmr_workspace import bsmr_test
 
 
-@buck_test(write_invocation_record=True)
-async def test_bxl_exec_platform_dynamic_output(buck: Buck) -> None:
-    result = await buck.bxl(
+@bsmr_test(write_invocation_record=True)
+async def test_bxl_exec_platform_dynamic_output(bsmr: Bsmr) -> None:
+    result = await bsmr.bxl(
         "//executor_fallback_tests/dynamic.bxl:test_dynamic_output",
         "-c",
         f"test.cache_buster={random_string()}",
@@ -35,10 +35,10 @@ async def test_bxl_exec_platform_dynamic_output(buck: Buck) -> None:
     )
 
     output = result.stdout.splitlines()[0]
-    assert os.path.exists(buck.cwd / Path(output))
+    assert os.path.exists(bsmr.cwd / Path(output))
 
     res = await expect_failure(
-        buck.bxl(
+        bsmr.bxl(
             "//executor_fallback_tests/dynamic.bxl:test_dynamic_output",
             "-c",
             f"test.cache_buster={random_string()}",
@@ -54,9 +54,9 @@ async def test_bxl_exec_platform_dynamic_output(buck: Buck) -> None:
     assert errors[0]["category"] == "USER"
 
 
-@buck_test()
-async def test_bxl_execution_platforms(buck: Buck) -> None:
-    result = await buck.bxl(
+@bsmr_test()
+async def test_bxl_execution_platforms(bsmr: Bsmr) -> None:
+    result = await bsmr.bxl(
         "//executor_fallback_tests/test.bxl:test_exec_platforms",
         "-c",
         f"test.cache_buster={random_string()}",
@@ -66,10 +66,10 @@ async def test_bxl_execution_platforms(buck: Buck) -> None:
     )
 
     output = result.stdout.splitlines()[0]
-    assert os.path.exists(buck.cwd / Path(output))
+    assert os.path.exists(bsmr.cwd / Path(output))
 
     await expect_failure(
-        buck.bxl(
+        bsmr.bxl(
             "//executor_fallback_tests/test.bxl:test_exec_platforms",
             "-c",
             f"test.cache_buster={random_string()}",
@@ -79,7 +79,7 @@ async def test_bxl_execution_platforms(buck: Buck) -> None:
         )
     )
 
-    result = await buck.bxl(
+    result = await bsmr.bxl(
         "//executor_fallback_tests/test.bxl:test_exec_platforms",
         "-c",
         f"test.cache_buster={random_string()}",
@@ -89,10 +89,10 @@ async def test_bxl_execution_platforms(buck: Buck) -> None:
     )
 
     output = result.stdout.splitlines()[0]
-    assert os.path.exists(buck.cwd / Path(output))
+    assert os.path.exists(bsmr.cwd / Path(output))
 
     await expect_failure(
-        buck.bxl(
+        bsmr.bxl(
             "//executor_fallback_tests/test.bxl:test_exec_platforms",
             "-c",
             f"test.cache_buster={random_string()}",
@@ -102,17 +102,17 @@ async def test_bxl_execution_platforms(buck: Buck) -> None:
         )
     )
 
-    result = await buck.bxl(
+    result = await bsmr.bxl(
         "//executor_fallback_tests/test.bxl:test_exec_compatible_with",
         "-c",
         f"test.cache_buster={random_string()}",
     )
 
     output = result.stdout.splitlines()[0]
-    assert os.path.exists(buck.cwd / Path(output))
+    assert os.path.exists(bsmr.cwd / Path(output))
 
     await expect_failure(
-        buck.bxl(
+        bsmr.bxl(
             "//executor_fallback_tests/test.bxl:test_exec_compatible_with",
             "-c",
             f"test.cache_buster={random_string()}",

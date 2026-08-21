@@ -17,19 +17,19 @@
 
 import re
 
-from bsmr.tests.e2e_util.api.buck import Buck
-from bsmr.tests.e2e_util.buck_workspace import buck_test
+from bsmr.tests.e2e_util.api.bsmr import Bsmr
+from bsmr.tests.e2e_util.bsmr_workspace import bsmr_test
 
 
-@buck_test()
-async def test_compatible_with(buck: Buck) -> None:
+@bsmr_test()
+async def test_compatible_with(bsmr: Bsmr) -> None:
     for good in ["root//:pass", "root//:pass2"]:
-        out = await buck.cquery(good)
+        out = await bsmr.cquery(good)
         assert re.match(
             "{} \\(.*\\)\n".format(good),
             out.stdout,
         )
 
     for bad in ["root//:fail", "root//:fail2"]:
-        out = await buck.cquery(bad)
+        out = await bsmr.cquery(bad)
         assert out.stdout == ""

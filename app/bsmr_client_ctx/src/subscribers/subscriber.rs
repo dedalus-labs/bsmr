@@ -17,7 +17,7 @@
 use std::sync::Arc;
 
 use async_trait::async_trait;
-use bsmr_events::BuckEvent;
+use bsmr_events::BsmrEvent;
 
 use crate::console_interaction_stream::SuperConsoleToggle;
 use crate::exit_result::ExitResult;
@@ -48,7 +48,7 @@ pub trait EventSubscriber: Send {
     ) -> bsmr_error::Result<()> {
         Ok(())
     }
-    async fn handle_events(&mut self, _event: &[Arc<BuckEvent>]) -> bsmr_error::Result<()> {
+    async fn handle_events(&mut self, _event: &[Arc<BsmrEvent>]) -> bsmr_error::Result<()> {
         Ok(())
     }
     async fn handle_command_result(

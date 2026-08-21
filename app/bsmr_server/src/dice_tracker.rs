@@ -21,7 +21,7 @@ use bsmr_core::bsmr_env;
 use bsmr_data::*;
 use bsmr_events::dispatch::EventDispatcher;
 use bsmr_events::dispatch::with_dispatcher_async;
-use bsmr_hash::StdBuckHashMap;
+use bsmr_hash::StdBsmrHashMap;
 use bsmr_util::threads::thread_spawn;
 use dice::DiceEvent;
 use dice::DiceEventListener;
@@ -32,10 +32,10 @@ use futures::channel::mpsc::UnboundedReceiver;
 use futures::channel::mpsc::UnboundedSender;
 
 /// Closure used to sample the dice core-state queue depth at each snapshot
-/// tick. Boxed so that BuckDiceTracker doesn't need a generic parameter.
+/// tick. Boxed so that BsmrDiceTracker doesn't need a generic parameter.
 type QueueDepthFn = Box<dyn Fn() -> u64 + Send + Sync + 'static>;
 
-/// The BuckDiceTracker keeps track of the started/finished events for a dice computation and periodically sends a snapshot to the client.
+/// The BsmrDiceTracker keeps track of the started/finished events for a dice computation and periodically sends a snapshot to the client.
 ///
 /// There are too many events coming out of dice for us to forward them all to the client, so we need to aggregate
 /// them in some way in the daemon.
@@ -44,12 +44,12 @@ type QueueDepthFn = Box<dyn Fn() -> u64 + Send + Sync + 'static>;
 ///
 /// A client won't necessarily get a final snapshot before a command returns.
 #[derive(Allocative)]
-pub struct BuckDiceTracker {
+pub struct BsmrDiceTracker {
     #[allocative(skip)]
     event_forwarder: UnboundedSender<DiceEvent>,
 }
 
-impl BuckDiceTracker {
+impl BsmrDiceTracker {
     pub fn new(events: EventDispatcher, queue_depth_fn: QueueDepthFn) -> bsmr_error::Result<Self> {
         let (event_forwarder, receiver) = mpsc::unbounded();
         let snapshot_interval =
@@ -78,7 +78,7 @@ impl BuckDiceTracker {
         queue_depth_fn: QueueDepthFn,
     ) {
         let mut needs_update = false;
-        let mut states = StdBuckHashMap::default();
+        let mut states = StdBsmrHashMap::default();
         let mut interval = tokio::time::interval(snapshot_interval);
         interval.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Delay);
         // This will loop until the sender side of the channel is dropped.
@@ -128,7 +128,7 @@ impl BuckDiceTracker {
     }
 }
 
-impl DiceEventListener for BuckDiceTracker {
+impl DiceEventListener for BsmrDiceTracker {
     fn event(&self, event: DiceEvent) {
         let _ = self.event_forwarder.unbounded_send(event);
     }

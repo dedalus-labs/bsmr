@@ -16,16 +16,16 @@
 
 from pathlib import Path
 
-from bsmr.tests.e2e_util.api.buck import Buck
-from bsmr.tests.e2e_util.buck_workspace import buck_test
+from bsmr.tests.e2e_util.api.bsmr import Bsmr
+from bsmr.tests.e2e_util.bsmr_workspace import bsmr_test
 
 
-@buck_test()
+@bsmr_test()
 async def test_reuse_current_config_with_config_overrides_and_previous_invocation(
-    buck: Buck,
+    bsmr: Bsmr,
     tmp_path: Path,
 ) -> None:
-    result_file = await buck.audit_config(
+    result_file = await bsmr.audit_config(
         "test.key",
         "--style",
         "json",
@@ -36,7 +36,7 @@ async def test_reuse_current_config_with_config_overrides_and_previous_invocatio
     config_override = tmp_path / "config_override.bcfg"
     config_override.write_text("[test]\n  key = override\n")
 
-    result_file = await buck.audit_config(
+    result_file = await bsmr.audit_config(
         "--config-file",
         str(config_override),
         "--config",
@@ -51,11 +51,11 @@ async def test_reuse_current_config_with_config_overrides_and_previous_invocatio
     assert "using current config instead" in result_file.stderr
 
 
-@buck_test()
+@bsmr_test()
 async def test_reuse_current_config_with_config_overrides_and_no_previous_invocation(
-    buck: Buck,
+    bsmr: Bsmr,
 ) -> None:
-    result_file = await buck.audit_config(
+    result_file = await bsmr.audit_config(
         "--config",
         "test.key=override",
         "--style",
@@ -66,9 +66,9 @@ async def test_reuse_current_config_with_config_overrides_and_no_previous_invoca
     assert "Ignoring --reuse-current-config flag" in result_file.stderr
 
 
-@buck_test()
-async def test_reuse_current_config_with_no_previous_invocation(buck: Buck) -> None:
-    result_file = await buck.audit_config(
+@bsmr_test()
+async def test_reuse_current_config_with_no_previous_invocation(bsmr: Bsmr) -> None:
+    result_file = await bsmr.audit_config(
         "test.key",
         "--style",
         "json",

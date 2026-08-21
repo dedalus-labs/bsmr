@@ -18,37 +18,37 @@
 import json
 from pathlib import Path
 
-from bsmr.tests.e2e_util.api.buck import Buck
+from bsmr.tests.e2e_util.api.bsmr import Bsmr
 from bsmr.tests.e2e_util.asserts import expect_failure
-from bsmr.tests.e2e_util.buck_workspace import buck_test
+from bsmr.tests.e2e_util.bsmr_workspace import bsmr_test
 
 
-@buck_test(inplace=False, data_dir="bxl/simple")
-async def test_bxl_root(buck: Buck) -> None:
-    result = await buck.bxl(
+@bsmr_test(inplace=False, data_dir="bxl/simple")
+async def test_bxl_root(bsmr: Bsmr) -> None:
+    result = await bsmr.bxl(
         "//bxl:root.bxl:root_test",
     )
 
-    assert str(buck.cwd) in result.stdout
+    assert str(bsmr.cwd) in result.stdout
 
 
-@buck_test(inplace=False, data_dir="bxl/simple")
-async def test_bxl_cell_root(buck: Buck) -> None:
-    result = await buck.bxl(
+@bsmr_test(inplace=False, data_dir="bxl/simple")
+async def test_bxl_cell_root(bsmr: Bsmr) -> None:
+    result = await bsmr.bxl(
         "upstream//cell_root.bxl:cell_root_test",
     )
 
-    assert str(buck.cwd / "fbcode") in result.stdout
+    assert str(bsmr.cwd / "fbcode") in result.stdout
 
 
-@buck_test(inplace=False, data_dir="bxl/simple")
-async def test_bxl_instant_event(buck: Buck) -> None:
-    await buck.bxl(
+@bsmr_test(inplace=False, data_dir="bxl/simple")
+async def test_bxl_instant_event(bsmr: Bsmr) -> None:
+    await bsmr.bxl(
         "//bxl/event.bxl:good",
     )
 
     # Get event log
-    log = (await buck.log("show")).stdout.strip()
+    log = (await bsmr.log("show")).stdout.strip()
     lines = log.splitlines()
     # try to find starlark instant event
 
@@ -66,43 +66,43 @@ async def test_bxl_instant_event(buck: Buck) -> None:
         raise AssertionError("Failed to find starlark instant event.")
 
     # Shouldn't fail
-    await buck.bxl("//bxl/event.bxl:metadata_with_duration")
+    await bsmr.bxl("//bxl/event.bxl:metadata_with_duration")
 
     await expect_failure(
-        buck.bxl(
+        bsmr.bxl(
             "//bxl/event.bxl:bad_metadata",
         ),
         stderr_regex="Metadata should be a dict where keys are strings, and values are strings, ints, bools, or dicts/lists of the mentioned types. Got type: `list`",
     )
 
     await expect_failure(
-        buck.bxl(
+        bsmr.bxl(
             "//bxl/event.bxl:bad_metadata_key",
         ),
         stderr_regex="Metadata keys should be strings. Got type: `int`",
     )
 
     await expect_failure(
-        buck.bxl(
+        bsmr.bxl(
             "//bxl/event.bxl:bad_metadata_value",
         ),
         stderr_regex="Metadata values should be strings, ints, bools, or dicts/lists of the mentioned types. Key `key` had value type `tuple`",
     )
 
-    result = await buck.bxl(
+    result = await bsmr.bxl(
         "//bxl/event.bxl:ensured_artifact",
     )
 
     artifact_path = result.stdout.strip()
 
     # Get event log
-    lines = (await buck.log("show-user")).stdout.strip().splitlines()
+    lines = (await bsmr.log("show-user")).stdout.strip().splitlines()
     found_event = False
     for line in lines:
         if "StarlarkUserEvent" in line:
             metadata = json.loads(line)["StarlarkUserEvent"]["metadata"]
             assert metadata["rel_path"] == artifact_path
-            assert metadata["abs_path"] == str(Path(buck.cwd / artifact_path))
+            assert metadata["abs_path"] == str(Path(bsmr.cwd / artifact_path))
             assert metadata["nested"]["nested_artifact"] == artifact_path
             found_event = True
             break
@@ -111,9 +111,9 @@ async def test_bxl_instant_event(buck: Buck) -> None:
         raise AssertionError("Failed to find starlark instant event.")
 
 
-@buck_test(inplace=False, data_dir="bxl/simple")
-async def test_bxl_read_config(buck: Buck) -> None:
-    result = await buck.bxl(
+@bsmr_test(inplace=False, data_dir="bxl/simple")
+async def test_bxl_read_config(bsmr: Bsmr) -> None:
+    result = await bsmr.bxl(
         "-c",
         "key.section=foo",
         "//bxl/read_config.bxl:read_config_test",
@@ -123,10 +123,10 @@ async def test_bxl_read_config(buck: Buck) -> None:
     assert "True" in result.stdout
 
 
-@buck_test(inplace=False, data_dir="bxl/simple")
-async def test_load_file(buck: Buck) -> None:
-    result = await buck.bxl(
+@bsmr_test(inplace=False, data_dir="bxl/simple")
+async def test_load_file(bsmr: Bsmr) -> None:
+    result = await bsmr.bxl(
         "//bxl:load_file.bxl:load_test",
     )
 
-    assert str(buck.cwd) in result.stdout
+    assert str(bsmr.cwd) in result.stdout

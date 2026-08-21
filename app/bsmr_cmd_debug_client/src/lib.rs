@@ -15,7 +15,7 @@
  */
 
 use bsmr_client_ctx::client_ctx::ClientCommandContext;
-use bsmr_client_ctx::common::BuckArgMatches;
+use bsmr_client_ctx::common::BsmrArgMatches;
 use bsmr_client_ctx::events_ctx::EventsCtx;
 use bsmr_client_ctx::exit_result::ExitResult;
 use bsmr_common::argv::Argv;
@@ -65,7 +65,7 @@ mod trace_io;
 #[derive(Debug, clap::Parser)]
 #[clap(about = "Hidden debug commands useful for testing bsmr")]
 pub enum DebugCommand {
-    /// Deliberately crashes the Buck daemon, for testing purposes.
+    /// Deliberately crashes the Bsmr daemon, for testing purposes.
     Crash(CrashCommand),
     HeapDump(HeapDumpCommand),
     /// Dumps allocator stat
@@ -84,7 +84,7 @@ pub enum DebugCommand {
     Materialize(MaterializeCommand),
     /// Validates that Bessemer and disk agree on the state of files.
     FileStatus(FileStatusCommand),
-    /// Prints bsmr daemon directory (`~/.buckd/xxx`).
+    /// Prints bsmr daemon directory (`~/.bsmrd/xxx`).
     DaemonDir(DaemonDirCommand),
     /// Prints bsmr executable (this executable) path.
     Exe(ExeCommand),
@@ -106,7 +106,7 @@ pub enum DebugCommand {
 impl DebugCommand {
     pub fn exec(
         self,
-        matches: BuckArgMatches<'_>,
+        matches: BsmrArgMatches<'_>,
         ctx: ClientCommandContext<'_>,
         events_ctx: &mut EventsCtx,
     ) -> ExitResult {

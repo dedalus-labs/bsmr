@@ -14,50 +14,50 @@
 
 # pyre-strict
 
-from bsmr.tests.e2e_util.api.buck import Buck
+from bsmr.tests.e2e_util.api.bsmr import Bsmr
 from bsmr.tests.e2e_util.asserts import expect_failure
-from bsmr.tests.e2e_util.buck_workspace import buck_test
+from bsmr.tests.e2e_util.bsmr_workspace import bsmr_test
 
 
-@buck_test()
-async def test_define_anon_bxl(buck: Buck) -> None:
-    await buck.bxl(
+@bsmr_test()
+async def test_define_anon_bxl(bsmr: Bsmr) -> None:
+    await bsmr.bxl(
         "//anon_bxl.bxl:define_anon",
     )
 
 
-@buck_test()
-async def test_define_wrong_type_anon_bxl(buck: Buck) -> None:
+@bsmr_test()
+async def test_define_wrong_type_anon_bxl(bsmr: Bsmr) -> None:
     await expect_failure(
-        buck.bxl("//wrong_type_anon_bxl.bxl:wrong_type"),
+        bsmr.bxl("//wrong_type_anon_bxl.bxl:wrong_type"),
         stderr_regex="Type of parameter `impl` doesn't match,",
     )
 
 
-@buck_test()
-async def test_eval_anon_bxl(buck: Buck) -> None:
-    await buck.bxl(
+@bsmr_test()
+async def test_eval_anon_bxl(bsmr: Bsmr) -> None:
+    await bsmr.bxl(
         "//anon_bxl.bxl:eval_anon_bxl",
     )
 
 
-@buck_test()
-async def test_check_anon_ouput_artifact(buck: Buck) -> None:
-    await buck.bxl(
+@bsmr_test()
+async def test_check_anon_ouput_artifact(bsmr: Bsmr) -> None:
+    await bsmr.bxl(
         "//anon_bxl.bxl:check_anon_ouput_artifact",
     )
 
 
-@buck_test()
-async def test_pass_string_to_arg_attr(buck: Buck) -> None:
-    await buck.bxl("//anon_bxl.bxl:eval_of_anon_with_arg_bxl")
+@bsmr_test()
+async def test_pass_string_to_arg_attr(bsmr: Bsmr) -> None:
+    await bsmr.bxl("//anon_bxl.bxl:eval_of_anon_with_arg_bxl")
 
 
-@buck_test()
-async def test_content_based_output(buck: Buck) -> None:
-    result = await buck.bxl(
+@bsmr_test()
+async def test_content_based_output(bsmr: Bsmr) -> None:
+    result = await bsmr.bxl(
         "//anon_bxl.bxl:eval_of_anon_with_content_based_output_impl"
     )
 
-    output_path = (buck.cwd / result.stdout.strip()).resolve()
+    output_path = (bsmr.cwd / result.stdout.strip()).resolve()
     assert output_path.read_text() == "hello world"

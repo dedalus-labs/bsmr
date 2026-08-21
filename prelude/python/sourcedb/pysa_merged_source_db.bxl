@@ -19,11 +19,11 @@ load("@prelude//python:typing.bzl", "get_default_sys_platform")
 load("@prelude//python/meta_only:config.bzl", "DEFAULT_PY_VERSION")  # @oss-disable
 
 # @oss-enable: load("@prelude//python:typing.bzl", "DEFAULT_PY_VERSION")
-load("@prelude//python/sourcedb:filter.bxl", "BUCK_PYTHON_RULE_KINDS")
+load("@prelude//python/sourcedb:filter.bxl", "BSMR_PYTHON_RULE_KINDS")
 load("@prelude//utils:utils.bzl", "flatten")
 
 def _is_python_target(rule_type: str) -> bool:
-    for kind in BUCK_PYTHON_RULE_KINDS:
+    for kind in BSMR_PYTHON_RULE_KINDS:
         if rule_type.endswith(kind):
             return True
     return False
@@ -131,7 +131,7 @@ def _run(ctx: bxl.Context) -> None:
     })
 
 run = bxl_main(
-    doc = """Produce a merged type check config for multiple Python Buck targets.
+    doc = """Produce a merged type check config for multiple Python Bsmr targets.
 
     Usage: bsmr bxl prelude//python/sourcedb/pysa_merged_source_db.bxl:run -- --target upstream//foo/...
     """,

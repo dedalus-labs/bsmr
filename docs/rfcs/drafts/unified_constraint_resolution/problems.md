@@ -161,4 +161,4 @@ However, this leaves a major footgun: **selecting on nccl version directly is no
 
 In practice, we trip over this footgun *all the time*. For example, default link style is a constraint that depends on many other constraints like OS and sanitizer, so its selects are deeply nested. Many users have introduced selects on default link style in the repo that forget to nest the OS and sanitizer checks, so those selects almost certainly behave differently than intended.
 
-A second problem with nested selects is that constraints depending on many other constraints require a huge number of nesting levels. In practice this creates extremely bloated selects in macros. They're hard to read, and they cost a lot of memory for Buck to store.
+A second problem with nested selects is that constraints depending on many other constraints require a huge number of nesting levels. In practice this creates extremely bloated selects in macros. They're hard to read, and they cost a lot of memory for Bsmr to store.

@@ -18,30 +18,30 @@
 import re
 
 import pytest
-from bsmr.tests.e2e_util.api.buck import Buck
+from bsmr.tests.e2e_util.api.bsmr import Bsmr
 from bsmr.tests.e2e_util.asserts import expect_failure
-from bsmr.tests.e2e_util.buck_workspace import buck_test
+from bsmr.tests.e2e_util.bsmr_workspace import bsmr_test
 
 
-@buck_test()
-async def test_incompatible_target_skipping(buck: Buck) -> None:
+@bsmr_test()
+async def test_incompatible_target_skipping(bsmr: Bsmr) -> None:
     # incompatible target should be skipped when a package
-    result = await buck.build("//:")
+    result = await bsmr.build("//:")
     assert "Skipped 1 incompatible targets:" in result.stderr
     assert "root//:incompatible (" in result.stderr
     # when explicitly requested, it should be a failure
-    await expect_failure(buck.build("//:incompatible"))
+    await expect_failure(bsmr.build("//:incompatible"))
     # should be a failure if it's both explicitly requested and part of a package/recursive pattern
     # TODO(cjhopman): this doesn't work correctly yet
     # await expect_failure(
-    # buck.build("//:", "//:incompatible")
+    # bsmr.build("//:", "//:incompatible")
     # )
 
 
 INCOMPATIBLE_ERROR = r"root//:incompatible\s*is incompatible with"
 
 
-@buck_test()
+@bsmr_test()
 @pytest.mark.parametrize(  # type: ignore
     "target_pattern",
     [
@@ -50,39 +50,39 @@ INCOMPATIBLE_ERROR = r"root//:incompatible\s*is incompatible with"
         "//dep_incompatible:transitive_dep_incompatible",
     ],
 )
-async def test_dep_incompatible_target(buck: Buck, target_pattern: str) -> None:
+async def test_dep_incompatible_target(bsmr: Bsmr, target_pattern: str) -> None:
     # a compatible target with incompatible deps should always fail no matter what.
     await expect_failure(
-        buck.cquery(target_pattern),
+        bsmr.cquery(target_pattern),
         stderr_regex=INCOMPATIBLE_ERROR,
     )
     await expect_failure(
-        buck.build(target_pattern, "--skip-incompatible-targets"),
+        bsmr.build(target_pattern, "--skip-incompatible-targets"),
         stderr_regex=INCOMPATIBLE_ERROR,
     )
 
 
-@buck_test()
-async def test_incompatible_target_with_incompatible_dep(buck: Buck) -> None:
+@bsmr_test()
+async def test_incompatible_target_with_incompatible_dep(bsmr: Bsmr) -> None:
     target = "//dep_incompatible:target_and_dep_incompatible"
-    await buck.cquery(target)
-    await buck.build(target, "--skip-incompatible-targets")
+    await bsmr.cquery(target)
+    await bsmr.build(target, "--skip-incompatible-targets")
     await expect_failure(
-        buck.build(target),
+        bsmr.build(target),
         stderr_regex=rf"{target}\s*is incompatible with",
     )
 
 
-@buck_test()
-async def test_exec_dep_transitive_incompatible(buck: Buck) -> None:
-    await buck.cquery(
+@bsmr_test()
+async def test_exec_dep_transitive_incompatible(bsmr: Bsmr) -> None:
+    await bsmr.cquery(
         "//exec_dep:one_exec_platform_transitive_incompatible",
     )
 
 
-@buck_test()
-async def test_exec_dep_transitive_incompatible_post_transition(buck: Buck) -> None:
-    await buck.cquery(
+@bsmr_test()
+async def test_exec_dep_transitive_incompatible_post_transition(bsmr: Bsmr) -> None:
+    await bsmr.cquery(
         "//exec_dep:one_exec_platform_transitive_incompatible_post_transition",
     )
 
@@ -100,9 +100,9 @@ async def test_exec_dep_transitive_incompatible_post_transition(buck: Buck) -> N
         ),
     ],
 )
-@buck_test(allow_soft_errors=True)
+@bsmr_test(allow_soft_errors=True)
 async def test_error_on_dep_only_incompatible(
-    buck: Buck, target_pattern: str, soft_error: bool
+    bsmr: Bsmr, target_pattern: str, soft_error: bool
 ) -> None:
     args = [
         "-c",
@@ -110,37 +110,37 @@ async def test_error_on_dep_only_incompatible(
         "//dep_incompatible:dep_incompatible",
     ]
     if soft_error:
-        await check_dep_only_incompatible_soft_err(buck, args)
+        await check_dep_only_incompatible_soft_err(bsmr, args)
     else:
         await expect_failure(
-            buck.cquery(*args),
+            bsmr.cquery(*args),
             stderr_regex=INCOMPATIBLE_ERROR,
         )
 
 
-@buck_test()
-async def test_error_on_dep_only_incompatible_conf(buck: Buck) -> None:
+@bsmr_test()
+async def test_error_on_dep_only_incompatible_conf(bsmr: Bsmr) -> None:
     args = [
         "//dep_incompatible:dep_incompatible_conf2",
     ]
     await expect_failure(
-        buck.cquery(*args),
+        bsmr.cquery(*args),
         stderr_regex=INCOMPATIBLE_ERROR,
     )
 
 
-@buck_test(allow_soft_errors=True)
-async def test_error_on_dep_only_incompatible_excluded(buck: Buck) -> None:
+@bsmr_test(allow_soft_errors=True)
+async def test_error_on_dep_only_incompatible_excluded(bsmr: Bsmr) -> None:
     args = [
         "-c",
         "bsmr.error_on_dep_only_incompatible_excluded=//dep_incompatible:dep_incompatible_conf2",
         "//dep_incompatible:dep_incompatible_conf2",
     ]
-    await check_dep_only_incompatible_soft_err(buck, args)
+    await check_dep_only_incompatible_soft_err(bsmr, args)
 
 
-async def check_dep_only_incompatible_soft_err(buck: Buck, args: list[str]) -> None:
-    result = await buck.cquery(*args)
+async def check_dep_only_incompatible_soft_err(bsmr: Bsmr, args: list[str]) -> None:
+    result = await bsmr.cquery(*args)
     # This can't use the same INCOMPATIBLE_ERROR str as elsewhere.
     # Because the result is a soft error, stderr has timestamps
     # prefixing each line which makes this regex, which works elsewhere,
@@ -154,19 +154,19 @@ async def check_dep_only_incompatible_soft_err(buck: Buck, args: list[str]) -> N
     assert re.search("is incompatible with", result.stderr, re.DOTALL | re.IGNORECASE)
 
 
-@buck_test(allow_soft_errors=True)
+@bsmr_test(allow_soft_errors=True)
 async def test_dep_only_incompatible_custom_soft_errors_with_exclusions(
-    buck: Buck,
+    bsmr: Bsmr,
 ) -> None:
     args = [
         "-c",
         "bsmr.dep_only_incompatible_info=//dep_incompatible/dep_only_incompatible_info:dep_only_incompatible_info_with_exclusions",
     ]
-    await buck.cquery("//dep_incompatible:dep_incompatible", *args)
-    result = await buck.log("show")
+    await bsmr.cquery("//dep_incompatible:dep_incompatible", *args)
+    result = await bsmr.log("show")
     assert "Soft Error: soft_error_one" in result.stdout
     assert "Soft Error: soft_error_three" in result.stdout
 
-    await buck.cquery("//dep_incompatible:transitive_dep_incompatible", *args)
-    result = await buck.log("show")
+    await bsmr.cquery("//dep_incompatible:transitive_dep_incompatible", *args)
+    result = await bsmr.log("show")
     assert "Soft Error: soft_error_two" in result.stdout

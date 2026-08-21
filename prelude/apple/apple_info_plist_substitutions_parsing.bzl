@@ -1,3 +1,9 @@
+# ===----------------------------------------------------------------------===
+# Upstream-Source: facebook/buck2@1560aca2002865cd73d7cafb22c705cfb640b2bc
+# Modifications Copyright (c) 2026 Dedalus Labs, Inc. and its contributors
+# SPDX-License-Identifier: Apache-2.0
+# ===----------------------------------------------------------------------===
+
 # Copyright (c) Meta Platforms, Inc. and affiliates.
 #
 # This source code is dual-licensed under either the MIT license found in the
@@ -11,7 +17,7 @@ load("@prelude//utils:selects.bzl", "selects")
 # `apple_bundle.info_plist_substitutions` might contain `CODE_SIGN_ENTITLEMENTS` key which (as per v1 documentation):
 #
 # > Code signing will embed entitlements pointed to by the entitlements_file arg in the bundle's apple_binary.
-# > This is the preferred way to specify entitlements when building with Buck.
+# > This is the preferred way to specify entitlements when building with Bsmr.
 # > If the entitlements file is not present, it falls back to the CODE_SIGN_ENTITLEMENTS entry in info_plist_substitutions.
 #
 # In order to properly depend on this fallback entitlements file (and manipulate it) we have to convert this text entry into the source artifact.

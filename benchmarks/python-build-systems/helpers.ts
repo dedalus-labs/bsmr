@@ -9,7 +9,7 @@ import { chmodSync, readFileSync, rmSync } from "node:fs";
 
 export type Runner = "bazel" | "bsmr";
 
-export interface BsmrOutputs {
+export interface Outputputs {
 	source: string;
 	wheel: string;
 }
@@ -89,7 +89,7 @@ export function performanceGateResults(medians: Readonly<Record<string, number>>
 }
 
 /** Parses the typed BSMR outputs needed for correctness and restoration gates. */
-export function parseBsmrOutputs(stdout: string): BsmrOutputs {
+export function parseOutputputs(stdout: string): Outputputs {
 	const value: unknown = JSON.parse(stdout.trim());
 	if (typeof value !== "object" || value === null || Array.isArray(value)) throw new Error("BSMR output must be a JSON object");
 	const outputs = value as Record<string, unknown>;

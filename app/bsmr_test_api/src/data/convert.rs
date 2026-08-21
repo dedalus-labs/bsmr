@@ -19,7 +19,7 @@ use std::time::SystemTime;
 
 use bsmr_core::cells::name::CellName;
 use bsmr_core::execution_types::executor_config::RemoteExecutorUseCase;
-use bsmr_error::BuckErrorContext;
+use bsmr_error::BsmrErrorContext;
 use bsmr_error::internal_error;
 use bsmr_fs::paths::forward_rel_path::ForwardRelativePathBuf;
 use gazebo::prelude::*;
@@ -69,7 +69,7 @@ fn weight_class_from_grpc(
             .ok_or_else(|| internal_error!("Missing `value`"))?
         {
             Value::Permits(p) => {
-                WeightClass::Permits(p.try_into().buck_error_context("Invalid `permits`")?)
+                WeightClass::Permits(p.try_into().bsmr_error_context("Invalid `permits`")?)
             }
             Value::Percentage(p) => {
                 WeightClass::Percentage(WeightPercentage::try_new(p).map_err(|e| {
@@ -127,7 +127,7 @@ fn weight_class_to_grpc(
 
     let value = match input {
         WeightClass::Permits(p) => {
-            Value::Permits(p.try_into().buck_error_context("Invalid `permits`")?)
+            Value::Permits(p.try_into().bsmr_error_context("Invalid `permits`")?)
         }
         WeightClass::Percentage(p) => Value::Percentage(p.into_value().into()),
     };
@@ -287,7 +287,7 @@ impl TryFrom<bsmr_test_proto::ConfiguredTargetHandle> for ConfiguredTargetHandle
     type Error = bsmr_error::Error;
 
     fn try_from(s: bsmr_test_proto::ConfiguredTargetHandle) -> Result<Self, Self::Error> {
-        let handle = s.id.try_into().buck_error_context("Invalid `id`")?;
+        let handle = s.id.try_into().bsmr_error_context("Invalid `id`")?;
         Ok(Self(handle))
     }
 }
@@ -297,7 +297,7 @@ impl TryInto<bsmr_test_proto::ConfiguredTargetHandle> for ConfiguredTargetHandle
 
     fn try_into(self) -> Result<bsmr_test_proto::ConfiguredTargetHandle, Self::Error> {
         Ok(bsmr_test_proto::ConfiguredTargetHandle {
-            id: self.0.try_into().buck_error_context("Invalid `handle`")?,
+            id: self.0.try_into().bsmr_error_context("Invalid `handle`")?,
         })
     }
 }
@@ -321,7 +321,7 @@ impl TryFrom<bsmr_test_proto::ConfiguredTarget> for ConfiguredTarget {
             handle: handle
                 .ok_or_else(|| internal_error!("Missing `handle`"))?
                 .try_into()
-                .buck_error_context("Invalid `handle`")?,
+                .bsmr_error_context("Invalid `handle`")?,
             cell,
             package,
             target,
@@ -343,7 +343,7 @@ impl TryInto<bsmr_test_proto::ConfiguredTarget> for ConfiguredTarget {
             handle: Some(
                 self.handle
                     .try_into()
-                    .buck_error_context("Invalid `handle`")?,
+                    .bsmr_error_context("Invalid `handle`")?,
             ),
             cell: self.cell,
             package: self.package,
@@ -360,7 +360,7 @@ impl TryFrom<i32> for TestStatus {
     type Error = bsmr_error::Error;
 
     fn try_from(s: i32) -> Result<Self, Self::Error> {
-        let s = bsmr_test_proto::TestStatus::try_from(s).buck_error_context("Invalid `status`")?;
+        let s = bsmr_test_proto::TestStatus::try_from(s).bsmr_error_context("Invalid `status`")?;
 
         Ok(match s {
             bsmr_test_proto::TestStatus::NotSet => {
@@ -419,15 +419,15 @@ impl TryFrom<bsmr_test_proto::TestResult> for TestResult {
         let duration = duration
             .map(convert::to_std_duration)
             .transpose()
-            .buck_error_context("For `duration`")?;
+            .bsmr_error_context("For `duration`")?;
 
         Ok(Self {
             target: target
                 .ok_or_else(|| internal_error!("Missing `target`"))?
                 .try_into()
-                .buck_error_context("Invalid `target`")?,
+                .bsmr_error_context("Invalid `target`")?,
             name,
-            status: status.try_into().buck_error_context("Invalid `status`")?,
+            status: status.try_into().bsmr_error_context("Invalid `status`")?,
             msg: msg.map(|m| m.msg),
             duration,
             max_memory_used_bytes,
@@ -447,13 +447,13 @@ impl TryInto<bsmr_test_proto::TestResult> for TestResult {
             target: Some(
                 self.target
                     .try_into()
-                    .buck_error_context("Invalid `target`")?,
+                    .bsmr_error_context("Invalid `target`")?,
             ),
             name: self.name,
             status: self
                 .status
                 .try_into()
-                .buck_error_context("Invalid `status`")?,
+                .bsmr_error_context("Invalid `status`")?,
             details: self.details,
             msg: self.msg.map(|msg| OptionalMsg { msg }),
             duration: self.duration.try_map(|d| d.try_into())?,
@@ -482,11 +482,11 @@ impl TryFrom<bsmr_test_proto::ExternalRunnerSpec> for ExternalRunnerSpec {
             target: target
                 .ok_or_else(|| internal_error!("Missing `target`"))?
                 .try_into()
-                .buck_error_context("Invalid `target`")?,
+                .bsmr_error_context("Invalid `target`")?,
             test_type,
             command: command
                 .into_try_map(|x| x.try_into())
-                .buck_error_context("Invalid `command`")?,
+                .bsmr_error_context("Invalid `command`")?,
             env: env
                 .into_iter()
                 .map(|(k, v)| Ok((k, v.try_into().unwrap())))
@@ -514,11 +514,11 @@ impl TryInto<bsmr_test_proto::ExternalRunnerSpec> for ExternalRunnerSpec {
             working_dir_cell,
         } = self;
         Ok(bsmr_test_proto::ExternalRunnerSpec {
-            target: Some(target.try_into().buck_error_context("Invalid `target`")?),
+            target: Some(target.try_into().bsmr_error_context("Invalid `target`")?),
             test_type,
             command: command
                 .into_try_map(|x| x.try_into())
-                .buck_error_context("Invalid `command`")?,
+                .bsmr_error_context("Invalid `command`")?,
             env: env
                 .into_iter()
                 .map(|(k, v)| Ok((k, v.try_into().unwrap())))
@@ -540,7 +540,7 @@ impl TryFrom<bsmr_test_proto::ExternalRunnerSpecValue> for ExternalRunnerSpecVal
             match s.value.ok_or_else(|| internal_error!("Missing `value`"))? {
                 Value::Verbatim(val) => ExternalRunnerSpecValue::Verbatim(val),
                 Value::ArgHandle(val) => ExternalRunnerSpecValue::ArgHandle(
-                    val.try_into().buck_error_context("Invalid `arg_handle`")?,
+                    val.try_into().bsmr_error_context("Invalid `arg_handle`")?,
                 ),
                 Value::EnvHandle(val) => ExternalRunnerSpecValue::EnvHandle(val.into()),
             },
@@ -557,7 +557,7 @@ impl TryInto<bsmr_test_proto::ExternalRunnerSpecValue> for ExternalRunnerSpecVal
         let value = match self {
             Self::Verbatim(val) => Value::Verbatim(val),
             Self::ArgHandle(ArgHandle(val)) => {
-                Value::ArgHandle(val.try_into().buck_error_context("Invalid `arg_handle`")?)
+                Value::ArgHandle(val.try_into().bsmr_error_context("Invalid `arg_handle`")?)
             }
             Self::EnvHandle(EnvHandle(val)) => Value::EnvHandle(val),
         };
@@ -662,7 +662,7 @@ impl TryInto<bsmr_test_proto::ArgValue> for ArgValue {
             content: Some(
                 self.content
                     .try_into()
-                    .buck_error_context("Invalid `content`")?,
+                    .bsmr_error_context("Invalid `content`")?,
             ),
             format: self
                 .format
@@ -679,7 +679,7 @@ impl TryFrom<bsmr_test_proto::ArgValue> for ArgValue {
             .content
             .ok_or_else(|| internal_error!("Missing `content`"))?
             .try_into()
-            .buck_error_context("Invalid `content`")?;
+            .bsmr_error_context("Invalid `content`")?;
         let format = s.format.map(|f| f.format);
 
         Ok(Self { content, format })
@@ -696,7 +696,7 @@ impl TryInto<bsmr_test_proto::ArgValueContent> for ArgValueContent {
             Self::ExternalRunnerSpecValue(value) => Value::SpecValue(
                 value
                     .try_into()
-                    .buck_error_context("Invalid external runner spec value")?,
+                    .bsmr_error_context("Invalid external runner spec value")?,
             ),
             Self::DeclaredOutput(value) => Value::DeclaredOutput(value.into()),
         };
@@ -716,10 +716,10 @@ impl TryFrom<bsmr_test_proto::ArgValueContent> for ArgValueContent {
                 Value::SpecValue(value) => Self::ExternalRunnerSpecValue(
                     value
                         .try_into()
-                        .buck_error_context("Invalid external runner spec value")?,
+                        .bsmr_error_context("Invalid external runner spec value")?,
                 ),
                 Value::DeclaredOutput(value) => {
-                    Self::DeclaredOutput(value.try_into().buck_error_context("Invalid `value`")?)
+                    Self::DeclaredOutput(value.try_into().bsmr_error_context("Invalid `value`")?)
                 }
             },
         )
@@ -742,17 +742,17 @@ impl TryFrom<bsmr_test_proto::ExecuteRequest2> for ExecuteRequest2 {
         let test_executable = test_executable
             .ok_or_else(|| internal_error!("Missing `test_executable`"))?
             .try_into()
-            .buck_error_context("Invalid `test_executable`")?;
+            .bsmr_error_context("Invalid `test_executable`")?;
 
         let timeout =
             convert::to_std_duration(timeout.ok_or_else(|| internal_error!("Missing `timeout`"))?)
-                .buck_error_context("Invalid `timeout`")?;
+                .bsmr_error_context("Invalid `timeout`")?;
 
         let host_sharing_requirements = host_sharing_requirements
             .ok_or_else(|| internal_error!("Missing `host_sharing_requirements`"))?;
         let host_sharing_requirements =
             host_sharing_requirements_from_grpc(host_sharing_requirements)
-                .buck_error_context("Invalid `host_sharing_requirements`")?;
+                .bsmr_error_context("Invalid `host_sharing_requirements`")?;
 
         let executor_override = executor_override.map(|o| o.into());
 
@@ -778,7 +778,7 @@ impl TryInto<bsmr_test_proto::ExecuteRequest2> for ExecuteRequest2 {
         let test_executable = Some(
             self.test_executable
                 .try_into()
-                .buck_error_context("Invalid `test_executable`")?,
+                .bsmr_error_context("Invalid `test_executable`")?,
         );
 
         Ok(bsmr_test_proto::ExecuteRequest2 {
@@ -786,7 +786,7 @@ impl TryInto<bsmr_test_proto::ExecuteRequest2> for ExecuteRequest2 {
             timeout: Some(self.timeout.try_into()?),
             host_sharing_requirements: Some(
                 host_sharing_requirements_to_grpc(self.host_sharing_requirements)
-                    .buck_error_context("Invalid `host_sharing_requirements`")?,
+                    .bsmr_error_context("Invalid `host_sharing_requirements`")?,
             ),
             executor_override: self.executor_override.map(|o| o.into()),
             required_local_resources: self
@@ -862,7 +862,7 @@ impl TryInto<bsmr_test_proto::Output> for Output {
             Self::LocalPath(value) => Value::LocalPath(
                 value
                     .to_str()
-                    .buck_error_context("Invalid local path")?
+                    .bsmr_error_context("Invalid local path")?
                     .to_owned(),
             ),
             Self::RemoteObject(value) => Value::RemoteObject(value.try_into()?),
@@ -883,7 +883,7 @@ impl TryFrom<bsmr_test_proto::Output> for Output {
                 Value::LocalPath(value) => Self::LocalPath(
                     value
                         .try_into()
-                        .buck_error_context("Invalid local path value.")?,
+                        .bsmr_error_context("Invalid local path value.")?,
                 ),
                 Value::RemoteObject(value) => Self::RemoteObject(value.try_into()?),
             },
@@ -899,17 +899,17 @@ impl TryInto<bsmr_test_proto::ExecutionResult2> for ExecutionResult2 {
             status: Some(
                 self.status
                     .try_into()
-                    .buck_error_context("Invalid `status`")?,
+                    .bsmr_error_context("Invalid `status`")?,
             ),
             stdout: Some(
                 self.stdout
                     .try_into()
-                    .buck_error_context("Invalid `stdout`")?,
+                    .bsmr_error_context("Invalid `stdout`")?,
             ),
             stderr: Some(
                 self.stderr
                     .try_into()
-                    .buck_error_context("Invalid `stderr`")?,
+                    .bsmr_error_context("Invalid `stderr`")?,
             ),
             outputs: self
                 .outputs
@@ -917,7 +917,7 @@ impl TryInto<bsmr_test_proto::ExecutionResult2> for ExecutionResult2 {
                 .map(|(k, v)| {
                     Ok(bsmr_test_proto::OutputEntry {
                         declared_output: Some(k.into()),
-                        output: Some(v.try_into().buck_error_context("Invalid `output`")?),
+                        output: Some(v.try_into().bsmr_error_context("Invalid `output`")?),
                     })
                 })
                 .collect::<Result<_, Self::Error>>()?,
@@ -953,15 +953,15 @@ impl TryFrom<bsmr_test_proto::ExecutionResult2> for ExecutionResult2 {
         let status = status
             .ok_or_else(|| internal_error!("Missing `status`"))?
             .try_into()
-            .buck_error_context("Invalid `status`")?;
+            .bsmr_error_context("Invalid `status`")?;
         let stdout = stdout
             .ok_or_else(|| internal_error!("Missing `stdout`"))?
             .try_into()
-            .buck_error_context("Invalid `stdout`")?;
+            .bsmr_error_context("Invalid `stdout`")?;
         let stderr = stderr
             .ok_or_else(|| internal_error!("Missing `stderr`"))?
             .try_into()
-            .buck_error_context("Invalid `stderr`")?;
+            .bsmr_error_context("Invalid `stderr`")?;
 
         let outputs = outputs
             .into_iter()
@@ -973,11 +973,11 @@ impl TryFrom<bsmr_test_proto::ExecutionResult2> for ExecutionResult2 {
                 let declared_output = declared_output
                     .ok_or_else(|| internal_error!("Missing `declared_output`"))?
                     .try_into()
-                    .buck_error_context("Invalid `declared_output`")?;
+                    .bsmr_error_context("Invalid `declared_output`")?;
                 let output = output
                     .ok_or_else(|| internal_error!("Missing `output`"))?
                     .try_into()
-                    .buck_error_context("Invalid `output`")?;
+                    .bsmr_error_context("Invalid `output`")?;
                 Ok((declared_output, output))
             })
             .collect::<Result<_, Self::Error>>()?;
@@ -986,12 +986,12 @@ impl TryFrom<bsmr_test_proto::ExecutionResult2> for ExecutionResult2 {
             + convert::to_std_duration(
                 start_time.ok_or_else(|| internal_error!("Missing `start_time`"))?,
             )
-            .buck_error_context("Invalid `start_time`")?;
+            .bsmr_error_context("Invalid `start_time`")?;
 
         let execution_time = convert::to_std_duration(
             execution_time.ok_or_else(|| internal_error!("Missing `execution_time`"))?,
         )
-        .buck_error_context("Invalid `execution_time`")?;
+        .bsmr_error_context("Invalid `execution_time`")?;
 
         let execution_details =
             execution_details.ok_or_else(|| internal_error!("Missing `execution_details`"))?;
@@ -1024,16 +1024,16 @@ impl TryFrom<bsmr_test_proto::TestExecutable> for TestExecutable {
         let ui_prints = stage
             .ok_or_else(|| internal_error!("Missing `ui_prints`"))?
             .try_into()
-            .buck_error_context("Invalid `ui_prints`")?;
+            .bsmr_error_context("Invalid `ui_prints`")?;
 
         let target = target
             .ok_or_else(|| internal_error!("Missing `target`"))?
             .try_into()
-            .buck_error_context("Invalid `target`")?;
+            .bsmr_error_context("Invalid `target`")?;
 
         let cmd = cmd
             .into_try_map(|c| c.try_into())
-            .buck_error_context("Invalid `cmd`")?;
+            .bsmr_error_context("Invalid `cmd`")?;
 
         let env = env
             .into_iter()
@@ -1042,14 +1042,14 @@ impl TryFrom<bsmr_test_proto::TestExecutable> for TestExecutable {
                 value
                     .ok_or_else(|| internal_error!("Missing `value`"))?
                     .try_into()
-                    .buck_error_context("Invalid `env`")
+                    .bsmr_error_context("Invalid `env`")
                     .map(|v: ArgValue| (key, v))
             })
             .collect::<bsmr_error::Result<_>>()?;
 
         let pre_create_dirs = pre_create_dirs
             .into_try_map(|c| c.try_into())
-            .buck_error_context("Invalid `pre_create_dirs`")?;
+            .bsmr_error_context("Invalid `pre_create_dirs`")?;
 
         Ok(TestExecutable {
             stage: ui_prints,
@@ -1068,23 +1068,23 @@ impl TryInto<bsmr_test_proto::TestExecutable> for TestExecutable {
         let stage = Some(
             self.stage
                 .try_into()
-                .buck_error_context("Invalid `ui_prints`")?,
+                .bsmr_error_context("Invalid `ui_prints`")?,
         );
         let target = Some(
             self.target
                 .try_into()
-                .buck_error_context("Invalid `target`")?,
+                .bsmr_error_context("Invalid `target`")?,
         );
         let cmd = self
             .cmd
             .into_try_map(|i| i.try_into())
-            .buck_error_context("Invalid `cmd`")?;
+            .bsmr_error_context("Invalid `cmd`")?;
 
         let env = self
             .env
             .into_iter()
             .map(|(k, v)| {
-                v.try_into().buck_error_context("Invalid `env`").map(
+                v.try_into().bsmr_error_context("Invalid `env`").map(
                     |v: bsmr_test_proto::ArgValue| bsmr_test_proto::EnvironmentVariable {
                         key: k,
                         value: Some(v),
@@ -1113,7 +1113,7 @@ impl TryInto<bsmr_test_proto::PrepareForLocalExecutionResponse> for PrepareForLo
             .command
             .cwd
             .to_str()
-            .buck_error_context("Invalid cwd path")?
+            .bsmr_error_context("Invalid cwd path")?
             .to_owned();
 
         Ok(bsmr_test_proto::PrepareForLocalExecutionResponse {
@@ -1151,7 +1151,7 @@ impl TryInto<bsmr_test_proto::SetupLocalResourceLocalExecutionCommand> for Local
             cwd: self
                 .cwd
                 .to_str()
-                .buck_error_context("Invalid cwd path for local resource")?
+                .bsmr_error_context("Invalid cwd path for local resource")?
                 .to_owned(),
             env: self
                 .env
@@ -1168,7 +1168,7 @@ impl TryFrom<bsmr_test_proto::PrepareForLocalExecutionResult> for LocalExecution
     fn try_from(s: bsmr_test_proto::PrepareForLocalExecutionResult) -> Result<Self, Self::Error> {
         Ok(Self {
             cmd: s.cmd,
-            cwd: s.cwd.try_into().buck_error_context("Invalid cwd value.")?,
+            cwd: s.cwd.try_into().bsmr_error_context("Invalid cwd value.")?,
             env: s
                 .env
                 .into_iter()
@@ -1186,7 +1186,7 @@ impl TryFrom<bsmr_test_proto::SetupLocalResourceLocalExecutionCommand> for Local
     ) -> Result<Self, Self::Error> {
         Ok(Self {
             cmd: s.cmd,
-            cwd: s.cwd.try_into().buck_error_context("Invalid cwd value.")?,
+            cwd: s.cwd.try_into().bsmr_error_context("Invalid cwd value.")?,
             env: s
                 .env
                 .into_iter()

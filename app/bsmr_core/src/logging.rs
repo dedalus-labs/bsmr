@@ -16,7 +16,7 @@
 
 use std::sync::Arc;
 
-use bsmr_error::BuckErrorContext;
+use bsmr_error::BsmrErrorContext;
 use bsmr_error::conversion::from_any_with_tag;
 use tracing_subscriber::EnvFilter;
 use tracing_subscriber::filter::Filtered;
@@ -55,10 +55,10 @@ where
     fn update_log_filter(&self, raw: &str) -> bsmr_error::Result<()> {
         let filter = EnvFilter::try_new(raw)
             .map_err(|e| from_any_with_tag(e, bsmr_error::ErrorTag::LogFilter))
-            .buck_error_context("Invalid log filter")?;
+            .bsmr_error_context("Invalid log filter")?;
         self.modify(|layer| *layer.filter_mut() = filter)
             .map_err(|e| from_any_with_tag(e, bsmr_error::ErrorTag::LogFilter))
-            .buck_error_context("Error updating log filter")?;
+            .bsmr_error_context("Error updating log filter")?;
         tracing::debug!("Log filter was updated to: `{}`", raw);
         Ok(())
     }
@@ -71,13 +71,13 @@ where
     W: for<'writer> MakeWriter<'writer> + Send + Sync + 'static,
 {
     // By default, show warnings/errors.
-    // If the user specifies BUCK_LOG, we want to honour that.
-    const ENV_VAR: &str = "BUCK_LOG";
+    // If the user specifies BSMR_LOG, we want to honour that.
+    const ENV_VAR: &str = "BSMR_LOG";
 
     let filter = match bsmr_env!(ENV_VAR)? {
         Some(v) => EnvFilter::try_new(v)
             .map_err(|e| from_any_with_tag(e, bsmr_error::ErrorTag::LogFilter))
-            .with_buck_error_context(|| format!("Failed to parse ${ENV_VAR} as a filter"))?,
+            .with_bsmr_error_context(|| format!("Failed to parse ${ENV_VAR} as a filter"))?,
         // daemon_listener is all emitted before the client starts tailing, which is why we log
         // those by default.
         None => EnvFilter::new("warn,[daemon_listener]=info"),

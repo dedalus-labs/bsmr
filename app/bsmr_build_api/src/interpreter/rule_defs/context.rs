@@ -25,7 +25,7 @@ use allocative::Allocative;
 use bsmr_core::provider::label::ConfiguredProvidersLabel;
 use bsmr_core::provider::label::ProvidersName;
 use bsmr_core::target::configured_target_label::ConfiguredTargetLabel;
-use bsmr_error::BuckErrorContext;
+use bsmr_error::BsmrErrorContext;
 use bsmr_error::conversion::from_any_with_tag;
 use bsmr_error::internal_error;
 use bsmr_execute::digest_config::DigestConfig;
@@ -121,7 +121,7 @@ impl<'v> AnalysisActions<'v> {
             .state
             .try_borrow_mut()
             .map_err(|e| from_any_with_tag(e, bsmr_error::ErrorTag::Tier0))
-            .buck_error_context("AnalysisActions.state is already borrowed")?;
+            .bsmr_error_context("AnalysisActions.state is already borrowed")?;
         RefMut::filter_map(state, |x| x.as_mut())
             .ok()
             .ok_or_else(|| internal_error!("state to be present during execution"))

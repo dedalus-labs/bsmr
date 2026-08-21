@@ -9,20 +9,20 @@ title: Build Report
 <!-- ===----------------------------------------------------------------------=== -->
 
 
-The build report is a JSON file that you can ask buck to output which contains
+The build report is a JSON file that you can ask bsmr to output which contains
 structured information about the result of your build. It is particularly
 valuable for its reporting of _unsuccessful_ outcomes in addition to
 _successful_ ones; usually, most use cases that only need to care about
 successful outcomes are well served by direct usage of the CLI.
 
-To request a build report, pass `--build-report <path>` to `buck build` on the
+To request a build report, pass `--build-report <path>` to `bsmr build` on the
 CLI.
 
 You can also pass `--build-report-options` with a comma-separated list of
 options to customize the build report:
 
 - `fill-out-failures`: Fill out the `failures` field in the build report (for
-  Buck1 backwards compatibility).
+  Legacy backwards compatibility).
 - `package-project-relative-paths`: Include the project-relative path of
   packages for built targets.
 - `include-artifact-hash-information`: Include artifact hash information in the
@@ -45,7 +45,7 @@ and `:target[sub]`.
 
 ```python
 BuildReport {
-    # A unique ID identifying this buck invocation. Currently a UUID, however
+    # A unique ID identifying this bsmr invocation. Currently a UUID, however
     # that may change in the future.
     trace_id: str,
 
@@ -68,7 +68,7 @@ BuildReport {
     # report in reference to these strings.
     strings: dict[str, str],
 
-    # BUCK1 BACKCOMPAT ONLY!
+    # BSMR1 BACKCOMPAT ONLY!
     #
     # Currently always empty. Will be filled in if a flag is passed in the future.
     #
@@ -97,9 +97,9 @@ BuildReportEntry {
     # configured.
     errors: list[Error],
 
-    # BUCK1 BACKCOMPAT ONLY!
+    # BSMR1 BACKCOMPAT ONLY!
     #
-    # The two fields below are included for buck1 backwards compatibility only.
+    # The two fields below are included for legacy backwards compatibility only.
     # They are both computed by aggregating across all the configured targets in
     # the way you might expect.
     success: "FAIL" | "SUCCESS",
@@ -384,7 +384,7 @@ The format of the build report is generally stable. However, note that new
 fields may be added at any time, and you should ensure this does not cause your
 parsing to fail.
 
-A number of fields above are marked as being for buck1 backwards compatibility
+A number of fields above are marked as being for legacy backwards compatibility
 only. These fields all have superior alternatives available in the build report
 already. We would strongly prefer that new code neither use nor parse them, as
 this increases the likelihood that they can be removed one day.
@@ -405,7 +405,7 @@ The build report currently has at least the following limitations:
     the command line. This is also a bug.
 1.  The "failures" field is empty by default. To populate it, pass the
     `fill-out-failures` option via `--build-report-options` (this exists for
-    buck1 backwards compatibility only; new code should not rely on it).
+    legacy backwards compatibility only; new code should not rely on it).
 
 Finally, it's worth raising that the concept of error deduplication has some
 fundamental limitations; if two targets both refer to the same non-existent

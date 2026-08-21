@@ -14,15 +14,15 @@
 
 # pyre-strict
 
-from bsmr.tests.e2e_util.api.buck import Buck
+from bsmr.tests.e2e_util.api.bsmr import Bsmr
 from bsmr.tests.e2e_util.asserts import expect_failure
-from bsmr.tests.e2e_util.buck_workspace import buck_test, env
+from bsmr.tests.e2e_util.bsmr_workspace import bsmr_test, env
 
 
-@buck_test()
-async def test_validation_affects_build_command(buck: Buck) -> None:
+@bsmr_test()
+async def test_validation_affects_build_command(bsmr: Bsmr) -> None:
     await expect_failure(
-        buck.build(":plate"),
+        bsmr.build(":plate"),
         stderr_regex="""
 Validation for `prelude//:mate \\(<unspecified>\\)` failed:
 
@@ -30,13 +30,13 @@ Here I am describing the failure reason
 
 Full validation result is located at""",
     )
-    await buck.build(":date")
+    await bsmr.build(":date")
 
 
-@buck_test(write_invocation_record=True)
-async def test_validation_affects_run_command(buck: Buck) -> None:
+@bsmr_test(write_invocation_record=True)
+async def test_validation_affects_run_command(bsmr: Bsmr) -> None:
     res = await expect_failure(
-        buck.run(
+        bsmr.run(
             ":plate",
         ),
         stderr_regex="""
@@ -50,14 +50,14 @@ Full validation result is located at""",
     record = res.invocation_record()
     assert len(record["errors"]) == 1
 
-    await buck.run(":date")
+    await bsmr.run(":date")
 
 
-@buck_test(write_invocation_record=True)
+@bsmr_test(write_invocation_record=True)
 @env("BSMR_ALLOW_INTERNAL_TEST_RUNNER_DO_NOT_USE", "1")
-async def test_validation_affects_test_command(buck: Buck) -> None:
+async def test_validation_affects_test_command(bsmr: Bsmr) -> None:
     res = await expect_failure(
-        buck.test(
+        bsmr.test(
             ":plate",
             test_executor="",
         ),
@@ -72,13 +72,13 @@ Full validation result is located at""",
     record = res.invocation_record()
     assert len(record["errors"]) == 1
 
-    await buck.test(":date", test_executor="")
+    await bsmr.test(":date", test_executor="")
 
 
-@buck_test(write_invocation_record=True)
-async def test_validation_affects_install_command(buck: Buck) -> None:
+@bsmr_test(write_invocation_record=True)
+async def test_validation_affects_install_command(bsmr: Bsmr) -> None:
     res = await expect_failure(
-        buck.install(
+        bsmr.install(
             ":plate",
         ),
         stderr_regex="Validation for `prelude//:mate \\(<unspecified>\\)` failed",
@@ -91,7 +91,7 @@ async def test_validation_affects_install_command(buck: Buck) -> None:
     # We intentionally fail on the installer side, but interpret
     # an attempt to run it as a successful verification.
     res = await expect_failure(
-        buck.install(
+        bsmr.install(
             ":date",
         ),
         stderr_regex="Installer: Incoming connection accepted, now closing it",
@@ -101,15 +101,15 @@ async def test_validation_affects_install_command(buck: Buck) -> None:
     assert len(record["errors"]) == 1
 
 
-@buck_test()
-async def test_optional_validation(buck: Buck) -> None:
-    await buck.build(":optional_passing")
+@bsmr_test()
+async def test_optional_validation(bsmr: Bsmr) -> None:
+    await bsmr.build(":optional_passing")
 
     # Optional validations are not run by default.
-    await buck.build(":optional_failing")
+    await bsmr.build(":optional_failing")
 
     # Expect a failure when run with --enable-optional-validations.
     await expect_failure(
-        buck.build(":optional_failing", "--enable-optional-validations", "whistle"),
+        bsmr.build(":optional_failing", "--enable-optional-validations", "whistle"),
         stderr_regex="Validation for `.+` failed",
     )

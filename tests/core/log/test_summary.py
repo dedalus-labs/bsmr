@@ -15,14 +15,14 @@
 # pyre-strict
 
 
-from bsmr.tests.e2e_util.api.buck import Buck
-from bsmr.tests.e2e_util.buck_workspace import buck_test
+from bsmr.tests.e2e_util.api.bsmr import Bsmr
+from bsmr.tests.e2e_util.bsmr_workspace import bsmr_test
 
 
-@buck_test()
-async def test_summary_command(buck: Buck) -> None:
-    await buck.build("//:my_rule")
-    out = await buck.log("summary")
+@bsmr_test()
+async def test_summary_command(bsmr: Bsmr) -> None:
+    await bsmr.build("//:my_rule")
+    out = await bsmr.log("summary")
 
     assert "Showing summary from:" in out.stdout
     assert "Targets Analyzed: 1" in out.stdout

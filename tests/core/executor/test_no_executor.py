@@ -14,18 +14,18 @@
 
 # pyre-strict
 
-from bsmr.tests.e2e_util.api.buck import Buck
+from bsmr.tests.e2e_util.api.bsmr import Bsmr
 from bsmr.tests.e2e_util.asserts import expect_failure
-from bsmr.tests.e2e_util.buck_workspace import buck_test
+from bsmr.tests.e2e_util.bsmr_workspace import bsmr_test
 
 
-@buck_test()
-async def test_no_executor(buck: Buck) -> None:
-    await buck.cquery(
+@bsmr_test()
+async def test_no_executor(bsmr: Bsmr) -> None:
+    await bsmr.cquery(
         "root//:run_action",
     )
 
     await expect_failure(
-        buck.build("root//:run_action"),
+        bsmr.build("root//:run_action"),
         stderr_regex=".*incompatible with the executor config.*",
     )

@@ -15,20 +15,20 @@
 # pyre-strict
 
 
-from bsmr.tests.e2e_util.api.buck import Buck
-from bsmr.tests.e2e_util.buck_workspace import buck_test
+from bsmr.tests.e2e_util.api.bsmr import Bsmr
+from bsmr.tests.e2e_util.bsmr_workspace import bsmr_test
 from bsmr.tests.e2e_util.helper.utils import filter_events
 
 
-@buck_test()
-async def test_forward_node_supports_cutoff(buck: Buck) -> None:
-    await buck.targets("--show-output", "root//:main")
+@bsmr_test()
+async def test_forward_node_supports_cutoff(bsmr: Bsmr) -> None:
+    await bsmr.targets("--show-output", "root//:main")
     # Add a file to the root directory
-    with open(buck.cwd / "TARGETS.fixture", "a") as targetsfile:
+    with open(bsmr.cwd / "TARGETS.fixture", "a") as targetsfile:
         targetsfile.write("\n# a comment\n")
-    await buck.targets("--show-output", "root//:main")
+    await bsmr.targets("--show-output", "root//:main")
 
-    events = await filter_events(buck, "Event", "data", "SpanEnd", "data")
+    events = await filter_events(bsmr, "Event", "data", "SpanEnd", "data")
     loads = []
     analyses = []
 

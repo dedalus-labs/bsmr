@@ -14,17 +14,17 @@
 
 # pyre-strict
 
-from bsmr.tests.e2e_util.api.buck import Buck
-from bsmr.tests.e2e_util.buck_workspace import buck_test
+from bsmr.tests.e2e_util.api.bsmr import Bsmr
+from bsmr.tests.e2e_util.bsmr_workspace import bsmr_test
 from bsmr.tests.e2e_util.helper.utils import filter_events
 
 
-@buck_test()
-async def test_emit_console_preferences(buck: Buck) -> None:
-    await buck.build("-c", "ui.thread_line_limit=30")
+@bsmr_test()
+async def test_emit_console_preferences(bsmr: Bsmr) -> None:
+    await bsmr.build("-c", "ui.thread_line_limit=30")
 
     max_lines = await filter_events(
-        buck,
+        bsmr,
         "Event",
         "data",
         "Instant",

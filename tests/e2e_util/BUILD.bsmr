@@ -32,7 +32,7 @@ python_library(
     name = "utilities",
     srcs = [
         "asserts.py",
-        "buck_workspace.py",
+        "bsmr_workspace.py",
     ],
     visibility = [
         "PUBLIC",

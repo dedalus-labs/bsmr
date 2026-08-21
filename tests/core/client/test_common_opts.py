@@ -18,30 +18,30 @@
 import tempfile
 
 import pytest
-from bsmr.tests.e2e_util.api.buck import Buck
+from bsmr.tests.e2e_util.api.bsmr import Bsmr
 from bsmr.tests.e2e_util.asserts import expect_failure
-from bsmr.tests.e2e_util.buck_workspace import buck_test
+from bsmr.tests.e2e_util.bsmr_workspace import bsmr_test
 
 
-@buck_test()
+@bsmr_test()
 @pytest.mark.parametrize(  # type: ignore
     "cmd",
     ["build", "targets", "cquery", "bxl", "uquery"],
 )
-async def test_write_uuid(buck: Buck, cmd: str) -> None:
+async def test_write_uuid(bsmr: Bsmr, cmd: str) -> None:
     with tempfile.NamedTemporaryFile() as file:
-        cmd_call = getattr(buck, cmd)
+        cmd_call = getattr(bsmr, cmd)
         await expect_failure(cmd_call("--write-build-id", file.name, "a"))
 
         assert len(file.read()) > 0
 
 
-@buck_test()
+@bsmr_test()
 @pytest.mark.parametrize(  # type: ignore
     "cmd",
     ["build", "targets", "cquery", "bxl", "uquery"],
 )
-async def test_ban_cell_override(buck: Buck, cmd: str) -> None:
-    cmd_call = getattr(buck, cmd)
+async def test_ban_cell_override(bsmr: Bsmr, cmd: str) -> None:
+    cmd_call = getattr(bsmr, cmd)
     await expect_failure(cmd_call("--config", "repositories.foo=bar", "a"))
     await expect_failure(cmd_call("--config", "cells.foo=bar", "a"))

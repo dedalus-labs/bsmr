@@ -22,8 +22,8 @@ use bsmr_server_ctx::ctx::ServerCommandContextTrait;
 use bsmr_server_ctx::ctx::ServerCommandDiceContext;
 use bsmr_server_ctx::partial_result_dispatcher::PartialResultDispatcher;
 
-use super::buck_out_path_parser::BuckOutPathParser;
-use super::buck_out_path_type_printer::BuckOutPathTypePrinter;
+use super::output_path_parser::OutputPathParser;
+use super::output_path_type_printer::OutputPathTypePrinter;
 use crate::ServerAuditSubcommand;
 
 #[async_trait]
@@ -37,10 +37,10 @@ impl ServerAuditSubcommand for AuditParseCommand {
         server_ctx
             .with_dice_ctx(|_server_ctx, mut dice_ctx| async move {
                 let cell_resolver = dice_ctx.get_cell_resolver().await?;
-                let buck_out_parser = BuckOutPathParser::new(cell_resolver);
-                let parsed_path = buck_out_parser.parse(&self.output_path)?;
+                let output_parser = OutputPathParser::new(cell_resolver);
+                let parsed_path = output_parser.parse(&self.output_path)?;
 
-                let printer = BuckOutPathTypePrinter::new(self.json, &self.output_attribute)?;
+                let printer = OutputPathTypePrinter::new(self.json, &self.output_attribute)?;
 
                 let stdout = stdout.as_writer();
 

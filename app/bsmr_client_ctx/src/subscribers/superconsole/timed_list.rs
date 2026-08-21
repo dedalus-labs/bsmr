@@ -20,8 +20,8 @@ use std::time::Duration;
 use bsmr_event_observer::display;
 use bsmr_event_observer::display::TargetDisplayOptions;
 use bsmr_event_observer::fmt_duration;
-use bsmr_event_observer::span_tracker::BuckEventSpanHandle;
-use bsmr_event_observer::span_tracker::BuckEventSpanTracker;
+use bsmr_event_observer::span_tracker::BsmrEventSpanHandle;
+use bsmr_event_observer::span_tracker::BsmrEventSpanTracker;
 use superconsole::Component;
 use superconsole::Dimensions;
 use superconsole::DrawMode;
@@ -64,8 +64,8 @@ impl TimedListBody<'_> {
     /// Render a root  as `root [first child + remaining children]`
     fn draw_root_first_child(
         &self,
-        root: &BuckEventSpanHandle,
-        single_child: BuckEventSpanHandle,
+        root: &BsmrEventSpanHandle,
+        single_child: BsmrEventSpanHandle,
         remaining_children: usize,
         display_platform: bool,
     ) -> bsmr_error::Result<TimedRow> {
@@ -112,7 +112,7 @@ impl TimedListBody<'_> {
         )
     }
 
-    fn draw_root(&self, root: &BuckEventSpanHandle) -> bsmr_error::Result<Vec<TimedRow>> {
+    fn draw_root(&self, root: &BsmrEventSpanHandle) -> bsmr_error::Result<Vec<TimedRow>> {
         let timekeeper = &self.state.timekeeper;
         let config = &self.state.config;
         let two_lines = config.two_lines;
@@ -225,7 +225,7 @@ impl Component for TimedList<'_> {
     type Error = bsmr_error::Error;
 
     fn draw_unchecked(&self, dimensions: Dimensions, mode: DrawMode) -> bsmr_error::Result<Lines> {
-        let span_tracker: &BuckEventSpanTracker = self.state.simple_console.observer().spans();
+        let span_tracker: &BsmrEventSpanTracker = self.state.simple_console.observer().spans();
 
         match mode {
             DrawMode::Normal if !span_tracker.is_unused() => {
@@ -255,9 +255,9 @@ mod tests {
     use bsmr_event_observer::action_stats::ActionStats;
     use bsmr_event_observer::span_tracker::EventTimestamp;
     use bsmr_event_observer::verbosity::Verbosity;
-    use bsmr_events::BuckEvent;
+    use bsmr_events::BsmrEvent;
     use bsmr_events::span::SpanId;
-    use bsmr_hash::StdBuckHashMap;
+    use bsmr_hash::StdBsmrHashMap;
     use bsmr_wrapper_common::invocation_id::TraceId;
     use dupe::Dupe;
     use itertools::Itertools;
@@ -294,7 +294,7 @@ mod tests {
     }
 
     fn super_console_state_for_test(
-        span_tracker: BuckEventSpanTracker,
+        span_tracker: BsmrEventSpanTracker,
         action_stats: ActionStats,
         timekeeper: Timekeeper,
         timed_list_state: SuperConsoleConfig,
@@ -317,31 +317,31 @@ mod tests {
     fn test_normal() -> bsmr_error::Result<()> {
         let tick = Tick::now();
 
-        let label = Arc::new(BuckEvent::new(
+        let label = Arc::new(BsmrEvent::new(
             fake_time(&tick, 3),
             TraceId::new(),
             Some(SpanId::next()),
             None,
-            bsmr_data::buck_event::Data::SpanStart(SpanStartEvent {
+            bsmr_data::bsmr_event::Data::SpanStart(SpanStartEvent {
                 data: Some(bsmr_data::span_start_event::Data::Fake(FakeStart {
                     caramba: "test".to_owned(),
                 })),
             }),
         ));
 
-        let module = Arc::new(BuckEvent::new(
+        let module = Arc::new(BsmrEvent::new(
             fake_time(&tick, 1),
             TraceId::new(),
             Some(SpanId::next()),
             None,
-            bsmr_data::buck_event::Data::SpanStart(SpanStartEvent {
+            bsmr_data::bsmr_event::Data::SpanStart(SpanStartEvent {
                 data: Some(bsmr_data::span_start_event::Data::Fake(FakeStart {
                     caramba: "foo".to_owned(),
                 })),
             }),
         ));
 
-        let mut state = BuckEventSpanTracker::new();
+        let mut state = BsmrEventSpanTracker::new();
         state.start_at(&label).unwrap();
         state.start_at(&module).unwrap();
 
@@ -387,43 +387,43 @@ mod tests {
     fn test_remaining() -> bsmr_error::Result<()> {
         let tick = Tick::now();
 
-        let e1 = BuckEvent::new(
+        let e1 = BsmrEvent::new(
             fake_time(&tick, 1),
             TraceId::new(),
             Some(SpanId::next()),
             None,
-            bsmr_data::buck_event::Data::SpanStart(SpanStartEvent {
+            bsmr_data::bsmr_event::Data::SpanStart(SpanStartEvent {
                 data: Some(bsmr_data::span_start_event::Data::Fake(FakeStart {
                     caramba: "e1".to_owned(),
                 })),
             }),
         );
 
-        let e2 = BuckEvent::new(
+        let e2 = BsmrEvent::new(
             fake_time(&tick, 1),
             TraceId::new(),
             Some(SpanId::next()),
             None,
-            bsmr_data::buck_event::Data::SpanStart(SpanStartEvent {
+            bsmr_data::bsmr_event::Data::SpanStart(SpanStartEvent {
                 data: Some(bsmr_data::span_start_event::Data::Fake(FakeStart {
                     caramba: "e2".to_owned(),
                 })),
             }),
         );
 
-        let e3 = BuckEvent::new(
+        let e3 = BsmrEvent::new(
             fake_time(&tick, 1),
             TraceId::new(),
             Some(SpanId::next()),
             None,
-            bsmr_data::buck_event::Data::SpanStart(SpanStartEvent {
+            bsmr_data::bsmr_event::Data::SpanStart(SpanStartEvent {
                 data: Some(bsmr_data::span_start_event::Data::Fake(FakeStart {
                     caramba: "e3".to_owned(),
                 })),
             }),
         );
 
-        let mut state = BuckEventSpanTracker::new();
+        let mut state = BsmrEventSpanTracker::new();
 
         for e in [e1, e2, e3] {
             state.start_at(&Arc::new(e.clone())).unwrap();
@@ -545,7 +545,7 @@ mod tests {
 
         let parent = SpanId::next();
 
-        let prepare = Arc::new(BuckEvent::new(
+        let prepare = Arc::new(BsmrEvent::new(
             fake_time(&tick, 5),
             TraceId::new(),
             Some(SpanId::next()),
@@ -561,7 +561,7 @@ mod tests {
             .into(),
         ));
 
-        let mut state = BuckEventSpanTracker::new();
+        let mut state = BsmrEventSpanTracker::new();
         state
             .start_at(&span_start_event(Some(parent), fake_time(&tick, 10)))
             .unwrap();
@@ -607,7 +607,7 @@ mod tests {
         // Now, add another action. Normally we don't have multiple stages actually running
         // concurrently but this is a test!
 
-        let re_download = Arc::new(BuckEvent::new(
+        let re_download = Arc::new(BsmrEvent::new(
             fake_time(&tick, 2),
             TraceId::new(),
             Some(SpanId::next()),
@@ -656,8 +656,8 @@ mod tests {
         Ok(())
     }
 
-    fn dice_snapshot(time: SystemTime) -> Arc<BuckEvent> {
-        Arc::new(BuckEvent::new(
+    fn dice_snapshot(time: SystemTime) -> Arc<BsmrEvent> {
+        Arc::new(BsmrEvent::new(
             time,
             TraceId::new(),
             None,
@@ -666,7 +666,7 @@ mod tests {
                 data: Some(
                     bsmr_data::DiceStateSnapshot {
                         key_states: {
-                            let mut map = StdBuckHashMap::default();
+                            let mut map = StdBsmrHashMap::default();
                             map.insert(
                                 "BuildKey".to_owned(),
                                 bsmr_data::DiceKeyState {
@@ -689,9 +689,9 @@ mod tests {
         ))
     }
 
-    fn span_start_event(parent_span: Option<SpanId>, time: SystemTime) -> Arc<BuckEvent> {
+    fn span_start_event(parent_span: Option<SpanId>, time: SystemTime) -> Arc<BsmrEvent> {
         let span_id = Some(parent_span.unwrap_or(SpanId::next()));
-        Arc::new(BuckEvent::new(
+        Arc::new(BsmrEvent::new(
             time,
             TraceId::new(),
             span_id,

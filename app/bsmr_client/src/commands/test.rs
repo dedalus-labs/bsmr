@@ -21,7 +21,7 @@ use bsmr_cli_proto::CounterWithExamples;
 use bsmr_cli_proto::TestRequest;
 use bsmr_cli_proto::TestSessionOptions;
 use bsmr_client_ctx::client_ctx::ClientCommandContext;
-use bsmr_client_ctx::common::BuckArgMatches;
+use bsmr_client_ctx::common::BsmrArgMatches;
 use bsmr_client_ctx::common::CommonBuildConfigurationOptions;
 use bsmr_client_ctx::common::CommonCommandOptions;
 use bsmr_client_ctx::common::CommonEventLogOptions;
@@ -30,7 +30,7 @@ use bsmr_client_ctx::common::build::CommonBuildOptions;
 use bsmr_client_ctx::common::target_cfg::TargetCfgOptions;
 use bsmr_client_ctx::common::timeout::CommonTimeoutOptions;
 use bsmr_client_ctx::common::ui::CommonConsoleOptions;
-use bsmr_client_ctx::daemon::client::BuckdClientConnector;
+use bsmr_client_ctx::daemon::client::BsmrdClientConnector;
 use bsmr_client_ctx::daemon::client::NoPartialResultHandler;
 use bsmr_client_ctx::events_ctx::EventsCtx;
 use bsmr_client_ctx::exit_result::ExitResult;
@@ -41,7 +41,7 @@ use bsmr_client_ctx::stdio::eprint_line;
 use bsmr_client_ctx::streaming::StreamingCommand;
 use bsmr_client_ctx::subscribers::superconsole::test::TestCounterColumn;
 use bsmr_client_ctx::subscribers::superconsole::test::span_from_build_failure_count;
-use bsmr_error::BuckErrorContext;
+use bsmr_error::BsmrErrorContext;
 use bsmr_error::ExitCode;
 use bsmr_error::internal_error;
 use bsmr_fs::error::IoResultExt;
@@ -50,7 +50,7 @@ use bsmr_fs::working_dir::AbsWorkingDir;
 use superconsole::Line;
 use superconsole::Span;
 
-use crate::commands::build::print_buck_ui_and_rating;
+use crate::commands::build::print_bsmr_ui_and_rating;
 use crate::commands::build::print_build_result;
 
 fn forward_output_to_path(
@@ -61,7 +61,7 @@ fn forward_output_to_path(
     fs_util::write(path_arg.resolve(working_dir), output)
         // input path from --test-executor-stderr=FILEPATH
         .categorize_input()
-        .buck_error_context("Failed to write test executor output to path")
+        .bsmr_error_context("Failed to write test executor output to path")
 }
 
 fn print_error_counter(
@@ -206,14 +206,6 @@ If include patterns are present, regardless of whether exclude patterns are pres
     #[clap(long, group = "run-info")]
     skip_run_info: bool,
 
-    /// This option does nothing. It is here to keep compatibility with Buck1 and ci
-    #[clap(long = "deep", hide = true)]
-    _deep: bool,
-
-    // ignored. only for e2e tests. compatibility with v1.
-    #[clap(long = "xml", hide = true)]
-    _xml: Option<String>,
-
     #[clap(flatten)]
     build_opts: CommonBuildOptions,
 
@@ -352,15 +344,15 @@ impl StreamingCommand for TestCommand {
 
     async fn exec_impl(
         self,
-        buckd: &mut BuckdClientConnector,
-        matches: BuckArgMatches<'_>,
+        bsmrd: &mut BsmrdClientConnector,
+        matches: BsmrArgMatches<'_>,
         ctx: &mut ClientCommandContext<'_>,
         events_ctx: &mut EventsCtx,
     ) -> ExitResult {
         // Warn if no target patterns but label filters are set
         // This usually means the patterns were accidentally consumed as label values
         // NOTE: maybe these should accept just one arg, but that probably breaks users who
-        // are doing buck test //... --include myproject myproject2
+        // are doing bsmr test //... --include myproject myproject2
         if let Some(suspicious_labels) =
             should_warn_about_flag_position(&self.patterns, &self.include, &self.exclude)
         {
@@ -394,7 +386,7 @@ impl StreamingCommand for TestCommand {
         }
 
         let context = ctx.client_context(matches, &self)?;
-        let response = buckd
+        let response = bsmrd
             .with_flushing()
             .test(
                 TestRequest {
@@ -471,7 +463,7 @@ impl StreamingCommand for TestCommand {
             console.print_error(&format!("{} BUILDS FAILED", statuses.build_errors))?;
         }
 
-        print_buck_ui_and_rating(&console, ctx, events_ctx.used_superconsole)?;
+        print_bsmr_ui_and_rating(&console, ctx, events_ctx.used_superconsole)?;
 
         let mut line = Line::default();
         line.push(Span::new_unstyled_lossy("Tests finished: "));

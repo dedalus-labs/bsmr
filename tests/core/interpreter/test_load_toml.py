@@ -17,8 +17,8 @@
 import ast
 from typing import Any
 
-from bsmr.tests.e2e_util.api.buck import Buck
-from bsmr.tests.e2e_util.buck_workspace import buck_test
+from bsmr.tests.e2e_util.api.bsmr import Bsmr
+from bsmr.tests.e2e_util.bsmr_workspace import bsmr_test
 
 
 def extract_test_output(stderr: str) -> dict[str, Any]:
@@ -55,9 +55,9 @@ def assert_common_fruits(data: dict[str, Any]) -> None:
     assert fruits[1]["name"] == "banana"
 
 
-@buck_test()
-async def test_load_toml(buck: Buck) -> None:
-    result = await buck.targets("root//:")
+@bsmr_test()
+async def test_load_toml(bsmr: Bsmr) -> None:
+    result = await bsmr.targets("root//:")
     data = extract_test_output(result.stderr)
 
     assert_common_types(data["types"])

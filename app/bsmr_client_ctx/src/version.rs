@@ -18,23 +18,23 @@ use std::fs::File;
 use std::sync::OnceLock;
 
 use bsmr_core::bsmr_env;
-use bsmr_error::BuckErrorContext;
+use bsmr_error::BsmrErrorContext;
 use bsmr_error::ErrorTag;
 use object::Object;
 
-/// Provides information about this buck version.
-pub struct BuckVersion {
+/// Provides information about this bsmr version.
+pub struct BsmrVersion {
     version: String,
     internal_exe_hash: String,
 }
 
-impl BuckVersion {
-    pub fn get() -> bsmr_error::Result<&'static BuckVersion> {
-        static VERSION: OnceLock<bsmr_error::Result<BuckVersion>> = OnceLock::new();
+impl BsmrVersion {
+    pub fn get() -> bsmr_error::Result<&'static BsmrVersion> {
+        static VERSION: OnceLock<bsmr_error::Result<BsmrVersion>> = OnceLock::new();
         VERSION
             .get_or_init(Self::compute)
             .as_ref()
-            .map_err(|err: &bsmr_error::Error| err.clone().tag([ErrorTag::BuckVersionError]))
+            .map_err(|err: &bsmr_error::Error| err.clone().tag([ErrorTag::BsmrVersionError]))
     }
 
     pub fn get_unique_id() -> bsmr_error::Result<&'static str> {
@@ -63,21 +63,21 @@ impl BuckVersion {
 
     fn hash_binary(file: &mut File) -> bsmr_error::Result<String> {
         let mut blake3 = blake3::Hasher::new();
-        std::io::copy(file, &mut blake3).buck_error_context("Error hashing binary")?;
+        std::io::copy(file, &mut blake3).bsmr_error_context("Error hashing binary")?;
         let hash = blake3.finalize();
         Ok(hash.to_hex().to_string())
     }
 
-    fn compute() -> bsmr_error::Result<BuckVersion> {
+    fn compute() -> bsmr_error::Result<BsmrVersion> {
         // Make sure to use the daemon exe's version, if there is one
         let exe = crate::daemon::client::connect::get_daemon_exe()
-            .buck_error_context("Error finding daemon executable for versioning")?;
+            .bsmr_error_context("Error finding daemon executable for versioning")?;
 
-        let mut file = File::open(&exe).with_buck_error_context(|| {
+        let mut file = File::open(&exe).with_bsmr_error_context(|| {
             format!("Error opening daemon executable at {}", exe.display())
         })?;
 
-        let file_m = unsafe { memmap2::Mmap::map(&file) }.with_buck_error_context(|| {
+        let file_m = unsafe { memmap2::Mmap::map(&file) }.with_bsmr_error_context(|| {
             format!(
                 "Error to mmap daemon executable at {} for versioning",
                 exe.display()
@@ -111,13 +111,13 @@ impl BuckVersion {
             format!("{internal_exe_hash} {internal_exe_hash_kind}")
         };
 
-        Ok(BuckVersion {
+        Ok(BsmrVersion {
             version,
             internal_exe_hash,
         })
     }
 
-    /// Provides a globally unique identifier for this buck executable.
+    /// Provides a globally unique identifier for this bsmr executable.
     pub fn unique_id(&self) -> &str {
         &self.internal_exe_hash
     }

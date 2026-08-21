@@ -553,7 +553,7 @@ def _symlink_ghci_binary(ctx, haskell_toolchain: HaskellToolchainInfo, ghci_bin:
     if not ghci_bin_dep:
         ghci_bin_dep = haskell_toolchain.ghci_ghc_path
 
-    # NOTE: In the buck1 version we'd symlink the binary only if a custom one
+    # NOTE: In the legacy version we'd symlink the binary only if a custom one
     # was provided, but in bsmr we're always setting `ghci_bin_dep` (i.e.
     # to default one if custom wasn't provided).
     src = ghci_bin_dep[DefaultInfo].default_outputs[0]
@@ -730,7 +730,7 @@ def haskell_ghci_impl(ctx: AnalysisContext) -> list[Provider]:
     outputs.extend(package_symlinks)
     outputs.extend(script_templates)
 
-    # As default output (e.g. used in `$(location )` buck macros), the rule
+    # As default output (e.g. used in `$(location )` bsmr macros), the rule
     # should output a directory containing symlinks to all scripts and resources
     # (e.g. shared objects, package configs)
     output_artifacts = {o.short_path: o for o in outputs}

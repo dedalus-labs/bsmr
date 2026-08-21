@@ -19,9 +19,9 @@ import json
 from pathlib import Path
 from typing import List
 
-from bsmr.tests.e2e_util.api.buck import Buck
+from bsmr.tests.e2e_util.api.bsmr import Bsmr
 from bsmr.tests.e2e_util.asserts import expect_failure
-from bsmr.tests.e2e_util.buck_workspace import buck_test
+from bsmr.tests.e2e_util.bsmr_workspace import bsmr_test
 from bsmr.tests.e2e_util.helper.golden import (
     golden,
     sanitize_build_report,
@@ -30,11 +30,11 @@ from bsmr.tests.e2e_util.helper.golden import (
 
 
 def build_report_test(name: str, command: List[str], should_fail: bool) -> None:
-    async def impl(buck: Buck, tmp_path: Path) -> None:
+    async def impl(bsmr: Bsmr, tmp_path: Path) -> None:
         report = tmp_path / "build-report.json"
         if should_fail:
             await expect_failure(
-                buck.test(
+                bsmr.test(
                     "--build-report",
                     str(report),
                     "--build-report-options",
@@ -43,7 +43,7 @@ def build_report_test(name: str, command: List[str], should_fail: bool) -> None:
                 )
             )
         else:
-            await buck.test("--build-report", str(report), *command)
+            await bsmr.test("--build-report", str(report), *command)
 
         with open(report) as file:
             report = json.loads(file.read())
@@ -60,7 +60,7 @@ def build_report_test(name: str, command: List[str], should_fail: bool) -> None:
 
     globals()[name] = impl
 
-    return buck_test()(impl)
+    return bsmr_test()(impl)
 
 
 build_report_test(

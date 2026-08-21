@@ -20,7 +20,7 @@ Perform lower level queries
 * `cell`: Query information about the [cells] list in .bsmr.
 * `file-package`: Map file paths to fully qualified package names.
 * `classpath`: Prints out a target's classpaths if it has one.
-    This command is deprecated and currently available for compatibility with buck1.
+    This command is deprecated and currently available for compatibility with legacy.
     We will replace this command with something that can audit the entire `TemplatePlaceholderInfo` in the future.
 * `config`: Read and display bsmrconfig values.
 * `configurations`: prints the constraints for configuration IDs
@@ -28,7 +28,7 @@ Perform lower level queries
 * `prelude`: print the interpreter prelude to stdout
 * `providers`: prints out the providers for a target pattern
 * `subtargets`: Print all subtargets
-* `analysis-queries`: buck audit analysis resolving query attrs
+* `analysis-queries`: bsmr audit analysis resolving query attrs
 * `execution-platform-resolution`: prints out information about execution platform resolution
 * `visibility`: Verify the visibility for transitive deps of the specified target(s) on the unconfigured target graph
 * `starlark`: Debug Starlark interpreter
@@ -84,7 +84,7 @@ Common options are documented under [Global options](#global-options).
 * `--profile-patterns <PROFILE_PATTERNS>`
     Enables profiling for all evaluations whose evaluation identifier matches one of the provided patterns.
 
-    Some examples identifiers: analysis/root//app/bsmr_action_impl:bsmr_action_impl (cfg:linux-x86_64#27ac5723e0c99706) load/cell//build_defs/json.bzl load/prelude//playground/test.bxl load/cell//build_defs/json.bzl@other_cell load_buildfile/upstream//third-party-buck/platform010/build/ncurses load_packagefile/upstream//cli/rust/cli_delegate anon_analysis/anon//:_anon_link_rule (anon: 766183dc9b6f680a) (root//platform/execution:linux-x86_64#08961b14cfb182aa) bxl/prelude//playground/test.bxl:playground
+    Some examples identifiers: analysis/root//app/bsmr_action_impl:bsmr_action_impl (cfg:linux-x86_64#27ac5723e0c99706) load/cell//build_defs/json.bzl load/prelude//playground/test.bxl load/cell//build_defs/json.bzl@other_cell load_buildfile/upstream//third-party-bsmr/platform010/build/ncurses load_packagefile/upstream//cli/rust/cli_delegate anon_analysis/anon//:_anon_link_rule (anon: 766183dc9b6f680a) (root//platform/execution:linux-x86_64#08961b14cfb182aa) bxl/prelude//playground/test.bxl:playground
 
     You can pass `--profile-patterns=.*` to enable no-op profiling for everything (additionally pass `--profile-patterns-mode=none` to use no-op profiling to just get a list of all the identifiers).
 
@@ -158,7 +158,7 @@ Common options are documented under [Global options](#global-options).
 * `--profile-patterns <PROFILE_PATTERNS>`
     Enables profiling for all evaluations whose evaluation identifier matches one of the provided patterns.
 
-    Some examples identifiers: analysis/root//app/bsmr_action_impl:bsmr_action_impl (cfg:linux-x86_64#27ac5723e0c99706) load/cell//build_defs/json.bzl load/prelude//playground/test.bxl load/cell//build_defs/json.bzl@other_cell load_buildfile/upstream//third-party-buck/platform010/build/ncurses load_packagefile/upstream//cli/rust/cli_delegate anon_analysis/anon//:_anon_link_rule (anon: 766183dc9b6f680a) (root//platform/execution:linux-x86_64#08961b14cfb182aa) bxl/prelude//playground/test.bxl:playground
+    Some examples identifiers: analysis/root//app/bsmr_action_impl:bsmr_action_impl (cfg:linux-x86_64#27ac5723e0c99706) load/cell//build_defs/json.bzl load/prelude//playground/test.bxl load/cell//build_defs/json.bzl@other_cell load_buildfile/upstream//third-party-bsmr/platform010/build/ncurses load_packagefile/upstream//cli/rust/cli_delegate anon_analysis/anon//:_anon_link_rule (anon: 766183dc9b6f680a) (root//platform/execution:linux-x86_64#08961b14cfb182aa) bxl/prelude//playground/test.bxl:playground
 
     You can pass `--profile-patterns=.*` to enable no-op profiling for everything (additionally pass `--profile-patterns-mode=none` to use no-op profiling to just get a list of all the identifiers).
 
@@ -198,7 +198,7 @@ Common options are documented under [Global options](#global-options).
 ## `bsmr audit classpath`
 
 Prints out a target's classpaths if it has one.
-    This command is deprecated and currently available for compatibility with buck1.
+    This command is deprecated and currently available for compatibility with legacy.
     We will replace this command with something that can audit the entire `TemplatePlaceholderInfo` in the future.
 
 **Usage**: `bsmr audit classpath [OPTIONS] [TARGET_PATTERNS]...`
@@ -237,7 +237,7 @@ Common options are documented under [Global options](#global-options).
 * `--profile-patterns <PROFILE_PATTERNS>`
     Enables profiling for all evaluations whose evaluation identifier matches one of the provided patterns.
 
-    Some examples identifiers: analysis/root//app/bsmr_action_impl:bsmr_action_impl (cfg:linux-x86_64#27ac5723e0c99706) load/cell//build_defs/json.bzl load/prelude//playground/test.bxl load/cell//build_defs/json.bzl@other_cell load_buildfile/upstream//third-party-buck/platform010/build/ncurses load_packagefile/upstream//cli/rust/cli_delegate anon_analysis/anon//:_anon_link_rule (anon: 766183dc9b6f680a) (root//platform/execution:linux-x86_64#08961b14cfb182aa) bxl/prelude//playground/test.bxl:playground
+    Some examples identifiers: analysis/root//app/bsmr_action_impl:bsmr_action_impl (cfg:linux-x86_64#27ac5723e0c99706) load/cell//build_defs/json.bzl load/prelude//playground/test.bxl load/cell//build_defs/json.bzl@other_cell load_buildfile/upstream//third-party-bsmr/platform010/build/ncurses load_packagefile/upstream//cli/rust/cli_delegate anon_analysis/anon//:_anon_link_rule (anon: 766183dc9b6f680a) (root//platform/execution:linux-x86_64#08961b14cfb182aa) bxl/prelude//playground/test.bxl:playground
 
     You can pass `--profile-patterns=.*` to enable no-op profiling for everything (additionally pass `--profile-patterns-mode=none` to use no-op profiling to just get a list of all the identifiers).
 
@@ -340,7 +340,7 @@ Common options are documented under [Global options](#global-options).
 * `--profile-patterns <PROFILE_PATTERNS>`
     Enables profiling for all evaluations whose evaluation identifier matches one of the provided patterns.
 
-    Some examples identifiers: analysis/root//app/bsmr_action_impl:bsmr_action_impl (cfg:linux-x86_64#27ac5723e0c99706) load/cell//build_defs/json.bzl load/prelude//playground/test.bxl load/cell//build_defs/json.bzl@other_cell load_buildfile/upstream//third-party-buck/platform010/build/ncurses load_packagefile/upstream//cli/rust/cli_delegate anon_analysis/anon//:_anon_link_rule (anon: 766183dc9b6f680a) (root//platform/execution:linux-x86_64#08961b14cfb182aa) bxl/prelude//playground/test.bxl:playground
+    Some examples identifiers: analysis/root//app/bsmr_action_impl:bsmr_action_impl (cfg:linux-x86_64#27ac5723e0c99706) load/cell//build_defs/json.bzl load/prelude//playground/test.bxl load/cell//build_defs/json.bzl@other_cell load_buildfile/upstream//third-party-bsmr/platform010/build/ncurses load_packagefile/upstream//cli/rust/cli_delegate anon_analysis/anon//:_anon_link_rule (anon: 766183dc9b6f680a) (root//platform/execution:linux-x86_64#08961b14cfb182aa) bxl/prelude//playground/test.bxl:playground
 
     You can pass `--profile-patterns=.*` to enable no-op profiling for everything (additionally pass `--profile-patterns-mode=none` to use no-op profiling to just get a list of all the identifiers).
 
@@ -411,7 +411,7 @@ Common options are documented under [Global options](#global-options).
 * `--profile-patterns <PROFILE_PATTERNS>`
     Enables profiling for all evaluations whose evaluation identifier matches one of the provided patterns.
 
-    Some examples identifiers: analysis/root//app/bsmr_action_impl:bsmr_action_impl (cfg:linux-x86_64#27ac5723e0c99706) load/cell//build_defs/json.bzl load/prelude//playground/test.bxl load/cell//build_defs/json.bzl@other_cell load_buildfile/upstream//third-party-buck/platform010/build/ncurses load_packagefile/upstream//cli/rust/cli_delegate anon_analysis/anon//:_anon_link_rule (anon: 766183dc9b6f680a) (root//platform/execution:linux-x86_64#08961b14cfb182aa) bxl/prelude//playground/test.bxl:playground
+    Some examples identifiers: analysis/root//app/bsmr_action_impl:bsmr_action_impl (cfg:linux-x86_64#27ac5723e0c99706) load/cell//build_defs/json.bzl load/prelude//playground/test.bxl load/cell//build_defs/json.bzl@other_cell load_buildfile/upstream//third-party-bsmr/platform010/build/ncurses load_packagefile/upstream//cli/rust/cli_delegate anon_analysis/anon//:_anon_link_rule (anon: 766183dc9b6f680a) (root//platform/execution:linux-x86_64#08961b14cfb182aa) bxl/prelude//playground/test.bxl:playground
 
     You can pass `--profile-patterns=.*` to enable no-op profiling for everything (additionally pass `--profile-patterns-mode=none` to use no-op profiling to just get a list of all the identifiers).
 
@@ -485,7 +485,7 @@ Common options are documented under [Global options](#global-options).
 * `--profile-patterns <PROFILE_PATTERNS>`
     Enables profiling for all evaluations whose evaluation identifier matches one of the provided patterns.
 
-    Some examples identifiers: analysis/root//app/bsmr_action_impl:bsmr_action_impl (cfg:linux-x86_64#27ac5723e0c99706) load/cell//build_defs/json.bzl load/prelude//playground/test.bxl load/cell//build_defs/json.bzl@other_cell load_buildfile/upstream//third-party-buck/platform010/build/ncurses load_packagefile/upstream//cli/rust/cli_delegate anon_analysis/anon//:_anon_link_rule (anon: 766183dc9b6f680a) (root//platform/execution:linux-x86_64#08961b14cfb182aa) bxl/prelude//playground/test.bxl:playground
+    Some examples identifiers: analysis/root//app/bsmr_action_impl:bsmr_action_impl (cfg:linux-x86_64#27ac5723e0c99706) load/cell//build_defs/json.bzl load/prelude//playground/test.bxl load/cell//build_defs/json.bzl@other_cell load_buildfile/upstream//third-party-bsmr/platform010/build/ncurses load_packagefile/upstream//cli/rust/cli_delegate anon_analysis/anon//:_anon_link_rule (anon: 766183dc9b6f680a) (root//platform/execution:linux-x86_64#08961b14cfb182aa) bxl/prelude//playground/test.bxl:playground
 
     You can pass `--profile-patterns=.*` to enable no-op profiling for everything (additionally pass `--profile-patterns-mode=none` to use no-op profiling to just get a list of all the identifiers).
 
@@ -551,7 +551,7 @@ Common options are documented under [Global options](#global-options).
 * `--profile-patterns <PROFILE_PATTERNS>`
     Enables profiling for all evaluations whose evaluation identifier matches one of the provided patterns.
 
-    Some examples identifiers: analysis/root//app/bsmr_action_impl:bsmr_action_impl (cfg:linux-x86_64#27ac5723e0c99706) load/cell//build_defs/json.bzl load/prelude//playground/test.bxl load/cell//build_defs/json.bzl@other_cell load_buildfile/upstream//third-party-buck/platform010/build/ncurses load_packagefile/upstream//cli/rust/cli_delegate anon_analysis/anon//:_anon_link_rule (anon: 766183dc9b6f680a) (root//platform/execution:linux-x86_64#08961b14cfb182aa) bxl/prelude//playground/test.bxl:playground
+    Some examples identifiers: analysis/root//app/bsmr_action_impl:bsmr_action_impl (cfg:linux-x86_64#27ac5723e0c99706) load/cell//build_defs/json.bzl load/prelude//playground/test.bxl load/cell//build_defs/json.bzl@other_cell load_buildfile/upstream//third-party-bsmr/platform010/build/ncurses load_packagefile/upstream//cli/rust/cli_delegate anon_analysis/anon//:_anon_link_rule (anon: 766183dc9b6f680a) (root//platform/execution:linux-x86_64#08961b14cfb182aa) bxl/prelude//playground/test.bxl:playground
 
     You can pass `--profile-patterns=.*` to enable no-op profiling for everything (additionally pass `--profile-patterns-mode=none` to use no-op profiling to just get a list of all the identifiers).
 
@@ -647,7 +647,7 @@ Common options are documented under [Global options](#global-options).
 * `--profile-patterns <PROFILE_PATTERNS>`
     Enables profiling for all evaluations whose evaluation identifier matches one of the provided patterns.
 
-    Some examples identifiers: analysis/root//app/bsmr_action_impl:bsmr_action_impl (cfg:linux-x86_64#27ac5723e0c99706) load/cell//build_defs/json.bzl load/prelude//playground/test.bxl load/cell//build_defs/json.bzl@other_cell load_buildfile/upstream//third-party-buck/platform010/build/ncurses load_packagefile/upstream//cli/rust/cli_delegate anon_analysis/anon//:_anon_link_rule (anon: 766183dc9b6f680a) (root//platform/execution:linux-x86_64#08961b14cfb182aa) bxl/prelude//playground/test.bxl:playground
+    Some examples identifiers: analysis/root//app/bsmr_action_impl:bsmr_action_impl (cfg:linux-x86_64#27ac5723e0c99706) load/cell//build_defs/json.bzl load/prelude//playground/test.bxl load/cell//build_defs/json.bzl@other_cell load_buildfile/upstream//third-party-bsmr/platform010/build/ncurses load_packagefile/upstream//cli/rust/cli_delegate anon_analysis/anon//:_anon_link_rule (anon: 766183dc9b6f680a) (root//platform/execution:linux-x86_64#08961b14cfb182aa) bxl/prelude//playground/test.bxl:playground
 
     You can pass `--profile-patterns=.*` to enable no-op profiling for everything (additionally pass `--profile-patterns-mode=none` to use no-op profiling to just get a list of all the identifiers).
 
@@ -738,7 +738,7 @@ Common options are documented under [Global options](#global-options).
 * `--profile-patterns <PROFILE_PATTERNS>`
     Enables profiling for all evaluations whose evaluation identifier matches one of the provided patterns.
 
-    Some examples identifiers: analysis/root//app/bsmr_action_impl:bsmr_action_impl (cfg:linux-x86_64#27ac5723e0c99706) load/cell//build_defs/json.bzl load/prelude//playground/test.bxl load/cell//build_defs/json.bzl@other_cell load_buildfile/upstream//third-party-buck/platform010/build/ncurses load_packagefile/upstream//cli/rust/cli_delegate anon_analysis/anon//:_anon_link_rule (anon: 766183dc9b6f680a) (root//platform/execution:linux-x86_64#08961b14cfb182aa) bxl/prelude//playground/test.bxl:playground
+    Some examples identifiers: analysis/root//app/bsmr_action_impl:bsmr_action_impl (cfg:linux-x86_64#27ac5723e0c99706) load/cell//build_defs/json.bzl load/prelude//playground/test.bxl load/cell//build_defs/json.bzl@other_cell load_buildfile/upstream//third-party-bsmr/platform010/build/ncurses load_packagefile/upstream//cli/rust/cli_delegate anon_analysis/anon//:_anon_link_rule (anon: 766183dc9b6f680a) (root//platform/execution:linux-x86_64#08961b14cfb182aa) bxl/prelude//playground/test.bxl:playground
 
     You can pass `--profile-patterns=.*` to enable no-op profiling for everything (additionally pass `--profile-patterns-mode=none` to use no-op profiling to just get a list of all the identifiers).
 
@@ -777,7 +777,7 @@ Common options are documented under [Global options](#global-options).
 
 ## `bsmr audit analysis-queries`
 
-buck audit analysis resolving query attrs
+bsmr audit analysis resolving query attrs
 
 **Usage**: `bsmr audit analysis-queries [OPTIONS] [TARGET_PATTERNS]...`
 
@@ -826,7 +826,7 @@ Common options are documented under [Global options](#global-options).
 * `--profile-patterns <PROFILE_PATTERNS>`
     Enables profiling for all evaluations whose evaluation identifier matches one of the provided patterns.
 
-    Some examples identifiers: analysis/root//app/bsmr_action_impl:bsmr_action_impl (cfg:linux-x86_64#27ac5723e0c99706) load/cell//build_defs/json.bzl load/prelude//playground/test.bxl load/cell//build_defs/json.bzl@other_cell load_buildfile/upstream//third-party-buck/platform010/build/ncurses load_packagefile/upstream//cli/rust/cli_delegate anon_analysis/anon//:_anon_link_rule (anon: 766183dc9b6f680a) (root//platform/execution:linux-x86_64#08961b14cfb182aa) bxl/prelude//playground/test.bxl:playground
+    Some examples identifiers: analysis/root//app/bsmr_action_impl:bsmr_action_impl (cfg:linux-x86_64#27ac5723e0c99706) load/cell//build_defs/json.bzl load/prelude//playground/test.bxl load/cell//build_defs/json.bzl@other_cell load_buildfile/upstream//third-party-bsmr/platform010/build/ncurses load_packagefile/upstream//cli/rust/cli_delegate anon_analysis/anon//:_anon_link_rule (anon: 766183dc9b6f680a) (root//platform/execution:linux-x86_64#08961b14cfb182aa) bxl/prelude//playground/test.bxl:playground
 
     You can pass `--profile-patterns=.*` to enable no-op profiling for everything (additionally pass `--profile-patterns-mode=none` to use no-op profiling to just get a list of all the identifiers).
 
@@ -911,7 +911,7 @@ Common options are documented under [Global options](#global-options).
 * `--profile-patterns <PROFILE_PATTERNS>`
     Enables profiling for all evaluations whose evaluation identifier matches one of the provided patterns.
 
-    Some examples identifiers: analysis/root//app/bsmr_action_impl:bsmr_action_impl (cfg:linux-x86_64#27ac5723e0c99706) load/cell//build_defs/json.bzl load/prelude//playground/test.bxl load/cell//build_defs/json.bzl@other_cell load_buildfile/upstream//third-party-buck/platform010/build/ncurses load_packagefile/upstream//cli/rust/cli_delegate anon_analysis/anon//:_anon_link_rule (anon: 766183dc9b6f680a) (root//platform/execution:linux-x86_64#08961b14cfb182aa) bxl/prelude//playground/test.bxl:playground
+    Some examples identifiers: analysis/root//app/bsmr_action_impl:bsmr_action_impl (cfg:linux-x86_64#27ac5723e0c99706) load/cell//build_defs/json.bzl load/prelude//playground/test.bxl load/cell//build_defs/json.bzl@other_cell load_buildfile/upstream//third-party-bsmr/platform010/build/ncurses load_packagefile/upstream//cli/rust/cli_delegate anon_analysis/anon//:_anon_link_rule (anon: 766183dc9b6f680a) (root//platform/execution:linux-x86_64#08961b14cfb182aa) bxl/prelude//playground/test.bxl:playground
 
     You can pass `--profile-patterns=.*` to enable no-op profiling for everything (additionally pass `--profile-patterns-mode=none` to use no-op profiling to just get a list of all the identifiers).
 
@@ -982,7 +982,7 @@ Common options are documented under [Global options](#global-options).
 * `--profile-patterns <PROFILE_PATTERNS>`
     Enables profiling for all evaluations whose evaluation identifier matches one of the provided patterns.
 
-    Some examples identifiers: analysis/root//app/bsmr_action_impl:bsmr_action_impl (cfg:linux-x86_64#27ac5723e0c99706) load/cell//build_defs/json.bzl load/prelude//playground/test.bxl load/cell//build_defs/json.bzl@other_cell load_buildfile/upstream//third-party-buck/platform010/build/ncurses load_packagefile/upstream//cli/rust/cli_delegate anon_analysis/anon//:_anon_link_rule (anon: 766183dc9b6f680a) (root//platform/execution:linux-x86_64#08961b14cfb182aa) bxl/prelude//playground/test.bxl:playground
+    Some examples identifiers: analysis/root//app/bsmr_action_impl:bsmr_action_impl (cfg:linux-x86_64#27ac5723e0c99706) load/cell//build_defs/json.bzl load/prelude//playground/test.bxl load/cell//build_defs/json.bzl@other_cell load_buildfile/upstream//third-party-bsmr/platform010/build/ncurses load_packagefile/upstream//cli/rust/cli_delegate anon_analysis/anon//:_anon_link_rule (anon: 766183dc9b6f680a) (root//platform/execution:linux-x86_64#08961b14cfb182aa) bxl/prelude//playground/test.bxl:playground
 
     You can pass `--profile-patterns=.*` to enable no-op profiling for everything (additionally pass `--profile-patterns-mode=none` to use no-op profiling to just get a list of all the identifiers).
 
@@ -1066,7 +1066,7 @@ Common options are documented under [Global options](#global-options).
 * `--profile-patterns <PROFILE_PATTERNS>`
     Enables profiling for all evaluations whose evaluation identifier matches one of the provided patterns.
 
-    Some examples identifiers: analysis/root//app/bsmr_action_impl:bsmr_action_impl (cfg:linux-x86_64#27ac5723e0c99706) load/cell//build_defs/json.bzl load/prelude//playground/test.bxl load/cell//build_defs/json.bzl@other_cell load_buildfile/upstream//third-party-buck/platform010/build/ncurses load_packagefile/upstream//cli/rust/cli_delegate anon_analysis/anon//:_anon_link_rule (anon: 766183dc9b6f680a) (root//platform/execution:linux-x86_64#08961b14cfb182aa) bxl/prelude//playground/test.bxl:playground
+    Some examples identifiers: analysis/root//app/bsmr_action_impl:bsmr_action_impl (cfg:linux-x86_64#27ac5723e0c99706) load/cell//build_defs/json.bzl load/prelude//playground/test.bxl load/cell//build_defs/json.bzl@other_cell load_buildfile/upstream//third-party-bsmr/platform010/build/ncurses load_packagefile/upstream//cli/rust/cli_delegate anon_analysis/anon//:_anon_link_rule (anon: 766183dc9b6f680a) (root//platform/execution:linux-x86_64#08961b14cfb182aa) bxl/prelude//playground/test.bxl:playground
 
     You can pass `--profile-patterns=.*` to enable no-op profiling for everything (additionally pass `--profile-patterns-mode=none` to use no-op profiling to just get a list of all the identifiers).
 
@@ -1137,7 +1137,7 @@ Common options are documented under [Global options](#global-options).
 * `--profile-patterns <PROFILE_PATTERNS>`
     Enables profiling for all evaluations whose evaluation identifier matches one of the provided patterns.
 
-    Some examples identifiers: analysis/root//app/bsmr_action_impl:bsmr_action_impl (cfg:linux-x86_64#27ac5723e0c99706) load/cell//build_defs/json.bzl load/prelude//playground/test.bxl load/cell//build_defs/json.bzl@other_cell load_buildfile/upstream//third-party-buck/platform010/build/ncurses load_packagefile/upstream//cli/rust/cli_delegate anon_analysis/anon//:_anon_link_rule (anon: 766183dc9b6f680a) (root//platform/execution:linux-x86_64#08961b14cfb182aa) bxl/prelude//playground/test.bxl:playground
+    Some examples identifiers: analysis/root//app/bsmr_action_impl:bsmr_action_impl (cfg:linux-x86_64#27ac5723e0c99706) load/cell//build_defs/json.bzl load/prelude//playground/test.bxl load/cell//build_defs/json.bzl@other_cell load_buildfile/upstream//third-party-bsmr/platform010/build/ncurses load_packagefile/upstream//cli/rust/cli_delegate anon_analysis/anon//:_anon_link_rule (anon: 766183dc9b6f680a) (root//platform/execution:linux-x86_64#08961b14cfb182aa) bxl/prelude//playground/test.bxl:playground
 
     You can pass `--profile-patterns=.*` to enable no-op profiling for everything (additionally pass `--profile-patterns-mode=none` to use no-op profiling to just get a list of all the identifiers).
 
@@ -1219,7 +1219,7 @@ Common options are documented under [Global options](#global-options).
 * `--profile-patterns <PROFILE_PATTERNS>`
     Enables profiling for all evaluations whose evaluation identifier matches one of the provided patterns.
 
-    Some examples identifiers: analysis/root//app/bsmr_action_impl:bsmr_action_impl (cfg:linux-x86_64#27ac5723e0c99706) load/cell//build_defs/json.bzl load/prelude//playground/test.bxl load/cell//build_defs/json.bzl@other_cell load_buildfile/upstream//third-party-buck/platform010/build/ncurses load_packagefile/upstream//cli/rust/cli_delegate anon_analysis/anon//:_anon_link_rule (anon: 766183dc9b6f680a) (root//platform/execution:linux-x86_64#08961b14cfb182aa) bxl/prelude//playground/test.bxl:playground
+    Some examples identifiers: analysis/root//app/bsmr_action_impl:bsmr_action_impl (cfg:linux-x86_64#27ac5723e0c99706) load/cell//build_defs/json.bzl load/prelude//playground/test.bxl load/cell//build_defs/json.bzl@other_cell load_buildfile/upstream//third-party-bsmr/platform010/build/ncurses load_packagefile/upstream//cli/rust/cli_delegate anon_analysis/anon//:_anon_link_rule (anon: 766183dc9b6f680a) (root//platform/execution:linux-x86_64#08961b14cfb182aa) bxl/prelude//playground/test.bxl:playground
 
     You can pass `--profile-patterns=.*` to enable no-op profiling for everything (additionally pass `--profile-patterns-mode=none` to use no-op profiling to just get a list of all the identifiers).
 
@@ -1294,7 +1294,7 @@ Common options are documented under [Global options](#global-options).
 * `--profile-patterns <PROFILE_PATTERNS>`
     Enables profiling for all evaluations whose evaluation identifier matches one of the provided patterns.
 
-    Some examples identifiers: analysis/root//app/bsmr_action_impl:bsmr_action_impl (cfg:linux-x86_64#27ac5723e0c99706) load/cell//build_defs/json.bzl load/prelude//playground/test.bxl load/cell//build_defs/json.bzl@other_cell load_buildfile/upstream//third-party-buck/platform010/build/ncurses load_packagefile/upstream//cli/rust/cli_delegate anon_analysis/anon//:_anon_link_rule (anon: 766183dc9b6f680a) (root//platform/execution:linux-x86_64#08961b14cfb182aa) bxl/prelude//playground/test.bxl:playground
+    Some examples identifiers: analysis/root//app/bsmr_action_impl:bsmr_action_impl (cfg:linux-x86_64#27ac5723e0c99706) load/cell//build_defs/json.bzl load/prelude//playground/test.bxl load/cell//build_defs/json.bzl@other_cell load_buildfile/upstream//third-party-bsmr/platform010/build/ncurses load_packagefile/upstream//cli/rust/cli_delegate anon_analysis/anon//:_anon_link_rule (anon: 766183dc9b6f680a) (root//platform/execution:linux-x86_64#08961b14cfb182aa) bxl/prelude//playground/test.bxl:playground
 
     You can pass `--profile-patterns=.*` to enable no-op profiling for everything (additionally pass `--profile-patterns-mode=none` to use no-op profiling to just get a list of all the identifiers).
 
@@ -1475,7 +1475,7 @@ Common options are documented under [Global options](#global-options).
 * `--profile-patterns <PROFILE_PATTERNS>`
     Enables profiling for all evaluations whose evaluation identifier matches one of the provided patterns.
 
-    Some examples identifiers: analysis/root//app/bsmr_action_impl:bsmr_action_impl (cfg:linux-x86_64#27ac5723e0c99706) load/cell//build_defs/json.bzl load/prelude//playground/test.bxl load/cell//build_defs/json.bzl@other_cell load_buildfile/upstream//third-party-buck/platform010/build/ncurses load_packagefile/upstream//cli/rust/cli_delegate anon_analysis/anon//:_anon_link_rule (anon: 766183dc9b6f680a) (root//platform/execution:linux-x86_64#08961b14cfb182aa) bxl/prelude//playground/test.bxl:playground
+    Some examples identifiers: analysis/root//app/bsmr_action_impl:bsmr_action_impl (cfg:linux-x86_64#27ac5723e0c99706) load/cell//build_defs/json.bzl load/prelude//playground/test.bxl load/cell//build_defs/json.bzl@other_cell load_buildfile/upstream//third-party-bsmr/platform010/build/ncurses load_packagefile/upstream//cli/rust/cli_delegate anon_analysis/anon//:_anon_link_rule (anon: 766183dc9b6f680a) (root//platform/execution:linux-x86_64#08961b14cfb182aa) bxl/prelude//playground/test.bxl:playground
 
     You can pass `--profile-patterns=.*` to enable no-op profiling for everything (additionally pass `--profile-patterns-mode=none` to use no-op profiling to just get a list of all the identifiers).
 
@@ -1543,7 +1543,7 @@ Common options are documented under [Global options](#global-options).
 * `--profile-patterns <PROFILE_PATTERNS>`
     Enables profiling for all evaluations whose evaluation identifier matches one of the provided patterns.
 
-    Some examples identifiers: analysis/root//app/bsmr_action_impl:bsmr_action_impl (cfg:linux-x86_64#27ac5723e0c99706) load/cell//build_defs/json.bzl load/prelude//playground/test.bxl load/cell//build_defs/json.bzl@other_cell load_buildfile/upstream//third-party-buck/platform010/build/ncurses load_packagefile/upstream//cli/rust/cli_delegate anon_analysis/anon//:_anon_link_rule (anon: 766183dc9b6f680a) (root//platform/execution:linux-x86_64#08961b14cfb182aa) bxl/prelude//playground/test.bxl:playground
+    Some examples identifiers: analysis/root//app/bsmr_action_impl:bsmr_action_impl (cfg:linux-x86_64#27ac5723e0c99706) load/cell//build_defs/json.bzl load/prelude//playground/test.bxl load/cell//build_defs/json.bzl@other_cell load_buildfile/upstream//third-party-bsmr/platform010/build/ncurses load_packagefile/upstream//cli/rust/cli_delegate anon_analysis/anon//:_anon_link_rule (anon: 766183dc9b6f680a) (root//platform/execution:linux-x86_64#08961b14cfb182aa) bxl/prelude//playground/test.bxl:playground
 
     You can pass `--profile-patterns=.*` to enable no-op profiling for everything (additionally pass `--profile-patterns-mode=none` to use no-op profiling to just get a list of all the identifiers).
 
@@ -1616,7 +1616,7 @@ Common options are documented under [Global options](#global-options).
 * `--profile-patterns <PROFILE_PATTERNS>`
     Enables profiling for all evaluations whose evaluation identifier matches one of the provided patterns.
 
-    Some examples identifiers: analysis/root//app/bsmr_action_impl:bsmr_action_impl (cfg:linux-x86_64#27ac5723e0c99706) load/cell//build_defs/json.bzl load/prelude//playground/test.bxl load/cell//build_defs/json.bzl@other_cell load_buildfile/upstream//third-party-buck/platform010/build/ncurses load_packagefile/upstream//cli/rust/cli_delegate anon_analysis/anon//:_anon_link_rule (anon: 766183dc9b6f680a) (root//platform/execution:linux-x86_64#08961b14cfb182aa) bxl/prelude//playground/test.bxl:playground
+    Some examples identifiers: analysis/root//app/bsmr_action_impl:bsmr_action_impl (cfg:linux-x86_64#27ac5723e0c99706) load/cell//build_defs/json.bzl load/prelude//playground/test.bxl load/cell//build_defs/json.bzl@other_cell load_buildfile/upstream//third-party-bsmr/platform010/build/ncurses load_packagefile/upstream//cli/rust/cli_delegate anon_analysis/anon//:_anon_link_rule (anon: 766183dc9b6f680a) (root//platform/execution:linux-x86_64#08961b14cfb182aa) bxl/prelude//playground/test.bxl:playground
 
     You can pass `--profile-patterns=.*` to enable no-op profiling for everything (additionally pass `--profile-patterns-mode=none` to use no-op profiling to just get a list of all the identifiers).
 
@@ -1664,7 +1664,7 @@ with dependencies when one action consumes the outputs of another
 action.
 
 Run `bsmr docs aquery` or
-https://buck2.build/docs/users/query/aquery/
+https://oss.dedaluslabs.ai/bsmr/users/query/aquery/
 for more documentation about the functions available in aquery
 expressions.
 
@@ -1764,7 +1764,7 @@ Common options are documented under [Global options](#global-options).
 * `--profile-patterns <PROFILE_PATTERNS>`
     Enables profiling for all evaluations whose evaluation identifier matches one of the provided patterns.
 
-    Some examples identifiers: analysis/root//app/bsmr_action_impl:bsmr_action_impl (cfg:linux-x86_64#27ac5723e0c99706) load/cell//build_defs/json.bzl load/prelude//playground/test.bxl load/cell//build_defs/json.bzl@other_cell load_buildfile/upstream//third-party-buck/platform010/build/ncurses load_packagefile/upstream//cli/rust/cli_delegate anon_analysis/anon//:_anon_link_rule (anon: 766183dc9b6f680a) (root//platform/execution:linux-x86_64#08961b14cfb182aa) bxl/prelude//playground/test.bxl:playground
+    Some examples identifiers: analysis/root//app/bsmr_action_impl:bsmr_action_impl (cfg:linux-x86_64#27ac5723e0c99706) load/cell//build_defs/json.bzl load/prelude//playground/test.bxl load/cell//build_defs/json.bzl@other_cell load_buildfile/upstream//third-party-bsmr/platform010/build/ncurses load_packagefile/upstream//cli/rust/cli_delegate anon_analysis/anon//:_anon_link_rule (anon: 766183dc9b6f680a) (root//platform/execution:linux-x86_64#08961b14cfb182aa) bxl/prelude//playground/test.bxl:playground
 
     You can pass `--profile-patterns=.*` to enable no-op profiling for everything (additionally pass `--profile-patterns-mode=none` to use no-op profiling to just get a list of all the identifiers).
 
@@ -1883,7 +1883,7 @@ Common options are documented under [Global options](#global-options).
 
     The following options are supported:
 
-    `fill-out-failures`: fill out failures the same way Buck1 would.
+    `fill-out-failures`: fill out failures the same way Legacy would.
 
     `package-project-relative-paths`: emit the project-relative path of packages for the targets that were built.
 
@@ -1932,16 +1932,16 @@ Common options are documented under [Global options](#global-options).
     This is useful when debugging builds and trying to inspect actions which executed remotely. It's possible that the action result is cached but the action itself has expired. In this case, downloading the action itself would fail. Enabling this option would unconditionally upload all actions, thus you will not hit any expiration issues.
 
 * `--fail-fast`
-    If Buck hits an error, do as little work as possible before exiting.
+    If Bsmr hits an error, do as little work as possible before exiting.
 
-    To illustrate the effect of this flag, consider an invocation of `build :foo :bar`. The default behavior of buck is to do enough work to get a result for the builds of each of `:foo` and `:bar`, and no more. This means that buck will continue to complete the build of `:bar` after the build of `:foo` has failed; however, once one dependency of `:foo` has failed, other dependencies will be cancelled unless they are needed by `:bar`.
+    To illustrate the effect of this flag, consider an invocation of `build :foo :bar`. The default behavior of bsmr is to do enough work to get a result for the builds of each of `:foo` and `:bar`, and no more. This means that bsmr will continue to complete the build of `:bar` after the build of `:foo` has failed; however, once one dependency of `:foo` has failed, other dependencies will be cancelled unless they are needed by `:bar`.
 
-    This flag changes the behavior of buck to not wait on `:bar` to complete once `:foo` has failed. Generally, this flag only has an effect on builds that specify multiple targets.
+    This flag changes the behavior of bsmr to not wait on `:bar` to complete once `:foo` has failed. Generally, this flag only has an effect on builds that specify multiple targets.
 
-    `--keep-going` changes the behavior of buck to not only wait on `:bar` once one dependency of `:foo` has failed, but to additionally attempt to build other dependencies of `:foo` if possible.
+    `--keep-going` changes the behavior of bsmr to not only wait on `:bar` once one dependency of `:foo` has failed, but to additionally attempt to build other dependencies of `:foo` if possible.
 
 * `--keep-going`
-    If Buck hits an error, continue doing as much work as possible before exiting.
+    If Bsmr hits an error, continue doing as much work as possible before exiting.
 
     See `--fail-fast` for more details.
 
@@ -2002,7 +2002,7 @@ Common options are documented under [Global options](#global-options).
 * `--profile-patterns <PROFILE_PATTERNS>`
     Enables profiling for all evaluations whose evaluation identifier matches one of the provided patterns.
 
-    Some examples identifiers: analysis/root//app/bsmr_action_impl:bsmr_action_impl (cfg:linux-x86_64#27ac5723e0c99706) load/cell//build_defs/json.bzl load/prelude//playground/test.bxl load/cell//build_defs/json.bzl@other_cell load_buildfile/upstream//third-party-buck/platform010/build/ncurses load_packagefile/upstream//cli/rust/cli_delegate anon_analysis/anon//:_anon_link_rule (anon: 766183dc9b6f680a) (root//platform/execution:linux-x86_64#08961b14cfb182aa) bxl/prelude//playground/test.bxl:playground
+    Some examples identifiers: analysis/root//app/bsmr_action_impl:bsmr_action_impl (cfg:linux-x86_64#27ac5723e0c99706) load/cell//build_defs/json.bzl load/prelude//playground/test.bxl load/cell//build_defs/json.bzl@other_cell load_buildfile/upstream//third-party-bsmr/platform010/build/ncurses load_packagefile/upstream//cli/rust/cli_delegate anon_analysis/anon//:_anon_link_rule (anon: 766183dc9b6f680a) (root//platform/execution:linux-x86_64#08961b14cfb182aa) bxl/prelude//playground/test.bxl:playground
 
     You can pass `--profile-patterns=.*` to enable no-op profiling for everything (additionally pass `--profile-patterns-mode=none` to use no-op profiling to just get a list of all the identifiers).
 
@@ -2088,7 +2088,7 @@ Common options are documented under [Global options](#global-options).
 
     The following options are supported:
 
-    `fill-out-failures`: fill out failures the same way Buck1 would.
+    `fill-out-failures`: fill out failures the same way Legacy would.
 
     `package-project-relative-paths`: emit the project-relative path of packages for the targets that were built.
 
@@ -2137,16 +2137,16 @@ Common options are documented under [Global options](#global-options).
     This is useful when debugging builds and trying to inspect actions which executed remotely. It's possible that the action result is cached but the action itself has expired. In this case, downloading the action itself would fail. Enabling this option would unconditionally upload all actions, thus you will not hit any expiration issues.
 
 * `--fail-fast`
-    If Buck hits an error, do as little work as possible before exiting.
+    If Bsmr hits an error, do as little work as possible before exiting.
 
-    To illustrate the effect of this flag, consider an invocation of `build :foo :bar`. The default behavior of buck is to do enough work to get a result for the builds of each of `:foo` and `:bar`, and no more. This means that buck will continue to complete the build of `:bar` after the build of `:foo` has failed; however, once one dependency of `:foo` has failed, other dependencies will be cancelled unless they are needed by `:bar`.
+    To illustrate the effect of this flag, consider an invocation of `build :foo :bar`. The default behavior of bsmr is to do enough work to get a result for the builds of each of `:foo` and `:bar`, and no more. This means that bsmr will continue to complete the build of `:bar` after the build of `:foo` has failed; however, once one dependency of `:foo` has failed, other dependencies will be cancelled unless they are needed by `:bar`.
 
-    This flag changes the behavior of buck to not wait on `:bar` to complete once `:foo` has failed. Generally, this flag only has an effect on builds that specify multiple targets.
+    This flag changes the behavior of bsmr to not wait on `:bar` to complete once `:foo` has failed. Generally, this flag only has an effect on builds that specify multiple targets.
 
-    `--keep-going` changes the behavior of buck to not only wait on `:bar` once one dependency of `:foo` has failed, but to additionally attempt to build other dependencies of `:foo` if possible.
+    `--keep-going` changes the behavior of bsmr to not only wait on `:bar` once one dependency of `:foo` has failed, but to additionally attempt to build other dependencies of `:foo` if possible.
 
 * `--keep-going`
-    If Buck hits an error, continue doing as much work as possible before exiting.
+    If Bsmr hits an error, continue doing as much work as possible before exiting.
 
     See `--fail-fast` for more details.
 
@@ -2183,7 +2183,7 @@ Common options are documented under [Global options](#global-options).
 * `--profile-patterns <PROFILE_PATTERNS>`
     Enables profiling for all evaluations whose evaluation identifier matches one of the provided patterns.
 
-    Some examples identifiers: analysis/root//app/bsmr_action_impl:bsmr_action_impl (cfg:linux-x86_64#27ac5723e0c99706) load/cell//build_defs/json.bzl load/prelude//playground/test.bxl load/cell//build_defs/json.bzl@other_cell load_buildfile/upstream//third-party-buck/platform010/build/ncurses load_packagefile/upstream//cli/rust/cli_delegate anon_analysis/anon//:_anon_link_rule (anon: 766183dc9b6f680a) (root//platform/execution:linux-x86_64#08961b14cfb182aa) bxl/prelude//playground/test.bxl:playground
+    Some examples identifiers: analysis/root//app/bsmr_action_impl:bsmr_action_impl (cfg:linux-x86_64#27ac5723e0c99706) load/cell//build_defs/json.bzl load/prelude//playground/test.bxl load/cell//build_defs/json.bzl@other_cell load_buildfile/upstream//third-party-bsmr/platform010/build/ncurses load_packagefile/upstream//cli/rust/cli_delegate anon_analysis/anon//:_anon_link_rule (anon: 766183dc9b6f680a) (root//platform/execution:linux-x86_64#08961b14cfb182aa) bxl/prelude//playground/test.bxl:playground
 
     You can pass `--profile-patterns=.*` to enable no-op profiling for everything (additionally pass `--profile-patterns-mode=none` to use no-op profiling to just get a list of all the identifiers).
 
@@ -2327,7 +2327,7 @@ Common options are documented under [Global options](#global-options).
 
     The following options are supported:
 
-    `fill-out-failures`: fill out failures the same way Buck1 would.
+    `fill-out-failures`: fill out failures the same way Legacy would.
 
     `package-project-relative-paths`: emit the project-relative path of packages for the targets that were built.
 
@@ -2376,16 +2376,16 @@ Common options are documented under [Global options](#global-options).
     This is useful when debugging builds and trying to inspect actions which executed remotely. It's possible that the action result is cached but the action itself has expired. In this case, downloading the action itself would fail. Enabling this option would unconditionally upload all actions, thus you will not hit any expiration issues.
 
 * `--fail-fast`
-    If Buck hits an error, do as little work as possible before exiting.
+    If Bsmr hits an error, do as little work as possible before exiting.
 
-    To illustrate the effect of this flag, consider an invocation of `build :foo :bar`. The default behavior of buck is to do enough work to get a result for the builds of each of `:foo` and `:bar`, and no more. This means that buck will continue to complete the build of `:bar` after the build of `:foo` has failed; however, once one dependency of `:foo` has failed, other dependencies will be cancelled unless they are needed by `:bar`.
+    To illustrate the effect of this flag, consider an invocation of `build :foo :bar`. The default behavior of bsmr is to do enough work to get a result for the builds of each of `:foo` and `:bar`, and no more. This means that bsmr will continue to complete the build of `:bar` after the build of `:foo` has failed; however, once one dependency of `:foo` has failed, other dependencies will be cancelled unless they are needed by `:bar`.
 
-    This flag changes the behavior of buck to not wait on `:bar` to complete once `:foo` has failed. Generally, this flag only has an effect on builds that specify multiple targets.
+    This flag changes the behavior of bsmr to not wait on `:bar` to complete once `:foo` has failed. Generally, this flag only has an effect on builds that specify multiple targets.
 
-    `--keep-going` changes the behavior of buck to not only wait on `:bar` once one dependency of `:foo` has failed, but to additionally attempt to build other dependencies of `:foo` if possible.
+    `--keep-going` changes the behavior of bsmr to not only wait on `:bar` once one dependency of `:foo` has failed, but to additionally attempt to build other dependencies of `:foo` if possible.
 
 * `--keep-going`
-    If Buck hits an error, continue doing as much work as possible before exiting.
+    If Bsmr hits an error, continue doing as much work as possible before exiting.
 
     See `--fail-fast` for more details.
 
@@ -2438,7 +2438,7 @@ Common options are documented under [Global options](#global-options).
 * `--profile-patterns <PROFILE_PATTERNS>`
     Enables profiling for all evaluations whose evaluation identifier matches one of the provided patterns.
 
-    Some examples identifiers: analysis/root//app/bsmr_action_impl:bsmr_action_impl (cfg:linux-x86_64#27ac5723e0c99706) load/cell//build_defs/json.bzl load/prelude//playground/test.bxl load/cell//build_defs/json.bzl@other_cell load_buildfile/upstream//third-party-buck/platform010/build/ncurses load_packagefile/upstream//cli/rust/cli_delegate anon_analysis/anon//:_anon_link_rule (anon: 766183dc9b6f680a) (root//platform/execution:linux-x86_64#08961b14cfb182aa) bxl/prelude//playground/test.bxl:playground
+    Some examples identifiers: analysis/root//app/bsmr_action_impl:bsmr_action_impl (cfg:linux-x86_64#27ac5723e0c99706) load/cell//build_defs/json.bzl load/prelude//playground/test.bxl load/cell//build_defs/json.bzl@other_cell load_buildfile/upstream//third-party-bsmr/platform010/build/ncurses load_packagefile/upstream//cli/rust/cli_delegate anon_analysis/anon//:_anon_link_rule (anon: 766183dc9b6f680a) (root//platform/execution:linux-x86_64#08961b14cfb182aa) bxl/prelude//playground/test.bxl:playground
 
     You can pass `--profile-patterns=.*` to enable no-op profiling for everything (additionally pass `--profile-patterns-mode=none` to use no-op profiling to just get a list of all the identifiers).
 
@@ -2493,7 +2493,7 @@ provided, we implicitly set the universe to be rooted at every
 target literal in the `cquery`.
 
 Run `bsmr docs cquery` or
-https://buck2.build/docs/users/query/cquery/
+https://oss.dedaluslabs.ai/bsmr/users/query/cquery/
 for more documentation about the functions available in cquery
 expressions.
 
@@ -2603,7 +2603,7 @@ Common options are documented under [Global options](#global-options).
 * `--profile-patterns <PROFILE_PATTERNS>`
     Enables profiling for all evaluations whose evaluation identifier matches one of the provided patterns.
 
-    Some examples identifiers: analysis/root//app/bsmr_action_impl:bsmr_action_impl (cfg:linux-x86_64#27ac5723e0c99706) load/cell//build_defs/json.bzl load/prelude//playground/test.bxl load/cell//build_defs/json.bzl@other_cell load_buildfile/upstream//third-party-buck/platform010/build/ncurses load_packagefile/upstream//cli/rust/cli_delegate anon_analysis/anon//:_anon_link_rule (anon: 766183dc9b6f680a) (root//platform/execution:linux-x86_64#08961b14cfb182aa) bxl/prelude//playground/test.bxl:playground
+    Some examples identifiers: analysis/root//app/bsmr_action_impl:bsmr_action_impl (cfg:linux-x86_64#27ac5723e0c99706) load/cell//build_defs/json.bzl load/prelude//playground/test.bxl load/cell//build_defs/json.bzl@other_cell load_buildfile/upstream//third-party-bsmr/platform010/build/ncurses load_packagefile/upstream//cli/rust/cli_delegate anon_analysis/anon//:_anon_link_rule (anon: 766183dc9b6f680a) (root//platform/execution:linux-x86_64#08961b14cfb182aa) bxl/prelude//playground/test.bxl:playground
 
     You can pass `--profile-patterns=.*` to enable no-op profiling for everything (additionally pass `--profile-patterns-mode=none` to use no-op profiling to just get a list of all the identifiers).
 
@@ -2641,7 +2641,7 @@ Common options are documented under [Global options](#global-options).
 * `--profile-mode <PROFILE_MODE>`
     Profile target loading.
 
-    When this option is enabled, Buck will profile every `BUILD.bsmr` file loaded during the query and merge the results into a single profile. The command may return cached profile data if `BUILD.bsmr` files were not invalidated.
+    When this option is enabled, Bsmr will profile every `BUILD.bsmr` file loaded during the query and merge the results into a single profile. The command may return cached profile data if `BUILD.bsmr` files were not invalidated.
 
     * Possible values:
         * `time-flame`
@@ -2796,34 +2796,34 @@ Common options are documented under [Global options](#global-options).
     Prints installer output to stderr. It might break superconsole
 
 * `-r, --run`
-    Run an Android activity. Here for compatibility with buck1 - it is automatically forwarded to the installer
+    Run an Android activity. Here for compatibility with legacy - it is automatically forwarded to the installer
 
 * `-e, --emulator`
-    Use this option to use emulators only on Android. Here for compatibility with buck1 - it is automatically forwarded to the installer
+    Use this option to use emulators only on Android. Here for compatibility with legacy - it is automatically forwarded to the installer
 
 * `-d, --device`
-    Use this option to use real devices only on Android. Here for compatibility with buck1 - it is automatically forwarded to the installer
+    Use this option to use real devices only on Android. Here for compatibility with legacy - it is automatically forwarded to the installer
 
 * `-s, --serial <SERIAL>`
-    Use Android device or emulator with specific serial or UDID number. Here for compatibility with buck1 - it is automatically forwarded to the installer
+    Use Android device or emulator with specific serial or UDID number. Here for compatibility with legacy - it is automatically forwarded to the installer
 
 * `-x, --all-devices`
-    Use all connected Android devices and/or emulators (multi-install mode). Here for compatibility with buck1 - it is automatically forwarded to the installer
+    Use all connected Android devices and/or emulators (multi-install mode). Here for compatibility with legacy - it is automatically forwarded to the installer
 
 * `-a, --activity <ACTIVITY>`
-    Android activity to launch e.g. com.facebook/.LoginActivity. Implies -r. Here for compatibility with buck1 - it is automatically forwarded to the installer
+    Android activity to launch e.g. com.facebook/.LoginActivity. Implies -r. Here for compatibility with legacy - it is automatically forwarded to the installer
 
 * `-i, --intent-uri <INTENT_URI>`
-    Android Intent URI to launch e.g. fb://profile. Implies -r. Here for compatibility with buck1 - it is automatically forwarded to the installer
+    Android Intent URI to launch e.g. fb://profile. Implies -r. Here for compatibility with legacy - it is automatically forwarded to the installer
 
 * `-w, --wait-for-debugger`
-    Have the launched Android process wait for the debugger. Here for compatibility with buck1 - it is automatically forwarded to the installer
+    Have the launched Android process wait for the debugger. Here for compatibility with legacy - it is automatically forwarded to the installer
 
 * `-u, --uninstall`
-    Use this option to uninstall an installed app before installing again. Here for compatibility with buck1 - it is automatically forwarded to the installer
+    Use this option to uninstall an installed app before installing again. Here for compatibility with legacy - it is automatically forwarded to the installer
 
 * `-k, --keep`
-    Use this option to Keep user data when uninstalling. Here for compatibility with buck1 - it is automatically forwarded to the installer
+    Use this option to Keep user data when uninstalling. Here for compatibility with legacy - it is automatically forwarded to the installer
 
 * `--build-report <PATH>`
     Print a build report
@@ -2840,7 +2840,7 @@ Common options are documented under [Global options](#global-options).
 
     The following options are supported:
 
-    `fill-out-failures`: fill out failures the same way Buck1 would.
+    `fill-out-failures`: fill out failures the same way Legacy would.
 
     `package-project-relative-paths`: emit the project-relative path of packages for the targets that were built.
 
@@ -2889,16 +2889,16 @@ Common options are documented under [Global options](#global-options).
     This is useful when debugging builds and trying to inspect actions which executed remotely. It's possible that the action result is cached but the action itself has expired. In this case, downloading the action itself would fail. Enabling this option would unconditionally upload all actions, thus you will not hit any expiration issues.
 
 * `--fail-fast`
-    If Buck hits an error, do as little work as possible before exiting.
+    If Bsmr hits an error, do as little work as possible before exiting.
 
-    To illustrate the effect of this flag, consider an invocation of `build :foo :bar`. The default behavior of buck is to do enough work to get a result for the builds of each of `:foo` and `:bar`, and no more. This means that buck will continue to complete the build of `:bar` after the build of `:foo` has failed; however, once one dependency of `:foo` has failed, other dependencies will be cancelled unless they are needed by `:bar`.
+    To illustrate the effect of this flag, consider an invocation of `build :foo :bar`. The default behavior of bsmr is to do enough work to get a result for the builds of each of `:foo` and `:bar`, and no more. This means that bsmr will continue to complete the build of `:bar` after the build of `:foo` has failed; however, once one dependency of `:foo` has failed, other dependencies will be cancelled unless they are needed by `:bar`.
 
-    This flag changes the behavior of buck to not wait on `:bar` to complete once `:foo` has failed. Generally, this flag only has an effect on builds that specify multiple targets.
+    This flag changes the behavior of bsmr to not wait on `:bar` to complete once `:foo` has failed. Generally, this flag only has an effect on builds that specify multiple targets.
 
-    `--keep-going` changes the behavior of buck to not only wait on `:bar` once one dependency of `:foo` has failed, but to additionally attempt to build other dependencies of `:foo` if possible.
+    `--keep-going` changes the behavior of bsmr to not only wait on `:bar` once one dependency of `:foo` has failed, but to additionally attempt to build other dependencies of `:foo` if possible.
 
 * `--keep-going`
-    If Buck hits an error, continue doing as much work as possible before exiting.
+    If Bsmr hits an error, continue doing as much work as possible before exiting.
 
     See `--fail-fast` for more details.
 
@@ -2935,7 +2935,7 @@ Common options are documented under [Global options](#global-options).
 * `--profile-patterns <PROFILE_PATTERNS>`
     Enables profiling for all evaluations whose evaluation identifier matches one of the provided patterns.
 
-    Some examples identifiers: analysis/root//app/bsmr_action_impl:bsmr_action_impl (cfg:linux-x86_64#27ac5723e0c99706) load/cell//build_defs/json.bzl load/prelude//playground/test.bxl load/cell//build_defs/json.bzl@other_cell load_buildfile/upstream//third-party-buck/platform010/build/ncurses load_packagefile/upstream//cli/rust/cli_delegate anon_analysis/anon//:_anon_link_rule (anon: 766183dc9b6f680a) (root//platform/execution:linux-x86_64#08961b14cfb182aa) bxl/prelude//playground/test.bxl:playground
+    Some examples identifiers: analysis/root//app/bsmr_action_impl:bsmr_action_impl (cfg:linux-x86_64#27ac5723e0c99706) load/cell//build_defs/json.bzl load/prelude//playground/test.bxl load/cell//build_defs/json.bzl@other_cell load_buildfile/upstream//third-party-bsmr/platform010/build/ncurses load_packagefile/upstream//cli/rust/cli_delegate anon_analysis/anon//:_anon_link_rule (anon: 766183dc9b6f680a) (root//platform/execution:linux-x86_64#08961b14cfb182aa) bxl/prelude//playground/test.bxl:playground
 
     You can pass `--profile-patterns=.*` to enable no-op profiling for everything (additionally pass `--profile-patterns-mode=none` to use no-op profiling to just get a list of all the identifiers).
 
@@ -3104,7 +3104,7 @@ Common options are documented under [Global options](#global-options).
 * `--profile-patterns <PROFILE_PATTERNS>`
     Enables profiling for all evaluations whose evaluation identifier matches one of the provided patterns.
 
-    Some examples identifiers: analysis/root//app/bsmr_action_impl:bsmr_action_impl (cfg:linux-x86_64#27ac5723e0c99706) load/cell//build_defs/json.bzl load/prelude//playground/test.bxl load/cell//build_defs/json.bzl@other_cell load_buildfile/upstream//third-party-buck/platform010/build/ncurses load_packagefile/upstream//cli/rust/cli_delegate anon_analysis/anon//:_anon_link_rule (anon: 766183dc9b6f680a) (root//platform/execution:linux-x86_64#08961b14cfb182aa) bxl/prelude//playground/test.bxl:playground
+    Some examples identifiers: analysis/root//app/bsmr_action_impl:bsmr_action_impl (cfg:linux-x86_64#27ac5723e0c99706) load/cell//build_defs/json.bzl load/prelude//playground/test.bxl load/cell//build_defs/json.bzl@other_cell load_buildfile/upstream//third-party-bsmr/platform010/build/ncurses load_packagefile/upstream//cli/rust/cli_delegate anon_analysis/anon//:_anon_link_rule (anon: 766183dc9b6f680a) (root//platform/execution:linux-x86_64#08961b14cfb182aa) bxl/prelude//playground/test.bxl:playground
 
     You can pass `--profile-patterns=.*` to enable no-op profiling for everything (additionally pass `--profile-patterns-mode=none` to use no-op profiling to just get a list of all the identifiers).
 
@@ -3149,7 +3149,7 @@ Use `--` to separate arguments to the target from arguments to bsmr:
 
 bsmr run //my/target -- --arg1 --arg2
 
-The Build ID for the underlying build execution is made available to the target in the `BUCK_RUN_BUILD_ID` environment variable.
+The Build ID for the underlying build execution is made available to the target in the `BSMR_RUN_BUILD_ID` environment variable.
 
 **Usage**: `bsmr bsmr run [OPTIONS] <TARGET> [-- <TARGET_ARGS>...]`
 
@@ -3190,7 +3190,7 @@ Common options are documented under [Global options](#global-options).
 
     The following options are supported:
 
-    `fill-out-failures`: fill out failures the same way Buck1 would.
+    `fill-out-failures`: fill out failures the same way Legacy would.
 
     `package-project-relative-paths`: emit the project-relative path of packages for the targets that were built.
 
@@ -3239,16 +3239,16 @@ Common options are documented under [Global options](#global-options).
     This is useful when debugging builds and trying to inspect actions which executed remotely. It's possible that the action result is cached but the action itself has expired. In this case, downloading the action itself would fail. Enabling this option would unconditionally upload all actions, thus you will not hit any expiration issues.
 
 * `--fail-fast`
-    If Buck hits an error, do as little work as possible before exiting.
+    If Bsmr hits an error, do as little work as possible before exiting.
 
-    To illustrate the effect of this flag, consider an invocation of `build :foo :bar`. The default behavior of buck is to do enough work to get a result for the builds of each of `:foo` and `:bar`, and no more. This means that buck will continue to complete the build of `:bar` after the build of `:foo` has failed; however, once one dependency of `:foo` has failed, other dependencies will be cancelled unless they are needed by `:bar`.
+    To illustrate the effect of this flag, consider an invocation of `build :foo :bar`. The default behavior of bsmr is to do enough work to get a result for the builds of each of `:foo` and `:bar`, and no more. This means that bsmr will continue to complete the build of `:bar` after the build of `:foo` has failed; however, once one dependency of `:foo` has failed, other dependencies will be cancelled unless they are needed by `:bar`.
 
-    This flag changes the behavior of buck to not wait on `:bar` to complete once `:foo` has failed. Generally, this flag only has an effect on builds that specify multiple targets.
+    This flag changes the behavior of bsmr to not wait on `:bar` to complete once `:foo` has failed. Generally, this flag only has an effect on builds that specify multiple targets.
 
-    `--keep-going` changes the behavior of buck to not only wait on `:bar` once one dependency of `:foo` has failed, but to additionally attempt to build other dependencies of `:foo` if possible.
+    `--keep-going` changes the behavior of bsmr to not only wait on `:bar` once one dependency of `:foo` has failed, but to additionally attempt to build other dependencies of `:foo` if possible.
 
 * `--keep-going`
-    If Buck hits an error, continue doing as much work as possible before exiting.
+    If Bsmr hits an error, continue doing as much work as possible before exiting.
 
     See `--fail-fast` for more details.
 
@@ -3296,7 +3296,7 @@ Common options are documented under [Global options](#global-options).
 * `--profile-patterns <PROFILE_PATTERNS>`
     Enables profiling for all evaluations whose evaluation identifier matches one of the provided patterns.
 
-    Some examples identifiers: analysis/root//app/bsmr_action_impl:bsmr_action_impl (cfg:linux-x86_64#27ac5723e0c99706) load/cell//build_defs/json.bzl load/prelude//playground/test.bxl load/cell//build_defs/json.bzl@other_cell load_buildfile/upstream//third-party-buck/platform010/build/ncurses load_packagefile/upstream//cli/rust/cli_delegate anon_analysis/anon//:_anon_link_rule (anon: 766183dc9b6f680a) (root//platform/execution:linux-x86_64#08961b14cfb182aa) bxl/prelude//playground/test.bxl:playground
+    Some examples identifiers: analysis/root//app/bsmr_action_impl:bsmr_action_impl (cfg:linux-x86_64#27ac5723e0c99706) load/cell//build_defs/json.bzl load/prelude//playground/test.bxl load/cell//build_defs/json.bzl@other_cell load_buildfile/upstream//third-party-bsmr/platform010/build/ncurses load_packagefile/upstream//cli/rust/cli_delegate anon_analysis/anon//:_anon_link_rule (anon: 766183dc9b6f680a) (root//platform/execution:linux-x86_64#08961b14cfb182aa) bxl/prelude//playground/test.bxl:playground
 
     You can pass `--profile-patterns=.*` to enable no-op profiling for everything (additionally pass `--profile-patterns-mode=none` to use no-op profiling to just get a list of all the identifiers).
 
@@ -3349,7 +3349,7 @@ Common options are documented under [Global options](#global-options).
 
 ### Options:
 * `--status`
-    Print buckd status as JSON after ensuring the server is running.
+    Print bsmrd status as JSON after ensuring the server is running.
 
 * `--snapshot`
     Whether to include a state snapshot in the JSON status output.
@@ -3370,7 +3370,7 @@ Common options are documented under [Global options](#global-options).
     Whether to include a state snapshot in the output.
 
 * `--all`
-    Enable printing status for all running buckd
+    Enable printing status for all running bsmrd
 
 * `--include-tokio-runtime-metrics`
     Enable printing metrics from the Tokio runtime
@@ -3420,7 +3420,7 @@ Common options are documented under [Global options](#global-options).
 * `--profile-patterns <PROFILE_PATTERNS>`
     Enables profiling for all evaluations whose evaluation identifier matches one of the provided patterns.
 
-    Some examples identifiers: analysis/root//app/bsmr_action_impl:bsmr_action_impl (cfg:linux-x86_64#27ac5723e0c99706) load/cell//build_defs/json.bzl load/prelude//playground/test.bxl load/cell//build_defs/json.bzl@other_cell load_buildfile/upstream//third-party-buck/platform010/build/ncurses load_packagefile/upstream//cli/rust/cli_delegate anon_analysis/anon//:_anon_link_rule (anon: 766183dc9b6f680a) (root//platform/execution:linux-x86_64#08961b14cfb182aa) bxl/prelude//playground/test.bxl:playground
+    Some examples identifiers: analysis/root//app/bsmr_action_impl:bsmr_action_impl (cfg:linux-x86_64#27ac5723e0c99706) load/cell//build_defs/json.bzl load/prelude//playground/test.bxl load/cell//build_defs/json.bzl@other_cell load_buildfile/upstream//third-party-bsmr/platform010/build/ncurses load_packagefile/upstream//cli/rust/cli_delegate anon_analysis/anon//:_anon_link_rule (anon: 766183dc9b6f680a) (root//platform/execution:linux-x86_64#08961b14cfb182aa) bxl/prelude//playground/test.bxl:playground
 
     You can pass `--profile-patterns=.*` to enable no-op profiling for everything (additionally pass `--profile-patterns-mode=none` to use no-op profiling to just get a list of all the identifiers).
 
@@ -3487,7 +3487,7 @@ Common options are documented under [Global options](#global-options).
 * `--profile-patterns <PROFILE_PATTERNS>`
     Enables profiling for all evaluations whose evaluation identifier matches one of the provided patterns.
 
-    Some examples identifiers: analysis/root//app/bsmr_action_impl:bsmr_action_impl (cfg:linux-x86_64#27ac5723e0c99706) load/cell//build_defs/json.bzl load/prelude//playground/test.bxl load/cell//build_defs/json.bzl@other_cell load_buildfile/upstream//third-party-buck/platform010/build/ncurses load_packagefile/upstream//cli/rust/cli_delegate anon_analysis/anon//:_anon_link_rule (anon: 766183dc9b6f680a) (root//platform/execution:linux-x86_64#08961b14cfb182aa) bxl/prelude//playground/test.bxl:playground
+    Some examples identifiers: analysis/root//app/bsmr_action_impl:bsmr_action_impl (cfg:linux-x86_64#27ac5723e0c99706) load/cell//build_defs/json.bzl load/prelude//playground/test.bxl load/cell//build_defs/json.bzl@other_cell load_buildfile/upstream//third-party-bsmr/platform010/build/ncurses load_packagefile/upstream//cli/rust/cli_delegate anon_analysis/anon//:_anon_link_rule (anon: 766183dc9b6f680a) (root//platform/execution:linux-x86_64#08961b14cfb182aa) bxl/prelude//playground/test.bxl:playground
 
     You can pass `--profile-patterns=.*` to enable no-op profiling for everything (additionally pass `--profile-patterns-mode=none` to use no-op profiling to just get a list of all the identifiers).
 
@@ -3528,7 +3528,7 @@ Common options are documented under [Global options](#global-options).
 
 Run the starlark debug adapter protocol server
 
-This forwards requests received on stdin to a debug server running in the buck daemon. DAP events and responses are returned from the daemon and sent to this command's stdout.
+This forwards requests received on stdin to a debug server running in the bsmr daemon. DAP events and responses are returned from the daemon and sent to this command's stdout.
 
 **Usage**: `bsmr starlark debug-attach [OPTIONS]`
 
@@ -3552,7 +3552,7 @@ Common options are documented under [Global options](#global-options).
 * `--profile-patterns <PROFILE_PATTERNS>`
     Enables profiling for all evaluations whose evaluation identifier matches one of the provided patterns.
 
-    Some examples identifiers: analysis/root//app/bsmr_action_impl:bsmr_action_impl (cfg:linux-x86_64#27ac5723e0c99706) load/cell//build_defs/json.bzl load/prelude//playground/test.bxl load/cell//build_defs/json.bzl@other_cell load_buildfile/upstream//third-party-buck/platform010/build/ncurses load_packagefile/upstream//cli/rust/cli_delegate anon_analysis/anon//:_anon_link_rule (anon: 766183dc9b6f680a) (root//platform/execution:linux-x86_64#08961b14cfb182aa) bxl/prelude//playground/test.bxl:playground
+    Some examples identifiers: analysis/root//app/bsmr_action_impl:bsmr_action_impl (cfg:linux-x86_64#27ac5723e0c99706) load/cell//build_defs/json.bzl load/prelude//playground/test.bxl load/cell//build_defs/json.bzl@other_cell load_buildfile/upstream//third-party-bsmr/platform010/build/ncurses load_packagefile/upstream//cli/rust/cli_delegate anon_analysis/anon//:_anon_link_rule (anon: 766183dc9b6f680a) (root//platform/execution:linux-x86_64#08961b14cfb182aa) bxl/prelude//playground/test.bxl:playground
 
     You can pass `--profile-patterns=.*` to enable no-op profiling for everything (additionally pass `--profile-patterns-mode=none` to use no-op profiling to just get a list of all the identifiers).
 
@@ -3693,7 +3693,7 @@ Common options are documented under [Global options](#global-options).
     Print the output absolute paths, in JSON format
 
 * `--keep-going`
-    On loading errors, put buck.error in the output stream and continue
+    On loading errors, put bsmr.error in the output stream and continue
 
 * `--streaming`
     Write output as soon as it is available. The order of the output items is non-deterministic and if multiple patterns cover the same target, may have duplicates
@@ -3747,7 +3747,7 @@ Common options are documented under [Global options](#global-options).
 * `--profile-patterns <PROFILE_PATTERNS>`
     Enables profiling for all evaluations whose evaluation identifier matches one of the provided patterns.
 
-    Some examples identifiers: analysis/root//app/bsmr_action_impl:bsmr_action_impl (cfg:linux-x86_64#27ac5723e0c99706) load/cell//build_defs/json.bzl load/prelude//playground/test.bxl load/cell//build_defs/json.bzl@other_cell load_buildfile/upstream//third-party-buck/platform010/build/ncurses load_packagefile/upstream//cli/rust/cli_delegate anon_analysis/anon//:_anon_link_rule (anon: 766183dc9b6f680a) (root//platform/execution:linux-x86_64#08961b14cfb182aa) bxl/prelude//playground/test.bxl:playground
+    Some examples identifiers: analysis/root//app/bsmr_action_impl:bsmr_action_impl (cfg:linux-x86_64#27ac5723e0c99706) load/cell//build_defs/json.bzl load/prelude//playground/test.bxl load/cell//build_defs/json.bzl@other_cell load_buildfile/upstream//third-party-bsmr/platform010/build/ncurses load_packagefile/upstream//cli/rust/cli_delegate anon_analysis/anon//:_anon_link_rule (anon: 766183dc9b6f680a) (root//platform/execution:linux-x86_64#08961b14cfb182aa) bxl/prelude//playground/test.bxl:playground
 
     You can pass `--profile-patterns=.*` to enable no-op profiling for everything (additionally pass `--profile-patterns-mode=none` to use no-op profiling to just get a list of all the identifiers).
 
@@ -3888,7 +3888,7 @@ Common options are documented under [Global options](#global-options).
     Print the output absolute paths, in JSON format
 
 * `--keep-going`
-    On loading errors, put buck.error in the output stream and continue
+    On loading errors, put bsmr.error in the output stream and continue
 
 * `--streaming`
     Write output as soon as it is available. The order of the output items is non-deterministic and if multiple patterns cover the same target, may have duplicates
@@ -3942,7 +3942,7 @@ Common options are documented under [Global options](#global-options).
 * `--profile-patterns <PROFILE_PATTERNS>`
     Enables profiling for all evaluations whose evaluation identifier matches one of the provided patterns.
 
-    Some examples identifiers: analysis/root//app/bsmr_action_impl:bsmr_action_impl (cfg:linux-x86_64#27ac5723e0c99706) load/cell//build_defs/json.bzl load/prelude//playground/test.bxl load/cell//build_defs/json.bzl@other_cell load_buildfile/upstream//third-party-buck/platform010/build/ncurses load_packagefile/upstream//cli/rust/cli_delegate anon_analysis/anon//:_anon_link_rule (anon: 766183dc9b6f680a) (root//platform/execution:linux-x86_64#08961b14cfb182aa) bxl/prelude//playground/test.bxl:playground
+    Some examples identifiers: analysis/root//app/bsmr_action_impl:bsmr_action_impl (cfg:linux-x86_64#27ac5723e0c99706) load/cell//build_defs/json.bzl load/prelude//playground/test.bxl load/cell//build_defs/json.bzl@other_cell load_buildfile/upstream//third-party-bsmr/platform010/build/ncurses load_packagefile/upstream//cli/rust/cli_delegate anon_analysis/anon//:_anon_link_rule (anon: 766183dc9b6f680a) (root//platform/execution:linux-x86_64#08961b14cfb182aa) bxl/prelude//playground/test.bxl:playground
 
     You can pass `--profile-patterns=.*` to enable no-op profiling for everything (additionally pass `--profile-patterns-mode=none` to use no-op profiling to just get a list of all the identifiers).
 
@@ -4005,7 +4005,7 @@ Common options are documented under [Global options](#global-options).
     Skip missing targets from `BUILD.bsmr` files when non-glob pattern is specified. This option does not skip missing packages and does not ignore errors of `BUILD.bsmr` file evaluation
 
 * `--keep-going`
-    On errors, put buck.error in the output stream and continue
+    On errors, put bsmr.error in the output stream and continue
 
 * `-A, --output-all-attributes`
     Output all attributes, equivalent of --output-attribute ''.
@@ -4046,7 +4046,7 @@ Common options are documented under [Global options](#global-options).
 * `--profile-patterns <PROFILE_PATTERNS>`
     Enables profiling for all evaluations whose evaluation identifier matches one of the provided patterns.
 
-    Some examples identifiers: analysis/root//app/bsmr_action_impl:bsmr_action_impl (cfg:linux-x86_64#27ac5723e0c99706) load/cell//build_defs/json.bzl load/prelude//playground/test.bxl load/cell//build_defs/json.bzl@other_cell load_buildfile/upstream//third-party-buck/platform010/build/ncurses load_packagefile/upstream//cli/rust/cli_delegate anon_analysis/anon//:_anon_link_rule (anon: 766183dc9b6f680a) (root//platform/execution:linux-x86_64#08961b14cfb182aa) bxl/prelude//playground/test.bxl:playground
+    Some examples identifiers: analysis/root//app/bsmr_action_impl:bsmr_action_impl (cfg:linux-x86_64#27ac5723e0c99706) load/cell//build_defs/json.bzl load/prelude//playground/test.bxl load/cell//build_defs/json.bzl@other_cell load_buildfile/upstream//third-party-bsmr/platform010/build/ncurses load_packagefile/upstream//cli/rust/cli_delegate anon_analysis/anon//:_anon_link_rule (anon: 766183dc9b6f680a) (root//platform/execution:linux-x86_64#08961b14cfb182aa) bxl/prelude//playground/test.bxl:playground
 
     You can pass `--profile-patterns=.*` to enable no-op profiling for everything (additionally pass `--profile-patterns-mode=none` to use no-op profiling to just get a list of all the identifiers).
 
@@ -4098,7 +4098,7 @@ When querying the unconfigured graph, dependencies appearing in all
 branches of `select()` dictionaries will be treated as dependencies.
 
 Run `bsmr docs uquery` or
-https://buck2.build/docs/users/query/uquery/
+https://oss.dedaluslabs.ai/bsmr/users/query/uquery/
 for more documentation about the functions available in uquery
 expressions.
 
@@ -4197,7 +4197,7 @@ Common options are documented under [Global options](#global-options).
 * `--profile-patterns <PROFILE_PATTERNS>`
     Enables profiling for all evaluations whose evaluation identifier matches one of the provided patterns.
 
-    Some examples identifiers: analysis/root//app/bsmr_action_impl:bsmr_action_impl (cfg:linux-x86_64#27ac5723e0c99706) load/cell//build_defs/json.bzl load/prelude//playground/test.bxl load/cell//build_defs/json.bzl@other_cell load_buildfile/upstream//third-party-buck/platform010/build/ncurses load_packagefile/upstream//cli/rust/cli_delegate anon_analysis/anon//:_anon_link_rule (anon: 766183dc9b6f680a) (root//platform/execution:linux-x86_64#08961b14cfb182aa) bxl/prelude//playground/test.bxl:playground
+    Some examples identifiers: analysis/root//app/bsmr_action_impl:bsmr_action_impl (cfg:linux-x86_64#27ac5723e0c99706) load/cell//build_defs/json.bzl load/prelude//playground/test.bxl load/cell//build_defs/json.bzl@other_cell load_buildfile/upstream//third-party-bsmr/platform010/build/ncurses load_packagefile/upstream//cli/rust/cli_delegate anon_analysis/anon//:_anon_link_rule (anon: 766183dc9b6f680a) (root//platform/execution:linux-x86_64#08961b14cfb182aa) bxl/prelude//playground/test.bxl:playground
 
     You can pass `--profile-patterns=.*` to enable no-op profiling for everything (additionally pass `--profile-patterns-mode=none` to use no-op profiling to just get a list of all the identifiers).
 
@@ -4318,7 +4318,7 @@ Common options are documented under [Global options](#global-options).
 * `--profile-patterns <PROFILE_PATTERNS>`
     Enables profiling for all evaluations whose evaluation identifier matches one of the provided patterns.
 
-    Some examples identifiers: analysis/root//app/bsmr_action_impl:bsmr_action_impl (cfg:linux-x86_64#27ac5723e0c99706) load/cell//build_defs/json.bzl load/prelude//playground/test.bxl load/cell//build_defs/json.bzl@other_cell load_buildfile/upstream//third-party-buck/platform010/build/ncurses load_packagefile/upstream//cli/rust/cli_delegate anon_analysis/anon//:_anon_link_rule (anon: 766183dc9b6f680a) (root//platform/execution:linux-x86_64#08961b14cfb182aa) bxl/prelude//playground/test.bxl:playground
+    Some examples identifiers: analysis/root//app/bsmr_action_impl:bsmr_action_impl (cfg:linux-x86_64#27ac5723e0c99706) load/cell//build_defs/json.bzl load/prelude//playground/test.bxl load/cell//build_defs/json.bzl@other_cell load_buildfile/upstream//third-party-bsmr/platform010/build/ncurses load_packagefile/upstream//cli/rust/cli_delegate anon_analysis/anon//:_anon_link_rule (anon: 766183dc9b6f680a) (root//platform/execution:linux-x86_64#08961b14cfb182aa) bxl/prelude//playground/test.bxl:playground
 
     You can pass `--profile-patterns=.*` to enable no-op profiling for everything (additionally pass `--profile-patterns-mode=none` to use no-op profiling to just get a list of all the identifiers).
 
@@ -4386,7 +4386,7 @@ Common options are documented under [Global options](#global-options).
 * `--profile-patterns <PROFILE_PATTERNS>`
     Enables profiling for all evaluations whose evaluation identifier matches one of the provided patterns.
 
-    Some examples identifiers: analysis/root//app/bsmr_action_impl:bsmr_action_impl (cfg:linux-x86_64#27ac5723e0c99706) load/cell//build_defs/json.bzl load/prelude//playground/test.bxl load/cell//build_defs/json.bzl@other_cell load_buildfile/upstream//third-party-buck/platform010/build/ncurses load_packagefile/upstream//cli/rust/cli_delegate anon_analysis/anon//:_anon_link_rule (anon: 766183dc9b6f680a) (root//platform/execution:linux-x86_64#08961b14cfb182aa) bxl/prelude//playground/test.bxl:playground
+    Some examples identifiers: analysis/root//app/bsmr_action_impl:bsmr_action_impl (cfg:linux-x86_64#27ac5723e0c99706) load/cell//build_defs/json.bzl load/prelude//playground/test.bxl load/cell//build_defs/json.bzl@other_cell load_buildfile/upstream//third-party-bsmr/platform010/build/ncurses load_packagefile/upstream//cli/rust/cli_delegate anon_analysis/anon//:_anon_link_rule (anon: 766183dc9b6f680a) (root//platform/execution:linux-x86_64#08961b14cfb182aa) bxl/prelude//playground/test.bxl:playground
 
     You can pass `--profile-patterns=.*` to enable no-op profiling for everything (additionally pass `--profile-patterns-mode=none` to use no-op profiling to just get a list of all the identifiers).
 
@@ -4593,7 +4593,7 @@ Common options are documented under [Global options](#global-options).
 * `--profile-patterns <PROFILE_PATTERNS>`
     Enables profiling for all evaluations whose evaluation identifier matches one of the provided patterns.
 
-    Some examples identifiers: analysis/root//app/bsmr_action_impl:bsmr_action_impl (cfg:linux-x86_64#27ac5723e0c99706) load/cell//build_defs/json.bzl load/prelude//playground/test.bxl load/cell//build_defs/json.bzl@other_cell load_buildfile/upstream//third-party-buck/platform010/build/ncurses load_packagefile/upstream//cli/rust/cli_delegate anon_analysis/anon//:_anon_link_rule (anon: 766183dc9b6f680a) (root//platform/execution:linux-x86_64#08961b14cfb182aa) bxl/prelude//playground/test.bxl:playground
+    Some examples identifiers: analysis/root//app/bsmr_action_impl:bsmr_action_impl (cfg:linux-x86_64#27ac5723e0c99706) load/cell//build_defs/json.bzl load/prelude//playground/test.bxl load/cell//build_defs/json.bzl@other_cell load_buildfile/upstream//third-party-bsmr/platform010/build/ncurses load_packagefile/upstream//cli/rust/cli_delegate anon_analysis/anon//:_anon_link_rule (anon: 766183dc9b6f680a) (root//platform/execution:linux-x86_64#08961b14cfb182aa) bxl/prelude//playground/test.bxl:playground
 
     You can pass `--profile-patterns=.*` to enable no-op profiling for everything (additionally pass `--profile-patterns-mode=none` to use no-op profiling to just get a list of all the identifiers).
 
@@ -4708,7 +4708,7 @@ Common options are documented under [Global options](#global-options).
 * `--profile-patterns <PROFILE_PATTERNS>`
     Enables profiling for all evaluations whose evaluation identifier matches one of the provided patterns.
 
-    Some examples identifiers: analysis/root//app/bsmr_action_impl:bsmr_action_impl (cfg:linux-x86_64#27ac5723e0c99706) load/cell//build_defs/json.bzl load/prelude//playground/test.bxl load/cell//build_defs/json.bzl@other_cell load_buildfile/upstream//third-party-buck/platform010/build/ncurses load_packagefile/upstream//cli/rust/cli_delegate anon_analysis/anon//:_anon_link_rule (anon: 766183dc9b6f680a) (root//platform/execution:linux-x86_64#08961b14cfb182aa) bxl/prelude//playground/test.bxl:playground
+    Some examples identifiers: analysis/root//app/bsmr_action_impl:bsmr_action_impl (cfg:linux-x86_64#27ac5723e0c99706) load/cell//build_defs/json.bzl load/prelude//playground/test.bxl load/cell//build_defs/json.bzl@other_cell load_buildfile/upstream//third-party-bsmr/platform010/build/ncurses load_packagefile/upstream//cli/rust/cli_delegate anon_analysis/anon//:_anon_link_rule (anon: 766183dc9b6f680a) (root//platform/execution:linux-x86_64#08961b14cfb182aa) bxl/prelude//playground/test.bxl:playground
 
     You can pass `--profile-patterns=.*` to enable no-op profiling for everything (additionally pass `--profile-patterns-mode=none` to use no-op profiling to just get a list of all the identifiers).
 
@@ -4794,7 +4794,7 @@ Common options are documented under [Global options](#global-options).
 
     The following options are supported:
 
-    `fill-out-failures`: fill out failures the same way Buck1 would.
+    `fill-out-failures`: fill out failures the same way Legacy would.
 
     `package-project-relative-paths`: emit the project-relative path of packages for the targets that were built.
 
@@ -4843,16 +4843,16 @@ Common options are documented under [Global options](#global-options).
     This is useful when debugging builds and trying to inspect actions which executed remotely. It's possible that the action result is cached but the action itself has expired. In this case, downloading the action itself would fail. Enabling this option would unconditionally upload all actions, thus you will not hit any expiration issues.
 
 * `--fail-fast`
-    If Buck hits an error, do as little work as possible before exiting.
+    If Bsmr hits an error, do as little work as possible before exiting.
 
-    To illustrate the effect of this flag, consider an invocation of `build :foo :bar`. The default behavior of buck is to do enough work to get a result for the builds of each of `:foo` and `:bar`, and no more. This means that buck will continue to complete the build of `:bar` after the build of `:foo` has failed; however, once one dependency of `:foo` has failed, other dependencies will be cancelled unless they are needed by `:bar`.
+    To illustrate the effect of this flag, consider an invocation of `build :foo :bar`. The default behavior of bsmr is to do enough work to get a result for the builds of each of `:foo` and `:bar`, and no more. This means that bsmr will continue to complete the build of `:bar` after the build of `:foo` has failed; however, once one dependency of `:foo` has failed, other dependencies will be cancelled unless they are needed by `:bar`.
 
-    This flag changes the behavior of buck to not wait on `:bar` to complete once `:foo` has failed. Generally, this flag only has an effect on builds that specify multiple targets.
+    This flag changes the behavior of bsmr to not wait on `:bar` to complete once `:foo` has failed. Generally, this flag only has an effect on builds that specify multiple targets.
 
-    `--keep-going` changes the behavior of buck to not only wait on `:bar` once one dependency of `:foo` has failed, but to additionally attempt to build other dependencies of `:foo` if possible.
+    `--keep-going` changes the behavior of bsmr to not only wait on `:bar` once one dependency of `:foo` has failed, but to additionally attempt to build other dependencies of `:foo` if possible.
 
 * `--keep-going`
-    If Buck hits an error, continue doing as much work as possible before exiting.
+    If Bsmr hits an error, continue doing as much work as possible before exiting.
 
     See `--fail-fast` for more details.
 
@@ -4928,7 +4928,7 @@ Common options are documented under [Global options](#global-options).
 * `--profile-patterns <PROFILE_PATTERNS>`
     Enables profiling for all evaluations whose evaluation identifier matches one of the provided patterns.
 
-    Some examples identifiers: analysis/root//app/bsmr_action_impl:bsmr_action_impl (cfg:linux-x86_64#27ac5723e0c99706) load/cell//build_defs/json.bzl load/prelude//playground/test.bxl load/cell//build_defs/json.bzl@other_cell load_buildfile/upstream//third-party-buck/platform010/build/ncurses load_packagefile/upstream//cli/rust/cli_delegate anon_analysis/anon//:_anon_link_rule (anon: 766183dc9b6f680a) (root//platform/execution:linux-x86_64#08961b14cfb182aa) bxl/prelude//playground/test.bxl:playground
+    Some examples identifiers: analysis/root//app/bsmr_action_impl:bsmr_action_impl (cfg:linux-x86_64#27ac5723e0c99706) load/cell//build_defs/json.bzl load/prelude//playground/test.bxl load/cell//build_defs/json.bzl@other_cell load_buildfile/upstream//third-party-bsmr/platform010/build/ncurses load_packagefile/upstream//cli/rust/cli_delegate anon_analysis/anon//:_anon_link_rule (anon: 766183dc9b6f680a) (root//platform/execution:linux-x86_64#08961b14cfb182aa) bxl/prelude//playground/test.bxl:playground
 
     You can pass `--profile-patterns=.*` to enable no-op profiling for everything (additionally pass `--profile-patterns-mode=none` to use no-op profiling to just get a list of all the identifiers).
 
@@ -4990,7 +4990,7 @@ Common options are documented under [Global options](#global-options).
 * `--tracked-only`
     Only considers tracked artifacts for cleanup.
 
-    `bsmr-out` can contain untracked artifacts for different reasons: - Outputs from aborted actions - State getting deleted (e.g., new buckversion that changes the on-disk state format) - Writing to `bsmr-out` without being expected by Buck
+    `bsmr-out` can contain untracked artifacts for different reasons: - Outputs from aborted actions - State getting deleted (e.g., new bsmrversion that changes the on-disk state format) - Writing to `bsmr-out` without being expected by Bsmr
 
 * `--adaptive-low-disk-threshold <PERCENT>`
     Enable adaptive low-disk promotion: after the regular stale scan, promote retained, non-active artifacts (oldest-access first) to stale until projected free disk % rises above this threshold (0.0 - 100.0)
@@ -5020,7 +5020,7 @@ Common options are documented under [Global options](#global-options).
 * `--profile-patterns <PROFILE_PATTERNS>`
     Enables profiling for all evaluations whose evaluation identifier matches one of the provided patterns.
 
-    Some examples identifiers: analysis/root//app/bsmr_action_impl:bsmr_action_impl (cfg:linux-x86_64#27ac5723e0c99706) load/cell//build_defs/json.bzl load/prelude//playground/test.bxl load/cell//build_defs/json.bzl@other_cell load_buildfile/upstream//third-party-buck/platform010/build/ncurses load_packagefile/upstream//cli/rust/cli_delegate anon_analysis/anon//:_anon_link_rule (anon: 766183dc9b6f680a) (root//platform/execution:linux-x86_64#08961b14cfb182aa) bxl/prelude//playground/test.bxl:playground
+    Some examples identifiers: analysis/root//app/bsmr_action_impl:bsmr_action_impl (cfg:linux-x86_64#27ac5723e0c99706) load/cell//build_defs/json.bzl load/prelude//playground/test.bxl load/cell//build_defs/json.bzl@other_cell load_buildfile/upstream//third-party-bsmr/platform010/build/ncurses load_packagefile/upstream//cli/rust/cli_delegate anon_analysis/anon//:_anon_link_rule (anon: 766183dc9b6f680a) (root//platform/execution:linux-x86_64#08961b14cfb182aa) bxl/prelude//playground/test.bxl:playground
 
     You can pass `--profile-patterns=.*` to enable no-op profiling for everything (additionally pass `--profile-patterns-mode=none` to use no-op profiling to just get a list of all the identifiers).
 
@@ -5064,11 +5064,11 @@ Commands for interacting with bsmr logs
 **Usage**: `bsmr log <COMMAND>`
 
 ### Subcommands:
-* `what-ran`: Output everything that buck ran from the selected invocation. If no invocation was specified, use the last buck invocation from this isolation directory
+* `what-ran`: Output everything that bsmr ran from the selected invocation. If no invocation was specified, use the last bsmr invocation from this isolation directory
 * `what-failed`: Outputs every command that failed in the selected invocation
 * `path`: Output the path to the selected log
 * `show`: Outputs the log in JSON format from selected invocation
-* `cmd`: Show buck command line arguments from selected invocation
+* `cmd`: Show bsmr command line arguments from selected invocation
 * `what-up`: Show the spans that were open when the log ended
 * `what-materialized`: Outputs materializations from selected invocation
 * `what-uploaded`: Outputs stats about uploads to RE from the selected invocation
@@ -5086,7 +5086,7 @@ Commands for interacting with bsmr logs
 Common options are documented under [Global options](#global-options).
 ## `bsmr log what-ran`
 
-Output everything that buck ran from the selected invocation. If no invocation was specified, use the last buck invocation from this isolation directory.
+Output everything that bsmr ran from the selected invocation. If no invocation was specified, use the last bsmr invocation from this isolation directory.
 
 The output is presented as a series of tab-delimited records with the following structure:
 
@@ -5265,7 +5265,7 @@ Common options are documented under [Global options](#global-options).
 
 ## `bsmr log cmd`
 
-Show buck command line arguments from selected invocation.
+Show bsmr command line arguments from selected invocation.
 
 This command output is not machine readable. Robots, please use `bsmr log show`.
 
@@ -5781,7 +5781,7 @@ Common options are documented under [Global options](#global-options).
 * `--profile-patterns <PROFILE_PATTERNS>`
     Enables profiling for all evaluations whose evaluation identifier matches one of the provided patterns.
 
-    Some examples identifiers: analysis/root//app/bsmr_action_impl:bsmr_action_impl (cfg:linux-x86_64#27ac5723e0c99706) load/cell//build_defs/json.bzl load/prelude//playground/test.bxl load/cell//build_defs/json.bzl@other_cell load_buildfile/upstream//third-party-buck/platform010/build/ncurses load_packagefile/upstream//cli/rust/cli_delegate anon_analysis/anon//:_anon_link_rule (anon: 766183dc9b6f680a) (root//platform/execution:linux-x86_64#08961b14cfb182aa) bxl/prelude//playground/test.bxl:playground
+    Some examples identifiers: analysis/root//app/bsmr_action_impl:bsmr_action_impl (cfg:linux-x86_64#27ac5723e0c99706) load/cell//build_defs/json.bzl load/prelude//playground/test.bxl load/cell//build_defs/json.bzl@other_cell load_buildfile/upstream//third-party-bsmr/platform010/build/ncurses load_packagefile/upstream//cli/rust/cli_delegate anon_analysis/anon//:_anon_link_rule (anon: 766183dc9b6f680a) (root//platform/execution:linux-x86_64#08961b14cfb182aa) bxl/prelude//playground/test.bxl:playground
 
     You can pass `--profile-patterns=.*` to enable no-op profiling for everything (additionally pass `--profile-patterns-mode=none` to use no-op profiling to just get a list of all the identifiers).
 
@@ -5856,7 +5856,7 @@ Common options are documented under [Global options](#global-options).
 * `--profile-patterns <PROFILE_PATTERNS>`
     Enables profiling for all evaluations whose evaluation identifier matches one of the provided patterns.
 
-    Some examples identifiers: analysis/root//app/bsmr_action_impl:bsmr_action_impl (cfg:linux-x86_64#27ac5723e0c99706) load/cell//build_defs/json.bzl load/prelude//playground/test.bxl load/cell//build_defs/json.bzl@other_cell load_buildfile/upstream//third-party-buck/platform010/build/ncurses load_packagefile/upstream//cli/rust/cli_delegate anon_analysis/anon//:_anon_link_rule (anon: 766183dc9b6f680a) (root//platform/execution:linux-x86_64#08961b14cfb182aa) bxl/prelude//playground/test.bxl:playground
+    Some examples identifiers: analysis/root//app/bsmr_action_impl:bsmr_action_impl (cfg:linux-x86_64#27ac5723e0c99706) load/cell//build_defs/json.bzl load/prelude//playground/test.bxl load/cell//build_defs/json.bzl@other_cell load_buildfile/upstream//third-party-bsmr/platform010/build/ncurses load_packagefile/upstream//cli/rust/cli_delegate anon_analysis/anon//:_anon_link_rule (anon: 766183dc9b6f680a) (root//platform/execution:linux-x86_64#08961b14cfb182aa) bxl/prelude//playground/test.bxl:playground
 
     You can pass `--profile-patterns=.*` to enable no-op profiling for everything (additionally pass `--profile-patterns-mode=none` to use no-op profiling to just get a list of all the identifiers).
 
@@ -5904,9 +5904,9 @@ This document provides an overview of common options that are available across m
 
     Instances of Bessemer share a daemon if and only if their isolation directory is identical. The isolation directory also influences the output paths provided by Bessemer, and as a result using a non-default isolation dir will cause cache misses (and slower builds).
 
-    * Default value: `v2`
+    * Default value: `default`
 * `-v, --verbose <VERBOSITY>`
-    How verbose buck should be while logging.
+    How verbose bsmr should be while logging.
 
     Values: 0 = Quiet, errors only; 1 = Show status. Default; 2 = more info about errors; 3 = more info about everything; 4 = more info about everything + stderr;
 
@@ -5938,7 +5938,7 @@ This document provides an overview of common options that are available across m
     Write the invocation record (as JSON) to this path. No guarantees whatsoever are made regarding the stability of the format
 
 * `--command-report-path <PATH>`
-    Write the command report to this path. A command report is always written to `bsmr-out/v2/<uuid>/command_report` even without this flag
+    Write the command report to this path. A command report is always written to `bsmr-out/default/<uuid>/command_report` even without this flag
 
 
 ## Bsmrconfig Options
@@ -6007,7 +6007,7 @@ This document provides an overview of common options that are available across m
 
     Accepts a comma-separated list of superconsole components to add. Possible values are:
 
-    dice - shows information about evaluated dice nodes debugevents - shows information about the flow of events from buckd
+    dice - shows information about evaluated dice nodes debugevents - shows information about the flow of events from bsmrd
 
     These components can be turned on/off interactively. Press 'h' for help when superconsole is active.
 

@@ -20,7 +20,7 @@ use std::time::Duration;
 use bsmr_cli_proto::GenericResponse;
 use bsmr_cli_proto::UnstableCrashRequest;
 use bsmr_cli_proto::unstable_crash_request::CrashType;
-use bsmr_error::BuckErrorContext;
+use bsmr_error::BsmrErrorContext;
 
 pub(crate) async fn crash(req: UnstableCrashRequest) -> bsmr_error::Result<GenericResponse> {
     let crash_type = CrashType::try_from(req.crash_type).map_err(|_| {
@@ -80,7 +80,7 @@ async fn allocate_memory(bytes: u64) -> bsmr_error::Result<GenericResponse> {
         unreachable!("allocate_and_pressure loops forever")
     })
     .await
-    .buck_error_context("Failed to spawn allocate_memory task")?
+    .bsmr_error_context("Failed to spawn allocate_memory task")?
 }
 
 fn allocate_and_pressure(bytes: usize, page_size: usize) -> ! {

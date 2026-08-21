@@ -21,7 +21,7 @@ use std::time::Duration;
 
 use async_trait::async_trait;
 use bsmr_data::CommandExecutionDetails;
-use bsmr_error::BuckErrorContext;
+use bsmr_error::BsmrErrorContext;
 use bsmr_event_observer::action_sub_error_display::ActionSubErrorDisplay;
 use bsmr_event_observer::display;
 use bsmr_event_observer::display::TargetDisplayOptions;
@@ -33,7 +33,7 @@ use bsmr_event_observer::unpack_event::unpack_event;
 use bsmr_event_observer::verbosity::Verbosity;
 use bsmr_event_observer::what_ran::command_to_string;
 use bsmr_event_observer::what_ran::worker_command_as_fallback_to_string;
-use bsmr_events::BuckEvent;
+use bsmr_events::BsmrEvent;
 use bsmr_health_check::report::DisplayReport;
 use bsmr_wrapper_common::invocation_id::TraceId;
 use gazebo::prelude::*;
@@ -352,7 +352,7 @@ impl StatefulSuperConsole {
         lines
     }
 
-    async fn handle_event(&mut self, ev: &Arc<BuckEvent>) -> bsmr_error::Result<()> {
+    async fn handle_event(&mut self, ev: &Arc<BsmrEvent>) -> bsmr_error::Result<()> {
         match self {
             Self::Running(c) => c.handle_event(ev).await,
             Self::Finalized(c) => c.handle_event(ev).await,
@@ -400,7 +400,7 @@ impl SuperConsoleState {
 
     pub async fn update_event_observer(
         &mut self,
-        event: &Arc<BuckEvent>,
+        event: &Arc<BsmrEvent>,
     ) -> bsmr_error::Result<()> {
         self.simple_console.update_event_observer(event).await
     }
@@ -414,7 +414,7 @@ impl SuperConsoleState {
     }
 }
 
-pub(crate) const BUCK_NO_INTERACTIVE_CONSOLE: &str = "BUCK_NO_INTERACTIVE_CONSOLE";
+pub(crate) const BSMR_NO_INTERACTIVE_CONSOLE: &str = "BSMR_NO_INTERACTIVE_CONSOLE";
 
 impl StatefulSuperConsoleImpl {
     async fn toggle(
@@ -433,12 +433,12 @@ impl StatefulSuperConsoleImpl {
             .await
     }
 
-    async fn handle_event(&mut self, event: &Arc<BuckEvent>) -> bsmr_error::Result<()> {
+    async fn handle_event(&mut self, event: &Arc<BsmrEvent>) -> bsmr_error::Result<()> {
         self.state.update_event_observer(event).await?;
 
         self.handle_inner_event(event)
             .await
-            .with_buck_error_context(|| display::InvalidBuckEvent(event.clone()).to_string())?;
+            .with_bsmr_error_context(|| display::InvalidBsmrEvent(event.clone()).to_string())?;
 
         if self.verbosity.print_all_commands() {
             emit_event_if_relevant(
@@ -451,10 +451,10 @@ impl StatefulSuperConsoleImpl {
         Ok(())
     }
 
-    async fn handle_inner_event(&mut self, event: &BuckEvent) -> bsmr_error::Result<()> {
+    async fn handle_inner_event(&mut self, event: &BsmrEvent) -> bsmr_error::Result<()> {
         match unpack_event(event)? {
-            bsmr_event_observer::unpack_event::UnpackedBuckEvent::SpanStart(_, _, _) => Ok(()),
-            bsmr_event_observer::unpack_event::UnpackedBuckEvent::SpanEnd(_, _, data) => match data
+            bsmr_event_observer::unpack_event::UnpackedBsmrEvent::SpanStart(_, _, _) => Ok(()),
+            bsmr_event_observer::unpack_event::UnpackedBsmrEvent::SpanEnd(_, _, data) => match data
             {
                 bsmr_data::span_end_event::Data::ActionExecution(action) => {
                     self.handle_action_execution_end(action).await
@@ -464,7 +464,7 @@ impl StatefulSuperConsoleImpl {
                 }
                 _ => Ok(()),
             },
-            bsmr_event_observer::unpack_event::UnpackedBuckEvent::Instant(_, _, data) => match data
+            bsmr_event_observer::unpack_event::UnpackedBsmrEvent::Instant(_, _, data) => match data
             {
                 bsmr_data::instant_event::Data::ConsoleMessage(message) => {
                     self.handle_console_message(message).await
@@ -489,9 +489,9 @@ impl StatefulSuperConsoleImpl {
                 }
                 _ => Ok(()),
             },
-            bsmr_event_observer::unpack_event::UnpackedBuckEvent::UnrecognizedSpanStart(_, _)
-            | bsmr_event_observer::unpack_event::UnpackedBuckEvent::UnrecognizedSpanEnd(_, _)
-            | bsmr_event_observer::unpack_event::UnpackedBuckEvent::UnrecognizedInstant(_, _) => {
+            bsmr_event_observer::unpack_event::UnpackedBsmrEvent::UnrecognizedSpanStart(_, _)
+            | bsmr_event_observer::unpack_event::UnpackedBsmrEvent::UnrecognizedSpanEnd(_, _)
+            | bsmr_event_observer::unpack_event::UnpackedBsmrEvent::UnrecognizedInstant(_, _) => {
                 Err(VisitorError::MissingField(event.clone()).into())
             }
         }
@@ -809,7 +809,7 @@ impl StatefulSuperConsoleImpl {
                         .join("\n");
                     self.handle_stderr(&format!(
                         "Help:\n{}\nenv var {}=true disables interactive console",
-                        help_message, BUCK_NO_INTERACTIVE_CONSOLE
+                        help_message, BSMR_NO_INTERACTIVE_CONSOLE
                     ))
                     .await?
                 }
@@ -819,7 +819,7 @@ impl StatefulSuperConsoleImpl {
                         self.handle_stderr(&format!(
                             "Bessemer has an interactive console; input is consumed. \
                              Press `h` for help or set {}=true to disable.",
-                            BUCK_NO_INTERACTIVE_CONSOLE
+                            BSMR_NO_INTERACTIVE_CONSOLE
                         ))
                         .await?;
                     }
@@ -879,7 +879,7 @@ impl StatefulSuperConsoleImpl {
 
 #[async_trait]
 impl EventSubscriber for StatefulSuperConsole {
-    async fn handle_events(&mut self, events: &[Arc<BuckEvent>]) -> bsmr_error::Result<()> {
+    async fn handle_events(&mut self, events: &[Arc<BsmrEvent>]) -> bsmr_error::Result<()> {
         for ev in events {
             self.handle_event(ev).await?;
         }
@@ -1114,12 +1114,12 @@ mod tests {
 
         // start a new event.
         let id = SpanId::next();
-        let event = Arc::new(BuckEvent::new(
+        let event = Arc::new(BsmrEvent::new(
             SystemTime::now(),
             trace_id,
             Some(id),
             None,
-            bsmr_data::buck_event::Data::SpanStart(SpanStartEvent {
+            bsmr_data::bsmr_event::Data::SpanStart(SpanStartEvent {
                 data: Some(bsmr_data::span_start_event::Data::Load(
                     LoadBuildFileStart {
                         module_id: "foo".to_owned(),
@@ -1142,12 +1142,12 @@ mod tests {
 
         // finish the event from before
         // expect to successfully close event.
-        let event = Arc::new(BuckEvent::new(
+        let event = Arc::new(BsmrEvent::new(
             SystemTime::now(),
             TraceId::new(),
             Some(id),
             None,
-            bsmr_data::buck_event::Data::SpanEnd(SpanEndEvent {
+            bsmr_data::bsmr_event::Data::SpanEnd(SpanEndEvent {
                 data: Some(bsmr_data::span_end_event::Data::Load(LoadBuildFileEnd {
                     module_id: "foo".to_owned(),
                     cell: "bar".to_owned(),
@@ -1186,12 +1186,12 @@ mod tests {
         )?;
 
         console
-            .handle_event(&Arc::new(BuckEvent::new(
+            .handle_event(&Arc::new(BsmrEvent::new(
                 now,
                 trace_id.dupe(),
                 Some(SpanId::next()),
                 None,
-                bsmr_data::buck_event::Data::SpanStart(SpanStartEvent {
+                bsmr_data::bsmr_event::Data::SpanStart(SpanStartEvent {
                     data: Some(
                         bsmr_data::CommandStart {
                             data: Some(bsmr_data::BuildCommandStart {}.into()),
@@ -1204,7 +1204,7 @@ mod tests {
             .await?;
 
         console
-            .handle_event(&Arc::new(BuckEvent::new(
+            .handle_event(&Arc::new(BsmrEvent::new(
                 now,
                 trace_id.dupe(),
                 None,
@@ -1224,7 +1224,7 @@ mod tests {
             .await?;
 
         console
-            .handle_event(&Arc::new(BuckEvent::new(
+            .handle_event(&Arc::new(BsmrEvent::new(
                 now,
                 trace_id.dupe(),
                 Some(SpanId::next()),
@@ -1258,7 +1258,7 @@ mod tests {
 
         // Verify we have the right output on intermediate frames
         if cfg!(fbcode_build) {
-            assert_frame_contains(&frame, "Buck UI:");
+            assert_frame_contains(&frame, "Bsmr UI:");
         } else {
             assert_frame_contains(&frame, "Build ID:");
         }
@@ -1296,7 +1296,7 @@ mod tests {
             DrawMode::Normal,
         )?;
 
-        // Buck UI/Build ID + Test UI, each on one line
+        // Bsmr UI/Build ID + Test UI, each on one line
         assert_eq!(full.len(), 2);
 
         let multiline = SessionInfoComponent {
@@ -1312,7 +1312,7 @@ mod tests {
         )?;
 
         // Width too narrow for all on one line, so each splits into header + value:
-        // Buck UI header, Buck UI value, Test UI header, Test UI value
+        // Bsmr UI header, Bsmr UI value, Test UI header, Test UI value
         assert_eq!(multiline.len(), 4);
 
         let too_small = SessionInfoComponent {

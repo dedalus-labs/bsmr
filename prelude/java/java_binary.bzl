@@ -1,3 +1,9 @@
+# ===----------------------------------------------------------------------===
+# Upstream-Source: facebook/buck2@1560aca2002865cd73d7cafb22c705cfb640b2bc
+# Modifications Copyright (c) 2026 Dedalus Labs, Inc. and its contributors
+# SPDX-License-Identifier: Apache-2.0
+# ===----------------------------------------------------------------------===
+
 # Copyright (c) Meta Platforms, Inc. and affiliates.
 #
 # This source code is dual-licensed under either the MIT license found in the
@@ -84,7 +90,7 @@ def _create_fat_jar(
                 java_toolchain.fat_jar_main_class_lib,
                 # fat jar's main class
                 "--fat_jar_main_class",
-                "com.facebook.buck.jvm.java.fatjar.FatJarMain",
+                "com.dedalus.bsmr.jvm.java.fatjar.FatJarMain",
                 # native libraries directory name. Main class expects to find libraries packed inside this directory.
                 "--fat_jar_native_libs_directory_name",
                 "nativelibs",

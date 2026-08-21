@@ -17,7 +17,7 @@
 use std::sync::Arc;
 
 use bsmr_cli_proto::client_context::ProfilePatternOptions;
-use bsmr_error::BuckErrorContext;
+use bsmr_error::BsmrErrorContext;
 use bsmr_events::dispatch::EventDispatcher;
 use bsmr_fs::paths::abs_path::AbsPathBuf;
 use bsmr_interpreter::starlark_profiler::config::ProfileRegex;
@@ -27,7 +27,7 @@ use bsmr_profile::proto_to_profile_mode;
 use crate::profile_patterns::FileWritingProfileEventListener;
 
 #[derive(bsmr_error::Error)]
-pub enum BuckdServerError {
+pub enum BsmrdServerError {
     #[error(
         "server received multiple profiler configurations. this is due to using both --profile-patterns and one of the command specific profiling args"
     )]
@@ -65,7 +65,7 @@ impl StarlarkProfilingManager {
         let configuration = match (starlark_profile_patterns_opts, starlark_profile_override) {
             (None, v) => v,
             (Some(v), StarlarkProfilerConfiguration::None) => v,
-            (Some(_), _) => Err(BuckdServerError::StarlarkProfilerConfigurationConflict)?,
+            (Some(_), _) => Err(BsmrdServerError::StarlarkProfilerConfigurationConflict)?,
         };
 
         let profile_event_listener = if let StarlarkProfilerConfiguration::ProfilePattern(

@@ -32,12 +32,12 @@ use bsmr_core::bzl::ImportPath;
 use bsmr_core::cells::build_file_cell::BuildFileCell;
 use bsmr_core::cells::cell_path::CellPath;
 use bsmr_core::cells::cell_path_with_allowed_relative_dir::CellPathWithAllowedRelativeDir;
-use bsmr_error::BuckErrorContext;
+use bsmr_error::BsmrErrorContext;
 use bsmr_error::conversion::from_any_with_tag;
 use bsmr_error::internal_error;
 use bsmr_event_observer::humanized::HumanizedBytes;
 use bsmr_events::dispatch::get_dispatcher;
-use bsmr_interpreter::factory::BuckStarlarkModule;
+use bsmr_interpreter::factory::BsmrStarlarkModule;
 use bsmr_interpreter::factory::FinishedStarlarkEvaluation;
 use bsmr_interpreter::factory::StarlarkEvaluatorProvider;
 use bsmr_interpreter::file_loader::InterpreterFileLoader;
@@ -118,7 +118,7 @@ impl ParseData {
         for x in ast.loads() {
             let path = resolver
                 .resolve_load(x.module_id, Some(&x.span))
-                .with_buck_error_context(|| {
+                .with_bsmr_error_context(|| {
                     format!(
                         "Error loading `load` of `{}` from `{}`",
                         x.module_id, x.span
@@ -140,7 +140,7 @@ impl ParseData {
 
 pub fn get_starlark_warning_link() -> &'static str {
     if bsmr_core::is_open_source() {
-        "https://buck2.build/docs/users/faq/starlark_peak_mem"
+        "https://oss.dedaluslabs.ai/bsmr/users/faq/starlark_peak_mem"
     } else {
         "https://fburl.com/starlark_peak_mem_warning"
     }
@@ -209,7 +209,7 @@ impl LoadResolver for InterpreterLoadResolver {
         if path.path().extension() == Some("bxl") {
             match self.loader_file_type {
                 StarlarkFileType::Bzl
-                | StarlarkFileType::Buck
+                | StarlarkFileType::Bsmr
                 | StarlarkFileType::Package
                 | StarlarkFileType::Json
                 | StarlarkFileType::Toml => {
@@ -323,10 +323,10 @@ impl InterpreterForDir {
 
     fn create_env<'v>(
         &self,
-        env: BuckStarlarkModule<'v>,
+        env: BsmrStarlarkModule<'v>,
         starlark_path: StarlarkPath<'_>,
         loaded_modules: &LoadedModules,
-    ) -> bsmr_error::Result<BuckStarlarkModule<'v>> {
+    ) -> bsmr_error::Result<BsmrStarlarkModule<'v>> {
         if let Some(prelude_import) = self.prelude_import(starlark_path) {
             let prelude_env = loaded_modules
                 .map
@@ -338,7 +338,7 @@ impl InterpreterForDir {
                 })?;
             env.import_public_symbols(prelude_env.env());
             if let StarlarkPath::BuildFile(_) = starlark_path {
-                for (name, value) in prelude_env.extra_globals_from_prelude_for_buck_files()? {
+                for (name, value) in prelude_env.extra_globals_from_prelude_for_bsmr_files()? {
                     env.set(name, value.to_value());
                 }
             }
@@ -359,13 +359,13 @@ impl InterpreterForDir {
     // implicit package include.
     fn create_build_env<'v>(
         &self,
-        env: BuckStarlarkModule<'v>,
+        env: BsmrStarlarkModule<'v>,
         build_file: &BuildFilePath,
         package_listing: &PackageListing,
         super_package: SuperPackage,
         package_boundary_exception: bool,
         loaded_modules: &LoadedModules,
-    ) -> bsmr_error::Result<(BuckStarlarkModule<'v>, ModuleInternals)> {
+    ) -> bsmr_error::Result<(BsmrStarlarkModule<'v>, ModuleInternals)> {
         let internals = self.global_state.configuror.new_extra_context(
             &self.cell_info,
             build_file.clone(),
@@ -494,7 +494,7 @@ impl InterpreterForDir {
 
     fn eval(
         self: &Arc<Self>,
-        env: &BuckStarlarkModule,
+        env: &BsmrStarlarkModule,
         ast: AstModule,
         bsmrconfigs: &mut dyn BsmrConfigsViewForStarlark,
         loaded_modules: LoadedModules,
@@ -574,7 +574,7 @@ impl InterpreterForDir {
         eval_provider: StarlarkEvaluatorProvider,
         cancellation: &CancellationContext,
     ) -> bsmr_error::Result<FrozenModule> {
-        BuckStarlarkModule::with_profiling(|env| {
+        BsmrStarlarkModule::with_profiling(|env| {
             let env = self.create_env(env, starlark_path.into(), &loaded_modules)?;
             let extra_context = match starlark_path {
                 StarlarkModulePath::LoadFile(bzl) => PerFileTypeContext::Bzl(BzlEvalCtx {
@@ -619,7 +619,7 @@ impl InterpreterForDir {
         eval_provider: StarlarkEvaluatorProvider,
         cancellation: &CancellationContext,
     ) -> bsmr_error::Result<SuperPackage> {
-        BuckStarlarkModule::with_profiling(|env| {
+        BsmrStarlarkModule::with_profiling(|env| {
             let env = self.create_env(
                 env,
                 StarlarkPath::PackageFile(package_file_path),
@@ -686,7 +686,7 @@ impl InterpreterForDir {
         Option<Arc<StarlarkProfileDataAndStats>>,
         EvaluationResultWithStats,
     )> {
-        BuckStarlarkModule::with_profiling(|env| {
+        BsmrStarlarkModule::with_profiling(|env| {
             let (env, internals) = self.create_build_env(
                 env,
                 build_file,

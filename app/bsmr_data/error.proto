@@ -15,7 +15,7 @@ syntax = "proto3";
 // only reason this file exists is to work around that limitation, especially
 // for error types, which may often have a name that might also make sense
 // elsewhere.
-package buck.data.error;
+package bsmr.data.error;
 
 // Error types are - by design - restricted to being set exactly once at the
 // error definition site. While they are useful, that means that they are enough
@@ -77,7 +77,7 @@ enum ErrorTag {
   CLIENT_GRPC = 4;
   CLIENT_STARTUP_TIMEOUT = 40;
   CLIENT_GRPC_STREAM = 41;
-  // Connect to buckd failed.
+  // Connect to bsmrd failed.
   DAEMON_CONNECT = 5;
   // Daemon is running another command.
   DAEMON_IS_BUSY = 501;
@@ -88,7 +88,7 @@ enum ErrorTag {
   DAEMON_STATUS = 504;
   DAEMON_REDIRECT = 505;
   // The bsmr daemon's executable has been deleted from disk.
-  BUCKD_EXE_DELETED = 506;
+  BSMRD_EXE_DELETED = 506;
   DAEMON_STARTUP_FAILED = 507;
   EXIT_STATUS = 517;
   EXIT_STATUS_UNKNOWN = 519;
@@ -97,12 +97,12 @@ enum ErrorTag {
   DAEMON_CONSTRAINTS_WRONG_AFTER_START = 510;
   DAEMON_DIR_CLEANUP_FAILED = 511;
   DAEMON_KILL_FAILED = 512;
-  BUCKD_LIFECYCLE_LOCK = 513;
-  BUCKD_INFO_MISSING = 514;
-  BUCKD_INFO_PARSE_ERROR = 515;
+  BSMRD_LIFECYCLE_LOCK = 513;
+  BSMRD_INFO_MISSING = 514;
+  BSMRD_INFO_PARSE_ERROR = 515;
   DAEMON_DISCONNECT = 516;
-  // Could not determine the BuckVersion
-  BUCK_VERSION_ERROR = 518;
+  // Could not determine the BsmrVersion
+  BSMR_VERSION_ERROR = 518;
   // Too large gRPC message.
   GRPC_RESPONSE_MESSAGE_TOO_LARGE = 6;
   // `visibility`, `within_view`.
@@ -142,7 +142,7 @@ enum ErrorTag {
   MATERIALIZATION_ERROR = 26;
   // Materialization was cancelled
   MATERIALIZATION_CANCELLED = 2600;
-  // Could not find buck project root
+  // Could not find bsmr project root
   NO_BSMR_ROOT = 27;
   // Project root directory no longer exists on disk
   MISSING_PROJECT_ROOT = 2700;
@@ -156,7 +156,7 @@ enum ErrorTag {
 
   // Path not found for path found in input or source
   MISSING_INPUT_PATH = 32;
-  // Path not found for buck or system path not provided by user
+  // Path not found for bsmr or system path not provided by user
   MISSING_INTERNAL_PATH = 33;
   // NotADirectory for path found in input or source
   INPUT_PATH_NOT_A_DIRECTORY = 34;
@@ -346,9 +346,9 @@ enum ErrorTag {
   INVALID_USERNAME = 6007;
   INVALID_ABS_PATH = 6008;
   // Malformed bsmr-out path string
-  INVALID_BUCK_OUT_PATH = 6009;
+  INVALID_OUTPUT_PATH = 6009;
   // Issue with bsmr-out dir on disk (ex. broken symlink, not a dir)
-  INVALID_BUCK_OUT = 6010;
+  INVALID_OUTPUT = 6010;
 
   // Build errors.
   BUILD_DEADLINE_EXPIRED = 7001;

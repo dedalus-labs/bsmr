@@ -12,17 +12,17 @@ title: Writing Rules
 import { FbInternalOnly } from 'docusaurus-plugin-internaldocs-fb/internal';
 
 This page describes how to write rules for Bessemer and explains the flow for
-implementing rules that are already defined in Buck1.
+implementing rules that are already defined in Legacy.
 
 For a list of the API functions available, see the
 [Build APIs](../../api/build).
 
 :::note
 
-Rules such as `@bsmr_build//rules:native_rules.bzl buck_genrule` are not
+Rules such as `@bsmr_build//rules:native_rules.bzl bsmr_genrule` are not
 actually rules, they are _macros_ (Starlark functions that eventually call out
 the underlying `genrule` _rule_). Macros in Bessemer are mostly compatible with
-Buck1 and should be written in the same way.
+Legacy and should be written in the same way.
 
 :::
 
@@ -33,7 +33,7 @@ To add a rule for a language, say `pascal`:
 
 1. Look at
    [prelude/decls](https://github.com/facebook/buck2/blob/main/prelude/decls/)
-   to see the attributes that are supported in Buck1 and are mirrored into
+   to see the attributes that are supported in Legacy and are mirrored into
    Bessemer. If `pascal` was an existing rule, you would see what attributes it
    takes (often it will be `pascal_library` and `pascal_binary`).
 
@@ -116,7 +116,7 @@ The output of any actions performed will be materialized in `bsmr-out`. However,
 only the defined outputs of providers are available for dependent rules to
 consume and only the actions necessary to produce those outputs being consumed
 will be run. By default, the `default_output` of the `DefaultInfo` provider is
-built and output during a `buck build`.
+built and output during a `bsmr build`.
 
 ### Providers
 
@@ -270,14 +270,14 @@ binary that returns a `RunInfo`.
 ## Testing Rules
 
 A common way to test is to use `genrule` to cause the produced binary to run and
-assert some properties from it. If your rule is in Buck1 and Bessemer, use a
+assert some properties from it. If your rule is in Legacy and Bessemer, use a
 `TARGETS` file so you can test with both. If your tests are incompatible with
-Buck1 (such as if it is a new rule), use `TARGETS.v2`, which will only be seen
-by Bessemer and won't cause errors with Buck1.
+Legacy (such as if it is a new rule), use `TARGETS.v2`, which will only be seen
+by Bessemer and won't cause errors with Legacy.
 
 ## New rules
 
-If your rule is **not** already in Buck1, then you can define it wherever you
+If your rule is **not** already in Legacy, then you can define it wherever you
 like, with a preference for it not being in `fbcode/bsmr/prelude`.
 
 The only advantage of the `prelude` is that rules can be used without a

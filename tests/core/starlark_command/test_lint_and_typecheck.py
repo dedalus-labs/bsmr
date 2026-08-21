@@ -15,23 +15,23 @@
 # pyre-strict
 
 
-from bsmr.tests.e2e_util.api.buck import Buck
+from bsmr.tests.e2e_util.api.bsmr import Bsmr
 from bsmr.tests.e2e_util.asserts import expect_failure
-from bsmr.tests.e2e_util.buck_workspace import buck_test
+from bsmr.tests.e2e_util.bsmr_workspace import bsmr_test
 
 
-@buck_test()
-async def test_lint_fails(buck: Buck) -> None:
+@bsmr_test()
+async def test_lint_fails(bsmr: Bsmr) -> None:
     await expect_failure(
-        buck.starlark("lint", "bad_warning.bzl"),
+        bsmr.starlark("lint", "bad_warning.bzl"),
         stderr_regex="Found 3 lints",
     )
 
 
-@buck_test()
-async def test_typecheck_fails(buck: Buck) -> None:
-    await buck.starlark("typecheck", "good.bzl")
+@bsmr_test()
+async def test_typecheck_fails(bsmr: Bsmr) -> None:
+    await bsmr.starlark("typecheck", "good.bzl")
     await expect_failure(
-        buck.starlark("typecheck", "bad.bzl"),
+        bsmr.starlark("typecheck", "bad.bzl"),
         stderr_regex="Detected 2 errors",
     )

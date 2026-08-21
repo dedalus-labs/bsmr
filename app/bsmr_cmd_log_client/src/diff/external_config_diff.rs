@@ -16,9 +16,9 @@
 
 use std::collections::BTreeMap;
 
-use bsmr_client_ctx::client_ctx::BuckSubcommand;
+use bsmr_client_ctx::client_ctx::BsmrSubcommand;
 use bsmr_client_ctx::client_ctx::ClientCommandContext;
-use bsmr_client_ctx::common::BuckArgMatches;
+use bsmr_client_ctx::common::BsmrArgMatches;
 use bsmr_client_ctx::events_ctx::EventsCtx;
 use bsmr_client_ctx::exit_result::ExitResult;
 use bsmr_event_log::stream_value::StreamValue;
@@ -92,7 +92,7 @@ fn insert_config_values(
 fn process_bsmrconfig_data(
     dict: &mut BTreeMap<String, String>,
     order: &mut Vec<String>,
-    event: &bsmr_data::BuckEvent,
+    event: &bsmr_data::BsmrEvent,
 ) {
     use bsmr_data::bsmrconfig_component::Data::ConfigFile;
     use bsmr_data::bsmrconfig_component::Data::ConfigValue;
@@ -100,7 +100,7 @@ fn process_bsmrconfig_data(
     use bsmr_data::config_file::Data::GlobalExternalConfig;
     use bsmr_data::config_file::Data::ProjectRelativePath;
 
-    if let Some(bsmr_data::buck_event::Data::Instant(end)) = event.data.as_ref() {
+    if let Some(bsmr_data::bsmr_event::Data::Instant(end)) = event.data.as_ref() {
         if let Some(bsmr_data::instant_event::Data::BsmrconfigInputValues(input)) =
             end.data.as_ref()
         {
@@ -206,12 +206,12 @@ impl Display for DiffType<'_> {
     }
 }
 
-impl BuckSubcommand for ExternalConfigDiffCommand {
+impl BsmrSubcommand for ExternalConfigDiffCommand {
     const COMMAND_NAME: &'static str = "log-diff-bsmrconfig";
 
     async fn exec_impl(
         self,
-        _matches: BuckArgMatches<'_>,
+        _matches: BsmrArgMatches<'_>,
         ctx: ClientCommandContext<'_>,
         _events_ctx: &mut EventsCtx,
     ) -> ExitResult {

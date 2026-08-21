@@ -19,56 +19,56 @@ import shutil
 from os.path import exists, islink
 from pathlib import Path
 
-from bsmr.tests.e2e_util.api.buck import Buck
+from bsmr.tests.e2e_util.api.bsmr import Bsmr
 from bsmr.tests.e2e_util.asserts import expect_failure
-from bsmr.tests.e2e_util.buck_workspace import buck_test, env
+from bsmr.tests.e2e_util.bsmr_workspace import bsmr_test, env
 from bsmr.tests.e2e_util.helper.utils import read_timestamps
 
 
-def _setup_sandbox(buck: Buck) -> None:
+def _setup_sandbox(bsmr: Bsmr) -> None:
     """Copy pre-built installer binaries into the sandbox project directory."""
     installer_bin = os.environ["INSTALLER_BIN"]
-    shutil.copy2(installer_bin, buck.cwd / "installer_bin")
-    os.chmod(buck.cwd / "installer_bin", 0o755)
+    shutil.copy2(installer_bin, bsmr.cwd / "installer_bin")
+    os.chmod(bsmr.cwd / "installer_bin", 0o755)
 
     forwarded_params_bin = os.environ["FORWARDED_PARAMS_INSTALLER_BIN"]
-    shutil.copy2(forwarded_params_bin, buck.cwd / "forwarded_params_installer_bin")
-    os.chmod(buck.cwd / "forwarded_params_installer_bin", 0o755)
+    shutil.copy2(forwarded_params_bin, bsmr.cwd / "forwarded_params_installer_bin")
+    os.chmod(bsmr.cwd / "forwarded_params_installer_bin", 0o755)
 
     extra_args_validator_bin = os.environ["EXTRA_ARGS_VALIDATOR_BIN"]
-    shutil.copy2(extra_args_validator_bin, buck.cwd / "extra_args_validator_bin")
-    os.chmod(buck.cwd / "extra_args_validator_bin", 0o755)
+    shutil.copy2(extra_args_validator_bin, bsmr.cwd / "extra_args_validator_bin")
+    os.chmod(bsmr.cwd / "extra_args_validator_bin", 0o755)
 
     early_exit_installer_bin = os.environ["EARLY_EXIT_INSTALLER_BIN"]
-    shutil.copy2(early_exit_installer_bin, buck.cwd / "early_exit_installer_bin")
-    os.chmod(buck.cwd / "early_exit_installer_bin", 0o755)
+    shutil.copy2(early_exit_installer_bin, bsmr.cwd / "early_exit_installer_bin")
+    os.chmod(bsmr.cwd / "early_exit_installer_bin", 0o755)
 
     # Create etc_hosts as a symlink to /etc/hosts (tests symlink resolution by rsync -aL)
-    os.symlink("/etc/hosts", buck.cwd / "etc_hosts")
+    os.symlink("/etc/hosts", bsmr.cwd / "etc_hosts")
 
 
-@buck_test()
-async def test_success_install(buck: Buck, tmp_path: Path) -> None:
-    _setup_sandbox(buck)
+@bsmr_test()
+async def test_success_install(bsmr: Bsmr, tmp_path: Path) -> None:
+    _setup_sandbox(bsmr)
     tmp_dir = tmp_path / "install_test"
     tmp_dir.mkdir()
     args = ["--dst", f"{tmp_dir}/"]
-    await buck.install("root//:installer_test", "--", *args)
+    await bsmr.install("root//:installer_test", "--", *args)
     assert exists(f"{tmp_dir}/artifact_a")
     assert exists(f"{tmp_dir}/artifact_b")
     assert exists(f"{tmp_dir}/etc_hosts")
     assert not islink(f"{tmp_dir}/etc_hosts")
 
 
-@buck_test(write_invocation_record=True)
-@env("BUCK_LOG", "bsmr_server_commands::commands::install=debug")
-async def test_install_logging(buck: Buck, tmp_path: Path) -> None:
-    _setup_sandbox(buck)
+@bsmr_test(write_invocation_record=True)
+@env("BSMR_LOG", "bsmr_server_commands::commands::install=debug")
+async def test_install_logging(bsmr: Bsmr, tmp_path: Path) -> None:
+    _setup_sandbox(bsmr)
     tmp_dir = tmp_path / "install_test"
     tmp_dir.mkdir()
     args = ["--dst", f"{tmp_dir}/"]
     args += ["--delay", "1"]
-    res = await buck.install(
+    res = await bsmr.install(
         "root//:installer_test",
         "--",
         *args,
@@ -76,10 +76,10 @@ async def test_install_logging(buck: Buck, tmp_path: Path) -> None:
     invocation_record = res.invocation_record()
 
     cmd_start_ts = (
-        await read_timestamps(buck, "Event", "data", "SpanStart", "data", "Command")
+        await read_timestamps(bsmr, "Event", "data", "SpanStart", "data", "Command")
     )[0]
     action_end_timestamps = await read_timestamps(
-        buck, "Event", "data", "SpanEnd", "data", "ActionExecution"
+        bsmr, "Event", "data", "SpanEnd", "data", "ActionExecution"
     )
 
     install_duration_ms = invocation_record["install_duration_us"] / 1000
@@ -99,23 +99,23 @@ async def test_install_logging(buck: Buck, tmp_path: Path) -> None:
     ]
 
 
-@buck_test(write_invocation_record=True)
-async def test_install_logs_target_rule_type_names(buck: Buck, tmp_path: Path) -> None:
-    _setup_sandbox(buck)
+@bsmr_test(write_invocation_record=True)
+async def test_install_logs_target_rule_type_names(bsmr: Bsmr, tmp_path: Path) -> None:
+    _setup_sandbox(bsmr)
     tmp_dir = tmp_path / "install_test"
     tmp_dir.mkdir()
     args = ["--dst", f"{tmp_dir}/"]
-    res = await buck.install("root//:installer_test", "--", *args)
+    res = await bsmr.install("root//:installer_test", "--", *args)
     record = res.invocation_record()
     assert record["target_rule_type_names"] == ["installer"]
 
 
-@buck_test()
+@bsmr_test()
 @env("BSMR_INSTALLER_SEND_TIMEOUT_S", "1")
-async def test_send_file_timeout(buck: Buck, tmp_path: Path) -> None:
-    _setup_sandbox(buck)
+async def test_send_file_timeout(bsmr: Bsmr, tmp_path: Path) -> None:
+    _setup_sandbox(bsmr)
     await expect_failure(
-        buck.install(
+        bsmr.install(
             "root//:installer_single_artifact",
             "--",
             "--delay",
@@ -125,11 +125,11 @@ async def test_send_file_timeout(buck: Buck, tmp_path: Path) -> None:
     )
 
 
-@buck_test(write_invocation_record=True)
-async def test_artifact_fails_to_install(buck: Buck) -> None:
-    _setup_sandbox(buck)
+@bsmr_test(write_invocation_record=True)
+async def test_artifact_fails_to_install(bsmr: Bsmr) -> None:
+    _setup_sandbox(bsmr)
     res = await expect_failure(
-        buck.install(
+        bsmr.install(
             "root//:installer_server_sends_error",
         ),
         stderr_regex=r"Interaction with installer failed",
@@ -150,11 +150,11 @@ async def test_artifact_fails_to_install(buck: Buck) -> None:
     ]
 
 
-@buck_test(write_invocation_record=True)
-async def test_fail_to_build_artifact(buck: Buck) -> None:
-    _setup_sandbox(buck)
+@bsmr_test(write_invocation_record=True)
+async def test_fail_to_build_artifact(bsmr: Bsmr) -> None:
+    _setup_sandbox(bsmr)
     res = await expect_failure(
-        buck.install(
+        bsmr.install(
             "root//:bad_artifacts",
         ),
         stderr_regex=r"Failed to build",
@@ -164,11 +164,11 @@ async def test_fail_to_build_artifact(buck: Buck) -> None:
     assert len(errors) == 1
 
 
-@buck_test(write_invocation_record=True)
-async def test_install_id_mismatch(buck: Buck) -> None:
-    _setup_sandbox(buck)
+@bsmr_test(write_invocation_record=True)
+async def test_install_id_mismatch(bsmr: Bsmr) -> None:
+    _setup_sandbox(bsmr)
     res = await expect_failure(
-        buck.install(
+        bsmr.install(
             "root//:installer_server_sends_wrong_install_info_response",
         ),
         stderr_regex=r"doesn't match with the sent one",
@@ -178,11 +178,11 @@ async def test_install_id_mismatch(buck: Buck) -> None:
     assert len(errors) == 1
 
 
-@buck_test(write_invocation_record=True)
-async def test_installer_needs_forwarded_params(buck: Buck) -> None:
-    _setup_sandbox(buck)
+@bsmr_test(write_invocation_record=True)
+async def test_installer_needs_forwarded_params(bsmr: Bsmr) -> None:
+    _setup_sandbox(bsmr)
     res = await expect_failure(
-        buck.install(
+        bsmr.install(
             "root//:installer_server_requires_forwarded_params",
         ),
         stderr_regex=r"-r_-e_-d_-s_-x_-a_-i_-w_-u_-k_must_be_passed_to_installer",
@@ -192,10 +192,10 @@ async def test_installer_needs_forwarded_params(buck: Buck) -> None:
     assert len(errors) == 1
 
 
-@buck_test()
-async def test_install_forwards_params(buck: Buck) -> None:
-    _setup_sandbox(buck)
-    await buck.install(
+@bsmr_test()
+async def test_install_forwards_params(bsmr: Bsmr) -> None:
+    _setup_sandbox(bsmr)
+    await bsmr.install(
         "-r",
         "-e",
         "-d",
@@ -213,10 +213,10 @@ async def test_install_forwards_params(buck: Buck) -> None:
     )
 
 
-@buck_test()
-async def test_install_forwards_params_long_form(buck: Buck) -> None:
-    _setup_sandbox(buck)
-    await buck.install(
+@bsmr_test()
+async def test_install_forwards_params_long_form(bsmr: Bsmr) -> None:
+    _setup_sandbox(bsmr)
+    await bsmr.install(
         "--run",
         "--emulator",
         "--device",
@@ -234,12 +234,12 @@ async def test_install_forwards_params_long_form(buck: Buck) -> None:
     )
 
 
-@buck_test()
+@bsmr_test()
 async def test_install_extra_args_ordered_after_builtin_args(
-    buck: Buck,
+    bsmr: Bsmr,
 ) -> None:
-    _setup_sandbox(buck)
-    await buck.install(
+    _setup_sandbox(bsmr)
+    await bsmr.install(
         "-r",
         "root//:installer_validates_extra_args_order",
         "--",
@@ -248,11 +248,11 @@ async def test_install_extra_args_ordered_after_builtin_args(
     )
 
 
-@buck_test(write_invocation_record=True)
-async def test_fail_to_build_installer(buck: Buck) -> None:
-    _setup_sandbox(buck)
+@bsmr_test(write_invocation_record=True)
+async def test_fail_to_build_installer(bsmr: Bsmr) -> None:
+    _setup_sandbox(bsmr)
     res = await expect_failure(
-        buck.install(
+        bsmr.install(
             "root//:bad_installer_target",
         ),
         stderr_regex=r"Failed to build installer",
@@ -262,11 +262,11 @@ async def test_fail_to_build_installer(buck: Buck) -> None:
     assert len(errors) == 1
 
 
-@buck_test()
-async def test_installer_early_exit(buck: Buck) -> None:
-    _setup_sandbox(buck)
+@bsmr_test()
+async def test_installer_early_exit(bsmr: Bsmr) -> None:
+    _setup_sandbox(bsmr)
     await expect_failure(
-        buck.install(
+        bsmr.install(
             "root//:installer_early_exit",
         ),
         stderr_regex=r"Installer process exited with status",

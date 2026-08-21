@@ -24,8 +24,8 @@ import subprocess
 from pathlib import Path
 from tempfile import NamedTemporaryFile, TemporaryDirectory
 
-from bsmr.tests.e2e_util.api.buck import Buck
-from bsmr.tests.e2e_util.buck_workspace import buck_test, env
+from bsmr.tests.e2e_util.api.bsmr import Bsmr
+from bsmr.tests.e2e_util.bsmr_workspace import bsmr_test, env
 
 
 def assert_path_in_manifest(path: str, manifest_paths: list[str]) -> None:
@@ -44,10 +44,10 @@ def assert_path_exists(path: str) -> None:
     assert os.path.exists(path), f"expected {path} to exist"
 
 
-def assert_buck_out_paths_materialized(buck_cwd: Path, paths: list[str]) -> None:
+def assert_output_paths_materialized(bsmr_cwd: Path, paths: list[str]) -> None:
     for path in paths:
         if re.match(r"bsmr-out\/.+\/{art,offline-cache}/.+\/.+\/.+", path) is not None:
-            assert_path_exists(os.path.join(buck_cwd, path))
+            assert_path_exists(os.path.join(bsmr_cwd, path))
 
 
 def hg_init(cwd: Path) -> None:
@@ -63,23 +63,23 @@ def hg_config_reponame(cwd: Path) -> None:
     )
 
 
-def _setup_bsmrconfig_digest_algorithms(buck: Buck) -> None:
+def _setup_bsmrconfig_digest_algorithms(bsmr: Bsmr) -> None:
     # The digests in `//cas_artifact:` require the bsmrconfig.
-    with open(buck.cwd / ".bsmr", "a") as bsmrconfig:
+    with open(bsmr.cwd / ".bsmr", "a") as bsmrconfig:
         bsmrconfig.write("[bsmr]\n")
         bsmrconfig.write("digest_algorithms = BLAKE3-KEYED,SHA1\n")
 
 
 # Tracing I/O not implemented for Windows.
-@buck_test(skip_for_os=["windows"])
-async def test_simple_binary_build(buck: Buck) -> None:
+@bsmr_test(skip_for_os=["windows"])
+async def test_simple_binary_build(bsmr: Bsmr) -> None:
     # Since this is an inplace test, we need to fake an hg repo so that export-manifest
     # can extract the repo revision.
-    hg_init(cwd=buck.cwd)
+    hg_init(cwd=bsmr.cwd)
 
-    await buck.debug("trace-io", "enable")
-    await buck.build("root//hello_world:welcome")
-    out = await buck.debug("trace-io", "export-manifest")
+    await bsmr.debug("trace-io", "enable")
+    await bsmr.build("root//hello_world:welcome")
+    out = await bsmr.debug("trace-io", "export-manifest")
     manifest = json.loads(out.stdout)
 
     assert (
@@ -92,9 +92,9 @@ async def test_simple_binary_build(buck: Buck) -> None:
     assert_path_in_manifest("hello_world/main.cpp", manifest["paths"])
 
 
-@buck_test(skip_for_os=["windows"])
-async def test_external_bsmrconfig_path_included_in_manifest(buck: Buck) -> None:
-    hg_init(cwd=buck.cwd)
+@bsmr_test(skip_for_os=["windows"])
+async def test_external_bsmrconfig_path_included_in_manifest(bsmr: Bsmr) -> None:
+    hg_init(cwd=bsmr.cwd)
 
     with NamedTemporaryFile("w") as tmp:
         tmpname = tmp.name
@@ -105,9 +105,9 @@ async def test_external_bsmrconfig_path_included_in_manifest(buck: Buck) -> None
             ]
         )
 
-        await buck.debug("trace-io", "enable")
-        await buck.build("root//hello_world:welcome", "--config-file", tmpname)
-        out = await buck.debug("trace-io", "export-manifest")
+        await bsmr.debug("trace-io", "enable")
+        await bsmr.build("root//hello_world:welcome", "--config-file", tmpname)
+        out = await bsmr.debug("trace-io", "export-manifest")
 
     manifest = json.loads(out.stdout)
 
@@ -115,13 +115,13 @@ async def test_external_bsmrconfig_path_included_in_manifest(buck: Buck) -> None
 
 
 # More complicated example with binary depending on multiple libraries.
-@buck_test(skip_for_os=["windows"])
-async def test_binary_with_deps(buck: Buck) -> None:
-    hg_init(cwd=buck.cwd)
+@bsmr_test(skip_for_os=["windows"])
+async def test_binary_with_deps(bsmr: Bsmr) -> None:
+    hg_init(cwd=bsmr.cwd)
 
-    await buck.debug("trace-io", "enable")
-    await buck.build("root//linking:root")
-    out = await buck.debug("trace-io", "export-manifest")
+    await bsmr.debug("trace-io", "enable")
+    await bsmr.build("root//linking:root")
+    out = await bsmr.debug("trace-io", "export-manifest")
     manifest = json.loads(out.stdout)
 
     assert (
@@ -138,14 +138,14 @@ async def test_binary_with_deps(buck: Buck) -> None:
 
 
 # Multiple builds should be logical union of all input files of all builds.
-@buck_test(skip_for_os=["windows"])
-async def test_multiple_builds(buck: Buck) -> None:
-    hg_init(cwd=buck.cwd)
+@bsmr_test(skip_for_os=["windows"])
+async def test_multiple_builds(bsmr: Bsmr) -> None:
+    hg_init(cwd=bsmr.cwd)
 
-    await buck.debug("trace-io", "enable")
-    await buck.build("root//linking:root")
-    await buck.build("root//hello_world:welcome")
-    out = await buck.debug("trace-io", "export-manifest")
+    await bsmr.debug("trace-io", "enable")
+    await bsmr.build("root//linking:root")
+    await bsmr.build("root//hello_world:welcome")
+    out = await bsmr.debug("trace-io", "export-manifest")
     manifest = json.loads(out.stdout)
 
     # From first build
@@ -155,18 +155,18 @@ async def test_multiple_builds(buck: Buck) -> None:
 
 
 # Symlinks should show up in the *_symlinks attributes of the manifest.
-@buck_test(setup_eden=True, skip_for_os=["windows"])
+@bsmr_test(setup_eden=True, skip_for_os=["windows"])
 @env("BSMR_HARD_ERROR", "false")
-async def test_symlinks(buck: Buck) -> None:
-    hg_config_reponame(cwd=buck.cwd)
+async def test_symlinks(bsmr: Bsmr) -> None:
+    hg_config_reponame(cwd=bsmr.cwd)
 
     def symlink(link: str, target: str) -> None:
         """
-        Symlinks link --> target. Assumes we're based in the buck cwd, so link must be relative.
+        Symlinks link --> target. Assumes we're based in the bsmr cwd, so link must be relative.
         """
-        os.symlink(target, os.path.join(buck.cwd, link))
+        os.symlink(target, os.path.join(bsmr.cwd, link))
 
-    # Set up symlinks during the test; buck will read everything behind symlinks while
+    # Set up symlinks during the test; bsmr will read everything behind symlinks while
     # setting up for the test otherwise.
     # Symlinks for root//symlinks:relative_link
     symlink("symlinks/main.cpp", "../hello_world/main.cpp")
@@ -185,11 +185,11 @@ async def test_symlinks(buck: Buck) -> None:
         symlink("symlinks/PassRegistry.h", str(absolute_target))
         symlink("symlinks/include", str(t / "include"))
 
-        await buck.debug("trace-io", "enable")
-        await buck.build("root//symlinks:relative_link")
-        await buck.build("root//symlinks:external_link")
+        await bsmr.debug("trace-io", "enable")
+        await bsmr.build("root//symlinks:relative_link")
+        await bsmr.build("root//symlinks:external_link")
 
-    out = await buck.debug("trace-io", "export-manifest")
+    out = await bsmr.debug("trace-io", "export-manifest")
     manifest = json.loads(out.stdout)
 
     assert_link_in(
@@ -216,13 +216,13 @@ async def test_symlinks(buck: Buck) -> None:
 
 
 # Validate that manifest includes downloaded http_archive path in bsmr-out.
-@buck_test(skip_for_os=["windows"])
-async def test_includes_http_archive_in_manifest(buck: Buck) -> None:
-    hg_init(cwd=buck.cwd)
+@bsmr_test(skip_for_os=["windows"])
+async def test_includes_http_archive_in_manifest(bsmr: Bsmr) -> None:
+    hg_init(cwd=bsmr.cwd)
 
-    await buck.debug("trace-io", "enable")
-    await buck.build("root//http_archive:test_zip")
-    out = await buck.debug("trace-io", "export-manifest")
+    await bsmr.debug("trace-io", "enable")
+    await bsmr.build("root//http_archive:test_zip")
+    out = await bsmr.debug("trace-io", "export-manifest")
     manifest = json.loads(out.stdout)
 
     assert any(
@@ -231,34 +231,34 @@ async def test_includes_http_archive_in_manifest(buck: Buck) -> None:
         )
         for path in manifest["paths"]
     ), "manifest should contain http_archive cached output"
-    assert_buck_out_paths_materialized(buck.cwd, manifest["paths"])
+    assert_output_paths_materialized(bsmr.cwd, manifest["paths"])
 
 
 # Ensure offline-cache bsmr-out dir is _not_ created when not doing I/O tracing.
-@buck_test(skip_for_os=["windows"])
+@bsmr_test(skip_for_os=["windows"])
 async def test_no_tracing_does_not_write_offline_cache_for_http_archive(
-    buck: Buck,
+    bsmr: Bsmr,
 ) -> None:
-    await buck.build("root//http_archive:test_zip")
-    assert not os.path.exists(os.path.join(buck.cwd, "bsmr-out/offline-cache")), (
+    await bsmr.build("root//http_archive:test_zip")
+    assert not os.path.exists(os.path.join(bsmr.cwd, "bsmr-out/offline-cache")), (
         "offline cache should not exist when not doing I/O tracing"
     )
 
 
 # Validate that when bsmrconfig use_network_action_output_cache=true is set we use the
 # offline-cache action output instead of fetching from the network.
-@buck_test(
+@bsmr_test(
     skip_for_os=["windows"],
     extra_bsmr_config={"bsmr": {"sqlite_materializer_state": "false"}},
 )
-@env("BUCK_LOG", "bsmr_execute_impl::materializers=trace")
-async def test_fake_offline_http_archive_uses_offline_cache(buck: Buck) -> None:
-    hg_init(cwd=buck.cwd)
+@env("BSMR_LOG", "bsmr_execute_impl::materializers=trace")
+async def test_fake_offline_http_archive_uses_offline_cache(bsmr: Bsmr) -> None:
+    hg_init(cwd=bsmr.cwd)
 
     # This should materialize the offline-cache dir.
     target = "root//http_archive:test_zip"
-    await buck.debug("trace-io", "enable")
-    result = await buck.build(target)
+    await bsmr.debug("trace-io", "enable")
+    result = await bsmr.build(target)
     print("stderr:", result.stderr)
     assert "/offline-cache/" in result.stderr, (
         "materializer should declare offline-cache materialization"
@@ -276,14 +276,14 @@ async def test_fake_offline_http_archive_uses_offline_cache(buck: Buck) -> None:
     )
 
     # Ensure bsmr-out/offline-cache paths are materialized.
-    await buck.debug("trace-io", "export-manifest")
+    await bsmr.debug("trace-io", "export-manifest")
     assert offline_cache_path.exists(), (
         "offline cache path should exist after manifest export"
     )
 
-    await buck.kill()
+    await bsmr.kill()
 
-    result = await buck.build(
+    result = await bsmr.build(
         "root//http_archive:test_zip",
         "--config",
         "bsmr.use_network_action_output_cache=true",
@@ -294,15 +294,15 @@ async def test_fake_offline_http_archive_uses_offline_cache(buck: Buck) -> None:
     assert http_download_path.exists(), "http download output path should exist"
 
 
-@buck_test(skip_for_os=["windows"])
-async def test_includes_cas_artifact_in_manifest(buck: Buck) -> None:
-    hg_init(cwd=buck.cwd)
+@bsmr_test(skip_for_os=["windows"])
+async def test_includes_cas_artifact_in_manifest(bsmr: Bsmr) -> None:
+    hg_init(cwd=bsmr.cwd)
 
-    _setup_bsmrconfig_digest_algorithms(buck)
+    _setup_bsmrconfig_digest_algorithms(bsmr)
 
-    await buck.debug("trace-io", "enable")
-    await buck.build("//cas_artifact:tree")
-    out = await buck.debug("trace-io", "export-manifest")
+    await bsmr.debug("trace-io", "enable")
+    await bsmr.build("//cas_artifact:tree")
+    out = await bsmr.debug("trace-io", "export-manifest")
     manifest = json.loads(out.stdout)
 
     assert any(
@@ -313,38 +313,38 @@ async def test_includes_cas_artifact_in_manifest(buck: Buck) -> None:
         for path in manifest["paths"]
     ), "offline cache should contain cas artifact tree"
 
-    assert_buck_out_paths_materialized(buck.cwd, manifest["paths"])
+    assert_output_paths_materialized(bsmr.cwd, manifest["paths"])
 
 
 # Ensure offline-cache bsmr-out dir is _not_ created when not doing I/O tracing.
-@buck_test(skip_for_os=["windows"])
+@bsmr_test(skip_for_os=["windows"])
 async def test_no_tracing_does_not_write_offline_cache_for_cas_artifact(
-    buck: Buck,
+    bsmr: Bsmr,
 ) -> None:
-    _setup_bsmrconfig_digest_algorithms(buck)
+    _setup_bsmrconfig_digest_algorithms(bsmr)
 
-    await buck.build("//cas_artifact:tree")
-    assert not os.path.exists(os.path.join(buck.cwd, "bsmr-out/offline-cache")), (
+    await bsmr.build("//cas_artifact:tree")
+    assert not os.path.exists(os.path.join(bsmr.cwd, "bsmr-out/offline-cache")), (
         "offline cache should not exist when not doing I/O tracing"
     )
 
 
 # Validate that when bsmrconfig use_network_action_output_cache=true is set we use the
 # offline-cache action output instead of fetching from the network.
-@buck_test(
+@bsmr_test(
     skip_for_os=["windows"],
     extra_bsmr_config={"bsmr": {"sqlite_materializer_state": "false"}},
 )
-@env("BUCK_LOG", "bsmr_execute_impl::materializers=trace")
-async def test_fake_offline_cas_artifact_uses_offline_cache(buck: Buck) -> None:
-    hg_init(cwd=buck.cwd)
+@env("BSMR_LOG", "bsmr_execute_impl::materializers=trace")
+async def test_fake_offline_cas_artifact_uses_offline_cache(bsmr: Bsmr) -> None:
+    hg_init(cwd=bsmr.cwd)
 
-    _setup_bsmrconfig_digest_algorithms(buck)
+    _setup_bsmrconfig_digest_algorithms(bsmr)
 
     # This should materialize the offline-cache dir.
     target = "root//cas_artifact:tree"
-    await buck.debug("trace-io", "enable")
-    result = await buck.build(target)
+    await bsmr.debug("trace-io", "enable")
+    result = await bsmr.build(target)
     print("stderr:", result.stderr)
     assert "/offline-cache/" in result.stderr, (
         "materializer should declare offline-cache materialization"
@@ -361,14 +361,14 @@ async def test_fake_offline_cas_artifact_uses_offline_cache(buck: Buck) -> None:
     )
 
     # Ensure bsmr-out/offline-cache paths are materialized.
-    await buck.debug("trace-io", "export-manifest")
+    await bsmr.debug("trace-io", "export-manifest")
     assert offline_cache_path.exists(), (
         "offline cache path should exist after manifest export"
     )
 
-    await buck.kill()
+    await bsmr.kill()
 
-    result = await buck.build(
+    result = await bsmr.build(
         target,
         "--config",
         "bsmr.use_network_action_output_cache=true",
@@ -380,16 +380,16 @@ async def test_fake_offline_cas_artifact_uses_offline_cache(buck: Buck) -> None:
 
 
 # Validate that all lists in the exported manifest are sorted.
-@buck_test(setup_eden=True, skip_for_os=["windows"])
+@bsmr_test(setup_eden=True, skip_for_os=["windows"])
 @env("BSMR_HARD_ERROR", "false")
-async def test_manifest_lists_are_sorted(buck: Buck) -> None:
-    hg_config_reponame(cwd=buck.cwd)
+async def test_manifest_lists_are_sorted(bsmr: Bsmr) -> None:
+    hg_config_reponame(cwd=bsmr.cwd)
 
     def symlink(link: str, target: str) -> None:
         """
-        Symlinks link --> target. Assumes we're based in the buck cwd, so link must be relative.
+        Symlinks link --> target. Assumes we're based in the bsmr cwd, so link must be relative.
         """
-        os.symlink(target, os.path.join(buck.cwd, link))
+        os.symlink(target, os.path.join(bsmr.cwd, link))
 
     # Set up multiple files in reverse alphabetical order to ensure they need sorting
     symlink("symlinks/zz_last.cpp", "../hello_world/main.cpp")
@@ -412,12 +412,12 @@ async def test_manifest_lists_are_sorted(buck: Buck) -> None:
         symlink("symlinks/ext_2.h", str(aa_file))
         symlink("symlinks/ext_3.h", str(mm_file))
 
-        await buck.debug("trace-io", "enable")
+        await bsmr.debug("trace-io", "enable")
 
         # Build multiple targets to create entries in non-alphabetical order
-        await buck.build("root//symlinks:zz_last")
-        await buck.build("root//symlinks:aa_first")
-        await buck.build("root//symlinks:mm_middle")
+        await bsmr.build("root//symlinks:zz_last")
+        await bsmr.build("root//symlinks:aa_first")
+        await bsmr.build("root//symlinks:mm_middle")
 
         with NamedTemporaryFile("w", delete=False) as tmp1:
             tmpname1 = tmp1.name
@@ -431,10 +431,10 @@ async def test_manifest_lists_are_sorted(buck: Buck) -> None:
 
         try:
             # Build with config files in reverse order to create unsorted external entries
-            await buck.build("root//hello_world:welcome", "--config-file", tmpname2)
-            await buck.build("root//hello_world:welcome", "--config-file", tmpname1)
+            await bsmr.build("root//hello_world:welcome", "--config-file", tmpname2)
+            await bsmr.build("root//hello_world:welcome", "--config-file", tmpname1)
 
-            out = await buck.debug("trace-io", "export-manifest")
+            out = await bsmr.debug("trace-io", "export-manifest")
         finally:
             os.unlink(tmpname1)
             os.unlink(tmpname2)
@@ -475,20 +475,20 @@ async def test_manifest_lists_are_sorted(buck: Buck) -> None:
     )
 
 
-@buck_test(
+@bsmr_test(
     skip_for_os=["windows"],
     extra_bsmr_config={"bsmr": {"sqlite_materializer_state": "false"}},
 )
-@env("BUCK_LOG", "bsmr_execute_impl::materializers=trace")
-async def test_run_action_with_allow_offline_output_cache(buck: Buck) -> None:
+@env("BSMR_LOG", "bsmr_execute_impl::materializers=trace")
+async def test_run_action_with_allow_offline_output_cache(bsmr: Bsmr) -> None:
     """Test RunAction caching when allow_offline_output_cache=True."""
-    hg_init(cwd=buck.cwd)
+    hg_init(cwd=bsmr.cwd)
 
     target = "root//run_action_cache:cached_target"
 
     # Build with trace mode to populate offline cache
-    await buck.debug("trace-io", "enable")
-    result = await buck.build(target)
+    await bsmr.debug("trace-io", "enable")
+    result = await bsmr.build(target)
     print("stderr:", result.stderr)
     assert "/offline-cache/" in result.stderr, (
         "materializer should declare offline-cache materialization"
@@ -506,15 +506,15 @@ async def test_run_action_with_allow_offline_output_cache(buck: Buck) -> None:
     )
 
     # Export manifest to materialize offline-cache
-    await buck.debug("trace-io", "export-manifest")
+    await bsmr.debug("trace-io", "export-manifest")
     assert offline_cache_path.exists(), (
         "offline cache path should exist after manifest export"
     )
 
-    await buck.kill()
+    await bsmr.kill()
 
     # Rebuild with offline cache enabled
-    result = await buck.build(
+    result = await bsmr.build(
         target,
         "--config",
         "bsmr.use_network_action_output_cache=true",
@@ -525,14 +525,14 @@ async def test_run_action_with_allow_offline_output_cache(buck: Buck) -> None:
     assert output_path.exists(), "action output path should exist"
 
 
-@buck_test(skip_for_os=["windows"])
-async def test_run_action_without_parameter_does_not_cache(buck: Buck) -> None:
+@bsmr_test(skip_for_os=["windows"])
+async def test_run_action_without_parameter_does_not_cache(bsmr: Bsmr) -> None:
     """Test that RunAction without allow_offline_output_cache doesn't cache."""
-    hg_init(cwd=buck.cwd)
+    hg_init(cwd=bsmr.cwd)
 
-    await buck.debug("trace-io", "enable")
-    await buck.build("root//run_action_cache:uncached_target")
-    out = await buck.debug("trace-io", "export-manifest")
+    await bsmr.debug("trace-io", "enable")
+    await bsmr.build("root//run_action_cache:uncached_target")
+    out = await bsmr.debug("trace-io", "export-manifest")
     manifest = json.loads(out.stdout)
 
     # Verify that offline-cache paths do NOT include uncached_target
@@ -546,14 +546,14 @@ async def test_run_action_without_parameter_does_not_cache(buck: Buck) -> None:
     )
 
 
-@buck_test(skip_for_os=["windows"])
-async def test_run_action_cache_includes_in_manifest(buck: Buck) -> None:
+@bsmr_test(skip_for_os=["windows"])
+async def test_run_action_cache_includes_in_manifest(bsmr: Bsmr) -> None:
     """Test that cached RunAction outputs appear in trace manifest."""
-    hg_init(cwd=buck.cwd)
+    hg_init(cwd=bsmr.cwd)
 
-    await buck.debug("trace-io", "enable")
-    await buck.build("root//run_action_cache:cached_target")
-    out = await buck.debug("trace-io", "export-manifest")
+    await bsmr.debug("trace-io", "enable")
+    await bsmr.build("root//run_action_cache:cached_target")
+    out = await bsmr.debug("trace-io", "export-manifest")
     manifest = json.loads(out.stdout)
 
     assert any(
@@ -565,23 +565,23 @@ async def test_run_action_cache_includes_in_manifest(buck: Buck) -> None:
         for path in manifest["paths"]
     ), "offline cache should contain cached run action output"
 
-    assert_buck_out_paths_materialized(buck.cwd, manifest["paths"])
+    assert_output_paths_materialized(bsmr.cwd, manifest["paths"])
 
 
-@buck_test(
+@bsmr_test(
     skip_for_os=["windows"],
     extra_bsmr_config={"bsmr": {"sqlite_materializer_state": "false"}},
 )
-@env("BUCK_LOG", "bsmr_execute_impl::materializers=trace")
-async def test_genrule_with_allow_offline_output_cache(buck: Buck) -> None:
+@env("BSMR_LOG", "bsmr_execute_impl::materializers=trace")
+async def test_genrule_with_allow_offline_output_cache(bsmr: Bsmr) -> None:
     """Test genrule caching when allow_offline_output_cache=True."""
-    hg_init(cwd=buck.cwd)
+    hg_init(cwd=bsmr.cwd)
 
     target = "root//genrule_cache:cached"
 
     # Build with trace mode to populate offline cache
-    await buck.debug("trace-io", "enable")
-    result = await buck.build(target)
+    await bsmr.debug("trace-io", "enable")
+    result = await bsmr.build(target)
     print("stderr:", result.stderr)
     assert "/offline-cache/" in result.stderr, (
         "materializer should declare offline-cache materialization"
@@ -599,15 +599,15 @@ async def test_genrule_with_allow_offline_output_cache(buck: Buck) -> None:
     )
 
     # Export manifest to materialize offline-cache
-    await buck.debug("trace-io", "export-manifest")
+    await bsmr.debug("trace-io", "export-manifest")
     assert offline_cache_path.exists(), (
         "offline cache path should exist after manifest export"
     )
 
-    await buck.kill()
+    await bsmr.kill()
 
     # Rebuild with offline cache enabled
-    result = await buck.build(
+    result = await bsmr.build(
         target,
         "--config",
         "bsmr.use_network_action_output_cache=true",
@@ -618,14 +618,14 @@ async def test_genrule_with_allow_offline_output_cache(buck: Buck) -> None:
     assert output_path.exists(), "genrule output path should exist"
 
 
-@buck_test(skip_for_os=["windows"])
-async def test_genrule_without_parameter_does_not_cache(buck: Buck) -> None:
+@bsmr_test(skip_for_os=["windows"])
+async def test_genrule_without_parameter_does_not_cache(bsmr: Bsmr) -> None:
     """Test that genrule without allow_offline_output_cache doesn't cache."""
-    hg_init(cwd=buck.cwd)
+    hg_init(cwd=bsmr.cwd)
 
-    await buck.debug("trace-io", "enable")
-    await buck.build("root//genrule_cache:uncached")
-    out = await buck.debug("trace-io", "export-manifest")
+    await bsmr.debug("trace-io", "enable")
+    await bsmr.build("root//genrule_cache:uncached")
+    out = await bsmr.debug("trace-io", "export-manifest")
     manifest = json.loads(out.stdout)
 
     # Verify that offline-cache paths do NOT include uncached genrule
@@ -639,14 +639,14 @@ async def test_genrule_without_parameter_does_not_cache(buck: Buck) -> None:
     )
 
 
-@buck_test(skip_for_os=["windows"])
-async def test_genrule_cache_includes_in_manifest(buck: Buck) -> None:
+@bsmr_test(skip_for_os=["windows"])
+async def test_genrule_cache_includes_in_manifest(bsmr: Bsmr) -> None:
     """Test that cached genrule outputs appear in trace manifest."""
-    hg_init(cwd=buck.cwd)
+    hg_init(cwd=bsmr.cwd)
 
-    await buck.debug("trace-io", "enable")
-    await buck.build("root//genrule_cache:cached")
-    out = await buck.debug("trace-io", "export-manifest")
+    await bsmr.debug("trace-io", "enable")
+    await bsmr.build("root//genrule_cache:cached")
+    out = await bsmr.debug("trace-io", "export-manifest")
     manifest = json.loads(out.stdout)
 
     assert any(
@@ -658,10 +658,10 @@ async def test_genrule_cache_includes_in_manifest(buck: Buck) -> None:
         for path in manifest["paths"]
     ), "offline cache should contain cached genrule output"
 
-    assert_buck_out_paths_materialized(buck.cwd, manifest["paths"])
+    assert_output_paths_materialized(bsmr.cwd, manifest["paths"])
 
 
 # No-op test for windows.
-@buck_test()
-async def test_noop(buck: Buck) -> None:
+@bsmr_test()
+async def test_noop(bsmr: Bsmr) -> None:
     return

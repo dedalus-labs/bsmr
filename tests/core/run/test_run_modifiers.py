@@ -13,14 +13,14 @@
 # above-listed licenses.
 
 
-from bsmr.tests.e2e_util.api.buck import Buck
+from bsmr.tests.e2e_util.api.bsmr import Bsmr
 from bsmr.tests.e2e_util.asserts import expect_failure
-from bsmr.tests.e2e_util.buck_workspace import buck_test
+from bsmr.tests.e2e_util.bsmr_workspace import bsmr_test
 
 
-@buck_test()
-async def test_run_single_modifier(buck: Buck) -> None:
-    result = await buck.run("root//:run?root//:macos")
+@bsmr_test()
+async def test_run_single_modifier(bsmr: Bsmr) -> None:
+    result = await bsmr.run("root//:run?root//:macos")
 
     [os, cpu] = result.stdout.strip().split()
 
@@ -28,9 +28,9 @@ async def test_run_single_modifier(buck: Buck) -> None:
     assert cpu == "DEFAULT"
 
 
-@buck_test()
-async def test_run_multiple_modifiers(buck: Buck) -> None:
-    result = await buck.run("root//:run?root//:macos+root//:arm")
+@bsmr_test()
+async def test_run_multiple_modifiers(bsmr: Bsmr) -> None:
+    result = await bsmr.run("root//:run?root//:macos+root//:arm")
 
     [os, cpu] = result.stdout.strip().split()
 
@@ -38,9 +38,9 @@ async def test_run_multiple_modifiers(buck: Buck) -> None:
     assert cpu == "arm"
 
 
-@buck_test()
-async def test_run_order_of_modifiers(buck: Buck) -> None:
-    result = await buck.run("root//:run?root//:macos+root//:linux")
+@bsmr_test()
+async def test_run_order_of_modifiers(bsmr: Bsmr) -> None:
+    result = await bsmr.run("root//:run?root//:macos+root//:linux")
 
     [os, cpu] = result.stdout.strip().split()
 
@@ -48,9 +48,9 @@ async def test_run_order_of_modifiers(buck: Buck) -> None:
     assert cpu == "DEFAULT"
 
 
-@buck_test()
-async def test_run_target_universe_single_modifier(buck: Buck) -> None:
-    result = await buck.run(
+@bsmr_test()
+async def test_run_target_universe_single_modifier(bsmr: Bsmr) -> None:
+    result = await bsmr.run(
         "root//:run",
         "--target-universe",
         "root//:run?root//:macos",
@@ -62,9 +62,9 @@ async def test_run_target_universe_single_modifier(buck: Buck) -> None:
     assert cpu == "DEFAULT"
 
 
-@buck_test()
-async def test_run_target_universe_multiple_modifiers(buck: Buck) -> None:
-    result = await buck.run(
+@bsmr_test()
+async def test_run_target_universe_multiple_modifiers(bsmr: Bsmr) -> None:
+    result = await bsmr.run(
         "root//:run",
         "--target-universe",
         "root//:run?root//:macos+root//:arm",
@@ -76,10 +76,10 @@ async def test_run_target_universe_multiple_modifiers(buck: Buck) -> None:
     assert cpu == "arm"
 
 
-@buck_test()
-async def test_run_fails_with_global_modifiers(buck: Buck) -> None:
+@bsmr_test()
+async def test_run_fails_with_global_modifiers(bsmr: Bsmr) -> None:
     await expect_failure(
-        buck.run(
+        bsmr.run(
             "--modifier",
             "root//:macos",
             "root//:run?root//:linux",
@@ -88,7 +88,7 @@ async def test_run_fails_with_global_modifiers(buck: Buck) -> None:
     )
 
     await expect_failure(
-        buck.run(
+        bsmr.run(
             "--modifier",
             "root//:macos",
             "root//:run",
@@ -99,12 +99,12 @@ async def test_run_fails_with_global_modifiers(buck: Buck) -> None:
     )
 
 
-@buck_test()
+@bsmr_test()
 async def test_run_fails_with_pattern_modifier_and_target_universe_modifier(
-    buck: Buck,
+    bsmr: Bsmr,
 ) -> None:
     await expect_failure(
-        buck.run(
+        bsmr.run(
             "root//:run?root//:macos",
             "--target-universe",
             "root//:run?root//:arm",

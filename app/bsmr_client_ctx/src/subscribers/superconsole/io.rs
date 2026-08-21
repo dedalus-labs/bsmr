@@ -127,7 +127,7 @@ fn do_render(
     let user_cpu_percents = two_snapshots.user_cpu_percents();
     let system_cpu_percents = two_snapshots.system_cpu_percents();
     if user_cpu_percents.is_some() || system_cpu_percents.is_some() {
-        let mut cpu_str_parts = vec!["buckd CPU".to_owned()];
+        let mut cpu_str_parts = vec!["bsmrd CPU".to_owned()];
         if let Some(p) = user_cpu_percents {
             cpu_str_parts.push(format!("user = {p}%"));
         }

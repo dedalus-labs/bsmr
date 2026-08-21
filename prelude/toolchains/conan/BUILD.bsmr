@@ -11,8 +11,8 @@ oncall("build_infra")
 source_listing()
 
 export_file(
-    name = "buckler",
-    src = "buckler/conanfile.py",
+    name = "adapter",
+    src = "adapter/conanfile.py",
     visibility = ["PUBLIC"],
 )
 

@@ -333,7 +333,7 @@ ensure_fields(AppName, Version, AppSrcVsn, Applications, IncludedApplications, P
                         Acc;
                     %% When the configured placeholder is specified as the version in the .app.src file,
                     %% it means that the version will be calculated dynamically based on the VCS version.
-                    %% We consider the version from the Buck target to be authoritative.
+                    %% We consider the version from the Bsmr target to be authoritative.
                     {vsn, Vsn} ->
                         case is_app_src_vsn(Vsn, AppSrcVsn) of
                             true -> [Default | lists:keydelete(vsn, 1, Acc)];

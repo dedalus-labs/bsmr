@@ -172,7 +172,7 @@ none = none
 [cell_aliases]
 config = prelude
 ovr_config = prelude
-buck = none
+bsmr = none
 [external_cells]
 prelude = disabled
 [buildfile]

@@ -21,7 +21,7 @@ use std::sync::Arc;
 use allocative::Allocative;
 use bsmr_artifact::artifact::artifact_type::Artifact;
 use bsmr_core::fs::artifact_path_resolver::ArtifactFs;
-use bsmr_error::BuckErrorContext;
+use bsmr_error::BsmrErrorContext;
 use bsmr_error::internal_error;
 use bsmr_execute::artifact::artifact_dyn::ArtifactDyn;
 use bsmr_execute::artifact::group::artifact_group_values_dyn::ArtifactGroupValuesDyn;
@@ -55,12 +55,12 @@ impl ArtifactGroupValues {
             if artifact.path_resolution_requires_artifact_value() {
                 let path = artifact
                     .resolve_path(artifact_fs, Some(&value.content_based_path_hash()))
-                    .buck_error_context("Invalid artifact")?;
+                    .bsmr_error_context("Invalid artifact")?;
                 insert_artifact_lazy(&mut builder, path, value)?;
             } else {
                 let path = artifact
                     .resolve_path(artifact_fs, None)
-                    .buck_error_context("Invalid artifact")?;
+                    .bsmr_error_context("Invalid artifact")?;
                 insert_artifact_lazy(&mut builder, path, value)?;
             }
         }
@@ -76,7 +76,7 @@ impl ArtifactGroupValues {
 
             builder
                 .merge(child_dir.dupe())
-                .buck_error_context("Merge failed")?;
+                .bsmr_error_context("Merge failed")?;
         }
 
         let directory = builder

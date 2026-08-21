@@ -16,8 +16,8 @@
 
 //!
 //! # Cell
-//! A 'Cell' is sub-project within the main project for Buck. All files
-//! reachable by Buck is belongs to a single Cell.
+//! A 'Cell' is sub-project within the main project for Bsmr. All files
+//! reachable by Bsmr is belongs to a single Cell.
 //! Cells can be sub-directories of other cells, but that makes that
 //! sub-directory part of the sub-cell and no longer part of the parent cell.
 //! For example, let's say there's cells 'parent-cell' and 'sub-cell' declared
@@ -63,7 +63,7 @@
 //! inaccessible from the cell context that doesn't declare them.
 //!
 //! ### The Empty Cell Alias
-//! The empty cell alias is a special alias injected by Buck to represent the
+//! The empty cell alias is a special alias injected by Bsmr to represent the
 //! current contextual cell. That means, inside `mycell` cell, references to the
 //! 'CellAlias' `""` will resolve to the `mycell` cell.
 //!
@@ -102,7 +102,7 @@ use std::sync::Arc;
 use allocative::Allocative;
 use bsmr_fs::paths::abs_path::AbsPath;
 use bsmr_fs::paths::file_name::FileNameBuf;
-use bsmr_hash::StdBuckHashMap;
+use bsmr_hash::StdBsmrHashMap;
 use dupe::Dupe;
 use dupe::OptionDupedExt;
 use gazebo::prelude::*;
@@ -151,7 +151,7 @@ enum CellError {
 pub struct CellAliasResolver {
     /// Current cell name.
     current: CellName,
-    aliases: Arc<StdBuckHashMap<NonEmptyCellAlias, CellName>>,
+    aliases: Arc<StdBsmrHashMap<NonEmptyCellAlias, CellName>>,
 }
 
 impl CellAliasResolver {
@@ -159,7 +159,7 @@ impl CellAliasResolver {
     /// this will fail
     pub fn new(
         current: CellName,
-        mut aliases: StdBuckHashMap<NonEmptyCellAlias, CellName>,
+        mut aliases: StdBsmrHashMap<NonEmptyCellAlias, CellName>,
     ) -> bsmr_error::Result<CellAliasResolver> {
         let current_as_alias = NonEmptyCellAlias::new(current.as_str().to_owned())?;
         if let Some(alias_target) = aliases.insert(current_as_alias, current) {
@@ -178,7 +178,7 @@ impl CellAliasResolver {
         root_aliases: &CellAliasResolver,
         alias_list: impl IntoIterator<Item = (NonEmptyCellAlias, NonEmptyCellAlias)>,
     ) -> bsmr_error::Result<CellAliasResolver> {
-        let mut aliases: StdBuckHashMap<_, _> = root_aliases
+        let mut aliases: StdBsmrHashMap<_, _> = root_aliases
             .mappings()
             .map(|(x, y)| (x.to_owned(), y))
             .collect();
@@ -222,7 +222,7 @@ pub struct CellResolver(Arc<CellResolverInternals>);
 
 #[derive(PartialEq, Eq, Debug, Allocative, Pagable)]
 struct CellResolverInternals {
-    cells: StdBuckHashMap<CellName, CellInstance>,
+    cells: StdBsmrHashMap<CellName, CellInstance>,
     #[allocative(visit = crate::cells::sequence_trie_allocative::visit_sequence_trie)]
     path_mappings: SequenceTrie<FileNameBuf, CellName>,
     root_cell: CellName,
@@ -248,8 +248,8 @@ impl CellResolver {
             }
         }
 
-        let mut cells_map: StdBuckHashMap<CellName, CellInstance> =
-            StdBuckHashMap::with_capacity_and_hasher(cells.len(), Default::default());
+        let mut cells_map: StdBsmrHashMap<CellName, CellInstance> =
+            StdBsmrHashMap::with_capacity_and_hasher(cells.len(), Default::default());
         for cell in cells {
             match cells_map.entry(cell.name()) {
                 hash_map::Entry::Occupied(entry) => {
@@ -390,7 +390,7 @@ impl CellResolver {
         if other_path.is_empty() {
             Self::testing_with_names_and_paths_with_alias(
                 &[(other_name, other_path)],
-                StdBuckHashMap::default(),
+                StdBsmrHashMap::default(),
             )
         } else {
             Self::testing_with_names_and_paths_with_alias(
@@ -401,7 +401,7 @@ impl CellResolver {
                         CellRootPathBuf::testing_new(""),
                     ),
                 ],
-                StdBuckHashMap::default(),
+                StdBsmrHashMap::default(),
             )
         }
     }
@@ -409,13 +409,13 @@ impl CellResolver {
     pub fn testing_with_names_and_paths(cells: &[(CellName, CellRootPathBuf)]) -> CellResolver {
         Self::testing_with_names_and_paths_with_alias(
             &cells.map(|(name, path)| (*name, path.clone())),
-            StdBuckHashMap::default(),
+            StdBsmrHashMap::default(),
         )
     }
 
     pub fn testing_with_names_and_paths_with_alias(
         cells: &[(CellName, CellRootPathBuf)],
-        mut root_cell_aliases: StdBuckHashMap<NonEmptyCellAlias, CellName>,
+        mut root_cell_aliases: StdBsmrHashMap<NonEmptyCellAlias, CellName>,
     ) -> CellResolver {
         assert_eq!(
             cells.len(),

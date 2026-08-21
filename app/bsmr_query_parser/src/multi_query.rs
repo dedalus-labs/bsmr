@@ -46,7 +46,7 @@ impl MaybeMultiQuery {
         if query.contains(QUERY_PERCENT_S_PLACEHOLDER) {
             // We'd really like the query args to only be literals (file or target).
             // If that didn't work, we'd really like query args to be well-formed expressions.
-            // Unfortunately Buck1 just substitutes in arbitrarily strings, where the query
+            // Unfortunately Legacy just substitutes in arbitrarily strings, where the query
             // or query_args may not form anything remotely valid.
             // We have to be backwards compatible :(
             let queries = args

@@ -18,7 +18,7 @@ use std::fmt;
 use std::fmt::Debug;
 
 use bsmr_common::file_ops::metadata::FileDigest;
-use bsmr_error::BuckErrorContext;
+use bsmr_error::BsmrErrorContext;
 use futures::future;
 use remote_execution::InlinedBlobWithDigest;
 use remote_execution::TDigest;
@@ -127,7 +127,7 @@ impl ReStdStream {
                 let bytes = client
                     .download_blob(&digest)
                     .await
-                    .with_buck_error_context(|| {
+                    .with_bsmr_error_context(|| {
                         format!(
                             "Error downloading from {}",
                             FileDigest::from_re(&digest, digest_config).as_display()

@@ -17,14 +17,14 @@
 
 import json
 
-from bsmr.tests.e2e_util.api.buck import Buck
-from bsmr.tests.e2e_util.buck_workspace import buck_test
+from bsmr.tests.e2e_util.api.bsmr import Bsmr
+from bsmr.tests.e2e_util.bsmr_workspace import bsmr_test
 
 
 # Test select works with bsmrconfig.
-@buck_test()
-async def test_select_bsmrconfig(buck: Buck) -> None:
-    out = await buck.cquery(
+@bsmr_test()
+async def test_select_bsmrconfig(bsmr: Bsmr) -> None:
+    out = await bsmr.cquery(
         "root//:the-test",
         "--output-attribute=labels",
     )
@@ -32,7 +32,7 @@ async def test_select_bsmrconfig(buck: Buck) -> None:
     assert len(q) == 1
     assert list(q.values())[0]["labels"] == ["NO"]
 
-    out = await buck.cquery(
+    out = await bsmr.cquery(
         "root//:the-test",
         "--output-attribute=labels",
         "-c",

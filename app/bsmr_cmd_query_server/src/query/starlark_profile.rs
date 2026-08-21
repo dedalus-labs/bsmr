@@ -17,7 +17,7 @@
 use std::path::Path;
 
 use bsmr_core::package::PackageLabel;
-use bsmr_error::BuckErrorContext;
+use bsmr_error::BsmrErrorContext;
 use bsmr_error::internal_error;
 use bsmr_events::dispatch::console_message;
 use bsmr_fs::paths::abs_path::AbsPath;
@@ -36,7 +36,7 @@ pub(crate) async fn write_query_profile_for_targets(
     let output_path =
         output_path.ok_or_else(|| internal_error!("Outut path must be set for profile mode"))?;
     let output_path = AbsPath::new(Path::new(output_path))
-        .buck_error_context("Output path must be set to absolute path by the client")?;
+        .bsmr_error_context("Output path must be set to absolute path by the client")?;
     do_write_query_profile_for_targets(ctx, output_path, Vec::from_iter(targets))
         .boxed()
         .await

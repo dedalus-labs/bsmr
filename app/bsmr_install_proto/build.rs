@@ -20,8 +20,8 @@ use std::io;
 fn main() -> io::Result<()> {
     let proto_files = &["install.proto"];
 
-    let buck_proto_srcs = env::var("BUCK_PROTO_SRCS");
-    let includes = if let Ok(path) = &buck_proto_srcs {
+    let bsmr_proto_srcs = env::var("BSMR_PROTO_SRCS");
+    let includes = if let Ok(path) = &bsmr_proto_srcs {
         vec![path.as_str()]
     } else {
         vec!["."]

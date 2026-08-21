@@ -19,7 +19,7 @@
 
 -import(common_util, [unicode_characters_to_binary/1, unicode_characters_to_list/1, filename_all_to_filename/1]).
 
--include_lib("common/include/buck_ct_records.hrl").
+-include_lib("common/include/bsmr_ct_records.hrl").
 -include_lib("common/include/tpx_records.hrl").
 -include_lib("kernel/include/logger.hrl").
 
@@ -119,7 +119,7 @@ handle_run(Args) ->
             none ->
                 capture_stdout;
             _ ->
-                os:putenv("ERLANG_BUCK_DEBUG_PRINT", "disabled"),
+                os:putenv("ERLANG_BSMR_DEBUG_PRINT", "disabled"),
                 no_capture_stdout
         end,
     test_logger:set_up_logger(OutputDir, test_runner, LoggingType),
@@ -133,7 +133,7 @@ handle_list_and_run(Args) ->
     %% without test runner support we run all tests and need to create our own test dir
     OutputDir = string:trim(os:cmd("mktemp -d")),
     test_logger:set_up_logger(OutputDir, test_runner, no_capture_stdout),
-    os:putenv("ERLANG_BUCK_DEBUG_PRINT", "disabled"),
+    os:putenv("ERLANG_BSMR_DEBUG_PRINT", "disabled"),
     case list_and_run(Args, OutputDir) of
         true ->
             io:format("~nAt least one test didn't pass!~nYou can find the test output directory here: ~ts~n", [
@@ -226,14 +226,14 @@ get_listing(TestInfo, OutputDir) ->
         raw_target = TestInfo#test_info.raw_target
     },
     Providers0 = [
-        buck_ct_provider:do_init(Provider, InitProviderState)
+        bsmr_ct_provider:do_init(Provider, InitProviderState)
      || Provider <- TestInfo#test_info.providers
     ],
     HookModules = get_hooks(TestInfo),
-    Providers1 = [buck_ct_provider:do_pre_listing(Provider) || Provider <- Providers0],
+    Providers1 = [bsmr_ct_provider:do_pre_listing(Provider) || Provider <- Providers0],
     Listing = list_test:list_tests(Suite, HookModules),
-    Providers2 = [buck_ct_provider:do_post_listing(Provider) || Provider <- Providers1],
-    [buck_ct_provider:do_terminate(Provider) || Provider <- Providers2],
+    Providers2 = [bsmr_ct_provider:do_post_listing(Provider) || Provider <- Providers1],
+    [bsmr_ct_provider:do_terminate(Provider) || Provider <- Providers2],
     Listing.
 
 %% rudimantary implementation for running tests with bsmr open-sourced test runner

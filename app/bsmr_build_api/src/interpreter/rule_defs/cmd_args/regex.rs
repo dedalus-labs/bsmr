@@ -15,7 +15,7 @@
  */
 
 use allocative::Allocative;
-use bsmr_interpreter::types::regex::StarlarkBuckRegex;
+use bsmr_interpreter::types::regex::StarlarkBsmrRegex;
 use dupe::Dupe;
 use regex::Regex;
 use serde::Serialize;
@@ -48,7 +48,7 @@ pub(crate) enum CmdArgsRegex<'v> {
     /// Deprecated.
     // TODO(nga): migrate, soft error, remove.
     Str(StringValue<'v>),
-    Regex(ValueTyped<'v, StarlarkBuckRegex>),
+    Regex(ValueTyped<'v, StarlarkBsmrRegex>),
 }
 
 impl<'v> CmdArgsRegex<'v> {
@@ -67,7 +67,7 @@ impl<'v> CmdArgsRegex<'v> {
 #[derive(Debug, Clone, Dupe, Copy, Allocative, StarlarkPagable)]
 pub(crate) enum FrozenCmdArgsRegex {
     Str(FrozenStringValue),
-    Regex(FrozenValueTyped<'static, StarlarkBuckRegex>),
+    Regex(FrozenValueTyped<'static, StarlarkBsmrRegex>),
 }
 
 impl<'v> CmdArgsRegex<'v> {

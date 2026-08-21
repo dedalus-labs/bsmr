@@ -18,7 +18,7 @@ use std::fmt;
 use std::fmt::Display;
 
 use allocative::Allocative;
-use bsmr_hash::BuckIndexSet;
+use bsmr_hash::BsmrIndexSet;
 use display_container::fmt_container;
 use dupe::IterDupedExt;
 use fancy_regex::Regex;
@@ -79,7 +79,7 @@ impl<T: QueryTarget> TargetSet<T> {
     }
 
     pub fn buildfile(&self) -> FileSet {
-        let mut files = BuckIndexSet::default();
+        let mut files = BsmrIndexSet::default();
         for target in self.targets.iter() {
             files.insert(FileNode(target.buildfile_path().path()));
         }
@@ -87,7 +87,7 @@ impl<T: QueryTarget> TargetSet<T> {
     }
 
     pub fn inputs(&self) -> bsmr_error::Result<FileSet> {
-        let mut files = BuckIndexSet::default();
+        let mut files = BsmrIndexSet::default();
         for target in self.targets.iter() {
             target.inputs_for_each(|file| {
                 files.insert(FileNode(file));

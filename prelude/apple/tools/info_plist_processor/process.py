@@ -1,3 +1,9 @@
+# ===----------------------------------------------------------------------===
+# Upstream-Source: facebook/buck2@1560aca2002865cd73d7cafb22c705cfb640b2bc
+# Modifications Copyright (c) 2026 Dedalus Labs, Inc. and its contributors
+# SPDX-License-Identifier: Apache-2.0
+# ===----------------------------------------------------------------------===
+
 # Copyright (c) Meta Platforms, Inc. and affiliates.
 #
 # This source code is dual-licensed under either the MIT license found in the
@@ -36,7 +42,7 @@ def _deepmerge_plist_dicts(source: dict[str, Any], destination: dict[str, Any]):
             exit(3)
 
 
-# Corresponding v1 code is contained in `com/facebook/buck/apple/PlistProcessStep.java`, `PlistProcessStep::execute` method.
+# Corresponding v1 code is contained in `com/dedalus/bsmr/apple/PlistProcessStep.java`, `PlistProcessStep::execute` method.
 def _merge_plist_dicts(
     source: dict[str, Any],
     destination: dict[str, Any],

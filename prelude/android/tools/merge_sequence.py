@@ -1,4 +1,10 @@
 #!/usr/bin/python3
+# ===----------------------------------------------------------------------===
+# Upstream-Source: facebook/buck2@1560aca2002865cd73d7cafb22c705cfb640b2bc
+# Modifications Copyright (c) 2026 Dedalus Labs, Inc. and its contributors
+# SPDX-License-Identifier: Apache-2.0
+# ===----------------------------------------------------------------------===
+
 # Copyright (c) Meta Platforms, Inc. and affiliates.
 #
 # This source code is dual-licensed under either the MIT license found in the
@@ -432,7 +438,7 @@ def get_native_linkables_by_merge_sequence(  # noqa: C901
 
         # TODO(cjhopman): This logic does not explicitly exclude targets that are used_by_wrap_script. D38377593
         # enforces that such targets never can_be_asset and are therefore implicitly excluded, but D38845949 still
-        # explicitly excludes them for Buck 1.
+        # explicitly excludes them for Bsmr 1.
         return False
 
     def get_children_without_merge_group(label: Label) -> list[Label]:

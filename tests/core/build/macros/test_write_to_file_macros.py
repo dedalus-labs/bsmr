@@ -16,8 +16,8 @@
 import os
 import re
 
-from bsmr.tests.e2e_util.api.buck import Buck
-from bsmr.tests.e2e_util.buck_workspace import buck_test
+from bsmr.tests.e2e_util.api.bsmr import Bsmr
+from bsmr.tests.e2e_util.bsmr_workspace import bsmr_test
 
 
 def _normalize_path(p: str) -> str:
@@ -37,14 +37,14 @@ def _find_file(dir, name: str) -> str:
     return f
 
 
-@buck_test(setup_eden=True)
-async def test_xxx(buck: Buck) -> None:
-    result = await buck.build("//:test_rule")
+@bsmr_test(setup_eden=True)
+async def test_xxx(bsmr: Bsmr) -> None:
+    result = await bsmr.build("//:test_rule")
     out = result.get_build_report().output_for_target("root//:test_rule")
 
     # Out contents is:
     # ```
-    # @bsmr-out/v2/art/root/6dd044292ff31ae1/__test_rule__/__macros/1e0e364a22c69340e6f02604520fdeb7674264c0/0.macro
+    # @bsmr-out/default/art/root/6dd044292ff31ae1/__test_rule__/__macros/1e0e364a22c69340e6f02604520fdeb7674264c0/0.macro
     # @../__macros/1e0e364a22c69340e6f02604520fdeb7674264c0/1.macro
     # @../__macros/1e0e364a22c69340e6f02604520fdeb7674264c0/2.macro
     # @../__macros/1e0e364a22c69340e6f02604520fdeb7674264c0/3.macro
@@ -59,32 +59,32 @@ async def test_xxx(buck: Buck) -> None:
     d = d.replace("\\", "/")
 
     assert (
-        "@bsmr-out/v2/art/root/<HASH>/__test_rule__/__macros/<HASH>/0.macro"
+        "@bsmr-out/default/art/root/<HASH>/__test_rule__/__macros/<HASH>/0.macro"
         == _normalize_path(a)
     )
     assert "@../__macros/<HASH>/1.macro" == _normalize_path(b)
     assert "@../__macros/<HASH>/2.macro" == _normalize_path(c)
     assert "@../__macros/<HASH>/3.macro" == _normalize_path(d)
 
-    buck_out = buck.cwd / "bsmr-out"
-    a_x = _find_file(buck_out, "0.macro")
+    output = bsmr.cwd / "bsmr-out"
+    a_x = _find_file(output, "0.macro")
     with open(a_x) as f:
         a_contents = _normalize_path(f.read())
-        assert "bsmr-out/v2/art/root/<HASH>/__write_file__/write_file.txt" == a_contents
+        assert "bsmr-out/default/art/root/<HASH>/__write_file__/write_file.txt" == a_contents
 
     # TODO(nga): contents of `{1,2,3}.macro` should be identical.
 
-    b_x = _find_file(buck_out, "1.macro")
+    b_x = _find_file(output, "1.macro")
     with open(b_x) as f:
         b_contents = _normalize_path(f.read())
-        assert "bsmr-out/v2/art/root/<HASH>/__write_file__/write_file.txt" == b_contents
+        assert "bsmr-out/default/art/root/<HASH>/__write_file__/write_file.txt" == b_contents
 
-    c_x = _find_file(buck_out, "2.macro")
+    c_x = _find_file(output, "2.macro")
     with open(c_x) as f:
         c_contents = _normalize_path(f.read())
         assert "../../__write_file__/write_file.txt" == c_contents
 
-    d_x = _find_file(buck_out, "3.macro")
+    d_x = _find_file(output, "3.macro")
     with open(d_x) as f:
         d_contents = _normalize_path(f.read())
         assert "../../__write_file__/write_file.txt" == d_contents

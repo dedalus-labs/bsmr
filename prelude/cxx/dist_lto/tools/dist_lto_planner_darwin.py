@@ -1,4 +1,10 @@
 #!/usr/bin/env python3
+# ===----------------------------------------------------------------------===
+# Upstream-Source: facebook/buck2@1560aca2002865cd73d7cafb22c705cfb640b2bc
+# Modifications Copyright (c) 2026 Dedalus Labs, Inc. and its contributors
+# SPDX-License-Identifier: Apache-2.0
+# ===----------------------------------------------------------------------===
+
 # Copyright (c) Meta Platforms, Inc. and affiliates.
 #
 # This source code is dual-licensed under either the MIT license found in the
@@ -13,7 +19,7 @@ A wrapper script around the linker invocation that completes distributed thin-lt
 This script:
 
 (1) Parses the meta file, which specifies various file paths for each input object file.
-(2) Writes "plan" json files for each input object file or archive describing to Buck starlark logic how to create opt + codegen actions for each
+(2) Writes "plan" json files for each input object file or archive describing to Bsmr starlark logic how to create opt + codegen actions for each
 (3) Writes a "link plan" and a "final index". The link plan is used to identify which input object files are already native object files, and the final index constitutes a filelist used in the final native link. This filelist is a transformed version of the "index.full" file the linker produces.
 
 Starlark code holds a representation of each input object file or archive in memory in an array. When code here needs to communicate characteristics about a particular element of this array, it encodes this using the index into this array. These indices are referred to as "starlark array index"
@@ -159,12 +165,12 @@ def _run_thin_link(
     thin_link_args: list[str],
 ):
     if premerger_enabled:
-        # Buck requires actions write output files to a location set by the build system.  When toolchain
+        # Bsmr requires actions write output files to a location set by the build system.  When toolchain
         # binaries cannot for whatever reason easily produce output files at known locations configurable
         # locations, the usual approach is to use a wrapper Python script such as this one to place the
-        # files at the locations buck expects.  In this case, this will not work as sharded summaries embed
+        # files at the locations bsmr expects.  In this case, this will not work as sharded summaries embed
         # paths to other bitcode files within the bitcode.  That means the toolchain must write the merged
-        # bitcode files to locations buck expects in the first place. This json document is parsed by the
+        # bitcode files to locations bsmr expects in the first place. This json document is parsed by the
         # linker and communicates the locations at which the toolchain must write the merged bitcode files.
         with tempfile.NamedTemporaryFile(mode="w+t") as premerger_output_mapping:
             json.dump(
@@ -245,7 +251,7 @@ def main(argv):
 
     # Generate plans for object files
     for path, data in sorted(object_file_records_map.items(), key=lambda v: v[0]):
-        # The linker will not write the sharded index to the location buck expects it to be by default, we need
+        # The linker will not write the sharded index to the location bsmr expects it to be by default, we need
         # to move it there.
         final_sharded_index_output_path = data.output_index_shard_file_path
         os.makedirs(os.path.dirname(final_sharded_index_output_path), exist_ok=True)
@@ -293,7 +299,7 @@ def main(argv):
             )
         else:
             # The linker will not generate an index shard, or a merged bitcode file if the input is not bitcode.
-            # Buck still expect the output, so write an empty file.
+            # Bsmr still expect the output, so write an empty file.
             non_lto_objects[data.starlark_array_index] = 1
             with open(final_sharded_index_output_path, "w"):
                 pass

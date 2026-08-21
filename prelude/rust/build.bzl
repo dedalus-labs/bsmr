@@ -175,7 +175,7 @@ def generate_rustdoc(
     output = ctx.actions.declare_output(subdir, has_content_based_path = use_cbp)
 
     plain_env, path_env = process_env(compile_ctx, toolchain_info.rustdoc_env | ctx.attrs.env)
-    plain_env["RUSTDOC_BUCK_TARGET"] = cmd_args(str(ctx.label.raw_target()))
+    plain_env["RUSTDOC_BSMR_TARGET"] = cmd_args(str(ctx.label.raw_target()))
 
     if toolchain_info.rust_target_path != None:
         path_env["RUST_TARGET_PATH"] = toolchain_info.rust_target_path[DefaultInfo].default_outputs[0]
@@ -241,7 +241,7 @@ def generate_rustdoc_coverage(
     output = ctx.actions.declare_output(file, has_content_based_path = use_cbp)
 
     plain_env, path_env = process_env(compile_ctx, ctx.attrs.env)
-    plain_env["RUSTDOC_BUCK_TARGET"] = cmd_args(str(ctx.label.raw_target()))
+    plain_env["RUSTDOC_BSMR_TARGET"] = cmd_args(str(ctx.label.raw_target()))
 
     if toolchain_info.rust_target_path != None:
         path_env["RUST_TARGET_PATH"] = toolchain_info.rust_target_path[DefaultInfo].default_outputs[0]
@@ -1189,16 +1189,16 @@ def _compute_common_args(
     # transitive dependency only occurs if the rlib and dylib both describe the
     # same crate i.e. contain the same crate hash.
     #
-    # Buck-built libraries never produce an rlib and dylib containing the same
+    # Bsmr-built libraries never produce an rlib and dylib containing the same
     # crate hash, since that only occurs when outputting multiple crate types
     # through a single rustc invocation: `--crate-type=rlib --crate-type=dylib`.
-    # In Buck, different crate types are built by different rustc invocations.
+    # In Bsmr, different crate types are built by different rustc invocations.
     # But Cargo does invoke rustc with multiple crate types when you write
     # `[lib] crate-type = ["rlib", "dylib"]` in Cargo.toml, and in fact the
     # standard libraries built by x.py and distributed by Rustup are built this
     # way.
     if toolchain_info.explicit_sysroot_deps:
-        # Standard libraries are being passed explicitly, and Buck-built
+        # Standard libraries are being passed explicitly, and Bsmr-built
         # dependencies never collide on crate hash, so `-Cprefer-dynamic` cannot
         # make a difference.
         prefer_dynamic_flags = []
@@ -1215,7 +1215,7 @@ def _compute_common_args(
         # the linker. This corresponds to `-gno-split-dwarf` in Clang.
         SplitDebugMode("none"): [],
         # Split DWARF: debug info is placed into *.dwo files in the directory
-        # specified by `--out-dir`. In Buck, this directory is usually called
+        # specified by `--out-dir`. In Bsmr, this directory is usually called
         # "extras" that is a sibling of the main output artifact (rlib,
         # staticlib, executable, or shared library).
         #
@@ -1226,7 +1226,7 @@ def _compute_common_args(
         #
         # For each binary target, we have a separate step which involves
         # `llvm-dwp` to combine all the *.dwo files from the dependency graph
-        # into one *.dwp. This is handled as a separate Buck action from the
+        # into one *.dwp. This is handled as a separate Bsmr action from the
         # compiler/linker invocation responsible for linking the executable or
         # shared library artifact.
         #
@@ -1566,7 +1566,7 @@ def _rustc_invoke(
         cmd_args(diag_json.as_output(), format = "--diag-json={}"),
         cmd_args(diag_txt.as_output(), format = "--diag-txt={}"),
         ["--remap-cwd-prefix=."] if not toolchain_info.nightly_features else [],
-        "--buck-target={}".format(ctx.label.raw_target()),
+        "--bsmr-target={}".format(ctx.label.raw_target()),
         hidden = [toolchain_info.compiler, compile_ctx.transitive_srcs.project_as_args("artifacts")],
     )
 
@@ -1755,7 +1755,7 @@ def process_env(
     #
     # and proc macros using std::fs to read thing like .pest grammars, which
     # would need paths relative to the directory that rustc got invoked in
-    # (which is the repo root in Buck builds).
+    # (which is the repo root in Bsmr builds).
     for key in _DIRECTORY_ENV:
         value = plain_env.pop(key, None)
         if value:

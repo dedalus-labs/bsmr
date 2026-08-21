@@ -28,7 +28,7 @@ use bsmr_core::pattern::pattern::ParsedPatternWithModifiers;
 use bsmr_core::pattern::pattern_type::PatternType;
 use bsmr_core::target::name::TargetName;
 use bsmr_events::dispatch::console_message;
-use bsmr_hash::BuckHasherBuilder;
+use bsmr_hash::BsmrHasherBuilder;
 use dice::DiceComputations;
 use dice::LinearRecomputeDiceComputations;
 use dice_futures::owning_future::OwningFuture;
@@ -55,7 +55,7 @@ enum BuildErrors {
 
 struct Builder<'c, 'd> {
     ctx: &'c LinearRecomputeDiceComputations<'d>,
-    already_loading: std::collections::HashSet<PackageLabel, BuckHasherBuilder>,
+    already_loading: std::collections::HashSet<PackageLabel, BsmrHasherBuilder>,
     load_package_futs:
         FuturesUnordered<BoxFuture<'c, (PackageLabel, bsmr_error::Result<Arc<EvaluationResult>>)>>,
 }

@@ -15,9 +15,9 @@
 # pyre-strict
 
 
-from bsmr.tests.e2e_util.api.buck import Buck
+from bsmr.tests.e2e_util.api.bsmr import Bsmr
 from bsmr.tests.e2e_util.asserts import expect_failure
-from bsmr.tests.e2e_util.buck_workspace import buck_test
+from bsmr.tests.e2e_util.bsmr_workspace import bsmr_test
 
 
 def assert_file_content_matches(file_path: str, exptected_content: str) -> None:
@@ -26,9 +26,9 @@ def assert_file_content_matches(file_path: str, exptected_content: str) -> None:
         assert content == exptected_content
 
 
-@buck_test()
-async def test_streaming_output_ensured_artifact(buck: Buck) -> None:
-    result = await buck.bxl(
+@bsmr_test()
+async def test_streaming_output_ensured_artifact(bsmr: Bsmr) -> None:
+    result = await bsmr.bxl(
         "//streaming.bxl:streaming_output_ensured_artifact",
     )
 
@@ -59,9 +59,9 @@ async def test_streaming_output_ensured_artifact(buck: Buck) -> None:
     assert_file_content_matches(output_file_path, "hello world!")
 
 
-@buck_test()
-async def test_streaming_output(buck: Buck) -> None:
-    result = await buck.bxl(
+@bsmr_test()
+async def test_streaming_output(bsmr: Bsmr) -> None:
+    result = await bsmr.bxl(
         "//streaming.bxl:streaming_output",
     )
 
@@ -84,9 +84,9 @@ async def test_streaming_output(buck: Buck) -> None:
     )
 
 
-@buck_test()
-async def test_streaming_output_without_duplicates(buck: Buck) -> None:
-    result = await buck.bxl(
+@bsmr_test()
+async def test_streaming_output_without_duplicates(bsmr: Bsmr) -> None:
+    result = await bsmr.bxl(
         "//streaming.bxl:streaming_output_without_duplicates",
     )
 
@@ -103,7 +103,7 @@ async def test_streaming_output_without_duplicates(buck: Buck) -> None:
 
     # call again to check when bxl key is cached
 
-    result = await buck.bxl(
+    result = await bsmr.bxl(
         "//streaming.bxl:streaming_output_without_duplicates",
     )
     stdout = result.stdout
@@ -118,9 +118,9 @@ async def test_streaming_output_without_duplicates(buck: Buck) -> None:
     )
 
 
-@buck_test()
-async def test_streaming_output_waits_on(buck: Buck) -> None:
-    result = await buck.bxl(
+@bsmr_test()
+async def test_streaming_output_waits_on(bsmr: Bsmr) -> None:
+    result = await bsmr.bxl(
         "//streaming.bxl:streaming_output_waits_on",
     )
 
@@ -147,10 +147,10 @@ async def test_streaming_output_waits_on(buck: Buck) -> None:
     )
 
 
-@buck_test()
-async def test_streaming_output_json(buck: Buck) -> None:
+@bsmr_test()
+async def test_streaming_output_json(bsmr: Bsmr) -> None:
     async def check_output() -> None:
-        result = await buck.bxl(
+        result = await bsmr.bxl(
             "//streaming.bxl:streaming_output_json",
         )
 
@@ -199,11 +199,11 @@ async def test_streaming_output_json(buck: Buck) -> None:
     await check_output()
 
 
-@buck_test()
-async def test_stream_output_fail(buck: Buck) -> None:
+@bsmr_test()
+async def test_stream_output_fail(bsmr: Bsmr) -> None:
     async def check() -> None:
         await expect_failure(
-            buck.bxl(
+            bsmr.bxl(
                 "//streaming.bxl:stream_output_fail",
             ),
             stdout_regex="Streaming output",

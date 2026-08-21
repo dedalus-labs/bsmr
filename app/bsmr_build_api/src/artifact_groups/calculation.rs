@@ -36,7 +36,7 @@ use bsmr_core::build_file_path::BuildFilePath;
 use bsmr_core::cells::cell_path::CellPath;
 use bsmr_core::package::PackageLabel;
 use bsmr_directory::directory::directory_data::DirectoryData;
-use bsmr_error::BuckErrorContext;
+use bsmr_error::BsmrErrorContext;
 use bsmr_error::internal_error;
 use bsmr_execute::artifact_value::ArtifactValue;
 use bsmr_execute::digest_config::HasDigestConfig;
@@ -193,7 +193,7 @@ fn ensure_source_artifact_staged<'a>(
     .boxed()
 }
 
-// These errors should be unreachable, they indicate misuse of the staged ensure artifact (or other buck
+// These errors should be unreachable, they indicate misuse of the staged ensure artifact (or other bsmr
 // invariant violations), but it's still better to propagate them as Error than to panic!().
 #[derive(Debug, bsmr_error::Error)]
 #[bsmr(tag = Input)]
@@ -541,7 +541,7 @@ impl Key for EnsureProjectedArtifactKey {
         insert_artifact(&mut builder, base_path, &base_value)?;
 
         let value = extract_artifact_value(&builder, &projected_path, digest_config)
-            .with_buck_error_context(|| {
+            .with_bsmr_error_context(|| {
                 format!("The path `{path}` cannot be projected in the artifact `{base}`. Are you calling project() on a symlink?")
             })?
             .ok_or_else(|| {
@@ -643,7 +643,7 @@ impl Key for EnsureTransitiveSetProjectionKey {
             let digest_config = ctx.global_data().get_digest_config();
 
             let values = ArtifactGroupValues::new(values, children, &artifact_fs, digest_config)
-                .buck_error_context("Failed to construct ArtifactGroupValues")?;
+                .bsmr_error_context("Failed to construct ArtifactGroupValues")?;
 
             ctx.store_evaluation_data(EnsureTransitiveSetProjectionKeyActivationData {
                 time_span: time_span.end_now(),

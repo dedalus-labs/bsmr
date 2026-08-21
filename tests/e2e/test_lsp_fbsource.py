@@ -15,12 +15,12 @@
 # pyre-strict
 
 
-from bsmr.tests.e2e_util.api.buck import Buck
-from bsmr.tests.e2e_util.buck_workspace import buck_test
+from bsmr.tests.e2e_util.api.bsmr import Bsmr
+from bsmr.tests.e2e_util.bsmr_workspace import bsmr_test
 
 
-@buck_test(inplace=True)
-async def test_lsp_starts_fbsource(buck: Buck) -> None:
-    async with await buck.lsp() as lsp:
+@bsmr_test(inplace=True)
+async def test_lsp_starts_fbsource(bsmr: Bsmr) -> None:
+    async with await bsmr.lsp() as lsp:
         # Will fail if the initialize response is not received
         await lsp.init_connection()

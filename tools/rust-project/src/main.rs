@@ -14,7 +14,7 @@
  * above-listed licenses.
  */
 
-mod buck;
+mod bsmr;
 mod cli;
 mod diagnostics;
 mod path;
@@ -38,7 +38,7 @@ use tracing_subscriber::Layer;
 use tracing_subscriber::filter::LevelFilter;
 use tracing_subscriber::layer::SubscriberExt;
 
-use crate::buck::Buck;
+use crate::bsmr::Bsmr;
 use crate::cli::ProjectKind;
 use crate::project_json::Crate;
 use crate::project_json::Dep;
@@ -66,9 +66,9 @@ enum Command {
         /// subdirectory.
         path: Option<PathBuf>,
     },
-    /// Convert buck's build to a format that rust-analyzer can consume.
+    /// Convert bsmr's build to a format that rust-analyzer can consume.
     Develop {
-        /// Buck targets to include in rust-project.json.
+        /// Bsmr targets to include in rust-project.json.
         #[clap(required = true, conflicts_with = "files", num_args=1..)]
         targets: Vec<String>,
 
@@ -192,7 +192,7 @@ enum JsonArguments {
     Path(PathBuf),
     /// Path to BUILD.bsmr file.
     Buildfile(PathBuf),
-    /// A named buck target.
+    /// A named bsmr target.
     Label(String),
 }
 
@@ -303,9 +303,9 @@ fn main() -> Result<(), anyhow::Error> {
             let subscriber = tracing_subscriber::registry().with(fmt.with_filter(filter));
             tracing::subscriber::set_global_default(subscriber)?;
 
-            let buck = Buck::new(bsmr_command, mode, project_root);
+            let bsmr = Bsmr::new(bsmr_command, mode, project_root);
 
-            cli::Check::new(buck, use_clippy, saved_file).run()
+            cli::Check::new(bsmr, use_clippy, saved_file).run()
         }
     }
 }

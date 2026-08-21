@@ -26,13 +26,13 @@ use bsmr_fs::paths::abs_norm_path::AbsNormPath;
 use bsmr_util::process;
 use bsmr_util::process::async_background_command;
 
-use crate::buck_cgroup_tree::read_current_cgroup;
 #[cfg(unix)]
 use crate::cgroup::Cgroup;
 #[cfg(unix)]
 use crate::cgroup::CgroupKindInternal;
 #[cfg(unix)]
 use crate::cgroup::NoMemoryMonitoring;
+use crate::cgroup_tree::read_current_cgroup;
 
 const DAEMON_ORIGINATING_CGROUP_FLAG: &str = "--daemon-originating-cgroup";
 
@@ -81,7 +81,7 @@ async fn get_daemon_spawner(init: &ResourceControlInit) -> bsmr_error::Result<Da
                 if !controllers.contains(controller) {
                     return Err(bsmr_error::bsmr_error!(
                         bsmr_error::ErrorTag::Input,
-                        "Buck parent cgroup does not have {} controller enabled",
+                        "Bsmr parent cgroup does not have {} controller enabled",
                         controller
                     ));
                 }
@@ -141,7 +141,7 @@ pub async fn create_daemon_spawn_command(
         )),
         #[cfg(unix)]
         DaemonSpawner::Cgroup(parent) => {
-            use bsmr_error::BuckErrorContext;
+            use bsmr_error::BsmrErrorContext;
             use bsmr_fs::paths::file_name::FileName;
 
             let child = parent
@@ -181,7 +181,7 @@ fn systemd_run_command(
     cmd.arg("--quiet");
     cmd.arg("--collect");
     cmd.arg("--property=Delegate=yes");
-    // N.B. the slice name here is used by BPFJailer to assign the `buck` Role
+    // N.B. the slice name here is used by BPFJailer to assign the `bsmr` Role
     // ID to the daemon process, which is what gives the daemon permission to
     // exit the jail.
     cmd.arg("--slice=bsmr");

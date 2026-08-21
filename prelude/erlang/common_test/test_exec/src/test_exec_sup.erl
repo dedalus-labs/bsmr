@@ -24,7 +24,7 @@ If one of them stops it entails termination of the whole tree.
 
 -export([init/1, start_link/1]).
 
--include_lib("common/include/buck_ct_records.hrl").
+-include_lib("common/include/bsmr_ct_records.hrl").
 
 -spec start_link(#test_env{}) -> {'ok', pid()} | {'error', supervisor:startlink_err()}.
 start_link(#test_env{} = TestEnv) ->

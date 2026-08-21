@@ -24,9 +24,9 @@ from pathlib import Path
 from typing import List
 
 import pytest
-from bsmr.tests.e2e_util.api.buck import Buck
+from bsmr.tests.e2e_util.api.bsmr import Bsmr
 from bsmr.tests.e2e_util.asserts import expect_failure
-from bsmr.tests.e2e_util.buck_workspace import buck_test, env
+from bsmr.tests.e2e_util.bsmr_workspace import bsmr_test, env
 from bsmr.tests.e2e_util.helper.assert_occurrences import (
     assert_occurrences,
     assert_occurrences_regex,
@@ -46,43 +46,43 @@ def eden_linux_only() -> bool:
 ############################################################################################
 
 
-@buck_test(inplace=False, data_dir="pass")
-async def test_pass(buck: Buck) -> None:
-    results = await buck.build("//:abc")
+@bsmr_test(inplace=False, data_dir="pass")
+async def test_pass(bsmr: Bsmr) -> None:
+    results = await bsmr.build("//:abc")
     assert "does not have any outputs" not in results.stderr
 
 
-@buck_test(inplace=False, data_dir="pass")
-async def test_missing_target(buck: Buck) -> None:
-    await expect_failure(buck.build("//:not_a_target_name"))
+@bsmr_test(inplace=False, data_dir="pass")
+async def test_missing_target(bsmr: Bsmr) -> None:
+    await expect_failure(bsmr.build("//:not_a_target_name"))
 
 
-@buck_test(inplace=False, data_dir="pass")
-async def test_success_message_printed(buck: Buck) -> None:
-    results = await buck.build("//:abc", "--console=simplenotty")
+@bsmr_test(inplace=False, data_dir="pass")
+async def test_success_message_printed(bsmr: Bsmr) -> None:
+    results = await bsmr.build("//:abc", "--console=simplenotty")
 
     assert "BUILD SUCCEEDED" in results.stderr
 
-    results = await buck.build("//:abc", "--console=simpletty")
+    results = await bsmr.build("//:abc", "--console=simpletty")
 
     assert_occurrences("\x1b[38;5;10mBUILD SUCCEEDED\x1b[39m", results.stderr, 1)
 
-    results = await buck.build("//:abc", "--console=super")
+    results = await bsmr.build("//:abc", "--console=super")
 
     assert_occurrences("\x1b[38;5;10mBUILD SUCCEEDED\x1b[39m", results.stderr, 1)
 
 
-@buck_test(inplace=False, data_dir="pass")
-async def test_success_message_suppressed_at_v0(buck: Buck) -> None:
-    results = await buck.build("//:abc", "-v0", "--console=simplenotty")
+@bsmr_test(inplace=False, data_dir="pass")
+async def test_success_message_suppressed_at_v0(bsmr: Bsmr) -> None:
+    results = await bsmr.build("//:abc", "-v0", "--console=simplenotty")
 
     assert "BUILD SUCCEEDED" not in results.stderr
 
 
-@buck_test(inplace=False, data_dir="failing")
-async def test_multiple_errors_print_with_simple_console(buck: Buck) -> None:
+@bsmr_test(inplace=False, data_dir="failing")
+async def test_multiple_errors_print_with_simple_console(bsmr: Bsmr) -> None:
     e = await expect_failure(
-        buck.build(
+        bsmr.build(
             "--console=simple",
             "//:foo",
             "//:bar",
@@ -91,7 +91,7 @@ async def test_multiple_errors_print_with_simple_console(buck: Buck) -> None:
     )
 
     # Make sure that streamed events come back
-    assert_occurrences_regex("(Build ID|Buck UI):", e.stderr, 1)
+    assert_occurrences_regex("(Build ID|Bsmr UI):", e.stderr, 1)
     assert_occurrences("RE Session: ", e.stderr, 1)
     assert_occurrences_regex("^BUILD FAILED", e.stderr, 1)
 
@@ -110,7 +110,7 @@ async def test_multiple_errors_print_with_simple_console(buck: Buck) -> None:
     # TODO(nmj): Remove this comment
     # assert_occurrences_regex("getting metadata for.*a_dir`", e.stderr, 1)
 
-    e = await expect_failure(buck.build("--console=simple", "//:non_existent"))
+    e = await expect_failure(bsmr.build("--console=simple", "//:non_existent"))
 
     assert_occurrences_regex("^BUILD FAILED", e.stderr, 1)
     assert_occurrences(
@@ -118,10 +118,10 @@ async def test_multiple_errors_print_with_simple_console(buck: Buck) -> None:
     )
 
 
-@buck_test(inplace=False, data_dir="failing")
-async def test_multiple_errors_print_with_super_console(buck: Buck) -> None:
+@bsmr_test(inplace=False, data_dir="failing")
+async def test_multiple_errors_print_with_super_console(bsmr: Bsmr) -> None:
     e = await expect_failure(
-        buck.build(
+        bsmr.build(
             "--console=super",
             "//:foo",
             "//:bar",
@@ -149,15 +149,15 @@ async def test_multiple_errors_print_with_super_console(buck: Buck) -> None:
 
     assert_occurrences("\x1b[38;5;1mBUILD FAILED\x1b[39m", e.stderr, 1)
 
-    e = await expect_failure(buck.build("--console=super", "//:non_existent"))
+    e = await expect_failure(bsmr.build("--console=super", "//:non_existent"))
 
     target_error = f"{DARK_RED}Unknown target `non_existent` from package `root//`"
     assert_occurrences("\x1b[38;5;1mBUILD FAILED\x1b[39m", e.stderr, 1)
     assert_occurrences_regex(target_error, e.stderr, 1)
 
 
-@buck_test(inplace=False, data_dir="pass")
-async def test_stderr_is_printed_for_successful_actions(buck: Buck) -> None:
+@bsmr_test(inplace=False, data_dir="pass")
+async def test_stderr_is_printed_for_successful_actions(bsmr: Bsmr) -> None:
     no_color_text = "warning on stderr no color"
     # Support '\r\n' which is printed on Windows.
     simple_color_stripped = "\\] warning on stderr with color\\r?$"
@@ -173,19 +173,19 @@ async def test_stderr_is_printed_for_successful_actions(buck: Buck) -> None:
 
     # By default stderr should not be relayed on success w/o the -v2 or higher flag.
 
-    res = await buck.build("--console=simplenotty", "//:print_stderr_simple_notty")
+    res = await bsmr.build("--console=simplenotty", "//:print_stderr_simple_notty")
 
     assert_occurrences(no_color_text, res.stderr, 0)
     assert_occurrences_regex(simple_color_stripped, res.stderr, 0)
     assert_occurrences(simpleconsole_stderr_line, res.stderr, 0)
 
-    res = await buck.build("--console=simpletty", "//:print_stderr_simple_tty")
+    res = await bsmr.build("--console=simpletty", "//:print_stderr_simple_tty")
 
     assert_occurrences(no_color_text, res.stderr, 0)
     assert_occurrences(simple_color, res.stderr, 0)
     assert_occurrences(simpleconsole_stderr_line, res.stderr, 0)
 
-    res = await buck.build("--console=super", "//:print_stderr_super")
+    res = await bsmr.build("--console=super", "//:print_stderr_super")
 
     assert_occurrences(no_color_text, res.stderr, 0)
     assert_occurrences(super_color, res.stderr, 0)
@@ -193,20 +193,20 @@ async def test_stderr_is_printed_for_successful_actions(buck: Buck) -> None:
         superconsole_stderr_line.format("root//:print_stderr_super"), res.stderr, 0
     )
 
-    res = await buck.build(
+    res = await bsmr.build(
         "-v5", "--console=simplenotty", "//:v_print_stderr_simple_notty"
     )
 
     assert_occurrences(no_color_text, res.stderr, 1)
     assert_occurrences_regex(simple_color_stripped, res.stderr, 1)
 
-    res = await buck.build("-v5", "--console=simpletty", "//:v_print_stderr_simple_tty")
+    res = await bsmr.build("-v5", "--console=simpletty", "//:v_print_stderr_simple_tty")
 
     assert_occurrences(no_color_text, res.stderr, 1)
     assert_occurrences(simple_color, res.stderr, 1)
     assert_occurrences(simpleconsole_stderr_line, res.stderr, 1)
 
-    res = await buck.build("-v5", "--console=super", "//:v_print_stderr_super")
+    res = await bsmr.build("-v5", "--console=super", "//:v_print_stderr_super")
 
     assert_occurrences(no_color_text, res.stderr, 1)
     assert_occurrences(super_color, res.stderr, 1)
@@ -216,7 +216,7 @@ async def test_stderr_is_printed_for_successful_actions(buck: Buck) -> None:
 
     # Things that print all the time should print w/o the verbosity flag, or with it
 
-    res = await buck.build(
+    res = await bsmr.build(
         "--console=simplenotty", "//:always_print_stderr_simple_notty"
     )
 
@@ -224,13 +224,13 @@ async def test_stderr_is_printed_for_successful_actions(buck: Buck) -> None:
     assert_occurrences_regex(simple_color_stripped, res.stderr, 1)
     assert_occurrences(simpleconsole_stderr_line, res.stderr, 1)
 
-    res = await buck.build("--console=simpletty", "//:always_print_stderr_simple_tty")
+    res = await bsmr.build("--console=simpletty", "//:always_print_stderr_simple_tty")
 
     assert_occurrences(no_color_text, res.stderr, 1)
     assert_occurrences(simple_color, res.stderr, 1)
     assert_occurrences(simpleconsole_stderr_line, res.stderr, 1)
 
-    res = await buck.build("--console=super", "//:always_print_stderr_super")
+    res = await bsmr.build("--console=super", "//:always_print_stderr_super")
 
     assert_occurrences(no_color_text, res.stderr, 1)
     assert_occurrences(super_color, res.stderr, 1)
@@ -240,7 +240,7 @@ async def test_stderr_is_printed_for_successful_actions(buck: Buck) -> None:
         1,
     )
 
-    res = await buck.build(
+    res = await bsmr.build(
         "-v5", "--console=simplenotty", "//:v_always_print_stderr_simple_notty"
     )
 
@@ -248,7 +248,7 @@ async def test_stderr_is_printed_for_successful_actions(buck: Buck) -> None:
     assert_occurrences_regex(simple_color_stripped, res.stderr, 1)
     assert_occurrences(simpleconsole_stderr_line, res.stderr, 1)
 
-    res = await buck.build(
+    res = await bsmr.build(
         "-v5", "--console=simpletty", "//:v_always_print_stderr_simple_tty"
     )
 
@@ -256,7 +256,7 @@ async def test_stderr_is_printed_for_successful_actions(buck: Buck) -> None:
     assert_occurrences(simple_color, res.stderr, 1)
     assert_occurrences(simpleconsole_stderr_line, res.stderr, 1)
 
-    res = await buck.build("-v5", "--console=super", "//:v_always_print_stderr_super")
+    res = await bsmr.build("-v5", "--console=super", "//:v_always_print_stderr_super")
 
     assert_occurrences(no_color_text, res.stderr, 1)
     assert_occurrences(super_color, res.stderr, 1)
@@ -267,15 +267,15 @@ async def test_stderr_is_printed_for_successful_actions(buck: Buck) -> None:
     )
 
 
-@buck_test(inplace=False, data_dir="flagfiles")
-async def test_flagfiles_are_located_correctly(buck: Buck) -> None:
-    out = await buck.build("@//mode/dev", "cell//subdir:simple", rel_cwd=Path("cell"))
+@bsmr_test(inplace=False, data_dir="flagfiles")
+async def test_flagfiles_are_located_correctly(bsmr: Bsmr) -> None:
+    out = await bsmr.build("@//mode/dev", "cell//subdir:simple", rel_cwd=Path("cell"))
 
     build_report = out.get_build_report()
     output = build_report.output_for_target("cell//subdir:simple")
     assert output.read_text().rstrip() == "overridden"
 
-    out = await buck.build("@//mode/dev", "cell//subdir:simple", rel_cwd=Path("cell"))
+    out = await bsmr.build("@//mode/dev", "cell//subdir:simple", rel_cwd=Path("cell"))
 
     build_report = out.get_build_report()
     output = build_report.output_for_target("cell//subdir:simple")
@@ -284,7 +284,7 @@ async def test_flagfiles_are_located_correctly(buck: Buck) -> None:
     # Make sure that relative paths are resolved against the cell root
     # (determined from project root + cwd) if they're not found relative
     # to cwd
-    out = await buck.build(
+    out = await bsmr.build(
         "@mode/dev", "cell//subdir:simple", rel_cwd=Path("cell/subdir")
     )
 
@@ -295,46 +295,46 @@ async def test_flagfiles_are_located_correctly(buck: Buck) -> None:
         "`@mode/dev` was specified, but not found. Using file at `//mode/dev`."
     ) in out.stderr
 
-    out = await buck.build("@cell//mode/dev", "cell//subdir:simple")
+    out = await bsmr.build("@cell//mode/dev", "cell//subdir:simple")
 
     build_report = out.get_build_report()
     output = build_report.output_for_target("cell//subdir:simple")
     assert output.read_text().rstrip() == "overridden"
 
     await expect_failure(
-        buck.build("@cell/mode/missing", "cell//subdir:simple"),
+        bsmr.build("@cell/mode/missing", "cell//subdir:simple"),
         stderr_regex="Unable to read flag file at `cell/mode/missing`",
     )
 
 
-@buck_test(inplace=False, data_dir="early_action_cutoff")
-async def test_early_action_cutoff(buck: Buck, tmp_path: Path) -> None:
+@bsmr_test(inplace=False, data_dir="early_action_cutoff")
+async def test_early_action_cutoff(bsmr: Bsmr, tmp_path: Path) -> None:
     sentinel = tmp_path / "sentinel"
     sentinel.touch()
 
     # This action is going to check that the file pointed at by "sentinel"
     # exists. Point it at a valid file.
 
-    with open(buck.cwd / "sentinel", "w", encoding="utf-8") as f:
+    with open(bsmr.cwd / "sentinel", "w", encoding="utf-8") as f:
         f.write(str(sentinel))
 
-    await buck.build("//:check")
+    await bsmr.build("//:check")
 
     ## Now, invalidate the action, and remove the underlying sentinel file. If
     # :check executes now, it'll fail.
 
-    with open(buck.cwd / "src", "w", encoding="utf-8") as f:
+    with open(bsmr.cwd / "src", "w", encoding="utf-8") as f:
         f.write("TEXT2")
 
     sentinel.unlink()
 
     # Run it to find out
 
-    await buck.build("//:check")
+    await bsmr.build("//:check")
 
 
-@buck_test(inplace=False, data_dir="toolchain_deps")
-async def test_toolchain_deps(buck: Buck) -> None:
+@bsmr_test(inplace=False, data_dir="toolchain_deps")
+async def test_toolchain_deps(bsmr: Bsmr) -> None:
     # This test builds two targets, both with the same `default_target_platform` platform
     # but which should resolve to different execution platforms because of toolchain deps.
     # Both targets still get configured with the `default_target_platform` of release.
@@ -342,7 +342,7 @@ async def test_toolchain_deps(buck: Buck) -> None:
     # The Python toolchain works on Windows/Linux, but we prefer Linux as an exec platform.
     # The ASIC toolchain only works on Windows, so `python_and_asic` (which does both) must
     # pick Windows for Python as well.
-    result = await buck.build("root//tests:python_and_asic", "root//tests:python_only")
+    result = await bsmr.build("root//tests:python_and_asic", "root//tests:python_only")
     python_and_asic = (
         result.get_build_report()
         .output_for_target("root//tests:python_and_asic")
@@ -361,7 +361,7 @@ async def test_toolchain_deps(buck: Buck) -> None:
     # Test foo_binary: a target that consumes a toolchain exposing multiple exec_deps
     # (compiler + linter). This validates the pattern documented in
     # docs/rule_authors/writing_toolchains.md "Exposing execution dependencies".
-    foo_result = await buck.build("root//tests:foo_hello")
+    foo_result = await bsmr.build("root//tests:foo_hello")
     foo_output = (
         foo_result.get_build_report()
         .output_for_target("root//tests:foo_hello")
@@ -370,20 +370,20 @@ async def test_toolchain_deps(buck: Buck) -> None:
     assert "compiled[-O2 -Wall]:" in foo_output
     assert "hello world" in foo_output
 
-    await buck.build("root//...", "--target-platforms=root//config:platform_windows")
+    await bsmr.build("root//...", "--target-platforms=root//config:platform_windows")
 
     # Check we get the toolchain dependencies in uquery and cquery
-    result = await buck.uquery("deps(//toolchains:python)")
+    result = await bsmr.uquery("deps(//toolchains:python)")
     assert "//toolchains:compile_python_release_linux\n" in result.stdout
     assert "//toolchains:python_debug\n" in result.stdout
-    result = await buck.cquery(
+    result = await bsmr.cquery(
         "deps(//toolchains:python)", "--target-platforms=root//config:platform_linux"
     )
     assert "//toolchains:compile_python_release_linux " in result.stdout
     assert "//toolchains:python_debug " not in result.stdout
 
 
-@buck_test(inplace=False, data_dir="http_deferral")
+@bsmr_test(inplace=False, data_dir="http_deferral")
 @pytest.mark.parametrize(
     "digest_algorithm",
     [
@@ -391,57 +391,57 @@ async def test_toolchain_deps(buck: Buck) -> None:
         "SHA256",
     ],
 )
-async def test_http_deferral(buck: Buck, digest_algorithm: str) -> None:
-    with open(buck.cwd / ".bsmr", "a") as f:
+async def test_http_deferral(bsmr: Bsmr, digest_algorithm: str) -> None:
+    with open(bsmr.cwd / ".bsmr", "a") as f:
         f.write("[bsmr]\n")
         f.write(f"digest_algorithms = {digest_algorithm}\n")
 
     target = "//:download"
 
     # Check it was deferred
-    res = await buck.build(target, "--materializations=none")
+    res = await bsmr.build(target, "--materializations=none")
     output = res.get_build_report().output_for_target(target)
     assert not os.path.exists(output)
 
     # Check it can be materialized
-    res = await buck.build(target)
+    res = await bsmr.build(target)
     assert os.path.exists(output)
 
 
-@buck_test(inplace=False, data_dir="http_deferral")
+@bsmr_test(inplace=False, data_dir="http_deferral")
 @env(
     "BSMR_TEST_INJECTED_MISSING_DIGESTS",
     "1a45666759704bf08fc670aa96118a0415c470fc:221",
 )
-async def test_http_deferral_uploads(buck: Buck) -> None:
-    await buck.build("//:target", "--no-remote-cache")
+async def test_http_deferral_uploads(bsmr: Bsmr) -> None:
+    await bsmr.build("//:target", "--no-remote-cache")
 
 
-@buck_test(inplace=False, data_dir="no_output")
-async def test_no_output(buck: Buck) -> None:
-    results = await buck.build("//:none")
+@bsmr_test(inplace=False, data_dir="no_output")
+async def test_no_output(bsmr: Bsmr) -> None:
+    results = await bsmr.build("//:none")
 
     assert "BUILD SUCCEEDED" in results.stderr
     assert "does not have any outputs" in results.stderr
 
 
-@buck_test(inplace=False, data_dir="no_output")
-async def test_no_output_wildcard(buck: Buck) -> None:
-    results = await buck.build("//...")
+@bsmr_test(inplace=False, data_dir="no_output")
+async def test_no_output_wildcard(bsmr: Bsmr) -> None:
+    results = await bsmr.build("//...")
 
     assert "BUILD SUCCEEDED" in results.stderr
     assert "does not have any outputs" not in results.stderr
 
 
-@buck_test(inplace=False, data_dir="executor_caching")
-async def test_executor_caching_disabled(buck: Buck) -> None:
+@bsmr_test(inplace=False, data_dir="executor_caching")
+async def test_executor_caching_disabled(bsmr: Bsmr) -> None:
     async def read_executors() -> List[str]:
-        out = await read_what_ran(buck)
+        out = await read_what_ran(bsmr)
         return [line["reproducer"]["executor"] for line in out]
 
     seed = random_string()
     # Run on RE with cache lookup and writes disabled
-    await buck.build(
+    await bsmr.build(
         ":test",
         "-c",
         f"test.seed={seed}",
@@ -451,10 +451,10 @@ async def test_executor_caching_disabled(buck: Buck) -> None:
     )
     assert await read_executors() == ["Re"]
 
-    await buck.kill()
+    await bsmr.kill()
 
     # Run on RE, should not get any cache hit as the cache writes were disabled
-    await buck.build(
+    await bsmr.build(
         ":test",
         "-c",
         f"test.seed={seed}",
@@ -466,15 +466,15 @@ async def test_executor_caching_disabled(buck: Buck) -> None:
     assert executors == ["Re"] or executors == []
 
 
-@buck_test(inplace=False, data_dir="executor_caching")
-async def test_executor_cache_writes_enabled(buck: Buck) -> None:
+@bsmr_test(inplace=False, data_dir="executor_caching")
+async def test_executor_cache_writes_enabled(bsmr: Bsmr) -> None:
     async def read_executors() -> List[str]:
-        out = await read_what_ran(buck)
+        out = await read_what_ran(bsmr)
         return [line["reproducer"]["executor"] for line in out]
 
     seed = random_string()
     # Run on RE with cache lookup disabled and cache writes enabled
-    await buck.build(
+    await bsmr.build(
         ":test",
         "-c",
         f"test.seed={seed}",
@@ -485,10 +485,10 @@ async def test_executor_cache_writes_enabled(buck: Buck) -> None:
     )
     assert await read_executors() == ["Re"]
 
-    await buck.kill()
+    await bsmr.kill()
 
     # Run on RE, should not get cache hits as writes were enabled
-    await buck.build(
+    await bsmr.build(
         ":test",
         "-c",
         f"test.seed={seed}",
@@ -498,30 +498,30 @@ async def test_executor_cache_writes_enabled(buck: Buck) -> None:
     assert await read_executors() == ["Cache"]
 
 
-@buck_test(inplace=False, data_dir="executor_caching")
-async def test_executor_caching(buck: Buck) -> None:
+@bsmr_test(inplace=False, data_dir="executor_caching")
+async def test_executor_caching(bsmr: Bsmr) -> None:
     async def read_executors() -> List[str]:
-        out = await read_what_ran(buck)
+        out = await read_what_ran(bsmr)
         return [line["reproducer"]["executor"] for line in out]
 
     seed = random_string()
 
     # Run on RE
-    await buck.build(
+    await bsmr.build(
         ":test", "-c", f"test.seed={seed}", "-c", "test.remote_enabled=true"
     )
     assert (await read_executors()) == ["Re"]
 
     # Run on RE, with caching (the default)
-    await buck.kill()
-    await buck.build(
+    await bsmr.kill()
+    await bsmr.build(
         ":test", "-c", f"test.seed={seed}", "-c", "test.remote_enabled=true"
     )
     assert (await read_executors()) == ["Cache"]
 
     # Kill, run locally, no caching.
-    await buck.kill()
-    await buck.build(
+    await bsmr.kill()
+    await bsmr.build(
         ":test",
         "-c",
         f"test.seed={seed}",
@@ -535,8 +535,8 @@ async def test_executor_caching(buck: Buck) -> None:
     assert (await read_executors()) == ["Local"]
 
     # Kill, run locally, with caching (explicitly).
-    await buck.kill()
-    await buck.build(
+    await bsmr.kill()
+    await bsmr.build(
         ":test",
         "-c",
         f"test.seed={seed}",
@@ -550,8 +550,8 @@ async def test_executor_caching(buck: Buck) -> None:
     assert (await read_executors()) == ["Cache"]
 
     # Kill, run locally, with caching (the default).
-    await buck.kill()
-    await buck.build(
+    await bsmr.kill()
+    await bsmr.build(
         ":test",
         "-c",
         f"test.seed={seed}",
@@ -563,56 +563,56 @@ async def test_executor_caching(buck: Buck) -> None:
     assert (await read_executors()) == ["Cache"]
 
 
-@buck_test(inplace=False, data_dir="pass")
-async def test_sandcastle_id_check(buck: Buck) -> None:
+@bsmr_test(inplace=False, data_dir="pass")
+async def test_sandcastle_id_check(bsmr: Bsmr) -> None:
     async def pid() -> int:
-        res = await buck.status()
+        res = await bsmr.status()
         return json.loads(res.stdout)["process_info"]["pid"]
 
-    await buck.build()
+    await bsmr.build()
     pid1 = await pid()
-    await buck.build(env={"SANDCASTLE_ID": "foo"})
+    await bsmr.build(env={"SANDCASTLE_ID": "foo"})
     pid2 = await pid()
-    await buck.build(env={"SANDCASTLE_ID": "foo"})
+    await bsmr.build(env={"SANDCASTLE_ID": "foo"})
     pid3 = await pid()
 
     assert pid1 != pid2
     assert pid2 == pid3
 
 
-@buck_test(inplace=False, data_dir="execution_platforms")
-async def test_enforce_unique_inodes(buck: Buck) -> None:
-    await buck.build(
+@bsmr_test(inplace=False, data_dir="execution_platforms")
+async def test_enforce_unique_inodes(bsmr: Bsmr) -> None:
+    await bsmr.build(
         "root//executor_unique_inode_tests/...",
         "-c",
         f"test.cache_buster={random_string()}",
     )
 
 
-@buck_test(inplace=False, data_dir="execution_platforms", skip_for_os=["windows"])
-async def test_executable_bit(buck: Buck) -> None:
-    await buck.build(
+@bsmr_test(inplace=False, data_dir="execution_platforms", skip_for_os=["windows"])
+async def test_executable_bit(bsmr: Bsmr) -> None:
+    await bsmr.build(
         "root//executor_exec_bit_tests/...",
         "-c",
         f"test.cache_buster={random_string()}",
     )
 
 
-@buck_test(inplace=False, data_dir="execution_platforms")
-async def test_symlink_output(buck: Buck) -> None:
-    with open(buck.cwd / ".bsmr.local", "w") as f:
+@bsmr_test(inplace=False, data_dir="execution_platforms")
+async def test_symlink_output(bsmr: Bsmr) -> None:
+    with open(bsmr.cwd / ".bsmr.local", "w") as f:
         f.write("[bsmr_re_client]\n")
         f.write("respect_file_symlinks = false\n")
-    await buck.build(
+    await bsmr.build(
         "root//executor_symlink_tests:check_not_symlink",
         "-c",
         f"test.cache_buster={random_string()}",
     )
-    await buck.kill()
-    with open(buck.cwd / ".bsmr.local", "w") as f:
+    await bsmr.kill()
+    with open(bsmr.cwd / ".bsmr.local", "w") as f:
         f.write("[bsmr_re_client]\n")
         f.write("respect_file_symlinks = true\n")
-    await buck.build(
+    await bsmr.build(
         "root//executor_symlink_tests:check_symlink",
         "-c",
         f"test.cache_buster={random_string()}",

@@ -15,7 +15,7 @@
  */
 
 use bsmr_client_ctx::client_ctx::ClientCommandContext;
-use bsmr_client_ctx::common::BuckArgMatches;
+use bsmr_client_ctx::common::BsmrArgMatches;
 use bsmr_client_ctx::exit_result::ExitResult;
 use clap::Command;
 use clap::ValueEnum;
@@ -62,7 +62,7 @@ impl CompletionCommand {
     pub fn exec(
         self,
         command: Command,
-        _matches: BuckArgMatches<'_>,
+        _matches: BsmrArgMatches<'_>,
         _ctx: ClientCommandContext<'_>,
     ) -> ExitResult {
         let mut command = command;
@@ -81,7 +81,7 @@ const GENERATED_TAG: &'static str = concat!("@", "generated");
 const COMPLETION_INSERTION_POINT: &'static str = "# %INSERT_OPTION_COMPLETION%";
 
 fn completion_wrapper(shell: Shell) -> &'static str {
-    #[cfg(buck_build)]
+    #[cfg(bsmr_build)]
     {
         match shell {
             Shell::Bash => completion_wrapper_bash::get(),
@@ -89,7 +89,7 @@ fn completion_wrapper(shell: Shell) -> &'static str {
             Shell::Zsh => completion_wrapper_zsh::get(),
         }
     }
-    #[cfg(not(buck_build))]
+    #[cfg(not(bsmr_build))]
     {
         match shell {
             Shell::Bash => include_str!("completion/completion-wrapper.bash"),
@@ -100,7 +100,7 @@ fn completion_wrapper(shell: Shell) -> &'static str {
 }
 
 fn options_wrapper(shell: Shell) -> &'static str {
-    #[cfg(buck_build)]
+    #[cfg(bsmr_build)]
     {
         match shell {
             Shell::Bash => options_wrapper_bash::get(),
@@ -108,7 +108,7 @@ fn options_wrapper(shell: Shell) -> &'static str {
             Shell::Zsh => options_wrapper_zsh::get(),
         }
     }
-    #[cfg(not(buck_build))]
+    #[cfg(not(bsmr_build))]
     {
         match shell {
             Shell::Bash => include_str!("completion/options-wrapper.bash"),

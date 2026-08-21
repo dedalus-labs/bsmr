@@ -16,10 +16,10 @@
 
 use allocative::Allocative;
 use async_trait::async_trait;
-use bsmr_error::BuckErrorContext;
+use bsmr_error::BsmrErrorContext;
 use bsmr_error::starlark_error::from_starlark_with_options;
 use bsmr_interpreter::dice::starlark_provider::StarlarkEvalKind;
-use bsmr_interpreter::factory::BuckStarlarkModule;
+use bsmr_interpreter::factory::BsmrStarlarkModule;
 use bsmr_interpreter::factory::StarlarkEvaluatorProvider;
 use bsmr_interpreter::file_type::StarlarkFileType;
 use dice::DiceComputations;
@@ -72,7 +72,7 @@ pub(crate) async fn check_starlark_stack_size(
             let eval_kind = StarlarkEvalKind::Unknown("Check starlark stack size".into());
             let provider = StarlarkEvaluatorProvider::new(ctx, eval_kind).await?;
 
-            BuckStarlarkModule::with_profiling(|env| {
+            BsmrStarlarkModule::with_profiling(|env| {
                 let (finished_eval, _) =
                     provider.with_evaluator(&env, cancellation.into(), move |eval, _| {
                         let content = indoc!(

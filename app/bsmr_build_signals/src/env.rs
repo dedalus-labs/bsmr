@@ -21,10 +21,10 @@ use std::time::Instant;
 
 use allocative::Allocative;
 use async_trait::async_trait;
-use bsmr_error::BuckErrorContext;
+use bsmr_error::BsmrErrorContext;
 use bsmr_events::dispatch::EventDispatcher;
 use bsmr_fs::paths::file_name::FileNameBuf;
-use bsmr_hash::StdBuckHashMap;
+use bsmr_hash::StdBsmrHashMap;
 use bsmr_util::time_span::TimeSpan;
 use dice::UserComputationData;
 use dupe::Dupe;
@@ -217,7 +217,7 @@ impl EarlyCommandTimingBuilder {
 
 pub struct BuildSignalsContext {
     pub command_name: String,
-    pub metadata: StdBuckHashMap<String, String>,
+    pub metadata: StdBsmrHashMap<String, String>,
     pub isolation_prefix: FileNameBuf,
     pub early_command_timing: EarlyCommandTiming,
 }
@@ -270,7 +270,7 @@ where
     if let Err(e) = handle
         .finish()
         .await
-        .buck_error_context("Error computing critical path")
+        .bsmr_error_context("Error computing critical path")
     {
         bsmr_fs::fs_util::soft_error!("critical_path_computation_failed", e)?;
     }

@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <!--
+      Overrides for default VS targets which allow building a project with bsmr instead of MSBuild.
+  -->
+  <PropertyGroup>
+      <vs_build_path>bsmr</vs_build_path>
+      <vs_bsmr_build_command>$(AbsolutizePathExe) --local_root $(RepoRoot) -- $(vs_build_path) $(ImmediateBsmrOptions) build @$(BsmrModeFile) $(BsmrConfig) $(BsmrTarget)</vs_bsmr_build_command>
+  </PropertyGroup>
+  <Target Name="Build">
+      <Exec WorkingDirectory="$(RepoRoot)" Command="$(vs_bsmr_build_command) $(ExtraBsmrOptions)"/>
+  </Target>
+  <Target Name="Clean">
+    <Exec WorkingDirectory="$(RepoRoot)" Command="bsmr clean @$(BsmrModeFile)"/>
+  </Target>
+  <Target Name="Rebuild" DependsOnTargets="Clean;Build"/>
+  <PropertyGroup>
+    <LocalDebuggerCommand Condition="'$(LocalDebuggerCommand)'=='$(TargetPath)'">$(BsmrDebuggerCommand)</LocalDebuggerCommand>
+    <LocalDebuggerWorkingDirectory Condition="'$(BsmrDebuggerCommandWorkingDirectory)' != ''">$(BsmrDebuggerCommandWorkingDirectory)</LocalDebuggerWorkingDirectory>
+    <LocalDebuggerCommandArguments>$(BsmrDebuggerCommandArguments) $(LocalDebuggerCommandArguments)</LocalDebuggerCommandArguments>
+    <LocalDebuggerEnvironment>$(BsmrDebuggerEnvironment)
+$(LocalDebuggerEnvironment)</LocalDebuggerEnvironment>
+    <!-- Allows test discovery and probably other things to work too -->
+    <TargetPath Condition="'$(BsmrDebuggerCommand)'!=''">$(BsmrDebuggerCommand)</TargetPath>
+  </PropertyGroup>
+</Project>

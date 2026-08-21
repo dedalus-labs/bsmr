@@ -24,10 +24,10 @@ import subprocess
 from pathlib import Path
 
 import pytest
-from bsmr.tests.e2e_util.api.buck import Buck
-from bsmr.tests.e2e_util.api.buck_result import BuckException
+from bsmr.tests.e2e_util.api.bsmr import Bsmr
+from bsmr.tests.e2e_util.api.bsmr_result import BsmrException
 from bsmr.tests.e2e_util.asserts import expect_failure
-from bsmr.tests.e2e_util.buck_workspace import buck_test
+from bsmr.tests.e2e_util.bsmr_workspace import bsmr_test
 from bsmr.tests.e2e_util.helper.utils import (
     get_bsmr_re_use_case,
     json_get,
@@ -35,24 +35,24 @@ from bsmr.tests.e2e_util.helper.utils import (
 )
 
 
-@buck_test(data_dir="anon_exec_deps")
-async def test_anon_target_exec_deps(buck: Buck) -> None:
-    await buck.build("//tests:exec_dep_good", "--remote-only")
+@bsmr_test(data_dir="anon_exec_deps")
+async def test_anon_target_exec_deps(bsmr: Bsmr) -> None:
+    await bsmr.build("//tests:exec_dep_good", "--remote-only")
 
     await expect_failure(
-        buck.build("//tests:exec_dep_bad", "--local-only"),
+        bsmr.build("//tests:exec_dep_bad", "--local-only"),
         stderr_regex="Exec deps and the current anon target must have the same execution platform resolution",
     )
 
     await expect_failure(
-        buck.build("//tests:exec_dep_rejects_dep"),
+        bsmr.build("//tests:exec_dep_rejects_dep"),
         stderr_regex="exec dep is missing the execution platform resolution",
     )
 
 
-@buck_test(data_dir="args")
-async def test_args(buck: Buck) -> None:
-    result = await buck.build("//:bin")
+@bsmr_test(data_dir="args")
+async def test_args(bsmr: Bsmr) -> None:
+    result = await bsmr.build("//:bin")
     output = result.get_build_report().output_for_target("//:bin")
     assert (
         output.read_text().rstrip()
@@ -60,17 +60,17 @@ async def test_args(buck: Buck) -> None:
     )
 
 
-@buck_test(data_dir="prelude_import")
-async def test_prelude_imported_once(buck: Buck) -> None:
+@bsmr_test(data_dir="prelude_import")
+async def test_prelude_imported_once(bsmr: Bsmr) -> None:
     # See the comments in the relevant targets files: they explain how this
     # test works.
-    await buck.build("cell1//...", "cell2//...")
+    await bsmr.build("cell1//...", "cell2//...")
 
 
-def read_all_outputs(buck: Buck, report: str) -> list[str]:
+def read_all_outputs(bsmr: Bsmr, report: str) -> list[str]:
     ret = []
 
-    with open(buck.cwd / report) as f:
+    with open(bsmr.cwd / report) as f:
         report = json.load(f)
         for _target, state in report["results"].items():
             ret.extend(state["outputs"].get("DEFAULT", []))
@@ -79,9 +79,9 @@ def read_all_outputs(buck: Buck, report: str) -> list[str]:
     return ret
 
 
-@buck_test(data_dir="build_providers")
-async def test_build_providers(buck: Buck) -> None:
-    await buck.build(
+@bsmr_test(data_dir="build_providers")
+async def test_build_providers(bsmr: Bsmr) -> None:
+    await bsmr.build(
         "//:target",
         "--build-default-info",
         "--skip-run-info",
@@ -90,12 +90,12 @@ async def test_build_providers(buck: Buck) -> None:
         "report",
     )
 
-    outputs = read_all_outputs(buck, "report")
+    outputs = read_all_outputs(bsmr, "report")
     assert any("/build" in o for o in outputs)
     assert all("/run" not in o for o in outputs)
     assert all("/test" not in o for o in outputs)
 
-    await buck.build(
+    await bsmr.build(
         "//:target",
         "--skip-default-info",
         "--build-run-info",
@@ -104,11 +104,11 @@ async def test_build_providers(buck: Buck) -> None:
         "report",
     )
 
-    outputs = read_all_outputs(buck, "report")
+    outputs = read_all_outputs(bsmr, "report")
     assert all("/build" not in o for o in outputs)
     assert all("/test" not in o for o in outputs)
 
-    await buck.build(
+    await bsmr.build(
         "//:target",
         "--skip-default-info",
         "--skip-run-info",
@@ -117,12 +117,12 @@ async def test_build_providers(buck: Buck) -> None:
         "report",
     )
 
-    outputs = read_all_outputs(buck, "report")
+    outputs = read_all_outputs(bsmr, "report")
     assert all("/build" not in o for o in outputs)
     assert all("/run" not in o for o in outputs)
 
 
-@buck_test(data_dir="projected_artifacts")
+@bsmr_test(data_dir="projected_artifacts")
 @pytest.mark.parametrize(
     "target",
     [
@@ -133,28 +133,28 @@ async def test_build_providers(buck: Buck) -> None:
         "//:check_c_b_local",
     ],
 )
-async def test_projected_artifacts(buck: Buck, target: str) -> None:
-    await buck.build(target)
+async def test_projected_artifacts(bsmr: Bsmr, target: str) -> None:
+    await bsmr.build(target)
 
 
-@buck_test(data_dir="upload_all_actions")
-async def test_upload_all_actions(buck: Buck) -> None:
-    with open(buck.cwd / "src", "w") as src:
+@bsmr_test(data_dir="upload_all_actions")
+async def test_upload_all_actions(bsmr: Bsmr) -> None:
+    with open(bsmr.cwd / "src", "w") as src:
         src.write(random_string())
 
     # This action includes `src` and is forced to run locally. This means RE
     # can never have seen it (and we'll check that later by asserting there is
     # only 1 cache query, excluding local actions).
-    await buck.build("//:cp", "--upload-all-actions")
+    await bsmr.build("//:cp", "--upload-all-actions")
 
     what_ran = await read_what_ran(
-        buck, "--emit-cache-queries", "--skip-local-executions"
+        bsmr, "--emit-cache-queries", "--skip-local-executions"
     )
     assert len(what_ran) == 1
 
     # Now, download the action. This will succeed only if we uploaded it.
     digest = what_ran[0]["reproducer"]["details"]["digest"]
-    use_case = await get_bsmr_re_use_case(buck)
+    use_case = await get_bsmr_re_use_case(bsmr)
     subprocess.check_call(
         [
             "dotslash",
@@ -168,80 +168,80 @@ async def test_upload_all_actions(buck: Buck) -> None:
     )
 
 
-@buck_test(data_dir="unified_root")
-async def test_unified_root(buck: Buck) -> None:
+@bsmr_test(data_dir="unified_root")
+async def test_unified_root(bsmr: Bsmr) -> None:
     # The nearest .bsmr must shield the invocation from an invalid parent config.
-    await buck.build(":inner", rel_cwd=Path("rooted/cell"))
+    await bsmr.build(":inner", rel_cwd=Path("rooted/cell"))
 
 
-@buck_test(data_dir="cell_delete")
-async def test_cell_deletion(buck: Buck) -> None:
+@bsmr_test(data_dir="cell_delete")
+async def test_cell_deletion(bsmr: Bsmr) -> None:
     """
     This is a regression test for https://github.com/facebook/buck2/pull/43,
     including the similar issue with directories that was fixed first.
     """
-    await buck.targets(":")
-    (buck.cwd / "hello").mkdir()
-    await buck.targets(":")
-    (buck.cwd / "hello").rmdir()
-    await buck.targets(":")
+    await bsmr.targets(":")
+    (bsmr.cwd / "hello").mkdir()
+    await bsmr.targets(":")
+    (bsmr.cwd / "hello").rmdir()
+    await bsmr.targets(":")
 
 
-@buck_test(
+@bsmr_test(
     data_dir="invalid_file_invalidation",
     skip_for_os=["windows"],
     setup_eden=True,
 )
-async def test_invalid_file_invalidation(buck: Buck) -> None:
+async def test_invalid_file_invalidation(bsmr: Bsmr) -> None:
     """
     This is a regression test for T136963408.
     """
 
-    await buck.build(":root")
+    await bsmr.build(":root")
 
-    src = buck.cwd / "src"
+    src = bsmr.cwd / "src"
     invalid = src / "\\"
     invalid_nested = src / "\\" / "a"
     invalid_nested_invalid = src / "\\" / "\\"
 
     # Create an invalid file. Build should work.
     invalid.touch()
-    output = await buck.build(":root")
+    output = await bsmr.build(":root")
     assert "is not valid. Add the path to" in output.stderr
 
     # Delete it, build should work.
     invalid.unlink()
-    await buck.build(":root")
+    await bsmr.build(":root")
 
     # Create an invalid dir. Build should still work.
     invalid_nested.mkdir(parents=True)
-    output = await buck.build(":root")
+    output = await bsmr.build(":root")
     assert "is not valid. Add the path to" in output.stderr
 
     # And delete it. Things should work.
     invalid_nested.rmdir()
     invalid.rmdir()
-    await buck.build(":root")
+    await bsmr.build(":root")
 
     # Finally, do an invalid file inside an invalid dir...
     invalid_nested_invalid.mkdir(parents=True)
-    output = await buck.build(":root")
+    output = await bsmr.build(":root")
     assert "is not valid. Add the path to" in output.stderr
 
     # And delete it. Things should again.
     invalid_nested_invalid.rmdir()
     invalid.rmdir()
-    await buck.build(":root")
+    await bsmr.build(":root")
 
 
-@buck_test(data_dir="concurrency")
-async def test_concurrency(buck: Buck) -> None:
-    await buck.build("//:weight", "--local-only", "--no-remote-cache")
+@bsmr_test(data_dir="concurrency")
+async def test_concurrency(bsmr: Bsmr) -> None:
+    await bsmr.build("//:weight", "--local-only", "--no-remote-cache")
 
     # Now, since our commands request 20% of resources, check that a no point
     # we had more than 5 running commands. Also check that we found the right
     # amount of commands.
-    log = (await buck.log("show")).stdout.strip().splitlines()
+    log = (await bsmr.log("show")).stdout.strip().splitlines()
 
     running_execs = {}
     execs_done = 0
@@ -285,10 +285,10 @@ async def test_concurrency(buck: Buck) -> None:
     assert execs_done == 10
 
 
-@buck_test(data_dir="fail_fast")
-async def test_fail_fast(buck: Buck) -> None:
-    with pytest.raises(BuckException) as exc:
-        await buck.build(
+@bsmr_test(data_dir="fail_fast")
+async def test_fail_fast(bsmr: Bsmr) -> None:
+    with pytest.raises(BsmrException) as exc:
+        await bsmr.build(
             "root//:mixed",
             "root//:slow",
             "--local-only",
@@ -299,8 +299,8 @@ async def test_fail_fast(buck: Buck) -> None:
     assert "slow_default_output" in exc.value.stderr
     assert "slow_other_output" in exc.value.stderr
 
-    with pytest.raises(BuckException) as exc:
-        await buck.build(
+    with pytest.raises(BsmrException) as exc:
+        await bsmr.build(
             "root//:mixed",
             "root//:slow",
             "--local-only",
@@ -313,10 +313,10 @@ async def test_fail_fast(buck: Buck) -> None:
     assert "slow_other_output" not in exc.value.stderr
 
 
-@buck_test(data_dir="keep_going_build")
-async def test_keep_going(buck: Buck) -> None:
-    with pytest.raises(BuckException) as exc:
-        await buck.build(
+@bsmr_test(data_dir="keep_going_build")
+async def test_keep_going(bsmr: Bsmr) -> None:
+    with pytest.raises(BsmrException) as exc:
+        await bsmr.build(
             "root//:top",
             "--local-only",
             "--no-remote-cache",
@@ -327,10 +327,10 @@ async def test_keep_going(buck: Buck) -> None:
 
     # Dont want to re-attach to the ongoing evaluation for slow_action.
     # Normally that gets cancelled, but even so that's still a race.
-    await buck.kill()
+    await bsmr.kill()
 
-    with pytest.raises(BuckException) as exc:
-        await buck.build(
+    with pytest.raises(BsmrException) as exc:
+        await bsmr.build(
             "root//:top", "--local-only", "--no-remote-cache", "--keep-going"
         )
 
@@ -338,11 +338,11 @@ async def test_keep_going(buck: Buck) -> None:
     assert "slow_action" in exc.value.stderr
 
 
-@buck_test(data_dir="cleanup")
-async def test_cleanup(buck: Buck) -> None:
+@bsmr_test(data_dir="cleanup")
+async def test_cleanup(bsmr: Bsmr) -> None:
     # Test for T85589819 - broken cleanup
     target_pattern = "//:cleanup"
-    result = await buck.build(target_pattern)
+    result = await bsmr.build(target_pattern)
     output = result.get_build_report().output_for_target(target_pattern)
 
     # The output should be something like path/__cleanup__/out/dir1/dir2/output.txt
@@ -350,20 +350,20 @@ async def test_cleanup(buck: Buck) -> None:
     output.unlink()
     output.parent.rmdir()
     output.parent.write_text("File that must be deleted")
-    await buck.kill()
-    await buck.build(target_pattern)
+    await bsmr.kill()
+    await bsmr.build(target_pattern)
 
     output.unlink()
     output.parent.rmdir()
     output.parent.parent.rmdir()
     output.parent.parent.write_text("File that must be deleted")
-    await buck.build(target_pattern)
+    await bsmr.build(target_pattern)
 
 
-@buck_test(data_dir="log_action_keys")
-async def test_log_action_keys(buck: Buck) -> None:
+@bsmr_test(data_dir="log_action_keys")
+async def test_log_action_keys(bsmr: Bsmr) -> None:
     async def read_action_keys() -> list[tuple[str, str]]:
-        out = await read_what_ran(buck)
+        out = await read_what_ran(bsmr)
         return [
             (
                 line["reproducer"]["executor"],
@@ -376,24 +376,24 @@ async def test_log_action_keys(buck: Buck) -> None:
     action_key = "executor root//:test (<unspecified>) touch"
 
     # Run on RE
-    await buck.build(
+    await bsmr.build(
         ":test", "-c", f"test.seed={seed}", "-c", "bsmr.log_action_keys=true"
     )
     assert await read_action_keys() == [("Re", action_key)]
 
-    await buck.kill()
+    await bsmr.kill()
 
     # Run on RE again, get a cache hit this time
-    await buck.build(
+    await bsmr.build(
         ":test", "-c", f"test.seed={seed}", "-c", "bsmr.log_action_keys=true"
     )
 
     assert await read_action_keys() == [("Cache", action_key)]
 
 
-@buck_test(data_dir="roots")
-async def test_roots(buck: Buck) -> None:
-    res = await buck.build("root//:test", "other//:test")
+@bsmr_test(data_dir="roots")
+async def test_roots(bsmr: Bsmr) -> None:
+    res = await bsmr.build("root//:test", "other//:test")
 
     is_windows: bool = platform.system() == "Windows"
 
@@ -406,8 +406,8 @@ async def test_roots(buck: Buck) -> None:
     with open(output) as f:
         j = json.load(f)
         print(j)
-        assert (buck.cwd / j["fixture_relative_to_cell"]).exists()
-        assert (buck.cwd / j["fixture_relative_to_project"]).exists()
+        assert (bsmr.cwd / j["fixture_relative_to_cell"]).exists()
+        assert (bsmr.cwd / j["fixture_relative_to_project"]).exists()
 
         assert j["cell_relative_to_fixture"] == platformify("../../../../../../..")
         assert j["project_relative_to_fixture"] == platformify("../../../../../../..")
@@ -415,8 +415,8 @@ async def test_roots(buck: Buck) -> None:
     output = res.get_build_report().output_for_target("other//:test")
     with open(output) as f:
         j = json.load(f)
-        assert (buck.cwd / "other" / j["fixture_relative_to_cell"]).exists()
-        assert (buck.cwd / j["fixture_relative_to_project"]).exists()
+        assert (bsmr.cwd / "other" / j["fixture_relative_to_cell"]).exists()
+        assert (bsmr.cwd / j["fixture_relative_to_project"]).exists()
 
         assert j["cell_relative_to_fixture"] == platformify(
             "../../../../../../../other"
@@ -424,18 +424,18 @@ async def test_roots(buck: Buck) -> None:
         assert j["project_relative_to_fixture"] == platformify("../../../../../../..")
 
 
-@buck_test(data_dir="tmpdir")
-async def test_tmpdir(buck: Buck) -> None:
-    await buck.build("root//:")
+@bsmr_test(data_dir="tmpdir")
+async def test_tmpdir(bsmr: Bsmr) -> None:
+    await bsmr.build("root//:")
 
 
 def random_string() -> str:
     return "".join(random.choice(string.ascii_lowercase) for i in range(256))
 
 
-@buck_test(data_dir="artifact_consistency")
-async def test_artifact_consistency(buck: Buck) -> None:
-    out = await buck.build_without_report(
+@bsmr_test(data_dir="artifact_consistency")
+async def test_artifact_consistency(bsmr: Bsmr) -> None:
+    out = await bsmr.build_without_report(
         ":gen[file3]",
         "--local-only",
         "--out=-",
@@ -443,7 +443,7 @@ async def test_artifact_consistency(buck: Buck) -> None:
 
     assert out.stdout == "This is file3"
 
-    out = await buck.build_without_report(
+    out = await bsmr.build_without_report(
         "-c",
         "gen.idx=2",
         ":gen[file3]",

@@ -15,15 +15,15 @@
 # pyre-strict
 
 
-from bsmr.tests.e2e_util.api.buck import Buck
+from bsmr.tests.e2e_util.api.bsmr import Bsmr
 from bsmr.tests.e2e_util.asserts import expect_failure
-from bsmr.tests.e2e_util.buck_workspace import buck_test
+from bsmr.tests.e2e_util.bsmr_workspace import bsmr_test
 
 
-@buck_test()
-async def test_unstable_typecheck(buck: Buck) -> None:
-    await buck.cquery("//:x")
+@bsmr_test()
+async def test_unstable_typecheck(bsmr: Bsmr) -> None:
+    await bsmr.cquery("//:x")
     await expect_failure(
-        buck.cquery("//:x", "--unstable-typecheck"),
+        bsmr.cquery("//:x", "--unstable-typecheck"),
         stderr_regex="Expected type `int` but got `str`",
     )

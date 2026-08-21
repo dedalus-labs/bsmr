@@ -43,7 +43,7 @@ use bsmr_error::internal_error;
 use bsmr_execute::artifact::fs::ExecutorFs;
 use bsmr_execute::execute::command_executor::ActionExecutionTimingData;
 use bsmr_execute::materialize::materializer::WriteRequest;
-use bsmr_hash::BuckIndexSet;
+use bsmr_hash::BsmrIndexSet;
 use dupe::Dupe;
 use pagable::Pagable;
 use pagable::pagable_typetag;
@@ -74,7 +74,7 @@ impl UnregisteredWriteMacrosToFileAction {
 impl UnregisteredAction for UnregisteredWriteMacrosToFileAction {
     fn register(
         self: Box<Self>,
-        outputs: BuckIndexSet<BuildArtifact>,
+        outputs: BsmrIndexSet<BuildArtifact>,
         starlark_data: Option<OwnedFrozenValue>,
         _error_handler: Option<OwnedFrozenValue>,
     ) -> bsmr_error::Result<Box<dyn Action>> {
@@ -109,7 +109,7 @@ struct WriteMacrosToFileAction {
 impl WriteMacrosToFileAction {
     fn new(
         contents: OwnedFrozenValue,
-        outputs: BuckIndexSet<BuildArtifact>,
+        outputs: BsmrIndexSet<BuildArtifact>,
         inner: UnregisteredWriteMacrosToFileAction,
     ) -> bsmr_error::Result<Self> {
         if outputs.is_empty() {

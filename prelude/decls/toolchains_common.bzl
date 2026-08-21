@@ -1,3 +1,9 @@
+# ===----------------------------------------------------------------------===
+# Upstream-Source: facebook/buck2@1560aca2002865cd73d7cafb22c705cfb640b2bc
+# Modifications Copyright (c) 2026 Dedalus Labs, Inc. and its contributors
+# SPDX-License-Identifier: Apache-2.0
+# ===----------------------------------------------------------------------===
+
 # Copyright (c) Meta Platforms, Inc. and affiliates.
 #
 # This source code is dual-licensed under either the MIT license found in the
@@ -52,7 +58,7 @@ def _cxx_toolchain():
     # Portions of the macro layers use the `default_deps` attribute to set this
     # to the `:cxx_no_default_deps` option. If a targets has within_view checks
     # that don't list `toolchains//:` they will experience an error. We can avoid
-    # this by ensuring the `within_deps` checks inside buck see either of the
+    # this by ensuring the `within_deps` checks inside bsmr see either of the
     # toolchains below as a possible default value, even though one of them is
     # never able to be selected in this expression.
     return _toolchain(lang, [], default = select({"DEFAULT": "toolchains//:" + lang, "config//:none": "toolchains//:cxx_no_default_deps"}))

@@ -27,7 +27,7 @@ use allocative::Visitor;
 use allocative::ident_key;
 use async_trait::async_trait;
 use bsmr_core::fs::project_rel_path::ProjectRelativePathBuf;
-use bsmr_error::BuckErrorContext;
+use bsmr_error::BsmrErrorContext;
 use bsmr_events::dispatch::EventDispatcher;
 use bsmr_events::dispatch::get_dispatcher;
 use bsmr_execute::materialize::materializer::CleanStaleArtifactsArgs;
@@ -419,7 +419,7 @@ impl<T: IoHandler> DeferredMaterializerExtensions for DeferredMaterializerAccess
             ))?;
         receiver
             .await
-            .buck_error_context("No response from materializer")
+            .bsmr_error_context("No response from materializer")
     }
 
     fn fsck(
@@ -440,11 +440,11 @@ impl<T: IoHandler> DeferredMaterializerExtensions for DeferredMaterializerAccess
             ))?;
         if let Some(task) = receiver
             .await
-            .buck_error_context("No response from materializer")?
+            .bsmr_error_context("No response from materializer")?
         {
             task.await
-                .buck_error_context("Refresh task aborted")?
-                .buck_error_context("Refresh failed")?;
+                .bsmr_error_context("Refresh task aborted")?
+                .bsmr_error_context("Refresh failed")?;
         }
         Ok(())
     }
@@ -457,7 +457,7 @@ impl<T: IoHandler> DeferredMaterializerExtensions for DeferredMaterializerAccess
             ))?;
         receiver
             .await
-            .buck_error_context("No response from materializer")
+            .bsmr_error_context("No response from materializer")
     }
 
     async fn clean_stale_artifacts(
@@ -502,7 +502,7 @@ impl<T: IoHandler> DeferredMaterializerExtensions for DeferredMaterializerAccess
             ))?;
         receiver
             .await
-            .buck_error_context("No response from materializer")
+            .bsmr_error_context("No response from materializer")
     }
 
     async fn flush_all_access_times(&self) -> bsmr_error::Result<String> {
@@ -513,7 +513,7 @@ impl<T: IoHandler> DeferredMaterializerExtensions for DeferredMaterializerAccess
             ))?;
         receiver
             .await
-            .buck_error_context("No response from materializer")
+            .bsmr_error_context("No response from materializer")
     }
 
     async fn create_subscription(
@@ -526,7 +526,7 @@ impl<T: IoHandler> DeferredMaterializerExtensions for DeferredMaterializerAccess
         Ok(Box::new(
             receiver
                 .await
-                .buck_error_context("No response from materializer")?,
+                .bsmr_error_context("No response from materializer")?,
         ) as _)
     }
 }

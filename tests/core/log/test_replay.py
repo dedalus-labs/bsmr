@@ -15,22 +15,22 @@
 # pyre-strict
 
 
-from bsmr.tests.e2e_util.api.buck import Buck
-from bsmr.tests.e2e_util.buck_workspace import buck_test
+from bsmr.tests.e2e_util.api.bsmr import Bsmr
+from bsmr.tests.e2e_util.bsmr_workspace import bsmr_test
 
 
-@buck_test()
-async def test_replay(buck: Buck) -> None:
-    await buck.build("//:EEE")
-    replay = await buck.log("replay", "-v2")
+@bsmr_test()
+async def test_replay(bsmr: Bsmr) -> None:
+    await bsmr.build("//:EEE")
+    replay = await bsmr.log("replay", "-v2")
     assert "//:EEE" in replay.stderr
 
 
-@buck_test()
-async def test_partial_result_replay(buck: Buck) -> None:
+@bsmr_test()
+async def test_partial_result_replay(bsmr: Bsmr) -> None:
     # `audit cell` is an easy way to produce partial results
-    res = await buck.audit("cell")
-    res2 = await buck.log("replay")
+    res = await bsmr.audit("cell")
+    res2 = await bsmr.log("replay")
 
     assert res.stdout != res2.stdout
     assert res2.stdout == ""

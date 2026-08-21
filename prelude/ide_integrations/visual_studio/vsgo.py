@@ -36,7 +36,7 @@ def get_mode_hashes(
     sample_target,
     explicit_targets,
     mode_files,
-    extra_buck_options,
+    extra_bsmr_options,
     debug,
     subprocess_cwd=None,
 ):
@@ -59,7 +59,7 @@ def get_mode_hashes(
                 "@" + mode_file,
                 "prelude//ide_integrations/visual_studio/get_mode_hashes.bxl:main",
             ]
-            + extra_buck_options
+            + extra_bsmr_options
             + ["--", "--target", sample_target]
             + explicit_targets
         )
@@ -139,7 +139,7 @@ def main(
     targets,
     mode_files,
     extra_bxl_options,
-    extra_buck_options,
+    extra_bsmr_options,
     generated_folder,
     recursive_target_types,
     target_exclude_patterns,
@@ -186,10 +186,10 @@ def main(
         + ["--mode_files"]
         + mode_files
     )
-    if extra_buck_options:
-        # Pass extra buck options verbatim so that run/debug invokes buck using the same options beside target and mode file.
-        bxl_cmds += ["--extra_buck_options"] + [
-            _escape_arg(o) for o in extra_buck_options
+    if extra_bsmr_options:
+        # Pass extra bsmr options verbatim so that run/debug invokes bsmr using the same options beside target and mode file.
+        bxl_cmds += ["--extra_bsmr_options"] + [
+            _escape_arg(o) for o in extra_bsmr_options
         ]
     bxl_cmds += ["--mode_hashes", json.dumps(mode_hashes, separators=(",", ":"))]
     if recursive_target_types:
@@ -263,11 +263,11 @@ if __name__ == "__main__":
 
     parser = argparse.ArgumentParser(
         prog="vsgo",
-        description="Visual Studio project generator for buck targets",
+        description="Visual Studio project generator for bsmr targets",
     )
     parser.add_argument(
         "targets",
-        help="""List of buck targets, aliases and/or patterns. Dependencies and transitive dependencies are automatically pulled in.
+        help="""List of bsmr targets, aliases and/or patterns. Dependencies and transitive dependencies are automatically pulled in.
 Individual specified targets are preferred over target patterns as the latter will usually pull in unused targets which
 could potentially slow down project generation and project loading significantly. Examples:
     1. Single fully-specified target:
@@ -305,9 +305,9 @@ generating and loading):
         default=[],
     )
     parser.add_argument(
-        "--extra_buck_options",
+        "--extra_bsmr_options",
         nargs="+",
-        help="extra options when running buck from generated project settings. Note '-' within option value needs to be escaped, e.g., `vsgo //third-party/semver:basic_example --extra_buck_options '\\-\\-out' 'C:\\open\\temp-out' '\\-\\-local-only'`",
+        help="extra options when running bsmr from generated project settings. Note '-' within option value needs to be escaped, e.g., `vsgo //third-party/semver:basic_example --extra_bsmr_options '\\-\\-out' 'C:\\open\\temp-out' '\\-\\-local-only'`",
         default=[],
     )
     parser.add_argument(
@@ -326,13 +326,13 @@ generating and loading):
     parser.add_argument(
         "--target_include_patterns",
         nargs="+",
-        help="include target(s) only if it matches buck target pattern",
+        help="include target(s) only if it matches bsmr target pattern",
         default=[],
     )
     parser.add_argument(
         "--target_exclude_patterns",
         nargs="+",
-        help="exclude target(s) if it matches buck target pattern",
+        help="exclude target(s) if it matches bsmr target pattern",
         default=[],
     )
     parser.add_argument(
@@ -343,7 +343,7 @@ generating and loading):
     parser.add_argument(
         "--startup_target",
         action="store",
-        help="buck target to be set as the default startup project",
+        help="bsmr target to be set as the default startup project",
     )
     parser.add_argument(
         "--fbsource",
@@ -382,7 +382,7 @@ generating and loading):
         targets=args.targets,
         mode_files=args.mode_files,
         extra_bxl_options=args.extra_bxl_options,
-        extra_buck_options=args.extra_buck_options,
+        extra_bsmr_options=args.extra_bsmr_options,
         generated_folder=args.generated_folder,
         recursive_target_types=args.recursive_target_types,
         target_exclude_patterns=args.target_exclude_patterns,

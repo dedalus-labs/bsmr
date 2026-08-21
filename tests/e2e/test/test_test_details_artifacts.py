@@ -19,8 +19,8 @@ import os
 import re
 from pathlib import Path
 
-from bsmr.tests.e2e_util.api.buck import Buck
-from bsmr.tests.e2e_util.buck_workspace import buck_test
+from bsmr.tests.e2e_util.api.bsmr import Bsmr
+from bsmr.tests.e2e_util.bsmr_workspace import bsmr_test
 from tae.testx.py.testx_helpers import TestXClient
 
 
@@ -35,7 +35,7 @@ def get_testx_binary() -> Path:
 
 
 def get_testx_client() -> TestXClient:
-    return TestXClient(binary=get_testx_binary(), caller="buck-e2e")
+    return TestXClient(binary=get_testx_binary(), caller="bsmr-e2e")
 
 
 def extract_test_run_id(haystack: str) -> int:
@@ -45,9 +45,9 @@ def extract_test_run_id(haystack: str) -> int:
     return int(match)
 
 
-@buck_test(inplace=True)
-async def test_passing_test_details_uploaded_to_artifacts(buck: Buck) -> None:
-    output = await buck.test(
+@bsmr_test(inplace=True)
+async def test_passing_test_details_uploaded_to_artifacts(bsmr: Bsmr) -> None:
+    output = await bsmr.test(
         "root//tests/targets/rules/python_test:test_produce_test_details",
         "--remote-only",
         "--",

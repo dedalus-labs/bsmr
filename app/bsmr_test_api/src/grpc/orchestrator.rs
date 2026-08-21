@@ -24,7 +24,7 @@ use bsmr_downward_api_proto::ExternalEventRequest;
 use bsmr_downward_api_proto::LogRequest;
 use bsmr_downward_api_proto::downward_api_client;
 use bsmr_downward_api_proto::downward_api_server;
-use bsmr_error::BuckErrorContext;
+use bsmr_error::BsmrErrorContext;
 use bsmr_error::internal_error;
 use bsmr_events::dispatch::EventDispatcher;
 use bsmr_events::dispatch::with_dispatcher_async;
@@ -32,7 +32,7 @@ use bsmr_grpc::ServerHandle;
 use bsmr_grpc::make_channel;
 use bsmr_grpc::spawn_oneshot;
 use bsmr_grpc::to_tonic;
-use bsmr_hash::StdBuckHashMap;
+use bsmr_hash::StdBsmrHashMap;
 use bsmr_test_proto::AttachInfoMessageRequest;
 use bsmr_test_proto::Empty;
 use bsmr_test_proto::EndOfTestResultsRequest;
@@ -104,7 +104,7 @@ impl TestOrchestratorClient {
 #[async_trait::async_trait]
 impl DownwardApi for TestOrchestratorClient {
     async fn console(&self, level: Level, message: String) -> bsmr_error::Result<()> {
-        let level = level.try_into().buck_error_context("Invalid `level`")?;
+        let level = level.try_into().bsmr_error_context("Invalid `level`")?;
 
         self.downward_api_client
             .clone()
@@ -118,7 +118,7 @@ impl DownwardApi for TestOrchestratorClient {
     }
 
     async fn log(&self, level: Level, message: String) -> bsmr_error::Result<()> {
-        let level = level.try_into().buck_error_context("Invalid `level`")?;
+        let level = level.try_into().bsmr_error_context("Invalid `level`")?;
 
         self.downward_api_client
             .clone()
@@ -131,7 +131,7 @@ impl DownwardApi for TestOrchestratorClient {
         Ok(())
     }
 
-    async fn external(&self, data: StdBuckHashMap<String, String>) -> bsmr_error::Result<()> {
+    async fn external(&self, data: StdBsmrHashMap<String, String>) -> bsmr_error::Result<()> {
         let event = data.into();
 
         self.downward_api_client
@@ -176,7 +176,7 @@ impl TestOrchestratorClient {
 
         let req: bsmr_test_proto::ExecuteRequest2 = req
             .try_into()
-            .buck_error_context("Invalid execute request")?;
+            .bsmr_error_context("Invalid execute request")?;
 
         let ExecuteResponse2 { response } = self
             .test_orchestrator_client
@@ -187,7 +187,7 @@ impl TestOrchestratorClient {
 
         let response = match response.ok_or_else(|| internal_error!("Missing `response`"))? {
             bsmr_test_proto::execute_response2::Response::Result(res) => {
-                ExecuteResponse::Result(res.try_into().buck_error_context("Invalid `result`")?)
+                ExecuteResponse::Result(res.try_into().bsmr_error_context("Invalid `result`")?)
             }
             bsmr_test_proto::execute_response2::Response::Cancelled(
                 bsmr_test_proto::Cancelled { reason },
@@ -213,7 +213,7 @@ impl TestOrchestratorClient {
     }
 
     pub async fn report_test_result(&self, result: TestResult) -> bsmr_error::Result<()> {
-        let result = result.try_into().buck_error_context("Invalid `result`")?;
+        let result = result.try_into().bsmr_error_context("Invalid `result`")?;
 
         self.test_orchestrator_client
             .clone()
@@ -231,7 +231,7 @@ impl TestOrchestratorClient {
         suite: String,
         tests: Vec<String>,
     ) -> bsmr_error::Result<()> {
-        let target = target.try_into().buck_error_context("Invalid `target`")?;
+        let target = target.try_into().bsmr_error_context("Invalid `target`")?;
 
         self.test_orchestrator_client
             .clone()
@@ -293,7 +293,7 @@ impl TestOrchestratorClient {
 
         let executable: bsmr_test_proto::TestExecutable = executable
             .try_into()
-            .buck_error_context("Invalid prepare_for_local_execution request")?;
+            .bsmr_error_context("Invalid prepare_for_local_execution request")?;
 
         let request = bsmr_test_proto::PrepareForLocalExecutionRequest {
             test_executable: Some(executable),
@@ -305,7 +305,7 @@ impl TestOrchestratorClient {
             .await?
             .into_inner()
             .try_into()
-            .buck_error_context("Invalid `result`")
+            .bsmr_error_context("Invalid `result`")
     }
 
     pub async fn attach_info_message(&self, message: String) -> bsmr_error::Result<()> {
@@ -364,7 +364,7 @@ where
             } = request
                 .into_inner()
                 .try_into()
-                .buck_error_context("Invalid execute2 request")?;
+                .bsmr_error_context("Invalid execute2 request")?;
 
             let TestExecutable {
                 stage,
@@ -389,12 +389,12 @@ where
                     disable_test_execution_caching,
                 )
                 .await
-                .buck_error_context("Execution failed")?;
+                .bsmr_error_context("Execution failed")?;
 
             let response = match response {
                 ExecuteResponse::Result(r) => bsmr_test_proto::execute_response2::Response::Result(
                     r.try_into()
-                        .buck_error_context("Failed to serialize result")?,
+                        .bsmr_error_context("Failed to serialize result")?,
                 ),
                 ExecuteResponse::Cancelled(reason) => {
                     let reason = if let Some(reason) = reason {
@@ -432,7 +432,7 @@ where
             self.inner
                 .end_of_test_results(exit_code)
                 .await
-                .buck_error_context("Failed to report end-of-tests")?;
+                .bsmr_error_context("Failed to report end-of-tests")?;
 
             Ok(Empty {})
         })
@@ -449,12 +449,12 @@ where
             let result = result
                 .ok_or_else(|| internal_error!("Missing `result`"))?
                 .try_into()
-                .buck_error_context("Invalid `result`")?;
+                .bsmr_error_context("Invalid `result`")?;
 
             self.inner
                 .report_test_result(result)
                 .await
-                .buck_error_context("Failed to report end-of-tests")?;
+                .bsmr_error_context("Failed to report end-of-tests")?;
 
             Ok(Empty {})
         })
@@ -471,7 +471,7 @@ where
             let target = target
                 .ok_or_else(|| internal_error!("Missing `target`"))?
                 .try_into()
-                .buck_error_context("Invalid `target`")?;
+                .bsmr_error_context("Invalid `target`")?;
 
             let Testing {
                 suite, testcases, ..
@@ -480,7 +480,7 @@ where
             self.inner
                 .report_tests_discovered(target, suite, testcases)
                 .await
-                .buck_error_context("Failed to report end-of-tests")?;
+                .bsmr_error_context("Failed to report end-of-tests")?;
 
             Ok(Empty {})
         })
@@ -500,7 +500,7 @@ where
             self.inner
                 .report_test_session(session_info, test_session_id)
                 .await
-                .buck_error_context("Failed to report test session summary")?;
+                .bsmr_error_context("Failed to report test session summary")?;
 
             Ok(Empty {})
         })
@@ -529,18 +529,18 @@ where
             } = test_executable
                 .ok_or_else(|| internal_error!("Missing `test_executable`"))?
                 .try_into()
-                .buck_error_context("Invalid `test_executable`")
-                .buck_error_context("Invalid prepare_for_local_execution request")?;
+                .bsmr_error_context("Invalid `test_executable`")
+                .bsmr_error_context("Invalid prepare_for_local_execution request")?;
 
             let result = self
                 .inner
                 .prepare_for_local_execution(stage, target, cmd, env, pre_create_dirs, resources)
                 .await
-                .buck_error_context("Prepare for local execution failed")?;
+                .bsmr_error_context("Prepare for local execution failed")?;
 
             result
                 .try_into()
-                .buck_error_context("Failed to serialize result")
+                .bsmr_error_context("Failed to serialize result")
         })
         .await
     }
@@ -555,7 +555,7 @@ where
             self.inner
                 .attach_info_message(message)
                 .await
-                .buck_error_context("Failed to attach info messages")?;
+                .bsmr_error_context("Failed to attach info messages")?;
 
             Ok(Empty {})
         })
@@ -578,7 +578,7 @@ where
                 .inner
                 .upload_to_cas(local_path, ttl_config.ttl_seconds, ttl_config.use_case)
                 .await
-                .buck_error_context("Failed to upload file to CAS")?;
+                .bsmr_error_context("Failed to upload file to CAS")?;
 
             Ok(UploadFileToCasResponse {
                 digest: Some(digest),
@@ -607,12 +607,12 @@ where
             let level = level
                 .ok_or_else(|| internal_error!("Missing `level`"))?
                 .try_into()
-                .buck_error_context("Invalid `level`")?;
+                .bsmr_error_context("Invalid `level`")?;
 
             self.inner
                 .console(level, message)
                 .await
-                .buck_error_context("Failed to console")?;
+                .bsmr_error_context("Failed to console")?;
 
             Ok(bsmr_downward_api_proto::Empty {})
         })
@@ -629,12 +629,12 @@ where
             let level = level
                 .ok_or_else(|| internal_error!("Missing `level`"))?
                 .try_into()
-                .buck_error_context("Invalid `level`")?;
+                .bsmr_error_context("Invalid `level`")?;
 
             self.inner
                 .log(level, message)
                 .await
-                .buck_error_context("Failed to log")?;
+                .bsmr_error_context("Failed to log")?;
 
             Ok(bsmr_downward_api_proto::Empty {})
         })
@@ -651,12 +651,12 @@ where
             let event = event
                 .ok_or_else(|| internal_error!("Missing `event`"))?
                 .try_into()
-                .buck_error_context("Invalid `event`")?;
+                .bsmr_error_context("Invalid `event`")?;
 
             self.inner
                 .external(event)
                 .await
-                .buck_error_context("Failed to deliver event")?;
+                .bsmr_error_context("Failed to deliver event")?;
 
             Ok(bsmr_downward_api_proto::Empty {})
         })

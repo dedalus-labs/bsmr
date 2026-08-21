@@ -26,7 +26,7 @@ test_artifact_type() here.
 
 -import(common_util, [unicode_characters_to_binary/1]).
 
--include_lib("common/include/buck_ct_records.hrl").
+-include_lib("common/include/bsmr_ct_records.hrl").
 
 -type generic_blob() :: #{generic_blob := #{}}.
 -type generic_text_log() :: #{generic_text_log := #{}}.

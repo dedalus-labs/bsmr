@@ -18,12 +18,12 @@ use async_trait::async_trait;
 use bsmr_cli_proto::UnstableDiceDumpRequest;
 use bsmr_cli_proto::unstable_dice_dump_request::DiceDumpFormat;
 use bsmr_client_ctx::client_ctx::ClientCommandContext;
-use bsmr_client_ctx::common::BuckArgMatches;
+use bsmr_client_ctx::common::BsmrArgMatches;
 use bsmr_client_ctx::common::CommonBuildConfigurationOptions;
 use bsmr_client_ctx::common::CommonEventLogOptions;
 use bsmr_client_ctx::common::CommonStarlarkOptions;
 use bsmr_client_ctx::common::ui::CommonConsoleOptions;
-use bsmr_client_ctx::daemon::client::BuckdClientConnector;
+use bsmr_client_ctx::daemon::client::BsmrdClientConnector;
 use bsmr_client_ctx::events_ctx::EventsCtx;
 use bsmr_client_ctx::exit_result::ExitResult;
 use bsmr_client_ctx::path_arg::PathArg;
@@ -50,8 +50,8 @@ impl StreamingCommand for DiceDumpCommand {
 
     async fn exec_impl(
         self,
-        buckd: &mut BuckdClientConnector,
-        _matches: BuckArgMatches<'_>,
+        bsmrd: &mut BsmrdClientConnector,
+        _matches: BsmrArgMatches<'_>,
         ctx: &mut ClientCommandContext<'_>,
         events_ctx: &mut EventsCtx,
     ) -> ExitResult {
@@ -62,7 +62,7 @@ impl StreamingCommand for DiceDumpCommand {
         } else {
             DiceDumpFormat::Tsv
         };
-        buckd
+        bsmrd
             .with_flushing()
             .unstable_dice_dump(
                 UnstableDiceDumpRequest {

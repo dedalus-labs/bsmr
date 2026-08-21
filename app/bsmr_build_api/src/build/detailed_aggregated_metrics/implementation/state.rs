@@ -22,7 +22,7 @@ use bsmr_core::deferred::key::DeferredHolderKey;
 use bsmr_core::soft_error;
 use bsmr_core::target::configured_target_label::ConfiguredTargetLabel;
 use bsmr_error::internal_error;
-use bsmr_hash::BuckHashSet;
+use bsmr_hash::BsmrHashSet;
 use dupe::Dupe;
 
 use crate::build::detailed_aggregated_metrics::FxMultiMap;
@@ -52,8 +52,8 @@ use crate::deferred::calculation::DeferredHolder;
 /// build it occurred in. We expect the user to track which executions are relevant to the current build,
 /// and use that later to compute metrics both over the whole graph and just specific to the current build.
 pub struct DetailedAggregatedMetricsStateTracker {
-    observed_executions: bsmr_hash::BuckHashMap<ActionKey, ActionExecutionMetrics>,
-    analysis_nodes: Arc<bsmr_hash::BuckHashMap<DeferredHolderKey, DeferredHolder>>,
+    observed_executions: bsmr_hash::BsmrHashMap<ActionKey, ActionExecutionMetrics>,
+    analysis_nodes: Arc<bsmr_hash::BsmrHashMap<DeferredHolderKey, DeferredHolder>>,
 }
 
 impl DetailedAggregatedMetricsStateTracker {
@@ -77,8 +77,8 @@ impl DetailedAggregatedMetricsStateTracker {
 
     fn new() -> Self {
         Self {
-            analysis_nodes: Arc::new(bsmr_hash::BuckHashMap::default()),
-            observed_executions: bsmr_hash::BuckHashMap::default(),
+            analysis_nodes: Arc::new(bsmr_hash::BsmrHashMap::default()),
+            observed_executions: bsmr_hash::BsmrHashMap::default(),
         }
     }
 
@@ -118,7 +118,7 @@ impl DetailedAggregatedMetricsStateTracker {
                 let analysis_nodes = self.analysis_nodes.dupe();
                 let rule_type_name = spec.target.rule_type().name().to_owned();
                 tokio::task::spawn_blocking(move || {
-                    let mut target_graph = BuckHashSet::default();
+                    let mut target_graph = BsmrHashSet::default();
                     traverse_target_graph(&spec.target, |target| {
                         target_graph.insert(target.dupe());
                     });

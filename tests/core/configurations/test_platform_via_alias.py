@@ -15,13 +15,13 @@
 # pyre-strict
 
 
-from bsmr.tests.e2e_util.api.buck import Buck
-from bsmr.tests.e2e_util.buck_workspace import buck_test
+from bsmr.tests.e2e_util.api.bsmr import Bsmr
+from bsmr.tests.e2e_util.bsmr_workspace import bsmr_test
 
 
 # Test platform can be loaded via `alias` rule.
-@buck_test()
-async def test_platform_via_alias(buck: Buck) -> None:
-    await buck.build(
+@bsmr_test()
+async def test_platform_via_alias(bsmr: Bsmr) -> None:
+    await bsmr.build(
         "root//:gr",
     )

@@ -18,16 +18,16 @@ import csv
 import random
 import string
 
-from bsmr.tests.e2e_util.api.buck import Buck
-from bsmr.tests.e2e_util.buck_workspace import buck_test
+from bsmr.tests.e2e_util.api.bsmr import Bsmr
+from bsmr.tests.e2e_util.bsmr_workspace import bsmr_test
 
 
-@buck_test()
-async def test_what_uploaded_csv(buck: Buck) -> None:
+@bsmr_test()
+async def test_what_uploaded_csv(bsmr: Bsmr) -> None:
     # Use a random content on every test invocation to make sure we actually get uploads
     content = "".join(random.choices(string.ascii_uppercase + string.digits, k=20))
-    await buck.build("//:upload_rule", "--remote-only", "-c", "test.content=" + content)
-    out = await buck.log("what-uploaded", "--format", "csv")
+    await bsmr.build("//:upload_rule", "--remote-only", "-c", "test.content=" + content)
+    out = await bsmr.log("what-uploaded", "--format", "csv")
     header = ["action", "digests_uploaded", "bytes_uploaded"]
     out = [
         dict(zip(header, record))
@@ -41,12 +41,12 @@ async def test_what_uploaded_csv(buck: Buck) -> None:
     assert int(out[1]["digests_uploaded"]) > 0, "second entry should be upload digests"
 
 
-@buck_test()
-async def test_what_uploaded_aggregated(buck: Buck) -> None:
+@bsmr_test()
+async def test_what_uploaded_aggregated(bsmr: Bsmr) -> None:
     # Use a random content on every test invocation to make sure we actually get uploads
     content = "".join(random.choices(string.ascii_uppercase + string.digits, k=20))
-    await buck.build("//:upload_rule", "--remote-only", "-c", "test.content=" + content)
-    out = await buck.log("what-uploaded", "--aggregate-by-ext")
+    await bsmr.build("//:upload_rule", "--remote-only", "-c", "test.content=" + content)
+    out = await bsmr.log("what-uploaded", "--aggregate-by-ext")
     out = [line.split() for line in out.stdout.splitlines() if line]
     assert len(out) > 0, "out should have some uploads"
     assert out[0] == ["txt", "1", "20"], f"unexpected output: {out}"

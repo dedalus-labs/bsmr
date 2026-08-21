@@ -318,7 +318,7 @@ def starlark_linter(bsmr: str, git: bool) -> None:
                 "--isolation-dir=starlark-linter",
                 "starlark",
                 "lint",
-                "--no-buckd",
+                "--no-bsmrd",
                 "@" + fp.name,
             ]
         )

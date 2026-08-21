@@ -17,13 +17,13 @@
 use async_trait::async_trait;
 use bsmr_cli_proto::UnstableHeapDumpRequest;
 use bsmr_client_ctx::client_ctx::ClientCommandContext;
-use bsmr_client_ctx::common::BuckArgMatches;
+use bsmr_client_ctx::common::BsmrArgMatches;
 use bsmr_client_ctx::common::CommonBuildConfigurationOptions;
 use bsmr_client_ctx::common::CommonEventLogOptions;
 use bsmr_client_ctx::common::CommonStarlarkOptions;
 use bsmr_client_ctx::common::ui::CommonConsoleOptions;
-use bsmr_client_ctx::daemon::client::BuckdClientConnector;
-use bsmr_client_ctx::daemon::client::connect::BuckdProcessInfo;
+use bsmr_client_ctx::daemon::client::BsmrdClientConnector;
+use bsmr_client_ctx::daemon::client::connect::BsmrdProcessInfo;
 use bsmr_client_ctx::events_ctx::EventsCtx;
 use bsmr_client_ctx::exit_result::ExitResult;
 use bsmr_client_ctx::path_arg::PathArg;
@@ -35,7 +35,7 @@ use bsmr_core::is_open_source;
 /// `mallctl prof.dump`. It is a profile of currently allocated memory,
 /// not profile of allocations.
 ///
-/// To use this command, restart buckd with env variable `MALLOC_CONF=prof:true,prof_final:false`.
+/// To use this command, restart bsmrd with env variable `MALLOC_CONF=prof:true,prof_final:false`.
 #[derive(Debug, clap::Parser)]
 pub struct HeapDumpCommand {
     /// The path to write the heap dump to.
@@ -57,8 +57,8 @@ impl StreamingCommand for HeapDumpCommand {
 
     async fn exec_impl(
         self,
-        buckd: &mut BuckdClientConnector,
-        _matches: BuckArgMatches<'_>,
+        bsmrd: &mut BsmrdClientConnector,
+        _matches: BsmrArgMatches<'_>,
         ctx: &mut ClientCommandContext<'_>,
         events_ctx: &mut EventsCtx,
     ) -> ExitResult {
@@ -66,7 +66,7 @@ impl StreamingCommand for HeapDumpCommand {
         let test_executor_path = self
             .test_executor_path
             .map(|path| path.resolve(&ctx.working_dir));
-        buckd
+        bsmrd
             .with_flushing()
             .unstable_heap_dump(
                 UnstableHeapDumpRequest {
@@ -80,7 +80,7 @@ impl StreamingCommand for HeapDumpCommand {
             .await?;
 
         let daemon_dir = ctx.paths()?.daemon_dir()?;
-        let process_info = BuckdProcessInfo::load(&daemon_dir)?;
+        let process_info = BsmrdProcessInfo::load(&daemon_dir)?;
         if !is_open_source() {
             bsmr_client_ctx::eprint!(
                 "\

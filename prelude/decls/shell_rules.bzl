@@ -14,7 +14,7 @@
 
 load("@prelude//decls:test_common.bzl", "test_common")
 load("@prelude//transitions:constraint_overrides.bzl", "constraint_overrides")
-load(":common.bzl", "buck", "prelude_rule")
+load(":common.bzl", "bsmr", "prelude_rule")
 load(":re_test_common.bzl", "re_test_common")
 
 sh_binary = prelude_rule(
@@ -43,13 +43,13 @@ sh_binary = prelude_rule(
         # Create a simple script that prints out the resource
         $ cat > script.sh
         #!/bin/sh
-        cat $BUCK_DEFAULT_RUNTIME_RESOURCES/data.dat
+        cat $BSMR_DEFAULT_RUNTIME_RESOURCES/data.dat
 
         # Make sure the script is executable
         $ chmod u+x script.sh
 
         # Run the script, and see that it prints out the resource we provided
-        $ buck run //:script
+        $ bsmr run //:script
         Jobs completed: 4. Time elapsed: 0.2s.
         BUILD SUCCEEDED
         I'm a datafile
@@ -72,16 +72,16 @@ sh_binary = prelude_rule(
                 A list of files or build rules that this rule requires in order to run. These could be things such as
                  random data files.
 
-                 When the script runs, the `$BUCK_DEFAULT_RUNTIME_RESOURCES`
+                 When the script runs, the `$BSMR_DEFAULT_RUNTIME_RESOURCES`
                  environment variable specifies the directory that contains these resources.
-                 This directory's location is determined entirely by Buck; the script should
+                 This directory's location is determined entirely by Bsmr; the script should
                  not assume the directory's location.
 
                  The resources are also made available in a tree structure that mirrors
                  their locations in the source and `bsmr-out` trees. The
-                 environment variable `$BUCK_PROJECT_ROOT` specifies a directory
+                 environment variable `$BSMR_PROJECT_ROOT` specifies a directory
                  that contains all the resources, laid out in their locations relative to
-                 the original buck project root.
+                 the original bsmr project root.
             """,
             ),
             "append_script_extension": attrs.bool(
@@ -100,12 +100,12 @@ sh_binary = prelude_rule(
             """,
             ),
             "deps": attrs.list(attrs.dep(), default = []),
-            "_target_os_type": buck.target_os_type_arg(),
+            "_target_os_type": bsmr.target_os_type_arg(),
             "has_content_based_path": attrs.bool(default = True),
         }
-        | buck.licenses_arg()
-        | buck.labels_arg()
-        | buck.contacts_arg()
+        | bsmr.licenses_arg()
+        | bsmr.labels_arg()
+        | bsmr.contacts_arg()
     ),
 )
 
@@ -151,7 +151,7 @@ sh_test = prelude_rule(
         $ chmod u+x script.sh
 
         # Run the script, and see that one test passes, one fails
-        $ buck test //:script_pass //:script_fail
+        $ bsmr test //:script_pass //:script_fail
         FAILURE script.sh sh_test
         Building: finished in 0.0 sec (100%) 2/2 jobs, 0 updated
           Total time: 0.0 sec
@@ -171,7 +171,7 @@ sh_test = prelude_rule(
     further = None,
     attrs = (
         # @unsorted-dict-items
-        buck.inject_test_env_arg()
+        bsmr.inject_test_env_arg()
         | {
             "args": attrs.list(
                 attrs.arg(),
@@ -219,9 +219,9 @@ sh_test = prelude_rule(
             """,
             ),
         }
-        | buck.licenses_arg()
-        | buck.labels_arg()
-        | buck.contacts_arg()
+        | bsmr.licenses_arg()
+        | bsmr.labels_arg()
+        | bsmr.contacts_arg()
         | test_common.attributes()
         | re_test_common.test_args()
         | test_common.attributes()

@@ -1,3 +1,9 @@
+# ===----------------------------------------------------------------------===
+# Upstream-Source: facebook/buck2@1560aca2002865cd73d7cafb22c705cfb640b2bc
+# Modifications Copyright (c) 2026 Dedalus Labs, Inc. and its contributors
+# SPDX-License-Identifier: Apache-2.0
+# ===----------------------------------------------------------------------===
+
 # Copyright (c) Meta Platforms, Inc. and affiliates.
 #
 # This source code is dual-licensed under either the MIT license found in the
@@ -15,7 +21,7 @@ load("@prelude//rust:clippy_configuration.bzl", "ClippyConfiguration")
 load("@prelude//rust:link_info.bzl", "RustProcMacroPlugin")
 load("@prelude//rust:rust_binary.bzl", "rust_binary_impl", "rust_test_impl")
 load("@prelude//rust:rust_library.bzl", "rust_library_impl")
-load(":common.bzl", "RuntimeDependencyHandling", "buck", "prelude_rule")
+load(":common.bzl", "RuntimeDependencyHandling", "bsmr", "prelude_rule")
 load(":cxx_common.bzl", "cxx_common")
 load(":native_common.bzl", "native_common")
 load(":re_test_common.bzl", "re_test_common")
@@ -23,9 +29,9 @@ load(":rust_common.bzl", "rust_common", "rust_target_dep")
 
 def _rust_common_attributes(is_binary: bool):
     return (
-        buck.licenses_arg()
-        | buck.labels_arg()
-        | buck.contacts_arg()
+        bsmr.licenses_arg()
+        | bsmr.labels_arg()
+        | bsmr.contacts_arg()
         | {
             "clippy_configuration": attrs.option(attrs.dep(providers = [ClippyConfiguration]), default = None),
             "coverage": attrs.bool(default = False),
@@ -37,8 +43,8 @@ def _rust_common_attributes(is_binary: bool):
             "separate_debug_info": attrs.bool(default = False),
             "use_content_based_paths": attrs.bool(default = True),
             "uses_restricted_rustc_flags": attrs.bool(default = False),
-            "_exec_os_type": buck.exec_os_type_arg(),
-            "_target_os_type": buck.target_os_type_arg(),
+            "_exec_os_type": bsmr.exec_os_type_arg(),
+            "_target_os_type": bsmr.target_os_type_arg(),
         }
         | cxx_common.default_deps_arg()
     )
@@ -86,15 +92,15 @@ rust_binary = prelude_rule(
         A rust\\_binary() rule builds a native executable from the supplied set of Rust source files
         and dependencies.
 
-        If you invoke a build with the `check` flavor, then Buck will invoke rustc
+        If you invoke a build with the `check` flavor, then Bsmr will invoke rustc
         to check the code (typecheck, produce warnings, etc), but won't generate an executable code.
         When applied to binaries it produces no output; for libraries it produces metadata for
         consumers of the library.
 
-        Note: Buck is currently tested with (and therefore supports) version 1.32.0 of Rust.
+        Note: Bsmr is currently tested with (and therefore supports) version 1.32.0 of Rust.
     """,
     examples = """
-        For more examples, check out our [integration tests](https://github.com/facebook/buck/tree/dev/test/com/facebook/buck/rust/testdata/).
+        For more examples, check out our [integration tests](https://github.com/dedalus/bsmr/tree/dev/test/com/dedalus/bsmr/rust/testdata/).
 
         ```
         rust_binary(
@@ -144,7 +150,7 @@ rust_binary = prelude_rule(
         | rust_common.rust_toolchain_arg()
         | rust_common.workspaces_arg()
         | native_common.transformation_spec_arg()
-        | buck.allow_cache_upload_arg()
+        | bsmr.allow_cache_upload_arg()
     ),
     uses_plugins = [RustProcMacroPlugin],
     supports_incoming_transition = True,
@@ -157,15 +163,15 @@ rust_library = prelude_rule(
         A rust\\_library() rule builds a native library from the supplied set of Rust source files
         and dependencies.
 
-        If you invoke a build with the `check` flavor, then Buck will invoke rustc
+        If you invoke a build with the `check` flavor, then Bsmr will invoke rustc
         to check the code (typecheck, produce warnings, etc), but won't generate an executable code.
         When applied to binaries it produces no output; for libraries it produces metadata for
         consumers of the library.
 
-        Note: Buck is currently tested with (and therefore supports) version 1.32.0 of Rust.
+        Note: Bsmr is currently tested with (and therefore supports) version 1.32.0 of Rust.
     """,
     examples = """
-        For more examples, check out our [integration tests](https://github.com/facebook/buck/tree/dev/test/com/facebook/buck/rust/testdata/).
+        For more examples, check out our [integration tests](https://github.com/dedalus/bsmr/tree/dev/test/com/dedalus/bsmr/rust/testdata/).
 
         ```
         rust_library(
@@ -191,7 +197,7 @@ rust_library = prelude_rule(
         | rust_common.features_arg()
         | rust_common.rustc_flags_arg()
         |
-        # linker_flags weren't supported for rust_library in Buck v1 but the
+        # linker_flags weren't supported for rust_library in Bsmr v1 but the
         # fbcode macros pass them anyway. They're typically empty since the
         # config-level flags don't get injected, but it doesn't hurt to accept
         # them and it simplifies the implementation of Rust rules since they
@@ -232,10 +238,10 @@ rust_test = prelude_rule(
         A rust\\_test() rule builds a Rust test native executable from the supplied set of Rust source
         files and dependencies and runs this test.
 
-        Note: Buck is currently tested with (and therefore supports) version 1.32.0 of Rust.
+        Note: Bsmr is currently tested with (and therefore supports) version 1.32.0 of Rust.
     """,
     examples = """
-        For more examples, check out our [integration tests](https://github.com/facebook/buck/tree/dev/test/com/facebook/buck/rust/testdata/).
+        For more examples, check out our [integration tests](https://github.com/dedalus/bsmr/tree/dev/test/com/dedalus/bsmr/rust/testdata/).
 
         ```
         rust_test(
@@ -269,7 +275,7 @@ rust_test = prelude_rule(
     further = None,
     attrs = (
         # @unsorted-dict-items
-        buck.inject_test_env_arg()
+        bsmr.inject_test_env_arg()
         | rust_common.srcs_arg()
         | rust_common.srcs_filegroup_arg()
         | rust_common.mapped_srcs_arg()

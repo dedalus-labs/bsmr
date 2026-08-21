@@ -15,23 +15,23 @@
 # pyre-strict
 
 
-from bsmr.tests.e2e_util.api.buck import Buck
-from bsmr.tests.e2e_util.api.buck_result import BuckException, BuckResult
+from bsmr.tests.e2e_util.api.bsmr import Bsmr
+from bsmr.tests.e2e_util.api.bsmr_result import BsmrException, BsmrResult
 from bsmr.tests.e2e_util.asserts import expect_failure
-from bsmr.tests.e2e_util.buck_workspace import buck_test
+from bsmr.tests.e2e_util.bsmr_workspace import bsmr_test
 from bsmr.tests.e2e_util.helper.golden import golden, sanitize_hashes
 
 
-@buck_test()
-async def test_select_fail(buck: Buck) -> None:
+@bsmr_test()
+async def test_select_fail(bsmr: Bsmr) -> None:
     outputs: list[str] = []
 
-    async def run(*args: str) -> BuckResult:
-        outputs.append("$ buck " + " ".join(args))
+    async def run(*args: str) -> BsmrResult:
+        outputs.append("$ bsmr " + " ".join(args))
         try:
-            res = await buck.run_buck_command(*args)
+            res = await bsmr.run_bsmr_command(*args)
             outputs.append(res.stdout)
-        except BuckException as e:
+        except BsmrException as e:
             outputs.append(e.stderr)
             raise e
         return res
@@ -89,16 +89,16 @@ async def test_select_fail(buck: Buck) -> None:
     )
 
 
-@buck_test()
-async def test_select_incompatible(buck: Buck) -> None:
+@bsmr_test()
+async def test_select_incompatible(bsmr: Bsmr) -> None:
     outputs: list[str] = []
 
-    async def run(*args: str) -> BuckResult:
-        outputs.append("$ buck " + " ".join(args))
+    async def run(*args: str) -> BsmrResult:
+        outputs.append("$ bsmr " + " ".join(args))
         try:
-            res = await buck.run_buck_command(*args)
+            res = await bsmr.run_bsmr_command(*args)
             outputs.append(res.stdout)
-        except BuckException as e:
+        except BsmrException as e:
             outputs.append(e.stderr)
             raise e
         return res

@@ -17,7 +17,7 @@
 use std::os::fd::OwnedFd;
 use std::sync::Arc;
 
-use bsmr_error::BuckErrorContext;
+use bsmr_error::BsmrErrorContext;
 use bsmr_error::internal_error;
 use bsmr_fs::paths::file_name::FileNameBuf;
 use dupe::Dupe;
@@ -71,7 +71,7 @@ impl CgroupFile {
             flags,
             Mode::empty(),
         )
-        .with_buck_error_context(|| format!("Failed to open cgroup file {}", name))?;
+        .with_bsmr_error_context(|| format!("Failed to open cgroup file {}", name))?;
         Ok(CgroupFile(Arc::new(file), name.to_owned()))
     }
 
@@ -85,7 +85,7 @@ impl CgroupFile {
             Self::sync_write_impl(&file, data.as_ref()).map_err(bsmr_error::Error::from)
         })
         .await?
-        .with_buck_error_context(|| format!("Writing cgroup file {}", name))
+        .with_bsmr_error_context(|| format!("Writing cgroup file {}", name))
     }
 
     /// Write the given buffer to the file
@@ -144,7 +144,7 @@ impl CgroupFile {
             bsmr_error::Ok((data, filled))
         })
         .await?
-        .with_buck_error_context(|| format!("Reading cgroup file {}", self.1))
+        .with_bsmr_error_context(|| format!("Reading cgroup file {}", self.1))
     }
 
     async fn read_to_buf(&self) -> bsmr_error::Result<Vec<u8>> {
@@ -170,7 +170,7 @@ impl CgroupFile {
             bsmr_error::Ok(data)
         })
         .await?
-        .with_buck_error_context(|| format!("Reading cgroup file {}", self.1))
+        .with_bsmr_error_context(|| format!("Reading cgroup file {}", self.1))
     }
 
     pub(crate) async fn read_to_string(&self) -> bsmr_error::Result<String> {
@@ -181,7 +181,7 @@ impl CgroupFile {
     // FIXME(JakobDegen): Ought probably to have some types to represent the files
     pub(crate) async fn read_memory_stat(&self) -> bsmr_error::Result<MemoryStat> {
         MemoryStat::parse(&self.read_to_string().await?)
-            .buck_error_context("Failed to parse memory.stat")
+            .bsmr_error_context("Failed to parse memory.stat")
     }
 
     pub(crate) async fn read_max_or_int(&self) -> bsmr_error::Result<Option<u64>> {
@@ -255,7 +255,7 @@ impl MemoryStat {
                 .next()
                 .ok_or_else(|| internal_error!("Invalid line: '{}' (no value)", line))?
                 .parse::<u64>()
-                .with_buck_error_context(|| format!("Invalid line: '{}' (invalid value)", line))?;
+                .with_bsmr_error_context(|| format!("Invalid line: '{}' (invalid value)", line))?;
             if parts.next().is_some() {
                 return Err(bsmr_error::internal_error!(
                     "Invalid line: '{}' (too many parts)",

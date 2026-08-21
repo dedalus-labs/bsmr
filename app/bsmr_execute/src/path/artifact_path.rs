@@ -20,7 +20,7 @@ use std::hash::Hash;
 
 use bsmr_core::content_hash::ContentBasedPathHash;
 use bsmr_core::fs::artifact_path_resolver::ArtifactFs;
-use bsmr_core::fs::buck_out_path::BuildArtifactPath;
+use bsmr_core::fs::output_path::BuildArtifactPath;
 use bsmr_core::fs::project_rel_path::ProjectRelativePathBuf;
 use bsmr_core::package::source_path::SourcePathRef;
 use bsmr_error::ErrorTag;
@@ -47,8 +47,8 @@ impl ArtifactPath<'_> {
         let file_name = match self.projected_path.is_empty() {
             false => self.projected_path,
             true => match self.base_path.as_ref() {
-                Either::Left(buck_out) => buck_out.path(),
-                Either::Right(buck) => buck.path().as_ref(),
+                Either::Left(output) => output.path(),
+                Either::Right(bsmr) => bsmr.path().as_ref(),
             },
         }
         .file_name()
@@ -68,8 +68,8 @@ impl ArtifactPath<'_> {
         for<'b> F: FnOnce(&'b ForwardRelativePath) -> T,
     {
         let base_short_path = match self.base_path.as_ref() {
-            Either::Left(buck_out) => buck_out.path(),
-            Either::Right(buck) => buck.path().as_ref(),
+            Either::Left(output) => output.path(),
+            Either::Right(bsmr) => bsmr.path().as_ref(),
         };
 
         let path = base_short_path.join_cow(self.projected_path);
@@ -87,12 +87,12 @@ impl ArtifactPath<'_> {
         for<'b> F: FnOnce(&'b ForwardRelativePath) -> T,
     {
         let base_path = match self.base_path.as_ref() {
-            Either::Left(buck_out) => Cow::Borrowed(buck_out.path()),
-            Either::Right(buck) => Cow::Owned(
-                buck.package()
+            Either::Left(output) => Cow::Borrowed(output.path()),
+            Either::Right(bsmr) => Cow::Owned(
+                bsmr.package()
                     .cell_relative_path()
                     .as_forward_relative_path()
-                    .join(buck.path()),
+                    .join(bsmr.path()),
             ),
         };
 
@@ -117,7 +117,7 @@ impl ArtifactPath<'_> {
 
         let base_path = match base_path {
             Either::Left(build) => artifact_fs
-                .buck_out_path_resolver()
+                .output_path_resolver()
                 .resolve_gen(build, content_hash)?,
             Either::Right(source) => artifact_fs.resolve_source(*source)?,
         };
@@ -140,7 +140,7 @@ impl ArtifactPath<'_> {
 
         let base_path = match base_path {
             Either::Left(build) => artifact_fs
-                .buck_out_path_resolver()
+                .output_path_resolver()
                 .resolve_gen_configuration_hash_path(build)?,
             Either::Right(source) => artifact_fs.resolve_source(*source)?,
         };

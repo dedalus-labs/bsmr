@@ -31,12 +31,12 @@ use bsmr_core::deferred::key::DeferredHolderKey;
 use bsmr_core::execution_types::execution::ExecutionPlatform;
 use bsmr_core::execution_types::execution::ExecutionPlatformResolution;
 use bsmr_core::execution_types::executor_config::CommandExecutorConfig;
-use bsmr_core::fs::buck_out_path::BuckOutPathKind;
-use bsmr_core::fs::buck_out_path::BuildArtifactPath;
+use bsmr_core::fs::output_path::BuildArtifactPath;
+use bsmr_core::fs::output_path::OutputPathKind;
 use bsmr_core::target::configured_target_label::ConfiguredTargetLabel;
 use bsmr_execute::execute::request::OutputType;
 use bsmr_fs::paths::forward_rel_path::ForwardRelativePathBuf;
-use bsmr_hash::buck_indexset;
+use bsmr_hash::bsmr_indexset;
 use dupe::Dupe;
 use itertools::Itertools;
 use starlark::values::Heap;
@@ -55,33 +55,32 @@ fn declaring_artifacts() -> bsmr_error::Result<()> {
             ExecutionPlatformResolution::unspecified(),
         );
         let out1 = ForwardRelativePathBuf::unchecked_new("bar.out".into());
-        let buckout1 =
-            BuildArtifactPath::new(base.dupe(), out1.clone(), BuckOutPathKind::default());
+        let bsmrout1 = BuildArtifactPath::new(base.dupe(), out1.clone(), OutputPathKind::default());
         let declared1 = actions.declare_artifact(
             None,
             out1.clone(),
             OutputType::File,
             None,
-            BuckOutPathKind::default(),
+            OutputPathKind::default(),
             heap,
         )?;
         declared1
             .get_path()
-            .with_full_path(|p| assert_eq!(p, buckout1.path()));
+            .with_full_path(|p| assert_eq!(p, bsmrout1.path()));
 
         let out2 = ForwardRelativePathBuf::unchecked_new("bar2.out".into());
-        let buckout2 = BuildArtifactPath::new(base, out2.clone(), BuckOutPathKind::default());
+        let bsmrout2 = BuildArtifactPath::new(base, out2.clone(), OutputPathKind::default());
         let declared2 = actions.declare_artifact(
             None,
             out2,
             OutputType::File,
             None,
-            BuckOutPathKind::default(),
+            OutputPathKind::default(),
             heap,
         )?;
         declared2
             .get_path()
-            .with_full_path(|p| assert_eq!(p, buckout2.path()));
+            .with_full_path(|p| assert_eq!(p, bsmrout2.path()));
 
         if actions
             .declare_artifact(
@@ -89,7 +88,7 @@ fn declaring_artifacts() -> bsmr_error::Result<()> {
                 out1,
                 OutputType::File,
                 None,
-                BuckOutPathKind::default(),
+                OutputPathKind::default(),
                 heap,
             )
             .is_ok()
@@ -168,11 +167,11 @@ fn register_actions() -> bsmr_error::Result<()> {
             out,
             OutputType::File,
             None,
-            BuckOutPathKind::default(),
+            OutputPathKind::default(),
             heap,
         )?;
 
-        let inputs = buck_indexset![ArtifactGroup::Artifact(
+        let inputs = bsmr_indexset![ArtifactGroup::Artifact(
             BuildArtifact::testing_new(
                 base.unpack_target_label().unwrap().dupe(),
                 "input",
@@ -180,7 +179,7 @@ fn register_actions() -> bsmr_error::Result<()> {
             )
             .into()
         )];
-        let outputs = buck_indexset![declared.as_output()];
+        let outputs = bsmr_indexset![declared.as_output()];
 
         let unregistered_action = SimpleUnregisteredAction::new(
             inputs,
@@ -225,11 +224,11 @@ fn finalizing_actions() -> bsmr_error::Result<()> {
             out,
             OutputType::File,
             None,
-            BuckOutPathKind::default(),
+            OutputPathKind::default(),
             heap,
         )?;
 
-        let inputs = buck_indexset![ArtifactGroup::Artifact(
+        let inputs = bsmr_indexset![ArtifactGroup::Artifact(
             BuildArtifact::testing_new(
                 base.unpack_target_label().unwrap().dupe(),
                 "input",
@@ -237,7 +236,7 @@ fn finalizing_actions() -> bsmr_error::Result<()> {
             )
             .into()
         )];
-        let outputs = buck_indexset![declared.as_output()];
+        let outputs = bsmr_indexset![declared.as_output()];
 
         let unregistered_action = SimpleUnregisteredAction::new(
             inputs,
@@ -307,13 +306,13 @@ fn category_identifier_test(
     );
     for (category, identifier) in action_names {
         let unregistered_action = SimpleUnregisteredAction::new(
-            buck_indexset![],
+            bsmr_indexset![],
             vec![],
             Category::new((*category).to_owned()).unwrap(),
             identifier.map(|i| i.to_owned()),
         );
 
-        actions.register(&base, buck_indexset![], unregistered_action)?;
+        actions.register(&base, bsmr_indexset![], unregistered_action)?;
     }
 
     (actions.finalize()?)(&AnalysisValueFetcher::testing_new(base))?;

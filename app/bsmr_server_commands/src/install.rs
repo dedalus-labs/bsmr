@@ -68,7 +68,7 @@ use bsmr_data::BuildResult;
 use bsmr_data::InstallEventInfoEnd;
 use bsmr_data::InstallEventInfoStart;
 use bsmr_directory::directory::entry::DirectoryEntry;
-use bsmr_error::BuckErrorContext;
+use bsmr_error::BsmrErrorContext;
 use bsmr_error::ErrorTag;
 use bsmr_error::internal_error;
 use bsmr_events::dispatch::get_dispatcher;
@@ -82,7 +82,7 @@ use bsmr_fs::fs_util;
 use bsmr_fs::paths::abs_norm_path::AbsNormPathBuf;
 use bsmr_fs::paths::file_name::FileName;
 use bsmr_fs::paths::forward_rel_path::ForwardRelativePathBuf;
-use bsmr_hash::BuckDefaultHasher;
+use bsmr_hash::BsmrDefaultHasher;
 use bsmr_install_proto::DeviceMetadata;
 use bsmr_install_proto::FileReadyRequest;
 use bsmr_install_proto::InstallInfoRequest;
@@ -155,12 +155,12 @@ async fn get_installer_log_directory(
     server_ctx: &dyn ServerCommandContextTrait,
     ctx: &mut DiceComputations<'_>,
 ) -> bsmr_error::Result<AbsNormPathBuf> {
-    let out_path = ctx.get_buck_out_path().await?;
+    let out_path = ctx.get_output_path().await?;
     let filesystem = server_ctx.project_root();
-    let buck_out_path = filesystem
+    let output_path = filesystem
         .root()
         .join(out_path.root().as_forward_relative_path());
-    let install_log_dir = buck_out_path.join(ForwardRelativePathBuf::unchecked_new(
+    let install_log_dir = output_path.join(ForwardRelativePathBuf::unchecked_new(
         "installer".to_owned(),
     ));
     fs_util::create_dir_all(&install_log_dir)?;
@@ -272,7 +272,7 @@ async fn install(
     let install_requests = ctx.compute_many(install_requests);
     try_join_all(install_requests)
         .await
-        .buck_error_context("Interaction with installer failed.")?;
+        .bsmr_error_context("Interaction with installer failed.")?;
 
     // Best-effort telemetry: a successful install must not be reported as failed
     // because rule-type lookup hit an error (DICE failure, unbound late binding, etc).
@@ -324,7 +324,7 @@ async fn collect_install_request_data<'a>(
 
     let resolved_pattern = resolved_pattern
         .convert_pattern()
-        .buck_error_context("Install with explicit configuration pattern is not supported yet")?;
+        .bsmr_error_context("Install with explicit configuration pattern is not supported yet")?;
 
     let mut installer_to_files_map = std::collections::HashMap::new();
     for (package_with_modifiers, spec) in resolved_pattern.specs {
@@ -437,7 +437,7 @@ fn get_timestamp_as_string() -> bsmr_error::Result<String> {
 }
 
 fn calculate_hash<T: Hash>(t: &T) -> u64 {
-    let mut s = BuckDefaultHasher::new();
+    let mut s = BsmrDefaultHasher::new();
     t.hash(&mut s);
     s.finish()
 }
@@ -488,7 +488,7 @@ impl<'a> ConnectedInstaller<'a> {
                 tokio::select! {
                     result = connect_fut => {
                         let channel = result
-                            .buck_error_context("Failed to connect to the installer using TCP")?;
+                            .bsmr_error_context("Failed to connect to the installer using TCP")?;
                         Ok(InstallerClient::new(channel)
                             .max_encoding_message_size(usize::MAX)
                             .max_decoding_message_size(usize::MAX))
@@ -538,7 +538,7 @@ impl<'a> ConnectedInstaller<'a> {
         }
 
         self.install_result(
-            send_files_result.buck_error_context("Interaction with installer failed"),
+            send_files_result.bsmr_error_context("Interaction with installer failed"),
         )
     }
 
@@ -919,7 +919,7 @@ async fn build_launch_installer(
                 .boxed()
             })
             .await
-            .buck_error_context("Failed to build installer")?;
+            .bsmr_error_context("Failed to build installer")?;
 
         // Produce arguments for local platform.
         let path_separator = if cfg!(windows) {
@@ -955,7 +955,7 @@ async fn build_launch_installer(
             .env("BSMR_UUID", build_id)
             .stderr(stderr)
             .spawn()
-            .buck_error_context("Failed to spawn installer")?;
+            .bsmr_error_context("Failed to spawn installer")?;
 
         Ok(child)
     } else {

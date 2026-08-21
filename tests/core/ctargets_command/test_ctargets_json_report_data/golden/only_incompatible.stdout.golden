@@ -6,9 +6,9 @@
   ],
   "incompatible_targets": [
   {
-    "buck.target":"root//a:macos_only",
-    "buck.incompatible.cause":"ValidIncompatible",
-    "buck.incompatible.reason":"root//a:macos_only\n    is incompatible with root//:linux_platform#<HASH> (root//:macos unsatisfied), check the target's compatibility attributes"
+    "bsmr.target":"root//a:macos_only",
+    "bsmr.incompatible.cause":"ValidIncompatible",
+    "bsmr.incompatible.reason":"root//a:macos_only\n    is incompatible with root//:linux_platform#<HASH> (root//:macos unsatisfied), check the target's compatibility attributes"
   }
   ]
 }

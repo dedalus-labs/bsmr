@@ -20,8 +20,8 @@ import json
 import os
 from pathlib import Path
 
-from bsmr.tests.e2e_util.api.buck import Buck
-from bsmr.tests.e2e_util.buck_workspace import buck_test
+from bsmr.tests.e2e_util.api.bsmr import Bsmr
+from bsmr.tests.e2e_util.bsmr_workspace import bsmr_test
 from bsmr.tests.e2e_util.helper.utils import filter_events
 
 
@@ -30,22 +30,22 @@ def test_dummy() -> None:
     pass
 
 
-def _use_some_memory_args(buck: Buck) -> list[str]:
+def _use_some_memory_args(bsmr: Bsmr) -> list[str]:
     return [
         "-c",
         f"use_some_memory.path={os.environ['USE_SOME_MEMORY_BIN']}",
     ]
 
 
-@buck_test(skip_for_os=["darwin", "windows"], disable_daemon_cgroup=False)
+@bsmr_test(skip_for_os=["darwin", "windows"], disable_daemon_cgroup=False)
 async def test_memory_pressure_telemetry(
-    buck: Buck,
+    bsmr: Bsmr,
 ) -> None:
-    with open(buck.cwd / ".bsmr.local", "w") as f:
+    with open(bsmr.cwd / ".bsmr.local", "w") as f:
         f.write("[bsmr_resource_control]\n")
         f.write("memory_high_per_action = 1048576\n")  # 1 MiB
 
-    await buck.build(
+    await bsmr.build(
         ":allocate_10_10M",
         "--no-remote-cache",
         "-c",
@@ -55,7 +55,7 @@ async def test_memory_pressure_telemetry(
     )
 
     resource_control_events = await filter_events(
-        buck, "Event", "data", "Instant", "data", "ResourceControlEvent"
+        bsmr, "Event", "data", "Instant", "data", "ResourceControlEvent"
     )
 
     # We can't reliably predict how many events will be fired and how high the pressure % will reach,
@@ -68,18 +68,18 @@ async def test_memory_pressure_telemetry(
     )
 
 
-@buck_test(skip_for_os=["darwin", "windows"], disable_daemon_cgroup=False)
+@bsmr_test(skip_for_os=["darwin", "windows"], disable_daemon_cgroup=False)
 async def test_resource_control_events_created(
-    buck: Buck,
+    bsmr: Bsmr,
 ) -> None:
-    with open(buck.cwd / ".bsmr.local", "w") as f:
+    with open(bsmr.cwd / ".bsmr.local", "w") as f:
         f.write("[bsmr_resource_control]\n")
         f.write("status = required\n")
         f.write("enable_action_cgroup_pool_v2 = true\n")
         f.write(f"memory_high_actions = {200 * 1024 * 1024}\n")  # 200 MiB
         f.write("enable_suspension = true\n")
 
-    await buck.build(
+    await bsmr.build(
         "prelude//:freeze_unfreeze_target",
         "--no-remote-cache",
         "-c",
@@ -87,11 +87,11 @@ async def test_resource_control_events_created(
         "-c",
         "build.execution_platforms=//:platforms",
         "--local-only",
-        *_use_some_memory_args(buck),
+        *_use_some_memory_args(bsmr),
     )
 
     event = await filter_events(
-        buck,
+        bsmr,
         "Event",
         "data",
         "Instant",
@@ -118,11 +118,11 @@ def get_daemon_cgroup_path(pid: int) -> Path:
     raise Exception(f"Could not find cgroup v2 entry for PID {pid}")
 
 
-@buck_test(skip_for_os=["darwin", "windows"], disable_daemon_cgroup=False)
-async def test_daemon_id_in_cgroup_path(buck: Buck) -> None:
-    await buck.server()
+@bsmr_test(skip_for_os=["darwin", "windows"], disable_daemon_cgroup=False)
+async def test_daemon_id_in_cgroup_path(bsmr: Bsmr) -> None:
+    await bsmr.server()
 
-    result = await buck.status()
+    result = await bsmr.status()
     status = json.loads(result.stdout)
     daemon_id = status["daemon_constraints"]["daemon_id"]
 

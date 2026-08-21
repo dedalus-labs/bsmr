@@ -15,13 +15,13 @@
 # pyre-strict
 
 
-from bsmr.tests.e2e_util.api.buck import Buck
-from bsmr.tests.e2e_util.buck_workspace import buck_test
+from bsmr.tests.e2e_util.api.bsmr import Bsmr
+from bsmr.tests.e2e_util.bsmr_workspace import bsmr_test
 
 
-@buck_test()
-async def test_dynamic_value(buck: Buck) -> None:
-    result = await buck.build("//:test_rule")
+@bsmr_test()
+async def test_dynamic_value(bsmr: Bsmr) -> None:
+    result = await bsmr.build("//:test_rule")
     out = result.get_build_report().output_for_target("//:test_rule")
     with open(out, "r") as f:
         assert f.read().strip() == "<<<123>>>"

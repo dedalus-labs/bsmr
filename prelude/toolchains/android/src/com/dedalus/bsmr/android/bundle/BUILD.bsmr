@@ -1,0 +1,58 @@
+# ===----------------------------------------------------------------------===
+# Upstream-Source: facebook/buck2@1560aca2002865cd73d7cafb22c705cfb640b2bc
+# Modifications Copyright (c) 2026 Dedalus Labs, Inc. and its contributors
+# SPDX-License-Identifier: Apache-2.0
+# ===----------------------------------------------------------------------===
+
+load("@prelude//toolchains/android/tools:build_rules.bzl", "bsmr_java_binary", "bsmr_java_library")
+load("@prelude//utils:source_listing.bzl", "source_listing")
+
+oncall("android_devxx")
+
+source_listing()
+
+bsmr_java_library(
+    name = "bundle",
+    srcs = glob(["*.java"]),
+    visibility = [
+        "PUBLIC",
+    ],
+    deps = [
+        "prelude//toolchains/android/src/com/dedalus/bsmr/android/apk:apk",
+        "prelude//toolchains/android/src/com/dedalus/bsmr/android/apk/sdk:apk_builder",
+        "prelude//toolchains/android/src/com/dedalus/bsmr/android/zipalign:zipalign",
+        "prelude//toolchains/android/src/com/dedalus/bsmr/core/build/execution/context:context",
+        "prelude//toolchains/android/src/com/dedalus/bsmr/util/zip:zip",
+        "prelude//toolchains/android/third-party:args4j",
+        "prelude//toolchains/android/third-party:bundletool",
+        "prelude//toolchains/android/third-party:gson",
+        "prelude//toolchains/android/third-party:guava",
+        "prelude//toolchains/android/third-party:infer-annotations",
+        "prelude//toolchains/android/third-party:jsr305",
+        "prelude//toolchains/android/third-party:jsr330",
+        "prelude//toolchains/android/third-party:kotlin-annotations",
+        "prelude//toolchains/android/third-party/aosp:apksig",
+    ],
+)
+
+bsmr_java_binary(
+    name = "bundle_builder_binary",
+    main_class = "com.dedalus.bsmr.android.bundle.AndroidBundleBuilderExecutableMain",
+    visibility = [
+        "PUBLIC",
+    ],
+    deps = [
+        ":bundle",
+    ],
+)
+
+bsmr_java_binary(
+    name = "bundle_apks_builder_binary",
+    main_class = "com.dedalus.bsmr.android.bundle.AndroidBundleApksBuilderExecutableMain",
+    visibility = [
+        "PUBLIC",
+    ],
+    deps = [
+        ":bundle",
+    ],
+)

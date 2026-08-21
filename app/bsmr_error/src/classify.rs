@@ -32,7 +32,7 @@ pub const ERROR_TAG_UNCLASSIFIED: &str = "UNCLASSIFIED";
     Ord
 )]
 pub enum Tier {
-    // Expected errors in inputs explicitly tracked by buck.
+    // Expected errors in inputs explicitly tracked by bsmr.
     Input,
     // Errors that may be triggered by issues with the host,
     // resource limits, non-explicit dependencies or potentially
@@ -176,7 +176,7 @@ fn tag_metadata(tag: ErrorTag) -> TagMetadata {
         ErrorTag::ServerTransportError => rank!(environment),
         ErrorTag::ServerMemoryPressure => rank!(environment),
         ErrorTag::DaemonOomKilled => rank!(environment).exit_code(ExitCode::FatalOom),
-        // Note: This is only true internally due to buckwrapper
+        // Note: This is only true internally due to bsmrwrapper
         ErrorTag::NoBsmrRoot => rank!(environment),
         ErrorTag::InstallerEnvironment => rank!(environment).hidden(),
         ErrorTag::IoNotConnected => rank!(environment), // This typically means eden is not mounted
@@ -215,8 +215,8 @@ fn tag_metadata(tag: ErrorTag) -> TagMetadata {
         ErrorTag::IoInputOutputError => rank!(environment),
         ErrorTag::IoBadAddress => rank!(environment),
         ErrorTag::IoStaleNfsHandle => rank!(environment),
-        ErrorTag::InvalidBuckOut => rank!(environment),
-        ErrorTag::BuckdExeDeleted => rank!(environment),
+        ErrorTag::InvalidOutput => rank!(environment),
+        ErrorTag::BsmrdExeDeleted => rank!(environment),
         ErrorTag::MissingProjectRoot => rank!(environment),
         ErrorTag::ActionOom => rank!(environment),
 
@@ -235,9 +235,9 @@ fn tag_metadata(tag: ErrorTag) -> TagMetadata {
         ErrorTag::DaemonConstraintsWrongAfterStart => rank!(tier0),
         ErrorTag::DaemonDirCleanupFailed => rank!(tier0),
         ErrorTag::DaemonKillFailed => rank!(tier0),
-        ErrorTag::BuckdLifecycleLock => rank!(tier0),
-        ErrorTag::BuckdInfoMissing => rank!(tier0),
-        ErrorTag::BuckdInfoParseError => rank!(tier0),
+        ErrorTag::BsmrdLifecycleLock => rank!(tier0),
+        ErrorTag::BsmrdInfoMissing => rank!(tier0),
+        ErrorTag::BsmrdInfoParseError => rank!(tier0),
         ErrorTag::DaemonWontDieFromKill => rank!(tier0),
         ErrorTag::GrpcResponseMessageTooLarge => rank!(tier0),
         ErrorTag::ReClientCrash => rank!(tier0),
@@ -321,7 +321,7 @@ fn tag_metadata(tag: ErrorTag) -> TagMetadata {
         ErrorTag::InvalidAuthToken => rank!(tier0),
         ErrorTag::InvalidUsername => rank!(tier0),
         ErrorTag::InvalidAbsPath => rank!(tier0),
-        ErrorTag::InvalidBuckOutPath => rank!(tier0),
+        ErrorTag::InvalidOutputPath => rank!(tier0),
         ErrorTag::InvalidErrorReport => rank!(tier0),
 
         ErrorTag::WindowsUnsupported => rank!(tier0),
@@ -406,8 +406,8 @@ fn tag_metadata(tag: ErrorTag) -> TagMetadata {
         ErrorTag::Tier0 => rank!(tier0).hidden(),
         // Daemon disconnected with nothing in stderr, likely SIGKILLed.
         ErrorTag::DaemonDisconnect => rank!(environment),
-        // Could not determine the BuckVersion
-        ErrorTag::BuckVersionError => rank!(tier0),
+        // Could not determine the BsmrVersion
+        ErrorTag::BsmrVersionError => rank!(tier0),
         ErrorTag::MaterializationCancelled => rank!(tier0),
 
         // Input errors

@@ -18,7 +18,7 @@ use async_trait::async_trait;
 use bsmr_cli_proto::InstallRequest;
 use bsmr_client_ctx::client_ctx::ClientCommandContext;
 use bsmr_client_ctx::command_outcome::CommandOutcome;
-use bsmr_client_ctx::common::BuckArgMatches;
+use bsmr_client_ctx::common::BsmrArgMatches;
 use bsmr_client_ctx::common::CommonBuildConfigurationOptions;
 use bsmr_client_ctx::common::CommonCommandOptions;
 use bsmr_client_ctx::common::CommonEventLogOptions;
@@ -26,13 +26,13 @@ use bsmr_client_ctx::common::CommonStarlarkOptions;
 use bsmr_client_ctx::common::build::CommonBuildOptions;
 use bsmr_client_ctx::common::target_cfg::TargetCfgOptions;
 use bsmr_client_ctx::common::ui::CommonConsoleOptions;
-use bsmr_client_ctx::daemon::client::BuckdClientConnector;
+use bsmr_client_ctx::daemon::client::BsmrdClientConnector;
 use bsmr_client_ctx::daemon::client::NoPartialResultHandler;
 use bsmr_client_ctx::events_ctx::EventsCtx;
 use bsmr_client_ctx::exit_result::ExitResult;
 use bsmr_client_ctx::streaming::StreamingCommand;
 
-use crate::commands::build::print_buck_ui_and_rating;
+use crate::commands::build::print_bsmr_ui_and_rating;
 
 #[derive(Debug, clap::Parser)]
 #[clap(name = "install", about = "Build and install an application")]
@@ -68,27 +68,27 @@ pub struct InstallCommand {
 }
 
 /// Defines install options for Android that exist only for compatibility
-/// with buck1, and which are all automatically forwarded to the installer.
+/// with legacy, and which are all automatically forwarded to the installer.
 #[derive(Debug, clap::Parser)]
 struct AndroidInstallOptions {
     #[clap(
         short,
         long,
-        help = "Run an Android activity. Here for compatibility with buck1 - it is automatically forwarded to the installer"
+        help = "Run an Android activity. Here for compatibility with legacy - it is automatically forwarded to the installer"
     )]
     run: bool,
 
     #[clap(
         short,
         long,
-        help = "Use this option to use emulators only on Android. Here for compatibility with buck1 - it is automatically forwarded to the installer"
+        help = "Use this option to use emulators only on Android. Here for compatibility with legacy - it is automatically forwarded to the installer"
     )]
     emulator: bool,
 
     #[clap(
         short,
         long,
-        help = "Use this option to use real devices only on Android. Here for compatibility with buck1 - it is automatically forwarded to the installer"
+        help = "Use this option to use real devices only on Android. Here for compatibility with legacy - it is automatically forwarded to the installer"
     )]
     device: bool,
 
@@ -96,49 +96,49 @@ struct AndroidInstallOptions {
         short,
         long,
         alias = "udid",
-        help = "Use Android device or emulator with specific serial or UDID number. Here for compatibility with buck1 - it is automatically forwarded to the installer"
+        help = "Use Android device or emulator with specific serial or UDID number. Here for compatibility with legacy - it is automatically forwarded to the installer"
     )]
     serial: Option<String>,
 
     #[clap(
         short = 'x',
         long,
-        help = "Use all connected Android devices and/or emulators (multi-install mode). Here for compatibility with buck1 - it is automatically forwarded to the installer"
+        help = "Use all connected Android devices and/or emulators (multi-install mode). Here for compatibility with legacy - it is automatically forwarded to the installer"
     )]
     all_devices: bool,
 
     #[clap(
         short,
         long,
-        help = "Android activity to launch e.g. com.facebook/.LoginActivity. Implies -r. Here for compatibility with buck1 - it is automatically forwarded to the installer"
+        help = "Android activity to launch e.g. com.facebook/.LoginActivity. Implies -r. Here for compatibility with legacy - it is automatically forwarded to the installer"
     )]
     activity: Option<String>,
 
     #[clap(
         short,
         long,
-        help = "Android Intent URI to launch e.g. fb://profile. Implies -r. Here for compatibility with buck1 - it is automatically forwarded to the installer"
+        help = "Android Intent URI to launch e.g. fb://profile. Implies -r. Here for compatibility with legacy - it is automatically forwarded to the installer"
     )]
     intent_uri: Option<String>,
 
     #[clap(
         short,
         long,
-        help = "Have the launched Android process wait for the debugger. Here for compatibility with buck1 - it is automatically forwarded to the installer"
+        help = "Have the launched Android process wait for the debugger. Here for compatibility with legacy - it is automatically forwarded to the installer"
     )]
     wait_for_debugger: bool,
 
     #[clap(
         short,
         long,
-        help = "Use this option to uninstall an installed app before installing again. Here for compatibility with buck1 - it is automatically forwarded to the installer"
+        help = "Use this option to uninstall an installed app before installing again. Here for compatibility with legacy - it is automatically forwarded to the installer"
     )]
     uninstall: bool,
 
     #[clap(
         short,
         long,
-        help = "Use this option to Keep user data when uninstalling. Here for compatibility with buck1 - it is automatically forwarded to the installer"
+        help = "Use this option to Keep user data when uninstalling. Here for compatibility with legacy - it is automatically forwarded to the installer"
     )]
     keep: bool,
 }
@@ -148,8 +148,8 @@ impl StreamingCommand for InstallCommand {
     const COMMAND_NAME: &'static str = "install";
     async fn exec_impl(
         self,
-        buckd: &mut BuckdClientConnector,
-        matches: BuckArgMatches<'_>,
+        bsmrd: &mut BsmrdClientConnector,
+        matches: BsmrArgMatches<'_>,
         ctx: &mut ClientCommandContext<'_>,
         events_ctx: &mut EventsCtx,
     ) -> ExitResult {
@@ -190,12 +190,12 @@ impl StreamingCommand for InstallCommand {
             extra_run_args.push("-k".to_owned());
         }
 
-        // Add the additional run args passed to buck.
-        // They are added last to allow for `buck install -- --some-installer-arg -- --arbitrary-app-arg1 --another-app-arg`
+        // Add the additional run args passed to bsmr.
+        // They are added last to allow for `bsmr install -- --some-installer-arg -- --arbitrary-app-arg1 --another-app-arg`
         // as otherwise we'll add the above installer options *after* the installer extra args `--` separator.
         extra_run_args.extend(self.extra_run_args.clone());
 
-        let response = buckd
+        let response = bsmrd
             .with_flushing()
             .install(
                 InstallRequest {
@@ -212,7 +212,7 @@ impl StreamingCommand for InstallCommand {
             )
             .await?;
         let console = self.common_opts.console_opts.final_console();
-        print_buck_ui_and_rating(&console, ctx, events_ctx.used_superconsole)?;
+        print_bsmr_ui_and_rating(&console, ctx, events_ctx.used_superconsole)?;
 
         match response {
             CommandOutcome::Success(_) => {

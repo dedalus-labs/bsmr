@@ -1,0 +1,91 @@
+# ===----------------------------------------------------------------------===
+# Upstream-Source: facebook/buck2@1560aca2002865cd73d7cafb22c705cfb640b2bc
+# Modifications Copyright (c) 2026 Dedalus Labs, Inc. and its contributors
+# SPDX-License-Identifier: Apache-2.0
+# ===----------------------------------------------------------------------===
+
+load("@bsmr_build//rules:testpilot_defs.bzl", "tpx_labels")
+load("@prelude//toolchains/android/tools:build_rules.bzl", "bsmr_kotlin_test", "standard_java_test")
+load("@prelude//utils:source_listing.bzl", "source_listing")
+
+oncall("android_devxx")
+
+source_listing()
+
+standard_java_test(
+    name = "testrunner",
+    labels = [tpx_labels.long_running],
+    run_test_separately = True,
+    with_test_data = True,
+    deps = [
+        "prelude//toolchains/android/src/com/dedalus/bsmr/android:helpers",
+        "prelude//toolchains/android/src/com/dedalus/bsmr/android:utils_api",
+        "prelude//toolchains/android/src/com/dedalus/bsmr/core/filesystems:filesystems",
+        "prelude//toolchains/android/src/com/dedalus/bsmr/jvm/core:core",
+        "prelude//toolchains/android/src/com/dedalus/bsmr/jvm/java:steps",
+        "prelude//toolchains/android/src/com/dedalus/bsmr/jvm/java:support",
+        "prelude//toolchains/android/src/com/dedalus/bsmr/jvm/java/abi/source/api:api",
+        "prelude//toolchains/android/src/com/dedalus/bsmr/jvm/java/classes:classes",
+        "prelude//toolchains/android/src/com/dedalus/bsmr/step:step",
+        "prelude//toolchains/android/src/com/dedalus/bsmr/test/result/type:type",
+        "prelude//toolchains/android/src/com/dedalus/bsmr/test/selectors:selectors",
+        "prelude//toolchains/android/src/com/dedalus/bsmr/testresultsoutput:testresultsoutput",
+        "prelude//toolchains/android/src/com/dedalus/bsmr/testrunner:base",
+        "prelude//toolchains/android/src/com/dedalus/bsmr/testrunner:instrumentation",
+        "prelude//toolchains/android/src/com/dedalus/bsmr/testrunner:instrumentation_for_clout",
+        "prelude//toolchains/android/src/com/dedalus/bsmr/testrunner:junit",
+        "prelude//toolchains/android/src/com/dedalus/bsmr/util:process_executor",
+        "prelude//toolchains/android/src/com/dedalus/bsmr/util:util",
+        "prelude//toolchains/android/src/com/dedalus/bsmr/util/environment:environment",
+        "prelude//toolchains/android/src/com/dedalus/bsmr/util/environment:platform",
+        "prelude//toolchains/android/src/com/dedalus/bsmr/util/unit:unit",
+        "prelude//toolchains/android/src/com/dedalus/bsmr/util/xml:xml",
+        "prelude//toolchains/android/test/com/dedalus/bsmr/android:testutil",
+        "prelude//toolchains/android/test/com/dedalus/bsmr/testutil:testutil",
+        "prelude//toolchains/android/test/com/dedalus/bsmr/testutil/integration:util",
+        "prelude//toolchains/android/third-party:args4j",
+        "prelude//toolchains/android/third-party:asm",
+        "prelude//toolchains/android/third-party:dd-plist",
+        "prelude//toolchains/android/third-party:ddmlib",
+        "prelude//toolchains/android/third-party:guava",
+        "prelude//toolchains/android/third-party:infer-annotations",
+        "prelude//toolchains/android/third-party:jackson-annotations",
+        "prelude//toolchains/android/third-party:jackson-core",
+        "prelude//toolchains/android/third-party:jackson-databind",
+        "prelude//toolchains/android/third-party:jsr305",
+        "prelude//toolchains/android/third-party:junit",
+        "prelude//toolchains/android/third-party:okhttp",
+        "prelude//toolchains/android/third-party:okio",
+        "prelude//toolchains/android/third-party:tools-sdk-common",
+    ],
+)
+
+bsmr_kotlin_test(
+    name = "tpx_timeout_buffer_manager_test",
+    srcs = ["TpxTimeoutBufferManagerTest.kt"],
+    deps = [
+        "prelude//toolchains/android/src/com/dedalus/bsmr/testresultsoutput:testresultsoutput",
+        "prelude//toolchains/android/src/com/dedalus/bsmr/testrunner:timeout",
+        "prelude//toolchains/android/third-party:junit",
+    ],
+)
+
+bsmr_kotlin_test(
+    name = "per_test_coverage_base_test",
+    srcs = ["BasePerTestCoverageRunListenerTest.kt"],
+    deps = [
+        "prelude//toolchains/android/src/com/dedalus/bsmr/testrunner:per_test_coverage_base",
+        "prelude//toolchains/android/third-party:jackson-core",
+        "prelude//toolchains/android/third-party:junit",
+    ],
+)
+
+bsmr_kotlin_test(
+    name = "per_test_coverage_listener_test",
+    srcs = ["PerTestJUnitCoverageRunListenerTest.kt"],
+    deps = [
+        "prelude//toolchains/android/src/com/dedalus/bsmr/testrunner:junit",
+        "prelude//toolchains/android/src/com/dedalus/bsmr/testrunner:per_test_coverage_base",
+        "prelude//toolchains/android/third-party:junit",
+    ],
+)

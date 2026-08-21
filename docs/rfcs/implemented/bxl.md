@@ -6,11 +6,11 @@
 
 import { FbInternalOnly } from 'docusaurus-plugin-internaldocs-fb/internal';
 
-# Buck Extension Language (BXL)
+# Bsmr Extension Language (BXL)
 
 Bessemer will allow more complex introspection and interaction with its graphs via
 the `bxl` feature. BXL will be a starlark script that allows integrators to
-interact with `buck` commands like build and query within starlark, creating a
+interact with `bsmr` commands like build and query within starlark, creating a
 sequence of operations that introspect, build, and extend the build graph.
 
 <FbInternalOnly>
@@ -19,7 +19,7 @@ https://fb.workplace.com/groups/bsmrprototyping/permalink/2404233936540759/.
 
 </FbInternalOnly>
 
-These are essentially custom buck operations, defined in Starlark, that still
+These are essentially custom bsmr operations, defined in Starlark, that still
 follow the constraints of Bessemer, which will enable the same level of
 incrementality and caching as native bsmr operations. Furthermore, bxl will
 have subscriptions enabled in the future, where based on the incrementality
@@ -40,11 +40,11 @@ I’ve previously defined some proposed integrations
 
 </FbInternalOnly>
 
-Lsp prefers to have a single buck command that given a file, returns the
+Lsp prefers to have a single bsmr command that given a file, returns the
 corresponding compilation database. This requires a single command, i.e a bxl,
 that accepts a file as input, performs `owners` queries, and uses the owning
 target plus the desired file to get the clang flags, and then writes it to disk
-in comp db format. It’s possible to write the same features using buck calls to
+in comp db format. It’s possible to write the same features using bsmr calls to
 cquery, and build using subtargets to generate compilation database per file.
 However, this requires lsp owners to maintain code in several locations and
 languages, and parse and reserialize data. It also does not provide the same
@@ -73,7 +73,7 @@ operations that are tracked by dice so bxl can access the same cached file
 operations as rest of bsmr. Android project generation currently doesn’t write
 project files to bsmr-out, which prevents it from using bsmr actions. It will
 have to rely on an external script to process the graph information printed by
-buck and write the actual project files. If it moves to `bsmr-out` based, then
+bsmr and write the actual project files. If it moves to `bsmr-out` based, then
 it can take advantage of creating actions directly using the graph information
 processed, and potentially take advantage of incremental actions api to avoid
 writing the entire graph on each subsequent update.
@@ -104,10 +104,10 @@ needed.)
 
 ### Visual Studio Project (vsgo)
 
-Vsgo is a pile of python that converts buck query/buck targets output via a
+Vsgo is a pile of python that converts bsmr query/bsmr targets output via a
 variety of heuristics into inputs to a custom fork gyp which is then invoked to
-generate visual studio projects for a given buck target. Having direct access to
-the internals of buck would allow us to remove the heuristics and possibly even
+generate visual studio projects for a given bsmr target. Having direct access to
+the internals of bsmr would allow us to remove the heuristics and possibly even
 move project generation directly into bxl.
 
 ## Goals

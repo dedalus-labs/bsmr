@@ -17,18 +17,18 @@
 
 import os
 
-from bsmr.tests.e2e_util.api.buck import Buck
-from bsmr.tests.e2e_util.buck_workspace import buck_test
+from bsmr.tests.e2e_util.api.bsmr import Bsmr
+from bsmr.tests.e2e_util.bsmr_workspace import bsmr_test
 
 
-@buck_test()
-async def test_package_file_alt_name(buck: Buck) -> None:
-    output = await buck.build("//:")
-    assert "AAA from BUCK_TREE" in output.stderr
+@bsmr_test()
+async def test_package_file_alt_name(bsmr: Bsmr) -> None:
+    output = await bsmr.build("//:")
+    assert "AAA from BSMR_TREE" in output.stderr
     assert "AAA from PACKAGE" not in output.stderr
 
-    os.unlink(buck.cwd / "BUCK_TREE")
+    os.unlink(bsmr.cwd / "BSMR_TREE")
 
-    output = await buck.build("//:")
-    assert "AAA from BUCK_TREE" not in output.stderr
+    output = await bsmr.build("//:")
+    assert "AAA from BSMR_TREE" not in output.stderr
     assert "AAA from PACKAGE" in output.stderr

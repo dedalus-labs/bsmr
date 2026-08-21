@@ -20,7 +20,7 @@ use allocative::Allocative;
 use bsmr_core::cells::CellResolver;
 use bsmr_core::fs::project::ProjectRoot;
 use bsmr_core::fs::project_rel_path::ProjectRelativePathBuf;
-use bsmr_error::BuckErrorContext;
+use bsmr_error::BsmrErrorContext;
 use bsmr_error::internal_error;
 use bsmr_fs::IoResultExt;
 use bsmr_fs::fs_util;
@@ -122,7 +122,7 @@ impl ConfigParserFileOps for DefaultConfigParserFileOps {
     ) -> bsmr_error::Result<Option<Vec<String>>> {
         let path = path.resolve_absolute(&self.project_fs);
         let Some(f) = fs_util::open_file_if_exists(&path)
-            .with_buck_error_context(|| format!("Reading file `{path:?}`"))?
+            .with_bsmr_error_context(|| format!("Reading file `{path:?}`"))?
         else {
             return Ok(None);
         };

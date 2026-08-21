@@ -22,10 +22,10 @@ use bsmr_build_api::interpreter::rule_defs::artifact::starlark_declared_artifact
 use bsmr_build_api::interpreter::rule_defs::context::AnalysisActions;
 use bsmr_common::cas_digest::CasDigest;
 use bsmr_core::execution_types::executor_config::RemoteExecutorUseCase;
-use bsmr_error::BuckErrorContext;
+use bsmr_error::BsmrErrorContext;
 use bsmr_execute::execute::request::OutputType;
 use bsmr_execute::materialize::http::Checksum;
-use bsmr_hash::buck_indexset;
+use bsmr_hash::bsmr_indexset;
 use chrono::TimeZone;
 use chrono::Utc;
 use starlark::environment::MethodsBuilder;
@@ -76,7 +76,7 @@ pub(crate) fn analysis_actions_methods_download(methods: &mut MethodsBuilder) {
         let checksum = Checksum::new(sha1.into_option(), sha256.into_option())?;
 
         this.register_action(
-            buck_indexset![output_artifact],
+            bsmr_indexset![output_artifact],
             UnregisteredDownloadFileAction::new(
                 checksum,
                 size_bytes.into_option(),
@@ -121,7 +121,7 @@ pub(crate) fn analysis_actions_methods_download(methods: &mut MethodsBuilder) {
         let mut registry = this.state()?;
 
         let digest = CasDigest::parse_digest(digest, this.digest_config.cas_digest_config())
-            .with_buck_error_context(|| format!("Not a valid RE digest: `{}`", digest))?
+            .with_bsmr_error_context(|| format!("Not a valid RE digest: `{}`", digest))?
             .0;
 
         let use_case = RemoteExecutorUseCase::new(use_case.to_owned());
@@ -149,7 +149,7 @@ pub(crate) fn analysis_actions_methods_download(methods: &mut MethodsBuilder) {
         )?;
 
         registry.register_action(
-            buck_indexset![output_artifact],
+            bsmr_indexset![output_artifact],
             UnregisteredCasArtifactAction {
                 digest,
                 re_use_case: use_case,

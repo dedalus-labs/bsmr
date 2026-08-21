@@ -1,3 +1,9 @@
+# ===----------------------------------------------------------------------===
+# Upstream-Source: facebook/buck2@1560aca2002865cd73d7cafb22c705cfb640b2bc
+# Modifications Copyright (c) 2026 Dedalus Labs, Inc. and its contributors
+# SPDX-License-Identifier: Apache-2.0
+# ===----------------------------------------------------------------------===
+
 # Copyright (c) Meta Platforms, Inc. and affiliates.
 #
 # This source code is dual-licensed under either the MIT license found in the
@@ -76,13 +82,13 @@ def javacd_toolchain(name, java, javac, jar, jlink, jmod, jrt_fs_jar, java_for_t
         jar = jar,
         java_for_tests = java_for_tests,
         is_bootstrap_toolchain = False,
-        class_abi_generator = "prelude//toolchains/android/src/com/facebook/buck/jvm/java/abi:api-stubber",
-        class_loader_bootstrapper = "prelude//toolchains/android/src/com/facebook/buck/cli/bootstrapper:bootstrapper",
-        fat_jar_main_class_lib = "prelude//toolchains/android/src/com/facebook/buck/jvm/java/fatjar:fat-jar-main-binary",
+        class_abi_generator = "prelude//toolchains/android/src/com/dedalus/bsmr/jvm/java/abi:api-stubber",
+        class_loader_bootstrapper = "prelude//toolchains/android/src/com/dedalus/bsmr/cli/bootstrapper:bootstrapper",
+        fat_jar_main_class_lib = "prelude//toolchains/android/src/com/dedalus/bsmr/jvm/java/fatjar:fat-jar-main-binary",
         javac = javac,
-        javacd = "prelude//toolchains/android/src/com/facebook/buck/jvm/java/stepsbuilder/javacd/main:javacd_tool",
+        javacd = "prelude//toolchains/android/src/com/dedalus/bsmr/jvm/java/stepsbuilder/javacd/main:javacd_tool",
         javac_protocol = "javacd",
-        javacd_main_class = "com.facebook.buck.jvm.java.stepsbuilder.javacd.main.JavaCDMain",
+        javacd_main_class = "com.dedalus.bsmr.jvm.java.stepsbuilder.javacd.main.JavaCDMain",
         jlink = jlink,
         jmod = jmod,
         jrt_fs_jar = jrt_fs_jar,
@@ -108,7 +114,7 @@ def _java_toolchain_impl(ctx):
             name = ctx.attrs.name,
         ),
         JavaToolchainInfo(
-            # TODO(navidq) make this configurable via buck config
+            # TODO(navidq) make this configurable via bsmr config
             abi_generation_mode = AbiGenerationMode("none"),
             compile_and_package = ctx.attrs.compile_and_package,
             class_abi_generator = ctx.attrs.class_abi_generator,
@@ -171,7 +177,7 @@ _java_toolchain = rule(
         ),
         "is_bootstrap_toolchain": attrs.bool(default = False),
         "jar": attrs.option(attrs.dep(providers = [RunInfo]), default = None),
-        "jar_builder": attrs.source(default = "prelude//toolchains/android/src/com/facebook/buck/util/zip:jar_builder"),
+        "jar_builder": attrs.source(default = "prelude//toolchains/android/src/com/dedalus/bsmr/util/zip:jar_builder"),
         "java": attrs.exec_dep(),
         "java_for_tests": attrs.option(attrs.dep(providers = [RunInfo]), default = None),
         "javac": attrs.option(attrs.one_of(attrs.dep(), attrs.source(), attrs.string()), default = None),
@@ -187,15 +193,15 @@ _java_toolchain = rule(
         ),
         "source_level": attrs.string(default = "8"),
         "target_level": attrs.string(default = "8"),
-        "zip_scrubber": attrs.source(default = "prelude//toolchains/android/src/com/facebook/buck/util/zip:zip_scrubber"),
+        "zip_scrubber": attrs.source(default = "prelude//toolchains/android/src/com/dedalus/bsmr/util/zip:zip_scrubber"),
     },
 )
 
 def java_test_toolchain(name, **kwargs):
-    kwargs["test_runner_library_jar"] = "prelude//toolchains/android/src/com/facebook/buck/testrunner:testrunner-bin-fixed"
-    kwargs["junit_test_runner_main_class_args"] = ["com.facebook.buck.jvm.java.runner.FileClassPathRunner", "com.facebook.buck.testrunner.JUnitMain"]
-    kwargs["junit5_test_runner_main_class_args"] = ["com.facebook.buck.jvm.java.runner.FileClassPathRunner", "com.facebook.buck.testrunner.JupiterMain"]
-    kwargs["testng_test_runner_main_class_args"] = ["com.facebook.buck.jvm.java.runner.FileClassPathRunner", "com.facebook.buck.testrunner.TestNGMain"]
+    kwargs["test_runner_library_jar"] = "prelude//toolchains/android/src/com/dedalus/bsmr/testrunner:testrunner-bin-fixed"
+    kwargs["junit_test_runner_main_class_args"] = ["com.dedalus.bsmr.jvm.java.runner.FileClassPathRunner", "com.dedalus.bsmr.testrunner.JUnitMain"]
+    kwargs["junit5_test_runner_main_class_args"] = ["com.dedalus.bsmr.jvm.java.runner.FileClassPathRunner", "com.dedalus.bsmr.testrunner.JupiterMain"]
+    kwargs["testng_test_runner_main_class_args"] = ["com.dedalus.bsmr.jvm.java.runner.FileClassPathRunner", "com.dedalus.bsmr.testrunner.TestNGMain"]
     kwargs["list_class_names"] = "prelude//java/tools:list_class_names"
 
     _java_test_toolchain_rule(name = name, **kwargs)

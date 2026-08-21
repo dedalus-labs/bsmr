@@ -18,7 +18,7 @@ use std::sync::LazyLock;
 
 use allocative::Allocative;
 use bsmr_core::cells::paths::CellRelativePath;
-use bsmr_core::fs::buck_out_path::BSMR_OUTPUT_ROOT;
+use bsmr_core::fs::output_path::BSMR_OUTPUT_ROOT;
 use bsmr_error::internal_error;
 use globset::Candidate;
 use globset::GlobSetBuilder;
@@ -67,11 +67,11 @@ impl Eq for IgnoreSet {}
 impl IgnoreSet {
     /// Creates an IgnoreSet from an "ignore spec".
     ///
-    /// This is modeled after buck1's parsing of project.ignores.
+    /// This is modeled after legacy's parsing of project.ignores.
     ///
     /// An ignore spec is a comma-separated list of ignore patterns. If an ignore pattern
     /// contains a glob character, then it uses java.nio.file.FileSystem.getPathMatcher,
-    /// otherwise it creates a com.facebook.buck.io.filesystem.RecursivePathMatcher
+    /// otherwise it creates a com.dedalus.bsmr.io.filesystem.RecursivePathMatcher
     ///
     /// Java's path matcher does not allow  '*' to cross directory boundaries. We get
     /// the RecursivePathMatcher behavior by identifying non-globby things and appending
@@ -81,18 +81,18 @@ impl IgnoreSet {
     pub fn from_ignore_spec(spec: &str, root_cell: bool) -> bsmr_error::Result<Self> {
         // TODO(cjhopman): There's opportunity to greatly improve the performance of IgnoreSet by
         // constructing special cases for a couple of common patterns we see in ignore specs. We
-        // know that these can get large wins in some places where we've done this same ignore (watchman, buck1's ignores).
+        // know that these can get large wins in some places where we've done this same ignore (watchman, legacy's ignores).
         // `**/filename`: a filename filter. These can all be merged into one hashset lookup.
         // `**/*.ext`: an extension filter. These can all be merged into one hashset lookup.
         // `**/*x*x*`: just some general glob on the filename alone, can merge these into one GlobSet that just needs to check against the filename.
         // `some/prefix/**`: a directory prefix. These can all be merged into one trie lookup.
         let mut patterns = Vec::new();
-        let buck_out = if root_cell {
+        let output = if root_cell {
             Some(BSMR_OUTPUT_ROOT)
         } else {
             None
         };
-        for val in buck_out.into_iter().chain(spec.split(',')) {
+        for val in output.into_iter().chain(spec.split(',')) {
             let val = val.trim();
             if val.is_empty() {
                 continue;

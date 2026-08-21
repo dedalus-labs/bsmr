@@ -17,14 +17,14 @@
 import json
 
 from bsmr.tests.e2e.configurations.cfg_constructor.modifiers_util import get_cfg
-from bsmr.tests.e2e_util.api.buck import Buck
+from bsmr.tests.e2e_util.api.bsmr import Bsmr
 from bsmr.tests.e2e_util.asserts import expect_failure
-from bsmr.tests.e2e_util.buck_workspace import buck_test
+from bsmr.tests.e2e_util.bsmr_workspace import bsmr_test
 
 
-@buck_test(inplace=False)
-async def test_cfg_modifiers_attr(buck: Buck) -> None:
-    result = await buck.targets(
+@bsmr_test(inplace=False)
+async def test_cfg_modifiers_attr(bsmr: Bsmr) -> None:
+    result = await bsmr.targets(
         "root//:test",
         "--output-attribute=modifiers",
     )
@@ -36,19 +36,19 @@ async def test_cfg_modifiers_attr(buck: Buck) -> None:
     assert target_modifiers == ["root//:A_1"]
 
 
-@buck_test(inplace=False)
-async def test_cfg_modifiers_attr_ctargets(buck: Buck) -> None:
+@bsmr_test(inplace=False)
+async def test_cfg_modifiers_attr_ctargets(bsmr: Bsmr) -> None:
     result = await get_cfg(
-        buck,
+        bsmr,
         "root//:test2",
     )
     assert ":A_1" in result
 
 
-@buck_test(inplace=False)
-async def test_metadata_modifiers_is_hard_error(buck: Buck) -> None:
-    result = await expect_failure(buck.ctargets("root//:test_metadata_modifiers"))
+@bsmr_test(inplace=False)
+async def test_metadata_modifiers_is_hard_error(bsmr: Bsmr) -> None:
+    result = await expect_failure(bsmr.ctargets("root//:test_metadata_modifiers"))
     assert (
-        'sets `metadata["buck.cfg_modifiers"]` which is no longer supported'
+        'sets `metadata["bsmr.cfg_modifiers"]` which is no longer supported'
         in result.stderr
     )

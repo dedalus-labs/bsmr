@@ -16,8 +16,8 @@
 
 from pathlib import Path
 
-from bsmr.tests.e2e_util.api.buck import Buck
-from bsmr.tests.e2e_util.buck_workspace import buck_test, get_mode_from_platform
+from bsmr.tests.e2e_util.api.bsmr import Bsmr
+from bsmr.tests.e2e_util.bsmr_workspace import bsmr_test, get_mode_from_platform
 from bsmr.tests.e2e_util.helper.utils import read_what_ran
 
 
@@ -36,27 +36,27 @@ from bsmr.tests.e2e_util.helper.utils import read_what_ran
 #      this way this test wouldn't need to be changed at all (Ex. D59864942)
 #   6: Wait for bvb that contains #5 to land. Optionally wait for a second as above.
 #   7: Remove the config flag (Ex. D59988979)
-@buck_test(inplace=True)
-async def test_action_digest(buck: Buck) -> None:
-    await buck.build(
+@bsmr_test(inplace=True)
+async def test_action_digest(bsmr: Bsmr) -> None:
+    await bsmr.build(
         get_mode_from_platform(),
         "root//tests/targets/rules/rust/hello_world:welcome",
         "--remote-only",
     )
-    compiled_out = await read_what_ran(buck)
+    compiled_out = await read_what_ran(bsmr)
     compiled_digests = [
         entry["reproducer"]["details"]["digest"] for entry in compiled_out
     ]
     compiled_digests.sort()
 
     # TODO(nga): this should also test reverted bsmr.
-    buck.path_to_executable = Path("bsmr")
-    await buck.build(
+    bsmr.path_to_executable = Path("bsmr")
+    await bsmr.build(
         get_mode_from_platform(),
         "root//tests/targets/rules/rust/hello_world:welcome",
         "--remote-only",
     )
-    deployed_out = await read_what_ran(buck)
+    deployed_out = await read_what_ran(bsmr)
     deployed_digests = [
         entry["reproducer"]["details"]["digest"] for entry in deployed_out
     ]

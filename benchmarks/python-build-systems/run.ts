@@ -13,7 +13,7 @@ import { join, relative, resolve, sep } from "node:path";
 import { performance } from "node:perf_hooks";
 
 import { bazelPythonVersion, bazelVersion, bazeliskSha256, djangoCommit, rulesPythonVersion } from "./config.ts";
-import { changedWheelEntries, median, parseBsmrOutputs, performanceGateResults, positiveInteger, removeReadOnlyTree, runnerOrder, targetSource, targetWheel, wheelPayload, type BsmrOutputs, type Runner, type WheelEntry } from "./helpers.ts";
+import { changedWheelEntries, median, parseOutputputs, performanceGateResults, positiveInteger, removeReadOnlyTree, runnerOrder, targetSource, targetWheel, wheelPayload, type Outputputs, type Runner, type WheelEntry } from "./helpers.ts";
 import { fixtureFiles } from "./prepare.ts";
 
 interface CachePaths {
@@ -36,7 +36,7 @@ interface Instance {
 	environment: NodeJS.ProcessEnv;
 	name: string;
 	outputRoot: string;
-	outputs?: BsmrOutputs;
+	outputs?: Outputputs;
 	runner: Runner;
 }
 
@@ -181,7 +181,7 @@ function build(value: Instance, regime: string, iteration: number, measured: boo
 	const result = execute(executable, args, value.cwd, value.environment);
 	writeFileSync(join(logs, `${regime}-${iteration}-${value.runner}.log`), `${result.stderr}${result.stdout}`);
 	requireSuccess(`${value.runner} ${regime}`, result);
-	if (value.runner === "bsmr") value.outputs = parseBsmrOutputs(result.stdout);
+	if (value.runner === "bsmr") value.outputs = parseOutputputs(result.stdout);
 	if (measured) observations.push({ elapsedMs: result.elapsedMs, iteration, regime, runner: value.runner });
 	return result;
 }

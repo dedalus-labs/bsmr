@@ -19,8 +19,8 @@ import json
 from pathlib import Path
 from typing import Any
 
-from bsmr.tests.e2e_util.api.buck import Buck
-from bsmr.tests.e2e_util.buck_workspace import buck_test
+from bsmr.tests.e2e_util.api.bsmr import Bsmr
+from bsmr.tests.e2e_util.bsmr_workspace import bsmr_test
 from bsmr.tests.e2e_util.helper.golden import golden
 from bsmr.tests.e2e_util.helper.utils import replace_digest, replace_hash
 
@@ -41,9 +41,9 @@ def _sanitize_timing_fields(obj: Any) -> None:
 
 
 def build_report_test(name: str, command: list[str]) -> None:
-    async def impl(buck: Buck, tmp_path: Path) -> None:
+    async def impl(bsmr: Bsmr, tmp_path: Path) -> None:
         report = tmp_path / "build-report.json"
-        await buck.build("--build-report", str(report), *command)
+        await bsmr.build("--build-report", str(report), *command)
 
         with open(report) as file:
             report = json.loads(file.read())
@@ -64,7 +64,7 @@ def build_report_test(name: str, command: list[str]) -> None:
 
     globals()[name] = impl
 
-    return buck_test()(impl)
+    return bsmr_test()(impl)
 
 
 build_report_test(
@@ -160,26 +160,26 @@ build_report_test(
 )
 
 
-@buck_test()
-async def test_build_report_non_existent_directory(buck: Buck) -> None:
+@bsmr_test()
+async def test_build_report_non_existent_directory(bsmr: Bsmr) -> None:
     build_report = "non_existent_dir/report"
 
-    await buck.build(
+    await bsmr.build(
         "//:rule1",
         "--build-report",
         build_report,
     )
 
-    with open(buck.cwd / build_report) as file:
+    with open(bsmr.cwd / build_report) as file:
         report = json.load(file)
         assert report["success"]
 
 
-@buck_test()
-async def test_build_report_contains_metrics(buck: Buck, tmp_path: Path) -> None:
+@bsmr_test()
+async def test_build_report_contains_metrics(bsmr: Bsmr, tmp_path: Path) -> None:
     report = tmp_path / "build-report.json"
 
-    await buck.build(
+    await bsmr.build(
         "//:rule1",
         "-c",
         "bsmr.detailed_aggregated_metrics=true",
@@ -196,13 +196,13 @@ async def test_build_report_contains_metrics(buck: Buck, tmp_path: Path) -> None
         assert report["build_metrics"]["metrics"]["declared_actions"] == 2
 
 
-@buck_test()
+@bsmr_test()
 async def test_build_report_contains_per_target_build_metrics(
-    buck: Buck, tmp_path: Path
+    bsmr: Bsmr, tmp_path: Path
 ) -> None:
     report = tmp_path / "build-report.json"
 
-    await buck.build(
+    await bsmr.build(
         "//:rule1",
         "//:rule2",
         "-c",
@@ -240,11 +240,11 @@ async def test_build_report_contains_per_target_build_metrics(
 
 
 def streaming_build_report_test(name: str, command: list[str]) -> None:
-    async def impl(buck: Buck, tmp_path: Path) -> None:
+    async def impl(bsmr: Bsmr, tmp_path: Path) -> None:
         base_report = tmp_path / "build-report.json"
         report = tmp_path / "streaming-build-report.json"
 
-        await buck.build(
+        await bsmr.build(
             "--build-report",
             str(base_report),
             "--streaming-build-report",
@@ -273,7 +273,7 @@ def streaming_build_report_test(name: str, command: list[str]) -> None:
 
     globals()[name] = impl
 
-    return buck_test()(impl)
+    return bsmr_test()(impl)
 
 
 streaming_build_report_test(
@@ -307,12 +307,12 @@ streaming_build_report_test(
 )
 
 
-@buck_test()
-async def test_streaming_build_report(buck: Buck, tmp_path: Path) -> None:
+@bsmr_test()
+async def test_streaming_build_report(bsmr: Bsmr, tmp_path: Path) -> None:
     """Test that --streaming-build-report creates a streaming report file with JSON lines."""
     streaming_report = tmp_path / "streaming-report.jsonl"
 
-    await buck.build(
+    await bsmr.build(
         "//:rule1",
         "//:rule2",
         "//:rule2[out2]",
@@ -343,31 +343,31 @@ async def test_streaming_build_report(buck: Buck, tmp_path: Path) -> None:
             assert "project_root" in report_data
 
 
-@buck_test()
-async def test_streaming_build_report_non_existent_directory(buck: Buck) -> None:
+@bsmr_test()
+async def test_streaming_build_report_non_existent_directory(bsmr: Bsmr) -> None:
     streaming_report = "non_existent_dir/report"
 
-    await buck.build(
+    await bsmr.build(
         "//:rule1",
         "--streaming-build-report",
         streaming_report,
     )
 
-    with open(buck.cwd / streaming_report) as file:
+    with open(bsmr.cwd / streaming_report) as file:
         report = json.load(file)
         assert report["success"]
 
 
-@buck_test()
+@bsmr_test()
 async def test_streaming_build_report_overwrites_existing_file(
-    buck: Buck, tmp_path: Path
+    bsmr: Bsmr, tmp_path: Path
 ) -> None:
     streaming_report = tmp_path / "streaming-report.jsonl"
 
     with open(streaming_report, "w") as file:
         file.write("Not valid JSON!")
 
-    await buck.build(
+    await bsmr.build(
         "//:rule1",
         "--streaming-build-report",
         str(streaming_report),
@@ -387,11 +387,11 @@ async def test_streaming_build_report_overwrites_existing_file(
             assert "project_root" in report_data
 
 
-@buck_test(data_dir="re_platform_names")
-async def test_build_report_re_platform_names(buck: Buck, tmp_path: Path) -> None:
+@bsmr_test(data_dir="re_platform_names")
+async def test_build_report_re_platform_names(bsmr: Bsmr, tmp_path: Path) -> None:
     report = tmp_path / "build-report.json"
 
-    await buck.build(
+    await bsmr.build(
         "//:run_action",
         "-c",
         "bsmr.detailed_aggregated_metrics=true",

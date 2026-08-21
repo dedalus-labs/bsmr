@@ -24,11 +24,11 @@ use bsmr_core::execution_types::executor_config::PathSeparatorKind;
 use bsmr_core::fs::project::ProjectRoot;
 use bsmr_core::fs::project_rel_path::ProjectRelativePath;
 use bsmr_core::fs::project_rel_path::ProjectRelativePathBuf;
-use bsmr_error::BuckErrorContext;
+use bsmr_error::BsmrErrorContext;
 use bsmr_execute::artifact::artifact_dyn::ArtifactDyn;
 use bsmr_execute::artifact::fs::ExecutorFs;
 use bsmr_fs::paths::RelativePath;
-use bsmr_interpreter::types::regex::StarlarkBuckRegex;
+use bsmr_interpreter::types::regex::StarlarkBsmrRegex;
 use dupe::Dupe;
 use either::Either;
 use regex::Regex;
@@ -110,7 +110,7 @@ const DEFAULT_ARTIFACT_OPTIONS: ArtifactOptions<'_> = ArtifactOptions {
 };
 
 enum FormatRegex<'v> {
-    Starlark(&'v StarlarkBuckRegex),
+    Starlark(&'v StarlarkBsmrRegex),
     Owned(regex::Regex),
 }
 

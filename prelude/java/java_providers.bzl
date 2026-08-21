@@ -1,3 +1,9 @@
+# ===----------------------------------------------------------------------===
+# Upstream-Source: facebook/buck2@1560aca2002865cd73d7cafb22c705cfb640b2bc
+# Modifications Copyright (c) 2026 Dedalus Labs, Inc. and its contributors
+# SPDX-License-Identifier: Apache-2.0
+# ===----------------------------------------------------------------------===
+
 # Copyright (c) Meta Platforms, Inc. and affiliates.
 #
 # This source code is dual-licensed under either the MIT license found in the
@@ -532,7 +538,7 @@ def _create_global_code_tset(actions: AnalysisActions, children: list[JavaCompil
 # }
 # With this setup, if a target depends on "//fbandroid/java/com/facebook/inject:inject", the `global_code_info` provider for that target will have an entry under "di".
 # This entry will be a JavaCompilingDepsTSet containing the .jar files associated with that target.
-# Each framework (like "di") can use a Buck rule to identify dependencies with matching values for their framework key in the `global_code_info` provider.
+# Each framework (like "di") can use a Bsmr rule to identify dependencies with matching values for their framework key in the `global_code_info` provider.
 # They can then compile all the .jars needed for global code generation.
 
 def get_global_code_info(

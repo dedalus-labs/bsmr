@@ -25,7 +25,7 @@ use bsmr_core::bsmr_env;
 use bsmr_core::execution_types::executor_config::RePlatformFields;
 use bsmr_core::fs::artifact_path_resolver::ArtifactFs;
 use bsmr_directory::directory::entry::DirectoryEntry;
-use bsmr_error::BuckErrorContext;
+use bsmr_error::BsmrErrorContext;
 use bsmr_events::dispatch::span_async;
 use bsmr_execute::digest::CasDigestToReExt;
 use bsmr_execute::digest_config::DigestConfig;
@@ -477,7 +477,7 @@ impl CacheUploader {
         let uploads = async {
             bsmr_util::future::try_join_all(upload_futs)
                 .await
-                .buck_error_context("Error uploading outputs")?;
+                .bsmr_error_context("Error uploading outputs")?;
 
             Ok(())
         };
@@ -489,7 +489,7 @@ impl CacheUploader {
                 .clone()
                 .into_re(&self.re_client, digest_config)
                 .await
-                .buck_error_context("Error accessing std_streams")
+                .bsmr_error_context("Error accessing std_streams")
         };
 
         let ((), std_streams) = future::try_join(uploads, std_streams).await?;
@@ -557,7 +557,7 @@ impl UploadCache for CacheUploader {
         dep_file_bundle: Option<&mut dyn IntoRemoteDepFile>,
         action_digest_and_blobs: &ActionDigestAndBlobs,
     ) -> bsmr_error::Result<CacheUploadResults> {
-        let error_on_cache_upload = error_on_cache_upload().buck_error_context("cache_upload")?;
+        let error_on_cache_upload = error_on_cache_upload().bsmr_error_context("cache_upload")?;
 
         let (cache_upload_outcome, action_result) = if res.was_locally_executed() {
             tracing::debug!(
@@ -638,7 +638,7 @@ fn systemtime_to_ttimestamp(time: SystemTime) -> bsmr_error::Result<TTimestamp> 
         seconds: duration
             .as_secs()
             .try_into()
-            .buck_error_context("Invalid duration")?,
+            .bsmr_error_context("Invalid duration")?,
         // Max 1B so it won't wrap around.
         nanos: duration.subsec_nanos() as _,
         ..Default::default()

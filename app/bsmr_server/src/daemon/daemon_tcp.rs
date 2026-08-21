@@ -15,13 +15,13 @@
  */
 
 pub fn create_listener() -> bsmr_error::Result<(
-    bsmr_common::buckd_connection::ConnectionType,
+    bsmr_common::daemon_connection::ConnectionType,
     std::net::TcpListener,
 )> {
     use std::net::Ipv4Addr;
     use std::net::SocketAddr;
 
-    use bsmr_common::buckd_connection::ConnectionType;
+    use bsmr_common::daemon_connection::ConnectionType;
 
     let addr = SocketAddr::new(Ipv4Addr::LOCALHOST.into(), 0);
     let tcp_listener = std::net::TcpListener::bind(addr)?;
@@ -38,7 +38,7 @@ pub fn create_listener() -> bsmr_error::Result<(
 #[cfg(test)]
 mod tests {
     use assert_matches::assert_matches;
-    use bsmr_common::buckd_connection::ConnectionType;
+    use bsmr_common::daemon_connection::ConnectionType;
 
     use crate::daemon::daemon_tcp::create_listener;
 

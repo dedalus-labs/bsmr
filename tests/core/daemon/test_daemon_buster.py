@@ -17,52 +17,52 @@
 
 import json
 
-from bsmr.tests.e2e_util.api.buck import Buck
-from bsmr.tests.e2e_util.buck_workspace import buck_test
+from bsmr.tests.e2e_util.api.bsmr import Bsmr
+from bsmr.tests.e2e_util.bsmr_workspace import bsmr_test
 
 
-@buck_test()
-async def test_daemon_buster(buck: Buck) -> None:
+@bsmr_test()
+async def test_daemon_buster(bsmr: Bsmr) -> None:
     async def pid() -> int:
-        return json.loads((await buck.status()).stdout)["process_info"]["pid"]
+        return json.loads((await bsmr.status()).stdout)["process_info"]["pid"]
 
-    await buck.build(":")
+    await bsmr.build(":")
     pid0 = await pid()
 
-    await buck.build(":")
+    await bsmr.build(":")
     pid1 = await pid()
     assert pid1 == pid0
 
-    with open(buck.cwd / ".bsmr", "a") as f:
+    with open(bsmr.cwd / ".bsmr", "a") as f:
         f.write("[bsmr]\n")
         f.write("daemon_buster = 1\n")
 
-    await buck.build(":")
+    await bsmr.build(":")
     pid2 = await pid()
     assert pid2 != pid1
 
-    await buck.build(":")
+    await bsmr.build(":")
     pid3 = await pid()
     assert pid3 == pid2
 
-    with open(buck.cwd / ".bsmr", "a") as f:
+    with open(bsmr.cwd / ".bsmr", "a") as f:
         f.write("[bsmr]\n")
         f.write("daemon_buster = 2\n")
 
-    await buck.build(":")
+    await bsmr.build(":")
     pid4 = await pid()
     assert pid4 != pid3
 
-    with open(buck.cwd / ".bsmr", "r") as f:
+    with open(bsmr.cwd / ".bsmr", "r") as f:
         config = f.read()
 
-    with open(buck.cwd / ".bsmr", "w") as f:
+    with open(bsmr.cwd / ".bsmr", "w") as f:
         f.write(
             "\n".join(
                 line for line in config.splitlines() if "daemon_buster" not in line
             )
         )
 
-    await buck.build(":")
+    await bsmr.build(":")
     pid5 = await pid()
     assert pid5 != pid4

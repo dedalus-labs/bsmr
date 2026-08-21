@@ -50,7 +50,7 @@ UseHeaderUnitsMode = enum(
     # rebuilt when PCM files would be). You can enable these to trace and model the
     # behaviour of module-enabled builds before actually migrating to them. This steps
     # helps estimate the overhead of precompiling modules in terms of additional
-    # uncached Buck actions.
+    # uncached Bsmr actions.
     "stub",
 )
 

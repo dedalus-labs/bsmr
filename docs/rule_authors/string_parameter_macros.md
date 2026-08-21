@@ -22,7 +22,7 @@ reproducible across different machine environments.
 ## `$(location //path/to:target)`
 
 Expands to the location of the output of the specified build rule. This means
-that you can refer to the output without needing to be aware of how Buck is
+that you can refer to the output without needing to be aware of how Bsmr is
 storing data on the disk mid-build.
 
 For example:
@@ -52,7 +52,7 @@ Identical to `$(location //path/to:target)`, but the configuration is
 transitioned to the execution platform (see the [page about
 configuration](../concepts/configurations.md) for more information). This
 can be useful when using `genrule` to wrap another build system with
-buck.
+bsmr.
 
 The target being referenced must expose a `DefaultInfo` (i.e. it must be
 `bsmr build`able).
@@ -171,7 +171,7 @@ the rule has a Java classpath. If the rule does not have (or contribute to) a
 classpath, then an exception is thrown and the build breaks. It takes an
 optional second argument to limit the depth of the traversal, but only a depth
 of 1 is currently supported. Its behavior is similar to the corresponding
-operation in the `buck audit` command.
+operation in the `bsmr audit` command.
 
 ## `$(location //path/to:target[output])`
 
@@ -185,7 +185,7 @@ exceed a limit in your operating environment. For example, if you use the
 results of an expanded macro in Bash, it could exceed Bash's command-line
 limits.
 
-To work around these limits, prefix the macro name with the `@` character. Buck
+To work around these limits, prefix the macro name with the `@` character. Bsmr
 then writes the results of the expanded macro to a temporary file and replaces
 the macro with the path to that file _while keeping the `@` prefix_. For
 example:
@@ -259,7 +259,7 @@ following query functions:
 - **Is white space okay inside a macro?** Macro arguments are white space
   separated, so arguments which contain white space must be quoted.
 - **Are nested quotes allowed?** A single level of nested quotes is allowed,
-  such as `"My name is 'Buck'."` or `'My name is "Buck".'`. Note that when you
+  such as `"My name is 'Bsmr'."` or `'My name is "Bsmr".'`. Note that when you
   use a macro in a BUILD.bsmr file, you must ensure that quotes are properly escaped,
   so that the shell command that uses the macro forms a proper string.
 

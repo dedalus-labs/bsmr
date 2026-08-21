@@ -26,7 +26,7 @@ use bsmr_core::global_cfg_options::GlobalCfgOptions;
 use bsmr_core::target::configured_target_label::ConfiguredTargetLabel;
 use bsmr_core::target::label::label::TargetLabel;
 use bsmr_core::target::target_configured_target_label::TargetConfiguredTargetLabel;
-use bsmr_error::BuckErrorContext;
+use bsmr_error::BsmrErrorContext;
 use bsmr_node::cfg_constructor::CFG_CONSTRUCTOR_CALCULATION_IMPL;
 use bsmr_node::configuration::target_platform_detector::TargetPlatformDetector;
 use bsmr_node::nodes::frontend::TargetGraphCalculation;
@@ -52,7 +52,7 @@ async fn get_target_platform_detector(
     ctx: &mut DiceComputations<'_>,
 ) -> bsmr_error::Result<Arc<TargetPlatformDetector>> {
     // This requires a bit of computation so cache it on the graph.
-    // TODO(cjhopman): Should we construct this (and similar bsmrconfig-derived objects) as part of the buck config itself?
+    // TODO(cjhopman): Should we construct this (and similar bsmrconfig-derived objects) as part of the bsmr config itself?
     #[derive(Clone, Display, Debug, Dupe, Eq, Hash, PartialEq, Allocative, Pagable)]
     #[display("TargetPlatformDetectorKey")]
     #[pagable_typetag(dice::DiceKeyDyn)]
@@ -117,7 +117,7 @@ async fn get_default_platform(
     if let Some(target) = detector.detect(target) {
         return get_platform_configuration(ctx, target).await;
     }
-    // TODO(cjhopman): This needs to implement buck1's approach to determining target platform, it's currently missing the fallback to bsmrconfig parser.target_platform.
+    // TODO(cjhopman): This needs to implement legacy's approach to determining target platform, it's currently missing the fallback to bsmrconfig parser.target_platform.
     Ok(ConfigurationData::unspecified())
 }
 
@@ -168,7 +168,7 @@ impl ConfiguredTargetCalculationImpl for ConfiguredTargetCalculationInstance {
                     false,
                 )
                 .await
-                .with_buck_error_context(|| format!("Resolving modifiers for target `{target}`"))
+                .with_bsmr_error_context(|| format!("Resolving modifiers for target `{target}`"))
         }
 
         match node.rule_kind() {

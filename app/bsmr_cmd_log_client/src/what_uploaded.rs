@@ -18,9 +18,9 @@ use std::fmt::Display;
 use std::fmt::Formatter;
 use std::io::Write;
 
-use bsmr_client_ctx::client_ctx::BuckSubcommand;
+use bsmr_client_ctx::client_ctx::BsmrSubcommand;
 use bsmr_client_ctx::client_ctx::ClientCommandContext;
-use bsmr_client_ctx::common::BuckArgMatches;
+use bsmr_client_ctx::common::BsmrArgMatches;
 use bsmr_client_ctx::event_log_options::EventLogOptions;
 use bsmr_client_ctx::events_ctx::EventsCtx;
 use bsmr_client_ctx::exit_result::ClientIoError;
@@ -29,7 +29,7 @@ use bsmr_data::ReUploadMetrics;
 use bsmr_event_log::stream_value::StreamValue;
 use bsmr_event_observer::display;
 use bsmr_event_observer::display::TargetDisplayOptions;
-use bsmr_hash::StdBuckHashMap;
+use bsmr_hash::StdBsmrHashMap;
 use tokio_stream::StreamExt;
 
 use crate::LogCommandOutputFormat;
@@ -85,7 +85,7 @@ impl Display for ExtensionRecord {
 }
 
 fn get_action_record(
-    state: &StdBuckHashMap<u64, bsmr_data::ActionExecutionStart>,
+    state: &StdBsmrHashMap<u64, bsmr_data::ActionExecutionStart>,
     upload: &ReUploadEvent,
 ) -> ActionRecord {
     let digests_uploaded = upload.inner.digests_uploaded.unwrap_or_default();
@@ -126,7 +126,7 @@ fn print_uploads(
 
 fn print_extension_stats(
     output: &mut LogCommandOutputFormatWithWriter,
-    stats_by_extension: &StdBuckHashMap<String, ReUploadMetrics>,
+    stats_by_extension: &StdBsmrHashMap<String, ReUploadMetrics>,
 ) -> Result<(), ClientIoError> {
     let mut records: Vec<ExtensionRecord> = stats_by_extension
         .iter()
@@ -158,12 +158,12 @@ struct ReUploadEvent<'a> {
     pub inner: &'a bsmr_data::ReUploadEnd,
 }
 
-impl BuckSubcommand for WhatUploadedCommand {
+impl BsmrSubcommand for WhatUploadedCommand {
     const COMMAND_NAME: &'static str = "log-what-uploaded";
 
     async fn exec_impl(
         self,
-        _matches: BuckArgMatches<'_>,
+        _matches: BsmrArgMatches<'_>,
         ctx: ClientCommandContext<'_>,
         _events_ctx: &mut EventsCtx,
     ) -> ExitResult {
@@ -185,13 +185,13 @@ impl BuckSubcommand for WhatUploadedCommand {
 
             let mut total_digests_uploaded = 0;
             let mut total_bytes_uploaded = 0;
-            let mut state = StdBuckHashMap::default();
-            let mut stats_by_extension: StdBuckHashMap<String, ReUploadMetrics> = StdBuckHashMap::default();
+            let mut state = StdBsmrHashMap::default();
+            let mut stats_by_extension: StdBsmrHashMap<String, ReUploadMetrics> = StdBsmrHashMap::default();
             while let Some(event) = events.try_next().await? {
                 match event {
                     // Insert parent span information so we can refer back to it later.
                     StreamValue::Event(event) => {
-                        if let Some(bsmr_data::buck_event::Data::SpanStart(start)) = &event.data
+                        if let Some(bsmr_data::bsmr_event::Data::SpanStart(start)) = &event.data
                             && let Some(bsmr_data::span_start_event::Data::ActionExecution(
                                 action,
                             )) = &start.data
@@ -199,7 +199,7 @@ impl BuckSubcommand for WhatUploadedCommand {
                             state.insert(event.span_id, action.clone());
                         }
 
-                        if let Some(bsmr_data::buck_event::Data::SpanEnd(end)) = &event.data
+                        if let Some(bsmr_data::bsmr_event::Data::SpanEnd(end)) = &event.data
                             && let Some(bsmr_data::span_end_event::Data::ReUpload(u)) =
                                 end.data.as_ref()
                         {

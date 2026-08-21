@@ -24,9 +24,9 @@ import socket
 from pathlib import Path
 
 from aiohttp import web
-from bsmr.tests.e2e_util.api.buck import Buck
+from bsmr.tests.e2e_util.api.bsmr import Bsmr
 from bsmr.tests.e2e_util.asserts import expect_failure
-from bsmr.tests.e2e_util.buck_workspace import buck_test
+from bsmr.tests.e2e_util.bsmr_workspace import bsmr_test
 from bsmr.tests.e2e_util.helper.utils import filter_events
 
 # Taken from the ActionExecutionKind enum in data.proto.
@@ -34,9 +34,9 @@ ACTION_EXECUTION_KIND_LOCAL = 1
 ACTION_EXECUTION_KIND_REMOTE = 2
 
 
-@buck_test(data_dir="actions")
-async def test_write_json(buck: Buck) -> None:
-    result = await buck.build("//write_json:", "-c", "write_json.content=default")
+@bsmr_test(data_dir="actions")
+async def test_write_json(bsmr: Bsmr) -> None:
+    result = await bsmr.build("//write_json:", "-c", "write_json.content=default")
 
     build_report = result.get_build_report()
     output = build_report.output_for_target("//write_json:absolute")
@@ -44,12 +44,12 @@ async def test_write_json(buck: Buck) -> None:
         assert os.path.isabs(path), path
 
     # we need to test that with_inputs properly flows input dependencies through to consumers
-    await buck.build("//write_json:with_inputs", "-c", "write_json.content=other")
+    await bsmr.build("//write_json:with_inputs", "-c", "write_json.content=other")
 
 
-@buck_test(data_dir="actions")
-async def test_copies_files(buck: Buck) -> None:
-    result = await buck.build(
+@bsmr_test(data_dir="actions")
+async def test_copies_files(bsmr: Bsmr) -> None:
+    result = await bsmr.build(
         "//copy:file_uses_declared_output",
         "//copy:file_uses_declared_output_as_output",
         "//copy:file_declares_output",
@@ -68,12 +68,12 @@ async def test_copies_files(buck: Buck) -> None:
     assert output.read_text().rstrip() == "some file"
 
     await expect_failure(
-        buck.build("//copy:fails_on_invalid_src"),
+        bsmr.build("//copy:fails_on_invalid_src"),
         stderr_regex="Type of parameter `src`",
     )
 
     await expect_failure(
-        buck.build("//copy:fails_on_invalid_dest"),
+        bsmr.build("//copy:fails_on_invalid_dest"),
         stderr_regex="Type of parameter `dest`",
     )
 
@@ -83,15 +83,15 @@ def get_canonicalized_for_windows(dest: Path, relative_link: str) -> str:
     return "\\\\?\\" + os.path.realpath(dest.parent / relative_link)
 
 
-@buck_test(
+@bsmr_test(
     data_dir="actions",
     # Because we use eden symlink redirection on MacOS
     # this test resolves both links and points to nonexistent files,
     # hence disabling eden
     setup_eden=False,
 )
-async def test_symlink_dir(buck: Buck) -> None:
-    result = await buck.build("//symlinked_dir:")
+async def test_symlink_dir(bsmr: Bsmr) -> None:
+    result = await bsmr.build("//symlinked_dir:")
     build_report = result.get_build_report()
     output = build_report.output_for_target("//symlinked_dir:out")
 
@@ -100,7 +100,7 @@ async def test_symlink_dir(buck: Buck) -> None:
     dest3 = output / "subdir" / "dir1" / "dir1_1" / "file1.txt.suffix"
     dest4 = output / "subdir" / "dep.txt.suffix"
 
-    # Example subdir: bsmr-out/v2/art/root/a59b783ba97fcd85891ddb2e62fbfebb/symlinked_dir/__out__/out/dir1/dir1_1
+    # Example subdir: bsmr-out/default/art/root/a59b783ba97fcd85891ddb2e62fbfebb/symlinked_dir/__out__/out/dir1/dir1_1
     expected_link1 = "../" * 10 + "symlinked_dir/dir1/dir1_1/file1.txt"
     expected_link2 = "../../__dep__/dep.txt"
     expected_link3 = "../" * 11 + "symlinked_dir/dir1/dir1_1/file1.txt"
@@ -128,13 +128,13 @@ async def test_symlink_dir(buck: Buck) -> None:
     assert dest4.read_text().strip() == "dep contents"
 
 
-@buck_test(
+@bsmr_test(
     data_dir="actions",
     # See note on test_symlink_dir
     setup_eden=False,
 )
-async def test_symlink_dir_associated_artifacts(buck: Buck) -> None:
-    result = await buck.build("//symlinked_dir:symlinked_transitive_files_target")
+async def test_symlink_dir_associated_artifacts(bsmr: Bsmr) -> None:
+    result = await bsmr.build("//symlinked_dir:symlinked_transitive_files_target")
     build_report = result.get_build_report()
     output = build_report.output_for_target(
         "//symlinked_dir:symlinked_transitive_files_target"
@@ -150,16 +150,16 @@ async def test_symlink_dir_associated_artifacts(buck: Buck) -> None:
     assert not (output / "tdep1").exists()
 
 
-@buck_test(data_dir="actions")
-async def test_simple_run(buck: Buck) -> None:
-    result = await buck.build("//run:runs_simple_script")
+@bsmr_test(data_dir="actions")
+async def test_simple_run(bsmr: Bsmr) -> None:
+    result = await bsmr.build("//run:runs_simple_script")
     output = result.get_build_report().output_for_target("//run:runs_simple_script")
     if platform.system() == "Windows":
         assert output.read_text() == "foo\nrun\\src.txt\nbar\n"
     else:
         assert output.read_text() == "foo\nrun/src.txt\nbar\n"
 
-    result = await buck.build("//run:runs_simple_script_as_exe")
+    result = await bsmr.build("//run:runs_simple_script_as_exe")
     output = result.get_build_report().output_for_target(
         "//run:runs_simple_script_as_exe"
     )
@@ -168,36 +168,36 @@ async def test_simple_run(buck: Buck) -> None:
     else:
         assert output.read_text() == "foo\nrun/src.txt\nbar\n"
 
-    result = await buck.build("//run:runs_script_locally")
+    result = await bsmr.build("//run:runs_script_locally")
     output = result.get_build_report().output_for_target("//run:runs_script_locally")
     assert output.read_text().strip() == socket.gethostname()
 
-    result = await buck.build("//run:runs_script_locally_outputs_symlink")
+    result = await bsmr.build("//run:runs_script_locally_outputs_symlink")
     output = result.get_build_report().output_for_target(
         "//run:runs_script_locally_outputs_symlink"
     )
     assert output.is_symlink()
 
     await expect_failure(
-        buck.build("//run:rejects_zero_outputs"),
+        bsmr.build("//run:rejects_zero_outputs"),
         stderr_regex="expected at least one output artifact",
     )
 
     await expect_failure(
-        buck.build("//run:rejects_bad_args"),
+        bsmr.build("//run:rejects_bad_args"),
         stderr_regex="Type of parameter `arguments` doesn't match",
     )
 
 
-@buck_test(data_dir="actions")
-async def test_local_action_records_hostname(buck: Buck) -> None:
+@bsmr_test(data_dir="actions")
+async def test_local_action_records_hostname(bsmr: Bsmr) -> None:
     # A locally-executed action always runs on the bsmr daemon's host, so its
     # ActionExecutionEnd event must carry that hostname -- including on the
     # success path, which previously left it unset.
-    await buck.build("//run:runs_script_locally")
+    await bsmr.build("//run:runs_script_locally")
 
     actions = await filter_events(
-        buck,
+        bsmr,
         "Event",
         "data",
         "SpanEnd",
@@ -209,18 +209,18 @@ async def test_local_action_records_hostname(buck: Buck) -> None:
     assert local[0]["hostname"] == socket.gethostname()
 
 
-@buck_test(data_dir="actions")
-async def test_remote_action_records_no_hostname(buck: Buck) -> None:
+@bsmr_test(data_dir="actions")
+async def test_remote_action_records_no_hostname(bsmr: Bsmr) -> None:
     # A remotely-executed action does not run on the daemon host, so its
     # ActionExecutionEnd event must not carry a hostname on the success path.
-    await buck.build(
+    await bsmr.build(
         "//run:runs_simple_script_remote",
         "--remote-only",
         "--no-remote-cache",
     )
 
     actions = await filter_events(
-        buck,
+        bsmr,
         "Event",
         "data",
         "SpanEnd",
@@ -232,43 +232,43 @@ async def test_remote_action_records_no_hostname(buck: Buck) -> None:
     assert remote[0].get("hostname") is None
 
 
-@buck_test(data_dir="actions")
-async def test_anon_targets(buck: Buck) -> None:
-    await buck.build("//anon:")
+@bsmr_test(data_dir="actions")
+async def test_anon_targets(bsmr: Bsmr) -> None:
+    await bsmr.build("//anon:")
 
     await expect_failure(
-        buck.build("//anon_invalid_defaults/source:default_source_fails"),
+        bsmr.build("//anon_invalid_defaults/source:default_source_fails"),
         stderr_regex="Anon targets do not support default values for `attrs.source\\(\\)`, specify `source_attr` explicitly",
     )
 
     await expect_failure(
-        buck.build("//anon_invalid_defaults/dep:default_dep_fails"),
+        bsmr.build("//anon_invalid_defaults/dep:default_dep_fails"),
         stderr_regex="Anon targets do not support default values for `attrs.dep\\(\\)`, specify `dep_attr` explicitly",
     )
 
     await expect_failure(
-        buck.build("//anon_invalid_defaults/arg:default_arg_fails"),
+        bsmr.build("//anon_invalid_defaults/arg:default_arg_fails"),
         stderr_regex="Anon targets do not support default values for `attrs.arg\\(\\)`, specify `arg_attr` explicitly",
     )
 
     await expect_failure(
-        buck.build("//anon_invalid_defaults/arg:arg_not_compatible"),
+        bsmr.build("//anon_invalid_defaults/arg:arg_not_compatible"),
         stderr_regex="Arg attribute must have `anon_target_compatible` set to `True`",
     )
 
     await expect_failure(
-        buck.build("//anon_invalid_defaults/promise_artifact:bad_short_path"),
+        bsmr.build("//anon_invalid_defaults/promise_artifact:bad_short_path"),
         stderr_regex="assert_short_path\\(\\) was called with `short_path = WRONG_PATH`",
     )
 
     await expect_failure(
-        buck.build("//anon_invalid_defaults/anon_rule:bad_anon_rule"),
+        bsmr.build("//anon_invalid_defaults/anon_rule:bad_anon_rule"),
         stderr_regex="Attr type `attrs.plugin_dep\\(\\)` is not supported for anon rules",
     )
 
 
-@buck_test(data_dir="actions")
-async def test_download_file(buck: Buck) -> None:
+@bsmr_test(data_dir="actions")
+async def test_download_file(bsmr: Bsmr) -> None:
     routes = web.RouteTableDef()
 
     attempt = 0
@@ -298,7 +298,7 @@ async def test_download_file(buck: Buck) -> None:
 
     port = sock.getsockname()[1]
     url = f"http://localhost:{port}"
-    await buck.build(
+    await bsmr.build(
         "//download_file:", "-c", f"test.sha1={sha1}", "-c", f"test.url={url}"
     )
 
@@ -307,8 +307,8 @@ async def test_download_file(buck: Buck) -> None:
     assert attempt == 4
 
 
-@buck_test(data_dir="actions")
-async def test_download_file_timeout_after_retries(buck: Buck) -> None:
+@bsmr_test(data_dir="actions")
+async def test_download_file_timeout_after_retries(bsmr: Bsmr) -> None:
     routes = web.RouteTableDef()
 
     body: bytes = b"foobar"
@@ -348,11 +348,11 @@ async def test_download_file_timeout_after_retries(buck: Buck) -> None:
     # than passed as an invocation config.
     #
     # Add an aggressive read timeout.
-    with open(buck.cwd / ".bsmr", "a") as bsmrconfig:
+    with open(bsmr.cwd / ".bsmr", "a") as bsmrconfig:
         bsmrconfig.write("[http]\nread_timeout_ms = 50\n")
 
     await expect_failure(
-        buck.build(
+        bsmr.build(
             "//download_file:",
             "-c",
             f"test.sha1={sha1}",
@@ -362,7 +362,7 @@ async def test_download_file_timeout_after_retries(buck: Buck) -> None:
         stderr_regex="Timed out while making request to",
     )
 
-    result = await buck.build(
+    result = await bsmr.build(
         "//download_file:",
         "-c",
         f"test.sha1={sha1}",
@@ -374,16 +374,16 @@ async def test_download_file_timeout_after_retries(buck: Buck) -> None:
     await runner.cleanup()
 
 
-@buck_test(data_dir="actions")
-async def test_cas_artifact(buck: Buck) -> None:
+@bsmr_test(data_dir="actions")
+async def test_cas_artifact(bsmr: Bsmr) -> None:
     # The digests in `//cas_artifact:` require the bsmrconfig.
-    # NB: cannot use `extra_bsmr_config` attrib of `@buck_test()``
-    with open(buck.cwd / ".bsmr", "a") as bsmrconfig:
+    # NB: cannot use `extra_bsmr_config` attrib of `@bsmr_test()``
+    with open(bsmr.cwd / ".bsmr", "a") as bsmrconfig:
         bsmrconfig.write("[bsmr]\n")
         bsmrconfig.write("digest_algorithms = BLAKE3-KEYED,SHA1\n")
 
     # Setting a use case override to test that it is not used.
-    result = await buck.build(
+    result = await bsmr.build(
         "//cas_artifact:", "-c", "bsmr_re_client.override_use_case=missing_usecase"
     )
 
@@ -399,10 +399,10 @@ async def test_cas_artifact(buck: Buck) -> None:
     assert (tree / "y").read_text() == "hi\n"
 
 
-@buck_test(data_dir="actions")
-async def test_invalid_command(buck: Buck) -> None:
+@bsmr_test(data_dir="actions")
+async def test_invalid_command(bsmr: Bsmr) -> None:
     await expect_failure(
-        buck.build("//run_bad:run_invalid_command_local"),
+        bsmr.build("//run_bad:run_invalid_command_local"),
         stderr_regex="non-zero exit code.*no exit code",
     )
     if platform.system() == "Linux":
@@ -410,52 +410,52 @@ async def test_invalid_command(buck: Buck) -> None:
     else:
         expected_error = "cannot find binary path"
     await expect_failure(
-        buck.build("//run_bad:run_invalid_command_remote"),
+        bsmr.build("//run_bad:run_invalid_command_remote"),
         stderr_regex=expected_error,
     )
 
 
-@buck_test(data_dir="actions")
-async def test_exit_code(buck: Buck) -> None:
+@bsmr_test(data_dir="actions")
+async def test_exit_code(bsmr: Bsmr) -> None:
     await expect_failure(
-        buck.build("//run_bad:run_odd_exit_code"),
+        bsmr.build("//run_bad:run_odd_exit_code"),
         stderr_regex="non-zero exit code 45",
     )
     # Linux does not allow negative exit codes
     if platform.system() == "Windows":
         await expect_failure(
-            buck.build("//run_bad:run_negative_exit_code"),
+            bsmr.build("//run_bad:run_negative_exit_code"),
             stderr_regex="non-zero exit code -65",
         )
 
 
-@buck_test(data_dir="actions")
-async def test_artifact_cycle(buck: Buck) -> None:
+@bsmr_test(data_dir="actions")
+async def test_artifact_cycle(bsmr: Bsmr) -> None:
     await expect_failure(
-        buck.build("//run_invalid:artifact_cycle"),
+        bsmr.build("//run_invalid:artifact_cycle"),
         stderr_regex="Recursion limit exceeded",
     )
 
 
-@buck_test(data_dir="actions")
-async def test_associated_artifacts(buck: Buck) -> None:
-    await buck.build("//associated_artifacts:check_artifacts")
+@bsmr_test(data_dir="actions")
+async def test_associated_artifacts(bsmr: Bsmr) -> None:
+    await bsmr.build("//associated_artifacts:check_artifacts")
 
 
-@buck_test(data_dir="actions")
-async def test_associated_artifacts_transitive_dep(buck: Buck) -> None:
-    await buck.build("//associated_artifacts:check_dropped_artifacts")
+@bsmr_test(data_dir="actions")
+async def test_associated_artifacts_transitive_dep(bsmr: Bsmr) -> None:
+    await bsmr.build("//associated_artifacts:check_dropped_artifacts")
 
 
-@buck_test(data_dir="actions")
-async def test_failure_has_wall_time(buck: Buck) -> None:
+@bsmr_test(data_dir="actions")
+async def test_failure_has_wall_time(bsmr: Bsmr) -> None:
     await expect_failure(
-        buck.build("//run_bad:run_odd_exit_code"),
+        bsmr.build("//run_bad:run_odd_exit_code"),
         stderr_regex="non-zero exit code 45",
     )
 
     wall_time = await filter_events(
-        buck,
+        bsmr,
         "Event",
         "data",
         "SpanEnd",
@@ -467,17 +467,17 @@ async def test_failure_has_wall_time(buck: Buck) -> None:
     assert wall_time
     print(wall_time)
     print(
-        await filter_events(buck, "Event", "data", "SpanEnd", "data", "ActionExecution")
+        await filter_events(bsmr, "Event", "data", "SpanEnd", "data", "ActionExecution")
     )
     for time in wall_time:
         assert time > 0
 
 
-@buck_test(data_dir="actions")
-async def test_local_action_has_input_size(buck: Buck) -> None:
-    await buck.build("//run:runs_script_locally")
+@bsmr_test(data_dir="actions")
+async def test_local_action_has_input_size(bsmr: Bsmr) -> None:
+    await bsmr.build("//run:runs_script_locally")
     input_size = await filter_events(
-        buck,
+        bsmr,
         "Event",
         "data",
         "SpanEnd",
@@ -494,11 +494,11 @@ async def test_local_action_has_input_size(buck: Buck) -> None:
         assert input_size[0] == 416
 
 
-@buck_test(data_dir="actions")
-async def test_remote_action_has_input_size(buck: Buck) -> None:
-    await buck.build("//run:runs_simple_script_remote")
+@bsmr_test(data_dir="actions")
+async def test_remote_action_has_input_size(bsmr: Bsmr) -> None:
+    await bsmr.build("//run:runs_simple_script_remote")
     input_size = await filter_events(
-        buck,
+        bsmr,
         "Event",
         "data",
         "SpanEnd",
@@ -515,17 +515,17 @@ async def test_remote_action_has_input_size(buck: Buck) -> None:
         assert input_size[0] == 416
 
 
-@buck_test(data_dir="actions")
-async def test_action_invalidation_tracking(buck: Buck) -> None:
-    with open(buck.cwd / ".bsmr", "a") as bsmrconfig:
+@bsmr_test(data_dir="actions")
+async def test_action_invalidation_tracking(bsmr: Bsmr) -> None:
+    with open(bsmr.cwd / ".bsmr", "a") as bsmrconfig:
         bsmrconfig.write("[bsmr]\n")
         bsmrconfig.write("invalidation_tracking_enabled = true\n")
         bsmrconfig.write("[bsmr]\n")
         bsmrconfig.write("invalidation_tracking_enabled = true\n")
 
-    await buck.build("//run:runs_simple_script")
+    await bsmr.build("//run:runs_simple_script")
     invalidation_info = await filter_events(
-        buck,
+        bsmr,
         "Event",
         "data",
         "SpanEnd",
@@ -537,12 +537,12 @@ async def test_action_invalidation_tracking(buck: Buck) -> None:
     assert invalidation_info
     assert invalidation_info[0]["changed_file"] is None
 
-    with open(buck.cwd / "run" / "src.txt", "a") as srcfile:
+    with open(bsmr.cwd / "run" / "src.txt", "a") as srcfile:
         srcfile.write("more data\n")
 
-    await buck.build("//run:runs_simple_script")
+    await bsmr.build("//run:runs_simple_script")
     invalidation_info = await filter_events(
-        buck,
+        bsmr,
         "Event",
         "data",
         "SpanEnd",
@@ -555,12 +555,12 @@ async def test_action_invalidation_tracking(buck: Buck) -> None:
     assert invalidation_info[0]["changed_file"] == {}
 
 
-@buck_test(data_dir="actions")
-async def test_target_rule_type_name(buck: Buck) -> None:
-    await buck.build("//run:runs_simple_script", "//copy:file_uses_declared_output")
+@bsmr_test(data_dir="actions")
+async def test_target_rule_type_name(bsmr: Bsmr) -> None:
+    await bsmr.build("//run:runs_simple_script", "//copy:file_uses_declared_output")
 
     target_rule_type_name = await filter_events(
-        buck,
+        bsmr,
         "Event",
         "data",
         "SpanEnd",
@@ -574,12 +574,12 @@ async def test_target_rule_type_name(buck: Buck) -> None:
     assert "run_command" in target_rule_type_name
 
     await expect_failure(
-        buck.build("//run_bad:run_odd_exit_code"),
+        bsmr.build("//run_bad:run_odd_exit_code"),
         stderr_regex="non-zero exit code 45",
     )
 
     target_rule_type_name = await filter_events(
-        buck,
+        bsmr,
         "Event",
         "data",
         "SpanEnd",

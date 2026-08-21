@@ -1578,22 +1578,22 @@ mod tests {
     #[test]
     fn output_admission_is_declaration_granular() {
         let declared = [
-            GuestOutput::file("buck-out/app.js"),
-            GuestOutput::directory("buck-out/assets"),
+            GuestOutput::file("bsmr-out/app.js"),
+            GuestOutput::directory("bsmr-out/assets"),
         ];
 
-        assert!(admit_output(Path::new("buck-out/app.js"), &declared).is_ok());
-        assert!(admit_output(Path::new("buck-out/assets/logo.svg"), &declared).is_ok());
-        assert!(admit_output(Path::new("buck-out/app.js/map"), &declared).is_err());
-        assert!(admit_output(Path::new("buck-out/undeclared"), &declared).is_err());
+        assert!(admit_output(Path::new("bsmr-out/app.js"), &declared).is_ok());
+        assert!(admit_output(Path::new("bsmr-out/assets/logo.svg"), &declared).is_ok());
+        assert!(admit_output(Path::new("bsmr-out/app.js/map"), &declared).is_err());
+        assert!(admit_output(Path::new("bsmr-out/undeclared"), &declared).is_err());
     }
 
     /// Overlapping roots are rejected because they cannot be imported independently.
     #[test]
     fn output_declarations_must_not_overlap() {
         let mut declared = [
-            GuestOutput::file("buck-out/assets/logo.svg"),
-            GuestOutput::directory("buck-out/assets"),
+            GuestOutput::file("bsmr-out/assets/logo.svg"),
+            GuestOutput::directory("bsmr-out/assets"),
         ];
 
         assert!(validate_output_declarations(&mut declared).is_err());
@@ -1602,11 +1602,11 @@ mod tests {
     /// Relative symlinks may stay inside one declared output root and nowhere else.
     #[test]
     fn output_symlinks_cannot_escape_their_declared_root() {
-        let root = Path::new("buck-out/assets");
+        let root = Path::new("bsmr-out/assets");
 
         assert!(
             validate_output_symlink(
-                Path::new("buck-out/assets/current"),
+                Path::new("bsmr-out/assets/current"),
                 Path::new("images/logo.svg"),
                 root,
             )
@@ -1614,7 +1614,7 @@ mod tests {
         );
         assert!(
             validate_output_symlink(
-                Path::new("buck-out/assets/current"),
+                Path::new("bsmr-out/assets/current"),
                 Path::new("../../secret"),
                 root,
             )
@@ -1622,7 +1622,7 @@ mod tests {
         );
         assert!(
             validate_output_symlink(
-                Path::new("buck-out/assets/current"),
+                Path::new("bsmr-out/assets/current"),
                 Path::new("/etc/passwd"),
                 root,
             )
@@ -1760,14 +1760,14 @@ mod tests {
             (".bsmr/result.json", br#"{"protocol":1,"exit_code":0}"#),
             (".bsmr/stdout", b"compiled\n"),
             (".bsmr/stderr", b""),
-            ("outputs/buck-out/app.js", b"export {};\n"),
+            ("outputs/bsmr-out/app.js", b"export {};\n"),
         ]);
         let temp = tempfile::tempdir().unwrap();
 
         let result = extract_guest_outputs(
             Cursor::new(archive),
             temp.path(),
-            &[GuestOutput::file("buck-out/app.js")],
+            &[GuestOutput::file("bsmr-out/app.js")],
         )
         .unwrap();
 
@@ -1775,7 +1775,7 @@ mod tests {
         assert_eq!(result.stdout, b"compiled\n");
         assert_eq!(result.stderr, b"");
         assert_eq!(
-            fs::read(temp.path().join("buck-out/app.js")).unwrap(),
+            fs::read(temp.path().join("bsmr-out/app.js")).unwrap(),
             b"export {};\n"
         );
     }
@@ -1835,21 +1835,21 @@ mod tests {
     fn output_import_fails_closed_on_existing_destination() {
         let project = tempfile::tempdir().unwrap();
         let staging = tempfile::tempdir().unwrap();
-        fs::create_dir_all(project.path().join("buck-out")).unwrap();
-        fs::create_dir_all(staging.path().join("buck-out")).unwrap();
-        fs::write(project.path().join("buck-out/app.js"), b"existing").unwrap();
-        fs::write(staging.path().join("buck-out/app.js"), b"new").unwrap();
+        fs::create_dir_all(project.path().join("bsmr-out")).unwrap();
+        fs::create_dir_all(staging.path().join("bsmr-out")).unwrap();
+        fs::write(project.path().join("bsmr-out/app.js"), b"existing").unwrap();
+        fs::write(staging.path().join("bsmr-out/app.js"), b"new").unwrap();
 
         assert!(
             import_outputs(
                 staging.path(),
                 project.path(),
-                &[GuestOutput::file("buck-out/app.js")],
+                &[GuestOutput::file("bsmr-out/app.js")],
             )
             .is_err()
         );
         assert_eq!(
-            fs::read(project.path().join("buck-out/app.js")).unwrap(),
+            fs::read(project.path().join("bsmr-out/app.js")).unwrap(),
             b"existing"
         );
     }
@@ -1859,25 +1859,25 @@ mod tests {
     fn output_import_preflight_prevents_partial_materialization() {
         let project = tempfile::tempdir().unwrap();
         let staging = tempfile::tempdir().unwrap();
-        fs::create_dir_all(project.path().join("buck-out")).unwrap();
-        fs::create_dir_all(staging.path().join("buck-out")).unwrap();
-        fs::write(staging.path().join("buck-out/a.js"), b"new").unwrap();
-        fs::write(staging.path().join("buck-out/b.js"), b"new").unwrap();
-        fs::write(project.path().join("buck-out/b.js"), b"existing").unwrap();
+        fs::create_dir_all(project.path().join("bsmr-out")).unwrap();
+        fs::create_dir_all(staging.path().join("bsmr-out")).unwrap();
+        fs::write(staging.path().join("bsmr-out/a.js"), b"new").unwrap();
+        fs::write(staging.path().join("bsmr-out/b.js"), b"new").unwrap();
+        fs::write(project.path().join("bsmr-out/b.js"), b"existing").unwrap();
 
         assert!(
             import_outputs(
                 staging.path(),
                 project.path(),
                 &[
-                    GuestOutput::file("buck-out/a.js"),
-                    GuestOutput::file("buck-out/b.js"),
+                    GuestOutput::file("bsmr-out/a.js"),
+                    GuestOutput::file("bsmr-out/b.js"),
                 ],
             )
             .is_err()
         );
-        assert!(!project.path().join("buck-out/a.js").exists());
-        assert!(staging.path().join("buck-out/a.js").exists());
+        assert!(!project.path().join("bsmr-out/a.js").exists());
+        assert!(staging.path().join("bsmr-out/a.js").exists());
     }
 
     /// Symlink metadata is treated as hostile even when the guest agent emitted it.
@@ -1901,7 +1901,7 @@ mod tests {
         header.set_link_name("../../../../etc/passwd").unwrap();
         header.set_cksum();
         archive
-            .append_data(&mut header, "outputs/buck-out/assets/current", &[][..])
+            .append_data(&mut header, "outputs/bsmr-out/assets/current", &[][..])
             .unwrap();
         archive.finish().unwrap();
         let temp = tempfile::tempdir().unwrap();
@@ -1910,7 +1910,7 @@ mod tests {
             extract_guest_outputs(
                 Cursor::new(archive.into_inner().unwrap()),
                 temp.path(),
-                &[GuestOutput::directory("buck-out/assets")],
+                &[GuestOutput::directory("bsmr-out/assets")],
             )
             .is_err()
         );

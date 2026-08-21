@@ -38,8 +38,8 @@ use bsmr_core::provider::label::ConfiguredProvidersLabel;
 use bsmr_core::provider::label::ProvidersName;
 use bsmr_core::target::configured_target_label::ConfiguredTargetLabel;
 use bsmr_error::internal_error;
-use bsmr_hash::BuckIndexMap;
-use bsmr_hash::StdBuckHashSet;
+use bsmr_hash::BsmrIndexMap;
+use bsmr_hash::StdBsmrHashSet;
 use bsmr_node::nodes::configured::ConfiguredTargetNode;
 use bsmr_node::nodes::configured_node_ref::ConfiguredTargetNodeRefNode;
 use bsmr_node::nodes::configured_node_ref::ConfiguredTargetNodeRefNodeDeps;
@@ -349,9 +349,9 @@ pub(crate) async fn get_from_template_placeholder_info(
     ctx: &mut DiceComputations<'_>,
     template_name: StaticStr,
     targets: impl IntoIterator<Item = ConfiguredTargetLabel>,
-) -> bsmr_error::Result<BuckIndexMap<ConfiguredTargetLabel, Artifact>> {
-    let mut label_to_artifact: BuckIndexMap<ConfiguredTargetLabel, Artifact> =
-        BuckIndexMap::default();
+) -> bsmr_error::Result<BsmrIndexMap<ConfiguredTargetLabel, Artifact>> {
+    let mut label_to_artifact: BsmrIndexMap<ConfiguredTargetLabel, Artifact> =
+        BsmrIndexMap::default();
 
     // Traversing tsets adds complexity here. Ideally, we could just do a normal traversal of these starlark values
     // we get from the template_info provider, but the cmdlinearglike interface only gives us access via ArtifactGroup
@@ -391,11 +391,11 @@ pub(crate) async fn get_from_template_placeholder_info(
     // for all the tset nodes that we encounter during our traversal of those top-level nodes. We don't need to track artifacts because
     // we just extract the targetlabel and put that in the output set and that can dedupe them (and we don't need to further
     // traverse artifacts).
-    let mut seen = StdBuckHashSet::default();
+    let mut seen = StdBsmrHashSet::default();
 
     while let Some((target, artifact)) = artifacts.pop_front() {
         let handle_artifact =
-            |label_to_artifact: &mut BuckIndexMap<ConfiguredTargetLabel, Artifact>,
+            |label_to_artifact: &mut BsmrIndexMap<ConfiguredTargetLabel, Artifact>,
              artifact: &Artifact|
              -> bsmr_error::Result<()> {
                 if let Some(owner) = artifact.owner() {

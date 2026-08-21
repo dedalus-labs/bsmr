@@ -15,20 +15,20 @@
 # pyre-strict
 
 
-from bsmr.tests.e2e_util.api.buck import Buck
-from bsmr.tests.e2e_util.buck_workspace import buck_test
+from bsmr.tests.e2e_util.api.bsmr import Bsmr
+from bsmr.tests.e2e_util.bsmr_workspace import bsmr_test
 
 
-@buck_test()
-async def test_build_universe(buck: Buck) -> None:
+@bsmr_test()
+async def test_build_universe(bsmr: Bsmr) -> None:
     # Run the build without universe.
-    result = await buck.build("//:test")
+    result = await bsmr.build("//:test")
     build_report = result.get_build_report()
     output = build_report.output_for_target("//:test")
     assert output.read_text().rstrip() == "default"
 
     # Now build the same target, but with the universe.
-    result = await buck.build(
+    result = await bsmr.build(
         "//:test",
         "--target-universe",
         "//:universe",
@@ -38,9 +38,9 @@ async def test_build_universe(buck: Buck) -> None:
     assert output.read_text().rstrip() == "cat"
 
 
-@buck_test()
-async def test_build_target_not_found_in_universe(buck: Buck) -> None:
-    result = await buck.build(
+@bsmr_test()
+async def test_build_target_not_found_in_universe(bsmr: Bsmr) -> None:
+    result = await bsmr.build(
         "//:test",
         "--target-universe",
         "//:different_universe",

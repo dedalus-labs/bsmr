@@ -20,12 +20,12 @@
 //!
 //! Components of the debugger:
 //!
-//! [BuckStarlarkDebuggerServer] is the main way that the core of bsmr integrates
+//! [BsmrStarlarkDebuggerServer] is the main way that the core of bsmr integrates
 //! the starlark debugger. This provides the hooks to wrap a Starlark evaluation and
 //! enable the debugger (and handle communication between that starlark evaluation
 //! and the debugger server/state)
 //!
-//! [BuckStarlarkDebuggerHandle] is a "handle" the to the debugger server. One of these
+//! [BsmrStarlarkDebuggerHandle] is a "handle" the to the debugger server. One of these
 //! will be created for each bsmr command and put in the dice per-transaction data. Code
 //! that needs to do starlark evaluation can then use this to setup their Evaluator
 //! appropriately (though this is really just an implementation detail hidden in the
@@ -44,13 +44,13 @@
 //! flowing between the DAP client and the starlark evaluation.
 //!
 //! The server also tracks the state of all evaluations so that it can send regularly
-//! debugger snapshots to all current buck commands. Those commands in turn use those snapshots
+//! debugger snapshots to all current bsmr commands. Those commands in turn use those snapshots
 //! to render a debugger superconsole component so that users aren't left confused about
 //! why their commands are seemingly hanging.
 //!
 //! The server handles a variety of other small adapter functionality. For example,
 //! the DAP client may send source file references as absolute paths, but our starlark
-//! evaluators will only understand them as the project-relative paths that buck
+//! evaluators will only understand them as the project-relative paths that bsmr
 //! uses and so the server must convert them from/to the client/starlark.
 
 use std::sync::Arc;
@@ -67,7 +67,7 @@ use tokio::sync::mpsc;
 
 use crate::error::StarlarkDebuggerError;
 use crate::run::ToClientMessage;
-use crate::server::BuckStarlarkDebuggerServer;
+use crate::server::BsmrStarlarkDebuggerServer;
 
 mod controller;
 mod dap_api;
@@ -78,12 +78,12 @@ mod variable_known_paths;
 
 /// A handle to the debugger server.
 #[derive(Debug, Clone, Dupe)]
-pub struct BuckStarlarkDebuggerHandle(Arc<HandleData>);
+pub struct BsmrStarlarkDebuggerHandle(Arc<HandleData>);
 
 #[derive(Debug)]
 pub struct HandleData {
     id: HandleId,
-    server: Arc<BuckStarlarkDebuggerServer>,
+    server: Arc<BsmrStarlarkDebuggerServer>,
 }
 
 impl Drop for HandleData {
@@ -93,7 +93,7 @@ impl Drop for HandleData {
 }
 
 #[async_trait]
-impl StarlarkDebuggerHandle for BuckStarlarkDebuggerHandle {
+impl StarlarkDebuggerHandle for BsmrStarlarkDebuggerHandle {
     async fn start_eval(
         &self,
         description: &str,
@@ -109,12 +109,12 @@ pub(crate) struct HandleId(u32);
 pub(crate) struct HookId(u32);
 
 /// We allow only a single debugger to be attached at a time. While it's attached, this will hold the server instance.
-static CURRENT_DEBUGGER: Mutex<Option<Arc<BuckStarlarkDebuggerServer>>> = Mutex::new(None);
+static CURRENT_DEBUGGER: Mutex<Option<Arc<BsmrStarlarkDebuggerServer>>> = Mutex::new(None);
 
 /// Used by each command to get a handle to the current debugger. The debugger server will capture the
 /// event dispatcher to send back debugger state snapshots (which indicate that the debugger is attached
 /// and which, if any, threads are paused) while the command is running.
-pub fn create_debugger_handle(events: EventDispatcher) -> Option<BuckStarlarkDebuggerHandle> {
+pub fn create_debugger_handle(events: EventDispatcher) -> Option<BsmrStarlarkDebuggerHandle> {
     CURRENT_DEBUGGER
         .lock()
         .unwrap()
@@ -123,7 +123,7 @@ pub fn create_debugger_handle(events: EventDispatcher) -> Option<BuckStarlarkDeb
 }
 
 /// Manages setting/unsetting the CURRENT_DEBUGGER while the starlark debug-attach command is running.
-struct ServerConnection(Arc<BuckStarlarkDebuggerServer>);
+struct ServerConnection(Arc<BsmrStarlarkDebuggerServer>);
 
 impl ServerConnection {
     fn new(
@@ -135,7 +135,7 @@ impl ServerConnection {
             return Err(StarlarkDebuggerError::DebuggerAlreadyAttached.into());
         }
 
-        let server = Arc::new(BuckStarlarkDebuggerServer::new(
+        let server = Arc::new(BsmrStarlarkDebuggerServer::new(
             to_client_send,
             project_root,
         ));

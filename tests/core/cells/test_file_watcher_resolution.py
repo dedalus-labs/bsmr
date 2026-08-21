@@ -15,25 +15,25 @@
 # pyre-strict
 
 
-from bsmr.tests.e2e_util.api.buck import Buck
-from bsmr.tests.e2e_util.buck_workspace import buck_test
+from bsmr.tests.e2e_util.api.bsmr import Bsmr
+from bsmr.tests.e2e_util.bsmr_workspace import bsmr_test
 
 
-@buck_test()
-async def test_changing_cell_location_bug(buck: Buck) -> None:
-    await buck.targets("foo//:", "bar//:")
+@bsmr_test()
+async def test_changing_cell_location_bug(bsmr: Bsmr) -> None:
+    await bsmr.targets("foo//:", "bar//:")
 
     # Switch the location of the 2 cells
-    (buck.cwd / ".bsmr").write_text(
+    (bsmr.cwd / ".bsmr").write_text(
         "[cells]\nfoo=bar\nbar=foo\nroot=.\nprelude=.\n"
     )
 
-    # Make sure buck picks up the `CellResolver` updates
-    await buck.targets("foo//:", "bar//:")
+    # Make sure bsmr picks up the `CellResolver` updates
+    await bsmr.targets("foo//:", "bar//:")
 
-    (buck.cwd / "foo" / "TARGETS.fixture").write_text("fail('error')")
+    (bsmr.cwd / "foo" / "TARGETS.fixture").write_text("fail('error')")
 
-    # FIXME(JakobDegen): The change to the `TARGETS.fixture` file does not get picked up by buck.
+    # FIXME(JakobDegen): The change to the `TARGETS.fixture` file does not get picked up by bsmr.
     # The cause is that the file watcher always invalidates injected keys computed from `CellPath`s,
     # but the `CellResolver` that it uses to map `ProjectRelativePath`s to `CellPath`s is computed
     # once at daemon startup and never updated. So concretely, the file update above results in the
@@ -42,4 +42,4 @@ async def test_changing_cell_location_bug(buck: Buck) -> None:
     #
     # This is just one example, there's a thousand other ways that you can change the `CellResolver`
     # to create similar bugs.
-    await buck.targets("foo//:", "bar//:")
+    await bsmr.targets("foo//:", "bar//:")

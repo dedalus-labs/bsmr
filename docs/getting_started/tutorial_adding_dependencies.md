@@ -276,7 +276,7 @@ or just understanding the flow. To help with this, let's say we've prepared a
 simple, shared logging library for you. <FbInternalOnly> The library is
 `root//docs/bsmr_lab/logging_lib:logging_lib`. </FbInternalOnly>
 <OssOnly> You can find it at
-https://github.com/facebook/buck2/tree/main/docs/buck2_lab/logging_lib and copy
+https://github.com/facebook/buck2/tree/main/docs/upstream_lab/logging_lib and copy
 the folder into `bsmr_lab` folder. </OssOnly>
 
 Our first step is to make our existing greeter_lib use this new logging_lib.

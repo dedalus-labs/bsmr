@@ -154,7 +154,7 @@ function runRunner(state: Fixture, mode: Mode): SpawnSyncReturns<string> {
 			"--source",
 			state.source,
 		],
-		{ encoding: "utf8", env: { ...process.env, BSMR_UNDECLARED: "ambient", BUCK_SCRATCH_PATH: state.scratch } },
+		{ encoding: "utf8", env: { ...process.env, BSMR_UNDECLARED: "ambient", BSMR_SCRATCH_PATH: state.scratch } },
 	);
 }
 

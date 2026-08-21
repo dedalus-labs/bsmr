@@ -18,8 +18,8 @@ import os
 import re
 import subprocess
 
-from bsmr.tests.e2e_util.api.buck import Buck
-from bsmr.tests.e2e_util.buck_workspace import buck_test
+from bsmr.tests.e2e_util.api.bsmr import Bsmr
+from bsmr.tests.e2e_util.bsmr_workspace import bsmr_test
 from bsmr.tests.e2e_util.helper.utils import (
     get_bsmr_re_use_case,
     json_get,
@@ -28,9 +28,9 @@ from bsmr.tests.e2e_util.helper.utils import (
 )
 
 
-@buck_test()
-async def test_local_action(buck: Buck) -> None:
-    await buck.build(
+@bsmr_test()
+async def test_local_action(bsmr: Bsmr) -> None:
+    await bsmr.build(
         "//:foo",
         "--no-remote-cache",
         "--local-only",
@@ -38,7 +38,7 @@ async def test_local_action(buck: Buck) -> None:
         f"test.cache_buster={random_string()}",
     )
 
-    log = (await buck.log("show")).stdout.strip().splitlines()
+    log = (await bsmr.log("show")).stdout.strip().splitlines()
 
     for line in log:
         outputs = json_get(
@@ -65,9 +65,9 @@ async def test_local_action(buck: Buck) -> None:
     raise AssertionError("Didn't find ActionExecution data")
 
 
-@buck_test()
-async def test_remote_action(buck: Buck) -> None:
-    await buck.build(
+@bsmr_test()
+async def test_remote_action(bsmr: Bsmr) -> None:
+    await bsmr.build(
         "//:foo",
         "--no-remote-cache",
         "--remote-only",
@@ -75,7 +75,7 @@ async def test_remote_action(buck: Buck) -> None:
         f"test.cache_buster={random_string()}",
     )
 
-    log = (await buck.log("show")).stdout.strip().splitlines()
+    log = (await bsmr.log("show")).stdout.strip().splitlines()
 
     for line in log:
         outputs = json_get(
@@ -99,10 +99,10 @@ async def test_remote_action(buck: Buck) -> None:
         assert digests[0] == "da39a3ee"
         break
 
-    what_ran = await read_what_ran(buck)
+    what_ran = await read_what_ran(bsmr)
     assert len(what_ran) == 1
     digest = what_ran[0]["reproducer"]["details"]["digest"]
-    use_case = await get_bsmr_re_use_case(buck)
+    use_case = await get_bsmr_re_use_case(bsmr)
     action_definition = subprocess.check_output(
         [
             "dotslash",

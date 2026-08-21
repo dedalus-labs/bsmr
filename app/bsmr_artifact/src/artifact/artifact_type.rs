@@ -27,8 +27,8 @@ use allocative::Allocative;
 use bsmr_core::content_hash::ContentBasedPathHash;
 use bsmr_core::deferred::base_deferred_key::BaseDeferredKey;
 use bsmr_core::fs::artifact_path_resolver::ArtifactFs;
-use bsmr_core::fs::buck_out_path::BuckOutPathKind;
-use bsmr_core::fs::buck_out_path::BuildArtifactPath;
+use bsmr_core::fs::output_path::BuildArtifactPath;
+use bsmr_core::fs::output_path::OutputPathKind;
 use bsmr_core::fs::project_rel_path::ProjectRelativePathBuf;
 use bsmr_execute::artifact::artifact_dyn::ArtifactDyn;
 use bsmr_execute::execute::request::OutputType;
@@ -600,7 +600,7 @@ impl<'v> OutputArtifact<'v> {
         output_type.check_path(self, self.0.output_type())
     }
 
-    pub fn path_resolution_method(&self) -> BuckOutPathKind {
+    pub fn path_resolution_method(&self) -> OutputPathKind {
         match &*self.0.artifact().borrow() {
             DeclaredArtifactKind::Bound(b) => b.get_path().path_resolution_method(),
             DeclaredArtifactKind::Unbound(u) => u.0.path_resolution_method(),
@@ -629,8 +629,8 @@ impl UnboundArtifact {
 pub mod testing {
     use bsmr_core::deferred::base_deferred_key::BaseDeferredKey;
     use bsmr_core::deferred::key::DeferredHolderKey;
-    use bsmr_core::fs::buck_out_path::BuckOutPathKind;
-    use bsmr_core::fs::buck_out_path::BuildArtifactPath;
+    use bsmr_core::fs::output_path::BuildArtifactPath;
+    use bsmr_core::fs::output_path::OutputPathKind;
     use bsmr_core::target::configured_target_label::ConfiguredTargetLabel;
     use bsmr_execute::execute::request::OutputType;
     use bsmr_fs::paths::forward_rel_path::ForwardRelativePath;
@@ -689,7 +689,7 @@ pub mod testing {
                 BuildArtifactPath::new(
                     BaseDeferredKey::TargetLabel(target.dupe()),
                     ForwardRelativePath::new(path).unwrap().to_buf(),
-                    BuckOutPathKind::default(),
+                    OutputPathKind::default(),
                 ),
                 ActionKey::new(
                     DeferredHolderKey::Base(BaseDeferredKey::TargetLabel(target)),
@@ -712,9 +712,9 @@ mod tests {
     use bsmr_core::deferred::base_deferred_key::BaseDeferredKey;
     use bsmr_core::deferred::key::DeferredHolderKey;
     use bsmr_core::fs::artifact_path_resolver::ArtifactFs;
-    use bsmr_core::fs::buck_out_path::BuckOutPathKind;
-    use bsmr_core::fs::buck_out_path::BuckOutPathResolver;
-    use bsmr_core::fs::buck_out_path::BuildArtifactPath;
+    use bsmr_core::fs::output_path::BuildArtifactPath;
+    use bsmr_core::fs::output_path::OutputPathKind;
+    use bsmr_core::fs::output_path::OutputPathResolver;
     use bsmr_core::fs::project::ProjectRoot;
     use bsmr_core::fs::project::ProjectRootTemp;
     use bsmr_core::fs::project_rel_path::ProjectRelativePath;
@@ -750,7 +750,7 @@ mod tests {
                 BuildArtifactPath::new(
                     BaseDeferredKey::TargetLabel(target.dupe()),
                     ForwardRelativePathBuf::unchecked_new("bar.out".into()),
-                    BuckOutPathKind::default(),
+                    OutputPathKind::default(),
                 ),
                 OutputType::File,
                 0,
@@ -801,7 +801,7 @@ mod tests {
                 CellName::testing_new("cell"),
                 CellRootPathBuf::new(ProjectRelativePathBuf::unchecked_new("cell_path".into())),
             ),
-            BuckOutPathResolver::new(ProjectRelativePathBuf::unchecked_new("buck_out".into())),
+            OutputPathResolver::new(ProjectRelativePathBuf::unchecked_new("output".into())),
             project_fs,
         );
 
@@ -832,7 +832,7 @@ mod tests {
                 CellName::testing_new("cell"),
                 CellRootPathBuf::new(ProjectRelativePathBuf::unchecked_new("cell_path".into())),
             ),
-            BuckOutPathResolver::new(ProjectRelativePathBuf::unchecked_new("buck_out".into())),
+            OutputPathResolver::new(ProjectRelativePathBuf::unchecked_new("output".into())),
             project_fs.dupe(),
         );
         let expected_path1 = project_fs.resolve(fs.resolve_build(artifact1.get_path(), None)?);

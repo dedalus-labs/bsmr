@@ -34,7 +34,7 @@ use bsmr_execute::execute::request::CommandExecutionOutput;
 use bsmr_execute::execute::request::CommandExecutionPaths;
 use bsmr_execute::execute::request::CommandExecutionRequest;
 use bsmr_execute::execute::request::OutputType;
-use bsmr_hash::BuckIndexSet;
+use bsmr_hash::BsmrIndexSet;
 use derivative::Derivative;
 use dupe::Dupe;
 use pagable::Pagable;
@@ -49,7 +49,7 @@ use starlark::values::OwnedFrozenValue;
 /// modules
 #[derive(Allocative, Clone, PartialEq)]
 pub(crate) struct SimpleUnregisteredAction {
-    inputs: BuckIndexSet<ArtifactGroup>,
+    inputs: BsmrIndexSet<ArtifactGroup>,
     cmd: Vec<String>,
     category: Category,
     identifier: Option<String>,
@@ -57,7 +57,7 @@ pub(crate) struct SimpleUnregisteredAction {
 
 impl SimpleUnregisteredAction {
     pub(crate) fn new(
-        inputs: BuckIndexSet<ArtifactGroup>,
+        inputs: BsmrIndexSet<ArtifactGroup>,
         cmd: Vec<String>,
         category: Category,
         identifier: Option<String>,
@@ -84,8 +84,8 @@ pub(crate) struct SimpleAction {
 
 impl SimpleAction {
     pub(crate) fn new(
-        inputs: BuckIndexSet<ArtifactGroup>,
-        outputs: BuckIndexSet<BuildArtifact>,
+        inputs: BsmrIndexSet<ArtifactGroup>,
+        outputs: BsmrIndexSet<BuildArtifact>,
         cmd: Vec<String>,
         category: Category,
         identifier: Option<String>,
@@ -103,7 +103,7 @@ impl SimpleAction {
 impl UnregisteredAction for SimpleUnregisteredAction {
     fn register(
         self: Box<Self>,
-        outputs: BuckIndexSet<BuildArtifact>,
+        outputs: BsmrIndexSet<BuildArtifact>,
         _starlark_data: Option<OwnedFrozenValue>,
         _error_handler: Option<OwnedFrozenValue>,
     ) -> bsmr_error::Result<Box<dyn Action>> {

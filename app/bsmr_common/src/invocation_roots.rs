@@ -20,7 +20,7 @@ use allocative::Allocative;
 use bsmr_core::bsmr_env;
 use bsmr_core::fs::project::ProjectRoot;
 use bsmr_core::fs::project_rel_path::ProjectRelativePathBuf;
-use bsmr_error::BuckErrorContext;
+use bsmr_error::BsmrErrorContext;
 use bsmr_error::internal_error;
 use bsmr_fs::error::IoResultExt;
 use bsmr_fs::fs_util;
@@ -50,8 +50,8 @@ pub struct InvocationRoots {
 }
 
 impl InvocationRoots {
-    pub fn common_buckd_dir(&self) -> bsmr_error::Result<AbsNormPathBuf> {
-        Ok(home_buck_dir()?.join(FileName::unchecked_new("buckd")))
+    pub fn common_bsmrd_dir(&self) -> bsmr_error::Result<AbsNormPathBuf> {
+        Ok(home_bsmr_dir()?.join(FileName::unchecked_new("bsmrd")))
     }
 
     pub fn paranoid_info_path(&self) -> bsmr_error::Result<AbsPathBuf> {
@@ -61,7 +61,7 @@ impl InvocationRoots {
         }
 
         Ok(self
-            .common_buckd_dir()?
+            .common_bsmrd_dir()?
             .join(FileName::new("paranoid.info")?)
             .into_abs_path_buf())
     }
@@ -132,31 +132,31 @@ pub fn get_invocation_paths_result(
     }
 }
 
-/// `~/.buck`.
-/// TODO(cjhopman): We currently place all buckd info into a directory owned by the user.
+/// `~/.bsmr`.
+/// TODO(cjhopman): We currently place all bsmrd info into a directory owned by the user.
 /// This is broken when multiple users try to share the same checkout.
 ///
-/// **This is different than the behavior of buck1.**
+/// **This is different than the behavior of legacy.**
 ///
-/// In buck1, the buck daemon is shared across users. Due to the fact that `buck run`
-/// will run whatever command is returned by the daemon, buck1 has a privilege escalation
+/// In legacy, the bsmr daemon is shared across users. Due to the fact that `bsmr run`
+/// will run whatever command is returned by the daemon, legacy has a privilege escalation
 /// vulnerability.
 ///
 /// There's a couple ways we could resolve this:
 ///
-/// 1. Use a shared .buckd information directory and have the client verify the identity of
+/// 1. Use a shared .bsmrd information directory and have the client verify the identity of
 ///    the server before doing anything with it. If the identity is different, kill it and
 ///    start a new one.
 ///
-/// 2. Keep user-owned .buckd directory, use some other mechanism to move ownership of
-///    output directories between different buckd instances.
-pub(crate) fn home_buck_dir() -> bsmr_error::Result<&'static AbsNormPath> {
+/// 2. Keep user-owned .bsmrd directory, use some other mechanism to move ownership of
+///    output directories between different bsmrd instances.
+pub(crate) fn home_bsmr_dir() -> bsmr_error::Result<&'static AbsNormPath> {
     fn find_dir() -> bsmr_error::Result<AbsNormPathBuf> {
         let home = dirs::home_dir()
             .ok_or_else(|| internal_error!("Expected a HOME directory to be available"))?;
         let home =
-            AbsNormPathBuf::new(home).buck_error_context("Expected an absolute HOME directory")?;
-        Ok(home.join(FileName::new(".buck")?))
+            AbsNormPathBuf::new(home).bsmr_error_context("Expected an absolute HOME directory")?;
+        Ok(home.join(FileName::new(".bsmr")?))
     }
 
     static DIR: LazyLock<bsmr_error::Result<AbsNormPathBuf>> = LazyLock::new(find_dir);

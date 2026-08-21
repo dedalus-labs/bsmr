@@ -1,3 +1,9 @@
+# ===----------------------------------------------------------------------===
+# Upstream-Source: facebook/buck2@1560aca2002865cd73d7cafb22c705cfb640b2bc
+# Modifications Copyright (c) 2026 Dedalus Labs, Inc. and its contributors
+# SPDX-License-Identifier: Apache-2.0
+# ===----------------------------------------------------------------------===
+
 # Copyright (c) Meta Platforms, Inc. and affiliates.
 #
 # This source code is dual-licensed under either the MIT license found in the
@@ -159,7 +165,7 @@ Duplicate class name(s) found:
 
 This means multiple copies of the same class is being included in the final apk.
 Check the class names and the target names listed below and make sure to only include one copy of each class.
-Run `buck cquery allpaths(<apk_target>, <library_target>)` or `arc deppy explain-dep <apk_target> <library_target>` to find the dependency paths.
+Run `bsmr cquery allpaths(<apk_target>, <library_target>)` or `arc deppy explain-dep <apk_target> <library_target>` to find the dependency paths.
 {"".join(messages)}
         """
 

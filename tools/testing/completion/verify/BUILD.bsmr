@@ -25,7 +25,7 @@ rust_binary(
         },
     }),
     deps = [
-        "bsmr_build//third-party/rust:buck-resources",
+        "root//packages/rust/bsmr-resources:bsmr_resources",
         "bsmr_build//third-party/rust:clap",
         "bsmr_build//third-party/rust:ptyprocess",
         "bsmr_build//third-party/rust:tempfile",

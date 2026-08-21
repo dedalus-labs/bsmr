@@ -10,5 +10,5 @@ def _impl(ctx):
     _ignore = ctx  # buildifier: disable=unused-variable
     return [DefaultInfo()]
 
-# This bzl file cannot be interpreted with Buck1 because there's no `rule` builtin.
+# This bzl file cannot be interpreted with Legacy because there's no `rule` builtin.
 my_rule = rule(impl = _impl, attrs = {})

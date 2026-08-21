@@ -31,7 +31,7 @@ use bsmr_core::pattern::pattern::ParsedPattern;
 use bsmr_core::pattern::pattern_type::PatternType;
 use bsmr_core::pattern::pattern_type::TargetPatternExtra;
 use bsmr_core::target::name::TargetName;
-use bsmr_hash::StdBuckHashSet;
+use bsmr_hash::StdBsmrHashSet;
 use bsmr_interpreter::load_module::INTERPRETER_CALCULATION_IMPL;
 use bsmr_interpreter::load_module::InterpreterCalculation;
 use bsmr_interpreter::paths::package::PackageFilePath;
@@ -68,7 +68,7 @@ fn write_str(outputter: &mut dyn Write, s: &mut String) -> bsmr_error::Result<()
 ///
 /// # Arguments
 ///
-/// * `keep_going` - On loading errors, put buck.error in the output stream and continue
+/// * `keep_going` - On loading errors, put bsmr.error in the output stream and continue
 ///   Passing from cli args `--keep-going` from `app/bsmr_client/src/commands/targets.rs`.
 /// * `imports` - Show the imports of each package/import. Shows an additional output per package/import (not per target), including implicit dependencies (e.g. the prelude) but only direct dependencies (not the transitive closure)
 ///   Passing from cli args `--imports` from `app/bsmr_client/src/commands/targets.rs`.
@@ -183,7 +183,7 @@ pub(crate) async fn targets_streaming(
     // Recursively chase down all `imported` paths, and output them.
     // This will only be done if `imports` is set
     let mut todo = mem::take(&mut *imported.lock().unwrap());
-    let mut seen_imported = StdBuckHashSet::default();
+    let mut seen_imported = StdBsmrHashSet::default();
     while let Some(path) = todo.pop() {
         if seen_imported.insert(path.path().clone()) {
             // If these lead to an error, that's surpsing (we had a working module with it loaded)

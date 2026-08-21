@@ -24,7 +24,7 @@ with the epmd daemon.
 
 -include_lib("kernel/include/logger.hrl").
 -export([start/2, stop/1, kill_process/1]).
--include_lib("common/include/buck_ct_records.hrl").
+-include_lib("common/include/bsmr_ct_records.hrl").
 
 -spec start(Type, Args) -> {'ok', pid()} | {'error', supervisor:startlink_err()} when
     Type :: application:start_type(),

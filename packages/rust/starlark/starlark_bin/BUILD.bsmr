@@ -5,11 +5,11 @@
 
 # Defines build targets for packages/rust/starlark/starlark_bin.
 
-load("@bsmr_build//rules:rust.bzl", buck_rust_binary = "rust_binary")
+load("@bsmr_build//rules:rust.bzl", bsmr_rust_binary = "rust_binary")
 
 oncall("build_infra")
 
-buck_rust_binary(
+bsmr_rust_binary(
     name = "starlark_bin",
     srcs = glob(
         ["bin/**/*.rs"],

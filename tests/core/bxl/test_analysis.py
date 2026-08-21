@@ -14,14 +14,14 @@
 
 # pyre-strict
 
-from bsmr.tests.e2e_util.api.buck import Buck
+from bsmr.tests.e2e_util.api.bsmr import Bsmr
 from bsmr.tests.e2e_util.asserts import expect_failure
-from bsmr.tests.e2e_util.buck_workspace import buck_test
+from bsmr.tests.e2e_util.bsmr_workspace import bsmr_test
 
 
-@buck_test()
-async def test_bxl_analysis(buck: Buck) -> None:
-    result = await buck.bxl(
+@bsmr_test()
+async def test_bxl_analysis(bsmr: Bsmr) -> None:
+    result = await bsmr.bxl(
         "//analysis.bxl:providers_test",
     )
 
@@ -29,7 +29,7 @@ async def test_bxl_analysis(buck: Buck) -> None:
     assert "provides_foo_foo" in lines[0]
     assert "provides_foo_foo" in lines[1]
 
-    result = await buck.bxl(
+    result = await bsmr.bxl(
         "//analysis.bxl:dependency_test",
     )
 
@@ -39,10 +39,10 @@ async def test_bxl_analysis(buck: Buck) -> None:
     ]
 
 
-@buck_test(write_invocation_record=True)
-async def test_bxl_analysis_missing_subtarget(buck: Buck) -> None:
+@bsmr_test(write_invocation_record=True)
+async def test_bxl_analysis_missing_subtarget(bsmr: Bsmr) -> None:
     res = await expect_failure(
-        buck.bxl(
+        bsmr.bxl(
             "//analysis.bxl:missing_subtarget_test",
         ),
         stderr_regex="requested sub target named `missing_subtarget` .* is not available",
@@ -55,9 +55,9 @@ async def test_bxl_analysis_missing_subtarget(buck: Buck) -> None:
     assert errors[0]["category"] == "USER"
 
 
-@buck_test()
-async def test_bxl_analysis_unconfigured_target_error(buck: Buck) -> None:
+@bsmr_test()
+async def test_bxl_analysis_unconfigured_target_error(bsmr: Bsmr) -> None:
     await expect_failure(
-        buck.bxl("//analysis.bxl:unconfigured_target_error_test"),
+        bsmr.bxl("//analysis.bxl:unconfigured_target_error_test"),
         stderr_regex="Type of parameter `labels` doesn't match",
     )

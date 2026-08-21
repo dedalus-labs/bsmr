@@ -112,7 +112,7 @@ impl ProviderName {
 )]
 pub enum NonDefaultProvidersName {
     Named(ArcSlice<ProviderName>),
-    // For some flavors from buck1, we can translate them to ProvidersName::Named
+    // For some flavors from legacy, we can translate them to ProvidersName::Named
     // as we know that we can implement them as a subtarget. For many flavored targets,
     // we can't do that. For those cases, we parse them to this "UnrecognizedFlavor" so
     // that we can defer any errors related to us not supporting it.

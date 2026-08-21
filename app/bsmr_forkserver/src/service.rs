@@ -27,7 +27,7 @@ use std::sync::Arc;
 
 use bsmr_common::convert::ProstDurationExt;
 use bsmr_core::logging::LogConfigurationReloadHandle;
-use bsmr_error::BuckErrorContext;
+use bsmr_error::BsmrErrorContext;
 use bsmr_error::internal_error;
 use bsmr_execute_local::DefaultKillProcess;
 use bsmr_execute_local::GatherOutputStatus;
@@ -107,12 +107,12 @@ impl ValidatedCommand {
                 .ok_or_else(|| internal_error!("Missing cwd"))?
                 .path,
         );
-        let cwd = AbsPath::new(Path::new(cwd)).buck_error_context("Invalid cwd")?;
+        let cwd = AbsPath::new(Path::new(cwd)).bsmr_error_context("Invalid cwd")?;
 
         let timeout = timeout
             .map(|t| t.try_into_duration())
             .transpose()
-            .buck_error_context("Invalid timeout")?;
+            .bsmr_error_context("Invalid timeout")?;
 
         let exe = maybe_absolutize_exe(exe, cwd)?;
 
@@ -393,7 +393,7 @@ impl Forkserver for UnixForkserverService {
     ) -> Result<Response<SetLogFilterResponse>, Status> {
         self.log_reload_handle
             .update_log_filter(&req.get_ref().log_filter)
-            .buck_error_context("Error updating forkserver filter")
+            .bsmr_error_context("Error updating forkserver filter")
             .map_err(|e| Status::invalid_argument(format!("{e:#}")))?;
 
         Ok(Response::new(SetLogFilterResponse {}))
@@ -442,12 +442,12 @@ impl MiniperfContainer {
 
         let mut miniperf_writer = opts
             .open(miniperf.as_path())
-            .with_buck_error_context(|| format!("Error opening: `{}`", miniperf.display()))?;
+            .with_bsmr_error_context(|| format!("Error opening: `{}`", miniperf.display()))?;
 
         miniperf_writer
             .write_all(miniperf_bin)
             .and_then(|()| miniperf_writer.flush())
-            .with_buck_error_context(|| {
+            .with_bsmr_error_context(|| {
                 format!("Error writing miniperf to `{}`", miniperf.display())
             })?;
 

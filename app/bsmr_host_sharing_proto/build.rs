@@ -20,8 +20,8 @@ use std::io;
 fn main() -> io::Result<()> {
     let proto_files = &["host_sharing.proto"];
 
-    let buck_proto_srcs = env::var("BUCK_PROTO_SRCS");
-    let includes = if let Ok(path) = &buck_proto_srcs {
+    let bsmr_proto_srcs = env::var("BSMR_PROTO_SRCS");
+    let includes = if let Ok(path) = &bsmr_proto_srcs {
         vec![path.as_str()]
     } else {
         vec!["."]
@@ -31,6 +31,6 @@ fn main() -> io::Result<()> {
     unsafe { builder.setup_protoc() }
         .type_attribute(".", "#[derive(::allocative::Allocative)]")
         .type_attribute(".", "#[derive(::serde::Serialize, ::serde::Deserialize)]")
-        .extern_path(".buck.data", "::bsmr_data")
+        .extern_path(".bsmr.data", "::bsmr_data")
         .compile(proto_files, &includes)
 }

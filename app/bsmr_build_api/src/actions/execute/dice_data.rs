@@ -21,7 +21,7 @@ use std::sync::Arc;
 use async_trait::async_trait;
 use bsmr_core::execution_types::executor_config::CommandExecutorConfig;
 use bsmr_core::fs::artifact_path_resolver::ArtifactFs;
-use bsmr_error::BuckErrorContext;
+use bsmr_error::BsmrErrorContext;
 use bsmr_error::conversion::from_any_with_tag;
 use bsmr_execute::execute::cache_uploader::UploadCache;
 use bsmr_execute::execute::prepared::PreparedCommandExecutor;
@@ -87,7 +87,7 @@ impl DiceHasCommandExecutor for DiceComputations<'_> {
             .data
             .get::<HasCommandExecutorHolder>()
             .map_err(|e| from_any_with_tag(e, bsmr_error::ErrorTag::Tier0))
-            .buck_error_context("CommandExecutorDelegate should be set")?;
+            .bsmr_error_context("CommandExecutorDelegate should be set")?;
         holder.delegate.get_command_executor(&artifact_fs, config)
     }
 }

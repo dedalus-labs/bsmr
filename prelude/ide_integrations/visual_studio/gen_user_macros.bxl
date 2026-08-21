@@ -12,7 +12,7 @@
 # of this source tree. You may select, at your option, one of the
 # above-listed licenses.
 
-load("constants.bxl", "ADDITIONAL_TARGETS", "BY_MODES", "DEBUG_ARGS", "DEBUG_CMD", "DEBUG_ENV", "DEBUG_PWD", "EXTRA_BUCK_OPTIONS", "IMMEDIATE_BUCK_OPTIONS")
+load("constants.bxl", "ADDITIONAL_TARGETS", "BY_MODES", "DEBUG_ARGS", "DEBUG_CMD", "DEBUG_ENV", "DEBUG_PWD", "EXTRA_BSMR_OPTIONS", "IMMEDIATE_BSMR_OPTIONS")
 load("utils.bxl", "get_vs_configuration", "h")
 
 def gen_user_macros(target: bxl.ConfiguredTargetNode, vs_settings: dict, _cli_args, bsmr_root):
@@ -33,15 +33,15 @@ def gen_user_macros(target: bxl.ConfiguredTargetNode, vs_settings: dict, _cli_ar
     )
 
     for mode_file, settings in vs_settings[BY_MODES].items():
-        buck_targets_list = [target.label.raw_target()] + settings[ADDITIONAL_TARGETS]
+        bsmr_targets_list = [target.label.raw_target()] + settings[ADDITIONAL_TARGETS]
         user_macros.append(
             h(
                 "PropertyGroup",
                 [
-                    h("BuckModeFile", mode_file, indent_level = 2),
-                    h("BuckTarget", " ".join([str(t) for t in buck_targets_list]), indent_level = 2),
-                    h(EXTRA_BUCK_OPTIONS, " ".join(settings[EXTRA_BUCK_OPTIONS]), indent_level = 2),
-                    h(IMMEDIATE_BUCK_OPTIONS, " ".join(settings[IMMEDIATE_BUCK_OPTIONS]), indent_level = 2),
+                    h("BsmrModeFile", mode_file, indent_level = 2),
+                    h("BsmrTarget", " ".join([str(t) for t in bsmr_targets_list]), indent_level = 2),
+                    h(EXTRA_BSMR_OPTIONS, " ".join(settings[EXTRA_BSMR_OPTIONS]), indent_level = 2),
+                    h(IMMEDIATE_BSMR_OPTIONS, " ".join(settings[IMMEDIATE_BSMR_OPTIONS]), indent_level = 2),
                     h(DEBUG_CMD, settings[DEBUG_CMD], indent_level = 2),
                     h(DEBUG_ARGS, " ".join(settings[DEBUG_ARGS]), indent_level = 2),
                     h(DEBUG_PWD, settings[DEBUG_PWD], indent_level = 2),

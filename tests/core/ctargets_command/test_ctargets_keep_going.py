@@ -15,8 +15,8 @@
 # pyre-strict
 
 
-from bsmr.tests.e2e_util.api.buck import Buck
-from bsmr.tests.e2e_util.buck_workspace import buck_test
+from bsmr.tests.e2e_util.api.bsmr import Bsmr
+from bsmr.tests.e2e_util.bsmr_workspace import bsmr_test
 from bsmr.tests.e2e_util.helper.golden import (
     golden,
     golden_replace_cfg_hash,
@@ -24,10 +24,10 @@ from bsmr.tests.e2e_util.helper.golden import (
 )
 
 
-@buck_test()
-async def test_ctargets_keep_going_parse_error_json(buck: Buck) -> None:
+@bsmr_test()
+async def test_ctargets_keep_going_parse_error_json(bsmr: Bsmr) -> None:
     """Test that package parse errors appear in JSON output with --keep-going"""
-    result = await buck.ctargets(
+    result = await bsmr.ctargets(
         "//a:target1",
         "//b:any",
         "//a:target2",
@@ -46,10 +46,10 @@ async def test_ctargets_keep_going_parse_error_json(buck: Buck) -> None:
     )
 
 
-@buck_test()
-async def test_ctargets_keep_going_parse_error_plain_text(buck: Buck) -> None:
+@bsmr_test()
+async def test_ctargets_keep_going_parse_error_plain_text(bsmr: Bsmr) -> None:
     """Test that parse errors go to stderr in plain text mode"""
-    result = await buck.ctargets(
+    result = await bsmr.ctargets(
         "//a:target1",
         "//b:any",
         "//a:target2",
@@ -67,10 +67,10 @@ async def test_ctargets_keep_going_parse_error_plain_text(buck: Buck) -> None:
     )
 
 
-@buck_test()
-async def test_ctargets_keep_going_missing_package(buck: Buck) -> None:
+@bsmr_test()
+async def test_ctargets_keep_going_missing_package(bsmr: Bsmr) -> None:
     """Test that missing packages are handled with --keep-going"""
-    result = await buck.ctargets(
+    result = await bsmr.ctargets(
         "//a:target1",
         "//nonexistent_package:target",
         "//a:target2",
@@ -89,10 +89,10 @@ async def test_ctargets_keep_going_missing_package(buck: Buck) -> None:
     )
 
 
-@buck_test()
-async def test_ctargets_keep_going_with_incompatible(buck: Buck) -> None:
+@bsmr_test()
+async def test_ctargets_keep_going_with_incompatible(bsmr: Bsmr) -> None:
     """Test that incompatible targets and errors work together correctly"""
-    result = await buck.ctargets(
+    result = await bsmr.ctargets(
         "//a:target1",
         "//a:macos_only",
         "//b:any",
@@ -111,10 +111,10 @@ async def test_ctargets_keep_going_with_incompatible(buck: Buck) -> None:
     )
 
 
-@buck_test()
-async def test_ctargets_keep_going_single_error(buck: Buck) -> None:
+@bsmr_test()
+async def test_ctargets_keep_going_single_error(bsmr: Bsmr) -> None:
     """Test edge case with single failing target"""
-    result = await buck.ctargets(
+    result = await bsmr.ctargets(
         "//b:does_not_matter",
         "--target-platforms=root//:p",
         "--keep-going",
@@ -131,10 +131,10 @@ async def test_ctargets_keep_going_single_error(buck: Buck) -> None:
     )
 
 
-@buck_test()
-async def test_ctargets_keep_going_multiple_packages_with_errors(buck: Buck) -> None:
+@bsmr_test()
+async def test_ctargets_keep_going_multiple_packages_with_errors(bsmr: Bsmr) -> None:
     """Test errors from multiple different packages"""
-    result = await buck.ctargets(
+    result = await bsmr.ctargets(
         "//a:target1",
         "//b:any",
         "//d:exists",
@@ -154,10 +154,10 @@ async def test_ctargets_keep_going_multiple_packages_with_errors(buck: Buck) -> 
     )
 
 
-@buck_test()
-async def test_ctargets_keep_going_transitive_incompatible(buck: Buck) -> None:
+@bsmr_test()
+async def test_ctargets_keep_going_transitive_incompatible(bsmr: Bsmr) -> None:
     """Test transitive incompatibility"""
-    result = await buck.ctargets(
+    result = await bsmr.ctargets(
         "//a:target1",
         "//c:depends_on_incompatible",
         "//a:target2",
@@ -176,10 +176,10 @@ async def test_ctargets_keep_going_transitive_incompatible(buck: Buck) -> None:
     )
 
 
-@buck_test()
-async def test_ctargets_keep_going_modifier_conflict(buck: Buck) -> None:
+@bsmr_test()
+async def test_ctargets_keep_going_modifier_conflict(bsmr: Bsmr) -> None:
     """Test modifier conflict: pattern modifiers + global modifiers"""
-    result = await buck.ctargets(
+    result = await bsmr.ctargets(
         "//a:target1",
         "//a:target2?root//:linux",
         "--modifier",

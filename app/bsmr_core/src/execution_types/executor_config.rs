@@ -23,8 +23,8 @@ use std::sync::LazyLock;
 use std::time::Duration;
 
 use allocative::Allocative;
-use bsmr_data::NetworkAccess as BuckNetworkAccess;
-use bsmr_hash::BuckHasher;
+use bsmr_data::NetworkAccess as BsmrNetworkAccess;
+use bsmr_hash::BsmrHasher;
 use derive_more::Display;
 use dupe::Dupe;
 use itertools::Itertools;
@@ -288,7 +288,7 @@ struct RemoteExecutorUseCaseData(String);
 
 interner!(
     USE_CASE_INTERNER,
-    BuckHasher,
+    BsmrHasher,
     RemoteExecutorUseCaseData,
     String,
     str
@@ -482,37 +482,37 @@ pub enum ExecutorNetworkAccess {
     Private,
 }
 
-impl From<ExecutorNetworkAccess> for BuckNetworkAccess {
+impl From<ExecutorNetworkAccess> for BsmrNetworkAccess {
     fn from(value: ExecutorNetworkAccess) -> Self {
         match value {
-            ExecutorNetworkAccess::All => BuckNetworkAccess::All,
-            ExecutorNetworkAccess::None => BuckNetworkAccess::None,
-            ExecutorNetworkAccess::Loopback => BuckNetworkAccess::Loopback,
-            ExecutorNetworkAccess::Strict => BuckNetworkAccess::Strict,
-            ExecutorNetworkAccess::Private => BuckNetworkAccess::Private,
+            ExecutorNetworkAccess::All => BsmrNetworkAccess::All,
+            ExecutorNetworkAccess::None => BsmrNetworkAccess::None,
+            ExecutorNetworkAccess::Loopback => BsmrNetworkAccess::Loopback,
+            ExecutorNetworkAccess::Strict => BsmrNetworkAccess::Strict,
+            ExecutorNetworkAccess::Private => BsmrNetworkAccess::Private,
         }
     }
 }
 
-impl From<BuckNetworkAccess> for ExecutorNetworkAccess {
-    fn from(value: BuckNetworkAccess) -> Self {
+impl From<BsmrNetworkAccess> for ExecutorNetworkAccess {
+    fn from(value: BsmrNetworkAccess) -> Self {
         match value {
-            BuckNetworkAccess::All => ExecutorNetworkAccess::All,
-            BuckNetworkAccess::None => ExecutorNetworkAccess::None,
-            BuckNetworkAccess::Loopback => ExecutorNetworkAccess::Loopback,
-            BuckNetworkAccess::Strict => ExecutorNetworkAccess::Strict,
-            BuckNetworkAccess::Private => ExecutorNetworkAccess::Private,
+            BsmrNetworkAccess::All => ExecutorNetworkAccess::All,
+            BsmrNetworkAccess::None => ExecutorNetworkAccess::None,
+            BsmrNetworkAccess::Loopback => ExecutorNetworkAccess::Loopback,
+            BsmrNetworkAccess::Strict => ExecutorNetworkAccess::Strict,
+            BsmrNetworkAccess::Private => ExecutorNetworkAccess::Private,
         }
     }
 }
 
-pub fn parse_network_access(s: &str) -> bsmr_error::Result<BuckNetworkAccess> {
+pub fn parse_network_access(s: &str) -> bsmr_error::Result<BsmrNetworkAccess> {
     match s {
-        "all" => Ok(BuckNetworkAccess::All),
-        "none" => Ok(BuckNetworkAccess::None),
-        "loopback" => Ok(BuckNetworkAccess::Loopback),
-        "strict" => Ok(BuckNetworkAccess::Strict),
-        "private" => Ok(BuckNetworkAccess::Private),
+        "all" => Ok(BsmrNetworkAccess::All),
+        "none" => Ok(BsmrNetworkAccess::None),
+        "loopback" => Ok(BsmrNetworkAccess::Loopback),
+        "strict" => Ok(BsmrNetworkAccess::Strict),
+        "private" => Ok(BsmrNetworkAccess::Private),
         _ => Err(bsmr_error::bsmr_error!(
             bsmr_error::ErrorTag::Input,
             "Invalid network_access value `{}`, expected one of [{}]",
@@ -700,23 +700,23 @@ mod tests {
     fn test_network_access_parse() {
         assert_eq!(
             parse_network_access("all").expect("all should parse"),
-            BuckNetworkAccess::All
+            BsmrNetworkAccess::All
         );
         assert_eq!(
             parse_network_access("none").expect("none should parse"),
-            BuckNetworkAccess::None
+            BsmrNetworkAccess::None
         );
         assert_eq!(
             parse_network_access("loopback").expect("loopback should parse"),
-            BuckNetworkAccess::Loopback
+            BsmrNetworkAccess::Loopback
         );
         assert_eq!(
             parse_network_access("strict").expect("strict should parse"),
-            BuckNetworkAccess::Strict
+            BsmrNetworkAccess::Strict
         );
         assert_eq!(
             parse_network_access("private").expect("private should parse"),
-            BuckNetworkAccess::Private
+            BsmrNetworkAccess::Private
         );
         assert!(
             parse_network_access("default").is_err(),

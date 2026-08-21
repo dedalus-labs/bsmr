@@ -136,7 +136,7 @@ def _filter_flags(clang_flags: List[str]) -> List[str]:  # noqa: C901
                 #          -Xlinker
                 #          -xxxx    structure
                 # This assumes -mllvm and its arg are provided consecutively,
-                # mostly to handle the case where they come from Buck's
+                # mostly to handle the case where they come from Bsmr's
                 # linker_flags.
                 # TODO(T159109840): Generalize this logic to handle -Xlinker
                 #       -mllvm -unrelated-flag -Xlinker -actual-mllvm-arg
@@ -210,7 +210,7 @@ def _cleanup_flags(clang_opt_flags: List[str]) -> List[str]:
 
 
 # Flags that fbcc consumes and does NOT pass through to the compiler.
-# See fbcode/tools/build/buck/wrappers/fbcc.py for the full list.
+# See fbcode/tools/build/bsmr/wrappers/fbcc.py for the full list.
 _FBCC_CONSUMED_PREFIXES = (
     "--log-fbcc",
     "--fbcc-create-external-debug-info=",
@@ -283,8 +283,8 @@ def main(argv: List[str]) -> int:
     #   2. the fbcc wrapper script path
     #   3. the "--cc" arg pointing to the compiler we use
     #   4. (optional) fbcc-consumed args like "--log-fbcc"
-    #   5. (optional) pass-through args like "--target=" (from buckified toolchains)
-    # EXAMPLE: ['--', 'bsmr-out/v2/gen/fbcode/8e3db19fe005003a/tools/build/buck/wrappers/__fbcc__/fbcc', '--cc=fbcode/third-party-buck/platform010/build/llvm-fb/<ver>/bin/clang++', '--log-fbcc=False', '--target=x86_64-redhat-linux-gnu', ...]
+    #   5. (optional) pass-through args like "--target=" (from bsmrified toolchains)
+    # EXAMPLE: ['--', 'bsmr-out/default/gen/fbcode/8e3db19fe005003a/tools/build/bsmr/wrappers/__fbcc__/fbcc', '--cc=fbcode/third-party-bsmr/platform010/build/llvm-fb/<ver>/bin/clang++', '--log-fbcc=False', '--target=x86_64-redhat-linux-gnu', ...]
     clang_cc1_flags = _cleanup_flags(args.opt_args[2:] + clang_opt_flags)
     if clang_cc1_flags is None:
         return EXIT_FAILURE
@@ -311,7 +311,7 @@ def main(argv: List[str]) -> int:
     if dwo is not None:
         # Unfortunately some users manually add `-gno-split-dwarf` to the
         # compiler flags contradicting the --split-dwarf setting. Create an
-        # empty file so buck rules are not missing the file...
+        # empty file so bsmr rules are not missing the file...
         try:
             with open(dwo, "x") as _:
                 pass

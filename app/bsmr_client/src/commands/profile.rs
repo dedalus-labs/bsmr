@@ -24,15 +24,15 @@ use bsmr_cli_proto::TargetProfile;
 use bsmr_cli_proto::profile_request::ProfileOpts;
 use bsmr_cli_proto::target_profile;
 use bsmr_client_ctx::client_ctx::ClientCommandContext;
-use bsmr_client_ctx::common::BuckArgMatches;
+use bsmr_client_ctx::common::BsmrArgMatches;
 use bsmr_client_ctx::common::CommonBuildConfigurationOptions;
 use bsmr_client_ctx::common::CommonCommandOptions;
 use bsmr_client_ctx::common::CommonEventLogOptions;
 use bsmr_client_ctx::common::CommonStarlarkOptions;
-use bsmr_client_ctx::common::profiling::BuckProfileMode;
+use bsmr_client_ctx::common::profiling::BsmrProfileMode;
 use bsmr_client_ctx::common::target_cfg::TargetCfgWithUniverseOptions;
 use bsmr_client_ctx::common::ui::CommonConsoleOptions;
-use bsmr_client_ctx::daemon::client::BuckdClientConnector;
+use bsmr_client_ctx::daemon::client::BsmrdClientConnector;
 use bsmr_client_ctx::daemon::client::NoPartialResultHandler;
 use bsmr_client_ctx::events_ctx::EventsCtx;
 use bsmr_client_ctx::exit_result::ExitResult;
@@ -40,7 +40,7 @@ use bsmr_client_ctx::path_arg::PathArg;
 use bsmr_client_ctx::streaming::StreamingCommand;
 use bsmr_common::argv::Argv;
 use bsmr_common::argv::SanitizedArgv;
-use bsmr_error::BuckErrorContext;
+use bsmr_error::BsmrErrorContext;
 use bsmr_error::bsmr_error;
 use bsmr_error::internal_error;
 
@@ -57,7 +57,7 @@ pub enum ProfileCommand {
 impl ProfileCommand {
     pub fn exec(
         self,
-        matches: BuckArgMatches<'_>,
+        matches: BsmrArgMatches<'_>,
         ctx: ClientCommandContext<'_>,
         events_ctx: &mut EventsCtx,
     ) -> ExitResult {
@@ -88,7 +88,7 @@ pub struct ProfileBxlCommand {
 #[derive(Debug, clap::Parser)]
 pub struct ProfileLoadingCommand {
     #[clap(flatten)]
-    buck_opts: AnalysisOrLoadProfileOptions,
+    bsmr_opts: AnalysisOrLoadProfileOptions,
 
     #[clap(flatten)]
     profile_common_opts: ProfileCommonOptions,
@@ -98,7 +98,7 @@ pub struct ProfileLoadingCommand {
 #[derive(Debug, clap::Parser)]
 pub struct ProfileAnalysisCommand {
     #[clap(flatten)]
-    buck_opts: AnalysisOrLoadProfileOptions,
+    bsmr_opts: AnalysisOrLoadProfileOptions,
 
     #[clap(flatten)]
     profile_common_opts: ProfileCommonOptions,
@@ -136,7 +136,7 @@ struct ProfileCommonOptions {
     ///
     /// `-allocated` means allocated memory, including memory which is later garbage collected.
     #[clap(long, value_enum)]
-    mode: BuckProfileMode,
+    mode: BsmrProfileMode,
 
     #[clap(flatten)]
     target_cfg: TargetCfgWithUniverseOptions,
@@ -165,8 +165,8 @@ impl StreamingCommand for ProfileSubcommand {
 
     async fn exec_impl(
         self,
-        buckd: &mut BuckdClientConnector,
-        matches: BuckArgMatches<'_>,
+        bsmrd: &mut BsmrdClientConnector,
+        matches: BsmrArgMatches<'_>,
         ctx: &mut ClientCommandContext<'_>,
         events_ctx: &mut EventsCtx,
     ) -> ExitResult {
@@ -184,7 +184,7 @@ impl StreamingCommand for ProfileSubcommand {
 
         let profile_opts = match &self.subcommand {
             ProfileCommand::Loading(loading) => ProfileOpts::TargetProfile(TargetProfile {
-                target_patterns: loading.buck_opts.target_patterns.clone(),
+                target_patterns: loading.bsmr_opts.target_patterns.clone(),
                 action: target_profile::Action::Loading as i32,
                 target_cfg: Some(
                     loading
@@ -198,10 +198,10 @@ impl StreamingCommand for ProfileSubcommand {
                     .target_cfg
                     .target_universe
                     .clone(),
-                recursive: loading.buck_opts.recursive,
+                recursive: loading.bsmr_opts.recursive,
             }),
             ProfileCommand::Analysis(analysis) => ProfileOpts::TargetProfile(TargetProfile {
-                target_patterns: analysis.buck_opts.target_patterns.clone(),
+                target_patterns: analysis.bsmr_opts.target_patterns.clone(),
                 action: target_profile::Action::Analysis as i32,
                 target_cfg: Some(
                     analysis
@@ -215,7 +215,7 @@ impl StreamingCommand for ProfileSubcommand {
                     .target_cfg
                     .target_universe
                     .clone(),
-                recursive: analysis.buck_opts.recursive,
+                recursive: analysis.bsmr_opts.recursive,
             }),
             ProfileCommand::Bxl(bxl) => {
                 if !bxl
@@ -245,7 +245,7 @@ impl StreamingCommand for ProfileSubcommand {
             profile_mode: profiler as i32,
         };
 
-        let response = buckd
+        let response = bsmrd
             .with_flushing()
             .profile(
                 request,
@@ -267,7 +267,7 @@ impl StreamingCommand for ProfileSubcommand {
                     bsmr_error::bsmr_error!(bsmr_error::ErrorTag::Input, "Duration is negative")
                 })
             })
-            .buck_error_context("Elapsed is invalid")?;
+            .bsmr_error_context("Elapsed is invalid")?;
 
         bsmr_client_ctx::println!(
             "Starlark {:?} profile has been written to {}",

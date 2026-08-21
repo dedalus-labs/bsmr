@@ -17,15 +17,15 @@
 
 import tempfile
 
-from bsmr.tests.e2e_util.api.buck import Buck
-from bsmr.tests.e2e_util.buck_workspace import buck_test
+from bsmr.tests.e2e_util.api.bsmr import Bsmr
+from bsmr.tests.e2e_util.bsmr_workspace import bsmr_test
 
 
-@buck_test()
-async def test_what_ran_incomplete(buck: Buck) -> None:
-    await buck.build("//:my_rule")
+@bsmr_test()
+async def test_what_ran_incomplete(bsmr: Bsmr) -> None:
+    await bsmr.build("//:my_rule")
 
-    log = (await buck.log("show")).stdout.strip()
+    log = (await bsmr.log("show")).stdout.strip()
     log_file = tempfile.NamedTemporaryFile(
         suffix=".json-lines", mode="w+", delete=False
     )
@@ -41,12 +41,12 @@ async def test_what_ran_incomplete(buck: Buck) -> None:
 
     target = "build\tprelude//:my_rule (<unspecified>)"
 
-    what_ran = await buck.log("what-ran", "--incomplete", log_file.name)
+    what_ran = await bsmr.log("what-ran", "--incomplete", log_file.name)
     assert "Showing commands from:" in what_ran.stderr
     assert target in what_ran.stdout
 
-    what_failed = await buck.log("what-failed", log_file.name)
+    what_failed = await bsmr.log("what-failed", log_file.name)
     assert target not in what_failed.stdout
 
-    what_ran = await buck.log("what-ran", "--show-std-err", log_file.name)
+    what_ran = await bsmr.log("what-ran", "--show-std-err", log_file.name)
     assert "<command did not finish executing>" in what_ran.stdout

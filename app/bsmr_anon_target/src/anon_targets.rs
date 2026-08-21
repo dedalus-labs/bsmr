@@ -66,14 +66,14 @@ use bsmr_core::pattern::pattern_type::TargetPatternExtra;
 use bsmr_core::target::label::label::TargetLabel;
 use bsmr_core::target::name::TargetNameRef;
 use bsmr_core::unsafe_send_future::UnsafeSendFuture;
-use bsmr_error::BuckErrorContext;
+use bsmr_error::BsmrErrorContext;
 use bsmr_error::internal_error;
 use bsmr_events::dispatch::async_record_root_spans;
 use bsmr_events::dispatch::get_dispatcher;
 use bsmr_events::dispatch::span_async;
 use bsmr_execute::digest_config::HasDigestConfig;
 use bsmr_fs::paths::forward_rel_path::ForwardRelativePath;
-use bsmr_interpreter::factory::BuckStarlarkModule;
+use bsmr_interpreter::factory::BsmrStarlarkModule;
 use bsmr_interpreter::factory::StarlarkEvaluatorProvider;
 use bsmr_interpreter::print_handler::EventDispatcherPrintHandler;
 use bsmr_interpreter::soft_error::BsmrStarlarkSoftErrorHandler;
@@ -269,7 +269,7 @@ impl AnonTargetKey {
                 attrs.insert(
                     k.to_owned(),
                     Self::coerce_to_anon_target_attr(attr.coercer(), v, &anon_attr_ctx)
-                        .with_buck_error_context(|| format!("Error coercing attribute `{k}`"))?,
+                        .with_bsmr_error_context(|| format!("Error coercing attribute `{k}`"))?,
                 );
             }
         }
@@ -347,7 +347,7 @@ impl AnonTargetKey {
             )
         };
         let lex =
-            lex_target_pattern::<TargetPatternExtra>(x, false).with_buck_error_context(err)?;
+            lex_target_pattern::<TargetPatternExtra>(x, false).with_bsmr_error_context(err)?;
         // TODO(nga): `CellName` contract requires it refers to declared cell name.
         //   This `unchecked_new` violates it.
         let cell =
@@ -510,7 +510,7 @@ impl AnonTargetKey {
         let eval_kind = self.0.dupe().eval_kind();
         let provider = StarlarkEvaluatorProvider::new(dice, eval_kind).await?;
 
-        BuckStarlarkModule::with_profiling_async(async move |env| {
+        BsmrStarlarkModule::with_profiling_async(async move |env| {
             let print = EventDispatcherPrintHandler(get_dispatcher());
             let mut reentrant_eval =
                 provider.make_reentrant_evaluator(&env, cancellation.into())?;

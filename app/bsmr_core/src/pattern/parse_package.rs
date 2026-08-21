@@ -14,7 +14,7 @@
  * above-listed licenses.
  */
 
-use bsmr_error::BuckErrorContext;
+use bsmr_error::BsmrErrorContext;
 use bsmr_fs::paths::forward_rel_path::ForwardRelativePath;
 
 use crate::cells::CellAliasResolver;
@@ -40,7 +40,7 @@ pub fn parse_package(
 
     let cell = cell_alias_resolver.resolve(cell)?;
     let cell_relative =
-        ForwardRelativePath::new(cell_relative).buck_error_context("Parsing package argument")?;
+        ForwardRelativePath::new(cell_relative).bsmr_error_context("Parsing package argument")?;
     let cell_relative = CellRelativePath::new(cell_relative);
 
     PackageLabel::new(cell, cell_relative)

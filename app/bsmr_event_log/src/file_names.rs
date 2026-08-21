@@ -16,7 +16,7 @@
 
 use bsmr_common::invocation_paths::InvocationPaths;
 use bsmr_error::internal_error;
-use bsmr_events::BuckEvent;
+use bsmr_events::BsmrEvent;
 use bsmr_fs::fs_util;
 use bsmr_fs::paths::abs_norm_path::AbsNormPath;
 use bsmr_fs::paths::abs_norm_path::AbsNormPathBuf;
@@ -32,7 +32,7 @@ use crate::utils::Encoding;
 use crate::utils::EventLogErrors;
 
 pub(crate) fn get_logfile_name(
-    event: &BuckEvent,
+    event: &BsmrEvent,
     encoding: Encoding,
     command_name: &str,
 ) -> bsmr_error::Result<FileNameBuf> {
@@ -174,7 +174,7 @@ mod tests {
         // Create 5 log files directly in logdir with incrementing modification times
         let mut log_paths = Vec::new();
         for i in 0..5 {
-            let log_path = logdir_path.join(format!("buck-log-{}.zst", i));
+            let log_path = logdir_path.join(format!("bsmr-log-{}.zst", i));
             let mut file = File::create(&log_path)?;
             file.write_all(format!("log content {}", i).as_bytes())?;
 

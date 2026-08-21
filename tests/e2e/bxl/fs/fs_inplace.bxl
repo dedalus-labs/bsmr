@@ -23,7 +23,7 @@ def _impl(ctx):
 
     # test fbcode as well
     asserts.true(ctx.fs.exists("root//"))
-    asserts.false(ctx.fs.exists("upstream//buck100"))
+    asserts.false(ctx.fs.exists("upstream//legacy00"))
     asserts.true(ctx.fs.is_dir("root//"))
     asserts.false(ctx.fs.is_file("root//"))
 

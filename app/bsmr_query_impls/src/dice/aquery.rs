@@ -37,7 +37,7 @@ use bsmr_core::configuration::compatibility::MaybeCompatible;
 use bsmr_core::fs::artifact_path_resolver::ArtifactFs;
 use bsmr_core::pattern::pattern::ParsedPattern;
 use bsmr_core::provider::label::ConfiguredProvidersLabel;
-use bsmr_hash::BuckDashMap;
+use bsmr_hash::BsmrDashMap;
 use bsmr_node::target_calculation::ConfiguredTargetCalculation;
 use bsmr_query::query::syntax::simple::eval::set::TargetSet;
 use dashmap::mapref::entry::Entry;
@@ -68,13 +68,13 @@ enum ActionQueryError {
 
 /// A simple concurrent map with a `get_or_compute()` function
 struct NodeCache<K: Hash + Eq + PartialEq + Dupe, V: Dupe> {
-    map: BuckDashMap<K, Shared<oneshot::Receiver<V>>>,
+    map: BsmrDashMap<K, Shared<oneshot::Receiver<V>>>,
 }
 
 impl<K: Hash + Eq + PartialEq + Dupe, V: Dupe> NodeCache<K, V> {
     fn new() -> Self {
         Self {
-            map: BuckDashMap::default(),
+            map: BsmrDashMap::default(),
         }
     }
 

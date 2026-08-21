@@ -18,9 +18,9 @@ use std::fmt;
 use std::io::Write;
 use std::time::Duration;
 
-use bsmr_client_ctx::client_ctx::BuckSubcommand;
+use bsmr_client_ctx::client_ctx::BsmrSubcommand;
 use bsmr_client_ctx::client_ctx::ClientCommandContext;
-use bsmr_client_ctx::common::BuckArgMatches;
+use bsmr_client_ctx::common::BsmrArgMatches;
 use bsmr_client_ctx::event_log_options::EventLogOptions;
 use bsmr_client_ctx::events_ctx::EventsCtx;
 use bsmr_client_ctx::exit_result::ClientIoError;
@@ -59,12 +59,12 @@ pub struct CriticalPathCommand {
     format: LogCommandOutputFormat,
 }
 
-impl BuckSubcommand for CriticalPathCommand {
+impl BsmrSubcommand for CriticalPathCommand {
     const COMMAND_NAME: &'static str = "log-critical-path";
 
     async fn exec_impl(
         self,
-        _matches: BuckArgMatches<'_>,
+        _matches: BsmrArgMatches<'_>,
         ctx: ClientCommandContext<'_>,
         _events_ctx: &mut EventsCtx,
     ) -> ExitResult {
@@ -100,12 +100,12 @@ pub struct SlowestPathCommand {
     format: LogCommandOutputFormat,
 }
 
-impl BuckSubcommand for SlowestPathCommand {
+impl BsmrSubcommand for SlowestPathCommand {
     const COMMAND_NAME: &'static str = "log-slowest-path";
 
     async fn exec_impl(
         self,
-        _matches: BuckArgMatches<'_>,
+        _matches: BsmrArgMatches<'_>,
         ctx: ClientCommandContext<'_>,
         _events_ctx: &mut EventsCtx,
     ) -> ExitResult {
@@ -143,7 +143,7 @@ async fn log_critical_path_command_exec(
 
     while let Some(event) = events.try_next().await? {
         if let StreamValue::Event(event) = event
-            && let Some(bsmr_data::buck_event::Data::Instant(instant)) = event.data
+            && let Some(bsmr_data::bsmr_event::Data::Instant(instant)) = event.data
             && let Some(bsmr_data::instant_event::Data::BuildGraphInfo(build_graph)) = instant.data
         {
             match path_kind {

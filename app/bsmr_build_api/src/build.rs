@@ -552,7 +552,7 @@ struct BuildDeadlineExpired;
 pub struct BuildConfiguredLabelOptions {
     pub skippable: bool,
     pub graph_properties: GraphPropertiesOptions,
-    /// Resolve the target's run command line (`run_args`). Set only by `buck run`;
+    /// Resolve the target's run command line (`run_args`). Set only by `bsmr run`;
     pub return_run_args: bool,
 }
 
@@ -672,7 +672,7 @@ async fn build_configured_label_inner<'a>(
     }
 
     if !opts.skippable && outputs.is_empty() {
-        let docs = "https://buck2.build/docs/users/faq/common_issues/#why-does-my-target-not-have-any-outputs"; // @oss-enable
+        let docs = "https://oss.dedaluslabs.ai/bsmr/users/faq/common_issues/#why-does-my-target-not-have-any-outputs"; // @oss-enable
         // @oss-disable: let docs = "https://www.internalfb.com/intern/staticdocs/bsmr/docs/users/faq/common_issues/#why-does-my-target-not-have-any-outputs";
         console_message(format!(
             "Target {} does not have any outputs. This means the rule did not define any outputs. See {} for more information",

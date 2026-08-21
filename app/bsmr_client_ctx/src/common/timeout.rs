@@ -14,7 +14,7 @@
  * above-listed licenses.
  */
 
-use bsmr_error::BuckErrorContext as _;
+use bsmr_error::BsmrErrorContext as _;
 
 /// Defines common options for options with timeouts
 #[derive(Debug, clap::Parser)]
@@ -50,6 +50,6 @@ impl CommonTimeoutOptions {
                 t.try_into()
             })
             .transpose()
-            .buck_error_context("Invalid `timeout`")
+            .bsmr_error_context("Invalid `timeout`")
     }
 }

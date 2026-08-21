@@ -19,7 +19,7 @@ use std::time::Instant;
 use std::time::SystemTime;
 
 use bsmr_events::daemon_id::DaemonId;
-use bsmr_hash::StdBuckHashMap;
+use bsmr_hash::StdBsmrHashMap;
 use bsmr_wrapper_common::invocation_id::TraceId;
 use tokio::sync::mpsc;
 
@@ -28,7 +28,7 @@ use crate::memory_tracker::MemoryReading;
 use crate::scheduler::Scene;
 
 pub(crate) struct EventSenderState {
-    metadata: StdBuckHashMap<String, String>,
+    metadata: StdBsmrHashMap<String, String>,
     estimated_memory_cap: u64,
     memory_reading: MemoryReading,
     last_scheduled_event_time: Option<Instant>,
@@ -138,7 +138,7 @@ impl EventSenderState {
 #[derive(Clone)]
 pub(crate) struct ResourceControlEventMostly {
     time_event_generated: SystemTime,
-    metadata: StdBuckHashMap<String, String>,
+    metadata: StdBsmrHashMap<String, String>,
     kind: bsmr_data::ResourceControlEventKind,
 
     memory_reading: MemoryReading,

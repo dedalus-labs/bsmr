@@ -19,7 +19,7 @@ use std::pin::Pin;
 use std::task::Context;
 use std::task::Poll;
 
-use bsmr_error::BuckErrorContext as _;
+use bsmr_error::BsmrErrorContext as _;
 use futures::future;
 use pin_project::pin_project;
 use tokio::io::AsyncRead;
@@ -102,7 +102,7 @@ where
     // NOTE: The uri here is only used to populate the requests we send. We don't actually connect
     // anywhere since we already have an I/O channel on hand.
     let channel = Endpoint::try_from(format!("http://{name}.invalid"))
-        .buck_error_context("Invalid endpoint")?
+        .bsmr_error_context("Invalid endpoint")?
         .connect_with_connector(service_fn(move |_: Uri| {
             let io = io
                 .take()
@@ -112,7 +112,7 @@ where
             future::ready(io)
         }))
         .await
-        .buck_error_context("Failed to create channel")?;
+        .bsmr_error_context("Failed to create channel")?;
 
     Ok(channel)
 }

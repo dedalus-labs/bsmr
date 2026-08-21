@@ -18,7 +18,7 @@
 
 use std::iter;
 
-use bsmr_hash::BuckIndexMap;
+use bsmr_hash::BsmrIndexMap;
 use dupe::Dupe;
 use itertools::Either;
 
@@ -28,7 +28,7 @@ use crate::query::syntax::simple::eval::values::QueryEvaluationValue;
 
 /// Used to represent the results for a "multi-query" (one that contains a "%s" and potentially is applied against multiple literals).
 pub struct MultiQueryResult<T: QueryTarget>(
-    pub BuckIndexMap<String, bsmr_error::Result<QueryEvaluationValue<T>>>,
+    pub BsmrIndexMap<String, bsmr_error::Result<QueryEvaluationValue<T>>>,
 );
 
 impl<T: QueryTarget> MultiQueryResult<T> {

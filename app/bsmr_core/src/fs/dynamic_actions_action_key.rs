@@ -15,7 +15,7 @@
  */
 
 use allocative::Allocative;
-use bsmr_error::BuckErrorContext;
+use bsmr_error::BsmrErrorContext;
 use bsmr_fs::paths::file_name::FileName;
 use bsmr_util::arc_str::ArcS;
 use dupe::Dupe;

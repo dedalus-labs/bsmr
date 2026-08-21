@@ -4,7 +4,7 @@
 # SPDX-License-Identifier: Apache-2.0
 # ===----------------------------------------------------------------------===
 
-#compdef bsmr buck
+#compdef bsmr bsmr
 # Copyright (c) Meta Platforms, Inc. and affiliates.
 #
 # This source code is licensed under both the MIT license found in the
@@ -20,7 +20,7 @@
 
 compdef -d bsmr
 
-_BUCK_COMPLETE_BIN="${_BUCK_COMPLETE_BIN:-bsmr}"
+_BSMR_COMPLETE_BIN="${_BSMR_COMPLETE_BIN:-bsmr}"
 
 __bsmr_takes_target()
 {
@@ -58,7 +58,7 @@ __bsmr_add_target_completions()
     local completions=()
     while read -r; do
         completions+="$REPLY"
-    done < <("${_BUCK_COMPLETE_BIN[@]}" complete --target="$1" 2>/dev/null)
+    done < <("${_BSMR_COMPLETE_BIN[@]}" complete --target="$1" 2>/dev/null)
 
     # Note: `-J targets` is needed as otherwise `-o nosort` is silently ignored
     compadd -S '' -J targets -o nosort -- "${completions[@]}"
@@ -118,4 +118,4 @@ __bsmr_fix()
     compstate[insert]="automenu-unambiguous"
 }
 
-compdef __bsmr_fix buck bsmr
+compdef __bsmr_fix bsmr bsmr

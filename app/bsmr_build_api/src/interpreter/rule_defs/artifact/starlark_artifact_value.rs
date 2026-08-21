@@ -22,7 +22,7 @@ use allocative::Allocative;
 use bsmr_artifact::artifact::artifact_type::Artifact;
 use bsmr_core::fs::project::ProjectRoot;
 use bsmr_core::fs::project_rel_path::ProjectRelativePathBuf;
-use bsmr_error::BuckErrorContext;
+use bsmr_error::BsmrErrorContext;
 use bsmr_error::ErrorTag;
 use bsmr_fs::error::IoResultExt;
 use bsmr_fs::fs_util;
@@ -188,7 +188,7 @@ fn artifact_value_methods(builder: &mut MethodsBuilder) {
             .tag(ErrorTag::StarlarkValue)?;
         let reader = BufReader::new(file);
         let value: serde_json::Value = serde_json::from_reader(reader)
-            .with_buck_error_context(|| format!("Error parsing JSON file `{path}`"))?;
+            .with_bsmr_error_context(|| format!("Error parsing JSON file `{path}`"))?;
         json_convert(value, heap)
     }
 }

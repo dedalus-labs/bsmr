@@ -15,11 +15,11 @@
 # pyre-strict
 
 
-from bsmr.tests.e2e_util.api.buck import Buck
-from bsmr.tests.e2e_util.buck_workspace import buck_test
+from bsmr.tests.e2e_util.api.bsmr import Bsmr
+from bsmr.tests.e2e_util.bsmr_workspace import bsmr_test
 
 
-@buck_test()
-async def test_oneof_concat(buck: Buck) -> None:
-    res = await buck.cquery("//:foo")
+@bsmr_test()
+async def test_oneof_concat(bsmr: Bsmr) -> None:
+    res = await bsmr.cquery("//:foo")
     assert res.stdout.startswith("root//:foo ")

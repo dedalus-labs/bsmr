@@ -20,7 +20,7 @@
 
 complete -r bsmr
 
-_BUCK_COMPLETE_BIN="${_BUCK_COMPLETE_BIN:-bsmr}"
+_BSMR_COMPLETE_BIN="${_BSMR_COMPLETE_BIN:-bsmr}"
 
 __bsmr_takes_target()
 {
@@ -66,7 +66,7 @@ __bsmr_add_target_completions()
         else
             completions+=("$REPLY")
         fi
-    done < <("${_BUCK_COMPLETE_BIN[@]}" complete --target="$1" 2>/dev/null)
+    done < <("${_BSMR_COMPLETE_BIN[@]}" complete --target="$1" 2>/dev/null)
     COMPREPLY=("${completions[@]}")
 }
 
@@ -122,9 +122,9 @@ __bsmr_fix()
 }
 
 if [[ "${BASH_VERSINFO[0]}" -eq 4 && "${BASH_VERSINFO[1]}" -ge 4 || "${BASH_VERSINFO[0]}" -gt 4 ]]; then
-    complete -F __bsmr_fix -o nosort -o bashdefault -o default -o nospace buck
+    complete -F __bsmr_fix -o nosort -o bashdefault -o default -o nospace bsmr
     complete -F __bsmr_fix -o nosort -o bashdefault -o default -o nospace bsmr
 else
-    complete -F __bsmr_fix -o bashdefault -o default -o nospace buck
+    complete -F __bsmr_fix -o bashdefault -o default -o nospace bsmr
     complete -F __bsmr_fix -o bashdefault -o default -o nospace bsmr
 fi

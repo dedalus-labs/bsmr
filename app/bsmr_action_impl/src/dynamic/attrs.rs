@@ -23,7 +23,7 @@ use bsmr_build_api::interpreter::rule_defs::artifact::starlark_output_artifact::
 use bsmr_build_api::interpreter::rule_defs::artifact::unpack_artifact::UnpackNonPromiseInputArtifact;
 use bsmr_core::deferred::dynamic::DynamicLambdaResultsKey;
 use bsmr_error::bsmr_error;
-use bsmr_hash::BuckIndexSet;
+use bsmr_hash::BsmrIndexSet;
 use dupe::Dupe;
 use starlark::StarlarkPagable;
 use starlark::collections::SmallSet;
@@ -208,7 +208,7 @@ impl<'v> DynamicAttrValue<Value<'v>> {
 pub fn dedupe_output_artifacts<'v>(
     v: Vec<ValueTyped<'v, StarlarkOutputArtifact<'v>>>,
 ) -> Box<[ValueTyped<'v, StarlarkOutputArtifact<'v>>]> {
-    let mut found = BuckIndexSet::default();
+    let mut found = BsmrIndexSet::default();
     let mut outputs = Vec::new();
     for i in v {
         if found.insert(i.artifact()) {
@@ -239,7 +239,7 @@ impl<'v> DynamicAttrValues<Value<'v>> {
     }
 
     pub(crate) fn artifact_values(&self) -> Box<[Artifact]> {
-        let mut artifact_values = BuckIndexSet::default();
+        let mut artifact_values = BsmrIndexSet::default();
         self.for_each_node(&mut |value| {
             if let DynamicAttrValue::ArtifactValue(artifact) = value {
                 artifact_values.insert(artifact.dupe());

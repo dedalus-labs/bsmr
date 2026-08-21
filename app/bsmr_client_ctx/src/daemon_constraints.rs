@@ -19,9 +19,9 @@ use bsmr_core::bsmr_env;
 use bsmr_core::ci::ci_identifiers;
 use bsmr_events::daemon_id::DaemonId;
 
-use crate::version::BuckVersion;
+use crate::version::BsmrVersion;
 
-/// Checks an environment variable to see if we were spawned by a buck daemon and if so, returns the
+/// Checks an environment variable to see if we were spawned by a bsmr daemon and if so, returns the
 /// UUID of that daemon.
 ///
 /// This is used to detect nested invocations, but returning `Some` does not guarantee that this is
@@ -49,7 +49,7 @@ pub fn gen_daemon_constraints(
 }
 
 pub fn version() -> bsmr_error::Result<String> {
-    Ok(BuckVersion::get_unique_id()?.to_owned())
+    Ok(BsmrVersion::get_unique_id()?.to_owned())
 }
 
 /// Used to make sure that daemons are restarted between CI jobs if they don't properly clean up

@@ -1,0 +1,36 @@
+# ===----------------------------------------------------------------------===
+# Upstream-Source: facebook/buck2@1560aca2002865cd73d7cafb22c705cfb640b2bc
+# Modifications Copyright (c) 2026 Dedalus Labs, Inc. and its contributors
+# SPDX-License-Identifier: Apache-2.0
+# ===----------------------------------------------------------------------===
+
+load("@prelude//toolchains/android/tools:build_rules.bzl", "SIGNED_JAR_BLOCKLIST", "bsmr_java_binary", "bsmr_java_library")
+load("@prelude//utils:source_listing.bzl", "source_listing")
+
+oncall("android_devxx")
+
+source_listing()
+
+bsmr_java_library(
+    name = "buildinfo",
+    srcs = glob(["*.java"]),
+    visibility = [
+        "prelude//toolchains/android/src/com/dedalus/bsmr/android/...",
+        "prelude//toolchains/android/test/com/dedalus/bsmr/...",
+    ],
+    deps = [
+        "prelude//toolchains/android/third-party:args4j",
+        "prelude//toolchains/android/third-party:infer-annotations",
+        "prelude//toolchains/android/third-party:kotlin-annotations",
+    ],
+)
+
+bsmr_java_binary(
+    name = "build_info_generator_binary",
+    blocklist = SIGNED_JAR_BLOCKLIST,
+    main_class = "com.dedalus.bsmr.android.buildinfo.BuildInfoGeneratorExecutableMain",
+    visibility = ["PUBLIC"],
+    deps = [
+        ":buildinfo",
+    ],
+)

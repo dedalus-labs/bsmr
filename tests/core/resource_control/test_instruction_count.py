@@ -18,8 +18,8 @@
 import os
 from typing import Any, Dict, List
 
-from bsmr.tests.e2e_util.api.buck import Buck
-from bsmr.tests.e2e_util.buck_workspace import buck_test
+from bsmr.tests.e2e_util.api.bsmr import Bsmr
+from bsmr.tests.e2e_util.bsmr_workspace import bsmr_test
 from bsmr.tests.e2e_util.helper.utils import filter_events, random_string
 
 
@@ -30,9 +30,9 @@ def helper_bin_flags() -> List[str]:
     ]
 
 
-@buck_test(skip_for_os=["windows", "darwin"], disable_daemon_cgroup=False)
-async def test_instruction_count_disabled(buck: Buck) -> None:
-    await buck.build(
+@bsmr_test(skip_for_os=["windows", "darwin"], disable_daemon_cgroup=False)
+async def test_instruction_count_disabled(bsmr: Bsmr) -> None:
+    await bsmr.build(
         "root//:three_billion_instructions",
         "-c",
         "bsmr.miniperf2=false",
@@ -44,7 +44,7 @@ async def test_instruction_count_disabled(buck: Buck) -> None:
     )
 
     events = await filter_events(
-        buck,
+        bsmr,
         "Event",
         "data",
         "SpanEnd",
@@ -57,9 +57,9 @@ async def test_instruction_count_disabled(buck: Buck) -> None:
             assert c["details"]["metadata"].get("execution_stats") is None
 
 
-async def get_matching_details(buck: Buck) -> Dict[str, Any]:
+async def get_matching_details(bsmr: Bsmr) -> Dict[str, Any]:
     events = await filter_events(
-        buck,
+        bsmr,
         "Event",
         "data",
         "SpanEnd",
@@ -73,9 +73,9 @@ async def get_matching_details(buck: Buck) -> Dict[str, Any]:
     raise AssertionError("did not find the expected target")
 
 
-@buck_test(skip_for_os=["windows", "darwin"], disable_daemon_cgroup=False)
-async def test_instruction_count_enabled(buck: Buck) -> None:
-    await buck.build(
+@bsmr_test(skip_for_os=["windows", "darwin"], disable_daemon_cgroup=False)
+async def test_instruction_count_enabled(bsmr: Bsmr) -> None:
+    await bsmr.build(
         "root//:three_billion_instructions",
         "-c",
         "bsmr.miniperf2=true",
@@ -86,7 +86,7 @@ async def test_instruction_count_enabled(buck: Buck) -> None:
         *helper_bin_flags(),
     )
 
-    details = await get_matching_details(buck)
+    details = await get_matching_details(bsmr)
     assert "OmittedLocalCommand" in details["command_kind"]["command"]
 
     # Check that we are within 20%
@@ -96,9 +96,9 @@ async def test_instruction_count_enabled(buck: Buck) -> None:
     assert instruction_count < 3300000000
 
 
-@buck_test(skip_for_os=["windows", "darwin"], disable_daemon_cgroup=False)
-async def test_instruction_count_remote(buck: Buck) -> None:
-    await buck.build(
+@bsmr_test(skip_for_os=["windows", "darwin"], disable_daemon_cgroup=False)
+async def test_instruction_count_remote(bsmr: Bsmr) -> None:
+    await bsmr.build(
         "root//:three_billion_instructions",
         "--no-remote-cache",
         "--write-to-cache-anyway",
@@ -106,7 +106,7 @@ async def test_instruction_count_remote(buck: Buck) -> None:
         *helper_bin_flags(),
     )
 
-    details = await get_matching_details(buck)
+    details = await get_matching_details(bsmr)
     assert not details["command_kind"]["command"]["RemoteCommand"]["cache_hit"]
 
     # Check that we are within 10%
@@ -116,14 +116,14 @@ async def test_instruction_count_remote(buck: Buck) -> None:
 
     # Check we also get it on a cache hit.
 
-    await buck.kill()
-    await buck.build(
+    await bsmr.kill()
+    await bsmr.build(
         "root//:three_billion_instructions",
         "--prefer-remote",
         *helper_bin_flags(),
     )
 
-    details = await get_matching_details(buck)
+    details = await get_matching_details(bsmr)
     assert details["command_kind"]["command"]["RemoteCommand"]["cache_hit"]
 
     # Check that we are within 10%
@@ -132,7 +132,7 @@ async def test_instruction_count_remote(buck: Buck) -> None:
     assert instruction_count < 3150000000
 
 
-@buck_test()
-def test_instruction_count_nop(buck: Buck) -> None:
+@bsmr_test()
+def test_instruction_count_nop(bsmr: Bsmr) -> None:
     # Pytest gets upset if we have no windows or mac tests in this file
     pass

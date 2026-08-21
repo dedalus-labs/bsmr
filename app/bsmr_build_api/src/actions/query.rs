@@ -37,7 +37,7 @@ use bsmr_core::package::PackageLabel;
 use bsmr_core::provider::label::ConfiguredProvidersLabel;
 use bsmr_execute::artifact::fs::ExecutorFs;
 use bsmr_fs::paths::forward_rel_path::ForwardRelativePathBuf;
-use bsmr_hash::BuckIndexMap;
+use bsmr_hash::BsmrIndexMap;
 use bsmr_node::attrs::configured_attr::ConfiguredAttr;
 use bsmr_query::query::environment::QueryTarget;
 use bsmr_query::query::graph::node::LabeledNode;
@@ -242,7 +242,7 @@ pub struct ActionData {
 }
 
 impl ActionData {
-    fn attrs(&self) -> BuckIndexMap<String, String> {
+    fn attrs(&self) -> BsmrIndexMap<String, String> {
         let mut attrs = self.action.action().aquery_attributes(
             &ExecutorFs::new(
                 &self.fs,
@@ -253,18 +253,18 @@ impl ActionData {
             },
         );
         attrs.insert(
-            "buck.executor_configuration".to_owned(),
+            "bsmr.executor_configuration".to_owned(),
             self.action.execution_config().executor.to_string(),
         );
         attrs.insert(
-            "buck.all_outputs_are_content_based".to_owned(),
+            "bsmr.all_outputs_are_content_based".to_owned(),
             self.action
                 .action()
                 .all_outputs_are_content_based()
                 .to_string(),
         );
         attrs.insert(
-            "buck.all_inputs_are_eligible_for_dedupe".to_owned(),
+            "bsmr.all_inputs_are_eligible_for_dedupe".to_owned(),
             self.action
                 .action()
                 .all_inputs_are_eligible_for_dedupe()
@@ -274,7 +274,7 @@ impl ActionData {
         let all_ineligible = self.action.action().all_ineligible_for_dedup_inputs();
         if !all_ineligible.is_empty() {
             attrs.insert(
-                "buck.all_ineligible_for_dedup_inputs".to_owned(),
+                "bsmr.all_ineligible_for_dedup_inputs".to_owned(),
                 all_ineligible.join(", "),
             );
         }

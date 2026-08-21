@@ -1,3 +1,9 @@
+# ===----------------------------------------------------------------------===
+# Upstream-Source: facebook/buck2@1560aca2002865cd73d7cafb22c705cfb640b2bc
+# Modifications Copyright (c) 2026 Dedalus Labs, Inc. and its contributors
+# SPDX-License-Identifier: Apache-2.0
+# ===----------------------------------------------------------------------===
+
 # Copyright (c) Meta Platforms, Inc. and affiliates.
 #
 # This source code is dual-licensed under either the MIT license found in the
@@ -56,7 +62,7 @@ def android_apk_impl(ctx: AnalysisContext) -> list[Provider]:
         compress_resources_dot_arsc = ctx.attrs.resource_compression == "enabled" or ctx.attrs.resource_compression == "enabled_with_strings_as_assets",
         validation_deps_outputs = get_validation_deps_outputs(ctx) + validation_outputs,
         packaging_options = ctx.attrs.packaging_options,
-        # Exclude BUCK_BUILD_ID from assets/BuildInfo.json for release builds.
+        # Exclude BSMR_BUILD_ID from assets/BuildInfo.json for release builds.
         include_build_info_file = ctx.attrs.include_build_info_file and ctx.attrs.package_type != "release",
     )
 
@@ -68,7 +74,7 @@ def android_apk_impl(ctx: AnalysisContext) -> list[Provider]:
         )
         default_output = ctx.actions.write(
             "{}_exopackage_apk_warning".format(ctx.label.name),
-            "exopackage apks should not be used externally, try buck install or building with exopackage disabled\n",
+            "exopackage apks should not be used externally, try bsmr install or building with exopackage disabled\n",
             has_content_based_path = False,
         )
         sub_targets["exo_apk"] = [DefaultInfo(default_output = output_apk)]  # Used by tests
@@ -230,7 +236,7 @@ def build_apk(
     ])
 
     # Invoke the toolchain's build-info generator from this apk packaging action (which already has
-    # every APK input) so the baked BUCK_BUILD_ID refreshes when the APK content changes and
+    # every APK input) so the baked BSMR_BUILD_ID refreshes when the APK content changes and
     # cache-hits otherwise -- no separate action. Its run command is multi-token (java -jar ...), so
     # pass it via an argfile the apk-builder reads and execs.
     if include_build_info_file:

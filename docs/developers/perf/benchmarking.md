@@ -54,8 +54,8 @@ absh -a 'bsmr ...A...' -b 'bsmr ...B...' -i -r -m -n 30
 
 Always pass `-i` and `-r`.
 
-`-m` is a key reason to prefer `--no-buckd` for memory benchmarks
-(see [basics.md](basics.md#the-process-model)). With `--no-buckd` the
+`-m` is a key reason to prefer `--no-bsmrd` for memory benchmarks
+(see [basics.md](basics.md#the-process-model)). With `--no-bsmrd` the
 spawned process *is* the daemon doing the work, so `-m` captures the
 meaningful peak RSS directly. With daemon mode `-m` only sees the thin
 gRPC client; for real daemon RSS you'd need
@@ -66,7 +66,7 @@ gRPC client; for real daemon RSS you'd need
 
 When `A` and `B` are different `bsmr` binaries:
 
-- For `--no-buckd` benchmarks (the typical case for wall-time and peak
+- For `--no-bsmrd` benchmarks (the typical case for wall-time and peak
   RSS), each invocation is fresh — no daemon state to manage.
 - For daemon-mode benchmarks (needed for retained memory), alternating
   binaries between iterations naturally kills and restarts the daemon
@@ -81,8 +81,8 @@ runs in another.
 
 | Question                            | Metric                                                              |
 |-------------------------------------|---------------------------------------------------------------------|
-| "How long does bsmr take?"         | Wall time (`absh` reports it; `/usr/bin/time` works for `--no-buckd`) |
-| "How much memory at peak?"          | `--no-buckd` + absh `-m`, or `VmHWM` from daemon `/proc` in daemon mode |
+| "How long does bsmr take?"         | Wall time (`absh` reports it; `/usr/bin/time` works for `--no-bsmrd`) |
+| "How much memory at peak?"          | `--no-bsmrd` + absh `-m`, or `VmHWM` from daemon `/proc` in daemon mode |
 | "How much is the daemon retaining?" | `allocator-stats.allocated`, daemon mode only                       |
 | "How much CPU?"                     | User+sys time across daemon + client + forkserver                   |
 | "Is bsmr doing more I/O?"          | Page faults / `/proc/<pid>/io`                                      |

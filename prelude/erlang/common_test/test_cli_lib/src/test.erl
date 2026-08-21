@@ -21,7 +21,7 @@ User-Facing library for quick-iteration testing of Common Test
 -typing([eqwalizer]).
 -compile(warn_missing_spec_all).
 
--include_lib("common/include/buck_ct_records.hrl").
+-include_lib("common/include/bsmr_ct_records.hrl").
 
 %% Public API
 -export([
@@ -327,7 +327,7 @@ init_common_app_env(CommonAppEnv) ->
                     % Only set the env if it's not already set to allow cli overrides
                     case application:get_env(common, KeyAtom) of
                         undefined ->
-                            ValueTerm = buck_ct_parser:parse_str(Value),
+                            ValueTerm = bsmr_ct_parser:parse_str(Value),
                             application:set_env(common, KeyAtom, ValueTerm);
                         _ ->
                             ok

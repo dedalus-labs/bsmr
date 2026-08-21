@@ -25,7 +25,7 @@ load("@prelude//android:configuration.bzl", "is_building_android_binary_attr")
 load("@prelude//android:min_sdk_version.bzl", "get_min_sdk_version_constraint_value_name", "get_min_sdk_version_range")
 load("@prelude//decls:test_common.bzl", "test_common")
 load("@prelude//transitions:constraint_overrides.bzl", "constraint_overrides")
-load(":common.bzl", "SourceAbiVerificationMode", "TestType", "buck", "prelude_rule")
+load(":common.bzl", "SourceAbiVerificationMode", "TestType", "bsmr", "prelude_rule")
 load(":jvm_common.bzl", "jvm_common")
 load(":re_test_common.bzl", "re_test_common")
 load(":toolchains_common.bzl", "toolchains_common")
@@ -62,12 +62,12 @@ gwt_binary = prelude_rule(
             "strict": attrs.bool(default = False),
             "style": attrs.enum(Style, default = "obf"),
             "vm_args": attrs.list(attrs.string(), default = []),
-            "_exec_os_type": buck.exec_os_type_arg(),
+            "_exec_os_type": bsmr.exec_os_type_arg(),
             "_java_toolchain": toolchains_common.java(),
         }
-        | buck.licenses_arg()
-        | buck.labels_arg()
-        | buck.contacts_arg()
+        | bsmr.licenses_arg()
+        | bsmr.labels_arg()
+        | bsmr.contacts_arg()
     ),
 )
 
@@ -98,9 +98,9 @@ jar_genrule = prelude_rule(
         | {
             "_java_toolchain": toolchains_common.java(),
         }
-        | buck.licenses_arg()
-        | buck.labels_arg()
-        | buck.contacts_arg()
+        | bsmr.licenses_arg()
+        | bsmr.labels_arg()
+        | bsmr.contacts_arg()
     ),
 )
 
@@ -125,9 +125,9 @@ java_annotation_processor = prelude_rule(
             "runs_on_java_only": attrs.bool(default = False),
             "_build_only_native_code": attrs.default_only(attrs.bool(default = is_build_only_native_code())),
         }
-        | buck.licenses_arg()
-        | buck.labels_arg()
-        | buck.contacts_arg()
+        | bsmr.licenses_arg()
+        | bsmr.labels_arg()
+        | bsmr.contacts_arg()
     ),
 )
 
@@ -238,14 +238,14 @@ java_binary = prelude_rule(
             "proguard_jvm_args": attrs.list(attrs.string(), default = []),
             "proguard_library_jars": attrs.list(attrs.source(), default = []),
             "_build_only_native_code": attrs.default_only(attrs.bool(default = is_build_only_native_code())),
-            "_exec_os_type": buck.exec_os_type_arg(),
+            "_exec_os_type": bsmr.exec_os_type_arg(),
             "_is_building_android_binary": is_building_android_binary_attr(),
             "_java_toolchain": toolchains_common.java(),
         }
         | constraint_overrides.attributes
-        | buck.licenses_arg()
-        | buck.labels_arg()
-        | buck.contacts_arg()
+        | bsmr.licenses_arg()
+        | bsmr.labels_arg()
+        | bsmr.contacts_arg()
     ),
     cfg = constraint_overrides.transition,
 )
@@ -401,13 +401,13 @@ java_library = prelude_rule(
             "_build_only_native_code": attrs.default_only(attrs.bool(default = is_build_only_native_code())),
             "_dex_min_sdk_version": attrs.option(attrs.int(), default = dex_min_sdk_version()),
             "_dex_toolchain": toolchains_common.dex(),
-            "_exec_os_type": buck.exec_os_type_arg(),
+            "_exec_os_type": bsmr.exec_os_type_arg(),
             "_is_building_android_binary": is_building_android_binary_attr(),
             "_java_toolchain": toolchains_common.java(),
         }
-        | buck.licenses_arg()
-        | buck.labels_arg()
-        | buck.contacts_arg()
+        | bsmr.licenses_arg()
+        | bsmr.labels_arg()
+        | bsmr.contacts_arg()
         | validation_common.attrs_validators_arg()
     ),
 )
@@ -431,9 +431,9 @@ java_plugin = prelude_rule(
             "supports_abi_generation_from_source": attrs.bool(default = False),
             "_build_only_native_code": attrs.default_only(attrs.bool(default = is_build_only_native_code())),
         }
-        | buck.licenses_arg()
-        | buck.labels_arg()
-        | buck.contacts_arg()
+        | bsmr.licenses_arg()
+        | bsmr.labels_arg()
+        | bsmr.contacts_arg()
     ),
 )
 
@@ -447,7 +447,7 @@ java_test = prelude_rule(
     further = None,
     attrs = (
         # @unsorted-dict-items
-        buck.inject_test_env_arg()
+        bsmr.inject_test_env_arg()
         | {
             "resources": attrs.list(
                 attrs.source(),
@@ -473,7 +473,7 @@ java_test = prelude_rule(
             """,
             ),
         }
-        | buck.test_label_arg()
+        | bsmr.test_label_arg()
         | {
             "deps": attrs.list(
                 attrs.dep(),
@@ -510,7 +510,7 @@ java_test = prelude_rule(
             """,
             ),
         }
-        | buck.run_test_separately_arg(
+        | bsmr.run_test_separately_arg(
             run_test_separately_type = attrs.bool(
                 default = False,
                 doc = """
@@ -522,7 +522,7 @@ java_test = prelude_rule(
             )
         )
         | re_test_common.test_args()
-        | buck.test_rule_timeout_ms()
+        | bsmr.test_rule_timeout_ms()
         | {
             "cxx_library_allowlist": attrs.list(
                 attrs.dep(),
@@ -577,14 +577,14 @@ java_test = prelude_rule(
             "unbundled_resources_root": attrs.option(attrs.source(allow_directory = True), default = None),
             "use_dependency_order_classpath": attrs.option(attrs.bool(), default = None),
             "_build_only_native_code": attrs.default_only(attrs.bool(default = is_build_only_native_code())),
-            "_exec_os_type": buck.exec_os_type_arg(),
+            "_exec_os_type": bsmr.exec_os_type_arg(),
             "_is_building_android_binary": attrs.default_only(attrs.bool(default = False)),
             "_java_test_toolchain": toolchains_common.java_test(),
             "_java_toolchain": toolchains_common.java(),
         }
         | constraint_overrides.attributes
-        | buck.licenses_arg()
-        | buck.contacts_arg()
+        | bsmr.licenses_arg()
+        | bsmr.contacts_arg()
         | validation_common.attrs_validators_arg()
     )
     | jvm_common.annotation_processors()
@@ -629,9 +629,9 @@ java_test_runner = prelude_rule(
             "srcs": attrs.list(attrs.source(), default = []),
             "target": attrs.option(attrs.string(), default = None),
         }
-        | buck.licenses_arg()
-        | buck.labels_arg()
-        | buck.contacts_arg()
+        | bsmr.licenses_arg()
+        | bsmr.labels_arg()
+        | bsmr.contacts_arg()
         | jvm_common.abi_generation_mode()
         | jvm_common.annotation_processors()
         | jvm_common.plugins()
@@ -644,7 +644,7 @@ prebuilt_jar = prelude_rule(
     docs = """
         A `prebuilt_jar()` rule is used to identify a JAR file that
         is checked into our repository as a precompiled binary rather than one
-        that is built from source by Buck. Frequently, these are used to
+        that is built from source by Bsmr. Frequently, these are used to
         reference third-party JAR files (such as junit.jar) and
         are used as dependencies of `java_library()` rules.
     """,
@@ -713,12 +713,12 @@ prebuilt_jar = prelude_rule(
             "_build_only_native_code": attrs.default_only(attrs.bool(default = is_build_only_native_code())),
             "_dex_min_sdk_version": attrs.option(attrs.int(), default = dex_min_sdk_version()),
             "_dex_toolchain": toolchains_common.dex(),
-            "_exec_os_type": buck.exec_os_type_arg(),
+            "_exec_os_type": bsmr.exec_os_type_arg(),
             "_prebuilt_jar_toolchain": toolchains_common.prebuilt_jar(),
         }
-        | buck.licenses_arg()
-        | buck.labels_arg()
-        | buck.contacts_arg()
+        | bsmr.licenses_arg()
+        | bsmr.labels_arg()
+        | bsmr.contacts_arg()
     ),
 )
 

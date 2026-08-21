@@ -19,17 +19,17 @@ import random
 import re
 import string
 
-from bsmr.tests.e2e_util.api.buck import Buck
-from bsmr.tests.e2e_util.buck_workspace import buck_test
+from bsmr.tests.e2e_util.api.bsmr import Bsmr
+from bsmr.tests.e2e_util.bsmr_workspace import bsmr_test
 
 
 def _replace_hash(s: str) -> str:
     return re.sub(r"\b[0-9a-f]{16}\b", "<HASH>", s)
 
 
-@buck_test(inplace=False, data_dir="bxl/simple")
-async def test_cquery_owner(buck: Buck) -> None:
-    result = await buck.bxl(
+@bsmr_test(inplace=False, data_dir="bxl/simple")
+async def test_cquery_owner(bsmr: Bsmr) -> None:
+    result = await bsmr.bxl(
         "//bxl/cquery.bxl:owner_test",
     )
     assert (
@@ -37,7 +37,7 @@ async def test_cquery_owner(buck: Buck) -> None:
         == "[root//bin:the_binary (root//platforms:platform1#<HASH>)]\n"
     )
 
-    result = await buck.bxl(
+    result = await bsmr.bxl(
         "//bxl/cquery.bxl:owner_with_cell_path_test",
     )
     assert (
@@ -46,9 +46,9 @@ async def test_cquery_owner(buck: Buck) -> None:
     )
 
 
-@buck_test(inplace=False, data_dir="bxl/simple")
-async def test_cquery_owner_list(buck: Buck) -> None:
-    result = await buck.bxl(
+@bsmr_test(inplace=False, data_dir="bxl/simple")
+async def test_cquery_owner_list(bsmr: Bsmr) -> None:
+    result = await bsmr.bxl(
         "//bxl/cquery.bxl:owner_list_test",
     )
     assert (
@@ -57,9 +57,9 @@ async def test_cquery_owner_list(buck: Buck) -> None:
     )
 
 
-@buck_test(inplace=False, data_dir="bxl/simple")
-async def test_cquery_kind(buck: Buck) -> None:
-    result = await buck.bxl(
+@bsmr_test(inplace=False, data_dir="bxl/simple")
+async def test_cquery_kind(bsmr: Bsmr) -> None:
+    result = await bsmr.bxl(
         "//bxl:cquery.bxl:kind_test",
     )
 
@@ -67,9 +67,9 @@ async def test_cquery_kind(buck: Buck) -> None:
     assert "bar" not in result.stdout
 
 
-@buck_test(inplace=False, data_dir="bxl/simple")
-async def test_cquery_inputs(buck: Buck) -> None:
-    result = await buck.bxl(
+@bsmr_test(inplace=False, data_dir="bxl/simple")
+async def test_cquery_inputs(bsmr: Bsmr) -> None:
+    result = await bsmr.bxl(
         "//bxl:cquery.bxl:inputs_test",
     )
 
@@ -78,18 +78,18 @@ async def test_cquery_inputs(buck: Buck) -> None:
     assert "1" in result.stdout
 
 
-@buck_test(inplace=False, data_dir="bxl/simple")
-async def test_cquery_filter(buck: Buck) -> None:
-    result = await buck.bxl(
+@bsmr_test(inplace=False, data_dir="bxl/simple")
+async def test_cquery_filter(bsmr: Bsmr) -> None:
+    result = await bsmr.bxl(
         "//bxl:cquery.bxl:filter_test",
     )
 
     assert "root//bin:the_binary" in result.stdout
 
 
-@buck_test(inplace=False, data_dir="bxl/simple")
-async def test_cquery_attrregex_filter(buck: Buck) -> None:
-    result = await buck.bxl(
+@bsmr_test(inplace=False, data_dir="bxl/simple")
+async def test_cquery_attrregex_filter(bsmr: Bsmr) -> None:
+    result = await bsmr.bxl(
         "//bxl/cquery.bxl:attrregexfilter_test",
     )
 
@@ -98,9 +98,9 @@ async def test_cquery_attrregex_filter(buck: Buck) -> None:
     assert "bar" not in result.stdout
 
 
-@buck_test(inplace=False, data_dir="bxl/simple")
-async def test_cquery_attrfilter(buck: Buck) -> None:
-    result = await buck.bxl(
+@bsmr_test(inplace=False, data_dir="bxl/simple")
+async def test_cquery_attrfilter(bsmr: Bsmr) -> None:
+    result = await bsmr.bxl(
         "//bxl/cquery.bxl:attrfilter_test",
     )
 
@@ -109,9 +109,9 @@ async def test_cquery_attrfilter(buck: Buck) -> None:
     assert "bar" not in result.stdout
 
 
-@buck_test(inplace=False, data_dir="bxl/simple")
-async def test_cquery_nattrfilter(buck: Buck) -> None:
-    result = await buck.bxl(
+@bsmr_test(inplace=False, data_dir="bxl/simple")
+async def test_cquery_nattrfilter(bsmr: Bsmr) -> None:
+    result = await bsmr.bxl(
         "//bxl/cquery.bxl:nattrfilter_test",
     )
 
@@ -120,9 +120,9 @@ async def test_cquery_nattrfilter(buck: Buck) -> None:
     assert "bar" in result.stdout
 
 
-@buck_test(inplace=False, data_dir="bxl/simple")
-async def test_cquery_rdeps(buck: Buck) -> None:
-    result = await buck.bxl(
+@bsmr_test(inplace=False, data_dir="bxl/simple")
+async def test_cquery_rdeps(bsmr: Bsmr) -> None:
+    result = await bsmr.bxl(
         "//bxl/cquery.bxl:rdeps_test",
     )
     assert (
@@ -131,9 +131,9 @@ async def test_cquery_rdeps(buck: Buck) -> None:
     )
 
 
-@buck_test(inplace=False, data_dir="bxl/simple")
-async def test_cquery_deps(buck: Buck) -> None:
-    result = await buck.bxl(
+@bsmr_test(inplace=False, data_dir="bxl/simple")
+async def test_cquery_deps(bsmr: Bsmr) -> None:
+    result = await bsmr.bxl(
         "//bxl/cquery.bxl:deps_test",
     )
     assert (
@@ -142,43 +142,43 @@ async def test_cquery_deps(buck: Buck) -> None:
     )
 
 
-@buck_test(inplace=False, data_dir="bxl/simple", allow_soft_errors=True)
-async def test_cquery_buildfile(buck: Buck) -> None:
-    await buck.bxl("//bxl/cquery.bxl:buildfile_test")
+@bsmr_test(inplace=False, data_dir="bxl/simple", allow_soft_errors=True)
+async def test_cquery_buildfile(bsmr: Bsmr) -> None:
+    await bsmr.bxl("//bxl/cquery.bxl:buildfile_test")
 
 
-@buck_test(inplace=False, data_dir="bxl/simple")
-async def test_cquery_incompatible_configured_targets(buck: Buck) -> None:
+@bsmr_test(inplace=False, data_dir="bxl/simple")
+async def test_cquery_incompatible_configured_targets(bsmr: Bsmr) -> None:
     # incompatible target should be skipped and the cquery should return compatible targets
-    result = await buck.bxl("//bxl/cquery.bxl:incompatible_configured_targets_test")
+    result = await bsmr.bxl("//bxl/cquery.bxl:incompatible_configured_targets_test")
     assert "Skipped 1 incompatible targets" in result.stderr
     assert "root//incompatible_targets:incompatible" in result.stderr
     assert "root//incompatible_targets:foo" in result.stdout
 
 
-@buck_test(inplace=False, data_dir="bxl/simple")
-async def test_cquery_incompatible_configured_targets_single_label(buck: Buck) -> None:
+@bsmr_test(inplace=False, data_dir="bxl/simple")
+async def test_cquery_incompatible_configured_targets_single_label(bsmr: Bsmr) -> None:
     # incompatible target should be skipped and the cquery should not fail
-    result = await buck.bxl(
+    result = await bsmr.bxl(
         "//bxl/cquery.bxl:incompatible_configured_targets_single_label_test"
     )
     assert "Skipped 1 incompatible targets" in result.stderr
     assert "root//incompatible_targets:incompatible" in result.stderr
 
 
-@buck_test(inplace=False, data_dir="bxl/simple")
-async def test_cquery_incompatible_targets(buck: Buck) -> None:
+@bsmr_test(inplace=False, data_dir="bxl/simple")
+async def test_cquery_incompatible_targets(bsmr: Bsmr) -> None:
     # incompatible target should be skipped and the cquery should not fail
-    result = await buck.bxl("//bxl/cquery.bxl:incompatible_targets_test")
+    result = await bsmr.bxl("//bxl/cquery.bxl:incompatible_targets_test")
     assert "Skipped 1 incompatible targets" in result.stderr
     assert "root//incompatible_targets:incompatible" in result.stderr
     assert "root//incompatible_targets:foo" not in result.stdout
 
 
-@buck_test(inplace=False, data_dir="bxl/simple")
-async def test_cquery_incompatible_targets_recursive(buck: Buck) -> None:
+@bsmr_test(inplace=False, data_dir="bxl/simple")
+async def test_cquery_incompatible_targets_recursive(bsmr: Bsmr) -> None:
     # incompatible target should be skipped and the cquery should return compatible targets
-    result = await buck.bxl("//bxl/cquery.bxl:incompatible_targets_test_recursive")
+    result = await bsmr.bxl("//bxl/cquery.bxl:incompatible_targets_test_recursive")
     assert "Skipped 2 incompatible targets" in result.stderr
     assert "root//incompatible_targets:incompatible" in result.stderr
     assert "root//incompatible_targets/inner_folder:incompatible_inner" in result.stderr
@@ -186,19 +186,19 @@ async def test_cquery_incompatible_targets_recursive(buck: Buck) -> None:
     assert "root//incompatible_targets:foo" in result.stdout
 
 
-@buck_test(inplace=False, data_dir="bxl/simple")
-async def test_cquery_configured_label(buck: Buck) -> None:
-    await buck.bxl("//bxl/cquery.bxl:cquery_configured_label")
+@bsmr_test(inplace=False, data_dir="bxl/simple")
+async def test_cquery_configured_label(bsmr: Bsmr) -> None:
+    await bsmr.bxl("//bxl/cquery.bxl:cquery_configured_label")
 
 
-@buck_test(inplace=False, data_dir="testsof")
-async def test_cquery_testsof(buck: Buck) -> None:
-    result = await buck.bxl(
+@bsmr_test(inplace=False, data_dir="testsof")
+async def test_cquery_testsof(bsmr: Bsmr) -> None:
+    result = await bsmr.bxl(
         "//cquery.bxl:testsof_test",
     )
     assert "root//:foo_test (root//:platform_default_tests" in result.stdout
 
-    result = await buck.bxl(
+    result = await bsmr.bxl(
         "//cquery.bxl:testsof_with_default_target_platform_test",
     )
     assert (
@@ -207,9 +207,9 @@ async def test_cquery_testsof(buck: Buck) -> None:
     )
 
 
-@buck_test(inplace=False, data_dir="bxl/simple")
-async def test_uquery_allpaths(buck: Buck) -> None:
-    result = await buck.bxl(
+@bsmr_test(inplace=False, data_dir="bxl/simple")
+async def test_uquery_allpaths(bsmr: Bsmr) -> None:
+    result = await bsmr.bxl(
         "//bxl:uquery.bxl:allpaths_test",
     )
 
@@ -219,18 +219,18 @@ async def test_uquery_allpaths(buck: Buck) -> None:
     )
 
 
-@buck_test(inplace=False, data_dir="bxl/simple")
-async def test_uquery_allpaths_filtered(buck: Buck) -> None:
-    result = await buck.bxl(
+@bsmr_test(inplace=False, data_dir="bxl/simple")
+async def test_uquery_allpaths_filtered(bsmr: Bsmr) -> None:
+    result = await bsmr.bxl(
         "//bxl:uquery.bxl:allpaths_filtered_test",
     )
 
     assert "[root//graph:one, root//graph:two, root//graph:three]\n" == result.stdout
 
 
-@buck_test(inplace=False, data_dir="bxl/simple")
-async def test_uquery_lazy_allpaths(buck: Buck) -> None:
-    result = await buck.bxl(
+@bsmr_test(inplace=False, data_dir="bxl/simple")
+async def test_uquery_lazy_allpaths(bsmr: Bsmr) -> None:
+    result = await bsmr.bxl(
         "//bxl:uquery.bxl:lazy_allpaths_test",
     )
 
@@ -240,27 +240,27 @@ async def test_uquery_lazy_allpaths(buck: Buck) -> None:
     )
 
 
-@buck_test(inplace=False, data_dir="bxl/simple")
-async def test_uquery_lazy_allpaths_filtered(buck: Buck) -> None:
-    result = await buck.bxl(
+@bsmr_test(inplace=False, data_dir="bxl/simple")
+async def test_uquery_lazy_allpaths_filtered(bsmr: Bsmr) -> None:
+    result = await bsmr.bxl(
         "//bxl:uquery.bxl:lazy_allpaths_filtered_test",
     )
 
     assert "[root//graph:one, root//graph:two, root//graph:three]\n" == result.stdout
 
 
-@buck_test(inplace=False, data_dir="bxl/simple")
-async def test_uquery_somepath(buck: Buck) -> None:
-    result = await buck.bxl(
+@bsmr_test(inplace=False, data_dir="bxl/simple")
+async def test_uquery_somepath(bsmr: Bsmr) -> None:
+    result = await bsmr.bxl(
         "//bxl:uquery.bxl:somepath_test",
     )
 
     assert "[root//graph:one, root//graph:two, root//graph:three]\n" == result.stdout
 
 
-@buck_test(inplace=False, data_dir="bxl/simple")
-async def test_uquery_somepath_filtered(buck: Buck) -> None:
-    result = await buck.bxl(
+@bsmr_test(inplace=False, data_dir="bxl/simple")
+async def test_uquery_somepath_filtered(bsmr: Bsmr) -> None:
+    result = await bsmr.bxl(
         "//bxl:uquery.bxl:somepath_filtered_test",
     )
 
@@ -271,18 +271,18 @@ async def test_uquery_somepath_filtered(buck: Buck) -> None:
     )
 
 
-@buck_test(inplace=False, data_dir="bxl/simple")
-async def test_uquery_lazy_somepath(buck: Buck) -> None:
-    result = await buck.bxl(
+@bsmr_test(inplace=False, data_dir="bxl/simple")
+async def test_uquery_lazy_somepath(bsmr: Bsmr) -> None:
+    result = await bsmr.bxl(
         "//bxl:uquery.bxl:lazy_somepath_test",
     )
 
     assert "[root//graph:one, root//graph:two, root//graph:three]\n" == result.stdout
 
 
-@buck_test(inplace=False, data_dir="bxl/simple")
-async def test_uquery_lazy_somepath_filtered(buck: Buck) -> None:
-    result = await buck.bxl(
+@bsmr_test(inplace=False, data_dir="bxl/simple")
+async def test_uquery_lazy_somepath_filtered(bsmr: Bsmr) -> None:
+    result = await bsmr.bxl(
         "//bxl:uquery.bxl:lazy_somepath_filtered_test",
     )
 
@@ -293,9 +293,9 @@ async def test_uquery_lazy_somepath_filtered(buck: Buck) -> None:
     )
 
 
-@buck_test(inplace=False, data_dir="bxl/simple")
-async def test_uquery_kind(buck: Buck) -> None:
-    result = await buck.bxl(
+@bsmr_test(inplace=False, data_dir="bxl/simple")
+async def test_uquery_kind(bsmr: Bsmr) -> None:
+    result = await bsmr.bxl(
         "//bxl:uquery.bxl:kind_test",
     )
 
@@ -303,9 +303,9 @@ async def test_uquery_kind(buck: Buck) -> None:
     assert "bar" not in result.stdout
 
 
-@buck_test(inplace=False, data_dir="bxl/simple")
-async def test_uquery_lazy_kind(buck: Buck) -> None:
-    result = await buck.bxl(
+@bsmr_test(inplace=False, data_dir="bxl/simple")
+async def test_uquery_lazy_kind(bsmr: Bsmr) -> None:
+    result = await bsmr.bxl(
         "//bxl:uquery.bxl:lazy_kind_test",
     )
 
@@ -313,45 +313,45 @@ async def test_uquery_lazy_kind(buck: Buck) -> None:
     assert "bar" not in result.stdout
 
 
-@buck_test(inplace=False, data_dir="bxl/simple")
-async def test_uquery_inputs(buck: Buck) -> None:
-    result = await buck.bxl(
+@bsmr_test(inplace=False, data_dir="bxl/simple")
+async def test_uquery_inputs(bsmr: Bsmr) -> None:
+    result = await bsmr.bxl(
         "//bxl:uquery.bxl:inputs_test",
     )
 
     assert "TARGETS.fixture" in result.stdout
 
 
-@buck_test(inplace=False, data_dir="bxl/simple")
-async def test_uquery_lazy_inputs(buck: Buck) -> None:
-    result = await buck.bxl(
+@bsmr_test(inplace=False, data_dir="bxl/simple")
+async def test_uquery_lazy_inputs(bsmr: Bsmr) -> None:
+    result = await bsmr.bxl(
         "//bxl:uquery.bxl:lazy_inputs_test",
     )
 
     assert "TARGETS.fixture" in result.stdout
 
 
-@buck_test(inplace=False, data_dir="bxl/simple")
-async def test_uquery_filter(buck: Buck) -> None:
-    result = await buck.bxl(
+@bsmr_test(inplace=False, data_dir="bxl/simple")
+async def test_uquery_filter(bsmr: Bsmr) -> None:
+    result = await bsmr.bxl(
         "//bxl:uquery.bxl:filter_test",
     )
 
     assert "root//bin:the_binary" in result.stdout
 
 
-@buck_test(inplace=False, data_dir="bxl/simple")
-async def test_uquery_lazy_filter(buck: Buck) -> None:
-    result = await buck.bxl(
+@bsmr_test(inplace=False, data_dir="bxl/simple")
+async def test_uquery_lazy_filter(bsmr: Bsmr) -> None:
+    result = await bsmr.bxl(
         "//bxl:uquery.bxl:lazy_filter_test",
     )
 
     assert "root//bin:the_binary" in result.stdout
 
 
-@buck_test(inplace=False, data_dir="bxl/simple")
-async def test_uquery_attrregex_filter(buck: Buck) -> None:
-    result = await buck.bxl(
+@bsmr_test(inplace=False, data_dir="bxl/simple")
+async def test_uquery_attrregex_filter(bsmr: Bsmr) -> None:
+    result = await bsmr.bxl(
         "//bxl/uquery.bxl:attrregexfilter_test",
     )
 
@@ -360,9 +360,9 @@ async def test_uquery_attrregex_filter(buck: Buck) -> None:
     assert "bar" not in result.stdout
 
 
-@buck_test(inplace=False, data_dir="bxl/simple")
-async def test_uquery_lazy_attrregex_filter(buck: Buck) -> None:
-    result = await buck.bxl(
+@bsmr_test(inplace=False, data_dir="bxl/simple")
+async def test_uquery_lazy_attrregex_filter(bsmr: Bsmr) -> None:
+    result = await bsmr.bxl(
         "//bxl/uquery.bxl:lazy_attrregexfilter_test",
     )
 
@@ -371,9 +371,9 @@ async def test_uquery_lazy_attrregex_filter(buck: Buck) -> None:
     assert "bar" not in result.stdout
 
 
-@buck_test(inplace=False, data_dir="bxl/simple")
-async def test_uquery_attrfilter(buck: Buck) -> None:
-    result = await buck.bxl(
+@bsmr_test(inplace=False, data_dir="bxl/simple")
+async def test_uquery_attrfilter(bsmr: Bsmr) -> None:
+    result = await bsmr.bxl(
         "//bxl/uquery.bxl:attrfilter_test",
     )
 
@@ -382,9 +382,9 @@ async def test_uquery_attrfilter(buck: Buck) -> None:
     assert "bar" not in result.stdout
 
 
-@buck_test(inplace=False, data_dir="bxl/simple")
-async def test_uquery_lazy_attrfilter(buck: Buck) -> None:
-    result = await buck.bxl(
+@bsmr_test(inplace=False, data_dir="bxl/simple")
+async def test_uquery_lazy_attrfilter(bsmr: Bsmr) -> None:
+    result = await bsmr.bxl(
         "//bxl/uquery.bxl:lazy_attrfilter_test",
     )
 
@@ -393,22 +393,22 @@ async def test_uquery_lazy_attrfilter(buck: Buck) -> None:
     assert "bar" not in result.stdout
 
 
-@buck_test(inplace=False, data_dir="bxl/simple")
-async def test_uquery_owner(buck: Buck) -> None:
-    result = await buck.bxl(
+@bsmr_test(inplace=False, data_dir="bxl/simple")
+async def test_uquery_owner(bsmr: Bsmr) -> None:
+    result = await bsmr.bxl(
         "//bxl/uquery.bxl:owner_test",
     )
     assert result.stdout == "[root//bin:the_binary]\n"
 
-    result = await buck.bxl(
+    result = await bsmr.bxl(
         "//bxl/uquery.bxl:owner_with_cell_path_test",
     )
     assert _replace_hash(result.stdout) == "[root//bin:the_binary]\n"
 
 
-@buck_test(inplace=False, data_dir="bxl/simple")
-async def test_uquery_owner_list(buck: Buck) -> None:
-    result = await buck.bxl(
+@bsmr_test(inplace=False, data_dir="bxl/simple")
+async def test_uquery_owner_list(bsmr: Bsmr) -> None:
+    result = await bsmr.bxl(
         "//bxl/uquery.bxl:owner_list_test",
     )
     assert (
@@ -417,22 +417,22 @@ async def test_uquery_owner_list(buck: Buck) -> None:
     )
 
 
-@buck_test(inplace=False, data_dir="bxl/simple")
-async def test_uquery_lazy_owner(buck: Buck) -> None:
-    result = await buck.bxl(
+@bsmr_test(inplace=False, data_dir="bxl/simple")
+async def test_uquery_lazy_owner(bsmr: Bsmr) -> None:
+    result = await bsmr.bxl(
         "//bxl/uquery.bxl:lazy_owner_test",
     )
     assert result.stdout == "[root//bin:the_binary]\n"
 
-    result = await buck.bxl(
+    result = await bsmr.bxl(
         "//bxl/uquery.bxl:lazy_owner_with_cell_path_test",
     )
     assert _replace_hash(result.stdout) == "[root//bin:the_binary]\n"
 
 
-@buck_test(inplace=False, data_dir="bxl/simple")
-async def test_uquery_lazy_owner_list(buck: Buck) -> None:
-    result = await buck.bxl(
+@bsmr_test(inplace=False, data_dir="bxl/simple")
+async def test_uquery_lazy_owner_list(bsmr: Bsmr) -> None:
+    result = await bsmr.bxl(
         "//bxl/uquery.bxl:lazy_owner_list_test",
     )
     assert (
@@ -441,9 +441,9 @@ async def test_uquery_lazy_owner_list(buck: Buck) -> None:
     )
 
 
-@buck_test(inplace=False, data_dir="bxl/simple")
-async def test_uquery_targets_in_buildfile(buck: Buck) -> None:
-    result = await buck.bxl(
+@bsmr_test(inplace=False, data_dir="bxl/simple")
+async def test_uquery_targets_in_buildfile(bsmr: Bsmr) -> None:
+    result = await bsmr.bxl(
         "//bxl/uquery.bxl:targets_in_buildfile_test",
     )
     assert (
@@ -452,9 +452,9 @@ async def test_uquery_targets_in_buildfile(buck: Buck) -> None:
     )
 
 
-@buck_test(inplace=False, data_dir="bxl/simple")
-async def test_uquery_lazy_targets_in_buildfile(buck: Buck) -> None:
-    result = await buck.bxl(
+@bsmr_test(inplace=False, data_dir="bxl/simple")
+async def test_uquery_lazy_targets_in_buildfile(bsmr: Bsmr) -> None:
+    result = await bsmr.bxl(
         "//bxl/uquery.bxl:lazy_targets_in_buildfile_test",
     )
     assert (
@@ -463,35 +463,35 @@ async def test_uquery_lazy_targets_in_buildfile(buck: Buck) -> None:
     )
 
 
-@buck_test(inplace=False, data_dir="bxl/simple", allow_soft_errors=True)
-async def test_uquery_buildfile(buck: Buck) -> None:
-    await buck.bxl("//bxl/uquery.bxl:buildfile_test")
+@bsmr_test(inplace=False, data_dir="bxl/simple", allow_soft_errors=True)
+async def test_uquery_buildfile(bsmr: Bsmr) -> None:
+    await bsmr.bxl("//bxl/uquery.bxl:buildfile_test")
 
 
-@buck_test(inplace=False, data_dir="bxl/simple", allow_soft_errors=True)
-async def test_uquery_lazy_buildfile(buck: Buck) -> None:
-    await buck.bxl("//bxl/uquery.bxl:lazy_buildfile_test")
+@bsmr_test(inplace=False, data_dir="bxl/simple", allow_soft_errors=True)
+async def test_uquery_lazy_buildfile(bsmr: Bsmr) -> None:
+    await bsmr.bxl("//bxl/uquery.bxl:lazy_buildfile_test")
 
 
-@buck_test(inplace=False, data_dir="bxl/simple")
-async def test_uquery_rdeps(buck: Buck) -> None:
-    result = await buck.bxl(
+@bsmr_test(inplace=False, data_dir="bxl/simple")
+async def test_uquery_rdeps(bsmr: Bsmr) -> None:
+    result = await bsmr.bxl(
         "//bxl/uquery.bxl:rdeps_test",
     )
     assert result.stdout == "[root//bin:the_binary, root//lib:lib1, root//lib:file1]\n"
 
 
-@buck_test(inplace=False, data_dir="bxl/simple")
-async def test_uquery_lazy_rdeps(buck: Buck) -> None:
-    result = await buck.bxl(
+@bsmr_test(inplace=False, data_dir="bxl/simple")
+async def test_uquery_lazy_rdeps(bsmr: Bsmr) -> None:
+    result = await bsmr.bxl(
         "//bxl/uquery.bxl:lazy_rdeps_test",
     )
     assert result.stdout == "[root//bin:the_binary, root//lib:lib1, root//lib:file1]\n"
 
 
-@buck_test(inplace=False, data_dir="bxl/simple")
-async def test_query_deps(buck: Buck) -> None:
-    result = await buck.bxl(
+@bsmr_test(inplace=False, data_dir="bxl/simple")
+async def test_query_deps(bsmr: Bsmr) -> None:
+    result = await bsmr.bxl(
         "//bxl/uquery.bxl:deps_test",
     )
     assert (
@@ -500,9 +500,9 @@ async def test_query_deps(buck: Buck) -> None:
     )
 
 
-@buck_test(inplace=False, data_dir="bxl/simple")
-async def test_uquery_lazy_deps(buck: Buck) -> None:
-    result = await buck.bxl(
+@bsmr_test(inplace=False, data_dir="bxl/simple")
+async def test_uquery_lazy_deps(bsmr: Bsmr) -> None:
+    result = await bsmr.bxl(
         "//bxl/uquery.bxl:lazy_deps_test",
     )
     assert (
@@ -511,62 +511,62 @@ async def test_uquery_lazy_deps(buck: Buck) -> None:
     )
 
 
-@buck_test(inplace=False, data_dir="testsof")
-async def test_uquery_testsof(buck: Buck) -> None:
-    result = await buck.bxl(
+@bsmr_test(inplace=False, data_dir="testsof")
+async def test_uquery_testsof(bsmr: Bsmr) -> None:
+    result = await bsmr.bxl(
         "//uquery.bxl:testsof_test",
     )
     assert "root//:foo_test" in result.stdout
 
 
-@buck_test(inplace=False, data_dir="bxl/simple")
-async def test_uquery_eval(buck: Buck) -> None:
-    result = await buck.bxl(
+@bsmr_test(inplace=False, data_dir="bxl/simple")
+async def test_uquery_eval(bsmr: Bsmr) -> None:
+    result = await bsmr.bxl(
         "//bxl/uquery.bxl:eval_query_test",
     )
     assert result.stdout == "[root//bin/TARGETS.fixture]\n"
 
-    result = await buck.bxl(
+    result = await bsmr.bxl(
         "//bxl/uquery.bxl:eval_query_with_query_args",
     )
 
 
-@buck_test(inplace=False, data_dir="bxl/simple")
-async def test_uquery_lazy_eval(buck: Buck) -> None:
-    result = await buck.bxl(
+@bsmr_test(inplace=False, data_dir="bxl/simple")
+async def test_uquery_lazy_eval(bsmr: Bsmr) -> None:
+    result = await bsmr.bxl(
         "//bxl/uquery.bxl:lazy_eval_query_test",
     )
     assert result.stdout == "[root//bin/TARGETS.fixture]\n"
 
-    result = await buck.bxl(
+    result = await bsmr.bxl(
         "//bxl/uquery.bxl:lazy_eval_query_with_query_args",
     )
 
 
-@buck_test(inplace=False, data_dir="bxl/simple")
-async def test_bxl_aquery_incompatible_targets(buck: Buck) -> None:
+@bsmr_test(inplace=False, data_dir="bxl/simple")
+async def test_bxl_aquery_incompatible_targets(bsmr: Bsmr) -> None:
     # incompatible target should be skipped and the aquery should not fail
-    result = await buck.bxl("//bxl/aquery.bxl:incompatible_targets")
+    result = await bsmr.bxl("//bxl/aquery.bxl:incompatible_targets")
     assert "Skipped 1 incompatible targets" in result.stderr
     assert "root//incompatible_targets:incompatible" in result.stderr
 
 
-@buck_test(inplace=False, data_dir="bxl/simple")
-async def test_cquery_eval(buck: Buck) -> None:
-    result = await buck.bxl(
+@bsmr_test(inplace=False, data_dir="bxl/simple")
+async def test_cquery_eval(bsmr: Bsmr) -> None:
+    result = await bsmr.bxl(
         "//bxl:cquery.bxl:eval_query_test",
     )
 
     assert "TARGETS.fixture" in result.stdout
 
-    result = await buck.bxl(
+    result = await bsmr.bxl(
         "//bxl/cquery.bxl:eval_query_with_query_args",
     )
 
 
-@buck_test(inplace=False, data_dir="bxl/simple")
-async def test_cquery_allpaths(buck: Buck) -> None:
-    result = await buck.bxl(
+@bsmr_test(inplace=False, data_dir="bxl/simple")
+async def test_cquery_allpaths(bsmr: Bsmr) -> None:
+    result = await bsmr.bxl(
         "//bxl:cquery.bxl:allpaths_test",
     )
 
@@ -576,9 +576,9 @@ async def test_cquery_allpaths(buck: Buck) -> None:
     )
 
 
-@buck_test(inplace=False, data_dir="bxl/simple")
-async def test_cquery_somepath(buck: Buck) -> None:
-    result = await buck.bxl(
+@bsmr_test(inplace=False, data_dir="bxl/simple")
+async def test_cquery_somepath(bsmr: Bsmr) -> None:
+    result = await bsmr.bxl(
         "//bxl:cquery.bxl:somepath_test",
     )
 
@@ -588,9 +588,9 @@ async def test_cquery_somepath(buck: Buck) -> None:
     )
 
 
-@buck_test(inplace=False, data_dir="bxl/simple")
-async def test_cquery_somepath_filtered(buck: Buck) -> None:
-    result = await buck.bxl(
+@bsmr_test(inplace=False, data_dir="bxl/simple")
+async def test_cquery_somepath_filtered(bsmr: Bsmr) -> None:
+    result = await bsmr.bxl(
         "//bxl:cquery.bxl:somepath_filtered_test",
     )
 

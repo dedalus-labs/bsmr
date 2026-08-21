@@ -15,20 +15,20 @@
 # pyre-strict
 
 
-from bsmr.tests.e2e_util.api.buck import Buck
-from bsmr.tests.e2e_util.buck_workspace import buck_test
+from bsmr.tests.e2e_util.api.bsmr import Bsmr
+from bsmr.tests.e2e_util.bsmr_workspace import bsmr_test
 from bsmr.tests.e2e_util.helper.utils import filter_events
 
 
-@buck_test()
+@bsmr_test()
 async def test_dice_is_not_invalidated_on_changes_in_ignored_directories(
-    buck: Buck,
+    bsmr: Bsmr,
 ) -> None:
-    await buck.targets("root//...")
-    (buck.cwd / "dir" / "fignore").write_text("xyz")
-    await buck.targets("root//...")
+    await bsmr.targets("root//...")
+    (bsmr.cwd / "dir" / "fignore").write_text("xyz")
+    await bsmr.targets("root//...")
     dice_equal = await filter_events(
-        buck,
+        bsmr,
         "Event",
         "data",
         "Instant",

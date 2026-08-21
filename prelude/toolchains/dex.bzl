@@ -1,3 +1,9 @@
+# ===----------------------------------------------------------------------===
+# Upstream-Source: facebook/buck2@1560aca2002865cd73d7cafb22c705cfb640b2bc
+# Modifications Copyright (c) 2026 Dedalus Labs, Inc. and its contributors
+# SPDX-License-Identifier: Apache-2.0
+# ===----------------------------------------------------------------------===
+
 # Copyright (c) Meta Platforms, Inc. and affiliates.
 #
 # This source code is dual-licensed under either the MIT license found in the
@@ -18,7 +24,7 @@ def system_dex_toolchain(name, android_sdk_tools_target, visibility = None):
     _dex_toolchain_rule(
         name = name,
         android_jar = "{}[android.jar]".format(android_sdk_tools_target),
-        d8_command_binary = "prelude//toolchains/android/src/com/facebook/buck/android/dex:run_d8_binary",
+        d8_command_binary = "prelude//toolchains/android/src/com/dedalus/bsmr/android/dex:run_d8_binary",
         visibility = visibility,
     )
 

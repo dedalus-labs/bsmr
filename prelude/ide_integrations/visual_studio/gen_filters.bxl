@@ -41,16 +41,16 @@ def _get_file_filter_map(vs_settings: dict) -> dict:
     # Handle paths that start with "bsmr-out"(exported files) separately since these file
     # don't have any common dir with the others and would make the hierarchy really nested
     # if processed together
-    buck_out_paths = [path for path in files if path.startswith("bsmr-out")]
-    buck_out_common_dir = _get_common_directory(buck_out_paths)
-    for file in buck_out_paths:
+    output_paths = [path for path in files if path.startswith("bsmr-out")]
+    output_common_dir = _get_common_directory(output_paths)
+    for file in output_paths:
         # Add a "generated_files" folder so that the files don't get mixed up with the others
-        filters[file] = "\\".join(["generated_files", dirname(file[len(buck_out_common_dir) :], "\\")])
+        filters[file] = "\\".join(["generated_files", dirname(file[len(output_common_dir) :], "\\")])
 
-    non_buck_out_paths = [path for path in files if not path.startswith("bsmr-out")]
-    non_buck_out_common_dir = _get_common_directory(non_buck_out_paths)
-    for file in non_buck_out_paths:
-        filters[file] = dirname(file[len(non_buck_out_common_dir) :], "\\")
+    non_output_paths = [path for path in files if not path.startswith("bsmr-out")]
+    source_common_dir = _get_common_directory(non_output_paths)
+    for file in non_output_paths:
+        filters[file] = dirname(file[len(source_common_dir) :], "\\")
     return filters
 
 def _get_filter_list(file_filter_map: dict) -> list:
@@ -160,8 +160,8 @@ main = bxl_main(
     impl = _main,
     cli_args = {
         "debug_settings": cli_args.option(cli_args.json()),  # target label => debug_settings.
-        "extra_buck_options": cli_args.list(cli_args.string(), default = []),
-        "immediate_buck_options": cli_args.list(cli_args.string(), default = []),
+        "extra_bsmr_options": cli_args.list(cli_args.string(), default = []),
+        "immediate_bsmr_options": cli_args.list(cli_args.string(), default = []),
         "log_level": cli_args.int(default = 30),
         "mode_files": cli_args.list(cli_args.string(), default = ["upstream//arvr/mode/win/dev"]),
         "mode_hashes": cli_args.option(cli_args.json()),  # mode => configuration hash.

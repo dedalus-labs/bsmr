@@ -19,14 +19,14 @@ use bsmr_cli_proto::ConfiguredTargetsRequest;
 use bsmr_cli_proto::ConfiguredTargetsResponse;
 use bsmr_cli_proto::configured_targets_request::OutputFormat;
 use bsmr_client_ctx::client_ctx::ClientCommandContext;
-use bsmr_client_ctx::common::BuckArgMatches;
+use bsmr_client_ctx::common::BsmrArgMatches;
 use bsmr_client_ctx::common::CommonBuildConfigurationOptions;
 use bsmr_client_ctx::common::CommonCommandOptions;
 use bsmr_client_ctx::common::CommonEventLogOptions;
 use bsmr_client_ctx::common::CommonStarlarkOptions;
 use bsmr_client_ctx::common::target_cfg::TargetCfgOptions;
 use bsmr_client_ctx::common::ui::CommonConsoleOptions;
-use bsmr_client_ctx::daemon::client::BuckdClientConnector;
+use bsmr_client_ctx::daemon::client::BsmrdClientConnector;
 use bsmr_client_ctx::daemon::client::NoPartialResultHandler;
 use bsmr_client_ctx::events_ctx::EventsCtx;
 use bsmr_client_ctx::exit_result::ExitResult;
@@ -51,7 +51,7 @@ pub struct ConfiguredTargetsCommand {
     #[clap(long)]
     skip_missing_targets: bool,
 
-    /// On errors, put buck.error in the output stream and continue
+    /// On errors, put bsmr.error in the output stream and continue
     #[clap(long)]
     keep_going: bool,
 
@@ -87,8 +87,8 @@ impl StreamingCommand for ConfiguredTargetsCommand {
 
     async fn exec_impl(
         self,
-        buckd: &mut BuckdClientConnector,
-        matches: BuckArgMatches<'_>,
+        bsmrd: &mut BsmrdClientConnector,
+        matches: BsmrArgMatches<'_>,
         ctx: &mut ClientCommandContext<'_>,
         events_ctx: &mut EventsCtx,
     ) -> ExitResult {
@@ -96,7 +96,7 @@ impl StreamingCommand for ConfiguredTargetsCommand {
         let output_format = self.output_format()?;
         let ConfiguredTargetsResponse {
             serialized_targets_output,
-        } = buckd
+        } = bsmrd
             .with_flushing()
             .ctargets(
                 ConfiguredTargetsRequest {

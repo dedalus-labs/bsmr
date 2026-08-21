@@ -16,7 +16,7 @@
 
 syntax = "proto3";
 
-package buck.daemon;
+package bsmr.daemon;
 
 import "google/protobuf/timestamp.proto";
 import "google/protobuf/duration.proto";
@@ -77,7 +77,7 @@ message StatusResponse {
   reserved 4;
   reserved 5;
   reserved 6;
-  buck.data.Snapshot snapshot = 7;
+  bsmr.data.Snapshot snapshot = 7;
   DaemonConstraints daemon_constraints = 8;
   string project_root = 9;
   string isolation_dir = 10;
@@ -85,7 +85,7 @@ message StatusResponse {
   optional bool supports_vpnless = 12;
   optional bool http2 = 13;
   optional bool valid_working_directory = 14;
-  optional bool valid_buck_out_mount = 15;
+  optional bool valid_output_mount = 15;
   optional string io_provider = 16;
   optional TokioRuntimeMetrics tokio_runtime_metrics = 17;
   optional string allprocs_cgroup_path = 18;
@@ -157,7 +157,7 @@ message ClientContext {
   // The name of the command the client thinks it's running.
   string command_name = 17;
   // Any --client-metadata passed by the user.
-  repeated buck.data.ClientMetadata client_metadata = 18;
+  repeated bsmr.data.ClientMetadata client_metadata = 18;
 
   /// Contents of `BSMR_HARD_ERROR` environment variable.
   string bsmr_hard_error = 20;
@@ -198,7 +198,7 @@ message ClientContext {
   optional ProfilePatternOptions profile_pattern_opts = 25;
 
   // Agent context key=value pairs passed via --agent-context.
-  repeated buck.data.AgentContextEntry agent_context = 27;
+  repeated bsmr.data.AgentContextEntry agent_context = 27;
 }
 
 message TargetsRequest {
@@ -494,7 +494,7 @@ message BuildRequest {
     // Include target outputs? [default: false]
     bool return_outputs = 1;
     // Include the target's resolved run command line? Set only by
-    // `buck run`. [default: false]
+    // `bsmr run`. [default: false]
     bool return_run_args = 3;
     // TODO(rafaelc): bool return_targets_without_data
   }
@@ -605,7 +605,7 @@ message BxlResponse {
   reserved 101;
   // Absolute path to the repo root
   string project_root = 2;
-  repeated buck.data.ErrorReport errors = 102;
+  repeated bsmr.data.ErrorReport errors = 102;
   optional string serialized_build_report = 100;
 }
 
@@ -651,7 +651,7 @@ message BuildResponse {
   string project_root = 2;
 
   optional string serialized_build_report = 100;
-  repeated buck.data.ErrorReport errors = 102;
+  repeated bsmr.data.ErrorReport errors = 102;
 }
 
 message CounterWithExamples {
@@ -664,7 +664,7 @@ message TestResponse {
   reserved 101;
   int32 executor_exit_code = 1;
   optional string serialized_build_report = 100;
-  repeated buck.data.ErrorReport errors = 102;
+  repeated bsmr.data.ErrorReport errors = 102;
   message TestStatuses {
     reserved 1 to 6;
     CounterWithExamples passed = 10;
@@ -725,7 +725,7 @@ message CommandResult {
   reserved 10;
 
   oneof result {
-    buck.data.ErrorReport error = 1;
+    bsmr.data.ErrorReport error = 1;
     // Ideally, this would be an Any, but tonic/prost doesn't support it yet.
     KillResponse kill_response = 2;
     StatusResponse status_response = 3;
@@ -779,7 +779,7 @@ message PartialResult {
 // A response from a command, either an informational event or the response.
 message CommandProgress {
   oneof progress {
-    buck.data.BuckEvent event = 1;
+    bsmr.data.BsmrEvent event = 1;
     CommandResult result = 2;
     PartialResult partial_result = 3;
   }
@@ -872,7 +872,7 @@ message DapRequest {
 /// the starlark DAP server is complete for
 /// this request. Responses to individual
 /// DAP requests are sent back in the event
-/// stream. See `buck.data.DapResult`
+/// stream. See `bsmr.data.DapResult`
 message DapResponse {}
 
 message BxlProfile {
@@ -953,7 +953,7 @@ message CleanStaleRequest {
 
 message CleanStaleResponse {
   optional string message = 1;
-  buck.data.CleanStaleStats stats = 2;
+  bsmr.data.CleanStaleStats stats = 2;
 }
 
 message FileStatusRequest {
@@ -997,12 +997,12 @@ message SetLogFilterResponse {}
 // directly, but this lets us have the daemon potentially send data to the CLI
 // as a side channel.
 message SubscriptionRequestWrapper {
-  buck.subscription.SubscriptionRequest request = 1;
+  bsmr.subscription.SubscriptionRequest request = 1;
 }
 
 // Same as above but for responses.
 message SubscriptionResponseWrapper {
-  buck.subscription.SubscriptionResponse response = 1;
+  bsmr.subscription.SubscriptionResponse response = 1;
 }
 
 // Sent to close out a call to Subscription. Data atually flows through via
@@ -1038,7 +1038,7 @@ message TraceIoResponse {
 }
 
 // Note: When adding new request or response types, some of the declarations in
-// src/lib.rs need to be updated to derive common things for buck's cli package.
+// src/lib.rs need to be updated to derive common things for bsmr's cli package.
 service DaemonApi {
   rpc Kill(KillRequest) returns (CommandResult);
   rpc Status(StatusRequest) returns (CommandResult);
@@ -1065,7 +1065,7 @@ service DaemonApi {
   rpc NewGenericImpl(NewGenericRequestMessage)
       returns (stream MultiCommandProgress);
 
-  // Crashes the Buck daemon. Unless you are writing tests or checking Bessemer's
+  // Crashes the Bsmr daemon. Unless you are writing tests or checking Bessemer's
   // behavior when it crashes, you probably don't want this.
   rpc Unstable_Crash(UnstableCrashRequest) returns (CommandResult);
 
@@ -1105,7 +1105,7 @@ service DaemonApi {
   rpc TraceIo(TraceIoRequest) returns (stream MultiCommandProgress);
 }
 
-// This struct is written to `~/.buck/paranoid.info` by `bsmr paranoid
+// This struct is written to `~/.bsmr/paranoid.info` by `bsmr paranoid
 // enabled`, it's used to control whether we are currently enabling paranoid
 // mode on this machine. Read `bsmr help debug paranoid` for more details.
 message ParanoidInfo {

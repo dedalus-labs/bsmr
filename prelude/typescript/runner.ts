@@ -284,8 +284,8 @@ function runTool(executable: string, arguments_: readonly string[], cwd: string)
 async function main(arguments_: readonly string[]): Promise<void> {
 	const options = parseArguments(arguments_);
 	if (await exists(options.output)) throw new Error(`action output '${options.output}' already exists`);
-	const scratchRoot = process.env["BUCK_SCRATCH_PATH"];
-	if (scratchRoot === undefined || scratchRoot === "") throw new Error("BSMR did not provide BUCK_SCRATCH_PATH");
+	const scratchRoot = process.env["BSMR_SCRATCH_PATH"];
+	if (scratchRoot === undefined || scratchRoot === "") throw new Error("BSMR did not provide BSMR_SCRATCH_PATH");
 	const workspace = resolve(scratchRoot, "typescript-workspace");
 	for (const input of [options.install, options.source, options.output]) {
 		if (isWithin(input, workspace) || isWithin(workspace, input)) throw new Error(`scratch workspace '${workspace}' overlaps '${input}'`);

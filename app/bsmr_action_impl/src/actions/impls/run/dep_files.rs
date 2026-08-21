@@ -50,7 +50,7 @@ use bsmr_directory::directory::directory_selector::DirectorySelector;
 use bsmr_directory::directory::entry::DirectoryEntry;
 use bsmr_directory::directory::find::find;
 use bsmr_directory::directory::fingerprinted_directory::FingerprintedDirectory;
-use bsmr_error::BuckErrorContext;
+use bsmr_error::BsmrErrorContext;
 use bsmr_error::internal_error;
 use bsmr_events::dispatch::span_async_simple;
 use bsmr_execute::artifact::artifact_dyn::ArtifactDyn;
@@ -83,9 +83,9 @@ use bsmr_fs::paths::file_name::FileNameBuf;
 use bsmr_fs::paths::forward_rel_path::ForwardRelativePath;
 use bsmr_fs::paths::forward_rel_path::ForwardRelativePathBuf;
 use bsmr_fs::paths::forward_rel_path::ForwardRelativePathNormalizer;
-use bsmr_hash::BuckDashMap;
-use bsmr_hash::StdBuckHashMap;
-use bsmr_hash::StdBuckHashSet;
+use bsmr_hash::BsmrDashMap;
+use bsmr_hash::StdBsmrHashMap;
+use bsmr_hash::StdBsmrHashSet;
 use derive_more::Display;
 use dupe::Dupe;
 use futures::StreamExt;
@@ -99,8 +99,8 @@ use tracing::instrument;
 use crate::actions::impls::run::RunActionKey;
 
 #[allocative::root]
-static DEP_FILES: LazyLock<BuckDashMap<RunActionKey, Arc<DepFileState>>> =
-    LazyLock::new(BuckDashMap::new);
+static DEP_FILES: LazyLock<BsmrDashMap<RunActionKey, Arc<DepFileState>>> =
+    LazyLock::new(BsmrDashMap::new);
 
 /// When this is set, we retain directories after fingerprinting, so that we can output them later
 /// for debugging via `bsmr audit dep-files`.
@@ -621,7 +621,7 @@ impl DepFileBundle {
             materializer,
         )
         .await
-        .buck_error_context("Error reading dep files")?;
+        .bsmr_error_context("Error reading dep files")?;
 
         let dep_files = match dep_files {
             Some(dep_files) => dep_files,
@@ -823,7 +823,7 @@ async fn outputs_match(
         .iter()
         .map(|(path, value)| {
             Ok((
-                fs.buck_out_path_resolver()
+                fs.output_path_resolver()
                     .resolve_gen(path, Some(&value.content_based_path_hash()))?,
                 value.dupe(),
             ))
@@ -925,7 +925,7 @@ async fn dep_files_match(
         ctx.materializer(),
     )
     .await
-    .buck_error_context(
+    .bsmr_error_context(
         "Error reading persisted dep files. \
             Fix the command that produced an invalid dep file. \
             You may also use `bsmr debug flush-dep-files` to drop all dep file state.",
@@ -1006,7 +1006,7 @@ pub(crate) async fn read_dep_files(
         };
     }
 
-    let dep_files = declared_dep_files.read(fs, result).buck_error_context(
+    let dep_files = declared_dep_files.read(fs, result).bsmr_error_context(
         "Error reading dep files, verify that the action produced valid output",
     )?;
 
@@ -1407,7 +1407,7 @@ impl DeclaredDepFiles {
         result: &ActionOutputs,
     ) -> bsmr_error::Result<Option<ConcreteDepFiles>> {
         let mut contents =
-            StdBuckHashMap::with_capacity_and_hasher(self.tagged.len(), Default::default());
+            StdBsmrHashMap::with_capacity_and_hasher(self.tagged.len(), Default::default());
 
         for declared_dep_file in self.tagged.values() {
             let content_hash = if declared_dep_file
@@ -1449,7 +1449,7 @@ impl DeclaredDepFiles {
                 contents.insert(declared_dep_file.label.dupe(), dep_file);
             };
 
-            read_dep_file.with_buck_error_context(|| {
+            read_dep_file.with_bsmr_error_context(|| {
                 format!(
                     "Action execution produced an invalid `{}` dep file at `{}`",
                     declared_dep_file.label, dep_file,
@@ -1467,8 +1467,8 @@ impl DeclaredDepFiles {
         match other {
             None => self.tagged.is_empty(),
             Some(other) => {
-                let this = self.tagged.values().collect::<StdBuckHashSet<_>>();
-                let other = other.tagged.values().collect::<StdBuckHashSet<_>>();
+                let this = self.tagged.values().collect::<StdBsmrHashSet<_>>();
+                let other = other.tagged.values().collect::<StdBsmrHashSet<_>>();
                 this == other
             }
         }
@@ -1492,7 +1492,7 @@ enum MaterializeDepFilesError {
 /// content of the corresponding dep file.
 #[derive(Clone)]
 pub(crate) struct ConcreteDepFiles {
-    contents: StdBuckHashMap<Arc<str>, String>,
+    contents: StdBsmrHashMap<Arc<str>, String>,
 }
 
 impl ConcreteDepFiles {
@@ -1515,7 +1515,7 @@ impl ConcreteDepFiles {
             }
 
             let path = ForwardRelativePathNormalizer::normalize_path(line)
-                .buck_error_context("Invalid line encountered in dep file")?;
+                .bsmr_error_context("Invalid line encountered in dep file")?;
 
             if let Err(e) = Self::add_path_to_selector(path, &mut selector, fs, builder) {
                 soft_error!("failed_to_add_dep_file_path_to_selector", e, error_on_oss: true)?;
@@ -1542,7 +1542,7 @@ impl ConcreteDepFiles {
         fs: &ArtifactFs,
         builder: &ActionDirectoryBuilder,
     ) -> bsmr_error::Result<()> {
-        if !path.starts_with(fs.buck_out_path_resolver().root()) {
+        if !path.starts_with(fs.output_path_resolver().root()) {
             // This path isn't in bsmr-out, no content-based hash to replace.
             selector.select(path.as_ref());
             return Ok(());

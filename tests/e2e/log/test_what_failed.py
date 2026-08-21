@@ -15,25 +15,25 @@
 # pyre-strict
 
 
-from bsmr.tests.e2e_util.api.buck import Buck
+from bsmr.tests.e2e_util.api.bsmr import Bsmr
 from bsmr.tests.e2e_util.asserts import expect_failure
-from bsmr.tests.e2e_util.buck_workspace import buck_test
+from bsmr.tests.e2e_util.bsmr_workspace import bsmr_test
 
 
-@buck_test(inplace=True)
-async def test_what_failed(buck: Buck) -> None:
+@bsmr_test(inplace=True)
+async def test_what_failed(bsmr: Bsmr) -> None:
     pkg = "root//tests/targets/rules/genrule/bad"
     bad = "my_genrule_bad_with_dep"
     good = "stub"
 
-    await expect_failure(buck.build(f"{pkg}:{bad}"))
-    out = await buck.log("what-failed")
+    await expect_failure(bsmr.build(f"{pkg}:{bad}"))
+    out = await bsmr.log("what-failed")
 
     # Only the failed command should be in what-failed.
     assert f"{pkg}:{bad}" in out.stdout
     assert f"{pkg}:{good}" not in out.stdout
 
     # Even though both commands are here.
-    out = await buck.log("what-ran")
+    out = await bsmr.log("what-ran")
     assert f"{pkg}:{bad}" in out.stdout
     assert f"{pkg}:{good}" in out.stdout

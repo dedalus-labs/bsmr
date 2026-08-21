@@ -27,7 +27,7 @@ use bsmr_common::dice::cells::HasCellResolver;
 use bsmr_core::configuration::compatibility::MaybeCompatible;
 use bsmr_core::provider::label::ConfiguredProvidersLabel;
 use bsmr_core::provider::label::ProvidersName;
-use bsmr_error::BuckErrorContext;
+use bsmr_error::BsmrErrorContext;
 use bsmr_error::internal_error;
 use bsmr_node::attrs::display::AttrDisplayWithContext;
 use bsmr_node::attrs::display::AttrDisplayWithContextExt;

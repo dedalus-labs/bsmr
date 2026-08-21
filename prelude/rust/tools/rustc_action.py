@@ -17,7 +17,7 @@
 # of post-processing on the json-formatted diagnostics:
 # - (preprocessing) resolve env vars referring to paths to absolute paths
 # - write the rendered form to a text diagnostic output, and also to stderr
-# - annotate unused crate messages with buck target info for downstream tooling,
+# - annotate unused crate messages with bsmr target info for downstream tooling,
 #   and also generated a rendered version
 # - generate a build status json when using failure filtering
 #
@@ -124,7 +124,7 @@ class Args(NamedTuple):
     path_env: Optional[list[tuple[str, str]]]
     remap_cwd_prefix: Optional[str]
     crate_map: Optional[list[tuple[str, str]]]
-    buck_target: Optional[str]
+    bsmr_target: Optional[str]
     failure_filter: Optional[IO[bytes]]
     required_output: Optional[list[tuple[str, str]]]
     echo: Optional[IO[bytes]]
@@ -171,8 +171,8 @@ def arg_parse() -> Args:
         help="Crate name to target map for unused crate diagnostics",
     )
     parser.add_argument(
-        "--buck-target",
-        help="Buck target for crate, used for unused crate diagnostics",
+        "--bsmr-target",
+        help="Bsmr target for crate, used for unused crate diagnostics",
     )
     parser.add_argument(
         "--failure-filter",
@@ -206,8 +206,8 @@ def arg_parse() -> Args:
 def arg_eval(arg: str) -> str:
     """
     Expand the following two special cases:
-        --extern=$(cat bsmr-out/v2/gen/foo.txt)=bsmr-out/dev/gen/libfoo.rlib
-        --env-set=FOO=$(abspath bsmr-out/v2/gen/foo.txt)
+        --extern=$(cat bsmr-out/default/gen/foo.txt)=bsmr-out/dev/gen/libfoo.rlib
+        --env-set=FOO=$(abspath bsmr-out/default/gen/foo.txt)
     """
     expanded = ""
 
@@ -282,7 +282,7 @@ async def handle_output(  # noqa: C901
                 got_error_diag = True
 
             # Add more information to unused crate warnings.
-            if args.buck_target:
+            if args.bsmr_target:
                 rendered_unused = []
                 for name in unused_names:
                     if name in crate_map:
@@ -292,9 +292,9 @@ async def handle_output(  # noqa: C901
                 rendered_unused.sort()
                 rendered_unused = "\n    ".join(rendered_unused)
 
-                diag["buck_target"] = args.buck_target
+                diag["bsmr_target"] = args.bsmr_target
                 diag["rendered"] = (
-                    f"Target `{args.buck_target}` has unused dependencies:\n"
+                    f"Target `{args.bsmr_target}` has unused dependencies:\n"
                     f"    {rendered_unused}"
                 )
             diag["unused_deps"] = {
@@ -367,10 +367,10 @@ async def main() -> int:  # noqa: C901
         # right-hand side as "./" and "./one/" and "one/two/". In compiler
         # diagnostics we would never want this leading "./" so strip it off.
         if arg.startswith("--remap-path-prefix="):
-            flag, buck_out, mapped = arg.split("=", 2)
+            flag, output, mapped = arg.split("=", 2)
             if mapped.startswith("./"):
                 mapped = mapped[2:]
-            arg = f"{flag}={buck_out}={mapped}"
+            arg = f"{flag}={output}={mapped}"
 
         # While the env-set feature is unstable, allow it to be used with stable
         # rustc by translating from a rustc flag to environment variables set
@@ -399,7 +399,7 @@ async def main() -> int:  # noqa: C901
         delete=False,
         # This isn't set when running doctests. Once that's fixed, we won't need
         # `tempfile`
-        dir=os.environ.get("BUCK_SCRATCH_PATH", None),
+        dir=os.environ.get("BSMR_SCRATCH_PATH", None),
     ) as args_file:
         args_file.write("\n".join(rustc_args).encode() + b"\n")
         args_file.flush()
@@ -459,7 +459,7 @@ async def main() -> int:  # noqa: C901
             json.dumps(build_status, separators=(",", ":")).encode() + b"\n"
         )
 
-        # OK to actually report success, but keep buck happy by making sure all
+        # OK to actually report success, but keep bsmr happy by making sure all
         # the required outputs are present
         if got_error_diag and res != 0:
             for _short, path in required_output:

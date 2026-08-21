@@ -32,12 +32,12 @@ func getGoBinary() (string, func(), error) {
 		return "", func() {}, fmt.Errorf("failed to create temp dir: %w", err)
 	}
 
-	buckOpts := strings.Fields(os.Getenv("GOPACKAGESDRIVER_BUCK_OPTIONS"))
+	bsmrOpts := strings.Fields(os.Getenv("GOPACKAGESDRIVER_BSMR_OPTIONS"))
 	scriptContent := fmt.Sprintf(`#!/usr/bin/env bash
 # remove the current directory from the path to avoid infinite recursion on system_go_toolchain
 export PATH=${PATH//$(dirname "$0"):/}
 exec bsmr run %s 'toolchains//:go[go]' -- "$@"
-`, strings.Join(buckOpts, " "))
+`, strings.Join(bsmrOpts, " "))
 
 	goBinaryPath := filepath.Join(tmpDir, "go")
 	err = os.WriteFile(goBinaryPath, []byte(scriptContent), 0755)

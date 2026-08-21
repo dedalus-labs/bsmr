@@ -12,7 +12,7 @@ import { chmodSync, existsSync, mkdirSync, mkdtempSync, writeFileSync } from "no
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
-import { changedWheelEntries, median, parseBsmrOutputs, performanceGateResults, removeReadOnlyTree, runnerOrder, wheelPayload } from "./helpers.ts";
+import { changedWheelEntries, median, parseOutputputs, performanceGateResults, removeReadOnlyTree, runnerOrder, wheelPayload } from "./helpers.ts";
 
 test("runner order alternates without changing membership", () => {
 	assert.deepEqual(runnerOrder(1), ["bsmr", "bazel"]);
@@ -74,12 +74,12 @@ test("performance gates reject regressions and missing paired medians", () => {
 });
 
 test("BSMR output parsing requires both semantic artifacts", () => {
-	const output = parseBsmrOutputs(JSON.stringify({
+	const output = parseOutputputs(JSON.stringify({
 		"root//:__bsmr_python_sources": "/tmp/source",
 		"root//:django": "/tmp/wheel",
 	}));
 	assert.deepEqual(output, { source: "/tmp/source", wheel: "/tmp/wheel" });
-	assert.throws(() => parseBsmrOutputs("{}"), /omitted/);
+	assert.throws(() => parseOutputputs("{}"), /omitted/);
 });
 
 test("wheel payload reads and filters the ZIP central directory", () => {

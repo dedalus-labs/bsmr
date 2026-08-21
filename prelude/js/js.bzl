@@ -13,7 +13,7 @@
 # above-listed licenses.
 
 load("@prelude//:genrule.bzl", "genrule_attributes")
-load("@prelude//decls:common.bzl", "buck")
+load("@prelude//decls:common.bzl", "bsmr")
 load("@prelude//decls:toolchains_common.bzl", "toolchains_common")
 load("@prelude//js:js_bundle.bzl", "js_bundle_impl")
 load("@prelude//js:js_bundle_genrule.bzl", "js_bundle_genrule_impl")
@@ -74,7 +74,7 @@ extra_attributes = {
         "type": attrs.string(
             default = "js_bundle_genrule",
         ),
-        "_exec_os_type": buck.exec_os_type_arg(),
+        "_exec_os_type": bsmr.exec_os_type_arg(),
         "_is_release": attrs.bool(
             default = _is_release(),
         ),

@@ -18,7 +18,7 @@
 
 use std::sync::OnceLock;
 
-use bsmr_error::BuckErrorContext;
+use bsmr_error::BsmrErrorContext;
 use bsmr_error::bsmr_error;
 
 #[allow(clippy::absurd_extreme_comparisons)]
@@ -29,7 +29,7 @@ pub fn sc_clk_tck() -> bsmr_error::Result<u32> {
             let rate = libc::sysconf(libc::_SC_CLK_TCK);
             let rate: u32 = rate
                 .try_into()
-                .buck_error_context("Integer overflow converting ticks per second")?;
+                .bsmr_error_context("Integer overflow converting ticks per second")?;
             if rate <= 0 || rate > 10_000 {
                 return Err(bsmr_error!(
                     bsmr_error::ErrorTag::CpuStats,

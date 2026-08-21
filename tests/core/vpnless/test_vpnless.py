@@ -19,34 +19,34 @@ from __future__ import annotations
 
 import json
 
-from bsmr.tests.e2e_util.api.buck import Buck
-from bsmr.tests.e2e_util.buck_workspace import buck_test, env
+from bsmr.tests.e2e_util.api.bsmr import Bsmr
+from bsmr.tests.e2e_util.bsmr_workspace import bsmr_test, env
 
 # Note: for test scenarios where we want to ensure the `cpe` crate reports no
 # vpnless support, we have to define the env var but =0. Otherwise these
 # tests will erroneously fail on macOS.
 
 
-@buck_test()
+@bsmr_test()
 @env("CPE_RUST_X2P_SUPPORTS_VPNLESS", "0")
 @env("CPE_RUST_X2P_HTTP1_PROXY_PORT", "5555")
-async def test_vpnless_disabled_by_host(buck: Buck) -> None:
+async def test_vpnless_disabled_by_host(bsmr: Bsmr) -> None:
     # Get a daemon to start
-    await buck.build()
-    result = await buck.status()
+    await bsmr.build()
+    result = await bsmr.status()
     status = json.loads(result.stdout)
     assert not status["supports_vpnless"], (
         "vpnless should be disabled by non-supporting host"
     )
 
 
-@buck_test()
+@bsmr_test()
 @env("CPE_RUST_X2P_SUPPORTS_VPNLESS", "1")
 # Need to set this so Windows doesn't go down the unix socket codepath.
 @env("CPE_RUST_X2P_HTTP1_PROXY_PORT", "5555")
-async def test_vpnless_enabled(buck: Buck) -> None:
+async def test_vpnless_enabled(bsmr: Bsmr) -> None:
     # Get a daemon to start
-    await buck.build()
-    result = await buck.status()
+    await bsmr.build()
+    result = await bsmr.status()
     status = json.loads(result.stdout)
     assert status["supports_vpnless"], "vpnless should be enabled by host"

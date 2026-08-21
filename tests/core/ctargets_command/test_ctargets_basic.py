@@ -18,17 +18,17 @@
 import json
 import re
 
-from bsmr.tests.e2e_util.api.buck import Buck
-from bsmr.tests.e2e_util.buck_workspace import buck_test
+from bsmr.tests.e2e_util.api.bsmr import Bsmr
+from bsmr.tests.e2e_util.bsmr_workspace import bsmr_test
 
 
 def _replace_hash(s: str) -> str:
     return re.sub(r"\b[0-9a-f]{16}\b", "<HASH>", s)
 
 
-@buck_test()
-async def test_ctargets_basic(buck: Buck) -> None:
-    result = await buck.ctargets(
+@bsmr_test()
+async def test_ctargets_basic(bsmr: Bsmr) -> None:
+    result = await bsmr.ctargets(
         "root//:gum",
         "--target-platforms=root//:p",
     )
@@ -37,28 +37,28 @@ async def test_ctargets_basic(buck: Buck) -> None:
     assert line == "root//:gum (root//:p#<HASH>)"
 
 
-@buck_test()
-async def test_ctargets_json(buck: Buck) -> None:
-    result = await buck.ctargets(
+@bsmr_test()
+async def test_ctargets_json(bsmr: Bsmr) -> None:
+    result = await bsmr.ctargets(
         "root//:chocolate",
         "--json",
     )
 
     [output] = json.loads(result.stdout)
 
-    output["buck.type"]
-    output["buck.deps"]
-    output["buck.inputs"]
-    output["buck.package"]
+    output["bsmr.type"]
+    output["bsmr.deps"]
+    output["bsmr.inputs"]
+    output["bsmr.package"]
     output["name"]
     assert output["default_target_platform"] == "root//:p"
     output["visibility"]
     output["within_view"]
 
 
-@buck_test()
-async def test_ctargets_multi_json(buck: Buck) -> None:
-    result = await buck.ctargets(
+@bsmr_test()
+async def test_ctargets_multi_json(bsmr: Bsmr) -> None:
+    result = await bsmr.ctargets(
         "root//:",
         "--json",
     )
@@ -68,10 +68,10 @@ async def test_ctargets_multi_json(buck: Buck) -> None:
     assert len(outputs) == 3
 
     for output in outputs:
-        output["buck.type"]
-        output["buck.deps"]
-        output["buck.inputs"]
-        output["buck.package"]
+        output["bsmr.type"]
+        output["bsmr.deps"]
+        output["bsmr.inputs"]
+        output["bsmr.package"]
 
         name = output["name"]
         if name == "chocolate":
@@ -81,9 +81,9 @@ async def test_ctargets_multi_json(buck: Buck) -> None:
         output["within_view"]
 
 
-@buck_test()
-async def test_ctargets_output_attribute(buck: Buck) -> None:
-    result = await buck.ctargets(
+@bsmr_test()
+async def test_ctargets_output_attribute(bsmr: Bsmr) -> None:
+    result = await bsmr.ctargets(
         "root//:chocolate", "--output-attribute=default_*", "--output-attribute=name"
     )
 

@@ -7,13 +7,13 @@
 
 # rust-project
 
-`rust-project` reads dependency information from Buck and generates a
+`rust-project` reads dependency information from Bsmr and generates a
 [rust-project.json](https://rust-analyzer.github.io/manual.html#non-cargo-based-projects)
 file for `rust-analyzer`.
 
 # Usage
 
-Run the tool from the repository root with one or more Buck targets:
+Run the tool from the repository root with one or more Bsmr targets:
 
 ```bash
 ./tools/bin/rust-project develop //app/bsmr:bsmr

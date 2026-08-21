@@ -16,7 +16,7 @@
 
 use std::future::Future;
 
-use bsmr_error::BuckErrorContext;
+use bsmr_error::BsmrErrorContext;
 use bytes::Bytes;
 use http::HeaderMap;
 use http::Method;
@@ -49,7 +49,7 @@ impl UriWithRedirect for Uri {
         }
         redirected
             .build()
-            .buck_error_context("Building redirected URI")
+            .bsmr_error_context("Building redirected URI")
     }
 
     /// Returns whether this Uri is the same host as represented by 'other'.
@@ -87,7 +87,7 @@ impl PendingRequest {
             .expect("Request builder should not error here") = self.headers.clone();
         builder
             .body(self.body.clone())
-            .buck_error_context("building redirected request")
+            .bsmr_error_context("building redirected request")
     }
 }
 

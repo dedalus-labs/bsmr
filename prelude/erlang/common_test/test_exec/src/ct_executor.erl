@@ -20,7 +20,7 @@ Notably allows us to call post/pre method on the node if needed, e.g for coverag
 """.
 
 -include_lib("kernel/include/logger.hrl").
--include_lib("common/include/buck_ct_records.hrl").
+-include_lib("common/include/bsmr_ct_records.hrl").
 
 -export([run/1]).
 
@@ -111,7 +111,7 @@ run(Args) when is_list(Args) ->
 
                 ProviderInitState = #init_provider_state{output_dir = OutputDir, suite = Suite, raw_target = RawTarget},
                 Providers0 = [
-                    buck_ct_provider:do_init(Provider, ProviderInitState)
+                    bsmr_ct_provider:do_init(Provider, ProviderInitState)
                  || {providers, Providers} <- CtExecutorArgs,
                     Provider <- Providers
                 ],
@@ -119,13 +119,13 @@ run(Args) when is_list(Args) ->
                 %% get longer stack traces
                 erlang:system_flag(backtrace_depth, 20),
                 ?LOG_DEBUG("ct_run called with arguments ~tp ~n", [CtRunArgs]),
-                Providers1 = [buck_ct_provider:do_pre_running(Provider) || Provider <- Providers0],
+                Providers1 = [bsmr_ct_provider:do_pre_running(Provider) || Provider <- Providers0],
 
                 %% set global timeout
                 Result = ct:run_test(CtRunArgs),
                 ?LOG_DEBUG("ct_run finished with result ~tp ~n", [Result]),
-                Providers2 = [buck_ct_provider:do_post_running(Provider) || Provider <- Providers1],
-                [buck_ct_provider:do_terminate(Provider) || Provider <- Providers2],
+                Providers2 = [bsmr_ct_provider:do_post_running(Provider) || Provider <- Providers1],
+                [bsmr_ct_provider:do_terminate(Provider) || Provider <- Providers2],
                 0
             catch
                 Class:Reason:Stack ->
@@ -151,7 +151,7 @@ parse_arguments(Args) ->
     % This will be sent to the program executing it (ct_runner),
     % that will log it in its own log.
     debug_print("CT executor called with ~tp~n", [Args]),
-    ParsedArgs = [buck_ct_parser:parse_str(Elem) || Elem <:- Args],
+    ParsedArgs = [bsmr_ct_parser:parse_str(Elem) || Elem <:- Args],
     debug_print("Parsed arguments ~tp~n", [ParsedArgs]),
     % We split the arguments between those that go to ct_run and those that are for
     % ct_executor
@@ -201,7 +201,7 @@ init_common_app_env_var(Key, Value) ->
     KeyAtom = binary_to_atom(Key, utf8),
     case common_util:get_env(KeyAtom) of
         undefined ->
-            ValueTerm = buck_ct_parser:parse_str(Value),
+            ValueTerm = bsmr_ct_parser:parse_str(Value),
             common_util:set_env(KeyAtom, ValueTerm);
         _ ->
             ok
@@ -243,7 +243,7 @@ preload_app_file_atoms(DotApp) ->
 
 -spec debug_print(string(), [term()]) -> ok.
 debug_print(Fmt, Args) ->
-    case os:getenv("ERLANG_BUCK_DEBUG_PRINT") of
+    case os:getenv("ERLANG_BSMR_DEBUG_PRINT") of
         false -> io:format(Fmt, Args);
         "disabled" -> ok;
         _ -> io:format(Fmt, Args)

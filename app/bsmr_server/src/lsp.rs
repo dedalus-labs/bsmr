@@ -44,8 +44,8 @@ use bsmr_events::dispatch::with_dispatcher;
 use bsmr_events::dispatch::with_dispatcher_async;
 use bsmr_fs::paths::abs_path::AbsPath;
 use bsmr_fs::paths::forward_rel_path::ForwardRelativePath;
-use bsmr_hash::StdBuckHashMap;
-use bsmr_hash::StdBuckHashSet;
+use bsmr_hash::StdBsmrHashMap;
+use bsmr_hash::StdBsmrHashSet;
 use bsmr_interpreter::allow_relative_paths::HasAllowRelativePaths;
 use bsmr_interpreter::load_module::InterpreterCalculation;
 use bsmr_interpreter::paths::module::OwnedStarlarkModulePath;
@@ -165,7 +165,7 @@ async fn get_builtin_globals_docs(dice_ctx: &mut DiceTransaction) -> bsmr_error:
 
 async fn get_prelude_docs(
     ctx: &DiceTransaction,
-    existing_globals: &StdBuckHashSet<&str>,
+    existing_globals: &StdBsmrHashSet<&str>,
 ) -> bsmr_error::Result<Option<(ImportPath, DocModule)>> {
     let ctx = &mut ctx.clone();
     let cell_resolver = ctx.get_cell_resolver().await?;
@@ -179,7 +179,7 @@ async fn get_prelude_docs(
     let mut module_docs = frozen_module.documentation();
 
     // For the prelude, we want to promote `native` symbol up one level
-    for (name, value) in module.extra_globals_from_prelude_for_buck_files()? {
+    for (name, value) in module.extra_globals_from_prelude_for_bsmr_files()? {
         if !existing_globals.contains(&name) && !module_docs.members.contains_key(name) {
             let doc = value.to_value().documentation();
 
@@ -195,9 +195,9 @@ async fn get_prelude_docs(
 struct DocsCache {
     /// Mapping of global names to URIs. These can either be files (for global symbols in the
     /// prelude), or `starlark:` URIs for rust native types and functions.
-    global_uris: StdBuckHashMap<String, LspUri>,
+    global_uris: StdBsmrHashMap<String, LspUri>,
     /// Mapping of starlark: URIs to a synthesized starlark representation.
-    native_starlark_files: StdBuckHashMap<LspUri, String>,
+    native_starlark_files: StdBsmrHashMap<LspUri, String>,
 }
 
 #[derive(bsmr_error::Error, Debug)]
@@ -245,7 +245,7 @@ impl DocsCache {
         location_lookup: F,
     ) -> bsmr_error::Result<Self> {
         let mut global_uris =
-            StdBuckHashMap::with_capacity_and_hasher(builtin_symbols.len(), Default::default());
+            StdBsmrHashMap::with_capacity_and_hasher(builtin_symbols.len(), Default::default());
 
         let mut insert_global = |sym: String, uri: LspUri| {
             if let Some(existing) = global_uris.insert(sym.clone(), uri.clone()) {
@@ -260,7 +260,7 @@ impl DocsCache {
             }
         };
 
-        let mut native_starlark_files = StdBuckHashMap::default();
+        let mut native_starlark_files = StdBsmrHashMap::default();
         for (import_path, docs) in builtin_symbols {
             match import_path {
                 Some(l) => {
@@ -302,7 +302,7 @@ impl DocsCache {
     }
 }
 
-struct BuckLspContext<'a> {
+struct BsmrLspContext<'a> {
     server_ctx: &'a dyn ServerCommandContextTrait,
     fs: ProjectRoot,
     docs_cache_manager: DocsCacheManager,
@@ -311,16 +311,16 @@ struct BuckLspContext<'a> {
 
 #[derive(Debug, bsmr_error::Error)]
 #[bsmr(tag = Input)]
-enum BuckLspContextError {
+enum BsmrLspContextError {
     /// The scheme provided was not correct or supported.
     #[error("URI `{}` was expected to be of type `{}`", .1, .0)]
     WrongScheme(String, LspUri),
 }
 
-impl<'a> BuckLspContext<'a> {
+impl<'a> BsmrLspContext<'a> {
     async fn new(
         server_ctx: &'a dyn ServerCommandContextTrait,
-    ) -> bsmr_error::Result<BuckLspContext<'a>> {
+    ) -> bsmr_error::Result<BsmrLspContext<'a>> {
         let (fs, docs_cache_manager) = server_ctx
             .with_dice_ctx(|server_ctx, dice_ctx| async move {
                 let fs = server_ctx.project_root().clone();
@@ -431,7 +431,7 @@ impl<'a> BuckLspContext<'a> {
         let import_path: OwnedStarlarkModulePath = match uri {
             LspUri::File(path) => self.import_path(path).await,
             LspUri::Starlark(path) => self.starlark_import_path(path).await,
-            LspUri::Other(_) => Err(BuckLspContextError::WrongScheme(
+            LspUri::Other(_) => Err(BsmrLspContextError::WrongScheme(
                 "file:// or starlark:".to_owned(),
                 uri.clone(),
             )
@@ -564,7 +564,7 @@ impl<'a> BuckLspContext<'a> {
     }
 }
 
-impl LspContext for BuckLspContext<'_> {
+impl LspContext for BsmrLspContext<'_> {
     fn parse_file_with_contents(&self, uri: &LspUri, content: String) -> LspEvalResult {
         let dispatcher = self.server_ctx.events().dupe();
         self.runtime
@@ -702,7 +702,7 @@ impl LspContext for BuckLspContext<'_> {
                         Ok(docs_cache.native_starlark_file(uri).cloned())
                     }
                     _ => Err(
-                        BuckLspContextError::WrongScheme("file://".to_owned(), uri.clone()).into(),
+                        BsmrLspContextError::WrongScheme("file://".to_owned(), uri.clone()).into(),
                     ),
                 }
             }))
@@ -787,7 +787,7 @@ async fn run_lsp_server(
     };
 
     let dispatcher = ctx.events().dupe();
-    let buck_lsp_ctx = BuckLspContext::new(ctx).await?;
+    let bsmr_lsp_ctx = BsmrLspContext::new(ctx).await?;
 
     tokio::task::block_in_place(|| {
         thread::scope(|scope| {
@@ -799,7 +799,7 @@ async fn run_lsp_server(
             });
 
             let server_thread = scope.spawn(with_dispatcher(dispatcher, || {
-                move || server_with_connection(connection, buck_lsp_ctx)
+                move || server_with_connection(connection, bsmr_lsp_ctx)
             }));
 
             let res = {

@@ -27,10 +27,10 @@ use bsmr_core::cells::name::CellName;
 use bsmr_core::fs::project::ProjectRoot;
 #[cfg(fbcode_build)]
 use bsmr_core::soft_error;
-use bsmr_error::BuckErrorContext;
+use bsmr_error::BsmrErrorContext;
 use bsmr_error::ErrorTag;
 use bsmr_error::bsmr_error;
-use bsmr_hash::StdBuckHashMap;
+use bsmr_hash::StdBsmrHashMap;
 use dice::DiceTransactionUpdater;
 
 #[cfg(fbcode_build)]
@@ -58,14 +58,14 @@ pub(crate) fn dice_clear_on_mergebase_change(
             section: "bsmr",
             property: "dice_clear_on_mergebase_change",
         })
-        .buck_error_context("Failed to parse dice_clear_on_mergebase_change config")?
+        .bsmr_error_context("Failed to parse dice_clear_on_mergebase_change config")?
         .unwrap_or(true);
     let env_skip = bsmr_env!(
         "BSMR_TEST_SKIP_DICE_CLEAR_ON_MERGEBASE_CHANGE",
         bool,
         applicability = testing
     )
-    .buck_error_context("Failed to parse BSMR_TEST_SKIP_DICE_CLEAR_ON_MERGEBASE_CHANGE env")?;
+    .bsmr_error_context("Failed to parse BSMR_TEST_SKIP_DICE_CLEAR_ON_MERGEBASE_CHANGE env")?;
     Ok(config_value && !env_skip)
 }
 
@@ -77,7 +77,7 @@ impl dyn FileWatcher {
         project_root: &ProjectRoot,
         root_config: &LegacyBsmrConfig,
         cells: CellResolver,
-        ignore_specs: StdBuckHashMap<CellName, IgnoreSet>,
+        ignore_specs: StdBsmrHashMap<CellName, IgnoreSet>,
     ) -> bsmr_error::Result<Arc<dyn FileWatcher>> {
         if !project_root.root().as_path().exists() {
             return Err(bsmr_error!(
@@ -133,15 +133,15 @@ impl dyn FileWatcher {
         match watcher_conf {
             "watchman" => Ok(Arc::new(
                 WatchmanFileWatcher::new(project_root.root(), root_config, cells, ignore_specs)
-                    .buck_error_context("Creating watchman file watcher")?,
+                    .bsmr_error_context("Creating watchman file watcher")?,
             )),
             "notify" => Ok(Arc::new(
                 NotifyFileWatcher::new(project_root, cells, ignore_specs)
-                    .buck_error_context("Creating notify file watcher")?,
+                    .bsmr_error_context("Creating notify file watcher")?,
             )),
             "fs_hash_crawler" => Ok(Arc::new(
                 FsHashCrawler::new(project_root, cells, ignore_specs)
-                    .buck_error_context("Creating fs_crawler file watcher")?,
+                    .bsmr_error_context("Creating fs_crawler file watcher")?,
             )),
             other => Err(bsmr_error!(
                 bsmr_error::ErrorTag::Tier0,

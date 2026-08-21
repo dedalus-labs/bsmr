@@ -15,13 +15,13 @@
 # pyre-strict
 
 
-from bsmr.tests.e2e_util.api.buck import Buck
-from bsmr.tests.e2e_util.buck_workspace import buck_test
+from bsmr.tests.e2e_util.api.bsmr import Bsmr
+from bsmr.tests.e2e_util.bsmr_workspace import bsmr_test
 
 
-@buck_test(inplace=True)
-async def test_re_resource_exhausted_reported_as_infra_failure(buck: Buck) -> None:
-    result = await buck.test(
+@bsmr_test(inplace=True)
+async def test_re_resource_exhausted_reported_as_infra_failure(bsmr: Bsmr) -> None:
+    result = await bsmr.test(
         "--remote-only",
         "--no-remote-cache",
         "root//tests/targets/rules/sh_test:test_remote_explicit",
@@ -37,15 +37,15 @@ async def test_re_resource_exhausted_reported_as_infra_failure(buck: Buck) -> No
     assert "resource exhausted" in result.stderr.lower()
 
 
-@buck_test(inplace=True)
-async def test_cancel_test_if_re_queue_longer_than_threshold(buck: Buck) -> None:
+@bsmr_test(inplace=True)
+async def test_cancel_test_if_re_queue_longer_than_threshold(bsmr: Bsmr) -> None:
     args = [
         "-c",
         "build.remote_execution_cancel_on_estimated_queue_time_exceeds_s=10",
         "--no-remote-cache",
         "--remote-only",
     ]
-    result = await buck.test(
+    result = await bsmr.test(
         *args,
         "root//tests/targets/rules/sh_test:test_remote_explicit_stays_in_queue",
         env={"BSMR_TEST_RE_QUEUE_ESTIMATE_S": "100"},

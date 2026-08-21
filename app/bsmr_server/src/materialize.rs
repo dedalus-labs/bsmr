@@ -17,7 +17,7 @@
 use bsmr_cli_proto::new_generic::MaterializeRequest;
 use bsmr_cli_proto::new_generic::MaterializeResponse;
 use bsmr_core::fs::project_rel_path::ProjectRelativePath;
-use bsmr_error::BuckErrorContext;
+use bsmr_error::BsmrErrorContext;
 use bsmr_events::dispatch::span_async;
 use bsmr_server_ctx::commands::command_end;
 use bsmr_server_ctx::ctx::ServerCommandContextTrait;
@@ -36,7 +36,7 @@ pub(crate) async fn materialize_command(
         let result = materialize(&context.base_context, req.paths)
             .await
             .map(|()| MaterializeResponse {})
-            .buck_error_context("Failed to materialize paths");
+            .bsmr_error_context("Failed to materialize paths");
         let end_event = command_end(&result, bsmr_data::MaterializeCommandEnd {});
         (result, end_event)
     })

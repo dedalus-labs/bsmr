@@ -24,11 +24,11 @@ use std::task::Poll;
 
 use async_trait::async_trait;
 use bsmr_core::bsmr_env;
-use bsmr_error::BuckErrorContext as _;
+use bsmr_error::BsmrErrorContext as _;
 use bsmr_events::dispatch::EventDispatcher;
 use bsmr_grpc::DuplexChannel;
 use bsmr_grpc::ServerHandle;
-use bsmr_hash::StdBuckHashMap;
+use bsmr_hash::StdBsmrHashMap;
 use bsmr_test_api::grpc::TestExecutorClient;
 use bsmr_test_api::grpc::spawn_orchestrator_server;
 use bsmr_test_api::protocol::TestExecutor;
@@ -42,11 +42,11 @@ use tokio::io::AsyncRead;
 use tokio::io::AsyncWrite;
 use tokio::process::Child;
 
-use crate::downward_api::BuckTestDownwardApi;
-use crate::orchestrator::BuckTestOrchestrator;
+use crate::downward_api::BsmrTestDownwardApi;
+use crate::orchestrator::BsmrTestOrchestrator;
 
-static TEST_EXECUTOR_CLIENTS: LazyLock<Mutex<StdBuckHashMap<u16, Arc<dyn TestExecutor>>>> =
-    LazyLock::new(|| Mutex::new(StdBuckHashMap::default()));
+static TEST_EXECUTOR_CLIENTS: LazyLock<Mutex<StdBsmrHashMap<u16, Arc<dyn TestExecutor>>>> =
+    LazyLock::new(|| Mutex::new(StdBsmrHashMap::default()));
 
 pub struct TestExecutorClientWrapper(u16);
 impl TestExecutorClientWrapper {
@@ -78,7 +78,7 @@ pub struct ExecutorLaunch {
     pub handle: ExecutorFuture,
     pub client: TestExecutorClient,
     pub make_server:
-        Box<dyn FnOnce(BuckTestOrchestrator<'static>, BuckTestDownwardApi) -> ServerHandle + Send>,
+        Box<dyn FnOnce(BsmrTestOrchestrator<'static>, BsmrTestDownwardApi) -> ServerHandle + Send>,
 }
 
 pub struct ExecutorFuture {
@@ -93,7 +93,7 @@ impl ExecutorFuture {
 
             let (status, stdout, stderr) = try_join3(child.wait(), stdout_fut, stderr_fut)
                 .await
-                .buck_error_context("Failed to run OutOfProcessTestExecutor")?;
+                .bsmr_error_context("Failed to run OutOfProcessTestExecutor")?;
 
             let exit_code = status.code().unwrap_or(1);
 
@@ -177,7 +177,7 @@ async fn spawn_orchestrator<T: AsyncRead + AsyncWrite + Send + Sync + Unpin + 's
 ) -> bsmr_error::Result<ExecutorLaunch> {
     let client = TestExecutorClient::new(executor_client_io)
         .await
-        .buck_error_context("Failed to create TestExecutorClient")?;
+        .bsmr_error_context("Failed to create TestExecutorClient")?;
 
     let make_server = Box::new(move |orchestrator, downward_api| {
         let (read, write) = tokio::io::split(orchestrator_server_io);

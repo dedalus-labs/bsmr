@@ -15,13 +15,13 @@
 # pyre-strict
 
 
-from bsmr.tests.e2e_util.api.buck import Buck
-from bsmr.tests.e2e_util.buck_workspace import buck_test
+from bsmr.tests.e2e_util.api.bsmr import Bsmr
+from bsmr.tests.e2e_util.bsmr_workspace import bsmr_test
 
 
-@buck_test()
-async def test_configuration_rule_unbound(buck: Buck) -> None:
-    await buck.cquery(
+@bsmr_test()
+async def test_configuration_rule_unbound(bsmr: Bsmr) -> None:
+    await bsmr.cquery(
         "--target-platforms=root//config:cat_platform",
         "root//:top",
     )

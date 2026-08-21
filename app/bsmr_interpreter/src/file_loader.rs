@@ -119,7 +119,7 @@ impl LoadedModule {
     }
 
     /// Returned `FrozenValue` is owned by `self.0.env`.
-    pub fn extra_globals_from_prelude_for_buck_files(
+    pub fn extra_globals_from_prelude_for_bsmr_files(
         &self,
     ) -> bsmr_error::Result<impl Iterator<Item = (&str, FrozenValue)> + '_> {
         if let Some(native) = self

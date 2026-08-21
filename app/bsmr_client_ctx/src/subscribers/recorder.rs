@@ -42,7 +42,7 @@ use bsmr_data::SoftError;
 use bsmr_data::SystemInfo;
 use bsmr_data::TargetCfg;
 use bsmr_data::error::ErrorTag;
-use bsmr_error::BuckErrorContext;
+use bsmr_error::BsmrErrorContext;
 use bsmr_error::ExitCode;
 use bsmr_error::Tier;
 use bsmr_error::bsmr_error;
@@ -56,16 +56,16 @@ use bsmr_event_observer::cache_hit_rate::total_cache_hit_rate;
 use bsmr_event_observer::last_command_execution_kind;
 use bsmr_event_observer::last_command_execution_kind::LastCommandExecutionKind;
 use bsmr_event_observer::last_command_execution_kind::get_last_command_execution_time;
-use bsmr_events::BuckEvent;
+use bsmr_events::BsmrEvent;
 use bsmr_events::daemon_id::DaemonId;
 use bsmr_fs::error::IoResultExt;
 use bsmr_fs::fs_util;
 use bsmr_fs::paths::abs_path::AbsPathBuf;
-use bsmr_hash::StdBuckHashMap;
-use bsmr_hash::StdBuckHashSet;
+use bsmr_hash::StdBsmrHashMap;
+use bsmr_hash::StdBsmrHashSet;
 use bsmr_util::network_speed_average::NetworkSpeedAverage;
 use bsmr_util::sliding_window::SlidingWindow;
-use bsmr_wrapper_common::BUCK_WRAPPER_START_TIME_ENV_VAR;
+use bsmr_wrapper_common::BSMR_WRAPPER_START_TIME_ENV_VAR;
 use bsmr_wrapper_common::invocation_id::TraceId;
 use console::strip_ansi_codes;
 use dupe::Dupe;
@@ -179,9 +179,9 @@ pub struct InvocationRecorder {
     initial_sink_dropped_count: Option<u64>,
     initial_sink_bytes_written: Option<u64>,
     sink_max_buffer_depth: u64,
-    soft_error_categories: StdBuckHashSet<SoftError>,
+    soft_error_categories: StdBsmrHashSet<SoftError>,
     concurrent_command_blocking_duration: Option<Duration>,
-    metadata: StdBuckHashMap<String, String>,
+    metadata: StdBsmrHashMap<String, String>,
     analysis_count: u64,
     load_count: u64,
     daemon_in_memory_state_is_corrupted: bool,
@@ -215,7 +215,7 @@ pub struct InvocationRecorder {
     initial_hedwig_download_bytes: Option<u64>,
     initial_hedwig_upload_queries: Option<u64>,
     initial_hedwig_upload_bytes: Option<u64>,
-    concurrent_command_ids: StdBuckHashSet<String>,
+    concurrent_command_ids: StdBsmrHashSet<String>,
     daemon_connection_failure: bool,
     /// Daemon started by this command.
     daemon_was_started: Option<bsmr_data::DaemonWasStartedReason>,
@@ -238,7 +238,7 @@ pub struct InvocationRecorder {
     peak_used_disk_space_bytes: Option<u64>,
     peak_normalized_system_load1: Option<f64>,
     peak_normalized_system_load5: Option<f64>,
-    active_networks_kinds: StdBuckHashSet<i32>,
+    active_networks_kinds: StdBsmrHashSet<i32>,
     target_cfg: Option<TargetCfg>,
     hg_revision: Option<String>,
     git_revision: Option<String>,
@@ -253,7 +253,7 @@ pub struct InvocationRecorder {
     previous_uuid_with_mismatched_config: Option<String>,
     file_watcher: Option<String>,
     health_check_tags_receiver: Option<Receiver<Vec<String>>>,
-    health_check_tags: StdBuckHashSet<String>,
+    health_check_tags: StdBsmrHashSet<String>,
     exec_time_ms: u64,
     initial_local_cache_hits_files_from_memory_cache: Option<i64>,
     initial_local_cache_hits_files_from_filesystem_cache: Option<i64>,
@@ -270,7 +270,7 @@ pub struct InvocationRecorder {
     current_in_progress_remote_uploads: u64,
     max_in_progress_remote_uploads: u64,
     // Track executor stage types by span ID to know which counter to decrement on end
-    executor_stages_by_span: StdBuckHashMap<u64, ExecutorStageType>,
+    executor_stages_by_span: StdBsmrHashMap<u64, ExecutorStageType>,
     // Track maximum bsmr daemon anon memory usage
     memory_max_anon_allprocs: Option<u64>,
     // Track maximum bsmr forkserver anon memory usage
@@ -393,7 +393,7 @@ impl InvocationRecorder {
             initial_sink_dropped_count: None,
             initial_sink_bytes_written: None,
             sink_max_buffer_depth: 0,
-            soft_error_categories: StdBuckHashSet::default(),
+            soft_error_categories: StdBsmrHashSet::default(),
             concurrent_command_blocking_duration: None,
             // Use a null daemon_id here initially - if we later get metadata back from the daemon,
             // we'll overwrite this then
@@ -431,7 +431,7 @@ impl InvocationRecorder {
             initial_hedwig_download_bytes: None,
             initial_hedwig_upload_queries: None,
             initial_hedwig_upload_bytes: None,
-            concurrent_command_ids: StdBuckHashSet::default(),
+            concurrent_command_ids: StdBsmrHashSet::default(),
             daemon_connection_failure: false,
             daemon_was_started: None,
             should_restart: false,
@@ -460,7 +460,7 @@ impl InvocationRecorder {
             peak_used_disk_space_bytes: None,
             peak_normalized_system_load1: None,
             peak_normalized_system_load5: None,
-            active_networks_kinds: StdBuckHashSet::default(),
+            active_networks_kinds: StdBsmrHashSet::default(),
             target_cfg: None,
             hg_revision: None,
             git_revision: None,
@@ -475,7 +475,7 @@ impl InvocationRecorder {
             previous_uuid_with_mismatched_config: None,
             file_watcher: None,
             health_check_tags_receiver: None,
-            health_check_tags: StdBuckHashSet::default(),
+            health_check_tags: StdBsmrHashSet::default(),
             exec_time_ms: 0,
             initial_local_cache_hits_files_from_memory_cache: None,
             initial_local_cache_hits_files_from_filesystem_cache: None,
@@ -491,7 +491,7 @@ impl InvocationRecorder {
             max_in_progress_remote_actions: 0,
             current_in_progress_remote_uploads: 0,
             max_in_progress_remote_uploads: 0,
-            executor_stages_by_span: StdBuckHashMap::default(),
+            executor_stages_by_span: StdBsmrHashMap::default(),
             memory_max_anon_allprocs: None,
             memory_max_anon_forkserver_actions: None,
             memory_max_total_allprocs: None,
@@ -631,7 +631,7 @@ impl InvocationRecorder {
                                 build_count
                                     .increment(merge_base, v, is_success)
                                     .await
-                                    .buck_error_context("Error recording build count"),
+                                    .bsmr_error_context("Error recording build count"),
                             )
                             .transpose()
                         } else {
@@ -668,10 +668,10 @@ impl InvocationRecorder {
             },
             // Error should have been reported.
             (Some(_), false) => InvocationOutcome::Unknown,
-            // No exit code means a run command succeeded in calling exec (result of exec is unknown but buck succeeded).
+            // No exit code means a run command succeeded in calling exec (result of exec is unknown but bsmr succeeded).
             // This should probably be a separate outcome.
             (None, false) => InvocationOutcome::Success,
-            // Exec should not have been called if there were errors in buck.
+            // Exec should not have been called if there were errors in bsmr.
             (None, true) => InvocationOutcome::Unknown,
         }
     }
@@ -685,8 +685,8 @@ impl InvocationRecorder {
                 // Add stderr to GRPC connection errors if available
                 let error = classify_server_stderr(error, &self.server_stderr);
                 let error = if self.server_stderr.is_empty() {
-                    let error = error.context("buckd stderr is empty");
-                    // Likely buckd received SIGKILL, may be due to memory pressure
+                    let error = error.context("bsmrd stderr is empty");
+                    // Likely bsmrd received SIGKILL, may be due to memory pressure
                     if self.tags.iter().any(|s| s == MEMORY_PRESSURE_TAG) {
                         error
                             .context("memory pressure detected")
@@ -695,13 +695,13 @@ impl InvocationRecorder {
                         error
                     }
                 } else if error.has_tag(ErrorTag::ServerSigterm) {
-                    error.context("buckd killed by SIGTERM")
+                    error.context("bsmrd killed by SIGTERM")
                 } else {
                     // Scribe sink truncates messages, but here we can do it better:
                     // - truncate even if total message is not large enough
                     // - truncate stderr, but keep the error message
                     let server_stderr = truncate_stderr(&self.server_stderr);
-                    error.context(format!("buckd stderr:\n{server_stderr}"))
+                    error.context(format!("bsmrd stderr:\n{server_stderr}"))
                 };
                 (&error).into()
             } else {
@@ -713,7 +713,7 @@ impl InvocationRecorder {
         errors.into_map(process_error_report)
     }
 
-    fn create_record_event(&mut self) -> BuckEvent {
+    fn create_record_event(&mut self) -> BsmrEvent {
         let mut sink_success_count = None;
         let mut sink_failure_count = None;
         let mut sink_dropped_count = None;
@@ -774,7 +774,7 @@ impl InvocationRecorder {
         let mut page_in_fetch_us = None;
         let mut page_in_deser_us = None;
         let mut page_in_bytes = None;
-        let mut page_in_by_key_type = StdBuckHashMap::default();
+        let mut page_in_by_key_type = StdBsmrHashMap::default();
 
         if let Some(snapshot) = &self.last_snapshot {
             sink_success_count =
@@ -1005,7 +1005,7 @@ impl InvocationRecorder {
             client_walltime: duration_since(SystemTime::now(), self.start_time)
                 .try_into()
                 .ok(),
-            wrapper_start_time: bsmr_env!(BUCK_WRAPPER_START_TIME_ENV_VAR, type=u64)
+            wrapper_start_time: bsmr_env!(BSMR_WRAPPER_START_TIME_ENV_VAR, type=u64)
                 .ok()
                 .flatten()
                 .or_else(|| {
@@ -1253,7 +1253,7 @@ impl InvocationRecorder {
             repo_path: self.repo_path.take(),
         };
 
-        let event = BuckEvent::new(
+        let event = BsmrEvent::new(
             SystemTime::now(),
             self.trace_id.dupe(),
             None,
@@ -1269,11 +1269,11 @@ impl InvocationRecorder {
                 let out = fs_util::create_file(path)
                     // input path from --unstable-write-invocation-record
                     .categorize_input()
-                    .buck_error_context("Error opening")?;
+                    .bsmr_error_context("Error opening")?;
                 let mut out = std::io::BufWriter::new(out);
                 serde_json::to_writer(&mut out, event.event())
-                    .buck_error_context("Error writing")?;
-                out.flush().buck_error_context("Error flushing")?;
+                    .bsmr_error_context("Error writing")?;
+                out.flush().bsmr_error_context("Error flushing")?;
                 bsmr_error::Ok(())
             })();
 
@@ -1290,7 +1290,7 @@ impl InvocationRecorder {
 
     fn try_read_health_check_tags(&mut self) {
         // The sender may have sent multiple tag messages since the recorder and health checker don't necessarily run at the same frequency.
-        // We should not make assumptions about order of sender/receiver drop since the health checker is a BuckEvent subscriber as well.
+        // We should not make assumptions about order of sender/receiver drop since the health checker is a BsmrEvent subscriber as well.
 
         // We do have the slight chance that health_check_client reports something after the recorder is dropped.
         // Presently, since the health checks run at every snapshot, the likelihood of missing tags should be low.
@@ -1305,18 +1305,18 @@ impl InvocationRecorder {
     // Collects client-side state and data, suitable for telemetry.
     // NOTE: If data is visible from the daemon, put it in cli::metadata::collect()
     fn default_metadata() -> bsmr_data::TypedMetadata {
-        let mut ints = StdBuckHashMap::default();
+        let mut ints = StdBsmrHashMap::default();
         ints.insert("is_tty".to_owned(), std::io::stderr().is_tty() as i64);
         bsmr_data::TypedMetadata {
             ints,
-            strings: StdBuckHashMap::default(),
+            strings: StdBsmrHashMap::default(),
         }
     }
 
     fn handle_command_start(
         &mut self,
         command: &bsmr_data::CommandStart,
-        event: &BuckEvent,
+        event: &BsmrEvent,
     ) -> bsmr_error::Result<()> {
         self.metadata.extend(command.metadata.clone());
         self.time_to_command_start = Some(duration_since(event.timestamp(), self.start_time));
@@ -1326,11 +1326,11 @@ impl InvocationRecorder {
     async fn handle_command_end(
         &mut self,
         command: &bsmr_data::CommandEnd,
-        event: &BuckEvent,
+        event: &BsmrEvent,
     ) -> bsmr_error::Result<()> {
         // Awkwardly unpacks the SpanEnd event so we can read its duration.
         let command_end = match event.data() {
-            bsmr_data::buck_event::Data::SpanEnd(end) => end.clone(),
+            bsmr_data::bsmr_event::Data::SpanEnd(end) => end.clone(),
             _ => {
                 return Err(bsmr_error!(
                     ErrorTag::InvalidEvent,
@@ -1380,7 +1380,7 @@ impl InvocationRecorder {
     fn handle_command_critical_start(
         &mut self,
         command: &bsmr_data::CommandCriticalStart,
-        event: &BuckEvent,
+        event: &BsmrEvent,
     ) -> bsmr_error::Result<()> {
         self.metadata.extend(command.metadata.clone());
         self.time_to_command_critical_section =
@@ -1390,7 +1390,7 @@ impl InvocationRecorder {
     fn handle_command_critical_end(
         &mut self,
         command: &bsmr_data::CommandCriticalEnd,
-        _event: &BuckEvent,
+        _event: &BsmrEvent,
     ) -> bsmr_error::Result<()> {
         self.metadata.extend(command.metadata.clone());
         Ok(())
@@ -1399,7 +1399,7 @@ impl InvocationRecorder {
     fn handle_action_execution_start(
         &mut self,
         _action: &bsmr_data::ActionExecutionStart,
-        event: &BuckEvent,
+        event: &BsmrEvent,
     ) -> bsmr_error::Result<()> {
         if self.time_to_first_action_execution.is_none() {
             self.time_to_first_action_execution =
@@ -1420,7 +1420,7 @@ impl InvocationRecorder {
     fn handle_action_execution_end(
         &mut self,
         action: &bsmr_data::ActionExecutionEnd,
-        event: &BuckEvent,
+        event: &BsmrEvent,
     ) -> bsmr_error::Result<()> {
         // Decrement current in-progress actions counter
         self.current_in_progress_actions = self.current_in_progress_actions.saturating_sub(1);
@@ -1491,7 +1491,7 @@ impl InvocationRecorder {
     fn handle_analysis_start(
         &mut self,
         _analysis: &bsmr_data::AnalysisStart,
-        event: &BuckEvent,
+        event: &BsmrEvent,
     ) -> bsmr_error::Result<()> {
         self.time_to_first_analysis
             .get_or_insert_with(|| duration_since(event.timestamp(), self.start_time));
@@ -1501,7 +1501,7 @@ impl InvocationRecorder {
     fn handle_load_start(
         &mut self,
         _eval: &bsmr_data::LoadBuildFileStart,
-        event: &BuckEvent,
+        event: &BsmrEvent,
     ) -> bsmr_error::Result<()> {
         self.time_to_load_first_build_file
             .get_or_insert_with(|| duration_since(event.timestamp(), self.start_time));
@@ -1511,7 +1511,7 @@ impl InvocationRecorder {
     fn handle_executor_stage_start(
         &mut self,
         executor_stage: &bsmr_data::ExecutorStageStart,
-        event: &BuckEvent,
+        event: &BsmrEvent,
     ) -> bsmr_error::Result<()> {
         let span_id = if let Some(span_id) = event.span_id() {
             span_id
@@ -1568,7 +1568,7 @@ impl InvocationRecorder {
     fn handle_executor_stage_end(
         &mut self,
         _executor_stage: bsmr_data::ExecutorStageEnd,
-        event: &BuckEvent,
+        event: &BsmrEvent,
     ) -> bsmr_error::Result<()> {
         // Look up the stage type from the span ID and decrement the appropriate counter
         if let Some(span_id) = event.span_id() {
@@ -1595,7 +1595,7 @@ impl InvocationRecorder {
     fn handle_cache_upload_end(
         &mut self,
         cache_upload: &bsmr_data::CacheUploadEnd,
-        _event: &BuckEvent,
+        _event: &BsmrEvent,
     ) -> bsmr_error::Result<()> {
         if cache_upload.success {
             self.cache_upload_count += 1;
@@ -1607,7 +1607,7 @@ impl InvocationRecorder {
     fn handle_dep_file_upload_end(
         &mut self,
         upload: &bsmr_data::DepFileUploadEnd,
-        _event: &BuckEvent,
+        _event: &BsmrEvent,
     ) -> bsmr_error::Result<()> {
         if upload.success {
             self.dep_file_upload_count += 1;
@@ -1619,7 +1619,7 @@ impl InvocationRecorder {
     fn handle_re_session_created(
         &mut self,
         session: &bsmr_data::RemoteExecutionSessionCreated,
-        _event: &BuckEvent,
+        _event: &BsmrEvent,
     ) -> bsmr_error::Result<()> {
         self.re_session_id = Some(session.session_id.clone());
         self.re_experiment_name = Some(session.experiment_name.clone());
@@ -1630,7 +1630,7 @@ impl InvocationRecorder {
     fn handle_materialization_end(
         &mut self,
         materialization: &bsmr_data::MaterializationEnd,
-        _event: &BuckEvent,
+        _event: &BsmrEvent,
     ) -> bsmr_error::Result<()> {
         self.materialization_output_size += materialization.total_bytes;
         self.materialization_files += materialization.file_count;
@@ -1649,10 +1649,10 @@ impl InvocationRecorder {
     fn handle_bxl_ensure_artifacts_end(
         &mut self,
         _bxl_ensure_artifacts_end: bsmr_data::BxlEnsureArtifactsEnd,
-        event: &BuckEvent,
+        event: &BsmrEvent,
     ) -> bsmr_error::Result<()> {
         let bxl_ensure_artifacts_end = match event.data() {
-            bsmr_data::buck_event::Data::SpanEnd(end) => end.clone(),
+            bsmr_data::bsmr_event::Data::SpanEnd(end) => end.clone(),
             _ => {
                 return Err(bsmr_error!(
                     ErrorTag::InvalidEvent,
@@ -1686,7 +1686,7 @@ impl InvocationRecorder {
     fn handle_test_discovery(
         &mut self,
         test_info: &bsmr_data::TestDiscovery,
-        _event: &BuckEvent,
+        _event: &BsmrEvent,
     ) -> bsmr_error::Result<()> {
         match &test_info.data {
             Some(bsmr_data::test_discovery::Data::Session(session_info)) => {
@@ -1701,7 +1701,7 @@ impl InvocationRecorder {
     fn handle_test_discovery_start(
         &mut self,
         _test_discovery: &bsmr_data::TestDiscoveryStart,
-        event: &BuckEvent,
+        event: &BsmrEvent,
     ) -> bsmr_error::Result<()> {
         self.time_to_first_test_discovery
             .get_or_insert_with(|| duration_since(event.timestamp(), self.start_time));
@@ -1711,7 +1711,7 @@ impl InvocationRecorder {
     fn handle_test_run_start(
         &mut self,
         _test_run: &bsmr_data::TestRunStart,
-        event: &BuckEvent,
+        event: &BsmrEvent,
     ) -> bsmr_error::Result<()> {
         self.time_to_first_test_run
             .get_or_insert_with(|| duration_since(event.timestamp(), self.start_time));
@@ -1721,7 +1721,7 @@ impl InvocationRecorder {
     fn handle_test_result(
         &mut self,
         test_result: &bsmr_data::TestResult,
-        event: &BuckEvent,
+        event: &BsmrEvent,
     ) -> bsmr_error::Result<()> {
         let duration = duration_since(event.timestamp(), self.start_time);
         match test_result.status() {
@@ -1791,7 +1791,7 @@ impl InvocationRecorder {
     fn handle_build_graph_info(
         &mut self,
         info: &bsmr_data::BuildGraphExecutionInfo,
-        _event: &BuckEvent,
+        _event: &BsmrEvent,
     ) -> bsmr_error::Result<()> {
         let mut duration = Duration::default();
 
@@ -1858,7 +1858,7 @@ impl InvocationRecorder {
     fn handle_snapshot(
         &mut self,
         update: &bsmr_data::Snapshot,
-        event: &BuckEvent,
+        event: &BsmrEvent,
     ) -> bsmr_error::Result<()> {
         self.max_malloc_bytes_active =
             max(self.max_malloc_bytes_active, update.malloc_bytes_active);
@@ -2121,7 +2121,7 @@ impl InvocationRecorder {
         &mut self,
         file_watcher: &bsmr_data::FileWatcherEnd,
         duration: Option<&prost_types::Duration>,
-        _event: &BuckEvent,
+        _event: &BsmrEvent,
     ) -> bsmr_error::Result<()> {
         // We might receive this event twice, so ... deal with it by merging the two.
         // See: https://fb.workplace.com/groups/bsmrdev/permalink/3396726613948720/
@@ -2184,10 +2184,10 @@ impl InvocationRecorder {
     fn handle_dice_block_concurrent_command_end(
         &mut self,
         _command: &bsmr_data::DiceBlockConcurrentCommandEnd,
-        event: &BuckEvent,
+        event: &BsmrEvent,
     ) -> bsmr_error::Result<()> {
         let block_concurrent_command = match event.data() {
-            bsmr_data::buck_event::Data::SpanEnd(end) => end.clone(),
+            bsmr_data::bsmr_event::Data::SpanEnd(end) => end.clone(),
             _ => {
                 return Err(bsmr_error!(
                     ErrorTag::InvalidEvent,
@@ -2211,10 +2211,10 @@ impl InvocationRecorder {
     fn handle_dice_cleanup_end(
         &mut self,
         _command: bsmr_data::DiceCleanupEnd,
-        event: &BuckEvent,
+        event: &BsmrEvent,
     ) -> bsmr_error::Result<()> {
         let dice_cleanup_end = match event.data() {
-            bsmr_data::buck_event::Data::SpanEnd(end) => end.clone(),
+            bsmr_data::bsmr_event::Data::SpanEnd(end) => end.clone(),
             _ => {
                 return Err(bsmr_error!(
                     ErrorTag::InvalidEvent,
@@ -2256,7 +2256,7 @@ impl InvocationRecorder {
         Ok(())
     }
 
-    async fn handle_event(&mut self, event: &Arc<BuckEvent>) -> bsmr_error::Result<()> {
+    async fn handle_event(&mut self, event: &Arc<BsmrEvent>) -> bsmr_error::Result<()> {
         // TODO(nga): query now once in `EventsCtx`.
         let now = SystemTime::now();
         if let Ok(delay) = now.duration_since(event.timestamp()) {
@@ -2266,7 +2266,7 @@ impl InvocationRecorder {
         self.event_count += 1;
 
         match event.data() {
-            bsmr_data::buck_event::Data::SpanStart(start) => {
+            bsmr_data::bsmr_event::Data::SpanStart(start) => {
                 match start
                     .data
                     .as_ref()
@@ -2302,7 +2302,7 @@ impl InvocationRecorder {
                     _ => Ok(()),
                 }
             }
-            bsmr_data::buck_event::Data::SpanEnd(end) => {
+            bsmr_data::bsmr_event::Data::SpanEnd(end) => {
                 match end
                     .data
                     .as_ref()
@@ -2353,7 +2353,7 @@ impl InvocationRecorder {
                     _ => Ok(()),
                 }
             }
-            bsmr_data::buck_event::Data::Instant(instant) => {
+            bsmr_data::bsmr_event::Data::Instant(instant) => {
                 match instant
                     .data
                     .as_ref()
@@ -2431,7 +2431,7 @@ impl InvocationRecorder {
                     _ => Ok(()),
                 }
             }
-            bsmr_data::buck_event::Data::Record(_) => Ok(()),
+            bsmr_data::bsmr_event::Data::Record(_) => Ok(()),
         }
     }
 }
@@ -2497,7 +2497,7 @@ impl EventSubscriber for InvocationRecorder {
         "invocation recorder"
     }
 
-    async fn handle_events(&mut self, events: &[Arc<BuckEvent>]) -> bsmr_error::Result<()> {
+    async fn handle_events(&mut self, events: &[Arc<BsmrEvent>]) -> bsmr_error::Result<()> {
         for event in events {
             self.handle_event(event).await?;
         }

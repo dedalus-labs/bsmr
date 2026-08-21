@@ -105,7 +105,7 @@ pnpm run ci check
 
 ## Provenance and license
 
-Bessemer began as a Buck2 fork and now has its own product interface, native
+Bessemer began as a upstream fork and now has its own product interface, native
 ecosystem adapters, cache policy, release process, and roadmap. See
 [`NOTICE`](NOTICE) and [`UPSTREAM_CHANGELOG.md`](UPSTREAM_CHANGELOG.md) for
 upstream provenance.

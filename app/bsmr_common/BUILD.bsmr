@@ -24,7 +24,7 @@ rust_library(
                     },
                 },
             },
-            "extra_buck_dependencies": {
+            "extra_bsmr_dependencies": {
                 "dependencies": [
                     (None, "//common/rust/shed/hostcaps:hostcaps"),
                 ],
@@ -55,6 +55,7 @@ rust_library(
         "bsmr_build//third-party/rust:hex",
         "bsmr_build//third-party/rust:hyper",
         "bsmr_build//third-party/rust:itertools",
+        "bsmr_build//third-party/rust:node-semver",
         "bsmr_build//third-party/rust:num_enum",
         "bsmr_build//third-party/rust:parking_lot",
         "bsmr_build//third-party/rust:prost-types",
@@ -72,6 +73,9 @@ rust_library(
         "bsmr_build//third-party/rust:toml",
         "bsmr_build//third-party/rust:tonic",
         "bsmr_build//third-party/rust:tracing",
+        "bsmr_build//third-party/rust:uv-distribution-filename",
+        "bsmr_build//third-party/rust:uv-pep508",
+        "bsmr_build//third-party/rust:uv-platform-tags",
         "bsmr_build//third-party/rust:yaml-rust2",
         # @oss-disable[end= ]: "//blake3:blake3-constants-rust-nothrift",
         "root//packages/rust/allocative/allocative:allocative",

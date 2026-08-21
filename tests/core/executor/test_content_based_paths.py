@@ -20,16 +20,16 @@ import subprocess
 import time
 from pathlib import Path
 
-from bsmr.tests.e2e_util.api.buck import Buck
-from bsmr.tests.e2e_util.api.buck_result import ExitCodeV2
+from bsmr.tests.e2e_util.api.bsmr import Bsmr
+from bsmr.tests.e2e_util.api.bsmr_result import ExitCodeV2
 from bsmr.tests.e2e_util.asserts import expect_failure
-from bsmr.tests.e2e_util.buck_workspace import buck_test
+from bsmr.tests.e2e_util.bsmr_workspace import bsmr_test
 from bsmr.tests.e2e_util.helper.utils import filter_events, read_what_ran
 
 
-async def is_eligible_for_action_dedup(buck: Buck) -> bool:
+async def is_eligible_for_action_dedup(bsmr: Bsmr) -> bool:
     events = await filter_events(
-        buck,
+        bsmr,
         "Event",
         "data",
         "SpanEnd",
@@ -52,28 +52,28 @@ UNKNOWN_ELIGIBILITY = 2
 
 
 async def build_target_with_different_platforms_and_verify_output_paths_are_identical(
-    buck: Buck,
+    bsmr: Bsmr,
     target: str,
     args: list[str] | None = None,
 ) -> None:
     if args is None:
         args = []
-    result1 = await buck.build(
+    result1 = await bsmr.build(
         target,
         "--target-platforms",
         "root//:p_default",
         "--show-output",
         *args,
     )
-    assert await is_eligible_for_action_dedup(buck) == ELIGIBLE_FOR_DEDUPE
-    result2 = await buck.build(
+    assert await is_eligible_for_action_dedup(bsmr) == ELIGIBLE_FOR_DEDUPE
+    result2 = await bsmr.build(
         target,
         "--target-platforms",
         "root//:p_cat",
         "--show-output",
         *args,
     )
-    assert await is_eligible_for_action_dedup(buck) == ELIGIBLE_FOR_DEDUPE
+    assert await is_eligible_for_action_dedup(bsmr) == ELIGIBLE_FOR_DEDUPE
 
     path1 = result1.get_target_to_build_output().get(target)
     path2 = result2.get_target_to_build_output().get(target)
@@ -83,58 +83,58 @@ async def build_target_with_different_platforms_and_verify_output_paths_are_iden
     assert "output_artifact" not in path1
     assert path1 != path2
 
-    actual1 = (buck.cwd / path1).resolve()
-    actual2 = (buck.cwd / path2).resolve()
+    actual1 = (bsmr.cwd / path1).resolve()
+    actual2 = (bsmr.cwd / path2).resolve()
 
     assert actual1.exists()
     assert actual2.exists()
     assert actual1 == actual2
 
 
-@buck_test()
-async def test_write_with_content_based_path(buck: Buck) -> None:
+@bsmr_test()
+async def test_write_with_content_based_path(bsmr: Bsmr) -> None:
     target = "root//:write_with_content_based_path"
     await build_target_with_different_platforms_and_verify_output_paths_are_identical(
-        buck, target
+        bsmr, target
     )
 
 
-@buck_test()
-async def test_write_macro_with_content_based_path(buck: Buck) -> None:
+@bsmr_test()
+async def test_write_macro_with_content_based_path(bsmr: Bsmr) -> None:
     target = "root//:write_macro_with_content_based_path"
     await build_target_with_different_platforms_and_verify_output_paths_are_identical(
-        buck, target
+        bsmr, target
     )
 
 
-@buck_test()
-async def test_write_json_with_content_based_path(buck: Buck) -> None:
+@bsmr_test()
+async def test_write_json_with_content_based_path(bsmr: Bsmr) -> None:
     target = "root//:write_json_with_content_based_path"
     await build_target_with_different_platforms_and_verify_output_paths_are_identical(
-        buck, target
+        bsmr, target
     )
 
 
-@buck_test()
-async def test_run_remote_with_content_based_path(buck: Buck) -> None:
+@bsmr_test()
+async def test_run_remote_with_content_based_path(bsmr: Bsmr) -> None:
     target = "root//:run_remote_with_content_based_path"
 
-    result1 = await buck.build(
+    result1 = await bsmr.build(
         target,
         "--target-platforms",
         "root//:p_default",
         "--show-output",
         "--remote-only",
     )
-    what_ran1 = await read_what_ran(buck)
-    result2 = await buck.build(
+    what_ran1 = await read_what_ran(bsmr)
+    result2 = await bsmr.build(
         target,
         "--target-platforms",
         "root//:p_cat",
         "--show-output",
         "--remote-only",
     )
-    what_ran2 = await read_what_ran(buck)
+    what_ran2 = await read_what_ran(bsmr)
 
     assert (
         what_ran1[0]["reproducer"]["details"]["digest"]
@@ -149,21 +149,21 @@ async def test_run_remote_with_content_based_path(buck: Buck) -> None:
     assert "output_artifact" not in path1
     assert path1 != path2
 
-    actual1 = (buck.cwd / path1).resolve()
-    actual2 = (buck.cwd / path2).resolve()
+    actual1 = (bsmr.cwd / path1).resolve()
+    actual2 = (bsmr.cwd / path2).resolve()
 
     assert actual1.exists()
     assert actual2.exists()
     assert actual1 == actual2
 
 
-@buck_test()
-async def test_identical_dep_file_hit_with_content_based_path(buck: Buck) -> None:
+@bsmr_test()
+async def test_identical_dep_file_hit_with_content_based_path(bsmr: Bsmr) -> None:
     target = "root//:run_remote_with_content_based_path"
 
-    result1 = await buck.build(target, "-c", "test.ignored_attr=run1", "--show-output")
-    result2 = await buck.build(target, "-c", "test.ignored_attr=run2", "--show-output")
-    what_ran2 = await read_what_ran(buck)
+    result1 = await bsmr.build(target, "-c", "test.ignored_attr=run1", "--show-output")
+    result2 = await bsmr.build(target, "-c", "test.ignored_attr=run2", "--show-output")
+    what_ran2 = await read_what_ran(bsmr)
     assert len(what_ran2) == 0
 
     path1 = result1.get_target_to_build_output().get(target)
@@ -173,72 +173,72 @@ async def test_identical_dep_file_hit_with_content_based_path(buck: Buck) -> Non
     assert path1 == path2
 
 
-@buck_test()
-async def test_run_local_with_content_based_path(buck: Buck) -> None:
+@bsmr_test()
+async def test_run_local_with_content_based_path(bsmr: Bsmr) -> None:
     target = "root//:run_local_with_content_based_path"
     await build_target_with_different_platforms_and_verify_output_paths_are_identical(
-        buck, target
+        bsmr, target
     )
 
 
-@buck_test()
-async def test_copy_with_content_based_path(buck: Buck) -> None:
+@bsmr_test()
+async def test_copy_with_content_based_path(bsmr: Bsmr) -> None:
     target = "root//:copy_with_content_based_path"
     await build_target_with_different_platforms_and_verify_output_paths_are_identical(
-        buck, target
+        bsmr, target
     )
 
 
-@buck_test()
-async def test_symlink_with_content_based_path(buck: Buck) -> None:
+@bsmr_test()
+async def test_symlink_with_content_based_path(bsmr: Bsmr) -> None:
     target = "root//:symlink_with_content_based_path"
     await build_target_with_different_platforms_and_verify_output_paths_are_identical(
-        buck, target
+        bsmr, target
     )
 
 
-@buck_test()
-async def test_symlink_and_copy_with_content_based_path(buck: Buck) -> None:
+@bsmr_test()
+async def test_symlink_and_copy_with_content_based_path(bsmr: Bsmr) -> None:
     target = "root//:symlink_and_copy_with_content_based_path"
     await build_target_with_different_platforms_and_verify_output_paths_are_identical(
-        buck, target
+        bsmr, target
     )
 
 
-@buck_test()
-async def test_copied_dir_with_content_based_path(buck: Buck) -> None:
+@bsmr_test()
+async def test_copied_dir_with_content_based_path(bsmr: Bsmr) -> None:
     target = "root//:copied_dir_with_content_based_path"
     await build_target_with_different_platforms_and_verify_output_paths_are_identical(
-        buck, target
+        bsmr, target
     )
 
 
-@buck_test()
-async def test_symlinked_dir_with_content_based_path(buck: Buck) -> None:
+@bsmr_test()
+async def test_symlinked_dir_with_content_based_path(bsmr: Bsmr) -> None:
     target = "root//:symlinked_dir_with_content_based_path"
     await build_target_with_different_platforms_and_verify_output_paths_are_identical(
-        buck, target
+        bsmr, target
     )
 
 
-@buck_test()
-async def test_cas_artifact_with_content_based_path(buck: Buck) -> None:
+@bsmr_test()
+async def test_cas_artifact_with_content_based_path(bsmr: Bsmr) -> None:
     await build_target_with_different_platforms_and_verify_output_paths_are_identical(
-        buck, "root//:empty_cas_artifact_with_content_based_path"
+        bsmr, "root//:empty_cas_artifact_with_content_based_path"
     )
 
 
-@buck_test()
-async def test_download_with_content_based_path(buck: Buck) -> None:
+@bsmr_test()
+async def test_download_with_content_based_path(bsmr: Bsmr) -> None:
     await build_target_with_different_platforms_and_verify_output_paths_are_identical(
-        buck, "root//:download_with_content_based_path"
+        bsmr, "root//:download_with_content_based_path"
     )
 
 
-@buck_test()
-async def test_download_with_content_based_path_and_no_metadata(buck: Buck) -> None:
+@bsmr_test()
+async def test_download_with_content_based_path_and_no_metadata(bsmr: Bsmr) -> None:
     await expect_failure(
-        buck.build(
+        bsmr.build(
             "root//:download_with_content_based_path_and_no_metadata",
         ),
         stderr_regex=r"Downloads using content-based path .* must supply metadata \(usually in the form of a sha1\)!",
@@ -258,23 +258,23 @@ def hg_config_reponame(cwd: Path) -> None:
     )
 
 
-@buck_test()
-async def test_offline_cas_artifact_with_content_based_path(buck: Buck) -> None:
-    hg_init(cwd=buck.cwd)
+@bsmr_test()
+async def test_offline_cas_artifact_with_content_based_path(bsmr: Bsmr) -> None:
+    hg_init(cwd=bsmr.cwd)
 
-    await buck.debug("trace-io", "enable")
+    await bsmr.debug("trace-io", "enable")
     target = "root//:empty_cas_artifact_with_content_based_path"
-    await buck.build(
+    await bsmr.build(
         target,
         "--target-platforms",
         "root//:p_default",
         "--show-output",
     )
 
-    await buck.debug("trace-io", "export-manifest")
-    await buck.kill()
+    await bsmr.debug("trace-io", "export-manifest")
+    await bsmr.kill()
 
-    await buck.build(
+    await bsmr.build(
         target,
         "--target-platforms",
         "root//:p_default",
@@ -286,23 +286,23 @@ async def test_offline_cas_artifact_with_content_based_path(buck: Buck) -> None:
     )
 
 
-@buck_test()
-async def test_offline_download_with_content_based_path(buck: Buck) -> None:
-    hg_init(cwd=buck.cwd)
+@bsmr_test()
+async def test_offline_download_with_content_based_path(bsmr: Bsmr) -> None:
+    hg_init(cwd=bsmr.cwd)
 
-    await buck.debug("trace-io", "enable")
+    await bsmr.debug("trace-io", "enable")
     target = "root//:download_with_content_based_path"
-    await buck.build(
+    await bsmr.build(
         target,
         "--target-platforms",
         "root//:p_default",
         "--show-output",
     )
 
-    await buck.debug("trace-io", "export-manifest")
-    await buck.kill()
+    await bsmr.debug("trace-io", "export-manifest")
+    await bsmr.kill()
 
-    await buck.build(
+    await bsmr.build(
         target,
         "--target-platforms",
         "root//:p_default",
@@ -314,10 +314,10 @@ async def test_offline_download_with_content_based_path(buck: Buck) -> None:
     )
 
 
-@buck_test()
-async def test_validation_with_content_based_path(buck: Buck) -> None:
+@bsmr_test()
+async def test_validation_with_content_based_path(bsmr: Bsmr) -> None:
     await expect_failure(
-        buck.build(
+        bsmr.build(
             "root//:failing_validation_with_content_based_path",
             "--target-platforms",
             "root//:p_default",
@@ -327,32 +327,32 @@ async def test_validation_with_content_based_path(buck: Buck) -> None:
     )
 
 
-@buck_test()
-async def test_dynamic_with_content_based_path(buck: Buck) -> None:
+@bsmr_test()
+async def test_dynamic_with_content_based_path(bsmr: Bsmr) -> None:
     await build_target_with_different_platforms_and_verify_output_paths_are_identical(
-        buck, "root//:dynamic_with_content_based_path"
+        bsmr, "root//:dynamic_with_content_based_path"
     )
 
 
-@buck_test()
-async def test_dynamic_new_with_content_based_path(buck: Buck) -> None:
+@bsmr_test()
+async def test_dynamic_new_with_content_based_path(bsmr: Bsmr) -> None:
     await build_target_with_different_platforms_and_verify_output_paths_are_identical(
-        buck, "root//:dynamic_new_with_content_based_path"
+        bsmr, "root//:dynamic_new_with_content_based_path"
     )
 
 
-@buck_test()
-async def test_projection_with_content_based_path(buck: Buck) -> None:
+@bsmr_test()
+async def test_projection_with_content_based_path(bsmr: Bsmr) -> None:
     await build_target_with_different_platforms_and_verify_output_paths_are_identical(
-        buck,
+        bsmr,
         "root//:use_projection_with_content_based_path",
     )
 
 
-@buck_test()
-async def test_ignores_content_based_artifact(buck: Buck) -> None:
+@bsmr_test()
+async def test_ignores_content_based_artifact(bsmr: Bsmr) -> None:
     await expect_failure(
-        buck.build(
+        bsmr.build(
             "root//:ignores_content_based_artifact",
             "--target-platforms",
             "root//:p_default",
@@ -362,11 +362,11 @@ async def test_ignores_content_based_artifact(buck: Buck) -> None:
     )
 
 
-@buck_test()
-async def test_local_actions_do_not_overwrite_each_other(buck: Buck) -> None:
+@bsmr_test()
+async def test_local_actions_do_not_overwrite_each_other(bsmr: Bsmr) -> None:
     target1 = "root//:uses_slow_running_local_action_with_content_based_path1"
     target2 = "root//:uses_slow_running_local_action_with_content_based_path2"
-    result = await buck.build(
+    result = await bsmr.build(
         target1,
         target2,
         "--show-output",
@@ -383,17 +383,17 @@ async def test_local_actions_do_not_overwrite_each_other(buck: Buck) -> None:
     assert path1 != path2
 
 
-@buck_test()
-async def test_uses_relative_to(buck: Buck) -> None:
+@bsmr_test()
+async def test_uses_relative_to(bsmr: Bsmr) -> None:
     await build_target_with_different_platforms_and_verify_output_paths_are_identical(
-        buck, "root//:uses_relative_to"
+        bsmr, "root//:uses_relative_to"
     )
 
 
-@buck_test()
-async def test_sets_inconsistent_params(buck: Buck) -> None:
+@bsmr_test()
+async def test_sets_inconsistent_params(bsmr: Bsmr) -> None:
     await expect_failure(
-        buck.build(
+        bsmr.build(
             "root//:sets_inconsistent_params",
             "--target-platforms",
             "root//:p_default",
@@ -403,14 +403,14 @@ async def test_sets_inconsistent_params(buck: Buck) -> None:
     )
 
 
-@buck_test()
+@bsmr_test()
 async def test_local_action_outputs_have_configuration_path_symlinks(
-    buck: Buck,
+    bsmr: Bsmr,
 ) -> None:
-    await buck.build(
+    await bsmr.build(
         "root//:run_remote_with_dep_on_run_local",
     )
-    materialized_out = await buck.log("what-materialized", "--format", "json")
+    materialized_out = await bsmr.log("what-materialized", "--format", "json")
     materialized = [
         json.loads(line) for line in materialized_out.stdout.splitlines() if line
     ]
@@ -425,14 +425,14 @@ async def test_local_action_outputs_have_configuration_path_symlinks(
     assert len(run_local_action_symlink_materialized) == 1
 
 
-@buck_test()
+@bsmr_test()
 async def test_local_action_inputs_have_configuration_path_symlinks(
-    buck: Buck,
+    bsmr: Bsmr,
 ) -> None:
-    await buck.build(
+    await bsmr.build(
         "root//:run_local_with_dep_on_run_remote",
     )
-    materialized_out = await buck.log("what-materialized", "--format", "json")
+    materialized_out = await bsmr.log("what-materialized", "--format", "json")
     materialized = [
         json.loads(line) for line in materialized_out.stdout.splitlines() if line
     ]
@@ -447,22 +447,22 @@ async def test_local_action_inputs_have_configuration_path_symlinks(
     assert len(run_remote_output_symlink_materialized) == 1
 
 
-@buck_test()
-async def test_output_symlink_is_updated(buck: Buck) -> None:
+@bsmr_test()
+async def test_output_symlink_is_updated(bsmr: Bsmr) -> None:
     target = "root//:run_remote_with_content_based_path"
 
-    result1 = await buck.build(
+    result1 = await bsmr.build(
         target, "-c", "test.data_string=hello world", "--show-output"
     )
     path1 = result1.get_target_to_build_output().get(target)
 
     assert path1 is not None
-    actual1 = (buck.cwd / path1).resolve()
+    actual1 = (bsmr.cwd / path1).resolve()
     assert actual1.exists()
     with open(actual1) as f:
         assert f.read() == "hello world"
 
-    result2 = await buck.build(
+    result2 = await bsmr.build(
         target, "-c", "test.data_string=goodbye world", "--show-output"
     )
     path2 = result2.get_target_to_build_output().get(target)
@@ -470,42 +470,42 @@ async def test_output_symlink_is_updated(buck: Buck) -> None:
     assert path2 is not None
     assert path2 == path1
 
-    actual2 = (buck.cwd / path2).resolve()
+    actual2 = (bsmr.cwd / path2).resolve()
     assert actual2.exists()
     assert actual2 != actual1
     with open(actual2) as f:
         assert f.read() == "goodbye world"
 
 
-@buck_test()
-async def test_argsfile_with_incorrectly_declared_output(buck: Buck) -> None:
+@bsmr_test()
+async def test_argsfile_with_incorrectly_declared_output(bsmr: Bsmr) -> None:
     target = "root//:argsfile_with_incorrectly_declared_output"
     await expect_failure(
-        buck.build(target),
+        bsmr.build(target),
         stderr_regex="error: Artifact must be bound by now",
     )
 
 
-@buck_test()
-async def test_run_action_with_incremental_metadata(buck: Buck) -> None:
+@bsmr_test()
+async def test_run_action_with_incremental_metadata(bsmr: Bsmr) -> None:
     target = "root//:incremental_action"
 
-    await buck.build(
+    await bsmr.build(
         target,
         "--target-platforms",
         "root//:p_default",
         "--show-output",
         "--remote-only",
     )
-    what_ran1 = await read_what_ran(buck)
-    await buck.build(
+    what_ran1 = await read_what_ran(bsmr)
+    await bsmr.build(
         target,
         "--target-platforms",
         "root//:p_cat",
         "--show-output",
         "--remote-only",
     )
-    what_ran2 = await read_what_ran(buck)
+    what_ran2 = await read_what_ran(bsmr)
 
     assert (
         what_ran1[0]["reproducer"]["details"]["digest"]
@@ -513,12 +513,12 @@ async def test_run_action_with_incremental_metadata(buck: Buck) -> None:
     )
 
 
-@buck_test()
+@bsmr_test()
 async def test_resolve_promise_artifact(
-    buck: Buck,
+    bsmr: Bsmr,
 ) -> None:
     await expect_failure(
-        buck.build(
+        bsmr.build(
             "root//:resolve_promise_artifact",
             "-c",
             "test.artifact_has_content_based_path=true",
@@ -529,7 +529,7 @@ async def test_resolve_promise_artifact(
     )
 
     await expect_failure(
-        buck.build(
+        bsmr.build(
             "root//:resolve_promise_artifact",
             "-c",
             "test.artifact_has_content_based_path=false",
@@ -539,7 +539,7 @@ async def test_resolve_promise_artifact(
         stderr_regex="Artifact promise resolved to artifact that does not use content based paths. Remove the `actions.assert_has_content_based_path` on the promised artifact.",
     )
 
-    await buck.build(
+    await bsmr.build(
         "root//:resolve_promise_artifact",
         "-c",
         "test.artifact_has_content_based_path=true",
@@ -548,28 +548,28 @@ async def test_resolve_promise_artifact(
     )
 
 
-@buck_test()
+@bsmr_test()
 async def test_pass_cbp_promise_artifact_to_anon_target(
-    buck: Buck,
+    bsmr: Bsmr,
 ) -> None:
-    await buck.build(
+    await bsmr.build(
         "root//:pass_cbp_promise_to_anon_target",
     )
 
 
-@buck_test()
-async def test_run_with_anon_non_cbp_dep_eligible_for_dedupe(buck: Buck) -> None:
-    await buck.build(
+@bsmr_test()
+async def test_run_with_anon_non_cbp_dep_eligible_for_dedupe(bsmr: Bsmr) -> None:
+    await bsmr.build(
         "root//:run_with_anon_non_cbp_dep",
         "--target-platforms",
         "root//:p_default",
     )
-    assert await is_eligible_for_action_dedup(buck) == ELIGIBLE_FOR_DEDUPE
+    assert await is_eligible_for_action_dedup(bsmr) == ELIGIBLE_FOR_DEDUPE
 
 
-@buck_test()
+@bsmr_test()
 async def test_run_with_symlink_to_non_content_based_input_eligible_for_dedupe_bug(
-    buck: Buck,
+    bsmr: Bsmr,
 ) -> None:
     # TODO(T276504188): This test documents a BUG and asserts the buggy
     # behavior, so it must be updated once the task is fixed.
@@ -589,7 +589,7 @@ async def test_run_with_symlink_to_non_content_based_input_eligible_for_dedupe_b
     #
     # When T276504188 is fixed, the consuming `run` action should instead be
     # reported as INELIGIBLE_INPUT and this assertion must be flipped.
-    await buck.build(
+    await bsmr.build(
         "root//:run_with_symlink_to_non_cbp_input",
         "--target-platforms",
         "root//:p_default",
@@ -597,12 +597,12 @@ async def test_run_with_symlink_to_non_content_based_input_eligible_for_dedupe_b
 
     # The consuming run action executes last (it depends on every other action
     # in the rule), so its eligibility verdict is the last event.
-    assert await is_eligible_for_action_dedup(buck) == ELIGIBLE_FOR_DEDUPE
+    assert await is_eligible_for_action_dedup(bsmr) == ELIGIBLE_FOR_DEDUPE
 
 
-@buck_test()
-async def test_not_eligible_for_dedupe(buck: Buck) -> None:
-    await buck.build(
+@bsmr_test()
+async def test_not_eligible_for_dedupe(bsmr: Bsmr) -> None:
+    await bsmr.build(
         "root//:not_eligible_for_dedupe",
         "--target-platforms",
         "root//:p_default",
@@ -611,7 +611,7 @@ async def test_not_eligible_for_dedupe(buck: Buck) -> None:
     )
 
     eligible_for_dedupe_events = await filter_events(
-        buck,
+        bsmr,
         "Event",
         "data",
         "SpanEnd",
@@ -623,7 +623,7 @@ async def test_not_eligible_for_dedupe(buck: Buck) -> None:
     assert eligible_for_dedupe_events == [INELIGIBLE_OUTPUT, INELIGIBLE_INPUT]
 
     expected_eligible_for_dedupe_events = await filter_events(
-        buck,
+        bsmr,
         "Event",
         "data",
         "SpanEnd",
@@ -638,10 +638,10 @@ async def test_not_eligible_for_dedupe(buck: Buck) -> None:
     ]
 
 
-@buck_test()
-async def test_expect_eligible_for_dedupe_ineligible_input(buck: Buck) -> None:
+@bsmr_test()
+async def test_expect_eligible_for_dedupe_ineligible_input(bsmr: Bsmr) -> None:
     await expect_failure(
-        buck.build(
+        bsmr.build(
             "root//:not_eligible_for_dedupe",
             "--target-platforms",
             "root//:p_default",
@@ -652,11 +652,11 @@ async def test_expect_eligible_for_dedupe_ineligible_input(buck: Buck) -> None:
     )
 
 
-@buck_test()
+@bsmr_test()
 async def test_expect_eligible_for_dedupe_ineligible_input_for_execution_platform(
-    buck: Buck,
+    bsmr: Bsmr,
 ) -> None:
-    buck.build(
+    bsmr.build(
         "root//:not_eligible_for_dedupe",
         "--target-platforms",
         "root//platforms:default",
@@ -665,10 +665,10 @@ async def test_expect_eligible_for_dedupe_ineligible_input_for_execution_platfor
     )
 
 
-@buck_test()
-async def test_expect_eligible_for_dedupe_ineligible_output(buck: Buck) -> None:
+@bsmr_test()
+async def test_expect_eligible_for_dedupe_ineligible_output(bsmr: Bsmr) -> None:
     await expect_failure(
-        buck.build(
+        bsmr.build(
             "root//:not_eligible_for_dedupe",
             "--target-platforms",
             "root//:p_default",
@@ -681,19 +681,19 @@ async def test_expect_eligible_for_dedupe_ineligible_output(buck: Buck) -> None:
     )
 
 
-@buck_test()
-async def test_execution_platform_returns_unknown_eligibility(buck: Buck) -> None:
+@bsmr_test()
+async def test_execution_platform_returns_unknown_eligibility(bsmr: Bsmr) -> None:
     # When an action's owner is configured for an execution platform (i.e. via
     # exec_dep), eligible_for_dedupe will return EXECUTION_PLATFORM_UNKNOWN_ELIGIBILITY
     # if an input is configured for the same platform as the action itself.
-    await buck.build(
+    await bsmr.build(
         "root//:uses_exec_dep",
         "--target-platforms",
         "root//:p_default",
     )
 
     eligible_for_dedupe_events = await filter_events(
-        buck,
+        bsmr,
         "Event",
         "data",
         "SpanEnd",
@@ -706,10 +706,10 @@ async def test_execution_platform_returns_unknown_eligibility(buck: Buck) -> Non
     assert eligible_for_dedupe_events.count(EXECUTION_PLATFORM_UNKNOWN_ELIGIBILITY) == 1
 
 
-@buck_test()
-async def test_failing_run_with_run_info(buck: Buck) -> None:
+@bsmr_test()
+async def test_failing_run_with_run_info(bsmr: Bsmr) -> None:
     failure = await expect_failure(
-        buck.build(
+        bsmr.build(
             "root//:failing_run_with_content_based_path",
             "--target-platforms",
             "root//:p_default",
@@ -724,8 +724,8 @@ async def test_failing_run_with_run_info(buck: Buck) -> None:
     )
 
 
-@buck_test()
-async def test_shared_content_hash_race(buck: Buck) -> None:
+@bsmr_test()
+async def test_shared_content_hash_race(bsmr: Bsmr) -> None:
     """Regression test for a writer-vs-writer race on shared content-based paths.
 
     Mirrors the pattern from prelude/rust/build.bzl
@@ -751,9 +751,9 @@ async def test_shared_content_hash_race(buck: Buck) -> None:
     # share the same seed, so they share the same content-hash path.
     base_seed = int(time.time() * 1000)
     for i in range(3):
-        await buck.build(
+        await bsmr.build(
             "-c",
             f"cbp_race.seed={base_seed + i}",
             *targets,
         )
-        await buck.clean()
+        await bsmr.clean()

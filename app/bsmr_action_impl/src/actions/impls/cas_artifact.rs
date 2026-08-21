@@ -37,7 +37,7 @@ use bsmr_common::io::trace::TracingIoProvider;
 use bsmr_core::category::CategoryRef;
 use bsmr_core::execution_types::executor_config::RemoteExecutorUseCase;
 use bsmr_core::soft_error;
-use bsmr_error::BuckErrorContext;
+use bsmr_error::BsmrErrorContext;
 use bsmr_error::internal_error;
 use bsmr_execute::artifact_value::ArtifactValue;
 use bsmr_execute::digest::CasDigestToReExt;
@@ -48,7 +48,7 @@ use bsmr_execute::directory::re_tree_to_directory;
 use bsmr_execute::execute::command_executor::ActionExecutionTimingData;
 use bsmr_execute::materialize::materializer::CasDownloadInfo;
 use bsmr_execute::materialize::materializer::DeclareArtifactPayload;
-use bsmr_hash::BuckIndexSet;
+use bsmr_hash::BsmrIndexSet;
 use chrono::DateTime;
 use chrono::TimeZone;
 use chrono::Utc;
@@ -114,7 +114,7 @@ pub(crate) struct UnregisteredCasArtifactAction {
 impl UnregisteredAction for UnregisteredCasArtifactAction {
     fn register(
         self: Box<Self>,
-        outputs: BuckIndexSet<BuildArtifact>,
+        outputs: BsmrIndexSet<BuildArtifact>,
         _starlark_data: Option<OwnedFrozenValue>,
         _error_handler: Option<OwnedFrozenValue>,
     ) -> bsmr_error::Result<Box<dyn Action>> {
@@ -130,7 +130,7 @@ struct CasArtifactAction {
 
 impl CasArtifactAction {
     fn new(
-        outputs: BuckIndexSet<BuildArtifact>,
+        outputs: BsmrIndexSet<BuildArtifact>,
         inner: UnregisteredCasArtifactAction,
     ) -> bsmr_error::Result<Self> {
         let outputs_len = outputs.len();
@@ -210,7 +210,7 @@ impl Action for CasArtifactAction {
                 re_client
                     .get_digest_expirations(vec![self.inner.digest.to_re()])
                     .await
-                    .with_buck_error_context(|| {
+                    .with_bsmr_error_context(|| {
                         format!(
                             "Error accessing digest expiration for: `{}`",
                             self.inner.digest,
@@ -276,7 +276,7 @@ impl Action for CasArtifactAction {
                                 .next()
                                 .ok_or_else(|| internal_error!("RE response was empty"))
                         })
-                        .with_buck_error_context(|| {
+                        .with_bsmr_error_context(|| {
                             format!("Error downloading tree: {}", self.inner.digest)
                         })?,
                     DirectoryKind::Directory => {
@@ -291,7 +291,7 @@ impl Action for CasArtifactAction {
                                     .next()
                                     .ok_or_else(|| internal_error!("RE response was empty"))
                             })
-                            .with_buck_error_context(|| {
+                            .with_bsmr_error_context(|| {
                                 format!("Error downloading dir: {}", self.inner.digest)
                             })?;
                         re_directory_to_re_tree(root_directory, &re_client).await?
@@ -308,7 +308,7 @@ impl Action for CasArtifactAction {
                     ctx.output_trees_download_config()
                         .fingerprint_re_output_trees_eagerly(),
                 )
-                .buck_error_context("Invalid directory")?;
+                .bsmr_error_context("Invalid directory")?;
 
                 ArtifactValue::new(
                     ActionDirectoryEntry::Dir(
@@ -360,7 +360,7 @@ impl Action for CasArtifactAction {
             let offline_cache_path =
                 offline::declare_copy_to_offline_output_cache(ctx, &self.output, value.dupe())
                     .await?;
-            tracer.add_buck_out_entry(offline_cache_path);
+            tracer.add_output_entry(offline_cache_path);
         }
 
         Ok((

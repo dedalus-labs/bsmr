@@ -21,7 +21,7 @@ use std::sync::atomic::Ordering;
 use allocative::Allocative;
 use bsmr_core::provider::label::ConfiguredProvidersLabel;
 use bsmr_error::internal_error;
-use bsmr_hash::BuckDashMap;
+use bsmr_hash::BsmrDashMap;
 use bsmr_test_api::data::ConfiguredTargetHandle;
 use dupe::Dupe;
 use pagable::Pagable;
@@ -52,7 +52,7 @@ pub struct TestSession {
     next_id: AtomicU64,
     /// A mapping of ConfiguredTargetHandle (which Tpx can use with) to the underlying provider in
     /// Bessemer.
-    labels: BuckDashMap<ConfiguredTargetHandle, ConfiguredProvidersLabel>,
+    labels: BsmrDashMap<ConfiguredTargetHandle, ConfiguredProvidersLabel>,
     /// Options overriding the behavior of tests executed in this session. This is primarily
     /// intended for unstable or debugging features.
     options: TestSessionOptions,
@@ -62,7 +62,7 @@ impl TestSession {
     pub fn new(options: TestSessionOptions) -> Self {
         Self {
             next_id: AtomicU64::new(0),
-            labels: BuckDashMap::default(),
+            labels: BsmrDashMap::default(),
             options,
         }
     }

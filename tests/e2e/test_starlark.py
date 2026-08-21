@@ -15,15 +15,15 @@
 # pyre-strict
 
 
-from bsmr.tests.e2e_util.api.buck import Buck
-from bsmr.tests.e2e_util.buck_workspace import buck_test
+from bsmr.tests.e2e_util.api.bsmr import Bsmr
+from bsmr.tests.e2e_util.bsmr_workspace import bsmr_test
 
 
-@buck_test(inplace=True)
-async def test_lint_bsmr(buck: Buck) -> None:
+@bsmr_test(inplace=True)
+async def test_lint_bsmr(bsmr: Bsmr) -> None:
     # FIXME(JakobDegen): Reusing `project.ignore` for this is bad, `starlark
     # lint` should have `-I` and `-X` flags like sapling
-    await buck.starlark(
+    await bsmr.starlark(
         "lint",
         "bsmr",
         "-c",
@@ -31,11 +31,11 @@ async def test_lint_bsmr(buck: Buck) -> None:
     )
 
 
-@buck_test(inplace=True)
-async def test_typecheck_prelude_lightweight(buck: Buck) -> None:
-    await buck.starlark("typecheck", "bsmr/prelude/prelude.bzl")
+@bsmr_test(inplace=True)
+async def test_typecheck_prelude_lightweight(bsmr: Bsmr) -> None:
+    await bsmr.starlark("typecheck", "bsmr/prelude/prelude.bzl")
 
 
-@buck_test(inplace=True)
-async def test_typecheck_prelude_compiler(buck: Buck) -> None:
-    await buck.uquery("root//:bsmr", "--unstable-typecheck")
+@bsmr_test(inplace=True)
+async def test_typecheck_prelude_compiler(bsmr: Bsmr) -> None:
+    await bsmr.uquery("root//:bsmr", "--unstable-typecheck")

@@ -20,7 +20,7 @@ use bsmr_build_api::interpreter::rule_defs::artifact::starlark_artifact_like::Va
 use bsmr_build_api::interpreter::rule_defs::artifact::starlark_declared_artifact::StarlarkDeclaredArtifact;
 use bsmr_build_api::interpreter::rule_defs::context::AnalysisActions;
 use bsmr_execute::execute::request::OutputType;
-use bsmr_hash::buck_indexset;
+use bsmr_hash::bsmr_indexset;
 use dupe::OptionDupedExt;
 use starlark::environment::MethodsBuilder;
 use starlark::eval::Evaluator;
@@ -47,7 +47,7 @@ fn create_dir_tree<'v>(
     let mut this = this.state()?;
     let (declaration, output_artifact) =
         this.get_or_declare_output(eval, output, OutputType::Directory, has_content_based_path)?;
-    this.register_action(buck_indexset![output_artifact], action, None, None)?;
+    this.register_action(bsmr_indexset![output_artifact], action, None, None)?;
 
     Ok(declaration.into_declared_artifact(unioned_associated_artifacts))
 }
@@ -70,7 +70,7 @@ fn copy_file_impl<'v>(
         this.get_or_declare_output(eval, dest, output_type, has_content_based_path)?;
 
     this.register_action(
-        buck_indexset![output_artifact],
+        bsmr_indexset![output_artifact],
         UnregisteredCopyAction::new(artifact, copy),
         None,
         None,

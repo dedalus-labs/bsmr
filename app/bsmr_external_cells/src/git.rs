@@ -36,11 +36,11 @@ use bsmr_core::cells::external::ExternalCellOrigin;
 use bsmr_core::cells::external::GitCellSetup;
 use bsmr_core::cells::name::CellName;
 use bsmr_core::cells::paths::CellRelativePath;
-use bsmr_core::fs::buck_out_path::BuckOutPathResolver;
+use bsmr_core::fs::output_path::OutputPathResolver;
 use bsmr_core::fs::project_rel_path::ProjectRelativePath;
 use bsmr_core::fs::project_rel_path::ProjectRelativePathBuf;
 use bsmr_directory::directory::directory::Directory;
-use bsmr_error::BuckErrorContext;
+use bsmr_error::BsmrErrorContext;
 use bsmr_error::internal_error;
 use bsmr_execute::artifact_value::ArtifactValue;
 use bsmr_execute::digest_config::HasDigestConfig;
@@ -55,7 +55,7 @@ use bsmr_execute::materialize::materializer::Materializer;
 use bsmr_fs::fs_util;
 use bsmr_fs::paths::abs_norm_path::AbsNormPath;
 use bsmr_fs::paths::forward_rel_path::ForwardRelativePath;
-use bsmr_hash::StdBuckHashMap;
+use bsmr_hash::StdBsmrHashMap;
 use bsmr_util::process::background_command;
 use cmp_any::PartialEqAny;
 use dice::CancellationContext;
@@ -140,7 +140,7 @@ impl IoRequest for GitFetchIoRequest {
                 .stderr(Stdio::piped())
                 .stdout(Stdio::null())
                 .output()
-                .buck_error_context("Could not run git to fetch external cell")?;
+                .bsmr_error_context("Could not run git to fetch external cell")?;
 
             if !output.status.success() {
                 return Err(GitError::Unsuccessful {
@@ -256,7 +256,7 @@ async fn download_and_materialize(
 
     // A map of commit hashes to semaphores that are actually condvars which protect access to the
     // directory associated with that commit
-    static DIRECTORY_LICENSES: OnceLock<Mutex<StdBuckHashMap<Arc<str>, Arc<Semaphore>>>> =
+    static DIRECTORY_LICENSES: OnceLock<Mutex<StdBsmrHashMap<Arc<str>, Arc<Semaphore>>>> =
         OnceLock::new();
 
     // We have to write this in a slightly funny way to convince the compiler that there's no
@@ -316,7 +316,7 @@ async fn download_and_materialize(
 
 #[derive(allocative::Allocative, Pagable)]
 pub(crate) struct GitFileOpsDelegate {
-    buck_out_resolver: BuckOutPathResolver,
+    output_resolver: OutputPathResolver,
     cell: CellName,
     setup: GitCellSetup,
     // The fs accesses in this code are sort of a mix between source file accesses and bsmr-out
@@ -326,7 +326,7 @@ pub(crate) struct GitFileOpsDelegate {
 
 impl GitFileOpsDelegate {
     fn resolve(&self, path: &CellRelativePath) -> ProjectRelativePathBuf {
-        self.buck_out_resolver
+        self.output_resolver
             .resolve_external_cell_source(path, ExternalCellOrigin::Git(self.setup.dupe()))
     }
 
@@ -358,7 +358,7 @@ impl FileOpsDelegate for GitFileOpsDelegate {
         let mut entries = (&self.io as &dyn IoProvider)
             .read_dir(project_path)
             .await
-            .with_buck_error_context(|| format!("Error listing dir `{path}`"))?
+            .with_bsmr_error_context(|| format!("Error listing dir `{path}`"))?
             .into_entries();
 
         // Make sure entries are deterministic, since read_dir isn't.
@@ -377,7 +377,7 @@ impl FileOpsDelegate for GitFileOpsDelegate {
         let Some(metadata) = (&self.io as &dyn IoProvider)
             .read_path_metadata_if_exists(project_path)
             .await
-            .with_buck_error_context(|| format!("Error accessing metadata for path `{path}`"))?
+            .with_bsmr_error_context(|| format!("Error accessing metadata for path `{path}`"))?
         else {
             return Ok(None);
         };
@@ -429,7 +429,7 @@ pub(crate) async fn get_file_ops_delegate(
         ) -> Self::Value {
             let artifact_fs = ctx.get_artifact_fs().await?;
             let ops = GitFileOpsDelegate {
-                buck_out_resolver: artifact_fs.buck_out_path_resolver().clone(),
+                output_resolver: artifact_fs.output_path_resolver().clone(),
                 cell: self.0,
                 setup: self.1.dupe(),
                 io: FsIoProvider::new(

@@ -129,7 +129,7 @@ def _versioned_param_to_select(items, default = None):
     if read_root_config("fbcode", "cquery_td") == "true":
         return None
 
-    # Special case a form of "empty" constraints that `buckify_tp2` may
+    # Special case a form of "empty" constraints that `bsmrify_tp2` may
     # generate in tp2 TARGETS.
     if len(items) == 1 and not items[0][0]:
         return items[0][1]
@@ -234,7 +234,7 @@ def _android_binary_macro_stub(allow_r_dot_java_in_secondary_dex = False, cpu_fi
             "/R^",
             "/R$",
             # Pin this to the primary for apps with no primary dex classes.
-            "^com/facebook/buck_generated/AppWithoutResourcesStub^",
+            "^com/dedalus/bsmr_generated/AppWithoutResourcesStub^",
         ]
 
     # TODO: T218493860 Accept `select` for `cpu_filters` and apply the same logic as for non-select cases
@@ -257,7 +257,7 @@ def _android_instrumentation_apk_macro_stub(cpu_filters = None, primary_dex_patt
         "/R^",
         "/R$",
         # Pin this to the primary for apps with no primary dex classes.
-        "^com/facebook/buck_generated/AppWithoutResourcesStub^",
+        "^com/dedalus/bsmr_generated/AppWithoutResourcesStub^",
     ]
     __rules__["android_instrumentation_apk"](cpu_filters = _get_valid_cpu_filters(cpu_filters), primary_dex_patterns = primary_dex_patterns, **kwargs)
 

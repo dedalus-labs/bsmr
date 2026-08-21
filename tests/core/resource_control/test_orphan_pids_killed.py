@@ -15,15 +15,15 @@
 # pyre-strict
 
 
-from bsmr.tests.e2e_util.api.buck import Buck
+from bsmr.tests.e2e_util.api.bsmr import Bsmr
 from bsmr.tests.e2e_util.asserts import expect_failure
-from bsmr.tests.e2e_util.buck_workspace import buck_test
+from bsmr.tests.e2e_util.bsmr_workspace import bsmr_test
 from bsmr.tests.e2e_util.helper.utils import filter_events, random_string
 
 
-@buck_test(skip_for_os=["windows", "darwin"], disable_daemon_cgroup=False)
-async def test_orphan_pids_killed(buck: Buck) -> None:
-    await buck.build(
+@bsmr_test(skip_for_os=["windows", "darwin"], disable_daemon_cgroup=False)
+async def test_orphan_pids_killed(bsmr: Bsmr) -> None:
+    await bsmr.build(
         "root//:spawn_orphan",
         "--no-remote-cache",
         "--local-only",
@@ -32,7 +32,7 @@ async def test_orphan_pids_killed(buck: Buck) -> None:
     )
 
     events = await filter_events(
-        buck,
+        bsmr,
         "Event",
         "data",
         "Instant",
@@ -55,20 +55,20 @@ async def test_orphan_pids_killed(buck: Buck) -> None:
     )
 
 
-@buck_test()
-def test_nop(buck: Buck) -> None:
+@bsmr_test()
+def test_nop(bsmr: Bsmr) -> None:
     # Pytest gets upset if we have no windows or mac tests in this file
     pass
 
 
-@buck_test(skip_for_os=["windows", "darwin"], disable_daemon_cgroup=False)
-async def test_no_orphan_same_pg_timeout(buck: Buck) -> None:
+@bsmr_test(skip_for_os=["windows", "darwin"], disable_daemon_cgroup=False)
+async def test_no_orphan_same_pg_timeout(bsmr: Bsmr) -> None:
     # Build a target that spawns a background process in the same process
     # group. The action has a short timeout, so it will be cancelled via
     # killpg, which kills the background process too. Cgroup cleanup should
     # find no remaining processes, so no OrphanProcessesKilled event.
     await expect_failure(
-        buck.build(
+        bsmr.build(
             "root//:spawn_same_pg_timeout",
             "--no-remote-cache",
             "--local-only",
@@ -79,7 +79,7 @@ async def test_no_orphan_same_pg_timeout(buck: Buck) -> None:
     )
 
     events = await filter_events(
-        buck,
+        bsmr,
         "Event",
         "data",
         "Instant",

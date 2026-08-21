@@ -1,3 +1,9 @@
+# ===----------------------------------------------------------------------===
+# Upstream-Source: facebook/buck2@1560aca2002865cd73d7cafb22c705cfb640b2bc
+# Modifications Copyright (c) 2026 Dedalus Labs, Inc. and its contributors
+# SPDX-License-Identifier: Apache-2.0
+# ===----------------------------------------------------------------------===
+
 # Copyright (c) Meta Platforms, Inc. and affiliates.
 #
 # This source code is dual-licensed under either the MIT license found in the
@@ -43,7 +49,7 @@ def merge_directory(source: str, destination: str) -> None:
         # We want a single destination directory containing all the record and unit
         # files from all the source directories.
         #
-        # There's no built-in way to merge directories in buck. In Python, there is
+        # There's no built-in way to merge directories in bsmr. In Python, there is
         # `shutil.copytree(source, dest, dirs_exist_ok=True)` but that overwrites
         # files in the destination when there are multiple sources with the same
         # file. That's slower.

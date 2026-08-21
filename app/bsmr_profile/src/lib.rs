@@ -21,7 +21,7 @@ use bsmr_cli_proto::profile_request::ProfileOpts;
 use bsmr_core::fs::project::ProjectRoot;
 use bsmr_core::pattern::unparsed::UnparsedPatternPredicate;
 use bsmr_core::pattern::unparsed::UnparsedPatterns;
-use bsmr_error::BuckErrorContext;
+use bsmr_error::BsmrErrorContext;
 use bsmr_error::bsmr_error;
 use bsmr_error::conversion::from_any_with_tag;
 use bsmr_fs::error::IoResultExt;
@@ -55,14 +55,14 @@ pub fn starlark_profiler_configuration_from_request(
     project_root: &ProjectRoot,
 ) -> bsmr_error::Result<StarlarkProfilerConfiguration> {
     let profiler_proto = bsmr_cli_proto::ProfileMode::try_from(req.profile_mode)
-        .buck_error_context("Invalid profiler")?;
+        .bsmr_error_context("Invalid profiler")?;
 
     let profile_mode = proto_to_profile_mode(profiler_proto);
 
     match req.profile_opts.as_ref().expect("Missing profile opts") {
         ProfileOpts::TargetProfile(opts) => {
             let action = bsmr_cli_proto::target_profile::Action::try_from(opts.action)
-                .buck_error_context("Invalid action")?;
+                .bsmr_error_context("Invalid action")?;
             Ok(match (action, opts.recursive) {
                 (bsmr_cli_proto::target_profile::Action::Loading, false) => {
                     let working_dir = AbsNormPath::new(&req.client_context()?.working_dir)?;
@@ -122,7 +122,7 @@ pub fn write_starlark_profile(
             .collect::<String>(),
     )
     .categorize_internal()
-    .buck_error_context("Failed to write targets")?;
+    .bsmr_error_context("Failed to write targets")?;
 
     if let Some(profile) = profile_data.profile_data.gen_flame_data()? {
         let mut options = inferno::flamegraph::Options::default();
@@ -147,7 +147,7 @@ pub fn write_starlark_profile(
             let profile = profile_data.profile_data.gen_csv()?;
             fs_util::write(output.join("profile.csv"), profile)
                 .categorize_internal()
-                .buck_error_context("Failed to write profile")?;
+                .bsmr_error_context("Failed to write profile")?;
         }
     };
     Ok(())
@@ -167,16 +167,16 @@ pub fn write_starlark_flamegraph(
 
     inferno::flamegraph::from_reader(&mut options, profile.as_bytes(), &mut svg)
         .map_err(|e| from_any_with_tag(e, bsmr_error::ErrorTag::Profile))
-        .buck_error_context("writing SVG from profile data")?;
+        .bsmr_error_context("writing SVG from profile data")?;
 
     let src_path = output_prefix.with_added_extension("src");
     fs_util::write(&src_path, &profile)
         .categorize_internal()
-        .buck_error_context(format!("Failed to write {src_path}"))?;
+        .bsmr_error_context(format!("Failed to write {src_path}"))?;
     let svg_path = output_prefix.with_added_extension("svg");
     fs_util::write(&svg_path, &svg)
         .categorize_internal()
-        .buck_error_context(format!("Failed to write {svg_path}"))?;
+        .bsmr_error_context(format!("Failed to write {svg_path}"))?;
 
     Ok(())
 }

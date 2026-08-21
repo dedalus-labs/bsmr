@@ -16,7 +16,7 @@
 
 use std::net::SocketAddr;
 
-use bsmr_error::BuckErrorContext;
+use bsmr_error::BsmrErrorContext;
 use bsmr_grpc::DuplexChannel;
 use clap::Parser;
 use tokio::net::TcpStream;
@@ -55,11 +55,11 @@ impl BsmrTestRunnerTcp {
 
         let orchestrator_io = TcpStream::connect(&orchestrator_addr)
             .await
-            .buck_error_context("Failed to create orchestrator_io")?;
+            .bsmr_error_context("Failed to create orchestrator_io")?;
 
         let executor_io = TcpStream::connect(&executor_addr)
             .await
-            .buck_error_context("Failed to create executor_io")?;
+            .bsmr_error_context("Failed to create executor_io")?;
 
         let executor_io = {
             let (read, write) = tokio::io::split(executor_io);

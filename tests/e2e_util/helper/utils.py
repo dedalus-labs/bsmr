@@ -23,16 +23,16 @@ from configparser import ConfigParser
 from pathlib import Path
 
 import psutil
-from bsmr.tests.e2e_util.api.buck import Buck
-from bsmr.tests.e2e_util.api.buck_result import InvocationRecord
+from bsmr.tests.e2e_util.api.bsmr import Bsmr
+from bsmr.tests.e2e_util.api.bsmr_result import InvocationRecord
 
 
 def daemon_is_alive(pid: int) -> bool:
     return psutil.pid_exists(pid)
 
 
-async def read_what_ran(buck: Buck, *args) -> typing.List[typing.Dict[str, typing.Any]]:
-    out = await buck.log("what-ran", "--format", "json", *args)
+async def read_what_ran(bsmr: Bsmr, *args) -> typing.List[typing.Dict[str, typing.Any]]:
+    out = await bsmr.log("what-ran", "--format", "json", *args)
     out = [line.strip() for line in out.stdout.splitlines()]
     out = [json.loads(line) for line in out if line]
     return out
@@ -44,8 +44,8 @@ def timestamp_ms(s: int, ns: int) -> int:
     return s * 1000 + f
 
 
-async def read_timestamps(buck: Buck, *args) -> typing.List[int]:
-    log = (await buck.log("show")).stdout.strip().splitlines()
+async def read_timestamps(bsmr: Bsmr, *args) -> typing.List[int]:
+    log = (await bsmr.log("show")).stdout.strip().splitlines()
     return [
         timestamp_ms(*json.loads(line)["Event"]["timestamp"])
         for line in log
@@ -79,18 +79,18 @@ def get_targets_from_what_ran(
     return targets
 
 
-async def expect_exec_count(buck: Buck, n: int) -> None:
-    out = await read_what_ran(buck)
+async def expect_exec_count(bsmr: Bsmr, n: int) -> None:
+    out = await read_what_ran(bsmr)
     assert len(out) == n, "unexpected actions: %s" % (out,)
 
 
 async def filter_events(
-    buck: Buck,
+    bsmr: Bsmr,
     *args: str,
     rel_cwd: typing.Optional[Path] = None,
     return_root: bool = False,
 ) -> typing.List[typing.Any]:
-    log = (await buck.log("show", rel_cwd=rel_cwd)).stdout.strip().splitlines()
+    log = (await bsmr.log("show", rel_cwd=rel_cwd)).stdout.strip().splitlines()
     found = []
     for line in log:
         e = json_get(line, *args, return_root_on_match=return_root)
@@ -128,20 +128,20 @@ def replace_digest(s: str) -> str:
     return re.sub(r"\b[0-9a-f]{40}:[0-9]{1,3}\b", "<DIGEST>", s)
 
 
-async def get_bsmr_re_use_case(buck: Buck) -> str:
+async def get_bsmr_re_use_case(bsmr: Bsmr) -> str:
     key = "bsmr_re_client.override_use_case"
     config = (
-        await buck.audit_config("--reuse-current-config", "--style=json", key)
+        await bsmr.audit_config("--reuse-current-config", "--style=json", key)
     ).get_json()
     use_case = config.get(key)
     if use_case is not None:
         return use_case
 
-    # The test harness's extra external config is part of normal Buck config
+    # The test harness's extra external config is part of normal Bsmr config
     # parsing, but `override_use_case` is filtered out of DICE-backed config
     # reads, so `audit config --reuse-current-config` may not report it. We need
     # to manually check the test config here.
-    extra_config_path = buck.get_env_var("BSMR_TEST_EXTRA_EXTERNAL_CONFIG")
+    extra_config_path = bsmr.get_env_var("BSMR_TEST_EXTRA_EXTERNAL_CONFIG")
     if extra_config_path is not None:
         use_case = _get_bsmr_re_use_case_from_config_file(Path(extra_config_path))
         if use_case is not None:
@@ -162,7 +162,7 @@ def read_invocation_record(record: Path) -> InvocationRecord:
 
 
 async def get_last_execution_kind(
-    buck: Buck,
+    bsmr: Bsmr,
     category: typing.Optional[str] = None,
     excluded_execution_kinds: typing.Optional[typing.List[int]] = None,
     target_name: typing.Optional[str] = None,
@@ -170,7 +170,7 @@ async def get_last_execution_kind(
     if excluded_execution_kinds is None:
         excluded_execution_kinds = []
     action_executions = await filter_events(
-        buck,
+        bsmr,
         "Event",
         "data",
         "SpanEnd",

@@ -48,7 +48,7 @@ use bsmr_fs::working_dir::AbsWorkingDir;
 use dupe::Dupe;
 use gazebo::prelude::*;
 
-use crate::common::profiling::BuckProfileMode;
+use crate::common::profiling::BsmrProfileMode;
 use crate::common::ui::CommonConsoleOptions;
 use crate::immediate_config::ImmediateConfigContext;
 use crate::path_arg::PathArg;
@@ -167,7 +167,7 @@ pub struct CommonEventLogOptions {
     pub(crate) unstable_write_invocation_record: Option<PathArg>,
 
     /// Write the command report to this path. A command report is always
-    /// written to `bsmr-out/v2/<uuid>/command_report` even without this flag.
+    /// written to `bsmr-out/default/<uuid>/command_report` even without this flag.
     #[clap(long, value_name = "PATH")]
     pub(crate) command_report_path: Option<PathArg>,
 }
@@ -264,14 +264,14 @@ impl CommonBuildConfigurationOptions {
     /// hence they're merged into a single list.
     pub fn config_overrides(
         &self,
-        matches: BuckArgMatches<'_>,
+        matches: BsmrArgMatches<'_>,
         immediate_ctx: &ImmediateConfigContext<'_>,
         cwd: &AbsWorkingDir,
     ) -> bsmr_error::Result<Vec<ConfigOverride>> {
         fn with_indices<'a, T>(
             collection: &'a [T],
             name: &str,
-            matches: BuckArgMatches<'a>,
+            matches: BsmrArgMatches<'a>,
         ) -> bsmr_error::Result<impl Iterator<Item = (usize, &'a T)> + use<'a, T>> {
             let indices: Vec<usize> = if collection.is_empty() {
                 Vec::new()
@@ -428,7 +428,7 @@ pub struct CommonStarlarkOptions {
     ///    load/cell//build_defs/json.bzl
     ///    load/prelude//playground/test.bxl
     ///    load/cell//build_defs/json.bzl@other_cell
-    ///    load_buildfile/upstream//third-party-buck/platform010/build/ncurses
+    ///    load_buildfile/upstream//third-party-bsmr/platform010/build/ncurses
     ///    load_packagefile/upstream//cli/rust/cli_delegate
     ///    anon_analysis/anon//:_anon_link_rule (anon: 766183dc9b6f680a) (root//platform/execution:linux-x86_64#08961b14cfb182aa)
     ///    bxl/prelude//playground/test.bxl:playground
@@ -466,7 +466,7 @@ pub struct CommonStarlarkOptions {
     ///
     /// `-allocated` means allocated memory, including memory which is later garbage collected.
     #[clap(long, value_enum)]
-    profile_patterns_mode: Option<BuckProfileMode>,
+    profile_patterns_mode: Option<BsmrProfileMode>,
 }
 
 impl CommonStarlarkOptions {
@@ -531,12 +531,12 @@ pub enum PrintOutputsFormat {
 }
 
 #[derive(Clone, Copy)]
-pub struct BuckArgMatches<'a> {
+pub struct BsmrArgMatches<'a> {
     inner: &'a clap::ArgMatches,
     expanded_argv: &'a ExpandedArgv,
 }
 
-impl<'a> BuckArgMatches<'a> {
+impl<'a> BsmrArgMatches<'a> {
     pub fn from_clap(inner: &'a clap::ArgMatches, expanded_argv: &'a ExpandedArgv) -> Self {
         Self {
             inner,
@@ -656,7 +656,7 @@ mod tests {
 
         let argv = argv.build();
         let clap = clap::ArgMatches::default();
-        let matches = BuckArgMatches::from_clap(&clap, &argv);
+        let matches = BsmrArgMatches::from_clap(&clap, &argv);
         let flags = matches.get_representative_config_flags_by_source();
 
         assert_eq!(
@@ -714,7 +714,7 @@ mod tests {
 
         let argv = argv.build();
         let clap = clap::ArgMatches::default();
-        let matches = BuckArgMatches::from_clap(&clap, &argv);
+        let matches = BsmrArgMatches::from_clap(&clap, &argv);
         let flags = matches.get_representative_config_flags_by_source();
 
         assert_eq!(
@@ -751,7 +751,7 @@ mod tests {
         let opts = CommonBuildConfigurationOptions::default();
         let argv = ExpandedArgvBuilder::new().build();
         let clap = clap::ArgMatches::default();
-        let matches = BuckArgMatches::from_clap(&clap, &argv);
+        let matches = BsmrArgMatches::from_clap(&clap, &argv);
 
         let overrides = opts.config_overrides(matches, &immediate_ctx, &cwd)?;
         assert!(overrides.is_empty());

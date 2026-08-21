@@ -24,7 +24,7 @@ use bsmr_build_api::interpreter::rule_defs::provider::builtin::default_info::Def
 use bsmr_build_api::interpreter::rule_defs::provider::callable::register_provider;
 use bsmr_build_api::interpreter::rule_defs::provider::registration::register_builtin_providers;
 use bsmr_build_api::keep_going::HasKeepGoing;
-use bsmr_build_api::spawner::BuckSpawner;
+use bsmr_build_api::spawner::BsmrSpawner;
 use bsmr_common::dice::data::testing::SetTestingIoProvider;
 use bsmr_common::legacy_configs::configs::LegacyBsmrConfig;
 use bsmr_common::package_listing::listing::PackageListing;
@@ -49,7 +49,7 @@ use bsmr_core::target::label::label::TargetLabel;
 use bsmr_events::dispatch::EventDispatcher;
 use bsmr_execute::digest_config::DigestConfig;
 use bsmr_execute::digest_config::SetDigestConfig;
-use bsmr_hash::StdBuckHashMap;
+use bsmr_hash::StdBsmrHashMap;
 use bsmr_interpreter::dice::starlark_debug::SetStarlarkDebugger;
 use bsmr_interpreter::extra::InterpreterHostArchitecture;
 use bsmr_interpreter::extra::InterpreterHostPlatform;
@@ -82,7 +82,7 @@ async fn test_analysis_calculation() -> bsmr_error::Result<()> {
         ),
     ]);
     let mut interpreter = Tester::with_cells((
-        CellAliasResolver::new(CellName::testing_new("cell"), StdBuckHashMap::default())?,
+        CellAliasResolver::new(CellName::testing_new("cell"), StdBsmrHashMap::default())?,
         resolver.dupe(),
         LegacyBsmrConfig::empty(),
         CellPathWithAllowedRelativeDir::new(CellPath::testing_new("cell//pkg"), None),
@@ -161,7 +161,7 @@ async fn test_analysis_calculation() -> bsmr_error::Result<()> {
             data.set_starlark_debugger_handle(None);
             set_fallback_executor_config(&mut data.data, CommandExecutorConfig::testing_local());
             data.data.set(EventDispatcher::null());
-            data.spawner = Arc::new(BuckSpawner::current_runtime().unwrap());
+            data.spawner = Arc::new(BsmrSpawner::current_runtime().unwrap());
             data
         })
         .unwrap();

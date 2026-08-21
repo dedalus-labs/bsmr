@@ -148,7 +148,7 @@ members = [
   "packages/rust/gazebo/strong_hash_derive",
   "packages/rust/gazebo/strong_hash_tests",
   "packages/rust/host_sharing",
-  "packages/rust/buck-resources",
+  "packages/rust/bsmr-resources",
   "tools/rust-project",
   "packages/rust/pagable/pagable",
   "packages/rust/pagable/pagable_derive",
@@ -484,4 +484,4 @@ yaml-rust2 = { version = "0.10.4", default-features = false }
 zstd = { version = "0.13.3", features = ["experimental", "zstdmt"] }
 
 [workspace.lints.rust]
-unexpected_cfgs = { level = "allow", check-cfg = ["cfg(fbcode_build)", "cfg(buck_build)", "cfg(client_only)", "cfg(tokio_unstable)", "cfg(bsmr_memfrag)"]}
+unexpected_cfgs = { level = "allow", check-cfg = ["cfg(fbcode_build)", "cfg(bsmr_build)", "cfg(client_only)", "cfg(tokio_unstable)", "cfg(bsmr_memfrag)"]}

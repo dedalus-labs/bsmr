@@ -15,13 +15,13 @@
 # pyre-strict
 
 
-from bsmr.tests.e2e_util.api.buck import Buck
-from bsmr.tests.e2e_util.buck_workspace import buck_test
+from bsmr.tests.e2e_util.api.bsmr import Bsmr
+from bsmr.tests.e2e_util.bsmr_workspace import bsmr_test
 
 
-@buck_test()
-async def test_targets_show_outputs_with_content_based_path(buck: Buck) -> None:
-    await buck.targets(
+@bsmr_test()
+async def test_targets_show_outputs_with_content_based_path(bsmr: Bsmr) -> None:
+    await bsmr.targets(
         "root//:write_with_content_based_path",
         "--show-output",
     )

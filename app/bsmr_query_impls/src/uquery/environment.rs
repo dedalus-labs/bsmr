@@ -27,11 +27,11 @@ use bsmr_core::configuration::compatibility::MaybeCompatible;
 use bsmr_core::package::PackageLabel;
 use bsmr_core::pattern::pattern_type::TargetPatternExtra;
 use bsmr_core::target::label::label::TargetLabel;
-use bsmr_error::BuckErrorContext;
+use bsmr_error::BsmrErrorContext;
 use bsmr_fs::paths::file_name::FileName;
 use bsmr_fs::paths::file_name::FileNameBuf;
-use bsmr_hash::BuckIndexSet;
-use bsmr_hash::StdBuckHashMap;
+use bsmr_hash::BsmrIndexSet;
+use bsmr_hash::StdBsmrHashMap;
 use bsmr_interpreter::load_module::InterpreterCalculation;
 use bsmr_node::nodes::frontend::TargetGraphCalculation;
 use bsmr_node::nodes::unconfigured::TargetNode;
@@ -88,7 +88,7 @@ enum RBuildFilesError {
 pub(crate) trait UqueryDelegate: Send + Sync {
     async fn get_buildfile_names_by_cell(
         &self,
-    ) -> bsmr_error::Result<StdBuckHashMap<CellName, Arc<[FileNameBuf]>>>;
+    ) -> bsmr_error::Result<StdBsmrHashMap<CellName, Arc<[FileNameBuf]>>>;
 
     /// Resolves a target pattern.
     async fn resolve_target_patterns(
@@ -126,12 +126,12 @@ pub(crate) struct UqueryEnvironment<'c> {
 }
 
 pub(crate) struct PreresolvedQueryLiterals<T: QueryTarget> {
-    resolved_literals: StdBuckHashMap<String, bsmr_error::Result<TargetSet<T>>>,
+    resolved_literals: StdBsmrHashMap<String, bsmr_error::Result<TargetSet<T>>>,
 }
 
 impl<T: QueryTarget> PreresolvedQueryLiterals<T> {
     pub(crate) fn new(
-        resolved_literals: StdBuckHashMap<String, bsmr_error::Result<TargetSet<T>>>,
+        resolved_literals: StdBsmrHashMap<String, bsmr_error::Result<TargetSet<T>>>,
     ) -> Self {
         Self { resolved_literals }
     }
@@ -146,7 +146,7 @@ impl<T: QueryTarget> PreresolvedQueryLiterals<T> {
                 async move { (lit.to_owned(), base.eval_literals(&[lit], ctx).await) }.boxed()
             })
             .await;
-        let mut resolved_literals = StdBuckHashMap::default();
+        let mut resolved_literals = StdBsmrHashMap::default();
         for (literal, result) in resolved_literal_results {
             resolved_literals.insert(literal, result);
         }
@@ -207,7 +207,7 @@ impl<'c> UqueryEnvironment<'c> {
             .ctx()
             .get_interpreter_results(target.pkg())
             .await
-            .with_buck_error_context(|| format!("Error looking up `{target}`"))?;
+            .with_bsmr_error_context(|| format!("Error looking up `{target}`"))?;
         let node = package.resolve_target(target.name())?;
         Ok(node.to_owned())
     }
@@ -393,7 +393,7 @@ pub(crate) async fn allbuildfiles<T: QueryTarget>(
     universe: &TargetSet<T>,
     delegate: &dyn UqueryDelegate,
 ) -> bsmr_error::Result<FileSet> {
-    let mut paths = BuckIndexSet::<FileNode>::default();
+    let mut paths = BsmrIndexSet::<FileNode>::default();
 
     let mut top_level_imports = Vec::<ImportPath>::new();
 
@@ -411,7 +411,7 @@ pub(crate) async fn allbuildfiles<T: QueryTarget>(
     let loads =
         get_transitive_loads(top_level_imports, delegate.linear_dice_computations()).await?;
 
-    let mut new_paths = BuckIndexSet::<FileNode>::default();
+    let mut new_paths = BsmrIndexSet::<FileNode>::default();
     for load in &loads {
         new_paths.insert(FileNode(load.path().clone()));
     }
@@ -480,7 +480,7 @@ pub(crate) async fn rbuildfiles(
     let mut output_paths: Vec<ImportPath> = Vec::new();
 
     struct Delegate<'a> {
-        first_order_import_map: &'a StdBuckHashMap<ImportPath, Vec<ImportPath>>,
+        first_order_import_map: &'a StdBsmrHashMap<ImportPath, Vec<ImportPath>>,
     }
 
     let visit = |node: Node| {
@@ -534,7 +534,7 @@ pub(crate) async fn rbuildfiles(
     )
     .await?;
 
-    let mut output_files = BuckIndexSet::<FileNode>::default();
+    let mut output_files = BsmrIndexSet::<FileNode>::default();
     for file in &output_paths {
         output_files.insert(FileNode(file.path().clone()));
     }
@@ -601,8 +601,8 @@ async fn top_level_imports_by_build_file(
     buildfiles: &[ArcCellPath],
     bzlfiles: &[ArcCellPath],
     delegate: &dyn UqueryDelegate,
-) -> bsmr_error::Result<StdBuckHashMap<ArcCellPath, Vec<ImportPath>>> {
-    let mut top_level_import_by_build_file = StdBuckHashMap::<ArcCellPath, Vec<ImportPath>>::new();
+) -> bsmr_error::Result<StdBsmrHashMap<ArcCellPath, Vec<ImportPath>>> {
+    let mut top_level_import_by_build_file = StdBsmrHashMap::<ArcCellPath, Vec<ImportPath>>::new();
 
     for file in bzlfiles {
         let imports = vec![ImportPath::new_same_cell(file.as_ref().clone())?];
@@ -641,7 +641,7 @@ async fn top_level_imports_by_build_file(
 async fn first_order_imports(
     all_top_level_imports: &[ImportPath],
     delegate: &dyn UqueryDelegate,
-) -> bsmr_error::Result<StdBuckHashMap<ImportPath, Vec<ImportPath>>> {
+) -> bsmr_error::Result<StdBsmrHashMap<ImportPath, Vec<ImportPath>>> {
     let all_imports = get_transitive_loads(
         all_top_level_imports.to_vec(),
         delegate.linear_dice_computations(),
@@ -653,7 +653,7 @@ async fn first_order_imports(
         .map(|node| async move { (node, delegate.ctx().get_loaded_module_imports(node).await) })
         .collect();
 
-    let mut first_order_import_map = StdBuckHashMap::<ImportPath, Vec<ImportPath>>::new();
+    let mut first_order_import_map = StdBsmrHashMap::<ImportPath, Vec<ImportPath>>::new();
 
     while let Some((import, first_order_imports)) =
         tokio::task::unconstrained(all_first_order_futs.next()).await

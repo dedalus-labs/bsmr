@@ -32,9 +32,9 @@ use bsmr_data::FileWatcherKind;
 use bsmr_data::TargetLabel;
 use bsmr_data::action_key;
 use bsmr_data::span_start_event::Data;
-use bsmr_error::BuckErrorContext;
+use bsmr_error::BsmrErrorContext;
 use bsmr_error::internal_error;
-use bsmr_events::BuckEvent;
+use bsmr_events::BsmrEvent;
 use bsmr_test_api::data::TestStatus;
 use bsmr_util::commas::commas;
 use bsmr_util::truncate::truncate;
@@ -225,10 +225,10 @@ pub fn display_action_identity(
 }
 
 /// Formats event payloads for display.
-pub fn display_event(event: &BuckEvent, opts: TargetDisplayOptions) -> bsmr_error::Result<String> {
+pub fn display_event(event: &BsmrEvent, opts: TargetDisplayOptions) -> bsmr_error::Result<String> {
     let res: bsmr_error::Result<_> = try {
         let data = match event.data() {
-            bsmr_data::buck_event::Data::SpanStart(start) => start.data.as_ref().unwrap(),
+            bsmr_data::bsmr_event::Data::SpanStart(start) => start.data.as_ref().unwrap(),
             _ => Err(bsmr_error::Error::from(ParseEventError::UnexpectedEvent))?,
         };
 
@@ -421,7 +421,7 @@ pub fn display_event(event: &BuckEvent, opts: TargetDisplayOptions) -> bsmr_erro
         res?
     };
 
-    res.with_buck_error_context(|| InvalidBuckEvent(Arc::new(event.clone())).to_string())
+    res.with_bsmr_error_context(|| InvalidBsmrEvent(Arc::new(event.clone())).to_string())
 }
 
 fn display_file_watcher(provider: i32) -> &'static str {
@@ -595,9 +595,9 @@ enum ParseEventError {
 }
 
 #[derive(bsmr_error::Error, Debug)]
-#[error("Invalid buck event: `{0:?}`")]
+#[error("Invalid bsmr event: `{0:?}`")]
 #[bsmr(tag = Tier0)]
-pub struct InvalidBuckEvent(pub Arc<BuckEvent>);
+pub struct InvalidBsmrEvent(pub Arc<BsmrEvent>);
 
 pub fn format_test_result(
     test_result: &bsmr_data::TestResult,
@@ -940,7 +940,7 @@ fn failure_reason_for_command_execution(
                 .as_ref()
                 .ok_or_else(|| internal_error!("Timeout did not include a `duration`"))?
                 .try_into_duration()
-                .buck_error_context("Timeout `duration` was invalid")?;
+                .bsmr_error_context("Timeout `duration` was invalid")?;
 
             format!("Command timed out after {:.3}s", duration.as_secs_f64(),)
         }

@@ -1,3 +1,9 @@
+# ===----------------------------------------------------------------------===
+# Upstream-Source: facebook/buck2@1560aca2002865cd73d7cafb22c705cfb640b2bc
+# Modifications Copyright (c) 2026 Dedalus Labs, Inc. and its contributors
+# SPDX-License-Identifier: Apache-2.0
+# ===----------------------------------------------------------------------===
+
 # Copyright (c) Meta Platforms, Inc. and affiliates.
 #
 # This source code is dual-licensed under either the MIT license found in the
@@ -7,7 +13,7 @@
 # above-listed licenses.
 
 load("@prelude//:native.bzl", "native")
-load("@prelude//toolchains/android/tools:build_rules.bzl", "buck_java_library")
+load("@prelude//toolchains/android/tools:build_rules.bzl", "bsmr_java_library")
 
 def protobuf_src_gen(name, srcs, proto_path = [], deps = [], exported_deps = []):
     common_args = [
@@ -46,7 +52,7 @@ def protobuf_src_gen(name, srcs, proto_path = [], deps = [], exported_deps = [])
         out = name + ".src.zip",
     )
 
-    buck_java_library(
+    bsmr_java_library(
         name = name,
         srcs = [":" + zip_rule_name],
         visibility = ["PUBLIC"],

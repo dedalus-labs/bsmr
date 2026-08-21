@@ -15,7 +15,7 @@
  */
 
 use async_trait::async_trait;
-use bsmr_error::BuckErrorContext;
+use bsmr_error::BsmrErrorContext;
 use bsmr_error::internal_error;
 use bsmr_execute::materialize::materializer::CleanStaleArtifactsArgs;
 use bsmr_server_ctx::ctx::ServerCommandContextTrait;
@@ -86,7 +86,7 @@ impl ServerCommandTemplate for CleanStaleServerCommand {
                         adaptive_min_ttl,
                     })
                     .await
-                    .buck_error_context("Failed to clean stale artifacts.")
+                    .bsmr_error_context("Failed to clean stale artifacts.")
             })
             .await
     }

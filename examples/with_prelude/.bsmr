@@ -18,7 +18,7 @@ config = prelude
 ovr_config = prelude
 fbcode = none
 fbsource = none
-buck = none
+bsmr = none
 
 [external_cells]
   prelude = bundled

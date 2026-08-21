@@ -20,9 +20,9 @@ use std::os::unix::io::AsRawFd;
 use std::os::unix::process::CommandExt;
 use std::process::Stdio;
 
-use bsmr_error::BuckErrorContext;
+use bsmr_error::BsmrErrorContext;
 use bsmr_fs::paths::abs_norm_path::AbsNormPath;
-use bsmr_resource_control::buck_cgroup_tree::BuckCgroupTree;
+use bsmr_resource_control::cgroup_tree::BsmrCgroupTree;
 use bsmr_util::process::background_command;
 use tokio::net::UnixStream;
 use tokio::process::Command;
@@ -33,14 +33,14 @@ pub async fn launch_forkserver(
     exe: impl AsRef<OsStr>,
     args: impl IntoIterator<Item = impl AsRef<OsStr>>,
     state_dir: &AbsNormPath,
-    cgroup_tree: Option<&BuckCgroupTree>,
+    cgroup_tree: Option<&BsmrCgroupTree>,
 ) -> bsmr_error::Result<ForkserverClient> {
     let (client_io, server_io) =
-        UnixStream::pair().buck_error_context("Failed to create fork server channel")?;
+        UnixStream::pair().bsmr_error_context("Failed to create fork server channel")?;
 
     let server_io = server_io
         .into_std()
-        .buck_error_context("Failed to convert server_io to std")?;
+        .bsmr_error_context("Failed to convert server_io to std")?;
 
     let exe = exe.as_ref();
 
@@ -83,15 +83,15 @@ pub async fn launch_forkserver(
         });
     }
 
-    let child = Command::from(command).spawn().with_buck_error_context(|| {
+    let child = Command::from(command).spawn().with_bsmr_error_context(|| {
         format!("Failed to start Forkserver `{}`", exe.to_string_lossy())
     })?;
 
     let channel = bsmr_grpc::make_channel(client_io, "forkserver")
         .await
-        .buck_error_context("Error connecting to Forkserver")?;
+        .bsmr_error_context("Error connecting to Forkserver")?;
 
     ForkserverClient::new(child, channel)
         .await
-        .buck_error_context("Error creating ForkserverClient")
+        .bsmr_error_context("Error creating ForkserverClient")
 }

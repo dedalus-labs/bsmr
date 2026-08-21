@@ -20,7 +20,7 @@ use std::os::unix::net::UnixStream as StdUnixStream;
 use std::sync::Arc;
 
 use bsmr_core::logging::LogConfigurationReloadHandle;
-use bsmr_error::BuckErrorContext;
+use bsmr_error::BsmrErrorContext;
 use bsmr_forkserver_proto::forkserver_server;
 use bsmr_fs::paths::abs_norm_path::AbsNormPathBuf;
 use bsmr_grpc::DuplexChannel;
@@ -43,11 +43,11 @@ pub async fn run_forkserver(
         }
         (None, Some(socket_path)) => {
             let listener =
-                UnixListener::bind(socket_path).buck_error_context("Failed to bind unix socket")?;
+                UnixListener::bind(socket_path).bsmr_error_context("Failed to bind unix socket")?;
             let (stream, _addr) = listener
                 .accept()
                 .await
-                .buck_error_context("Failed to accept unix socket")?;
+                .bsmr_error_context("Failed to accept unix socket")?;
             stream
         }
         _ => {
@@ -61,7 +61,7 @@ pub async fn run_forkserver(
     };
 
     let service = UnixForkserverService::new(log_reload_handle, &state_dir)
-        .buck_error_context("Failed to create UnixForkserverService")?;
+        .bsmr_error_context("Failed to create UnixForkserverService")?;
 
     let router = tonic::transport::Server::builder().add_service(
         forkserver_server::ForkserverServer::new(service)

@@ -37,8 +37,8 @@ use dice::DiceComputations;
 use dupe::Dupe;
 
 use crate::ServerAuditSubcommand;
-use crate::output::buck_out_path_parser::BuckOutPathParser;
-use crate::output::buck_out_path_parser::BuckOutPathType;
+use crate::output::output_path_parser::OutputPathParser;
+use crate::output::output_path_parser::OutputPathType;
 
 #[derive(Debug, bsmr_error::Error)]
 #[bsmr(tag = Input)]
@@ -62,11 +62,11 @@ async fn audit_output<'v>(
     dice_ctx: &'v mut DiceComputations<'_>,
     global_cfg_options: &'v GlobalCfgOptions,
 ) -> bsmr_error::Result<Option<AuditOutputResult>> {
-    let buck_out_parser = BuckOutPathParser::new(cell_resolver);
-    let parsed = buck_out_parser.parse(output_path)?;
+    let output_parser = OutputPathParser::new(cell_resolver);
+    let parsed = output_parser.parse(output_path)?;
 
     let (target_label, config_hash, content_hash, short_path) = match parsed {
-        BuckOutPathType::RuleOutput {
+        OutputPathType::RuleOutput {
             target_label,
             common_attrs,
             short_path,

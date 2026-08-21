@@ -57,6 +57,11 @@ const artifacts: readonly Artifact[] = [
 		output: "prelude/typescript/runner.mjs",
 		target: "node18",
 	},
+	{
+		input: "./ci/rust-build-dependencies.ts",
+		output: "ci/rust-build-dependencies.mjs",
+		target: "node20",
+	},
 ];
 
 /** Create one deterministic, self-contained Node artifact configuration. */

@@ -15,7 +15,7 @@
  */
 
 //! This contains the [DebugServer] trait which represents the part of the debug adapter
-//! protocol implemented by the buck debug server and some utilities for working with
+//! protocol implemented by the bsmr debug server and some utilities for working with
 //! the debug adapter response/request/etc types.
 
 use debugserver_types as dap;

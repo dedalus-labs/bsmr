@@ -17,49 +17,49 @@
 import json
 import typing
 
-from bsmr.tests.e2e_util.api.buck import Buck
-from bsmr.tests.e2e_util.buck_workspace import buck_test
+from bsmr.tests.e2e_util.api.bsmr import Bsmr
+from bsmr.tests.e2e_util.bsmr_workspace import bsmr_test
 
 
-@buck_test(skip_for_os=["darwin", "windows"], disable_daemon_cgroup=False)
-async def test_version_gate_enables_cgroup(buck: Buck) -> None:
+@bsmr_test(skip_for_os=["darwin", "windows"], disable_daemon_cgroup=False)
+async def test_version_gate_enables_cgroup(bsmr: Bsmr) -> None:
     """When status_if_min_daemon_cgroup_version is set to a version <= the
     binary's DAEMON_CGROUP_VERSION, resource control should be enabled
     (status = if_available)."""
 
-    with open(buck.cwd / ".bsmr", "a") as bsmrconfig:
+    with open(bsmr.cwd / ".bsmr", "a") as bsmrconfig:
         bsmrconfig.write("[bsmr_resource_control]\n")
         # Version 1 is the current DAEMON_CGROUP_VERSION, so this should enable.
         bsmrconfig.write("status_if_min_daemon_cgroup_version = 1\n")
 
-    snapshot = await start_daemon_and_get_snapshot(buck)
+    snapshot = await start_daemon_and_get_snapshot(bsmr)
     assert snapshot["allprocs_cgroup"] is not None
 
 
-@buck_test(skip_for_os=["darwin", "windows"], disable_daemon_cgroup=False)
-async def test_version_gate_disables_cgroup_when_version_too_high(buck: Buck) -> None:
+@bsmr_test(skip_for_os=["darwin", "windows"], disable_daemon_cgroup=False)
+async def test_version_gate_disables_cgroup_when_version_too_high(bsmr: Bsmr) -> None:
     """When status_if_min_daemon_cgroup_version is set to a version higher than
     the binary's DAEMON_CGROUP_VERSION, resource control should remain off."""
 
-    with open(buck.cwd / ".bsmr", "a") as bsmrconfig:
+    with open(bsmr.cwd / ".bsmr", "a") as bsmrconfig:
         bsmrconfig.write("[bsmr_resource_control]\n")
         # Version 9999 is higher than any DAEMON_CGROUP_VERSION, so this should not enable.
         bsmrconfig.write("status_if_min_daemon_cgroup_version = 9999\n")
 
-    snapshot = await start_daemon_and_get_snapshot(buck)
+    snapshot = await start_daemon_and_get_snapshot(bsmr)
     assert snapshot["allprocs_cgroup"] is None
 
 
-@buck_test(skip_for_os=["darwin", "windows"], disable_daemon_cgroup=False)
-async def test_version_gate_not_set_status_off(buck: Buck) -> None:
+@bsmr_test(skip_for_os=["darwin", "windows"], disable_daemon_cgroup=False)
+async def test_version_gate_not_set_status_off(bsmr: Bsmr) -> None:
     """When status_if_min_daemon_cgroup_version is not set and status is off,
     resource control should be off."""
 
-    with open(buck.cwd / ".bsmr", "a") as bsmrconfig:
+    with open(bsmr.cwd / ".bsmr", "a") as bsmrconfig:
         bsmrconfig.write("[bsmr_resource_control]\n")
         bsmrconfig.write("status = off\n")
 
-    snapshot = await start_daemon_and_get_snapshot(buck)
+    snapshot = await start_daemon_and_get_snapshot(bsmr)
     assert snapshot["allprocs_cgroup"] is None
 
 
@@ -68,8 +68,8 @@ async def test_noop() -> None:
     pass
 
 
-async def start_daemon_and_get_snapshot(buck: Buck) -> dict[str, typing.Any]:
-    await buck.targets(":")
-    status_result = await buck.status("--snapshot")
+async def start_daemon_and_get_snapshot(bsmr: Bsmr) -> dict[str, typing.Any]:
+    await bsmr.targets(":")
+    status_result = await bsmr.status("--snapshot")
     status_data = json.loads(status_result.stdout)
     return status_data["snapshot"]

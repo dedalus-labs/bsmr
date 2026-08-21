@@ -12,10 +12,10 @@
 # of this source tree. You may select, at your option, one of the
 # above-listed licenses.
 
-load("@root//tests:buck_e2e.bzl", "bsmr_e2e_test")
+load("@root//tests:bsmr_e2e.bzl", "bsmr_e2e_test")
 load("@bsmr_build//rules:export_files.bzl", "export_file")
 
-def bxl_test(src, name = None, labels = None, buck_args: list[str] | None = None, bxl_args: list[str] | None = None, env: dict[str, str] | None = None, **kwargs):
+def bxl_test(src, name = None, labels = None, bsmr_args: list[str] | None = None, bxl_args: list[str] | None = None, env: dict[str, str] | None = None, **kwargs):
     """
     Creates a test target from a bsmr bxl script. BXL script must use "test" as entry
     point.
@@ -24,9 +24,9 @@ def bxl_test(src, name = None, labels = None, buck_args: list[str] | None = None
         src: source path of BXL script. This cannot be a target since bxl
             can only be invoked from the repo and not from bsmr-out.
         name: Name of the test target. If unspecified, use src as the name.
-        buck_args: Arguments to `bsmr bxl` invocation for buck specifically.
+        bsmr_args: Arguments to `bsmr bxl` invocation for bsmr specifically.
             Common examples are `--config` flags and `---modifier` flags.
-            Ex. buck_args = ["--config", "build.use_limited_hybrid=false"]
+            Ex. bsmr_args = ["--config", "build.use_limited_hybrid=false"]
         bxl_args: Arguments to `bsmr bxl` invocation after `--`. These are
             arguments to bxl script specifically.
         env: Additional environment variables to pass to the test. These are
@@ -43,7 +43,7 @@ def bxl_test(src, name = None, labels = None, buck_args: list[str] | None = None
     export_file_name = "{}.{}.export_file".format(src, name)
     export_file(name = export_file_name, src = src, mode = "reference")
 
-    # This is ugly but needed for buck1 compatibility
+    # This is ugly but needed for legacy compatibility
     cell = native.repository_name()[1:]
     base_path = native.package_name()
     bxl_main = "{}//{}/{}:test".format(cell, base_path, src)
@@ -59,8 +59,8 @@ def bxl_test(src, name = None, labels = None, buck_args: list[str] | None = None
     }
     if bxl_args:
         merged_env["BXL_ARGS"] = " ".join(bxl_args)
-    if buck_args:
-        merged_env["BUCK_ARGS"] = " ".join(buck_args)
+    if bsmr_args:
+        merged_env["BSMR_ARGS"] = " ".join(bsmr_args)
     if env:
         merged_env.update(env)
 

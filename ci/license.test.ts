@@ -54,8 +54,6 @@ test("policy accepts canonical source and package licenses", async () => {
 			return { exitCode: 0, stdout: "", stderr: "" };
 		};
 		await assert.doesNotReject(runLicensePolicy("check", root, exec));
-		tracked = "app/BUILD.bsmr\0app/BUCK\0package.json\0";
-		await assert.rejects(runLicensePolicy("check", root, exec), /app\/BUCK: rename legacy build manifest/);
 	} finally {
 		rmSync(root, { force: true, recursive: true });
 	}

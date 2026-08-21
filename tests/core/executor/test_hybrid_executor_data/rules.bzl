@@ -176,7 +176,7 @@ def _symlink_impl(ctx):
 symlink = rule(
     impl = _symlink_impl,
     attrs = {
-        # @lint-ignore BUCKRESTRICTEDSYNTAX
+        # @lint-ignore BSMRRESTRICTEDSYNTAX
         "cache_buster": attrs.string(default = read_config("test", "cache_buster", "")),
         "source": attrs.dep(),
     },

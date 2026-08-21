@@ -22,7 +22,7 @@ audit` and `bsmr debug`, which can be helpful.
 ## Running builds
 
 `./bsmr.py <command>` builds bsmr from source and runs `<command>` using that bsmr. The command
-is run in a different isolation dir, to prevent the command from stepping on your existing buck
+is run in a different isolation dir, to prevent the command from stepping on your existing bsmr
 daemon. This means large builds will get no cache hits and be very slow.
 
 Alternatively, `bsmr build @upstream//mode/opt root//:bsmr --out /tmp/bsmr` to build bsmr
@@ -35,14 +35,14 @@ bsmr emits most of its logs in a structured form that is best interacted with vi
 commands.
 
 We additionally have some tracing logging, though it's sparse and not in very widespread use. Use
-the `BUCK_LOG` environment variable to enable trace logging. Requires daemon restart:
+the `BSMR_LOG` environment variable to enable trace logging. Requires daemon restart:
 
 ```bash
 bsmr kill
-BUCK_LOG=module_name=trace bsmr <command>
+BSMR_LOG=module_name=trace bsmr <command>
 # Example
-BUCK_LOG=starlark=trace bsmr uquery cell//path/to:target
-BUCK_LOG=bsmr_execute_impl::materializers=trace bsmr build cell//path/to:target
+BSMR_LOG=starlark=trace bsmr uquery cell//path/to:target
+BSMR_LOG=bsmr_execute_impl::materializers=trace bsmr build cell//path/to:target
 ```
 
 Or use `./bsmr.py` instead of `bsmr` to run local changes
@@ -75,7 +75,7 @@ bsmr build @upstream//mode/opt root//bsmr_tpx_cli:bsmr_tpx_cli --out /tmp/tpx
 bsmr test -c test.v2_test_executor=/tmp/tpx
 ```
 
-Alternatively, you can build buck and tpx in one go with `fbcode/bsmr/bsmr.py` and use it like buck:
+Alternatively, you can build bsmr and tpx in one go with `fbcode/bsmr/bsmr.py` and use it like bsmr:
 
 ```sh
 fbcode/bsmr/bsmr.py test ...
@@ -84,10 +84,10 @@ fbcode/bsmr/bsmr.py test ...
 To get access to Tpx's stderr and stdout if you are print-debugging, you need to also get Bessemer to have the right log level for it:
 
 ```sh
-BUCK_LOG=bsmr_test=debug bsmr test
+BSMR_LOG=bsmr_test=debug bsmr test
 ```
 
-Remember that you need a daemon restart to change `BUCK_LOG`.
+Remember that you need a daemon restart to change `BSMR_LOG`.
 
 Refer to the [tpx wiki](https://www.internalfb.com/wiki/TAE/tpx/Hacking_on_Tpx/) for more details.
 

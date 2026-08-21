@@ -17,11 +17,11 @@
 
 import json
 
-from bsmr.tests.e2e_util.api.buck import Buck
+from bsmr.tests.e2e_util.api.bsmr import Bsmr
 
 
-async def get_files(buck: Buck) -> list[str]:
-    res = await buck.targets("root//:")
+async def get_files(bsmr: Bsmr) -> list[str]:
+    res = await bsmr.targets("root//:")
     for x in res.stderr.splitlines():
         p = x.split("Files: ", 1)
         if len(p) > 1:

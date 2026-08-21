@@ -16,11 +16,11 @@
 
 use std::time::Duration;
 
-use bsmr_client_ctx::client_ctx::BuckSubcommand;
+use bsmr_client_ctx::client_ctx::BsmrSubcommand;
 use bsmr_client_ctx::client_ctx::ClientCommandContext;
-use bsmr_client_ctx::common::BuckArgMatches;
+use bsmr_client_ctx::common::BsmrArgMatches;
 use bsmr_client_ctx::common::CommonEventLogOptions;
-use bsmr_client_ctx::daemon::client::BuckdLifecycleLock;
+use bsmr_client_ctx::daemon::client::BsmrdLifecycleLock;
 use bsmr_client_ctx::events_ctx::EventsCtx;
 use bsmr_client_ctx::exit_result::ExitResult;
 use bsmr_client_ctx::startup_deadline::StartupDeadline;
@@ -38,18 +38,18 @@ pub struct KillCommand {
     pub(crate) event_log_opts: CommonEventLogOptions,
 }
 
-impl BuckSubcommand for KillCommand {
+impl BsmrSubcommand for KillCommand {
     const COMMAND_NAME: &'static str = "kill";
 
     async fn exec_impl(
         self,
-        _matches: BuckArgMatches<'_>,
+        _matches: BsmrArgMatches<'_>,
         ctx: ClientCommandContext<'_>,
         _events_ctx: &mut EventsCtx,
     ) -> ExitResult {
         let daemon_dir = ctx.paths()?.daemon_dir()?;
 
-        let lifecycle_lock = BuckdLifecycleLock::lock_with_timeout(
+        let lifecycle_lock = BsmrdLifecycleLock::lock_with_timeout(
             daemon_dir.clone(),
             StartupDeadline::duration_from_now(Duration::from_secs(10))?,
         )
@@ -57,7 +57,7 @@ impl BuckSubcommand for KillCommand {
 
         bsmr_client_ctx::daemon::client::kill::kill_command_impl(
             &lifecycle_lock,
-            "`buck kill` was invoked",
+            "`bsmr kill` was invoked",
         )
         .await
         .into()

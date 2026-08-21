@@ -23,7 +23,7 @@ use bsmr_common::file_ops::metadata::FileMetadata;
 use bsmr_core::deferred::base_deferred_key::BaseDeferredKey;
 use bsmr_core::execution_types::executor_config::RemoteExecutorUseCase;
 use bsmr_core::fs::artifact_path_resolver::ArtifactFs;
-use bsmr_core::fs::buck_out_path::BuildArtifactPath;
+use bsmr_core::fs::output_path::BuildArtifactPath;
 use bsmr_core::fs::project_rel_path::ProjectRelativePathBuf;
 use bsmr_directory::directory::directory_iterator::DirectoryIterator;
 use bsmr_directory::directory::entry::DirectoryEntry;
@@ -102,10 +102,10 @@ fn format_directory_entry_leaves(
 #[derive(bsmr_error::Error, Debug, Clone, Dupe)]
 #[error(
     "Your build requires materializing an artifact that has expired in the \
-    RE CAS and Buck does not have it. \
-    This likely happened because your Buck daemon \
+    RE CAS and Bsmr does not have it. \
+    This likely happened because your Bsmr daemon \
     has been online for a long time. This error is currently unrecoverable. \
-    To proceed, you should restart Buck using `bsmr killall`.
+    To proceed, you should restart Bsmr using `bsmr killall`.
 
 Debug information:
   Path: {}

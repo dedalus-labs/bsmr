@@ -15,43 +15,43 @@
 # pyre-strict
 import re
 
-from bsmr.tests.e2e_util.api.buck import Buck
+from bsmr.tests.e2e_util.api.bsmr import Bsmr
 from bsmr.tests.e2e_util.asserts import expect_failure
-from bsmr.tests.e2e_util.buck_workspace import buck_test, env
+from bsmr.tests.e2e_util.bsmr_workspace import bsmr_test, env
 from bsmr.tests.e2e_util.helper.golden import golden, strip_glog_lines
 
 
-@buck_test()
-async def test_soft_error(buck: Buck) -> None:
+@bsmr_test()
+async def test_soft_error(bsmr: Bsmr) -> None:
     await expect_failure(
-        buck.targets(":"), stderr_regex="starlark_raised_soft_error.*Will be reported"
+        bsmr.targets(":"), stderr_regex="starlark_raised_soft_error.*Will be reported"
     )
 
 
-@buck_test()
+@bsmr_test()
 @env("BSMR_HARD_ERROR", "false")
-async def test_soft_error_quiet(buck: Buck) -> None:
-    res = await buck.targets("quiet:", ":")
+async def test_soft_error_quiet(bsmr: Bsmr) -> None:
+    res = await bsmr.targets("quiet:", ":")
     assert "starlark_raised_soft_error" in res.stderr
     assert "starlark_quiet_soft_error" not in res.stderr
 
 
-@buck_test()
+@bsmr_test()
 @env("BSMR_HARD_ERROR", "false")
-async def test_soft_error_no_stack(buck: Buck) -> None:
-    res = await buck.targets(":")
+async def test_soft_error_no_stack(bsmr: Bsmr) -> None:
+    res = await bsmr.targets(":")
     assert "Traceback" in res.stderr
 
-    res = await buck.targets("no_stack:")
+    res = await bsmr.targets("no_stack:")
     assert "Traceback" not in res.stderr
 
 
-@buck_test(
+@bsmr_test(
     # windows errors are slightly different, just skip for now
     skip_for_os=["windows"],
 )
 @env("BSMR_HARD_ERROR", "false")
-async def test_package_listing_errors(buck: Buck) -> None:
+async def test_package_listing_errors(bsmr: Bsmr) -> None:
     outs = []
     for target in [
         # //package_listing/missing does not exist
@@ -72,7 +72,7 @@ async def test_package_listing_errors(buck: Buck) -> None:
         # Missing directory due to being in the wrong cell
         "//something:",
     ]:
-        out = await expect_failure(buck.uquery(target, "-v=0", "--console=none"))
+        out = await expect_failure(bsmr.uquery(target, "-v=0", "--console=none"))
         stripped_stderr = re.sub(
             "read_dir(.*)", "read_dir(<stripped absolute path>)", out.stderr
         )
@@ -84,13 +84,13 @@ async def test_package_listing_errors(buck: Buck) -> None:
     )
 
 
-@buck_test(
+@bsmr_test(
     # windows errors are slightly different, just skip for now
     skip_for_os=["windows"],
 )
-async def test_configured_graph_deps_collapsed_in_errors(buck: Buck) -> None:
+async def test_configured_graph_deps_collapsed_in_errors(bsmr: Bsmr) -> None:
     out = await expect_failure(
-        buck.cquery(
+        bsmr.cquery(
             "//deps_collapsed:top",
             "-v=0",
             "--console=none",
@@ -102,13 +102,13 @@ async def test_configured_graph_deps_collapsed_in_errors(buck: Buck) -> None:
     golden(output=stderr, rel_path="deps_collapsed/expected.golden.out")
 
 
-@buck_test(
+@bsmr_test(
     # windows errors are slightly different, just skip for now
     skip_for_os=["windows"],
 )
-async def test_configured_graph_deps_collapsed_in_errors_2(buck: Buck) -> None:
+async def test_configured_graph_deps_collapsed_in_errors_2(bsmr: Bsmr) -> None:
     out = await expect_failure(
-        buck.cquery(
+        bsmr.cquery(
             "//deps_collapsed:top",
             "-v=0",
             "--console=none",

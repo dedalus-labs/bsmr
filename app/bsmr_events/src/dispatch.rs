@@ -33,7 +33,7 @@ use std::time::SystemTime;
 use bsmr_core::event::EventDispatch;
 use bsmr_data::SpanEndEvent;
 use bsmr_data::SpanStartEvent;
-use bsmr_data::buck_event;
+use bsmr_data::bsmr_event;
 use bsmr_data::span_end_event;
 use bsmr_data::span_start_event;
 use bsmr_wrapper_common::invocation_id::TraceId;
@@ -42,7 +42,7 @@ use futures::Future;
 use pin_project::pin_project;
 use smallvec::SmallVec;
 
-use crate::BuckEvent;
+use crate::BsmrEvent;
 use crate::Event;
 use crate::EventSink;
 use crate::daemon_id::DaemonId;
@@ -102,7 +102,7 @@ impl EventDispatcher {
     }
 
     /// Emits an event annotated with the current trace ID.
-    pub fn buck_event(&self, data: buck_event::Data) {
+    pub fn bsmr_event(&self, data: bsmr_event::Data) {
         self.event_with_span_id(data, None, current_span());
     }
 
@@ -132,17 +132,17 @@ impl EventDispatcher {
             data: Some(data.into()),
         };
         let now = SystemTime::now();
-        let event = BuckEvent::new(
+        let event = BsmrEvent::new(
             now,
             self.trace_id.dupe(),
             None,
             current_span(),
             instant.into(),
         );
-        self.sink.send_now(Event::Buck(event)).await;
+        self.sink.send_now(Event::Bsmr(event)).await;
     }
 
-    fn event_with_span_id<E: Into<buck_event::Data>>(
+    fn event_with_span_id<E: Into<bsmr_event::Data>>(
         &self,
         data: E,
         span_id: Option<SpanId>,
@@ -150,8 +150,8 @@ impl EventDispatcher {
     ) {
         let now = SystemTime::now();
 
-        let event = BuckEvent::new(now, self.trace_id.dupe(), span_id, parent_id, data.into());
-        self.sink.send(Event::Buck(event));
+        let event = BsmrEvent::new(now, self.trace_id.dupe(), span_id, parent_id, data.into());
+        self.sink.send(Event::Bsmr(event));
     }
 
     pub fn partial_result(&self, data: bsmr_cli_proto::PartialResult) {
@@ -742,8 +742,8 @@ mod tests {
     use crate::sink::channel::ChannelEventSink;
     use crate::source::ChannelEventSource;
 
-    async fn next_event(source: &mut ChannelEventSource) -> BuckEvent {
-        source.receive().unwrap().unpack_buck().unwrap().clone()
+    async fn next_event(source: &mut ChannelEventSource) -> BsmrEvent {
+        source.receive().unwrap().unpack_bsmr().unwrap().clone()
     }
 
     fn create_dispatcher() -> (EventDispatcher, ChannelEventSource, TraceId) {
@@ -773,7 +773,7 @@ mod tests {
         let (dispatcher, mut source, trace_id) = create_dispatcher();
         let (start, _) = create_start_end_events();
 
-        dispatcher.buck_event(
+        dispatcher.bsmr_event(
             SpanStartEvent {
                 data: Some(start.into()),
             }

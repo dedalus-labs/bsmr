@@ -22,27 +22,27 @@ use bsmr_event_observer::pending_estimate::pending_estimate;
 use bsmr_event_observer::span_tracker;
 use bsmr_event_observer::span_tracker::RootData;
 use bsmr_event_observer::span_tracker::Roots;
-use bsmr_events::BuckEvent;
+use bsmr_events::BsmrEvent;
 use bsmr_events::dispatch::EventDispatcher;
 use bsmr_events::span::SpanId;
-use bsmr_hash::StdBuckHashMap;
-use bsmr_hash::StdBuckHashSet;
+use bsmr_hash::StdBsmrHashMap;
+use bsmr_hash::StdBsmrHashSet;
 use bsmr_wrapper_common::invocation_id::TraceId;
 use dupe::Dupe;
 use parking_lot::Mutex;
 use parking_lot::MutexGuard;
 use tokio::sync::oneshot;
 
-static ACTIVE_COMMANDS: LazyLock<Mutex<StdBuckHashMap<TraceId, ActiveCommandHandle>>> =
-    LazyLock::new(|| Mutex::new(StdBuckHashMap::default()));
+static ACTIVE_COMMANDS: LazyLock<Mutex<StdBsmrHashMap<TraceId, ActiveCommandHandle>>> =
+    LazyLock::new(|| Mutex::new(StdBsmrHashMap::default()));
 
 /// Return the active commands, if you can access them.
-pub fn try_active_commands() -> Option<StdBuckHashMap<TraceId, ActiveCommandHandle>> {
+pub fn try_active_commands() -> Option<StdBsmrHashMap<TraceId, ActiveCommandHandle>> {
     // Note that this function is accessed during panic, so have to be super careful
     Some(ACTIVE_COMMANDS.try_lock()?.clone())
 }
 
-pub fn active_commands() -> MutexGuard<'static, StdBuckHashMap<TraceId, ActiveCommandHandle>> {
+pub fn active_commands() -> MutexGuard<'static, StdBsmrHashMap<TraceId, ActiveCommandHandle>> {
     ACTIVE_COMMANDS.lock()
 }
 
@@ -133,8 +133,8 @@ pub struct SpansSnapshot {
 /// A wrapper around ActiveCommandState that allows 1 client to write to it.
 pub struct ActiveCommandStateWriter {
     /// Maps a SpanId to whether it is a root (i.e. no parent)
-    roots: Roots<Arc<BuckEvent>>,
-    non_roots: StdBuckHashSet<SpanId>,
+    roots: Roots<Arc<BsmrEvent>>,
+    non_roots: StdBsmrHashSet<SpanId>,
     dice_state: DiceState,
     closed: u64,
     shared: Arc<ActiveCommandState>,
@@ -144,42 +144,42 @@ impl ActiveCommandStateWriter {
     fn new(shared: Arc<ActiveCommandState>) -> Self {
         Self {
             roots: Roots::default(),
-            non_roots: StdBuckHashSet::default(),
+            non_roots: StdBsmrHashSet::default(),
             dice_state: DiceState::new(),
             closed: 0,
             shared,
         }
     }
 
-    pub fn peek_event(&mut self, buck_event: &BuckEvent) {
-        use bsmr_data::buck_event::Data::*;
+    pub fn peek_event(&mut self, bsmr_event: &BsmrEvent) {
+        use bsmr_data::bsmr_event::Data::*;
 
         let mut changed = false;
 
-        match buck_event.data() {
+        match bsmr_event.data() {
             SpanStart(..) => {
-                let span_id = match buck_event.span_id() {
+                let span_id = match bsmr_event.span_id() {
                     Some(id) => id,
                     None => return,
                 };
 
-                if !span_tracker::is_span_shown(buck_event) {
+                if !span_tracker::is_span_shown(bsmr_event) {
                     return;
                 }
 
-                let is_root = buck_event
+                let is_root = bsmr_event
                     .parent_id()
                     .is_none_or(|id| !self.roots.contains(id) && !self.non_roots.contains(&id));
 
                 if is_root {
-                    self.roots.insert(span_id, false, RootData::new(buck_event));
+                    self.roots.insert(span_id, false, RootData::new(bsmr_event));
                     changed = true;
                 } else {
                     self.non_roots.insert(span_id);
                 }
             }
             SpanEnd(..) => {
-                let span_id = match buck_event.span_id() {
+                let span_id = match bsmr_event.span_id() {
                     Some(id) => id,
                     None => return,
                 };
@@ -293,7 +293,7 @@ mod tests {
         let child = SpanId::next();
         let trace = TraceId::new();
 
-        writer.peek_event(&BuckEvent::new(
+        writer.peek_event(&BsmrEvent::new(
             SystemTime::now(),
             trace.clone(),
             Some(root),
@@ -313,7 +313,7 @@ mod tests {
             }
         );
 
-        writer.peek_event(&BuckEvent::new(
+        writer.peek_event(&BsmrEvent::new(
             SystemTime::now(),
             trace.clone(),
             Some(child),
@@ -333,7 +333,7 @@ mod tests {
             }
         );
 
-        writer.peek_event(&BuckEvent::new(
+        writer.peek_event(&BsmrEvent::new(
             SystemTime::now(),
             trace.clone(),
             Some(child),
@@ -354,7 +354,7 @@ mod tests {
             }
         );
 
-        writer.peek_event(&BuckEvent::new(
+        writer.peek_event(&BsmrEvent::new(
             SystemTime::now(),
             trace.clone(),
             Some(root),
@@ -375,7 +375,7 @@ mod tests {
             }
         );
 
-        writer.peek_event(&BuckEvent::new(
+        writer.peek_event(&BsmrEvent::new(
             SystemTime::now(),
             trace,
             None,
@@ -384,7 +384,7 @@ mod tests {
                 data: Some(
                     bsmr_data::DiceStateSnapshot {
                         key_states: {
-                            let mut map = StdBuckHashMap::default();
+                            let mut map = StdBsmrHashMap::default();
                             map.insert(
                                 "BuildKey".to_owned(),
                                 bsmr_data::DiceKeyState {
@@ -427,10 +427,10 @@ mod tests {
     }
 
     fn check_concurrent_command_trace_ids_eq(event: Option<Event>, expected_trace_ids: &[String]) {
-        assert_matches!(event, Some(Event::Buck(event)) => {
+        assert_matches!(event, Some(Event::Bsmr(event)) => {
             assert_matches!(
                 event.data(),
-                bsmr_data::buck_event::Data::Instant(bsmr_data::InstantEvent {
+                bsmr_data::bsmr_event::Data::Instant(bsmr_data::InstantEvent {
                     data: Some(bsmr_data::instant_event::Data::ConcurrentCommands(
                         bsmr_data::ConcurrentCommands {
                             trace_ids,
@@ -438,8 +438,8 @@ mod tests {
                     ))
                 }) => {
                     // Use HashSets because  trace ids may not be reported in the same order that we specified.
-                    let trace_ids: StdBuckHashSet<&String> = trace_ids.iter().collect();
-                    let expected_trace_ids: StdBuckHashSet<&String> = expected_trace_ids.iter().collect();
+                    let trace_ids: StdBsmrHashSet<&String> = trace_ids.iter().collect();
+                    let expected_trace_ids: StdBsmrHashSet<&String> = expected_trace_ids.iter().collect();
                     assert_eq!(trace_ids, expected_trace_ids);
                 }
             );

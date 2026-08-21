@@ -18,14 +18,14 @@
 import json
 import tempfile
 
-from bsmr.tests.e2e_util.api.buck import Buck
-from bsmr.tests.e2e_util.buck_workspace import buck_test
+from bsmr.tests.e2e_util.api.bsmr import Bsmr
+from bsmr.tests.e2e_util.bsmr_workspace import bsmr_test
 
 
-@buck_test(inplace=True)
-async def test_python_coverage(buck: Buck) -> None:
+@bsmr_test(inplace=True)
+async def test_python_coverage(bsmr: Bsmr) -> None:
     with tempfile.NamedTemporaryFile("w") as covfile:
-        await buck.test(
+        await bsmr.test(
             "@upstream//mode/dbgo-cov",
             "root//tests/targets/rules/python/coverage:test",
             "--",
@@ -41,11 +41,11 @@ async def test_python_coverage(buck: Buck) -> None:
     )
 
 
-@buck_test(inplace=True)
-async def test_python_coverage_filtering_by_folder(buck: Buck) -> None:
+@bsmr_test(inplace=True)
+async def test_python_coverage_filtering_by_folder(bsmr: Bsmr) -> None:
     folder_to_collect = "bsmr/tests/targets/rules/python/coverage"
     with tempfile.NamedTemporaryFile("w") as covfile:
-        await buck.test(
+        await bsmr.test(
             "@upstream//mode/dbgo-cov",
             "root//tests/targets/rules/python/coverage:test",
             "-c",

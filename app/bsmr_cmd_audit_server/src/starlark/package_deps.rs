@@ -22,7 +22,7 @@ use bsmr_common::dice::cells::HasCellResolver;
 use bsmr_core::bzl::ImportPath;
 use bsmr_core::pattern::parse_package::parse_package;
 use bsmr_error::bsmr_error;
-use bsmr_hash::StdBuckHashSet;
+use bsmr_hash::StdBsmrHashSet;
 use bsmr_interpreter::file_loader::LoadedModule;
 use bsmr_interpreter::load_module::INTERPRETER_CALCULATION_IMPL;
 use bsmr_interpreter::paths::module::StarlarkModulePath;
@@ -56,7 +56,7 @@ pub(crate) async fn server_execute(
 
             struct Printer {
                 first: bool,
-                visited: StdBuckHashSet<ImportPath>,
+                visited: StdBsmrHashSet<ImportPath>,
             }
 
             impl Printer {
@@ -98,7 +98,7 @@ pub(crate) async fn server_execute(
 
             let mut printer = Printer {
                 first: true,
-                visited: StdBuckHashSet::default(),
+                visited: StdBsmrHashSet::default(),
             };
 
             for module in module_deps.0.into_iter() {

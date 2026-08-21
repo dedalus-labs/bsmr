@@ -24,11 +24,11 @@ use tokio::sync::oneshot;
 #[cfg(unix)]
 pub mod action_scene;
 #[cfg(unix)]
-pub mod buck_cgroup_tree;
-#[cfg(unix)]
 pub mod cgroup;
 #[cfg(unix)]
 pub mod cgroup_files;
+#[cfg(unix)]
+pub mod cgroup_tree;
 #[cfg(unix)]
 pub mod memory_tracker;
 pub mod path;
@@ -50,7 +50,7 @@ pub struct OrphanProcessInfo {
 }
 
 #[cfg(not(unix))]
-pub mod buck_cgroup_tree {
+pub mod cgroup_tree {
     use bsmr_common::init::ResourceControlConfig;
 
     /// Return the current cgroup path for logging, if supported on this platform.
@@ -58,20 +58,20 @@ pub mod buck_cgroup_tree {
         None
     }
 
-    pub struct PreppedBuckCgroups;
+    pub struct PreppedBsmrCgroups;
 
-    impl PreppedBuckCgroups {
+    impl PreppedBsmrCgroups {
         pub fn prep_current_process() -> bsmr_error::Result<Self> {
             unreachable!("not used on windows")
         }
     }
 
     #[derive(allocative::Allocative)]
-    pub struct BuckCgroupTree;
+    pub struct BsmrCgroupTree;
 
-    impl BuckCgroupTree {
+    impl BsmrCgroupTree {
         pub async fn set_up(
-            _prepped: PreppedBuckCgroups,
+            _prepped: PreppedBsmrCgroups,
             _config: &ResourceControlConfig,
         ) -> bsmr_error::Result<Self> {
             unreachable!("not used on windows")
@@ -87,17 +87,17 @@ pub mod memory_tracker {
     use bsmr_common::init::ResourceControlConfig;
     use bsmr_events::daemon_id::DaemonId;
 
-    use crate::buck_cgroup_tree::BuckCgroupTree;
+    use crate::cgroup_tree::BsmrCgroupTree;
 
     #[derive(Allocative)]
     pub struct MemoryTracker {
-        pub cgroup_tree: BuckCgroupTree,
+        pub cgroup_tree: BsmrCgroupTree,
     }
 
     pub type MemoryTrackerHandle = Arc<MemoryTracker>;
 
     pub async fn create_memory_tracker(
-        _cgroup_tree: Option<BuckCgroupTree>,
+        _cgroup_tree: Option<BsmrCgroupTree>,
         _resource_control_config: &ResourceControlConfig,
         _daemon_id: &DaemonId,
     ) -> bsmr_error::Result<Option<MemoryTrackerHandle>> {

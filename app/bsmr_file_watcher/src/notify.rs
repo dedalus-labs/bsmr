@@ -35,7 +35,7 @@ use bsmr_data::FileWatcherKind;
 use bsmr_error::conversion::from_any_with_tag;
 use bsmr_events::dispatch::span_async;
 use bsmr_fs::paths::abs_norm_path::AbsNormPath;
-use bsmr_hash::StdBuckHashMap;
+use bsmr_hash::StdBsmrHashMap;
 use dice::DiceTransactionUpdater;
 use dupe::Dupe;
 use notify::EventKind;
@@ -89,7 +89,7 @@ impl NotifyFileData {
         event: notify::Result<notify::Event>,
         root: &ProjectRoot,
         cells: &CellResolver,
-        ignore_specs: &StdBuckHashMap<CellName, IgnoreSet>,
+        ignore_specs: &StdBsmrHashMap<CellName, IgnoreSet>,
     ) -> bsmr_error::Result<()> {
         let event = event.map_err(|e| from_any_with_tag(e, bsmr_error::ErrorTag::NotifyWatcher))?;
 
@@ -102,7 +102,7 @@ impl NotifyFileData {
             // We also ignore other bsmr-out directories, as if you have two isolation dirs running at once, they are not interesting.
             // We do this in the notify-watcher, rather than a generic layer, as watchman users should configure
             // to ignore bsmr-out, to reduce the number of events, rather than hiding them later.
-            if path.starts_with(InvocationPaths::buck_out_dir_prefix()) {
+            if path.starts_with(InvocationPaths::output_dir_prefix()) {
                 // We don't want to event add them as ignored events, since they are super common
                 // and very boring
                 continue;
@@ -300,7 +300,7 @@ impl NotifyFileWatcher {
     pub fn new(
         root: &ProjectRoot,
         cells: CellResolver,
-        ignore_specs: StdBuckHashMap<CellName, IgnoreSet>,
+        ignore_specs: StdBsmrHashMap<CellName, IgnoreSet>,
     ) -> bsmr_error::Result<Self> {
         let data = Arc::new(Mutex::new(Ok(NotifyFileData::new())));
         let data2 = data.dupe();
@@ -310,7 +310,7 @@ impl NotifyFileWatcher {
         let barrier_dir = root
             .root()
             .as_path()
-            .join(InvocationPaths::buck_out_dir_prefix().as_str());
+            .join(InvocationPaths::output_dir_prefix().as_str());
         std::fs::create_dir_all(&barrier_dir)
             .map_err(|e| from_any_with_tag(e, bsmr_error::ErrorTag::NotifyWatcher))?;
         let mut watcher =

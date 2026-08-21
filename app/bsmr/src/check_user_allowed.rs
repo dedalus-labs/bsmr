@@ -23,7 +23,7 @@ pub(crate) fn check_user_allowed() -> bsmr_error::Result<()> {
     use std::ptr;
 
     use bsmr_core::ci::is_ci;
-    use bsmr_error::BuckErrorContext;
+    use bsmr_error::BsmrErrorContext;
     use bsmr_wrapper_common::win::winapi_handle::WinapiHandle;
     use windows_sys::Win32::Foundation::HANDLE;
     use windows_sys::Win32::Security::GetTokenInformation;
@@ -36,11 +36,11 @@ pub(crate) fn check_user_allowed() -> bsmr_error::Result<()> {
     let mut handle: HANDLE = ptr::null_mut();
     let token_ok = unsafe { OpenProcessToken(GetCurrentProcess(), TOKEN_QUERY, &mut handle) };
     if token_ok == 0 {
-        return Err(io::Error::last_os_error()).buck_error_context("OpenProcessToken failed");
+        return Err(io::Error::last_os_error()).bsmr_error_context("OpenProcessToken failed");
     }
 
     let handle = unsafe {
-        WinapiHandle::new_check_last_os_error(handle).buck_error_context("OpenProcessToken")?
+        WinapiHandle::new_check_last_os_error(handle).bsmr_error_context("OpenProcessToken")?
     };
     let size = mem::size_of::<TOKEN_ELEVATION>();
     let elevation: MaybeUninit<TOKEN_ELEVATION> = MaybeUninit::zeroed();
@@ -56,7 +56,7 @@ pub(crate) fn check_user_allowed() -> bsmr_error::Result<()> {
         )
     };
     if success_get == 0 {
-        return Err(io::Error::last_os_error()).buck_error_context("GetTokenInformation failed");
+        return Err(io::Error::last_os_error()).bsmr_error_context("GetTokenInformation failed");
     }
 
     let elevation_struct: TOKEN_ELEVATION = unsafe { elevation.assume_init() };

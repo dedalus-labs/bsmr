@@ -29,7 +29,7 @@ use bsmr_core::rollout_percentage::RolloutPercentage;
 use bsmr_error::internal_error;
 use bsmr_events::dispatch::span_async;
 use bsmr_fs::paths::abs_norm_path::AbsNormPath;
-use bsmr_hash::StdBuckHashMap;
+use bsmr_hash::StdBsmrHashMap;
 use bsmr_util::process::async_background_command;
 use dice::DiceTransactionUpdater;
 use tracing::debug;
@@ -53,7 +53,7 @@ struct WatchmanQueryProcessor {
     // `tests/e2e/cells/test_file_watcher_resolution:test_changing_cell_location_bug` for a repro of
     // a bug.
     cells: CellResolver,
-    ignore_specs: StdBuckHashMap<CellName, IgnoreSet>,
+    ignore_specs: StdBsmrHashMap<CellName, IgnoreSet>,
     empty_on_fresh_instance: bool,
     report_global_rev: bool,
     last_mergebase: Option<String>,
@@ -363,7 +363,7 @@ impl WatchmanFileWatcher {
         project_root: &AbsNormPath,
         root_config: &LegacyBsmrConfig,
         cells: CellResolver,
-        ignore_specs: StdBuckHashMap<CellName, IgnoreSet>,
+        ignore_specs: StdBsmrHashMap<CellName, IgnoreSet>,
     ) -> bsmr_error::Result<Self> {
         let watchman_merge_base = root_config
             .get(BsmrconfigKeyRef {

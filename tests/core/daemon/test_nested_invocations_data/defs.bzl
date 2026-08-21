@@ -10,11 +10,11 @@ def _normal_impl(ctx):
     out = ctx.actions.declare_output("out.txt", has_content_based_path = False)
 
     cmd = cmd_args(
-        ctx.attrs.bsmr_path,
+        ctx.attrs.build_path,
         "build",
         "root//:trivial",
         "-c",
-        "nested.bsmr_path=" + ctx.attrs.bsmr_path,
+        "nested.build_path=" + ctx.attrs.build_path,
         "--out",
         out.as_output(),
     )
@@ -39,8 +39,8 @@ def _trace_impl(ctx):
 import subprocess
 import sys
 
-buck_path = sys.argv[1]
-subprocess.run([buck_path, "debug", "trace-io", "enable"])
+build_path = sys.argv[1]
+subprocess.run([build_path, "debug", "trace-io", "enable"])
     """,
         has_content_based_path = False,
     )
@@ -48,7 +48,7 @@ subprocess.run([buck_path, "debug", "trace-io", "enable"])
         [
             "fbpython",
             script,
-            ctx.attrs.bsmr_path,
+            ctx.attrs.build_path,
             trace_out.as_output(),
         ],
         local_only = True,
@@ -56,11 +56,11 @@ subprocess.run([buck_path, "debug", "trace-io", "enable"])
     )
 
     nested_cmd = cmd_args(
-        ctx.attrs.bsmr_path,
+        ctx.attrs.build_path,
         "build",
         "root//:trivial",
         "-c",
-        "nested.bsmr_path=" + ctx.attrs.bsmr_path,
+        "nested.build_path=" + ctx.attrs.build_path,
         "--out",
         nested_out.as_output(),
         hidden = trace_out,
@@ -75,13 +75,13 @@ subprocess.run([buck_path, "debug", "trace-io", "enable"])
 normal_nested_invocation = rule(
     impl = _normal_impl,
     attrs = {
-        "bsmr_path": attrs.string(),
+        "build_path": attrs.string(),
     },
 )
 
 trace_nested_invocation = rule(
     impl = _trace_impl,
     attrs = {
-        "bsmr_path": attrs.string(),
+        "build_path": attrs.string(),
     },
 )

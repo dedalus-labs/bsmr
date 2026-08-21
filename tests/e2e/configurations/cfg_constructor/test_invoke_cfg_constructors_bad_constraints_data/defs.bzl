@@ -39,6 +39,6 @@ def init_cfg_constructor():
     set_cfg_constructor(
         stage0 = _bad_pre_constraint_analysis,
         stage1 = _cfg_constructor_post_constraint_analysis,
-        key = "buck.cfg_modifiers",
+        key = "bsmr.cfg_modifiers",
         aliases = _ALIASES,
     )

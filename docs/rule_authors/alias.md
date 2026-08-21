@@ -77,7 +77,7 @@ The `configured_alias` rule has the following relevant attributes:
 :::note
 
 The `actual` field is available for `configured_alias` but it is not used under
-the hood (to keep compatibility of output format with Buck1 queries).
+the hood (to keep compatibility of output format with Legacy queries).
 
 :::
 

@@ -14,7 +14,7 @@
  * above-listed licenses.
  */
 
-use bsmr_error::BuckErrorContext;
+use bsmr_error::BsmrErrorContext;
 use bsmr_node::attrs::attr::Attribute;
 use bsmr_node::attrs::attr::CoercedValue;
 use bsmr_node::attrs::coercion_context::AttrCoercionContext;
@@ -77,7 +77,7 @@ impl AttributeCoerceExt for Attribute {
                 .coercer()
                 .coerce_with_default(configurable, coercer_ctx, value, default.map(|x| &**x))
                 .map(CoercedValue::Custom)
-                .with_buck_error_context(|| {
+                .with_bsmr_error_context(|| {
                     format!("Error coercing attribute `{param_name}` of type `{self}`")
                 }),
             Some(_) => Ok(CoercedValue::Default),

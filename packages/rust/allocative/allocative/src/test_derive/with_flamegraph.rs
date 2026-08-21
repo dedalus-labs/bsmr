@@ -1,3 +1,9 @@
+//===----------------------------------------------------------------------===//
+// Upstream-Source: facebook/buck2@1560aca2002865cd73d7cafb22c705cfb640b2bc
+// Modifications Copyright (c) 2026 Dedalus Labs, Inc. and its contributors
+// SPDX-License-Identifier: Apache-2.0
+//===----------------------------------------------------------------------===//
+
 /*
  * Copyright (c) Meta Platforms, Inc. and affiliates.
  *
@@ -39,7 +45,7 @@ fn test_flamegraph() {
         allocative::test_derive::with_flamegraph::TestData;data;alloc::boxed::Box<[u8]>;ptr 16\n\
         allocative::test_derive::with_flamegraph::TestData;data;alloc::boxed::Box<[u8]>;ptr;u8;data;u8 100\n\
         ",
-        // When running test with buck, crate name is `allocative_unittest`.
+        // When running test with bsmr, crate name is `allocative_unittest`.
         fg.finish_and_write_flame_graph()
             .replace("allocative_unittest::", "allocative::")
     );

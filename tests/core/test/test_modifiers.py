@@ -19,9 +19,9 @@ import json
 from pathlib import Path
 from typing import List
 
-from bsmr.tests.e2e_util.api.buck import Buck
+from bsmr.tests.e2e_util.api.bsmr import Bsmr
 from bsmr.tests.e2e_util.asserts import expect_failure
-from bsmr.tests.e2e_util.buck_workspace import buck_test
+from bsmr.tests.e2e_util.bsmr_workspace import bsmr_test
 from bsmr.tests.e2e_util.helper.golden import (
     golden,
     GOLDEN_DIRECTORY,
@@ -31,11 +31,11 @@ from bsmr.tests.e2e_util.helper.golden import (
 
 
 def build_report_test(name: str, command: List[str], should_fail: bool) -> None:
-    async def impl(buck: Buck, tmp_path: Path) -> None:
+    async def impl(bsmr: Bsmr, tmp_path: Path) -> None:
         report = tmp_path / "build-report.json"
         if should_fail:
             await expect_failure(
-                buck.test(
+                bsmr.test(
                     "--build-report",
                     str(report),
                     "--build-report-options",
@@ -44,7 +44,7 @@ def build_report_test(name: str, command: List[str], should_fail: bool) -> None:
                 )
             )
         else:
-            await buck.test("--build-report", str(report), *command)
+            await bsmr.test("--build-report", str(report), *command)
 
         with open(report) as file:
             report = json.loads(file.read())
@@ -61,7 +61,7 @@ def build_report_test(name: str, command: List[str], should_fail: bool) -> None:
 
     globals()[name] = impl
 
-    return buck_test()(impl)
+    return bsmr_test()(impl)
 
 
 build_report_test(
@@ -117,11 +117,11 @@ build_report_test(
 def modifiers_match_test(
     name: str, command: List[str], expected_configurations: int, should_fail: bool
 ) -> None:
-    async def impl(buck: Buck, tmp_path: Path) -> None:
+    async def impl(bsmr: Bsmr, tmp_path: Path) -> None:
         report = tmp_path / "build-report.json"
         if should_fail:
             await expect_failure(
-                buck.test(
+                bsmr.test(
                     "--build-report",
                     str(report),
                     "--build-report-options",
@@ -130,7 +130,7 @@ def modifiers_match_test(
                 )
             )
         else:
-            await buck.test("--build-report", str(report), *command)
+            await bsmr.test("--build-report", str(report), *command)
 
         with open(report) as file:
             report = json.loads(file.read())
@@ -145,7 +145,7 @@ def modifiers_match_test(
             # check if the associated modifiers exist in the configuration
             for configuration_id in entry["configured"].keys():
                 num_configurations += 1
-                configurations = await buck.audit_configurations(configuration_id)
+                configurations = await bsmr.audit_configurations(configuration_id)
 
                 for modifier in modifiers:
                     assert modifier in configurations.stdout
@@ -154,7 +154,7 @@ def modifiers_match_test(
 
     globals()[name] = impl
 
-    return buck_test()(impl)
+    return bsmr_test()(impl)
 
 
 modifiers_match_test(
@@ -211,33 +211,33 @@ modifiers_match_test(
 )
 
 
-@buck_test()
-async def test_order_of_modifiers(buck: Buck, tmp_path: Path) -> None:
+@bsmr_test()
+async def test_order_of_modifiers(bsmr: Bsmr, tmp_path: Path) -> None:
     target_with_modifiers = "root//:ok?root//:linux+root//:macos"
     report = tmp_path / "build-report.json"
 
-    await buck.test("--build-report", str(report), target_with_modifiers)
+    await bsmr.test("--build-report", str(report), target_with_modifiers)
 
     with open(report) as file:
         report = json.loads(file.read())
 
     [configuration] = report["results"][target_with_modifiers]["configured"].keys()
 
-    cfg = await buck.audit_configurations(configuration)
+    cfg = await bsmr.audit_configurations(configuration)
 
     assert "root//:macos" in cfg.stdout
     assert "root//:linux" not in cfg.stdout
 
 
-@buck_test()
+@bsmr_test()
 async def test_modifiers_that_end_up_with_same_configuration(
-    buck: Buck, tmp_path: Path
+    bsmr: Bsmr, tmp_path: Path
 ) -> None:
     mac_first = "root//:ok?root//:macos+root//:arm"
     arm_first = "root//:ok?root//:arm+root//:macos"
     report = tmp_path / "build-report.json"
 
-    await buck.test("--build-report", str(report), mac_first, arm_first)
+    await bsmr.test("--build-report", str(report), mac_first, arm_first)
 
     with open(report) as file:
         report = json.loads(file.read())
@@ -249,15 +249,15 @@ async def test_modifiers_that_end_up_with_same_configuration(
 
     [configuration] = report["results"][mac_first]["configured"].keys()
 
-    cfg = await buck.audit_configurations(configuration)
+    cfg = await bsmr.audit_configurations(configuration)
 
     assert "root//:macos" in cfg.stdout
     assert "root//:arm" in cfg.stdout
 
 
-@buck_test()
-async def test_fails_with_global_modifiers(buck: Buck) -> None:
+@bsmr_test()
+async def test_fails_with_global_modifiers(bsmr: Bsmr) -> None:
     await expect_failure(
-        buck.test("--modifier", "root//:macos", "//:ok?root//:linux"),
+        bsmr.test("--modifier", "root//:macos", "//:ok?root//:linux"),
         stderr_regex=r"Cannot specify modifiers with \?modifier syntax when global CLI modifiers are set with --modifier flag",
     )

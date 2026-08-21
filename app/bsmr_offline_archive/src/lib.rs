@@ -19,7 +19,7 @@ use std::fmt;
 use std::path::Path;
 
 use bsmr_core::fs::project_rel_path::ProjectRelativePathBuf;
-use bsmr_error::BuckErrorContext;
+use bsmr_error::BsmrErrorContext;
 use bsmr_fs::error::IoResultExt;
 use bsmr_fs::fs_util;
 use bsmr_fs::paths::abs_norm_path::AbsNormPathBuf;
@@ -128,7 +128,7 @@ pub struct RepositoryMetadata {
 impl RepositoryMetadata {
     pub fn from_cwd() -> bsmr_error::Result<Self> {
         Self::from_path(
-            std::env::current_dir().buck_error_context("Error getting current directory")?,
+            std::env::current_dir().bsmr_error_context("Error getting current directory")?,
         )
     }
 
@@ -167,9 +167,9 @@ where
 
     let result = cmd
         .output()
-        .buck_error_context("failed to dispatch hg command")?;
+        .bsmr_error_context("failed to dispatch hg command")?;
     if result.status.success() {
-        let out = String::from_utf8(result.stdout).buck_error_context("hg stdout to string")?;
+        let out = String::from_utf8(result.stdout).bsmr_error_context("hg stdout to string")?;
         let out = out.trim();
         if out.is_empty() {
             Err(bsmr_error::bsmr_error!(
@@ -181,7 +181,7 @@ where
             Ok(out.to_owned())
         }
     } else {
-        let err = String::from_utf8(result.stderr).buck_error_context("hg stderr to string")?;
+        let err = String::from_utf8(result.stderr).bsmr_error_context("hg stderr to string")?;
         Err(bsmr_error::bsmr_error!(
             bsmr_error::ErrorTag::OfflineArchive,
             "{}",

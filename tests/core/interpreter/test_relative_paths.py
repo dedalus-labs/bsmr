@@ -17,44 +17,44 @@
 
 import os
 
-from bsmr.tests.e2e_util.api.buck import Buck
+from bsmr.tests.e2e_util.api.bsmr import Bsmr
 from bsmr.tests.e2e_util.asserts import expect_failure
-from bsmr.tests.e2e_util.buck_workspace import buck_test
+from bsmr.tests.e2e_util.bsmr_workspace import bsmr_test
 
 
-@buck_test()
-async def test_relative_path_basic(buck: Buck) -> None:
-    assert "//foo/bar:test_basic" in (await buck.targets("//foo/bar:")).stdout
+@bsmr_test()
+async def test_relative_path_basic(bsmr: Bsmr) -> None:
+    assert "//foo/bar:test_basic" in (await bsmr.targets("//foo/bar:")).stdout
 
 
-@buck_test()
-async def test_relative_path_left_allowed_dir(buck: Buck) -> None:
+@bsmr_test()
+async def test_relative_path_left_allowed_dir(bsmr: Bsmr) -> None:
     await expect_failure(
-        buck.targets("//foo/baz:"),
+        bsmr.targets("//foo/baz:"),
         stderr_regex="Relative import path `../../defs.bzl` is not allowed at the current location.",
     )
 
 
-@buck_test()
-async def test_relative_path_has_symlink(buck: Buck) -> None:
-    os.symlink(buck.cwd, os.path.join(buck.cwd, "foo/sym"), target_is_directory=True)
+@bsmr_test()
+async def test_relative_path_has_symlink(bsmr: Bsmr) -> None:
+    os.symlink(bsmr.cwd, os.path.join(bsmr.cwd, "foo/sym"), target_is_directory=True)
     await expect_failure(
-        buck.targets("//foo/sym/foo/bar:"),
+        bsmr.targets("//foo/sym/foo/bar:"),
         stderr_regex="Symlink found on the way from current dir `root//foo/sym/foo/bar` to allowed relative dir `root//foo`: `root//foo/sym`.",
     )
 
 
-@buck_test()
-async def test_relative_path_in_attribute_default_current(buck: Buck) -> None:
+@bsmr_test()
+async def test_relative_path_in_attribute_default_current(bsmr: Bsmr) -> None:
     await expect_failure(
-        buck.targets("//foo/default_current:target"),
+        bsmr.targets("//foo/default_current:target"),
         stderr_regex="Target pattern must be absolute",
     )
 
 
-@buck_test()
-async def test_relative_path_in_attribute_default_up(buck: Buck) -> None:
+@bsmr_test()
+async def test_relative_path_in_attribute_default_up(bsmr: Bsmr) -> None:
     await expect_failure(
-        buck.targets("//foo/default_up:target"),
+        bsmr.targets("//foo/default_up:target"),
         stderr_regex="Target pattern must be absolute",
     )

@@ -16,7 +16,7 @@
 
 use std::num::NonZeroU32;
 
-use bsmr_error::BuckErrorContext;
+use bsmr_error::BsmrErrorContext;
 use bsmr_error::internal_error;
 use dupe::Dupe;
 
@@ -37,7 +37,7 @@ impl Pid {
     pub fn from_i64(pid: i64) -> bsmr_error::Result<Self> {
         Self::from_u32(
             pid.try_into()
-                .buck_error_context("integer overflow converting pid to u32")?,
+                .bsmr_error_context("integer overflow converting pid to u32")?,
         )
     }
 
@@ -51,7 +51,7 @@ impl Pid {
             self.pid
                 .get()
                 .try_into()
-                .buck_error_context("Integer overflow converting pid to pid_t")?,
+                .bsmr_error_context("Integer overflow converting pid to pid_t")?,
         ))
     }
 }

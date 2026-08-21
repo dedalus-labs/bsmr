@@ -1,3 +1,9 @@
+# ===----------------------------------------------------------------------===
+# Upstream-Source: facebook/buck2@1560aca2002865cd73d7cafb22c705cfb640b2bc
+# Modifications Copyright (c) 2026 Dedalus Labs, Inc. and its contributors
+# SPDX-License-Identifier: Apache-2.0
+# ===----------------------------------------------------------------------===
+
 # Copyright (c) Meta Platforms, Inc. and affiliates.
 #
 # This source code is dual-licensed under either the MIT license found in the
@@ -7,10 +13,10 @@
 # above-listed licenses.
 
 def export_file(visibility = ["PUBLIC"], **kwargs):
-    # @lint-ignore BUCKLINT: avoid "native is forbidden in fbcode"
+    # @lint-ignore BSMRLINT: avoid "native is forbidden in fbcode"
     native.export_file(visibility = visibility, **kwargs)
 
 def export_files(files, visibility = ["PUBLIC"], **kwargs):
-    # @lint-ignore BUCKLINT: avoid "native is forbidden in fbcode"
+    # @lint-ignore BSMRLINT: avoid "native is forbidden in fbcode"
     for file in files:
         native.export_file(name = file, visibility = visibility, **kwargs)

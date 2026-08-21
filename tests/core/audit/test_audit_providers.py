@@ -17,9 +17,9 @@
 
 import re
 
-from bsmr.tests.e2e_util.api.buck import Buck
+from bsmr.tests.e2e_util.api.bsmr import Bsmr
 from bsmr.tests.e2e_util.asserts import expect_failure
-from bsmr.tests.e2e_util.buck_workspace import buck_test
+from bsmr.tests.e2e_util.bsmr_workspace import bsmr_test
 from bsmr.tests.e2e_util.helper.golden import golden_replace_cfg_hash, sanitize_stderr
 
 
@@ -30,9 +30,9 @@ def _replace_hash(s: str) -> str:
 GOLDEN_DIRECTORY = "modifiers/golden/"
 
 
-@buck_test(data_dir="sorted")
-async def test_listed_providers_are_sorted(buck: Buck) -> None:
-    result = await buck.audit("providers", "//:target", "--list")
+@bsmr_test(data_dir="sorted")
+async def test_listed_providers_are_sorted(bsmr: Bsmr) -> None:
+    result = await bsmr.audit("providers", "//:target", "--list")
 
     # "  - DefaultInfo" -> "DefaultInfo"
     providers = [
@@ -47,20 +47,20 @@ async def test_listed_providers_are_sorted(buck: Buck) -> None:
     ]
 
 
-@buck_test(data_dir="universe")
-async def test_audit_providers_universe(buck: Buck) -> None:
-    result = await buck.audit("providers", "//:aaa", "--quiet")
+@bsmr_test(data_dir="universe")
+async def test_audit_providers_universe(bsmr: Bsmr) -> None:
+    result = await bsmr.audit("providers", "//:aaa", "--quiet")
     assert "root//:aaa (root//:p-aaa#<HASH>)" == _replace_hash(result.stdout.strip())
 
-    result = await buck.audit(
+    result = await bsmr.audit(
         "providers", "//:aaa", "--target-universe=//:bbb", "--quiet"
     )
     assert "root//:aaa (root//:p-bbb#<HASH>)" == _replace_hash(result.stdout.strip())
 
 
-@buck_test(data_dir="modifiers")
-async def test_audit_providers_with_single_modifier(buck: Buck) -> None:
-    result = await buck.audit("providers", "//:dummy?//:macos")
+@bsmr_test(data_dir="modifiers")
+async def test_audit_providers_with_single_modifier(bsmr: Bsmr) -> None:
+    result = await bsmr.audit("providers", "//:dummy?//:macos")
 
     golden_replace_cfg_hash(
         output=result.stdout,
@@ -68,9 +68,9 @@ async def test_audit_providers_with_single_modifier(buck: Buck) -> None:
     )
 
 
-@buck_test(data_dir="modifiers")
-async def test_audit_providers_with_multiple_target_patterns(buck: Buck) -> None:
-    result = await buck.audit("providers", "//:dummy?//:macos", "//:dummy?//:arm")
+@bsmr_test(data_dir="modifiers")
+async def test_audit_providers_with_multiple_target_patterns(bsmr: Bsmr) -> None:
+    result = await bsmr.audit("providers", "//:dummy?//:macos", "//:dummy?//:arm")
 
     golden_replace_cfg_hash(
         output=result.stdout,
@@ -79,9 +79,9 @@ async def test_audit_providers_with_multiple_target_patterns(buck: Buck) -> None
     )
 
 
-@buck_test(data_dir="modifiers")
-async def test_audit_providers_with_multiple_modifiers(buck: Buck) -> None:
-    result = await buck.audit("providers", "//:dummy?//:macos+//:arm")
+@bsmr_test(data_dir="modifiers")
+async def test_audit_providers_with_multiple_modifiers(bsmr: Bsmr) -> None:
+    result = await bsmr.audit("providers", "//:dummy?//:macos+//:arm")
 
     golden_replace_cfg_hash(
         output=result.stdout,
@@ -90,11 +90,11 @@ async def test_audit_providers_with_multiple_modifiers(buck: Buck) -> None:
     )
 
 
-@buck_test(data_dir="modifiers")
-async def test_audit_providers_order_of_modifiers(buck: Buck) -> None:
+@bsmr_test(data_dir="modifiers")
+async def test_audit_providers_order_of_modifiers(bsmr: Bsmr) -> None:
     # if passing in modifiers of the same constraint setting,
     # the last one should be the one that applies
-    result = await buck.audit("providers", "//:dummy?//:macos+//:linux")
+    result = await bsmr.audit("providers", "//:dummy?//:macos+//:linux")
 
     golden_replace_cfg_hash(
         output=result.stdout,
@@ -102,9 +102,9 @@ async def test_audit_providers_order_of_modifiers(buck: Buck) -> None:
     )
 
 
-@buck_test(data_dir="modifiers")
-async def test_audit_providers_all_targets_with_modifiers(buck: Buck) -> None:
-    result = await buck.audit("providers", "//:?//:macos")
+@bsmr_test(data_dir="modifiers")
+async def test_audit_providers_all_targets_with_modifiers(bsmr: Bsmr) -> None:
+    result = await bsmr.audit("providers", "//:?//:macos")
 
     golden_replace_cfg_hash(
         output=result.stdout,
@@ -113,9 +113,9 @@ async def test_audit_providers_all_targets_with_modifiers(buck: Buck) -> None:
     )
 
 
-@buck_test(data_dir="modifiers")
-async def test_audit_providers_recursive_with_modifiers(buck: Buck) -> None:
-    result = await buck.audit("providers", "//...?//:macos")
+@bsmr_test(data_dir="modifiers")
+async def test_audit_providers_recursive_with_modifiers(bsmr: Bsmr) -> None:
+    result = await bsmr.audit("providers", "//...?//:macos")
 
     golden_replace_cfg_hash(
         output=result.stdout,
@@ -124,9 +124,9 @@ async def test_audit_providers_recursive_with_modifiers(buck: Buck) -> None:
     )
 
 
-@buck_test(data_dir="modifiers")
-async def test_audit_providers_modifiers_with_subtarget(buck: Buck) -> None:
-    result = await buck.audit("providers", "//:dummy_with_subtarget[sub]?//:macos")
+@bsmr_test(data_dir="modifiers")
+async def test_audit_providers_modifiers_with_subtarget(bsmr: Bsmr) -> None:
+    result = await bsmr.audit("providers", "//:dummy_with_subtarget[sub]?//:macos")
 
     golden_replace_cfg_hash(
         output=result.stdout,
@@ -135,9 +135,9 @@ async def test_audit_providers_modifiers_with_subtarget(buck: Buck) -> None:
     )
 
 
-@buck_test(data_dir="modifiers")
-async def test_audit_providers_modifiers_with_target_universe(buck: Buck) -> None:
-    result = await buck.audit(
+@bsmr_test(data_dir="modifiers")
+async def test_audit_providers_modifiers_with_target_universe(bsmr: Bsmr) -> None:
+    result = await bsmr.audit(
         "providers", "//:dummy", "--target-universe", "//:dummy?//:linux"
     )
 
@@ -148,11 +148,11 @@ async def test_audit_providers_modifiers_with_target_universe(buck: Buck) -> Non
     )
 
 
-@buck_test(data_dir="modifiers")
+@bsmr_test(data_dir="modifiers")
 async def test_audit_providers_modifiers_with_multiple_target_universe(
-    buck: Buck,
+    bsmr: Bsmr,
 ) -> None:
-    result = await buck.audit(
+    result = await bsmr.audit(
         "providers",
         "//:dummy",
         "--target-universe",
@@ -166,15 +166,15 @@ async def test_audit_providers_modifiers_with_multiple_target_universe(
     )
 
 
-@buck_test(data_dir="modifiers")
-async def test_audit_providers_modifiers_fail_with_global(buck: Buck) -> None:
+@bsmr_test(data_dir="modifiers")
+async def test_audit_providers_modifiers_fail_with_global(bsmr: Bsmr) -> None:
     await expect_failure(
-        buck.audit("providers", "--modifier", "//:linux", "//:dummy?//:arm"),
+        bsmr.audit("providers", "--modifier", "//:linux", "//:dummy?//:arm"),
         stderr_regex=r"Cannot specify modifiers with \?modifier syntax when global CLI modifiers are set with --modifier flag",
     )
 
     await expect_failure(
-        buck.audit(
+        bsmr.audit(
             "providers",
             "--modifier",
             "//:linux",
@@ -186,12 +186,12 @@ async def test_audit_providers_modifiers_fail_with_global(buck: Buck) -> None:
     )
 
 
-@buck_test(data_dir="modifiers")
+@bsmr_test(data_dir="modifiers")
 async def test_audit_providers_modifiers_fail_with_pattern_modifier_and_target_universe_modifier(
-    buck: Buck,
+    bsmr: Bsmr,
 ) -> None:
     await expect_failure(
-        buck.audit(
+        bsmr.audit(
             "providers", "//:dummy?//:macos", "--target-universe", "//:dummy?//:linux"
         ),
         stderr_regex=r"Cannot use \?modifier syntax in target pattern expression with --target-universe flag",
@@ -201,9 +201,9 @@ async def test_audit_providers_modifiers_fail_with_pattern_modifier_and_target_u
 FILTER_GOLDEN_DIRECTORY = "filter/golden/"
 
 
-@buck_test(data_dir="filter")
-async def test_audit_providers_filter_single(buck: Buck) -> None:
-    result = await buck.audit("providers", "-p", "FooInfo", "//:has_all")
+@bsmr_test(data_dir="filter")
+async def test_audit_providers_filter_single(bsmr: Bsmr) -> None:
+    result = await bsmr.audit("providers", "-p", "FooInfo", "//:has_all")
 
     golden_replace_cfg_hash(
         output=result.stdout,
@@ -211,9 +211,9 @@ async def test_audit_providers_filter_single(buck: Buck) -> None:
     )
 
 
-@buck_test(data_dir="filter")
-async def test_audit_providers_filter_multiple(buck: Buck) -> None:
-    result = await buck.audit(
+@bsmr_test(data_dir="filter")
+async def test_audit_providers_filter_multiple(bsmr: Bsmr) -> None:
+    result = await bsmr.audit(
         "providers", "-p", "FooInfo", "-p", "BarInfo", "//:has_all"
     )
 
@@ -223,9 +223,9 @@ async def test_audit_providers_filter_multiple(buck: Buck) -> None:
     )
 
 
-@buck_test(data_dir="filter")
-async def test_audit_providers_filter_not_found(buck: Buck) -> None:
-    result = await buck.audit(
+@bsmr_test(data_dir="filter")
+async def test_audit_providers_filter_not_found(bsmr: Bsmr) -> None:
+    result = await bsmr.audit(
         "providers", "-p", "Nonexistent1", "-p", "Nonexistent2", "//:has_all"
     )
 
@@ -241,9 +241,9 @@ async def test_audit_providers_filter_not_found(buck: Buck) -> None:
     )
 
 
-@buck_test(data_dir="filter")
-async def test_audit_providers_filter_multi_target(buck: Buck) -> None:
-    result = await buck.audit(
+@bsmr_test(data_dir="filter")
+async def test_audit_providers_filter_multi_target(bsmr: Bsmr) -> None:
+    result = await bsmr.audit(
         "providers", "-p", "FooInfo", "-p", "BarInfo", "//:has_all", "//:has_foo"
     )
 

@@ -30,7 +30,7 @@ use crate::final_console::FinalConsole;
 use crate::subscribers::errorconsole::ErrorConsole;
 use crate::subscribers::simpleconsole::SimpleConsole;
 use crate::subscribers::subscriber::EventSubscriber;
-use crate::subscribers::superconsole::BUCK_NO_INTERACTIVE_CONSOLE;
+use crate::subscribers::superconsole::BSMR_NO_INTERACTIVE_CONSOLE;
 use crate::subscribers::superconsole::StatefulSuperConsole;
 use crate::subscribers::superconsole::SuperConsoleConfig;
 use crate::subscribers::superconsole::timekeeper::Timekeeper;
@@ -56,7 +56,7 @@ pub enum ConsoleType {
 
 impl ConsoleType {
     /// Returns true if this console type may use a superconsole.
-    /// Used to decide whether to print Buck UI / Build ID at the end of a build,
+    /// Used to decide whether to print Bsmr UI / Build ID at the end of a build,
     /// since the superconsole's live area (which shows it during the build) gets cleared.
     pub fn maybe_superconsole(self) -> bool {
         matches!(self, ConsoleType::Super | ConsoleType::Auto)
@@ -192,7 +192,7 @@ pub struct CommonConsoleOptions {
         help = "Which console to use for this command",
         default_value = "auto",
         ignore_case = true,
-        env = bsmr_env_name!("BUCK_CONSOLE"),
+        env = bsmr_env_name!("BSMR_CONSOLE"),
         value_name = "super|simple|...",
         value_enum
     )]
@@ -203,7 +203,7 @@ pub struct CommonConsoleOptions {
     /// Accepts a comma-separated list of superconsole components to add. Possible values are:
     ///
     ///   dice - shows information about evaluated dice nodes
-    ///   debugevents - shows information about the flow of events from buckd
+    ///   debugevents - shows information about the flow of events from bsmrd
     ///
     /// These components can be turned on/off interactively.
     /// Press 'h' for help when superconsole is active.
@@ -218,7 +218,7 @@ pub struct CommonConsoleOptions {
     #[clap(
         long,
         help = "Disable console interactions",
-        env = bsmr_env_name!(BUCK_NO_INTERACTIVE_CONSOLE),
+        env = bsmr_env_name!(BSMR_NO_INTERACTIVE_CONSOLE),
         value_parser = FalseyValueParser::new(),
     )]
     pub no_interactive_console: bool,
@@ -279,7 +279,7 @@ impl CommonConsoleOptions {
 
     pub fn superconsole_config(&self) -> SuperConsoleConfig {
         let mut config = SuperConsoleConfig {
-            expanded_progress: !bsmr_env!("BUCK_DISABLE_EXPANDED_PROGRESS", bool).unwrap_or(false),
+            expanded_progress: !bsmr_env!("BSMR_DISABLE_EXPANDED_PROGRESS", bool).unwrap_or(false),
             ..SuperConsoleConfig::default()
         };
 

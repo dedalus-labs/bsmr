@@ -15,11 +15,11 @@
 # pyre-strict
 
 
-from bsmr.tests.e2e_util.api.buck import Buck
-from bsmr.tests.e2e_util.buck_workspace import buck_test
+from bsmr.tests.e2e_util.api.bsmr import Bsmr
+from bsmr.tests.e2e_util.bsmr_workspace import bsmr_test
 
 
-@buck_test()
-async def test_v2_only(buck: Buck) -> None:
+@bsmr_test()
+async def test_v2_only(bsmr: Bsmr) -> None:
     # Just check it works.
-    await buck.build("root//:")
+    await bsmr.build("root//:")

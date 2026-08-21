@@ -377,7 +377,7 @@ Multiple filters on a mapping use AND semantics (all must match).
 | `label:REGEX`                  | Target's labels/tags           | `label:vendor`               |
 | `tag:REGEX`                    | Same as `label:`               | `tag:third_party`            |
 | `target_regex:REGEX`           | Target's `raw_target()` string | `target_regex:caffe2/.*`     |
-| `pattern:BUILD_TARGET_PATTERN` | Buck target pattern            | `pattern:upstream//caffe2/...` |
+| `pattern:BUILD_TARGET_PATTERN` | Bsmr target pattern            | `pattern:upstream//caffe2/...` |
 
 ### Filter interaction with tree traversal
 

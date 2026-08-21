@@ -79,7 +79,7 @@ def merge_index_store(
     #
     # We use `prefer_remote` to maximize the work done on RE, because
     # we assume that RE hosts have the fastest network connections,
-    # especially if the buck command is running on a local
+    # especially if the bsmr command is running on a local
     # laptop. There can also be some duplication between index stores,
     # so we expect the final output to be smaller and less to
     # download.

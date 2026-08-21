@@ -15,16 +15,16 @@
 # pyre-strict
 
 
-from bsmr.tests.e2e_util.api.buck import Buck
-from bsmr.tests.e2e_util.buck_workspace import buck_test, env
+from bsmr.tests.e2e_util.api.bsmr import Bsmr
+from bsmr.tests.e2e_util.bsmr_workspace import bsmr_test, env
 
 
-@buck_test()
+@bsmr_test()
 @env("BSMR_ALLOW_INTERNAL_TEST_RUNNER_DO_NOT_USE", "1")
-async def test_platform_resolution(buck: Buck) -> None:
+async def test_platform_resolution(bsmr: Bsmr) -> None:
     # Setup is such that test target is incompatible with testee's default
     # target platform.
-    await buck.test(
+    await bsmr.test(
         ":my_rule",
         test_executor="",
     )

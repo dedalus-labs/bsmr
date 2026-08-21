@@ -1,3 +1,9 @@
+# ===----------------------------------------------------------------------===
+# Upstream-Source: facebook/buck2@1560aca2002865cd73d7cafb22c705cfb640b2bc
+# Modifications Copyright (c) 2026 Dedalus Labs, Inc. and its contributors
+# SPDX-License-Identifier: Apache-2.0
+# ===----------------------------------------------------------------------===
+
 # Copyright (c) Meta Platforms, Inc. and affiliates.
 #
 # This source code is dual-licensed under either the MIT license found in the
@@ -110,14 +116,14 @@ def create_annotation_processor_properties(
 
     annotation_processor_params = _update_first(
         annotation_processor_params,
-        "buck.current_buck_target=<will_be_replaced>",
-        "buck.current_buck_target=" + str(ctx.label.raw_target()),
+        "bsmr.current_bsmr_target=<will_be_replaced>",
+        "bsmr.current_bsmr_target=" + str(ctx.label.raw_target()),
     )
 
     annotation_processor_params = _update_first(
         annotation_processor_params,
-        "buck.required_for_source_only_abi=<will_be_replaced>",
-        ("buck.required_for_source_only_abi=" + str(ctx.attrs.required_for_source_only_abi)) if hasattr(ctx.attrs, "required_for_source_only_abi") else None,
+        "bsmr.required_for_source_only_abi=<will_be_replaced>",
+        ("bsmr.required_for_source_only_abi=" + str(ctx.attrs.required_for_source_only_abi)) if hasattr(ctx.attrs, "required_for_source_only_abi") else None,
     )
 
     return AnnotationProcessorProperties(

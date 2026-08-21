@@ -1,3 +1,9 @@
+# ===----------------------------------------------------------------------===
+# Upstream-Source: facebook/buck2@1560aca2002865cd73d7cafb22c705cfb640b2bc
+# Modifications Copyright (c) 2026 Dedalus Labs, Inc. and its contributors
+# SPDX-License-Identifier: Apache-2.0
+# ===----------------------------------------------------------------------===
+
 # Copyright (c) Meta Platforms, Inc. and affiliates.
 #
 # This source code is licensed under both the MIT license found in the
@@ -60,7 +66,7 @@ def _turn_http_archive_into_protoc_distribution(providers: ProviderCollection, p
 def _download_protoc_distribution_impl(ctx: AnalysisContext) -> Promise:
     protoc_filename = "bin/protoc" + ctx.attrs.exe_extension
 
-    # @lint-ignore BUCKLINT: avoid "Direct usage of native rules is not allowed."
+    # @lint-ignore BSMRLINT: avoid "Direct usage of native rules is not allowed."
     return ctx.actions.anon_target(
         native.http_archive,
         {

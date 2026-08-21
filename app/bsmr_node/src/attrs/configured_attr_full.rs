@@ -15,7 +15,7 @@
  */
 
 use bsmr_core::package::PackageLabel;
-use bsmr_error::BuckErrorContext;
+use bsmr_error::BsmrErrorContext;
 
 use crate::attrs::attr::Attribute;
 use crate::attrs::configured_attr::ConfiguredAttr;
@@ -37,6 +37,6 @@ impl ConfiguredAttrFull<'_> {
     ) -> bsmr_error::Result<()> {
         self.value
             .traverse(pkg, traversal)
-            .with_buck_error_context(|| format!("traversing attribute `{}`", self.name))
+            .with_bsmr_error_context(|| format!("traversing attribute `{}`", self.name))
     }
 }

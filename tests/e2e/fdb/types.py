@@ -20,7 +20,7 @@ import os
 from dataclasses import dataclass
 from typing import Any, Dict, Type, TypeVar, Union
 
-from bsmr.tests.e2e_util.api.buck_result import BuckResult
+from bsmr.tests.e2e_util.api.bsmr_result import BsmrResult
 
 
 T = TypeVar("T")
@@ -85,7 +85,7 @@ class ExecInfo:
     target_info: dict[str, Any]
 
     @staticmethod
-    def from_buck_result(result: BuckResult) -> "ExecInfo":
+    def from_bsmr_result(result: BsmrResult) -> "ExecInfo":
         with open(result.stdout.strip("\n")) as json_file:
             return _dataclass_from_dict(ExecInfo, json.loads(json_file.read()))
 

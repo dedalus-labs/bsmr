@@ -18,8 +18,8 @@
 import json
 import re
 
-from bsmr.tests.e2e_util.api.buck import Buck
-from bsmr.tests.e2e_util.buck_workspace import buck_test
+from bsmr.tests.e2e_util.api.bsmr import Bsmr
+from bsmr.tests.e2e_util.bsmr_workspace import bsmr_test
 from bsmr.tests.e2e_util.helper.utils import filter_events
 
 
@@ -27,10 +27,10 @@ def _replace_hash(s: str) -> str:
     return re.sub(r"\b[0-9a-f]{16}\b", "<HASH>", s)
 
 
-@buck_test()
-async def test_configuration_transition_rule_cquery(buck: Buck) -> None:
+@bsmr_test()
+async def test_configuration_transition_rule_cquery(bsmr: Bsmr) -> None:
     # For the reference, cquery output is: P467297091. Note the "forward" node.
-    result = await buck.cquery("deps(root//:the-test)")
+    result = await bsmr.cquery("deps(root//:the-test)")
     result.check_returncode()
     # Watchos resource should be present twice: as forward and as transitioned.
     assert result.stdout.count(":watchos-resource") == 2
@@ -38,9 +38,9 @@ async def test_configuration_transition_rule_cquery(buck: Buck) -> None:
     assert result.stdout.count(":default-resource") == 1
 
 
-@buck_test()
-async def test_configuration_transition_rule_cquery_actual_attr(buck: Buck) -> None:
-    result = await buck.cquery(
+@bsmr_test()
+async def test_configuration_transition_rule_cquery_actual_attr(bsmr: Bsmr) -> None:
+    result = await bsmr.cquery(
         "--target-platforms=root//:iphoneos-p",
         "root//:watchos-resource",
         "--output-attribute=actual",
@@ -67,20 +67,20 @@ async def test_configuration_transition_rule_cquery_actual_attr(buck: Buck) -> N
     assert config_transition_has_no_attributes
 
 
-@buck_test()
-async def test_configuration_transition_rule_build(buck: Buck) -> None:
+@bsmr_test()
+async def test_configuration_transition_rule_build(bsmr: Bsmr) -> None:
     # Rule implementations do the assertions.
-    result = await buck.build("root//:the-test")
+    result = await bsmr.build("root//:the-test")
     result.check_returncode()
 
 
-@buck_test()
+@bsmr_test()
 async def test_configuration_transition_yields_multiple_configurations_created_events(
-    buck: Buck,
+    bsmr: Bsmr,
 ) -> None:
-    await buck.build("root//:the-test")
+    await bsmr.build("root//:the-test")
     configuration_created_events = await filter_events(
-        buck, "Event", "data", "Instant", "data", "ConfigurationCreated", "cfg"
+        bsmr, "Event", "data", "Instant", "data", "ConfigurationCreated", "cfg"
     )
 
     assert len(configuration_created_events) == 2

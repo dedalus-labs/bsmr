@@ -18,12 +18,12 @@
 import os
 from typing import Any, Dict
 
-from bsmr.tests.e2e_util.api.buck import Buck
-from bsmr.tests.e2e_util.buck_workspace import buck_test
+from bsmr.tests.e2e_util.api.bsmr import Bsmr
+from bsmr.tests.e2e_util.bsmr_workspace import bsmr_test
 from bsmr.tests.e2e_util.helper.utils import filter_events, random_string
 
 
-def _use_some_memory_args(buck: Buck) -> list[str]:
+def _use_some_memory_args(bsmr: Bsmr) -> list[str]:
     return [
         "root//:use_some_memory",
         "--no-remote-cache",
@@ -35,19 +35,19 @@ def _use_some_memory_args(buck: Buck) -> list[str]:
     ]
 
 
-@buck_test(skip_for_os=["windows", "darwin"], disable_daemon_cgroup=False)
-async def test_memory_reporting_disabled(buck: Buck) -> None:
+@bsmr_test(skip_for_os=["windows", "darwin"], disable_daemon_cgroup=False)
+async def test_memory_reporting_disabled(bsmr: Bsmr) -> None:
     env = {
         "BSMR_TEST_RESOURCE_CONTROL_CONFIG": '{"status":"Off","init":"Systemd","memory_max":null,"memory_high":null,"memory_max_per_action":null,"memory_high_per_action":null,"memory_high_actions":null,"memory_max_actions":null,"enable_suspension":false,"preferred_action_suspend_strategy":"KillAndRetry"}'
     }
 
-    await buck.build(
-        *_use_some_memory_args(buck),
+    await bsmr.build(
+        *_use_some_memory_args(bsmr),
         env=env,
     )
 
     events = await filter_events(
-        buck,
+        bsmr,
         "Event",
         "data",
         "SpanEnd",
@@ -60,9 +60,9 @@ async def test_memory_reporting_disabled(buck: Buck) -> None:
             assert c["details"]["metadata"]["execution_stats"]["memory_peak"] is None
 
 
-async def get_matching_details(buck: Buck) -> Dict[str, Any]:
+async def get_matching_details(bsmr: Bsmr) -> Dict[str, Any]:
     events = await filter_events(
-        buck,
+        bsmr,
         "Event",
         "data",
         "SpanEnd",
@@ -76,13 +76,13 @@ async def get_matching_details(buck: Buck) -> Dict[str, Any]:
     raise AssertionError("did not find the expected target")
 
 
-@buck_test(skip_for_os=["windows", "darwin"], disable_daemon_cgroup=False)
-async def test_memory_reporting(buck: Buck) -> None:
-    await buck.build(
-        *_use_some_memory_args(buck),
+@bsmr_test(skip_for_os=["windows", "darwin"], disable_daemon_cgroup=False)
+async def test_memory_reporting(bsmr: Bsmr) -> None:
+    await bsmr.build(
+        *_use_some_memory_args(bsmr),
     )
 
-    details = await get_matching_details(buck)
+    details = await get_matching_details(bsmr)
     assert "OmittedLocalCommand" in details["command_kind"]["command"]
 
     memory_peak = details["metadata"]["execution_stats"]["memory_peak"]
@@ -90,14 +90,14 @@ async def test_memory_reporting(buck: Buck) -> None:
     assert memory_peak < 15000000
 
 
-@buck_test(skip_for_os=["windows", "darwin"], disable_daemon_cgroup=False)
-async def test_memory_reporting_in_test(buck: Buck) -> None:
-    await buck.test(
-        *_use_some_memory_args(buck),
+@bsmr_test(skip_for_os=["windows", "darwin"], disable_daemon_cgroup=False)
+async def test_memory_reporting_in_test(bsmr: Bsmr) -> None:
+    await bsmr.test(
+        *_use_some_memory_args(bsmr),
     )
 
     events = await filter_events(
-        buck,
+        bsmr,
         "Event",
         "data",
         "SpanEnd",
@@ -112,7 +112,7 @@ async def test_memory_reporting_in_test(buck: Buck) -> None:
     assert memory_peak < 15000000
 
 
-@buck_test()
-def test_nop(buck: Buck) -> None:
+@bsmr_test()
+def test_nop(bsmr: Bsmr) -> None:
     # Pytest gets upset if we have no windows or mac tests in this file
     pass

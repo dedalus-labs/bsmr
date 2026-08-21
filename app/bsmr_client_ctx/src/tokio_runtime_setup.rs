@@ -14,7 +14,7 @@
  * above-listed licenses.
  */
 
-use bsmr_error::BuckErrorContext;
+use bsmr_error::BsmrErrorContext;
 use bsmr_util::tokio_runtime::new_tokio_runtime;
 
 /// Tokio runtime used by the client commands.
@@ -26,5 +26,5 @@ pub fn client_tokio_runtime() -> bsmr_error::Result<tokio::runtime::Runtime> {
         .worker_threads(1)
         .enable_all()
         .build()
-        .buck_error_context("Building tokio runtime")
+        .bsmr_error_context("Building tokio runtime")
 }

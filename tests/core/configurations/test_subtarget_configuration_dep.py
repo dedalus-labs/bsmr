@@ -16,26 +16,26 @@
 
 import json
 
-from bsmr.tests.e2e_util.api.buck import Buck
+from bsmr.tests.e2e_util.api.bsmr import Bsmr
 from bsmr.tests.e2e_util.asserts import expect_failure
-from bsmr.tests.e2e_util.buck_workspace import buck_test
+from bsmr.tests.e2e_util.bsmr_workspace import bsmr_test
 
 
-@buck_test()
-async def test_default_target_platform_is_subtarget(buck: Buck) -> None:
+@bsmr_test()
+async def test_default_target_platform_is_subtarget(bsmr: Bsmr) -> None:
     # FIXME(JakobDegen): Bug. The target specifies a subtarget that does have an appropriate
     # provider.
     await expect_failure(
-        buck.cquery(":stub"),
+        bsmr.cquery(":stub"),
         stderr_regex="Expected `root//:alias_platform` to be a `platform\\(\\)` target",
     )
 
 
-@buck_test()
-async def test_subtarget_in_select_key(buck: Buck) -> None:
-    res = await buck.uquery(
-        "root//:with_constraint_key_dep", "-a", "buck.configuration_deps"
+@bsmr_test()
+async def test_subtarget_in_select_key(bsmr: Bsmr) -> None:
+    res = await bsmr.uquery(
+        "root//:with_constraint_key_dep", "-a", "bsmr.configuration_deps"
     )
     res = json.loads(res.stdout)
-    # FIXME(JakobDegen): Bug. `buck.deps`-like attributes do not include subtargets
-    assert list(res.values())[0]["buck.configuration_deps"] == ["root//:cat_alias[sub]"]
+    # FIXME(JakobDegen): Bug. `bsmr.deps`-like attributes do not include subtargets
+    assert list(res.values())[0]["bsmr.configuration_deps"] == ["root//:cat_alias[sub]"]

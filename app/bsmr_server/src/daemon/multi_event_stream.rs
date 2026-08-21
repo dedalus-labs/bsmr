@@ -109,7 +109,7 @@ where
 #[cfg(test)]
 mod tests {
     use assert_matches::assert_matches;
-    use bsmr_data::BuckEvent;
+    use bsmr_data::BsmrEvent;
     use futures::stream::StreamExt;
     use futures::stream::poll_fn;
 
@@ -118,7 +118,7 @@ mod tests {
     fn event(span_id: u64) -> CommandProgress {
         CommandProgress {
             progress: Some(bsmr_cli_proto::command_progress::Progress::Event(Box::new(
-                BuckEvent {
+                BsmrEvent {
                     span_id,
                     ..Default::default()
                 },

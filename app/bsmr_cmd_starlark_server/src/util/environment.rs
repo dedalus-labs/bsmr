@@ -17,7 +17,7 @@
 use bsmr_core::bzl::ImportPath;
 use bsmr_core::cells::build_file_cell::BuildFileCell;
 use bsmr_core::cells::name::CellName;
-use bsmr_hash::StdBuckHashSet;
+use bsmr_hash::StdBsmrHashSet;
 use bsmr_interpreter::file_type::StarlarkFileType;
 use bsmr_interpreter::import_paths::HasImportPaths;
 use bsmr_interpreter::load_module::INTERPRETER_CALCULATION_IMPL;
@@ -53,7 +53,7 @@ impl Environment {
             .await?
         {
             Some(prelude)
-                if path_type == StarlarkFileType::Buck || prelude.import_path().cell() != cell =>
+                if path_type == StarlarkFileType::Bsmr || prelude.import_path().cell() != cell =>
             {
                 Some(prelude)
             }
@@ -78,9 +78,9 @@ impl Environment {
         &self,
         path_type: StarlarkFileType,
         dice: &DiceTransaction,
-    ) -> bsmr_error::Result<StdBuckHashSet<String>> {
+    ) -> bsmr_error::Result<StdBsmrHashSet<String>> {
         let mut dice = dice.clone();
-        let mut names = StdBuckHashSet::default();
+        let mut names = StdBsmrHashSet::default();
 
         for x in self.globals.names() {
             names.insert(x.as_str().to_owned());
@@ -93,8 +93,8 @@ impl Environment {
             for x in m.env().names() {
                 names.insert(x.as_str().to_owned());
             }
-            if path_type == StarlarkFileType::Buck {
-                for (name, _value) in m.extra_globals_from_prelude_for_buck_files()? {
+            if path_type == StarlarkFileType::Bsmr {
+                for (name, _value) in m.extra_globals_from_prelude_for_bsmr_files()? {
                     names.insert(name.to_owned());
                 }
             }

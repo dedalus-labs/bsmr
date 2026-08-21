@@ -1,4 +1,10 @@
 #!/usr/bin/env fbpython
+# ===----------------------------------------------------------------------===
+# Upstream-Source: facebook/buck2@1560aca2002865cd73d7cafb22c705cfb640b2bc
+# Modifications Copyright (c) 2026 Dedalus Labs, Inc. and its contributors
+# SPDX-License-Identifier: Apache-2.0
+# ===----------------------------------------------------------------------===
+
 # Copyright (c) Meta Platforms, Inc. and affiliates.
 #
 # This source code is dual-licensed under either the MIT license found in the
@@ -28,7 +34,7 @@ def _parse_args() -> argparse.Namespace:
     group = parser.add_mutually_exclusive_group(required=True)
     group.add_argument(
         "--targets-file",
-        help="Path to a json file which contains user-focused Buck targets",
+        help="Path to a json file which contains user-focused Bsmr targets",
     )
     group.add_argument(
         "--spec-file",

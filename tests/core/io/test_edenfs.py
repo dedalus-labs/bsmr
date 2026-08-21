@@ -57,132 +57,132 @@ from bsmr.tests.core.common.io.file_watcher_tests import (
     setup_file_watcher_test,
     verify_results,
 )
-from bsmr.tests.e2e_util.api.buck import Buck
-from bsmr.tests.e2e_util.buck_workspace import buck_test
+from bsmr.tests.e2e_util.api.bsmr import Bsmr
+from bsmr.tests.e2e_util.bsmr_workspace import bsmr_test
 from bsmr.tests.e2e_util.helper.utils import filter_events
 
 
-@buck_test(setup_eden=True)
-async def test_edenfs_create_file(buck: Buck) -> None:
+@bsmr_test(setup_eden=True)
+async def test_edenfs_create_file(bsmr: Bsmr) -> None:
     await run_create_file_test(
-        buck, FileSystemType.EDEN_FS, FileWatcherProvider.EDEN_FS
+        bsmr, FileSystemType.EDEN_FS, FileWatcherProvider.EDEN_FS
     )
 
 
-@buck_test(setup_eden=True)
-async def test_edenfs_modify_file(buck: Buck) -> None:
+@bsmr_test(setup_eden=True)
+async def test_edenfs_modify_file(bsmr: Bsmr) -> None:
     await run_modify_file_test(
-        buck, FileSystemType.EDEN_FS, FileWatcherProvider.EDEN_FS
+        bsmr, FileSystemType.EDEN_FS, FileWatcherProvider.EDEN_FS
     )
 
 
-@buck_test(setup_eden=True)
-async def test_edenfs_remove_file(buck: Buck) -> None:
+@bsmr_test(setup_eden=True)
+async def test_edenfs_remove_file(bsmr: Bsmr) -> None:
     await run_remove_file_test(
-        buck, FileSystemType.EDEN_FS, FileWatcherProvider.EDEN_FS
+        bsmr, FileSystemType.EDEN_FS, FileWatcherProvider.EDEN_FS
     )
 
 
-@buck_test(setup_eden=True)
-async def test_edenfs_rename_file(buck: Buck) -> None:
+@bsmr_test(setup_eden=True)
+async def test_edenfs_rename_file(bsmr: Bsmr) -> None:
     await run_rename_file_test(
-        buck, FileSystemType.EDEN_FS, FileWatcherProvider.EDEN_FS
+        bsmr, FileSystemType.EDEN_FS, FileWatcherProvider.EDEN_FS
     )
 
 
 # File replace is not supported on Windows
-@buck_test(setup_eden=True, skip_for_os=["windows"])
-async def test_edenfs_replace_file(buck: Buck) -> None:
+@bsmr_test(setup_eden=True, skip_for_os=["windows"])
+async def test_edenfs_replace_file(bsmr: Bsmr) -> None:
     await run_replace_file_test(
-        buck, FileSystemType.EDEN_FS, FileWatcherProvider.EDEN_FS
+        bsmr, FileSystemType.EDEN_FS, FileWatcherProvider.EDEN_FS
     )
 
 
-@buck_test(setup_eden=True)
-async def test_edenfs_create_directory(buck: Buck) -> None:
+@bsmr_test(setup_eden=True)
+async def test_edenfs_create_directory(bsmr: Bsmr) -> None:
     await run_create_directory_test(
-        buck, FileSystemType.EDEN_FS, FileWatcherProvider.EDEN_FS
+        bsmr, FileSystemType.EDEN_FS, FileWatcherProvider.EDEN_FS
     )
 
 
-@buck_test(setup_eden=True)
-async def test_edenfs_remove_directory(buck: Buck) -> None:
+@bsmr_test(setup_eden=True)
+async def test_edenfs_remove_directory(bsmr: Bsmr) -> None:
     await run_remove_directory_test(
-        buck, FileSystemType.EDEN_FS, FileWatcherProvider.EDEN_FS
+        bsmr, FileSystemType.EDEN_FS, FileWatcherProvider.EDEN_FS
     )
 
 
-@buck_test(setup_eden=True)
-async def test_edenfs_rename_directory(buck: Buck) -> None:
+@bsmr_test(setup_eden=True)
+async def test_edenfs_rename_directory(bsmr: Bsmr) -> None:
     await run_rename_directory_test(
-        buck, FileSystemType.EDEN_FS, FileWatcherProvider.EDEN_FS
+        bsmr, FileSystemType.EDEN_FS, FileWatcherProvider.EDEN_FS
     )
 
 
-@buck_test(setup_eden=True)
-async def test_edenfs_checkout_mergebase_changes(buck: Buck) -> None:
+@bsmr_test(setup_eden=True)
+async def test_edenfs_checkout_mergebase_changes(bsmr: Bsmr) -> None:
     await run_checkout_mergebase_changes_test(
-        buck, FileSystemType.EDEN_FS, FileWatcherProvider.EDEN_FS
+        bsmr, FileSystemType.EDEN_FS, FileWatcherProvider.EDEN_FS
     )
 
 
-@buck_test(setup_eden=True)
-async def test_edenfs_checkout_with_mergebase(buck: Buck) -> None:
+@bsmr_test(setup_eden=True)
+async def test_edenfs_checkout_with_mergebase(bsmr: Bsmr) -> None:
     await run_checkout_with_mergebase_test(
-        buck, FileSystemType.EDEN_FS, FileWatcherProvider.EDEN_FS
+        bsmr, FileSystemType.EDEN_FS, FileWatcherProvider.EDEN_FS
     )
 
 
-@buck_test(setup_eden=True)
-async def test_edenfs_rebase_with_mergebase(buck: Buck) -> None:
+@bsmr_test(setup_eden=True)
+async def test_edenfs_rebase_with_mergebase(bsmr: Bsmr) -> None:
     await run_rebase_with_mergebase_test(
-        buck, FileSystemType.EDEN_FS, FileWatcherProvider.EDEN_FS
+        bsmr, FileSystemType.EDEN_FS, FileWatcherProvider.EDEN_FS
     )
 
 
-@buck_test(setup_eden=True)
-async def test_edenfs_restack_with_mergebase(buck: Buck) -> None:
+@bsmr_test(setup_eden=True)
+async def test_edenfs_restack_with_mergebase(bsmr: Bsmr) -> None:
     await run_restack_with_mergebase_test(
-        buck, FileSystemType.EDEN_FS, FileWatcherProvider.EDEN_FS
+        bsmr, FileSystemType.EDEN_FS, FileWatcherProvider.EDEN_FS
     )
 
 
-@buck_test(setup_eden=True)
-async def test_edenfs_create_symlink_test(buck: Buck) -> None:
+@bsmr_test(setup_eden=True)
+async def test_edenfs_create_symlink_test(bsmr: Bsmr) -> None:
     await run_create_symlink_test(
-        buck, FileSystemType.EDEN_FS, FileWatcherProvider.EDEN_FS
+        bsmr, FileSystemType.EDEN_FS, FileWatcherProvider.EDEN_FS
     )
 
 
-@buck_test(setup_eden=True)
-async def test_edenfs_replace_file_with_symlink_test(buck: Buck) -> None:
+@bsmr_test(setup_eden=True)
+async def test_edenfs_replace_file_with_symlink_test(bsmr: Bsmr) -> None:
     await run_replace_file_with_symlink_test(
-        buck, FileSystemType.EDEN_FS, FileWatcherProvider.EDEN_FS
+        bsmr, FileSystemType.EDEN_FS, FileWatcherProvider.EDEN_FS
     )
 
 
-@buck_test(setup_eden=True)
-async def test_edenfs_change_symlink_target_test(buck: Buck) -> None:
+@bsmr_test(setup_eden=True)
+async def test_edenfs_change_symlink_target_test(bsmr: Bsmr) -> None:
     await run_change_symlink_target_test(
-        buck, FileSystemType.EDEN_FS, FileWatcherProvider.EDEN_FS
+        bsmr, FileSystemType.EDEN_FS, FileWatcherProvider.EDEN_FS
     )
 
 
-@buck_test(setup_eden=True)
-async def test_edenfs_truncate_journal(buck: Buck) -> None:
-    await setup_file_watcher_test(buck)
-    subprocess.run(["edenfsctl", "debug", "flush_journal"], cwd=buck.cwd)
+@bsmr_test(setup_eden=True)
+async def test_edenfs_truncate_journal(bsmr: Bsmr) -> None:
+    await setup_file_watcher_test(bsmr)
+    subprocess.run(["edenfsctl", "debug", "flush_journal"], cwd=bsmr.cwd)
 
-    is_fresh_instance, _ = await get_file_watcher_events(buck)
+    is_fresh_instance, _ = await get_file_watcher_events(bsmr)
     assert is_fresh_instance
 
 
-@buck_test(setup_eden=True)
-async def test_edenfs_file_watcher_stats(buck: Buck) -> None:
-    await setup_file_watcher_test(buck)
+@bsmr_test(setup_eden=True)
+async def test_edenfs_file_watcher_stats(bsmr: Bsmr) -> None:
+    await setup_file_watcher_test(bsmr)
 
     file_stats = await filter_events(
-        buck,
+        bsmr,
         "Event",
         "data",
         "SpanEnd",
@@ -200,11 +200,11 @@ async def test_edenfs_file_watcher_stats(buck: Buck) -> None:
     assert file_stats["eden_version"] is not None
 
 
-@buck_test(setup_eden=True)
-async def test_edenfs_files_report_on_fresh_instance(buck: Buck) -> None:
-    await setup_file_watcher_test(buck)
-    await setup_file_watcher_scm_test(buck)
-    await buck.kill()
+@bsmr_test(setup_eden=True)
+async def test_edenfs_files_report_on_fresh_instance(bsmr: Bsmr) -> None:
+    await setup_file_watcher_test(bsmr)
+    await setup_file_watcher_scm_test(bsmr)
+    await bsmr.kill()
 
     required = [
         FileWatcherEvent(
@@ -215,12 +215,12 @@ async def test_edenfs_files_report_on_fresh_instance(buck: Buck) -> None:
         ),
     ]
 
-    is_fresh_instance, results = await get_file_watcher_events(buck)
+    is_fresh_instance, results = await get_file_watcher_events(bsmr)
     assert is_fresh_instance
     verify_results(results, required)
 
 
-@buck_test(
+@bsmr_test(
     setup_eden=True,
     # the test has subproject and creates bsmr-out in subproject,
     # when we setup eden we assume that bsmr-out is in project root dir
@@ -230,15 +230,15 @@ async def test_edenfs_files_report_on_fresh_instance(buck: Buck) -> None:
     # test is flaky on windows
     skip_for_os=["windows"],
 )
-async def test_edenfs_changes_in_subproject(buck: Buck) -> None:
+async def test_edenfs_changes_in_subproject(bsmr: Bsmr) -> None:
     cwd = Path("subproject")
-    await buck.targets("cell//:", rel_cwd=cwd)
+    await bsmr.targets("cell//:", rel_cwd=cwd)
 
-    with open(buck.cwd / "subproject" / "abc", "a"):
+    with open(bsmr.cwd / "subproject" / "abc", "a"):
         pass
 
     _, results = await get_file_watcher_events(
-        buck, target_pattern="cell//:", rel_cwd=cwd
+        bsmr, target_pattern="cell//:", rel_cwd=cwd
     )
     required = [
         FileWatcherEvent(
@@ -250,7 +250,7 @@ async def test_edenfs_changes_in_subproject(buck: Buck) -> None:
     verify_results(results, required)
 
 
-@buck_test(
+@bsmr_test(
     setup_eden=True,
     # the test has subproject and creates bsmr-out in subproject,
     # when we setup eden we assume that bsmr-out is in project root dir
@@ -260,18 +260,18 @@ async def test_edenfs_changes_in_subproject(buck: Buck) -> None:
     # test is flaky on windows
     skip_for_os=["windows"],
 )
-async def test_edenfs_changes_outside_subproject(buck: Buck) -> None:
+async def test_edenfs_changes_outside_subproject(bsmr: Bsmr) -> None:
     cwd = Path("subproject")
-    await buck.targets("cell//:", rel_cwd=cwd)
+    await bsmr.targets("cell//:", rel_cwd=cwd)
 
-    with open(buck.cwd / "subproject" / "abc", "a"):
+    with open(bsmr.cwd / "subproject" / "abc", "a"):
         pass
 
-    with open(buck.cwd / "cde", "a"):
+    with open(bsmr.cwd / "cde", "a"):
         pass
 
     _, results = await get_file_watcher_events(
-        buck, target_pattern="cell//:", rel_cwd=cwd
+        bsmr, target_pattern="cell//:", rel_cwd=cwd
     )
     required = [
         FileWatcherEvent(
@@ -292,8 +292,8 @@ def create_and_commit(cwd: Path, path: str) -> str:
     return subprocess.check_output(["sl", "whereami"], cwd=cwd).decode()
 
 
-@buck_test(setup_eden=True)
-async def test_edenfs_checkout_dir_changes(buck: Buck) -> None:
+@bsmr_test(setup_eden=True)
+async def test_edenfs_checkout_dir_changes(bsmr: Bsmr) -> None:
     # We want to create the following commit tree,
     # so when we move between f2 and f1 the mergbase doesn't change:
     #
@@ -304,16 +304,16 @@ async def test_edenfs_checkout_dir_changes(buck: Buck) -> None:
     # │
     # o  xxxxxxxxf1
 
-    f1 = create_and_commit(buck.cwd, "files/d1/f1")
-    f2 = create_and_commit(buck.cwd, "files/d2/f2")
-    subprocess.run(["sl", "co", f1], cwd=buck.cwd)
-    subprocess.run(["sl", "bookmark", "main"], cwd=buck.cwd, check=True)
-    create_and_commit(buck.cwd, "files/d3/f3")
-    subprocess.run(["sl", "co", f2], cwd=buck.cwd)
+    f1 = create_and_commit(bsmr.cwd, "files/d1/f1")
+    f2 = create_and_commit(bsmr.cwd, "files/d2/f2")
+    subprocess.run(["sl", "co", f1], cwd=bsmr.cwd)
+    subprocess.run(["sl", "bookmark", "main"], cwd=bsmr.cwd, check=True)
+    create_and_commit(bsmr.cwd, "files/d3/f3")
+    subprocess.run(["sl", "co", f2], cwd=bsmr.cwd)
 
-    await buck.targets("root//:")
-    subprocess.run(["sl", "co", f1], cwd=buck.cwd)
-    is_fresh_instance, results = await get_file_watcher_events(buck)
+    await bsmr.targets("root//:")
+    subprocess.run(["sl", "co", f1], cwd=bsmr.cwd)
+    is_fresh_instance, results = await get_file_watcher_events(bsmr)
     required = [
         FileWatcherEvent(
             FileWatcherEventType.DELETE, FileWatcherKind.FILE, "root//files/d2/f2"
@@ -329,27 +329,27 @@ async def test_edenfs_checkout_dir_changes(buck: Buck) -> None:
     verify_results(results, required)
 
 
-@buck_test(setup_eden=True)
-async def test_edenfs_directory_rename(buck: Buck) -> None:
-    (buck.cwd / "d1").mkdir()
-    (buck.cwd / "d1" / "TARGETS.fixture").touch()
-    await buck.targets("root//d1:")
+@bsmr_test(setup_eden=True)
+async def test_edenfs_directory_rename(bsmr: Bsmr) -> None:
+    (bsmr.cwd / "d1").mkdir()
+    (bsmr.cwd / "d1" / "TARGETS.fixture").touch()
+    await bsmr.targets("root//d1:")
 
-    (buck.cwd / "d1").rename(buck.cwd / "d2")
+    (bsmr.cwd / "d1").rename(bsmr.cwd / "d2")
     # FIXME(JakobDegen): Bug: This directory doesn't exist.
     # Note: Also repros with watchman
-    await buck.targets("root//d1:")
+    await bsmr.targets("root//d1:")
 
 
 # Dir replace is not supported on Windows
-@buck_test(setup_eden=True, skip_for_os=["windows"])
-async def test_edenfs_directory_replace(buck: Buck) -> None:
-    await setup_file_watcher_test(buck)
-    (buck.cwd / "d1").mkdir()
-    (buck.cwd / "d2").mkdir()
+@bsmr_test(setup_eden=True, skip_for_os=["windows"])
+async def test_edenfs_directory_replace(bsmr: Bsmr) -> None:
+    await setup_file_watcher_test(bsmr)
+    (bsmr.cwd / "d1").mkdir()
+    (bsmr.cwd / "d2").mkdir()
     # it's only possible to replace a dir
     # if newname exists and is an empty directory
-    (buck.cwd / "d1").rename(buck.cwd / "d2")
+    (bsmr.cwd / "d1").rename(bsmr.cwd / "d2")
 
     # we should get `create` for the newname
     # and `delete` for the oldname
@@ -362,24 +362,24 @@ async def test_edenfs_directory_replace(buck: Buck) -> None:
         ),
     ]
 
-    _, results = await get_file_watcher_events(buck)
+    _, results = await get_file_watcher_events(bsmr)
     verify_results(results, required)
 
 
-@buck_test(setup_eden=True)
-async def test_edenfs_duplicated_notifications(buck: Buck) -> None:
-    await setup_file_watcher_test(buck)
+@bsmr_test(setup_eden=True)
+async def test_edenfs_duplicated_notifications(bsmr: Bsmr) -> None:
+    await setup_file_watcher_test(bsmr)
 
-    with open(buck.cwd / "files" / "abc", "a") as f:
+    with open(bsmr.cwd / "files" / "abc", "a") as f:
         f.write("test")
 
-    with open(buck.cwd / "files" / "bcd", "a"):
+    with open(bsmr.cwd / "files" / "bcd", "a"):
         pass
 
-    with open(buck.cwd / "files" / "abc", "a") as f:
+    with open(bsmr.cwd / "files" / "abc", "a") as f:
         f.write("test1")
 
-    _, results = await get_file_watcher_events(buck)
+    _, results = await get_file_watcher_events(bsmr)
     # eden watcher doesn't report duplicates
     assert results == [
         FileWatcherEvent(
@@ -391,8 +391,8 @@ async def test_edenfs_duplicated_notifications(buck: Buck) -> None:
     ]
 
 
-def get_eden_version(buck: Buck) -> Optional[datetime]:
-    eden_out = subprocess.check_output(["eden", "-v"], cwd=buck.cwd).decode()
+def get_eden_version(bsmr: Bsmr) -> Optional[datetime]:
+    eden_out = subprocess.check_output(["eden", "-v"], cwd=bsmr.cwd).decode()
     match = re.search(r"Running:\s*(\d+)", eden_out)
     if match:
         return datetime.strptime(match.group(1).strip(), "%Y%m%d")
@@ -404,14 +404,14 @@ def get_eden_version(buck: Buck) -> Optional[datetime]:
     return None
 
 
-@buck_test(setup_eden=True)
-async def test_edenfs_hg_clean_update(buck: Buck) -> None:
-    await setup_file_watcher_test(buck)
+@bsmr_test(setup_eden=True)
+async def test_edenfs_hg_clean_update(bsmr: Bsmr) -> None:
+    await setup_file_watcher_test(bsmr)
 
-    with open(buck.cwd / "files" / "abc", "a") as f:
+    with open(bsmr.cwd / "files" / "abc", "a") as f:
         f.write("test")
 
-    _, results = await get_file_watcher_events(buck)
+    _, results = await get_file_watcher_events(bsmr)
     required = [
         FileWatcherEvent(
             FileWatcherEventType.MODIFY,
@@ -421,9 +421,9 @@ async def test_edenfs_hg_clean_update(buck: Buck) -> None:
     ]
     verify_results(results, required)
 
-    subprocess.run(["hg", "up", "-C", "."], cwd=buck.cwd)
+    subprocess.run(["hg", "up", "-C", "."], cwd=bsmr.cwd)
 
-    eden_version = get_eden_version(buck)
+    eden_version = get_eden_version(bsmr)
     assert eden_version is not None, "Failed to get eden version"
 
     expected_result = []
@@ -437,5 +437,5 @@ async def test_edenfs_hg_clean_update(buck: Buck) -> None:
             )
         )
 
-    _, results = await get_file_watcher_events(buck)
+    _, results = await get_file_watcher_events(bsmr)
     assert results == expected_result

@@ -18,7 +18,7 @@ use std::path::Path;
 use std::sync::OnceLock;
 
 use allocative::Allocative;
-use bsmr_error::BuckErrorContext;
+use bsmr_error::BsmrErrorContext;
 use bsmr_error::internal_error;
 
 use crate::IoResultExt;
@@ -42,8 +42,8 @@ impl<T: WorkingDirectoryImpl> WorkingDirectoryGen<T> {
     pub fn chdir_and_promise_it_will_not_change(&self) -> bsmr_error::Result<()> {
         self.imp
             .chdir(&self.path)
-            .buck_error_context("Failed to chdir")?;
-        cwd_will_not_change(&self.path).buck_error_context("Failed to set working dir")?;
+            .bsmr_error_context("Failed to chdir")?;
+        cwd_will_not_change(&self.path).bsmr_error_context("Failed to set working dir")?;
         Ok(())
     }
 
@@ -65,7 +65,7 @@ mod unix_impl {
     use std::os::fd::OwnedFd;
 
     use allocative::Allocative;
-    use bsmr_error::BuckErrorContext;
+    use bsmr_error::BsmrErrorContext;
     use nix::fcntl::OFlag;
     use nix::sys::stat::Mode;
 
@@ -85,7 +85,7 @@ mod unix_impl {
                 OFlag::O_RDONLY | OFlag::O_CLOEXEC | OFlag::O_DIRECTORY,
                 Mode::empty(),
             )
-            .with_buck_error_context(|| format!("Failed to open: `{path}`"))?;
+            .with_bsmr_error_context(|| format!("Failed to open: `{path}`"))?;
 
             Ok(Self { fd })
         }
@@ -96,9 +96,9 @@ mod unix_impl {
         }
 
         fn is_stale(&self, path: &AbsNormPath) -> bsmr_error::Result<bool> {
-            let cwd = nix::sys::stat::fstat(&self.fd).buck_error_context("Failed to stat cwd")?;
+            let cwd = nix::sys::stat::fstat(&self.fd).bsmr_error_context("Failed to stat cwd")?;
             let path = nix::sys::stat::stat(path.as_path())
-                .with_buck_error_context(|| format!("Failed to stat `{path}`"))?;
+                .with_bsmr_error_context(|| format!("Failed to stat `{path}`"))?;
             Ok(cwd.st_dev != path.st_dev || cwd.st_ino != path.st_ino)
         }
     }

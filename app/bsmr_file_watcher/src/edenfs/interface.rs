@@ -33,15 +33,15 @@ use bsmr_data::FileWatcherEventType as Type;
 use bsmr_data::FileWatcherKind as Kind;
 use bsmr_eden::connection::EdenConnectionManager;
 use bsmr_eden::semaphore;
-use bsmr_error::BuckErrorContext;
+use bsmr_error::BsmrErrorContext;
 use bsmr_error::internal_error;
 use bsmr_events::dispatch::span_async;
 use bsmr_fs::paths::abs_norm_path::AbsNormPath;
 use bsmr_fs::paths::abs_norm_path::AbsNormPathBuf;
 use bsmr_fs::paths::forward_rel_path::ForwardRelativePath;
 use bsmr_fs::paths::forward_rel_path::ForwardRelativePathBuf;
-use bsmr_hash::StdBuckHashMap;
-use bsmr_hash::StdBuckHashSet;
+use bsmr_hash::StdBsmrHashMap;
+use bsmr_hash::StdBsmrHashSet;
 use dice::DiceTransactionUpdater;
 use edenfs::ChangeNotification;
 use edenfs::ChangesSinceV2Params;
@@ -102,7 +102,7 @@ pub(crate) struct EdenFsFileWatcher {
     cells: CellResolver,
     // The project root, relative to the eden mount point
     project_root: ForwardRelativePathBuf,
-    ignore_specs: StdBuckHashMap<CellName, IgnoreSet>,
+    ignore_specs: StdBsmrHashMap<CellName, IgnoreSet>,
     mergebase: RwLock<Option<MergebaseDetails>>,
     last_mergebase: RwLock<Option<MergebaseDetails>>,
     mergebase_with: Option<String>,
@@ -116,7 +116,7 @@ impl EdenFsFileWatcher {
         project_root: &ProjectRoot,
         root_config: &LegacyBsmrConfig,
         cells: CellResolver,
-        ignore_specs: StdBuckHashMap<CellName, IgnoreSet>,
+        ignore_specs: StdBsmrHashMap<CellName, IgnoreSet>,
     ) -> bsmr_error::Result<Self> {
         let manager = EdenConnectionManager::new(fb, project_root, Some(semaphore::bsmr_default()))
             .map_err(EdenFsWatcherError::EdenConnectionError)?
@@ -176,7 +176,7 @@ impl EdenFsFileWatcher {
             .manager
             .with_eden(|eden| eden.changesSinceV2(&changes_since_v2_params))
             .await
-            .buck_error_context("Failed to query EdenFS for changes since last position.")?;
+            .bsmr_error_context("Failed to query EdenFS for changes since last position.")?;
         let new_position = result.toPosition;
 
         let mut file_change_tracker = FileChangeTracker::new();
@@ -187,7 +187,7 @@ impl EdenFsFileWatcher {
         // This can happen as we receive file changes from a commit transitions and from an explicit notification.
         // Also eden will report duplicates if there were another changes between changes on the same file.
         // We want to ignore duplicates, so we store unique changes in the set
-        let mut processed_changes: StdBuckHashSet<EdenFsEvent> = StdBuckHashSet::default();
+        let mut processed_changes: StdBsmrHashSet<EdenFsEvent> = StdBsmrHashSet::default();
         for change in result.changes {
             // Once a large or unknown change is detected, we need to invalidate DICE. Therefore,
             // skip processing the rest of the changes and continue to propagate true.
@@ -211,7 +211,7 @@ impl EdenFsFileWatcher {
             (stats, file_change_tracker, dice) = self
                 .on_large_or_unknown_change(dice)
                 .await
-                .buck_error_context("Failed to handle large or unknown change.")?;
+                .bsmr_error_context("Failed to handle large or unknown change.")?;
         }
 
         // The journal position isn't updated until we have successfully written the changes to DICE.
@@ -228,7 +228,7 @@ impl EdenFsFileWatcher {
         change: &ChangeNotification,
         tracker: &mut FileChangeTracker,
         stats: &mut FileWatcherStats,
-        processed_changes: &mut StdBuckHashSet<EdenFsEvent>,
+        processed_changes: &mut StdBsmrHashSet<EdenFsEvent>,
     ) -> bsmr_error::Result<ProcessChangeStatus> {
         let large_or_unknown_change = match change {
             ChangeNotification::smallChange(small_change) => match small_change {
@@ -381,13 +381,13 @@ impl EdenFsFileWatcher {
                     let to = hex::encode(&commit_transition.to);
                     self.process_commit_transition(tracker, stats, &from, &to, processed_changes)
                         .await
-                        .buck_error_context("Failed to process commit transition.")?
+                        .bsmr_error_context("Failed to process commit transition.")?
                 }
                 LargeChangeNotification::lostChanges(_lost_changes) => {
                     let current_rev = ".";
                     self.update_mergebase(current_rev)
                         .await
-                        .buck_error_context("Failed to update mergebase.")?;
+                        .bsmr_error_context("Failed to update mergebase.")?;
                     // Return LargeOrUnknown indicating a large change (i.e. invalidate DICE).
                     ProcessChangeStatus::LargeOrUnknown
                 }
@@ -435,7 +435,7 @@ impl EdenFsFileWatcher {
             let to = hex::encode(&commit_transition.to);
             self.update_mergebase(&to)
                 .await
-                .buck_error_context("Failed to update mergebase.")?;
+                .bsmr_error_context("Failed to update mergebase.")?;
         }
 
         Ok(())
@@ -448,7 +448,7 @@ impl EdenFsFileWatcher {
         kind: Kind,
         event: Type,
         path: &[u8],
-        processed_changes: &mut StdBuckHashSet<EdenFsEvent>,
+        processed_changes: &mut StdBsmrHashSet<EdenFsEvent>,
     ) -> bsmr_error::Result<()> {
         let eden_rel_path = PathBuf::from(str::from_utf8(path)?);
 
@@ -539,7 +539,7 @@ impl EdenFsFileWatcher {
         stats: &mut FileWatcherStats,
         from: &str,
         to: Option<&str>,
-        processed_changes: &mut StdBuckHashSet<EdenFsEvent>,
+        processed_changes: &mut StdBsmrHashSet<EdenFsEvent>,
     ) -> bsmr_error::Result<ProcessChangeStatus> {
         // `sl status` only reports added/removed/modified files, not directories.
         // we use `sl debugdiffdirs` to get changes for directories
@@ -568,12 +568,12 @@ impl EdenFsFileWatcher {
         stats: &mut FileWatcherStats,
         from: &str,
         to: Option<&str>,
-        processed_changes: &mut StdBuckHashSet<EdenFsEvent>,
+        processed_changes: &mut StdBsmrHashSet<EdenFsEvent>,
     ) -> bsmr_error::Result<ProcessChangeStatus> {
         // limit results to MAX_SAPLING_STATUS_CHANGES
         match get_status(&self.eden_root, &from, to, MAX_SAPLING_STATUS_CHANGES)
             .await
-            .buck_error_context("Failed to get Sapling status.")?
+            .bsmr_error_context("Failed to get Sapling status.")?
         {
             SaplingGetStatusResult::TooManyChanges => Ok(ProcessChangeStatus::LargeOrUnknown),
             SaplingGetStatusResult::Normal(status) => {
@@ -616,7 +616,7 @@ impl EdenFsFileWatcher {
                 // Return false indicating no large change.
                 results
                     .map(|_| ProcessChangeStatus::Processed)
-                    .buck_error_context("Failed to process Sapling statuses.")
+                    .bsmr_error_context("Failed to process Sapling statuses.")
             }
         }
     }
@@ -627,12 +627,12 @@ impl EdenFsFileWatcher {
         stats: &mut FileWatcherStats,
         from: &str,
         to: Option<&str>,
-        processed_changes: &mut StdBuckHashSet<EdenFsEvent>,
+        processed_changes: &mut StdBsmrHashSet<EdenFsEvent>,
     ) -> bsmr_error::Result<ProcessChangeStatus> {
         // limit results to MAX_SAPLING_STATUS_CHANGES
         match get_dir_diff(&self.eden_root, &from, to, MAX_SAPLING_STATUS_CHANGES)
             .await
-            .buck_error_context("Failed to get Sapling debugdiffdirs.")?
+            .bsmr_error_context("Failed to get Sapling debugdiffdirs.")?
         {
             SaplingGetStatusResult::TooManyChanges => Ok(ProcessChangeStatus::LargeOrUnknown),
             SaplingGetStatusResult::Normal(status) => {
@@ -675,7 +675,7 @@ impl EdenFsFileWatcher {
                 // Return false indicating no large change.
                 results
                     .map(|_| ProcessChangeStatus::Processed)
-                    .buck_error_context("Failed to process Sapling dir diffs.")
+                    .bsmr_error_context("Failed to process Sapling dir diffs.")
             }
         }
     }
@@ -690,12 +690,12 @@ impl EdenFsFileWatcher {
         stats: &mut FileWatcherStats,
         from: &str,
         to: &str,
-        processed_changes: &mut StdBuckHashSet<EdenFsEvent>,
+        processed_changes: &mut StdBsmrHashSet<EdenFsEvent>,
     ) -> bsmr_error::Result<ProcessChangeStatus> {
         let mergebase_changed = self
             .update_mergebase(to)
             .await
-            .buck_error_context("Failed to update mergebase.")?;
+            .bsmr_error_context("Failed to update mergebase.")?;
 
         if mergebase_changed && self.dice_clear_on_mergebase_change {
             // Mergebase has changed - invalidate DICE.
@@ -756,7 +756,7 @@ impl EdenFsFileWatcher {
         if let Some(mergebase) = mergebase_info.map(|m| m.mergebase) {
             let mut tracker = FileChangeTracker::new();
             let mut stats = FileWatcherStats::new(base_stats, 0);
-            let mut processed_changes: StdBuckHashSet<EdenFsEvent> = StdBuckHashSet::default();
+            let mut processed_changes: StdBsmrHashSet<EdenFsEvent> = StdBsmrHashSet::default();
             self.process_source_control_changes(
                 &mut tracker,
                 &mut stats,
@@ -782,7 +782,7 @@ impl EdenFsFileWatcher {
             // Compute new mergebase.
             let mergebase = get_mergebase(&self.eden_root, &to, mergebase_with)
                 .await
-                .buck_error_context("Failed to get mergebase")?;
+                .bsmr_error_context("Failed to get mergebase")?;
             let last_mergebase = self.mergebase.read().await.clone();
 
             // Update mergebases

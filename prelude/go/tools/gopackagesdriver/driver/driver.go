@@ -40,9 +40,9 @@ const (
 	metaStdLib      = "std"
 )
 
-var allPackagesTargetExprs = strings.Fields(os.Getenv("GOPACKAGESDRIVER_BUCK_ALL_PACKAGES_TARGET_EXPRS"))
+var allPackagesTargetExprs = strings.Fields(os.Getenv("GOPACKAGESDRIVER_BSMR_ALL_PACKAGES_TARGET_EXPRS"))
 
-func query(ctx context.Context, req *packages.DriverRequest, bucker Bucker, platform Platform, targets []string) (*packages.DriverResponse, error) {
+func query(ctx context.Context, req *packages.DriverRequest, bsmrer Bsmrer, platform Platform, targets []string) (*packages.DriverResponse, error) {
 	var resp *packages.DriverResponse
 	var err error
 
@@ -74,7 +74,7 @@ func query(ctx context.Context, req *packages.DriverRequest, bucker Bucker, plat
 		return nil, err
 	}
 
-	resp, err = queryBXL(ctx, req, bucker, platform, targetsByType.buckPatterns, targetsByType.buckFiles)
+	resp, err = queryBXL(ctx, req, bsmrer, platform, targetsByType.bsmrPatterns, targetsByType.bsmrFiles)
 	if err != nil {
 		slog.Error("error when query BXL", "args", os.Args, "err", err)
 		return nil, err
@@ -106,7 +106,7 @@ func query(ctx context.Context, req *packages.DriverRequest, bucker Bucker, plat
 	}
 
 	// fallback to `go list` if we don't have any roots
-	// this will allow us to resolve non-buck targets
+	// this will allow us to resolve non-bsmr targets
 	if len(resp.Roots) == 0 {
 		resp.NotHandled = true
 	}
@@ -199,9 +199,9 @@ func Run(ctx context.Context, opts ...Option) error {
 	cwd := CWD()
 	targets := os.Args[1:]
 	cmder := &shellCommander{}
-	bucker := &buckShell{
+	bsmrer := &bsmrShell{
 		cmder:       cmder,
-		buckOptions: strings.Fields(os.Getenv("GOPACKAGESDRIVER_BUCK_OPTIONS")),
+		bsmrOptions: strings.Fields(os.Getenv("GOPACKAGESDRIVER_BSMR_OPTIONS")),
 	}
 
 	req, err := readDriverRequest()
@@ -209,7 +209,7 @@ func Run(ctx context.Context, opts ...Option) error {
 		return fmt.Errorf("failed to read driver request: %w", err)
 	}
 
-	platform, err := newPlatform(ctx, bucker, req)
+	platform, err := newPlatform(ctx, bsmrer, req)
 	if err != nil {
 		slog.Error("error creating platform", "err", err)
 		return err
@@ -231,7 +231,7 @@ func Run(ctx context.Context, opts ...Option) error {
 		})
 	}()
 
-	resp, err = query(ctx, req, bucker, platform, targets)
+	resp, err = query(ctx, req, bsmrer, platform, targets)
 	if err != nil {
 		return err
 	}

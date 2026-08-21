@@ -38,8 +38,8 @@ use bsmr_event_observer::verbosity::Verbosity;
 use bsmr_event_observer::what_ran::WhatRanCommandConsoleFormat;
 use bsmr_event_observer::what_ran::WhatRanOutputCommand;
 use bsmr_event_observer::what_ran::WhatRanOutputWriter;
-use bsmr_events::BuckEvent;
-use bsmr_hash::StdBuckHashMap;
+use bsmr_events::BsmrEvent;
+use bsmr_hash::StdBsmrHashMap;
 use bsmr_health_check::interface::HealthCheckType;
 use bsmr_health_check::report::DisplayReport;
 use bsmr_wrapper_common::invocation_id::TraceId;
@@ -64,8 +64,8 @@ use crate::ticker::Tick;
 /// within this duration.
 const KEEPALIVE_TIME_LIMIT: Duration = Duration::from_secs(7);
 
-static ELAPSED_HEALTH_CHECK_MAP: LazyLock<Mutex<StdBuckHashMap<HealthCheckType, (Instant, u64)>>> =
-    LazyLock::new(|| Mutex::new(StdBuckHashMap::default()));
+static ELAPSED_HEALTH_CHECK_MAP: LazyLock<Mutex<StdBsmrHashMap<HealthCheckType, (Instant, u64)>>> =
+    LazyLock::new(|| Mutex::new(StdBsmrHashMap::default()));
 
 fn now_display() -> impl Display {
     chrono::Local::now().to_rfc3339_opts(::chrono::SecondsFormat::Millis, false)
@@ -241,7 +241,7 @@ where
 
     pub(crate) async fn update_event_observer(
         &mut self,
-        event: &Arc<BuckEvent>,
+        event: &Arc<BsmrEvent>,
     ) -> bsmr_error::Result<()> {
         self.observer.observe(event).await
     }
@@ -334,7 +334,7 @@ where
     pub(crate) async fn handle_file_watcher_end(
         &mut self,
         file_watcher: &bsmr_data::FileWatcherEnd,
-        _event: &BuckEvent,
+        _event: &BsmrEvent,
     ) -> bsmr_error::Result<()> {
         if self.verbosity.print_status() {
             for x in display_file_watcher_end(file_watcher) {
@@ -345,7 +345,7 @@ where
         Ok(())
     }
 
-    pub(crate) async fn handle_event(&mut self, event: &Arc<BuckEvent>) -> bsmr_error::Result<()> {
+    pub(crate) async fn handle_event(&mut self, event: &Arc<BsmrEvent>) -> bsmr_error::Result<()> {
         self.update_event_observer(event).await?;
 
         self.handle_event_inner(event).await?;
@@ -362,9 +362,9 @@ where
         Ok(())
     }
 
-    async fn handle_event_inner(&mut self, event: &BuckEvent) -> bsmr_error::Result<()> {
+    async fn handle_event_inner(&mut self, event: &BsmrEvent) -> bsmr_error::Result<()> {
         match unpack_event(event)? {
-            bsmr_event_observer::unpack_event::UnpackedBuckEvent::SpanStart(_, _, data) => {
+            bsmr_event_observer::unpack_event::UnpackedBsmrEvent::SpanStart(_, _, data) => {
                 match data {
                     bsmr_data::span_start_event::Data::Command(command) => {
                         self.handle_command_start(command, event).await
@@ -372,7 +372,7 @@ where
                     _ => Ok(()),
                 }
             }
-            bsmr_event_observer::unpack_event::UnpackedBuckEvent::SpanEnd(_, _, data) => match data
+            bsmr_event_observer::unpack_event::UnpackedBsmrEvent::SpanEnd(_, _, data) => match data
             {
                 bsmr_data::span_end_event::Data::Command(command) => {
                     self.handle_command_end(command, event).await
@@ -385,7 +385,7 @@ where
                 }
                 _ => Ok(()),
             },
-            bsmr_event_observer::unpack_event::UnpackedBuckEvent::Instant(_, _, data) => match data
+            bsmr_event_observer::unpack_event::UnpackedBsmrEvent::Instant(_, _, data) => match data
             {
                 bsmr_data::instant_event::Data::ConsoleMessage(message) => {
                     self.handle_stderr(&message.message).await
@@ -425,9 +425,9 @@ where
                 }
                 _ => Ok(()),
             },
-            bsmr_event_observer::unpack_event::UnpackedBuckEvent::UnrecognizedSpanStart(_, _)
-            | bsmr_event_observer::unpack_event::UnpackedBuckEvent::UnrecognizedSpanEnd(_, _)
-            | bsmr_event_observer::unpack_event::UnpackedBuckEvent::UnrecognizedInstant(_, _) => {
+            bsmr_event_observer::unpack_event::UnpackedBsmrEvent::UnrecognizedSpanStart(_, _)
+            | bsmr_event_observer::unpack_event::UnpackedBsmrEvent::UnrecognizedSpanEnd(_, _)
+            | bsmr_event_observer::unpack_event::UnpackedBsmrEvent::UnrecognizedInstant(_, _) => {
                 Err(VisitorError::MissingField(event.clone()).into())
             }
         }
@@ -436,7 +436,7 @@ where
     pub(crate) async fn handle_structured_error(
         &mut self,
         err: &bsmr_data::StructuredError,
-        _event: &BuckEvent,
+        _event: &BsmrEvent,
     ) -> bsmr_error::Result<()> {
         if err.quiet {
             return Ok(());
@@ -449,11 +449,11 @@ where
     async fn handle_command_start(
         &mut self,
         _command: &bsmr_data::CommandStart,
-        event: &BuckEvent,
+        event: &BsmrEvent,
     ) -> bsmr_error::Result<()> {
         if cfg!(fbcode_build) {
             echo!(
-                "Buck UI: https://www.internalfb.com/bsmr/{}",
+                "Bsmr UI: https://www.internalfb.com/bsmr/{}",
                 event.trace_id()?
             )?;
         } else {
@@ -466,7 +466,7 @@ where
     async fn handle_command_end(
         &mut self,
         _command: &bsmr_data::CommandEnd,
-        _event: &BuckEvent,
+        _event: &BsmrEvent,
     ) -> bsmr_error::Result<()> {
         let snapshots = self.observer().two_snapshots();
 
@@ -509,7 +509,7 @@ where
     pub(crate) async fn handle_action_execution_end(
         &mut self,
         action: &bsmr_data::ActionExecutionEnd,
-        _event: &BuckEvent,
+        _event: &BsmrEvent,
     ) -> bsmr_error::Result<()> {
         let action_id = display::display_action_identity(
             action.key.as_ref(),
@@ -565,7 +565,7 @@ where
     async fn handle_test_discovery(
         &mut self,
         test_info: &bsmr_data::TestDiscovery,
-        _event: &BuckEvent,
+        _event: &BsmrEvent,
     ) -> bsmr_error::Result<()> {
         if let Some(data) = &test_info.data {
             match data {
@@ -586,7 +586,7 @@ where
     async fn handle_test_result(
         &mut self,
         result: &bsmr_data::TestResult,
-        _event: &BuckEvent,
+        _event: &BsmrEvent,
     ) -> bsmr_error::Result<()> {
         if let Some(msg) = display::format_test_result(result, self.verbosity)? {
             let mut buffer = String::new();
@@ -659,7 +659,7 @@ where
         Ok(())
     }
 
-    async fn handle_events(&mut self, events: &[Arc<BuckEvent>]) -> bsmr_error::Result<()> {
+    async fn handle_events(&mut self, events: &[Arc<BsmrEvent>]) -> bsmr_error::Result<()> {
         for ev in events {
             self.handle_event(ev).await?;
         }

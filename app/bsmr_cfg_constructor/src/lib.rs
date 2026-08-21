@@ -32,7 +32,7 @@ use bsmr_core::provider::label::ProvidersLabel;
 use bsmr_core::unsafe_send_future::UnsafeSendFuture;
 use bsmr_events::dispatch::get_dispatcher;
 use bsmr_interpreter::dice::starlark_provider::StarlarkEvalKind;
-use bsmr_interpreter::factory::BuckStarlarkModule;
+use bsmr_interpreter::factory::BsmrStarlarkModule;
 use bsmr_interpreter::factory::ReentrantStarlarkEvaluator;
 use bsmr_interpreter::factory::StarlarkEvaluatorProvider;
 use bsmr_interpreter::print_handler::EventDispatcherPrintHandler;
@@ -243,7 +243,7 @@ async fn eval_underlying(
     let eval_kind = StarlarkEvalKind::Unknown("constraint-analysis invocation".into());
     let provider = StarlarkEvaluatorProvider::new(ctx, eval_kind).await?;
 
-    BuckStarlarkModule::with_profiling_async(async move |module| {
+    BsmrStarlarkModule::with_profiling_async(async move |module| {
         let mut reentrant_eval = provider.make_reentrant_evaluator(&module, cancellation.into())?;
 
         let cfg_constructor_pre_constraint_analysis = module

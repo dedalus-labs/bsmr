@@ -21,7 +21,7 @@ use bsmr_common::invocation_paths::InvocationPaths;
 use bsmr_common::legacy_configs::configs::LegacyBsmrConfig;
 use bsmr_common::legacy_configs::key::BsmrconfigKeyRef;
 use bsmr_core::rollout_percentage::RolloutPercentage;
-use bsmr_error::BuckErrorContext;
+use bsmr_error::BsmrErrorContext;
 use bsmr_error::internal_error;
 use bsmr_events::daemon_id::DaemonId;
 use bsmr_execute::digest_config::DigestConfig;
@@ -38,9 +38,9 @@ use bsmr_fs::error::IoResultExt;
 use bsmr_fs::fs_util;
 use bsmr_fs::paths::abs_norm_path::AbsNormPath;
 use bsmr_fs::paths::file_name::FileName;
-use bsmr_hash::StdBuckHashMap;
+use bsmr_hash::StdBsmrHashMap;
 
-use crate::daemon::server::BuckdServerInitPreferences;
+use crate::daemon::server::BsmrdServerInitPreferences;
 
 #[derive(Allocative)]
 pub struct DiskStateOptions {
@@ -77,12 +77,12 @@ fn sqlite_db_setup_metadata_and_versions(
     deferred_materializer_config: Option<&DeferredMaterializerConfigs>,
     daemon_id: &DaemonId,
 ) -> bsmr_error::Result<(
-    StdBuckHashMap<String, String>,
-    StdBuckHashMap<String, String>,
+    StdBsmrHashMap<String, String>,
+    StdBsmrHashMap<String, String>,
 )> {
     let metadata = bsmr_events::metadata::collect(daemon_id);
 
-    let mut versions = StdBuckHashMap::from([("schema_version".to_owned(), schema_version)]);
+    let mut versions = StdBsmrHashMap::from([("schema_version".to_owned(), schema_version)]);
 
     if let Some(config) = deferred_materializer_config {
         versions.insert(
@@ -111,7 +111,7 @@ pub(crate) async fn maybe_initialize_materializer_sqlite_db(
     root_config: &LegacyBsmrConfig,
     deferred_materializer_configs: &DeferredMaterializerConfigs,
     digest_config: DigestConfig,
-    init_ctx: &BuckdServerInitPreferences,
+    init_ctx: &BsmrdServerInitPreferences,
     daemon_id: &DaemonId,
 ) -> bsmr_error::Result<(Option<MaterializerStateSqliteDb>, Option<MaterializerState>)> {
     if !options.sqlite_materializer_state {
@@ -241,7 +241,7 @@ pub(crate) fn delete_unknown_disk_state(
         }
     };
 
-    res.with_buck_error_context(|| {
+    res.with_bsmr_error_context(|| {
         format!(
             "deleting unrecognized caches in {} to prevent them from going stale",
             &cache_dir_path
@@ -262,7 +262,8 @@ mod tests {
     fn test_delete_all_from_cache_dir() {
         let fs_temp = ProjectRootTemp::new().unwrap();
         let fs = fs_temp.path();
-        let cache_dir_path = fs.resolve(ProjectRelativePath::unchecked_new("bsmr-out/v2/cache"));
+        let cache_dir_path =
+            fs.resolve(ProjectRelativePath::unchecked_new("bsmr-out/default/cache"));
         let materializer_state_db = cache_dir_path.join(ForwardRelativePath::unchecked_new(
             "materializer_state/db.sqlite",
         ));
@@ -286,7 +287,8 @@ mod tests {
     fn test_delete_from_cache_dir_with_known_dirs() {
         let fs_temp = ProjectRootTemp::new().unwrap();
         let fs = fs_temp.path();
-        let cache_dir_path = fs.resolve(ProjectRelativePath::unchecked_new("bsmr-out/v2/cache"));
+        let cache_dir_path =
+            fs.resolve(ProjectRelativePath::unchecked_new("bsmr-out/default/cache"));
         let materializer_state_db = cache_dir_path.join(ForwardRelativePath::unchecked_new(
             "materializer_state/db.sqlite",
         ));

@@ -24,7 +24,7 @@ use bsmr_build_event_proto::TestId;
 use bsmr_build_event_proto::TestOutcome;
 use bsmr_build_event_proto::build_event::Payload;
 use bsmr_common::convert::ProstDurationExt;
-use bsmr_events::BuckEvent;
+use bsmr_events::BsmrEvent;
 
 const SCHEMA_VERSION: u32 = 1;
 
@@ -83,11 +83,11 @@ enum IdentityField {
 
 /// Projects one internal event when it represents a completed test attempt.
 pub(super) fn project_test_attempt(
-    event: &BuckEvent,
+    event: &BsmrEvent,
     sequence_number: u64,
 ) -> bsmr_error::Result<Option<BuildEvent>> {
     let result = match event.data() {
-        bsmr_data::buck_event::Data::Instant(instant) => match instant.data.as_ref() {
+        bsmr_data::bsmr_event::Data::Instant(instant) => match instant.data.as_ref() {
             Some(bsmr_data::instant_event::Data::TestResult(result)) => result,
             _ => return Ok(None),
         },
@@ -238,15 +238,15 @@ fn details_digest(details: &str) -> bsmr_error::Result<Option<bsmr_build_event_p
 pub(super) fn completed_test_event(
     trace_id: bsmr_wrapper_common::invocation_id::TraceId,
     attempt: Option<bsmr_data::TestAttempt>,
-) -> std::sync::Arc<BuckEvent> {
+) -> std::sync::Arc<BsmrEvent> {
     use std::time::Duration;
 
-    std::sync::Arc::new(bsmr_events::BuckEvent::new(
+    std::sync::Arc::new(bsmr_events::BsmrEvent::new(
         SystemTime::UNIX_EPOCH + Duration::from_millis(42),
         trace_id,
         None,
         None,
-        bsmr_data::buck_event::Data::Instant(bsmr_data::InstantEvent {
+        bsmr_data::bsmr_event::Data::Instant(bsmr_data::InstantEvent {
             data: Some(
                 bsmr_data::TestResult {
                     name: "case".to_owned(),

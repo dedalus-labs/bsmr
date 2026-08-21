@@ -20,8 +20,8 @@ customizations.
 ## Performance impact of Bessemer configuration changes
 
 Because configuration settings are sometimes included in the cache keys that
-Bessemer uses in its caching system, changes to Buck's configuration can invalidate
-previously-built artifacts in Buck's caches. If this occurs, Bessemer rebuilds
+Bessemer uses in its caching system, changes to Bsmr's configuration can invalidate
+previously-built artifacts in Bsmr's caches. If this occurs, Bessemer rebuilds
 those artifacts, which can impact your build time.
 
 These configuration changes can happen when modifying configuration files and
@@ -39,7 +39,7 @@ INI file format; these are discussed below.
 
 As mentioned previously, we have extended the INI file parser that Bessemer uses to
 parse configuration files. As a result, _INI file parsers provided by other
-languages or libraries are often not able to parse Buck's configuration files
+languages or libraries are often not able to parse Bsmr's configuration files
 successfully_.
 
 ### Dot character not supported in section names
@@ -146,8 +146,8 @@ Bessemer treats _any_ file—irrespective of name—in a
 `.bsmr.d`(`bsmrconfig.d`) directory (excluding files found in
 subdirectories) as a Bessemer configuration file, provided that it adheres to
 `.bsmr` syntax. Note that a `.bsmr.d` directory is distinct from the
-similarly-named `.buckd` directory which is used by the
-[Bessemer Daemon (`buckd`)](daemon.md) . For a description of how Bessemer resolves
+similarly-named `.bsmrd` directory which is used by the
+[Bessemer Daemon (`bsmrd`)](daemon.md) . For a description of how Bessemer resolves
 collisions between settings in these configuration files, see the section
 [**Precedence of Bessemer configuration specifications**](#precedence-of-bsmr-configuration-specifications)
 below.
@@ -195,7 +195,7 @@ key name/value pairs that constitute part of a section. In this second use case,
 you'll need to ensure that the _included_ file is referenced beneath the
 appropriate section in the _including_ file. Because of this additional
 complexity, we recommend that you include only files that contain complete
-sections. **Note:** Inclusion of files is a Buck-specific extension to the INI
+sections. **Note:** Inclusion of files is a Bsmr-specific extension to the INI
 file parser that Bessemer uses. Therefore, if you use this feature, your Bessemer
 configuration files will probably not be parsable by other more-generic INI file
 parsers. The syntax to include a file is
@@ -226,7 +226,7 @@ exists.
 # .bsmr
 #
 [cxx]
-  cxxppflags="-D MYMACRO=\"Buck\""
+  cxxppflags="-D MYMACRO=\"Bsmr\""
 
 <file:cxx-other-platform/cxx-other-platform.include>
 
@@ -267,7 +267,7 @@ specified in this section.
 
 ```ini
 [cells]
-    buck = .
+    bsmr = .
     bazel_skylib = ./third-party/skylark/bazel-skylib
 ```
 
@@ -278,7 +278,7 @@ include the current cell in this section, but we consider it a best practice to
 do so:
 
 ```ini
-buck = .
+bsmr = .
 ```
 
 You can view the contents of this section using the `bsmr audit cell` command.

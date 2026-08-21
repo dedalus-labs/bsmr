@@ -1,7 +1,7 @@
 # This file is @generated, regenerate by re-running test with `-- --env BSMR_UPDATE_GOLDEN=1` appended to the test command
 
 [
-  "buckd_command_init",
+  "bsmrd_command_init",
   "file-watcher-wait",
   "other-command-start-overhead",
   "listing root//",

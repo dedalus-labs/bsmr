@@ -1,3 +1,9 @@
+# ===----------------------------------------------------------------------===
+# Upstream-Source: facebook/buck2@1560aca2002865cd73d7cafb22c705cfb640b2bc
+# Modifications Copyright (c) 2026 Dedalus Labs, Inc. and its contributors
+# SPDX-License-Identifier: Apache-2.0
+# ===----------------------------------------------------------------------===
+
 # Copyright (c) Meta Platforms, Inc. and affiliates.
 #
 # This source code is dual-licensed under either the MIT license found in the
@@ -41,7 +47,7 @@ jdk_system_image = rule(
     attrs = {
         "core_for_system_modules_jar": attrs.source(),
         "create_jdk_system_image": attrs.exec_dep(default = "prelude//android/tools:create_jdk_system_image"),
-        "jar_builder": attrs.source(default = "prelude//toolchains/android/src/com/facebook/buck/util/zip:jar_builder"),
+        "jar_builder": attrs.source(default = "prelude//toolchains/android/src/com/dedalus/bsmr/util/zip:jar_builder"),
         "_java_toolchain": toolchains_common.java_for_android(),
     },
 )

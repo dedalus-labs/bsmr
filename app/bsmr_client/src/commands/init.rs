@@ -18,15 +18,15 @@ use std::io::ErrorKind;
 use std::io::Write;
 
 use bsmr_client_ctx::client_ctx::ClientCommandContext;
-use bsmr_client_ctx::common::BuckArgMatches;
+use bsmr_client_ctx::common::BsmrArgMatches;
 use bsmr_client_ctx::common::ui::CommonConsoleOptions;
 use bsmr_client_ctx::exit_result::ExitResult;
 use bsmr_client_ctx::final_console::FinalConsole;
 use bsmr_client_ctx::path_arg::PathArg;
 use bsmr_common::argv::Argv;
 use bsmr_common::argv::SanitizedArgv;
-use bsmr_core::fs::buck_out_path::BSMR_OUTPUT_ROOT;
-use bsmr_error::BuckErrorContext;
+use bsmr_core::fs::output_path::BSMR_OUTPUT_ROOT;
+use bsmr_error::BsmrErrorContext;
 use bsmr_error::ErrorTag;
 use bsmr_error::bsmr_error;
 use bsmr_fs::error::IoResultExt;
@@ -35,7 +35,7 @@ use bsmr_fs::paths::abs_path::AbsPath;
 use bsmr_util::process::background_command;
 
 /// Legacy root manifest that native frontends may replace only when byte-identical.
-pub(crate) const INITIAL_ROOT_MANIFEST: &str = r#"# A list of available rules and their signatures can be found here: https://buck2.build/docs/prelude/globals/
+pub(crate) const INITIAL_ROOT_MANIFEST: &str = r#"# A list of available rules and their signatures can be found here: https://oss.dedaluslabs.ai/bsmr/prelude/globals/
 
 genrule(
     name = "hello_world",
@@ -77,7 +77,7 @@ pub struct InitCommand {
 }
 
 impl InitCommand {
-    pub fn exec(self, _matches: BuckArgMatches<'_>, ctx: ClientCommandContext<'_>) -> ExitResult {
+    pub fn exec(self, _matches: BsmrArgMatches<'_>, ctx: ClientCommandContext<'_>) -> ExitResult {
         let console = self.console_opts.final_console();
 
         match exec_impl(self, ctx, &console) {
@@ -125,7 +125,7 @@ fn exec_impl(
                 )?;
                 None
             }
-            r => Some(r.buck_error_context("Couldn't detect dirty status of folder.")?),
+            r => Some(r.bsmr_error_context("Couldn't detect dirty status of folder.")?),
         };
 
         let changes = status.filter(|o| o.status.success()).map(|o| {
@@ -254,7 +254,6 @@ mod tests {
         assert!(!tempdir_path.join(".bsmrroot").exists());
         assert!(!tempdir_path.join("toolchains").exists());
         assert!(!tempdir_path.join("BUILD.bsmr").exists());
-        assert!(!tempdir_path.join("BUCK").exists());
         Ok(())
     }
 

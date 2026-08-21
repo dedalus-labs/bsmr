@@ -1,4 +1,10 @@
 #!/usr/bin/env python3
+# ===----------------------------------------------------------------------===
+# Upstream-Source: facebook/buck2@1560aca2002865cd73d7cafb22c705cfb640b2bc
+# Modifications Copyright (c) 2026 Dedalus Labs, Inc. and its contributors
+# SPDX-License-Identifier: Apache-2.0
+# ===----------------------------------------------------------------------===
+
 # Copyright (c) Meta Platforms, Inc. and affiliates.
 #
 # This source code is dual-licensed under either the MIT license found in the
@@ -120,7 +126,7 @@ def _rewrite_dependency_file(command, out_path):
         raise RuntimeError("-emit-dependencies requires -dependencies-file-output")
 
     # The compiler will output d files in Makefile format with abolute paths,
-    # Buck expects line separated relative paths with no input prefix.
+    # Bsmr expects line separated relative paths with no input prefix.
     output_file_map_path = command[command.index("-output-file-map") + 1]
     with open(output_file_map_path) as f:
         output_file_map = json.load(f)
@@ -211,7 +217,7 @@ def _parse_wrapper_args(
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "-dependencies-file-output",
-        help="Path to write Buck format dependencies file to",
+        help="Path to write Bsmr format dependencies file to",
     )
     parser.add_argument(
         "-ignore-errors",
@@ -270,13 +276,13 @@ def main():
         # module validation errors to fail builds.
         # https://github.com/llvm/llvm-project/blob/main/clang/lib/Driver/ToolChains/Clang.cpp#L3709
         env["CLANG_MODULE_CACHE_PATH"] = os.path.join(
-            env[_RE_TMPDIR_ENV_VAR], "buck-module-cache"
+            env[_RE_TMPDIR_ENV_VAR], "bsmr-module-cache"
         )
     else:
         # For local actions use a shared module cache location.
         # This should be safe to share across the other local
         # compilation actions.
-        env["CLANG_MODULE_CACHE_PATH"] = "/tmp/buck-module-cache"
+        env["CLANG_MODULE_CACHE_PATH"] = "/tmp/bsmr-module-cache"
 
     # Separate the driver args from the wrapper args
     command, wrapper_args = _parse_wrapper_args(sys.argv[1:])
@@ -373,7 +379,7 @@ def main():
                 # Get the serialized diagnostics output from the output file map.
                 serialized_diags = _get_serialized_diagnostics_path(command)
 
-                # Convert the diagnostics to JSON for the Buck error handler.
+                # Convert the diagnostics to JSON for the Bsmr error handler.
                 subprocess.run(
                     [wrapper_args.serialized_diagnostics_to_json, serialized_diags],
                     stdout=json_out,
@@ -394,7 +400,7 @@ def main():
             )
             sys.exit(1)
 
-        # Rewrite .d files for the format that Buck requires.
+        # Rewrite .d files for the format that Bsmr requires.
         if "-emit-dependencies" in command:
             _rewrite_dependency_file(command, wrapper_args.dependencies_file_output)
 

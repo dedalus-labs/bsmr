@@ -1,0 +1,36 @@
+//===----------------------------------------------------------------------===//
+// Upstream-Source: facebook/buck2@1560aca2002865cd73d7cafb22c705cfb640b2bc
+// Modifications Copyright (c) 2026 Dedalus Labs, Inc. and its contributors
+// SPDX-License-Identifier: Apache-2.0
+//===----------------------------------------------------------------------===//
+
+/*
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
+ *
+ * This source code is dual-licensed under either the MIT license found in the
+ * LICENSE-MIT file in the root directory of this source tree or the Apache
+ * License, Version 2.0 found in the LICENSE-APACHE file in the root directory
+ * of this source tree. You may select, at your option, one of the
+ * above-listed licenses.
+ */
+
+package com.dedalus.bsmr.util.zip;
+
+import javax.annotation.Nullable;
+
+/**
+ * Strategy interface for merging manifest attribute values. Implementations define how to compute
+ * the final value when merging attributes from multiple manifests.
+ */
+@FunctionalInterface
+public interface ManifestAttributeMerger {
+
+  /**
+   * Computes the merged value for a manifest attribute.
+   *
+   * @param existingValue The current value in the target manifest, or null if not present.
+   * @param newValue The incoming value from the source manifest.
+   * @return The merged value to use in the target manifest.
+   */
+  Object merge(@Nullable Object existingValue, Object newValue);
+}

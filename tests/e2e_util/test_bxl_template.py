@@ -14,29 +14,29 @@
 
 import os
 
-from bsmr.tests.e2e_util.api.buck import Buck
-from bsmr.tests.e2e_util.api.buck_result import BuckException
-from bsmr.tests.e2e_util.buck_workspace import buck_test
+from bsmr.tests.e2e_util.api.bsmr import Bsmr
+from bsmr.tests.e2e_util.api.bsmr_result import BsmrException
+from bsmr.tests.e2e_util.bsmr_workspace import bsmr_test
 
 
 # This is just a template test case for `bxl_test` to use bsmr's e2e test framework.
 # It does not need to be edited for new `bxl_test`.
 
 
-@buck_test(inplace=True)
-async def test_bxl(buck: Buck) -> None:
+@bsmr_test(inplace=True)
+async def test_bxl(bsmr: Bsmr) -> None:
     args = []
 
-    buck_args = os.environ.get("BUCK_ARGS")
-    if buck_args:
-        args += buck_args.split(" ")
+    bsmr_args = os.environ.get("BSMR_ARGS")
+    if bsmr_args:
+        args += bsmr_args.split(" ")
 
     bxl_args = os.environ.get("BXL_ARGS")
     if bxl_args:
         args += ["--"] + bxl_args.split(" ")
 
     try:
-        await buck.bxl(os.environ["BXL_MAIN"], *args)
-    except BuckException as e:
+        await bsmr.bxl(os.environ["BXL_MAIN"], *args)
+    except BsmrException as e:
         # Re-raise with stderr included in the message for better test output
         raise AssertionError(f"BXL failed:\n{e.stderr}") from e

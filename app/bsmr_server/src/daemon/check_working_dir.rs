@@ -34,7 +34,7 @@ pub fn check_working_dir() -> bsmr_error::Result<()> {
 
     if err.kind() == io::ErrorKind::NotConnected {
         let err = "Bessemer is running in an Eden mount but Eden restarted uncleanly. \
-            This error is unrecoverable and you should restart Buck using `bsmr killall`.";
+            This error is unrecoverable and you should restart Bsmr using `bsmr killall`.";
         return Err(bsmr_error::bsmr_error!(
             bsmr_error::ErrorTag::Environment,
             "{}",

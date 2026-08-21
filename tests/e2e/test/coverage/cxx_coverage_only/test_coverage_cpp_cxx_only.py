@@ -18,16 +18,16 @@
 import json
 from pathlib import Path
 
-from bsmr.tests.e2e_util.api.buck import Buck
-from bsmr.tests.e2e_util.buck_workspace import buck_test
+from bsmr.tests.e2e_util.api.bsmr import Bsmr
+from bsmr.tests.e2e_util.bsmr_workspace import bsmr_test
 
 from .test_coverage_utils import collect_coverage_for
 
 
-@buck_test(inplace=True)
-async def test_cpp_test_coverage(buck: Buck, tmp_path: Path) -> None:
+@bsmr_test(inplace=True)
+async def test_cpp_test_coverage(bsmr: Bsmr, tmp_path: Path) -> None:
     coverage_file = tmp_path / "coverage.txt"
-    await buck.test(
+    await bsmr.test(
         "@upstream//mode/dbgo-cov",
         "root//tests/targets/rules/cxx:cpp_test_pass",
         "--",
@@ -43,13 +43,13 @@ async def test_cpp_test_coverage(buck: Buck, tmp_path: Path) -> None:
     assert "fbcode/common/gtest/LightMain.cpp" in paths, str(paths)
 
 
-@buck_test(inplace=True)
+@bsmr_test(inplace=True)
 async def test_cpp_test_coverage_filter_by_path_outside_target(
-    buck: Buck,
+    bsmr: Bsmr,
     tmp_path: Path,
 ) -> None:
     paths = await collect_coverage_for(
-        buck, tmp_path, "root//tests/targets/rules/cxx:cpp_test_pass", ["folly"]
+        bsmr, tmp_path, "root//tests/targets/rules/cxx:cpp_test_pass", ["folly"]
     )
 
     expected_paths = [p for p in paths if p.startswith("fbcode/folly")]
@@ -66,12 +66,12 @@ async def test_cpp_test_coverage_filter_by_path_outside_target(
     assert len(unexpected_paths) == 0, str(paths)
 
 
-@buck_test(inplace=True)
+@bsmr_test(inplace=True)
 async def test_cpp_test_coverage_filter_by_path_of_target(
-    buck: Buck, tmp_path: Path
+    bsmr: Bsmr, tmp_path: Path
 ) -> None:
     paths = await collect_coverage_for(
-        buck,
+        bsmr,
         tmp_path,
         "root//tests/targets/rules/cxx:cpp_test_pass",
         ["bsmr/tests"],
@@ -83,13 +83,13 @@ async def test_cpp_test_coverage_filter_by_path_of_target(
     assert len(unexpected_paths) == 0, str(paths)
 
 
-@buck_test(inplace=True)
+@bsmr_test(inplace=True)
 async def test_cpp_test_coverage_filter_by_path_of_target_with_dev_lg(
-    buck: Buck,
+    bsmr: Bsmr,
     tmp_path: Path,
 ) -> None:
     paths = await collect_coverage_for(
-        buck,
+        bsmr,
         tmp_path,
         "root//tests/targets/rules/cxx:cpp_test_pass",
         mode="@upstream//mode/dev-lg",
@@ -102,13 +102,13 @@ async def test_cpp_test_coverage_filter_by_path_of_target_with_dev_lg(
     assert len(unexpected_paths) == 0, str(paths)
 
 
-@buck_test(inplace=True)
+@bsmr_test(inplace=True)
 async def test_cpp_test_coverage_filter_by_path_in_link_group_with_dev_lg(
-    buck: Buck,
+    bsmr: Bsmr,
     tmp_path: Path,
 ) -> None:
     paths = await collect_coverage_for(
-        buck,
+        bsmr,
         tmp_path,
         "root//tests/targets/rules/cxx:cpp_test_pass",
         mode="@upstream//mode/dev-lg",
@@ -127,14 +127,14 @@ async def test_cpp_test_coverage_filter_by_path_in_link_group_with_dev_lg(
     assert len(unexpected_paths) == 0, str(paths)
 
 
-@buck_test(inplace=True)
+@bsmr_test(inplace=True)
 async def test_cpp_test_coverage_filter_by_file_of_target_with_dev_lg(
-    buck: Buck,
+    bsmr: Bsmr,
     tmp_path: Path,
 ) -> None:
     source_name = "bsmr/tests/targets/rules/cxx/cpp_test_pass.cpp"
     paths = await collect_coverage_for(
-        buck,
+        bsmr,
         tmp_path,
         "root//tests/targets/rules/cxx:cpp_test_pass",
         mode="@upstream//mode/dev-lg",
@@ -148,14 +148,14 @@ async def test_cpp_test_coverage_filter_by_file_of_target_with_dev_lg(
     assert len(unexpected_paths) == 0, str(paths)
 
 
-@buck_test(inplace=True)
+@bsmr_test(inplace=True)
 async def test_cpp_test_coverage_filter_by_source_file_in_link_group_with_dev_lg(
-    buck: Buck,
+    bsmr: Bsmr,
     tmp_path: Path,
 ) -> None:
     source_name = "folly/String.cpp"
     paths = await collect_coverage_for(
-        buck,
+        bsmr,
         tmp_path,
         "root//tests/targets/rules/cxx:cpp_test_pass",
         mode="@upstream//mode/dev-lg",
@@ -171,14 +171,14 @@ async def test_cpp_test_coverage_filter_by_source_file_in_link_group_with_dev_lg
     assert len(unexpected_paths) == 0, str(paths)
 
 
-@buck_test(inplace=True)
+@bsmr_test(inplace=True)
 async def test_cpp_test_coverage_filter_by_header_file_in_link_group_with_dev_lg(
-    buck: Buck,
+    bsmr: Bsmr,
     tmp_path: Path,
 ) -> None:
     header_name = "testing_frameworks/code_coverage/playground/link_groups/LibraryRightRightOnlyUsedHere.h"
     paths = await collect_coverage_for(
-        buck,
+        bsmr,
         tmp_path,
         "upstream//testing_frameworks/code_coverage/playground/link_groups:test_with_link_groups",
         mode="@upstream//mode/dev-lg",
@@ -222,14 +222,14 @@ async def test_cpp_test_coverage_filter_by_header_file_in_link_group_with_dev_lg
     )
 
 
-@buck_test(inplace=True)
+@bsmr_test(inplace=True)
 async def test_cpp_test_coverage_filter_by_header_file_defined_in_one_link_group_and_used_in_another(
-    buck: Buck,
+    bsmr: Bsmr,
     tmp_path: Path,
 ) -> None:
     header_name = "testing_frameworks/code_coverage/playground/link_groups/LibraryRightLeftUsedInOtherLinkGroup.h"
     paths = await collect_coverage_for(
-        buck,
+        bsmr,
         tmp_path,
         "upstream//testing_frameworks/code_coverage/playground/link_groups:test_with_header_used_in_different_link_group",
         mode="@upstream//mode/dev-lg",
@@ -262,14 +262,14 @@ async def test_cpp_test_coverage_filter_by_header_file_defined_in_one_link_group
     )
 
 
-@buck_test(inplace=True)
+@bsmr_test(inplace=True)
 async def test_cpp_test_coverage_filter_by_header_file_defined_in_one_link_group_and_used_in_test_binary_link_group(
-    buck: Buck,
+    bsmr: Bsmr,
     tmp_path: Path,
 ) -> None:
     header_name = "testing_frameworks/code_coverage/playground/link_groups/LibraryRightLeftUsedInOtherLinkGroup.h"
     paths = await collect_coverage_for(
-        buck,
+        bsmr,
         tmp_path,
         "upstream//testing_frameworks/code_coverage/playground/link_groups:test_with_header_used_in_different_link_group",
         mode="@upstream//mode/dev-lg",
@@ -302,11 +302,11 @@ async def test_cpp_test_coverage_filter_by_header_file_defined_in_one_link_group
     )
 
 
-@buck_test(inplace=True)
-async def test_cpp_test_coverage_filter_by_file(buck: Buck, tmp_path: Path) -> None:
+@bsmr_test(inplace=True)
+async def test_cpp_test_coverage_filter_by_file(bsmr: Bsmr, tmp_path: Path) -> None:
     source_name = "bsmr/tests/targets/rules/cxx/cpp_test_pass.cpp"
     paths = await collect_coverage_for(
-        buck,
+        bsmr,
         tmp_path,
         "root//tests/targets/rules/cxx:cpp_test_pass",
         [source_name],
@@ -316,13 +316,13 @@ async def test_cpp_test_coverage_filter_by_file(buck: Buck, tmp_path: Path) -> N
     assert paths[0] == f"fbcode/{source_name}"
 
 
-@buck_test(inplace=True)
+@bsmr_test(inplace=True)
 async def test_cpp_test_coverage_when_filter_by_test_binary_header_file(
-    buck: Buck, tmp_path: Path
+    bsmr: Bsmr, tmp_path: Path
 ) -> None:
     header_name = "testing_frameworks/code_coverage/playground/Test.h"
     paths = await collect_coverage_for(
-        buck,
+        bsmr,
         tmp_path,
         "upstream//testing_frameworks/code_coverage/playground:test",
         [header_name],
@@ -335,13 +335,13 @@ async def test_cpp_test_coverage_when_filter_by_test_binary_header_file(
     assert source_name in paths
 
 
-@buck_test(inplace=True)
+@bsmr_test(inplace=True)
 async def test_cpp_test_coverage_when_filter_by_library_header_file(
-    buck: Buck, tmp_path: Path
+    bsmr: Bsmr, tmp_path: Path
 ) -> None:
     header_name = "testing_frameworks/code_coverage/playground/ThirdLevelDep.h"
     paths = await collect_coverage_for(
-        buck,
+        bsmr,
         tmp_path,
         "upstream//testing_frameworks/code_coverage/playground:test",
         [header_name],
@@ -389,15 +389,15 @@ async def test_cpp_test_coverage_when_filter_by_library_header_file(
     )
 
 
-@buck_test(inplace=True)
+@bsmr_test(inplace=True)
 async def test_cpp_test_coverage_when_filter_by_library_private_header_file(
-    buck: Buck, tmp_path: Path
+    bsmr: Bsmr, tmp_path: Path
 ) -> None:
     private_header_name = (
         "testing_frameworks/code_coverage/playground/ThirdLevelDepPrivate.h"
     )
     paths = await collect_coverage_for(
-        buck,
+        bsmr,
         tmp_path,
         "upstream//testing_frameworks/code_coverage/playground:test",
         [private_header_name],
@@ -414,13 +414,13 @@ async def test_cpp_test_coverage_when_filter_by_library_private_header_file(
     )
 
 
-@buck_test(inplace=True)
+@bsmr_test(inplace=True)
 async def test_cpp_test_coverage_when_filter_by_header_file_in_headers_only_library(
-    buck: Buck, tmp_path: Path
+    bsmr: Bsmr, tmp_path: Path
 ) -> None:
     header_name = "testing_frameworks/code_coverage/playground/LibraryWithOnlyHeaders.h"
     paths = await collect_coverage_for(
-        buck,
+        bsmr,
         tmp_path,
         "upstream//testing_frameworks/code_coverage/playground:test_with_dep_with_only_headers",
         [header_name],
@@ -438,14 +438,14 @@ async def test_cpp_test_coverage_when_filter_by_header_file_in_headers_only_libr
     )
 
 
-@buck_test(inplace=True)
+@bsmr_test(inplace=True)
 async def test_cpp_test_coverage_filter_by_file_with_opt_mode(
-    buck: Buck,
+    bsmr: Bsmr,
     tmp_path: Path,
 ) -> None:
     source_name = "bsmr/tests/targets/rules/cxx/cpp_test_pass.cpp"
     paths = await collect_coverage_for(
-        buck,
+        bsmr,
         tmp_path,
         target="root//tests/targets/rules/cxx:cpp_test_pass",
         filter=[source_name],
@@ -456,13 +456,13 @@ async def test_cpp_test_coverage_filter_by_file_with_opt_mode(
     assert paths[0] == f"fbcode/{source_name}"
 
 
-@buck_test(inplace=True)
+@bsmr_test(inplace=True)
 async def test_cpp_test_coverage_filter_by_file_and_path(
-    buck: Buck, tmp_path: Path
+    bsmr: Bsmr, tmp_path: Path
 ) -> None:
     source_name = "bsmr/tests/targets/rules/cxx/cpp_test_pass.cpp"
     paths = await collect_coverage_for(
-        buck,
+        bsmr,
         tmp_path,
         "root//tests/targets/rules/cxx:cpp_test_pass",
         [source_name, "folly"],
@@ -488,14 +488,14 @@ async def test_cpp_test_coverage_filter_by_file_and_path(
     )
 
 
-@buck_test(inplace=True)
+@bsmr_test(inplace=True)
 async def test_cpp_test_coverage_xplat_filter_by_file_path(
-    buck: Buck,
+    bsmr: Bsmr,
     tmp_path: Path,
 ) -> None:
     file_to_collect_coverage = "xplat/testinfra/playground/cpp/ExampleTest.cpp"
     paths = await collect_coverage_for(
-        buck,
+        bsmr,
         tmp_path,
         "upstream//xplat/testinfra/playground/cpp:example_testFbcode",
         filter=[file_to_collect_coverage],

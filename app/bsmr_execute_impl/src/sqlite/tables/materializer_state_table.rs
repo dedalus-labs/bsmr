@@ -29,7 +29,7 @@ use bsmr_directory::directory::directory_iterator::DirectoryIterator;
 use bsmr_directory::directory::directory_iterator::DirectoryIteratorPathStack;
 use bsmr_directory::directory::entry::DirectoryEntry;
 use bsmr_directory::directory::walk::unordered_entry_walk;
-use bsmr_error::BuckErrorContext;
+use bsmr_error::BsmrErrorContext;
 use bsmr_error::conversion::from_any_with_tag;
 use bsmr_error::internal_error;
 use bsmr_execute::digest_config::DigestConfig;
@@ -39,7 +39,7 @@ use bsmr_execute::directory::ActionDirectoryMember;
 use bsmr_execute::directory::ActionSharedDirectory;
 use bsmr_execute::directory::INTERNER;
 use bsmr_fs::paths::forward_rel_path::ForwardRelativePathBuf;
-use bsmr_hash::StdBuckHashMap;
+use bsmr_hash::StdBsmrHashMap;
 use chrono::DateTime;
 use chrono::TimeZone;
 use chrono::Utc;
@@ -275,8 +275,8 @@ fn convert_sqlite_entries_to_materializer_state(
         children: Vec<SqliteEntry<'a>>,
     }
 
-    let mut directories: StdBuckHashMap<ProjectRelativePathBuf, DirectoryData> =
-        StdBuckHashMap::default();
+    let mut directories: StdBsmrHashMap<ProjectRelativePathBuf, DirectoryData> =
+        StdBsmrHashMap::default();
 
     let mut results = Vec::new();
 
@@ -400,7 +400,7 @@ fn digest(
     let entry_hash_kind = entry_hash_kind
         .try_into()
         .map_err(|e| from_any_with_tag(e, bsmr_error::ErrorTag::Tier0))
-        .with_buck_error_context(|| format!("Invalid entry_hash_kind: `{entry_hash_kind}`"))?;
+        .with_bsmr_error_context(|| format!("Invalid entry_hash_kind: `{entry_hash_kind}`"))?;
 
     let file_digest = FileDigest::from_digest_bytes(entry_hash_kind, entry_hash, size)?;
     Ok(TrackedFileDigest::new(
@@ -489,7 +489,7 @@ impl MaterializerStateSqliteTable {
         self.connection
             .lock()
             .execute(&sql, [])
-            .with_buck_error_context(|| format!("creating sqlite table {STATE_TABLE_NAME}"))?;
+            .with_bsmr_error_context(|| format!("creating sqlite table {STATE_TABLE_NAME}"))?;
         self.create_parent_path_index()?;
         Ok(())
     }
@@ -505,7 +505,7 @@ impl MaterializerStateSqliteTable {
         self.connection
             .lock()
             .execute(&sql, [])
-            .with_buck_error_context(|| format!("creating index on {STATE_TABLE_NAME}"))?;
+            .with_bsmr_error_context(|| format!("creating index on {STATE_TABLE_NAME}"))?;
         Ok(())
     }
 
@@ -539,7 +539,7 @@ impl MaterializerStateSqliteTable {
                     entry.parent_path,
                 ],
             )
-            .with_buck_error_context(|| {
+            .with_bsmr_error_context(|| {
                 format!("inserting `{path}` into sqlite table {STATE_TABLE_NAME}")
             })?;
         }
@@ -562,7 +562,7 @@ impl MaterializerStateSqliteTable {
             );
             tracing::trace!(sql = %sql, chunk = ?chunk, "updating last_access_times");
             tx.execute(&sql, rusqlite::params_from_iter(chunk.map(|p| p.as_str())))
-                .with_buck_error_context(|| format!("updating sqlite table {STATE_TABLE_NAME}"))?;
+                .with_bsmr_error_context(|| format!("updating sqlite table {STATE_TABLE_NAME}"))?;
         }
         tx.commit()?;
         Ok(())
@@ -572,7 +572,7 @@ impl MaterializerStateSqliteTable {
         &self,
         digest_config: DigestConfig,
     ) -> bsmr_error::Result<MaterializerState> {
-        let entries = self.read_all_entries().with_buck_error_context(|| {
+        let entries = self.read_all_entries().with_bsmr_error_context(|| {
             format!("error reading row of sqlite table {STATE_TABLE_NAME}")
         })?;
         convert_sqlite_entries_to_materializer_state(entries, digest_config)
@@ -601,7 +601,7 @@ impl MaterializerStateSqliteTable {
             ))
         })?
         .collect::<Result<Vec<_>, _>>()
-        .with_buck_error_context(|| format!("reading from sqlite table {STATE_TABLE_NAME}"))
+        .with_bsmr_error_context(|| format!("reading from sqlite table {STATE_TABLE_NAME}"))
     }
 
     pub(crate) fn delete(&self, paths: Vec<ProjectRelativePathBuf>) -> bsmr_error::Result<usize> {
@@ -631,7 +631,7 @@ impl MaterializerStateSqliteTable {
                     &sql,
                     rusqlite::params_from_iter(paths.iter().map(|p| p.as_str())),
                 )
-                .with_buck_error_context(|| {
+                .with_bsmr_error_context(|| {
                     format!("deleting artifact rows from sqlite table {STATE_TABLE_NAME}")
                 })
         }
@@ -656,7 +656,7 @@ impl MaterializerStateSqliteTable {
                     &sql,
                     rusqlite::params_from_iter(paths.iter().map(|p| p.as_str())),
                 )
-                .with_buck_error_context(|| {
+                .with_bsmr_error_context(|| {
                     format!(
                         "deleting directory artifact members from sqlite table {STATE_TABLE_NAME}"
                     )
