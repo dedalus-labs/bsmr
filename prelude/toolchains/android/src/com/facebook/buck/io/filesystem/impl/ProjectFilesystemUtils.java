@@ -1,3 +1,9 @@
+//===----------------------------------------------------------------------===//
+// Upstream-Source: facebook/buck2@1560aca2002865cd73d7cafb22c705cfb640b2bc
+// Modifications Copyright (c) 2026 Dedalus Labs, Inc. and its contributors
+// SPDX-License-Identifier: Apache-2.0
+//===----------------------------------------------------------------------===//
+
 /*
  * Copyright (c) Meta Platforms, Inc. and affiliates.
  *
@@ -415,7 +421,7 @@ public class ProjectFilesystemUtils {
     if (normalizedPath.isAbsolute()) {
       AbsPath pathAbs = AbsPath.of(normalizedPath);
       AbsPath configuredBuckOut = MorePaths.normalize(root.resolve(buckOut));
-      // If the path is in the configured buck-out, it's also part of the filesystem.
+      // If the path is in the configured bsmr-out, it's also part of the filesystem.
       if (pathAbs.startsWith(configuredBuckOut) || pathAbs.startsWith(root)) {
         return Optional.of(MorePaths.relativize(root.getPath(), normalizedPath));
       } else {

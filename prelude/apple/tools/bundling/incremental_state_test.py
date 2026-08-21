@@ -1,3 +1,9 @@
+# ===----------------------------------------------------------------------===
+# Upstream-Source: facebook/buck2@1560aca2002865cd73d7cafb22c705cfb640b2bc
+# Modifications Copyright (c) 2026 Dedalus Labs, Inc. and its contributors
+# SPDX-License-Identifier: Apache-2.0
+# ===----------------------------------------------------------------------===
+
 # Copyright (c) Meta Platforms, Inc. and affiliates.
 #
 # This source code is dual-licensed under either the MIT license found in the
@@ -32,7 +38,7 @@ class TestIncrementalState(unittest.TestCase):
                     resolved_symlink=None,
                 ),
                 IncrementalStateItem(
-                    source=Path("buck-out/bar.txt"),
+                    source=Path("bsmr-out/bar.txt"),
                     destination_relative_to_bundle=Path("Resources/bar.txt"),
                     digest="bar_digest",
                     resolved_symlink=None,
@@ -97,13 +103,13 @@ class TestIncrementalState(unittest.TestCase):
                     resolved_symlink=None,
                 ),
                 IncrementalStateItem(
-                    source=Path("buck-out/bar.txt"),
+                    source=Path("bsmr-out/bar.txt"),
                     destination_relative_to_bundle=Path("Resources/bar.txt"),
                     digest="bar_digest",
                     resolved_symlink=None,
                 ),
                 IncrementalStateItem(
-                    source=Path("buck-out/bar"),
+                    source=Path("bsmr-out/bar"),
                     destination_relative_to_bundle=Path("Resources/bar"),
                     digest=None,
                     resolved_symlink=Path("bar.txt"),

@@ -864,7 +864,7 @@ def _make_py_package_live(
     # For outplace, every runtime file is copied into the link-tree directory,
     # so the link-tree itself is the only output that needs to be materialized
     # by consumers. For inplace, the link-tree contains symlinks pointing into
-    # buck-out, so the runtime files (and any hidden resources) must be
+    # bsmr-out, so the runtime files (and any hidden resources) must be
     # materialized alongside it.
     if is_outplace:
         hidden_resources = []

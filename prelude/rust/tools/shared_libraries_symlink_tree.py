@@ -1,4 +1,10 @@
 #!/usr/bin/env python3
+# ===----------------------------------------------------------------------===
+# Upstream-Source: facebook/buck2@1560aca2002865cd73d7cafb22c705cfb640b2bc
+# Modifications Copyright (c) 2026 Dedalus Labs, Inc. and its contributors
+# SPDX-License-Identifier: Apache-2.0
+# ===----------------------------------------------------------------------===
+
 # Copyright (c) Meta Platforms, Inc. and affiliates.
 #
 # This source code is dual-licensed under either the MIT license found in the
@@ -21,8 +27,8 @@
 #         (
 #             True,
 #             "libthird-party_rust_vendor_anyhow_1.0.100.so",
-#             "buck-out/v2/gen/fbsource/577ba3460b84e891/third-party/rust/vendor/anyhow/__1.0.100__/DPHL/libthird-party_rust_vendor_anyhow_1.0.100.so",
-#             "buck-out/v2/gen/fbsource/577ba3460b84e891/third-party/rust/vendor/anyhow/__1.0.100__/DPHL/libthird-party_rust_vendor_anyhow_1.0.100.so.dwp",
+#             "bsmr-out/v2/gen/fbsource/577ba3460b84e891/third-party/rust/vendor/anyhow/__1.0.100__/DPHL/libthird-party_rust_vendor_anyhow_1.0.100.so",
+#             "bsmr-out/v2/gen/fbsource/577ba3460b84e891/third-party/rust/vendor/anyhow/__1.0.100__/DPHL/libthird-party_rust_vendor_anyhow_1.0.100.so.dwp",
 #         ),
 #         ....
 #     ],
@@ -38,7 +44,7 @@
 #
 # Constructs symlink tree /tmp/my_tree
 # ```
-# libthird-party_rust_vendor_anyhow_1.0.100.so -> buck-out/v2/gen/fbsource/577ba3460b84e891/third-party/rust/vendor/anyhow/__1.0.100__/DPHL/libthird-party_rust_vendor_anyhow_1.0.100.so
+# libthird-party_rust_vendor_anyhow_1.0.100.so -> bsmr-out/v2/gen/fbsource/577ba3460b84e891/third-party/rust/vendor/anyhow/__1.0.100__/DPHL/libthird-party_rust_vendor_anyhow_1.0.100.so
 # ...
 # ```
 

@@ -6,7 +6,7 @@
       "digest": "foo_digest"
     },
     {
-      "path": "buck-out/bar.txt",
+      "path": "bsmr-out/bar.txt",
       "digest": "bar_digest"
     }
   ]

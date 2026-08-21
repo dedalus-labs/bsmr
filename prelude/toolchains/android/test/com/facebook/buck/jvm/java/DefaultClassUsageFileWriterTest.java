@@ -1,3 +1,9 @@
+//===----------------------------------------------------------------------===//
+// Upstream-Source: facebook/buck2@1560aca2002865cd73d7cafb22c705cfb640b2bc
+// Modifications Copyright (c) 2026 Dedalus Labs, Inc. and its contributors
+// SPDX-License-Identifier: Apache-2.0
+//===----------------------------------------------------------------------===//
+
 /*
  * Copyright (c) Meta Platforms, Inc. and affiliates.
  *
@@ -35,7 +41,7 @@ public class DefaultClassUsageFileWriterTest {
 
   @Test
   public void fileReadOrderDoesntAffectClassesUsedOutput() throws IOException {
-    RelPath configuredBuckOut = RelPath.get("buck-out/v2");
+    RelPath configuredBuckOut = RelPath.get("bsmr-out/v2");
     AbsPath testJarPath = tmp.getRoot().resolve("test.jar");
     AbsPath testTwoJarPath = tmp.getRoot().resolve("test2.jar");
 

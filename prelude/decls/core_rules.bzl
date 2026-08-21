@@ -602,7 +602,7 @@ export_file = prelude_rule(
                 default = None,
                 doc = """
                 How files are referenced internally in buck.
-                 If set to 'copy', then a full copy will be made into the new location in buck-out.
+                 If set to 'copy', then a full copy will be made into the new location in bsmr-out.
                  If set to 'reference', the original file will be used by internal build rules in-place.
                  However, this mode does not work across repositories or if the 'out' property is set.
                  For read-only operations, 'reference' can be more performant.
@@ -1586,7 +1586,7 @@ zip_file = prelude_rule(
             glob(['dir/**/*']) +
             [
               # Imagine this generates the output
-              # "buck-out/gen/foo/hello.txt". This output will
+              # "bsmr-out/gen/foo/hello.txt". This output will
               # be found in the zip at "hello.txt"
               '//some/other:target',
 
