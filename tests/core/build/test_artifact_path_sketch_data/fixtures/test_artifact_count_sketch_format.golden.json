@@ -12,7 +12,7 @@
           "other_outputs": {},
           "outputs": {
             "DEFAULT": [
-              "buck-out/v2/art/root/<HASH>/__simple__/out.txt"
+              "bsmr-out/v2/art/root/<HASH>/__simple__/out.txt"
             ]
           },
           "success": "SUCCESS"
@@ -23,7 +23,7 @@
       "other_outputs": {},
       "outputs": {
         "DEFAULT": [
-          "buck-out/v2/art/root/<HASH>/__simple__/out.txt"
+          "bsmr-out/v2/art/root/<HASH>/__simple__/out.txt"
         ]
       },
       "success": "SUCCESS"

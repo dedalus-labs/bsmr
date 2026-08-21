@@ -16,10 +16,10 @@ def main():
 
     if platform.system() == "Windows":
         check = ["TEMP", "TMP"]
-        buck_out = "buck-out\\v2"
+        buck_out = "bsmr-out\\v2"
     else:
         check = ["TMPDIR"]
-        buck_out = "buck-out/v2"
+        buck_out = "bsmr-out/v2"
 
     scratch = os.environ["BUCK_SCRATCH_PATH"]
     assert not os.path.isabs(scratch), scratch
