@@ -76,7 +76,15 @@ export const releasePlease = workflow({
 					},
 					run: command({
 						file: "gh",
-						args: ["workflow", "run", "ci.yml", "--ref", releaseBranch],
+						args: [
+							"workflow",
+							"run",
+							"ci.yml",
+							"--repo",
+							expr<string>("github.repository"),
+							"--ref",
+							releaseBranch,
+						],
 					}),
 				},
 				{
@@ -91,8 +99,10 @@ export const releasePlease = workflow({
 							"workflow",
 							"run",
 							"release.yml",
+							"--repo",
+							expr<string>("github.repository"),
 							"--ref",
-							"main",
+							stepOutput("release", "tag_name"),
 							"--field",
 							format("tag={0}", stepOutput("release", "tag_name")),
 						],
