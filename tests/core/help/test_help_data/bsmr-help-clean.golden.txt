@@ -11,15 +11,15 @@ Options:
           Performs a dry-run and prints the paths that would be removed.
 
       --stale [<DURATION>]
-          Delete artifacts from buck-out older than 1 week or older than
+          Delete artifacts from bsmr-out older than 1 week or older than
           the specified duration, without killing the daemon
 
       --tracked-only
           Only considers tracked artifacts for cleanup.
 
-          `buck-out` can contain untracked artifacts for different reasons: - Outputs from aborted
+          `bsmr-out` can contain untracked artifacts for different reasons: - Outputs from aborted
           actions - State getting deleted (e.g., new buckversion that changes the on-disk state
-          format) - Writing to `buck-out` without being expected by Buck
+          format) - Writing to `bsmr-out` without being expected by Buck
 
       --adaptive-low-disk-threshold <PERCENT>
           Enable adaptive low-disk promotion: after the regular stale scan, promote retained,
@@ -204,11 +204,11 @@ Event Log Options:
 
       --command-report-path <PATH>
           Write the command report to this path. A command report is always written to
-          `buck-out/v2/<uuid>/command_report` even without this flag
+          `bsmr-out/v2/<uuid>/command_report` even without this flag
 
 Universal Options:
       --isolation-dir <ISOLATION_DIR>
-          The name of the directory that Bessemer creates within buck-out for writing outputs and
+          The name of the directory that Bessemer creates within bsmr-out for writing outputs and
           daemon information. If one is not provided, Bessemer creates a directory with the default
           name.
 

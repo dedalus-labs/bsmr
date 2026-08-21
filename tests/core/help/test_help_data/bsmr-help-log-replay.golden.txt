@@ -77,7 +77,7 @@ Console Options:
 
 Universal Options:
       --isolation-dir <ISOLATION_DIR>
-          The name of the directory that Bessemer creates within buck-out for writing outputs and
+          The name of the directory that Bessemer creates within bsmr-out for writing outputs and
           daemon information. If one is not provided, Bessemer creates a directory with the default
           name.
 
