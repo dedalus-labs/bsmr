@@ -253,7 +253,7 @@ pub(crate) fn testing_incremental_state_sqlite_db(
 ) -> bsmr_error::Result<IncrementalDbState> {
     IncrementalStateSqliteDb::initialize_incremental_sqlite_db(
         fs.resolve(ProjectRelativePath::unchecked_new(
-            "buck-out/v2/cache/incremental_state",
+            "bsmr-out/v2/cache/incremental_state",
         )),
         versions,
         metadata,
@@ -298,7 +298,7 @@ mod tests {
             bsmr_fs::paths::forward_rel_path::ForwardRelativePathBuf::unchecked_new(
                 "test_file".to_owned(),
             ),
-            ProjectRelativePathBuf::unchecked_new("buck-out/content_hash/test_file".to_owned()),
+            ProjectRelativePathBuf::unchecked_new("bsmr-out/content_hash/test_file".to_owned()),
         );
         let incremental_path_map = IncrementalPathMap::new(mapping);
         let metadatas = testing_metadatas();

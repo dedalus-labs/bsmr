@@ -105,10 +105,10 @@ impl<'v> StarlarkAuditCtx<'v> {
 #[starlark_module]
 fn audit_methods(builder: &mut MethodsBuilder) {
     /// Returns either:
-    ///  - The `action` which created the buck-out path, if exists.
-    ///  - The `unconfigured_target_label` constructed from the buck-out path, if the configuration hashes do not match.
-    ///  - None, if the configuration hash of the buck-out path matches the one passed into this function, or the default target
-    /// configuration, but no action could be found that generated the buck-out path.
+    ///  - The `action` which created the bsmr-out path, if exists.
+    ///  - The `unconfigured_target_label` constructed from the bsmr-out path, if the configuration hashes do not match.
+    ///  - None, if the configuration hash of the bsmr-out path matches the one passed into this function, or the default target
+    /// configuration, but no action could be found that generated the bsmr-out path.
     ///
     /// Takes in an optional target platform, otherwise will use the default target platform.
     ///
@@ -116,7 +116,7 @@ fn audit_methods(builder: &mut MethodsBuilder) {
     /// ```python
     /// def _impl_audit_output(ctx):
     ///     target_platform = "foo"
-    ///     result = ctx.audit().output("buck-out/v2/art/fbcode/some_cfg_hash/path/to/__target__/artifact", target_platform)
+    ///     result = ctx.audit().output("bsmr-out/v2/art/fbcode/some_cfg_hash/path/to/__target__/artifact", target_platform)
     ///     ctx.output.print(result)
     /// ```
     fn output<'v>(

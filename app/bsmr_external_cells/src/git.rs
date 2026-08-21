@@ -319,7 +319,7 @@ pub(crate) struct GitFileOpsDelegate {
     buck_out_resolver: BuckOutPathResolver,
     cell: CellName,
     setup: GitCellSetup,
-    // The fs accesses in this code are sort of a mix between source file accesses and buck-out
+    // The fs accesses in this code are sort of a mix between source file accesses and bsmr-out
     // accesses. Unconditionally using an `FsIoProvider` turns out to give all the right behavior
     io: FsIoProvider,
 }

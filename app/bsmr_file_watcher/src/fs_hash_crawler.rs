@@ -287,7 +287,7 @@ impl FsSnapshot {
             let rel_path = root.relativize(&disk_path)?;
             let cell_path = cells.get_cell_path(&rel_path);
 
-            // We ignore buck-out and .hg dirs, as those are uninteresting events caused by us.
+            // We ignore bsmr-out and .hg dirs, as those are uninteresting events caused by us.
             if rel_path.starts_with(InvocationPaths::buck_out_dir_prefix())
                 || rel_path.starts_with(ProjectRelativePath::unchecked_new(".hg"))
             {

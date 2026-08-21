@@ -67,7 +67,7 @@ pub struct CleanCommand {
 
     #[clap(
         long = "stale",
-        help = "Delete artifacts from buck-out older than 1 week or older than
+        help = "Delete artifacts from bsmr-out older than 1 week or older than
 the specified duration, without killing the daemon",
         value_name = "DURATION"
     )]
@@ -79,10 +79,10 @@ the specified duration, without killing the daemon",
 
     /// Only considers tracked artifacts for cleanup.
     ///
-    /// `buck-out` can contain untracked artifacts for different reasons:
+    /// `bsmr-out` can contain untracked artifacts for different reasons:
     ///  - Outputs from aborted actions
     ///  - State getting deleted (e.g., new buckversion that changes the on-disk state format)
-    ///  - Writing to `buck-out` without being expected by Buck
+    ///  - Writing to `bsmr-out` without being expected by Buck
     #[clap(long = "tracked-only", requires = "stale")]
     tracked_only: bool,
 
@@ -249,7 +249,7 @@ async fn clean(
             fs_util::create_dir_all(&trash_dir)?;
         }
 
-        // Move buck-out to trash folder
+        // Move bsmr-out to trash folder
         if buck_out_dir.exists() {
             console.print_stderr(&format!(
                 "Moving {} to {}",
@@ -340,7 +340,7 @@ fn collect_paths_to_clean(
     Ok(paths_to_clean)
 }
 
-/// In Windows, we've observed the buck-out clean immediately after killing
+/// In Windows, we've observed the bsmr-out clean immediately after killing
 /// the daemon can fail with this error: `The process cannot access the
 /// file because it is being used by another process.`. To get around this,
 /// add a single retry.
@@ -355,7 +355,7 @@ fn clean_buck_out_with_retry(
         }
         Err(e) => {
             tracing::info!(
-                "Retrying buck-out clean, first attempted failed with: {:#}",
+                "Retrying bsmr-out clean, first attempted failed with: {:#}",
                 e
             );
             result = clean_buck_out(path, console_type);
@@ -389,7 +389,7 @@ impl CleanProgressState {
     fn format_message(&self) -> Line {
         let elapsed = Instant::now() - self.start_time;
         Line::sanitized(&format!(
-            "Cleaning buck-out: {} files deleted ({}s)",
+            "Cleaning bsmr-out: {} files deleted ({}s)",
             self.files_deleted(),
             elapsed.as_secs()
         ))

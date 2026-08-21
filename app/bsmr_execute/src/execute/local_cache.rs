@@ -656,7 +656,7 @@ mod tests {
             TrackedFileDigest::from_content(b"cached output", digest_config.cas_digest_config());
         let result = LocalActionResult {
             output_files: vec![LocalOutputFile {
-                path: "buck-out/output".to_owned(),
+                path: "bsmr-out/output".to_owned(),
                 digest: LocalDigest::from_file(&output),
                 executable: false,
             }],
@@ -778,7 +778,7 @@ mod tests {
             TrackedFileDigest::from_content(&tree_bytes, digest_config.cas_digest_config());
         let result = LocalActionResult {
             output_directories: vec![LocalOutputDirectory {
-                path: "buck-out/directory".to_owned(),
+                path: "bsmr-out/directory".to_owned(),
                 tree_digest: LocalDigest::from_file(&tree_digest),
             }],
             ..Default::default()

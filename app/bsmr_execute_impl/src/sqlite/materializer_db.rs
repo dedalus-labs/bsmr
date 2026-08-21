@@ -181,7 +181,7 @@ pub(crate) fn testing_materializer_state_sqlite_db(
 )> {
     MaterializerStateSqliteDb::initialize_materializer_sqlite_db(
         fs.resolve(ProjectRelativePath::unchecked_new(
-            "buck-out/v2/cache/materializer_state",
+            "bsmr-out/v2/cache/materializer_state",
         )),
         versions,
         metadata,

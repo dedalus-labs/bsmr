@@ -64,7 +64,7 @@ impl HashingInfo {
     }
 }
 
-// When cleaning up artifacts in buck-out, std::fs::remove_dir_all() (and
+// When cleaning up artifacts in bsmr-out, std::fs::remove_dir_all() (and
 // non-sudo `rm -rf`) is not able to list/remove files from directories without
 // the read/write/execute bits being set. Since buck and RE make no promises
 // about preserving anything other than the execution bit, we normalize the
@@ -144,7 +144,7 @@ pub async fn build_entry_from_disk(
         //
         // Additionally, it's possible the output doesn't exist because the
         // action failed due to corrupted materialized state (eg a user
-        // deleted/changed a file in buck-out). The "check all inputs match the
+        // deleted/changed a file in bsmr-out). The "check all inputs match the
         // materializer state" check is expensive. We don't perform it before
         // running every action, it's only run if the action returns an
         // exit_code != 0. If we returned an error for missing files here, we'd
@@ -318,7 +318,7 @@ fn create_symlink(
                 .replace('\\', "/");
             let target_abspath =
                 canonical_path.join_normalized(RelativePath::unchecked_new(&normalized_target))?;
-            // Recalculate symlink target if it points from symlinked buck-out to the files inside project root.
+            // Recalculate symlink target if it points from symlinked bsmr-out to the files inside project root.
             if target_abspath.starts_with(project_root) {
                 symlink_target = diff_paths(target_abspath, directory_path)
                     .ok_or_else(|| internal_error!("can't calculate relative path"))?;
