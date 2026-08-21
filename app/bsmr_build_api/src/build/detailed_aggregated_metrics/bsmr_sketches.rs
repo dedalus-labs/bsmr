@@ -758,9 +758,9 @@ mod tests {
         // Two top-level artifacts share a `deps()` subtree containing `p_shared`;
         // merging them into a single directory means each project-relative leaf
         // reaches the sketcher exactly once.
-        let p_shared = ProjectRelativePathBuf::unchecked_new("buck-out/shared.txt".to_owned());
-        let p_other = ProjectRelativePathBuf::unchecked_new("buck-out/other.txt".to_owned());
-        let p_first = ProjectRelativePathBuf::unchecked_new("buck-out/first.txt".to_owned());
+        let p_shared = ProjectRelativePathBuf::unchecked_new("bsmr-out/shared.txt".to_owned());
+        let p_other = ProjectRelativePathBuf::unchecked_new("bsmr-out/other.txt".to_owned());
+        let p_first = ProjectRelativePathBuf::unchecked_new("bsmr-out/first.txt".to_owned());
 
         let digest_config = DigestConfig::testing_default();
         let cas = digest_config.cas_digest_config();

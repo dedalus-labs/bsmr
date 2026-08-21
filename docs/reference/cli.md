@@ -35,7 +35,7 @@ Perform lower level queries
 * `dep-files`: prints out the select files for a command
 * `deferred-materializer`: Access and interact with the deferred materializer
 * `output`: Query the action that produced the output artifact. Does not support BXL, test, scratch, or anon artifacts. If the configuration hash of the output path does not match the current platform configuration, the unconfigured target label will be returned.
-* `parse`: Parses the buck-out path into parts that may be useful (ex: config hash, file path to artifact).
+* `parse`: Parses the bsmr-out path into parts that may be useful (ex: config hash, file path to artifact).
 * `package-values`: Inspect package values, visibility, within_view and visibility_cap
 
 ### Common Options:
@@ -1426,7 +1426,7 @@ Query the action that produced the output artifact. Does not support BXL, test, 
 
 ### Arguments:
 * `<OUTPUT_PATH>`
-    The buck-out path to the build artifact, starting with `buck-out` and including the configuration platform.
+    The bsmr-out path to the build artifact, starting with `bsmr-out` and including the configuration platform.
 
 
 ### Common Options:
@@ -1514,13 +1514,13 @@ Common options are documented under [Global options](#global-options).
 
 ## `bsmr audit parse`
 
-Parses the buck-out path into parts that may be useful (ex: config hash, file path to artifact).
+Parses the bsmr-out path into parts that may be useful (ex: config hash, file path to artifact).
 
 **Usage**: `bsmr audit parse [OPTIONS] <OUTPUT_PATH>`
 
 ### Arguments:
 * `<OUTPUT_PATH>`
-    The buck-out path to the build artifact, starting with `buck-out` and including the configuration platform.
+    The bsmr-out path to the build artifact, starting with `bsmr-out` and including the configuration platform.
 
 
 ### Common Options:
@@ -4984,13 +4984,13 @@ Common options are documented under [Global options](#global-options).
     Performs a dry-run and prints the paths that would be removed.
 
 * `--stale <DURATION>`
-    Delete artifacts from buck-out older than 1 week or older than
+    Delete artifacts from bsmr-out older than 1 week or older than
     the specified duration, without killing the daemon
 
 * `--tracked-only`
     Only considers tracked artifacts for cleanup.
 
-    `buck-out` can contain untracked artifacts for different reasons: - Outputs from aborted actions - State getting deleted (e.g., new buckversion that changes the on-disk state format) - Writing to `buck-out` without being expected by Buck
+    `bsmr-out` can contain untracked artifacts for different reasons: - Outputs from aborted actions - State getting deleted (e.g., new buckversion that changes the on-disk state format) - Writing to `bsmr-out` without being expected by Buck
 
 * `--adaptive-low-disk-threshold <PERCENT>`
     Enable adaptive low-disk promotion: after the regular stale scan, promote retained, non-active artifacts (oldest-access first) to stale until projected free disk % rises above this threshold (0.0 - 100.0)
@@ -5900,7 +5900,7 @@ This document provides an overview of common options that are available across m
 ## Universal Options
 
 * `--isolation-dir <ISOLATION_DIR>`
-    The name of the directory that Bessemer creates within buck-out for writing outputs and daemon information. If one is not provided, Bessemer creates a directory with the default name.
+    The name of the directory that Bessemer creates within bsmr-out for writing outputs and daemon information. If one is not provided, Bessemer creates a directory with the default name.
 
     Instances of Bessemer share a daemon if and only if their isolation directory is identical. The isolation directory also influences the output paths provided by Bessemer, and as a result using a non-default isolation dir will cause cache misses (and slower builds).
 
@@ -5938,7 +5938,7 @@ This document provides an overview of common options that are available across m
     Write the invocation record (as JSON) to this path. No guarantees whatsoever are made regarding the stability of the format
 
 * `--command-report-path <PATH>`
-    Write the command report to this path. A command report is always written to `buck-out/v2/<uuid>/command_report` even without this flag
+    Write the command report to this path. A command report is always written to `bsmr-out/v2/<uuid>/command_report` even without this flag
 
 
 ## Bsmrconfig Options

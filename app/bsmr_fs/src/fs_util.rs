@@ -157,10 +157,10 @@ fn symlink_impl(original: &Path, link: &AbsPath) -> Result<(), IoError> {
     let target_abspath = std::path::absolute(&target_abspath).map_err(IoError::new)?;
 
     // Relative symlinks in Windows are relative from the real/canonical path of the link,
-    // so it can get messy when the symlink lives in buck-out. For Windows, we'll canonicalize,
+    // so it can get messy when the symlink lives in bsmr-out. For Windows, we'll canonicalize,
     // or if the target doesn't exist yet simulate canonicalize() by canonicalizing the common
     // ancestor between the target and link and appending the rest. The common ancestor should
-    // live somewhere between repo root / buck-out and link's directory, which should both exist.
+    // live somewhere between repo root / bsmr-out and link's directory, which should both exist.
     // Canonicalize() will also handle adding the verbatim prefix \\?\, which is required for
     // supporting paths longer than 260
     // In general, it should be OK to opt for absolute / canonical paths when possible as
@@ -325,7 +325,7 @@ fn remove_file_impl(path: &Path) -> io::Result<()> {
         match fs::remove_file(path) {
             Ok(_) => Ok(()),
             Err(e) => {
-                // Some tools may set readonly attribute on files in buck-out
+                // Some tools may set readonly attribute on files in bsmr-out
                 // which causes `Access is denied` error on Windows.
                 // Try to remove readonly attribute and retry.
                 if e.kind() == ErrorKind::PermissionDenied {

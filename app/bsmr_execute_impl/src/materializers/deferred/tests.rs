@@ -196,7 +196,7 @@ mod state_machine {
                 read_dir_barriers: None,
                 clean_barriers: None,
                 digest_config: DigestConfig::testing_default(),
-                buck_out_path: make_path("buck-out/v2"),
+                buck_out_path: make_path("bsmr-out/v2"),
                 fs,
             }
         }
@@ -1201,7 +1201,7 @@ mod state_machine {
         }).await
     }
 
-    const SAMPLE_BUCK_OUT_PATH: &str = "buck-out/v2/art/foo/bar";
+    const SAMPLE_BUCK_OUT_PATH: &str = "bsmr-out/v2/art/foo/bar";
 
     #[tokio::test]
     async fn test_clean_stale() -> bsmr_error::Result<()> {
@@ -1267,7 +1267,7 @@ mod state_machine {
             );
             let (dm, _, _) = make_materializer(io, None).await;
 
-            // Interrupt while scanning buck-out
+            // Interrupt while scanning bsmr-out
             let dm = Arc::new(dm);
             let dm_dup = dm.dupe();
             let fut = dm_dup.clean_stale_artifacts(CleanStaleArtifactsArgs {
@@ -1656,7 +1656,7 @@ mod state_machine {
     #[tokio::test]
     async fn test_eager_declare_and_cancel() {
         ignore_stack_overflow_checks_for_future(async {
-            let path = make_path("buck-out/v2/eager/cancel");
+            let path = make_path("bsmr-out/v2/eager/cancel");
             let (mut dm, _) = make_processor(Default::default());
 
             // Register and declare → starts materializing at Low
@@ -1694,7 +1694,7 @@ mod state_machine {
     #[tokio::test]
     async fn test_eager_declare_upgrade_and_release() {
         ignore_stack_overflow_checks_for_future(async {
-            let path = make_path("buck-out/v2/eager/upgrade");
+            let path = make_path("bsmr-out/v2/eager/upgrade");
             let (mut dm, _) = make_processor(Default::default());
 
             // Register and declare → starts eager materialization at Low
@@ -1740,7 +1740,7 @@ mod state_machine {
     #[tokio::test]
     async fn test_eager_multiple_callers_register_path() {
         ignore_stack_overflow_checks_for_future(async {
-            let path = make_path("buck-out/v2/eager/shared");
+            let path = make_path("bsmr-out/v2/eager/shared");
             let (mut dm, _) = make_processor(Default::default());
             let sender = dm.command_sender.dupe();
 
@@ -1796,8 +1796,8 @@ mod state_machine {
     #[tokio::test]
     async fn test_eager_configuration_path_lookup_and_release() {
         ignore_stack_overflow_checks_for_future(async {
-            let artifact_path = make_path("buck-out/v2/gen/content-hash/foo/bar");
-            let config_path = make_path("buck-out/v2/gen/config-hash/foo/bar");
+            let artifact_path = make_path("bsmr-out/v2/gen/content-hash/foo/bar");
+            let config_path = make_path("bsmr-out/v2/gen/config-hash/foo/bar");
             let (mut dm, _) = make_processor(Default::default());
 
             let sender = dm.command_sender.dupe();
@@ -1832,7 +1832,7 @@ mod state_machine {
     #[tokio::test]
     async fn test_join_cancelled_future_starts_fresh() {
         ignore_stack_overflow_checks_for_future(async {
-            let path = make_path("buck-out/v2/eager/cancel-on-join");
+            let path = make_path("bsmr-out/v2/eager/cancel-on-join");
             let (mut dm, _) = make_processor(Default::default());
 
             let sender = dm.command_sender.dupe();
@@ -1884,9 +1884,9 @@ mod state_machine {
     #[tokio::test]
     async fn test_eager_release_skips_cancel_when_cluster_has_promoted_member() {
         ignore_stack_overflow_checks_for_future(async {
-            let config_path = make_path("buck-out/v2/eager/cluster/config");
-            let artifact_a = make_path("buck-out/v2/eager/cluster/a");
-            let artifact_b = make_path("buck-out/v2/eager/cluster/b");
+            let config_path = make_path("bsmr-out/v2/eager/cluster/config");
+            let artifact_a = make_path("bsmr-out/v2/eager/cluster/a");
+            let artifact_b = make_path("bsmr-out/v2/eager/cluster/b");
             let (mut dm, _) = make_processor(Default::default());
 
             let sender = dm.command_sender.dupe();

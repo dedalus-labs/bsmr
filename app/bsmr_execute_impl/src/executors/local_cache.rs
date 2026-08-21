@@ -572,7 +572,7 @@ mod tests {
     fn cached_outputs_must_exactly_match_declared_outputs() -> bsmr_error::Result<()> {
         let result = LocalActionResult {
             output_files: vec![LocalOutputFile {
-                path: "buck-out/result".to_owned(),
+                path: "bsmr-out/result".to_owned(),
                 digest: LocalDigest {
                     algorithm: "SHA256".to_owned(),
                     hash: "00".repeat(32),
@@ -583,8 +583,8 @@ mod tests {
             ..Default::default()
         };
 
-        validate_output_paths(["buck-out/result".to_owned()], &result)?;
-        assert!(validate_output_paths(["buck-out/other".to_owned()], &result).is_err());
+        validate_output_paths(["bsmr-out/result".to_owned()], &result)?;
+        assert!(validate_output_paths(["bsmr-out/other".to_owned()], &result).is_err());
         assert!(validate_output_paths([], &result).is_err());
         Ok(())
     }

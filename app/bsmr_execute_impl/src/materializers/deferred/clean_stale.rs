@@ -343,7 +343,7 @@ impl CleanStaleArtifactsCommand {
                 .materializer_state_table()
                 .read_materializer_state(io.digest_config())?;
 
-            // Entries in the db should have been found in buck-out, return error and skip cleaning untracked artifacts.
+            // Entries in the db should have been found in bsmr-out, return error and skip cleaning untracked artifacts.
             if !materializer_state.is_empty() {
                 let error = CleanStaleError {
                     db_size: materializer_state.len(),

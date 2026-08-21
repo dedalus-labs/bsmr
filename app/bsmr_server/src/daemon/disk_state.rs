@@ -116,7 +116,7 @@ pub(crate) async fn maybe_initialize_materializer_sqlite_db(
 ) -> bsmr_error::Result<(Option<MaterializerStateSqliteDb>, Option<MaterializerState>)> {
     if !options.sqlite_materializer_state {
         // When sqlite materializer state is disabled, we should always delete the materializer state db.
-        // Otherwise, artifacts in buck-out will diverge from the state stored in db.
+        // Otherwise, artifacts in bsmr-out will diverge from the state stored in db.
         io_executor
             .execute_io_inline(|| {
                 fs_util::remove_all(paths.materializer_state_path())
@@ -204,7 +204,7 @@ pub(crate) async fn maybe_initialize_incremental_sqlite_db(
 
 // Once we start storing disk state in the cache directory, we need to make sure
 // bsmr always deletes the cache directory if the cache is disabled.
-// Otherwise, buck-out state can diverge from the state of on-disk cache when
+// Otherwise, bsmr-out state can diverge from the state of on-disk cache when
 // cache is disabled, causing bsmr to use stale cache when reading from the
 // cache is re-enabled. One way this can happen is that someone can build on
 // an older revision with a bsmr that doesn't understand the cache directory
@@ -262,7 +262,7 @@ mod tests {
     fn test_delete_all_from_cache_dir() {
         let fs_temp = ProjectRootTemp::new().unwrap();
         let fs = fs_temp.path();
-        let cache_dir_path = fs.resolve(ProjectRelativePath::unchecked_new("buck-out/v2/cache"));
+        let cache_dir_path = fs.resolve(ProjectRelativePath::unchecked_new("bsmr-out/v2/cache"));
         let materializer_state_db = cache_dir_path.join(ForwardRelativePath::unchecked_new(
             "materializer_state/db.sqlite",
         ));
@@ -286,7 +286,7 @@ mod tests {
     fn test_delete_from_cache_dir_with_known_dirs() {
         let fs_temp = ProjectRootTemp::new().unwrap();
         let fs = fs_temp.path();
-        let cache_dir_path = fs.resolve(ProjectRelativePath::unchecked_new("buck-out/v2/cache"));
+        let cache_dir_path = fs.resolve(ProjectRelativePath::unchecked_new("bsmr-out/v2/cache"));
         let materializer_state_db = cache_dir_path.join(ForwardRelativePath::unchecked_new(
             "materializer_state/db.sqlite",
         ));

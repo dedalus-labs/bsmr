@@ -925,7 +925,7 @@ mod tests {
         let artifact_fs = ArtifactFs::new(
             cells,
             BuckOutPathResolver::new(ProjectRelativePathBuf::unchecked_new(
-                "cell/buck-out/v2".into(),
+                "cell/bsmr-out/v2".into(),
             )),
             project_fs.dupe(),
         );

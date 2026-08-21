@@ -48,7 +48,7 @@ pub(crate) enum AuditOutputError {
     )]
     UnsupportedPathType(String),
     #[error(
-        "Invalid path {0} - failed to find either a configuration hash or a content hash in the path. Please make sure that the path is a buck-out path."
+        "Invalid path {0} - failed to find either a configuration hash or a content hash in the path. Please make sure that the path is a bsmr-out path."
     )]
     InvalidPathNoHashFound(String),
     #[error("Invalid path {0} - found both a configuration hash and a content hash in the path!")]
@@ -147,10 +147,10 @@ impl ServerAuditSubcommand for AuditOutputCommand {
     ) -> bsmr_error::Result<()> {
         Ok(server_ctx
             .with_dice_ctx(|server_ctx, mut dice_ctx| async move {
-                // First, we parse the buck-out path to get a target label. Next, we configure the target
+                // First, we parse the bsmr-out path to get a target label. Next, we configure the target
                 // label and run analysis on it to get the `DeferredTable`. Then, we iterate through the
                 // deferred table's entries and look at their build outputs (if they have any) to try to
-                // match the inputted buck-out path with the build output's buck-out path. Once we find
+                // match the inputted bsmr-out path with the build output's bsmr-out path. Once we find
                 // a matching path, we create the `ActionQueryNode` from the action key associated with the
                 // matching build output, and print out the result.
 
@@ -177,7 +177,7 @@ impl ServerAuditSubcommand for AuditOutputCommand {
                             AuditOutputResult::MaybeRelevantForConfigurationHashPath(label) => {
                                 writeln!(
                                     stdout,
-                                    "Platform configuration of the buck-out path did not match the one used to invoke this command. Returning the most relevant unconfigured target label for the buck-out path: {label}"
+                                    "Platform configuration of the bsmr-out path did not match the one used to invoke this command. Returning the most relevant unconfigured target label for the bsmr-out path: {label}"
                                 )?;
                             },
                             AuditOutputResult::MatchContentBasedPath(label) => {
@@ -189,7 +189,7 @@ impl ServerAuditSubcommand for AuditOutputCommand {
                         // If we get here, that means we failed to find any matching actions
                         writeln!(
                             stdout,
-                            "Failed to find an action that produced the output path. Make sure that you did not input a symlinked buck-out path."
+                            "Failed to find an action that produced the output path. Make sure that you did not input a symlinked bsmr-out path."
                         )?;
                     }
                 }

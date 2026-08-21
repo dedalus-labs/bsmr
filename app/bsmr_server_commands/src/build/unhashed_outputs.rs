@@ -106,7 +106,7 @@ fn create_unhashed_link(
         abs_unhashed_path = AbsNormPathBuf::from(path.to_owned())?;
     }
 
-    // We are going to need to clear the path between buck-out and the symlink we want to create.
+    // We are going to need to clear the path between bsmr-out and the symlink we want to create.
     // To do this, we need to traverse forward out of buck_out_root and towards our symlink, and
     // delete any files or symlinks we find along the way. As soon as we find one, we can stop.
 
@@ -173,22 +173,22 @@ mod tests {
     #[test]
     fn test_iter_reverse_ancestors() {
         let prefix = if cfg!(windows) { "C:" } else { "" };
-        let root = AbsNormPathBuf::try_from(format!("{prefix}/repo/buck-out/v2")).unwrap();
+        let root = AbsNormPathBuf::try_from(format!("{prefix}/repo/bsmr-out/v2")).unwrap();
         let path =
-            AbsNormPathBuf::try_from(format!("{prefix}/repo/buck-out/v2/foo/bar/some")).unwrap();
+            AbsNormPathBuf::try_from(format!("{prefix}/repo/bsmr-out/v2/foo/bar/some")).unwrap();
 
         let mut iter = iter_reverse_ancestors(&path, &root);
         assert_eq!(
             iter.next().unwrap().to_str().unwrap(),
-            &format!("{prefix}/repo/buck-out/v2/foo"),
+            &format!("{prefix}/repo/bsmr-out/v2/foo"),
         );
         assert_eq!(
             iter.next().unwrap().to_str().unwrap(),
-            &format!("{prefix}/repo/buck-out/v2/foo/bar"),
+            &format!("{prefix}/repo/bsmr-out/v2/foo/bar"),
         );
         assert_eq!(
             iter.next().unwrap().to_str().unwrap(),
-            &format!("{prefix}/repo/buck-out/v2/foo/bar/some"),
+            &format!("{prefix}/repo/bsmr-out/v2/foo/bar/some"),
         );
         assert_eq!(iter.next(), None);
     }

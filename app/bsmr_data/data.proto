@@ -262,7 +262,7 @@ message InstantEvent {
     // done by the daemon, it needs to come through this way.
     RestartConfiguration restart_configuration = 28;
 
-    // Unexpected file found in buck-out/<isolation_dir>/gen during a
+    // Unexpected file found in bsmr-out/<isolation_dir>/gen during a
     // clean --stale run, not found in materializer state
     UntrackedFile untracked_file = 29;
 

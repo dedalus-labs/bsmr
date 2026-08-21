@@ -23,7 +23,7 @@ use crate::AuditSubcommand;
 #[derive(Debug, clap::Parser, serde::Serialize, serde::Deserialize)]
 #[clap(
     name = "audit-parse",
-    about = "Parses the buck-out path into parts that may be useful (ex: config hash, file path to artifact)."
+    about = "Parses the bsmr-out path into parts that may be useful (ex: config hash, file path to artifact)."
 )]
 pub struct AuditParseCommand {
     #[clap(flatten)]
@@ -35,7 +35,7 @@ pub struct AuditParseCommand {
 
     #[clap(
         name = "OUTPUT_PATH",
-        help = "The buck-out path to the build artifact, starting with `buck-out` and including the configuration platform."
+        help = "The bsmr-out path to the build artifact, starting with `bsmr-out` and including the configuration platform."
     )]
     pub output_path: String,
 
