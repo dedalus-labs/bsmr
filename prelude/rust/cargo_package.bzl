@@ -1,3 +1,9 @@
+# ===----------------------------------------------------------------------===
+# Upstream-Source: facebook/buck2@1560aca2002865cd73d7cafb22c705cfb640b2bc
+# Modifications Copyright (c) 2026 Dedalus Labs, Inc. and its contributors
+# SPDX-License-Identifier: Apache-2.0
+# ===----------------------------------------------------------------------===
+
 # Copyright (c) Meta Platforms, Inc. and affiliates.
 #
 # This source code is dual-licensed under either the MIT license found in the
@@ -19,7 +25,7 @@ load("@prelude//utils:type_defs.bzl", "is_dict", "is_list")
 
 def set_reindeer_platforms(platforms) -> None:
     """
-    Call from a PACKAGE or BUCK_TREE file to make the macros in this file
+    Call from a PACKAGE or BSMR_TREE file to make the macros in this file
     recognize your own non-default platforms.
 
         load("@prelude//rust:cargo_package.bzl", "DEFAULT_REINDEER_PLATFORMS", "set_reindeer_platforms")

@@ -5,7 +5,7 @@
 
 # Defines build targets for packages/rust/starlark/starlark.
 
-load("@bsmr_build//rules:native_rules.bzl", "alias", "buck_filegroup")
+load("@bsmr_build//rules:native_rules.bzl", "alias", "bsmr_filegroup")
 load("@bsmr_build//rules:rust.bzl", "rust_library")
 
 oncall("build_infra")
@@ -30,7 +30,7 @@ alias(
     actual = "root//packages/rust/starlark/starlark_bin:starlark_bin",
 )
 
-buck_filegroup(
+bsmr_filegroup(
     name = "testcases",
     srcs = glob([
         "src/**/golden/**",
@@ -67,7 +67,7 @@ rust_library(
     ],
     test_env = {
         # Some of our tests include testcase files relative to CARGO_MANIFEST_DIR.
-        # This is a hack that allows both `cargo test` and `buck test` to work.
+        # This is a hack that allows both `cargo test` and `bsmr test` to work.
         "CARGO_MANIFEST_DIR": "$(location :testcases)",
     },
     deps = [

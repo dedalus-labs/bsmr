@@ -17,17 +17,17 @@
 
 import re
 
-from bsmr.tests.e2e_util.api.buck import Buck
-from bsmr.tests.e2e_util.buck_workspace import buck_test
+from bsmr.tests.e2e_util.api.bsmr import Bsmr
+from bsmr.tests.e2e_util.bsmr_workspace import bsmr_test
 
 
 def _replace_hash(s: str) -> str:
     return re.sub(r"\b[0-9a-f]{16}\b", "<HASH>", s)
 
 
-@buck_test()
-async def test_ctargets_incompatible(buck: Buck) -> None:
-    result = await buck.ctargets(
+@bsmr_test()
+async def test_ctargets_incompatible(bsmr: Bsmr) -> None:
+    result = await bsmr.ctargets(
         # This one will be omitted from the output because it is not compatible.
         "root//:triangle",
         # This one will be output.

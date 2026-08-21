@@ -15,42 +15,42 @@
 # pyre-strict
 
 
-from bsmr.tests.e2e_util.api.buck import Buck
+from bsmr.tests.e2e_util.api.bsmr import Bsmr
 from bsmr.tests.e2e_util.asserts import expect_failure
-from bsmr.tests.e2e_util.buck_workspace import buck_test
+from bsmr.tests.e2e_util.bsmr_workspace import bsmr_test
 
 
-@buck_test()
-async def test_build_artifact(buck: Buck) -> None:
-    res = await buck.bxl(
+@bsmr_test()
+async def test_build_artifact(bsmr: Bsmr) -> None:
+    res = await bsmr.bxl(
         "//:lazy_build_artifact.bxl:build_artifact",
     )
     assert "foo.txt" in res.stdout
     assert "bar.txt" in res.stdout
 
 
-@buck_test()
-async def test_build_artifact_catch_error(buck: Buck) -> None:
-    res = await buck.bxl(
+@bsmr_test()
+async def test_build_artifact_catch_error(bsmr: Bsmr) -> None:
+    res = await bsmr.bxl(
         "//:lazy_build_artifact.bxl:build_artifact_fail",
     )
     assert "foo.txt" in res.stdout
 
 
-@buck_test()
-async def test_cannot_build_dynmiac_action_output(buck: Buck) -> None:
+@bsmr_test()
+async def test_cannot_build_dynmiac_action_output(bsmr: Bsmr) -> None:
     await expect_failure(
-        buck.bxl(
+        bsmr.bxl(
             "//:lazy_build_artifact.bxl:dynamic",
         ),
         stderr_regex="does not accept declared artifact",
     )
 
 
-@buck_test()
-async def test_cannot_bxl_action_output(buck: Buck) -> None:
+@bsmr_test()
+async def test_cannot_bxl_action_output(bsmr: Bsmr) -> None:
     await expect_failure(
-        buck.bxl(
+        bsmr.bxl(
             "//:lazy_build_artifact.bxl:bxl_action_output",
         ),
         stderr_regex="does not accept declared artifact",

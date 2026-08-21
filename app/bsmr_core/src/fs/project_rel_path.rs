@@ -17,10 +17,10 @@
 //!
 //! 'ProjectRelativePath's are normalized, platform agnostic, forward pointing
 //! relative paths based at the `project root`.
-//! The `project root` is an 'AbsPath' that corresponds to the root of the buck
-//! process. This is not the current directory where the buck process is
-//! invoked. It is the path of the root of the buck project, which defines the
-//! buck version and configurations.
+//! The `project root` is an 'AbsPath' that corresponds to the root of the bsmr
+//! process. This is not the current directory where the bsmr process is
+//! invoked. It is the path of the root of the bsmr project, which defines the
+//! bsmr version and configurations.
 //!
 //! The 'ProjectFilesystem' is the filesystem containing the `project root`
 //! information. This file system is used to interact with the
@@ -46,16 +46,16 @@
 //!     AbsNormPathBuf::from("C:\\open\\fbsource\\".into())?
 //! };
 //! let some_path = if cfg!(not(windows)) {
-//!     AbsNormPath::new("/usr/local/fbsource/buck/BUILD.bsmr")?
+//!     AbsNormPath::new("/usr/local/fbsource/bsmr/BUILD.bsmr")?
 //! } else {
-//!     AbsNormPath::new("c:/open/fbsource/buck/BUILD.bsmr")?
+//!     AbsNormPath::new("c:/open/fbsource/bsmr/BUILD.bsmr")?
 //! };
 //!
 //! let fs = ProjectRoot::new_unchecked(root);
 //! let project_rel = fs.relativize(some_path)?;
 //!
 //! assert_eq!(
-//!     Cow::Borrowed(ProjectRelativePath::new("buck/BUILD.bsmr")?),
+//!     Cow::Borrowed(ProjectRelativePath::new("bsmr/BUILD.bsmr")?),
 //!     project_rel
 //! );
 //! assert_eq!(some_path.to_buf(), fs.resolve(project_rel.as_ref()));
@@ -63,7 +63,7 @@
 //! let rel_path = RelativePath::unchecked_new("../src");
 //! let project_rel_2 = project_rel.join_normalized(rel_path)?;
 //! assert_eq!(
-//!     ProjectRelativePathBuf::try_from("buck/src".to_owned())?,
+//!     ProjectRelativePathBuf::try_from("bsmr/src".to_owned())?,
 //!     project_rel_2
 //! );
 //!
@@ -749,7 +749,7 @@ impl<'a> IntoFileNameBufIterator for &'a ProjectRelativePathBuf {
 #[cfg(test)]
 mod tests {
     use bsmr_fs::paths::forward_rel_path::ForwardRelativePath;
-    use bsmr_hash::StdBuckHashMap;
+    use bsmr_hash::StdBsmrHashMap;
 
     use crate::fs::project_rel_path::ProjectRelativePath;
     use crate::fs::project_rel_path::ProjectRelativePathBuf;
@@ -811,7 +811,7 @@ mod tests {
 
     #[test]
     fn wrapped_paths_work_in_maps() -> bsmr_error::Result<()> {
-        let mut map = StdBuckHashMap::default();
+        let mut map = StdBsmrHashMap::default();
 
         let p1 = ForwardRelativePath::new("foo")?;
         let p2 = ProjectRelativePath::new("bar")?;

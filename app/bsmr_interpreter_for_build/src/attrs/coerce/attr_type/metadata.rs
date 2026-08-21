@@ -14,7 +14,7 @@
  * above-listed licenses.
  */
 
-use bsmr_error::BuckErrorContext;
+use bsmr_error::BsmrErrorContext;
 use bsmr_error::conversion::from_any_with_tag;
 use bsmr_error::internal_error;
 use bsmr_interpreter::types::opaque_metadata::OpaqueMetadata;
@@ -54,7 +54,7 @@ impl AttrTypeCoerce for MetadataAttrType {
             let value = value
                 .to_json_value()
                 .map_err(|e| from_any_with_tag(e, bsmr_error::ErrorTag::Tier0))
-                .with_buck_error_context(|| {
+                .with_bsmr_error_context(|| {
                     format!(
                         "Metadata attribute with key {} is not convertible to JSON: {}",
                         key.to_owned(),

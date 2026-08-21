@@ -23,7 +23,7 @@ use bsmr_core::fs::project_rel_path::ProjectRelativePathBuf;
 use bsmr_core::soft_error;
 use bsmr_directory::directory::directory_ref::DirectoryRef;
 use bsmr_directory::directory::entry::DirectoryEntry;
-use bsmr_error::BuckErrorContext;
+use bsmr_error::BsmrErrorContext;
 use bsmr_error::internal_error;
 use bsmr_execute::digest_config::DigestConfig;
 use bsmr_execute::directory::ActionDirectoryEntry;
@@ -488,7 +488,7 @@ impl ArtifactTree {
             sqlite_db
                 .materializer_state_table()
                 .delete(invalidated_paths)
-                .buck_error_context("Error invalidating paths in materializer state")?;
+                .bsmr_error_context("Error invalidating paths in materializer state")?;
         }
 
         Ok(futs)

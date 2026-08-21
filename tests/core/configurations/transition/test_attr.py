@@ -15,13 +15,13 @@
 # pyre-strict
 
 
-from bsmr.tests.e2e_util.api.buck import Buck
-from bsmr.tests.e2e_util.buck_workspace import buck_test
+from bsmr.tests.e2e_util.api.bsmr import Bsmr
+from bsmr.tests.e2e_util.bsmr_workspace import bsmr_test
 
 
-@buck_test()
-async def test_configuration_transition_attr(buck: Buck) -> None:
-    result = await buck.cquery("deps(root//:the-test)")
+@bsmr_test()
+async def test_configuration_transition_attr(bsmr: Bsmr) -> None:
+    result = await bsmr.cquery("deps(root//:the-test)")
     result.check_returncode()
     # Default configuration is iphoneos and it should be transitioned to watchos
     assert ":watchos_resource" in result.stdout

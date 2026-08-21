@@ -39,7 +39,7 @@ queried with `bsmr aquery`.
 A single input or output of an [action](#action). These are files that
 participate as inputs or outputs of a build and can be source files or build
 outputs. For more information, see the
-[Artifact API](https://buck2.build/docs/api/build/Artifact/).
+[Artifact API](https://oss.dedaluslabs.ai/bsmr/api/build/Artifact/).
 
 ## Attribute
 
@@ -61,7 +61,7 @@ and any sub-directories not containing a `BUILD.bsmr` file as a [package](#packa
 
 ## BXL
 
-BXL ([Buck eXtension Language](../../bxl)) scripts are written in
+BXL ([Bsmr eXtension Language](../../bxl)) scripts are written in
 [Starlark](#starlark) (a restricted subset of Python) and give integrators the
 ability to inspect and interact directly with the bsmr graph.
 
@@ -75,7 +75,7 @@ BXL scripts can query the [action graph](#action-graph),
 Originally intended to allow for migration of repositories with different setups
 into one monorepo. The cell root always contains a [.bsmr](#bsmr),
 although the presence of a .bsmr file doesn't in itself define a cell.
-Cells are specified in the .bsmr for the Buck [project](#project).
+Cells are specified in the .bsmr for the Bsmr [project](#project).
 
 ## Configuration
 
@@ -119,7 +119,7 @@ library to use, etc.
 
 The Daemon process lives between invocations and is designed to allow for cache
 reuse between Bessemer invocations, which can considerably speed up builds. For
-more information, see [Daemon (buckd)](daemon.md).
+more information, see [Daemon (bsmrd)](daemon.md).
 
 ## Dependency
 
@@ -172,7 +172,7 @@ implicitly loads all the symbols defined in the prelude whenever it loads a
 via a `load()` statement.
 
 When you create a Bessemer project using `bsmr init --git`, it will contain the
-prelude inherited from Buck2. The upstream version is viewable at
+prelude inherited from upstream. The upstream version is viewable at
 https://github.com/facebook/buck2/tree/main/prelude.
 
 ## Project
@@ -188,7 +188,7 @@ are executed from the project root.
 Data returned from a [rule](#rule) function. It's the only way that information
 from this rule is available to other rules that depend on it (see
 [dependency](#dependency)). For more information, see
-[Providers](https://buck2.build/docs/rule_authors/writing_rules/#providers).
+[Providers](https://oss.dedaluslabs.ai/bsmr/rule_authors/writing_rules/#providers).
 
 ## Platform
 

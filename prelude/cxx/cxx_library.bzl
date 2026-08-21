@@ -2189,7 +2189,7 @@ def _static_library(
     # No reason to create a static library with just a single object file. We
     # still want to create a static lib to expose as the default output because
     # it's the contract/expectation of external clients of the cmd line
-    # interface. Any tools consuming `buck build` outputs should get a
+    # interface. Any tools consuming `bsmr build` outputs should get a
     # consistent output type when building a library, not static lib or object
     # file depending on number of source files.
     linker_info = get_cxx_toolchain_info(ctx).linker_info

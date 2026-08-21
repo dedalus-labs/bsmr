@@ -19,7 +19,7 @@ use std::sync::Arc;
 use bsmr_core::configuration::transition::id::TransitionId;
 use bsmr_core::plugins::PluginKindSet;
 use bsmr_core::target::label::interner::ConcurrentTargetLabelInterner;
-use bsmr_error::BuckErrorContext;
+use bsmr_error::BsmrErrorContext;
 use bsmr_interpreter::coerce::COERCE_PROVIDERS_LABEL_FOR_BZL;
 use bsmr_interpreter::types::provider::callable::ValueAsProviderCallableLike;
 use bsmr_interpreter::types::transition::transition_id_from_value;
@@ -95,7 +95,7 @@ impl AttributeExt for Attribute {
                         &attr_coercion_context_for_bzl(eval)?,
                         x,
                     )
-                    .buck_error_context("Error coercing attribute default")?,
+                    .bsmr_error_context("Error coercing attribute default")?,
             )),
         };
         Ok(StarlarkAttribute::new(Attribute::new(

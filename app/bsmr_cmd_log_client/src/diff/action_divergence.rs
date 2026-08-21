@@ -14,9 +14,9 @@
  * above-listed licenses.
  */
 
-use bsmr_client_ctx::client_ctx::BuckSubcommand;
+use bsmr_client_ctx::client_ctx::BsmrSubcommand;
 use bsmr_client_ctx::client_ctx::ClientCommandContext;
-use bsmr_client_ctx::common::BuckArgMatches;
+use bsmr_client_ctx::common::BsmrArgMatches;
 use bsmr_client_ctx::events_ctx::EventsCtx;
 use bsmr_client_ctx::exit_result::ExitResult;
 use bsmr_data::ActionKey;
@@ -47,10 +47,10 @@ struct ActionExecutionData {
 }
 
 fn get_action_execution_data(
-    event: &bsmr_data::BuckEvent,
+    event: &bsmr_data::BsmrEvent,
 ) -> Option<(ActionKey, ActionExecutionData)> {
     event.data.as_ref().and_then(|data| match data {
-        bsmr_data::buck_event::Data::SpanEnd(end) => {
+        bsmr_data::bsmr_event::Data::SpanEnd(end) => {
             end.data.as_ref().and_then(|data| match data {
                 bsmr_data::span_end_event::Data::ActionExecution(data) => {
                     data.key.as_ref().map(|key: &ActionKey| {
@@ -128,12 +128,12 @@ fn print_divergence_msg(
     Ok(())
 }
 
-impl BuckSubcommand for ActionDivergenceCommand {
+impl BsmrSubcommand for ActionDivergenceCommand {
     const COMMAND_NAME: &'static str = "log-diff-action-divergence";
 
     async fn exec_impl(
         self,
-        _matches: BuckArgMatches<'_>,
+        _matches: BsmrArgMatches<'_>,
         ctx: ClientCommandContext<'_>,
         _events_ctx: &mut EventsCtx,
     ) -> ExitResult {

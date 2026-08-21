@@ -21,9 +21,9 @@ from pathlib import Path
 from tempfile import TemporaryDirectory
 
 import pytest
-from bsmr.tests.e2e_util.api.buck import Buck
-from bsmr.tests.e2e_util.api.buck_result import BuckResult
-from bsmr.tests.e2e_util.buck_workspace import buck_test, env
+from bsmr.tests.e2e_util.api.bsmr import Bsmr
+from bsmr.tests.e2e_util.api.bsmr_result import BsmrResult
+from bsmr.tests.e2e_util.bsmr_workspace import bsmr_test, env
 from bsmr.tests.e2e_util.helper.utils import filter_events
 
 
@@ -32,8 +32,8 @@ def test_dummy() -> None:
     pass
 
 
-def _configure(buck: Buck, kill_and_retry: bool) -> None:
-    with open(buck.cwd / ".bsmr.local", "w") as f:
+def _configure(bsmr: Bsmr, kill_and_retry: bool) -> None:
+    with open(bsmr.cwd / ".bsmr.local", "w") as f:
         f.write("[bsmr_resource_control]\n")
         if kill_and_retry:
             f.write("preferred_action_suspend_strategy = kill_and_retry\n")
@@ -41,7 +41,7 @@ def _configure(buck: Buck, kill_and_retry: bool) -> None:
             f.write("preferred_action_suspend_strategy = cgroup_freeze\n")
 
 
-def _use_some_memory_args(buck: Buck, temp: TemporaryDirectory[str]) -> list[str]:
+def _use_some_memory_args(bsmr: Bsmr, temp: TemporaryDirectory[str]) -> list[str]:
     return [
         "--show-full-simple-output",
         "-c",
@@ -54,14 +54,14 @@ def _use_some_memory_args(buck: Buck, temp: TemporaryDirectory[str]) -> list[str
 
 
 async def _check_suspends(  # noqa C901
-    buck: Buck,
+    bsmr: Bsmr,
     kill_and_retry: bool,
     temp: TemporaryDirectory[str],
-    res: BuckResult,
+    res: BsmrResult,
 ) -> int:
     # First check the reported suspensions
     actions = await filter_events(
-        buck,
+        bsmr,
         "Event",
         "data",
         "SpanEnd",
@@ -105,7 +105,7 @@ async def _check_suspends(  # noqa C901
         assert total_detected_kills >= expected_kills - 2
     else:
         paths = Path(res.stdout.strip()).read_text().splitlines()
-        paths = [buck.cwd / p for p in paths]
+        paths = [bsmr.cwd / p for p in paths]
         assert len(paths) == len(reported_suspends)
 
         # Then compare them to the detected suspensions
@@ -125,24 +125,24 @@ async def _check_suspends(  # noqa C901
     return num_suspended_actions
 
 
-@buck_test(skip_for_os=["darwin", "windows"], disable_daemon_cgroup=False)
+@bsmr_test(skip_for_os=["darwin", "windows"], disable_daemon_cgroup=False)
 @env("BSMR_HARD_ERROR", "panic")
 @pytest.mark.parametrize("kill_and_retry", [True, False])
 async def test_action_suspend(
-    buck: Buck,
+    bsmr: Bsmr,
     kill_and_retry: bool,
 ) -> None:
     temp = TemporaryDirectory()
-    _configure(buck, kill_and_retry)
-    res = await buck.build_without_report(
+    _configure(bsmr, kill_and_retry)
+    res = await bsmr.build_without_report(
         ":sleep_10",
-        *_use_some_memory_args(buck, temp),
+        *_use_some_memory_args(bsmr, temp),
     )
 
-    await _check_suspends(buck, kill_and_retry, temp, res)
+    await _check_suspends(bsmr, kill_and_retry, temp, res)
 
     pressure_starts = await filter_events(
-        buck,
+        bsmr,
         "Event",
         "data",
         "SpanStart",
@@ -150,7 +150,7 @@ async def test_action_suspend(
         "MemoryPressure",
     )
     pressure_ends = await filter_events(
-        buck,
+        bsmr,
         "Event",
         "data",
         "SpanEnd",
@@ -161,37 +161,37 @@ async def test_action_suspend(
     assert len(pressure_ends) == 1
 
 
-@buck_test(skip_for_os=["darwin", "windows"], disable_daemon_cgroup=False)
+@bsmr_test(skip_for_os=["darwin", "windows"], disable_daemon_cgroup=False)
 @env("BSMR_HARD_ERROR", "panic")
 @pytest.mark.parametrize("kill_and_retry", [True, False])
 async def test_action_suspend_stress_test(
-    buck: Buck,
+    bsmr: Bsmr,
     kill_and_retry: bool,
 ) -> None:
     temp = TemporaryDirectory()
-    _configure(buck, kill_and_retry)
-    await buck.build(
+    _configure(bsmr, kill_and_retry)
+    await bsmr.build(
         ":very_fast_100",
-        *_use_some_memory_args(buck, temp),
+        *_use_some_memory_args(bsmr, temp),
     )
 
 
-@buck_test(skip_for_os=["darwin", "windows"], disable_daemon_cgroup=False)
+@bsmr_test(skip_for_os=["darwin", "windows"], disable_daemon_cgroup=False)
 @pytest.mark.skip(
     reason="Action suspension not triggering in CI, same as test_action_suspend"
 )
 @pytest.mark.parametrize("kill_and_retry", [True, False])
 async def test_suspend_one_of_two(
-    buck: Buck,
+    bsmr: Bsmr,
     kill_and_retry: bool,
 ) -> None:
     temp = TemporaryDirectory()
-    _configure(buck, kill_and_retry)
+    _configure(bsmr, kill_and_retry)
 
-    res = await buck.build_without_report(
+    res = await bsmr.build_without_report(
         ":two_mutually_incompatible",
-        *_use_some_memory_args(buck, temp),
+        *_use_some_memory_args(bsmr, temp),
     )
 
-    num_suspends = await _check_suspends(buck, kill_and_retry, temp, res)
+    num_suspends = await _check_suspends(bsmr, kill_and_retry, temp, res)
     assert num_suspends == 1

@@ -15,15 +15,15 @@
 # pyre-strict
 
 
-from bsmr.tests.e2e_util.api.buck import Buck
+from bsmr.tests.e2e_util.api.bsmr import Bsmr
 from bsmr.tests.e2e_util.asserts import expect_failure
-from bsmr.tests.e2e_util.buck_workspace import buck_test
+from bsmr.tests.e2e_util.bsmr_workspace import bsmr_test
 
 
-@buck_test()
-async def test_configuration_transition_rule_infinite_bug(buck: Buck) -> None:
+@bsmr_test()
+async def test_configuration_transition_rule_infinite_bug(bsmr: Bsmr) -> None:
     result = await expect_failure(
-        buck.cquery(
+        bsmr.cquery(
             "deps(root//:xx)",
         )
     )

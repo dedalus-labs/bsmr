@@ -23,7 +23,7 @@ use std::sync::Arc;
 use allocative::Allocative;
 use async_trait::async_trait;
 use bsmr_core::cells::name::CellName;
-use bsmr_error::BuckErrorContext;
+use bsmr_error::BsmrErrorContext;
 use bsmr_error::internal_error;
 use bsmr_events::dispatch::get_dispatcher;
 use derive_more::Display;
@@ -220,7 +220,7 @@ impl Key for LegacyBsmrConfigForCellKey {
         let this_cell = cells.get(self.cell_name)?;
         let config = BsmrConfigBasedCells::parse_single_cell_with_dice(ctx, this_cell.path())
             .await
-            .with_buck_error_context(|| {
+            .with_bsmr_error_context(|| {
                 format!("Computing legacy bsmrconfigs for cell `{}`", self.cell_name)
             })?;
         let config = config.filter_values(is_config_invisible_to_dice);

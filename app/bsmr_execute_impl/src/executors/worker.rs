@@ -43,9 +43,9 @@ use bsmr_fs::error::IoResultExt;
 use bsmr_fs::fs_util;
 use bsmr_fs::paths::abs_norm_path::AbsNormPathBuf;
 use bsmr_fs::paths::file_name::FileName;
-use bsmr_hash::BuckDashMap;
-use bsmr_hash::BuckIndexMap;
-use bsmr_hash::StdBuckHashMap;
+use bsmr_hash::BsmrDashMap;
+use bsmr_hash::BsmrIndexMap;
+use bsmr_hash::StdBsmrHashMap;
 use bsmr_util::time_span::TimeSpan;
 use bsmr_worker_proto::ExecuteCommand;
 use bsmr_worker_proto::ExecuteCommandStream;
@@ -122,7 +122,7 @@ impl WorkerInitError {
                 // implies that it is the primary command and that exit code != 0
                 manager.failure(
                     execution_kind,
-                    BuckIndexMap::default(),
+                    BsmrIndexMap::default(),
                     std_streams,
                     *exit_code,
                     CommandExecutionMetadata::empty(TimeSpan::empty_now()),
@@ -133,7 +133,7 @@ impl WorkerInitError {
             WorkerInitError::ConnectionTimeout(..) | WorkerInitError::SpawnFailed(..) => manager
                 .failure(
                     execution_kind,
-                    BuckIndexMap::default(),
+                    BsmrIndexMap::default(),
                     CommandStdStreams::Local {
                         stdout: Default::default(),
                         stderr: format!("Error initializing worker: {self}").into_bytes(),
@@ -328,7 +328,7 @@ async fn spawn_worker(
                 Ok(GatherOutputStatus::Cancelled | GatherOutputStatus::TimedOut(_)) => {
                     WorkerInitError::InternalError(bsmr_error!(
                         bsmr_error::ErrorTag::WorkerCancelled,
-                        "Worker cancelled by buck"
+                        "Worker cancelled by bsmr"
                     ))
                 }
                 Err(e) => WorkerInitError::InternalError(e),
@@ -362,8 +362,8 @@ async fn spawn_worker(
 type WorkerFuture = Shared<BoxFuture<'static, Result<Arc<WorkerHandle>, Arc<WorkerInitError>>>>;
 
 pub struct WorkerPool {
-    workers: Arc<parking_lot::Mutex<StdBuckHashMap<WorkerId, WorkerFuture>>>,
-    brokers: Arc<parking_lot::Mutex<StdBuckHashMap<WorkerId, Arc<HostSharingBroker>>>>,
+    workers: Arc<parking_lot::Mutex<StdBsmrHashMap<WorkerId, WorkerFuture>>>,
+    brokers: Arc<parking_lot::Mutex<StdBsmrHashMap<WorkerId, Arc<HostSharingBroker>>>>,
     graceful_shutdown_timeout_s: Option<u32>,
 }
 
@@ -371,8 +371,8 @@ impl WorkerPool {
     pub fn new(graceful_shutdown_timeout_s: Option<u32>) -> WorkerPool {
         tracing::info!("Creating new WorkerPool");
         WorkerPool {
-            workers: Arc::new(parking_lot::Mutex::new(StdBuckHashMap::default())),
-            brokers: Arc::new(parking_lot::Mutex::new(StdBuckHashMap::default())),
+            workers: Arc::new(parking_lot::Mutex::new(StdBsmrHashMap::default())),
+            brokers: Arc::new(parking_lot::Mutex::new(StdBsmrHashMap::default())),
             graceful_shutdown_timeout_s,
         }
     }
@@ -443,7 +443,7 @@ enum WorkerClient {
         ids: Arc<AtomicU64>,
         stream: UnboundedSender<ExecuteCommandStream>,
         stream_closed_observer: Arc<dyn LivelinessObserver>,
-        waiters: Arc<BuckDashMap<u64, tokio::sync::oneshot::Sender<ExecuteResponseStream>>>,
+        waiters: Arc<BsmrDashMap<u64, tokio::sync::oneshot::Sender<ExecuteResponseStream>>>,
     },
 }
 
@@ -464,7 +464,7 @@ impl WorkerClient {
         let stream = client
             .execute_stream(tonic::Request::new(UnboundedReceiverStream::new(rx)))
             .await?;
-        let waiters: Arc<BuckDashMap<u64, tokio::sync::oneshot::Sender<ExecuteResponseStream>>> =
+        let waiters: Arc<BsmrDashMap<u64, tokio::sync::oneshot::Sender<ExecuteResponseStream>>> =
             Default::default();
         let (stream_closed_observer, stream_closed_guard) = LivelinessGuard::create();
         {

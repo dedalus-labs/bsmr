@@ -51,10 +51,10 @@ _BUILD_ROOT_LABELS = set([
     "windows_long_path_issue",  # Windows: relative path length exceeds PATH_MAX, program cannot access file
     "flowtype_ota_safety_target",  # produces JSON containing file paths that are project-relative
     "ctrlr_setting_paths",
-    "llvm_buck_genrule",
+    "llvm_bsmr_genrule",
 ])
 
-# In Buck1 the SRCS environment variable is only set if the substring SRCS is on the command line.
+# In Legacy the SRCS environment variable is only set if the substring SRCS is on the command line.
 # That's a horrible heuristic, and doesn't account for users accessing $SRCS from a shell script.
 # But in some cases, $SRCS is so large it breaks the process limit, so have a label to opt in to
 # that behavior.
@@ -129,7 +129,7 @@ def genrule_impl(ctx: AnalysisContext) -> list[Provider]:
     #   src - sources files
     #   out - where outputs go
     # `src` is the current directory
-    # Buck1 uses `.` as output, but that won't work since
+    # Legacy uses `.` as output, but that won't work since
     # Bessemer clears the output directory before execution, and thus src/sh too.
     return process_genrule(ctx, ctx.attrs.out, ctx.attrs.outs)
 
@@ -276,7 +276,7 @@ def process_genrule(
 
     replace_regex = []
 
-    # For backwards compatibility with Buck1.
+    # For backwards compatibility with Legacy.
     if is_windows:
         for re, sub in _WINDOWS_ENV_SUBSTITUTIONS:
             replace_regex.append((re, sub))
@@ -398,13 +398,13 @@ def process_genrule(
         if is_windows:
             rewrite_scratch_path = cmd_args(
                 cmd_args(ctx.label.project_root, relative_to = srcs_artifact),
-                format = 'set "BUCK_SCRATCH_PATH={}\\%BUCK_SCRATCH_PATH%"',
+                format = 'set "BSMR_SCRATCH_PATH={}\\%BSMR_SCRATCH_PATH%"',
             )
         else:
             srcs_dir = cmd_args(srcs_dir, quote = "shell")
             rewrite_scratch_path = cmd_args(
                 cmd_args(ctx.label.project_root, quote = "shell", relative_to = srcs_artifact),
-                format = "export BUCK_SCRATCH_PATH={}/$BUCK_SCRATCH_PATH",
+                format = "export BSMR_SCRATCH_PATH={}/$BSMR_SCRATCH_PATH",
             )
 
         # Relativize all paths in the command to the sandbox dir.
@@ -412,7 +412,7 @@ def process_genrule(
             script_cmd.relative_to(srcs_artifact)
 
         script = [
-            # Rewrite BUCK_SCRATCH_PATH
+            # Rewrite BSMR_SCRATCH_PATH
             rewrite_scratch_path,
             # Change to the directory that genrules expect.
             cmd_args(srcs_dir, format = "cd {}"),

@@ -52,7 +52,7 @@ use bsmr_core::target::configured_target_label::ConfiguredTargetLabel;
 use bsmr_execute::artifact_value::ArtifactValue;
 use bsmr_execute::digest_config::DigestConfig;
 use bsmr_execute::digest_config::SetDigestConfig;
-use bsmr_hash::StdBuckHashMap;
+use bsmr_hash::StdBsmrHashMap;
 use dice::UserComputationData;
 use dice::testing::DiceBuilder;
 use dupe::Dupe;
@@ -68,10 +68,10 @@ fn mock_analysis_for_tsets(
     mut dice_builder: DiceBuilder,
     tsets: Vec<OwnedFrozenValueTyped<FrozenTransitiveSet>>,
 ) -> DiceBuilder {
-    let mut by_target: StdBuckHashMap<
+    let mut by_target: StdBsmrHashMap<
         ConfiguredTargetLabel,
         Vec<(TransitiveSetKey, OwnedFrozenValueTyped<FrozenTransitiveSet>)>,
-    > = StdBuckHashMap::default();
+    > = StdBsmrHashMap::default();
 
     for value in tsets {
         let key = value.key().dupe();
@@ -96,7 +96,7 @@ fn mock_analysis_for_tsets(
                     RecordedActions::new(0),
                 ),
                 None,
-                StdBuckHashMap::default(),
+                StdBsmrHashMap::default(),
                 0,
                 0,
                 None,
@@ -211,7 +211,7 @@ async fn test_ensure_artifact_group() -> bsmr_error::Result<()> {
 
     let mut dice = dice_builder.build(extra).unwrap();
     dice.set_cell_resolver(cell_resolver)?;
-    dice.set_buck_out_path(None)?;
+    dice.set_output_path(None)?;
     inject_legacy_config_for_test(&mut dice, cell_parent, LegacyBsmrConfig::empty())?;
     let mut dice = dice.commit().await;
 

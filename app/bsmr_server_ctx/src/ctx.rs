@@ -41,7 +41,7 @@ use bsmr_events::dispatch::EventDispatcher;
 use bsmr_execute::materialize::materializer::Materializer;
 use bsmr_fs::paths::file_name::FileName;
 use bsmr_fs::working_dir::AbsWorkingDir;
-use bsmr_hash::StdBuckHashMap;
+use bsmr_hash::StdBsmrHashMap;
 use bsmr_wrapper_common::invocation_id::TraceId;
 use dice::DiceComputations;
 use dice::DiceTransaction;
@@ -139,12 +139,12 @@ pub trait ServerCommandContextTrait: Send + Sync {
         data: bsmr_data::command_start::Data,
     ) -> bsmr_error::Result<bsmr_data::CommandStart>;
 
-    async fn request_metadata(&self) -> bsmr_error::Result<StdBuckHashMap<String, String>>;
+    async fn request_metadata(&self) -> bsmr_error::Result<StdBsmrHashMap<String, String>>;
 
     async fn config_metadata(
         &self,
         ctx: &mut DiceComputations<'_>,
-    ) -> bsmr_error::Result<StdBuckHashMap<String, String>>;
+    ) -> bsmr_error::Result<StdBsmrHashMap<String, String>>;
 
     fn log_target_pattern(
         &self,

@@ -116,7 +116,7 @@ fn audit_methods(builder: &mut MethodsBuilder) {
     /// ```python
     /// def _impl_audit_output(ctx):
     ///     target_platform = "foo"
-    ///     result = ctx.audit().output("bsmr-out/v2/art/fbcode/some_cfg_hash/path/to/__target__/artifact", target_platform)
+    ///     result = ctx.audit().output("bsmr-out/default/art/fbcode/some_cfg_hash/path/to/__target__/artifact", target_platform)
     ///     ctx.output.print(result)
     /// ```
     fn output<'v>(

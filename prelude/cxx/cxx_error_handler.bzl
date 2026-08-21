@@ -1,3 +1,9 @@
+# ===----------------------------------------------------------------------===
+# Upstream-Source: facebook/buck2@1560aca2002865cd73d7cafb22c705cfb640b2bc
+# Modifications Copyright (c) 2026 Dedalus Labs, Inc. and its contributors
+# SPDX-License-Identifier: Apache-2.0
+# ===----------------------------------------------------------------------===
+
 # Copyright (c) Meta Platforms, Inc. and affiliates.
 #
 # This source code is dual-licensed under either the MIT license found in the
@@ -7,7 +13,7 @@
 # above-listed licenses.
 
 CxxGenericErrorType = record(
-    matcher = str | BuckRegex,
+    matcher = str | BsmrRegex,
     category_suffix = str,
 )
 
@@ -17,10 +23,10 @@ def make_error_type(matcher = None, category_suffix = str) -> CxxGenericErrorTyp
         category_suffix = category_suffix,
     )
 
-def _match(matcher: str | BuckRegex, lowercase_stderr: str) -> bool:
+def _match(matcher: str | BsmrRegex, lowercase_stderr: str) -> bool:
     if isinstance(matcher, str):
         return matcher in lowercase_stderr
-    elif isinstance(matcher, BuckRegex):
+    elif isinstance(matcher, BsmrRegex):
         return matcher.match(lowercase_stderr)
     else:
         fail("Unknown matcher type: {}", type(matcher))

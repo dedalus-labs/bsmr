@@ -17,7 +17,7 @@
 use std::collections::BTreeMap;
 
 use allocative::Allocative;
-use bsmr_hash::BuckHasher;
+use bsmr_hash::BsmrHasher;
 use derive_more::Display;
 use dupe::Dupe;
 use pagable::Pagable;
@@ -77,7 +77,7 @@ impl<'a> From<&'a PluginKindInner> for PluginKindInner {
 )]
 pub struct PluginKind(Intern<PluginKindInner>);
 
-interner!(PLUGIN_KIND_INTERNER, BuckHasher, PluginKindInner);
+interner!(PLUGIN_KIND_INTERNER, BsmrHasher, PluginKindInner);
 
 impl PluginKind {
     /// Creates a new `PluginKind` instance.
@@ -158,7 +158,7 @@ static_assertions::assert_eq_size!(PluginKindSetUnpacked, [usize; 2]);
 
 interner!(
     PLUGIN_KIND_SET_INTERNER,
-    BuckHasher,
+    BsmrHasher,
     PluginKindSetData,
     Vec<(PluginKind, bool)>,
     [(PluginKind, bool)]

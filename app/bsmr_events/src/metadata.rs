@@ -20,7 +20,7 @@ use std::sync::OnceLock;
 
 use bsmr_core::ci::ci_identifiers;
 use bsmr_core::facebook_only;
-use bsmr_hash::StdBuckHashMap;
+use bsmr_hash::StdBsmrHashMap;
 use bsmr_wrapper_common::BSMR_WRAPPER_ENV_VAR;
 
 use crate::daemon_id::DaemonId;
@@ -33,8 +33,8 @@ use crate::daemon_id::DaemonId;
 #[cfg(not(fbcode_build))]
 pub fn collect_with_extras(
     daemon: &DaemonId,
-    extras: &StdBuckHashMap<String, String>,
-) -> StdBuckHashMap<String, String> {
+    extras: &StdBsmrHashMap<String, String>,
+) -> StdBsmrHashMap<String, String> {
     let mut map = collect(daemon);
     for (k, v) in extras.iter() {
         map.entry(k.clone()).or_insert_with(|| v.clone());
@@ -43,15 +43,15 @@ pub fn collect_with_extras(
 }
 
 /// Collects metadata from the current binary and environment and writes it as map, suitable for telemetry purposes.
-pub fn collect(daemon: &DaemonId) -> StdBuckHashMap<String, String> {
+pub fn collect(daemon: &DaemonId) -> StdBsmrHashMap<String, String> {
     facebook_only();
-    fn add_env_var(map: &mut StdBuckHashMap<String, String>, key: &'static str, var: &'static str) {
+    fn add_env_var(map: &mut StdBsmrHashMap<String, String>, key: &'static str, var: &'static str) {
         if let Ok(data) = env::var(var) {
             map.insert(key.to_owned(), data);
         }
     }
 
-    let mut map = StdBuckHashMap::default();
+    let mut map = StdBsmrHashMap::default();
 
     let info = system_info();
     if let Some(hostname) = info.hostname {

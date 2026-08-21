@@ -15,8 +15,8 @@
 # pyre-strict
 
 
-from bsmr.tests.e2e_util.api.buck import Buck
-from bsmr.tests.e2e_util.buck_workspace import buck_test
+from bsmr.tests.e2e_util.api.bsmr import Bsmr
+from bsmr.tests.e2e_util.bsmr_workspace import bsmr_test
 from bsmr.tests.e2e_util.helper.utils import (
     expect_exec_count,
     random_string,
@@ -24,10 +24,10 @@ from bsmr.tests.e2e_util.helper.utils import (
 )
 
 
-@buck_test(inplace=True)
-async def test_remote_worker(buck: Buck) -> None:
+@bsmr_test(inplace=True)
+async def test_remote_worker(bsmr: Bsmr) -> None:
     target = "root//tests/targets/rules/remote_worker:run_two_worker_rules"
-    result = await buck.build(
+    result = await bsmr.build(
         target,
         "-c",
         f"test.cache_buster={random_string()}",
@@ -35,7 +35,7 @@ async def test_remote_worker(buck: Buck) -> None:
 
     output = result.get_build_report().output_for_target(target)
 
-    output_path = buck.cwd / output
+    output_path = bsmr.cwd / output
     with open(output_path, "r") as f:
         output_lines = f.readlines()
         assert len(output_lines) == 2
@@ -45,25 +45,25 @@ async def test_remote_worker(buck: Buck) -> None:
         # so we can't guarantee this is the case.
         # assert output_lines[0].strip() == output_lines[1].strip()
 
-    whatran_json = await read_what_ran(buck)
+    whatran_json = await read_what_ran(bsmr)
     worker_entries = [x for x in whatran_json if "run_remote_worker" in x["identity"]]
     assert len(worker_entries) == 2, whatran_json
     assert worker_entries[0]["reproducer"]["executor"] == "ReWorker"
 
-    whatran = (await buck.log("what-ran", "--skip-cache-hits")).stdout.split("\n")
+    whatran = (await bsmr.log("what-ran", "--skip-cache-hits")).stdout.split("\n")
     worker_lines = [x for x in whatran if "re_worker(" in x]
     assert len(worker_lines) == 2, whatran
 
 
-@buck_test(inplace=True)
-async def test_remote_worker_caches(buck: Buck) -> None:
+@bsmr_test(inplace=True)
+async def test_remote_worker_caches(bsmr: Bsmr) -> None:
     target = "root//tests/targets/rules/remote_worker:run_remote_worker_1"
     args = [
         target,
     ]
-    await buck.build(*args)
+    await bsmr.build(*args)
 
-    buck.kill()
+    bsmr.kill()
 
-    await buck.build(*args)
-    await expect_exec_count(buck, 0)
+    await bsmr.build(*args)
+    await expect_exec_count(bsmr, 0)

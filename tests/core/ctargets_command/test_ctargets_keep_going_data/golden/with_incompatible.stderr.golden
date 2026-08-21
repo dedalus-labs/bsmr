@@ -2,7 +2,7 @@
 
 [<TIMESTAMP>] Starting new bsmr daemon...
 [<TIMESTAMP>] Connected to new bsmr daemon.
-[<TIMESTAMP>] Buck UI: https://www.internalfb.com/bsmr/<UUID>
+[<TIMESTAMP>] Bsmr UI: https://www.internalfb.com/bsmr/<UUID>
 [<TIMESTAMP>] Skipped 1 incompatible targets:
 [<TIMESTAMP>]   root//a:macos_only (root//:linux_platform#<HASH>)
 [<TIMESTAMP>] Error parsing root//b

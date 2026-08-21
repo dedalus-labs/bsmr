@@ -1,3 +1,9 @@
+# ===----------------------------------------------------------------------===
+# Upstream-Source: facebook/buck2@1560aca2002865cd73d7cafb22c705cfb640b2bc
+# Modifications Copyright (c) 2026 Dedalus Labs, Inc. and its contributors
+# SPDX-License-Identifier: Apache-2.0
+# ===----------------------------------------------------------------------===
+
 # Copyright (c) Meta Platforms, Inc. and affiliates.
 #
 # This source code is dual-licensed under either the MIT license found in the
@@ -17,7 +23,7 @@ def __invoke_main() -> None:
     # sure the bundled runtime uses the correct standard library. We are safe
     # to remove it once we have initialized the runtime.
     # leaving it may cause errors if the user code calls a subprocess that
-    # expects to be using the system python distribution eg: buck
+    # expects to be using the system python distribution eg: bsmr
     os.environ.pop("PYTHONHOME", None)
 
     module = os.getenv("FB_PAR_MAIN_MODULE")

@@ -17,23 +17,23 @@
 import json
 import typing
 
-from bsmr.tests.e2e_util.api.buck import Buck
-from bsmr.tests.e2e_util.buck_workspace import buck_test
+from bsmr.tests.e2e_util.api.bsmr import Bsmr
+from bsmr.tests.e2e_util.bsmr_workspace import bsmr_test
 from bsmr.tests.e2e_util.helper.utils import filter_events
 
 
-@buck_test(skip_for_os=["darwin", "windows"], disable_daemon_cgroup=False)
-async def test_metrics_cgroup_no_resource_control(buck: Buck) -> None:
-    write_config(buck, resource_control=False)
-    snapshot = await start_daemon_and_get_snapshot(buck)
+@bsmr_test(skip_for_os=["darwin", "windows"], disable_daemon_cgroup=False)
+async def test_metrics_cgroup_no_resource_control(bsmr: Bsmr) -> None:
+    write_config(bsmr, resource_control=False)
+    snapshot = await start_daemon_and_get_snapshot(bsmr)
     assert snapshot["allprocs_cgroup"] is None
     assert snapshot["forkserver_actions_cgroup"] is None
 
 
-@buck_test(skip_for_os=["darwin", "windows"], disable_daemon_cgroup=False)
-async def test_metrics_cgroup_resource_control(buck: Buck) -> None:
-    write_config(buck, resource_control=True)
-    snapshot = await start_daemon_and_get_snapshot(buck)
+@bsmr_test(skip_for_os=["darwin", "windows"], disable_daemon_cgroup=False)
+async def test_metrics_cgroup_resource_control(bsmr: Bsmr) -> None:
+    write_config(bsmr, resource_control=True)
+    snapshot = await start_daemon_and_get_snapshot(bsmr)
     # Daemon should have allocated at least 500KB of anon memory
     assert snapshot["allprocs_cgroup"]["anon"] >= (
         snapshot["forkserver_actions_cgroup"]["anon"] + 500000
@@ -48,12 +48,12 @@ async def test_metrics_cgroup_resource_control(buck: Buck) -> None:
     )
 
 
-@buck_test(
+@bsmr_test(
     skip_for_os=["darwin", "windows"],
 )
-async def test_cgroup_path_tag(buck: Buck) -> None:
-    await buck.targets(":")
-    events = await filter_events(buck, "Event", "data", "Instant", "data", "SystemInfo")
+async def test_cgroup_path_tag(bsmr: Bsmr) -> None:
+    await bsmr.targets(":")
+    events = await filter_events(bsmr, "Event", "data", "Instant", "data", "SystemInfo")
     assert len(events) >= 1
     path = events[0]["daemon_cgroup_slice_path"]
     assert path is not None
@@ -65,18 +65,18 @@ async def test_noop() -> None:
     pass
 
 
-def write_config(buck: Buck, *, resource_control: bool) -> None:
-    with open(buck.cwd / ".bsmr", "a") as bsmrconfig:
+def write_config(bsmr: Bsmr, *, resource_control: bool) -> None:
+    with open(bsmr.cwd / ".bsmr", "a") as bsmrconfig:
         bsmrconfig.write("[bsmr_resource_control]\n")
         bsmrconfig.write(f"status = {'required' if resource_control else 'off'}\n")
 
 
-async def start_daemon_and_get_snapshot(buck: Buck) -> dict[str, typing.Any]:
+async def start_daemon_and_get_snapshot(bsmr: Bsmr) -> dict[str, typing.Any]:
     # Start the daemon
-    await buck.targets(":")
+    await bsmr.targets(":")
 
     # Get the snapshot
-    status_result = await buck.status("--snapshot")
+    status_result = await bsmr.status("--snapshot")
     status_data = json.loads(status_result.stdout)
     snapshot = status_data["snapshot"]
     return snapshot

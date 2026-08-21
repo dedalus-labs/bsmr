@@ -19,16 +19,16 @@ import asyncio
 from typing import Optional
 
 import pytest
-from bsmr.tests.e2e_util.api.buck import Buck
-from bsmr.tests.e2e_util.api.buck_result import BuckException, BuildResult
+from bsmr.tests.e2e_util.api.bsmr import Bsmr
+from bsmr.tests.e2e_util.api.bsmr_result import BsmrException, BuildResult
 from bsmr.tests.e2e_util.api.process import Process
 from bsmr.tests.e2e_util.asserts import expect_failure
-from bsmr.tests.e2e_util.buck_workspace import buck_test
+from bsmr.tests.e2e_util.bsmr_workspace import bsmr_test
 
 
-@buck_test()
-async def test_exit_when_different_state(buck: Buck) -> None:
-    a = buck.build(
+@bsmr_test()
+async def test_exit_when_different_state(bsmr: Bsmr) -> None:
+    a = bsmr.build(
         "-c",
         "foo.bar=1",
         "--exit-when=differentstate",
@@ -37,7 +37,7 @@ async def test_exit_when_different_state(buck: Buck) -> None:
         "--no-remote-cache",
     )
 
-    b = buck.build(
+    b = bsmr.build(
         "-c",
         "foo.bar=2",
         "--exit-when=differentstate",
@@ -48,7 +48,7 @@ async def test_exit_when_different_state(buck: Buck) -> None:
 
     # create a coroutine that can return a result
     async def process(
-        p: Process[BuildResult, BuckException],
+        p: Process[BuildResult, BsmrException],
     ) -> tuple[Optional[int], str]:
         result = await expect_failure(p)
         return (result.process.returncode, result.stderr)
@@ -69,10 +69,10 @@ async def test_exit_when_different_state(buck: Buck) -> None:
         assert exit_code == 4
 
 
-@buck_test()
+@bsmr_test()
 @pytest.mark.parametrize("same_state", [True, False])
-async def test_exit_when_preemptible_always(buck: Buck, same_state: bool) -> None:
-    a = buck.build(
+async def test_exit_when_preemptible_always(bsmr: Bsmr, same_state: bool) -> None:
+    a = bsmr.build(
         "-c",
         "foo.bar=1",
         "--preemptible=always",
@@ -81,7 +81,7 @@ async def test_exit_when_preemptible_always(buck: Buck, same_state: bool) -> Non
         "--no-remote-cache",
     )
 
-    b = buck.build(
+    b = bsmr.build(
         "-c",
         # We expect to ALWAYS preempt commands, to prevent blocking new callees
         "foo.bar=1" if same_state else "foo.bar=2",
@@ -93,7 +93,7 @@ async def test_exit_when_preemptible_always(buck: Buck, same_state: bool) -> Non
 
     # create a coroutine that can return a result
     async def process(
-        p: Process[BuildResult, BuckException],
+        p: Process[BuildResult, BsmrException],
     ) -> tuple[Optional[int], str]:
         result = await expect_failure(p)
         return (result.process.returncode, result.stderr)
@@ -114,9 +114,9 @@ async def test_exit_when_preemptible_always(buck: Buck, same_state: bool) -> Non
         assert exit_code == 5
 
 
-@buck_test(write_invocation_record=True)
-async def test_preemptible_logged(buck: Buck) -> None:
-    res = await buck.targets(
+@bsmr_test(write_invocation_record=True)
+async def test_preemptible_logged(bsmr: Bsmr) -> None:
+    res = await bsmr.targets(
         "--preemptible=always",
         ":",
     )
@@ -124,12 +124,12 @@ async def test_preemptible_logged(buck: Buck) -> None:
     assert record["preemptible"] == "ALWAYS"
 
 
-@buck_test()
+@bsmr_test()
 @pytest.mark.parametrize("same_state", [True, False])
 async def test_exit_when_preemptible_on_different_state(
-    buck: Buck, same_state: bool
+    bsmr: Bsmr, same_state: bool
 ) -> None:
-    a = buck.build(
+    a = bsmr.build(
         "-c",
         "foo.bar=1",
         "--preemptible=ondifferentstate",
@@ -138,7 +138,7 @@ async def test_exit_when_preemptible_on_different_state(
         "--no-remote-cache",
     )
 
-    b = buck.build(
+    b = bsmr.build(
         "-c",
         # We expect to ALWAYS preempt commands, to prevent blocking new callees
         "foo.bar=1" if same_state else "foo.bar=2",
@@ -150,7 +150,7 @@ async def test_exit_when_preemptible_on_different_state(
 
     # create a coroutine that can return a result
     async def process(
-        p: Process[BuildResult, BuckException],
+        p: Process[BuildResult, BsmrException],
     ) -> tuple[Optional[int], str]:
         result = await expect_failure(p)
         return (result.process.returncode, result.stderr)
@@ -176,21 +176,21 @@ async def test_exit_when_preemptible_on_different_state(
         assert exit_code == 5
 
 
-@buck_test()
+@bsmr_test()
 @pytest.mark.parametrize("same_state", [True, False])
 async def test_exit_when_not_idle_does_not_start_when_daemon_busy(
-    buck: Buck, same_state: bool
+    bsmr: Bsmr, same_state: bool
 ) -> None:
     """Test that an incoming command with --exit-when=notidle does not start if there's another command running."""
 
     # create a coroutine that can return a result
     async def process(
-        p: Process[BuildResult, BuckException],
+        p: Process[BuildResult, BsmrException],
     ) -> tuple[Optional[int], str]:
         result = await expect_failure(p)
         return (result.process.returncode, result.stderr)
 
-    a = buck.build(
+    a = bsmr.build(
         "-c",
         "foo.bar=1",
         ":long_running_target",
@@ -203,7 +203,7 @@ async def test_exit_when_not_idle_does_not_start_when_daemon_busy(
     # Wait a short time to ensure the first command has started
     await asyncio.sleep(0.5)
 
-    b = buck.build(
+    b = bsmr.build(
         "-c",
         "foo.bar=1" if same_state else "foo.bar=2",
         "--exit-when=notidle",
@@ -230,21 +230,21 @@ async def test_exit_when_not_idle_does_not_start_when_daemon_busy(
         assert exit_code == 4
 
 
-@buck_test()
+@bsmr_test()
 @pytest.mark.parametrize("same_state", [True, False])
 async def test_exit_when_not_idle_does_not_gets_preempted(
-    buck: Buck, same_state: bool
+    bsmr: Bsmr, same_state: bool
 ) -> None:
     """Test that a running command with --exit-when=notidle continues running even with an incoming command."""
 
     # create a coroutine that can return a result
     async def process(
-        p: Process[BuildResult, BuckException],
+        p: Process[BuildResult, BsmrException],
     ) -> tuple[Optional[int], str]:
         result = await expect_failure(p)
         return (result.process.returncode, result.stderr)
 
-    a = buck.build(
+    a = bsmr.build(
         "-c",
         "foo.bar=1",
         "--exit-when=notidle",
@@ -259,7 +259,7 @@ async def test_exit_when_not_idle_does_not_gets_preempted(
     await asyncio.sleep(0.5)
 
     # Start another command without the flag (default is --preemptible=never)
-    b = buck.build(
+    b = bsmr.build(
         "-c",
         "foo.bar=1" if same_state else "foo.bar=2",
         ":long_running_target",
@@ -279,21 +279,21 @@ async def test_exit_when_not_idle_does_not_gets_preempted(
     assert len(pending) == 2
 
 
-@buck_test()
+@bsmr_test()
 @pytest.mark.parametrize("same_state", [True, False])
 async def test_preemptible_exit_when_not_idle_gets_preempted(
-    buck: Buck, same_state: bool
+    bsmr: Bsmr, same_state: bool
 ) -> None:
     """Test that a running command with --exit-when=notidle and --preemptible gets preempted with an incoming command."""
 
     # create a coroutine that can return a result
     async def process(
-        p: Process[BuildResult, BuckException],
+        p: Process[BuildResult, BsmrException],
     ) -> tuple[Optional[int], str]:
         result = await expect_failure(p)
         return (result.process.returncode, result.stderr)
 
-    a = buck.build(
+    a = bsmr.build(
         "-c",
         "foo.bar=1",
         "--exit-when=notidle",
@@ -309,7 +309,7 @@ async def test_preemptible_exit_when_not_idle_gets_preempted(
     await asyncio.sleep(0.5)
 
     # Start another command without the flag (default is --preemptible=never)
-    b = buck.build(
+    b = bsmr.build(
         "-c",
         "foo.bar=1" if same_state else "foo.bar=2",
         ":long_running_target",
@@ -335,10 +335,10 @@ async def test_preemptible_exit_when_not_idle_gets_preempted(
         assert exit_code == 5
 
 
-@buck_test()
+@bsmr_test()
 @pytest.mark.parametrize("same_state", [True, False])
 async def test_multiple_exit_when_not_idle_commands(
-    buck: Buck, same_state: bool
+    bsmr: Bsmr, same_state: bool
 ) -> None:
     """
     Test that a running command with --exit-when=notidle does NOT get preempted by an incoming command that
@@ -347,12 +347,12 @@ async def test_multiple_exit_when_not_idle_commands(
 
     # create a coroutine that can return a result
     async def process(
-        p: Process[BuildResult, BuckException],
+        p: Process[BuildResult, BsmrException],
     ) -> tuple[Optional[int], str]:
         result = await expect_failure(p)
         return (result.process.returncode, result.stderr)
 
-    a = buck.build(
+    a = bsmr.build(
         "-c",
         "foo.bar=1",
         "--exit-when=notidle",
@@ -366,7 +366,7 @@ async def test_multiple_exit_when_not_idle_commands(
     # Wait a short time to ensure the first command has started
     await asyncio.sleep(0.5)
 
-    b = buck.build(
+    b = bsmr.build(
         "-c",
         "foo.bar=1" if same_state else "foo.bar=2",
         "--exit-when=notidle",
@@ -392,21 +392,21 @@ async def test_multiple_exit_when_not_idle_commands(
         assert exit_code == 4
 
 
-@buck_test()
+@bsmr_test()
 @pytest.mark.parametrize("same_state", [True, False])
 async def test_exit_when_not_idle_after_command_exits(
-    buck: Buck, same_state: bool
+    bsmr: Bsmr, same_state: bool
 ) -> None:
     """ """
 
     # create a coroutine that can return a result
     async def process(
-        p: Process[BuildResult, BuckException],
+        p: Process[BuildResult, BsmrException],
     ) -> tuple[Optional[int], str]:
         result = await p
         return (result.process.returncode, result.stderr)
 
-    a = buck.build(
+    a = bsmr.build(
         "-c",
         "foo.bar=1",
         ":short_running_target",
@@ -419,7 +419,7 @@ async def test_exit_when_not_idle_after_command_exits(
     # Wait a short time to ensure the first command has finished
     await asyncio.sleep(2)
 
-    b = buck.build(
+    b = bsmr.build(
         "-c",
         "foo.bar=1" if same_state else "foo.bar=2",
         "--exit-when=notidle",

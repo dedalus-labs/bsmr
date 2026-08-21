@@ -19,9 +19,9 @@ import re
 from pathlib import Path
 from typing import cast
 
-from bsmr.tests.e2e_util.api.buck import Buck
-from bsmr.tests.e2e_util.api.buck_result import BuckException
-from bsmr.tests.e2e_util.buck_workspace import buck_test, get_mode_from_platform
+from bsmr.tests.e2e_util.api.bsmr import Bsmr
+from bsmr.tests.e2e_util.api.bsmr_result import BsmrException
+from bsmr.tests.e2e_util.bsmr_workspace import bsmr_test, get_mode_from_platform
 
 
 def remove_ansi_escape_sequences(ansi_str: str) -> str:
@@ -108,9 +108,9 @@ def event_log_results(path: Path) -> dict[str, int]:
 
 
 def print_testrun_url(label: str, output: str) -> None:
-    """Print the TestX testrun URL parsed from a buck.test output, labelled by
+    """Print the TestX testrun URL parsed from a bsmr.test output, labelled by
     run type (e.g. "target run" / "base-rev retry"). Each contract does two
-    buck.test calls, so this surfaces both testruns for inspection."""
+    bsmr.test calls, so this surfaces both testruns for inspection."""
     m = re.search(r"testinfra/testrun/\d+", output)
     url = f"https://www.internalfb.com/intern/{m.group(0)}" if m else "<no testrun>"
     print(f"[BRR-contract] {label}: {url}")
@@ -130,7 +130,7 @@ PYTHON_MULTI_TESTS_TARGET: str = (
 # Full match-name for `multi_tests.TestCase.test_a` in the format tpx's
 # `--exact` filter compares against: `<suite> - <display_name>`, where
 # `<display_name>` is `<method> (<full.module.path.Class>)` per the legacy
-# python unittest listing parser (tpx-buck/src/listing/python.rs).
+# python unittest listing parser (tpx-bsmr/src/listing/python.rs).
 TEST_A_MATCH_NAME: str = (
     f"{PYTHON_MULTI_TESTS_TARGET} - test_a "
     "(bsmr.tests.targets.rules.python.test.multi_tests.TestCase)"
@@ -138,9 +138,9 @@ TEST_A_MATCH_NAME: str = (
 MAIN_MATCH_NAME: str = f"{PYTHON_MULTI_TESTS_TARGET} - main"
 
 
-@buck_test(inplace=True, skip_for_os=["darwin", "windows"])
+@bsmr_test(inplace=True, skip_for_os=["darwin", "windows"])
 async def test_srr_exact_with_main_expands_to_full_suite(
-    buck: Buck, tmp_path: Path
+    bsmr: Bsmr, tmp_path: Path
 ) -> None:
     # GIVEN: a bundle-mode python target with 3 discoverable test cases
     # (test_a, test_b, test_c) and the patched tpx whose `--exact` filter
@@ -153,7 +153,7 @@ async def test_srr_exact_with_main_expands_to_full_suite(
     # shape produced when TARGET had both a specific test failure and a
     # suite-level fatal.
     try:
-        result = await buck.test(
+        result = await bsmr.test(
             PYTHON_MULTI_TESTS_TARGET,
             mode,
             "--",
@@ -162,7 +162,7 @@ async def test_srr_exact_with_main_expands_to_full_suite(
             MAIN_MATCH_NAME,
         )
         stderr = result.stderr
-    except BuckException as e:
+    except BsmrException as e:
         stderr = e.stderr
 
     # THEN: the synthetic `- main` entry expands to `^<target> - ` and
@@ -177,8 +177,8 @@ async def test_srr_exact_with_main_expands_to_full_suite(
     )
 
 
-@buck_test(inplace=True, skip_for_os=["darwin", "windows"])
-async def test_srr_exact_single_test_stays_narrow(buck: Buck, tmp_path: Path) -> None:
+@bsmr_test(inplace=True, skip_for_os=["darwin", "windows"])
+async def test_srr_exact_single_test_stays_narrow(bsmr: Bsmr, tmp_path: Path) -> None:
     # GIVEN: a bundle-mode python target with 3 discoverable test cases
     # (test_a, test_b, test_c) and any tpx version — this test's
     # assertion holds in both pre-fix and post-fix states (regression
@@ -188,7 +188,7 @@ async def test_srr_exact_single_test_stays_narrow(buck: Buck, tmp_path: Path) ->
     # WHEN: SRR invokes tpx with `--exact` on a single real existing test
     # case name. No synthetic `- main`/`- unmanaged` suffix is present.
     try:
-        result = await buck.test(
+        result = await bsmr.test(
             PYTHON_MULTI_TESTS_TARGET,
             mode,
             "--",
@@ -196,7 +196,7 @@ async def test_srr_exact_single_test_stays_narrow(buck: Buck, tmp_path: Path) ->
             TEST_A_MATCH_NAME,
         )
         stderr = result.stderr
-    except BuckException as e:
+    except BsmrException as e:
         stderr = e.stderr
 
     # THEN: exactly the one named test runs. The suite-level expansion
@@ -212,8 +212,8 @@ async def test_srr_exact_single_test_stays_narrow(buck: Buck, tmp_path: Path) ->
     )
 
 
-@buck_test(inplace=True, skip_for_os=["darwin", "windows"])
-async def test_brr_suite_level_main_runs_all_tests(buck: Buck, tmp_path: Path) -> None:
+@bsmr_test(inplace=True, skip_for_os=["darwin", "windows"])
+async def test_brr_suite_level_main_runs_all_tests(bsmr: Bsmr, tmp_path: Path) -> None:
     """
     When a BRR input file contains a suite-level '- main' entry (indicating
     a run_as_bundle test failed in the original run), the retry should run all
@@ -222,7 +222,7 @@ async def test_brr_suite_level_main_runs_all_tests(buck: Buck, tmp_path: Path) -
     mode = get_mode_from_platform()
 
     # Step 1: Run the test normally to get a valid run_id from the test infra
-    first_run = await buck.test(PYTHON_TEST_TARGET, mode)
+    first_run = await bsmr.test(PYTHON_TEST_TARGET, mode)
     run_id_match = re.search(r"testinfra/testrun/(\d+)", first_run.stderr)
     assert run_id_match, "Could not extract run_id from test output"
     run_id = run_id_match.group(1)
@@ -247,9 +247,9 @@ async def test_brr_suite_level_main_runs_all_tests(buck: Buck, tmp_path: Path) -
     # Step 3: Run with BRR retry — the fix converts "- main" to a prefix
     # matcher so individual test cases from the suite are included.
     # BRR mode may exit non-zero (code 32) even when tests pass, so we
-    # catch BuckException and check stderr from whichever path we get.
+    # catch BsmrException and check stderr from whichever path we get.
     try:
-        result = await buck.test(
+        result = await bsmr.test(
             PYTHON_TEST_TARGET,
             mode,
             "--",
@@ -257,7 +257,7 @@ async def test_brr_suite_level_main_runs_all_tests(buck: Buck, tmp_path: Path) -
             str(brr_file),
         )
         stderr = result.stderr
-    except BuckException as e:
+    except BsmrException as e:
         stderr = e.stderr
 
     # Step 4: Assert tests actually ran (before the fix, this was "NO TESTS RAN")
@@ -276,9 +276,9 @@ TYPE_CHECK_UNMANAGED_TARGET: str = (
 )
 
 
-@buck_test(inplace=True, skip_for_os=["darwin", "windows"])
+@bsmr_test(inplace=True, skip_for_os=["darwin", "windows"])
 async def test_brr_unmanaged_existing_and_synthetic_new_no_phantom(
-    buck: Buck, tmp_path: Path
+    bsmr: Bsmr, tmp_path: Path
 ) -> None:
     """
     Simulate, in a single BRR run, an unmanaged suite that has BOTH a real
@@ -299,7 +299,7 @@ async def test_brr_unmanaged_existing_and_synthetic_new_no_phantom(
     mode = get_mode_from_platform()
 
     # Step 1: Run the unmanaged type-check target normally to get a valid run_id.
-    first_run = await buck.test(TYPE_CHECK_UNMANAGED_TARGET, mode)
+    first_run = await bsmr.test(TYPE_CHECK_UNMANAGED_TARGET, mode)
     run_id_match = re.search(r"testinfra/testrun/(\d+)", first_run.stderr)
     assert run_id_match, "Could not extract run_id from test output"
     run_id = run_id_match.group(1)
@@ -327,7 +327,7 @@ async def test_brr_unmanaged_existing_and_synthetic_new_no_phantom(
     # tpx event log. BRR mode may exit non-zero, so inspect the log regardless.
     event_log = tmp_path / "events.ndjson"
     try:
-        await buck.test(
+        await bsmr.test(
             TYPE_CHECK_UNMANAGED_TARGET,
             mode,
             "--",
@@ -338,7 +338,7 @@ async def test_brr_unmanaged_existing_and_synthetic_new_no_phantom(
             "--event-log-file",
             str(event_log),
         )
-    except BuckException:
+    except BsmrException:
         pass
 
     assert event_log.exists(), "Event log file was not written"
@@ -371,8 +371,8 @@ async def test_brr_unmanaged_existing_and_synthetic_new_no_phantom(
 BRR_SIM_UNMANAGED_TARGET: str = "upstream//testinfra/playground/sh:brr_sim_unmanaged"
 
 
-@buck_test(inplace=True, skip_for_os=["darwin", "windows"])
-async def test_brr_unmanaged_preexisting_failure(buck: Buck, tmp_path: Path) -> None:
+@bsmr_test(inplace=True, skip_for_os=["darwin", "windows"])
+async def test_brr_unmanaged_preexisting_failure(bsmr: Bsmr, tmp_path: Path) -> None:
     """
     CONTRACT — pre-existing failing unmanaged test.
 
@@ -390,9 +390,9 @@ async def test_brr_unmanaged_preexisting_failure(buck: Buck, tmp_path: Path) -> 
 
     # Step 1: target run — the unmanaged test FAILS on demand. Capture its run_id.
     try:
-        first_run = await buck.test(BRR_SIM_UNMANAGED_TARGET, mode, "--", *fail_env)
+        first_run = await bsmr.test(BRR_SIM_UNMANAGED_TARGET, mode, "--", *fail_env)
         stderr = first_run.stderr
-    except BuckException as e:
+    except BsmrException as e:
         stderr = e.stderr
     run_id_match = re.search(r"testinfra/testrun/(\d+)", stderr)
     assert run_id_match, f"Could not extract run_id from test output:\n{stderr}"
@@ -422,7 +422,7 @@ async def test_brr_unmanaged_preexisting_failure(buck: Buck, tmp_path: Path) -> 
     # Step 3: base-revision retry — still failing on base (BRR_SIM_FAIL=1).
     event_log = tmp_path / "events.ndjson"
     try:
-        retry = await buck.test(
+        retry = await bsmr.test(
             BRR_SIM_UNMANAGED_TARGET,
             mode,
             "--",
@@ -435,7 +435,7 @@ async def test_brr_unmanaged_preexisting_failure(buck: Buck, tmp_path: Path) -> 
             str(event_log),
         )
         retry_stderr = retry.stderr
-    except BuckException as e:
+    except BsmrException as e:
         retry_stderr = e.stderr
     print_testrun_url("Contract 1 (pre-existing) base-rev retry", retry_stderr)
 
@@ -467,9 +467,9 @@ BRR_SIM_UNMANAGED_SKIP_FILTERING_TARGET: str = (
 )
 
 
-@buck_test(inplace=True, skip_for_os=["darwin", "windows"])
+@bsmr_test(inplace=True, skip_for_os=["darwin", "windows"])
 async def test_brr_unmanaged_cogwheel_label_preexisting_failure_no_phantom(
-    buck: Buck, tmp_path: Path
+    bsmr: Bsmr, tmp_path: Path
 ) -> None:
     """
     CONTRACT — pre-existing failing unmanaged test that carries the
@@ -490,9 +490,9 @@ async def test_brr_unmanaged_cogwheel_label_preexisting_failure_no_phantom(
 
     # Step 1: target run — the labeled unmanaged test FAILS on demand. Capture run_id.
     try:
-        first_run = await buck.test(target, mode, "--", *fail_env)
+        first_run = await bsmr.test(target, mode, "--", *fail_env)
         stderr = first_run.stderr
-    except BuckException as e:
+    except BsmrException as e:
         stderr = e.stderr
     run_id_match = re.search(r"testinfra/testrun/(\d+)", stderr)
     assert run_id_match, f"Could not extract run_id from test output:\n{stderr}"
@@ -522,7 +522,7 @@ async def test_brr_unmanaged_cogwheel_label_preexisting_failure_no_phantom(
     # Step 3: base-revision retry — still failing on base (BRR_SIM_FAIL=1).
     event_log = tmp_path / "events.ndjson"
     try:
-        retry = await buck.test(
+        retry = await bsmr.test(
             target,
             mode,
             "--",
@@ -535,7 +535,7 @@ async def test_brr_unmanaged_cogwheel_label_preexisting_failure_no_phantom(
             str(event_log),
         )
         retry_stderr = retry.stderr
-    except BuckException as e:
+    except BsmrException as e:
         retry_stderr = e.stderr
     print_testrun_url("Cogwheel-label contract base-rev retry", retry_stderr)
 
@@ -558,8 +558,8 @@ async def test_brr_unmanaged_cogwheel_label_preexisting_failure_no_phantom(
     )
 
 
-@buck_test(inplace=True, skip_for_os=["darwin", "windows"])
-async def test_brr_unmanaged_new_does_not_exist(buck: Buck, tmp_path: Path) -> None:
+@bsmr_test(inplace=True, skip_for_os=["darwin", "windows"])
+async def test_brr_unmanaged_new_does_not_exist(bsmr: Bsmr, tmp_path: Path) -> None:
     """
     CONTRACT — new unmanaged test that does not exist on the base revision.
 
@@ -574,7 +574,7 @@ async def test_brr_unmanaged_new_does_not_exist(buck: Buck, tmp_path: Path) -> N
     mode = get_mode_from_platform()
 
     # Step 1: a normal run of the real target just to get a valid run_id.
-    first_run = await buck.test(BRR_SIM_UNMANAGED_TARGET, mode)
+    first_run = await bsmr.test(BRR_SIM_UNMANAGED_TARGET, mode)
     run_id_match = re.search(r"testinfra/testrun/(\d+)", first_run.stderr)
     assert run_id_match, "Could not extract run_id from test output"
     run_id = run_id_match.group(1)
@@ -604,7 +604,7 @@ async def test_brr_unmanaged_new_does_not_exist(buck: Buck, tmp_path: Path) -> N
     # Step 3: base-revision retry with new-test detection enabled.
     event_log = tmp_path / "events.ndjson"
     try:
-        retry = await buck.test(
+        retry = await bsmr.test(
             BRR_SIM_UNMANAGED_TARGET,
             mode,
             "--",
@@ -616,7 +616,7 @@ async def test_brr_unmanaged_new_does_not_exist(buck: Buck, tmp_path: Path) -> N
             str(event_log),
         )
         retry_stderr = retry.stderr
-    except BuckException as e:
+    except BsmrException as e:
         retry_stderr = e.stderr
     print_testrun_url("Contract 2 (new) base-rev retry", retry_stderr)
 
@@ -640,8 +640,8 @@ BROKEN_RUN_AS_BUNDLE_TARGET: str = (
 )
 
 
-@buck_test(inplace=True, skip_for_os=["darwin", "windows"])
-async def test_brr_roundtrip_run_as_bundle_failure(buck: Buck, tmp_path: Path) -> None:
+@bsmr_test(inplace=True, skip_for_os=["darwin", "windows"])
+async def test_brr_roundtrip_run_as_bundle_failure(bsmr: Bsmr, tmp_path: Path) -> None:
     """
     End-to-end BRR roundtrip: a run_as_bundle test that fails produces a
     report with '- main', and feeding that report back via
@@ -653,9 +653,9 @@ async def test_brr_roundtrip_run_as_bundle_failure(buck: Buck, tmp_path: Path) -
     retry_report_file = tmp_path / "retry_report.json"
 
     # Step 1: Run the broken run_as_bundle target and save the failure report.
-    # The test will fail (fatal error), so we expect BuckException.
+    # The test will fail (fatal error), so we expect BsmrException.
     try:
-        await buck.test(
+        await bsmr.test(
             BROKEN_RUN_AS_BUNDLE_TARGET,
             mode,
             "--",
@@ -664,8 +664,8 @@ async def test_brr_roundtrip_run_as_bundle_failure(buck: Buck, tmp_path: Path) -
             "--save-failures-for-retry-in-file",
             str(report_file),
         )
-        raise AssertionError("Expected BuckException from broken run_as_bundle target")
-    except BuckException:
+        raise AssertionError("Expected BsmrException from broken run_as_bundle target")
+    except BsmrException:
         pass
 
     # Step 2: Verify the report was written and contains a "- main" entry.
@@ -678,7 +678,7 @@ async def test_brr_roundtrip_run_as_bundle_failure(buck: Buck, tmp_path: Path) -
     # Step 3: Feed the report back as a BRR retry input, saving the retry
     # output to a second report file so we can inspect it directly.
     try:
-        await buck.test(
+        await bsmr.test(
             BROKEN_RUN_AS_BUNDLE_TARGET,
             mode,
             "--",
@@ -689,7 +689,7 @@ async def test_brr_roundtrip_run_as_bundle_failure(buck: Buck, tmp_path: Path) -
             "--save-failures-for-retry-in-file",
             str(retry_report_file),
         )
-    except BuckException:
+    except BsmrException:
         pass
 
     # Step 4: The retry must reproduce the failure.  Verify by
@@ -709,8 +709,8 @@ BROKEN_LISTING_TARGET: str = (
 )
 
 
-@buck_test(inplace=True, skip_for_os=["darwin", "windows"])
-async def test_brr_roundtrip_listing_failure(buck: Buck, tmp_path: Path) -> None:
+@bsmr_test(inplace=True, skip_for_os=["darwin", "windows"])
+async def test_brr_roundtrip_listing_failure(bsmr: Bsmr, tmp_path: Path) -> None:
     """
     End-to-end BRR roundtrip: a test whose listing fails (os._exit(1) at
     import time with supports_static_listing=False) produces a report with
@@ -726,7 +726,7 @@ async def test_brr_roundtrip_listing_failure(buck: Buck, tmp_path: Path) -> None
     # With TPX_PLAYGROUND_FATAL=1, the test crashes at import time which
     # kills dynamic listing (supports_static_listing=False).
     try:
-        await buck.test(
+        await bsmr.test(
             BROKEN_LISTING_TARGET,
             mode,
             "--",
@@ -735,8 +735,8 @@ async def test_brr_roundtrip_listing_failure(buck: Buck, tmp_path: Path) -> None
             "--save-failures-for-retry-in-file",
             str(report_file),
         )
-        raise AssertionError("Expected BuckException from broken listing target")
-    except BuckException:
+        raise AssertionError("Expected BsmrException from broken listing target")
+    except BsmrException:
         pass
 
     # Step 2: Verify the report was written and contains a "- listing" entry.
@@ -755,7 +755,7 @@ async def test_brr_roundtrip_listing_failure(buck: Buck, tmp_path: Path) -> None
     # Step 3: Feed the report back as a BRR retry input, saving the retry
     # output to a second report file so we can inspect it directly.
     try:
-        await buck.test(
+        await bsmr.test(
             BROKEN_LISTING_TARGET,
             mode,
             "--",
@@ -766,7 +766,7 @@ async def test_brr_roundtrip_listing_failure(buck: Buck, tmp_path: Path) -> None
             "--save-failures-for-retry-in-file",
             str(retry_report_file),
         )
-    except BuckException:
+    except BsmrException:
         pass
 
     # Step 4: The retry must reproduce the listing failure.  Verify by
@@ -781,9 +781,9 @@ async def test_brr_roundtrip_listing_failure(buck: Buck, tmp_path: Path) -> None
     print(retry_report)
 
 
-@buck_test(inplace=True, skip_for_os=["darwin", "windows"])
+@bsmr_test(inplace=True, skip_for_os=["darwin", "windows"])
 async def test_brr_transient_listing_failure_suppresses_execution(
-    buck: Buck, tmp_path: Path
+    bsmr: Bsmr, tmp_path: Path
 ) -> None:
     """
     Transient listing failure with per-target listing-only BRR: listing fails
@@ -797,7 +797,7 @@ async def test_brr_transient_listing_failure_suppresses_execution(
 
     # Step 1: Run with TPX_PLAYGROUND_FATAL=1 to make listing crash.
     try:
-        await buck.test(
+        await bsmr.test(
             BROKEN_LISTING_TARGET,
             mode,
             "--",
@@ -806,8 +806,8 @@ async def test_brr_transient_listing_failure_suppresses_execution(
             "--save-failures-for-retry-in-file",
             str(report_file),
         )
-        raise AssertionError("Expected BuckException from broken listing target")
-    except BuckException:
+        raise AssertionError("Expected BsmrException from broken listing target")
+    except BsmrException:
         pass
 
     # Step 2: Verify the report has "- listing".
@@ -821,7 +821,7 @@ async def test_brr_transient_listing_failure_suppresses_execution(
     # succeeds this time. TPX detects the '- listing' entries and suppresses
     # execution for the target via ListOnlyDiscovery::for_targets().
     try:
-        result = await buck.test(
+        result = await bsmr.test(
             BROKEN_LISTING_TARGET,
             mode,
             "--",
@@ -829,7 +829,7 @@ async def test_brr_transient_listing_failure_suppresses_execution(
             str(report_file),
         )
         stderr = result.stderr
-    except BuckException as e:
+    except BsmrException as e:
         stderr = e.stderr
 
     # Step 4: Execution is suppressed for listing-only targets. Listing
@@ -841,8 +841,8 @@ async def test_brr_transient_listing_failure_suppresses_execution(
     )
 
 
-@buck_test(inplace=True, skip_for_os=["darwin", "windows"])
-async def test_brr_listing_only_roundtrip(buck: Buck, tmp_path: Path) -> None:
+@bsmr_test(inplace=True, skip_for_os=["darwin", "windows"])
+async def test_brr_listing_only_roundtrip(bsmr: Bsmr, tmp_path: Path) -> None:
     """
     End-to-end BRR roundtrip with --list-only: a listing failure produces a
     report with '- listing', and feeding that report back via
@@ -855,7 +855,7 @@ async def test_brr_listing_only_roundtrip(buck: Buck, tmp_path: Path) -> None:
 
     # Step 1: Run the broken listing target and save the failure report.
     try:
-        await buck.test(
+        await bsmr.test(
             BROKEN_LISTING_TARGET,
             mode,
             "--",
@@ -864,8 +864,8 @@ async def test_brr_listing_only_roundtrip(buck: Buck, tmp_path: Path) -> None:
             "--save-failures-for-retry-in-file",
             str(report_file),
         )
-        raise AssertionError("Expected BuckException from broken listing target")
-    except BuckException:
+        raise AssertionError("Expected BsmrException from broken listing target")
+    except BsmrException:
         pass
 
     # Step 2: Verify the report contains a "- listing" entry.
@@ -879,7 +879,7 @@ async def test_brr_listing_only_roundtrip(buck: Buck, tmp_path: Path) -> None:
     # passing --list-only for a listing-only BRR). Listing still fails
     # because TPX_PLAYGROUND_FATAL is set.
     try:
-        await buck.test(
+        await bsmr.test(
             BROKEN_LISTING_TARGET,
             mode,
             "--",
@@ -891,7 +891,7 @@ async def test_brr_listing_only_roundtrip(buck: Buck, tmp_path: Path) -> None:
             "--save-failures-for-retry-in-file",
             str(retry_report_file),
         )
-    except BuckException:
+    except BsmrException:
         pass
 
     # Step 4: The retry must reproduce the listing failure with --list-only.
@@ -904,8 +904,8 @@ async def test_brr_listing_only_roundtrip(buck: Buck, tmp_path: Path) -> None:
     )
 
 
-@buck_test(inplace=True, skip_for_os=["darwin", "windows"])
-async def test_brr_listing_only_transient_failure(buck: Buck, tmp_path: Path) -> None:
+@bsmr_test(inplace=True, skip_for_os=["darwin", "windows"])
+async def test_brr_listing_only_transient_failure(bsmr: Bsmr, tmp_path: Path) -> None:
     """
     Transient listing failure with --list-only: listing fails in the original
     run, but succeeds on the BRR retry with --list-only. No tests should
@@ -916,7 +916,7 @@ async def test_brr_listing_only_transient_failure(buck: Buck, tmp_path: Path) ->
 
     # Step 1: Run with TPX_PLAYGROUND_FATAL=1 to make listing crash.
     try:
-        await buck.test(
+        await bsmr.test(
             BROKEN_LISTING_TARGET,
             mode,
             "--",
@@ -925,8 +925,8 @@ async def test_brr_listing_only_transient_failure(buck: Buck, tmp_path: Path) ->
             "--save-failures-for-retry-in-file",
             str(report_file),
         )
-        raise AssertionError("Expected BuckException from broken listing target")
-    except BuckException:
+        raise AssertionError("Expected BsmrException from broken listing target")
+    except BsmrException:
         pass
 
     # Step 2: Verify the report has "- listing".
@@ -940,7 +940,7 @@ async def test_brr_listing_only_transient_failure(buck: Buck, tmp_path: Path) ->
     # TPX_PLAYGROUND_FATAL — listing succeeds this time, but --list-only
     # should suppress test execution.
     try:
-        result = await buck.test(
+        result = await bsmr.test(
             BROKEN_LISTING_TARGET,
             mode,
             "--",
@@ -949,7 +949,7 @@ async def test_brr_listing_only_transient_failure(buck: Buck, tmp_path: Path) ->
             str(report_file),
         )
         stderr = result.stderr
-    except BuckException as e:
+    except BsmrException as e:
         stderr = e.stderr
 
     # Step 4: --list-only must suppress execution even when listing succeeds.
@@ -960,8 +960,8 @@ async def test_brr_listing_only_transient_failure(buck: Buck, tmp_path: Path) ->
     )
 
 
-@buck_test(inplace=True, skip_for_os=["darwin", "windows"])
-async def test_brr_per_target_listing_only(buck: Buck, tmp_path: Path) -> None:
+@bsmr_test(inplace=True, skip_for_os=["darwin", "windows"])
+async def test_brr_per_target_listing_only(bsmr: Bsmr, tmp_path: Path) -> None:
     """
     Per-target listing-only BRR: when the BRR input file contains '- listing'
     entries, TPX automatically suppresses execution for those targets without
@@ -972,7 +972,7 @@ async def test_brr_per_target_listing_only(buck: Buck, tmp_path: Path) -> None:
 
     # Step 1: Run with TPX_PLAYGROUND_FATAL=1 to make listing crash.
     try:
-        await buck.test(
+        await bsmr.test(
             BROKEN_LISTING_TARGET,
             mode,
             "--",
@@ -981,8 +981,8 @@ async def test_brr_per_target_listing_only(buck: Buck, tmp_path: Path) -> None:
             "--save-failures-for-retry-in-file",
             str(report_file),
         )
-        raise AssertionError("Expected BuckException from broken listing target")
-    except BuckException:
+        raise AssertionError("Expected BsmrException from broken listing target")
+    except BsmrException:
         pass
 
     # Step 2: Verify the report has "- listing".
@@ -996,7 +996,7 @@ async def test_brr_per_target_listing_only(buck: Buck, tmp_path: Path) -> None:
     # TPX_PLAYGROUND_FATAL — listing succeeds, but TPX should automatically
     # suppress execution because the BRR file has '- listing' entries.
     try:
-        result = await buck.test(
+        result = await bsmr.test(
             BROKEN_LISTING_TARGET,
             mode,
             "--",
@@ -1004,7 +1004,7 @@ async def test_brr_per_target_listing_only(buck: Buck, tmp_path: Path) -> None:
             str(report_file),
         )
         stderr = result.stderr
-    except BuckException as e:
+    except BsmrException as e:
         stderr = e.stderr
 
     # Step 4: TPX must suppress execution for listing-only targets even
@@ -1016,8 +1016,8 @@ async def test_brr_per_target_listing_only(buck: Buck, tmp_path: Path) -> None:
     )
 
 
-@buck_test(inplace=True, skip_for_os=["darwin", "windows"])
-async def test_save_successes_for_retry(buck: Buck, tmp_path: Path) -> None:
+@bsmr_test(inplace=True, skip_for_os=["darwin", "windows"])
+async def test_save_successes_for_retry(bsmr: Bsmr, tmp_path: Path) -> None:
     """
     --save-successes-for-retry-in-file writes all passing tests to an NDJSON
     file. Each line contains a single test_name entry. The file format is
@@ -1028,7 +1028,7 @@ async def test_save_successes_for_retry(buck: Buck, tmp_path: Path) -> None:
     successes_file = tmp_path / "successes.ndjson"
 
     # Run a passing test target with --save-successes-for-retry-in-file.
-    await buck.test(
+    await bsmr.test(
         PYTHON_TEST_TARGET,
         mode,
         "--",

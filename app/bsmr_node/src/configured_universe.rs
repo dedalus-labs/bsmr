@@ -258,7 +258,7 @@ impl CqueryUniverse {
         // We lookup in all ancestors because we still have package boundary violations.
         // But we ignore symlinks: path may be a symlink target
         // for a target living in another directory.
-        // This is another reason to not support symlinks in buck.
+        // This is another reason to not support symlinks in bsmr.
         for package in path.ancestors() {
             // Here we allocate package for possibly non-existent package,
             // violating `Package` assumptions.

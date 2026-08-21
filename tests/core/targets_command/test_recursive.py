@@ -15,14 +15,14 @@
 
 import json
 
-from bsmr.tests.e2e_util.api.buck import Buck
+from bsmr.tests.e2e_util.api.bsmr import Bsmr
 from bsmr.tests.e2e_util.asserts import expect_failure
-from bsmr.tests.e2e_util.buck_workspace import buck_test
+from bsmr.tests.e2e_util.bsmr_workspace import bsmr_test
 
 
-@buck_test()
-async def test_targets_recursive(buck: Buck) -> None:
-    result = await buck.targets("--json", "ignored/...")
+@bsmr_test()
+async def test_targets_recursive(bsmr: Bsmr) -> None:
+    result = await bsmr.targets("--json", "ignored/...")
     assert json.loads(result.stdout) == []
 
-    await expect_failure(buck.targets("--json", "nonexistent/..."))
+    await expect_failure(bsmr.targets("--json", "nonexistent/..."))

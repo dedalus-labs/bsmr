@@ -22,14 +22,14 @@ use std::sync::atomic::Ordering;
 use std::time::Duration;
 use std::time::Instant;
 
-use bsmr_client_ctx::client_ctx::BuckSubcommand;
+use bsmr_client_ctx::client_ctx::BsmrSubcommand;
 use bsmr_client_ctx::client_ctx::ClientCommandContext;
-use bsmr_client_ctx::common::BuckArgMatches;
+use bsmr_client_ctx::common::BsmrArgMatches;
 use bsmr_client_ctx::common::CommonCommandOptions;
 use bsmr_client_ctx::common::CommonEventLogOptions;
 use bsmr_client_ctx::common::target_cfg::TargetCfgUnusedOptions;
 use bsmr_client_ctx::common::ui::ConsoleType;
-use bsmr_client_ctx::daemon::client::BuckdLifecycleLock;
+use bsmr_client_ctx::daemon::client::BsmrdLifecycleLock;
 use bsmr_client_ctx::daemon::client::kill::kill_command_impl;
 use bsmr_client_ctx::events_ctx::EventsCtx;
 use bsmr_client_ctx::exit_result::ExitResult;
@@ -37,7 +37,7 @@ use bsmr_client_ctx::final_console::FinalConsole;
 use bsmr_client_ctx::startup_deadline::StartupDeadline;
 use bsmr_client_ctx::subscribers::superconsole::StatefulSuperConsole;
 use bsmr_common::daemon_dir::DaemonDir;
-use bsmr_error::BuckErrorContext;
+use bsmr_error::BsmrErrorContext;
 use bsmr_fs::error::IoResultExt;
 use bsmr_fs::fs_util;
 use bsmr_fs::paths::abs_norm_path::AbsNormPathBuf;
@@ -81,8 +81,8 @@ the specified duration, without killing the daemon",
     ///
     /// `bsmr-out` can contain untracked artifacts for different reasons:
     ///  - Outputs from aborted actions
-    ///  - State getting deleted (e.g., new buckversion that changes the on-disk state format)
-    ///  - Writing to `bsmr-out` without being expected by Buck
+    ///  - State getting deleted (e.g., new bsmrversion that changes the on-disk state format)
+    ///  - Writing to `bsmr-out` without being expected by Bsmr
     #[clap(long = "tracked-only", requires = "stale")]
     tracked_only: bool,
 
@@ -124,7 +124,7 @@ the specified duration, without killing the daemon",
 impl CleanCommand {
     pub fn exec(
         self,
-        matches: BuckArgMatches<'_>,
+        matches: BsmrArgMatches<'_>,
         ctx: ClientCommandContext<'_>,
         events_ctx: &mut EventsCtx,
     ) -> ExitResult {
@@ -173,24 +173,24 @@ struct InnerCleanCommand {
     common_opts: CommonCommandOptions,
 }
 
-impl BuckSubcommand for InnerCleanCommand {
+impl BsmrSubcommand for InnerCleanCommand {
     const COMMAND_NAME: &'static str = "clean";
 
     async fn exec_impl(
         self,
-        _matches: BuckArgMatches<'_>,
+        _matches: BsmrArgMatches<'_>,
         ctx: ClientCommandContext<'_>,
         _events_ctx: &mut bsmr_client_ctx::events_ctx::EventsCtx,
     ) -> ExitResult {
         let paths = ctx.paths()?;
-        let buck_out_dir = paths.buck_out_path();
+        let output_dir = paths.output_path();
         let daemon_dir = paths.daemon_dir()?;
         let trash_dir = paths.trash_dir();
         let console = &self.common_opts.console_opts.final_console();
 
         if self.dry_run {
             return clean(
-                buck_out_dir,
+                output_dir,
                 daemon_dir,
                 trash_dir,
                 console,
@@ -204,7 +204,7 @@ impl BuckSubcommand for InnerCleanCommand {
 
         // Kill the daemon and make sure a new daemon does not spin up while we're performing clean up operations
         // This will ensure we have exclusive access to the directories in question
-        let lifecycle_lock = BuckdLifecycleLock::lock_with_timeout(
+        let lifecycle_lock = BsmrdLifecycleLock::lock_with_timeout(
             daemon_dir.clone(),
             StartupDeadline::duration_from_now(Duration::from_secs(10))?,
         )
@@ -213,7 +213,7 @@ impl BuckSubcommand for InnerCleanCommand {
         kill_command_impl(&lifecycle_lock, "`bsmr clean` was invoked").await?;
 
         clean(
-            buck_out_dir,
+            output_dir,
             daemon_dir,
             trash_dir,
             console,
@@ -231,13 +231,13 @@ impl BuckSubcommand for InnerCleanCommand {
 }
 
 async fn clean(
-    buck_out_dir: AbsNormPathBuf,
+    output_dir: AbsNormPathBuf,
     daemon_dir: DaemonDir,
     trash_dir: AbsNormPathBuf,
     console: &FinalConsole,
     console_type: ConsoleType,
     // None means "dry run".
-    lifecycle_lock: Option<&BuckdLifecycleLock>,
+    lifecycle_lock: Option<&BsmrdLifecycleLock>,
     background: bool,
 ) -> bsmr_error::Result<()> {
     let paths_to_clean = if background {
@@ -250,13 +250,13 @@ async fn clean(
         }
 
         // Move bsmr-out to trash folder
-        if buck_out_dir.exists() {
+        if output_dir.exists() {
             console.print_stderr(&format!(
                 "Moving {} to {}",
-                buck_out_dir.display(),
+                output_dir.display(),
                 trash_target.display()
             ))?;
-            fs_util::rename(&buck_out_dir, &trash_target).categorize_internal()?;
+            fs_util::rename(&output_dir, &trash_target).categorize_internal()?;
         }
 
         // Clean the daemon_dir first
@@ -268,7 +268,7 @@ async fn clean(
             }
         }
 
-        console.print_stderr("Buck-out moved to trash. Now cleaning up...")?;
+        console.print_stderr("Bsmr-out moved to trash. Now cleaning up...")?;
         console.print_stderr(
             "Tip: Use Ctrl-Z to put this in the background, or run in a new terminal.",
         )?;
@@ -282,24 +282,24 @@ async fn clean(
                     .map(|path| path.display().to_string()),
             );
             tokio::task::spawn_blocking(move || {
-                clean_buck_out_with_retry(&trash_target_normalized, console_type)
+                clean_output_root_with_retry(&trash_target_normalized, console_type)
             })
             .await?
-            .buck_error_context("Failed to spawn clean")?;
+            .bsmr_error_context("Failed to spawn clean")?;
         }
         paths_to_clean
     } else {
         let mut paths_to_clean = Vec::new();
 
-        if buck_out_dir.exists() {
+        if output_dir.exists() {
             paths_to_clean =
-                collect_paths_to_clean(&buck_out_dir)?.map(|path| path.display().to_string());
+                collect_paths_to_clean(&output_dir)?.map(|path| path.display().to_string());
             if lifecycle_lock.is_some() {
                 tokio::task::spawn_blocking(move || {
-                    clean_buck_out_with_retry(&buck_out_dir, console_type)
+                    clean_output_root_with_retry(&output_dir, console_type)
                 })
                 .await?
-                .buck_error_context("Failed to spawn clean")?;
+                .bsmr_error_context("Failed to spawn clean")?;
             }
         }
 
@@ -323,14 +323,12 @@ async fn clean(
     Ok(())
 }
 
-fn collect_paths_to_clean(
-    buck_out_path: &AbsNormPathBuf,
-) -> bsmr_error::Result<Vec<AbsNormPathBuf>> {
-    if !buck_out_path.exists() {
+fn collect_paths_to_clean(output_path: &AbsNormPathBuf) -> bsmr_error::Result<Vec<AbsNormPathBuf>> {
+    if !output_path.exists() {
         return Ok(vec![]);
     }
     let mut paths_to_clean = vec![];
-    let dir = fs_util::read_dir(buck_out_path).categorize_internal()?;
+    let dir = fs_util::read_dir(output_path).categorize_internal()?;
     for entry in dir {
         let entry = entry?;
         let path = entry.path();
@@ -344,11 +342,11 @@ fn collect_paths_to_clean(
 /// the daemon can fail with this error: `The process cannot access the
 /// file because it is being used by another process.`. To get around this,
 /// add a single retry.
-fn clean_buck_out_with_retry(
+fn clean_output_root_with_retry(
     path: &AbsNormPathBuf,
     console_type: ConsoleType,
 ) -> bsmr_error::Result<()> {
-    let mut result = clean_buck_out(path, console_type);
+    let mut result = clean_output_root(path, console_type);
     match result {
         Ok(_) => {
             return result;
@@ -358,7 +356,7 @@ fn clean_buck_out_with_retry(
                 "Retrying bsmr-out clean, first attempted failed with: {:#}",
                 e
             );
-            result = clean_buck_out(path, console_type);
+            result = clean_output_root(path, console_type);
         }
     }
     result
@@ -457,7 +455,7 @@ impl Drop for CleanProgressHandle {
     }
 }
 
-fn clean_buck_out(path: &AbsNormPathBuf, console_type: ConsoleType) -> bsmr_error::Result<()> {
+fn clean_output_root(path: &AbsNormPathBuf, console_type: ConsoleType) -> bsmr_error::Result<()> {
     let walk = WalkDir::new(path);
     let thread_pool = ThreadPool::new(bsmr_util::threads::available_parallelism());
     let error = Arc::new(Mutex::new(None));
@@ -521,7 +519,7 @@ fn clean_buck_out(path: &AbsNormPathBuf, console_type: ConsoleType) -> bsmr_erro
         return Err(e);
     }
 
-    // Buck's cwd is typically the directory that is passed in here, which means that on Windows we
+    // Bsmr's cwd is typically the directory that is passed in here, which means that on Windows we
     // often fail to delete this if we don't clean up all our child processes. Leaving zombies
     // around isn't great though...
     let dir = fs_util::read_dir(path).categorize_internal()?;

@@ -26,20 +26,20 @@ use bsmr_error::ExitCode;
 use bsmr_event_observer::span_tracker::EventTimestamp;
 use dupe::Dupe;
 
-use crate::client_ctx::BuckSubcommand;
+use crate::client_ctx::BsmrSubcommand;
 use crate::client_ctx::ClientCommandContext;
-use crate::common::BuckArgMatches;
+use crate::common::BsmrArgMatches;
 use crate::common::CommonBuildConfigurationOptions;
 use crate::common::CommonEventLogOptions;
 use crate::common::CommonStarlarkOptions;
 use crate::common::ui::CommonConsoleOptions;
 use crate::common::ui::get_console_with_root;
-use crate::daemon::client::BuckdClientConnector;
-use crate::daemon::client::connect::BuckdConnectDaemonOptions;
-use crate::daemon::client::connect::BuckdConnectOptions;
+use crate::daemon::client::BsmrdClientConnector;
+use crate::daemon::client::connect::BsmrdConnectDaemonOptions;
+use crate::daemon::client::connect::BsmrdConnectOptions;
 use crate::daemon::client::connect::DaemonConstraintsRequest;
 use crate::daemon::client::connect::DesiredTraceIoState;
-use crate::daemon::client::connect::connect_buckd;
+use crate::daemon::client::connect::connect_bsmrd;
 use crate::events_ctx::EventsCtx;
 use crate::exit_result::ExitResult;
 use crate::path_arg::PathArg;
@@ -57,7 +57,7 @@ const HEALTH_CHECK_CHANNEL_SIZE: usize = 100;
 
 fn update_events_ctx<T: StreamingCommand>(
     cmd: &T,
-    matches: BuckArgMatches<'_>,
+    matches: BsmrArgMatches<'_>,
     ctx: &ClientCommandContext,
     events_ctx: &mut EventsCtx,
 ) {
@@ -168,8 +168,8 @@ pub trait StreamingCommand: Sized + Send + Sync {
     /// Run the command.
     async fn exec_impl(
         self,
-        buckd: &mut BuckdClientConnector,
-        matches: BuckArgMatches<'_>,
+        bsmrd: &mut BsmrdClientConnector,
+        matches: BsmrArgMatches<'_>,
         ctx: &mut ClientCommandContext<'_>,
         events_ctx: &mut EventsCtx,
     ) -> ExitResult;
@@ -219,25 +219,25 @@ pub trait StreamingCommand: Sized + Send + Sync {
     }
 }
 
-impl<T: StreamingCommand> BuckSubcommand for T {
+impl<T: StreamingCommand> BsmrSubcommand for T {
     const COMMAND_NAME: &'static str = T::COMMAND_NAME;
 
     /// Actual call that runs a `StreamingCommand`.
     /// Handles the business of setting up a server connection for streaming.
     async fn exec_impl(
         self,
-        matches: BuckArgMatches<'_>,
+        matches: BsmrArgMatches<'_>,
         mut ctx: ClientCommandContext<'_>,
         events_ctx: &mut EventsCtx,
     ) -> ExitResult {
         let work = async {
             let mut connect_options = if T::existing_only() {
-                BuckdConnectOptions::ExistingOnly
+                BsmrdConnectOptions::ExistingOnly
             } else {
                 let mut req =
                     DaemonConstraintsRequest::new(ctx.immediate_config, T::trace_io(&self))?;
                 ctx.restarter.apply_to_constraints(&mut req);
-                BuckdConnectOptions::Options(BuckdConnectDaemonOptions {
+                BsmrdConnectOptions::Options(BsmrdConnectDaemonOptions {
                     constraints: req,
                     #[cfg(all(fbcode_build, target_os = "linux"))]
                     allow_daemon_start_unsandboxed_via_wrapper: ctx
@@ -245,34 +245,34 @@ impl<T: StreamingCommand> BuckSubcommand for T {
                         .allow_daemon_start_unsandboxed_via_wrapper()?,
                 })
             };
-            let buckd = match ctx.start_in_process_daemon.take() {
-                None => connect_buckd(connect_options, events_ctx, ctx.paths()?).await,
+            let bsmrd = match ctx.start_in_process_daemon.take() {
+                None => connect_bsmrd(connect_options, events_ctx, ctx.paths()?).await,
                 Some(start_in_process_daemon) => {
                     // Start in-process daemon, wait until it is ready to accept connections.
                     start_in_process_daemon()?;
 
                     // Do not attempt to spawn a daemon if connect failed.
                     // Connect should not fail.
-                    connect_options = BuckdConnectOptions::ExistingOnly;
+                    connect_options = BsmrdConnectOptions::ExistingOnly;
 
-                    connect_buckd(connect_options, events_ctx, ctx.paths()?).await
+                    connect_bsmrd(connect_options, events_ctx, ctx.paths()?).await
                 }
             };
 
-            let mut buckd = match buckd {
-                Ok(buckd) => buckd,
+            let mut bsmrd = match bsmrd {
+                Ok(bsmrd) => bsmrd,
                 Err(e) => {
                     return ExitResult::err_with_exit_code(e, ExitCode::ConnectError);
                 }
             };
 
-            events_ctx.cgroup_path_of_bsmr_daemon = buckd.cgroup_path_of_bsmr_daemon.clone();
+            events_ctx.cgroup_path_of_bsmr_daemon = bsmrd.cgroup_path_of_bsmr_daemon.clone();
 
             let command_result = self
-                .exec_impl(&mut buckd, matches, &mut ctx, events_ctx)
+                .exec_impl(&mut bsmrd, matches, &mut ctx, events_ctx)
                 .await;
 
-            ctx.restarter.observe(&buckd, events_ctx);
+            ctx.restarter.observe(&bsmrd, events_ctx);
 
             command_result
         };
@@ -285,7 +285,7 @@ impl<T: StreamingCommand> BuckSubcommand for T {
 
     fn update_events_ctx(
         &self,
-        matches: BuckArgMatches<'_>,
+        matches: BsmrArgMatches<'_>,
         ctx: &ClientCommandContext,
         events_ctx: &mut EventsCtx,
     ) {

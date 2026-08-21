@@ -38,11 +38,11 @@ mod tests {
 
     use bsmr_data::CommandStart;
     use bsmr_data::SpanStartEvent;
-    use bsmr_data::buck_event::Data::SpanStart;
+    use bsmr_data::bsmr_event::Data::SpanStart;
     use bsmr_data::span_start_event::Data::Command;
 
     use super::ChannelEventSource;
-    use crate::BuckEvent;
+    use crate::BsmrEvent;
     use crate::Event;
     use crate::EventSink;
     use crate::TraceId;
@@ -53,7 +53,7 @@ mod tests {
         let (send, recv) = crossbeam_channel::unbounded();
         let sink = ChannelEventSink::new(send);
         let mut source = ChannelEventSource::new(recv);
-        sink.send(Event::Buck(BuckEvent::new(
+        sink.send(Event::Bsmr(BsmrEvent::new(
             SystemTime::now(),
             TraceId::new(),
             None,
@@ -68,7 +68,7 @@ mod tests {
             }
             .into(),
         )));
-        let event = source.receive().unwrap().unpack_buck().unwrap().clone();
+        let event = source.receive().unwrap().unpack_bsmr().unwrap().clone();
         assert!(matches!(
             event.data(),
             SpanStart(SpanStartEvent {

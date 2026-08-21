@@ -27,7 +27,7 @@ use bsmr_core::cells::name::CellName;
 use bsmr_core::cells::nested::NestedCells;
 use bsmr_core::fs::project_rel_path::ProjectRelativePath;
 use bsmr_error::internal_error;
-use bsmr_hash::StdBuckHashMap;
+use bsmr_hash::StdBsmrHashMap;
 use instance::CellInstance;
 
 /// Errors from cell creation
@@ -52,8 +52,8 @@ enum CellError {
 /// generate a final 'CellResolver'
 #[derive(Debug)]
 pub(crate) struct CellsAggregator {
-    cell_infos: StdBuckHashMap<CellName, CellAggregatorInfo>,
-    root_aliases: StdBuckHashMap<NonEmptyCellAlias, CellName>,
+    cell_infos: StdBsmrHashMap<CellName, CellAggregatorInfo>,
+    root_aliases: StdBsmrHashMap<NonEmptyCellAlias, CellName>,
     root_cell: CellName,
 }
 
@@ -67,11 +67,11 @@ impl CellsAggregator {
     pub(crate) fn new(
         // This is order sensitive
         cells: Vec<(CellName, CellRootPathBuf)>,
-        root_aliases: StdBuckHashMap<NonEmptyCellAlias, NonEmptyCellAlias>,
+        root_aliases: StdBsmrHashMap<NonEmptyCellAlias, NonEmptyCellAlias>,
     ) -> bsmr_error::Result<Self> {
-        let mut path_rmap = StdBuckHashMap::default();
-        let mut infos = StdBuckHashMap::default();
-        let mut combined_aliases = StdBuckHashMap::default();
+        let mut path_rmap = StdBsmrHashMap::default();
+        let mut infos = StdBsmrHashMap::default();
+        let mut combined_aliases = StdBsmrHashMap::default();
         for (cell, path) in cells {
             let real_cell = match path_rmap.try_insert(path.clone(), cell) {
                 Ok(_) => {
@@ -182,7 +182,7 @@ mod tests {
                 (other1, other_path.clone()),
                 (other2, other_path.clone()),
             ],
-            StdBuckHashMap::default(),
+            StdBsmrHashMap::default(),
         )
         .unwrap()
         .make_cell_resolver()
@@ -209,7 +209,7 @@ mod tests {
         assert!(
             CellsAggregator::new(
                 Vec::new(),
-                StdBuckHashMap::from_iter([(
+                StdBsmrHashMap::from_iter([(
                     NonEmptyCellAlias::testing_new("root"),
                     NonEmptyCellAlias::testing_new("does_not_exist")
                 )])

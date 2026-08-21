@@ -19,83 +19,83 @@ import os
 import tempfile
 from pathlib import Path
 
-from bsmr.tests.e2e_util.api.buck import Buck
+from bsmr.tests.e2e_util.api.bsmr import Bsmr
 from bsmr.tests.e2e_util.asserts import expect_failure
-from bsmr.tests.e2e_util.buck_workspace import buck_test
+from bsmr.tests.e2e_util.bsmr_workspace import bsmr_test
 
 
-@buck_test()
-async def test_out_single_default_output(buck: Buck) -> None:
+@bsmr_test()
+async def test_out_single_default_output(bsmr: Bsmr) -> None:
     with tempfile.TemporaryDirectory() as out:
         output = os.path.join(out, "output")
-        await buck.build("//:a", "--out", output)
+        await bsmr.build("//:a", "--out", output)
         with open(output) as readable:
             assert readable.read() == "a\n"
 
 
-@buck_test()
-async def test_out_overwrite(buck: Buck) -> None:
+@bsmr_test()
+async def test_out_overwrite(bsmr: Bsmr) -> None:
     with tempfile.TemporaryDirectory() as out:
         output = os.path.join(out, "output")
-        await buck.build("//:a", "--out", output)
-        await buck.build("//:a", "--out", output)
+        await bsmr.build("//:a", "--out", output)
+        await bsmr.build("//:a", "--out", output)
 
 
-@buck_test()
-async def test_out_parent_not_exist(buck: Buck) -> None:
+@bsmr_test()
+async def test_out_parent_not_exist(bsmr: Bsmr) -> None:
     with tempfile.TemporaryDirectory() as out:
         output = os.path.join(out, "notexist", "output")
-        await buck.build("//:a", "--out", output)
+        await bsmr.build("//:a", "--out", output)
         with open(output) as readable:
             assert readable.read() == "a\n"
 
 
-@buck_test()
-async def test_out_single_default_output_to_dir(buck: Buck) -> None:
+@bsmr_test()
+async def test_out_single_default_output_to_dir(bsmr: Bsmr) -> None:
     with tempfile.TemporaryDirectory() as out:
-        await buck.build("//:a", "--out", out)
+        await bsmr.build("//:a", "--out", out)
         with open(Path(out) / "a.txt") as readable:
             assert readable.read() == "a\n"
 
 
-@buck_test()
-async def test_out_no_outputs(buck: Buck) -> None:
+@bsmr_test()
+async def test_out_no_outputs(bsmr: Bsmr) -> None:
     with tempfile.NamedTemporaryFile("w") as out:
         await expect_failure(
-            buck.build("//:none", "--out", out.name),
+            bsmr.build("//:none", "--out", out.name),
             stderr_regex="produced zero default outputs",
         )
 
 
-@buck_test()
-async def test_out_multiple_outputs(buck: Buck) -> None:
+@bsmr_test()
+async def test_out_multiple_outputs(bsmr: Bsmr) -> None:
     with tempfile.NamedTemporaryFile("w") as out:
         await expect_failure(
-            buck.build("//:ab", "--out", out.name),
+            bsmr.build("//:ab", "--out", out.name),
             stderr_regex="produced 2 outputs",
         )
 
 
-@buck_test()
-async def test_out_multiple_targets(buck: Buck) -> None:
+@bsmr_test()
+async def test_out_multiple_targets(bsmr: Bsmr) -> None:
     with tempfile.NamedTemporaryFile("w") as out:
         await expect_failure(
-            buck.build("//:a", "//:b", "--out", out.name),
+            bsmr.build("//:a", "//:b", "--out", out.name),
             stderr_regex="command built multiple top-level targets",
         )
 
 
-@buck_test()
-async def test_out_directory(buck: Buck) -> None:
+@bsmr_test()
+async def test_out_directory(bsmr: Bsmr) -> None:
     with tempfile.TemporaryDirectory() as out:
-        await buck.build("//:dir", "--out", out)
+        await bsmr.build("//:dir", "--out", out)
         assert (Path(out) / "b.txt").exists()
         assert (Path(out) / "nested_dir" / "a.txt").exists()
 
 
-@buck_test()
-async def test_out_stdout_multiple(buck: Buck) -> None:
-    result = await buck.build("//:a", "//:b", "--out", "-")
+@bsmr_test()
+async def test_out_stdout_multiple(bsmr: Bsmr) -> None:
+    result = await bsmr.build("//:a", "//:b", "--out", "-")
 
     # The e2e test runner adds a `--build-report` flag in order to be able
     # to parse out failures. In normal usage of `--out -` there wouldn't be this
@@ -106,14 +106,14 @@ async def test_out_stdout_multiple(buck: Buck) -> None:
     assert trailing == ""
 
 
-@buck_test()
-async def test_out_stdout_none(buck: Buck) -> None:
-    await buck.build("--out", "-")
+@bsmr_test()
+async def test_out_stdout_none(bsmr: Bsmr) -> None:
+    await bsmr.build("--out", "-")
 
 
-@buck_test()
-async def test_out_stdout_directory(buck: Buck) -> None:
+@bsmr_test()
+async def test_out_stdout_directory(bsmr: Bsmr) -> None:
     await expect_failure(
-        buck.build("//:dir", "--out", "-"),
+        bsmr.build("//:dir", "--out", "-"),
         stderr_regex="produces a default output that is a directory, and cannot be sent to stdout",
     )

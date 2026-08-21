@@ -18,8 +18,8 @@
 import re
 import sys
 
-from bsmr.tests.e2e_util.api.buck import Buck
-from bsmr.tests.e2e_util.buck_workspace import buck_test, env
+from bsmr.tests.e2e_util.api.bsmr import Bsmr
+from bsmr.tests.e2e_util.bsmr_workspace import bsmr_test, env
 
 
 # builds targets in an fbcode target configuration, unsupported on mac RE workers
@@ -29,19 +29,19 @@ def fbcode_linux_only() -> bool:
 
 if fbcode_linux_only():
 
-    @buck_test(inplace=True, skip_for_os=["windows"])
-    async def test_swig_pp(buck: Buck) -> None:
-        await buck.build(
+    @bsmr_test(inplace=True, skip_for_os=["windows"])
+    async def test_swig_pp(bsmr: Bsmr) -> None:
+        await bsmr.build(
             "upstream//security/ca/lib:CAUtils-py-gen",
         )
 
-    @buck_test(inplace=True)
+    @bsmr_test(inplace=True)
     @env("BSMR_KEEP_DEP_FILE_DIRECTORIES", "true")
-    async def test_arvr_cuda_dep_files(buck: Buck) -> None:
-        target = "upstream//arvr/tools/buck/tests/cuda:test_cuda_arvr"
+    async def test_arvr_cuda_dep_files(bsmr: Bsmr) -> None:
+        target = "upstream//arvr/tools/bsmr/tests/cuda:test_cuda_arvr"
         mode_file = "@upstream//arvr/mode/platform010/cuda12_5/opt"
-        await buck.build(mode_file, target)
-        res = await buck.audit_dep_files(target, "cuda_compile", "main.cu", mode_file)
+        await bsmr.build(mode_file, target)
+        res = await bsmr.audit_dep_files(target, "cuda_compile", "main.cu", mode_file)
         out = res.stdout
 
         # Check that we are tracking our dependency on stdlib headers, even
@@ -51,26 +51,26 @@ if fbcode_linux_only():
         )
 
         # Check that we are tracking directly-included headers
-        assert re.search("headers.*arvr/tools/buck/tests/cuda/direct_dep.h", out)
+        assert re.search("headers.*arvr/tools/bsmr/tests/cuda/direct_dep.h", out)
 
         # Check that we are tracking transitively-included headers
-        assert re.search("headers.*arvr/tools/buck/tests/cuda/transitive_dep.h", out)
+        assert re.search("headers.*arvr/tools/bsmr/tests/cuda/transitive_dep.h", out)
 
         # Check that we are not tracking irrelevant headers
         assert (
-            re.search("headers.*arvr/tools/buck/tests/cuda/unrelated_dep.h", out)
+            re.search("headers.*arvr/tools/bsmr/tests/cuda/unrelated_dep.h", out)
             is None
         )
 
 
-@buck_test(inplace=True, skip_for_os=["windows"])
-async def test_swig_pp_unit(buck: Buck) -> None:
-    await buck.test(
-        "upstream//tools/build/buck:swig_filter_test",
+@bsmr_test(inplace=True, skip_for_os=["windows"])
+async def test_swig_pp_unit(bsmr: Bsmr) -> None:
+    await bsmr.test(
+        "upstream//tools/build/bsmr:swig_filter_test",
     )
 
 
-@buck_test(inplace=True)
+@bsmr_test(inplace=True)
 async def test_windows_dummy() -> None:
     # None of the tests in this file pass on Windows and that upsets CI.
     pass

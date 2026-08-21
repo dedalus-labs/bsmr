@@ -5,8 +5,8 @@
 <!-- ===----------------------------------------------------------------------=== -->
 
 A **target pattern** is a string that describes a set of one or more targets.
-You can use target patterns as arguments to commands, such as buck build and
-buck query. You can also use target patterns in the Visibility argument of your
+You can use target patterns as arguments to commands, such as bsmr build and
+bsmr query. You can also use target patterns in the Visibility argument of your
 build rules.
 
 The simplest target pattern `//apps/myapp:app` matches exactly the target of the
@@ -55,7 +55,7 @@ inner providers via `//my/app:target[<providers-label>]` syntax. The inner
 providers label will refer to a specific set of providers exposed by a rule,
 such as a particular set of outputs from the rule.
 
-The providers label can be used for commands: buck builds, provider queries, and
+The providers label can be used for commands: bsmr builds, provider queries, and
 action queries. Any rule's dependencies also refers to a providers label.
 However, configuration rules (i.e config_settings) should be referred to without
 providers. (TODO: experiment and see if we should just use provider labels

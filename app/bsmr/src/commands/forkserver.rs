@@ -17,7 +17,7 @@
 use std::sync::Arc;
 
 use bsmr_client_ctx::client_ctx::ClientCommandContext;
-use bsmr_client_ctx::common::BuckArgMatches;
+use bsmr_client_ctx::common::BsmrArgMatches;
 use bsmr_client_ctx::events_ctx::EventsCtx;
 use bsmr_client_ctx::exit_result::ExitResult;
 use bsmr_core::logging::LogConfigurationReloadHandle;
@@ -52,7 +52,7 @@ pub(crate) struct ForkserverCommand {
 impl ForkserverCommand {
     pub(crate) fn exec(
         self,
-        _matches: BuckArgMatches<'_>,
+        _matches: BsmrArgMatches<'_>,
         _ctx: ClientCommandContext<'_>,
         events_ctx: &mut EventsCtx,
         log_reload_handle: Arc<dyn LogConfigurationReloadHandle>,

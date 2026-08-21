@@ -74,7 +74,7 @@ def _gen_sources(sources):
     source_entries = [
         h(
             "ClCompile",
-            [h("BuckObjSubTarget", object, indent_level = 3)],
+            [h("BsmrObjSubTarget", object, indent_level = 3)],
             {
                 "Include": cmd_args("$(RepoRoot)\\", source, delimiter = ""),
             },
@@ -154,7 +154,7 @@ def gen_vcxproj(target: bxl.ConfiguredTargetNode, vs_settings: dict, cli_args, b
                     "Exec",
                     None,
                     {
-                        "Command": "$(vs_buck_build_command)[objects][%(ClCompile.BuckObjSubTarget)] $(ExtraBuckOptions)",
+                        "Command": "$(vs_bsmr_build_command)[objects][%(ClCompile.BsmrObjSubTarget)] $(ExtraBsmrOptions)",
                         "WorkingDirectory": "$(RepoRoot)",
                     },
                     indent_level = 2,
@@ -235,8 +235,8 @@ main = bxl_main(
     impl = _main,
     cli_args = {
         "debug_settings": cli_args.option(cli_args.json()),  # target label => debug_settings.
-        "extra_buck_options": cli_args.list(cli_args.string(), default = []),
-        "immediate_buck_options": cli_args.list(cli_args.string(), default = []),
+        "extra_bsmr_options": cli_args.list(cli_args.string(), default = []),
+        "immediate_bsmr_options": cli_args.list(cli_args.string(), default = []),
         "log_level": cli_args.int(default = 30),
         "mode_files": cli_args.list(cli_args.string(), default = ["upstream//arvr/mode/win/dev"]),
         "mode_hashes": cli_args.option(cli_args.json()),  # mode => configuration hash.

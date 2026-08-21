@@ -19,15 +19,15 @@ import json
 import re
 from pathlib import Path
 
-from bsmr.tests.e2e_util.api.buck import Buck
-from bsmr.tests.e2e_util.api.buck_result import BuckResult
+from bsmr.tests.e2e_util.api.bsmr import Bsmr
+from bsmr.tests.e2e_util.api.bsmr_result import BsmrResult
 from bsmr.tests.e2e_util.asserts import expect_failure
-from bsmr.tests.e2e_util.buck_workspace import buck_test
+from bsmr.tests.e2e_util.bsmr_workspace import bsmr_test
 from bsmr.tests.e2e_util.helper.golden import golden
 
 """
 If you need to add a directory that's isolated in bsmr/test/targets
-(ex. some test of form @buck_test( data_dir=some_new_directory)),
+(ex. some test of form @bsmr_test( data_dir=some_new_directory)),
 then you will need to update isolated_targets in bsmr/test/targets/TARGETS.
 Otherwise the test will fail because it cannot recognize the new directory.
 """
@@ -37,179 +37,179 @@ def _replace_hash(s: str) -> str:
     return re.sub(r"\b[0-9a-f]{16}\b", "<HASH>", s)
 
 
-@buck_test(data_dir="bxl_simple")
-async def test_uquery_none(buck: Buck) -> None:
+@bsmr_test(data_dir="bxl_simple")
+async def test_uquery_none(bsmr: Bsmr) -> None:
     await expect_failure(
-        buck.uquery("""none"""),
+        bsmr.uquery("""none"""),
         stderr_regex="Error parsing target pattern `none`",
     )
 
     await expect_failure(
-        buck.uquery("""None"""),
+        bsmr.uquery("""None"""),
         stderr_regex="expected value of type `targets`, got `None`:",
     )
 
-    result = await buck.uquery(""":none""")
+    result = await bsmr.uquery(""":none""")
     assert result.stdout == "root//:none\n"
 
-    result = await buck.uquery(""":None""")
+    result = await bsmr.uquery(""":None""")
     assert result.stdout == "root//:None\n"
 
-    result = await buck.uquery("""':none'""")
+    result = await bsmr.uquery("""':none'""")
     assert result.stdout == "root//:none\n"
 
-    result = await buck.uquery("""':None'""")
+    result = await bsmr.uquery("""':None'""")
     assert result.stdout == "root//:None\n"
 
     await expect_failure(
-        buck.uquery("""set(none)"""),
+        bsmr.uquery("""set(none)"""),
         stderr_regex="Error parsing target pattern `none`",
     )
 
     await expect_failure(
-        buck.uquery("""set(None)"""),
+        bsmr.uquery("""set(None)"""),
         # stderr_regex="expected value of type `targets`, got `None`:",
         stderr_regex="Error parsing target pattern `None`",
     )
 
     await expect_failure(
-        buck.uquery("""set('none')"""),
+        bsmr.uquery("""set('none')"""),
         stderr_regex="Error parsing target pattern `none`",
     )
 
     await expect_failure(
-        buck.uquery("""set('None')"""),
+        bsmr.uquery("""set('None')"""),
         stderr_regex="Error parsing target pattern `None`",
     )
 
     await expect_failure(
-        buck.uquery("""filter('', none)"""),
+        bsmr.uquery("""filter('', none)"""),
         stderr_regex="Error parsing target pattern `none`",
     )
 
     await expect_failure(
-        buck.uquery("""filter('', None)"""),
+        bsmr.uquery("""filter('', None)"""),
         stderr_regex=re.escape(
             "None is not a valid value for function `filter` argument [1] `set: *target or file expression*`"
         ),
     )
 
-    result = await buck.uquery("""filter(none, :none)""")
+    result = await bsmr.uquery("""filter(none, :none)""")
     assert result.stdout == "root//:none\n"
 
     await expect_failure(
-        buck.uquery("""filter(None, :None)"""),
+        bsmr.uquery("""filter(None, :None)"""),
         stderr_regex=re.escape(
             "None is not a valid value for function `filter` argument [0] `regex: *string*`"
         ),
     )
 
-    result = await buck.uquery("""filter('none', :none)""")
+    result = await bsmr.uquery("""filter('none', :none)""")
     assert result.stdout == "root//:none\n"
 
-    result = await buck.uquery("""filter('None', :None)""")
+    result = await bsmr.uquery("""filter('None', :None)""")
     assert result.stdout == "root//:None\n"
 
-    result = await buck.uquery("""filter(none, ':none')""")
+    result = await bsmr.uquery("""filter(none, ':none')""")
     assert result.stdout == "root//:none\n"
 
     await expect_failure(
-        buck.uquery("""filter(None, ':None')"""),
+        bsmr.uquery("""filter(None, ':None')"""),
         stderr_regex=re.escape(
             "None is not a valid value for function `filter` argument [0] `regex: *string*`"
         ),
     )
 
-    result = await buck.uquery("""filter('none', ':none')""")
+    result = await bsmr.uquery("""filter('none', ':none')""")
     assert result.stdout == "root//:none\n"
 
-    result = await buck.uquery("""filter('None', ':None')""")
+    result = await bsmr.uquery("""filter('None', ':None')""")
     assert result.stdout == "root//:None\n"
 
     await expect_failure(
-        buck.uquery("""none()"""),
+        bsmr.uquery("""none()"""),
         stderr_regex="unknown function `none`:",
     )
     await expect_failure(
-        buck.uquery("""None()"""),
+        bsmr.uquery("""None()"""),
         stderr_regex="in Eof",
     )
 
 
-@buck_test(data_dir="bxl_simple")
-async def test_uquery_inputs(buck: Buck) -> None:
-    result = await buck.uquery("""inputs(set(root//bin:the_binary //lib:file1))""")
+@bsmr_test(data_dir="bxl_simple")
+async def test_uquery_inputs(bsmr: Bsmr) -> None:
+    result = await bsmr.uquery("""inputs(set(root//bin:the_binary //lib:file1))""")
     assert result.stdout == "bin/TARGETS.fixture\n"
 
-    result = await buck.uquery("""inputs(set())""")
+    result = await bsmr.uquery("""inputs(set())""")
     assert result.stdout == ""
 
 
-@buck_test(data_dir="bxl_simple")
-async def test_uquery_union(buck: Buck) -> None:
-    result = await buck.uquery("""deps(root//lib:lib1) + set(root//data:data)""")
+@bsmr_test(data_dir="bxl_simple")
+async def test_uquery_union(bsmr: Bsmr) -> None:
+    result = await bsmr.uquery("""deps(root//lib:lib1) + set(root//data:data)""")
     assert result.stdout == "root//lib:file1\nroot//lib:lib1\nroot//data:data\n"
 
-    result = await buck.uquery(
+    result = await bsmr.uquery(
         """buildfile(root//bin:the_binary) + inputs(deps(root//lib:lib1))"""
     )
     assert result.stdout == "bin/TARGETS.fixture\nlib/TARGETS.fixture\n"
 
-    result = await buck.uquery("""'root//bin:the_binary' + set(root//data:data)""")
+    result = await bsmr.uquery("""'root//bin:the_binary' + set(root//data:data)""")
     assert result.stdout == "root//bin:the_binary\nroot//data:data\n"
 
 
-@buck_test(data_dir="bxl_simple")
-async def test_uquery_owner(buck: Buck) -> None:
-    result = await buck.uquery("""owner(bin/TARGETS.fixture)""")
+@bsmr_test(data_dir="bxl_simple")
+async def test_uquery_owner(bsmr: Bsmr) -> None:
+    result = await bsmr.uquery("""owner(bin/TARGETS.fixture)""")
     assert result.stdout == "root//bin:the_binary\n"
 
-    result = await buck.uquery("""owner(data/buck/build/data.file)""")
+    result = await bsmr.uquery("""owner(data/bsmr/build/data.file)""")
     assert result.stdout == "root//data:data\n"
 
-    # there's no buildfile in the root of the special buck, make sure that works
-    result = await buck.uquery("""owner(special/file)""")
+    # there's no buildfile in the root of the special bsmr, make sure that works
+    result = await bsmr.uquery("""owner(special/file)""")
     assert "No owner" in result.stderr
     assert result.stdout == ""
 
     # there's a buildfile here, but no target owns the file
-    result = await buck.uquery("""owner(.bsmr)""")
+    result = await bsmr.uquery("""owner(.bsmr)""")
     assert "No owner" in result.stderr
     assert result.stdout == ""
 
-    result = await buck.uquery(
-        """owner(../data/buck/build/data.file)""", rel_cwd=Path("special")
+    result = await bsmr.uquery(
+        """owner(../data/bsmr/build/data.file)""", rel_cwd=Path("special")
     )
     assert result.stdout == "root//data:data\n"
 
-    result = await buck.uquery("""owner(root//bin/TARGETS.fixture)""")
+    result = await bsmr.uquery("""owner(root//bin/TARGETS.fixture)""")
     assert result.stdout == "root//bin:the_binary\n"
 
 
-@buck_test(data_dir="bxl_simple")
-async def test_query_owner_with_explicit_package_boundary_violation(buck: Buck) -> None:
-    result = await buck.uquery("""owner(package_boundary_violation/bin)""")
+@bsmr_test(data_dir="bxl_simple")
+async def test_query_owner_with_explicit_package_boundary_violation(bsmr: Bsmr) -> None:
+    result = await bsmr.uquery("""owner(package_boundary_violation/bin)""")
     assert "root//package_boundary_violation:bin" in result.stdout
     assert "root//:package_boundary_violation" in result.stdout
 
 
-@buck_test(data_dir="bxl_simple", allow_soft_errors=True)
-async def test_uquery_buildfile(buck: Buck) -> None:
-    result = await buck.uquery("""buildfile(root//bin:the_binary)""")
+@bsmr_test(data_dir="bxl_simple", allow_soft_errors=True)
+async def test_uquery_buildfile(bsmr: Bsmr) -> None:
+    result = await bsmr.uquery("""buildfile(root//bin:the_binary)""")
     assert result.stdout == "bin/TARGETS.fixture\n"
 
-    result = await buck.uquery("""buildfile(root//bin: + root//data:)""")
+    result = await bsmr.uquery("""buildfile(root//bin: + root//data:)""")
     assert result.stdout == "bin/TARGETS.fixture\ndata/TARGETS.fixture\n"
 
-    result = await buck.uquery(
-        """buildfile(owner(../data/buck/build/data.file))""", rel_cwd=Path("special")
+    result = await bsmr.uquery(
+        """buildfile(owner(../data/bsmr/build/data.file))""", rel_cwd=Path("special")
     )
     assert result.stdout == "data/TARGETS.fixture\n"
 
 
-@buck_test(data_dir="bxl_simple")
-async def test_uquery_targets_in_buildfile(buck: Buck) -> None:
-    result = await buck.uquery("""targets_in_buildfile(bin/TARGETS.fixture)""")
+@bsmr_test(data_dir="bxl_simple")
+async def test_uquery_targets_in_buildfile(bsmr: Bsmr) -> None:
+    result = await bsmr.uquery("""targets_in_buildfile(bin/TARGETS.fixture)""")
     assert (
         result.stdout
         == "\n".join(
@@ -226,17 +226,17 @@ async def test_uquery_targets_in_buildfile(buck: Buck) -> None:
     )
 
 
-@buck_test(data_dir="bxl_simple")
-async def test_query_configuration_deps(buck: Buck) -> None:
-    result = await buck.uquery(
+@bsmr_test(data_dir="bxl_simple")
+async def test_query_configuration_deps(bsmr: Bsmr) -> None:
+    result = await bsmr.uquery(
         """deps(root//bin:the_binary, 1, configuration_deps())"""
     )
     assert "root//bin:my_config" in result.stdout
 
 
-@buck_test(data_dir="bxl_simple")
-async def test_deps(buck: Buck) -> None:
-    result = await buck.uquery("""deps(root//bin:the_binary)""")
+@bsmr_test(data_dir="bxl_simple")
+async def test_deps(bsmr: Bsmr) -> None:
+    result = await bsmr.uquery("""deps(root//bin:the_binary)""")
     assert (
         result.stdout
         == "\n".join(
@@ -259,7 +259,7 @@ async def test_deps(buck: Buck) -> None:
 
     target_deps_expr = """deps(root//bin:the_binary, 100, target_deps())"""
 
-    result = await buck.uquery(target_deps_expr)
+    result = await bsmr.uquery(target_deps_expr)
     assert (
         result.stdout
         == "\n".join(
@@ -280,7 +280,7 @@ async def test_deps(buck: Buck) -> None:
     # this is a little subtle, query's deps() function always forms a graph
     # with the nodes themselves so we subtract them out. It's not quite right
     # if a node in the graph of target deps were to have an exec dep on another.
-    result = await buck.uquery(
+    result = await bsmr.uquery(
         "deps({}, 1, exec_deps()) - {}".format(target_deps_expr, target_deps_expr)
     )
     assert (
@@ -296,70 +296,70 @@ async def test_deps(buck: Buck) -> None:
     )
 
 
-@buck_test(data_dir="bxl_simple")
-async def test_uquery_cell(buck: Buck) -> None:
-    result = await buck.uquery("""//stuff:magic""", rel_cwd=Path("special"))
+@bsmr_test(data_dir="bxl_simple")
+async def test_uquery_cell(bsmr: Bsmr) -> None:
+    result = await bsmr.uquery("""//stuff:magic""", rel_cwd=Path("special"))
     assert result.stdout == "special//stuff:magic\n"
 
 
-@buck_test(data_dir="bxl_simple")
-async def test_uquery_relative(buck: Buck) -> None:
-    result = await buck.uquery("""...""", rel_cwd=Path("special"))
+@bsmr_test(data_dir="bxl_simple")
+async def test_uquery_relative(bsmr: Bsmr) -> None:
+    result = await bsmr.uquery("""...""", rel_cwd=Path("special"))
     assert result.stdout == "special//stuff:magic\n"
-    result = await buck.uquery("""...""", rel_cwd=Path("bin"))
+    result = await bsmr.uquery("""...""", rel_cwd=Path("bin"))
     assert "root//bin:the_binary\n" in result.stdout
 
 
-@buck_test(data_dir="bxl_simple")
-async def test_uquery_provider_names(buck: Buck) -> None:
+@bsmr_test(data_dir="bxl_simple")
+async def test_uquery_provider_names(bsmr: Bsmr) -> None:
     await expect_failure(
-        buck.uquery("'root//bin:the_binary[provider_name]'"),
+        bsmr.uquery("'root//bin:the_binary[provider_name]'"),
         stderr_regex="Expected a target pattern without providers",
     )
 
     await expect_failure(
-        buck.uquery("'root//bin:the_binary#some_flavor'"),
+        bsmr.uquery("'root//bin:the_binary#some_flavor'"),
         stderr_regex="Expected a target pattern without providers",
     )
 
 
-@buck_test(data_dir="bxl_simple")
-async def test_query_filter(buck: Buck) -> None:
+@bsmr_test(data_dir="bxl_simple")
+async def test_query_filter(bsmr: Bsmr) -> None:
     # Test uquery/cquery on target and file sets
-    out = await buck.uquery("filter('the_binary$', root//...)")
+    out = await bsmr.uquery("filter('the_binary$', root//...)")
     assert out.stdout == "root//bin:the_binary\n"
-    out = await buck.cquery("filter('the_binary\\w', root//...)")
+    out = await bsmr.cquery("filter('the_binary\\w', root//...)")
     assert (
         _replace_hash(out.stdout)
         == "root//bin:the_binary_with_dir_srcs (root//platforms:platform1#<HASH>)\n"
     )
-    out = await buck.uquery("filter('fixture$', inputs(root//bin:the_binary))")
+    out = await bsmr.uquery("filter('fixture$', inputs(root//bin:the_binary))")
     assert out.stdout == "bin/TARGETS.fixture\n"
-    out = await buck.cquery("filter('fixture$', inputs(root//bin:the_binary))")
+    out = await bsmr.cquery("filter('fixture$', inputs(root//bin:the_binary))")
     assert out.stdout == "bin/TARGETS.fixture\n"
 
 
-@buck_test(setup_eden=True, data_dir="bxl_simple")
-async def test_attributes(buck: Buck) -> None:
-    out = await buck.uquery("set(root//bin:the_binary //lib:file1)")
+@bsmr_test(setup_eden=True, data_dir="bxl_simple")
+async def test_attributes(bsmr: Bsmr) -> None:
+    out = await bsmr.uquery("set(root//bin:the_binary //lib:file1)")
     assert out.stdout == "root//bin:the_binary\nroot//lib:file1\n"
 
-    json_out = await buck.uquery("--json", "set(root//bin:the_binary //lib:file1)")
+    json_out = await bsmr.uquery("--json", "set(root//bin:the_binary //lib:file1)")
     json_out = json.loads(json_out.stdout)
     assert ["root//bin:the_binary", "root//lib:file1"] == json_out
 
-    attrs_out = await buck.uquery(
+    attrs_out = await bsmr.uquery(
         "--output-attribute",
-        "buck\\..*",
+        "bsmr\\..*",
         "--output-attribute",
         "srcs",
         "--output-attribute",
         "deps",
         "set(root//bin:the_binary //lib:file1)",
     )
-    attrs_json_out = await buck.uquery(
+    attrs_json_out = await bsmr.uquery(
         "--output-attribute",
-        "buck\\..*",
+        "bsmr\\..*",
         "--output-attribute",
         "srcs",
         "--output-attribute",
@@ -372,7 +372,7 @@ async def test_attributes(buck: Buck) -> None:
     attrs_json_out = json.loads(attrs_json_out.stdout)
     assert {
         "root//bin:the_binary": {
-            "buck.deps": [
+            "bsmr.deps": [
                 "root//:data",
                 "root//lib:lib1",
                 "root//lib:lib2",
@@ -380,31 +380,31 @@ async def test_attributes(buck: Buck) -> None:
                 "root//:foo_toolchain",
                 "root//:bin",
             ],
-            "buck.package": "root//bin:TARGETS.fixture",
-            "buck.tree_modifiers": ["cfg//os:linux"],
-            "buck.type": "_foo_binary",
-            "buck.configuration_deps": ["root//bin:my_platform", "root//bin:my_config"],
-            "buck.oncall": None,
+            "bsmr.package": "root//bin:TARGETS.fixture",
+            "bsmr.tree_modifiers": ["cfg//os:linux"],
+            "bsmr.type": "_foo_binary",
+            "bsmr.configuration_deps": ["root//bin:my_platform", "root//bin:my_config"],
+            "bsmr.oncall": None,
             "deps": ["root//lib:lib1", "root//lib:lib2", "root//lib:lib3"],
             "srcs": ["root//bin/TARGETS.fixture"],
         },
         "root//lib:file1": {
-            "buck.deps": [],
-            "buck.package": "root//lib:TARGETS.fixture",
-            "buck.tree_modifiers": ["cfg//os:linux"],
-            "buck.type": "_foo_genrule",
-            "buck.configuration_deps": ["root//platforms:platform1"],
-            "buck.oncall": None,
+            "bsmr.deps": [],
+            "bsmr.package": "root//lib:TARGETS.fixture",
+            "bsmr.tree_modifiers": ["cfg//os:linux"],
+            "bsmr.type": "_foo_genrule",
+            "bsmr.configuration_deps": ["root//platforms:platform1"],
+            "bsmr.oncall": None,
         },
     } == attrs_json_out
 
 
-@buck_test(data_dir="bxl_simple")
-async def test_dot(buck: Buck) -> None:
-    out = await buck.uquery("--dot", "deps(root//bin:the_binary, 100, target_deps())")
+@bsmr_test(data_dir="bxl_simple")
+async def test_dot(bsmr: Bsmr) -> None:
+    out = await bsmr.uquery("--dot", "deps(root//bin:the_binary, 100, target_deps())")
     golden(output=out.stdout, rel_path="bxl_simple/expected/dot/deps.golden")
 
-    out = await buck.uquery(
+    out = await bsmr.uquery(
         "--dot",
         "--output-attribute=name",
         "--output-attribute=^deps",
@@ -413,16 +413,16 @@ async def test_dot(buck: Buck) -> None:
     )
     golden(output=out.stdout, rel_path="bxl_simple/expected/dot/attrs.golden")
 
-    out = await buck.uquery(
+    out = await bsmr.uquery(
         "--dot",
         "deps(root//bin:the_binary, 100, target_deps()) - set(//lib: //platforms:)",
     )
     golden(output=out.stdout, rel_path="bxl_simple/expected/dot/subgraph.golden")
 
 
-@buck_test(data_dir="bxl_simple")
-async def test_dot_compact(buck: Buck) -> None:
-    out = await buck.uquery(
+@bsmr_test(data_dir="bxl_simple")
+async def test_dot_compact(bsmr: Bsmr) -> None:
+    out = await bsmr.uquery(
         "--dot-compact", "deps(root//bin:the_binary, 100, target_deps())"
     )
     golden(
@@ -430,7 +430,7 @@ async def test_dot_compact(buck: Buck) -> None:
         rel_path="bxl_simple/expected/dot_compact/deps.golden",
     )
 
-    out = await buck.uquery(
+    out = await bsmr.uquery(
         "--dot-compact",
         "--output-attribute=name",
         "--output-attribute=^deps",
@@ -442,7 +442,7 @@ async def test_dot_compact(buck: Buck) -> None:
         rel_path="bxl_simple/expected/dot_compact/attrs.golden",
     )
 
-    out = await buck.uquery(
+    out = await bsmr.uquery(
         "--dot-compact",
         "deps(root//bin:the_binary, 100, target_deps()) - set(//lib: //platforms:)",
     )
@@ -453,43 +453,43 @@ async def test_dot_compact(buck: Buck) -> None:
 
 
 # Tests for "%Ss" uses
-@buck_test(data_dir="bxl_simple")
-async def test_args_as_set(buck: Buck) -> None:
-    out = await buck.uquery("%Ss", "root//bin:the_binary", "//lib:file1")
+@bsmr_test(data_dir="bxl_simple")
+async def test_args_as_set(bsmr: Bsmr) -> None:
+    out = await bsmr.uquery("%Ss", "root//bin:the_binary", "//lib:file1")
     assert out.stdout == "root//bin:the_binary\nroot//lib:file1\n"
 
-    result = await buck.uquery("--json", "%Ss", "root//bin:the_binary", "//lib:file1")
+    result = await bsmr.uquery("--json", "%Ss", "root//bin:the_binary", "//lib:file1")
     json_out = json.loads(result.stdout)
     assert json_out == ["root//bin:the_binary", "root//lib:file1"]
 
 
-@buck_test(data_dir="bxl_simple")
-async def test_multi_uquery(buck: Buck) -> None:
-    out = await buck.uquery("%s", "root//bin:the_binary", "//lib:file1")
+@bsmr_test(data_dir="bxl_simple")
+async def test_multi_uquery(bsmr: Bsmr) -> None:
+    out = await bsmr.uquery("%s", "root//bin:the_binary", "//lib:file1")
     assert out.stdout == "root//bin:the_binary\nroot//lib:file1\n"
 
-    result = await buck.uquery(
-        "owner(%s)", "bin/TARGETS.fixture", "data/buck/build/data.file"
+    result = await bsmr.uquery(
+        "owner(%s)", "bin/TARGETS.fixture", "data/bsmr/build/data.file"
     )
     assert result.stdout == "root//bin:the_binary\nroot//data:data\n"
 
-    result = await buck.uquery(
-        "--json", "owner(%s)", "bin/TARGETS.fixture", "data/buck/build/data.file"
+    result = await bsmr.uquery(
+        "--json", "owner(%s)", "bin/TARGETS.fixture", "data/bsmr/build/data.file"
     )
     json_out = json.loads(result.stdout)
 
     assert json_out == {
         "bin/TARGETS.fixture": ["root//bin:the_binary"],
-        "data/buck/build/data.file": ["root//data:data"],
+        "data/bsmr/build/data.file": ["root//data:data"],
     }
 
-    # match buck1's strange handling of multi-query with --output-attribute
-    result = await buck.uquery(
+    # match legacy's strange handling of multi-query with --output-attribute
+    result = await bsmr.uquery(
         "--json",
         "--output-attribute=name",
         "owner(%s)",
         "bin/TARGETS.fixture",
-        "data/buck/build/data.file",
+        "data/bsmr/build/data.file",
     )
     json_out = json.loads(result.stdout)
 
@@ -501,109 +501,109 @@ async def test_multi_uquery(buck: Buck) -> None:
     # test a case where the query for one arg fails. The process should exit with a non-zero code, but
     # the produced output should be valid json with an appropriate error indicator.
     failure = await expect_failure(
-        buck.uquery("--json", "inputs(%s)", "//data:data", "xyz")
+        bsmr.uquery("--json", "inputs(%s)", "//data:data", "xyz")
     )
     json_out = json.loads(failure.stdout)
     assert "$error" in json_out["xyz"]
-    assert json_out["//data:data"] == ["data/buck/build/data.file"]
+    assert json_out["//data:data"] == ["data/bsmr/build/data.file"]
 
     # Test where the parameter is not a literal, but a query fragment
-    out = await buck.uquery("%s", "deps(root//lib:lib1)")
+    out = await bsmr.uquery("%s", "deps(root//lib:lib1)")
     assert out.stdout == "root//lib:file1\nroot//lib:lib1\n"
 
-    out = await buck.uquery("owner(%s)", "inputs(root//bin:the_binary)")
+    out = await bsmr.uquery("owner(%s)", "inputs(root//bin:the_binary)")
     assert out.stdout == "root//bin:the_binary\n"
 
-    out = await buck.uquery("owner(%s)", "data/buck/build/data.file")
+    out = await bsmr.uquery("owner(%s)", "data/bsmr/build/data.file")
     assert out.stdout == "root//data:data\n"
 
-    # We'd really prefer this to be an error, but Buck1 allows it
-    out = await buck.uquery("owner(%s", "data/buck/build/data.file)")
+    # We'd really prefer this to be an error, but Legacy allows it
+    out = await bsmr.uquery("owner(%s", "data/bsmr/build/data.file)")
     assert out.stdout == "root//data:data\n"
 
 
-@buck_test(data_dir="testsof")
-async def test_testsof(buck: Buck) -> None:
-    out = await buck.uquery("testsof(//:foo_lib)")
+@bsmr_test(data_dir="testsof")
+async def test_testsof(bsmr: Bsmr) -> None:
+    out = await bsmr.uquery("testsof(//:foo_lib)")
 
     assert "root//:foo_test" in out.stdout
     assert "root//:foo_extra_test" in out.stdout
     assert "root//:foo_lib" not in out.stdout
 
 
-@buck_test(data_dir="directory_sources")
-async def test_directory_source(buck: Buck) -> None:
-    await buck.build(":a_file")
-    await buck.build(":a_dir")
+@bsmr_test(data_dir="directory_sources")
+async def test_directory_source(bsmr: Bsmr) -> None:
+    await bsmr.build(":a_file")
+    await bsmr.build(":a_dir")
 
-    result = await buck.query("owner(dir/file1.txt)")
+    result = await bsmr.query("owner(dir/file1.txt)")
     assert result.stdout == "root//:a_dir\n"
-    result = await buck.query("inputs(:a_dir)")
+    result = await bsmr.query("inputs(:a_dir)")
     assert (
         result.stdout == "dir/file1.txt\ndir/subdir/file2.txt\ndir/subdir/file3.txt\n"
     )
 
     # Can't reference files that don't exist
     await expect_failure(
-        buck.build("does_not_exist:"),
+        bsmr.build("does_not_exist:"),
         stderr_regex="Source file `does_not_exist` does not exist as a member of package",
     )
 
     # Want to make sure we can't do a package boundary violation
     # Currently these are soft errors
     await expect_failure(
-        buck.build("subpackage:"),
+        bsmr.build("subpackage:"),
         stderr_regex="Source file `subpackage` does not exist as a member of package",
     )
 
     await expect_failure(
-        buck.build("dir_with_subpackage"),
+        bsmr.build("dir_with_subpackage"),
         stderr_regex="may not cover any subpackages, but includes subpackage `dir_with_subpackage/subpackage`.",
     )
 
 
-@buck_test(data_dir="oncall")
-async def test_oncall(buck: Buck) -> None:
-    out = await buck.uquery("//:foo", "--output-attribute=oncall")
+@bsmr_test(data_dir="oncall")
+async def test_oncall(bsmr: Bsmr) -> None:
+    out = await bsmr.uquery("//:foo", "--output-attribute=oncall")
     assert '"magic"' in out.stdout
-    out = await buck.cquery("//:bar", "--output-attribute=oncall")
+    out = await bsmr.cquery("//:bar", "--output-attribute=oncall")
     assert '"magic"' in out.stdout
 
 
-@buck_test(data_dir="oncall")
-async def test_output_all_attributes(buck: Buck) -> None:
-    def contains(out: BuckResult, want: list[str], notwant: list[str]) -> None:
+@bsmr_test(data_dir="oncall")
+async def test_output_all_attributes(bsmr: Bsmr) -> None:
+    def contains(out: BsmrResult, want: list[str], notwant: list[str]) -> None:
         x = json.loads(out.stdout)["root//:foo"]
         for w in want:
             assert w in x
         for w in notwant:
             assert w not in x
 
-    out = await buck.uquery("//:foo", "--output-all-attributes", "--json")
+    out = await bsmr.uquery("//:foo", "--output-all-attributes", "--json")
     contains(
         out,
         [
-            "buck.type",
+            "bsmr.type",
             "name",
-            "buck.oncall",
-            "buck.package",
-            "buck.configuration_deps",
-            "buck.deps",
+            "bsmr.oncall",
+            "bsmr.package",
+            "bsmr.configuration_deps",
+            "bsmr.deps",
             "visibility",
         ],
         ["madeup"],
     )
-    out = await buck.uquery("//:foo", "--output-basic-attributes", "--json")
+    out = await bsmr.uquery("//:foo", "--output-basic-attributes", "--json")
     contains(
         out,
-        ["buck.type", "name", "buck.package", "visibility"],
-        ["buck.oncall", "buck.configuration_deps"],
+        ["bsmr.type", "name", "bsmr.package", "visibility"],
+        ["bsmr.oncall", "bsmr.configuration_deps"],
     )
 
 
-@buck_test(data_dir="bxl_simple")
-async def test_output_format_starlark_golden(buck: Buck) -> None:
-    result = await buck.uquery(
+@bsmr_test(data_dir="bxl_simple")
+async def test_output_format_starlark_golden(bsmr: Bsmr) -> None:
+    result = await bsmr.uquery(
         "--output-format=starlark",
         "--stack",
         "//lib:",
@@ -615,136 +615,136 @@ async def test_output_format_starlark_golden(buck: Buck) -> None:
     )
 
 
-@buck_test(data_dir="bxl_simple")
-async def test_uquery_rdeps(buck: Buck) -> None:
-    result = await buck.query("""rdeps(root//bin:the_binary, //lib:file1)""")
+@bsmr_test(data_dir="bxl_simple")
+async def test_uquery_rdeps(bsmr: Bsmr) -> None:
+    result = await bsmr.query("""rdeps(root//bin:the_binary, //lib:file1)""")
     assert result.stdout == "root//bin:the_binary\nroot//lib:lib1\nroot//lib:file1\n"
 
-    result = await buck.query("""rdeps(root//bin:the_binary, //lib:file1, 0)""")
+    result = await bsmr.query("""rdeps(root//bin:the_binary, //lib:file1, 0)""")
     assert result.stdout == "root//lib:file1\n"
 
-    result = await buck.query("""rdeps(root//bin:the_binary, //lib:file1, 1)""")
+    result = await bsmr.query("""rdeps(root//bin:the_binary, //lib:file1, 1)""")
     assert result.stdout == "root//lib:lib1\nroot//lib:file1\n"
 
-    result = await buck.query("""rdeps(root//bin:the_binary, //lib:file1, 100)""")
+    result = await bsmr.query("""rdeps(root//bin:the_binary, //lib:file1, 100)""")
     assert result.stdout == "root//bin:the_binary\nroot//lib:lib1\nroot//lib:file1\n"
 
 
-@buck_test(data_dir="bxl_simple")
-async def test_query_attrfilter_special_attribute(buck: Buck) -> None:
-    out = await buck.uquery(
-        "attrfilter(buck.package, 'root//bin:TARGETS.fixture',root//bin:the_binary)"
+@bsmr_test(data_dir="bxl_simple")
+async def test_query_attrfilter_special_attribute(bsmr: Bsmr) -> None:
+    out = await bsmr.uquery(
+        "attrfilter(bsmr.package, 'root//bin:TARGETS.fixture',root//bin:the_binary)"
     )
     assert out.stdout.strip() == "root//bin:the_binary"
 
 
 # Tests for intersect and except operators on FileSet, TargetSet, and String types
 # These tests verify the fix for https://github.com/facebook/buck2/issues/1109
-@buck_test(data_dir="set_operators")
-async def test_uquery_fileset_intersect(buck: Buck) -> None:
+@bsmr_test(data_dir="set_operators")
+async def test_uquery_fileset_intersect(bsmr: Bsmr) -> None:
     """Test FileSet intersect FileSet using inputs()."""
-    result = await buck.uquery(
+    result = await bsmr.uquery(
         """inputs(root//:lib_a) intersect inputs(root//:lib_b)"""
     )
     assert result.stdout == "common.txt\n"
 
 
-@buck_test(data_dir="set_operators")
-async def test_uquery_fileset_except(buck: Buck) -> None:
+@bsmr_test(data_dir="set_operators")
+async def test_uquery_fileset_except(bsmr: Bsmr) -> None:
     """Test FileSet except FileSet using inputs()."""
-    result = await buck.uquery("""inputs(root//:lib_a) except inputs(root//:lib_b)""")
+    result = await bsmr.uquery("""inputs(root//:lib_a) except inputs(root//:lib_b)""")
     assert result.stdout == "lib_a.txt\n"
 
 
-@buck_test(data_dir="set_operators")
-async def test_uquery_fileset_intersect_string(buck: Buck) -> None:
+@bsmr_test(data_dir="set_operators")
+async def test_uquery_fileset_intersect_string(bsmr: Bsmr) -> None:
     """Test FileSet intersect String."""
-    result = await buck.uquery("""inputs(root//:lib_a) intersect "common.txt" """)
+    result = await bsmr.uquery("""inputs(root//:lib_a) intersect "common.txt" """)
     assert result.stdout == "common.txt\n"
 
 
-@buck_test(data_dir="set_operators")
-async def test_uquery_fileset_except_string(buck: Buck) -> None:
+@bsmr_test(data_dir="set_operators")
+async def test_uquery_fileset_except_string(bsmr: Bsmr) -> None:
     """Test FileSet except String."""
-    result = await buck.uquery("""inputs(root//:lib_a) except "common.txt" """)
+    result = await bsmr.uquery("""inputs(root//:lib_a) except "common.txt" """)
     assert result.stdout == "lib_a.txt\n"
 
 
-@buck_test(data_dir="set_operators")
-async def test_uquery_string_intersect_fileset(buck: Buck) -> None:
+@bsmr_test(data_dir="set_operators")
+async def test_uquery_string_intersect_fileset(bsmr: Bsmr) -> None:
     """Test String intersect FileSet."""
-    result = await buck.uquery(""" "common.txt" intersect inputs(root//:lib_a)""")
+    result = await bsmr.uquery(""" "common.txt" intersect inputs(root//:lib_a)""")
     assert result.stdout == "common.txt\n"
 
 
-@buck_test(data_dir="set_operators")
-async def test_uquery_string_except_fileset(buck: Buck) -> None:
+@bsmr_test(data_dir="set_operators")
+async def test_uquery_string_except_fileset(bsmr: Bsmr) -> None:
     """Test String except FileSet (string not in fileset)."""
-    result = await buck.uquery(""" "lib_a.txt" except inputs(root//:lib_b)""")
+    result = await bsmr.uquery(""" "lib_a.txt" except inputs(root//:lib_b)""")
     assert result.stdout == "lib_a.txt\n"
 
 
-@buck_test(data_dir="set_operators")
-async def test_uquery_targetset_intersect(buck: Buck) -> None:
+@bsmr_test(data_dir="set_operators")
+async def test_uquery_targetset_intersect(bsmr: Bsmr) -> None:
     """Test TargetSet intersect TargetSet using set()."""
-    result = await buck.uquery(
+    result = await bsmr.uquery(
         """set(root//:lib_a root//:app) intersect set(root//:lib_b root//:app)"""
     )
     assert result.stdout == "root//:app\n"
 
 
-@buck_test(data_dir="set_operators")
-async def test_uquery_targetset_except(buck: Buck) -> None:
+@bsmr_test(data_dir="set_operators")
+async def test_uquery_targetset_except(bsmr: Bsmr) -> None:
     """Test TargetSet except TargetSet using set()."""
-    result = await buck.uquery(
+    result = await bsmr.uquery(
         """set(root//:lib_a root//:app) except set(root//:app)"""
     )
     assert result.stdout == "root//:lib_a\n"
 
 
-@buck_test(data_dir="set_operators")
-async def test_uquery_targetset_intersect_string(buck: Buck) -> None:
+@bsmr_test(data_dir="set_operators")
+async def test_uquery_targetset_intersect_string(bsmr: Bsmr) -> None:
     """Test TargetSet intersect String."""
-    result = await buck.uquery(
+    result = await bsmr.uquery(
         """set(root//:lib_a root//:app) intersect "root//:lib_a" """
     )
     assert result.stdout == "root//:lib_a\n"
 
 
-@buck_test(data_dir="set_operators")
-async def test_uquery_targetset_except_string(buck: Buck) -> None:
+@bsmr_test(data_dir="set_operators")
+async def test_uquery_targetset_except_string(bsmr: Bsmr) -> None:
     """Test TargetSet except String."""
-    result = await buck.uquery("""set(root//:lib_a root//:app) except "root//:app" """)
+    result = await bsmr.uquery("""set(root//:lib_a root//:app) except "root//:app" """)
     assert result.stdout == "root//:lib_a\n"
 
 
-@buck_test(data_dir="set_operators")
-async def test_uquery_string_intersect_targetset(buck: Buck) -> None:
+@bsmr_test(data_dir="set_operators")
+async def test_uquery_string_intersect_targetset(bsmr: Bsmr) -> None:
     """Test String intersect TargetSet."""
-    result = await buck.uquery(
+    result = await bsmr.uquery(
         """ "root//:lib_a" intersect set(root//:lib_a root//:app)"""
     )
     assert result.stdout == "root//:lib_a\n"
 
 
-@buck_test(data_dir="set_operators")
-async def test_uquery_string_except_targetset(buck: Buck) -> None:
+@bsmr_test(data_dir="set_operators")
+async def test_uquery_string_except_targetset(bsmr: Bsmr) -> None:
     """Test String except TargetSet (string not in targetset)."""
-    result = await buck.uquery(
+    result = await bsmr.uquery(
         """ "root//:app" except set(root//:lib_a root//:lib_b)"""
     )
     assert result.stdout == "root//:app\n"
 
 
-@buck_test(data_dir="set_operators")
-async def test_uquery_string_intersect_string(buck: Buck) -> None:
+@bsmr_test(data_dir="set_operators")
+async def test_uquery_string_intersect_string(bsmr: Bsmr) -> None:
     """Test String intersect String for targets."""
-    result = await buck.uquery(""" "root//:lib_a" intersect "root//:lib_a" """)
+    result = await bsmr.uquery(""" "root//:lib_a" intersect "root//:lib_a" """)
     assert result.stdout == "root//:lib_a\n"
 
 
-@buck_test(data_dir="set_operators")
-async def test_uquery_string_except_string(buck: Buck) -> None:
+@bsmr_test(data_dir="set_operators")
+async def test_uquery_string_except_string(bsmr: Bsmr) -> None:
     """Test String except String (different targets)."""
-    result = await buck.uquery(""" "root//:app" except "root//:lib_a" """)
+    result = await bsmr.uquery(""" "root//:app" except "root//:lib_a" """)
     assert result.stdout == "root//:app\n"

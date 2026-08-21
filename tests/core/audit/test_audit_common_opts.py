@@ -16,15 +16,15 @@
 
 
 import pytest
-from bsmr.tests.e2e_util.api.buck import Buck
-from bsmr.tests.e2e_util.buck_workspace import buck_test
+from bsmr.tests.e2e_util.api.bsmr import Bsmr
+from bsmr.tests.e2e_util.bsmr_workspace import bsmr_test
 
 # TODO(iguridi) or TODO(raulgarcia4):
 # New `audit` commands have been added since these tests were created.
 # Test them if necessary.
 
 
-@buck_test()
+@bsmr_test()
 @pytest.mark.parametrize(  # type: ignore
     "cmd",
     [
@@ -34,12 +34,12 @@ from bsmr.tests.e2e_util.buck_workspace import buck_test
         "audit_visibility",
     ],
 )
-async def test_pass_common_opts_func(buck: Buck, cmd: str) -> None:
-    cmd_call = getattr(buck, cmd)
+async def test_pass_common_opts_func(bsmr: Bsmr, cmd: str) -> None:
+    cmd_call = getattr(bsmr, cmd)
     await cmd_call("--client-metadata", "id=placeholder_id")
 
 
-@buck_test()
+@bsmr_test()
 @pytest.mark.parametrize(  # type: ignore
     "cmd",
     [
@@ -52,10 +52,10 @@ async def test_pass_common_opts_func(buck: Buck, cmd: str) -> None:
         "subtargets",
     ],
 )
-async def test_pass_common_opts(buck: Buck, cmd: str) -> None:
+async def test_pass_common_opts(bsmr: Bsmr, cmd: str) -> None:
     commands_requiring_target_pattern_arg_value = {"providers", "subtargets"}
 
     if cmd in commands_requiring_target_pattern_arg_value:
-        await buck.audit(cmd, "//:dummy", "--client-metadata", "id=placeholder_id")
+        await bsmr.audit(cmd, "//:dummy", "--client-metadata", "id=placeholder_id")
     else:
-        await buck.audit(cmd, "--client-metadata", "id=placeholder_id")
+        await bsmr.audit(cmd, "--client-metadata", "id=placeholder_id")

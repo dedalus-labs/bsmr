@@ -947,7 +947,7 @@ again.]
    - `references/advanced_patterns.md` - Production-ready patterns (custom providers, transitive sets, toolchains, multiple outputs, testing rules)
 2. **Explore Bessemer's prelude**: See real production rules in `fbcode/bsmr/prelude/`
 3. **Try more complex rules**: Multiple outputs, custom providers, transitive dependencies
-4. **Learn BXL**: Buck Extension Language for build introspection
+4. **Learn BXL**: Bsmr Extension Language for build introspection
 5. **Build something real**: Apply what you learned to your project
 
 **Pro tip:** After completing the tutorial, ask questions like "how do providers work in detail?" or "what are transitive sets?" and I'll reference the appropriate documentation to give you deeper explanations.

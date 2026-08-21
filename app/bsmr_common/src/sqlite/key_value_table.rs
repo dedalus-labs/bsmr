@@ -16,8 +16,8 @@
 
 use std::sync::Arc;
 
-use bsmr_error::BuckErrorContext;
-use bsmr_hash::StdBuckHashMap;
+use bsmr_error::BsmrErrorContext;
+use bsmr_hash::StdBsmrHashMap;
 use itertools::Itertools;
 use parking_lot::Mutex;
 use rusqlite::Connection;
@@ -48,11 +48,11 @@ impl KeyValueSqliteTable {
         self.connection
             .lock()
             .execute(&sql, [])
-            .with_buck_error_context(|| format!("creating sqlite table {}", self.table_name))?;
+            .with_bsmr_error_context(|| format!("creating sqlite table {}", self.table_name))?;
         Ok(())
     }
 
-    pub fn insert_all(&self, map: StdBuckHashMap<String, String>) -> bsmr_error::Result<()> {
+    pub fn insert_all(&self, map: StdBsmrHashMap<String, String>) -> bsmr_error::Result<()> {
         let sql = format!(
             "INSERT OR REPLACE INTO {} (key, value) VALUES {}",
             self.table_name,
@@ -68,21 +68,21 @@ impl KeyValueSqliteTable {
                 &sql,
                 rusqlite::params_from_iter(map.into_iter().flat_map(<[_; 2]>::from)),
             )
-            .with_buck_error_context(|| {
+            .with_bsmr_error_context(|| {
                 format!("inserting into sqlite table {}", self.table_name)
             })?;
         Ok(())
     }
 
-    pub fn read_all(&self) -> bsmr_error::Result<StdBuckHashMap<String, String>> {
+    pub fn read_all(&self) -> bsmr_error::Result<StdBsmrHashMap<String, String>> {
         let sql = format!("SELECT key, value FROM {}", self.table_name);
         tracing::trace!(sql = %sql, "read all from table");
         let connection = self.connection.lock();
         let mut stmt = connection.prepare(&sql)?;
         let map = stmt
             .query_map([], |row| Ok((row.get(0)?, row.get(1)?)))?
-            .collect::<Result<StdBuckHashMap<String, String>, _>>()
-            .with_buck_error_context(|| format!("reading from sqlite table {}", self.table_name))?;
+            .collect::<Result<StdBsmrHashMap<String, String>, _>>()
+            .with_bsmr_error_context(|| format!("reading from sqlite table {}", self.table_name))?;
         Ok(map)
     }
 
@@ -95,7 +95,7 @@ impl KeyValueSqliteTable {
             .query_map([key], |row| row.get(0))?
             .next()
             .transpose()
-            .with_buck_error_context(|| {
+            .with_bsmr_error_context(|| {
                 format!("reading `{}` from sqlite table {}", key, self.table_name)
             })?;
         Ok(row)
@@ -123,7 +123,7 @@ mod tests {
 
         table.create_table().unwrap();
 
-        let expected = StdBuckHashMap::from([
+        let expected = StdBsmrHashMap::from([
             ("foo".to_owned(), "foo".to_owned()),
             ("bar".to_owned(), "bar".to_owned()),
         ]);

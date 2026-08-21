@@ -1,3 +1,9 @@
+# ===----------------------------------------------------------------------===
+# Upstream-Source: facebook/buck2@1560aca2002865cd73d7cafb22c705cfb640b2bc
+# Modifications Copyright (c) 2026 Dedalus Labs, Inc. and its contributors
+# SPDX-License-Identifier: Apache-2.0
+# ===----------------------------------------------------------------------===
+
 # Copyright (c) Meta Platforms, Inc. and affiliates.
 #
 # This source code is dual-licensed under either the MIT license found in the
@@ -307,7 +313,7 @@ def _add_plugins(ctx: AnalysisContext, plugins: list[tuple], is_ksp: bool) -> _P
         kotlinc_cmd_args.add(cmd_args(["-Xplugin", plugin[DefaultInfo].default_outputs[0]], delimiter = "="))
         options = []
         for option_key, option_val in plugin_options.items():
-            # "_codegen_dir_" means buck should provide a dir
+            # "_codegen_dir_" means bsmr should provide a dir
             if option_val == "__codegen_dir__":
                 option_val = ctx.actions.declare_output("kotlin_compiler_plugin_dir", has_content_based_path = True)
                 options.append(cmd_args([option_key, option_val.as_output()], delimiter = "="))
@@ -414,7 +420,7 @@ def build_kotlin_library(
             ctx.attrs.srcs,
             custom_jdk_info = custom_jdk_info,
             additional_classpath_entries = additional_classpath_entries,
-            # Match buck1, which always does class ABI generation for Kotlin targets unless explicitly specified.
+            # Match legacy, which always does class ABI generation for Kotlin targets unless explicitly specified.
             override_abi_generation_mode = get_abi_generation_mode(ctx.attrs.abi_generation_mode) or AbiGenerationMode("class"),
             extra_sub_targets = extra_sub_targets,
             validation_deps_outputs = validation_deps_outputs,

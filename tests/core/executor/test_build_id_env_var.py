@@ -15,14 +15,14 @@
 # pyre-strict
 
 
-from bsmr.tests.e2e_util.api.buck import Buck
-from bsmr.tests.e2e_util.buck_workspace import buck_test
+from bsmr.tests.e2e_util.api.bsmr import Bsmr
+from bsmr.tests.e2e_util.bsmr_workspace import bsmr_test
 from bsmr.tests.e2e_util.helper.utils import random_string
 
 
-@buck_test()
-async def test_build_id_env_var_is_set_locally(buck: Buck) -> None:
-    result = await buck.build(
+@bsmr_test()
+async def test_build_id_env_var_is_set_locally(bsmr: Bsmr) -> None:
+    result = await bsmr.build(
         "root//:top",
         "--local-only",
         "--no-remote-cache",
@@ -33,12 +33,12 @@ async def test_build_id_env_var_is_set_locally(buck: Buck) -> None:
     output = result.get_build_report().output_for_target("root//:top")
     assert output.exists()
     with open(output) as f:
-        assert f.read().strip() == result.buck_build_id
+        assert f.read().strip() == result.bsmr_build_id
 
 
-@buck_test()
-async def test_build_id_env_var_is_set_remotely(buck: Buck) -> None:
-    result = await buck.build(
+@bsmr_test()
+async def test_build_id_env_var_is_set_remotely(bsmr: Bsmr) -> None:
+    result = await bsmr.build(
         "root//:top",
         "--remote-only",
         "--no-remote-cache",
@@ -49,4 +49,4 @@ async def test_build_id_env_var_is_set_remotely(buck: Buck) -> None:
     output = result.get_build_report().output_for_target("root//:top")
     assert output.exists()
     with open(output) as f:
-        assert f.read().strip() == result.buck_build_id
+        assert f.read().strip() == result.bsmr_build_id

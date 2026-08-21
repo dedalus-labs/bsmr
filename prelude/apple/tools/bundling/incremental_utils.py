@@ -1,3 +1,9 @@
+# ===----------------------------------------------------------------------===
+# Upstream-Source: facebook/buck2@1560aca2002865cd73d7cafb22c705cfb640b2bc
+# Modifications Copyright (c) 2026 Dedalus Labs, Inc. and its contributors
+# SPDX-License-Identifier: Apache-2.0
+# ===----------------------------------------------------------------------===
+
 # Copyright (c) Meta Platforms, Inc. and affiliates.
 #
 # This source code is dual-licensed under either the MIT license found in the
@@ -160,7 +166,7 @@ def calculate_incremental_state(
     spec: List[BundleSpecItem], action_metadata: Dict[Path, str]
 ) -> List[IncrementalStateItem]:
     """
-    `action_metadata` maps Buck project relative paths to hash digest
+    `action_metadata` maps Bsmr project relative paths to hash digest
     for every input file of the action which executes this script
     """
     result = []

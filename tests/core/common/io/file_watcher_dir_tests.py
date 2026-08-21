@@ -30,16 +30,16 @@ from bsmr.tests.core.common.io.file_watcher_tests import (
     setup_file_watcher_test,
     verify_results,
 )
-from bsmr.tests.e2e_util.api.buck import Buck
+from bsmr.tests.e2e_util.api.bsmr import Bsmr
 
 
 async def run_create_directory_test(
-    buck: Buck,
+    bsmr: Bsmr,
     file_system_type: FileSystemType,
     file_watcher_provider: FileWatcherProvider,
 ) -> None:
-    await setup_file_watcher_test(buck)
-    path = os.path.join(buck.cwd, "files", "def")
+    await setup_file_watcher_test(bsmr)
+    path = os.path.join(bsmr.cwd, "files", "def")
     os.mkdir(path)
 
     required = [
@@ -50,18 +50,18 @@ async def run_create_directory_test(
         )
     ]
 
-    is_fresh_instance, results = await get_file_watcher_events(buck)
+    is_fresh_instance, results = await get_file_watcher_events(bsmr)
     assert not is_fresh_instance
     verify_results(results, required)
 
 
 async def run_remove_directory_test(
-    buck: Buck,
+    bsmr: Bsmr,
     file_system_type: FileSystemType,
     file_watcher_provider: FileWatcherProvider,
 ) -> None:
-    await setup_file_watcher_test(buck)
-    path = os.path.join(buck.cwd, "files", "d")
+    await setup_file_watcher_test(bsmr)
+    path = os.path.join(bsmr.cwd, "files", "d")
     shutil.rmtree(path)
 
     if (
@@ -83,19 +83,19 @@ async def run_remove_directory_test(
             ),
         ]
 
-    is_fresh_instance, results = await get_file_watcher_events(buck)
+    is_fresh_instance, results = await get_file_watcher_events(bsmr)
     assert not is_fresh_instance
     verify_results(results, required)
 
 
 async def run_rename_directory_test(
-    buck: Buck,
+    bsmr: Bsmr,
     file_system_type: FileSystemType,
     file_watcher_provider: FileWatcherProvider,
 ) -> None:
-    await setup_file_watcher_test(buck)
-    fromPath = os.path.join(buck.cwd, "files", "d")
-    toPath = os.path.join(buck.cwd, "files", "def")
+    await setup_file_watcher_test(bsmr)
+    fromPath = os.path.join(bsmr.cwd, "files", "d")
+    toPath = os.path.join(bsmr.cwd, "files", "def")
     os.rename(fromPath, toPath)
 
     required = [
@@ -115,6 +115,6 @@ async def run_rename_directory_test(
         ),
     ]
 
-    is_fresh_instance, results = await get_file_watcher_events(buck)
+    is_fresh_instance, results = await get_file_watcher_events(bsmr)
     assert not is_fresh_instance
     verify_results(results, required)

@@ -37,13 +37,13 @@ fn test_host_info() -> bsmr_error::Result<()> {
 }
 
 #[test]
-fn test_buck_v2() -> bsmr_error::Result<()> {
+fn test_bsmr_v2() -> bsmr_error::Result<()> {
     let mut tester = Tester::new().unwrap();
     tester.run_starlark_test(indoc!(
         r#"
             def test():
                 assert_eq(True, hasattr(host_info(), "bsmr"))
-                assert_eq(False, hasattr(host_info(), "buck1"))
+                assert_eq(False, hasattr(host_info(), "legacy"))
         "#
     ))?;
     Ok(())

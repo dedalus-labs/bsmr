@@ -29,7 +29,7 @@ use bsmr_directory::directory::directory_iterator::DirectoryIterator;
 use bsmr_directory::directory::directory_iterator::DirectoryIteratorPathStack;
 use bsmr_directory::directory::entry::DirectoryEntry;
 use bsmr_directory::directory::walk::unordered_entry_walk;
-use bsmr_error::BuckErrorContext;
+use bsmr_error::BsmrErrorContext;
 use bsmr_error::ErrorTag;
 use bsmr_error::conversion::from_any_with_tag;
 use bsmr_events::dispatch::EventDispatcher;
@@ -54,8 +54,8 @@ use bsmr_fs::error::IoResultExt;
 use bsmr_fs::fs_util;
 use bsmr_fs::fs_util::ReadDir;
 use bsmr_fs::paths::abs_norm_path::AbsNormPathBuf;
-use bsmr_hash::StdBuckHashMap;
-use bsmr_hash::StdBuckHashSet;
+use bsmr_hash::StdBsmrHashMap;
+use bsmr_hash::StdBsmrHashSet;
 use bsmr_http::HttpClient;
 use chrono::Duration;
 use chrono::Utc;
@@ -91,7 +91,7 @@ use crate::materializers::io::materialize_files;
 pub struct DefaultIoHandler {
     fs: ProjectRoot,
     digest_config: DigestConfig,
-    buck_out_path: ProjectRelativePathBuf,
+    output_path: ProjectRelativePathBuf,
     re_client_manager: Arc<ReConnectionManager>,
     /// Executor for blocking IO operations
     io_executor: Arc<dyn BlockingExecutor>,
@@ -150,7 +150,7 @@ pub trait IoHandler: Sized + Sync + Send + 'static {
     ) -> Option<BoxFuture<'static, bsmr_error::Result<()>>>;
 
     fn read_dir(&self, path: &AbsNormPathBuf) -> bsmr_error::Result<ReadDir>;
-    fn buck_out_path(&self) -> &ProjectRelativePathBuf;
+    fn output_path(&self) -> &ProjectRelativePathBuf;
     fn re_client_manager(&self) -> &Arc<ReConnectionManager>;
     fn fs(&self) -> &ProjectRoot;
     fn digest_config(&self) -> DigestConfig;
@@ -160,7 +160,7 @@ impl DefaultIoHandler {
     pub fn new(
         fs: ProjectRoot,
         digest_config: DigestConfig,
-        buck_out_path: ProjectRelativePathBuf,
+        output_path: ProjectRelativePathBuf,
         re_client_manager: Arc<ReConnectionManager>,
         io_executor: Arc<dyn BlockingExecutor>,
         http_client: HttpClient,
@@ -168,7 +168,7 @@ impl DefaultIoHandler {
         Self {
             fs,
             digest_config,
-            buck_out_path,
+            output_path,
             re_client_manager,
             io_executor,
             http_client,
@@ -308,7 +308,7 @@ impl DefaultIoHandler {
                 }
                 .boxed()
                 .await
-                .with_buck_error_context(|| {
+                .with_bsmr_error_context(|| {
                     format!(
                         "Error materializing HTTP resource declared by target `{}`",
                         info.owner
@@ -340,7 +340,7 @@ impl DefaultIoHandler {
                     .execute_io_inline(|| {
                         let data =
                             zstd::bulk::decompress(&write.compressed_data, write.decompressed_size)
-                                .buck_error_context("Error decompressing data")?;
+                                .bsmr_error_context("Error decompressing data")?;
                         stat.total_bytes = write.decompressed_size as u64;
                         self.fs.write_file(&path, data, write.is_executable)
                     })
@@ -490,8 +490,8 @@ impl IoHandler for DefaultIoHandler {
         fs_util::read_dir(path).categorize_internal()
     }
 
-    fn buck_out_path(&self) -> &ProjectRelativePathBuf {
-        &self.buck_out_path
+    fn output_path(&self) -> &ProjectRelativePathBuf {
+        &self.output_path
     }
 
     fn re_client_manager(&self) -> &Arc<ReConnectionManager> {
@@ -514,12 +514,12 @@ fn maybe_tombstone_digest(digest: &FileDigest) -> bsmr_error::Result<&FileDigest
     static TOMBSTONE_DIGEST: LazyLock<FileDigest> =
         LazyLock::new(|| FileDigest::new_sha1([0; 20], 1));
 
-    fn convert_digests(val: &str) -> bsmr_error::Result<StdBuckHashSet<FileDigest>> {
+    fn convert_digests(val: &str) -> bsmr_error::Result<StdBsmrHashSet<FileDigest>> {
         val.split(' ')
             .map(|digest| {
                 let digest = TDigest::from_str(digest)
                     .map_err(|e| from_any_with_tag(e, ErrorTag::InvalidDigest))
-                    .with_buck_error_context(|| format!("Invalid digest: `{digest}`"))?;
+                    .with_bsmr_error_context(|| format!("Invalid digest: `{digest}`"))?;
                 // This code is only used by E2E tests, so while it's not *a test*, testing_default
                 // is an OK choice here.
                 let digest = FileDigest::from_re(&digest, DigestConfig::testing_default())?;
@@ -530,7 +530,7 @@ fn maybe_tombstone_digest(digest: &FileDigest) -> bsmr_error::Result<&FileDigest
 
     let tombstoned_digests = bsmr_env!(
         "BSMR_TEST_TOMBSTONED_DIGESTS",
-        type=StdBuckHashSet<FileDigest>,
+        type=StdBsmrHashSet<FileDigest>,
         converter=convert_digests,
         applicability=testing,
     )?;
@@ -550,7 +550,7 @@ pub(super) fn create_ttl_refresh(
     min_ttl: Duration,
     digest_config: DigestConfig,
 ) -> Option<impl Future<Output = bsmr_error::Result<()>> + use<>> {
-    let mut digests_to_refresh = StdBuckHashMap::<_, StdBuckHashSet<_>>::new();
+    let mut digests_to_refresh = StdBsmrHashMap::<_, StdBsmrHashSet<_>>::new();
 
     let ttl_deadline = Utc::now() + min_ttl;
 
@@ -660,7 +660,7 @@ impl WriteIoRequest {
         cleanup_path(project_fs, &self.path)?;
         let data =
             zstd::bulk::decompress(&self.write.compressed_data, self.write.decompressed_size)
-                .buck_error_context("Error decompressing data")?;
+                .bsmr_error_context("Error decompressing data")?;
         project_fs.write_file(&self.path, data, self.write.is_executable)?;
         Ok(())
     }

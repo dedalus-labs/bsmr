@@ -22,7 +22,7 @@ use allocative::Allocative;
 use bsmr_artifact::artifact::artifact_type::Artifact;
 use bsmr_artifact::artifact::artifact_type::OutputArtifact;
 use bsmr_build_api_derive::internal_provider;
-use bsmr_error::BuckErrorContext;
+use bsmr_error::BsmrErrorContext;
 use bsmr_error::internal_error;
 use dupe::Dupe;
 use starlark::any::ProvidesStaticType;
@@ -130,11 +130,11 @@ use crate::interpreter::rule_defs::provider::collection::FrozenProviderCollectio
 /// foo_binary_wrapper(name = "foo", srcs = glob(["*.cpp"]) + [":gen_stuff"])
 ///
 /// # Builds just 'foo' binary. The strip command is never invoked.
-/// $ buck build //subdir:foo
+/// $ bsmr build //subdir:foo
 ///
 /// # builds the 'foo' binary, because it is needed by the 'strip' command. Ensures that
 /// # both the stripped binary and the debug symbols are built.
-/// $ buck build //subdir:foo[stripped]
+/// $ bsmr build //subdir:foo[stripped]
 /// ```
 #[internal_provider(default_info_creator)]
 #[derive(
@@ -233,7 +233,7 @@ impl FrozenDefaultInfo {
             .ok_or_else(|| internal_error!("sub_targets should be a dict-like object"))?
             .get_str(name)
             .map(|v| {
-                FrozenValueTyped::new_err(v).buck_error_context(
+                FrozenValueTyped::new_err(v).bsmr_error_context(
                     "Values inside of a frozen provider should be frozen provider collection",
                 )
             })

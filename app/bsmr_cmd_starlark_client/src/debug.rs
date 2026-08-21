@@ -20,13 +20,13 @@ use std::sync::LazyLock;
 use async_trait::async_trait;
 use bsmr_cli_proto::DapRequest;
 use bsmr_client_ctx::client_ctx::ClientCommandContext;
-use bsmr_client_ctx::common::BuckArgMatches;
+use bsmr_client_ctx::common::BsmrArgMatches;
 use bsmr_client_ctx::common::CommonBuildConfigurationOptions;
 use bsmr_client_ctx::common::CommonEventLogOptions;
 use bsmr_client_ctx::common::CommonStarlarkOptions;
 use bsmr_client_ctx::common::ui::CommonConsoleOptions;
 use bsmr_client_ctx::common::ui::ConsoleType;
-use bsmr_client_ctx::daemon::client::BuckdClientConnector;
+use bsmr_client_ctx::daemon::client::BsmrdClientConnector;
 use bsmr_client_ctx::events_ctx::EventsCtx;
 use bsmr_client_ctx::events_ctx::PartialResultCtx;
 use bsmr_client_ctx::events_ctx::PartialResultHandler;
@@ -35,15 +35,15 @@ use bsmr_client_ctx::ide_support::ide_message_stream;
 use bsmr_client_ctx::stream_util::reborrow_stream_for_static;
 use bsmr_client_ctx::streaming::StreamingCommand;
 use bsmr_client_ctx::subscribers::subscriber::EventSubscriber;
-use bsmr_event_observer::unpack_event::UnpackedBuckEvent;
+use bsmr_event_observer::unpack_event::UnpackedBsmrEvent;
 use bsmr_event_observer::unpack_event::unpack_event;
-use bsmr_events::BuckEvent;
+use bsmr_events::BsmrEvent;
 use futures::StreamExt;
 
 /// Run the starlark debug adapter protocol server
 ///
 /// This forwards requests received on stdin to a debug server running in the
-/// buck daemon. DAP events and responses are returned from the daemon and sent
+/// bsmr daemon. DAP events and responses are returned from the daemon and sent
 /// to this command's stdout.
 #[derive(Debug, clap::Parser)]
 #[clap(name = "starlark-debug-attach")]
@@ -79,8 +79,8 @@ impl StreamingCommand for StarlarkDebugAttachCommand {
 
     async fn exec_impl(
         self,
-        buckd: &mut BuckdClientConnector,
-        matches: BuckArgMatches<'_>,
+        bsmrd: &mut BsmrdClientConnector,
+        matches: BsmrArgMatches<'_>,
         ctx: &mut ClientCommandContext<'_>,
         events_ctx: &mut EventsCtx,
     ) -> ExitResult {
@@ -108,7 +108,7 @@ impl StreamingCommand for StarlarkDebugAttachCommand {
         reborrow_stream_for_static(
             stream,
             |stream| async move {
-                buckd
+                bsmrd
                     .with_flushing()
                     .dap(
                         client_context,
@@ -201,10 +201,10 @@ impl StreamingCommand for StarlarkDebugAttachCommand {
 
             async fn handle_events(
                 &mut self,
-                events: &[std::sync::Arc<BuckEvent>],
+                events: &[std::sync::Arc<BsmrEvent>],
             ) -> bsmr_error::Result<()> {
                 for ev in events {
-                    if let UnpackedBuckEvent::Instant(_, _, data) = unpack_event(ev)? {
+                    if let UnpackedBsmrEvent::Instant(_, _, data) = unpack_event(ev)? {
                         match data {
                             bsmr_data::instant_event::Data::StructuredError(soft_error) => {
                                 if !soft_error.quiet {

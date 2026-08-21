@@ -15,7 +15,7 @@
  */
 
 use bsmr_common::convert::ProstDurationExt;
-use bsmr_error::BuckErrorContext;
+use bsmr_error::BsmrErrorContext;
 use bsmr_error::internal_error;
 use bsmr_execute_local::CommandEvent;
 use bsmr_execute_local::GatherOutputStatus;
@@ -144,7 +144,7 @@ where
                     duration
                         .ok_or_else(|| internal_error!("Missing `duration`"))?
                         .try_into_duration()
-                        .buck_error_context("Invalid `duration`")?,
+                        .bsmr_error_context("Invalid `duration`")?,
                 ),
                 orphans,
             ),

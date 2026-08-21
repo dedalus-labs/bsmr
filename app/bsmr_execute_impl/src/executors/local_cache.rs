@@ -18,7 +18,7 @@ use bsmr_directory::directory::directory_iterator::DirectoryIterator;
 use bsmr_directory::directory::directory_iterator::DirectoryIteratorPathStack;
 use bsmr_directory::directory::entry::DirectoryEntry;
 use bsmr_directory::directory::walk::unordered_entry_walk;
-use bsmr_error::BuckErrorContext;
+use bsmr_error::BsmrErrorContext;
 use bsmr_execute::artifact_value::ArtifactValue;
 use bsmr_execute::digest_config::DigestConfig;
 use bsmr_execute::directory::ActionDirectoryMember;
@@ -51,7 +51,7 @@ use bsmr_execute::execute::result::CommandExecutionResult;
 use bsmr_execute::materialize::materializer::DeclareArtifactPayload;
 use bsmr_execute::materialize::materializer::Materializer;
 use bsmr_fs::paths::forward_rel_path::ForwardRelativePath;
-use bsmr_hash::BuckIndexMap;
+use bsmr_hash::BsmrIndexMap;
 use bsmr_util::time_span::TimeSpan;
 use chrono::DateTime;
 use chrono::Utc;
@@ -226,7 +226,7 @@ async fn restore_result(
     command: &PreparedCommand<'_, '_>,
     result: LocalActionResult,
 ) -> bsmr_error::Result<(
-    BuckIndexMap<CommandExecutionOutput, ArtifactValue>,
+    BsmrIndexMap<CommandExecutionOutput, ArtifactValue>,
     CommandStdStreams,
 )> {
     let digest_config = command.digest_config;
@@ -275,7 +275,7 @@ async fn restore_result(
     }
 
     let mut declarations = Vec::with_capacity(command.request.paths().output_paths().len());
-    let mut outputs = BuckIndexMap::with_capacity(command.request.paths().output_paths().len());
+    let mut outputs = BsmrIndexMap::with_capacity(command.request.paths().output_paths().len());
     for (requested, (path, _)) in command
         .request
         .outputs()
@@ -462,7 +462,7 @@ fn publish_stream(
 
 fn re_path(path: &str) -> bsmr_error::Result<&ForwardRelativePath> {
     ForwardRelativePath::new_trim_trailing_slashes(path)
-        .buck_error_context("Path received from the local cache is not normalized")
+        .bsmr_error_context("Path received from the local cache is not normalized")
 }
 
 fn is_portable_python_wheel_result(

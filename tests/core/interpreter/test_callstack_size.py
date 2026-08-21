@@ -15,19 +15,19 @@
 # pyre-strict
 
 
-from bsmr.tests.e2e_util.api.buck import Buck
+from bsmr.tests.e2e_util.api.bsmr import Bsmr
 from bsmr.tests.e2e_util.asserts import expect_failure
-from bsmr.tests.e2e_util.buck_workspace import buck_test
+from bsmr.tests.e2e_util.bsmr_workspace import bsmr_test
 
 
-@buck_test()
-async def test_stack_overflow(buck: Buck) -> None:
+@bsmr_test()
+async def test_stack_overflow(bsmr: Bsmr) -> None:
     await expect_failure(
-        buck.uquery("bad//:"), stderr_regex="Starlark call stack overflow"
+        bsmr.uquery("bad//:"), stderr_regex="Starlark call stack overflow"
     )
 
 
-@buck_test()
-async def test_callstack_size(buck: Buck) -> None:
-    output = await buck.uquery("good//:")
+@bsmr_test()
+async def test_callstack_size(bsmr: Bsmr) -> None:
+    output = await bsmr.uquery("good//:")
     assert "TEST PASSED" in output.stderr

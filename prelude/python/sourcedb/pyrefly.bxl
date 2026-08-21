@@ -1,3 +1,9 @@
+# ===----------------------------------------------------------------------===
+# Upstream-Source: facebook/buck2@1560aca2002865cd73d7cafb22c705cfb640b2bc
+# Modifications Copyright (c) 2026 Dedalus Labs, Inc. and its contributors
+# SPDX-License-Identifier: Apache-2.0
+# ===----------------------------------------------------------------------===
+
 # Copyright (c) Meta Platforms, Inc. and affiliates.
 #
 # This source code is dual-licensed under either the MIT license found in the
@@ -99,9 +105,9 @@ def _set_entry_common_fields(
     # TODO(connernilsen): replace with actual platform later
     entry["python_platform"] = "linux"
 
-    # Get buck.deps first, then fall back to deps. buck.deps might
+    # Get bsmr.deps first, then fall back to deps. bsmr.deps might
     # have extra targets we eventually exclude or stop processing, which is fine.
-    attr_deps = attrs.get("buck.deps") or attrs.get("deps")
+    attr_deps = attrs.get("bsmr.deps") or attrs.get("deps")
     if attr_deps == None:
         fail(target.rule_type)
     attr_deps = attr_deps.value()

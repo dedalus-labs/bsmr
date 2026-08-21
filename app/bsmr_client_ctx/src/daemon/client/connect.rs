@@ -28,18 +28,18 @@ use std::time::Duration;
 
 use bsmr_cli_proto::DaemonProcessInfo;
 use bsmr_cli_proto::daemon_api_client::DaemonApiClient;
-use bsmr_common::buckd_connection::BUCK_AUTH_TOKEN_HEADER;
-use bsmr_common::buckd_connection::ConnectionType;
 use bsmr_common::client_utils::RetryError;
 use bsmr_common::client_utils::get_channel_tcp;
 use bsmr_common::client_utils::get_channel_uds;
 use bsmr_common::client_utils::retrying;
+use bsmr_common::daemon_connection::BSMR_AUTH_TOKEN_HEADER;
+use bsmr_common::daemon_connection::ConnectionType;
 use bsmr_common::daemon_dir::DaemonDir;
 use bsmr_common::init::DaemonStartupConfig;
 use bsmr_common::invocation_paths::InvocationPaths;
 use bsmr_core::bsmr_env;
 use bsmr_data::DaemonWasStartedReason;
-use bsmr_error::BuckErrorContext;
+use bsmr_error::BsmrErrorContext;
 use bsmr_error::ErrorTag;
 use bsmr_error::bsmr_error;
 use bsmr_error::conversion::from_any_with_tag;
@@ -65,9 +65,9 @@ use tonic::service::Interceptor;
 use tonic::transport::Channel;
 
 use crate::command_outcome::CommandOutcome;
-use crate::daemon::client::BuckdClient;
-use crate::daemon::client::BuckdClientConnector;
-use crate::daemon::client::BuckdLifecycleLock;
+use crate::daemon::client::BsmrdClient;
+use crate::daemon::client::BsmrdClientConnector;
+use crate::daemon::client::BsmrdLifecycleLock;
 use crate::daemon::client::kill;
 use crate::daemon::client::kill::hard_kill_until;
 use crate::daemon::daemon_windows::spawn_background_process_on_windows;
@@ -230,15 +230,15 @@ pub enum DesiredTraceIoState {
 
 #[derive(Debug, Clone)]
 #[allow(clippy::large_enum_variant)]
-pub enum BuckdConnectOptions {
+pub enum BsmrdConnectOptions {
     ExistingOnly,
-    Options(BuckdConnectDaemonOptions),
+    Options(BsmrdConnectDaemonOptions),
 }
 
 #[derive(Debug, Clone)]
-pub struct BuckdConnectDaemonOptions {
+pub struct BsmrdConnectDaemonOptions {
     pub(crate) constraints: DaemonConstraintsRequest,
-    /// Start the daemon by asking the installed Buck wrapper to re-exec it
+    /// Start the daemon by asking the installed Bsmr wrapper to re-exec it
     /// outside of the AI sandbox.
     ///
     /// The normal Unix daemon startup path runs the daemon executable directly:
@@ -248,32 +248,32 @@ pub struct BuckdConnectDaemonOptions {
     /// ```
     ///
     /// When this is set and the current process certificate has an `agent.id`
-    /// identity attribute, Buck preserves the normal daemon argv, but prefixes
+    /// identity attribute, Bsmr preserves the normal daemon argv, but prefixes
     /// it with the wrapper command and the canonical daemon executable:
     ///
     /// ```text
-    /// /usr/local/bin/buck unsandbox-daemon <daemon-exe> --isolation-dir <dir> daemon ...
+    /// /usr/local/bin/bsmr unsandbox-daemon <daemon-exe> --isolation-dir <dir> daemon ...
     /// ```
     ///
-    /// This _only_ works if the wrapper is installed at `/usr/local/bin/buck`,
+    /// This _only_ works if the wrapper is installed at `/usr/local/bin/bsmr`,
     /// as the BPFJailer policy only allows executables with that path the
     /// ability to exit the jail. Wrappers that support the `unsandbox-daemon`
     /// are installed setuid-root, and must be from a release build on or after
     /// 20260630.
     ///
     /// The wrapper owns the privileged/sandbox-specific part of the flow: it
-    /// validates that the requested executable is the Buck daemon associated
+    /// validates that the requested executable is the Bsmr daemon associated
     /// with the caller, escapes the AI sandbox where supported, and then execs
     /// the daemon executable with the original daemon argv. From this client's
-    /// point of view, the spawned process still follows the ordinary Unix Buck
+    /// point of view, the spawned process still follows the ordinary Unix Bsmr
     /// daemon startup contract: it forks, the launcher exits, and this code
     /// waits for that launcher process before connecting to the daemon socket,
     /// it just takes longer.
     ///
     /// This must remain a daemon-start-only path. The wrapper command is
-    /// intentionally constructed only around Buck's normal `daemon` argv, so
+    /// intentionally constructed only around Bsmr's normal `daemon` argv, so
     /// enabling this option should not create a general mechanism for
-    /// unsandboxing arbitrary Buck commands or user-provided executables.
+    /// unsandboxing arbitrary Bsmr commands or user-provided executables.
     #[cfg(all(fbcode_build, target_os = "linux"))]
     pub(crate) allow_daemon_start_unsandboxed_via_wrapper: bool,
 }
@@ -291,15 +291,15 @@ async fn get_channel(
 }
 
 #[derive(Clone)]
-pub struct BuckAddAuthTokenInterceptor {
+pub struct BsmrAddAuthTokenInterceptor {
     auth_token: AsciiMetadataValue,
 }
 
-impl Interceptor for BuckAddAuthTokenInterceptor {
+impl Interceptor for BsmrAddAuthTokenInterceptor {
     fn call(&mut self, mut request: Request<()>) -> Result<Request<()>, Status> {
         request
             .metadata_mut()
-            .append(BUCK_AUTH_TOKEN_HEADER, self.auth_token.clone());
+            .append(BSMR_AUTH_TOKEN_HEADER, self.auth_token.clone());
         Ok(request)
     }
 }
@@ -307,11 +307,11 @@ impl Interceptor for BuckAddAuthTokenInterceptor {
 pub async fn new_daemon_api_client(
     endpoint: ConnectionType,
     auth_token: String,
-) -> bsmr_error::Result<DaemonApiClient<InterceptedService<Channel, BuckAddAuthTokenInterceptor>>> {
+) -> bsmr_error::Result<DaemonApiClient<InterceptedService<Channel, BsmrAddAuthTokenInterceptor>>> {
     let channel = get_channel(endpoint, true).await?;
     Ok(DaemonApiClient::with_interceptor(
         channel,
-        BuckAddAuthTokenInterceptor {
+        BsmrAddAuthTokenInterceptor {
             auth_token: AsciiMetadataValue::try_from(auth_token)
                 .map_err(|e| from_any_with_tag(e, ErrorTag::InvalidAuthToken))?,
         },
@@ -320,15 +320,15 @@ pub async fn new_daemon_api_client(
     .max_decoding_message_size(usize::MAX))
 }
 
-pub fn buckd_startup_timeout() -> bsmr_error::Result<Duration> {
+pub fn bsmrd_startup_timeout() -> bsmr_error::Result<Duration> {
     Ok(Duration::from_secs(
-        bsmr_env!("BUCKD_STARTUP_TIMEOUT", type=u64)?.unwrap_or(10),
+        bsmr_env!("BSMRD_STARTUP_TIMEOUT", type=u64)?.unwrap_or(10),
     ))
 }
 
-pub fn buckd_startup_init_timeout() -> bsmr_error::Result<Duration> {
+pub fn bsmrd_startup_init_timeout() -> bsmr_error::Result<Duration> {
     Ok(Duration::from_secs(
-        bsmr_env!("BUCKD_STARTUP_INIT_TIMEOUT", type=u64)?.unwrap_or(90),
+        bsmr_env!("BSMRD_STARTUP_INIT_TIMEOUT", type=u64)?.unwrap_or(90),
     ))
 }
 
@@ -339,7 +339,7 @@ struct ExecutableAndArgs<'a> {
 
 #[cfg(not(all(fbcode_build, target_os = "linux")))]
 async fn get_unix_daemon_and_args<'a>(
-    _options: &BuckdConnectDaemonOptions,
+    _options: &BsmrdConnectDaemonOptions,
     args: Vec<&'a str>,
 ) -> bsmr_error::Result<ExecutableAndArgs<'a>> {
     Ok(ExecutableAndArgs {
@@ -350,30 +350,30 @@ async fn get_unix_daemon_and_args<'a>(
 
 /// Responsible for starting the daemon when no daemon is running.
 /// This struct holds a lock such that only one daemon is ever started per daemon directory.
-struct BuckdLifecycle<'a> {
+struct BsmrdLifecycle<'a> {
     paths: &'a InvocationPaths,
-    lock: BuckdLifecycleLock,
+    lock: BsmrdLifecycleLock,
 }
 
-impl<'a> BuckdLifecycle<'a> {
+impl<'a> BsmrdLifecycle<'a> {
     async fn lock_with_timeout(
         paths: &'a InvocationPaths,
         deadline: StartupDeadline,
-    ) -> bsmr_error::Result<BuckdLifecycle<'a>> {
-        Ok(BuckdLifecycle::<'a> {
+    ) -> bsmr_error::Result<BsmrdLifecycle<'a>> {
+        Ok(BsmrdLifecycle::<'a> {
             paths,
-            lock: BuckdLifecycleLock::lock_with_timeout(paths.daemon_dir()?, deadline).await?,
+            lock: BsmrdLifecycleLock::lock_with_timeout(paths.daemon_dir()?, deadline).await?,
         })
     }
 
     fn clean_daemon_dir(&self) -> bsmr_error::Result<()> {
         self.lock
             .clean_daemon_dir(true)
-            .buck_error_context("Cleaning daemon dir")
+            .bsmr_error_context("Cleaning daemon dir")
             .tag(ErrorTag::DaemonDirCleanupFailed)
     }
 
-    async fn start_server(&self, options: &BuckdConnectDaemonOptions) -> bsmr_error::Result<()> {
+    async fn start_server(&self, options: &BsmrdConnectDaemonOptions) -> bsmr_error::Result<()> {
         let constraints = &options.constraints;
         let mut args = vec!["--isolation-dir", self.paths.isolation.as_str(), "daemon"];
 
@@ -403,7 +403,7 @@ impl<'a> BuckdLifecycle<'a> {
         //   ```
         //   Which regresses from 15s to 80s when `RUST_LIB_BACKTRACE` is set. So we disable
         //   backtraces in the daemon unless the user has explicitly asked for them. We
-        //   intentionally avoid considering the `RUST_BACKTRACE` variables that buck was invoked
+        //   intentionally avoid considering the `RUST_BACKTRACE` variables that bsmr was invoked
         //   with, because a lot of Rust tooling sets those without meaning to influence this
         //   behavior.
         daemon_env_vars.push((
@@ -419,8 +419,8 @@ impl<'a> BuckdLifecycle<'a> {
 
         if cfg!(unix) {
             // On Unix we spawn a process which forks and exits, and here we wait for that spawned
-            // process to terminate. That process is usually the Buck daemon executable, but may be
-            // the installed Buck wrapper, which runs the daemon on our behalf after unsandboxing it.
+            // process to terminate. That process is usually the Bsmr daemon executable, but may be
+            // the installed Bsmr wrapper, which runs the daemon on our behalf after unsandboxing it.
             let ExecutableAndArgs { executable, args } =
                 get_unix_daemon_and_args(options, args).await?;
 
@@ -463,7 +463,7 @@ impl<'a> BuckdLifecycle<'a> {
         daemon_id: &DaemonId,
     ) -> bsmr_error::Result<()> {
         let project_dir = self.paths.project_root();
-        let timeout_secs = buckd_startup_timeout()?;
+        let timeout_secs = bsmrd_startup_timeout()?;
 
         // Create a unique name that we know won't overlap with other bsmr daemons and has enough
         // information to understand at least a little bit about which daemon it is
@@ -497,8 +497,8 @@ impl<'a> BuckdLifecycle<'a> {
 
         cmd.args(&resource_control_args);
 
-        if bsmr_env!("BUCK_DAEMON_LOG_TO_FILE", type=u8)? == Some(1) {
-            cmd.env("BUCK_LOG_TO_FILE_PATH", self.paths.log_dir().as_os_str());
+        if bsmr_env!("BSMR_DAEMON_LOG_TO_FILE", type=u8)? == Some(1) {
+            cmd.env("BSMR_LOG_TO_FILE_PATH", self.paths.log_dir().as_os_str());
         }
 
         for (key, val) in daemon_env_vars {
@@ -535,7 +535,7 @@ impl<'a> BuckdLifecycle<'a> {
             match result {
                 Err(_elapsed) => {
                     // The command has timed out, kill the process and wait
-                    child.kill().await.buck_error_context(
+                    child.kill().await.bsmr_error_context(
                         "Error killing process after bsmr daemon launch timing out",
                     )?;
                     // This should return immediately as kill() waits for the process to end. We wait here again to fetch the ExitStatus
@@ -544,7 +544,7 @@ impl<'a> BuckdLifecycle<'a> {
                         child
                             .wait()
                             .await
-                            .buck_error_context("Daemon startup timed out")?,
+                            .bsmr_error_context("Daemon startup timed out")?,
                     )
                 }
                 Ok(result) => result.map_err(bsmr_error::Error::from),
@@ -555,7 +555,7 @@ impl<'a> BuckdLifecycle<'a> {
             stdout_taken
                 .read_to_end(&mut buf)
                 .await
-                .buck_error_context("Error reading stdout of child")?;
+                .bsmr_error_context("Error reading stdout of child")?;
             Ok(buf)
         };
         let stderr_fut = async {
@@ -563,7 +563,7 @@ impl<'a> BuckdLifecycle<'a> {
             stderr_taken
                 .read_to_end(&mut buf)
                 .await
-                .buck_error_context("Error reading stderr of child")?;
+                .bsmr_error_context("Error reading stderr of child")?;
             Ok(buf)
         };
 
@@ -573,11 +573,11 @@ impl<'a> BuckdLifecycle<'a> {
         // so we wait for termination of the child process.
         let joined = try_join3(status_fut, stdout_fut, stderr_fut).await;
         match joined {
-            Err(error) => Err(BuckdConnectError::BuckDaemonLaunchFailed { error }.into()),
+            Err(error) => Err(BsmrdConnectError::BsmrDaemonLaunchFailed { error }.into()),
             Ok((status, stdout, stderr)) => {
                 if !status.success() {
                     let exit_status_error = bsmr_error::Error::from(status);
-                    Err(BuckdConnectError::BuckDaemonStartupFailed {
+                    Err(BsmrdConnectError::BsmrDaemonStartupFailed {
                         stdout: String::from_utf8_lossy(&stdout).to_string(),
                         stderr: String::from_utf8_lossy(&stderr).to_string(),
                         exit_status_error,
@@ -592,17 +592,17 @@ impl<'a> BuckdLifecycle<'a> {
 }
 
 /// Represents an established connection to the daemon. We then upgrade it into a
-/// BootstrapBuckdClient by querying constraints. This is a separate step so that we retry
+/// BootstrapBsmrdClient by querying constraints. This is a separate step so that we retry
 /// establishing the channel but not querying constraints.
-pub struct BuckdChannel {
+pub struct BsmrdChannel {
     info: DaemonProcessInfo,
     daemon_dir: DaemonDir,
-    client: DaemonApiClient<InterceptedService<Channel, BuckAddAuthTokenInterceptor>>,
+    client: DaemonApiClient<InterceptedService<Channel, BsmrAddAuthTokenInterceptor>>,
 }
 
-impl BuckdChannel {
-    /// Upgrade this BuckdChannel to a BootstrapBuckdClient.
-    pub async fn upgrade(self) -> bsmr_error::Result<BootstrapBuckdClient> {
+impl BsmrdChannel {
+    /// Upgrade this BsmrdChannel to a BootstrapBsmrdClient.
+    pub async fn upgrade(self) -> bsmr_error::Result<BootstrapBsmrdClient> {
         let Self {
             info,
             daemon_dir,
@@ -611,9 +611,9 @@ impl BuckdChannel {
 
         let constraints = get_constraints(&mut client)
             .await
-            .buck_error_context("Error obtaining daemon constraints")?;
+            .bsmr_error_context("Error obtaining daemon constraints")?;
 
-        Ok(BootstrapBuckdClient {
+        Ok(BootstrapBsmrdClient {
             info,
             daemon_dir,
             client,
@@ -622,30 +622,30 @@ impl BuckdChannel {
     }
 }
 
-/// Client used for connection setup. Can be used to create BuckdClientConnector instances later.
+/// Client used for connection setup. Can be used to create BsmrdClientConnector instances later.
 #[derive(Clone)]
-pub struct BootstrapBuckdClient {
+pub struct BootstrapBsmrdClient {
     info: DaemonProcessInfo,
     daemon_dir: DaemonDir,
-    client: DaemonApiClient<InterceptedService<Channel, BuckAddAuthTokenInterceptor>>,
+    client: DaemonApiClient<InterceptedService<Channel, BsmrAddAuthTokenInterceptor>>,
     /// The constraints for the daemon we're connected to.
     constraints: bsmr_cli_proto::DaemonConstraints,
 }
 
-impl BootstrapBuckdClient {
+impl BootstrapBsmrdClient {
     pub async fn connect(
         paths: &InvocationPaths,
-        options: BuckdConnectOptions,
+        options: BsmrdConnectOptions,
         events_ctx: &mut EventsCtx,
     ) -> bsmr_error::Result<Self> {
         let daemon_dir = paths.daemon_dir()?;
 
         fs_util::create_dir_all(&daemon_dir.path)
-            .with_buck_error_context(|| format!("Error creating daemon dir: {daemon_dir}"))?;
+            .with_bsmr_error_context(|| format!("Error creating daemon dir: {daemon_dir}"))?;
 
         let res = match &options {
-            BuckdConnectOptions::ExistingOnly => establish_connection_existing(&daemon_dir).await,
-            BuckdConnectOptions::Options(options) => {
+            BsmrdConnectOptions::ExistingOnly => establish_connection_existing(&daemon_dir).await,
+            BsmrdConnectOptions::Options(options) => {
                 establish_connection(paths, options, events_ctx).await
             }
         };
@@ -659,23 +659,21 @@ impl BootstrapBuckdClient {
         }
     }
 
-    pub fn to_connector(self) -> BuckdClientConnector {
+    pub fn to_connector(self) -> BsmrdClientConnector {
         let cgroup_path_of_bsmr_daemon = {
             #[cfg(target_os = "linux")]
             {
-                bsmr_resource_control::buck_cgroup_tree::read_cgroup_path_of_bsmr_daemon(
-                    self.info.pid,
-                )
-                .ok()
-                .flatten()
+                bsmr_resource_control::cgroup_tree::read_cgroup_path_of_bsmr_daemon(self.info.pid)
+                    .ok()
+                    .flatten()
             }
             #[cfg(not(target_os = "linux"))]
             {
                 None
             }
         };
-        BuckdClientConnector {
-            client: BuckdClient {
+        BsmrdClientConnector {
+            client: BsmrdClient {
                 daemon_dir: self.daemon_dir,
                 client: self.client,
                 constraints: self.constraints,
@@ -690,7 +688,7 @@ impl BootstrapBuckdClient {
     }
 
     async fn kill_for_constraints_mismatch(&mut self) -> bsmr_error::Result<Pid> {
-        self.kill("client expected different buckd constraints")
+        self.kill("client expected different bsmrd constraints")
             .await
     }
 
@@ -702,14 +700,14 @@ impl BootstrapBuckdClient {
 /// Attempt to connect to a daemon that can satisfy specified constraints.
 /// If the daemon does not match constraints (different version or does not enable I/O tracing),
 /// it will kill it and restart it with the correct constraints.
-/// This behavior can be overridden by passing `BuckdConnectOptions::ExistingOnly`.
-/// In that case, then any existing buck daemon (regardless of constraint) is accepted.
-pub async fn connect_buckd(
-    options: BuckdConnectOptions,
+/// This behavior can be overridden by passing `BsmrdConnectOptions::ExistingOnly`.
+/// In that case, then any existing bsmr daemon (regardless of constraint) is accepted.
+pub async fn connect_bsmrd(
+    options: BsmrdConnectOptions,
     events_ctx: &mut EventsCtx,
     paths: &InvocationPaths,
-) -> bsmr_error::Result<BuckdClientConnector> {
-    match BootstrapBuckdClient::connect(paths, options, events_ctx).await {
+) -> bsmr_error::Result<BsmrdClientConnector> {
+    match BootstrapBsmrdClient::connect(paths, options, events_ctx).await {
         Ok(client) => Ok(client.to_connector()),
         Err(e) => {
             events_ctx.handle_daemon_connection_failure();
@@ -720,13 +718,13 @@ pub async fn connect_buckd(
 
 pub async fn establish_connection_existing(
     daemon_dir: &DaemonDir,
-) -> bsmr_error::Result<BootstrapBuckdClient> {
-    let deadline = StartupDeadline::duration_from_now(buckd_startup_timeout()?)?;
+) -> bsmr_error::Result<BootstrapBsmrdClient> {
+    let deadline = StartupDeadline::duration_from_now(bsmrd_startup_timeout()?)?;
     deadline
         .run(
-            "establishing connection to existing Buck daemon",
+            "establishing connection to existing Bsmr daemon",
             async move {
-                BuckdProcessInfo::load(daemon_dir)?
+                BsmrdProcessInfo::load(daemon_dir)?
                     .create_channel()
                     .await?
                     .upgrade()
@@ -738,16 +736,16 @@ pub async fn establish_connection_existing(
 
 async fn establish_connection(
     paths: &InvocationPaths,
-    options: &BuckdConnectDaemonOptions,
+    options: &BsmrdConnectDaemonOptions,
     events_ctx: &mut EventsCtx,
-) -> bsmr_error::Result<BootstrapBuckdClient> {
+) -> bsmr_error::Result<BootstrapBsmrdClient> {
     // There are many places where `establish_connection_inner` may hang.
     // If it does, better print something to the user instead of hanging quietly forever.
-    let timeout = buckd_startup_init_timeout()?;
+    let timeout = bsmrd_startup_init_timeout()?;
     let deadline = StartupDeadline::duration_from_now(timeout)?;
     deadline
         .down(
-            "establishing connection to Buck daemon or start a daemon",
+            "establishing connection to Bsmr daemon or start a daemon",
             |timeout| establish_connection_inner(paths, options, timeout, events_ctx),
         )
         .await
@@ -768,8 +766,8 @@ fn explain_failed_to_connect_reason(reason: bsmr_data::DaemonWasStartedReason) -
         }
         DaemonWasStartedReason::TimedOutConnectingToDaemon => "Timed out connecting to daemon",
         DaemonWasStartedReason::TimeoutCalculationError => "Timeout calculation error",
-        DaemonWasStartedReason::NoBuckdInfo => "No buckd.info",
-        DaemonWasStartedReason::CouldNotLoadBuckdInfo => "Could not load buckd.info",
+        DaemonWasStartedReason::NoBsmrdInfo => "No bsmrd.info",
+        DaemonWasStartedReason::CouldNotLoadBsmrdInfo => "Could not load bsmrd.info",
         DaemonWasStartedReason::NoDaemonProcess => "bsmr daemon is not running",
     }
 }
@@ -777,16 +775,16 @@ fn explain_failed_to_connect_reason(reason: bsmr_data::DaemonWasStartedReason) -
 #[allow(clippy::collapsible_match)]
 async fn establish_connection_inner(
     paths: &InvocationPaths,
-    options: &BuckdConnectDaemonOptions,
+    options: &BsmrdConnectDaemonOptions,
     deadline: StartupDeadline,
     events_ctx: &mut EventsCtx,
-) -> bsmr_error::Result<BootstrapBuckdClient> {
+) -> bsmr_error::Result<BootstrapBsmrdClient> {
     let constraints = &options.constraints;
     let daemon_dir = paths.daemon_dir()?;
 
     let res = deadline
         .half()?
-        .run("connecting to existing buck daemon", {
+        .run("connecting to existing bsmr daemon", {
             try_connect_existing_before_acquiring_lifecycle_lock(&daemon_dir, constraints).map(Ok)
         })
         .await;
@@ -796,20 +794,20 @@ async fn establish_connection_inner(
         };
     }
 
-    // At this point, we've either failed to connect to buckd or buckd had the wrong constraints.
+    // At this point, we've either failed to connect to bsmrd or bsmrd had the wrong constraints.
     // Get the lifecycle lock to ensure we don't have races with other processes as we check and change things.
     let lifecycle_lock = deadline
         .down("acquire lifecycle lock", |deadline| {
-            BuckdLifecycle::lock_with_timeout(paths, deadline)
+            BsmrdLifecycle::lock_with_timeout(paths, deadline)
         })
         .await?;
 
     // Even if we didn't connect before, it's possible that we just raced with another invocation
     // starting the server, so we try to connect again while holding the lock.
     let daemon_was_started_reason = {
-        match BuckdProcessInfo::load_if_exists(&daemon_dir) {
-            Ok(Some(buckd_info)) => {
-                match try_connect_existing(&buckd_info, &deadline, &lifecycle_lock).await {
+        match BsmrdProcessInfo::load_if_exists(&daemon_dir) {
+            Ok(Some(bsmrd_info)) => {
+                match try_connect_existing(&bsmrd_info, &deadline, &lifecycle_lock).await {
                     Ok(channel) => {
                         let mut client = channel.upgrade().await?;
 
@@ -825,7 +823,7 @@ async fn establish_connection_inner(
                             match reason {
                                 ConstraintUnsatisfiedReason::TraceIo
                                 | ConstraintUnsatisfiedReason::StartupConfig => {
-                                    return Err(BuckdConnectError::NestedConstraintMismatch {
+                                    return Err(BsmrdConnectError::NestedConstraintMismatch {
                                         reason,
                                     }
                                     .into());
@@ -842,7 +840,7 @@ async fn establish_connection_inner(
 
                         deadline
                             .run(
-                                "sending kill command to the Buck daemon",
+                                "sending kill command to the Bsmr daemon",
                                 client.kill_for_constraints_mismatch(),
                             )
                             .await?;
@@ -859,9 +857,9 @@ async fn establish_connection_inner(
                             ))
                             .await?;
 
-                        hard_kill_until(&buckd_info.info, &deadline)
+                        hard_kill_until(&bsmrd_info.info, &deadline)
                             .await
-                            .map_err(|error| BuckdConnectError::DaemonKillFailed { error })?;
+                            .map_err(|error| BsmrdConnectError::DaemonKillFailed { error })?;
 
                         reason
                     }
@@ -870,16 +868,16 @@ async fn establish_connection_inner(
             Ok(None) => {
                 events_ctx.eprintln("Starting new bsmr daemon...").await?;
 
-                bsmr_data::DaemonWasStartedReason::NoBuckdInfo
+                bsmr_data::DaemonWasStartedReason::NoBsmrdInfo
             }
             Err(e) => {
                 events_ctx
                     .eprintln(&format!(
-                        "Could not load buckd.info: {e}, starting new bsmr daemon..."
+                        "Could not load bsmrd.info: {e}, starting new bsmr daemon..."
                     ))
                     .await?;
 
-                bsmr_data::DaemonWasStartedReason::CouldNotLoadBuckdInfo
+                bsmr_data::DaemonWasStartedReason::CouldNotLoadBsmrdInfo
             }
         }
     };
@@ -891,7 +889,7 @@ async fn establish_connection_inner(
                 explain_failed_to_connect_reason(daemon_was_started_reason)
             ),
             |deadline| {
-                start_new_buckd_and_connect(
+                start_new_bsmrd_and_connect(
                     deadline,
                     &lifecycle_lock,
                     paths,
@@ -904,14 +902,14 @@ async fn establish_connection_inner(
         .await
 }
 
-async fn start_new_buckd_and_connect(
+async fn start_new_bsmrd_and_connect(
     deadline: StartupDeadline,
-    lifecycle_lock: &BuckdLifecycle<'_>,
+    lifecycle_lock: &BsmrdLifecycle<'_>,
     paths: &InvocationPaths,
-    options: &BuckdConnectDaemonOptions,
+    options: &BsmrdConnectDaemonOptions,
     events_ctx: &mut EventsCtx,
     daemon_was_started_reason: bsmr_data::DaemonWasStartedReason,
-) -> bsmr_error::Result<BootstrapBuckdClient> {
+) -> bsmr_error::Result<BootstrapBsmrdClient> {
     let constraints = &options.constraints;
 
     // Daemon dir may be corrupted. Safer to delete it.
@@ -921,23 +919,23 @@ async fn start_new_buckd_and_connect(
     lifecycle_lock
         .start_server(options)
         .await
-        .buck_error_context("Error starting bsmr daemon")?;
-    // It might take a little bit for the daemon server to start up. We could wait for the buckd.info
+        .bsmr_error_context("Error starting bsmr daemon")?;
+    // It might take a little bit for the daemon server to start up. We could wait for the bsmrd.info
     // file to appear, but it's just as easy to just retry the connection itself.
 
     let channel = deadline
         .retrying(
-            "connect to buckd after server start",
+            "connect to bsmrd after server start",
             Duration::from_millis(5),
             Duration::from_millis(100),
-            || async { BuckdProcessInfo::load_and_create_channel(&paths.daemon_dir()?).await },
+            || async { BsmrdProcessInfo::load_and_create_channel(&paths.daemon_dir()?).await },
         )
         .await?;
 
     let client = channel.upgrade().await?;
 
     if let Err(reason) = constraints.satisfied(&client.constraints) {
-        return Err(BuckdConnectError::BuckDaemonConstraintWrongAfterStart {
+        return Err(BsmrdConnectError::BsmrDaemonConstraintWrongAfterStart {
             reason,
             expected: (*constraints).clone(),
             actual: client.constraints,
@@ -954,22 +952,22 @@ async fn start_new_buckd_and_connect(
 
 #[allow(clippy::large_enum_variant)]
 enum ConnectBeforeRestart {
-    Accepted(BootstrapBuckdClient),
+    Accepted(BootstrapBsmrdClient),
     Rejected,
 }
 
-/// Connect to buckd before attempt to restart the server.
+/// Connect to bsmrd before attempt to restart the server.
 ///
 /// # Returns
 ///
-/// * `Ok(Some(client))` if we connected to an existing buckd
-/// * `Ok(None)` if we failed to connect and should restart buckd
+/// * `Ok(Some(client))` if we connected to an existing bsmrd
+/// * `Ok(None)` if we failed to connect and should restart bsmrd
 /// * `Err` if we failed to connect and should abandon startup
 async fn try_connect_existing_before_acquiring_lifecycle_lock(
     daemon_dir: &DaemonDir,
     constraints: &DaemonConstraintsRequest,
 ) -> ConnectBeforeRestart {
-    match BuckdProcessInfo::load_and_create_channel(daemon_dir).await {
+    match BsmrdProcessInfo::load_and_create_channel(daemon_dir).await {
         Ok(channel) => {
             let Ok(client) = channel.upgrade().await else {
                 return ConnectBeforeRestart::Rejected;
@@ -988,26 +986,26 @@ async fn try_connect_existing_before_acquiring_lifecycle_lock(
 }
 
 async fn try_connect_existing(
-    buckd_info: &BuckdProcessInfo<'_>,
+    bsmrd_info: &BsmrdProcessInfo<'_>,
     timeout: &StartupDeadline,
-    _lock: &BuckdLifecycle<'_>,
-) -> Result<BuckdChannel, bsmr_data::DaemonWasStartedReason> {
-    let timeout: bsmr_error::Result<_> = try { timeout.min(buckd_startup_timeout()?)? };
+    _lock: &BsmrdLifecycle<'_>,
+) -> Result<BsmrdChannel, bsmr_data::DaemonWasStartedReason> {
+    let timeout: bsmr_error::Result<_> = try { timeout.min(bsmrd_startup_timeout()?)? };
     let Ok(timeout) = timeout else {
         return Err(bsmr_data::DaemonWasStartedReason::TimeoutCalculationError);
     };
-    let Ok(rem_duration) = timeout.rem_duration("connect existing buckd") else {
+    let Ok(rem_duration) = timeout.rem_duration("connect existing bsmrd") else {
         return Err(bsmr_data::DaemonWasStartedReason::TimedOutConnectingToDaemon);
     };
-    match tokio::time::timeout(rem_duration, buckd_info.create_channel()).await {
+    match tokio::time::timeout(rem_duration, bsmrd_info.create_channel()).await {
         Ok(Ok(channel)) => Ok(channel),
         Ok(Err(_)) => {
-            let Ok(pid) = buckd_info.pid() else {
-                return Err(bsmr_data::DaemonWasStartedReason::CouldNotLoadBuckdInfo);
+            let Ok(pid) = bsmrd_info.pid() else {
+                return Err(bsmr_data::DaemonWasStartedReason::CouldNotLoadBsmrdInfo);
             };
-            let buckd_process_exists = process_exists(pid).unwrap_or(true);
-            if !buckd_process_exists {
-                // We don't delete the `buckd.info` file, and if we failed to connect,
+            let bsmrd_process_exists = process_exists(pid).unwrap_or(true);
+            if !bsmrd_process_exists {
+                // We don't delete the `bsmrd.info` file, and if we failed to connect,
                 // the most likely reason is that the daemon process doesn't exist.
                 Err(bsmr_data::DaemonWasStartedReason::NoDaemonProcess)
             } else {
@@ -1021,24 +1019,24 @@ async fn try_connect_existing(
     }
 }
 
-pub struct BuckdProcessInfo<'a> {
+pub struct BsmrdProcessInfo<'a> {
     pub(crate) info: DaemonProcessInfo,
     daemon_dir: &'a DaemonDir,
 }
 
-impl<'a> BuckdProcessInfo<'a> {
+impl<'a> BsmrdProcessInfo<'a> {
     /// Utility method for places that want to match on the overall result of those two operations.
     async fn load_and_create_channel(
         daemon_dir: &'a DaemonDir,
-    ) -> bsmr_error::Result<BuckdChannel> {
+    ) -> bsmr_error::Result<BsmrdChannel> {
         Self::load(daemon_dir)?.create_channel().await
     }
 
     pub fn load(daemon_dir: &'a DaemonDir) -> bsmr_error::Result<Self> {
         match Self::load_if_exists(daemon_dir) {
             Ok(Some(info)) => Ok(info),
-            Ok(None) => Err(BuckdConnectError::BuckdInfoMissing {
-                path: daemon_dir.buckd_info(),
+            Ok(None) => Err(BsmrdConnectError::BsmrdInfoMissing {
+                path: daemon_dir.bsmrd_info(),
             }
             .into()),
             Err(e) => Err(e),
@@ -1046,32 +1044,32 @@ impl<'a> BuckdProcessInfo<'a> {
     }
 
     pub fn load_if_exists(daemon_dir: &'a DaemonDir) -> bsmr_error::Result<Option<Self>> {
-        let location = daemon_dir.buckd_info();
+        let location = daemon_dir.bsmrd_info();
         let file = match File::open(&location) {
             Ok(file) => file,
             Err(e) if e.kind() == std::io::ErrorKind::NotFound => return Ok(None),
             Err(e) => {
-                return Err(e).with_buck_error_context(|| {
-                    format!("Trying to open buckd info, `{}`", location.display())
+                return Err(e).with_bsmr_error_context(|| {
+                    format!("Trying to open bsmrd info, `{}`", location.display())
                 });
             }
         };
         let reader = BufReader::new(file);
         let info = serde_json::from_reader(reader)
-            .map_err(|error| BuckdConnectError::BuckdInfoParseError { location, error })?;
+            .map_err(|error| BsmrdConnectError::BsmrdInfoParseError { location, error })?;
 
-        Ok(Some(BuckdProcessInfo { info, daemon_dir }))
+        Ok(Some(BsmrdProcessInfo { info, daemon_dir }))
     }
 
-    pub async fn create_channel(&self) -> bsmr_error::Result<BuckdChannel> {
+    pub async fn create_channel(&self) -> bsmr_error::Result<BsmrdChannel> {
         tracing::debug!("Creating channel to: {}", self.info.endpoint);
         let connection_type = ConnectionType::parse(&self.info.endpoint)?;
 
         let client = new_daemon_api_client(connection_type, self.info.auth_token.clone())
             .await
-            .buck_error_context("Error connecting")?;
+            .bsmr_error_context("Error connecting")?;
 
-        Ok(BuckdChannel {
+        Ok(BsmrdChannel {
             info: self.info.clone(),
             daemon_dir: self.daemon_dir.clone(),
             client,
@@ -1088,7 +1086,7 @@ impl<'a> BuckdProcessInfo<'a> {
 }
 
 async fn get_constraints(
-    client: &mut DaemonApiClient<InterceptedService<Channel, BuckAddAuthTokenInterceptor>>,
+    client: &mut DaemonApiClient<InterceptedService<Channel, BsmrAddAuthTokenInterceptor>>,
 ) -> bsmr_error::Result<bsmr_cli_proto::DaemonConstraints> {
     // NOTE: No tailers in bootstrap client, we capture logs if we fail to connect, but
     // otherwise we leave them alone.
@@ -1114,7 +1112,7 @@ async fn get_constraints(
 }
 
 pub fn get_daemon_exe() -> bsmr_error::Result<PathBuf> {
-    let exe = env::current_exe().buck_error_context("Failed to get current exe")?;
+    let exe = env::current_exe().bsmr_error_context("Failed to get current exe")?;
     if bsmr_core::client_only::is_client_only()? {
         let ext = if cfg!(windows) { ".exe" } else { "" };
         Ok(exe
@@ -1129,10 +1127,10 @@ pub fn get_daemon_exe() -> bsmr_error::Result<PathBuf> {
 #[derive(Debug, bsmr_error::Error)]
 #[allow(clippy::large_enum_variant)]
 #[bsmr(tag = DaemonConnect)]
-enum BuckdConnectError {
-    #[error("buck daemon startup failed\nstdout:\n{stdout}\nstderr:\n{stderr}")]
+enum BsmrdConnectError {
+    #[error("bsmr daemon startup failed\nstdout:\n{stdout}\nstderr:\n{stderr}")]
     #[bsmr(tag = DaemonStartupFailed)]
-    BuckDaemonStartupFailed {
+    BsmrDaemonStartupFailed {
         stdout: String,
         stderr: String,
         #[source]
@@ -1140,15 +1138,15 @@ enum BuckdConnectError {
     },
     #[error("Failed to launch Bessemer daemon: {error:#}")]
     #[bsmr(tag = DaemonLaunchFailed)]
-    BuckDaemonLaunchFailed {
+    BsmrDaemonLaunchFailed {
         #[source]
         error: bsmr_error::Error,
     },
     #[error(
-        "during buck daemon startup, the started process did not match constraints ({reason}).\nexpected: {expected:?}\nactual: {actual:?}"
+        "during bsmr daemon startup, the started process did not match constraints ({reason}).\nexpected: {expected:?}\nactual: {actual:?}"
     )]
     #[bsmr(tag = DaemonConstraintsWrongAfterStart)]
-    BuckDaemonConstraintWrongAfterStart {
+    BsmrDaemonConstraintWrongAfterStart {
         reason: ConstraintUnsatisfiedReason,
         expected: DaemonConstraintsRequest,
         actual: bsmr_cli_proto::DaemonConstraints,
@@ -1156,19 +1154,19 @@ enum BuckdConnectError {
     #[error("bsmr daemon constraint mismatch during nested invocation: {reason}")]
     #[bsmr(tag = DaemonNestedConstraintsMismatch)]
     NestedConstraintMismatch { reason: ConstraintUnsatisfiedReason },
-    #[error("buckd info {path} does not exist")]
-    #[bsmr(tag = BuckdInfoMissing)]
-    BuckdInfoMissing { path: AbsNormPathBuf },
+    #[error("bsmrd info {path} does not exist")]
+    #[bsmr(tag = BsmrdInfoMissing)]
+    BsmrdInfoMissing { path: AbsNormPathBuf },
     #[error("Error parsing daemon info in `{}`. \
                 Try deleting that file and running `bsmr killall` before running your command again",
                 location.display())]
-    #[bsmr(tag = BuckdInfoParseError)]
-    BuckdInfoParseError {
+    #[bsmr(tag = BsmrdInfoParseError)]
+    BsmrdInfoParseError {
         location: AbsNormPathBuf,
         #[source]
         error: serde_json::Error,
     },
-    #[error("Failed to kill buckd: {error:#}")]
+    #[error("Failed to kill bsmrd: {error:#}")]
     #[bsmr(tag = DaemonKillFailed)]
     DaemonKillFailed {
         #[source]
@@ -1186,7 +1184,7 @@ async fn daemon_connect_error(
         Duration::from_millis(500),
         || async {
             let daemon_dir = paths.daemon_dir()?;
-            let error_log = std::fs::read(daemon_dir.buckd_error_log())?;
+            let error_log = std::fs::read(daemon_dir.bsmrd_error_log())?;
 
             let error_report = bsmr_data::ErrorReport::deserialize(
                 &mut serde_json::Deserializer::from_slice(&error_log),
@@ -1210,7 +1208,7 @@ async fn daemon_connect_error(
         let stderr = paths
             .daemon_dir()
             .and_then(|dir| {
-                let stderr = std::fs::read(dir.buckd_stderr())?;
+                let stderr = std::fs::read(dir.bsmrd_stderr())?;
                 Ok(String::from_utf8_lossy(&stderr).into_owned())
             })
             .unwrap_or_else(|_| "<none>".to_owned());
@@ -1225,11 +1223,11 @@ async fn daemon_connect_error(
         classify_server_stderr(error, &stderr)
     };
     let delete_command = if cfg!(windows) {
-        "rmdir /s /q %USERPROFILE%\\.buck\\buckd"
+        "rmdir /s /q %USERPROFILE%\\.bsmr\\bsmrd"
     } else {
-        "rm -rf ~/.buck/buckd"
+        "rm -rf ~/.bsmr/bsmrd"
     };
-    let daemon_process_info = BuckdProcessInfoDiagnostic::new(paths);
+    let daemon_process_info = BsmrdProcessInfoDiagnostic::new(paths);
 
     let kill_command = if daemon_process_info.process_exists() {
         "running `bsmr kill` and your command afterwards.
@@ -1239,7 +1237,7 @@ async fn daemon_connect_error(
     };
 
     let error_message = format!(
-        "Failed to connect to buck daemon.
+        "Failed to connect to bsmr daemon.
     {daemon_process_info}
 
     Try {kill_command}running `{delete_command}` and your command afterwards"
@@ -1247,9 +1245,9 @@ async fn daemon_connect_error(
     error.context(error_message)
 }
 
-enum BuckdProcessInfoDiagnostic {
+enum BsmrdProcessInfoDiagnostic {
     DaemonDirUnavailable(bsmr_error::Error),
-    MissingBuckdInfo(DaemonDir),
+    MissingBsmrdInfo(DaemonDir),
     LoadError {
         daemon_dir: DaemonDir,
         error: bsmr_error::Error,
@@ -1261,22 +1259,22 @@ enum BuckdProcessInfoDiagnostic {
     },
 }
 
-impl BuckdProcessInfoDiagnostic {
+impl BsmrdProcessInfoDiagnostic {
     fn new(paths: &InvocationPaths) -> Self {
         let daemon_dir = match paths.daemon_dir() {
             Ok(daemon_dir) => daemon_dir,
-            Err(e) => return BuckdProcessInfoDiagnostic::DaemonDirUnavailable(e),
+            Err(e) => return BsmrdProcessInfoDiagnostic::DaemonDirUnavailable(e),
         };
         let daemon_dir_for_load = daemon_dir.clone();
 
-        match BuckdProcessInfo::load_if_exists(&daemon_dir_for_load) {
-            Ok(Some(process_info)) => BuckdProcessInfoDiagnostic::ProcessInfo {
+        match BsmrdProcessInfo::load_if_exists(&daemon_dir_for_load) {
+            Ok(Some(process_info)) => BsmrdProcessInfoDiagnostic::ProcessInfo {
                 pid_present_on_system: pid_present_on_system(process_info.info.pid),
                 daemon_dir,
                 info: process_info.info,
             },
-            Ok(None) => BuckdProcessInfoDiagnostic::MissingBuckdInfo(daemon_dir),
-            Err(e) => BuckdProcessInfoDiagnostic::LoadError {
+            Ok(None) => BsmrdProcessInfoDiagnostic::MissingBsmrdInfo(daemon_dir),
+            Err(e) => BsmrdProcessInfoDiagnostic::LoadError {
                 daemon_dir,
                 error: e,
             },
@@ -1285,7 +1283,7 @@ impl BuckdProcessInfoDiagnostic {
 
     fn process_exists(&self) -> bool {
         match self {
-            BuckdProcessInfoDiagnostic::ProcessInfo {
+            BsmrdProcessInfoDiagnostic::ProcessInfo {
                 pid_present_on_system,
                 ..
             } => *pid_present_on_system == Some(true),
@@ -1295,7 +1293,7 @@ impl BuckdProcessInfoDiagnostic {
 
     fn pid_present_for_display(&self) -> &'static str {
         match self {
-            BuckdProcessInfoDiagnostic::ProcessInfo {
+            BsmrdProcessInfoDiagnostic::ProcessInfo {
                 pid_present_on_system,
                 ..
             } => match pid_present_on_system {
@@ -1316,10 +1314,10 @@ fn pid_present_on_system(pid: i64) -> Option<bool> {
         .and_then(|pid| process_exists(pid).ok())
 }
 
-impl Display for BuckdProcessInfoDiagnostic {
+impl Display for BsmrdProcessInfoDiagnostic {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            BuckdProcessInfoDiagnostic::ProcessInfo {
+            BsmrdProcessInfoDiagnostic::ProcessInfo {
                 daemon_dir, info, ..
             } => write!(
                 f,
@@ -1329,30 +1327,30 @@ impl Display for BuckdProcessInfoDiagnostic {
     endpoint: {}
     version: {}
     pid present on system: {}",
-                daemon_dir.buckd_info(),
+                daemon_dir.bsmrd_info(),
                 daemon_dir.path,
                 info.pid,
                 info.endpoint,
                 info.version,
                 self.pid_present_for_display(),
             ),
-            BuckdProcessInfoDiagnostic::MissingBuckdInfo(daemon_dir) => write!(
+            BsmrdProcessInfoDiagnostic::MissingBsmrdInfo(daemon_dir) => write!(
                 f,
                 "Daemon process info from {}:
     daemon dir: {}
     status: <missing>",
-                daemon_dir.buckd_info(),
+                daemon_dir.bsmrd_info(),
                 daemon_dir.path,
             ),
-            BuckdProcessInfoDiagnostic::LoadError { daemon_dir, error } => write!(
+            BsmrdProcessInfoDiagnostic::LoadError { daemon_dir, error } => write!(
                 f,
                 "Daemon process info from {}:
     daemon dir: {}
     status: unavailable: {error:#}",
-                daemon_dir.buckd_info(),
+                daemon_dir.bsmrd_info(),
                 daemon_dir.path,
             ),
-            BuckdProcessInfoDiagnostic::DaemonDirUnavailable(error) => {
+            BsmrdProcessInfoDiagnostic::DaemonDirUnavailable(error) => {
                 write!(f, "Daemon process info unavailable: {error:#}")
             }
         }
@@ -1529,9 +1527,9 @@ mod tests {
             auth_token: "redacted".to_owned(),
         };
         let daemon_dir = DaemonDir {
-            path: AbsNormPathBuf::new("/tmp/buckd".into()).expect("daemon dir should be valid"),
+            path: AbsNormPathBuf::new("/tmp/bsmrd".into()).expect("daemon dir should be valid"),
         };
-        let wrapper = BuckdProcessInfoDiagnostic::ProcessInfo {
+        let wrapper = BsmrdProcessInfoDiagnostic::ProcessInfo {
             daemon_dir,
             info: process_info,
             pid_present_on_system: Some(true),
@@ -1540,7 +1538,7 @@ mod tests {
         assert_eq!(
             wrapper.to_string(),
             format!(
-                "Daemon process info from /tmp/buckd/buckd.info:\n    daemon dir: /tmp/buckd\n    pid: {pid}\n    endpoint: tcp:44805\n    version: 92ca877522e06be7580a7ea2d622a3c06712322a\n    pid present on system: yes"
+                "Daemon process info from /tmp/bsmrd/bsmrd.info:\n    daemon dir: /tmp/bsmrd\n    pid: {pid}\n    endpoint: tcp:44805\n    version: 92ca877522e06be7580a7ea2d622a3c06712322a\n    pid present on system: yes"
             )
         );
     }
@@ -1555,9 +1553,9 @@ mod tests {
             auth_token: "redacted".to_owned(),
         };
         let daemon_dir = DaemonDir {
-            path: AbsNormPathBuf::new("/tmp/buckd".into()).expect("daemon dir should be valid"),
+            path: AbsNormPathBuf::new("/tmp/bsmrd".into()).expect("daemon dir should be valid"),
         };
-        let wrapper = BuckdProcessInfoDiagnostic::ProcessInfo {
+        let wrapper = BsmrdProcessInfoDiagnostic::ProcessInfo {
             daemon_dir,
             info: process_info,
             pid_present_on_system: Some(false),
@@ -1565,27 +1563,27 @@ mod tests {
 
         assert_eq!(
             wrapper.to_string(),
-            "Daemon process info from /tmp/buckd/buckd.info:\n    daemon dir: /tmp/buckd\n    pid: 999999999\n    endpoint: tcp:44805\n    version: 92ca877522e06be7580a7ea2d622a3c06712322a\n    pid present on system: no"
+            "Daemon process info from /tmp/bsmrd/bsmrd.info:\n    daemon dir: /tmp/bsmrd\n    pid: 999999999\n    endpoint: tcp:44805\n    version: 92ca877522e06be7580a7ea2d622a3c06712322a\n    pid present on system: no"
         );
     }
 
     #[cfg(not(windows))]
     #[test]
-    fn test_format_daemon_process_info_missing_buckd_info() {
+    fn test_format_daemon_process_info_missing_bsmrd_info() {
         let daemon_dir = DaemonDir {
-            path: AbsNormPathBuf::new("/tmp/buckd".into()).expect("daemon dir should be valid"),
+            path: AbsNormPathBuf::new("/tmp/bsmrd".into()).expect("daemon dir should be valid"),
         };
 
         assert_eq!(
-            BuckdProcessInfoDiagnostic::MissingBuckdInfo(daemon_dir).to_string(),
-            "Daemon process info from /tmp/buckd/buckd.info:\n    daemon dir: /tmp/buckd\n    status: <missing>"
+            BsmrdProcessInfoDiagnostic::MissingBsmrdInfo(daemon_dir).to_string(),
+            "Daemon process info from /tmp/bsmrd/bsmrd.info:\n    daemon dir: /tmp/bsmrd\n    status: <missing>"
         );
     }
 
     #[test]
     fn test_format_daemon_process_info_daemon_dir_unavailable() {
         assert_eq!(
-            BuckdProcessInfoDiagnostic::DaemonDirUnavailable(internal_error!("no daemon dir"))
+            BsmrdProcessInfoDiagnostic::DaemonDirUnavailable(internal_error!("no daemon dir"))
                 .to_string(),
             "Daemon process info unavailable: no daemon dir (internal error)"
         );
@@ -1595,16 +1593,16 @@ mod tests {
     #[test]
     fn test_format_daemon_process_info_load_error() {
         let daemon_dir = DaemonDir {
-            path: AbsNormPathBuf::new("/tmp/buckd".into()).expect("daemon dir should be valid"),
+            path: AbsNormPathBuf::new("/tmp/bsmrd".into()).expect("daemon dir should be valid"),
         };
 
         assert_eq!(
-            BuckdProcessInfoDiagnostic::LoadError {
+            BsmrdProcessInfoDiagnostic::LoadError {
                 daemon_dir,
-                error: internal_error!("failed to load buckd.info"),
+                error: internal_error!("failed to load bsmrd.info"),
             }
             .to_string(),
-            "Daemon process info from /tmp/buckd/buckd.info:\n    daemon dir: /tmp/buckd\n    status: unavailable: failed to load buckd.info (internal error)"
+            "Daemon process info from /tmp/bsmrd/bsmrd.info:\n    daemon dir: /tmp/bsmrd\n    status: unavailable: failed to load bsmrd.info (internal error)"
         );
     }
 

@@ -1,0 +1,10 @@
+# ===----------------------------------------------------------------------===
+# Copyright (c) 2026 Dedalus Labs, Inc. and its contributors
+# SPDX-License-Identifier: Apache-2.0
+# ===----------------------------------------------------------------------===
+
+cargo_env = [
+    "CARGO_PKG_VERSION_MAJOR",
+    "CARGO_PKG_VERSION_MINOR",
+    "CARGO_PKG_VERSION_PATCH",
+]

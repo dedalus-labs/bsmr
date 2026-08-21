@@ -23,9 +23,9 @@ use bsmr_build_api::artifact_groups::ArtifactGroup;
 use bsmr_build_api::interpreter::rule_defs::artifact::starlark_artifact_like::ValueAsInputArtifactLike;
 use bsmr_build_api::interpreter::rule_defs::artifact_tagging::ArtifactTag;
 use bsmr_build_api::interpreter::rule_defs::cmd_args::CommandLineArtifactVisitor;
-use bsmr_error::BuckErrorContext;
+use bsmr_error::BsmrErrorContext;
 use bsmr_error::internal_error;
-use bsmr_hash::BuckHashMap;
+use bsmr_hash::BsmrHashMap;
 use bsmr_interpreter_for_build::interpreter::testing::Tester;
 use dupe::Dupe;
 use indoc::indoc;
@@ -74,7 +74,7 @@ fn test_tagging() -> bsmr_error::Result<()> {
             let artifact = artifact
                 .0
                 .get_bound_artifact()
-                .buck_error_context("Not a bound artifact")?
+                .bsmr_error_context("Not a bound artifact")?
                 .dupe();
 
             visit_json_artifacts(tagged, &mut AssertVisitor { tag, artifact })?;
@@ -89,7 +89,7 @@ fn test_tagging() -> bsmr_error::Result<()> {
                 value: JsonUnpack::unpack_value_err(tagged)?,
                 fs: None,
                 absolute: false,
-                artifact_path_mapping: &BuckHashMap::default(),
+                artifact_path_mapping: &BsmrHashMap::default(),
             })
             .map_err(bsmr_error::Error::from)?;
 
@@ -97,7 +97,7 @@ fn test_tagging() -> bsmr_error::Result<()> {
                 value: JsonUnpack::unpack_value_err(value)?,
                 fs: None,
                 absolute: false,
-                artifact_path_mapping: &BuckHashMap::default(),
+                artifact_path_mapping: &BsmrHashMap::default(),
             })
             .map_err(bsmr_error::Error::from)?;
 

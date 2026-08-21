@@ -18,14 +18,14 @@ use async_trait::async_trait;
 use bsmr_cli_proto::AqueryRequest;
 use bsmr_cli_proto::AqueryResponse;
 use bsmr_client_ctx::client_ctx::ClientCommandContext;
-use bsmr_client_ctx::common::BuckArgMatches;
+use bsmr_client_ctx::common::BsmrArgMatches;
 use bsmr_client_ctx::common::CommonBuildConfigurationOptions;
 use bsmr_client_ctx::common::CommonCommandOptions;
 use bsmr_client_ctx::common::CommonEventLogOptions;
 use bsmr_client_ctx::common::CommonStarlarkOptions;
 use bsmr_client_ctx::common::target_cfg::TargetCfgOptions;
 use bsmr_client_ctx::common::ui::CommonConsoleOptions;
-use bsmr_client_ctx::daemon::client::BuckdClientConnector;
+use bsmr_client_ctx::daemon::client::BsmrdClientConnector;
 use bsmr_client_ctx::daemon::client::StdoutPartialResultHandler;
 use bsmr_client_ctx::events_ctx::EventsCtx;
 use bsmr_client_ctx::exit_result::ExitResult;
@@ -45,7 +45,7 @@ action.
 Run `bsmr docs aquery` or
 "#,
         if_else_opensource!(
-            "https://buck2.build/docs/users/query/aquery/",
+            "https://oss.dedaluslabs.ai/bsmr/users/query/aquery/",
             "https://www.internalfb.com/intern/staticdocs/bsmr/docs/users/query/aquery/",
         ),
         r#"
@@ -96,8 +96,8 @@ impl StreamingCommand for AqueryCommand {
 
     async fn exec_impl(
         self,
-        buckd: &mut BuckdClientConnector,
-        matches: BuckArgMatches<'_>,
+        bsmrd: &mut BsmrdClientConnector,
+        matches: BsmrArgMatches<'_>,
         ctx: &mut ClientCommandContext<'_>,
         events_ctx: &mut EventsCtx,
     ) -> ExitResult {
@@ -106,7 +106,7 @@ impl StreamingCommand for AqueryCommand {
         let output_attributes = self.query_common.attributes.get()?;
         let context = ctx.client_context(matches, &self)?;
 
-        let AqueryResponse {} = buckd
+        let AqueryResponse {} = bsmrd
             .with_flushing()
             .aquery(
                 AqueryRequest {

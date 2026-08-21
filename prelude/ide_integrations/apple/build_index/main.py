@@ -29,7 +29,7 @@ def parse_arguments() -> Namespace:
     parser.add_argument("-d", "--dest", type=str, required=True)
     parser.add_argument("-t", "--target", type=str, required=True, nargs="+")
     parser.add_argument(
-        "-c", "--config", action="append", help="Buck configuration flags"
+        "-c", "--config", action="append", help="Bsmr configuration flags"
     )
     parser.add_argument(
         "-s",

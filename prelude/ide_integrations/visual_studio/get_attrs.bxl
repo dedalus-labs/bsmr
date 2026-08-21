@@ -28,7 +28,7 @@ def get_attrs(target: bxl.ConfiguredTargetNode, bxl_ctx) -> dict:
     # TODO: Compare between resolved_attrs_lazy and resolved_attrs_eager after everything is done
     attrs = target.resolved_attrs_lazy(bxl_ctx)
     output = {}
-    output["buck_type"] = _get_buck_type(attrs)
+    output["bsmr_type"] = _get_bsmr_type(attrs)
     output["srcs"] = _get_srcs(attrs)
     output["headers"] = _get_headers(attrs)
     output["exported_headers"] = _get_exported_headers(attrs)
@@ -181,8 +181,8 @@ def _get_srcs(attrs) -> dict:
 
     return srcs
 
-def _get_buck_type(attrs) -> str:
-    return attrs.get("buck.type")
+def _get_bsmr_type(attrs) -> str:
+    return attrs.get("bsmr.type")
 
 def _get_args(attrs) -> list:
     args = attrs.get("args")

@@ -17,7 +17,7 @@
 use bsmr_core::execution_types::executor_config::RemoteExecutorUseCase;
 use bsmr_events::dispatch::get_dispatcher_opt;
 use remote_execution::ActionHistoryInfo;
-use remote_execution::BuckInfo;
+use remote_execution::BsmrInfo;
 use remote_execution::RemoteExecutionMetadata;
 
 use crate::re::action_identity::ReActionIdentity;
@@ -35,7 +35,7 @@ impl RemoteExecutionMetadataExt for RemoteExecutorUseCase {
         };
         RemoteExecutionMetadata {
             use_case_id: self.as_str().to_owned(),
-            buck_info: Some(BuckInfo {
+            bsmr_info: Some(BsmrInfo {
                 build_id: trace_id,
                 ..Default::default()
             }),

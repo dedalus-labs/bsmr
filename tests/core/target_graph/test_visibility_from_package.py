@@ -15,14 +15,14 @@
 # pyre-strict
 
 
-from bsmr.tests.e2e_util.api.buck import Buck
-from bsmr.tests.e2e_util.buck_workspace import buck_test
+from bsmr.tests.e2e_util.api.bsmr import Bsmr
+from bsmr.tests.e2e_util.bsmr_workspace import bsmr_test
 from bsmr.tests.e2e_util.helper.golden import golden
 
 
-@buck_test()
-async def test_visibility_from_package_simple(buck: Buck) -> None:
-    result = await buck.uquery(
+@bsmr_test()
+async def test_visibility_from_package_simple(bsmr: Bsmr) -> None:
+    result = await bsmr.uquery(
         "root//simple:", "--output-attribute=visibility|within_view"
     )
     golden(
@@ -31,9 +31,9 @@ async def test_visibility_from_package_simple(buck: Buck) -> None:
     )
 
 
-@buck_test()
-async def test_visibility_from_package_inherit(buck: Buck) -> None:
-    result = await buck.uquery(
+@bsmr_test()
+async def test_visibility_from_package_inherit(bsmr: Bsmr) -> None:
+    result = await bsmr.uquery(
         "root//inherit/...", "--output-attribute=visibility|within_view"
     )
     golden(
@@ -42,9 +42,9 @@ async def test_visibility_from_package_inherit(buck: Buck) -> None:
     )
 
 
-@buck_test()
-async def test_visibility_from_package_override(buck: Buck) -> None:
-    result = await buck.uquery(
+@bsmr_test()
+async def test_visibility_from_package_override(bsmr: Bsmr) -> None:
+    result = await bsmr.uquery(
         "root//override/...", "--output-attribute=visibility|within_view"
     )
     golden(
@@ -53,9 +53,9 @@ async def test_visibility_from_package_override(buck: Buck) -> None:
     )
 
 
-@buck_test()
-async def test_visibility_from_package_public(buck: Buck) -> None:
-    result = await buck.uquery(
+@bsmr_test()
+async def test_visibility_from_package_public(bsmr: Bsmr) -> None:
+    result = await bsmr.uquery(
         "root//public/...", "--output-attribute=visibility|within_view"
     )
     golden(

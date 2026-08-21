@@ -15,15 +15,15 @@
 # pyre-strict
 
 
-from bsmr.tests.e2e_util.api.buck import Buck
+from bsmr.tests.e2e_util.api.bsmr import Bsmr
 from bsmr.tests.e2e_util.asserts import expect_failure
-from bsmr.tests.e2e_util.buck_workspace import buck_test
+from bsmr.tests.e2e_util.bsmr_workspace import bsmr_test
 from bsmr.tests.e2e_util.helper.golden import golden
 
 
-@buck_test()
-async def test_toolchain_incoming_edge(buck: Buck) -> None:
-    res = await expect_failure(buck.ctargets("root//:stub", "-v0", "--console=none"))
+@bsmr_test()
+async def test_toolchain_incoming_edge(bsmr: Bsmr) -> None:
+    res = await expect_failure(bsmr.ctargets("root//:stub", "-v0", "--console=none"))
     golden(
         output=res.stderr,
         rel_path="error.golden.stderr",

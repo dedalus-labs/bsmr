@@ -30,7 +30,7 @@ use bsmr_core::deferred::base_deferred_key::BaseDeferredKey;
 use bsmr_core::deferred::dynamic::DynamicLambdaResultsKey;
 use bsmr_core::deferred::key::DeferredHolderKey;
 use bsmr_data::ToProtoMessage;
-use bsmr_error::BuckErrorContext;
+use bsmr_error::BsmrErrorContext;
 use dice::CancellationContext;
 use dice::Demand;
 use dice::DiceComputations;
@@ -95,7 +95,7 @@ impl Key for DynamicLambdaDiceKey {
 
         let analysis_values = prepare_and_execute_lambda(ctx, cancellation, lambda, self.0.dupe())
             .await
-            .with_buck_error_context(|| {
+            .with_bsmr_error_context(|| {
                 format!("Error running dynamic analysis for `{}`", &self.0.owner())
             })?;
         let res = Arc::new(DynamicLambdaResult { analysis_values });

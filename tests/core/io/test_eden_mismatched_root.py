@@ -16,17 +16,17 @@
 
 from pathlib import Path
 
-from bsmr.tests.e2e_util.api.buck import Buck
-from bsmr.tests.e2e_util.buck_workspace import buck_test
+from bsmr.tests.e2e_util.api.bsmr import Bsmr
+from bsmr.tests.e2e_util.bsmr_workspace import bsmr_test
 
 
-@buck_test(
+@bsmr_test(
     setup_eden=True,
     # bsmr-out is not redirected in the subproject
     allow_soft_errors=True,
-    # We don't run buck outside the subproject
+    # We don't run bsmr outside the subproject
     skip_final_kill=True,
 )
-async def test_mismatched_root(buck: Buck) -> None:
-    await buck.build("//...", rel_cwd=Path("subdir"))
-    await buck.kill(rel_cwd=Path("subdir"))
+async def test_mismatched_root(bsmr: Bsmr) -> None:
+    await bsmr.build("//...", rel_cwd=Path("subdir"))
+    await bsmr.kill(rel_cwd=Path("subdir"))

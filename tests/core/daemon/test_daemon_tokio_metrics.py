@@ -17,19 +17,19 @@
 import json
 import typing
 
-from bsmr.tests.e2e_util.api.buck import Buck
-from bsmr.tests.e2e_util.buck_workspace import buck_test
+from bsmr.tests.e2e_util.api.bsmr import Bsmr
+from bsmr.tests.e2e_util.bsmr_workspace import bsmr_test
 
 
-@buck_test(skip_for_os=["darwin", "windows"])
-async def test_default_output(buck: Buck) -> None:
-    status = await start_daemon_and_get_status(buck)
+@bsmr_test(skip_for_os=["darwin", "windows"])
+async def test_default_output(bsmr: Bsmr) -> None:
+    status = await start_daemon_and_get_status(bsmr)
     assert "tokio_runtime_metrics" not in status
 
 
-@buck_test(skip_for_os=["darwin", "windows"])
-async def test_includes_tokio(buck: Buck) -> None:
-    status = await start_daemon_and_get_status(buck, include_tokio_runtime_metrics=True)
+@bsmr_test(skip_for_os=["darwin", "windows"])
+async def test_includes_tokio(bsmr: Bsmr) -> None:
+    status = await start_daemon_and_get_status(bsmr, include_tokio_runtime_metrics=True)
     assert "tokio_runtime_metrics" in status
     metrics = status["tokio_runtime_metrics"]
     assert "global_queue_depth" in metrics
@@ -37,21 +37,21 @@ async def test_includes_tokio(buck: Buck) -> None:
     assert "num_workers" in metrics
 
 
-@buck_test(skip_for_os=["darwin", "windows"])
-async def test_notices_tokio_worker_override(buck: Buck) -> None:
-    append_tokio_workers_config(buck)
-    status = await start_daemon_and_get_status(buck, include_tokio_runtime_metrics=True)
+@bsmr_test(skip_for_os=["darwin", "windows"])
+async def test_notices_tokio_worker_override(bsmr: Bsmr) -> None:
+    append_tokio_workers_config(bsmr)
+    status = await start_daemon_and_get_status(bsmr, include_tokio_runtime_metrics=True)
     assert "tokio_runtime_metrics" in status
     metrics = status["tokio_runtime_metrics"]
     assert "num_workers" in metrics
     assert metrics["num_workers"] == 42  # from modification below
 
 
-@buck_test()
-async def test_snapshot_events_carry_tokio_runtime_stats(buck: Buck) -> None:
+@bsmr_test()
+async def test_snapshot_events_carry_tokio_runtime_stats(bsmr: Bsmr) -> None:
     # Snapshots should always include tokio_runtime_stats — there's no toggle.
-    await buck.targets(":")
-    snapshots = await _snapshot_events(buck)
+    await bsmr.targets(":")
+    snapshots = await _snapshot_events(bsmr)
     assert len(snapshots) > 0, "expected at least one snapshot event in the log"
     populated = [s for s in snapshots if s.get("tokio_runtime_stats")]
     assert len(populated) > 0, (
@@ -69,9 +69,9 @@ async def test_snapshot_events_carry_tokio_runtime_stats(buck: Buck) -> None:
     )
 
 
-async def _snapshot_events(buck: Buck) -> list[dict[str, typing.Any]]:
+async def _snapshot_events(bsmr: Bsmr) -> list[dict[str, typing.Any]]:
     """Returns the Snapshot payloads from the most recent invocation's log."""
-    out = await buck.log("show")
+    out = await bsmr.log("show")
     snapshots: list[dict[str, typing.Any]] = []
     for line in out.stdout.splitlines():
         if not line:
@@ -85,22 +85,22 @@ async def _snapshot_events(buck: Buck) -> list[dict[str, typing.Any]]:
     return snapshots
 
 
-def append_tokio_workers_config(buck: Buck) -> None:
-    with open(buck.cwd / ".bsmr", "a") as bsmrconfig:
+def append_tokio_workers_config(bsmr: Bsmr) -> None:
+    with open(bsmr.cwd / ".bsmr", "a") as bsmrconfig:
         bsmrconfig.write("[build]\n")
         bsmrconfig.write("num_tokio_workers = 42")
 
 
 async def start_daemon_and_get_status(
-    buck: Buck, include_tokio_runtime_metrics: bool = False
+    bsmr: Bsmr, include_tokio_runtime_metrics: bool = False
 ) -> dict[str, typing.Any]:
     # Start the daemon
-    await buck.targets(":")
+    await bsmr.targets(":")
 
     status_result = await (
-        buck.status("--include-tokio-runtime-metrics")
+        bsmr.status("--include-tokio-runtime-metrics")
         if include_tokio_runtime_metrics
-        else buck.status()
+        else bsmr.status()
     )
     status_data = json.loads(status_result.stdout)
     return status_data

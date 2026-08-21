@@ -19,7 +19,7 @@ use std::time::Duration;
 
 use allocative::Allocative;
 use bsmr_core::bsmr_env;
-use bsmr_error::BuckErrorContext;
+use bsmr_error::BsmrErrorContext;
 #[cfg(unix)]
 use bsmr_fs::paths::abs_norm_path::AbsNormPathBuf;
 use serde::Deserialize;
@@ -212,12 +212,12 @@ impl SystemWarningConfig {
     }
 
     pub fn serialize(&self) -> bsmr_error::Result<String> {
-        serde_json::to_string(&self).buck_error_context("Error serializing SystemWarningConfig")
+        serde_json::to_string(&self).bsmr_error_context("Error serializing SystemWarningConfig")
     }
 
     pub fn deserialize(s: &str) -> bsmr_error::Result<Self> {
         serde_json::from_str::<Self>(s)
-            .buck_error_context("Error deserializing SystemWarningConfig")
+            .bsmr_error_context("Error deserializing SystemWarningConfig")
     }
 }
 
@@ -227,7 +227,7 @@ pub struct ResourceControlConfig {
     /// The corresponding bsmrconfig is `bsmr_resource_control.status` that can take
     /// one of `{off | if_available | required}`.
     pub status: ResourceControlStatus,
-    /// If resource control is enabled, buck needs to get a cgroup to run in from somewhere - this is
+    /// If resource control is enabled, bsmr needs to get a cgroup to run in from somewhere - this is
     /// where.
     pub init: ResourceControlInit,
     /// Maximum allowed memory usage for all work bsmr manages.
@@ -354,13 +354,13 @@ impl FromStr for ResourceControlInit {
 /// The current version of the resource control algorithm. Say you have some important change to the
 /// algo that fixes a bug. Incrementing this to `N + 1` and setting the
 /// `bsmr_resource_control.enable_suspension_if_min_algo_version` bsmrconfig to `N + 1` enables
-/// suspension only if your bug fix is actually included in the version of buck in use
+/// suspension only if your bug fix is actually included in the version of bsmr in use
 const RESOURCE_CONTROL_ALGO_VERSION: u32 = 6;
 
 /// The current version of the daemon cgroup wrapping logic. Incrementing this to `N + 1` and
 /// setting `bsmr_resource_control.status_if_min_daemon_cgroup_version` bsmrconfig to `N + 1`
 /// enables daemon cgroup wrapping (status = if_available) only if the bug fix is included in the
-/// version of buck in use.
+/// version of bsmr in use.
 const DAEMON_CGROUP_VERSION: u32 = 1;
 
 impl ResourceControlConfig {
@@ -457,12 +457,12 @@ impl ResourceControlConfig {
     }
 
     pub fn serialize(&self) -> bsmr_error::Result<String> {
-        serde_json::to_string(&self).buck_error_context("Error serializing ResourceControlConfig")
+        serde_json::to_string(&self).bsmr_error_context("Error serializing ResourceControlConfig")
     }
 
     pub fn deserialize(s: &str) -> bsmr_error::Result<Self> {
         serde_json::from_str::<Self>(s)
-            .buck_error_context("Error deserializing ResourceControlConfig")
+            .bsmr_error_context("Error deserializing ResourceControlConfig")
     }
 }
 
@@ -629,12 +629,12 @@ impl DaemonStartupConfig {
     }
 
     pub fn serialize(&self) -> bsmr_error::Result<String> {
-        serde_json::to_string(&self).buck_error_context("Error serializing DaemonStartupConfig")
+        serde_json::to_string(&self).bsmr_error_context("Error serializing DaemonStartupConfig")
     }
 
     pub fn deserialize(s: &str) -> bsmr_error::Result<Self> {
         serde_json::from_str::<Self>(s)
-            .buck_error_context("Error deserializing DaemonStartupConfig")
+            .bsmr_error_context("Error deserializing DaemonStartupConfig")
     }
 
     pub fn testing_empty() -> Self {

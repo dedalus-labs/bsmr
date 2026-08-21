@@ -19,7 +19,7 @@ use bsmr_cli_proto::TargetsRequest;
 use bsmr_cli_proto::targets_request;
 use bsmr_cli_proto::targets_request::OutputFormat;
 use bsmr_client_ctx::client_ctx::ClientCommandContext;
-use bsmr_client_ctx::common::BuckArgMatches;
+use bsmr_client_ctx::common::BsmrArgMatches;
 use bsmr_client_ctx::common::CommonBuildConfigurationOptions;
 use bsmr_client_ctx::common::CommonCommandOptions;
 use bsmr_client_ctx::common::CommonEventLogOptions;
@@ -29,7 +29,7 @@ use bsmr_client_ctx::common::build::CommonOutputOptions;
 use bsmr_client_ctx::common::target_cfg::TargetCfgOptions;
 use bsmr_client_ctx::common::ui::CommonConsoleOptions;
 use bsmr_client_ctx::console_interaction_stream::ConsoleInteractionStream;
-use bsmr_client_ctx::daemon::client::BuckdClientConnector;
+use bsmr_client_ctx::daemon::client::BsmrdClientConnector;
 use bsmr_client_ctx::daemon::client::NoPartialResultHandler;
 use bsmr_client_ctx::daemon::client::StdoutPartialResultHandler;
 use bsmr_client_ctx::events_ctx::EventsCtx;
@@ -52,7 +52,7 @@ enum TargetsError {
     IncompatibleArguments,
 }
 
-// Use non-camel case so the possible values match buck1's
+// Use non-camel case so the possible values match legacy's
 #[allow(non_camel_case_types)]
 #[derive(Debug, Clone, Dupe, clap::ValueEnum)]
 #[clap(rename_all = "snake_case")]
@@ -81,7 +81,7 @@ enum TargetHashGraphType {
     Configured,
 }
 
-// Use non-camel case so the possible values match buck1's
+// Use non-camel case so the possible values match legacy's
 /// Possible values for the --target-hash-function arg. We don't actually
 /// honor the specific algorithms, we use them as a hint to pick "fast" or "strong".
 #[allow(non_camel_case_types)]
@@ -185,7 +185,7 @@ pub struct TargetsCommand {
     #[clap(flatten)]
     show_output: CommonOutputOptions,
 
-    /// On loading errors, put buck.error in the output stream and continue
+    /// On loading errors, put bsmr.error in the output stream and continue
     #[clap(long)]
     keep_going: bool,
 
@@ -294,8 +294,8 @@ impl StreamingCommand for TargetsCommand {
 
     async fn exec_impl(
         mut self,
-        buckd: &mut BuckdClientConnector,
-        matches: BuckArgMatches<'_>,
+        bsmrd: &mut BsmrdClientConnector,
+        matches: BsmrArgMatches<'_>,
         ctx: &mut ClientCommandContext<'_>,
         events_ctx: &mut EventsCtx,
     ) -> ExitResult {
@@ -372,7 +372,7 @@ impl StreamingCommand for TargetsCommand {
             let project_root = ctx.paths()?.roots.project_root.clone();
             targets_show_outputs(
                 ctx.console_interaction_stream(&self.common_opts.console_opts),
-                buckd,
+                bsmrd,
                 events_ctx,
                 target_request,
                 self.show_output.is_full().then(|| project_root.root()),
@@ -382,7 +382,7 @@ impl StreamingCommand for TargetsCommand {
         } else {
             targets(
                 ctx.console_interaction_stream(&self.common_opts.console_opts),
-                buckd,
+                bsmrd,
                 events_ctx,
                 target_request,
             )
@@ -409,13 +409,13 @@ impl StreamingCommand for TargetsCommand {
 
 async fn targets_show_outputs(
     console_interaction: Option<ConsoleInteractionStream<'_>>,
-    buckd: &mut BuckdClientConnector,
+    bsmrd: &mut BsmrdClientConnector,
     events_ctx: &mut EventsCtx,
     target_request: TargetsRequest,
     root_path: Option<&AbsNormPath>,
     format: PrintOutputsFormat,
 ) -> ExitResult {
-    let response = buckd
+    let response = bsmrd
         .with_flushing()
         .targets_show_outputs(
             target_request,
@@ -442,11 +442,11 @@ async fn targets_show_outputs(
 
 async fn targets(
     console_interaction: Option<ConsoleInteractionStream<'_>>,
-    buckd: &mut BuckdClientConnector,
+    bsmrd: &mut BsmrdClientConnector,
     events_ctx: &mut EventsCtx,
     target_request: TargetsRequest,
 ) -> ExitResult {
-    let response = buckd
+    let response = bsmrd
         .with_flushing()
         .targets(
             target_request,

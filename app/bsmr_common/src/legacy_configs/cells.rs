@@ -30,11 +30,11 @@ use bsmr_core::cells::external::GitObjectFormat;
 use bsmr_core::cells::name::CellName;
 use bsmr_core::fs::project::ProjectRoot;
 use bsmr_core::fs::project_rel_path::ProjectRelativePath;
-use bsmr_error::BuckErrorContext;
+use bsmr_error::BsmrErrorContext;
 use bsmr_fs::paths::RelativePath;
 use bsmr_fs::paths::abs_path::AbsPath;
 use bsmr_fs::paths::forward_rel_path::ForwardRelativePath;
-use bsmr_hash::StdBuckHashSet;
+use bsmr_hash::StdBsmrHashSet;
 use dice::DiceComputations;
 use dupe::Dupe;
 use pagable::Pagable;
@@ -69,7 +69,7 @@ use crate::legacy_configs::path::ProjectConfigSource;
 pub struct ExternalBsmrconfigData {
     // The result of parsing the bsmrconfigs coming from either global (e.g. /etc/bsmrconfig.d) or
     // user (e.g. ~/.bsmr.d or $home_dir/.bsmr.local) files/dirs outside of the repo
-    // The order matters here and reflects the same order these are processed in buck, see
+    // The order matters here and reflects the same order these are processed in bsmr, see
     // https://fburl.com/code/8ue78p1j
     external_path_configs: Vec<ExternalPathBsmrconfigData>,
     // The result of parsing the bsmrconfigs coming from command line args (e.g. --config or --config-file)
@@ -188,7 +188,7 @@ impl ExternalBsmrconfigData {
     }
 }
 
-/// Used for creating a CellResolver in a buckv1-compatible way based on values
+/// Used for creating a CellResolver in a legacy-compatible way based on values
 /// in .bsmr in each cell.
 ///
 /// We'll traverse the structure of the `[cells]` sections starting from
@@ -200,7 +200,7 @@ impl ExternalBsmrconfigData {
 pub struct BsmrConfigBasedCells {
     pub cell_resolver: CellResolver,
     pub root_config: LegacyBsmrConfig,
-    pub config_paths: StdBuckHashSet<ConfigPath>,
+    pub config_paths: StdBsmrHashSet<ConfigPath>,
     pub external_data: ExternalBsmrconfigData,
 }
 
@@ -285,7 +285,7 @@ impl BsmrConfigBasedCells {
     ) -> bsmr_error::Result<Self> {
         Self::parse_with_file_ops_and_options_inner(file_ops, config_args, follow_includes)
             .await
-            .buck_error_context("Parsing cells")
+            .bsmr_error_context("Parsing cells")
     }
 
     async fn parse_with_file_ops_and_options_inner(
@@ -296,7 +296,7 @@ impl BsmrConfigBasedCells {
         // Tracing file ops to record config file accesses on command invocation.
         struct TracingFileOps<'a> {
             inner: &'a mut dyn ConfigParserFileOps,
-            trace: StdBuckHashSet<ConfigPath>,
+            trace: StdBsmrHashSet<ConfigPath>,
         }
 
         #[async_trait::async_trait]
@@ -366,7 +366,7 @@ impl BsmrConfigBasedCells {
                 let alias_path = CellRootPathBuf::new(
                     root_path.as_project_relative_path()
                         .join_normalized(RelativePath::unchecked_new(alias_path.as_str()))
-                        .with_buck_error_context(|| {
+                        .with_bsmr_error_context(|| {
                             format!(
                                 "expected alias path to be a relative path, but found `{}` for `{}`",
                                 alias_path.as_str(),

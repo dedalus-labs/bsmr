@@ -17,7 +17,7 @@
 //! A very limited interface for writing dot files (see <http://www.graphviz.org/doc/info/lang.html>)
 //!
 //! Has a lot less features than <https://crates.io/crates/dot> or <https://crates.io/crates/tabbycat>,
-//! but it's easier for us to match buck1's output with this simple implementation.
+//! but it's easier for us to match legacy's output with this simple implementation.
 // TODO(cjhopman): while the `dot` crate is probably too opinionated, `tabbycat` looks nice and is
 // lower level so gives a lot of control (including control over ordering of node/edge statements).
 // It looks like we could use that, but it mostly would just handle the actual writing of the
@@ -30,7 +30,7 @@ use std::fmt::Display;
 use std::io::Write;
 use std::sync::LazyLock;
 
-use bsmr_hash::StdBuckHashMap;
+use bsmr_hash::StdBsmrHashMap;
 use regex::Regex;
 use starlark_map::small_map::SmallMap;
 
@@ -150,7 +150,7 @@ impl DotCompact {
         writeln!(w, "digraph {} {{", graph.name())?;
 
         let mut next_id: u32 = 0;
-        let mut lookup_numeric_id: StdBuckHashMap<String, u32> = StdBuckHashMap::default();
+        let mut lookup_numeric_id: StdBsmrHashMap<String, u32> = StdBsmrHashMap::default();
 
         let mut name_to_number = |node_name: &str| -> u32 {
             match lookup_numeric_id.entry(node_name.to_owned()) {

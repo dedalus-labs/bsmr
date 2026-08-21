@@ -22,7 +22,7 @@ use std::path::Path;
 use std::sync::LazyLock;
 
 use bsmr_core::soft_error;
-use bsmr_error::BuckErrorContext;
+use bsmr_error::BsmrErrorContext;
 use bsmr_error::ErrorTag;
 use bsmr_error::bsmr_error;
 use bsmr_error::internal_error;
@@ -31,19 +31,19 @@ use bsmr_fs::paths::abs_path::AbsPath;
 use bsmr_util::process::async_background_command;
 use regex::Regex;
 
-use super::BuckdConnectDaemonOptions;
+use super::BsmrdConnectDaemonOptions;
 use super::ExecutableAndArgs;
 
 // `YYYYMMDD-HHMMSS` release strings sort lexicographically in the same order as their timestamps.
 #[derive(Clone, Debug, Eq, Ord, PartialEq, PartialOrd)]
-struct BuckWrapperRelease<'a>(Cow<'a, str>);
+struct BsmrWrapperRelease<'a>(Cow<'a, str>);
 
-impl BuckWrapperRelease<'_> {
+impl BsmrWrapperRelease<'_> {
     fn as_str(&self) -> &str {
         self.0.as_ref()
     }
 
-    async fn create(wrapper: &str) -> Option<BuckWrapperRelease<'static>> {
+    async fn create(wrapper: &str) -> Option<BsmrWrapperRelease<'static>> {
         let output = async_background_command(wrapper)
             .arg("--version-wrapper")
             .stdin(std::process::Stdio::null())
@@ -63,38 +63,38 @@ impl BuckWrapperRelease<'_> {
         }
 
         let stdout = String::from_utf8_lossy(&output.stdout);
-        BuckWrapperRelease::parse_version_wrapper_output(&stdout)
-            .map(|release| BuckWrapperRelease(Cow::Owned(release.as_str().to_owned())))
+        BsmrWrapperRelease::parse_version_wrapper_output(&stdout)
+            .map(|release| BsmrWrapperRelease(Cow::Owned(release.as_str().to_owned())))
     }
 
-    fn is_at_least(&self, min_release: &BuckWrapperRelease<'_>) -> bool {
+    fn is_at_least(&self, min_release: &BsmrWrapperRelease<'_>) -> bool {
         self.as_str() >= min_release.as_str()
     }
 }
 
-impl<'a> BuckWrapperRelease<'a> {
-    fn parse_version_wrapper_output(output: &'a str) -> Option<BuckWrapperRelease<'a>> {
-        static BUCK_WRAPPER_RELEASE: LazyLock<Regex> = LazyLock::new(|| {
+impl<'a> BsmrWrapperRelease<'a> {
+    fn parse_version_wrapper_output(output: &'a str) -> Option<BsmrWrapperRelease<'a>> {
+        static BSMR_WRAPPER_RELEASE: LazyLock<Regex> = LazyLock::new(|| {
             Regex::new(r"(?m)^Release:\s*([0-9]{8}-[0-9]{6})(?:\s|$)")
                 .expect("hardcoded regex should compile")
         });
 
-        BUCK_WRAPPER_RELEASE.captures(output).and_then(|captures| {
+        BSMR_WRAPPER_RELEASE.captures(output).and_then(|captures| {
             captures
                 .get(1)
-                .map(|release| BuckWrapperRelease(Cow::Borrowed(release.as_str())))
+                .map(|release| BsmrWrapperRelease(Cow::Borrowed(release.as_str())))
         })
     }
 }
 
-impl fmt::Display for BuckWrapperRelease<'_> {
+impl fmt::Display for BsmrWrapperRelease<'_> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         self.as_str().fmt(f)
     }
 }
 
 pub(super) async fn get_unix_daemon_and_args<'a>(
-    options: &BuckdConnectDaemonOptions,
+    options: &BsmrdConnectDaemonOptions,
     args: Vec<&'a str>,
 ) -> bsmr_error::Result<ExecutableAndArgs<'a>> {
     let daemon_exe = super::get_daemon_exe()?;
@@ -102,10 +102,10 @@ pub(super) async fn get_unix_daemon_and_args<'a>(
     if let Some(unsandboxed_daemon_wrapper) = daemon_unsandboxed_wrapper(options).await {
         let canonical_daemon_exe = daemon_exe
             .canonicalize()
-            .buck_error_context("Failed to canonicalize Buck daemon executable")?
+            .bsmr_error_context("Failed to canonicalize Bsmr daemon executable")?
             .into_os_string()
             .into_string()
-            .map_err(|_| internal_error!("Buck daemon executable path is not valid UTF-8"))?;
+            .map_err(|_| internal_error!("Bsmr daemon executable path is not valid UTF-8"))?;
         let args = std::iter::once(Cow::Borrowed("unsandbox-daemon"))
             .chain(std::iter::once(Cow::Owned(canonical_daemon_exe)))
             .chain(args.into_iter().map(Cow::Borrowed))
@@ -122,11 +122,11 @@ pub(super) async fn get_unix_daemon_and_args<'a>(
     }
 }
 
-async fn daemon_unsandboxed_wrapper(options: &BuckdConnectDaemonOptions) -> Option<&'static str> {
-    const UNSANDBOX_DAEMON_WRAPPER: &str = "/usr/local/bin/buck";
+async fn daemon_unsandboxed_wrapper(options: &BsmrdConnectDaemonOptions) -> Option<&'static str> {
+    const UNSANDBOX_DAEMON_WRAPPER: &str = "/usr/local/bin/bsmr";
     // This was the first release (d242c0c75785ff34bfcefbecc9cf4a40022df37b) that accepted the `unsandbox-daemon` command.
-    const MIN_UNSANDBOX_DAEMON_WRAPPER_RELEASE: BuckWrapperRelease<'static> =
-        BuckWrapperRelease(Cow::Borrowed("20260630-090501"));
+    const MIN_UNSANDBOX_DAEMON_WRAPPER_RELEASE: BsmrWrapperRelease<'static> =
+        BsmrWrapperRelease(Cow::Borrowed("20260630-090501"));
 
     if !options.allow_daemon_start_unsandboxed_via_wrapper {
         return None;
@@ -149,7 +149,7 @@ async fn daemon_unsandboxed_wrapper(options: &BuckdConnectDaemonOptions) -> Opti
     };
     if !wrapper_is_setuid {
         let _unused = soft_error!(
-            "buck_unsandbox_daemon_wrapper_not_setuid",
+            "bsmr_unsandbox_daemon_wrapper_not_setuid",
             bsmr_error!(
                 ErrorTag::Environment,
                 "Not starting daemon via `{}` because it is not setuid",
@@ -161,9 +161,9 @@ async fn daemon_unsandboxed_wrapper(options: &BuckdConnectDaemonOptions) -> Opti
         return None;
     }
 
-    let Some(release) = BuckWrapperRelease::create(UNSANDBOX_DAEMON_WRAPPER).await else {
+    let Some(release) = BsmrWrapperRelease::create(UNSANDBOX_DAEMON_WRAPPER).await else {
         let _unused = soft_error!(
-            "buck_unsandbox_daemon_wrapper_release_unavailable",
+            "bsmr_unsandbox_daemon_wrapper_release_unavailable",
             bsmr_error!(
                 ErrorTag::Environment,
                 "Not starting daemon via `{}` because its wrapper release could not be fetched",
@@ -177,7 +177,7 @@ async fn daemon_unsandboxed_wrapper(options: &BuckdConnectDaemonOptions) -> Opti
 
     if !release.is_at_least(&MIN_UNSANDBOX_DAEMON_WRAPPER_RELEASE) {
         let _unused = soft_error!(
-            "buck_unsandbox_daemon_wrapper_release_too_old",
+            "bsmr_unsandbox_daemon_wrapper_release_too_old",
             bsmr_error!(
                 ErrorTag::Environment,
                 "Not starting daemon via `{}` because wrapper release `{}` is older than `{}`",
@@ -201,17 +201,17 @@ mod tests {
     #[test]
     fn test_parse_version_wrapper_output() {
         assert_eq!(
-            BuckWrapperRelease::parse_version_wrapper_output(
+            BsmrWrapperRelease::parse_version_wrapper_output(
                 "Revision: d242c0c75785ff34bfcefbecc9cf4a40022df37b\nRelease:  20260630-090501\n",
             ),
-            Some(BuckWrapperRelease(Cow::Borrowed("20260630-090501")))
+            Some(BsmrWrapperRelease(Cow::Borrowed("20260630-090501")))
         );
         assert_eq!(
-            BuckWrapperRelease::parse_version_wrapper_output("Release:  20260630\n"),
+            BsmrWrapperRelease::parse_version_wrapper_output("Release:  20260630\n"),
             None
         );
         assert_eq!(
-            BuckWrapperRelease::parse_version_wrapper_output("Release:  20260630-abcdef\n"),
+            BsmrWrapperRelease::parse_version_wrapper_output("Release:  20260630-abcdef\n"),
             None
         );
     }
@@ -219,7 +219,7 @@ mod tests {
     #[test]
     fn test_parse_version_wrapper_output_rejects_error() {
         assert_eq!(
-            BuckWrapperRelease::parse_version_wrapper_output(
+            BsmrWrapperRelease::parse_version_wrapper_output(
                 "Revision: ERROR. Maybe you are using a local build?\nRelease:  ERROR. Maybe you are using a local build?\n",
             ),
             None
@@ -228,19 +228,19 @@ mod tests {
 
     #[test]
     fn test_is_at_least() {
-        const MIN_UNSANDBOX_DAEMON_WRAPPER_RELEASE: BuckWrapperRelease<'static> =
-            BuckWrapperRelease(Cow::Borrowed("20260630-090501"));
+        const MIN_UNSANDBOX_DAEMON_WRAPPER_RELEASE: BsmrWrapperRelease<'static> =
+            BsmrWrapperRelease(Cow::Borrowed("20260630-090501"));
 
         assert!(
-            BuckWrapperRelease(Cow::Borrowed("20260630-090501"))
+            BsmrWrapperRelease(Cow::Borrowed("20260630-090501"))
                 .is_at_least(&MIN_UNSANDBOX_DAEMON_WRAPPER_RELEASE)
         );
         assert!(
-            BuckWrapperRelease(Cow::Borrowed("20260701-000000"))
+            BsmrWrapperRelease(Cow::Borrowed("20260701-000000"))
                 .is_at_least(&MIN_UNSANDBOX_DAEMON_WRAPPER_RELEASE)
         );
         assert!(
-            !BuckWrapperRelease(Cow::Borrowed("20260630-090500"))
+            !BsmrWrapperRelease(Cow::Borrowed("20260630-090500"))
                 .is_at_least(&MIN_UNSANDBOX_DAEMON_WRAPPER_RELEASE)
         );
     }

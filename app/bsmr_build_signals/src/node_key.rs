@@ -20,7 +20,7 @@ use std::hash::Hash;
 use std::hash::Hasher;
 use std::sync::Arc;
 
-use bsmr_hash::BuckHasher;
+use bsmr_hash::BsmrHasher;
 use cmp_any::PartialEqAny;
 use dupe::Dupe;
 
@@ -64,7 +64,7 @@ impl<T: BuildSignalsNodeKeyImpl> BuildSignalsNodeKeyDyn for T {
     }
 
     fn hash(&self) -> u64 {
-        let mut hasher = BuckHasher::new();
+        let mut hasher = BsmrHasher::new();
         self.hash(&mut hasher);
         hasher.finish()
     }

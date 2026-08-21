@@ -24,7 +24,7 @@ use crate::AuditSubcommand;
 #[clap(
     name = "audit-classpath",
     about = "Prints out a target's classpaths if it has one.
-    This command is deprecated and currently available for compatibility with buck1.
+    This command is deprecated and currently available for compatibility with legacy.
     We will replace this command with something that can audit the entire `TemplatePlaceholderInfo` in the future."
 )]
 pub struct AuditClasspathCommand {

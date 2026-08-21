@@ -12,8 +12,8 @@
 # of this source tree. You may select, at your option, one of the
 # above-listed licenses.
 
-load("@root//tests:buck_e2e.bzl", "bsmr_e2e_test")
-load("@bsmr_build//rules:native_rules.bzl", "buck_genrule")
+load("@root//tests:bsmr_e2e.bzl", "bsmr_e2e_test")
+load("@bsmr_build//rules:native_rules.bzl", "bsmr_genrule")
 load("@upstream//tools/build_defs/windows:powershell.bzl", "powershell_cmd_exe")
 
 # This is meant to be Open-source friendly. In our e2e tests, we invoke a variant from
@@ -29,7 +29,7 @@ def _check_dependencies_test(name, target, contacts, env, labels: list[str], dep
         test_with_compiled_bsmr = False,
         test_with_deployed_bsmr = True,
         skip_deployed_bsmr_version_dep = True,
-        use_buck_api = False,
+        use_bsmr_api = False,
         # In order for target determinator to trigger this test when the `target` specified has changed, we need to introduce a dep on `target`.
         # However, we cannot introduce a configured dep, because the `target` may not be compatible with platform of dependencies test.
         # This adds a dep on `target` in a select arm that is never satisfied. This will work for TD because TD only looks at deps on unconfigured
@@ -53,7 +53,7 @@ def check_dependencies_test(
     expect_failure_msg = None,
     env = None,
     deps = None,
-    extra_buck_args = [],
+    extra_bsmr_args = [],
     labels = [],
     target_deps = True,
     deps_filter_pattern = None,
@@ -107,16 +107,16 @@ def check_dependencies_test(
     modifiers = kwargs.pop("modifiers", None)
     if modifiers:
         for m in modifiers:
-            extra_buck_args = extra_buck_args + ["--modifier", m]
+            extra_bsmr_args = extra_bsmr_args + ["--modifier", m]
 
-    extra_buck_args_target = "%s_extra_buck_args" % (name)
-    buck_args_str = "\n".join(extra_buck_args)
-    buck_genrule(
-        name = extra_buck_args_target,
-        out = "extra_buck_args",
-        bash = "echo '%s' > $OUT" % (buck_args_str),
+    extra_bsmr_args_target = "%s_extra_bsmr_args" % (name)
+    bsmr_args_str = "\n".join(extra_bsmr_args)
+    bsmr_genrule(
+        name = extra_bsmr_args_target,
+        out = "extra_bsmr_args",
+        bash = "echo '%s' > $OUT" % (bsmr_args_str),
         cmd_exe = powershell_cmd_exe([
-            "Set-Content $OUT '%s'" % (buck_args_str),
+            "Set-Content $OUT '%s'" % (bsmr_args_str),
         ]),
     )
 
@@ -131,7 +131,7 @@ def check_dependencies_test(
             "DEPS_EXCLUDE_PATTERN": deps_exclude_pattern or "",
             "DEPS_FILTER_PATTERN": deps_filter_pattern or "",
             "EXPECT_FAILURE_MSG": expect_failure_msg or "",
-            "EXTRA_BUCK_ARGS_FILE": "@$(location :%s)" % (extra_buck_args_target),
+            "EXTRA_BSMR_ARGS_FILE": "@$(location :%s)" % (extra_bsmr_args_target),
             "FLAVOR": "check_dependencies_test",
             "TARGET": target,
             "TARGET_DEPS": str(target_deps).lower(),

@@ -18,7 +18,7 @@ use std::sync::LazyLock;
 
 use bsmr_core::cells::cell_path::CellPath;
 use bsmr_core::package::PackageLabel;
-use bsmr_hash::StdBuckHashSet;
+use bsmr_hash::StdBsmrHashSet;
 use dice::DiceTransaction;
 use dice_futures::drop::DropTogether;
 use dice_futures::spawn::spawn_dropcancel;
@@ -93,7 +93,7 @@ pub async fn collect_package_roots<E>(
     let semaphore = &SEMAPHORE;
 
     let mut queue = FuturesUnordered::new();
-    let mut seen = StdBuckHashSet::default();
+    let mut seen = StdBsmrHashSet::default();
 
     let list_dir = |path: CellPath| async move {
         let _permit = semaphore.acquire().await.unwrap();
@@ -108,7 +108,7 @@ pub async fn collect_package_roots<E>(
             .map(|v| v.is_ignored())
         {
             Ok(true) => {
-                // TODO(cjhopman): Ignoring this matches buck1 behavior, but we'd like this to be an error.
+                // TODO(cjhopman): Ignoring this matches legacy behavior, but we'd like this to be an error.
             }
             Ok(false) => {
                 if seen.insert(path.clone()) {

@@ -18,27 +18,27 @@
 import os.path
 from pathlib import Path
 
-from bsmr.tests.e2e_util.api.buck import Buck
-from bsmr.tests.e2e_util.buck_workspace import buck_test
+from bsmr.tests.e2e_util.api.bsmr import Bsmr
+from bsmr.tests.e2e_util.bsmr_workspace import bsmr_test
 
 
-@buck_test()
-async def test_chrome_trace(buck: Buck, tmp_path: Path) -> None:
+@bsmr_test()
+async def test_chrome_trace(bsmr: Bsmr, tmp_path: Path) -> None:
     # Just check it at least runs.
-    await buck.build("//...")
-    await buck.debug("chrome-trace", "--trace-path", str(tmp_path / "trace.json"))
+    await bsmr.build("//...")
+    await bsmr.debug("chrome-trace", "--trace-path", str(tmp_path / "trace.json"))
 
 
-@buck_test()
-async def test_chrome_trace_no_repo(buck: Buck, tmp_path: Path) -> None:
+@bsmr_test()
+async def test_chrome_trace_no_repo(bsmr: Bsmr, tmp_path: Path) -> None:
     # Check that it runs from a path that is not in the repo.
-    await buck.build("//...")
-    log_path = (await buck.log("last")).stdout.strip()
-    await buck.debug(
+    await bsmr.build("//...")
+    log_path = (await bsmr.log("last")).stdout.strip()
+    await bsmr.debug(
         "chrome-trace",
         "--trace-path",
         str(tmp_path / "trace.json"),
         "--path",
         log_path,
-        rel_cwd=Path(os.path.relpath("/", buck.cwd)),
+        rel_cwd=Path(os.path.relpath("/", bsmr.cwd)),
     )

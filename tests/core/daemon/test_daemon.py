@@ -23,15 +23,15 @@ import time
 from pathlib import Path
 
 import pytest
-from bsmr.tests.e2e_util.api.buck import Buck
+from bsmr.tests.e2e_util.api.bsmr import Bsmr
 from bsmr.tests.e2e_util.asserts import expect_failure
-from bsmr.tests.e2e_util.buck_workspace import buck_test, env
+from bsmr.tests.e2e_util.bsmr_workspace import bsmr_test, env
 from bsmr.tests.e2e_util.helper.utils import daemon_is_alive
 
 
-@buck_test()
+@bsmr_test()
 @env("BSMR_TESTING_INACTIVITY_TIMEOUT", "true")
-async def test_inactivity_timeout(buck: Buck) -> None:
+async def test_inactivity_timeout(bsmr: Bsmr) -> None:
     #######################################################
     # Recommend running this test in opt mode
     # Otherwise the command that is run here
@@ -40,9 +40,9 @@ async def test_inactivity_timeout(buck: Buck) -> None:
     #######################################################
 
     # this will start the daemon
-    status = await buck.server("--status")
+    status = await bsmr.server("--status")
     pid = json.loads(status.stdout)["process_info"]["pid"]
-    daemon_dir = await buck.get_daemon_dir()
+    daemon_dir = await bsmr.get_daemon_dir()
 
     time.sleep(1)  # 1 sec timeout
 
@@ -50,74 +50,74 @@ async def test_inactivity_timeout(buck: Buck) -> None:
     for _ in range(20):
         time.sleep(1)
         if not daemon_is_alive(pid):
-            result = await buck.status()
-            assert "no buckd running" == result.stderr.splitlines()[-1]
+            result = await bsmr.status()
+            assert "no bsmrd running" == result.stderr.splitlines()[-1]
 
-            stderr = (daemon_dir / "buckd.stderr").read_text()
+            stderr = (daemon_dir / "bsmrd.stderr").read_text()
             assert "inactivity timeout elapsed" in stderr
             return
 
     raise AssertionError(f"Server with pid {pid} did not die in 20 seconds")
 
 
-@buck_test()
-async def test_server_endpoint_output(buck: Buck) -> None:
-    result = await buck.server()
+@bsmr_test()
+async def test_server_endpoint_output(bsmr: Bsmr) -> None:
+    result = await bsmr.server()
     stdout = result.stdout.strip()
-    assert stdout.startswith("buckd.endpoint=")
-    assert stdout.removeprefix("buckd.endpoint=")
+    assert stdout.startswith("bsmrd.endpoint=")
+    assert stdout.removeprefix("bsmrd.endpoint=")
 
 
-@buck_test()
-async def test_server_status_output(buck: Buck) -> None:
-    result = await buck.server("--status")
+@bsmr_test()
+async def test_server_status_output(bsmr: Bsmr) -> None:
+    result = await bsmr.server("--status")
     status = json.loads(result.stdout)
     pid = status["process_info"]["pid"]
     assert isinstance(pid, int)
     assert pid > 0
 
 
-@buck_test()
-async def test_server_status_snapshot_output(buck: Buck) -> None:
-    result = await buck.server("--status", "--snapshot")
+@bsmr_test()
+async def test_server_status_snapshot_output(bsmr: Bsmr) -> None:
+    result = await bsmr.server("--status", "--snapshot")
     status = json.loads(result.stdout)
     snapshot = status["snapshot"]
     assert snapshot is not None
     assert "bsmr_max_rss" in snapshot
 
 
-@buck_test()
-async def test_server_snapshot_requires_status(buck: Buck) -> None:
-    await expect_failure(buck.server("--snapshot"), stderr_regex="--status")
+@bsmr_test()
+async def test_server_snapshot_requires_status(bsmr: Bsmr) -> None:
+    await expect_failure(bsmr.server("--snapshot"), stderr_regex="--status")
 
 
-@buck_test()
+@bsmr_test()
 @pytest.mark.parametrize(
     "corrupt",
     ["not-json", '{"valid-json", "but-not-valid-data"}'],
 )
-async def test_corrupted_buckd_info(buck: Buck, corrupt: str) -> None:
-    await buck.targets("//:rule")
+async def test_corrupted_bsmrd_info(bsmr: Bsmr, corrupt: str) -> None:
+    await bsmr.targets("//:rule")
 
-    daemon_dir = await buck.get_daemon_dir()
-    with open(f"{daemon_dir}/buckd.info") as f:
+    daemon_dir = await bsmr.get_daemon_dir()
+    with open(f"{daemon_dir}/bsmrd.info") as f:
         # Check file exists and valid.
         json.load(f)
 
     # Kill that daemon now to avoid having making a mess and leaving 2 daemons
     # around.
-    await buck.kill()
+    await bsmr.kill()
 
-    with open(f"{daemon_dir}/buckd.info", "w") as f:
+    with open(f"{daemon_dir}/bsmrd.info", "w") as f:
         f.write(corrupt)
 
-    await buck.targets("//:rule")
+    await bsmr.targets("//:rule")
 
 
-@buck_test()
-async def test_process_title(buck: Buck) -> None:
-    await buck.build()  # Start the daemon
-    status = await buck.status()
+@bsmr_test()
+async def test_process_title(bsmr: Bsmr) -> None:
+    await bsmr.build()  # Start the daemon
+    status = await bsmr.status()
     status = json.loads(status.stdout)
     pid = status["process_info"]["pid"]
 
@@ -134,46 +134,46 @@ async def test_process_title(buck: Buck) -> None:
         raise Exception("Unknown platform")
 
 
-@buck_test()
-async def test_status_fields(buck: Buck) -> None:
-    await buck.build()  # Start the daemon
-    status = await buck.status()
+@bsmr_test()
+async def test_status_fields(bsmr: Bsmr) -> None:
+    await bsmr.build()  # Start the daemon
+    status = await bsmr.status()
     status = json.loads(status.stdout)
     assert status["valid_working_directory"]
-    assert status["valid_buck_out_mount"]
+    assert status["valid_output_mount"]
 
 
-@buck_test()
-async def test_status_all(buck: Buck) -> None:
+@bsmr_test()
+async def test_status_all(bsmr: Bsmr) -> None:
     # this will start the daemons
-    await buck.server()
+    await bsmr.server()
 
-    status = await buck.status()
+    status = await bsmr.status()
     status = json.loads(status.stdout)
     pid = status["process_info"]["pid"]
 
-    status_all = await buck.status("--all")
+    status_all = await bsmr.status("--all")
     status_all = json.loads(status_all.stdout)
     for status in status_all:
         if status["process_info"]["pid"] == pid:
             return
     raise Exception(
-        f"buckd status for pid {pid} not found in {json.dumps(status_all, indent=2)}"
+        f"bsmrd status for pid {pid} not found in {json.dumps(status_all, indent=2)}"
     )
 
 
-@buck_test()
-@env("BUCK_LOG", "bsmr_client_ctx::daemon::client::kill=debug")
-async def test_no_buckd_kills_existing_daemon(buck: Buck) -> None:
-    await buck.audit("cell")  # Start the daemon
-    result = await buck.audit("cell", "--no-buckd")  # Kill the existing daemon
+@bsmr_test()
+@env("BSMR_LOG", "bsmr_client_ctx::daemon::client::kill=debug")
+async def test_no_daemon_kills_existing_daemon(bsmr: Bsmr) -> None:
+    await bsmr.audit("cell")  # Start the daemon
+    result = await bsmr.audit("cell", "--no-bsmrd")  # Kill the existing daemon
     assert "Killing daemon with PID" in result.stderr
 
 
-@buck_test()
-async def test_buck_out_is_cache_dir(buck: Buck) -> None:
-    await buck.targets(":")  # Start a daemon
-    root = await buck.root()
+@bsmr_test()
+async def test_output_is_cache_dir(bsmr: Bsmr) -> None:
+    await bsmr.targets(":")  # Start a daemon
+    root = await bsmr.root()
     assert (
         (Path(root.stdout.strip()) / "bsmr-out" / "v2" / "CACHEDIR.TAG")
         .read_text(encoding="utf-8")
@@ -181,11 +181,11 @@ async def test_buck_out_is_cache_dir(buck: Buck) -> None:
     )
 
 
-@buck_test()
-async def test_prev_daemon_dir(buck: Buck) -> None:
-    await buck.targets(":")  # Start a daemon
-    await buck.kill()
-    await buck.targets(":")  # Start another daemon
+@bsmr_test()
+async def test_prev_daemon_dir(bsmr: Bsmr) -> None:
+    await bsmr.targets(":")  # Start a daemon
+    await bsmr.kill()
+    await bsmr.targets(":")  # Start another daemon
 
     def extract_pid(stderr: str) -> int:
         pid = [re.match(r".* PID: (\d+)", line) for line in stderr.splitlines()]
@@ -193,10 +193,10 @@ async def test_prev_daemon_dir(buck: Buck) -> None:
         assert len(pid) == 1, pid[0]
         return int(pid[0].group(1))
 
-    new_daemon_stderr = await buck.daemon_stderr()
-    killed_daemon_stderr = await buck.prev_daemon_stderr()
+    new_daemon_stderr = await bsmr.daemon_stderr()
+    killed_daemon_stderr = await bsmr.prev_daemon_stderr()
 
-    # check logs contain buckd pid and don't match
+    # check logs contain bsmrd pid and don't match
     assert extract_pid(new_daemon_stderr) != extract_pid(killed_daemon_stderr)
 
-    assert "triggered shutdown: `buck kill` was invoked" in killed_daemon_stderr
+    assert "triggered shutdown: `bsmr kill` was invoked" in killed_daemon_stderr

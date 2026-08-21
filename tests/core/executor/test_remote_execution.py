@@ -17,17 +17,17 @@
 import os
 import tempfile
 
-from bsmr.tests.e2e_util.api.buck import Buck
+from bsmr.tests.e2e_util.api.bsmr import Bsmr
 from bsmr.tests.e2e_util.asserts import expect_failure
-from bsmr.tests.e2e_util.buck_workspace import buck_test, env
+from bsmr.tests.e2e_util.bsmr_workspace import bsmr_test, env
 from bsmr.tests.e2e_util.helper.utils import filter_events, random_string
 
 
-@buck_test()
+@bsmr_test()
 @env("BSMR_TEST_FAIL_CONNECT", "true")
-async def test_re_connection_failure_no_retry(buck: Buck) -> None:
+async def test_re_connection_failure_no_retry(bsmr: Bsmr) -> None:
     out = await expect_failure(
-        buck.build(
+        bsmr.build(
             "root//:simple",
             "--remote-only",
             "--no-remote-cache",
@@ -41,10 +41,10 @@ async def test_re_connection_failure_no_retry(buck: Buck) -> None:
 RE_USE_CASE_STAGES = ("Queue", "WorkerDownload", "Execute", "WorkerUpload")
 
 
-async def assert_re_use_case(buck: Buck, expected_use_case: str) -> None:
+async def assert_re_use_case(bsmr: Bsmr, expected_use_case: str) -> None:
     for action in RE_USE_CASE_STAGES:
         use_cases = await filter_events(
-            buck,
+            bsmr,
             "Event",
             "data",
             "SpanStart",
@@ -60,108 +60,108 @@ async def assert_re_use_case(buck: Buck, expected_use_case: str) -> None:
         assert all(use_case == expected_use_case for use_case in use_cases), use_cases
 
 
-@buck_test()
-async def test_re_use_case_override_with_arg(buck: Buck) -> None:
+@bsmr_test()
+async def test_re_use_case_override_with_arg(bsmr: Bsmr) -> None:
     # Make sure action is not cached
-    with open(buck.cwd / "input.txt", "w") as f:
+    with open(bsmr.cwd / "input.txt", "w") as f:
         f.write(random_string())
-    await buck.build(
+    await bsmr.build(
         "root//:simple",
         "--remote-only",
         "--no-remote-cache",
     )
-    await assert_re_use_case(buck, "bsmr-testing")
+    await assert_re_use_case(bsmr, "bsmr-testing")
     # Change the target input
-    with open(buck.cwd / "input.txt", "w") as f:
+    with open(bsmr.cwd / "input.txt", "w") as f:
         f.write(random_string())
-    await buck.build(
+    await bsmr.build(
         "root//:simple",
         "--remote-only",
         "--no-remote-cache",
         "--config",
         "bsmr_re_client.override_use_case=bsmr-user",
     )
-    await assert_re_use_case(buck, "bsmr-user")
+    await assert_re_use_case(bsmr, "bsmr-user")
 
 
-@buck_test()
-async def test_re_use_case_override_with_config(buck: Buck) -> None:
+@bsmr_test()
+async def test_re_use_case_override_with_config(bsmr: Bsmr) -> None:
     # Make sure action is not cached
-    with open(buck.cwd / "input.txt", "w") as f:
+    with open(bsmr.cwd / "input.txt", "w") as f:
         f.write(random_string())
-    await buck.build(
+    await bsmr.build(
         "root//:simple",
         "--remote-only",
         "--no-remote-cache",
     )
-    await assert_re_use_case(buck, "bsmr-testing")
+    await assert_re_use_case(bsmr, "bsmr-testing")
     # Change the target input
-    with open(buck.cwd / "input.txt", "w") as f:
+    with open(bsmr.cwd / "input.txt", "w") as f:
         f.write(random_string())
-    with open(buck.cwd / ".bsmr.local", "w") as f:
+    with open(bsmr.cwd / ".bsmr.local", "w") as f:
         f.write("[bsmr_re_client]\n")
         f.write("override_use_case = bsmr-user\n")
-    await buck.build(
+    await bsmr.build(
         "root//:simple",
         "--remote-only",
         "--no-remote-cache",
     )
-    await assert_re_use_case(buck, "bsmr-user")
+    await assert_re_use_case(bsmr, "bsmr-user")
 
 
-@buck_test()
-async def test_re_use_case_override_with_external_config(buck: Buck) -> None:
+@bsmr_test()
+async def test_re_use_case_override_with_external_config(bsmr: Bsmr) -> None:
     # Make sure action is not cached
-    with open(buck.cwd / "input.txt", "w") as f:
+    with open(bsmr.cwd / "input.txt", "w") as f:
         f.write(random_string())
-    await buck.build(
+    await bsmr.build(
         "root//:simple",
         "--remote-only",
         "--no-remote-cache",
     )
-    await assert_re_use_case(buck, "bsmr-testing")
+    await assert_re_use_case(bsmr, "bsmr-testing")
     # Change the target input
-    with open(buck.cwd / "input.txt", "w") as f:
+    with open(bsmr.cwd / "input.txt", "w") as f:
         f.write(random_string())
     with tempfile.NamedTemporaryFile("w", delete=False) as f:
         f.write("[bsmr_re_client]\n")
         f.write("override_use_case = bsmr-user\n")
         f.close()
-        await buck.build(
+        await bsmr.build(
             "root//:simple",
             "--remote-only",
             "--no-remote-cache",
             "--config-file",
             f.name,
         )
-    await assert_re_use_case(buck, "bsmr-user")
+    await assert_re_use_case(bsmr, "bsmr-user")
 
 
-@buck_test()
-async def test_re_use_case_override_with_external_config_source(buck: Buck) -> None:
+@bsmr_test()
+async def test_re_use_case_override_with_external_config_source(bsmr: Bsmr) -> None:
     with tempfile.NamedTemporaryFile("w", delete=False) as temp:
         env = os.environ.copy()
         env["BSMR_TEST_EXTRA_EXTERNAL_CONFIG"] = temp.name
         # Make sure action is not cached
-        with open(buck.cwd / "input.txt", "w") as f:
+        with open(bsmr.cwd / "input.txt", "w") as f:
             f.write(random_string())
-        await buck.build(
+        await bsmr.build(
             "root//:simple",
             "--remote-only",
             "--no-remote-cache",
             env=env,
         )
-        await assert_re_use_case(buck, "bsmr-default")
+        await assert_re_use_case(bsmr, "bsmr-default")
         # Change the target input
-        with open(buck.cwd / "input.txt", "w") as f:
+        with open(bsmr.cwd / "input.txt", "w") as f:
             f.write(random_string())
         temp.write("[bsmr_re_client]\n")
         temp.write("override_use_case = bsmr-user\n")
         temp.flush()
-        await buck.build(
+        await bsmr.build(
             "root//:simple",
             "--remote-only",
             "--no-remote-cache",
             env=env,
         )
-        await assert_re_use_case(buck, "bsmr-user")
+        await assert_re_use_case(bsmr, "bsmr-user")

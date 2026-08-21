@@ -93,7 +93,7 @@ pub struct SimpleDirEntry {
 #[derive(Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug, Allocative)]
 pub struct RawDirEntry {
     // Put the `file_name` first so we sort by it (which is what people expect)
-    /// Not all file names are accepted as file names in Buck. Such files are automatically ignored.
+    /// Not all file names are accepted as file names in Bsmr. Such files are automatically ignored.
     /// This should probably be something like `CompactOsString`.
     pub file_name: CompactString,
     pub file_type: FileType,

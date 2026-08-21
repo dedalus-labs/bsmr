@@ -22,9 +22,9 @@ use bsmr_common::local_resource_state::LocalResourceState;
 use bsmr_core::target::configured_target_label::ConfiguredTargetLabel;
 use bsmr_data::ReleaseLocalResourcesEnd;
 use bsmr_data::ReleaseLocalResourcesStart;
-use bsmr_error::BuckErrorContext;
+use bsmr_error::BsmrErrorContext;
 use bsmr_events::dispatch::span_async_simple;
-use bsmr_hash::StdBuckHashMap;
+use bsmr_hash::StdBsmrHashMap;
 use dice::DiceComputations;
 use dice::UserComputationData;
 use dupe::Dupe;
@@ -32,7 +32,7 @@ use tokio::sync::Mutex;
 
 #[derive(Default)]
 pub struct LocalResourceRegistry(
-    pub Arc<Mutex<StdBuckHashMap<ConfiguredTargetLabel, bsmr_error::Result<LocalResourceState>>>>,
+    pub Arc<Mutex<StdBsmrHashMap<ConfiguredTargetLabel, bsmr_error::Result<LocalResourceState>>>>,
 );
 
 impl LocalResourceRegistry {
@@ -54,7 +54,7 @@ impl LocalResourceRegistry {
                     let pid = s.owning_pid().unwrap();
                     try_terminate_process_gracefully(pid, Duration::from_secs(20))
                         .await
-                        .buck_error_context(format!(
+                        .bsmr_error_context(format!(
                             "Failed to kill a process with `{}` PID to release local resource `{}`",
                             pid,
                             s.source_target()

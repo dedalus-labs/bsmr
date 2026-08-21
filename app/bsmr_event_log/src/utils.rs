@@ -17,7 +17,7 @@
 use std::str::FromStr;
 use std::time::SystemTime;
 
-use bsmr_error::BuckErrorContext;
+use bsmr_error::BsmrErrorContext;
 use bsmr_fs::paths::abs_path::AbsPathBuf;
 use bsmr_wrapper_common::invocation_id::TraceId;
 use dupe::Dupe;
@@ -30,7 +30,7 @@ pub(crate) enum EventLogErrors {
     )]
     #[bsmr(tag = EventLogNotOpen)]
     LogNotOpen { serialized_event: String },
-    #[error("Reached End of File before reading BuckEvent in log `{0}`")]
+    #[error("Reached End of File before reading BsmrEvent in log `{0}`")]
     #[bsmr(tag = EventLogEof)]
     EndOfFile(String),
     #[error("No event log available for {idx}th last command (have latest {num_logfiles})")]
@@ -172,7 +172,7 @@ impl Invocation {
 
     pub(crate) fn parse_json_line(json: &str) -> bsmr_error::Result<Invocation> {
         let i = serde_json::from_str::<bsmr_data::Invocation>(json)
-            .with_buck_error_context(|| format!("Invalid header: {}", json.trim_end()))?;
+            .with_bsmr_error_context(|| format!("Invalid header: {}", json.trim_end()))?;
         Ok(Invocation::from_proto(i))
     }
 

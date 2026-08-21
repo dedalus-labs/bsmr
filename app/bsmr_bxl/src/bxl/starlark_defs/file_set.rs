@@ -22,7 +22,7 @@ use std::sync::Arc;
 use allocative::Allocative;
 use bsmr_common::file_ops::metadata::SimpleDirEntry;
 use bsmr_core::cells::cell_path::CellPath;
-use bsmr_hash::BuckIndexSet;
+use bsmr_hash::BsmrIndexSet;
 use bsmr_query::query::syntax::simple::eval::file_set::FileNode;
 use bsmr_query::query::syntax::simple::eval::file_set::FileSet;
 use derive_more::Display;
@@ -66,7 +66,7 @@ impl<'a> FileSetExpr<'a> {
                 bxl.parse_query_file_literal(val)?,
             )])),
             FileSetExpr::Literals(val) => {
-                let mut file_set = FileSet::new(BuckIndexSet::default());
+                let mut file_set = FileSet::new(BsmrIndexSet::default());
                 for arg in &val {
                     file_set.insert(FileNode(bxl.parse_query_file_literal(arg)?));
                 }
@@ -105,7 +105,7 @@ impl OwnedFileSetExpr {
                 core_data.parse_query_file_literal(val)?,
             )])),
             OwnedFileSetExpr::Literals(val) => {
-                let mut file_set = FileSet::new(BuckIndexSet::default());
+                let mut file_set = FileSet::new(BsmrIndexSet::default());
                 for arg in val {
                     file_set.insert(FileNode(core_data.parse_query_file_literal(arg)?));
                 }

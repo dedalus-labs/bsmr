@@ -1,3 +1,9 @@
+# ===----------------------------------------------------------------------===
+# Upstream-Source: facebook/buck2@1560aca2002865cd73d7cafb22c705cfb640b2bc
+# Modifications Copyright (c) 2026 Dedalus Labs, Inc. and its contributors
+# SPDX-License-Identifier: Apache-2.0
+# ===----------------------------------------------------------------------===
+
 # Copyright (c) Meta Platforms, Inc. and affiliates.
 #
 # This source code is dual-licensed under either the MIT license found in the
@@ -66,7 +72,7 @@ rust_toolchain_attrs = {
     "rustdoc_flags": provider_field(list[typing.Any], default = []),
     # Extra flags to pass to the linker
     "linker_flags": provider_field(list[typing.Any], default = []),
-    # When you `buck test` a library, also compile and run example code in its
+    # When you `bsmr test` a library, also compile and run example code in its
     # documentation comments.
     "doctests": provider_field(bool, default = False),
     # The Rust compiler (rustc)
@@ -85,7 +91,7 @@ rust_toolchain_attrs = {
     #
     # For check builds, e.g. [check], [diag.json], [clippy.json] subtargets, or the default target
     # for `rust_library` rules, these lints will be applied as Deny Lints. Importantly, this means
-    # that when you call `buck build :rust_lib` or use tools like arc rust-check or rustfix, these
+    # that when you call `bsmr build :rust_lib` or use tools like arc rust-check or rustfix, these
     # lints will be surfaced as errors.
     #
     # However, for "regular" builds, e.g. when building tests or binaries, or building this target

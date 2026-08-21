@@ -16,42 +16,42 @@
 
 import json
 
-from bsmr.tests.e2e_util.api.buck import Buck
-from bsmr.tests.e2e_util.buck_workspace import buck_test
+from bsmr.tests.e2e_util.api.bsmr import Bsmr
+from bsmr.tests.e2e_util.bsmr_workspace import bsmr_test
 
 
-@buck_test()
-async def test_audit_file_package_simple(buck: Buck) -> None:
+@bsmr_test()
+async def test_audit_file_package_simple(bsmr: Bsmr) -> None:
     """Test basic file-package mapping"""
-    result = await buck.audit("file-package", "TARGETS.fixture")
+    result = await bsmr.audit("file-package", "TARGETS.fixture")
     assert ": root//" in result.stdout
 
 
-@buck_test()
-async def test_audit_file_package_json(buck: Buck) -> None:
+@bsmr_test()
+async def test_audit_file_package_json(bsmr: Bsmr) -> None:
     """Test file-package mapping with JSON output"""
-    result = await buck.audit("file-package", "TARGETS.fixture", "--json")
+    result = await bsmr.audit("file-package", "TARGETS.fixture", "--json")
 
     data = json.loads(result.stdout)
     expected = {"TARGETS.fixture": {"package": "root//"}}
     assert data == expected, f"Expected {expected}, got {data}"
 
 
-@buck_test()
-async def test_audit_file_package_newcell_json(buck: Buck) -> None:
+@bsmr_test()
+async def test_audit_file_package_newcell_json(bsmr: Bsmr) -> None:
     """Test file-package mapping for a file in 'newcell'"""
     # Assume 'newcell/TARGETS.fixture' exists in the test workspace
-    result = await buck.audit("file-package", "newcell/TARGETS.fixture", "--json")
+    result = await bsmr.audit("file-package", "newcell/TARGETS.fixture", "--json")
 
     data = json.loads(result.stdout)
     expected = {"newcell/TARGETS.fixture": {"package": "newcell//"}}
     assert data == expected, f"Expected {expected}, got {data}"
 
 
-@buck_test()
-async def test_audit_file_package_multiple_paths_json(buck: Buck) -> None:
+@bsmr_test()
+async def test_audit_file_package_multiple_paths_json(bsmr: Bsmr) -> None:
     """Test file-package mapping with multiple paths, including a file in 'newcell'"""
-    result = await buck.audit(
+    result = await bsmr.audit(
         "file-package",
         "TARGETS.fixture",
         "subdir/testfile",
@@ -68,10 +68,10 @@ async def test_audit_file_package_multiple_paths_json(buck: Buck) -> None:
     assert data == expected, f"Expected {expected}, got {data}"
 
 
-@buck_test()
-async def test_audit_file_package_with_errors_json(buck: Buck) -> None:
+@bsmr_test()
+async def test_audit_file_package_with_errors_json(bsmr: Bsmr) -> None:
     """Test file-package mapping with a mix of valid and invalid paths"""
-    result = await buck.audit(
+    result = await bsmr.audit(
         "file-package",
         "TARGETS.fixture",
         "nonexistent/file.txt",
@@ -88,10 +88,10 @@ async def test_audit_file_package_with_errors_json(buck: Buck) -> None:
     assert data == expected, f"Expected {expected}, got {data}"
 
 
-@buck_test()
-async def test_audit_file_package_with_errors_plain(buck: Buck) -> None:
+@bsmr_test()
+async def test_audit_file_package_with_errors_plain(bsmr: Bsmr) -> None:
     """Test file-package mapping with a mix of valid and invalid paths (plain text)"""
-    result = await buck.audit(
+    result = await bsmr.audit(
         "file-package",
         "TARGETS.fixture",
         "nonexistent/file.txt",
@@ -106,11 +106,11 @@ async def test_audit_file_package_with_errors_plain(buck: Buck) -> None:
     assert "nonexistent/file.txt: Error:" in result.stdout
 
 
-@buck_test()
-async def test_audit_file_package_absolute_path(buck: Buck) -> None:
+@bsmr_test()
+async def test_audit_file_package_absolute_path(bsmr: Bsmr) -> None:
     """Test file-package mapping with an absolute path"""
-    abs_path = str(buck.cwd / "TARGETS.fixture")
-    result = await buck.audit("file-package", abs_path, "--json")
+    abs_path = str(bsmr.cwd / "TARGETS.fixture")
+    result = await bsmr.audit("file-package", abs_path, "--json")
 
     data = json.loads(result.stdout)
     expected = {abs_path: {"package": "root//"}}

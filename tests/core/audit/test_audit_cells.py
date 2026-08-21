@@ -16,36 +16,36 @@
 
 import json
 
-from bsmr.tests.e2e_util.api.buck import Buck
-from bsmr.tests.e2e_util.buck_workspace import buck_test
+from bsmr.tests.e2e_util.api.bsmr import Bsmr
+from bsmr.tests.e2e_util.bsmr_workspace import bsmr_test
 
 
-@buck_test()
-async def test_cell_ordering(buck: Buck) -> None:
-    res = await buck.audit("cell")
+@bsmr_test()
+async def test_cell_ordering(bsmr: Bsmr) -> None:
+    res = await bsmr.audit("cell")
     # The repository should be in the list, not the alias
     assert "source:" in res.stdout
     assert "a:" not in res.stdout
     assert "z:" not in res.stdout
 
-    res = await buck.audit("cell", "--aliases")
+    res = await bsmr.audit("cell", "--aliases")
     assert "source:" in res.stdout
     assert "a:" in res.stdout
     assert "z:" in res.stdout
 
 
-@buck_test()
-async def test_bxl_audit_cell(buck: Buck) -> None:
-    result = await buck.bxl("//test_audit.bxl:audit_cell")
+@bsmr_test()
+async def test_bxl_audit_cell(bsmr: Bsmr) -> None:
+    result = await bsmr.bxl("//test_audit.bxl:audit_cell")
 
     # specify single cell
     outputs = result.stdout.splitlines()
     single_result = json.loads(outputs[0])
-    assert single_result["source"] == str(buck.cwd / "fbs")
+    assert single_result["source"] == str(bsmr.cwd / "fbs")
 
     # don't specify cell - should return all cell aliases
     all_result = json.loads(outputs[1])
-    assert all_result["a"] == str(buck.cwd / "fbs")
-    assert all_result["z"] == str(buck.cwd / "fbc")
-    assert all_result["code"] == str(buck.cwd / "fbc")
-    assert all_result["source"] == str(buck.cwd / "fbs")
+    assert all_result["a"] == str(bsmr.cwd / "fbs")
+    assert all_result["z"] == str(bsmr.cwd / "fbc")
+    assert all_result["code"] == str(bsmr.cwd / "fbc")
+    assert all_result["source"] == str(bsmr.cwd / "fbs")

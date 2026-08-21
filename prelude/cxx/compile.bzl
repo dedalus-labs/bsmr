@@ -257,7 +257,7 @@ def create_compile_cmds(
     if len(srcs_with_flags) == 0:
         return CxxCompileCommandOutput()
 
-    # TODO(T110378129): Buck v1 validates *all* headers used by a compilation
+    # TODO(T110378129): Bsmr v1 validates *all* headers used by a compilation
     # at compile time, but that doing that here/eagerly might be expensive (but
     # we should figure out something).
     _validate_target_headers(target_label, own_preprocessors)
@@ -997,7 +997,7 @@ def _cxx_dynamic_compile(
 
     return [DefaultInfo()]
 
-# https://buck2.build/docs/api/build/AnalysisActions/#analysisactionsdynamic_output_new
+# https://oss.dedaluslabs.ai/bsmr/api/build/AnalysisActions/#analysisactionsdynamic_output_new
 # Dynamic actions factory for batch CXX compilation
 _dynamic_compile_rule = dynamic_actions(
     impl = _cxx_dynamic_compile,
@@ -1944,11 +1944,11 @@ def _mk_argsfiles(
             deps_args.append(headers_tag.tag_artifacts(preprocessor.set.project_as_args("modular_args")))
 
         # filename example: .cpp.deps_cxx_args, .cpp.deps_cxx_args_redacted
-        deps_argsfile_for_compiler, deps_argsfile_for_buck_action_rerun = mk_argsfile_for_dep_file_filtering(filename_prefix + "deps_cxx_args", deps_args)
+        deps_argsfile_for_compiler, deps_argsfile_for_bsmr_action_rerun = mk_argsfile_for_dep_file_filtering(filename_prefix + "deps_cxx_args", deps_args)
         argsfiles.append(
             cmd_args(
                 headers_tag.tag_artifacts(deps_argsfile_for_compiler),
-                hidden = deps_argsfile_for_buck_action_rerun,
+                hidden = deps_argsfile_for_bsmr_action_rerun,
             )
         )
         args_list.extend(deps_args)
@@ -1963,7 +1963,7 @@ def _mk_argsfiles(
             get_flags_for_compiler_type(compiler_info.compiler_type),
             # compiler
             cxx_by_language_ext(impl_params.lang_compiler_flags, ext.value),
-            # ctx.attrs.compiler_flags need to come last to preserve buck1 ordering, this prevents compiler
+            # ctx.attrs.compiler_flags need to come last to preserve legacy ordering, this prevents compiler
             # flags ordering-dependent build errors
             impl_params.compiler_flags,
             headers_tag.tag_artifacts(preprocessor.set.project_as_args("include_dirs")),
@@ -2032,26 +2032,26 @@ def _mk_argsfiles(
                 file_prefix_args,
                 delimiter = " ",
             )
-            specs_file, specs_file_for_buck_action_rerun = write_for_dep_file_filtering(
+            specs_file, specs_file_for_bsmr_action_rerun = write_for_dep_file_filtering(
                 file_prefix_args_filename + ".specs",
                 specs_content,
             )
             prefix_ref = cmd_args(
                 headers_tag.tag_artifacts(specs_file),
                 format = "-specs={}",
-                hidden = specs_file_for_buck_action_rerun,
+                hidden = specs_file_for_bsmr_action_rerun,
             )
         else:
             prefix_ref = file_prefix_args
 
-        file_prefix_argsfile_for_compiler, file_prefix_argsfile_for_buck_action_rerun = mk_argsfile_for_dep_file_filtering(
+        file_prefix_argsfile_for_compiler, file_prefix_argsfile_for_bsmr_action_rerun = mk_argsfile_for_dep_file_filtering(
             file_prefix_args_filename,
             prefix_ref,
         )
         argsfiles.append(
             cmd_args(
                 headers_tag.tag_artifacts(file_prefix_argsfile_for_compiler),
-                hidden = file_prefix_argsfile_for_buck_action_rerun,
+                hidden = file_prefix_argsfile_for_bsmr_action_rerun,
             )
         )
         args_list.append(prefix_ref)
@@ -2069,7 +2069,7 @@ def _mk_argsfiles(
     file_name = filename_prefix + "cxx_compile_argsfile"
 
     # For Xcode to parse argsfiles of argsfiles, the paths in the former must be absolute.
-    argsfile, argsfile_for_buck_action_rerun = write_for_dep_file_filtering(
+    argsfile, argsfile_for_bsmr_action_rerun = write_for_dep_file_filtering(
         file_name,
         file_args,
         absolute = is_xcode_argsfile,
@@ -2081,7 +2081,7 @@ def _mk_argsfiles(
     cmd_form = cmd_args(
         headers_tag.tag_artifacts(argsfile),
         format = "-@{}" if is_nasm else "@{}",
-        hidden = input_args + [argsfile_for_buck_action_rerun],
+        hidden = input_args + [argsfile_for_bsmr_action_rerun],
     )
 
     return CompileArgsfile(

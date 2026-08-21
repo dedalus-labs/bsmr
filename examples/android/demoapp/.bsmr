@@ -19,7 +19,7 @@ root = .
   fbcode = none
   fbsource = none
   fbcode_macros = none
-  buck = none
+  bsmr = none
 
 # Uses a copy of the prelude bundled with the bsmr binary. You can alternatively delete this
 # section and vendor a copy of the prelude to the `prelude` directory of your project.

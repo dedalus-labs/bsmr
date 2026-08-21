@@ -428,7 +428,7 @@ impl<Env: QueryEnvironment> DefaultQueryFunctionsModule<Env> {
     /// Find the dependencies of the targets in the given target universe.
     ///
     /// The first parameter `targets` is a specific target or target pattern. It specifies the targets to find dependencies for.
-    /// The second argument `depth` is an optional integer literal specifying an upper bound on the depth of the search. A value of one (1) specifies that buck query should return only direct dependencies. If the depth parameter is omitted, the search is unbounded.
+    /// The second argument `depth` is an optional integer literal specifying an upper bound on the depth of the search. A value of one (1) specifies that bsmr query should return only direct dependencies. If the depth parameter is omitted, the search is unbounded.
     /// The third argument `captured_expr` is an optional filter expression that controls the
     /// traversal. The expression is evaluated for each node and returns the child nodes to recurse
     /// on when collecting transitive dependencies. Available filters are `configuration_deps()`,
@@ -526,7 +526,7 @@ impl<Env: QueryEnvironment> DefaultQueryFunctionsModule<Env> {
     ///
     /// This function won't be implemented in the future, because bsmr query core does not support returning both files and targets from a single function.
     ///
-    /// In buck1 it returns targets and files referenced by the given attribute in the given targets.
+    /// In legacy it returns targets and files referenced by the given attribute in the given targets.
     ///
     /// <FbInternalOnly>
     /// For more context see discussion in T126638795.
@@ -579,7 +579,7 @@ impl<Env: QueryEnvironment> DefaultQueryFunctionsModule<Env> {
     ///
     /// The first parameter `universe` defines where to look for reverse dependencies.
     /// The second parameter `targets` is a specific target or target pattern. It specifies the targets to find reverse dependencies for.
-    /// The third argument `depth` is an optional integer literal specifying an upper bound on the depth of the search. A value of one (1) specifies that buck query should return only direct dependencies. If the depth parameter is omitted, the search is unbounded.
+    /// The third argument `depth` is an optional integer literal specifying an upper bound on the depth of the search. A value of one (1) specifies that bsmr query should return only direct dependencies. If the depth parameter is omitted, the search is unbounded.
     /// The fourth argument `captured_expr` is an optional expression that can be used to filter the results.
     ///
     /// The returned values include the nodes from the `targets` argument itself.
@@ -972,7 +972,7 @@ impl<Env: QueryEnvironment> DefaultQueryFunctions<Env> {
         left: QueryValue<Env::Target>,
         right: QueryValue<Env::Target>,
     ) -> Result<QueryValue<Env::Target>, QueryError> {
-        // Special-case String + String to match buck1 behavior:
+        // Special-case String + String to match legacy behavior:
         // treat both strings as target literals in a single evaluation.
         if let (QueryValue::String(l), QueryValue::String(r)) = (&left, &right) {
             return Ok(QueryValue::TargetSet(env.eval_literals(&[l, r]).await?));

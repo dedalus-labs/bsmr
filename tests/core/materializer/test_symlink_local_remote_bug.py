@@ -15,30 +15,30 @@
 
 import os
 
-from bsmr.tests.e2e_util.api.buck import Buck
-from bsmr.tests.e2e_util.buck_workspace import buck_test
+from bsmr.tests.e2e_util.api.bsmr import Bsmr
+from bsmr.tests.e2e_util.bsmr_workspace import bsmr_test
 
 # TODO(nga): Local and remote execution of `//:dog_and_bone` must produce identical output.
 #   This is a known limitation of at least our RE implementation. It reads through symlinks.
 
 
-@buck_test(skip_for_os=["windows"])
-async def test_symlink_preserves_empty_directory_local(buck: Buck) -> None:
-    result = await buck.build("//:dog_and_bone", "--prefer-local", "--no-remote-cache")
+@bsmr_test(skip_for_os=["windows"])
+async def test_symlink_preserves_empty_directory_local(bsmr: Bsmr) -> None:
+    result = await bsmr.build("//:dog_and_bone", "--prefer-local", "--no-remote-cache")
     out = result.get_build_report().output_for_target("//:dog_and_bone")
     assert os.path.islink(out)
     assert os.path.isfile(out)
 
 
-@buck_test(skip_for_os=["windows"])
-async def test_symlink_preserves_empty_directory_remote(buck: Buck) -> None:
-    result = await buck.build("//:dog_and_bone", "--prefer-remote")
+@bsmr_test(skip_for_os=["windows"])
+async def test_symlink_preserves_empty_directory_remote(bsmr: Bsmr) -> None:
+    result = await bsmr.build("//:dog_and_bone", "--prefer-remote")
     out = result.get_build_report().output_for_target("//:dog_and_bone")
     # This is incorrect, should be a symlink.
     assert not os.path.islink(out)
     assert os.path.isfile(out)
 
 
-@buck_test()
-async def test_noop(buck: Buck) -> None:
+@bsmr_test()
+async def test_noop(bsmr: Bsmr) -> None:
     return

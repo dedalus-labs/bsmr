@@ -1,3 +1,9 @@
+# ===----------------------------------------------------------------------===
+# Upstream-Source: facebook/buck2@1560aca2002865cd73d7cafb22c705cfb640b2bc
+# Modifications Copyright (c) 2026 Dedalus Labs, Inc. and its contributors
+# SPDX-License-Identifier: Apache-2.0
+# ===----------------------------------------------------------------------===
+
 # Copyright (c) Meta Platforms, Inc. and affiliates.
 #
 # This source code is dual-licensed under either the MIT license found in the
@@ -26,7 +32,7 @@ def _sha256_arg():
             default = None,
             doc = """
     The [`SHA-256`](//wikipedia.org/wiki/SHA-2) hash of the downloaded artifact.
-     Buck verifies this is correct and fails the fetch command if it doesn't match in order to
+     Bsmr verifies this is correct and fails the fetch command if it doesn't match in order to
      guarantee repeatable builds.
 """,
         ),
@@ -81,7 +87,7 @@ def _unarchive_args():
             default = None,
             doc = """
             An optional name to call the directory that the downloaded artifact is
-            extracted into. Buck will generate a default name if one is not
+            extracted into. Bsmr will generate a default name if one is not
             provided that uses the `name` of the rule.
         """,
         ),

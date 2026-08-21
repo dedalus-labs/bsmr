@@ -24,7 +24,7 @@
 use std::sync::LazyLock;
 
 use allocative::Allocative;
-use bsmr_hash::BuckHasher;
+use bsmr_hash::BsmrHasher;
 use dupe::Dupe;
 use pagable::Pagable;
 use pagable::PagableDeserialize;
@@ -48,7 +48,7 @@ use static_interner::interner;
 )]
 struct CategoryData(String);
 
-interner!(CATEGORY_INTERNER, BuckHasher, CategoryData, String);
+interner!(CATEGORY_INTERNER, BsmrHasher, CategoryData, String);
 
 /// A category, representing a family of actions.
 #[derive(

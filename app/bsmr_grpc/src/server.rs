@@ -14,7 +14,7 @@
  * above-listed licenses.
  */
 
-use bsmr_error::BuckErrorContext;
+use bsmr_error::BsmrErrorContext;
 use futures::future;
 use futures::stream;
 use futures::stream::StreamExt;
@@ -41,7 +41,7 @@ impl ServerHandle {
         self.channel.notify_now();
         self.handle
             .await
-            .buck_error_context("Failed to join task")?
+            .bsmr_error_context("Failed to join task")?
     }
 
     /// Obtain the JoinHandle to the task driving the server, without asking the server to
@@ -88,7 +88,7 @@ where
                 let _ignored = recv.recv().await;
             })
             .await
-            .buck_error_context("Server exited with an error")?;
+            .bsmr_error_context("Server exited with an error")?;
 
         Ok(())
     };

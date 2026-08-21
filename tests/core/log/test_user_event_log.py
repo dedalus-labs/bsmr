@@ -20,8 +20,8 @@ import re
 from pathlib import Path
 
 import pytest
-from bsmr.tests.e2e_util.api.buck import Buck
-from bsmr.tests.e2e_util.buck_workspace import buck_test
+from bsmr.tests.e2e_util.api.bsmr import Bsmr
+from bsmr.tests.e2e_util.bsmr_workspace import bsmr_test
 from bsmr.tests.e2e_util.helper.golden import golden
 
 
@@ -29,11 +29,11 @@ def _replace_timestamp(s: str) -> str:
     return re.sub(r"\b[0-9]+\b", "<NUMBER>", s)
 
 
-@buck_test(skip_for_os=["windows"])
-async def test_user_event_log_custom_output(buck: Buck, tmp_path: Path) -> None:
+@bsmr_test(skip_for_os=["windows"])
+async def test_user_event_log_custom_output(bsmr: Bsmr, tmp_path: Path) -> None:
     local_log = tmp_path / "test.json"
 
-    await buck.bxl(
+    await bsmr.bxl(
         "root//:test.bxl:instant_event",
         "--user-event-log",
         str(local_log),
@@ -50,18 +50,18 @@ async def test_user_event_log_custom_output(buck: Buck, tmp_path: Path) -> None:
         json.loads(results[2])["StarlarkUserEvent"]
 
 
-@buck_test(skip_for_os=["windows"])
-async def test_user_event_log_with_actions(buck: Buck, tmp_path: Path) -> None:
+@bsmr_test(skip_for_os=["windows"])
+async def test_user_event_log_with_actions(bsmr: Bsmr, tmp_path: Path) -> None:
     local_log = tmp_path / "test.json-lines"
 
-    await buck.bxl(
+    await bsmr.bxl(
         "root//:test.bxl:action",
         "--event-log",
         str(local_log),
     )
 
     results = (
-        (await buck.log("show-user", str(Path(local_log).absolute())))
+        (await bsmr.log("show-user", str(Path(local_log).absolute())))
         .stdout.strip()
         .splitlines()[1:]
     )
@@ -82,13 +82,13 @@ async def test_user_event_log_with_actions(buck: Buck, tmp_path: Path) -> None:
     )
 
 
-@buck_test(skip_for_os=["windows"])
-async def test_user_event_with_log_show_user(buck: Buck) -> None:
-    await buck.bxl(
+@bsmr_test(skip_for_os=["windows"])
+async def test_user_event_with_log_show_user(bsmr: Bsmr) -> None:
+    await bsmr.bxl(
         "root//:test.bxl:instant_event",
     )
 
-    results = (await buck.log("show-user")).stdout.strip().splitlines()[1:]
+    results = (await bsmr.log("show-user")).stdout.strip().splitlines()[1:]
 
     results = _replace_timestamp("\n".join(results))
 
@@ -99,25 +99,25 @@ async def test_user_event_with_log_show_user(buck: Buck) -> None:
     )
 
 
-@buck_test(skip_for_os=["windows"])
+@bsmr_test(skip_for_os=["windows"])
 @pytest.mark.parametrize(
     "file_extension", [".json-lines", ".json-lines.gz", ".json-lines.zst"]
 )
 async def test_user_event_log_with_log_show_user_compatibility(
-    buck: Buck,
+    bsmr: Bsmr,
     tmp_path: Path,
     file_extension: str,
 ) -> None:
     local_log = tmp_path / f"test.{file_extension}"
 
-    await buck.bxl(
+    await bsmr.bxl(
         "root//:test.bxl:instant_event",
         "--event-log",
         str(local_log),
     )
 
     results = (
-        (await buck.log("show-user", str(Path(local_log).absolute())))
+        (await bsmr.log("show-user", str(Path(local_log).absolute())))
         .stdout.strip()
         .splitlines()[1:]
     )
@@ -132,6 +132,6 @@ async def test_user_event_log_with_log_show_user_compatibility(
 
 
 # Placeholder for tests to be listed successfully on Windows.
-@buck_test()
-async def test_noop(buck: Buck) -> None:
+@bsmr_test()
+async def test_noop(bsmr: Bsmr) -> None:
     return

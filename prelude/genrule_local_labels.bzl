@@ -33,8 +33,8 @@ _GENRULE_LOCAL_LABELS = set([
     # The iOS build needs to run a genrule locally to gather non-deterministic
     # build info from `hg`.
     "non_deterministic_build_info",
-    # Some call "buck run" & "buck root" recursively.
-    "uses_buck_run",
+    # Some call "bsmr run" & "bsmr root" recursively.
+    "uses_bsmr_run",
     # Some antlir and telephoto genrules use clowder for downloading from everstore
     "uses_clowder",
     # Some antlir genrules use cpio for unpacking rpms
@@ -91,19 +91,19 @@ _GENRULE_LOCAL_LABELS = set([
     "justknobs",
     # Side effecting writes directly into bsmr-out on the local
     # filesystem
-    "writes_to_buck_out",
+    "writes_to_output",
     # Side effecting writes directly to local filesystem outside of bsmr-out
     # Do not add or use in new rules, just for tagging existing rules for
     # better categorization.
-    "writes_outside_buck_out",
+    "writes_outside_output",
     # Calculates and writes absolute paths in the local filesystem
     "uses_local_filesystem_abspaths",
     # Use local GPUs with latest Nvidia libs which are not available in RE yet
     "uses_lower_locally",
     # Uses fbpkg outside of the repo
     "uses_fbpkg",
-    # Makes recursive calls to buck
-    "uses_buck",
+    # Makes recursive calls to bsmr
+    "uses_bsmr",
     # Uses files in the repo that it doesn't declare as dependencies
     "uses_undeclared_inputs",
     # Connects to service router which won't work on RE
@@ -167,7 +167,7 @@ _GENRULE_LOCAL_LABELS = set([
     # locally to build on Windows. This is a mitigation until we can break down these
     # targets
     "zeratul_windows_capacity_hog",
-    # The compilation databases produced by Buck have paths relative to the root of
+    # The compilation databases produced by Bsmr have paths relative to the root of
     # fbsource. This isn't compatible with RE.
     "uses_compilation_database",
     # Uses checkpolicy which is not on RE

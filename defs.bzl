@@ -13,7 +13,7 @@
 # above-listed licenses.
 
 load("@bsmr_build//rules:targets.bzl", "translate_target")
-load("@prelude//decls:common.bzl", "buck")
+load("@prelude//decls:common.bzl", "bsmr")
 load("@prelude//os_lookup:defs.bzl", "Os", "OsLookup")
 
 def _bsmr_bundle_impl(ctx: AnalysisContext) -> list[Provider]:
@@ -62,7 +62,7 @@ _bsmr_bundle = rule(
         "bsmr_health_check": attrs.option(attrs.dep(), default = None),
         "labels": attrs.list(attrs.string(), default = []),
         "tpx": attrs.option(attrs.dep(), default = None),
-        "_target_os_type": buck.target_os_type_arg(),
+        "_target_os_type": bsmr.target_os_type_arg(),
     },
 )
 

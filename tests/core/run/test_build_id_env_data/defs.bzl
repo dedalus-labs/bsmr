@@ -12,7 +12,7 @@ def _check_run_uuid(_ctx):
         RunInfo([
             "fbpython",
             "-c",
-            'import os; assert "BUCK_RUN_BUILD_ID" in os.environ',
+            'import os; assert "BSMR_RUN_BUILD_ID" in os.environ',
         ]),
     ]
 

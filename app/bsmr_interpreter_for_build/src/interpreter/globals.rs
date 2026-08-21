@@ -27,7 +27,7 @@ use bsmr_interpreter::types::cell_root::register_cell_root;
 use bsmr_interpreter::types::configured_providers_label::register_providers_label;
 use bsmr_interpreter::types::package_path::register_package_path;
 use bsmr_interpreter::types::project_root::register_project_root;
-use bsmr_interpreter::types::regex::register_buck_regex;
+use bsmr_interpreter::types::regex::register_bsmr_regex;
 use bsmr_interpreter::types::target_label::register_target_label;
 use bsmr_util::late_binding::LateBinding;
 use starlark::environment::GlobalsBuilder;
@@ -76,7 +76,7 @@ pub fn register_load_natives(builder: &mut GlobalsBuilder) {
     register_package_natives(builder);
     register_warning(builder);
     register_regex(builder);
-    register_buck_regex(builder);
+    register_bsmr_regex(builder);
     register_load_symbols(builder);
     register_rule_function(builder);
     register_attrs(builder);
@@ -150,7 +150,7 @@ fn register_all_internals(builder: &mut GlobalsBuilder) {
 /// This does not include the implicit prelude and cell imports which are only available in `BUILD.bsmr`
 /// files, but does include everything else.
 ///
-/// Note: As long as starlark/buck have any notion of reference equality, it is important for
+/// Note: As long as starlark/bsmr have any notion of reference equality, it is important for
 /// correctness that this be called just once. The result should be accessed via
 /// `ctx.get_global_interpreter_state()`
 pub(crate) fn base_globals() -> GlobalsBuilder {

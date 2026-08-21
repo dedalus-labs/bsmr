@@ -17,20 +17,20 @@
 
 from pathlib import Path
 
-from bsmr.tests.e2e_util.api.buck import Buck
-from bsmr.tests.e2e_util.buck_workspace import buck_test
+from bsmr.tests.e2e_util.api.bsmr import Bsmr
+from bsmr.tests.e2e_util.bsmr_workspace import bsmr_test
 
 
-@buck_test(setup_eden=True)
-async def test_modify_src_eden(buck: Buck) -> None:
-    path = buck.cwd / "src.txt"
+@bsmr_test(setup_eden=True)
+async def test_modify_src_eden(bsmr: Bsmr) -> None:
+    path = bsmr.cwd / "src.txt"
 
     path.write_text("HELLO\n")
-    result = await buck.build("root//:copy_file")
+    result = await bsmr.build("root//:copy_file")
     output = result.get_build_report().output_for_target("root//:copy_file")
     assert Path(output).read_text() == "HELLO\n"
 
     path.write_text("GOODBYE\n")
-    result = await buck.build("root//:copy_file")
+    result = await bsmr.build("root//:copy_file")
     output = result.get_build_report().output_for_target("root//:copy_file")
     assert Path(output).read_text() == "GOODBYE\n"

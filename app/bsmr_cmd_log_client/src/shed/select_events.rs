@@ -14,9 +14,9 @@
  * above-listed licenses.
  */
 
-use bsmr_client_ctx::client_ctx::BuckSubcommand;
+use bsmr_client_ctx::client_ctx::BsmrSubcommand;
 use bsmr_client_ctx::client_ctx::ClientCommandContext;
-use bsmr_client_ctx::common::BuckArgMatches;
+use bsmr_client_ctx::common::BsmrArgMatches;
 use bsmr_client_ctx::event_log_options::EventLogOptions;
 use bsmr_client_ctx::events_ctx::EventsCtx;
 use bsmr_client_ctx::exit_result::ExitResult;
@@ -55,12 +55,12 @@ pub struct SelectEventsCommand {
     exclude: Vec<String>,
 }
 
-impl BuckSubcommand for SelectEventsCommand {
+impl BsmrSubcommand for SelectEventsCommand {
     const COMMAND_NAME: &'static str = "log-shed-select-events";
 
     async fn exec_impl(
         self,
-        _matches: BuckArgMatches<'_>,
+        _matches: BsmrArgMatches<'_>,
         ctx: ClientCommandContext<'_>,
         _events_ctx: &mut EventsCtx,
     ) -> ExitResult {
@@ -88,8 +88,8 @@ impl BuckSubcommand for SelectEventsCommand {
     }
 }
 
-fn event_name(event: &bsmr_data::BuckEvent) -> &'static str {
-    use bsmr_data::buck_event::Data;
+fn event_name(event: &bsmr_data::BsmrEvent) -> &'static str {
+    use bsmr_data::bsmr_event::Data;
 
     let Some(data) = event.data.as_ref() else {
         return "Unknown";
@@ -115,12 +115,12 @@ mod tests {
     use bsmr_data::ActionExecutionStart;
     use bsmr_data::SpanEndEvent;
     use bsmr_data::SpanStartEvent;
-    use bsmr_data::buck_event::Data;
+    use bsmr_data::bsmr_event::Data;
     use bsmr_event_log::read::EventLogPathBuf;
     use bsmr_event_log::stream_value::StreamValue;
     use bsmr_event_log::utils::Invocation;
     use bsmr_event_log::write::rewrite_event_log;
-    use bsmr_events::BuckEvent;
+    use bsmr_events::BsmrEvent;
     use bsmr_events::span::SpanId;
     use bsmr_fs::paths::abs_path::AbsPathBuf;
     use bsmr_wrapper_common::invocation_id::TraceId;
@@ -129,8 +129,8 @@ mod tests {
 
     use super::*;
 
-    fn make_event(data: Data) -> BuckEvent {
-        BuckEvent::new(
+    fn make_event(data: Data) -> BsmrEvent {
+        BsmrEvent::new(
             SystemTime::now(),
             TraceId::new(),
             Some(SpanId::next()),
@@ -168,7 +168,7 @@ mod tests {
     /// publicly constructible from outside `bsmr_event_log`.
     async fn build_input_log(
         path: AbsPathBuf,
-        events: Vec<BuckEvent>,
+        events: Vec<BsmrEvent>,
     ) -> bsmr_error::Result<EventLogPathBuf> {
         use std::io::Write;
 

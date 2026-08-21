@@ -15,12 +15,12 @@
 # pyre-strict
 
 
-from bsmr.tests.e2e_util.api.buck import Buck
-from bsmr.tests.e2e_util.buck_workspace import buck_test
+from bsmr.tests.e2e_util.api.bsmr import Bsmr
+from bsmr.tests.e2e_util.bsmr_workspace import bsmr_test
 
 
-@buck_test()
-async def test_no_package_call_does_not_reset_visibility(buck: Buck) -> None:
+@bsmr_test()
+async def test_no_package_call_does_not_reset_visibility(bsmr: Bsmr) -> None:
     # Test that PACKAGE file without package() call does not reset visibility inherited from parent PACKAGE file.
 
-    await buck.build("root//b:top")
+    await bsmr.build("root//b:top")

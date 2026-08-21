@@ -12,7 +12,7 @@ title: Bessemer Consoles
 Bessemer offers several console types for build-like commands (e.g. `build`,
 `install`, `test`, etc.). The console is always written to stderr.
 
-The console can be specified via the `--console` flag, or the `BUCK_CONSOLE` env
+The console can be specified via the `--console` flag, or the `BSMR_CONSOLE` env
 variable. The default console type is `auto`. Supported `--console` types:
 
 - `auto` - Default console type. Auto defaults to the superconsole if the stderr
@@ -67,7 +67,7 @@ To see what's available you can press `?` or `h`. This will work as long as
 stdin is a TTY, which will be true most of the time if you're not piping
 anything into Bessemer. To disable to allow alternate use of stdin, or for follow
 up pasted commands to not get swallowed, you can set the
-`BUCK_NO_INTERACTIVE_CONSOLE` environment variable, or use the flag
+`BSMR_NO_INTERACTIVE_CONSOLE` environment variable, or use the flag
 `--no-interactive-console`.
 
 We support the following toggles:

@@ -80,7 +80,7 @@ alias(
 python_library(
     name = "alias_lib",
     srcs = ["alias.py"],
-    # @lint-ignore BUCKLINT tests Python type checking sourcedb functionality with base_module
+    # @lint-ignore BSMRLINT tests Python type checking sourcedb functionality with base_module
     base_module = "",
 )
 

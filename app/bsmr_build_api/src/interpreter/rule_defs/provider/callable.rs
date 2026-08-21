@@ -25,7 +25,7 @@ use std::sync::Arc;
 use allocative::Allocative;
 use bsmr_core::cells::cell_path::CellPath;
 use bsmr_core::provider::id::ProviderId;
-use bsmr_error::BuckErrorContext;
+use bsmr_error::BsmrErrorContext;
 use bsmr_error::conversion::from_any_with_tag;
 use bsmr_interpreter::build_context::starlark_path_from_build_context;
 use bsmr_interpreter::types::provider::callable::ProviderCallableLike;
@@ -756,7 +756,7 @@ pub fn register_provider(builder: &mut GlobalsBuilder) {
                         new_fields.insert(name, field.dupe());
                     } else {
                         let ty = provider_field_parse_type(field, eval)
-                            .with_buck_error_context(|| format!("Field `{name}` type `{field}` is not created with `provider_field`, and cannot be evaluated as a type"))?;
+                            .with_bsmr_error_context(|| format!("Field `{name}` type `{field}` is not created with `provider_field`, and cannot be evaluated as a type"))?;
                         new_fields.insert(name, UserProviderField { ty, default: None });
                     }
                 }

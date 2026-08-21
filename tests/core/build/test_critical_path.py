@@ -19,8 +19,8 @@ import json
 import typing
 from dataclasses import dataclass
 
-from bsmr.tests.e2e_util.api.buck import Buck
-from bsmr.tests.e2e_util.buck_workspace import buck_test
+from bsmr.tests.e2e_util.api.bsmr import Bsmr
+from bsmr.tests.e2e_util.bsmr_workspace import bsmr_test
 from bsmr.tests.e2e_util.helper.golden import golden
 from bsmr.tests.e2e_util.helper.utils import filter_events
 
@@ -37,11 +37,11 @@ class CriticalPathLog:
     potential_improvement_duration: str
 
 
-async def do_critical_path(buck: Buck) -> None:
-    await buck.build("//:step_3", "--no-remote-cache")
+async def do_critical_path(bsmr: Bsmr) -> None:
+    await bsmr.build("//:step_3", "--no-remote-cache")
 
     critical_path = (
-        (await buck.log("critical-path", "--format=tabulated"))
+        (await bsmr.log("critical-path", "--format=tabulated"))
         .stdout.strip()
         .splitlines()
     )
@@ -54,7 +54,7 @@ async def do_critical_path(buck: Buck) -> None:
     ]
 
     expected = [
-        ("buckd_command_init", ""),
+        ("bsmrd_command_init", ""),
         ("file-watcher-wait", ""),
         ("other-command-start-overhead", ""),
         ("listing", "root//"),
@@ -87,21 +87,21 @@ async def do_critical_path(buck: Buck) -> None:
         assert s.name == e[1]
 
 
-@buck_test()
-async def test_critical_path_longest_path_graph(buck: Buck) -> None:
-    with open(buck.cwd / ".bsmr", "a") as f:
+@bsmr_test()
+async def test_critical_path_longest_path_graph(bsmr: Bsmr) -> None:
+    with open(bsmr.cwd / ".bsmr", "a") as f:
         f.write("[bsmr]\n")
         f.write("critical_path_backend2 = longest-path-graph\n")
-    await do_critical_path(buck)
+    await do_critical_path(bsmr)
 
 
-@buck_test()
-async def test_critical_path_json(buck: Buck) -> None:
+@bsmr_test()
+async def test_critical_path_json(bsmr: Bsmr) -> None:
     import json
 
-    await buck.build("//:step_3", "--no-remote-cache")
+    await bsmr.build("//:step_3", "--no-remote-cache")
     critical_path = (
-        (await buck.log("critical-path", "--format", "json"))
+        (await bsmr.log("critical-path", "--format", "json"))
         .stdout.strip()
         .splitlines()
     )
@@ -110,7 +110,7 @@ async def test_critical_path_json(buck: Buck) -> None:
     trimmed_critical_path = [e for e in critical_path if e["kind"] not in ("waiting")]
 
     expected = [
-        ("buckd_command_init", None),
+        ("bsmrd_command_init", None),
         ("file-watcher-wait", None),
         ("other-command-start-overhead", None),
         ("listing", "root//"),
@@ -141,7 +141,7 @@ async def test_critical_path_json(buck: Buck) -> None:
             "compute-critical-path",
             "file-watcher-wait",
             "other-command-start-overhead",
-            "buckd_command_init",
+            "bsmrd_command_init",
             "build_key",
             "configure_target",
         ):
@@ -162,15 +162,15 @@ async def test_critical_path_json(buck: Buck) -> None:
 # Test that verifies the dicekey->node+deps graph that we produce for critical path
 # calculations. It can be a lot easier to understand bugs and behavior here than
 # only inspecting the final critical path output (like other tests).
-@buck_test()
-async def test_dynamic_input_events(buck: Buck) -> None:
-    with open(buck.cwd / ".bsmr", "a") as f:
+@bsmr_test()
+async def test_dynamic_input_events(bsmr: Bsmr) -> None:
+    with open(bsmr.cwd / ".bsmr", "a") as f:
         f.write("[bsmr]\n")
         f.write("critical_path_backend2 = logging\n")
 
-    await buck.build("//:check_dynamic_input", "--no-remote-cache")
+    await bsmr.build("//:check_dynamic_input", "--no-remote-cache")
     events = await filter_events(
-        buck,
+        bsmr,
         "Event",
         "data",
         "Instant",
@@ -194,13 +194,13 @@ async def test_dynamic_input_events(buck: Buck) -> None:
 
 
 # Test that we can compute critical paths that include edges as inputs of dynamic_output/actions.
-@buck_test()
-async def test_dynamic_input(buck: Buck) -> None:
+@bsmr_test()
+async def test_dynamic_input(bsmr: Bsmr) -> None:
     import json
 
-    await buck.build("//:check_dynamic_input", "--no-remote-cache")
+    await bsmr.build("//:check_dynamic_input", "--no-remote-cache")
     critical_path = (
-        await buck.log("critical-path", "--format", "json")
+        await bsmr.log("critical-path", "--format", "json")
     ).stdout.splitlines()
     critical_path = [json.loads(e) for e in critical_path]
 
@@ -217,7 +217,7 @@ async def test_dynamic_input(buck: Buck) -> None:
             "compute-critical-path",
             "file-watcher-wait",
             "other-command-start-overhead",
-            "buckd_command_init",
+            "bsmrd_command_init",
             "configure_target",
             "build_key",
         ):
@@ -248,9 +248,9 @@ async def test_dynamic_input(buck: Buck) -> None:
     )
 
 
-@buck_test()
-async def test_critical_path_metadata(buck: Buck) -> None:
-    await buck.build(
+@bsmr_test()
+async def test_critical_path_metadata(bsmr: Bsmr) -> None:
+    await bsmr.build(
         "//:step_0",
         "--no-remote-cache",
         "--client-metadata",
@@ -259,7 +259,7 @@ async def test_critical_path_metadata(buck: Buck) -> None:
     )
 
     build_graph_info = await filter_events(
-        buck,
+        bsmr,
         "Event",
         "data",
         "Instant",
@@ -274,9 +274,9 @@ async def test_critical_path_metadata(buck: Buck) -> None:
     assert build_graph_info["metadata"]["oncall"] == "myoncall"
 
 
-async def critical_path_helper(buck: Buck) -> typing.List[typing.Dict[str, typing.Any]]:
+async def critical_path_helper(bsmr: Bsmr) -> typing.List[typing.Dict[str, typing.Any]]:
     critical_path_actions = await filter_events(
-        buck,
+        bsmr,
         "Event",
         "data",
         "Instant",
@@ -289,11 +289,11 @@ async def critical_path_helper(buck: Buck) -> typing.List[typing.Dict[str, typin
     return critical_path_actions[0]
 
 
-@buck_test()
-async def test_critical_path_execution_kind(buck: Buck) -> None:
-    await buck.build("//:step_3", "--no-remote-cache")
+@bsmr_test()
+async def test_critical_path_execution_kind(bsmr: Bsmr) -> None:
+    await bsmr.build("//:step_3", "--no-remote-cache")
 
-    critical_path_actions = await critical_path_helper(buck)
+    critical_path_actions = await critical_path_helper(bsmr)
 
     has_action_execution = False
     for action in critical_path_actions:
@@ -308,11 +308,11 @@ async def test_critical_path_execution_kind(buck: Buck) -> None:
     assert has_action_execution
 
 
-@buck_test()
-async def test_critical_path_rule_type(buck: Buck) -> None:
-    await buck.build("//:step_0", "--no-remote-cache")
+@bsmr_test()
+async def test_critical_path_rule_type(bsmr: Bsmr) -> None:
+    await bsmr.build("//:step_0", "--no-remote-cache")
 
-    critical_path_actions = await critical_path_helper(buck)
+    critical_path_actions = await critical_path_helper(bsmr)
 
     for action in critical_path_actions:
         assert action["entry"]
@@ -324,11 +324,11 @@ async def test_critical_path_rule_type(buck: Buck) -> None:
             )
 
 
-@buck_test()
-async def test_critical_path_action_digest(buck: Buck) -> None:
-    await buck.build("//:step_3", "--no-remote-cache")
+@bsmr_test()
+async def test_critical_path_action_digest(bsmr: Bsmr) -> None:
+    await bsmr.build("//:step_3", "--no-remote-cache")
 
-    critical_path_actions = await critical_path_helper(buck)
+    critical_path_actions = await critical_path_helper(bsmr)
 
     has_action_digest = False
     for action in critical_path_actions:
@@ -340,12 +340,12 @@ async def test_critical_path_action_digest(buck: Buck) -> None:
     assert has_action_digest
 
 
-@buck_test()
-async def test_critical_path_top_level_targets(buck: Buck) -> None:
-    await buck.build("//:step_1", "//:step_2", "//:step_3", "--no-remote-cache")
+@bsmr_test()
+async def test_critical_path_top_level_targets(bsmr: Bsmr) -> None:
+    await bsmr.build("//:step_1", "//:step_2", "//:step_3", "--no-remote-cache")
 
     build_graph_info = await filter_events(
-        buck,
+        bsmr,
         "Event",
         "data",
         "Instant",
@@ -380,13 +380,13 @@ async def test_critical_path_top_level_targets(buck: Buck) -> None:
     assert total_duration == d2
 
 
-@buck_test()
-async def test_critical_path_test_entries(buck: Buck) -> None:
-    await buck.test(
+@bsmr_test()
+async def test_critical_path_test_entries(bsmr: Bsmr) -> None:
+    await bsmr.test(
         "//:long_running_test",
     )
 
-    critical_path_actions = await critical_path_helper(buck)
+    critical_path_actions = await critical_path_helper(bsmr)
 
     # Should have exactly 1 TestListing.
     test_listing_actions = [
@@ -421,15 +421,15 @@ async def test_critical_path_test_entries(buck: Buck) -> None:
 # Note: if an optimization is made to materialize tset artifacts individually (without
 # going through EnsureTransitiveSetProjectionKey), the critical path dependency should
 # still not be just BuildKey -- it should include the analysis that produces the tset.
-@buck_test()
-async def test_critical_path_tset_final_materialization(buck: Buck) -> None:
-    with open(buck.cwd / ".bsmr", "a") as f:
+@bsmr_test()
+async def test_critical_path_tset_final_materialization(bsmr: Bsmr) -> None:
+    with open(bsmr.cwd / ".bsmr", "a") as f:
         f.write("[bsmr]\n")
         f.write("critical_path_backend2 = logging\n")
 
-    await buck.build("//:tset_top", "--no-remote-cache")
+    await bsmr.build("//:tset_top", "--no-remote-cache")
     events = await filter_events(
-        buck,
+        bsmr,
         "Event",
         "data",
         "Instant",
@@ -471,8 +471,8 @@ async def test_critical_path_tset_final_materialization(buck: Buck) -> None:
     )
 
 
-@buck_test()
-async def test_critical_path_anon_targets(buck: Buck) -> None:
+@bsmr_test()
+async def test_critical_path_anon_targets(bsmr: Bsmr) -> None:
     """Test that anon target nodes appear on the critical path with correct
     splitting when anon targets themselves have anon target dependencies.
 
@@ -486,9 +486,9 @@ async def test_critical_path_anon_targets(buck: Buck) -> None:
     Expected critical path ordering:
       analysis[part1] -> anon_analysis[part1] -> anon_analysis -> anon_analysis[part2] -> analysis[part2]
     """
-    await buck.build("//:anon_step", "--no-remote-cache")
+    await bsmr.build("//:anon_step", "--no-remote-cache")
 
-    critical_path_actions = await critical_path_helper(buck)
+    critical_path_actions = await critical_path_helper(bsmr)
 
     # Collect the entry types we care about
     entry_kinds = []

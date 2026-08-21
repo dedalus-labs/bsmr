@@ -18,7 +18,7 @@ use std::fmt;
 use std::fmt::Display;
 
 use allocative::Allocative;
-use bsmr_error::BuckErrorContext;
+use bsmr_error::BsmrErrorContext;
 use bsmr_interpreter::types::select_fail::StarlarkSelectFail;
 use bsmr_interpreter::types::select_incompatible::StarlarkSelectIncompatible;
 use serde::Serialize;

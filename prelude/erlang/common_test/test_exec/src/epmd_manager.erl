@@ -19,7 +19,7 @@ each suite execution.
 """.
 -compile(warn_missing_spec_all).
 
--include_lib("common/include/buck_ct_records.hrl").
+-include_lib("common/include/bsmr_ct_records.hrl").
 
 %% UI methods
 -export([start_link/1, get_epmd_out_path/1, get_port/0]).

@@ -62,9 +62,9 @@ use crate::span::SpanId;
 /// introduce new "spans". All events belong to a span except the first and last events of a trace. All spans except
 /// the span created by the first and last events of the trace have a parent; as such, spans form a tree.
 #[derive(Debug, Clone, PartialEq, Serialize)]
-pub struct BuckEvent {
+pub struct BsmrEvent {
     /// Full event, the rest of the fields are caches.
-    event: Box<bsmr_data::BuckEvent>,
+    event: Box<bsmr_data::BsmrEvent>,
 
     /// A timestamp for when this event was emitted.
     timestamp: SystemTime,
@@ -78,22 +78,22 @@ pub struct BuckEvent {
     pub parent_id: Option<SpanId>,
 }
 
-impl BuckEvent {
+impl BsmrEvent {
     pub fn new(
         timestamp: SystemTime,
         trace_id: TraceId,
         span_id: Option<SpanId>,
         parent_id: Option<SpanId>,
-        data: bsmr_data::buck_event::Data,
-    ) -> BuckEvent {
-        let event = bsmr_data::BuckEvent {
+        data: bsmr_data::bsmr_event::Data,
+    ) -> BsmrEvent {
+        let event = bsmr_data::BsmrEvent {
             timestamp: Some(timestamp.into()),
             trace_id: trace_id.to_string(),
             span_id: span_id.map_or(0, |s| s.0.into()),
             parent_id: parent_id.map_or(0, |s| s.0.into()),
             data: Some(data),
         };
-        BuckEvent {
+        BsmrEvent {
             event: Box::new(event),
             timestamp,
             span_id,
@@ -117,18 +117,18 @@ impl BuckEvent {
         self.parent_id
     }
 
-    pub fn event(&self) -> &bsmr_data::BuckEvent {
+    pub fn event(&self) -> &bsmr_data::BsmrEvent {
         &self.event
     }
 
-    pub fn data(&self) -> &bsmr_data::buck_event::Data {
+    pub fn data(&self) -> &bsmr_data::bsmr_event::Data {
         self.event
             .data
             .as_ref()
             .expect("data is set, it is validated")
     }
 
-    pub fn data_mut(&mut self) -> &mut bsmr_data::buck_event::Data {
+    pub fn data_mut(&mut self) -> &mut bsmr_data::bsmr_event::Data {
         self.event
             .data
             .as_mut()
@@ -137,14 +137,14 @@ impl BuckEvent {
 
     pub fn span_start_event(&self) -> Option<&bsmr_data::SpanStartEvent> {
         match self.data() {
-            bsmr_data::buck_event::Data::SpanStart(start) => Some(start),
+            bsmr_data::bsmr_event::Data::SpanStart(start) => Some(start),
             _ => None,
         }
     }
 
     pub fn span_end_event(&self) -> Option<&bsmr_data::SpanEndEvent> {
         match self.data() {
-            bsmr_data::buck_event::Data::SpanEnd(end) => Some(end),
+            bsmr_data::bsmr_event::Data::SpanEnd(end) => Some(end),
             _ => None,
         }
     }
@@ -156,7 +156,7 @@ impl BuckEvent {
                 match span_start_event
                     .data
                     .as_ref()
-                    .ok_or_else(|| BuckEventError::MissingField(self.clone()))?
+                    .ok_or_else(|| BsmrEventError::MissingField(self.clone()))?
                 {
                     bsmr_data::span_start_event::Data::Command(command_start) => {
                         Ok(Some(command_start))
@@ -168,23 +168,23 @@ impl BuckEvent {
     }
 }
 
-impl From<BuckEvent> for Box<bsmr_data::BuckEvent> {
-    fn from(e: BuckEvent) -> Self {
+impl From<BsmrEvent> for Box<bsmr_data::BsmrEvent> {
+    fn from(e: BsmrEvent) -> Self {
         e.event
     }
 }
 
-impl TryFrom<Box<bsmr_data::BuckEvent>> for BuckEvent {
+impl TryFrom<Box<bsmr_data::BsmrEvent>> for BsmrEvent {
     type Error = bsmr_error::Error;
 
-    fn try_from(event: Box<bsmr_data::BuckEvent>) -> bsmr_error::Result<BuckEvent> {
-        event.data.as_ref().ok_or(BuckEventError::MissingData)?;
+    fn try_from(event: Box<bsmr_data::BsmrEvent>) -> bsmr_error::Result<BsmrEvent> {
+        event.data.as_ref().ok_or(BsmrEventError::MissingData)?;
         fn new_span_id(num: u64) -> Option<SpanId> {
             NonZeroU64::new(num).map(SpanId)
         }
         Ok(Self {
             timestamp: SystemTime::try_from(
-                event.timestamp.ok_or(BuckEventError::MissingTimestamp)?,
+                event.timestamp.ok_or(BsmrEventError::MissingTimestamp)?,
             )?,
             span_id: new_span_id(event.span_id),
             parent_id: new_span_id(event.parent_id),
@@ -201,8 +201,8 @@ pub enum Event {
     CommandResult(Box<CommandResult>),
     /// A progress event from this command. Different commands have different types.
     PartialResult(PartialResult),
-    /// A regular buck event. Is the only type to end up in the Event Log
-    Buck(BuckEvent),
+    /// A regular bsmr event. Is the only type to end up in the Event Log
+    Bsmr(BsmrEvent),
 }
 
 /// A sink for events, easily plumbable to the guts of systems that intend to produce events consumeable by
@@ -242,13 +242,13 @@ pub fn create_source_sink_pair() -> (ChannelEventSource, impl EventSink) {
 #[allow(clippy::large_enum_variant)]
 #[derive(bsmr_error::Error, Debug)]
 #[bsmr(tag = InvalidEvent)]
-enum BuckEventError {
-    #[error("The `bsmr_data::BuckEvent` provided has no `Timestamp`")]
+enum BsmrEventError {
+    #[error("The `bsmr_data::BsmrEvent` provided has no `Timestamp`")]
     MissingTimestamp,
-    #[error("The `bsmr_data::BuckEvent` provided has no `Data`")]
+    #[error("The `bsmr_data::BsmrEvent` provided has no `Data`")]
     MissingData,
     #[error("Sent an event missing one or more fields: `{0:?}`")]
-    MissingField(BuckEvent),
+    MissingField(BsmrEvent),
 }
 
 pub fn init_late_bindings() {
@@ -264,7 +264,7 @@ mod tests {
 
     #[test]
     fn round_trip_success() {
-        let test = BuckEvent::new(
+        let test = BsmrEvent::new(
             SystemTime::now(),
             TraceId::new(),
             Some(SpanId::next()),
@@ -281,7 +281,7 @@ mod tests {
         );
         assert_eq!(
             test,
-            BuckEvent::try_from(Box::<bsmr_data::BuckEvent>::from(test.clone())).unwrap()
+            BsmrEvent::try_from(Box::<bsmr_data::BsmrEvent>::from(test.clone())).unwrap()
         );
     }
 

@@ -70,9 +70,9 @@ def _main(bxl_ctx):
     Then we can use a dynamic function to continue the generation progress.
 
     References:
-    https://buck2.build/docs/api/bxl/bxl.ConfiguredTargetNode/#bxlconfiguredtargetnoderesolved_attrs_eager
+    https://oss.dedaluslabs.ai/bsmr/api/bxl/bxl.ConfiguredTargetNode/#bxlconfiguredtargetnoderesolved_attrs_eager
     https://fb.workplace.com/groups/bsmrdev/permalink/3745100652444646/
-    https://buck2.build/docs/developers/dynamic_output/#dynamic-output
+    https://oss.dedaluslabs.ai/bsmr/developers/dynamic_output/#dynamic-output
     """
     actions = bxl_ctx.bxl_actions().actions
     targets = []  # list[ConfiguredTargetNode]. Configured target list from command line after target pattern expansion.
@@ -191,7 +191,7 @@ def _main(bxl_ctx):
 
     # This lambda function gets executed after attrs are written into the json files and then loads them back to get resolved macro values.
     # Params:
-    # ctx, artifacts, outputs: required params by a dynamic output lambda function(see https://buck2.build/docs/rule_authors/dynamic_dependencies/)
+    # ctx, artifacts, outputs: required params by a dynamic output lambda function(see https://oss.dedaluslabs.ai/bsmr/rule_authors/dynamic_dependencies/)
     # cli_args: bxl_ctx.cli_args, this is not available inside the lambda function so we have to pass them in as param
     # bsmr_root: bxl_ctx.bsmr_root(), same as above
     def gen_vcxproj_files(
@@ -276,19 +276,19 @@ main = bxl_main(
             cli_args.json(),
             doc = "Override target debug settings. Takes in JSON string of shape target_label => debug_settings.",
         ),
-        "extra_buck_options": cli_args.list(
+        "extra_bsmr_options": cli_args.list(
             cli_args.string(),
             default = [],
-            doc = "Extra options passed to buck build command of generated project(s) build settings. Escape `-` with `\\-`.",
+            doc = "Extra options passed to bsmr build command of generated project(s) build settings. Escape `-` with `\\-`.",
         ),
         "fbsource": cli_args.bool(
             default = False,
             doc = "Whether to turn on fbsource specific behaviors.",
         ),
-        "immediate_buck_options": cli_args.list(
+        "immediate_bsmr_options": cli_args.list(
             cli_args.string(),
             default = [],
-            doc = "Immediate options passed to buck build command of generated project(s) build settings. Escape `-` with `\\-`.",
+            doc = "Immediate options passed to bsmr build command of generated project(s) build settings. Escape `-` with `\\-`.",
         ),
         "log_level": cli_args.int(
             default = 30,
@@ -310,7 +310,7 @@ main = bxl_main(
         "recursive_target_types": cli_args.list(
             cli_args.string(),
             default = ["cxx_binary", "cxx_library", "cxx_test", "alias", "command_alias"],
-            doc = "The types of targets that will be recovered when buck expands target pattern (`...`) and transitive dependencies.",
+            doc = "The types of targets that will be recovered when bsmr expands target pattern (`...`) and transitive dependencies.",
         ),
         "solution_name": cli_args.option(
             cli_args.string(),
@@ -318,24 +318,24 @@ main = bxl_main(
         ),
         "startup_target": cli_args.option(
             cli_args.target_label(),
-            doc = "Default startup target/project. Takes in buck target label. Default to first target.",
+            doc = "Default startup target/project. Takes in bsmr target label. Default to first target.",
         ),
         # Not using target_expr() here as we need to differentiate between explicit target and target pattern.
         "target": cli_args.list(
             cli_args.string(),
-            doc = "Buck target(s) to generate project files for. Takes in buck target label and/or pattern.",
+            doc = "Bsmr target(s) to generate project files for. Takes in bsmr target label and/or pattern.",
         ),
         # Not using target_expr() here as it can get extremely slow when expanding massive pattern like xplat/...
         "target_exclude_pattern": cli_args.list(
             cli_args.string(),
             default = [],
-            doc = "Buck target label, pattern or path to exclude in generation.",
+            doc = "Bsmr target label, pattern or path to exclude in generation.",
         ),
         # Not using target_expr() here as it can get extremely slow when expanding massive pattern like xplat/...
         "target_include_pattern": cli_args.list(
             cli_args.string(),
             default = [],
-            doc = "Buck target label, pattern or path to include in generation only.",
+            doc = "Bsmr target label, pattern or path to include in generation only.",
         ),
     },
 )

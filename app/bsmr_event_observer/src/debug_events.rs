@@ -20,10 +20,10 @@ use std::time::Duration;
 use std::time::SystemTime;
 
 use bsmr_data::SpanEndEvent;
-use bsmr_events::BuckEvent;
+use bsmr_events::BsmrEvent;
 use gazebo::variants::VariantName;
 
-use crate::unpack_event::UnpackedBuckEvent;
+use crate::unpack_event::UnpackedBsmrEvent;
 use crate::unpack_event::unpack_event;
 
 static NUM_DELAYS_FOR_AVERAGE: usize = 10;
@@ -66,7 +66,7 @@ impl DebugEventsState {
         }
     }
 
-    pub fn handle_event(&mut self, event: &BuckEvent) -> bsmr_error::Result<()> {
+    pub fn handle_event(&mut self, event: &BsmrEvent) -> bsmr_error::Result<()> {
         self.event_count += 1;
 
         let delay = event
@@ -81,12 +81,12 @@ impl DebugEventsState {
         }
 
         match unpack_event(event)? {
-            UnpackedBuckEvent::SpanStart(_, _, data) => self.span_started(Some(data)),
-            UnpackedBuckEvent::UnrecognizedSpanStart(_, _) => self.span_started(None),
-            UnpackedBuckEvent::SpanEnd(_, span_end, data) => self.span_end(span_end, Some(data)),
-            UnpackedBuckEvent::UnrecognizedSpanEnd(_, span_end) => self.span_end(span_end, None),
-            UnpackedBuckEvent::Instant(_, _, data) => self.instant(Some(data)),
-            UnpackedBuckEvent::UnrecognizedInstant(_, _) => self.instant(None),
+            UnpackedBsmrEvent::SpanStart(_, _, data) => self.span_started(Some(data)),
+            UnpackedBsmrEvent::UnrecognizedSpanStart(_, _) => self.span_started(None),
+            UnpackedBsmrEvent::SpanEnd(_, span_end, data) => self.span_end(span_end, Some(data)),
+            UnpackedBsmrEvent::UnrecognizedSpanEnd(_, span_end) => self.span_end(span_end, None),
+            UnpackedBsmrEvent::Instant(_, _, data) => self.instant(Some(data)),
+            UnpackedBsmrEvent::UnrecognizedInstant(_, _) => self.instant(None),
         }
 
         Ok(())

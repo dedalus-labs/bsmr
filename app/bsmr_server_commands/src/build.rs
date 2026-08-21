@@ -67,7 +67,7 @@ use bsmr_core::soft_error;
 use bsmr_core::target::label::label::TargetLabel;
 use bsmr_data::BuildResult;
 use bsmr_data::ToProtoMessage;
-use bsmr_error::BuckErrorContext;
+use bsmr_error::BsmrErrorContext;
 use bsmr_error::internal_error;
 use bsmr_events::dispatch::console_message;
 use bsmr_events::dispatch::instant_event;
@@ -182,7 +182,7 @@ async fn build(
         .as_ref()
         .map(|t| (*t).try_into())
         .transpose()
-        .with_buck_error_context(|| "Invalid `duration`")?;
+        .with_bsmr_error_context(|| "Invalid `duration`")?;
 
     let timeout_observer = timeout.map(|timeout| {
         Arc::new(TimeoutLivelinessObserver::new(timeout)) as Arc<dyn LivelinessObserver>
@@ -233,10 +233,10 @@ async fn build(
 
     let final_artifact_materializations =
         Materializations::try_from(request.final_artifact_materializations)
-            .with_buck_error_context(|| "Invalid final_artifact_materializations")
+            .with_bsmr_error_context(|| "Invalid final_artifact_materializations")
             .unwrap();
     let final_artifact_uploads = Uploads::try_from(request.final_artifact_uploads)
-        .with_buck_error_context(|| "Invalid final_artifact_uploads")
+        .with_bsmr_error_context(|| "Invalid final_artifact_uploads")
         .unwrap();
 
     let want_configured_graph_size = ctx
@@ -768,7 +768,7 @@ async fn build_targets(
         AsyncBuildTargetResultBuilder::new(streaming_build_result_tx, build_start);
     let fut = match target_resolution_config {
         TargetResolutionConfig::Default(global_cfg_options) => {
-            let spec = spec.convert_pattern().buck_error_context(
+            let spec = spec.convert_pattern().bsmr_error_context(
                 "Targets with explicit configuration can only be built when the `--target-universe=` flag is provided",
             )?;
             build_targets_with_global_target_platform(

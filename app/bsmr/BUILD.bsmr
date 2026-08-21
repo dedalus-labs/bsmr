@@ -5,7 +5,7 @@
 
 # Defines build targets for app/bsmr.
 
-load("@bsmr_build//rules:rust.bzl", buck_rust_binary = "rust_binary")
+load("@bsmr_build//rules:rust.bzl", bsmr_rust_binary = "rust_binary")
 # @oss-disable[end= ]: load("@bsmr_build//rules:platform_utils.bzl", "platform_utils")
 load("@bsmr_build//rules:rust.bzl", "rust_library")
 load(":transition.bzl", "bsmr_client_transition_alias")
@@ -21,8 +21,8 @@ _memfrag = read_config("bsmr_dev", "memfrag", "") == "true"
 rust_library(
     name = "bsmr",
     srcs = glob(["src/**/*.rs"]),
-    # Cargo-only deps used in `bin/bsmr.rs` under `#[cfg(not(buck_build))]`.
-    # On linux/macos cargo uses jemalloc as the global allocator; buck builds
+    # Cargo-only deps used in `bin/bsmr.rs` under `#[cfg(not(bsmr_build))]`.
+    # On linux/macos cargo uses jemalloc as the global allocator; bsmr builds
     # rely on fbcode.default_allocator instead.
     autocargo = {
         "cargo_toml_config": {
@@ -34,7 +34,7 @@ rust_library(
                     },
                 },
             },
-            "extra_buck_dependencies": {
+            "extra_bsmr_dependencies": {
                 "target": {
                     '\'cfg(any(target_os = "linux", target_os = "macos"))\'': {
                         "dependencies": [
@@ -104,7 +104,7 @@ rust_library(
     }),
 )
 
-buck_rust_binary(
+bsmr_rust_binary(
     name = "bsmr-bin",
     srcs = ["bin/bsmr.rs"],
     allow_cache_upload = True,
@@ -112,13 +112,13 @@ buck_rust_binary(
     crate_root = "bin/bsmr.rs",
     env = {
         # This is only set for release builds.
-        "BSMR_RELEASE_TIMESTAMP": read_config("buck", "release_timestamp", ""),
+        "BSMR_RELEASE_TIMESTAMP": read_config("bsmr", "release_timestamp", ""),
         # This config value is set by the upload script, and controls the output of `--version`. We
         # would like to use build info for this, but it is unfortunately not reliably available, see
         # T140147872.
-        "BSMR_SET_EXPLICIT_VERSION": read_config("buck", "set_explicit_version", ""),
+        "BSMR_SET_EXPLICIT_VERSION": read_config("bsmr", "set_explicit_version", ""),
         # This config value is set by the upload script, and controls the output of `--internal-version` on windows
-        "BSMR_WIN_INTERNAL_VERSION": read_config("buck", "win_internal_version", ""),
+        "BSMR_WIN_INTERNAL_VERSION": read_config("bsmr", "win_internal_version", ""),
     },
     # Set via -c bsmr.emit_relocs=true in the deploy script to produce a
     # binary with ELF relocations for BOLT post-link optimization.

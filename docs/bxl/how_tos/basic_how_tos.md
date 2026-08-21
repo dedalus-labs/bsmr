@@ -324,7 +324,7 @@ def _impl_example(_ctx):
 - **Debugger** - to use the debugger you can follow these instructions
   [here](https://fb.workplace.com/groups/bsmreng/permalink/3562907607330619/).
 
-      1. `fdb --starlark-kill-buck attach buck`
+      1. `fdb --starlark-kill-bsmr attach bsmr`
       2. place a breakpoint to the bxl file
       3. run the bsmr bxl command
 

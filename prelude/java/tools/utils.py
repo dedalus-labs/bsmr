@@ -230,14 +230,14 @@ def _hyperlink(file: str, line: int, text: str) -> str:
     Returns:
         A string containing the hyperlinked text with terminal escape sequences
     """
-    # Keep in sync with fbcode/bsmr/prelude/toolchains/android/src/com/facebook/buck/jvm/cd/ErrorInterceptor.java
+    # Keep in sync with fbcode/bsmr/prelude/toolchains/android/src/com/dedalus/bsmr/jvm/cd/ErrorInterceptor.java
     isVsCode = (
         os.environ.get("FBVSCODE_REMOTE_ENV_NAME") == "od"
         or os.environ.get("TERM_PROGRAM") == "vscode"
     )
 
     isHyperlinkDisabled = os.path.exists(
-        os.path.expanduser("~/.disable_buck_jvm_path_hyperlink")
+        os.path.expanduser("~/.disable_bsmr_jvm_path_hyperlink")
     )
 
     if isVsCode or isHyperlinkDisabled:
@@ -248,7 +248,7 @@ def _hyperlink(file: str, line: int, text: str) -> str:
 
     is_jetbrains = (
         "ANDROID_EDITOR" in os.environ
-        or pathlib.Path("~/.jetbrains-fb/.buck_path_hyperlink_uses_jetbrains")
+        or pathlib.Path("~/.jetbrains-fb/.build_path_hyperlink_uses_jetbrains")
         .expanduser()
         .is_file()
     )

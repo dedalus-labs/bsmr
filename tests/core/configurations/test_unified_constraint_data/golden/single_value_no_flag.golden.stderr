@@ -2,7 +2,7 @@
 
 [<TIMESTAMP>] Starting new bsmr daemon...
 [<TIMESTAMP>] Connected to new bsmr daemon.
-[<TIMESTAMP>] Buck UI: https://www.internalfb.com/bsmr/<UUID>
+[<TIMESTAMP>] Bsmr UI: https://www.internalfb.com/bsmr/<UUID>
 [<TIMESTAMP>] root//single_value_no_flag:version (<unbound>): failed:
 [<TIMESTAMP>]   Error running analysis for `root//single_value_no_flag:version (<unbound>)`
 [<TIMESTAMP>]   

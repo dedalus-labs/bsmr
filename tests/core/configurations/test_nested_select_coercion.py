@@ -15,11 +15,11 @@
 # pyre-strict
 
 
-from bsmr.tests.e2e_util.api.buck import Buck
-from bsmr.tests.e2e_util.buck_workspace import buck_test
+from bsmr.tests.e2e_util.api.bsmr import Bsmr
+from bsmr.tests.e2e_util.bsmr_workspace import bsmr_test
 
 
-@buck_test()
-async def test_nested_select_coercion(buck: Buck) -> None:
-    res = await buck.uquery("//:foo")
+@bsmr_test()
+async def test_nested_select_coercion(bsmr: Bsmr) -> None:
+    res = await bsmr.uquery("//:foo")
     assert res.stdout.startswith("root//:foo")

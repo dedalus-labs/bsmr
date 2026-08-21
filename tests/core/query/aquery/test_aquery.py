@@ -15,14 +15,14 @@
 # pyre-strict
 
 
-from bsmr.tests.e2e_util.api.buck import Buck
-from bsmr.tests.e2e_util.buck_workspace import buck_test
+from bsmr.tests.e2e_util.api.bsmr import Bsmr
+from bsmr.tests.e2e_util.bsmr_workspace import bsmr_test
 from bsmr.tests.e2e_util.helper.golden import golden
 
 
-@buck_test()
-async def test_target(buck: Buck) -> None:
-    stdout = (await buck.aquery("//:test", "-a", "identifier")).stdout
+@bsmr_test()
+async def test_target(bsmr: Bsmr) -> None:
+    stdout = (await bsmr.aquery("//:test", "-a", "identifier")).stdout
 
     golden(
         output=stdout,
@@ -30,9 +30,9 @@ async def test_target(buck: Buck) -> None:
     )
 
 
-@buck_test()
-async def test_all_outputs(buck: Buck) -> None:
-    stdout = (await buck.aquery("all_outputs(//:test)", "-a", "identifier")).stdout
+@bsmr_test()
+async def test_all_outputs(bsmr: Bsmr) -> None:
+    stdout = (await bsmr.aquery("all_outputs(//:test)", "-a", "identifier")).stdout
 
     golden(
         output=stdout,
@@ -40,9 +40,9 @@ async def test_all_outputs(buck: Buck) -> None:
     )
 
 
-@buck_test()
-async def test_all_actions(buck: Buck) -> None:
-    stdout = (await buck.aquery("all_actions(//:test)", "-a", "identifier")).stdout
+@bsmr_test()
+async def test_all_actions(bsmr: Bsmr) -> None:
+    stdout = (await bsmr.aquery("all_actions(//:test)", "-a", "identifier")).stdout
 
     golden(
         output=stdout,
@@ -50,10 +50,10 @@ async def test_all_actions(buck: Buck) -> None:
     )
 
 
-@buck_test()
-async def test_all_outputs_subtarget(buck: Buck) -> None:
+@bsmr_test()
+async def test_all_outputs_subtarget(bsmr: Bsmr) -> None:
     stdout = (
-        await buck.aquery("all_outputs('//:test[sub]')", "-a", "identifier")
+        await bsmr.aquery("all_outputs('//:test[sub]')", "-a", "identifier")
     ).stdout
 
     golden(
@@ -62,10 +62,10 @@ async def test_all_outputs_subtarget(buck: Buck) -> None:
     )
 
 
-@buck_test()
-async def test_filter(buck: Buck) -> None:
+@bsmr_test()
+async def test_filter(bsmr: Bsmr) -> None:
     stdout = (
-        await buck.aquery(
+        await bsmr.aquery(
             "attrfilter('identifier', 'other', all_actions('//:test[sub]'))",
             "-a",
             "identifier",
@@ -78,9 +78,9 @@ async def test_filter(buck: Buck) -> None:
     )
 
 
-@buck_test()
-async def test_deps(buck: Buck) -> None:
-    stdout = (await buck.aquery("deps(//:test)", "-a", "identifier")).stdout
+@bsmr_test()
+async def test_deps(bsmr: Bsmr) -> None:
+    stdout = (await bsmr.aquery("deps(//:test)", "-a", "identifier")).stdout
 
     golden(
         output=stdout,
@@ -88,18 +88,18 @@ async def test_deps(buck: Buck) -> None:
     )
 
 
-@buck_test()
-async def test_bxl_aquery_target(buck: Buck) -> None:
-    stdout = (await buck.bxl("//:aquery.bxl:target")).stdout
+@bsmr_test()
+async def test_bxl_aquery_target(bsmr: Bsmr) -> None:
+    stdout = (await bsmr.bxl("//:aquery.bxl:target")).stdout
     golden(
         output=stdout,
         rel_path="bxl_target.golden.json",
     )
 
 
-@buck_test()
-async def test_bxl_aquery_all_outputs(buck: Buck) -> None:
-    stdout = (await buck.bxl("//:aquery.bxl:all_outputs")).stdout
+@bsmr_test()
+async def test_bxl_aquery_all_outputs(bsmr: Bsmr) -> None:
+    stdout = (await bsmr.bxl("//:aquery.bxl:all_outputs")).stdout
 
     golden(
         output=stdout,
@@ -107,9 +107,9 @@ async def test_bxl_aquery_all_outputs(buck: Buck) -> None:
     )
 
 
-@buck_test()
-async def test_bxl_aquery_all_actions(buck: Buck) -> None:
-    stdout = (await buck.bxl("//:aquery.bxl:all_actions")).stdout
+@bsmr_test()
+async def test_bxl_aquery_all_actions(bsmr: Bsmr) -> None:
+    stdout = (await bsmr.bxl("//:aquery.bxl:all_actions")).stdout
 
     golden(
         output=stdout,
@@ -117,9 +117,9 @@ async def test_bxl_aquery_all_actions(buck: Buck) -> None:
     )
 
 
-@buck_test()
-async def test_bxl_aquery_all_outputs_subtarget(buck: Buck) -> None:
-    stdout = (await buck.bxl("//:aquery.bxl:all_outputs_subtarget")).stdout
+@bsmr_test()
+async def test_bxl_aquery_all_outputs_subtarget(bsmr: Bsmr) -> None:
+    stdout = (await bsmr.bxl("//:aquery.bxl:all_outputs_subtarget")).stdout
 
     golden(
         output=stdout,
@@ -127,9 +127,9 @@ async def test_bxl_aquery_all_outputs_subtarget(buck: Buck) -> None:
     )
 
 
-@buck_test()
-async def test_bxl_aquery_attrfilter(buck: Buck) -> None:
-    stdout = (await buck.bxl("//:aquery.bxl:attrfilter")).stdout
+@bsmr_test()
+async def test_bxl_aquery_attrfilter(bsmr: Bsmr) -> None:
+    stdout = (await bsmr.bxl("//:aquery.bxl:attrfilter")).stdout
 
     golden(
         output=stdout,
@@ -137,9 +137,9 @@ async def test_bxl_aquery_attrfilter(buck: Buck) -> None:
     )
 
 
-@buck_test()
-async def test_bxl_aquery_deps(buck: Buck) -> None:
-    stdout = (await buck.bxl("//:aquery.bxl:deps")).stdout
+@bsmr_test()
+async def test_bxl_aquery_deps(bsmr: Bsmr) -> None:
+    stdout = (await bsmr.bxl("//:aquery.bxl:deps")).stdout
 
     golden(
         output=stdout,
@@ -147,9 +147,9 @@ async def test_bxl_aquery_deps(buck: Buck) -> None:
     )
 
 
-@buck_test()
-async def test_bxl_aquery_eval(buck: Buck) -> None:
-    stdout = (await buck.bxl("//:aquery.bxl:eval")).stdout
+@bsmr_test()
+async def test_bxl_aquery_eval(bsmr: Bsmr) -> None:
+    stdout = (await bsmr.bxl("//:aquery.bxl:eval")).stdout
 
     golden(
         output=stdout,
@@ -157,6 +157,6 @@ async def test_bxl_aquery_eval(buck: Buck) -> None:
     )
 
 
-@buck_test()
-async def test_bxl_aquery_action_query_node(buck: Buck) -> None:
-    await buck.bxl("//:aquery.bxl:action_query_node")
+@bsmr_test()
+async def test_bxl_aquery_action_query_node(bsmr: Bsmr) -> None:
+    await bsmr.bxl("//:aquery.bxl:action_query_node")

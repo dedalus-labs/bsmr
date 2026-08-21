@@ -1,3 +1,9 @@
+# ===----------------------------------------------------------------------===
+# Upstream-Source: facebook/buck2@1560aca2002865cd73d7cafb22c705cfb640b2bc
+# Modifications Copyright (c) 2026 Dedalus Labs, Inc. and its contributors
+# SPDX-License-Identifier: Apache-2.0
+# ===----------------------------------------------------------------------===
+
 # Copyright (c) Meta Platforms, Inc. and affiliates.
 #
 # This source code is dual-licensed under either the MIT license found in the
@@ -36,8 +42,8 @@ def run_lazy_imports_analyzer(ctx: AnalysisContext, resources, output: Artifact,
     cmd = cmd_args(ctx.attrs.lazy_imports_analyzer[RunInfo], hidden = resources)
     cmd.add(dbg_source_db_output)  # First arg: <DB_PATH>
     cmd.add(output.as_output())  # Second arg: <OUTPUT_PATH>
-    cmd.add("--buck_mode")
-    cmd.add("buck-build")
+    cmd.add("--bsmr_mode")
+    cmd.add("bsmr-build")
 
     main_module = _get_main_module(ctx)
     if main_module != None:

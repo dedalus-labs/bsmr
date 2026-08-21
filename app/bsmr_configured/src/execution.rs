@@ -39,7 +39,7 @@ use bsmr_core::execution_types::execution_platforms::ExecutionPlatformsData;
 use bsmr_core::provider::label::ProvidersLabel;
 use bsmr_core::target::label::label::TargetLabel;
 use bsmr_core::target::target_configured_target_label::TargetConfiguredTargetLabel;
-use bsmr_error::BuckErrorContext;
+use bsmr_error::BsmrErrorContext;
 use bsmr_error::internal_error;
 use dice_futures::cancellation::CancellationContext;
 use bsmr_node::attrs::configuration_context::AttrConfigurationContext;
@@ -152,7 +152,7 @@ impl ExecutionPlatformConstraints {
         {
             let configured_attr = a
                 .configure(cfg_ctx)
-                .with_buck_error_context(|| {
+                .with_bsmr_error_context(|| {
                     format!(
                         "Error configuring attribute `{}` to resolve execution platform",
                         EXEC_COMPATIBLE_WITH_ATTRIBUTE.name
@@ -161,7 +161,7 @@ impl ExecutionPlatformConstraints {
                 .require_compatible()?;
             ConfiguredTargetNode::attr_as_target_compatible_with(configured_attr.value)
                 .map(|label| {
-                    label.with_buck_error_context(|| {
+                    label.with_bsmr_error_context(|| {
                         format!("attribute `{}`", EXEC_COMPATIBLE_WITH_ATTRIBUTE.name)
                     })
                 })
@@ -520,7 +520,7 @@ pub(crate) async fn configure_exec_dep_with_modifiers(
             true,
         )
         .await
-        .with_buck_error_context(|| {
+        .with_bsmr_error_context(|| {
             format!("Resolving modifiers for exec dep target `{}`", exec_dep)
         })?;
 

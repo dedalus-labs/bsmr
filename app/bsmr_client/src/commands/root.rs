@@ -17,7 +17,7 @@
 use std::str::FromStr;
 
 use bsmr_client_ctx::client_ctx::ClientCommandContext;
-use bsmr_client_ctx::common::BuckArgMatches;
+use bsmr_client_ctx::common::BsmrArgMatches;
 use bsmr_client_ctx::immediate_config::ImmediateConfigContext;
 use bsmr_client_ctx::path_arg::PathArg;
 use bsmr_common::argv::Argv;
@@ -70,7 +70,7 @@ pub struct RootCommand {
 impl RootCommand {
     pub fn exec(
         self,
-        _matches: BuckArgMatches<'_>,
+        _matches: BsmrArgMatches<'_>,
         ctx: ClientCommandContext<'_>,
     ) -> bsmr_error::Result<()> {
         let root = if matches!(self.kind, RootKind::Daemon) {

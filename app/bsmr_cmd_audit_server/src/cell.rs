@@ -24,7 +24,7 @@ use bsmr_common::dice::cells::HasCellResolver;
 use bsmr_core::fs::project::ProjectRoot;
 use bsmr_core::fs::project_rel_path::ProjectRelativePath;
 use bsmr_fs::paths::abs_norm_path::AbsNormPathBuf;
-use bsmr_hash::BuckIndexMap;
+use bsmr_hash::BsmrIndexMap;
 use bsmr_server_ctx::ctx::ServerCommandContextTrait;
 use bsmr_server_ctx::ctx::ServerCommandDiceContext;
 use bsmr_server_ctx::partial_result_dispatcher::PartialResultDispatcher;
@@ -79,10 +79,10 @@ pub(crate) async fn audit_cell(
     aliases: bool,
     cwd: &ProjectRelativePath,
     fs: &ProjectRoot,
-) -> bsmr_error::Result<BuckIndexMap<String, AbsNormPathBuf>> {
+) -> bsmr_error::Result<BsmrIndexMap<String, AbsNormPathBuf>> {
     let cells = ctx.get_cell_resolver().await?;
     let this_resolver = ctx.get_cell_alias_resolver_for_dir(cwd).await?;
-    let mappings: BuckIndexMap<_, _> = {
+    let mappings: BsmrIndexMap<_, _> = {
         if aliases_to_resolve.is_empty() {
             if aliases {
                 this_resolver

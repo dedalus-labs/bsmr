@@ -18,11 +18,11 @@ use std::sync::Arc;
 
 use async_trait::async_trait;
 use bsmr_data::error::ErrorTag;
-use bsmr_error::BuckErrorContext;
+use bsmr_error::BsmrErrorContext;
 use bsmr_error::bsmr_error;
-use bsmr_event_observer::unpack_event::UnpackedBuckEvent;
+use bsmr_event_observer::unpack_event::UnpackedBsmrEvent;
 use bsmr_event_observer::unpack_event::unpack_event;
-use bsmr_events::BuckEvent;
+use bsmr_events::BsmrEvent;
 use bsmr_fs::async_fs_util;
 use bsmr_fs::error::IoResultExt;
 use bsmr_fs::paths::abs_path::AbsPathBuf;
@@ -46,13 +46,13 @@ impl TestIdWriter {
 
 #[async_trait]
 impl EventSubscriber for TestIdWriter {
-    async fn handle_events(&mut self, events: &[Arc<BuckEvent>]) -> bsmr_error::Result<()> {
+    async fn handle_events(&mut self, events: &[Arc<BsmrEvent>]) -> bsmr_error::Result<()> {
         if self.written {
             return Ok(());
         }
 
         for event in events {
-            if let Ok(UnpackedBuckEvent::Instant(
+            if let Ok(UnpackedBsmrEvent::Instant(
                 _,
                 _,
                 bsmr_data::instant_event::Data::TestDiscovery(discovery),
@@ -72,7 +72,7 @@ impl EventSubscriber for TestIdWriter {
                     async_fs_util::write(&self.path, test_id)
                         .await
                         .categorize_input()
-                        .buck_error_context("Error writing test ID")?;
+                        .bsmr_error_context("Error writing test ID")?;
                     self.written = true;
                     return Ok(());
                 }
@@ -87,19 +87,19 @@ mod tests {
     use std::sync::Arc;
     use std::time::SystemTime;
 
-    use bsmr_events::BuckEvent;
+    use bsmr_events::BsmrEvent;
     use bsmr_fs::paths::abs_path::AbsPathBuf;
     use bsmr_wrapper_common::invocation_id::TraceId;
 
     use super::*;
 
-    fn test_discovery_session_event(info: &str, test_session_id: Option<&str>) -> Arc<BuckEvent> {
-        Arc::new(BuckEvent::new(
+    fn test_discovery_session_event(info: &str, test_session_id: Option<&str>) -> Arc<BsmrEvent> {
+        Arc::new(BsmrEvent::new(
             SystemTime::now(),
             TraceId::new(),
             None,
             None,
-            bsmr_data::buck_event::Data::Instant(bsmr_data::InstantEvent {
+            bsmr_data::bsmr_event::Data::Instant(bsmr_data::InstantEvent {
                 data: Some(
                     bsmr_data::TestDiscovery {
                         data: Some(bsmr_data::test_discovery::Data::Session(
@@ -115,13 +115,13 @@ mod tests {
         ))
     }
 
-    fn non_matching_event() -> Arc<BuckEvent> {
-        Arc::new(BuckEvent::new(
+    fn non_matching_event() -> Arc<BsmrEvent> {
+        Arc::new(BsmrEvent::new(
             SystemTime::now(),
             TraceId::new(),
             None,
             None,
-            bsmr_data::buck_event::Data::Instant(bsmr_data::InstantEvent {
+            bsmr_data::bsmr_event::Data::Instant(bsmr_data::InstantEvent {
                 data: Some(
                     bsmr_data::ConsoleMessage {
                         message: "hello".to_owned(),
@@ -132,25 +132,25 @@ mod tests {
         ))
     }
 
-    fn test_discovery_no_data_event() -> Arc<BuckEvent> {
-        Arc::new(BuckEvent::new(
+    fn test_discovery_no_data_event() -> Arc<BsmrEvent> {
+        Arc::new(BsmrEvent::new(
             SystemTime::now(),
             TraceId::new(),
             None,
             None,
-            bsmr_data::buck_event::Data::Instant(bsmr_data::InstantEvent {
+            bsmr_data::bsmr_event::Data::Instant(bsmr_data::InstantEvent {
                 data: Some(bsmr_data::TestDiscovery { data: None }.into()),
             }),
         ))
     }
 
-    fn test_discovery_suite_event() -> Arc<BuckEvent> {
-        Arc::new(BuckEvent::new(
+    fn test_discovery_suite_event() -> Arc<BsmrEvent> {
+        Arc::new(BsmrEvent::new(
             SystemTime::now(),
             TraceId::new(),
             None,
             None,
-            bsmr_data::buck_event::Data::Instant(bsmr_data::InstantEvent {
+            bsmr_data::bsmr_event::Data::Instant(bsmr_data::InstantEvent {
                 data: Some(
                     bsmr_data::TestDiscovery {
                         data: Some(bsmr_data::test_discovery::Data::Tests(

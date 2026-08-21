@@ -35,14 +35,14 @@ use bsmr_core::execution_types::execution::ExecutionPlatformResolution;
 use bsmr_core::provider::label::ConfiguredProvidersLabel;
 use bsmr_core::target::configured_target_label::ConfiguredTargetLabel;
 use bsmr_core::unsafe_send_future::UnsafeSendFuture;
-use bsmr_error::BuckErrorContext;
+use bsmr_error::BsmrErrorContext;
 use bsmr_error::conversion::from_any_with_tag;
 use bsmr_error::internal_error;
 use bsmr_events::dispatch::get_dispatcher;
 use bsmr_execute::digest_config::HasDigestConfig;
-use bsmr_hash::StdBuckHashMap;
+use bsmr_hash::StdBsmrHashMap;
 use bsmr_interpreter::dice::starlark_provider::StarlarkEvalKind;
-use bsmr_interpreter::factory::BuckStarlarkModule;
+use bsmr_interpreter::factory::BsmrStarlarkModule;
 use bsmr_interpreter::factory::StarlarkEvaluatorProvider;
 use bsmr_interpreter::print_handler::EventDispatcherPrintHandler;
 use bsmr_interpreter::soft_error::BsmrStarlarkSoftErrorHandler;
@@ -85,8 +85,8 @@ enum AnalysisError {
 // that are NOT tied to that module. Must claim ownership of them via `add_reference` before returning them.
 pub struct RuleAnalysisAttrResolutionContext<'a, 'v> {
     pub module: &'a Module<'v>,
-    pub dep_analysis_results: StdBuckHashMap<ConfiguredTargetLabel, FrozenProviderCollectionValue>,
-    pub query_results: StdBuckHashMap<String, Arc<AnalysisQueryResult>>,
+    pub dep_analysis_results: StdBsmrHashMap<ConfiguredTargetLabel, FrozenProviderCollectionValue>,
+    pub query_results: StdBsmrHashMap<String, Arc<AnalysisQueryResult>>,
     pub execution_platform_resolution: ExecutionPlatformResolution,
 }
 
@@ -123,7 +123,7 @@ impl<'a, 'v> AttrResolutionContext<'v> for &'_ RuleAnalysisAttrResolutionContext
 }
 
 pub fn get_dep<'v>(
-    dep_analysis_results: &StdBuckHashMap<ConfiguredTargetLabel, FrozenProviderCollectionValue>,
+    dep_analysis_results: &StdBsmrHashMap<ConfiguredTargetLabel, FrozenProviderCollectionValue>,
     target: &ConfiguredProvidersLabel,
     module: &Module<'v>,
 ) -> bsmr_error::Result<FrozenValueTyped<'v, FrozenProviderCollection>> {
@@ -138,7 +138,7 @@ pub fn get_dep<'v>(
 }
 
 pub fn resolve_unkeyed_placeholder(
-    dep_analysis_results: &StdBuckHashMap<ConfiguredTargetLabel, FrozenProviderCollectionValue>,
+    dep_analysis_results: &StdBsmrHashMap<ConfiguredTargetLabel, FrozenProviderCollectionValue>,
     name: &str,
     module: &Module,
 ) -> Option<FrozenCommandLineArg> {
@@ -161,7 +161,7 @@ pub fn resolve_unkeyed_placeholder(
 }
 
 pub fn resolve_query(
-    query_results: &StdBuckHashMap<String, Arc<AnalysisQueryResult>>,
+    query_results: &StdBsmrHashMap<String, Arc<AnalysisQueryResult>>,
     query: &str,
     module: &Module,
 ) -> bsmr_error::Result<Arc<AnalysisQueryResult>> {
@@ -194,7 +194,7 @@ pub trait RuleSpec: Sync {
 struct AnalysisEnv<'a> {
     rule_spec: &'a dyn RuleSpec,
     deps: Vec<(&'a ConfiguredTargetLabel, AnalysisResult)>,
-    query_results: StdBuckHashMap<String, Arc<AnalysisQueryResult>>,
+    query_results: StdBsmrHashMap<String, Arc<AnalysisQueryResult>>,
     execution_platform: &'a ExecutionPlatformResolution,
     label: ConfiguredTargetLabel,
     cancellation: &'a CancellationContext,
@@ -204,7 +204,7 @@ pub(crate) async fn run_analysis<'a>(
     dice: &'a mut DiceComputations<'_>,
     label: &ConfiguredTargetLabel,
     results: Vec<(&'a ConfiguredTargetLabel, AnalysisResult)>,
-    query_results: StdBuckHashMap<String, Arc<AnalysisQueryResult>>,
+    query_results: StdBsmrHashMap<String, Arc<AnalysisQueryResult>>,
     execution_platform: &'a ExecutionPlatformResolution,
     rule_spec: &'a dyn RuleSpec,
     node: ConfiguredTargetNodeRef<'a>,
@@ -223,11 +223,11 @@ pub(crate) async fn run_analysis<'a>(
 
 pub fn get_deps_from_analysis_results(
     results: Vec<(&ConfiguredTargetLabel, AnalysisResult)>,
-) -> bsmr_error::Result<StdBuckHashMap<ConfiguredTargetLabel, FrozenProviderCollectionValue>> {
+) -> bsmr_error::Result<StdBsmrHashMap<ConfiguredTargetLabel, FrozenProviderCollectionValue>> {
     results
         .into_iter()
         .map(|(label, result)| Ok((label.dupe(), result.providers()?.to_owned())))
-        .collect::<bsmr_error::Result<StdBuckHashMap<ConfiguredTargetLabel, FrozenProviderCollectionValue>>>()
+        .collect::<bsmr_error::Result<StdBsmrHashMap<ConfiguredTargetLabel, FrozenProviderCollectionValue>>>()
 }
 
 // Used to express that the impl Future below captures multiple named lifetimes.
@@ -251,7 +251,7 @@ async fn run_analysis_with_env_underlying(
     analysis_env: AnalysisEnv<'_>,
     node: ConfiguredTargetNodeRef<'_>,
 ) -> bsmr_error::Result<(AnalysisResult, Option<AnalysisSplitInstants>)> {
-    BuckStarlarkModule::with_profiling_async(async move |env| {
+    BsmrStarlarkModule::with_profiling_async(async move |env| {
         let print = EventDispatcherPrintHandler(get_dispatcher());
 
         let validations_from_deps = analysis_env
@@ -356,7 +356,7 @@ async fn run_analysis_with_env_underlying(
                 AnalysisResult::new(
                     recorded_values,
                     profile_data,
-                    StdBuckHashMap::default(),
+                    StdBsmrHashMap::default(),
                     declared_actions,
                     declared_artifacts,
                     validations,
@@ -398,7 +398,7 @@ fn get_rule_callable(
     let rule_callable = module
         .get_any_visibility(name)
         .map_err(|e| from_any_with_tag(e, bsmr_error::ErrorTag::Tier0))
-        .with_buck_error_context(|| format!("Couldn't find rule `{name}`"))?
+        .with_bsmr_error_context(|| format!("Couldn't find rule `{name}`"))?
         .0;
     let rule_callable = rule_callable.owned_value(eval.frozen_heap());
     let rule_callable = rule_callable

@@ -223,10 +223,10 @@ management.
 
 Let’s talk about check_depths and how it works. Imagine this as our recursive
 word count example. If a file or directory changes, the core state returns
-check_depths. In the old Buck approach, all dependencies were checked in
+check_depths. In the old Bsmr approach, all dependencies were checked in
 parallel, exiting early if a change was detected, but this could spawn
 unnecessary tasks. For instance, if hacking.md was deleted, an invalid key
-request could trigger a panic, as seen in Buck’s previous behavior.
+request could trigger a panic, as seen in Bsmr’s previous behavior.
 
 ## Optimizing Dependency Checks for Performance
 
@@ -291,7 +291,7 @@ whole bunch of things in parallel. We have a whole bunch of different sorts of
 computes going on, and each one of them is holding onto one of these dice
 computations, which has a depth recording when you call compute. This goes to an
 async evaluator, which we have one per transaction—essentially one per larger
-computation, like one per buck command.
+computation, like one per bsmr command.
 
 ## Caching Mechanism and State Management
 
@@ -341,35 +341,35 @@ right? Like, there’s three ways that it’s intended to flow in, right? We hav
 injected keys sort of down the leaves at the bottom of the graph as I drew it,
 right? This is going to be used for like global data for things that are in like
 one state for a particular computation. A really good example of this previously
-was buck config, right? The whole buck config would be computed and then put in
+was bsmr config, right? The whole bsmr config would be computed and then put in
 a leaf. We’ve actually now, the computation is actually now split and done
-partially on Dice, but still the main inputs to buck config are leaves on the
+partially on Dice, but still the main inputs to bsmr config are leaves on the
 graph.
 
 ## Injected Keys and Their Impact
 
-The buck out path, I think, is in an injected key. I think the path to the
+The bsmr out path, I think, is in an injected key. I think the path to the
 prelude, things like this, where it’s like, yeah, we only have one of those.
 It’s not really going to, you know, we don’t expect the work. I shouldn’t say
 that if the workflow involves like changing one of these a lot, using an
 injected key may not be the best thing, right? Because if say something like
-buck config, right? If you change buck config, it invalidates basically
-everything. And like the workflows for users require changing buck config today.
-And so that’s like an unfortunate aspect of the buck config design that sort of
+bsmr config, right? If you change bsmr config, it invalidates basically
+everything. And like the workflows for users require changing bsmr config today.
+And so that’s like an unfortunate aspect of the bsmr config design that sort of
 requires that, and like, it’s not, you know, injected key for that. Like, yes,
-it’s how you have to do it because that’s the design of buck config, but it’s
+it’s how you have to do it because that’s the design of bsmr config, but it’s
 not great for the workflow.
 
 ## User Data in Dice
 
-The buck out path, right? We don’t, you know, that’s not changing during normal
+The bsmr out path, right? We don’t, you know, that’s not changing during normal
 work. And so like, if the cost of changing that is high, that’s like, you know,
 files and directories that act like this, they’re not injected. We don’t inject
 the values, but we do like invalidate them. Kind of similar. And like, that is
 kind of where data comes in from outside the graph, user data. User data is just
 data that we stick on Dice to give us access to things that are useful to have
 access to, but aren’t meaningful to the computation. The best example of this is
-the event dispatcher, right? Every buck command creates an event dispatcher to
+the event dispatcher, right? Every bsmr command creates an event dispatcher to
 sort of get events back out to the client or to the log. And we, you know, we
 put this on the per transaction user data, and keys just access this as much as
 they want.

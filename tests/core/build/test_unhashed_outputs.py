@@ -18,33 +18,33 @@ import os
 import shutil
 from pathlib import Path
 
-from bsmr.tests.e2e_util.api.buck import Buck
-from bsmr.tests.e2e_util.buck_workspace import buck_test
+from bsmr.tests.e2e_util.api.bsmr import Bsmr
+from bsmr.tests.e2e_util.bsmr_workspace import bsmr_test
 
 
-@buck_test()
-async def test_unhashed_putputs(buck: Buck) -> None:
-    await buck.build("//pack:trivial_build")
+@bsmr_test()
+async def test_unhashed_putputs(bsmr: Bsmr) -> None:
+    await bsmr.build("//pack:trivial_build")
 
-    p = buck.cwd / "bsmr-out" / "v2" / "gen" / "root" / "pack" / "foo.txt"
+    p = bsmr.cwd / "bsmr-out" / "v2" / "gen" / "root" / "pack" / "foo.txt"
     assert p.exists()
     assert p.is_symlink()
 
 
-@buck_test()
-async def test_projected_output(buck: Buck) -> None:
-    await buck.build("//:projected_output")
+@bsmr_test()
+async def test_projected_output(bsmr: Bsmr) -> None:
+    await bsmr.build("//:projected_output")
 
-    p = buck.cwd / "bsmr-out" / "v2" / "gen" / "root" / "dir"
+    p = bsmr.cwd / "bsmr-out" / "v2" / "gen" / "root" / "dir"
     assert p.exists()
     assert p.is_symlink()
     assert (p / "file").is_file()
 
 
-@buck_test()
-async def test_build_symlink_does_not_traverse_existing_symlinks(buck: Buck) -> None:
-    await buck.build("//pack:trivial_build")
-    symlink_folder = buck.cwd / "bsmr-out" / "v2" / "gen" / "root" / "pack"
+@bsmr_test()
+async def test_build_symlink_does_not_traverse_existing_symlinks(bsmr: Bsmr) -> None:
+    await bsmr.build("//pack:trivial_build")
+    symlink_folder = bsmr.cwd / "bsmr-out" / "v2" / "gen" / "root" / "pack"
 
     # Now, overwrite part of the symlink path with something we cannot traverse.
     path = symlink_folder.parent
@@ -54,16 +54,16 @@ async def test_build_symlink_does_not_traverse_existing_symlinks(buck: Buck) -> 
 
     # Can we still build? If we delete the symlink when walking up the path, we
     # can. If we traverse it, we can't.
-    await buck.build("//pack:trivial_build")
+    await bsmr.build("//pack:trivial_build")
 
 
-@buck_test()
-async def test_conflict_with_content_based_paths(buck: Buck) -> None:
+@bsmr_test()
+async def test_conflict_with_content_based_paths(bsmr: Bsmr) -> None:
     symlink_path: Path = (
-        buck.cwd / "bsmr-out" / "v2" / "gen" / "root" / "conflict" / "shared_name"
+        bsmr.cwd / "bsmr-out" / "v2" / "gen" / "root" / "conflict" / "shared_name"
     )
     content_based_path: Path = (
-        buck.cwd / "bsmr-out" / "v2" / "art" / "root" / "conflict" / "shared_name"
+        bsmr.cwd / "bsmr-out" / "v2" / "art" / "root" / "conflict" / "shared_name"
     )
     subtarget_output: Path
     # sanity check that we're starting from a clean state
@@ -90,7 +90,7 @@ async def test_conflict_with_content_based_paths(buck: Buck) -> None:
     # Build just the subtarget. Esnsure that the subtarget output exists and is
     # reacable, and that it lives in the place we expect.
     #
-    res = await buck.build(
+    res = await bsmr.build(
         "//conflict/shared_name:subtarget",
         "--config",
         "bsmr.create_unhashed_links=false",
@@ -104,7 +104,7 @@ async def test_conflict_with_content_based_paths(buck: Buck) -> None:
     # Build the conflicting target w/o unhashed links. This should leave the
     # subtarget_output alone, which should remain readable.
     #
-    await buck.build(
+    await bsmr.build(
         "//conflict:shared_name",
         "--config",
         "bsmr.create_unhashed_links=false",
@@ -116,5 +116,5 @@ async def test_conflict_with_content_based_paths(buck: Buck) -> None:
     # Build the conflicting target with unhashed links. This will overwrite the
     # subtarget with a directory, and the symlink_path will now exist.
     #
-    await buck.build("//conflict:shared_name")
+    await bsmr.build("//conflict:shared_name")
     base_checks(should_symlink_exist=True)

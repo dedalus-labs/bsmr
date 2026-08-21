@@ -1,6 +1,6 @@
 # This file is @generated, regenerate by re-running test with `-- --env BSMR_UPDATE_GOLDEN=1` appended to the test command
 
-[<TIMESTAMP>] Buck UI: https://www.internalfb.com/bsmr/<UUID>
+[<TIMESTAMP>] Bsmr UI: https://www.internalfb.com/bsmr/<UUID>
 Command failed: 
 Error evaluating build file: `root//within_view_preserve/child_bad/bad_dep:TARGETS.fixture`
 

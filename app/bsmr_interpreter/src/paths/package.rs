@@ -30,7 +30,7 @@ use pagable::Pagable;
 ///
 /// Example of a valid PACKAGE file path: `upstream//path/to/PACKAGE`
 ///
-/// Find more details in the [Bessemer documentation](https://buck2.build/docs/rule_authors/package_files/).
+/// Find more details in the [Bessemer documentation](https://oss.dedaluslabs.ai/bsmr/rule_authors/package_files/).
 #[derive(
     Clone,
     Debug,
@@ -50,7 +50,7 @@ pub struct PackageFilePath {
 impl PackageFilePath {
     pub fn package_file_names() -> impl Iterator<Item = &'static FileName> {
         [
-            FileName::unchecked_new("BUCK_TREE"),
+            FileName::unchecked_new("BSMR_TREE"),
             FileName::unchecked_new("PACKAGE"),
         ]
         .into_iter()

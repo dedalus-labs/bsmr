@@ -138,8 +138,8 @@ def _labels_arg():
             attrs.string(),
             default = [],
             doc = """
-    Set of arbitrary strings which allow you to annotate a [build rule](https://buck2.build/docs/concepts/build_rule/) with tags
-    that can be searched for over an entire dependency tree using `buck query()`.
+    Set of arbitrary strings which allow you to annotate a [build rule](https://oss.dedaluslabs.ai/bsmr/concepts/build_rule/) with tags
+    that can be searched for over an entire dependency tree using `bsmr query()`.
 """,
         ),
     }
@@ -166,11 +166,11 @@ def _test_label_arg():
             default = [],
             doc = """
     A list of labels to be applied to these tests. These labels are
-     arbitrary text strings and have no meaning within buck itself. They
+     arbitrary text strings and have no meaning within bsmr itself. They
      can, however, have meaning for you as a test author
      (e.g., `smoke` or `fast`). A label can be
      used to filter or include a specific test rule
-     when executing `buck test`
+     when executing `bsmr test`
 """,
         ),
     }
@@ -230,7 +230,7 @@ def _licenses_arg():
             default = [],
             doc = """
             Set of license files for this library. To get the list of license files for a given build rule and
-            all of its dependencies, you can use [buck query](https://buck2.build/docs/users/commands/query/)
+            all of its dependencies, you can use [bsmr query](https://oss.dedaluslabs.ai/bsmr/users/commands/query/)
         """,
         ),
     }
@@ -251,7 +251,7 @@ def _contacts_arg():
         ),
     }
 
-buck = struct(
+bsmr = struct(
     name_arg = _name_arg,
     deps_query_arg = _deps_query_arg,
     exec_os_type_arg = _exec_os_type_arg,

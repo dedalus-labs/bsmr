@@ -17,36 +17,36 @@
 
 import asyncio
 
-from bsmr.tests.e2e_util.api.buck import Buck
-from bsmr.tests.e2e_util.api.buck_result import ExitCodeV2
+from bsmr.tests.e2e_util.api.bsmr import Bsmr
+from bsmr.tests.e2e_util.api.bsmr_result import ExitCodeV2
 from bsmr.tests.e2e_util.asserts import expect_failure
-from bsmr.tests.e2e_util.buck_workspace import buck_test, env
+from bsmr.tests.e2e_util.bsmr_workspace import bsmr_test, env
 
 
-@buck_test()
-async def test_exit_code_build_success(buck: Buck) -> None:
-    result = await buck.build(":build_success")
+@bsmr_test()
+async def test_exit_code_build_success(bsmr: Bsmr) -> None:
+    result = await bsmr.build(":build_success")
     assert result.process.returncode == ExitCodeV2.SUCCESS.value
 
 
-@buck_test()
-async def test_exit_code_build_fail(buck: Buck) -> None:
+@bsmr_test()
+async def test_exit_code_build_fail(bsmr: Bsmr) -> None:
     # TODO(nga): check non-existing command
     # TODO(nga): check local vs RE
-    await expect_failure(buck.build(":build_fail"), exit_code=ExitCodeV2.USER_ERROR)
+    await expect_failure(bsmr.build(":build_fail"), exit_code=ExitCodeV2.USER_ERROR)
 
 
 # Deliberately cause a daemon connection failure.
-@buck_test()
-@env("BSMR_TEST_FAIL_BUCKD_AUTH", "true")
+@bsmr_test()
+@env("BSMR_TEST_FAIL_BSMRD_AUTH", "true")
 # This test case spawns a loose daemon that we can't connect to. On windows
 # this loose daemon will keep holding onto bsmr-out files after test case finishes
 # and prevent other processes from changing them, so set a termination timeout
 # of 20 seconds so that this loose daemon gets killed before test case finishes.
 @env("BSMR_TERMINATE_AFTER", "15")
-async def test_exit_code_fail_buckd_auth_for_unknown_reason(buck: Buck) -> None:
+async def test_exit_code_fail_bsmrd_auth_for_unknown_reason(bsmr: Bsmr) -> None:
     await expect_failure(
-        buck.build(":build_success"), exit_code=ExitCodeV2.CONNECT_ERROR
+        bsmr.build(":build_success"), exit_code=ExitCodeV2.CONNECT_ERROR
     )
     await asyncio.sleep(
         20

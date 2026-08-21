@@ -30,7 +30,7 @@ use bsmr_core::pattern::pattern_type::TargetPatternExtra;
 use bsmr_core::provider::label::ConfiguredProvidersLabel;
 use bsmr_core::soft_error;
 use bsmr_core::target::label::label::TargetLabel;
-use bsmr_error::BuckErrorContext;
+use bsmr_error::BsmrErrorContext;
 use bsmr_interpreter::types::target_label::StarlarkConfiguredTargetLabel;
 use bsmr_interpreter::types::target_label::StarlarkTargetLabel;
 use bsmr_node::load_patterns::MissingTargetBehavior;
@@ -621,7 +621,7 @@ impl<'v> TargetListExpr<'v, TargetNode> {
                         .for_each(|t| resolved.push(TargetExpr::Node(t))),
                         TargetListExpr::Iterable(_) => {
                             return Err(TargetExprError::NotATarget(item.value.to_repr()))
-                                .buck_error_context("list in a list");
+                                .bsmr_error_context("list in a list");
                         }
                     }
                 }

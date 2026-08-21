@@ -21,13 +21,13 @@ use bsmr_build_api::interpreter::rule_defs::cmd_args::value_as::ValueAsCommandLi
 use bsmr_build_api::interpreter::rule_defs::register_rule_defs;
 use bsmr_core::execution_types::executor_config::PathSeparatorKind;
 use bsmr_core::fs::artifact_path_resolver::ArtifactFs;
-use bsmr_core::fs::buck_out_path::BuckOutPathResolver;
+use bsmr_core::fs::output_path::OutputPathResolver;
 use bsmr_core::fs::project::ProjectRoot;
 use bsmr_core::fs::project_rel_path::ProjectRelativePathBuf;
 use bsmr_execute::artifact::fs::ExecutorFs;
 use bsmr_fs::paths::abs_norm_path::AbsNormPathBuf;
-use bsmr_hash::BuckHashMap;
-use bsmr_interpreter::types::regex::register_buck_regex;
+use bsmr_hash::BsmrHashMap;
+use bsmr_interpreter::types::regex::register_bsmr_regex;
 use bsmr_interpreter_for_build::interpreter::testing::Tester;
 use bsmr_interpreter_for_build::interpreter::testing::cells;
 use bsmr_interpreter_for_build::label::testing::label_creator;
@@ -43,8 +43,8 @@ fn artifact_fs() -> ArtifactFs {
     let cell_info = cells(None).unwrap();
     ArtifactFs::new(
         cell_info.1,
-        BuckOutPathResolver::new(ProjectRelativePathBuf::unchecked_new(
-            "bsmr-out/v2".to_owned(),
+        OutputPathResolver::new(ProjectRelativePathBuf::unchecked_new(
+            "bsmr-out/default".to_owned(),
         )),
         ProjectRoot::new(AbsNormPathBuf::try_from(std::env::current_dir().unwrap()).unwrap())
             .unwrap(),
@@ -55,7 +55,7 @@ fn get_command_line(value: Value) -> bsmr_error::Result<Vec<String>> {
     let fs = artifact_fs();
     let executor_fs = ExecutorFs::new(&fs, PathSeparatorKind::Unix);
     let mut cli = Vec::<String>::new();
-    let artifact_path_mapping = BuckHashMap::default();
+    let artifact_path_mapping = BsmrHashMap::default();
     let mut fmt = CommandLineBuilder::new(&mut cli, &artifact_path_mapping, &executor_fs);
 
     match ValueAsCommandLineLike::unpack_value(value)? {
@@ -77,7 +77,7 @@ pub(crate) fn command_line_stringifier(builder: &mut GlobalsBuilder) {
         let fs = artifact_fs();
         let executor_fs = ExecutorFs::new(&fs, PathSeparatorKind::Unix);
         let mut cli = Vec::<String>::new();
-        let artifact_path_mapping = BuckHashMap::default();
+        let artifact_path_mapping = BsmrHashMap::default();
         let mut fmt = CommandLineBuilder::new(&mut cli, &artifact_path_mapping, &executor_fs);
         ValueAsCommandLineLike::unpack_value_err(value)?
             .0
@@ -111,6 +111,6 @@ pub(crate) fn tester() -> bsmr_error::Result<Tester> {
     tester.additional_globals(artifactory);
     tester.additional_globals(label_creator);
     tester.additional_globals(register_rule_defs);
-    tester.additional_globals(register_buck_regex);
+    tester.additional_globals(register_bsmr_regex);
     Ok(tester)
 }

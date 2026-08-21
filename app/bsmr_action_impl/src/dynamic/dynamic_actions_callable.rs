@@ -21,7 +21,7 @@ use std::sync::LazyLock;
 use allocative::Allocative;
 use bsmr_build_api::interpreter::rule_defs::context::AnalysisActions;
 use bsmr_build_api::interpreter::rule_defs::provider::ty::abstract_provider::AbstractProvider;
-use bsmr_error::BuckErrorContext;
+use bsmr_error::BsmrErrorContext;
 use bsmr_error::internal_error;
 use dupe::Dupe;
 use starlark::any::ProvidesStaticType;
@@ -198,7 +198,7 @@ impl<'v> StarlarkValue<'v> for FrozenStarlarkDynamicActionsCallable {
                 for (name, attr_ty) in &self.attrs {
                     let value = attr_ty
                         .coerce(parser.next()?)
-                        .with_buck_error_context(|| format!("Error coercing attribute `{name}`"))?;
+                        .with_bsmr_error_context(|| format!("Error coercing attribute `{name}`"))?;
                     attr_values.push(value);
                 }
                 Ok(DynamicAttrValues {

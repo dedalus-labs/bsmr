@@ -22,7 +22,7 @@ use std::sync::atomic::AtomicU64;
 
 use allocative::Allocative;
 use bsmr_build_api_derive::internal_provider;
-use bsmr_error::BuckErrorContext;
+use bsmr_error::BsmrErrorContext;
 use bsmr_error::bsmr_error;
 use bsmr_error::internal_error;
 use either::Either;
@@ -145,7 +145,7 @@ fn iter_env<'v>(
             .ok_or_else(|| internal_error!("Invalid key in `env`: Expected a str, got: `{key}`"))?;
 
         let arglike = ValueAsCommandLineLike::unpack_value_err(value)
-            .with_buck_error_context(|| format!("Invalid value in `env` for key `{key}`"))?
+            .with_bsmr_error_context(|| format!("Invalid value in `env` for key `{key}`"))?
             .0;
 
         Ok((key, arglike))
@@ -193,7 +193,7 @@ fn validate_worker_info<'v, V>(info: &WorkerInfoGen<V>) -> bsmr_error::Result<()
 where
     V: ValueLike<'v>,
 {
-    let exe = StarlarkCmdArgs::try_from_value(info.exe.get().to_value()).with_buck_error_context(
+    let exe = StarlarkCmdArgs::try_from_value(info.exe.get().to_value()).with_bsmr_error_context(
         || {
             format!(
                 "Value for `exe` field is not a command line: `{}`",

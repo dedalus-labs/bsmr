@@ -2,7 +2,7 @@
 
 [<TIMESTAMP>] Starting new bsmr daemon...
 [<TIMESTAMP>] Connected to new bsmr daemon.
-[<TIMESTAMP>] Buck UI: https://www.internalfb.com/bsmr/<UUID>
+[<TIMESTAMP>] Bsmr UI: https://www.internalfb.com/bsmr/<UUID>
 [<TIMESTAMP>] RE Session: reSessionID-<UUID>
 [<TIMESTAMP>] Action failed: root//fail_action:fail_script (<unspecified>) (fail_script)
 [<TIMESTAMP>] Remote command returned non-zero exit code 1

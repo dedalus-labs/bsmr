@@ -1,3 +1,9 @@
+# ===----------------------------------------------------------------------===
+# Upstream-Source: facebook/buck2@1560aca2002865cd73d7cafb22c705cfb640b2bc
+# Modifications Copyright (c) 2026 Dedalus Labs, Inc. and its contributors
+# SPDX-License-Identifier: Apache-2.0
+# ===----------------------------------------------------------------------===
+
 # Copyright (c) Meta Platforms, Inc. and affiliates.
 #
 # This source code is dual-licensed under either the MIT license found in the
@@ -37,7 +43,7 @@ _TOOL_MODULE_PATH = os.path.join(
     os.path.dirname(__file__), "..", "sort_pre_dexed_files.py"
 )
 
-_DEFAULT_WEIGHT_LIMIT = 12 * 1024 * 1024  # 12 MiB, matches Buck default
+_DEFAULT_WEIGHT_LIMIT = 12 * 1024 * 1024  # 12 MiB, matches Bsmr default
 
 _DEFAULT_REF_COUNTS = {
     "method_ref_count": "0",

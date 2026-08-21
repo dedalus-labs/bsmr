@@ -8,7 +8,7 @@
 # Build support
 
 This cell contains the toolchains, generated third-party targets, and narrow
-compatibility layer required to build Buck itself.
+compatibility layer required to build Bsmr itself.
 
-Projects should use the [public prelude](https://buck2.build/docs/prelude/globals/)
-and [build APIs](https://buck2.build/docs/api/build/globals/) directly.
+Projects should use the [public prelude](https://oss.dedaluslabs.ai/bsmr/prelude/globals/)
+and [build APIs](https://oss.dedaluslabs.ai/bsmr/api/build/globals/) directly.

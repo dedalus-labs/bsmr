@@ -8,7 +8,7 @@
 use std::fmt::Write;
 
 use bsmr_core::cells::paths::CellRelativePathBuf;
-use bsmr_core::fs::buck_out_path::BSMR_OUTPUT_ROOT;
+use bsmr_core::fs::output_path::BSMR_OUTPUT_ROOT;
 use bsmr_core::package::package_relative_path::PackageRelativePath;
 use chrono::NaiveDate;
 use serde::Deserialize;

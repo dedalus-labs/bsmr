@@ -29,7 +29,7 @@ use bsmr_core;
 use bsmr_core::fs::project::ProjectRoot;
 use bsmr_core::fs::project_rel_path::ProjectRelativePath;
 use bsmr_core::soft_error;
-use bsmr_error::BuckErrorContext;
+use bsmr_error::BsmrErrorContext;
 use bsmr_error::bsmr_error;
 use bsmr_error::conversion::from_any_with_tag;
 use bsmr_fs::error::IoResultExt;
@@ -106,7 +106,7 @@ impl EdenConnectionManager {
 
         let rel_project_root = canon_project_root
             .strip_prefix(&canon_eden_mount)
-            .with_buck_error_context(|| {
+            .with_bsmr_error_context(|| {
                 format!(
                     "Eden root {canon_eden_mount} was not a prefix of the project root {canon_project_root}"
                 )
@@ -335,7 +335,7 @@ impl EdenConnector {
             let eden: Arc<dyn EdenService + Send + Sync> = thrift_builder(fb, &socket)?
                 .build_client(::edenfs_clients::make_EdenService)
                 .map_err(|e| from_any_with_tag(e, bsmr_error::ErrorTag::IoEdenThriftError))
-                .buck_error_context("Error constructing Eden client")?;
+                .bsmr_error_context("Error constructing Eden client")?;
 
             wait_until_mount_is_ready(eden.as_ref(), &mount).await?;
 

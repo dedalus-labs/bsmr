@@ -21,7 +21,7 @@ use std::time::Instant;
 use bsmr_common::init::ActionSuspendStrategy;
 use bsmr_common::init::ResourceControlConfig;
 use bsmr_events::daemon_id::DaemonId;
-use bsmr_hash::StdBuckHashMap;
+use bsmr_hash::StdBsmrHashMap;
 use dupe::Dupe;
 use tokio::sync::mpsc;
 use tokio::sync::oneshot;
@@ -138,7 +138,7 @@ pub(crate) struct SceneIdRef(u64);
 
 /// A scene is the unit of work that the scheduler manages.
 ///
-/// You should typically think of this as an action, but in principle it might be anything that buck
+/// You should typically think of this as an action, but in principle it might be anything that bsmr
 /// does which needs access to significant system resources for some amount of time.
 struct Scene {
     description: SceneDescription,
@@ -213,9 +213,9 @@ pub(crate) struct Scheduler {
     last_parallelism_increase_time: Instant,
     /// Current best estimate for the maximum amount of memory we can use.
     ///
-    /// This is approximately computed as the total memory in use by buck the last time we saw
+    /// This is approximately computed as the total memory in use by bsmr the last time we saw
     /// significant memory pressure. As a result it doesn't just reflect system-wide limits, but
-    /// also implicitly incorporates information about what processes other than buck are doing.
+    /// also implicitly incorporates information about what processes other than bsmr are doing.
     ///
     /// FIXME(JakobDegen): Is having a single value for this enough? Should we be averaging over the
     /// last N samples?
@@ -410,7 +410,7 @@ impl Scheduler {
     pub(crate) fn update(
         &mut self,
         memory_reading: MemoryReading,
-        scene_readings: StdBuckHashMap<SceneIdRef, SceneResourceReading>,
+        scene_readings: StdBsmrHashMap<SceneIdRef, SceneResourceReading>,
         now: Instant,
     ) {
         self.allprocs_memory_current
@@ -741,11 +741,11 @@ mod tests {
 
     use super::*;
 
-    struct UpdateBuilder(StdBuckHashMap<SceneIdRef, SceneResourceReading>);
+    struct UpdateBuilder(StdBsmrHashMap<SceneIdRef, SceneResourceReading>);
 
     impl UpdateBuilder {
         fn new() -> Self {
-            Self(StdBuckHashMap::default())
+            Self(StdBsmrHashMap::default())
         }
 
         fn add(self, scene_id: SceneIdRef, memory_current: u64) -> Self {
@@ -768,7 +768,7 @@ mod tests {
             self
         }
 
-        fn build(self) -> StdBuckHashMap<SceneIdRef, SceneResourceReading> {
+        fn build(self) -> StdBsmrHashMap<SceneIdRef, SceneResourceReading> {
             self.0
         }
     }

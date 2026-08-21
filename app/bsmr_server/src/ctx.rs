@@ -38,7 +38,7 @@ use bsmr_build_api::build_signals::create_build_signals;
 use bsmr_build_api::context::SetBuildContextData;
 use bsmr_build_api::keep_going::HasKeepGoing;
 use bsmr_build_api::materialize::HasMaterializationQueueTracker;
-use bsmr_build_api::spawner::BuckSpawner;
+use bsmr_build_api::spawner::BsmrSpawner;
 use bsmr_build_signals::env::CriticalPathBackendName;
 use bsmr_build_signals::env::EarlyCommandTimingBuilder;
 use bsmr_build_signals::env::FILE_WATCHER_WAIT;
@@ -100,8 +100,8 @@ use bsmr_fs::paths::abs_norm_path::AbsNormPathBuf;
 use bsmr_fs::paths::file_name::FileName;
 use bsmr_fs::paths::file_name::FileNameBuf;
 use bsmr_fs::working_dir::AbsWorkingDir;
-use bsmr_hash::StdBuckHashMap;
-use bsmr_hash::StdBuckHashSet;
+use bsmr_hash::StdBsmrHashMap;
+use bsmr_hash::StdBsmrHashSet;
 use bsmr_interpreter::dice::starlark_debug::SetStarlarkDebugger;
 use bsmr_interpreter::extra::InterpreterHostArchitecture;
 use bsmr_interpreter::extra::InterpreterHostPlatform;
@@ -120,7 +120,7 @@ use bsmr_server_ctx::ctx::PrivateStruct;
 use bsmr_server_ctx::ctx::ServerCommandContextTrait;
 use bsmr_server_ctx::stderr_output_guard::StderrOutputGuard;
 use bsmr_server_ctx::stderr_output_guard::StderrOutputWriter;
-use bsmr_server_starlark_debug::BuckStarlarkDebuggerHandle;
+use bsmr_server_starlark_debug::BsmrStarlarkDebuggerHandle;
 use bsmr_server_starlark_debug::create_debugger_handle;
 use bsmr_test::local_resource_registry::InitLocalResourceRegistry;
 use bsmr_util::arc_str::ArcS;
@@ -145,7 +145,7 @@ use crate::agent_host_guard::check_agent_host_guard;
 use crate::daemon::common::CommandExecutorFactory;
 use crate::daemon::common::get_default_executor_config;
 use crate::daemon::state::DaemonStateData;
-use crate::dice_tracker::BuckDiceTracker;
+use crate::dice_tracker::BsmrDiceTracker;
 use crate::heartbeat_guard::HeartbeatGuard;
 use crate::host_info;
 use crate::profile_patterns::FileWritingProfileEventListener;
@@ -181,7 +181,7 @@ pub struct BaseServerCommandContext {
     /// Removes this command from the set of active commands when dropped.
     pub _drop_guard: ActiveCommandDropGuard,
     /// Spawner
-    pub spawner: Arc<BuckSpawner>,
+    pub spawner: Arc<BsmrSpawner>,
 }
 
 /// ServerCommandContext provides access to the global daemon state and information about the calling client for
@@ -218,14 +218,14 @@ pub struct ServerCommandContext<'a> {
     /// the `bsmr profile` command.
     pub starlark_profiling_manager: StarlarkProfilingManager,
 
-    debugger_handle: Option<BuckStarlarkDebuggerHandle>,
+    debugger_handle: Option<BsmrStarlarkDebuggerHandle>,
 
     record_target_call_stacks: bool,
     skip_targets_with_duplicate_names: bool,
     disable_starlark_types: bool,
     unstable_typecheck: bool,
 
-    pub buck_out_dir: ProjectRelativePathBuf,
+    pub output_dir: ProjectRelativePathBuf,
     isolation_prefix: FileNameBuf,
 
     /// Common build options associated with this command.
@@ -360,7 +360,7 @@ impl<'a> ServerCommandContext<'a> {
             _re_connection_handle: re_connection_handle,
             cert_state,
             starlark_profiling_manager,
-            buck_out_dir: paths.buck_out_dir(),
+            output_dir: paths.output_dir(),
             isolation_prefix: paths.isolation.clone(),
             build_options: build_options.cloned(),
             record_target_call_stacks: client_context.target_call_stacks,
@@ -533,7 +533,7 @@ impl ServerCommandContext<'_> {
                 Ok(BsmrConfigBasedCells {
                     cell_resolver: new_configs.cell_resolver,
                     root_config: new_configs.root_config,
-                    config_paths: StdBuckHashSet::default(),
+                    config_paths: StdBsmrHashSet::default(),
                     external_data: (*dice_ctx.get_injected_external_bsmrconfig_data().await?)
                         .clone(),
                 })
@@ -552,7 +552,7 @@ impl ServerCommandContext<'_> {
 
     fn report_traced_config_paths(
         &self,
-        paths: &StdBuckHashSet<ConfigPath>,
+        paths: &StdBsmrHashSet<ConfigPath>,
     ) -> bsmr_error::Result<()> {
         if let Some(tracing_provider) = TracingIoProvider::from_io(&*self.base_context.daemon.io) {
             for config_path in paths {
@@ -644,7 +644,7 @@ impl DiceUpdater for DiceCommandUpdater<'_, '_> {
             Arc::new(ConcurrentTargetLabelInterner::default()),
         )?;
 
-        ctx.set_buck_out_path(Some(self.cmd_ctx.buck_out_dir.clone()))?;
+        ctx.set_output_path(Some(self.cmd_ctx.output_dir.clone()))?;
 
         let optional_validations = self
             .cmd_ctx
@@ -863,7 +863,7 @@ impl DiceCommandUpdater<'_, '_> {
             .dupe();
         let mut data = UserComputationData {
             data,
-            tracker: Arc::new(BuckDiceTracker::new(
+            tracker: Arc::new(BsmrDiceTracker::new(
                 self.cmd_ctx.events().dupe(),
                 Box::new(move || dice.core_state_queue_depth() as u64),
             )?),
@@ -997,14 +997,14 @@ impl DiceCommandUpdater<'_, '_> {
     }
 }
 
-struct ConfigMetadataHolder(StdBuckHashMap<String, String>);
+struct ConfigMetadataHolder(StdBsmrHashMap<String, String>);
 
 fn collect_config_metadata_into(config: &LegacyBsmrConfig, data: &mut UserComputationData) {
     // Facebook only: metadata collection for Scribe writes
     facebook_only();
 
     fn add_config(
-        map: &mut StdBuckHashMap<String, String>,
+        map: &mut StdBsmrHashMap<String, String>,
         cfg: &LegacyBsmrConfig,
         key: BsmrconfigKeyRef<'static>,
         field_name: &'static str,
@@ -1026,7 +1026,7 @@ fn collect_config_metadata_into(config: &LegacyBsmrConfig, data: &mut UserComput
         sample_json.get("normals")?.as_object().cloned()
     }
 
-    let mut metadata = StdBuckHashMap::default();
+    let mut metadata = StdBsmrHashMap::default();
 
     add_config(
         &mut metadata,
@@ -1038,8 +1038,8 @@ fn collect_config_metadata_into(config: &LegacyBsmrConfig, data: &mut UserComput
         "repository",
     );
 
-    // Buck1 honors a configuration field, `scuba.defaults`, by drawing values from the configuration value and
-    // inserting them verbatim into Scuba samples. Bessemer doesn't write to Scuba in the same way that Buck1
+    // Legacy honors a configuration field, `scuba.defaults`, by drawing values from the configuration value and
+    // inserting them verbatim into Scuba samples. Bessemer doesn't write to Scuba in the same way that Legacy
     // does, but metadata in this function indirectly makes its way to Scuba, so it makes sense to respect at
     // least some of the data within it.
     //
@@ -1203,7 +1203,7 @@ impl ServerCommandContextTrait for ServerCommandContext<'_> {
     }
 
     /// Gathers metadata to attach to events for when a command starts and stops.
-    async fn request_metadata(&self) -> bsmr_error::Result<StdBuckHashMap<String, String>> {
+    async fn request_metadata(&self) -> bsmr_error::Result<StdBsmrHashMap<String, String>> {
         // Facebook only: metadata collection for Scribe writes
         facebook_only();
 
@@ -1271,7 +1271,7 @@ impl ServerCommandContextTrait for ServerCommandContext<'_> {
     async fn config_metadata(
         &self,
         ctx: &mut DiceComputations<'_>,
-    ) -> bsmr_error::Result<StdBuckHashMap<String, String>> {
+    ) -> bsmr_error::Result<StdBsmrHashMap<String, String>> {
         ctx.per_transaction_data()
             .data
             .get::<ConfigMetadataHolder>()

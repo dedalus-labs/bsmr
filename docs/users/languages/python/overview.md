@@ -12,7 +12,7 @@ title: Python, uv, Ruff, and ty
 # Python, uv, Ruff, and ty
 
 BSMR builds conventional Python projects and uv workspaces directly from
-`pyproject.toml`. You do not need a `BUCK`, `BUILD.bsmr`, or handwritten
+`pyproject.toml`. You do not need a `BSMR`, `BUILD.bsmr`, or handwritten
 Starlark file for the conventional path. Standard Python metadata stays
 authoritative while BSMR lowers it into a private action graph.
 

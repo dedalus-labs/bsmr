@@ -21,17 +21,17 @@ import signal
 from collections.abc import Callable
 from pathlib import Path
 
-from bsmr.tests.e2e_util.api.buck import Buck
-from bsmr.tests.e2e_util.api.buck_result import BuckException, BuckResult, ExitCodeV2
+from bsmr.tests.e2e_util.api.bsmr import Bsmr
+from bsmr.tests.e2e_util.api.bsmr_result import BsmrException, BsmrResult, ExitCodeV2
 from bsmr.tests.e2e_util.api.process import Process
-from bsmr.tests.e2e_util.buck_workspace import buck_test
+from bsmr.tests.e2e_util.bsmr_workspace import bsmr_test
 from bsmr.tests.e2e_util.helper.utils import read_invocation_record
 
 
 async def _test_cancellation_helper(
-    buck: Buck,
+    bsmr: Bsmr,
     tmp_path: Path,
-    runner: Callable[[Buck, list[str]], Process[BuckResult, BuckException]],
+    runner: Callable[[Bsmr, list[str]], Process[BsmrResult, BsmrException]],
 ) -> None:
     """
     This test starts a test that writes its PID to a file then runs for 60
@@ -50,8 +50,8 @@ async def _test_cancellation_helper(
         "--unstable-write-invocation-record",
         str(record_path),
     ]
-    await buck.audit("providers", ":slow", *opts)
-    command = runner(buck, [*opts, "--local-only"])
+    await bsmr.audit("providers", ":slow", *opts)
+    command = runner(bsmr, [*opts, "--local-only"])
 
     command = await command.start()
 
@@ -85,15 +85,15 @@ async def _test_cancellation_helper(
     assert record["exit_result_name"] == "SIGNAL_INTERRUPT"
 
 
-@buck_test()
-async def test_cancellation(buck: Buck, tmp_path: Path) -> None:
+@bsmr_test()
+async def test_cancellation(bsmr: Bsmr, tmp_path: Path) -> None:
     await _test_cancellation_helper(
-        buck, tmp_path, lambda buck, opts: buck.build(*opts, ":slow")
+        bsmr, tmp_path, lambda bsmr, opts: bsmr.build(*opts, ":slow")
     )
 
 
-@buck_test()
-async def test_cancellation_bxl(buck: Buck, tmp_path: Path) -> None:
+@bsmr_test()
+async def test_cancellation_bxl(bsmr: Bsmr, tmp_path: Path) -> None:
     await _test_cancellation_helper(
-        buck, tmp_path, lambda buck, opts: buck.bxl(*opts, "//build.bxl:build")
+        bsmr, tmp_path, lambda bsmr, opts: bsmr.bxl(*opts, "//build.bxl:build")
     )

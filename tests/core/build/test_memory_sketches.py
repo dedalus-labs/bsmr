@@ -19,8 +19,8 @@ import os
 import subprocess
 from pathlib import Path
 
-from bsmr.tests.e2e_util.api.buck import Buck
-from bsmr.tests.e2e_util.buck_workspace import buck_test
+from bsmr.tests.e2e_util.api.bsmr import Bsmr
+from bsmr.tests.e2e_util.bsmr_workspace import bsmr_test
 
 
 def _get_sketch_cardinality(sketch_str: str) -> float:
@@ -88,7 +88,7 @@ def check_approx(actual: float, expected: float, tolerance: float = 0.10) -> Non
 
 
 async def _build_and_extract_sketches(
-    buck: Buck,
+    bsmr: Bsmr,
     tmp_path: Path,
     targets: list[str],
     sketch_field: str,
@@ -104,7 +104,7 @@ async def _build_and_extract_sketches(
     report = tmp_path / "build-report.json"
 
     # Build with sketch enabled
-    await buck.build(
+    await bsmr.build(
         *targets,
         "-c",
         f"{config_key}=true",
@@ -135,10 +135,10 @@ async def _build_and_extract_sketches(
 
 
 async def _get_retained_sketches(
-    buck: Buck, tmp_path: Path, targets: list[str]
+    bsmr: Bsmr, tmp_path: Path, targets: list[str]
 ) -> dict[str, str]:
     return await _build_and_extract_sketches(
-        buck,
+        bsmr,
         tmp_path,
         targets,
         "retained_analysis_memory_sketch",
@@ -147,10 +147,10 @@ async def _get_retained_sketches(
 
 
 async def _get_analysis_peak_sketches(
-    buck: Buck, tmp_path: Path, targets: list[str]
+    bsmr: Bsmr, tmp_path: Path, targets: list[str]
 ) -> dict[str, str]:
     return await _build_and_extract_sketches(
-        buck,
+        bsmr,
         tmp_path,
         targets,
         "peak_analysis_memory_sketch",
@@ -159,10 +159,10 @@ async def _get_analysis_peak_sketches(
 
 
 async def _get_load_peak_sketches(
-    buck: Buck, tmp_path: Path, targets: list[str]
+    bsmr: Bsmr, tmp_path: Path, targets: list[str]
 ) -> dict[str, str]:
     return await _build_and_extract_sketches(
-        buck,
+        bsmr,
         tmp_path,
         targets,
         "peak_load_memory_sketch",
@@ -175,8 +175,8 @@ async def _get_load_peak_sketches(
 # =============================================================================
 
 
-@buck_test()
-async def test_retained_analysis_memory_sketch(buck: Buck, tmp_path: Path) -> None:
+@bsmr_test()
+async def test_retained_analysis_memory_sketch(bsmr: Bsmr, tmp_path: Path) -> None:
     """
     Test that retained_analysis_memory_sketch is computed correctly.
 
@@ -184,13 +184,13 @@ async def test_retained_analysis_memory_sketch(buck: Buck, tmp_path: Path) -> No
     then verify the sketch cardinality matches the expected amount.
     """
     # target1 allocates 1M + shared_dep allocates 5M = ~6M total
-    sketches = await _get_retained_sketches(buck, tmp_path, ["//:target1"])
+    sketches = await _get_retained_sketches(bsmr, tmp_path, ["//:target1"])
     check_merged_cardinality([sketches["//:target1"]], 6_000_000)
 
 
-@buck_test()
+@bsmr_test()
 async def test_retained_analysis_memory_sketch_merging(
-    buck: Buck, tmp_path: Path
+    bsmr: Bsmr, tmp_path: Path
 ) -> None:
     """
     Test that sketch merging works correctly.
@@ -199,7 +199,7 @@ async def test_retained_analysis_memory_sketch_merging(
     their sketches gives the correct combined cardinality.
     """
     sketches = await _get_retained_sketches(
-        buck, tmp_path, ["//:target1", "//:target2"]
+        bsmr, tmp_path, ["//:target1", "//:target2"]
     )
 
     sketch1 = sketches["//:target1"]
@@ -214,9 +214,9 @@ async def test_retained_analysis_memory_sketch_merging(
     check_merged_cardinality([sketch1, sketch2], 7_500_000)
 
 
-@buck_test()
+@bsmr_test()
 async def test_retained_analysis_memory_sketch_bzl_globals(
-    buck: Buck, tmp_path: Path
+    bsmr: Bsmr, tmp_path: Path
 ) -> None:
     """
     Test that memory from bzl file globals is included in the sketch.
@@ -224,15 +224,15 @@ async def test_retained_analysis_memory_sketch_bzl_globals(
     Rules defined in bzl files can have global data that gets retained.
     This test verifies that such memory is reflected in the sketch.
     """
-    sketches = await _get_retained_sketches(buck, tmp_path, ["//:target_with_globals"])
+    sketches = await _get_retained_sketches(bsmr, tmp_path, ["//:target_with_globals"])
 
     # Verify global data memory is included (at least 1M from GLOBAL_DATA)
     check_merged_cardinality([sketches["//:target_with_globals"]], 1_000_000)
 
 
-@buck_test()
+@bsmr_test()
 async def test_retained_analysis_memory_sketch_daemon_restart(
-    buck: Buck, tmp_path: Path
+    bsmr: Bsmr, tmp_path: Path
 ) -> None:
     """
     Test that sketches are bitwise identical across daemon restarts.
@@ -240,13 +240,13 @@ async def test_retained_analysis_memory_sketch_daemon_restart(
     Build a target, kill the daemon, rebuild, and verify sketches are exactly equal.
     """
     # First build
-    sketches1 = await _get_retained_sketches(buck, tmp_path, ["//:target1"])
+    sketches1 = await _get_retained_sketches(bsmr, tmp_path, ["//:target1"])
 
     # Kill daemon
-    await buck.kill()
+    await bsmr.kill()
 
     # Second build after restart
-    sketches2 = await _get_retained_sketches(buck, tmp_path, ["//:target1"])
+    sketches2 = await _get_retained_sketches(bsmr, tmp_path, ["//:target1"])
 
     # Sketches should be bitwise identical
     assert sketches1["//:target1"] == sketches2["//:target1"], (
@@ -254,9 +254,9 @@ async def test_retained_analysis_memory_sketch_daemon_restart(
     )
 
 
-@buck_test()
+@bsmr_test()
 async def test_retained_analysis_memory_sketch_anon_targets(
-    buck: Buck, tmp_path: Path
+    bsmr: Bsmr, tmp_path: Path
 ) -> None:
     """
     Test that memory from anon targets is included in the sketch.
@@ -264,21 +264,21 @@ async def test_retained_analysis_memory_sketch_anon_targets(
     Anon targets allocate their own analysis memory which should be
     reflected in the parent target's sketch.
     """
-    sketches = await _get_retained_sketches(buck, tmp_path, ["//:target_with_anon"])
+    sketches = await _get_retained_sketches(bsmr, tmp_path, ["//:target_with_anon"])
 
     # The anon target allocates 500K + parent allocates 100K = ~600K
     check_merged_cardinality([sketches["//:target_with_anon"]], 600_000)
 
 
-@buck_test()
+@bsmr_test()
 async def test_retained_analysis_memory_sketch_disabled(
-    buck: Buck, tmp_path: Path
+    bsmr: Bsmr, tmp_path: Path
 ) -> None:
     """Test that sketch is not present when config is disabled."""
     report = tmp_path / "build-report.json"
 
     # Build without sketch config
-    await buck.build(
+    await bsmr.build(
         "//:target1",
         "--build-report",
         str(report),
@@ -302,8 +302,8 @@ async def test_retained_analysis_memory_sketch_disabled(
 # =============================================================================
 
 
-@buck_test()
-async def test_peak_analysis_memory_sketch(buck: Buck, tmp_path: Path) -> None:
+@bsmr_test()
+async def test_peak_analysis_memory_sketch(bsmr: Bsmr, tmp_path: Path) -> None:
     """
     Test that peak_analysis_memory_sketch is computed correctly.
 
@@ -311,12 +311,12 @@ async def test_peak_analysis_memory_sketch(buck: Buck, tmp_path: Path) -> None:
     allocate and retain all memory, peak ~= retained.
     """
     # target1 allocates 1M + shared_dep allocates 5M = ~6M total
-    sketches = await _get_analysis_peak_sketches(buck, tmp_path, ["//:target1"])
+    sketches = await _get_analysis_peak_sketches(bsmr, tmp_path, ["//:target1"])
     check_merged_cardinality([sketches["//:target1"]], 6_000_000)
 
 
-@buck_test()
-async def test_peak_analysis_memory_sketch_merging(buck: Buck, tmp_path: Path) -> None:
+@bsmr_test()
+async def test_peak_analysis_memory_sketch_merging(bsmr: Bsmr, tmp_path: Path) -> None:
     """
     Test that peak sketch merging works correctly.
 
@@ -324,7 +324,7 @@ async def test_peak_analysis_memory_sketch_merging(buck: Buck, tmp_path: Path) -
     their sketches gives the correct combined cardinality.
     """
     sketches = await _get_analysis_peak_sketches(
-        buck, tmp_path, ["//:target1", "//:target2"]
+        bsmr, tmp_path, ["//:target1", "//:target2"]
     )
 
     sketch1 = sketches["//:target1"]
@@ -339,13 +339,13 @@ async def test_peak_analysis_memory_sketch_merging(buck: Buck, tmp_path: Path) -
     check_merged_cardinality([sketch1, sketch2], 7_500_000)
 
 
-@buck_test()
-async def test_peak_analysis_memory_sketch_disabled(buck: Buck, tmp_path: Path) -> None:
+@bsmr_test()
+async def test_peak_analysis_memory_sketch_disabled(bsmr: Bsmr, tmp_path: Path) -> None:
     """Test that peak sketch is not present when config is disabled."""
     report = tmp_path / "build-report.json"
 
     # Build without peak sketch config
-    await buck.build(
+    await bsmr.build(
         "//:target1",
         "--build-report",
         str(report),
@@ -364,9 +364,9 @@ async def test_peak_analysis_memory_sketch_disabled(buck: Buck, tmp_path: Path) 
     )
 
 
-@buck_test()
+@bsmr_test()
 async def test_peak_analysis_memory_sketch_gte_retained(
-    buck: Buck, tmp_path: Path
+    bsmr: Bsmr, tmp_path: Path
 ) -> None:
     """
     Test that peak sketch cardinality >= retained sketch cardinality.
@@ -376,7 +376,7 @@ async def test_peak_analysis_memory_sketch_gte_retained(
     """
     report = tmp_path / "build-report.json"
 
-    await buck.build(
+    await bsmr.build(
         "//:target1",
         "-c",
         "bsmr.log_peak_analysis_memory_sketch=true",
@@ -405,9 +405,9 @@ async def test_peak_analysis_memory_sketch_gte_retained(
     )
 
 
-@buck_test()
+@bsmr_test()
 async def test_analysis_memory_peak_captures_temporaries(
-    buck: Buck, tmp_path: Path
+    bsmr: Bsmr, tmp_path: Path
 ) -> None:
     """
     Test that peak sketch captures temporary memory that is NOT retained.
@@ -418,7 +418,7 @@ async def test_analysis_memory_peak_captures_temporaries(
     """
     report = tmp_path / "build-report.json"
 
-    await buck.build(
+    await bsmr.build(
         "//:target_peak_only",
         "-c",
         "bsmr.log_peak_analysis_memory_sketch=true",
@@ -458,8 +458,8 @@ async def test_analysis_memory_peak_captures_temporaries(
 # =============================================================================
 
 
-@buck_test()
-async def test_peak_load_memory_sketch(buck: Buck, tmp_path: Path) -> None:
+@bsmr_test()
+async def test_peak_load_memory_sketch(bsmr: Bsmr, tmp_path: Path) -> None:
     """
     Test that peak_load_memory_sketch is computed and non-empty.
 
@@ -467,31 +467,31 @@ async def test_peak_load_memory_sketch(buck: Buck, tmp_path: Path) -> None:
     The rules.bzl file is loaded during analysis, so the sketch should
     have a non-zero cardinality.
     """
-    sketches = await _get_load_peak_sketches(buck, tmp_path, ["//:target1"])
+    sketches = await _get_load_peak_sketches(bsmr, tmp_path, ["//:target1"])
     # The bzl files are small, but loading them still allocates some memory.
     assert _get_sketch_cardinality(sketches["//:target1"]) > 0
 
 
-@buck_test()
-async def test_peak_load_memory_sketch_with_globals(buck: Buck, tmp_path: Path) -> None:
+@bsmr_test()
+async def test_peak_load_memory_sketch_with_globals(bsmr: Bsmr, tmp_path: Path) -> None:
     """
     Test that load peak sketch reflects memory from bzl file globals.
 
     rules_with_globals.bzl allocates ~1MB of global data at load time.
     This should be captured in the load peak sketch.
     """
-    sketches = await _get_load_peak_sketches(buck, tmp_path, ["//:target_with_globals"])
+    sketches = await _get_load_peak_sketches(bsmr, tmp_path, ["//:target_with_globals"])
     # The bzl file allocates ~1MB of globals at load time
     assert _get_sketch_cardinality(sketches["//:target_with_globals"]) >= 500_000
 
 
-@buck_test()
-async def test_peak_load_memory_sketch_disabled(buck: Buck, tmp_path: Path) -> None:
+@bsmr_test()
+async def test_peak_load_memory_sketch_disabled(bsmr: Bsmr, tmp_path: Path) -> None:
     """Test that load peak sketch is not present when config is disabled."""
     report = tmp_path / "build-report.json"
 
     # Build without load peak sketch config
-    await buck.build(
+    await bsmr.build(
         "//:target1",
         "--build-report",
         str(report),
@@ -510,12 +510,12 @@ async def test_peak_load_memory_sketch_disabled(buck: Buck, tmp_path: Path) -> N
     )
 
 
-@buck_test()
-async def test_load_and_analysis_peak_sketches(buck: Buck, tmp_path: Path) -> None:
+@bsmr_test()
+async def test_load_and_analysis_peak_sketches(bsmr: Bsmr, tmp_path: Path) -> None:
     """Test that load and analysis peak sketches separate load/analysis memory."""
     report = tmp_path / "build-report.json"
 
-    await buck.build(
+    await bsmr.build(
         "//:target_with_load_memory",
         "//:target1",
         "-c",

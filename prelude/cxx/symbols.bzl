@@ -1,3 +1,9 @@
+# ===----------------------------------------------------------------------===
+# Upstream-Source: facebook/buck2@1560aca2002865cd73d7cafb22c705cfb640b2bc
+# Modifications Copyright (c) 2026 Dedalus Labs, Inc. and its contributors
+# SPDX-License-Identifier: Apache-2.0
+# ===----------------------------------------------------------------------===
+
 # Copyright (c) Meta Platforms, Inc. and affiliates.
 #
 # This source code is dual-licensed under either the MIT license found in the
@@ -96,7 +102,7 @@ def _extract_symbol_names(
             # Grab only the symbol name field.
             ' | cut -d" " -f2 '
             +
-            # Strip off ABI Version (@...) when using llvm-nm to keep compat with buck1
+            # Strip off ABI Version (@...) when using llvm-nm to keep compat with legacy
             " | cut -d@ -f1 "
             +
             # Remove ASAN ODR generated symbols: __odr_asan_gen_*. They are

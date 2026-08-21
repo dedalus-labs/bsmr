@@ -17,7 +17,7 @@
 use bsmr_core::fs::project::ProjectRoot;
 use bsmr_core::fs::project_rel_path::ProjectRelativePath;
 use bsmr_core::fs::project_rel_path::ProjectRelativePathBuf;
-use bsmr_error::BuckErrorContext;
+use bsmr_error::BsmrErrorContext;
 use bsmr_error::bsmr_error;
 use bsmr_fs::error::IoResultExt;
 use bsmr_fs::fs_util;
@@ -37,7 +37,7 @@ impl CleanOutputPaths {
     ) -> bsmr_error::Result<()> {
         for path in paths {
             cleanup_path(fs, path)
-                .with_buck_error_context(|| format!("Error cleaning up output path `{path}`"))?;
+                .with_bsmr_error_context(|| format!("Error cleaning up output path `{path}`"))?;
         }
         Ok(())
     }

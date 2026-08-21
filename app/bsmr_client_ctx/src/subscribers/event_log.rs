@@ -21,7 +21,7 @@ use std::time::SystemTime;
 use async_trait::async_trait;
 use bsmr_common::argv::SanitizedArgv;
 use bsmr_event_log::write::WriteEventLog;
-use bsmr_events::BuckEvent;
+use bsmr_events::BsmrEvent;
 use bsmr_fs::paths::abs_norm_path::AbsNormPathBuf;
 use bsmr_fs::paths::abs_path::AbsPathBuf;
 use bsmr_fs::working_dir::AbsWorkingDir;
@@ -29,7 +29,7 @@ use bsmr_fs::working_dir::AbsWorkingDir;
 use crate::subscribers::subscriber::EventSubscriber;
 use crate::ticker::Tick;
 
-/// This EventLog lets us to events emitted by Buck and log them to a file. The events are
+/// This EventLog lets us to events emitted by Bsmr and log them to a file. The events are
 /// serialized as JSON and logged one per line.
 pub(crate) struct EventLog {
     writer: WriteEventLog,
@@ -69,13 +69,13 @@ impl EventSubscriber for EventLog {
         "event log"
     }
 
-    async fn handle_events(&mut self, events: &[Arc<BuckEvent>]) -> bsmr_error::Result<()> {
+    async fn handle_events(&mut self, events: &[Arc<BsmrEvent>]) -> bsmr_error::Result<()> {
         Ok(self.writer.write_events(events).await?)
     }
 
     async fn handle_tailer_stderr(&mut self, _stderr: &str) -> bsmr_error::Result<()> {
-        // TODO(nga): currently we mostly ignore buckd stderr.
-        //   It is very important to investigate crashes of buckd.
+        // TODO(nga): currently we mostly ignore bsmrd stderr.
+        //   It is very important to investigate crashes of bsmrd.
         //
         // Write interesting daemon errors, such as crashes, to the event log.
         Ok(())

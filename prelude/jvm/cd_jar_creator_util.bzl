@@ -67,8 +67,8 @@ def get_abi_generation_mode(
 # a bunch of nested structs and then use write_json to get a json-encoded
 # protobuf message.
 #
-# The definition is in xplat/toolchains/android/sdk/src/com/facebook/buck/cd/resources/proto/javacd.proto
-# and xplat/toolchains/android/sdk/src/com/facebook/buck/cd/resources/proto/kotlincd.proto and is, sadly,
+# The definition is in xplat/toolchains/android/sdk/src/com/dedalus/bsmr/cd/resources/proto/javacd.proto
+# and xplat/toolchains/android/sdk/src/com/dedalus/bsmr/cd/resources/proto/kotlincd.proto and is, sadly,
 # poorly documented.
 
 # Our protobuf format mostly encodes paths in RelPath/AbsPath structs with a single "path" field.
@@ -192,7 +192,7 @@ def get_source_only_abi_compiling_deps(compiling_deps_tset: [JavaCompilingDepsTS
 
 # buildifier: disable=unused-variable
 def encode_ap_params(annotation_processor_properties: AnnotationProcessorProperties, target_type: TargetType) -> [struct, None]:
-    # buck1 oddly only inspects annotation processors, not plugins for
+    # legacy oddly only inspects annotation processors, not plugins for
     # abi/source-only abi related things, even though the plugin rules
     # support the flags. we apply it to both.
     encoded_ap_params = None
@@ -202,7 +202,7 @@ def encode_ap_params(annotation_processor_properties: AnnotationProcessorPropert
             pluginProperties = [],
         )
         for ap in annotation_processor_properties.annotation_processors:
-            # We should also filter out non-abi-affecting APs for source-abi, but buck1 doesn't and so we have lots that depend on not filtering them there.
+            # We should also filter out non-abi-affecting APs for source-abi, but legacy doesn't and so we have lots that depend on not filtering them there.
             if target_type == TargetType("source_only_abi") and not ap.affects_abi:
                 continue
             if ap.deps or ap.processors:
@@ -303,11 +303,11 @@ def encode_base_jar_command(
         compileTimeClasspathPaths = compiling_classpath,
         compileTimeClasspathSnapshotPaths = compiling_classpath_snapshot,
         javaSrcs = srcs,
-        # We use "class" abi compatibility to match buck1 (other compatibility modes are used for abi verification.
+        # We use "class" abi compatibility to match legacy (other compatibility modes are used for abi verification.
         abiCompatibilityMode = encode_abi_generation_mode(AbiGenerationMode("class")),
         abiGenerationMode = encode_abi_generation_mode(command_abi_generation_mode(target_type, abi_generation_mode)),
         trackClassUsage = track_class_usage,
-        configuredBuckOut = "bsmr-out/v2",
+        configuredOutput = "bsmr-out/default",
         buildTargetValue = build_target_value,
         resourcesMap = [
             {
@@ -419,7 +419,7 @@ def prepare_cd_exe(
     non_worker_args = cmd_args([java, jvm_args, "-cp", compiler, "-jar", class_loader_bootstrapper, main_class])
 
     if local_only or not worker:
-        # buck doesn't support the case where remote_worker is provided but worker is not.
+        # bsmr doesn't support the case where remote_worker is provided but worker is not.
         if not worker:
             expect(remote_worker == None, "When worker is not provided, remote_worker must be None.")
         return RunInfo(args = non_worker_args), local_only

@@ -18,7 +18,7 @@ use std::slice;
 use std::vec;
 
 use allocative::Allocative;
-use bsmr_hash::BuckIndexSet;
+use bsmr_hash::BsmrIndexSet;
 use pagable::Pagable;
 
 /// It is a boxed slice, where all elements are unique.
@@ -37,9 +37,9 @@ impl<T> BoxSliceSet<T> {
     }
 }
 
-impl<T> From<BuckIndexSet<T>> for BoxSliceSet<T> {
+impl<T> From<BsmrIndexSet<T>> for BoxSliceSet<T> {
     #[inline]
-    fn from(set: BuckIndexSet<T>) -> BoxSliceSet<T> {
+    fn from(set: BsmrIndexSet<T>) -> BoxSliceSet<T> {
         BoxSliceSet(set.into_iter().collect())
     }
 }

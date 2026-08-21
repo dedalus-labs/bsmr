@@ -24,7 +24,7 @@ use bsmr_core::provider::label::ProvidersLabel;
 use bsmr_core::provider::label::ProvidersName;
 use bsmr_core::target::configured_target_label::ConfiguredTargetLabel;
 use bsmr_core::target::label::label::TargetLabel;
-use bsmr_error::BuckErrorContext;
+use bsmr_error::BsmrErrorContext;
 use derive_more::Display;
 use derive_more::From;
 use dupe::Dupe;
@@ -320,13 +320,13 @@ fn value_to_providers_name(subtarget_name: SubtargetNameArg) -> bsmr_error::Resu
             .items
             .into_iter()
             .map(|name| {
-                ProviderName::new(name).buck_error_context("for parameter `subtarget_name`")
+                ProviderName::new(name).bsmr_error_context("for parameter `subtarget_name`")
             })
             .collect::<bsmr_error::Result<Vec<_>>>()?,
         SubtargetNameArg::Str(str) => {
             vec![
                 ProviderName::new(str.to_owned())
-                    .buck_error_context("for parameter `subtarget_name`")?,
+                    .bsmr_error_context("for parameter `subtarget_name`")?,
             ]
         }
     };

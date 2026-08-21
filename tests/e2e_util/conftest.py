@@ -16,7 +16,7 @@
 import inspect
 
 import pytest
-from bsmr.tests.e2e_util.buck_workspace import buck  # noqa F401
+from bsmr.tests.e2e_util.bsmr_workspace import bsmr  # noqa F401
 
 
 def pytest_collection_modifyitems(items):
@@ -32,5 +32,5 @@ def pytest_collection_modifyitems(items):
 
 def pytest_configure(config):
     config.addinivalue_line(
-        "markers", "buck_test: used by buck_test to pass data to Buck fixtures"
+        "markers", "bsmr_test: used by bsmr_test to pass data to Bsmr fixtures"
     )

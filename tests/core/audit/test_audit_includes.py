@@ -19,12 +19,12 @@ import os
 import re
 from pathlib import Path
 
-from bsmr.tests.e2e_util.api.buck import Buck
-from bsmr.tests.e2e_util.api.buck_result import BuckResult
-from bsmr.tests.e2e_util.buck_workspace import buck_test
+from bsmr.tests.e2e_util.api.bsmr import Bsmr
+from bsmr.tests.e2e_util.api.bsmr_result import BsmrResult
+from bsmr.tests.e2e_util.bsmr_workspace import bsmr_test
 
 
-def _includes(output: BuckResult) -> list[str]:
+def _includes(output: BsmrResult) -> list[str]:
     return sorted(
         [
             re.sub(".*[/\\\\]", "", line)
@@ -34,24 +34,24 @@ def _includes(output: BuckResult) -> list[str]:
     )
 
 
-@buck_test()
-async def test_audit_includes(buck: Buck, tmp_path: Path) -> None:
+@bsmr_test()
+async def test_audit_includes(bsmr: Bsmr, tmp_path: Path) -> None:
     expected_includes = ["example.json", "incl.bzl", "prelude.bzl"]
     # Using project relative path.
-    output = await buck.audit("includes", "TARGETS.fixture")
+    output = await bsmr.audit("includes", "TARGETS.fixture")
     assert _includes(output) == expected_includes
 
     # Using project relative path when in a subdirectory.
-    await buck.audit("includes", "TARGETS.fixture", rel_cwd=Path("dir"))
+    await bsmr.audit("includes", "TARGETS.fixture", rel_cwd=Path("dir"))
     assert _includes(output) == expected_includes
 
     # Using absolute path.
-    output = await buck.audit("includes", f"{buck.cwd}/TARGETS.fixture")
+    output = await bsmr.audit("includes", f"{bsmr.cwd}/TARGETS.fixture")
     assert _includes(output) == expected_includes
 
     if os.name != "nt":
         # Create symlink to the project root in a temporary directory.
-        (tmp_path / "symlink").symlink_to(buck.cwd)
+        (tmp_path / "symlink").symlink_to(bsmr.cwd)
 
-        output = await buck.audit("includes", f"{tmp_path}/symlink/TARGETS.fixture")
+        output = await bsmr.audit("includes", f"{tmp_path}/symlink/TARGETS.fixture")
         assert _includes(output) == expected_includes

@@ -17,15 +17,15 @@
 
 import os
 
-from bsmr.tests.e2e_util.api.buck import Buck
-from bsmr.tests.e2e_util.api.buck_result import ExitCodeV2
+from bsmr.tests.e2e_util.api.bsmr import Bsmr
+from bsmr.tests.e2e_util.api.bsmr_result import ExitCodeV2
 from bsmr.tests.e2e_util.asserts import expect_failure
-from bsmr.tests.e2e_util.buck_workspace import buck_test, get_mode_from_platform
+from bsmr.tests.e2e_util.bsmr_workspace import bsmr_test, get_mode_from_platform
 
 
-@buck_test(inplace=True)
-async def test_targets(buck: Buck) -> None:
-    result = await buck.targets("root//tests/targets/commands:")
+@bsmr_test(inplace=True)
+async def test_targets(bsmr: Bsmr) -> None:
+    result = await bsmr.targets("root//tests/targets/commands:")
 
     targets = [
         "root//tests/targets/commands:dynamic",
@@ -37,10 +37,10 @@ async def test_targets(buck: Buck) -> None:
         assert target in result.stdout
 
 
-@buck_test(inplace=True)
-async def test_targets_errors(buck: Buck) -> None:
+@bsmr_test(inplace=True)
+async def test_targets_errors(bsmr: Bsmr) -> None:
     await expect_failure(
-        buck.targets(
+        bsmr.targets(
             "root//tests/targets/commands:",
             "root//tests/targets/non_existent_path:",
         ),
@@ -48,10 +48,10 @@ async def test_targets_errors(buck: Buck) -> None:
     )
 
 
-@buck_test(inplace=True)
-async def test_explicit_targets_errors(buck: Buck) -> None:
+@bsmr_test(inplace=True)
+async def test_explicit_targets_errors(bsmr: Bsmr) -> None:
     await expect_failure(
-        buck.targets(
+        bsmr.targets(
             "root//tests/targets/commands:notarealtarget",
         ),
         exit_code=ExitCodeV2.USER_ERROR,
@@ -59,9 +59,9 @@ async def test_explicit_targets_errors(buck: Buck) -> None:
     )
 
 
-@buck_test(inplace=True)
-async def test_targets_with_config_value(buck: Buck) -> None:
-    targets_enabled_result = await buck.targets(
+@bsmr_test(inplace=True)
+async def test_targets_with_config_value(bsmr: Bsmr) -> None:
+    targets_enabled_result = await bsmr.targets(
         "--config",
         "user.targets_enabled=true",
         "root//tests/targets/commands:",
@@ -71,7 +71,7 @@ async def test_targets_with_config_value(buck: Buck) -> None:
         in targets_enabled_result.stdout
     )
 
-    targets_disabled_result = await buck.targets(
+    targets_disabled_result = await bsmr.targets(
         "--config",
         "user.targets_enabled=false",
         "root//tests/targets/commands:",
@@ -81,7 +81,7 @@ async def test_targets_with_config_value(buck: Buck) -> None:
         not in targets_disabled_result.stdout
     )
 
-    targets_cell_rel_result = await buck.targets(
+    targets_cell_rel_result = await bsmr.targets(
         "--config",
         "upstream//user.targets_enabled=true",
         "root//tests/targets/commands:",
@@ -89,9 +89,9 @@ async def test_targets_with_config_value(buck: Buck) -> None:
     assert targets_cell_rel_result.stdout == targets_disabled_result.stdout
 
 
-@buck_test(inplace=True)
-async def test_targets_root_relative_from_fbcode(buck: Buck) -> None:
-    result = await buck.targets("root//tests/targets/commands:")
+@bsmr_test(inplace=True)
+async def test_targets_root_relative_from_fbcode(bsmr: Bsmr) -> None:
+    result = await bsmr.targets("root//tests/targets/commands:")
 
     targets = [
         "root//tests/targets/commands:dynamic",
@@ -103,14 +103,14 @@ async def test_targets_root_relative_from_fbcode(buck: Buck) -> None:
         assert target in result.stdout
 
 
-@buck_test(inplace=True)
-async def test_targets_show_output(buck: Buck) -> None:
+@bsmr_test(inplace=True)
+async def test_targets_show_output(bsmr: Bsmr) -> None:
     for target in [
         "root//tests/targets/rules/genrule:executable_helper",
         "root//tests/targets/rules/export_file:exported.txt",
     ]:
-        build_result = await buck.build(target, "--show-output")
-        targets_result = await buck.targets(target, "--show-output")
+        build_result = await bsmr.build(target, "--show-output")
+        targets_result = await bsmr.targets(target, "--show-output")
 
         build_report = build_result.get_build_report()
         build_report_outputs = [
@@ -124,18 +124,18 @@ async def test_targets_show_output(buck: Buck) -> None:
         assert show_output_outputs == build_report_outputs
 
 
-@buck_test(inplace=True)
-async def test_targets_show_output_subtargets(buck: Buck) -> None:
+@bsmr_test(inplace=True)
+async def test_targets_show_output_subtargets(bsmr: Bsmr) -> None:
     TARGET = "root//tests/targets/rules/cxx:my_cpp1"
     SUBTARGET = "compilation-database"
     TARGET_WITH_SUBTARGET = (
         "root//tests/targets/rules/cxx:my_cpp1[compilation-database]"
     )
 
-    build_result = await buck.build(
+    build_result = await bsmr.build(
         TARGET_WITH_SUBTARGET, "--show-output", get_mode_from_platform()
     )
-    targets_result = await buck.targets(
+    targets_result = await bsmr.targets(
         TARGET_WITH_SUBTARGET, "--show-output", get_mode_from_platform()
     )
 
@@ -152,14 +152,14 @@ async def test_targets_show_output_subtargets(buck: Buck) -> None:
     assert show_output_outputs == build_report_outputs
 
 
-@buck_test(inplace=True)
-async def test_targets_show_full_output(buck: Buck) -> None:
+@bsmr_test(inplace=True)
+async def test_targets_show_full_output(bsmr: Bsmr) -> None:
     for target in [
         "root//tests/targets/rules/genrule:executable_helper",
         "root//tests/targets/rules/export_file:exported.txt",
     ]:
-        build_result = await buck.build(target, "--show-full-output")
-        targets_result = await buck.targets(target, "--show-full-output")
+        build_result = await bsmr.build(target, "--show-full-output")
+        targets_result = await bsmr.targets(target, "--show-full-output")
 
         build_report = build_result.get_build_report()
         build_report_outputs = [

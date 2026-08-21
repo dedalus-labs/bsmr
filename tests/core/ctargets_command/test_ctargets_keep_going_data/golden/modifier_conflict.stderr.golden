@@ -2,6 +2,6 @@
 
 [<TIMESTAMP>] Starting new bsmr daemon...
 [<TIMESTAMP>] Connected to new bsmr daemon.
-[<TIMESTAMP>] Buck UI: https://www.internalfb.com/bsmr/<UUID>
+[<TIMESTAMP>] Bsmr UI: https://www.internalfb.com/bsmr/<UUID>
 [<TIMESTAMP>] Error parsing root//a
 [<TIMESTAMP>] Cannot specify modifiers with ?modifier syntax when global CLI modifiers are set with --modifier flag

@@ -27,7 +27,7 @@ use bsmr_common::file_ops::metadata::FileMetadata;
 use bsmr_common::file_ops::metadata::FileType;
 use bsmr_common::file_ops::metadata::TrackedFileDigest;
 use bsmr_directory::directory::entry::DirectoryEntry;
-use bsmr_error::BuckErrorContext;
+use bsmr_error::BsmrErrorContext;
 use bsmr_error::internal_error;
 use bsmr_fs::error::IoResultExt;
 use bsmr_fs::fs_util;
@@ -66,7 +66,7 @@ impl HashingInfo {
 
 // When cleaning up artifacts in bsmr-out, std::fs::remove_dir_all() (and
 // non-sudo `rm -rf`) is not able to list/remove files from directories without
-// the read/write/execute bits being set. Since buck and RE make no promises
+// the read/write/execute bits being set. Since bsmr and RE make no promises
 // about preserving anything other than the execution bit, we normalize the
 // **directory** permissions here on the outputs of local actions to allow for
 // removal later by operations like "prepare output directory" or "clean" or
@@ -137,7 +137,7 @@ pub async fn build_entry_from_disk(
         // removed later by the materializer). Ignoring failures here and
         // catching them later also allows the action executor to report stats
         // on the action execution prior to turnl If we returned an error here
-        // we'd cut that process short.  The BuckActionExecutor has a check for
+        // we'd cut that process short.  The BsmrActionExecutor has a check for
         // missing outputs. When `None` is returned here the output isn't listed
         // in the digested results, and that check will produce a missing
         // outputs error.
@@ -214,7 +214,7 @@ async fn build_dir_from_disk(
             .to_str()
             .ok_or_else(|| internal_error!("Filename is not UTF-8"))
             .and_then(|f| FileNameBuf::try_from(f.to_owned()))
-            .with_buck_error_context(|| {
+            .with_bsmr_error_context(|| {
                 format!("Invalid filename: {}", disk_path.clone().display())
             })?;
 
@@ -307,7 +307,7 @@ fn create_symlink(
             .ok_or_else(|| internal_error!("failed to get parent of {}", path.display()))?;
         let canonical_path = fs_util::canonicalize(directory_path)
             .categorize_internal()
-            .buck_error_context(format!(
+            .bsmr_error_context(format!(
                 "failed to get canonical path of {}",
                 directory_path.display()
             ))?;

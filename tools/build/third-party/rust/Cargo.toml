@@ -19,7 +19,7 @@
 [workspace]
 
 [package]
-# Pseudo-package whose dependencies are imported and buckified
+# Pseudo-package whose dependencies are imported and bsmrified
 name = "rust-third-party"
 version = "0.0.0"
 publish = false
@@ -52,7 +52,6 @@ bincode = { version = "2", features = ["serde"] }
 bitflags = "2.11.1"
 blake3 = { version = "=1.8.2", features = ["mmap", "rayon", "traits-preview"] } # Check overlay before updating
 bstr = { version = "1.10.0", features = ["serde", "std", "unicode"] }
-buck-resources = "1"
 bumpalo = { version = "3.20.2", features = ["allocator_api", "collections"] }
 byteorder = "1.5"
 bytemuck = { version = "1.25", features = ["const_zeroed", "derive", "min_const_generics", "must_cast", "nightly_portable_simd", "nightly_stdsimd"] }
@@ -249,6 +248,9 @@ triomphe = "0.1.11"
 twox-hash = "1.6.1"
 typed-arena = "2"
 unicode-segmentation = "1.13.2"
+uv-distribution-filename = "=0.0.71"
+uv-pep508 = "=0.0.71"
+uv-platform-tags = "=0.0.71"
 uuid = { version = "1.23.0", features = ["serde", "rng-getrandom", "v4", "v5", "v6", "v7", "v8"] }
 vt100 = "0.16.2"
 walkdir = "2.3"

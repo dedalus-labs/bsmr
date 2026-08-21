@@ -56,12 +56,12 @@ Result {
 }
 ```
 
-### Buck events
+### Bsmr events
 
-The rest of the event log contain `BuckEvent`s, which are either
+The rest of the event log contain `BsmrEvent`s, which are either
 `SpanStartEvent`s, `SpanEndEvent`s, or `InstantEvent`s.
 
-The `BuckEvent` format is roughly as follows:
+The `BsmrEvent` format is roughly as follows:
 
 ```python
 Event {

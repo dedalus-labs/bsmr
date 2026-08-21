@@ -18,28 +18,28 @@
 import json
 import os
 
-from bsmr.tests.e2e_util.api.buck import Buck
+from bsmr.tests.e2e_util.api.bsmr import Bsmr
 from bsmr.tests.e2e_util.asserts import expect_failure
-from bsmr.tests.e2e_util.buck_workspace import buck_test
+from bsmr.tests.e2e_util.bsmr_workspace import bsmr_test
 
 
-@buck_test(inplace=False, data_dir="bxl/simple", allow_soft_errors=True)
-async def test_bxl_fs_exists(buck: Buck) -> None:
-    await buck.bxl("//bxl:fs.bxl:exists", "--", "--root_path", str(buck.cwd))
+@bsmr_test(inplace=False, data_dir="bxl/simple", allow_soft_errors=True)
+async def test_bxl_fs_exists(bsmr: Bsmr) -> None:
+    await bsmr.bxl("//bxl:fs.bxl:exists", "--", "--root_path", str(bsmr.cwd))
 
 
-@buck_test(inplace=False, data_dir="bxl/simple", skip_for_os=["windows"])
-async def test_bxl_fs_exists_symlink(buck: Buck) -> None:
-    link_path = buck.cwd / "symlink/foo/bar"
+@bsmr_test(inplace=False, data_dir="bxl/simple", skip_for_os=["windows"])
+async def test_bxl_fs_exists_symlink(bsmr: Bsmr) -> None:
+    link_path = bsmr.cwd / "symlink/foo/bar"
     if not os.path.islink(link_path):
         os.unlink(link_path)
         os.symlink("../bar", link_path)
-    await buck.bxl("//bxl:fs.bxl:exists_symlink")
+    await bsmr.bxl("//bxl:fs.bxl:exists_symlink")
 
 
-@buck_test(inplace=False, data_dir="bxl/simple", allow_soft_errors=True)
-async def test_bxl_fs_list(buck: Buck) -> None:
-    result = await buck.bxl(
+@bsmr_test(inplace=False, data_dir="bxl/simple", allow_soft_errors=True)
+async def test_bxl_fs_list(bsmr: Bsmr) -> None:
+    result = await bsmr.bxl(
         "//bxl:fs.bxl:list_relative_path",
     )
 
@@ -48,8 +48,8 @@ async def test_bxl_fs_list(buck: Buck) -> None:
         "root//bin/kind",
     ]
 
-    result = await buck.bxl(
-        "//bxl:fs.bxl:list_absolute_path", "--", "--root_path", str(buck.cwd)
+    result = await bsmr.bxl(
+        "//bxl:fs.bxl:list_absolute_path", "--", "--root_path", str(bsmr.cwd)
     )
 
     assert result.stdout.splitlines() == [
@@ -57,7 +57,7 @@ async def test_bxl_fs_list(buck: Buck) -> None:
         "root//bin/kind",
     ]
 
-    result = await buck.bxl(
+    result = await bsmr.bxl(
         "//bxl:fs.bxl:list_source_artifact",
     )
 
@@ -66,7 +66,7 @@ async def test_bxl_fs_list(buck: Buck) -> None:
         "root//bin/kind/rules.bzl",
     ]
 
-    result = await buck.bxl(
+    result = await bsmr.bxl(
         "//bxl:fs.bxl:list_file_node",
     )
 
@@ -75,7 +75,7 @@ async def test_bxl_fs_list(buck: Buck) -> None:
         "root//bin/kind/rules.bzl",
     ]
 
-    result = await buck.bxl(
+    result = await bsmr.bxl(
         "//bxl:fs.bxl:list_dirs_only",
     )
 
@@ -83,7 +83,7 @@ async def test_bxl_fs_list(buck: Buck) -> None:
         "root//bin/kind",
     ]
 
-    result = await buck.bxl("//bxl:fs.bxl:list_cell_path")
+    result = await bsmr.bxl("//bxl:fs.bxl:list_cell_path")
 
     expected_output = [
         "root//bin/TARGETS.fixture",
@@ -96,24 +96,24 @@ async def test_bxl_fs_list(buck: Buck) -> None:
     assert output["//bin"] == expected_output
 
 
-@buck_test(inplace=False, data_dir="bxl/simple", allow_soft_errors=True)
-async def test_bxl_fs_is_file(buck: Buck) -> None:
-    await buck.bxl("//bxl:fs.bxl:is_file", "--", "--root_path", str(buck.cwd))
+@bsmr_test(inplace=False, data_dir="bxl/simple", allow_soft_errors=True)
+async def test_bxl_fs_is_file(bsmr: Bsmr) -> None:
+    await bsmr.bxl("//bxl:fs.bxl:is_file", "--", "--root_path", str(bsmr.cwd))
 
 
-@buck_test(inplace=False, data_dir="bxl/simple", allow_soft_errors=True)
-async def test_bxl_fs_is_dir(buck: Buck) -> None:
-    await buck.bxl("//bxl:fs.bxl:is_dir", "--", "--root_path", str(buck.cwd))
+@bsmr_test(inplace=False, data_dir="bxl/simple", allow_soft_errors=True)
+async def test_bxl_fs_is_dir(bsmr: Bsmr) -> None:
+    await bsmr.bxl("//bxl:fs.bxl:is_dir", "--", "--root_path", str(bsmr.cwd))
 
 
-@buck_test(
+@bsmr_test(
     inplace=False,
     data_dir="bxl/simple",
     skip_for_os=["windows"],
     allow_soft_errors=True,
 )
-async def test_bxl_fs_project_rel_path(buck: Buck) -> None:
-    result = await buck.bxl("//bxl:fs.bxl:project_rel_path")
+async def test_bxl_fs_project_rel_path(bsmr: Bsmr) -> None:
+    result = await bsmr.bxl("//bxl:fs.bxl:project_rel_path")
 
     assert result.stdout.splitlines() == [
         "bin/kind/TARGETS.fixture",
@@ -121,44 +121,44 @@ async def test_bxl_fs_project_rel_path(buck: Buck) -> None:
     ]
 
 
-@buck_test(
+@bsmr_test(
     inplace=False,
     data_dir="bxl/simple",
     skip_for_os=["windows"],
     allow_soft_errors=True,
 )
-async def test_bxl_fs_abs_path_unsafe(buck: Buck) -> None:
-    result = await buck.bxl("//bxl:fs.bxl:abs_path_unsafe")
+async def test_bxl_fs_abs_path_unsafe(bsmr: Bsmr) -> None:
+    result = await bsmr.bxl("//bxl:fs.bxl:abs_path_unsafe")
 
     assert result.stdout.splitlines() == [
-        str(buck.cwd / "bin/kind/TARGETS.fixture"),
-        str(buck.cwd / "bin/kind/rules.bzl"),
+        str(bsmr.cwd / "bin/kind/TARGETS.fixture"),
+        str(bsmr.cwd / "bin/kind/rules.bzl"),
     ]
 
 
-@buck_test(inplace=False, data_dir="bxl/simple", skip_for_os=["windows"])
-async def test_bxl_fs_source(buck: Buck) -> None:
-    await buck.bxl("//bxl:fs.bxl:source")
+@bsmr_test(inplace=False, data_dir="bxl/simple", skip_for_os=["windows"])
+async def test_bxl_fs_source(bsmr: Bsmr) -> None:
+    await bsmr.bxl("//bxl:fs.bxl:source")
 
     await expect_failure(
-        buck.bxl("//bxl:fs.bxl:source_invalid_path"),
+        bsmr.bxl("//bxl:fs.bxl:source_invalid_path"),
         stderr_regex="Inferred package path `root//fs` is not a valid package within the given file path `root//this/path/does/not/exist",
     )
     await expect_failure(
-        buck.bxl("//bxl:fs.bxl:source_invalid_hint"),
+        bsmr.bxl("//bxl:fs.bxl:source_invalid_hint"),
         stderr_regex="Inferred package path `root//bin/kind` is not a valid package within the given file path `root//fs/src/source",
     )
     await expect_failure(
-        buck.bxl("//bxl:fs.bxl:source_too_many_hints"),
+        bsmr.bxl("//bxl:fs.bxl:source_too_many_hints"),
         stderr_regex="Expected a single target hint, not an iterable",
     )
 
 
-@buck_test(
+@bsmr_test(
     inplace=False,
     data_dir="bxl/simple",
     skip_for_os=["windows"],
     allow_soft_errors=True,
 )
-async def test_bxl_file_set_ops(buck: Buck) -> None:
-    await buck.bxl("//bxl/fs.bxl:file_set_operations")
+async def test_bxl_file_set_ops(bsmr: Bsmr) -> None:
+    await bsmr.bxl("//bxl/fs.bxl:file_set_operations")

@@ -408,7 +408,7 @@ To fix this:
 Alternatively, if you don't need a self-contained release with bundled ERTS,
 set include_erts=False (or remove it, as False is the default).
 
-Documentation: https://buck2.build/docs/prelude/erlang/
+Documentation: https://oss.dedaluslabs.ai/bsmr/prelude/erlang/
 Target: {target}
 """.format(target = str(ctx.label))
         )

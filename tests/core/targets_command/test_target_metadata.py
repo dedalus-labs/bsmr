@@ -15,16 +15,16 @@
 # pyre-strict
 
 
-from bsmr.tests.e2e_util.api.buck import Buck
-from bsmr.tests.e2e_util.buck_workspace import buck_test
+from bsmr.tests.e2e_util.api.bsmr import Bsmr
+from bsmr.tests.e2e_util.bsmr_workspace import bsmr_test
 from bsmr.tests.e2e_util.helper.golden import golden
 
 
-@buck_test()
-async def test_metadata(buck: Buck) -> None:
+@bsmr_test()
+async def test_metadata(bsmr: Bsmr) -> None:
     stdout = (
-        await buck.targets(
-            "//...", "--keep-going", "-a", "^metadata|buck.package|name$"
+        await bsmr.targets(
+            "//...", "--keep-going", "-a", "^metadata|bsmr.package|name$"
         )
     ).stdout
     golden(

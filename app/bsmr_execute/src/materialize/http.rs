@@ -28,7 +28,7 @@ use bsmr_common::file_ops::metadata::FileDigest;
 use bsmr_common::file_ops::metadata::TrackedFileDigest;
 use bsmr_core::fs::project::ProjectRoot;
 use bsmr_core::fs::project_rel_path::ProjectRelativePath;
-use bsmr_error::BuckErrorContext;
+use bsmr_error::BsmrErrorContext;
 use bsmr_fs::error::IoResultExt;
 use bsmr_fs::fs_util;
 use bsmr_http::HttpClient;
@@ -381,7 +381,7 @@ async fn copy_and_hash(
 
         writer
             .write(&chunk)
-            .with_buck_error_context(|| format!("write({abs_path})"))
+            .with_bsmr_error_context(|| format!("write({abs_path})"))
             .map_err(HttpDownloadError::IoError)?;
 
         digester.update(&chunk);
@@ -393,7 +393,7 @@ async fn copy_and_hash(
     }
     writer
         .flush()
-        .with_buck_error_context(|| format!("flush({abs_path})"))
+        .with_bsmr_error_context(|| format!("flush({abs_path})"))
         .map_err(HttpDownloadError::IoError)?;
 
     let digest = digester.finalize();

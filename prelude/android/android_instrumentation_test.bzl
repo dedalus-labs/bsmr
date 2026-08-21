@@ -68,7 +68,7 @@ def android_instrumentation_test_impl(ctx: AnalysisContext):
             shared_libs = traverse_shared_library_info(shared_library_info, transformation_provider = None),
         )
 
-        env["BUCK_LD_SYMLINK_TREE"] = cxx_library_symlink_tree
+        env["BSMR_LD_SYMLINK_TREE"] = cxx_library_symlink_tree
     classpath_args.add(cmd_args(extra_classpath + classpath, delimiter = get_path_separator_for_exec_os(ctx)))
     cmd.append(at_argfile(actions = ctx.actions, name = "classpath_args_file", args = classpath_args))
 
@@ -270,7 +270,7 @@ def _compute_emulator_abi(labels: list[str]):
     else:  # len(emulator_abi_labels) == 1:
         return emulator_abi_labels[0].replace(ANDROID_EMULATOR_ABI_LABEL_PREFIX, "")
 
-# replicating the logic in https://fburl.com/code/1fqowxu4 to match buck1's behavior
+# replicating the logic in https://fburl.com/code/1fqowxu4 to match legacy's behavior
 def _compute_emulator_subplatform(labels: list[str]) -> str:
     emulator_subplatform_labels = [label for label in labels if label.startswith("re_emulator_")]
     expect(

@@ -9,7 +9,7 @@ title: Configurations
 <!-- ===----------------------------------------------------------------------=== -->
 
 
-Build configurations are how Buck models building the same target in
+Build configurations are how Bsmr models building the same target in
 different ways. This can include (but is not limited to):
 
 - Target architecture
@@ -20,7 +20,7 @@ different ways. This can include (but is not limited to):
 - Sanitizers
 - Passing arbitrary flags to build tools
 
-When building a target, Buck always builds it in a particular
+When building a target, Bsmr always builds it in a particular
 configuration. Build configurations are also sometimes called
 "platforms". While technically separate, those two concepts are almost
 identical.
@@ -230,7 +230,7 @@ how shortly), the build will just fail (unless
 
 When trying to build a set of targets using a
 [pattern](./target_pattern.md) (e.g. `//some/package:` or
-`//some/package/...`), Buck will simply ignore incompatible targets.
+`//some/package/...`), Bsmr will simply ignore incompatible targets.
 
 See the
 [reference documentation](../../api/build/Select/#target_compatible_with)
@@ -341,7 +341,7 @@ configuration is currently represented as a hash of its values (a
 
 ## Target platform vs execution platform
 
-Buck distinguishes two kinds of platforms: target platforms and execution
+Bsmr distinguishes two kinds of platforms: target platforms and execution
 platforms. Target platforms are the platforms where your code runs,
 and execution platforms are the ones used to run compilers and build tools
 during the build process.
@@ -351,7 +351,7 @@ OS, you will still need to build a compiler for Linux/Mac/Windows. You may
 also want to build the said compiler in release mode for faster
 builds even when building the Android app in development mode.
 
-For this reason, Buck requires both _target_ platforms and _execution_
+For this reason, Bsmr requires both _target_ platforms and _execution_
 platforms to be defined. The execution platforms are specified via the
 `build.execution_platforms` value in `.bsmr`.
 
@@ -363,7 +363,7 @@ Build configurations are uniquely identified by their hash, which is not
 human friendly.
 
 To determine what constraints are part of a configuration, run
-`bsmr cquery //...` sot that Buck will discover all existing
+`bsmr cquery //...` sot that Bsmr will discover all existing
 configurations, then run `bsmr audit configurations`.
 
 This will list all available configurations and print their composing
@@ -384,8 +384,8 @@ and `cquery` on `root//app/bsmr_core:bsmr_core`.
 > bsmr uquery -A '"root//app/bsmr_core:bsmr_core"'
 {
   "root//app/bsmr_core:bsmr_core": {
-    "buck.type": "rust_library",
-    "buck.package": "root//app/bsmr_core:TARGETS",
+    "bsmr.type": "rust_library",
+    "bsmr.package": "root//app/bsmr_core:TARGETS",
     "name": "bsmr_core",
     "visibility": [
       "PUBLIC"
@@ -423,10 +423,10 @@ and `cquery` on `root//app/bsmr_core:bsmr_core`.
 > bsmr cquery -A '"root//app/bsmr_core:bsmr_core"'
 {
   "root//app/bsmr_core:bsmr_core (ovr_config//platform/linux:<OMITTED>)": {
-    "buck.type": "rust_library",
-    "buck.package": "root//app/bsmr_core:TARGETS",
-    "buck.target_configuration": "ovr_config//platform/linux:<OMITTED>",
-    "buck.execution_platform": "root//platform/<OMITTED>",
+    "bsmr.type": "rust_library",
+    "bsmr.package": "root//app/bsmr_core:TARGETS",
+    "bsmr.target_configuration": "ovr_config//platform/linux:<OMITTED>",
+    "bsmr.execution_platform": "root//platform/<OMITTED>",
     "name": "bsmr_core",
     "visibility": [
       "PUBLIC"
@@ -442,8 +442,8 @@ and `cquery` on `root//app/bsmr_core:bsmr_core`.
 }
 ```
 
-The `cquery` output has additional `buck.target_configuration` and
-`buck.execution_platform` attributes which tell you what the target is
+The `cquery` output has additional `bsmr.target_configuration` and
+`bsmr.execution_platform` attributes which tell you what the target is
 being built for and what it's being built on, respectively. `uquery`
 doesn't have those.
 

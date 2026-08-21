@@ -17,17 +17,17 @@
 use bsmr_common::legacy_configs::configs::LegacyBsmrConfig;
 use bsmr_execute_impl::executors::local::ForkserverAccess;
 use bsmr_fs::paths::abs_norm_path::AbsNormPath;
-use bsmr_resource_control::buck_cgroup_tree::BuckCgroupTree;
+use bsmr_resource_control::cgroup_tree::BsmrCgroupTree;
 
 #[cfg(unix)]
 pub async fn maybe_launch_forkserver(
     root_config: &LegacyBsmrConfig,
     forkserver_state_dir: &AbsNormPath,
-    cgroup_tree: Option<&BuckCgroupTree>,
+    cgroup_tree: Option<&BsmrCgroupTree>,
 ) -> bsmr_error::Result<ForkserverAccess> {
     use bsmr_common::legacy_configs::key::BsmrconfigKeyRef;
     use bsmr_core::rollout_percentage::RolloutPercentage;
-    use bsmr_error::BuckErrorContext;
+    use bsmr_error::BsmrErrorContext;
 
     let config = root_config
         .parse::<RolloutPercentage>(BsmrconfigKeyRef {
@@ -40,7 +40,7 @@ pub async fn maybe_launch_forkserver(
         return Ok(ForkserverAccess::None);
     }
 
-    let exe = std::env::current_exe().buck_error_context("Cannot access current_exe")?;
+    let exe = std::env::current_exe().bsmr_error_context("Cannot access current_exe")?;
     Ok(ForkserverAccess::Client(
         bsmr_forkserver::launch::launch_forkserver(
             exe,
@@ -56,7 +56,7 @@ pub async fn maybe_launch_forkserver(
 pub async fn maybe_launch_forkserver(
     _root_config: &LegacyBsmrConfig,
     _forkserver_state_dir: &AbsNormPath,
-    _cgroup_tree: Option<&BuckCgroupTree>,
+    _cgroup_tree: Option<&BsmrCgroupTree>,
 ) -> bsmr_error::Result<ForkserverAccess> {
     Ok(ForkserverAccess::None)
 }

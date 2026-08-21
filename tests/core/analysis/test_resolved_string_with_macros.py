@@ -15,15 +15,15 @@
 # pyre-strict
 
 
-from bsmr.tests.e2e_util.api.buck import Buck
-from bsmr.tests.e2e_util.buck_workspace import buck_test
+from bsmr.tests.e2e_util.api.bsmr import Bsmr
+from bsmr.tests.e2e_util.bsmr_workspace import bsmr_test
 
 
-@buck_test()
-async def test_startswith(buck: Buck) -> None:
-    await buck.build("//:test_startswith")
+@bsmr_test()
+async def test_startswith(bsmr: Bsmr) -> None:
+    await bsmr.build("//:test_startswith")
 
 
-@buck_test()
-async def test_equality(buck: Buck) -> None:
-    await buck.build("//:test_equality")
+@bsmr_test()
+async def test_equality(bsmr: Bsmr) -> None:
+    await bsmr.build("//:test_equality")

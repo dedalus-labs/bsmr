@@ -19,56 +19,56 @@ from __future__ import annotations
 
 import json
 
-from bsmr.tests.e2e_util.api.buck import Buck
-from bsmr.tests.e2e_util.buck_workspace import buck_test
+from bsmr.tests.e2e_util.api.bsmr import Bsmr
+from bsmr.tests.e2e_util.bsmr_workspace import bsmr_test
 from bsmr.tests.e2e_util.helper.utils import random_string
 
 
-@buck_test()
-async def test_incremental_file_materialized(buck: Buck) -> None:
-    result = await buck.run("root//:plate", "-c", f"test.seed={random_string()}")
+@bsmr_test()
+async def test_incremental_file_materialized(bsmr: Bsmr) -> None:
+    result = await bsmr.run("root//:plate", "-c", f"test.seed={random_string()}")
     assert result.stdout == "0"
-    result = await buck.run("root//:plate", "-c", f"test.seed={random_string()}")
+    result = await bsmr.run("root//:plate", "-c", f"test.seed={random_string()}")
     assert result.stdout == "1"
 
 
-@buck_test()
-async def test_incremental_dir_materialized(buck: Buck) -> None:
-    result = await buck.run("root//:mate", "-c", f"test.seed={random_string()}")
+@bsmr_test()
+async def test_incremental_dir_materialized(bsmr: Bsmr) -> None:
+    result = await bsmr.run("root//:mate", "-c", f"test.seed={random_string()}")
     assert result.stdout == "0"
-    result = await buck.run("root//:mate", "-c", f"test.seed={random_string()}")
+    result = await bsmr.run("root//:mate", "-c", f"test.seed={random_string()}")
     assert result.stdout == "1"
 
 
-@buck_test()
-async def test_incremental_file_not_materialized(buck: Buck) -> None:
-    result = await buck.run("root//:flute", "-c", f"test.seed={random_string()}")
+@bsmr_test()
+async def test_incremental_file_not_materialized(bsmr: Bsmr) -> None:
+    result = await bsmr.run("root//:flute", "-c", f"test.seed={random_string()}")
     assert result.stdout == "0"
-    result = await buck.run("root//:flute", "-c", f"test.seed={random_string()}")
+    result = await bsmr.run("root//:flute", "-c", f"test.seed={random_string()}")
     assert result.stdout == "1"
 
 
-@buck_test()
-async def test_incremental_dir_not_materialized(buck: Buck) -> None:
-    result = await buck.run("root//:suite", "-c", f"test.seed={random_string()}")
+@bsmr_test()
+async def test_incremental_dir_not_materialized(bsmr: Bsmr) -> None:
+    result = await bsmr.run("root//:suite", "-c", f"test.seed={random_string()}")
     assert result.stdout == "0"
-    result = await buck.run("root//:suite", "-c", f"test.seed={random_string()}")
+    result = await bsmr.run("root//:suite", "-c", f"test.seed={random_string()}")
     assert result.stdout == "1"
 
 
-@buck_test()
-async def test_remote_cache_is_used(buck: Buck) -> None:
+@bsmr_test()
+async def test_remote_cache_is_used(bsmr: Bsmr) -> None:
     seed = random_string()
-    result = await buck.run("root//:plate", "-c", f"test.seed={seed}")
+    result = await bsmr.run("root//:plate", "-c", f"test.seed={seed}")
     assert result.stdout == "0"
-    result = await buck.run("root//:plate", "-c", f"test.seed={random_string()}")
+    result = await bsmr.run("root//:plate", "-c", f"test.seed={random_string()}")
     assert result.stdout == "1"
 
     # For the next build with already used seed we expect the action to be taken from the cache
-    result = await buck.run("root//:plate", "-c", f"test.seed={seed}")
+    result = await bsmr.run("root//:plate", "-c", f"test.seed={seed}")
     assert result.stdout == "0"
 
-    out = await buck.log("what-ran", "--format", "json")
+    out = await bsmr.log("what-ran", "--format", "json")
     out = [line.strip() for line in out.stdout.splitlines()]
     out = [json.loads(line) for line in out if line]
     assert len(out) == 1, "out should have 1 line: `{}`".format(out)

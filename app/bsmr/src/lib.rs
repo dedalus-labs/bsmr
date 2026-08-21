@@ -44,14 +44,14 @@ use bsmr_client::commands::test::TestCommand;
 use bsmr_client_ctx::agent_context::AgentContextEntry;
 use bsmr_client_ctx::agent_context::parse_agent_context;
 use bsmr_client_ctx::argfiles::expand_argv;
-use bsmr_client_ctx::client_ctx::BuckSubcommand;
+use bsmr_client_ctx::client_ctx::BsmrSubcommand;
 use bsmr_client_ctx::client_ctx::ClientCommandContext;
 use bsmr_client_ctx::client_metadata::ClientMetadata;
 use bsmr_client_ctx::client_metadata::parse_client_metadata;
-use bsmr_client_ctx::common::BuckArgMatches;
+use bsmr_client_ctx::common::BsmrArgMatches;
 use bsmr_client_ctx::exit_result::ExitResult;
 use bsmr_client_ctx::immediate_config::ImmediateConfigContext;
-use bsmr_client_ctx::version::BuckVersion;
+use bsmr_client_ctx::version::BsmrVersion;
 use bsmr_cmd_audit_client::AuditCommand;
 use bsmr_cmd_debug_client::DebugCommand;
 use bsmr_cmd_log_client::LogCommand;
@@ -62,11 +62,11 @@ use bsmr_common::invocation_roots::get_invocation_paths_result;
 use bsmr_core::bsmr_env;
 use bsmr_core::bsmr_env_name;
 use bsmr_data::ErrorReport;
-use bsmr_error::BuckErrorContext;
+use bsmr_error::BsmrErrorContext;
 use bsmr_error::ErrorTag;
 use bsmr_error::ExitCode;
 use bsmr_error::bsmr_error;
-use bsmr_error::conversion::clap::buck_error_clap_parser;
+use bsmr_error::conversion::clap::bsmr_error_clap_parser;
 use bsmr_event_observer::verbosity::Verbosity;
 use bsmr_fs::paths::file_name::FileNameBuf;
 use bsmr_util::threads::thread_spawn_scoped;
@@ -84,7 +84,7 @@ pub mod error_reporting;
 pub mod process_context;
 
 fn parse_isolation_dir(s: &str) -> bsmr_error::Result<FileNameBuf> {
-    FileNameBuf::try_from(s.to_owned()).buck_error_context("isolation dir must be a directory name")
+    FileNameBuf::try_from(s.to_owned()).bsmr_error_context("isolation dir must be a directory name")
 }
 
 /// Options of `bsmr` command, before subcommand.
@@ -98,15 +98,15 @@ struct BeforeSubcommandOptions {
     /// The isolation directory also influences the output paths provided by Bessemer,
     /// and as a result using a non-default isolation dir will cause cache misses (and slower builds).
     #[clap(
-        value_parser = buck_error_clap_parser(parse_isolation_dir),
-        env("BUCK_ISOLATION_DIR"),
+        value_parser = bsmr_error_clap_parser(parse_isolation_dir),
+        env("BSMR_ISOLATION_DIR"),
         long,
         global = true,
-        default_value="v2"
+        default_value="default"
     )]
     isolation_dir: FileNameBuf,
 
-    /// How verbose buck should be while logging.
+    /// How verbose bsmr should be while logging.
     ///
     /// Values:
     /// 0 = Quiet, errors only;
@@ -122,8 +122,8 @@ struct BeforeSubcommandOptions {
         long = "verbose",
         default_value = "1",
         global = true,
-        env = bsmr_env_name!("BUCK_VERBOSE"),
-        value_parser = buck_error_clap_parser(Verbosity::try_from_cli)
+        env = bsmr_env_name!("BSMR_VERBOSE"),
+        value_parser = bsmr_error_clap_parser(Verbosity::try_from_cli)
     )]
     verbosity: Verbosity,
 
@@ -134,7 +134,7 @@ struct BeforeSubcommandOptions {
     /// Metadata key-value pairs to inject into Bessemer's logging. Client metadata must be of the
     /// form `key=value`, where `key` is a snake_case identifier, and will be sent to backend
     /// datasets.
-    #[clap(long, global = true, value_parser = buck_error_clap_parser(parse_client_metadata))]
+    #[clap(long, global = true, value_parser = bsmr_error_clap_parser(parse_client_metadata))]
     client_metadata: Vec<ClientMetadata>,
 
     /// Agent context key=value pairs for telemetry.
@@ -143,23 +143,23 @@ struct BeforeSubcommandOptions {
     /// Examples:
     ///   --agent-context intent=fix,attempt=2,prior_error=missing_target
     ///   --agent-context intent=build --agent-context attempt=1
-    #[clap(long, global = true, value_delimiter = ',', value_parser = buck_error_clap_parser(parse_agent_context))]
+    #[clap(long, global = true, value_delimiter = ',', value_parser = bsmr_error_clap_parser(parse_agent_context))]
     agent_context: Vec<AgentContextEntry>,
 
-    /// Do not launch a daemon process, run buck server in client process.
+    /// Do not launch a daemon process, run bsmr server in client process.
     ///
-    /// Note even when running in no-buckd mode, it still writes state files.
-    /// In particular, this command effectively kills buckd process
+    /// Note even when running in no-bsmrd mode, it still writes state files.
+    /// In particular, this command effectively kills bsmrd process
     /// running with the same isolation directory.
     ///
     /// This is an unsupported option used only for development work.
-    #[clap(env("BSMR_NO_BUCKD"), long, global(true), hide(true))]
-    // Env var is BSMR_NO_BUCKD instead of NO_BUCKD env var from buck1 because no buckd
+    #[clap(env("BSMR_NO_BSMRD"), long, global(true), hide(true))]
+    // Env var is BSMR_NO_BSMRD instead of NO_BSMRD env var from legacy because no bsmrd
     // is not supported for production work for bsmr and lots of places already set
-    // NO_BUCKD=1 for buck1.
-    no_buckd: bool,
+    // NO_BSMRD=1 for legacy.
+    no_daemon: bool,
 
-    /// Print buck wrapper help.
+    /// Print bsmr wrapper help.
     #[clap(skip)] // @oss-enable
     // @oss-disable: #[clap(long)]
     help_wrapper: bool,
@@ -179,7 +179,7 @@ fn help() -> &'static str {
 #[clap(
     name = "bsmr",
     about(Some(help())),
-    version(BuckVersion::get_version_for_clap()),
+    version(BsmrVersion::get_version_for_clap()),
     styles = cli_style::get_styles(),
 )]
 pub(crate) struct Opt {
@@ -212,7 +212,7 @@ impl Opt {
         self,
         process: ProcessContext<'_>,
         immediate_config: &ImmediateConfigContext,
-        matches: BuckArgMatches<'_>,
+        matches: BsmrArgMatches<'_>,
         argv: Argv,
     ) -> ExitResult {
         let subcommand_matches = matches.unwrap_subcommand();
@@ -237,7 +237,7 @@ pub fn exec(process: ProcessContext<'_>) -> ExitResult {
         &mut immediate_config,
         &cwd,
     )
-    .buck_error_context("Error expanding argsfiles")?;
+    .bsmr_error_context("Error expanding argsfiles")?;
 
     let argv = Argv {
         argv: process.shared.args.to_vec(),
@@ -356,7 +356,7 @@ impl ParsedArgv {
         self.opt.exec(
             process,
             immediate_config,
-            BuckArgMatches::from_clap(&self.matches, &expanded_args),
+            BsmrArgMatches::from_clap(&self.matches, &expanded_args),
             self.argv,
         )
     }
@@ -422,7 +422,7 @@ impl CommandKind {
         self,
         process: ProcessContext<'_>,
         immediate_config: &ImmediateConfigContext,
-        matches: BuckArgMatches<'_>,
+        matches: BsmrArgMatches<'_>,
         argv: Argv,
         common_opts: BeforeSubcommandOptions,
     ) -> ExitResult {
@@ -471,12 +471,12 @@ impl CommandKind {
         common_opts: BeforeSubcommandOptions,
         process: ProcessContext<'_>,
         immediate_config: &ImmediateConfigContext,
-        matches: BuckArgMatches<'_>,
+        matches: BsmrArgMatches<'_>,
         argv: Argv,
         paths: InvocationPathsResult,
     ) -> ExitResult {
-        if common_opts.no_buckd {
-            // `no_buckd` can't work in a client-only binary
+        if common_opts.no_daemon {
+            // `no_daemon` can't work in a client-only binary
             if let Some(res) = ExitResult::retry_command_with_full_binary()? {
                 return res;
             }
@@ -494,9 +494,9 @@ impl CommandKind {
 
         let runtime = runtime.get_or_init()?;
 
-        let start_in_process_daemon = if common_opts.no_buckd {
+        let start_in_process_daemon = if common_opts.no_daemon {
             #[cfg(not(client_only))]
-            let v = bsmr_daemon::no_buckd::start_in_process_daemon(
+            let v = bsmr_daemon::no_daemon::start_in_process_daemon(
                 immediate_config.daemon_startup_config()?,
                 paths.clone().get_result()?,
                 runtime,

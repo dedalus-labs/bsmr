@@ -1,3 +1,9 @@
+# ===----------------------------------------------------------------------===
+# Upstream-Source: facebook/buck2@1560aca2002865cd73d7cafb22c705cfb640b2bc
+# Modifications Copyright (c) 2026 Dedalus Labs, Inc. and its contributors
+# SPDX-License-Identifier: Apache-2.0
+# ===----------------------------------------------------------------------===
+
 # Copyright (c) Meta Platforms, Inc. and affiliates.
 #
 # This source code is dual-licensed under either the MIT license found in the
@@ -16,7 +22,7 @@ load("@prelude//:validation_deps.bzl", "VALIDATION_DEPS_ATTR_NAME")
 load("@prelude//android:build_only_native_code.bzl", "is_build_only_native_code")
 load("@prelude//android:configuration.bzl", "is_building_android_binary_attr")
 load("@prelude//decls:test_common.bzl", "test_common")
-load(":common.bzl", "AnnotationProcessingTool", "SourceAbiVerificationMode", "TestType", "buck", "prelude_rule")
+load(":common.bzl", "AnnotationProcessingTool", "SourceAbiVerificationMode", "TestType", "bsmr", "prelude_rule")
 load(":java_rules.bzl", "dex_min_sdk_version")
 load(":jvm_common.bzl", "jvm_common")
 load(":re_test_common.bzl", "re_test_common")
@@ -151,7 +157,7 @@ kotlin_library = prelude_rule(
         | jvm_common.javac()
         | jvm_common.enable_used_classes()
         | jvm_common.classic_java_content_based_paths()
-        | buck.labels_arg()
+        | bsmr.labels_arg()
         | jvm_common.abi_generation_mode()
         | {
             "extra_arguments": attrs.list(attrs.string(), default = []),
@@ -175,13 +181,13 @@ kotlin_library = prelude_rule(
             "_build_only_native_code": attrs.default_only(attrs.bool(default = is_build_only_native_code())),
             "_dex_min_sdk_version": attrs.option(attrs.int(), default = dex_min_sdk_version()),
             "_dex_toolchain": toolchains_common.dex(),
-            "_exec_os_type": buck.exec_os_type_arg(),
+            "_exec_os_type": bsmr.exec_os_type_arg(),
             "_is_building_android_binary": is_building_android_binary_attr(),
             "_java_toolchain": toolchains_common.java(),
             "_kotlin_toolchain": toolchains_common.kotlin(),
         }
-        | buck.licenses_arg()
-        | buck.contacts_arg()
+        | bsmr.licenses_arg()
+        | bsmr.contacts_arg()
         | jvm_common.plugins()
         | validation_common.attrs_validators_arg()
     ),
@@ -197,7 +203,7 @@ kotlin_test = prelude_rule(
     further = None,
     attrs = (
         # @unsorted-dict-items
-        buck.inject_test_env_arg()
+        bsmr.inject_test_env_arg()
         | {
             "resources": attrs.list(
                 attrs.source(),
@@ -223,7 +229,7 @@ kotlin_test = prelude_rule(
             """,
             ),
         }
-        | buck.test_label_arg()
+        | bsmr.test_label_arg()
         | {
             "deps": attrs.list(
                 attrs.dep(),
@@ -244,9 +250,9 @@ kotlin_test = prelude_rule(
             """,
             ),
         }
-        | buck.run_test_separately_arg(run_test_separately_type = attrs.bool(default = False))
+        | bsmr.run_test_separately_arg(run_test_separately_type = attrs.bool(default = False))
         | re_test_common.test_args()
-        | buck.test_rule_timeout_ms()
+        | bsmr.test_rule_timeout_ms()
         | {
             "vm_args": attrs.list(
                 attrs.arg(),
@@ -309,14 +315,14 @@ kotlin_test = prelude_rule(
             "use_dependency_order_classpath": attrs.option(attrs.bool(), default = None),
             "use_jvm_abi_gen": attrs.option(attrs.bool(), default = None),
             "_build_only_native_code": attrs.default_only(attrs.bool(default = is_build_only_native_code())),
-            "_exec_os_type": buck.exec_os_type_arg(),
+            "_exec_os_type": bsmr.exec_os_type_arg(),
             "_is_building_android_binary": attrs.default_only(attrs.bool(default = False)),
             "_java_test_toolchain": toolchains_common.java_test(),
             "_java_toolchain": toolchains_common.java(),
             "_kotlin_toolchain": toolchains_common.kotlin(),
         }
-        | buck.licenses_arg()
-        | buck.contacts_arg()
+        | bsmr.licenses_arg()
+        | bsmr.contacts_arg()
         | test_common.attributes()
     ),
 )

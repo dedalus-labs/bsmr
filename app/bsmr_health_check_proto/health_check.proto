@@ -20,7 +20,7 @@ import "google/protobuf/duration.proto";
 import "google/protobuf/timestamp.proto";
 import "data.proto";
 
-package buck.health_check;
+package bsmr.health_check;
 
 message Empty {};
 
@@ -29,11 +29,11 @@ message Empty {};
 // overheads.
 message HealthCheckContextEvent {
   oneof data {
-    buck.data.ParsedTargetPatterns parsed_target_patterns = 1;
-    buck.data.CommandStartWithTraceId command_start = 2;
+    bsmr.data.ParsedTargetPatterns parsed_target_patterns = 1;
+    bsmr.data.CommandStartWithTraceId command_start = 2;
     string branched_from_revision = 3;
     bool has_excess_cache_misses = 4;
-    buck.data.SystemInfo experiment_configurations = 5;
+    bsmr.data.SystemInfo experiment_configurations = 5;
     uint64 test_slow_build_threshold_secs = 6;
   }
 }

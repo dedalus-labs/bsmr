@@ -15,47 +15,47 @@
 # pyre-strict
 
 
-from bsmr.tests.e2e_util.api.buck import Buck
-from bsmr.tests.e2e_util.buck_workspace import buck_test
+from bsmr.tests.e2e_util.api.bsmr import Bsmr
+from bsmr.tests.e2e_util.bsmr_workspace import bsmr_test
 
 
-@buck_test()
-async def test_get_package_path(buck: Buck) -> None:
-    await buck.bxl(
+@bsmr_test()
+async def test_get_package_path(bsmr: Bsmr) -> None:
+    await bsmr.bxl(
         "//package.bxl:get_package_path",
     )
 
 
-@buck_test()
-async def test_read_package_value(buck: Buck) -> None:
-    await buck.bxl("//package.bxl:read_package_value")
+@bsmr_test()
+async def test_read_package_value(bsmr: Bsmr) -> None:
+    await bsmr.bxl("//package.bxl:read_package_value")
 
 
-@buck_test()
-async def test_read_package_value_from_string(buck: Buck) -> None:
-    await buck.bxl("//package.bxl:read_package_value_from_string")
+@bsmr_test()
+async def test_read_package_value_from_string(bsmr: Bsmr) -> None:
+    await bsmr.bxl("//package.bxl:read_package_value_from_string")
 
 
-@buck_test()
-async def test_read_override_package_value(buck: Buck) -> None:
-    await buck.bxl("//package.bxl:read_override_package_value")
+@bsmr_test()
+async def test_read_override_package_value(bsmr: Bsmr) -> None:
+    await bsmr.bxl("//package.bxl:read_override_package_value")
 
 
-@buck_test()
-async def test_read_package_value_not_found(buck: Buck) -> None:
-    await buck.bxl("//package.bxl:read_package_value_not_found")
+@bsmr_test()
+async def test_read_package_value_not_found(bsmr: Bsmr) -> None:
+    await bsmr.bxl("//package.bxl:read_package_value_not_found")
 
 
-@buck_test()
-async def test_read_package_visibility(buck: Buck) -> None:
-    await buck.bxl("//package.bxl:read_package_visibility")
+@bsmr_test()
+async def test_read_package_visibility(bsmr: Bsmr) -> None:
+    await bsmr.bxl("//package.bxl:read_package_visibility")
 
 
-@buck_test()
-async def test_read_package_within_view(buck: Buck) -> None:
-    await buck.bxl("//package.bxl:read_package_within_view")
+@bsmr_test()
+async def test_read_package_within_view(bsmr: Bsmr) -> None:
+    await bsmr.bxl("//package.bxl:read_package_within_view")
 
 
-@buck_test()
-async def test_read_package_visibility_cap(buck: Buck) -> None:
-    await buck.bxl("//package.bxl:read_package_visibility_cap")
+@bsmr_test()
+async def test_read_package_visibility_cap(bsmr: Bsmr) -> None:
+    await bsmr.bxl("//package.bxl:read_package_visibility_cap")

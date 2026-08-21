@@ -11,8 +11,8 @@ def _audit_output_action_exists_impl(ctx):
     target = ctx.configured_targets(label)
     build_result = ctx.build(target)
     artifact = build_result.values()[0].artifacts()[0]
-    buck_out = get_path_without_materialization(artifact, ctx)
-    action = ctx.audit().output(buck_out)
+    output = get_path_without_materialization(artifact, ctx)
+    action = ctx.audit().output(output)
 
     asserts.equals(action.owner(), target.label)
     asserts.equals(action.outputs()[0].basename, "foo.txt")
@@ -38,8 +38,8 @@ audit_content_based_output_action_exists = bxl_main(
 )
 
 def _audit_output_config_not_match_impl(ctx):
-    buck_out = "bsmr-out/v2/gen/root/aaaabbbbccccdddd/__with_output__/foo.txt"
-    output = ctx.audit().output(buck_out, "root//:someplat")
+    output = "bsmr-out/default/gen/root/aaaabbbbccccdddd/__with_output__/foo.txt"
+    output = ctx.audit().output(output, "root//:someplat")
     asserts.equals(str(output), "root//:with_output")
 
 audit_output_config_not_match = bxl_main(

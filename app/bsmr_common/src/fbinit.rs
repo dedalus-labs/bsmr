@@ -26,7 +26,7 @@ fn run_init() -> FacebookInit {
     {
         use gflags::GflagValue;
 
-        // There are two sources of log spew when building bsmr with Buck and linking against fbcode:
+        // There are two sources of log spew when building bsmr with Bsmr and linking against fbcode:
         //   1. folly/logging/xlog, which can be configured via a special configuration string, which we use to
         //      log only critical-level logs. https://github.com/facebook/folly/blob/master/folly/logging/docs/Config.md
         //   2. google log (glog), which is older but still used, which can configured using a flag at runtime.

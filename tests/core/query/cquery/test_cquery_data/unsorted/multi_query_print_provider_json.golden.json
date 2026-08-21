@@ -3,7 +3,7 @@
 {
   "root//bin:the_binary": {
     "root//bin:the_binary (root//platforms:platform1#<HASH>)": {
-      "buck.providers": {
+      "bsmr.providers": {
         "DefaultInfo": {
           "sub_targets": {},
           "default_outputs": [],
@@ -24,7 +24,7 @@
   },
   "//lib:lib1": {
     "root//lib:lib1 (root//platforms:platform1#<HASH>)": {
-      "buck.providers": {
+      "bsmr.providers": {
         "DefaultInfo": {
           "sub_targets": {},
           "default_outputs": [],

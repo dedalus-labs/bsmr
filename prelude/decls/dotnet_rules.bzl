@@ -1,3 +1,9 @@
+# ===----------------------------------------------------------------------===
+# Upstream-Source: facebook/buck2@1560aca2002865cd73d7cafb22c705cfb640b2bc
+# Modifications Copyright (c) 2026 Dedalus Labs, Inc. and its contributors
+# SPDX-License-Identifier: Apache-2.0
+# ===----------------------------------------------------------------------===
+
 # Copyright (c) Meta Platforms, Inc. and affiliates.
 #
 # This source code is dual-licensed under either the MIT license found in the
@@ -11,7 +17,7 @@
 # the generated docs, and so those should be verified to be accurate and
 # well-formatted (and then delete this TODO)
 
-load(":common.bzl", "buck", "prelude_rule")
+load(":common.bzl", "bsmr", "prelude_rule")
 
 FrameworkVersion = ["net35", "net40", "net45", "net46"]
 
@@ -22,7 +28,7 @@ csharp_library = prelude_rule(
          and dependencies by invoking csc.
     """,
     examples = """
-        For more examples, check out our [integration tests](https://github.com/facebook/buck/tree/dev/test/com/facebook/buck/rust/testdata/).
+        For more examples, check out our [integration tests](https://github.com/dedalus/bsmr/tree/dev/test/com/dedalus/bsmr/rust/testdata/).
 
         ```
         csharp_library(
@@ -102,9 +108,9 @@ csharp_library = prelude_rule(
             """,
             ),
         }
-        | buck.licenses_arg()
-        | buck.labels_arg()
-        | buck.contacts_arg()
+        | bsmr.licenses_arg()
+        | bsmr.labels_arg()
+        | bsmr.contacts_arg()
     ),
 )
 
@@ -144,9 +150,9 @@ prebuilt_dotnet_library = prelude_rule(
             """
             ),
         }
-        | buck.licenses_arg()
-        | buck.labels_arg()
-        | buck.contacts_arg()
+        | bsmr.licenses_arg()
+        | bsmr.labels_arg()
+        | bsmr.contacts_arg()
     ),
 )
 

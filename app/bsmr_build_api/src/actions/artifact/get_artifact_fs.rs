@@ -32,12 +32,12 @@ pub trait GetArtifactFs {
 #[async_trait]
 impl GetArtifactFs for DiceComputations<'_> {
     async fn get_artifact_fs(&mut self) -> bsmr_error::Result<ArtifactFs> {
-        let buck_out_path_resolver = self.get_buck_out_path().await?;
+        let output_path_resolver = self.get_output_path().await?;
         let project_filesystem = self.global_data().get_io_provider().project_root().dupe();
-        let buck_path_resolver = self.get_cell_resolver().await?;
+        let build_path_resolver = self.get_cell_resolver().await?;
         Ok(ArtifactFs::new(
-            buck_path_resolver,
-            buck_out_path_resolver,
+            build_path_resolver,
+            output_path_resolver,
             project_filesystem,
         ))
     }

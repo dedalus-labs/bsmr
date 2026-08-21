@@ -32,7 +32,7 @@ use bsmr_cli_proto::targets_request::TargetHashGraphType;
 use bsmr_common::dice::cells::HasCellResolver;
 use bsmr_common::pattern::parse_from_cli::parse_patterns_from_cli_args;
 use bsmr_core::pattern::pattern_type::TargetPatternExtra;
-use bsmr_error::BuckErrorContext;
+use bsmr_error::BsmrErrorContext;
 use bsmr_error::internal_error;
 use bsmr_server_ctx::ctx::ServerCommandContextTrait;
 use bsmr_server_ctx::global_cfg_options::global_cfg_options_from_client_context;
@@ -102,7 +102,7 @@ fn outputter<'a, W: Write + Send + 'a>(
     let (output_type, output): (_, Box<dyn Compressor>) = match &request.output {
         None => (OutputType::Stdout, Box::new(UncompressedCompressor(stdout))),
         Some(file) => {
-            let file = BufWriter::new(File::create(file).with_buck_error_context(|| {
+            let file = BufWriter::new(File::create(file).with_bsmr_error_context(|| {
                 format!("Failed to open file `{file}` for `targets` output ")
             })?);
             (OutputType::File, Box::new(UncompressedCompressor(file)))
@@ -110,7 +110,7 @@ fn outputter<'a, W: Write + Send + 'a>(
     };
 
     let compression = Compression::try_from(request.compression)
-        .internal_error("buck cli should send valid compression type")?;
+        .internal_error("bsmr cli should send valid compression type")?;
     let output = match compression {
         Compression::Uncompressed => output,
         Compression::Gzip => Box::new(GzEncoder::new(output, Default::default())),
@@ -216,7 +216,7 @@ async fn targets_with_output(
             if other.streaming {
                 let formatter = create_formatter(request, other)?;
                 let hashing = match TargetHashGraphType::try_from(other.target_hash_graph_type)
-                    .expect("buck cli should send valid target hash graph type")
+                    .expect("bsmr cli should send valid target hash graph type")
                 {
                     TargetHashGraphType::None => None,
                     _ => Some(other.target_hash_use_fast_hash),

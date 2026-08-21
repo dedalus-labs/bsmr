@@ -18,7 +18,7 @@ use bsmr_cli_proto::trace_io_request;
 use bsmr_cli_proto::trace_io_response;
 use bsmr_common::file_ops::metadata::RawSymlink;
 use bsmr_common::io::trace::TracingIoProvider;
-use bsmr_error::BuckErrorContext;
+use bsmr_error::BsmrErrorContext;
 use bsmr_events::dispatch::span_async;
 use bsmr_server_ctx::commands::command_end;
 use bsmr_server_ctx::ctx::ServerCommandContextTrait;
@@ -68,15 +68,15 @@ async fn build_response_with_trace(
     provider: &TracingIoProvider,
 ) -> bsmr_error::Result<bsmr_cli_proto::TraceIoResponse> {
     // Materialize bsmr-out paths so they can be archived.
-    let buck_out_entries: Vec<_> = provider.trace().buck_out_entries();
+    let output_entries: Vec<_> = provider.trace().output_entries();
     context
         .materializer()
-        .ensure_materialized(buck_out_entries.clone())
+        .ensure_materialized(output_entries.clone())
         .await
-        .buck_error_context("Error materializing bsmr-out paths for trace")?;
+        .bsmr_error_context("Error materializing bsmr-out paths for trace")?;
 
     let mut entries = provider.trace().project_entries();
-    entries.extend(buck_out_entries);
+    entries.extend(output_entries);
 
     let mut relative_symlinks = Vec::new();
     let mut external_symlinks = Vec::new();

@@ -22,7 +22,7 @@ use std::time::Duration;
 
 use assert_matches::assert_matches;
 use async_trait::async_trait;
-use bsmr_error::BuckErrorContext;
+use bsmr_error::BsmrErrorContext;
 use bsmr_error::bsmr_error;
 use bsmr_error::internal_error;
 use bsmr_util::process::async_background_command;
@@ -110,7 +110,7 @@ impl WatchmanInstance {
         child
             .kill()
             .await
-            .buck_error_context("Failed to kill Watchman")?;
+            .bsmr_error_context("Failed to kill Watchman")?;
 
         // Everything went well. Remove the child so we don't log on Drop.
         self.child.take();
@@ -129,7 +129,7 @@ impl Drop for WatchmanInstance {
         // If we get here, something went wrong and we didn't stop Watchman properly. Log debug
         // info.
         eprintln!("WatchmanInstance did not exit cleanly!");
-        let log = std::fs::read_to_string(&self.log).with_buck_error_context(|| {
+        let log = std::fs::read_to_string(&self.log).with_bsmr_error_context(|| {
             format!("Failed to read log file at {}", self.log.display())
         });
         match log {
@@ -177,7 +177,7 @@ async fn spawn_watchman(watchman_dir: &Path) -> bsmr_error::Result<WatchmanInsta
 
     wait_for_watchman(&watchman_sock)
         .await
-        .buck_error_context("Waiting for Watchman to start")?;
+        .bsmr_error_context("Waiting for Watchman to start")?;
 
     Ok(WatchmanInstance {
         child: Some(watchman),

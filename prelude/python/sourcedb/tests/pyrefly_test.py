@@ -33,12 +33,12 @@ def strip_prefix(path: str) -> str:
         catch_all_stub_marker = "/catch_all_sourcedb_stubs/"
         if catch_all_stub_marker in path:
             return (
-                "bsmr-out/v2/gen/prelude/<more generated path output>/out/"
+                "bsmr-out/default/gen/prelude/<more generated path output>/out/"
                 + "catch_all_sourcedb_stubs/"
                 + path.split(catch_all_stub_marker, 1)[1]
             )
         path = Path(path)
-        return f"bsmr-out/v2/gen/prelude/<more generated path output>/out/{path.name}"
+        return f"bsmr-out/default/gen/prelude/<more generated path output>/out/{path.name}"
     elif PATH_PREFIX in str(path):
         return PATH_PREFIX + str(path).split(PATH_PREFIX)[1]
     else:
@@ -139,7 +139,7 @@ class DB:
         return json.dumps(dataclasses.asdict(self), indent=2, sort_keys=True)
 
 
-def query_buck(test_target: str) -> Any:
+def query_bsmr(test_target: str) -> Any:
     result = subprocess.run(
         [
             "bsmr",
@@ -221,7 +221,7 @@ def main() -> None:
     )
     args = parser.parse_args()
 
-    actual = DB.from_json(query_buck(args.test_target))
+    actual = DB.from_json(query_bsmr(args.test_target))
 
     if args.generate:
         text = actual.to_json()

@@ -14,13 +14,13 @@
 
 # pyre-strict
 
-from bsmr.tests.e2e_util.api.buck import Buck
-from bsmr.tests.e2e_util.buck_workspace import buck_test
+from bsmr.tests.e2e_util.api.bsmr import Bsmr
+from bsmr.tests.e2e_util.bsmr_workspace import bsmr_test
 from bsmr.tests.e2e_util.helper.utils import random_string, read_what_ran
 
 
-@buck_test()
-async def test_stable_action_digest_with_deterministic_paths(buck: Buck) -> None:
+@bsmr_test()
+async def test_stable_action_digest_with_deterministic_paths(bsmr: Bsmr) -> None:
     args = [
         "-c",
         "test.local_enabled=false",
@@ -29,8 +29,8 @@ async def test_stable_action_digest_with_deterministic_paths(buck: Buck) -> None
         "//:test",
     ]
 
-    await buck.test(*args)
-    first_what_ran = await read_what_ran(buck)
+    await bsmr.test(*args)
+    first_what_ran = await read_what_ran(bsmr)
     first_digests = [
         entry["reproducer"]["details"]["digest"]
         for entry in first_what_ran
@@ -38,8 +38,8 @@ async def test_stable_action_digest_with_deterministic_paths(buck: Buck) -> None
     ]
     assert len(first_digests) == 1, "Expected one test.run entry"
 
-    await buck.test(*args)
-    second_what_ran = await read_what_ran(buck)
+    await bsmr.test(*args)
+    second_what_ran = await read_what_ran(bsmr)
     second_digests = [
         entry["reproducer"]["details"]["digest"]
         for entry in second_what_ran
@@ -52,9 +52,9 @@ async def test_stable_action_digest_with_deterministic_paths(buck: Buck) -> None
     )
 
 
-@buck_test()
-async def test_stress_runs_have_different_action_digests(buck: Buck) -> None:
-    await buck.test(
+@bsmr_test()
+async def test_stress_runs_have_different_action_digests(bsmr: Bsmr) -> None:
+    await bsmr.test(
         "-c",
         "test.local_enabled=false",
         "-c",
@@ -64,7 +64,7 @@ async def test_stress_runs_have_different_action_digests(buck: Buck) -> None:
         "--stress-runs",
         "2",
     )
-    what_ran = await read_what_ran(buck)
+    what_ran = await read_what_ran(bsmr)
     test_runs = [entry for entry in what_ran if entry["reason"] == "test.run"]
     assert len(test_runs) == 2, (
         f"Expected exactly 2 test.run entries for stress runs, got {len(test_runs)}"
@@ -76,8 +76,8 @@ async def test_stress_runs_have_different_action_digests(buck: Buck) -> None:
     )
 
 
-@buck_test()
-async def test_remote_test_execution_cached(buck: Buck) -> None:
+@bsmr_test()
+async def test_remote_test_execution_cached(bsmr: Bsmr) -> None:
     args = [
         "-c",
         "test.local_enabled=false",
@@ -86,10 +86,10 @@ async def test_remote_test_execution_cached(buck: Buck) -> None:
         "//:cacheable_test",
     ]
 
-    await buck.test(*args)
+    await bsmr.test(*args)
 
-    await buck.test(*args)
-    second_what_ran = await read_what_ran(buck, "--emit-cache-queries")
+    await bsmr.test(*args)
+    second_what_ran = await read_what_ran(bsmr, "--emit-cache-queries")
     second_test_runs = [
         entry
         for entry in second_what_ran
@@ -101,8 +101,8 @@ async def test_remote_test_execution_cached(buck: Buck) -> None:
     )
 
 
-@buck_test()
-async def test_remote_test_execution_not_cached_for_stress_runs(buck: Buck) -> None:
+@bsmr_test()
+async def test_remote_test_execution_not_cached_for_stress_runs(bsmr: Bsmr) -> None:
     args = [
         "-c",
         "test.local_enabled=false",
@@ -114,10 +114,10 @@ async def test_remote_test_execution_not_cached_for_stress_runs(buck: Buck) -> N
         "2",
     ]
 
-    await buck.test(*args)
+    await bsmr.test(*args)
 
-    await buck.test(*args)
-    what_ran = await read_what_ran(buck)
+    await bsmr.test(*args)
+    what_ran = await read_what_ran(bsmr)
     test_runs = [entry for entry in what_ran if entry["reason"] == "test.run"]
     assert len(test_runs) == 2, (
         f"Expected exactly 2 test.run entries for stress runs, got {len(test_runs)}"
@@ -132,8 +132,8 @@ async def test_remote_test_execution_not_cached_for_stress_runs(buck: Buck) -> N
         )
 
 
-@buck_test()
-async def test_local_test_execution_not_cached(buck: Buck) -> None:
+@bsmr_test()
+async def test_local_test_execution_not_cached(bsmr: Bsmr) -> None:
     seed = random_string()
     args = [
         "-c",
@@ -145,10 +145,10 @@ async def test_local_test_execution_not_cached(buck: Buck) -> None:
         "//:cacheable_test",
     ]
 
-    await buck.test(*args)
+    await bsmr.test(*args)
 
-    await buck.test(*args)
-    second_what_ran = await read_what_ran(buck)
+    await bsmr.test(*args)
+    second_what_ran = await read_what_ran(bsmr)
     second_test_runs = [
         entry for entry in second_what_ran if entry["reason"] == "test.run"
     ]
@@ -160,9 +160,9 @@ async def test_local_test_execution_not_cached(buck: Buck) -> None:
     )
 
 
-@buck_test()
+@bsmr_test()
 async def test_remote_test_execution_not_cached_with_no_remote_cache(
-    buck: Buck,
+    bsmr: Bsmr,
 ) -> None:
     args = [
         "-c",
@@ -173,10 +173,10 @@ async def test_remote_test_execution_not_cached_with_no_remote_cache(
         "//:cacheable_test",
     ]
 
-    await buck.test(*args)
+    await bsmr.test(*args)
 
-    await buck.test(*args)
-    second_what_ran = await read_what_ran(buck)
+    await bsmr.test(*args)
+    second_what_ran = await read_what_ran(bsmr)
     second_test_runs = [
         entry for entry in second_what_ran if entry["reason"] == "test.run"
     ]
@@ -188,9 +188,9 @@ async def test_remote_test_execution_not_cached_with_no_remote_cache(
     )
 
 
-@buck_test()
+@bsmr_test()
 async def test_remote_test_execution_not_cached_with_disable_flag(
-    buck: Buck,
+    bsmr: Bsmr,
 ) -> None:
     args = [
         "-c",
@@ -202,10 +202,10 @@ async def test_remote_test_execution_not_cached_with_disable_flag(
         "--disable-test-execution-caching",
     ]
 
-    await buck.test(*args)
+    await bsmr.test(*args)
 
-    await buck.test(*args)
-    second_what_ran = await read_what_ran(buck)
+    await bsmr.test(*args)
+    second_what_ran = await read_what_ran(bsmr)
     second_test_runs = [
         entry for entry in second_what_ran if entry["reason"] == "test.run"
     ]

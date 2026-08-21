@@ -27,7 +27,7 @@ use bsmr_common::legacy_configs::key::BsmrconfigKeyRef;
 use bsmr_common::legacy_configs::view::LegacyBsmrConfigView;
 use bsmr_core::execution_types::executor_config::RemoteExecutorUseCase;
 use bsmr_core::fs::project_rel_path::ProjectRelativePath;
-use bsmr_error::BuckErrorContext;
+use bsmr_error::BsmrErrorContext;
 use bsmr_execute::artifact::artifact_dyn::ArtifactDyn;
 use bsmr_execute::artifact_utils::ArtifactValueBuilder;
 use bsmr_execute::artifact_value::ArtifactValue;
@@ -35,7 +35,7 @@ use bsmr_execute::digest_config::HasDigestConfig;
 use bsmr_execute::directory::ActionDirectoryBuilder;
 use bsmr_execute::execute::blobs::ActionBlobs;
 use bsmr_execute::materialize::materializer::HasMaterializer;
-use bsmr_hash::BuckDashSet;
+use bsmr_hash::BsmrDashSet;
 use dice::DiceComputations;
 use dice::UserComputationData;
 use dice_futures::spawn::spawn_dropcancel;
@@ -54,7 +54,7 @@ pub async fn materialize_and_upload_artifact_group(
     ctx: &mut DiceComputations<'_>,
     artifact_group: &ArtifactGroup,
     contexts: MaterializationAndUploadContext,
-    queue_tracker: &Arc<BuckDashSet<BuildArtifact>>,
+    queue_tracker: &Arc<BsmrDashSet<BuildArtifact>>,
 ) -> bsmr_error::Result<ArtifactGroupValues> {
     let (values, _) = {
         let fut = ctx.try_compute2(
@@ -87,7 +87,7 @@ async fn materialize_artifact_group(
     ctx: &mut DiceComputations<'_>,
     artifact_group: &ArtifactGroup,
     materialization_context: MaterializationContext,
-    queue_tracker: &Arc<BuckDashSet<BuildArtifact>>,
+    queue_tracker: &Arc<BsmrDashSet<BuildArtifact>>,
 ) -> bsmr_error::Result<ArtifactGroupValues> {
     let values = ctx.ensure_artifact_group(artifact_group).await?;
 
@@ -145,7 +145,7 @@ async fn materialize_artifact_group(
                             materializer
                             .declare_copy(configuration_hash_path.clone(), symlink_value, Vec::new(), None)
                             .await
-                            .buck_error_context(
+                            .bsmr_error_context(
                                 "Failed to declare configuration path to content-based path symlinks",
                             )?;
                         }
@@ -158,7 +158,7 @@ async fn materialize_artifact_group(
                             &artifact_group,
                         )
                         .await
-                        .buck_error_context("Failed to materialize artifacts")?;
+                        .bsmr_error_context("Failed to materialize artifacts")?;
                         bsmr_error::Ok(())
                     }
                 };
@@ -286,22 +286,22 @@ impl From<(Materializations, Uploads)> for MaterializationAndUploadContext {
 /// This map contains all the artifacts that we enqueued for materialization. This ensures
 /// we don't enqueue the same thing more than once. Should be shared across work done
 /// in a single DICE transaction.
-pub struct MaterializationQueueTrackerHolder(Arc<BuckDashSet<BuildArtifact>>);
+pub struct MaterializationQueueTrackerHolder(Arc<BsmrDashSet<BuildArtifact>>);
 
 pub trait HasMaterializationQueueTracker {
     fn init_materialization_queue_tracker(&mut self);
 
-    fn get_materialization_queue_tracker(&self) -> Arc<BuckDashSet<BuildArtifact>>;
+    fn get_materialization_queue_tracker(&self) -> Arc<BsmrDashSet<BuildArtifact>>;
 }
 
 impl HasMaterializationQueueTracker for UserComputationData {
     fn init_materialization_queue_tracker(&mut self) {
         self.data.set(MaterializationQueueTrackerHolder(Arc::new(
-            BuckDashSet::default(),
+            BsmrDashSet::default(),
         )));
     }
 
-    fn get_materialization_queue_tracker(&self) -> Arc<BuckDashSet<BuildArtifact>> {
+    fn get_materialization_queue_tracker(&self) -> Arc<BsmrDashSet<BuildArtifact>> {
         self.data
             .get::<MaterializationQueueTrackerHolder>()
             .expect("MaterializationQueueTracker should be set")

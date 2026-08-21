@@ -17,16 +17,16 @@
 import json
 from pathlib import Path
 
-from bsmr.tests.e2e_util.api.buck import Buck
-from bsmr.tests.e2e_util.buck_workspace import buck_test
+from bsmr.tests.e2e_util.api.bsmr import Bsmr
+from bsmr.tests.e2e_util.bsmr_workspace import bsmr_test
 
 
-@buck_test(inplace=True)
+@bsmr_test(inplace=True)
 async def test_cpp_test_coverage_with_network_sandboxing(
-    buck: Buck, tmp_path: Path
+    bsmr: Bsmr, tmp_path: Path
 ) -> None:
     coverage_file = tmp_path / "coverage.txt"
-    await buck.test(
+    await bsmr.test(
         "@upstream//mode/dbgo-cov",
         "root//tests/targets/rules/cxx:cpp_test_pass",
         "-c",

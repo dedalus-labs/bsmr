@@ -95,7 +95,7 @@ impl PathSanitizer {
             [cell, path] => self.sanitize_cell_based_path(given, cell, path),
             _ => Err(bsmr_error!(
                 bsmr_error::ErrorTag::Input,
-                "Poorly formatted BuckPath string"
+                "Poorly formatted BsmrPath string"
             )),
         }
     }
@@ -183,9 +183,9 @@ impl PathSanitizer {
     ///
     /// Both `given_fragment` and `proper_cell_path` refer to the same path,
     /// but `given_fragment` is user input and may be malformed in ways that
-    /// buck will not tolerate. (absolute, cross-cell, absolute, ../, etc)
+    /// bsmr will not tolerate. (absolute, cross-cell, absolute, ../, etc)
     ///
-    /// This function returns true if `given_fragment` is acceptable to buck
+    /// This function returns true if `given_fragment` is acceptable to bsmr
     /// as a relative reference to a path in the cell that `proper_cell_path`
     /// is based on.
     fn is_normalized_path_and_in_cell(
@@ -356,7 +356,7 @@ mod tests {
         let uut =
             PathSanitizer::new(&cell_configs(&cwd)?, &cwd, &find_invocation_roots(&cwd)?).await?;
 
-        uut.sanitize("root//baredir0/buckdir0a")?;
+        uut.sanitize("root//baredir0/bsmrdir0a")?;
 
         Ok(())
     }
@@ -367,18 +367,18 @@ mod tests {
         let uut =
             PathSanitizer::new(&cell_configs(&cwd)?, &cwd, &find_invocation_roots(&cwd)?).await?;
 
-        uut.sanitize("baredir0/buckdir0a")?;
+        uut.sanitize("baredir0/bsmrdir0a")?;
 
         Ok(())
     }
 
-    testy!(canonical_path_in_root_from_root(in_root()?, "root//baredir0/buckdir0a") -> {
-        abs_path: from_root("baredir0/buckdir0a"),
-        canonical: "root//baredir0/buckdir0a",
+    testy!(canonical_path_in_root_from_root(in_root()?, "root//baredir0/bsmrdir0a") -> {
+        abs_path: from_root("baredir0/bsmrdir0a"),
+        canonical: "root//baredir0/bsmrdir0a",
         cell_name: "root",
-        cell_path: "baredir0/buckdir0a",
-        given: "root//baredir0/buckdir0a",
-        to_string: "root//baredir0/buckdir0a",
+        cell_path: "baredir0/bsmrdir0a",
+        given: "root//baredir0/bsmrdir0a",
+        to_string: "root//baredir0/bsmrdir0a",
     });
 
     testy!(anonymous_cell_from_root(in_root()?, "//") -> {
@@ -399,13 +399,13 @@ mod tests {
         to_string: "cell1//bsmr",
     });
 
-    testy!(relative_path_from_root(in_root()?, "baredir0/buckdir0a") -> {
-        abs_path: from_root("baredir0/buckdir0a"),
-        canonical: "root//baredir0/buckdir0a",
+    testy!(relative_path_from_root(in_root()?, "baredir0/bsmrdir0a") -> {
+        abs_path: from_root("baredir0/bsmrdir0a"),
+        canonical: "root//baredir0/bsmrdir0a",
         cell_name: "root",
-        cell_path: "baredir0/buckdir0a",
-        given: "baredir0/buckdir0a",
-        to_string: "baredir0/buckdir0a",
+        cell_path: "baredir0/bsmrdir0a",
+        given: "baredir0/bsmrdir0a",
+        to_string: "baredir0/bsmrdir0a",
     });
 
     testy!(cross_cell_forward_path_from_root(in_root()?, "cell1/bsmr") -> {
@@ -413,7 +413,7 @@ mod tests {
         canonical: "cell1//bsmr",
         cell_name: "cell1",
         cell_path: "bsmr",
-        given: "cell1//bsmr", // BuckPath is documented as correcting this to cell1//bsmr
+        given: "cell1//bsmr", // BsmrPath is documented as correcting this to cell1//bsmr
         to_string: "cell1//bsmr",
     });
 

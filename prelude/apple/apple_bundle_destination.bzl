@@ -1,3 +1,9 @@
+# ===----------------------------------------------------------------------===
+# Upstream-Source: facebook/buck2@1560aca2002865cd73d7cafb22c705cfb640b2bc
+# Modifications Copyright (c) 2026 Dedalus Labs, Inc. and its contributors
+# SPDX-License-Identifier: Apache-2.0
+# ===----------------------------------------------------------------------===
+
 # Copyright (c) Meta Platforms, Inc. and affiliates.
 #
 # This source code is dual-licensed under either the MIT license found in the
@@ -12,7 +18,7 @@ load(":apple_bundle_utility.bzl", "get_apple_versioned_macos_bundle_value_primit
 # Abstraction of a place in a resulting bundle where file or directory will be copied. Actual value
 # of path relative to bundle root depends on a platform. This class is an implementation detail and
 # is not exposed to user unlike `AppleResourceDestination`.
-# v1 code is `com/facebook/buck/apple/AppleBundleDestination.java`
+# v1 code is `com/dedalus/bsmr/apple/AppleBundleDestination.java`
 AppleBundleDestination = enum(
     "resources",
     "frameworks",

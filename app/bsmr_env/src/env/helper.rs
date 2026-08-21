@@ -18,7 +18,7 @@ use std::env;
 use std::env::VarError;
 use std::sync::OnceLock;
 
-use bsmr_error::BuckErrorContext;
+use bsmr_error::BsmrErrorContext;
 
 pub struct EnvHelper<T> {
     convert: fn(&str) -> bsmr_error::Result<T>,
@@ -59,6 +59,6 @@ impl<T> EnvHelper<T> {
                 )),
             })
             .map(Option::as_ref)
-            .with_buck_error_context(|| format!("Invalid value for ${var}"))
+            .with_bsmr_error_context(|| format!("Invalid value for ${var}"))
     }
 }

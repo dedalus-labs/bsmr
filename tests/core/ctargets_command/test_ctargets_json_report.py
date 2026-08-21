@@ -15,8 +15,8 @@
 # pyre-strict
 
 
-from bsmr.tests.e2e_util.api.buck import Buck
-from bsmr.tests.e2e_util.buck_workspace import buck_test
+from bsmr.tests.e2e_util.api.bsmr import Bsmr
+from bsmr.tests.e2e_util.bsmr_workspace import bsmr_test
 from bsmr.tests.e2e_util.helper.golden import (
     golden,
     golden_replace_cfg_hash,
@@ -24,10 +24,10 @@ from bsmr.tests.e2e_util.helper.golden import (
 )
 
 
-@buck_test()
-async def test_ctargets_json_report_basic(buck: Buck) -> None:
+@bsmr_test()
+async def test_ctargets_json_report_basic(bsmr: Bsmr) -> None:
     """Test basic --json-report with only compatible targets"""
-    result = await buck.ctargets(
+    result = await bsmr.ctargets(
         "//a:target1",
         "//a:target2",
         "--target-platforms=root//:p",
@@ -44,10 +44,10 @@ async def test_ctargets_json_report_basic(buck: Buck) -> None:
     )
 
 
-@buck_test()
-async def test_ctargets_json_report_with_incompatible(buck: Buck) -> None:
+@bsmr_test()
+async def test_ctargets_json_report_with_incompatible(bsmr: Bsmr) -> None:
     """Test --json-report with incompatible targets"""
-    result = await buck.ctargets(
+    result = await bsmr.ctargets(
         "//a:target1",
         "//a:macos_only",
         "//a:target2",
@@ -65,10 +65,10 @@ async def test_ctargets_json_report_with_incompatible(buck: Buck) -> None:
     )
 
 
-@buck_test()
-async def test_ctargets_json_report_with_transitive_incompatible(buck: Buck) -> None:
+@bsmr_test()
+async def test_ctargets_json_report_with_transitive_incompatible(bsmr: Bsmr) -> None:
     """Test --json-report with transitively incompatible targets"""
-    result = await buck.ctargets(
+    result = await bsmr.ctargets(
         "//a:target1",
         "//c:depends_on_incompatible",
         "//a:target2",
@@ -87,10 +87,10 @@ async def test_ctargets_json_report_with_transitive_incompatible(buck: Buck) -> 
     )
 
 
-@buck_test()
-async def test_ctargets_json_report_with_errors_and_keep_going(buck: Buck) -> None:
+@bsmr_test()
+async def test_ctargets_json_report_with_errors_and_keep_going(bsmr: Bsmr) -> None:
     """Test --json-report with errors (should only appear in stderr, not JSON)"""
-    result = await buck.ctargets(
+    result = await bsmr.ctargets(
         "//a:target1",
         "//b:any",
         "//a:target2",
@@ -109,10 +109,10 @@ async def test_ctargets_json_report_with_errors_and_keep_going(buck: Buck) -> No
     )
 
 
-@buck_test()
-async def test_ctargets_json_report_mixed(buck: Buck) -> None:
+@bsmr_test()
+async def test_ctargets_json_report_mixed(bsmr: Bsmr) -> None:
     """Test --json-report with mix of compatible, incompatible, and errors"""
-    result = await buck.ctargets(
+    result = await bsmr.ctargets(
         "//a:target1",
         "//a:macos_only",
         "//b:any",
@@ -133,10 +133,10 @@ async def test_ctargets_json_report_mixed(buck: Buck) -> None:
     )
 
 
-@buck_test()
-async def test_ctargets_json_report_only_incompatible(buck: Buck) -> None:
+@bsmr_test()
+async def test_ctargets_json_report_only_incompatible(bsmr: Bsmr) -> None:
     """Test --json-report when all targets are incompatible"""
-    result = await buck.ctargets(
+    result = await bsmr.ctargets(
         "//a:macos_only",
         "--target-platforms=root//:linux_platform",
         "--json-report",
@@ -152,10 +152,10 @@ async def test_ctargets_json_report_only_incompatible(buck: Buck) -> None:
     )
 
 
-@buck_test()
-async def test_ctargets_json_report_with_attributes(buck: Buck) -> None:
+@bsmr_test()
+async def test_ctargets_json_report_with_attributes(bsmr: Bsmr) -> None:
     """Test --json-report with attribute filtering"""
-    result = await buck.ctargets(
+    result = await bsmr.ctargets(
         "//a:target1",
         "//a:target2",
         "--target-platforms=root//:p",

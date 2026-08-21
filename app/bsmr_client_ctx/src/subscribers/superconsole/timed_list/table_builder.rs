@@ -19,7 +19,7 @@ use std::time::Duration;
 use bsmr_event_observer::display;
 use bsmr_event_observer::display::TargetDisplayOptions;
 use bsmr_event_observer::fmt_duration;
-use bsmr_event_observer::span_tracker::BuckEventSpanInfo;
+use bsmr_event_observer::span_tracker::BsmrEventSpanInfo;
 use derive_more::From;
 use superconsole::Component;
 use superconsole::Dimensions;
@@ -112,7 +112,7 @@ pub(crate) struct TimedRow {
 impl TimedRow {
     pub(crate) fn span(
         padding: usize,
-        span: &BuckEventSpanInfo,
+        span: &BsmrEventSpanInfo,
         timekeeper: &Timekeeper,
         cutoffs: &Cutoffs,
         display_platform: bool,

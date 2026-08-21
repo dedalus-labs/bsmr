@@ -1,3 +1,9 @@
+# ===----------------------------------------------------------------------===
+# Upstream-Source: facebook/buck2@1560aca2002865cd73d7cafb22c705cfb640b2bc
+# Modifications Copyright (c) 2026 Dedalus Labs, Inc. and its contributors
+# SPDX-License-Identifier: Apache-2.0
+# ===----------------------------------------------------------------------===
+
 # Copyright (c) Meta Platforms, Inc. and affiliates.
 #
 # This source code is dual-licensed under either the MIT license found in the
@@ -18,7 +24,7 @@ load(
 CudaCompileInfo = record(
     # Output base filename without extension
     filename = field(str),
-    # Buck action identifier
+    # Bsmr action identifier
     identifier = field(str),
     # Output sub-directory where all CUDA compilation artifacts will go to
     output_prefix = field(str),
@@ -26,10 +32,10 @@ CudaCompileInfo = record(
 )
 
 CudaCompileStyle = enum(
-    # Use NVCC as the compiler driver and compile a CUDA file in a single Buck
+    # Use NVCC as the compiler driver and compile a CUDA file in a single Bsmr
     # action.
     "mono",
-    # NVCC provides the compilation plan, but use one Buck action per compilation
+    # NVCC provides the compilation plan, but use one Bsmr action per compilation
     # sub-command.
     "dist",
 )
@@ -78,7 +84,7 @@ def cuda_mono_compile(
 ) -> None:
     """
     Compile a CUDA file monolithically using NVCC as the compiler driver.
-    All compilation happens in a single Buck action.
+    All compilation happens in a single Bsmr action.
     """
 
     # Bind the object output for monolithic NVCC compilation.
@@ -115,7 +121,7 @@ def cuda_distributed_compile(
     """
     Compile a CUDA file using distributed compilation.
     NVCC provides the compilation plan, but compilation is split into
-    one Buck action per sub-command.
+    one Bsmr action per sub-command.
     """
     hostcc_argsfile = cuda_dist_output.hostcc_argsfile
 

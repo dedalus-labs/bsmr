@@ -23,11 +23,11 @@ import signal
 from pathlib import Path
 
 import pytest
-from bsmr.tests.e2e_util.api.buck import Buck
-from bsmr.tests.e2e_util.api.buck_result import BuckException, ExitCodeV2
+from bsmr.tests.e2e_util.api.bsmr import Bsmr
+from bsmr.tests.e2e_util.api.bsmr_result import BsmrException, ExitCodeV2
 from bsmr.tests.e2e_util.asserts import expect_failure
-from bsmr.tests.e2e_util.buck_workspace import (
-    buck_test,
+from bsmr.tests.e2e_util.bsmr_workspace import (
+    bsmr_test,
     env,
     get_mode_from_platform,
     is_deployed_bsmr,
@@ -43,14 +43,14 @@ def remove_ansi_escape_sequences(ansi_str: str) -> str:
 
 
 # TODO(marwhal): Fix and enable on Windows
-@buck_test(inplace=True, skip_for_os=["windows"])
-async def test_sh_test(buck: Buck) -> None:
-    await buck.test(
+@bsmr_test(inplace=True, skip_for_os=["windows"])
+async def test_sh_test(bsmr: Bsmr) -> None:
+    await bsmr.test(
         "root//tests/targets/rules/sh_test:test",
     )
 
     await expect_failure(
-        buck.test(
+        bsmr.test(
             "root//tests/targets/rules/sh_test:test_fail",
         ),
         stderr_regex=r"1 TESTS FAILED\n(\s)+✗ fbcode\/\/bsmr\/tests\/targets\/rules\/sh_test:test_fail - unmanaged",
@@ -58,63 +58,63 @@ async def test_sh_test(buck: Buck) -> None:
 
 
 # TODO(marwhal): Fix and enable on Windows
-@buck_test(inplace=True, skip_for_os=["windows"])
-async def test_sh_test_remote_checks(buck: Buck) -> None:
+@bsmr_test(inplace=True, skip_for_os=["windows"])
+async def test_sh_test_remote_checks(bsmr: Bsmr) -> None:
     await expect_failure(
-        buck.test(
+        bsmr.test(
             "root//tests/targets/rules/sh_test:test",
             "--remote-only",
         ),
         stderr_regex="Incompatible executor preferences: `RemoteRequired` & `LocalRequired`",
     )
-    await buck.test(
+    await bsmr.test(
         "root//tests/targets/rules/sh_test:test_remote_implicit",
         "--local-only",
     )
-    await buck.test(
+    await bsmr.test(
         "root//tests/targets/rules/sh_test:test_remote_implicit",
         "--remote-only",
     )
     await expect_failure(
-        buck.test(
+        bsmr.test(
             "root//tests/targets/rules/sh_test:test_remote_explicit",
             "--local-only",
         ),
         stderr_regex="LocalOnly.*is incompatible",
     )
-    await buck.test(
+    await bsmr.test(
         "root//tests/targets/rules/sh_test:test_remote_explicit",
         "--remote-only",
     )
 
 
 # TODO(marwhal): Fix and enable on Windows
-@buck_test(inplace=True, skip_for_os=["windows"])
-async def test_test_build_fail(buck: Buck) -> None:
+@bsmr_test(inplace=True, skip_for_os=["windows"])
+async def test_test_build_fail(bsmr: Bsmr) -> None:
     await expect_failure(
-        buck.test(
-            "hewwo_buck",
+        bsmr.test(
+            "hewwo_bsmr",
         ),
         stderr_regex="does not exist",
     )
 
-    await buck.test("root//tests/targets/rules/sh_test:test")
+    await bsmr.test("root//tests/targets/rules/sh_test:test")
 
 
-@buck_test(inplace=True, skip_for_os=["darwin"])
-async def test_cpp_test(buck: Buck) -> None:
+@bsmr_test(inplace=True, skip_for_os=["darwin"])
+async def test_cpp_test(bsmr: Bsmr) -> None:
     mode = get_mode_from_platform()
-    await buck.test("root//tests/targets/rules/cxx:cpp_test_pass", mode)
+    await bsmr.test("root//tests/targets/rules/cxx:cpp_test_pass", mode)
 
     await expect_failure(
-        buck.test("root//tests/targets/rules/cxx:cpp_test_fail", mode),
+        bsmr.test("root//tests/targets/rules/cxx:cpp_test_fail", mode),
         stderr_regex=r"1 TESTS FAILED\n(\s)+✗ fbcode\/\/bsmr\/tests\/targets\/rules\/cxx:cpp_test_fail - Simple\.Fail",
     )
 
-    await buck.test("root//tests/targets/rules/cxx:cpp_test_local_only", mode)
+    await bsmr.test("root//tests/targets/rules/cxx:cpp_test_local_only", mode)
 
     await expect_failure(
-        buck.test(
+        bsmr.test(
             "root//tests/targets/rules/cxx:cpp_test_local_only",
             mode,
             "--remote-only",
@@ -123,10 +123,10 @@ async def test_cpp_test(buck: Buck) -> None:
     )
 
 
-@buck_test(inplace=True, skip_for_os=["windows"])
-async def test_cpp_stress_runs(buck: Buck) -> None:
+@bsmr_test(inplace=True, skip_for_os=["windows"])
+async def test_cpp_stress_runs(bsmr: Bsmr) -> None:
     mode = get_mode_from_platform()
-    res = await buck.test(
+    res = await bsmr.test(
         "root//tests/targets/rules/cxx:cpp_test_pass",
         mode,
         "--",
@@ -136,10 +136,10 @@ async def test_cpp_stress_runs(buck: Buck) -> None:
     assert "Pass 10" in res.stderr, "Expected stress runs to be run"
 
 
-@buck_test(inplace=True, skip_for_os=["windows"])
-async def test_cpp_stress_runs_deterministic_paths(buck: Buck) -> None:
+@bsmr_test(inplace=True, skip_for_os=["windows"])
+async def test_cpp_stress_runs_deterministic_paths(bsmr: Bsmr) -> None:
     mode = get_mode_from_platform()
-    res = await buck.test(
+    res = await bsmr.test(
         "root//tests/targets/rules/cxx:cpp_test_pass",
         mode,
         "--",
@@ -149,93 +149,93 @@ async def test_cpp_stress_runs_deterministic_paths(buck: Buck) -> None:
     assert "Pass 10" in res.stderr, "Expected stress runs to be run"
 
 
-@buck_test(inplace=True, skip_for_os=["darwin"])
-async def test_cpp_test_fdb_message(buck: Buck) -> None:
+@bsmr_test(inplace=True, skip_for_os=["darwin"])
+async def test_cpp_test_fdb_message(bsmr: Bsmr) -> None:
     await expect_failure(
-        buck.test(
+        bsmr.test(
             "root//tests/targets/rules/cxx:cpp_test_fail",
             get_mode_from_platform(),
             "--",
             "--color",
             "off",
         ),
-        stderr_regex=r"Run \$ fdb buck test \<args\> to debug",
+        stderr_regex=r"Run \$ fdb bsmr test \<args\> to debug",
     )
 
 
-@buck_test(inplace=True, skip_for_os=MAC_AND_WINDOWS)
-async def test_python_test(buck: Buck) -> None:
-    await buck.test("root//tests/targets/rules/python/test:test")
+@bsmr_test(inplace=True, skip_for_os=MAC_AND_WINDOWS)
+async def test_python_test(bsmr: Bsmr) -> None:
+    await bsmr.test("root//tests/targets/rules/python/test:test")
 
-    await buck.test("root//tests/targets/rules/python/test:test_env")
+    await bsmr.test("root//tests/targets/rules/python/test:test_env")
 
     await expect_failure(
-        buck.test("root//tests/targets/rules/python/test:test_fail"),
+        bsmr.test("root//tests/targets/rules/python/test:test_fail"),
         stderr_regex=r"1 TESTS FAILED\n(\s)+✗ fbcode\/\/bsmr\/tests\/targets\/rules\/python\/test:test_fail - test",
     )
 
     await expect_failure(
-        buck.test("root//tests/targets/rules/python/test:test_fatal"),
+        bsmr.test("root//tests/targets/rules/python/test:test_fatal"),
         stderr_regex=r"1 TESTS FATALS\n(\s)+⚠ fbcode\/\/bsmr\/tests\/targets\/rules\/python\/test:test_fatal - test",
     )
 
 
-@buck_test(inplace=True, skip_for_os=MAC_AND_WINDOWS)
-async def test_python_test_with_remote_execution(buck: Buck) -> None:
-    await buck.test(
+@bsmr_test(inplace=True, skip_for_os=MAC_AND_WINDOWS)
+async def test_python_test_with_remote_execution(bsmr: Bsmr) -> None:
+    await bsmr.test(
         "root//tests/targets/rules/python/test:test_remote_execution",
     )
     await expect_failure(
-        buck.test(
+        bsmr.test(
             "root//tests/targets/rules/python/test:test_remote_execution_fail",
         ),
         stderr_regex=r"1 TESTS FAILED\n(\s)+✗ fbcode\/\/bsmr\/tests\/targets\/rules\/python\/test:test_remote_execution_fail - test",
     )
     await expect_failure(
-        buck.test(
+        bsmr.test(
             "root//tests/targets/rules/python/test:test_remote_execution_fatal",
         ),
         stderr_regex=r"1 TESTS FATALS\n(\s)+⚠ fbcode\/\/bsmr\/tests\/targets\/rules\/python\/test:test_remote_execution_fatal - test",
     )
 
 
-@buck_test(inplace=True, skip_for_os=MAC_AND_WINDOWS)
-async def test_python_needed_coverage(buck: Buck) -> None:
-    await buck.test(
+@bsmr_test(inplace=True, skip_for_os=MAC_AND_WINDOWS)
+async def test_python_needed_coverage(bsmr: Bsmr) -> None:
+    await bsmr.test(
         "root//tests/targets/rules/python/needed_coverage:test_pass",
         "root//tests/targets/rules/python/needed_coverage:test_pass_specific_file",
     )
     await expect_failure(
-        buck.test("root//tests/targets/rules/python/needed_coverage:test_fail"),
+        bsmr.test("root//tests/targets/rules/python/needed_coverage:test_fail"),
         stderr_regex="ERROR: Actual coverage [0-9.]*% is smaller than expected 100.% for file",
     )
     await expect_failure(
-        buck.test(
+        bsmr.test(
             "root//tests/targets/rules/python/needed_coverage:test_fail_fractional"
         ),
         stderr_regex="ERROR: Actual coverage [0-9.]*% is smaller than expected [0-9.]*% for file",
     )
 
 
-@buck_test(inplace=True, skip_for_os=MAC_AND_WINDOWS)
-async def test_tests_attribute(buck: Buck) -> None:
-    lib_tests = await buck.test("root//tests/targets/rules/python/test:lib")
+@bsmr_test(inplace=True, skip_for_os=MAC_AND_WINDOWS)
+async def test_tests_attribute(bsmr: Bsmr) -> None:
+    lib_tests = await bsmr.test("root//tests/targets/rules/python/test:lib")
     assert "Pass 1" in remove_ansi_escape_sequences(lib_tests.stderr)
 
 
-@buck_test(inplace=True, skip_for_os=MAC_AND_WINDOWS)
-async def test_tests_attribute_ignore(buck: Buck) -> None:
-    lib_tests = await buck.test(
+@bsmr_test(inplace=True, skip_for_os=MAC_AND_WINDOWS)
+async def test_tests_attribute_ignore(bsmr: Bsmr) -> None:
+    lib_tests = await bsmr.test(
         "root//tests/targets/rules/python/test:lib",
         "--ignore-tests-attribute",
     )
     assert "NO TESTS RAN" in remove_ansi_escape_sequences(lib_tests.stderr)
 
 
-@buck_test(inplace=True)
-async def test_listing_failure(buck: Buck) -> None:
+@bsmr_test(inplace=True)
+async def test_listing_failure(bsmr: Bsmr) -> None:
     output = await expect_failure(
-        buck.test(
+        bsmr.test(
             "root//tests/targets/rules/python/broken:broken",
             get_mode_from_platform(),
         ),
@@ -248,12 +248,12 @@ async def test_listing_failure(buck: Buck) -> None:
     )
 
 
-@buck_test(inplace=True, skip_for_os=["windows"])
+@bsmr_test(inplace=True, skip_for_os=["windows"])
 async def test_python_import_error_with_static_listing_builtin_runner(
-    buck: Buck,
+    bsmr: Bsmr,
 ) -> None:
     output = await expect_failure(
-        buck.test(
+        bsmr.test(
             "root//tests/targets/rules/python/broken:broken_with_static_listing_builtin_runner",
             get_mode_from_platform(),
         ),
@@ -268,10 +268,10 @@ async def test_python_import_error_with_static_listing_builtin_runner(
     assert not re.search("unittest.loader._FailedTest", output.stderr, re.DOTALL)
 
 
-@buck_test(inplace=True, skip_for_os=["windows"])
-async def test_python_import_error_with_static_listing_new_provider(buck: Buck) -> None:
+@bsmr_test(inplace=True, skip_for_os=["windows"])
+async def test_python_import_error_with_static_listing_new_provider(bsmr: Bsmr) -> None:
     output = await expect_failure(
-        buck.test(
+        bsmr.test(
             "root//tests/targets/rules/python/broken:broken_with_static_listing_new_adapter",
             get_mode_from_platform(),
         ),
@@ -285,12 +285,12 @@ async def test_python_import_error_with_static_listing_new_provider(buck: Buck) 
     )
 
 
-@buck_test(inplace=True, skip_for_os=["windows"])
+@bsmr_test(inplace=True, skip_for_os=["windows"])
 async def test_python_import_error_with_static_listing_new_provider_bundle(
-    buck: Buck,
+    bsmr: Bsmr,
 ) -> None:
     output = await expect_failure(
-        buck.test(
+        bsmr.test(
             "root//tests/targets/rules/python/broken:broken_with_static_listing_new_adapter_bundle",
             get_mode_from_platform(),
         ),
@@ -303,9 +303,9 @@ async def test_python_import_error_with_static_listing_new_provider_bundle(
     )
 
 
-@buck_test(inplace=True)
-async def test_tests_dedupe(buck: Buck) -> None:
-    lib_tests = await buck.test(
+@bsmr_test(inplace=True)
+async def test_tests_dedupe(bsmr: Bsmr) -> None:
+    lib_tests = await bsmr.test(
         "root//tests/targets/rules/python/test:lib",
         "root//tests/targets/rules/python/test:tests_for_lib",
         get_mode_from_platform(),
@@ -314,68 +314,68 @@ async def test_tests_dedupe(buck: Buck) -> None:
 
 
 @pytest.mark.parametrize("build_filtered", [(True), (False)])
-@buck_test(
+@bsmr_test(
     inplace=True,
     skip_for_os=["windows"],  # TODO(marwhal): Fix and enable on Windows
 )
-async def test_label_filtering(buck: Buck, build_filtered: bool) -> None:
+async def test_label_filtering(bsmr: Bsmr, build_filtered: bool) -> None:
     cmd = ["root//tests/targets/rules/label_test_filtering:"]
     if build_filtered:
         cmd.append("--build-filtered")
 
-    await expect_failure(buck.test(*cmd), stderr_regex="1 TESTS FAILED")
+    await expect_failure(bsmr.test(*cmd), stderr_regex="1 TESTS FAILED")
 
     await expect_failure(
-        buck.test(*cmd, "--exclude", "label-pass"), stderr_regex="1 TESTS FAILED"
+        bsmr.test(*cmd, "--exclude", "label-pass"), stderr_regex="1 TESTS FAILED"
     )
 
     await expect_failure(
-        buck.test(*cmd, "--include", "label-fail"), stderr_regex="1 TESTS FAILED"
+        bsmr.test(*cmd, "--include", "label-fail"), stderr_regex="1 TESTS FAILED"
     )
 
     await expect_failure(
-        buck.test(*cmd, "--include", "label-fail", "--exclude", "label-pass"),
+        bsmr.test(*cmd, "--include", "label-fail", "--exclude", "label-pass"),
         stderr_regex="1 TESTS FAILED",
     )
 
     await expect_failure(
-        buck.test(
+        bsmr.test(
             *cmd,
         ),
         stderr_regex="1 TESTS FAILED",
     )
 
-    await buck.test(*cmd, "--include", "label-pass")
+    await bsmr.test(*cmd, "--include", "label-pass")
 
-    await buck.test(*cmd, "--exclude", "label-fail")
+    await bsmr.test(*cmd, "--exclude", "label-fail")
 
-    await buck.test(*cmd, "--include", "!label-fail")
+    await bsmr.test(*cmd, "--include", "!label-fail")
 
-    await buck.test(
+    await bsmr.test(
         *cmd, "--include", "label-fail", "--exclude", "label-fail", "--always-exclude"
     )
 
-    await buck.test(*cmd, "--include", "!label-fail", "label-fail")
+    await bsmr.test(*cmd, "--include", "!label-fail", "label-fail")
 
 
-@buck_test(inplace=True, skip_for_os=MAC_AND_WINDOWS)
-async def test_name_filtering(buck: Buck) -> None:
-    await buck.test(
+@bsmr_test(inplace=True, skip_for_os=MAC_AND_WINDOWS)
+async def test_name_filtering(bsmr: Bsmr) -> None:
+    await bsmr.test(
         "root//tests/targets/rules/python/test/...", "--", "test_env"
     )
 
     await expect_failure(
-        buck.test(
+        bsmr.test(
             "root//tests/targets/rules/python/test/...", "--", "test_fail"
         ),
         stderr_regex="1 TESTS FAILED",
     )
 
 
-@buck_test(inplace=True)
-async def test_compile_error(buck: Buck) -> None:
+@bsmr_test(inplace=True)
+async def test_compile_error(bsmr: Bsmr) -> None:
     await expect_failure(
-        buck.test(
+        bsmr.test(
             "root//tests/targets/compile_error:cpp_test_compile_error",
             get_mode_from_platform(),
         ),
@@ -383,23 +383,23 @@ async def test_compile_error(buck: Buck) -> None:
     )
 
 
-@buck_test(
+@bsmr_test(
     inplace=True,
     skip_for_os=["windows"],  # TODO(marwhal): Fix and enable on Windows
 )
-async def test_cwd(buck: Buck) -> None:
-    await buck.test(
+async def test_cwd(bsmr: Bsmr) -> None:
+    await bsmr.test(
         "root//tests/targets/rules/sh_test:test_cwd",
     )
 
 
-@buck_test(
+@bsmr_test(
     inplace=True,
     skip_for_os=["windows"],  # TODO(marwhal): Fix and enable on Windows
 )
-async def test_default_label_filtering(buck: Buck) -> None:
+async def test_default_label_filtering(bsmr: Bsmr) -> None:
     await expect_failure(
-        buck.test(
+        bsmr.test(
             "root//tests/targets/rules/sh_test:test_fail_extended",
             "--",
             "--extended-tests",
@@ -408,18 +408,18 @@ async def test_default_label_filtering(buck: Buck) -> None:
     )
 
     # Ignores it by default
-    await buck.test(
+    await bsmr.test(
         "root//tests/targets/rules/sh_test:test_fail_extended",
     )
 
 
-@buck_test(
+@bsmr_test(
     inplace=True,
     skip_for_os=["windows"],  # TODO(marwhal): Fix and enable on Windows
 )
-async def test_stress_runs(buck: Buck) -> None:
+async def test_stress_runs(bsmr: Bsmr) -> None:
     await expect_failure(
-        buck.test(
+        bsmr.test(
             "root//tests/targets/rules/sh_test:test_fail",
             "--",
             "--stress-runs",
@@ -432,10 +432,10 @@ async def test_stress_runs(buck: Buck) -> None:
 # Not-in-place tests cannot run with deployed bsmr
 if not is_deployed_bsmr():
 
-    @buck_test(inplace=False, data_dir="testsof")
-    @env("BUCK_LOG", "bsmr_test::command=debug")
-    async def test_target_compatibility(buck: Buck) -> None:
-        out = await buck.test(
+    @bsmr_test(inplace=False, data_dir="testsof")
+    @env("BSMR_LOG", "bsmr_test::command=debug")
+    async def test_target_compatibility(bsmr: Bsmr) -> None:
+        out = await bsmr.test(
             "//...",
             "--target-platforms",
             "//:platform_default_tests",
@@ -444,7 +444,7 @@ if not is_deployed_bsmr():
         assert "target incompatible node" in out.stderr
 
         await expect_failure(
-            buck.test(
+            bsmr.test(
                 "//:foo_extra_test",
                 "--target-platforms",
                 "//:platform_default_tests",
@@ -454,26 +454,26 @@ if not is_deployed_bsmr():
 
 
 # TODO(marwhal): Fix and enable on Windows
-@buck_test(inplace=True, skip_for_os=["windows"])
-async def test_external_runner_test_info_options(buck: Buck) -> None:
-    await buck.test(
+@bsmr_test(inplace=True, skip_for_os=["windows"])
+async def test_external_runner_test_info_options(bsmr: Bsmr) -> None:
+    await bsmr.test(
         "root//tests/targets/rules/external_runner_test_info/...",
     )
 
 
 # TODO(marwhal): Fix and enable on Windows
-@buck_test(inplace=True, skip_for_os=["windows"])
-async def test_allow_tests_on_re(buck: Buck) -> None:
-    await buck.test(
+@bsmr_test(inplace=True, skip_for_os=["windows"])
+async def test_allow_tests_on_re(bsmr: Bsmr) -> None:
+    await bsmr.test(
         "root//tests/targets/rules/external_runner_test_info/...",
         "--unstable-allow-tests-on-re",
     )
 
 
-@buck_test(inplace=True)
-async def test_incompatible_tests_do_not_run_on_re(buck: Buck) -> None:
+@bsmr_test(inplace=True)
+async def test_incompatible_tests_do_not_run_on_re(bsmr: Bsmr) -> None:
     await expect_failure(
-        buck.test(
+        bsmr.test(
             "root//tests/targets/rules/external_runner_test_info:invalid_test",
             "-c",
             "external_runner_test_info.declare_invalid_test=1",
@@ -482,16 +482,16 @@ async def test_incompatible_tests_do_not_run_on_re(buck: Buck) -> None:
     )
 
 
-@buck_test(inplace=True)
+@bsmr_test(inplace=True)
 @env("TEST_MAKE_IT_FAIL", "1")
-async def test_env_var_filtering(buck: Buck) -> None:
-    await buck.test(
+async def test_env_var_filtering(bsmr: Bsmr) -> None:
+    await bsmr.test(
         "root//tests/targets/rules/python/test:test",
         get_mode_from_platform(),
     )
 
     await expect_failure(
-        buck.test(
+        bsmr.test(
             "root//tests/targets/rules/python/test:test",
             get_mode_from_platform(),
             "--",
@@ -502,12 +502,12 @@ async def test_env_var_filtering(buck: Buck) -> None:
     )
 
 
-@buck_test(inplace=True, skip_for_os=["windows"])
+@bsmr_test(inplace=True, skip_for_os=["windows"])
 async def test_prepare_for_local_execution_env_with_env_cli_parameter(
-    buck: Buck, tmp_path: Path
+    bsmr: Bsmr, tmp_path: Path
 ) -> None:
     out = tmp_path / "out"
-    await buck.test(
+    await bsmr.test(
         "root//tests/targets/rules/python/test:test",
         "--",
         "--env",
@@ -529,11 +529,11 @@ async def test_prepare_for_local_execution_env_with_env_cli_parameter(
 
 
 # TODO(marwhal): Fix and enable on Windows
-@buck_test(inplace=True, skip_for_os=["windows"])
+@bsmr_test(inplace=True, skip_for_os=["windows"])
 @env("EXTRA_VAR", "foo")
-async def test_prepare_for_local_execution_env(buck: Buck, tmp_path: Path) -> None:
+async def test_prepare_for_local_execution_env(bsmr: Bsmr, tmp_path: Path) -> None:
     out = tmp_path / "out"
-    await buck.test(
+    await bsmr.test(
         "root//tests/targets/rules/python/test:test",
         "--",
         "--no-run-output-test-commands-for-fdb",
@@ -552,19 +552,19 @@ async def test_prepare_for_local_execution_env(buck: Buck, tmp_path: Path) -> No
     assert "EXTRA_VAR" not in env
 
 
-@buck_test(inplace=True)
+@bsmr_test(inplace=True)
 @env("BSMR_TEST_TPX_USE_TCP", "true")
-async def test_tcp(buck: Buck) -> None:
-    await buck.test(
+async def test_tcp(bsmr: Bsmr) -> None:
+    await bsmr.test(
         "root//tests/targets/rules/python/test:test",
         get_mode_from_platform(),
     )
 
 
-@buck_test(inplace=True)
-async def test_passing_test_names_are_not_shown(buck: Buck) -> None:
+@bsmr_test(inplace=True)
+async def test_passing_test_names_are_not_shown(bsmr: Bsmr) -> None:
     # Passing test headers are not shown unless we pass --print-passing-details explicitly.
-    tests = await buck.test(
+    tests = await bsmr.test(
         "root//tests/targets/rules/python/test:test",
         get_mode_from_platform(),
     )
@@ -574,10 +574,10 @@ async def test_passing_test_names_are_not_shown(buck: Buck) -> None:
     )
 
 
-@buck_test(inplace=True)
-async def test_failing_test_names_are_shown(buck: Buck) -> None:
+@bsmr_test(inplace=True)
+async def test_failing_test_names_are_shown(bsmr: Bsmr) -> None:
     await expect_failure(
-        buck.test(
+        bsmr.test(
             "root//tests/targets/rules/python/test:test",
             get_mode_from_platform(),
             "--",
@@ -588,10 +588,10 @@ async def test_failing_test_names_are_shown(buck: Buck) -> None:
     )
 
 
-@buck_test(inplace=True)
-async def test_no_print_passing_details(buck: Buck) -> None:
+@bsmr_test(inplace=True)
+async def test_no_print_passing_details(bsmr: Bsmr) -> None:
     # Without --print-passing-details, test headers and stdout is NOT displayed.
-    tests = await buck.test(
+    tests = await bsmr.test(
         "root//tests/targets/rules/python/test:test",
         get_mode_from_platform(),
     )
@@ -602,10 +602,10 @@ async def test_no_print_passing_details(buck: Buck) -> None:
     assert "TESTED!" not in tests.stderr
 
 
-@buck_test(inplace=True)
-async def test_print_passing_details(buck: Buck) -> None:
+@bsmr_test(inplace=True)
+async def test_print_passing_details(bsmr: Bsmr) -> None:
     # With --print-passing-details, test headers and stdout is displayed.
-    tests = await buck.test(
+    tests = await bsmr.test(
         "root//tests/targets/rules/python/test:test",
         get_mode_from_platform(),
         "--",
@@ -618,11 +618,11 @@ async def test_print_passing_details(buck: Buck) -> None:
     assert "TESTED!" in tests.stderr
 
 
-@buck_test(inplace=True)
-async def test_no_no_print_details(buck: Buck) -> None:
+@bsmr_test(inplace=True)
+async def test_no_no_print_details(bsmr: Bsmr) -> None:
     # Without --no-print-details the stack trace is displayed.
     await expect_failure(
-        buck.test(
+        bsmr.test(
             "root//tests/targets/rules/python/test:test",
             get_mode_from_platform(),
             "--",
@@ -633,11 +633,11 @@ async def test_no_no_print_details(buck: Buck) -> None:
     )
 
 
-@buck_test(inplace=True)
-async def test_no_print_details(buck: Buck) -> None:
+@bsmr_test(inplace=True)
+async def test_no_print_details(bsmr: Bsmr) -> None:
     # With --no-print-details the stack trace is not displayed.
     tests = await expect_failure(
-        buck.test(
+        bsmr.test(
             "root//tests/targets/rules/python/test:test",
             "--",
             "--env",
@@ -648,9 +648,9 @@ async def test_no_print_details(buck: Buck) -> None:
     assert "AssertionError: 41 != 42" not in tests.stderr
 
 
-@buck_test(inplace=True)
-async def test_bundle_sharding(buck: Buck) -> None:
-    tests = await buck.test(
+@bsmr_test(inplace=True)
+async def test_bundle_sharding(bsmr: Bsmr) -> None:
+    tests = await bsmr.test(
         "root//tests/targets/rules/python/test:multi_tests",
         get_mode_from_platform(),
     )
@@ -658,8 +658,8 @@ async def test_bundle_sharding(buck: Buck) -> None:
 
 
 # TODO(marwhal): Fix and enable on Windows
-@buck_test(inplace=True, skip_for_os=["windows"])
-async def test_cancellation(buck: Buck, tmp_path: Path) -> None:
+@bsmr_test(inplace=True, skip_for_os=["windows"])
+async def test_cancellation(bsmr: Bsmr, tmp_path: Path) -> None:
     """
     This test starts a test that writes its PID to a file then runs for 60
     seconds. We test cancellation by sending a CTRL+C as soon as a test
@@ -668,12 +668,12 @@ async def test_cancellation(buck: Buck, tmp_path: Path) -> None:
     """
 
     # Make sure we are ready to go
-    await buck.build(
+    await bsmr.build(
         "root//tests/targets/rules/python/test:cancellation",
         "--build-test-info",
     )
 
-    tests = buck.test(
+    tests = bsmr.test(
         "root//tests/targets/rules/python/test:cancellation",
         "--",
         "--stress-runs",
@@ -712,20 +712,20 @@ async def test_cancellation(buck: Buck, tmp_path: Path) -> None:
             raise Exception(f"PID existed: {pid}")
 
 
-@buck_test(inplace=True, skip_for_os=["windows"])
-async def test_cancellation_on_re(buck: Buck) -> None:
+@bsmr_test(inplace=True, skip_for_os=["windows"])
+async def test_cancellation_on_re(bsmr: Bsmr) -> None:
     """
     This test starts a test on RE, waits for it to start, cancels, then starts
     again and verifies we don't wait for the test to finish.
     """
 
     # Make sure we are ready to go
-    await buck.build(
+    await bsmr.build(
         "root//tests/targets/rules/python/test:cancellation",
         "--build-test-info",
     )
 
-    tests = buck.test(
+    tests = bsmr.test(
         "root//tests/targets/rules/python/test:cancellation",
         "--unstable-force-tests-on-re",
         "--remote-only",
@@ -741,8 +741,8 @@ async def test_cancellation_on_re(buck: Buck) -> None:
 
     async def has_started() -> bool:
         try:
-            stdout = (await buck.log("what-ran")).stdout
-        except BuckException as e:
+            stdout = (await bsmr.log("what-ran")).stdout
+        except BsmrException as e:
             # The log is truncated here so this can exit non-zero.
             stdout = e.stdout
 
@@ -761,13 +761,13 @@ async def test_cancellation_on_re(buck: Buck) -> None:
 
     # Run a command that cannot execute concurrerntly and check it does not
     # take 60 seconds to run, which means we went idle.
-    await asyncio.wait_for(buck.audit_config("-c", "foo.bar=True"), timeout=10)
+    await asyncio.wait_for(bsmr.audit_config("-c", "foo.bar=True"), timeout=10)
 
 
-@buck_test(inplace=True, skip_for_os=["windows"])
-async def test_timeout_local(buck: Buck) -> None:
+@bsmr_test(inplace=True, skip_for_os=["windows"])
+async def test_timeout_local(bsmr: Bsmr) -> None:
     result = await expect_failure(
-        buck.test(
+        bsmr.test(
             "root//tests/targets/rules/python/test:timeout",
             "--local-only",
             "--no-remote-cache",
@@ -781,10 +781,10 @@ async def test_timeout_local(buck: Buck) -> None:
     assert "1 TESTS TIMED OUT" in result.stderr
 
 
-@buck_test(inplace=True, skip_for_os=["windows"])
-async def test_timeout_re(buck: Buck) -> None:
+@bsmr_test(inplace=True, skip_for_os=["windows"])
+async def test_timeout_re(bsmr: Bsmr) -> None:
     result = await expect_failure(
-        buck.test(
+        bsmr.test(
             "root//tests/targets/rules/python/test:timeout",
             "--unstable-allow-all-tests-on-re",
             "--remote-only",
@@ -799,10 +799,10 @@ async def test_timeout_re(buck: Buck) -> None:
     assert "1 TESTS TIMED OUT" in result.stderr
 
 
-@buck_test(inplace=True, skip_for_os=["windows"])
-async def test_timeout_and_failure_local(buck: Buck) -> None:
+@bsmr_test(inplace=True, skip_for_os=["windows"])
+async def test_timeout_and_failure_local(bsmr: Bsmr) -> None:
     result = await expect_failure(
-        buck.test(
+        bsmr.test(
             "root//tests/targets/rules/python/test:timeout_and_fail",
             "--local-only",
             "--no-remote-cache",
@@ -822,8 +822,8 @@ async def test_timeout_and_failure_local(buck: Buck) -> None:
 
 if not is_deployed_bsmr():
 
-    @buck_test(inplace=True, skip_for_os=["windows"])
-    async def test_overall_timeout(buck: Buck) -> None:
+    @bsmr_test(inplace=True, skip_for_os=["windows"])
+    async def test_overall_timeout(bsmr: Bsmr) -> None:
         """
         If an overall timeout is set, we expect that to result in OMITs
         reported in Tpx, and Tpx does not set an error status for that.
@@ -831,7 +831,7 @@ if not is_deployed_bsmr():
         We're OK with that, we will report how many OMITs there were.
         The caller is expected to be aware of how this feature works.
         """
-        buck.test(
+        bsmr.test(
             "root//tests/targets/rules/python/test:timeout",
             "--local-only",
             "--no-remote-cache",
@@ -843,39 +843,39 @@ if not is_deployed_bsmr():
         )
 
 
-@buck_test(inplace=True, skip_for_os=["windows"])
+@bsmr_test(inplace=True, skip_for_os=["windows"])
 @pytest.mark.parametrize(
     "test",
     ["requires_env", "requires_env_location"],
 )
-async def test_test_env(buck: Buck, test: str) -> None:
+async def test_test_env(bsmr: Bsmr, test: str) -> None:
     test = f"root//tests/targets/rules/sh_test:{test}"
 
-    await buck.test(test)
+    await bsmr.test(test)
 
     # Check run also works. Note that those tests run from `fbcode` by default
     # so no chdir needed here.
-    await buck.run(test)
+    await bsmr.run(test)
 
 
-@buck_test(inplace=True, skip_for_os=["windows"])
-async def test_exit_code(buck: Buck) -> None:
+@bsmr_test(inplace=True, skip_for_os=["windows"])
+async def test_exit_code(bsmr: Bsmr) -> None:
     result = await expect_failure(
-        buck.test("root//tests/targets/rules/sh_test:test_fail")
+        bsmr.test("root//tests/targets/rules/sh_test:test_fail")
     )
     assert result.process.returncode == 32
-    result = await expect_failure(buck.test("not//a/real:target"))
+    result = await expect_failure(bsmr.test("not//a/real:target"))
     assert result.process.returncode == ExitCodeV2.USER_ERROR.value
 
 
-@buck_test(inplace=True, skip_for_os=["windows"])
-async def test_skip_missing_targets(buck: Buck) -> None:
+@bsmr_test(inplace=True, skip_for_os=["windows"])
+async def test_skip_missing_targets(bsmr: Bsmr) -> None:
     await expect_failure(
-        buck.test("root//tests/targets/rules/python/test:not_a_thing"),
+        bsmr.test("root//tests/targets/rules/python/test:not_a_thing"),
         stderr_regex="Unknown target `not_a_thing`",
     )
 
-    res = await buck.test(
+    res = await bsmr.test(
         "root//tests/targets/rules/python/test:not_a_thing",
         "--skip-missing-targets",
     )
@@ -883,24 +883,24 @@ async def test_skip_missing_targets(buck: Buck) -> None:
     assert "Skipped 1 missing targets:" in res.stderr
 
 
-@buck_test(inplace=True, skip_for_os=["darwin", "windows"])
-async def test_test_worker(buck: Buck) -> None:
+@bsmr_test(inplace=True, skip_for_os=["darwin", "windows"])
+async def test_test_worker(bsmr: Bsmr) -> None:
     worker_args = [
         "-c",
         "build.use_persistent_workers=True",
         "--local-only",
         "--no-remote-cache",
     ]
-    await buck.test(
+    await bsmr.test(
         *worker_args, "root//tests/targets/rules/worker_grpc:worker_test"
     )
 
 
-@buck_test(inplace=True, write_invocation_record=True)
+@bsmr_test(inplace=True, write_invocation_record=True)
 @env("TEST_MAKE_IT_FAIL", "1")
-async def test_failed_tests_has_error_category(buck: Buck) -> None:
+async def test_failed_tests_has_error_category(bsmr: Bsmr) -> None:
     res = await expect_failure(
-        buck.test(
+        bsmr.test(
             "root//tests/targets/rules/python/test:test",
             get_mode_from_platform(),
             "--",

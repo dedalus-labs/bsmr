@@ -15,16 +15,16 @@
 # pyre-strict
 
 
-from bsmr.tests.e2e_util.api.buck import Buck
-from bsmr.tests.e2e_util.buck_workspace import buck_test
+from bsmr.tests.e2e_util.api.bsmr import Bsmr
+from bsmr.tests.e2e_util.bsmr_workspace import bsmr_test
 from bsmr.tests.e2e_util.helper.utils import filter_events
 
 
-@buck_test()
-async def test_peak_allocated_bytes(buck: Buck) -> None:
-    await buck.uquery("//:EEE")
+@bsmr_test()
+async def test_peak_allocated_bytes(bsmr: Bsmr) -> None:
+    await bsmr.uquery("//:EEE")
     span_end_load_event = await filter_events(
-        buck,
+        bsmr,
         "Event",
         "data",
         "SpanEnd",

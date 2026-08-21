@@ -18,7 +18,7 @@ use std::net::SocketAddr;
 use std::path::Path;
 use std::process::Stdio;
 
-use bsmr_error::BuckErrorContext as _;
+use bsmr_error::BsmrErrorContext as _;
 use bsmr_events::metadata::username;
 use bsmr_util::process::async_background_command;
 use futures::future::Either;
@@ -59,7 +59,7 @@ pub(crate) async fn spawn(
         command.env(BSMR_TEST_EXECUTOR_USER_ENV_VAR, user);
     }
 
-    let proc = command.spawn().with_buck_error_context(|| {
+    let proc = command.spawn().with_bsmr_error_context(|| {
         format!(
             "Failed to start {} for OutOfProcessTestExecutor",
             &executable.display()
@@ -75,7 +75,7 @@ pub(crate) async fn spawn(
             executor_tcp_listener.accept(),
         )
         .await
-        .with_buck_error_context(|| {
+        .with_bsmr_error_context(|| {
             format!(
                 "Failed to accept TCP connection from {}",
                 &executable.display()

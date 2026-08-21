@@ -210,13 +210,13 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_expands_subdirectory_with_buck_targets() -> TestResult {
+    async fn test_expands_subdirectory_with_bsmr_targets() -> TestResult {
         let (roots, cwd) = in_root()?;
         let uut = PackageCompleter::new(&cwd, &roots).await?;
 
-        let actual = uut.complete("baredir0/buck").await?;
+        let actual = uut.complete("baredir0/bsmr").await?;
 
-        assert_eq!(actual, vec!["baredir0/buckdir0b/", "baredir0/buckdir0b:",]);
+        assert_eq!(actual, vec!["baredir0/bsmrdir0b/", "baredir0/bsmrdir0b:",]);
         Ok(())
     }
 
@@ -225,9 +225,9 @@ mod tests {
         let (roots, cwd) = in_root()?;
         let uut = PackageCompleter::new(&cwd, &roots).await?;
 
-        let actual = uut.complete("baredir0/buckdir0b").await?;
+        let actual = uut.complete("baredir0/bsmrdir0b").await?;
 
-        assert_eq!(actual, vec!["baredir0/buckdir0b/", "baredir0/buckdir0b:",]);
+        assert_eq!(actual, vec!["baredir0/bsmrdir0b/", "baredir0/bsmrdir0b:",]);
         Ok(())
     }
 
@@ -238,7 +238,7 @@ mod tests {
 
         let actual = uut.complete("b").await?;
 
-        assert_eq!(actual, vec!["baredir0a/", "buckdir0b/", "buckdir0b:",]);
+        assert_eq!(actual, vec!["baredir0a/", "bsmrdir0b/", "bsmrdir0b:",]);
         Ok(())
     }
 
@@ -339,8 +339,8 @@ mod tests {
             actual,
             vec![
                 "baredir0/baredir0a/",
-                "baredir0/buckdir0b/",
-                "baredir0/buckdir0b:"
+                "baredir0/bsmrdir0b/",
+                "baredir0/bsmrdir0b:"
             ]
         );
         Ok(())
@@ -351,9 +351,9 @@ mod tests {
         let (roots, cwd) = in_root()?;
         let uut = PackageCompleter::new(&cwd, &roots).await?;
 
-        let actual = uut.complete("baredir0/buckdir0b").await?;
+        let actual = uut.complete("baredir0/bsmrdir0b").await?;
 
-        assert_eq!(actual, vec!["baredir0/buckdir0b/", "baredir0/buckdir0b:",]);
+        assert_eq!(actual, vec!["baredir0/bsmrdir0b/", "baredir0/bsmrdir0b:",]);
         Ok(())
     }
 
@@ -456,7 +456,7 @@ mod tests {
 
         let actual = uut.complete("b").await?;
 
-        assert_eq!(actual, vec!["baredir0a/", "buckdir0b/", "buckdir0b:",]);
+        assert_eq!(actual, vec!["baredir0a/", "bsmrdir0b/", "bsmrdir0b:",]);
         Ok(())
     }
 

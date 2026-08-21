@@ -17,15 +17,15 @@
 
 import json
 
-from bsmr.tests.e2e_util.api.buck import Buck
-from bsmr.tests.e2e_util.buck_workspace import buck_test
+from bsmr.tests.e2e_util.api.bsmr import Bsmr
+from bsmr.tests.e2e_util.bsmr_workspace import bsmr_test
 
 
-@buck_test()
-async def test_select_refine(buck: Buck) -> None:
+@bsmr_test()
+async def test_select_refine(bsmr: Bsmr) -> None:
     # Smoke test for select refinement:
     # the most specific option is picked even if it is not listed first.
-    out = await buck.cquery(
+    out = await bsmr.cquery(
         "--target-platforms=//:p-good-domestic",
         "-a=labels",
         "//:the-test",

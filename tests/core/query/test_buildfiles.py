@@ -15,26 +15,26 @@
 # pyre-strict
 
 
-from bsmr.tests.e2e_util.api.buck import Buck
-from bsmr.tests.e2e_util.buck_workspace import buck_test
+from bsmr.tests.e2e_util.api.bsmr import Bsmr
+from bsmr.tests.e2e_util.bsmr_workspace import bsmr_test
 
 
-@buck_test()
-async def test_allbuildfiles(buck: Buck) -> None:
+@bsmr_test()
+async def test_allbuildfiles(bsmr: Bsmr) -> None:
     target1 = "root//load:abc"
     target2 = "root//transitive_load:def"
     target3 = "root//transitive_load:ghi"
-    out1 = (await buck.uquery(f"allbuildfiles({target1})")).stdout
-    out2 = (await buck.uquery(f"allbuildfiles({target2})")).stdout
-    out3 = (await buck.uquery(f"allbuildfiles({target3})")).stdout
-    out4 = (await buck.uquery(f"allbuildfiles(set({target1} {target2}))")).stdout
+    out1 = (await bsmr.uquery(f"allbuildfiles({target1})")).stdout
+    out2 = (await bsmr.uquery(f"allbuildfiles({target2})")).stdout
+    out3 = (await bsmr.uquery(f"allbuildfiles({target3})")).stdout
+    out4 = (await bsmr.uquery(f"allbuildfiles(set({target1} {target2}))")).stdout
 
     # First, check that these are the same for cquery
-    assert out1 == (await buck.cquery(f"allbuildfiles({target1})")).stdout
-    assert out2 == (await buck.cquery(f"allbuildfiles({target2})")).stdout
-    assert out3 == (await buck.cquery(f"allbuildfiles({target3})")).stdout
+    assert out1 == (await bsmr.cquery(f"allbuildfiles({target1})")).stdout
+    assert out2 == (await bsmr.cquery(f"allbuildfiles({target2})")).stdout
+    assert out3 == (await bsmr.cquery(f"allbuildfiles({target3})")).stdout
     assert (
-        out4 == (await buck.cquery(f"allbuildfiles(set({target1} {target2}))")).stdout
+        out4 == (await bsmr.cquery(f"allbuildfiles(set({target1} {target2}))")).stdout
     )
 
     out1 = [x for x in out1.splitlines() if not x.startswith("nano_prelude/")]
@@ -66,23 +66,23 @@ async def test_allbuildfiles(buck: Buck) -> None:
     assert out4 == expected4
 
 
-@buck_test()
-async def test_rbuildfiles(buck: Buck) -> None:
+@bsmr_test()
+async def test_rbuildfiles(bsmr: Bsmr) -> None:
     target_file = "transitive_load/TARGETS.fixture"
     out1 = (
-        await buck.uquery(f"rbuildfiles({target_file}, transitive_load/c.bzl)")
+        await bsmr.uquery(f"rbuildfiles({target_file}, transitive_load/c.bzl)")
     ).stdout
-    out2 = (await buck.uquery(f"rbuildfiles({target_file}, {target_file})")).stdout
+    out2 = (await bsmr.uquery(f"rbuildfiles({target_file}, {target_file})")).stdout
 
     # Check that these are the same for cquery
     assert (
         out1
         == (
-            await buck.cquery(f"rbuildfiles({target_file}, transitive_load/c.bzl)")
+            await bsmr.cquery(f"rbuildfiles({target_file}, transitive_load/c.bzl)")
         ).stdout
     )
     assert (
-        out2 == (await buck.cquery(f"rbuildfiles({target_file}, {target_file})")).stdout
+        out2 == (await bsmr.cquery(f"rbuildfiles({target_file}, {target_file})")).stdout
     )
 
     assert "transitive_load/b.bzl" in out1

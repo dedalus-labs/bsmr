@@ -16,13 +16,13 @@
 
 from pathlib import Path
 
-from bsmr.tests.e2e_util.api.buck import Buck
-from bsmr.tests.e2e_util.buck_workspace import buck_test
+from bsmr.tests.e2e_util.api.bsmr import Bsmr
+from bsmr.tests.e2e_util.bsmr_workspace import bsmr_test
 
 
-@buck_test()
-async def test_bxl_dynamic_action_basic(buck: Buck) -> None:
-    result = await buck.bxl(
+@bsmr_test()
+async def test_bxl_dynamic_action_basic(bsmr: Bsmr) -> None:
+    result = await bsmr.bxl(
         "//:dynamic.bxl:basic",
     )
     outputs = result.stdout.strip()

@@ -1,3 +1,9 @@
+//===----------------------------------------------------------------------===//
+// Upstream-Source: facebook/buck2@1560aca2002865cd73d7cafb22c705cfb640b2bc
+// Modifications Copyright (c) 2026 Dedalus Labs, Inc. and its contributors
+// SPDX-License-Identifier: Apache-2.0
+//===----------------------------------------------------------------------===//
+
 /*
  * Copyright 2019 The Starlark in Rust Authors.
  * Copyright (c) Facebook, Inc. and its affiliates.
@@ -248,8 +254,8 @@ def bad() -> str:
         let m = module(
             r#"
 # starlark-lint-disable unused-load
-load("@cell//buck/lib:rust_library.bzl", "rust_library")
-load("@cell//buck/lib:rust_binary.bzl", "rust_binary")
+load("@cell//bsmr/lib:rust_library.bzl", "rust_library")
+load("@cell//bsmr/lib:rust_binary.bzl", "rust_binary")
 
 def bad1() -> str:
     pass
@@ -282,7 +288,7 @@ def good3() -> str:
         let src = module(
             "\
             # starlark-lint-disable unused-load\r\n\
-            load('@cell//buck/lib:rust_library.bzl', 'rust_library')",
+            load('@cell//bsmr/lib:rust_library.bzl', 'rust_library')",
         );
         let res = src.lint(None);
         assert!(res.is_empty());

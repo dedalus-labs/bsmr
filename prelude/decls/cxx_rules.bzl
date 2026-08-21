@@ -30,7 +30,7 @@ load("@prelude//linking:execution_preference.bzl", "link_execution_preference_at
 load("@prelude//linking:link_info.bzl", "ArchiveContentsType", "LinkOrdering", "LinkStyle")
 load("@prelude//linking:types.bzl", "Linkage")
 load("@prelude//transitions:constraint_overrides.bzl", "constraint_overrides")
-load(":common.bzl", "CxxRuntimeType", "CxxSourceType", "HeadersAsRawHeadersMode", "buck", "prelude_rule")
+load(":common.bzl", "CxxRuntimeType", "CxxSourceType", "HeadersAsRawHeadersMode", "bsmr", "prelude_rule")
 load(":cxx_common.bzl", "cxx_common")
 load(":genrule_common.bzl", "genrule_common")
 load(":native_common.bzl", "native_common")
@@ -125,10 +125,10 @@ cxx_binary = prelude_rule(
         )
 
         # To build without stripping:
-        buck build :echo
+        bsmr build :echo
 
         # To build with stripping debug symbols only:
-        buck build :echo#strip-debug
+        bsmr build :echo#strip-debug
         ```
     """,
     further = None,
@@ -147,7 +147,7 @@ cxx_binary = prelude_rule(
         | native_common.link_group_deps()
         | native_common.link_group_public_deps_label()
         | native_common.transformation_spec_arg()
-        | buck.deps_query_arg()
+        | bsmr.deps_query_arg()
         | cxx_common.raw_headers_arg()
         | cxx_common.include_directories_arg()
         | cxx_common.raw_headers_as_headers_mode_arg()
@@ -180,10 +180,10 @@ cxx_binary = prelude_rule(
             "version_universe": attrs.option(attrs.string(), default = None),
             "weak_framework_names": attrs.list(attrs.string(), default = []),
         }
-        | buck.allow_cache_upload_arg()
-        | buck.licenses_arg()
-        | buck.labels_arg()
-        | buck.contacts_arg()
+        | bsmr.allow_cache_upload_arg()
+        | bsmr.licenses_arg()
+        | bsmr.labels_arg()
+        | bsmr.contacts_arg()
         | _cxx_binary_and_test_attrs()
     ),
     # @oss-disable[end= ]: cfg = constraint_overrides.transition,
@@ -194,13 +194,13 @@ cxx_genrule = prelude_rule(
     name = "cxx_genrule",
     docs = """
         A `cxx_genrule()` enables you to run shell commands as part
-        of the Buck build process. A `cxx_genrule()` exposes - through
+        of the Bsmr build process. A `cxx_genrule()` exposes - through
         a set of string parameter macros and variables - information about the
         tools and configuration options used by the
-        Buck environment, specifically those related to the C/C++ toolchain.
+        Bsmr environment, specifically those related to the C/C++ toolchain.
 
         The information exposed through these tools and configuration options is a reflection of:
-        Buck's built-in settings,
+        Bsmr's built-in settings,
         the settings in `.bsmr`
         and `.bsmr.local`,
         and the result of various command-line overrides specified through
@@ -214,17 +214,17 @@ cxx_genrule = prelude_rule(
         another `cxx_genrule()`.
 
         Note that if you specify the `cxx_genrule` as a command-line
-        target to `buck build`, you must include a platform flavor.
+        target to `bsmr build`, you must include a platform flavor.
         For example:
 
         ```
-        buck build :cxx_gr_name#iphonesimulator-x86_64
+        bsmr build :cxx_gr_name#iphonesimulator-x86_64
         ```
 
         You could also just specify the default platform flavor explicitly:
 
         ```
-        buck build :cxx_gr_name#default
+        bsmr build :cxx_gr_name#default
         ```
     """,
     examples = None,
@@ -239,7 +239,7 @@ cxx_genrule = prelude_rule(
                 doc = """
                 The shell command to run to generate the output file. It is the fallback of `bash`
                  and `cmd_exe`. The shell command can access information
-                 about the buck build environment through a set
+                 about the bsmr build environment through a set
                  of *macros*, *parameterized macros*, and *variables*.
 
                  #### Macros
@@ -331,11 +331,11 @@ cxx_genrule = prelude_rule(
                 `$(location //path/to:target)`
                 Expands to the path of the output of the build rule. This
                  means that you can refer to these without needing to be aware of
-                 how Buck is storing data on the disk mid-build.
+                 how Bsmr is storing data on the disk mid-build.
 
                 #### Variables
 
-                 Finally, Buck adds the following variables to the environment in
+                 Finally, Bsmr adds the following variables to the environment in
                  which the shell command runs. They are accessed using the following syntax.
                  Note the use of braces rather than parentheses.
 
@@ -390,9 +390,9 @@ cxx_genrule = prelude_rule(
             "outs": attrs.option(attrs.dict(key = attrs.string(), value = attrs.set(attrs.string(), sorted = False), sorted = False), default = None),
             "remote": attrs.option(attrs.bool(), default = None),
         }
-        | buck.licenses_arg()
-        | buck.labels_arg()
-        | buck.contacts_arg()
+        | bsmr.licenses_arg()
+        | bsmr.labels_arg()
+        | bsmr.contacts_arg()
         | core_args.optional_has_content_based_path_attr()
     ),
 )
@@ -541,10 +541,10 @@ library_attrs = (
         "version_universe": attrs.option(attrs.string(), default = None),
         "weak_framework_names": attrs.list(attrs.string(), default = []),
     }
-    | buck.allow_cache_upload_arg()
-    | buck.licenses_arg()
-    | buck.labels_arg()
-    | buck.contacts_arg()
+    | bsmr.allow_cache_upload_arg()
+    | bsmr.licenses_arg()
+    | bsmr.labels_arg()
+    | bsmr.contacts_arg()
 )
 
 cxx_library = prelude_rule(
@@ -555,26 +555,26 @@ cxx_library = prelude_rule(
 
         #### Building requires a specified top-level target
 
-        Whether a Buck command builds the `cxx_library` is
+        Whether a Bsmr command builds the `cxx_library` is
         determined by the inclusion of a top-level target, such as
         a `cxx_binary()` or `android_binary()`, that
         transitively depends on the `cxx_library`. The set of
-        targets specified to the Buck command (`buck build`, `buck run`, etc) must
-        include one of these top-level targets in order for Buck to build
+        targets specified to the Bsmr command (`bsmr build`, `bsmr run`, etc) must
+        include one of these top-level targets in order for Bsmr to build
         the `cxx_library`. Note that you could specify the top-level target
         implicitly using a `build target pattern` or you could also specify
         the top-level target using a bsmrconfig `alias` defined in `.bsmr`.
 
-        *How* Buck builds the library also depends on the specified top-level target.
+        *How* Bsmr builds the library also depends on the specified top-level target.
         For example, a C/C++ binary (`cxx_binary`) would require a static non-PIC build of the library,
         whereas an Android APK (`android_binary`) would require a shared PIC-enabled build.
         (PIC stands for position-independent code.)
 
         #### Dependencies of the cxx\\_library also require a top-level target
 
-        Similarly, in order for Buck to build a target that
+        Similarly, in order for Bsmr to build a target that
         the `cxx_library` depends on, such as a `cxx_genrule()`,
-        you must specify in the Buck command a top-level target that depends on
+        you must specify in the Bsmr command a top-level target that depends on
         the `cxx_library`. For example, you could specify
         to `build` a `cxx_binary` that
         depends on the `cxx_library`. If you specify as
@@ -758,9 +758,9 @@ cxx_precompiled_header = prelude_rule(
             "version_universe": attrs.option(attrs.string(), default = None),
         }
         | library_attrs
-        | buck.licenses_arg()
-        | buck.labels_arg()
-        | buck.contacts_arg()
+        | bsmr.licenses_arg()
+        | bsmr.labels_arg()
+        | bsmr.contacts_arg()
     ),
 )
 
@@ -808,8 +808,8 @@ windows_resource = prelude_rule(
         | {
             "deps": attrs.list(attrs.dep(), default = []),
         }
-        | buck.labels_arg()
-        | buck.contacts_arg()
+        | bsmr.labels_arg()
+        | bsmr.contacts_arg()
     ),
 )
 
@@ -833,7 +833,7 @@ cxx_test = prelude_rule(
     further = None,
     attrs = (
         # @unsorted-dict-items
-        buck.inject_test_env_arg()
+        bsmr.inject_test_env_arg()
         | cxx_common.srcs_arg()
         | cxx_common.headers_arg()
         | cxx_common.default_deps_arg()
@@ -841,14 +841,14 @@ cxx_test = prelude_rule(
         | cxx_common.compiler_flags_arg()
         | cxx_common.linker_flags_arg()
         | cxx_common.precompiled_header_arg()
-        | buck.deps_query_arg()
+        | bsmr.deps_query_arg()
         | {
             "resources": attrs.named_set(
                 attrs.source(),
                 sorted = True,
                 default = [],
                 doc = """
-                This attribute is currently not implemented, and just causes buck to rebuild
+                This attribute is currently not implemented, and just causes bsmr to rebuild
                  the test file if any of the resources change. This will change in the future
                  to provide a more reliable interface for resource files.
 
@@ -876,7 +876,7 @@ cxx_test = prelude_rule(
                 `$(location //path/to:target)`
                 Expands to the location of the output of the build rule. This
                  means that you can refer to these without needing to be aware of how
-                 Buck is storing data on the disk mid-build.
+                 Bsmr is storing data on the disk mid-build.
             """,
             ),
             "env": attrs.dict(
@@ -894,7 +894,7 @@ cxx_test = prelude_rule(
                 `$(location //path/to:target)`
                 Expands to the location of the output of the build rule. This
                  means that you can refer to these without needing to be aware of how
-                 Buck is storing data on the disk mid-build.
+                 Bsmr is storing data on the disk mid-build.
             """,
             ),
             "framework": attrs.option(
@@ -905,8 +905,8 @@ cxx_test = prelude_rule(
             """,
             ),
         }
-        | buck.run_test_separately_arg(run_test_separately_type = attrs.option(attrs.bool(), default = None))
-        | buck.test_rule_timeout_ms()
+        | bsmr.run_test_separately_arg(run_test_separately_type = attrs.option(attrs.bool(), default = None))
+        | bsmr.test_rule_timeout_ms()
         | native_common.link_group_deps()
         | native_common.link_group_public_deps_label()
         | native_common.transformation_spec_arg()
@@ -952,10 +952,10 @@ cxx_test = prelude_rule(
             "version_universe": attrs.option(attrs.string(), default = None),
             "weak_framework_names": attrs.list(attrs.string(), default = []),
         }
-        | buck.allow_cache_upload_arg()
-        | buck.licenses_arg()
-        | buck.labels_arg()
-        | buck.contacts_arg()
+        | bsmr.allow_cache_upload_arg()
+        | bsmr.licenses_arg()
+        | bsmr.labels_arg()
+        | bsmr.contacts_arg()
         | test_common.attributes()
         | _cxx_binary_and_test_attrs()
     ),
@@ -1086,9 +1086,9 @@ cxx_toolchain = prelude_rule(
             "strip_non_global_flags": attrs.option(attrs.list(attrs.arg()), default = None),
             "use_header_map": attrs.bool(default = False),
         }
-        | buck.licenses_arg()
-        | buck.labels_arg()
-        | buck.contacts_arg()
+        | bsmr.licenses_arg()
+        | bsmr.labels_arg()
+        | bsmr.contacts_arg()
     ),
 )
 
@@ -1141,7 +1141,7 @@ prebuilt_cxx_library = prelude_rule(
                 default = False,
                 doc = """
                 Indicates if this library only consists of headers or not. If this is set to
-                 `True`, Buck will not link this library into any library that depends on it.
+                 `True`, Bsmr will not link this library into any library that depends on it.
             """,
             ),
             "shared_lib": attrs.option(
@@ -1215,10 +1215,10 @@ prebuilt_cxx_library = prelude_rule(
             "versioned_static_lib": attrs.option(attrs.versioned(attrs.source()), default = None),
             "versioned_static_pic_lib": attrs.option(attrs.versioned(attrs.source()), default = None),
         }
-        | buck.allow_cache_upload_arg()
-        | buck.licenses_arg()
-        | buck.labels_arg()
-        | buck.contacts_arg()
+        | bsmr.allow_cache_upload_arg()
+        | bsmr.licenses_arg()
+        | bsmr.labels_arg()
+        | bsmr.contacts_arg()
     ),
 )
 
@@ -1352,9 +1352,9 @@ prebuilt_cxx_library_group = prelude_rule(
             "include_in_android_merge_map_output": attrs.bool(default = True),
             "supports_shared_library_interface": attrs.bool(default = True),
         }
-        | buck.licenses_arg()
-        | buck.labels_arg()
-        | buck.contacts_arg()
+        | bsmr.licenses_arg()
+        | bsmr.labels_arg()
+        | bsmr.contacts_arg()
     ),
 )
 
@@ -1390,7 +1390,7 @@ llvm_link_bitcode = prelude_rule(
     attrs = (
         # @unsorted-dict-items
         cxx_common.srcs_arg()
-        | buck.deps_query_arg()
+        | bsmr.deps_query_arg()
         | {
             "deps": attrs.list(attrs.dep(), default = []),
         }

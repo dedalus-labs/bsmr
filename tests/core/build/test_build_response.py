@@ -18,19 +18,19 @@
 import typing
 from pathlib import Path
 
-from bsmr.tests.e2e_util.api.buck import Buck
+from bsmr.tests.e2e_util.api.bsmr import Bsmr
 from bsmr.tests.e2e_util.asserts import expect_failure
-from bsmr.tests.e2e_util.buck_workspace import buck_test
+from bsmr.tests.e2e_util.bsmr_workspace import bsmr_test
 from bsmr.tests.e2e_util.helper.utils import filter_events
 
 
 async def check_targets(
-    buck: Buck,
+    bsmr: Bsmr,
     expected_target_names: typing.List[str],
     expected_error_messages: typing.List[str],
 ) -> None:
     build_response = await filter_events(
-        buck,
+        bsmr,
         "Result",
         "result",
         "build_response",
@@ -48,11 +48,11 @@ async def check_targets(
             assert expected in actual_msg["message"]
 
 
-@buck_test()
-async def test_build_one_fails(buck: Buck, tmp_path: Path) -> None:
+@bsmr_test()
+async def test_build_one_fails(bsmr: Bsmr, tmp_path: Path) -> None:
     report = tmp_path / "build-report.json"
     await expect_failure(
-        buck.build(
+        bsmr.build(
             "--build-report",
             str(report),
             "//:fail",
@@ -61,7 +61,7 @@ async def test_build_one_fails(buck: Buck, tmp_path: Path) -> None:
         stderr_regex="Failed to build 'root//:fail",
     )
     await check_targets(
-        buck,
+        bsmr,
         ["root//:a_one", "root//:fail"],
         ["Failed to build 'root//:fail (<unspecified>)'"],
     )

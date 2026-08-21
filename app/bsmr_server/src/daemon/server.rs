@@ -29,14 +29,14 @@ use std::time::SystemTime;
 
 use allocative::Allocative;
 use async_trait::async_trait;
-use bsmr_build_api::configure_dice::configure_dice_for_buck;
-use bsmr_build_api::spawner::BuckSpawner;
+use bsmr_build_api::configure_dice::configure_dice_for_bsmr;
+use bsmr_build_api::spawner::BsmrSpawner;
 use bsmr_certs::validate::CertState;
 use bsmr_certs::validate::check_cert_state;
 use bsmr_certs::validate::validate_certs;
 use bsmr_cli_proto::daemon_api_server::*;
 use bsmr_cli_proto::*;
-use bsmr_common::buckd_connection::BUCK_AUTH_TOKEN_HEADER;
+use bsmr_common::daemon_connection::BSMR_AUTH_TOKEN_HEADER;
 use bsmr_common::events::HasEvents;
 use bsmr_common::init::DaemonStartupConfig;
 use bsmr_common::invocation_paths::InvocationPaths;
@@ -53,7 +53,7 @@ use bsmr_core::error::reset_soft_error_counters;
 use bsmr_core::fs::project::ProjectRoot;
 use bsmr_core::logging::LogConfigurationReloadHandle;
 use bsmr_core::pattern::unparsed::UnparsedPatternPredicate;
-use bsmr_error::BuckErrorContext;
+use bsmr_error::BsmrErrorContext;
 use bsmr_events::Event;
 use bsmr_events::daemon_id::DaemonId;
 use bsmr_events::dispatch::EventDispatcher;
@@ -69,8 +69,8 @@ use bsmr_fs::paths::abs_path::AbsPathBuf;
 use bsmr_interpreter::starlark_profiler::config::StarlarkProfilerConfiguration;
 use bsmr_profile::proto_to_profile_mode;
 use bsmr_profile::starlark_profiler_configuration_from_request;
-use bsmr_resource_control::buck_cgroup_tree::BuckCgroupTree;
-use bsmr_resource_control::buck_cgroup_tree::PreppedBuckCgroups;
+use bsmr_resource_control::cgroup_tree::BsmrCgroupTree;
+use bsmr_resource_control::cgroup_tree::PreppedBsmrCgroups;
 use bsmr_server_ctx::bxl::BXL_SERVER_COMMANDS;
 use bsmr_server_ctx::ctx::ServerCommandContextTrait;
 use bsmr_server_ctx::late_bindings::AUDIT_SERVER_COMMAND;
@@ -141,13 +141,13 @@ static DEFAULT_KILL_TIMEOUT: Duration = Duration::from_millis(500);
 
 static DEFAULT_INACTIVITY_TIMEOUT: Duration = Duration::from_secs(4 * 86400);
 
-pub trait BuckdServerDelegate: Allocative + Send + Sync {
+pub trait BsmrdServerDelegate: Allocative + Send + Sync {
     fn force_shutdown_with_timeout(&self, reason: String, timeout: Duration);
 }
 
 #[derive(Allocative)]
 struct DaemonShutdown {
-    delegate: Box<dyn BuckdServerDelegate>,
+    delegate: Box<dyn BsmrdServerDelegate>,
 
     /// This channel is used to trigger a graceful shutdown of the grpc server. After
     /// an item is sent on this channel, the server will start rejecting new requests
@@ -178,7 +178,7 @@ impl DaemonShutdown {
 }
 
 #[derive(Allocative)]
-pub struct BuckdServerInitPreferences {
+pub struct BsmrdServerInitPreferences {
     pub detect_cycles: Option<DetectCycles>,
     pub enable_trace_io: bool,
     pub reject_materializer_state: Option<SqliteIdentity>,
@@ -186,7 +186,7 @@ pub struct BuckdServerInitPreferences {
     pub daemon_originating_cgroup: Option<String>,
 }
 
-impl BuckdServerInitPreferences {
+impl BsmrdServerInitPreferences {
     pub async fn construct_dice(
         &self,
         io: Arc<dyn IoProvider>,
@@ -194,7 +194,7 @@ impl BuckdServerInitPreferences {
         root_config: &LegacyBsmrConfig,
         tenting_acl_provider: Option<Arc<dyn TentingAclProvider>>,
     ) -> bsmr_error::Result<Arc<Dice>> {
-        configure_dice_for_buck(
+        configure_dice_for_bsmr(
             io,
             digest_config,
             Some(root_config),
@@ -206,13 +206,13 @@ impl BuckdServerInitPreferences {
 }
 
 #[derive(Clone)]
-struct BuckCheckAuthTokenInterceptor {
+struct BsmrCheckAuthTokenInterceptor {
     auth_token: String,
 }
 
-impl Interceptor for BuckCheckAuthTokenInterceptor {
+impl Interceptor for BsmrCheckAuthTokenInterceptor {
     fn call(&mut self, request: Request<()>) -> Result<Request<()>, Status> {
-        let token = match request.metadata().get(BUCK_AUTH_TOKEN_HEADER) {
+        let token = match request.metadata().get(BSMR_AUTH_TOKEN_HEADER) {
             Some(token) => token,
             None => return Err(Status::unauthenticated("missing auth token")),
         };
@@ -220,7 +220,7 @@ impl Interceptor for BuckCheckAuthTokenInterceptor {
             return Err(Status::unauthenticated("invalid auth token"));
         }
 
-        if bsmr_env!("BSMR_TEST_FAIL_BUCKD_AUTH", bool, applicability = testing).unwrap() {
+        if bsmr_env!("BSMR_TEST_FAIL_BSMRD_AUTH", bool, applicability = testing).unwrap() {
             return Err(Status::unauthenticated("injected auth error"));
         }
 
@@ -229,7 +229,7 @@ impl Interceptor for BuckCheckAuthTokenInterceptor {
 }
 
 #[derive(Allocative)]
-pub(crate) struct BuckdServerData {
+pub(crate) struct BsmrdServerData {
     /// The flag that is set to true when server is shutting down.
     stop_accepting_requests: AtomicBool,
     #[allocative(skip)]
@@ -249,29 +249,29 @@ pub(crate) struct BuckdServerData {
     rt: Handle,
 }
 
-/// The BuckdServer implements the DaemonApi.
+/// The BsmrdServer implements the DaemonApi.
 ///
 /// Simple endpoints are implemented here and complex things will be implemented in a sibling
 /// module taking just a ServerCommandContext.
 #[derive(Allocative)]
-pub struct BuckdServer(Arc<BuckdServerData>);
+pub struct BsmrdServer(Arc<BsmrdServerData>);
 
-impl BuckdServerData {
+impl BsmrdServerData {
     pub(crate) fn daemon_state_data(&self) -> Arc<DaemonStateData> {
         self.daemon_state.data()
     }
 }
 
-impl BuckdServer {
+impl BsmrdServer {
     #[tracing::instrument(name = "daemon_listener", skip_all)]
     pub async fn run(
         fb: fbinit::FacebookInit,
         log_reload_handle: Arc<dyn LogConfigurationReloadHandle>,
         paths: InvocationPaths,
-        delegate: Box<dyn BuckdServerDelegate>,
-        init_ctx: BuckdServerInitPreferences,
+        delegate: Box<dyn BsmrdServerDelegate>,
+        init_ctx: BsmrdServerInitPreferences,
         process_info: DaemonProcessInfo,
-        prepped_cgroups: Option<PreppedBuckCgroups>,
+        prepped_cgroups: Option<PreppedBsmrCgroups>,
         base_daemon_constraints: bsmr_cli_proto::DaemonConstraints,
         listener: Pin<Box<dyn Stream<Item = Result<tokio::net::TcpStream, io::Error>> + Send>>,
         rt: Handle,
@@ -288,18 +288,18 @@ impl BuckdServer {
         )?;
 
         // Create bsmr-out and potentially chdir to there.
-        fs_util::create_dir_all(paths.buck_out_path())
-            .buck_error_context("Error creating buck_out_path")?;
+        fs_util::create_dir_all(paths.output_path())
+            .bsmr_error_context("Error creating output_path")?;
 
         let cwd = {
-            let dir = WorkingDirectory::open(paths.buck_out_path())?;
+            let dir = WorkingDirectory::open(paths.output_path())?;
             dir.chdir_and_promise_it_will_not_change()?;
             dir
         };
 
         let cgroup_tree = if let Some(prepped_cgroups) = prepped_cgroups {
             Some(
-                BuckCgroupTree::set_up(
+                BsmrCgroupTree::set_up(
                     prepped_cgroups,
                     &init_ctx.daemon_startup_config.resource_control,
                 )
@@ -342,7 +342,7 @@ impl BuckdServer {
         }
 
         let auth_token = process_info.auth_token.clone();
-        let api_server = BuckdServer(Arc::new(BuckdServerData {
+        let api_server = BsmrdServer(Arc::new(BsmrdServerData {
             stop_accepting_requests: AtomicBool::new(false),
             process_info,
             base_daemon_constraints,
@@ -365,7 +365,7 @@ impl BuckdServer {
         let shutdown =
             server_shutdown_signal(command_receiver, shutdown_receiver, daemon_idle_timeout_s)?;
         let server = Server::builder()
-            .layer(InterceptorLayer::new(BuckCheckAuthTokenInterceptor {
+            .layer(InterceptorLayer::new(BsmrCheckAuthTokenInterceptor {
                 auth_token,
             }))
             .add_service(
@@ -500,7 +500,7 @@ impl BuckdServer {
             system_total_memory_bytes: Some(system_memory_stats()),
             memory_pressure_threshold_percent: system_warning_config
                 .memory_pressure_threshold_percent,
-            total_disk_space_bytes: disk_space_stats(daemon_state.paths.buck_out_path())
+            total_disk_space_bytes: disk_space_stats(daemon_state.paths.output_path())
                 .ok()
                 .map(|DiskSpaceStats { total_space, .. }| total_space),
             remaining_disk_space_threshold_gb: system_warning_config
@@ -561,7 +561,7 @@ impl BuckdServer {
         // as a baseline.
         let snapshot_collector = SnapshotCollector::new(
             data.dupe(),
-            daemon_state.paths.buck_out_path(),
+            daemon_state.paths.output_path(),
             self.0.rt.clone(),
         );
         dispatch.instant_event(Box::new(snapshot_collector.create_snapshot().await));
@@ -701,7 +701,7 @@ impl BuckdServer {
     fn check_if_accepting_requests(&self) -> Result<(), Status> {
         if self.0.stop_accepting_requests.load(Ordering::Relaxed) {
             Err(Status::failed_precondition(
-                "Failed to run command, `buckd` is shutting down soon!",
+                "Failed to run command, `bsmrd` is shutting down soon!",
             ))
         } else {
             Ok(())
@@ -805,11 +805,11 @@ fn pump_events(
                     progress: Some(command_progress::Progress::PartialResult(Box::new(result))),
                 }));
             }
-            Event::Buck(buck_event) => {
-                state.peek_event(&buck_event);
+            Event::Bsmr(bsmr_event) => {
+                state.peek_event(&bsmr_event);
 
                 let _ignore = output_send.send(Ok(CommandProgress {
-                    progress: Some(command_progress::Progress::Event(buck_event.into())),
+                    progress: Some(command_progress::Progress::Event(bsmr_event.into())),
                 }));
             }
         }
@@ -851,7 +851,7 @@ where
 
     let spawned = spawn_dropcancel(
         |cancellations| func(req, cancellations),
-        &BuckSpawner::new(rt.clone()),
+        &BsmrSpawner::new(rt.clone()),
         &events_ctx,
     );
     let (output_send, output_recv) = tokio::sync::mpsc::unbounded_channel();
@@ -880,7 +880,7 @@ where
     let daemon_shutdown_stream = daemon_shutdown_channel
         .map_ok(move |shutdown| CommandProgress {
             progress: Some(command_progress::Progress::Event(Box::new(
-                bsmr_data::BuckEvent {
+                bsmr_data::BsmrEvent {
                     timestamp: Some(SystemTime::now().into()),
                     trace_id: trace_id.to_string(),
                     span_id: 0,
@@ -918,7 +918,7 @@ struct QueryCommandOptions {
 }
 
 impl OneshotCommandOptions for QueryCommandOptions {
-    fn pre_run(&self, _server: &BuckdServer) -> Result<(), Status> {
+    fn pre_run(&self, _server: &BsmrdServer) -> Result<(), Status> {
         Ok(())
     }
 }
@@ -948,13 +948,13 @@ type ResponseStream =
     Pin<Box<dyn Stream<Item = Result<MultiCommandProgress, Status>> + Send + Sync>>;
 
 #[async_trait]
-impl DaemonApi for BuckdServer {
+impl DaemonApi for BsmrdServer {
     async fn kill(&self, req: Request<KillRequest>) -> Result<Response<CommandResult>, Status> {
         struct KillRunCommandOptions;
 
         impl OneshotCommandOptions for KillRunCommandOptions {
             /// kill should be always available
-            fn pre_run(&self, _server: &BuckdServer) -> Result<(), Status> {
+            fn pre_run(&self, _server: &BsmrdServer) -> Result<(), Status> {
                 Ok(())
             }
         }
@@ -992,7 +992,7 @@ impl DaemonApi for BuckdServer {
                 0;
                 req.response_payload_size
                     .try_into()
-                    .buck_error_context("requested payload too large")?
+                    .bsmr_error_context("requested payload too large")?
             ];
             rand::rngs::SmallRng::seed_from_u64(10).fill_bytes(&mut payload);
 
@@ -1010,7 +1010,7 @@ impl DaemonApi for BuckdServer {
                 Some(
                     snapshot::SnapshotCollector::new(
                         daemon_state.data(),
-                        daemon_state.paths.buck_out_path(),
+                        daemon_state.paths.output_path(),
                         rt.clone(),
                     )
                     .create_snapshot()
@@ -1033,7 +1033,7 @@ impl DaemonApi for BuckdServer {
             daemon_constraints.extra = Some(extra_constraints);
 
             let valid_working_directory = daemon_state.validate_cwd().is_ok();
-            let valid_buck_out_mount = daemon_state.validate_buck_out_mount().is_ok();
+            let valid_output_mount = daemon_state.validate_output_mount().is_ok();
 
             let io_provider = daemon_state.data().io.name().to_owned();
 
@@ -1057,7 +1057,7 @@ impl DaemonApi for BuckdServer {
                 supports_vpnless: Some(daemon_state.data().http_client.supports_vpnless()),
                 http2: Some(daemon_state.data().http_client.http2()),
                 valid_working_directory: Some(valid_working_directory),
-                valid_buck_out_mount: Some(valid_buck_out_mount),
+                valid_output_mount: Some(valid_output_mount),
                 io_provider: Some(io_provider),
                 allprocs_cgroup_path: {
                     #[cfg(unix)]
@@ -1422,7 +1422,7 @@ impl DaemonApi for BuckdServer {
         self.check_if_accepting_requests()?;
 
         let response = memory::allocator_stats(&req.into_inner().options)
-            .buck_error_context("Failed to retrieve allocator stats");
+            .bsmr_error_context("Failed to retrieve allocator stats");
 
         match response {
             Ok(response) => Ok(Response::new(UnstableAllocatorStatsResponse { response })),
@@ -1442,14 +1442,14 @@ impl DaemonApi for BuckdServer {
             let path = Path::new(&path);
             let format_proto =
                 bsmr_cli_proto::unstable_dice_dump_request::DiceDumpFormat::try_from(inner.format)
-                    .buck_error_context("Invalid DICE dump format")?;
+                    .bsmr_error_context("Invalid DICE dump format")?;
 
             self.0
                 .daemon_state
                 .data()
                 .spawn_dice_dump(path, format_proto)
                 .await
-                .with_buck_error_context(|| {
+                .with_bsmr_error_context(|| {
                     format!("Failed to perform dice dump to {}", path.display())
                 })?;
 
@@ -1655,7 +1655,7 @@ impl DaemonApi for BuckdServer {
             self.0
                 .log_reload_handle
                 .update_log_filter(&req.log_filter)
-                .buck_error_context("Error updating daemon log filter")
+                .bsmr_error_context("Error updating daemon log filter")
                 .map_err(|e| Status::invalid_argument(format!("{e:#}")))?;
         }
 
@@ -1666,7 +1666,7 @@ impl DaemonApi for BuckdServer {
                 forkserver
                     .set_log_filter(req.log_filter)
                     .await
-                    .buck_error_context("Error forwarding daemon log filter to forkserver")
+                    .bsmr_error_context("Error forwarding daemon log filter to forkserver")
                     .map_err(|e| Status::invalid_argument(format!("{e:#}")))?;
             }
         }
@@ -1693,7 +1693,7 @@ impl DaemonApi for BuckdServer {
 /// Options to configure the execution of a oneshot command (i.e. what happens in `oneshot()`).
 trait OneshotCommandOptions: Send + Sync + 'static {
     #[allow(clippy::result_large_err)]
-    fn pre_run(&self, server: &BuckdServer) -> Result<(), Status> {
+    fn pre_run(&self, server: &BsmrdServer) -> Result<(), Status> {
         server.check_if_accepting_requests()
     }
 }

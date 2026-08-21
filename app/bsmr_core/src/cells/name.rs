@@ -18,8 +18,8 @@ use std::hash::Hash;
 use std::hash::Hasher;
 
 use allocative::Allocative;
-use bsmr_error::BuckErrorSerde;
-use bsmr_hash::BuckHasher;
+use bsmr_error::BsmrErrorSerde;
+use bsmr_hash::BsmrHasher;
 use derive_more::Display;
 use dupe::Dupe;
 use equivalent::Equivalent;
@@ -70,7 +70,7 @@ impl<'a> From<CellNameDataRef<'a>> for CellNameData {
     }
 }
 
-interner!(INTERNER, BuckHasher, CellNameData);
+interner!(INTERNER, BsmrHasher, CellNameData);
 
 /// A 'CellName' is a canonicalized, human-readable name that corresponds to a
 /// 'CellInstance'. There should be a one to one mapping between a 'CellName'

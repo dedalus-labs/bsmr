@@ -1,3 +1,9 @@
+//===----------------------------------------------------------------------===//
+// Upstream-Source: facebook/buck2@1560aca2002865cd73d7cafb22c705cfb640b2bc
+// Modifications Copyright (c) 2026 Dedalus Labs, Inc. and its contributors
+// SPDX-License-Identifier: Apache-2.0
+//===----------------------------------------------------------------------===//
+
 /*
  * Copyright (c) Meta Platforms, Inc. and affiliates.
  *
@@ -17,8 +23,8 @@ import (
 )
 
 type targetsByType struct {
-	buckPatterns []string
-	buckFiles    []string
+	bsmrPatterns []string
+	bsmrFiles    []string
 	stdPatterns  []string
 	stdFiles     []string
 }
@@ -51,7 +57,7 @@ func parsePatterns(platform Platform, targets []string, goRoot string) (*targets
 	result := &targetsByType{}
 	for _, pkg := range pkgTargets {
 		if strings.Contains(pkg, "//") || strings.Contains(pkg, ":") {
-			result.buckPatterns = append(result.buckPatterns, pkg)
+			result.bsmrPatterns = append(result.bsmrPatterns, pkg)
 		} else {
 			result.stdPatterns = append(result.stdPatterns, pkg)
 		}
@@ -61,7 +67,7 @@ func parsePatterns(platform Platform, targets []string, goRoot string) (*targets
 		if strings.Contains(file, goRoot) {
 			result.stdFiles = append(result.stdFiles, file)
 		} else {
-			result.buckFiles = append(result.buckFiles, file)
+			result.bsmrFiles = append(result.bsmrFiles, file)
 		}
 	}
 

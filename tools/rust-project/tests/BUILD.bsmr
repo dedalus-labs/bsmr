@@ -5,7 +5,7 @@
 
 # Defines build targets for tools/rust-project/tests.
 
-load("@root//tests:buck_e2e.bzl", "bsmr_e2e_test")
+load("@root//tests:bsmr_e2e.bzl", "bsmr_e2e_test")
 
 bsmr_e2e_test(
     name = "test_rust_project",

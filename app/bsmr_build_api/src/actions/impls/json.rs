@@ -19,10 +19,10 @@ use std::io::sink;
 use std::sync::Arc;
 
 use bsmr_core::content_hash::ContentBasedPathHash;
-use bsmr_error::BuckErrorContext;
+use bsmr_error::BsmrErrorContext;
 use bsmr_execute::artifact::artifact_dyn::ArtifactDyn;
 use bsmr_execute::artifact::fs::ExecutorFs;
-use bsmr_hash::BuckHashMap;
+use bsmr_hash::BsmrHashMap;
 use bsmr_interpreter::types::cell_path::StarlarkCellPath;
 use bsmr_interpreter::types::configured_providers_label::StarlarkConfiguredProvidersLabel;
 use bsmr_interpreter::types::target_label::StarlarkTargetLabel;
@@ -278,7 +278,7 @@ fn is_singleton_cmdargs(x: CommandLineArg) -> bool {
 }
 
 pub fn validate_json(x: JsonUnpack) -> bsmr_error::Result<()> {
-    write_json(x, None, &mut sink(), false, false, &BuckHashMap::default())
+    write_json(x, None, &mut sink(), false, false, &BsmrHashMap::default())
 }
 
 pub fn write_json(
@@ -306,7 +306,7 @@ pub fn write_json(
         }
         bsmr_error::Ok(())
     })()
-    .buck_error_context("Error converting to JSON for `write_json`")
+    .bsmr_error_context("Error converting to JSON for `write_json`")
 }
 
 pub fn visit_json_artifacts<'v>(

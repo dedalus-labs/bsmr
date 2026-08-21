@@ -14,7 +14,7 @@
 
 load("@prelude//erlang:erlang_application.bzl", "StartTypeValues")
 load("@prelude//erlang:erlang_info.bzl", "ErlangAppIncludeInfo", "ErlangAppInfo", "ErlangAppOrTestInfo")
-load(":common.bzl", "buck", "prelude_rule")
+load(":common.bzl", "bsmr", "prelude_rule")
 load(":re_test_common.bzl", "re_test_common")
 
 def re_test_args():
@@ -23,8 +23,8 @@ def re_test_args():
     return {"remote_execution": args["remote_execution"]}
 
 common_attributes = (
-    buck.labels_arg()
-    | buck.contacts_arg()
+    bsmr.labels_arg()
+    | bsmr.contacts_arg()
     | {
         "os_env": attrs.option(
             attrs.dict(key = attrs.string(), value = attrs.string()),

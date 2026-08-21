@@ -33,10 +33,10 @@ load(
 
 # Key under which `set_cfg_modifiers()` writes its PACKAGE-level cfg modifiers
 # (consumed by `set_cfg_constructor(key = MODIFIER_METADATA_KEY, ...)`). The
-# string value collides with the historical per-target `metadata["buck.cfg_modifiers"]`
+# string value collides with the historical per-target `metadata["bsmr.cfg_modifiers"]`
 # key, which is no longer supported - per-target modifiers must use the first-class
 # `modifiers` attribute.
-MODIFIER_METADATA_KEY = "buck.cfg_modifiers"
+MODIFIER_METADATA_KEY = "bsmr.cfg_modifiers"
 
 _TARGET_LOCATION_STR = "`modifiers` attribute of target"
 _CLI_LOCATION_STR = "command line"

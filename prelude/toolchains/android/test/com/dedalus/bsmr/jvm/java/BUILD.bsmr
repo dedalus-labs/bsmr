@@ -1,0 +1,126 @@
+# ===----------------------------------------------------------------------===
+# Upstream-Source: facebook/buck2@1560aca2002865cd73d7cafb22c705cfb640b2bc
+# Modifications Copyright (c) 2026 Dedalus Labs, Inc. and its contributors
+# SPDX-License-Identifier: Apache-2.0
+# ===----------------------------------------------------------------------===
+
+load("@bsmr_build//rules:testpilot_defs.bzl", "tpx_labels")
+load(
+    "@prelude//toolchains/android/tools:build_rules.bzl",
+    "bsmr_java_library",
+    "bsmr_java_test",
+)
+load("@prelude//utils:source_listing.bzl", "source_listing")
+
+oncall("android_devxx")
+
+source_listing()
+
+bsmr_java_library(
+    name = "testutil",
+    srcs = [
+        "FakeJavac.java",
+        "FakeStandardJavaFileManager.java",
+    ],
+    visibility = [
+        "prelude//toolchains/android/test/...",
+    ],
+    deps = [
+        "prelude//toolchains/android/src/com/dedalus/bsmr/android:helpers",
+        "prelude//toolchains/android/src/com/dedalus/bsmr/cd/resources/proto:javacd-model",
+        "prelude//toolchains/android/src/com/dedalus/bsmr/core/filesystems:filesystems",
+        "prelude//toolchains/android/src/com/dedalus/bsmr/jvm/core:core",
+        "prelude//toolchains/android/src/com/dedalus/bsmr/jvm/java:steps",
+        "prelude//toolchains/android/src/com/dedalus/bsmr/jvm/java:support",
+        "prelude//toolchains/android/src/com/dedalus/bsmr/jvm/java/abi/source/api:api",
+        "prelude//toolchains/android/src/com/dedalus/bsmr/jvm/java/classes:classes",
+        "prelude//toolchains/android/src/com/dedalus/bsmr/jvm/java/javax:javax",
+        "prelude//toolchains/android/src/com/dedalus/bsmr/step:step",
+        "prelude//toolchains/android/src/com/dedalus/bsmr/test/result/type:type",
+        "prelude//toolchains/android/src/com/dedalus/bsmr/test/selectors:selectors",
+        "prelude//toolchains/android/src/com/dedalus/bsmr/util:process_executor",
+        "prelude//toolchains/android/src/com/dedalus/bsmr/util:util",
+        "prelude//toolchains/android/src/com/dedalus/bsmr/util/environment:environment",
+        "prelude//toolchains/android/src/com/dedalus/bsmr/util/environment:platform",
+        "prelude//toolchains/android/src/com/dedalus/bsmr/util/unit:unit",
+        "prelude//toolchains/android/test/com/dedalus/bsmr/testutil:testutil",
+        "prelude//toolchains/android/test/com/dedalus/bsmr/testutil/integration:util",
+        "prelude//toolchains/android/third-party:args4j",
+        "prelude//toolchains/android/third-party:asm",
+        "prelude//toolchains/android/third-party:dd-plist",
+        "prelude//toolchains/android/third-party:ddmlib",
+        "prelude//toolchains/android/third-party:guava",
+        "prelude//toolchains/android/third-party:infer-annotations",
+        "prelude//toolchains/android/third-party:jackson-annotations",
+        "prelude//toolchains/android/third-party:jackson-core",
+        "prelude//toolchains/android/third-party:jackson-databind",
+        "prelude//toolchains/android/third-party:jsr305",
+        "prelude//toolchains/android/third-party:junit",
+        "prelude//toolchains/android/third-party:okhttp",
+        "prelude//toolchains/android/third-party:okio",
+        "prelude//toolchains/android/third-party:tools-sdk-common",
+    ],
+    exported_deps = [],
+)
+
+bsmr_java_test(
+    name = "java",
+    srcs = glob(
+        ["*Test.java"],
+    ),
+    _java_toolchain = "toolchains//:java_for_android",
+    java_version = "21",
+    labels = [
+        tpx_labels.long_running,
+    ],
+    deps = [
+        "prelude//toolchains/android/src/com/dedalus/bsmr/android:helpers",
+        "prelude//toolchains/android/src/com/dedalus/bsmr/cd/resources/proto:javacd-model",
+        "prelude//toolchains/android/src/com/dedalus/bsmr/io/file:file",
+        "prelude//toolchains/android/src/com/dedalus/bsmr/io/pathformat:pathformat",
+        "prelude//toolchains/android/src/com/dedalus/bsmr/jvm/core:core",
+        "prelude//toolchains/android/src/com/dedalus/bsmr/jvm/java:steps",
+        "prelude//toolchains/android/src/com/dedalus/bsmr/jvm/java:support",
+        "prelude//toolchains/android/src/com/dedalus/bsmr/jvm/java/abi/source/api:api",
+        "prelude//toolchains/android/src/com/dedalus/bsmr/jvm/java/classes:classes",
+        "prelude//toolchains/android/src/com/dedalus/bsmr/jvm/java/javax:javax",
+        "prelude//toolchains/android/src/com/dedalus/bsmr/jvm/java/runner:runner",
+        "prelude//toolchains/android/src/com/dedalus/bsmr/jvm/java/version/utils:utils",
+        "prelude//toolchains/android/src/com/dedalus/bsmr/step:step",
+        "prelude//toolchains/android/src/com/dedalus/bsmr/step/isolatedsteps:isolatedsteps",
+        "prelude//toolchains/android/src/com/dedalus/bsmr/step/isolatedsteps/java:java",
+        "prelude//toolchains/android/src/com/dedalus/bsmr/test/result/type:type",
+        "prelude//toolchains/android/src/com/dedalus/bsmr/test/selectors:selectors",
+        "prelude//toolchains/android/src/com/dedalus/bsmr/util:process_executor",
+        "prelude//toolchains/android/src/com/dedalus/bsmr/util:util",
+        "prelude//toolchains/android/src/com/dedalus/bsmr/util/environment:environment",
+        "prelude//toolchains/android/src/com/dedalus/bsmr/util/environment:platform",
+        "prelude//toolchains/android/src/com/dedalus/bsmr/util/function:function",
+        "prelude//toolchains/android/src/com/dedalus/bsmr/util/json:json",
+        "prelude//toolchains/android/src/com/dedalus/bsmr/util/unit:unit",
+        "prelude//toolchains/android/src/com/dedalus/bsmr/util/zip:zip",
+        "prelude//toolchains/android/test/com/dedalus/bsmr/android:testutil",
+        "prelude//toolchains/android/test/com/dedalus/bsmr/step:testutil",
+        "prelude//toolchains/android/test/com/dedalus/bsmr/testutil:testutil",
+        "prelude//toolchains/android/test/com/dedalus/bsmr/testutil/integration:util",
+        "prelude//toolchains/android/test/com/dedalus/bsmr/util:testutil",
+        "prelude//toolchains/android/third-party:args4j",
+        "prelude//toolchains/android/third-party:asm",
+        "prelude//toolchains/android/third-party:commons-compress",
+        "prelude//toolchains/android/third-party:dd-plist",
+        "prelude//toolchains/android/third-party:ddmlib",
+        "prelude//toolchains/android/third-party:guava",
+        "prelude//toolchains/android/third-party:infer-annotations",
+        "prelude//toolchains/android/third-party:jackson-annotations",
+        "prelude//toolchains/android/third-party:jackson-core",
+        "prelude//toolchains/android/third-party:jackson-databind",
+        "prelude//toolchains/android/third-party:jimfs",
+        "prelude//toolchains/android/third-party:jsr305",
+        "prelude//toolchains/android/third-party:junit",
+        "prelude//toolchains/android/third-party:okhttp",
+        "prelude//toolchains/android/third-party:okio",
+        "prelude//toolchains/android/third-party:tools-sdk-common",
+        "prelude//toolchains/android/third-party:zstd-jni",
+        ":testutil",
+    ],
+)

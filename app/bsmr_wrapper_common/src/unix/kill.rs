@@ -16,7 +16,7 @@
 
 use std::time::Duration;
 
-use bsmr_error::BuckErrorContext;
+use bsmr_error::BsmrErrorContext;
 use nix::sys::signal::Signal;
 use sysinfo::Process;
 
@@ -46,7 +46,7 @@ pub(crate) fn kill(pid: Pid) -> bsmr_error::Result<Option<KilledProcessHandleImp
     match nix::sys::signal::kill(pid_nix, Signal::SIGKILL) {
         Ok(()) => Ok(Some(KilledProcessHandleImpl { pid })),
         Err(nix::errno::Errno::ESRCH) => Ok(None),
-        Err(e) => Err(e).with_buck_error_context(|| format!("Failed to kill pid {pid}")),
+        Err(e) => Err(e).with_bsmr_error_context(|| format!("Failed to kill pid {pid}")),
     }
 }
 

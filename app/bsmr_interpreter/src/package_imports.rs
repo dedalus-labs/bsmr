@@ -43,7 +43,7 @@ enum PackageImportsError {
 #[derive(Debug, Eq, PartialEq, Allocative, Pagable)]
 pub struct ImplicitImport {
     import: ImportPath,
-    // Oddly buckv1 allows renaming symbols for these imports.
+    // Oddly legacy allows renaming symbols for these imports.
     symbols: OrderedMap<String, String>,
 }
 

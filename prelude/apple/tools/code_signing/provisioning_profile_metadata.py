@@ -1,3 +1,9 @@
+# ===----------------------------------------------------------------------===
+# Upstream-Source: facebook/buck2@1560aca2002865cd73d7cafb22c705cfb640b2bc
+# Modifications Copyright (c) 2026 Dedalus Labs, Inc. and its contributors
+# SPDX-License-Identifier: Apache-2.0
+# ===----------------------------------------------------------------------===
+
 # Copyright (c) Meta Platforms, Inc. and affiliates.
 #
 # This source code is dual-licensed under either the MIT license found in the
@@ -47,7 +53,7 @@ class ProvisioningProfileMetadata:
         ]
     )
 
-    # See `ProvisioningProfileMetadataFactory::getAppIDFromEntitlements` from `ProvisioningProfileMetadataFactory.java` in Buck v1
+    # See `ProvisioningProfileMetadataFactory::getAppIDFromEntitlements` from `ProvisioningProfileMetadataFactory.java` in Bsmr v1
     def get_app_id(self) -> AppId:
         maybe_app_id = self.entitlements.get(
             "application-identifier"
@@ -58,7 +64,7 @@ class ProvisioningProfileMetadata:
             )
         return AppId.from_string(maybe_app_id)
 
-    # See `ProvisioningProfileMetadata::getMergeableEntitlements` from `ProvisioningProfileMetadata.java` in Buck v1
+    # See `ProvisioningProfileMetadata::getMergeableEntitlements` from `ProvisioningProfileMetadata.java` in Bsmr v1
     def get_mergeable_entitlements(self) -> dict[str, Any]:
         return {
             k: v
@@ -66,7 +72,7 @@ class ProvisioningProfileMetadata:
             if k in ProvisioningProfileMetadata._mergeable_entitlements_keys
         }
 
-    # See `ProvisioningProfileMetadataFactory::fromProvisioningProfilePath` from `ProvisioningProfileMetadataFactory.java` in Buck v1
+    # See `ProvisioningProfileMetadataFactory::fromProvisioningProfilePath` from `ProvisioningProfileMetadataFactory.java` in Bsmr v1
     @staticmethod
     def from_provisioning_profile_file_content(
         file_path: Path, content: bytes

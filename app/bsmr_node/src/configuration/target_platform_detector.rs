@@ -15,7 +15,7 @@
  */
 
 //! The target platform detector spec is used to define a mapping of `package-prefix` to `target platform target`.
-//! When performing "target platform resolution", if a target doesn't specify a `default_target_platform`, buck
+//! When performing "target platform resolution", if a target doesn't specify a `default_target_platform`, bsmr
 //! will fallback to the target platform detector to determine the default target platform for that target.
 //!
 //! This is encoded in the bsmrconfig value `parser.target_platform_detector_spec` and has the format:
@@ -28,7 +28,7 @@
 //!
 //! An example supported mapping is: `target://foo/...->//:tgt target:cell//bar/...->//:tgt2 target:cell//bar/foo/...->//:tgt`.
 //! This would map `//foo:x` to platform `//:tgt`, `cell//bar:x` to `//:tgt2` and `cell//bar/foo:x` also to `//:tgt2` (the mapping
-//! for `cell//bar/foo/...` has no effect because buck will pick the first matching spec).
+//! for `cell//bar/foo/...` has no effect because bsmr will pick the first matching spec).
 
 use allocative::Allocative;
 use bsmr_core::cells::CellAliasResolver;
@@ -38,7 +38,7 @@ use bsmr_core::cells::name::CellName;
 use bsmr_core::pattern::pattern::ParsedPattern;
 use bsmr_core::pattern::pattern_type::TargetPatternExtra;
 use bsmr_core::target::label::label::TargetLabel;
-use bsmr_error::BuckErrorContext;
+use bsmr_error::BsmrErrorContext;
 use pagable::Pagable;
 
 #[derive(Debug, bsmr_error::Error)]
@@ -104,7 +104,7 @@ impl TargetPlatformDetector {
                             cell_alias_resolver,
                         )
                         .and_then(|x| x.as_target_label(target))
-                        .buck_error_context("Error parsing target platform detector spec")?;
+                        .bsmr_error_context("Error parsing target platform detector spec")?;
                         detectors.push((matcher_package, target))
                     }
                     None => {
@@ -140,7 +140,7 @@ impl TargetPlatformDetector {
 mod tests {
     use bsmr_core::cells::alias::NonEmptyCellAlias;
     use bsmr_core::cells::cell_root_path::CellRootPathBuf;
-    use bsmr_hash::StdBuckHashMap;
+    use bsmr_hash::StdBsmrHashMap;
 
     use super::*;
 
@@ -157,7 +157,7 @@ mod tests {
                     CellRootPathBuf::testing_new("cell1"),
                 ),
             ],
-            StdBuckHashMap::from_iter([(
+            StdBsmrHashMap::from_iter([(
                 NonEmptyCellAlias::testing_new("alias1"),
                 CellName::testing_new("cell1"),
             )]),
@@ -221,7 +221,7 @@ mod tests {
                     CellRootPathBuf::testing_new("cell1"),
                 ),
             ],
-            StdBuckHashMap::from_iter([(
+            StdBsmrHashMap::from_iter([(
                 NonEmptyCellAlias::testing_new("alias1"),
                 CellName::testing_new("cell1"),
             )]),

@@ -1,0 +1,98 @@
+//===----------------------------------------------------------------------===//
+// Upstream-Source: facebook/buck2@1560aca2002865cd73d7cafb22c705cfb640b2bc
+// Modifications Copyright (c) 2026 Dedalus Labs, Inc. and its contributors
+// SPDX-License-Identifier: Apache-2.0
+//===----------------------------------------------------------------------===//
+
+/*
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
+ *
+ * This source code is dual-licensed under either the MIT license found in the
+ * LICENSE-MIT file in the root directory of this source tree or the Apache
+ * License, Version 2.0 found in the LICENSE-APACHE file in the root directory
+ * of this source tree. You may select, at your option, one of the
+ * above-listed licenses.
+ */
+
+package com.dedalus.bsmr.jvm.java;
+
+import com.dedalus.bsmr.core.filesystems.AbsPath;
+import com.dedalus.bsmr.core.filesystems.RelPath;
+import com.dedalus.bsmr.core.util.log.Logger;
+import com.dedalus.bsmr.jvm.core.BuildTargetValue;
+import com.dedalus.bsmr.jvm.java.abi.AbiGenerationModeUtils;
+import com.dedalus.bsmr.step.isolatedsteps.IsolatedStep;
+import com.google.common.base.Preconditions;
+import com.google.common.collect.ImmutableList;
+import javax.annotation.Nullable;
+
+/**
+ * Java implementation of compile to jar steps factory that doesn't depend on an internal build
+ * graph datastructures, intended to be used from the Daemon worker.
+ */
+public class DaemonJavacToJarStepFactory extends BaseJavacToJarStepFactory {
+
+  private static final Logger LOG = Logger.get(DaemonJavacToJarStepFactory.class);
+
+  public DaemonJavacToJarStepFactory() {}
+
+  @Override
+  public void createCompileToJarStepImpl(
+      RelPath bsmrOut,
+      AbsPath buildCellRootPath,
+      BuildTargetValue invokingRule,
+      CompilerOutputPathsValue compilerOutputPathsValue,
+      CompilerParameters compilerParameters,
+      @Nullable JarParameters abiJarParameters,
+      @Nullable JarParameters libraryJarParameters,
+      ImmutableList.Builder<IsolatedStep> steps,
+      ResolvedJavac resolvedJavac,
+      @Nullable ActionMetadata actionMetadata,
+      JavaExtraParams extraParams) {
+    Preconditions.checkArgument(
+        libraryJarParameters == null
+            || libraryJarParameters
+                .getEntriesToJar()
+                .contains(compilerParameters.getOutputPaths().getClassesDir()));
+
+    // In order to use direct spooling to the Jar:
+    // (1) It must be enabled through a .bsmr.
+    // (2) The target must have 0 postprocessing steps.
+    // (3) Tha compile API must be JSR 199.
+    boolean isSpoolingToJarEnabled =
+        AbiGenerationModeUtils.isNotClassAbi(compilerParameters.getAbiGenerationMode())
+            || resolvedJavac instanceof Jsr199Javac.ResolvedJsr199Javac;
+
+    if (isSpoolingToJarEnabled) {
+      steps.add(
+          new JavacStep(
+              resolvedJavac,
+              extraParams.getResolvedJavacOptions(),
+              invokingRule,
+              bsmrOut,
+              compilerOutputPathsValue,
+              compilerParameters,
+              abiJarParameters,
+              libraryJarParameters,
+              false));
+    } else {
+      super.createCompileToJarStepImpl(
+          bsmrOut,
+          buildCellRootPath,
+          invokingRule,
+          compilerOutputPathsValue,
+          compilerParameters,
+          null,
+          libraryJarParameters,
+          steps,
+          resolvedJavac,
+          actionMetadata,
+          extraParams);
+    }
+  }
+
+  @Override
+  public boolean supportsCompilationDaemon() {
+    return true;
+  }
+}

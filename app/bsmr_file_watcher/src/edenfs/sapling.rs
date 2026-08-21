@@ -19,7 +19,7 @@ use std::path::Path;
 use std::process::Stdio;
 
 use allocative::Allocative;
-use bsmr_error::BuckErrorContext;
+use bsmr_error::BsmrErrorContext;
 use bsmr_error::bsmr_error;
 use bsmr_error::internal_error;
 use bsmr_util::process::async_background_command;
@@ -79,14 +79,14 @@ pub(crate) async fn get_mergebase<D: AsRef<Path>, C: AsRef<str>, M: AsRef<str>>(
         ])
         .output()
         .await
-        .buck_error_context("Failed to obtain mergebase")?;
+        .bsmr_error_context("Failed to obtain mergebase")?;
 
     if !output.status.success() || !output.stderr.is_empty() {
         bsmr_error!(
             bsmr_error::ErrorTag::Sapling,
             "Failed to obtain mergebase:\n{}",
             String::from_utf8(output.stderr)
-                .buck_error_context("Failed to stderr reported by get_mergebase.")?
+                .bsmr_error_context("Failed to stderr reported by get_mergebase.")?
         );
     }
 
@@ -94,7 +94,7 @@ pub(crate) async fn get_mergebase<D: AsRef<Path>, C: AsRef<str>, M: AsRef<str>>(
 }
 
 fn parse_log_output(output: Vec<u8>) -> bsmr_error::Result<Option<MergebaseDetails>> {
-    let output = String::from_utf8(output).buck_error_context("Failed to parse hg log output")?;
+    let output = String::from_utf8(output).bsmr_error_context("Failed to parse hg log output")?;
     if output.is_empty() {
         return Ok(None);
     }
@@ -111,7 +111,7 @@ fn parse_log_output(output: Vec<u8>) -> bsmr_error::Result<Option<MergebaseDetai
         Some(
             global_rev
                 .parse::<u64>()
-                .buck_error_context("Failed to parse global_rev")?,
+                .bsmr_error_context("Failed to parse global_rev")?,
         )
     } else {
         None
@@ -145,7 +145,7 @@ pub(crate) async fn get_status<D: AsRef<Path>, F: AsRef<str>, S: AsRef<str>>(
         .args(args.as_slice())
         .stdout(Stdio::piped())
         .spawn()
-        .buck_error_context("Failed to obtain Sapling status")?;
+        .bsmr_error_context("Failed to obtain Sapling status")?;
 
     let stdout = output.stdout.take().ok_or_else(|| {
         bsmr_error!(
@@ -190,7 +190,7 @@ pub(crate) async fn get_dir_diff<D: AsRef<Path>, F: AsRef<str>, S: AsRef<str>>(
         .args(args.as_slice())
         .stdout(Stdio::piped())
         .spawn()
-        .buck_error_context("Failed to obtain Sapling debugdiffdirs")?;
+        .bsmr_error_context("Failed to obtain Sapling debugdiffdirs")?;
 
     let stdout = output.stdout.take().ok_or_else(|| {
         bsmr_error!(

@@ -16,17 +16,17 @@
 import os
 from pathlib import Path
 
-from bsmr.tests.e2e_util.api.buck import Buck
+from bsmr.tests.e2e_util.api.bsmr import Bsmr
 from bsmr.tests.e2e_util.asserts import expect_failure
-from bsmr.tests.e2e_util.buck_workspace import buck_test
+from bsmr.tests.e2e_util.bsmr_workspace import bsmr_test
 
 
-@buck_test()
+@bsmr_test()
 async def test_target_hashing_accepts_backreferencing_relative_paths(
-    buck: Buck,
+    bsmr: Bsmr,
     tmp_path: Path,
 ) -> None:
-    await buck.targets(
+    await bsmr.targets(
         ":bin",
         "--show-target-hash",
         "--target-hash-file-mode=paths_only",
@@ -36,7 +36,7 @@ async def test_target_hashing_accepts_backreferencing_relative_paths(
 
     # Paths outside of the project still fail
     await expect_failure(
-        buck.targets(
+        bsmr.targets(
             "bin:bin",
             "--show-target-hash",
             "--target-hash-file-mode=paths_only",
@@ -47,9 +47,9 @@ async def test_target_hashing_accepts_backreferencing_relative_paths(
 
     if os.name != "nt":
         # Absolute path non-normalized paths should work
-        (tmp_path / "symlink").symlink_to(buck.cwd)
+        (tmp_path / "symlink").symlink_to(bsmr.cwd)
 
-        await buck.targets(
+        await bsmr.targets(
             ":bin",
             "--show-target-hash",
             "--target-hash-file-mode=paths_only",

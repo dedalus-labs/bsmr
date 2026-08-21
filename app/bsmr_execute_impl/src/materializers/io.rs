@@ -28,7 +28,7 @@ use bsmr_fs::error::IoResultExt;
 use bsmr_fs::fs_util;
 use bsmr_fs::paths::abs_norm_path::AbsNormPath;
 use bsmr_fs::paths::abs_norm_path::AbsNormPathBuf;
-use bsmr_hash::StdBuckHashMap;
+use bsmr_hash::StdBsmrHashMap;
 
 pub struct MaterializeTreeStructure {
     pub path: ProjectRelativePathBuf,
@@ -127,7 +127,7 @@ where
 /// `file_dest`. It's then removed from `srcs`.
 fn _materialize_files_from_map<P, D>(
     entry: DirectoryEntry<&D, &ActionDirectoryMember>,
-    srcs: &mut StdBuckHashMap<AbsNormPathBuf, AbsNormPathBuf>,
+    srcs: &mut StdBsmrHashMap<AbsNormPathBuf, AbsNormPathBuf>,
     dest: P,
 ) -> bsmr_error::Result<()>
 where

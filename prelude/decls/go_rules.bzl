@@ -26,7 +26,7 @@ load(
     "go_stdlib_transition",
     "go_test_transition",
 )
-load(":common.bzl", "buck", "prelude_rule")
+load(":common.bzl", "bsmr", "prelude_rule")
 load(":cxx_common.bzl", "cxx_common")
 load(":go_common.bzl", "go_common")
 load(":re_test_common.bzl", "re_test_common")
@@ -42,7 +42,7 @@ go_binary = prelude_rule(
          and dependencies. The files supplied are expected to be in the main package, implicitly.
     """,
     examples = """
-        For more examples, check out our [integration tests](https://github.com/facebook/buck/tree/dev/test/com/facebook/buck/features/go/testdata).
+        For more examples, check out our [integration tests](https://github.com/dedalus/bsmr/tree/dev/test/com/dedalus/bsmr/features/go/testdata).
 
         ```
         go_binary(
@@ -126,9 +126,9 @@ go_binary = prelude_rule(
             """,
             ),
         }
-        | buck.licenses_arg()
-        | buck.labels_arg()
-        | buck.contacts_arg()
+        | bsmr.licenses_arg()
+        | bsmr.labels_arg()
+        | bsmr.contacts_arg()
     ),
     cfg = go_binary_transition,
 )
@@ -140,7 +140,7 @@ go_exported_library = prelude_rule(
          and dependencies. This is done via `-buildmode` flag and "//export" annotations in the code.
     """,
     examples = """
-        For more examples, check out our [integration tests](https://github.com/facebook/buck/tree/dev/test/com/facebook/buck/features/go/testdata).
+        For more examples, check out our [integration tests](https://github.com/dedalus/bsmr/tree/dev/test/com/dedalus/bsmr/features/go/testdata).
 
         ```
         go_exported_library(
@@ -220,9 +220,9 @@ go_exported_library = prelude_rule(
             """,
             ),
         }
-        | buck.licenses_arg()
-        | buck.labels_arg()
-        | buck.contacts_arg()
+        | bsmr.licenses_arg()
+        | bsmr.labels_arg()
+        | bsmr.contacts_arg()
     ),
     cfg = go_exported_library_transition,
 )
@@ -234,7 +234,7 @@ go_library = prelude_rule(
          and dependencies.
     """,
     examples = """
-        For more examples, check out our [integration tests](https://github.com/facebook/buck/tree/dev/test/com/facebook/buck/features/go/testdata).
+        For more examples, check out our [integration tests](https://github.com/dedalus/bsmr/tree/dev/test/com/dedalus/bsmr/features/go/testdata).
 
         ```
         go_library(
@@ -268,9 +268,9 @@ go_library = prelude_rule(
         | go_common.coverage_enabled_arg()
         | go_common.generate_exported_header()
         | {}
-        | buck.licenses_arg()
-        | buck.labels_arg()
-        | buck.contacts_arg()
+        | bsmr.licenses_arg()
+        | bsmr.labels_arg()
+        | bsmr.contacts_arg()
     ),
     cfg = go_library_transition,
 )
@@ -287,7 +287,7 @@ go_test = prelude_rule(
          files, they won't be available when your test runs.
     """,
     examples = """
-        For more examples, check out our [integration tests](https://github.com/facebook/buck/tree/dev/test/com/facebook/buck/features/go/testdata).
+        For more examples, check out our [integration tests](https://github.com/dedalus/bsmr/tree/dev/test/com/dedalus/bsmr/features/go/testdata).
 
         ```
         go_library(
@@ -334,7 +334,7 @@ go_test = prelude_rule(
     further = None,
     attrs = (
         # @unsorted-dict-items
-        buck.inject_test_env_arg()
+        bsmr.inject_test_env_arg()
         | go_common.srcs_arg()
         | {
             "coverage_mode": attrs.option(
@@ -348,7 +348,7 @@ go_test = prelude_rule(
                 attrs.string(),
                 default = None,
                 doc = """
-                Sets the full name of the test package being compiled. This defaults to the path from the buck
+                Sets the full name of the test package being compiled. This defaults to the path from the bsmr
                 root with "\\_test" appended. (e.g. given a ./.bsmr, a rule in ./a/b/BUILD.bsmr defaults to package "a/b\\_test")
 
                  Note: if you want to test packages internally (i.e. same package name), use the `target_under_test`
@@ -402,8 +402,8 @@ go_test = prelude_rule(
             """,
             ),
         }
-        | buck.test_label_arg()
-        | buck.test_rule_timeout_ms()
+        | bsmr.test_label_arg()
+        | bsmr.test_rule_timeout_ms()
         | {
             "env": attrs.dict(
                 key = attrs.string(),
@@ -415,7 +415,7 @@ go_test = prelude_rule(
             """,
             ),
         }
-        | buck.run_test_separately_arg(
+        | bsmr.run_test_separately_arg(
             run_test_separately_type = attrs.bool(
                 default = False,
                 doc = """
@@ -431,8 +431,8 @@ go_test = prelude_rule(
             "runner": attrs.option(attrs.dep(), default = None),
             "specs": attrs.option(attrs.arg(json = True), default = None),
         }
-        | buck.licenses_arg()
-        | buck.contacts_arg()
+        | bsmr.licenses_arg()
+        | bsmr.contacts_arg()
         | re_test_common.test_args()
         | test_common.attributes()
     ),
@@ -453,8 +453,8 @@ go_bootstrap_binary = prelude_rule(
             "build_args": attrs.list(attrs.string(), default = [], doc = """Package name, file names and build flags"""),
             "workdir": attrs.string(default = "", doc = """Change to subdir before running the command"""),
         }
-        | buck.labels_arg()
-        | buck.contacts_arg()
+        | bsmr.labels_arg()
+        | bsmr.contacts_arg()
     ),
 )
 

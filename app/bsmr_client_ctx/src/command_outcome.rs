@@ -28,12 +28,12 @@ use crate::exit_result::ExitResult;
 /// At the point where this is returned, all event processing / logging should be handled.
 #[must_use]
 pub enum CommandOutcome<R> {
-    /// The buckd client successfully returned the expected response.
+    /// The bsmrd client successfully returned the expected response.
     ///
     /// Additional processing of this response may be necessary to determine overall success or
     /// failure within the client.
     Success(R),
-    /// The buckd client successfully returned a response, but that response was a general failure.
+    /// The bsmrd client successfully returned a response, but that response was a general failure.
     ///
     /// The user has already been presented an error message, and the CLI should exit with
     /// this status code.

@@ -8,7 +8,7 @@ Options:
 
 Universal Options:
   -v, --verbose <VERBOSITY>
-          How verbose buck should be while logging.
+          How verbose bsmr should be while logging.
 
           Values: 0 = Quiet, errors only; 1 = Show status. Default; 2 = more info about errors; 3 =
           more info about everything; 4 = more info about everything + stderr;

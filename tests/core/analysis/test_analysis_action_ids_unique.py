@@ -15,24 +15,24 @@
 # pyre-strict
 
 
-from bsmr.tests.e2e_util.api.buck import Buck
+from bsmr.tests.e2e_util.api.bsmr import Bsmr
 from bsmr.tests.e2e_util.asserts import expect_failure
-from bsmr.tests.e2e_util.buck_workspace import buck_test
+from bsmr.tests.e2e_util.bsmr_workspace import bsmr_test
 
 
-@buck_test(data_dir="identifier")
+@bsmr_test(data_dir="identifier")
 async def test_analysis_action_ids_unique_identifier_within_category(
-    buck: Buck,
+    bsmr: Bsmr,
 ) -> None:
     await expect_failure(
-        buck.audit("providers", "//:yyy"),
+        bsmr.audit("providers", "//:yyy"),
         stderr_regex="Action category `foo` contains duplicate identifier `x`",
     )
 
 
-@buck_test(data_dir="category")
-async def test_analysis_action_ids_unique_singleton_category(buck: Buck) -> None:
+@bsmr_test(data_dir="category")
+async def test_analysis_action_ids_unique_singleton_category(bsmr: Bsmr) -> None:
     await expect_failure(
-        buck.audit("providers", "//:zzz"),
+        bsmr.audit("providers", "//:zzz"),
         stderr_regex="Analysis produced multiple actions with category `foo` and at least one of them had no identifier",
     )

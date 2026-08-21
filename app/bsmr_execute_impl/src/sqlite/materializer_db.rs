@@ -27,7 +27,7 @@ use bsmr_execute::digest_config::DigestConfig;
 use bsmr_execute::execute::blocking::BlockingExecutor;
 use bsmr_fs::paths::abs_norm_path::AbsNormPath;
 use bsmr_fs::paths::abs_norm_path::AbsNormPathBuf;
-use bsmr_hash::StdBuckHashMap;
+use bsmr_hash::StdBsmrHashMap;
 use chrono::DateTime;
 use chrono::Utc;
 use dupe::Dupe;
@@ -99,8 +99,8 @@ impl MaterializerStateSqliteDb {
     /// create a new one.
     pub async fn initialize(
         materializer_state_dir: AbsNormPathBuf,
-        versions: StdBuckHashMap<String, String>,
-        current_instance_metadata: StdBuckHashMap<String, String>,
+        versions: StdBsmrHashMap<String, String>,
+        current_instance_metadata: StdBsmrHashMap<String, String>,
         // Using `BlockingExecutor` out of convenience. This function should be called during startup
         // when there's not a lot of I/O so it shouldn't matter.
         io_executor: Arc<dyn BlockingExecutor>,
@@ -123,8 +123,8 @@ impl MaterializerStateSqliteDb {
     /// Internal implementation that handles digest config
     fn initialize_materializer_sqlite_db(
         materializer_state_dir: AbsNormPathBuf,
-        versions: StdBuckHashMap<String, String>,
-        current_instance_metadata: StdBuckHashMap<String, String>,
+        versions: StdBsmrHashMap<String, String>,
+        current_instance_metadata: StdBsmrHashMap<String, String>,
         digest_config: DigestConfig,
         reject_identity: Option<&SqliteIdentity>,
     ) -> bsmr_error::Result<(Self, bsmr_error::Result<MaterializerState>)> {
@@ -172,8 +172,8 @@ impl MaterializerStateSqliteDb {
 #[allow(unused)] // Used by test modules
 pub(crate) fn testing_materializer_state_sqlite_db(
     fs: &ProjectRoot,
-    versions: StdBuckHashMap<String, String>,
-    metadata: StdBuckHashMap<String, String>,
+    versions: StdBsmrHashMap<String, String>,
+    metadata: StdBsmrHashMap<String, String>,
     reject_identity: Option<&SqliteIdentity>,
 ) -> bsmr_error::Result<(
     MaterializerStateSqliteDb,
@@ -181,7 +181,7 @@ pub(crate) fn testing_materializer_state_sqlite_db(
 )> {
     MaterializerStateSqliteDb::initialize_materializer_sqlite_db(
         fs.resolve(ProjectRelativePath::unchecked_new(
-            "bsmr-out/v2/cache/materializer_state",
+            "bsmr-out/default/cache/materializer_state",
         )),
         versions,
         metadata,
@@ -327,7 +327,7 @@ mod tests {
                 last_access_time: now_seconds(),
             },
         ];
-        let mut artifacts: StdBuckHashMap<_, _> =
+        let mut artifacts: StdBsmrHashMap<_, _> =
             artifacts.into_iter().map(|x| (x.path.clone(), x)).collect();
 
         for (path, entry) in artifacts.iter() {
@@ -337,7 +337,7 @@ mod tests {
         }
 
         let check_materializer_state_expected = |state: &MaterializerState,
-                                                 artifacts: &StdBuckHashMap<
+                                                 artifacts: &StdBsmrHashMap<
             ProjectRelativePathBuf,
             MaterializerStateEntry,
         >| {
@@ -374,7 +374,7 @@ mod tests {
 
     #[test]
     fn test_initialize_sqlite_db() -> bsmr_error::Result<()> {
-        fn testing_metadatas() -> Vec<StdBuckHashMap<String, String>> {
+        fn testing_metadatas() -> Vec<StdBsmrHashMap<String, String>> {
             let metadata = bsmr_events::metadata::collect(&DaemonId::new());
             let mut metadatas = vec![metadata; 5];
             for (i, metadata) in metadatas.iter_mut().enumerate() {
@@ -384,8 +384,8 @@ mod tests {
         }
 
         fn assert_metadata_matches(
-            mut have: StdBuckHashMap<String, String>,
-            want: &StdBuckHashMap<String, String>,
+            mut have: StdBsmrHashMap<String, String>,
+            want: &StdBsmrHashMap<String, String>,
         ) {
             // Remove the key we inject (and check it's there).
             have.remove("timestamp_on_initialization").unwrap();
@@ -404,8 +404,8 @@ mod tests {
         let timestamp = now_seconds();
         let metadatas = testing_metadatas();
 
-        let v0 = StdBuckHashMap::from([("version".to_owned(), "0".to_owned())]);
-        let v1 = StdBuckHashMap::from([("version".to_owned(), "1".to_owned())]);
+        let v0 = StdBsmrHashMap::from([("version".to_owned(), "0".to_owned())]);
+        let v1 = StdBsmrHashMap::from([("version".to_owned(), "1".to_owned())]);
 
         {
             let (mut db, loaded_state) = testing_materializer_state_sqlite_db(

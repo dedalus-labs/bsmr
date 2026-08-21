@@ -14,7 +14,7 @@
 
 param(
 	[parameter(Mandatory=$true)] [String] $InstallDirectory,
-	[parameter(Mandatory=$true,ValueFromPipeline=$true)] [String] $BsmrOutput
+	[parameter(Mandatory=$true,ValueFromPipeline=$true)] [String] $Outputput
 )
 
 begin

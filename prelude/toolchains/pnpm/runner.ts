@@ -196,9 +196,9 @@ function packageManagerState(output: string): string {
 	if (process.platform === "win32") {
 		throw new Error("pnpm install adapter requires relocatable executable symlinks and does not support Windows");
 	}
-	const scratch = process.env["BUCK_SCRATCH_PATH"];
+	const scratch = process.env["BSMR_SCRATCH_PATH"];
 	if (scratch === undefined || scratch === "") {
-		throw new Error("BSMR did not provide BUCK_SCRATCH_PATH for pnpm mutable state");
+		throw new Error("BSMR did not provide BSMR_SCRATCH_PATH for pnpm mutable state");
 	}
 	const state = resolve(scratch, "pnpm");
 	if (state === output || state.startsWith(`${output}${sep}`)) {

@@ -23,7 +23,7 @@ A `bsmr` invocation is split between two processes:
 - **Client**: the binary you actually invoke. Parses CLI args, talks gRPC to
   the daemon, prints the streamed events to your terminal, and exits when
   the command finishes.
-- **Daemon (`buckd`)**: a long-lived process that holds the DICE graph,
+- **Daemon (`bsmrd`)**: a long-lived process that holds the DICE graph,
   caches, executor connections, etc. All real work happens here.
 
 Implications for measurement:
@@ -34,7 +34,7 @@ Implications for measurement:
 - The daemon survives between invocations. Two consecutive `bsmr build` commands share DICE state,
   allocators, file watchers, etc. State carries across commands until the daemon is killed or
   restarted by version skew.
-- `--no-buckd` runs everything in one process. When possible this is preferred as it's less noisy,
+- `--no-bsmrd` runs everything in one process. When possible this is preferred as it's less noisy,
   but cannot be used for something like retained memory or with a pre-warming step.
 
 ## Avoiding daemon conflicts
@@ -43,8 +43,8 @@ Any one checkout can only have one daemon running at a time. If an existing daem
 a new command is issued using a different version/build of bsmr, the existing daemon is killed.
 
  - Use `sl worktree` to create additional checkouts
- - If making changes to buck itself, don't run benchmarks in the same checkouts, it will make your
-   rebuilds of buck slow.
+ - If making changes to bsmr itself, don't run benchmarks in the same checkouts, it will make your
+   rebuilds of bsmr slow.
  - Usually one checkout for all benchmarking is enough, unless you need persistent daemons
  - Isolation dirs offer some of the same behaviors but are not recommended because they split the
    remote action cache.
@@ -75,7 +75,7 @@ Choosing the right workload means higher SNR and faster results. *Typically:*
    - Ensure you get 100% cache hits. One build with `--remote-only` will generally populate anything
      missing and being on the right revision helps.
 
-Additionally: `-v0`, `--console=none`, and `--no-buckd` helps reduce variance. Event log is still
+Additionally: `-v0`, `--console=none`, and `--no-bsmrd` helps reduce variance. Event log is still
 produced.
 
 See `recommended_targets.fb.md` for recommended targets at Meta.

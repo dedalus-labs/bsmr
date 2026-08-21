@@ -17,14 +17,14 @@
 
 import json
 
-from bsmr.tests.e2e_util.api.buck import Buck
-from bsmr.tests.e2e_util.buck_workspace import buck_test
+from bsmr.tests.e2e_util.api.bsmr import Bsmr
+from bsmr.tests.e2e_util.bsmr_workspace import bsmr_test
 
 
-@buck_test()
-async def test_imports_json(buck: Buck) -> None:
+@bsmr_test()
+async def test_imports_json(bsmr: Bsmr) -> None:
     """Test that targets --streaming --imports handles JSON file imports."""
-    result = await buck.targets("//...", "--json", "--streaming", "--imports")
+    result = await bsmr.targets("//...", "--json", "--streaming", "--imports")
     xs = json.loads(result.stdout)
 
     found_targets = False
@@ -32,10 +32,10 @@ async def test_imports_json(buck: Buck) -> None:
     found_json = False
 
     for x in xs:
-        if "buck.imports" not in x:
+        if "bsmr.imports" not in x:
             continue
-        file = x["buck.file"]
-        imports = x["buck.imports"]
+        file = x["bsmr.file"]
+        imports = x["bsmr.imports"]
 
         if file == "root//TARGETS.fixture":
             assert "root//uses_json.bzl" in imports

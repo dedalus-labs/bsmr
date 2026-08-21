@@ -1,3 +1,9 @@
+//===----------------------------------------------------------------------===//
+// Upstream-Source: facebook/buck2@1560aca2002865cd73d7cafb22c705cfb640b2bc
+// Modifications Copyright (c) 2026 Dedalus Labs, Inc. and its contributors
+// SPDX-License-Identifier: Apache-2.0
+//===----------------------------------------------------------------------===//
+
 /*
  * Copyright (c) Meta Platforms, Inc. and affiliates.
  *
@@ -31,14 +37,14 @@ const cgoGoTypesFileName = "_cgo_gotypes.go"
 const cgoGenFileNameExt = ".cgo1.go"
 
 // queryBXL is a wrapper around query that will use BXL to resolve the targets
-func queryBXL(ctx context.Context, req *packages.DriverRequest, bucker Bucker, platform Platform, patterns []string, files []string) (*packages.DriverResponse, error) {
+func queryBXL(ctx context.Context, req *packages.DriverRequest, bsmrer Bsmrer, platform Platform, patterns []string, files []string) (*packages.DriverResponse, error) {
 	if len(patterns) == 0 && len(files) == 0 {
 		return &packages.DriverResponse{}, nil
 	}
 
 	bxlArgs := buildBXLArgs(req, patterns, files)
 
-	bxlOut, err := bucker.BXL(ctx, "prelude//go/tools/gopackagesdriver:driver.bxl:driver", bxlArgs)
+	bxlOut, err := bsmrer.BXL(ctx, "prelude//go/tools/gopackagesdriver:driver.bxl:driver", bxlArgs)
 	if err != nil {
 		var ee *exec.ExitError
 		if errors.As(err, &ee) {

@@ -36,7 +36,7 @@ impl Component for SessionInfoComponent<'_> {
         let mut headers = Lines::new();
         let mut ids = vec![];
         if cfg!(fbcode_build) {
-            headers.push(Line::unstyled("Buck UI:")?);
+            headers.push(Line::unstyled("Bsmr UI:")?);
             ids.push(Span::new_unstyled(format!(
                 "https://www.internalfb.com/bsmr/{}",
                 self.session_info.trace_id

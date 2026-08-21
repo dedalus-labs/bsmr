@@ -14,13 +14,13 @@
  * above-listed licenses.
  */
 
-use bsmr_client_ctx::client_ctx::BuckSubcommand;
+use bsmr_client_ctx::client_ctx::BsmrSubcommand;
 use bsmr_client_ctx::client_ctx::ClientCommandContext;
-use bsmr_client_ctx::common::BuckArgMatches;
+use bsmr_client_ctx::common::BsmrArgMatches;
 use bsmr_client_ctx::event_log_options::EventLogOptions;
 use bsmr_client_ctx::events_ctx::EventsCtx;
 use bsmr_client_ctx::exit_result::ExitResult;
-use bsmr_error::BuckErrorContext;
+use bsmr_error::BsmrErrorContext;
 use bsmr_event_log::file_names::retrieve_all_logs;
 
 /// Output the path to the selected log.
@@ -35,12 +35,12 @@ pub struct PathLogCommand {
     all: bool,
 }
 
-impl BuckSubcommand for PathLogCommand {
+impl BsmrSubcommand for PathLogCommand {
     const COMMAND_NAME: &'static str = "log-path";
 
     async fn exec_impl(
         self,
-        _matches: BuckArgMatches<'_>,
+        _matches: BsmrArgMatches<'_>,
         ctx: ClientCommandContext<'_>,
         _events_ctx: &mut EventsCtx,
     ) -> ExitResult {
@@ -52,7 +52,7 @@ impl BuckSubcommand for PathLogCommand {
         let paths = if all {
             retrieve_all_logs(
                 ctx.paths()
-                    .buck_error_context("Error identifying log dir")?,
+                    .bsmr_error_context("Error identifying log dir")?,
             )?
         } else {
             vec![event_log_options.get(&ctx).await?]

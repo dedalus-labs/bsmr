@@ -24,7 +24,7 @@ def _srcs_arg():
             sorted = False,
             default = [],
             doc = """
-    Either a list or a map of the source files which Buck makes available to the shell
+    Either a list or a map of the source files which Bsmr makes available to the shell
      command at the path in the `SRCDIR` environment variable.
      If you specify a list, the source files are the names in the list.
      If you specify a map, the source files are made available as the names in
@@ -42,7 +42,7 @@ def _cmd_arg():
             doc = """
     The shell command to run to generate the output file. It is the
      fallback for `bash` and `cmd_exe` arguments. The following environment variables are populated by
-     Buck and available to the shell command. They are accessed using
+     Bsmr and available to the shell command. They are accessed using
      the syntax:
 
     ```
@@ -157,7 +157,7 @@ def _type_arg():
      underlying logical "type".
 
      For example, if you have the following `cxx_genrule` defined
-     in the root directory of your Buck project
+     in the root directory of your Bsmr project
 
     ```
     cxx_genrule(
@@ -168,10 +168,10 @@ def _type_arg():
     )
     ```
 
-     then the following `buck query` command
+     then the following `bsmr query` command
 
     ```
-    buck query "attrfilter( type, 'epilog', '//...' )"
+    bsmr query "attrfilter( type, 'epilog', '//...' )"
     ```
 
      returns
@@ -218,7 +218,7 @@ def _error_handler_arg():
                  Used in conjunction with `error_handler_stderr_errorformats` and `error_handler_stdout_errorformats`
                  when calling `ActionErrorCtx.parse_with_errorformat()` to categorize parsed errors.
 
-                 See https://buck2.build/docs/api/build/ActionErrorCtx/#actionerrorctxparse_with_errorformat for more details.
+                 See https://oss.dedaluslabs.ai/bsmr/api/build/ActionErrorCtx/#actionerrorctxparse_with_errorformat for more details.
             """,
         ),
         "error_handler_stderr_errorformats": attrs.option(
@@ -232,7 +232,7 @@ def _error_handler_arg():
                  When a genrule fails, the error handler attempts to match the stderr
                  against these patterns.
 
-                 See https://buck2.build/docs/api/build/ActionErrorCtx/#actionerrorctxparse_with_errorformat for more details.
+                 See https://oss.dedaluslabs.ai/bsmr/api/build/ActionErrorCtx/#actionerrorctxparse_with_errorformat for more details.
             """,
         ),
         "error_handler_stdout_errorformats": attrs.option(
@@ -241,7 +241,7 @@ def _error_handler_arg():
             doc = """
                 Same as `error_handler_stderr_errorformats`, but for stdout.
 
-                 See https://buck2.build/docs/api/build/ActionErrorCtx/#actionerrorctxparse_with_errorformat for more details.
+                 See https://oss.dedaluslabs.ai/bsmr/api/build/ActionErrorCtx/#actionerrorctxparse_with_errorformat for more details.
             """,
         ),
     }

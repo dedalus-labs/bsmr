@@ -24,7 +24,7 @@ use tracing::debug;
 
 use crate::HookId;
 use crate::error::StarlarkDebuggerInternalError;
-use crate::server::BuckStarlarkDebuggerServer;
+use crate::server::BsmrStarlarkDebuggerServer;
 
 /// The debug controller is created once for each starlark evaluation. It adds the hooks to the
 /// starlark Evaluator needed for debugging. Internally, the server will send and receive messages
@@ -33,9 +33,9 @@ use crate::server::BuckStarlarkDebuggerServer;
 /// When evaluation finishes and the debug  controller is dropped, it will notify the server that it
 /// has been dropped.
 #[derive(Debug)]
-pub struct BuckStarlarkDebugController {
+pub struct BsmrStarlarkDebugController {
     eval_wrapper: EvalWrapperHolder,
-    server: Arc<BuckStarlarkDebuggerServer>,
+    server: Arc<BsmrStarlarkDebuggerServer>,
     hook_id: HookId,
     description: String,
     _permit: OwnedSemaphorePermit,
@@ -46,7 +46,7 @@ pub struct BuckStarlarkDebugController {
     _unsend: std::marker::PhantomData<*mut ()>,
 }
 
-impl StarlarkDebugController for BuckStarlarkDebugController {
+impl StarlarkDebugController for BsmrStarlarkDebugController {
     /// Initializes the Evaluator. This can only be used once for a particular controller.
     fn initialize(&mut self, eval: &mut starlark::eval::Evaluator) -> bsmr_error::Result<()> {
         match self.eval_wrapper.take()? {
@@ -62,12 +62,12 @@ impl StarlarkDebugController for BuckStarlarkDebugController {
     }
 }
 
-impl BuckStarlarkDebugController {
+impl BsmrStarlarkDebugController {
     pub(crate) fn new(
         eval_wrapper: Option<Box<dyn DapAdapterEvalHook>>,
         hook_id: HookId,
         description: &str,
-        server: &Arc<BuckStarlarkDebuggerServer>,
+        server: &Arc<BsmrStarlarkDebuggerServer>,
         permit: tokio::sync::OwnedSemaphorePermit,
     ) -> Self {
         Self {
@@ -84,7 +84,7 @@ impl BuckStarlarkDebugController {
     }
 }
 
-impl Drop for BuckStarlarkDebugController {
+impl Drop for BsmrStarlarkDebugController {
     fn drop(&mut self) {
         self.server.drop_hook(self.hook_id)
     }

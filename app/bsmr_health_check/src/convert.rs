@@ -16,7 +16,7 @@
 
 // gRPC to rust converters
 
-use bsmr_error::BuckErrorContext;
+use bsmr_error::BsmrErrorContext;
 use bsmr_error::internal_error;
 
 use crate::interface::HealthCheckContextEvent;
@@ -33,7 +33,7 @@ impl TryFrom<i32> for Severity {
     type Error = bsmr_error::Error;
     fn try_from(s: i32) -> bsmr_error::Result<Self> {
         let severity = bsmr_health_check_proto::Severity::try_from(s)
-            .buck_error_context("Invalid `severity`")?;
+            .bsmr_error_context("Invalid `severity`")?;
         Ok(match severity {
             bsmr_health_check_proto::Severity::Info => Severity::Info,
             bsmr_health_check_proto::Severity::Warning => Severity::Warning,
@@ -88,7 +88,7 @@ impl TryFrom<i32> for HealthCheckType {
 
     fn try_from(value: i32) -> bsmr_error::Result<Self> {
         let value = bsmr_health_check_proto::HealthCheckType::try_from(value)
-            .buck_error_context("Invalid `health_check_type`")?;
+            .bsmr_error_context("Invalid `health_check_type`")?;
         Ok(match value {
             bsmr_health_check_proto::HealthCheckType::MemoryPressure => {
                 HealthCheckType::MemoryPressure

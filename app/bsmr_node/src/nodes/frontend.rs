@@ -19,7 +19,7 @@ use std::sync::Arc;
 use async_trait::async_trait;
 use bsmr_core::package::PackageLabel;
 use bsmr_core::target::label::label::TargetLabel;
-use bsmr_error::BuckErrorContext;
+use bsmr_error::BsmrErrorContext;
 use bsmr_util::late_binding::LateBinding;
 use bsmr_util::time_span::TimeSpan;
 use dice::DiceComputations;
@@ -129,7 +129,7 @@ impl TargetGraphCalculation for DiceComputations<'_> {
             .unwrap()
             .get_interpreter_results(self, target.pkg())
             .map(move |res| {
-                let res = res.with_buck_error_context(|| {
+                let res = res.with_bsmr_error_context(|| {
                     format!(
                         "Error loading targets in package `{}` for target `{}`",
                         target.pkg(),

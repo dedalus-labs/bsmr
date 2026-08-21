@@ -40,7 +40,7 @@ LANGUAGE_STANDARD_AND_TOOLSET_MAP = {
 }
 
 ABSOLUTIZE_PATH_EXE = "prelude//ide_integrations/visual_studio:absolutize_path_exe"
-VS_BUCK_BUILD_PROPS = "prelude//ide_integrations/visual_studio:vs_buck_build_props"
+VS_BSMR_BUILD_PROPS = "prelude//ide_integrations/visual_studio:vs_bsmr_build_props"
 
 def _remove_flags_with_macros(flags: list) -> list:
     # Hacky way to find macros since regex sub is not available in bxl
@@ -178,8 +178,8 @@ def _produce_proj_artifact(
         toolchains_props = '        <Import Project="$(RepoRoot)\\third-party\\toolchains\\visual_studio\\toolchain.props"/>'
 
     absolutize_path_exe = _get_path(ABSOLUTIZE_PATH_EXE, bxl_ctx)
-    vs_buck_build_props_path = _get_path(VS_BUCK_BUILD_PROPS, bxl_ctx)
-    vs_buck_build_props = """        <Import Project="{}"/>""".format(vs_buck_build_props_path)
+    vs_bsmr_build_props_path = _get_path(VS_BSMR_BUILD_PROPS, bxl_ctx)
+    vs_bsmr_build_props = """        <Import Project="{}"/>""".format(vs_bsmr_build_props_path)
 
     content = cmd_args(
         """<?xml version="1.0" encoding="utf-8"?>
@@ -207,7 +207,7 @@ def _produce_proj_artifact(
         """    </ItemDefinitionGroup>""",
         """    <Import Project="$(VCTargetsPath)\\Microsoft.Cpp.Targets" />""",
         """    <ImportGroup Label="PropertySheets">""",
-        vs_buck_build_props,
+        vs_bsmr_build_props,
         """    </ImportGroup>""",
         """</Project>""",
         delimiter = "\n",

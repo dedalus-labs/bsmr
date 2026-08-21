@@ -15,27 +15,27 @@
 # pyre-strict
 
 
-from bsmr.tests.e2e_util.api.buck import Buck
-from bsmr.tests.e2e_util.buck_workspace import buck_test
+from bsmr.tests.e2e_util.api.bsmr import Bsmr
+from bsmr.tests.e2e_util.bsmr_workspace import bsmr_test
 
 
-@buck_test(data_dir="")
-async def test_unwrap_forward(buck: Buck) -> None:
-    await buck.bxl("//bxl/configured_target.bxl:unwrap_forward")
+@bsmr_test(data_dir="")
+async def test_unwrap_forward(bsmr: Bsmr) -> None:
+    await bsmr.bxl("//bxl/configured_target.bxl:unwrap_forward")
 
 
-@buck_test(data_dir="")
-async def test_configured_targets_with_modifiers(buck: Buck) -> None:
-    result = await buck.bxl(
+@bsmr_test(data_dir="")
+async def test_configured_targets_with_modifiers(bsmr: Bsmr) -> None:
+    result = await bsmr.bxl(
         "//bxl/configured_target.bxl:configured_targets_with_modifiers"
     )
     configurations = [line.strip() for line in result.stdout.splitlines()]
-    linux_cfg = await buck.audit_configurations(configurations[0])
+    linux_cfg = await bsmr.audit_configurations(configurations[0])
     assert "root//:linux" in linux_cfg.stdout
-    macos_cfg = await buck.audit_configurations(configurations[1])
+    macos_cfg = await bsmr.audit_configurations(configurations[1])
     assert "root//:macos" in macos_cfg.stdout
 
 
-@buck_test(data_dir="")
-async def test_strip_cfg(buck: Buck) -> None:
-    await buck.bxl("//bxl/configured_target.bxl:strip_cfg")
+@bsmr_test(data_dir="")
+async def test_strip_cfg(bsmr: Bsmr) -> None:
+    await bsmr.bxl("//bxl/configured_target.bxl:strip_cfg")

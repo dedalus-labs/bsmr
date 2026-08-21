@@ -17,19 +17,19 @@
 use std::time::Duration;
 
 use bsmr_data::ParsedTargetPatterns;
-use bsmr_error::BuckErrorContext;
+use bsmr_error::BsmrErrorContext;
 use bsmr_fs::async_fs_util;
 use bsmr_fs::error::IoResultExt;
 use bsmr_fs::paths::abs_norm_path::AbsNormPathBuf;
 use bsmr_fs::paths::file_name::FileName;
-use bsmr_hash::StdBuckHashMap;
+use bsmr_hash::StdBsmrHashMap;
 use serde::Deserialize;
 use serde::Serialize;
 
 use crate::client_utils;
 
 // Version for serialized BuildCount on disk.
-// Update if changing BuildCount to allow building with deployed and compiled buck on the same rev.
+// Update if changing BuildCount to allow building with deployed and compiled bsmr on the same rev.
 pub const BUILD_COUNT_VERSION: u64 = 2;
 
 #[derive(
@@ -61,19 +61,19 @@ impl BuildCount {
 #[derive(Debug, PartialEq, Eq, Serialize, Deserialize)]
 struct BuildCountMap {
     merge_base: String,
-    counts: StdBuckHashMap<String, BuildCount>,
+    counts: StdBsmrHashMap<String, BuildCount>,
 }
 
 impl BuildCountMap {
     fn new(merge_base: String) -> Self {
         Self {
             merge_base,
-            counts: StdBuckHashMap::default(),
+            counts: StdBsmrHashMap::default(),
         }
     }
 
     #[cfg(test)]
-    fn testing_new(counts: StdBuckHashMap<String, BuildCount>) -> Self {
+    fn testing_new(counts: StdBsmrHashMap<String, BuildCount>) -> Self {
         Self {
             merge_base: "testing".to_owned(),
             counts,
@@ -148,7 +148,7 @@ impl BuildCountManager {
             return Ok(None);
         };
         let build_count_map: BuildCountMap = serde_json::from_str(&buffer)
-            .with_buck_error_context(|| {
+            .with_bsmr_error_context(|| {
                 format!("Parsing JSON from {}", self.file_path.display())
             })?;
         Ok(Some(build_count_map))
@@ -240,13 +240,13 @@ mod tests {
 
     #[test]
     fn test_update_normal_input() -> bsmr_error::Result<()> {
-        let mut before = StdBuckHashMap::default();
+        let mut before = StdBsmrHashMap::default();
         before.insert("//some:target".to_owned(), BuildCount::new(1, 1));
         before.insert("//some/other:target".to_owned(), BuildCount::new(2, 2));
         let mut bc = BuildCountMap::testing_new(before);
         let target_patterns = make_patterns(vec!["//some/other:target", "//yet/another:target"]);
         bc.increment(&target_patterns, true);
-        let mut expected = StdBuckHashMap::default();
+        let mut expected = StdBsmrHashMap::default();
         expected.insert("//some:target".to_owned(), BuildCount::new(1, 1));
         expected.insert("//some/other:target".to_owned(), BuildCount::new(3, 3));
         expected.insert("//yet/another:target".to_owned(), BuildCount::new(1, 1));
@@ -257,7 +257,7 @@ mod tests {
 
     #[test]
     fn test_update_empty_input() -> bsmr_error::Result<()> {
-        let mut before = StdBuckHashMap::default();
+        let mut before = StdBsmrHashMap::default();
         before.insert("//some:target".to_owned(), BuildCount::new(1, 1));
         let expected = before.clone();
         let mut bc = BuildCountMap::testing_new(before);
@@ -270,7 +270,7 @@ mod tests {
 
     #[test]
     fn test_min_count_some_value() -> bsmr_error::Result<()> {
-        let mut data = StdBuckHashMap::default();
+        let mut data = StdBsmrHashMap::default();
         data.insert("//some:target1".to_owned(), BuildCount::new(3, 3));
         data.insert("//some:target2".to_owned(), BuildCount::new(4, 4));
         data.insert("//some:target3".to_owned(), BuildCount::new(5, 5));
@@ -283,7 +283,7 @@ mod tests {
 
     #[test]
     fn test_min_count_ignores_others() -> bsmr_error::Result<()> {
-        let mut data = StdBuckHashMap::default();
+        let mut data = StdBsmrHashMap::default();
         data.insert("//some:target1".to_owned(), BuildCount::new(3, 3));
         data.insert("//some:target2".to_owned(), BuildCount::new(4, 4));
         data.insert("//some:target3".to_owned(), BuildCount::new(5, 5));
@@ -296,7 +296,7 @@ mod tests {
 
     #[test]
     fn test_min_count_empty_data() -> bsmr_error::Result<()> {
-        let data = StdBuckHashMap::default();
+        let data = StdBsmrHashMap::default();
         let bc = BuildCountMap::testing_new(data);
         assert_eq!(bc.min_count(&make_patterns(vec![])), BuildCount::new(0, 0));
 
@@ -327,7 +327,7 @@ mod tests {
         )
         .await?;
         let bc = bcm.read_mergebase("testing").await?;
-        let mut expected = StdBuckHashMap::default();
+        let mut expected = StdBsmrHashMap::default();
         expected.insert("//some:target".to_owned(), BuildCount::new(1, 1));
         assert_eq!(bc.counts, expected);
 
@@ -348,7 +348,7 @@ mod tests {
     async fn test_write_normal_input() -> bsmr_error::Result<()> {
         let temp_dir = tempfile::tempdir()?;
         let bcm = BuildCountManager::new(temp_dir.path().to_path_buf().try_into()?)?;
-        let mut data = StdBuckHashMap::default();
+        let mut data = StdBsmrHashMap::default();
         data.insert("//some:target".to_owned(), BuildCount::new(1, 1));
         bcm.write(&BuildCountMap::testing_new(data)).await?;
         assert_eq!(
@@ -363,7 +363,7 @@ mod tests {
     async fn test_write_empty_input() -> bsmr_error::Result<()> {
         let temp_dir = tempfile::tempdir()?;
         let bcm = BuildCountManager::new(temp_dir.path().to_path_buf().try_into()?)?;
-        let data = StdBuckHashMap::default();
+        let data = StdBsmrHashMap::default();
         bcm.write(&BuildCountMap::testing_new(data)).await?;
         assert_eq!(
             std::str::from_utf8(&tokio::fs::read(bcm.file_path).await?)?,

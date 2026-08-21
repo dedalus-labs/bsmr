@@ -49,7 +49,7 @@ def _process_target_config(ctx: bxl.Context, target: bxl.ConfiguredTargetNode, a
     # convert all source paths to absolute paths
     resolved_attrs = target.resolved_attrs_eager(ctx)
 
-    # Using srcs instead of .sources() gives the resolved artifacts if provided with a buck rule as a src label.
+    # Using srcs instead of .sources() gives the resolved artifacts if provided with a bsmr rule as a src label.
     # For example, this is used in cxx powered crates internally
     srcs = []
     for src in resolved_attrs.srcs:
@@ -265,7 +265,7 @@ def expand_targets(ctx: bxl.Context, targets: list[TargetLabel], exclude_workspa
     kind_target_list = ctx.cquery().kind("^(rust_binary|rust_library|rust_test|alias|_?transitioned)$", target_universe)
 
     # Allow targets to opt-in to being treated as rust-analyzer-compatible.
-    # This is used for cross-compilation targets that apply Buck transitions to Rust rules.
+    # This is used for cross-compilation targets that apply Bsmr transitions to Rust rules.
     labeled_target_list = ctx.cquery().attrfilter("labels", "rust_analyzer_target", target_universe)
     expanded_targets = {t.label.raw_target(): t for t in kind_target_list + labeled_target_list}
 
@@ -320,11 +320,11 @@ def resolve_targets_impl(ctx: bxl.Context) -> None:
 
     expanded_targets = sorted([t.raw_target() for t in target_analysis.keys()])
     if not expanded_targets:
-        # ctx.analysis() drops targets that are incompatible with the current buck
+        # ctx.analysis() drops targets that are incompatible with the current bsmr
         # configuration (see the `skip_incompatible` keyword argument).
         #
         # If we have no expanded targets at all, try to find sufficient metadata about
-        # the requested targets using unconfigured buck targets.
+        # the requested targets using unconfigured bsmr targets.
         expanded_targets = targets
         resolved_deps = gather_unconfigured_deps(ctx, targets)
 

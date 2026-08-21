@@ -17,9 +17,9 @@
 use std::sync::Arc;
 
 use bsmr_error::internal_error;
-use bsmr_events::BuckEvent;
+use bsmr_events::BsmrEvent;
 use bsmr_events::span::SpanId;
-use bsmr_hash::StdBuckHashMap;
+use bsmr_hash::StdBsmrHashMap;
 use derivative::Derivative;
 use derive_more::From;
 use dupe::Dupe;
@@ -148,7 +148,7 @@ impl<'a, T: SpanTrackable> SpanHandle<'a, T> {
 pub struct Roots<T: SpanTrackable> {
     roots: LinkedHashMap<<T as SpanTrackable>::Id, RootData>,
     boring_roots: LinkedHashMap<<T as SpanTrackable>::Id, RootData>,
-    dice_counts: StdBuckHashMap<&'static str, u64>,
+    dice_counts: StdBsmrHashMap<&'static str, u64>,
 }
 
 #[derive(Clone)]
@@ -248,7 +248,7 @@ impl<T: SpanTrackable> Roots<T> {
         }
     }
 
-    pub fn dice_counts(&self) -> &StdBuckHashMap<&'static str, u64> {
+    pub fn dice_counts(&self) -> &StdBsmrHashMap<&'static str, u64> {
         &self.dice_counts
     }
 }
@@ -280,7 +280,7 @@ where
 impl<T> ExactSizeIterator for ExactSizeIteratorWrapper<T> where T: Iterator {}
 
 /// SpanTracker tracks ongoing spans received via handle() (those are typically produced by
-/// the Buck daemon). Internally, we keep track of:
+/// the Bsmr daemon). Internally, we keep track of:
 ///
 /// - Ongoing spans that are roots. Those will be rendered on their own line in the console.
 /// - All ongoing spans by id. This is used to access spans by id, such as when looking for
@@ -294,7 +294,7 @@ impl<T> ExactSizeIterator for ExactSizeIteratorWrapper<T> where T: Iterator {}
 #[derive(Clone)]
 pub struct SpanTracker<T: SpanTrackable> {
     roots: Roots<T>,
-    all: StdBuckHashMap<<T as SpanTrackable>::Id, Span<T>>,
+    all: StdBsmrHashMap<<T as SpanTrackable>::Id, Span<T>>,
     roots_completed: usize,
 }
 
@@ -433,15 +433,15 @@ pub trait SpanTrackable: std::fmt::Debug + Send + Sync + 'static {
     fn dice_key_type(&self) -> Option<&'static str>;
 }
 
-impl SpanTrackable for BuckEvent {
+impl SpanTrackable for BsmrEvent {
     type Id = SpanId;
 
     fn span_id(&self) -> Option<Self::Id> {
-        BuckEvent::span_id(self)
+        BsmrEvent::span_id(self)
     }
 
     fn parent_id(&self) -> Option<Self::Id> {
-        BuckEvent::parent_id(self)
+        BsmrEvent::parent_id(self)
     }
 
     fn is_shown(&self) -> bool {
@@ -519,7 +519,7 @@ impl<T: SpanTrackable> SpanTrackable for Arc<T> {
     }
 }
 
-pub fn is_span_shown(event: &BuckEvent) -> bool {
+pub fn is_span_shown(event: &BsmrEvent) -> bool {
     use bsmr_data::span_start_event::Data;
 
     match event.span_start_event().and_then(|span| span.data.as_ref()) {
@@ -570,12 +570,12 @@ pub fn is_span_shown(event: &BuckEvent) -> bool {
     }
 }
 
-pub type BuckEventSpanTracker = SpanTracker<Arc<BuckEvent>>;
-pub type BuckEventSpanHandle<'a> = SpanHandle<'a, Arc<BuckEvent>>;
-pub type BuckEventSpanInfo = SpanInfo<Arc<BuckEvent>>;
+pub type BsmrEventSpanTracker = SpanTracker<Arc<BsmrEvent>>;
+pub type BsmrEventSpanHandle<'a> = SpanHandle<'a, Arc<BsmrEvent>>;
+pub type BsmrEventSpanInfo = SpanInfo<Arc<BsmrEvent>>;
 
-impl BuckEventSpanTracker {
-    pub fn handle_event(&mut self, event: &Arc<BuckEvent>) -> bsmr_error::Result<()> {
+impl BsmrEventSpanTracker {
+    pub fn handle_event(&mut self, event: &Arc<BsmrEvent>) -> bsmr_error::Result<()> {
         if let Some(_start) = event.span_start_event() {
             self.start_at(event)?;
         } else if let Some(_end) = event.span_end_event() {
@@ -585,12 +585,12 @@ impl BuckEventSpanTracker {
     }
 }
 
-impl WhatRanState for SpanTracker<Arc<BuckEvent>> {
+impl WhatRanState for SpanTracker<Arc<BsmrEvent>> {
     fn get(&self, span_id: SpanId) -> Option<WhatRanRelevantAction> {
         self.all
             .get(&span_id)
             .map(|e| e.info.event.data())
-            .and_then(WhatRanRelevantAction::from_buck_data)
+            .and_then(WhatRanRelevantAction::from_bsmr_data)
     }
 }
 

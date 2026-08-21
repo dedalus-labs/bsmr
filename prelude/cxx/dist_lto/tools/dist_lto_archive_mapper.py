@@ -1,4 +1,10 @@
 #!/usr/bin/env python3
+# ===----------------------------------------------------------------------===
+# Upstream-Source: facebook/buck2@1560aca2002865cd73d7cafb22c705cfb640b2bc
+# Modifications Copyright (c) 2026 Dedalus Labs, Inc. and its contributors
+# SPDX-License-Identifier: Apache-2.0
+# ===----------------------------------------------------------------------===
+
 # Copyright (c) Meta Platforms, Inc. and affiliates.
 #
 # This source code is dual-licensed under either the MIT license found in the
@@ -8,15 +14,15 @@
 # above-listed licenses.
 
 """
-This script is used to transform an opaque directory Buck artifact filled with
-files into a number of Buck artifacts that can each be operated on individually.
+This script is used to transform an opaque directory Bsmr artifact filled with
+files into a number of Bsmr artifacts that can each be operated on individually.
 
 This script is used to take a directory filled with object files created
 through dynamic_output and a list of name, output destination path pairs.
 For each such pair, we look for a file in the directory matching the name,
 and copy it to the destination path.
 
-This allows buck to declare and operate on each file individually, rather than
+This allows bsmr to declare and operate on each file individually, rather than
 the entire opaque directory.
 """
 

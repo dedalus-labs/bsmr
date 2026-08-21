@@ -634,6 +634,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "bsmr-resources"
+version = "1.0.0"
+dependencies = [
+ "dunce",
+ "once_cell",
+ "serde",
+ "serde_json",
+ "thiserror 2.0.20",
+]
+
+[[package]]
 name = "bsmr_action_impl"
 version = "0.1.0"
 dependencies = [
@@ -3181,17 +3192,6 @@ dependencies = [
  "memchr",
  "regex-automata",
  "serde_core",
-]
-
-[[package]]
-name = "buck-resources"
-version = "1.0.0"
-dependencies = [
- "dunce",
- "once_cell",
- "serde",
- "serde_json",
- "thiserror 2.0.20",
 ]
 
 [[package]]

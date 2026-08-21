@@ -14,7 +14,7 @@
  * above-listed licenses.
  */
 
-use bsmr_error::BuckErrorContext as _;
+use bsmr_error::BsmrErrorContext as _;
 use bsmr_error::internal_error;
 use bsmr_grpc::ServerHandle;
 use bsmr_grpc::make_channel;
@@ -58,7 +58,7 @@ impl TestExecutor for TestExecutorClient {
         self.client
             .clone()
             .external_runner_spec(ExternalRunnerSpecRequest {
-                test_spec: Some(s.try_into().buck_error_context("Invalid `test_spec`")?),
+                test_spec: Some(s.try_into().bsmr_error_context("Invalid `test_spec`")?),
             })
             .await?;
 
@@ -100,12 +100,12 @@ where
             let test_spec = test_spec
                 .ok_or_else(|| internal_error!("Missing `test_spec`"))?
                 .try_into()
-                .buck_error_context("Invalid `test_spec`")?;
+                .bsmr_error_context("Invalid `test_spec`")?;
 
             self.inner
                 .external_runner_spec(test_spec)
                 .await
-                .buck_error_context("Failed to dispatch test_spec")?;
+                .bsmr_error_context("Failed to dispatch test_spec")?;
 
             Ok(Empty {})
         })
@@ -120,7 +120,7 @@ where
             self.inner
                 .end_of_test_requests()
                 .await
-                .buck_error_context("Failed to report end-of-tests")?;
+                .bsmr_error_context("Failed to report end-of-tests")?;
 
             Ok(Empty {})
         })
@@ -135,7 +135,7 @@ where
             self.inner
                 .unstable_heap_dump(&req.into_inner().destination_path)
                 .await
-                .buck_error_context("Failed to dispatch unstable_heap_dump")?;
+                .bsmr_error_context("Failed to dispatch unstable_heap_dump")?;
             Ok(UnstableHeapDumpResponse {})
         })
         .await

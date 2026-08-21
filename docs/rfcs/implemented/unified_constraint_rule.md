@@ -138,7 +138,7 @@ constraint(
 )
 ```
 
-One issue with how constraint works in Buck today is that setting `cfg//:sanitizer[none]` in the configuration creates a different configuration than having `cfg//:sanitizer` unset. This means that changing between `[none]` and unset may cause Buck to do some amount of duplicate work and create different build action keys, even though they are semantically equivalent.
+One issue with how constraint works in Bsmr today is that setting `cfg//:sanitizer[none]` in the configuration creates a different configuration than having `cfg//:sanitizer` unset. This means that changing between `[none]` and unset may cause Bsmr to do some amount of duplicate work and create different build action keys, even though they are semantically equivalent.
 
 It also means that everywhere someone writes a `select` on sanitizer, they have to write it like this,
 
@@ -222,7 +222,7 @@ Note select on defaults mentioned in the original RFC are still planned to be su
 
 ### Background
 
-Currently in Bessemer, [`ConfigurationInfo`](https://buck2.build/docs/api/build/ConfigurationInfo/) exposes `.constraints` as a dictionary attribute that can be directly accessed and manipulated. With unified constraint, a constraint setting can now declare a default constraint value that should be used when the constraint is not explicitly set.
+Currently in Bessemer, [`ConfigurationInfo`](https://oss.dedaluslabs.ai/bsmr/api/build/ConfigurationInfo/) exposes `.constraints` as a dictionary attribute that can be directly accessed and manipulated. With unified constraint, a constraint setting can now declare a default constraint value that should be used when the constraint is not explicitly set.
 
 ### Problem
 

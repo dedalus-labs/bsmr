@@ -16,7 +16,7 @@
 
 use bsmr_util::late_binding::LateBinding;
 
-#[cfg(not(buck_build))]
+#[cfg(not(bsmr_build))]
 const RELEASE_VERSION: &str = include_str!("../../../VERSION");
 
 pub struct BsmrBuildInfo {
@@ -34,12 +34,12 @@ pub fn revision() -> Option<&'static str> {
         .ok()
         .and_then(|i| i.revision)
         .filter(|s| !s.is_empty());
-    #[cfg(not(buck_build))]
+    #[cfg(not(bsmr_build))]
     let revision = revision.or(Some(RELEASE_VERSION.trim()));
     revision
 }
 
-/// Get the generated version for the windows binary. We use this for defining bucks internal version
+/// Get the generated version for the windows binary. We use this for defining bsmrs internal version
 pub fn win_internal_version() -> Option<&'static str> {
     BSMR_BUILD_INFO
         .get()
@@ -74,7 +74,7 @@ pub fn release_timestamp() -> Option<&'static str> {
         .filter(|s| !s.is_empty())
 }
 
-#[cfg(all(test, not(buck_build)))]
+#[cfg(all(test, not(bsmr_build)))]
 mod tests {
     use super::RELEASE_VERSION;
 

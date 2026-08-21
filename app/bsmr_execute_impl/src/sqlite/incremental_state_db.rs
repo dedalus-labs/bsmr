@@ -27,8 +27,8 @@ use bsmr_core::soft_error;
 use bsmr_execute::execute::blocking::BlockingExecutor;
 use bsmr_fs::paths::abs_norm_path::AbsNormPath;
 use bsmr_fs::paths::abs_norm_path::AbsNormPathBuf;
-use bsmr_hash::BuckDashMap;
-use bsmr_hash::StdBuckHashMap;
+use bsmr_hash::BsmrDashMap;
+use bsmr_hash::StdBsmrHashMap;
 use chrono::DateTime;
 use chrono::Utc;
 use dupe::Dupe;
@@ -46,7 +46,7 @@ use crate::sqlite::tables::incremental_state_table::IncrementalStateSqliteTable;
 /// bsmrconfig in the project root's .bsmr.
 pub const INCREMENTAL_DB_SCHEMA_VERSION: u64 = 0;
 
-pub(crate) type IncrementalState = BuckDashMap<String, Arc<IncrementalPathMap>>;
+pub(crate) type IncrementalState = BsmrDashMap<String, Arc<IncrementalPathMap>>;
 
 pub struct IncrementalDbState {
     pub db: Option<IncrementalStateSqliteDb>,
@@ -57,7 +57,7 @@ impl IncrementalDbState {
     pub fn db_disabled() -> Self {
         Self {
             db: None,
-            state: BuckDashMap::default(),
+            state: BsmrDashMap::default(),
         }
     }
 }
@@ -168,8 +168,8 @@ impl IncrementalStateSqliteDb {
     /// (2) the `IncrementalState` if loading was successful or the load error.
     pub async fn initialize(
         incremental_state_dir: AbsNormPathBuf,
-        versions: StdBuckHashMap<String, String>,
-        current_instance_metadata: StdBuckHashMap<String, String>,
+        versions: StdBsmrHashMap<String, String>,
+        current_instance_metadata: StdBsmrHashMap<String, String>,
         io_executor: Arc<dyn BlockingExecutor>,
         reject_identity: Option<&SqliteIdentity>,
     ) -> bsmr_error::Result<IncrementalDbState> {
@@ -187,8 +187,8 @@ impl IncrementalStateSqliteDb {
 
     fn initialize_incremental_sqlite_db(
         incremental_state_dir: AbsNormPathBuf,
-        versions: StdBuckHashMap<String, String>,
-        current_instance_metadata: StdBuckHashMap<String, String>,
+        versions: StdBsmrHashMap<String, String>,
+        current_instance_metadata: StdBsmrHashMap<String, String>,
         reject_identity: Option<&SqliteIdentity>,
     ) -> bsmr_error::Result<IncrementalDbState> {
         let reject_identity = reject_identity.cloned();
@@ -233,7 +233,7 @@ impl IncrementalStateSqliteDb {
 
                 Ok(IncrementalDbState {
                     db: Some(db),
-                    state: BuckDashMap::default(),
+                    state: BsmrDashMap::default(),
                 })
             }
         }
@@ -247,13 +247,13 @@ impl IncrementalStateSqliteDb {
 #[allow(unused)] // Used by test modules
 pub(crate) fn testing_incremental_state_sqlite_db(
     fs: &ProjectRoot,
-    versions: StdBuckHashMap<String, String>,
-    metadata: StdBuckHashMap<String, String>,
+    versions: StdBsmrHashMap<String, String>,
+    metadata: StdBsmrHashMap<String, String>,
     reject_identity: Option<&SqliteIdentity>,
 ) -> bsmr_error::Result<IncrementalDbState> {
     IncrementalStateSqliteDb::initialize_incremental_sqlite_db(
         fs.resolve(ProjectRelativePath::unchecked_new(
-            "bsmr-out/v2/cache/incremental_state",
+            "bsmr-out/default/cache/incremental_state",
         )),
         versions,
         metadata,
@@ -272,7 +272,7 @@ mod tests {
 
     #[test]
     fn test_initialize_incremental_sqlite_db() -> bsmr_error::Result<()> {
-        fn testing_metadatas() -> Vec<StdBuckHashMap<String, String>> {
+        fn testing_metadatas() -> Vec<StdBsmrHashMap<String, String>> {
             let metadata = bsmr_events::metadata::collect(&DaemonId::new());
             let mut metadatas = vec![metadata; 5];
             for (i, metadata) in metadatas.iter_mut().enumerate() {
@@ -282,8 +282,8 @@ mod tests {
         }
 
         fn assert_metadata_matches(
-            mut have: StdBuckHashMap<String, String>,
-            want: &StdBuckHashMap<String, String>,
+            mut have: StdBsmrHashMap<String, String>,
+            want: &StdBsmrHashMap<String, String>,
         ) {
             // Remove the key we inject (and check it's there).
             have.remove("timestamp_on_initialization").unwrap();
@@ -303,8 +303,8 @@ mod tests {
         let incremental_path_map = IncrementalPathMap::new(mapping);
         let metadatas = testing_metadatas();
 
-        let v0 = StdBuckHashMap::from([("version".to_owned(), "0".to_owned())]);
-        let v1 = StdBuckHashMap::from([("version".to_owned(), "1".to_owned())]);
+        let v0 = StdBsmrHashMap::from([("version".to_owned(), "0".to_owned())]);
+        let v1 = StdBsmrHashMap::from([("version".to_owned(), "1".to_owned())]);
 
         // Initialize with non-existent DB (should create new DB)
         {

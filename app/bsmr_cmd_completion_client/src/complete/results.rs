@@ -25,14 +25,14 @@ use bsmr_core::cells::name::CellName;
 use bsmr_fs::fs_util;
 use bsmr_fs::paths::abs_norm_path::AbsNormPath;
 use bsmr_fs::paths::file_name::FileNameBuf;
-use bsmr_hash::StdBuckHashMap;
+use bsmr_hash::StdBsmrHashMap;
 
 use super::path_sanitizer::SanitizedPath;
 
 pub(crate) struct CompletionResults<'a> {
     roots: &'a InvocationRoots,
     cell_configs: Arc<BsmrConfigBasedCells>,
-    buildfiles: StdBuckHashMap<CellName, Vec<FileNameBuf>>,
+    buildfiles: StdBsmrHashMap<CellName, Vec<FileNameBuf>>,
     results: BTreeSet<String>,
 }
 
@@ -41,7 +41,7 @@ impl<'a> CompletionResults<'a> {
         Self {
             roots,
             cell_configs,
-            buildfiles: StdBuckHashMap::default(),
+            buildfiles: StdBsmrHashMap::default(),
             results: BTreeSet::<String>::new(),
         }
     }

@@ -1,3 +1,9 @@
+# ===----------------------------------------------------------------------===
+# Upstream-Source: facebook/buck2@1560aca2002865cd73d7cafb22c705cfb640b2bc
+# Modifications Copyright (c) 2026 Dedalus Labs, Inc. and its contributors
+# SPDX-License-Identifier: Apache-2.0
+# ===----------------------------------------------------------------------===
+
 # Copyright (c) Meta Platforms, Inc. and affiliates.
 #
 # This source code is dual-licensed under either the MIT license found in the
@@ -11,7 +17,7 @@
 # the generated docs, and so those should be verified to be accurate and
 # well-formatted (and then delete this TODO)
 
-load(":common.bzl", "buck", "prelude_rule")
+load(":common.bzl", "bsmr", "prelude_rule")
 
 js_bundle = prelude_rule(
     name = "js_bundle",
@@ -34,9 +40,9 @@ js_bundle = prelude_rule(
             "fallback_transform_profile": attrs.option(attrs.string(), default = None),
             "worker": attrs.dep(),
         }
-        | buck.licenses_arg()
-        | buck.labels_arg()
-        | buck.contacts_arg()
+        | bsmr.licenses_arg()
+        | bsmr.labels_arg()
+        | bsmr.contacts_arg()
     ),
 )
 
@@ -68,9 +74,9 @@ js_bundle_genrule = prelude_rule(
             "srcs": attrs.named_set(attrs.source(), sorted = False, default = []),
             "weight": attrs.option(attrs.int(), default = None),
         }
-        | buck.licenses_arg()
-        | buck.labels_arg()
-        | buck.contacts_arg()
+        | bsmr.licenses_arg()
+        | bsmr.labels_arg()
+        | bsmr.contacts_arg()
     ),
 )
 
@@ -94,9 +100,9 @@ js_library = prelude_rule(
             "srcs": attrs.list(attrs.one_of(attrs.source(), attrs.tuple(attrs.source(), attrs.string())), default = []),
             "worker": attrs.dep(),
         }
-        | buck.licenses_arg()
-        | buck.labels_arg()
-        | buck.contacts_arg()
+        | bsmr.licenses_arg()
+        | bsmr.labels_arg()
+        | bsmr.contacts_arg()
     ),
 )
 

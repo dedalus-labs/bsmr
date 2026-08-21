@@ -1,3 +1,9 @@
+//===----------------------------------------------------------------------===//
+// Upstream-Source: facebook/buck2@1560aca2002865cd73d7cafb22c705cfb640b2bc
+// Modifications Copyright (c) 2026 Dedalus Labs, Inc. and its contributors
+// SPDX-License-Identifier: Apache-2.0
+//===----------------------------------------------------------------------===//
+
 /*
  * Copyright (c) Meta Platforms, Inc. and affiliates.
  *
@@ -8,13 +14,13 @@
  * above-listed licenses.
  */
 
-//! Protobufs for ineteracting with Buck's DownwardApi over GPRC. This isn't the protocol Buck v1
+//! Protobufs for ineteracting with Bsmr's DownwardApi over GPRC. This isn't the protocol Bsmr v1
 //! speaks, where the DownwardApi is accessed over named pipes with serialized JSON payloads. This
 //! is a different way to make the same calls.
 
 // We put this in a module for easier naming in convert.
 mod proto {
-    tonic::include_proto!("buck.downward_api");
+    tonic::include_proto!("bsmr.downward_api");
 }
 
 pub use proto::*;

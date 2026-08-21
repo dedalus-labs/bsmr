@@ -15,51 +15,51 @@
 # pyre-strict
 
 
-from bsmr.tests.e2e_util.api.buck import Buck
+from bsmr.tests.e2e_util.api.bsmr import Bsmr
 from bsmr.tests.e2e_util.asserts import expect_failure
-from bsmr.tests.e2e_util.buck_workspace import buck_test
+from bsmr.tests.e2e_util.bsmr_workspace import bsmr_test
 
 
-@buck_test()
-async def test_ok(buck: Buck) -> None:
-    await buck.test("//:ok")
+@bsmr_test()
+async def test_ok(bsmr: Bsmr) -> None:
+    await bsmr.test("//:ok")
 
 
-@buck_test()
-async def test_fail(buck: Buck) -> None:
+@bsmr_test()
+async def test_fail(bsmr: Bsmr) -> None:
     await expect_failure(
-        buck.test("//:fail"), stderr_regex="Fail: root//:fail - unmanaged"
+        bsmr.test("//:fail"), stderr_regex="Fail: root//:fail - unmanaged"
     )
 
 
-@buck_test()
-async def test_tests_attribute(buck: Buck) -> None:
+@bsmr_test()
+async def test_tests_attribute(bsmr: Bsmr) -> None:
     await expect_failure(
-        buck.test("//:noop_references_fail"),
+        bsmr.test("//:noop_references_fail"),
         stderr_regex="Fail: root//:fail - unmanaged",
     )
 
 
-@buck_test()
-async def test_tests_attribute_transitive(buck: Buck) -> None:
+@bsmr_test()
+async def test_tests_attribute_transitive(bsmr: Bsmr) -> None:
     await expect_failure(
-        buck.test(
+        bsmr.test(
             "//:noop_transitively_references_fail",
         ),
         stderr_regex="Fail: root//:fail - unmanaged",
     )
 
 
-@buck_test()
-async def test_tests_attribute_cycle(buck: Buck) -> None:
-    buck.test(
+@bsmr_test()
+async def test_tests_attribute_cycle(bsmr: Bsmr) -> None:
+    bsmr.test(
         "//:noop_cycle1",
     )
 
 
-@buck_test()
-async def test_tests_attribute_self_transition(buck: Buck) -> None:
+@bsmr_test()
+async def test_tests_attribute_self_transition(bsmr: Bsmr) -> None:
     await expect_failure(
-        buck.test("//:noop_self_transition_references_fail"),
+        bsmr.test("//:noop_self_transition_references_fail"),
         stderr_regex="Fail: root//:fail - unmanaged",
     )

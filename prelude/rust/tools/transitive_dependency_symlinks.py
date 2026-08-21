@@ -1,4 +1,10 @@
 #!/usr/bin/env python3
+# ===----------------------------------------------------------------------===
+# Upstream-Source: facebook/buck2@1560aca2002865cd73d7cafb22c705cfb640b2bc
+# Modifications Copyright (c) 2026 Dedalus Labs, Inc. and its contributors
+# SPDX-License-Identifier: Apache-2.0
+# ===----------------------------------------------------------------------===
+
 # Copyright (c) Meta Platforms, Inc. and affiliates.
 #
 # This source code is dual-licensed under either the MIT license found in the
@@ -17,11 +23,11 @@
 # Most crates have a crate name determined during analysis: value of the `crate`
 # attribute, or derived using a simple heuristic from the rust_library target's
 # `name` attribute. For these it's easy to give the rlib a correct filename up
-# front and use buck's `ctx.actions.symlinked_dir` to collect them into a
+# front and use bsmr's `ctx.actions.symlinked_dir` to collect them into a
 # directory. These do not go through this tool.
 #
 # Crates that use `crate_dynamic` have a crate name computed at build time, for
-# example by extracting the name from a .thrift file. Buck needs a filename at
+# example by extracting the name from a .thrift file. Bsmr needs a filename at
 # analysis time for all artifacts, so we name those rlib files using a
 # provisional name and then this tool at build time will symlink them under the
 # real crate name that rustc will recognize.

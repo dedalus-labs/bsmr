@@ -18,12 +18,12 @@ use bsmr_cli_proto::new_generic::ExpandExternalCellsRequest;
 use bsmr_cli_proto::new_generic::NewGenericRequest;
 use bsmr_cli_proto::new_generic::NewGenericResponse;
 use bsmr_client_ctx::client_ctx::ClientCommandContext;
-use bsmr_client_ctx::common::BuckArgMatches;
+use bsmr_client_ctx::common::BsmrArgMatches;
 use bsmr_client_ctx::common::CommonBuildConfigurationOptions;
 use bsmr_client_ctx::common::CommonEventLogOptions;
 use bsmr_client_ctx::common::CommonStarlarkOptions;
 use bsmr_client_ctx::common::ui::CommonConsoleOptions;
-use bsmr_client_ctx::daemon::client::BuckdClientConnector;
+use bsmr_client_ctx::daemon::client::BsmrdClientConnector;
 use bsmr_client_ctx::events_ctx::EventsCtx;
 use bsmr_client_ctx::exit_result::ExitResult;
 use bsmr_client_ctx::streaming::StreamingCommand;
@@ -55,8 +55,8 @@ impl StreamingCommand for ExpandExternalCellsCommand {
 
     async fn exec_impl(
         self,
-        buckd: &mut BuckdClientConnector,
-        matches: BuckArgMatches<'_>,
+        bsmrd: &mut BsmrdClientConnector,
+        matches: BsmrArgMatches<'_>,
         ctx: &mut ClientCommandContext<'_>,
         events_ctx: &mut EventsCtx,
     ) -> ExitResult {
@@ -66,7 +66,7 @@ impl StreamingCommand for ExpandExternalCellsCommand {
         } else {
             ExpandExternalCellsRequest::Specific(self.cells.into_iter().collect())
         };
-        let resp = buckd
+        let resp = bsmrd
             .with_flushing()
             .new_generic(
                 context,

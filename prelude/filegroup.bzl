@@ -1,3 +1,9 @@
+# ===----------------------------------------------------------------------===
+# Upstream-Source: facebook/buck2@1560aca2002865cd73d7cafb22c705cfb640b2bc
+# Modifications Copyright (c) 2026 Dedalus Labs, Inc. and its contributors
+# SPDX-License-Identifier: Apache-2.0
+# ===----------------------------------------------------------------------===
+
 # Copyright (c) Meta Platforms, Inc. and affiliates.
 #
 # This source code is dual-licensed under either the MIT license found in the
@@ -28,7 +34,7 @@ def filegroup_impl(ctx):
                 fail("filegroup {} has srcs with duplicate names: {} and {}".format(ctx.label, src, srcs[src.short_path]))
             srcs[src.short_path] = src
 
-    # It seems that buck1 always copies, and that's important for Python rules
+    # It seems that legacy always copies, and that's important for Python rules
     if ctx.attrs.copy:
         output = ctx.actions.copied_dir(
             output_name,

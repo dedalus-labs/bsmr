@@ -17,7 +17,7 @@
 use bsmr_core::fs::project::ProjectRoot;
 use bsmr_core::fs::project_rel_path::ProjectRelativePath;
 use bsmr_fs::paths::abs_norm_path::AbsNormPathBuf;
-use bsmr_hash::BuckIndexMap;
+use bsmr_hash::BsmrIndexMap;
 use bsmr_util::late_binding::LateBinding;
 use dice::DiceComputations;
 use futures::future::BoxFuture;
@@ -29,7 +29,7 @@ pub static AUDIT_CELL: LateBinding<
         aliases: bool,
         cwd: &'v ProjectRelativePath,
         fs: &'v ProjectRoot,
-    ) -> BoxFuture<'v, bsmr_error::Result<BuckIndexMap<String, AbsNormPathBuf>>>,
+    ) -> BoxFuture<'v, bsmr_error::Result<BsmrIndexMap<String, AbsNormPathBuf>>>,
 > = LateBinding::new("AUDIT_CELL");
 
 pub fn audit_cell<'v>(
@@ -38,7 +38,7 @@ pub fn audit_cell<'v>(
     aliases: bool,
     cwd: &'v ProjectRelativePath,
     fs: &'v ProjectRoot,
-) -> bsmr_error::Result<BoxFuture<'v, bsmr_error::Result<BuckIndexMap<String, AbsNormPathBuf>>>> {
+) -> bsmr_error::Result<BoxFuture<'v, bsmr_error::Result<BsmrIndexMap<String, AbsNormPathBuf>>>> {
     Ok((AUDIT_CELL.get()?)(
         ctx,
         aliases_to_resolve,

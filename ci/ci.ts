@@ -344,10 +344,7 @@ export const ci = workflow({
 				...installDotSlash,
 				{
 					name: "Generate Rust build dependencies",
-					run: command({
-						file: "./tools/bin/reindeer",
-						args: ["--third-party-dir", "tools/build/third-party/rust", "buckify"],
-					}),
+					run: command({ file: "node", args: ["ci/rust-build-dependencies.mjs"] }),
 				},
 				{
 					name: "Check Starlark",

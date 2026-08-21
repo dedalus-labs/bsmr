@@ -14,7 +14,7 @@
  * above-listed licenses.
  */
 
-use bsmr_error::BuckErrorContext;
+use bsmr_error::BsmrErrorContext;
 
 /// Initializes structured soft-error reporting.
 pub fn initialize() -> bsmr_error::Result<()> {
@@ -30,7 +30,7 @@ pub fn initialize() -> bsmr_error::Result<()> {
             options,
         );
     }))
-    .buck_error_context("Error initializing soft errors")?;
+    .bsmr_error_context("Error initializing soft errors")?;
     Ok(())
 }
 
@@ -39,9 +39,9 @@ mod imp {
     use bsmr_data::Location;
     use bsmr_events::daemon_id::get_daemon_id_for_panics;
     use bsmr_events::metadata;
-    use bsmr_hash::StdBuckHashMap;
+    use bsmr_hash::StdBsmrHashMap;
 
-    fn get_metadata(options: &StructuredErrorOptions) -> StdBuckHashMap<String, String> {
+    fn get_metadata(options: &StructuredErrorOptions) -> StdBsmrHashMap<String, String> {
         #[cfg_attr(client_only, allow(unused_mut))]
         let mut map = metadata::collect(&get_daemon_id_for_panics());
         #[cfg(not(client_only))]

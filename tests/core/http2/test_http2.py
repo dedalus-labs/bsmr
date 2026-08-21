@@ -19,24 +19,24 @@ from __future__ import annotations
 
 import json
 
-from bsmr.tests.e2e_util.api.buck import Buck
-from bsmr.tests.e2e_util.buck_workspace import buck_test
+from bsmr.tests.e2e_util.api.bsmr import Bsmr
+from bsmr.tests.e2e_util.bsmr_workspace import bsmr_test
 
 
-@buck_test()
-async def test_http2_enabled(buck: Buck) -> None:
+@bsmr_test()
+async def test_http2_enabled(bsmr: Bsmr) -> None:
     # Get a daemon to start
-    await buck.build()
-    result = await buck.status()
+    await bsmr.build()
+    result = await bsmr.status()
     status = json.loads(result.stdout)
     assert status["http2"] is True, "http2 is enabled by default"
 
     # Insert necessary bsmrconfig to pick up http2 configuration.
-    with open(f"{buck.cwd}/.bsmr", "a") as bsmrconfig:
+    with open(f"{bsmr.cwd}/.bsmr", "a") as bsmrconfig:
         bsmrconfig.writelines(["[http]\n", "http2 = false\n"])
 
     # Get a daemon to start
-    await buck.build()
-    result = await buck.status()
+    await bsmr.build()
+    result = await bsmr.status()
     status = json.loads(result.stdout)
     assert status["http2"] is False, "http2 was disabled by bsmrconfig"

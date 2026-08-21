@@ -19,19 +19,19 @@ import json
 import platform
 from pathlib import Path
 
-from bsmr.tests.e2e_util.api.buck import Buck
-from bsmr.tests.e2e_util.buck_workspace import buck_test
+from bsmr.tests.e2e_util.api.bsmr import Bsmr
+from bsmr.tests.e2e_util.bsmr_workspace import bsmr_test
 
 
 # TODO(marwhal): Fix and enable on Windows
-@buck_test(inplace=True, skip_for_os=["windows"])
-async def test_no_quotes(buck: Buck) -> None:
-    result = await buck.bxl(
-        "upstream//tools/build/buck/bxl/cpp_lsp/cpp_gen_cdb.bxl:cpp_gen_cdb",
+@bsmr_test(inplace=True, skip_for_os=["windows"])
+async def test_no_quotes(bsmr: Bsmr) -> None:
+    result = await bsmr.bxl(
+        "upstream//tools/build/bsmr/bxl/cpp_lsp/cpp_gen_cdb.bxl:cpp_gen_cdb",
         "--",
         "--filename",
         str(
-            buck.cwd.parent
+            bsmr.cwd.parent
             / "fbcode/bsmr/tests/targets/cpp_gen_cdb/basic/src/main.cpp"
         ),
         "--os",
@@ -51,6 +51,6 @@ async def test_no_quotes(buck: Buck) -> None:
 
 
 # TODO(marwhal): Add this back one at least one test in this file passes on Windows
-@buck_test(inplace=True)
-async def test_noop(buck: Buck) -> None:
+@bsmr_test(inplace=True)
+async def test_noop(bsmr: Bsmr) -> None:
     return

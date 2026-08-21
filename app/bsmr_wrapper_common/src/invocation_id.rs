@@ -22,23 +22,23 @@ use std::hash::Hasher;
 use std::str::FromStr;
 
 use allocative::Allocative;
-use bsmr_error::BuckErrorContext;
-use bsmr_hash::BuckDefaultHasher;
+use bsmr_error::BsmrErrorContext;
+use bsmr_hash::BsmrDefaultHasher;
 use dupe::Dupe;
 use uuid::Uuid;
 
-use crate::BUCK_WRAPPER_UUID_ENV_VAR;
+use crate::BSMR_WRAPPER_UUID_ENV_VAR;
 
 #[derive(Debug, bsmr_error::Error)]
 #[bsmr(tag = Environment)]
 enum TraceIdError {
-    #[error("`{}` environment variable is not UTF-8", BUCK_WRAPPER_UUID_ENV_VAR)]
+    #[error("`{}` environment variable is not UTF-8", BSMR_WRAPPER_UUID_ENV_VAR)]
     EnvVarNotUtf8,
 }
 
 /// A TraceId is a unique identifier for a trace. Trace IDs are globally unique; their textual form is a v4 UUID.
 ///
-/// TraceIds generally correspond to commands, but they do not have to, e.g. in the case of a Buck daemon producing
+/// TraceIds generally correspond to commands, but they do not have to, e.g. in the case of a Bsmr daemon producing
 /// events even when a command is not running.
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Allocative)]
 pub struct TraceId(
@@ -104,9 +104,9 @@ impl TraceId {
 
     /// Fetch `TraceId` from environment variable or generate a new one.
     pub fn from_env_or_new() -> bsmr_error::Result<TraceId> {
-        match env::var(BUCK_WRAPPER_UUID_ENV_VAR) {
-            Ok(s) => Ok(TraceId::from_str(&s).with_buck_error_context(|| {
-                format!("Parsing bsmr invocation id from env variable {BUCK_WRAPPER_UUID_ENV_VAR}")
+        match env::var(BSMR_WRAPPER_UUID_ENV_VAR) {
+            Ok(s) => Ok(TraceId::from_str(&s).with_bsmr_error_context(|| {
+                format!("Parsing bsmr invocation id from env variable {BSMR_WRAPPER_UUID_ENV_VAR}")
             })?),
             Err(env::VarError::NotPresent) => Ok(TraceId::new()),
             Err(env::VarError::NotUnicode(_)) => Err(TraceIdError::EnvVarNotUtf8.into()),
@@ -115,7 +115,7 @@ impl TraceId {
 
     /// Generate short hash to be used as a message key for a Scribe client.
     pub fn hash(&self) -> i64 {
-        let mut hasher = BuckDefaultHasher::new();
+        let mut hasher = BsmrDefaultHasher::new();
         Hash::hash(self, &mut hasher);
         hasher.finish() as i64
     }

@@ -51,7 +51,7 @@ use bsmr_core::provider::label::ProvidersName;
 use bsmr_core::target::configured_target_label::ConfiguredTargetLabel;
 use bsmr_data::ErrorReport;
 use bsmr_directory::directory::entry::DirectoryEntry;
-use bsmr_error::BuckErrorContext;
+use bsmr_error::BsmrErrorContext;
 use bsmr_error::UniqueRootId;
 use bsmr_error::classify::ErrorLike;
 use bsmr_error::classify::Tier;
@@ -63,7 +63,7 @@ use bsmr_execute::directory::ActionSharedDirectory;
 use bsmr_fs::error::IoResultExt;
 use bsmr_fs::fs_util;
 use bsmr_fs::paths::abs_norm_path::AbsNormPathBuf;
-use bsmr_hash::BuckDefaultHasher;
+use bsmr_hash::BsmrDefaultHasher;
 use bsmr_sketches::DependencyGraphSketch;
 use bsmr_wrapper_common::invocation_id::TraceId;
 use derivative::Derivative;
@@ -108,7 +108,7 @@ pub struct BuildReport {
     trace_id: TraceId,
     success: bool,
     results: HashMap<EntryLabel, BuildReportEntry>,
-    /// filled only when fill-out-failures is passed for Buck1 backcompat only
+    /// filled only when fill-out-failures is passed for Legacy backcompat only
     failures: HashMap<EntryLabel, String>,
     project_root: AbsNormPathBuf,
     truncated: bool,
@@ -122,7 +122,7 @@ pub struct BuildReport {
     error_category: Option<String>,
 }
 
-/// The fields that stored in the unconfigured `BuildReportEntry` for buck1 backcompat.
+/// The fields that stored in the unconfigured `BuildReportEntry` for legacy backcompat.
 ///
 /// Do not put new fields in here. Put them in `ConfiguredBuildReportEntry`
 #[derive(Default, Debug, Serialize)]
@@ -242,9 +242,9 @@ pub(crate) struct AllTargetsBuildMetrics {
 /// DO NOT UPDATE WITHOUT UPDATING `docs/users/build_observability/build_report.md`!
 #[derive(Debug, Serialize)]
 struct BuildReportEntry {
-    /// The buck1 build report did not support multiple configurations of the same target. We
+    /// The legacy build report did not support multiple configurations of the same target. We
     /// do, which is why we have the `configured` field below, which users should ideally use.
-    /// This field is kept around for buck1 compatibility only and should ideally be removed.
+    /// This field is kept around for legacy compatibility only and should ideally be removed.
     ///
     /// We avoid the `WithErrors` variant here, to keep the errors field from conflicting with
     /// the one on this struct.
@@ -649,7 +649,7 @@ impl<'a> BuildReportCollector<'a> {
             results: entries,
             failures: self.failures,
             project_root: project_root.root().to_owned(),
-            // In buck1 we may truncate build report for a large number of targets.
+            // In legacy we may truncate build report for a large number of targets.
             // Setting this to false since we don't currently truncate bsmr's build report.
             truncated: false,
             strings: self.strings,
@@ -707,7 +707,7 @@ impl<'a> BuildReportCollector<'a> {
     // ============================================================================
 
     pub(crate) fn update_string_cache(&mut self, string: String) -> String {
-        let mut hasher = BuckDefaultHasher::new();
+        let mut hasher = BsmrDefaultHasher::new();
         string.hash(&mut hasher);
         let hash = hasher.finish().to_string();
         self.strings.insert(hash.clone(), string);
@@ -1053,7 +1053,7 @@ impl<'a> BuildReportCollector<'a> {
             // there was at least one error above.
             //
             // This both omits errors and overwrites previous ones. That's the price you pay for
-            // using buck1
+            // using legacy
             self.failures.insert(
                 entry_label,
                 self.strings
@@ -1178,7 +1178,7 @@ fn write_or_serialize_build_report(
         }
         let file = fs_util::create_file(path.clone())
             .categorize_internal()
-            .buck_error_context("Error writing build report")?;
+            .bsmr_error_context("Error writing build report")?;
         let mut file = BufWriter::new(file);
         serde_json::to_writer_pretty(&mut file, build_report)?
     } else {
@@ -1315,7 +1315,7 @@ pub fn stream_build_report(
         .create(true)
         .append(true)
         .open(path.clone())
-        .buck_error_context("Error opening streaming build report file for appending")?;
+        .bsmr_error_context("Error opening streaming build report file for appending")?;
     let mut file = BufWriter::new(file);
     file.write_all(serialized_build_report.as_ref().unwrap().as_bytes())?;
     file.write_all(b"\n")?;
@@ -1339,7 +1339,7 @@ pub fn initialize_streaming_build_report(
     // create and clear the file
     let _file = fs_util::create_file(path.clone())
         .categorize_internal()
-        .buck_error_context("Error initializing streaming build report")?;
+        .bsmr_error_context("Error initializing streaming build report")?;
 
     Ok(())
 }

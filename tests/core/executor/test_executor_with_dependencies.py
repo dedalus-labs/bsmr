@@ -18,19 +18,19 @@
 import json
 from pathlib import Path
 
-from bsmr.tests.e2e_util.api.buck import Buck
+from bsmr.tests.e2e_util.api.bsmr import Bsmr
 from bsmr.tests.e2e_util.asserts import expect_failure
-from bsmr.tests.e2e_util.buck_workspace import buck_test
+from bsmr.tests.e2e_util.bsmr_workspace import bsmr_test
 from bsmr.tests.e2e_util.helper.utils import random_string, read_what_ran
 
 
-@buck_test()
-async def test_executor_with_dependencies(buck: Buck) -> None:
+@bsmr_test()
+async def test_executor_with_dependencies(bsmr: Bsmr) -> None:
     # Smoke test: run on RE and correctly pass the `remote_execution_dependencies` parameter specified in the platform
     # The RE external dependency (https://fburl.com/wiki/e55nloow) is purposefully wrong as the smc_tier is non existent,
     # We just want to check that the parameter is passed correctly to RE
     await expect_failure(
-        buck.build(
+        bsmr.build(
             ":target_without_dependencies",
             "-c",
             "build.execution_platforms=root//platforms:platforms_with_dependencies",
@@ -42,9 +42,9 @@ async def test_executor_with_dependencies(buck: Buck) -> None:
     )
 
 
-@buck_test()
-async def test_good_target_with_dependencies(buck: Buck) -> None:
-    result = await buck.build(
+@bsmr_test()
+async def test_good_target_with_dependencies(bsmr: Bsmr) -> None:
+    result = await bsmr.build(
         ":good_target_with_dependencies",
         "-c",
         "build.execution_platforms=root//platforms:platforms_without_dependencies",
@@ -64,7 +64,7 @@ async def test_good_target_with_dependencies(buck: Buck) -> None:
         assert len(deps[0]["reservation_id"]) == 20
 
     # Make sure it actually did run on RE.
-    out = await read_what_ran(buck)
+    out = await read_what_ran(bsmr)
     executors = {line["identity"]: line["reproducer"]["executor"] for line in out}
     expected = {
         "root//:good_target_with_dependencies (<unspecified>) (cp)": "Re",
@@ -72,10 +72,10 @@ async def test_good_target_with_dependencies(buck: Buck) -> None:
     assert executors == expected
 
 
-@buck_test()
-async def test_bad_target_with_dependencies(buck: Buck) -> None:
+@bsmr_test()
+async def test_bad_target_with_dependencies(bsmr: Bsmr) -> None:
     await expect_failure(
-        buck.build(
+        bsmr.build(
             ":bad_target_with_dependencies",
             "-c",
             "build.execution_platforms=root//platforms:platforms_without_dependencies",

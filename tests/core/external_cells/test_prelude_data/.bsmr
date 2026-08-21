@@ -11,7 +11,7 @@ root = .
   toolchains = root
   fbsource = root
   fbcode = root
-  buck = root
+  bsmr = root
 
 [external_cells]
   prelude = bundled

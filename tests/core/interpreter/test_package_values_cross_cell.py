@@ -15,14 +15,14 @@
 # pyre-strict
 
 
-from bsmr.tests.e2e_util.api.buck import Buck
-from bsmr.tests.e2e_util.buck_workspace import buck_test
+from bsmr.tests.e2e_util.api.bsmr import Bsmr
+from bsmr.tests.e2e_util.bsmr_workspace import bsmr_test
 from bsmr.tests.e2e_util.helper.golden import golden
 
 
-@buck_test()
-async def test_audit_package_values_cross_cell(buck: Buck) -> None:
-    stdout = (await buck.audit("package-values", "other//")).stdout
+@bsmr_test()
+async def test_audit_package_values_cross_cell(bsmr: Bsmr) -> None:
+    stdout = (await bsmr.audit("package-values", "other//")).stdout
     golden(
         output=stdout,
         rel_path="audit-package-values-cross-cell.golden.json",

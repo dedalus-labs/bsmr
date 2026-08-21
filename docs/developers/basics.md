@@ -54,7 +54,7 @@ of nearby code.
 
 Standard `rustfmt` conventions apply. Beyond that:
 
-- **HashMaps**: use `bsmr_hash::BuckHashMap`, not `fxhash::FxHashMap`.
+- **HashMaps**: use `bsmr_hash::BsmrHashMap`, not `fxhash::FxHashMap`.
 - **Cloning**: prefer `.dupe()` over `.clone()` for types that implement `Dupe`
   (e.g. `Arc`-wrapped types). Use `gazebo` utilities — particularly `dupe` —
   where they fit.

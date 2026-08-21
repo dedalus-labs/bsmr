@@ -23,7 +23,7 @@ use bsmr_execute::artifact_value::ArtifactValue;
 use bsmr_execute::directory::INTERNER;
 use bsmr_execute::entry::build_entry_from_disk;
 use bsmr_execute::materialize::materializer::CopiedArtifact;
-use bsmr_hash::BuckIndexMap;
+use bsmr_hash::BsmrIndexMap;
 use dupe::Dupe;
 
 /// Declares a copy materialization to copy the output BuildArtifact to the
@@ -46,7 +46,7 @@ pub(crate) async fn declare_copy_to_offline_output_cache(
 }
 
 /// Declares copy materializations to copy offline-cached BuildArtifact outputs
-/// to the build output directory. Used only during offline builds to ensure buck
+/// to the build output directory. Used only during offline builds to ensure bsmr
 /// does not make any network requests.
 ///
 /// Returns ActionOutputs with all requested outputs on success.
@@ -55,7 +55,7 @@ pub(crate) async fn declare_copy_from_offline_cache(
     ctx: &mut dyn ActionExecutionCtx,
     outputs: &[&BuildArtifact],
 ) -> bsmr_error::Result<ActionOutputs> {
-    let mut restored_outputs = BuckIndexMap::default();
+    let mut restored_outputs = BsmrIndexMap::default();
 
     // Restore all outputs - any cache miss = total failure
     for output in outputs {

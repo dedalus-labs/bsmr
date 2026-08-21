@@ -1592,7 +1592,7 @@ def _get_merged_linkables_for_platform(
         elif link_group in link_groups:
             link_group_data = link_groups[link_group]
 
-            # TODO(cjhopman): buck1 provides a more useful error here in that it lists the module mappings for all
+            # TODO(cjhopman): legacy provides a more useful error here in that it lists the module mappings for all
             # constituents of the merge group (rather than just one conflict). That allows users to resolve all the
             # issues at once. With merge sequence merging (the replacement for merge map), this error shouldn't ever be hit
             # and so maybe it's not necessary to improve it.

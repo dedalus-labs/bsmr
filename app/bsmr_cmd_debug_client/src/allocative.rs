@@ -17,12 +17,12 @@
 use async_trait::async_trait;
 use bsmr_cli_proto::AllocativeRequest;
 use bsmr_client_ctx::client_ctx::ClientCommandContext;
-use bsmr_client_ctx::common::BuckArgMatches;
+use bsmr_client_ctx::common::BsmrArgMatches;
 use bsmr_client_ctx::common::CommonBuildConfigurationOptions;
 use bsmr_client_ctx::common::CommonEventLogOptions;
 use bsmr_client_ctx::common::CommonStarlarkOptions;
 use bsmr_client_ctx::common::ui::CommonConsoleOptions;
-use bsmr_client_ctx::daemon::client::BuckdClientConnector;
+use bsmr_client_ctx::daemon::client::BsmrdClientConnector;
 use bsmr_client_ctx::daemon::client::NoPartialResultHandler;
 use bsmr_client_ctx::events_ctx::EventsCtx;
 use bsmr_client_ctx::exit_result::ExitResult;
@@ -53,13 +53,13 @@ impl StreamingCommand for AllocativeCommand {
 
     async fn exec_impl(
         self,
-        buckd: &mut BuckdClientConnector,
-        _matches: BuckArgMatches<'_>,
+        bsmrd: &mut BsmrdClientConnector,
+        _matches: BsmrArgMatches<'_>,
         ctx: &mut ClientCommandContext<'_>,
         events_ctx: &mut EventsCtx,
     ) -> ExitResult {
         let context = ctx.empty_client_context("debug-allocative")?;
-        buckd
+        bsmrd
             .with_flushing()
             .allocative(
                 AllocativeRequest {

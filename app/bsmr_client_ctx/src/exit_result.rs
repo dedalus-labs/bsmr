@@ -72,7 +72,7 @@ enum ExitResultVariant {
     /// a new process with the given name and argv.
     /// This is used to implement `bsmr run`.
     Exec(ExecArgs),
-    /// We failed (i.e. due to a Buck internal error).
+    /// We failed (i.e. due to a Bsmr internal error).
     /// At this time, when execution does fail, we print out the error message to stderr.
     StatusWithErr(ExitCode, bsmr_error::Error),
 }
@@ -208,7 +208,7 @@ impl ExitResult {
 
     /// Bessemer supports being built as both a "full" binary as well as a "client-only" binary.
     ///
-    /// However, some commands (eg `--no-buckd`) are not supported in the client-only binary, and so
+    /// However, some commands (eg `--no-bsmrd`) are not supported in the client-only binary, and so
     /// when these commands are run, we have to retry them with the full build.
     ///
     /// This function is called in those cases. It returns `Some` only for client-only builds.
@@ -249,21 +249,21 @@ impl ExitResult {
     pub fn write_command_report(
         &self,
         trace_id: TraceId,
-        buck_log_dir: Option<AbsNormPathBuf>,
+        bsmr_log_dir: Option<AbsNormPathBuf>,
         command_report_path: Option<AbsPathBuf>,
         finalizing_error_messages: Vec<String>,
     ) -> bsmr_error::Result<()> {
-        let (path, copy_path) = if let Some(buck_log_dir) = buck_log_dir {
-            let dir = buck_log_dir.join(ForwardRelativePath::new(&trace_id.to_string())?);
+        let (path, copy_path) = if let Some(bsmr_log_dir) = bsmr_log_dir {
+            let dir = bsmr_log_dir.join(ForwardRelativePath::new(&trace_id.to_string())?);
             fs_util::create_dir_all(&dir)?;
-            // this path is used by the buck wrapper, don't change without updating the wrapper.
+            // this path is used by the bsmr wrapper, don't change without updating the wrapper.
             let path = dir.join(ForwardRelativePath::new("command_report.json")?);
             (path.into_abs_path_buf(), command_report_path)
         } else if let Some(command_report_path) = command_report_path {
-            // If buck_log_dir is not set, we are running outside a repo, write to command_report_path if present.
+            // If bsmr_log_dir is not set, we are running outside a repo, write to command_report_path if present.
             (command_report_path, None)
         } else {
-            // No buck_log_dir, no command_report_path, do nothing.
+            // No bsmr_log_dir, no command_report_path, do nothing.
             return Ok(());
         };
         let file = fs_util::create_file(&path).categorize_internal()?;
@@ -290,7 +290,7 @@ impl ExitResult {
                 if let Some(parent) = report_path.parent() {
                     fs_util::create_dir_all(parent)?;
                 }
-                // buck wrapper depends on command report being written.
+                // bsmr wrapper depends on command report being written.
                 file.flush()?;
                 // input path from --command-report-path
                 fs_util::copy(path, report_path).categorize_input()?;

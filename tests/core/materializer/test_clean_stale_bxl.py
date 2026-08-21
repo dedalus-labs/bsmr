@@ -15,31 +15,31 @@
 # pyre-strict
 
 
-from bsmr.tests.e2e_util.api.buck import Buck
-from bsmr.tests.e2e_util.buck_workspace import buck_test
+from bsmr.tests.e2e_util.api.bsmr import Bsmr
+from bsmr.tests.e2e_util.bsmr_workspace import bsmr_test
 
 
-@buck_test()
-async def test_clean_stale_bxl(buck: Buck) -> None:
-    await buck.bxl("//clean_stale/build.bxl:build_test")
+@bsmr_test()
+async def test_clean_stale_bxl(bsmr: Bsmr) -> None:
+    await bsmr.bxl("//clean_stale/build.bxl:build_test")
 
-    art_files = [path.name for path in (buck.cwd / "bsmr-out/v2/art").glob("**/*")]
+    art_files = [path.name for path in (bsmr.cwd / "bsmr-out/default/art").glob("**/*")]
     assert "out.json" in art_files
 
     # Check that artifacts written to art by bxl are not deleted
-    await buck.clean("--stale")
-    art_files = [path.name for path in (buck.cwd / "bsmr-out/v2/art").glob("**/*")]
+    await bsmr.clean("--stale")
+    art_files = [path.name for path in (bsmr.cwd / "bsmr-out/default/art").glob("**/*")]
     assert "out.json" in art_files
 
     # Force clean of tracked artifacts, check that art is deleted but not bxl
-    await buck.kill()
-    await buck.clean("--stale=0s")
+    await bsmr.kill()
+    await bsmr.clean("--stale=0s")
 
-    art_files = [path.name for path in (buck.cwd / "bsmr-out/v2/art").glob("**/*")]
+    art_files = [path.name for path in (bsmr.cwd / "bsmr-out/default/art").glob("**/*")]
     assert "out.json" not in art_files
 
     # TODO these should probably be tracked and cleaned too (write to art instead?)
     art_bxl_files = [
-        path.name for path in (buck.cwd / "bsmr-out/v2/art-bxl").glob("**/*")
+        path.name for path in (bsmr.cwd / "bsmr-out/default/art-bxl").glob("**/*")
     ]
     assert "foo_out" in art_bxl_files

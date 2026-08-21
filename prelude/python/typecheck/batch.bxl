@@ -1,3 +1,9 @@
+# ===----------------------------------------------------------------------===
+# Upstream-Source: facebook/buck2@1560aca2002865cd73d7cafb22c705cfb640b2bc
+# Modifications Copyright (c) 2026 Dedalus Labs, Inc. and its contributors
+# SPDX-License-Identifier: Apache-2.0
+# ===----------------------------------------------------------------------===
+
 # Copyright (c) Meta Platforms, Inc. and affiliates.
 #
 # This source code is dual-licensed under either the MIT license found in the
@@ -6,7 +12,7 @@
 # of this source tree. You may select, at your option, one of the
 # above-listed licenses.
 
-load("@prelude//python/sourcedb:filter.bxl", "BUCK_PYTHON_RULE_KINDS")
+load("@prelude//python/sourcedb:filter.bxl", "BSMR_PYTHON_RULE_KINDS")
 load("@prelude//utils:utils.bzl", "flatten")
 
 def _check_targets_batched(ctx: bxl.Context, checked_targets: list[Label]) -> typing.Any:
@@ -15,7 +21,7 @@ def _check_targets_batched(ctx: bxl.Context, checked_targets: list[Label]) -> ty
     return {label.raw_target(): [artifact.rel_path() for artifact in artifacts] for label, artifacts in output.items()}
 
 def _is_python_target(rule_type: str) -> bool:
-    for kind in BUCK_PYTHON_RULE_KINDS:
+    for kind in BSMR_PYTHON_RULE_KINDS:
         if rule_type.endswith(kind):
             return True
     return False

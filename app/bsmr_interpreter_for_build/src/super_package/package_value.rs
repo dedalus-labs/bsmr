@@ -19,7 +19,7 @@ use std::io;
 use std::sync::Arc;
 
 use allocative::Allocative;
-use bsmr_error::BuckErrorContext;
+use bsmr_error::BsmrErrorContext;
 use bsmr_error::conversion::from_any_with_tag;
 use bsmr_error::internal_error;
 use bsmr_interpreter::file_type::StarlarkFileType;
@@ -140,7 +140,7 @@ pub struct OwnedFrozenStarlarkPackageValue(OwnedFrozenValue);
 
 impl<'v> StarlarkPackageValue<'v> {
     pub(crate) fn new(value: Value<'v>) -> bsmr_error::Result<StarlarkPackageValue<'v>> {
-        serde_json::to_writer(io::sink(), &value).buck_error_context(
+        serde_json::to_writer(io::sink(), &value).bsmr_error_context(
             "Value must be serializable to JSON to be stored as package value",
         )?;
         Ok(StarlarkPackageValue(value))

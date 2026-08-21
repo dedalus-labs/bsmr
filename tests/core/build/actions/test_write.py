@@ -18,15 +18,15 @@
 import os
 
 from bsmr.tests.e2e_util import asserts
-from bsmr.tests.e2e_util.api.buck import Buck
+from bsmr.tests.e2e_util.api.bsmr import Bsmr
 from bsmr.tests.e2e_util.asserts import expect_failure
-from bsmr.tests.e2e_util.buck_workspace import buck_test
+from bsmr.tests.e2e_util.bsmr_workspace import bsmr_test
 from bsmr.tests.e2e_util.helper.utils import filter_events
 
 
-@buck_test(data_dir="write")
-async def test_write_files(buck: Buck) -> None:
-    result = await buck.build(
+@bsmr_test(data_dir="write")
+async def test_write_files(bsmr: Bsmr) -> None:
+    result = await bsmr.build(
         "//:simple",
         "//:uses_declared_output",
         "//:uses_declared_output_as_output",
@@ -77,28 +77,28 @@ async def test_write_files(buck: Buck) -> None:
     assert os.path.isabs(output.read_text().strip())
 
 
-@buck_test(data_dir="write_fails")
-async def test_write_files_fails_invalid_content(buck: Buck) -> None:
+@bsmr_test(data_dir="write_fails")
+async def test_write_files_fails_invalid_content(bsmr: Bsmr) -> None:
     await expect_failure(
-        buck.build("//:fails_on_invalid_contents"),
+        bsmr.build("//:fails_on_invalid_contents"),
         stderr_regex="Type of parameter `content`",
     )
 
 
-@buck_test(data_dir="write_fails")
-async def test_write_files_fails_invalid_output(buck: Buck) -> None:
+@bsmr_test(data_dir="write_fails")
+async def test_write_files_fails_invalid_output(bsmr: Bsmr) -> None:
     await expect_failure(
-        buck.build("//:fails_on_invalid_output"),
+        bsmr.build("//:fails_on_invalid_output"),
         stderr_regex="Type of parameter `output`",
     )
 
 
-@buck_test(data_dir="write")
-async def test_output_size(buck: Buck) -> None:
-    await buck.build("//:simple")
+@bsmr_test(data_dir="write")
+async def test_output_size(bsmr: Bsmr) -> None:
+    await bsmr.build("//:simple")
 
     output_size = await filter_events(
-        buck,
+        bsmr,
         "Event",
         "data",
         "SpanEnd",

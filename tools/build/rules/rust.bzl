@@ -12,8 +12,8 @@
 # of this source tree. You may select, at your option, one of the
 # above-listed licenses.
 
-# Buck's own BUILD.bsmr files still use Meta's Rust macro schema. Keep this adapter
-# limited to the rules required to build Buck; new targets should use the
+# Bsmr's own BUILD.bsmr files still use Meta's Rust macro schema. Keep this adapter
+# limited to the rules required to build Bsmr; new targets should use the
 # public prelude directly.
 
 load("@prelude//utils:type_defs.bzl", "is_select")
@@ -21,7 +21,7 @@ load("@bsmr_build//rules:targets.bzl", "translate_target")
 
 prelude = native
 
-_CFG_BUCK_BUILD = "--cfg=buck_build"
+_CFG_BSMR_BUILD = "--cfg=bsmr_build"
 
 def rust_library(
     name,
@@ -44,7 +44,7 @@ def rust_library(
     prelude.rust_library(
         name = name,
         edition = edition or _default_rust_edition(),
-        rustc_flags = rustc_flags + [_CFG_BUCK_BUILD],
+        rustc_flags = rustc_flags + [_CFG_BSMR_BUILD],
         deps = _fix_deps(deps),
         visibility = ["PUBLIC"],
         mapped_srcs = _maybe_select_map(mapped_srcs, _fix_mapped_srcs),
@@ -68,7 +68,7 @@ def rust_binary(
     prelude.rust_binary(
         name = name,
         edition = edition or _default_rust_edition(),
-        rustc_flags = rustc_flags + [_CFG_BUCK_BUILD],
+        rustc_flags = rustc_flags + [_CFG_BSMR_BUILD],
         deps = _fix_deps(deps),
         visibility = visibility,
         **kwargs,
@@ -78,7 +78,7 @@ def rust_unittest(name, edition = None, rustc_flags = [], deps = [], visibility 
     prelude.rust_test(
         name = name,
         edition = edition or _default_rust_edition(),
-        rustc_flags = rustc_flags + [_CFG_BUCK_BUILD],
+        rustc_flags = rustc_flags + [_CFG_BSMR_BUILD],
         deps = _fix_deps(deps),
         visibility = visibility,
         **kwargs,
@@ -113,7 +113,7 @@ def rust_protobuf_library(
         "PROTOC_INCLUDE": "$(location bsmr_build//third-party/proto:google_protobuf)",
     })
     if proto_srcs:
-        build_env["BUCK_PROTO_SRCS"] = "$(location {})".format(proto_srcs)
+        build_env["BSMR_PROTO_SRCS"] = "$(location {})".format(proto_srcs)
 
     prelude.genrule(
         name = proto_name,

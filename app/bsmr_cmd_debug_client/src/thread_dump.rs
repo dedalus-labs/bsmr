@@ -15,30 +15,30 @@
  */
 
 use bsmr_client_ctx::client_ctx::ClientCommandContext;
-use bsmr_client_ctx::common::BuckArgMatches;
-use bsmr_client_ctx::daemon::client::connect::BuckdProcessInfo;
+use bsmr_client_ctx::common::BsmrArgMatches;
+use bsmr_client_ctx::daemon::client::connect::BsmrdProcessInfo;
 use bsmr_client_ctx::exit_result::ExitResult;
 use bsmr_client_ctx::thread_dump::thread_dump_command;
-use bsmr_error::BuckErrorContext;
+use bsmr_error::BsmrErrorContext;
 use bsmr_error::ErrorTag;
 use bsmr_error::bsmr_error;
 
-/// Prints a thread dump of the currently running buck daemon to stdout
+/// Prints a thread dump of the currently running bsmr daemon to stdout
 #[derive(Debug, clap::Parser)]
 pub struct ThreadDumpCommand {}
 
 impl ThreadDumpCommand {
-    pub fn exec(self, _matches: BuckArgMatches<'_>, ctx: ClientCommandContext<'_>) -> ExitResult {
+    pub fn exec(self, _matches: BsmrArgMatches<'_>, ctx: ClientCommandContext<'_>) -> ExitResult {
         let paths = ctx.paths()?;
         let daemon_dir = paths.daemon_dir()?;
-        let Ok(info) = BuckdProcessInfo::load(&daemon_dir) else {
-            return bsmr_error!(ErrorTag::Input, "No running buck daemon").into();
+        let Ok(info) = BsmrdProcessInfo::load(&daemon_dir) else {
+            return bsmr_error!(ErrorTag::Input, "No running bsmr daemon").into();
         };
 
         ctx.with_runtime(|_| async move {
             let status = thread_dump_command(&info)?
                 .spawn()
-                .buck_error_context("Could not run LLDB to grab a thread-dump")?
+                .bsmr_error_context("Could not run LLDB to grab a thread-dump")?
                 .wait()
                 .await?;
             if status.success() {

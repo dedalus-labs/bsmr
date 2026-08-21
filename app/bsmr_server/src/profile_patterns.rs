@@ -23,7 +23,7 @@ use bsmr_fs::fs_util;
 use bsmr_fs::paths::abs_path::AbsPathBuf;
 use bsmr_fs::paths::file_name::FileName;
 use bsmr_fs::paths::forward_rel_path::ForwardRelativePathBuf;
-use bsmr_hash::StdBuckHashMap;
+use bsmr_hash::StdBsmrHashMap;
 use bsmr_interpreter::dice::starlark_provider::StarlarkEvalKind;
 use bsmr_interpreter::factory::ProfileEventListener;
 use bsmr_interpreter::starlark_profiler::data::StarlarkProfileDataAndStats;
@@ -37,7 +37,7 @@ pub(crate) struct FileWritingProfileEventListener {
 }
 
 struct State {
-    written: StdBuckHashMap<ForwardRelativePathBuf, usize>,
+    written: StdBsmrHashMap<ForwardRelativePathBuf, usize>,
     errors: Vec<bsmr_error::Error>,
     profiles: Vec<Arc<StarlarkProfileDataAndStats>>,
 }
@@ -47,7 +47,7 @@ impl FileWritingProfileEventListener {
         Self {
             base_path,
             state: Mutex::new(State {
-                written: StdBuckHashMap::default(),
+                written: StdBsmrHashMap::default(),
                 errors: Vec::new(),
                 profiles: Vec::new(),
             }),

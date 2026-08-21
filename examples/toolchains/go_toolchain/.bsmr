@@ -16,7 +16,7 @@ none = none
 [cell_aliases]
 config = prelude
 ovr_config = prelude
-buck = none
+bsmr = none
 fbcode = none
 fbcode_macros = none
 fbsource = none

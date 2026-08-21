@@ -17,31 +17,31 @@
 import json
 import typing
 
-from bsmr.tests.e2e_util.api.buck import Buck
-from bsmr.tests.e2e_util.buck_workspace import buck_test
+from bsmr.tests.e2e_util.api.bsmr import Bsmr
+from bsmr.tests.e2e_util.bsmr_workspace import bsmr_test
 
 
-@buck_test(skip_for_os=["darwin", "windows"], disable_daemon_cgroup=False)
-async def test_if_available_fallback_no_user_session(buck: Buck) -> None:
+@bsmr_test(skip_for_os=["darwin", "windows"], disable_daemon_cgroup=False)
+async def test_if_available_fallback_no_user_session(bsmr: Bsmr) -> None:
     """When status=if_available and systemd-run --user can't connect to the
     user session bus, the daemon should start successfully without cgroups
     instead of failing with DAEMON_STARTUP_FAILED."""
 
-    with open(buck.cwd / ".bsmr", "a") as bsmrconfig:
+    with open(bsmr.cwd / ".bsmr", "a") as bsmrconfig:
         bsmrconfig.write("[bsmr_resource_control]\n")
         bsmrconfig.write("status = if_available\n")
 
     # Strip the env vars that systemd-run --user needs to find the D-Bus
     # session bus. This simulates the VS Code 3p extension sandbox which
     # filters these out via an allowlist.
-    buck._env.pop("DBUS_SESSION_BUS_ADDRESS", None)
-    buck._env.pop("XDG_RUNTIME_DIR", None)
+    bsmr._env.pop("DBUS_SESSION_BUS_ADDRESS", None)
+    bsmr._env.pop("XDG_RUNTIME_DIR", None)
 
     # The daemon should start successfully (fallback to no cgroup).
-    await buck.targets(":")
+    await bsmr.targets(":")
 
     # Verify daemon is running without cgroups.
-    status_result = await buck.status("--snapshot")
+    status_result = await bsmr.status("--snapshot")
     status_data = json.loads(status_result.stdout)
     snapshot: dict[str, typing.Any] = status_data["snapshot"]
     assert snapshot["allprocs_cgroup"] is None

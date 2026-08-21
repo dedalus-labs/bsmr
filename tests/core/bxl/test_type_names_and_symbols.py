@@ -14,10 +14,10 @@
 
 # pyre-strict
 
-from bsmr.tests.e2e_util.api.buck import Buck
-from bsmr.tests.e2e_util.buck_workspace import buck_test
+from bsmr.tests.e2e_util.api.bsmr import Bsmr
+from bsmr.tests.e2e_util.bsmr_workspace import bsmr_test
 
 
-@buck_test()
-async def test_cquery_ctx(buck: Buck) -> None:
-    await buck.bxl("//bxl/check_type_names_and_symbols.bxl:cquery_ctx")
+@bsmr_test()
+async def test_cquery_ctx(bsmr: Bsmr) -> None:
+    await bsmr.bxl("//bxl/check_type_names_and_symbols.bxl:cquery_ctx")

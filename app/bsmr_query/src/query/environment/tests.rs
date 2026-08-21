@@ -20,8 +20,8 @@ use std::fmt;
 use std::sync::Arc;
 
 use bsmr_error::internal_error;
-use bsmr_hash::BuckIndexSet;
-use bsmr_hash::StdBuckHashMap;
+use bsmr_hash::BsmrIndexSet;
+use bsmr_hash::StdBsmrHashMap;
 use bsmr_query::query::traversal::NodeLookup;
 use bsmr_query::query::traversal::async_depth_first_postorder_traversal;
 use bsmr_query::query::traversal::async_depth_limited_traversal;
@@ -41,7 +41,7 @@ struct TestTargetAttr;
 #[derive(Clone, Dupe, Eq, PartialEq)]
 struct TestTarget {
     id: TestTargetId,
-    deps: Arc<BuckIndexSet<TestTargetId>>,
+    deps: Arc<BsmrIndexSet<TestTargetId>>,
 }
 
 /// Custom debug to make the test output more readable
@@ -136,7 +136,7 @@ impl QueryTarget for TestTarget {
 }
 
 struct TestEnv {
-    graph: StdBuckHashMap<TestTargetId, TestTarget>,
+    graph: StdBsmrHashMap<TestTargetId, TestTarget>,
 }
 
 impl NodeLookup<TestTarget> for TestEnv {
@@ -227,7 +227,7 @@ impl TestEnv {
     fn set(&self, entries: &str) -> bsmr_error::Result<TargetSet<TestTarget>> {
         let mut set = TargetSet::new();
         for c in entries.split(',') {
-            let id = TestTargetId(c.parse().buck_error_context("Invalid ID")?);
+            let id = TestTargetId(c.parse().bsmr_error_context("Invalid ID")?);
             set.insert(<Self as NodeLookup<TestTarget>>::get(self, &id)?);
         }
         Ok(set)
@@ -236,7 +236,7 @@ impl TestEnv {
 
 #[derive(Default)]
 pub struct TestEnvBuilder {
-    graph: StdBuckHashMap<u64, BuckIndexSet<u64>>,
+    graph: StdBsmrHashMap<u64, BsmrIndexSet<u64>>,
 }
 
 impl TestEnvBuilder {

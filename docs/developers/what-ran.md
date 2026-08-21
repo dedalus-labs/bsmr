@@ -57,13 +57,13 @@ Use What Ran as follows:
 The following ran locally:
 
 ```bash
-build  upstream//scripts/torozco/getenv:getenv-san-conf-__generated-lib__ (archive_thin libgetenv-san-conf-__generated-lib__.pic.a)  local  fbcode/third-party-buck/platform010/build/llvm-fb/bin/llvm-ar qcsTD bsmr-out/v2/gen/fbcode/d839c731f5505c62/scripts/torozco/getenv/__getenv-san-conf-__generated-lib____/libgetenv-san-conf-__generated-lib__.pic.a bsmr-out/v2/gen/fbcode/d839c731f5505c62/scripts/torozco/getenv/__getenv-san-conf-__generated-lib____/__objects__/san-conf.c.pic.o
+build  upstream//scripts/torozco/getenv:getenv-san-conf-__generated-lib__ (archive_thin libgetenv-san-conf-__generated-lib__.pic.a)  local  fbcode/third-party-bsmr/platform010/build/llvm-fb/bin/llvm-ar qcsTD bsmr-out/default/gen/fbcode/d839c731f5505c62/scripts/torozco/getenv/__getenv-san-conf-__generated-lib____/libgetenv-san-conf-__generated-lib__.pic.a bsmr-out/default/gen/fbcode/d839c731f5505c62/scripts/torozco/getenv/__getenv-san-conf-__generated-lib____/__objects__/san-conf.c.pic.o
 ```
 
 To repro, you'd run:
 
 ```bash
-fbcode/third-party-buck/platform010/build/llvm-fb/bin/llvm-ar qcsTD bsmr-out/v2/gen/fbcode/d839c731f5505c62/scripts/torozco/getenv/__getenv-san-conf-__generated-lib____/libgetenv-san-conf-__generated-lib__.pic.a bsmr-out/v2/gen/fbcode/d839c731f5505c62/scripts/torozco/getenv/__getenv-san-conf-__generated-lib____/__objects__/san-conf.c.pic.
+fbcode/third-party-bsmr/platform010/build/llvm-fb/bin/llvm-ar qcsTD bsmr-out/default/gen/fbcode/d839c731f5505c62/scripts/torozco/getenv/__getenv-san-conf-__generated-lib____/libgetenv-san-conf-__generated-lib__.pic.a bsmr-out/default/gen/fbcode/d839c731f5505c62/scripts/torozco/getenv/__getenv-san-conf-__generated-lib____/__objects__/san-conf.c.pic.
 ```
 
 The following ran on RE:

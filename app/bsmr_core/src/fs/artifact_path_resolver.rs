@@ -20,8 +20,8 @@ use dupe::Dupe;
 use crate::cells::CellResolver;
 use crate::cells::cell_path::CellPathRef;
 use crate::content_hash::ContentBasedPathHash;
-use crate::fs::buck_out_path::BuckOutPathResolver;
-use crate::fs::buck_out_path::BuildArtifactPath;
+use crate::fs::output_path::BuildArtifactPath;
+use crate::fs::output_path::OutputPathResolver;
 use crate::fs::project::ProjectRoot;
 use crate::fs::project_rel_path::ProjectRelativePathBuf;
 use crate::package::source_path::SourcePathRef;
@@ -29,19 +29,19 @@ use crate::package::source_path::SourcePathRef;
 #[derive(Clone, Allocative)]
 pub struct ArtifactFs {
     cell_resolver: CellResolver,
-    buck_out_path_resolver: BuckOutPathResolver,
+    output_path_resolver: OutputPathResolver,
     project_filesystem: ProjectRoot,
 }
 
 impl ArtifactFs {
     pub fn new(
-        buck_path_resolver: CellResolver,
-        buck_out_path_resolver: BuckOutPathResolver,
+        build_path_resolver: CellResolver,
+        output_path_resolver: OutputPathResolver,
         project_filesystem: ProjectRoot,
     ) -> Self {
         Self {
-            cell_resolver: buck_path_resolver,
-            buck_out_path_resolver,
+            cell_resolver: build_path_resolver,
+            output_path_resolver,
             project_filesystem,
         }
     }
@@ -50,7 +50,7 @@ impl ArtifactFs {
         &self,
         path: &BuildArtifactPath,
     ) -> Option<ProjectRelativePathBuf> {
-        self.buck_out_path_resolver.unhashed_gen(path)
+        self.output_path_resolver.unhashed_gen(path)
     }
 
     pub fn resolve_build(
@@ -58,14 +58,14 @@ impl ArtifactFs {
         path: &BuildArtifactPath,
         content_hash: Option<&ContentBasedPathHash>,
     ) -> bsmr_error::Result<ProjectRelativePathBuf> {
-        self.buck_out_path_resolver.resolve_gen(path, content_hash)
+        self.output_path_resolver.resolve_gen(path, content_hash)
     }
 
     pub fn resolve_build_configuration_hash_path(
         &self,
         path: &BuildArtifactPath,
     ) -> bsmr_error::Result<ProjectRelativePathBuf> {
-        self.buck_out_path_resolver
+        self.output_path_resolver
             .resolve_gen_configuration_hash_path(path)
     }
 
@@ -85,7 +85,7 @@ impl ArtifactFs {
             .get(source_artifact_path.package().cell_name())?
             .external()
         {
-            Ok(self.buck_out_path_resolver.resolve_external_cell_source(
+            Ok(self.output_path_resolver.resolve_external_cell_source(
                 source_artifact_path.to_cell_path().path(),
                 origin.dupe(),
             ))
@@ -100,15 +100,15 @@ impl ArtifactFs {
         &self,
         path: &BuildArtifactPath,
     ) -> bsmr_error::Result<ProjectRelativePathBuf> {
-        self.buck_out_path_resolver.resolve_offline_cache(path)
+        self.output_path_resolver.resolve_offline_cache(path)
     }
 
     pub fn fs(&self) -> &ProjectRoot {
         &self.project_filesystem
     }
 
-    pub fn buck_out_path_resolver(&self) -> &BuckOutPathResolver {
-        &self.buck_out_path_resolver
+    pub fn output_path_resolver(&self) -> &OutputPathResolver {
+        &self.output_path_resolver
     }
 
     pub fn cell_resolver(&self) -> &CellResolver {

@@ -15,7 +15,7 @@
  */
 
 use allocative::Allocative;
-use bsmr_core::fs::buck_out_path::BuildArtifactPath;
+use bsmr_core::fs::output_path::BuildArtifactPath;
 use bsmr_data::ToProtoMessage;
 use bsmr_error::internal_error;
 use bsmr_execute::execute::request::OutputType;

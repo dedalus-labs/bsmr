@@ -253,7 +253,7 @@ def _compiled_go_files(
 
     return compiled_go_files, set()
 
-# map import names to packages ID, for non-buck packages like stdlib leave names as is
+# map import names to packages ID, for non-bsmr packages like stdlib leave names as is
 # Example {"foo/bar": "upstream//foo/bar:bar"}
 def _imports(go_list_out: GoListOut, import_table: dict[str, str]) -> dict[str, str]:
     # todo: make it work when deps are not requested
@@ -261,7 +261,7 @@ def _imports(go_list_out: GoListOut, import_table: dict[str, str]) -> dict[str, 
     # We don't need to use "if" statements for test imports, because they are always empty for non-test targets
     all_imports = [] + go_list_out.imports + go_list_out.test_imports
 
-    # resolve imports, consider an import as stdlib import if not found in buck deps
+    # resolve imports, consider an import as stdlib import if not found in bsmr deps
     imports = {imp: import_table.get(imp, imp) for imp in all_imports if imp != "C"}
 
     has_cgo_files = len(go_list_out.cgo_files) > 0
@@ -349,7 +349,7 @@ driver = bxl_main(
     # @unsorted-dict-items
     cli_args = {
         # packages.Load queries
-        # Note: relative paths have similar syntax to buck targets, e.q. upstream//foo/bar.go
+        # Note: relative paths have similar syntax to bsmr targets, e.q. upstream//foo/bar.go
         "files": cli_args.option(cli_args.list(cli_args.string())),
         "target_exprs": cli_args.option(cli_args.list(cli_args.target_expr())),
         # packages.DriverRequest values

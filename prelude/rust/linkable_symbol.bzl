@@ -15,7 +15,7 @@
 """
 Example:
 
-    buck_genrule(
+    bsmr_genrule(
         name = "my-generated-data"
         bash = "something slow",
     )

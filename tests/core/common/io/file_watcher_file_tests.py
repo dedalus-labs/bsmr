@@ -30,16 +30,16 @@ from bsmr.tests.core.common.io.file_watcher_tests import (
     setup_file_watcher_test,
     verify_results,
 )
-from bsmr.tests.e2e_util.api.buck import Buck
+from bsmr.tests.e2e_util.api.bsmr import Bsmr
 
 
 async def run_create_file_test(
-    buck: Buck,
+    bsmr: Bsmr,
     file_system_type: FileSystemType,
     file_watcher_provider: FileWatcherProvider,
 ) -> None:
-    await setup_file_watcher_test(buck)
-    path = os.path.join(buck.cwd, "files", "def")
+    await setup_file_watcher_test(bsmr)
+    path = os.path.join(bsmr.cwd, "files", "def")
     with open(path, "a"):
         pass
 
@@ -49,18 +49,18 @@ async def run_create_file_test(
         )
     ]
 
-    is_fresh_instance, results = await get_file_watcher_events(buck)
+    is_fresh_instance, results = await get_file_watcher_events(bsmr)
     assert not is_fresh_instance
     verify_results(results, required)
 
 
 async def run_modify_file_test(
-    buck: Buck,
+    bsmr: Bsmr,
     file_system_type: FileSystemType,
     file_watcher_provider: FileWatcherProvider,
 ) -> None:
-    await setup_file_watcher_test(buck)
-    path = os.path.join(buck.cwd, "files", "abc")
+    await setup_file_watcher_test(bsmr)
+    path = os.path.join(bsmr.cwd, "files", "abc")
     with open(path, "a") as f:
         f.write("modify")
 
@@ -86,18 +86,18 @@ async def run_modify_file_test(
             )
         ]
 
-    is_fresh_instance, results = await get_file_watcher_events(buck)
+    is_fresh_instance, results = await get_file_watcher_events(bsmr)
     assert not is_fresh_instance
     verify_results(results, required)
 
 
 async def run_remove_file_test(
-    buck: Buck,
+    bsmr: Bsmr,
     file_system_type: FileSystemType,
     file_watcher_provider: FileWatcherProvider,
 ) -> None:
-    await setup_file_watcher_test(buck)
-    path = os.path.join(buck.cwd, "files", "abc")
+    await setup_file_watcher_test(bsmr)
+    path = os.path.join(bsmr.cwd, "files", "abc")
     os.remove(path)
 
     required = [
@@ -106,20 +106,20 @@ async def run_remove_file_test(
         )
     ]
 
-    is_fresh_instance, results = await get_file_watcher_events(buck)
+    is_fresh_instance, results = await get_file_watcher_events(bsmr)
     assert not is_fresh_instance
     verify_results(results, required)
 
 
 async def run_rename_file_test(
-    buck: Buck,
+    bsmr: Bsmr,
     file_system_type: FileSystemType,
     file_watcher_provider: FileWatcherProvider,
 ) -> None:
-    await setup_file_watcher_test(buck)
+    await setup_file_watcher_test(bsmr)
 
-    fromPath = os.path.join(buck.cwd, "files", "abc")
-    toPath = os.path.join(buck.cwd, "files", "def")
+    fromPath = os.path.join(bsmr.cwd, "files", "abc")
+    toPath = os.path.join(bsmr.cwd, "files", "def")
     os.rename(fromPath, toPath)
 
     required = [
@@ -131,28 +131,28 @@ async def run_rename_file_test(
         ),
     ]
 
-    is_fresh_instance, results = await get_file_watcher_events(buck)
+    is_fresh_instance, results = await get_file_watcher_events(bsmr)
     assert not is_fresh_instance
     verify_results(results, required)
 
 
 async def run_replace_file_test(
-    buck: Buck,
+    bsmr: Bsmr,
     file_system_type: FileSystemType,
     file_watcher_provider: FileWatcherProvider,
 ) -> None:
-    await setup_file_watcher_test(buck)
+    await setup_file_watcher_test(bsmr)
 
-    path = os.path.join(buck.cwd, "files", "def")
+    path = os.path.join(bsmr.cwd, "files", "def")
     with open(path, "a"):
         pass
 
     # clear log - run build twice
-    await buck.targets("root//:")
-    await buck.targets("root//:")
+    await bsmr.targets("root//:")
+    await bsmr.targets("root//:")
 
-    fromPath = os.path.join(buck.cwd, "files", "abc")
-    toPath = os.path.join(buck.cwd, "files", "def")
+    fromPath = os.path.join(bsmr.cwd, "files", "abc")
+    toPath = os.path.join(bsmr.cwd, "files", "def")
     os.rename(fromPath, toPath)
 
     if file_watcher_provider in [
@@ -182,6 +182,6 @@ async def run_replace_file_test(
             ),
         ]
 
-    is_fresh_instance, results = await get_file_watcher_events(buck)
+    is_fresh_instance, results = await get_file_watcher_events(bsmr)
     assert not is_fresh_instance
     verify_results(results, required)

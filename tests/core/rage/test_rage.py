@@ -18,8 +18,8 @@
 import os
 import tempfile
 
-from bsmr.tests.e2e_util.api.buck import Buck
-from bsmr.tests.e2e_util.buck_workspace import buck_test
+from bsmr.tests.e2e_util.api.bsmr import Bsmr
+from bsmr.tests.e2e_util.bsmr_workspace import bsmr_test
 
 
 def opener(path: str, flags: int) -> int:
@@ -38,10 +38,10 @@ echo "$@"
 
 
 # No windows since mocking pastry command didn't work D41623200
-@buck_test(skip_for_os=["windows", "darwin"])
-async def test_rage(buck: Buck) -> None:
+@bsmr_test(skip_for_os=["windows", "darwin"])
+async def test_rage(bsmr: Bsmr) -> None:
     # Build a trivial action
-    await buck.build("//:simple")
+    await bsmr.build("//:simple")
 
     with tempfile.TemporaryDirectory() as tmpdirname:
         pastry_path = f"{tmpdirname}/pastry"
@@ -52,23 +52,23 @@ async def test_rage(buck: Buck) -> None:
         # We want to find our executable first
         cmd_path = tmpdirname + os.pathsep + os.environ["PATH"]
         # Run rage aginst the most recent invocation.
-        await buck.rage(input=b"0", env={"PATH": cmd_path})
+        await bsmr.rage(input=b"0", env={"PATH": cmd_path})
 
 
-@buck_test(skip_for_os=["darwin"])
-async def test_rage_no_paste(buck: Buck) -> None:
+@bsmr_test(skip_for_os=["darwin"])
+async def test_rage_no_paste(bsmr: Bsmr) -> None:
     # Build a trivial action
-    await buck.build("//:simple")
+    await bsmr.build("//:simple")
     # Run rage aginst the most recent invocation.
-    await buck.rage("--no-paste", "--invocation-offset", "0")
+    await bsmr.rage("--no-paste", "--invocation-offset", "0")
 
 
-@buck_test(skip_for_os=["darwin"])
-async def test_rage_no_logs(buck: Buck) -> None:
+@bsmr_test(skip_for_os=["darwin"])
+async def test_rage_no_logs(bsmr: Bsmr) -> None:
     # Rage doesn't crash even with no invocation logs
-    await buck.rage("--no-paste")
+    await bsmr.rage("--no-paste")
 
 
-@buck_test()  # pytest blows up if there's zero mac tests in the file
-async def test_nop(buck: Buck) -> None:
+@bsmr_test()  # pytest blows up if there's zero mac tests in the file
+async def test_nop(bsmr: Bsmr) -> None:
     pass

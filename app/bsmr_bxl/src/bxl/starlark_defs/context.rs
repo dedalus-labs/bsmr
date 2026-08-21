@@ -14,7 +14,7 @@
  * above-listed licenses.
  */
 
-//! The context containing the available buck commands and query operations for `bxl` functions.
+//! The context containing the available bsmr commands and query operations for `bxl` functions.
 
 use std::cell::RefCell;
 use std::io::Write;
@@ -41,7 +41,7 @@ use bsmr_core::global_cfg_options::GlobalCfgOptions;
 use bsmr_core::pattern::query_file_literal::parse_query_file_literal;
 use bsmr_core::provider::label::ConfiguredProvidersLabel;
 use bsmr_core::target::label::label::TargetLabel;
-use bsmr_error::BuckErrorContext;
+use bsmr_error::BsmrErrorContext;
 use bsmr_error::bsmr_error;
 use bsmr_events::dispatch::console_message;
 use bsmr_execute::digest_config::DigestConfig;
@@ -221,7 +221,7 @@ impl BxlContextCoreData {
         let cell = label.bxl_path.cell();
         let bxl_cell = cell_resolver
             .get(cell)
-            .with_buck_error_context(|| format!("Cell does not exist: `{cell}`"))?
+            .with_bsmr_error_context(|| format!("Cell does not exist: `{cell}`"))?
             .dupe();
         let cell_name = bxl_cell.name();
         let target_alias_resolver = dice.target_alias_resolver().await?;

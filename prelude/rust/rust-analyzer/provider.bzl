@@ -1,3 +1,9 @@
+# ===----------------------------------------------------------------------===
+# Upstream-Source: facebook/buck2@1560aca2002865cd73d7cafb22c705cfb640b2bc
+# Modifications Copyright (c) 2026 Dedalus Labs, Inc. and its contributors
+# SPDX-License-Identifier: Apache-2.0
+# ===----------------------------------------------------------------------===
+
 # Copyright (c) Meta Platforms, Inc. and affiliates.
 #
 # This source code is dual-licensed under either the MIT license found in the
@@ -26,10 +32,10 @@ RustAnalyzerInfo = provider(
         "available_proc_macros": list[Dependency],
         # The name of the crate for the target.
         "crate": CrateName,
-        # The root source for the rust target (typically lib.rs, main.rs), relative to the buck target file.
+        # The root source for the rust target (typically lib.rs, main.rs), relative to the bsmr target file.
         "crate_root": str,
         "edition": str,
-        # The processed env as produced by the buck build prelude. Some env vars like `OUT_DIR` and `CARGO_MANIFEST_DIR`
+        # The processed env as produced by the bsmr build prelude. Some env vars like `OUT_DIR` and `CARGO_MANIFEST_DIR`
         # will be made into absolute paths.
         "env": dict[str, cmd_args],
         "features": list[str],

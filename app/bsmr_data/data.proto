@@ -16,11 +16,11 @@ import "google/protobuf/empty.proto";
 import "error.proto";
 import "host_sharing.proto";
 
-package buck.data;
+package bsmr.data;
 
-// A single event originating from Buck. Its semantics depend on the `data`
+// A single event originating from Bsmr. Its semantics depend on the `data`
 // member.
-message BuckEvent {
+message BsmrEvent {
   reserved 2047;
 
   // A timestamp for when this event was fired, taken from the system clock.
@@ -91,7 +91,7 @@ message SpanStartEvent {
     DepFileUploadStart dep_file_upload = 88;
     ComputeDetailedAggregatedMetricsStart compute_detailed_aggregated_metrics =
         89;
-    // Used in Buck unit tests.
+    // Used in Bsmr unit tests.
     FakeStart fake = 999;
   }
 }
@@ -144,7 +144,7 @@ message SpanEndEvent {
     DepFileUploadEnd dep_file_upload = 88;
     ComputeDetailedAggregatedMetricsEnd compute_detailed_aggregated_metrics =
         89;
-    // Used in Buck unit tests.
+    // Used in Bsmr unit tests.
     FakeEnd fake = 999;
   }
 }
@@ -185,7 +185,7 @@ message StarlarkUserEvent {
 message CommandOptions {
   // The value passed to the `-j` flag or equivalent
   uint64 configured_parallelism = 1;
-  // The parallelism available to buck, independent of the value configured by
+  // The parallelism available to bsmr, independent of the value configured by
   // the user
   uint64 available_parallelism = 2;
 }
@@ -419,7 +419,7 @@ message DebugAdapterCommandSnapshot {
 }
 
 // The DebugAdapterSnapshot is sent to all commands when a debugger is attached
-// to buck, it contains imformation about the currently paused threads.
+// to bsmr, it contains imformation about the currently paused threads.
 message DebugAdapterSnapshot {
   // The handle for the command receiving this snapshot, it can be used to
   // distinguish which of the per-handle snapshots is from this command and
@@ -653,7 +653,7 @@ message CriticalPathEntry2 {
   google.protobuf.Duration user_duration = 3;
 
   // The total duration for this entry, which might include runtime not
-  // controlled by the user (e.g. Buck querying caches, etc.)
+  // controlled by the user (e.g. Bsmr querying caches, etc.)
   google.protobuf.Duration total_duration = 4;
 
   // The maximum improvement possible for this node. This should be compared to
@@ -1407,7 +1407,7 @@ message CommandEnd {
   }
 
   // This should eventually be deleted. Retaining only so that ingress
-  // can process invocation records from old buck versions.
+  // can process invocation records from old bsmr versions.
   bool is_success = 2;
 
   optional BuildResult build_result = 5;
@@ -1946,8 +1946,8 @@ enum ExpectedEligibleForDedupe {
 // boolean values. They've been converted to this `*_cache_upload_result` with
 // values from this enum, but it's important that the semantic meaning of the
 // 0/1 values here match the false/true meanings of the old `did_*` fields. That
-// way old buck instances that still generate true/false are interpreted
-// correctly by new ingress/buck clients.
+// way old bsmr instances that still generate true/false are interpreted
+// correctly by new ingress/bsmr clients.
 enum UploadResult {
   UPLOAD_RESULT_DID_NOT_UPLOAD_UNSPECIFIED = 0;
   UPLOAD_RESULT_UPLOADED = 1;
@@ -2330,7 +2330,7 @@ message TestDiscoveryEnd {
   string suite_name = 1;
   CommandExecution command_report = 2;
   bool re_cache_enabled = 3;
-  optional buck.host_sharing.HostSharingRequirements
+  optional bsmr.host_sharing.HostSharingRequirements
       command_host_sharing_requirements = 4;
   ConfiguredTargetLabel target_label = 5;
 }
@@ -2342,7 +2342,7 @@ message TestRunStart {
 message TestRunEnd {
   TestSuite suite = 1;
   CommandExecution command_report = 2;
-  optional buck.host_sharing.HostSharingRequirements
+  optional bsmr.host_sharing.HostSharingRequirements
       command_host_sharing_requirements = 3;
 }
 
@@ -2476,7 +2476,7 @@ message BuildArtifact {
 }
 
 // A target pattern, representing a set of targets. See
-// `<https://buck2.build/docs/concepts/target_pattern>` for Buck's
+// `<https://oss.dedaluslabs.ai/bsmr/concepts/target_pattern>` for Bsmr's
 // documentation on target patterns.
 message TargetPattern {
   string value = 1;
@@ -2599,7 +2599,7 @@ message TypedMetadata {
   map<string, string> strings = 2;
 }
 
-// Why current command started buckd.
+// Why current command started bsmrd.
 enum DaemonWasStartedReason {
   UNKNOWN_REASON = 0;
   CONSTRAINT_MISMATCH_VERSION = 1;
@@ -2611,9 +2611,9 @@ enum DaemonWasStartedReason {
   COULD_NOT_CONNECT_TO_DAEMON = 11;
   TIMED_OUT_CONNECTING_TO_DAEMON = 12;
   TIMEOUT_CALCULATION_ERROR = 13;
-  NO_BUCKD_INFO = 14;
-  COULD_NOT_LOAD_BUCKD_INFO = 15;
-  // `buckd.info` exists, but buckd is not running.
+  NO_BSMRD_INFO = 14;
+  COULD_NOT_LOAD_BSMRD_INFO = 15;
+  // `bsmrd.info` exists, but bsmrd is not running.
   NO_DAEMON_PROCESS = 16;
 }
 
@@ -2738,7 +2738,7 @@ message InvocationRecord {
   optional uint64 compressed_event_log_size_bytes = 65;
   optional bool has_end_of_stream = 67;
   optional string critical_path_backend = 68;
-  // Retained so that ingress can populate outcome for old buck versions.
+  // Retained so that ingress can populate outcome for old bsmr versions.
   // Delete later.
   optional bool instant_command_is_success = 69;
   // Optional - total time for final artifact materializations.
@@ -2767,7 +2767,7 @@ message InvocationRecord {
   // Time elapsed from a build's start until first test discovery begins.
   optional uint64 time_to_first_test_discovery_ms = 81;
   // Tracks whether bsmrconfigs were invalidated between invocations (e.g. due
-  // to modefile changes or another buck command in between)
+  // to modefile changes or another bsmr command in between)
   // For the first command after daemon start or for the first time these
   // configs are observed in each state (cell, command etc.), it will be set
   // to true.
@@ -2873,10 +2873,10 @@ message InvocationRecord {
   // Exit code that should have been returned by the bsmr client process,
   // unless it failed after finalizing logging.
   // This will be missing for run commands where the command succeeds in
-  // buck and the RunInfo binary starts executing.
+  // bsmr and the RunInfo binary starts executing.
   optional uint32 exit_code = 249;
 
-  // If command returned an exit code and it originated from buck, this is
+  // If command returned an exit code and it originated from bsmr, this is
   // the meaning of the exit code (e.g. SUCCESS).
   // If the exit code was from an external source, this is that source
   // (e.g. TEST_RUNNER)
@@ -3208,7 +3208,7 @@ message ErrorReport {
   // The location in source code where this error was created. Typically a Rust
   // source file, but the exact format is not guaranteed.
   SourceLocation source_location = 5;
-  repeated buck.data.error.ErrorTag tags = 6;
+  repeated bsmr.data.error.ErrorTag tags = 6;
   repeated string sub_error_categories = 7;
   optional string category_key = 8;
   repeated StringTag string_tags = 9;

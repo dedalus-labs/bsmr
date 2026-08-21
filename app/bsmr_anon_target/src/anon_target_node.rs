@@ -36,7 +36,7 @@ use bsmr_core::deferred::base_deferred_key::BaseDeferredKey;
 use bsmr_core::deferred::base_deferred_key::BaseDeferredKeyDyn;
 use bsmr_core::deferred::base_deferred_key::PathResolutionError;
 use bsmr_core::execution_types::execution::ExecutionPlatformResolution;
-use bsmr_core::fs::buck_out_path::BuckOutPathKind;
+use bsmr_core::fs::output_path::OutputPathKind;
 use bsmr_core::fs::project_rel_path::ProjectRelativePath;
 use bsmr_core::fs::project_rel_path::ProjectRelativePathBuf;
 use bsmr_core::global_cfg_options::GlobalCfgOptions;
@@ -45,8 +45,8 @@ use bsmr_core::target::label::label::TargetLabel;
 use bsmr_data::ToProtoMessage;
 use bsmr_data::action_key_owner::BaseDeferredKeyProto;
 use bsmr_fs::paths::forward_rel_path::ForwardRelativePath;
-use bsmr_hash::BuckHasher;
-use bsmr_hash::StdBuckHashMap;
+use bsmr_hash::BsmrHasher;
+use bsmr_hash::StdBsmrHashMap;
 use bsmr_interpreter::dice::starlark_provider::DynEvalKindKey;
 use bsmr_interpreter::dice::starlark_provider::StarlarkEvalKind;
 use bsmr_node::rule_type::StarlarkRuleType;
@@ -138,7 +138,7 @@ impl AnonTarget {
         exec_cfg: ConfigurationNoExec,
         variant: AnonTargetVariant,
     ) -> Self {
-        let mut full_hash = BuckHasher::default();
+        let mut full_hash = BsmrHasher::default();
         rule_type.hash(&mut full_hash);
         name.hash(&mut full_hash);
         attrs.hash(&mut full_hash);
@@ -217,7 +217,7 @@ impl AnonTargetDyn for AnonTarget {
         let rule_analysis_attr_resolution_ctx = RuleAnalysisAttrResolutionContext {
             module: env,
             dep_analysis_results,
-            query_results: StdBuckHashMap::default(),
+            query_results: StdBsmrHashMap::default(),
             execution_platform_resolution: exec_resolution,
         };
 
@@ -245,8 +245,8 @@ impl AnonTargetDyn for AnonTarget {
         promise_artifact_mappings: SmallMap<String, Value<'v>>,
         anon_target_result: Value<'v>,
         eval: &mut Evaluator<'v, '_, '_>,
-    ) -> bsmr_error::Result<StdBuckHashMap<PromiseArtifactId, Artifact>> {
-        let mut fulfilled_artifact_mappings = StdBuckHashMap::default();
+    ) -> bsmr_error::Result<StdBsmrHashMap<PromiseArtifactId, Artifact>> {
+        let mut fulfilled_artifact_mappings = StdBsmrHashMap::default();
 
         for (id, func) in promise_artifact_mappings.values().enumerate() {
             let artifact = eval.eval_function(*func, &[anon_target_result], &[])?;
@@ -294,7 +294,7 @@ impl BaseDeferredKeyDyn for AnonTarget {
         prefix: &ForwardRelativePath,
         action_key: Option<&str>,
         path: &ForwardRelativePath,
-        path_resolution_method: BuckOutPathKind,
+        path_resolution_method: OutputPathKind,
         content_hash: Option<&ContentBasedPathHash>,
     ) -> bsmr_error::Result<ProjectRelativePathBuf> {
         let cell_relative_path = self.name().pkg().cell_relative_path().as_str();
@@ -308,12 +308,12 @@ impl BaseDeferredKeyDyn for AnonTarget {
             prefix.as_str(),
             "-anon/",
             self.name().pkg().cell_name().as_str(),
-            if path_resolution_method == BuckOutPathKind::Configuration {
+            if path_resolution_method == OutputPathKind::Configuration {
                 "/"
             } else {
                 ""
             },
-            if path_resolution_method == BuckOutPathKind::Configuration {
+            if path_resolution_method == OutputPathKind::Configuration {
                 self.exec_cfg().cfg().output_hash().as_str()
             } else {
                 ""
@@ -324,7 +324,7 @@ impl BaseDeferredKeyDyn for AnonTarget {
             } else {
                 "/"
             },
-            if path_resolution_method == BuckOutPathKind::Configuration {
+            if path_resolution_method == OutputPathKind::Configuration {
                 self.path_hash()
             } else if let Some(content_hash) = content_hash {
                 content_hash.as_str()

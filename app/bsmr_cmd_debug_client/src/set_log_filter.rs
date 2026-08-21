@@ -16,9 +16,9 @@
 
 use bsmr_cli_proto::SetLogFilterRequest;
 use bsmr_client_ctx::client_ctx::ClientCommandContext;
-use bsmr_client_ctx::common::BuckArgMatches;
-use bsmr_client_ctx::daemon::client::connect::BuckdConnectOptions;
-use bsmr_client_ctx::daemon::client::connect::connect_buckd;
+use bsmr_client_ctx::common::BsmrArgMatches;
+use bsmr_client_ctx::daemon::client::connect::BsmrdConnectOptions;
+use bsmr_client_ctx::daemon::client::connect::connect_bsmrd;
 use bsmr_client_ctx::events_ctx::EventsCtx;
 use bsmr_client_ctx::exit_result::ExitResult;
 use bsmr_client_ctx::subscribers::stdout_stderr_forwarder::StdoutStderrForwarder;
@@ -41,18 +41,18 @@ pub struct SetLogFilterCommand {
 }
 
 impl SetLogFilterCommand {
-    pub fn exec(self, _matches: BuckArgMatches<'_>, ctx: ClientCommandContext<'_>) -> ExitResult {
+    pub fn exec(self, _matches: BsmrArgMatches<'_>, ctx: ClientCommandContext<'_>) -> ExitResult {
         ctx.with_runtime(|ctx| async move {
             let mut events_ctx = EventsCtx::new(None, vec![Box::new(StdoutStderrForwarder)]);
 
-            let mut buckd = connect_buckd(
-                BuckdConnectOptions::ExistingOnly,
+            let mut bsmrd = connect_bsmrd(
+                BsmrdConnectOptions::ExistingOnly,
                 &mut events_ctx,
                 ctx.paths()?,
             )
             .await?;
 
-            buckd
+            bsmrd
                 .with_flushing()
                 .set_log_filter(
                     &mut events_ctx,

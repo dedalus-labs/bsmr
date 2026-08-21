@@ -61,8 +61,8 @@ exec bsmr run prelude//go/tools/gopackagesdriver:gopackagesdriver -- "${@}"
 {
   "go.toolsEnvVars": {
     "GOPACKAGESDRIVER": "${workspaceFolder}/tools/bin/gopackagesdriver.sh", # (required) path to the driver
-    "GOPACKAGESDRIVER_BUCK_OPTIONS": "--target-platforms prelude//platforms:default", # (optional) if your `toolchains//:go` requires it
-    "GOPACKAGESDRIVER_BUCK_ALL_PACKAGES_TARGET_EXPRS": "root//..." # (optional) index all packages on gopls startup (might be slow and unreliable)
+    "GOPACKAGESDRIVER_BSMR_OPTIONS": "--target-platforms prelude//platforms:default", # (optional) if your `toolchains//:go` requires it
+    "GOPACKAGESDRIVER_BSMR_ALL_PACKAGES_TARGET_EXPRS": "root//..." # (optional) index all packages on gopls startup (might be slow and unreliable)
   },
   "gopls": {
     "build.workspaceFiles": [ # (required) to handle changes in BUILD.bsmr files
@@ -102,9 +102,9 @@ approach.
 
 The driver is configured via environment variables:
 
-- `GOPACKAGESDRIVER_BUCK_OPTIONS` - options passed to `bsmr bxl` and
+- `GOPACKAGESDRIVER_BSMR_OPTIONS` - options passed to `bsmr bxl` and
   `bsmr run` commands.
-- `GOPACKAGESDRIVER_BUCK_ALL_PACKAGES_TARGET_EXPRS` - a list of target
+- `GOPACKAGESDRIVER_BSMR_ALL_PACKAGES_TARGET_EXPRS` - a list of target
   expressions separated by space, useful to replace `./...` query that `gopls`
   does on startup.
 - `GOPACKAGESDRIVER_LOG_LEVEL` - log level, one of `debug`, `info`, `warn`,

@@ -18,15 +18,15 @@ import json
 import sys
 from pathlib import Path
 
-from bsmr.tests.e2e_util.api.buck import Buck
-from bsmr.tests.e2e_util.buck_workspace import buck_test
+from bsmr.tests.e2e_util.api.bsmr import Bsmr
+from bsmr.tests.e2e_util.bsmr_workspace import bsmr_test
 from bsmr.tests.e2e_util.helper.utils import random_string, read_what_ran
 
 
-@buck_test()
-async def test_target_with_two_gang_workers(buck: Buck) -> None:
+@bsmr_test()
+async def test_target_with_two_gang_workers(bsmr: Bsmr) -> None:
     """Test that a target with two gang workers builds successfully on RE."""
-    result = await buck.build(
+    result = await bsmr.build(
         ":target_with_two_gang_workers",
         "-c",
         "build.execution_platforms=root//platforms:platforms",
@@ -49,7 +49,7 @@ async def test_target_with_two_gang_workers(buck: Buck) -> None:
             assert len(workers) == 2, f"Expected 2 gang workers, got {len(workers)}"
 
     # Make sure it actually ran on RE
-    out = await read_what_ran(buck)
+    out = await read_what_ran(bsmr)
     executors = {line["identity"]: line["reproducer"]["executor"] for line in out}
     expected = {
         "root//:target_with_two_gang_workers (<unspecified>) (cp)": "Re",

@@ -17,64 +17,64 @@
 use bsmr_data::InstantEvent;
 use bsmr_data::SpanEndEvent;
 use bsmr_data::SpanStartEvent;
-use bsmr_data::buck_event;
-use bsmr_events::BuckEvent;
+use bsmr_data::bsmr_event;
+use bsmr_events::BsmrEvent;
 
 #[derive(bsmr_error::Error, Debug)]
 #[bsmr(tag = InvalidEvent)]
 pub enum VisitorError {
     #[error("Sent an event missing one or more fields: `{0:?}`")]
-    MissingField(BuckEvent),
+    MissingField(BsmrEvent),
     #[error("Sent an unexpected Record event: `{0:?}`")]
-    UnexpectedRecord(BuckEvent),
+    UnexpectedRecord(BsmrEvent),
 }
 
-/// Just a simple structure that makes it easier to deal with BuckEvent rather than
+/// Just a simple structure that makes it easier to deal with BsmrEvent rather than
 /// needing to deal with the unpacking of optional fields yourself.
-pub enum UnpackedBuckEvent<'a> {
+pub enum UnpackedBsmrEvent<'a> {
     SpanStart(
-        &'a BuckEvent,
+        &'a BsmrEvent,
         &'a SpanStartEvent,
         &'a bsmr_data::span_start_event::Data,
     ),
     SpanEnd(
-        &'a BuckEvent,
+        &'a BsmrEvent,
         &'a SpanEndEvent,
         &'a bsmr_data::span_end_event::Data,
     ),
     Instant(
-        &'a BuckEvent,
+        &'a BsmrEvent,
         &'a InstantEvent,
         &'a bsmr_data::instant_event::Data,
     ),
-    UnrecognizedSpanStart(&'a BuckEvent, &'a SpanStartEvent),
-    UnrecognizedSpanEnd(&'a BuckEvent, &'a SpanEndEvent),
-    UnrecognizedInstant(&'a BuckEvent, &'a InstantEvent),
+    UnrecognizedSpanStart(&'a BsmrEvent, &'a SpanStartEvent),
+    UnrecognizedSpanEnd(&'a BsmrEvent, &'a SpanEndEvent),
+    UnrecognizedInstant(&'a BsmrEvent, &'a InstantEvent),
 }
 
-pub fn unpack_event(event: &BuckEvent) -> bsmr_error::Result<UnpackedBuckEvent<'_>> {
+pub fn unpack_event(event: &BsmrEvent) -> bsmr_error::Result<UnpackedBsmrEvent<'_>> {
     match &event.data() {
-        buck_event::Data::SpanStart(v) => Ok({
+        bsmr_event::Data::SpanStart(v) => Ok({
             if let Some(data) = v.data.as_ref() {
-                UnpackedBuckEvent::SpanStart(event, v, data)
+                UnpackedBsmrEvent::SpanStart(event, v, data)
             } else {
-                UnpackedBuckEvent::UnrecognizedSpanStart(event, v)
+                UnpackedBsmrEvent::UnrecognizedSpanStart(event, v)
             }
         }),
-        buck_event::Data::SpanEnd(v) => Ok({
+        bsmr_event::Data::SpanEnd(v) => Ok({
             if let Some(data) = v.data.as_ref() {
-                UnpackedBuckEvent::SpanEnd(event, v, data)
+                UnpackedBsmrEvent::SpanEnd(event, v, data)
             } else {
-                UnpackedBuckEvent::UnrecognizedSpanEnd(event, v)
+                UnpackedBsmrEvent::UnrecognizedSpanEnd(event, v)
             }
         }),
-        buck_event::Data::Instant(v) => Ok({
+        bsmr_event::Data::Instant(v) => Ok({
             if let Some(data) = v.data.as_ref() {
-                UnpackedBuckEvent::Instant(event, v, data)
+                UnpackedBsmrEvent::Instant(event, v, data)
             } else {
-                UnpackedBuckEvent::UnrecognizedInstant(event, v)
+                UnpackedBsmrEvent::UnrecognizedInstant(event, v)
             }
         }),
-        buck_event::Data::Record(_) => Err(VisitorError::UnexpectedRecord(event.clone()).into()),
+        bsmr_event::Data::Record(_) => Err(VisitorError::UnexpectedRecord(event.clone()).into()),
     }
 }

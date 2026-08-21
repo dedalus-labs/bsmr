@@ -27,7 +27,7 @@
 // are traditionally process id and thread id.
 //
 // In these traces, it's not really practical to assign the actual  pid/tid that
-// produced the BuckEvents in the logs to the TraceEvent objects. MUCH of buck's
+// produced the BsmrEvents in the logs to the TraceEvent objects. MUCH of bsmr's
 // work is done in asynchronous futures, and the thread assignments for them are
 // (somewhat) irrelevant. If an action execution future gets moved between
 // executor threads, say, we would still like to represent the spans as relating
@@ -68,15 +68,15 @@ use std::sync::Arc;
 use std::time::Duration;
 use std::time::SystemTime;
 
-use bsmr_client_ctx::client_ctx::BuckSubcommand;
+use bsmr_client_ctx::client_ctx::BsmrSubcommand;
 use bsmr_client_ctx::client_ctx::ClientCommandContext;
-use bsmr_client_ctx::common::BuckArgMatches;
+use bsmr_client_ctx::common::BsmrArgMatches;
 use bsmr_client_ctx::event_log_options::EventLogOptions;
 use bsmr_client_ctx::events_ctx::EventsCtx;
 use bsmr_client_ctx::exit_result::ExitResult;
 use bsmr_client_ctx::path_arg::PathArg;
 use bsmr_common::convert::ProstDurationExt;
-use bsmr_error::BuckErrorContext;
+use bsmr_error::BsmrErrorContext;
 use bsmr_error::bsmr_error;
 use bsmr_error::internal_error;
 use bsmr_event_log::read::EventLogPathBuf;
@@ -85,12 +85,12 @@ use bsmr_event_log::utils::Invocation;
 use bsmr_event_observer::display;
 use bsmr_event_observer::display::CriticalPathEntryDisplay;
 use bsmr_event_observer::display::TargetDisplayOptions;
-use bsmr_event_observer::unpack_event::UnpackedBuckEvent;
+use bsmr_event_observer::unpack_event::UnpackedBsmrEvent;
 use bsmr_event_observer::unpack_event::unpack_event;
-use bsmr_events::BuckEvent;
+use bsmr_events::BsmrEvent;
 use bsmr_fs::paths::abs_path::AbsPathBuf;
-use bsmr_hash::StdBuckHashMap;
-use bsmr_hash::StdBuckHashSet;
+use bsmr_hash::StdBsmrHashMap;
+use bsmr_hash::StdBsmrHashSet;
 use derive_more::Display;
 use dupe::Dupe;
 use flate2::Compression;
@@ -159,12 +159,12 @@ struct ChromeTraceFirstPass {
     ///    of the last events.
     ///
     /// So this first pass builds up several lists of "interesting" span IDs.
-    pub long_analyses: StdBuckHashSet<bsmr_events::span::SpanId>,
-    pub long_loads: StdBuckHashSet<bsmr_events::span::SpanId>,
-    pub long_load_packages: StdBuckHashSet<bsmr_events::span::SpanId>,
-    pub local_actions: StdBuckHashSet<bsmr_events::span::SpanId>,
-    pub critical_path_action_keys: StdBuckHashSet<bsmr_data::ActionKey>,
-    pub critical_path_span_ids: StdBuckHashSet<u64>,
+    pub long_analyses: StdBsmrHashSet<bsmr_events::span::SpanId>,
+    pub long_loads: StdBsmrHashSet<bsmr_events::span::SpanId>,
+    pub long_load_packages: StdBsmrHashSet<bsmr_events::span::SpanId>,
+    pub local_actions: StdBsmrHashSet<bsmr_events::span::SpanId>,
+    pub critical_path_action_keys: StdBsmrHashSet<bsmr_data::ActionKey>,
+    pub critical_path_span_ids: StdBsmrHashSet<u64>,
     pub command_start: SystemTime,
     pub command_options: Option<bsmr_data::CommandOptions>,
 }
@@ -175,20 +175,20 @@ impl ChromeTraceFirstPass {
     const LONG_LOAD_PACKAGE_CUTOFF: Duration = Duration::from_millis(50);
     fn new() -> Self {
         Self {
-            long_analyses: StdBuckHashSet::default(),
-            long_loads: StdBuckHashSet::default(),
-            long_load_packages: StdBuckHashSet::default(),
-            local_actions: StdBuckHashSet::default(),
-            critical_path_action_keys: StdBuckHashSet::default(),
-            critical_path_span_ids: StdBuckHashSet::default(),
+            long_analyses: StdBsmrHashSet::default(),
+            long_loads: StdBsmrHashSet::default(),
+            long_load_packages: StdBsmrHashSet::default(),
+            local_actions: StdBsmrHashSet::default(),
+            critical_path_action_keys: StdBsmrHashSet::default(),
+            critical_path_span_ids: StdBsmrHashSet::default(),
             command_start: SystemTime::UNIX_EPOCH,
             command_options: None,
         }
     }
 
-    fn handle_event(&mut self, event: &BuckEvent) -> bsmr_error::Result<()> {
+    fn handle_event(&mut self, event: &BsmrEvent) -> bsmr_error::Result<()> {
         match event.data() {
-            bsmr_data::buck_event::Data::SpanStart(start) => {
+            bsmr_data::bsmr_event::Data::SpanStart(start) => {
                 if let Some(bsmr_data::span_start_event::Data::Command(..)) = start.data.as_ref() {
                     self.command_start = event.timestamp();
                 } else if let Some(bsmr_data::span_start_event::Data::ExecutorStage(exec)) =
@@ -219,7 +219,7 @@ impl ChromeTraceFirstPass {
                     }
                 }
             }
-            bsmr_data::buck_event::Data::SpanEnd(end) => {
+            bsmr_data::bsmr_event::Data::SpanEnd(end) => {
                 if let Some(bsmr_data::span_end_event::Data::Analysis(_)) = end.data.as_ref() {
                     if end
                         .duration
@@ -254,7 +254,7 @@ impl ChromeTraceFirstPass {
                     }
                 }
             }
-            bsmr_data::buck_event::Data::Instant(instant) => {
+            bsmr_data::bsmr_event::Data::Instant(instant) => {
                 if let Some(bsmr_data::instant_event::Data::BuildGraphInfo(info)) =
                     instant.data.as_ref()
                 {
@@ -269,7 +269,7 @@ impl ChromeTraceFirstPass {
                     self.command_options = Some(*options);
                 }
             }
-            bsmr_data::buck_event::Data::Record(_) => {}
+            bsmr_data::bsmr_event::Data::Record(_) => {}
         };
         Ok(())
     }
@@ -341,7 +341,7 @@ impl ChromeTraceInstant {
 
 // N.B. "Process" and "Thread" here are chrome/perfetto TraceEvent json object
 // terms. See comments at the top of this file about how the pid/tid field map
-// to how we use them to represent buck's activity in a trace.
+// to how we use them to represent bsmr's activity in a trace.
 #[allow(dead_code)] // Process isn't used at this time, but is included for completeness.
 enum ChromeTraceMetadataKind {
     Process { pid: u64 },
@@ -516,7 +516,7 @@ struct SimpleCounters<T> {
     /// Stores the current value of each timeseries.
     /// Set to None when we output a zero, so we can save a bit of filesize
     /// by omitting them from the JSON output.
-    counters: StdBuckHashMap<String, SimpleCounter<T>>,
+    counters: StdBsmrHashMap<String, SimpleCounter<T>>,
     zero_value: T,
     trace_events: Vec<serde_json::Value>,
 }
@@ -541,7 +541,7 @@ where
         Self {
             name,
             next_flush: SystemTime::UNIX_EPOCH,
-            counters: StdBuckHashMap::default(),
+            counters: StdBsmrHashMap::default(),
             trace_events: vec![],
             zero_value,
         }
@@ -668,13 +668,13 @@ struct TimestampAndAmount {
 
 struct AverageRateOfChangeCounters {
     counters: SimpleCounters<u64>,
-    previous_timestamp_and_amount_by_key: StdBuckHashMap<String, TimestampAndAmount>,
+    previous_timestamp_and_amount_by_key: StdBsmrHashMap<String, TimestampAndAmount>,
 }
 
 impl AverageRateOfChangeCounters {
     pub fn new(name: &'static str) -> Self {
         Self {
-            previous_timestamp_and_amount_by_key: StdBuckHashMap::default(),
+            previous_timestamp_and_amount_by_key: StdBsmrHashMap::default(),
             counters: SimpleCounters::<u64>::new(name, 0),
         }
     }
@@ -708,20 +708,20 @@ impl AverageRateOfChangeCounters {
 struct SpanCounters {
     counter: SimpleCounters<i32>,
     // Stores how current open spans contribute to counter values.
-    open_spans: StdBuckHashMap<bsmr_events::span::SpanId, (&'static str, i32)>,
+    open_spans: StdBsmrHashMap<bsmr_events::span::SpanId, (&'static str, i32)>,
 }
 
 impl SpanCounters {
     pub fn new(name: &'static str) -> Self {
         Self {
             counter: SimpleCounters::new(name, 0),
-            open_spans: StdBuckHashMap::default(),
+            open_spans: StdBsmrHashMap::default(),
         }
     }
 
     fn bump_counter_while_span(
         &mut self,
-        event: &BuckEvent,
+        event: &BsmrEvent,
         key: &'static str,
         amount: i32,
     ) -> bsmr_error::Result<()> {
@@ -733,7 +733,7 @@ impl SpanCounters {
     fn handle_event_end(
         &mut self,
         _end: &bsmr_data::SpanEndEvent,
-        event: &BuckEvent,
+        event: &BsmrEvent,
     ) -> bsmr_error::Result<()> {
         if let Some((key, value)) = self.open_spans.remove(&event.span_id().unwrap()) {
             self.counter.subtract(event.timestamp(), key, value)?;
@@ -744,12 +744,12 @@ impl SpanCounters {
 
 struct ChromeTraceWriter {
     trace_events: Vec<serde_json::Value>,
-    open_spans: StdBuckHashMap<bsmr_events::span::SpanId, ChromeTraceOpenSpan>,
+    open_spans: StdBsmrHashMap<bsmr_events::span::SpanId, ChromeTraceOpenSpan>,
     invocation: Invocation,
     first_pass: ChromeTraceFirstPass,
     max_tracks: u64,
     span_counters: SpanCounters,
-    unused_track_ids: StdBuckHashMap<SpanCategorization, TrackIdAllocator>,
+    unused_track_ids: StdBsmrHashMap<SpanCategorization, TrackIdAllocator>,
     // Wrappers to contain values from InstantEvent.Data.Snapshot as a timeseries
     snapshot_counters: SimpleCounters<u64>,
     process_memory_counters: SimpleCounters<f64>,
@@ -775,11 +775,11 @@ impl ChromeTraceWriter {
     pub fn new(invocation: Invocation, first_pass: ChromeTraceFirstPass, max_tracks: u64) -> Self {
         Self {
             trace_events: vec![],
-            open_spans: StdBuckHashMap::default(),
+            open_spans: StdBsmrHashMap::default(),
             invocation,
             first_pass,
             max_tracks,
-            unused_track_ids: StdBuckHashMap::default(),
+            unused_track_ids: StdBsmrHashMap::default(),
             span_counters: SpanCounters::new("spans"),
             snapshot_counters: SimpleCounters::<u64>::new("snapshot_counters", 0),
             process_memory_counters: SimpleCounters::<f64>::new("process_memory", 0.0),
@@ -805,7 +805,7 @@ impl ChromeTraceWriter {
     fn assign_track_for_span(
         &mut self,
         track_key: SpanCategorization,
-        event: Option<&BuckEvent>,
+        event: Option<&BsmrEvent>,
     ) -> bsmr_error::Result<Option<SpanTrackAssignment>> {
         let parent_track_id = event
             .and_then(|event| event.parent_id)
@@ -865,7 +865,7 @@ impl ChromeTraceWriter {
 
     fn open_span(
         &mut self,
-        event: &BuckEvent,
+        event: &BsmrEvent,
         span: ChromeTraceOpenSpan,
     ) -> bsmr_error::Result<()> {
         self.open_spans.insert(event.span_id().unwrap(), span);
@@ -874,7 +874,7 @@ impl ChromeTraceWriter {
 
     fn open_named_span(
         &mut self,
-        event: &BuckEvent,
+        event: &BsmrEvent,
         name: String,
         track_key: SpanCategorization,
     ) -> bsmr_error::Result<()> {
@@ -899,9 +899,9 @@ impl ChromeTraceWriter {
         Ok(())
     }
 
-    fn handle_event(&mut self, event: &Arc<BuckEvent>) -> bsmr_error::Result<()> {
+    fn handle_event(&mut self, event: &Arc<BsmrEvent>) -> bsmr_error::Result<()> {
         match event.data() {
-            bsmr_data::buck_event::Data::SpanStart(bsmr_data::SpanStartEvent {
+            bsmr_data::bsmr_event::Data::SpanStart(bsmr_data::SpanStartEvent {
                 data: Some(start_data),
             }) => {
                 let on_critical_path = event.span_id().is_some_and(|span_id| {
@@ -1111,9 +1111,9 @@ impl ChromeTraceWriter {
             }
             // Data field is oneof and `None` means the event is produced with newer version of `.proto` file
             // which added a variant which is not available in version used when compiling this program.
-            bsmr_data::buck_event::Data::SpanStart(bsmr_data::SpanStartEvent { data: None }) => {}
-            bsmr_data::buck_event::Data::SpanEnd(end) => self.handle_event_end(end, event)?,
-            bsmr_data::buck_event::Data::Instant(bsmr_data::InstantEvent {
+            bsmr_data::bsmr_event::Data::SpanStart(bsmr_data::SpanStartEvent { data: None }) => {}
+            bsmr_data::bsmr_event::Data::SpanEnd(end) => self.handle_event_end(end, event)?,
+            bsmr_data::bsmr_event::Data::Instant(bsmr_data::InstantEvent {
                 data: Some(instant_data),
             }) => match instant_data {
                 bsmr_data::instant_event::Data::Snapshot(snapshot) => {
@@ -1237,8 +1237,8 @@ impl ChromeTraceWriter {
             },
             // Data field is oneof and `None` means the event is produced with newer version of `.proto` file
             // which added a variant which is not available in version used when compiling this program.
-            bsmr_data::buck_event::Data::Instant(bsmr_data::InstantEvent { data: None }) => {}
-            bsmr_data::buck_event::Data::Record(_) => {}
+            bsmr_data::bsmr_event::Data::Instant(bsmr_data::InstantEvent { data: None }) => {}
+            bsmr_data::bsmr_event::Data::Record(_) => {}
         };
         Ok(())
     }
@@ -1564,7 +1564,7 @@ impl ChromeTraceWriter {
     fn handle_event_end(
         &mut self,
         end: &bsmr_data::SpanEndEvent,
-        event: &BuckEvent,
+        event: &BsmrEvent,
     ) -> bsmr_error::Result<()> {
         self.span_counters.handle_event_end(end, event)?;
         if let Some(open) = self.open_spans.remove(&event.span_id().unwrap()) {
@@ -1617,7 +1617,7 @@ impl ChromeTraceWriter {
 impl ChromeTraceCommand {
     pub fn exec(
         self,
-        matches: BuckArgMatches<'_>,
+        matches: BsmrArgMatches<'_>,
         ctx: ClientCommandContext<'_>,
         events_ctx: &mut EventsCtx,
     ) -> ExitResult {
@@ -1628,12 +1628,12 @@ impl ChromeTraceCommand {
         log_path: EventLogPathBuf,
     ) -> bsmr_error::Result<(
         Invocation,
-        BoxStream<'static, bsmr_error::Result<BuckEvent>>,
+        BoxStream<'static, bsmr_error::Result<BsmrEvent>>,
     )> {
         let (invocation, stream_values) = log_path.unpack_stream().await?;
         let stream = stream_values.try_filter_map(|stream_value| async move {
             match stream_value {
-                StreamValue::Event(e) => Ok(Some(BuckEvent::try_from(e)?)),
+                StreamValue::Event(e) => Ok(Some(BsmrEvent::try_from(e)?)),
                 _ => Ok(None),
             }
         });
@@ -1661,12 +1661,12 @@ impl ChromeTraceCommand {
     }
 }
 
-impl BuckSubcommand for ChromeTraceCommand {
+impl BsmrSubcommand for ChromeTraceCommand {
     const COMMAND_NAME: &'static str = "chrome-trace";
 
     async fn exec_impl(
         self,
-        _matches: BuckArgMatches<'_>,
+        _matches: BsmrArgMatches<'_>,
         ctx: ClientCommandContext<'_>,
         _events_ctx: &mut EventsCtx,
     ) -> ExitResult {
@@ -1681,7 +1681,7 @@ impl BuckSubcommand for ChromeTraceCommand {
 
         let dest_path = if trace_path.is_dir() {
             Self::trace_path_from_dir(trace_path, log.path())
-                .buck_error_context("Could not determine trace path")?
+                .bsmr_error_context("Could not determine trace path")?
         } else {
             trace_path
         };
@@ -1735,10 +1735,10 @@ impl ChromeTraceCommand {
         while let Some(event) = tokio_stream::StreamExt::try_next(&mut stream).await? {
             first_pass
                 .handle_event(&event)
-                .with_buck_error_context(|| {
-                    display::InvalidBuckEvent(Arc::new(event.clone())).to_string()
+                .with_bsmr_error_context(|| {
+                    display::InvalidBsmrEvent(Arc::new(event.clone())).to_string()
                 })?;
-            if let Ok(UnpackedBuckEvent::Instant(
+            if let Ok(UnpackedBsmrEvent::Instant(
                 _,
                 _,
                 bsmr_data::instant_event::Data::BuildGraphInfo(info),
@@ -1780,7 +1780,7 @@ impl ChromeTraceCommand {
             let event = Arc::new(event);
             writer
                 .handle_event(&event)
-                .with_buck_error_context(|| display::InvalidBuckEvent(event).to_string())?;
+                .with_bsmr_error_context(|| display::InvalidBsmrEvent(event).to_string())?;
         }
 
         writer.write_thread_names()?;

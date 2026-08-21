@@ -1,3 +1,9 @@
+# ===----------------------------------------------------------------------===
+# Upstream-Source: facebook/buck2@1560aca2002865cd73d7cafb22c705cfb640b2bc
+# Modifications Copyright (c) 2026 Dedalus Labs, Inc. and its contributors
+# SPDX-License-Identifier: Apache-2.0
+# ===----------------------------------------------------------------------===
+
 # @generated
 # Copyright (C) 2016 The Android Open Source Project
 #
@@ -13,8 +19,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# Port of Buck native gwt_binary() rule. See discussion in context of
-# https://github.com/facebook/buck/issues/109
+# Port of Bsmr native gwt_binary() rule. See discussion in context of
+# https://github.com/dedalus/bsmr/issues/109
 load("//tools/bzl:genrule2.bzl", "genrule2")
 load("//tools/bzl:java.bzl", "java_library2")
 

@@ -30,7 +30,7 @@ use bsmr_execute::directory::ActionDirectoryMember;
 use bsmr_execute::directory::ActionSharedDirectory;
 use bsmr_execute::re::manager::UnconfiguredRemoteExecutionClient;
 use bsmr_fs::paths::abs_path::AbsPathBuf;
-use bsmr_hash::StdBuckHashSet;
+use bsmr_hash::StdBsmrHashSet;
 use bsmr_test_api::data::RemoteStorageConfig;
 use dupe::Dupe;
 use remote_execution::NamedDigest;
@@ -40,14 +40,14 @@ type CacheKey = TDigest;
 
 pub struct ReClientWithCache {
     client: UnconfiguredRemoteExecutionClient,
-    cache: Mutex<StdBuckHashSet<Arc<CacheKey>>>,
+    cache: Mutex<StdBsmrHashSet<Arc<CacheKey>>>,
 }
 
 impl ReClientWithCache {
     pub fn new(client: UnconfiguredRemoteExecutionClient) -> Self {
         Self {
             client,
-            cache: Mutex::new(StdBuckHashSet::default()),
+            cache: Mutex::new(StdBsmrHashSet::default()),
         }
     }
 

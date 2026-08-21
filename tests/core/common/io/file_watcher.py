@@ -19,7 +19,7 @@ from enum import Enum
 from pathlib import Path
 from typing import Optional
 
-from bsmr.tests.e2e_util.api.buck import Buck
+from bsmr.tests.e2e_util.api.bsmr import Bsmr
 from bsmr.tests.e2e_util.helper.utils import filter_events
 
 
@@ -87,11 +87,11 @@ class FileWatcherEvent:
 #  }
 #
 async def get_file_watcher_events(
-    buck: Buck, target_pattern: str = "root//:", rel_cwd: Optional[Path] = None
+    bsmr: Bsmr, target_pattern: str = "root//:", rel_cwd: Optional[Path] = None
 ) -> tuple[bool, list[FileWatcherEvent]]:
-    await buck.targets(target_pattern, rel_cwd=rel_cwd)
+    await bsmr.targets(target_pattern, rel_cwd=rel_cwd)
     filtered_events = await filter_events(
-        buck,
+        bsmr,
         "Event",
         "data",
         "SpanEnd",
@@ -114,7 +114,7 @@ async def get_file_watcher_events(
             )
 
     fresh_instance = await filter_events(
-        buck,
+        bsmr,
         "Event",
         "data",
         "SpanEnd",

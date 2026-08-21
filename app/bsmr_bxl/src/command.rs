@@ -47,10 +47,10 @@ use bsmr_core::package::PackageLabel;
 use bsmr_core::soft_error;
 use bsmr_data::BxlEnsureArtifactsEnd;
 use bsmr_data::BxlEnsureArtifactsStart;
-use bsmr_error::BuckErrorContext;
+use bsmr_error::BsmrErrorContext;
 use bsmr_error::internal_error;
 use bsmr_events::dispatch::get_dispatcher;
-use bsmr_hash::StdBuckHashMap;
+use bsmr_hash::StdBsmrHashMap;
 use bsmr_interpreter::load_module::InterpreterCalculation;
 use bsmr_interpreter::parse_import::ParseImportOptions;
 use bsmr_interpreter::parse_import::RelativeImports;
@@ -307,11 +307,11 @@ impl BxlServerCommand {
     /// This context determines how artifacts will be materialized and uploaded.
     fn create_materialization_context(&self) -> MaterializationAndUploadContext {
         let materializations = Materializations::try_from(self.req.final_artifact_materializations)
-            .with_buck_error_context(|| "Invalid final_artifact_materializations")
+            .with_bsmr_error_context(|| "Invalid final_artifact_materializations")
             .unwrap();
 
         let uploads = Uploads::try_from(self.req.final_artifact_uploads)
-            .with_buck_error_context(|| "Invalid final_artifact_uploads")
+            .with_bsmr_error_context(|| "Invalid final_artifact_uploads")
             .unwrap();
 
         (materializations, uploads).into()
@@ -601,13 +601,13 @@ pub(crate) fn parse_bxl_label_from_cli(
 
 #[derive(Debug)]
 struct PendingStreaming {
-    indexes: StdBuckHashMap<ArtifactGroup, Vec<Arc<Mutex<PendingStreamingOutput>>>>,
+    indexes: StdBsmrHashMap<ArtifactGroup, Vec<Arc<Mutex<PendingStreamingOutput>>>>,
 }
 
 impl PendingStreaming {
     fn new(pending_streaming_outputs: impl Iterator<Item = PendingStreamingOutput>) -> Self {
-        let mut indexes: StdBuckHashMap<ArtifactGroup, Vec<Arc<Mutex<PendingStreamingOutput>>>> =
-            StdBuckHashMap::default();
+        let mut indexes: StdBsmrHashMap<ArtifactGroup, Vec<Arc<Mutex<PendingStreamingOutput>>>> =
+            StdBsmrHashMap::default();
 
         let pending_streaming_outputs = pending_streaming_outputs
             .into_iter()
@@ -650,7 +650,7 @@ mod tests {
     use bsmr_artifact::artifact::build_artifact::BuildArtifact;
     use bsmr_core::configuration::data::ConfigurationData;
     use bsmr_core::target::configured_target_label::ConfiguredTargetLabel;
-    use bsmr_hash::BuckIndexSet;
+    use bsmr_hash::BsmrIndexSet;
 
     use super::*;
 
@@ -670,12 +670,12 @@ mod tests {
         let a2 = new_test_artifact_group(2);
         let a3 = new_test_artifact_group(3);
         let p1 = PendingStreamingOutput::new(
-            BuckIndexSet::from([a1.dupe(), a2.dupe()]),
+            BsmrIndexSet::from([a1.dupe(), a2.dupe()]),
             b"output1".to_vec(),
         );
-        let p2 = PendingStreamingOutput::new(BuckIndexSet::from([a1.dupe()]), b"output2".to_vec());
+        let p2 = PendingStreamingOutput::new(BsmrIndexSet::from([a1.dupe()]), b"output2".to_vec());
         let p3 = PendingStreamingOutput::new(
-            BuckIndexSet::from([a2.dupe(), a3.dupe()]),
+            BsmrIndexSet::from([a2.dupe(), a3.dupe()]),
             b"output3".to_vec(),
         );
 

@@ -17,21 +17,21 @@
 
 import json
 
-from bsmr.tests.e2e_util.api.buck import Buck
+from bsmr.tests.e2e_util.api.bsmr import Bsmr
 from bsmr.tests.e2e_util.asserts import expect_failure
-from bsmr.tests.e2e_util.buck_workspace import buck_test
+from bsmr.tests.e2e_util.bsmr_workspace import bsmr_test
 
 
-@buck_test(inplace=True)
-async def test_set_cfg_modifiers(buck: Buck) -> None:
-    result = await buck.targets(
+@bsmr_test(inplace=True)
+async def test_set_cfg_modifiers(bsmr: Bsmr) -> None:
+    result = await bsmr.targets(
         "root//tests/e2e/configurations/cfg_constructor/test_clear_package_modifiers_data/set_cfg_modifiers/dir:test",
         "--package-values",
     )
     targets = json.loads(result.stdout)
     assert len(targets) == 1
     target = targets[0]
-    cfg_modifiers = target["buck.package_values"]["buck.cfg_modifiers"]
+    cfg_modifiers = target["bsmr.package_values"]["bsmr.cfg_modifiers"]
     assert cfg_modifiers == [
         {
             "_type": "TaggedModifiers",
@@ -81,15 +81,15 @@ async def test_set_cfg_modifiers(buck: Buck) -> None:
     ]
 
 
-@buck_test(inplace=True)
+@bsmr_test(inplace=True)
 async def test_set_cfg_modifiers_from_package_file_only(
-    buck: Buck,
+    bsmr: Bsmr,
 ) -> None:
     await expect_failure(
-        buck.targets(
+        bsmr.targets(
             "root//tests/e2e/configurations/cfg_constructor/test_clear_package_modifiers_data/set_cfg_modifiers/package_file_check:test",
             "-c",
-            "buck_e2e.testing_failure=true",
+            "bsmr_e2e.testing_failure=true",
         ),
-        stderr_regex="set_cfg_modifiers is only allowed to be used from a PACKAGE or BUCK_TREE file, not a bzl file",
+        stderr_regex="set_cfg_modifiers is only allowed to be used from a PACKAGE or BSMR_TREE file, not a bzl file",
     )

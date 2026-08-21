@@ -27,8 +27,8 @@ use bsmr_artifact::artifact::build_artifact::BuildArtifact;
 use bsmr_core::category::Category;
 use bsmr_core::deferred::key::DeferredHolderKey;
 use bsmr_core::execution_types::execution::ExecutionPlatformResolution;
-use bsmr_core::fs::buck_out_path::BuckOutPathKind;
-use bsmr_core::fs::buck_out_path::BuildArtifactPath;
+use bsmr_core::fs::output_path::BuildArtifactPath;
+use bsmr_core::fs::output_path::OutputPathKind;
 use bsmr_directory::directory;
 use bsmr_directory::directory::builder::DirectoryBuilder;
 use bsmr_directory::directory::builder::DirectoryInsertError;
@@ -40,7 +40,7 @@ use bsmr_error::internal_error;
 use bsmr_execute::execute::request::OutputType;
 use bsmr_fs::paths::forward_rel_path::ForwardRelativePath;
 use bsmr_fs::paths::forward_rel_path::ForwardRelativePathBuf;
-use bsmr_hash::BuckIndexSet;
+use bsmr_hash::BsmrIndexSet;
 use dupe::Dupe;
 use dupe::OptionDupedExt;
 use gazebo::prelude::SliceExt;
@@ -191,7 +191,7 @@ impl<'v> ActionsRegistry<'v> {
         path: ForwardRelativePathBuf,
         output_type: OutputType,
         declaration_location: Option<FileSpan>,
-        path_resolution_method: BuckOutPathKind,
+        path_resolution_method: OutputPathKind,
         heap: Heap<'v>,
     ) -> bsmr_error::Result<DeclaredArtifact<'v>> {
         let (path, hidden) = match prefix {
@@ -215,7 +215,7 @@ impl<'v> ActionsRegistry<'v> {
     pub fn register<A: UnregisteredAction + 'static>(
         &mut self,
         self_key: &DeferredHolderKey,
-        outputs: BuckIndexSet<OutputArtifact>,
+        outputs: BsmrIndexSet<OutputArtifact>,
         action: A,
     ) -> bsmr_error::Result<ActionKey> {
         let key = ActionKey::new(
@@ -227,7 +227,7 @@ impl<'v> ActionsRegistry<'v> {
                 (self.declared_dynamic_outputs.len() + self.pending.len()).try_into()?,
             ),
         );
-        let mut bound_outputs = BuckIndexSet::with_capacity(outputs.len());
+        let mut bound_outputs = BsmrIndexSet::with_capacity(outputs.len());
         for output in outputs {
             let bound = output.bind(key.dupe())?.as_base_artifact().dupe();
             bound_outputs.insert(bound);

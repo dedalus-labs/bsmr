@@ -34,16 +34,16 @@ pub mod starlark_error;
 /// A piece of metadata to indicate whether this error is an infra or user error.
 ///
 /// You can attach this to an error by passing it to the [`Error::context`] method. Alternatively,
-/// you can call [`.tag()`](`crate::BuckErrorContext::tag`) on a [`bsmr_error::Result`][`Result`].
+/// you can call [`.tag()`](`crate::BsmrErrorContext::tag`) on a [`bsmr_error::Result`][`Result`].
 ///
 /// The category is fundamentally closed - the expectation is that it will not grow new variants in
 /// the future.
 #[doc(inline)]
 pub use classify::Tier;
-pub use context::BuckErrorContext;
+pub use context::BsmrErrorContext;
 pub use context_value::ContextValue;
 pub use context_value::TypedContext;
-pub use conversion::serde::BuckErrorSerde;
+pub use conversion::serde::BsmrErrorSerde;
 pub use error::DynLateFormat;
 pub use error::Error;
 pub use exit_code::ExitCode;

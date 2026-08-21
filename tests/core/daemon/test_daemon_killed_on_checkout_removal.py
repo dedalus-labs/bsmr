@@ -23,8 +23,8 @@ import re
 import subprocess
 from pathlib import Path
 
-from bsmr.tests.e2e_util.api.buck import Buck
-from bsmr.tests.e2e_util.buck_workspace import buck_test, eden_remove, env
+from bsmr.tests.e2e_util.api.bsmr import Bsmr
+from bsmr.tests.e2e_util.bsmr_workspace import bsmr_test, eden_remove, env
 from bsmr.tests.e2e_util.helper.golden import golden, sanitize_daemon_stderr
 
 
@@ -44,19 +44,19 @@ def _is_process_alive(pid: int) -> bool:
             return False
 
 
-@buck_test(setup_eden=True, skip_final_kill=True)
+@bsmr_test(setup_eden=True, skip_final_kill=True)
 @env("BSMR_TESTING_CHECKER_INTERVAL_SECONDS", "1")
-async def test_daemon_killed_on_checkout_removal(buck: Buck) -> None:
+async def test_daemon_killed_on_checkout_removal(bsmr: Bsmr) -> None:
     # Start the daemon and capture its PID and daemon dir before removal.
-    await buck.server()
+    await bsmr.server()
 
-    status = json.loads((await buck.status()).stdout)
+    status = json.loads((await bsmr.status()).stdout)
     pid = status["process_info"]["pid"]
-    daemon_dir = await buck.get_daemon_dir()
+    daemon_dir = await bsmr.get_daemon_dir()
 
-    project_dir = Path(buck.cwd)
+    project_dir = Path(bsmr.cwd)
     eden_dir = project_dir.parent / "eden"
-    eden_remove(eden_dir, project_dir, buck._env)
+    eden_remove(eden_dir, project_dir, bsmr._env)
 
     assert not project_dir.exists(), f"Eden checkout was not removed: {project_dir}"
 
@@ -66,7 +66,7 @@ async def test_daemon_killed_on_checkout_removal(buck: Buck) -> None:
         raise AssertionError("Server did not die in 20 seconds")
 
     # Process is dead. Verify the shutdown reason in daemon stderr.
-    stderr = (daemon_dir / "buckd.stderr").read_text()
+    stderr = (daemon_dir / "bsmrd.stderr").read_text()
     # Replace the project root path before general sanitization.
     # sanitize_daemon_stderr only handles /data/users/ (Linux);
     # macOS scratch paths (e.g. /var/folders/…) need explicit replacement.

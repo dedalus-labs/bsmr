@@ -12,9 +12,9 @@
 # of this source tree.
 
 def rust_library_from_crates(name):
-    # @lint-ignore BUCKLINT: avoid "Direct usage of native rules is not allowed."
+    # @lint-ignore BSMRLINT: avoid "Direct usage of native rules is not allowed."
     native.export_file(name = name, src = "BUILD.bsmr", visibility = ["PUBLIC"])
 
 def rust_binary_from_crates(name):
-    # @lint-ignore BUCKLINT: avoid "Direct usage of native rules is not allowed."
+    # @lint-ignore BSMRLINT: avoid "Direct usage of native rules is not allowed."
     native.genrule(name = name, cmd = "exit 1", executable = True, out = "out", visibility = ["PUBLIC"])

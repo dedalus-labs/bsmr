@@ -1,3 +1,9 @@
+# ===----------------------------------------------------------------------===
+# Upstream-Source: facebook/buck2@1560aca2002865cd73d7cafb22c705cfb640b2bc
+# Modifications Copyright (c) 2026 Dedalus Labs, Inc. and its contributors
+# SPDX-License-Identifier: Apache-2.0
+# ===----------------------------------------------------------------------===
+
 # Copyright (c) Meta Platforms, Inc. and affiliates.
 #
 # This source code is dual-licensed under either the MIT license found in the
@@ -11,7 +17,7 @@
 
 # 2. If target has a label `dbg:info:exec=//another:target` then we assume that `ExecInfo` (see types.bzl) will be obtained via [RunInfo] of another target (//another:target).
 # For example:
-#    Running "buck run //another:target" (or via using [RunInfo]) should produce `ExecInfo` as its stdout
+#    Running "bsmr run //another:target" (or via using [RunInfo]) should produce `ExecInfo` as its stdout
 
 # 3. If target has a label `dbg:info:ref=//another:target` we assume a presence of //another:target which we can inspect for the presence of relevant providers (see fdb.bxl)
 

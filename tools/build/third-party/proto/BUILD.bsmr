@@ -1,3 +1,9 @@
+# ===----------------------------------------------------------------------===
+# Upstream-Source: facebook/buck2@1560aca2002865cd73d7cafb22c705cfb640b2bc
+# Modifications Copyright (c) 2026 Dedalus Labs, Inc. and its contributors
+# SPDX-License-Identifier: Apache-2.0
+# ===----------------------------------------------------------------------===
+
 # Copyright (c) Meta Platforms, Inc. and affiliates.
 #
 # This source code is licensed under both the MIT license found in the
@@ -5,7 +11,7 @@
 # License, Version 2.0 found in the LICENSE-APACHE file in the root directory
 # of this source tree.
 
-# @lint-ignore BUCKLINT: avoid "Direct usage of native rules is not allowed."
+# @lint-ignore BSMRLINT: avoid "Direct usage of native rules is not allowed."
 load(":defs.bzl", "protoc_distribution")
 
 protoc_distribution(
@@ -13,14 +19,14 @@ protoc_distribution(
     version = "21.4",
 )
 
-# @lint-ignore BUCKLINT: avoid "Direct usage of native rules is not allowed."
+# @lint-ignore BSMRLINT: avoid "Direct usage of native rules is not allowed."
 alias(
     name = "protoc",
     actual = ":distribution[protoc]",
     visibility = ["PUBLIC"],
 )
 
-# @lint-ignore BUCKLINT: avoid "Direct usage of native rules is not allowed."
+# @lint-ignore BSMRLINT: avoid "Direct usage of native rules is not allowed."
 alias(
     name = "google_protobuf",
     actual = ":distribution[google_protobuf]",

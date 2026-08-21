@@ -17,18 +17,18 @@
 
 from pathlib import Path
 
-from bsmr.tests.e2e_util.api.buck import Buck
-from bsmr.tests.e2e_util.buck_workspace import buck_test
+from bsmr.tests.e2e_util.api.bsmr import Bsmr
+from bsmr.tests.e2e_util.bsmr_workspace import bsmr_test
 
 from .test_coverage_utils import collect_coverage_for
 
 
-@buck_test(inplace=True)
+@bsmr_test(inplace=True)
 async def test_junit_test_selective_coverage_doesnt_produce_coverage(
-    buck: Buck, tmp_path: Path
+    bsmr: Bsmr, tmp_path: Path
 ) -> None:
     paths = await collect_coverage_for(
-        buck,
+        bsmr,
         tmp_path,
         "upstream//testing_frameworks/code_coverage/junit/com/facebook/testing_frameworks:test",
         folder_filter=[],

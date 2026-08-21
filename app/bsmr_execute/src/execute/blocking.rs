@@ -20,7 +20,7 @@ use allocative::Allocative;
 use async_trait::async_trait;
 use bsmr_core::bsmr_env;
 use bsmr_core::fs::project::ProjectRoot;
-use bsmr_error::BuckErrorContext;
+use bsmr_error::BsmrErrorContext;
 use bsmr_error::internal_error;
 use bsmr_events::dispatch::current_span;
 use bsmr_events::dispatch::maybe_proxy_current_span;
@@ -88,14 +88,14 @@ struct ThreadPoolIoRequest {
 }
 
 #[derive(Allocative)]
-pub struct BuckBlockingExecutor {
+pub struct BsmrBlockingExecutor {
     #[allocative(skip)]
     io_data_semaphore: Semaphore,
     #[allocative(skip)]
     command_sender: crossbeam_channel::Sender<ThreadPoolIoRequest>,
 }
 
-impl BuckBlockingExecutor {
+impl BsmrBlockingExecutor {
     /// We choose the default concurrency as follows:
     ///
     /// - For operations executed by the thread pool, we choose a fairly low concurrency level.
@@ -117,7 +117,7 @@ impl BuckBlockingExecutor {
         for i in 0..io_threads {
             let command_receiver = command_receiver.clone();
             let fs = fs.dupe();
-            thread_spawn(&format!("buck-io-{i}"), move || {
+            thread_spawn(&format!("bsmr-io-{i}"), move || {
                 for ThreadPoolIoRequest {
                     sender,
                     parent_id,
@@ -128,7 +128,7 @@ impl BuckBlockingExecutor {
                     let _ignored = sender.send(res);
                 }
             })
-            .buck_error_context("Failed to spawn io worker")?;
+            .bsmr_error_context("Failed to spawn io worker")?;
         }
 
         Ok(Self {
@@ -139,7 +139,7 @@ impl BuckBlockingExecutor {
 }
 
 #[async_trait]
-impl BlockingExecutor for BuckBlockingExecutor {
+impl BlockingExecutor for BsmrBlockingExecutor {
     async fn execute_dyn_io_inline<'a>(
         &self,
         f: Box<dyn FnOnce() -> bsmr_error::Result<()> + Send + 'a>,
@@ -170,7 +170,7 @@ impl BlockingExecutor for BuckBlockingExecutor {
 
         cancellations
             .critical_section(
-                || async move { receiver.await.buck_error_context("Pool shut down")? },
+                || async move { receiver.await.bsmr_error_context("Pool shut down")? },
             )
             .boxed()
     }
@@ -216,7 +216,7 @@ impl BlockingExecutor for DirectIoExecutor {
                 // Execute IO operation in Tokio's blocking thread pool
                 tokio::task::spawn_blocking(move || io.execute(&project_fs))
                     .await
-                    .buck_error_context("Direct IO spawn_blocking failed")?
+                    .bsmr_error_context("Direct IO spawn_blocking failed")?
             })
             .boxed()
     }

@@ -16,7 +16,7 @@
 
 use bsmr_core::configuration::compatibility::ResultMaybeCompatible;
 use bsmr_core::package::PackageLabel;
-use bsmr_error::BuckErrorContext;
+use bsmr_error::BsmrErrorContext;
 
 use crate::attrs::attr::Attribute;
 use crate::attrs::coerced_attr::CoercedAttr;
@@ -43,7 +43,7 @@ impl<'a> CoercedAttrFull<'a> {
                 attr: self.attr,
                 value: v,
             })
-            .with_buck_error_context(|| format!("configuring attr `{}`", self.name))
+            .with_bsmr_error_context(|| format!("configuring attr `{}`", self.name))
     }
 
     pub fn traverse(
@@ -53,6 +53,6 @@ impl<'a> CoercedAttrFull<'a> {
     ) -> bsmr_error::Result<()> {
         self.value
             .traverse(self.attr.coercer(), Some(pkg), traversal)
-            .with_buck_error_context(|| format!("traversing attribute `{}`", self.name))
+            .with_bsmr_error_context(|| format!("traversing attribute `{}`", self.name))
     }
 }

@@ -1146,7 +1146,7 @@ def _sort_pre_dexed_files(
 
             if len(primary_dex_class_names) > 0 and not is_root_module(module):
                 # TODO(T148680617) We shouldn't allow classes that are specified to be in the
-                # primary dex to end up in a non-root module, but buck1 allows it and there are
+                # primary dex to end up in a non-root module, but legacy allows it and there are
                 # Voltron configs that rely on this, so we allow it too for migration purposes.
                 # fail("Non-root modules should not have anything that belongs in the primary dex, " +
                 #     "but {} is assigned to module {} and has the following class names in the primary dex: {}\n".format(

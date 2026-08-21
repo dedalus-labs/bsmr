@@ -52,7 +52,7 @@ pub enum RelativeImports<'a> {
     Disallow,
 }
 
-/// Extra options for parsing a load() or load-like path into a `BuckPath`
+/// Extra options for parsing a load() or load-like path into a `BsmrPath`
 pub struct ParseImportOptions<'a> {
     /// Whether '@' is required at the beginning of the import.
     pub allow_missing_at_symbol: bool,
@@ -89,7 +89,7 @@ pub fn parse_import(
     parse_import_with_config(cell_resolver, import, &opts)
 }
 
-/// Parse import string into a BuckPath, but potentially be more or less flexible with what is
+/// Parse import string into a BsmrPath, but potentially be more or less flexible with what is
 /// accepted.
 ///
 /// Common use case is e.g. allowing "cell//foo:bar.bzl" to be passed on the command line
@@ -172,12 +172,12 @@ pub fn parse_bzl_path_with_config(
 mod tests {
     use bsmr_core::cells::alias::NonEmptyCellAlias;
     use bsmr_core::cells::name::CellName;
-    use bsmr_hash::StdBuckHashMap;
+    use bsmr_hash::StdBsmrHashMap;
 
     use super::*;
 
     fn resolver() -> CellAliasResolver {
-        let mut m = StdBuckHashMap::default();
+        let mut m = StdBsmrHashMap::default();
         m.insert(
             NonEmptyCellAlias::new("cell1".to_owned()).unwrap(),
             CellName::testing_new("cell1"),

@@ -16,7 +16,7 @@
 
 use bsmr_cli_proto::common_build_options::ExecutionStrategy;
 use bsmr_core::bsmr_env_name;
-use bsmr_error::conversion::clap::buck_error_clap_parser;
+use bsmr_error::conversion::clap::bsmr_error_clap_parser;
 use clap::ArgGroup;
 use clap::builder::FalseyValueParser;
 use tracing::warn;
@@ -25,7 +25,7 @@ use crate::common::PrintOutputsFormat;
 
 #[derive(Debug, Clone, Copy, serde::Serialize, serde::Deserialize)]
 pub struct BuildReportOption {
-    /// Fill out the failures in build report as it was done by default in buck1.
+    /// Fill out the failures in build report as it was done by default in legacy.
     fill_out_failures: bool,
 
     /// Include package relative paths in the output.
@@ -94,7 +94,7 @@ pub struct CommonBuildOptions {
     /// The following options are supported:
     ///
     /// `fill-out-failures`:
-    /// fill out failures the same way Buck1 would.
+    /// fill out failures the same way Legacy would.
     ///
     /// `package-project-relative-paths`:
     /// emit the project-relative path of packages for the targets that were built.
@@ -108,7 +108,7 @@ pub struct CommonBuildOptions {
         long = "build-report-options",
         requires = "build_report",
         value_delimiter = ',',
-        value_parser = buck_error_clap_parser(parse_build_report_option),
+        value_parser = bsmr_error_clap_parser(parse_build_report_option),
     )]
     build_report_options: Vec<BuildReportOption>,
 
@@ -132,7 +132,7 @@ pub struct CommonBuildOptions {
     sandbox: bool,
 
     /// Enable only local execution. Will reject actions that cannot execute locally.
-    #[clap(long, group = "build_strategy", env = bsmr_env_name!("BUCK_OFFLINE_BUILD"), value_parser = FalseyValueParser::new())]
+    #[clap(long, group = "build_strategy", env = bsmr_env_name!("BSMR_OFFLINE_BUILD"), value_parser = FalseyValueParser::new())]
     local_only: bool,
 
     /// Enable only remote execution. Will reject actions that cannot execute remotely.
@@ -145,7 +145,7 @@ pub struct CommonBuildOptions {
     prefer_local: bool,
 
     /// Enable hybrid execution. Will prefer executing actions that can execute remotely on RE and will avoid racing local and remote execution.
-    #[clap(long, group = "build_strategy", env = bsmr_env_name!("BUCK_PREFER_REMOTE"), value_parser = FalseyValueParser::new())]
+    #[clap(long, group = "build_strategy", env = bsmr_env_name!("BSMR_PREFER_REMOTE"), value_parser = FalseyValueParser::new())]
     prefer_remote: bool,
 
     /// Experimental: Disable all execution.
@@ -155,7 +155,7 @@ pub struct CommonBuildOptions {
     /// Do not perform remote cache queries or cache writes. If remote execution is enabled, the RE
     /// service might still deduplicate actions, so for e.g. benchmarking, using a random isolation
     /// dir is preferred.
-    #[clap(long, env = bsmr_env_name!("BUCK_OFFLINE_BUILD"), value_parser = FalseyValueParser::new())]
+    #[clap(long, env = bsmr_env_name!("BSMR_OFFLINE_BUILD"), value_parser = FalseyValueParser::new())]
     no_remote_cache: bool,
 
     /// Could be used to enable the action cache writes on the RE worker when no_remote_cache is specified
@@ -179,24 +179,24 @@ pub struct CommonBuildOptions {
     #[clap(long)]
     upload_all_actions: bool,
 
-    /// If Buck hits an error, do as little work as possible before exiting.
+    /// If Bsmr hits an error, do as little work as possible before exiting.
     ///
     /// To illustrate the effect of this flag, consider an invocation of `build :foo :bar`. The
-    /// default behavior of buck is to do enough work to get a result for the builds of each of
-    /// `:foo` and `:bar`, and no more. This means that buck will continue to complete the build of
+    /// default behavior of bsmr is to do enough work to get a result for the builds of each of
+    /// `:foo` and `:bar`, and no more. This means that bsmr will continue to complete the build of
     /// `:bar` after the build of `:foo` has failed; however, once one dependency of `:foo` has
     /// failed, other dependencies will be cancelled unless they are needed by `:bar`.
     ///
-    /// This flag changes the behavior of buck to not wait on `:bar` to complete once `:foo` has
+    /// This flag changes the behavior of bsmr to not wait on `:bar` to complete once `:foo` has
     /// failed. Generally, this flag only has an effect on builds that specify multiple targets.
     ///
-    /// `--keep-going` changes the behavior of buck to not only wait on `:bar` once one dependency
+    /// `--keep-going` changes the behavior of bsmr to not only wait on `:bar` once one dependency
     /// of `:foo` has failed, but to additionally attempt to build other dependencies of `:foo` if
     /// possible.
     #[clap(long, group = "fail-when")]
     fail_fast: bool,
 
-    /// If Buck hits an error, continue doing as much work as possible before exiting.
+    /// If Bsmr hits an error, continue doing as much work as possible before exiting.
     ///
     /// See `--fail-fast` for more details.
     #[clap(long, group = "fail-when")]

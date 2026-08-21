@@ -21,7 +21,7 @@ use bsmr_artifact::artifact::artifact_type::Artifact;
 use bsmr_core::deferred::base_deferred_key::BaseDeferredKey;
 use bsmr_core::execution_types::execution::ExecutionPlatformResolution;
 use bsmr_core::target::configured_target_label::ConfiguredTargetLabel;
-use bsmr_hash::StdBuckHashMap;
+use bsmr_hash::StdBsmrHashMap;
 use bsmr_interpreter::dice::starlark_provider::StarlarkEvalKind;
 use bsmr_node::rule_type::StarlarkRuleType;
 use dupe::Dupe;
@@ -49,7 +49,7 @@ pub trait AnonTargetDyn: Send + Sync + Display {
         promise_artifact_mappings: SmallMap<String, Value<'v>>,
         anon_target_result: Value<'v>,
         eval: &mut Evaluator<'v, '_, '_>,
-    ) -> bsmr_error::Result<StdBuckHashMap<PromiseArtifactId, Artifact>>;
+    ) -> bsmr_error::Result<StdBsmrHashMap<PromiseArtifactId, Artifact>>;
 
     fn resolve_attrs<'v>(
         &self,
@@ -62,7 +62,7 @@ pub trait AnonTargetDyn: Send + Sync + Display {
 // Container for analysis results of the anon target dependents.
 pub struct AnonTargetDependentAnalysisResults<'v> {
     pub dep_analysis_results: Vec<(&'v ConfiguredTargetLabel, AnalysisResult)>,
-    pub promised_artifacts: StdBuckHashMap<&'v PromiseArtifactAttr, Artifact>,
+    pub promised_artifacts: StdBsmrHashMap<&'v PromiseArtifactAttr, Artifact>,
 }
 
 impl<'v> AnonTargetDependentAnalysisResults<'v> {

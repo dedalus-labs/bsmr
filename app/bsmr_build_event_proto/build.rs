@@ -11,7 +11,7 @@ use std::io;
 /// Generates the public build-event Rust bindings.
 fn main() -> io::Result<()> {
     let proto_files = &["build_event.proto"];
-    let proto_srcs = env::var("BUCK_PROTO_SRCS");
+    let proto_srcs = env::var("BSMR_PROTO_SRCS");
     let includes = proto_srcs.as_deref().map_or(vec!["."], |path| vec![path]);
 
     let builder = bsmr_protoc_dev::configure();

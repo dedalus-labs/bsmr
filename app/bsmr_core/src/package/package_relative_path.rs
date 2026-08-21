@@ -696,14 +696,14 @@ impl Deref for PackageRelativePathBuf {
 
 #[cfg(test)]
 mod tests {
-    use bsmr_hash::StdBuckHashMap;
+    use bsmr_hash::StdBsmrHashMap;
 
     use crate::package::package_relative_path::PackageRelativePath;
     use crate::package::package_relative_path::PackageRelativePathBuf;
 
     #[test]
     fn paths_work_in_maps() -> bsmr_error::Result<()> {
-        let mut map = StdBuckHashMap::default();
+        let mut map = StdBsmrHashMap::default();
 
         let p1 = PackageRelativePath::new("foo")?;
         let p2 = PackageRelativePath::new("bar")?;

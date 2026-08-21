@@ -23,7 +23,7 @@ use bsmr_artifact::artifact::artifact_type::Artifact;
 use bsmr_artifact::artifact::artifact_type::OutputArtifact;
 use bsmr_core::configuration::data::ConfigurationData;
 use bsmr_core::deferred::base_deferred_key::BaseDeferredKey;
-use bsmr_error::BuckErrorContext;
+use bsmr_error::BsmrErrorContext;
 use bsmr_error::bsmr_error;
 use bsmr_error::internal_error;
 use display_container::display_pair;
@@ -287,7 +287,7 @@ impl<'v, V: ValueLike<'v>> TransitiveSetGen<V> {
         &self,
     ) -> bsmr_error::Result<ValueTypedComplex<'v, TransitiveSetDefinition<'v>>> {
         ValueTypedComplex::unpack_value_err(self.definition.to_value())
-            .buck_error_context("Must be a TransitiveSetDefinition")
+            .bsmr_error_context("Must be a TransitiveSetDefinition")
     }
 }
 
@@ -663,12 +663,12 @@ impl<'v> TransitiveSet<'v> {
 
         let projection_path_resolution_may_require_artifact_value =
             ProjectionBitSet::from_bools(&projection_path_resolution_may_require_artifact_value)
-                .with_buck_error_context(|| {
+                .with_bsmr_error_context(|| {
                     format!("in transitive set {:?}", definition.as_debug())
                 })?;
         let projection_is_eligible_for_dedupe =
             ProjectionBitSet::from_bools(&projection_is_eligible_for_dedupe_iter)
-                .with_buck_error_context(|| {
+                .with_bsmr_error_context(|| {
                     format!("in transitive set {:?}", definition.as_debug())
                 })?;
 

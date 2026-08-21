@@ -15,15 +15,15 @@
 # pyre-strict
 
 
-from bsmr.tests.e2e_util.api.buck import Buck
+from bsmr.tests.e2e_util.api.bsmr import Bsmr
 from bsmr.tests.e2e_util.asserts import expect_failure
-from bsmr.tests.e2e_util.buck_workspace import buck_test
+from bsmr.tests.e2e_util.bsmr_workspace import bsmr_test
 
 
-@buck_test(inplace=True)
-async def test_conflicting_fbcode_coverage_flags_fail(buck: Buck) -> None:
+@bsmr_test(inplace=True)
+async def test_conflicting_fbcode_coverage_flags_fail(bsmr: Bsmr) -> None:
     await expect_failure(
-        buck.test(
+        bsmr.test(
             *[
                 "--config",
                 "fbcode.coverage=true",
@@ -36,10 +36,10 @@ async def test_conflicting_fbcode_coverage_flags_fail(buck: Buck) -> None:
     )
 
 
-@buck_test(inplace=True)
-async def test_fbcode_coverage_selective_require_filters(buck: Buck) -> None:
+@bsmr_test(inplace=True)
+async def test_fbcode_coverage_selective_require_filters(bsmr: Bsmr) -> None:
     await expect_failure(
-        buck.test(
+        bsmr.test(
             *[
                 "--config",
                 "fbcode.coverage_selective=true",

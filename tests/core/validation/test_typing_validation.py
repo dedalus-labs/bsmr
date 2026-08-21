@@ -14,29 +14,29 @@
 
 # pyre-strict
 
-from bsmr.tests.e2e_util.api.buck import Buck
+from bsmr.tests.e2e_util.api.bsmr import Bsmr
 from bsmr.tests.e2e_util.asserts import expect_failure
-from bsmr.tests.e2e_util.buck_workspace import buck_test
+from bsmr.tests.e2e_util.bsmr_workspace import bsmr_test
 
 
-@buck_test()
-async def test_typing_validation_fails_on_type_errors(buck: Buck) -> None:
+@bsmr_test()
+async def test_typing_validation_fails_on_type_errors(bsmr: Bsmr) -> None:
     await expect_failure(
-        buck.build(":bad_types_validated"),
+        bsmr.build(":bad_types_validated"),
         stderr_regex="Validation for .+ failed.*is not assignable to parameter",
     )
 
 
-@buck_test()
-async def test_typing_validation_passes_on_clean_types(buck: Buck) -> None:
-    await buck.build(":good_types_validated")
+@bsmr_test()
+async def test_typing_validation_passes_on_clean_types(bsmr: Bsmr) -> None:
+    await bsmr.build(":good_types_validated")
 
 
-@buck_test()
-async def test_typing_validation_off_ignores_errors(buck: Buck) -> None:
-    await buck.build(":bad_types_no_validation")
+@bsmr_test()
+async def test_typing_validation_off_ignores_errors(bsmr: Bsmr) -> None:
+    await bsmr.build(":bad_types_no_validation")
 
 
-@buck_test()
-async def test_typing_disabled_skips_validation(buck: Buck) -> None:
-    await buck.build(":typing_disabled")
+@bsmr_test()
+async def test_typing_disabled_skips_validation(bsmr: Bsmr) -> None:
+    await bsmr.build(":typing_disabled")

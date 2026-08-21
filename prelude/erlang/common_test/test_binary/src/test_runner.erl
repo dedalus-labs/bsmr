@@ -16,7 +16,7 @@
 -compile(warn_missing_spec_all).
 
 -include_lib("common/include/tpx_records.hrl").
--include_lib("common/include/buck_ct_records.hrl").
+-include_lib("common/include/bsmr_ct_records.hrl").
 -include_lib("kernel/include/logger.hrl").
 
 -export([run_tests/6, mark_success/2, mark_failure/2]).

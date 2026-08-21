@@ -4,11 +4,11 @@
 # SPDX-License-Identifier: Apache-2.0
 # ===----------------------------------------------------------------------===
 
-load("@bsmr_build//rules:native_rules.bzl", "buck_sh_binary")
+load("@bsmr_build//rules:native_rules.bzl", "bsmr_sh_binary")
 
 oncall("build_infra")
 
-buck_sh_binary(
+bsmr_sh_binary(
     name = "prep_cgroup",
     main = "prep_cgroup.sh",
 )

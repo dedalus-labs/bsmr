@@ -6,5 +6,5 @@ documentation = "https://docs.rs/cmp_any"
 edition = "2024"
 license = { workspace = true }
 name = "cmp_any"
-repository = "https://github.com/facebook/buck2"
+repository = "https://github.com/dedalus-labs/bsmr"
 version = "0.8.1"

@@ -1,3 +1,9 @@
+# ===----------------------------------------------------------------------===
+# Upstream-Source: facebook/buck2@1560aca2002865cd73d7cafb22c705cfb640b2bc
+# Modifications Copyright (c) 2026 Dedalus Labs, Inc. and its contributors
+# SPDX-License-Identifier: Apache-2.0
+# ===----------------------------------------------------------------------===
+
 # Copyright (c) Meta Platforms, Inc. and affiliates.
 #
 # This source code is dual-licensed under either the MIT license found in the
@@ -87,7 +93,7 @@ def _swift_pcm_compilation_impl(ctx: AnalysisContext) -> [Promise, list[Provider
         pcm_deps_tset = get_compiled_pcm_deps_tset(ctx, compiled_pcm_deps_providers)
 
         # We don't need to compile non-modular or targets that do not export any headers,
-        # but for the sake of BUCK1 compatibility, we need to pass them up,
+        # but for the sake of BSMR1 compatibility, we need to pass them up,
         # in case they re-export some dependencies.
         if uncompiled_pcm_info.is_transient:
             return [

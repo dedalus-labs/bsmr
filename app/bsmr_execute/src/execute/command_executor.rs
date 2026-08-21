@@ -31,7 +31,7 @@ use bsmr_core::fs::project_rel_path::ProjectRelativePath;
 use bsmr_core::fs::project_rel_path::ProjectRelativePathBuf;
 use bsmr_data::NetworkAccess;
 use bsmr_directory::directory::fingerprinted_directory::FingerprintedDirectory;
-use bsmr_error::BuckErrorContext;
+use bsmr_error::BsmrErrorContext;
 use bsmr_error::bsmr_error;
 use dice_futures::cancellation::CancellationContext;
 use dupe::Dupe;
@@ -328,7 +328,7 @@ fn re_create_action(
             timeout: timeout
                 .map(|t| t.try_into())
                 .transpose()
-                .buck_error_context("Cannot convert timeout to GRPC")?,
+                .bsmr_error_context("Cannot convert timeout to GRPC")?,
             do_not_cache,
             ..Default::default()
         };
@@ -411,7 +411,7 @@ fn re_create_action(
         timeout: timeout
             .map(|t| t.try_into())
             .transpose()
-            .buck_error_context("Cannot convert timeout to GRPC")?,
+            .bsmr_error_context("Cannot convert timeout to GRPC")?,
         do_not_cache,
         #[cfg(fbcode_build)]
         allow_unsandboxed_action_cache_uploads,

@@ -17,12 +17,12 @@
 use async_trait::async_trait;
 use bsmr_cli_proto::GenericRequest;
 use bsmr_client_ctx::client_ctx::ClientCommandContext;
-use bsmr_client_ctx::common::BuckArgMatches;
+use bsmr_client_ctx::common::BsmrArgMatches;
 use bsmr_client_ctx::common::CommonBuildConfigurationOptions;
 use bsmr_client_ctx::common::CommonEventLogOptions;
 use bsmr_client_ctx::common::CommonStarlarkOptions;
 use bsmr_client_ctx::common::ui::CommonConsoleOptions;
-use bsmr_client_ctx::daemon::client::BuckdClientConnector;
+use bsmr_client_ctx::daemon::client::BsmrdClientConnector;
 use bsmr_client_ctx::daemon::client::StdoutPartialResultHandler;
 use bsmr_client_ctx::events_ctx::EventsCtx;
 use bsmr_client_ctx::exit_result::ExitResult;
@@ -87,11 +87,11 @@ pub struct StarlarkCommandCommonOptions {
 impl StreamingCommand for StarlarkSubcommand {
     const COMMAND_NAME: &'static str = "starlark";
 
-    /// Starlark subcommands are all implemented as a generic request to the buckd server that will deserialize the command object.
+    /// Starlark subcommands are all implemented as a generic request to the bsmrd server that will deserialize the command object.
     async fn exec_impl(
         self,
-        buckd: &mut BuckdClientConnector,
-        matches: BuckArgMatches<'_>,
+        bsmrd: &mut BsmrdClientConnector,
+        matches: BsmrArgMatches<'_>,
         ctx: &mut ClientCommandContext<'_>,
         events_ctx: &mut EventsCtx,
     ) -> ExitResult {
@@ -99,7 +99,7 @@ impl StreamingCommand for StarlarkSubcommand {
 
         let context = ctx.client_context(matches, &self)?;
 
-        buckd
+        bsmrd
             .with_flushing()
             .starlark(
                 GenericRequest {
@@ -134,7 +134,7 @@ impl StreamingCommand for StarlarkSubcommand {
 impl StarlarkCommand {
     pub fn exec(
         self,
-        matches: BuckArgMatches<'_>,
+        matches: BsmrArgMatches<'_>,
         ctx: ClientCommandContext<'_>,
         events_ctx: &mut EventsCtx,
     ) -> ExitResult {

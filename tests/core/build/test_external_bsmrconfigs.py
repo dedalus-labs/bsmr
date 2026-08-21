@@ -20,25 +20,25 @@ import tempfile
 from dataclasses import dataclass
 from typing import Optional
 
-from bsmr.tests.e2e_util.api.buck import Buck
-from bsmr.tests.e2e_util.buck_workspace import buck_test
+from bsmr.tests.e2e_util.api.bsmr import Bsmr
+from bsmr.tests.e2e_util.bsmr_workspace import bsmr_test
 from bsmr.tests.e2e_util.helper.golden import golden_replace_temp_path
 from bsmr.tests.e2e_util.helper.utils import filter_events
 
 
-@buck_test(
+@bsmr_test(
     extra_bsmr_config={
         "external_path_configs_section": {
             "external_path_configs_key": "external_path_configs_value",
         }
     },
 )
-async def test_external_bsmrconfigs(buck: Buck) -> None:
+async def test_external_bsmrconfigs(bsmr: Bsmr) -> None:
     with tempfile.NamedTemporaryFile("w", delete=False) as f:
         f.write("[test_section]\n")
         f.write("test_key = test_value\n")
         f.close()
-        await buck.build(
+        await bsmr.build(
             "@root//mode/my_mode",
             "//:test",
             "-c",
@@ -47,14 +47,14 @@ async def test_external_bsmrconfigs(buck: Buck) -> None:
             f.name,
         )
         # Make a spurious file change to trigger DICE updater state comparison
-        with open(buck.cwd / "src", "w") as src:
+        with open(bsmr.cwd / "src", "w") as src:
             src.write("test")
 
-        with open(buck.cwd / ".bsmr.local", "w") as localconfig:
+        with open(bsmr.cwd / ".bsmr.local", "w") as localconfig:
             localconfig.write("[local_section]\n")
             localconfig.write("local_key = local_value\n")
             localconfig.write("<file:included.bcfg>\n")
-        await buck.build(
+        await bsmr.build(
             "@root//mode/my_mode",
             "//:test",
             "-c",
@@ -64,7 +64,7 @@ async def test_external_bsmrconfigs(buck: Buck) -> None:
         )
 
     bsmrconfig_input_values = await filter_events(
-        buck, "Event", "data", "Instant", "data", "BsmrconfigInputValues", "components"
+        bsmr, "Event", "data", "Instant", "data", "BsmrconfigInputValues", "components"
     )
 
     assert len(bsmrconfig_input_values) == 1
@@ -76,7 +76,7 @@ async def test_external_bsmrconfigs(buck: Buck) -> None:
     external_path_configs = external_configs[0]["data"]["GlobalExternalConfigFile"]
     assert (
         external_path_configs["origin_path"]
-        == buck._env["BSMR_TEST_EXTRA_EXTERNAL_CONFIG"]
+        == bsmr._env["BSMR_TEST_EXTRA_EXTERNAL_CONFIG"]
     )
     assert len(external_path_configs["values"]) == 2
 
@@ -101,7 +101,7 @@ async def test_external_bsmrconfigs(buck: Buck) -> None:
     local_path_configs = external_configs[1]["data"]["GlobalExternalConfigFile"]
     assert len(local_path_configs["values"]) == 2
     assert local_path_configs["origin_path"] == ".bsmr.local"
-    # Note that buck parses configfiles ordered by section: https://fburl.com/rnzlt05n
+    # Note that bsmr parses configfiles ordered by section: https://fburl.com/rnzlt05n
     # That's why, we first have the values from the included file,
     included_config_value = local_path_configs["values"][0]
     assert (
@@ -118,7 +118,7 @@ async def test_external_bsmrconfigs(buck: Buck) -> None:
         and local_config_value["value"] == "local_value"
         and not local_config_value["is_cli"]
     )
-    # The rest matches the same order provided by the above buck command
+    # The rest matches the same order provided by the above bsmr command
     # i.e. modefile, command line config flag, followed by the config file
 
     # We only store the path of the modefile
@@ -152,7 +152,7 @@ async def test_external_bsmrconfigs(buck: Buck) -> None:
     )
 
 
-@buck_test(
+@bsmr_test(
     extra_bsmr_config={
         "external_path_configs_section": {
             "external_path_configs_key": "external_path_configs_value",
@@ -161,22 +161,22 @@ async def test_external_bsmrconfigs(buck: Buck) -> None:
     write_invocation_record=True,
 )
 async def test_previous_command_with_mismatched_config(
-    buck: Buck,
+    bsmr: Bsmr,
 ) -> None:
-    await buck.build(
+    await bsmr.build(
         "@root//mode/my_mode",
         "//:test",
         "-c",
         "my_section.my_key=my_value",
     )
     previous_invalidating_command = await filter_events(
-        buck, "Event", "data", "Instant", "data", "PreviousCommandWithMismatchedConfig"
+        bsmr, "Event", "data", "Instant", "data", "PreviousCommandWithMismatchedConfig"
     )
     # No previous command, no PreviousCommandWithMismatchedConfig fired
     assert len(previous_invalidating_command) == 0
 
     # Rerun without any changes
-    res = await buck.build(
+    res = await bsmr.build(
         "@root//mode/my_mode",
         "//:test",
         "-c",
@@ -184,13 +184,13 @@ async def test_previous_command_with_mismatched_config(
     )
     trace_id = json.loads(res.stdout)["trace_id"]
     previous_invalidating_command = await filter_events(
-        buck, "Event", "data", "Instant", "data", "PreviousCommandWithMismatchedConfig"
+        bsmr, "Event", "data", "Instant", "data", "PreviousCommandWithMismatchedConfig"
     )
     # No invalidation, no PreviousInvalidatingCommand fired
     assert len(previous_invalidating_command) == 0
 
     # Rerun with changes to commandline config
-    await buck.build(
+    await bsmr.build(
         "@root//mode/my_mode",
         "//:test",
         "-c",
@@ -198,13 +198,13 @@ async def test_previous_command_with_mismatched_config(
     )
 
     previous_invalidating_command = await filter_events(
-        buck, "Event", "data", "Instant", "data", "PreviousCommandWithMismatchedConfig"
+        bsmr, "Event", "data", "Instant", "data", "PreviousCommandWithMismatchedConfig"
     )
     assert len(previous_invalidating_command) == 1
     assert previous_invalidating_command[0]["trace_id"] == trace_id
     sanitized_argv = previous_invalidating_command[0]["sanitized_argv"]
     assert (
-        # sanitized_argv[0] contains the path to the buck executable which is different on every machine
+        # sanitized_argv[0] contains the path to the bsmr executable which is different on every machine
         sanitized_argv[1] == "build"
         and sanitized_argv[2] == "@root//mode/my_mode"
         and sanitized_argv[3] == "//:test"
@@ -212,9 +212,9 @@ async def test_previous_command_with_mismatched_config(
         and sanitized_argv[5] == "my_section.my_key=my_value"
     )
     # Make a change to .bsmr
-    with open(buck.cwd / ".bsmr", "a") as bsmrconfig:
+    with open(bsmr.cwd / ".bsmr", "a") as bsmrconfig:
         bsmrconfig.write("\n[test_section]\ntest_key = test_value\n")
-        await buck.build(
+        await bsmr.build(
             "@root//mode/my_mode",
             "//:test",
             "-c",
@@ -223,7 +223,7 @@ async def test_previous_command_with_mismatched_config(
 
     # Previous command didn't change any external configs but still has new_configs_used = 1 due to changes to project-relative configs.
     # We don't capture that by design at the moment.
-    res = await buck.build(
+    res = await bsmr.build(
         "@root//mode/my_mode",
         "//:test",
         "-c",
@@ -232,22 +232,22 @@ async def test_previous_command_with_mismatched_config(
     trace_id = json.loads(res.stdout)["trace_id"]
 
     previous_invalidating_command = await filter_events(
-        buck, "Event", "data", "Instant", "data", "PreviousCommandWithMismatchedConfig"
+        bsmr, "Event", "data", "Instant", "data", "PreviousCommandWithMismatchedConfig"
     )
     assert len(previous_invalidating_command) == 0
     assert res.invocation_record()["new_configs_used"] == 1
 
     # Make a change to .bsmr.local
-    with open(buck.cwd / ".bsmr.local", "w") as localconfig:
+    with open(bsmr.cwd / ".bsmr.local", "w") as localconfig:
         localconfig.write("\n[local_section]\nlocal_key = local_value\n")
-    await buck.build(
+    await bsmr.build(
         "@root//mode/my_mode",
         "//:test",
         "-c",
         "my_section.my_key=my_new_value",
     )
     previous_invalidating_command = await filter_events(
-        buck, "Event", "data", "Instant", "data", "PreviousCommandWithMismatchedConfig"
+        bsmr, "Event", "data", "Instant", "data", "PreviousCommandWithMismatchedConfig"
     )
     assert len(previous_invalidating_command) == 1
     assert previous_invalidating_command[0]["trace_id"] == trace_id
@@ -260,9 +260,9 @@ class ExternalConfigsLog:
     origin: Optional[str] = None
 
 
-@buck_test()
-async def test_log_external_configs(buck: Buck) -> None:
-    await buck.build(
+@bsmr_test()
+async def test_log_external_configs(bsmr: Bsmr) -> None:
+    await bsmr.build(
         "@root//mode/my_mode",
         "//:test",
         "-c",
@@ -271,7 +271,7 @@ async def test_log_external_configs(buck: Buck) -> None:
         "my_section.my_key=my_new_value",
     )
 
-    external_configs = (await buck.log("external-configs")).stdout.strip().splitlines()
+    external_configs = (await bsmr.log("external-configs")).stdout.strip().splitlines()
     external_configs = [e.split("\t") for e in external_configs]
 
     external_configs = [
@@ -286,7 +286,7 @@ async def test_log_external_configs(buck: Buck) -> None:
         # Our tests inject file_watcher to external configs in test setup stage
         ExternalConfigsLog(
             descriptor="bsmr.file_watcher = fs_hash_crawler",
-            origin=buck._env["BSMR_TEST_EXTRA_EXTERNAL_CONFIG"],
+            origin=bsmr._env["BSMR_TEST_EXTRA_EXTERNAL_CONFIG"],
         ),
         ExternalConfigsLog(
             descriptor="my_mode.bcfg",
@@ -312,9 +312,9 @@ async def test_log_external_configs(buck: Buck) -> None:
             )
 
 
-@buck_test()
-async def test_log_external_configs_json(buck: Buck) -> None:
-    await buck.build(
+@bsmr_test()
+async def test_log_external_configs_json(bsmr: Bsmr) -> None:
+    await bsmr.build(
         "@root//mode/my_mode",
         "//:test",
         "-c",
@@ -324,13 +324,13 @@ async def test_log_external_configs_json(buck: Buck) -> None:
     )
 
     external_configs = (
-        (await buck.log("external-configs", "--format", "json"))
+        (await bsmr.log("external-configs", "--format", "json"))
         .stdout.strip()
         .splitlines()
     )
     external_configs = [json.loads(e) for e in external_configs]
 
-    tmp_path = os.path.dirname(buck._env["BSMR_TEST_EXTRA_EXTERNAL_CONFIG"])
+    tmp_path = os.path.dirname(bsmr._env["BSMR_TEST_EXTRA_EXTERNAL_CONFIG"])
     golden_replace_temp_path(
         output=json.dumps(external_configs, sort_keys=True, indent=2),
         rel_path="events.golden.json",

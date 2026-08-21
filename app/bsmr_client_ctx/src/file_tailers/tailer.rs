@@ -22,7 +22,7 @@ use std::io::Seek;
 use std::io::SeekFrom;
 use std::time::Duration;
 
-use bsmr_error::BuckErrorContext;
+use bsmr_error::BsmrErrorContext;
 use bsmr_fs::paths::abs_norm_path::AbsNormPathBuf;
 use dupe::Dupe;
 use futures::FutureExt;
@@ -55,7 +55,7 @@ impl FileTailer {
         sender: UnboundedSender<FileTailerEvent>,
         stdout_or_stderr: StdoutOrStderr,
     ) -> bsmr_error::Result<FileTailer> {
-        let mut reader = BufReader::new(File::open(&file).with_buck_error_context(|| {
+        let mut reader = BufReader::new(File::open(&file).with_bsmr_error_context(|| {
             format!("Error setting up tailer for {}", file.display())
         })?);
 

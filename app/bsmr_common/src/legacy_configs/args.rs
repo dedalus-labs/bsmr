@@ -18,7 +18,7 @@ use bsmr_cli_proto::ConfigOverride;
 use bsmr_cli_proto::config_override::ConfigType;
 use bsmr_core::cells::cell_root_path::CellRootPathBuf;
 use bsmr_core::fs::project_rel_path::ProjectRelativePathBuf;
-use bsmr_error::BuckErrorContext;
+use bsmr_error::BsmrErrorContext;
 use bsmr_fs::paths::abs_path::AbsPath;
 use bsmr_fs::paths::abs_path::AbsPathBuf;
 use pagable::Pagable;
@@ -121,7 +121,7 @@ pub(crate) async fn resolve_config_args(
     let mut resolved_args = Vec::new();
 
     for u in args {
-        let config_type = ConfigType::try_from(u.config_type).with_buck_error_context(|| {
+        let config_type = ConfigType::try_from(u.config_type).with_bsmr_error_context(|| {
             format!(
                 "Unknown ConfigType enum value `{}` when trying to deserialize",
                 u.config_type

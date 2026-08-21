@@ -37,7 +37,7 @@ use crate::build::detailed_aggregated_metrics::events::DetailedAggregatedMetrics
 
 /// Utility to configure the dice globals.
 /// One place to not forget to initialize something in all places.
-pub async fn configure_dice_for_buck(
+pub async fn configure_dice_for_bsmr(
     io: Arc<dyn IoProvider>,
     digest_config: DigestConfig,
     root_config: Option<&LegacyBsmrConfig>,

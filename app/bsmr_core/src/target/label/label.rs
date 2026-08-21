@@ -25,7 +25,7 @@ use std::str;
 use allocative::Allocative;
 use bsmr_data::ToProtoMessage;
 use bsmr_fs::paths::forward_rel_path::ForwardRelativePath;
-use bsmr_hash::BuckHasher;
+use bsmr_hash::BsmrHasher;
 use dupe::Dupe;
 use lock_free_hashtable::atomic_value::AtomicValue;
 use pagable::Pagable;
@@ -127,7 +127,7 @@ impl TargetLabel {
     pub fn new(pkg: PackageLabel, name: &TargetNameRef) -> Self {
         // Hash should be stable because it is used to generate the configuration hash.
         let key = &(pkg.dupe(), &name);
-        let mut hasher = BuckHasher::default();
+        let mut hasher = BsmrHasher::default();
         key.hash(&mut hasher);
         let hash = hasher.finish() as u32;
 

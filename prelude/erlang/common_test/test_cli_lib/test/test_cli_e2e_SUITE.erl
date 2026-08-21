@@ -16,7 +16,7 @@
 % elp:ignore WA003 (better_assertions) - Open Source
 -include_lib("stdlib/include/assert.hrl").
 -include_lib("common_test/include/ct.hrl").
--include_lib("common/include/buck_ct_records.hrl").
+-include_lib("common/include/bsmr_ct_records.hrl").
 
 -export([suite/0, all/0, init_per_suite/1, end_per_suite/1]).
 

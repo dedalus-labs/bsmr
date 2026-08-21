@@ -18,7 +18,7 @@ use std::fmt::Write;
 
 use bsmr_core::category::CategoryRef;
 use bsmr_core::deferred::base_deferred_key::BaseDeferredKey;
-use bsmr_core::fs::buck_out_path::BuckOutScratchPath;
+use bsmr_core::fs::output_path::ScratchOutputPath;
 use bsmr_data::ToProtoMessage;
 use bsmr_execute::execute::target::CommandExecutionTarget;
 use derivative::Derivative;
@@ -50,8 +50,8 @@ impl<'a> ActionExecutionTarget<'a> {
         self.action.identifier()
     }
 
-    pub fn scratch_path(&self) -> BuckOutScratchPath {
-        BuckOutScratchPath::new(
+    pub fn scratch_path(&self) -> ScratchOutputPath {
+        ScratchOutputPath::new(
             self.action.owner().dupe(),
             self.action.category(),
             self.action.identifier(),

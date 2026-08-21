@@ -866,7 +866,7 @@ mod tests {
     use std::path::Path;
     use std::path::PathBuf;
 
-    use bsmr_hash::StdBuckHashMap;
+    use bsmr_hash::StdBsmrHashMap;
 
     use crate::paths::abs_norm_path::AbsNormPath;
     use crate::paths::abs_norm_path::AbsNormPathBuf;
@@ -887,7 +887,7 @@ mod tests {
 
     #[test]
     fn abs_paths_work_in_maps() -> bsmr_error::Result<()> {
-        let mut map = StdBuckHashMap::default();
+        let mut map = StdBsmrHashMap::default();
         let foo_string = make_absolute("/foo");
         let bar_string = make_absolute("/bar");
 

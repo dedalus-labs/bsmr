@@ -15,15 +15,15 @@
 # pyre-strict
 
 
-from bsmr.tests.e2e_util.api.buck import Buck
+from bsmr.tests.e2e_util.api.bsmr import Bsmr
 from bsmr.tests.e2e_util.asserts import expect_failure
-from bsmr.tests.e2e_util.buck_workspace import buck_test
+from bsmr.tests.e2e_util.bsmr_workspace import bsmr_test
 from bsmr.tests.e2e_util.helper.golden import golden
 
 
-@buck_test()
-async def test_default_not_a_label(buck: Buck) -> None:
-    res = await expect_failure(buck.uquery("root//:", "--console=none", "-v0"))
+@bsmr_test()
+async def test_default_not_a_label(bsmr: Bsmr) -> None:
+    res = await expect_failure(bsmr.uquery("root//:", "--console=none", "-v0"))
     golden(
         output=res.stderr,
         rel_path="golden/default_not_a_label.golden.stderr",

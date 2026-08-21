@@ -14,22 +14,22 @@
 
 # pyre-strict
 
-from bsmr.tests.e2e_util.api.buck import Buck
+from bsmr.tests.e2e_util.api.bsmr import Bsmr
 from bsmr.tests.e2e_util.asserts import expect_failure
-from bsmr.tests.e2e_util.buck_workspace import buck_test
+from bsmr.tests.e2e_util.bsmr_workspace import bsmr_test
 
 
-@buck_test()
-async def test_unbound_artifact(buck: Buck) -> None:
+@bsmr_test()
+async def test_unbound_artifact(bsmr: Bsmr) -> None:
     await expect_failure(
-        buck.build("root//:action_with_unbound_artifact"),
+        bsmr.build("root//:action_with_unbound_artifact"),
         stderr_regex="error: Artifact must be bound by now",
     )
 
 
-@buck_test()
-async def test_unbound_artifact_inside_tset(buck: Buck) -> None:
+@bsmr_test()
+async def test_unbound_artifact_inside_tset(bsmr: Bsmr) -> None:
     await expect_failure(
-        buck.build("root//:action_with_unbound_artifact"),
+        bsmr.build("root//:action_with_unbound_artifact"),
         stderr_regex="error: Artifact must be bound by now",
     )

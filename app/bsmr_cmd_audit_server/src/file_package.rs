@@ -25,7 +25,7 @@ use bsmr_common::package_listing::dice::DicePackageListingResolver;
 use bsmr_common::package_listing::resolver::PackageListingResolver;
 use bsmr_core::fs::project::ProjectRoot;
 use bsmr_fs::working_dir::AbsWorkingDir;
-use bsmr_hash::BuckIndexMap;
+use bsmr_hash::BsmrIndexMap;
 use bsmr_server_ctx::ctx::ServerCommandContextTrait;
 use bsmr_server_ctx::ctx::ServerCommandDiceContext;
 use bsmr_server_ctx::partial_result_dispatcher::PartialResultDispatcher;
@@ -79,10 +79,10 @@ async fn audit_build_package(
     paths: &[String],
     cwd_abs: &AbsWorkingDir,
     project_root: &ProjectRoot,
-) -> bsmr_error::Result<BuckIndexMap<String, Package>> {
+) -> bsmr_error::Result<BsmrIndexMap<String, Package>> {
     let cells = ctx.get_cell_resolver().await?;
 
-    let mut mappings = BuckIndexMap::default();
+    let mut mappings = BsmrIndexMap::default();
 
     for path_str in paths {
         // Resolve path to absolute (handles both relative and absolute inputs),

@@ -22,7 +22,7 @@ use hyper_http_proxy::Proxy;
 
 #[cfg(fbcode_build)]
 mod imp {
-    use bsmr_error::BuckErrorContext;
+    use bsmr_error::BsmrErrorContext;
     use http::Uri;
     use hyper_http_proxy::Intercept;
 
@@ -48,7 +48,7 @@ mod imp {
             tracing::debug!("Using x2pagent http proxy client on port: {}", port);
             let uri: Uri = format!("http://localhost:{port}")
                 .try_into()
-                .buck_error_context("Error converting x2pagent proxy address into URI")?;
+                .bsmr_error_context("Error converting x2pagent proxy address into URI")?;
             Ok(Some(Proxy::new(Intercept::All, uri)))
         } else {
             Ok(None)

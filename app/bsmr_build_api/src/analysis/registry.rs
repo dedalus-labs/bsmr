@@ -30,12 +30,12 @@ use bsmr_artifact::artifact::build_artifact::BuildArtifact;
 use bsmr_core::deferred::base_deferred_key::BaseDeferredKey;
 use bsmr_core::deferred::key::DeferredHolderKey;
 use bsmr_core::execution_types::execution::ExecutionPlatformResolution;
-use bsmr_core::fs::buck_out_path::BuckOutPathKind;
+use bsmr_core::fs::output_path::OutputPathKind;
 use bsmr_error::internal_error;
 use bsmr_execute::execute::request::OutputType;
 use bsmr_fs::paths::forward_rel_path::ForwardRelativePath;
 use bsmr_fs::paths::forward_rel_path::ForwardRelativePathBuf;
-use bsmr_hash::BuckIndexSet;
+use bsmr_hash::BsmrIndexSet;
 use bsmr_interpreter::testing::BsmrTestHeapName;
 use bsmr_util::thin_box::ThinBoxSlice;
 use derivative::Derivative;
@@ -173,7 +173,7 @@ impl<'v> AnalysisRegistry<'v> {
         filename: &str,
         output_type: OutputType,
         declaration_location: Option<FileSpan>,
-        path_resolution_method: BuckOutPathKind,
+        path_resolution_method: OutputPathKind,
         heap: Heap<'v>,
     ) -> bsmr_error::Result<DeclaredArtifact<'v>> {
         // We don't allow declaring `` as an output, although technically there's nothing preventing
@@ -226,16 +226,16 @@ impl<'v> AnalysisRegistry<'v> {
                     output_type,
                     declaration_location.dupe(),
                     match has_content_based_path {
-                        Some(true) => BuckOutPathKind::ContentHash,
-                        Some(false) => BuckOutPathKind::Configuration,
+                        Some(true) => OutputPathKind::ContentHash,
+                        Some(false) => OutputPathKind::Configuration,
                         None => {
                             if *crate::interpreter::rule_defs::context::ACTION_HAS_CONTENT_BASED_PATH_DEFAULT
                                 .get()
                                 .unwrap_or(&false)
                             {
-                                BuckOutPathKind::ContentHash
+                                OutputPathKind::ContentHash
                             } else {
-                                BuckOutPathKind::default()
+                                OutputPathKind::default()
                             }
                         }
                     },
@@ -281,7 +281,7 @@ impl<'v> AnalysisRegistry<'v> {
 
     pub fn register_action<A: UnregisteredAction + 'static>(
         &mut self,
-        outputs: BuckIndexSet<OutputArtifact>,
+        outputs: BsmrIndexSet<OutputArtifact>,
         action: A,
         associated_value: Option<Value<'v>>,
         error_handler: Option<StarlarkCallable<'v>>,

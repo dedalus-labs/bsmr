@@ -20,8 +20,8 @@ use std::io;
 fn main() -> io::Result<()> {
     let proto_files = &["forkserver.proto"];
 
-    let buck_proto_srcs = env::var("BUCK_PROTO_SRCS");
-    let includes = if let Ok(path) = &buck_proto_srcs {
+    let bsmr_proto_srcs = env::var("BSMR_PROTO_SRCS");
+    let includes = if let Ok(path) = &bsmr_proto_srcs {
         vec![path.as_str()]
     } else {
         vec![".", "../bsmr_data", "../bsmr_host_sharing_proto"]
@@ -30,17 +30,17 @@ fn main() -> io::Result<()> {
     let builder = bsmr_protoc_dev::configure();
     unsafe { builder.setup_protoc() }
         .type_attribute(
-            "buck.forkserver.RequestEvent.data",
+            "bsmr.forkserver.RequestEvent.data",
             "#[derive(::derive_more::From, ::gazebo::variants::VariantName, ::gazebo::variants::UnpackVariants)]",
         )
         .type_attribute(
-            "buck.forkserver.EnvDirective.data",
+            "bsmr.forkserver.EnvDirective.data",
             "#[derive(::derive_more::From, ::gazebo::variants::VariantName, ::gazebo::variants::UnpackVariants)]",
         )
         .type_attribute(
-            "buck.forkserver.RequestEvent.data",
+            "bsmr.forkserver.RequestEvent.data",
             "#[allow(clippy::large_enum_variant)]",
         )
-        .extern_path(".buck.data", "::bsmr_data")
+        .extern_path(".bsmr.data", "::bsmr_data")
         .compile(proto_files, &includes)
 }

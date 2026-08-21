@@ -15,19 +15,19 @@
 # pyre-strict
 
 
-from bsmr.tests.e2e_util.api.buck import Buck
-from bsmr.tests.e2e_util.buck_workspace import buck_test
+from bsmr.tests.e2e_util.api.bsmr import Bsmr
+from bsmr.tests.e2e_util.bsmr_workspace import bsmr_test
 
 
-@buck_test()
-async def test_read_root_config(buck: Buck) -> None:
-    output = await buck.build("//:")
+@bsmr_test()
+async def test_read_root_config(bsmr: Bsmr) -> None:
+    output = await bsmr.build("//:")
     assert "<<root=regular>>" in output.stderr
     assert "<<root_ignore_default=regular>>" in output.stderr
     assert "<<root_use_default=predict>>" in output.stderr
     assert "<<local=regular>>" in output.stderr
 
-    output = await buck.build("other//:")
+    output = await bsmr.build("other//:")
     assert "{{root=regular}}" in output.stderr
     assert "{{root_ignore_default=regular}}" in output.stderr
     assert "{{root_use_default=quantity}}" in output.stderr

@@ -22,8 +22,8 @@ import sys
 import typing
 from pathlib import Path
 
-from bsmr.tests.e2e_util.api.buck import Buck
-from bsmr.tests.e2e_util.buck_workspace import buck_test
+from bsmr.tests.e2e_util.api.bsmr import Bsmr
+from bsmr.tests.e2e_util.bsmr_workspace import bsmr_test
 
 
 def _repo(cwd: Path) -> Path:
@@ -61,62 +61,62 @@ def _init_repo(cwd: Path) -> None:
     _set_revision(rev, cwd=cwd)
 
 
-@buck_test()
-async def test_expand_external(buck: Buck) -> None:
-    _init_repo(cwd=buck.cwd)
-    await buck.expand_external_cell("libfoo")
-    assert (buck.cwd / "libfoo" / "src.txt").exists()
-    assert "buildfile" in (buck.cwd / "libfoo" / ".bsmr").read_text()
+@bsmr_test()
+async def test_expand_external(bsmr: Bsmr) -> None:
+    _init_repo(cwd=bsmr.cwd)
+    await bsmr.expand_external_cell("libfoo")
+    assert (bsmr.cwd / "libfoo" / "src.txt").exists()
+    assert "buildfile" in (bsmr.cwd / "libfoo" / ".bsmr").read_text()
 
 
-@buck_test()
-async def test_non_master_ancestor(buck: Buck) -> None:
-    _init_repo(cwd=buck.cwd)
+@bsmr_test()
+async def test_non_master_ancestor(bsmr: Bsmr) -> None:
+    _init_repo(cwd=bsmr.cwd)
 
-    _git(["switch", "-c", "other"], cwd=buck.cwd)
-    (_repo(cwd=buck.cwd) / "src.txt").write_text("change")
-    rev = _git_commit(cwd=buck.cwd)
-    _set_revision(rev, cwd=buck.cwd)
+    _git(["switch", "-c", "other"], cwd=bsmr.cwd)
+    (_repo(cwd=bsmr.cwd) / "src.txt").write_text("change")
+    rev = _git_commit(cwd=bsmr.cwd)
+    _set_revision(rev, cwd=bsmr.cwd)
 
-    _git(["switch", "master"], cwd=buck.cwd)
-    (_repo(cwd=buck.cwd) / "src.txt").write_text("change2")
-    _git_commit(cwd=buck.cwd)
+    _git(["switch", "master"], cwd=bsmr.cwd)
+    (_repo(cwd=bsmr.cwd) / "src.txt").write_text("change2")
+    _git_commit(cwd=bsmr.cwd)
 
-    res = await buck.build_without_report("libfoo//:t", "--show-full-simple-output")
+    res = await bsmr.build_without_report("libfoo//:t", "--show-full-simple-output")
     assert Path(res.stdout.strip()).read_text().strip() == "change"
 
 
-@buck_test()
-async def test_changing_commit(buck: Buck) -> None:
-    _init_repo(cwd=buck.cwd)
+@bsmr_test()
+async def test_changing_commit(bsmr: Bsmr) -> None:
+    _init_repo(cwd=bsmr.cwd)
 
-    res = await buck.build_without_report("libfoo//:t", "--show-full-simple-output")
+    res = await bsmr.build_without_report("libfoo//:t", "--show-full-simple-output")
     assert Path(res.stdout.strip()).read_text().strip() == ""
 
-    (_repo(cwd=buck.cwd) / "src.txt").write_text("change")
-    rev = _git_commit(cwd=buck.cwd)
-    _set_revision(rev, cwd=buck.cwd)
+    (_repo(cwd=bsmr.cwd) / "src.txt").write_text("change")
+    rev = _git_commit(cwd=bsmr.cwd)
+    _set_revision(rev, cwd=bsmr.cwd)
 
-    res = await buck.build_without_report("libfoo//:t", "--show-full-simple-output")
+    res = await bsmr.build_without_report("libfoo//:t", "--show-full-simple-output")
     assert Path(res.stdout.strip()).read_text().strip() == "change"
 
 
-@buck_test()
-async def test_full_clean_cycle(buck: Buck) -> None:
-    _init_repo(cwd=buck.cwd)
+@bsmr_test()
+async def test_full_clean_cycle(bsmr: Bsmr) -> None:
+    _init_repo(cwd=bsmr.cwd)
 
-    res = await buck.build_without_report(
+    res = await bsmr.build_without_report(
         "libfoo//:t[src]", "--show-full-simple-output"
     )
     src_path = Path(res.stdout.strip())
 
-    await buck.clean()
+    await bsmr.clean()
 
     assert not Path(src_path).exists()
 
 
-@buck_test()
-async def test_noop_commit_change_causes_rebuild(buck: Buck) -> None:
+@bsmr_test()
+async def test_noop_commit_change_causes_rebuild(bsmr: Bsmr) -> None:
     """Changing the commit hash of a git external cell causes a full rebuild
     even when the file contents are identical. This test uses a non-deterministic
     action to detect whether a rebuild occurred: if the outputs differ, the
@@ -124,19 +124,19 @@ async def test_noop_commit_change_causes_rebuild(buck: Buck) -> None:
 
     When external cell caching is fixed to be content-based, this assertion
     should flip to `output1 == output2`."""
-    _init_repo(cwd=buck.cwd)
+    _init_repo(cwd=bsmr.cwd)
 
-    res1 = await buck.build_without_report(
+    res1 = await bsmr.build_without_report(
         "libfoo//:nondeterministic", "--show-full-simple-output", "--local-only"
     )
     output1 = Path(res1.stdout.strip()).read_text().strip()
 
     # New commit that adds an unrelated file (no build-relevant changes)
-    (_repo(cwd=buck.cwd) / "README.md").write_text("unrelated file")
-    rev = _git_commit(cwd=buck.cwd)
-    _set_revision(rev, cwd=buck.cwd)
+    (_repo(cwd=bsmr.cwd) / "README.md").write_text("unrelated file")
+    rev = _git_commit(cwd=bsmr.cwd)
+    _set_revision(rev, cwd=bsmr.cwd)
 
-    res2 = await buck.build_without_report(
+    res2 = await bsmr.build_without_report(
         "libfoo//:nondeterministic", "--show-full-simple-output", "--local-only"
     )
     output2 = Path(res2.stdout.strip()).read_text().strip()
@@ -145,12 +145,12 @@ async def test_noop_commit_change_causes_rebuild(buck: Buck) -> None:
     assert output1 != output2
 
 
-@buck_test()
-async def test_no_refetch_on_restart(buck: Buck) -> None:
-    _init_repo(cwd=buck.cwd)
+@bsmr_test()
+async def test_no_refetch_on_restart(bsmr: Bsmr) -> None:
+    _init_repo(cwd=bsmr.cwd)
 
-    await buck.build("libfoo//:t")
-    await buck.kill()
+    await bsmr.build("libfoo//:t")
+    await bsmr.kill()
 
     def _remove_readonly(
         func: typing.Callable[..., object], path: str, _exc: object
@@ -159,7 +159,7 @@ async def test_no_refetch_on_restart(buck: Buck) -> None:
         func(path)
 
     shutil.rmtree(
-        _repo(cwd=buck.cwd),
+        _repo(cwd=bsmr.cwd),
         onexc=_remove_readonly if sys.platform == "win32" else None,
     )
-    await buck.build("libfoo//:t")
+    await bsmr.build("libfoo//:t")

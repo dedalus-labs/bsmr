@@ -20,7 +20,7 @@ use std::time::Duration;
 use std::time::Instant;
 
 use bsmr_common::client_utils::retrying;
-use bsmr_error::BuckErrorContext;
+use bsmr_error::BsmrErrorContext;
 use bsmr_error::internal_error;
 
 /// Utility to time out properly with context during bsmr client startup.
@@ -144,6 +144,6 @@ impl StartupDeadline {
     {
         retrying(initial_delay, max_delay, self.rem_duration(op)?, f)
             .await
-            .with_buck_error_context(|| op.to_owned())
+            .with_bsmr_error_context(|| op.to_owned())
     }
 }

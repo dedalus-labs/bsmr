@@ -56,7 +56,7 @@ pub struct CommonAttributeArgs {
          num_args = 1,
          // If the output_all_attributes flag (-A) is set, use "" to select all
          default_value_if("output_all_attributes", "true", Some("")),
-         default_value_if("output_basic_attributes", "true", Some("^(buck\\.package|buck\\.type|[^\\.]*)$")),
+         default_value_if("output_basic_attributes", "true", Some("^(bsmr\\.package|bsmr\\.type|[^\\.]*)$")),
      )]
     output_attribute: Vec<String>,
 

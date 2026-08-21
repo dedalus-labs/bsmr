@@ -25,7 +25,7 @@ use bsmr_cli_proto::build_request::ResponseOptions;
 use bsmr_cli_proto::build_request::build_providers;
 use bsmr_client_ctx::client_ctx::ClientCommandContext;
 use bsmr_client_ctx::command_outcome::CommandOutcome;
-use bsmr_client_ctx::common::BuckArgMatches;
+use bsmr_client_ctx::common::BsmrArgMatches;
 use bsmr_client_ctx::common::CommonBuildConfigurationOptions;
 use bsmr_client_ctx::common::CommonCommandOptions;
 use bsmr_client_ctx::common::CommonEventLogOptions;
@@ -36,7 +36,7 @@ use bsmr_client_ctx::common::build::CommonOutputOptions;
 use bsmr_client_ctx::common::target_cfg::TargetCfgWithUniverseOptions;
 use bsmr_client_ctx::common::timeout::CommonTimeoutOptions;
 use bsmr_client_ctx::common::ui::CommonConsoleOptions;
-use bsmr_client_ctx::daemon::client::BuckdClientConnector;
+use bsmr_client_ctx::daemon::client::BsmrdClientConnector;
 use bsmr_client_ctx::daemon::client::NoPartialResultHandler;
 use bsmr_client_ctx::events_ctx::EventsCtx;
 use bsmr_client_ctx::exit_result::ClientIoError;
@@ -45,7 +45,7 @@ use bsmr_client_ctx::final_console::FinalConsole;
 use bsmr_client_ctx::output_destination_arg::OutputDestinationArg;
 use bsmr_client_ctx::streaming::StreamingCommand;
 use bsmr_core::bsmr_env;
-use bsmr_error::BuckErrorContext;
+use bsmr_error::BsmrErrorContext;
 use bsmr_error::bsmr_error;
 use bsmr_wrapper_common::invocation_id::TraceId;
 use dupe::Dupe;
@@ -153,10 +153,6 @@ pub struct BuildCommand {
     #[clap(name = "TARGET_PATTERNS", help = "Patterns to build", value_hint = clap::ValueHint::Other)]
     patterns: Vec<String>,
 
-    /// This option does nothing. It is here to keep compatibility with Buck1 and ci
-    #[clap(long = "deep", hide = true)]
-    _deep: bool,
-
     #[clap(flatten)]
     build_opts: CommonBuildOptions,
 
@@ -251,14 +247,14 @@ impl StreamingCommand for BuildCommand {
 
     async fn exec_impl(
         self,
-        buckd: &mut BuckdClientConnector,
-        matches: BuckArgMatches<'_>,
+        bsmrd: &mut BsmrdClientConnector,
+        matches: BsmrArgMatches<'_>,
         ctx: &mut ClientCommandContext<'_>,
         events_ctx: &mut EventsCtx,
     ) -> ExitResult {
         let context = ctx.client_context(matches, &self)?;
 
-        let result = buckd
+        let result = bsmrd
             .with_flushing()
             .build(
                 BuildRequest {
@@ -294,7 +290,7 @@ impl StreamingCommand for BuildCommand {
         };
 
         let console = self.common_opts.console_opts.final_console();
-        print_buck_ui_and_rating(&console, ctx, events_ctx.used_superconsole)?;
+        print_bsmr_ui_and_rating(&console, ctx, events_ctx.used_superconsole)?;
 
         if success {
             if self.patterns.is_empty() {
@@ -345,7 +341,7 @@ impl StreamingCommand for BuildCommand {
                     stdout,
                 )
                 .await
-                .buck_error_context("Error requesting specific output path for --out")?;
+                .bsmr_error_context("Error requesting specific output path for --out")?;
             }
 
             ExitResult::success()
@@ -387,7 +383,7 @@ pub(crate) fn print_build_succeeded(
 
 /// Prints two things at command end:
 ///
-/// 1. **Buck UI URL re-print** — emitted only when a superconsole was
+/// 1. **Bsmr UI URL re-print** — emitted only when a superconsole was
 ///    actually constructed for the command (`used_superconsole`).
 ///    Superconsole's live area showed the URL during the command but
 ///    clears on exit, so without the re-print the URL would be gone from
@@ -413,7 +409,7 @@ pub(crate) fn print_build_succeeded(
 /// Safe to call from any streaming command (build, run, test, install) so
 /// the sentiment survey reaches all of them — callers in other commands
 /// should not invoke this helper.
-pub(crate) fn print_buck_ui_and_rating(
+pub(crate) fn print_bsmr_ui_and_rating(
     console: &FinalConsole,
     ctx: &ClientCommandContext<'_>,
     used_superconsole: bool,
@@ -422,7 +418,7 @@ pub(crate) fn print_buck_ui_and_rating(
 
     if used_superconsole {
         if cfg!(fbcode_build) {
-            // ?rbs (rate build speed) triggers a modal in Buck UI prompting
+            // ?rbs (rate build speed) triggers a modal in Bsmr UI prompting
             // the user to rate their build speed experience. Only emitted in
             // the non-hyperlink branch — hyperlink terminals get the inline
             // hyperlink prompt below.
@@ -432,7 +428,7 @@ pub(crate) fn print_buck_ui_and_rating(
                 rate_build_speed_suffix = "?rbs";
             }
             console.print_stderr(&format!(
-                "Buck UI: https://www.internalfb.com/bsmr/{}{}",
+                "Bsmr UI: https://www.internalfb.com/bsmr/{}{}",
                 ctx.trace_id, rate_build_speed_suffix
             ))?;
         } else {
@@ -475,7 +471,7 @@ fn print_build_rating(
         return Ok(());
     }
 
-    // Gated by the cpe_buck_sentiment GK via [experiments] sentiment bsmrconfig
+    // Gated by the cpe_bsmr_sentiment GK via [experiments] sentiment bsmrconfig
     if !ctx.immediate_config.show_sentiment() {
         return Ok(());
     }

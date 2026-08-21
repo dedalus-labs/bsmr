@@ -15,26 +15,26 @@
 # pyre-strict
 
 
-from bsmr.tests.e2e_util.api.buck import Buck
+from bsmr.tests.e2e_util.api.bsmr import Bsmr
 from bsmr.tests.e2e_util.asserts import expect_failure
-from bsmr.tests.e2e_util.buck_workspace import buck_test, env
+from bsmr.tests.e2e_util.bsmr_workspace import bsmr_test, env
 
 
-@buck_test(
+@bsmr_test(
     setup_eden=False,
     extra_bsmr_config={"bsmr": {"file_watcher": "edenfs"}},
 )
 @env("BSMR_HARD_ERROR", "false")
-async def test_watchman_fallback(buck: Buck) -> None:
-    res = await buck.targets("root//:")
+async def test_watchman_fallback(bsmr: Bsmr) -> None:
+    res = await bsmr.targets("root//:")
     # fallback to watchman
     assert "Watchman fresh instance" in res.stderr
 
 
-@buck_test(
+@bsmr_test(
     setup_eden=False,
     extra_bsmr_config={"bsmr": {"file_watcher": "edenfs"}},
 )
-async def test_eden_fail(buck: Buck) -> None:
-    res = await expect_failure(buck.targets("root//:"))
+async def test_eden_fail(bsmr: Bsmr) -> None:
+    res = await expect_failure(bsmr.targets("root//:"))
     assert "Couldn't initiate connection to Eden" in res.stderr

@@ -6,7 +6,7 @@ name=TARGETS.fixture
 
 [repositories]
 root = .
-buck = buck
+bsmr = bsmr
 nano_prelude = nano_prelude
 config = config
 

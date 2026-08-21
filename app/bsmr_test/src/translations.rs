@@ -14,13 +14,13 @@
  * above-listed licenses.
  */
 
-//! Translation between buck core data and the test spec data types
+//! Translation between bsmr core data and the test spec data types
 
 use bsmr_common::file_ops::metadata::FileDigest;
 use bsmr_core::cells::CellResolver;
 use bsmr_core::provider::label::ConfiguredProvidersLabel;
 use bsmr_data::ToProtoMessage;
-use bsmr_error::BuckErrorContext;
+use bsmr_error::BsmrErrorContext;
 use bsmr_execute::artifact_value::ArtifactValue;
 use bsmr_execute::directory::ActionDirectoryEntry;
 use bsmr_execute::directory::ActionDirectoryMember;
@@ -48,7 +48,7 @@ pub(crate) fn build_configured_target_handle(
     let configuration = target.cfg().to_string();
     let package_project_relative_path = cell_resolver
         .resolve_path(label.pkg().as_cell_path())
-        .buck_error_context("Failed to resolve the project relative path of package")?;
+        .bsmr_error_context("Failed to resolve the project relative path of package")?;
 
     Ok(ConfiguredTarget {
         handle: session.register(target),
@@ -81,7 +81,7 @@ pub(crate) fn convert_test_result(
 
     Ok(bsmr_data::TestResult {
         name,
-        status: status.try_into().buck_error_context("Invalid `status`")?,
+        status: status.try_into().bsmr_error_context("Invalid `status`")?,
         msg: msg.map(|msg| bsmr_data::test_result::OptionalMsg { msg }),
         duration: duration.and_then(|d| d.try_into().ok()),
         details,

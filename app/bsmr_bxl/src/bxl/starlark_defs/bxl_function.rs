@@ -21,7 +21,7 @@ use std::sync::Arc;
 use allocative::Allocative;
 use bsmr_build_api::bxl::types::BxlFunctionLabel;
 use bsmr_core::bxl::BxlFilePath;
-use bsmr_error::BuckErrorContext;
+use bsmr_error::BsmrErrorContext;
 use bsmr_error::bsmr_error;
 use bsmr_interpreter::build_context::starlark_path_from_build_context;
 use cli_args::CliArgs;
@@ -251,7 +251,7 @@ impl FrozenBxlFunction {
                 snake_case_args,
                 cli.parse_clap(ArgAccessor::Clap { clap: &clap, arg }, ctx)
                     .await
-                    .with_buck_error_context(|| {
+                    .with_bsmr_error_context(|| {
                         format!("Error parsing cli flag `{arg}` for bxl function")
                     })?,
             );

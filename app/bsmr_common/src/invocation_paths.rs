@@ -20,7 +20,7 @@
 use std::borrow::Cow;
 
 use allocative::Allocative;
-use bsmr_core::fs::buck_out_path::BSMR_OUTPUT_ROOT;
+use bsmr_core::fs::output_path::BSMR_OUTPUT_ROOT;
 use bsmr_core::fs::project::ProjectRoot;
 use bsmr_core::fs::project_rel_path::ProjectRelativePath;
 use bsmr_core::fs::project_rel_path::ProjectRelativePathBuf;
@@ -41,7 +41,7 @@ pub struct InvocationPaths {
     /// the same project root.
     ///
     /// The daemon metadata directory is post-fixed with the isolation prefix
-    /// (i.e `$HOME/.buck/buckd/<projectroot>/<isolationdir>`).
+    /// (i.e `$HOME/.bsmr/bsmrd/<projectroot>/<isolationdir>`).
     /// The output path is `<projectroot>/bsmr-out/<isolationdir>/`.
     ///
     /// Any on-disk state from the daemon (including build outputs and similar) should only
@@ -50,11 +50,11 @@ pub struct InvocationPaths {
     /// This form of isolation is currently supported primarily for two uses:
     ///
     /// 1. testing - it allows us to run isolated daemons on a project for tests. This is
-    ///    particularly useful to allow a test in a project to recursively invoke buck, but also
+    ///    particularly useful to allow a test in a project to recursively invoke bsmr, but also
     ///    useful to write tests against a project's macros and rules and using a project's real
     ///    configuration.
     ///
-    /// 2. generally to support recursive buck invocations. while our ideal may be that these
+    /// 2. generally to support recursive bsmr invocations. while our ideal may be that these
     ///    eventually are not allowed, the most pragmatic approach currently is to support them
     ///    but push them into isolated, temporary daemons.
     pub isolation: FileNameBuf,
@@ -83,7 +83,7 @@ impl InvocationPaths {
 
         let path = self
             .roots
-            .common_buckd_dir()?
+            .common_bsmrd_dir()?
             .join(root_relative.as_ref())
             .join(&self.isolation);
 
@@ -95,51 +95,51 @@ impl InvocationPaths {
     }
 
     pub fn log_dir(&self) -> AbsNormPathBuf {
-        self.buck_out_path()
+        self.output_path()
             .join(ForwardRelativePath::unchecked_new("log"))
     }
 
     pub fn tmp_dir(&self) -> AbsNormPathBuf {
-        self.buck_out_path()
+        self.output_path()
             .join(ForwardRelativePath::unchecked_new("tmp"))
     }
 
     pub fn re_logs_dir(&self) -> AbsNormPathBuf {
-        self.buck_out_path()
+        self.output_path()
             .join(ForwardRelativePath::unchecked_new("re_logs"))
     }
 
     pub fn build_count_dir(&self) -> AbsNormPathBuf {
-        self.buck_out_path()
+        self.output_path()
             .join(ForwardRelativePath::unchecked_new("build_count"))
     }
 
     pub fn dice_dump_dir(&self) -> AbsNormPathBuf {
-        self.buck_out_path()
+        self.output_path()
             .join(ForwardRelativePath::unchecked_new("dice_dump"))
     }
 
-    pub fn buck_out_dir_prefix() -> &'static ProjectRelativePath {
+    pub fn output_dir_prefix() -> &'static ProjectRelativePath {
         ProjectRelativePath::unchecked_new(BSMR_OUTPUT_ROOT)
     }
 
-    pub fn buck_out_dir(&self) -> ProjectRelativePathBuf {
-        Self::buck_out_dir_prefix().join(&self.isolation)
+    pub fn output_dir(&self) -> ProjectRelativePathBuf {
+        Self::output_dir_prefix().join(&self.isolation)
     }
 
-    pub fn buck_out_path(&self) -> AbsNormPathBuf {
-        self.roots.project_root.root().join(self.buck_out_dir())
+    pub fn output_path(&self) -> AbsNormPathBuf {
+        self.roots.project_root.root().join(self.output_dir())
     }
 
     /// Directory containing on-disk cache
     pub fn cache_dir(&self) -> ProjectRelativePathBuf {
-        self.buck_out_dir()
+        self.output_dir()
             .join(ForwardRelativePath::unchecked_new("cache"))
     }
 
     /// Temporary directory for paranoid downloads.
     pub fn paranoid_cache_dir(&self) -> ProjectRelativePathBuf {
-        self.buck_out_dir()
+        self.output_dir()
             .join(ForwardRelativePath::unchecked_new("paranoid"))
     }
 
@@ -163,7 +163,7 @@ impl InvocationPaths {
     /// temporary files used by miniperf. We put this in bsmr-out because that directory gets
     /// allowlisted for execution (because we write lots of tools there).
     pub fn forkserver_state_dir(&self) -> AbsNormPathBuf {
-        self.buck_out_path()
+        self.output_path()
             .join(ForwardRelativePath::unchecked_new("forkserver"))
     }
 
@@ -184,7 +184,7 @@ impl InvocationPaths {
 
     /// This is used by the health check server and client to preserve states across runs, and for temporary files.
     pub fn health_check_state_dir(&self) -> AbsNormPathBuf {
-        self.buck_out_path()
+        self.output_path()
             .join(ForwardRelativePath::unchecked_new("health_check"))
     }
 
@@ -195,7 +195,7 @@ impl InvocationPaths {
         self.roots
             .project_root
             .root()
-            .join(Self::buck_out_dir_prefix())
+            .join(Self::output_dir_prefix())
             .join(ForwardRelativePath::unchecked_new("tmp/stale-bsmr-out"))
     }
 }
@@ -233,9 +233,9 @@ mod tests {
         };
 
         let expected_path = if cfg!(windows) {
-            ".buck\\buckd\\C\\my\\project\\isolation"
+            ".bsmr\\bsmrd\\C\\my\\project\\isolation"
         } else {
-            ".buck/buckd/my/project/isolation"
+            ".bsmr/bsmrd/my/project/isolation"
         };
         assert_eq!(
             paths.daemon_dir().unwrap().path.as_os_str(),
@@ -258,7 +258,7 @@ mod tests {
         );
 
         assert_eq!(
-            paths.buck_out_dir(),
+            paths.output_dir(),
             ProjectRelativePathBuf::unchecked_new("bsmr-out/isolation".to_owned())
         );
         let expected_path = if cfg!(windows) {
@@ -266,7 +266,7 @@ mod tests {
         } else {
             "/my/project/bsmr-out/isolation"
         };
-        assert_eq!(paths.buck_out_path().as_os_str(), OsStr::new(expected_path));
+        assert_eq!(paths.output_path().as_os_str(), OsStr::new(expected_path));
 
         let expected_path = if cfg!(windows) {
             "C:\\my\\project\\bsmr-out\\isolation\\log"

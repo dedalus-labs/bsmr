@@ -15,15 +15,15 @@
 # pyre-strict
 
 
-from bsmr.tests.e2e_util.api.buck import Buck
-from bsmr.tests.e2e_util.buck_workspace import buck_test
+from bsmr.tests.e2e_util.api.bsmr import Bsmr
+from bsmr.tests.e2e_util.bsmr_workspace import bsmr_test
 
 
-@buck_test()
-async def test_sub_packages(buck: Buck) -> None:
-    res = await buck.targets("root//:")
+@bsmr_test()
+async def test_sub_packages(bsmr: Bsmr) -> None:
+    res = await bsmr.targets("root//:")
     assert 'Pkgs: ["cat/x", "dog"]' in res.stderr
-    res = await buck.targets("root//dog:")
+    res = await bsmr.targets("root//dog:")
     assert 'Pkgs: ["y"]' in res.stderr
-    res = await buck.targets("root//cat/x:")
+    res = await bsmr.targets("root//cat/x:")
     assert "Pkgs: []" in res.stderr

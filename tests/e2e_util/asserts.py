@@ -21,9 +21,9 @@ from pathlib import Path
 from typing import Awaitable, Optional, Type, TypeVar, Union
 
 import pytest
-from bsmr.tests.e2e_util.api.buck_result import (
-    BuckException,
-    BuckResult,
+from bsmr.tests.e2e_util.api.bsmr_result import (
+    BsmrException,
+    BsmrResult,
     ExitCode,
     ExitCodeV2,
 )
@@ -51,23 +51,23 @@ def _indent(text: str) -> str:
 
 
 async def expect_failure(
-    process: Awaitable[BuckResult],
+    process: Awaitable[BsmrResult],
     *,
     # pyrefly: ignore [bad-function-definition]
-    exception: Type[E] = BuckException,
+    exception: Type[E] = BsmrException,
     exit_code: Union[ExitCode, ExitCodeV2, None] = None,
     stdout_regex: Optional[str] = None,
     stderr_regex: Optional[str] = None,
 ) -> E:
     """
-    Asserts that the process raises a BuckException.
+    Asserts that the process raises a BsmrException.
 
     Parameters:
-        process: An Awaitable of BuckResult, usually a Process
+        process: An Awaitable of BsmrResult, usually a Process
         exception:
             The type of exception to check for.
-            The exception can be a BuckException or any subclass.
-            Default is BuckException.
+            The exception can be a BsmrException or any subclass.
+            Default is BsmrException.
         exit_code:
             An optional exit code to check for if provided.
             Raises an AssertionError if the actual exit code is different.
@@ -81,7 +81,7 @@ async def expect_failure(
     with pytest.raises(exception) as execinfo:  # type: ignore
         await process
     failure = execinfo.value
-    if not isinstance(failure, BuckException):
+    if not isinstance(failure, BsmrException):
         return failure
     if exit_code is not None:
         actual_exit_code = (

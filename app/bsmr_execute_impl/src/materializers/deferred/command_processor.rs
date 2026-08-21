@@ -30,7 +30,7 @@ use bsmr_directory::directory::directory_iterator::DirectoryIterator;
 use bsmr_directory::directory::directory_iterator::DirectoryIteratorPathStack;
 use bsmr_directory::directory::entry::DirectoryEntry;
 use bsmr_directory::directory::walk::unordered_entry_walk;
-use bsmr_error::BuckErrorContext;
+use bsmr_error::BsmrErrorContext;
 use bsmr_error::bsmr_error;
 use bsmr_events::dispatch::EventDispatcher;
 use bsmr_events::dispatch::maybe_proxy_current_span;
@@ -49,7 +49,7 @@ use bsmr_fs::fs_util;
 use bsmr_fs::fs_util::disk_space_stats;
 use bsmr_fs::paths::abs_path::AbsPath;
 use bsmr_fs::paths::abs_path::AbsPathBuf;
-use bsmr_hash::StdBuckHashSet;
+use bsmr_hash::StdBsmrHashSet;
 use bsmr_util::threads::check_stack_overflow;
 use bsmr_wrapper_common::invocation_id::TraceId;
 use chrono::DateTime;
@@ -116,7 +116,7 @@ pub(super) struct DeferredMaterializerCommandProcessor<T: 'static> {
     pub(super) io: Arc<T>,
     pub(super) sqlite_db: Option<MaterializerStateSqliteDb>,
     /// The runtime the deferred materializer will spawn futures on. This is normally the runtime
-    /// used by the rest of Buck.
+    /// used by the rest of Bsmr.
     rt: Handle,
     pub(super) defer_write_actions: bool,
     /// Keep track of artifact versions to avoid callbacks clobbering state if the state has moved
@@ -135,7 +135,7 @@ pub(super) struct DeferredMaterializerCommandProcessor<T: 'static> {
     ttl_refresh_instance: Option<oneshot::Receiver<(DateTime<Utc>, bsmr_error::Result<()>)>>,
     pub(super) cancellations: &'static CancellationContext,
     stats: Arc<DeferredMaterializerStats>,
-    access_times_buffer: Option<StdBuckHashSet<ProjectRelativePathBuf>>,
+    access_times_buffer: Option<StdBsmrHashSet<ProjectRelativePathBuf>>,
     verbose_materializer_log: bool,
     daemon_dispatcher: EventDispatcher,
     disable_eager_write_dispatch: bool,
@@ -429,7 +429,7 @@ impl<T: IoHandler> DeferredMaterializerCommandProcessor<T> {
         tree: ArtifactTree,
         cancellations: &'static CancellationContext,
         stats: Arc<DeferredMaterializerStats>,
-        access_times_buffer: Option<StdBuckHashSet<ProjectRelativePathBuf>>,
+        access_times_buffer: Option<StdBsmrHashSet<ProjectRelativePathBuf>>,
         verbose_materializer_log: bool,
         daemon_dispatcher: EventDispatcher,
         disable_eager_write_dispatch: bool,
@@ -1586,7 +1586,7 @@ impl<T: IoHandler> DeferredMaterializerCommandProcessor<T> {
         if let Some(cleaning_fut) = cleaning_future {
             cleaning_fut
                 .await
-                .with_buck_error_context(|| "Error cleaning output path")
+                .with_bsmr_error_context(|| "Error cleaning output path")
                 .map_err(SharedMaterializingError::Error)?;
         };
 

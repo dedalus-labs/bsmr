@@ -1,4 +1,10 @@
 #!/usr/bin/env python3
+# ===----------------------------------------------------------------------===
+# Upstream-Source: facebook/buck2@1560aca2002865cd73d7cafb22c705cfb640b2bc
+# Modifications Copyright (c) 2026 Dedalus Labs, Inc. and its contributors
+# SPDX-License-Identifier: Apache-2.0
+# ===----------------------------------------------------------------------===
+
 # Copyright (c) Meta Platforms, Inc. and affiliates.
 #
 # This source code is dual-licensed under either the MIT license found in the
@@ -118,7 +124,7 @@ def process_link_args(args: list[str], out_artifacts: Path) -> list[str]:
         # The -o flag here is set by rustc to a temporary output location. In a normal rustc link,
         # rustc will eventually copy the temporary output file to the final location specified by
         # --emit=link={}. Since this path is temporary, we can simply omit it and pass the real
-        # path needed by buck directly to the deferred link action.
+        # path needed by bsmr directly to the deferred link action.
         elif arg.startswith("-L") or arg.startswith("-o"):
             i += 2  # skip the next line
             continue

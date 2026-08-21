@@ -120,7 +120,7 @@ function runRunner(
 			env: {
 				...process.env,
 				BSMR_UNDECLARED: "ambient",
-				BUCK_SCRATCH_PATH: state.scratch,
+				BSMR_SCRATCH_PATH: state.scratch,
 				HOME: join(state.root, "ambient-home"),
 				NPM_CONFIG_USERCONFIG: join(state.root, "ambient-npmrc"),
 				XDG_CONFIG_HOME: join(state.root, "ambient-xdg-config"),

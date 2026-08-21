@@ -19,8 +19,8 @@ import json
 import re
 from pathlib import Path
 
-from bsmr.tests.e2e_util.api.buck import Buck
-from bsmr.tests.e2e_util.buck_workspace import buck_test
+from bsmr.tests.e2e_util.api.bsmr import Bsmr
+from bsmr.tests.e2e_util.bsmr_workspace import bsmr_test
 from bsmr.tests.e2e_util.helper.golden import golden
 
 
@@ -28,18 +28,18 @@ def _replace_hash(s: str) -> str:
     return re.sub(r"\b[0-9a-f]{16}\b", "<HASH>", s)
 
 
-@buck_test()
-async def test_bxl_dynamic_action(buck: Buck) -> None:
-    result = await buck.bxl(
+@bsmr_test()
+async def test_bxl_dynamic_action(bsmr: Bsmr) -> None:
+    result = await bsmr.bxl(
         "//:dynamic.bxl:dynamic_test",
     )
     outputs = result.stdout.strip()
     assert Path(outputs).read_text() == "content"
 
 
-@buck_test()
-async def test_bxl_dynamic_with_bxl_ctx(buck: Buck) -> None:
-    result = await buck.bxl(
+@bsmr_test()
+async def test_bxl_dynamic_with_bxl_ctx(bsmr: Bsmr) -> None:
+    result = await bsmr.bxl(
         "//:dynamic.bxl:dynamic_test_with_bxl_ctx",
     )
 
@@ -55,9 +55,9 @@ async def test_bxl_dynamic_with_bxl_ctx(buck: Buck) -> None:
 
 
 # Very simple test that the exec_deps/toolchains get propagatd to the dynamic bxl_ctx correctly
-@buck_test(allow_soft_errors=True)
-async def test_bxl_dynamic_execution_resolution(buck: Buck) -> None:
-    result = await buck.bxl(
+@bsmr_test(allow_soft_errors=True)
+async def test_bxl_dynamic_execution_resolution(bsmr: Bsmr) -> None:
+    result = await bsmr.bxl(
         "//:dynamic.bxl:dynamic_test_execution_resolution",
     )
 
@@ -66,9 +66,9 @@ async def test_bxl_dynamic_execution_resolution(buck: Buck) -> None:
     assert Path(outputs["dynamic"]).read_text() == Path(outputs["root"]).read_text()
 
 
-@buck_test()
-async def test_bxl_dynamic_incompatible_targets(buck: Buck) -> None:
-    result = await buck.bxl(
+@bsmr_test()
+async def test_bxl_dynamic_incompatible_targets(bsmr: Bsmr) -> None:
+    result = await bsmr.bxl(
         "//:dynamic.bxl:dynamic_test_incompatible_targets",
     )
 

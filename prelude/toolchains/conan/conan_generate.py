@@ -35,7 +35,7 @@ def conan_install(
 
     args = ["install"]
     args.extend(["--build", "missing"])
-    args.extend(["--generator", "BucklerGenerator"])
+    args.extend(["--generator", "BsmrlerGenerator"])
     args.extend(["--lockfile", lockfile])
     args.extend(["--install-folder", install_folder])
     args.extend(["--output-folder", output_folder])
@@ -72,11 +72,11 @@ def main():
         help="Path to the base Conan user-home.",
     )
     parser.add_argument(
-        "--buckler",
+        "--adapter",
         metavar="FILE",
         type=str,
         required=True,
-        help="Path to the Buckler generator.",
+        help="Path to the Bsmrler generator.",
     )
     parser.add_argument(
         "--install-folder",
@@ -144,7 +144,7 @@ def main():
     args = parser.parse_args()
 
     conan_common.install_user_home(args.user_home, args.conan_init)
-    conan_common.install_generator(args.user_home, args.buckler)
+    conan_common.install_generator(args.user_home, args.adapter)
 
     os.mkdir(args.install_folder)
     os.mkdir(args.output_folder)

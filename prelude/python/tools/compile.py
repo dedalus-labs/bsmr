@@ -18,7 +18,7 @@
 Example usage (internal):
 $ cat inputs.manifest
 [["foo.py", "input/foo.py", "//my_rule:foo"]]
-$ buck build //upstream//python/build/compile:compile --show-full-output
+$ bsmr build //upstream//python/build/compile:compile --show-full-output
 $ python <fulloutput/__main__.py> --output=out-dir --bytecode-manifest=output.manifest inputs.manifest
 $ find out-dir -type f
 out-dir/foo.pyc

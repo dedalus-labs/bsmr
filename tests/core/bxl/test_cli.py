@@ -19,15 +19,15 @@ import json
 import os
 import re
 
-from bsmr.tests.e2e_util.api.buck import Buck
+from bsmr.tests.e2e_util.api.bsmr import Bsmr
 from bsmr.tests.e2e_util.asserts import expect_failure
-from bsmr.tests.e2e_util.buck_workspace import buck_test
+from bsmr.tests.e2e_util.bsmr_workspace import bsmr_test
 from bsmr.tests.e2e_util.helper.golden import golden, GOLDEN_DIRECTORY, sanitize_hashes
 
 
-@buck_test()
-async def test_bxl_cli(buck: Buck) -> None:
-    result = await buck.bxl(
+@bsmr_test()
+async def test_bxl_cli(bsmr: Bsmr) -> None:
+    result = await bsmr.bxl(
         "//cli_args.bxl:cli_test",
         "--",
         "--int_arg",
@@ -53,7 +53,7 @@ async def test_bxl_cli(buck: Buck) -> None:
         rel_path=GOLDEN_DIRECTORY + "test_bxl_cli_standard.golden.txt",
     )
 
-    result = await buck.bxl(
+    result = await bsmr.bxl(
         "//cli_args.bxl:cli_test",
         "--",
         # Override default bool arg with false
@@ -84,7 +84,7 @@ async def test_bxl_cli(buck: Buck) -> None:
 
     # multiple occurrences of a list-type argument
     # i.e., --arg 1 --arg 2 --arg 3
-    result = await buck.bxl(
+    result = await bsmr.bxl(
         "//cli_args.bxl:cli_test",
         "--",
         "--int_arg",
@@ -114,7 +114,7 @@ async def test_bxl_cli(buck: Buck) -> None:
 
     # illegal target
     await expect_failure(
-        buck.bxl(
+        bsmr.bxl(
             "//cli_args.bxl:cli_test",
             "--",
             "--int_arg",
@@ -139,7 +139,7 @@ async def test_bxl_cli(buck: Buck) -> None:
 
     # not int
     await expect_failure(
-        buck.bxl(
+        bsmr.bxl(
             "//cli_args.bxl:cli_test",
             "--",
             "--int_arg",
@@ -164,7 +164,7 @@ async def test_bxl_cli(buck: Buck) -> None:
 
     # list inner type mismatch
     await expect_failure(
-        buck.bxl(
+        bsmr.bxl(
             "//cli_args.bxl:cli_test",
             "--",
             "--int_arg",
@@ -189,7 +189,7 @@ async def test_bxl_cli(buck: Buck) -> None:
 
     # not valid enum variant
     await expect_failure(
-        buck.bxl(
+        bsmr.bxl(
             "//cli_args.bxl:cli_test",
             "--",
             "--int_arg",
@@ -214,7 +214,7 @@ async def test_bxl_cli(buck: Buck) -> None:
 
     # missing non-optional field
     await expect_failure(
-        buck.bxl(
+        bsmr.bxl(
             "//cli_args.bxl:cli_test",
             "--",
             "--int_arg",
@@ -236,7 +236,7 @@ async def test_bxl_cli(buck: Buck) -> None:
     )
 
     # check short args work
-    result = await buck.bxl(
+    result = await bsmr.bxl(
         "//cli_args.bxl:cli_test_short",
         "--",
         "-i",
@@ -263,7 +263,7 @@ async def test_bxl_cli(buck: Buck) -> None:
     )
 
     # check long args still work with short args
-    result = await buck.bxl(
+    result = await bsmr.bxl(
         "//cli_args.bxl:cli_test_short",
         "--",
         "--int_arg",
@@ -290,7 +290,7 @@ async def test_bxl_cli(buck: Buck) -> None:
     )
 
     # check snakecase cli_arg access from bxl context, make sure it still works with default args and shorthand args
-    result = await buck.bxl(
+    result = await bsmr.bxl(
         "//cli_args.bxl:cli_test_snakecase_access",
         "--",
         "--my-arg",
@@ -298,16 +298,16 @@ async def test_bxl_cli(buck: Buck) -> None:
     )
     assert result.stdout == 'my-arg: "this is my arg"\n'
 
-    result = await buck.bxl(
+    result = await bsmr.bxl(
         "//cli_args.bxl:cli_test_snakecase_access", "--", "-a", "this is my arg"
     )
     assert result.stdout == 'my-arg: "this is my arg"\n'
 
-    result = await buck.bxl("//cli_args.bxl:cli_test_snakecase_access")
+    result = await bsmr.bxl("//cli_args.bxl:cli_test_snakecase_access")
     assert result.stdout == 'my-arg: "default"\n'
 
     await expect_failure(
-        buck.bxl(
+        bsmr.bxl(
             "//cli_args_bad_case.bxl:cli_test_bad_case",
             "--",
             "--my-arg",
@@ -316,8 +316,8 @@ async def test_bxl_cli(buck: Buck) -> None:
     )
 
 
-@buck_test()
-async def test_bxl_cli_json_args(buck: Buck) -> None:
+@bsmr_test()
+async def test_bxl_cli_json_args(bsmr: Bsmr) -> None:
     json_args = {
         "int": 1,
         "string": "foo",
@@ -330,7 +330,7 @@ async def test_bxl_cli_json_args(buck: Buck) -> None:
 
     my_json = json.dumps(json_args)
 
-    await buck.bxl(
+    await bsmr.bxl(
         "//cli_args.bxl:cli_json_arg",
         "--",
         "--my-json",
@@ -338,7 +338,7 @@ async def test_bxl_cli_json_args(buck: Buck) -> None:
     )
 
     await expect_failure(
-        buck.bxl(
+        bsmr.bxl(
             "//cli_args.bxl:cli_json_arg",
             "--",
             "--my-json",
@@ -348,11 +348,11 @@ async def test_bxl_cli_json_args(buck: Buck) -> None:
     )
 
 
-@buck_test()
-async def test_bxl_cli_short_bad(buck: Buck) -> None:
+@bsmr_test()
+async def test_bxl_cli_short_bad(bsmr: Bsmr) -> None:
     # duplicate "short"
     await expect_failure(
-        buck.bxl(
+        bsmr.bxl(
             "//cli_args_bad.bxl:cli_test_short_bad",
             "--",
             "-a",
@@ -372,9 +372,9 @@ async def test_bxl_cli_short_bad(buck: Buck) -> None:
     )
 
 
-@buck_test()
-async def test_cli_target_pattern(buck: Buck) -> None:
-    result = await buck.bxl(
+@bsmr_test()
+async def test_cli_target_pattern(bsmr: Bsmr) -> None:
+    result = await bsmr.bxl(
         "//cli_args.bxl:target_expr_test",
         "--",
         "--targets",
@@ -382,7 +382,7 @@ async def test_cli_target_pattern(buck: Buck) -> None:
     )
     assert "[root//:t1]" in result.stdout
 
-    result = await buck.bxl(
+    result = await bsmr.bxl(
         "//cli_args.bxl:target_expr_test",
         "--",
         "--targets",
@@ -392,7 +392,7 @@ async def test_cli_target_pattern(buck: Buck) -> None:
     assert "root//:t2" in result.stdout
 
     await expect_failure(
-        buck.bxl(
+        bsmr.bxl(
             "//cli_args.bxl:target_expr_test",
             "--",
             "--targets",
@@ -402,7 +402,7 @@ async def test_cli_target_pattern(buck: Buck) -> None:
     )
 
     await expect_failure(
-        buck.bxl(
+        bsmr.bxl(
             "//cli_args.bxl:target_expr_test",
             "--",
             "--targets",
@@ -412,11 +412,11 @@ async def test_cli_target_pattern(buck: Buck) -> None:
     )
 
 
-@buck_test()
-async def test_cli_sub_target_pattern(buck: Buck) -> None:
+@bsmr_test()
+async def test_cli_sub_target_pattern(bsmr: Bsmr) -> None:
     # Tests where no sub-target is specified; should ensure functionality
     # of regular target patterns work with these subtarget patterns.
-    result = await buck.bxl(
+    result = await bsmr.bxl(
         "//cli_args.bxl:sub_target_expr_test",
         "--",
         "--sub_targets",
@@ -424,7 +424,7 @@ async def test_cli_sub_target_pattern(buck: Buck) -> None:
     )
     assert "[root//:t1]" in result.stdout
 
-    result = await buck.bxl(
+    result = await bsmr.bxl(
         "//cli_args.bxl:sub_target_expr_test",
         "--",
         "--sub_targets",
@@ -434,7 +434,7 @@ async def test_cli_sub_target_pattern(buck: Buck) -> None:
     assert "root//:t2" in result.stdout
 
     # Test single sub-targets.
-    result = await buck.bxl(
+    result = await bsmr.bxl(
         "//cli_args.bxl:sub_target_expr_test",
         "--",
         "--sub_targets",
@@ -443,7 +443,7 @@ async def test_cli_sub_target_pattern(buck: Buck) -> None:
     assert "[root//:t1[sub]]" in result.stdout
 
     # Several subtargets / nested subtargets.
-    result = await buck.bxl(
+    result = await bsmr.bxl(
         "//cli_args.bxl:sub_target_expr_test",
         "--",
         "--sub_targets",
@@ -452,7 +452,7 @@ async def test_cli_sub_target_pattern(buck: Buck) -> None:
     assert "[root//:t2[sub1][sub2]]" in result.stdout
 
     await expect_failure(
-        buck.bxl(
+        bsmr.bxl(
             "//cli_args.bxl:sub_target_expr_test",
             "--",
             "--sub_targets",
@@ -462,10 +462,10 @@ async def test_cli_sub_target_pattern(buck: Buck) -> None:
     )
 
 
-@buck_test()
-async def test_cli_target_fails_with_question_mark_modifier_syntax(buck: Buck) -> None:
+@bsmr_test()
+async def test_cli_target_fails_with_question_mark_modifier_syntax(bsmr: Bsmr) -> None:
     await expect_failure(
-        buck.bxl(
+        bsmr.bxl(
             "//cli_args.bxl:cli_test",
             "--",
             "--int_arg",
@@ -489,7 +489,7 @@ async def test_cli_target_fails_with_question_mark_modifier_syntax(buck: Buck) -
     )
 
     await expect_failure(
-        buck.bxl(
+        bsmr.bxl(
             "//cli_args.bxl:target_expr_test",
             "--",
             "--targets",
@@ -499,10 +499,10 @@ async def test_cli_target_fails_with_question_mark_modifier_syntax(buck: Buck) -
     )
 
 
-@buck_test()
-async def test_cli_configured_target_fails_with_global_modifiers(buck: Buck) -> None:
+@bsmr_test()
+async def test_cli_configured_target_fails_with_global_modifiers(bsmr: Bsmr) -> None:
     await expect_failure(
-        buck.bxl(
+        bsmr.bxl(
             "--modifier",
             "root//:macos",
             "//cli_args.bxl:cli_configured_target",
@@ -514,7 +514,7 @@ async def test_cli_configured_target_fails_with_global_modifiers(buck: Buck) -> 
     )
 
     await expect_failure(
-        buck.bxl(
+        bsmr.bxl(
             "--modifier",
             "root//:macos",
             "//cli_args.bxl:cli_configured_target",
@@ -530,9 +530,9 @@ def _extract_configuration(s: str) -> list[str]:
     return re.findall(r"\((cfg:<empty>#[a-f0-9]+)\)", s)
 
 
-@buck_test()
-async def test_cli_configured_target_pattern(buck: Buck) -> None:
-    result = await buck.bxl(
+@bsmr_test()
+async def test_cli_configured_target_pattern(bsmr: Bsmr) -> None:
+    result = await bsmr.bxl(
         "//cli_args.bxl:cli_configured_target",
         "--",
         "--configured_target",
@@ -541,12 +541,12 @@ async def test_cli_configured_target_pattern(buck: Buck) -> None:
 
     [configuration] = _extract_configuration(result.stdout)
 
-    cfg = await buck.audit_configurations(configuration)
+    cfg = await bsmr.audit_configurations(configuration)
 
     assert "root//:macos" in cfg.stdout
 
     # test multiple modifiers
-    result = await buck.bxl(
+    result = await bsmr.bxl(
         "//cli_args.bxl:cli_configured_target",
         "--",
         "--configured_target",
@@ -555,7 +555,7 @@ async def test_cli_configured_target_pattern(buck: Buck) -> None:
 
     [configuration] = _extract_configuration(result.stdout)
 
-    cfg = await buck.audit_configurations(configuration)
+    cfg = await bsmr.audit_configurations(configuration)
 
     assert "root//:macos" in cfg.stdout
     assert "root//:arm" in cfg.stdout
@@ -563,7 +563,7 @@ async def test_cli_configured_target_pattern(buck: Buck) -> None:
     # test order of modifiers
     # if passing in modifiers of the same constraint setting,
     # the last one should be the one that applies
-    result = await buck.bxl(
+    result = await bsmr.bxl(
         "//cli_args.bxl:cli_configured_target",
         "--",
         "--configured_target",
@@ -572,13 +572,13 @@ async def test_cli_configured_target_pattern(buck: Buck) -> None:
 
     [configuration] = _extract_configuration(result.stdout)
 
-    cfg = await buck.audit_configurations(configuration)
+    cfg = await bsmr.audit_configurations(configuration)
 
     assert "root//:linux" in cfg.stdout
     assert "root//:macos" not in cfg.stdout
 
     # test no modifiers
-    result = await buck.bxl(
+    result = await bsmr.bxl(
         "//cli_args.bxl:cli_configured_target",
         "--",
         "--configured_target",
@@ -588,7 +588,7 @@ async def test_cli_configured_target_pattern(buck: Buck) -> None:
     assert "configured_target: root//:t1 (<unspecified>)" in result.stdout
 
     # test expr
-    result = await buck.bxl(
+    result = await bsmr.bxl(
         "//cli_args.bxl:cli_configured_target_expr",
         "--",
         "--configured_target_expr",
@@ -596,12 +596,12 @@ async def test_cli_configured_target_pattern(buck: Buck) -> None:
     )
 
     [configuration] = _extract_configuration(result.stdout)
-    cfg = await buck.audit_configurations(configuration)
+    cfg = await bsmr.audit_configurations(configuration)
 
     assert "root//:macos" in cfg.stdout
 
     # test expr with package pattern
-    result = await buck.bxl(
+    result = await bsmr.bxl(
         "//cli_args.bxl:cli_configured_target_expr",
         "--",
         "--configured_target_expr",
@@ -609,7 +609,7 @@ async def test_cli_configured_target_pattern(buck: Buck) -> None:
     )
 
     for configuration in _extract_configuration(result.stdout):
-        cfg = await buck.audit_configurations(configuration)
+        cfg = await bsmr.audit_configurations(configuration)
         assert "root//:macos" in cfg.stdout
 
     golden(
@@ -619,7 +619,7 @@ async def test_cli_configured_target_pattern(buck: Buck) -> None:
     )
 
     # test expr with recursive pattern
-    result = await buck.bxl(
+    result = await bsmr.bxl(
         "//cli_args.bxl:cli_configured_target_expr",
         "--",
         "--configured_target_expr",
@@ -627,7 +627,7 @@ async def test_cli_configured_target_pattern(buck: Buck) -> None:
     )
 
     for configuration in _extract_configuration(result.stdout):
-        cfg = await buck.audit_configurations(configuration)
+        cfg = await bsmr.audit_configurations(configuration)
         assert "root//:macos" in cfg.stdout
         assert "root//:arm" in cfg.stdout
 
@@ -638,10 +638,10 @@ async def test_cli_configured_target_pattern(buck: Buck) -> None:
     )
 
 
-@buck_test()
-async def test_cli_configured_target_modifiers_flag(buck: Buck) -> None:
+@bsmr_test()
+async def test_cli_configured_target_modifiers_flag(bsmr: Bsmr) -> None:
     # test single modifier
-    result = await buck.bxl(
+    result = await bsmr.bxl(
         "--modifier",
         "root//:macos",
         "//cli_args.bxl:cli_configured_target",
@@ -652,11 +652,11 @@ async def test_cli_configured_target_modifiers_flag(buck: Buck) -> None:
 
     [configuration] = _extract_configuration(result.stdout)
 
-    cfg = await buck.audit_configurations(configuration)
+    cfg = await bsmr.audit_configurations(configuration)
     assert "root//:macos" in cfg.stdout
 
     # test multiple modifiers
-    result = await buck.bxl(
+    result = await bsmr.bxl(
         "--modifier",
         "root//:macos",
         "--modifier",
@@ -668,12 +668,12 @@ async def test_cli_configured_target_modifiers_flag(buck: Buck) -> None:
     )
 
     [configuration] = _extract_configuration(result.stdout)
-    cfg = await buck.audit_configurations(configuration)
+    cfg = await bsmr.audit_configurations(configuration)
     assert "root//:macos" in cfg.stdout
     assert "root//:arm" in cfg.stdout
 
     # test expr
-    result = await buck.bxl(
+    result = await bsmr.bxl(
         "--modifier",
         "root//:macos",
         "--modifier",
@@ -685,7 +685,7 @@ async def test_cli_configured_target_modifiers_flag(buck: Buck) -> None:
     )
 
     for configuration in _extract_configuration(result.stdout):
-        cfg = await buck.audit_configurations(configuration)
+        cfg = await bsmr.audit_configurations(configuration)
         assert "root//:macos" in cfg.stdout
         assert "root//:arm" in cfg.stdout
 
@@ -696,9 +696,9 @@ async def test_cli_configured_target_modifiers_flag(buck: Buck) -> None:
     )
 
 
-@buck_test()
-async def test_cli_configured_target_platform(buck: Buck) -> None:
-    result = await buck.bxl(
+@bsmr_test()
+async def test_cli_configured_target_platform(bsmr: Bsmr) -> None:
+    result = await bsmr.bxl(
         "--target-platforms",
         "root//:p",
         "//cli_args.bxl:cli_configured_target",
@@ -711,7 +711,7 @@ async def test_cli_configured_target_platform(buck: Buck) -> None:
         result.stdout
     )
 
-    result = await buck.bxl(
+    result = await bsmr.bxl(
         "--target-platforms",
         "root//:p",
         "//cli_args.bxl:cli_configured_target_expr",
@@ -727,18 +727,18 @@ async def test_cli_configured_target_platform(buck: Buck) -> None:
     )
 
 
-@buck_test()
-async def test_cli_json_file(buck: Buck) -> None:
-    json_file_path = os.path.join(buck.cwd, "a.json")
+@bsmr_test()
+async def test_cli_json_file(bsmr: Bsmr) -> None:
+    json_file_path = os.path.join(bsmr.cwd, "a.json")
 
-    await buck.bxl(
+    await bsmr.bxl(
         "//cli_args.bxl:cli_json_file",
         "--",
         "--json-file",
         json_file_path,
     )
 
-    await buck.bxl(
+    await bsmr.bxl(
         "//cli_args.bxl:cli_json_file",
         "--",
         "--json-file",

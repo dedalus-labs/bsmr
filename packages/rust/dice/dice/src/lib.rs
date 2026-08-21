@@ -15,7 +15,7 @@
  */
 
 //!
-//! The dynamic incremental caching computation engine that powers buckv2.
+//! The dynamic incremental caching computation engine that powers bsmrv2.
 //!
 //! The computation engine will output values corresponding to given `Key`s,
 //! reusing previously computed values when possible. `Key`s computations are
@@ -214,8 +214,8 @@ pub use dice_futures::cancellation::CancellationContext; // expose cancellation 
 pub use dice_futures::cancellation::CancellationHandle; // expose cancellation handle as api
 pub use dice_futures::spawn::CancellableJoinHandle; // expose cancellation context as api
 pub use dice_futures::spawn::WeakFutureError; // expose future errors as api
-pub(crate) type HashMap<K, V> = bsmr_hash::BuckHashMap<K, V>;
-pub(crate) type HashSet<K> = bsmr_hash::BuckHashSet<K>;
+pub(crate) type HashMap<K, V> = bsmr_hash::BsmrHashMap<K, V>;
+pub(crate) type HashSet<K> = bsmr_hash::BsmrHashSet<K>;
 
 pub use crate::api::activation_tracker::ActivationData;
 pub use crate::api::activation_tracker::ActivationTracker;

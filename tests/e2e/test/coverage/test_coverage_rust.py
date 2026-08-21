@@ -20,14 +20,14 @@ import re
 from pathlib import Path
 from typing import List
 
-from bsmr.tests.e2e_util.api.buck import Buck
-from bsmr.tests.e2e_util.buck_workspace import buck_test
+from bsmr.tests.e2e_util.api.bsmr import Bsmr
+from bsmr.tests.e2e_util.bsmr_workspace import bsmr_test
 
 from .test_coverage_utils import collect_coverage_for
 
 
-async def query_target_srcs(buck: Buck, target: str) -> List[str]:
-    query_result = await buck.uquery(
+async def query_target_srcs(bsmr: Bsmr, target: str) -> List[str]:
+    query_result = await bsmr.uquery(
         target,
         "--output-attribute",
         "srcs",
@@ -38,10 +38,10 @@ async def query_target_srcs(buck: Buck, target: str) -> List[str]:
     ]
 
 
-@buck_test(inplace=True)
-async def test_rust_test_coverage(buck: Buck, tmp_path: Path) -> None:
+@bsmr_test(inplace=True)
+async def test_rust_test_coverage(bsmr: Bsmr, tmp_path: Path) -> None:
     coverage_file = tmp_path / "coverage.txt"
-    await buck.test(
+    await bsmr.test(
         "@upstream//mode/dbgo-cov",
         "root//tests/targets/rules/rust:tests_pass",
         "--",
@@ -55,13 +55,13 @@ async def test_rust_test_coverage(buck: Buck, tmp_path: Path) -> None:
     assert "fbcode/bsmr/tests/targets/rules/rust/tests_pass.rs" in paths, str(paths)
 
 
-@buck_test(inplace=True)
+@bsmr_test(inplace=True)
 async def test_rust_test_coverage_filtering_by_path_of_target(
-    buck: Buck,
+    bsmr: Bsmr,
     tmp_path: Path,
 ) -> None:
     paths = await collect_coverage_for(
-        buck,
+        bsmr,
         tmp_path,
         "root//tests/targets/rules/rust:tests_pass",
         folder_filter=["fbcode/bsmr/tests"],
@@ -72,55 +72,55 @@ async def test_rust_test_coverage_filtering_by_path_of_target(
     assert len(unexpected_paths) == 0, str(paths)
 
 
-@buck_test(inplace=True)
+@bsmr_test(inplace=True)
 async def test_rust_test_coverage_filtering_by_path_of_files(
-    buck: Buck,
+    bsmr: Bsmr,
     tmp_path: Path,
 ) -> None:
     target = "root//tests/targets/rules/rust:tests_pass"
     file_path = "fbcode/bsmr/tests/targets/rules/rust/tests_pass.rs"
     paths = await collect_coverage_for(
-        buck,
+        bsmr,
         tmp_path,
         target,
         folder_filter=[],
         file_filter=[file_path],
     )
 
-    target_srcs = await query_target_srcs(buck, target)
+    target_srcs = await query_target_srcs(bsmr, target)
 
     # rust can only do coverage at crate granularity,
     # so we expect coverage for all the files in the target
     assert paths == target_srcs, str(target_srcs)
 
 
-@buck_test(inplace=True)
+@bsmr_test(inplace=True)
 async def test_rust_test_coverage_of_rust_library_filtering_by_file_path_outside_of_target(
-    buck: Buck,
+    bsmr: Bsmr,
     tmp_path: Path,
 ) -> None:
     file_path = "fbcode/testing_frameworks/code_coverage/adder.rs"
     lib_target = "upstream//testing_frameworks/code_coverage:adder"
 
     paths = await collect_coverage_for(
-        buck,
+        bsmr,
         tmp_path,
         "bsmr/tests/targets/rules/rust/coverage/test_with_rust_library_outside_targets_path:test",
         folder_filter=[],
         file_filter=[file_path],
     )
 
-    target_srcs = await query_target_srcs(buck, lib_target)
+    target_srcs = await query_target_srcs(bsmr, lib_target)
     assert paths == target_srcs, str(target_srcs)
 
 
-@buck_test(inplace=True)
+@bsmr_test(inplace=True)
 async def test_rust_test_coverage_of_rust_library_filtering_by_folder_path_outside_of_target(
-    buck: Buck,
+    bsmr: Bsmr,
     tmp_path: Path,
 ) -> None:
     paths = await collect_coverage_for(
-        buck,
+        bsmr,
         tmp_path,
         "bsmr/tests/targets/rules/rust/coverage/test_with_rust_library_outside_targets_path:test",
         folder_filter=["fbcode/testing_frameworks"],
@@ -134,13 +134,13 @@ async def test_rust_test_coverage_of_rust_library_filtering_by_folder_path_outsi
     assert len(unexpected_paths) == 0, str(paths)
 
 
-@buck_test(inplace=True)
+@bsmr_test(inplace=True)
 async def test_rust_test_coverage_of_cpp_file_filtering_by_file_with_cxx(
-    buck: Buck, tmp_path: Path
+    bsmr: Bsmr, tmp_path: Path
 ) -> None:
     file_to_collect_coverage = "fbcode/testing_frameworks/code_coverage/rust/Adder.cpp"
     paths = await collect_coverage_for(
-        buck,
+        bsmr,
         tmp_path,
         "testing_frameworks/code_coverage/rust:tests_with_cxx_cpp_dep",
         folder_filter=[],
@@ -153,13 +153,13 @@ async def test_rust_test_coverage_of_cpp_file_filtering_by_file_with_cxx(
     assert paths == [file_to_collect_coverage], str(paths)
 
 
-@buck_test(inplace=True)
+@bsmr_test(inplace=True)
 async def test_rust_test_coverage_of_cpp_file_filtering_by_file_with_cxx_through_rust_library(
-    buck: Buck, tmp_path: Path
+    bsmr: Bsmr, tmp_path: Path
 ) -> None:
     file_to_collect_coverage = "fbcode/testing_frameworks/code_coverage/rust/Adder.cpp"
     paths = await collect_coverage_for(
-        buck,
+        bsmr,
         tmp_path,
         "testing_frameworks/code_coverage/rust:tests_with_cxx_rust_library_dep",
         folder_filter=[],
@@ -170,13 +170,13 @@ async def test_rust_test_coverage_of_cpp_file_filtering_by_file_with_cxx_through
     assert paths == [file_to_collect_coverage], str(paths)
 
 
-@buck_test(inplace=True)
+@bsmr_test(inplace=True)
 async def test_rust_test_coverage_of_cpp_file_filtering_by_file_with_cxx_on_autogenerated_library_unittests(
-    buck: Buck, tmp_path: Path
+    bsmr: Bsmr, tmp_path: Path
 ) -> None:
     file_to_collect_coverage = "fbcode/testing_frameworks/code_coverage/rust/Adder.cpp"
     paths = await collect_coverage_for(
-        buck,
+        bsmr,
         tmp_path,
         "testing_frameworks/code_coverage/rust:tests_in_library-unittest",
         folder_filter=[],
@@ -187,13 +187,13 @@ async def test_rust_test_coverage_of_cpp_file_filtering_by_file_with_cxx_on_auto
     assert paths == [file_to_collect_coverage], str(paths)
 
 
-@buck_test(inplace=True)
+@bsmr_test(inplace=True)
 async def test_rust_test_coverage_of_cpp_file_filtering_by_file_with_bindgen_rust_library(
-    buck: Buck, tmp_path: Path
+    bsmr: Bsmr, tmp_path: Path
 ) -> None:
     file_to_collect_coverage = "fbcode/testing_frameworks/code_coverage/rust/AdderC.cpp"
     paths = await collect_coverage_for(
-        buck,
+        bsmr,
         tmp_path,
         "testing_frameworks/code_coverage/rust:tests_with_bindgen_rust_library_dep",
         folder_filter=[],
@@ -203,15 +203,15 @@ async def test_rust_test_coverage_of_cpp_file_filtering_by_file_with_bindgen_rus
     assert paths == [file_to_collect_coverage], str(paths)
 
 
-@buck_test(inplace=True)
+@bsmr_test(inplace=True)
 async def test_rust_test_coverage_of_cpp_file_filtering_by_file_with_ligen_cpp_dep(
-    buck: Buck, tmp_path: Path
+    bsmr: Bsmr, tmp_path: Path
 ) -> None:
     file_to_collect_coverage = (
         "fbcode/testing_frameworks/code_coverage/rust/AdderLigen.cpp"
     )
     paths = await collect_coverage_for(
-        buck,
+        bsmr,
         tmp_path,
         "testing_frameworks/code_coverage/rust:test_with_ligen_cpp_dep",
         folder_filter=[],
@@ -228,12 +228,12 @@ def any_item_matches(items: List[str], regex: str) -> bool:
     return False
 
 
-@buck_test(inplace=True)
+@bsmr_test(inplace=True)
 async def test_rust_test_coverage_of_cpp_file_filtering_by_header_with_cxx(
-    buck: Buck, tmp_path: Path
+    bsmr: Bsmr, tmp_path: Path
 ) -> None:
     paths = await collect_coverage_for(
-        buck,
+        bsmr,
         tmp_path,
         "testing_frameworks/code_coverage/rust:tests_with_code_in_cpp_header",
         folder_filter=[],

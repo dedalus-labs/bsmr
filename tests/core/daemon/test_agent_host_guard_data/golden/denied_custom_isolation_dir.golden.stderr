@@ -2,7 +2,7 @@
 
 [<TIMESTAMP>] Starting new bsmr daemon...
 [<TIMESTAMP>] Connected to new bsmr daemon.
-[<TIMESTAMP>] Buck UI: https://www.internalfb.com/bsmr/<UUID>
+[<TIMESTAMP>] Bsmr UI: https://www.internalfb.com/bsmr/<UUID>
 Command failed: 
 Running bsmr with bsmr daemon spawned from a coding agent's sandbox on certain hosts can make builds extremely slow. This daemon is in that situation on host `<HOSTNAME>`, so its builds are blocked for now. We are working on a long-term fix to remove bsmr daemon from sandbox.
 

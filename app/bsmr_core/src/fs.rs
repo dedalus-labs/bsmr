@@ -1,3 +1,9 @@
+//===----------------------------------------------------------------------===//
+// Upstream-Source: facebook/buck2@1560aca2002865cd73d7cafb22c705cfb640b2bc
+// Modifications Copyright (c) 2026 Dedalus Labs, Inc. and its contributors
+// SPDX-License-Identifier: Apache-2.0
+//===----------------------------------------------------------------------===//
+
 /*
  * Copyright (c) Meta Platforms, Inc. and affiliates.
  *
@@ -9,8 +15,8 @@
  */
 
 pub mod artifact_path_resolver;
-pub mod buck_out_path;
 pub mod dynamic_actions_action_key;
+pub mod output_path;
 mod paths_cmp_ext;
 pub mod project;
 pub mod project_rel_path;

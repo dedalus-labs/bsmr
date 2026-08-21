@@ -17,7 +17,7 @@
 use std::ffi::OsString;
 use std::path::Path;
 
-use bsmr_error::BuckErrorContext;
+use bsmr_error::BsmrErrorContext;
 use bsmr_error::bsmr_error;
 use bsmr_error::conversion::from_any_with_tag;
 use rustls::ClientConfig;
@@ -47,7 +47,7 @@ fn setup_cryptography() -> std::result::Result<(), std::sync::Arc<rustls::crypto
 /// certificate store.
 async fn load_system_root_certs() -> bsmr_error::Result<RootCertStore> {
     let root_certs = if let Some(path) = find_root_ca_certs() {
-        load_certs(&path).await.with_buck_error_context(|| {
+        load_certs(&path).await.with_bsmr_error_context(|| {
             format!("Loading root certs from: {}", path.to_string_lossy())
         })
     } else {
@@ -114,7 +114,7 @@ async fn load_key<P: AsRef<Path>>(key: P) -> bsmr_error::Result<PrivateKeyDer<'s
     let key = key.as_ref();
 
     let private_key = PrivateKeyDer::from_pem_file(key)
-        .with_buck_error_context(|| format!("Error opening key file `{}`", key.display()))?;
+        .with_bsmr_error_context(|| format!("Error opening key file `{}`", key.display()))?;
 
     Ok(private_key)
 }
@@ -145,12 +145,12 @@ pub async fn tls_config_with_single_cert<P: AsRef<Path>>(
     let system_roots = load_system_root_certs().await?;
     let (cert, key) = load_cert_pair(cert_path, key_path)
         .await
-        .buck_error_context("Error loading certificate pair")?;
+        .bsmr_error_context("Error loading certificate pair")?;
     ClientConfig::builder()
         .with_root_certificates(system_roots)
         .with_client_auth_cert(cert, key)
         .map_err(|e| from_any_with_tag(e, bsmr_error::ErrorTag::Certs))
-        .buck_error_context("Error creating TLS config with cert and key path")
+        .bsmr_error_context("Error creating TLS config with cert and key path")
 }
 
 // Load certs from the given path
@@ -161,7 +161,7 @@ pub(crate) async fn load_certs<P: AsRef<Path>>(
 
     let cert_data = tokio::fs::read(cert_path)
         .await
-        .with_buck_error_context(|| {
+        .with_bsmr_error_context(|| {
             format!("Error reading certificate file `{}`", cert_path.display())
         })?;
 
@@ -171,7 +171,7 @@ pub(crate) async fn load_certs<P: AsRef<Path>>(
     let certs: Result<Vec<CertificateDer<'static>>, rustls_pki_types::pem::Error> =
         cert_results.into_iter().collect();
 
-    certs.with_buck_error_context(|| {
+    certs.with_bsmr_error_context(|| {
         format!("Error reading certificate file `{}`", cert_path.display())
     })
 }
@@ -203,7 +203,7 @@ pub fn find_internal_cert() -> Option<OsString> {
     return None;
 }
 
-/// Whether the machine buck is running on supports vpnless operation.
+/// Whether the machine bsmr is running on supports vpnless operation.
 pub fn supports_vpnless() -> bool {
     #[cfg(fbcode_build)]
     return cpe::x2p::supports_vpnless();

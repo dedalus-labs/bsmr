@@ -17,7 +17,7 @@
 use std::cell::OnceCell;
 use std::iter;
 
-use bsmr_error::BuckErrorContext;
+use bsmr_error::BsmrErrorContext;
 use bsmr_error::bsmr_error;
 use starlark::environment::GlobalsBuilder;
 use starlark::starlark_module;
@@ -74,7 +74,7 @@ pub fn new_dynamic_actions_callable<'v>(
             None,
             &DynamicActionsCallbackReturnType::starlark_type_repr(),
         )
-        .buck_error_context("`impl` function must be callable with given params")?;
+        .bsmr_error_context("`impl` function must be callable with given params")?;
 
     let callable_ty = Ty::function(
         ParamSpec::new_named_only(attrs.iter().map(|(name, ty)| {

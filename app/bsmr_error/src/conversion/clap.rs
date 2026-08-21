@@ -1,3 +1,9 @@
+//===----------------------------------------------------------------------===//
+// Upstream-Source: facebook/buck2@1560aca2002865cd73d7cafb22c705cfb640b2bc
+// Modifications Copyright (c) 2026 Dedalus Labs, Inc. and its contributors
+// SPDX-License-Identifier: Apache-2.0
+//===----------------------------------------------------------------------===//
+
 /*
  * Copyright (c) Meta Platforms, Inc. and affiliates.
  *
@@ -28,9 +34,9 @@ impl From<clap::error::Error> for crate::Error {
 }
 
 #[derive(Clone)]
-struct BuckErrorClapParser<F, T>(F, PhantomData<T>);
+struct BsmrErrorClapParser<F, T>(F, PhantomData<T>);
 
-impl<F, T> clap::builder::TypedValueParser for BuckErrorClapParser<F, T>
+impl<F, T> clap::builder::TypedValueParser for BsmrErrorClapParser<F, T>
 where
     F: Fn(&str) -> crate::Result<T> + Send + Sync + Clone + 'static,
     T: Send + Sync + Clone + 'static,
@@ -54,10 +60,10 @@ where
     }
 }
 
-pub fn buck_error_clap_parser<F, T>(f: F) -> impl clap::builder::TypedValueParser<Value = T>
+pub fn bsmr_error_clap_parser<F, T>(f: F) -> impl clap::builder::TypedValueParser<Value = T>
 where
     F: Fn(&str) -> crate::Result<T> + Send + Sync + Clone + 'static,
     T: Clone + Send + Sync + 'static,
 {
-    BuckErrorClapParser(f, PhantomData)
+    BsmrErrorClapParser(f, PhantomData)
 }

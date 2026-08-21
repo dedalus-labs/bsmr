@@ -1,3 +1,9 @@
+# ===----------------------------------------------------------------------===
+# Upstream-Source: facebook/buck2@1560aca2002865cd73d7cafb22c705cfb640b2bc
+# Modifications Copyright (c) 2026 Dedalus Labs, Inc. and its contributors
+# SPDX-License-Identifier: Apache-2.0
+# ===----------------------------------------------------------------------===
+
 # Copyright (c) Meta Platforms, Inc. and affiliates.
 #
 # This source code is dual-licensed under either the MIT license found in the
@@ -11,7 +17,7 @@ load("@prelude//utils:type_defs.bzl", "is_list")
 load(":context.bzl", "CompileContext")
 
 # Write a file containing all the dynamically-generated dependency names. This
-# isn't used in the course of any Buck builds, but is needed by rust-project to
+# isn't used in the course of any Bsmr builds, but is needed by rust-project to
 # supply an accurate dependency graph to rust-analyzer..
 def write_named_deps_names(ctx: AnalysisContext, compile_ctx: CompileContext) -> Artifact | None:
     if not is_list(ctx.attrs.named_deps):

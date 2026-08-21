@@ -1,3 +1,9 @@
+# ===----------------------------------------------------------------------===
+# Upstream-Source: facebook/buck2@1560aca2002865cd73d7cafb22c705cfb640b2bc
+# Modifications Copyright (c) 2026 Dedalus Labs, Inc. and its contributors
+# SPDX-License-Identifier: Apache-2.0
+# ===----------------------------------------------------------------------===
+
 # Copyright (c) Meta Platforms, Inc. and affiliates.
 #
 # This source code is dual-licensed under either the MIT license found in the
@@ -50,15 +56,15 @@ _APPLE_STDERR_ERROR_CATEGORIES = [
     ErrorEnricher(matcher = "command timed out", category = "timeout_failure"),
     ErrorEnricher(matcher = "no such file or directory", category = "no_such_file_failure"),
     # user errors
-    ErrorEnricher(matcher = "unknown target", category = "unknown_buck_target_failure"),
-    # buck configuration issues
+    ErrorEnricher(matcher = "unknown target", category = "unknown_bsmr_target_failure"),
+    # bsmr configuration issues
     ErrorEnricher(matcher = "unknown cell alias", category = "unknown_cell_alias_failure"),
 ]
 
-def _match(matcher: str | BuckRegex, lowercase_stderr: str) -> bool:
+def _match(matcher: str | BsmrRegex, lowercase_stderr: str) -> bool:
     if isinstance(matcher, str):
         return matcher in lowercase_stderr
-    elif isinstance(matcher, BuckRegex):
+    elif isinstance(matcher, BsmrRegex):
         return matcher.match(lowercase_stderr)
     else:
         fail("Unknown matcher type: {}", type(matcher))

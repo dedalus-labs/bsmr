@@ -18,7 +18,7 @@ use std::process::Stdio;
 
 use bsmr_common::init::LogDownloadMethod;
 use bsmr_common::temp_path::TempPath;
-use bsmr_error::BuckErrorContext;
+use bsmr_error::BsmrErrorContext;
 use bsmr_error::internal_error;
 use bsmr_event_log::file_names::find_log_by_trace_id;
 use bsmr_event_log::file_names::retrieve_nth_recent_log;
@@ -81,7 +81,7 @@ impl EventLogOptions {
         } else {
             retrieve_nth_recent_log(
                 ctx.paths()
-                    .buck_error_context("Error identifying log dir")?,
+                    .bsmr_error_context("Error identifying log dir")?,
                 self.recent.unwrap_or(0),
             )
         }

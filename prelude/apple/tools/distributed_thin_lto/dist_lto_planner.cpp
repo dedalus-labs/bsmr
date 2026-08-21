@@ -1,3 +1,9 @@
+//===----------------------------------------------------------------------===//
+// Upstream-Source: facebook/buck2@1560aca2002865cd73d7cafb22c705cfb640b2bc
+// Modifications Copyright (c) 2026 Dedalus Labs, Inc. and its contributors
+// SPDX-License-Identifier: Apache-2.0
+//===----------------------------------------------------------------------===//
+
 /*
  * Copyright (c) Meta Platforms, Inc. and affiliates.
  *
@@ -172,14 +178,14 @@ static void populatePreMergerPathConversionMaps(
 static void runThinLink(
     const std::unordered_map<std::string, std::string>& preMergeToPostMerge) {
   if (enablePreMerger) {
-    // Buck requires actions write output files to a location set by the build
+    // Bsmr requires actions write output files to a location set by the build
     // system.  When toolchain binaries cannot for whatever reason easily
     // produce output files at known locations configurable locations, the usual
     // approach is to use a wrapper Python script such as this one to place the
-    // files at the locations buck expects.  In this case, this will not work as
+    // files at the locations bsmr expects.  In this case, this will not work as
     // sharded summaries embed paths to other bitcode files within the bitcode.
     // That means the toolchain must write the merged bitcode files to locations
-    // buck expects in the first place. This json document is parsed by the
+    // bsmr expects in the first place. This json document is parsed by the
     // linker and communicates the locations at which the toolchain must write
     // the merged bitcode files.
     facebook::files::TemporaryFile preMergerOutputFileMappingFile(
@@ -403,7 +409,7 @@ static folly::coro::Task<void> writeOptimizationPlanForObjectFile(
     nonLTOObjectFiles.push_back(objectFile->starlarkArrayIndex);
     nonLTOObjectFilesMutex.unlock();
     // The linker will not generate an index shard, or a merged bitcode file if
-    // the input is not bitcode. Buck still expects the output, so write empty
+    // the input is not bitcode. Bsmr still expects the output, so write empty
     // files.
     std::ofstream(objectFile->outputIndexShardFilePath).close();
 

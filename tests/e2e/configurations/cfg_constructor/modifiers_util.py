@@ -14,14 +14,14 @@
 
 # pyre-strict
 
-from bsmr.tests.e2e_util.api.buck import Buck
+from bsmr.tests.e2e_util.api.bsmr import Bsmr
 
 
-async def get_cfg(buck: Buck, *args: str) -> str:
-    result = await buck.ctargets(*args)
+async def get_cfg(bsmr: Bsmr, *args: str) -> str:
+    result = await bsmr.ctargets(*args)
 
     # Assuming ctargets output is `target (cfg)`
     cfg = result.stdout.split()[1].strip("()")
 
-    result = await buck.audit_configurations(cfg)
+    result = await bsmr.audit_configurations(cfg)
     return result.stdout

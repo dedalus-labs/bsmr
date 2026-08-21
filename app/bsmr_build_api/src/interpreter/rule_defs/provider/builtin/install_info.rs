@@ -18,7 +18,7 @@ use allocative::Allocative;
 use bsmr_artifact::artifact::artifact_type::Artifact;
 use bsmr_build_api_derive::internal_provider;
 use bsmr_core::provider::label::ConfiguredProvidersLabel;
-use bsmr_error::BuckErrorContext;
+use bsmr_error::BsmrErrorContext;
 use bsmr_interpreter::types::configured_providers_label::StarlarkConfiguredProvidersLabel;
 use starlark::any::ProvidesStaticType;
 use starlark::collections::SmallMap;
@@ -120,7 +120,7 @@ impl<'v, V: ValueLike<'v>> InstallInfoGen<V> {
                 Ok((
                     k,
                     v.0.get_bound_artifact()
-                        .with_buck_error_context(|| format!("For key `{k}`"))?,
+                        .with_bsmr_error_context(|| format!("For key `{k}`"))?,
                 ))
             })
             .collect()

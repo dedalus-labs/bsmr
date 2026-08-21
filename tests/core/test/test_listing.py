@@ -17,9 +17,9 @@
 from enum import Enum
 from typing import Any, Dict, List
 
-from bsmr.tests.e2e_util.api.buck import Buck
+from bsmr.tests.e2e_util.api.bsmr import Bsmr
 from bsmr.tests.e2e_util.asserts import expect_failure
-from bsmr.tests.e2e_util.buck_workspace import buck_test, env
+from bsmr.tests.e2e_util.bsmr_workspace import bsmr_test, env
 from bsmr.tests.e2e_util.helper.utils import filter_events, random_string
 
 
@@ -29,54 +29,54 @@ class TestDiscovery(Enum):
     SKIPPED = 3
 
 
-@buck_test()
-async def test_discovery_output_dir(buck: Buck) -> None:
+@bsmr_test()
+async def test_discovery_output_dir(bsmr: Bsmr) -> None:
     args = [
         "//:ok",
     ]
-    await run_test_and_check_discovery_presence(buck, TestDiscovery.EXECUTED, args)
+    await run_test_and_check_discovery_presence(bsmr, TestDiscovery.EXECUTED, args)
 
-    bad_buck_out_path = (buck.cwd / "bsmr-out" / "v2" / "test" / "bsmr-out").resolve()
-    assert not bad_buck_out_path.exists()
+    bad_output_path = (bsmr.cwd / "bsmr-out" / "v2" / "test" / "bsmr-out").resolve()
+    assert not bad_output_path.exists()
 
     discovery_output_path = (
-        buck.cwd / "bsmr-out" / "v2" / "test" / "discovery"
+        bsmr.cwd / "bsmr-out" / "v2" / "test" / "discovery"
     ).resolve()
     assert discovery_output_path.exists()
 
 
-@buck_test()
-async def test_discovery_cached_on_dice(buck: Buck) -> None:
+@bsmr_test()
+async def test_discovery_cached_on_dice(bsmr: Bsmr) -> None:
     args = [
         "//:ok",
     ]
-    await run_test_and_check_discovery_presence(buck, TestDiscovery.EXECUTED, args)
-    await run_test_and_check_discovery_presence(buck, TestDiscovery.SKIPPED, args)
+    await run_test_and_check_discovery_presence(bsmr, TestDiscovery.EXECUTED, args)
+    await run_test_and_check_discovery_presence(bsmr, TestDiscovery.SKIPPED, args)
 
 
-@buck_test()
-async def test_failed_discovery_not_cached_on_dice(buck: Buck) -> None:
+@bsmr_test()
+async def test_failed_discovery_not_cached_on_dice(bsmr: Bsmr) -> None:
     args = [
         "//:bad",
     ]
     await expect_failure(
-        buck.test(*args),
+        bsmr.test(*args),
         stderr_regex="Failed to list tests",
     )
-    whatran = (await buck.log("what-ran")).stdout
+    whatran = (await bsmr.log("what-ran")).stdout
     assert "test.discovery" in whatran
     assert "test.run" not in whatran
 
     await expect_failure(
-        buck.test(*args),
+        bsmr.test(*args),
         stderr_regex="Failed to list tests",
     )
-    whatran = (await buck.log("what-ran")).stdout
+    whatran = (await bsmr.log("what-ran")).stdout
     assert "test.discovery" in whatran
 
 
-@buck_test()
-async def test_listing_uncacheable(buck: Buck) -> None:
+@bsmr_test()
+async def test_listing_uncacheable(bsmr: Bsmr) -> None:
     seed = random_string()
     args = [
         "-c",
@@ -90,16 +90,16 @@ async def test_listing_uncacheable(buck: Buck) -> None:
         "//:listing_uncacheable",
     ]
     # Check it executed locally consistently
-    await run_test_and_check_discovery_presence(buck, TestDiscovery.EXECUTED, args)
-    await buck.kill()
-    await run_test_and_check_discovery_presence(buck, TestDiscovery.EXECUTED, args)
+    await run_test_and_check_discovery_presence(bsmr, TestDiscovery.EXECUTED, args)
+    await bsmr.kill()
+    await run_test_and_check_discovery_presence(bsmr, TestDiscovery.EXECUTED, args)
     # Check cache is not uploaded
-    cached = await _cache_uploads(buck)
+    cached = await _cache_uploads(bsmr)
     assert len(cached) == 0
 
 
-@buck_test()
-async def test_discovery_cached_on_re(buck: Buck) -> None:
+@bsmr_test()
+async def test_discovery_cached_on_re(bsmr: Bsmr) -> None:
     seed = random_string()
     args = [
         "-c",
@@ -112,10 +112,10 @@ async def test_discovery_cached_on_re(buck: Buck) -> None:
         "test.remote_cache_enabled=true",
         "//:test",
     ]
-    await run_test_and_check_discovery_presence(buck, TestDiscovery.EXECUTED, args)
-    await buck.kill()
-    await run_test_and_check_discovery_presence(buck, TestDiscovery.CACHED, args)
-    await buck.kill()
+    await run_test_and_check_discovery_presence(bsmr, TestDiscovery.EXECUTED, args)
+    await bsmr.kill()
+    await run_test_and_check_discovery_presence(bsmr, TestDiscovery.CACHED, args)
+    await bsmr.kill()
     args = [
         "-c",
         f"test.seed={seed}",
@@ -127,12 +127,12 @@ async def test_discovery_cached_on_re(buck: Buck) -> None:
         "test.remote_cache_enabled=true",
         "//:test",
     ]
-    await run_test_and_check_discovery_presence(buck, TestDiscovery.CACHED, args)
+    await run_test_and_check_discovery_presence(bsmr, TestDiscovery.CACHED, args)
 
 
-@buck_test()
+@bsmr_test()
 @env("BSMR_TEST_SKIP_ACTION_CACHE_WRITE", "true")
-async def test_local_discovery_uploaded_to_cache(buck: Buck) -> None:
+async def test_local_discovery_uploaded_to_cache(bsmr: Bsmr) -> None:
     seed = random_string()
     args = [
         "-c",
@@ -143,27 +143,27 @@ async def test_local_discovery_uploaded_to_cache(buck: Buck) -> None:
         "test.remote_cache_enabled=true",
         "//:ok",
     ]
-    await run_test_and_check_discovery_presence(buck, TestDiscovery.EXECUTED, args)
-    await _check_cache_uploaded(buck)
+    await run_test_and_check_discovery_presence(bsmr, TestDiscovery.EXECUTED, args)
+    await _check_cache_uploaded(bsmr)
 
 
-async def _check_cache_uploaded(buck: Buck) -> None:
-    result = await _cache_uploads(buck)
+async def _check_cache_uploaded(bsmr: Bsmr) -> None:
+    result = await _cache_uploads(bsmr)
     assert len(result) == 1
     assert result[0]["success"]
 
 
-async def _cache_uploads(buck: Buck) -> List[Dict[str, Any]]:
-    return await filter_events(buck, "Event", "data", "SpanEnd", "data", "CacheUpload")
+async def _cache_uploads(bsmr: Bsmr) -> List[Dict[str, Any]]:
+    return await filter_events(bsmr, "Event", "data", "SpanEnd", "data", "CacheUpload")
 
 
 async def run_test_and_check_discovery_presence(
-    buck: Buck,
+    bsmr: Bsmr,
     discovery: TestDiscovery,
     args: List[str],
 ) -> None:
-    await buck.test(*args)
-    stdout = (await buck.log("what-ran")).stdout
+    await bsmr.test(*args)
+    stdout = (await bsmr.log("what-ran")).stdout
 
     assert "test.run" in stdout
     match discovery:

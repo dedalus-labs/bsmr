@@ -5,7 +5,7 @@
 # ===----------------------------------------------------------------------===
 
 # @noautodeps
-load("@root//tests:buck_e2e.bzl", "bsmr_e2e_test")
+load("@root//tests:bsmr_e2e.bzl", "bsmr_e2e_test")
 load("@bsmr_build//rules:python_library.bzl", "python_library")
 load("@prelude//cfg/modifier:name.bzl", "NAMED_CONSTRAINT_SETTINGS")
 load(":constraint_setting_group.bzl", "constraint_setting_group")

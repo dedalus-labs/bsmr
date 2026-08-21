@@ -21,12 +21,12 @@ use std::sync::atomic::Ordering;
 use std::time::Instant;
 
 use bsmr_core::io_counters::IoCounterKey;
-use bsmr_error::BuckErrorContext;
+use bsmr_error::BsmrErrorContext;
 use bsmr_execute::re::manager::ReConnectionManager;
 use bsmr_fs::fs_util::DiskSpaceStats;
 use bsmr_fs::fs_util::disk_space_stats;
 use bsmr_fs::paths::abs_norm_path::AbsNormPathBuf;
-use bsmr_hash::StdBuckHashMap;
+use bsmr_hash::StdBsmrHashMap;
 use bsmr_util::process_stats::process_stats;
 use bsmr_util::system_stats::UnixSystemStats;
 
@@ -106,7 +106,7 @@ impl TokioMetricsState {
 pub struct SnapshotCollector {
     daemon: Arc<DaemonStateData>,
     net_io_collector: SystemNetworkIoCollector,
-    buck_out_path: Arc<AbsNormPathBuf>,
+    output_path: Arc<AbsNormPathBuf>,
     cpu_usage_collector: Option<CpuUsageCollector>,
     /// Handle to the *main* (`bsmr-rt`) runtime where DICE / build work runs.
     /// Snapshot collection itself runs on the smaller `bsmr-tn` Tonic
@@ -118,20 +118,20 @@ pub struct SnapshotCollector {
     /// Baseline of the page-in counters at command start, subtracted from the
     /// current counters on the final snapshot to report only this command's
     /// page-ins.
-    page_in_baseline: StdBuckHashMap<String, bsmr_data::DicePageInKeyTypeStats>,
+    page_in_baseline: StdBsmrHashMap<String, bsmr_data::DicePageInKeyTypeStats>,
 }
 
 impl SnapshotCollector {
     pub fn new(
         daemon: Arc<DaemonStateData>,
-        buck_out_path: AbsNormPathBuf,
+        output_path: AbsNormPathBuf,
         runtime: tokio::runtime::Handle,
     ) -> SnapshotCollector {
         let page_in_baseline = page_in_proto_map(&daemon);
         SnapshotCollector {
             daemon,
             net_io_collector: SystemNetworkIoCollector::new(),
-            buck_out_path: buck_out_path.into(),
+            output_path: output_path.into(),
             cpu_usage_collector: CpuUsageCollector::new().ok(),
             runtime,
             tokio_metrics_state: Arc::new(TokioMetricsState::new()),
@@ -232,7 +232,7 @@ impl SnapshotCollector {
         ) -> bsmr_error::Result<()> {
             let stats = re
                 .get_network_stats()
-                .buck_error_context("Error collecting network stats")?;
+                .bsmr_error_context("Error collecting network stats")?;
 
             snapshot.re_download_bytes = stats.downloaded;
             snapshot.re_upload_bytes = stats.uploaded;
@@ -350,7 +350,7 @@ impl SnapshotCollector {
                 })
                 .collect();
         } else {
-            snapshot.network_interface_stats = StdBuckHashMap::default();
+            snapshot.network_interface_stats = StdBsmrHashMap::default();
         }
     }
 
@@ -376,7 +376,7 @@ impl SnapshotCollector {
         if let Ok(DiskSpaceStats {
             total_space,
             free_space,
-        }) = disk_space_stats(&*self.buck_out_path)
+        }) = disk_space_stats(&*self.output_path)
         {
             snapshot.used_disk_space_bytes = Some(total_space - free_space);
         }
@@ -638,7 +638,7 @@ fn compute_worker_counter_deltas(
 /// Cumulative per-key-type page-in counters, as proto stats.
 fn page_in_proto_map(
     daemon: &DaemonStateData,
-) -> StdBuckHashMap<String, bsmr_data::DicePageInKeyTypeStats> {
+) -> StdBsmrHashMap<String, bsmr_data::DicePageInKeyTypeStats> {
     daemon
         .dice_manager
         .unsafe_dice()
@@ -661,9 +661,9 @@ fn page_in_proto_map(
 /// Per-key-type delta of the cumulative page-in counters between the command's
 /// start (`baseline`) and now (`current`).
 fn compute_page_in_delta(
-    baseline: &StdBuckHashMap<String, bsmr_data::DicePageInKeyTypeStats>,
-    current: &StdBuckHashMap<String, bsmr_data::DicePageInKeyTypeStats>,
-) -> StdBuckHashMap<String, bsmr_data::DicePageInKeyTypeStats> {
+    baseline: &StdBsmrHashMap<String, bsmr_data::DicePageInKeyTypeStats>,
+    current: &StdBsmrHashMap<String, bsmr_data::DicePageInKeyTypeStats>,
+) -> StdBsmrHashMap<String, bsmr_data::DicePageInKeyTypeStats> {
     current
         .iter()
         .filter_map(|(key_type, c)| {
@@ -761,7 +761,7 @@ mod tokio_unstable_smoke {
 
 #[cfg(test)]
 mod compute_page_in_delta_tests {
-    use bsmr_hash::StdBuckHashMap;
+    use bsmr_hash::StdBsmrHashMap;
 
     use super::compute_page_in_delta;
 
@@ -776,11 +776,11 @@ mod compute_page_in_delta_tests {
 
         // Baseline cumulatives include page-ins from earlier commands on this
         // daemon, so they must be subtracted out.
-        let mut baseline = StdBuckHashMap::default();
+        let mut baseline = StdBsmrHashMap::default();
         baseline.insert("A".to_owned(), stat(10, 100, 200, 1000));
         baseline.insert("C".to_owned(), stat(5, 50, 50, 500));
 
-        let mut current = StdBuckHashMap::default();
+        let mut current = StdBsmrHashMap::default();
         current.insert("A".to_owned(), stat(12, 130, 260, 1300)); // +2 this command
         current.insert("B".to_owned(), stat(3, 30, 60, 300)); // new key type, baseline 0
         current.insert("C".to_owned(), stat(5, 50, 50, 500)); // unchanged -> omitted

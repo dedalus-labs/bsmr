@@ -33,7 +33,7 @@ the thinlto index (which lists the objects actually needed for the final link).
 
 
 Both opt and link plans use indices to refer to other files because it allows the bzl
-code to easily map back to other objects held in buck memory.
+code to easily map back to other objects held in bsmr memory.
 """
 
 import argparse
@@ -352,7 +352,7 @@ def main(argv):
             sort_keys=True,
         )
 
-    # Append all search path flags (e.g -Lfbcode/third-party-buck/platform010/build/glibc/lib) from argsfile to final_index
+    # Append all search path flags (e.g -Lfbcode/third-party-bsmr/platform010/build/glibc/lib) from argsfile to final_index
     # this workaround is to make dist_lto compatible with link_group. see T136415235 for more info
     argsfile = _get_argsfile(args)
     lib_search_path = _extract_lib_search_path(argsfile)

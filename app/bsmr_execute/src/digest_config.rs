@@ -93,7 +93,7 @@ impl fmt::Display for DigestConfig {
 
 static_interner::interner!(
     DIGEST_CONFIG_INTERNER,
-    bsmr_hash::BuckDefaultHasher,
+    bsmr_hash::BsmrDefaultHasher,
     DigestConfigInner
 );
 

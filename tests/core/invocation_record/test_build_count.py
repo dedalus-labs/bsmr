@@ -16,16 +16,16 @@
 
 import subprocess
 
-from bsmr.tests.e2e_util.api.buck import Buck
+from bsmr.tests.e2e_util.api.bsmr import Bsmr
 from bsmr.tests.e2e_util.asserts import expect_failure
-from bsmr.tests.e2e_util.buck_workspace import buck_test
+from bsmr.tests.e2e_util.bsmr_workspace import bsmr_test
 
 
-@buck_test(setup_eden=True, write_invocation_record=True)
-async def test_build_count_since_rebase(buck: Buck) -> None:
+@bsmr_test(setup_eden=True, write_invocation_record=True)
+async def test_build_count_since_rebase(bsmr: Bsmr) -> None:
     # needed for mergebase to exist
-    subprocess.run(["sl", "bookmark", "main"], cwd=buck.cwd, check=True)
-    res = await buck.build(
+    subprocess.run(["sl", "bookmark", "main"], cwd=bsmr.cwd, check=True)
+    res = await bsmr.build(
         "//:test",
     )
     record = res.invocation_record()
@@ -34,7 +34,7 @@ async def test_build_count_since_rebase(buck: Buck) -> None:
     assert record["min_build_count_since_rebase"] == 1
 
     res2 = await expect_failure(
-        buck.build(
+        bsmr.build(
             "//:test",
             "-c test.fail=1",
         )

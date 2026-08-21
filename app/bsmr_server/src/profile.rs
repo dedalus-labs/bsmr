@@ -27,7 +27,7 @@ use bsmr_core::package::PackageLabel;
 use bsmr_core::pattern::pattern_type::ConfiguredProvidersPatternExtra;
 use bsmr_core::pattern::pattern_type::TargetPatternExtra;
 use bsmr_core::target::configured_target_label::ConfiguredTargetLabel;
-use bsmr_error::BuckErrorContext;
+use bsmr_error::BsmrErrorContext;
 use bsmr_error::internal_error;
 use bsmr_fs::paths::abs_path::AbsPath;
 use bsmr_interpreter::dice::starlark_provider::StarlarkEvalKind;
@@ -81,7 +81,7 @@ async fn generate_profile_analysis(
         StarlarkProfilerConfiguration::ProfileAnalysis(..) => {
             profile_analysis(&mut ctx, &configured_targets)
                 .await
-                .buck_error_context("Recursive profile analysis failed")
+                .bsmr_error_context("Recursive profile analysis failed")
                 .map(Arc::new)
         }
         _ => Err(internal_error!("Incorrect profile mode")),
@@ -151,7 +151,7 @@ impl ServerCommandTemplate for ProfileServerCommand {
         {
             ProfileOpts::TargetProfile(opts) => {
                 let action = bsmr_cli_proto::target_profile::Action::try_from(opts.action)
-                    .buck_error_context("Invalid action")?;
+                    .bsmr_error_context("Invalid action")?;
 
                 let profile_data = generate_profile(
                     server_ctx,

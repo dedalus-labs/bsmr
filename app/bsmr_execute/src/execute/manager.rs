@@ -23,7 +23,7 @@ use bsmr_build_signals::env::WaitingData;
 use bsmr_common::liveliness_observer::LivelinessObserver;
 use bsmr_core::bsmr_env;
 use bsmr_events::dispatch::EventDispatcher;
-use bsmr_hash::BuckIndexMap;
+use bsmr_hash::BsmrIndexMap;
 use bsmr_util::time_span::TimeSpan;
 use futures::future::Future;
 use futures::future::FutureExt;
@@ -46,7 +46,7 @@ trait CommandExecutionManagerLike: Sized {
     fn result(
         self,
         status: CommandExecutionStatus,
-        outputs: BuckIndexMap<CommandExecutionOutput, ArtifactValue>,
+        outputs: BsmrIndexMap<CommandExecutionOutput, ArtifactValue>,
         std_streams: CommandStdStreams,
         exit_code: Option<i32>,
         timing: CommandExecutionMetadata,
@@ -66,7 +66,7 @@ pub struct CommandExecutionManagerInner {
     pub waiting_data: WaitingData,
 }
 
-/// This tracker helps track the information that will go into the BuckCommandExecutionMetadata
+/// This tracker helps track the information that will go into the BsmrCommandExecutionMetadata
 pub struct CommandExecutionManager {
     pub inner: Box<CommandExecutionManagerInner>,
 }
@@ -133,7 +133,7 @@ impl CommandExecutionManager {
                 execution_kind,
                 reason: Some(reason),
             },
-            BuckIndexMap::default(),
+            BsmrIndexMap::default(),
             Default::default(),
             None,
             metadata,
@@ -165,7 +165,7 @@ impl CommandExecutionManagerLike for CommandExecutionManager {
     fn result(
         self,
         status: CommandExecutionStatus,
-        outputs: BuckIndexMap<CommandExecutionOutput, ArtifactValue>,
+        outputs: BsmrIndexMap<CommandExecutionOutput, ArtifactValue>,
         std_streams: CommandStdStreams,
         exit_code: Option<i32>,
         timing: CommandExecutionMetadata,
@@ -218,7 +218,7 @@ impl CommandExecutionManagerWithClaim {
     pub fn success(
         self,
         execution_kind: CommandExecutionKind,
-        outputs: BuckIndexMap<CommandExecutionOutput, ArtifactValue>,
+        outputs: BsmrIndexMap<CommandExecutionOutput, ArtifactValue>,
         std_streams: CommandStdStreams,
         timing: CommandExecutionMetadata,
     ) -> CommandExecutionResult {
@@ -242,7 +242,7 @@ impl CommandExecutionManagerWithClaim {
                 execution_kind,
                 reason: None,
             },
-            BuckIndexMap::default(),
+            BsmrIndexMap::default(),
             Default::default(),
             None,
             timing,
@@ -260,7 +260,7 @@ impl CommandExecutionManagerLike for CommandExecutionManagerWithClaim {
     fn result(
         self,
         status: CommandExecutionStatus,
-        outputs: BuckIndexMap<CommandExecutionOutput, ArtifactValue>,
+        outputs: BsmrIndexMap<CommandExecutionOutput, ArtifactValue>,
         std_streams: CommandStdStreams,
         exit_code: Option<i32>,
         timing: CommandExecutionMetadata,
@@ -298,7 +298,7 @@ pub trait CommandExecutionManagerExt: Sized {
     fn failure(
         self,
         execution_kind: CommandExecutionKind,
-        outputs: BuckIndexMap<CommandExecutionOutput, ArtifactValue>,
+        outputs: BsmrIndexMap<CommandExecutionOutput, ArtifactValue>,
         std_streams: CommandStdStreams,
         exit_code: Option<i32>,
         timing: CommandExecutionMetadata,
@@ -315,7 +315,7 @@ pub trait CommandExecutionManagerExt: Sized {
     fn timeout(
         self,
         execution_kind: CommandExecutionKind,
-        outputs: BuckIndexMap<CommandExecutionOutput, ArtifactValue>,
+        outputs: BsmrIndexMap<CommandExecutionOutput, ArtifactValue>,
         duration: Duration,
         std_streams: CommandStdStreams,
         timing: CommandExecutionMetadata,
@@ -345,7 +345,7 @@ where
     fn failure(
         self,
         execution_kind: CommandExecutionKind,
-        outputs: BuckIndexMap<CommandExecutionOutput, ArtifactValue>,
+        outputs: BsmrIndexMap<CommandExecutionOutput, ArtifactValue>,
         std_streams: CommandStdStreams,
         exit_code: Option<i32>,
         timing: CommandExecutionMetadata,
@@ -383,7 +383,7 @@ where
     fn timeout(
         self,
         execution_kind: CommandExecutionKind,
-        outputs: BuckIndexMap<CommandExecutionOutput, ArtifactValue>,
+        outputs: BsmrIndexMap<CommandExecutionOutput, ArtifactValue>,
         duration: Duration,
         std_streams: CommandStdStreams,
         timing: CommandExecutionMetadata,
@@ -416,7 +416,7 @@ where
                 execution_kind,
                 typ: error_type,
             },
-            BuckIndexMap::default(),
+            BsmrIndexMap::default(),
             Default::default(),
             None,
             CommandExecutionMetadata::empty(TimeSpan::empty_now()),

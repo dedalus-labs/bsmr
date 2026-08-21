@@ -26,7 +26,7 @@ use bsmr_cli_proto::build_request::Uploads;
 use bsmr_cli_proto::build_request::build_providers;
 use bsmr_client_ctx::client_ctx::ClientCommandContext;
 use bsmr_client_ctx::command_outcome::CommandOutcome;
-use bsmr_client_ctx::common::BuckArgMatches;
+use bsmr_client_ctx::common::BsmrArgMatches;
 use bsmr_client_ctx::common::CommonBuildConfigurationOptions;
 use bsmr_client_ctx::common::CommonCommandOptions;
 use bsmr_client_ctx::common::CommonEventLogOptions;
@@ -34,7 +34,7 @@ use bsmr_client_ctx::common::CommonStarlarkOptions;
 use bsmr_client_ctx::common::build::CommonBuildOptions;
 use bsmr_client_ctx::common::target_cfg::TargetCfgWithUniverseOptions;
 use bsmr_client_ctx::common::ui::CommonConsoleOptions;
-use bsmr_client_ctx::daemon::client::BuckdClientConnector;
+use bsmr_client_ctx::daemon::client::BsmrdClientConnector;
 use bsmr_client_ctx::daemon::client::NoPartialResultHandler;
 use bsmr_client_ctx::events_ctx::EventsCtx;
 use bsmr_client_ctx::exit_result::ExitResult;
@@ -42,16 +42,16 @@ use bsmr_client_ctx::path_arg::PathArg;
 use bsmr_client_ctx::streaming::StreamingCommand;
 use bsmr_common::argv::Argv;
 use bsmr_common::argv::SanitizedArgv;
-use bsmr_error::BuckErrorContext;
+use bsmr_error::BsmrErrorContext;
 use bsmr_error::conversion::from_any_with_tag;
-use bsmr_hash::StdBuckHashMap;
-use bsmr_hash::StdBuckHashSet;
+use bsmr_hash::StdBsmrHashMap;
+use bsmr_hash::StdBsmrHashSet;
 use bsmr_wrapper_common::BSMR_WRAPPER_ENV_VAR;
-use bsmr_wrapper_common::BUCK_WRAPPER_START_TIME_ENV_VAR;
-use bsmr_wrapper_common::BUCK_WRAPPER_UUID_ENV_VAR;
+use bsmr_wrapper_common::BSMR_WRAPPER_START_TIME_ENV_VAR;
+use bsmr_wrapper_common::BSMR_WRAPPER_UUID_ENV_VAR;
 use serde::Serialize;
 
-use crate::commands::build::print_buck_ui_and_rating;
+use crate::commands::build::print_bsmr_ui_and_rating;
 use crate::commands::build::print_build_failed;
 use crate::commands::build::print_build_result;
 use crate::commands::build::print_build_succeeded;
@@ -63,7 +63,7 @@ use crate::commands::build::print_build_succeeded;
 /// bsmr run //my/target -- --arg1 --arg2
 ///
 /// The Build ID for the underlying build execution is made available to the target in
-/// the `BUCK_RUN_BUILD_ID` environment variable.
+/// the `BSMR_RUN_BUILD_ID` environment variable.
 #[derive(Debug, clap::Parser)]
 // FIXME(JakobDegen): Remove usage override once soft error is removed
 #[clap(
@@ -116,8 +116,8 @@ impl StreamingCommand for RunCommand {
 
     async fn exec_impl(
         self,
-        buckd: &mut BuckdClientConnector,
-        matches: BuckArgMatches<'_>,
+        bsmrd: &mut BsmrdClientConnector,
+        matches: BsmrArgMatches<'_>,
         ctx: &mut ClientCommandContext<'_>,
         events_ctx: &mut EventsCtx,
     ) -> ExitResult {
@@ -130,7 +130,7 @@ impl StreamingCommand for RunCommand {
         let context = ctx.client_context(matches, &self)?;
         let has_target_universe = !self.target_cfg.target_universe.is_empty();
         // TODO(rafaelc): fail fast on the daemon if the target doesn't have RunInfo
-        let response = buckd
+        let response = bsmrd
             .with_flushing()
             .build(
                 BuildRequest {
@@ -143,7 +143,7 @@ impl StreamingCommand for RunCommand {
                         run_info: build_providers::Action::Build as i32,
                         test_info: build_providers::Action::Skip as i32,
                     }),
-                    // `buck run` execs the target, so it needs the resolved run command line.
+                    // `bsmr run` execs the target, so it needs the resolved run command line.
                     response_options: Some(ResponseOptions {
                         return_outputs: false,
                         return_run_args: true,
@@ -201,20 +201,20 @@ impl StreamingCommand for RunCommand {
             None
         };
 
-        print_buck_ui_and_rating(&console, ctx, events_ctx.used_superconsole)?;
+        print_bsmr_ui_and_rating(&console, ctx, events_ctx.used_superconsole)?;
         print_build_succeeded(&console, ctx, extra)?;
 
-        // Special case for recursive invocations of buck; `BSMR_WRAPPER` is set by wrapper scripts that execute
+        // Special case for recursive invocations of bsmr; `BSMR_WRAPPER` is set by wrapper scripts that execute
         // Bessemer. We're not a wrapper script, so we unset it to prevent `run` from inheriting it.
         // TODO: Audit that the environment access only happens in single-threaded code.
         unsafe { std::env::remove_var(BSMR_WRAPPER_ENV_VAR) };
         // TODO: Audit that the environment access only happens in single-threaded code.
-        unsafe { std::env::remove_var(BUCK_WRAPPER_UUID_ENV_VAR) };
+        unsafe { std::env::remove_var(BSMR_WRAPPER_UUID_ENV_VAR) };
         // TODO: Audit that the environment access only happens in single-threaded code.
-        unsafe { std::env::remove_var(BUCK_WRAPPER_START_TIME_ENV_VAR) };
+        unsafe { std::env::remove_var(BSMR_WRAPPER_START_TIME_ENV_VAR) };
 
         if let Some(file_path) = self.command_args_file {
-            let mut output = File::create(&file_path).with_buck_error_context(|| {
+            let mut output = File::create(&file_path).with_bsmr_error_context(|| {
                 format!("Failed to create/open `{file_path}` to print command")
             })?;
 
@@ -226,10 +226,10 @@ impl StreamingCommand for RunCommand {
                 print_command: false,
             };
             let serialized = serde_json::to_string(&command)
-                .buck_error_context("Failed to serialize command")?;
+                .bsmr_error_context("Failed to serialize command")?;
             output
                 .write_all(serialized.as_bytes())
-                .buck_error_context("Failed to write command")?;
+                .bsmr_error_context("Failed to write command")?;
 
             return ExitResult::success();
         }
@@ -253,7 +253,7 @@ impl StreamingCommand for RunCommand {
             run_args[0].clone().into(),
             run_args.into_iter().map(|arg| arg.into()).collect(),
             chdir,
-            vec![("BUCK_RUN_BUILD_ID".to_owned(), ctx.trace_id.to_string())],
+            vec![("BSMR_RUN_BUILD_ID".to_owned(), ctx.trace_id.to_string())],
         )
     }
 
@@ -274,7 +274,7 @@ impl StreamingCommand for RunCommand {
     }
 
     fn sanitize_argv(&self, argv: Argv) -> SanitizedArgv {
-        let to_redact: StdBuckHashSet<_> = self.extra_run_args.iter().collect();
+        let to_redact: StdBsmrHashSet<_> = self.extra_run_args.iter().collect();
         argv.redacted(to_redact)
     }
 }
@@ -283,10 +283,10 @@ impl StreamingCommand for RunCommand {
 struct CommandArgsFile {
     path: String,
     argv: Vec<String>,
-    envp: StdBuckHashMap<String, String>,
-    // Not used. For buck_v1 back compatibility only.
+    envp: StdBsmrHashMap<String, String>,
+    // Not used. For bsmr_v1 back compatibility only.
     is_fix_script: bool,
-    // Not used. For buck_v1 back compatibility only.
+    // Not used. For bsmr_v1 back compatibility only.
     print_command: bool,
 }
 

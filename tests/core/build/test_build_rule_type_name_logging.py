@@ -17,16 +17,16 @@
 
 import typing
 
-from bsmr.tests.e2e_util.api.buck import Buck
-from bsmr.tests.e2e_util.buck_workspace import buck_test
+from bsmr.tests.e2e_util.api.bsmr import Bsmr
+from bsmr.tests.e2e_util.bsmr_workspace import bsmr_test
 from bsmr.tests.e2e_util.helper.utils import filter_events
 
 
 async def check_rule_type_names(
-    buck: Buck, expected_rule_type_names: typing.List[typing.Optional[str]]
+    bsmr: Bsmr, expected_rule_type_names: typing.List[typing.Optional[str]]
 ) -> None:
     rule_names = await filter_events(
-        buck,
+        bsmr,
         "Result",
         "result",
         "build_response",
@@ -39,47 +39,47 @@ async def check_rule_type_names(
             assert actual["target_rule_type_name"] == expected
 
 
-@buck_test()
-async def test_build_nested_subtargets(buck: Buck) -> None:
-    await buck.build(
+@bsmr_test()
+async def test_build_nested_subtargets(bsmr: Bsmr) -> None:
+    await bsmr.build(
         "//:nested[sub][nested_sub]",
     )
-    await check_rule_type_names(buck, ["nested_subtargets"])
+    await check_rule_type_names(bsmr, ["nested_subtargets"])
 
 
-@buck_test()
-async def test_build_single_dep_touch(buck: Buck) -> None:
-    await buck.build(
+@bsmr_test()
+async def test_build_single_dep_touch(bsmr: Bsmr) -> None:
+    await bsmr.build(
         "//:rule1",
     )
-    await check_rule_type_names(buck, ["one"])
+    await check_rule_type_names(bsmr, ["one"])
 
 
-@buck_test()
-async def test_build_two_out_of_order(buck: Buck) -> None:
-    await buck.build(
+@bsmr_test()
+async def test_build_two_out_of_order(bsmr: Bsmr) -> None:
+    await bsmr.build(
         "//:rule1",
         "//:nested[sub][nested_sub]",
     )
-    await check_rule_type_names(buck, ["nested_subtargets", "one"])
+    await check_rule_type_names(bsmr, ["nested_subtargets", "one"])
 
 
-@buck_test()
-async def test_build_rule_with_transition(buck: Buck) -> None:
-    await buck.build(
+@bsmr_test()
+async def test_build_rule_with_transition(bsmr: Bsmr) -> None:
+    await bsmr.build(
         "//:a_writer_with_transition",
     )
 
-    await check_rule_type_names(buck, ["three_with_transition"])
+    await check_rule_type_names(bsmr, ["three_with_transition"])
 
 
-@buck_test()
-async def test_build_all_in_target(buck: Buck) -> None:
-    await buck.build(
+@bsmr_test()
+async def test_build_all_in_target(bsmr: Bsmr) -> None:
+    await bsmr.build(
         "//:",
     )
     await check_rule_type_names(
-        buck,
+        bsmr,
         [
             "two",
             "three_with_transition",
@@ -91,13 +91,13 @@ async def test_build_all_in_target(buck: Buck) -> None:
     )
 
 
-@buck_test()
-async def test_build_all_recursive(buck: Buck) -> None:
-    await buck.build(
+@bsmr_test()
+async def test_build_all_recursive(bsmr: Bsmr) -> None:
+    await bsmr.build(
         "//...",
     )
     await check_rule_type_names(
-        buck,
+        bsmr,
         [
             "two",
             "three_with_transition",

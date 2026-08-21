@@ -1,8 +1,8 @@
 # This file is @generated, regenerate by re-running test with `-- --env BSMR_UPDATE_GOLDEN=1` appended to the test command
 
-[<TIMESTAMP>] Buck UI: https://www.internalfb.com/bsmr/<UUID>
+[<TIMESTAMP>] Bsmr UI: https://www.internalfb.com/bsmr/<UUID>
 BUILD FAILED
-Command failed: Buck daemon event bus encountered an error, the root cause (if available) is displayed above this message.
+Command failed: Bsmr daemon event bus encountered an error, the root cause (if available) is displayed above this message.
 
 Caused by:
     0: code: 'Unknown error', message: "h2 protocol error: error reading a body from connection", source: hyper::Error(Body, Error { kind: Io(Custom { kind: BrokenPipe, error: "stream closed because of a broken pipe" }) })

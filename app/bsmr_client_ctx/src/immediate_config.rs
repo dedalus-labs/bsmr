@@ -31,7 +31,7 @@ use bsmr_core::cells::CellResolver;
 use bsmr_core::cells::cell_path::CellPathRef;
 use bsmr_core::cells::cell_root_path::CellRootPathBuf;
 use bsmr_core::fs::project::ProjectRoot;
-use bsmr_error::BuckErrorContext;
+use bsmr_error::BsmrErrorContext;
 use bsmr_error::internal_error;
 use bsmr_fs::fs_util;
 use bsmr_fs::paths::abs_norm_path::AbsNormPath;
@@ -70,7 +70,7 @@ impl ImmediateConfig {
             cell_resolver: cells.cell_resolver,
             cwd_cell_alias_resolver,
             daemon_startup_config: DaemonStartupConfig::new(&cells.root_config)
-                .buck_error_context("Error loading daemon startup config")?,
+                .bsmr_error_context("Error loading daemon startup config")?,
             #[cfg(fbcode_build)]
             allow_daemon_start_unsandboxed_via_wrapper: cells
                 .root_config
@@ -225,7 +225,7 @@ impl<'a> ImmediateConfigContext<'a> {
                     show_sentiment: cfg.show_sentiment,
                 })
             })
-            .buck_error_context("Error creating cell resolver")
+            .bsmr_error_context("Error creating cell resolver")
     }
 
     pub(crate) fn resolve_argfile_kind(
@@ -256,7 +256,7 @@ impl<'a> ImmediateConfigContext<'a> {
 }
 
 fn is_paranoid_enabled(path: &AbsPath) -> bsmr_error::Result<bool> {
-    if let Some(p) = bsmr_env!("BUCK_PARANOID", type=bool)? {
+    if let Some(p) = bsmr_env!("BSMR_PARANOID", type=bool)? {
         return Ok(p);
     }
 
@@ -266,13 +266,13 @@ fn is_paranoid_enabled(path: &AbsPath) -> bsmr_error::Result<bool> {
     };
 
     let info = bsmr_cli_proto::ParanoidInfo::decode(bytes.as_slice())
-        .buck_error_context("Invalid data ")?;
+        .bsmr_error_context("Invalid data ")?;
 
     let now = SystemTime::now();
     let expires_at = SystemTime::try_from(
         info.expires_at
             .ok_or_else(|| internal_error!("Missing expires_at"))?,
     )
-    .buck_error_context("Invalid expires_at")?;
+    .bsmr_error_context("Invalid expires_at")?;
     Ok(now < expires_at)
 }

@@ -27,7 +27,7 @@ oncall("build_infra")
     bxl_test(
         name = "{}_test".format(sanitizer),
         src = "test_sanitizer_bsmrconfig_backed_modifiers.bxl",
-        buck_args = [
+        bsmr_args = [
             "--config",
             "fbcode.sanitizer={}".format(sanitizer),
         ],
@@ -62,7 +62,7 @@ bsmrconfig_backed_modifiers(
 bxl_test(
     name = "test_platform_bsmrconfig_backed_modifiers_test",
     src = "test_platform_bsmrconfig_backed_modifiers.bxl",
-    buck_args = [
+    bsmr_args = [
         "--config",
         "test.use_platform=linux_x86_64",
     ],

@@ -1,3 +1,9 @@
+# ===----------------------------------------------------------------------===
+# Upstream-Source: facebook/buck2@1560aca2002865cd73d7cafb22c705cfb640b2bc
+# Modifications Copyright (c) 2026 Dedalus Labs, Inc. and its contributors
+# SPDX-License-Identifier: Apache-2.0
+# ===----------------------------------------------------------------------===
+
 # Copyright (c) Meta Platforms, Inc. and affiliates.
 #
 # This source code is dual-licensed under either the MIT license found in the
@@ -55,7 +61,7 @@ def apk_genrule_impl(ctx: AnalysisContext) -> list[Provider]:
         input_android_aab_info = ctx.attrs.aab[AndroidAabInfo]
         expect(input_android_aab_info != None, "'aab' attribute must be an Android Bundle!")
 
-        # It's not an APK, but buck1 does this so we do it too for compatibility
+        # It's not an APK, but legacy does this so we do it too for compatibility
         input_apk = input_android_aab_info.aab
         input_manifest = input_android_aab_info.manifest
         input_materialized_artifacts = input_android_aab_info.materialized_artifacts

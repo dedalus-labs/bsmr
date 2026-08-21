@@ -27,7 +27,7 @@ use bsmr_core::cells::build_file_cell::BuildFileCell;
 use bsmr_core::cells::cell_path::CellPath;
 use bsmr_core::cells::cell_path_with_allowed_relative_dir::CellPathWithAllowedRelativeDir;
 use bsmr_core::cells::name::CellName;
-use bsmr_hash::StdBuckHashSet;
+use bsmr_hash::StdBsmrHashSet;
 use bsmr_interpreter::load_module::InterpreterCalculation;
 use bsmr_interpreter::parse_import::ParseImportOptions;
 use bsmr_interpreter::parse_import::RelativeImports;
@@ -83,7 +83,7 @@ fn parse_starlark_paths(
     cell_resolver: &CellAliasResolver,
     current_dir: &CellPath,
     symbol_patterns: &[String],
-) -> bsmr_error::Result<StdBuckHashSet<StarlarkFilePath>> {
+) -> bsmr_error::Result<StdBsmrHashSet<StarlarkFilePath>> {
     let parse_options = ParseImportOptions {
         allow_missing_at_symbol: true,
         relative_import_option: RelativeImports::Allow {

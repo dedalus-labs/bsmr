@@ -159,7 +159,7 @@ def get_apple_bundle_resource_part_list(ctx: AnalysisContext) -> AppleBundleReso
         signing_context_parts = first_level_signing_context_parts,
     )
 
-# Same logic as in v1, see `buck_client/src/com/facebook/buck/apple/ApplePkgInfo.java`
+# Same logic as in v1, see `bsmr_client/src/com/dedalus/bsmr/apple/ApplePkgInfo.java`
 def _create_pkg_info_if_needed(ctx: AnalysisContext) -> list[AppleBundlePart]:
     extension = get_extension_attr(ctx)
     if extension == "xpc" or extension == "qlgenerator":

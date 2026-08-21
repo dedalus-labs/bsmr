@@ -15,20 +15,20 @@
 
 import json
 
-from bsmr.tests.e2e_util.api.buck import Buck
-from bsmr.tests.e2e_util.buck_workspace import buck_test
+from bsmr.tests.e2e_util.api.bsmr import Bsmr
+from bsmr.tests.e2e_util.bsmr_workspace import bsmr_test
 
 
-@buck_test(inplace=False)
-async def test_bsmr_config_logging_disabled(buck: Buck) -> None:
-    result = await buck.targets("//:")
+@bsmr_test(inplace=False)
+async def test_bsmr_config_logging_disabled(bsmr: Bsmr) -> None:
+    result = await bsmr.targets("//:")
     assert "starlark_log_bsmrconfig" not in result.stderr
     assert "starlark_log_all_bsmrconfigs" not in result.stderr
 
 
-@buck_test(inplace=False)
-async def test_bsmr_config_logging_enabled(buck: Buck) -> None:
-    result = await buck.targets("//:", "--config", "bsmrconfig.log=test.read1")
+@bsmr_test(inplace=False)
+async def test_bsmr_config_logging_enabled(bsmr: Bsmr) -> None:
+    result = await bsmr.targets("//:", "--config", "bsmrconfig.log=test.read1")
     lines = [
         line
         for line in result.stderr.splitlines()
@@ -39,7 +39,7 @@ async def test_bsmr_config_logging_enabled(buck: Buck) -> None:
     ]
     assert len(lines) == 1
 
-    result = await buck.targets(
+    result = await bsmr.targets(
         "//:", "--config", "bsmrconfig.log=test.not_a_valid_bsmrconfig"
     )
     lines = [
@@ -48,9 +48,9 @@ async def test_bsmr_config_logging_enabled(buck: Buck) -> None:
     assert len(lines) == 0
 
 
-@buck_test(inplace=False)
-async def test_bsmr_config_logging_enabled_json(buck: Buck) -> None:
-    result = await buck.targets("//:", "--config", "bsmrconfig.log_json=test.read1")
+@bsmr_test(inplace=False)
+async def test_bsmr_config_logging_enabled_json(bsmr: Bsmr) -> None:
+    result = await bsmr.targets("//:", "--config", "bsmrconfig.log_json=test.read1")
     lines = [
         line for line in result.stderr.splitlines() if "starlark_log_bsmrconfig" in line
     ]
@@ -61,7 +61,7 @@ async def test_bsmr_config_logging_enabled_json(buck: Buck) -> None:
     ]
     assert read_config["cell"] == "root"
 
-    result = await buck.targets(
+    result = await bsmr.targets(
         "//:", "--config", "bsmrconfig.log_json=test.not_a_valid_bsmrconfig"
     )
     lines = [
@@ -70,9 +70,9 @@ async def test_bsmr_config_logging_enabled_json(buck: Buck) -> None:
     assert len(lines) == 0
 
 
-@buck_test(inplace=False)
-async def test_bsmr_config_logging_all_enabled(buck: Buck) -> None:
-    result = await buck.targets(
+@bsmr_test(inplace=False)
+async def test_bsmr_config_logging_all_enabled(bsmr: Bsmr) -> None:
+    result = await bsmr.targets(
         "//:",
         "--config",
         "bsmrconfig.log_all_in_json=true",

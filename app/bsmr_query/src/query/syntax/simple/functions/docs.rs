@@ -17,7 +17,7 @@
 use std::borrow::Cow;
 use std::fmt::Write;
 
-use bsmr_hash::BuckIndexMap;
+use bsmr_hash::BsmrIndexMap;
 use itertools::Itertools;
 
 use crate::query::syntax::simple::functions::helpers::QueryArgType;
@@ -103,7 +103,7 @@ impl FunctionDescription {
 
 // Instances created by #[query_module]
 pub struct ModuleDescription {
-    pub functions: BuckIndexMap<&'static str, FunctionDescription>,
+    pub functions: BsmrIndexMap<&'static str, FunctionDescription>,
 
     pub short_help: Option<String>,
     pub details: Option<String>,
@@ -119,7 +119,7 @@ impl QueryEnvironmentDescription {
         let merged_sorted_functions = self
             .mods
             .iter()
-            .fold(BuckIndexMap::default(), |acc, module| {
+            .fold(BsmrIndexMap::default(), |acc, module| {
                 acc.into_iter().chain(module.functions.iter()).collect()
             })
             .into_iter()

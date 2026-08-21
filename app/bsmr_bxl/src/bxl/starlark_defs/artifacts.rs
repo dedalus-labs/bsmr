@@ -32,7 +32,7 @@ use bsmr_build_api::interpreter::rule_defs::artifact::starlark_artifact::Starlar
 use bsmr_build_api::interpreter::rule_defs::artifact::starlark_artifact_like::StarlarkInputArtifactLike;
 use bsmr_build_api::interpreter::rule_defs::artifact::starlark_declared_artifact::StarlarkDeclaredArtifact;
 use bsmr_execute::path::artifact_path::ArtifactPath;
-use bsmr_hash::BuckIndexSet;
+use bsmr_hash::BsmrIndexSet;
 use derive_more::Display;
 use dice::DiceComputations;
 use dupe::Dupe;
@@ -481,7 +481,7 @@ fn artifact_group_methods(builder: &mut MethodsBuilder) {
 #[derive(Debug, Allocative)]
 pub(crate) struct LazyBuildArtifact {
     /// The artifacts that are associated with this artifact. This is used to materialize.
-    artifacts_to_build: BuckIndexSet<ArtifactGroup>,
+    artifacts_to_build: BsmrIndexSet<ArtifactGroup>,
     artifact: StarlarkArtifact,
 }
 
@@ -497,7 +497,7 @@ impl LazyBuildArtifact {
             .flat_map(|v| v.iter())
             .cloned()
             .chain(iter::once(ArtifactGroup::Artifact(bound_artifact)))
-            .collect::<BuckIndexSet<_>>();
+            .collect::<BsmrIndexSet<_>>();
 
         LazyBuildArtifact {
             artifacts_to_build: artifacts,

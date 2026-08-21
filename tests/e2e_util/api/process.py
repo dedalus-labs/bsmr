@@ -33,7 +33,7 @@ from bsmr.tests.e2e_util.api.result import E, ExceptionType, R, ResultType
 
 
 class Process(Generic[R, E], Awaitable[R]):
-    """Instantiates a BuckProcess object with a running process"""
+    """Instantiates a BsmrProcess object with a running process"""
 
     def __init__(
         self,
@@ -89,7 +89,7 @@ class Process(Generic[R, E], Awaitable[R]):
         return self._result_type(*args)
 
     async def _wait(self) -> R:
-        """Returns a BuckResult with a finished process"""
+        """Returns a BsmrResult with a finished process"""
         process = await self._awaitable_process
         return await self._get_result_or_raise_exception(process)
 
@@ -106,13 +106,13 @@ class Process(Generic[R, E], Awaitable[R]):
         Overrides __await__ of Awaitable class to implement Awaitable[R].
         Usage:
             ```
-            buck_result = await process
+            bsmr_result = await process
             ```
         """
         return self._wait().__await__()
 
     async def interrupt(self) -> R:
-        """Sends SIGINT, and returns a BuckResult with an interrupted process"""
+        """Sends SIGINT, and returns a BsmrResult with an interrupted process"""
         process = await self._awaitable_process
         process.send_signal(signal.SIGINT)
         return await self._get_result_or_raise_exception(process)

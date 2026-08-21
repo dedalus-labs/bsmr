@@ -1,3 +1,9 @@
+# ===----------------------------------------------------------------------===
+# Upstream-Source: facebook/buck2@1560aca2002865cd73d7cafb22c705cfb640b2bc
+# Modifications Copyright (c) 2026 Dedalus Labs, Inc. and its contributors
+# SPDX-License-Identifier: Apache-2.0
+# ===----------------------------------------------------------------------===
+
 # Copyright (c) Meta Platforms, Inc. and affiliates.
 #
 # This source code is dual-licensed under either the MIT license found in the
@@ -31,7 +37,7 @@ def _create_preprocess_subparser(
 ) -> None:
     parser = subparsers.add_parser(
         _SubcommandName.preprocess.value,
-        description="Sub-command to expand macro variables in parametrized Info.plist files. It's the Buck v2 equivalent of what `FindAndReplaceStep` and `InfoPlistSubstitution` do.",
+        description="Sub-command to expand macro variables in parametrized Info.plist files. It's the Bsmr v2 equivalent of what `FindAndReplaceStep` and `InfoPlistSubstitution` do.",
     )
     parser.add_argument(
         "--input",
@@ -73,7 +79,7 @@ def _create_process_subparser(
 ) -> None:
     parser = subparsers.add_parser(
         _SubcommandName.process.value,
-        description="Sub-command to do the final processing of the Info.plist before it's copied to the application bundle. It's the Buck v2 equivalent of what `PlistProcessStep` does in v1.",
+        description="Sub-command to do the final processing of the Info.plist before it's copied to the application bundle. It's the Bsmr v2 equivalent of what `PlistProcessStep` does in v1.",
     )
     parser.add_argument(
         "--input",
@@ -122,7 +128,7 @@ def _create_process_subparser(
 
 def _parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
-        description="Tool to process Info.plist file before it is placed into the bundle. It's the Buck v2 equivalent of what `AppleInfoPlist` build rule from v1 does."
+        description="Tool to process Info.plist file before it is placed into the bundle. It's the Bsmr v2 equivalent of what `AppleInfoPlist` build rule from v1 does."
     )
     subparsers = parser.add_subparsers(dest="subcommand_name")
     _create_preprocess_subparser(subparsers)

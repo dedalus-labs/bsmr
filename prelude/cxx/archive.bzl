@@ -1,3 +1,9 @@
+# ===----------------------------------------------------------------------===
+# Upstream-Source: facebook/buck2@1560aca2002865cd73d7cafb22c705cfb640b2bc
+# Modifications Copyright (c) 2026 Dedalus Labs, Inc. and its contributors
+# SPDX-License-Identifier: Apache-2.0
+# ===----------------------------------------------------------------------===
+
 # Copyright (c) Meta Platforms, Inc. and affiliates.
 #
 # This source code is dual-licensed under either the MIT license found in the
@@ -144,7 +150,7 @@ def make_archive(
     # TODO(T110378125): use argsfiles for GNU archiver for long lists of objects.
     # TODO(T110378123): for BSD archiver, split long args over multiple invocations.
     # TODO(T110378100): We need to scrub the static library (timestamps, permissions, etc) as those are
-    # sources of non-determinism. See `ObjectFileScrubbers.createDateUidGidScrubber()` in Buck v1.
+    # sources of non-determinism. See `ObjectFileScrubbers.createDateUidGidScrubber()` in Bsmr v1.
 
     return Archive(
         artifact = archive,

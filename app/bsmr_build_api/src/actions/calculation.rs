@@ -35,7 +35,7 @@ use bsmr_data::ActionErrorDiagnostics;
 use bsmr_data::ActionSubErrors;
 use bsmr_data::ToProtoMessage;
 use bsmr_data::get_action_digest;
-use bsmr_error::BuckErrorContext;
+use bsmr_error::BsmrErrorContext;
 use bsmr_event_observer::action_util::get_execution_time_ms;
 use bsmr_events::dispatch::async_record_root_spans;
 use bsmr_events::dispatch::get_dispatcher;
@@ -45,7 +45,7 @@ use bsmr_execute::artifact::artifact_dyn::ArtifactDyn;
 use bsmr_execute::execute::result::CommandExecutionReport;
 use bsmr_execute::execute::result::CommandExecutionStatus;
 use bsmr_execute::output_size::OutputSize;
-use bsmr_hash::BuckIndexMap;
+use bsmr_hash::BsmrIndexMap;
 use bsmr_interpreter::print_handler::EventDispatcherPrintHandler;
 use bsmr_interpreter::soft_error::BsmrStarlarkSoftErrorHandler;
 use bsmr_node::nodes::configured_frontend::ConfiguredTargetNodeCalculation;
@@ -76,7 +76,7 @@ use crate::actions::error_handler::ActionErrorHandlerError;
 use crate::actions::error_handler::ActionSubErrorResult;
 use crate::actions::error_handler::StarlarkActionErrorContext;
 use crate::actions::execute::action_executor::ActionOutputs;
-use crate::actions::execute::action_executor::BuckActionExecutor;
+use crate::actions::execute::action_executor::BsmrActionExecutor;
 use crate::actions::execute::action_executor::HasActionExecutor;
 use crate::actions::execute::error::ExecuteError;
 use crate::artifact_groups::ArtifactGroup;
@@ -126,7 +126,7 @@ async fn build_action_no_redirect(
     let executor = ctx
         .get_action_executor(action.execution_config())
         .await
-        .buck_error_context(format!("for action `{action}`"))?;
+        .bsmr_error_context(format!("for action `{action}`"))?;
 
     let _eager_guard = if executor.materializer().is_eager_materialization_enabled()
         && action.eager_materialization_enabled()
@@ -153,7 +153,7 @@ async fn build_action_no_redirect(
     };
 
     let ensured_inputs = if inputs.is_empty() {
-        BuckIndexMap::default()
+        BsmrIndexMap::default()
     } else {
         let ready_inputs: Vec<_> = tokio::task::unconstrained(KeepGoing::try_compute_join_all(
             ctx,
@@ -172,7 +172,7 @@ async fn build_action_no_redirect(
         ))
         .await?;
 
-        let mut results = BuckIndexMap::with_capacity(inputs.len());
+        let mut results = BsmrIndexMap::with_capacity(inputs.len());
         for (artifact, ready) in zip(inputs.iter(), ready_inputs) {
             results.insert(artifact.clone(), ready);
         }
@@ -299,9 +299,9 @@ async fn collect_eager_paths(
 async fn build_action_inner(
     ctx: &mut DiceComputations<'_>,
     cancellation: &CancellationContext,
-    executor: &BuckActionExecutor,
+    executor: &BsmrActionExecutor,
     waiting_data: WaitingData,
-    ensured_inputs: BuckIndexMap<ArtifactGroup, ArtifactGroupValues>,
+    ensured_inputs: BsmrIndexMap<ArtifactGroup, ArtifactGroupValues>,
     action: &Arc<RegisteredAction>,
     target_rule_type_name: Option<String>,
 ) -> (ActionExecutionData, Box<bsmr_data::ActionExecutionEnd>) {
@@ -562,7 +562,7 @@ async fn build_action_inner(
 
 fn is_action_eligible_for_dedupe(
     action: &Arc<RegisteredAction>,
-    inputs: &BuckIndexMap<ArtifactGroup, ArtifactGroupValues>,
+    inputs: &BsmrIndexMap<ArtifactGroup, ArtifactGroupValues>,
 ) -> bsmr_data::EligibleForDedupe {
     let target_platform =
         if let BaseDeferredKey::TargetLabel(configured_label) = action.key().owner() {
@@ -778,7 +778,7 @@ impl ActionCalculation {
         action_key: &ActionKey,
     ) -> impl Future<Output = bsmr_error::Result<ActionOutputs>> + use<'a> {
         // build_action is called for every action key. We don't use `async fn` to ensure that it has minimal cost.
-        // We don't currently consume this in buck_e2e but it's good to log for debugging purposes.
+        // We don't currently consume this in bsmr_e2e but it's good to log for debugging purposes.
         debug!("build_action {}", action_key);
         ctx.compute(BuildKey::ref_cast(action_key)).map(|v| v?)
     }

@@ -1,3 +1,9 @@
+# ===----------------------------------------------------------------------===
+# Upstream-Source: facebook/buck2@1560aca2002865cd73d7cafb22c705cfb640b2bc
+# Modifications Copyright (c) 2026 Dedalus Labs, Inc. and its contributors
+# SPDX-License-Identifier: Apache-2.0
+# ===----------------------------------------------------------------------===
+
 # Copyright (c) Meta Platforms, Inc. and affiliates.
 #
 # This source code is dual-licensed under either the MIT license found in the
@@ -9,7 +15,7 @@
 load("@prelude//zip_file:zip_file_toolchain.bzl", "ZipFileToolchainInfo")
 
 def zip_file_toolchain(name, **kwargs):
-    kwargs["create_zip"] = "prelude//toolchains/android/src/com/facebook/buck/features/zip/rules/utils:zip_binary"
+    kwargs["create_zip"] = "prelude//toolchains/android/src/com/dedalus/bsmr/features/zip/rules/utils:zip_binary"
 
     _zip_file_toolchain_rule(name = name, **kwargs)
 

@@ -26,12 +26,12 @@ use tokio::runtime::Handle;
 use tokio::task::JoinHandle;
 
 #[derive(Allocative)]
-pub struct BuckSpawner {
+pub struct BsmrSpawner {
     #[allocative(skip)]
     rt: Handle,
 }
 
-impl BuckSpawner {
+impl BsmrSpawner {
     pub fn new(rt: Handle) -> Self {
         Self { rt }
     }
@@ -43,7 +43,7 @@ impl BuckSpawner {
     }
 }
 
-impl<T: HasEvents> Spawner<T> for BuckSpawner {
+impl<T: HasEvents> Spawner<T> for BsmrSpawner {
     fn spawn(
         &self,
         ctx: &T,
@@ -61,7 +61,7 @@ mod tests {
 
     use bsmr_data::CommandEnd;
     use bsmr_data::CommandStart;
-    use bsmr_events::BuckEvent;
+    use bsmr_events::BsmrEvent;
     use bsmr_events::create_source_sink_pair;
     use bsmr_events::daemon_id::DaemonId;
     use bsmr_events::dispatch::EventDispatcher;
@@ -75,8 +75,8 @@ mod tests {
 
     use super::*;
 
-    async fn next_event(source: &mut ChannelEventSource) -> BuckEvent {
-        source.receive().unwrap().unpack_buck().unwrap().clone()
+    async fn next_event(source: &mut ChannelEventSource) -> BsmrEvent {
+        source.receive().unwrap().unpack_bsmr().unwrap().clone()
     }
 
     fn create_ctx(dispatcher: EventDispatcher) -> UserComputationData {
@@ -104,7 +104,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_spawn() {
-        let sp = BuckSpawner::current_runtime().unwrap();
+        let sp = BsmrSpawner::current_runtime().unwrap();
 
         // Create dispatcher
         let (mut events, sink) = create_source_sink_pair();
@@ -130,7 +130,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_spawn_task() {
-        let sp = Arc::new(BuckSpawner::current_runtime().unwrap());
+        let sp = Arc::new(BsmrSpawner::current_runtime().unwrap());
 
         // Create dispatchers
         let (mut events1, sink1) = create_source_sink_pair();

@@ -1,3 +1,9 @@
+# ===----------------------------------------------------------------------===
+# Upstream-Source: facebook/buck2@1560aca2002865cd73d7cafb22c705cfb640b2bc
+# Modifications Copyright (c) 2026 Dedalus Labs, Inc. and its contributors
+# SPDX-License-Identifier: Apache-2.0
+# ===----------------------------------------------------------------------===
+
 # Copyright (c) Meta Platforms, Inc. and affiliates.
 #
 # This source code is dual-licensed under either the MIT license found in the
@@ -12,7 +18,7 @@ load("@prelude//utils:utils.bzl", "value_or")
 load(":exec_deps.bzl", "HttpArchiveExecDeps")
 load(":unarchive.bzl", "archive_type", "unarchive")
 
-# Buck v2 doesn't support directories as source inputs, while v1 allows that.
+# Bsmr v2 doesn't support directories as source inputs, while v1 allows that.
 # This rule fills that gap and allows to produce a directory from archive,
 # which then can be used as an input for other rules.
 

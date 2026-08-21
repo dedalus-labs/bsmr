@@ -15,42 +15,42 @@
 # pyre-strict
 
 
-from bsmr.tests.e2e_util.api.buck import Buck
+from bsmr.tests.e2e_util.api.bsmr import Bsmr
 from bsmr.tests.e2e_util.asserts import expect_failure
-from bsmr.tests.e2e_util.buck_workspace import buck_test
+from bsmr.tests.e2e_util.bsmr_workspace import bsmr_test
 
 
-@buck_test()
-async def test_construction_validation_good(buck: Buck) -> None:
-    await buck.targets("//good:")
+@bsmr_test()
+async def test_construction_validation_good(bsmr: Bsmr) -> None:
+    await bsmr.targets("//good:")
 
 
-@buck_test()
-async def test_construction_validation_bad(buck: Buck) -> None:
+@bsmr_test()
+async def test_construction_validation_bad(bsmr: Bsmr) -> None:
     await expect_failure(
-        buck.targets("//bad:"),
+        bsmr.targets("//bad:"),
         stderr_regex=r"`impl` function signature is incorrect",
     )
 
 
-@buck_test()
-async def test_construction_validation_bad_param_types(buck: Buck) -> None:
+@bsmr_test()
+async def test_construction_validation_bad_param_types(bsmr: Bsmr) -> None:
     await expect_failure(
-        buck.targets("//bad_param_types:"),
+        bsmr.targets("//bad_param_types:"),
         stderr_regex=r"`impl` function signature is incorrect",
     )
 
 
-@buck_test()
-async def test_construction_validation_bad_param_types_vnew(buck: Buck) -> None:
+@bsmr_test()
+async def test_construction_validation_bad_param_types_vnew(bsmr: Bsmr) -> None:
     # FIXME(JakobDegen): Evaluate whether we can implement this. The performance
     # concerns are a bit higher here because the code is hotter.
-    await buck.build("//bad_param_types_vnew:")
+    await bsmr.build("//bad_param_types_vnew:")
 
 
-@buck_test()
-async def test_construction_validation_bad_return_type(buck: Buck) -> None:
+@bsmr_test()
+async def test_construction_validation_bad_return_type(bsmr: Bsmr) -> None:
     await expect_failure(
-        buck.targets("//bad_return_type:"),
+        bsmr.targets("//bad_return_type:"),
         stderr_regex=r"`impl` function signature is incorrect",
     )

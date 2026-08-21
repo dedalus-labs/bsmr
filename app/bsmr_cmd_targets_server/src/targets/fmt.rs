@@ -32,7 +32,7 @@ use bsmr_core::cells::cell_path::CellPath;
 use bsmr_core::configuration::compatibility::IncompatiblePlatformReason;
 use bsmr_core::configuration::compatibility::IncompatiblePlatformReasonCause;
 use bsmr_core::package::PackageLabel;
-use bsmr_error::BuckErrorContext;
+use bsmr_error::BsmrErrorContext;
 use bsmr_error::conversion::from_any_with_tag;
 use bsmr_error::internal_error;
 use bsmr_node::attrs::hacks::configured_value_to_json;
@@ -54,11 +54,11 @@ use gazebo::prelude::SliceExt;
 use regex::RegexSet;
 
 use crate::json::QuotedJson;
-use crate::target_hash::BuckTargetHash;
+use crate::target_hash::BsmrTargetHash;
 
 pub(crate) struct TargetInfo<'a> {
     pub(crate) node: TargetNodeRef<'a>,
-    pub(crate) target_hash: Option<BuckTargetHash>,
+    pub(crate) target_hash: Option<BsmrTargetHash>,
     pub(crate) super_package: &'a SuperPackage,
 }
 
@@ -321,13 +321,13 @@ impl TargetFormatter for JsonFormat {
         self.writer.entry_item(
             buffer,
             &mut first,
-            "buck.file",
+            "bsmr.file",
             QuotedJson::quote_str(&source.to_string()),
         );
         self.writer.entry_item(
             buffer,
             &mut first,
-            "buck.imports",
+            "bsmr.imports",
             QuotedJson::list(imports.map(|d| QuotedJson::quote_display(d.path()))),
         );
         self.writer.entry_end(buffer, first);
@@ -355,7 +355,7 @@ impl TargetFormatter for JsonFormat {
         self.writer.entry_item(
             stdout,
             &mut first,
-            "buck.error",
+            "bsmr.error",
             QuotedJson::quote_str(&format!("{error:?}")),
         );
         self.writer.entry_end(stdout, first);
@@ -383,7 +383,7 @@ impl ConfiguredTargetFormatter for JsonFormat {
         self.writer.entry_start(buffer);
         let mut is_first_entry = true;
 
-        self.print_attr(buffer, &mut is_first_entry, "buck.target", || {
+        self.print_attr(buffer, &mut is_first_entry, "bsmr.target", || {
             QuotedJson::quote_display(target_node.label().unconfigured())
         });
 
@@ -455,7 +455,7 @@ impl ConfiguredTargetFormatter for JsonFormat {
         self.writer.entry_item(
             stdout,
             &mut first,
-            "buck.error",
+            "bsmr.error",
             QuotedJson::quote_str(&format!("{error:?}")),
         );
         self.writer.entry_end(stdout, first);
@@ -471,7 +471,7 @@ impl ConfiguredTargetFormatter for JsonFormat {
         self.writer.entry_item(
             stdout,
             &mut first,
-            "buck.error",
+            "bsmr.error",
             QuotedJson::quote_str(&format!("{error:?}")),
         );
         self.writer.entry_end(stdout, first);
@@ -665,7 +665,7 @@ impl JsonReportFormat {
         self.json_format.writer.entry_item(
             output,
             &mut is_first_entry,
-            "buck.target",
+            "bsmr.target",
             QuotedJson::quote_display(reason.target.unconfigured()),
         );
 
@@ -677,14 +677,14 @@ impl JsonReportFormat {
         self.json_format.writer.entry_item(
             output,
             &mut is_first_entry,
-            "buck.incompatible.cause",
+            "bsmr.incompatible.cause",
             QuotedJson::quote_str(cause_str),
         );
 
         self.json_format.writer.entry_item(
             output,
             &mut is_first_entry,
-            "buck.incompatible.reason",
+            "bsmr.incompatible.reason",
             QuotedJson::quote_str(&format!("{:#}", reason)),
         );
 
@@ -719,7 +719,7 @@ pub(crate) fn create_formatter(
         OutputFormat::Text => Ok(Arc::new(TargetNameFormat {
             target_call_stacks,
             target_hash_graph_type: TargetHashGraphType::try_from(other.target_hash_graph_type)
-                .expect("buck cli should send valid target hash graph type"),
+                .expect("bsmr cli should send valid target hash graph type"),
         })),
         OutputFormat::Json | OutputFormat::JsonLines => Ok(Arc::new(JsonFormat {
             attributes: if other.output_attributes.is_empty() {

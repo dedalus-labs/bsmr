@@ -14,23 +14,23 @@
  * above-listed licenses.
  */
 
-use bsmr_error::BuckErrorContext;
-use bsmr_hash::StdBuckHashMap;
+use bsmr_error::BsmrErrorContext;
+use bsmr_hash::StdBsmrHashMap;
 use tracing::Level;
 
 use crate::proto;
 
-impl TryInto<StdBuckHashMap<String, String>> for proto::Event {
+impl TryInto<StdBsmrHashMap<String, String>> for proto::Event {
     type Error = bsmr_error::Error;
 
-    fn try_into(self) -> Result<StdBuckHashMap<String, String>, Self::Error> {
+    fn try_into(self) -> Result<StdBsmrHashMap<String, String>, Self::Error> {
         use std::collections::hash_map::Entry;
 
         use proto::event::Item;
 
         let proto::Event { items } = self;
 
-        let mut ret = StdBuckHashMap::default();
+        let mut ret = StdBsmrHashMap::default();
         for Item { key, value } in items {
             match ret.entry(key) {
                 Entry::Vacant(e) => {
@@ -73,7 +73,7 @@ impl TryInto<Level> for proto::LogLevel {
         use proto::log_level::Value;
 
         let proto::LogLevel { value } = self;
-        let value = Value::try_from(value).buck_error_context("Invalid `value`")?;
+        let value = Value::try_from(value).bsmr_error_context("Invalid `value`")?;
 
         Ok(match value {
             Value::NotSet => {

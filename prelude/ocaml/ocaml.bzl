@@ -287,7 +287,7 @@ def _compiler_cmd(ctx: AnalysisContext, compiler: cmd_args, cc: cmd_args) -> cmd
     cmd.add(ctx.attrs.compiler_flags)
 
     # Now, add in `COMMON_OCAML_WARNING_FLAGS` (defined by
-    # 'fbcode/tools/build/buck/gen_modes.py') e.g.
+    # 'fbcode/tools/build/bsmr/gen_modes.py') e.g.
     # -4-29-35-41-42-44-45-48-50 to selective disable warnings.
     attr_warnings = ctx.attrs.warnings_flags if ctx.attrs.warnings_flags != None else ""
     cmd.add("-w", ocaml_toolchain.warnings_flags + attr_warnings)

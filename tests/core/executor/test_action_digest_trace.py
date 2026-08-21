@@ -15,15 +15,15 @@
 # pyre-strict
 
 
-from bsmr.tests.e2e_util.api.buck import Buck
-from bsmr.tests.e2e_util.buck_workspace import buck_test, env
+from bsmr.tests.e2e_util.api.bsmr import Bsmr
+from bsmr.tests.e2e_util.bsmr_workspace import bsmr_test, env
 from bsmr.tests.e2e_util.helper.utils import filter_events, random_string
 
 
-async def get_action_digest_traces(buck: Buck) -> list[dict[str, object]]:
+async def get_action_digest_traces(bsmr: Bsmr) -> list[dict[str, object]]:
     """Get all ActionDigestTrace events from the log."""
     return await filter_events(
-        buck,
+        bsmr,
         "Event",
         "data",
         "Instant",
@@ -32,20 +32,20 @@ async def get_action_digest_traces(buck: Buck) -> list[dict[str, object]]:
     )
 
 
-@buck_test()
+@bsmr_test()
 @env("BSMR_ACTION_DIGEST_TRACE_LG_SAMPLE_RATE", "0")  # Sample all digests
-async def test_action_digest_trace_cache_miss(buck: Buck) -> None:
+async def test_action_digest_trace_cache_miss(bsmr: Bsmr) -> None:
     """Test that cache miss events are traced."""
     # Make sure action is not cached by using a random input
-    with open(buck.cwd / "input.txt", "w") as f:
+    with open(bsmr.cwd / "input.txt", "w") as f:
         f.write(random_string())
 
-    await buck.build(
+    await bsmr.build(
         "root//:simple",
         "--remote-only",
     )
 
-    traces = await get_action_digest_traces(buck)
+    traces = await get_action_digest_traces(bsmr)
     # Should have at least one trace event
     assert len(traces) >= 1, f"Expected at least 1 trace event, got {len(traces)}"
 
@@ -58,27 +58,27 @@ async def test_action_digest_trace_cache_miss(buck: Buck) -> None:
     )
 
 
-@buck_test()
+@bsmr_test()
 @env("BSMR_ACTION_DIGEST_TRACE_LG_SAMPLE_RATE", "0")  # Sample all digests
-async def test_action_digest_trace_cache_hit(buck: Buck) -> None:
+async def test_action_digest_trace_cache_hit(bsmr: Bsmr) -> None:
     """Test that cache hit events are traced."""
     # First build to populate cache
-    with open(buck.cwd / "input.txt", "w") as f:
+    with open(bsmr.cwd / "input.txt", "w") as f:
         f.write(random_string())
 
-    await buck.build(
+    await bsmr.build(
         "root//:simple",
         "--remote-only",
     )
 
-    await buck.kill()
+    await bsmr.kill()
     # Second build should hit cache
-    await buck.build(
+    await bsmr.build(
         "root//:simple",
         "--remote-only",
     )
 
-    traces = await get_action_digest_traces(buck)
+    traces = await get_action_digest_traces(bsmr)
     # Should have at least one trace event
     assert len(traces) >= 1, f"Expected at least 1 trace event, got {len(traces)}"
 
@@ -90,22 +90,22 @@ async def test_action_digest_trace_cache_hit(buck: Buck) -> None:
     )
 
 
-@buck_test()
+@bsmr_test()
 @env(
     "BSMR_ACTION_DIGEST_TRACE_LG_SAMPLE_RATE", "64"
 )  # Sample rate so high nothing is sampled
-async def test_action_digest_trace_sampling(buck: Buck) -> None:
+async def test_action_digest_trace_sampling(bsmr: Bsmr) -> None:
     """Test that sampling works - with very high rate, nothing should be sampled."""
-    with open(buck.cwd / "input.txt", "w") as f:
+    with open(bsmr.cwd / "input.txt", "w") as f:
         f.write(random_string())
 
-    await buck.build(
+    await bsmr.build(
         "root//:simple",
         "--remote-only",
         "--no-remote-cache",
     )
 
-    traces = await get_action_digest_traces(buck)
+    traces = await get_action_digest_traces(bsmr)
     # With sampling rate of 64 bits (impossible), should have no traces
     assert len(traces) == 0, (
         f"Expected 0 trace events with high sampling rate, got {len(traces)}"

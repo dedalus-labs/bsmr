@@ -16,7 +16,7 @@
 
 use bsmr_core::provider::label::ConfiguredProvidersLabel;
 use bsmr_events::dispatch::EventDispatcher;
-use bsmr_hash::StdBuckHashSet;
+use bsmr_hash::StdBsmrHashSet;
 
 /// Common code executed in the end of command to produce `CommandEnd`.
 pub fn command_end<R, D>(result: &bsmr_error::Result<R>, data: D) -> bsmr_data::CommandEnd
@@ -48,7 +48,7 @@ pub fn send_target_cfg_event(
     conf_labels: impl IntoIterator<Item = &ConfiguredProvidersLabel>,
     target_cfg: &Option<bsmr_cli_proto::TargetCfg>,
 ) {
-    let mut target_platforms = StdBuckHashSet::default();
+    let mut target_platforms = StdBsmrHashSet::default();
     for conf in conf_labels {
         // cfg can be unbound
         if let Ok(label) = conf.cfg().label() {

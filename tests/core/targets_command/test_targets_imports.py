@@ -17,33 +17,33 @@
 
 import json
 
-from bsmr.tests.e2e_util.api.buck import Buck
-from bsmr.tests.e2e_util.buck_workspace import buck_test
+from bsmr.tests.e2e_util.api.bsmr import Bsmr
+from bsmr.tests.e2e_util.bsmr_workspace import bsmr_test
 
 
-@buck_test()
-async def test_imports(buck: Buck) -> None:
-    result = await buck.targets("//...", "--json", "--streaming", "--imports")
+@bsmr_test()
+async def test_imports(bsmr: Bsmr) -> None:
+    result = await bsmr.targets("//...", "--json", "--streaming", "--imports")
     xs = json.loads(result.stdout)
     found = 0
     for x in xs:
-        if "buck.imports" in x:
-            if x["buck.file"] == "root//TARGETS.fixture":
-                assert x["buck.package"] == "root//"
-                assert x["buck.imports"] == ["prelude//prelude.bzl", "root//a.bzl"]
+        if "bsmr.imports" in x:
+            if x["bsmr.file"] == "root//TARGETS.fixture":
+                assert x["bsmr.package"] == "root//"
+                assert x["bsmr.imports"] == ["prelude//prelude.bzl", "root//a.bzl"]
                 found += 1
-            elif x["buck.file"] == "root//a.bzl":
-                assert x["buck.imports"] == [
+            elif x["bsmr.file"] == "root//a.bzl":
+                assert x["bsmr.imports"] == [
                     "prelude//prelude.bzl",
                     "root//b.bzl",
                 ]
-                assert "buck.package" not in x
+                assert "bsmr.package" not in x
                 found += 1
-            elif x["buck.file"] == "root//PACKAGE":
-                assert x["buck.imports"] == [
+            elif x["bsmr.file"] == "root//PACKAGE":
+                assert x["bsmr.imports"] == [
                     "prelude//prelude.bzl",
                     "root//b.bzl",
                 ]
-                assert "buck.package" not in x
+                assert "bsmr.package" not in x
                 found += 1
     assert found == 3

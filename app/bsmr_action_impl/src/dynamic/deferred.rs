@@ -56,10 +56,10 @@ use bsmr_execute::artifact_value::ArtifactValue;
 use bsmr_execute::digest_config::DigestConfig;
 use bsmr_execute::digest_config::HasDigestConfig;
 use bsmr_execute::materialize::materializer::HasMaterializer;
-use bsmr_hash::BuckIndexMap;
-use bsmr_hash::StdBuckHashMap;
+use bsmr_hash::BsmrIndexMap;
+use bsmr_hash::StdBsmrHashMap;
 use bsmr_interpreter::dice::starlark_provider::StarlarkEvalKind;
-use bsmr_interpreter::factory::BuckStarlarkModule;
+use bsmr_interpreter::factory::BsmrStarlarkModule;
 use bsmr_interpreter::factory::FinishedStarlarkEvaluation;
 use bsmr_interpreter::factory::StarlarkEvaluatorProvider;
 use bsmr_interpreter::print_handler::EventDispatcherPrintHandler;
@@ -178,13 +178,13 @@ pub fn invoke_dynamic_output_lambda<'v>(
 }
 
 fn execute_lambda_inner<'v>(
-    env: &BuckStarlarkModule<'v>,
+    env: &BsmrStarlarkModule<'v>,
     eval_provider: StarlarkEvaluatorProvider,
     liveness: CancellationObserver,
     lambda: OwnedRefFrozenRef<'_, FrozenDynamicLambdaParams>,
     self_key: &DynamicLambdaResultsKey,
-    resolved_dynamic_values: StdBuckHashMap<DynamicValue, FrozenProviderCollectionValue>,
-    ensured_artifacts: &BuckIndexMap<&Artifact, &ArtifactValue>,
+    resolved_dynamic_values: StdBsmrHashMap<DynamicValue, FrozenProviderCollectionValue>,
+    ensured_artifacts: &BsmrIndexMap<&Artifact, &ArtifactValue>,
     input_artifacts_materialized: InputArtifactsMaterialized,
     digest_config: DigestConfig,
     artifact_fs: &ArtifactFs,
@@ -267,8 +267,8 @@ async fn execute_lambda(
     lambda: OwnedRefFrozenRef<'_, FrozenDynamicLambdaParams>,
     dice: &mut DiceComputations<'_>,
     self_key: DynamicLambdaResultsKey,
-    resolved_dynamic_values: StdBuckHashMap<DynamicValue, FrozenProviderCollectionValue>,
-    ensured_artifacts: &BuckIndexMap<&Artifact, &ArtifactValue>,
+    resolved_dynamic_values: StdBsmrHashMap<DynamicValue, FrozenProviderCollectionValue>,
+    ensured_artifacts: &BsmrIndexMap<&Artifact, &ArtifactValue>,
     input_artifacts_materialized: InputArtifactsMaterialized,
     digest_config: DigestConfig,
     liveness: CancellationObserver,
@@ -322,7 +322,7 @@ async fn execute_lambda(
                 let mut declared_actions = None;
                 let mut declared_artifacts = None;
 
-                let output: bsmr_error::Result<_> = BuckStarlarkModule::with_profiling(|env| {
+                let output: bsmr_error::Result<_> = BsmrStarlarkModule::with_profiling(|env| {
                     let (finished_evaluation, analysis_registry) = execute_lambda_inner(
                         &env,
                         eval_provider,
@@ -378,7 +378,7 @@ pub(crate) async fn prepare_and_execute_lambda(
     // the grand scheme of things that's probably not a huge deal.
     let all_artifact_group_values =
         ensure_artifacts_built(&lambda.as_ref().static_fields.artifact_values, ctx).await?;
-    let ensured_artifacts: BuckIndexMap<_, _> = all_artifact_group_values
+    let ensured_artifacts: BsmrIndexMap<_, _> = all_artifact_group_values
         .iter()
         .flat_map(|x| x.iter())
         .map(|(a, v)| (a, v))
@@ -466,7 +466,7 @@ async fn ensure_artifacts_built(
 pub struct InputArtifactsMaterialized(());
 
 async fn materialize_inputs(
-    ensured_artifacts: &BuckIndexMap<&Artifact, &ArtifactValue>,
+    ensured_artifacts: &BsmrIndexMap<&Artifact, &ArtifactValue>,
     ctx: &mut DiceComputations<'_>,
 ) -> bsmr_error::Result<InputArtifactsMaterialized> {
     if ensured_artifacts.is_empty() {
@@ -501,9 +501,9 @@ async fn materialize_inputs(
 async fn resolve_dynamic_values(
     dynamic_values: &[DynamicValue],
     ctx: &mut DiceComputations<'_>,
-) -> bsmr_error::Result<StdBuckHashMap<DynamicValue, FrozenProviderCollectionValue>> {
+) -> bsmr_error::Result<StdBsmrHashMap<DynamicValue, FrozenProviderCollectionValue>> {
     if dynamic_values.is_empty() {
-        return Ok(StdBuckHashMap::default());
+        return Ok(StdBsmrHashMap::default());
     }
 
     let providers = ctx
@@ -519,7 +519,7 @@ async fn resolve_dynamic_values(
         })
         .await?;
 
-    Ok(StdBuckHashMap::from_iter(providers))
+    Ok(StdBsmrHashMap::from_iter(providers))
 }
 
 pub enum DynamicLambdaCtxDataSpec<'v> {
@@ -545,7 +545,7 @@ pub struct DynamicLambdaCtxData<'v> {
 
 /// Prepare dict of artifact values for dynamic actions.
 fn artifact_values<'v>(
-    ensured_artifacts: &BuckIndexMap<&Artifact, &ArtifactValue>,
+    ensured_artifacts: &BsmrIndexMap<&Artifact, &ArtifactValue>,
     _: InputArtifactsMaterialized,
     artifact_fs: &ArtifactFs,
     heap: Heap<'v>,
@@ -597,10 +597,10 @@ fn outputs<'v>(
 fn new_attr_value<'v>(
     value: &DynamicAttrValue<FrozenValue>,
     _input_artifacts_materialized: InputArtifactsMaterialized,
-    ensured_artifacts: &BuckIndexMap<&Artifact, &ArtifactValue>,
+    ensured_artifacts: &BsmrIndexMap<&Artifact, &ArtifactValue>,
     artifact_fs: &ArtifactFs,
     registry: &mut AnalysisRegistry<'v>,
-    resolved_dynamic_values: &StdBuckHashMap<DynamicValue, FrozenProviderCollectionValue>,
+    resolved_dynamic_values: &StdBsmrHashMap<DynamicValue, FrozenProviderCollectionValue>,
     env: &Module<'v>,
 ) -> bsmr_error::Result<Value<'v>> {
     match value {
@@ -729,10 +729,10 @@ fn new_attr_values<'v>(
     values: &DynamicAttrValues<FrozenValue>,
     callable: &FrozenStarlarkDynamicActionsCallable,
     input_artifacts_materialized: InputArtifactsMaterialized,
-    ensured_artifacts: &BuckIndexMap<&Artifact, &ArtifactValue>,
+    ensured_artifacts: &BsmrIndexMap<&Artifact, &ArtifactValue>,
     artifact_fs: &ArtifactFs,
     registry: &mut AnalysisRegistry<'v>,
-    resolved_dynamic_values: &StdBuckHashMap<DynamicValue, FrozenProviderCollectionValue>,
+    resolved_dynamic_values: &StdBsmrHashMap<DynamicValue, FrozenProviderCollectionValue>,
     env: &Module<'v>,
 ) -> bsmr_error::Result<Box<[(String, Value<'v>)]>> {
     if values.values.len() != callable.attrs.len() {
@@ -764,8 +764,8 @@ pub fn dynamic_lambda_ctx_data<'v>(
     dynamic_lambda: OwnedRefFrozenRef<'_, FrozenDynamicLambdaParams>,
     self_key: DynamicLambdaResultsKey,
     input_artifacts_materialized: InputArtifactsMaterialized,
-    ensured_artifacts: &BuckIndexMap<&Artifact, &ArtifactValue>,
-    resolved_dynamic_values: &StdBuckHashMap<DynamicValue, FrozenProviderCollectionValue>,
+    ensured_artifacts: &BsmrIndexMap<&Artifact, &ArtifactValue>,
+    resolved_dynamic_values: &StdBsmrHashMap<DynamicValue, FrozenProviderCollectionValue>,
     artifact_fs: &ArtifactFs,
     digest_config: DigestConfig,
     env: &Module<'v>,

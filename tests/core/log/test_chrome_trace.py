@@ -17,14 +17,14 @@
 
 from pathlib import Path
 
-from bsmr.tests.e2e_util.api.buck import Buck
-from bsmr.tests.e2e_util.buck_workspace import buck_test
+from bsmr.tests.e2e_util.api.bsmr import Bsmr
+from bsmr.tests.e2e_util.bsmr_workspace import bsmr_test
 
 
-@buck_test()
-async def test_chrome_trace(buck: Buck, tmp_path: Path) -> None:
+@bsmr_test()
+async def test_chrome_trace(bsmr: Bsmr, tmp_path: Path) -> None:
     # Just check it at least runs. More thorough coverage lives in the
     # bsmr_log_common unit tests shared with `bsmr debug chrome-trace`.
-    await buck.build("//...")
-    await buck.log("chrome-trace", "--trace-path", str(tmp_path / "trace.json"))
+    await bsmr.build("//...")
+    await bsmr.log("chrome-trace", "--trace-path", str(tmp_path / "trace.json"))
     assert (tmp_path / "trace.json").exists()

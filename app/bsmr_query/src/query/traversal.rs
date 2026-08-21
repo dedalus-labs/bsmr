@@ -226,7 +226,7 @@ mod tests {
 
     use bsmr_core::build_file_path::BuildFilePath;
     use bsmr_core::cells::cell_path::CellPath;
-    use bsmr_hash::StdBuckHashMap;
+    use bsmr_hash::StdBsmrHashMap;
     use derive_more::Display;
     use dupe::Dupe;
     use dupe::IterDupedExt;
@@ -352,7 +352,7 @@ mod tests {
         }
     }
 
-    struct Graph(StdBuckHashMap<Ref, Node>);
+    struct Graph(StdBsmrHashMap<Ref, Node>);
 
     impl Graph {
         fn child_visitor<'a>(&self) -> impl AsyncChildVisitor<Node> + use<'a> {
@@ -398,7 +398,7 @@ mod tests {
     }
 
     fn make_graph(nodes: &[(i64, &[i64])]) -> bsmr_error::Result<Graph> {
-        let mut map = StdBuckHashMap::default();
+        let mut map = StdBsmrHashMap::default();
         for (n, deps) in nodes {
             map.insert(Ref(*n), Node(Ref(*n), deps.map(|v| Ref(*v))));
         }

@@ -17,4 +17,4 @@
 # %INSERT_OPTION_COMPLETION%
 # clap_complete generated content ENDS
 
-complete -c buck -w bsmr
+complete -c bsmr -w bsmr

@@ -14,7 +14,7 @@
  * above-listed licenses.
  */
 
-use bsmr_error::BuckErrorContext;
+use bsmr_error::BsmrErrorContext;
 use bsmr_grpc::DuplexChannel;
 use bsmr_test_api::grpc::TestOrchestratorClient;
 use bsmr_test_api::grpc::spawn_executor_server;
@@ -41,7 +41,7 @@ where
 
     let orchestrator_client = TestOrchestratorClient::new(orchestrator_channel)
         .await
-        .buck_error_context("Failed to TestOrchestratorClient")?;
+        .bsmr_error_context("Failed to TestOrchestratorClient")?;
 
     let runner = BsmrTestRunner::new(orchestrator_client, spec_receiver, args)?;
 
@@ -50,7 +50,7 @@ where
     executor_server
         .shutdown()
         .await
-        .buck_error_context("Failed to shutdown server")?;
+        .bsmr_error_context("Failed to shutdown server")?;
 
     Ok(())
 }

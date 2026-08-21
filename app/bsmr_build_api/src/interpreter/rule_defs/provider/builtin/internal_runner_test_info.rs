@@ -20,7 +20,7 @@ use std::time::Duration;
 use allocative::Allocative;
 use bsmr_build_api_derive::internal_provider;
 use bsmr_core::provider::label::ConfiguredProvidersLabel;
-use bsmr_error::BuckErrorContext;
+use bsmr_error::BsmrErrorContext;
 use bsmr_error::bsmr_error;
 use bsmr_error::internal_error;
 use bsmr_interpreter::types::configured_providers_label::StarlarkConfiguredProvidersLabel;
@@ -535,7 +535,7 @@ where
 
     let required_local_resources = info.required_local_resources.get().to_value();
     if !required_local_resources.is_none() {
-        for resource_type in iter_value(required_local_resources).buck_error_context("`required_local_resources` should be a list or a tuple of `RequiredTestLocalResource` objects")? {
+        for resource_type in iter_value(required_local_resources).bsmr_error_context("`required_local_resources` should be a list or a tuple of `RequiredTestLocalResource` objects")? {
             let resource_type = StarlarkRequiredTestLocalResource::from_value(resource_type)
                 .ok_or_else(|| bsmr_error!(bsmr_error::ErrorTag::Input, "`required_local_resources` should only contain `RequiredTestLocalResource` values, got {}", resource_type))?;
             if !provided_local_resources.contains_key(&resource_type.name as &str) {
@@ -554,8 +554,8 @@ where
     NoneOr::<bool>::unpack_value(info.run_from_project_root.get().to_value())?
         .ok_or_else(|| internal_error!("`run_from_project_root` must be a bool if provided"))?;
     unpack_opt_executor(info.default_executor.get().to_value())
-        .buck_error_context("Invalid `default_executor`")?;
-    unpack_opt_worker(info.worker.get().to_value()).buck_error_context("Invalid `worker`")?;
+        .bsmr_error_context("Invalid `default_executor`")?;
+    unpack_opt_worker(info.worker.get().to_value()).bsmr_error_context("Invalid `worker`")?;
 
     // Both parse_test_listing and parse_test_result are required callables.
     let ptl = info.parse_test_listing.get().to_value();

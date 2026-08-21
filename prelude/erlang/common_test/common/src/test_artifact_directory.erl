@@ -19,7 +19,7 @@ Used by TPX to upload diagnostic reports.
 """.
 -compile(warn_missing_spec_all).
 
--include_lib("common/include/buck_ct_records.hrl").
+-include_lib("common/include/bsmr_ct_records.hrl").
 -include_lib("kernel/include/logger.hrl").
 
 -import(common_util, [unicode_characters_to_list/1]).

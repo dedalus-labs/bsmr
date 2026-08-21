@@ -30,7 +30,7 @@ use bsmr_fs::fs_util;
 use bsmr_fs::paths::abs_norm_path::AbsNormPath;
 use bsmr_fs::paths::abs_norm_path::AbsNormPathBuf;
 use bsmr_fs::paths::file_name::FileNameBuf;
-use bsmr_hash::buck_indexmap;
+use bsmr_hash::bsmr_indexmap;
 use bsmr_interpreter::file_loader::LoadedModule;
 use bsmr_interpreter::load_module::InterpreterCalculation;
 use bsmr_interpreter::paths::module::StarlarkModulePath;
@@ -185,7 +185,7 @@ fn resolve_path(
     current_cell_abs_path: &AbsNormPath,
     path: &str,
 ) -> bsmr_error::Result<CellPath> {
-    // To match buck1, if the path is absolute we use it as-is, but if not it is treated
+    // To match legacy, if the path is absolute we use it as-is, but if not it is treated
     // as relative to the working dir cell root (not the working dir).
     // The easiest way to consistently handle non-canonical paths
     // is to just resolve to absolute here, and then relativize.
@@ -255,9 +255,9 @@ impl ServerAuditSubcommand for AuditIncludesCommand {
                 // them. After we print the results, we'll propagate an error if there is one.
                 if self.json {
                     let mut ser = serde_json::Serializer::pretty(&mut stdout);
-                    // buck1 has a bug where it doesn't properly handle >1 arg when passed --json
+                    // legacy has a bug where it doesn't properly handle >1 arg when passed --json
                     // it also, sadly, prints just a single list of outputs for that case. we match
-                    // buck1's behavior for 1 successful file and print a dictionary for multiple. This is
+                    // legacy's behavior for 1 successful file and print a dictionary for multiple. This is
                     // unfortunate, but we hope that users can migrate to the equivalent query commands instead.
                     if let Some((_path, Ok(includes))) = results.as_singleton() {
                         includes.serialize(&mut ser)?
@@ -267,11 +267,11 @@ impl ServerAuditSubcommand for AuditIncludesCommand {
                             match includes {
                                 Ok(includes) => map.serialize_entry(
                                     path,
-                                    &buck_indexmap! {"includes" => &includes},
+                                    &bsmr_indexmap! {"includes" => &includes},
                                 )?,
                                 Err(e) => map.serialize_entry(
                                     path,
-                                    &buck_indexmap! {"$error" => format!("{:#}", e)},
+                                    &bsmr_indexmap! {"$error" => format!("{:#}", e)},
                                 )?,
                             }
                         }
@@ -287,7 +287,7 @@ impl ServerAuditSubcommand for AuditIncludesCommand {
                                 // intentionally add a blank line after the header
                                 writeln!(stdout, "# {path}\n")?;
                                 for include in includes {
-                                    // To match buck1, we print absolute paths.
+                                    // To match legacy, we print absolute paths.
                                     writeln!(stdout, "{include}")?;
                                 }
                             }

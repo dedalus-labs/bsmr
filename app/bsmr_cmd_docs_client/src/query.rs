@@ -15,7 +15,7 @@
  */
 
 use bsmr_client_ctx::client_ctx::ClientCommandContext;
-use bsmr_client_ctx::common::BuckArgMatches;
+use bsmr_client_ctx::common::BsmrArgMatches;
 use bsmr_client_ctx::exit_result::ExitResult;
 use bsmr_query::query::syntax::simple::functions::description::QUERY_ENVIRONMENT_DESCRIPTION_BY_TYPE;
 use bsmr_query::query::syntax::simple::functions::description::QueryType;
@@ -96,7 +96,7 @@ fn output(options: OutputFormatOptions, description: QueryEnvironmentDescription
 impl DocsUqueryCommand {
     pub(crate) fn exec(
         self,
-        _matches: BuckArgMatches<'_>,
+        _matches: BsmrArgMatches<'_>,
         _ctx: ClientCommandContext<'_>,
     ) -> ExitResult {
         let description = (QUERY_ENVIRONMENT_DESCRIPTION_BY_TYPE.get()?)(QueryType::Uquery);
@@ -107,7 +107,7 @@ impl DocsUqueryCommand {
 impl DocsCqueryCommand {
     pub(crate) fn exec(
         self,
-        _matches: BuckArgMatches<'_>,
+        _matches: BsmrArgMatches<'_>,
         _ctx: ClientCommandContext<'_>,
     ) -> ExitResult {
         let description = (QUERY_ENVIRONMENT_DESCRIPTION_BY_TYPE.get()?)(QueryType::Cquery);
@@ -118,7 +118,7 @@ impl DocsCqueryCommand {
 impl DocsAqueryCommand {
     pub(crate) fn exec(
         self,
-        _matches: BuckArgMatches<'_>,
+        _matches: BsmrArgMatches<'_>,
         _ctx: ClientCommandContext<'_>,
     ) -> ExitResult {
         let description = (QUERY_ENVIRONMENT_DESCRIPTION_BY_TYPE.get()?)(QueryType::Aquery);

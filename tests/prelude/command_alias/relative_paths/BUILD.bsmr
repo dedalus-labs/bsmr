@@ -109,7 +109,7 @@ import sys
 
 output = subprocess.run(
     [Path(sys.argv[1]).resolve()],
-    cwd='bsmr-out/v2',
+    cwd='bsmr-out/default',
     capture_output=True,
     text=True,
 )

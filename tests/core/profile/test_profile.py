@@ -19,11 +19,11 @@ from pathlib import Path
 from tempfile import TemporaryDirectory
 
 import pytest
-from bsmr.tests.e2e_util.api.buck import Buck
-from bsmr.tests.e2e_util.api.buck_result import BuckException, BuckResult
+from bsmr.tests.e2e_util.api.bsmr import Bsmr
+from bsmr.tests.e2e_util.api.bsmr_result import BsmrException, BsmrResult
 from bsmr.tests.e2e_util.api.process import Process
 from bsmr.tests.e2e_util.asserts import expect_failure
-from bsmr.tests.e2e_util.buck_workspace import buck_test
+from bsmr.tests.e2e_util.bsmr_workspace import bsmr_test
 from bsmr.tests.e2e_util.helper.golden import golden
 
 
@@ -41,17 +41,17 @@ PROFILERS = [
 ]
 
 
-@buck_test()
+@bsmr_test()
 @pytest.mark.parametrize(
     "profiler",
     PROFILERS,
 )
 async def test_profile_analysis_for_self_transition(
-    buck: Buck, tmp_path: Path, profiler: str
+    bsmr: Bsmr, tmp_path: Path, profiler: str
 ) -> None:
     file_path = tmp_path / "profile"
 
-    await buck.profile(
+    await bsmr.profile(
         "analysis",
         "--target-platforms=//self_transition:p",
         "--mode",
@@ -64,15 +64,15 @@ async def test_profile_analysis_for_self_transition(
     assert os.path.exists(file_path)
 
 
-@buck_test()
+@bsmr_test()
 @pytest.mark.parametrize(
     "profiler",
     PROFILERS,
 )
-async def test_profile_analysis_last(buck: Buck, tmp_path: Path, profiler: str) -> None:
+async def test_profile_analysis_last(bsmr: Bsmr, tmp_path: Path, profiler: str) -> None:
     file_path = tmp_path / "profile"
 
-    await buck.profile(
+    await bsmr.profile(
         "analysis",
         "--mode",
         profiler,
@@ -84,17 +84,17 @@ async def test_profile_analysis_last(buck: Buck, tmp_path: Path, profiler: str) 
     assert os.path.exists(file_path)
 
 
-@buck_test()
+@bsmr_test()
 @pytest.mark.parametrize(
     "profiler",
     PROFILERS,
 )
 async def test_profile_analysis_recursive(
-    buck: Buck, tmp_path: Path, profiler: str
+    bsmr: Bsmr, tmp_path: Path, profiler: str
 ) -> None:
     file_path = tmp_path / "profile"
 
-    command = buck.profile(
+    command = bsmr.profile(
         "analysis",
         "--mode",
         profiler,
@@ -106,17 +106,17 @@ async def test_profile_analysis_recursive(
     await assert_flame_outputs(command, file_path, profiler)
 
 
-@buck_test()
+@bsmr_test()
 @pytest.mark.parametrize(
     "profiler",
     PROFILERS,
 )
 async def test_profile_analysis_recursive_transition(
-    buck: Buck, tmp_path: Path, profiler: str
+    bsmr: Bsmr, tmp_path: Path, profiler: str
 ) -> None:
     file_path = tmp_path / "profile"
 
-    command = buck.profile(
+    command = bsmr.profile(
         "analysis",
         "--mode",
         profiler,
@@ -129,15 +129,15 @@ async def test_profile_analysis_recursive_transition(
     await assert_flame_outputs(command, file_path, profiler)
 
 
-@buck_test()
+@bsmr_test()
 @pytest.mark.parametrize(
     "profiler",
     PROFILERS,
 )
-async def test_profile_loading_last(buck: Buck, tmp_path: Path, profiler: str) -> None:
+async def test_profile_loading_last(bsmr: Bsmr, tmp_path: Path, profiler: str) -> None:
     file_path = tmp_path / "profile"
 
-    command = buck.profile(
+    command = bsmr.profile(
         "loading",
         "--mode",
         profiler,
@@ -149,15 +149,15 @@ async def test_profile_loading_last(buck: Buck, tmp_path: Path, profiler: str) -
     await _assertions_for_profile_without_frozen_module(command, file_path, profiler)
 
 
-@buck_test()
+@bsmr_test()
 @pytest.mark.parametrize(
     "profiler",
     PROFILERS,
 )
-async def test_query_profile(buck: Buck, tmp_path: Path, profiler: str) -> None:
+async def test_query_profile(bsmr: Bsmr, tmp_path: Path, profiler: str) -> None:
     file_path = tmp_path / "profile"
 
-    command = buck.cquery(
+    command = bsmr.cquery(
         "--profile-mode",
         profiler,
         "deps(//query/a:a)",
@@ -168,23 +168,23 @@ async def test_query_profile(buck: Buck, tmp_path: Path, profiler: str) -> None:
     await _assertions_for_profile_without_frozen_module(command, file_path, profiler)
 
     if not profiler.endswith("-retained"):
-        with open(buck.cwd / file_path / "targets.txt", "r") as f:
+        with open(bsmr.cwd / file_path / "targets.txt", "r") as f:
             lines = [x.rstrip() for x in sorted(f.readlines())]
             assert [
                 "load/root//query/a",
                 "load/root//query/b",
             ] == lines
     else:
-        assert not os.path.exists(buck.cwd / file_path)
+        assert not os.path.exists(bsmr.cwd / file_path)
 
 
-@buck_test()
-async def test_profile_loading_last_single_target(buck: Buck, tmp_path: Path) -> None:
+@bsmr_test()
+async def test_profile_loading_last_single_target(bsmr: Bsmr, tmp_path: Path) -> None:
     file_path = tmp_path / "profile"
 
     profiler = "statement"
 
-    command = buck.profile(
+    command = bsmr.profile(
         "loading",
         "--mode",
         profiler,
@@ -196,7 +196,7 @@ async def test_profile_loading_last_single_target(buck: Buck, tmp_path: Path) ->
     await _assertions_for_profile_without_frozen_module(command, file_path, profiler)
 
 
-@buck_test()
+@bsmr_test()
 @pytest.mark.parametrize(
     "profiler",
     PROFILERS,
@@ -206,11 +206,11 @@ async def test_profile_loading_last_single_target(buck: Buck, tmp_path: Path) ->
     [True, False],
 )
 async def test_profile_analysis_pattern(
-    buck: Buck, tmp_path: Path, profiler: str, recursive: bool
+    bsmr: Bsmr, tmp_path: Path, profiler: str, recursive: bool
 ) -> None:
     file_path = tmp_path / "profile"
 
-    command = buck.profile(
+    command = bsmr.profile(
         "analysis",
         "--mode",
         profiler,
@@ -223,17 +223,17 @@ async def test_profile_analysis_pattern(
     await assert_flame_outputs(command, file_path, profiler)
 
 
-@buck_test()
+@bsmr_test()
 @pytest.mark.parametrize(
     "profiler",
     PROFILERS,
 )
 async def test_profile_loading_recursive(
-    buck: Buck, tmp_path: Path, profiler: str
+    bsmr: Bsmr, tmp_path: Path, profiler: str
 ) -> None:
     file_path = tmp_path / "profile"
 
-    command = buck.profile(
+    command = bsmr.profile(
         "loading",
         "--mode",
         profiler,
@@ -249,17 +249,17 @@ async def test_profile_loading_recursive(
     )
 
 
-@buck_test()
+@bsmr_test()
 @pytest.mark.parametrize(
     "profiler",
     PROFILERS,
 )
 async def test_profile_bxl_with_actions(
-    buck: Buck, tmp_path: Path, profiler: str
+    bsmr: Bsmr, tmp_path: Path, profiler: str
 ) -> None:
     file_path = tmp_path / "profile"
 
-    command = buck.profile(
+    command = bsmr.profile(
         "bxl",
         "--mode",
         profiler,
@@ -271,17 +271,17 @@ async def test_profile_bxl_with_actions(
     await assert_flame_outputs(command, file_path, profiler)
 
 
-@buck_test()
+@bsmr_test()
 @pytest.mark.parametrize(
     "profiler",
     PROFILERS,
 )
 async def test_profile_bxl_without_actions(
-    buck: Buck, tmp_path: Path, profiler: str
+    bsmr: Bsmr, tmp_path: Path, profiler: str
 ) -> None:
     file_path = tmp_path / "profile"
 
-    command = buck.profile(
+    command = bsmr.profile(
         "bxl",
         "--mode",
         profiler,
@@ -293,35 +293,35 @@ async def test_profile_bxl_without_actions(
     await assert_flame_outputs(command, file_path, profiler)
 
 
-@buck_test(setup_eden=True)
-async def test_profile_no_buckd(
-    buck: Buck,
+@bsmr_test(setup_eden=True)
+async def test_profile_no_daemon(
+    bsmr: Bsmr,
     tmp_path: Path,
 ) -> None:
     file_path = tmp_path / "profile"
 
-    command = await buck.profile(
+    command = await bsmr.profile(
         "loading",
         "--mode",
         "statement",
         "//simple:",
         "--output",
         str(file_path),
-        "--no-buckd",
+        "--no-bsmrd",
     )
 
     assert "Total retained bytes:" in command.stdout
     assert os.path.exists(file_path)
 
 
-@buck_test()
+@bsmr_test()
 async def test_profile_loading_recursive_target_pattern(
-    buck: Buck, tmp_path: Path
+    bsmr: Bsmr, tmp_path: Path
 ) -> None:
     file_path = tmp_path / "profile"
     profiler = "time-flame"
 
-    command = buck.profile(
+    command = bsmr.profile(
         "loading",
         "--mode",
         profiler,
@@ -333,12 +333,12 @@ async def test_profile_loading_recursive_target_pattern(
     await _assertions_for_profile_without_frozen_module(command, file_path, profiler)
 
 
-@buck_test(skip_for_os=["windows"])
-async def test_profile_patterns(buck: Buck, tmp_path: Path) -> None:
+@bsmr_test(skip_for_os=["windows"])
+async def test_profile_patterns(bsmr: Bsmr, tmp_path: Path) -> None:
     with TemporaryDirectory() as tmpdir:
         tmp_path = Path(tmpdir)
 
-        await buck.build(
+        await bsmr.build(
             "//simple/...",
             "--profile-patterns=.*",
             "--profile-patterns-mode=statement",
@@ -370,12 +370,12 @@ async def test_profile_patterns(buck: Buck, tmp_path: Path) -> None:
         golden(output="\n".join(output_lines), rel_path="profile_patterns.golden")
 
 
-@buck_test(skip_for_os=["windows"])
-async def test_profile_patterns_flame(buck: Buck, tmp_path: Path) -> None:
+@bsmr_test(skip_for_os=["windows"])
+async def test_profile_patterns_flame(bsmr: Bsmr, tmp_path: Path) -> None:
     with TemporaryDirectory() as tmpdir:
         tmp_path = Path(tmpdir)
 
-        await buck.build(
+        await bsmr.build(
             "//simple/...",
             "--profile-patterns=.*",
             "--profile-patterns-mode=time-flame",
@@ -408,7 +408,7 @@ async def test_profile_patterns_flame(buck: Buck, tmp_path: Path) -> None:
 
 
 async def _assertions_for_profile_without_frozen_module(
-    command: Process[BuckResult, BuckException],
+    command: Process[BsmrResult, BsmrException],
     file_path: Path,
     profiler: str,
 ) -> None:
@@ -422,7 +422,7 @@ async def _assertions_for_profile_without_frozen_module(
 
 
 async def assert_flame_outputs(
-    command: Process[BuckResult, BuckException],
+    command: Process[BsmrResult, BsmrException],
     file_path: Path,
     profiler: str,
 ) -> None:

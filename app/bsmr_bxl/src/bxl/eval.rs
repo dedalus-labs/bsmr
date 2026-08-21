@@ -40,7 +40,7 @@ use bsmr_events::dispatch::get_dispatcher;
 use bsmr_events::dispatch::with_dispatcher;
 use bsmr_execute::digest_config::DigestConfig;
 use bsmr_execute::digest_config::HasDigestConfig;
-use bsmr_interpreter::factory::BuckStarlarkModule;
+use bsmr_interpreter::factory::BsmrStarlarkModule;
 use bsmr_interpreter::factory::StarlarkEvaluatorProvider;
 use bsmr_interpreter::file_loader::LoadedModule;
 use bsmr_interpreter::load_module::InterpreterCalculation;
@@ -195,7 +195,7 @@ impl BxlInnerEvaluator {
             dispatcher,
         } = self;
 
-        BuckStarlarkModule::with_profiling(|env| {
+        BsmrStarlarkModule::with_profiling(|env| {
             let key = data.key().dupe();
 
             let bxl_dice = BxlDiceComputations::new(dice, liveness.dupe());

@@ -32,7 +32,7 @@ use bsmr_build_api::interpreter::rule_defs::provider::collection::FrozenProvider
 use bsmr_core::execution_types::execution::ExecutionPlatformResolution;
 use bsmr_core::provider::label::ConfiguredProvidersLabel;
 use bsmr_core::target::configured_target_label::ConfiguredTargetLabel;
-use bsmr_hash::StdBuckHashMap;
+use bsmr_hash::StdBsmrHashMap;
 use bsmr_node::nodes::configured::ConfiguredTargetNode;
 use futures::FutureExt;
 use starlark::environment::Module;
@@ -44,8 +44,8 @@ use crate::bxl::starlark_defs::context::BxlContext;
 #[derive(Allocative)]
 pub(crate) struct LazyAttrResolutionCache {
     pub(super) dep_analysis_results:
-        Option<StdBuckHashMap<ConfiguredTargetLabel, FrozenProviderCollectionValue>>,
-    pub(super) query_results: Option<StdBuckHashMap<String, Arc<AnalysisQueryResult>>>,
+        Option<StdBsmrHashMap<ConfiguredTargetLabel, FrozenProviderCollectionValue>>,
+    pub(super) query_results: Option<StdBsmrHashMap<String, Arc<AnalysisQueryResult>>>,
 }
 
 // Contains a `module` that things must live on, and various `FrozenProviderCollectionValue`s
@@ -74,7 +74,7 @@ impl LazyAttrResolutionCache {
         ctx: &'v BxlContext<'v>,
         configured_node: &'v ConfiguredTargetNode,
         eval: &mut Evaluator<'v, '_, '_>,
-    ) -> bsmr_error::Result<&StdBuckHashMap<ConfiguredTargetLabel, FrozenProviderCollectionValue>>
+    ) -> bsmr_error::Result<&StdBsmrHashMap<ConfiguredTargetLabel, FrozenProviderCollectionValue>>
     {
         get_or_try_init(&mut self.dep_analysis_results, || {
             get_deps_from_analysis_results(ctx.via_dice(eval, |ctx| {
@@ -90,7 +90,7 @@ impl LazyAttrResolutionCache {
         ctx: &'v BxlContext<'v>,
         configured_node: &'v ConfiguredTargetNode,
         eval: &mut Evaluator<'v, '_, '_>,
-    ) -> bsmr_error::Result<&StdBuckHashMap<String, Arc<AnalysisQueryResult>>> {
+    ) -> bsmr_error::Result<&StdBsmrHashMap<String, Arc<AnalysisQueryResult>>> {
         get_or_try_init(&mut self.query_results, || {
             ctx.via_dice(eval, |ctx| {
                 ctx.via(|dice_ctx| {

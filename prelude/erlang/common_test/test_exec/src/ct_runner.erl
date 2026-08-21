@@ -22,7 +22,7 @@ communicates the result to the test runner.
 -behavior(gen_server).
 
 -export([start_link/1]).
--include_lib("common/include/buck_ct_records.hrl").
+-include_lib("common/include/bsmr_ct_records.hrl").
 -include_lib("kernel/include/logger.hrl").
 -define(raw_file_access, prim_file).
 

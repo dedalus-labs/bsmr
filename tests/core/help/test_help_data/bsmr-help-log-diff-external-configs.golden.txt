@@ -45,11 +45,11 @@ Universal Options:
           The isolation directory also influences the output paths provided by Bessemer, and as a
           result using a non-default isolation dir will cause cache misses (and slower builds).
 
-          [env: BUCK_ISOLATION_DIR=]
-          [default: v2]
+          [env: BSMR_ISOLATION_DIR=]
+          [default: default]
 
   -v, --verbose <VERBOSITY>
-          How verbose buck should be while logging.
+          How verbose bsmr should be while logging.
 
           Values: 0 = Quiet, errors only; 1 = Show status. Default; 2 = more info about errors; 3 =
           more info about everything; 4 = more info about everything + stderr;
@@ -58,7 +58,7 @@ Universal Options:
           actions, status, stats, success) to fine-tune the verbosity of the log. Example usage
           "-v=1,stderr"
 
-          [env: BUCK_VERBOSE=]
+          [env: BSMR_VERBOSE=]
           [default: 1]
 
       --oncall <ONCALL>

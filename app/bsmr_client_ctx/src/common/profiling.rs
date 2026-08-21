@@ -25,7 +25,7 @@ use dupe::Dupe;
     serde::Serialize,
     serde::Deserialize
 )]
-pub enum BuckProfileMode {
+pub enum BsmrProfileMode {
     TimeFlame,
     HeapAllocated,
     HeapRetained,
@@ -41,26 +41,26 @@ pub enum BuckProfileMode {
     None,
 }
 
-impl BuckProfileMode {
+impl BsmrProfileMode {
     pub fn to_proto(&self) -> bsmr_cli_proto::ProfileMode {
         match self {
-            BuckProfileMode::TimeFlame => bsmr_cli_proto::ProfileMode::TimeFlame,
-            BuckProfileMode::HeapAllocated => bsmr_cli_proto::ProfileMode::HeapAllocated,
-            BuckProfileMode::HeapRetained => bsmr_cli_proto::ProfileMode::HeapRetained,
-            BuckProfileMode::HeapFlameAllocated => bsmr_cli_proto::ProfileMode::HeapFlameAllocated,
-            BuckProfileMode::HeapFlameRetained => bsmr_cli_proto::ProfileMode::HeapFlameRetained,
-            BuckProfileMode::HeapSummaryAllocated => {
+            BsmrProfileMode::TimeFlame => bsmr_cli_proto::ProfileMode::TimeFlame,
+            BsmrProfileMode::HeapAllocated => bsmr_cli_proto::ProfileMode::HeapAllocated,
+            BsmrProfileMode::HeapRetained => bsmr_cli_proto::ProfileMode::HeapRetained,
+            BsmrProfileMode::HeapFlameAllocated => bsmr_cli_proto::ProfileMode::HeapFlameAllocated,
+            BsmrProfileMode::HeapFlameRetained => bsmr_cli_proto::ProfileMode::HeapFlameRetained,
+            BsmrProfileMode::HeapSummaryAllocated => {
                 bsmr_cli_proto::ProfileMode::HeapSummaryAllocated
             }
-            BuckProfileMode::HeapSummaryRetained => {
+            BsmrProfileMode::HeapSummaryRetained => {
                 bsmr_cli_proto::ProfileMode::HeapSummaryRetained
             }
-            BuckProfileMode::Statement => bsmr_cli_proto::ProfileMode::Statement,
-            BuckProfileMode::Bytecode => bsmr_cli_proto::ProfileMode::Bytecode,
-            BuckProfileMode::BytecodePairs => bsmr_cli_proto::ProfileMode::BytecodePairs,
-            BuckProfileMode::Typecheck => bsmr_cli_proto::ProfileMode::Typecheck,
-            BuckProfileMode::Coverage => bsmr_cli_proto::ProfileMode::Coverage,
-            BuckProfileMode::None => bsmr_cli_proto::ProfileMode::None,
+            BsmrProfileMode::Statement => bsmr_cli_proto::ProfileMode::Statement,
+            BsmrProfileMode::Bytecode => bsmr_cli_proto::ProfileMode::Bytecode,
+            BsmrProfileMode::BytecodePairs => bsmr_cli_proto::ProfileMode::BytecodePairs,
+            BsmrProfileMode::Typecheck => bsmr_cli_proto::ProfileMode::Typecheck,
+            BsmrProfileMode::Coverage => bsmr_cli_proto::ProfileMode::Coverage,
+            BsmrProfileMode::None => bsmr_cli_proto::ProfileMode::None,
         }
     }
 }

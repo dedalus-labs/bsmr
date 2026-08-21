@@ -29,12 +29,12 @@ use bsmr_data::local_stage;
 use bsmr_data::re_stage;
 use bsmr_data::span_end_event;
 use bsmr_data::span_start_event;
-use bsmr_events::BuckEvent;
+use bsmr_events::BsmrEvent;
 use bsmr_events::span::SpanId;
-use bsmr_hash::StdBuckHashMap;
+use bsmr_hash::StdBsmrHashMap;
 
 use crate::last_command_execution_kind::get_last_command_execution_time;
-use crate::unpack_event::UnpackedBuckEvent;
+use crate::unpack_event::UnpackedBsmrEvent;
 use crate::unpack_event::unpack_event;
 
 #[derive(Debug, Clone, Copy)]
@@ -46,7 +46,7 @@ enum State {
 
 #[derive(Debug, Default)]
 pub struct SpanMap<T> {
-    map: StdBuckHashMap<SpanId, (State, T)>,
+    map: StdBsmrHashMap<SpanId, (State, T)>,
     running: u64,
     finished: u64,
     cancelled: u64,
@@ -195,7 +195,7 @@ impl BuildProgressStateTracker {
         }
     }
 
-    pub fn handle_event(&mut self, event: &BuckEvent) -> bsmr_error::Result<()> {
+    pub fn handle_event(&mut self, event: &BsmrEvent) -> bsmr_error::Result<()> {
         let ev = unpack_event(event)?;
 
         self.handle_load(&ev)?;
@@ -203,7 +203,7 @@ impl BuildProgressStateTracker {
         self.handle_actions(&ev)?;
 
         match unpack_event(event)? {
-            UnpackedBuckEvent::Instant(_, _, instant_event::Data::DiceStateSnapshot(snapshot)) => {
+            UnpackedBsmrEvent::Instant(_, _, instant_event::Data::DiceStateSnapshot(snapshot)) => {
                 if let Some(read_dir_states) = snapshot.key_states.get("ReadDirKey") {
                     self.stats.dirs_read = read_dir_states.finished as u64;
                 }
@@ -239,8 +239,8 @@ impl BuildProgressStateTracker {
                     self.validations.min_finished = states.finished as u64;
                 }
             }
-            UnpackedBuckEvent::SpanEnd(
-                BuckEvent {
+            UnpackedBsmrEvent::SpanEnd(
+                BsmrEvent {
                     span_id: Some(span_id),
                     ..
                 },
@@ -261,10 +261,10 @@ impl BuildProgressStateTracker {
         Ok(())
     }
 
-    fn handle_load(&mut self, ev: &UnpackedBuckEvent) -> bsmr_error::Result<()> {
+    fn handle_load(&mut self, ev: &UnpackedBsmrEvent) -> bsmr_error::Result<()> {
         match ev {
-            UnpackedBuckEvent::SpanStart(
-                BuckEvent {
+            UnpackedBsmrEvent::SpanStart(
+                BsmrEvent {
                     span_id: Some(span_id),
                     ..
                 },
@@ -274,8 +274,8 @@ impl BuildProgressStateTracker {
                 self.loads.started(*span_id, TrackedLoadSpan {});
                 self.loads.running(*span_id);
             }
-            UnpackedBuckEvent::SpanEnd(
-                BuckEvent {
+            UnpackedBsmrEvent::SpanEnd(
+                BsmrEvent {
                     span_id: Some(span_id),
                     ..
                 },
@@ -293,10 +293,10 @@ impl BuildProgressStateTracker {
         Ok(())
     }
 
-    fn handle_analysis(&mut self, ev: &UnpackedBuckEvent) -> bsmr_error::Result<()> {
+    fn handle_analysis(&mut self, ev: &UnpackedBsmrEvent) -> bsmr_error::Result<()> {
         match ev {
-            UnpackedBuckEvent::SpanStart(
-                BuckEvent {
+            UnpackedBsmrEvent::SpanStart(
+                BsmrEvent {
                     span_id: Some(span_id),
                     ..
                 },
@@ -305,8 +305,8 @@ impl BuildProgressStateTracker {
             ) => {
                 self.analyses.started(*span_id, TrackedAnalysisSpan {});
             }
-            UnpackedBuckEvent::SpanStart(
-                BuckEvent {
+            UnpackedBsmrEvent::SpanStart(
+                BsmrEvent {
                     parent_id: Some(parent_id),
                     ..
                 },
@@ -317,8 +317,8 @@ impl BuildProgressStateTracker {
             ) => {
                 self.analyses.running(*parent_id);
             }
-            UnpackedBuckEvent::SpanEnd(
-                BuckEvent {
+            UnpackedBsmrEvent::SpanEnd(
+                BsmrEvent {
                     span_id: Some(span_id),
                     ..
                 },
@@ -347,10 +347,10 @@ impl BuildProgressStateTracker {
         }
     }
 
-    fn handle_actions(&mut self, ev: &UnpackedBuckEvent) -> bsmr_error::Result<()> {
+    fn handle_actions(&mut self, ev: &UnpackedBsmrEvent) -> bsmr_error::Result<()> {
         match ev {
-            UnpackedBuckEvent::SpanStart(
-                BuckEvent {
+            UnpackedBsmrEvent::SpanStart(
+                BsmrEvent {
                     span_id: Some(span_id),
                     ..
                 },
@@ -359,8 +359,8 @@ impl BuildProgressStateTracker {
             ) => {
                 self.actions.started(*span_id, TrackedActionSpan::default());
             }
-            UnpackedBuckEvent::SpanStart(
-                BuckEvent {
+            UnpackedBsmrEvent::SpanStart(
+                BsmrEvent {
                     parent_id: Some(parent_id),
                     ..
                 },
@@ -387,8 +387,8 @@ impl BuildProgressStateTracker {
                     _ => {}
                 };
             }
-            UnpackedBuckEvent::SpanEnd(
-                BuckEvent {
+            UnpackedBsmrEvent::SpanEnd(
+                BsmrEvent {
                     span_id: Some(span_id),
                     ..
                 },

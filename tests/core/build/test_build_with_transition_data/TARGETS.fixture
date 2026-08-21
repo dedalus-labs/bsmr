@@ -6,7 +6,7 @@ platform(
 )
 
 simple(
-    name = "buck",
+    name = "bsmr",
 )
 
 simple(

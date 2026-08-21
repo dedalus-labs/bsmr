@@ -11,7 +11,7 @@ replacement for `labels`.
 
 ## Context: labels
 
-In buck1 we have `labels` builtin rule attribute, which is a list of strings.
+In legacy we have `labels` builtin rule attribute, which is a list of strings.
 
 In bsmr we have `labels` attribute which is configured in prelude, it does not
 have special meaning.
