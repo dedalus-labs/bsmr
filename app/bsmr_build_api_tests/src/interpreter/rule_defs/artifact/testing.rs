@@ -177,7 +177,7 @@ pub(crate) fn artifactory(builder: &mut GlobalsBuilder) {
         let fs = ArtifactFs::new(
             cell_info.1,
             BuckOutPathResolver::new(ProjectRelativePathBuf::unchecked_new(
-                "buck-out/v2".to_owned(),
+                "bsmr-out/v2".to_owned(),
             )),
             project_fs,
         );

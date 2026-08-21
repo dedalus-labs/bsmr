@@ -68,7 +68,7 @@ fn test_ignore_artifacts() -> bsmr_error::Result<()> {
             assert_eq(make_inputs([]), cli.inputs)
             assert_eq([], cli.outputs)
 
-            assert_eq_ignore_hash(["buck-out/v2/art/root/<HASH>/__dep2__/dir/quz.h"], get_args(cli))
+            assert_eq_ignore_hash(["bsmr-out/v2/art/root/<HASH>/__dep2__/dir/quz.h"], get_args(cli))
         "#
     ))?;
     Ok(())

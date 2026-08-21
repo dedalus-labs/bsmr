@@ -198,7 +198,7 @@ async fn make_default_dice_state(
         CellName::testing_new("cell"),
         CellRootPathBuf::new(ProjectRelativePathBuf::unchecked_new("cell-path".into())),
     );
-    let output_path = ProjectRelativePathBuf::unchecked_new("buck-out/v2".into());
+    let output_path = ProjectRelativePathBuf::unchecked_new("bsmr-out/v2".into());
 
     let mut dice_builder = DiceBuilder::new();
     dice_builder = dice_builder.set_data(|data| {
