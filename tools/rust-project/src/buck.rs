@@ -175,7 +175,7 @@ pub(crate) fn to_project_json(
         }
 
         // We want to include all the directories from srcs, because sometimes the source files on
-        // disk aren't in the same layout as buck-out. In this situation, the root_module directory
+        // disk aren't in the same layout as bsmr-out. In this situation, the root_module directory
         // isn't sufficient to find all files in the module tree.
         //
         // You could construct a pathological case using mapped_srcs that means we miss

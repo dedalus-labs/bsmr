@@ -17,7 +17,7 @@ def _validate_workspace_path(path: str) -> None:
         fail("Cargo workspace input path '{}' must be relative".format(path))
     if "" in components or "." in components or ".." in components:
         fail("Cargo workspace input path '{}' must be normalized".format(path))
-    if components[0] in [".bsmr", ".bsmr.local", ".git", "buck-out", "target"]:
+    if components[0] in [".bsmr", ".bsmr.local", ".git", "bsmr-out", "target"]:
         fail("Cargo workspace input path '{}' is owned by BSMR or Cargo".format(path))
 
 def _cargo_workspace_impl(ctx: AnalysisContext) -> list[Provider]:

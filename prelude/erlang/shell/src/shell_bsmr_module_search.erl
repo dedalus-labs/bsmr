@@ -69,7 +69,7 @@ find_module_source(Module) ->
         io_lib:format("~ts/erl/_build*", [Root]),
         "-o",
         "-path",
-        io_lib:format("~ts/buck-out", [Root]),
+        io_lib:format("~ts/bsmr-out", [Root]),
         ")",
         "-prune",
         "-o",
@@ -82,7 +82,7 @@ find_module_source(Module) ->
             RelPath
          || Path <- string:split(Output, ~"\n", all),
             RelPath <- [unicode_characters_to_binary(P) || P <- [string:prefix(Path, [Root, ~"/"])], P =/= nomatch],
-            string:prefix(RelPath, ~"buck-out") == nomatch,
+            string:prefix(RelPath, ~"bsmr-out") == nomatch,
             binary:match(RelPath, ~"_build") == nomatch
         ]
     of

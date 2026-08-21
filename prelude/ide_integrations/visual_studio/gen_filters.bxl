@@ -38,16 +38,16 @@ def _get_file_filter_map(vs_settings: dict) -> dict:
     filters = {}
     files = vs_settings["Headers"] + vs_settings["Sources"].keys()
 
-    # Handle paths that start with "buck-out"(exported files) separately since these file
+    # Handle paths that start with "bsmr-out"(exported files) separately since these file
     # don't have any common dir with the others and would make the hierarchy really nested
     # if processed together
-    buck_out_paths = [path for path in files if path.startswith("buck-out")]
+    buck_out_paths = [path for path in files if path.startswith("bsmr-out")]
     buck_out_common_dir = _get_common_directory(buck_out_paths)
     for file in buck_out_paths:
         # Add a "generated_files" folder so that the files don't get mixed up with the others
         filters[file] = "\\".join(["generated_files", dirname(file[len(buck_out_common_dir) :], "\\")])
 
-    non_buck_out_paths = [path for path in files if not path.startswith("buck-out")]
+    non_buck_out_paths = [path for path in files if not path.startswith("bsmr-out")]
     non_buck_out_common_dir = _get_common_directory(non_buck_out_paths)
     for file in non_buck_out_paths:
         filters[file] = dirname(file[len(non_buck_out_common_dir) :], "\\")

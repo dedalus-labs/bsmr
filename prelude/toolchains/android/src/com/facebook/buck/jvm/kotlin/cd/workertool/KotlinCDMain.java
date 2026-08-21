@@ -1,3 +1,9 @@
+//===----------------------------------------------------------------------===//
+// Upstream-Source: facebook/buck2@1560aca2002865cd73d7cafb22c705cfb640b2bc
+// Modifications Copyright (c) 2026 Dedalus Labs, Inc. and its contributors
+// SPDX-License-Identifier: Apache-2.0
+//===----------------------------------------------------------------------===//
+
 /*
  * Copyright (c) Meta Platforms, Inc. and affiliates.
  *
@@ -24,7 +30,7 @@ import java.util.logging.Level;
  * <p>This provides a simple executable that can run any of the kotlincd actions.
  */
 public class KotlinCDMain {
-  private static final String LOG_PATH = "buck-out/v2/kotlincd";
+  private static final String LOG_PATH = "bsmr-out/v2/kotlincd";
 
   /** Main entrypoint of KotlinCD worker tool. */
   public static void main(String[] args) throws IOException {

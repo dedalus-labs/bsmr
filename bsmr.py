@@ -56,7 +56,7 @@ def parse_arguments() -> Tuple[argparse.Namespace, List[str]]:
             "the installed bsmr with test.v2_test_executor pinned to it, instead "
             "of building+running a local bsmr bundle. This keeps the locally-built "
             "TPX alive across Citadel's HEAD->BASE rebase (the target leg vs the "
-            "BRR/SRR legs), which otherwise GCs the bundle's buck-out copy and "
+            "BRR/SRR legs), which otherwise GCs the bundle's bsmr-out copy and "
             "fails with 'v2_test_executor ... binary has been deleted from disk'. "
             "Inert when empty."
         ),
@@ -116,7 +116,7 @@ TPX_TARGET = "root//bsmr_tpx_cli:bsmr_tpx_cli"
 
 
 def tpx_build_mode() -> str:
-    # opt is intentional: a mode/dev TPX fails to run from outside buck-out
+    # opt is intentional: a mode/dev TPX fails to run from outside bsmr-out
     # (missing libunwind.so.8), whereas the opt binary is self-contained.
     return (
         "@upstream//mode/opt-win"

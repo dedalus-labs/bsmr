@@ -1,4 +1,10 @@
 #!/usr/bin/env python3
+# ===----------------------------------------------------------------------===
+# Upstream-Source: facebook/buck2@1560aca2002865cd73d7cafb22c705cfb640b2bc
+# Modifications Copyright (c) 2026 Dedalus Labs, Inc. and its contributors
+# SPDX-License-Identifier: Apache-2.0
+# ===----------------------------------------------------------------------===
+
 # Copyright (c) Meta Platforms, Inc. and affiliates.
 #
 # This source code is dual-licensed under either the MIT license found in the
@@ -22,7 +28,7 @@ def unquote(argument):
 
 
 def is_relative_buck_out_path(argument):
-    return argument.startswith("buck-out\\")
+    return argument.startswith("bsmr-out\\")
 
 
 def is_library_path(argument):

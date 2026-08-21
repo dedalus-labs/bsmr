@@ -53,7 +53,7 @@ interface Correctness {
 	version: string;
 }
 
-const generatedComponents = new Set([".pytest_cache", ".ruff_cache", ".venv", "__pycache__", "bazel-bin", "bazel-out", "bazel-testlogs", "buck-out"]);
+const generatedComponents = new Set([".pytest_cache", ".ruff_cache", ".venv", "__pycache__", "bazel-bin", "bazel-out", "bazel-testlogs", "bsmr-out"]);
 const targetEntry = "root//:django-admin";
 const targetTest = "root//:test";
 const fixture = join(import.meta.dirname, "fixture");

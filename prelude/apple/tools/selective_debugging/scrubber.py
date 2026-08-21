@@ -30,9 +30,9 @@ from .utils import MachOException
 
 
 FAKE_PATH = b"fake/path"
-# buck-out/isolation_dir/gen/project_cell/{hash}/....
+# bsmr-out/isolation_dir/gen/project_cell/{hash}/....
 NUM_OF_COMPONENTS_IN_BSMR_OUTPUT_PATH_BEFORE_PROJECT_PATH = 5
-# buck-out/isolation_dir/gen/project_cell//X/Y/__name__/{hash}/....
+# bsmr-out/isolation_dir/gen/project_cell//X/Y/__name__/{hash}/....
 NUM_OF_COMPONENTS_IN_BSMR_OUTPUT_PATH_BEFORE_PROJECT_PATH_WITH_CONTENT_BASED_PATH = 4
 
 
@@ -60,7 +60,7 @@ def load_focused_targets_output_paths(json_file_path: str) -> set[str]:
     return output_paths
 
 
-# This function converts buck-out/isolation_dir/gen/project_cell/{hash}/X/Y/__name__/libFoo.a
+# This function converts bsmr-out/isolation_dir/gen/project_cell/{hash}/X/Y/__name__/libFoo.a
 # into X/Y/__name__ to match the focus target output path created by load_focused_targets_output_paths
 # Visible for testing
 def _get_target_output_path_from_debug_file_path(
@@ -68,13 +68,13 @@ def _get_target_output_path_from_debug_file_path(
 ) -> str:
     # This function assumes the debug file path created by bsmr in one of the following formats:
     # Without content based path:
-    # buck-out/isolation_dir/gen/project_cell/{hash}/.../__name__/libFoo.a
-    # buck-out/isolation_dir/gen/project_cell/{hash}/.../__name__/__objects__/bar.o
-    # buck-out/isolation_dir/gen/project_cell/{hash}/.../__name__/swift_object_file.o
+    # bsmr-out/isolation_dir/gen/project_cell/{hash}/.../__name__/libFoo.a
+    # bsmr-out/isolation_dir/gen/project_cell/{hash}/.../__name__/__objects__/bar.o
+    # bsmr-out/isolation_dir/gen/project_cell/{hash}/.../__name__/swift_object_file.o
     # With content based path:
-    # buck-out/isolation_dir/gen/project_cell/.../__name__/{hash}/libFoo.a
-    # buck-out/isolation_dir/gen/project_cell/.../__name__/__objects__/{hash}/bar.o
-    # buck-out/isolation_dir/gen/project_cell/.../__name__/{hash}/swift_object_file.o
+    # bsmr-out/isolation_dir/gen/project_cell/.../__name__/{hash}/libFoo.a
+    # bsmr-out/isolation_dir/gen/project_cell/.../__name__/__objects__/{hash}/bar.o
+    # bsmr-out/isolation_dir/gen/project_cell/.../__name__/{hash}/swift_object_file.o
     parts = debug_target_path.split("/")
 
     # We are doing the traverse in reverse order because this way we'll find the first
@@ -120,7 +120,7 @@ def should_scrub_with_focused_targets_output_paths(
     else:
         debug_target_path = debug_file_path
 
-    if debug_file_path.startswith("buck-out/"):
+    if debug_file_path.startswith("bsmr-out/"):
         target_output_path, target_output_content_based_path = (
             _get_target_output_path_from_debug_file_path(debug_target_path)
         )

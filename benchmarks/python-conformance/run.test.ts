@@ -23,7 +23,7 @@ test("invariant_empty_cache_claims_require_a_new_isolation", (context) => {
 	context.after(() => rmSync(repository, { force: true, recursive: true }));
 	assert.doesNotThrow(() => assertBsmrCacheState(repository, "new-isolation", "empty-isolation"));
 	assert.throws(() => assertBsmrCacheState(repository, undefined, "empty-isolation"), /requires BSMR_BENCH_ISOLATION_DIR/);
-	mkdirSync(join(repository, "buck-out", "used-isolation"), { recursive: true });
+	mkdirSync(join(repository, "bsmr-out", "used-isolation"), { recursive: true });
 	assert.throws(() => assertBsmrCacheState(repository, "used-isolation", "empty-isolation"), /already exists/);
 	assert.doesNotThrow(() => assertBsmrCacheState(repository, "used-isolation", "repository-local-state-preserved"));
 });
