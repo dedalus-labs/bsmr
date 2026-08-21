@@ -75,9 +75,9 @@ Buck can omit writes entirely if the same content is already on disk.
 
 The deferred materializer can be configured to continuously delete stale
 artifacts, that haven't been recently accessed, or untracked artifacts, that
-exist in buck-out but not in the materalizer state.
+exist in bsmr-out but not in the materalizer state.
 
-Unlike `bsmr clean` this does not fully wipe buck-out but it should not
+Unlike `bsmr clean` this does not fully wipe bsmr-out but it should not
 negatively impact build performance if you are building and rebasing regularly.
 
 Enabling this requires enabling [on-disk state](#on-disk-state) and
@@ -104,7 +104,7 @@ clean_stale_start_offset_hours = 12
 - `clean_stale_period_hours` determines how frequently to schedule recurring
   clean events.
 - `clean_stale_artifact_ttl_hours` determines how long artifacts should be kept
-  in buck-out before cleaning them.
+  in bsmr-out before cleaning them.
 - `clean_stale_low_disk_threshold` (percent of total disk free, e.g. `10.0`)
   enables more aggressive cleaning when free disk drops at or below it. The
   low-disk behavior below never engages unless this is set.

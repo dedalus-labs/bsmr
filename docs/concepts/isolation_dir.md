@@ -28,11 +28,11 @@ The isolation directory serves as a fundamental boundary that:
 
 ### Physical Structure
 
-The isolation directory exists as a subdirectory within the `buck-out` folder:
+The isolation directory exists as a subdirectory within the `bsmr-out` folder:
 
 ```
 project_root/
-└── buck-out/
+└── bsmr-out/
     ├── v2/            # Default isolation directory
     │   ├── artifacts/
     │   ├── cache/
@@ -45,7 +45,7 @@ project_root/
 ```
 
 By default, Bessemer uses an isolation directory named `v2`, creating all build
-outputs and metadata within `$PROJECT_ROOT/buck-out/v2`.
+outputs and metadata within `$PROJECT_ROOT/bsmr-out/v2`.
 
 ### Important Characteristics
 

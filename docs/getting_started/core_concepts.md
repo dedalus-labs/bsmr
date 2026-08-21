@@ -468,7 +468,7 @@ As you become more adept, you can explore other powerful buck commands, such as:
   [buck daemon](../../concepts/daemon/), this is sometimes needed to recover
   from a failed build due to bad daemon state;
 - [`buck clean`](../../users/commands/clean/) to remove build artifacts from
-  [buck-out](../../concepts/buck_out/), this is a remedy to recover from failed
+  [bsmr-out](../../concepts/bsmr_out/), this is a remedy to recover from failed
   build due to either bad daemon or bad artifacts in cache;
 - [`buck log`](../../users/commands/log/) to see information about previous
   builds
@@ -509,7 +509,7 @@ graph TD
 
     F --> G[Resolve dependencies]
     G --> H[Execute build actions]
-    H --> I[Generate outputs in </br> buck-out/]
+    H --> I[Generate outputs in </br> bsmr-out/]
 
     I --> J{Command specific behavior}
     J -->|build| K[Show output path </br> if --show-output available]
@@ -535,13 +535,13 @@ purposes, and the interactive feature helps during debugging.
 ## Buck-out
 
 So you’ve successfully built the target and run it. Finally, let’s briefly talk
-about [buck-out](../../concepts/buck_out/), which is an important concept yet
+about [bsmr-out](../../concepts/bsmr_out/), which is an important concept yet
 hard to understand initially. We know that buck builds complicated targets with
 big dependency graphs and generates tons of outputs for test and run. Where
 should these output artifacts be stored at? The outputs should not be stored at
 the source directory which is tracked by the source control system. The outputs
 also need to be reused/cached for later builds to save build time. So here comes
-buck-out,it has the following characteristics:
+bsmr-out,it has the following characteristics:
 
 - It’s under repo root;
 - It has a unique file structure, some directories are hashed for caching
@@ -552,15 +552,15 @@ buck-out,it has the following characteristics:
 
 #### Tips:
 
-- **Do NOT** delete artifacts manually from buck-out directory and expect buck
-  to rebuild them, buck doesn’t track things under buck-out, use buck clean
+- **Do NOT** delete artifacts manually from bsmr-out directory and expect buck
+  to rebuild them, buck doesn’t track things under bsmr-out, use buck clean
   instead;
 
 <FbInternalOnly>
 
-- **Do NOT** use buck-out directory path in your source or BUILD.bsmr file, you should
+- **Do NOT** use bsmr-out directory path in your source or BUILD.bsmr file, you should
   not assume where artifacts will be stored, see more information in
-  [this wiki](https://www.internalfb.com/wiki/Buck/Buck-users/faq_trick_tip/Dealing_with_buck-out/);
+  [this wiki](https://www.internalfb.com/wiki/Buck/Buck-users/faq_trick_tip/Dealing_with-buck-out/);
 - Buck-out can grow very big and consumes your disk space, you can run buck
   clean or [buck clean --stale](../../users/commands/clean/) as the remedy
 

@@ -56,12 +56,12 @@ Providing better ergonomics for BXL scripts (such as enabling something like
 `bsmr comp_db`) is being discussed
 [here](https://github.com/facebook/buck2/issues/86).
 
-## Tools jumping to `buck-out`
+## Tools jumping to `bsmr-out`
 
 You may notice that your tools (e.g. clangd's Go To Definition feature)
-jump to symlinks into `buck-out`, rather than into the source tree.
+jump to symlinks into `bsmr-out`, rather than into the source tree.
 
-This is often problematic, because `buck-out` is not under source
+This is often problematic, because `bsmr-out` is not under source
 control (so all VCS-related editor tools fail), and text editors
 typically handle those symlinks poorly (e.g. VS Code will keep separate
 tabs for the symlink and the source header, and Vim will reuse an

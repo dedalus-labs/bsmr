@@ -31,20 +31,20 @@ It is prohibited to specify both `--modifier` flag and `?` on CLI. This restrict
 Buck’s build commands accept a set of `--show-output` flags (ex. `--show-output` and `--show-full-output`) that prints the output location of targets specified on CLI. For example, invoking `bsmr build root//:bsmr –show-output` prints
 
 ```python
-root//:bsmr buck-out/v2/gen/fbcode/57b1cdd23074b8c3/bsmr/bsmr
+root//:bsmr bsmr-out/v2/gen/fbcode/57b1cdd23074b8c3/bsmr/bsmr
 ```
 
 Likewise, invoking build in a different mode like `bsmr build root//:bsmr -m opt` will print a different path
 
 ```python
-root//:bsmr buck-out/v2/gen/fbcode/b706492dec65e54c/bsmr/bsmr
+root//:bsmr bsmr-out/v2/gen/fbcode/b706492dec65e54c/bsmr/bsmr
 ```
 
 With `?`-syntax, users would be able to invoke `bsmr build root//:bsmr root//:bsmr?opt` in the same invocation. For that, we propose to use the following output structure.
 
 ```python
-root//:bsmr buck-out/v2/gen/fbcode/57b1cdd23074b8c3/bsmr/bsmr
-root//:bsmr?opt buck-out/v2/gen/fbcode/b706492dec65e54c/bsmr/bsmr
+root//:bsmr bsmr-out/v2/gen/fbcode/57b1cdd23074b8c3/bsmr/bsmr
+root//:bsmr?opt bsmr-out/v2/gen/fbcode/b706492dec65e54c/bsmr/bsmr
 ```
 
 This preserves modifiers in the exact same way that is specified from the CLI invocation, which allows users to differentiate which path belongs to dev modifier and which path belongs to opt modifier, without needing to understand very much about modifiers.
@@ -60,7 +60,7 @@ Current build report for `bsmr build root//:bsmr` looks as follows. For readabil
       "success": "SUCCESS",
       "outputs": {
         "DEFAULT": [
-          "buck-out/v2/gen/fbcode/57b1cdd23074b8c3/bsmr/bsmr"
+          "bsmr-out/v2/gen/fbcode/57b1cdd23074b8c3/bsmr/bsmr"
         ]
       },
       "other_outputs": {},
@@ -70,7 +70,7 @@ Current build report for `bsmr build root//:bsmr` looks as follows. For readabil
           "success": "SUCCESS",
           "outputs": {
             "DEFAULT": [
-              "buck-out/v2/gen/fbcode/57b1cdd23074b8c3/bsmr/bsmr"
+              "bsmr-out/v2/gen/fbcode/57b1cdd23074b8c3/bsmr/bsmr"
             ]
           },
           "other_outputs": {}
@@ -92,7 +92,7 @@ When `?`-syntax is used, we will also preserve the modifiers in the build report
       "success": "SUCCESS",
       "outputs": {
         "DEFAULT": [
-          "buck-out/v2/gen/fbcode/57b1cdd23074b8c3/bsmr/bsmr"
+          "bsmr-out/v2/gen/fbcode/57b1cdd23074b8c3/bsmr/bsmr"
         ]
       },
       "other_outputs": {},
@@ -102,7 +102,7 @@ When `?`-syntax is used, we will also preserve the modifiers in the build report
           "success": "SUCCESS",
           "outputs": {
             "DEFAULT": [
-              "buck-out/v2/gen/fbcode/57b1cdd23074b8c3/bsmr/bsmr"
+              "bsmr-out/v2/gen/fbcode/57b1cdd23074b8c3/bsmr/bsmr"
             ]
           },
           "other_outputs": {}
@@ -115,7 +115,7 @@ When `?`-syntax is used, we will also preserve the modifiers in the build report
       "success": "SUCCESS",
       "outputs": {
         "DEFAULT": [
-          "buck-out/v2/gen/fbcode/b706492dec65e54c/bsmr/bsmr"
+          "bsmr-out/v2/gen/fbcode/b706492dec65e54c/bsmr/bsmr"
         ]
       },
       "other_outputs": {},
@@ -125,7 +125,7 @@ When `?`-syntax is used, we will also preserve the modifiers in the build report
           "success": "SUCCESS",
           "outputs": {
             "DEFAULT": [
-              "buck-out/v2/gen/fbcode/b706492dec65e54c/bsmr/bsmr"
+              "bsmr-out/v2/gen/fbcode/b706492dec65e54c/bsmr/bsmr"
             ]
           },
           "other_outputs": {}
@@ -152,7 +152,7 @@ A possible alternate design is that we add a `per_target_modifiers` section of t
       "success": "SUCCESS",
       "outputs": {
         "DEFAULT": [
-          "buck-out/v2/gen/fbcode/57b1cdd23074b8c3/bsmr/bsmr"
+          "bsmr-out/v2/gen/fbcode/57b1cdd23074b8c3/bsmr/bsmr"
         ]
       },
       "other_outputs": {},
@@ -162,7 +162,7 @@ A possible alternate design is that we add a `per_target_modifiers` section of t
           "success": "SUCCESS",
           "outputs": {
             "DEFAULT": [
-              "buck-out/v2/gen/fbcode/57b1cdd23074b8c3/bsmr/bsmr"
+              "bsmr-out/v2/gen/fbcode/57b1cdd23074b8c3/bsmr/bsmr"
             ]
           },
           "other_outputs": {}
@@ -172,7 +172,7 @@ A possible alternate design is that we add a `per_target_modifiers` section of t
           "success": "SUCCESS",
           "outputs": {
             "DEFAULT": [
-              "buck-out/v2/gen/fbcode/b706492dec65e54c/bsmr/bsmr"
+              "bsmr-out/v2/gen/fbcode/b706492dec65e54c/bsmr/bsmr"
             ]
           },
           "other_outputs": {}
@@ -185,7 +185,7 @@ A possible alternate design is that we add a `per_target_modifiers` section of t
           "success": "SUCCESS",
           "outputs": {
             "DEFAULT": [
-              "buck-out/v2/gen/fbcode/57b1cdd23074b8c3/bsmr/bsmr"
+              "bsmr-out/v2/gen/fbcode/57b1cdd23074b8c3/bsmr/bsmr"
             ]
           },
           "other_outputs": {}
@@ -195,7 +195,7 @@ A possible alternate design is that we add a `per_target_modifiers` section of t
           "success": "SUCCESS",
           "outputs": {
             "DEFAULT": [
-              "buck-out/v2/gen/fbcode/b706492dec65e54c/bsmr/bsmr"
+              "bsmr-out/v2/gen/fbcode/b706492dec65e54c/bsmr/bsmr"
             ]
           },
           "other_outputs": {}

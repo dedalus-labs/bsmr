@@ -78,7 +78,7 @@ build some artifact (for details, see the
 [`bxl.OutputStream`](../../../api/bxl/OutputStream) documentation, available as
 part of `ctx.output`). At high level, `ctx.output.print(..)` prints results to
 stdout, and `ctx.output.ensure(artifact)` marks artifacts as to be materialized
-into buck-out by the end of the BXL function, returning an object that lets you
+into bsmr-out by the end of the BXL function, returning an object that lets you
 print the output path via `ctx.output.print(ensured)`.
 
 ## Passing in and using CLI args

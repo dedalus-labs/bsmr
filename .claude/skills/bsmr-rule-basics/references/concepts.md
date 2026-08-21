@@ -170,7 +170,7 @@ Artifacts represent files in Bessemer's build model.
 #### 2. Build Artifacts
 
 - **Definition:** Files produced by actions during the build
-- **Location:** `buck-out/` directory
+- **Location:** `bsmr-out/` directory
 - **Characteristics:**
   - Created by actions
   - Cached based on inputs
