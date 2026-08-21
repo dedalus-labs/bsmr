@@ -22,7 +22,7 @@ from bsmr.tests.e2e_util.buck_workspace import buck_test
 
 @buck_test(
     setup_eden=True,
-    # buck-out is not redirected in the subproject
+    # bsmr-out is not redirected in the subproject
     allow_soft_errors=True,
     # We don't run buck outside the subproject
     skip_final_kill=True,

@@ -32,7 +32,7 @@ async def test_audit_output_malformed_path(buck: Buck) -> None:
         buck.audit_output(
             "blah",
         ),
-        stderr_regex="Path does not start with buck-out",
+        stderr_regex="Path does not start with bsmr-out",
     )
 
 
@@ -42,7 +42,7 @@ async def test_audit_output_scratch_path_unsupported(buck: Buck) -> None:
     config_hash = await _get_config_hash(buck, "root//:dummy")
     await expect_failure(
         buck.audit_output(
-            f"buck-out/v2/tmp/cell1/{config_hash}/path/to/target/__target__/output",
+            f"bsmr-out/v2/tmp/cell1/{config_hash}/path/to/target/__target__/output",
         ),
         stderr_regex="not supported for audit output",
     )
@@ -54,7 +54,7 @@ async def test_audit_output_bxl_unsupported(buck: Buck) -> None:
     config_hash = await _get_config_hash(buck, "root//:dummy")
     await expect_failure(
         buck.audit_output(
-            f"buck-out/v2/art-bxl/cell1/{config_hash}/path/to/function.bxl/__function__/output",
+            f"bsmr-out/v2/art-bxl/cell1/{config_hash}/path/to/function.bxl/__function__/output",
         ),
         stderr_regex="not supported for audit output",
     )
@@ -66,7 +66,7 @@ async def test_audit_output_anon_targets_unsupported(buck: Buck) -> None:
     config_hash = await _get_config_hash(buck, "root//:dummy")
     await expect_failure(
         buck.audit_output(
-            f"buck-out/v2/art-anon/cell1/{config_hash}/path/to/target/rule_hash/__target__/output",
+            f"bsmr-out/v2/art-anon/cell1/{config_hash}/path/to/target/rule_hash/__target__/output",
         ),
         stderr_regex="not supported for audit output",
     )
@@ -79,9 +79,9 @@ async def test_audit_output_invalid_prefix(buck: Buck) -> None:
     config_hash = await _get_config_hash(buck, "root//:dummy")
     await expect_failure(
         buck.audit_output(
-            f"buck-out/v2/not_art/cell1/{config_hash}/path/to/target/rule_hash/__target__/output",
+            f"bsmr-out/v2/not_art/cell1/{config_hash}/path/to/target/rule_hash/__target__/output",
         ),
-        stderr_regex="Malformed buck-out path",
+        stderr_regex="Malformed bsmr-out path",
     )
 
 
@@ -91,7 +91,7 @@ async def test_audit_output_nonexistent_cell(buck: Buck) -> None:
     config_hash = await _get_config_hash(buck, "root//:dummy")
     await expect_failure(
         buck.audit_output(
-            f"buck-out/v2/art/made_up_cell/{config_hash}/path/to/target/rule_hash/__target__/output",
+            f"bsmr-out/v2/art/made_up_cell/{config_hash}/path/to/target/rule_hash/__target__/output",
         ),
         stderr_regex="unknown cell name",
     )
@@ -102,7 +102,7 @@ async def test_audit_output_in_root_directory(buck: Buck) -> None:
     target = "root//:dummy"
     config_hash = await _get_config_hash(buck, target)
     result = await buck.audit_output(
-        f"buck-out/v2/art/root/{config_hash}/__dummy__/foo.txt",
+        f"bsmr-out/v2/art/root/{config_hash}/__dummy__/foo.txt",
         "--output-all-attributes",
     )
 
@@ -116,7 +116,7 @@ async def test_audit_output_in_root_directory(buck: Buck) -> None:
 async def test_audit_content_based_output_in_root_directory(buck: Buck) -> None:
     target = "root//:dummy"
     result = await buck.audit_output(
-        f"buck-out/v2/art/root/__dummy__/{DUMMY_CONTENT_HASH}/foo.txt",
+        f"bsmr-out/v2/art/root/__dummy__/{DUMMY_CONTENT_HASH}/foo.txt",
         "-c",
         "test.has_content_based_path=true",
     )
@@ -129,7 +129,7 @@ async def test_non_root_cell(buck: Buck) -> None:
     target = "cell1//:dummy2"
     config_hash = await _get_config_hash(buck, target)
     result = await buck.audit_output(
-        f"buck-out/v2/art/cell1/{config_hash}/__dummy2__/foo.txt",
+        f"bsmr-out/v2/art/cell1/{config_hash}/__dummy2__/foo.txt",
         "--output-all-attributes",
     )
 
@@ -147,7 +147,7 @@ async def test_fixed_target_platform(buck: Buck) -> None:
     target = "root//directory:dummy"
     config_hash = await _get_config_hash(buck, target, target_platforms_arg)
     result = await buck.audit_output(
-        f"buck-out/v2/art/root/{config_hash}/directory/__dummy__/foo.txt",
+        f"bsmr-out/v2/art/root/{config_hash}/directory/__dummy__/foo.txt",
         target_platforms_arg,
     )
 
@@ -163,7 +163,7 @@ async def test_dynamic_output_declared_in_rule_bound_in_dynamic(buck: Buck) -> N
     config_hash = await _get_config_hash(buck, target)
 
     result = await buck.audit_output(
-        f"buck-out/v2/art/root/{config_hash}/dynamic_output/__dynamic_output__/bound_dynamic.txt",
+        f"bsmr-out/v2/art/root/{config_hash}/dynamic_output/__dynamic_output__/bound_dynamic.txt",
     )
     action = result.stdout
     assert target in action
@@ -177,7 +177,7 @@ async def test_content_based_dynamic_output_declared_in_rule_bound_in_dynamic(
     target = "root//dynamic_output:dynamic_output"
 
     result = await buck.audit_output(
-        f"buck-out/v2/art/root/dynamic_output/__dynamic_output__/{DUMMY_CONTENT_HASH}/bound_dynamic.txt",
+        f"bsmr-out/v2/art/root/dynamic_output/__dynamic_output__/{DUMMY_CONTENT_HASH}/bound_dynamic.txt",
         "-c",
         "test.has_content_based_path=true",
     )
@@ -189,7 +189,7 @@ async def test_dynamic_output_declared_and_bound_in_dynamic(buck: Buck) -> None:
     target = "root//dynamic_output:dynamic_output"
     config_hash = await _get_config_hash(buck, target)
     result = await buck.audit_output(
-        f"buck-out/v2/art/root/{config_hash}/dynamic_output/__dynamic_output__/defined_dynamic.txt",
+        f"bsmr-out/v2/art/root/{config_hash}/dynamic_output/__dynamic_output__/defined_dynamic.txt",
     )
     # FIXME(JakobDegen): Why isn't this an error?
     assert "Failed to find an action that produced the output path" in result.stdout
@@ -201,7 +201,7 @@ async def test_wrong_config_hash(buck: Buck) -> None:
     target_platform = "root//:linux_platform"
     target_platforms_arg = f"--target-platforms={target_platform}"
     result = await buck.audit_output(
-        "buck-out/v2/art/root/aaaabbbbccccdddd/directory/__dummy__/foo.txt",
+        "bsmr-out/v2/art/root/aaaabbbbccccdddd/directory/__dummy__/foo.txt",
         target_platforms_arg,
     )
 
@@ -220,7 +220,7 @@ async def test_output_directory(buck: Buck) -> None:
     target = "root//directory:empty_dir"
     config_hash = await _get_config_hash(buck, target)
     result = await buck.audit_output(
-        f"buck-out/v2/art/root/{config_hash}/directory/__empty_dir__/outputdir",
+        f"bsmr-out/v2/art/root/{config_hash}/directory/__empty_dir__/outputdir",
     )
 
     action = result.stdout
@@ -233,7 +233,7 @@ async def test_content_based_output_directory(buck: Buck) -> None:
     # Test a rule that outputs to a directory
     target = "root//directory:empty_dir"
     result = await buck.audit_output(
-        f"buck-out/v2/art/root/directory/__empty_dir__/{DUMMY_CONTENT_HASH}/outputdir",
+        f"bsmr-out/v2/art/root/directory/__empty_dir__/{DUMMY_CONTENT_HASH}/outputdir",
         "-c",
         "test.has_content_based_path=true",
     )
@@ -243,7 +243,7 @@ async def test_content_based_output_directory(buck: Buck) -> None:
 
 # TODO(@wendyy) - remove this config hash hack
 # Config hash might change, so let's build a target with linux target platform
-# and get the current config hash, which is the 4th index in the buck-out path.
+# and get the current config hash, which is the 4th index in the bsmr-out path.
 async def _get_config_hash(buck: Buck, target: str, *args: str) -> str:
     result = await buck.build(target, *args)
     delim = "/"

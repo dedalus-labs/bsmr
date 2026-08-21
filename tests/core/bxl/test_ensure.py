@@ -34,7 +34,7 @@ def _replace_hash(s: str) -> str:
     return re.sub(r"\b[0-9a-f]{16}\b", "<HASH>", s)
 
 
-BUCK_OUT_ROOT_REL_PATH = "buck-out/v2/art/root"
+BUCK_OUT_ROOT_REL_PATH = "bsmr-out/v2/art/root"
 
 
 @buck_test()
@@ -117,7 +117,7 @@ async def test_bxl_artifact_path(buck: Buck) -> None:
 
     prefix = BUCK_OUT_ROOT_REL_PATH + "/"
 
-    # The project relative path to the buck-out directory with the output
+    # The project relative path to the bsmr-out directory with the output
     assert outputs["build_artifact_project_rel_path"].startswith(prefix)
     assert (
         "/artifacts/__with_build_artifact__/foo.txt"

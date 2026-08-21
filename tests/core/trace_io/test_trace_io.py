@@ -46,7 +46,7 @@ def assert_path_exists(path: str) -> None:
 
 def assert_buck_out_paths_materialized(buck_cwd: Path, paths: list[str]) -> None:
     for path in paths:
-        if re.match(r"buck-out\/.+\/{art,offline-cache}/.+\/.+\/.+", path) is not None:
+        if re.match(r"bsmr-out\/.+\/{art,offline-cache}/.+\/.+\/.+", path) is not None:
             assert_path_exists(os.path.join(buck_cwd, path))
 
 
@@ -215,7 +215,7 @@ async def test_symlinks(buck: Buck) -> None:
     assert_path_in_manifest("symlinks/other.cpp", manifest["paths"])
 
 
-# Validate that manifest includes downloaded http_archive path in buck-out.
+# Validate that manifest includes downloaded http_archive path in bsmr-out.
 @buck_test(skip_for_os=["windows"])
 async def test_includes_http_archive_in_manifest(buck: Buck) -> None:
     hg_init(cwd=buck.cwd)
@@ -227,20 +227,20 @@ async def test_includes_http_archive_in_manifest(buck: Buck) -> None:
 
     assert any(
         re.match(
-            r"buck-out/.+/offline-cache/.+/http_archive/__test_zip__/download", path
+            r"bsmr-out/.+/offline-cache/.+/http_archive/__test_zip__/download", path
         )
         for path in manifest["paths"]
     ), "manifest should contain http_archive cached output"
     assert_buck_out_paths_materialized(buck.cwd, manifest["paths"])
 
 
-# Ensure offline-cache buck-out dir is _not_ created when not doing I/O tracing.
+# Ensure offline-cache bsmr-out dir is _not_ created when not doing I/O tracing.
 @buck_test(skip_for_os=["windows"])
 async def test_no_tracing_does_not_write_offline_cache_for_http_archive(
     buck: Buck,
 ) -> None:
     await buck.build("root//http_archive:test_zip")
-    assert not os.path.exists(os.path.join(buck.cwd, "buck-out/offline-cache")), (
+    assert not os.path.exists(os.path.join(buck.cwd, "bsmr-out/offline-cache")), (
         "offline cache should not exist when not doing I/O tracing"
     )
 
@@ -275,7 +275,7 @@ async def test_fake_offline_http_archive_uses_offline_cache(buck: Buck) -> None:
         "offline cache path should not exist before manifest export"
     )
 
-    # Ensure buck-out/offline-cache paths are materialized.
+    # Ensure bsmr-out/offline-cache paths are materialized.
     await buck.debug("trace-io", "export-manifest")
     assert offline_cache_path.exists(), (
         "offline cache path should exist after manifest export"
@@ -307,7 +307,7 @@ async def test_includes_cas_artifact_in_manifest(buck: Buck) -> None:
 
     assert any(
         re.match(
-            r"buck-out\/.+\/offline-cache/root\/.+\/cas_artifact/__tree__/tree", path
+            r"bsmr-out\/.+\/offline-cache/root\/.+\/cas_artifact/__tree__/tree", path
         )
         is not None
         for path in manifest["paths"]
@@ -316,7 +316,7 @@ async def test_includes_cas_artifact_in_manifest(buck: Buck) -> None:
     assert_buck_out_paths_materialized(buck.cwd, manifest["paths"])
 
 
-# Ensure offline-cache buck-out dir is _not_ created when not doing I/O tracing.
+# Ensure offline-cache bsmr-out dir is _not_ created when not doing I/O tracing.
 @buck_test(skip_for_os=["windows"])
 async def test_no_tracing_does_not_write_offline_cache_for_cas_artifact(
     buck: Buck,
@@ -324,7 +324,7 @@ async def test_no_tracing_does_not_write_offline_cache_for_cas_artifact(
     _setup_bsmrconfig_digest_algorithms(buck)
 
     await buck.build("//cas_artifact:tree")
-    assert not os.path.exists(os.path.join(buck.cwd, "buck-out/offline-cache")), (
+    assert not os.path.exists(os.path.join(buck.cwd, "bsmr-out/offline-cache")), (
         "offline cache should not exist when not doing I/O tracing"
     )
 
@@ -360,7 +360,7 @@ async def test_fake_offline_cas_artifact_uses_offline_cache(buck: Buck) -> None:
         "offline cache path should not exist before manifest export"
     )
 
-    # Ensure buck-out/offline-cache paths are materialized.
+    # Ensure bsmr-out/offline-cache paths are materialized.
     await buck.debug("trace-io", "export-manifest")
     assert offline_cache_path.exists(), (
         "offline cache path should exist after manifest export"
@@ -558,7 +558,7 @@ async def test_run_action_cache_includes_in_manifest(buck: Buck) -> None:
 
     assert any(
         re.match(
-            r"buck-out/.+/offline-cache/root/.+/run_action_cache/__cached_target__/out.txt",
+            r"bsmr-out/.+/offline-cache/root/.+/run_action_cache/__cached_target__/out.txt",
             path,
         )
         is not None
@@ -651,7 +651,7 @@ async def test_genrule_cache_includes_in_manifest(buck: Buck) -> None:
 
     assert any(
         re.match(
-            r"buck-out/.+/offline-cache/root/.+/genrule_cache/__cached__/output.txt",
+            r"bsmr-out/.+/offline-cache/root/.+/genrule_cache/__cached__/output.txt",
             path,
         )
         is not None

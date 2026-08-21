@@ -120,7 +120,7 @@ async def test_matching_artifact_optimization(buck: Buck) -> None:
 )
 async def test_cache_directory_cleanup(buck: Buck) -> None:
     # sqlite materializer state is already enabled
-    cache_dir = Path(buck.cwd, "buck-out", "v2", "cache")
+    cache_dir = Path(buck.cwd, "bsmr-out", "v2", "cache")
     materializer_state_dir = cache_dir / "materializer_state"
     materializer_state_dir.mkdir(parents=True)
     incremental_state_dir = cache_dir / "incremental_state"

@@ -557,7 +557,7 @@ async def test_unmaterialized_incremental_action_not_persist_between_daemon_rest
     )
 
 
-# Clean wipes buck-out, which should reset everything so incremental actions should start anew
+# Clean wipes bsmr-out, which should reset everything so incremental actions should start anew
 async def incremental_action_clean_resets_state_helper(
     buck: Buck, use_content_based_path: bool
 ) -> None:

@@ -86,7 +86,7 @@ async def test_command_report_init_daemon_error(buck: Buck, tmp_path: Path) -> N
 @buck_test(write_invocation_record=True)
 @env("BSMR_TEST_FAIL_BUCKD_AUTH", "true")
 # This test case spawns a loose daemon that we can't connect to. On windows
-# this loose daemon will keep holding onto buck-out files after test case finishes
+# this loose daemon will keep holding onto bsmr-out files after test case finishes
 # and prevent other processes from changing them, so set a termination timeout
 # of 20 seconds so that this loose daemon gets killed before test case finishes.
 @env("BSMR_TERMINATE_AFTER", "15")
@@ -170,7 +170,7 @@ async def test_empty_bsmrconfig(buck: Buck, tmp_path: Path) -> None:
             env={"BUCK_WRAPPER_UUID": uuid},
         )
     )
-    report_path = buck.cwd / "buck-out/v2/log" / uuid / "command_report.json"
+    report_path = buck.cwd / "bsmr-out/v2/log" / uuid / "command_report.json"
 
     with open(report_path) as f:
         report = json.loads(f.read())

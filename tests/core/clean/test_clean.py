@@ -85,9 +85,9 @@ async def test_clean_dry_run(buck: Buck) -> None:
 
 def is_buck_path(x: str) -> bool:
     if platform.system() == "Windows":
-        return "\\.buck\\buckd\\" in x or "\\buck-out\\" in x
+        return "\\.buck\\buckd\\" in x or "\\bsmr-out\\" in x
     else:
-        return "/.buck/buckd/" in x or "/buck-out/" in x
+        return "/.buck/buckd/" in x or "/bsmr-out/" in x
 
 
 def _assert_all_paths_exist(paths: Iterable[str]) -> None:
@@ -100,8 +100,8 @@ def _assert_all_paths_do_not_exist(paths: Iterable[str]) -> None:
         if os.path.exists(f"{path}/buckd.lifecycle"):
             # Clean keeps lifecycle file in daemon dir.
             assert ["buckd.lifecycle"] == os.listdir(path)
-        elif path.endswith("buck-out/v2/log") or (
-            platform.system() == "Windows" and path.endswith("buck-out\\v2\\log")
+        elif path.endswith("bsmr-out/v2/log") or (
+            platform.system() == "Windows" and path.endswith("bsmr-out\\v2\\log")
         ):
             # Log dir should contain one entry, for the clean command itself.
             assert len(os.listdir(path)) == 1
@@ -111,7 +111,7 @@ def _assert_all_paths_do_not_exist(paths: Iterable[str]) -> None:
 
 @buck_test()
 async def test_clean_background(buck: Buck) -> None:
-    """Test that bsmr clean --background moves buck-out to trash and deletes it."""
+    """Test that bsmr clean --background moves bsmr-out to trash and deletes it."""
     build_result = await buck.build("root//:trivial_build")
     build_report = build_result.get_build_report()
     build_report_outputs = [

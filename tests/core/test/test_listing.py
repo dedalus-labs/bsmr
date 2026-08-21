@@ -36,11 +36,11 @@ async def test_discovery_output_dir(buck: Buck) -> None:
     ]
     await run_test_and_check_discovery_presence(buck, TestDiscovery.EXECUTED, args)
 
-    bad_buck_out_path = (buck.cwd / "buck-out" / "v2" / "test" / "buck-out").resolve()
+    bad_buck_out_path = (buck.cwd / "bsmr-out" / "v2" / "test" / "bsmr-out").resolve()
     assert not bad_buck_out_path.exists()
 
     discovery_output_path = (
-        buck.cwd / "buck-out" / "v2" / "test" / "discovery"
+        buck.cwd / "bsmr-out" / "v2" / "test" / "discovery"
     ).resolve()
     assert discovery_output_path.exists()
 
