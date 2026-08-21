@@ -83,7 +83,7 @@ test_list(_Config) ->
     ?assertEqual({ok, EmptyExpected}, test:list_impl("does_not_exist_SUITE")).
 
 %% Regression: lists:split/2 crashed with badarg when Path had fewer
-%% components than CWD (e.g. sandcastle deep buck-out CWD vs short
+%% components than CWD (e.g. sandcastle deep bsmr-out CWD vs short
 %% dotslash cache ErlCmd path).
 test_try_make_path_relative(_Config) ->
     ?assertEqual("relative/path", test_info:try_make_path_relative("relative/path")),

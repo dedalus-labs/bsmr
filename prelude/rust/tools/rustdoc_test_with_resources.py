@@ -1,4 +1,10 @@
 #!/usr/bin/env python3
+# ===----------------------------------------------------------------------===
+# Upstream-Source: facebook/buck2@1560aca2002865cd73d7cafb22c705cfb640b2bc
+# Modifications Copyright (c) 2026 Dedalus Labs, Inc. and its contributors
+# SPDX-License-Identifier: Apache-2.0
+# ===----------------------------------------------------------------------===
+
 # Copyright (c) Meta Platforms, Inc. and affiliates.
 #
 # This source code is dual-licensed under either the MIT license found in the
@@ -14,10 +20,10 @@ dynamic linking can be resolved correctly, and where the resources.json required
 by Folly's resources implementation is available.
 
     rustdoc_test_with_resources.py \
-        --resources buck-out/path/to/resources.json \
+        --resources bsmr-out/path/to/resources.json \
         /tmp/rustdoctestABCXYZ/rust_out [ARGS]...
 
-This will copy the executable rust_out to buck-out/path/to/rustdoctestABCXYZ and
+This will copy the executable rust_out to bsmr-out/path/to/rustdoctestABCXYZ and
 exec it from there with the rest of the args.
 """
 

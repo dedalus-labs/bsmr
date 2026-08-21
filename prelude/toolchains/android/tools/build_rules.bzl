@@ -303,7 +303,7 @@ def buck_java_test(name, vm_args = None, run_test_separately = False, **kwargs):
             # the conditions to trigger the issue reported on bugs.sun.com.
             #
             # Currently, we do not set this flag in bin/buck_common, as Buck does not
-            # normally modify the contents of buck-out after they are loaded into
+            # normally modify the contents of bsmr-out after they are loaded into
             # memory. However, we may need to use this flag when running buckd where
             # references to zip files may be long-lived.
             #

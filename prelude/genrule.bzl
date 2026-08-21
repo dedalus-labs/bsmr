@@ -103,7 +103,7 @@ def genrule_attributes() -> dict[str, Attr]:
         "repo_relative_root": attrs.bool(
             default = False,
             doc = """
-            If true, the genrule will be executed from the project root, instead of in the genrule location in buck-out.
+            If true, the genrule will be executed from the project root, instead of in the genrule location in bsmr-out.
             Helps with long paths issues on windows with deeply nested directories, which will usually have long relative paths as inputs.
             Should eventually default to true.
         """,

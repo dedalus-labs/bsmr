@@ -78,7 +78,7 @@ sh_binary = prelude_rule(
                  not assume the directory's location.
 
                  The resources are also made available in a tree structure that mirrors
-                 their locations in the source and `buck-out` trees. The
+                 their locations in the source and `bsmr-out` trees. The
                  environment variable `$BUCK_PROJECT_ROOT` specifies a directory
                  that contains all the resources, laid out in their locations relative to
                  the original buck project root.

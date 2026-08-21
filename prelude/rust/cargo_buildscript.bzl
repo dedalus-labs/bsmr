@@ -121,7 +121,7 @@ def _make_cc_shim(ctx: AnalysisContext, name: str, cmd: cmd_args) -> cmd_args:
 
     For a cmd like this:
 
-        buck-out/v2/art/fbcode/tools/build/buck/wrappers/__fbcc__/0cdd64957fa390c4/fbcc \
+        bsmr-out/v2/art/fbcode/tools/build/buck/wrappers/__fbcc__/0cdd64957fa390c4/fbcc \
         -resource-dir \
         fbcode/third-party-buck/platform010/build/llvm-fb/21/lib/clang/stable \
         -Bfbcode/third-party-buck/platform010/build/binutils/x86_64-facebook-linux/bin
@@ -132,8 +132,8 @@ def _make_cc_shim(ctx: AnalysisContext, name: str, cmd: cmd_args) -> cmd_args:
 
         python3 \
         fbcode/bsmr/prelude/rust/tools/from_any_dir.py \
-        --cwd=/re_cwd/buck-out/v2/art/fbsource/eef091ffd45259ca/third-party/rust/vendor/gmp-mpfr-sys/__1-build-script-run__/cwd \
-        ${..}/buck-out/v2/art/fbcode/tools/build/buck/wrappers/__fbcc__/0cdd64957fa390c4/fbcc \
+        --cwd=/re_cwd/bsmr-out/v2/art/fbsource/eef091ffd45259ca/third-party/rust/vendor/gmp-mpfr-sys/__1-build-script-run__/cwd \
+        ${..}/bsmr-out/v2/art/fbcode/tools/build/buck/wrappers/__fbcc__/0cdd64957fa390c4/fbcc \
         -resource-dir \
         ${..}/fbcode/third-party-buck/platform010/build/llvm-fb/21/lib/clang/stable \
         -B${..}/fbcode/third-party-buck/platform010/build/binutils/x86_64-facebook-linux/bin
@@ -170,7 +170,7 @@ def _make_cc_shim(ctx: AnalysisContext, name: str, cmd: cmd_args) -> cmd_args:
                 "#!/usr/bin/env bash",
                 # Capture buildscript-selected working directory.
                 "cc_original_dir=$(pwd)",
-                # Change directory to the script's location in buck-out, then up
+                # Change directory to the script's location in bsmr-out, then up
                 # to the repo root.
                 'cd -- "$(dirname -- "$(realpath "${BASH_SOURCE[0]}")")"',
                 cmd_args(ctx.label.project_root, relative_to = (script, 1), format = "cd {}"),

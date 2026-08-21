@@ -244,8 +244,8 @@ def infer_settings_by_modes(target_label, settings, mode_files, mode_hashes) -> 
         else:
             mode_hash = mode_hash["default"]
 
-        # We're ignoring the suggestion that don't rely on buck-out implementation detail here,
-        # as we have no way to get the buck-out under a different mode than current one using to run the BXL script.
+        # We're ignoring the suggestion that don't rely on bsmr-out implementation detail here,
+        # as we have no way to get the bsmr-out under a different mode than current one using to run the BXL script.
         settings_by_modes[mode_file] = json.decode(settings_json.replace(default_mode_hash, mode_hash))
     return settings_by_modes
 

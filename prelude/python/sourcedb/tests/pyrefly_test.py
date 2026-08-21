@@ -29,16 +29,16 @@ PATH_PREFIX: str = "prelude/python"
 
 
 def strip_prefix(path: str) -> str:
-    if path.startswith("buck-out"):
+    if path.startswith("bsmr-out"):
         catch_all_stub_marker = "/catch_all_sourcedb_stubs/"
         if catch_all_stub_marker in path:
             return (
-                "buck-out/v2/gen/prelude/<more generated path output>/out/"
+                "bsmr-out/v2/gen/prelude/<more generated path output>/out/"
                 + "catch_all_sourcedb_stubs/"
                 + path.split(catch_all_stub_marker, 1)[1]
             )
         path = Path(path)
-        return f"buck-out/v2/gen/prelude/<more generated path output>/out/{path.name}"
+        return f"bsmr-out/v2/gen/prelude/<more generated path output>/out/{path.name}"
     elif PATH_PREFIX in str(path):
         return PATH_PREFIX + str(path).split(PATH_PREFIX)[1]
     else:
@@ -67,7 +67,7 @@ class Manifest:
                 paths.append(strip_prefix(path))
 
         if self.relative_to is not None:
-            self.relative_to = "buck-out/<some generated path>/out/"
+            self.relative_to = "bsmr-out/<some generated path>/out/"
 
         self.buildfile_path = strip_prefix(self.buildfile_path)
 

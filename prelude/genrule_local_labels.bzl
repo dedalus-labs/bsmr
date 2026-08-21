@@ -39,7 +39,7 @@ _GENRULE_LOCAL_LABELS = set([
     "uses_clowder",
     # Some antlir genrules use cpio for unpacking rpms
     "uses_cpio",
-    # Creates secondary Eden repos outside of `buck-out/`
+    # Creates secondary Eden repos outside of `bsmr-out/`
     "uses_eden_mounts",
     # The Antlir core compiler uses sudo
     "uses_sudo",
@@ -89,10 +89,10 @@ _GENRULE_LOCAL_LABELS = set([
     "uses_dewey",
     # Accesses justknobs configuration
     "justknobs",
-    # Side effecting writes directly into buck-out on the local
+    # Side effecting writes directly into bsmr-out on the local
     # filesystem
     "writes_to_buck_out",
-    # Side effecting writes directly to local filesystem outside of buck-out
+    # Side effecting writes directly to local filesystem outside of bsmr-out
     # Do not add or use in new rules, just for tagging existing rules for
     # better categorization.
     "writes_outside_buck_out",

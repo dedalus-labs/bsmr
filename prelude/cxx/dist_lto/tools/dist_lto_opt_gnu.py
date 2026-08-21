@@ -1,4 +1,10 @@
 #!/usr/bin/env python3
+# ===----------------------------------------------------------------------===
+# Upstream-Source: facebook/buck2@1560aca2002865cd73d7cafb22c705cfb640b2bc
+# Modifications Copyright (c) 2026 Dedalus Labs, Inc. and its contributors
+# SPDX-License-Identifier: Apache-2.0
+# ===----------------------------------------------------------------------===
+
 # Copyright (c) Meta Platforms, Inc. and affiliates.
 #
 # This source code is dual-licensed under either the MIT license found in the
@@ -278,7 +284,7 @@ def main(argv: List[str]) -> int:
     #   3. the "--cc" arg pointing to the compiler we use
     #   4. (optional) fbcc-consumed args like "--log-fbcc"
     #   5. (optional) pass-through args like "--target=" (from buckified toolchains)
-    # EXAMPLE: ['--', 'buck-out/v2/gen/fbcode/8e3db19fe005003a/tools/build/buck/wrappers/__fbcc__/fbcc', '--cc=fbcode/third-party-buck/platform010/build/llvm-fb/<ver>/bin/clang++', '--log-fbcc=False', '--target=x86_64-redhat-linux-gnu', ...]
+    # EXAMPLE: ['--', 'bsmr-out/v2/gen/fbcode/8e3db19fe005003a/tools/build/buck/wrappers/__fbcc__/fbcc', '--cc=fbcode/third-party-buck/platform010/build/llvm-fb/<ver>/bin/clang++', '--log-fbcc=False', '--target=x86_64-redhat-linux-gnu', ...]
     clang_cc1_flags = _cleanup_flags(args.opt_args[2:] + clang_opt_flags)
     if clang_cc1_flags is None:
         return EXIT_FAILURE
