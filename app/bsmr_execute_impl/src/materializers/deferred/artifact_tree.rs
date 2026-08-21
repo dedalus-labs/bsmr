@@ -198,7 +198,7 @@ pub enum ArtifactMaterializationStage {
         metadata: ArtifactMetadata,
         /// Latest recipe known to reproduce this artifact if files disappear.
         method: Option<Arc<ArtifactMaterializationMethod>>,
-        /// Used to clean older artifacts from buck-out.
+        /// Used to clean older artifacts from bsmr-out.
         last_access_time: DateTime<Utc>,
         /// Artifact declared by running daemon.
         /// Should not be deleted without invalidating DICE nodes, which currently

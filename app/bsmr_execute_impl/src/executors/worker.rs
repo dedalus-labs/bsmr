@@ -202,7 +202,7 @@ fn spawn_via_forkserver(
 
         // Socket is created by worker so won't exist if initialization fails.
         if fs_util::try_exists(&socket_path)? {
-            // TODO(ctolliday) delete directory (after logs are moved to buck-out)
+            // TODO(ctolliday) delete directory (after logs are moved to bsmr-out)
             fs_util::remove_file(&socket_path).categorize_internal()?;
         }
         res
@@ -247,7 +247,7 @@ async fn spawn_worker(
             worker_dir
         )));
     }
-    // TODO(ctolliday) put these in buck-out/<iso>/workers and only use /tmp dir for sockets
+    // TODO(ctolliday) put these in bsmr-out/<iso>/workers and only use /tmp dir for sockets
     let std_redirects = StdRedirectPaths {
         stdout: worker_dir.join(FileName::unchecked_new("stdout")),
         stderr: worker_dir.join(FileName::unchecked_new("stderr")),

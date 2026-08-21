@@ -199,7 +199,7 @@ fn verify_buck_out_dir(paths: &InvocationPaths) -> bsmr_error::Result<()> {
 
     fs_util::create_dir_all(path.clone()).map_err(|e| {
         e.tag([ErrorTag::InvalidBuckOut]).context(format!(
-            "Failed to create buck-out directory `{}`. \
+            "Failed to create bsmr-out directory `{}`. \
              The path or a parent directory may be on a stale mount, \
              be a broken symlink, a file, or the project root may no longer be \
              accessible. \
@@ -377,10 +377,10 @@ impl DaemonCommand {
             }
         }
 
-        // Unfortunately, buck-out doesn't really have a well-defined place/time at which it creates
-        // the buck-out dir, instead just creating it whenever it first wants to write something to
+        // Unfortunately, bsmr-out doesn't really have a well-defined place/time at which it creates
+        // the bsmr-out dir, instead just creating it whenever it first wants to write something to
         // it. We don't want to create it unconditionally on all commands as there are lots of
-        // client commands (help, log, etc.) that should not require a buck-out just to be able to
+        // client commands (help, log, etc.) that should not require a bsmr-out just to be able to
         // run. However, at the point at which we're starting a daemon it does seem sensible to now
         // ensure that it always exists, primarily so that we can put a file into it to mark it as a
         // cachedir.

@@ -1543,14 +1543,14 @@ impl ConcreteDepFiles {
         builder: &ActionDirectoryBuilder,
     ) -> bsmr_error::Result<()> {
         if !path.starts_with(fs.buck_out_path_resolver().root()) {
-            // This path isn't in buck-out, no content-based hash to replace.
+            // This path isn't in bsmr-out, no content-based hash to replace.
             selector.select(path.as_ref());
             return Ok(());
         }
 
         let mut before_content_hash_parts = vec![];
         let mut path_iter = path.as_ref().iter();
-        // Paths always begin with "buck-out/<ISOLATION_DIR>/<gen or art, etc.>/<CELL>", so
+        // Paths always begin with "bsmr-out/<ISOLATION_DIR>/<gen or art, etc.>/<CELL>", so
         // we can skip the first 4 segments.
         for _ in 0..4 {
             if let Some(segment) = path_iter.next() {

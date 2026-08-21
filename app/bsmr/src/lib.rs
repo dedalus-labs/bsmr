@@ -91,7 +91,7 @@ fn parse_isolation_dir(s: &str) -> bsmr_error::Result<FileNameBuf> {
 #[derive(Clone, Debug, clap::Parser)]
 #[clap(next_help_heading = "Universal Options")]
 struct BeforeSubcommandOptions {
-    /// The name of the directory that Bessemer creates within buck-out for writing outputs and daemon
+    /// The name of the directory that Bessemer creates within bsmr-out for writing outputs and daemon
     /// information. If one is not provided, Bessemer creates a directory with the default name.
     ///
     /// Instances of Bessemer share a daemon if and only if their isolation directory is identical.

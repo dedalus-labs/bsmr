@@ -168,7 +168,7 @@ pub(crate) fn analysis_actions_methods_run(methods: &mut MethodsBuilder) {
     ///       and restored during offline builds without re-executing the action
     ///     * Intended for actions that read from the network (e.g., downloads, remote artifact fetches)
     ///       which cannot execute in offline build environments where network access is restricted
-    ///     * During trace builds: outputs are copied to `buck-out/offline-cache/` after successful execution
+    ///     * During trace builds: outputs are copied to `bsmr-out/offline-cache/` after successful execution
     ///     * During offline builds: if all outputs exist in offline cache, they are restored without
     ///       running the action; otherwise the action executes normally (graceful fallback)
     ///     * Requires `bsmr.use_network_action_output_cache=true` config to take effect

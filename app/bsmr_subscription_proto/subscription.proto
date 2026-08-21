@@ -1,3 +1,9 @@
+//===----------------------------------------------------------------------===//
+// Upstream-Source: facebook/buck2@1560aca2002865cd73d7cafb22c705cfb640b2bc
+// Modifications Copyright (c) 2026 Dedalus Labs, Inc. and its contributors
+// SPDX-License-Identifier: Apache-2.0
+//===----------------------------------------------------------------------===//
+
 /*
  * Copyright (c) Meta Platforms, Inc. and affiliates.
  *
@@ -44,7 +50,7 @@ message SubscribeToPaths {
   // Regardless of platform, those paths use forward slashes as delimiters.
   //
   // Note that while requesting notifications for source paths (i.e. paths not
-  // under buck-out) is not an error, it will not produce notifications, since
+  // under bsmr-out) is not an error, it will not produce notifications, since
   // those paths are never materialized by Buck itself.
   repeated string paths = 1;
 }

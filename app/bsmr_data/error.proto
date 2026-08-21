@@ -345,9 +345,9 @@ enum ErrorTag {
   INVALID_DURATION = 6006;
   INVALID_USERNAME = 6007;
   INVALID_ABS_PATH = 6008;
-  // Malformed buck-out path string
+  // Malformed bsmr-out path string
   INVALID_BUCK_OUT_PATH = 6009;
-  // Issue with buck-out dir on disk (ex. broken symlink, not a dir)
+  // Issue with bsmr-out dir on disk (ex. broken symlink, not a dir)
   INVALID_BUCK_OUT = 6010;
 
   // Build errors.

@@ -338,7 +338,7 @@ where
     }
 }
 
-/// An artifact that will be materialized to buck-out at the end of the bxl invocation.
+/// An artifact that will be materialized to bsmr-out at the end of the bxl invocation.
 /// These artifacts can be printed to bxl's results. Doing so will print the path of the artifact
 /// rather than the standard representation.
 ///
@@ -408,7 +408,7 @@ fn ensured_artifact_methods(builder: &mut MethodsBuilder) {
     }
 }
 
-/// An artifact group that will be materialized to buck-out at the end of the bxl invocation.
+/// An artifact group that will be materialized to bsmr-out at the end of the bxl invocation.
 /// These artifacts can be printed to bxl's results. Doing so will print the path of each artifact in
 /// the group rather than the standard representation.
 ///

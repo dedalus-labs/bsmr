@@ -150,7 +150,7 @@ pub struct DaemonStateData {
 
     pub(crate) forkserver: ForkserverAccess,
 
-    /// Whether to consult the offline-cache buck-out dir for network action
+    /// Whether to consult the offline-cache bsmr-out dir for network action
     /// outputs prior to running them. If no cached output exists, the action
     /// (download_file, cas_artifact) will execute normally.
     ///
@@ -555,8 +555,8 @@ impl DaemonState {
             )
             .await?;
 
-            // Create this after the materializer because it'll want to write to buck-out, and an Eden
-            // materializer would create buck-out now.
+            // Create this after the materializer because it'll want to write to bsmr-out, and an Eden
+            // materializer would create bsmr-out now.
             tracing::info!("Launching forkserver...");
             let forkserver = maybe_launch_forkserver(
                 root_config,
@@ -773,7 +773,7 @@ impl DaemonState {
             .buck_error_context("Error validating working directory")?;
 
         self.validate_buck_out_mount()
-            .buck_error_context("Error validating buck-out mount")?;
+            .buck_error_context("Error validating bsmr-out mount")?;
 
         dispatcher.instant_event(bsmr_data::TagEvent {
             tags: data.tags.clone(),
@@ -840,12 +840,12 @@ impl DaemonState {
             let buck_out_root = project_root.join(InvocationPaths::buck_out_dir_prefix());
 
             if let Some(buck_out_root_meta) = fs_util::symlink_metadata_if_exists(buck_out_root)? {
-                // If buck-out is a symlink, we'll be happy with that.
+                // If bsmr-out is a symlink, we'll be happy with that.
                 if buck_out_root_meta.is_symlink() {
                     return Ok(());
                 }
 
-                // If we are on UNIX, then buck-out could also be on a different device from the repo.
+                // If we are on UNIX, then bsmr-out could also be on a different device from the repo.
                 // We don't check which kind of device, we just assume it's not mounted completely
                 // wrong.
                 #[cfg(unix)]
@@ -867,7 +867,7 @@ impl DaemonState {
                 "eden_buck_out",
                 bsmr_error::bsmr_error!(
                     bsmr_error::ErrorTag::Environment,
-                    "Buck is running in an Eden repository, but `buck-out` is not redirected. \
+                    "Buck is running in an Eden repository, but `bsmr-out` is not redirected. \
                      This will likely lead to failed or slow builds. \
                      To remediate, run `eden redirect fixup`."
                 ),

@@ -287,7 +287,7 @@ impl BuckdServer {
             init_ctx.daemon_startup_config.materializations.as_deref(),
         )?;
 
-        // Create buck-out and potentially chdir to there.
+        // Create bsmr-out and potentially chdir to there.
         fs_util::create_dir_all(paths.buck_out_path())
             .buck_error_context("Error creating buck_out_path")?;
 

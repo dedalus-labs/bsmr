@@ -167,7 +167,7 @@ pub struct CommonEventLogOptions {
     pub(crate) unstable_write_invocation_record: Option<PathArg>,
 
     /// Write the command report to this path. A command report is always
-    /// written to `buck-out/v2/<uuid>/command_report` even without this flag.
+    /// written to `bsmr-out/v2/<uuid>/command_report` even without this flag.
     #[clap(long, value_name = "PATH")]
     pub(crate) command_report_path: Option<PathArg>,
 }
