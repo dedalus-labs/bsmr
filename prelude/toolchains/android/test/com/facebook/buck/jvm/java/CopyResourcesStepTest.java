@@ -36,7 +36,7 @@ public class CopyResourcesStepTest {
     // android/java/src/com/facebook/base/data.json
     // android/java/src/com/facebook/common/util/data.json
 
-    RelPath configuredBuckOut = RelPath.get("buck-out/v2");
+    RelPath configuredBuckOut = RelPath.get("bsmr-out/v2");
     RelPath target =
         configuredBuckOut.resolveRel(
             "android/java/lib__resources__classes/com/facebook/common/util/data.json");
@@ -70,7 +70,7 @@ public class CopyResourcesStepTest {
     // android/java/src/com/facebook/base/data.json
     // android/java/src/com/facebook/common/util/data.json
 
-    RelPath configuredBuckOut = RelPath.get("buck-out/v2");
+    RelPath configuredBuckOut = RelPath.get("bsmr-out/v2");
     RelPath target =
         configuredBuckOut.resolveRel(
             "android/java/src/lib__resources__classes/com/facebook/common/util/data.json");
@@ -104,7 +104,7 @@ public class CopyResourcesStepTest {
     // android/java/src/com/facebook/base/data.json
     // android/java/src/com/facebook/common/util/data.json
 
-    RelPath configuredBuckOut = RelPath.get("buck-out/v2");
+    RelPath configuredBuckOut = RelPath.get("bsmr-out/v2");
     RelPath target =
         configuredBuckOut.resolveRel(
             "android/java/src/com/facebook/lib__resources__classes/"

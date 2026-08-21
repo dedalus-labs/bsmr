@@ -28,7 +28,7 @@
       "relative_to": null,
       "srcs": {
         "python.sourcedb.tests.test_files.triton_collision.kernel": [
-          "buck-out/v2/gen/prelude/<more generated path output>/out/catch_all_sourcedb_stubs/6514d54e329e0204/python/sourcedb/tests/test_files/triton_collision/kernel.pyi"
+          "bsmr-out/v2/gen/prelude/<more generated path output>/out/catch_all_sourcedb_stubs/6514d54e329e0204/python/sourcedb/tests/test_files/triton_collision/kernel.pyi"
         ]
       }
     },
@@ -60,7 +60,7 @@
       "relative_to": null,
       "srcs": {
         "python.sourcedb.tests.test_files.triton_collision.kernel": [
-          "buck-out/v2/gen/prelude/<more generated path output>/out/catch_all_sourcedb_stubs/fa07c7f3671b4749/python/sourcedb/tests/test_files/triton_collision/kernel.pyi"
+          "bsmr-out/v2/gen/prelude/<more generated path output>/out/catch_all_sourcedb_stubs/fa07c7f3671b4749/python/sourcedb/tests/test_files/triton_collision/kernel.pyi"
         ]
       }
     },
@@ -87,7 +87,7 @@
       "relative_to": null,
       "srcs": {
         "generated_file": [
-          "buck-out/v2/gen/prelude/<more generated path output>/out/generated_file.pyi"
+          "bsmr-out/v2/gen/prelude/<more generated path output>/out/generated_file.pyi"
         ]
       }
     },
@@ -96,7 +96,7 @@
       "deps": [],
       "python_platform": "linux",
       "python_version": "3.12",
-      "relative_to": "buck-out/<some generated path>/out/",
+      "relative_to": "bsmr-out/<some generated path>/out/",
       "srcs": {
         "generated1": [
           "generated1.py"
@@ -182,7 +182,7 @@
       "deps": [],
       "python_platform": "linux",
       "python_version": "3.12",
-      "relative_to": "buck-out/<some generated path>/out/",
+      "relative_to": "bsmr-out/<some generated path>/out/",
       "srcs": {}
     },
     "prelude//python/sourcedb/tests/test_files:reexported_genrule_lib": {
@@ -197,10 +197,10 @@
       "relative_to": null,
       "srcs": {
         "python.sourcedb.tests.test_files.helpers": [
-          "buck-out/v2/gen/prelude/<more generated path output>/out/helpers.py"
+          "bsmr-out/v2/gen/prelude/<more generated path output>/out/helpers.py"
         ],
         "python.sourcedb.tests.test_files.utils": [
-          "buck-out/v2/gen/prelude/<more generated path output>/out/utils.py"
+          "bsmr-out/v2/gen/prelude/<more generated path output>/out/utils.py"
         ]
       }
     },
@@ -251,7 +251,7 @@
       "relative_to": null,
       "srcs": {
         "python.sourcedb.tests.test_files.triton_kernel": [
-          "buck-out/v2/gen/prelude/<more generated path output>/out/catch_all_sourcedb_stubs/7d64be37df83c3cd/python/sourcedb/tests/test_files/triton_kernel.pyi"
+          "bsmr-out/v2/gen/prelude/<more generated path output>/out/catch_all_sourcedb_stubs/7d64be37df83c3cd/python/sourcedb/tests/test_files/triton_kernel.pyi"
         ]
       }
     }

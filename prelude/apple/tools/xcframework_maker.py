@@ -1,3 +1,9 @@
+# ===----------------------------------------------------------------------===
+# Upstream-Source: facebook/buck2@1560aca2002865cd73d7cafb22c705cfb640b2bc
+# Modifications Copyright (c) 2026 Dedalus Labs, Inc. and its contributors
+# SPDX-License-Identifier: Apache-2.0
+# ===----------------------------------------------------------------------===
+
 # Copyright (c) Meta Platforms, Inc. and affiliates.
 #
 # This source code is dual-licensed under either the MIT license found in the
@@ -126,7 +132,7 @@ def main() -> None:
 
     for framework_path in args.framework_path:
         # args are structured like this
-        # --framework_path ios-arm64 buck-out/path/to/MyPkg.framework
+        # --framework_path ios-arm64 bsmr-out/path/to/MyPkg.framework
 
         framework_arch = framework_path[0]
         framework_fullpath = framework_path[1]

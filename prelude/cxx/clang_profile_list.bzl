@@ -1,3 +1,9 @@
+# ===----------------------------------------------------------------------===
+# Upstream-Source: facebook/buck2@1560aca2002865cd73d7cafb22c705cfb640b2bc
+# Modifications Copyright (c) 2026 Dedalus Labs, Inc. and its contributors
+# SPDX-License-Identifier: Apache-2.0
+# ===----------------------------------------------------------------------===
+
 # Copyright (c) Meta Platforms, Inc. and affiliates.
 #
 # This source code is dual-licensed under either the MIT license found in the
@@ -40,7 +46,7 @@ def _clang_profile_list_impl(ctx: AnalysisContext) -> list[Provider]:
     lines = ["[clang]"]
     for src_path in ctx.attrs.srcs:
         # Use wildcard prefix to match both direct source paths (fbcode/path/to/file.cpp)
-        # and symlink tree paths (buck-out/.../buck-headers/path/to/file.h)
+        # and symlink tree paths (bsmr-out/.../buck-headers/path/to/file.h)
         lines.append("source:*{}=allow".format(src_path))
     if ctx.attrs.srcs:
         lines.append("default:skip")

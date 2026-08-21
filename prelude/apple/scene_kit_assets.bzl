@@ -1,3 +1,9 @@
+# ===----------------------------------------------------------------------===
+# Upstream-Source: facebook/buck2@1560aca2002865cd73d7cafb22c705cfb640b2bc
+# Modifications Copyright (c) 2026 Dedalus Labs, Inc. and its contributors
+# SPDX-License-Identifier: Apache-2.0
+# ===----------------------------------------------------------------------===
+
 # Copyright (c) Meta Platforms, Inc. and affiliates.
 #
 # This source code is dual-licensed under either the MIT license found in the
@@ -54,10 +60,10 @@ def compile_scene_kit_assets(ctx: AnalysisContext, specs: list[SceneKitAssetsSpe
         copy_scene_kit_assets_cmds.append(copy_scene_kit_assets_cmd)
 
     # Sandboxing and fs isolation on RE machines results in Xcode tools failing
-    # when those are working in freshly created directories in buck-out.
+    # when those are working in freshly created directories in bsmr-out.
     # See https://fb.workplace.com/groups/1042353022615812/permalink/1872164996301273/
     # As a workaround create a directory in tmp, use it for Xcode tools, then
-    # copy the result to buck-out.
+    # copy the result to bsmr-out.
     wrapper_script, _ = ctx.actions.write(
         "copy_scene_kit_assets_wrapper.sh",
         [

@@ -261,7 +261,7 @@ def _allow_offline_output_cache_arg():
                  remote artifact fetches) which cannot execute in offline build environments
                  where network access is restricted.
 
-                 During trace builds, outputs are copied to `buck-out/offline-cache/` after
+                 During trace builds, outputs are copied to `bsmr-out/offline-cache/` after
                  successful execution. During offline builds, if all outputs exist in the
                  offline cache, they are restored without running the genrule; otherwise
                  the genrule executes normally (graceful fallback).

@@ -92,7 +92,7 @@ def _unarchive_cmd(ext_type: str, exec_is_windows: bool, archive: Artifact, stri
     if ext_type in _TAR_FLAGS:
         os_flags = (
             [
-                # buck-out is a symlink with EdenFS, and tar on Windows doesn't like it,
+                # bsmr-out is a symlink with EdenFS, and tar on Windows doesn't like it,
                 # and needs -P flag to allow operations with symlinks
                 "-P",
             ]
