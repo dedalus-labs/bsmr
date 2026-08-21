@@ -15,11 +15,14 @@ use std::io::Read;
 use std::io::Seek;
 use std::io::SeekFrom;
 use std::io::Write;
+use std::ops::ControlFlow;
 use std::path::Component;
 use std::path::Path;
 use std::path::PathBuf;
+use std::sync::Arc;
 use std::time::Duration;
 
+use async_trait::async_trait;
 use bsmr_common::cas_digest::DigestAlgorithmFamily;
 use bsmr_common::cas_digest::Digester;
 use bsmr_common::file_ops::metadata::FileDigest;
@@ -32,10 +35,15 @@ use bsmr_execute::digest::CasDigestFromReExt;
 use bsmr_execute::digest_config::DigestConfig;
 use bsmr_execute::directory::ActionDirectoryMember;
 use bsmr_execute::directory::ActionImmutableDirectory;
+use bsmr_execute::execute::manager::CommandExecutionManager;
+use bsmr_execute::execute::manager::CommandExecutionManagerExt;
 use bsmr_execute::execute::prepared::PreparedAction;
+use bsmr_execute::execute::prepared::PreparedCommand;
+use bsmr_execute::execute::prepared::PreparedCommandOptionalExecutor;
 use bsmr_execute::execute::request::CommandExecutionRequest;
 use bsmr_execute::execute::request::NetworkAccess;
 use bsmr_execute::execute::request::OutputType;
+use bsmr_execute::execute::result::CommandExecutionResult;
 use bsmr_execute_local::CommandResult;
 use bsmr_execute_local::GatherOutputStatus;
 use bsmr_sandbox::BundleTrust;
@@ -54,6 +62,7 @@ use bsmr_sandbox::MEMORY_MIB;
 use bsmr_sandbox::PROTOCOL_VERSION;
 use bsmr_sandbox::VCPU_COUNT;
 use bsmr_sandbox::VerifiedBundle;
+use dice_futures::cancellation::CancellationContext;
 use prost::Message;
 use remote_execution as RE;
 use sha2::Digest;
@@ -326,6 +335,35 @@ impl FirecrackerActionPolicy {
 pub struct FirecrackerExecutor {
     bundle: FirecrackerBundle,
     launcher_socket: PathBuf,
+}
+
+/// Rejects unsupported sandbox semantics before a cache can satisfy an action.
+pub struct FirecrackerPolicyCacheChecker {
+    inner: Arc<dyn PreparedCommandOptionalExecutor>,
+}
+
+impl FirecrackerPolicyCacheChecker {
+    #[must_use]
+    pub fn new(inner: Arc<dyn PreparedCommandOptionalExecutor>) -> Self {
+        Self { inner }
+    }
+}
+
+#[async_trait]
+impl PreparedCommandOptionalExecutor for FirecrackerPolicyCacheChecker {
+    async fn maybe_execute(
+        &self,
+        command: &PreparedCommand<'_, '_>,
+        manager: CommandExecutionManager,
+        cancellations: &CancellationContext,
+    ) -> ControlFlow<CommandExecutionResult, CommandExecutionManager> {
+        if let Err(error) = validate_action_policy(command.prepared_action, command.request) {
+            return ControlFlow::Break(manager.error("firecracker_policy", error));
+        }
+        self.inner
+            .maybe_execute(command, manager, cancellations)
+            .await
+    }
 }
 
 impl FirecrackerExecutor {
