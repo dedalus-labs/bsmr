@@ -175,7 +175,7 @@ async def test_buck_out_is_cache_dir(buck: Buck) -> None:
     await buck.targets(":")  # Start a daemon
     root = await buck.root()
     assert (
-        (Path(root.stdout.strip()) / "buck-out" / "v2" / "CACHEDIR.TAG")
+        (Path(root.stdout.strip()) / "bsmr-out" / "v2" / "CACHEDIR.TAG")
         .read_text(encoding="utf-8")
         .startswith("Signature: 8a477f597d28d172789f06886806bc55")
     )

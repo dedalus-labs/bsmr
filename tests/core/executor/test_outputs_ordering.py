@@ -118,7 +118,7 @@ async def test_remote_action(buck: Buck) -> None:
     # Though RE action has "a" first and then "z"
     assert (
         re.search(
-            'Output\\WDirectories.+\n\\["buck-out/.+/__foo__/a",\\W"buck-out/.+/__foo__/z"',
+            'Output\\WDirectories.+\n\\["bsmr-out/.+/__foo__/a",\\W"bsmr-out/.+/__foo__/z"',
             action_definition,
         )
         is not None
