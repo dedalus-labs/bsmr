@@ -31,7 +31,6 @@ rust_library(
     },
     test_deps = [
         "bsmr_build//third-party/rust:assert_matches",
-        "bsmr_build//third-party/rust:sha2",
     ],
     deps = [
         "bsmr_build//third-party/rust:async-condvar-fair",
@@ -48,6 +47,7 @@ rust_library(
         "bsmr_build//third-party/rust:regex",
         "bsmr_build//third-party/rust:rusqlite",
         "bsmr_build//third-party/rust:serde_json",
+        "bsmr_build//third-party/rust:sha2",
         "bsmr_build//third-party/rust:tar",
         "bsmr_build//third-party/rust:tempfile",
         "bsmr_build//third-party/rust:tokio",

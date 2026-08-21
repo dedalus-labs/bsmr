@@ -49,6 +49,16 @@ const setupNode = {
 	uses: "actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38",
 	with: { "node-version": "26.5.1" },
 } as const;
+const uploadArtifact = {
+	name: "Upload raw Firecracker benchmarks",
+	uses: "actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02",
+	with: {
+		"if-no-files-found": "error",
+		name: "firecracker-startup-benchmarks",
+		path: format("{0}/*-startup.json", expr<string>("runner.temp")),
+		"retention-days": 30,
+	},
+} as const;
 const installRust = {
 	name: "Install pinned Rust toolchain",
 	run: command({
@@ -109,6 +119,23 @@ const rustResultsAccepted = and(
 	),
 );
 const runnerTemp = expr<string>("runner.temp");
+const firecrackerTest = (name: string) =>
+	command({
+		file: "cargo",
+		args: [
+			"test",
+			"--locked",
+			"-p",
+			"bsmr_sandbox",
+			"--test",
+			"firecracker",
+			name,
+			"--",
+			"--ignored",
+			"--exact",
+			"--nocapture",
+		],
+	});
 const osvScannerPath = format("{0}/osv-scanner", runnerTemp);
 const osvReportPath = format("{0}/osv.json", runnerTemp);
 const dotSlashArchivePath = format("{0}/dotslash.tar.gz", runnerTemp);
@@ -420,8 +447,11 @@ export const ci = workflow({
 						'mkfs.ext4 -q -F -d "$RUNNER_TEMP/firecracker-rootfs" "$RUNNER_TEMP/firecracker-bundle/rootfs"',
 						`target/debug/bsmr-sandbox-bundle --directory "$RUNNER_TEMP/firecracker-bundle" --firecracker-version ${firecrackerVersion} --architecture x86_64`,
 						'sudo install -d -o root -g root -m 0755 /usr/local/share/bsmr/firecracker /usr/local/libexec',
-						'sudo install -o root -g root -m 0444 "$RUNNER_TEMP/firecracker-bundle/manifest.json" "$RUNNER_TEMP/firecracker-bundle/kernel" "$RUNNER_TEMP/firecracker-bundle/rootfs" /usr/local/share/bsmr/firecracker/',
-						'sudo install -o root -g root -m 0555 "$RUNNER_TEMP/firecracker-bundle/firecracker" "$RUNNER_TEMP/firecracker-bundle/jailer" /usr/local/share/bsmr/firecracker/',
+						'test "$(stat -c %d "$RUNNER_TEMP/firecracker-bundle")" = "$(stat -c %d /usr/local/share/bsmr/firecracker)"',
+						'sudo ln "$RUNNER_TEMP/firecracker-bundle/manifest.json" "$RUNNER_TEMP/firecracker-bundle/kernel" "$RUNNER_TEMP/firecracker-bundle/rootfs" "$RUNNER_TEMP/firecracker-bundle/snapshot" "$RUNNER_TEMP/firecracker-bundle/memory" "$RUNNER_TEMP/firecracker-bundle/firecracker" "$RUNNER_TEMP/firecracker-bundle/jailer" /usr/local/share/bsmr/firecracker/',
+						'sudo chown root:root /usr/local/share/bsmr/firecracker/manifest.json /usr/local/share/bsmr/firecracker/kernel /usr/local/share/bsmr/firecracker/rootfs /usr/local/share/bsmr/firecracker/snapshot /usr/local/share/bsmr/firecracker/memory /usr/local/share/bsmr/firecracker/firecracker /usr/local/share/bsmr/firecracker/jailer',
+						'sudo chmod 0444 /usr/local/share/bsmr/firecracker/manifest.json /usr/local/share/bsmr/firecracker/kernel /usr/local/share/bsmr/firecracker/rootfs /usr/local/share/bsmr/firecracker/snapshot /usr/local/share/bsmr/firecracker/memory',
+						'sudo chmod 0555 /usr/local/share/bsmr/firecracker/firecracker /usr/local/share/bsmr/firecracker/jailer',
 						"sudo install -o root -g root -m 0555 target/debug/bsmr-sandboxd /usr/local/libexec/bsmr-sandboxd",
 					].join("\n")),
 				},
@@ -433,6 +463,68 @@ export const ci = workflow({
 						"! getent group 61000",
 						"sudo install -o root -g root -m 0400 /dev/null /bsmr-host-sentinel",
 						'echo "created=true" >> "$GITHUB_OUTPUT"',
+					].join("\n")),
+				},
+				{
+					name: "Start fresh-boot oracle",
+					id: "fresh_launcher",
+					run: unsafeShell([
+						'sudo systemd-run --unit=bsmr-sandboxd-fresh --property=KillMode=control-group -- /usr/local/libexec/bsmr-sandboxd --bundle /usr/local/share/bsmr/firecracker/manifest.json --socket /run/bsmr/sandboxd-fresh.sock --jail-root /var/lib/bsmr/jailer --uid-base 61000 --gid-base 61000 --socket-gid "$(id -g)" --max-vms 4 --boot-mode fresh',
+						'echo "started=true" >> "$GITHUB_OUTPUT"',
+					].join("\n")),
+				},
+				{
+					name: "Run fresh-boot conformance corpus",
+					env: {
+						BSMR_SANDBOX_BUNDLE:
+							"/usr/local/share/bsmr/firecracker/manifest.json",
+						BSMR_SANDBOX_PROBE: format(
+							"{0}/sandbox-probe",
+							expr<string>("runner.temp"),
+						),
+						BSMR_SANDBOX_SOCKET: "/run/bsmr/sandboxd-fresh.sock",
+					},
+					run: firecrackerTest("firecracker_conformance"),
+				},
+				{
+					name: "Benchmark fresh-boot oracle",
+					env: {
+						BSMR_SANDBOX_BENCHMARK_OUT: format(
+							"{0}/fresh-startup.json",
+							expr<string>("runner.temp"),
+						),
+						BSMR_SANDBOX_BUNDLE:
+							"/usr/local/share/bsmr/firecracker/manifest.json",
+						BSMR_SANDBOX_MODE: "fresh",
+						BSMR_SANDBOX_PROBE: format(
+							"{0}/sandbox-probe",
+							expr<string>("runner.temp"),
+						),
+						BSMR_SANDBOX_SOCKET: "/run/bsmr/sandboxd-fresh.sock",
+					},
+					run: firecrackerTest("firecracker_startup_benchmark"),
+				},
+				{
+					name: "Stop fresh-boot oracle",
+					if: and(
+						always(),
+						eq(stepOutput("fresh_launcher", "started"), "true"),
+					),
+					run: command({
+						file: "sudo",
+						args: ["systemctl", "stop", "bsmr-sandboxd-fresh.service"],
+					}),
+				},
+				{
+					name: "Verify fresh-boot cleanup",
+					if: and(
+						always(),
+						eq(stepOutput("fresh_launcher", "started"), "true"),
+					),
+					run: unsafeShell([
+						"sudo journalctl --unit=bsmr-sandboxd-fresh.service --no-pager",
+						'test -z "$(sudo find /var/lib/bsmr/jailer -mindepth 2 -print -quit)"',
+						'if test -d /sys/fs/cgroup/bsmr; then test -z "$(sudo find /sys/fs/cgroup/bsmr -mindepth 1 -type d -print -quit)"; fi',
 					].join("\n")),
 				},
 				{
@@ -450,22 +542,40 @@ export const ci = workflow({
 						BSMR_SANDBOX_PROBE: format("{0}/sandbox-probe", runnerTemp),
 						BSMR_SANDBOX_SOCKET: "/run/bsmr/sandboxd.sock",
 					},
-					run: command({
-						file: "cargo",
-						args: [
-							"test",
-							"--locked",
-							"-p",
-							"bsmr_sandbox",
-							"--test",
-							"firecracker",
-							"firecracker_conformance",
-							"--",
-							"--ignored",
-							"--exact",
-							"--nocapture",
-						],
-					}),
+					run: firecrackerTest("firecracker_conformance"),
+				},
+				{
+					name: "Benchmark snapshot restoration",
+					env: {
+						BSMR_SANDBOX_BENCHMARK_OUT: format(
+							"{0}/snapshot-startup.json",
+							expr<string>("runner.temp"),
+						),
+						BSMR_SANDBOX_BUNDLE:
+							"/usr/local/share/bsmr/firecracker/manifest.json",
+						BSMR_SANDBOX_MODE: "snapshot",
+						BSMR_SANDBOX_PROBE: format(
+							"{0}/sandbox-probe",
+							expr<string>("runner.temp"),
+						),
+						BSMR_SANDBOX_SOCKET: "/run/bsmr/sandboxd.sock",
+					},
+					run: firecrackerTest("firecracker_startup_benchmark"),
+				},
+				uploadArtifact,
+				{
+					name: "Enforce snapshot speedup",
+					env: {
+						BSMR_SANDBOX_FRESH_BENCHMARK: format(
+							"{0}/fresh-startup.json",
+							expr<string>("runner.temp"),
+						),
+						BSMR_SANDBOX_SNAPSHOT_BENCHMARK: format(
+							"{0}/snapshot-startup.json",
+							expr<string>("runner.temp"),
+						),
+					},
+					run: firecrackerTest("firecracker_snapshot_speedup"),
 				},
 				{
 					name: "Stop isolated launcher",

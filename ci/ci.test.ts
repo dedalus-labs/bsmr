@@ -149,10 +149,53 @@ test("Firecracker installs its bundle beneath the immutable system prefix", () =
 
 	assert.ok(assemble !== undefined && "run" in assemble);
 	assert.equal(assemble.run.kind, "unsafe-shell");
-	assert.match(unsafeScript("Assemble pinned execution bundle"), /\/usr\/local\/share\/bsmr\/firecracker/);
+	const assembleScript = unsafeScript("Assemble pinned execution bundle");
+	assert.match(assembleScript, /\/usr\/local\/share\/bsmr\/firecracker/);
+	assert.match(assembleScript, /firecracker-bundle\/snapshot/);
+	assert.match(assembleScript, /firecracker-bundle\/memory/);
+	assert.match(assembleScript, /sudo ln .*firecracker-bundle\/memory/);
+	assert.doesNotMatch(assembleScript, /sudo install .*firecracker-bundle\/memory/);
 	assert.ok(launcher !== undefined && "run" in launcher);
 	assert.equal(launcher.run.kind, "unsafe-shell");
 	assert.match(unsafeScript("Start isolated launcher"), /\/usr\/local\/share\/bsmr\/firecracker/);
+});
+
+test("Firecracker snapshots beat the identical fresh-boot corpus", () => {
+	const steps = jobs.rust_sandbox?.steps ?? [];
+	const fresh = steps.find((step) => step.name === "Start fresh-boot oracle");
+	const freshCleanup = steps.find(
+		(step) => step.name === "Verify fresh-boot cleanup",
+	);
+	const snapshot = steps.find((step) => step.name === "Start isolated launcher");
+	const upload = steps.find(
+		(step) => step.name === "Upload raw Firecracker benchmarks",
+	);
+	const gate = steps.find((step) => step.name === "Enforce snapshot speedup");
+
+	assert.ok(fresh !== undefined && "run" in fresh);
+	assert.equal(fresh.run.kind, "unsafe-shell");
+	assert.match(unsafeScript("Start fresh-boot oracle"), /--boot-mode fresh/);
+	assert.match(
+		freshCleanup?.if ?? "",
+		/steps\.fresh_launcher\.outputs\.started == 'true'/,
+	);
+	assert.ok(snapshot !== undefined && "run" in snapshot);
+	assert.equal(snapshot.run.kind, "unsafe-shell");
+	assert.doesNotMatch(unsafeScript("Start isolated launcher"), /--boot-mode fresh/);
+	assert.ok(upload !== undefined && "uses" in upload);
+	assert.match(upload.uses, /^actions\/upload-artifact@[0-9a-f]{40}$/);
+	assert.equal(upload.with?.["if-no-files-found"], "error");
+	assert.ok(gate !== undefined && "run" in gate);
+	assert.equal(gate.run.kind, "command");
+	assert.ok(gate.run.kind === "command" && gate.run.args.includes("firecracker_snapshot_speedup"));
+	assert.equal(
+		steps.filter((step) =>
+			"run" in step &&
+			step.run.kind === "command" &&
+			step.run.args.includes("firecracker_conformance"),
+		).length,
+		2,
+	);
 });
 
 test("self-hosting keeps the CLI reference derived from clap", () => {

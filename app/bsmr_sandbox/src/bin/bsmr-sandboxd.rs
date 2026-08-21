@@ -7,6 +7,7 @@
 
 #[cfg(target_os = "linux")]
 mod linux {
+    use std::collections::BTreeMap;
     use std::fs;
     use std::fs::File;
     use std::io::ErrorKind;
@@ -15,9 +16,9 @@ mod linux {
     use std::io::Seek;
     use std::io::SeekFrom;
     use std::io::Write;
+    use std::mem::MaybeUninit;
     use std::os::fd::AsRawFd;
-    use std::os::fd::FromRawFd;
-    use std::os::fd::OwnedFd;
+    use std::os::unix::fs::FileExt;
     use std::os::unix::fs::FileTypeExt;
     use std::os::unix::fs::MetadataExt;
     use std::os::unix::fs::OpenOptionsExt;
@@ -52,8 +53,13 @@ mod linux {
     use bsmr_sandbox::PROTOCOL_VERSION;
     use bsmr_sandbox::VCPU_COUNT;
     use bsmr_sandbox::VerifiedBundle;
+    use bsmr_sandbox::firecracker::ApiClient;
+    use bsmr_sandbox::snapshot::GUEST_READY_BYTE;
+    use bsmr_sandbox::snapshot::READY_MARKER;
+    use bsmr_sandbox::snapshot::WAKE_BYTE;
+    use bsmr_sandbox::snapshot::WAKE_PORT;
     use clap::Parser;
-    use nix::cmsg_space;
+    use clap::ValueEnum;
     use nix::errno::Errno;
     use nix::fcntl::FcntlArg;
     use nix::fcntl::OFlag;
@@ -61,11 +67,9 @@ mod linux {
     use nix::sched::CloneFlags;
     use nix::sched::unshare;
     use nix::sys::signal::kill;
-    use nix::sys::socket::ControlMessageOwned;
     use nix::sys::socket::MsgFlags;
     use nix::sys::socket::getsockopt;
     use nix::sys::socket::recv;
-    use nix::sys::socket::recvmsg;
     use nix::sys::socket::sockopt::PeerCredentials;
     use nix::sys::wait::WaitStatus;
     use nix::sys::wait::waitpid;
@@ -81,8 +85,8 @@ mod linux {
     use thiserror::Error;
 
     const MAX_MESSAGE_BYTES: usize = 64 * 1024;
-    const MAX_API_RESPONSE_BYTES: usize = 64 * 1024;
     const MAX_DIAGNOSTIC_BYTES: u64 = 16 * 1024;
+    const MAX_GUEST_READY_LOG_BYTES: u64 = 64 * 1024;
     const BOOT_TIMEOUT: Duration = Duration::from_secs(10);
     const CLEANUP_TIMEOUT: Duration = Duration::from_secs(5);
     const CLIENT_IO_TIMEOUT: Duration = Duration::from_secs(5);
@@ -106,6 +110,9 @@ mod linux {
         /// Root-owned base directory for ephemeral jailer roots.
         #[arg(long, default_value = "/var/lib/bsmr/jailer")]
         jail_root: PathBuf,
+        /// Root-owned local content-addressed store on the jail filesystem.
+        #[arg(long, default_value = "/var/cache/bsmr/cas")]
+        cas_root: PathBuf,
         /// First UID in the operator-reserved per-microVM identity range.
         #[arg(long)]
         uid_base: u32,
@@ -118,6 +125,15 @@ mod linux {
         /// Hard upper bound on concurrent microVMs.
         #[arg(long, default_value_t = 8)]
         max_vms: usize,
+        /// Explicit boot path; fresh exists only as the correctness oracle.
+        #[arg(long, value_enum, default_value_t = BootMode::Snapshot)]
+        boot_mode: BootMode,
+    }
+
+    #[derive(Clone, Copy, Debug, ValueEnum)]
+    enum BootMode {
+        Snapshot,
+        Fresh,
     }
 
     #[derive(Debug, Error)]
@@ -132,6 +148,12 @@ mod linux {
         IdentityInUse { kind: &'static str, id: u32 },
         #[error("unsafe launcher path {0:?}")]
         UnsafePath(PathBuf),
+        #[error("bundle, local CAS, and jail root must share a filesystem: {0:?}")]
+        CasFilesystem(PathBuf),
+        #[error("existing local CAS object does not match its verified source: {0:?}")]
+        CasCollision(PathBuf),
+        #[error("local CAS object is missing: {0}")]
+        CasMissing(&'static str),
         #[error("cgroup v2 is missing required controller {0}")]
         MissingController(&'static str),
         #[error("I/O failure at {path:?}: {source}")]
@@ -158,14 +180,24 @@ mod linux {
         },
         #[error("launcher transport {path:?} changed while it was copied")]
         TransportMutation { path: PathBuf },
+        #[error("launcher transport file {index} failed digest authentication: {source}")]
+        TransportDigest {
+            index: usize,
+            #[source]
+            source: bsmr_sandbox::BundleError,
+        },
         #[error("launcher protocol must be {PROTOCOL_VERSION}, got {0}")]
         Protocol(u32),
         #[error("launcher action ID must be a lowercase UUID")]
         ActionId,
         #[error("launcher execution bundle digest does not match")]
         EnvironmentDigest,
-        #[error("launcher transport devices must be non-empty")]
-        EmptyTransport,
+        #[error("launcher input transport must be non-empty")]
+        EmptyInput,
+        #[error("launcher transport digests must be lowercase SHA-256")]
+        TransportDigestShape,
+        #[error("launcher output capacity must be {MAX_OUTPUT_BYTES} bytes")]
+        OutputCapacity,
         #[error("launcher input exceeds {MAX_INPUT_BYTES} bytes")]
         InputTooLarge,
         #[error("launcher output exceeds {MAX_OUTPUT_BYTES} bytes")]
@@ -206,10 +238,28 @@ mod linux {
         HostDeadline(String),
         #[error("Firecracker API did not become ready")]
         ApiTimeout,
+        #[error("Firecracker guest did not reach its pre-action barrier")]
+        GuestReadyTimeout,
+        #[error("Firecracker guest exceeded its readiness log limit")]
+        GuestReadyLogLimit,
+        #[error("launcher supervisor is missing after startup")]
+        MissingSupervisor,
         #[error("invalid Firecracker PID file")]
         Pid,
-        #[error("Firecracker API request {path} failed: {response}")]
-        Api { path: String, response: String },
+        #[error("Firecracker API failure: {0}")]
+        Api(#[from] bsmr_sandbox::firecracker::ApiError),
+        #[error("failed to release the pristine guest barrier: {0}")]
+        WakeIo(#[source] std::io::Error),
+        #[error("Firecracker vsock acknowledgement is too large")]
+        WakeAcknowledgementTooLarge,
+        #[error("Firecracker rejected the guest vsock connection")]
+        WakeRejected,
+        #[error("Firecracker returned an invalid vsock acknowledgement")]
+        WakeAcknowledgement,
+        #[error("Firecracker guest did not acknowledge its restored vsock")]
+        GuestWakeTimeout,
+        #[error("Firecracker guest returned an invalid readiness byte")]
+        GuestWakeAcknowledgement,
         #[error("guest output archive is invalid: {0}")]
         Output(std::io::Error),
         #[error("microVM cleanup failed: {0}")]
@@ -218,12 +268,94 @@ mod linux {
         Serialize(#[from] serde_json::Error),
         #[error("launcher socket failure: {0}")]
         Socket(#[from] nix::Error),
+        #[error("kernel-side transport copy failed at {path:?}: {source}")]
+        Transfer {
+            path: PathBuf,
+            #[source]
+            source: std::io::Error,
+        },
+        #[error("kernel-side transport returned an invalid byte count")]
+        TransferCount,
+        #[error("environment-start duration exceeds u64 microseconds")]
+        DurationOverflow,
     }
 
     struct Transport {
         action: File,
         input: File,
         output: File,
+    }
+
+    struct TransportSpec<'a> {
+        index: usize,
+        bytes: u64,
+        capacity: u64,
+        sha256: &'a str,
+    }
+
+    struct Execution {
+        status: LauncherStatus,
+        environment_start_us: u64,
+    }
+
+    #[derive(Clone, Copy)]
+    struct VmContext<'a> {
+        bundle: &'a VerifiedBundle,
+        cas: &'a CasStore,
+        jail_root: &'a Path,
+        uid: u32,
+        gid: u32,
+        boot_mode: BootMode,
+    }
+
+    struct CasStore {
+        artifacts: BTreeMap<&'static str, PathBuf>,
+    }
+
+    impl CasStore {
+        /// Materializes verified VM artifacts once beneath their content digests.
+        fn prepare(
+            bundle: &VerifiedBundle,
+            cas_root: &Path,
+            jail_root: &Path,
+        ) -> Result<Self, LauncherError> {
+            let root = cas_root.join("sha256");
+            verify_or_create_root_directory(&root, 0o700)?;
+            if fs::metadata(&root)
+                .map_err(|error| io_error(&root, error))?
+                .dev()
+                != fs::metadata(jail_root)
+                    .map_err(|error| io_error(jail_root, error))?
+                    .dev()
+            {
+                return Err(LauncherError::CasFilesystem(root));
+            }
+            let mut artifacts = BTreeMap::new();
+            for name in ["kernel", "rootfs", "snapshot", "memory"] {
+                let source = bundle.artifact(name)?;
+                let destination = root.join(bundle.artifact_sha256(name)?);
+                match fs::hard_link(&source, &destination) {
+                    Ok(()) => {}
+                    Err(error) if error.kind() == ErrorKind::AlreadyExists => {
+                        verify_cas_object(&source, &destination, bundle.artifact_sha256(name)?)?;
+                    }
+                    Err(error) if error.raw_os_error() == Some(Errno::EXDEV as i32) => {
+                        return Err(LauncherError::CasFilesystem(destination));
+                    }
+                    Err(error) => return Err(io_error(&destination, error)),
+                }
+                artifacts.insert(name, destination);
+            }
+            Ok(Self { artifacts })
+        }
+
+        /// Resolves one required immutable object from the prepared local CAS.
+        fn artifact(&self, name: &'static str) -> Result<&Path, LauncherError> {
+            self.artifacts
+                .get(name)
+                .map(PathBuf::as_path)
+                .ok_or(LauncherError::CasMissing(name))
+        }
     }
 
     struct Jail {
@@ -305,6 +437,7 @@ mod linux {
             std::env::consts::ARCH,
             BundleTrust::RootOwned,
         )?);
+        let cas = Arc::new(CasStore::prepare(&bundle, &args.cas_root, &args.jail_root)?);
         verify_reported_versions(&bundle, args.uid_base, args.gid_base)?;
         let listener = bind_socket(&args.socket, args.socket_gid)?;
         listener
@@ -320,13 +453,16 @@ mod linux {
                 Ok((stream, _)) => {
                     let permit = acquire(Arc::clone(&capacity));
                     let bundle = Arc::clone(&bundle);
+                    let cas = Arc::clone(&cas);
                     let jail_root = args.jail_root.clone();
                     let uid = args.uid_base + permit.slot as u32;
                     let gid = args.gid_base + permit.slot as u32;
+                    let boot_mode = args.boot_mode;
                     std::thread::spawn(move || {
                         let _permit = permit;
-                        if let Err(error) = handle_connection(stream, &bundle, &jail_root, uid, gid)
-                        {
+                        if let Err(error) = handle_connection(
+                            stream, &bundle, &cas, &jail_root, uid, gid, boot_mode,
+                        ) {
                             eprintln!("bsmr-sandboxd: {error}");
                         }
                     });
@@ -388,9 +524,11 @@ mod linux {
     fn handle_connection(
         mut stream: UnixStream,
         bundle: &VerifiedBundle,
+        cas: &CasStore,
         jail_root: &Path,
         uid: u32,
         gid: u32,
+        boot_mode: BootMode,
     ) -> Result<(), LauncherError> {
         stream
             .set_read_timeout(Some(CLIENT_IO_TIMEOUT))
@@ -398,38 +536,42 @@ mod linux {
             .map_err(|source| io_error("launcher client", source))?;
         let credentials = getsockopt(&stream, PeerCredentials)?;
         let (request, mut transport) = receive_request(&stream)?;
-        let result = execute_request(
-            &stream,
-            &request,
-            &mut transport,
+        let context = VmContext {
             bundle,
+            cas,
             jail_root,
             uid,
             gid,
-        );
+            boot_mode,
+        };
+        let result = execute_request(&stream, &request, &mut transport, context);
         let response = match result {
-            Ok(status) => LauncherResponse {
+            Ok(execution) => LauncherResponse {
                 protocol: PROTOCOL_VERSION,
-                status,
+                status: execution.status,
                 cleanup_complete: true,
+                environment_start_us: Some(execution.environment_start_us),
                 error: None,
             },
             Err(LauncherError::Cancelled) => LauncherResponse {
                 protocol: PROTOCOL_VERSION,
                 status: LauncherStatus::Cancelled,
                 cleanup_complete: true,
+                environment_start_us: None,
                 error: None,
             },
             Err(LauncherError::Cleanup(error)) => LauncherResponse {
                 protocol: PROTOCOL_VERSION,
                 status: LauncherStatus::Failed,
                 cleanup_complete: false,
+                environment_start_us: None,
                 error: Some(error),
             },
             Err(error) => LauncherResponse {
                 protocol: PROTOCOL_VERSION,
                 status: LauncherStatus::Failed,
                 cleanup_complete: true,
+                environment_start_us: None,
                 error: Some(error.to_string()),
             },
         };
@@ -457,14 +599,20 @@ mod linux {
         if request.environment_digest != bundle.environment_digest() {
             return Err(LauncherError::EnvironmentDigest);
         }
-        if request.input_bytes == 0 || request.output_bytes == 0 {
-            return Err(LauncherError::EmptyTransport);
+        if request.input_bytes == 0 {
+            return Err(LauncherError::EmptyInput);
         }
         if request.input_bytes > MAX_INPUT_BYTES {
             return Err(LauncherError::InputTooLarge);
         }
+        if !valid_sha256(&request.action_sha256) || !valid_sha256(&request.input_sha256) {
+            return Err(LauncherError::TransportDigestShape);
+        }
         if request.output_bytes > MAX_OUTPUT_BYTES {
             return Err(LauncherError::OutputTooLarge);
+        }
+        if request.output_bytes != MAX_OUTPUT_BYTES {
+            return Err(LauncherError::OutputCapacity);
         }
         validate_machine(request)?;
         if request
@@ -491,28 +639,26 @@ mod linux {
     fn receive_request(stream: &UnixStream) -> Result<(LauncherRequest, Transport), LauncherError> {
         let mut bytes = vec![0u8; MAX_MESSAGE_BYTES + 4];
         let mut iov = [IoSliceMut::new(&mut bytes)];
-        let mut control = cmsg_space!([i32; 3]);
-        let message = recvmsg::<()>(
-            stream.as_raw_fd(),
+        let mut control_bytes = [MaybeUninit::uninit(); rustix::cmsg_space!(ScmRights(3))];
+        let mut control = rustix::net::RecvAncillaryBuffer::new(&mut control_bytes);
+        let message = rustix::net::recvmsg(
+            stream,
             &mut iov,
-            Some(&mut control),
-            MsgFlags::MSG_CMSG_CLOEXEC,
-        )?;
+            &mut control,
+            rustix::net::RecvFlags::CMSG_CLOEXEC,
+        )
+        .map_err(|source| io_error("launcher request", source.into()))?;
         let received = message.bytes;
         let mut descriptors = Vec::new();
-        for control in message.cmsgs()? {
-            if let ControlMessageOwned::ScmRights(rights) = control {
+        for message in control.drain() {
+            if let rustix::net::RecvAncillaryMessage::ScmRights(rights) = message {
                 descriptors.extend(rights);
             }
         }
-        let descriptors = descriptors
-            .into_iter()
-            .map(own_received_descriptor)
-            .collect::<Vec<_>>();
         if descriptors.len() != 3 {
             return Err(LauncherError::FileDescriptors);
         }
-        if message.flags.contains(MsgFlags::MSG_CTRUNC) {
+        if message.flags.contains(rustix::net::ReturnFlags::CTRUNC) {
             return Err(LauncherError::FileDescriptors);
         }
         if received < 4 {
@@ -618,14 +764,11 @@ mod linux {
         stream: &UnixStream,
         request: &LauncherRequest,
         transport: &mut Transport,
-        bundle: &VerifiedBundle,
-        jail_root: &Path,
-        uid: u32,
-        gid: u32,
-    ) -> Result<LauncherStatus, LauncherError> {
-        validate_request(request, bundle)?;
-        let mut jail = prepare_jail(request, transport, bundle, jail_root, uid, gid)?;
-        let result = run_microvm(stream, request, transport, bundle, &mut jail, uid, gid);
+        context: VmContext<'_>,
+    ) -> Result<Execution, LauncherError> {
+        validate_request(request, context.bundle)?;
+        let mut jail = prepare_jail(request, transport, context)?;
+        let result = run_microvm(stream, request, transport, &mut jail, context);
         let cleanup = cleanup_jail(&mut jail);
         match (result, cleanup) {
             (_, Err(error)) => Err(LauncherError::Cleanup(error.to_string())),
@@ -637,16 +780,14 @@ mod linux {
     fn prepare_jail(
         request: &LauncherRequest,
         transport: &mut Transport,
-        bundle: &VerifiedBundle,
-        jail_root: &Path,
-        uid: u32,
-        gid: u32,
+        context: VmContext<'_>,
     ) -> Result<Jail, LauncherError> {
-        let firecracker = bundle.artifact("firecracker")?;
+        let firecracker = context.bundle.artifact("firecracker")?;
         let executable = firecracker
             .file_name()
             .ok_or_else(|| LauncherError::UnsafePath(firecracker.clone()))?;
-        let root = jail_root
+        let root = context
+            .jail_root
             .join(executable)
             .join(&request.action_id)
             .join("root");
@@ -663,18 +804,13 @@ mod linux {
         };
         let populate = (|| {
             fs::create_dir_all(&jail.root).map_err(|source| io_error(&jail.root, source))?;
-            copy_immutable(
-                bundle.artifact("kernel")?,
-                jail.root.join("kernel"),
-                uid,
-                gid,
-            )?;
-            copy_immutable(
-                bundle.artifact("rootfs")?,
-                jail.root.join("rootfs"),
-                uid,
-                gid,
-            )?;
+            link_immutable(context.cas.artifact("kernel")?, jail.root.join("kernel"))?;
+            link_immutable(context.cas.artifact("rootfs")?, jail.root.join("rootfs"))?;
+            if matches!(context.boot_mode, BootMode::Snapshot) {
+                for artifact in ["snapshot", "memory"] {
+                    link_immutable(context.cas.artifact(artifact)?, jail.root.join(artifact))?;
+                }
+            }
             let action_bytes = transport
                 .action
                 .metadata()
@@ -683,16 +819,26 @@ mod linux {
             copy_transport(
                 &mut transport.action,
                 &jail.root.join("action"),
-                action_bytes,
-                uid,
-                gid,
+                TransportSpec {
+                    index: 0,
+                    bytes: action_bytes,
+                    capacity: MAX_ACTION_BYTES,
+                    sha256: &request.action_sha256,
+                },
+                context.uid,
+                context.gid,
             )?;
             copy_transport(
                 &mut transport.input,
                 &jail.root.join("input"),
-                request.input_bytes,
-                uid,
-                gid,
+                TransportSpec {
+                    index: 1,
+                    bytes: request.input_bytes,
+                    capacity: MAX_INPUT_BYTES,
+                    sha256: &request.input_sha256,
+                },
+                context.uid,
+                context.gid,
             )?;
             let output = jail.root.join("output");
             File::options()
@@ -705,8 +851,8 @@ mod linux {
                 .map_err(|source| io_error(&output, source))?;
             chown(
                 &output,
-                Some(nix::unistd::Uid::from_raw(uid)),
-                Some(Gid::from_raw(gid)),
+                Some(nix::unistd::Uid::from_raw(context.uid)),
+                Some(Gid::from_raw(context.gid)),
             )?;
             Ok(())
         })();
@@ -717,22 +863,34 @@ mod linux {
         Ok(jail)
     }
 
-    /// Copies an immutable bundle resource into the per-action jail.
-    fn copy_immutable(
-        source: PathBuf,
-        destination: PathBuf,
-        uid: u32,
-        gid: u32,
+    /// Hard-links one verified immutable artifact into an action jail.
+    fn link_immutable(
+        source: impl AsRef<Path>,
+        destination: impl AsRef<Path>,
     ) -> Result<(), LauncherError> {
-        fs::copy(&source, &destination).map_err(|error| io_error(&destination, error))?;
-        fs::set_permissions(&destination, fs::Permissions::from_mode(0o400))
-            .map_err(|error| io_error(&destination, error))?;
-        chown(
-            &destination,
-            Some(nix::unistd::Uid::from_raw(uid)),
-            Some(Gid::from_raw(gid)),
-        )?;
-        Ok(())
+        let destination = destination.as_ref();
+        fs::hard_link(source, destination).map_err(|error| io_error(destination, error))
+    }
+
+    /// Rejects a pre-existing digest name unless it is the verified source inode.
+    fn verify_cas_object(
+        source: &Path,
+        destination: &Path,
+        expected: &str,
+    ) -> Result<(), LauncherError> {
+        let source_metadata =
+            fs::symlink_metadata(source).map_err(|error| io_error(source, error))?;
+        let destination_metadata =
+            fs::symlink_metadata(destination).map_err(|error| io_error(destination, error))?;
+        if !source_metadata.is_file() || !destination_metadata.is_file() {
+            return Err(LauncherError::CasCollision(destination.into()));
+        }
+        if source_metadata.dev() == destination_metadata.dev()
+            && source_metadata.ino() == destination_metadata.ino()
+        {
+            return Ok(());
+        }
+        bsmr_sandbox::verify_sha256(destination, expected).map_err(Into::into)
     }
 
     /// Confirms both trusted executables report the manifest's same pinned release.
@@ -775,20 +933,26 @@ mod linux {
     fn copy_transport(
         source: &mut File,
         destination: &Path,
-        expected: u64,
+        spec: TransportSpec<'_>,
         uid: u32,
         gid: u32,
     ) -> Result<(), LauncherError> {
-        source
-            .seek(SeekFrom::Start(0))
-            .map_err(|error| io_error(destination, error))?;
         let mut output = File::options()
             .write(true)
             .create_new(true)
             .mode(0o400)
             .open(destination)
             .map_err(|error| io_error(destination, error))?;
-        copy_exact_transport(source, &mut output, expected, destination)?;
+        copy_exact_transport(source, &mut output, spec.bytes, destination)?;
+        bsmr_sandbox::verify_sha256(destination, spec.sha256).map_err(|source| {
+            LauncherError::TransportDigest {
+                index: spec.index,
+                source,
+            }
+        })?;
+        output
+            .set_len(spec.capacity)
+            .map_err(|error| io_error(destination, error))?;
         output
             .sync_all()
             .map_err(|error| io_error(destination, error))?;
@@ -807,17 +971,43 @@ mod linux {
         expected: u64,
         path: &Path,
     ) -> Result<(), LauncherError> {
-        let copied = std::io::copy(&mut source.take(expected), destination)
-            .map_err(|error| io_error(path, error))?;
+        sendfile_exact(source, destination, expected, path)?;
         let mut extra = [0u8; 1];
         let has_extra = source
-            .read(&mut extra)
+            .read_at(&mut extra, expected)
             .map_err(|error| io_error(path, error))?
             != 0;
-        if copied != expected || has_extra {
+        if has_extra {
             return Err(LauncherError::TransportMutation {
                 path: path.to_owned(),
             });
+        }
+        Ok(())
+    }
+
+    /// Copies a fixed range entirely inside the kernel, without userspace buffers.
+    fn sendfile_exact(
+        source: &File,
+        destination: &File,
+        expected: u64,
+        path: &Path,
+    ) -> Result<(), LauncherError> {
+        let mut offset = 0_u64;
+        let mut remaining = expected;
+        while remaining > 0 {
+            let count = usize::try_from(remaining).unwrap_or(usize::MAX);
+            let copied = rustix::fs::sendfile(destination, source, Some(&mut offset), count)
+                .map_err(|source| LauncherError::Transfer {
+                    path: path.to_owned(),
+                    source: source.into(),
+                })?;
+            if copied == 0 {
+                return Err(LauncherError::TransportMutation {
+                    path: path.to_owned(),
+                });
+            }
+            let copied = u64::try_from(copied).map_err(|_| LauncherError::TransferCount)?;
+            remaining -= copied;
         }
         Ok(())
     }
@@ -827,13 +1017,12 @@ mod linux {
         stream: &UnixStream,
         request: &LauncherRequest,
         transport: &mut Transport,
-        bundle: &VerifiedBundle,
         jail: &mut Jail,
-        uid: u32,
-        gid: u32,
-    ) -> Result<LauncherStatus, LauncherError> {
-        let jailer = bundle.artifact("jailer")?;
-        let firecracker = bundle.artifact("firecracker")?;
+        context: VmContext<'_>,
+    ) -> Result<Execution, LauncherError> {
+        let environment_started = Instant::now();
+        let jailer = context.bundle.artifact("jailer")?;
+        let firecracker = context.bundle.artifact("firecracker")?;
         let cgroup_memory = (u64::from(request.memory_mib) + 128) * 1024 * 1024;
         let jailer_log_path = jail
             .root
@@ -859,9 +1048,9 @@ mod linux {
             "--exec-file".into(),
             firecracker.as_os_str().to_owned(),
             "--uid".into(),
-            uid.to_string().into(),
+            context.uid.to_string().into(),
             "--gid".into(),
-            gid.to_string().into(),
+            context.gid.to_string().into(),
             "--chroot-base-dir".into(),
             jail_base.as_os_str().to_owned(),
             "--cgroup-version".into(),
@@ -920,14 +1109,27 @@ mod linux {
         }
         let pid = read_pid(&pid_file)?;
         jail.pid = Some(pid);
-        configure_firecracker(&api, request)?;
-        let deadline = request
-            .timeout_ms
-            .map(|timeout| Instant::now() + Duration::from_millis(timeout) + BOOT_TIMEOUT);
         let supervisor = jail
             .supervisor
             .as_mut()
-            .expect("supervisor exists after successful startup");
+            .ok_or(LauncherError::MissingSupervisor)?;
+        match context.boot_mode {
+            BootMode::Snapshot => load_snapshot(&api)?,
+            BootMode::Fresh => {
+                configure_fresh(&api, request)?;
+                wait_for_guest_ready(supervisor, &jailer_log_path, BOOT_TIMEOUT)?;
+            }
+        }
+        wake_guest(&jail.root.join("vsock.socket"))?;
+        let environment_start_us = u64::try_from(environment_started.elapsed().as_micros())
+            .map_err(|_| LauncherError::DurationOverflow)?;
+        eprintln!(
+            "bsmr-sandboxd: action={} boot_mode={:?} environment_start_us={}",
+            request.action_id, context.boot_mode, environment_start_us
+        );
+        let deadline = request
+            .timeout_ms
+            .map(|timeout| Instant::now() + Duration::from_millis(timeout) + BOOT_TIMEOUT);
         let status = monitor(stream, supervisor, deadline)?;
         if status == LauncherStatus::TimedOut {
             return Err(LauncherError::HostDeadline(read_log_tail(
@@ -937,7 +1139,10 @@ mod linux {
         if status == LauncherStatus::Completed {
             copy_guest_output(&jail.root.join("output"), &mut transport.output)?;
         }
-        Ok(status)
+        Ok(Execution {
+            status,
+            environment_start_us,
+        })
     }
 
     /// Reads only the bounded tail of a trusted VMM and guest diagnostic log.
@@ -985,6 +1190,33 @@ mod linux {
             std::thread::sleep(POLL_INTERVAL);
         }
         Err(LauncherError::ApiTimeout)
+    }
+
+    /// Waits until fresh guest PID 1 has bound vsock before the host sends `CONNECT`.
+    fn wait_for_guest_ready(
+        supervisor: &mut Child,
+        log: &Path,
+        timeout: Duration,
+    ) -> Result<(), LauncherError> {
+        let deadline = Instant::now() + timeout;
+        while Instant::now() < deadline {
+            let metadata = fs::metadata(log).map_err(|source| io_error(log, source))?;
+            if metadata.len() > MAX_GUEST_READY_LOG_BYTES {
+                return Err(LauncherError::GuestReadyLogLimit);
+            }
+            let contents = fs::read_to_string(log).map_err(|source| io_error(log, source))?;
+            if contents.contains(READY_MARKER) {
+                return Ok(());
+            }
+            if let Some(status) = supervisor.try_wait().map_err(LauncherError::Jailer)? {
+                return Err(LauncherError::SupervisorExit {
+                    status,
+                    log: contents.trim().to_owned(),
+                });
+            }
+            std::thread::sleep(POLL_INTERVAL);
+        }
+        Err(LauncherError::GuestReadyTimeout)
     }
 
     /// Keeps Firecracker as PID 1 in a child namespace and links its life to sandboxd.
@@ -1044,10 +1276,10 @@ mod linux {
         Ok(Pid::from_raw(pid))
     }
 
-    /// Configures a Firecracker VM without adding any network device.
-    fn configure_firecracker(api: &Path, request: &LauncherRequest) -> Result<(), LauncherError> {
-        put_json(
-            api,
+    /// Configures the fresh-boot correctness oracle with the production device graph.
+    fn configure_fresh(api: &Path, request: &LauncherRequest) -> Result<(), LauncherError> {
+        let api = ApiClient::new(api, CLIENT_IO_TIMEOUT);
+        api.put(
             "/machine-config",
             &serde_json::json!({
                 "vcpu_count": request.vcpu_count,
@@ -1056,23 +1288,21 @@ mod linux {
                 "track_dirty_pages": false
             }),
         )?;
-        put_json(
-            api,
+        api.put(
             "/boot-source",
             &serde_json::json!({
-                "kernel_image_path": "/kernel",
+                "kernel_image_path": "kernel",
                 "boot_args": "root=/dev/vda ro console=ttyS0 reboot=k panic=1 pci=off init=/sbin/bsmr-sandbox-guest"
             }),
         )?;
         for (id, path, root, read_only) in [
-            ("rootfs", "/rootfs", true, true),
-            ("input", "/input", false, true),
-            ("output", "/output", false, false),
-            ("action", "/action", false, true),
+            ("rootfs", "rootfs", true, true),
+            ("input", "input", false, true),
+            ("output", "output", false, false),
+            ("action", "action", false, true),
         ] {
             let endpoint = format!("/drives/{id}");
-            put_json(
-                api,
+            api.put(
                 &endpoint,
                 &serde_json::json!({
                     "drive_id": id,
@@ -1082,125 +1312,103 @@ mod linux {
                 }),
             )?;
         }
-        put_json(
-            api,
+        api.put(
+            "/vsock",
+            &serde_json::json!({
+                "vsock_id": "bsmr-control",
+                "guest_cid": 3,
+                "uds_path": "vsock.socket"
+            }),
+        )?;
+        api.put("/entropy", &serde_json::json!({}))?;
+        api.put(
             "/actions",
             &serde_json::json!({"action_type": "InstanceStart"}),
-        )
-    }
-
-    /// Sends one bounded HTTP PUT to Firecracker's local API socket.
-    fn put_json<T: Serialize>(socket: &Path, path: &str, value: &T) -> Result<(), LauncherError> {
-        let body = serde_json::to_vec(value)?;
-        let mut stream = UnixStream::connect(socket).map_err(|source| io_error(socket, source))?;
-        stream
-            .set_read_timeout(Some(CLIENT_IO_TIMEOUT))
-            .and_then(|()| stream.set_write_timeout(Some(CLIENT_IO_TIMEOUT)))
-            .map_err(|source| io_error(socket, source))?;
-        write!(
-            stream,
-            "PUT {path} HTTP/1.1\r\nHost: localhost\r\nAccept: application/json\r\nContent-Type: application/json\r\nContent-Length: {}\r\nConnection: close\r\n\r\n",
-            body.len()
-        )
-        .and_then(|_| stream.write_all(&body))
-        .map_err(|source| io_error(socket, source))?;
-        let response = read_api_response(&mut stream).map_err(|source| io_error(socket, source))?;
-        if !response
-            .lines()
-            .next()
-            .is_some_and(|status| status.starts_with("HTTP/1.1 2"))
-        {
-            return Err(LauncherError::Api {
-                path: path.to_owned(),
-                response,
-            });
-        }
+        )?;
         Ok(())
     }
 
-    /// Reads one bounded keep-alive HTTP response using its explicit message framing.
-    fn read_api_response(stream: &mut UnixStream) -> std::io::Result<String> {
-        let mut response = Vec::new();
-        let (header_length, content_length) = loop {
-            let mut headers = [httparse::EMPTY_HEADER; 16];
-            let mut parsed = httparse::Response::new(&mut headers);
-            if let httparse::Status::Complete(header_length) = parsed
-                .parse(&response)
-                .map_err(|error| std::io::Error::new(ErrorKind::InvalidData, error))?
-            {
-                if parsed.version != Some(1) {
-                    return Err(std::io::Error::new(
-                        ErrorKind::InvalidData,
-                        "Firecracker API response is not HTTP/1.1",
-                    ));
-                }
-                let status = parsed.code.ok_or_else(|| {
-                    std::io::Error::new(
-                        ErrorKind::InvalidData,
-                        "Firecracker API response has no status",
-                    )
-                })?;
-                let lengths = parsed
-                    .headers
-                    .iter()
-                    .filter(|header| header.name.eq_ignore_ascii_case("content-length"))
-                    .map(|header| {
-                        std::str::from_utf8(header.value)
-                            .map_err(|error| std::io::Error::new(ErrorKind::InvalidData, error))?
-                            .parse::<usize>()
-                            .map_err(|error| std::io::Error::new(ErrorKind::InvalidData, error))
-                    })
-                    .collect::<std::io::Result<Vec<_>>>()?;
-                let content_length = match (status, lengths.as_slice()) {
-                    (204, []) => 0,
-                    (_, [length]) => *length,
-                    _ => {
-                        return Err(std::io::Error::new(
-                            ErrorKind::InvalidData,
-                            "Firecracker API response has invalid Content-Length framing",
-                        ));
-                    }
-                };
-                break (header_length, content_length);
+    /// Restores the authenticated state through Firecracker's kernel COW backend.
+    fn load_snapshot(api: &Path) -> Result<(), LauncherError> {
+        ApiClient::new(api, CLIENT_IO_TIMEOUT).put(
+            "/snapshot/load",
+            &serde_json::json!({
+                "snapshot_path": "snapshot",
+                "mem_backend": {
+                    "backend_path": "memory",
+                    "backend_type": "File"
+                },
+                "track_dirty_pages": false,
+                "resume_vm": true,
+                "clock_realtime": true
+            }),
+        )?;
+        Ok(())
+    }
+
+    /// Connects to the snapshot-preserved listener and releases exactly one guest.
+    fn wake_guest(socket: &Path) -> Result<(), LauncherError> {
+        let mut stream = connect_ready_guest(socket, BOOT_TIMEOUT)?;
+        stream
+            .write_all(&[WAKE_BYTE])
+            .map_err(LauncherError::WakeIo)
+    }
+
+    /// Retries only connections that fail before the action-release byte is sent.
+    fn connect_ready_guest(socket: &Path, timeout: Duration) -> Result<UnixStream, LauncherError> {
+        let deadline = Instant::now() + timeout;
+        loop {
+            if let Some(stream) = try_connect_ready_guest(socket)? {
+                return Ok(stream);
             }
-            let remaining = MAX_API_RESPONSE_BYTES - response.len();
-            if remaining == 0 {
-                return Err(std::io::Error::new(
-                    ErrorKind::InvalidData,
-                    "Firecracker API headers are too large",
-                ));
+            if Instant::now() >= deadline {
+                return Err(LauncherError::GuestWakeTimeout);
             }
-            let mut chunk = [0u8; 4096];
-            let limit = remaining.min(chunk.len());
-            let read = stream.read(&mut chunk[..limit])?;
-            if read == 0 {
-                return Err(std::io::Error::new(
-                    ErrorKind::UnexpectedEof,
-                    "Firecracker API response ended before its headers",
-                ));
-            }
-            response.extend_from_slice(&chunk[..read]);
-        };
-        let message_length = header_length
-            .checked_add(content_length)
-            .filter(|length| *length <= MAX_API_RESPONSE_BYTES)
-            .ok_or_else(|| {
-                std::io::Error::new(
-                    ErrorKind::InvalidData,
-                    "Firecracker API response is too large",
-                )
-            })?;
-        if response.len() > message_length {
-            return Err(std::io::Error::new(
-                ErrorKind::InvalidData,
-                "Firecracker API response exceeds Content-Length",
-            ));
+            std::thread::sleep(POLL_INTERVAL);
         }
-        let received = response.len();
-        response.resize(message_length, 0);
-        stream.read_exact(&mut response[received..])?;
-        String::from_utf8(response)
-            .map_err(|error| std::io::Error::new(ErrorKind::InvalidData, error))
+    }
+
+    /// Establishes one connection without releasing guest action state.
+    fn try_connect_ready_guest(socket: &Path) -> Result<Option<UnixStream>, LauncherError> {
+        let mut stream = match UnixStream::connect(socket) {
+            Ok(stream) => stream,
+            Err(_) => return Ok(None),
+        };
+        stream
+            .set_read_timeout(Some(CLIENT_IO_TIMEOUT))
+            .and_then(|()| stream.set_write_timeout(Some(CLIENT_IO_TIMEOUT)))
+            .map_err(LauncherError::WakeIo)?;
+        if writeln!(stream, "CONNECT {WAKE_PORT}").is_err() {
+            return Ok(None);
+        }
+        let mut acknowledgement = Vec::new();
+        loop {
+            let mut byte = [0u8; 1];
+            if stream.read_exact(&mut byte).is_err() {
+                return Ok(None);
+            }
+            if byte[0] == b'\n' {
+                break;
+            }
+            if acknowledgement.len() == 63 {
+                return Err(LauncherError::WakeAcknowledgementTooLarge);
+            }
+            acknowledgement.push(byte[0]);
+        }
+        let host_port = acknowledgement
+            .strip_prefix(b"OK ")
+            .ok_or(LauncherError::WakeRejected)?;
+        if host_port.is_empty() || !host_port.iter().all(u8::is_ascii_digit) {
+            return Err(LauncherError::WakeAcknowledgement);
+        }
+        let mut ready = [0u8; 1];
+        if stream.read_exact(&mut ready).is_err() {
+            return Ok(None);
+        }
+        if ready != [GUEST_READY_BYTE] {
+            return Err(LauncherError::GuestWakeAcknowledgement);
+        }
+        Ok(Some(stream))
     }
 
     /// Monitors Firecracker without trusting guest completion messages.
@@ -1244,17 +1452,13 @@ mod linux {
     fn copy_guest_output(source: &Path, destination: &mut File) -> Result<(), LauncherError> {
         let mut input = File::open(source).map_err(|error| io_error(source, error))?;
         let logical_bytes = tar_stream_len(&mut input)?;
-        input
-            .seek(SeekFrom::Start(0))
-            .map_err(|error| io_error(source, error))?;
         destination
             .set_len(0)
             .map_err(|error| io_error("output transport", error))?;
         destination
             .seek(SeekFrom::Start(0))
             .map_err(|error| io_error("output transport", error))?;
-        std::io::copy(&mut input.take(logical_bytes), destination)
-            .map_err(|error| io_error("output transport", error))?;
+        sendfile_exact(&input, destination, logical_bytes, source)?;
         destination
             .sync_all()
             .map_err(|error| io_error("output transport", error))?;
@@ -1465,11 +1669,12 @@ mod linux {
             })
     }
 
-    /// Takes ownership of one descriptor received through `SCM_RIGHTS`.
-    fn own_received_descriptor(descriptor: i32) -> OwnedFd {
-        // SAFETY: `recvmsg` returns each `SCM_RIGHTS` descriptor as a new descriptor owned by
-        // this process. This function is called exactly once for every received descriptor.
-        unsafe { OwnedFd::from_raw_fd(descriptor) }
+    /// Checks the canonical lowercase digest shape before any filesystem work.
+    fn valid_sha256(value: &str) -> bool {
+        value.len() == 64
+            && value
+                .bytes()
+                .all(|byte| byte.is_ascii_digit() || (b'a'..=b'f').contains(&byte))
     }
 
     /// Attaches one filesystem path to an I/O error.
@@ -1482,27 +1687,43 @@ mod linux {
 
     #[cfg(test)]
     mod tests {
+        use std::fs;
+        use std::io::Read;
         use std::io::Write;
+        use std::os::unix::net::UnixListener;
         use std::path::Path;
         use std::process::Command;
+        use std::thread;
         use std::time::Duration;
 
         use nix::errno::Errno;
         use nix::sys::signal::kill;
         use nix::unistd::Pid;
+        use sha2::Digest;
+        use sha2::Sha256;
 
+        use super::GUEST_READY_BYTE;
         use super::Jail;
         use super::LauncherRequest;
         use super::MEMORY_MIB;
         use super::PROTOCOL_VERSION;
+        use super::READY_MARKER;
+        use super::TransportSpec;
         use super::VCPU_COUNT;
+        use super::WAKE_BYTE;
+        use super::WAKE_PORT;
         use super::cleanup_jail;
         use super::copy_exact_transport;
-        use super::read_api_response;
+        use super::copy_transport;
+        use super::link_immutable;
         use super::reported_version;
         use super::valid_action_id;
+        use super::valid_sha256;
         use super::validate_machine;
+        use super::verify_cas_object;
         use super::verify_kvm_device;
+        use super::wait_for_guest_ready;
+        use super::wake_guest;
 
         /// Constructs the smallest request accepted by protocol validation.
         fn request(environment_digest: &str) -> LauncherRequest {
@@ -1511,7 +1732,9 @@ mod linux {
                 action_id: "01234567-89ab-cdef-0123-456789abcdef".to_owned(),
                 environment_digest: environment_digest.to_owned(),
                 input_bytes: 1,
+                input_sha256: format!("{:x}", Sha256::digest(b"i")),
                 output_bytes: 1,
+                action_sha256: format!("{:x}", Sha256::digest(b"a")),
                 vcpu_count: VCPU_COUNT,
                 memory_mib: MEMORY_MIB,
                 timeout_ms: None,
@@ -1540,12 +1763,74 @@ mod linux {
             assert!(verify_kvm_device(file.path()).is_err());
         }
 
+        /// Fresh boot cannot release an action before guest PID 1 publishes readiness.
+        #[test]
+        fn invariant_fresh_boot_waits_for_guest_listener() {
+            let log = tempfile::NamedTempFile::new().unwrap();
+            let path = log.path().to_owned();
+            let writer = thread::spawn(move || {
+                thread::sleep(Duration::from_millis(20));
+                fs::write(path, READY_MARKER).unwrap();
+            });
+            let mut supervisor = Command::new("sleep").arg("60").spawn().unwrap();
+
+            let result = wait_for_guest_ready(&mut supervisor, log.path(), Duration::from_secs(1));
+
+            writer.join().unwrap();
+            supervisor.kill().unwrap();
+            supervisor.wait().unwrap();
+            assert!(result.is_ok());
+        }
+
+        /// A restored transport reset cannot consume the one action-release byte.
+        #[test]
+        fn invariant_snapshot_wake_waits_for_guest_readiness() {
+            let directory = tempfile::tempdir().unwrap();
+            let socket = directory.path().join("vsock.socket");
+            let listener = UnixListener::bind(&socket).unwrap();
+            let server = thread::spawn(move || {
+                for attempt in 0..2 {
+                    let (mut stream, _) = listener.accept().unwrap();
+                    let mut request = Vec::new();
+                    loop {
+                        let mut byte = [0u8; 1];
+                        stream.read_exact(&mut byte).unwrap();
+                        request.push(byte[0]);
+                        if byte[0] == b'\n' {
+                            break;
+                        }
+                    }
+                    assert_eq!(request, format!("CONNECT {WAKE_PORT}\n").as_bytes());
+                    stream.write_all(b"OK 1\n").unwrap();
+                    if attempt == 0 {
+                        continue;
+                    }
+                    stream.write_all(&[GUEST_READY_BYTE]).unwrap();
+                    let mut wake = [0u8; 1];
+                    stream.read_exact(&mut wake).unwrap();
+                    assert_eq!(wake, [WAKE_BYTE]);
+                }
+            });
+
+            wake_guest(&socket).unwrap();
+            server.join().unwrap();
+        }
+
         #[test]
         /// The action nonce grammar cannot introduce a jail path component.
         fn action_id_is_one_lowercase_uuid() {
             assert!(valid_action_id("01234567-89ab-cdef-0123-456789abcdef"));
             assert!(!valid_action_id("../234567-89ab-cdef-0123-456789abcdef"));
             assert!(!valid_action_id("01234567-89AB-CDEF-0123-456789ABCDEF"));
+        }
+
+        /// Transport digests have exactly one canonical wire representation.
+        #[test]
+        fn transport_digest_is_lowercase_sha256() {
+            assert!(valid_sha256(&"a".repeat(64)));
+            assert!(!valid_sha256(&"A".repeat(64)));
+            assert!(!valid_sha256(&"a".repeat(63)));
+            assert!(!valid_sha256(&"g".repeat(64)));
         }
 
         /// Missing cgroup state is reported only after the process and jail are removed.
@@ -1615,6 +1900,75 @@ mod linux {
             }
         }
 
+        /// Same-size descriptor mutation cannot cross the privileged boundary.
+        #[test]
+        fn transport_copy_authenticates_content() {
+            use std::io::Seek;
+            use std::io::SeekFrom;
+            use std::io::Write;
+
+            let directory = tempfile::tempdir().unwrap();
+            let destination = directory.path().join("destination");
+            let mut source = tempfile::tempfile().unwrap();
+            source.write_all(b"evil").unwrap();
+            source.seek(SeekFrom::Start(0)).unwrap();
+            let expected = format!("{:x}", Sha256::digest(b"good"));
+
+            assert!(
+                copy_transport(
+                    &mut source,
+                    &destination,
+                    TransportSpec {
+                        index: 0,
+                        bytes: 4,
+                        capacity: 4,
+                        sha256: &expected,
+                    },
+                    0,
+                    0,
+                )
+                .is_err()
+            );
+        }
+
+        /// Immutable VM artifacts are materialized without copying their data.
+        #[test]
+        fn immutable_artifacts_are_hardlinked() {
+            use std::os::unix::fs::MetadataExt;
+
+            let directory = tempfile::tempdir().unwrap();
+            let source = directory.path().join("source");
+            let destination = directory.path().join("destination");
+            std::fs::write(&source, b"immutable").unwrap();
+
+            link_immutable(&source, &destination).unwrap();
+
+            let source = std::fs::metadata(source).unwrap();
+            let destination = std::fs::metadata(destination).unwrap();
+            assert_eq!(source.dev(), destination.dev());
+            assert_eq!(source.ino(), destination.ino());
+            assert_eq!(source.nlink(), 2);
+        }
+
+        /// A digest name accepts equal content and rejects a collision.
+        #[test]
+        fn cas_object_collision_is_rejected() {
+            let directory = tempfile::tempdir().unwrap();
+            let source = directory.path().join("source");
+            let equivalent = directory.path().join("equivalent");
+            let collision = directory.path().join("collision");
+            std::fs::write(&source, b"same bytes").unwrap();
+            std::fs::write(&equivalent, b"same bytes").unwrap();
+            std::fs::write(&collision, b"different bytes").unwrap();
+            let digest = format!("{:x}", Sha256::digest(b"same bytes"));
+
+            assert!(verify_cas_object(&source, &equivalent, &digest).is_ok());
+            assert!(verify_cas_object(&source, &collision, &digest).is_err());
+            let linked = directory.path().join("linked");
+            std::fs::hard_link(&source, &linked).unwrap();
+            assert!(verify_cas_object(&source, &linked, &digest).is_ok());
+        }
+
         /// Firecracker appends a normal exit log after its canonical version line.
         #[test]
         fn release_version_is_the_exact_first_line() {
@@ -1622,26 +1976,6 @@ mod linux {
 
             assert_eq!(reported_version(output), Some("Firecracker v1.16.1"));
             assert_eq!(reported_version(b"\xff"), None);
-        }
-
-        /// A complete keep-alive response is bounded by HTTP framing, not socket EOF.
-        #[test]
-        fn api_response_does_not_wait_for_keep_alive_eof() {
-            let (mut client, mut server) = std::os::unix::net::UnixStream::pair().unwrap();
-            client
-                .set_read_timeout(Some(Duration::from_millis(100)))
-                .unwrap();
-            server
-                .write_all(
-                    b"HTTP/1.1 204 \r\nServer: Firecracker API\r\nConnection: keep-alive\r\n\r\n",
-                )
-                .unwrap();
-
-            assert!(
-                read_api_response(&mut client)
-                    .unwrap()
-                    .starts_with("HTTP/1.1 204 ")
-            );
         }
     }
 }

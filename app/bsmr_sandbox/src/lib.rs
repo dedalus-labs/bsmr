@@ -5,6 +5,11 @@
 
 // Defines the versioned protocol shared by BSMR's Firecracker components.
 
+#[cfg(target_os = "linux")]
+pub mod firecracker;
+#[cfg(target_os = "linux")]
+pub mod snapshot;
+
 use std::collections::BTreeMap;
 use std::fs;
 use std::fs::File;
@@ -19,7 +24,7 @@ use sha2::Digest;
 use sha2::Sha256;
 use thiserror::Error;
 
-pub const PROTOCOL_VERSION: u32 = 1;
+pub const PROTOCOL_VERSION: u32 = 2;
 pub const MAX_ACTION_BYTES: u64 = 64 * 1024;
 pub const MAX_INPUT_BYTES: u64 = 1024 * 1024 * 1024;
 pub const MAX_OUTPUT_ARCHIVE_BYTES: u64 = 1024 * 1024 * 1024;
@@ -43,6 +48,8 @@ pub enum BundleError {
     Schema(u32),
     #[error("bundle architecture {bundle:?} does not match host {host:?}")]
     Architecture { bundle: String, host: String },
+    #[error("bundle host fingerprint {bundle:?} does not match host {host:?}")]
+    HostFingerprint { bundle: String, host: String },
     #[error("Firecracker and jailer versions differ: {firecracker:?} and {jailer:?}")]
     Version { firecracker: String, jailer: String },
     #[error("bundle is missing required artifact {0:?}")]
@@ -115,13 +122,25 @@ impl VerifiedBundle {
                 host: host_architecture.to_owned(),
             });
         }
+        #[cfg(target_os = "linux")]
+        if trust == BundleTrust::RootOwned {
+            let host = host_fingerprint()?;
+            verify_host_identity(&manifest.host_fingerprint, &host)?;
+        }
         if manifest.firecracker_version != manifest.jailer_version {
             return Err(BundleError::Version {
                 firecracker: manifest.firecracker_version,
                 jailer: manifest.jailer_version,
             });
         }
-        for required in ["firecracker", "jailer", "kernel", "rootfs"] {
+        for required in [
+            "firecracker",
+            "jailer",
+            "kernel",
+            "rootfs",
+            "snapshot",
+            "memory",
+        ] {
             if !manifest.artifacts.contains_key(required) {
                 return Err(BundleError::Missing(required));
             }
@@ -148,14 +167,7 @@ impl VerifiedBundle {
             if !metadata.file_type().is_file() {
                 return Err(BundleError::Type(path));
             }
-            let actual = sha256_file(&path)?;
-            if actual != artifact.sha256 {
-                return Err(BundleError::Digest {
-                    path,
-                    expected: artifact.sha256.clone(),
-                    actual,
-                });
-            }
+            verify_sha256(&path, &artifact.sha256)?;
         }
         if trust == BundleTrust::RootOwned {
             verify_static_elf(
@@ -192,11 +204,32 @@ impl VerifiedBundle {
         Ok(self.root.join(&artifact.path))
     }
 
+    /// Returns one verified artifact's lowercase content identity.
+    pub fn artifact_sha256(&self, name: &'static str) -> Result<&str, BundleError> {
+        self.manifest
+            .artifacts
+            .get(name)
+            .map(|artifact| artifact.sha256.as_str())
+            .ok_or(BundleError::Missing(name))
+    }
+
     /// Returns the release version both Firecracker executables must report.
     #[must_use]
     pub fn firecracker_version(&self) -> &str {
         &self.manifest.firecracker_version
     }
+}
+
+/// Rejects a snapshot built against a different CPU, microcode, or host kernel.
+#[cfg(target_os = "linux")]
+fn verify_host_identity(bundle: &str, host: &str) -> Result<(), BundleError> {
+    if bundle != host {
+        return Err(BundleError::HostFingerprint {
+            bundle: bundle.to_owned(),
+            host: host.to_owned(),
+        });
+    }
+    Ok(())
 }
 
 /// Rejects dynamic or wrong-architecture VMM executables.
@@ -272,6 +305,19 @@ fn sha256_file(path: &Path) -> Result<String, BundleError> {
     Ok(format!("{:x}", hasher.finalize()))
 }
 
+/// Verifies one regular file against an expected lowercase SHA-256 digest.
+pub fn verify_sha256(path: &Path, expected: &str) -> Result<(), BundleError> {
+    let actual = sha256_file(path)?;
+    if actual != expected {
+        return Err(BundleError::Digest {
+            path: path.to_owned(),
+            expected: expected.to_owned(),
+            actual,
+        });
+    }
+    Ok(())
+}
+
 #[cfg(unix)]
 /// Rejects artifacts writable by identities other than root.
 fn verify_root_owned(path: &Path) -> Result<(), BundleError> {
@@ -320,9 +366,48 @@ pub struct BundleArtifact {
 pub struct BundleManifest {
     pub schema: u32,
     pub architecture: String,
+    pub host_fingerprint: String,
     pub firecracker_version: String,
     pub jailer_version: String,
     pub artifacts: BTreeMap<String, BundleArtifact>,
+}
+
+#[cfg(target_os = "linux")]
+/// Identifies the CPU, microcode, and KVM host kernel used by a snapshot.
+pub fn host_fingerprint() -> Result<String, BundleError> {
+    let cpu_path = Path::new("/proc/cpuinfo");
+    let cpu = fs::read_to_string(cpu_path).map_err(|source| BundleError::Read {
+        path: cpu_path.to_owned(),
+        source,
+    })?;
+    let kernel_path = Path::new("/proc/sys/kernel/osrelease");
+    let kernel = fs::read_to_string(kernel_path).map_err(|source| BundleError::Read {
+        path: kernel_path.to_owned(),
+        source,
+    })?;
+    let mut identity = cpu
+        .lines()
+        .take_while(|line| !line.is_empty())
+        .filter(|line| {
+            let field = line.split_once(':').map(|(field, _)| field.trim());
+            field.is_some_and(|field| {
+                [
+                    "vendor_id",
+                    "cpu family",
+                    "model",
+                    "model name",
+                    "stepping",
+                    "microcode",
+                    "flags",
+                ]
+                .contains(&field)
+            })
+        })
+        .collect::<Vec<_>>()
+        .join("\n");
+    identity.push_str("\nkernel = ");
+    identity.push_str(kernel.trim());
+    Ok(format!("sha256:{:x}", Sha256::digest(identity)))
 }
 
 /// The shape of one output admitted by the guest result validator.
@@ -379,7 +464,9 @@ pub struct LauncherRequest {
     pub action_id: String,
     pub environment_digest: String,
     pub input_bytes: u64,
+    pub input_sha256: String,
     pub output_bytes: u64,
+    pub action_sha256: String,
     pub vcpu_count: u8,
     pub memory_mib: u32,
     pub timeout_ms: Option<u64>,
@@ -401,6 +488,7 @@ pub struct LauncherResponse {
     pub protocol: u32,
     pub status: LauncherStatus,
     pub cleanup_complete: bool,
+    pub environment_start_us: Option<u64>,
     pub error: Option<String>,
 }
 
@@ -425,10 +513,13 @@ mod tests {
     use sha2::Sha256;
 
     use super::BundleArtifact;
+    use super::BundleError;
     use super::BundleManifest;
     use super::BundleTrust;
     use super::PROTOCOL_VERSION;
     use super::VerifiedBundle;
+    #[cfg(target_os = "linux")]
+    use super::verify_host_identity;
     use super::verify_static_elf;
 
     /// The bundle verifier accepts a matching ELF64 machine with no interpreter.
@@ -448,12 +539,27 @@ mod tests {
         assert!(verify_static_elf(file.path(), "x86_64").is_err());
     }
 
+    /// Snapshot state cannot cross an unproven CPU and host-kernel boundary.
+    #[cfg(target_os = "linux")]
+    #[test]
+    fn snapshot_host_identity_is_exact() {
+        assert!(verify_host_identity("sha256:host", "sha256:host").is_ok());
+        assert!(verify_host_identity("sha256:source", "sha256:target").is_err());
+    }
+
     /// A manifest cannot bless changed bytes or two different executable releases.
     #[test]
     fn bundle_rejects_digest_and_version_mismatches() {
         let directory = tempfile::tempdir().unwrap();
         let mut artifacts = BTreeMap::new();
-        for name in ["firecracker", "jailer", "kernel", "rootfs"] {
+        for name in [
+            "firecracker",
+            "jailer",
+            "kernel",
+            "rootfs",
+            "snapshot",
+            "memory",
+        ] {
             fs::write(directory.path().join(name), name).unwrap();
             artifacts.insert(
                 name.to_owned(),
@@ -466,6 +572,7 @@ mod tests {
         let mut manifest = BundleManifest {
             schema: PROTOCOL_VERSION,
             architecture: std::env::consts::ARCH.to_owned(),
+            host_fingerprint: "sha256:test-host".to_owned(),
             firecracker_version: "1.16.1".to_owned(),
             jailer_version: "1.16.1".to_owned(),
             artifacts,
@@ -478,6 +585,38 @@ mod tests {
         manifest.jailer_version = "1.16.0".to_owned();
         fs::write(&path, serde_json::to_vec(&manifest).unwrap()).unwrap();
         assert!(VerifiedBundle::load(&path, std::env::consts::ARCH, BundleTrust::Content).is_err());
+    }
+
+    /// A production bundle is incomplete without pristine VM state and memory.
+    #[test]
+    fn bundle_requires_pristine_snapshot_artifacts() {
+        let directory = tempfile::tempdir().unwrap();
+        let mut artifacts = BTreeMap::new();
+        for name in ["firecracker", "jailer", "kernel", "rootfs"] {
+            fs::write(directory.path().join(name), name).unwrap();
+            artifacts.insert(
+                name.to_owned(),
+                BundleArtifact {
+                    path: name.into(),
+                    sha256: format!("{:x}", Sha256::digest(name.as_bytes())),
+                },
+            );
+        }
+        let manifest = BundleManifest {
+            schema: PROTOCOL_VERSION,
+            architecture: std::env::consts::ARCH.to_owned(),
+            host_fingerprint: "sha256:test-host".to_owned(),
+            firecracker_version: "1.16.1".to_owned(),
+            jailer_version: "1.16.1".to_owned(),
+            artifacts,
+        };
+        let path = directory.path().join("manifest.json");
+        fs::write(&path, serde_json::to_vec(&manifest).unwrap()).unwrap();
+
+        assert!(matches!(
+            VerifiedBundle::load(&path, std::env::consts::ARCH, BundleTrust::Content),
+            Err(BundleError::Missing("snapshot"))
+        ));
     }
 
     /// Root ownership cannot compensate for a group- or world-writable artifact.

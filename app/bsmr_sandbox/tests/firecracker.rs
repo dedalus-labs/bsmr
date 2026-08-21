@@ -29,6 +29,7 @@ use bsmr_sandbox::GuestResultEnvelope;
 use bsmr_sandbox::LauncherRequest;
 use bsmr_sandbox::LauncherResponse;
 use bsmr_sandbox::LauncherStatus;
+use bsmr_sandbox::MAX_OUTPUT_BYTES;
 use bsmr_sandbox::MEMORY_MIB;
 use bsmr_sandbox::PROTOCOL_VERSION;
 use bsmr_sandbox::VCPU_COUNT;
@@ -36,9 +37,13 @@ use bsmr_sandbox::VerifiedBundle;
 use nix::sys::socket::ControlMessage;
 use nix::sys::socket::MsgFlags;
 use nix::sys::socket::sendmsg;
+use serde::Deserialize;
+use serde::Serialize;
+use sha2::Digest;
+use sha2::Sha256;
 
 const ACTION_BYTES: u64 = 64 * 1024;
-const OUTPUT_BYTES: u64 = 128 * 1024 * 1024;
+const BENCHMARK_SAMPLES: usize = 30;
 
 /// Executes the conformance corpus only in the mandatory nested-KVM CI lane.
 #[test]
@@ -76,6 +81,17 @@ fn firecracker_conformance() {
     assert_eq!(repeated.response.status, LauncherStatus::Completed);
     assert_eq!(read_archive(repeated.output), archive);
 
+    let first_random = execute(&socket, &bundle, &probe, &["random"], Some(5_000), false);
+    let second_random = execute(&socket, &bundle, &probe, &["random"], Some(5_000), false);
+    assert_eq!(first_random.response.status, LauncherStatus::Completed);
+    assert_eq!(second_random.response.status, LauncherStatus::Completed);
+    let first_random = read_archive(first_random.output);
+    let second_random = read_archive(second_random.output);
+    assert_ne!(
+        first_random.files["outputs/out/random"],
+        second_random.files["outputs/out/random"]
+    );
+
     std::thread::scope(|scope| {
         let first = scope.spawn(|| execute(&socket, &bundle, &probe, &[], Some(5_000), false));
         let second = scope.spawn(|| execute(&socket, &bundle, &probe, &[], Some(5_000), false));
@@ -102,6 +118,140 @@ fn firecracker_conformance() {
     let cancelled = execute(&socket, &bundle, &probe, &["hang"], None, true);
     assert_eq!(cancelled.response.status, LauncherStatus::Cancelled);
     assert!(cancelled.response.cleanup_complete);
+}
+
+/// Measures Firecracker environment start independently from action execution.
+#[test]
+#[ignore = "requires root-installed Firecracker bundle and KVM launcher"]
+fn firecracker_startup_benchmark() {
+    let bundle_path = required_path("BSMR_SANDBOX_BUNDLE");
+    let socket = required_path("BSMR_SANDBOX_SOCKET");
+    let probe = required_path("BSMR_SANDBOX_PROBE");
+    let output = required_path("BSMR_SANDBOX_BENCHMARK_OUT");
+    let mode = std::env::var("BSMR_SANDBOX_MODE").expect("BSMR_SANDBOX_MODE must be set");
+    let bundle =
+        VerifiedBundle::load(&bundle_path, std::env::consts::ARCH, BundleTrust::Content).unwrap();
+    let mut environment_samples = Vec::with_capacity(BENCHMARK_SAMPLES);
+    let mut roundtrip_samples = Vec::with_capacity(BENCHMARK_SAMPLES);
+    for _ in 0..BENCHMARK_SAMPLES {
+        let roundtrip = Instant::now();
+        let execution = execute(&socket, &bundle, &probe, &[], Some(5_000), false);
+        let roundtrip_us = u64::try_from(roundtrip.elapsed().as_micros()).unwrap();
+        assert_eq!(execution.response.status, LauncherStatus::Completed);
+        environment_samples.push(
+            execution
+                .response
+                .environment_start_us
+                .expect("successful execution must report environment start"),
+        );
+        roundtrip_samples.push(roundtrip_us);
+    }
+    let benchmark = StartupBenchmark::from_samples(
+        mode,
+        bundle.environment_digest().to_owned(),
+        bsmr_sandbox::host_fingerprint().unwrap(),
+        environment_samples,
+        roundtrip_samples,
+    );
+    std::fs::write(&output, serde_json::to_vec_pretty(&benchmark).unwrap()).unwrap();
+    eprintln!("{benchmark:#?}");
+}
+
+/// Enforces the accepted snapshot speedup against the fresh-boot oracle.
+#[test]
+#[ignore = "requires benchmark artifacts from both KVM launch modes"]
+fn firecracker_snapshot_speedup() {
+    let fresh: StartupBenchmark = serde_json::from_slice(
+        &std::fs::read(required_path("BSMR_SANDBOX_FRESH_BENCHMARK")).unwrap(),
+    )
+    .unwrap();
+    let snapshot: StartupBenchmark = serde_json::from_slice(
+        &std::fs::read(required_path("BSMR_SANDBOX_SNAPSHOT_BENCHMARK")).unwrap(),
+    )
+    .unwrap();
+    assert_eq!(fresh.mode, "fresh");
+    assert_eq!(snapshot.mode, "snapshot");
+    assert_eq!(fresh.environment_digest, snapshot.environment_digest);
+    assert_eq!(fresh.host_fingerprint, snapshot.host_fingerprint);
+    assert_eq!(fresh.environment_samples_us.len(), BENCHMARK_SAMPLES);
+    assert_eq!(snapshot.environment_samples_us.len(), BENCHMARK_SAMPLES);
+    assert_eq!(fresh.roundtrip_samples_us.len(), BENCHMARK_SAMPLES);
+    assert_eq!(snapshot.roundtrip_samples_us.len(), BENCHMARK_SAMPLES);
+    assert!(
+        snapshot.environment_p50_us.saturating_mul(4) <= fresh.environment_p50_us,
+        "snapshot p50 {} us is not 4x faster than fresh p50 {} us",
+        snapshot.environment_p50_us,
+        fresh.environment_p50_us
+    );
+    assert!(
+        snapshot.environment_p95_us.saturating_mul(4) <= fresh.environment_p95_us,
+        "snapshot p95 {} us is not 4x faster than fresh p95 {} us",
+        snapshot.environment_p95_us,
+        fresh.environment_p95_us
+    );
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+struct StartupBenchmark {
+    mode: String,
+    environment_digest: String,
+    host_fingerprint: String,
+    environment_samples_us: Vec<u64>,
+    environment_p50_us: u64,
+    environment_p95_us: u64,
+    environment_p99_us: u64,
+    roundtrip_samples_us: Vec<u64>,
+    roundtrip_p50_us: u64,
+    roundtrip_p95_us: u64,
+    roundtrip_p99_us: u64,
+}
+
+impl StartupBenchmark {
+    /// Sorts the complete sample set and reports nearest-rank percentiles.
+    fn from_samples(
+        mode: String,
+        environment_digest: String,
+        host_fingerprint: String,
+        environment_samples_us: Vec<u64>,
+        roundtrip_samples_us: Vec<u64>,
+    ) -> Self {
+        assert_eq!(environment_samples_us.len(), BENCHMARK_SAMPLES);
+        assert_eq!(roundtrip_samples_us.len(), BENCHMARK_SAMPLES);
+        let mut environment = environment_samples_us.clone();
+        let mut roundtrip = roundtrip_samples_us.clone();
+        environment.sort_unstable();
+        roundtrip.sort_unstable();
+        Self {
+            mode,
+            environment_digest,
+            host_fingerprint,
+            environment_samples_us,
+            environment_p50_us: percentile(&environment, 50),
+            environment_p95_us: percentile(&environment, 95),
+            environment_p99_us: percentile(&environment, 99),
+            roundtrip_samples_us,
+            roundtrip_p50_us: percentile(&roundtrip, 50),
+            roundtrip_p95_us: percentile(&roundtrip, 95),
+            roundtrip_p99_us: percentile(&roundtrip, 99),
+        }
+    }
+}
+
+/// Returns one nearest-rank percentile from a non-empty sorted sample.
+fn percentile(samples: &[u64], percentile: usize) -> u64 {
+    assert!(!samples.is_empty());
+    assert!((1..=100).contains(&percentile));
+    let rank = samples.len().saturating_mul(percentile).div_ceil(100);
+    samples[rank.saturating_sub(1)]
+}
+
+/// Nearest-rank selection remains stable for the mandatory sample count.
+#[test]
+fn startup_percentiles_are_exact() {
+    let samples = (1..=BENCHMARK_SAMPLES as u64).collect::<Vec<_>>();
+    assert_eq!(percentile(&samples, 50), 15);
+    assert_eq!(percentile(&samples, 95), 29);
+    assert_eq!(percentile(&samples, 99), 30);
 }
 
 struct Execution {
@@ -148,14 +298,18 @@ fn execute(
     write_input(&mut input, probe);
     let input_bytes = input.metadata().unwrap().len();
     input.seek(SeekFrom::Start(0)).unwrap();
+    let action_sha256 = transport_sha256(&mut action_file);
+    let input_sha256 = transport_sha256(&mut input);
     let mut output = tempfile::tempfile().unwrap();
-    output.set_len(OUTPUT_BYTES).unwrap();
+    output.set_len(MAX_OUTPUT_BYTES).unwrap();
     let request = LauncherRequest {
         protocol: PROTOCOL_VERSION,
         action_id: uuid::Uuid::new_v4().to_string(),
         environment_digest: bundle.environment_digest().to_owned(),
         input_bytes,
-        output_bytes: OUTPUT_BYTES,
+        input_sha256,
+        output_bytes: MAX_OUTPUT_BYTES,
+        action_sha256,
         vcpu_count: VCPU_COUNT,
         memory_mib: MEMORY_MIB,
         timeout_ms,
@@ -169,6 +323,22 @@ fn execute(
     let response = read_response(&mut stream);
     output.seek(SeekFrom::Start(0)).unwrap();
     Execution { response, output }
+}
+
+/// Authenticates a KVM-test transport and rewinds it for descriptor passing.
+fn transport_sha256(file: &mut File) -> String {
+    file.seek(SeekFrom::Start(0)).unwrap();
+    let mut hasher = Sha256::new();
+    let mut buffer = [0u8; 16 * 1024];
+    loop {
+        let read = file.read(&mut buffer).unwrap();
+        if read == 0 {
+            break;
+        }
+        hasher.update(&buffer[..read]);
+    }
+    file.seek(SeekFrom::Start(0)).unwrap();
+    format!("{:x}", hasher.finalize())
 }
 
 /// Waits only for the configured launcher socket to accept its first connection.

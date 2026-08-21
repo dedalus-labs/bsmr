@@ -11,14 +11,21 @@ oncall("build_infra")
 
 rust_library(
     name = "bsmr_sandbox",
-    srcs = ["src/lib.rs"],
+    srcs = [
+        "src/firecracker.rs",
+        "src/lib.rs",
+        "src/snapshot.rs",
+    ],
     deps = [
         "bsmr_build//third-party/rust:serde",
         "bsmr_build//third-party/rust:serde_json",
         "bsmr_build//third-party/rust:sha2",
         "bsmr_build//third-party/rust:tar",
         "bsmr_build//third-party/rust:thiserror",
-    ],
+    ] + select({
+        "DEFAULT": [],
+        "ovr_config//os:linux": ["bsmr_build//third-party/rust:httparse"],
+    }),
 )
 
 rust_binary(
@@ -47,7 +54,10 @@ rust_binary(
         "bsmr_build//third-party/rust:thiserror",
     ] + select({
         "DEFAULT": [],
-        "ovr_config//os:linux": ["bsmr_build//third-party/rust:nix"],
+        "ovr_config//os:linux": [
+            "bsmr_build//third-party/rust:nix",
+            "bsmr_build//third-party/rust:rustix",
+        ],
     }),
 )
 
@@ -59,12 +69,12 @@ rust_binary(
     deps = [
         ":bsmr_sandbox",
         "bsmr_build//third-party/rust:serde_json",
+        "bsmr_build//third-party/rust:sha2",
         "bsmr_build//third-party/rust:thiserror",
     ] + select({
         "DEFAULT": [],
         "ovr_config//os:linux": [
             "bsmr_build//third-party/rust:clap",
-            "bsmr_build//third-party/rust:httparse",
             "bsmr_build//third-party/rust:nix",
             "bsmr_build//third-party/rust:rustix",
             "bsmr_build//third-party/rust:signal-hook",
