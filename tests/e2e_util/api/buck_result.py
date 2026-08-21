@@ -275,7 +275,7 @@ class TargetsResult(BuckResult):
 
     def get_target_to_build_output(self) -> Dict[str, str]:
         """
-        Returns a dict of the target and its output file in buck-out
+        Returns a dict of the target and its output file in bsmr-out
         """
         target_to_output = {}
         assert (
@@ -301,8 +301,8 @@ class BuildResult(BuckResult):
 
     def get_target_to_build_output(self) -> Dict[str, str]:
         """
-        Returns a dict of the build target and file created in buck-out
-        Prints to build target followed by path to buck-out file to stdout
+        Returns a dict of the build target and file created in bsmr-out
+        Prints to build target followed by path to bsmr-out file to stdout
         """
         target_to_output = {}
         assert (

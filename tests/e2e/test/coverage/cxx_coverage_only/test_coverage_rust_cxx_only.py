@@ -91,7 +91,7 @@ async def test_rust_test_coverage_of_cpp_file_filtering_by_file_with_cxx(
     )
 
     fbcode_filename = f"fbcode/{file_to_collect_coverage}"
-    # cxx.h is a CXX bridge framework header whose buck-out path now resolves
+    # cxx.h is a CXX bridge framework header whose bsmr-out path now resolves
     # to a source path due to -fcoverage-prefix-map; filter it out.
     paths = [p for p in paths if not p.endswith("/cxx.h")]
     assert paths == [fbcode_filename], str(paths)
@@ -181,7 +181,7 @@ async def test_rust_test_coverage_of_cpp_file_filtering_by_header_with_cxx(
         ["testing_frameworks/code_coverage/rust/AdderWithHeaderCode.h"],
     )
 
-    # cxx.h is a CXX bridge framework header whose buck-out path now resolves
+    # cxx.h is a CXX bridge framework header whose bsmr-out path now resolves
     # to a source path due to -fcoverage-prefix-map; filter it out.
     paths = [p for p in paths if not p.endswith("/cxx.h")]
     assert len(paths) == 3, str(paths)

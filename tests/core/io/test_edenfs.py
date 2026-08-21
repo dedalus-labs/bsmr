@@ -222,10 +222,10 @@ async def test_edenfs_files_report_on_fresh_instance(buck: Buck) -> None:
 
 @buck_test(
     setup_eden=True,
-    # the test has subproject and creates buck-out in subproject,
-    # when we setup eden we assume that buck-out is in project root dir
-    # and redirect only that buck-out and not buck-out in subproject.
-    # So, ignore soft errors that buck-out isn't redirected
+    # the test has subproject and creates bsmr-out in subproject,
+    # when we setup eden we assume that bsmr-out is in project root dir
+    # and redirect only that bsmr-out and not bsmr-out in subproject.
+    # So, ignore soft errors that bsmr-out isn't redirected
     allow_soft_errors=True,
     # test is flaky on windows
     skip_for_os=["windows"],
@@ -252,10 +252,10 @@ async def test_edenfs_changes_in_subproject(buck: Buck) -> None:
 
 @buck_test(
     setup_eden=True,
-    # the test has subproject and creates buck-out in subproject,
-    # when we setup eden we assume that buck-out is in project root dir
-    # and redirect only that buck-out and not buck-out in subproject.
-    # So, ignore soft errors that buck-out isn't redirected
+    # the test has subproject and creates bsmr-out in subproject,
+    # when we setup eden we assume that bsmr-out is in project root dir
+    # and redirect only that bsmr-out and not bsmr-out in subproject.
+    # So, ignore soft errors that bsmr-out isn't redirected
     allow_soft_errors=True,
     # test is flaky on windows
     skip_for_os=["windows"],

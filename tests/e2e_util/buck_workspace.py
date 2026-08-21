@@ -199,7 +199,7 @@ async def buck_fixture(  # noqa C901 : "too complex"
                     # Use the FS Events watcher, which is more reliable than the default.
                     json.dump(
                         {
-                            "ignore_dirs": ["buck-out", ".hg"],
+                            "ignore_dirs": ["bsmr-out", ".hg"],
                             "fsevents_watch_files": True,
                             "prefer_split_fsevents_watcher": False,
                         },
@@ -325,7 +325,7 @@ def _eden_base_cmd(eden_dir: Path) -> List[str]:
     ]
 
 
-# Adapted from Eden integration test, didn't use their code because Eden uses the compiled binary in their buck-out
+# Adapted from Eden integration test, didn't use their code because Eden uses the compiled binary in their bsmr-out
 # which we don't have, extracting that part out would be more work than what was done below.
 # https://www.internalfb.com/code/fbsource/[45334ead4a72]/fbcode/eden/integration/lib/testcase.py?lines=123
 def _setup_eden(
@@ -361,11 +361,11 @@ def _setup_eden(
     # Let's use symlink redirections to avoid these issues.
     redirection_type = "symlink" if sys.platform == "darwin" else "bind"
     with open(temp_repo / ".eden-redirections", "w") as f:
-        f.write(f'[redirections]\n"buck-out" = "{redirection_type}"\n')
+        f.write(f'[redirections]\n"bsmr-out" = "{redirection_type}"\n')
 
     # Make sure the repo's `sl status` is clean. Eden auto-creates the redirections
     with open(temp_repo / ".gitignore", "w") as f:
-        f.write("/buck-out\n")
+        f.write("/bsmr-out\n")
 
     subprocess.check_call(
         ["hg", "commit", "--addremove", "-m", "init"],
@@ -442,7 +442,7 @@ def _copytree(
     """Copies all files and directories from src into dst"""
     dst.mkdir(parents=True, exist_ok=True)
     for item in os.listdir(src):
-        if item == "buck-out":
+        if item == "bsmr-out":
             continue
         s = src / item
         d = dst / item

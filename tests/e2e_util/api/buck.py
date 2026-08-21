@@ -828,7 +828,7 @@ class Buck(Executable):
         args = list(argv)
         invocation_record_path = None
         if self.write_invocation_record and can_write_invocation_record:
-            invocation_record_dir = cwd / "buck-out" / "tmp"
+            invocation_record_dir = cwd / "bsmr-out" / "tmp"
             invocation_record_dir.mkdir(parents=True, exist_ok=True)
             invocation_record_path = invocation_record_dir / (buck_build_id + ".json")
             separator_idx = args.index("--") if "--" in args else len(args)

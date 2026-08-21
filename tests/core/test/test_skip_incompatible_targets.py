@@ -24,7 +24,7 @@ from bsmr.tests.e2e_util.buck_workspace import buck_test, env
 @buck_test()
 @env(
     "BSMR_ALLOW_INTERNAL_TEST_RUNNER_DO_NOT_USE", "1"
-)  # needed to avoid failure on missing bsmr-tpx in buck-out
+)  # needed to avoid failure on missing bsmr-tpx in bsmr-out
 async def test_test_skip_incompatible_targets(buck: Buck) -> None:
     targetA = "root//:compatible-with-A"
     targetB = "root//:compatible-with-B"

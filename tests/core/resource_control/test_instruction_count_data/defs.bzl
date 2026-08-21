@@ -13,7 +13,7 @@ _cache_buster = read_config("test", "cache_buster", default = "")
 def _impl(ctx):
     tbi_bin = ctx.actions.declare_output("tbi.bin", has_content_based_path = False)
     ctx.actions.run(
-        # Copy the helper binary into buck-out so the action below can
+        # Copy the helper binary into bsmr-out so the action below can
         # run remotely
         cmd_args(
             "cp",

@@ -40,7 +40,7 @@ async def test_exit_code_build_fail(buck: Buck) -> None:
 @buck_test()
 @env("BSMR_TEST_FAIL_BUCKD_AUTH", "true")
 # This test case spawns a loose daemon that we can't connect to. On windows
-# this loose daemon will keep holding onto buck-out files after test case finishes
+# this loose daemon will keep holding onto bsmr-out files after test case finishes
 # and prevent other processes from changing them, so set a termination timeout
 # of 20 seconds so that this loose daemon gets killed before test case finishes.
 @env("BSMR_TERMINATE_AFTER", "15")

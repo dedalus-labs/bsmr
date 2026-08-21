@@ -156,7 +156,7 @@ async def test_clean_stale_artifact_dir(buck: Buck) -> None:
     output_parent = output_1.parent
     while not output_parent.exists():
         output_parent = output_parent.parent
-    assert output_parent.parts[-3:] == ("buck-out", "v2", "art")
+    assert output_parent.parts[-3:] == ("bsmr-out", "v2", "art")
 
 
 @buck_test()
@@ -196,7 +196,7 @@ async def test_clean_stale_declared(buck: Buck) -> None:
     await buck.kill()
 
     # Drop the state. The path exists on disk.
-    shutil.rmtree(buck.cwd / "buck-out/v2/cache/materializer_state")
+    shutil.rmtree(buck.cwd / "bsmr-out/v2/cache/materializer_state")
 
     # Build again, start by declaring, then clean, then require locally.
     await buck.build("//declared:remote")

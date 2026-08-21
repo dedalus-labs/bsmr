@@ -22,7 +22,7 @@ def bxl_test(src, name = None, labels = None, buck_args: list[str] | None = None
 
     Parameters:
         src: source path of BXL script. This cannot be a target since bxl
-            can only be invoked from the repo and not from buck-out.
+            can only be invoked from the repo and not from bsmr-out.
         name: Name of the test target. If unspecified, use src as the name.
         buck_args: Arguments to `bsmr bxl` invocation for buck specifically.
             Common examples are `--config` flags and `---modifier` flags.
