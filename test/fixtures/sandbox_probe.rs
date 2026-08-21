@@ -6,6 +6,7 @@
 //! Exercises host-containment invariants from inside a Firecracker guest.
 
 use std::fs;
+use std::io::Read;
 use std::os::unix::fs::PermissionsExt;
 use std::os::unix::fs::symlink;
 use std::path::Path;
@@ -33,6 +34,15 @@ fn main() {
             .all(|line| line.split(':').next().unwrap().trim() == "lo")
     );
     fs::create_dir("out").unwrap();
+    if std::env::args().nth(1).as_deref() == Some("random") {
+        let mut random = [0u8; 32];
+        fs::File::open("/dev/urandom")
+            .unwrap()
+            .read_exact(&mut random)
+            .unwrap();
+        fs::write("out/random", random).unwrap();
+        return;
+    }
     fs::create_dir("out/empty").unwrap();
     fs::write("out/result", b"isolated\n").unwrap();
     fs::write("out/unicode-\u{2603}", b"snow\n").unwrap();

@@ -56,9 +56,11 @@ use bsmr_sandbox::VCPU_COUNT;
 use bsmr_sandbox::VerifiedBundle;
 use prost::Message;
 use remote_execution as RE;
+use sha2::Digest;
+use sha2::Sha256;
 
 const SANDBOX_PROFILE: &str = "untrusted-v1";
-const SANDBOX_PROTOCOL: &str = "1";
+const SANDBOX_PROTOCOL: &str = "2";
 
 #[derive(Debug, bsmr_error::Error)]
 #[bsmr(input)]
@@ -73,7 +75,7 @@ enum FirecrackerSandboxError {
     InheritedEnvironment,
     #[error("Firecracker sandbox actions cannot use persistent workers")]
     PersistentWorker,
-    #[error("Firecracker sandbox protocol v1 requires network_access = none")]
+    #[error("Firecracker sandbox protocol v2 requires network_access = none")]
     NetworkAccess,
     #[error("invalid Firecracker execution bundle: {0}")]
     Bundle(String),
@@ -89,7 +91,7 @@ enum FirecrackerSandboxError {
         target: PathBuf,
         root: PathBuf,
     },
-    #[error("Firecracker launcher protocol must be 1, got {0}")]
+    #[error("Firecracker launcher protocol must be 2, got {0}")]
     LauncherProtocol(u32),
     #[error("Firecracker launcher reported incomplete cleanup")]
     IncompleteCleanup,
@@ -117,7 +119,7 @@ enum FirecrackerSandboxError {
     MissingEnvelope(&'static str),
     #[error("invalid Firecracker guest result: {0}")]
     ParseGuestResult(serde_json::Error),
-    #[error("Firecracker guest protocol must be 1, got {0}")]
+    #[error("Firecracker guest protocol must be 2, got {0}")]
     GuestProtocol(u32),
     #[error("Firecracker output staging directory must be empty: `{0:?}`")]
     StagingNotEmpty(PathBuf),
@@ -153,6 +155,8 @@ enum FirecrackerSandboxError {
     LauncherFailure(String),
     #[error("Firecracker launcher status and error payload disagree")]
     LauncherStatusShape,
+    #[error("Firecracker launcher status and environment-start timing disagree")]
+    LauncherTimingShape,
     #[error("Firecracker launcher returned timeout without an action deadline")]
     MissingTimeout,
     #[error("Firecracker action timeout exceeds u64 milliseconds")]
@@ -174,13 +178,13 @@ enum FirecrackerSandboxError {
     },
     #[error("Firecracker action command must contain an executable")]
     MissingExecutable,
-    #[error("Firecracker protocol v1 requires a project-relative executable, got `{0}`")]
+    #[error("Firecracker protocol v2 requires a project-relative executable, got `{0}`")]
     AbsoluteExecutable(String),
-    #[error("Firecracker protocol v1 does not support required local resources")]
+    #[error("Firecracker protocol v2 does not support required local resources")]
     LocalResources,
-    #[error("Firecracker protocol v1 does not support incremental output state")]
+    #[error("Firecracker protocol v2 does not support incremental output state")]
     IncrementalOutputs,
-    #[error("Firecracker protocol v1 does not support actions that outlive their command")]
+    #[error("Firecracker protocol v2 does not support actions that outlive their command")]
     DetachedProcess,
     #[error("failed to create Firecracker transport file: {0}")]
     CreateTransport(std::io::Error),
@@ -224,7 +228,7 @@ pub struct HostCapabilities<'a> {
 }
 
 impl HostCapabilities<'static> {
-    /// Detects the minimum host capabilities required by Firecracker protocol v1.
+    /// Detects the minimum host capabilities required by Firecracker protocol v2.
     #[must_use]
     pub fn detect() -> Self {
         Self {
@@ -293,7 +297,7 @@ pub enum WorkerPolicy {
     Persistent,
 }
 
-/// A proof that an action uses only semantics implemented by protocol v1.
+/// A proof that an action uses only semantics implemented by protocol v2.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub struct FirecrackerActionPolicy;
 
@@ -371,7 +375,9 @@ impl FirecrackerExecutor {
             .map_err(FirecrackerSandboxError::CreateTransport)?
             .len();
 
-        let action_file = write_guest_action(&action)?;
+        let mut action_file = write_guest_action(&action)?;
+        let input_sha256 = transport_sha256(&mut input)?;
+        let action_sha256 = transport_sha256(&mut action_file)?;
         let mut output = tempfile::tempfile().map_err(FirecrackerSandboxError::CreateTransport)?;
         output
             .set_len(MAX_OUTPUT_BYTES)
@@ -382,7 +388,9 @@ impl FirecrackerExecutor {
             action_id: uuid::Uuid::new_v4().to_string(),
             environment_digest: self.environment_digest().to_owned(),
             input_bytes,
+            input_sha256,
             output_bytes: MAX_OUTPUT_BYTES,
+            action_sha256,
             vcpu_count: VCPU_COUNT,
             memory_mib: MEMORY_MIB,
             timeout_ms: action.timeout_ms,
@@ -400,30 +408,7 @@ impl FirecrackerExecutor {
 
         let status = match response.status {
             LauncherStatus::Completed => {
-                output
-                    .seek(SeekFrom::Start(0))
-                    .map_err(FirecrackerSandboxError::CreateTransport)?;
-                let staging = tempfile::Builder::new()
-                    .prefix(".bsmr-firecracker-")
-                    .tempdir_in(project_root)
-                    .map_err(FirecrackerSandboxError::CreateTransport)?;
-                let result = extract_guest_outputs(&mut output, staging.path(), &action.outputs)?;
-                import_outputs(staging.path(), project_root, &action.outputs)?;
-                let status = if result.timed_out {
-                    GatherOutputStatus::TimedOut(action_timeout(&action)?)
-                } else {
-                    GatherOutputStatus::Finished {
-                        exit_code: result.exit_code,
-                        execution_stats: None,
-                    }
-                };
-                return Ok(CommandResult {
-                    status,
-                    stdout: result.stdout,
-                    stderr: result.stderr,
-                    cgroup_result: None,
-                    orphan_processes: Vec::new(),
-                });
+                return completed_result(&mut output, project_root, &action);
             }
             LauncherStatus::TimedOut => GatherOutputStatus::TimedOut(action_timeout(&action)?),
             LauncherStatus::Cancelled => GatherOutputStatus::Cancelled,
@@ -444,6 +429,58 @@ impl FirecrackerExecutor {
     }
 }
 
+/// Validates, stages, and imports one completed guest result.
+fn completed_result(
+    output: &mut File,
+    project_root: &Path,
+    action: &GuestAction,
+) -> bsmr_error::Result<CommandResult> {
+    output
+        .seek(SeekFrom::Start(0))
+        .map_err(FirecrackerSandboxError::CreateTransport)?;
+    let staging = tempfile::Builder::new()
+        .prefix(".bsmr-firecracker-")
+        .tempdir_in(project_root)
+        .map_err(FirecrackerSandboxError::CreateTransport)?;
+    let result = extract_guest_outputs(output, staging.path(), &action.outputs)?;
+    import_outputs(staging.path(), project_root, &action.outputs)?;
+    let status = if result.timed_out {
+        GatherOutputStatus::TimedOut(action_timeout(action)?)
+    } else {
+        GatherOutputStatus::Finished {
+            exit_code: result.exit_code,
+            execution_stats: None,
+        }
+    };
+    Ok(CommandResult {
+        status,
+        stdout: result.stdout,
+        stderr: result.stderr,
+        cgroup_result: None,
+        orphan_processes: Vec::new(),
+    })
+}
+
+/// Authenticates one transport descriptor and rewinds it for launcher transfer.
+fn transport_sha256(file: &mut File) -> bsmr_error::Result<String> {
+    file.seek(SeekFrom::Start(0))
+        .map_err(FirecrackerSandboxError::CreateTransport)?;
+    let mut hasher = Sha256::new();
+    let mut buffer = [0u8; 16 * 1024];
+    loop {
+        let read = file
+            .read(&mut buffer)
+            .map_err(FirecrackerSandboxError::CreateTransport)?;
+        if read == 0 {
+            break;
+        }
+        hasher.update(&buffer[..read]);
+    }
+    file.seek(SeekFrom::Start(0))
+        .map_err(FirecrackerSandboxError::CreateTransport)?;
+    Ok(format!("{:x}", hasher.finalize()))
+}
+
 /// Recovers the required duration for a result that claims timeout.
 fn action_timeout(action: &GuestAction) -> bsmr_error::Result<Duration> {
     action
@@ -452,7 +489,7 @@ fn action_timeout(action: &GuestAction) -> bsmr_error::Result<Duration> {
         .ok_or_else(|| FirecrackerSandboxError::MissingTimeout.into())
 }
 
-/// Proves that an action uses only semantics implemented by protocol v1.
+/// Proves that an action uses only semantics implemented by protocol v2.
 pub(crate) fn validate_action_policy(
     prepared: &PreparedAction,
     request: &CommandExecutionRequest,
@@ -806,6 +843,17 @@ pub fn validate_launcher_response(response: &LauncherResponse) -> bsmr_error::Re
     };
     if !error_shape_is_valid {
         return Err(FirecrackerSandboxError::LauncherStatusShape.into());
+    }
+    let timing_shape_is_valid = match response.status {
+        LauncherStatus::Completed | LauncherStatus::TimedOut => {
+            response.environment_start_us.is_some()
+        }
+        LauncherStatus::Failed | LauncherStatus::Cancelled => {
+            response.environment_start_us.is_none()
+        }
+    };
+    if !timing_shape_is_valid {
+        return Err(FirecrackerSandboxError::LauncherTimingShape.into());
     }
     Ok(())
 }
@@ -1396,7 +1444,7 @@ fn create_output_symlink(_target: &Path, _destination: &Path) -> bsmr_error::Res
     Err(FirecrackerSandboxError::UnsupportedOs(std::env::consts::OS.to_owned()).into())
 }
 
-/// Returns the complete sorted action identity for Firecracker protocol v1.
+/// Returns the complete sorted action identity for Firecracker protocol v2.
 #[must_use]
 pub fn sandbox_platform_properties(environment_digest: &str) -> [(&'static str, &str); 4] {
     [
@@ -1440,12 +1488,28 @@ mod tests {
     #[test]
     fn bundle_identity_changes_with_every_artifact() {
         let temp = tempfile::tempdir().unwrap();
-        for name in ["firecracker", "jailer", "kernel", "rootfs"] {
+        for name in [
+            "firecracker",
+            "jailer",
+            "kernel",
+            "rootfs",
+            "snapshot",
+            "memory",
+        ] {
             fs::write(temp.path().join(name), name).unwrap();
         }
 
         let before = load_test_bundle(temp.path());
-        for name in ["firecracker", "jailer", "kernel", "rootfs"] {
+        let other_host = load_test_bundle_for_host(temp.path(), "sha256:other-host");
+        assert_ne!(before.environment_digest(), other_host.environment_digest());
+        for name in [
+            "firecracker",
+            "jailer",
+            "kernel",
+            "rootfs",
+            "snapshot",
+            "memory",
+        ] {
             fs::write(temp.path().join(name), format!("changed {name}")).unwrap();
             let after = load_test_bundle(temp.path());
             assert_ne!(before.environment_digest(), after.environment_digest());
@@ -1455,22 +1519,35 @@ mod tests {
 
     /// Constructs one valid synthetic bundle for semantic identity tests.
     fn load_test_bundle(root: &Path) -> FirecrackerBundle {
-        let artifacts = ["firecracker", "jailer", "kernel", "rootfs"]
-            .into_iter()
-            .map(|name| {
-                let bytes = fs::read(root.join(name)).unwrap();
-                (
-                    name.to_owned(),
-                    BundleArtifact {
-                        path: name.into(),
-                        sha256: format!("{:x}", Sha256::digest(bytes)),
-                    },
-                )
-            })
-            .collect();
+        load_test_bundle_for_host(root, "sha256:test-host")
+    }
+
+    /// Constructs one synthetic bundle for an exact snapshot host class.
+    fn load_test_bundle_for_host(root: &Path, host_fingerprint: &str) -> FirecrackerBundle {
+        let artifacts = [
+            "firecracker",
+            "jailer",
+            "kernel",
+            "rootfs",
+            "snapshot",
+            "memory",
+        ]
+        .into_iter()
+        .map(|name| {
+            let bytes = fs::read(root.join(name)).unwrap();
+            (
+                name.to_owned(),
+                BundleArtifact {
+                    path: name.into(),
+                    sha256: format!("{:x}", Sha256::digest(bytes)),
+                },
+            )
+        })
+        .collect();
         let manifest = BundleManifest {
             schema: PROTOCOL_VERSION,
             architecture: std::env::consts::ARCH.to_owned(),
+            host_fingerprint: host_fingerprint.to_owned(),
             firecracker_version: "test".to_owned(),
             jailer_version: "test".to_owned(),
             artifacts,
@@ -1491,7 +1568,7 @@ mod tests {
                 ("bsmr.sandbox.backend", "firecracker"),
                 ("bsmr.sandbox.environment", "sha256:environment"),
                 ("bsmr.sandbox.profile", "untrusted-v1"),
-                ("bsmr.sandbox.protocol", "1"),
+                ("bsmr.sandbox.protocol", "2"),
             ]
         );
     }
@@ -1657,17 +1734,22 @@ mod tests {
             protocol: PROTOCOL_VERSION,
             status: LauncherStatus::Completed,
             cleanup_complete: true,
+            environment_start_us: Some(1),
             error: None,
         };
         assert!(validate_launcher_response(&completed()).is_ok());
 
         let mut wrong_protocol = completed();
-        wrong_protocol.protocol = 2;
+        wrong_protocol.protocol = PROTOCOL_VERSION + 1;
         assert!(validate_launcher_response(&wrong_protocol).is_err());
 
         let mut leaked = completed();
         leaked.cleanup_complete = false;
         assert!(validate_launcher_response(&leaked).is_err());
+
+        let mut missing_timing = completed();
+        missing_timing.environment_start_us = None;
+        assert!(validate_launcher_response(&missing_timing).is_err());
 
         let mut ambiguous = completed();
         ambiguous.error = Some("unexpected".to_owned());
@@ -1714,6 +1796,7 @@ mod tests {
                 protocol: PROTOCOL_VERSION,
                 status: LauncherStatus::Completed,
                 cleanup_complete: true,
+                environment_start_us: Some(1),
                 error: None,
             };
             let payload = serde_json::to_vec(&response).unwrap();
@@ -1732,7 +1815,9 @@ mod tests {
             action_id: "01234567-89ab-cdef-0123-456789abcdef".to_owned(),
             environment_digest: "sha256:test".to_owned(),
             input_bytes: 5,
+            input_sha256: format!("{:x}", Sha256::digest(b"input")),
             output_bytes: 0,
+            action_sha256: format!("{:x}", Sha256::digest(b"action")),
             vcpu_count: 1,
             memory_mib: 128,
             timeout_ms: None,
@@ -1757,7 +1842,7 @@ mod tests {
     #[test]
     fn output_archive_round_trips_declared_results() {
         let archive = output_archive(&[
-            (".bsmr/result.json", br#"{"protocol":1,"exit_code":0}"#),
+            (".bsmr/result.json", br#"{"protocol":2,"exit_code":0}"#),
             (".bsmr/stdout", b"compiled\n"),
             (".bsmr/stderr", b""),
             ("outputs/bsmr-out/app.js", b"export {};\n"),
@@ -1784,7 +1869,7 @@ mod tests {
     #[test]
     fn output_archive_rejects_undeclared_nodes_before_import() {
         let archive = output_archive(&[
-            (".bsmr/result.json", br#"{"protocol":1,"exit_code":0}"#),
+            (".bsmr/result.json", br#"{"protocol":2,"exit_code":0}"#),
             (".bsmr/stdout", b""),
             (".bsmr/stderr", b""),
             ("outputs/.ssh/authorized_keys", b"oops"),
@@ -1887,7 +1972,7 @@ mod tests {
         append_archive_file(
             &mut archive,
             ".bsmr/result.json",
-            br#"{"protocol":1,"exit_code":0}"#,
+            br#"{"protocol":2,"exit_code":0}"#,
         );
         append_archive_file(&mut archive, ".bsmr/stdout", b"");
         append_archive_file(&mut archive, ".bsmr/stderr", b"");
