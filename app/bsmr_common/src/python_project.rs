@@ -9,6 +9,7 @@ use std::collections::BTreeMap;
 use std::collections::BTreeSet;
 
 use bsmr_core::cells::paths::CellRelativePathBuf;
+use bsmr_core::fs::buck_out_path::BSMR_OUTPUT_ROOT;
 use bsmr_core::package::package_relative_path::PackageRelativePath;
 use globset::GlobBuilder;
 use globset::GlobSet;
@@ -598,22 +599,23 @@ fn is_generated_path(path: &str, virtual_environments: &[String]) -> bool {
         || path == "pylock.toml"
         || path == "uv.lock"
         || path.split('/').any(|component| {
-            matches!(
-                component,
-                ".bsmr"
-                    | ".git"
-                    | ".mypy_cache"
-                    | ".pytest_cache"
-                    | ".ruff_cache"
-                    | ".venv"
-                    | "__pycache__"
-                    | "buck-out"
-                    | "build"
-                    | "dist"
-                    | "node_modules"
-                    | "target"
-                    | "target-bsmr"
-            ) || component.ends_with(".egg-info")
+            component == BSMR_OUTPUT_ROOT
+                || matches!(
+                    component,
+                    ".bsmr"
+                        | ".git"
+                        | ".mypy_cache"
+                        | ".pytest_cache"
+                        | ".ruff_cache"
+                        | ".venv"
+                        | "__pycache__"
+                        | "build"
+                        | "dist"
+                        | "node_modules"
+                        | "target"
+                        | "target-bsmr"
+                )
+                || component.ends_with(".egg-info")
         })
 }
 
@@ -843,7 +845,7 @@ mod tests {
             "examples/pyproject.toml",
             "README.md",
             "bazel-demo/generated.py",
-            "buck-out/generated.py",
+            "bsmr-out/generated.py",
             ".venv/ignored.py",
             ".custom-env/pyvenv.cfg",
             ".custom-env/lib/python3.14/site-packages/demo/pyproject.toml",
@@ -879,7 +881,7 @@ mod tests {
         assert!(!build.contains(".venv/ignored.py"));
         assert!(!build.contains(".custom-env"));
         assert!(!build.contains("bazel-demo"));
-        assert!(!build.contains("buck-out"));
+        assert!(!build.contains("bsmr-out"));
         assert!(!build.contains("node_modules"));
         assert!(!build.contains("target-bsmr"));
         assert!(!build.contains("target/generated.py"));

@@ -25,6 +25,7 @@ use bsmr_common::argv::Argv;
 use bsmr_common::argv::SanitizedArgv;
 use bsmr_common::legacy_configs::cells::BsmrConfigBasedCells;
 use bsmr_common::legacy_configs::key::BsmrconfigKeyRef;
+use bsmr_core::fs::buck_out_path::BSMR_OUTPUT_ROOT;
 
 use crate::commands::go_graph::GoGraph;
 use crate::commands::go_manifest::SyncMode;
@@ -412,7 +413,7 @@ fn contains_go_source(root: &Path) -> Result<bool, GoCommandError> {
 
 /// Mirrors Go wildcard exclusions and adds Bessemer's materialization root.
 fn ignored_root_directory(name: &str) -> bool {
-    name == "buck-out"
+    name == BSMR_OUTPUT_ROOT
         || name == "testdata"
         || name == "vendor"
         || name.starts_with('.')

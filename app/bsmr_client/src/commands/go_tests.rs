@@ -53,7 +53,7 @@ fn rejects_unconfigured_build_tags() {
 #[test]
 fn discovers_package_roots_without_bsmr_outputs() {
     let root = tempfile::tempdir().expect("temporary repository");
-    for directory in ["pkg", "buck-out", "vendor", ".hidden", "_tools"] {
+    for directory in ["pkg", "bsmr-out", "vendor", ".hidden", "_tools"] {
         fs::create_dir(root.path().join(directory)).expect("fixture directory");
     }
     fs::write(root.path().join("root.go"), "package root\n").expect("root source");

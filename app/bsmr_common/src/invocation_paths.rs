@@ -20,6 +20,7 @@
 use std::borrow::Cow;
 
 use allocative::Allocative;
+use bsmr_core::fs::buck_out_path::BSMR_OUTPUT_ROOT;
 use bsmr_core::fs::project::ProjectRoot;
 use bsmr_core::fs::project_rel_path::ProjectRelativePath;
 use bsmr_core::fs::project_rel_path::ProjectRelativePathBuf;
@@ -41,7 +42,7 @@ pub struct InvocationPaths {
     ///
     /// The daemon metadata directory is post-fixed with the isolation prefix
     /// (i.e `$HOME/.buck/buckd/<projectroot>/<isolationdir>`).
-    /// The buck-out is `<projectroot>/buck-out/<isolationdir>/`
+    /// The output path is `<projectroot>/bsmr-out/<isolationdir>/`.
     ///
     /// Any on-disk state from the daemon (including build outputs and similar) should only
     /// be written or read from directories that include this component.
@@ -119,7 +120,7 @@ impl InvocationPaths {
     }
 
     pub fn buck_out_dir_prefix() -> &'static ProjectRelativePath {
-        ProjectRelativePath::unchecked_new("buck-out")
+        ProjectRelativePath::unchecked_new(BSMR_OUTPUT_ROOT)
     }
 
     pub fn buck_out_dir(&self) -> ProjectRelativePathBuf {
@@ -159,7 +160,7 @@ impl InvocationPaths {
     }
 
     /// This is used by the forkserver to write the miniperf wrapper binary (if used), as well as
-    /// temporary files used by miniperf. We put this in buck-out because that directory gets
+    /// temporary files used by miniperf. We put this in bsmr-out because that directory gets
     /// allowlisted for execution (because we write lots of tools there).
     pub fn forkserver_state_dir(&self) -> AbsNormPathBuf {
         self.buck_out_path()
@@ -189,13 +190,13 @@ impl InvocationPaths {
 
     /// Trash directory for background clean operations.
     /// Files moved here can be deleted asynchronously without blocking the main clean operation.
-    /// This points to buck-out/tmp/stale-buck-out which is used as the trash directory.
+    /// This points to bsmr-out/tmp/stale-bsmr-out which is used as the trash directory.
     pub fn trash_dir(&self) -> AbsNormPathBuf {
         self.roots
             .project_root
             .root()
             .join(Self::buck_out_dir_prefix())
-            .join(ForwardRelativePath::unchecked_new("tmp/stale-buck-out"))
+            .join(ForwardRelativePath::unchecked_new("tmp/stale-bsmr-out"))
     }
 }
 
@@ -258,37 +259,37 @@ mod tests {
 
         assert_eq!(
             paths.buck_out_dir(),
-            ProjectRelativePathBuf::unchecked_new("buck-out/isolation".to_owned())
+            ProjectRelativePathBuf::unchecked_new("bsmr-out/isolation".to_owned())
         );
         let expected_path = if cfg!(windows) {
-            "C:\\my\\project\\buck-out\\isolation"
+            "C:\\my\\project\\bsmr-out\\isolation"
         } else {
-            "/my/project/buck-out/isolation"
+            "/my/project/bsmr-out/isolation"
         };
         assert_eq!(paths.buck_out_path().as_os_str(), OsStr::new(expected_path));
 
         let expected_path = if cfg!(windows) {
-            "C:\\my\\project\\buck-out\\isolation\\log"
+            "C:\\my\\project\\bsmr-out\\isolation\\log"
         } else {
-            "/my/project/buck-out/isolation/log"
+            "/my/project/bsmr-out/isolation/log"
         };
         assert_eq!(paths.log_dir().as_os_str(), OsStr::new(expected_path));
         let expected_path = if cfg!(windows) {
-            "C:\\my\\project\\buck-out\\isolation\\dice_dump"
+            "C:\\my\\project\\bsmr-out\\isolation\\dice_dump"
         } else {
-            "/my/project/buck-out/isolation/dice_dump"
+            "/my/project/bsmr-out/isolation/dice_dump"
         };
         assert_eq!(paths.dice_dump_dir().as_os_str(), OsStr::new(expected_path));
 
         assert_eq!(
             paths.cache_dir(),
-            ProjectRelativePathBuf::unchecked_new("buck-out/isolation/cache".to_owned())
+            ProjectRelativePathBuf::unchecked_new("bsmr-out/isolation/cache".to_owned())
         );
 
         let expected_path = if cfg!(windows) {
-            "C:\\my\\project\\buck-out\\isolation\\cache\\materializer_state"
+            "C:\\my\\project\\bsmr-out\\isolation\\cache\\materializer_state"
         } else {
-            "/my/project/buck-out/isolation/cache/materializer_state"
+            "/my/project/bsmr-out/isolation/cache/materializer_state"
         };
         assert_eq!(
             paths.materializer_state_path().as_os_str(),
@@ -296,9 +297,9 @@ mod tests {
         );
 
         let expected_path = if cfg!(windows) {
-            "C:\\my\\project\\buck-out\\isolation\\health_check"
+            "C:\\my\\project\\bsmr-out\\isolation\\health_check"
         } else {
-            "/my/project/buck-out/isolation/health_check"
+            "/my/project/bsmr-out/isolation/health_check"
         };
         assert_eq!(
             paths.health_check_state_dir().as_os_str(),

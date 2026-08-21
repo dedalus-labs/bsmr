@@ -2,7 +2,7 @@
 Cargo.lock
 !/Cargo.lock
 !/tools/build/third-party/rust/Cargo.lock
-buck-out
+bsmr-out
 /node_modules/
 /site/
 __pycache__/

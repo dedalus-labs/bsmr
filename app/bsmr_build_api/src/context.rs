@@ -20,6 +20,7 @@ use std::sync::Arc;
 
 use allocative::Allocative;
 use async_trait::async_trait;
+use bsmr_core::fs::buck_out_path::BSMR_OUTPUT_ROOT;
 use bsmr_core::fs::buck_out_path::BuckOutPathResolver;
 use bsmr_core::fs::project_rel_path::ProjectRelativePathBuf;
 use derive_more::Display;
@@ -81,7 +82,7 @@ impl SetBuildContextData for DiceTransactionUpdater {
             BuildDataKey,
             Arc::new(BuildData {
                 buck_out_path: path.unwrap_or_else(|| {
-                    ProjectRelativePathBuf::unchecked_new("buck-out/v2".to_owned())
+                    ProjectRelativePathBuf::unchecked_new(format!("{BSMR_OUTPUT_ROOT}/v2"))
                 }),
             }),
         )])?)

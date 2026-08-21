@@ -25,6 +25,7 @@ use bsmr_client_ctx::final_console::FinalConsole;
 use bsmr_client_ctx::path_arg::PathArg;
 use bsmr_common::argv::Argv;
 use bsmr_common::argv::SanitizedArgv;
+use bsmr_core::fs::buck_out_path::BSMR_OUTPUT_ROOT;
 use bsmr_error::BuckErrorContext;
 use bsmr_error::ErrorTag;
 use bsmr_error::bsmr_error;
@@ -198,9 +199,9 @@ fn initialize_bsmrconfig(repo_root: &AbsPath, prelude: bool, git: bool) -> bsmr_
 
 fn set_up_gitignore(repo_root: &AbsPath) -> bsmr_error::Result<()> {
     let gitignore = repo_root.join(".gitignore");
-    // If .gitignore is empty or doesn't exist, add in buck-out
+    // A new repository must not expose Bessemer's generated state to Git.
     if !gitignore.exists() || fs_util::metadata(&gitignore).categorize_internal()?.len() == 0 {
-        fs_util::write(gitignore, "/buck-out\n").categorize_internal()?;
+        fs_util::write(gitignore, format!("/{BSMR_OUTPUT_ROOT}\n")).categorize_internal()?;
     }
     Ok(())
 }
@@ -269,10 +270,10 @@ mod tests {
         let gitignore_path = tempdir_path.join(".gitignore");
         assert!(gitignore_path.exists());
         let actual = fs_util::read_to_string(&gitignore_path)?;
-        let expected = "/buck-out\n";
+        let expected = "/bsmr-out\n";
         assert_eq!(actual, expected);
 
-        // If an empty .gitignore exists (this is the case after running `git init`), add `buck-out`.
+        // If an empty .gitignore exists (this is the case after running `git init`), add `bsmr-out`.
         fs_util::write(&gitignore_path, "")?;
         set_up_gitignore(tempdir_path)?;
         assert!(gitignore_path.exists());
