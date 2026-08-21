@@ -43,7 +43,7 @@ pub struct GlobalInterpreterState {
     pub cell_resolver: CellResolver,
 
     /// The GlobalEnvironment contains all the globally available symbols
-    /// (primarily starlark stdlib and Buck-provided functions).
+    /// (primarily starlark stdlib and Bsmr-provided functions).
     pub global_env: Globals,
 
     /// Interpreter Configurer

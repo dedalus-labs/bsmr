@@ -15,52 +15,52 @@
 # pyre-strict
 
 
-from bsmr.tests.e2e_util.api.buck import Buck
+from bsmr.tests.e2e_util.api.bsmr import Bsmr
 from bsmr.tests.e2e_util.asserts import expect_failure
-from bsmr.tests.e2e_util.buck_workspace import buck_test
+from bsmr.tests.e2e_util.bsmr_workspace import bsmr_test
 
 
-@buck_test()
-async def test_run_executable(buck: Buck) -> None:
-    result = await buck.run("root//:print_animal_hello")
+@bsmr_test()
+async def test_run_executable(bsmr: Bsmr) -> None:
+    result = await bsmr.run("root//:print_animal_hello")
     assert result.stdout.strip() == "hello dog"
 
-    result = await buck.run(
+    result = await bsmr.run(
         "root//:print_animal_hello", "--target-universe", "root//:cat_universe"
     )
     assert result.stdout.strip() == "hello cat"
 
 
-@buck_test()
-async def test_run_with_transition_without_target_universe(buck: Buck) -> None:
-    result = await buck.run(
-        "root//:buck",
+@bsmr_test()
+async def test_run_with_transition_without_target_universe(bsmr: Bsmr) -> None:
+    result = await bsmr.run(
+        "root//:bsmr",
         "--target-platforms=root//:p_cat",
     )
 
     # The transition (deliberately) loses the configuration so that we get the
-    # DEFAULT 'hello buck' from the select in the target definition.
-    assert result.stdout.strip() == "hello buck"
+    # DEFAULT 'hello bsmr' from the select in the target definition.
+    assert result.stdout.strip() == "hello bsmr"
 
 
-@buck_test()
-async def test_run_with_transition_with_target_universe(buck: Buck) -> None:
-    result = await buck.run(
-        "root//:buck",
+@bsmr_test()
+async def test_run_with_transition_with_target_universe(bsmr: Bsmr) -> None:
+    result = await bsmr.run(
+        "root//:bsmr",
         "--target-platforms=root//:p_cat",
         "--target-universe",
-        "root//:buck",
+        "root//:bsmr",
     )
 
     # The transition (deliberately) loses the configuration so that we get the
-    # DEFAULT 'hello buck' from the select in the target definition.
-    assert result.stdout.strip() == "hello buck"
+    # DEFAULT 'hello bsmr' from the select in the target definition.
+    assert result.stdout.strip() == "hello bsmr"
 
 
-@buck_test()
-async def test_run_target_not_in_universe(buck: Buck) -> None:
+@bsmr_test()
+async def test_run_target_not_in_universe(bsmr: Bsmr) -> None:
     await expect_failure(
-        buck.run(
+        bsmr.run(
             "root//:print_animal_hello",
             "--target-universe",
             "root//:print_animal_goodbye",

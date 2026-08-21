@@ -14,15 +14,15 @@
 
 # pyre-strict
 
-from bsmr.tests.e2e_util.api.buck import Buck
-from bsmr.tests.e2e_util.buck_workspace import buck_test
+from bsmr.tests.e2e_util.api.bsmr import Bsmr
+from bsmr.tests.e2e_util.bsmr_workspace import bsmr_test
 from bsmr.tests.e2e_util.helper.golden import golden_dir
 
 
-@buck_test()
-async def test_builtin_docs_golden(buck: Buck) -> None:
-    output = buck.cwd.parent / "output"
-    await buck.docs("starlark-builtins", "--output-dir", str(output))
+@bsmr_test()
+async def test_builtin_docs_golden(bsmr: Bsmr) -> None:
+    output = bsmr.cwd.parent / "output"
+    await bsmr.docs("starlark-builtins", "--output-dir", str(output))
 
     outputs: dict[str, str] = {}
     for file in output.glob("**/*.md"):

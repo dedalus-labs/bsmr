@@ -1,3 +1,9 @@
+# ===----------------------------------------------------------------------===
+# Upstream-Source: facebook/buck2@1560aca2002865cd73d7cafb22c705cfb640b2bc
+# Modifications Copyright (c) 2026 Dedalus Labs, Inc. and its contributors
+# SPDX-License-Identifier: Apache-2.0
+# ===----------------------------------------------------------------------===
+
 # Copyright (c) Meta Platforms, Inc. and affiliates.
 #
 # This source code is dual-licensed under either the MIT license found in the
@@ -9,7 +15,7 @@
 load("@prelude//:artifacts.bzl", "ArtifactGroupInfo")
 load("@prelude//:paths.bzl", "paths")
 load("@prelude//cxx:preprocessor.bzl", "CPreprocessorInfo", "cxx_merge_cpreprocessors")
-load("@prelude//decls:common.bzl", "buck")
+load("@prelude//decls:common.bzl", "bsmr")
 load("@prelude//utils:expect.bzl", "expect")
 load(":rule_spec.bzl", "RuleRegistrationSpec")
 
@@ -49,8 +55,8 @@ registration_spec = RuleRegistrationSpec(
         libraries that export them.
     """,
     impl = _impl,
-    attrs = buck.labels_arg()
-    | buck.contacts_arg()
+    attrs = bsmr.labels_arg()
+    | bsmr.contacts_arg()
     | {
         "deps": attrs.list(
             attrs.dep(providers = [CPreprocessorInfo]),

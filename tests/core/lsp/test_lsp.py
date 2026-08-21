@@ -23,11 +23,11 @@ from pathlib import Path
 from typing import Any, Optional
 
 import pytest
-from bsmr.tests.e2e_util.api.buck import Buck
-from bsmr.tests.e2e_util.api.buck_result import BuckException
+from bsmr.tests.e2e_util.api.bsmr import Bsmr
+from bsmr.tests.e2e_util.api.bsmr_result import BsmrException
 from bsmr.tests.e2e_util.api.fixtures import Fixture, Span
 from bsmr.tests.e2e_util.api.lsp import LSPResponseError
-from bsmr.tests.e2e_util.buck_workspace import buck_test, env
+from bsmr.tests.e2e_util.bsmr_workspace import bsmr_test, env
 from bsmr.tests.e2e_util.helper.utils import daemon_is_alive
 
 
@@ -64,8 +64,8 @@ def _assert_goto_result(
     _assert_uris(res[0]["targetUri"], expected_dest_path.as_uri())
 
 
-def fixture(buck: Buck, path: Path) -> Fixture:
-    abs_path = buck.cwd / path
+def fixture(bsmr: Bsmr, path: Path) -> Fixture:
+    abs_path = bsmr.cwd / path
     fixture = Fixture(abs_path.read_text())
     abs_path.write_text(fixture.content)
     return fixture
@@ -134,20 +134,20 @@ async def _wait_for_active_command_state(
             return True
 
 
-@buck_test()
-async def test_lsp_starts(buck: Buck) -> None:
-    async with await buck.lsp() as lsp:
+@bsmr_test()
+async def test_lsp_starts(bsmr: Bsmr) -> None:
+    async with await bsmr.lsp() as lsp:
         # Will fail if the initialize response is not received
         await lsp.init_connection()
 
 
-@buck_test()
+@bsmr_test()
 async def test_lsp_stdin_eof_clears_server_command(
-    buck: Buck,
+    bsmr: Bsmr,
 ) -> None:
     try:
-        async with await buck.subscribe("--active-commands") as subscribe:
-            lsp = await buck.lsp()
+        async with await bsmr.subscribe("--active-commands") as subscribe:
+            lsp = await bsmr.lsp()
             try:
                 await lsp.init_connection()
                 assert await _wait_for_active_command_state(
@@ -167,19 +167,19 @@ async def test_lsp_stdin_eof_clears_server_command(
             finally:
                 await _kill_if_alive(lsp.process)
     finally:
-        await buck.kill()
+        await bsmr.kill()
 
 
-@buck_test()
+@bsmr_test()
 @env("BSMR_TESTING_INACTIVITY_TIMEOUT", "true")
-async def test_lsp_does_not_exit_when_daemon_times_out(buck: Buck) -> None:
-    await buck.server()
-    status = await buck.status()
+async def test_lsp_does_not_exit_when_daemon_times_out(bsmr: Bsmr) -> None:
+    await bsmr.server()
+    status = await bsmr.status()
     pid = json.loads(status.stdout)["process_info"]["pid"]
-    daemon_dir = await buck.get_daemon_dir()
-    daemon_stderr = daemon_dir / "buckd.stderr"
+    daemon_dir = await bsmr.get_daemon_dir()
+    daemon_stderr = daemon_dir / "bsmrd.stderr"
 
-    lsp = await buck.lsp()
+    lsp = await bsmr.lsp()
     try:
         exited = await _wait_for_exit(lsp.process, timeout=10)
         assert not exited
@@ -194,20 +194,20 @@ async def test_lsp_does_not_exit_when_daemon_times_out(buck: Buck) -> None:
         await _kill_if_alive(lsp.process)
 
 
-@buck_test(skip_for_os=["windows"])
+@bsmr_test(skip_for_os=["windows"])
 @env("BSMR_TESTING_INACTIVITY_TIMEOUT", "true")
-@env("BUCKD_STARTUP_TIMEOUT", "90")
+@env("BSMRD_STARTUP_TIMEOUT", "90")
 async def test_lsp_daemon_inactivity_shutdown_currently_times_out_before_recovering_different_user_version(
-    buck: Buck,
+    bsmr: Bsmr,
 ) -> None:
-    await buck.server()
-    status = await buck.status()
+    await bsmr.server()
+    status = await bsmr.status()
     original_pid = json.loads(status.stdout)["process_info"]["pid"]
-    daemon_dir = await buck.get_daemon_dir()
-    daemon_stderr = daemon_dir / "buckd.stderr"
-    daemon_info = daemon_dir / "buckd.info"
+    daemon_dir = await bsmr.get_daemon_dir()
+    daemon_stderr = daemon_dir / "bsmrd.stderr"
+    daemon_info = daemon_dir / "bsmrd.info"
 
-    lsp = await buck.lsp()
+    lsp = await bsmr.lsp()
     try:
         exited = await _wait_for_exit(lsp.process, timeout=10)
         assert not exited
@@ -225,25 +225,25 @@ async def test_lsp_daemon_inactivity_shutdown_currently_times_out_before_recover
         daemon_info.write_text(json.dumps(info))
 
         start = asyncio.get_running_loop().time()
-        with pytest.raises(BuckException) as exc:
-            await buck.server()
+        with pytest.raises(BsmrException) as exc:
+            await bsmr.server()
         elapsed = asyncio.get_running_loop().time() - start
 
         assert elapsed >= 90
-        assert "Failed to connect to buck daemon." in exc.value.stderr
+        assert "Failed to connect to bsmr daemon." in exc.value.stderr
         assert "version: different-version" in exc.value.stderr
     finally:
         await _kill_if_alive(lsp.process)
 
 
-@buck_test()
-async def test_lsp_exits_when_daemon_disappears(buck: Buck) -> None:
-    await buck.server()
+@bsmr_test()
+async def test_lsp_exits_when_daemon_disappears(bsmr: Bsmr) -> None:
+    await bsmr.server()
 
-    lsp = await buck.lsp()
+    lsp = await bsmr.lsp()
     try:
         await lsp.init_connection()
-        await buck.kill()
+        await bsmr.kill()
 
         exited = await _wait_for_exit(lsp.process, timeout=10)
         assert exited
@@ -252,12 +252,12 @@ async def test_lsp_exits_when_daemon_disappears(buck: Buck) -> None:
         await _kill_if_alive(lsp.process)
 
 
-@buck_test()
+@bsmr_test()
 @env("BSMR_TESTING_INACTIVITY_TIMEOUT", "true")
-async def test_lsp_requests_keep_daemon_alive(buck: Buck) -> None:
-    async with await buck.lsp() as lsp:
+async def test_lsp_requests_keep_daemon_alive(bsmr: Bsmr) -> None:
+    async with await bsmr.lsp() as lsp:
         await lsp.init_connection()
-        daemon_info = await buck.get_daemon_dir() / "buckd.info"
+        daemon_info = await bsmr.get_daemon_dir() / "bsmrd.info"
         pid = json.loads(daemon_info.read_text())["pid"]
 
         for _ in range(6):
@@ -268,13 +268,13 @@ async def test_lsp_requests_keep_daemon_alive(buck: Buck) -> None:
         assert lsp.process.returncode is None
 
 
-@buck_test(skip_for_os=["windows"])
-async def test_lsp_exits_when_daemon_is_killed(buck: Buck) -> None:
-    await buck.server()
-    status = await buck.status()
+@bsmr_test(skip_for_os=["windows"])
+async def test_lsp_exits_when_daemon_is_killed(bsmr: Bsmr) -> None:
+    await bsmr.server()
+    status = await bsmr.status()
     pid = json.loads(status.stdout)["process_info"]["pid"]
 
-    lsp = await buck.lsp()
+    lsp = await bsmr.lsp()
     try:
         await lsp.init_connection()
         os.kill(pid, signal.SIGKILL)
@@ -286,9 +286,9 @@ async def test_lsp_exits_when_daemon_is_killed(buck: Buck) -> None:
         await _kill_if_alive(lsp.process)
 
 
-@buck_test()
-async def test_lints_on_open(buck: Buck) -> None:
-    async with await buck.lsp() as lsp:
+@bsmr_test()
+async def test_lints_on_open(bsmr: Bsmr) -> None:
+    async with await bsmr.lsp() as lsp:
         await lsp.init_connection()
         diags = await lsp.open_file(Path("clean_lint.bzl"))
         assert diags is not None
@@ -299,17 +299,17 @@ async def test_lints_on_open(buck: Buck) -> None:
         assert len(diags["diagnostics"]) == 1
 
 
-@buck_test()
-async def test_goto_definition(buck: Buck) -> None:
+@bsmr_test()
+async def test_goto_definition(bsmr: Bsmr) -> None:
     src_targets_path = Path("dir/TARGETS.fixture")
     dest_targets_path = Path("cell/sub/TARGETS.fixture")
     dest_bzl_path = Path("cell/sub/defs.bzl")
 
-    src_targets = fixture(buck, src_targets_path)
-    dest_targets = fixture(buck, dest_targets_path)
-    dest_bzl = fixture(buck, dest_bzl_path)
+    src_targets = fixture(bsmr, src_targets_path)
+    dest_targets = fixture(bsmr, dest_targets_path)
+    dest_bzl = fixture(bsmr, dest_bzl_path)
 
-    async with await buck.lsp() as lsp:
+    async with await bsmr.lsp() as lsp:
         await lsp.init_connection()
         diags = await lsp.open_file(src_targets_path)
         # pyrefly: ignore [unsupported-operation]
@@ -324,7 +324,7 @@ async def test_goto_definition(buck: Buck) -> None:
             # pyrefly: ignore [bad-argument-type]
             res,
             src_targets.spans["load"],
-            buck.cwd / dest_bzl_path,
+            bsmr.cwd / dest_bzl_path,
             None,
         )
 
@@ -337,7 +337,7 @@ async def test_goto_definition(buck: Buck) -> None:
             # pyrefly: ignore [bad-argument-type]
             res,
             src_targets.spans["dummy"],
-            buck.cwd / dest_bzl_path,
+            bsmr.cwd / dest_bzl_path,
             dest_bzl.spans["rule"],
         )
 
@@ -358,7 +358,7 @@ async def test_goto_definition(buck: Buck) -> None:
             # pyrefly: ignore [bad-argument-type]
             res,
             src_targets.spans["missing_foo"],
-            buck.cwd / dest_targets_path,
+            bsmr.cwd / dest_targets_path,
             None,
         )
 
@@ -371,7 +371,7 @@ async def test_goto_definition(buck: Buck) -> None:
             # pyrefly: ignore [bad-argument-type]
             res,
             src_targets.spans["rule"],
-            buck.cwd / dest_bzl_path,
+            bsmr.cwd / dest_bzl_path,
             dest_bzl.spans["rule"],
         )
 
@@ -384,14 +384,14 @@ async def test_goto_definition(buck: Buck) -> None:
             # pyrefly: ignore [bad-argument-type]
             res,
             src_targets.spans["baz"],
-            buck.cwd / dest_targets_path,
+            bsmr.cwd / dest_targets_path,
             dest_targets.spans["baz"],
         )
 
 
-@buck_test()
-async def test_returns_file_contents_for_starlark_types(buck: Buck) -> None:
-    async with await buck.lsp() as lsp:
+@bsmr_test()
+async def test_returns_file_contents_for_starlark_types(bsmr: Bsmr) -> None:
+    async with await bsmr.lsp() as lsp:
         await lsp.init_connection()
 
         res = await lsp.file_contents("starlark:/native/DefaultInfo.bzl")
@@ -406,12 +406,12 @@ async def test_returns_file_contents_for_starlark_types(buck: Buck) -> None:
             await lsp.file_contents((lsp.cwd / ".bsmr").as_uri())
 
 
-@buck_test()
-async def test_goto_definition_for_globals(buck: Buck) -> None:
+@bsmr_test()
+async def test_goto_definition_for_globals(bsmr: Bsmr) -> None:
     globals_bzl_path = Path("globals.bzl")
 
-    globals_bzl = fixture(buck, globals_bzl_path)
-    async with await buck.lsp() as lsp:
+    globals_bzl = fixture(bsmr, globals_bzl_path)
+    async with await bsmr.lsp() as lsp:
         await lsp.init_connection()
         diags = await lsp.open_file(globals_bzl_path)
         # pyrefly: ignore [unsupported-operation]
@@ -434,7 +434,7 @@ async def test_goto_definition_for_globals(buck: Buck) -> None:
         _assert_uris(
             # pyrefly: ignore [unsupported-operation]
             res[0]["targetUri"],
-            (buck.cwd / "prelude" / "prelude.bzl").as_uri(),
+            (bsmr.cwd / "prelude" / "prelude.bzl").as_uri(),
         )
 
         res = await lsp.goto_definition(
@@ -459,13 +459,13 @@ async def test_goto_definition_for_globals(buck: Buck) -> None:
         assert len(res) == 0
 
 
-@buck_test()
-async def test_supports_bxl_files(buck: Buck) -> None:
+@bsmr_test()
+async def test_supports_bxl_files(bsmr: Bsmr) -> None:
     src_bxl_path = Path("query.bxl")
 
-    src_bxl = fixture(buck, src_bxl_path)
+    src_bxl = fixture(bsmr, src_bxl_path)
 
-    async with await buck.lsp() as lsp:
+    async with await bsmr.lsp() as lsp:
         await lsp.init_connection()
         diags = await lsp.open_file(src_bxl_path)
         # pyrefly: ignore [unsupported-operation]
@@ -480,7 +480,7 @@ async def test_supports_bxl_files(buck: Buck) -> None:
             # pyrefly: ignore [bad-argument-type]
             res,
             src_bxl.spans["foo"],
-            buck.cwd / src_bxl_path,
+            bsmr.cwd / src_bxl_path,
             src_bxl.spans["dest_foo"],
         )
 
@@ -493,6 +493,6 @@ async def test_supports_bxl_files(buck: Buck) -> None:
             # pyrefly: ignore [bad-argument-type]
             res,
             src_bxl.spans["f"],
-            buck.cwd / src_bxl_path,
+            bsmr.cwd / src_bxl_path,
             src_bxl.spans["dest_f"],
         )

@@ -29,7 +29,7 @@ bsmr build --show-output <target>
 
 ## Upgrade from the old output root
 
-Bessemer does not read or migrate the former `buck-out` directory. Stop older
+Bessemer does not read or migrate the former `bsmr-out` directory. Stop older
 Bessemer daemons, delete that generated directory, and add `/bsmr-out` to the
 repository `.gitignore`. New repositories created by `bsmr init --git` already
 ignore the current directory.

@@ -56,7 +56,7 @@ def _maybe_add_java_version(**kwargs):
 def _add_labels(**kwargs):
     if "labels" not in kwargs:
         kwargs["labels"] = []
-    kwargs["labels"] += ["wrapped_with_buck_java_rules", "pfh:Infra"]
+    kwargs["labels"] += ["wrapped_with_bsmr_java_rules", "pfh:Infra"]
     return kwargs
 
 def _set_bsmr_java_toolchain(**kwargs):
@@ -103,7 +103,7 @@ def _add_kotlin_deps(**kwargs):
     ]
     return kwargs
 
-def buck_kotlin_library(name, **kwargs):
+def bsmr_kotlin_library(name, **kwargs):
     kwargs = _maybe_add_java_version(**kwargs)
     kwargs = _set_bsmr_java_toolchain(**kwargs)
     kwargs = _set_bsmr_kotlin_toolchain(**kwargs)
@@ -111,7 +111,7 @@ def buck_kotlin_library(name, **kwargs):
     kwargs = _add_kotlin_deps(**kwargs)
     return fb_native.kotlin_library(name = name, **kwargs)
 
-def buck_java_library(name, **kwargs):
+def bsmr_java_library(name, **kwargs):
     kwargs = _add_labels(**kwargs)
     kwargs = _maybe_add_java_version(**kwargs)
     kwargs = _set_bsmr_java_toolchain(**kwargs)
@@ -119,7 +119,7 @@ def buck_java_library(name, **kwargs):
     kwargs = _set_versioned_java_srcs(**kwargs)
     return fb_native.java_library(name = name, **kwargs)
 
-def buck_java_binary(name, **kwargs):
+def bsmr_java_binary(name, **kwargs):
     kwargs = _add_labels(**kwargs)
     kwargs = _set_bsmr_java_toolchain(**kwargs)
     java_args = kwargs["java_args_for_run_info"] if "java_args_for_run_info" in kwargs else []
@@ -156,7 +156,7 @@ def _oss_remote_file_with_wrapper(name, ext, url, sha1, **kwargs):
         type = "executable" if ext == "exe" else "data",
     )
 
-def _buck_remote_file_with_wrapper(
+def _bsmr_remote_file_with_wrapper(
     name,
     ext,
     url,
@@ -179,7 +179,7 @@ def third_party_jar(
     # @oss-disable[end= ]: internal_alias,
     **kwargs,
 ):
-    return _buck_remote_file_with_wrapper(
+    return _bsmr_remote_file_with_wrapper(
         name,
         "jar",
         url,
@@ -195,7 +195,7 @@ def third_party_aar(
     # @oss-disable[end= ]: internal_alias,
     **kwargs,
 ):
-    return _buck_remote_file_with_wrapper(
+    return _bsmr_remote_file_with_wrapper(
         name,
         "aar",
         url,
@@ -211,7 +211,7 @@ def third_party_exe(
     # @oss-disable[end= ]: internal_alias,
     **kwargs,
 ):
-    return _buck_remote_file_with_wrapper(
+    return _bsmr_remote_file_with_wrapper(
         name,
         "exe",
         url,
@@ -220,14 +220,14 @@ def third_party_exe(
         **kwargs,
     )
 
-def buck_prebuilt_jar(name, **kwargs):
+def bsmr_prebuilt_jar(name, **kwargs):
     return _toolchain_prebuilt_jar(name = name, **kwargs)
 
 def _shallow_dict_copy_without_key(table, key_to_omit):
     """Returns a shallow copy of dict with key_to_omit omitted."""
     return {key: table[key] for key in table if key != key_to_omit}
 
-def buck_kotlin_test(**kwargs):
+def bsmr_kotlin_test(**kwargs):
     extra_labels = [_RUN_AS_BUNDLE_LABEL, _FDB_DEBUG_LABEL]
 
     kwargs = _add_labels(**kwargs)
@@ -239,8 +239,8 @@ def buck_kotlin_test(**kwargs):
 
     fb_native.kotlin_test(**kwargs)
 
-def buck_java_test(name, vm_args = None, run_test_separately = False, **kwargs):
-    """java_test wrapper that provides sensible defaults for buck tests.
+def bsmr_java_test(name, vm_args = None, run_test_separately = False, **kwargs):
+    """java_test wrapper that provides sensible defaults for bsmr tests.
 
     Args:
       name: name
@@ -280,11 +280,11 @@ def buck_java_test(name, vm_args = None, run_test_separately = False, **kwargs):
         name = name,
         deps = deps
         + [
-            # When actually running Buck, the launcher script loads the bootstrapper,
-            # and the bootstrapper loads the rest of Buck. For unit tests, which don't
-            # run Buck, we have to add a direct dependency on the bootstrapper in case
+            # When actually running Bsmr, the launcher script loads the bootstrapper,
+            # and the bootstrapper loads the rest of Bsmr. For unit tests, which don't
+            # run Bsmr, we have to add a direct dependency on the bootstrapper in case
             # they exercise code that uses it.
-            "prelude//toolchains/android/src/com/facebook/buck/cli/bootstrapper:bootstrapper_lib",
+            "prelude//toolchains/android/src/com/dedalus/bsmr/cli/bootstrapper:bootstrapper_lib",
         ],
         vm_args = [
             # Don't use the system-installed JNA; extract it from the local jar.
@@ -295,16 +295,16 @@ def buck_java_test(name, vm_args = None, run_test_separately = False, **kwargs):
             # http://bugs.sun.com/view_bug.do?bug_id=7129299
             #
             # This has been observed to cause a problem in integration tests such as
-            # CachedTestIntegrationTest where `buck build //:test` is run repeatedly
+            # CachedTestIntegrationTest where `bsmr build //:test` is run repeatedly
             # such that a corresponding `test.jar` file is overwritten several times.
             # The CompiledClassFileFinder in JavaTestRule creates a java.util.zip.ZipFile
             # to enumerate the zip entries in order to find the set of .class files
             # in `test.jar`. This interleaving of reads and writes appears to match
             # the conditions to trigger the issue reported on bugs.sun.com.
             #
-            # Currently, we do not set this flag in bin/buck_common, as Buck does not
+            # Currently, we do not set this flag in bin/bsmr_common, as Bsmr does not
             # normally modify the contents of bsmr-out after they are loaded into
-            # memory. However, we may need to use this flag when running buckd where
+            # memory. However, we may need to use this flag when running bsmrd where
             # references to zip files may be long-lived.
             #
             # Finally, note that when you specify this flag,
@@ -325,7 +325,7 @@ def standard_java_test(name, run_test_separately = False, vm_args = None, labels
     test_srcs = native.glob(["*Test.java"])
 
     if len(test_srcs) > 0:
-        buck_java_test(
+        bsmr_java_test(
             name = name,
             srcs = test_srcs,
             resources = native.glob(["testdata/**"]) if with_test_data else [],
@@ -335,7 +335,7 @@ def standard_java_test(name, run_test_separately = False, vm_args = None, labels
             **kwargs,
         )
 
-def buck_prebuilt_artifact(
+def bsmr_prebuilt_artifact(
     # @oss-disable[end= ]: cas_digest,
     oss_url = None,
     oss_sha1 = None,

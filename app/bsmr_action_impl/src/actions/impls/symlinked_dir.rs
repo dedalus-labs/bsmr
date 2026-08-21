@@ -33,7 +33,7 @@ use bsmr_build_api::interpreter::rule_defs::artifact::starlark_artifact_like::Va
 use bsmr_build_signals::env::WaitingData;
 use bsmr_core::category::CategoryRef;
 use bsmr_core::content_hash::ContentBasedPathHash;
-use bsmr_error::BuckErrorContext;
+use bsmr_error::BsmrErrorContext;
 use bsmr_error::internal_error;
 use bsmr_execute::artifact::artifact_dyn::ArtifactDyn;
 use bsmr_execute::artifact_utils::ArtifactValueBuilder;
@@ -41,7 +41,7 @@ use bsmr_execute::execute::command_executor::ActionExecutionTimingData;
 use bsmr_execute::materialize::materializer::CopiedArtifact;
 use bsmr_fs::paths::forward_rel_path::ForwardRelativePath;
 use bsmr_fs::paths::forward_rel_path::ForwardRelativePathBuf;
-use bsmr_hash::BuckIndexSet;
+use bsmr_hash::BsmrIndexSet;
 use dupe::Dupe;
 use gazebo::prelude::*;
 use itertools::Itertools;
@@ -124,7 +124,7 @@ impl UnregisteredSymlinkedDirAction {
                     (
                         as_artifact.0.get_artifact_group()?,
                         ForwardRelativePathBuf::try_from(k.to_owned())
-                            .buck_error_context("dict key must be a forward relative path")?
+                            .bsmr_error_context("dict key must be a forward relative path")?
                             .into_box(),
                     ),
                     associates,
@@ -149,7 +149,7 @@ impl UnregisteredSymlinkedDirAction {
         let (mut args, unioned_associated_artifacts) = Self::unpack_args(srcs)
             // FIXME: This warning is talking about the Starlark-level argument name `srcs`.
             //        Once we use a proper Value parser this should all get cleaned up.
-            .buck_error_context(
+            .bsmr_error_context(
                 ValueError::IncorrectParameterTypeNamed("srcs".to_owned()).to_string(),
             )?;
         // Overlapping check make sense for non-copy mode only.
@@ -173,7 +173,7 @@ impl UnregisteredSymlinkedDirAction {
 impl UnregisteredAction for UnregisteredSymlinkedDirAction {
     fn register(
         self: Box<Self>,
-        outputs: BuckIndexSet<BuildArtifact>,
+        outputs: BsmrIndexSet<BuildArtifact>,
         _starlark_data: Option<OwnedFrozenValue>,
         _error_handler: Option<OwnedFrozenValue>,
     ) -> bsmr_error::Result<Box<dyn Action>> {
@@ -334,8 +334,8 @@ mod tests {
     use super::*;
 
     fn mk_artifact() -> Artifact {
-        let buck_path = SourcePath::testing_new("cell//pkg", "");
-        Artifact::from(SourceArtifact::new(buck_path))
+        let build_path = SourcePath::testing_new("cell//pkg", "");
+        Artifact::from(SourceArtifact::new(build_path))
     }
 
     // TODO: This needs proper tests, but right now it's kind of a pain to get the

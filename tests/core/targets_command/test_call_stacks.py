@@ -17,18 +17,18 @@
 
 import json
 
-from bsmr.tests.e2e_util.api.buck import Buck
-from bsmr.tests.e2e_util.buck_workspace import buck_test
+from bsmr.tests.e2e_util.api.bsmr import Bsmr
+from bsmr.tests.e2e_util.bsmr_workspace import bsmr_test
 
 
-@buck_test()
-async def test_target_call_stacks_json(buck: Buck) -> None:
-    out = await buck.targets(
+@bsmr_test()
+async def test_target_call_stacks_json(bsmr: Bsmr) -> None:
+    out = await bsmr.targets(
         "--stack",
         "--output-attribute=.*",
         "root//:test",
     )
 
     out = json.loads(out.stdout)
-    call_stack = out[0]["buck.target_call_stack"]
+    call_stack = out[0]["bsmr.target_call_stack"]
     assert "stub" in call_stack

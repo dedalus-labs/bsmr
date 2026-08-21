@@ -149,7 +149,7 @@ impl PerFileTypeContext {
     }
 }
 
-/// Buck-specific information exposed to the starlark environment via the context's extra field.
+/// Bsmr-specific information exposed to the starlark environment via the context's extra field.
 /// This would include things like the current cell or package name or the package listing. It's
 /// used for quite a few other things, including recording declared rules.
 ///

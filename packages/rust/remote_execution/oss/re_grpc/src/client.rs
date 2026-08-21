@@ -1798,13 +1798,13 @@ fn with_re_metadata<T>(
         RequestMetadata {
             tool_details: Some(ToolDetails {
                 tool_name: "bsmr".to_owned(),
-                // TODO(#503): Pull the BuckVersion::get_unique_id() from BuckDaemon
+                // TODO(#503): Pull the BsmrVersion::get_unique_id() from BsmrDaemon
                 tool_version: "0.1.0".to_owned(),
             }),
             action_id: "".to_owned(),
             tool_invocation_id: metadata
-                .buck_info
-                .map_or(String::new(), |buck_info| buck_info.build_id),
+                .bsmr_info
+                .map_or(String::new(), |bsmr_info| bsmr_info.build_id),
             correlated_invocations_id: "".to_owned(),
             action_mnemonic: "".to_owned(),
             target_id: "".to_owned(),

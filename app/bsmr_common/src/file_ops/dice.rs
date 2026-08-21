@@ -24,7 +24,7 @@ use bsmr_core::cells::cell_path::CellPath;
 use bsmr_core::cells::cell_path::CellPathRef;
 use bsmr_core::cells::name::CellName;
 use bsmr_fs::paths::file_name::FileNameBuf;
-use bsmr_hash::StdBuckHashSet;
+use bsmr_hash::StdBsmrHashSet;
 use derive_more::Display;
 use dice::DiceComputations;
 use dice::DiceTransactionUpdater;
@@ -115,7 +115,7 @@ impl DiceFileComputations {
     ) -> Result<String, FileReadError> {
         match Self::read_file_if_exists(ctx, path).await {
             Ok(result) => result.ok_or_else(|| FileReadError::NotFound(path.to_string())),
-            Err(e) => Err(FileReadError::Buck(e)),
+            Err(e) => Err(FileReadError::Bsmr(e)),
         }
     }
 
@@ -134,7 +134,7 @@ impl DiceFileComputations {
     ) -> Result<RawPathMetadata, FileReadError> {
         match Self::read_path_metadata_if_exists(ctx, path).await {
             Ok(result) => result.ok_or_else(|| FileReadError::NotFound(path.to_string())),
-            Err(e) => Err(FileReadError::Buck(e)),
+            Err(e) => Err(FileReadError::Bsmr(e)),
         }
     }
 
@@ -166,12 +166,12 @@ pub(crate) enum CheckIgnores {
 
 #[derive(Allocative)]
 pub struct FileChangeTracker {
-    files_to_dirty: StdBuckHashSet<ReadFileKey>,
-    dirs_to_dirty: StdBuckHashSet<ReadDirKey>,
-    paths_to_dirty: StdBuckHashSet<PathMetadataKey>,
-    exists_matching_exact_case_to_dirty: StdBuckHashSet<ExistsMatchingExactCaseKey>,
+    files_to_dirty: StdBsmrHashSet<ReadFileKey>,
+    dirs_to_dirty: StdBsmrHashSet<ReadDirKey>,
+    paths_to_dirty: StdBsmrHashSet<PathMetadataKey>,
+    exists_matching_exact_case_to_dirty: StdBsmrHashSet<ExistsMatchingExactCaseKey>,
 
-    maybe_modified_dirs: StdBuckHashSet<CellPath>,
+    maybe_modified_dirs: StdBsmrHashSet<CellPath>,
 }
 
 impl FileChangeTracker {
@@ -243,7 +243,7 @@ impl FileChangeTracker {
         self.paths_to_dirty.insert(PathMetadataKey(path.clone()));
     }
 
-    /// Normally, buck does not need the file watcher to tell it that a directory's entries have
+    /// Normally, bsmr does not need the file watcher to tell it that a directory's entries have
     /// changed. However, in some cases file watcher want to force-invalidate directory listings,
     /// and so this exists. It should not normally be used.
     pub fn dir_entries_changed_force_invalidate(&mut self, path: CellPath) {

@@ -1,3 +1,9 @@
+# ===----------------------------------------------------------------------===
+# Upstream-Source: facebook/buck2@1560aca2002865cd73d7cafb22c705cfb640b2bc
+# Modifications Copyright (c) 2026 Dedalus Labs, Inc. and its contributors
+# SPDX-License-Identifier: Apache-2.0
+# ===----------------------------------------------------------------------===
+
 # Copyright (c) Meta Platforms, Inc. and affiliates.
 #
 # This source code is dual-licensed under either the MIT license found in the
@@ -19,7 +25,7 @@ from .info_plist_metadata import InfoPlistMetadata
 from .provisioning_profile_metadata import ProvisioningProfileMetadata
 
 
-# Buck v1 corresponding code is in `ProvisioningProfileCopyStep::execute` in `ProvisioningProfileCopyStep.java`
+# Bsmr v1 corresponding code is in `ProvisioningProfileCopyStep::execute` in `ProvisioningProfileCopyStep.java`
 def prepare_info_plist(
     info_plist: Path,
     info_plist_metadata: InfoPlistMetadata,
@@ -35,7 +41,7 @@ def prepare_info_plist(
     return Path(output_path)
 
 
-# Equivalent Buck v1 code is in `ProvisioningProfileCopyStep.java` in `ProvisioningProfileCopyStep::getInfoPlistAdditionalKeys` method.
+# Equivalent Bsmr v1 code is in `ProvisioningProfileCopyStep.java` in `ProvisioningProfileCopyStep::getInfoPlistAdditionalKeys` method.
 def _additional_keys(
     info_plist_metadata: InfoPlistMetadata, profile: ProvisioningProfileMetadata
 ) -> Dict[str, Any]:

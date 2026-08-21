@@ -21,9 +21,9 @@ use std::fmt::Formatter;
 use std::io::Write;
 use std::path::Path;
 
-use bsmr_client_ctx::client_ctx::BuckSubcommand;
+use bsmr_client_ctx::client_ctx::BsmrSubcommand;
 use bsmr_client_ctx::client_ctx::ClientCommandContext;
-use bsmr_client_ctx::common::BuckArgMatches;
+use bsmr_client_ctx::common::BsmrArgMatches;
 use bsmr_client_ctx::event_log_options::EventLogOptions;
 use bsmr_client_ctx::events_ctx::EventsCtx;
 use bsmr_client_ctx::exit_result::ClientIoError;
@@ -172,12 +172,12 @@ fn get_record(materialization: &bsmr_data::MaterializationEnd) -> Record {
     }
 }
 
-impl BuckSubcommand for WhatMaterializedCommand {
+impl BsmrSubcommand for WhatMaterializedCommand {
     const COMMAND_NAME: &'static str = "log-what-materialized";
 
     async fn exec_impl(
         self,
-        _matches: BuckArgMatches<'_>,
+        _matches: BsmrArgMatches<'_>,
         ctx: ClientCommandContext<'_>,
         _events_ctx: &mut EventsCtx,
     ) -> ExitResult {
@@ -202,7 +202,7 @@ impl BuckSubcommand for WhatMaterializedCommand {
             while let Some(event) = events.try_next().await? {
                 match event {
                     StreamValue::Event(event) => match &event.data {
-                        Some(bsmr_data::buck_event::Data::SpanEnd(bsmr_data::SpanEndEvent {
+                        Some(bsmr_data::bsmr_event::Data::SpanEnd(bsmr_data::SpanEndEvent {
                             data: Some(bsmr_data::span_end_event::Data::Materialization(m)),
                             ..
                         })) if m.success =>

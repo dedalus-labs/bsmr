@@ -90,7 +90,7 @@ func main() {
 		"GOTOOLCHAIN": "local",
 	}
 	for _, name := range []string{
-		"BUCK_SCRATCH_PATH",
+		"BSMR_SCRATCH_PATH",
 		"CC",
 		"CGO_ENABLED",
 		"GO111MODULE",
@@ -126,13 +126,13 @@ func main() {
 		envs["GOROOT"] = absGoroot
 	}
 
-	if buckScratchPath, ok := envs["BUCK_SCRATCH_PATH"]; ok {
-		absBuckScratchPath, err := filepath.Abs(buckScratchPath)
+	if bsmrScratchPath, ok := envs["BSMR_SCRATCH_PATH"]; ok {
+		absBsmrScratchPath, err := filepath.Abs(bsmrScratchPath)
 		if err != nil {
-			log.Fatalf("Failed to resolve BUCK_SCRATCH_PATH: %s", err)
+			log.Fatalf("Failed to resolve BSMR_SCRATCH_PATH: %s", err)
 		}
-		envs["GOCACHE"] = absBuckScratchPath
-		envs["TMPDIR"] = absBuckScratchPath
+		envs["GOCACHE"] = absBsmrScratchPath
+		envs["TMPDIR"] = absBsmrScratchPath
 	}
 
 	cwd, err := os.Getwd()

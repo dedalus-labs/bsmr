@@ -15,7 +15,7 @@
 # Bxl script in this file is addressing the problem of retrieving additional information
 # from language rule providers in order to correctly setup debugging tools
 # Typical use case is:
-#   - a user wants to debug "buck run `//some:target`" or "buck test //some:test"
+#   - a user wants to debug "bsmr run `//some:target`" or "bsmr test //some:test"
 #   - depending on the language and/or platform used //some:target could be a macros wrapping a rule provider
 #   - actual language rule might have relevant information / artifacts in order to make debugging possible.
 # So this script provides various hooks to let debugging tool

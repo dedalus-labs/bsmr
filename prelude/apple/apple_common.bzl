@@ -117,7 +117,7 @@ def _target_sdk_version():
             default = None,
             doc = """
     The minimum OS version that the library target should support, overriding the minimum set in
-     `.bsmr`. When set, Buck will automatically add flags to both Objective-C and
+     `.bsmr`. When set, Bsmr will automatically add flags to both Objective-C and
      Swift compilation that will allow the use of the new APIs without guarding code inside availability
      checks.
 """,

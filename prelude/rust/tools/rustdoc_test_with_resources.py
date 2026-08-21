@@ -63,20 +63,20 @@ def main():
     test_binary, rest = Path(args.test[0]), args.test[1:]
 
     # Create directory.
-    buck_tmpdir = args.resources.parent.parent / test_binary.parent.name
-    os.makedirs(buck_tmpdir, exist_ok=True)
+    bsmr_tmpdir = args.resources.parent.parent / test_binary.parent.name
+    os.makedirs(bsmr_tmpdir, exist_ok=True)
 
     # Copy executable.
-    buck_executable = buck_tmpdir / test_binary.name
-    shutil.copy2(test_binary, buck_executable)
+    bsmr_executable = bsmr_tmpdir / test_binary.name
+    shutil.copy2(test_binary, bsmr_executable)
 
     # Copy resources.json.
     # Folly looks for a sibling of the executable, with this suffix.
-    buck_resources_json = buck_tmpdir / (test_binary.name + ".resources.json")
-    shutil.copy2(args.resources, buck_resources_json)
+    bsmr_resources_json = bsmr_tmpdir / (test_binary.name + ".resources.json")
+    shutil.copy2(args.resources, bsmr_resources_json)
 
     # Run test.
-    os.execl(buck_executable, buck_executable, *rest)
+    os.execl(bsmr_executable, bsmr_executable, *rest)
 
 
 if __name__ == "__main__":

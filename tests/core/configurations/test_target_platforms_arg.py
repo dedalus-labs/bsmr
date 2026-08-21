@@ -18,13 +18,13 @@
 import re
 from pathlib import Path
 
-from bsmr.tests.e2e_util.api.buck import Buck
-from bsmr.tests.e2e_util.buck_workspace import buck_test
+from bsmr.tests.e2e_util.api.bsmr import Bsmr
+from bsmr.tests.e2e_util.bsmr_workspace import bsmr_test
 
 
-@buck_test()
-async def test_target_platforms_arg(buck: Buck) -> None:
-    out = await buck.cquery(
+@bsmr_test()
+async def test_target_platforms_arg(bsmr: Bsmr) -> None:
+    out = await bsmr.cquery(
         # Specifying platform without cell to make sure it is resolved against current cell
         "--target-platforms=//:p-clouds",
         "deps(//:the-test, 1)",

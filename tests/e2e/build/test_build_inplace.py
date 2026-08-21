@@ -22,17 +22,17 @@ from pathlib import Path
 from typing import Any, Dict
 
 import pytest
-from bsmr.tests.e2e_util.api.buck import Buck
+from bsmr.tests.e2e_util.api.bsmr import Bsmr
 from bsmr.tests.e2e_util.asserts import expect_failure
-from bsmr.tests.e2e_util.buck_workspace import buck_test, get_mode_from_platform
+from bsmr.tests.e2e_util.bsmr_workspace import bsmr_test, get_mode_from_platform
 from bsmr.tests.e2e_util.helper.utils import json_get, read_what_ran
 
 
-@buck_test(inplace=True)
-async def test_sh_binary_no_append_extension(buck: Buck) -> None:
+@bsmr_test(inplace=True)
+async def test_sh_binary_no_append_extension(bsmr: Bsmr) -> None:
     target = "root//tests/targets/rules/shell:no_extension"
     args = [target, "--show-full-output", get_mode_from_platform()]
-    result = await buck.build(*args)
+    result = await bsmr.build(*args)
     output_dict = result.get_target_to_build_output()
     output = Path(output_dict[target])
 
@@ -42,15 +42,15 @@ async def test_sh_binary_no_append_extension(buck: Buck) -> None:
     # And that we're calling it without an extension as well
     last_script_line = output.read_text().splitlines()[-1]
     if sys.platform == "win32":
-        assert "%BUCK_PROJECT_ROOT%\\no_extension %*" in last_script_line
+        assert "%BSMR_PROJECT_ROOT%\\no_extension %*" in last_script_line
     else:
-        assert '"$BUCK_PROJECT_ROOT/no_extension" "$@"' in last_script_line
+        assert '"$BSMR_PROJECT_ROOT/no_extension" "$@"' in last_script_line
 
 
-@buck_test(inplace=True)
-async def test_build_test_dependencies(buck: Buck) -> None:
+@bsmr_test(inplace=True)
+async def test_build_test_dependencies(bsmr: Bsmr) -> None:
     target = "root//tests/targets/rules/sh_test:test_with_env"
-    build = await buck.build(
+    build = await bsmr.build(
         target,
         "--build-test-info",
         "--build-report",
@@ -70,11 +70,11 @@ async def test_build_test_dependencies(buck: Buck) -> None:
     assert not has_file
 
 
-@buck_test(inplace=True)
-async def test_missing_outputs_error(buck: Buck) -> None:
+@bsmr_test(inplace=True)
+async def test_missing_outputs_error(bsmr: Bsmr) -> None:
     # Check that we a) say what went wrong, b) show the command
     await expect_failure(
-        buck.build(
+        bsmr.build(
             "root//tests/targets/rules/genrule/bad:my_genrule_bad",
             # We really should make this an isolated test to avoid having to set this.
             "-c",
@@ -86,19 +86,19 @@ async def test_missing_outputs_error(buck: Buck) -> None:
 
     # Same, but locally.
     await expect_failure(
-        buck.build(
+        bsmr.build(
             "root//tests/targets/rules/genrule/bad:my_genrule_bad_local"
         ),
         stderr_regex="(Action failed to produce outputs.*Stdout:\nHELLO_STDOUT.*Stderr:\nHELLO_STDERR|does not exist in the artifact)",
     )
 
 
-@buck_test(inplace=True)
-async def test_local_execution(buck: Buck) -> None:
+@bsmr_test(inplace=True)
+async def test_local_execution(bsmr: Bsmr) -> None:
     target = "root//tests/targets/rules/genrule:echo_pythonpath"
 
-    await buck.kill()
-    res = await buck.build(target, env={"PYTHONPATH": "foobar"})
+    await bsmr.kill()
+    res = await bsmr.build(target, env={"PYTHONPATH": "foobar"})
 
     build_report = res.get_build_report()
     output = build_report.output_for_target(target)
@@ -106,10 +106,10 @@ async def test_local_execution(buck: Buck) -> None:
 
 
 # In case of timeouts and failures, best would be to just disable this test.
-@buck_test(inplace=True, skip_for_os=["windows"])
-async def test_asic_platforms(buck: Buck) -> None:
+@bsmr_test(inplace=True, skip_for_os=["windows"])
+async def test_asic_platforms(bsmr: Bsmr) -> None:
     target = "root//tests/targets/asic_platforms:uses_asic_tool"
-    result = await buck.build(
+    result = await bsmr.build(
         target,
         "--show-full-output",
     )
@@ -121,9 +121,9 @@ async def test_asic_platforms(buck: Buck) -> None:
         )
 
 
-@buck_test(inplace=True)
-async def test_genrule_with_remote_execution_dependencies(buck: Buck) -> None:
-    result = await buck.build(
+@bsmr_test(inplace=True)
+async def test_genrule_with_remote_execution_dependencies(bsmr: Bsmr) -> None:
+    result = await bsmr.build(
         get_mode_from_platform(),
         "root//tests/targets/rules/genrule/re_dependencies:remote_execution_dependencies",
         "--config",
@@ -143,8 +143,8 @@ async def test_genrule_with_remote_execution_dependencies(buck: Buck) -> None:
         assert len(deps[0]["reservation_id"]) == 20
 
 
-async def read_io_provider_for_last_build(buck: Buck) -> None:
-    log = (await buck.log("show")).stdout
+async def read_io_provider_for_last_build(bsmr: Bsmr) -> None:
+    log = (await bsmr.log("show")).stdout
     for line in log.splitlines():
         io_provider = json_get(
             line,
@@ -167,7 +167,7 @@ async def read_io_provider_for_last_build(buck: Buck) -> None:
 # that people don't have to learn things about apple toolchains to debug it
 if False:
 
-    @buck_test(
+    @bsmr_test(
         inplace=True,
         skip_for_os=["windows"],
         extra_bsmr_config={
@@ -178,30 +178,30 @@ if False:
             }
         },
     )
-    async def test_source_hashing_blake3_only(buck: Buck) -> None:
+    async def test_source_hashing_blake3_only(bsmr: Bsmr) -> None:
         target = "root//tests/targets/rules/rust/hello_world:welcome"
 
-        await buck.build(target, "--no-remote-cache", "--remote-only")
-        run1 = await read_what_ran(buck)
+        await bsmr.build(target, "--no-remote-cache", "--remote-only")
+        run1 = await read_what_ran(bsmr)
 
-        io_provider = await read_io_provider_for_last_build(buck)
+        io_provider = await read_io_provider_for_last_build(bsmr)
         assert io_provider == "fs"
 
-        await buck.kill()
-        await buck.build(
+        await bsmr.kill()
+        await bsmr.build(
             target,
             "--no-remote-cache",
             "--remote-only",
             env={"BSMR_DISABLE_FILE_ATTR": "true"},
         )
-        run2 = await read_what_ran(buck)
+        run2 = await read_what_ran(bsmr)
 
         def key(entry: Dict[str, Any]) -> str:
             return entry["identity"]
 
         assert sorted(run1, key=key) == sorted(run2, key=key)
 
-    @buck_test(
+    @bsmr_test(
         inplace=True,
         skip_for_os=["windows"],
         extra_bsmr_config={
@@ -212,13 +212,13 @@ if False:
             }
         },
     )
-    async def test_source_hashing_eden_blake3_only(buck: Buck) -> None:
-        if not os.path.exists(buck.cwd / ".eden"):
+    async def test_source_hashing_eden_blake3_only(bsmr: Bsmr) -> None:
+        if not os.path.exists(bsmr.cwd / ".eden"):
             pytest.skip("This test is meaningless if not using Eden")  # pyre-ignore
 
         # Check we have Eden I/O
-        await buck.build()
-        io_provider = await read_io_provider_for_last_build(buck)
+        await bsmr.build()
+        io_provider = await read_io_provider_for_last_build(bsmr)
 
         # If our test didn't use Eden then that means the current host's Eden is too old.
         # Skip in this case, unless
@@ -232,23 +232,23 @@ if False:
 
         target = "root//tests/targets/rules/rust/hello_world:welcome"
 
-        await buck.build(target, "--no-remote-cache", "--remote-only")
-        run1 = await read_what_ran(buck)
+        await bsmr.build(target, "--no-remote-cache", "--remote-only")
+        run1 = await read_what_ran(bsmr)
 
-        with open(buck._env["BSMR_TEST_EXTRA_EXTERNAL_CONFIG"], "a") as f:
+        with open(bsmr._env["BSMR_TEST_EXTRA_EXTERNAL_CONFIG"], "a") as f:
             f.write("[bsmr]\n")
             f.write("allow_eden_io = false")
 
-        await buck.kill()
-        await buck.build(
+        await bsmr.kill()
+        await bsmr.build(
             target,
             "--no-remote-cache",
             "--remote-only",
             env={"BSMR_DISABLE_FILE_ATTR": "true"},
         )
-        run2 = await read_what_ran(buck)
+        run2 = await read_what_ran(bsmr)
 
-        io_provider = await read_io_provider_for_last_build(buck)
+        io_provider = await read_io_provider_for_last_build(bsmr)
         assert io_provider == "fs"
 
         def key(entry: Dict[str, Any]) -> str:
@@ -256,7 +256,7 @@ if False:
 
         assert sorted(run1, key=key) == sorted(run2, key=key)
 
-    @buck_test(
+    @bsmr_test(
         inplace=True,
         skip_for_os=["windows"],
         extra_bsmr_config={
@@ -267,23 +267,23 @@ if False:
             }
         },
     )
-    async def test_source_hashing(buck: Buck) -> None:
-        if not os.path.exists(buck.cwd / ".eden"):
+    async def test_source_hashing(bsmr: Bsmr) -> None:
+        if not os.path.exists(bsmr.cwd / ".eden"):
             pytest.skip("This test is meaningless if not using Eden")  # pyre-ignore
 
         target = "root//tests/targets/rules/rust/hello_world:welcome"
 
-        await buck.build(target, "--no-remote-cache", "--remote-only")
-        run1 = await read_what_ran(buck)
+        await bsmr.build(target, "--no-remote-cache", "--remote-only")
+        run1 = await read_what_ran(bsmr)
 
-        await buck.kill()
-        await buck.build(
+        await bsmr.kill()
+        await bsmr.build(
             target,
             "--no-remote-cache",
             "--remote-only",
             env={"BSMR_DISABLE_FILE_ATTR": "true"},
         )
-        run2 = await read_what_ran(buck)
+        run2 = await read_what_ran(bsmr)
 
         def key(entry: Dict[str, Any]) -> str:
             return entry["identity"]

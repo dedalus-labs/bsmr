@@ -22,7 +22,7 @@ use async_trait::async_trait;
 use bsmr_core::cells::cell_path::CellPath;
 use bsmr_core::fs::project::ProjectRoot;
 use bsmr_core::fs::project_rel_path::ProjectRelativePathBuf;
-use bsmr_error::BuckErrorContext;
+use bsmr_error::BsmrErrorContext;
 use bsmr_error::ErrorTag;
 
 use crate::file_ops::metadata::RawDirEntry;

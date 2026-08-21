@@ -1,0 +1,127 @@
+# ===----------------------------------------------------------------------===
+# Upstream-Source: facebook/buck2@1560aca2002865cd73d7cafb22c705cfb640b2bc
+# Modifications Copyright (c) 2026 Dedalus Labs, Inc. and its contributors
+# SPDX-License-Identifier: Apache-2.0
+# ===----------------------------------------------------------------------===
+
+load("@prelude//toolchains/android/tools:build_rules.bzl", "bsmr_java_binary", "bsmr_java_library")
+load("@prelude//utils:source_listing.bzl", "source_listing")
+
+oncall("android_devxx")
+
+source_listing()
+
+EXO_RESOURCES_REWRITER_SRCS = ["ExoResourcesRewriterExecutableMain.java"]
+
+MERGE_ANDROID_RESOURCES_SRCS = [
+    "MergeAndroidResources.java",
+    "MergeAndroidResourcesExecutableMain.java",
+]
+
+MERGE_ASSETS_SRCS = [
+    "MergeAssetsUtils.java",
+    "MergeAssetsExecutableMain.java",
+]
+
+bsmr_java_library(
+    name = "resources",
+    srcs = glob(
+        ["*.java"],
+        exclude = EXO_RESOURCES_REWRITER_SRCS + MERGE_ANDROID_RESOURCES_SRCS + MERGE_ASSETS_SRCS,
+    ),
+    visibility = ["PUBLIC"],
+    deps = [
+        "prelude//toolchains/android/src/com/dedalus/bsmr/io/file:file",
+        "prelude//toolchains/android/src/com/dedalus/bsmr/io/filesystem/impl:utils",
+        "prelude//toolchains/android/src/com/dedalus/bsmr/util:util",
+        "prelude//toolchains/android/src/com/dedalus/bsmr/util/zip:zip",
+        "prelude//toolchains/android/third-party:guava",
+        "prelude//toolchains/android/third-party:infer-annotations",
+        "prelude//toolchains/android/third-party:jsr305",
+        "prelude//toolchains/android/third-party:kotlin-annotations",
+    ],
+)
+
+bsmr_java_library(
+    name = "merge_android_resources",
+    srcs = MERGE_ANDROID_RESOURCES_SRCS,
+    visibility = ["PUBLIC"],
+    deps = [
+        "prelude//toolchains/android/src/com/dedalus/bsmr/android/aapt:r_dot_txt",
+        "prelude//toolchains/android/src/com/dedalus/bsmr/core/filesystems:filesystems",
+        "prelude//toolchains/android/src/com/dedalus/bsmr/core/util/log:log",
+        "prelude//toolchains/android/src/com/dedalus/bsmr/util:throwing_print_writer",
+        "prelude//toolchains/android/src/com/dedalus/bsmr/util/json:json",
+        "prelude//toolchains/android/src/com/dedalus/bsmr/util/zip:zip",
+        "prelude//toolchains/android/third-party:args4j",
+        "prelude//toolchains/android/third-party:guava",
+        "prelude//toolchains/android/third-party:infer-annotations",
+        "prelude//toolchains/android/third-party:kotlin-annotations",
+        ":resources",
+    ],
+)
+
+bsmr_java_binary(
+    name = "merge_android_resources_binary",
+    main_class = "com.dedalus.bsmr.android.resources.MergeAndroidResourcesExecutableMain",
+    visibility = [
+        "PUBLIC",
+    ],
+    deps = [
+        ":merge_android_resources",
+    ],
+)
+
+bsmr_java_library(
+    name = "merge_assets",
+    srcs = MERGE_ASSETS_SRCS,
+    java_version = "11",
+    visibility = ["PUBLIC"],
+    deps = [
+        "prelude//toolchains/android/src/com/dedalus/bsmr/android/apkmodule:apkmodule",
+        "prelude//toolchains/android/src/com/dedalus/bsmr/io/filesystem/impl:utils",
+        "prelude//toolchains/android/src/com/dedalus/bsmr/util/json:json",
+        "prelude//toolchains/android/third-party:args4j",
+        "prelude//toolchains/android/third-party:guava",
+        "prelude//toolchains/android/third-party:infer-annotations",
+        "prelude//toolchains/android/third-party:kotlin-annotations",
+        ":resources",
+    ],
+)
+
+bsmr_java_binary(
+    name = "merge_assets_binary",
+    main_class = "com.dedalus.bsmr.android.resources.MergeAssetsExecutableMain",
+    visibility = [
+        "PUBLIC",
+    ],
+    deps = [
+        ":merge_assets",
+    ],
+)
+
+bsmr_java_library(
+    name = "exo_resources_rewriter",
+    srcs = EXO_RESOURCES_REWRITER_SRCS,
+    java_version = "11",
+    visibility = ["PUBLIC"],
+    deps = [
+        "prelude//toolchains/android/src/com/dedalus/bsmr/android/zipalign:zipalign",
+        "prelude//toolchains/android/src/com/dedalus/bsmr/core/filesystems:filesystems",
+        "prelude//toolchains/android/third-party:args4j",
+        "prelude//toolchains/android/third-party:guava",
+        "prelude//toolchains/android/third-party:infer-annotations",
+        ":resources",
+    ],
+)
+
+bsmr_java_binary(
+    name = "exo_resources_rewriter_binary",
+    main_class = "com.dedalus.bsmr.android.resources.ExoResourcesRewriterExecutableMain",
+    visibility = [
+        "PUBLIC",
+    ],
+    deps = [
+        ":exo_resources_rewriter",
+    ],
+)

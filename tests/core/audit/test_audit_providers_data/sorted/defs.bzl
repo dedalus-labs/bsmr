@@ -12,5 +12,5 @@ ZetaInfo = provider(fields = [])
 def _impl(_ctx):
     return [DefaultInfo(), ZetaInfo(), AlphaInfo()]
 
-# This bzl file cannot be interpreted with Buck1 because there's no `rule` builtin.
+# This bzl file cannot be interpreted with Legacy because there's no `rule` builtin.
 provider_test_rule = rule(impl = _impl, attrs = {})

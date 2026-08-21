@@ -26,9 +26,9 @@ use bsmr_core::execution_types::executor_config::ReGangWorker;
 use bsmr_core::execution_types::executor_config::RemoteExecutorCustomImage;
 use bsmr_core::execution_types::executor_config::RemoteExecutorDependency;
 use bsmr_core::fs::artifact_path_resolver::ArtifactFs;
-use bsmr_core::fs::buck_out_path::BuckOutScratchPath;
-use bsmr_core::fs::buck_out_path::BuckOutTestPath;
-use bsmr_core::fs::buck_out_path::BuildArtifactPath;
+use bsmr_core::fs::output_path::BuildArtifactPath;
+use bsmr_core::fs::output_path::ScratchOutputPath;
+use bsmr_core::fs::output_path::TestOutputPath;
 use bsmr_core::fs::project_rel_path::ProjectRelativePath;
 use bsmr_core::fs::project_rel_path::ProjectRelativePathBuf;
 use bsmr_core::soft_error;
@@ -38,7 +38,7 @@ use bsmr_directory::directory::directory::Directory;
 use bsmr_directory::directory::directory_iterator::DirectoryIterator;
 use bsmr_directory::directory::fingerprinted_directory::FingerprintedDirectory;
 use bsmr_error::bsmr_error;
-use bsmr_hash::BuckIndexSet;
+use bsmr_hash::BsmrIndexSet;
 use derive_more::Display;
 use dupe::Dupe;
 use gazebo::variants::UnpackVariants;
@@ -93,7 +93,7 @@ pub struct ActionMetadataBlob {
 pub enum CommandExecutionInput {
     Artifact(Box<dyn ArtifactGroupValuesDyn>),
     ActionMetadata(ActionMetadataBlob),
-    ScratchPath(BuckOutScratchPath),
+    ScratchPath(ScratchOutputPath),
     IncrementalRemoteOutput(
         ProjectRelativePathBuf,
         ActionDirectoryEntry<ActionSharedDirectory>,
@@ -215,7 +215,7 @@ impl ExecutorPreference {
 
 pub struct CommandExecutionPaths {
     inputs: Vec<CommandExecutionInput>,
-    outputs: BuckIndexSet<CommandExecutionOutput>,
+    outputs: BsmrIndexSet<CommandExecutionOutput>,
 
     input_directory: ActionImmutableDirectory,
     output_paths: Vec<(ProjectRelativePathBuf, OutputType)>,
@@ -227,7 +227,7 @@ pub struct CommandExecutionPaths {
 impl CommandExecutionPaths {
     pub fn new(
         inputs: Vec<CommandExecutionInput>,
-        outputs: BuckIndexSet<CommandExecutionOutput>,
+        outputs: BsmrIndexSet<CommandExecutionOutput>,
         fs: &ArtifactFs,
         digest_config: DigestConfig,
         interner: Option<&DashMapDirectoryInterner<ActionDirectoryMember, TrackedFileDigest>>,
@@ -237,7 +237,7 @@ impl CommandExecutionPaths {
         // RE spec requires outputs to be sorted:
         // https://github.com/bazelbuild/remote-apis/blob/1f36c310b28d762b258ea577ed08e8203274efae/build/bazel/remote/execution/v2/remote_execution.proto#L667-L669
         // We sort early here and not when we create RE action in order for local and remote actions to be in-sync.
-        let outputs: BuckIndexSet<_> = outputs
+        let outputs: BsmrIndexSet<_> = outputs
             .into_iter()
             .sorted_by_key(|e| {
                 let resolved = e
@@ -840,7 +840,7 @@ pub enum CommandExecutionOutputRef<'a> {
         output_type: OutputType,
     },
     TestPath {
-        path: &'a BuckOutTestPath,
+        path: &'a TestOutputPath,
         create: OutputCreationBehavior,
     },
 }
@@ -860,7 +860,7 @@ impl CommandExecutionOutputRef<'_> {
                 output_type: *output_type,
             }),
             Self::TestPath { path, create } => Ok(ResolvedCommandExecutionOutput {
-                path: fs.buck_out_path_resolver().resolve_test(path),
+                path: fs.output_path_resolver().resolve_test(path),
                 create: *create,
                 output_type: OutputType::FileOrDirectory,
             }),
@@ -880,7 +880,7 @@ impl CommandExecutionOutputRef<'_> {
                 output_type: *output_type,
             }),
             Self::TestPath { path, create } => Ok(ResolvedCommandExecutionOutput {
-                path: fs.buck_out_path_resolver().resolve_test(path),
+                path: fs.output_path_resolver().resolve_test(path),
                 create: *create,
                 output_type: OutputType::FileOrDirectory,
             }),
@@ -915,7 +915,7 @@ pub enum CommandExecutionOutput {
         output_type: OutputType,
     },
     TestPath {
-        path: BuckOutTestPath,
+        path: TestOutputPath,
         create: OutputCreationBehavior,
     },
 }

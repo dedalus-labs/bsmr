@@ -17,40 +17,40 @@
 
 import json
 
-from bsmr.tests.e2e_util.api.buck import Buck
+from bsmr.tests.e2e_util.api.bsmr import Bsmr
 from bsmr.tests.e2e_util.asserts import expect_failure
-from bsmr.tests.e2e_util.buck_workspace import buck_test
+from bsmr.tests.e2e_util.bsmr_workspace import bsmr_test
 
 
-@buck_test()
-async def test_deps_in_cquery_not_uquery(buck: Buck) -> None:
+@bsmr_test()
+async def test_deps_in_cquery_not_uquery(bsmr: Bsmr) -> None:
     # Check that plugin deps appear as deps in uquery but not in cquery
-    result = await buck.uquery("deps(//tests:reg_a)")
+    result = await bsmr.uquery("deps(//tests:reg_a)")
     assert "//tests:reg_a_REAL" in result.stdout
-    result = await buck.cquery("deps(//tests:reg_a)")
+    result = await bsmr.cquery("deps(//tests:reg_a)")
     assert "//tests:reg_a_REAL" not in result.stdout
     # And make sure that the attribute itself is serialized correctly in cquery and uquery
-    result = await buck.uquery("-a", "actual", "//tests:reg_a")
+    result = await bsmr.uquery("-a", "actual", "//tests:reg_a")
     assert json.loads(result.stdout) == {
         "root//tests:reg_a": {"actual": "root//tests:reg_a_REAL"}
     }
-    result = await buck.cquery("-a", "actual", "//tests:reg_a")
+    result = await bsmr.cquery("-a", "actual", "//tests:reg_a")
     assert json.loads(result.stdout) == {
         "root//tests:reg_a (<unspecified>)": {"actual": "root//tests:reg_a_REAL"}
     }
 
 
-@buck_test()
-async def test_cquery(buck: Buck) -> None:
+@bsmr_test()
+async def test_cquery(bsmr: Bsmr) -> None:
     ###### Check that everything is correctly configured as reported by cquery
-    result = await buck.cquery(
+    result = await bsmr.cquery(
         "--json",
         "-a",
-        "buck.deps",
+        "bsmr.deps",
         "-a",
-        "buck.execution_platform",
+        "bsmr.execution_platform",
         "-a",
-        "buck.plugins",
+        "bsmr.plugins",
         "deps(//tests:b)",
     )
     result = json.loads(result.stdout)
@@ -60,25 +60,25 @@ async def test_cquery(buck: Buck) -> None:
         v for k, v in result.items() if k.startswith("root//tests:l")
     )
 
-    assert set(b["buck.plugins"]["RustProcMacro"]) == {
+    assert set(b["bsmr.plugins"]["RustProcMacro"]) == {
         "root//tests:reg_a_REAL",
         "root//tests:reg_b_REAL",
         "root//tests:doc_a_REAL",
     }
-    assert set(l["buck.plugins"]["RustProcMacro"]) == {
+    assert set(l["bsmr.plugins"]["RustProcMacro"]) == {
         "root//tests:reg_a_REAL",
         "root//tests:doc_b_REAL",
     }
 
-    assert b["buck.execution_platform"].startswith("root//config:platform_linux")
+    assert b["bsmr.execution_platform"].startswith("root//config:platform_linux")
     assert any(
         dep.startswith("root//tests:reg_a_REAL (root//config:platform_linux")
-        for dep in b["buck.deps"]
+        for dep in b["bsmr.deps"]
     )
-    assert l["buck.execution_platform"].startswith("root//config:platform_windows")
+    assert l["bsmr.execution_platform"].startswith("root//config:platform_windows")
     assert any(
         dep.startswith("root//tests:reg_a_REAL (root//config:platform_windows")
-        for dep in l["buck.deps"]
+        for dep in l["bsmr.deps"]
     )
 
     assert any(
@@ -91,10 +91,10 @@ async def test_cquery(buck: Buck) -> None:
     )
 
 
-@buck_test()
-async def test_analysis(buck: Buck) -> None:
+@bsmr_test()
+async def test_analysis(bsmr: Bsmr) -> None:
     # Check that we can properly identify all the different plugin deps in analysis
-    result = await buck.build("root//tests:b", "root//tests:l")
+    result = await bsmr.build("root//tests:b", "root//tests:l")
 
     b = json.loads(
         result.get_build_report().output_for_target("root//tests:b").read_text()
@@ -117,40 +117,40 @@ async def test_analysis(buck: Buck) -> None:
     }
 
 
-@buck_test()
-async def test_plugin_dep_errors(buck: Buck) -> None:
+@bsmr_test()
+async def test_plugin_dep_errors(bsmr: Bsmr) -> None:
     # Tests are explained in the file
-    await buck.build("//test_errors:recursive_target_1")
+    await bsmr.build("//test_errors:recursive_target_1")
 
-    await buck.build("//test_errors:regular_a")
+    await bsmr.build("//test_errors:regular_a")
 
-    result = await buck.uquery("deps(//test_errors:regular_b)")
+    result = await bsmr.uquery("deps(//test_errors:regular_b)")
     assert "//test_errors:toolchain" in result.stdout
-    result = await expect_failure(buck.build("//test_errors:regular_b"))
+    result = await expect_failure(bsmr.build("//test_errors:regular_b"))
     assert (
         "Plugin dep `root//test_errors:toolchain` is a toolchain rule" in result.stderr
     )
 
-    result = await expect_failure(buck.build("//test_errors:wrong_plugin_kind"))
+    result = await expect_failure(bsmr.build("//test_errors:wrong_plugin_kind"))
     assert "The rule did not declare that it uses plugins of kind A" in result.stderr
 
 
-@buck_test()
-async def test_repeated_insertion(buck: Buck) -> None:
-    result = await buck.cquery(
-        "-a", "buck.plugins", "//repeated_insertion:different_deps_alias"
+@bsmr_test()
+async def test_repeated_insertion(bsmr: Bsmr) -> None:
+    result = await bsmr.cquery(
+        "-a", "bsmr.plugins", "//repeated_insertion:different_deps_alias"
     )
     assert {"Plugin": ["root//repeated_insertion:plugin"]} == list(
         json.loads(result.stdout).values()
-    )[0]["buck.plugins"]
+    )[0]["bsmr.plugins"]
 
 
-@buck_test()
-async def test_visibility(buck: Buck) -> None:
-    result = await expect_failure(buck.build("//visibility:missing_access"))
+@bsmr_test()
+async def test_visibility(bsmr: Bsmr) -> None:
+    result = await expect_failure(bsmr.build("//visibility:missing_access"))
     assert (
         "`root//visibility/package:hidden` is not visible to `root//visibility:missing_access`"
         in result.stderr
     )
 
-    await buck.build("//visibility:has_access")
+    await bsmr.build("//visibility:has_access")

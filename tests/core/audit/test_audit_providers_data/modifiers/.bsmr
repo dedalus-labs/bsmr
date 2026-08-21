@@ -10,7 +10,7 @@ prelude = prelude
 
 [cell_aliases]
 fbsource = root
-buck = root
+bsmr = root
 fbcode = root
 config = prelude
 ovr_config = prelude

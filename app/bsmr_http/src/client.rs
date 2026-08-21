@@ -17,7 +17,7 @@
 use std::sync::Arc;
 
 use allocative::Allocative;
-use bsmr_error::BuckErrorContext;
+use bsmr_error::BsmrErrorContext;
 use bytes::Bytes;
 use dupe::Dupe;
 use futures::StreamExt;
@@ -264,7 +264,7 @@ pub async fn to_bytes(body: BoxStream<'_, hyper::Result<Bytes>>) -> bsmr_error::
     reader
         .read_to_end(&mut buf)
         .await
-        .buck_error_context("Reading response body")?;
+        .bsmr_error_context("Reading response body")?;
     Ok(buf.into())
 }
 
@@ -678,7 +678,7 @@ mod tests {
                 };
 
                 let listener = tokio::net::UnixListener::bind(&socket)
-                    .buck_error_context("binding to unix socket")?;
+                    .bsmr_error_context("binding to unix socket")?;
                 let handle = tokio::task::spawn(async move {
                     loop {
                         let (stream, _) =
@@ -884,7 +884,7 @@ mod proxy_tests {
     use std::net::ToSocketAddrs;
     use std::time::Duration;
 
-    use bsmr_error::BuckErrorContext;
+    use bsmr_error::BsmrErrorContext;
     use bytes::Bytes;
     use http::Method;
     use httptest::Expectation;
@@ -921,7 +921,7 @@ mod proxy_tests {
             let proxy_server_addr = "[::1]:0".to_socket_addrs().unwrap().next().unwrap();
             let listener = TcpListener::bind(proxy_server_addr)
                 .await
-                .buck_error_context("failed to bind to local address")?;
+                .bsmr_error_context("failed to bind to local address")?;
             let proxy_server_addr = listener.local_addr()?;
 
             let handle: JoinHandle<()> = tokio::task::spawn(async move {
@@ -967,7 +967,7 @@ mod proxy_tests {
                 .authority(self.addr.to_string().as_str())
                 .path_and_query("/")
                 .build()
-                .buck_error_context("failed to build proxy server URI")
+                .bsmr_error_context("failed to build proxy server URI")
         }
     }
 

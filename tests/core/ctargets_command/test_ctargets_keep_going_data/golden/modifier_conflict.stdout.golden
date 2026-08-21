@@ -2,15 +2,15 @@
 
 [
   {
-    "buck.package":"root//a",
-    "buck.error":"Cannot specify modifiers with ?modifier syntax when global CLI modifiers are set with --modifier flag"
+    "bsmr.package":"root//a",
+    "bsmr.error":"Cannot specify modifiers with ?modifier syntax when global CLI modifiers are set with --modifier flag"
   },
   {
-    "buck.target":"root//a:target1",
-    "buck.type":"nano_prelude//stub_rules.bzl:stub",
-    "buck.deps":[],
-    "buck.inputs":[],
-    "buck.package":"root//a",
+    "bsmr.target":"root//a:target1",
+    "bsmr.type":"nano_prelude//stub_rules.bzl:stub",
+    "bsmr.deps":[],
+    "bsmr.inputs":[],
+    "bsmr.package":"root//a",
     "name":"target1",
     "visibility":[],
     "within_view":["PUBLIC"]

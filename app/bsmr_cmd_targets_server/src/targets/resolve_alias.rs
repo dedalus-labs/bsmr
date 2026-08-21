@@ -31,10 +31,10 @@ use bsmr_cli_proto::targets_request::OutputFormat;
 use bsmr_core::pattern::pattern::ParsedPattern;
 use bsmr_core::pattern::pattern_type::TargetPatternExtra;
 use bsmr_core::target::label::label::TargetLabel;
-use bsmr_error::BuckErrorContext;
+use bsmr_error::BsmrErrorContext;
 use bsmr_error::internal_error;
-use bsmr_hash::StdBuckHashMap;
-use bsmr_hash::StdBuckHashSet;
+use bsmr_hash::StdBsmrHashMap;
+use bsmr_hash::StdBsmrHashSet;
 use bsmr_node::nodes::attributes::PACKAGE;
 use bsmr_node::nodes::frontend::TargetGraphCalculation;
 use dice::DiceTransaction;
@@ -131,9 +131,9 @@ pub(crate) async fn targets_resolve_aliases(
     let packages = parsed_target_patterns
         .iter()
         .map(|(package, _name)| package.dupe())
-        .collect::<StdBuckHashSet<_>>();
+        .collect::<StdBsmrHashSet<_>>();
 
-    let packages: StdBuckHashMap<_, _> = dice
+    let packages: StdBsmrHashMap<_, _> = dice
         .compute_join(packages, |ctx: &mut _, package| {
             async move {
                 (
@@ -190,15 +190,15 @@ pub(crate) async fn targets_resolve_aliases(
                 package_data
                     .as_ref()
                     .map_err(|e| e.dupe())
-                    .with_buck_error_context(|| {
+                    .with_bsmr_error_context(|| {
                         format!("Package cannot be evaluated: `{package}`")
                     })?
                     .resolve_target(target_name)
-                    .with_buck_error_context(|| {
+                    .with_bsmr_error_context(|| {
                         format!("Target does not exist in package `{package}`: `{target_name}`",)
                     })
             })
-            .with_buck_error_context(|| format!("Invalid alias: `{alias}`"))?;
+            .with_bsmr_error_context(|| format!("Invalid alias: `{alias}`"))?;
 
         if needs_separator {
             formatter.separator(&mut buffer);

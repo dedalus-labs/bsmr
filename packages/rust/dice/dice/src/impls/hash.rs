@@ -19,10 +19,10 @@ use std::hash::Hash;
 use std::hash::Hasher;
 use std::mem;
 
-use bsmr_hash::BuckHasher;
+use bsmr_hash::BsmrHasher;
 
 pub(crate) fn key_hash<K: Hash + 'static>(key: &K) -> u64 {
-    let mut hasher = BuckHasher::default();
+    let mut hasher = BsmrHasher::default();
     if mem::size_of::<K>() == 0 {
         // Hashing `TypeId` unconditionally measurably slows down hashing.
         TypeId::of::<K>().hash(&mut hasher);

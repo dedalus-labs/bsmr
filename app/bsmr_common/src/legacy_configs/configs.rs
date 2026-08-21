@@ -23,7 +23,7 @@ use allocative::Allocative;
 use bsmr_cli_proto::ConfigOverride;
 use bsmr_core::cells::cell_root_path::CellRootPath;
 use bsmr_core::fs::project_rel_path::ProjectRelativePath;
-use bsmr_hash::StdBuckHashMap;
+use bsmr_hash::StdBsmrHashMap;
 use dupe::Dupe;
 use pagable::Pagable;
 use starlark_map::sorted_map::SortedMap;
@@ -118,7 +118,7 @@ pub fn parse_config_section_and_key(
         .ok_or_else(|| ConfigArgumentParseError::NoSectionDotSeparator(raw_arg.to_owned()))?;
 
     // We only trim the section + key, whitespace in values needs to be preserved. For example,
-    // Buck can be invoked with --config section.key="Some Value" that contains important whitespace.
+    // Bsmr can be invoked with --config section.key="Some Value" that contains important whitespace.
     let trimmed_section = raw_section.trim_start();
     if trimmed_section.find(char::is_whitespace).is_some()
         || raw_key.find(char::is_whitespace).is_some()
@@ -370,12 +370,12 @@ pub mod testing {
     }
 
     pub struct TestConfigParserFileOps {
-        data: StdBuckHashMap<ProjectRelativePathBuf, String>,
+        data: StdBsmrHashMap<ProjectRelativePathBuf, String>,
     }
 
     impl TestConfigParserFileOps {
         pub fn new(data: &[(&str, &str)]) -> bsmr_error::Result<Self> {
-            let mut holder_data = StdBuckHashMap::default();
+            let mut holder_data = StdBsmrHashMap::default();
             for (file, content) in data {
                 holder_data.insert(
                     ProjectRelativePath::new(*file)?.to_owned(),

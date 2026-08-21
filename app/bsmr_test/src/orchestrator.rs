@@ -74,7 +74,7 @@ use bsmr_core::execution_types::executor_config::MetaInternalExtraParams;
 use bsmr_core::execution_types::executor_config::PathSeparatorKind;
 use bsmr_core::execution_types::executor_config::RemoteExecutorCustomImage;
 use bsmr_core::fs::artifact_path_resolver::ArtifactFs;
-use bsmr_core::fs::buck_out_path::BuckOutTestPath;
+use bsmr_core::fs::output_path::TestOutputPath;
 use bsmr_core::fs::project_rel_path::ProjectRelativePathBuf;
 use bsmr_core::provider::label::ConfiguredProvidersLabel;
 use bsmr_core::target::configured_target_label::ConfiguredTargetLabel;
@@ -89,7 +89,7 @@ use bsmr_data::TestRunStart;
 use bsmr_data::TestSessionInfo;
 use bsmr_data::TestSuite;
 use bsmr_data::ToProtoMessage;
-use bsmr_error::BuckErrorContext;
+use bsmr_error::BsmrErrorContext;
 use bsmr_error::ErrorTag;
 use bsmr_error::conversion::from_any_with_tag;
 use bsmr_error::internal_error;
@@ -130,13 +130,13 @@ use bsmr_execute_impl::executors::local::materialize_inputs;
 use bsmr_execute_impl::executors::local::prep_scratch_path;
 use bsmr_fs::paths::forward_rel_path::ForwardRelativePath;
 use bsmr_fs::paths::forward_rel_path::ForwardRelativePathBuf;
-use bsmr_hash::BuckDefaultHasher;
-use bsmr_hash::BuckHashMap;
-use bsmr_hash::BuckIndexMap;
-use bsmr_hash::BuckIndexSet;
-use bsmr_hash::StdBuckHashMap;
-use bsmr_hash::StdBuckHashSet;
-use bsmr_hash::buck_indexset;
+use bsmr_hash::BsmrDefaultHasher;
+use bsmr_hash::BsmrHashMap;
+use bsmr_hash::BsmrIndexMap;
+use bsmr_hash::BsmrIndexSet;
+use bsmr_hash::StdBsmrHashMap;
+use bsmr_hash::StdBsmrHashSet;
+use bsmr_hash::bsmr_indexset;
 use bsmr_node::nodes::configured::ConfiguredTargetNode;
 use bsmr_node::nodes::configured_frontend::ConfiguredTargetNodeCalculation;
 use bsmr_resource_control::HasResourceControl;
@@ -226,14 +226,14 @@ impl OwnedTestInfo {
         }
     }
 
-    fn env_args<'v>(&self) -> StdBuckHashMap<&'v str, &'v dyn CommandLineArgLike<'v>> {
+    fn env_args<'v>(&self) -> StdBsmrHashMap<&'v str, &'v dyn CommandLineArgLike<'v>> {
         match self {
             Self::External(info) => info.env().collect(),
             Self::Internal(info) => info.env().collect(),
         }
     }
 
-    fn local_resources(&self) -> BuckIndexMap<&str, Option<&ConfiguredProvidersLabel>> {
+    fn local_resources(&self) -> BsmrIndexMap<&str, Option<&ConfiguredProvidersLabel>> {
         match self {
             Self::External(info) => info.local_resources(),
             Self::Internal(info) => info.local_resources(),
@@ -320,7 +320,7 @@ pub enum ExecutorMessage {
     InfoMessage(String),
 }
 
-pub struct BuckTestOrchestrator<'a: 'static> {
+pub struct BsmrTestOrchestrator<'a: 'static> {
     dice: DiceTransaction,
     session: Arc<TestSession>,
     results_channel: UnboundedSender<bsmr_error::Result<ExecutorMessage>>,
@@ -331,7 +331,7 @@ pub struct BuckTestOrchestrator<'a: 'static> {
     internal_runner_config: InternalRunnerConfig,
 }
 
-impl<'a> BuckTestOrchestrator<'a> {
+impl<'a> BsmrTestOrchestrator<'a> {
     pub(crate) async fn new(
         dice: DiceTransaction,
         session: Arc<TestSession>,
@@ -339,7 +339,7 @@ impl<'a> BuckTestOrchestrator<'a> {
         results_channel: UnboundedSender<bsmr_error::Result<ExecutorMessage>>,
         cancellations: &'a CancellationContext,
         internal_runner_config: InternalRunnerConfig,
-    ) -> bsmr_error::Result<BuckTestOrchestrator<'a>> {
+    ) -> bsmr_error::Result<BsmrTestOrchestrator<'a>> {
         let events = dice.per_transaction_data().get_dispatcher().dupe();
         let re_client = Arc::new(remote_storage::ReClientWithCache::new(
             dice.per_transaction_data().get_re_client(),
@@ -365,7 +365,7 @@ impl<'a> BuckTestOrchestrator<'a> {
         cancellations: &'a CancellationContext,
         re_client: Arc<remote_storage::ReClientWithCache>,
         internal_runner_config: InternalRunnerConfig,
-    ) -> BuckTestOrchestrator<'a> {
+    ) -> BsmrTestOrchestrator<'a> {
         Self {
             dice,
             session,
@@ -454,13 +454,13 @@ impl<'a> BuckTestOrchestrator<'a> {
 
         Self::require_alive(self.liveliness_observer.dupe()).await?;
 
-        let mut output_map = StdBuckHashMap::default();
+        let mut output_map = StdBsmrHashMap::default();
         let mut paths_to_materialize = vec![];
 
         let remote_storage_config_update_futures = FuturesUnordered::new();
 
         for (test_path, artifact) in outputs {
-            let project_relative_path = fs.buck_out_path_resolver().resolve_test(&test_path);
+            let project_relative_path = fs.output_path_resolver().resolve_test(&test_path);
             let output_name = test_path.into_path().into();
             // It's OK to search iteratively here because there will be few entries in `pre_create_dirs`
             let remote_storage_config = pre_create_dirs
@@ -477,7 +477,7 @@ impl<'a> BuckTestOrchestrator<'a> {
                 //
                 // TODO(arr): is there a better way to check that the output is
                 // in CAS other than checking that the command was executed on
-                // RE? Alternatively, when we make buck upload local testing
+                // RE? Alternatively, when we make bsmr upload local testing
                 // artifacts to CAS, we can remove this condition altogether.
                 (true, Some(CommandExecutionKind::Remote { .. }), Some(remote_object)) => {
                     let re_client = self.re_client.clone();
@@ -508,7 +508,7 @@ impl<'a> BuckTestOrchestrator<'a> {
             .get_materializer()
             .ensure_materialized(paths_to_materialize)
             .await
-            .buck_error_context("Error materializing test outputs")?;
+            .bsmr_error_context("Error materializing test outputs")?;
 
         Ok(ExecutionResult2 {
             status,
@@ -590,7 +590,7 @@ impl<'a> BuckTestOrchestrator<'a> {
                 agv.iter()
                     .filter_map(|(artifact, _)| artifact.action_key().map(|k| k.dupe()))
             })
-            .collect::<StdBuckHashSet<_>>() // dedupe
+            .collect::<StdBsmrHashSet<_>>() // dedupe
             .into_iter()
             .collect();
 
@@ -740,7 +740,7 @@ impl Key for TestExecutionKey {
         cancellations
             .with_structured_cancellation(|observer| {
                 async move {
-                    BuckTestOrchestrator::prepare_and_execute_no_dice(
+                    BsmrTestOrchestrator::prepare_and_execute_no_dice(
                         ctx,
                         self.dupe(),
                         Arc::new(observer),
@@ -792,7 +792,7 @@ async fn prepare_and_execute(
         }?;
         Ok((*result).clone())
     } else {
-        Ok(BuckTestOrchestrator::prepare_and_execute_no_dice(
+        Ok(BsmrTestOrchestrator::prepare_and_execute_no_dice(
             ctx,
             key,
             liveliness_observer,
@@ -841,7 +841,7 @@ impl Display for TestExecutionKey {
 struct PreparedLocalResourceSetupContext {
     pub target: ConfiguredTargetLabel,
     pub execution_request: CommandExecutionRequest,
-    pub env_var_mapping: BuckIndexMap<String, String>,
+    pub env_var_mapping: BsmrIndexMap<String, String>,
 }
 
 #[derive(Clone, Dupe, Allocative)]
@@ -863,7 +863,7 @@ enum ExecuteError {
 }
 
 #[async_trait]
-impl TestOrchestrator for BuckTestOrchestrator<'_> {
+impl TestOrchestrator for BsmrTestOrchestrator<'_> {
     async fn execute2(
         &self,
         stage: TestStage,
@@ -877,7 +877,7 @@ impl TestOrchestrator for BuckTestOrchestrator<'_> {
         required_local_resources: RequiredLocalResources,
         disable_test_execution_caching: bool,
     ) -> bsmr_error::Result<ExecuteResponse> {
-        let res = BuckTestOrchestrator::execute2(
+        let res = BsmrTestOrchestrator::execute2(
             self,
             stage,
             test_target,
@@ -1159,11 +1159,11 @@ struct ExecuteData {
     pub status: ExecutionStatus,
     pub timing: CommandExecutionMetadata,
     pub execution_kind: Option<CommandExecutionKind>,
-    pub outputs: Vec<(BuckOutTestPath, ArtifactValue)>,
+    pub outputs: Vec<(TestOutputPath, ArtifactValue)>,
     pub command_execution: Option<bsmr_data::CommandExecution>,
 }
 
-impl BuckTestOrchestrator<'_> {
+impl BsmrTestOrchestrator<'_> {
     fn executor_preference(
         opts: TestSessionOptions,
         test_supports_re: bool,
@@ -1394,7 +1394,7 @@ impl BuckTestOrchestrator<'_> {
         let std_streams = std_streams
             .into_bytes()
             .await
-            .buck_error_context("Error accessing test output")?;
+            .bsmr_error_context("Error accessing test output")?;
         let stdout = ExecutionStream::Inline(std_streams.stdout);
         let stderr = ExecutionStream::Inline(std_streams.stderr);
 
@@ -1477,7 +1477,7 @@ impl BuckTestOrchestrator<'_> {
             None => test_target_node
                 .execution_platform_resolution()
                 .executor_config()
-                .buck_error_context("Error accessing executor config")?,
+                .bsmr_error_context("Error accessing executor config")?,
         };
 
         if let TestStage::Listing { .. } = &stage {
@@ -1645,7 +1645,7 @@ impl BuckTestOrchestrator<'_> {
                     .ok_or_else(|| {
                         internal_error!("The `executor_override` provided does not exist")
                     })
-                    .with_buck_error_context(|| {
+                    .with_bsmr_error_context(|| {
                         format!(
                             "Error processing `executor_override`: `{}`",
                             executor_override.name
@@ -1677,7 +1677,7 @@ impl BuckTestOrchestrator<'_> {
             supports_test_execution_caching,
         )
         .await
-        .buck_error_context("Error constructing CommandExecutor")?;
+        .bsmr_error_context("Error constructing CommandExecutor")?;
 
         Ok(TestExecutor {
             test_executor: executor,
@@ -1698,7 +1698,7 @@ impl BuckTestOrchestrator<'_> {
     ) -> bsmr_error::Result<ExpandedTestExecutable> {
         let output_root = resolve_output_root(dice, test_target, stage).await?;
 
-        let mut declared_outputs = BuckIndexMap::<BuckOutTestPath, OutputCreationBehavior>::new();
+        let mut declared_outputs = BsmrIndexMap::<TestOutputPath, OutputCreationBehavior>::new();
 
         let mut supports_re = true;
 
@@ -1749,7 +1749,7 @@ impl BuckTestOrchestrator<'_> {
         };
 
         for output in pre_create_dirs.into_owned() {
-            let test_path = BuckOutTestPath::new(output_root.clone(), output.name.into());
+            let test_path = TestOutputPath::new(output_root.clone(), output.name.into());
             declared_outputs.insert(test_path, OutputCreationBehavior::Create);
         }
 
@@ -1770,7 +1770,7 @@ impl BuckTestOrchestrator<'_> {
         cmd: Vec<String>,
         env: SortedVectorMap<String, String>,
         ensured_inputs: Vec<(ArtifactGroup, ArtifactGroupValues)>,
-        declared_outputs: BuckIndexMap<BuckOutTestPath, OutputCreationBehavior>,
+        declared_outputs: BsmrIndexMap<TestOutputPath, OutputCreationBehavior>,
         fs: &ArtifactFs,
         timeout: Option<Duration>,
         host_sharing_requirements: Option<Arc<HostSharingRequirements>>,
@@ -1893,7 +1893,7 @@ impl BuckTestOrchestrator<'_> {
                 async move {
                     (
                         missing_target.dupe(),
-                        setup.await.with_buck_error_context(|| {
+                        setup.await.with_bsmr_error_context(|| {
                             format!(
                                 "Error setting up local resource declared in `{missing_target}`"
                             )
@@ -1938,7 +1938,7 @@ impl BuckTestOrchestrator<'_> {
             })
             .await?;
 
-        let artifact_path_mapping: BuckHashMap<_, _> = inputs
+        let artifact_path_mapping: BsmrHashMap<_, _> = inputs
             .iter()
             .flat_map(|v| v.iter())
             .map(|(a, v)| (a, v.content_based_path_hash()))
@@ -1958,7 +1958,7 @@ impl BuckTestOrchestrator<'_> {
             .collect();
         let paths = CommandExecutionPaths::new(
             inputs,
-            buck_indexset![],
+            bsmr_indexset![],
             fs,
             digest_config,
             dice.per_transaction_data()
@@ -2030,7 +2030,7 @@ impl BuckTestOrchestrator<'_> {
         let std_streams = std_streams
             .into_bytes()
             .await
-            .buck_error_context("Error accessing setup local resource output")?;
+            .bsmr_error_context("Error accessing setup local resource output")?;
 
         match status {
             CommandExecutionStatus::Success { .. } => {}
@@ -2066,7 +2066,7 @@ impl BuckTestOrchestrator<'_> {
 
         let string_content = String::from_utf8_lossy(&std_streams.stdout);
         let data: LocalResourcesSetupResult = serde_json::from_str(&string_content)
-            // .buck_error_context("Error parsing local resource setup command output")
+            // .bsmr_error_context("Error parsing local resource setup command output")
             .map_err(|e| from_any_with_tag(e, ErrorTag::LocalResourceSetup))?;
         let state = data.into_state(context.target.clone(), &context.env_var_mapping)?;
 
@@ -2074,14 +2074,14 @@ impl BuckTestOrchestrator<'_> {
     }
 }
 
-impl Drop for BuckTestOrchestrator<'_> {
+impl Drop for BsmrTestOrchestrator<'_> {
     fn drop(&mut self) {
         // If we didn't close the sender yet, then notify the receiver that our stream is
         // incomplete.
         let _ignored = self
             .results_channel
             .unbounded_send(Err(bsmr_error::internal_error!(
-                "BuckTestOrchestrator exited before end-of-tests was received",
+                "BsmrTestOrchestrator exited before end-of-tests was received",
             )));
     }
 }
@@ -2090,7 +2090,7 @@ struct Execute2RequestExpander<'a> {
     test_info: &'a OwnedTestInfo,
     stage: &'a TestStage,
     output_root: &'a ForwardRelativePath,
-    declared_outputs: &'a mut BuckIndexMap<BuckOutTestPath, OutputCreationBehavior>,
+    declared_outputs: &'a mut BsmrIndexMap<TestOutputPath, OutputCreationBehavior>,
     fs: &'a ExecutorFs<'a>,
     cmd: Cow<'a, [ArgValue]>,
     env: Cow<'a, SortedVectorMap<String, ArgValue>>,
@@ -2099,7 +2099,7 @@ struct Execute2RequestExpander<'a> {
 
 fn make_visit_arg_artifacts<'v>(
     cli_args_for_interpolation: Vec<&'v dyn CommandLineArgLike<'v>>,
-    env_for_interpolation: StdBuckHashMap<&'v str, &'v dyn CommandLineArgLike<'v>>,
+    env_for_interpolation: StdBsmrHashMap<&'v str, &'v dyn CommandLineArgLike<'v>>,
 ) -> impl for<'a> Fn(&'a mut dyn CommandLineArtifactVisitor<'v>, &'a ArgValue) -> bsmr_error::Result<()>
 {
     move |artifact_visitor: &mut dyn CommandLineArtifactVisitor<'_>, value: &ArgValue| {
@@ -2124,7 +2124,7 @@ fn make_visit_arg_artifacts<'v>(
 }
 
 impl<'a> Execute2RequestExpander<'a> {
-    fn get_inputs(&self) -> bsmr_error::Result<BuckIndexSet<ArtifactGroup>> {
+    fn get_inputs(&self) -> bsmr_error::Result<BsmrIndexSet<ArtifactGroup>> {
         let Execute2RequestExpander {
             test_info,
             stage,
@@ -2156,10 +2156,10 @@ impl<'a> Execute2RequestExpander<'a> {
 
     fn expand_arg_value<'v>(
         fmt: &mut CommandLineBuilder<'v, '_>,
-        declared_outputs: &mut BuckIndexMap<BuckOutTestPath, OutputCreationBehavior>,
+        declared_outputs: &mut BsmrIndexMap<TestOutputPath, OutputCreationBehavior>,
         value: &'v ArgValue,
         cli_args_for_interpolation: &[&dyn CommandLineArgLike<'v>],
-        env_for_interpolation: &StdBuckHashMap<&str, &dyn CommandLineArgLike<'v>>,
+        env_for_interpolation: &StdBsmrHashMap<&str, &dyn CommandLineArgLike<'v>>,
         output_root: &ForwardRelativePath,
         fs: &ExecutorFs<'_>,
     ) -> bsmr_error::Result<()> {
@@ -2186,8 +2186,8 @@ impl<'a> Execute2RequestExpander<'a> {
                 arg.add_to_command_line(fmt)?;
             }
             ArgValueContent::DeclaredOutput(output) => {
-                let test_path = BuckOutTestPath::new(output_root.to_owned(), output.name.clone());
-                let path = fs.fs().buck_out_path_resolver().resolve_test(&test_path);
+                let test_path = TestOutputPath::new(output_root.to_owned(), output.name.clone());
+                let path = fs.fs().output_path_resolver().resolve_test(&test_path);
                 fmt.push_project_path(path)?;
                 declared_outputs.insert(test_path, OutputCreationBehavior::Parent);
             }
@@ -2303,7 +2303,7 @@ impl<'a> Execute2RequestExpander<'a> {
                     // TODO(ianc): Support input_paths on test workers
                     input_paths: CommandExecutionPaths::new(
                         vec![],
-                        buck_indexset![],
+                        bsmr_indexset![],
                         fs.fs(),
                         digest_config,
                         None,
@@ -2322,7 +2322,7 @@ async fn resolve_output_root(
     test_target: &ConfiguredProvidersLabel,
     stage: &TestStage,
 ) -> Result<ForwardRelativePathBuf, bsmr_error::Error> {
-    let resolver = dice.get_buck_out_path().await?;
+    let resolver = dice.get_output_path().await?;
 
     let output_root = match stage {
         TestStage::Listing { .. } => resolver
@@ -2334,7 +2334,7 @@ async fn resolve_output_root(
             repeat_count,
             ..
         } => {
-            let mut hasher = BuckDefaultHasher::new();
+            let mut hasher = BsmrDefaultHasher::new();
             variant.hash(&mut hasher);
             repeat_count.hash(&mut hasher);
             testcases.hash(&mut hasher);
@@ -2357,7 +2357,7 @@ struct ExpandedTestExecutable {
     env: SortedVectorMap<String, String>,
     ensured_inputs: Vec<(ArtifactGroup, ArtifactGroupValues)>,
     supports_re: bool,
-    declared_outputs: BuckIndexMap<BuckOutTestPath, OutputCreationBehavior>,
+    declared_outputs: BsmrIndexMap<TestOutputPath, OutputCreationBehavior>,
     worker: Option<WorkerSpec>,
 }
 
@@ -2600,7 +2600,7 @@ mod tests {
     use super::*;
 
     async fn make() -> bsmr_error::Result<(
-        BuckTestOrchestrator<'static>,
+        BsmrTestOrchestrator<'static>,
         UnboundedReceiver<bsmr_error::Result<ExecutorMessage>>,
     )> {
         let fs = ProjectRootTemp::new().unwrap();
@@ -2609,12 +2609,12 @@ mod tests {
             CellName::testing_new("cell"),
             CellRootPathBuf::new(ProjectRelativePathBuf::unchecked_new("cell".to_owned())),
         );
-        let buckout_path = ProjectRelativePathBuf::unchecked_new("buck_out/v2".into());
+        let output_path = ProjectRelativePathBuf::unchecked_new("output/v2".into());
         let mut dice = DiceBuilder::new()
             .set_data(|d| d.set_testing_io_provider(&fs))
             .build(UserComputationData::new())
             .unwrap();
-        dice.set_buck_out_path(Some(buckout_path))?;
+        dice.set_output_path(Some(output_path))?;
         dice.set_cell_resolver(cell_resolver)?;
 
         let dice = dice.commit().await;
@@ -2626,7 +2626,7 @@ mod tests {
         ));
 
         Ok((
-            BuckTestOrchestrator::from_parts(
+            BsmrTestOrchestrator::from_parts(
                 dice,
                 Arc::new(TestSession::new(Default::default())),
                 NoopLivelinessObserver::create(),

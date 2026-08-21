@@ -15,86 +15,86 @@
 # pyre-strict
 
 
-from bsmr.tests.e2e_util.api.buck import Buck
-from bsmr.tests.e2e_util.buck_workspace import buck_test
+from bsmr.tests.e2e_util.api.bsmr import Bsmr
+from bsmr.tests.e2e_util.bsmr_workspace import bsmr_test
 
 
-@buck_test()
-async def test_bxl_target_universe_keep_going_no_errors(buck: Buck) -> None:
-    await buck.bxl(
+@bsmr_test()
+async def test_bxl_target_universe_keep_going_no_errors(bsmr: Bsmr) -> None:
+    await bsmr.bxl(
         "//target_universe.bxl:target_universe_keep_going_no_errors",
     )
 
 
-@buck_test()
-async def test_bxl_target_universe_universe_target_set(buck: Buck) -> None:
-    await buck.bxl(
+@bsmr_test()
+async def test_bxl_target_universe_universe_target_set(bsmr: Bsmr) -> None:
+    await bsmr.bxl(
         "//target_universe.bxl:target_universe_universe_target_set",
     )
 
 
-@buck_test()
-async def test_bxl_target_universe_keep_going_with_errors(buck: Buck) -> None:
-    await buck.bxl(
+@bsmr_test()
+async def test_bxl_target_universe_keep_going_with_errors(bsmr: Bsmr) -> None:
+    await bsmr.bxl(
         "//keep_going.bxl:target_universe_keep_going_with_errors",
     )
 
 
-@buck_test()
-async def test_bxl_target_universe_keep_going_list_input(buck: Buck) -> None:
-    await buck.bxl(
+@bsmr_test()
+async def test_bxl_target_universe_keep_going_list_input(bsmr: Bsmr) -> None:
+    await bsmr.bxl(
         "//keep_going.bxl:target_universe_keep_going_list_input",
     )
 
 
-@buck_test()
-async def test_bxl_target_universe_keep_going_target_set_input(buck: Buck) -> None:
-    await buck.bxl(
+@bsmr_test()
+async def test_bxl_target_universe_keep_going_target_set_input(bsmr: Bsmr) -> None:
+    await bsmr.bxl(
         "//keep_going.bxl:target_universe_keep_going_target_set_input",
     )
 
 
-@buck_test()
-async def test_bxl_target_universe_keep_going_mixed_list(buck: Buck) -> None:
-    await buck.bxl(
+@bsmr_test()
+async def test_bxl_target_universe_keep_going_mixed_list(bsmr: Bsmr) -> None:
+    await bsmr.bxl(
         "//keep_going.bxl:target_universe_keep_going_mixed_list",
     )
 
 
-@buck_test()
-async def test_bxl_target_universe_keep_going_all_fail(buck: Buck) -> None:
-    await buck.bxl(
+@bsmr_test()
+async def test_bxl_target_universe_keep_going_all_fail(bsmr: Bsmr) -> None:
+    await bsmr.bxl(
         "//keep_going.bxl:target_universe_keep_going_all_fail",
     )
 
 
-@buck_test()
+@bsmr_test()
 async def test_bxl_target_universe_keep_going_incompatible_target_set(
-    buck: Buck,
+    bsmr: Bsmr,
 ) -> None:
-    result = await buck.bxl(
+    result = await bsmr.bxl(
         "//keep_going.bxl:target_universe_keep_going_incompatible_target_set",
     )
     assert "Skipped 1 incompatible targets" in result.stderr
     assert "root//incompatible_targets:incompatible_target" in result.stderr
 
 
-@buck_test()
+@bsmr_test()
 async def test_bxl_target_universe_keep_going_incompatible_string_pattern(
-    buck: Buck,
+    bsmr: Bsmr,
 ) -> None:
-    result = await buck.bxl(
+    result = await bsmr.bxl(
         "//keep_going.bxl:target_universe_keep_going_incompatible_string_pattern",
     )
     assert "Skipped 1 incompatible targets" in result.stderr
     assert "root//incompatible_targets:incompatible_target" in result.stderr
 
 
-@buck_test()
+@bsmr_test()
 async def test_bxl_target_universe_keep_going_incompatible_list(
-    buck: Buck,
+    bsmr: Bsmr,
 ) -> None:
-    result = await buck.bxl(
+    result = await bsmr.bxl(
         "//keep_going.bxl:target_universe_keep_going_incompatible_list",
     )
     assert "Skipped 1 incompatible targets" in result.stderr

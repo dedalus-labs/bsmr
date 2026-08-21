@@ -15,7 +15,7 @@
 import os
 
 from bsmr.tests.e2e_util.asserts import expect_failure
-from bsmr.tests.e2e_util.buck_workspace import buck_test, get_mode_from_platform
+from bsmr.tests.e2e_util.bsmr_workspace import bsmr_test, get_mode_from_platform
 
 
 # This is just a template test case for `check_dependencies_test` to use bsmr's e2e test framework.
@@ -30,8 +30,8 @@ if FLAVOR == "check_dependencies_test":  # noqa: C901
         split_list = [] if list_env == "" else list_env.split(",")
         return [elem for item in split_list for elem in (to_bxl_param, item)]
 
-    @buck_test(inplace=True)
-    async def test_check_dependencies_bxl(buck) -> None:
+    @bsmr_test(inplace=True)
+    async def test_check_dependencies_bxl(bsmr) -> None:
         allowlist_args = pass_list_arg(
             from_env_var="ALLOWLIST", to_bxl_param="--allowlist_patterns"
         )
@@ -44,12 +44,12 @@ if FLAVOR == "check_dependencies_test":  # noqa: C901
         if not mode_argfile:
             mode_argfile = get_mode_from_platform()
 
-        additional_argfile = os.environ.get("EXTRA_BUCK_ARGS_FILE", None)
+        additional_argfile = os.environ.get("EXTRA_BSMR_ARGS_FILE", None)
         additional_args = []
         if additional_argfile:
             additional_args.append(additional_argfile)
 
-        bxl_call = buck.bxl(
+        bxl_call = bsmr.bxl(
             os.environ["BXL_MAIN"],
             mode_argfile,
             *additional_args,
@@ -90,12 +90,12 @@ elif FLAVOR == "audit_dependents_test":
         split_list = [] if list_env == "" else list_env.split(",")
         return [elem for item in split_list for elem in ("--allowlist_patterns", item)]
 
-    @buck_test(inplace=True)
-    async def test_audit_dependents_bxl(buck) -> None:
+    @bsmr_test(inplace=True)
+    async def test_audit_dependents_bxl(bsmr) -> None:
         allow_list = process_list_arg()
         expect_failure_msg = os.environ["EXPECT_FAILURE_MSG"]
 
-        bxl_call = buck.bxl(
+        bxl_call = bsmr.bxl(
             os.environ["BXL_MAIN"],
             "--",
             "--target",
@@ -120,11 +120,11 @@ elif FLAVOR == "assert_dependencies_test":
         split_list = [] if list_env == "" else list_env.split(",")
         return [elem for item in split_list for elem in ("--deps", item)]
 
-    @buck_test(inplace=True)
-    async def test_check_dependencies_bxl(buck) -> None:
+    @bsmr_test(inplace=True)
+    async def test_check_dependencies_bxl(bsmr) -> None:
         dep_list = process_list_arg()
         expect_failure_msg = os.environ["EXPECT_FAILURE_MSG"]
-        bxl_call = buck.bxl(
+        bxl_call = bsmr.bxl(
             os.environ["BXL_MAIN"],
             "--",
             "--target",
@@ -141,8 +141,8 @@ elif FLAVOR == "assert_dependencies_test":
 
 elif FLAVOR == "check_mutually_exclusive_dependencies_test":
 
-    @buck_test(inplace=True)
-    async def test_check_mutually_exclusive_dependencies_bxl(buck) -> None:
+    @bsmr_test(inplace=True)
+    async def test_check_mutually_exclusive_dependencies_bxl(bsmr) -> None:
         expect_failure_msg = os.environ["EXPECT_FAILURE_MSG"]
 
         # Build mode argfile is passed directly to bsmr as an argfile
@@ -152,7 +152,7 @@ elif FLAVOR == "check_mutually_exclusive_dependencies_test":
         if build_mode_argfile:
             additional_args.append(build_mode_argfile)
 
-        bxl_call = buck.bxl(
+        bxl_call = bsmr.bxl(
             os.environ["BXL_MAIN"],
             *additional_args,
             "--",

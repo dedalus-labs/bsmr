@@ -87,7 +87,7 @@ impl AnonTargetAttrTypeCoerce for AttrType {
             },
             AttrTypeInner::Enum(x) => match value.unpack_str() {
                 Some(s) => {
-                    // Enum names in Buck can be specified upper or lower case,
+                    // Enum names in Bsmr can be specified upper or lower case,
                     // so we normalise them to lowercase to make rule implementations easier
                     let s = s.to_lowercase();
                     if let Some(s) = x.variants.get(s.as_str()) {

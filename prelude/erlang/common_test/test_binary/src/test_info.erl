@@ -16,7 +16,7 @@
 -compile(warn_missing_spec_all).
 
 -export([load_from_file/1, write_to_file/2, try_make_path_relative/1]).
--include_lib("common/include/buck_ct_records.hrl").
+-include_lib("common/include/bsmr_ct_records.hrl").
 
 -type test_info() :: #test_info{}.
 -export_type([test_info/0]).
@@ -41,10 +41,10 @@ load_from_file(TestInfoFile) ->
         <<"raw_target">> := RawTarget,
         <<"trampolines">> := Trampolines
     } = json:decode(Content),
-    Providers1 = buck_ct_parser:parse_str(Providers),
+    Providers1 = bsmr_ct_parser:parse_str(Providers),
     CtOpts1 = make_ct_opts(
-        buck_ct_parser:parse_str(CtOpts),
-        [buck_ct_parser:parse_str(CTH) || CTH <- ExtraCtHooks]
+        bsmr_ct_parser:parse_str(CtOpts),
+        [bsmr_ct_parser:parse_str(CTH) || CTH <- ExtraCtHooks]
     ),
     {ok, ParsedArtifactAnnotationMFA} = parse_mfa(ArtifactAnnotationMFA),
     #test_info{

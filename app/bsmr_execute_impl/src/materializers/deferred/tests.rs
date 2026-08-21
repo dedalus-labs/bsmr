@@ -28,7 +28,7 @@ use bsmr_execute::materialize::materializer::DeferredMaterializerSubscription;
 use bsmr_execute::materialize::utils::dynamic_priority_handle::DynamicPriorityHandle;
 use bsmr_execute::materialize::utils::priority_semaphore::Priority;
 use bsmr_fs::paths::forward_rel_path::ForwardRelativePath;
-use bsmr_hash::StdBuckHashMap;
+use bsmr_hash::StdBsmrHashMap;
 use parking_lot::Mutex;
 
 use super::*;
@@ -68,9 +68,9 @@ fn test_find_artifacts() -> bsmr_error::Result<()> {
     tree.insert(artifact3.iter().map(|f| f.to_owned()), ());
     tree.insert(artifact4.iter().map(|f| f.to_owned()), ());
 
-    let expected_artifacts: StdBuckHashSet<_> =
+    let expected_artifacts: StdBsmrHashSet<_> =
         vec![artifact1, artifact2, artifact3].into_iter().collect();
-    let found_artifacts: StdBuckHashSet<_> = tree.find_artifacts(&builder).into_iter().collect();
+    let found_artifacts: StdBsmrHashSet<_> = tree.find_artifacts(&builder).into_iter().collect();
     assert_eq!(found_artifacts, expected_artifacts);
     Ok(())
 }
@@ -92,8 +92,8 @@ fn test_remove_path() {
     insert(&mut tree, "a/c");
 
     let removed_subtree = tree.remove_path(ProjectRelativePath::unchecked_new("a/b"));
-    // Convert to StdBuckHashMap<String, String> so it's easier to test
-    let removed_subtree: StdBuckHashMap<String, String> = removed_subtree
+    // Convert to StdBsmrHashMap<String, String> so it's easier to test
+    let removed_subtree: StdBsmrHashMap<String, String> = removed_subtree
         .map(|(k, v)| (k.as_str().to_owned(), v))
         .collect();
 
@@ -111,7 +111,7 @@ mod state_machine {
     use assert_matches::assert_matches;
     use bsmr_common::file_ops::metadata::Symlink;
     use bsmr_core::fs::project::ProjectRootTemp;
-    use bsmr_error::BuckErrorContext;
+    use bsmr_error::BsmrErrorContext;
     use bsmr_error::bsmr_error;
     use bsmr_events::daemon_id::DaemonId;
     use bsmr_events::source::ChannelEventSource;
@@ -152,13 +152,13 @@ mod state_machine {
         fail: Mutex<bool>,
         fail_paths: Mutex<Vec<ProjectRelativePathBuf>>,
         // If set, add a sleep when materializing to simulate a long materialization period
-        materialization_config: StdBuckHashMap<ProjectRelativePathBuf, TokioDuration>,
+        materialization_config: StdBsmrHashMap<ProjectRelativePathBuf, TokioDuration>,
         #[allocative(skip)]
         read_dir_barriers: Option<Arc<(Barrier, Barrier)>>,
         #[allocative(skip)]
         clean_barriers: Option<Arc<(Barrier, Barrier)>>,
         digest_config: DigestConfig,
-        buck_out_path: ProjectRelativePathBuf,
+        output_path: ProjectRelativePathBuf,
         fs: ProjectRoot,
     }
 
@@ -192,18 +192,18 @@ mod state_machine {
                 log: Default::default(),
                 fail: Default::default(),
                 fail_paths: Default::default(),
-                materialization_config: StdBuckHashMap::default(),
+                materialization_config: StdBsmrHashMap::default(),
                 read_dir_barriers: None,
                 clean_barriers: None,
                 digest_config: DigestConfig::testing_default(),
-                buck_out_path: make_path("bsmr-out/v2"),
+                output_path: make_path("bsmr-out/default"),
                 fs,
             }
         }
 
         pub fn with_materialization_config(
             mut self,
-            materialization_config: StdBuckHashMap<ProjectRelativePathBuf, TokioDuration>,
+            materialization_config: StdBsmrHashMap<ProjectRelativePathBuf, TokioDuration>,
         ) -> Self {
             self.materialization_config = materialization_config;
             self
@@ -226,7 +226,7 @@ mod state_machine {
     impl StubIoHandler {
         fn actually_write(self: &Arc<Self>, path: &ProjectRelativePathBuf, write: &Arc<WriteFile>) {
             let data = zstd::bulk::decompress(&write.compressed_data, write.decompressed_size)
-                .buck_error_context("Error decompressing data")
+                .bsmr_error_context("Error decompressing data")
                 .unwrap();
             self.fs.write_file(path, data, write.is_executable).unwrap();
         }
@@ -346,8 +346,8 @@ mod state_machine {
             fs_util::read_dir(path)
         }
 
-        fn buck_out_path(&self) -> &ProjectRelativePathBuf {
-            &self.buck_out_path
+        fn output_path(&self) -> &ProjectRelativePathBuf {
+            &self.output_path
         }
 
         fn re_client_manager(&self) -> &Arc<ReConnectionManager> {
@@ -433,8 +433,8 @@ mod state_machine {
     fn make_db(fs: &ProjectRoot) -> (MaterializerStateSqliteDb, Option<MaterializerState>) {
         let (db, state) = testing_materializer_state_sqlite_db(
             fs,
-            StdBuckHashMap::from([("version".to_owned(), "0".to_owned())]),
-            StdBuckHashMap::default(),
+            StdBsmrHashMap::from([("version".to_owned(), "0".to_owned())]),
+            StdBsmrHashMap::default(),
             None,
         )
         .unwrap();
@@ -480,7 +480,7 @@ mod state_machine {
     }
 
     fn make_processor(
-        materialization_config: StdBuckHashMap<ProjectRelativePathBuf, TokioDuration>,
+        materialization_config: StdBsmrHashMap<ProjectRelativePathBuf, TokioDuration>,
     ) -> (
         DeferredMaterializerCommandProcessor<StubIoHandler>,
         MaterializerReceiver<StubIoHandler>,
@@ -527,7 +527,7 @@ mod state_machine {
                 ));
             }
         })
-        .buck_error_context("Cannot start materializer thread")
+        .bsmr_error_context("Cannot start materializer thread")
         .unwrap();
 
         (
@@ -727,7 +727,7 @@ mod state_machine {
             let target_path = make_path("foo/bar_target");
             let target_from_symlink = RelativePathBuf::from_system_path(Path::new("bar_target"))?;
 
-            let mut materialization_config = StdBuckHashMap::default();
+            let mut materialization_config = StdBsmrHashMap::default();
             // Materialize the symlink target slowly so that we actually hit the logic point where we
             // await for symlink targets and the entry materialization
             materialization_config.insert(target_path.clone(), TokioDuration::from_millis(100));
@@ -793,7 +793,7 @@ mod state_machine {
             let target_path = make_path("foo/bar_target");
             let target_from_symlink = RelativePathBuf::from_system_path(Path::new("bar_target"))?;
 
-            let mut materialization_config = StdBuckHashMap::default();
+            let mut materialization_config = StdBsmrHashMap::default();
             // Materialize the symlink target slowly so that we actually hit the logic point where we
             // await for symlink targets and the entry materialization
             materialization_config.insert(target_path.clone(), TokioDuration::from_millis(100));
@@ -999,7 +999,7 @@ mod state_machine {
                 .expect("db missing")
                 .materializer_state_table()
                 .delete(vec![path.clone()])
-                .buck_error_context("delete failed")
+                .bsmr_error_context("delete failed")
                 .unwrap();
             dm.testing_declare_existing(&path, value2.dupe());
 
@@ -1201,12 +1201,12 @@ mod state_machine {
         }).await
     }
 
-    const SAMPLE_BUCK_OUT_PATH: &str = "bsmr-out/v2/art/foo/bar";
+    const SAMPLE_OUTPUT_PATH: &str = "bsmr-out/default/art/foo/bar";
 
     #[tokio::test]
     async fn test_clean_stale() -> bsmr_error::Result<()> {
         ignore_stack_overflow_checks_for_future(async {
-            let path = make_path(SAMPLE_BUCK_OUT_PATH);
+            let path = make_path(SAMPLE_OUTPUT_PATH);
             let project_root = temp_root();
             let io = Arc::new(StubIoHandler::new(project_root.clone()));
             let (dm, mut handle, _) = make_materializer(io.dupe(), None).await;
@@ -1253,7 +1253,7 @@ mod state_machine {
     #[tokio::test]
     async fn test_clean_stale_interrupt() -> bsmr_error::Result<()> {
         ignore_stack_overflow_checks_for_future(async {
-            let path = make_path(SAMPLE_BUCK_OUT_PATH);
+            let path = make_path(SAMPLE_OUTPUT_PATH);
             let project_root = temp_root();
             let io = Arc::new(StubIoHandler::new(project_root.clone()));
             let (dm, mut handle, _) = make_materializer(io.dupe(), None).await;
@@ -1356,7 +1356,7 @@ mod state_machine {
     #[tokio::test]
     async fn test_clean_stale_schedule() -> bsmr_error::Result<()> {
         ignore_stack_overflow_checks_for_future(async {
-            let path = make_path(SAMPLE_BUCK_OUT_PATH);
+            let path = make_path(SAMPLE_OUTPUT_PATH);
             let project_root = temp_root();
             // dry run because it's easier and since this is only testing that cleans are triggered by the materializer
             let clean_stale_config = CleanStaleConfig {
@@ -1373,8 +1373,8 @@ mod state_machine {
 
             let receive_clean_result = |events: &mut ChannelEventSource| {
                 let event = events.receive().unwrap();
-                match event.unpack_buck().unwrap().data() {
-                    bsmr_data::buck_event::Data::Instant(instant) => match instant.data.as_ref() {
+                match event.unpack_bsmr().unwrap().data() {
+                    bsmr_data::bsmr_event::Data::Instant(instant) => match instant.data.as_ref() {
                         Some(bsmr_data::instant_event::Data::CleanStaleResult(res)) => {
                             Some(res.clone())
                         }
@@ -1656,7 +1656,7 @@ mod state_machine {
     #[tokio::test]
     async fn test_eager_declare_and_cancel() {
         ignore_stack_overflow_checks_for_future(async {
-            let path = make_path("bsmr-out/v2/eager/cancel");
+            let path = make_path("bsmr-out/default/eager/cancel");
             let (mut dm, _) = make_processor(Default::default());
 
             // Register and declare → starts materializing at Low
@@ -1694,7 +1694,7 @@ mod state_machine {
     #[tokio::test]
     async fn test_eager_declare_upgrade_and_release() {
         ignore_stack_overflow_checks_for_future(async {
-            let path = make_path("bsmr-out/v2/eager/upgrade");
+            let path = make_path("bsmr-out/default/eager/upgrade");
             let (mut dm, _) = make_processor(Default::default());
 
             // Register and declare → starts eager materialization at Low
@@ -1740,7 +1740,7 @@ mod state_machine {
     #[tokio::test]
     async fn test_eager_multiple_callers_register_path() {
         ignore_stack_overflow_checks_for_future(async {
-            let path = make_path("bsmr-out/v2/eager/shared");
+            let path = make_path("bsmr-out/default/eager/shared");
             let (mut dm, _) = make_processor(Default::default());
             let sender = dm.command_sender.dupe();
 
@@ -1796,8 +1796,8 @@ mod state_machine {
     #[tokio::test]
     async fn test_eager_configuration_path_lookup_and_release() {
         ignore_stack_overflow_checks_for_future(async {
-            let artifact_path = make_path("bsmr-out/v2/gen/content-hash/foo/bar");
-            let config_path = make_path("bsmr-out/v2/gen/config-hash/foo/bar");
+            let artifact_path = make_path("bsmr-out/default/gen/content-hash/foo/bar");
+            let config_path = make_path("bsmr-out/default/gen/config-hash/foo/bar");
             let (mut dm, _) = make_processor(Default::default());
 
             let sender = dm.command_sender.dupe();
@@ -1832,7 +1832,7 @@ mod state_machine {
     #[tokio::test]
     async fn test_join_cancelled_future_starts_fresh() {
         ignore_stack_overflow_checks_for_future(async {
-            let path = make_path("bsmr-out/v2/eager/cancel-on-join");
+            let path = make_path("bsmr-out/default/eager/cancel-on-join");
             let (mut dm, _) = make_processor(Default::default());
 
             let sender = dm.command_sender.dupe();
@@ -1884,9 +1884,9 @@ mod state_machine {
     #[tokio::test]
     async fn test_eager_release_skips_cancel_when_cluster_has_promoted_member() {
         ignore_stack_overflow_checks_for_future(async {
-            let config_path = make_path("bsmr-out/v2/eager/cluster/config");
-            let artifact_a = make_path("bsmr-out/v2/eager/cluster/a");
-            let artifact_b = make_path("bsmr-out/v2/eager/cluster/b");
+            let config_path = make_path("bsmr-out/default/eager/cluster/config");
+            let artifact_a = make_path("bsmr-out/default/eager/cluster/a");
+            let artifact_b = make_path("bsmr-out/default/eager/cluster/b");
             let (mut dm, _) = make_processor(Default::default());
 
             let sender = dm.command_sender.dupe();

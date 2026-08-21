@@ -34,12 +34,14 @@ const test: ProcessSpec = {
 		"ci/cli.test.ts",
 		"ci/dependabot.test.ts",
 		"ci/docs.test.ts",
+		"ci/identity.test.ts",
 		"ci/license-preamble.test.ts",
 		"ci/license-provenance.test.ts",
 		"ci/license.test.ts",
 		"ci/osv-audit.test.ts",
 		"ci/release-sync.test.ts",
 		"ci/release.test.ts",
+		"ci/rust-build-dependencies.test.ts",
 		"ci/verify-sha256.test.ts",
 		"benchmarks/python-build-systems/run.test.ts",
 		"benchmarks/python-conformance/run.test.ts",
@@ -50,6 +52,7 @@ const test: ProcessSpec = {
 	],
 };
 const license: ProcessSpec = { file: "node", args: ["ci/license.ts", "check"] };
+const identity: ProcessSpec = { file: "node", args: ["ci/identity.ts"] };
 const licenseGenerated: ProcessSpec = { file: "node", args: ["ci/license.ts", "generated"] };
 const security: ProcessSpec = {
 	file: "pnpm",
@@ -73,6 +76,7 @@ const generatedDiff: ProcessSpec = {
 		".github/dependabot.yml",
 		".github/actions",
 		".github/workflows",
+		"ci/rust-build-dependencies.mjs",
 		"prelude/toolchains/pnpm/runner.mjs",
 		"prelude/typescript/runner.mjs",
 	],
@@ -92,7 +96,7 @@ const commands = {
 	"check generated": [generate, dependabot, licenseGenerated, buildActions, generatedDiff],
 	"check license": [license],
 	"check security": [security],
-	check: [typecheck, test, generate, dependabot, licenseGenerated, buildActions, license, ...actionSyntax, generatedDiff, security],
+	check: [typecheck, test, generate, dependabot, licenseGenerated, buildActions, license, identity, ...actionSyntax, generatedDiff, security],
 	generate: [generate, dependabot, licenseGenerated, buildActions],
 	test: [test],
 	typecheck: [typecheck],

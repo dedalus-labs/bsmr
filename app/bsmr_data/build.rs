@@ -14,8 +14,8 @@ use std::io;
 fn main() -> io::Result<()> {
     let proto_files = &["data.proto", "error.proto"];
 
-    let buck_proto_srcs = env::var("BUCK_PROTO_SRCS");
-    let includes = if let Ok(path) = &buck_proto_srcs {
+    let bsmr_proto_srcs = env::var("BSMR_PROTO_SRCS");
+    let includes = if let Ok(path) = &bsmr_proto_srcs {
         vec![path.as_str()]
     } else {
         vec![".", "../bsmr_host_sharing_proto"]
@@ -24,112 +24,112 @@ fn main() -> io::Result<()> {
     let builder = bsmr_protoc_dev::configure();
     unsafe { builder.setup_protoc() }
         .type_attribute(
-            "buck.data.BuckEvent.data",
+            "bsmr.data.BsmrEvent.data",
             "#[allow(clippy::large_enum_variant)]",
         )
         .type_attribute(
-            "buck.data.SpanEndEvent.data",
+            "bsmr.data.SpanEndEvent.data",
             "#[allow(clippy::large_enum_variant)]",
         )
         .type_attribute(
-            "buck.data.InstantEvent.data",
+            "bsmr.data.InstantEvent.data",
             "#[allow(clippy::large_enum_variant)]",
         )
         .type_attribute(
-            "buck.data.BuckEvent.data",
+            "bsmr.data.BsmrEvent.data",
             "#[derive(::derive_more::From, ::gazebo::variants::VariantName)]",
         )
         .type_attribute(
-            "buck.data.SpanStartEvent.data",
+            "bsmr.data.SpanStartEvent.data",
             "#[derive(::derive_more::From, ::gazebo::variants::VariantName)]",
         )
         .type_attribute(
-            "buck.data.SpanEndEvent.data",
+            "bsmr.data.SpanEndEvent.data",
             "#[derive(::derive_more::From, ::gazebo::variants::VariantName)]",
         )
         .type_attribute(
-            "buck.data.CommandStart.data",
+            "bsmr.data.CommandStart.data",
             "#[derive(::derive_more::From, ::gazebo::variants::VariantName)]",
         )
         .type_attribute(
-            "buck.data.CommandEnd.data",
+            "bsmr.data.CommandEnd.data",
             "#[derive(::derive_more::From, ::gazebo::variants::VariantName)]",
         )
         .type_attribute(
-            "buck.data.CommandCriticalStart.data",
+            "bsmr.data.CommandCriticalStart.data",
             "#[derive(::derive_more::From, ::gazebo::variants::VariantName)]",
         )
         .type_attribute(
-            "buck.data.CommandCriticalEnd.data",
+            "bsmr.data.CommandCriticalEnd.data",
             "#[derive(::derive_more::From, ::gazebo::variants::VariantName)]",
         )
         .type_attribute(
-            "buck.data.InstantEvent.data",
+            "bsmr.data.InstantEvent.data",
             "#[derive(::derive_more::From, ::gazebo::variants::VariantName)]",
         )
         .type_attribute(
-            "buck.data.RecordEvent.data",
+            "bsmr.data.RecordEvent.data",
             "#[derive(::derive_more::From, ::gazebo::variants::VariantName)]",
         )
         .type_attribute(
-            "buck.data.LocalStage.stage",
+            "bsmr.data.LocalStage.stage",
             "#[derive(::derive_more::From)]",
         )
-        .type_attribute("buck.data.ReStage.stage", "#[derive(::derive_more::From)]")
+        .type_attribute("bsmr.data.ReStage.stage", "#[derive(::derive_more::From)]")
         .type_attribute(
-            "buck.data.ExecutorStageStart.stage",
+            "bsmr.data.ExecutorStageStart.stage",
             "#[derive(::derive_more::From)]",
         )
         .type_attribute(
-            "buck.data.CommandExecution.status",
+            "bsmr.data.CommandExecution.status",
             "#[derive(::derive_more::From, ::gazebo::variants::VariantName)]",
         )
         .type_attribute(
-            "buck.data.ActionExecutionEnd.error",
+            "bsmr.data.ActionExecutionEnd.error",
             "#[derive(::derive_more::From, ::gazebo::variants::VariantName)]",
         )
         .type_attribute(
-            "buck.data.ActionError.error",
+            "bsmr.data.ActionError.error",
             "#[derive(::derive_more::From, ::gazebo::variants::VariantName)]",
         )
         .field_attribute(
-            "buck.data.CommandExecutionDetails.cmd_stderr",
+            "bsmr.data.CommandExecutionDetails.cmd_stderr",
             "#[serde(rename = \"stderr\")]",
         )
         .field_attribute(
-            "buck.data.CommandExecutionDetails.cmd_stdout",
+            "bsmr.data.CommandExecutionDetails.cmd_stdout",
             "#[serde(rename = \"stdout\")]",
         )
         .type_attribute(
-            "buck.data.CommandExecutionDetails.command",
+            "bsmr.data.CommandExecutionDetails.command",
             "#[derive(::derive_more::From, ::gazebo::variants::VariantName)]",
         )
         .type_attribute(
-            "buck.data.DynamicLambdaStart.owner",
+            "bsmr.data.DynamicLambdaStart.owner",
             "#[derive(::derive_more::From, ::gazebo::variants::VariantName)]",
         )
         .type_attribute(
-            "buck.data.DeferredPreparationStageStart.stage",
+            "bsmr.data.DeferredPreparationStageStart.stage",
             "#[derive(::derive_more::From, ::gazebo::variants::VariantName)]",
         )
         .type_attribute(
-            "buck.data.AnalysisStart.target",
+            "bsmr.data.AnalysisStart.target",
             "#[derive(::derive_more::From, ::gazebo::variants::VariantName)]",
         )
         .type_attribute(
-            "buck.data.AnalysisEnd.target",
+            "bsmr.data.AnalysisEnd.target",
             "#[derive(::derive_more::From, ::gazebo::variants::VariantName)]",
         )
         .type_attribute(
-            "buck.data.ActionKind",
+            "bsmr.data.ActionKind",
             "#[derive(::gazebo::variants::VariantName, ::pagable::Pagable)]",
         )
         .type_attribute(
-            "buck.data.MaterializationMethod",
+            "bsmr.data.MaterializationMethod",
             "#[derive(::gazebo::variants::VariantName)]",
         )
-        .type_attribute("buck.data.CpuCounter", "#[derive(dupe::Dupe)]")
-        .type_attribute("buck.data.CommandExecutionStats", "#[derive(dupe::Dupe)]")
+        .type_attribute("bsmr.data.CpuCounter", "#[derive(dupe::Dupe)]")
+        .type_attribute("bsmr.data.CommandExecutionStats", "#[derive(dupe::Dupe)]")
         .type_attribute(".", "#[derive(::serde::Serialize, ::serde::Deserialize)]")
         .type_attribute(".", "#[derive(::allocative::Allocative)]")
         .field_attribute(
@@ -227,69 +227,69 @@ fn main() -> io::Result<()> {
             "#[serde(rename = \"non_critical_path_duration_us\", with = \"crate::serialize_duration_as_micros\")]",
         )
         .type_attribute(
-            "buck.data.CriticalPathEntry2.entry",
+            "bsmr.data.CriticalPathEntry2.entry",
             "#[derive(::derive_more::From, ::gazebo::variants::VariantName)]",
         )
         .type_attribute(
-            "buck.data.CriticalPathEntry2.Analysis.target",
+            "bsmr.data.CriticalPathEntry2.Analysis.target",
             "#[derive(::derive_more::From, ::gazebo::variants::VariantName)]",
         )
         .type_attribute(
-            "buck.data.CriticalPathEntry2.ActionExecution.owner",
+            "bsmr.data.CriticalPathEntry2.ActionExecution.owner",
             "#[derive(::derive_more::From, ::gazebo::variants::VariantName)]",
         )
         .type_attribute(
-            "buck.data.CriticalPathEntry2.Materialization.owner",
+            "bsmr.data.CriticalPathEntry2.Materialization.owner",
             "#[derive(::derive_more::From, ::gazebo::variants::VariantName)]",
         )
         .type_attribute(
-            "buck.data.StarlarkUserMetadataDictValue",
+            "bsmr.data.StarlarkUserMetadataDictValue",
             "#[serde(transparent)]",
         )
         .type_attribute(
-            "buck.data.StarlarkUserMetadataListValue",
+            "bsmr.data.StarlarkUserMetadataListValue",
             "#[serde(transparent)]",
         )
         .type_attribute(
-            "buck.data.StarlarkUserMetadataValue",
+            "bsmr.data.StarlarkUserMetadataValue",
             "#[serde(transparent)]",
         )
         .type_attribute(
-            "buck.data.StarlarkUserMetadataValue.value",
+            "bsmr.data.StarlarkUserMetadataValue.value",
             "#[serde(untagged)]",
         )
         .type_attribute(
-            "buck.data.CommandExecutionKind.command",
+            "bsmr.data.CommandExecutionKind.command",
             "#[derive(::derive_more::From, ::gazebo::variants::VariantName)]",
         )
         .field_attribute(
-            "buck.data.Invocation.expanded_command_line_args",
+            "bsmr.data.Invocation.expanded_command_line_args",
             "#[serde(default)]",
         )
         .field_attribute(
-            "buck.data.CommandExecutionMetadata.wall_time",
+            "bsmr.data.CommandExecutionMetadata.wall_time",
             "#[serde(rename = \"wall_time_us\", with = \"crate::serialize_duration_as_micros\")]",
         )
         .field_attribute(
-            "buck.data.CommandExecutionMetadata.execution_time",
+            "bsmr.data.CommandExecutionMetadata.execution_time",
             "#[serde(rename = \"execution_time_us\", with = \"crate::serialize_duration_as_micros\")]",
         )
         .field_attribute(
-            "buck.data.CommandExecutionMetadata.input_materialization_duration",
+            "bsmr.data.CommandExecutionMetadata.input_materialization_duration",
             "#[serde(rename = \"input_materialization_duration_us\", with = \"crate::serialize_duration_as_micros\")]",
         )
         .field_attribute(
-            "buck.data.CommandExecutionMetadata.hashing_duration",
+            "bsmr.data.CommandExecutionMetadata.hashing_duration",
             "#[serde(rename = \"hashing_duration_us\", with = \"crate::serialize_duration_as_micros\")]",
         )
         .field_attribute(
-            "buck.data.CommandExecutionMetadata.queue_duration",
+            "bsmr.data.CommandExecutionMetadata.queue_duration",
             "#[serde(rename = \"queue_duration_us\", with = \"crate::serialize_duration_as_micros\")]",
         )
         .boxed("RecordEvent.data.invocation_record")
         .boxed("SpanEndEvent.data.action_execution")
         .boxed("SpanEndEvent.data.cache_upload")
         .boxed("InstantEvent.data.snapshot")
-        .extern_path(".buck.host_sharing", "::bsmr_host_sharing_proto")
+        .extern_path(".bsmr.host_sharing", "::bsmr_host_sharing_proto")
         .compile(proto_files, &includes)
 }

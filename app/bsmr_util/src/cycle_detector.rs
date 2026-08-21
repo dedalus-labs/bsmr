@@ -23,8 +23,8 @@ use std::mem::ManuallyDrop;
 use std::time::Duration;
 
 use bsmr_error::bsmr_error;
-use bsmr_hash::StdBuckHashMap;
-use bsmr_hash::StdBuckHashSet;
+use bsmr_hash::StdBsmrHashMap;
+use bsmr_hash::StdBsmrHashSet;
 use futures::lock::Mutex;
 use starlark_map::small_set::SmallSet;
 use tokio::select;
@@ -105,8 +105,8 @@ impl<C: CycleDescriptor> LazyCycleDetector<C> {
 
             CycleDetectorState {
                 nodes: Vec::new(),
-                node_ids: StdBuckHashMap::default(),
-                dirtied_nodes: StdBuckHashSet::default(),
+                node_ids: StdBsmrHashMap::default(),
+                dirtied_nodes: StdBsmrHashSet::default(),
                 idle_delay,
             }
             .run(&mut receiver)
@@ -207,10 +207,10 @@ enum NodeState<C: CycleDescriptor> {
 }
 
 struct CycleDetectorState<C: CycleDescriptor> {
-    node_ids: StdBuckHashMap<C::Key, u32>,
+    node_ids: StdBsmrHashMap<C::Key, u32>,
     nodes: Vec<(C::Key, NodeState<C>)>,
     // These are nodes for which we've seen a new out-edge since last we checked for cycles. We will start our next search at these nodes.
-    dirtied_nodes: StdBuckHashSet<u32>,
+    dirtied_nodes: StdBsmrHashSet<u32>,
     idle_delay: Duration,
 }
 
@@ -350,7 +350,7 @@ impl<C: CycleDescriptor> CycleDetectorState<C> {
             }
         }
 
-        let mut visited = StdBuckHashSet::default();
+        let mut visited = StdBsmrHashSet::default();
 
         let mut stack = SmallSet::new();
 

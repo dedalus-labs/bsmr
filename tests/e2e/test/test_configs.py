@@ -18,8 +18,8 @@ import json
 import tempfile
 from typing import Final
 
-from bsmr.tests.e2e_util.api.buck import Buck
-from bsmr.tests.e2e_util.buck_workspace import buck_test
+from bsmr.tests.e2e_util.api.bsmr import Bsmr
+from bsmr.tests.e2e_util.bsmr_workspace import bsmr_test
 
 FBCODE_TARGET: Final[str] = "upstream//testinfra/playground/cpp/tests:test_example"
 ARVR_TARGET: Final[str] = (
@@ -27,11 +27,11 @@ ARVR_TARGET: Final[str] = (
 )
 
 
-@buck_test(inplace=True)
-async def test_no_args(buck: Buck) -> None:
-    bsmr_config = await execute_test_with_args(buck, [], target=FBCODE_TARGET)
+@bsmr_test(inplace=True)
+async def test_no_args(bsmr: Bsmr) -> None:
+    bsmr_config = await execute_test_with_args(bsmr, [], target=FBCODE_TARGET)
 
-    assert_buck_args_config_equal(
+    assert_bsmr_args_config_equal(
         bsmr_config,
         {
             "mode": "@upstream//mode/dev",
@@ -41,12 +41,12 @@ async def test_no_args(buck: Buck) -> None:
     )
 
     bsmr_config = await execute_test_with_args(
-        buck,
+        bsmr,
         [],
         target=ARVR_TARGET,
     )
 
-    assert_buck_args_config_equal(
+    assert_bsmr_args_config_equal(
         bsmr_config,
         {
             "mode": "",
@@ -56,15 +56,15 @@ async def test_no_args(buck: Buck) -> None:
     )
 
 
-@buck_test(inplace=True)
-async def test_mode_file(buck: Buck) -> None:
+@bsmr_test(inplace=True)
+async def test_mode_file(bsmr: Bsmr) -> None:
     all_configs_to_test = [
         ["@upstream//mode/dev"],
         ["--flagfile", "upstream//mode/dev"],
     ]
     for config in all_configs_to_test:
-        bsmr_config = await execute_test_with_args(buck, config, target=FBCODE_TARGET)
-        assert_buck_args_config_equal(
+        bsmr_config = await execute_test_with_args(bsmr, config, target=FBCODE_TARGET)
+        assert_bsmr_args_config_equal(
             bsmr_config,
             {
                 "mode": "@upstream//mode/dev",
@@ -74,15 +74,15 @@ async def test_mode_file(buck: Buck) -> None:
         )
 
 
-@buck_test(inplace=True)
-async def test_mode_file_non_default(buck: Buck) -> None:
+@bsmr_test(inplace=True)
+async def test_mode_file_non_default(bsmr: Bsmr) -> None:
     all_configs_to_test = [
         ["@upstream//mode/opt"],
         ["--flagfile", "upstream//mode/opt"],
     ]
     for config in all_configs_to_test:
-        bsmr_config = await execute_test_with_args(buck, config, target=FBCODE_TARGET)
-        assert_buck_args_config_equal(
+        bsmr_config = await execute_test_with_args(bsmr, config, target=FBCODE_TARGET)
+        assert_bsmr_args_config_equal(
             bsmr_config,
             {
                 "mode": "@upstream//mode/opt",
@@ -92,16 +92,16 @@ async def test_mode_file_non_default(buck: Buck) -> None:
         )
 
 
-@buck_test(inplace=True)
-async def test_multi_mode_file(buck: Buck) -> None:
+@bsmr_test(inplace=True)
+async def test_multi_mode_file(bsmr: Bsmr) -> None:
     all_configs_to_test = [
         ["@upstream//mode/opt", "@upstream//mode/dev"],
         ["--flagfile", "upstream//mode/opt", "--flagfile", "upstream//mode/dev"],
         ["--flagfile", "upstream//mode/opt", "@upstream//mode/dev"],
     ]
     for config in all_configs_to_test:
-        bsmr_config = await execute_test_with_args(buck, config, target=FBCODE_TARGET)
-        assert_buck_args_config_equal(
+        bsmr_config = await execute_test_with_args(bsmr, config, target=FBCODE_TARGET)
+        assert_bsmr_args_config_equal(
             bsmr_config,
             {
                 "mode": "@upstream//mode/opt;@upstream//mode/dev",
@@ -111,16 +111,16 @@ async def test_multi_mode_file(buck: Buck) -> None:
         )
 
 
-@buck_test(inplace=True)
-async def test_multi_mode_file_deduplication(buck: Buck) -> None:
+@bsmr_test(inplace=True)
+async def test_multi_mode_file_deduplication(bsmr: Bsmr) -> None:
     all_configs_to_test = [
         ["@upstream//mode/opt", "@upstream//mode/dev", "@upstream//mode/dev"],
         ["@upstream//mode/opt", "@upstream//mode/opt", "@upstream//mode/dev"],
         ["@upstream//mode/dev", "@upstream//mode/opt", "@upstream//mode/dev"],
     ]
     for config in all_configs_to_test:
-        bsmr_config = await execute_test_with_args(buck, config, target=FBCODE_TARGET)
-        assert_buck_args_config_equal(
+        bsmr_config = await execute_test_with_args(bsmr, config, target=FBCODE_TARGET)
+        assert_bsmr_args_config_equal(
             bsmr_config,
             {
                 "mode": "@upstream//mode/opt;@upstream//mode/dev",
@@ -130,9 +130,9 @@ async def test_multi_mode_file_deduplication(buck: Buck) -> None:
         )
 
 
-@buck_test(inplace=True)
-async def test_config(buck: Buck) -> None:
-    # certain config makes it to the buck config
+@bsmr_test(inplace=True)
+async def test_config(bsmr: Bsmr) -> None:
+    # certain config makes it to the bsmr config
     all_configs_to_test = [
         ["--config", "fbcode.use_link_groups_in_dev=True"],
         ["--config=fbcode.use_link_groups_in_dev=True"],
@@ -140,8 +140,8 @@ async def test_config(buck: Buck) -> None:
         ["-c", "fbcode.use_link_groups_in_dev=True"],
     ]
     for config in all_configs_to_test:
-        bsmr_config = await execute_test_with_args(buck, config, target=FBCODE_TARGET)
-        assert_buck_args_config_equal(
+        bsmr_config = await execute_test_with_args(bsmr, config, target=FBCODE_TARGET)
+        assert_bsmr_args_config_equal(
             bsmr_config,
             {
                 "mode": "@upstream//mode/dev",
@@ -152,9 +152,9 @@ async def test_config(buck: Buck) -> None:
 
     # some configs are dropped
     bsmr_config = await execute_test_with_args(
-        buck, ["-c", "bsmr.log_configured_graph_size=true"], target=FBCODE_TARGET
+        bsmr, ["-c", "bsmr.log_configured_graph_size=true"], target=FBCODE_TARGET
     )
-    assert_buck_args_config_equal(
+    assert_bsmr_args_config_equal(
         bsmr_config,
         {
             "mode": "@upstream//mode/dev",
@@ -164,9 +164,9 @@ async def test_config(buck: Buck) -> None:
     )
 
 
-@buck_test(inplace=True)
-async def test_config_deduplication(buck: Buck) -> None:
-    # certain config makes it to the buck config
+@bsmr_test(inplace=True)
+async def test_config_deduplication(bsmr: Bsmr) -> None:
+    # certain config makes it to the bsmr config
     all_configs_to_test = [
         [
             "--config=fbcode.use_link_groups_in_dev=True",
@@ -190,8 +190,8 @@ async def test_config_deduplication(buck: Buck) -> None:
         ],
     ]
     for config in all_configs_to_test:
-        bsmr_config = await execute_test_with_args(buck, config, target=FBCODE_TARGET)
-        assert_buck_args_config_equal(
+        bsmr_config = await execute_test_with_args(bsmr, config, target=FBCODE_TARGET)
+        assert_bsmr_args_config_equal(
             bsmr_config,
             {
                 "mode": "@upstream//mode/dev",
@@ -201,8 +201,8 @@ async def test_config_deduplication(buck: Buck) -> None:
         )
 
 
-@buck_test(inplace=True)
-async def test_modifier(buck: Buck) -> None:
+@bsmr_test(inplace=True)
+async def test_modifier(bsmr: Bsmr) -> None:
     all_configs_to_test = [
         ["--modifier", "dev"],
         ["--modifier=dev"],
@@ -210,8 +210,8 @@ async def test_modifier(buck: Buck) -> None:
         ["-mdev"],
     ]
     for config in all_configs_to_test:
-        bsmr_config = await execute_test_with_args(buck, config, target=FBCODE_TARGET)
-        assert_buck_args_config_equal(
+        bsmr_config = await execute_test_with_args(bsmr, config, target=FBCODE_TARGET)
+        assert_bsmr_args_config_equal(
             bsmr_config,
             {
                 "mode": "@upstream//mode/dev",
@@ -222,14 +222,14 @@ async def test_modifier(buck: Buck) -> None:
         )
 
 
-@buck_test(inplace=True)
-async def test_modifier_deduplication(buck: Buck) -> None:
+@bsmr_test(inplace=True)
+async def test_modifier_deduplication(bsmr: Bsmr) -> None:
     all_configs_to_test = [
         ["-m", "dev", "-m", "opt", "-m", "dev"],
     ]
     for config in all_configs_to_test:
-        bsmr_config = await execute_test_with_args(buck, config, target=FBCODE_TARGET)
-        assert_buck_args_config_equal(
+        bsmr_config = await execute_test_with_args(bsmr, config, target=FBCODE_TARGET)
+        assert_bsmr_args_config_equal(
             bsmr_config,
             {
                 "mode": "@upstream//mode/dev",
@@ -245,14 +245,14 @@ async def test_modifier_deduplication(buck: Buck) -> None:
 #########
 
 
-# run the buck test command and return the actual used buck config
+# run the bsmr test command and return the actual used bsmr config
 async def execute_test_with_args(
-    buck: Buck,
+    bsmr: Bsmr,
     args: list[str],
     target: str,
 ) -> dict[str, str]:
     tpx_trace_path = tempfile.NamedTemporaryFile(delete=False)
-    await buck.test(
+    await bsmr.test(
         *args,
         target,
         "--",
@@ -275,7 +275,7 @@ def get_bsmr_config(tpx_trace_path: str) -> dict[str, str]:
     return {}
 
 
-def assert_buck_args_config_equal(
+def assert_bsmr_args_config_equal(
     actual_config: dict[str, str], expected_config: dict[str, str]
 ) -> None:
     assert actual_config == expected_config, (

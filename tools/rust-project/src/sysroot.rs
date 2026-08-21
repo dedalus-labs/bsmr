@@ -20,8 +20,8 @@ use std::process::Stdio;
 
 use tracing::instrument;
 
-use crate::buck::truncate_line_ending;
-use crate::buck::utf8_output;
+use crate::bsmr::truncate_line_ending;
+use crate::bsmr::utf8_output;
 use crate::project_json::Sysroot;
 
 #[derive(Debug)]
@@ -51,7 +51,7 @@ pub(crate) fn resolve_rustup_sysroot() -> Result<Sysroot, anyhow::Error> {
     let sysroot = Sysroot {
         sysroot,
         sysroot_src: Some(sysroot_src),
-        sysroot_project: None, // rustup sysroot is not buckified
+        sysroot_project: None, // rustup sysroot is not bsmrified
     };
     Ok(sysroot)
 }

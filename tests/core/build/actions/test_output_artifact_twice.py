@@ -15,13 +15,13 @@
 # pyre-strict
 
 
-from bsmr.tests.e2e_util.api.buck import Buck
-from bsmr.tests.e2e_util.buck_workspace import buck_test
+from bsmr.tests.e2e_util.api.bsmr import Bsmr
+from bsmr.tests.e2e_util.bsmr_workspace import bsmr_test
 
 
-@buck_test()
-async def test_output_artifact_twice_same(buck: Buck) -> None:
-    res = await buck.build("root//:test_output_artifact_twice_same")
+@bsmr_test()
+async def test_output_artifact_twice_same(bsmr: Bsmr) -> None:
+    res = await bsmr.build("root//:test_output_artifact_twice_same")
     assert (
         res.get_build_report()
         .output_for_target("root//:test_output_artifact_twice_same")
@@ -30,9 +30,9 @@ async def test_output_artifact_twice_same(buck: Buck) -> None:
     )
 
 
-@buck_test()
-async def test_output_artifact_twice_with_projection(buck: Buck) -> None:
-    res = await buck.build("root//:test_output_artifact_twice_with_projection")
+@bsmr_test()
+async def test_output_artifact_twice_with_projection(bsmr: Bsmr) -> None:
+    res = await bsmr.build("root//:test_output_artifact_twice_with_projection")
     assert (
         res.get_build_report().output_for_target(
             "root//:test_output_artifact_twice_with_projection"

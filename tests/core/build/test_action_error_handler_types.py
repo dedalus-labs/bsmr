@@ -14,36 +14,36 @@
 
 # pyre-strict
 
-from bsmr.tests.e2e_util.api.buck import Buck
+from bsmr.tests.e2e_util.api.bsmr import Bsmr
 from bsmr.tests.e2e_util.asserts import expect_failure
-from bsmr.tests.e2e_util.buck_workspace import buck_test
+from bsmr.tests.e2e_util.bsmr_workspace import bsmr_test
 
 
-@buck_test()
-async def test_action_error_handler_types(buck: Buck) -> None:
-    await buck.bxl(
+@bsmr_test()
+async def test_action_error_handler_types(bsmr: Bsmr) -> None:
+    await bsmr.bxl(
         "//:test_action_error_handler_types.bxl:test_action_error_handler_types"
     )
 
 
-@buck_test()
-async def test_output_when_no_error_handler_used(buck: Buck) -> None:
+@bsmr_test()
+async def test_output_when_no_error_handler_used(bsmr: Bsmr) -> None:
     failure = await expect_failure(
-        buck.build("//:does_not_use_error_handler"),
+        bsmr.build("//:does_not_use_error_handler"),
     )
 
     assert "Action sub-errors produced by error handlers: <empty>" not in failure.stderr
 
 
-@buck_test()
-async def test_error_handler_succeed_on_nonetype(buck: Buck) -> None:
-    await buck.build("//:error_handler_nonetype")
+@bsmr_test()
+async def test_error_handler_succeed_on_nonetype(bsmr: Bsmr) -> None:
+    await bsmr.build("//:error_handler_nonetype")
 
 
-@buck_test()
-async def test_output_for_error_handler_with_errorformat(buck: Buck) -> None:
+@bsmr_test()
+async def test_output_for_error_handler_with_errorformat(bsmr: Bsmr) -> None:
     failure = await expect_failure(
-        buck.build("//:error_handler_with_errorformat"),
+        bsmr.build("//:error_handler_with_errorformat"),
     )
 
     assert "- [test_failure] main.rs:10 expected `;`, found `}`" in failure.stderr

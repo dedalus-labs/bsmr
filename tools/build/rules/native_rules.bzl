@@ -12,12 +12,12 @@
 # of this source tree. You may select, at your option, one of the
 # above-listed licenses.
 
-def buck_genrule(visibility = ["PUBLIC"], **kwargs):
-    # @lint-ignore BUCKLINT: avoid "native is forbidden in fbcode"
+def bsmr_genrule(visibility = ["PUBLIC"], **kwargs):
+    # @lint-ignore BSMRLINT: avoid "native is forbidden in fbcode"
     native.genrule(visibility = visibility, **kwargs)
 
-def buck_filegroup(visibility = ["PUBLIC"], **kwargs):
-    # @lint-ignore BUCKLINT: avoid "native is forbidden in fbcode"
+def bsmr_filegroup(visibility = ["PUBLIC"], **kwargs):
+    # @lint-ignore BSMRLINT: avoid "native is forbidden in fbcode"
     native.filegroup(visibility = visibility, **kwargs)
 
 def alias(actual, visibility = ["PUBLIC"], **kwargs):
@@ -25,6 +25,6 @@ def alias(actual, visibility = ["PUBLIC"], **kwargs):
         actual = "root//" + actual.removeprefix("root//")
     native.alias(actual = actual, visibility = visibility, **kwargs)
 
-def buck_sh_binary(visibility = ["PUBLIC"], **kwargs):
-    # @lint-ignore BUCKLINT: avoid "native is forbidden in fbcode"
+def bsmr_sh_binary(visibility = ["PUBLIC"], **kwargs):
+    # @lint-ignore BSMRLINT: avoid "native is forbidden in fbcode"
     native.sh_binary(visibility = visibility, **kwargs)

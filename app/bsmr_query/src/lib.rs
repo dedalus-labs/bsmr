@@ -24,9 +24,9 @@ pub use bsmr_query_derive::query_module;
 // ::bsmr_query like it would when used in other crates).
 extern crate self as bsmr_query;
 
-/// __derive_refs allows us to reference other crates in buck_query_proc_macro without users needing to be
+/// __derive_refs allows us to reference other crates in bsmr_query_proc_macro without users needing to be
 ///  aware of those dependencies. We make them public here and then can reference them like
-///  `buck_query::__derive_refs::foo`.
+///  `bsmr_query::__derive_refs::foo`.
 #[doc(hidden)]
 pub mod __derive_refs {
     pub use async_trait;

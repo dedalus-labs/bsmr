@@ -16,12 +16,12 @@
 
 //! Handles parsing macros out of an attrs.arg()
 //!
-//! Much of this behavior is inherited from buckv1, which is documented
-//! here <https://buck.build/function/string_parameter_macros.html> and here
-//! <https://github.com/facebook/buck/blob/5bc82b7c90f1a5c5ac70e2de7d2c2170c289ee79/src/com/facebook/buck/core/macros/MacroFinderAutomaton.java>
+//! Much of this behavior is inherited from legacy, which is documented
+//! here <https://oss.dedaluslabs.ai/bsmr/function/string_parameter_macros.html> and here
+//! <https://github.com/dedalus/bsmr/blob/5bc82b7c90f1a5c5ac70e2de7d2c2170c289ee79/src/com/dedalus/bsmr/core/macros/MacroFinderAutomaton.java>
 //!
 //! Many rule attributes that accept strings actually accept an attrs.arg(). These allow
-//! users to specify "String parameter macros" that are placeholders that buck will expand
+//! users to specify "String parameter macros" that are placeholders that bsmr will expand
 //! to their final values later in the build. Common examples of these would `$(location //some:target)`
 //! or `$(exe //some:target)`.
 //!
@@ -55,13 +55,13 @@
 //! behavior when they encounter any `(` that will make them continue until the parens are balanced. While an
 //! unquoted arg has seen more `(` than `)`, it will not be terminated by whitespace or `)`.
 //!
-//! We diverge from buckv1 in a handful of known ways.
+//! We diverge from legacy in a handful of known ways.
 //!
-//! 1. buck1 allows pretty much any characters to appear in a macro type. We restrict it to alphanumeric and `_`.
+//! 1. legacy allows pretty much any characters to appear in a macro type. We restrict it to alphanumeric and `_`.
 //!
-//! 2. buck1 disallows spaces entirely within unquoted args. This can be surprising. Unquoted args are generally used for
-//!    the query part of query macros, and in other contexts where buck accepts queries it allows whitespace.
-//!    Example, the string "$(query_outputs deps(//some:target, 3))" would be rejected by buck1 due to the space before the 3.
+//! 2. legacy disallows spaces entirely within unquoted args. This can be surprising. Unquoted args are generally used for
+//!    the query part of query macros, and in other contexts where bsmr accepts queries it allows whitespace.
+//!    Example, the string "$(query_outputs deps(//some:target, 3))" would be rejected by legacy due to the space before the 3.
 //!
 //! Some examples:
 //!
@@ -163,7 +163,7 @@ type Error<'a> = (&'a str, ArgParseError);
 /// A Result includes both some parsed type and a slice of what remains to be parsed.
 type Result<'a, T> = result::Result<(T, &'a str), Error<'a>>;
 
-// We diverge slightly from buckv1 here.
+// We diverge slightly from legacy here.
 //
 // See https://www.internalfb.com/diffs/D3917438?transaction_fbid=1890520777849195 where that decision in v1 was questioned.
 
@@ -197,7 +197,7 @@ fn unescape(input: &str) -> String {
 // $(macro deps(123)abc) -> arg1 == "deps(123)", arg2=abc
 // $(macro a(b(c(d)))) -> arg1 == "a(b(b(d))))"
 // ```
-// TODO: that second case seems like a bug in buckv1 and it should be just a single arg. We've preserved the v1 behavior.
+// TODO: that second case seems like a bug in legacy and it should be just a single arg. We've preserved the v1 behavior.
 fn read_unquoted_arg(input: &str) -> Result<'_, String> {
     let mut has_escapes = false;
     let mut paren_count = 0;
@@ -286,7 +286,7 @@ fn read_macro_arg(input: &str) -> Result<'_, String> {
     }
 }
 
-// This is much stricter than buckv1. v1 allows nearly any character in the macro type. We allow only alphanumeric, '-', and '_'.
+// This is much stricter than legacy. v1 allows nearly any character in the macro type. We allow only alphanumeric, '-', and '_'.
 fn read_macro_type(input: &str) -> Result<'_, String> {
     match input.find(|c: char| c.is_whitespace() || c == ')') {
         None => Err((input, ArgParseError::MacroTypeUnfinished)),

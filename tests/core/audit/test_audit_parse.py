@@ -17,20 +17,20 @@
 
 import json
 
-from bsmr.tests.e2e_util.api.buck import Buck
-from bsmr.tests.e2e_util.buck_workspace import buck_test
+from bsmr.tests.e2e_util.api.bsmr import Bsmr
+from bsmr.tests.e2e_util.bsmr_workspace import bsmr_test
 
 
-@buck_test()
-async def test_audit_parse(buck: Buck) -> None:
+@bsmr_test()
+async def test_audit_parse(bsmr: Bsmr) -> None:
     # random config hash
     config_hash = "3f794b0267173c8e"
 
     # rule
     # json
-    result = await buck.audit(
+    result = await bsmr.audit(
         "parse",
-        f"bsmr-out/v2/art/root/{config_hash}/path/to/target/__target_name__/output",
+        f"bsmr-out/default/art/root/{config_hash}/path/to/target/__target_name__/output",
         "--json",
     )
 
@@ -46,9 +46,9 @@ async def test_audit_parse(buck: Buck) -> None:
     )
 
     # not json
-    result = await buck.audit(
+    result = await bsmr.audit(
         "parse",
-        f"bsmr-out/v2/art/root/{config_hash}/path/to/target/__target_name__/output",
+        f"bsmr-out/default/art/root/{config_hash}/path/to/target/__target_name__/output",
     )
 
     result = result.stdout.splitlines()
@@ -59,9 +59,9 @@ async def test_audit_parse(buck: Buck) -> None:
     assert result[4] == "root/path/to/target/__target_name__/output"
 
     # output attribute
-    result = await buck.audit(
+    result = await bsmr.audit(
         "parse",
-        f"bsmr-out/v2/art/root/{config_hash}/path/to/target/__target_name__/output",
+        f"bsmr-out/default/art/root/{config_hash}/path/to/target/__target_name__/output",
         "--output-attribute",
         "config_hash",
         "--output-attribute",
@@ -73,9 +73,9 @@ async def test_audit_parse(buck: Buck) -> None:
     assert result[1] == "root/path/to/target/__target_name__/output"
 
     # output attribute with json
-    result = await buck.audit(
+    result = await bsmr.audit(
         "parse",
-        f"bsmr-out/v2/art/root/{config_hash}/path/to/target/__target_name__/output",
+        f"bsmr-out/default/art/root/{config_hash}/path/to/target/__target_name__/output",
         "--json",
         "--output-attribute",
         "config_hash",
@@ -91,9 +91,9 @@ async def test_audit_parse(buck: Buck) -> None:
     )
 
     # tmp
-    result = await buck.audit(
+    result = await bsmr.audit(
         "parse",
-        f"bsmr-out/v2/tmp/root/{config_hash}/path/to/target/__target_name__/output",
+        f"bsmr-out/default/tmp/root/{config_hash}/path/to/target/__target_name__/output",
         "--json",
     )
 
@@ -107,9 +107,9 @@ async def test_audit_parse(buck: Buck) -> None:
     )
 
     # bxl
-    result = await buck.audit(
+    result = await bsmr.audit(
         "parse",
-        f"bsmr-out/v2/art-bxl/root/{config_hash}/path/to/function.bxl/__function_name__/output",
+        f"bsmr-out/default/art-bxl/root/{config_hash}/path/to/function.bxl/__function_name__/output",
         "--json",
     )
 
@@ -122,9 +122,9 @@ async def test_audit_parse(buck: Buck) -> None:
     )
 
     # anon
-    result = await buck.audit(
+    result = await bsmr.audit(
         "parse",
-        f"bsmr-out/v2/art-anon/root/{config_hash}/path/to/target/rule_hash/__target_name__/output",
+        f"bsmr-out/default/art-anon/root/{config_hash}/path/to/target/rule_hash/__target_name__/output",
         "--json",
     )
 
@@ -139,9 +139,9 @@ async def test_audit_parse(buck: Buck) -> None:
     )
 
     # test
-    result = await buck.audit(
+    result = await bsmr.audit(
         "parse",
-        f"bsmr-out/v2/test/root/{config_hash}/path/to/target/__target_name__/output",
+        f"bsmr-out/default/test/root/{config_hash}/path/to/target/__target_name__/output",
         "--json",
     )
 
@@ -154,15 +154,15 @@ async def test_audit_parse(buck: Buck) -> None:
     )
 
 
-@buck_test()
-async def test_audit_parse_content_based(buck: Buck) -> None:
+@bsmr_test()
+async def test_audit_parse_content_based(bsmr: Bsmr) -> None:
     # random content hash
     content_hash = "aaaabbbbccccdddd"
 
     # json
-    result = await buck.audit(
+    result = await bsmr.audit(
         "parse",
-        f"bsmr-out/v2/art/root/path/to/target/__target_name__/{content_hash}/output",
+        f"bsmr-out/default/art/root/path/to/target/__target_name__/{content_hash}/output",
         "--json",
     )
 
@@ -178,9 +178,9 @@ async def test_audit_parse_content_based(buck: Buck) -> None:
     )
 
     # not json
-    result = await buck.audit(
+    result = await bsmr.audit(
         "parse",
-        f"bsmr-out/v2/art/root/path/to/target/__target_name__/{content_hash}/output",
+        f"bsmr-out/default/art/root/path/to/target/__target_name__/{content_hash}/output",
     )
 
     result = result.stdout.splitlines()

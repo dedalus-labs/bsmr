@@ -14,7 +14,7 @@
  * above-listed licenses.
  */
 
-use bsmr_error::BuckErrorContext;
+use bsmr_error::BsmrErrorContext;
 use bsmr_error::conversion::from_any_with_tag;
 use bsmr_error::internal_error;
 use bytes::BytesMut;
@@ -54,7 +54,7 @@ impl<T: for<'a> Deserialize<'a>> Decoder for LspMessageLikeDecoder<T> {
 
         let (headers_length, headers) = match httparse::parse_headers(src, &mut headers_buff)
             .map_err(|e| from_any_with_tag(e, bsmr_error::ErrorTag::Tier0))
-            .buck_error_context("Invalid headers")?
+            .bsmr_error_context("Invalid headers")?
         {
             httparse::Status::Complete(r) => r,
             httparse::Status::Partial => return Ok(None),
@@ -66,9 +66,9 @@ impl<T: for<'a> Deserialize<'a>> Decoder for LspMessageLikeDecoder<T> {
             if h.name.eq_ignore_ascii_case("Content-Length") {
                 content_length = Some(
                     std::str::from_utf8(h.value)
-                        .buck_error_context("Content-Length is not utf-8")?
+                        .bsmr_error_context("Content-Length is not utf-8")?
                         .parse()
-                        .buck_error_context("Content-Length is not a number")?,
+                        .bsmr_error_context("Content-Length is not a number")?,
                 );
                 break;
             }
@@ -83,7 +83,7 @@ impl<T: for<'a> Deserialize<'a>> Decoder for LspMessageLikeDecoder<T> {
 
         let _headers = src.split_to(headers_length);
         let text = src.split_to(content_length);
-        Some(serde_json::from_slice(&text).buck_error_context("Invalid request")).transpose()
+        Some(serde_json::from_slice(&text).bsmr_error_context("Invalid request")).transpose()
     }
 }
 

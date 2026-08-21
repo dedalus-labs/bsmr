@@ -95,7 +95,7 @@ def __run():
     # nuking PWD from sys.path. Otherwise, there can be problems if someone runs
     # from a directory with a similarly named file, even if their code is properly
     # namespaced. e.g. if one has foo/bar/contextlib.py and while in foo/bar runs
-    # `buck run foo/bar:bin`, runpy will fail as it tries to import
+    # `bsmr run foo/bar:bin`, runpy will fail as it tries to import
     # foo/bar/contextlib.py. You're just out of luck if you have sys.py
 
     # Set `argv[0]` to the executing script.

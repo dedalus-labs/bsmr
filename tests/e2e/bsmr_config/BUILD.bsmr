@@ -5,7 +5,7 @@
 
 # Defines build targets for tests/e2e/bsmr_config.
 
-load("@root//tests:buck_e2e.bzl", "bsmr_e2e_test")
+load("@root//tests:bsmr_e2e.bzl", "bsmr_e2e_test")
 
 oncall("build_infra")
 

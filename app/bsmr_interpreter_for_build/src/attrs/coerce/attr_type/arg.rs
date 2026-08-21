@@ -47,7 +47,7 @@ use crate::attrs::coerce::attr_type::ty_maybe_select::TyMaybeSelect;
 // These are the macros we haven't yet implemented yet, we should make sure not
 // to try and resolve them to user defined macros with a target parameter,
 // because some of them don't take a target.
-// Taken from https://buck.build/function/string_parameter_macros.html.
+// Taken from https://oss.dedaluslabs.ai/bsmr/function/string_parameter_macros.html.
 static UNIMPLEMENTED_MACROS: LazyLock<HashSet<&'static str>> =
     LazyLock::new(|| hashset!["classpath_abi", "maven_coords", "output", "query_paths",]);
 

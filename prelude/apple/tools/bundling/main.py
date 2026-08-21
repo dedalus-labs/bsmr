@@ -1,3 +1,9 @@
+# ===----------------------------------------------------------------------===
+# Upstream-Source: facebook/buck2@1560aca2002865cd73d7cafb22c705cfb640b2bc
+# Modifications Copyright (c) 2026 Dedalus Labs, Inc. and its contributors
+# SPDX-License-Identifier: Apache-2.0
+# ===----------------------------------------------------------------------===
+
 # Copyright (c) Meta Platforms, Inc. and affiliates.
 #
 # This source code is dual-licensed under either the MIT license found in the
@@ -722,7 +728,7 @@ def _amend_spec_with_build_uuid(
     resources_destination: Optional[Path],
     tmp_dir: Path,
 ) -> None:
-    build_id = os.environ.get("BUCK_BUILD_ID")
+    build_id = os.environ.get("BSMR_BUILD_ID")
     if not build_id:
         return
 
@@ -738,8 +744,8 @@ def _amend_spec_with_build_uuid(
     # build that produced the cache value.
     #
     # For example, if you did the following:
-    #  - `buck build //my:app` (build uuid X)
-    #  - `buck build //my:app` (build uuid Y)
+    #  - `bsmr build //my:app` (build uuid X)
+    #  - `bsmr build //my:app` (build uuid Y)
     #
     # Build Y runs no actions at all (nothing invalidated because synthesized
     # files are not inputs to the action), so `BuildInfo.json` would contain
@@ -761,7 +767,7 @@ def _deduplicate_spec(spec: List[BundleSpecItem]) -> List[BundleSpecItem]:
     # Do not reorder spec items to achieve determinism.
     # Rely on the fact that `dict` preserves key order.
     deduplicated_spec = list(dict.fromkeys(spec))
-    # Force same sorting as in Buck1 for `SourcePathWithAppleBundleDestination`
+    # Force same sorting as in Legacy for `SourcePathWithAppleBundleDestination`
     # WARNING: This logic is tightly coupled with how spec filtering is done in `_filter_conflicting_paths` method during incremental bundling. Don't change unless you fully understand what is going on here.
     deduplicated_spec.sort()
     return deduplicated_spec

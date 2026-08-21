@@ -1,3 +1,9 @@
+# ===----------------------------------------------------------------------===
+# Upstream-Source: facebook/buck2@1560aca2002865cd73d7cafb22c705cfb640b2bc
+# Modifications Copyright (c) 2026 Dedalus Labs, Inc. and its contributors
+# SPDX-License-Identifier: Apache-2.0
+# ===----------------------------------------------------------------------===
+
 # Copyright (c) Meta Platforms, Inc. and affiliates.
 #
 # This source code is dual-licensed under either the MIT license found in the
@@ -6,7 +12,7 @@
 # of this source tree. You may select, at your option, one of the
 # above-listed licenses.
 
-load(":common.bzl", "buck", "prelude_rule")
+load(":common.bzl", "bsmr", "prelude_rule")
 
 git_fetch = prelude_rule(
     name = "git_fetch",
@@ -71,9 +77,9 @@ git_fetch = prelude_rule(
             ),
             "_git_fetch_tool": attrs.default_only(attrs.exec_dep(providers = [RunInfo], default = "prelude//git/tools:git_fetch")),
         }
-        | buck.licenses_arg()
-        | buck.labels_arg()
-        | buck.contacts_arg()
+        | bsmr.licenses_arg()
+        | bsmr.labels_arg()
+        | bsmr.contacts_arg()
     ),
 )
 

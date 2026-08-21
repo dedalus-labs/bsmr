@@ -1,3 +1,9 @@
+# ===----------------------------------------------------------------------===
+# Upstream-Source: facebook/buck2@1560aca2002865cd73d7cafb22c705cfb640b2bc
+# Modifications Copyright (c) 2026 Dedalus Labs, Inc. and its contributors
+# SPDX-License-Identifier: Apache-2.0
+# ===----------------------------------------------------------------------===
+
 # Copyright (c) Meta Platforms, Inc. and affiliates.
 #
 # This source code is dual-licensed under either the MIT license found in the
@@ -25,7 +31,7 @@ load(
 )
 load("@prelude//cxx:headers.bzl", "HeaderMode")
 load("@prelude//cxx:linker.bzl", "is_pdb_generated")
-load("@prelude//decls:common.bzl", "buck")
+load("@prelude//decls:common.bzl", "bsmr")
 load("@prelude//linking:link_info.bzl", "LinkOrdering", "LinkStyle")
 load("@prelude//linking:lto.bzl", "LtoMode")
 load("@prelude//os_lookup:defs.bzl", "Os", "OsLookup")
@@ -263,7 +269,7 @@ system_cxx_toolchain = rule(
             providers = [CxxToolsInfo],
             default = "prelude//toolchains/msvc:msvc_tools" if host_info().os.is_windows else "prelude//toolchains/cxx/clang:path_clang_tools",
         ),
-        "_target_os_type": buck.target_os_type_arg(),
+        "_target_os_type": bsmr.target_os_type_arg(),
     },
     is_toolchain_rule = True,
 )
@@ -295,7 +301,7 @@ cxx_tools_info_toolchain = rule(
         "post_link_flags": attrs.list(attrs.arg(), default = []),
         "rc_flags": attrs.list(attrs.arg(), default = []),
         "supports_content_based_paths": attrs.bool(default = False),
-        "_target_os_type": buck.target_os_type_arg(),
+        "_target_os_type": bsmr.target_os_type_arg(),
     },
     is_toolchain_rule = True,
 )

@@ -20,8 +20,8 @@ use std::io;
 fn main() -> io::Result<()> {
     let proto_files = &["health_check.proto"];
 
-    let buck_proto_srcs = env::var("BUCK_PROTO_SRCS");
-    let includes = if let Ok(path) = &buck_proto_srcs {
+    let bsmr_proto_srcs = env::var("BSMR_PROTO_SRCS");
+    let includes = if let Ok(path) = &bsmr_proto_srcs {
         vec![path.as_str()]
     } else {
         vec![".", "../bsmr_data", "../bsmr_host_sharing_proto"]
@@ -29,6 +29,6 @@ fn main() -> io::Result<()> {
 
     let builder = bsmr_protoc_dev::configure();
     unsafe { builder.setup_protoc() }
-        .extern_path(".buck.data", "::bsmr_data")
+        .extern_path(".bsmr.data", "::bsmr_data")
         .compile(proto_files, &includes)
 }

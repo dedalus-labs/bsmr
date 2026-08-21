@@ -18,28 +18,28 @@
 import json
 
 import pytest
-from bsmr.tests.e2e_util.api.buck import Buck
+from bsmr.tests.e2e_util.api.bsmr import Bsmr
 from bsmr.tests.e2e_util.asserts import expect_failure
-from bsmr.tests.e2e_util.buck_workspace import buck_test
+from bsmr.tests.e2e_util.bsmr_workspace import bsmr_test
 from bsmr.tests.e2e_util.helper.golden import golden
 
 
 """
-Tests to ensure that the `buck docs` command works as expected
+Tests to ensure that the `bsmr docs` command works as expected
 """
 
 
-@buck_test()
-async def test_docs_returns(buck: Buck) -> None:
-    result = await buck.docs("starlark")
+@bsmr_test()
+async def test_docs_returns(bsmr: Bsmr) -> None:
+    result = await bsmr.docs("starlark")
     result.check_returncode()
     decoded = json.loads(result.stdout)
     assert decoded == []
 
 
-@buck_test()
-async def test_prelude_docs(buck: Buck) -> None:
-    result = await buck.docs("starlark", "prelude//:prelude.bzl")
+@bsmr_test()
+async def test_prelude_docs(bsmr: Bsmr) -> None:
+    result = await bsmr.docs("starlark", "prelude//:prelude.bzl")
     result.check_returncode()
     decoded = json.loads(result.stdout)
     golden(
@@ -49,13 +49,13 @@ async def test_prelude_docs(buck: Buck) -> None:
 
 
 @pytest.mark.xfail(reason="until we ban non .bzl paths, this would be valid")
-@buck_test()
-async def test_docs_fail_with_invalid_patterns(buck: Buck) -> None:
+@bsmr_test()
+async def test_docs_fail_with_invalid_patterns(bsmr: Bsmr) -> None:
     await expect_failure(
-        buck.docs("starlark", "not_an_import_path"),
+        bsmr.docs("starlark", "not_an_import_path"),
         stderr_regex="Import path must have suffix .*: `root//not_an_import_path`",
     )
     await expect_failure(
-        buck.docs("starlark", "//cell"),
+        bsmr.docs("starlark", "//cell"),
         stderr_regex="Import path must have suffix .*: `root//cell`",
     )

@@ -8,27 +8,27 @@
 
 ## Context
 
-Buck has a concept of Visibility for every target. It allows users to define,
+Bsmr has a concept of Visibility for every target. It allows users to define,
 for each target, the targets it can depend on and targets that can depend on it.
 Visibility is specified as an allowlist of targets/target patterns, and any
 target used that falls outside of the allowlist fails visibility checking.
 Visibility pattern can be specified on `visibility` and `within_view` attributes
 in buildfiles and
-[PACKAGE files](https://www.internalfb.com/intern/wiki/Buck-users/Key_Concepts/Package_Files/).
+[PACKAGE files](https://www.internalfb.com/intern/wiki/Bsmr-users/Key_Concepts/Package_Files/).
 
 Visibility is important to lots of codebase maintainers because it can be used
 to keep projects from pulling in unwanted dependencies. As some examples, App
-Core teams are using Buck visibility as a
+Core teams are using Bsmr visibility as a
 [replacement to current supermodules for protecting app modularity](https://fb.prod.workplace.com/groups/2292177024436518/permalink/3112235492430663/).
 Instagram's using visibility to
 [protect modularity and define Link Groups used for build speed optimizations](https://fb.prod.workplace.com/groups/devx.build.bffs/posts/5169450219756775/?comment_id=5169500636418400).
-There's interest from various DevX teams in using Buck visibility on
-[PACKAGE files](https://www.internalfb.com/intern/wiki/Buck-users/Key_Concepts/Package_Files/)
+There's interest from various DevX teams in using Bsmr visibility on
+[PACKAGE files](https://www.internalfb.com/intern/wiki/Bsmr-users/Key_Concepts/Package_Files/)
 to
 [enforce repo boundaries, which will allow target determinators to migrate off of sparse profiles and onto Eden](https://fb.prod.workplace.com/groups/devx.build.bffs/posts/5169450219756775/),
 although visibility in its current form is likely not fit for enforcing such
 repo boundaries. Visibility has also been used to enforce
-[requirements that only certain targets are allowed to depend on targets in fbcode/scripts](https://fb.workplace.com/groups/buckeng/permalink/4392940254087889/).
+[requirements that only certain targets are allowed to depend on targets in fbcode/scripts](https://fb.workplace.com/groups/bsmreng/permalink/4392940254087889/).
 
 For perf reasons, bsmr doesn't always enforce visibility. Instead, it only
 enforces visibility on construction of the configured target graph. Visibility
@@ -36,7 +36,7 @@ checking is expensive memory-wise because it requires tracking all deps at each
 node. When constructing configured target graph, this cost is already paid for
 when bsmr checks transitive target compatibility. When constructing the
 unconfigured target graph, however, this is costly, so we avoid checking
-visibility there. (Note that buck does not allow you to specify selects in
+visibility there. (Note that bsmr does not allow you to specify selects in
 visibility attributes.)
 
 In practice, this means that commands like `cquery` and `build` can enforce

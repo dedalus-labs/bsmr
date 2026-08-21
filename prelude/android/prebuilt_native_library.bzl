@@ -1,3 +1,9 @@
+# ===----------------------------------------------------------------------===
+# Upstream-Source: facebook/buck2@1560aca2002865cd73d7cafb22c705cfb640b2bc
+# Modifications Copyright (c) 2026 Dedalus Labs, Inc. and its contributors
+# SPDX-License-Identifier: Apache-2.0
+# ===----------------------------------------------------------------------===
+
 # Copyright (c) Meta Platforms, Inc. and affiliates.
 #
 # This source code is dual-licensed under either the MIT license found in the
@@ -29,7 +35,7 @@ def prebuilt_native_library_impl(ctx: AnalysisContext) -> list[Provider]:
         prebuilt_native_library_dir = prebuilt_native_library_dir,
     )
     return [
-        # Buck1 copies the input directory and returns it as the output path. We don't
+        # Legacy copies the input directory and returns it as the output path. We don't
         # copy; we could just return the input directory itself as the output path, but
         # we're avoiding that (due to potential confusion from the output path being an
         # input directory) until we have an actual need for prebuilt_native_library

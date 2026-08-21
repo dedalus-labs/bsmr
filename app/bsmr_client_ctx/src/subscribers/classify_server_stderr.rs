@@ -82,7 +82,7 @@ pub(crate) fn classify_server_stderr(error: bsmr_error::Error, stderr: &str) -> 
 
 //    0: rust_begin_unwind
 //       at ./xplat/rust/toolchain/sysroot/1.80.1/library/std/src/panicking.rs:652:5
-//    1: <bsmr_server::daemon::server::BuckdServer as bsmr_cli_proto::daemon_api_server::DaemonApi>::unstable_crash::{closure#0}
+//    1: <bsmr_server::daemon::server::BsmrdServer as bsmr_cli_proto::daemon_api_server::DaemonApi>::unstable_crash::{closure#0}
 //       at ./fbcode/bsmr/app/bsmr_server/src/daemon/crash.rs:18:13
 static RUST_STACK_FRAME: LazyLock<regex::Regex> =
     LazyLock::new(|| regex::Regex::new(r"^\s*\d*:\s*(.*)$").unwrap());
@@ -241,26 +241,26 @@ stack backtrace:
              at ./xplat/rust/toolchain/sysroot/1.80.1/library/std/src/panicking.rs:652:5
    1: core::panicking::panic_fmt
              at ./xplat/rust/toolchain/sysroot/1.80.1/library/core/src/panicking.rs:72:14
-   2: <bsmr_server::daemon::server::BuckdServer as bsmr_cli_proto::daemon_api_server::DaemonApi>::unstable_crash::{closure#0}
+   2: <bsmr_server::daemon::server::BsmrdServer as bsmr_cli_proto::daemon_api_server::DaemonApi>::unstable_crash::{closure#0}
              at ./fbcode/bsmr/app/bsmr_server/src/daemon/crash.rs:18:13
-   3: <<bsmr_cli_proto::daemon_api_server::DaemonApiServer<_> as tower_service::Service<http::request::Request<_>>>::call::Unstable_CrashSvc<bsmr_server::daemon::server::BuckdServer> as tonic::server::service::UnaryService<bsmr_cli_proto::UnstableCrashRequest>>::call::{closure#0}
+   3: <<bsmr_cli_proto::daemon_api_server::DaemonApiServer<_> as tower_service::Service<http::request::Request<_>>>::call::Unstable_CrashSvc<bsmr_server::daemon::server::BsmrdServer> as tonic::server::service::UnaryService<bsmr_cli_proto::UnstableCrashRequest>>::call::{closure#0}
              at ./xplat/rust/toolchain/sysroot/1.80.1/library/core/src/future/future.rs:123:9
-   4: <bsmr_cli_proto::daemon_api_server::DaemonApiServer<bsmr_server::daemon::server::BuckdServer> as tower_service::Service<http::request::Request<hyper::body::body::Body>>>::call::{closure#20}
+   4: <bsmr_cli_proto::daemon_api_server::DaemonApiServer<bsmr_server::daemon::server::BsmrdServer> as tower_service::Service<http::request::Request<hyper::body::body::Body>>>::call::{closure#20}
              at ./xplat/rust/toolchain/sysroot/1.80.1/library/core/src/future/future.rs:123:9
    5: <futures_util::future::future::map::Map<futures_util::future::try_future::into_future::IntoFuture<core::pin::Pin<alloc::boxed::Box<dyn core::future::future::Future<Output = core::result::Result<http::response::Response<http_body::combinators::box_body::UnsyncBoxBody<bytes::bytes::Bytes, tonic::status::Status>>, core::convert::Infallible>> + core::marker::Send>>>, futures_util::fns::MapOkFn<<tonic::transport::service::router::Routes>::add_service<bsmr_test_proto::test_executor_server::TestExecutorServer<bsmr_test_api::grpc::executor::Service<bsmr_test_runner::executor::BsmrTestExecutor>>>::{closure#0}>> as core::future::future::Future>::poll
              at ./xplat/rust/toolchain/sysroot/1.80.1/library/core/src/future/future.rs:123:9
    6: <futures_util::future::future::map::Map<futures_util::future::try_future::into_future::IntoFuture<tower::util::map_response::MapResponseFuture<core::pin::Pin<alloc::boxed::Box<dyn core::future::future::Future<Output = core::result::Result<http::response::Response<http_body::combinators::box_body::UnsyncBoxBody<bytes::bytes::Bytes, tonic::status::Status>>, core::convert::Infallible>> + core::marker::Send>>, <tonic::transport::service::router::Routes>::add_service<bsmr_forkserver_proto::forkserver_server::ForkserverServer<bsmr_forkserver::unix::service::UnixForkserverService>>::{closure#0}>>, futures_util::fns::MapOkFn<<http::response::Response<http_body::combinators::box_body::UnsyncBoxBody<bytes::bytes::Bytes, axum_core::error::Error>> as axum_core::response::into_response::IntoResponse>::into_response>> as core::future::future::Future>::poll
              at ./third-party/rust/vendor/futures-util-0.3.30/src/lib.rs:91:13
-   7: <tower::util::map_response::MapResponseFuture<tower::util::map_response::MapResponseFuture<core::pin::Pin<alloc::boxed::Box<dyn core::future::future::Future<Output = core::result::Result<http::response::Response<http_body::combinators::box_body::UnsyncBoxBody<bytes::bytes::Bytes, tonic::status::Status>>, core::convert::Infallible>> + core::marker::Send>>, <tonic::transport::service::router::Routes>::add_service<bsmr_cli_proto::daemon_api_server::DaemonApiServer<bsmr_server::daemon::server::BuckdServer>>::{closure#0}>, <http::response::Response<http_body::combinators::box_body::UnsyncBoxBody<bytes::bytes::Bytes, axum_core::error::Error>> as axum_core::response::into_response::IntoResponse>::into_response> as core::future::future::Future>::poll
+   7: <tower::util::map_response::MapResponseFuture<tower::util::map_response::MapResponseFuture<core::pin::Pin<alloc::boxed::Box<dyn core::future::future::Future<Output = core::result::Result<http::response::Response<http_body::combinators::box_body::UnsyncBoxBody<bytes::bytes::Bytes, tonic::status::Status>>, core::convert::Infallible>> + core::marker::Send>>, <tonic::transport::service::router::Routes>::add_service<bsmr_cli_proto::daemon_api_server::DaemonApiServer<bsmr_server::daemon::server::BsmrdServer>>::{closure#0}>, <http::response::Response<http_body::combinators::box_body::UnsyncBoxBody<bytes::bytes::Bytes, axum_core::error::Error>> as axum_core::response::into_response::IntoResponse>::into_response> as core::future::future::Future>::poll
              at ./third-party/rust/vendor/futures-util-0.3.30/src/lib.rs:91:13
    8: <tower::util::oneshot::Oneshot<tower::util::boxed_clone::BoxCloneService<http::request::Request<hyper::body::body::Body>, http::response::Response<http_body::combinators::box_body::UnsyncBoxBody<bytes::bytes::Bytes, axum_core::error::Error>>, core::convert::Infallible>, http::request::Request<hyper::body::body::Body>> as core::future::future::Future>::poll
              at ./xplat/rust/toolchain/sysroot/1.80.1/library/core/src/future/future.rs:123:9
              ";
 
         let panic_sanitized_trace = test_trace_lines("
-        <bsmr_server::daemon::server::BuckdServer as bsmr_cli_proto::daemon_api_server::DaemonApi>::unstable_crash::{closure#0}
-        <<bsmr_cli_proto::daemon_api_server::DaemonApiServer<_> as tower_service::Service<http::request::Request<_>>>::call::Unstable_CrashSvc<bsmr_server::daemon::server::BuckdServer> as tonic::server::service::UnaryService<bsmr_cli_proto::UnstableCrashRequest>>::call::{closure#0}
-        <bsmr_cli_proto::daemon_api_server::DaemonApiServer<bsmr_server::daemon::server::BuckdServer> as tower_service::Service<http::request::Request<hyper::body::body::Body>>>::call::{closure#20}
+        <bsmr_server::daemon::server::BsmrdServer as bsmr_cli_proto::daemon_api_server::DaemonApi>::unstable_crash::{closure#0}
+        <<bsmr_cli_proto::daemon_api_server::DaemonApiServer<_> as tower_service::Service<http::request::Request<_>>>::call::Unstable_CrashSvc<bsmr_server::daemon::server::BsmrdServer> as tonic::server::service::UnaryService<bsmr_cli_proto::UnstableCrashRequest>>::call::{closure#0}
+        <bsmr_cli_proto::daemon_api_server::DaemonApiServer<bsmr_server::daemon::server::BsmrdServer> as tower_service::Service<http::request::Request<hyper::body::body::Body>>>::call::{closure#20}
         <futures_util::future::future::map::Map<futures_util::future::try_future::into_future::IntoFuture<core::pin::Pin<alloc::boxed::Box<dyn core::future::future::Future<Output = core::result::Result<http::response::Response<http_body::combinators::box_body::UnsyncBoxBody<bytes::bytes::Bytes, tonic::status::Status>>, core::convert::Infallible>> + core::marker::Send>>>, futures_util::fns::MapOkFn<<tonic::transport::service::router::Routes>::add_service<bsmr_test_proto::test_executor_server::TestExecutorServer<bsmr_test_api::grpc::executor::Service<bsmr_test_runner::executor::BsmrTestExecutor>>>::{closure#0}>> as core::future::future::Future>::poll
         <futures_util::future::future::map::Map<futures_util::future::try_future::into_future::IntoFuture<tower::util::map_response::MapResponseFuture<core::pin::Pin<alloc::boxed::Box<dyn core::future::future::Future<Output = core::result::Result<http::response::Response<http_body::combinators::box_body::UnsyncBoxBody<bytes::bytes::Bytes, tonic::status::Status>>, core::convert::Infallible>> + core::marker::Send>>, <tonic::transport::service::router::Routes>::add_service<bsmr_forkserver_proto::forkserver_server::ForkserverServer<bsmr_forkserver::unix::service::UnixForkserverService>>::{closure#0}>>, futures_util::fns::MapOkFn<<http::response::Response<http_body::combinators::box_body::UnsyncBoxBody<bytes::bytes::Bytes, axum_core::error::Error>> as axum_core::response::into_response::IntoResponse>::into_response>> as core::future::future::Future>::poll
         ");
@@ -293,22 +293,22 @@ stack backtrace:
                        xplat/rust/toolchain/sysroot/1.80.1/library/std/src/sys/pal/unix/mod.rs:366
     @ 0000000007edad48 std::process::abort
                        xplat/rust/toolchain/sysroot/1.80.1/library/std/src/process.rs:2369
-    @ 000000001875604b <bsmr_server::daemon::server::BuckdServer as bsmr_cli_proto::daemon_api_server::DaemonApi>::unstable_crash::{closure#0}
+    @ 000000001875604b <bsmr_server::daemon::server::BsmrdServer as bsmr_cli_proto::daemon_api_server::DaemonApi>::unstable_crash::{closure#0}
                        fbcode/bsmr/app/bsmr_server/src/daemon/crash.rs:27
-    @ 0000000018e12834 <<bsmr_cli_proto::daemon_api_server::DaemonApiServer<_> as tower_service::Service<http::request::Request<_>>>::call::Unstable_CrashSvc<bsmr_server::daemon::server::BuckdServer> as tonic::server::service::UnaryService<bsmr_cli_proto::UnstableCrashRequest>>::call::{closure#0}
+    @ 0000000018e12834 <<bsmr_cli_proto::daemon_api_server::DaemonApiServer<_> as tower_service::Service<http::request::Request<_>>>::call::Unstable_CrashSvc<bsmr_server::daemon::server::BsmrdServer> as tonic::server::service::UnaryService<bsmr_cli_proto::UnstableCrashRequest>>::call::{closure#0}
                        xplat/rust/toolchain/sysroot/1.80.1/library/core/src/future/future.rs:123
-    @ 0000000018dff24b <bsmr_cli_proto::daemon_api_server::DaemonApiServer<bsmr_server::daemon::server::BuckdServer> as tower_service::Service<http::request::Request<hyper::body::body::Body>>>::call::{closure#20}
+    @ 0000000018dff24b <bsmr_cli_proto::daemon_api_server::DaemonApiServer<bsmr_server::daemon::server::BsmrdServer> as tower_service::Service<http::request::Request<hyper::body::body::Body>>>::call::{closure#20}
                        xplat/rust/toolchain/sysroot/1.80.1/library/core/src/future/future.rs:123
-    @ 0000000019a82766 <futures_util::future::future::map::Map<futures_util::future::try_future::into_future::IntoFuture<core::pin::Pin<alloc::boxed::Box<dyn core::future::future::Future<Output = core::result::Result<http::response::Response<http_body::combinators::box_body::UnsyncBoxBody<bytes::bytes::Bytes, tonic::status::Status>>, core::convert::Infallible>> + core::marker::Send>>>, futures_util::fns::MapOkFn<<tonic::transport::service::router::Routes>::add_service<bsmr_cli_proto::daemon_api_server::DaemonApiServer<bsmr_server::daemon::server::BuckdServer>>::{closure#0}>> as core::future::future::Future>::poll
+    @ 0000000019a82766 <futures_util::future::future::map::Map<futures_util::future::try_future::into_future::IntoFuture<core::pin::Pin<alloc::boxed::Box<dyn core::future::future::Future<Output = core::result::Result<http::response::Response<http_body::combinators::box_body::UnsyncBoxBody<bytes::bytes::Bytes, tonic::status::Status>>, core::convert::Infallible>> + core::marker::Send>>>, futures_util::fns::MapOkFn<<tonic::transport::service::router::Routes>::add_service<bsmr_cli_proto::daemon_api_server::DaemonApiServer<bsmr_server::daemon::server::BsmrdServer>>::{closure#0}>> as core::future::future::Future>::poll
                        xplat/rust/toolchain/sysroot/1.80.1/library/core/src/future/future.rs:123
     ";
 
         let linux_sanitized_trace = test_trace_lines("
         std::sys::pal::unix::abort_internal
         std::process::abort
-        <bsmr_server::daemon::server::BuckdServer as bsmr_cli_proto::daemon_api_server::DaemonApi>::unstable_crash::{closure#0}
-        <<bsmr_cli_proto::daemon_api_server::DaemonApiServer<_> as tower_service::Service<http::request::Request<_>>>::call::Unstable_CrashSvc<bsmr_server::daemon::server::BuckdServer> as tonic::server::service::UnaryService<bsmr_cli_proto::UnstableCrashRequest>>::call::{closure#0}
-        <bsmr_cli_proto::daemon_api_server::DaemonApiServer<bsmr_server::daemon::server::BuckdServer> as tower_service::Service<http::request::Request<hyper::body::body::Body>>>::call::{closure#20}
+        <bsmr_server::daemon::server::BsmrdServer as bsmr_cli_proto::daemon_api_server::DaemonApi>::unstable_crash::{closure#0}
+        <<bsmr_cli_proto::daemon_api_server::DaemonApiServer<_> as tower_service::Service<http::request::Request<_>>>::call::Unstable_CrashSvc<bsmr_server::daemon::server::BsmrdServer> as tonic::server::service::UnaryService<bsmr_cli_proto::UnstableCrashRequest>>::call::{closure#0}
+        <bsmr_cli_proto::daemon_api_server::DaemonApiServer<bsmr_server::daemon::server::BsmrdServer> as tower_service::Service<http::request::Request<hyper::body::body::Body>>>::call::{closure#20}
         ");
         assert_eq!(
             extract_trace(linux_folly_trace)

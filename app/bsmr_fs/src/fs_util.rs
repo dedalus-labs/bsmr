@@ -29,7 +29,7 @@ use std::path::PathBuf;
 
 pub use bsmr_env::soft_error::soft_error;
 #[cfg(unix)]
-use bsmr_error::BuckErrorContext;
+use bsmr_error::BsmrErrorContext;
 use bsmr_error::bsmr_error;
 #[cfg(unix)]
 use bsmr_error::internal_error;
@@ -164,7 +164,7 @@ fn symlink_impl(original: &Path, link: &AbsPath) -> Result<(), IoError> {
     // Canonicalize() will also handle adding the verbatim prefix \\?\, which is required for
     // supporting paths longer than 260
     // In general, it should be OK to opt for absolute / canonical paths when possible as
-    // buck will not read any of these paths.
+    // bsmr will not read any of these paths.
     let target_canonical = if let Ok(path) = target_abspath.canonicalize() {
         path
     } else {
@@ -608,7 +608,7 @@ pub fn disk_space_stats<P: AsRef<AbsPath>>(path: P) -> bsmr_error::Result<DiskSp
 
         let path_c = CString::new(path.as_os_str().as_bytes())
             .map_err(bsmr_error::Error::from)
-            .with_buck_error_context(|| format!("Failed to convert path to CString: {path:?}"))?;
+            .with_bsmr_error_context(|| format!("Failed to convert path to CString: {path:?}"))?;
         let mut statvfs = unsafe { MaybeUninit::<libc::statvfs>::zeroed().assume_init() };
         unsafe {
             let r = libc::statvfs(path_c.as_ptr(), &mut statvfs);
@@ -906,7 +906,7 @@ mod tests {
 
     use assert_matches::assert_matches;
     use bsmr_error::ErrorTag;
-    use bsmr_hash::StdBuckHashMap;
+    use bsmr_hash::StdBsmrHashMap;
 
     use crate::error::IoResultExt;
     use crate::fs_util::IoError;
@@ -1522,7 +1522,7 @@ mod tests {
         use std::io::ErrorKind;
 
         let tempdir = tempfile::tempdir().unwrap();
-        let mut test_cases = StdBuckHashMap::default();
+        let mut test_cases = StdBsmrHashMap::default();
         // The behavior of these test cases varies by platform
         let should_succeed = cfg!(target_os = "macos");
         let expected_attempts = if should_succeed { MAX_IO_ATTEMPTS } else { 1 };

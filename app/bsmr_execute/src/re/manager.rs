@@ -32,7 +32,7 @@ use bsmr_core::execution_types::executor_config::RemoteExecutorDependency;
 use bsmr_core::execution_types::executor_config::RemoteExecutorUseCase;
 use bsmr_core::fs::project::ProjectRoot;
 use bsmr_core::fs::project_rel_path::ProjectRelativePath;
-use bsmr_error::BuckErrorContext;
+use bsmr_error::BsmrErrorContext;
 use bsmr_error::conversion::from_any_with_tag;
 use bsmr_error::internal_error;
 use bsmr_fs::paths::abs_norm_path::AbsNormPathBuf;
@@ -90,7 +90,7 @@ use crate::re::uploader::UploadStats;
 /// When all existing [ReConnectionHandle] (for a particular [ReConnectionManager]) are dropped, the
 /// underlying connection will be closed.
 ///
-/// This approach allows us to ensure that all RE interactions for a particular buck command use the
+/// This approach allows us to ensure that all RE interactions for a particular bsmr command use the
 /// same RE session. Concurrent commands will share an RE session.
 
 #[derive(Clone, Allocative)]
@@ -103,8 +103,8 @@ pub struct RemoteExecutionConfig {
     pub connection_retries: usize,
     pub static_metadata: Arc<RemoteExecutionStaticMetadata>,
     pub logs_dir_path: Option<AbsNormPathBuf>,
-    pub buck_out_path: AbsNormPathBuf,
-    /// Whether Buck is running in paranoid mode.
+    pub output_path: AbsNormPathBuf,
+    /// Whether Bsmr is running in paranoid mode.
     pub is_paranoid_mode: bool,
 }
 
@@ -209,7 +209,7 @@ impl ReConnectionManager {
         connection_retries: usize,
         static_metadata: Arc<RemoteExecutionStaticMetadata>,
         logs_dir_path: Option<AbsNormPathBuf>,
-        buck_out_path: AbsNormPathBuf,
+        output_path: AbsNormPathBuf,
         is_paranoid_mode: bool,
     ) -> Self {
         Self {
@@ -220,7 +220,7 @@ impl ReConnectionManager {
                 connection_retries,
                 static_metadata,
                 logs_dir_path,
-                buck_out_path,
+                output_path,
                 is_paranoid_mode,
             },
         }
@@ -250,7 +250,7 @@ impl ReConnectionManager {
     pub fn get_network_stats(&self) -> bsmr_error::Result<RemoteExecutionClientStats> {
         let client_stats = RE::get_network_stats()
             .map_err(|e| from_any_with_tag(e, bsmr_error::ErrorTag::Tier0))
-            .buck_error_context("Error getting RE network stats")?;
+            .bsmr_error_context("Error getting RE network stats")?;
 
         // Those two fields come from RE and are always available.
         let mut res = RemoteExecutionClientStats {

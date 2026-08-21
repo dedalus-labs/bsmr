@@ -33,17 +33,17 @@ load("@prelude//utils:utils.bzl", "flatten")
 #
 # Voltron support comes in two main parts:
 # (1) Constructing the Voltron module graph (assigning targets to each module). This is done
-# by constructing a "target graph" and then delegating to buck1 to produce the module graph.
+# by constructing a "target graph" and then delegating to legacy to produce the module graph.
 # (2) Using the Voltron module graph while building our APK.
 #
 # For (1), in order to calculate which targets belong to each module, we reconstruct a "target
 # graph" from "deps" information that is propagated up through AndroidPackageableInfo.
-# In buck1 we use the underlying "TargetGraph" object that is based on the raw target
+# In legacy we use the underlying "TargetGraph" object that is based on the raw target
 # definitions. This results in some slightly different behavior for `provided_deps` - in
 # bsmr, we (correctly) ignore `provided_deps`, since they do not influence the packaging of
-# the APK, whereas in `buck1`, we treat `provided_deps` the same as `deps`.
+# the APK, whereas in `legacy`, we treat `provided_deps` the same as `deps`.
 # In practice, this rarely affects the module assignments, but can mean that `bsmr` will
-# put a target inside a module whereas `buck1` will put it into the main APK (since `buck1`
+# put a target inside a module whereas `legacy` will put it into the main APK (since `legacy`
 # can find a path from an "always in main APK seed" to the target via some `provided_dep`,
 # whereas `bsmr` does not).
 #

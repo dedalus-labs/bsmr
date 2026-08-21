@@ -16,7 +16,7 @@
 
 //! Contains the internal support within the attribute framework for `select()`.
 
-use bsmr_error::BuckErrorContext;
+use bsmr_error::BsmrErrorContext;
 use bsmr_error::internal_error;
 use bsmr_interpreter::types::select_fail::StarlarkSelectFail;
 use bsmr_interpreter::types::select_incompatible::StarlarkSelectIncompatible;
@@ -170,7 +170,7 @@ impl CoercedAttrExr for CoercedAttr {
         } else {
             Ok(attr
                 .coerce_item(configurable, ctx, value)
-                .with_buck_error_context(|| format!("Error coercing {value}"))?)
+                .with_bsmr_error_context(|| format!("Error coercing {value}"))?)
         }
     }
 }

@@ -19,9 +19,9 @@ import csv
 import json
 import sys
 
-from bsmr.tests.e2e_util.api.buck import Buck
+from bsmr.tests.e2e_util.api.bsmr import Bsmr
 from bsmr.tests.e2e_util.asserts import expect_failure
-from bsmr.tests.e2e_util.buck_workspace import buck_test
+from bsmr.tests.e2e_util.bsmr_workspace import bsmr_test
 
 
 # builds targets in an fbcode target configuration, unsupported on mac RE workers
@@ -30,10 +30,10 @@ def fbcode_linux_only() -> bool:
 
 
 # TODO(marwhal): Fix and enable on Windows
-@buck_test(inplace=True, skip_for_os=["windows"])
-async def test_what_ran_json_target_without_explicit_test_cases(buck: Buck) -> None:
-    await buck.test("root//tests/targets/rules/sh_test:test")
-    out = await buck.log("what-ran", "--format", "json")
+@bsmr_test(inplace=True, skip_for_os=["windows"])
+async def test_what_ran_json_target_without_explicit_test_cases(bsmr: Bsmr) -> None:
+    await bsmr.test("root//tests/targets/rules/sh_test:test")
+    out = await bsmr.log("what-ran", "--format", "json")
     out = [line.strip() for line in out.stdout.splitlines()]
     out = [json.loads(line) for line in out if line]
     assert len(out) == 1, "out should have 1 line: `{}`".format(out)
@@ -48,20 +48,20 @@ async def test_what_ran_json_target_without_explicit_test_cases(buck: Buck) -> N
 
 if fbcode_linux_only():
 
-    @buck_test(inplace=True)
-    async def test_what_ran(buck: Buck) -> None:
-        await buck.build("root//tests/targets/rules/cxx/hello_world:welcome")
-        out = await buck.log("what-ran")
+    @bsmr_test(inplace=True)
+    async def test_what_ran(bsmr: Bsmr) -> None:
+        await bsmr.build("root//tests/targets/rules/cxx/hello_world:welcome")
+        out = await bsmr.log("what-ran")
         assert "welcome" in out.stdout
 
-        await buck.test("root//tests/targets/rules/sh_test:test")
-        out = await buck.log("what-ran")
+        await bsmr.test("root//tests/targets/rules/sh_test:test")
+        out = await bsmr.log("what-ran")
         assert "sh_test/test.py arg1" in out.stdout
 
-    @buck_test(inplace=True)
-    async def test_what_ran_filter_category(buck: Buck) -> None:
-        await buck.build("upstream//fbobjc/bsmr/samples/hello_world:HelloWorldBundle")
-        out = await buck.log(
+    @bsmr_test(inplace=True)
+    async def test_what_ran_filter_category(bsmr: Bsmr) -> None:
+        await bsmr.build("upstream//fbobjc/bsmr/samples/hello_world:HelloWorldBundle")
+        out = await bsmr.log(
             "what-ran",
             "--filter-category",
             ".*cxx.*",
@@ -74,12 +74,12 @@ if fbcode_linux_only():
             "cxx_link_executable" or "cxx_compile" in rec["identity"] for rec in out
         ), "action identity must contain the filtered category: `{}`".format(out)
 
-    @buck_test(inplace=True)
-    async def test_what_ran_show_std_err(buck: Buck) -> None:
+    @bsmr_test(inplace=True)
+    async def test_what_ran_show_std_err(bsmr: Bsmr) -> None:
         await expect_failure(
-            buck.build("root//tests/targets/rules/genrule/bad/...")
+            bsmr.build("root//tests/targets/rules/genrule/bad/...")
         )
-        out = await buck.log("what-ran", "--show-std-err", "--format", "json")
+        out = await bsmr.log("what-ran", "--show-std-err", "--format", "json")
         out = [line.strip() for line in out.stdout.splitlines()]
         out = [json.loads(line) for line in out if line]
         assert any(
@@ -90,7 +90,7 @@ if fbcode_linux_only():
             )
         )
 
-        out = await buck.log(
+        out = await bsmr.log(
             "what-ran", "--show-std-err", "--omit-empty-std-err", "--format", "json"
         )
         out = [line.strip() for line in out.stdout.splitlines()]
@@ -99,10 +99,10 @@ if fbcode_linux_only():
             "we should have no empty std_errs: `{}`".format(out)
         )
 
-    @buck_test(inplace=True)
-    async def test_what_ran_json_target_with_test_cases(buck: Buck) -> None:
-        await buck.test("root//tests/targets/rules/go/test:test")
-        out = await buck.log("what-ran", "--format", "json")
+    @bsmr_test(inplace=True)
+    async def test_what_ran_json_target_with_test_cases(bsmr: Bsmr) -> None:
+        await bsmr.test("root//tests/targets/rules/go/test:test")
+        out = await bsmr.log("what-ran", "--format", "json")
         out = [line.strip() for line in out.stdout.splitlines()]
         out = [json.loads(line) for line in out if line]
         out = [repro for repro in out if repro.get("reason", "").startswith("test.")]
@@ -121,10 +121,10 @@ if fbcode_linux_only():
         assert repro["reproducer"]["executor"] == "Local"
         assert repro["extra"]["testcases"] == ["TestFoo"]
 
-    @buck_test(inplace=True)
-    async def test_what_ran_csv_target_with_test_cases(buck: Buck) -> None:
-        await buck.test("root//tests/targets/rules/go/test:test")
-        out = await buck.log("what-ran", "--format", "csv")
+    @bsmr_test(inplace=True)
+    async def test_what_ran_csv_target_with_test_cases(bsmr: Bsmr) -> None:
+        await bsmr.test("root//tests/targets/rules/go/test:test")
+        out = await bsmr.log("what-ran", "--format", "csv")
         out = [line.strip() for line in out.stdout.splitlines()]
         header = ["reason", "identity", "executor", "reproducer"]
         out = [dict(zip(header, record)) for record in csv.reader(out) if record]
@@ -146,14 +146,14 @@ if fbcode_linux_only():
 
 
 # TODO: This would be more reliable if it were an isolated test.
-@buck_test(inplace=True)
-async def test_what_ran_local(buck: Buck) -> None:
+@bsmr_test(inplace=True)
+async def test_what_ran_local(bsmr: Bsmr) -> None:
     target = "root//tests/targets/rules/genrule:mktemp"
-    await buck.build(
+    await bsmr.build(
         target,
         "--no-remote-cache",
     )
-    out = await buck.log("what-ran")
+    out = await bsmr.log("what-ran")
     out = [line.strip() for line in out.stdout.splitlines() if target in line]
     assert len(out) == 1
 

@@ -29,7 +29,7 @@ use bsmr_core::fs::project_rel_path::ProjectRelativePathBuf;
 use bsmr_core::soft_error;
 use bsmr_data::CleanStaleResultKind;
 use bsmr_data::CleanStaleStats;
-use bsmr_error::BuckErrorContext;
+use bsmr_error::BsmrErrorContext;
 use bsmr_error::ErrorTag;
 use bsmr_error::bsmr_error;
 use bsmr_events::daemon_id::DaemonId;
@@ -44,7 +44,7 @@ use bsmr_fs::paths::abs_norm_path::AbsNormPath;
 use bsmr_fs::paths::abs_path::AbsPathBuf;
 use bsmr_fs::paths::file_name::FileName;
 use bsmr_fs::paths::file_name::FileNameBuf;
-use bsmr_hash::StdBuckHashMap;
+use bsmr_hash::StdBsmrHashMap;
 use bsmr_wrapper_common::invocation_id::TraceId;
 use chrono::DateTime;
 use chrono::Utc;
@@ -249,7 +249,7 @@ impl CleanStaleArtifactsCommand {
         let mut artifact_dirs = Vec::new();
         for dir_name in &["gen", "art"] {
             let dir_path = io
-                .buck_out_path()
+                .output_path()
                 .join(ProjectRelativePathBuf::unchecked_new(dir_name.to_string()));
             let dir_abs = io.fs().resolve(&dir_path);
             if fs_util::try_exists(&dir_abs)? {
@@ -269,7 +269,7 @@ impl CleanStaleArtifactsCommand {
 
                 let dir_subtree = tree
                     .get_subtree(&mut dir_path.iter())
-                    .with_buck_error_context(|| {
+                    .with_bsmr_error_context(|| {
                         format!("Found a file where directory was expected: {}", dir_path)
                     })?;
 
@@ -278,7 +278,7 @@ impl CleanStaleArtifactsCommand {
                 let dir_subtree = match dir_subtree {
                     Some(t) => t,
                     None => {
-                        empty = StdBuckHashMap::default();
+                        empty = StdBsmrHashMap::default();
                         &empty
                     }
                 };
@@ -580,7 +580,7 @@ impl<T: IoHandler> StaleFinder<'_, T> {
     fn visit_recursively(
         &mut self,
         path: ProjectRelativePathBuf,
-        subtree: &StdBuckHashMap<FileNameBuf, ArtifactTree>,
+        subtree: &StdBsmrHashMap<FileNameBuf, ArtifactTree>,
     ) -> bsmr_error::Result<()> {
         let mut queue = vec![(path, subtree)];
 
@@ -598,10 +598,10 @@ impl<T: IoHandler> StaleFinder<'_, T> {
     fn visit<'t>(
         &mut self,
         path: &ProjectRelativePath,
-        subtree: &'t StdBuckHashMap<FileNameBuf, ArtifactTree>,
+        subtree: &'t StdBsmrHashMap<FileNameBuf, ArtifactTree>,
         queue: &mut Vec<(
             ProjectRelativePathBuf,
-            &'t StdBuckHashMap<FileNameBuf, ArtifactTree>,
+            &'t StdBsmrHashMap<FileNameBuf, ArtifactTree>,
         )>,
     ) -> bsmr_error::Result<()> {
         let abs_path = self.io.fs().resolve(path);

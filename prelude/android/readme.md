@@ -278,7 +278,7 @@ comprehensive workflow in the Android build system.
 ```mermaid
 sequenceDiagram
     participant Dev as Developer
-    participant Buck as Bessemer Engine
+    participant Bsmr as Bessemer Engine
     participant APK as android_apk_impl
     participant Binary as get_binary_info
     participant DEX as DEX Processing
@@ -286,8 +286,8 @@ sequenceDiagram
     participant Tools as Android Tools
     participant SDK as Android SDK
 
-    Dev->>Buck: buck build //app:my_app
-    Buck->>APK: Execute android_apk rule
+    Dev->>Bsmr: bsmr build //app:my_app
+    Bsmr->>APK: Execute android_apk rule
     APK->>Binary: get_binary_info(ctx)
 
     par Parallel Processing
@@ -311,8 +311,8 @@ sequenceDiagram
     Tools->>SDK: Run apk_builder + zipalign
     SDK-->>Tools: Signed APK
     Tools-->>APK: Final APK artifact
-    APK-->>Buck: APK + install info
-    Buck-->>Dev: Build complete
+    APK-->>Bsmr: APK + install info
+    Bsmr-->>Dev: Build complete
 ```
 
 ### Example Flow: Multi-DEX Processing

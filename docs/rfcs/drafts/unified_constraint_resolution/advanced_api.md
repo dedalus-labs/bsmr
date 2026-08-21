@@ -62,7 +62,7 @@ Plugging in project foo's resolution only takes one extra line in the `opt_level
 
 You may have seen plans for `default` to support selects in a previous iteration of the unified `constraint()` rule RFC. That is no longer planned.
 
-Additionally, we'll make a configuration with the default value set equivalent to a configuration with the constraint unset. Concretely, with the sanitizer constraint from the [RFC at a glance tab](main.md) (`default = "none"`), a configuration with `cfg//:sanitizer[none]` will be identical to a configuration without the sanitizer constraint set at all. Beyond simplifying UX, this should produce some capacity savings for CI. Today, several constraints create distinct configurations depending on whether the default value is set explicitly, which costs Buck extra memory at configuration time. This change also requires full rollout of the unified `constraint()` rule.
+Additionally, we'll make a configuration with the default value set equivalent to a configuration with the constraint unset. Concretely, with the sanitizer constraint from the [RFC at a glance tab](main.md) (`default = "none"`), a configuration with `cfg//:sanitizer[none]` will be identical to a configuration without the sanitizer constraint set at all. Beyond simplifying UX, this should produce some capacity savings for CI. Today, several constraints create distinct configurations depending on whether the default value is set explicitly, which costs Bsmr extra memory at configuration time. This change also requires full rollout of the unified `constraint()` rule.
 
 ## Interesting Use Cases of Resolution
 
@@ -378,7 +378,7 @@ This variant can achieve similar functionality to the current RFC without introd
 The tradeoff is that nothing at the rule level encourages constraint authors to write constraints in this way. The "input vs return" distinction relies entirely on understanding proper usage patterns, and many constraint authors likely don't understand these nuances.
 
 One particular aspect I found problematic was that `select_visibility` is entirely opt-in, so nothing prevents users from bypassing the input/return separation. Two scenarios I'm concerned will happen:
-1. Users don't define `select_visibility` and let both `version_modifier` and `version` have public select visibility. A non-trivial amount of Buck users will put in only the minimal effort to make things work, and won't use guardrail features if they aren't required.
+1. Users don't define `select_visibility` and let both `version_modifier` and `version` have public select visibility. A non-trivial amount of Bsmr users will put in only the minimal effort to make things work, and won't use guardrail features if they aren't required.
 2. A user realizes that `version_modifier` can't be selected on and decides the way to fix it is by expanding `select_visibility` of `version_modifier` rather than selecting on `version`, which breaks the benefit of this API in the first place.
 
 Variants A and B share additional pros and cons listed at the end of this section.
@@ -425,7 +425,7 @@ The tradeoff is that this API requires splitting every existing constraint targe
 
 - Significant friction to adopt `resolution`. Splitting an existing constraint into two targets means migrating every callsite, either all selects or all modifiers, to the new target. Even with AI codemods, this is non-trivial enough to deter adoption in cases where resolution would actually be incredibly useful.
 - Trivial use cases that just need resolution without separate `input_values` and `return_values`, like expressing incompatibilities between constraints, become significantly more complicated.
-- Two targets for one logical constraint is more confusing for general Buck users on which to use for selects and which to use for modifiers. This group is an order of magnitude larger than constraint authors.
+- Two targets for one logical constraint is more confusing for general Bsmr users on which to use for selects and which to use for modifiers. This group is an order of magnitude larger than constraint authors.
 
 ### Variant C: Resolution without separate `input_values` and `return_values`
 

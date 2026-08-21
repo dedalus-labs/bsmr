@@ -16,7 +16,7 @@ load(
 
 ALLOW_LIST = [
     ".*:useless_target.*",
-    "upstream//xplat/configurations/buck/apple/common_files:dummy.c",
+    "upstream//xplat/configurations/bsmr/apple/common_files:dummy.c",
     "upstream//third-party/libgcc.*",
     "upstream//third-party/tp2/libgcc.*",
 ]

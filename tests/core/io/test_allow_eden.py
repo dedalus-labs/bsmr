@@ -16,22 +16,22 @@
 
 import json
 
-from bsmr.tests.e2e_util.api.buck import Buck
-from bsmr.tests.e2e_util.buck_workspace import buck_test
+from bsmr.tests.e2e_util.api.bsmr import Bsmr
+from bsmr.tests.e2e_util.bsmr_workspace import bsmr_test
 
 # This file acts as both a test of `bsmr.allow_eden_io` as well as a self-test
 # of the `setup_eden` logic in the test runner
 
 
-async def _check_io_provider(buck: Buck, name: str) -> None:
-    await buck.server()
-    out = await buck.status()
+async def _check_io_provider(bsmr: Bsmr, name: str) -> None:
+    await bsmr.server()
+    out = await bsmr.status()
     status = json.loads(out.stdout.strip())
     io_provider = status["io_provider"]
     assert io_provider == name
 
 
-@buck_test(
+@bsmr_test(
     setup_eden=False,
     extra_bsmr_config={
         "bsmr": {
@@ -39,11 +39,11 @@ async def _check_io_provider(buck: Buck, name: str) -> None:
         }
     },
 )
-async def test_no_eden(buck: Buck) -> None:
-    await _check_io_provider(buck, "fs")
+async def test_no_eden(bsmr: Bsmr) -> None:
+    await _check_io_provider(bsmr, "fs")
 
 
-@buck_test(
+@bsmr_test(
     setup_eden=False,
     extra_bsmr_config={
         "bsmr": {
@@ -51,11 +51,11 @@ async def test_no_eden(buck: Buck) -> None:
         }
     },
 )
-async def test_allow_eden_io_ignored_on_fs_io(buck: Buck) -> None:
-    await _check_io_provider(buck, "fs")
+async def test_allow_eden_io_ignored_on_fs_io(bsmr: Bsmr) -> None:
+    await _check_io_provider(bsmr, "fs")
 
 
-@buck_test(
+@bsmr_test(
     setup_eden=True,
     extra_bsmr_config={
         "bsmr": {
@@ -63,11 +63,11 @@ async def test_allow_eden_io_ignored_on_fs_io(buck: Buck) -> None:
         }
     },
 )
-async def test_allow_eden_io_respected(buck: Buck) -> None:
-    await _check_io_provider(buck, "fs")
+async def test_allow_eden_io_respected(bsmr: Bsmr) -> None:
+    await _check_io_provider(bsmr, "fs")
 
 
-@buck_test(
+@bsmr_test(
     setup_eden=True,
     extra_bsmr_config={
         "bsmr": {
@@ -75,5 +75,5 @@ async def test_allow_eden_io_respected(buck: Buck) -> None:
         }
     },
 )
-async def test_eden_io(buck: Buck) -> None:
-    await _check_io_provider(buck, "eden")
+async def test_eden_io(bsmr: Bsmr) -> None:
+    await _check_io_provider(bsmr, "eden")

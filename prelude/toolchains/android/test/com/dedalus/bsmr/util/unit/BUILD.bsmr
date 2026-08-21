@@ -1,0 +1,23 @@
+# ===----------------------------------------------------------------------===
+# Upstream-Source: facebook/buck2@1560aca2002865cd73d7cafb22c705cfb640b2bc
+# Modifications Copyright (c) 2026 Dedalus Labs, Inc. and its contributors
+# SPDX-License-Identifier: Apache-2.0
+# ===----------------------------------------------------------------------===
+
+load("@prelude//toolchains/android/tools:build_rules.bzl", "standard_java_test")
+load("@prelude//utils:source_listing.bzl", "source_listing")
+
+oncall("android_devxx")
+
+source_listing()
+
+standard_java_test(
+    name = "unit",
+    deps = [
+        "prelude//toolchains/android/src/com/dedalus/bsmr/util/unit:unit",
+        "prelude//toolchains/android/third-party:guava",
+        "prelude//toolchains/android/third-party:jackson-databind",
+        "prelude//toolchains/android/third-party:jsr305",
+        "prelude//toolchains/android/third-party:junit",
+    ],
+)

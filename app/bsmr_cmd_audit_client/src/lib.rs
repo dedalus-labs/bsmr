@@ -17,13 +17,13 @@
 use async_trait::async_trait;
 use bsmr_cli_proto::GenericRequest;
 use bsmr_client_ctx::client_ctx::ClientCommandContext;
-use bsmr_client_ctx::common::BuckArgMatches;
+use bsmr_client_ctx::common::BsmrArgMatches;
 use bsmr_client_ctx::common::CommonBuildConfigurationOptions;
 use bsmr_client_ctx::common::CommonCommandOptions;
 use bsmr_client_ctx::common::CommonEventLogOptions;
 use bsmr_client_ctx::common::CommonStarlarkOptions;
 use bsmr_client_ctx::common::ui::CommonConsoleOptions;
-use bsmr_client_ctx::daemon::client::BuckdClientConnector;
+use bsmr_client_ctx::daemon::client::BsmrdClientConnector;
 use bsmr_client_ctx::daemon::client::StdoutPartialResultHandler;
 use bsmr_client_ctx::events_ctx::EventsCtx;
 use bsmr_client_ctx::exit_result::ExitResult;
@@ -137,11 +137,11 @@ impl AuditCommand {
 impl StreamingCommand for AuditCommand {
     const COMMAND_NAME: &'static str = "audit";
 
-    /// Audit subcommands are all implemented as a generic request to the buckd server that will deserialize the command object.
+    /// Audit subcommands are all implemented as a generic request to the bsmrd server that will deserialize the command object.
     async fn exec_impl(
         self,
-        buckd: &mut BuckdClientConnector,
-        matches: BuckArgMatches<'_>,
+        bsmrd: &mut BsmrdClientConnector,
+        matches: BsmrArgMatches<'_>,
         ctx: &mut ClientCommandContext<'_>,
         events_ctx: &mut EventsCtx,
     ) -> ExitResult {
@@ -151,7 +151,7 @@ impl StreamingCommand for AuditCommand {
 
         let context = ctx.client_context(submatches, &self)?;
 
-        buckd
+        bsmrd
             .with_flushing()
             .audit(
                 GenericRequest {

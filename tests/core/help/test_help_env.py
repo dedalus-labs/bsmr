@@ -15,19 +15,19 @@
 # pyre-strict
 
 
-from bsmr.tests.e2e_util.api.buck import Buck
-from bsmr.tests.e2e_util.buck_workspace import buck_test
+from bsmr.tests.e2e_util.api.bsmr import Bsmr
+from bsmr.tests.e2e_util.bsmr_workspace import bsmr_test
 from bsmr.tests.e2e_util.helper.golden import golden
 
 
-@buck_test()
-async def test_help(buck: Buck) -> None:
-    result = await buck.help_env()
+@bsmr_test()
+async def test_help(bsmr: Bsmr) -> None:
+    result = await bsmr.help_env()
     golden(
         output=result.stdout,
         rel_path="bsmr-help-env.golden.txt",
     )
-    result = await buck.help_env("--self-testing")
+    result = await bsmr.help_env("--self-testing")
     golden(
         output=result.stdout,
         rel_path="bsmr-help-env-testing.golden.txt",

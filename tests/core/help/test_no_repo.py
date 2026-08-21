@@ -16,14 +16,14 @@
 
 from pathlib import Path
 
-from bsmr.tests.e2e_util.api.buck import Buck
-from bsmr.tests.e2e_util.buck_workspace import buck_test
+from bsmr.tests.e2e_util.api.bsmr import Bsmr
+from bsmr.tests.e2e_util.bsmr_workspace import bsmr_test
 
 
-@buck_test(skip_final_kill=True)
-async def test_no_repo(buck: Buck, tmp_path: Path) -> None:
-    await buck.help()
+@bsmr_test(skip_final_kill=True)
+async def test_no_repo(bsmr: Bsmr, tmp_path: Path) -> None:
+    await bsmr.help()
     # And make sure this also works with absolute argfiles
     arg_path = tmp_path / "argsfile.txt"
     arg_path.write_text("--help", encoding="utf-8")
-    await buck.run_buck_command(f"@{arg_path}")
+    await bsmr.run_bsmr_command(f"@{arg_path}")

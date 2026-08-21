@@ -63,7 +63,7 @@ load("@prelude//apple/validation:required_reasons_tools.bzl", "RequiredReasonsTo
 load("@prelude//cxx:groups_types.bzl", "GroupFilterInfo", "Traversal")
 load("@prelude//cxx:headers.bzl", "CPrecompiledHeaderInfo", "HeaderMode")
 load("@prelude//cxx:link_groups_types.bzl", "LINK_GROUP_MAP_ATTR")
-load("@prelude//decls:common.bzl", "CxxRuntimeType", "CxxSourceType", "HeadersAsRawHeadersMode", "LinkableDepType", "buck", "prelude_rule")
+load("@prelude//decls:common.bzl", "CxxRuntimeType", "CxxSourceType", "HeadersAsRawHeadersMode", "LinkableDepType", "bsmr", "prelude_rule")
 load("@prelude//decls:cxx_common.bzl", "cxx_common")
 load("@prelude//decls:native_common.bzl", "native_common")
 load("@prelude//decls:test_common.bzl", "test_common")
@@ -125,10 +125,10 @@ def apple_bundle_base_attrs():
         apple_common.product_name_from_module_name_arg()
         | apple_common.asset_catalogs_compilation_options_arg()
         | apple_common.info_plist_substitutions_arg()
-        | buck.contacts_arg()
+        | bsmr.contacts_arg()
         | apple_common.default_platform_arg()
-        | buck.labels_arg()
-        | buck.licenses_arg()
+        | bsmr.labels_arg()
+        | bsmr.licenses_arg()
         | apple_common.codesign_flags_arg()
         | apple_common.codesign_identity_arg()
         | apple_common.deps_arg()
@@ -200,9 +200,9 @@ apple_asset_catalog = prelude_rule(
     further = None,
     attrs = (
         # @unsorted-dict-items
-        buck.contacts_arg()
-        | buck.labels_arg()
-        | buck.licenses_arg()
+        bsmr.contacts_arg()
+        | bsmr.labels_arg()
+        | bsmr.licenses_arg()
         | {
             "app_icon": attrs.option(
                 attrs.string(),
@@ -241,7 +241,7 @@ apple_app_intents = prelude_rule(
     docs = "An `apple_app_intents()` rule represents App Intents definitions for Apple platforms.",
     examples = None,
     further = None,
-    attrs = (buck.contacts_arg() | buck.labels_arg() | buck.licenses_arg()),
+    attrs = (bsmr.contacts_arg() | bsmr.labels_arg() | bsmr.licenses_arg()),
     impl = apple_app_intents_impl,
 )
 
@@ -257,7 +257,7 @@ apple_binary = prelude_rule(
         in the way that they import header files, in order to better accommodate existing conventions.
         See the sections for the `headers` and `exported_headers` attributes for more details.
 
-        Buck enables you to override components of the Apple toolchain with
+        Bsmr enables you to override components of the Apple toolchain with
         alternate tools, either from the Xcode search paths or from directories
         that you specify.
         See the `.bsmr` project configuration for more information.
@@ -323,10 +323,10 @@ apple_binary = prelude_rule(
         | apple_common.executable_name_arg()
         | apple_common.info_plist_substitutions_arg()
         | cxx_common.supported_platforms_regex_arg()
-        | buck.contacts_arg()
+        | bsmr.contacts_arg()
         | apple_common.default_platform_arg()
-        | buck.labels_arg()
-        | buck.licenses_arg()
+        | bsmr.labels_arg()
+        | bsmr.licenses_arg()
         | apple_common.defaults_arg()
         | apple_common.deps_arg()
         | apple_common.devirt_enabled_arg()
@@ -399,7 +399,7 @@ apple_binary = prelude_rule(
             "_swift_enable_testing": attrs.default_only(attrs.bool(default = False)),
             VALIDATION_DEPS_ATTR_NAME: VALIDATION_DEPS_ATTR_TYPE,
         }
-        | buck.allow_cache_upload_arg()
+        | bsmr.allow_cache_upload_arg()
         | validation_common.attrs_validators_arg()
         | constraint_overrides.attributes
         | get_skip_swift_incremental_outputs_attrs()
@@ -418,7 +418,7 @@ apple_bundle = prelude_rule(
 
         Code signing will embed entitlements pointed to by the `entitlements_file` arg in
         the bundle's `apple_binary`. This is the preferred way to specify entitlements
-        when building with Buck.
+        when building with Bsmr.
 
         If the entitlements file is not present, it falls back to the `CODE_SIGN_ENTITLEMENTS` entry in
          `info_plist_substitutions`.
@@ -498,7 +498,7 @@ apple_bundle = prelude_rule(
                 doc = """
                 A list of dependencies of this bundle as build targets. You can embed application
                  extensions by specifying the extension's bundle target. To include a WatchKit app, append the
-                 flavor `#watch` to the target specification. Buck will automatically substitute the appropriate
+                 flavor `#watch` to the target specification. Bsmr will automatically substitute the appropriate
                  platform flavor (either `watchsimulator` or `watchos`) based on the parent.
             """,
             ),
@@ -507,7 +507,7 @@ apple_bundle = prelude_rule(
                 default = None,
                 doc = """
                 The name of the resulting bundle and binary. The setting behaves like PRODUCT\\_NAME Xcode build setting.
-                 For example, if your rule is named "MyApp" and extension is "app", by default buck will generate MyApp.app bundle.
+                 For example, if your rule is named "MyApp" and extension is "app", by default bsmr will generate MyApp.app bundle.
                  But if you will set product name to "SuperApp", bundle will get "SuperApp.app" name.
             """,
             ),
@@ -538,10 +538,10 @@ apple_bundle = prelude_rule(
         | apple_common.privacy_manifest_arg()
         | apple_common.product_name_from_module_name_arg()
         | apple_common.asset_catalogs_compilation_options_arg()
-        | buck.contacts_arg()
+        | bsmr.contacts_arg()
         | apple_common.default_platform_arg()
-        | buck.labels_arg()
-        | buck.licenses_arg()
+        | bsmr.labels_arg()
+        | bsmr.licenses_arg()
         | apple_common.codesign_flags_arg()
         | apple_common.codesign_identity_arg()
         | apple_common.resource_group_arg()
@@ -577,7 +577,7 @@ apple_library = prelude_rule(
         in the way that they import header files, in order to better accommodate existing conventions.
         See the sections for the `headers` and `exported_headers` attributes for more details.
 
-        Buck enables you to override components of the Apple toolchain with
+        Bsmr enables you to override components of the Apple toolchain with
         alternate tools, either from the Xcode search paths or from directories
         that you specify.
         See the `.bsmr` project configuration for more information.
@@ -644,10 +644,10 @@ apple_library = prelude_rule(
         | apple_common.apple_tools_arg()
         | apple_common.apple_toolchain_arg()
         | validation_common.attrs_validators_arg()
-        | buck.contacts_arg()
+        | bsmr.contacts_arg()
         | apple_common.default_platform_arg()
-        | buck.labels_arg()
-        | buck.licenses_arg()
+        | bsmr.labels_arg()
+        | bsmr.licenses_arg()
         | apple_common.defaults_arg()
         | apple_common.deps_arg()
         | apple_common.devirt_enabled_arg()
@@ -726,7 +726,7 @@ apple_library = prelude_rule(
             APPLE_ARCHIVE_OBJECTS_LOCALLY_OVERRIDE_ATTR_NAME: attrs.option(attrs.bool(), default = None),
             VALIDATION_DEPS_ATTR_NAME: VALIDATION_DEPS_ATTR_TYPE,
         }
-        | buck.allow_cache_upload_arg()
+        | bsmr.allow_cache_upload_arg()
         | get_swift_incremental_file_hashing_attrs()
         | get_swift_incremental_logging_attrs()
         | get_swift_incremental_remote_outputs_attrs()
@@ -782,8 +782,8 @@ apple_metal_library = prelude_rule(
     """,
     further = None,
     attrs = (
-        buck.labels_arg()
-        | buck.contacts_arg()
+        bsmr.labels_arg()
+        | bsmr.contacts_arg()
         | {
             "headers": attrs.list(attrs.source(), default = []),
             "metal_compiler_flags": attrs.list(
@@ -836,10 +836,10 @@ apple_package = prelude_rule(
     further = None,
     attrs = (
         # @unsorted-dict-items
-        buck.contacts_arg()
+        bsmr.contacts_arg()
         | apple_common.default_platform_arg()
-        | buck.labels_arg()
-        | buck.licenses_arg()
+        | bsmr.labels_arg()
+        | bsmr.licenses_arg()
         | {
             "bundle": attrs.dep(
                 providers = [AppleBundleInfo],
@@ -968,9 +968,9 @@ apple_resource = prelude_rule(
             "codesign_entitlements": attrs.option(attrs.source(), default = None),
             "codesign_flags_override": attrs.option(attrs.list(attrs.string()), default = None),
         }
-        | buck.contacts_arg()
-        | buck.labels_arg()
-        | buck.licenses_arg()
+        | bsmr.contacts_arg()
+        | bsmr.labels_arg()
+        | bsmr.licenses_arg()
         | apple_common.skip_universal_resource_dedupe_arg()
     ),
     impl = apple_resource_impl,
@@ -981,7 +981,7 @@ apple_test = prelude_rule(
     name = "apple_test",
     docs = """
         An `apple_test()` rule contains Objective-C/C++ code which can be built and used to test
-        code contained in other rules. The tests can be executed by running `buck test`.
+        code contained in other rules. The tests can be executed by running `bsmr test`.
     """,
     examples = """
         ```
@@ -1042,8 +1042,8 @@ apple_test = prelude_rule(
         | cxx_common.compiler_flags_arg()
         | cxx_common.linker_flags_arg()
         | apple_common.target_sdk_version()
-        | buck.run_test_separately_arg(run_test_separately_type = attrs.bool(default = False))
-        | buck.test_label_arg()
+        | bsmr.run_test_separately_arg(run_test_separately_type = attrs.bool(default = False))
+        | bsmr.test_label_arg()
         | apple_common.extra_xcode_sources()
         | apple_common.extra_xcode_files()
         | apple_common.serialize_debugging_options_arg()
@@ -1052,9 +1052,9 @@ apple_test = prelude_rule(
         | apple_common.executable_name_arg()
         | apple_common.asset_catalogs_compilation_options_arg()
         | cxx_common.supported_platforms_regex_arg()
-        | buck.contacts_arg()
+        | bsmr.contacts_arg()
         | apple_common.default_platform_arg()
-        | buck.licenses_arg()
+        | bsmr.licenses_arg()
         | apple_common.codesign_flags_arg()
         | apple_common.codesign_identity_arg()
         | apple_common.defaults_arg()
@@ -1129,8 +1129,8 @@ apple_test = prelude_rule(
             "test_rule_timeout_ms": attrs.option(attrs.int(), default = None),
             "ui_test_target_app": attrs.option(attrs.dep(), default = None),
         }
-        | buck.allow_cache_upload_arg()
-        | buck.inject_test_env_arg()
+        | bsmr.allow_cache_upload_arg()
+        | bsmr.inject_test_env_arg()
         | apple_test_extra_attrs()
         | test_common.attributes()
         | xplugins_common.debug_artifacts_arg
@@ -1153,9 +1153,9 @@ apple_toolchain = prelude_rule(
     examples = None,
     further = None,
     attrs = (
-        buck.contacts_arg()
-        | buck.labels_arg()
-        | buck.licenses_arg()
+        bsmr.contacts_arg()
+        | bsmr.labels_arg()
+        | bsmr.licenses_arg()
         | {
             "actool": attrs.exec_dep(providers = [RunInfo]),
             "app_intents_metadata_processor": attrs.option(attrs.exec_dep(providers = [RunInfo]), default = None),
@@ -1227,8 +1227,8 @@ required_reasons_tools = prelude_rule(
     examples = None,
     further = None,
     attrs = (
-        buck.contacts_arg()
-        | buck.labels_arg()
+        bsmr.contacts_arg()
+        | bsmr.labels_arg()
         | {
             "analyzer": attrs.exec_dep(providers = [RunInfo]),
             "validator": attrs.exec_dep(providers = [RunInfo]),
@@ -1257,9 +1257,9 @@ core_data_model = prelude_rule(
     further = None,
     attrs = (
         # @unsorted-dict-items
-        buck.contacts_arg()
-        | buck.labels_arg()
-        | buck.licenses_arg()
+        bsmr.contacts_arg()
+        | bsmr.labels_arg()
+        | bsmr.licenses_arg()
         | {
             "module": attrs.option(attrs.string(), default = None),
             "path": attrs.source(
@@ -1296,9 +1296,9 @@ prebuilt_apple_framework = prelude_rule(
     further = None,
     attrs = (
         # @unsorted-dict-items
-        buck.contacts_arg()
-        | buck.labels_arg()
-        | buck.licenses_arg()
+        bsmr.contacts_arg()
+        | bsmr.labels_arg()
+        | bsmr.licenses_arg()
         | apple_common.deps_arg()
         | apple_common.libraries_arg()
         | apple_common.sdk_modules_arg()
@@ -1358,9 +1358,9 @@ scene_kit_assets = prelude_rule(
     further = None,
     attrs = (
         # @unsorted-dict-items
-        buck.contacts_arg()
-        | buck.labels_arg()
-        | buck.licenses_arg()
+        bsmr.contacts_arg()
+        | bsmr.labels_arg()
+        | bsmr.licenses_arg()
         | {
             "path": attrs.source(allow_directory = True),
         }
@@ -1379,9 +1379,9 @@ swift_toolchain = prelude_rule(
     examples = None,
     further = None,
     attrs = (
-        buck.contacts_arg()
-        | buck.labels_arg()
-        | buck.licenses_arg()
+        bsmr.contacts_arg()
+        | bsmr.labels_arg()
+        | bsmr.licenses_arg()
         | {
             "architecture": attrs.string(),
             "enforce_dedupe_eligibility": attrs.bool(default = False),
@@ -1453,8 +1453,8 @@ apple_universal_executable = prelude_rule(
     examples = None,
     further = None,
     attrs = (
-        buck.labels_arg()
-        | buck.contacts_arg()
+        bsmr.labels_arg()
+        | bsmr.contacts_arg()
         | {
             "executable": attrs.split_transition_dep(
                 cfg = cpu_split_transition,
@@ -1581,8 +1581,8 @@ cxx_universal_executable = prelude_rule(
     examples = None,
     further = None,
     attrs = (
-        buck.labels_arg()
-        | buck.contacts_arg()
+        bsmr.labels_arg()
+        | bsmr.contacts_arg()
         | {
             "executable": attrs.split_transition_dep(
                 cfg = cpu_split_transition,
@@ -1632,8 +1632,8 @@ apple_xcframework = prelude_rule(
         built per-platform via a split transition and then combined.
     """,
     impl = apple_xcframework_impl,
-    attrs = buck.labels_arg()
-    | buck.contacts_arg()
+    attrs = bsmr.labels_arg()
+    | bsmr.contacts_arg()
     | {
         "framework": attrs.split_transition_dep(cfg = framework_split_transition),
         "framework_name": attrs.option(attrs.string(), default = None),
@@ -1670,8 +1670,8 @@ apple_static_archive = prelude_rule(
     """,
     impl = apple_static_archive_impl,
     attrs = (
-        buck.labels_arg()
-        | buck.contacts_arg()
+        bsmr.labels_arg()
+        | bsmr.contacts_arg()
         | apple_common.deps_arg()
         | {
             "archive_name": attrs.option(attrs.string(), default = None),
@@ -1736,8 +1736,8 @@ apple_resource_bundle = prelude_rule(
     """,
     impl = apple_resource_bundle_impl,
     attrs = (
-        buck.labels_arg()
-        | buck.contacts_arg()
+        bsmr.labels_arg()
+        | bsmr.contacts_arg()
         | apple_common.deps_arg()
         | apple_common.ibtool_flags_arg()
         | apple_common.product_name_arg()

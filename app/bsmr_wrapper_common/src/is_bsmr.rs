@@ -25,7 +25,7 @@ use dupe::Dupe;
 #[derive(Copy, Clone, Dupe)]
 pub enum WhoIsAsking {
     Bessemer,
-    BuckWrapper,
+    BsmrWrapper,
 }
 
 pub(crate) fn is_bsmr_exe(path: &Path, who_is_asking: WhoIsAsking) -> bool {
@@ -48,7 +48,7 @@ pub(crate) fn is_bsmr_exe(path: &Path, who_is_asking: WhoIsAsking) -> bool {
         true
     } else {
         match who_is_asking {
-            WhoIsAsking::BuckWrapper => {
+            WhoIsAsking::BsmrWrapper => {
                 // We don't know another name of the bsmr executable in the wrapper.
                 false
             }
@@ -84,17 +84,17 @@ mod tests {
         };
 
         assert!(is_bsmr_exe(Path::new(fake_bsmr), WhoIsAsking::Bessemer));
-        assert!(is_bsmr_exe(Path::new(fake_bsmr), WhoIsAsking::BuckWrapper));
+        assert!(is_bsmr_exe(Path::new(fake_bsmr), WhoIsAsking::BsmrWrapper));
 
         let current_exe = env::current_exe().unwrap();
 
         assert!(is_bsmr_exe(&current_exe, WhoIsAsking::Bessemer));
-        assert!(!is_bsmr_exe(&current_exe, WhoIsAsking::BuckWrapper));
+        assert!(!is_bsmr_exe(&current_exe, WhoIsAsking::BsmrWrapper));
 
         assert!(!is_bsmr_exe(Path::new(other_path), WhoIsAsking::Bessemer));
         assert!(!is_bsmr_exe(
             Path::new(other_path),
-            WhoIsAsking::BuckWrapper
+            WhoIsAsking::BsmrWrapper
         ));
     }
 }

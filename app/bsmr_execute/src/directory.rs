@@ -56,8 +56,8 @@ use bsmr_fs::paths::file_name::FileName;
 use bsmr_fs::paths::file_name::FileNameBuf;
 use bsmr_fs::paths::forward_rel_path::ForwardRelativePath;
 use bsmr_fs::paths::forward_rel_path::ForwardRelativePathBuf;
-use bsmr_hash::StdBuckHashMap;
-use bsmr_hash::StdBuckHashSet;
+use bsmr_hash::StdBsmrHashMap;
+use bsmr_hash::StdBsmrHashSet;
 use chrono::DateTime;
 use chrono::Utc;
 use derive_more::Display;
@@ -343,7 +343,7 @@ pub fn re_tree_to_directory(
     /// but the pointers are hashes, so we need to first see a hash before we can work out what
     /// hashing mechanism to use here.
     struct DirMap<'a> {
-        by_kind: SmallMap<DigestAlgorithm, StdBuckHashMap<FileDigest, &'a RE::Directory>>,
+        by_kind: SmallMap<DigestAlgorithm, StdBsmrHashMap<FileDigest, &'a RE::Directory>>,
         directories: &'a [RE::Directory],
     }
 
@@ -720,7 +720,7 @@ pub fn expand_selector_for_dependencies(
     // thing.
     let mut paths_to_visit = paths_to_take.clone();
 
-    let mut all_known_symlinks = StdBuckHashSet::default();
+    let mut all_known_symlinks = StdBsmrHashSet::default();
 
     while !paths_to_visit.is_empty() {
         let mut next_paths_to_visit = DirectorySelector::empty();
@@ -1122,7 +1122,7 @@ mod tests {
     #[test]
     fn test_extract_symlink_chain() -> bsmr_error::Result<()> {
         // Crank up the difficulty: l1 points through d3/f, but through l2. We need all of those in
-        // the deps! In practice, this tends to not happen in Buck 2 because we always dereference
+        // the deps! In practice, this tends to not happen in Bsmr 2 because we always dereference
         // symlinks and traverse them, but might a well support it properly.
         let digest_config = DigestConfig::testing_default();
 

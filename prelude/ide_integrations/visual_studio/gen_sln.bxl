@@ -130,7 +130,7 @@ def _set_startup_target(targets, vs_settings_list, startup_target_label: TargetL
             )
         )
 
-# In buck dependency tree, duplicate targets can exist with exact same label but different
+# In bsmr dependency tree, duplicate targets can exist with exact same label but different
 # configurations. While VS doesn't like duplicate project names (prompting with message: The
 # solution already contains an item named 'xxx'). Besides, there is not much value in showing
 # multiple projects for the same target but with slightly different configuration. Ideally, this

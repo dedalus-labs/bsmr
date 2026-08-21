@@ -19,26 +19,26 @@ import json
 from pathlib import Path
 from typing import List, Optional
 
-from bsmr.tests.e2e_util.api.buck import Buck
+from bsmr.tests.e2e_util.api.bsmr import Bsmr
 
 
 async def collect_coverage_for(
-    buck: Buck,
+    bsmr: Bsmr,
     tmp_path: Path,
     target: str,
     folder_filter: List[str],
     file_filter: List[str],
     mode: Optional[str] = None,
     extra_tpx_args: Optional[List[str]] = None,
-    extra_buck_args: Optional[List[str]] = None,
+    extra_bsmr_args: Optional[List[str]] = None,
 ) -> List[str]:
     coverage_file = tmp_path / "coverage.txt"
     folder_filter_str = ":".join(folder_filter)
     file_filter_str = ":".join(file_filter)
-    buck_args = []
+    bsmr_args = []
     if mode is not None:
-        buck_args.append(mode)
-    buck_args.extend(
+        bsmr_args.append(mode)
+    bsmr_args.extend(
         [
             "--config",
             "code_coverage.enable=filtered",
@@ -47,10 +47,10 @@ async def collect_coverage_for(
             "--config",
             f"code_coverage.file_path_filter={file_filter_str}",
         ]
-        + (extra_buck_args or [])
+        + (extra_bsmr_args or [])
     )
-    buck_args.append(target)
-    buck_args.extend(
+    bsmr_args.append(target)
+    bsmr_args.extend(
         [
             "--",
             "--collect-coverage",
@@ -58,7 +58,7 @@ async def collect_coverage_for(
         ]
         + (extra_tpx_args or [])
     )
-    await buck.test(*buck_args)
+    await bsmr.test(*bsmr_args)
     paths = []
     with open(coverage_file) as results:
         for line in results:

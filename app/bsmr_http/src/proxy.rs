@@ -17,7 +17,7 @@
 use std::net::IpAddr;
 use std::str::FromStr;
 
-use bsmr_error::BuckErrorContext;
+use bsmr_error::BsmrErrorContext;
 use http::Uri;
 use http::uri::InvalidUri;
 use http::uri::PathAndQuery;
@@ -52,7 +52,7 @@ pub(super) fn https_proxy_from_env() -> bsmr_error::Result<Option<Proxy>> {
     if let Some(https_proxy) = env_to_string("HTTPS_PROXY")? {
         let uri: DefaultSchemeUri = https_proxy
             .parse()
-            .with_buck_error_context(|| format!("Invalid HTTPS_PROXY uri: {https_proxy}"))?;
+            .with_bsmr_error_context(|| format!("Invalid HTTPS_PROXY uri: {https_proxy}"))?;
         if let Some(no_proxy) = noproxy_from_env(Scheme::HTTPS)? {
             Ok(Some(Proxy::new(
                 no_proxy.into_proxy_intercept(),
@@ -72,7 +72,7 @@ pub(super) fn http_proxy_from_env() -> bsmr_error::Result<Option<Proxy>> {
     if let Some(http_proxy) = env_to_string("HTTP_PROXY")? {
         let uri: DefaultSchemeUri = http_proxy
             .parse()
-            .with_buck_error_context(|| format!("Invalid HTTP_PROXY uri: {http_proxy}"))?;
+            .with_bsmr_error_context(|| format!("Invalid HTTP_PROXY uri: {http_proxy}"))?;
         if let Some(no_proxy) = noproxy_from_env(Scheme::HTTP)? {
             Ok(Some(Proxy::new(
                 no_proxy.into_proxy_intercept(),

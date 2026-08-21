@@ -69,7 +69,7 @@ defer_write_actions = true
 ```
 
 This mechanism is recommended if you're using the On-disk State, since it means
-Buck can omit writes entirely if the same content is already on disk.
+Bsmr can omit writes entirely if the same content is already on disk.
 
 ## `bsmr clean --stale`
 

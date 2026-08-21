@@ -63,7 +63,7 @@ enum ValidationSpecError {
 /// artifacts are rejected because validations are expected to be derived,
 /// reproducible outputs.
 ///
-/// See the [Validations guide](https://buck2.build/docs/rule_authors/validation/)
+/// See the [Validations guide](https://oss.dedaluslabs.ai/bsmr/rule_authors/validation/)
 /// for the end-to-end story.
 #[derive(
     Debug,
@@ -105,7 +105,7 @@ pub struct StarlarkValidationSpecGen<V: ValueLifetimeless> {
     /// invalid JSON, incompatible schema version, or schema mismatch.
     /// Source artifacts are rejected — the result must come from an action.
     ///
-    /// See [Writing the validator](https://buck2.build/docs/rule_authors/validation/#writing-the-validator)
+    /// See [Writing the validator](https://oss.dedaluslabs.ai/bsmr/rule_authors/validation/#writing-the-validator)
     /// in the Validations guide for the full schema reference and examples.
     validation_result: ValueOfUncheckedGeneric<V, ValueIsInputArtifactAnnotation>,
 
@@ -232,7 +232,7 @@ fn validation_spec_methods(builder: &mut MethodsBuilder) {
     /// invalid JSON, incompatible schema version, or schema mismatch. Source
     /// artifacts are rejected — the result must come from an action.
     ///
-    /// See [Writing the validator](https://buck2.build/docs/rule_authors/validation/#writing-the-validator)
+    /// See [Writing the validator](https://oss.dedaluslabs.ai/bsmr/rule_authors/validation/#writing-the-validator)
     /// in the Validations guide for end-to-end examples.
     fn validation_result<'v>(
         this: &'v StarlarkValidationSpec,

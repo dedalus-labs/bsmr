@@ -1,3 +1,9 @@
+# ===----------------------------------------------------------------------===
+# Upstream-Source: facebook/buck2@1560aca2002865cd73d7cafb22c705cfb640b2bc
+# Modifications Copyright (c) 2026 Dedalus Labs, Inc. and its contributors
+# SPDX-License-Identifier: Apache-2.0
+# ===----------------------------------------------------------------------===
+
 # Copyright (c) Meta Platforms, Inc. and affiliates.
 #
 # This source code is dual-licensed under either the MIT license found in the
@@ -189,7 +195,7 @@ def _filter_matching_selected_provisioning_profile_infos(
     ]
 
 
-# See `ProvisioningProfileStore::getBestProvisioningProfile` in `ProvisioningProfileStore.java` for Buck v1 equivalent
+# See `ProvisioningProfileStore::getBestProvisioningProfile` in `ProvisioningProfileStore.java` for Bsmr v1 equivalent
 # This function operates on data types only without performing any IO or process invocation.
 def select_best_provisioning_profile_core(
     info_plist_metadata: InfoPlistMetadata,

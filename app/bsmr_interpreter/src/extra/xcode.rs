@@ -18,7 +18,7 @@ use std::io;
 use std::path::Path;
 
 use allocative::Allocative;
-use bsmr_error::BuckErrorContext;
+use bsmr_error::BsmrErrorContext;
 use bsmr_error::conversion::from_any_with_tag;
 use bsmr_fs::fs_util;
 use bsmr_fs::paths::abs_norm_path::AbsNormPathBuf;
@@ -68,7 +68,7 @@ impl XcodeVersionInfo {
     pub fn new() -> bsmr_error::Result<Option<Self>> {
         let resolved_xcode_path =
             fs_util::canonicalize_if_exists(AbsPath::new(XCODE_SELECT_SYMLINK)?)
-                .buck_error_context("resolve selected xcode link")?;
+                .bsmr_error_context("resolve selected xcode link")?;
         let resolved_xcode_path = match resolved_xcode_path {
             Some(p) => p,
             None => return Ok(None),

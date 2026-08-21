@@ -18,27 +18,27 @@
 import os
 from pathlib import Path
 
-from bsmr.tests.e2e_util.api.buck import Buck
-from bsmr.tests.e2e_util.buck_workspace import buck_test
+from bsmr.tests.e2e_util.api.bsmr import Bsmr
+from bsmr.tests.e2e_util.bsmr_workspace import bsmr_test
 
 
-@buck_test()
-async def test_bsmrconfig_works_in_external_cells(buck: Buck) -> None:
-    result = await buck.audit(
+@bsmr_test()
+async def test_bsmrconfig_works_in_external_cells(bsmr: Bsmr) -> None:
+    result = await bsmr.audit(
         "config", "--cell", "test_bundled_cell", "user_section.key"
     )
     assert "key = value" in result.stdout
 
 
-@buck_test()
-async def test_uquery(buck: Buck) -> None:
-    result = await buck.uquery("deps(other//:other_alias)")
+@bsmr_test()
+async def test_uquery(bsmr: Bsmr) -> None:
+    result = await bsmr.uquery("deps(other//:other_alias)")
     assert result.stdout.strip().split() == [
         "test_bundled_cell//dir:test_hidden",
         "test_bundled_cell//dir:test",
         "other//:other_alias",
     ]
-    result = await buck.uquery(
+    result = await bsmr.uquery(
         "deps(test_bundled_cell//dir:test)", rel_cwd=Path("other")
     )
     assert result.stdout.strip().split() == [
@@ -47,27 +47,27 @@ async def test_uquery(buck: Buck) -> None:
     ]
 
 
-@buck_test()
-async def test_build_local(buck: Buck) -> None:
-    result = await buck.build_without_report(
+@bsmr_test()
+async def test_build_local(bsmr: Bsmr) -> None:
+    result = await bsmr.build_without_report(
         "--show-full-simple-output", "--local-only", "other//:other_alias"
     )
     p = Path(result.stdout.strip())
     assert p.read_text().strip() == "\n".join(["value", "6", "foobar", "foobar2"])
 
 
-@buck_test()
-async def test_build_remote(buck: Buck) -> None:
-    result = await buck.build_without_report(
+@bsmr_test()
+async def test_build_remote(bsmr: Bsmr) -> None:
+    result = await bsmr.build_without_report(
         "--show-full-simple-output", "--remote-only", "other//:other_alias"
     )
     p = Path(result.stdout.strip())
     assert p.read_text().strip() == "\n".join(["value", "6", "foobar", "foobar2"])
 
 
-@buck_test()
-async def test_materialize_source_directly(buck: Buck) -> None:
-    result = await buck.build_without_report(
+@bsmr_test()
+async def test_materialize_source_directly(bsmr: Bsmr) -> None:
+    result = await bsmr.build_without_report(
         "--show-full-simple-output", "test_bundled_cell//dir:exported"
     )
     p = Path(result.stdout.strip())
@@ -76,16 +76,16 @@ async def test_materialize_source_directly(buck: Buck) -> None:
     assert p.read_text().strip() == "foobar"
 
 
-@buck_test()
-async def test_expand_external_cell(buck: Buck) -> None:
-    await buck.expand_external_cell("test_bundled_cell")
-    assert (buck.cwd / "test_bundled_cell" / ".bsmr").exists()
+@bsmr_test()
+async def test_expand_external_cell(bsmr: Bsmr) -> None:
+    await bsmr.expand_external_cell("test_bundled_cell")
+    assert (bsmr.cwd / "test_bundled_cell" / ".bsmr").exists()
 
     # Remove the external cell declaration
-    (buck.cwd / ".bsmr_no_external").replace(buck.cwd / ".bsmr")
-    (buck.cwd / "test_bundled_cell" / "dir" / "src.txt").write_text("foobar3\n")
+    (bsmr.cwd / ".bsmr_no_external").replace(bsmr.cwd / ".bsmr")
+    (bsmr.cwd / "test_bundled_cell" / "dir" / "src.txt").write_text("foobar3\n")
 
-    result = await buck.build_without_report(
+    result = await bsmr.build_without_report(
         "--show-full-simple-output", "other//:other_alias"
     )
     p = Path(result.stdout.strip())

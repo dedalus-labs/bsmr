@@ -17,7 +17,7 @@
 use std::time::Duration;
 
 use assert_matches::assert_matches;
-use bsmr_error::BuckErrorContext as _;
+use bsmr_error::BsmrErrorContext as _;
 use bsmr_grpc::DuplexChannel;
 use tokio::io::AsyncRead;
 use tokio::io::AsyncWrite;
@@ -46,25 +46,25 @@ async fn test_basic() -> bsmr_error::Result<()> {
     let server = spawn_executor_server(to_duplex_channel(server_io), MockExecutor);
     let client = TestExecutorClient::new(client_io)
         .await
-        .buck_error_context("Failed to create client")?;
+        .bsmr_error_context("Failed to create client")?;
 
     client
         .end_of_test_requests()
         .await
-        .buck_error_context("Call 1")?;
+        .bsmr_error_context("Call 1")?;
     client
         .end_of_test_requests()
         .await
-        .buck_error_context("Call 2")?;
+        .bsmr_error_context("Call 2")?;
     client
         .end_of_test_requests()
         .await
-        .buck_error_context("Call 3")?;
+        .bsmr_error_context("Call 3")?;
 
     server
         .shutdown()
         .await
-        .buck_error_context("Failed to shutdown")?;
+        .bsmr_error_context("Failed to shutdown")?;
 
     assert_matches!(client.end_of_test_requests().await, Err(..));
 

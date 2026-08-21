@@ -22,12 +22,12 @@ use bsmr_build_api::build::BuildProviderType;
 use bsmr_build_api::build::ProviderArtifacts;
 use bsmr_core::fs::artifact_path_resolver::ArtifactFs;
 use bsmr_core::fs::project::ProjectRoot;
-use bsmr_error::BuckErrorContext;
+use bsmr_error::BsmrErrorContext;
 use bsmr_fs::error::IoResultExt;
 use bsmr_fs::fs_util;
 use bsmr_fs::paths::abs_norm_path::AbsNormPathBuf;
 use bsmr_fs::paths::abs_path::AbsPath;
-use bsmr_hash::StdBuckHashSet;
+use bsmr_hash::StdBsmrHashSet;
 use bsmr_query::__derive_refs::indexmap::IndexMap;
 use itertools::Itertools;
 use tracing::info;
@@ -37,11 +37,11 @@ pub(crate) fn create_unhashed_outputs(
     artifact_fs: &ArtifactFs,
     fs: &ProjectRoot,
 ) -> bsmr_error::Result<u64> {
-    let buck_out_root = fs.resolve(artifact_fs.buck_out_path_resolver().root());
+    let output_root = fs.resolve(artifact_fs.output_path_resolver().root());
 
     let start = std::time::Instant::now();
     // The following IndexMap will contain a key of the unhashed/symlink path and values of all the hashed locations that map to the unhashed location.
-    let mut unhashed_to_hashed: IndexMap<AbsNormPathBuf, StdBuckHashSet<AbsNormPathBuf>> =
+    let mut unhashed_to_hashed: IndexMap<AbsNormPathBuf, StdBsmrHashSet<AbsNormPathBuf>> =
         IndexMap::new();
     for provider_artifact in provider_artifacts {
         if !matches!(provider_artifact.provider_type, BuildProviderType::Default) {
@@ -71,7 +71,7 @@ pub(crate) fn create_unhashed_outputs(
     let mut num_unhashed_links_made = 0;
     for (unhashed, hashed_set) in unhashed_to_hashed {
         if hashed_set.len() == 1 {
-            create_unhashed_link(&unhashed, hashed_set.iter().next().unwrap(), &buck_out_root)?;
+            create_unhashed_link(&unhashed, hashed_set.iter().next().unwrap(), &output_root)?;
             num_unhashed_links_made += 1;
         } else {
             info!(
@@ -92,7 +92,7 @@ pub(crate) fn create_unhashed_outputs(
 fn create_unhashed_link(
     unhashed_path: &AbsNormPathBuf,
     original_path: &AbsNormPathBuf,
-    buck_out_root: &AbsNormPathBuf,
+    output_root: &AbsNormPathBuf,
 ) -> bsmr_error::Result<()> {
     // Remove the final path separator if it exists so that the path looks like a file and not a directory or else symlink() fails.
     tracing::debug!("Creating link: `{}` -> `{}`", unhashed_path, original_path);
@@ -107,11 +107,11 @@ fn create_unhashed_link(
     }
 
     // We are going to need to clear the path between bsmr-out and the symlink we want to create.
-    // To do this, we need to traverse forward out of buck_out_root and towards our symlink, and
+    // To do this, we need to traverse forward out of output_root and towards our symlink, and
     // delete any files or symlinks we find along the way. As soon as we find one, we can stop.
 
     if let Some(parent) = abs_unhashed_path.parent() {
-        for prefix in iter_reverse_ancestors(parent, buck_out_root.as_ref()) {
+        for prefix in iter_reverse_ancestors(parent, output_root.as_ref()) {
             let meta = match fs_util::symlink_metadata_if_exists(prefix)? {
                 Some(meta) => meta,
                 None => continue,
@@ -120,34 +120,34 @@ fn create_unhashed_link(
             if meta.is_file() || meta.is_symlink() {
                 fs_util::remove_file(prefix)
                     .categorize_internal()
-                    .with_buck_error_context(
+                    .with_bsmr_error_context(
                         || "was not able to remove file while cleaning up prefixes",
                     )?;
             }
         }
 
         fs_util::create_dir_all(parent)
-            .with_buck_error_context(|| "while creating unhashed directory for symlink")?;
+            .with_bsmr_error_context(|| "while creating unhashed directory for symlink")?;
     }
 
     if let Ok(metadata) = fs_util::symlink_metadata(&abs_unhashed_path).categorize_internal() {
         if metadata.is_dir() {
             fs_util::remove_dir_all(&abs_unhashed_path)
                 .categorize_internal()
-                .with_buck_error_context(
+                .with_bsmr_error_context(
                     || "was not able to remove absolute unhashed path (directory)",
                 )?
         } else {
             fs_util::remove_file(&abs_unhashed_path)
                 .categorize_internal()
-                .with_buck_error_context(
+                .with_bsmr_error_context(
                     || "was not able to remove absolute unhashed path (file)",
                 )?
         }
     }
     fs_util::symlink(original_path, abs_unhashed_path)
         .categorize_internal()
-        .with_buck_error_context(
+        .with_bsmr_error_context(
             || "was not able to symlink original path to absolute unhashed path",
         )?;
     Ok(())
@@ -173,22 +173,22 @@ mod tests {
     #[test]
     fn test_iter_reverse_ancestors() {
         let prefix = if cfg!(windows) { "C:" } else { "" };
-        let root = AbsNormPathBuf::try_from(format!("{prefix}/repo/bsmr-out/v2")).unwrap();
-        let path =
-            AbsNormPathBuf::try_from(format!("{prefix}/repo/bsmr-out/v2/foo/bar/some")).unwrap();
+        let root = AbsNormPathBuf::try_from(format!("{prefix}/repo/bsmr-out/default")).unwrap();
+        let path = AbsNormPathBuf::try_from(format!("{prefix}/repo/bsmr-out/default/foo/bar/some"))
+            .unwrap();
 
         let mut iter = iter_reverse_ancestors(&path, &root);
         assert_eq!(
             iter.next().unwrap().to_str().unwrap(),
-            &format!("{prefix}/repo/bsmr-out/v2/foo"),
+            &format!("{prefix}/repo/bsmr-out/default/foo"),
         );
         assert_eq!(
             iter.next().unwrap().to_str().unwrap(),
-            &format!("{prefix}/repo/bsmr-out/v2/foo/bar"),
+            &format!("{prefix}/repo/bsmr-out/default/foo/bar"),
         );
         assert_eq!(
             iter.next().unwrap().to_str().unwrap(),
-            &format!("{prefix}/repo/bsmr-out/v2/foo/bar/some"),
+            &format!("{prefix}/repo/bsmr-out/default/foo/bar/some"),
         );
         assert_eq!(iter.next(), None);
     }

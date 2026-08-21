@@ -321,7 +321,7 @@ fn gen_for_method(parsed: &Parsed, method: &Method) -> syn::Result<MethodCodegen
 }
 
 pub(crate) fn codegen(parsed: Parsed) -> syn::Result<TokenStream> {
-    let mod_name = quote!(__buck_query_gen);
+    let mod_name = quote!(__bsmr_query_gen);
     let mut methods = Vec::new();
     for method in &parsed.module.methods {
         methods.push(gen_for_method(&parsed, method)?);

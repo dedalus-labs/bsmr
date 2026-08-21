@@ -1,3 +1,9 @@
+//===----------------------------------------------------------------------===//
+// Upstream-Source: facebook/buck2@1560aca2002865cd73d7cafb22c705cfb640b2bc
+// Modifications Copyright (c) 2026 Dedalus Labs, Inc. and its contributors
+// SPDX-License-Identifier: Apache-2.0
+//===----------------------------------------------------------------------===//
+
 /*
  * Copyright (c) Meta Platforms, Inc. and affiliates.
  *
@@ -425,7 +431,7 @@ func init() {
 }
 
 func main() {
-	// Buck ensures that resources defined on the test targets live in the same
+	// Bsmr ensures that resources defined on the test targets live in the same
 	// directory as the binary. We change the working directory to this
 	// directory to make sure that tests can read test fixtures relative to the
 	// current working directory. This matches behavior with "go test" from the

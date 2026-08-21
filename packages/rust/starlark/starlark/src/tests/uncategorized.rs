@@ -1,3 +1,9 @@
+//===----------------------------------------------------------------------===//
+// Upstream-Source: facebook/buck2@1560aca2002865cd73d7cafb22c705cfb640b2bc
+// Modifications Copyright (c) 2026 Dedalus Labs, Inc. and its contributors
+// SPDX-License-Identifier: Apache-2.0
+//===----------------------------------------------------------------------===//
+
 /*
  * Copyright 2018 The Starlark in Rust Authors.
  * Copyright (c) Facebook, Inc. and its affiliates.
@@ -288,7 +294,7 @@ xs[1] += 1
 #[test]
 fn test_radd() {
     // We want select append to always produce a select, much like the
-    // Bazel/Buck `select` function.
+    // Bazel/Bsmr `select` function.
     #[derive(
         Debug,
         Display,

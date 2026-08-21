@@ -23,7 +23,7 @@ use bsmr_core::build_file_path::BuildFilePath;
 use bsmr_core::cells::cell_path::CellPath;
 use bsmr_core::configuration::compatibility::MaybeCompatible;
 use bsmr_core::package::PackageLabel;
-use bsmr_error::BuckErrorContext;
+use bsmr_error::BsmrErrorContext;
 use dupe::Dupe;
 use dupe::OptionDupedExt;
 use futures::stream::FuturesUnordered;
@@ -152,7 +152,7 @@ pub trait TraversalFilter<T: QueryTarget>: Send + Sync {
     async fn get_children(&self, target: &T) -> bsmr_error::Result<TargetSet<T>>;
 }
 
-/// The environment of a Buck query that can evaluate queries to produce a
+/// The environment of a Bsmr query that can evaluate queries to produce a
 /// result.
 #[async_trait]
 pub trait QueryEnvironment: Send + Sync {
@@ -307,7 +307,7 @@ pub trait QueryEnvironment: Send + Sync {
             .into_iter()
             .flat_map(|(target, tests)| {
                 tests.into_iter().map(move |test| async move {
-                    let test = self.get_node(&test).await.with_buck_error_context(|| {
+                    let test = self.get_node(&test).await.with_bsmr_error_context(|| {
                         format!(
                             "Error getting test of target {}",
                             LabeledNode::node_key(target),
@@ -348,7 +348,7 @@ pub trait QueryEnvironment: Send + Sync {
                     let test = self
                         .get_node_for_default_configured_target(&test)
                         .await
-                        .with_buck_error_context(|| {
+                        .with_bsmr_error_context(|| {
                             format!(
                                 "Error getting test of target {}",
                                 LabeledNode::node_key(target),
@@ -474,7 +474,7 @@ impl<'a, Q: QueryTarget> AsyncChildVisitor<Q> for QueryTargetFilteredDepsSucceso
                 }
             }
         };
-        res.with_buck_error_context(|| {
+        res.with_bsmr_error_context(|| {
             format!("Error traversing children of `{}`", target.node_key())
         })
     }

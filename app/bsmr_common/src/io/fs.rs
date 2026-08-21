@@ -23,7 +23,7 @@ use allocative::Allocative;
 use async_trait::async_trait;
 use bsmr_core::fs::project::ProjectRoot;
 use bsmr_core::fs::project_rel_path::ProjectRelativePathBuf;
-use bsmr_error::BuckErrorContext;
+use bsmr_error::BsmrErrorContext;
 use bsmr_error::internal_error;
 use bsmr_fs::IoResultExt;
 use bsmr_fs::fs_util;
@@ -159,7 +159,7 @@ impl IoProvider for FsIoProvider {
             let mut entries = Vec::new();
 
             for entry in dir_entries {
-                let e = entry.buck_error_context("Error accessing directory entry")?;
+                let e = entry.bsmr_error_context("Error accessing directory entry")?;
                 let file_name = e.file_name();
                 let file_name = file_name
                     .to_str()
@@ -173,7 +173,7 @@ impl IoProvider for FsIoProvider {
             bsmr_error::Ok(ReadDirOutcome::Entries(entries))
         })
         .await?
-        .buck_error_context("Error listing directory")
+        .bsmr_error_context("Error listing directory")
     }
 
     async fn read_path_metadata_if_exists_impl(
@@ -293,7 +293,7 @@ fn convert_metadata(
         RawPathMetadata::Directory
     } else {
         let digest = FileDigest::from_file(&path.abspath, file_digest_config)
-            .with_buck_error_context(|| {
+            .with_bsmr_error_context(|| {
                 format!("Error collecting file digest for `{}`", path.path)
             })?;
         let digest = TrackedFileDigest::new(digest, file_digest_config.as_cas_digest_config());
@@ -327,7 +327,7 @@ impl ExactPathMetadata {
                         .parent()
                         .expect("We pushed a component to this so it cannot be empty")
                         .join_system_normalized(&dest)
-                        .with_buck_error_context(|| {
+                        .with_bsmr_error_context(|| {
                             format!("Invalid symlink at `{}`: `{}`", curr.path, dest.display())
                         })?;
 

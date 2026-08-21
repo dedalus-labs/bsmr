@@ -15,15 +15,15 @@
  */
 
 use bsmr_client_ctx::client_ctx::ClientCommandContext;
-use bsmr_client_ctx::common::BuckArgMatches;
+use bsmr_client_ctx::common::BsmrArgMatches;
 use bsmr_client_ctx::exit_result::ExitResult;
 
-/// Print bsmr daemon directory (`~/.buckd/xxx`).
+/// Print bsmr daemon directory (`~/.bsmrd/xxx`).
 #[derive(Debug, clap::Parser)]
 pub struct DaemonDirCommand {}
 
 impl DaemonDirCommand {
-    pub fn exec(self, _matches: BuckArgMatches<'_>, ctx: ClientCommandContext<'_>) -> ExitResult {
+    pub fn exec(self, _matches: BsmrArgMatches<'_>, ctx: ClientCommandContext<'_>) -> ExitResult {
         bsmr_client_ctx::println!("{}", ctx.paths()?.daemon_dir()?.path.display())?;
         ExitResult::success()
     }

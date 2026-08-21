@@ -13,49 +13,49 @@
 # above-listed licenses.
 
 
-from bsmr.tests.e2e_util.api.buck import Buck
-from bsmr.tests.e2e_util.buck_workspace import buck_test
+from bsmr.tests.e2e_util.api.bsmr import Bsmr
+from bsmr.tests.e2e_util.bsmr_workspace import bsmr_test
 
 
-@buck_test(inplace=False, data_dir="bxl/simple", skip_for_os=["windows"])
-async def test_catch_resolve_lazy_dict(buck: Buck) -> None:
-    await buck.bxl(
+@bsmr_test(inplace=False, data_dir="bxl/simple", skip_for_os=["windows"])
+async def test_catch_resolve_lazy_dict(bsmr: Bsmr) -> None:
+    await bsmr.bxl(
         "//bxl/utils:test_lazy_utils.bxl:test_catch_resolve_lazy_dict",
     )
 
 
-@buck_test(inplace=False, data_dir="bxl/simple", skip_for_os=["windows"])
-async def test_batch_apply_lazy(buck: Buck) -> None:
-    await buck.bxl(
+@bsmr_test(inplace=False, data_dir="bxl/simple", skip_for_os=["windows"])
+async def test_batch_apply_lazy(bsmr: Bsmr) -> None:
+    await bsmr.bxl(
         "//bxl/utils:test_lazy_utils.bxl:test_batch_apply_lazy",
     )
 
 
-@buck_test(inplace=False, data_dir="bxl/simple", skip_for_os=["windows"])
-async def test_batch_apply_lazy_catch_each(buck: Buck) -> None:
-    await buck.bxl(
+@bsmr_test(inplace=False, data_dir="bxl/simple", skip_for_os=["windows"])
+async def test_batch_apply_lazy_catch_each(bsmr: Bsmr) -> None:
+    await bsmr.bxl(
         "//bxl/utils:test_lazy_utils.bxl:test_batch_apply_lazy_catch_each",
     )
 
 
-@buck_test(inplace=False, data_dir="bxl/simple", skip_for_os=["windows"])
-async def test_batch_apply_lazy_catch_all(buck: Buck) -> None:
-    await buck.bxl("//bxl/utils:test_lazy_utils.bxl:test_batch_apply_lazy_catch_all")
+@bsmr_test(inplace=False, data_dir="bxl/simple", skip_for_os=["windows"])
+async def test_batch_apply_lazy_catch_all(bsmr: Bsmr) -> None:
+    await bsmr.bxl("//bxl/utils:test_lazy_utils.bxl:test_batch_apply_lazy_catch_all")
 
 
-@buck_test(inplace=False, data_dir="bxl/simple", skip_for_os=["windows"])
-async def test_partition_results(buck: Buck) -> None:
-    await buck.bxl("//bxl/utils:test_lazy_utils.bxl:test_partition_results")
+@bsmr_test(inplace=False, data_dir="bxl/simple", skip_for_os=["windows"])
+async def test_partition_results(bsmr: Bsmr) -> None:
+    await bsmr.bxl("//bxl/utils:test_lazy_utils.bxl:test_partition_results")
 
 
-@buck_test(inplace=False, data_dir="bxl/simple", skip_for_os=["windows"])
-async def test_partition_results_dict(buck: Buck) -> None:
-    await buck.bxl(
+@bsmr_test(inplace=False, data_dir="bxl/simple", skip_for_os=["windows"])
+async def test_partition_results_dict(bsmr: Bsmr) -> None:
+    await bsmr.bxl(
         "//bxl/utils:test_lazy_utils.bxl:test_partition_results_dict",
     )
 
 
 # dummy test to avoid test listing failure on windows
-@buck_test(inplace=True)
-async def test_dummy(buck: Buck) -> None:
+@bsmr_test(inplace=True)
+async def test_dummy(bsmr: Bsmr) -> None:
     pass

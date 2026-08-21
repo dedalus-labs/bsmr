@@ -16,7 +16,7 @@
 
 syntax = "proto3";
 
-package buck.test;
+package bsmr.test;
 
 import "google/protobuf/duration.proto";
 import "data.proto";
@@ -101,7 +101,7 @@ message TestResult {
   google.protobuf.Duration duration = 7; // Optional
   string details = 8; // Required
   optional uint64 max_memory_used_bytes = 9;
-  optional buck.data.TestAttempt attempt = 10;
+  optional bsmr.data.TestAttempt attempt = 10;
 }
 
 message ReportTestResultRequest {
@@ -130,7 +130,7 @@ message ExternalRunnerSpecRequest {
 }
 
 // A spec representing test targets aiming for maximum compatibility with the
-// external runner spec as defined in buck1.
+// external runner spec as defined in legacy.
 message ExternalRunnerSpec {
   // Target the spec belongs to
   ConfiguredTarget target = 1;
@@ -187,7 +187,7 @@ message LocalResourceType {
 message ExecuteRequest2 {
   reserved 1 to 4, 7;
   google.protobuf.Duration timeout = 5;
-  buck.host_sharing.HostSharingRequirements host_sharing_requirements = 6;
+  bsmr.host_sharing.HostSharingRequirements host_sharing_requirements = 6;
   TestExecutable test_executable = 8;
   ExecutorConfigOverride executor_override = 9;
   repeated LocalResourceType required_local_resources = 10;
@@ -296,11 +296,11 @@ message ExecutionResult2 {
   google.protobuf.Duration execution_time = 6;
   ExecutionDetails execution_details = 7;
   optional uint64 max_memory_used_bytes = 8;
-  optional buck.data.CommandExecution command_execution = 9;
+  optional bsmr.data.CommandExecution command_execution = 9;
 }
 
 message ExecutionDetails {
-  optional buck.data.CommandExecutionKind execution_kind = 1;
+  optional bsmr.data.CommandExecutionKind execution_kind = 1;
 }
 
 enum CancellationReason {

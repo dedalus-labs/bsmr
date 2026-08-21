@@ -182,7 +182,7 @@ fn from_starlark_impl(
         | starlark_syntax::ErrorKind::Parser(e)
         | starlark_syntax::ErrorKind::Other(e)
         | starlark_syntax::ErrorKind::Native(e) => {
-            let error = BuckStarlarkError(e, description);
+            let error = BsmrStarlarkError(e, description);
 
             from_any_with_tag_and_source_location(&error, source_location, tag)
         }
@@ -190,21 +190,21 @@ fn from_starlark_impl(
     }
 }
 
-pub(crate) struct BuckStarlarkError(pub(crate) anyhow::Error, String);
+pub(crate) struct BsmrStarlarkError(pub(crate) anyhow::Error, String);
 
-impl fmt::Debug for BuckStarlarkError {
+impl fmt::Debug for BsmrStarlarkError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{}", self.1)
     }
 }
 
-impl fmt::Display for BuckStarlarkError {
+impl fmt::Display for BsmrStarlarkError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{}", self.1)
     }
 }
 
-impl std::error::Error for BuckStarlarkError {
+impl std::error::Error for BsmrStarlarkError {
     fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
         self.0.source()
     }

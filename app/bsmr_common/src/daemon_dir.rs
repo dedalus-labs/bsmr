@@ -17,7 +17,7 @@
 use bsmr_fs::paths::abs_norm_path::AbsNormPathBuf;
 use bsmr_fs::paths::file_name::FileName;
 
-/// `~/.buck/buckd/repo-path` directory.
+/// `~/.bsmr/bsmrd/repo-path` directory.
 #[derive(Debug, Clone, derive_more::Display)]
 #[display("{}", path.display())]
 pub struct DaemonDir {
@@ -25,27 +25,27 @@ pub struct DaemonDir {
 }
 
 impl DaemonDir {
-    /// Path to `buckd.info` file.
-    pub fn buckd_info(&self) -> AbsNormPathBuf {
-        self.path.join(FileName::new("buckd.info").unwrap())
+    /// Path to `bsmrd.info` file.
+    pub fn bsmrd_info(&self) -> AbsNormPathBuf {
+        self.path.join(FileName::new("bsmrd.info").unwrap())
     }
 
-    /// Path to `buckd.stdout` file.
-    pub fn buckd_stdout(&self) -> AbsNormPathBuf {
-        self.path.join(FileName::new("buckd.stdout").unwrap())
+    /// Path to `bsmrd.stdout` file.
+    pub fn bsmrd_stdout(&self) -> AbsNormPathBuf {
+        self.path.join(FileName::new("bsmrd.stdout").unwrap())
     }
 
-    /// Path to `buckd.stderr` file.
-    pub fn buckd_stderr(&self) -> AbsNormPathBuf {
-        self.path.join(FileName::new("buckd.stderr").unwrap())
+    /// Path to `bsmrd.stderr` file.
+    pub fn bsmrd_stderr(&self) -> AbsNormPathBuf {
+        self.path.join(FileName::new("bsmrd.stderr").unwrap())
     }
 
-    /// Path to `buckd.pid` file.
-    pub fn buckd_pid(&self) -> AbsNormPathBuf {
-        self.path.join(FileName::new("buckd.pid").unwrap())
+    /// Path to `bsmrd.pid` file.
+    pub fn bsmrd_pid(&self) -> AbsNormPathBuf {
+        self.path.join(FileName::new("bsmrd.pid").unwrap())
     }
 
-    pub fn buckd_error_log(&self) -> AbsNormPathBuf {
-        self.path.join(FileName::new("buckd.error.log").unwrap())
+    pub fn bsmrd_error_log(&self) -> AbsNormPathBuf {
+        self.path.join(FileName::new("bsmrd.error.log").unwrap())
     }
 }

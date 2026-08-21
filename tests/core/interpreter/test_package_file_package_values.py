@@ -17,31 +17,31 @@
 
 import json
 
-from bsmr.tests.e2e_util.api.buck import Buck
+from bsmr.tests.e2e_util.api.bsmr import Bsmr
 from bsmr.tests.e2e_util.asserts import expect_failure
-from bsmr.tests.e2e_util.buck_workspace import buck_test
+from bsmr.tests.e2e_util.bsmr_workspace import bsmr_test
 from bsmr.tests.e2e_util.helper.golden import golden
 
 
-@buck_test()
-async def test_package_file_package_values(buck: Buck) -> None:
+@bsmr_test()
+async def test_package_file_package_values(bsmr: Bsmr) -> None:
     # Build file does all the assertions.
-    output = await buck.build("//:")
+    output = await bsmr.build("//:")
     assert "TEST PASSED" in output.stderr
 
 
-@buck_test()
-async def test_audit_package_values(buck: Buck) -> None:
-    stdout = (await buck.audit("package-values", "//")).stdout
+@bsmr_test()
+async def test_audit_package_values(bsmr: Bsmr) -> None:
+    stdout = (await bsmr.audit("package-values", "//")).stdout
     golden(
         output=stdout,
         rel_path="audit-package-values.golden.json",
     )
 
 
-@buck_test()
-async def test_audit_package_values_select(buck: Buck) -> None:
-    stdout = (await buck.audit("package-values", "//")).stdout
+@bsmr_test()
+async def test_audit_package_values_select(bsmr: Bsmr) -> None:
+    stdout = (await bsmr.audit("package-values", "//")).stdout
     result = json.loads(stdout)
     pkg = result["root//"]
     # Verify select value has expected JSON structure
@@ -58,11 +58,11 @@ async def test_audit_package_values_select(buck: Buck) -> None:
     assert "visibility_cap" in pkg
 
 
-@buck_test()
+@bsmr_test()
 async def test_audit_package_values_visibility_cap_intersection(
-    buck: Buck,
+    bsmr: Bsmr,
 ) -> None:
-    stdout = (await buck.audit("package-values", "//capped/child")).stdout
+    stdout = (await bsmr.audit("package-values", "//capped/child")).stdout
     result = json.loads(stdout)
     pkg = result["root//capped/child"]
     cap = pkg["visibility_cap"]
@@ -71,38 +71,38 @@ async def test_audit_package_values_visibility_cap_intersection(
     assert len(cap["intersection"]) == 2
 
 
-@buck_test()
-async def test_targets_package_values(buck: Buck) -> None:
-    stdout = (await buck.targets("--package-values", "//...")).stdout
+@bsmr_test()
+async def test_targets_package_values(bsmr: Bsmr) -> None:
+    stdout = (await bsmr.targets("--package-values", "//...")).stdout
     golden(
         output=stdout,
         rel_path="targets-package-values.golden.json",
     )
 
 
-@buck_test()
-async def test_targets_package_values_regex(buck: Buck) -> None:
+@bsmr_test()
+async def test_targets_package_values_regex(bsmr: Bsmr) -> None:
     # Empty string as regex matches all keys.
-    out = (await buck.targets("--package-values-regex", "", "//...")).stdout
+    out = (await bsmr.targets("--package-values-regex", "", "//...")).stdout
     json_result = json.loads(out)[0]
-    pv = json_result["buck.package_values"]
+    pv = json_result["bsmr.package_values"]
     assert pv["aaa.bbb"] == "ccc"
     assert pv["xxx.yyy"] == "zzz"
     assert pv["sel.ector"]["__type"] == "selector"
     assert pv["sel.concat"]["__type"] == "concat"
 
-    out = (await buck.targets("--package-values-regex", "aaa.bbb", "//...")).stdout
+    out = (await bsmr.targets("--package-values-regex", "aaa.bbb", "//...")).stdout
     json_result = json.loads(out)[0]
     expected = {"aaa.bbb": "ccc"}
-    assert json_result["buck.package_values"] == expected
+    assert json_result["bsmr.package_values"] == expected
 
-    out = (await buck.targets("--package-values-regex", "xxx", "//...")).stdout
+    out = (await bsmr.targets("--package-values-regex", "xxx", "//...")).stdout
     json_result = json.loads(out)[0]
     expected = {"xxx.yyy": "zzz"}
-    assert json_result["buck.package_values"] == expected
+    assert json_result["bsmr.package_values"] == expected
 
     out = (
-        await buck.targets(
+        await bsmr.targets(
             "--package-values-regex",
             "aaa.bbb",
             "--package-values-regex",
@@ -112,31 +112,31 @@ async def test_targets_package_values_regex(buck: Buck) -> None:
     ).stdout
     json_result = json.loads(out)[0]
     expected = {"aaa.bbb": "ccc", "xxx.yyy": "zzz"}
-    assert json_result["buck.package_values"] == expected
+    assert json_result["bsmr.package_values"] == expected
 
     # Regex matching select keys.
-    out = (await buck.targets("--package-values-regex", "sel", "//...")).stdout
+    out = (await bsmr.targets("--package-values-regex", "sel", "//...")).stdout
     json_result = json.loads(out)[0]
-    pv = json_result["buck.package_values"]
+    pv = json_result["bsmr.package_values"]
     assert len(pv) == 2
     assert pv["sel.ector"]["__type"] == "selector"
     assert pv["sel.concat"]["__type"] == "concat"
 
-    out = (await buck.targets("--package-values-regex", "non_existent", "//...")).stdout
+    out = (await bsmr.targets("--package-values-regex", "non_existent", "//...")).stdout
     json_result = json.loads(out)[0]
     expected = {}
-    assert json_result["buck.package_values"] == expected
+    assert json_result["bsmr.package_values"] == expected
 
     args = ["allow", "only", "one", "arg", "per", "flag", "occurrence"]
     await expect_failure(
-        buck.targets("--package-values-regex", *args, "//..."),
+        bsmr.targets("--package-values-regex", *args, "//..."),
         stderr_regex="Error parsing root//arg",
     )
 
 
-@buck_test()
-async def test_targets_streaming_package_values(buck: Buck) -> None:
-    stdout = (await buck.targets("--streaming", "--package-values", "//...")).stdout
+@bsmr_test()
+async def test_targets_streaming_package_values(bsmr: Bsmr) -> None:
+    stdout = (await bsmr.targets("--streaming", "--package-values", "//...")).stdout
     golden(
         output=stdout,
         rel_path="targets-streaming-package-values.golden.json",

@@ -14,16 +14,16 @@
 
 # pyre-strict
 
-from bsmr.tests.e2e_util.api.buck import Buck
-from bsmr.tests.e2e_util.buck_workspace import buck_test
+from bsmr.tests.e2e_util.api.bsmr import Bsmr
+from bsmr.tests.e2e_util.bsmr_workspace import bsmr_test
 
 
-@buck_test()
-async def test_audit_deferred_materializer_list(buck: Buck) -> None:
-    res = await buck.audit("deferred-materializer", "list")
+@bsmr_test()
+async def test_audit_deferred_materializer_list(bsmr: Bsmr) -> None:
+    res = await bsmr.audit("deferred-materializer", "list")
     assert res.stdout.strip() == ""
 
-    await buck.build("//:simple")
+    await bsmr.build("//:simple")
 
-    res = await buck.audit("deferred-materializer", "list")
+    res = await bsmr.audit("deferred-materializer", "list")
     assert "__simple__" in res.stdout.strip()

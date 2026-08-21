@@ -1,3 +1,9 @@
+//===----------------------------------------------------------------------===//
+// Upstream-Source: facebook/buck2@1560aca2002865cd73d7cafb22c705cfb640b2bc
+// Modifications Copyright (c) 2026 Dedalus Labs, Inc. and its contributors
+// SPDX-License-Identifier: Apache-2.0
+//===----------------------------------------------------------------------===//
+
 /*
  * Copyright (c) Meta Platforms, Inc. and affiliates.
  *
@@ -21,7 +27,7 @@ pub struct ActionHistoryInfo {
 }
 
 #[derive(Clone, Default)]
-pub struct BuckInfo {
+pub struct BsmrInfo {
     pub build_id: String,
     pub version: String,
     pub _dot_dot: (),
@@ -36,7 +42,7 @@ pub struct TClientContextMetadata {
 #[derive(Clone, Default)]
 pub struct RemoteExecutionMetadata {
     pub action_history_info: Option<ActionHistoryInfo>,
-    pub buck_info: Option<BuckInfo>,
+    pub bsmr_info: Option<BsmrInfo>,
     pub platform: Option<TPlatform>,
     pub use_case_id: String,
     pub do_not_cache: bool,

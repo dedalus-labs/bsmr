@@ -32,12 +32,12 @@ impl FileTailers {
     pub fn new(daemon_dir: &DaemonDir) -> bsmr_error::Result<Self> {
         let (tx, rx) = mpsc::unbounded_channel();
         let stdout_tailer = FileTailer::tail_file(
-            daemon_dir.buckd_stdout(),
+            daemon_dir.bsmrd_stdout(),
             tx.clone(),
             StdoutOrStderr::Stdout,
         )?;
         let stderr_tailer =
-            FileTailer::tail_file(daemon_dir.buckd_stderr(), tx, StdoutOrStderr::Stderr)?;
+            FileTailer::tail_file(daemon_dir.bsmrd_stderr(), tx, StdoutOrStderr::Stderr)?;
         let this = Self {
             _stdout_tailer: Some(stdout_tailer),
             _stderr_tailer: Some(stderr_tailer),

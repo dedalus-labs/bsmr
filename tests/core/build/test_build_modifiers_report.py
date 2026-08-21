@@ -18,9 +18,9 @@
 import json
 from pathlib import Path
 
-from bsmr.tests.e2e_util.api.buck import Buck
+from bsmr.tests.e2e_util.api.bsmr import Bsmr
 from bsmr.tests.e2e_util.asserts import expect_failure
-from bsmr.tests.e2e_util.buck_workspace import buck_test
+from bsmr.tests.e2e_util.bsmr_workspace import bsmr_test
 from bsmr.tests.e2e_util.helper.golden import (
     golden,
     GOLDEN_DIRECTORY,
@@ -34,15 +34,15 @@ def build_report_test(
     command: list[str],
     expect_error: bool = False,
 ) -> None:
-    async def impl(buck: Buck, tmp_path: Path) -> None:
+    async def impl(bsmr: Bsmr, tmp_path: Path) -> None:
         report = tmp_path / "build-report.json"
         command.extend(["--build-report", str(report)])
 
         if expect_error:
             command.extend(["--build-report-options", "fill-out-failures"])
-            await expect_failure(buck.build(*command))
+            await expect_failure(bsmr.build(*command))
         else:
-            await buck.build(*command)
+            await bsmr.build(*command)
 
         with open(report) as file:
             report = json.loads(file.read())
@@ -56,7 +56,7 @@ def build_report_test(
 
     globals()[name] = impl
 
-    return buck_test()(impl)
+    return bsmr_test()(impl)
 
 
 build_report_test(
@@ -103,12 +103,12 @@ build_report_test(
 )
 
 
-@buck_test()
-async def test_build_modifiers_that_lead_to_same_configured(buck: Buck) -> None:
+@bsmr_test()
+async def test_build_modifiers_that_lead_to_same_configured(bsmr: Bsmr) -> None:
     mac_first = "root//:target?root//:macos+root//:arm"
     arm_first = "root//:target?root//:arm+root//:macos"
 
-    result = await buck.build(
+    result = await bsmr.build(
         mac_first,
         arm_first,
         "-c",

@@ -372,7 +372,7 @@ def _raw_headers_arg():
             default = [],
             doc = """
     The set of header files that can be used for inclusion to the source files in the target and all
-     targets that transitively depend on it. Buck doesn't add raw headers to the search path of a
+     targets that transitively depend on it. Bsmr doesn't add raw headers to the search path of a
      compiler/preprocessor automatically.
      `include_directories` and `public_include_directories` are the recommended
      way to add raw headers to the search path (they will be added via `-I`).

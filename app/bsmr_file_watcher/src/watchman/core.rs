@@ -24,7 +24,7 @@ use std::time::Duration;
 use async_trait::async_trait;
 use bsmr_certs::validate::validate_certs;
 use bsmr_core::bsmr_env;
-use bsmr_error::BuckErrorContext;
+use bsmr_error::BsmrErrorContext;
 use bsmr_error::ErrorTag;
 use bsmr_error::internal_error;
 use dupe::Dupe;
@@ -74,7 +74,7 @@ enum WatchmanClientError {
     RequestFailed { inner: watchman_client::Error },
 }
 
-// We use the "new" field. This is marked as deprecated, but buck1 uses it and
+// We use the "new" field. This is marked as deprecated, but legacy uses it and
 // I'm unaware of issues due to its use there.
 //
 // Putting this in it own mod was the best way to scope the allow(deprecated).
@@ -82,7 +82,7 @@ enum WatchmanClientError {
 mod types {
     use super::*;
     query_result_type! {
-        pub(crate) struct BuckQueryResult {
+        pub(crate) struct BsmrQueryResult {
             name: NameField,
             file_type: FileTypeField,
             exists: ExistsField,
@@ -90,7 +90,7 @@ mod types {
         }
     }
 
-    impl BuckQueryResult {
+    impl BsmrQueryResult {
         pub fn into_event(self) -> Option<WatchmanEvent> {
             let kind = match *self.file_type {
                 FileType::BlockSpecial
@@ -187,14 +187,14 @@ async fn with_timeout<R>(
         Ok(Err(e)) => {
             validate_certs()
                 .await
-                .buck_error_context("Watchman Request Failed")?;
+                .bsmr_error_context("Watchman Request Failed")?;
 
             Err(WatchmanClientError::RequestFailed { inner: e }.into())
         }
         Err(_) => {
             validate_certs()
                 .await
-                .buck_error_context("Watchman Timed Out")?;
+                .bsmr_error_context("Watchman Timed Out")?;
             Err(WatchmanClientError::Timeout(timeout).into())
         }
     }
@@ -207,10 +207,10 @@ impl WatchmanClient {
     ) -> bsmr_error::Result<WatchmanClient> {
         let client = with_timeout(connector.connect())
             .await
-            .buck_error_context("Connecting to watchman")?;
+            .bsmr_error_context("Connecting to watchman")?;
         let root = with_timeout(client.resolve_root(path))
             .await
-            .buck_error_context("Resolving watchman root")?;
+            .bsmr_error_context("Resolving watchman root")?;
         Ok(Self(Arc::new((client, root))))
     }
 
@@ -350,7 +350,7 @@ where
             Err(e) => self
                 .reconnect_and_sync_query(client)
                 .await
-                .buck_error_context(e.to_string()),
+                .bsmr_error_context(e.to_string()),
         }?;
 
         let (res, new_mergebase, clock) = match sync_res {
@@ -407,7 +407,7 @@ where
         *client = Some(
             WatchmanClient::connect(&self.connector, self.path.clone())
                 .await
-                .buck_error_context("Error reconnecting to Watchman")?,
+                .bsmr_error_context("Error reconnecting to Watchman")?,
         );
         Ok(())
     }
@@ -465,10 +465,10 @@ where
             query.empty_on_fresh_instance = true;
         }
 
-        let mut query_result = client.query::<BuckQueryResult>(query).await?;
+        let mut query_result = client.query::<BsmrQueryResult>(query).await?;
         if needs_watchman_perf_workaround && query_result.is_fresh_instance {
             let query = make_query(ClockSpec::default(), None);
-            query_result = client.query::<BuckQueryResult>(query).await?;
+            query_result = client.query::<BsmrQueryResult>(query).await?;
         }
 
         let QueryResult {
@@ -553,10 +553,10 @@ where
 
             let out = sync_done_rx
                 .await
-                .buck_error_context(
+                .bsmr_error_context(
                     "SyncableQueryHandler did not return a response for sync request",
                 )?
-                .buck_error_context("SyncableQueryHandler returned an error")?;
+                .bsmr_error_context("SyncableQueryHandler returned an error")?;
 
             Ok(out)
         }
@@ -573,7 +573,7 @@ where
     ) -> bsmr_error::Result<SyncableQuery<T, P>> {
         let path = path.as_ref();
         let path = CanonicalPath::canonicalize(path)
-            .with_buck_error_context(|| format!("Error canonicalizing: `{}`", path.display()))?;
+            .with_bsmr_error_context(|| format!("Error canonicalizing: `{}`", path.display()))?;
 
         let query = QueryRequestCommon {
             expression: Some(expr),

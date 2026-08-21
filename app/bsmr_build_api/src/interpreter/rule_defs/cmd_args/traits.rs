@@ -21,8 +21,8 @@ use bsmr_core::content_hash::ContentBasedPathHash;
 use bsmr_core::fs::project_rel_path::ProjectRelativePath;
 use bsmr_core::fs::project_rel_path::ProjectRelativePathBuf;
 use bsmr_execute::artifact::fs::ExecutorFs;
-use bsmr_hash::BuckHashMap;
-use bsmr_hash::BuckIndexSet;
+use bsmr_hash::BsmrHashMap;
+use bsmr_hash::BsmrIndexSet;
 use bsmr_interpreter::types::cell_root::CellRoot;
 use bsmr_interpreter::types::configured_providers_label::StarlarkConfiguredProvidersLabel;
 use bsmr_interpreter::types::project_root::StarlarkProjectRoot;
@@ -72,17 +72,17 @@ pub trait CommandLineArtifactVisitor<'v> {
 
 /// A CommandLineArtifactVisitor that gathers inputs and outputs.
 pub struct SimpleCommandLineArtifactVisitor<'v> {
-    pub inputs: BuckIndexSet<ArtifactGroup>,
-    pub declared_outputs: BuckIndexSet<OutputArtifact<'v>>,
-    pub frozen_outputs: BuckIndexSet<Artifact>,
+    pub inputs: BsmrIndexSet<ArtifactGroup>,
+    pub declared_outputs: BsmrIndexSet<OutputArtifact<'v>>,
+    pub frozen_outputs: BsmrIndexSet<Artifact>,
 }
 
 impl SimpleCommandLineArtifactVisitor<'_> {
     pub fn new() -> Self {
         Self {
-            inputs: BuckIndexSet::default(),
-            declared_outputs: BuckIndexSet::default(),
-            frozen_outputs: BuckIndexSet::default(),
+            inputs: BsmrIndexSet::default(),
+            declared_outputs: BsmrIndexSet::default(),
+            frozen_outputs: BsmrIndexSet::default(),
         }
     }
 
@@ -132,14 +132,14 @@ pub trait ArtifactPathMapper {
     fn get(&self, artifact: &Artifact) -> Option<&ContentBasedPathHash>;
 }
 
-impl ArtifactPathMapper for BuckHashMap<&Artifact, ContentBasedPathHash> {
+impl ArtifactPathMapper for BsmrHashMap<&Artifact, ContentBasedPathHash> {
     fn get(&self, artifact: &Artifact) -> Option<&ContentBasedPathHash> {
         self.get(artifact)
     }
 }
 
 pub struct ArtifactPathMapperImpl<'a> {
-    pub map: BuckHashMap<&'a Artifact, ContentBasedPathHash>,
+    pub map: BsmrHashMap<&'a Artifact, ContentBasedPathHash>,
 }
 
 impl<'a> From<&'a Vec<(ArtifactGroup, ArtifactGroupValues)>> for ArtifactPathMapperImpl<'a> {

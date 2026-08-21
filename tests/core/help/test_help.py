@@ -18,8 +18,8 @@
 import asyncio
 import re
 
-from bsmr.tests.e2e_util.api.buck import Buck
-from bsmr.tests.e2e_util.buck_workspace import buck_test
+from bsmr.tests.e2e_util.api.bsmr import Bsmr
+from bsmr.tests.e2e_util.bsmr_workspace import bsmr_test
 from bsmr.tests.e2e_util.helper.golden import golden
 
 
@@ -43,9 +43,9 @@ def _find_subcommands(help: str) -> list[str]:
 semaphore = asyncio.Semaphore(10)
 
 
-async def _test_help(buck: Buck, command_stack: list[str]) -> int:
+async def _test_help(bsmr: Bsmr, command_stack: list[str]) -> int:
     async with semaphore:
-        result = await buck.help(*command_stack)
+        result = await bsmr.help(*command_stack)
 
     name = "-".join(["help", *command_stack])
     golden(
@@ -55,14 +55,14 @@ async def _test_help(buck: Buck, command_stack: list[str]) -> int:
 
     subcommands = _find_subcommands(result.stdout)
     subtasks = [
-        _test_help(buck, command_stack + [subcommand]) for subcommand in subcommands
+        _test_help(bsmr, command_stack + [subcommand]) for subcommand in subcommands
     ]
     subresults = await asyncio.gather(*subtasks)
 
     return sum(subresults) + 1
 
 
-@buck_test()
-async def test_help(buck: Buck) -> None:
-    total = await _test_help(buck, [])
+@bsmr_test()
+async def test_help(bsmr: Bsmr) -> None:
+    total = await _test_help(bsmr, [])
     assert total > 4

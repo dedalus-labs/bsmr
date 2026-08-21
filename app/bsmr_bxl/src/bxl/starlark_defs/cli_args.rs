@@ -35,10 +35,10 @@ use bsmr_core::pattern::pattern_type::TargetPatternExtra;
 use bsmr_core::provider::label::ProvidersLabel;
 use bsmr_core::target::configured_target_label::ConfiguredTargetLabel;
 use bsmr_core::target::label::label::TargetLabel;
-use bsmr_error::conversion::clap::buck_error_clap_parser;
+use bsmr_error::conversion::clap::bsmr_error_clap_parser;
 use bsmr_error::conversion::from_any_with_tag;
 use bsmr_fs::paths::abs_norm_path::AbsNormPathBuf;
-use bsmr_hash::BuckIndexSet;
+use bsmr_hash::BsmrIndexSet;
 use bsmr_interpreter::types::configured_providers_label::StarlarkProvidersLabel;
 use bsmr_interpreter::types::target_label::StarlarkConfiguredTargetLabel;
 use bsmr_interpreter::types::target_label::StarlarkTargetLabel;
@@ -333,7 +333,7 @@ pub(crate) enum CliArgType {
     Int,
     Float,
     String,
-    Enumeration(Arc<BuckIndexSet<String>>),
+    Enumeration(Arc<BsmrIndexSet<String>>),
     List(Arc<CliArgType>),
     Option(Arc<CliArgType>),
     TargetLabel,
@@ -417,7 +417,7 @@ impl CliArgType {
         CliArgType::SubTargetExpr
     }
 
-    fn enumeration(vs: BuckIndexSet<String>) -> Self {
+    fn enumeration(vs: BsmrIndexSet<String>) -> Self {
         CliArgType::Enumeration(Arc::new(vs))
     }
 
@@ -566,7 +566,7 @@ impl CliArgType {
             CliArgType::Option(inner) => inner.to_clap(clap).required(false),
             CliArgType::TargetLabel => {
                 clap.num_args(1)
-                    .value_parser(buck_error_clap_parser(|x: &str| {
+                    .value_parser(bsmr_error_clap_parser(|x: &str| {
                         bsmr_error::Ok(
                             lex_target_pattern::<TargetPatternExtra>(x, false)
                                 .and_then(|parsed| parsed.pattern.infer_target())
@@ -584,7 +584,7 @@ impl CliArgType {
             }
             CliArgType::ConfiguredTargetLabel => {
                 clap.num_args(1)
-                    .value_parser(buck_error_clap_parser(|x: &str| {
+                    .value_parser(bsmr_error_clap_parser(|x: &str| {
                         bsmr_error::Ok(
                             lex_target_pattern::<TargetPatternExtra>(x, false)
                                 .and_then(|parsed| parsed.pattern.infer_target())
@@ -602,7 +602,7 @@ impl CliArgType {
             }
             CliArgType::SubTarget => {
                 clap.num_args(1)
-                    .value_parser(buck_error_clap_parser(|x: &str| {
+                    .value_parser(bsmr_error_clap_parser(|x: &str| {
                         bsmr_error::Ok(
                             lex_target_pattern::<ProvidersPatternExtra>(x, false)
                                 .and_then(|parsed| parsed.pattern.infer_target())
@@ -1252,7 +1252,7 @@ pub(crate) fn cli_args_module(registry: &mut GlobalsBuilder) {
     }
 
     /// Takes an arg from cli, reads the specified file as JSON, and returns the parsed object in bxl.
-    /// Supports both relative and absolute paths. Relative paths are resolved relative to the buck project root.
+    /// Supports both relative and absolute paths. Relative paths are resolved relative to the bsmr project root.
     ///
     /// ### Examples
     ///
@@ -1312,7 +1312,7 @@ mod tests {
     use bsmr_core::provider::label::testing::ProvidersLabelTestExt;
     use bsmr_core::target::configured_target_label::ConfiguredTargetLabel;
     use bsmr_core::target::label::label::TargetLabel;
-    use bsmr_hash::BuckIndexSet;
+    use bsmr_hash::BsmrIndexSet;
     use bsmr_interpreter::types::configured_providers_label::StarlarkProvidersLabel;
     use bsmr_interpreter::types::target_label::StarlarkConfiguredTargetLabel;
     use bsmr_interpreter::types::target_label::StarlarkTargetLabel;
@@ -1395,7 +1395,7 @@ mod tests {
             );
 
             assert_eq!(
-                CliArgType::enumeration(BuckIndexSet::from_iter([
+                CliArgType::enumeration(BsmrIndexSet::from_iter([
                     "a".to_owned(),
                     "b".to_owned(),
                     "c".to_owned()

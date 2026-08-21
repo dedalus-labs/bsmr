@@ -1,3 +1,9 @@
+# ===----------------------------------------------------------------------===
+# Upstream-Source: facebook/buck2@1560aca2002865cd73d7cafb22c705cfb640b2bc
+# Modifications Copyright (c) 2026 Dedalus Labs, Inc. and its contributors
+# SPDX-License-Identifier: Apache-2.0
+# ===----------------------------------------------------------------------===
+
 # Copyright (c) Meta Platforms, Inc. and affiliates.
 #
 # This source code is dual-licensed under either the MIT license found in the
@@ -6,18 +12,18 @@
 # of this source tree. You may select, at your option, one of the
 # above-listed licenses.
 
-BUCK_PYTHON_RULE_KINDS = [
+BSMR_PYTHON_RULE_KINDS = [
     "python_binary",
     "python_library",
     "python_test",
 ]
-BUCK_PYTHON_RULE_KIND_QUERY = "|".join(BUCK_PYTHON_RULE_KINDS)
+BSMR_PYTHON_RULE_KIND_QUERY = "|".join(BSMR_PYTHON_RULE_KINDS)
 
 def get_unfiltered_root_targets(query: bxl.UqueryContext, target_patterns: typing.Any) -> bxl.UnconfiguredTargetSet:
     candidate_targets = utarget_set()
     for pattern in target_patterns:
         candidate_targets += query.kind(
-            BUCK_PYTHON_RULE_KIND_QUERY,
+            BSMR_PYTHON_RULE_KIND_QUERY,
             pattern,
         )
     return candidate_targets

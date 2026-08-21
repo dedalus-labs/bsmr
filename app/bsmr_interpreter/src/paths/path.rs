@@ -83,7 +83,7 @@ impl<'a> StarlarkPath<'a> {
 
     pub fn file_type(&self) -> StarlarkFileType {
         match self {
-            StarlarkPath::BuildFile(_) => StarlarkFileType::Buck,
+            StarlarkPath::BuildFile(_) => StarlarkFileType::Bsmr,
             StarlarkPath::PackageFile(_) => StarlarkFileType::Package,
             StarlarkPath::LoadFile(_) => StarlarkFileType::Bzl,
             StarlarkPath::BxlFile(_) => StarlarkFileType::Bxl,

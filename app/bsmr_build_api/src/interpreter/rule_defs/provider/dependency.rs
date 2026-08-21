@@ -23,7 +23,7 @@ use allocative::Allocative;
 use bsmr_core::execution_types::execution::ExecutionPlatformResolution;
 use bsmr_core::provider::label::ConfiguredProvidersLabel;
 use bsmr_core::provider::label::ProviderName;
-use bsmr_error::BuckErrorContext;
+use bsmr_error::BsmrErrorContext;
 use bsmr_interpreter::types::configured_providers_label::StarlarkConfiguredProvidersLabel;
 use starlark::any::ProvidesStaticType;
 use starlark::coerce::Coerce;
@@ -152,7 +152,7 @@ where
         self.provider_collection
             .to_value()
             .at(index, heap)
-            .with_buck_error_context(|| format!("Error accessing dependencies of `{}`", self.label))
+            .with_bsmr_error_context(|| format!("Error accessing dependencies of `{}`", self.label))
             .map_err(Into::into)
     }
 
@@ -295,7 +295,7 @@ fn dependency_methods(builder: &mut MethodsBuilder) {
         Ok(this
             .provider_collection
             .get(index)
-            .with_buck_error_context(|| {
+            .with_bsmr_error_context(|| {
                 format!("Error accessing dependencies of `{}`", this.label)
             })?)
     }

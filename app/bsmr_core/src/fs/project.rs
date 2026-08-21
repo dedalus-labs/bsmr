@@ -22,7 +22,7 @@ use std::path::Path;
 use std::path::PathBuf;
 use std::sync::Arc;
 
-use bsmr_error::BuckErrorContext;
+use bsmr_error::BsmrErrorContext;
 use bsmr_fs::error::IoResultExt;
 use bsmr_fs::fs_util;
 use bsmr_fs::paths::abs_norm_path::AbsNormPath;
@@ -91,7 +91,7 @@ impl ProjectRoot {
     pub fn new(root: AbsNormPathBuf) -> bsmr_error::Result<Self> {
         let canon = fs_util::canonicalize(&root)
             .categorize_internal()
-            .buck_error_context("canonicalize project root")?;
+            .bsmr_error_context("canonicalize project root")?;
         if canon != root {
             return Err(ProjectRootError::NotCanonical(root, canon).into());
         }
@@ -130,16 +130,16 @@ impl ProjectRoot {
     ///     let fs = ProjectRoot::new_unchecked(root);
     ///
     ///     assert_eq!(
-    ///         AbsNormPathBuf::from("/usr/local/fbsource/buck/BUILD.bsmr".into())?,
-    ///         fs.resolve(ProjectRelativePath::new("buck/BUILD.bsmr")?)
+    ///         AbsNormPathBuf::from("/usr/local/fbsource/bsmr/BUILD.bsmr".into())?,
+    ///         fs.resolve(ProjectRelativePath::new("bsmr/BUILD.bsmr")?)
     ///     );
     /// } else {
     ///     let root = AbsNormPathBuf::from("c:/open/fbsource/".into())?;
     ///     let fs = ProjectRoot::new_unchecked(root);
     ///
     ///     assert_eq!(
-    ///         AbsNormPathBuf::from("c:/open/fbsource/buck/BUILD.bsmr".into())?,
-    ///         fs.resolve(ProjectRelativePath::new("buck/BUILD.bsmr")?)
+    ///         AbsNormPathBuf::from("c:/open/fbsource/bsmr/BUILD.bsmr".into())?,
+    ///         fs.resolve(ProjectRelativePath::new("bsmr/BUILD.bsmr")?)
     ///     );
     /// }
     ///
@@ -167,8 +167,8 @@ impl ProjectRoot {
     /// let fs = ProjectRoot::new_unchecked(root);
     ///
     /// assert_eq!(
-    ///     PathBuf::from("buck/BUILD.bsmr"),
-    ///     fs.as_relative_path(ProjectRelativePath::new("buck/BUILD.bsmr")?)
+    ///     PathBuf::from("bsmr/BUILD.bsmr"),
+    ///     fs.as_relative_path(ProjectRelativePath::new("bsmr/BUILD.bsmr")?)
     /// );
     ///
     /// # bsmr_error::Ok(())
@@ -197,8 +197,8 @@ impl ProjectRoot {
     ///     let fs = ProjectRoot::new_unchecked(root);
     ///
     ///     assert_eq!(
-    ///         Cow::Borrowed(ProjectRelativePath::new("src/buck.java")?),
-    ///         fs.relativize(AbsNormPath::new("/usr/local/fbsource/src/buck.java")?)?
+    ///         Cow::Borrowed(ProjectRelativePath::new("src/bsmr.java")?),
+    ///         fs.relativize(AbsNormPath::new("/usr/local/fbsource/src/bsmr.java")?)?
     ///     );
     ///     assert!(fs.relativize(AbsNormPath::new("/other/path")?).is_err());
     /// } else {
@@ -206,16 +206,16 @@ impl ProjectRoot {
     ///     let fs = ProjectRoot::new_unchecked(root);
     ///
     ///     assert_eq!(
-    ///         Cow::Borrowed(ProjectRelativePath::new("src/buck.java")?),
-    ///         fs.relativize(AbsNormPath::new("c:/open/fbsource/src/buck.java")?)?
+    ///         Cow::Borrowed(ProjectRelativePath::new("src/bsmr.java")?),
+    ///         fs.relativize(AbsNormPath::new("c:/open/fbsource/src/bsmr.java")?)?
     ///     );
     ///     assert_eq!(
-    ///         Cow::Borrowed(ProjectRelativePath::new("src/buck.java")?),
-    ///         fs.relativize(AbsNormPath::new(r"C:\open\fbsource\src\buck.java")?)?
+    ///         Cow::Borrowed(ProjectRelativePath::new("src/bsmr.java")?),
+    ///         fs.relativize(AbsNormPath::new(r"C:\open\fbsource\src\bsmr.java")?)?
     ///     );
     ///     assert_eq!(
-    ///         Cow::Borrowed(ProjectRelativePath::new("src/buck.java")?),
-    ///         fs.relativize(AbsNormPath::new(r"\\?\C:\open\fbsource\src\buck.java")?)?
+    ///         Cow::Borrowed(ProjectRelativePath::new("src/bsmr.java")?),
+    ///         fs.relativize(AbsNormPath::new(r"\\?\C:\open\fbsource\src\bsmr.java")?)?
     ///     );
     ///     assert!(fs.relativize(AbsNormPath::new("c:/other/path")?).is_err());
     /// }
@@ -304,7 +304,7 @@ impl ProjectRoot {
     ) -> bsmr_error::Result<ProjectRelativePathBuf> {
         let path = path.as_ref();
         self.relativize_any_impl(path.as_ref())
-            .with_buck_error_context(|| {
+            .with_bsmr_error_context(|| {
                 format!(
                     "relativize path `{}` against project root `{}`",
                     path.display(),
@@ -322,13 +322,13 @@ impl ProjectRoot {
     ) -> bsmr_error::Result<()> {
         let abs_path = self.root().join(path.as_ref());
         if let Some(parent) = abs_path.parent() {
-            fs_util::create_dir_all(parent).with_buck_error_context(|| {
+            fs_util::create_dir_all(parent).with_bsmr_error_context(|| {
                 format!("`write_file` for `{abs_path}` creating directory `{parent}`")
             })?;
         }
         fs_util::write_with_executable_bit(&abs_path, contents, executable)
             .categorize_internal()
-            .with_buck_error_context(|| format!("`write_file` writing `{abs_path}`"))?;
+            .with_bsmr_error_context(|| format!("`write_file` writing `{abs_path}`"))?;
         Ok(())
     }
 
@@ -340,17 +340,17 @@ impl ProjectRoot {
     ) -> bsmr_error::Result<File> {
         let abs_path = self.root().join(path.as_ref());
         if let Some(parent) = abs_path.parent() {
-            fs_util::create_dir_all(parent).with_buck_error_context(|| {
+            fs_util::create_dir_all(parent).with_bsmr_error_context(|| {
                 format!("`create_file` for `{abs_path}` creating directory `{parent}`")
             })?;
         }
         let file = File::create(&abs_path)
-            .with_buck_error_context(|| format!("`create_file` creating `{abs_path}`"))?;
+            .with_bsmr_error_context(|| format!("`create_file` creating `{abs_path}`"))?;
         #[cfg(unix)]
         if executable {
             use std::os::unix::fs::PermissionsExt;
             file.set_permissions(std::fs::Permissions::from_mode(0o755))
-                .with_buck_error_context(|| {
+                .with_bsmr_error_context(|| {
                     format!("`create_file` setting executable `{abs_path}`")
                 })?;
         }
@@ -436,7 +436,7 @@ impl ProjectRoot {
         let dest_abs = self.resolve(dest);
 
         let result = self.copy_resolved(&src_abs, &dest_abs);
-        result.with_buck_error_context(|| {
+        result.with_bsmr_error_context(|| {
             format!("Error copying from src path `{src_abs}` to dest path `{dest_abs}`")
         })
     }

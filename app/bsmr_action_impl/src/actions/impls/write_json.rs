@@ -48,9 +48,9 @@ use bsmr_error::internal_error;
 use bsmr_execute::artifact::fs::ExecutorFs;
 use bsmr_execute::execute::command_executor::ActionExecutionTimingData;
 use bsmr_execute::materialize::materializer::WriteRequest;
-use bsmr_hash::BuckIndexMap;
-use bsmr_hash::BuckIndexSet;
-use bsmr_hash::buck_indexmap;
+use bsmr_hash::BsmrIndexMap;
+use bsmr_hash::BsmrIndexSet;
+use bsmr_hash::bsmr_indexmap;
 use dupe::Dupe;
 use pagable::Pagable;
 use pagable::pagable_typetag;
@@ -116,7 +116,7 @@ impl UnregisteredWriteJsonAction {
 impl UnregisteredAction for UnregisteredWriteJsonAction {
     fn register(
         self: Box<Self>,
-        outputs: BuckIndexSet<BuildArtifact>,
+        outputs: BsmrIndexSet<BuildArtifact>,
         starlark_data: Option<OwnedFrozenValue>,
         _error_handler: Option<OwnedFrozenValue>,
     ) -> bsmr_error::Result<Box<dyn Action>> {
@@ -136,7 +136,7 @@ struct WriteJsonAction {
 impl WriteJsonAction {
     fn new(
         contents: OwnedFrozenValue,
-        outputs: BuckIndexSet<BuildArtifact>,
+        outputs: BsmrIndexSet<BuildArtifact>,
         inner: UnregisteredWriteJsonAction,
     ) -> bsmr_error::Result<Self> {
         validate_json(JsonUnpack::unpack_value_err(contents.value())?)?;
@@ -215,13 +215,13 @@ impl Action for WriteJsonAction {
         &self,
         fs: &ExecutorFs,
         artifact_path_mapping: &dyn ArtifactPathMapper,
-    ) -> BuckIndexMap<String, String> {
+    ) -> BsmrIndexMap<String, String> {
         let res: bsmr_error::Result<String> = try {
             let content = self.get_contents(fs, artifact_path_mapping)?;
             String::from_utf8(content).map_err(bsmr_error::Error::from)?
         };
         // TODO(cjhopman): We should change this api to support returning a Result.
-        buck_indexmap! {
+        bsmr_indexmap! {
             "contents".to_owned() => match res {
                 Ok(v) => v,
                 Err(e) => format!("ERROR: constructing contents ({e})")
@@ -283,7 +283,7 @@ impl Action for WriteJsonAction {
                 .ok_or_else(|| internal_error!("Action did not set execution_start"))?;
 
         Ok((
-            ActionOutputs::new(buck_indexmap![self.output.get_path().dupe() => value]),
+            ActionOutputs::new(bsmr_indexmap![self.output.get_path().dupe() => value]),
             ActionExecutionMetadata {
                 execution_kind: ActionExecutionKind::Simple,
                 timing: ActionExecutionTimingData { wall_time },

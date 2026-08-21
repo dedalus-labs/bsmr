@@ -50,8 +50,8 @@ use bsmr_core::target::configured_target_label::ConfiguredTargetLabel;
 use bsmr_core::target::label::label::TargetLabel;
 use bsmr_fs::paths::abs_norm_path::AbsNormPathBuf;
 use bsmr_fs::paths::file_name::FileNameBuf;
-use bsmr_hash::StdBuckHashMap;
-use bsmr_hash::buck_indexset;
+use bsmr_hash::StdBsmrHashMap;
+use bsmr_hash::bsmr_indexset;
 use bsmr_node::load_patterns::MissingTargetBehavior;
 use bsmr_node::load_patterns::load_patterns;
 use bsmr_node::nodes::configured::ConfiguredTargetNode;
@@ -258,7 +258,7 @@ impl UqueryDelegate for DiceQueryDelegate<'_, '_> {
     // get the list of potential buildfile names for each cell
     async fn get_buildfile_names_by_cell(
         &self,
-    ) -> bsmr_error::Result<StdBuckHashMap<CellName, Arc<[FileNameBuf]>>> {
+    ) -> bsmr_error::Result<StdBsmrHashMap<CellName, Arc<[FileNameBuf]>>> {
         let mut ctx = self.ctx.get();
         let resolver = ctx.get_cell_resolver().await?;
         let buildfiles = ctx
@@ -299,7 +299,7 @@ impl UqueryDelegate for DiceQueryDelegate<'_, '_> {
 
     async fn eval_file_literal(&self, literal: &str) -> bsmr_error::Result<FileSet> {
         let cell_path = self.query_data.literal_parser.parse_file_literal(literal)?;
-        Ok(FileSet::new(buck_indexset![FileNode(cell_path)]))
+        Ok(FileSet::new(bsmr_indexset![FileNode(cell_path)]))
     }
 
     fn linear_dice_computations(&self) -> &LinearRecomputeDiceComputations<'_> {

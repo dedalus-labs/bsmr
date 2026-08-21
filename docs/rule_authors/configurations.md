@@ -52,7 +52,7 @@ are still conceptually useful).
 
 ## Execution platforms
 
-> To Buck, both execution platforms and the list of them are based on
+> To Bsmr, both execution platforms and the list of them are based on
 > `ExecutionPlatformInfo` and `ExecutionPlatformRegistrationInfo`, but
 > we’ll talk in
 > terms of the `execution_platform` and `execution_platforms` rules.
@@ -66,7 +66,7 @@ There are three main concepts to understand about execution platforms:
 ### Execution platforms
 
 The simplest execution platform setup is the one `bsmr init` uses. This
-setup gathers constraints from the host machine Buck is running on.
+setup gathers constraints from the host machine Bsmr is running on.
 
 ```ini
 [parser]
@@ -93,7 +93,7 @@ More complex setups are possible. You can:
   everything else).
 - Set up cross compilation, in conjunction with toolchains that will
   provide the right flags.
-- Let buck automatically select from multiple execution platforms
+- Let bsmr automatically select from multiple execution platforms
   depending on what's being built (for example, most of the build can be
   done on Linux, but the linker might only run on Windows).
 
@@ -169,10 +169,10 @@ ends there.
 In more complex cases, you may have multiple execution platforms. For
 example, you may have a remote build farm that has both Linux and
 Windows machines. When a build is requested for a particular configured
-target, Buck will iterate the platforms provided in the registration
+target, Bsmr will iterate the platforms provided in the registration
 provider, and select the first platform whose configuration matches the
 execution constraints. Basically, some build tools only run on Linux, so
-if the tools need to be built, Buck will configure them to be built for
+if the tools need to be built, Bsmr will configure them to be built for
 Linux, and then when it comes time to run them, it will schedule them to
 run under the Linux execution platform. Other build tools (a
 cross-platform python script) could run anywhere and these will not
@@ -203,7 +203,7 @@ Aside from the way they interact with dependents, exec deps are regular
 targets in the build graph. They may themselves be compiled using their
 own `exec_dep`s, and therefore may need to select their own exec platform
 based on their own exec deps. Each time a target somewhere in the build
-graph has `exec_dep`s, Buck will do another transition through exec
+graph has `exec_dep`s, Bsmr will do another transition through exec
 platform resolution.
 
 You might not notice an incorrectly typed dependency edge if your only
@@ -211,7 +211,7 @@ registered execution platform = your target platform = your host machine
 and you don't do much build configuration, but it matters once you start
 writing your own build tools and compiling for platforms other than your
 host machine. The typical error when you have misconfigured is "exec
-format error" on Linux, where Buck is trying to execute e.g. a Windows
+format error" on Linux, where Bsmr is trying to execute e.g. a Windows
 executable on a Linux machine.
 
 ### Execution platform resolution

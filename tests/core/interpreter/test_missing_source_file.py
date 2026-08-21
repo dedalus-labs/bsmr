@@ -15,27 +15,27 @@
 # pyre-strict
 
 
-from bsmr.tests.e2e_util.api.buck import Buck
+from bsmr.tests.e2e_util.api.bsmr import Bsmr
 from bsmr.tests.e2e_util.asserts import expect_failure
-from bsmr.tests.e2e_util.buck_workspace import buck_test, env
+from bsmr.tests.e2e_util.bsmr_workspace import bsmr_test, env
 
 
-@buck_test()
+@bsmr_test()
 @env(
     "BSMR_HARD_ERROR",
     "true",
 )
-async def test_missing_source_file_when_hard_errors_enabled(buck: Buck) -> None:
+async def test_missing_source_file_when_hard_errors_enabled(bsmr: Bsmr) -> None:
     await expect_failure(
-        buck.uquery("//package1:"),
+        bsmr.uquery("//package1:"),
         stderr_regex="Source file `non_existent_source_file.txt` does not exist as a member of package `prelude//package1`",
     )
 
 
-@buck_test()
+@bsmr_test()
 @env(
     "BSMR_HARD_ERROR",
     "false",
 )
-async def test_missing_source_file_when_hard_errors_disabled(buck: Buck) -> None:
-    await buck.uquery("//package1:")
+async def test_missing_source_file_when_hard_errors_disabled(bsmr: Bsmr) -> None:
+    await bsmr.uquery("//package1:")

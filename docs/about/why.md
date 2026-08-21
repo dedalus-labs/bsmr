@@ -15,7 +15,7 @@ the engine evaluates only the affected graph and can execute actions locally
 or through the Remote Execution API.
 
 The implementation is derived from
-[Buck2](https://github.com/facebook/buck2), including its Rust engine,
+[upstream](https://github.com/facebook/buck2), including its Rust engine,
 Starlark rule surface, DICE incremental computation, and prelude. Bessemer
 keeps that foundation while owning its public CLI, crate namespace, release
 process, and future compatibility contract.

@@ -1,3 +1,9 @@
+# ===----------------------------------------------------------------------===
+# Upstream-Source: facebook/buck2@1560aca2002865cd73d7cafb22c705cfb640b2bc
+# Modifications Copyright (c) 2026 Dedalus Labs, Inc. and its contributors
+# SPDX-License-Identifier: Apache-2.0
+# ===----------------------------------------------------------------------===
+
 # Copyright (c) Meta Platforms, Inc. and affiliates.
 #
 # This source code is dual-licensed under either the MIT license found in the
@@ -11,7 +17,7 @@
 # the generated docs, and so those should be verified to be accurate and
 # well-formatted (and then delete this TODO)
 
-load(":common.bzl", "buck", "prelude_rule")
+load(":common.bzl", "bsmr", "prelude_rule")
 load(":ocaml_common.bzl", "ocaml_common")
 
 ocaml_binary = prelude_rule(
@@ -20,10 +26,10 @@ ocaml_binary = prelude_rule(
         A ocaml\\_binary() rule builds both native and bytecode executables from the supplied set of OCaml and C source files
          and dependencies.
 
-         Note: Buck is currently tested with 4.X OCaml series.
+         Note: Bsmr is currently tested with 4.X OCaml series.
     """,
     examples = """
-        For more examples, check out our [integration tests](https://github.com/facebook/buck/tree/dev/test/com/facebook/buck/features/ocaml/testdata/).
+        For more examples, check out our [integration tests](https://github.com/dedalus/bsmr/tree/dev/test/com/dedalus/bsmr/features/ocaml/testdata/).
 
         ```
         ocaml_binary(
@@ -78,9 +84,9 @@ ocaml_binary = prelude_rule(
             "platform": attrs.option(attrs.string(), default = None),
             "warnings_flags": attrs.option(attrs.string(), default = None),
         }
-        | buck.licenses_arg()
-        | buck.labels_arg()
-        | buck.contacts_arg()
+        | bsmr.licenses_arg()
+        | bsmr.labels_arg()
+        | bsmr.contacts_arg()
     ),
 )
 
@@ -90,10 +96,10 @@ ocaml_library = prelude_rule(
         A ocaml\\_library() rule builds a native and a bytecode libraries from the
          supplied set of OCaml source files and dependencies.
 
-         Note: Buck is currently tested with 4.X OCaml series.
+         Note: Bsmr is currently tested with 4.X OCaml series.
     """,
     examples = """
-        For more examples, check out our [integration tests](https://github.com/facebook/buck/tree/dev/test/com/facebook/buck/features/ocaml/testdata/).
+        For more examples, check out our [integration tests](https://github.com/dedalus/bsmr/tree/dev/test/com/dedalus/bsmr/features/ocaml/testdata/).
 
         ```
         ocaml_library(
@@ -120,9 +126,9 @@ ocaml_library = prelude_rule(
             "ocamldep_flags": attrs.list(attrs.arg(), default = []),
             "warnings_flags": attrs.option(attrs.string(), default = None),
         }
-        | buck.licenses_arg()
-        | buck.labels_arg()
-        | buck.contacts_arg()
+        | bsmr.licenses_arg()
+        | bsmr.labels_arg()
+        | bsmr.contacts_arg()
     ),
 )
 
@@ -150,9 +156,9 @@ prebuilt_ocaml_library = prelude_rule(
             "native_c_libs": attrs.list(attrs.string(), default = []),
             "native_lib": attrs.option(attrs.string(), default = None),
         }
-        | buck.licenses_arg()
-        | buck.labels_arg()
-        | buck.contacts_arg()
+        | bsmr.licenses_arg()
+        | bsmr.labels_arg()
+        | bsmr.contacts_arg()
     ),
 )
 

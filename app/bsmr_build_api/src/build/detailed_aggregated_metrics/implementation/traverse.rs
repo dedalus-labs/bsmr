@@ -82,7 +82,7 @@ impl Node {
     }
 }
 
-struct Graph<'a>(&'a bsmr_hash::BuckHashMap<DeferredHolderKey, DeferredHolder>);
+struct Graph<'a>(&'a bsmr_hash::BsmrHashMap<DeferredHolderKey, DeferredHolder>);
 
 impl<'a> Graph<'a> {
     pub(crate) fn lookup_deferred(
@@ -238,14 +238,14 @@ impl<'a> Graph<'a> {
 }
 
 struct TraversalState {
-    visited: bsmr_hash::BuckHashSet<Key>,
+    visited: bsmr_hash::BsmrHashSet<Key>,
     queue: Vec<Key>,
 }
 
 impl TraversalState {
     fn new() -> Self {
         Self {
-            visited: bsmr_hash::BuckHashSet::default(),
+            visited: bsmr_hash::BsmrHashSet::default(),
             queue: Vec::new(),
         }
     }
@@ -264,9 +264,9 @@ impl TraversalState {
 
 pub fn traverse_partial_action_graph<'a>(
     root_artifacts: impl IntoIterator<Item = &'a ArtifactGroup>,
-    state: &bsmr_hash::BuckHashMap<DeferredHolderKey, DeferredHolder>,
-) -> bsmr_error::Result<(bool, bsmr_hash::BuckHashSet<ActionKey>)> {
-    let mut actions = bsmr_hash::BuckHashSet::default();
+    state: &bsmr_hash::BsmrHashMap<DeferredHolderKey, DeferredHolder>,
+) -> bsmr_error::Result<(bool, bsmr_hash::BsmrHashSet<ActionKey>)> {
+    let mut actions = bsmr_hash::BsmrHashSet::default();
 
     let graph = Graph(state);
     let roots = graph.root_keys(root_artifacts)?;
@@ -288,7 +288,7 @@ pub fn traverse_target_graph(
     root: &ConfiguredTargetNode,
     mut visitor: impl FnMut(&ConfiguredTargetLabel),
 ) {
-    let mut visited = bsmr_hash::BuckHashSet::default();
+    let mut visited = bsmr_hash::BsmrHashSet::default();
     let mut queue = Vec::new();
     visited.insert(root.label());
     queue.push(root);

@@ -21,9 +21,9 @@ import signal
 import time
 from pathlib import Path
 
-from bsmr.tests.e2e_util.api.buck import Buck
+from bsmr.tests.e2e_util.api.bsmr import Bsmr
 from bsmr.tests.e2e_util.asserts import expect_failure
-from bsmr.tests.e2e_util.buck_workspace import buck_test, env
+from bsmr.tests.e2e_util.bsmr_workspace import bsmr_test, env
 from bsmr.tests.e2e_util.helper.golden import (
     golden,
     sanitize_daemon_stderr,
@@ -37,10 +37,10 @@ from bsmr.tests.e2e_util.helper.utils import (
 )
 
 
-@buck_test(write_invocation_record=True)
-async def test_action_error(buck: Buck) -> None:
+@bsmr_test(write_invocation_record=True)
+async def test_action_error(bsmr: Bsmr) -> None:
     res = await expect_failure(
-        buck.build("//:action_fail"),
+        bsmr.build("//:action_fail"),
         stderr_regex="Failed to build 'root//:action_fail",
     )
     error = res.invocation_record().single_error()
@@ -52,21 +52,21 @@ async def test_action_error(buck: Buck) -> None:
     )
 
 
-@buck_test(write_invocation_record=True)
-async def test_missing_outputs(buck: Buck) -> None:
+@bsmr_test(write_invocation_record=True)
+async def test_missing_outputs(bsmr: Bsmr) -> None:
     # FIXME(JakobDegen): This doesn't work with non-local-only actions
     res = await expect_failure(
-        buck.build("//:missing_outputs", "--local-only"),
+        bsmr.build("//:missing_outputs", "--local-only"),
         stderr_regex="Failed to build 'root//:missing_outputs",
     )
     error = res.invocation_record().single_error()
     assert error["category"] == "USER"
 
 
-@buck_test(write_invocation_record=True)
-async def test_bad_url(buck: Buck) -> None:
+@bsmr_test(write_invocation_record=True)
+async def test_bad_url(bsmr: Bsmr) -> None:
     res = await expect_failure(
-        buck.build("//:bad_url"),
+        bsmr.build("//:bad_url"),
         stderr_regex="Failed to build 'root//:bad_url",
     )
     error = res.invocation_record().single_error()
@@ -76,10 +76,10 @@ async def test_bad_url(buck: Buck) -> None:
     # assert error["source_location"] == "bsmr_http/src/lib.rs::HttpError::SendRequest"
 
 
-@buck_test(write_invocation_record=True)
-async def test_attr_coercion(buck: Buck) -> None:
+@bsmr_test(write_invocation_record=True)
+async def test_attr_coercion(bsmr: Bsmr) -> None:
     res = await expect_failure(
-        buck.build("//attr_coercion:int_rule"),
+        bsmr.build("//attr_coercion:int_rule"),
         stderr_regex="evaluating build file: `root//attr_coercion:TARGETS.fixture",
     )
     error = res.invocation_record().single_error()
@@ -87,24 +87,24 @@ async def test_attr_coercion(buck: Buck) -> None:
     assert "StarlarkError::Value::" in error["source_location"]
 
 
-@buck_test(write_invocation_record=True)
-async def test_bsmr_fail(buck: Buck) -> None:
+@bsmr_test(write_invocation_record=True)
+async def test_bsmr_fail(bsmr: Bsmr) -> None:
     res = await expect_failure(
-        buck.build("//bsmr_fail:foobar"),
+        bsmr.build("//bsmr_fail:foobar"),
         stderr_regex="evaluating build file: `root//bsmr_fail:TARGETS.fixture`",
     )
     error = res.invocation_record().single_error()
     # Just make sure that despite there being no context on the error, we still report the right
     # metadata
     assert error["source_location"].startswith(
-        "bsmr_interpreter_for_build/src/interpreter/functions/internals.rs::BuckFail::"
+        "bsmr_interpreter_for_build/src/interpreter/functions/internals.rs::BsmrFail::"
     )
 
 
-@buck_test(write_invocation_record=True)
-async def test_starlark_fail_error_categorization(buck: Buck) -> None:
+@bsmr_test(write_invocation_record=True)
+async def test_starlark_fail_error_categorization(bsmr: Bsmr) -> None:
     res = await expect_failure(
-        buck.build("//starlark_fail:foobar"),
+        bsmr.build("//starlark_fail:foobar"),
         stderr_regex="evaluating build file: `root//starlark_fail:TARGETS.fixture`",
     )
     error = res.invocation_record().single_error()
@@ -113,10 +113,10 @@ async def test_starlark_fail_error_categorization(buck: Buck) -> None:
     assert error["category"] == "USER"
 
 
-@buck_test(write_invocation_record=True)
-async def test_starlark_parse_error_categorization(buck: Buck) -> None:
+@bsmr_test(write_invocation_record=True)
+async def test_starlark_parse_error_categorization(bsmr: Bsmr) -> None:
     res = await expect_failure(
-        buck.build("//starlark_parse_error:starlark_parse_error"),
+        bsmr.build("//starlark_parse_error:starlark_parse_error"),
         stderr_regex=".*Parse error:.*",
     )
     error = res.invocation_record().single_error()
@@ -126,10 +126,10 @@ async def test_starlark_parse_error_categorization(buck: Buck) -> None:
     assert error["category"] == "USER"
 
 
-@buck_test(write_invocation_record=True)
-async def test_starlark_scope_error_categorization(buck: Buck) -> None:
+@bsmr_test(write_invocation_record=True)
+async def test_starlark_scope_error_categorization(bsmr: Bsmr) -> None:
     res = await expect_failure(
-        buck.build("//starlark_scope_error:value_err"),
+        bsmr.build("//starlark_scope_error:value_err"),
         stderr_regex="evaluating build file: .* not found",
     )
     error = res.invocation_record().single_error()
@@ -139,10 +139,10 @@ async def test_starlark_scope_error_categorization(buck: Buck) -> None:
     assert error["category"] == "USER"
 
 
-@buck_test(write_invocation_record=True)
-async def test_targets_error_categorization(buck: Buck) -> None:
+@bsmr_test(write_invocation_record=True)
+async def test_targets_error_categorization(bsmr: Bsmr) -> None:
     res = await expect_failure(
-        buck.targets("//starlark_fail:foobar"),
+        bsmr.targets("//starlark_fail:foobar"),
         stderr_regex="evaluating build file: `root//starlark_fail:TARGETS.fixture`",
     )
     error = res.invocation_record().single_error()
@@ -155,12 +155,12 @@ async def test_targets_error_categorization(buck: Buck) -> None:
     )
 
 
-@buck_test(write_invocation_record=True)
-async def test_daemon_crash(buck: Buck) -> None:
-    await buck.build()
+@bsmr_test(write_invocation_record=True)
+async def test_daemon_crash(bsmr: Bsmr) -> None:
+    await bsmr.build()
 
     res = await expect_failure(
-        buck.debug("crash", "panic"),
+        bsmr.debug("crash", "panic"),
     )
     error = res.invocation_record().single_error()
     if is_running_on_windows():
@@ -174,7 +174,7 @@ async def test_daemon_crash(buck: Buck) -> None:
         "SERVER_PANICKED",
     ]
     assert error["tags"][4].startswith("crash")
-    assert "buckd stderr:\n" in error["message"]
+    assert "bsmrd stderr:\n" in error["message"]
     assert "panicked at" in error["message"]
 
     assert error["best_tag"] == "SERVER_PANICKED"
@@ -192,12 +192,12 @@ async def test_daemon_crash(buck: Buck) -> None:
         )
 
 
-@buck_test(write_invocation_record=True)
-@env("BUCKD_STARTUP_TIMEOUT", "0")
-@env("BUCKD_STARTUP_INIT_TIMEOUT", "0")
-async def test_connection_timeout(buck: Buck) -> None:
-    res = await expect_failure(buck.targets(":"))
-    assert "timed out before establishing connection to Buck daemon" in res.stderr
+@bsmr_test(write_invocation_record=True)
+@env("BSMRD_STARTUP_TIMEOUT", "0")
+@env("BSMRD_STARTUP_INIT_TIMEOUT", "0")
+async def test_connection_timeout(bsmr: Bsmr) -> None:
+    res = await expect_failure(bsmr.targets(":"))
+    assert "timed out before establishing connection to Bsmr daemon" in res.stderr
 
     record = res.invocation_record()
 
@@ -216,17 +216,17 @@ async def test_connection_timeout(buck: Buck) -> None:
         )
 
 
-@buck_test(write_invocation_record=True)
-async def test_daemon_abort(buck: Buck) -> None:
-    await buck.build()
+@bsmr_test(write_invocation_record=True)
+async def test_daemon_abort(bsmr: Bsmr) -> None:
+    await bsmr.build()
 
-    res = await expect_failure(buck.debug("crash", "abort"))
+    res = await expect_failure(bsmr.debug("crash", "abort"))
     error = res.invocation_record().single_error()
     category_key = error["category_key"]
 
     if is_running_on_windows():
         # TODO get windows to dump a stack trace / detect signals
-        assert "buckd stderr is empty" in error["message"]
+        assert "bsmrd stderr is empty" in error["message"]
         assert category_key == "DAEMON_DISCONNECT"
     else:
         # Messages from folly's signal handler.
@@ -242,23 +242,23 @@ async def test_daemon_abort(buck: Buck) -> None:
         assert error["tags"][-1].startswith("crash(")
 
 
-async def wait_for_daemon_pid(buck: Buck) -> int:
+async def wait_for_daemon_pid(bsmr: Bsmr) -> int:
     for _ in range(10):
         time.sleep(1)
-        status = await buck.status()
-        if status.stderr != "no buckd running":
+        status = await bsmr.status()
+        if status.stderr != "no bsmrd running":
             return json.loads(status.stdout)["process_info"]["pid"]
-    raise Exception("Failed to find buckd pid")
+    raise Exception("Failed to find bsmrd pid")
 
 
-@buck_test(skip_for_os=["windows"])
-async def test_daemon_killed(buck: Buck, tmp_path: Path) -> None:
+@bsmr_test(skip_for_os=["windows"])
+async def test_daemon_killed(bsmr: Bsmr, tmp_path: Path) -> None:
     record = tmp_path / "record.json"
-    build = await buck.build(
+    build = await bsmr.build(
         ":slow_action", "--unstable-write-invocation-record", str(record)
     ).start()
 
-    pid = await wait_for_daemon_pid(buck)
+    pid = await wait_for_daemon_pid(bsmr)
     os.kill(pid, signal.SIGKILL)
     await build.communicate()  # Wait for the client to exit
 
@@ -267,16 +267,16 @@ async def test_daemon_killed(buck: Buck, tmp_path: Path) -> None:
     assert error["category"] == "ENVIRONMENT"
 
 
-@buck_test(write_invocation_record=True)
-async def test_build_file_race(buck: Buck) -> None:
+@bsmr_test(write_invocation_record=True)
+async def test_build_file_race(bsmr: Bsmr) -> None:
     target = "//file_busy:file"
     # first build
-    file_path = (await buck.build(target)).get_build_report().output_for_target(target)
+    file_path = (await bsmr.build(target)).get_build_report().output_for_target(target)
 
     # Open the file for writing and keep it open
     f = open(file_path, "w")
     # build again, source code has changed, binary must be rebuilt
-    build = buck.build(
+    build = bsmr.build(
         target,
         "--show-output",
         "-c",
@@ -295,13 +295,13 @@ async def test_build_file_race(buck: Buck) -> None:
     f.close()
 
 
-@buck_test(write_invocation_record=True)
-async def test_download_failure(buck: Buck) -> None:
+@bsmr_test(write_invocation_record=True)
+async def test_download_failure(bsmr: Bsmr) -> None:
     # Upload action if necessary
-    await buck.build("//:run_action", "--remote-only")
-    await buck.clean()
+    await bsmr.build("//:run_action", "--remote-only")
+    await bsmr.clean()
     res = await expect_failure(
-        buck.build(
+        bsmr.build(
             "//:run_action",
             env={"BSMR_TEST_FAIL_RE_DOWNLOADS": "true"},
         )
@@ -309,18 +309,18 @@ async def test_download_failure(buck: Buck) -> None:
     error = res.invocation_record().single_error()
     assert error["category_key"] == "RE_NOT_FOUND:UNKNOWN"
     assert (
-        "Your build requires materializing an artifact that has expired in the RE CAS and Buck does not have it. This likely happened because your Buck daemon has been online for a long time. This error is currently unrecoverable. To proceed, you should restart Buck using `bsmr killall`."
+        "Your build requires materializing an artifact that has expired in the RE CAS and Bsmr does not have it. This likely happened because your Bsmr daemon has been online for a long time. This error is currently unrecoverable. To proceed, you should restart Bsmr using `bsmr killall`."
         in res.stderr
     )
 
 
-@buck_test(write_invocation_record=True)
-async def test_re_execute_failure(buck: Buck) -> None:
+@bsmr_test(write_invocation_record=True)
+async def test_re_execute_failure(bsmr: Bsmr) -> None:
     # Upload action if necessary
-    await buck.build("//:run_action", "--remote-only")
-    await buck.clean()
+    await bsmr.build("//:run_action", "--remote-only")
+    await bsmr.clean()
     res = await expect_failure(
-        buck.build(
+        bsmr.build(
             "//:run_action",
             "--no-remote-cache",
             env={"BSMR_TEST_FAIL_RE_EXECUTE": "true"},
@@ -330,10 +330,10 @@ async def test_re_execute_failure(buck: Buck) -> None:
     assert error["category_key"] == "RE_FAILED_PRECONDITION:UNKNOWN"
 
 
-@buck_test(write_invocation_record=True)
-async def test_local_incompatible(buck: Buck) -> None:
+@bsmr_test(write_invocation_record=True)
+async def test_local_incompatible(bsmr: Bsmr) -> None:
     res = await expect_failure(
-        buck.build(
+        bsmr.build(
             "//:local_run_action",
             "--remote-only",
             "--no-remote-cache",
@@ -348,10 +348,10 @@ async def test_local_incompatible(buck: Buck) -> None:
     )
 
 
-@buck_test(write_invocation_record=True)
+@bsmr_test(write_invocation_record=True)
 @env("BSMR_TEST_INIT_DAEMON_ERROR", "true")
-async def test_daemon_startup_error(buck: Buck) -> None:
-    res = await expect_failure(buck.targets(":"))
+async def test_daemon_startup_error(bsmr: Bsmr) -> None:
+    res = await expect_failure(bsmr.targets(":"))
     assert "Injected init daemon error" in res.stderr
     assert "Error initializing DaemonStateData" in res.stderr
 
@@ -365,10 +365,10 @@ async def test_daemon_startup_error(buck: Buck) -> None:
     )
 
 
-@buck_test(skip_for_os=["windows"], write_invocation_record=True)
+@bsmr_test(skip_for_os=["windows"], write_invocation_record=True)
 @env("BSMR_TEST_DAEMON_STARTUP_SIGNAL", "true")
-async def test_daemon_startup_signal(buck: Buck) -> None:
-    res = await expect_failure(buck.targets(":"))
+async def test_daemon_startup_signal(bsmr: Bsmr) -> None:
+    res = await expect_failure(bsmr.targets(":"))
     error = res.invocation_record().single_error()
     assert error["category_key"] == "DAEMON_STARTUP_FAILED:SIGTERM"
 
@@ -378,7 +378,7 @@ async def test_daemon_startup_signal(buck: Buck) -> None:
     )
 
 
-@buck_test(
+@bsmr_test(
     setup_eden=True,
     extra_bsmr_config={
         "bsmr": {
@@ -388,23 +388,23 @@ async def test_daemon_startup_signal(buck: Buck) -> None:
     skip_for_os=["windows"],
     write_invocation_record=True,
 )
-async def test_eden_io_error_tagging(buck: Buck) -> None:
-    targets_file = buck.cwd / "TARGETS.fixture"
+async def test_eden_io_error_tagging(bsmr: Bsmr) -> None:
+    targets_file = bsmr.cwd / "TARGETS.fixture"
 
     # remove file read permissions during test execution, test setup will fail if permissions are set on any fixture earlier
     targets_file.chmod(0o000)
 
     # triggers file read IO error
-    res = await expect_failure(buck.targets(":"))
+    res = await expect_failure(bsmr.targets(":"))
     error = res.invocation_record().single_error()
     assert "IO_EDEN" in error["tags"]
     assert error["category_key"] == "IO_EDEN:IO_PERMISSION_DENIED"
 
 
-@buck_test(write_invocation_record=True)
+@bsmr_test(write_invocation_record=True)
 @env("BSMR_TEST_FAIL_STREAMING", "true")
-async def test_client_streaming_error(buck: Buck) -> None:
-    res = await expect_failure(buck.targets(":"))
+async def test_client_streaming_error(bsmr: Bsmr) -> None:
+    res = await expect_failure(bsmr.targets(":"))
     assert "Injected client streaming error" in res.stderr
 
     error = res.invocation_record().single_error()
@@ -416,10 +416,10 @@ async def test_client_streaming_error(buck: Buck) -> None:
     )
 
 
-@buck_test(write_invocation_record=True)
-async def test_action_error_has_categorization(buck: Buck) -> None:
+@bsmr_test(write_invocation_record=True)
+async def test_action_error_has_categorization(bsmr: Bsmr) -> None:
     res = await expect_failure(
-        buck.build("//fail_action:error_handler_produced_error_categories"),
+        bsmr.build("//fail_action:error_handler_produced_error_categories"),
         stderr_regex="Action sub-errors produced by error handlers",
     )
 
@@ -428,11 +428,11 @@ async def test_action_error_has_categorization(buck: Buck) -> None:
     assert error["category_key"] == "ACTION_COMMAND_FAILURE:FirstError"
 
 
-@buck_test(write_invocation_record=True, skip_for_os=["windows"])
+@bsmr_test(write_invocation_record=True, skip_for_os=["windows"])
 @env("BSMR_TEST_INIT_DATA_SLEEP_SECS", "120")
-@env("BUCKD_STARTUP_INIT_TIMEOUT", "5")
-async def test_init_data_timeout(buck: Buck) -> None:
-    res = await expect_failure(buck.targets(":"))
+@env("BSMRD_STARTUP_INIT_TIMEOUT", "5")
+async def test_init_data_timeout(bsmr: Bsmr) -> None:
+    res = await expect_failure(bsmr.targets(":"))
     record = res.invocation_record()
     error = record.single_error()
 
@@ -443,16 +443,16 @@ async def test_init_data_timeout(buck: Buck) -> None:
     )
 
 
-@buck_test(
+@bsmr_test(
     skip_for_os=["darwin", "windows"],
     write_invocation_record=True,
 )
-async def test_nix_errno(buck: Buck) -> None:
-    await buck.build(":run_action", "--show-output")
-    shutil.rmtree(buck.cwd / "bsmr-out/v2")
+async def test_nix_errno(bsmr: Bsmr) -> None:
+    await bsmr.build(":run_action", "--show-output")
+    shutil.rmtree(bsmr.cwd / "bsmr-out/default")
 
     res = await expect_failure(
-        buck.targets(":"),
+        bsmr.targets(":"),
         stderr_regex="Failed to stat.*ENOENT: No such file or directory",
     )
     error = res.invocation_record().single_error()

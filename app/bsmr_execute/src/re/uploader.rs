@@ -37,11 +37,11 @@ use bsmr_directory::directory::directory_iterator::DirectoryIteratorPathStack;
 use bsmr_directory::directory::directory_ref::FingerprintedDirectoryRef;
 use bsmr_directory::directory::entry::DirectoryEntry;
 use bsmr_directory::directory::fingerprinted_directory::FingerprintedDirectory;
-use bsmr_error::BuckErrorContext;
+use bsmr_error::BsmrErrorContext;
 use bsmr_error::conversion::from_any_with_tag;
 use bsmr_error::internal_error;
-use bsmr_hash::StdBuckHashMap;
-use bsmr_hash::StdBuckHashSet;
+use bsmr_hash::StdBsmrHashMap;
+use bsmr_hash::StdBsmrHashSet;
 use chrono::Duration;
 use chrono::Utc;
 use dupe::Dupe;
@@ -77,7 +77,7 @@ use crate::re::metadata::RemoteExecutionMetadataExt;
 #[derive(Clone, Debug, Default)]
 pub struct UploadStats {
     pub total: ReUploadMetrics,
-    pub by_extension: StdBuckHashMap<String, ReUploadMetrics>,
+    pub by_extension: StdBsmrHashMap<String, ReUploadMetrics>,
 }
 
 pub struct Uploader {}
@@ -93,7 +93,7 @@ impl Uploader {
         deduplicate_get_digests_ttl_calls: bool,
     ) -> bsmr_error::Result<(
         Vec<InlinedBlobWithDigest>,
-        StdBuckHashSet<&'a TrackedCasDigest<FileDigestKind>>,
+        StdBsmrHashSet<&'a TrackedCasDigest<FileDigestKind>>,
     )> {
         // RE mentions they usually take 5-10 minutes of leeway so we mirror this here.
         let now = Utc::now();
@@ -105,7 +105,7 @@ impl Uploader {
         let ttl_deadline = now + Duration::seconds(ttl_wanted);
 
         // See if anything needs uploading
-        let mut input_digests = blobs.keys().collect::<StdBuckHashSet<_>>();
+        let mut input_digests = blobs.keys().collect::<StdBsmrHashSet<_>>();
         {
             // Collect the digests we need to upload
             for entry in input_dir.unordered_walk().without_paths() {
@@ -127,7 +127,7 @@ impl Uploader {
         };
 
         let mut upload_blobs = Vec::new();
-        let mut missing_digests = StdBuckHashSet::default();
+        let mut missing_digests = StdBsmrHashSet::default();
         add_injected_missing_digests(&input_digests, &mut missing_digests)?;
 
         let digests_and_ttls_iterator = if deduplicate_get_digests_ttl_calls {
@@ -156,7 +156,7 @@ impl Uploader {
             let input_digests_ttls = fut.await?;
 
             struct DigestsWithTtlIterator<I> {
-                ttls: StdBuckHashMap<TrackedFileDigest, i64>,
+                ttls: StdBsmrHashMap<TrackedFileDigest, i64>,
                 inner: I,
             }
 
@@ -359,9 +359,9 @@ impl Uploader {
                                     return Err(bsmr_error::bsmr_error!(
                                         bsmr_error::ErrorTag::ReCasArtifactExpired,
                                         "Your build requires an artifact that has expired in the RE CAS \
-                                        and Buck does not have it. This likely happened because your Buck daemon \
+                                        and Bsmr does not have it. This likely happened because your Bsmr daemon \
                                         has been online for a long time. This error is currently unrecoverable. \
-                                        To proceed, you should restart Buck using `bsmr killall`. \
+                                        To proceed, you should restart Bsmr using `bsmr killall`. \
                                         Debug information: {:#}",
                                         err
                                     ));
@@ -408,13 +408,13 @@ impl Uploader {
             materializer
                 .ensure_materialized(paths_to_materialize)
                 .await
-                .buck_error_context("Error materializing paths for upload")?;
+                .bsmr_error_context("Error materializing paths for upload")?;
         }
 
         // Compute stats of digests we're about to upload so we can report them
         // to the span end event of this stage of execution.
         let stats = {
-            let mut stats_by_extension = StdBuckHashMap::default();
+            let mut stats_by_extension = StdBsmrHashMap::default();
             let mut named_digest_byte_count: u64 = 0;
             for nd in &upload_files {
                 // Aggregate metrics by file extension.
@@ -516,7 +516,7 @@ fn error_for_missing_file(
     bsmr_error::bsmr_error!(
         bsmr_error::ErrorTag::ReInvalidGetCasResponse,
         "Action execution requires artifact `{}` but the materializer did not return a matching \
-        file for this path. This error is unrecoverable and you should restart Buck using \
+        file for this path. This error is unrecoverable and you should restart Bsmr using \
         `bsmr killall`. We would appreciate a bug report. Debug information: {:#}",
         digest,
         cause,
@@ -526,15 +526,15 @@ fn error_for_missing_file(
 /// This is used for tests. We allow an environment variable to be set to report that some digests
 /// are _always_ missing if they are required. This lets us test our upload paths more easily.
 fn add_injected_missing_digests<'a>(
-    input_digests: &StdBuckHashSet<&'a TrackedFileDigest>,
-    missing_digests: &mut StdBuckHashSet<&'a TrackedFileDigest>,
+    input_digests: &StdBsmrHashSet<&'a TrackedFileDigest>,
+    missing_digests: &mut StdBsmrHashSet<&'a TrackedFileDigest>,
 ) -> bsmr_error::Result<()> {
     fn convert_digests(val: &str) -> bsmr_error::Result<Vec<FileDigest>> {
         val.split(' ')
             .map(|digest| {
                 let digest = TDigest::from_str(digest)
                     .map_err(|e| from_any_with_tag(e, bsmr_error::ErrorTag::InvalidDigest))
-                    .with_buck_error_context(|| format!("Invalid digest: `{digest}`"))?;
+                    .with_bsmr_error_context(|| format!("Invalid digest: `{digest}`"))?;
                 // This code does not run in a test but it is only used for testing.
                 let digest = FileDigest::from_re(&digest, DigestConfig::testing_default())?;
                 bsmr_error::Ok(digest)
@@ -587,11 +587,11 @@ struct GetDigestsTtlDeduper<'s> {
     /// Maps a given digest to a request that will produce this digest (and
     /// possibly / likely others). The request is referenced as an ID that
     /// can be used to lookup in `queries`.
-    digests: StdBuckHashMap<TrackedFileDigest, RequestId>,
+    digests: StdBsmrHashMap<TrackedFileDigest, RequestId>,
     /// Maps a request to the actual future that will contain its results.
-    queries: StdBuckHashMap<
+    queries: StdBsmrHashMap<
         RequestId,
-        Shared<BoxFuture<'s, bsmr_error::Result<StdBuckHashMap<TrackedFileDigest, i64>>>>,
+        Shared<BoxFuture<'s, bsmr_error::Result<StdBsmrHashMap<TrackedFileDigest, i64>>>>,
     >,
 }
 
@@ -606,13 +606,13 @@ impl<'s> GetDigestsTtlDeduper<'s> {
         digest_config: DigestConfig,
         digests: impl IntoIterator<Item = &'a TrackedFileDigest>,
     ) -> (
-        impl Future<Output = bsmr_error::Result<StdBuckHashMap<TrackedFileDigest, i64>>> + 's,
+        impl Future<Output = bsmr_error::Result<StdBsmrHashMap<TrackedFileDigest, i64>>> + 's,
         usize,
         usize,
     ) {
         let mut guard = deduper.lock().expect("Poisoned lock");
 
-        let mut reqs = StdBuckHashSet::default();
+        let mut reqs = StdBsmrHashSet::default();
 
         let mut to_schedule = Vec::new();
 
@@ -677,7 +677,7 @@ fn query_digest_ttls<'s>(
     identity: Option<&ReActionIdentity<'_>>,
     digest_config: DigestConfig,
     input_digests: Vec<TrackedFileDigest>,
-) -> BoxFuture<'s, bsmr_error::Result<StdBuckHashMap<TrackedFileDigest, i64>>> {
+) -> BoxFuture<'s, bsmr_error::Result<StdBsmrHashMap<TrackedFileDigest, i64>>> {
     let client = client.dupe();
     let metadata = use_case.metadata(identity);
     let digests = input_digests.iter().map(|d| d.to_re()).collect();

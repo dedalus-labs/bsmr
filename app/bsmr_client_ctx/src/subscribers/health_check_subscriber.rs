@@ -21,9 +21,9 @@ use std::sync::Arc;
 use async_trait::async_trait;
 use bsmr_common::invocation_paths::InvocationPaths;
 use bsmr_core::soft_error;
-use bsmr_data::buck_event::Data::*;
+use bsmr_data::bsmr_event::Data::*;
 use bsmr_error::internal_error;
-use bsmr_events::BuckEvent;
+use bsmr_events::BsmrEvent;
 use bsmr_health_check::health_check_client::HealthCheckClient;
 use bsmr_health_check::health_check_client::StreamingHealthCheckClient;
 use bsmr_health_check::interface::HealthCheckContextEvent;
@@ -51,7 +51,7 @@ pub struct HealthCheckSubscriber {
 
 #[async_trait]
 impl EventSubscriber for HealthCheckSubscriber {
-    async fn handle_events(&mut self, events: &[Arc<BuckEvent>]) -> bsmr_error::Result<()> {
+    async fn handle_events(&mut self, events: &[Arc<BsmrEvent>]) -> bsmr_error::Result<()> {
         for ev in events {
             self.handle_event(ev).await?;
         }
@@ -91,7 +91,7 @@ impl HealthCheckSubscriber {
         })
     }
 
-    async fn handle_event(&mut self, event: &Arc<BuckEvent>) -> bsmr_error::Result<()> {
+    async fn handle_event(&mut self, event: &Arc<BsmrEvent>) -> bsmr_error::Result<()> {
         if self.event_sender.is_none() || self.health_check_client.is_none() {
             return Ok(());
         }
@@ -303,8 +303,8 @@ mod tests {
         ]
     }
 
-    fn test_event(data: bsmr_data::buck_event::Data) -> Arc<BuckEvent> {
-        Arc::new(BuckEvent::new(
+    fn test_event(data: bsmr_data::bsmr_event::Data) -> Arc<BsmrEvent> {
+        Arc::new(BsmrEvent::new(
             SystemTime::now(),
             TraceId::new(),
             None,
@@ -313,7 +313,7 @@ mod tests {
         ))
     }
 
-    fn event_for_excess_cache_miss() -> bsmr_data::buck_event::Data {
+    fn event_for_excess_cache_miss() -> bsmr_data::bsmr_event::Data {
         let action_end = ActionExecutionEnd {
             kind: ActionKind::Run as i32,
             invalidation_info: Some(bsmr_data::CommandInvalidationInfo {
@@ -322,7 +322,7 @@ mod tests {
             }),
             ..Default::default()
         };
-        bsmr_data::buck_event::Data::SpanEnd(bsmr_data::SpanEndEvent {
+        bsmr_data::bsmr_event::Data::SpanEnd(bsmr_data::SpanEndEvent {
             data: Some(bsmr_data::span_end_event::Data::ActionExecution(Box::new(
                 action_end,
             ))),
@@ -398,7 +398,7 @@ mod tests {
             events_tx,
         );
 
-        let event = test_event(bsmr_data::buck_event::Data::Instant(
+        let event = test_event(bsmr_data::bsmr_event::Data::Instant(
             bsmr_data::InstantEvent {
                 data: Some(Box::new(bsmr_data::Snapshot::default()).into()),
             },
@@ -436,7 +436,7 @@ mod tests {
             events_tx,
         );
 
-        let event = test_event(bsmr_data::buck_event::Data::Instant(
+        let event = test_event(bsmr_data::bsmr_event::Data::Instant(
             bsmr_data::InstantEvent {
                 data: Some(Box::new(bsmr_data::Snapshot::default()).into()),
             },
@@ -468,7 +468,7 @@ mod tests {
             events_tx,
         );
 
-        let event = test_event(bsmr_data::buck_event::Data::Instant(
+        let event = test_event(bsmr_data::bsmr_event::Data::Instant(
             bsmr_data::InstantEvent {
                 data: Some(Box::new(bsmr_data::Snapshot::default()).into()),
             },

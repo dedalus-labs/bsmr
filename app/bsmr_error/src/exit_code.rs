@@ -1,3 +1,9 @@
+//===----------------------------------------------------------------------===//
+// Upstream-Source: facebook/buck2@1560aca2002865cd73d7cafb22c705cfb640b2bc
+// Modifications Copyright (c) 2026 Dedalus Labs, Inc. and its contributors
+// SPDX-License-Identifier: Apache-2.0
+//===----------------------------------------------------------------------===//
+
 /*
  * Copyright (c) Meta Platforms, Inc. and affiliates.
  *
@@ -8,7 +14,7 @@
  * above-listed licenses.
  */
 
-/// Common exit codes for buck with stronger semantic meanings
+/// Common exit codes for bsmr with stronger semantic meanings
 ///
 /// The exit code is u8 integer and has the following meanings for common exit codes.
 /// - Success             : 0

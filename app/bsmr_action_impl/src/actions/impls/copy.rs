@@ -36,8 +36,8 @@ use bsmr_execute::artifact::artifact_dyn::ArtifactDyn;
 use bsmr_execute::artifact_utils::ArtifactValueBuilder;
 use bsmr_execute::execute::command_executor::ActionExecutionTimingData;
 use bsmr_execute::materialize::materializer::CopiedArtifact;
-use bsmr_hash::BuckIndexSet;
-use bsmr_hash::buck_indexset;
+use bsmr_hash::BsmrIndexSet;
+use bsmr_hash::bsmr_indexset;
 use dupe::Dupe;
 use gazebo::prelude::*;
 use pagable::Pagable;
@@ -77,7 +77,7 @@ impl UnregisteredCopyAction {
 impl UnregisteredAction for UnregisteredCopyAction {
     fn register(
         self: Box<Self>,
-        outputs: BuckIndexSet<BuildArtifact>,
+        outputs: BsmrIndexSet<BuildArtifact>,
         _starlark_data: Option<OwnedFrozenValue>,
         _error_handler: Option<OwnedFrozenValue>,
     ) -> bsmr_error::Result<Box<dyn Action>> {
@@ -96,7 +96,7 @@ impl CopyAction {
     fn new(
         copy: CopyMode,
         src: ArtifactGroup,
-        outputs: BuckIndexSet<BuildArtifact>,
+        outputs: BsmrIndexSet<BuildArtifact>,
     ) -> bsmr_error::Result<Self> {
         // TODO: Exclude other variants once they become available here. For now, this is a noop.
         match src {
@@ -111,7 +111,7 @@ impl CopyAction {
         } else {
             Ok(CopyAction {
                 copy,
-                inputs: BoxSliceSet::from(buck_indexset![src]),
+                inputs: BoxSliceSet::from(bsmr_indexset![src]),
                 outputs: BoxSliceSet::from(outputs),
             })
         }

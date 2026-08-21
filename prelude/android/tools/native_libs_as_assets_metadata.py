@@ -1,3 +1,9 @@
+# ===----------------------------------------------------------------------===
+# Upstream-Source: facebook/buck2@1560aca2002865cd73d7cafb22c705cfb640b2bc
+# Modifications Copyright (c) 2026 Dedalus Labs, Inc. and its contributors
+# SPDX-License-Identifier: Apache-2.0
+# ===----------------------------------------------------------------------===
+
 # Copyright (c) Meta Platforms, Inc. and affiliates.
 #
 # This source code is dual-licensed under either the MIT license found in the
@@ -60,7 +66,7 @@ def main() -> None:
                         )
                     )
 
-    # buck1 sorts native libraries in decreasing file size order, so we do the same.
+    # legacy sorts native libraries in decreasing file size order, so we do the same.
     native_libraries.sort(
         key=lambda native_lib: (-native_lib.size, native_lib.relative_path)
     )

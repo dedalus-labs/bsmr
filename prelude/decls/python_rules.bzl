@@ -26,7 +26,7 @@ load("@prelude//python:python.bzl", "PythonLibraryInfo")
 load("@prelude//python:python_runtime_bundle.bzl", "PythonRuntimeBundleInfo")
 load("@prelude//python:toolchain.bzl", "NativeLinkStrategy")
 load("@prelude//transitions:constraint_overrides.bzl", "constraint_overrides")
-load(":common.bzl", "CxxRuntimeType", "CxxSourceType", "HeadersAsRawHeadersMode", "LinkableDepType", "buck", "prelude_rule")
+load(":common.bzl", "CxxRuntimeType", "CxxSourceType", "HeadersAsRawHeadersMode", "LinkableDepType", "bsmr", "prelude_rule")
 load(":cxx_common.bzl", "cxx_common")
 load(":native_common.bzl", "native_common")
 load(":python_common.bzl", "python_common")
@@ -132,10 +132,10 @@ def _python_executable_attrs():
             "_create_manifest_for_source_dir": _create_manifest_for_source_dir(),
             "_cxx_hacks": attrs.default_only(attrs.dep(default = "prelude//cxx/tools:cxx_hacks")),
             "_cxx_toolchain": toolchains_common.cxx(),
-            "_exec_os_type": buck.exec_os_type_arg(),
+            "_exec_os_type": bsmr.exec_os_type_arg(),
             "_python_internal_tools": python_common.internal_tools_arg(),
             "_python_toolchain": toolchains_common.python(),
-            "_target_os_type": buck.target_os_type_arg(),
+            "_target_os_type": bsmr.target_os_type_arg(),
         }
     )
 
@@ -194,7 +194,7 @@ def _typing_arg():
             default = False,
             doc = """
     When True (and typing is also True), Pyre type checking runs as a build
-    validation during normal buck build, failing the build on type errors.
+    validation during normal bsmr build, failing the build on type errors.
 """,
         ),
     }
@@ -245,7 +245,7 @@ cxx_python_extension = prelude_rule(
         # but it's the pragmatic way of getting it working for now.
         # @unsorted-dict-items
         {k: attrs.default_only(v) for k, v in cxx_rules.cxx_library.attrs.items()}
-        | buck.labels_arg()
+        | bsmr.labels_arg()
         | python_common.base_module_arg()
         | cxx_common.srcs_arg()
         | cxx_common.deps_arg()
@@ -317,10 +317,10 @@ cxx_python_extension = prelude_rule(
             # Copied from python_library.
             "_python_internal_tools": python_common.internal_tools_arg(),
             "_python_toolchain": toolchains_common.python(),
-            "_target_os_type": buck.target_os_type_arg(),
+            "_target_os_type": bsmr.target_os_type_arg(),
         }
-        | buck.licenses_arg()
-        | buck.contacts_arg()
+        | bsmr.licenses_arg()
+        | bsmr.contacts_arg()
     ),
 )
 
@@ -333,7 +333,7 @@ prebuilt_python_library = prelude_rule(
         These prebuilt libraries can either be [whl files](https://www.python.org/dev/peps/pep-0427/) or eggs
 
         whls for most packages are available for download from [PyPI](https://pypi.org). The whl used may be
-        downloaded with `remote_file()`. However, Buck does not attempt to infer dependency information from pip,
+        downloaded with `remote_file()`. However, Bsmr does not attempt to infer dependency information from pip,
         so that information will have to be imparted by the user.
 
         To create an egg for a package, run `python setup.py bdist_egg` in the package source distribution.
@@ -371,7 +371,7 @@ prebuilt_python_library = prelude_rule(
     further = None,
     attrs = (
         # @unsorted-dict-items
-        buck.labels_arg()
+        bsmr.labels_arg()
         | {
             "binary_src": attrs.source(
                 doc = """
@@ -405,8 +405,8 @@ prebuilt_python_library = prelude_rule(
             "_python_internal_tools": python_common.internal_tools_arg(),
             "_python_toolchain": toolchains_common.python(),
         }
-        | buck.licenses_arg()
-        | buck.contacts_arg()
+        | bsmr.licenses_arg()
+        | bsmr.contacts_arg()
     ),
 )
 
@@ -443,14 +443,14 @@ python_binary = prelude_rule(
     attrs = (
         # @unsorted-dict-items
         {k: attrs.default_only(v) for k, v in cxx_rules.cxx_binary.attrs.items()}
-        | buck.labels_arg()
+        | bsmr.labels_arg()
         | {
             "base_module": attrs.option(
                 attrs.string(),
                 default = None,
                 doc = """
                 The package in which the main module should reside in its final
-                 location in the binary. If unset, Buck uses the project-relative directory
+                 location in the binary. If unset, Bsmr uses the project-relative directory
                  that contains the BUILD.bsmr file.
             """,
             ),
@@ -493,9 +493,9 @@ python_binary = prelude_rule(
             "repl_only_deps": attrs.list(attrs.dep(), default = []),
             "zip_safe": attrs.option(attrs.bool(), default = None),
         }
-        | buck.licenses_arg()
-        | buck.contacts_arg()
-        | buck.allow_cache_upload_arg()
+        | bsmr.licenses_arg()
+        | bsmr.contacts_arg()
+        | bsmr.allow_cache_upload_arg()
         | _typing_arg()
         | _python_binary_attrs()
         | validation_common.attrs_validators_arg()
@@ -539,7 +539,7 @@ python_library = prelude_rule(
     further = None,
     attrs = (
         # @unsorted-dict-items
-        buck.labels_arg()
+        bsmr.labels_arg()
         | python_common.srcs_arg()
         | python_common.resources_arg()
         | python_common.base_module_arg()
@@ -571,8 +571,8 @@ python_library = prelude_rule(
             "_python_internal_tools": python_common.internal_tools_arg(),
             "_python_toolchain": toolchains_common.python(),
         }
-        | buck.licenses_arg()
-        | buck.contacts_arg()
+        | bsmr.licenses_arg()
+        | bsmr.contacts_arg()
         | _typing_arg()
         | validation_common.attrs_validators_arg()
     ),
@@ -615,7 +615,7 @@ python_test = prelude_rule(
     attrs = (
         # @unsorted-dict-items
         {k: attrs.default_only(v) for k, v in cxx_rules.cxx_binary.attrs.items()}
-        | buck.inject_test_env_arg()
+        | bsmr.inject_test_env_arg()
         | python_common.srcs_arg()
         | python_common.resources_arg()
         | python_common.base_module_arg()
@@ -626,10 +626,10 @@ python_test = prelude_rule(
                 default = None,
                 doc = """
                 The main module used to run the tests.
-                 This parameter is normally not needed, as Buck will provide a default main
+                 This parameter is normally not needed, as Bsmr will provide a default main
                  module that runs all tests. However, you can override this with your own
                  module to perform custom initialization or command line processing. Your
-                 custom module can import the standard Buck test main
+                 custom module can import the standard Bsmr test main
                  as `__test_main__`, and can invoke it's normal main function
                  as `__test_main__.main(sys.argv)`.
             """,
@@ -651,13 +651,13 @@ python_test = prelude_rule(
                 `$(location //path/to:target)`
                 Expands to the location of the output of the build rule. This
                  means that you can refer to these without needing to be aware of how
-                 Buck is storing data on the disk mid-build.
+                 Bsmr is storing data on the disk mid-build.
             """,
             ),
         }
         | python_common.deps_arg()
         | python_common.version_selections_arg()
-        | buck.test_rule_timeout_ms()
+        | bsmr.test_rule_timeout_ms()
         | python_common.package_style_arg()
         | python_common.preload_deps_arg()
         | python_common.linker_flags_arg()
@@ -682,9 +682,9 @@ python_test = prelude_rule(
             "versioned_srcs": attrs.option(attrs.versioned(attrs.named_set(attrs.source(), sorted = True)), default = None),
             "zip_safe": attrs.option(attrs.bool(), default = None),
         }
-        | buck.licenses_arg()
-        | buck.labels_arg()
-        | buck.contacts_arg()
+        | bsmr.licenses_arg()
+        | bsmr.labels_arg()
+        | bsmr.contacts_arg()
         | _typing_arg()
         | test_common.attributes()
         | _python_test_attrs()
@@ -700,13 +700,13 @@ python_test_runner = prelude_rule(
     further = None,
     attrs = (
         # @unsorted-dict-items
-        buck.labels_arg()
+        bsmr.labels_arg()
         | {
             "main_module": attrs.string(default = ""),
             "src": attrs.source(),
         }
-        | buck.licenses_arg()
-        | buck.contacts_arg()
+        | bsmr.licenses_arg()
+        | bsmr.contacts_arg()
     ),
 )
 

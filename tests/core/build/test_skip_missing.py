@@ -16,14 +16,14 @@
 # pyre-strict
 
 
-from bsmr.tests.e2e_util.api.buck import Buck
+from bsmr.tests.e2e_util.api.bsmr import Bsmr
 from bsmr.tests.e2e_util.asserts import expect_failure
-from bsmr.tests.e2e_util.buck_workspace import buck_test
+from bsmr.tests.e2e_util.bsmr_workspace import bsmr_test
 
 
-@buck_test()
-async def test_build_skip_missing(buck: Buck) -> None:
-    result = await buck.build(
+@bsmr_test()
+async def test_build_skip_missing(bsmr: Bsmr) -> None:
+    result = await bsmr.build(
         "//:existing",
         "//:missing",
         "--skip-missing-targets",
@@ -34,10 +34,10 @@ async def test_build_skip_missing(buck: Buck) -> None:
     assert "Skipped 1 missing targets:" in result.stderr
 
 
-@buck_test()
-async def test_build_skip_missing_fails_on_missing_package(buck: Buck) -> None:
+@bsmr_test()
+async def test_build_skip_missing_fails_on_missing_package(bsmr: Bsmr) -> None:
     await expect_failure(
-        buck.build(
+        bsmr.build(
             "//:existing",
             "//bad-package:existing",
             "--skip-missing-targets",

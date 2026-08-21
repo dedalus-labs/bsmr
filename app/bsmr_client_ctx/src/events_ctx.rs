@@ -24,11 +24,11 @@ use std::time::SystemTime;
 use async_trait::async_trait;
 use bsmr_cli_proto::CommandResult;
 use bsmr_cli_proto::command_result;
-use bsmr_error::BuckErrorContext;
+use bsmr_error::BsmrErrorContext;
 use bsmr_error::ErrorTag;
 use bsmr_error::internal_error;
 use bsmr_event_log::stream_value::StreamValue;
-use bsmr_events::BuckEvent;
+use bsmr_events::BsmrEvent;
 use bsmr_fs::paths::abs_norm_path::AbsNormPathBuf;
 use bsmr_fs::paths::abs_path::AbsPathBuf;
 use bsmr_wrapper_common::invocation_id::TraceId;
@@ -47,7 +47,7 @@ use crate::console_interaction_stream::ConsoleInteractionStream;
 use crate::console_interaction_stream::NoopSuperConsoleInteraction;
 use crate::console_interaction_stream::SuperConsoleInteraction;
 use crate::console_interaction_stream::SuperConsoleToggle;
-use crate::daemon::client::BuckdClient;
+use crate::daemon::client::BsmrdClient;
 use crate::daemon::client::NoPartialResultHandler;
 use crate::daemon::client::tonic_status_to_error;
 use crate::exit_result::ExitResult;
@@ -72,14 +72,14 @@ const STREAM_PROCESSING_YIELD_INTERVAL: Duration = Duration::from_millis(125);
 
 #[derive(Debug, bsmr_error::Error)]
 #[allow(clippy::large_enum_variant)]
-enum BuckdCommunicationError {
+enum BsmrdCommunicationError {
     #[error("call to daemon returned an unexpected result type. got `{0:?}`")]
     #[bsmr(tag = Tier0)]
     UnexpectedResultType(command_result::Result),
-    #[error("buck daemon returned an empty CommandResult")]
+    #[error("bsmr daemon returned an empty CommandResult")]
     #[bsmr(tag = Tier0)]
     EmptyCommandResult,
-    #[error("buck daemon request finished without returning a CommandResult")]
+    #[error("bsmr daemon request finished without returning a CommandResult")]
     #[bsmr(tag = Tier0)]
     MissingCommandResult,
     #[error(
@@ -87,19 +87,19 @@ enum BuckdCommunicationError {
     )]
     #[bsmr(tag = InterruptedByDaemonShutdown)]
     InterruptedByDaemonShutdown(bsmr_data::DaemonShutdown),
-    #[error("buckd communication encountered an unexpected error `{0:?}`")]
+    #[error("bsmrd communication encountered an unexpected error `{0:?}`")]
     #[bsmr(tag = Tier0)]
     TonicError(tonic::Status),
 }
 
-impl From<tonic::Status> for BuckdCommunicationError {
+impl From<tonic::Status> for BsmrdCommunicationError {
     fn from(status: tonic::Status) -> Self {
         match status.code() {
             tonic::Code::Ok => {
                 unreachable!("::Ok should be unreachable as it should produce an Ok result")
             }
             // all errors should be encoded into the CommandResult, we must've hit something strange to be here.
-            _ => BuckdCommunicationError::TonicError(status),
+            _ => BsmrdCommunicationError::TonicError(status),
         }
     }
 }
@@ -158,7 +158,7 @@ impl<'a> DaemonEventsCtx<'a> {
     }
 
     pub(crate) fn new(
-        client: &mut BuckdClient,
+        client: &mut BsmrdClient,
         events_ctx: &'a mut EventsCtx,
     ) -> bsmr_error::Result<Self> {
         let tailers = FileTailers::new(&client.daemon_dir)?;
@@ -187,7 +187,7 @@ impl<'a> DaemonEventsCtx<'a> {
     where
         Handler: PartialResultHandler,
     {
-        let next = next.ok_or(BuckdCommunicationError::MissingCommandResult)?;
+        let next = next.ok_or(BsmrdCommunicationError::MissingCommandResult)?;
         let mut events = Vec::with_capacity(next.len());
         for next in next {
             let next = match next {
@@ -197,7 +197,7 @@ impl<'a> DaemonEventsCtx<'a> {
                     let is_oom = self.inner.is_daemon_oom_killed().await?;
                     return if is_oom {
                         Err(e)
-                            .buck_error_context(
+                            .bsmr_error_context(
                                 "Bessemer daemon was killed by an OOM killer due to high memory pressure. \
                                 Common causes are large or numerous build or test targets or \
                                 too many Bessemer daemons running simultaneously.")
@@ -205,7 +205,7 @@ impl<'a> DaemonEventsCtx<'a> {
                             .tag(ErrorTag::DaemonOomKilled)
                     } else {
                         Err(e)
-                            .buck_error_context("Buck daemon event bus encountered an error, the root cause (if available) is displayed above this message.")
+                            .bsmr_error_context("Bsmr daemon event bus encountered an error, the root cause (if available) is displayed above this message.")
                             .tag(ErrorTag::ClientGrpcStream)
                     };
                 }
@@ -326,7 +326,7 @@ impl<'a> DaemonEventsCtx<'a> {
                 // certain) the daemon shutdown is the cause for us to simply claim it is.
                 tracing::debug!("Original unpack_stream error was: {:#}", e);
 
-                return Err(BuckdCommunicationError::InterruptedByDaemonShutdown(shutdown).into());
+                return Err(BsmrdCommunicationError::InterruptedByDaemonShutdown(shutdown).into());
             }
             (Err(e), None) => return Err(e),
         };
@@ -452,9 +452,9 @@ fn convert_result<R: TryFrom<command_result::Result, Error = command_result::Res
         )),
         Some(value) => match value.try_into() {
             Ok(v) => Ok(CommandOutcome::Success(v)),
-            Err(res) => Err(BuckdCommunicationError::UnexpectedResultType(res).into()),
+            Err(res) => Err(BsmrdCommunicationError::UnexpectedResultType(res).into()),
         },
-        None => Err(BuckdCommunicationError::EmptyCommandResult.into()),
+        None => Err(BsmrdCommunicationError::EmptyCommandResult.into()),
     }
 }
 
@@ -463,10 +463,10 @@ pub struct EventsCtx {
     pub recorder: Option<Box<InvocationRecorder>>,
     pub(crate) subscribers: Vec<Box<dyn EventSubscriber>>,
     client_cpu_tracker: ClientCpuTracker,
-    // buck_log_dir and command_report_path are used to write the command report.
+    // bsmr_log_dir and command_report_path are used to write the command report.
     // Ensuring a command report is always written would require either simplifying
     // how the isolation dir is determined, or writing to a different path.
-    pub buck_log_dir: Option<AbsNormPathBuf>,
+    pub bsmr_log_dir: Option<AbsNormPathBuf>,
     pub command_report_path: Option<AbsPathBuf>,
     // Internal commands triggered by other commands should not log an invocation record.
     pub log_invocation_record: bool,
@@ -491,7 +491,7 @@ impl EventsCtx {
             subscribers,
             recorder: recorder.map(Box::new),
             client_cpu_tracker: ClientCpuTracker::new(),
-            buck_log_dir: None,
+            bsmr_log_dir: None,
             command_report_path: None,
             log_invocation_record: true,
             cgroup_path_of_bsmr_daemon: None,
@@ -531,12 +531,12 @@ impl EventsCtx {
 
     async fn handle_events(
         &mut self,
-        events: Vec<BuckEvent>,
+        events: Vec<BsmrEvent>,
         shutdown: &mut Option<bsmr_data::DaemonShutdown>,
     ) -> bsmr_error::Result<()> {
         let events = events.into_map(|mut event| {
             let timestamp = event.timestamp();
-            if let bsmr_data::buck_event::Data::Instant(instant_event) = event.data_mut() {
+            if let bsmr_data::bsmr_event::Data::Instant(instant_event) = event.data_mut() {
                 match &mut instant_event.data {
                     Some(bsmr_data::instant_event::Data::Snapshot(snapshot)) => {
                         let now = SystemTime::now();
@@ -705,7 +705,7 @@ impl EventsCtx {
         runtime: &Runtime,
     ) -> ExitResult {
         runtime.block_on(async move {
-            let buck_log_dir = self.buck_log_dir.take();
+            let bsmr_log_dir = self.bsmr_log_dir.take();
             let command_report_path = self.command_report_path.take();
             let finalize_events = async {
                 self.handle_exit_result(&result);
@@ -725,7 +725,7 @@ impl EventsCtx {
             // Don't fail the command if command report fails to write. TODO(ctolliday) show a warning?
             let _unused = result.write_command_report(
                 trace_id,
-                buck_log_dir,
+                bsmr_log_dir,
                 command_report_path,
                 finalizing_errors,
             );

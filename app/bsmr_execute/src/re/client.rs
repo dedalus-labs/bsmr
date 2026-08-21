@@ -33,7 +33,7 @@ use bsmr_data::ReQueueAcquiringDependencies;
 use bsmr_data::ReQueueCancelled;
 use bsmr_data::ReQueueNoWorkerAvailable;
 use bsmr_data::ReQueueOverQuota;
-use bsmr_error::BuckErrorContext;
+use bsmr_error::BsmrErrorContext;
 use bsmr_error::bsmr_error;
 use bsmr_error::conversion::from_any_with_tag;
 use bsmr_error::internal_error;
@@ -42,7 +42,7 @@ use bsmr_events::schedule_type::SandcastleScheduleType;
 use bsmr_fs::error::IoResultExt;
 use bsmr_fs::fs_util;
 use bsmr_fs::paths::abs_norm_path::AbsNormPath;
-use bsmr_hash::StdBuckHashMap;
+use bsmr_hash::StdBsmrHashMap;
 #[cfg(fbcode_build)]
 use bsmr_re_configuration::CASdMode;
 use bsmr_re_configuration::RemoteExecutionStaticMetadataImpl;
@@ -59,7 +59,7 @@ use prost::Message;
 use remote_execution as RE;
 use remote_execution::ActionResultRequest;
 use remote_execution::ActionResultResponse;
-use remote_execution::BuckInfo;
+use remote_execution::BsmrInfo;
 #[cfg(fbcode_build)]
 use remote_execution::ClientBuilderCommonMethods;
 use remote_execution::DownloadRequest;
@@ -631,7 +631,7 @@ fn trace_action_digest(
 // After we execute an action once, we no longer want to pretend that we got cache misses on it if
 // we execute it again (say, on a subsequent build); the `AtomicBool` in the value deals with that,
 // it's true after the first time we execute the action
-static INDUCED_CACHE_MISSES: LazyLock<Option<StdBuckHashMap<String, AtomicBool>>> =
+static INDUCED_CACHE_MISSES: LazyLock<Option<StdBsmrHashMap<String, AtomicBool>>> =
     LazyLock::new(|| {
         if let Ok(p) = std::env::var("BSMR_INDUCED_CACHE_MISSES") {
             let c = fs_util::read_to_string(AbsNormPath::new(&p).unwrap())
@@ -776,9 +776,9 @@ impl RemoteExecutionClientImpl {
                             }),
                             destination_path_hint: Some(
                                 re_config
-                                    .buck_out_path
+                                    .output_path
                                     .to_str()
-                                    .buck_error_context("invalid destination path")?
+                                    .bsmr_error_context("invalid destination path")?
                                     .to_owned(),
                             ),
                             sync_copy_policy: match static_metadata
@@ -847,9 +847,9 @@ impl RemoteExecutionClientImpl {
                 embedded_cas_daemon_config.copy_policy = CopyPolicy::BEST_AVAILABLE;
                 embedded_cas_daemon_config.materialization_mount_path = Some(
                     re_config
-                        .buck_out_path
+                        .output_path
                         .to_str()
-                        .buck_error_context("invalid meterialization_mount_path")?
+                        .bsmr_error_context("invalid meterialization_mount_path")?
                         .to_owned(),
                 );
 
@@ -902,10 +902,10 @@ impl RemoteExecutionClientImpl {
                     re_client_config.log_file_location = Some(
                         logs_dir_path
                             .to_str()
-                            .buck_error_context("Invalid log_file_location")?
+                            .bsmr_error_context("Invalid log_file_location")?
                             .to_owned(),
                     );
-                    // keep last 10 sessions (similar to a number of buck builds)
+                    // keep last 10 sessions (similar to a number of bsmr builds)
                     re_client_config.log_rollup_window_size = 10;
                 }
 
@@ -957,7 +957,7 @@ impl RemoteExecutionClientImpl {
                 re_client_config.client_config_path = static_metadata
                     .client_config_path
                     .as_deref()
-                    .unwrap_or("remote_execution/client/configs/buck")
+                    .unwrap_or("remote_execution/client/configs/bsmr")
                     .to_owned();
 
                 re_client_config.disable_fallocate = static_metadata.disable_fallocate;
@@ -1521,7 +1521,7 @@ impl RemoteExecutionClientImpl {
         let metadata = RemoteExecutionMetadata {
             platform: Some(re_platform(platform)),
             do_not_cache: skip_cache_write,
-            buck_info: Some(BuckInfo {
+            bsmr_info: Some(BsmrInfo {
                 version: bsmr_build_info::revision()
                     .map(|s| s.to_owned())
                     .unwrap_or_default(),
@@ -1786,7 +1786,7 @@ impl RemoteExecutionClientImpl {
         if let Some(ds) = response.inlined_blobs {
             for d in ds {
                 blobs.push(
-                    Message::decode(d.blob.as_slice()).with_buck_error_context(|| {
+                    Message::decode(d.blob.as_slice()).with_bsmr_error_context(|| {
                         format!("Failed to Protobuf decode tree at `{}`", d.digest)
                     })?,
                 );
@@ -1870,12 +1870,12 @@ impl RemoteExecutionClientImpl {
                 let permits: u32 = chunk
                     .len()
                     .try_into()
-                    .buck_error_context("chunk is too large")?;
+                    .bsmr_error_context("chunk is too large")?;
 
                 let _permit = match priority_control
                     .acquire_permit(&self.download_files_semapore, permits)
                     .await
-                    .buck_error_context("Failed to acquire download_files_semapore")?
+                    .bsmr_error_context("Failed to acquire download_files_semapore")?
                 {
                     AcquirePermitResult::Acquired(permit) => permit,
                     AcquirePermitResult::Cancelled => {

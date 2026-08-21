@@ -20,19 +20,19 @@
 use bsmr_core::cells::cell_root_path::CellRootPath;
 use bsmr_core::cells::cell_root_path::CellRootPathBuf;
 use bsmr_core::fs::project_rel_path::ProjectRelativePath;
-use bsmr_error::BuckErrorContext;
+use bsmr_error::BsmrErrorContext;
 use bsmr_error::internal_error;
 
-use crate::BuckDaemonProtoError::MissingClientContext;
+use crate::BsmrDaemonProtoError::MissingClientContext;
 
 pub mod new_generic;
 pub mod protobuf_util;
 
-tonic::include_proto!("buck.daemon");
+tonic::include_proto!("bsmr.daemon");
 
 #[derive(Debug, bsmr_error::Error)]
 #[bsmr(tag = Tier0)]
-enum BuckDaemonProtoError {
+enum BsmrDaemonProtoError {
     #[error("daemon request was missing client context")]
     MissingClientContext,
 }
@@ -225,7 +225,7 @@ macro_rules! define_request {
                 // A request that has a client context field should always set the context.
                 match &self.context {
                     Some(v) => Ok(v),
-                    None => Err(BuckDaemonProtoError::MissingClientContext.into()),
+                    None => Err(BsmrDaemonProtoError::MissingClientContext.into()),
                 }
             }
         }

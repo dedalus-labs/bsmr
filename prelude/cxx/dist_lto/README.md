@@ -167,7 +167,7 @@ expensive optimization passes to be run, which can further improve code quality
 near that of a monolithic LTO.
 
 This is all great, and ThinLTO has been in use at Meta for some time. However,
-Bessemer has the ability to take a step further than Buck1 could ever have - Bessemer
+Bessemer has the ability to take a step further than Legacy could ever have - Bessemer
 can distribute parallel `opt` actions across many machines via Remote Execution
 to achieve drastic speedups in ThinLTO wall clock time, memory usage, and
 incrementality.
@@ -178,7 +178,7 @@ Bessemer's role in a distributed ThinLTO compilation is to construct a graph of
 actions that directly mirrors the graph that the `index` step outputs. The graph
 that the `index` step outputs is entirely dynamic and, as such, the build system
 is only aware of what the graph could be after the `index` step is complete.
-Unlike Buck1 (or even Blaze/Bazel), Bessemer has explicit support for this paradigm
+Unlike Legacy (or even Blaze/Bazel), Bessemer has explicit support for this paradigm
 [("dynamic dependencies")](https://fburl.com/gdoc/zklwhkll). Therefore, for
 Bessemer, the basic strategy looks like:
 

@@ -48,7 +48,7 @@ use bsmr_directory::directory::directory_iterator::DirectoryIterator;
 use bsmr_directory::directory::directory_iterator::DirectoryIteratorPathStack;
 use bsmr_directory::directory::entry::DirectoryEntry;
 use bsmr_directory::directory::walk::unordered_entry_walk;
-use bsmr_error::BuckErrorContext;
+use bsmr_error::BsmrErrorContext;
 use bsmr_events::dispatch::EventDispatcher;
 use bsmr_events::dispatch::current_span;
 use bsmr_events::dispatch::get_dispatcher;
@@ -73,7 +73,7 @@ use bsmr_execute::materialize::materializer::MaterializationError;
 use bsmr_execute::materialize::materializer::Materializer;
 use bsmr_execute::materialize::materializer::WriteRequest;
 use bsmr_execute::re::manager::ReConnectionManager;
-use bsmr_hash::StdBuckHashSet;
+use bsmr_hash::StdBsmrHashSet;
 use bsmr_http::HttpClient;
 use bsmr_util::threads::thread_spawn;
 use chrono::DateTime;
@@ -119,7 +119,7 @@ use crate::sqlite::materializer_db::MaterializerStateSqliteDb;
 ///   build rules, the affected rule is recomputed and therefore has its
 ///   artifacts re-declared. So when `ensure` is called the materializer has
 ///   up-to-date information about the artifacts.
-/// - file changes during a build are not properly supported by Buck and
+/// - file changes during a build are not properly supported by Bsmr and
 ///   treated as undefined behaviour, so there's no need to worry about them.
 #[derive(Allocative)]
 pub struct DeferredMaterializerAccessor<T: IoHandler + 'static> {
@@ -476,7 +476,7 @@ impl<T: IoHandler + Allocative> Materializer for DeferredMaterializerAccessor<T>
             // NOTE: The zstd crate doesn't release extra capacity of its encoding buffer so it's
             // important to do so here (or the compressed Vec is the same capacity as the input!).
             let compressed_data = zstd::bulk::compress(&content, 0)
-                .with_buck_error_context(|| format!("Error compressing {} bytes", content.len()))?
+                .with_bsmr_error_context(|| format!("Error compressing {} bytes", content.len()))?
                 .into_boxed_slice();
 
             paths.push(path);
@@ -519,7 +519,7 @@ impl<T: IoHandler + Allocative> Materializer for DeferredMaterializerAccessor<T>
 
         let is_match = recv
             .await
-            .buck_error_context("Recv'ing match future from command thread.")?;
+            .bsmr_error_context("Recv'ing match future from command thread.")?;
 
         Ok(is_match.into())
     }
@@ -532,7 +532,7 @@ impl<T: IoHandler + Allocative> Materializer for DeferredMaterializerAccessor<T>
 
         let has_artifact = recv
             .await
-            .buck_error_context("Receiving \"has artifact\" future from command thread.")?;
+            .bsmr_error_context("Receiving \"has artifact\" future from command thread.")?;
 
         Ok(has_artifact)
     }
@@ -566,10 +566,10 @@ impl<T: IoHandler + Allocative> Materializer for DeferredMaterializerAccessor<T>
                 current_span(),
                 sender,
             ))
-            .buck_error_context("Sending Ensure() command.")?;
+            .bsmr_error_context("Sending Ensure() command.")?;
         let materialization_fut = recv
             .await
-            .buck_error_context("Receiving materialization future from command thread.")?;
+            .bsmr_error_context("Receiving materialization future from command thread.")?;
         Ok(materialization_fut)
     }
 
@@ -636,7 +636,7 @@ impl<T: IoHandler + Allocative> Materializer for DeferredMaterializerAccessor<T>
             },
         )?;
 
-        let result = recv.await.buck_error_context(
+        let result = recv.await.bsmr_error_context(
             "Receiving \"artifact entries for materialized paths\" future from command thread.",
         )?;
 
@@ -661,7 +661,7 @@ impl<T: IoHandler + Allocative> Materializer for DeferredMaterializerAccessor<T>
             ))?;
         let leases = receiver
             .await
-            .buck_error_context("No response from materializer")?;
+            .bsmr_error_context("No response from materializer")?;
         Ok(Box::new(EagerPathLeases(leases)))
     }
 }
@@ -673,7 +673,7 @@ impl DeferredMaterializerAccessor<DefaultIoHandler> {
     pub fn new(
         fs: ProjectRoot,
         digest_config: DigestConfig,
-        buck_out_path: ProjectRelativePathBuf,
+        output_path: ProjectRelativePathBuf,
         re_client_manager: Arc<ReConnectionManager>,
         io_executor: Arc<dyn BlockingExecutor>,
         configs: DeferredMaterializerConfigs,
@@ -708,14 +708,14 @@ impl DeferredMaterializerAccessor<DefaultIoHandler> {
         };
         let access_times_buffer =
             (!matches!(configs.update_access_times, AccessTimesUpdates::Disabled))
-                .then(StdBuckHashSet::new);
+                .then(StdBsmrHashSet::new);
 
         let tree = ArtifactTree::initialize(sqlite_state);
 
         let io = Arc::new(DefaultIoHandler::new(
             fs,
             digest_config,
-            buck_out_path,
+            output_path,
             re_client_manager,
             io_executor,
             http_client,
@@ -761,7 +761,7 @@ impl DeferredMaterializerAccessor<DefaultIoHandler> {
                 ));
             }
         })
-        .buck_error_context("Cannot start materializer thread")?;
+        .bsmr_error_context("Cannot start materializer thread")?;
 
         Ok(Self {
             command_thread: Some(command_thread),
@@ -791,7 +791,7 @@ async fn join_all_existing_futs(
                 f.await.ok();
             }
             ProcessingFuture::Cleaning(f) => {
-                f.await.with_buck_error_context(|| {
+                f.await.with_bsmr_error_context(|| {
                     format!(
                         "Error waiting for a previous future to finish cleaning output path {path}"
                     )

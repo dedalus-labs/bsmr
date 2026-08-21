@@ -15,13 +15,13 @@
 # pyre-strict
 
 
-from bsmr.tests.e2e_util.api.buck import Buck
-from bsmr.tests.e2e_util.buck_workspace import buck_test
+from bsmr.tests.e2e_util.api.bsmr import Bsmr
+from bsmr.tests.e2e_util.bsmr_workspace import bsmr_test
 
 
-@buck_test()
-async def test_projected_output_artifact_write(buck: Buck) -> None:
-    res = await buck.build("root//:write")
+@bsmr_test()
+async def test_projected_output_artifact_write(bsmr: Bsmr) -> None:
+    res = await bsmr.build("root//:write")
     # TODO(nga): this is a bug: we write into projected artifact, but return original artifact,
     #   and yet here we read from original non-projected artifact.
     assert (
@@ -30,9 +30,9 @@ async def test_projected_output_artifact_write(buck: Buck) -> None:
     )
 
 
-@buck_test()
-async def test_projected_output_artifact_run(buck: Buck) -> None:
-    res = await buck.build("root//:run")
+@bsmr_test()
+async def test_projected_output_artifact_run(bsmr: Bsmr) -> None:
+    res = await bsmr.build("root//:run")
     assert (
         "hello"
         == (res.get_build_report().output_for_target("root//:run") / "rel").read_text()

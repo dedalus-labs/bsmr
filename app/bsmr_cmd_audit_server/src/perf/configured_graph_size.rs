@@ -21,7 +21,7 @@ use bsmr_build_api::build::graph_properties::debug_compute_configured_graph_prop
 use bsmr_cli_proto::ClientContext;
 use bsmr_cmd_audit_client::perf::configured_graph_size::ConfiguredGraphSizeCommand;
 use bsmr_core::configuration::compatibility::MaybeCompatible;
-use bsmr_hash::BuckIndexMap;
+use bsmr_hash::BsmrIndexMap;
 use bsmr_node::nodes::configured_frontend::ConfiguredTargetNodeCalculation;
 use bsmr_server_ctx::ctx::ServerCommandContextTrait;
 use bsmr_server_ctx::ctx::ServerCommandDiceContext;
@@ -52,7 +52,7 @@ pub(crate) async fn server_execute(
                 sketch: Option<String>,
                 duration_ms: u64,
             }
-            let mut results = BuckIndexMap::default();
+            let mut results = BsmrIndexMap::default();
 
             // We intentionally don't do this in parallel so that we can get the computation time for them.
             for target in &targets {

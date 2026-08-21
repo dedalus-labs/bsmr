@@ -22,7 +22,7 @@ use starlark::syntax::DialectTypes;
 pub enum StarlarkFileType {
     Bzl,
     Bxl,
-    Buck,
+    Bsmr,
     Package,
     Json,
     Toml,
@@ -32,7 +32,7 @@ pub enum StarlarkFileType {
 impl StarlarkFileType {
     pub fn dialect(&self, disable_starlark_types: bool) -> Dialect {
         let enable_f_strings = bsmr_core::is_open_source();
-        let buck_dialect: Dialect = Dialect {
+        let bsmr_dialect: Dialect = Dialect {
             enable_def: false,
             enable_lambda: true,
             enable_load: true,
@@ -87,7 +87,7 @@ impl StarlarkFileType {
 
         match self {
             Self::Bzl => bzl_dialect,
-            Self::Buck => buck_dialect,
+            Self::Bsmr => bsmr_dialect,
             Self::Package => package_dialect,
             Self::Bxl => bxl_dialect,
             Self::Json | Self::Toml => Dialect::Standard,

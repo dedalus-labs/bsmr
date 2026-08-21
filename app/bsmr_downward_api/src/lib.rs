@@ -14,13 +14,13 @@
  * above-listed licenses.
  */
 
-//! The downward api for external processes. This crate defines a trait of downward api that Buck
+//! The downward api for external processes. This crate defines a trait of downward api that Bsmr
 //! will need to handle as the process runner.
 
-use bsmr_hash::StdBuckHashMap;
+use bsmr_hash::StdBsmrHashMap;
 use tracing::Level;
 
-/// The API available to processes that Buck will need to handle
+/// The API available to processes that Bsmr will need to handle
 #[async_trait::async_trait]
 pub trait DownwardApi {
     /// indicates to print to the console at a specific log level
@@ -30,8 +30,8 @@ pub trait DownwardApi {
     /// TODO consider if we should have structured log instead of a String message
     async fn log(&self, level: Level, msg: String) -> bsmr_error::Result<()>;
 
-    /// reports an externally consumable event containing some data that will be untouched by buck
-    async fn external(&self, data: StdBuckHashMap<String, String>) -> bsmr_error::Result<()>;
+    /// reports an externally consumable event containing some data that will be untouched by bsmr
+    async fn external(&self, data: StdBsmrHashMap<String, String>) -> bsmr_error::Result<()>;
 
-    // TODO map the StepEvent and TraceEvents in buckv1 to something. Maybe just a single trace event
+    // TODO map the StepEvent and TraceEvents in legacy to something. Maybe just a single trace event
 }

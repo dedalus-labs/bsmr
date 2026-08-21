@@ -16,14 +16,14 @@ def main():
 
     if platform.system() == "Windows":
         check = ["TEMP", "TMP"]
-        buck_out = "bsmr-out\\v2"
+        output = "bsmr-out\\v2"
     else:
         check = ["TMPDIR"]
-        buck_out = "bsmr-out/v2"
+        output = "bsmr-out/default"
 
-    scratch = os.environ["BUCK_SCRATCH_PATH"]
+    scratch = os.environ["BSMR_SCRATCH_PATH"]
     assert not os.path.isabs(scratch), scratch
-    assert buck_out in scratch, scratch
+    assert output in scratch, scratch
     assert os.path.isdir(scratch), scratch
 
     for c in check:
@@ -32,8 +32,8 @@ def main():
 
         if location == "local":
             # Check the path is "ours"
-            assert buck_out in v, v
-            # Check the path is the same as BUCK_SCRATCH_PATH
+            assert output in v, v
+            # Check the path is the same as BSMR_SCRATCH_PATH
             rel = os.path.relpath(os.path.normpath(v))
             assert rel == scratch, rel
         elif location == "remote":

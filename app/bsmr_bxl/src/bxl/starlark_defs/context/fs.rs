@@ -162,7 +162,7 @@ async fn try_exists(
 /// detect simple properties of artifacts, and source directories.
 #[starlark_module]
 fn fs_operations(builder: &mut MethodsBuilder) {
-    /// Check if a path exists on disk, taking advantage of Buck's cached filesystem.
+    /// Check if a path exists on disk, taking advantage of Bsmr's cached filesystem.
     /// Takes in a literal, a source artifact (via `artifact`), or a `file_node`.
     ///
     /// Sample usage:
@@ -307,7 +307,7 @@ fn fs_operations(builder: &mut MethodsBuilder) {
         #[starlark(default = NoneOr::None)] target_hint: NoneOr<ValueOf<'v, TargetListExprArg<'v>>>,
         eval: &mut Evaluator<'v, '_, '_>,
     ) -> starlark::Result<ValueTyped<'v, StarlarkArtifact>> {
-        let buck_path = this.ctx.via_dice(eval, |dice| {
+        let build_path = this.ctx.via_dice(eval, |dice| {
             dice.via(|dice| {
                 async {
                     let file_path_as_cell_path = expr.get(dice, this.cell()?).await?;
@@ -362,8 +362,8 @@ fn fs_operations(builder: &mut MethodsBuilder) {
             })
         })?;
 
-        Ok(eval
-            .heap()
-            .alloc_typed(StarlarkArtifact::new(SourceArtifact::new(buck_path).into())))
+        Ok(eval.heap().alloc_typed(StarlarkArtifact::new(
+            SourceArtifact::new(build_path).into(),
+        )))
     }
 }

@@ -74,7 +74,7 @@ use bsmr_core::provider::label::ProvidersLabel;
 use bsmr_core::tag_result;
 use bsmr_core::target::label::label::TargetLabel;
 use bsmr_data::BuildResult;
-use bsmr_error::BuckErrorContext;
+use bsmr_error::BsmrErrorContext;
 use bsmr_error::ErrorTag;
 use bsmr_error::internal_error;
 use bsmr_events::dispatch::console_message;
@@ -83,8 +83,8 @@ use bsmr_events::dispatch::with_dispatcher_async;
 use bsmr_fs::error::IoResultExt;
 use bsmr_fs::fs_util;
 use bsmr_fs::paths::abs_path::AbsPathBuf;
-use bsmr_hash::BuckIndexSet;
-use bsmr_hash::StdBuckHashSet;
+use bsmr_hash::BsmrIndexSet;
+use bsmr_hash::StdBsmrHashSet;
 use bsmr_interpreter::extra::InterpreterHostPlatform;
 use bsmr_interpreter_for_build::interpreter::context::HasInterpreterContext;
 use bsmr_node::load_patterns::MissingTargetBehavior;
@@ -118,13 +118,13 @@ use futures::stream::StreamExt;
 use futures::stream::TryStreamExt;
 use itertools::Itertools;
 
-use crate::downward_api::BuckTestDownwardApi;
+use crate::downward_api::BsmrTestDownwardApi;
 use crate::executor_launcher::ExecutorLaunch;
 use crate::executor_launcher::ExecutorLauncher;
 use crate::executor_launcher::OutOfProcessTestExecutor;
 use crate::executor_launcher::TestExecutorClientWrapper;
 use crate::local_resource_registry::HasLocalResourceRegistry;
-use crate::orchestrator::BuckTestOrchestrator;
+use crate::orchestrator::BsmrTestOrchestrator;
 use crate::orchestrator::ExecutorMessage;
 use crate::session::TestSession;
 use crate::session::TestSessionOptions;
@@ -370,9 +370,9 @@ async fn test(
     let (test_executor, test_executor_args) = match test_executor_config {
         Some(config) => {
             let test_executor = post_process_test_executor(config.as_ref())
-                .with_buck_error_context(|| format!("Invalid `test.v2_test_executor`: {config}"))?;
+                .with_bsmr_error_context(|| format!("Invalid `test.v2_test_executor`: {config}"))?;
             let mut test_executor_args =
-                vec!["--buck-trace-id".to_owned(), client_ctx.trace_id.clone()];
+                vec!["--bsmr-trace-id".to_owned(), client_ctx.trace_id.clone()];
             let platform = match (*ctx)
                 .get_interpreter_configuror()
                 .await?
@@ -445,7 +445,7 @@ async fn test(
         .as_ref()
         .map(|t| (*t).try_into())
         .transpose()
-        .buck_error_context("Invalid `duration`")?;
+        .bsmr_error_context("Invalid `duration`")?;
 
     let project_root = server_ctx.project_root();
     let tpx_experiments = get_tpx_experiments(ctx.dupe(), project_root).await?;
@@ -490,7 +490,7 @@ async fn test(
         &request.target_cfg,
     );
 
-    // TODO(bobyf) remap exit code for buck reserved exit code
+    // TODO(bobyf) remap exit code for bsmr reserved exit code
     let executor_exit_code = test_outcome.exit_code()?;
 
     // Filtering out individual types might not be best here. While we just have 1 non-build
@@ -627,7 +627,7 @@ async fn test_targets(
     ignore_tests_attribute: bool,
     build_default_info: bool,
     build_run_info: bool,
-    tpx_experiments: StdBuckHashSet<String>,
+    tpx_experiments: StdBsmrHashSet<String>,
 ) -> bsmr_error::Result<TestOutcome> {
     let session = Arc::new(session);
 
@@ -642,7 +642,7 @@ async fn test_targets(
     let tpx_args = {
         let mut args = vec![
             "ignored".to_owned(),
-            "--buck-test-info".to_owned(),
+            "--bsmr-test-info".to_owned(),
             "ignored".to_owned(),
         ];
         args.extend(external_runner_args);
@@ -662,7 +662,7 @@ async fn test_targets(
     let res = launcher
         .launch(tpx_args)
         .await
-        .buck_error_context("Failed to launch executor");
+        .bsmr_error_context("Failed to launch executor");
 
     let res = tag_result!(
         "executor_launch_failed",
@@ -722,7 +722,7 @@ async fn test_targets(
                 // Keep wrapper alive for the lifetime of the executor to ensure it stays registered.
                 let _test_executor_wrapper = test_executor_wrapper;
 
-                let orchestrator = BuckTestOrchestrator::new(
+                let orchestrator = BsmrTestOrchestrator::new(
                     ctx.dupe(),
                     session.dupe(),
                     liveliness_observer.dupe(),
@@ -731,9 +731,9 @@ async fn test_targets(
                     internal_runner_config.clone(),
                 )
                 .await
-                .buck_error_context("Failed to create a BuckTestOrchestrator")?;
+                .bsmr_error_context("Failed to create a BsmrTestOrchestrator")?;
 
-                let server_handle = make_server(orchestrator, BuckTestDownwardApi);
+                let server_handle = make_server(orchestrator, BsmrTestDownwardApi);
 
                 // Lazily created orchestrator for the in-process internal runner path.
                 // Only initialized when a target has InternalRunnerTestInfo.
@@ -759,7 +759,7 @@ async fn test_targets(
                 });
 
                 driver.push_pattern(
-                    pattern.convert_pattern().buck_error_context(
+                    pattern.convert_pattern().bsmr_error_context(
                         "Test with explicit configuration pattern is not supported yet",
                     )?,
                     skip_incompatible_targets,
@@ -793,7 +793,7 @@ async fn test_targets(
                 test_executor
                     .end_of_test_requests()
                     .await
-                    .buck_error_context("Failed to notify test executor of end-of-tests")?;
+                    .bsmr_error_context("Failed to notify test executor of end-of-tests")?;
 
                 // Wait for the tests to finish running.
                 let test_statuses = test_status_receiver
@@ -802,21 +802,21 @@ async fn test_targets(
                         future::ready(Ok(acc))
                     })
                     .await
-                    .buck_error_context("Did not receive all results from executor")?;
+                    .bsmr_error_context("Did not receive all results from executor")?;
 
                 // Shutdown our server. This is technically not *required* since dropping it would shut it
                 // down implicitly, but let's do it anyway so we can collect any errors.
                 server_handle
                     .shutdown()
                     .await
-                    .buck_error_context("Failed to shutdown orchestrator")?;
+                    .bsmr_error_context("Failed to shutdown orchestrator")?;
 
                 let local_resource_registry = ctx.get_local_resource_registry()?;
 
                 local_resource_registry
                     .release_all_resources()
                     .await
-                    .buck_error_context("Failed to release local resources")?;
+                    .bsmr_error_context("Failed to release local resources")?;
 
                 // Process the build errors we've collected.
                 let mut builder = BuildTargetResultBuilder::new(None, std::time::Instant::now());
@@ -835,7 +835,7 @@ async fn test_targets(
 
     let executor_output = executor_handle
         .await
-        .buck_error_context("Failed to retrieve executor exit code")?;
+        .bsmr_error_context("Failed to retrieve executor exit code")?;
 
     if executor_output.exit_code != 0 {
         return Err(bsmr_error::bsmr_error!(
@@ -859,7 +859,7 @@ async fn test_targets(
     // TODO(bobyf, torozco) we can use cancellation handle here instead of liveliness observer
     let (build_target_result, executor_report) = test_server
         .await
-        .buck_error_context("Failed to collect executor report")??;
+        .bsmr_error_context("Failed to collect executor report")??;
 
     let mut errors = convert_error(&build_target_result)
         .iter()
@@ -936,8 +936,8 @@ struct TestDriverState<'a, 'e> {
 struct TestDriver<'a, 'e> {
     state: TestDriverState<'a, 'e>,
     work: FuturesUnordered<BoxFuture<'a, ControlFlow<Vec<BuildEvent>, Vec<TestDriverTask>>>>,
-    labels_configured: StdBuckHashSet<(ProvidersLabelWithModifiers, bool)>,
-    labels_tested: StdBuckHashSet<ConfiguredProvidersLabel>,
+    labels_configured: StdBsmrHashSet<(ProvidersLabelWithModifiers, bool)>,
+    labels_tested: StdBsmrHashSet<ConfiguredProvidersLabel>,
     error_events: Vec<BuildEvent>,
     build_target_result: BuildTargetResult,
 }
@@ -947,8 +947,8 @@ impl<'a, 'e> TestDriver<'a, 'e> {
         Self {
             state,
             work: FuturesUnordered::new(),
-            labels_configured: StdBuckHashSet::default(),
-            labels_tested: StdBuckHashSet::default(),
+            labels_configured: StdBsmrHashSet::default(),
+            labels_tested: StdBsmrHashSet::default(),
             error_events: Vec::new(),
             build_target_result: BuildTargetResult::new(),
         }
@@ -1420,7 +1420,7 @@ async fn build_target_result(
 ) -> bsmr_error::Result<(BuildTargetResult, FrozenProviderCollectionValue)> {
     // NOTE: We fail if we hit an incompatible target here. This can happen if we reach an
     // incompatible target via `tests = [...]`. This should perhaps change, but that's how it works
-    // in v1: https://fb.workplace.com/groups/buckeng/posts/8520953297953210
+    // in v1: https://fb.workplace.com/groups/bsmreng/posts/8520953297953210
     let providers = ctx
         .get()
         .get_providers(&label)
@@ -1522,7 +1522,7 @@ async fn test_target<'a, 'e>(
             let orchestrator = driver_state
                 .internal_orchestrator
                 .get_or_try_init(|| async {
-                    let orchestrator = BuckTestOrchestrator::new(
+                    let orchestrator = BsmrTestOrchestrator::new(
                         driver_state.ctx.dupe(),
                         driver_state.session.dupe(),
                         driver_state.liveliness_observer.dupe(),
@@ -1531,7 +1531,7 @@ async fn test_target<'a, 'e>(
                         driver_state.internal_runner_config.clone(),
                     )
                     .await
-                    .buck_error_context("Failed to create internal BuckTestOrchestrator")?;
+                    .bsmr_error_context("Failed to create internal BsmrTestOrchestrator")?;
                     Ok::<_, bsmr_error::Error>(
                         Arc::new(orchestrator) as Arc<dyn TestOrchestrator + Send + Sync>
                     )
@@ -1645,7 +1645,7 @@ fn run_tests<'a, 'b>(
 
             (async move {
                 fut.await
-                    .buck_error_context("Failed to notify test executor of a new test")?;
+                    .bsmr_error_context("Failed to notify test executor of a new test")?;
                 Ok(providers_label)
             })
             .boxed()
@@ -1679,9 +1679,9 @@ struct TestLabelFiltering {
     /// If positive include label filters are present, then this filter will ONLY match sets of
     /// labels that contains the label filter. Otherwise, if only exclusion filters are present, or
     /// no label filters are present, this will match any set of labels as long as its not excluded.
-    included_labels: BuckIndexSet<String>,
+    included_labels: BsmrIndexSet<String>,
     /// Additional excluded labels. These have order of precedence after `included_labels`.
-    excluded_labels: BuckIndexSet<String>,
+    excluded_labels: BsmrIndexSet<String>,
     /// If true, ignores order of precedence such that as long as an exclusion filter matches, we
     /// don't match the set of labels.
     always_exclude: bool,
@@ -1819,20 +1819,20 @@ fn post_process_test_executor(s: &str) -> bsmr_error::Result<PathBuf> {
     match s.split_once("$BSMR_BINARY_DIR/") {
         Some(("", rest)) => {
             let exe = AbsPathBuf::new(
-                std::env::current_exe().buck_error_context("Cannot get Bessemer executable")?,
+                std::env::current_exe().bsmr_error_context("Cannot get Bessemer executable")?,
             )?;
             // On Linux, /proc/self/exe appends " (deleted)" to the path when the
             // binary has been removed from disk (e.g. after a bsmr upgrade).
             if exe.as_path().to_string_lossy().ends_with(" (deleted)") {
                 return Err(bsmr_error::bsmr_error!(
-                    ErrorTag::BuckdExeDeleted,
+                    ErrorTag::BsmrdExeDeleted,
                     "The bsmr daemon's binary has been deleted from disk. \
                      Run `bsmr kill` to restart the daemon with the current binary."
                 ));
             }
             let exe = fs_util::canonicalize(&exe)
                 .categorize_internal()
-                .buck_error_context(
+                .bsmr_error_context(
                     "Failed to canonicalize path to Bessemer executable. Try running `bsmr kill`.",
                 )?;
 

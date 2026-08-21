@@ -30,16 +30,16 @@ import json
 import time
 import typing
 
-from bsmr.tests.e2e_util.api.buck import Buck
-from bsmr.tests.e2e_util.buck_workspace import buck_test
+from bsmr.tests.e2e_util.api.bsmr import Bsmr
+from bsmr.tests.e2e_util.bsmr_workspace import bsmr_test
 
 
 async def get_materialization_duration_from_critical_path(
-    buck: Buck,
+    bsmr: Bsmr,
 ) -> typing.Optional[float]:
     """Extract materialization duration from critical path log."""
     try:
-        result = await buck.log("critical-path", "--format=json")
+        result = await bsmr.log("critical-path", "--format=json")
         for line in result.stdout.strip().splitlines():
             entry = json.loads(line)
             if entry.get("kind") == "materialization":
@@ -51,7 +51,7 @@ async def get_materialization_duration_from_critical_path(
 
 
 async def run_build_and_measure(
-    buck: Buck,
+    bsmr: Bsmr,
     target: str,
     extra_args: typing.Optional[list[str]] = None,
 ) -> tuple[float, typing.Optional[float]]:
@@ -66,18 +66,18 @@ async def run_build_and_measure(
         args.extend(extra_args)
 
     start = time.monotonic()
-    await buck.build(*args)
+    await bsmr.build(*args)
     wall_clock = time.monotonic() - start
 
-    mat_duration = await get_materialization_duration_from_critical_path(buck)
+    mat_duration = await get_materialization_duration_from_critical_path(bsmr)
 
     return wall_clock, mat_duration
 
 
-@buck_test()
-async def test_small_flat_build(buck: Buck) -> None:
+@bsmr_test()
+async def test_small_flat_build(bsmr: Bsmr) -> None:
     """Test that building a small flat tset (10 artifacts) works correctly."""
-    result = await buck.build("//:small_flat")
+    result = await bsmr.build("//:small_flat")
     build_report = result.get_build_report()
     output = build_report.output_for_target("root//:small_flat")
     assert output.exists()
@@ -85,10 +85,10 @@ async def test_small_flat_build(buck: Buck) -> None:
     assert "10 artifacts" in content
 
 
-@buck_test()
-async def test_medium_balanced_build(buck: Buck) -> None:
+@bsmr_test()
+async def test_medium_balanced_build(bsmr: Bsmr) -> None:
     """Test that building a medium balanced tset (100 artifacts) works correctly."""
-    result = await buck.build("//:medium_balanced")
+    result = await bsmr.build("//:medium_balanced")
     build_report = result.get_build_report()
     output = build_report.output_for_target("root//:medium_balanced")
     assert output.exists()
@@ -96,10 +96,10 @@ async def test_medium_balanced_build(buck: Buck) -> None:
     assert "100 artifacts" in content
 
 
-@buck_test()
-async def test_medium_flat_build(buck: Buck) -> None:
+@bsmr_test()
+async def test_medium_flat_build(bsmr: Bsmr) -> None:
     """Test that building a medium flat tset (100 artifacts) works correctly."""
-    result = await buck.build("//:medium_flat")
+    result = await bsmr.build("//:medium_flat")
     build_report = result.get_build_report()
     output = build_report.output_for_target("root//:medium_flat")
     assert output.exists()
@@ -107,10 +107,10 @@ async def test_medium_flat_build(buck: Buck) -> None:
     assert "100 artifacts" in content
 
 
-@buck_test()
-async def test_medium_deep_build(buck: Buck) -> None:
+@bsmr_test()
+async def test_medium_deep_build(bsmr: Bsmr) -> None:
     """Test that building a medium deep tset (100 artifacts) works correctly."""
-    result = await buck.build("//:medium_deep")
+    result = await bsmr.build("//:medium_deep")
     build_report = result.get_build_report()
     output = build_report.output_for_target("root//:medium_deep")
     assert output.exists()
@@ -118,8 +118,8 @@ async def test_medium_deep_build(buck: Buck) -> None:
     assert "100 artifacts" in content
 
 
-@buck_test()
-async def test_noop_materialization_small_flat(buck: Buck) -> None:
+@bsmr_test()
+async def test_noop_materialization_small_flat(bsmr: Bsmr) -> None:
     """
     Test no-op materialization for small flat tset.
 
@@ -129,17 +129,17 @@ async def test_noop_materialization_small_flat(buck: Buck) -> None:
     target = "//:small_flat"
 
     # First build - materialize everything
-    await buck.build(target, "--no-remote-cache")
+    await bsmr.build(target, "--no-remote-cache")
 
     # Second build - should be a no-op for materialization
-    wall_clock, mat_duration = await run_build_and_measure(buck, target)
+    wall_clock, mat_duration = await run_build_and_measure(bsmr, target)
 
     # Basic sanity check - second build should complete reasonably fast
     assert wall_clock < 30.0, f"No-op build took too long: {wall_clock}s"
 
 
-@buck_test()
-async def test_noop_materialization_medium_balanced(buck: Buck) -> None:
+@bsmr_test()
+async def test_noop_materialization_medium_balanced(bsmr: Bsmr) -> None:
     """
     Test no-op materialization for medium balanced tset.
 
@@ -149,21 +149,21 @@ async def test_noop_materialization_medium_balanced(buck: Buck) -> None:
     target = "//:medium_balanced"
 
     # First build - materialize everything
-    await buck.build(target, "--no-remote-cache")
+    await bsmr.build(target, "--no-remote-cache")
 
     # Second build - should be a no-op for materialization
-    wall_clock, mat_duration = await run_build_and_measure(buck, target)
+    wall_clock, mat_duration = await run_build_and_measure(bsmr, target)
 
     # Basic sanity check - second build should complete reasonably fast
     assert wall_clock < 30.0, f"No-op build took too long: {wall_clock}s"
 
 
-@buck_test()
-async def test_configurable_target(buck: Buck) -> None:
+@bsmr_test()
+async def test_configurable_target(bsmr: Bsmr) -> None:
     """
     Test the configurable target with custom parameters.
     """
-    result = await buck.build(
+    result = await bsmr.build(
         "//:configurable",
         "-c",
         "test.artifacts_per_node=2",
@@ -185,7 +185,7 @@ async def test_configurable_target(buck: Buck) -> None:
 
 
 async def perf_noop_materialization(
-    buck: Buck,
+    bsmr: Bsmr,
     artifacts_per_node: int = 1,
     nodes_per_tset: int = 100,
     number_of_tsets: int = 10,
@@ -195,7 +195,7 @@ async def perf_noop_materialization(
     Performance test for no-op materialization.
 
     Args:
-        buck: Buck instance
+        bsmr: Bsmr instance
         artifacts_per_node: Artifacts per logical node
         nodes_per_tset: Nodes per sub-tset
         number_of_tsets: Number of sub-tsets
@@ -217,7 +217,7 @@ async def perf_noop_materialization(
 
     # Initial build to populate artifacts
     initial_start = time.monotonic()
-    await buck.build(target, "--no-remote-cache", *config_args)
+    await bsmr.build(target, "--no-remote-cache", *config_args)
     initial_duration = time.monotonic() - initial_start
 
     # Measure no-op builds
@@ -226,7 +226,7 @@ async def perf_noop_materialization(
 
     for _ in range(iterations):
         wall_clock, mat_duration = await run_build_and_measure(
-            buck, target, config_args
+            bsmr, target, config_args
         )
         noop_durations.append(wall_clock)
         if mat_duration is not None:
@@ -254,8 +254,8 @@ async def perf_noop_materialization(
     }
 
 
-@buck_test()
-async def test_perf_small_scale(buck: Buck) -> None:
+@bsmr_test()
+async def test_perf_small_scale(bsmr: Bsmr) -> None:
     """
     Small-scale performance test that runs as part of the test suite.
 
@@ -263,7 +263,7 @@ async def test_perf_small_scale(buck: Buck) -> None:
     with a small number of artifacts.
     """
     results = await perf_noop_materialization(
-        buck,
+        bsmr,
         artifacts_per_node=1,
         nodes_per_tset=10,
         number_of_tsets=2,

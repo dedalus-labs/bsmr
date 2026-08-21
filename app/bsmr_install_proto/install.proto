@@ -84,7 +84,7 @@ enum ErrorCategory {
   ERROR_CATEGORY_UNSPECIFIED = 0;
   // Unexpected errors in installer. AKA Infra error.
   TIER_0 = 1;
-  // Expected errors in inputs explicitly tracked by buck. AKA User error.
+  // Expected errors in inputs explicitly tracked by bsmr. AKA User error.
   INPUT = 2;
   // Errors that may be triggered by issues with the host,
   // resource limits, non-explicit dependencies or potentially

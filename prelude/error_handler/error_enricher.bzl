@@ -21,10 +21,10 @@ across different languages.
 
 load("@prelude//error_handler:error_enricher_types.bzl", "ErrorEnricher")
 
-def match_error(matcher: str | BuckRegex, text: str) -> bool:
+def match_error(matcher: str | BsmrRegex, text: str) -> bool:
     if isinstance(matcher, str):
         return matcher in text
-    elif isinstance(matcher, BuckRegex):
+    elif isinstance(matcher, BsmrRegex):
         return matcher.match(text)
     else:
         fail("Unknown matcher type: {}".format(type(matcher)))

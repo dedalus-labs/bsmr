@@ -56,7 +56,7 @@ use bsmr_core::cells::cell_path::CellPath;
 use bsmr_core::cells::paths::CellRelativePathBuf;
 use bsmr_core::package::PackageLabel;
 use bsmr_core::package::package_relative_path::PackageRelativePath;
-use bsmr_error::BuckErrorContext;
+use bsmr_error::BsmrErrorContext;
 use bsmr_error::internal_error;
 use bsmr_events::dispatch::span;
 use bsmr_events::dispatch::span_async_simple;
@@ -267,7 +267,7 @@ impl<'c, 'd: 'c> DiceCalculationDelegate<'c, 'd> {
                 async move {
                     ctx.get_loaded_module(import.borrow())
                         .await
-                        .with_buck_error_context(|| {
+                        .with_bsmr_error_context(|| {
                             format!(
                                 "From load at {}",
                                 span.as_ref()
@@ -607,7 +607,7 @@ impl<'c, 'd: 'c> DiceCalculationDelegate<'c, 'd> {
             .with_package_context_information(path.path().to_string())?;
 
         let value: serde_json::Value = serde_json::from_str(&contents)
-            .with_buck_error_context(|| format!("Parsing {path}"))?;
+            .with_bsmr_error_context(|| format!("Parsing {path}"))?;
 
         // patternlint-disable-next-line bsmr-no-starlark-module: We expect these to be small + simple
         let frozen = Module::with_temp_heap(|module| {
@@ -635,7 +635,7 @@ impl<'c, 'd: 'c> DiceCalculationDelegate<'c, 'd> {
             .with_package_context_information(path.path().to_string())?;
 
         let value: toml::Value =
-            toml::from_str(&contents).with_buck_error_context(|| format!("Parsing {path}"))?;
+            toml::from_str(&contents).with_bsmr_error_context(|| format!("Parsing {path}"))?;
         let json_value = toml_value_to_json(value);
 
         // patternlint-disable-next-line bsmr-no-starlark-module: We expect these to be small + simple
@@ -680,7 +680,7 @@ impl<'c, 'd: 'c> DiceCalculationDelegate<'c, 'd> {
                 provider,
                 cancellation,
             )
-            .with_buck_error_context(|| format!("Error evaluating module: `{}`", starlark_file))?;
+            .with_bsmr_error_context(|| format!("Error evaluating module: `{}`", starlark_file))?;
 
         Ok(LoadedModule::new(
             OwnedStarlarkModulePath::new(starlark_file),
@@ -823,7 +823,7 @@ impl<'c, 'd: 'c> DiceCalculationDelegate<'c, 'd> {
                 provider,
                 cancellation,
             )
-            .with_buck_error_context(|| format!("evaluating Starlark PACKAGE file `{path}`"))
+            .with_bsmr_error_context(|| format!("evaluating Starlark PACKAGE file `{path}`"))
     }
 
     pub(crate) async fn eval_package_file(
@@ -968,7 +968,7 @@ impl<'c, 'd: 'c> DiceCalculationDelegate<'c, 'd> {
                         false,
                         cancellation,
                     )
-                    .with_buck_error_context(|| {
+                    .with_bsmr_error_context(|| {
                         format!("Error evaluating build file: `{}`", build_file_path)
                     });
                 let error = result_with_stats.as_ref().err().map(|e| format!("{e:#}"));

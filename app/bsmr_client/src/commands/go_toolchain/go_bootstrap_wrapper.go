@@ -51,7 +51,7 @@ func main() {
 	if err != nil {
 		fail(err)
 	}
-	if scratch := os.Getenv("BUCK_SCRATCH_PATH"); scratch != "" {
+	if scratch := os.Getenv("BSMR_SCRATCH_PATH"); scratch != "" {
 		absolute, err := filepath.Abs(scratch)
 		if err != nil {
 			fmt.Fprintln(os.Stderr, err)

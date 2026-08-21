@@ -17,21 +17,21 @@
 
 import json
 
-from bsmr.tests.e2e_util.api.buck import Buck
+from bsmr.tests.e2e_util.api.bsmr import Bsmr
 from bsmr.tests.e2e_util.asserts import expect_failure
-from bsmr.tests.e2e_util.buck_workspace import buck_test
+from bsmr.tests.e2e_util.bsmr_workspace import bsmr_test
 
 
-@buck_test()
-async def test_transition_info_outgoing_edge(buck: Buck) -> None:
-    res = await buck.cquery(
+@bsmr_test()
+async def test_transition_info_outgoing_edge(bsmr: Bsmr) -> None:
+    res = await bsmr.cquery(
         "root//:base", "-u", ":pre_outgoing_transition", "-a", "labels"
     )
     res = json.loads(res.stdout)
     assert len(res) == 1
     assert list(res.values())[0]["labels"] == ["cat"]
 
-    res = await buck.cquery(
+    res = await bsmr.cquery(
         "root//:base", "-u", ":pre_dynamic_outgoing_transition", "-a", "labels"
     )
     res = json.loads(res.stdout)
@@ -39,9 +39,9 @@ async def test_transition_info_outgoing_edge(buck: Buck) -> None:
     assert list(res.values())[0]["labels"] == ["cat"]
 
 
-@buck_test()
-async def test_transition_info_incoming_edge(buck: Buck) -> None:
-    res = await buck.cquery(
+@bsmr_test()
+async def test_transition_info_incoming_edge(bsmr: Bsmr) -> None:
+    res = await bsmr.cquery(
         "root//:base", "-u", ":pre_incoming_transition", "-a", "labels"
     )
     res = json.loads(res.stdout)
@@ -49,9 +49,9 @@ async def test_transition_info_incoming_edge(buck: Buck) -> None:
     assert list(res.values())[0]["labels"] == ["cat"]
 
 
-@buck_test()
-async def test_unexpected_dynamic_outgoing(buck: Buck) -> None:
+@bsmr_test()
+async def test_unexpected_dynamic_outgoing(bsmr: Bsmr) -> None:
     await expect_failure(
-        buck.uquery("root//unexpected_dynamic:unexpected_dynamic"),
+        bsmr.uquery("root//unexpected_dynamic:unexpected_dynamic"),
         stderr_regex="Expected `str`, but got `tuple",
     )

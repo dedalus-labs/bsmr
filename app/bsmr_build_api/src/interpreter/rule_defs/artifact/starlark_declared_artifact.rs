@@ -23,7 +23,7 @@ use bsmr_artifact::artifact::artifact_type::Artifact;
 use bsmr_artifact::artifact::artifact_type::DeclaredArtifact;
 use bsmr_artifact::artifact::artifact_type::OutputArtifact;
 use bsmr_core::deferred::base_deferred_key::BaseDeferredKey;
-use bsmr_error::BuckErrorContext;
+use bsmr_error::BsmrErrorContext;
 use bsmr_error::bsmr_error;
 use bsmr_execute::path::artifact_path::ArtifactPath;
 use bsmr_fs::paths::file_name::FileName;
@@ -176,7 +176,7 @@ impl<'v> StarlarkInputArtifactLike<'v> for StarlarkDeclaredArtifact<'v> {
         // This shouldn't ever be called for StarlarkDeclaredArtifact
         bsmr_error!(
             bsmr_error::ErrorTag::Tier0,
-            "error trying to use declared artifact as an output, this indicates an internal buck error"
+            "error trying to use declared artifact as an output, this indicates an internal bsmr error"
         )
     }
 

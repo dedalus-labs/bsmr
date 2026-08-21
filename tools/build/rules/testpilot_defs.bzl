@@ -14,7 +14,7 @@
 
 # Stub `testpilot_defs.bzl` for the OSS bsmr build.
 #
-# `prelude/toolchains/android/test/com/facebook/buck/testrunner/BUILD.bsmr`
+# `prelude/toolchains/android/test/com/dedalus/bsmr/testrunner/BUILD.bsmr`
 # loads this file from `@bsmr_build//rules:testpilot_defs.bzl` to
 # get a `tpx_labels` struct (used as `labels = [tpx_labels.long_running]`).
 # `fbsource` resolves to the build-support cell, so the load

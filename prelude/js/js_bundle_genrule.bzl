@@ -69,7 +69,7 @@ def _run_genrule(ctx: AnalysisContext, out_name: str, extra_env_vars: dict, iden
 
     replace_regex = []
 
-    # For backwards compatibility with Buck1.
+    # For backwards compatibility with Legacy.
     if is_windows:
         for re, sub in _WINDOWS_ENV_SUBSTITUTIONS:
             replace_regex.append((re, sub))
@@ -153,13 +153,13 @@ def _run_genrule(ctx: AnalysisContext, out_name: str, extra_env_vars: dict, iden
         if is_windows:
             rewrite_scratch_path = cmd_args(
                 cmd_args(ctx.label.project_root, relative_to = srcs_artifact),
-                format = 'set "BUCK_SCRATCH_PATH={}\\%BUCK_SCRATCH_PATH%"',
+                format = 'set "BSMR_SCRATCH_PATH={}\\%BSMR_SCRATCH_PATH%"',
             )
         else:
             srcs_dir = cmd_args(srcs_dir, quote = "shell")
             rewrite_scratch_path = cmd_args(
                 cmd_args(ctx.label.project_root, quote = "shell", relative_to = srcs_artifact),
-                format = "export BUCK_SCRATCH_PATH={}/$BUCK_SCRATCH_PATH",
+                format = "export BSMR_SCRATCH_PATH={}/$BSMR_SCRATCH_PATH",
             )
 
         for script_cmd in script:

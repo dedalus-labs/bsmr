@@ -44,12 +44,12 @@ use dupe::Dupe;
 use superconsole::Stdin;
 
 // fbcode likes to set its own allocator in fbcode.default_allocator
-// So when we set our own allocator, buck build bsmr or bsmr build bsmr often breaks.
+// So when we set our own allocator, bsmr build bsmr or bsmr build bsmr often breaks.
 // Making jemalloc the default only when we do a cargo build.
 #[global_allocator]
 #[cfg(all(
     any(target_os = "linux", target_os = "macos"),
-    not(buck_build),
+    not(bsmr_build),
     not(bsmr_memfrag)
 ))]
 static ALLOC: tikv_jemallocator::Jemalloc = tikv_jemallocator::Jemalloc;
@@ -67,7 +67,7 @@ static ALLOC: mimalloc::MiMalloc = mimalloc::MiMalloc;
 static ALLOC: mem_frag::SamplingAlloc = mem_frag::SamplingAlloc::new();
 
 fn init_logging() -> bsmr_error::Result<Arc<dyn LogConfigurationReloadHandle>> {
-    static ENV_TRACING_LOG_FILE_PATH: &str = "BUCK_LOG_TO_FILE_PATH";
+    static ENV_TRACING_LOG_FILE_PATH: &str = "BSMR_LOG_TO_FILE_PATH";
 
     let handle = match std::env::var_os(ENV_TRACING_LOG_FILE_PATH) {
         Some(path) => {
@@ -92,7 +92,7 @@ fn init_logging() -> bsmr_error::Result<Arc<dyn LogConfigurationReloadHandle>> {
 fn check_cargo() {
     if !cfg!(fbcode_build) && !bsmr_core::is_open_source() {
         eprintln!("=====================================================================");
-        eprintln!("WARNING: You are using Buck v2 compiled with `cargo`, not `buck`.");
+        eprintln!("WARNING: You are using Bsmr v2 compiled with `cargo`, not `bsmr`.");
         eprintln!("         Some operations may go slower and logging may be impaired.");
         eprintln!("=====================================================================");
         eprintln!();
@@ -138,7 +138,7 @@ fn exec_with_logging(
     (shared, res)
 }
 
-// As this main() is used as the entry point for the `buck daemon` command,
+// As this main() is used as the entry point for the `bsmr daemon` command,
 // it must be single-threaded. Commands that want to be multi-threaded/async
 // will start up their own tokio runtime.
 fn main() -> ! {

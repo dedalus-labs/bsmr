@@ -20,7 +20,7 @@ use std::process::ExitStatus;
 use std::time::Duration;
 
 use bsmr_common::kill_util::try_terminate_process_gracefully;
-use bsmr_error::BuckErrorContext;
+use bsmr_error::BsmrErrorContext;
 use bsmr_error::internal_error;
 use bsmr_resource_control::ActionFreezeEvent;
 use bsmr_resource_control::ActionFreezeEventReceiver;
@@ -163,10 +163,10 @@ impl ProcessGroupImpl {
                 Duration::from_secs(graceful_shutdown_timeout_s as u64),
             )
             .await
-            .with_buck_error_context(|| format!("Failed to terminate process {pid} gracefully"))?;
+            .with_bsmr_error_context(|| format!("Failed to terminate process {pid} gracefully"))?;
         } else {
             signal::killpg(Pid::from_raw(pid), Signal::SIGKILL)
-                .with_buck_error_context(|| format!("Failed to kill process {pid}"))?;
+                .with_bsmr_error_context(|| format!("Failed to kill process {pid}"))?;
         }
 
         Ok(())

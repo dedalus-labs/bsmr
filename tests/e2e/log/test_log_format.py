@@ -17,8 +17,8 @@
 
 import json
 
-from bsmr.tests.e2e_util.api.buck import Buck
-from bsmr.tests.e2e_util.buck_workspace import buck_test
+from bsmr.tests.e2e_util.api.bsmr import Bsmr
+from bsmr.tests.e2e_util.bsmr_workspace import bsmr_test
 
 
 # Tests to ensure that the log format for a few important fields hasn't
@@ -26,10 +26,10 @@ from bsmr.tests.e2e_util.buck_workspace import buck_test
 #
 # If this test needs to be updated, please sync with @athmasagar or the
 # fbcode_build_infra oncall to ensure that log parsers are also migrated.
-@buck_test(inplace=True, skip_for_os=["windows"])
-async def test_log_format(buck: Buck) -> None:
-    await buck.build("root//tests/targets/rules/cxx/hello_world:welcome")
-    out = await buck.log("show")
+@bsmr_test(inplace=True, skip_for_os=["windows"])
+async def test_log_format(bsmr: Bsmr) -> None:
+    await bsmr.build("root//tests/targets/rules/cxx/hello_world:welcome")
+    out = await bsmr.log("show")
 
     lines = [line.strip() for line in out.stdout.splitlines()]
     test_line = None
@@ -67,6 +67,6 @@ async def test_log_format(buck: Buck) -> None:
 
 
 # Placeholder for tests to be listed successfully on Windows.
-@buck_test(inplace=True)
-async def test_noop(buck: Buck) -> None:
+@bsmr_test(inplace=True)
+async def test_noop(bsmr: Bsmr) -> None:
     return

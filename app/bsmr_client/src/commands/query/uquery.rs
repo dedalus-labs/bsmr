@@ -18,14 +18,14 @@ use async_trait::async_trait;
 use bsmr_cli_proto::UqueryRequest;
 use bsmr_cli_proto::UqueryResponse;
 use bsmr_client_ctx::client_ctx::ClientCommandContext;
-use bsmr_client_ctx::common::BuckArgMatches;
+use bsmr_client_ctx::common::BsmrArgMatches;
 use bsmr_client_ctx::common::CommonBuildConfigurationOptions;
 use bsmr_client_ctx::common::CommonCommandOptions;
 use bsmr_client_ctx::common::CommonEventLogOptions;
 use bsmr_client_ctx::common::CommonStarlarkOptions;
 use bsmr_client_ctx::common::target_cfg::TargetCfgUnusedOptions;
 use bsmr_client_ctx::common::ui::CommonConsoleOptions;
-use bsmr_client_ctx::daemon::client::BuckdClientConnector;
+use bsmr_client_ctx::daemon::client::BsmrdClientConnector;
 use bsmr_client_ctx::daemon::client::StdoutPartialResultHandler;
 use bsmr_client_ctx::events_ctx::EventsCtx;
 use bsmr_client_ctx::exit_result::ExitResult;
@@ -51,7 +51,7 @@ branches of `select()` dictionaries will be treated as dependencies.
 Run `bsmr docs uquery` or
 ",
         if_else_opensource!(
-            "https://buck2.build/docs/users/query/uquery/",
+            "https://oss.dedaluslabs.ai/bsmr/users/query/uquery/",
             "https://www.internalfb.com/intern/staticdocs/bsmr/docs/users/query/uquery/",
         ),
         r#"
@@ -106,8 +106,8 @@ impl StreamingCommand for UqueryCommand {
 
     async fn exec_impl(
         mut self,
-        buckd: &mut BuckdClientConnector,
-        matches: BuckArgMatches<'_>,
+        bsmrd: &mut BsmrdClientConnector,
+        matches: BsmrArgMatches<'_>,
         ctx: &mut ClientCommandContext<'_>,
         events_ctx: &mut EventsCtx,
     ) -> ExitResult {
@@ -116,7 +116,7 @@ impl StreamingCommand for UqueryCommand {
         let output_attributes = self.query_common.attributes.get()?;
         let context = ctx.client_context(matches, &self)?;
 
-        let UqueryResponse {} = buckd
+        let UqueryResponse {} = bsmrd
             .with_flushing()
             .uquery(
                 UqueryRequest {

@@ -15,15 +15,15 @@
 # pyre-strict
 
 
-from bsmr.tests.e2e_util.api.buck import Buck
+from bsmr.tests.e2e_util.api.bsmr import Bsmr
 from bsmr.tests.e2e_util.asserts import expect_failure
-from bsmr.tests.e2e_util.buck_workspace import buck_test
+from bsmr.tests.e2e_util.bsmr_workspace import bsmr_test
 
 
 # Test prelude is typechecked unconditionally.
-@buck_test()
-async def test_prelude_typecheck(buck: Buck) -> None:
+@bsmr_test()
+async def test_prelude_typecheck(bsmr: Bsmr) -> None:
     await expect_failure(
-        buck.uquery("//:"),
+        bsmr.uquery("//:"),
         stderr_regex="Expected type `str` but got `int`",
     )

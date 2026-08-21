@@ -41,10 +41,10 @@ use bsmr_core::package::PackageLabel;
 use bsmr_core::package::source_path::SourcePathRef;
 use bsmr_core::provider::label::ConfiguredProvidersLabel;
 use bsmr_core::target::configured_target_label::ConfiguredTargetLabel;
-use bsmr_error::BuckErrorContext;
+use bsmr_error::BsmrErrorContext;
 use bsmr_fs::paths::abs_path::AbsPath;
-use bsmr_hash::StdBuckHashMap;
-use bsmr_hash::StdBuckHashSet;
+use bsmr_hash::StdBsmrHashMap;
+use bsmr_hash::StdBsmrHashSet;
 use bsmr_interpreter::types::target_label::StarlarkConfiguredTargetLabel;
 use bsmr_node::attrs::attr_type::arg::StringWithMacros;
 use bsmr_node::attrs::attr_type::dict::DictLiteral;
@@ -134,7 +134,7 @@ fn attr_with_stripped_cfg(attr: &ConfiguredAttr) -> bsmr_error::Result<CoercedAt
             CoercedAttr::Dep(dep.label.unconfigured())
         }
         ConfiguredAttr::SplitTransitionDep(dep) => {
-            let deps: StdBuckHashSet<_> = dep.deps.values().map(|l| l.unconfigured()).collect();
+            let deps: StdBsmrHashSet<_> = dep.deps.values().map(|l| l.unconfigured()).collect();
             if deps.len() != 1 {
                 return Err(bsmr_error::internal_error!(
                     "ConfiguredSplitTransitionDep should have exactly one dep, but found {}",
@@ -352,7 +352,7 @@ fn configured_target_node_value_methods(builder: &mut MethodsBuilder) {
     /// Gets the attribute from the configured target node.
     /// If the attribute is unset, returns the default value.
     /// If the attribute is not defined by the rule, returns `None`.
-    /// It will not return special attribute (attribute that start with 'buck.' in `bsmr cquery -A` command).
+    /// It will not return special attribute (attribute that start with 'bsmr.' in `bsmr cquery -A` command).
     ///
     /// Sample usage:
     /// ```python
@@ -678,10 +678,10 @@ fn configured_target_node_value_methods(builder: &mut MethodsBuilder) {
         let path = if path.is_absolute() {
             Cow::Owned(
                 fs.relativize_any(AbsPath::new(path)?)
-                    .buck_error_context("Given path does not belong to the project root")?,
+                    .bsmr_error_context("Given path does not belong to the project root")?,
             )
         } else {
-            Cow::Borrowed(ProjectRelativePath::new(path).buck_error_context(
+            Cow::Borrowed(ProjectRelativePath::new(path).bsmr_error_context(
                 "Given path should either be absolute or a forward pointing project relative path",
             )?)
         };
@@ -905,7 +905,7 @@ fn configured_attr_methods(builder: &mut MethodsBuilder) {
     ) -> starlark::Result<StarlarkCoercedAttr> {
         Ok(StarlarkCoercedAttr(
             attr_with_stripped_cfg(&this.0)
-                .buck_error_context("Failed to strip configuration from attribute")?,
+                .bsmr_error_context("Failed to strip configuration from attribute")?,
             this.1.dupe(),
         ))
     }
@@ -986,7 +986,7 @@ fn lazy_attrs_methods(builder: &mut MethodsBuilder) {
                         .configured_target_node
                         .0
                         .special_attrs()
-                        .collect::<StdBuckHashMap<_, _>>();
+                        .collect::<StdBsmrHashMap<_, _>>();
                     let attr = special_attrs.get(attr);
                     match attr {
                         None => NoneOr::None,
@@ -1096,7 +1096,7 @@ fn lazy_resolved_attrs_methods(builder: &mut MethodsBuilder) {
                         .configured_node
                         .0
                         .special_attrs()
-                        .collect::<StdBuckHashMap<_, _>>();
+                        .collect::<StdBsmrHashMap<_, _>>();
                     let attr = special_attrs.get(attr);
                     match attr {
                         None => NoneOr::None,

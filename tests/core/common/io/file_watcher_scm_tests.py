@@ -26,80 +26,80 @@ from bsmr.tests.core.common.io.file_watcher_tests import (
     FileSystemType,
     setup_file_watcher_test,
 )
-from bsmr.tests.e2e_util.api.buck import Buck
+from bsmr.tests.e2e_util.api.bsmr import Bsmr
 
 
 # Setup repo structure to test these conditions: https://www.internalfb.com/excalidraw/EX346258
-async def setup_file_watcher_scm_test(buck: Buck) -> tuple[str, str, str, str]:
+async def setup_file_watcher_scm_test(bsmr: Bsmr) -> tuple[str, str, str, str]:
     # Run after setup_file_watcher_test to create a simple stack of commits
-    commit_a = subprocess.check_output(["sl", "whereami"], cwd=buck.cwd).decode()
+    commit_a = subprocess.check_output(["sl", "whereami"], cwd=bsmr.cwd).decode()
 
     # Create a file
-    path = os.path.join(buck.cwd, "files", "def")
+    path = os.path.join(bsmr.cwd, "files", "def")
     with open(path, "a"):
         pass
 
     # Commit it
-    subprocess.run(["sl", "commit", "--addremove", "-m", "commit_b"], cwd=buck.cwd)
-    commit_b = subprocess.check_output(["sl", "whereami"], cwd=buck.cwd).decode()
+    subprocess.run(["sl", "commit", "--addremove", "-m", "commit_b"], cwd=bsmr.cwd)
+    commit_b = subprocess.check_output(["sl", "whereami"], cwd=bsmr.cwd).decode()
 
     # Go back to commit_a
-    subprocess.run(["sl", "co", commit_a], cwd=buck.cwd)
+    subprocess.run(["sl", "co", commit_a], cwd=bsmr.cwd)
 
     # Create a file
-    path = os.path.join(buck.cwd, "files", "ghi")
+    path = os.path.join(bsmr.cwd, "files", "ghi")
     with open(path, "a"):
         pass
 
     # Commit it
-    subprocess.run(["sl", "commit", "--addremove", "-m", "commit_c"], cwd=buck.cwd)
-    commit_c = subprocess.check_output(["sl", "whereami"], cwd=buck.cwd).decode()
+    subprocess.run(["sl", "commit", "--addremove", "-m", "commit_c"], cwd=bsmr.cwd)
+    commit_c = subprocess.check_output(["sl", "whereami"], cwd=bsmr.cwd).decode()
 
     # Create a file
-    path = os.path.join(buck.cwd, "files", "jkl")
+    path = os.path.join(bsmr.cwd, "files", "jkl")
     with open(path, "a"):
         pass
 
     # Commit it
-    subprocess.run(["sl", "commit", "--addremove", "-m", "commit_d"], cwd=buck.cwd)
-    commit_d = subprocess.check_output(["sl", "whereami"], cwd=buck.cwd).decode()
+    subprocess.run(["sl", "commit", "--addremove", "-m", "commit_d"], cwd=bsmr.cwd)
+    commit_d = subprocess.check_output(["sl", "whereami"], cwd=bsmr.cwd).decode()
 
     # clear log - run build twice
-    await buck.targets("root//:")
-    await buck.targets("root//:")
+    await bsmr.targets("root//:")
+    await bsmr.targets("root//:")
 
     return commit_a, commit_b, commit_c, commit_d
 
 
 async def run_checkout_mergebase_changes_test(
-    buck: Buck,
+    bsmr: Bsmr,
     file_system_type: FileSystemType,
     file_watcher_provider: FileWatcherProvider,
 ) -> None:
-    await setup_file_watcher_test(buck)
+    await setup_file_watcher_test(bsmr)
 
     # Create a file
-    path = os.path.join(buck.cwd, "files", "def")
+    path = os.path.join(bsmr.cwd, "files", "def")
     with open(path, "a"):
         pass
 
     # Commit it
-    subprocess.run(["sl", "commit", "--addremove", "-m", "next"], cwd=buck.cwd)
-    commit_a = subprocess.check_output(["sl", "whereami"], cwd=buck.cwd).decode()
+    subprocess.run(["sl", "commit", "--addremove", "-m", "next"], cwd=bsmr.cwd)
+    commit_a = subprocess.check_output(["sl", "whereami"], cwd=bsmr.cwd).decode()
 
     # Create a file
-    path = os.path.join(buck.cwd, "files", "ghi")
+    path = os.path.join(bsmr.cwd, "files", "ghi")
     with open(path, "a"):
         pass
 
     # Commit it
-    subprocess.run(["sl", "commit", "--addremove", "-m", "next"], cwd=buck.cwd)
-    commit_b = subprocess.check_output(["sl", "whereami"], cwd=buck.cwd).decode()
+    subprocess.run(["sl", "commit", "--addremove", "-m", "next"], cwd=bsmr.cwd)
+    commit_b = subprocess.check_output(["sl", "whereami"], cwd=bsmr.cwd).decode()
 
     # Go back to the previous commit
-    subprocess.run(["sl", "co", commit_a], cwd=buck.cwd)
+    subprocess.run(["sl", "co", commit_a], cwd=bsmr.cwd)
 
-    is_fresh_instance, _ = await get_file_watcher_events(buck)
+    is_fresh_instance, _ = await get_file_watcher_events(bsmr)
     if file_watcher_provider in [
         FileWatcherProvider.FS_HASH_CRAWLER,
         FileWatcherProvider.RUST_NOTIFY,
@@ -112,9 +112,9 @@ async def run_checkout_mergebase_changes_test(
         assert is_fresh_instance
 
     # Go back to the next commit
-    subprocess.run(["sl", "co", commit_b], cwd=buck.cwd)
+    subprocess.run(["sl", "co", commit_b], cwd=bsmr.cwd)
 
-    is_fresh_instance, results = await get_file_watcher_events(buck)
+    is_fresh_instance, results = await get_file_watcher_events(bsmr)
     print(results)
 
     if file_watcher_provider in [
@@ -127,34 +127,34 @@ async def run_checkout_mergebase_changes_test(
 
 
 async def run_checkout_with_mergebase_test(
-    buck: Buck,
+    bsmr: Bsmr,
     file_system_type: FileSystemType,
     file_watcher_provider: FileWatcherProvider,
 ) -> None:
-    await setup_file_watcher_test(buck)
-    [_, _, commit_c, _] = await setup_file_watcher_scm_test(buck)
+    await setup_file_watcher_test(bsmr)
+    [_, _, commit_c, _] = await setup_file_watcher_scm_test(bsmr)
 
     # Go back to commit_c
-    subprocess.run(["sl", "co", commit_c], cwd=buck.cwd)
+    subprocess.run(["sl", "co", commit_c], cwd=bsmr.cwd)
 
-    is_fresh_instance, results = await get_file_watcher_events(buck)
+    is_fresh_instance, results = await get_file_watcher_events(bsmr)
     print(results)
 
     assert not is_fresh_instance
 
 
 async def run_rebase_with_mergebase_test(
-    buck: Buck,
+    bsmr: Bsmr,
     file_system_type: FileSystemType,
     file_watcher_provider: FileWatcherProvider,
 ) -> None:
-    await setup_file_watcher_test(buck)
-    [_, commit_b, commit_c, _] = await setup_file_watcher_scm_test(buck)
+    await setup_file_watcher_test(bsmr)
+    [_, commit_b, commit_c, _] = await setup_file_watcher_scm_test(bsmr)
 
     # Rebase C->D from A to B
-    subprocess.run(["sl", "rebase", "-s", commit_c, "-d", commit_b], cwd=buck.cwd)
+    subprocess.run(["sl", "rebase", "-s", commit_c, "-d", commit_b], cwd=bsmr.cwd)
 
-    is_fresh_instance, results = await get_file_watcher_events(buck)
+    is_fresh_instance, results = await get_file_watcher_events(bsmr)
     print(results)
 
     if file_system_type == FileSystemType.NATIVE:
@@ -166,17 +166,17 @@ async def run_rebase_with_mergebase_test(
 
 
 async def run_restack_with_mergebase_test(
-    buck: Buck,
+    bsmr: Bsmr,
     file_system_type: FileSystemType,
     file_watcher_provider: FileWatcherProvider,
 ) -> None:
-    await setup_file_watcher_test(buck)
-    [commit_a, _, _, commit_d] = await setup_file_watcher_scm_test(buck)
+    await setup_file_watcher_test(bsmr)
+    [commit_a, _, _, commit_d] = await setup_file_watcher_scm_test(bsmr)
 
     # Rebase D from C to A
-    subprocess.run(["sl", "rebase", "-s", commit_d, "-d", commit_a], cwd=buck.cwd)
+    subprocess.run(["sl", "rebase", "-s", commit_d, "-d", commit_a], cwd=bsmr.cwd)
 
-    is_fresh_instance, results = await get_file_watcher_events(buck)
+    is_fresh_instance, results = await get_file_watcher_events(bsmr)
     print(results)
 
     assert not is_fresh_instance

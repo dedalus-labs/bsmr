@@ -17,23 +17,23 @@
 import time
 
 import pytest
-from bsmr.tests.e2e_util.api.buck import Buck
-from bsmr.tests.e2e_util.api.buck_result import BuckException
-from bsmr.tests.e2e_util.buck_workspace import buck_test
+from bsmr.tests.e2e_util.api.bsmr import Bsmr
+from bsmr.tests.e2e_util.api.bsmr_result import BsmrException
+from bsmr.tests.e2e_util.bsmr_workspace import bsmr_test
 
 
 ALL_STAGES = ["load", "package", "analysis", "bxl"]
 
 
-@buck_test()
+@bsmr_test()
 @pytest.mark.parametrize("stage", ALL_STAGES)
-async def test_cancellation(buck: Buck, stage: str) -> None:
+async def test_cancellation(bsmr: Bsmr, stage: str) -> None:
     if stage == "bxl":
         preempted_target = "//:root.bxl:loop_test"
-        a_method = buck.bxl
+        a_method = bsmr.bxl
     else:
         preempted_target = ":target"
-        a_method = buck.build
+        a_method = bsmr.build
 
     aproc = a_method(
         "--preemptible=always",
@@ -41,7 +41,7 @@ async def test_cancellation(buck: Buck, stage: str) -> None:
         f"should.loop={stage}",
         preempted_target,
     )
-    bproc = buck.build(
+    bproc = bsmr.build(
         ":target",
     )
 
@@ -56,7 +56,7 @@ async def test_cancellation(buck: Buck, stage: str) -> None:
         raise RuntimeError(
             "Expected to be preempted, but command completed successfully"
         )
-    except BuckException as e:
+    except BsmrException as e:
         a = e
 
     # Note: one of the important features being tested here is not that a is
@@ -69,7 +69,7 @@ async def test_cancellation(buck: Buck, stage: str) -> None:
     # this test will time out.
     try:
         assert a.process.returncode != 0
-        assert "buck daemon preempted this command" in a.stderr
+        assert "bsmr daemon preempted this command" in a.stderr
         b.check_returncode()
     except Exception:
         print("A STDERR:\n", a.stdout, "\n\nA STDOUT:\n", a.stderr)

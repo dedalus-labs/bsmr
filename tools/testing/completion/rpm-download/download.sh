@@ -1,4 +1,10 @@
 #!/bin/bash
+# ===----------------------------------------------------------------------===
+# Upstream-Source: facebook/buck2@1560aca2002865cd73d7cafb22c705cfb640b2bc
+# Modifications Copyright (c) 2026 Dedalus Labs, Inc. and its contributors
+# SPDX-License-Identifier: Apache-2.0
+# ===----------------------------------------------------------------------===
+
 # Copyright (c) Meta Platforms, Inc. and affiliates.
 #
 # This source code is dual-licensed under either the MIT license found in the
@@ -9,8 +15,8 @@
 
 set -e
 
-dnf download "$1" --destdir "$BUCK_SCRATCH_PATH"
-rpm=$(echo "$BUCK_SCRATCH_PATH"/*)
+dnf download "$1" --destdir "$BSMR_SCRATCH_PATH"
+rpm=$(echo "$BSMR_SCRATCH_PATH"/*)
 mkdir -p "$2"
 rpm2archive - < "$rpm" | tar -xvzf - -C "$(realpath "$2")"
 

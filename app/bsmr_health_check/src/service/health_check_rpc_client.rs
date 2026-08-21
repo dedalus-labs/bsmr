@@ -22,7 +22,7 @@ use std::time::Duration;
 use bsmr_common::client_utils::get_channel_tcp;
 use bsmr_common::client_utils::retrying;
 use bsmr_core::async_once_cell::AsyncOnceCell;
-use bsmr_error::BuckErrorContext;
+use bsmr_error::BsmrErrorContext;
 use bsmr_error::ErrorTag;
 use bsmr_error::conversion::from_any_with_tag;
 use bsmr_error::internal_error;
@@ -102,7 +102,7 @@ impl HealthCheckRpcClient {
                 .categorize_internal()
         })
         .await
-        .buck_error_context("Failed to find TCP socket from health check server")?;
+        .bsmr_error_context("Failed to find TCP socket from health check server")?;
 
         let tcp_port = tcp_port.trim().parse::<u16>()?;
 
@@ -110,7 +110,7 @@ impl HealthCheckRpcClient {
             get_channel_tcp(Ipv4Addr::LOCALHOST, tcp_port).await
         })
         .await
-        .buck_error_context("Failed to connect to the health check server using TCP")?;
+        .bsmr_error_context("Failed to connect to the health check server using TCP")?;
 
         let rpc_client = HealthCheckClient::new(channel)
             .max_encoding_message_size(usize::MAX)
@@ -128,11 +128,11 @@ impl HealthCheckRpcClient {
         }
 
         let exe = AbsPathBuf::new(
-            std::env::current_exe().buck_error_context("Cannot get Bessemer executable")?,
+            std::env::current_exe().bsmr_error_context("Cannot get Bessemer executable")?,
         )?;
         let exe = fs_util::canonicalize(&exe)
             .categorize_internal()
-            .buck_error_context(
+            .bsmr_error_context(
                 "Failed to canonicalize path to Bessemer executable. Try running `bsmr kill`.",
             )?;
 

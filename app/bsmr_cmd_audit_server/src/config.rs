@@ -30,7 +30,7 @@ use bsmr_common::legacy_configs::configs::LegacyBsmrConfigValue;
 use bsmr_common::legacy_configs::dice::HasLegacyConfigs;
 use bsmr_core::cells::CellAliasResolver;
 use bsmr_core::cells::name::CellName;
-use bsmr_hash::StdBuckHashMap;
+use bsmr_hash::StdBsmrHashMap;
 use bsmr_server_ctx::ctx::ServerCommandContextTrait;
 use bsmr_server_ctx::ctx::ServerCommandDiceContext;
 use bsmr_server_ctx::partial_result_dispatcher::PartialResultDispatcher;
@@ -266,7 +266,7 @@ impl CellConfigRenderer for SimpleCellConfigRenderer<'_> {
 struct JsonCellConfigRenderer<'a> {
     stdout: StdoutPartialOutput<'a>,
     scope_keys_to_cell: bool,
-    json_output: StdBuckHashMap<String, String>,
+    json_output: StdBsmrHashMap<String, String>,
 }
 
 impl CellConfigRenderer for JsonCellConfigRenderer<'_> {
@@ -367,7 +367,7 @@ impl ServerAuditSubcommand for AuditConfigCommand {
                     OutputFormat::Json => Box::new(JsonCellConfigRenderer {
                         stdout,
                         scope_keys_to_cell: self.all_cells,
-                        json_output: StdBuckHashMap::default(),
+                        json_output: StdBsmrHashMap::default(),
                     }),
                 };
 

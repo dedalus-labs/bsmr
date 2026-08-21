@@ -9,5 +9,5 @@
 load("@prelude//cfg/modifier:set_cfg_modifiers.bzl", "set_cfg_modifiers")
 
 def set_cfg_modifiers_not_from_package_file():
-    if native.read_config("buck_e2e", "testing_failure", False):
+    if native.read_config("bsmr_e2e", "testing_failure", False):
         set_cfg_modifiers(cfg_modifiers = [])

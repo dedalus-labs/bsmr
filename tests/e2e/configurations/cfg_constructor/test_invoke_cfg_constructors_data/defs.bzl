@@ -6,7 +6,7 @@
 # of this source tree. You may select, at your option, one of the
 # above-listed licenses.
 
-KEY = "buck.cfg_modifiers"
+KEY = "bsmr.cfg_modifiers"
 
 def set_cfg_modifiers():
     write_package_value(

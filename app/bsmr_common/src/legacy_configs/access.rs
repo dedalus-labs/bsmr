@@ -17,8 +17,8 @@
 use std::str::FromStr;
 use std::sync::Arc;
 
-use bsmr_error::BuckErrorContext;
-use bsmr_hash::StdBuckHashMap;
+use bsmr_error::BsmrErrorContext;
+use bsmr_hash::StdBsmrHashMap;
 use bsmr_util::env_vars::substitute_env_vars;
 use gazebo::eq_chain;
 
@@ -31,8 +31,8 @@ use crate::legacy_configs::view::LegacyBsmrConfigView;
 
 /// Read the `[bsmr_metadata]` section from a `LegacyBsmrConfig` and resolve any `$VAR`
 /// references. Entries whose env vars are not set are skipped with a warning.
-pub fn parse_bsmrconfig_metadata(config: &LegacyBsmrConfig) -> StdBuckHashMap<String, String> {
-    let mut map = StdBuckHashMap::default();
+pub fn parse_bsmrconfig_metadata(config: &LegacyBsmrConfig) -> StdBsmrHashMap<String, String> {
+    let mut map = StdBsmrHashMap::default();
     let Some(section) = config.get_section("bsmr_metadata") else {
         return map;
     };
@@ -118,7 +118,7 @@ impl LegacyBsmrConfig {
         value
             .parse()
             .map_err(bsmr_error::Error::from)
-            .with_buck_error_context(|| {
+            .with_bsmr_error_context(|| {
                 format!(
                     "Invalid value for bsmrconfig `{}.{}`: conversion to {} failed, value as `{}`",
                     section.to_owned(),
@@ -135,7 +135,7 @@ impl LegacyBsmrConfig {
     {
         self.get_config_value(key)
             .map(|s| {
-                Self::parse_impl(key, s.as_str()).with_buck_error_context(|| {
+                Self::parse_impl(key, s.as_str()).with_bsmr_error_context(|| {
                     format!("Defined {}", s.source.as_legacy_bsmr_config_location())
                 })
             })

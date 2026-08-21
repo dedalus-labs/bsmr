@@ -20,7 +20,7 @@ use std::fmt::Debug;
 
 use bsmr_common::package_listing::file_listing::PackageFileListing;
 use bsmr_core::package::package_relative_path::PackageRelativePath;
-use bsmr_error::BuckErrorContext;
+use bsmr_error::BsmrErrorContext;
 use bsmr_error::conversion::from_any_with_tag;
 use bsmr_fs::paths::forward_rel_path::ForwardRelativePath;
 use derivative::Derivative;
@@ -60,7 +60,7 @@ impl GlobPattern {
     fn new(pattern: &str) -> bsmr_error::Result<GlobPattern> {
         let parsed_pattern = glob::Pattern::new(pattern)
             .map_err(|e| from_any_with_tag(e, bsmr_error::ErrorTag::Input))
-            .with_buck_error_context(|| format!("Error creating globspec for `{pattern}`"))?;
+            .with_bsmr_error_context(|| format!("Error creating globspec for `{pattern}`"))?;
         if pattern.contains("//") {
             return Err(GlobError::DoubleSlash(pattern.to_owned()).into());
         }

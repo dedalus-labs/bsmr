@@ -367,7 +367,7 @@ def _extract_global_symbols_from_link_args(
     """
 
     # TODO(T110378137): This is ported from D24065414, but it might make sense
-    # to explicitly tell Buck about the global symbols, rather than us trying to
+    # to explicitly tell Bsmr about the global symbols, rather than us trying to
     # extract it from linker flags (which is brittle).
     output = ctx.actions.declare_output(name, has_content_based_path = False)
 

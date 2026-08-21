@@ -17,5 +17,5 @@ def python_library(srcs = [], visibility = ["PUBLIC"], cpp_deps = [], **kwargs):
     # the open source prelude `python_library` rule does not support it, so drop it.
     _unused = cpp_deps  # @unused
 
-    # @lint-ignore BUCKLINT: avoid "Direct usage of native rules is not allowed."
+    # @lint-ignore BSMRLINT: avoid "Direct usage of native rules is not allowed."
     native.python_library(srcs = srcs, visibility = visibility, **kwargs)

@@ -17,8 +17,8 @@
 use std::sync::Arc;
 
 use async_trait::async_trait;
-use bsmr_error::BuckErrorContext;
-use bsmr_events::BuckEvent;
+use bsmr_error::BsmrErrorContext;
+use bsmr_events::BsmrEvent;
 use bsmr_fs::async_fs_util;
 use bsmr_fs::error::IoResultExt;
 use bsmr_fs::paths::abs_path::AbsPathBuf;
@@ -37,14 +37,14 @@ impl BuildIdWriter {
 
 #[async_trait]
 impl EventSubscriber for BuildIdWriter {
-    async fn handle_events(&mut self, events: &[Arc<BuckEvent>]) -> bsmr_error::Result<()> {
+    async fn handle_events(&mut self, events: &[Arc<BsmrEvent>]) -> bsmr_error::Result<()> {
         for event in events {
             if event.command_start()?.is_some() {
                 // input path from --write-build-id
                 async_fs_util::write(&self.path, event.trace_id()?.to_string())
                     .await
                     .categorize_input()
-                    .buck_error_context("Error writing build ID")?;
+                    .bsmr_error_context("Error writing build ID")?;
             }
         }
         Ok(())

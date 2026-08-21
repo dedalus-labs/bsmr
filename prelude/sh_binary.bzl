@@ -19,7 +19,7 @@ def _derive_link(artifact):
     if artifact.is_source:
         return artifact.short_path
 
-    # TODO(cjhopman): Reject cross-repo resources. Buck1 does that. It's probably
+    # TODO(cjhopman): Reject cross-repo resources. Legacy does that. It's probably
     # easier for us (compared to v1) to construct a scheme for them that is
     # correct, but not necessary yet.
 
@@ -55,15 +55,15 @@ def _generate_script(
     script_name = name + (".bat" if is_windows else "")
     script = actions.declare_output(script_name, has_content_based_path = has_content_based_path)
 
-    # This is much, much simpler than the buck1 sh_binary template. A couple reasons:
+    # This is much, much simpler than the legacy sh_binary template. A couple reasons:
     # 1. we don't invoke the script through a symlink and so don't need to use and implement a cross-platform `readlink -e`
     # 2. we don't construct an invocation-specific sandbox. The implementation of
-    # that in buck1 is pretty crazy and it shouldn't actually be necessary.
+    # that in legacy is pretty crazy and it shouldn't actually be necessary.
     # 3. we don't construct the cell symlinks. those were also strange. They were
     # used for the links in the invocation-specific sandbox (so things would
     # point through the cell symlinks to their original locations). Instead we
-    # construct links directly to things (which buck1 actually also did for its
-    # BUCK_DEFAULT_RUNTIME_RESOURCES).
+    # construct links directly to things (which legacy actually also did for its
+    # BSMR_DEFAULT_RUNTIME_RESOURCES).
     if not is_windows:
         script_content = cmd_args(
             "#!/usr/bin/env bash",
@@ -77,20 +77,20 @@ def _generate_script(
             # should unify the two, but prior to doing this we should also
             # identify what the right format is. For now, this variable lets
             # callees disambiguate (see D28960177 for more context).
-            "export BUCK_SH_BINARY_VERSION_UNSTABLE=2",
-            cmd_args('export BUCK_PROJECT_ROOT="$__SCRIPT_DIR/', resources_dir, '"', delimiter = ""),
+            "export BSMR_SH_BINARY_VERSION_UNSTABLE=2",
+            cmd_args('export BSMR_PROJECT_ROOT="$__SCRIPT_DIR/', resources_dir, '"', delimiter = ""),
             # Normalize backslashes to forward slashes for the Windows-host /
             # Linux-target (RE) case where relative_to produces Windows-style separators.
-            'export BUCK_PROJECT_ROOT="${BUCK_PROJECT_ROOT//\\\\//}"',
-            # In buck1, the paths for resources that are outputs of rules have
-            # different paths in BUCK_PROJECT_ROOT and
-            # BUCK_DEFAULT_RUNTIME_RESOURCES, but we use the same paths. buck1's
-            # BUCK_PROJECT_ROOT paths would use the actual bsmr-out path rather
+            'export BSMR_PROJECT_ROOT="${BSMR_PROJECT_ROOT//\\\\//}"',
+            # In legacy, the paths for resources that are outputs of rules have
+            # different paths in BSMR_PROJECT_ROOT and
+            # BSMR_DEFAULT_RUNTIME_RESOURCES, but we use the same paths. legacy's
+            # BSMR_PROJECT_ROOT paths would use the actual bsmr-out path rather
             # than something derived from the target and so to use that people
             # would need to hardcode bsmr-out paths into their scripts. For repo
             # sources, the paths are the same for both.
-            'export BUCK_DEFAULT_RUNTIME_RESOURCES="$BUCK_PROJECT_ROOT"',
-            'exec "$BUCK_PROJECT_ROOT/{}" "$@"'.format(main_link),
+            'export BSMR_DEFAULT_RUNTIME_RESOURCES="$BSMR_PROJECT_ROOT"',
+            'exec "$BSMR_PROJECT_ROOT/{}" "$@"'.format(main_link),
             relative_to = (script, 1),
         )
     else:
@@ -106,10 +106,10 @@ def _generate_script(
             else "",
             # Get parent folder.
             'for %%a in ("%__SRC%") do set "__SCRIPT_DIR=%%~dpa"',
-            "set BUCK_SH_BINARY_VERSION_UNSTABLE=2",
-            cmd_args("set BUCK_PROJECT_ROOT=%__SCRIPT_DIR%\\", resources_dir, delimiter = ""),
-            "set BUCK_DEFAULT_RUNTIME_RESOURCES=%BUCK_PROJECT_ROOT%",
-            "%BUCK_PROJECT_ROOT%\\{} %*".format(main_link),
+            "set BSMR_SH_BINARY_VERSION_UNSTABLE=2",
+            cmd_args("set BSMR_PROJECT_ROOT=%__SCRIPT_DIR%\\", resources_dir, delimiter = ""),
+            "set BSMR_DEFAULT_RUNTIME_RESOURCES=%BSMR_PROJECT_ROOT%",
+            "%BSMR_PROJECT_ROOT%\\{} %*".format(main_link),
             relative_to = (script, 1),
         )
     actions.write(

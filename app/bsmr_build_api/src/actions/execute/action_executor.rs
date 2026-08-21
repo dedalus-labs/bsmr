@@ -32,9 +32,9 @@ use bsmr_common::liveliness_observer::NoopLivelinessObserver;
 use bsmr_core::content_hash::ContentBasedPathHash;
 use bsmr_core::execution_types::executor_config::CommandExecutorConfig;
 use bsmr_core::fs::artifact_path_resolver::ArtifactFs;
-use bsmr_core::fs::buck_out_path::BuildArtifactPath;
+use bsmr_core::fs::output_path::BuildArtifactPath;
 use bsmr_data::SchedulingMode;
-use bsmr_error::BuckErrorContext;
+use bsmr_error::BsmrErrorContext;
 use bsmr_error::internal_error;
 use bsmr_events::dispatch::EventDispatcher;
 use bsmr_execute::artifact::fs::ExecutorFs;
@@ -71,10 +71,10 @@ use bsmr_execute::re::manager::UnconfiguredRemoteExecutionClient;
 use bsmr_execute::re::output_trees_download_config::OutputTreesDownloadConfig;
 use bsmr_file_watcher::mergebase::GetMergebase;
 use bsmr_file_watcher::mergebase::Mergebase;
-use bsmr_hash::BuckHashMap;
-use bsmr_hash::BuckIndexMap;
-use bsmr_hash::BuckIndexSet;
-use bsmr_hash::buck_indexmap;
+use bsmr_hash::BsmrHashMap;
+use bsmr_hash::BsmrIndexMap;
+use bsmr_hash::BsmrIndexSet;
+use bsmr_hash::bsmr_indexmap;
 use bsmr_http::HttpClient;
 use derivative::Derivative;
 use derive_more::Display;
@@ -122,7 +122,7 @@ impl OutputSize for ActionOutputs {
 #[derive(Derivative, Debug, Allocative, pagable::Pagable)]
 #[derivative(PartialEq, Eq)]
 struct ActionOutputsData {
-    outputs: BuckIndexMap<BuildArtifactPath, ArtifactValue>,
+    outputs: BsmrIndexMap<BuildArtifactPath, ArtifactValue>,
 }
 
 /// Metadata associated with the execution of this action.
@@ -241,12 +241,12 @@ impl ActionExecutionKind {
 }
 
 impl ActionOutputs {
-    pub fn new(outputs: BuckIndexMap<BuildArtifactPath, ArtifactValue>) -> Self {
+    pub fn new(outputs: BsmrIndexMap<BuildArtifactPath, ArtifactValue>) -> Self {
         Self(Arc::new(ActionOutputsData { outputs }))
     }
 
     pub fn from_single(artifact: BuildArtifactPath, value: ArtifactValue) -> Self {
-        Self::new(buck_indexmap! {artifact => value})
+        Self::new(bsmr_indexmap! {artifact => value})
     }
 
     pub fn get(&self, artifact: &BuildArtifactPath) -> Option<&ArtifactValue> {
@@ -274,7 +274,7 @@ pub trait HasActionExecutor {
     async fn get_action_executor(
         &mut self,
         config: &CommandExecutorConfig,
-    ) -> bsmr_error::Result<Arc<BuckActionExecutor>>;
+    ) -> bsmr_error::Result<Arc<BsmrActionExecutor>>;
 }
 
 #[async_trait]
@@ -282,7 +282,7 @@ impl HasActionExecutor for DiceComputations<'_> {
     async fn get_action_executor(
         &mut self,
         executor_config: &CommandExecutorConfig,
-    ) -> bsmr_error::Result<Arc<BuckActionExecutor>> {
+    ) -> bsmr_error::Result<Arc<BsmrActionExecutor>> {
         let artifact_fs = self.get_artifact_fs().await?;
         let digest_config = self.global_data().get_digest_config();
 
@@ -304,7 +304,7 @@ impl HasActionExecutor for DiceComputations<'_> {
         let mergebase = self.per_transaction_data().get_mergebase();
         let invalidation_tracking_enabled = self.get_invalidation_tracking_config().enabled;
 
-        Ok(Arc::new(BuckActionExecutor::new(
+        Ok(Arc::new(BsmrActionExecutor::new(
             CommandExecutor::new(
                 executor,
                 action_cache_checker,
@@ -329,7 +329,7 @@ impl HasActionExecutor for DiceComputations<'_> {
     }
 }
 
-pub struct BuckActionExecutor {
+pub struct BsmrActionExecutor {
     command_executor: CommandExecutor,
     blocking_executor: Arc<dyn BlockingExecutor>,
     materializer: Arc<dyn Materializer>,
@@ -344,7 +344,7 @@ pub struct BuckActionExecutor {
     output_trees_download_config: OutputTreesDownloadConfig,
 }
 
-impl BuckActionExecutor {
+impl BsmrActionExecutor {
     pub fn new(
         command_executor: CommandExecutor,
         blocking_executor: Arc<dyn BlockingExecutor>,
@@ -359,7 +359,7 @@ impl BuckActionExecutor {
         invalidation_tracking_enabled: bool,
         output_trees_download_config: OutputTreesDownloadConfig,
     ) -> Self {
-        BuckActionExecutor {
+        BsmrActionExecutor {
             command_executor,
             blocking_executor,
             materializer,
@@ -392,17 +392,17 @@ impl BuckActionExecutor {
     }
 }
 
-struct BuckActionExecutionContext<'a> {
-    executor: &'a BuckActionExecutor,
+struct BsmrActionExecutionContext<'a> {
+    executor: &'a BsmrActionExecutor,
     action: &'a RegisteredAction,
-    inputs: BuckIndexMap<ArtifactGroup, ArtifactGroupValues>,
+    inputs: BsmrIndexMap<ArtifactGroup, ArtifactGroupValues>,
     outputs: &'a [BuildArtifact],
     command_reports: &'a mut Vec<CommandExecutionReport>,
     cancellations: &'a CancellationContext,
 }
 
 #[async_trait]
-impl ActionExecutionCtx for BuckActionExecutionContext<'_> {
+impl ActionExecutionCtx for BsmrActionExecutionContext<'_> {
     fn target(&self) -> ActionExecutionTarget<'_> {
         ActionExecutionTarget::new(self.action)
     }
@@ -438,8 +438,8 @@ impl ActionExecutionCtx for BuckActionExecutionContext<'_> {
 
     fn artifact_path_mapping(
         &self,
-        filter: Option<BuckIndexSet<ArtifactGroup>>,
-    ) -> BuckHashMap<&Artifact, ContentBasedPathHash> {
+        filter: Option<BsmrIndexSet<ArtifactGroup>>,
+    ) -> BsmrHashMap<&Artifact, ContentBasedPathHash> {
         self.inputs
             .iter()
             .filter(|(ag, _)| {
@@ -687,7 +687,7 @@ impl ActionExecutionCtx for BuckActionExecutionContext<'_> {
             .materializer
             .invalidate_many(output_paths.clone())
             .await
-            .buck_error_context("Failed to invalidate output directory")?;
+            .bsmr_error_context("Failed to invalidate output directory")?;
 
         self.executor
             .blocking_executor
@@ -698,7 +698,7 @@ impl ActionExecutionCtx for BuckActionExecutionContext<'_> {
                 self.cancellations,
             )
             .await
-            .buck_error_context("Failed to cleanup output directory")?;
+            .bsmr_error_context("Failed to cleanup output directory")?;
 
         Ok(())
     }
@@ -716,11 +716,11 @@ impl ActionExecutionCtx for BuckActionExecutionContext<'_> {
     }
 }
 
-impl BuckActionExecutor {
+impl BsmrActionExecutor {
     pub(crate) async fn execute(
         &self,
         waiting_data: WaitingData,
-        inputs: BuckIndexMap<ArtifactGroup, ArtifactGroupValues>,
+        inputs: BsmrIndexMap<ArtifactGroup, ArtifactGroupValues>,
         action: &RegisteredAction,
         cancellations: &CancellationContext,
     ) -> (
@@ -732,7 +732,7 @@ impl BuckActionExecutor {
         let res = async {
             let outputs = action.outputs();
 
-            let mut ctx = BuckActionExecutionContext {
+            let mut ctx = BsmrActionExecutionContext {
                 executor: self,
                 action,
                 inputs,
@@ -865,7 +865,7 @@ mod tests {
     use bsmr_core::execution_types::executor_config::CommandGenerationOptions;
     use bsmr_core::execution_types::executor_config::PathSeparatorKind;
     use bsmr_core::fs::artifact_path_resolver::ArtifactFs;
-    use bsmr_core::fs::buck_out_path::BuckOutPathResolver;
+    use bsmr_core::fs::output_path::OutputPathResolver;
     use bsmr_core::fs::project::ProjectRootTemp;
     use bsmr_core::fs::project_rel_path::ProjectRelativePath;
     use bsmr_core::fs::project_rel_path::ProjectRelativePathBuf;
@@ -891,7 +891,7 @@ mod tests {
     use bsmr_execute::re::manager::UnconfiguredRemoteExecutionClient;
     use bsmr_execute::re::output_trees_download_config::OutputTreesDownloadConfig;
     use bsmr_fs::fs_util::uncategorized as fs_util;
-    use bsmr_hash::buck_indexset;
+    use bsmr_hash::bsmr_indexset;
     use bsmr_http::HttpClientBuilder;
     use dice_futures::cancellation::CancellationContext;
     use dupe::Dupe;
@@ -907,7 +907,7 @@ mod tests {
     use crate::actions::execute::action_executor::ActionExecutionKind;
     use crate::actions::execute::action_executor::ActionExecutionMetadata;
     use crate::actions::execute::action_executor::ActionOutputs;
-    use crate::actions::execute::action_executor::BuckActionExecutor;
+    use crate::actions::execute::action_executor::BsmrActionExecutor;
     use crate::artifact_groups::ArtifactGroup;
     use crate::artifact_groups::ArtifactGroupValues;
 
@@ -924,15 +924,15 @@ mod tests {
         let project_fs = temp_fs.path().dupe();
         let artifact_fs = ArtifactFs::new(
             cells,
-            BuckOutPathResolver::new(ProjectRelativePathBuf::unchecked_new(
-                "cell/bsmr-out/v2".into(),
+            OutputPathResolver::new(ProjectRelativePathBuf::unchecked_new(
+                "cell/bsmr-out/default".into(),
             )),
             project_fs.dupe(),
         );
 
         let tracker = Arc::new(Mutex::new(Vec::new()));
 
-        let executor = BuckActionExecutor::new(
+        let executor = BsmrActionExecutor::new(
             CommandExecutor::new(
                 Arc::new(DryRunExecutor::new(tracker, artifact_fs.clone())),
                 Arc::new(NoOpCommandOptionalExecutor {}),
@@ -1081,12 +1081,12 @@ mod tests {
             }
         }
 
-        let inputs = buck_indexset![ArtifactGroup::Artifact(Artifact::from(
+        let inputs = bsmr_indexset![ArtifactGroup::Artifact(Artifact::from(
             SourceArtifact::new(SourcePath::testing_new("cell//pkg", "source"))
         ))];
         let label =
             TargetLabel::testing_parse("cell//pkg:foo").configure(ConfigurationData::testing_new());
-        let outputs = buck_indexset![BuildArtifact::testing_new(
+        let outputs = bsmr_indexset![BuildArtifact::testing_new(
             label.dupe(),
             "output",
             ActionIndex::new(0),

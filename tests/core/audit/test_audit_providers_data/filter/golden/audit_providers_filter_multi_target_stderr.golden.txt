@@ -2,5 +2,5 @@
 
 [<TIMESTAMP>] Starting new bsmr daemon...
 [<TIMESTAMP>] Connected to new bsmr daemon.
-[<TIMESTAMP>] Buck UI: https://www.internalfb.com/bsmr/<UUID>
+[<TIMESTAMP>] Bsmr UI: https://www.internalfb.com/bsmr/<UUID>
 [<TIMESTAMP>] root//:has_foo: provider `BarInfo` not found. Available providers: [`DefaultInfo`, `FooInfo`]

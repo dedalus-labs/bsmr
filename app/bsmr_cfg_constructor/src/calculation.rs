@@ -46,7 +46,7 @@ use pagable::pagable_typetag;
 #[bsmr(tag = Input)]
 enum CalculationCfgConstructorError {
     #[error(
-        "Target `{0}` sets `metadata[\"buck.cfg_modifiers\"]` which is no longer supported. \
+        "Target `{0}` sets `metadata[\"bsmr.cfg_modifiers\"]` which is no longer supported. \
          Use the first-class `modifiers` attribute instead."
     )]
     MetadataModifiersNotSupported(TargetLabel),
@@ -168,7 +168,7 @@ impl CfgConstructorCalculationImpl for CfgConstructorCalculationInstance {
             .map(|m| m.to_value())
             .map(MetadataValue::new);
 
-        // metadata["buck.cfg_modifiers"] is no longer supported. Fail loudly so the developer
+        // metadata["bsmr.cfg_modifiers"] is no longer supported. Fail loudly so the developer
         // knows the modifier they wrote won't be applied.
         if target
             .metadata()?

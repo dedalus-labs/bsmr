@@ -24,7 +24,7 @@ use crate::interpreter::module_internals::ModuleInternals;
 #[derive(bsmr_error::Error, Debug)]
 #[error("Fail: {0}")]
 #[bsmr(tag = Tier0)]
-struct BuckFail(String);
+struct BsmrFail(String);
 
 /// Registers functions that are only available in the `__internal__` global and not meant to be
 /// stable.
@@ -33,7 +33,7 @@ pub(crate) fn register_internals(builder: &mut GlobalsBuilder) {
     /// `fail()` but implemented using a bsmr error type instead of starlark's, for testing
     /// purposes.
     fn bsmr_fail<'v>(msg: &str, _eval: &mut Evaluator<'v, '_, '_>) -> starlark::Result<NoneType> {
-        Err(bsmr_error::Error::from(BuckFail(msg.to_owned())).into())
+        Err(bsmr_error::Error::from(BsmrFail(msg.to_owned())).into())
     }
 
     /// Returns a list of direct subpackage relative paths of current package.

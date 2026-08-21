@@ -15,24 +15,24 @@
 # pyre-strict
 
 
-from bsmr.tests.e2e_util.api.buck import Buck
+from bsmr.tests.e2e_util.api.bsmr import Bsmr
 from bsmr.tests.e2e_util.asserts import expect_failure
-from bsmr.tests.e2e_util.buck_workspace import buck_test
+from bsmr.tests.e2e_util.bsmr_workspace import bsmr_test
 
 
-@buck_test()
-async def test_not_bxl(buck: Buck) -> None:
+@bsmr_test()
+async def test_not_bxl(bsmr: Bsmr) -> None:
     await expect_failure(
-        buck.bxl(
+        bsmr.bxl(
             "//not_bxl.bxl:not_bxl",
         ),
         stderr_regex="Expected value of type `bxl` but got `function",
     )
 
 
-@buck_test()
-async def test_not_allowed_now(buck: Buck) -> None:
+@bsmr_test()
+async def test_not_allowed_now(bsmr: Bsmr) -> None:
     await expect_failure(
-        buck.build(":"),
+        bsmr.build(":"),
         stderr_regex="This function can only be called from Bxl",
     )

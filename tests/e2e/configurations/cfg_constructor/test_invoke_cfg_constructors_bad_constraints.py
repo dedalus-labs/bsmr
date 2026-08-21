@@ -15,12 +15,12 @@
 # pyre-strict
 
 
-from bsmr.tests.e2e_util.api.buck import Buck
+from bsmr.tests.e2e_util.api.bsmr import Bsmr
 from bsmr.tests.e2e_util.asserts import expect_failure
-from bsmr.tests.e2e_util.buck_workspace import buck_test
+from bsmr.tests.e2e_util.bsmr_workspace import bsmr_test
 
 
-@buck_test(inplace=False)
-async def test_invoke_cfg_constructors_bad_constraints(buck: Buck) -> None:
-    result = await expect_failure(buck.cquery("root//:test"))
+@bsmr_test(inplace=False)
+async def test_invoke_cfg_constructors_bad_constraints(bsmr: Bsmr) -> None:
+    result = await expect_failure(bsmr.cquery("root//:test"))
     assert "root//:not_a_constraint is not a configuration rule." in result.stderr

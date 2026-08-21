@@ -14,7 +14,7 @@ use std::sync::Arc;
 
 use async_trait::async_trait;
 use bsmr_build_event_proto::BuildEvent;
-use bsmr_events::BuckEvent;
+use bsmr_events::BsmrEvent;
 use bsmr_fs::paths::abs_path::AbsPathBuf;
 use tokio::fs::File;
 use tokio::io::AsyncWriteExt;
@@ -71,7 +71,7 @@ impl EventSubscriber for BuildEventWriter {
         "build event writer"
     }
 
-    async fn handle_events(&mut self, events: &[Arc<BuckEvent>]) -> bsmr_error::Result<()> {
+    async fn handle_events(&mut self, events: &[Arc<BsmrEvent>]) -> bsmr_error::Result<()> {
         self.ensure_file().await?;
         for event in events {
             if let Some(observation) = project_test_attempt(event, self.next_sequence_number)? {

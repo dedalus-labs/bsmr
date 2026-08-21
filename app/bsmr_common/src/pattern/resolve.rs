@@ -24,8 +24,8 @@ use bsmr_core::pattern::pattern::display_precise_pattern;
 use bsmr_core::pattern::pattern_type::ConfiguredProvidersPatternExtra;
 use bsmr_core::pattern::pattern_type::PatternType;
 use bsmr_core::target::name::TargetName;
-use bsmr_error::BuckErrorContext;
-use bsmr_hash::BuckIndexMap;
+use bsmr_error::BsmrErrorContext;
+use bsmr_hash::BsmrIndexMap;
 use dice::DiceComputations;
 use dupe::Dupe;
 use gazebo::prelude::VecExt;
@@ -38,7 +38,7 @@ use crate::pattern::package_roots::find_package_roots;
 /// Targets are not validated yet, and `:` is not yet expanded.
 #[derive(Debug)]
 pub struct ResolvedPattern<T: PatternType> {
-    pub specs: BuckIndexMap<PackageLabelWithModifiers, PackageSpec<T>>,
+    pub specs: BsmrIndexMap<PackageLabelWithModifiers, PackageSpec<T>>,
 }
 
 impl<T> ResolvedPattern<T>
@@ -47,7 +47,7 @@ where
 {
     pub fn new() -> Self {
         Self {
-            specs: BuckIndexMap::default(),
+            specs: BsmrIndexMap::default(),
         }
     }
 
@@ -83,13 +83,13 @@ where
 
 impl ResolvedPattern<ConfiguredProvidersPatternExtra> {
     pub fn convert_pattern<U: PatternType>(self) -> bsmr_error::Result<ResolvedPattern<U>> {
-        let mut specs = BuckIndexMap::with_capacity(self.specs.len());
+        let mut specs = BsmrIndexMap::with_capacity(self.specs.len());
         for (package_with_modifiers, spec) in self.specs {
             let spec = match spec {
                 PackageSpec::Targets(targets) => {
                     PackageSpec::Targets(targets.into_try_map(|(target_name, extra)| {
                         let extra = U::from_configured_providers(extra.clone())
-                            .with_buck_error_context(|| {
+                            .with_bsmr_error_context(|| {
                                 format!(
                                     "Expecting {} pattern, got `{}`",
                                     U::NAME,
@@ -158,7 +158,7 @@ async fn resolve_target_patterns_impl<P: PatternType>(
             ParsedPattern::Recursive(cell_path) => {
                 let roots = find_package_roots(cell_path.clone(), file_ops)
                     .await
-                    .buck_error_context("Error resolving recursive target pattern.")?;
+                    .bsmr_error_context("Error resolving recursive target pattern.")?;
                 for package in roots {
                     resolved.add_package(package, Modifiers::new(None));
                 }
@@ -190,7 +190,7 @@ async fn resolve_target_patterns_with_modifiers_impl<P: PatternType>(
             ParsedPattern::Recursive(cell_path) => {
                 let roots = find_package_roots(cell_path.clone(), file_ops)
                     .await
-                    .buck_error_context("Error resolving recursive target pattern.")?;
+                    .bsmr_error_context("Error resolving recursive target pattern.")?;
                 for package in roots {
                     resolved.add_package(package, pattern.modifiers.clone());
                 }

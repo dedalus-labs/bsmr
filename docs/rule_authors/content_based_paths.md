@@ -39,7 +39,7 @@ that artifacts produced under different configurations land in different
 locations:
 
 ```
-bsmr-out/v2/art/<configuration-hash>/<cell>/__<target>__/<output>
+bsmr-out/default/art/<configuration-hash>/<cell>/__<target>__/<output>
 ```
 
 The output paths of an action are part of the command line and therefore
@@ -60,8 +60,8 @@ the digest.
 
 Here are two content-based path renderings:
 
-1. `bsmr-out/v2/art/cell/output_artifacts/__target__/libfoo.o` (**placeholder**)
-2. `bsmr-out/v2/art/cell/97752af0dd8a8d17/__target__/libfoo.o` (**real content-based path**)
+1. `bsmr-out/default/art/cell/output_artifacts/__target__/libfoo.o` (**placeholder**)
+2. `bsmr-out/default/art/cell/97752af0dd8a8d17/__target__/libfoo.o` (**real content-based path**)
 
 In a given `actions.run()`, all inputs have a **real** content-based path, and
 all outputs have **placeholder** paths. You won't see the same artifact
@@ -131,7 +131,7 @@ sequenceDiagram
     participant CAS as Content Addressed Storage
     participant RE as Remote Executor
     Note right of B: Inputs resolved with REAL content hash<br/>(already known from upstream artifacts)<br/>Output resolved with placeholder<br/>"output_artifacts"
-    Note right of B: Action<br/>gcc foo.c -o bsmr-out/v2/art/cell/output_artifacts/__target__/libfoo.o
+    Note right of B: Action<br/>gcc foo.c -o bsmr-out/default/art/cell/output_artifacts/__target__/libfoo.o
     alt
         rect rgb(247 230 234)
         Note left of AC: Cache MISS
@@ -140,14 +140,14 @@ sequenceDiagram
         B->>RE: Execute action
         Note left of RE: Executor writes libfoo.o to path<br/>containing "output_artifacts"
         RE-->>CAS: Store(D -> <libfoo.o contents>)
-        RE-->>AC: Action Result<br/>{name:"bsmr-out/v2/art/cell/output_artifacts/__target__/libfoo.o", digest: D}
-        RE-->>B: ExecuteResponse: Action Result<br/>{name:"bsmr-out/v2/art/cell/output_artifacts/__target__/libfoo.o", digest: D}
+        RE-->>AC: Action Result<br/>{name:"bsmr-out/default/art/cell/output_artifacts/__target__/libfoo.o", digest: D}
+        RE-->>B: ExecuteResponse: Action Result<br/>{name:"bsmr-out/default/art/cell/output_artifacts/__target__/libfoo.o", digest: D}
         end
     else
         rect rgb(230 247 239)
         Note left of AC: Cache HIT
         B->>AC: Lookup(Action)
-        AC-->>B: Action Result<br/>{name:"bsmr-out/v2/art/cell/output_artifacts/__target__/libfoo.o", digest: D}
+        AC-->>B: Action Result<br/>{name:"bsmr-out/default/art/cell/output_artifacts/__target__/libfoo.o", digest: D}
         end
     end
     rect rgb(241 235 255)
@@ -155,7 +155,7 @@ sequenceDiagram
     B->>CAS: Get(D)
     CAS-->>B: <libfoo.o contents>
     Note right of B: real_hash = hex(first 8 bytes of digest D) = 97752af0dd8a8d17
-    Note right of B: Materialize libfoo.o at resolved path:<br/>bsmr-out/v2/art/cell/97752af0dd8a8d17/__target__/libfoo.o
+    Note right of B: Materialize libfoo.o at resolved path:<br/>bsmr-out/default/art/cell/97752af0dd8a8d17/__target__/libfoo.o
     end
 ```
 
@@ -309,12 +309,12 @@ the causes of duplication.
 You can also use `bsmr aquery` to investigate eligibility directly. Each action
 exposes attributes that report its dedupe status:
 
-- `buck.all_outputs_are_content_based` — whether every output is content-based.
-- `buck.all_inputs_are_eligible_for_dedupe` — whether every input is eligible.
-- `buck.all_ineligible_for_dedup_inputs` — the specific inputs that are not
+- `bsmr.all_outputs_are_content_based` — whether every output is content-based.
+- `bsmr.all_inputs_are_eligible_for_dedupe` — whether every input is eligible.
+- `bsmr.all_ineligible_for_dedup_inputs` — the specific inputs that are not
   eligible (only present when there is at least one).
 
-For example, `bsmr aquery <target> --output-attribute 'buck\..*'` will print
+For example, `bsmr aquery <target> --output-attribute 'bsmr\..*'` will print
 these attributes for each action, pointing you directly at the outputs or inputs
 that are keeping the action from being deduplicated.
 
@@ -344,7 +344,7 @@ them awkward for anything that needs to refer to a build output by path.
 
 For this reason, the paths Bessemer reports to the outside world are still
 *configuration-hash* paths, of the form
-`bsmr-out/v2/art/<configuration-hash>/<cell>/__<target>__/<output>`. These are
+`bsmr-out/default/art/<configuration-hash>/<cell>/__<target>__/<output>`. These are
 what you get from:
 
 - `bsmr build --show-output` (and `--show-full-output`, `--build-report`)

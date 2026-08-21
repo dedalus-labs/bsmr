@@ -25,5 +25,5 @@ use serde::Serialize;
 pub enum StreamValue {
     Result(Box<CommandResult>),
     PartialResult(Box<PartialResult>),
-    Event(Box<bsmr_data::BuckEvent>),
+    Event(Box<bsmr_data::BsmrEvent>),
 }

@@ -21,12 +21,12 @@ use std::sync::Arc;
 use async_trait::async_trait;
 use bsmr_core::fs::project_rel_path::ProjectRelativePath;
 use bsmr_core::fs::project_rel_path::ProjectRelativePathBuf;
-use bsmr_error::BuckErrorContext;
+use bsmr_error::BsmrErrorContext;
 use bsmr_error::internal_error;
 use bsmr_events::dispatch::EventDispatcher;
 use bsmr_execute::materialize::materializer::DeferredMaterializerSubscription;
-use bsmr_hash::StdBuckHashMap;
-use bsmr_hash::StdBuckHashSet;
+use bsmr_hash::StdBsmrHashMap;
+use bsmr_hash::StdBsmrHashSet;
 use derivative::Derivative;
 use derive_more::Display;
 use dupe::Dupe;
@@ -45,14 +45,14 @@ use crate::materializers::deferred::MaterializerSender;
 /// notifications when those paths are materialized.
 pub(super) struct MaterializerSubscriptions {
     index: SubscriptionIndex,
-    active: StdBuckHashMap<SubscriptionIndex, SubscriptionData>,
+    active: StdBsmrHashMap<SubscriptionIndex, SubscriptionData>,
 }
 
 impl MaterializerSubscriptions {
     pub fn new() -> Self {
         Self {
             index: SubscriptionIndex(0),
-            active: StdBuckHashMap::default(),
+            active: StdBsmrHashMap::default(),
         }
     }
 
@@ -90,7 +90,7 @@ impl MaterializerSubscriptions {
     }
 
     pub(super) fn list_subscribed_paths(&self) -> impl Iterator<Item = &ProjectRelativePath> {
-        let mut seen = StdBuckHashSet::default();
+        let mut seen = StdBsmrHashSet::default();
 
         self.active
             .values()
@@ -101,14 +101,14 @@ impl MaterializerSubscriptions {
 }
 
 struct SubscriptionData {
-    paths: StdBuckHashSet<ProjectRelativePathBuf>,
+    paths: StdBsmrHashSet<ProjectRelativePathBuf>,
     sender: UnboundedSender<ProjectRelativePathBuf>,
 }
 
 impl SubscriptionData {
     fn new(sender: UnboundedSender<ProjectRelativePathBuf>) -> Self {
         Self {
-            paths: StdBuckHashSet::default(),
+            paths: StdBsmrHashSet::default(),
             sender,
         }
     }

@@ -1,3 +1,9 @@
+# ===----------------------------------------------------------------------===
+# Upstream-Source: facebook/buck2@1560aca2002865cd73d7cafb22c705cfb640b2bc
+# Modifications Copyright (c) 2026 Dedalus Labs, Inc. and its contributors
+# SPDX-License-Identifier: Apache-2.0
+# ===----------------------------------------------------------------------===
+
 # Copyright (c) Meta Platforms, Inc. and affiliates.
 #
 # This source code is dual-licensed under either the MIT license found in the
@@ -255,7 +261,7 @@ def depth_first_traversal_by(
 
     return list(visited)
 
-# To support migration from a tset-based link strategy, we are trying to match buck's internal tset
+# To support migration from a tset-based link strategy, we are trying to match bsmr's internal tset
 # traversal logic here.  Look for implementation of TopologicalTransitiveSetIteratorGen
 def rust_matching_topological_traversal(
     graph_nodes: [dict[typing.Any, typing.Any], None], roots: typing.Iterable, get_nodes_to_traverse_func: typing.Callable

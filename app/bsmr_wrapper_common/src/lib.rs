@@ -16,7 +16,7 @@
 
 //! Code shared between `bsmr_wrapper` and `bsmr`.
 //!
-//! Careful! The wrapper is not released as part of the regular buck version bumps,
+//! Careful! The wrapper is not released as part of the regular bsmr version bumps,
 //! meaning code changes here are not "atomically" updated.
 
 #![feature(once_cell_try)]
@@ -25,7 +25,7 @@ use std::thread;
 use std::time::Duration;
 use std::time::Instant;
 
-use bsmr_hash::StdBuckHashSet;
+use bsmr_hash::StdBsmrHashSet;
 use is_bsmr::WhoIsAsking;
 use sysinfo::ProcessRefreshKind;
 use sysinfo::ProcessesToUpdate;
@@ -45,9 +45,9 @@ mod unix;
 pub mod win;
 
 pub const BSMR_WRAPPER_ENV_VAR: &str = "BSMR_WRAPPER";
-pub const BUCK_WRAPPER_UUID_ENV_VAR: &str = "BUCK_WRAPPER_UUID";
-pub const BUCK_WRAPPER_START_TIME_ENV_VAR: &str = "BUCK_WRAPPER_START_TIME";
-pub const EXPERIMENTS_FILENAME: &str = "experiments_from_buck_start";
+pub const BSMR_WRAPPER_UUID_ENV_VAR: &str = "BSMR_WRAPPER_UUID";
+pub const BSMR_WRAPPER_START_TIME_ENV_VAR: &str = "BSMR_WRAPPER_START_TIME";
+pub const EXPERIMENTS_FILENAME: &str = "experiments_from_bsmr_start";
 pub const DOT_BSMRCONFIG_D: &str = ".bsmr.d";
 
 /// Because `sysinfo::Process` is not `Clone`.
@@ -63,7 +63,7 @@ struct ProcessInfo {
 /// flag (see `bsmr_client_ctx::daemon::client::connect`), accepting both the
 /// `--isolation-dir <name>` and `--isolation-dir=<name>` forms. Returns `None` when
 /// the flag is absent (e.g. the isolation dir was supplied via the
-/// `BUCK_ISOLATION_DIR` env var, which does not appear in argv).
+/// `BSMR_ISOLATION_DIR` env var, which does not appear in argv).
 fn parse_isolation_dir(cmd: &[String]) -> Option<String> {
     let mut args = cmd.iter();
     while let Some(arg) = args.next() {
@@ -83,16 +83,16 @@ fn parse_isolation_dir(cmd: &[String]) -> Option<String> {
 /// PIDs), and not just all posix PIDs (what the kernel calls TGIDs). In order to make sure that we
 /// don't kill any of the TIDs in our PID, we need to filter the list of TIDs down. This function
 /// returns the list of all PIDs on the system.
-fn get_all_tgids_linux() -> Option<StdBuckHashSet<sysinfo::Pid>> {
+fn get_all_tgids_linux() -> Option<StdBsmrHashSet<sysinfo::Pid>> {
     if !cfg!(target_os = "linux") {
         return None;
     }
 
     let Ok(entries) = std::fs::read_dir("/proc") else {
-        return Some(StdBuckHashSet::default());
+        return Some(StdBsmrHashSet::default());
     };
 
-    let mut all_tgids = StdBuckHashSet::default();
+    let mut all_tgids = StdBsmrHashSet::default();
 
     for e in entries {
         let Ok(e) = e else {
@@ -124,7 +124,7 @@ fn find_bsmr_processes(who_is_asking: WhoIsAsking) -> Vec<ProcessInfo> {
             .with_cmd(UpdateKind::Always),
     );
 
-    let mut current_parents = StdBuckHashSet::default();
+    let mut current_parents = StdBsmrHashSet::default();
     let mut parent = Some(sysinfo::Pid::from_u32(std::process::id()));
     while let Some(pid) = parent {
         // There is a small chance on Windows that the PID of a dead parent

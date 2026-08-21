@@ -17,18 +17,18 @@
 
 import os
 
-from bsmr.tests.e2e_util.api.buck import Buck
-from bsmr.tests.e2e_util.buck_workspace import buck_test, get_mode_from_platform
+from bsmr.tests.e2e_util.api.bsmr import Bsmr
+from bsmr.tests.e2e_util.bsmr_workspace import bsmr_test, get_mode_from_platform
 
 
-@buck_test(inplace=True)
-async def test_linker_argsfile_valid(buck: Buck) -> None:
+@bsmr_test(inplace=True)
+async def test_linker_argsfile_valid(bsmr: Bsmr) -> None:
     args = [
         "root//tests/targets/rules/cxx/hello_world:welcome[linker.argsfile]",
         "--show-full-output",
         get_mode_from_platform(),
     ]
-    result = await buck.build(*args)
+    result = await bsmr.build(*args)
     output_dict = result.get_target_to_build_output()
     assert len(output_dict) == 1
     output_path = next(iter(output_dict.values()))

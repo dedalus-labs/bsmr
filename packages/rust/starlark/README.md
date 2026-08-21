@@ -19,7 +19,7 @@ This project provides a Rust implementation of the
 [Starlark language](https://github.com/bazelbuild/starlark/blob/master/spec.md).
 Starlark (formerly codenamed Skylark) is a deterministic language inspired by
 Python3, used for configuration in the build systems
-[Bazel](https://bazel.build), [Buck](https://buck.build) and
+[Bazel](https://bazel.build), [Bsmr](https://oss.dedaluslabs.ai/bsmr) and
 [Bessemer](https://github.com/dedalus-labs/bsmr), which depends on this library.
 This project was originally developed
 [in this repo](https://github.com/google/starlark-rust), which contains a more

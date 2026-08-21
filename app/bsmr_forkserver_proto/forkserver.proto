@@ -1,3 +1,9 @@
+//===----------------------------------------------------------------------===//
+// Upstream-Source: facebook/buck2@1560aca2002865cd73d7cafb22c705cfb640b2bc
+// Modifications Copyright (c) 2026 Dedalus Labs, Inc. and its contributors
+// SPDX-License-Identifier: Apache-2.0
+//===----------------------------------------------------------------------===//
+
 /*
  * Copyright (c) Meta Platforms, Inc. and affiliates.
  *
@@ -13,7 +19,7 @@ syntax = "proto3";
 import "google/protobuf/duration.proto";
 import "data.proto";
 
-package buck.forkserver;
+package bsmr.forkserver;
 
 message CommandRequest {
   reserved 3, 4, 7, 10, 11, 13, 15, 16;
@@ -45,7 +51,7 @@ message CommandRequest {
   // The cgroup that the command should be spawned into. Must already exist.
   optional string command_cgroup = 17;
   // Network access policy for the command.
-  optional buck.data.NetworkAccess network_access = 18;
+  optional bsmr.data.NetworkAccess network_access = 18;
 }
 
 message WorkingDirectory {
@@ -92,12 +98,12 @@ message OrphanProcess {
   string comm = 2;
 }
 
-// Like `buck.data.CommandExecutionStats`, but without memory information
+// Like `bsmr.data.CommandExecutionStats`, but without memory information
 message CollectedExecutionStats {
   optional uint64 cpu_instructions_user = 1;
   optional uint64 cpu_instructions_kernel = 2;
-  optional buck.data.CpuCounter userspace_events = 3;
-  optional buck.data.CpuCounter kernel_events = 4;
+  optional bsmr.data.CpuCounter userspace_events = 3;
+  optional bsmr.data.CpuCounter kernel_events = 4;
 }
 
 message ExitEvent {

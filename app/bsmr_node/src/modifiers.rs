@@ -1,3 +1,9 @@
+//===----------------------------------------------------------------------===//
+// Upstream-Source: facebook/buck2@1560aca2002865cd73d7cafb22c705cfb640b2bc
+// Modifications Copyright (c) 2026 Dedalus Labs, Inc. and its contributors
+// SPDX-License-Identifier: Apache-2.0
+//===----------------------------------------------------------------------===//
+
 /*
  * Copyright (c) Meta Platforms, Inc. and affiliates.
  *
@@ -15,7 +21,7 @@ use allocative::Allocative;
 use dupe::Dupe;
 use pagable::Pagable;
 
-pub const MODIFIER_METADATA_KEY: &str = "buck.cfg_modifiers";
+pub const MODIFIER_METADATA_KEY: &str = "bsmr.cfg_modifiers";
 #[derive(Debug, Eq, PartialEq, Hash, Clone, Dupe, Allocative, Pagable)]
 pub struct PackageCfgModifiersValue(Arc<serde_json::Value>);
 

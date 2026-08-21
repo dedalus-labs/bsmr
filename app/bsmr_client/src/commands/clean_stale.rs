@@ -18,18 +18,18 @@ use async_trait::async_trait;
 use bsmr_cli_proto::CleanStaleRequest;
 use bsmr_cli_proto::CleanStaleResponse;
 use bsmr_client_ctx::client_ctx::ClientCommandContext;
-use bsmr_client_ctx::common::BuckArgMatches;
+use bsmr_client_ctx::common::BsmrArgMatches;
 use bsmr_client_ctx::common::CommonBuildConfigurationOptions;
 use bsmr_client_ctx::common::CommonCommandOptions;
 use bsmr_client_ctx::common::CommonEventLogOptions;
 use bsmr_client_ctx::common::CommonStarlarkOptions;
 use bsmr_client_ctx::common::ui::CommonConsoleOptions;
-use bsmr_client_ctx::daemon::client::BuckdClientConnector;
+use bsmr_client_ctx::daemon::client::BsmrdClientConnector;
 use bsmr_client_ctx::daemon::client::NoPartialResultHandler;
 use bsmr_client_ctx::events_ctx::EventsCtx;
 use bsmr_client_ctx::exit_result::ExitResult;
 use bsmr_client_ctx::streaming::StreamingCommand;
-use bsmr_error::BuckErrorContext;
+use bsmr_error::BsmrErrorContext;
 use bsmr_error::conversion::from_any_with_tag;
 use bsmr_error::internal_error;
 use chrono::DateTime;
@@ -37,7 +37,7 @@ use chrono::Duration;
 use chrono::TimeZone;
 use chrono::Utc;
 
-/// Clean only old artifacts from a running buck daemon without killing the daemon.
+/// Clean only old artifacts from a running bsmr daemon without killing the daemon.
 /// This can be interrupted by other commands that run in parallel and request materialization.
 ///
 /// This is a separate command from CleanCommand even though it is invoked with
@@ -112,8 +112,8 @@ impl StreamingCommand for CleanStaleCommand {
 
     async fn exec_impl(
         self,
-        buckd: &mut BuckdClientConnector,
-        matches: BuckArgMatches<'_>,
+        bsmrd: &mut BsmrdClientConnector,
+        matches: BsmrArgMatches<'_>,
         ctx: &mut ClientCommandContext<'_>,
         events_ctx: &mut EventsCtx,
     ) -> ExitResult {
@@ -131,7 +131,7 @@ impl StreamingCommand for CleanStaleCommand {
                                 e,
                                 bsmr_error::ErrorTag::InvalidDuration
                             ))
-                            .buck_error_context("Error converting duration")?
+                            .bsmr_error_context("Error converting duration")?
                     ),
                 )?;
                 // Round up to next second since timestamp below is rounded down
@@ -157,7 +157,7 @@ impl StreamingCommand for CleanStaleCommand {
         }
 
         let context = ctx.client_context(matches, &self)?;
-        let response: CleanStaleResponse = buckd
+        let response: CleanStaleResponse = bsmrd
             .with_flushing()
             .clean_stale(
                 CleanStaleRequest {

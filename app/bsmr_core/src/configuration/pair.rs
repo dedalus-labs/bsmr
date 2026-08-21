@@ -17,7 +17,7 @@
 use std::sync::LazyLock;
 
 use allocative::Allocative;
-use bsmr_hash::BuckHasher;
+use bsmr_hash::BsmrHasher;
 use dupe::Dupe;
 use pagable::Pagable;
 use static_interner::Intern;
@@ -49,7 +49,7 @@ struct ConfigurationPairData {
 )]
 pub struct Configuration(Intern<ConfigurationPairData>);
 
-interner!(INTERNER, BuckHasher, ConfigurationPairData);
+interner!(INTERNER, BsmrHasher, ConfigurationPairData);
 
 impl Configuration {
     #[inline]

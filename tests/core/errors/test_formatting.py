@@ -17,9 +17,9 @@
 
 import re
 
-from bsmr.tests.e2e_util.api.buck import Buck
+from bsmr.tests.e2e_util.api.bsmr import Bsmr
 from bsmr.tests.e2e_util.asserts import expect_failure
-from bsmr.tests.e2e_util.buck_workspace import buck_test
+from bsmr.tests.e2e_util.bsmr_workspace import bsmr_test
 from bsmr.tests.e2e_util.helper.golden import golden, strip_glog_lines
 
 
@@ -35,8 +35,8 @@ def _sanitize(s: str) -> str:
 def error_formatting_test(
     name: str, command: list[str], command_name: str = "build"
 ) -> None:
-    async def impl(buck: Buck) -> None:
-        func = getattr(buck, command_name)
+    async def impl(bsmr: Bsmr) -> None:
+        func = getattr(bsmr, command_name)
         res = await expect_failure(func("--console=none", *command))
         golden(
             output=_sanitize(res.stderr),
@@ -45,7 +45,7 @@ def error_formatting_test(
 
     globals()[name] = impl
 
-    buck_test()(impl)
+    bsmr_test()(impl)
 
 
 error_formatting_test(name="test_action_fail", command=["//:action_fail"])

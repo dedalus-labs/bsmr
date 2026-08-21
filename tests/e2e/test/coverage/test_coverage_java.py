@@ -19,14 +19,14 @@ from pathlib import Path
 from typing import Optional
 
 import pytest
-from bsmr.tests.e2e_util.api.buck import Buck
-from bsmr.tests.e2e_util.buck_workspace import buck_test
+from bsmr.tests.e2e_util.api.bsmr import Bsmr
+from bsmr.tests.e2e_util.bsmr_workspace import bsmr_test
 
 from .test_coverage_utils import collect_coverage_for
 
 JAVA_TEST_TARGET = "upstream//xplat/test_frameworks/coverage/java/playground:SimpleTest"
 
-EXTRA_BUCK_ARGS = [
+EXTRA_BSMR_ARGS = [
     "--config",
     "junit_selective_coverage_rollout.is_enabled=true",
     # currently selective coverage is enabled via this flag
@@ -34,19 +34,19 @@ EXTRA_BUCK_ARGS = [
 
 
 @pytest.mark.parametrize("mode", [None, "@upstream//mode/dev", "@upstream//mode/opt"])
-@buck_test(inplace=True)
+@bsmr_test(inplace=True)
 async def test_java_coverage_file_filter(
-    buck: Buck, tmp_path: Path, mode: Optional[str]
+    bsmr: Bsmr, tmp_path: Path, mode: Optional[str]
 ) -> None:
     file_to_collect_coverage = "xplat/test_frameworks/coverage/java/playground/java_test/src/test/com/facebook/playground/SimpleTest.java"
     result = await collect_coverage_for(
-        buck,
+        bsmr,
         tmp_path,
         target=JAVA_TEST_TARGET,
         mode=mode,
         folder_filter=[],
         file_filter=[file_to_collect_coverage],
-        extra_buck_args=EXTRA_BUCK_ARGS,
+        extra_bsmr_args=EXTRA_BSMR_ARGS,
     )
 
     assert set(result) == {file_to_collect_coverage}, (
@@ -55,19 +55,19 @@ async def test_java_coverage_file_filter(
 
 
 @pytest.mark.parametrize("mode", [None, "@upstream//mode/dev", "@upstream//mode/opt"])
-@buck_test(inplace=True)
+@bsmr_test(inplace=True)
 async def test_java_coverage_folder_filter(
-    buck: Buck, tmp_path: Path, mode: Optional[str]
+    bsmr: Bsmr, tmp_path: Path, mode: Optional[str]
 ) -> None:
     folder_to_collect_coverage = "xplat/test_frameworks/coverage/java/playground/java_test/src/test/com/facebook/playground/nested"
     result = await collect_coverage_for(
-        buck,
+        bsmr,
         tmp_path,
         target=JAVA_TEST_TARGET,
         mode=mode,
         folder_filter=[folder_to_collect_coverage],
         file_filter=[],
-        extra_buck_args=EXTRA_BUCK_ARGS,
+        extra_bsmr_args=EXTRA_BSMR_ARGS,
     )
 
     expected_files = {
@@ -78,12 +78,12 @@ async def test_java_coverage_folder_filter(
     )
 
 
-@buck_test(inplace=True)
+@bsmr_test(inplace=True)
 async def test_junit_test_selective_coverage_doesnt_produce_coverage(
-    buck: Buck, tmp_path: Path
+    bsmr: Bsmr, tmp_path: Path
 ) -> None:
     paths = await collect_coverage_for(
-        buck,
+        bsmr,
         tmp_path,
         "upstream//testing_frameworks/code_coverage/junit/com/facebook/testing_frameworks:test",
         file_filter=[

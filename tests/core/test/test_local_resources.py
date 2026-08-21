@@ -14,27 +14,27 @@
 
 # pyre-strict
 
-from bsmr.tests.e2e_util.api.buck import Buck
-from bsmr.tests.e2e_util.buck_workspace import buck_test, env
+from bsmr.tests.e2e_util.api.bsmr import Bsmr
+from bsmr.tests.e2e_util.bsmr_workspace import bsmr_test, env
 
 
-@buck_test()
+@bsmr_test()
 @env("BSMR_ALLOW_INTERNAL_TEST_RUNNER_DO_NOT_USE", "1")
-async def test_platform_resolution(buck: Buck) -> None:
-    await buck.test(
+async def test_platform_resolution(bsmr: Bsmr) -> None:
+    await bsmr.test(
         ":my_test",
         test_executor="",
     )
-    res = await buck.log("what-ran")
+    res = await bsmr.log("what-ran")
     assert "MY_RESOURCE_ID=42" in res.stdout
 
 
-@buck_test(skip_for_os=["windows", "darwin"], disable_daemon_cgroup=False)
+@bsmr_test(skip_for_os=["windows", "darwin"], disable_daemon_cgroup=False)
 @env("BSMR_ALLOW_INTERNAL_TEST_RUNNER_DO_NOT_USE", "1")
-async def test_local_resource_broker_survives_cgroup_cleanup(buck: Buck) -> None:
-    await buck.test(
+async def test_local_resource_broker_survives_cgroup_cleanup(bsmr: Bsmr) -> None:
+    await bsmr.test(
         ":my_daemon_test",
         test_executor="",
     )
-    res = await buck.log("what-ran")
+    res = await bsmr.log("what-ran")
     assert "BROKER_PID=" in res.stdout

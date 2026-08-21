@@ -28,7 +28,7 @@ use bsmr_common::invocation_paths::InvocationPaths;
 use bsmr_common::invocation_paths_result::InvocationPathsResult;
 use bsmr_core::error::bsmr_hard_error_env;
 use bsmr_core::error::bsmr_show_soft_errors_env;
-use bsmr_error::BuckErrorContext;
+use bsmr_error::BsmrErrorContext;
 use bsmr_event_observer::verbosity::Verbosity;
 use bsmr_fs::paths::file_name::FileNameBuf;
 use bsmr_fs::working_dir::AbsWorkingDir;
@@ -39,7 +39,7 @@ use tokio::runtime::Runtime;
 
 use crate::agent_context::AgentContextEntry;
 use crate::client_metadata::ClientMetadata;
-use crate::common::BuckArgMatches;
+use crate::common::BsmrArgMatches;
 use crate::common::CommonEventLogOptions;
 use crate::common::ExitWhen;
 use crate::common::HostArchOverride;
@@ -150,24 +150,24 @@ impl<'a> ClientCommandContext<'a> {
         self.runtime.block_on(func(self))
     }
 
-    pub fn exec<T: BuckSubcommand>(
+    pub fn exec<T: BsmrSubcommand>(
         self,
         cmd: T,
-        matches: BuckArgMatches<'_>,
+        matches: BsmrArgMatches<'_>,
         events_ctx: &mut EventsCtx,
     ) -> ExitResult {
         self.with_runtime(|ctx| ctx.exec_async(cmd, matches, events_ctx))
     }
 
     // Handles setting up subscribers, executing a command and finalizing logging.
-    pub async fn exec_async<T: BuckSubcommand>(
+    pub async fn exec_async<T: BsmrSubcommand>(
         self,
         cmd: T,
-        matches: BuckArgMatches<'_>,
+        matches: BsmrArgMatches<'_>,
         events_ctx: &mut EventsCtx,
     ) -> ExitResult {
         cmd.update_events_ctx(matches, &self, events_ctx);
-        events_ctx.buck_log_dir = self.paths().map(|paths| paths.log_dir()).ok();
+        events_ctx.bsmr_log_dir = self.paths().map(|paths| paths.log_dir()).ok();
         events_ctx.command_report_path = cmd
             .event_log_opts()
             .command_report_path
@@ -194,7 +194,7 @@ impl<'a> ClientCommandContext<'a> {
 
     pub fn client_context<T: StreamingCommand>(
         &self,
-        arg_matches: BuckArgMatches<'_>,
+        arg_matches: BsmrArgMatches<'_>,
         cmd: &T,
     ) -> bsmr_error::Result<ClientContext> {
         // TODO(cjhopman): Support non unicode paths?
@@ -265,7 +265,7 @@ impl<'a> ClientCommandContext<'a> {
                 .working_dir
                 .path()
                 .to_str()
-                .buck_error_context(CurrentDirIsNotUtf8.to_string())?
+                .bsmr_error_context(CurrentDirIsNotUtf8.to_string())?
                 .to_owned(),
             config_overrides: Default::default(),
             host_platform: Default::default(),
@@ -320,16 +320,16 @@ impl<'a> ClientCommandContext<'a> {
     }
 }
 
-/// Provides a common interface for buck subcommands that use event subscribers for logging.
+/// Provides a common interface for bsmr subcommands that use event subscribers for logging.
 /// Executed by a ClientCommandContext.
 #[allow(async_fn_in_trait)]
-pub trait BuckSubcommand {
+pub trait BsmrSubcommand {
     /// Give the command a name for printing, debugging, etc.
     const COMMAND_NAME: &'static str;
 
     async fn exec_impl(
         self,
-        matches: BuckArgMatches<'_>,
+        matches: BsmrArgMatches<'_>,
         ctx: ClientCommandContext<'_>,
         events_ctx: &mut EventsCtx,
     ) -> ExitResult;
@@ -341,7 +341,7 @@ pub trait BuckSubcommand {
     // Don't return an error, all logging will break if this fails.
     fn update_events_ctx(
         &self,
-        _matches: BuckArgMatches<'_>,
+        _matches: BsmrArgMatches<'_>,
         ctx: &ClientCommandContext,
         events_ctx: &mut EventsCtx,
     ) {

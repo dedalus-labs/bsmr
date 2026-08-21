@@ -157,16 +157,16 @@ Therefore, the following commands do not work, which could be confusing for
 developers who don't realize that `messenger` is a macro rather than a target.
 
 ```
-buck build //apps/messenger:messenger    # FAILS
-buck targets --type create_apks          # FAILS
+bsmr build //apps/messenger:messenger    # FAILS
+bsmr targets --type create_apks          # FAILS
 ```
 
 ## How to view expanded macros {#viewing}
 
-Use `buck targets` to view the resulting targets after expanding all macros. The
-following invocation of `buck targets` show the resulting targets from the
+Use `bsmr targets` to view the resulting targets after expanding all macros. The
+following invocation of `bsmr targets` show the resulting targets from the
 preceding example, but not the macro that created them.
 
 ```
-buck targets upstream//fbandroid/apps/messenger/...
+bsmr targets upstream//fbandroid/apps/messenger/...
 ```

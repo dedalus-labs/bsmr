@@ -39,7 +39,7 @@ use allocative::Key;
 use allocative::Visitor;
 use allocative::hashbrown_util::bucket_count_for_capacity;
 use bsmr_error::bsmr_error;
-use bsmr_hash::StdBuckHashMap;
+use bsmr_hash::StdBsmrHashMap;
 
 /// Tree that stores data in the leaves. Think of the key as the path to the
 /// leaf containing the value. The data/value is of type `V`, and each edge
@@ -49,7 +49,7 @@ use bsmr_hash::StdBuckHashMap;
 #[derive(Debug)]
 pub enum DataTree<K, V> {
     /// Stores data of type `V` with key of type `Iterator<Item = K>`.
-    Tree(StdBuckHashMap<K, DataTree<K, V>>),
+    Tree(StdBsmrHashMap<K, DataTree<K, V>>),
     Data(V),
 }
 
@@ -91,7 +91,7 @@ impl<K: Allocative, V: Allocative> Allocative for DataTree<K, V> {
 /// — the full hashmap allocation minus the value slots that the DFS accounts for.
 fn visit_hash_map_keys_and_skipped_values<K: Allocative, V: Allocative>(
     visitor: &mut Visitor<'_>,
-    map: &StdBuckHashMap<K, DataTree<K, V>>,
+    map: &StdBsmrHashMap<K, DataTree<K, V>>,
 ) {
     let bucket_count = bucket_count_for_capacity(map.capacity());
     let occupied_key_slot_bytes = map.len()
@@ -138,7 +138,7 @@ impl<K, V> DataTree<K, V> {
 
 impl<K: 'static + Eq + Hash + Clone, V: 'static> DataTree<K, V> {
     pub fn new() -> Self {
-        Self::Tree(StdBuckHashMap::default())
+        Self::Tree(StdBsmrHashMap::default())
     }
 
     /// Gets the value at `key` or one of its prefixes, and returns it.
@@ -202,7 +202,7 @@ impl<K: 'static + Eq + Hash + Clone, V: 'static> DataTree<K, V> {
     pub fn get_subtree<'a, I, Q>(
         &self,
         key: &mut I,
-    ) -> bsmr_error::Result<Option<&StdBuckHashMap<K, Self>>>
+    ) -> bsmr_error::Result<Option<&StdBsmrHashMap<K, Self>>>
     where
         K: 'a + Borrow<Q>,
         Q: 'a + Hash + Eq + ?Sized,
@@ -293,14 +293,14 @@ impl<K: 'static + Eq + Hash + Clone, V: 'static> DataTree<K, V> {
         }
     }
 
-    pub fn children(&self) -> Option<&StdBuckHashMap<K, DataTree<K, V>>> {
+    pub fn children(&self) -> Option<&StdBsmrHashMap<K, DataTree<K, V>>> {
         match self {
             Self::Tree(children) => Some(children),
             Self::Data(_) => None,
         }
     }
 
-    fn children_mut(&mut self) -> Option<&mut StdBuckHashMap<K, DataTree<K, V>>> {
+    fn children_mut(&mut self) -> Option<&mut StdBsmrHashMap<K, DataTree<K, V>>> {
         match self {
             Self::Tree(children) => Some(children),
             Self::Data(_) => None,

@@ -19,7 +19,7 @@
 use std::io;
 use std::time::Duration;
 
-use bsmr_error::BuckErrorContext;
+use bsmr_error::BsmrErrorContext;
 use windows_sys::Win32::Foundation::FILETIME;
 use windows_sys::Win32::Foundation::STILL_ACTIVE;
 use windows_sys::Win32::System::Threading::GetExitCodeProcess;
@@ -73,7 +73,7 @@ impl WinapiProcessHandle {
                     return Ok(());
                 }
 
-                Err(os_error).with_buck_error_context(|| format!("Failed to kill pid {}", self.pid))
+                Err(os_error).with_bsmr_error_context(|| format!("Failed to kill pid {}", self.pid))
             } else {
                 Ok(())
             }
@@ -97,7 +97,7 @@ impl WinapiProcessHandle {
         };
 
         if result == 0 {
-            return Err(io::Error::last_os_error()).with_buck_error_context(|| {
+            return Err(io::Error::last_os_error()).with_bsmr_error_context(|| {
                 format!("Failed to call GetProcessTimes for pid {}", self.pid)
             });
         }
@@ -121,7 +121,7 @@ impl WinapiProcessHandle {
             }
         }
 
-        Err(io::Error::last_os_error()).with_buck_error_context(|| {
+        Err(io::Error::last_os_error()).with_bsmr_error_context(|| {
             format!("Failed to call GetExitCodeProcess for pid {}", self.pid)
         })
     }

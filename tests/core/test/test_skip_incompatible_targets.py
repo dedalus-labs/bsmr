@@ -16,22 +16,22 @@
 # pyre-strict
 
 
-from bsmr.tests.e2e_util.api.buck import Buck
+from bsmr.tests.e2e_util.api.bsmr import Bsmr
 from bsmr.tests.e2e_util.asserts import expect_failure
-from bsmr.tests.e2e_util.buck_workspace import buck_test, env
+from bsmr.tests.e2e_util.bsmr_workspace import bsmr_test, env
 
 
-@buck_test()
+@bsmr_test()
 @env(
     "BSMR_ALLOW_INTERNAL_TEST_RUNNER_DO_NOT_USE", "1"
 )  # needed to avoid failure on missing bsmr-tpx in bsmr-out
-async def test_test_skip_incompatible_targets(buck: Buck) -> None:
+async def test_test_skip_incompatible_targets(bsmr: Bsmr) -> None:
     targetA = "root//:compatible-with-A"
     targetB = "root//:compatible-with-B"
     platformA = "root//:platA"
 
     await expect_failure(
-        buck.test(
+        bsmr.test(
             targetA,
             targetB,
             f"--target-platforms={platformA}",
@@ -40,7 +40,7 @@ async def test_test_skip_incompatible_targets(buck: Buck) -> None:
         stderr_regex=rf"{targetB}\s*is incompatible with {platformA}#.*$",
     )
 
-    result = await buck.test(
+    result = await bsmr.test(
         targetA,
         targetB,
         f"--target-platforms={platformA}",

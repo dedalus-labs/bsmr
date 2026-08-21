@@ -1,3 +1,9 @@
+//===----------------------------------------------------------------------===//
+// Upstream-Source: facebook/buck2@1560aca2002865cd73d7cafb22c705cfb640b2bc
+// Modifications Copyright (c) 2026 Dedalus Labs, Inc. and its contributors
+// SPDX-License-Identifier: Apache-2.0
+//===----------------------------------------------------------------------===//
+
 /*
  * Copyright (c) Meta Platforms, Inc. and affiliates.
  *
@@ -68,20 +74,20 @@ func CWD() string {
 	return cwd
 }
 
-// findProjectDirectory finds the absolute buck project directory
-func findProjectDirectory(ctx context.Context, bucker Bucker) (string, error) {
-	return bucker.Root(ctx)
+// findProjectDirectory finds the absolute bsmr project directory
+func findProjectDirectory(ctx context.Context, bsmrer Bsmrer) (string, error) {
+	return bsmrer.Root(ctx)
 }
 
-// newPlatform creates a new actual platform using system libraries and buck
-func newPlatform(ctx context.Context, bucker Bucker, req *packages.DriverRequest) (*realPlatform, error) {
+// newPlatform creates a new actual platform using system libraries and bsmr
+func newPlatform(ctx context.Context, bsmrer Bsmrer, req *packages.DriverRequest) (*realPlatform, error) {
 	rp := &realPlatform{
 		overlay: req.Overlay,
 	}
 
-	pd, err := findProjectDirectory(ctx, bucker)
+	pd, err := findProjectDirectory(ctx, bsmrer)
 	if err != nil || pd == "" {
-		return nil, fmt.Errorf("failed to find buck project directory: %w", err)
+		return nil, fmt.Errorf("failed to find bsmr project directory: %w", err)
 	}
 	rp.projectDir = pd
 

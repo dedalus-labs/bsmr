@@ -1,3 +1,9 @@
+# ===----------------------------------------------------------------------===
+# Upstream-Source: facebook/buck2@1560aca2002865cd73d7cafb22c705cfb640b2bc
+# Modifications Copyright (c) 2026 Dedalus Labs, Inc. and its contributors
+# SPDX-License-Identifier: Apache-2.0
+# ===----------------------------------------------------------------------===
+
 # Copyright (c) Meta Platforms, Inc. and affiliates.
 #
 # This source code is dual-licensed under either the MIT license found in the
@@ -29,8 +35,8 @@ def _srcs_arg():
             default = None,
             doc = """
     The set of source files to be compiled by this rule. It supports \\*.ml, \\*.mli, \\*.mly, \\*.mll, and \\*.c files.
-     (see  [this test](https://github.com/facebook/buck/tree/dev/test/com/facebook/buck/features/ocaml/testdata/ocaml/clib/BUCK.fixture)  as C interop example and
-      [this test](https://github.com/facebook/buck/tree/dev/test/com/facebook/buck/features/ocaml/testdata/ocaml/calc/BUCK.fixture)  as parser and lexer example).
+     (see  [this test](https://github.com/dedalus/bsmr/tree/dev/test/com/dedalus/bsmr/features/ocaml/testdata/ocaml/clib/BSMR.fixture)  as C interop example and
+      [this test](https://github.com/dedalus/bsmr/tree/dev/test/com/dedalus/bsmr/features/ocaml/testdata/ocaml/calc/BSMR.fixture)  as parser and lexer example).
 """,
         ),
     }
@@ -42,7 +48,7 @@ def _compiler_flags_arg():
             default = [],
             doc = """
     The set of additional compiler flags to pass to ocaml compiler. It supports
-     specifying ppx (see [for example](https://github.com/facebook/buck/tree/dev/test/com/facebook/buck/features/ocaml/testdata/compiler_flag_macros/BUCK.fixture)).
+     specifying ppx (see [for example](https://github.com/dedalus/bsmr/tree/dev/test/com/dedalus/bsmr/features/ocaml/testdata/compiler_flag_macros/BSMR.fixture)).
 """,
         ),
     }

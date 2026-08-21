@@ -16,8 +16,8 @@
 
 import hashlib
 
-from bsmr.tests.e2e_util.api.buck import Buck
-from bsmr.tests.e2e_util.buck_workspace import buck_test, get_mode_from_platform
+from bsmr.tests.e2e_util.api.bsmr import Bsmr
+from bsmr.tests.e2e_util.bsmr_workspace import bsmr_test, get_mode_from_platform
 
 
 def sha256_file(path: str) -> str:
@@ -30,12 +30,12 @@ def sha256_file(path: str) -> str:
 
 # Regression testing for the differences in execution environment causing https://github.com/rust-lang/rust/issues/153898
 # to generate different crate hashes.
-@buck_test(inplace=True)
-async def test_rust_build_reproducibility(buck: Buck) -> None:
+@bsmr_test(inplace=True)
+async def test_rust_build_reproducibility(bsmr: Bsmr) -> None:
     target = "root//tests/targets/rules/rust/source_map_consistency/repro:repro"
 
     # Build 1: remote execution
-    result_remote = await buck.build_without_report(
+    result_remote = await bsmr.build_without_report(
         get_mode_from_platform(),
         target,
         "--remote-only",
@@ -44,10 +44,10 @@ async def test_rust_build_reproducibility(buck: Buck) -> None:
     remote_path = result_remote.stdout.strip()
     remote_hash = sha256_file(remote_path)
 
-    await buck.kill()
+    await bsmr.kill()
 
     # Build 2: local execution, no remote cache
-    result_local = await buck.build_without_report(
+    result_local = await bsmr.build_without_report(
         get_mode_from_platform(),
         target,
         "--local-only",

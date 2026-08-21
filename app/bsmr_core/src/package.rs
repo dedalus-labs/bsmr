@@ -15,7 +15,7 @@
  */
 
 //!
-//! A 'Package' in Buck corresponds to the subdirectories containing the
+//! A 'Package' in Bsmr corresponds to the subdirectories containing the
 //! repository sources that are accessible to the targets defined in the build
 //! file of current package. Each 'Package' can only contain one build file.
 //!
@@ -28,7 +28,7 @@
 //! Example:
 //! ```ignore
 //! fbsource
-//! +-- .buck
+//! +-- .bsmr
 //! +-- package1
 //! |   +-- TARGETS
 //! |   +-- my.java
@@ -55,7 +55,7 @@ use std::hash::Hasher;
 use allocative::Allocative;
 pub(crate) use bsmr_fs::paths::fmt::quoted_display;
 use bsmr_fs::paths::forward_rel_path::ForwardRelativePath;
-use bsmr_hash::BuckHasher;
+use bsmr_hash::BsmrHasher;
 use derive_more::Display;
 use dupe::Dupe;
 use equivalent::Equivalent;
@@ -144,7 +144,7 @@ impl Equivalent<PackageLabelData> for PackageLabelDataRef<'_> {
     }
 }
 
-interner!(INTERNER, BuckHasher, PackageLabelData);
+interner!(INTERNER, BsmrHasher, PackageLabelData);
 
 impl PackageLabel {
     #[inline]

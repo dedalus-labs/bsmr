@@ -16,8 +16,8 @@
 #
 # Use this reindeer.toml configuration to refer to this rule:
 #
-#     [buck]
-#     buckfile_imports = """
+#     [bsmr]
+#     bsmrfile_imports = """
 #     load("@prelude//rust:cargo_buildscript.bzl", "buildscript_run")
 #     """
 #
@@ -32,7 +32,7 @@ load(
     "cxx_merge_cpreprocessors",
 )
 load("@prelude//cxx:target_sdk_version.bzl", "get_target_triple")
-load("@prelude//decls:common.bzl", "buck")
+load("@prelude//decls:common.bzl", "bsmr")
 load("@prelude//decls:toolchains_common.bzl", "toolchains_common")
 load("@prelude//linking:link_info.bzl", "LinkInfosTSet", "LinkStrategy", "MergedLinkInfo")
 load("@prelude//os_lookup:defs.bzl", "Os", "OsLookup", "ScriptLanguage")
@@ -115,16 +115,16 @@ def _make_cc_shim(ctx: AnalysisContext, name: str, cmd: cmd_args) -> cmd_args:
     resources, in a script that can be invoked from any directory.
 
     Different crates' build scripts run $CC from inside of $OUT_DIR, or from
-    /tmp, not necessarily only from the directory that Buck gives to the build
+    /tmp, not necessarily only from the directory that Bsmr gives to the build
     script execution. Also they pass arguments to $CC which are relative to the
     directory they chose to run it in.
 
     For a cmd like this:
 
-        bsmr-out/v2/art/fbcode/tools/build/buck/wrappers/__fbcc__/0cdd64957fa390c4/fbcc \
+        bsmr-out/default/art/fbcode/tools/build/bsmr/wrappers/__fbcc__/0cdd64957fa390c4/fbcc \
         -resource-dir \
-        fbcode/third-party-buck/platform010/build/llvm-fb/21/lib/clang/stable \
-        -Bfbcode/third-party-buck/platform010/build/binutils/x86_64-facebook-linux/bin
+        fbcode/third-party-bsmr/platform010/build/llvm-fb/21/lib/clang/stable \
+        -Bfbcode/third-party-bsmr/platform010/build/binutils/x86_64-facebook-linux/bin
 
     we use `absolute_prefix` to insert a recognizable marker `${..}/` in front
     of every argument that is a path. The markers are later substituted with an
@@ -132,11 +132,11 @@ def _make_cc_shim(ctx: AnalysisContext, name: str, cmd: cmd_args) -> cmd_args:
 
         python3 \
         fbcode/bsmr/prelude/rust/tools/from_any_dir.py \
-        --cwd=/re_cwd/bsmr-out/v2/art/fbsource/eef091ffd45259ca/third-party/rust/vendor/gmp-mpfr-sys/__1-build-script-run__/cwd \
-        ${..}/bsmr-out/v2/art/fbcode/tools/build/buck/wrappers/__fbcc__/0cdd64957fa390c4/fbcc \
+        --cwd=/re_cwd/bsmr-out/default/art/fbsource/eef091ffd45259ca/third-party/rust/vendor/gmp-mpfr-sys/__1-build-script-run__/cwd \
+        ${..}/bsmr-out/default/art/fbcode/tools/build/bsmr/wrappers/__fbcc__/0cdd64957fa390c4/fbcc \
         -resource-dir \
-        ${..}/fbcode/third-party-buck/platform010/build/llvm-fb/21/lib/clang/stable \
-        -B${..}/fbcode/third-party-buck/platform010/build/binutils/x86_64-facebook-linux/bin
+        ${..}/fbcode/third-party-bsmr/platform010/build/llvm-fb/21/lib/clang/stable \
+        -B${..}/fbcode/third-party-bsmr/platform010/build/binutils/x86_64-facebook-linux/bin
 
     There are 4 categories of paths which are relative to different locations.
 
@@ -397,7 +397,7 @@ _cargo_buildscript_rule = rule(
         "rustc_link_search": attrs.bool(default = False),
         "version": attrs.string(),
         "_cxx_toolchain": toolchains_common.cxx(),
-        "_exec_os_type": buck.exec_os_type_arg(),
+        "_exec_os_type": bsmr.exec_os_type_arg(),
         "_rust_internal_tools_toolchain": attrs.default_only(
             attrs.toolchain_dep(default = "prelude//rust/tools:internal_tools_toolchain"),
         ),

@@ -41,7 +41,7 @@ impl Shell {
         match self {
             Self::Bash => Ok(Command::new("bash")),
             Self::Fish => {
-                let mut path = buck_resources::get("bsmr/tools/testing/completion/verify/fish").unwrap();
+                let mut path = bsmr_resources::get("bsmr/tools/testing/completion/verify/fish").unwrap();
                 path.push("bin/fish");
                 Ok(Command::new(path))
             }
@@ -49,7 +49,7 @@ impl Shell {
                 if cfg!(target_os = "macos") {
                     Ok(Command::new("zsh"))
                 } else {
-                    let mut path = buck_resources::get("bsmr/tools/testing/completion/verify/zsh").unwrap();
+                    let mut path = bsmr_resources::get("bsmr/tools/testing/completion/verify/zsh").unwrap();
                     path.push("usr/bin/zsh");
                     Ok(Command::new(path))
                 }

@@ -1,3 +1,9 @@
+# ===----------------------------------------------------------------------===
+# Upstream-Source: facebook/buck2@1560aca2002865cd73d7cafb22c705cfb640b2bc
+# Modifications Copyright (c) 2026 Dedalus Labs, Inc. and its contributors
+# SPDX-License-Identifier: Apache-2.0
+# ===----------------------------------------------------------------------===
+
 # Copyright (c) Meta Platforms, Inc. and affiliates.
 #
 # This source code is dual-licensed under either the MIT license found in the
@@ -69,13 +75,13 @@ def main(argv):
     if "GOROOT" in env:
         env["GOROOT"] = os.path.realpath(env["GOROOT"])
 
-    env["GOCACHE"] = os.path.realpath(env["BUCK_SCRATCH_PATH"])
+    env["GOCACHE"] = os.path.realpath(env["BSMR_SCRATCH_PATH"])
 
     cwd = os.getcwd()
     for env_var in ["CC", "CGO_CFLAGS", "CGO_CPPFLAGS", "CGO_LDFLAGS"]:
         if env_var in env:
             # HACK: Split the value into a list of arguments then join them back.
-            # This is because buck encodes quoted args in a way `go` doesn't like,
+            # This is because bsmr encodes quoted args in a way `go` doesn't like,
             # but `go_join` does it in a way that `go` expects.
             var_value = go_join(shlex.split(env[env_var]))
             # HACK: Replace %cwd% with the current working directory to make it work when `go` does `cd` to a tmp-dir.

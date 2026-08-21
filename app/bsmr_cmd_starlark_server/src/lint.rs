@@ -26,8 +26,8 @@ use bsmr_common::io::IoProvider;
 use bsmr_core::cells::CellResolver;
 use bsmr_core::cells::name::CellName;
 use bsmr_error::internal_error;
-use bsmr_hash::StdBuckHashMap;
-use bsmr_hash::StdBuckHashSet;
+use bsmr_hash::StdBsmrHashMap;
+use bsmr_hash::StdBsmrHashSet;
 use bsmr_interpreter::file_type::StarlarkFileType;
 use bsmr_interpreter::paths::path::StarlarkPath;
 use bsmr_server_ctx::ctx::ServerCommandContextTrait;
@@ -49,21 +49,21 @@ use crate::util::paths::starlark_files;
 /// The cache of names for a path, keyed by its CellName and its path type.
 struct Cache<'a> {
     dice: &'a DiceTransaction,
-    cached: StdBuckHashMap<(CellName, StarlarkFileType), Arc<StdBuckHashSet<String>>>,
+    cached: StdBsmrHashMap<(CellName, StarlarkFileType), Arc<StdBsmrHashSet<String>>>,
 }
 
 impl<'a> Cache<'a> {
     pub(crate) fn new(dice: &'a DiceTransaction) -> Cache<'a> {
         Self {
             dice,
-            cached: StdBuckHashMap::default(),
+            cached: StdBsmrHashMap::default(),
         }
     }
 
     pub(crate) async fn get_names(
         &mut self,
         path: &StarlarkPath<'_>,
-    ) -> bsmr_error::Result<Arc<StdBuckHashSet<String>>> {
+    ) -> bsmr_error::Result<Arc<StdBsmrHashSet<String>>> {
         let path_type = path.file_type();
         let cell = path.cell();
         if let Some(res) = self.cached.get(&(cell, path_type)) {

@@ -35,7 +35,7 @@ impl AttrTypeCoerce for EnumAttrType {
         value: Value,
     ) -> bsmr_error::Result<CoercedAttr> {
         let s = value.unpack_str_err()?;
-        // Enum names in Buck can be specified upper or lower case,
+        // Enum names in Bsmr can be specified upper or lower case,
         // so we normalise them to lowercase to make rule implementations easier
         let s = s.to_lowercase();
         if let Some(s) = self.variants.get(s.as_str()) {

@@ -37,8 +37,8 @@ use bsmr_core::deferred::key::DeferredHolderKey;
 use bsmr_core::execution_types::execution::ExecutionPlatformResolution;
 use bsmr_core::execution_types::executor_config::PathSeparatorKind;
 use bsmr_core::fs::artifact_path_resolver::ArtifactFs;
-use bsmr_core::fs::buck_out_path::BuckOutPathKind;
-use bsmr_core::fs::buck_out_path::BuckOutPathResolver;
+use bsmr_core::fs::output_path::OutputPathKind;
+use bsmr_core::fs::output_path::OutputPathResolver;
 use bsmr_core::fs::project::ProjectRoot;
 use bsmr_core::fs::project_rel_path::ProjectRelativePathBuf;
 use bsmr_core::package::PackageLabel;
@@ -52,8 +52,8 @@ use bsmr_execute::artifact::fs::ExecutorFs;
 use bsmr_execute::execute::request::OutputType;
 use bsmr_fs::paths::abs_norm_path::AbsNormPathBuf;
 use bsmr_fs::paths::forward_rel_path::ForwardRelativePathBuf;
-use bsmr_hash::BuckHashMap;
-use bsmr_hash::buck_indexset;
+use bsmr_hash::BsmrHashMap;
+use bsmr_hash::bsmr_indexset;
 use bsmr_interpreter_for_build::interpreter::build_context::BuildContext;
 use bsmr_interpreter_for_build::interpreter::testing::cells;
 use bsmr_util::arc_str::ArcS;
@@ -123,7 +123,7 @@ pub(crate) fn artifactory(builder: &mut GlobalsBuilder) {
             ForwardRelativePathBuf::try_from(path.to_owned()).unwrap(),
             OutputType::File,
             None,
-            BuckOutPathKind::default(),
+            OutputPathKind::default(),
             eval.heap(),
         )?;
         Ok(StarlarkDeclaredArtifact::new(
@@ -148,15 +148,15 @@ pub(crate) fn artifactory(builder: &mut GlobalsBuilder) {
             ForwardRelativePathBuf::try_from(path.to_owned()).unwrap(),
             OutputType::File,
             None,
-            BuckOutPathKind::default(),
+            OutputPathKind::default(),
             eval.heap(),
         )?;
-        let outputs = buck_indexset![artifact.as_output()];
+        let outputs = bsmr_indexset![artifact.as_output()];
         registry.register(
             &DeferredHolderKey::Base(BaseDeferredKey::TargetLabel(target_label.dupe())),
             outputs,
             SimpleUnregisteredAction::new(
-                buck_indexset![],
+                bsmr_indexset![],
                 vec![],
                 CategoryRef::new("fake_action").unwrap().to_owned(),
                 None,
@@ -176,14 +176,14 @@ pub(crate) fn artifactory(builder: &mut GlobalsBuilder) {
                 .unwrap();
         let fs = ArtifactFs::new(
             cell_info.1,
-            BuckOutPathResolver::new(ProjectRelativePathBuf::unchecked_new(
-                "bsmr-out/v2".to_owned(),
+            OutputPathResolver::new(ProjectRelativePathBuf::unchecked_new(
+                "bsmr-out/default".to_owned(),
             )),
             project_fs,
         );
         let executor_fs = ExecutorFs::new(&fs, PathSeparatorKind::Unix);
         let mut cli = Vec::<String>::new();
-        let artifact_path_mapping = BuckHashMap::default();
+        let artifact_path_mapping = BsmrHashMap::default();
         let mut fmt = CommandLineBuilder::new(&mut cli, &artifact_path_mapping, &executor_fs);
         artifact
             .0
@@ -223,9 +223,9 @@ pub(crate) fn artifactory(builder: &mut GlobalsBuilder) {
 
         actions_registry.register(
             &DeferredHolderKey::Base(BaseDeferredKey::TargetLabel(target_label.dupe())),
-            buck_indexset![output_artifact],
+            bsmr_indexset![output_artifact],
             SimpleUnregisteredAction::new(
-                buck_indexset![],
+                bsmr_indexset![],
                 vec![],
                 CategoryRef::new("fake_action").unwrap().to_owned(),
                 None,

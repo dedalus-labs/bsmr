@@ -22,7 +22,7 @@ use allocative::Allocative;
 use async_trait::async_trait;
 use bsmr_artifact::artifact::artifact_type::Artifact;
 use bsmr_core::target::configured_target_label::ConfiguredTargetLabel;
-use bsmr_hash::BuckIndexMap;
+use bsmr_hash::BsmrIndexMap;
 use bsmr_node::nodes::configured::ConfiguredTargetNode;
 use bsmr_node::nodes::configured_frontend::ConfiguredTargetNodeCalculation;
 use bsmr_node::nodes::configured_ref::ConfiguredGraphNodeRef;
@@ -171,7 +171,7 @@ impl ConfiguredGraphQueryEnvironmentDelegate for AnalysisConfiguredGraphQueryDel
 /// don't inadvertently cause flattening of those sets.
 fn find_target_nodes(
     targets: TargetSet<ConfiguredGraphNodeRef>,
-    label_to_artifact: BuckIndexMap<ConfiguredTargetLabel, Artifact>,
+    label_to_artifact: BsmrIndexMap<ConfiguredTargetLabel, Artifact>,
 ) -> bsmr_error::Result<TargetSet<ConfiguredGraphNodeRef>> {
     let mut queue: VecDeque<_> = targets.iter().duped().collect();
     let mut seen = targets;

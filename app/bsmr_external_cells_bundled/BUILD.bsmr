@@ -25,7 +25,7 @@ rust_library(
     ]),
     autocargo = {
         "cargo_toml_config": {
-            "extra_buck_dependencies": {
+            "extra_bsmr_dependencies": {
                 "build-dependencies": [
                     "bsmr_build//third-party/rust:walkdir",
                 ],
@@ -39,7 +39,7 @@ rust_library(
     # we avoid recompiling if at all possible.
     #
     # FIXME(JakobDegen): Ideally this would be a `rust_linkable_symbol`-like
-    # thing, but that needs to be moved to the prelude after buck1-death. It
+    # thing, but that needs to be moved to the prelude after legacy-death. It
     # also can't be made to work with cargo builds, so we'd need to deprecate
     # those more too.
     deps = [],

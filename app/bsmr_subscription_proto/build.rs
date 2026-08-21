@@ -20,8 +20,8 @@ use std::io;
 fn main() -> io::Result<()> {
     let proto_files = &["subscription.proto"];
 
-    let buck_proto_srcs = env::var("BUCK_PROTO_SRCS");
-    let includes = if let Ok(path) = &buck_proto_srcs {
+    let bsmr_proto_srcs = env::var("BSMR_PROTO_SRCS");
+    let includes = if let Ok(path) = &bsmr_proto_srcs {
         vec![path.as_str()]
     } else {
         vec!["."]
@@ -32,11 +32,11 @@ fn main() -> io::Result<()> {
         .type_attribute(".", "#[derive(::serde::Serialize, ::serde::Deserialize)]")
         .type_attribute(".", "#[derive(::allocative::Allocative)]")
         .type_attribute(
-            "buck.subscription.SubscriptionRequest.request",
+            "bsmr.subscription.SubscriptionRequest.request",
             "#[derive(::derive_more::From)]",
         )
         .type_attribute(
-            "buck.subscription.SubscriptionResponse.response",
+            "bsmr.subscription.SubscriptionResponse.response",
             "#[derive(::derive_more::From)]",
         )
         .compile(proto_files, &includes)

@@ -228,7 +228,7 @@ jobs:
         env:
           HOLLYWOOD_COMMAND_ARG_2: ${{ runner.temp }}
       - name: Generate Rust build dependencies
-        run: ./tools/bin/reindeer --third-party-dir tools/build/third-party/rust buckify
+        run: node ci/rust-build-dependencies.mjs
         shell: bash
       - name: Check Starlark
         run: python3 test.py --ci --git --bsmr=target/debug/bsmr --lint-starlark-only

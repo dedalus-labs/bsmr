@@ -35,8 +35,8 @@ use bsmr_common::file_ops::metadata::FileMetadata;
 use bsmr_common::file_ops::metadata::TrackedFileDigest;
 use bsmr_common::io::trace::TracingIoProvider;
 use bsmr_core::category::CategoryRef;
-use bsmr_core::fs::buck_out_path::BuildArtifactPath;
-use bsmr_error::BuckErrorContext;
+use bsmr_core::fs::output_path::BuildArtifactPath;
+use bsmr_error::BsmrErrorContext;
 use bsmr_error::ErrorTag;
 use bsmr_error::conversion::from_any_with_tag;
 use bsmr_execute::artifact_value::ArtifactValue;
@@ -47,7 +47,7 @@ use bsmr_execute::materialize::http::http_download;
 use bsmr_execute::materialize::http::http_head;
 use bsmr_execute::materialize::materializer::DeclareArtifactPayload;
 use bsmr_execute::materialize::materializer::HttpDownloadInfo;
-use bsmr_hash::BuckIndexSet;
+use bsmr_hash::BsmrIndexSet;
 use bsmr_http::HttpClient;
 use dupe::Dupe;
 use pagable::Pagable;
@@ -97,7 +97,7 @@ impl UnregisteredDownloadFileAction {
 impl UnregisteredAction for UnregisteredDownloadFileAction {
     fn register(
         self: Box<Self>,
-        outputs: BuckIndexSet<BuildArtifact>,
+        outputs: BsmrIndexSet<BuildArtifact>,
         _starlark_data: Option<OwnedFrozenValue>,
         _error_handler: Option<OwnedFrozenValue>,
     ) -> bsmr_error::Result<Box<dyn Action>> {
@@ -113,7 +113,7 @@ struct DownloadFileAction {
 
 impl DownloadFileAction {
     fn new(
-        outputs: BuckIndexSet<BuildArtifact>,
+        outputs: BsmrIndexSet<BuildArtifact>,
         inner: UnregisteredDownloadFileAction,
     ) -> bsmr_error::Result<Self> {
         if outputs.len() != 1 {
@@ -180,15 +180,15 @@ impl DownloadFileAction {
                         let content_length = content_length
                             .to_str()
                             .map_err(|e| from_any_with_tag(e, bsmr_error::ErrorTag::Http))
-                            .buck_error_context("Header is not valid utf-8")?;
+                            .bsmr_error_context("Header is not valid utf-8")?;
                         let content_length_number =
-                            content_length.parse().with_buck_error_context(|| {
+                            content_length.parse().with_bsmr_error_context(|| {
                                 format!("Header is not a number: `{content_length}`")
                             })?;
                         bsmr_error::Ok(content_length_number)
                     })
                     .transpose()
-                    .with_buck_error_context(|| {
+                    .with_bsmr_error_context(|| {
                         format!(
                             "Request to `{}` returned an invalid `{}` header",
                             url,
@@ -367,7 +367,7 @@ impl Action for DownloadFileAction {
             let offline_cache_path =
                 offline::declare_copy_to_offline_output_cache(ctx, self.output(), value.dupe())
                     .await?;
-            tracer.add_buck_out_entry(offline_cache_path);
+            tracer.add_output_entry(offline_cache_path);
         }
 
         Ok((

@@ -4,7 +4,7 @@
 # SPDX-License-Identifier: Apache-2.0
 # ===----------------------------------------------------------------------===
 
-load("@prelude//toolchains/android/tools:build_rules.bzl", "buck_java_binary", "buck_java_library", "third_party_aar", "third_party_exe", "third_party_jar")
+load("@prelude//toolchains/android/tools:build_rules.bzl", "bsmr_java_binary", "bsmr_java_library", "third_party_aar", "third_party_exe", "third_party_jar")
 load("@prelude//utils:source_listing.bzl", "source_listing")
 
 oncall("android_devxx")
@@ -20,7 +20,7 @@ third_party_jar(
     url = "mvn:https://maven.google.com:com.android.tools.build:aapt2-proto:jar:8.7.3-12006047",
 )
 
-buck_java_library(
+bsmr_java_library(
     name = "aapt2-proto",
     visibility = ["PUBLIC"],
     exported_deps = [
@@ -50,23 +50,23 @@ third_party_jar(
     ],
 )
 
-buck_java_library(
+bsmr_java_library(
     name = "tools-sdk-common",
     visibility = [
-        "prelude//toolchains/android/src/com/facebook/buck/android/aapt:merge_android_resource_sources",
-        "prelude//toolchains/android/src/com/facebook/buck/android/manifest:manifest",
-        "prelude//toolchains/android/test/com/facebook/buck/android:testutil",
-        "prelude//toolchains/android/test/com/facebook/buck/android/manifest:manifest",
-        "prelude//toolchains/android/test/com/facebook/buck/jvm/java:java",
-        "prelude//toolchains/android/test/com/facebook/buck/jvm/java:testutil",
-        "prelude//toolchains/android/test/com/facebook/buck/jvm/java/abi:abi",
-        "prelude//toolchains/android/test/com/facebook/buck/jvm/java/abi:testutil",
-        "prelude//toolchains/android/test/com/facebook/buck/jvm/kotlin:kotlin",
-        "prelude//toolchains/android/test/com/facebook/buck/testrunner:testrunner",
-        "prelude//toolchains/android/test/com/facebook/buck/testutil:testutil_test",
-        "prelude//toolchains/android/test/com/facebook/buck/testutil/integration:util",
-        "prelude//toolchains/android/test/com/facebook/buck/util:util",
-        "prelude//toolchains/android/test/com/facebook/buck/util/xml:xml",
+        "prelude//toolchains/android/src/com/dedalus/bsmr/android/aapt:merge_android_resource_sources",
+        "prelude//toolchains/android/src/com/dedalus/bsmr/android/manifest:manifest",
+        "prelude//toolchains/android/test/com/dedalus/bsmr/android:testutil",
+        "prelude//toolchains/android/test/com/dedalus/bsmr/android/manifest:manifest",
+        "prelude//toolchains/android/test/com/dedalus/bsmr/jvm/java:java",
+        "prelude//toolchains/android/test/com/dedalus/bsmr/jvm/java:testutil",
+        "prelude//toolchains/android/test/com/dedalus/bsmr/jvm/java/abi:abi",
+        "prelude//toolchains/android/test/com/dedalus/bsmr/jvm/java/abi:testutil",
+        "prelude//toolchains/android/test/com/dedalus/bsmr/jvm/kotlin:kotlin",
+        "prelude//toolchains/android/test/com/dedalus/bsmr/testrunner:testrunner",
+        "prelude//toolchains/android/test/com/dedalus/bsmr/testutil:testutil_test",
+        "prelude//toolchains/android/test/com/dedalus/bsmr/testutil/integration:util",
+        "prelude//toolchains/android/test/com/dedalus/bsmr/util:util",
+        "prelude//toolchains/android/test/com/dedalus/bsmr/util/xml:xml",
     ],
     deps = [
         ":layoutlib-api",
@@ -103,7 +103,7 @@ third_party_jar(
     sha1 = "6abada4555fa60825ea5f353443a7e561445c4f0",
     url = "mvn:https://maven.google.com:com.android.tools.layoutlib:layoutlib-api:jar:31.7.3",
     visibility = [
-        "prelude//toolchains/android/src/com/facebook/buck/android/aapt:merge_android_resource_sources",
+        "prelude//toolchains/android/src/com/dedalus/bsmr/android/aapt:merge_android_resource_sources",
     ],
 )
 
@@ -127,7 +127,7 @@ third_party_jar(
     sha1 = "0d0489e76e4eb785336317add6b65d57b928a429",
     url = "mvn:com.android.tools.build:manifest-merger:jar:31.7.3",
     visibility = [
-        "prelude//toolchains/android/src/com/facebook/buck/android/manifest:manifest",
+        "prelude//toolchains/android/src/com/dedalus/bsmr/android/manifest:manifest",
         "prelude//toolchains/android/third-party:manifest-merger",
         "prelude//toolchains/android/third-party/aosp:aosp",
     ],
@@ -147,7 +147,7 @@ third_party_jar(
 
 # === Begin: asm
 
-buck_java_library(
+bsmr_java_library(
     name = "asm",
     visibility = ["PUBLIC"],
     exported_deps = [
@@ -188,7 +188,7 @@ third_party_jar(
     url = "mvn:https://maven.google.com:com.android.tools.build:bundletool:jar:1.16.0",
 )
 
-buck_java_library(
+bsmr_java_library(
     name = "bundletool",
     visibility = ["PUBLIC"],
     exported_deps = [
@@ -249,12 +249,12 @@ third_party_jar(
 
 # === Begin: grpc
 
-buck_java_library(
+bsmr_java_library(
     name = "remote-apis",
     srcs = [],
     visibility = [
-        "prelude//toolchains/android/src/com/facebook/buck/installer/proto:installer-model",
-        "prelude//toolchains/android/src/com/facebook/buck/workertool/resources/proto:worker-model",
+        "prelude//toolchains/android/src/com/dedalus/bsmr/installer/proto:installer-model",
+        "prelude//toolchains/android/src/com/dedalus/bsmr/workertool/resources/proto:worker-model",
     ],
     exported_deps = [
         ":grpc-api",
@@ -273,7 +273,7 @@ buck_java_library(
     ],
 )
 
-buck_java_library(
+bsmr_java_library(
     name = "grpc-api",
     deps = [":perfmark-api"],
     exported_deps = [":grpc-api-jar"],
@@ -306,7 +306,7 @@ third_party_jar(
     sha1 = "b93f11824ee89d1283801dce8145bc54e1b8e94e",
     url = "mvn:io.grpc:grpc-netty-shaded:jar:1.24.0",
     visibility = [
-        "prelude//toolchains/android/src/com/facebook/buck/installer:installer_server",
+        "prelude//toolchains/android/src/com/dedalus/bsmr/installer:installer_server",
     ],
 )
 
@@ -316,8 +316,8 @@ third_party_jar(
     sha1 = "07a9669aa35f447d5181edc1b4f4e887128c045b",
     url = "mvn:io.grpc:grpc-netty:jar:1.24.0",
     visibility = [
-        "prelude//toolchains/android/src/com/facebook/buck/jvm/cd/workertool/grpc:workertool_grpc",
-        "prelude//toolchains/android/test/com/facebook/buck/jvm/cd/workertool/grpc:workertool_grpc",
+        "prelude//toolchains/android/src/com/dedalus/bsmr/jvm/cd/workertool/grpc:workertool_grpc",
+        "prelude//toolchains/android/test/com/dedalus/bsmr/jvm/cd/workertool/grpc:workertool_grpc",
     ],
 )
 
@@ -362,8 +362,8 @@ third_party_jar(
     # Jackson keeps a hot cache of serializers and deserializers as a useful optimization.
     # Plus consistency across the codebase is nice.
     visibility = [
-        "prelude//toolchains/android/src/com/facebook/buck/android/bundle:bundle",
-        "prelude//toolchains/android/src/com/facebook/buck/jvm/kotlin/cd/workertool:main_lib",
+        "prelude//toolchains/android/src/com/dedalus/bsmr/android/bundle:bundle",
+        "prelude//toolchains/android/src/com/dedalus/bsmr/jvm/kotlin/cd/workertool:main_lib",
         "prelude//toolchains/android/third-party/aosp:aosp",  # Sad transitive deps are sad
         ":remote-apis",  # Legacy caller which should probably use Jackson
     ],
@@ -380,7 +380,7 @@ third_party_jar(
     visibility = ["PUBLIC"],
 )
 
-buck_java_library(
+bsmr_java_library(
     name = "guava",
     visibility = ["PUBLIC"],
     deps = [
@@ -419,7 +419,7 @@ third_party_jar(
     sha1 = "da25056c694c54ba16e78e4fc35f17fc60f0d1b4",
     url = "mvn:com.google.inject:guice:jar:5.1.0",
     visibility = [
-        "prelude//toolchains/android/src/com/facebook/buck/testrunner:testng",
+        "prelude//toolchains/android/src/com/dedalus/bsmr/testrunner:testng",
     ],
     deps = [
         ":jsr330",
@@ -455,11 +455,11 @@ third_party_jar(
 
 # === Begin: io.netty
 
-buck_java_library(
+bsmr_java_library(
     name = "netty",
     visibility = [
-        "prelude//toolchains/android/src/com/facebook/buck/jvm/cd/workertool/grpc:workertool_grpc",
-        "prelude//toolchains/android/test/com/facebook/buck/jvm/cd/workertool/grpc:workertool_grpc",
+        "prelude//toolchains/android/src/com/dedalus/bsmr/jvm/cd/workertool/grpc:workertool_grpc",
+        "prelude//toolchains/android/test/com/dedalus/bsmr/jvm/cd/workertool/grpc:workertool_grpc",
     ],
     exported_deps = [
         ":netty-buffer",
@@ -652,7 +652,7 @@ third_party_jar(
     visibility = ["PUBLIC"],
 )
 
-buck_java_library(
+bsmr_java_library(
     name = "jackson-databind",
     visibility = ["PUBLIC"],
     exported_deps = [
@@ -712,7 +712,7 @@ third_party_jar(
     # @oss-disable[end= ]: internal_alias = "upstream//third-party/java/net/java/dev/jna/jna:jna__toolchain",
     sha1 = "1200e7ebeedbe0d10062093f32925a912020e747",
     url = "mvn:net.java.dev.jna:jna:jar:5.13.0",
-    visibility = ["prelude//toolchains/android/src/com/facebook/buck/io/windowsfs:windowsfs"],
+    visibility = ["prelude//toolchains/android/src/com/dedalus/bsmr/io/windowsfs:windowsfs"],
 )
 # ===   End: jna
 
@@ -732,7 +732,7 @@ third_party_jar(
     sha1 = "6975da39a7040257bd51d21a231b76c915872d38",
     url = "mvn:javax.inject:javax.inject:jar:1",
     visibility = [
-        "prelude//toolchains/android/src/com/facebook/buck/android/bundle:bundle",
+        "prelude//toolchains/android/src/com/dedalus/bsmr/android/bundle:bundle",
         ":bundletool",
         ":guice",
     ],
@@ -747,9 +747,9 @@ third_party_jar(
     sha1 = "8ac9e16d933b6fb43bc7f576336b8f4d7eb5ba12",
     url = "mvn:junit:junit:jar:4.13.2",
     visibility = [
-        "prelude//toolchains/android/src/com/facebook/buck/...",
-        "prelude//toolchains/android/src/com/facebook/buck/testrunner:junit",
-        "prelude//toolchains/android/test/com/facebook/buck/...",
+        "prelude//toolchains/android/src/com/dedalus/bsmr/...",
+        "prelude//toolchains/android/src/com/dedalus/bsmr/testrunner:junit",
+        "prelude//toolchains/android/test/com/dedalus/bsmr/...",
     ],
     deps = [
         ":hamcrest",
@@ -757,7 +757,7 @@ third_party_jar(
 )
 
 common_visibility = [
-    "prelude//toolchains/android/src/com/facebook/buck/testrunner:junit",
+    "prelude//toolchains/android/src/com/dedalus/bsmr/testrunner:junit",
 ]
 
 third_party_jar(
@@ -941,9 +941,9 @@ third_party_jar(
     sha1 = "e6c176cdaeb5ce3751c120eb1dfd84e5cc64d369",
     url = "mvn:org.jetbrains.kotlin:kotlin-build-tools-api:jar:2.1.0",
     visibility = [
-        "prelude//toolchains/android/src/com/facebook/buck/jvm/kotlin/buildtools:buildtools",
-        "prelude//toolchains/android/src/com/facebook/buck/jvm/kotlin/buildtools/snapshot:cp_snapshot_generator_lib",
-        "prelude//toolchains/android/test/com/facebook/buck/jvm/kotlin/buildtools:buildtools",
+        "prelude//toolchains/android/src/com/dedalus/bsmr/jvm/kotlin/buildtools:buildtools",
+        "prelude//toolchains/android/src/com/dedalus/bsmr/jvm/kotlin/buildtools/snapshot:cp_snapshot_generator_lib",
+        "prelude//toolchains/android/test/com/dedalus/bsmr/jvm/kotlin/buildtools:buildtools",
     ],
 )
 
@@ -980,7 +980,7 @@ third_party_jar(
     visibility = ["PUBLIC"],
 )
 
-buck_java_binary(
+bsmr_java_binary(
     name = "classic_kotlin-compiler-binary",
     main_class = "org.jetbrains.kotlin.cli.jvm.K2JVMCompiler",
     visibility = ["PUBLIC"],
@@ -996,7 +996,7 @@ buck_java_binary(
     ],
 )
 
-buck_java_binary(
+bsmr_java_binary(
     name = "kotlin-compiler-binary",
     main_class = "org.jetbrains.kotlin.cli.jvm.K2JVMCompiler",
     visibility = ["PUBLIC"],
@@ -1016,10 +1016,10 @@ buck_java_binary(
 
 # === Begin: kotlinx
 
-buck_java_library(
+bsmr_java_library(
     name = "kotlinx-metadata-jvm",
     visibility = [
-        "prelude//toolchains/android/src/com/facebook/buck/jvm/java/abi/kotlin:kotlin",
+        "prelude//toolchains/android/src/com/dedalus/bsmr/jvm/java/abi/kotlin:kotlin",
         ":d8",
     ],
     exported_deps = [
@@ -1229,7 +1229,7 @@ third_party_aar(
     # @oss-disable[end= ]: internal_alias = "upstream//third-party/java/com/github/luben/zstd-jni:zstd-jni-android",
     sha1 = "dfa697a8cf4f83e0793db1b235058c2ce4fbcf01",
     url = "mvn:com.github.luben:zstd-jni:aar:1.5.6-9",
-    visibility = ["prelude//toolchains/android/src/com/facebook/buck/android/agent:agent"],
+    visibility = ["prelude//toolchains/android/src/com/dedalus/bsmr/android/agent:agent"],
 )
 # ===   End: zstd-jni
 
@@ -1357,9 +1357,9 @@ third_party_jar(
     sha1 = "3d41953fbdda2adf1a75baee10851cd9de7c1b24",
     url = "https://github.com/facebook/buck2/releases/download/androidToolchain%2F2025-04-03/d8_dexer_patched.jar",
     visibility = [
-        "prelude//toolchains/android/src/com/facebook/buck/android/dex:d8_executable_main",
-        "prelude//toolchains/android/src/com/facebook/buck/android/dex:dex",
-        "prelude//toolchains/android/src/com/facebook/buck/android/dex:multi_dex_executable_main",
+        "prelude//toolchains/android/src/com/dedalus/bsmr/android/dex:d8_executable_main",
+        "prelude//toolchains/android/src/com/dedalus/bsmr/android/dex:dex",
+        "prelude//toolchains/android/src/com/dedalus/bsmr/android/dex:multi_dex_executable_main",
     ],
 )
 # ===   end: third party libraries with internal patching

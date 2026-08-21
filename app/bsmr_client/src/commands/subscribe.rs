@@ -21,20 +21,20 @@ use async_trait::async_trait;
 use bsmr_cli_proto::protobuf_util::ProtobufSplitter;
 use bsmr_client_ctx::client_ctx::ClientCommandContext;
 use bsmr_client_ctx::command_outcome::CommandOutcome;
-use bsmr_client_ctx::common::BuckArgMatches;
+use bsmr_client_ctx::common::BsmrArgMatches;
 use bsmr_client_ctx::common::CommonBuildConfigurationOptions;
 use bsmr_client_ctx::common::CommonEventLogOptions;
 use bsmr_client_ctx::common::CommonStarlarkOptions;
 use bsmr_client_ctx::common::ui::CommonConsoleOptions;
 use bsmr_client_ctx::common::ui::ConsoleType;
-use bsmr_client_ctx::daemon::client::BuckdClientConnector;
+use bsmr_client_ctx::daemon::client::BsmrdClientConnector;
 use bsmr_client_ctx::events_ctx::EventsCtx;
 use bsmr_client_ctx::events_ctx::PartialResultCtx;
 use bsmr_client_ctx::events_ctx::PartialResultHandler;
 use bsmr_client_ctx::exit_result::ExitResult;
 use bsmr_client_ctx::stream_util::reborrow_stream_for_static;
 use bsmr_client_ctx::streaming::StreamingCommand;
-use bsmr_error::BuckErrorContext;
+use bsmr_error::BsmrErrorContext;
 use bsmr_error::internal_error;
 use bsmr_subscription_proto::SubscriptionRequest;
 use futures::stream::StreamExt;
@@ -83,8 +83,8 @@ impl StreamingCommand for SubscribeCommand {
 
     async fn exec_impl(
         self,
-        buckd: &mut BuckdClientConnector,
-        matches: BuckArgMatches<'_>,
+        bsmrd: &mut BsmrdClientConnector,
+        matches: BsmrArgMatches<'_>,
         ctx: &mut ClientCommandContext<'_>,
         events_ctx: &mut EventsCtx,
     ) -> ExitResult {
@@ -94,7 +94,7 @@ impl StreamingCommand for SubscribeCommand {
             .and_then(|bytes| {
                 futures::future::ready(
                     SubscriptionRequest::decode_length_delimited(bytes)
-                        .buck_error_context("Error decoding SubscriptionRequest"),
+                        .bsmr_error_context("Error decoding SubscriptionRequest"),
                 )
             })
             .map(|res| match res {
@@ -138,7 +138,7 @@ impl StreamingCommand for SubscribeCommand {
             reborrow_stream_for_static(
                 stream,
                 |stream| async move {
-                    buckd
+                    bsmrd
                         .with_flushing()
                         .subscription(client_context, stream, events_ctx, partial_result_handler)
                         .await
@@ -238,12 +238,12 @@ impl PartialResultHandler for SubscriptionPartialResultHandler {
 
         if self.json {
             serde_json::to_writer(&mut self.buffer, &response)
-                .buck_error_context("JSON encoding failed")?;
+                .bsmr_error_context("JSON encoding failed")?;
             self.buffer.push(b'\n');
         } else {
             response
                 .encode_length_delimited(&mut self.buffer)
-                .buck_error_context("Encoding failed")?;
+                .bsmr_error_context("Encoding failed")?;
         }
 
         ctx.stdout(&self.buffer).await

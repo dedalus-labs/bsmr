@@ -38,7 +38,7 @@ TargetInfo = record(
     labels = field(list[str], default = []),
 )
 
-# if the target recommends a certain build configuration (e.g. build mode, buck config flags).
+# if the target recommends a certain build configuration (e.g. build mode, bsmr config flags).
 # See documentation in Rust-side for more details.
 TargetPreExecInfo = record(
     target_info = field(TargetInfo),

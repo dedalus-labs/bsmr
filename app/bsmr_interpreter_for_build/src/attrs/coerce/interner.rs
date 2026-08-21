@@ -21,7 +21,7 @@ use std::hash::Hasher;
 use std::marker;
 use std::sync::Arc;
 
-use bsmr_hash::BuckHasher;
+use bsmr_hash::BsmrHasher;
 use bsmr_util::arc_str::ArcSlice;
 use bsmr_util::arc_str::ArcStr;
 use dupe::Dupe;
@@ -31,7 +31,7 @@ use hashbrown::HashTable;
 /// Things specific about this interner:
 /// - Requires interned values to be Dupe, so that you can intern both Arc<...> and specific Arc types like ArcStr.
 /// - Interner is not static, so it's not required to take up memory for the entire duration of the program.
-pub(crate) struct AttrCoercionInterner<T: Dupe + Hash + Eq, H = BuckHasher> {
+pub(crate) struct AttrCoercionInterner<T: Dupe + Hash + Eq, H = BsmrHasher> {
     cache: RefCell<HashTable<(u64, T)>>,
     _marker: marker::PhantomData<H>,
 }

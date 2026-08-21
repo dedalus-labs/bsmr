@@ -1,20 +1,20 @@
 # This file is @generated, regenerate by re-running test with `-- --env BSMR_UPDATE_GOLDEN=1` appended to the test command
 
-$ buck cquery root//:incompat_foo -v0 --target-platforms=//:platform1
+$ bsmr cquery root//:incompat_foo -v0 --target-platforms=//:platform1
 root//:incompat_foo (root//:platform1#<HASH>)
 
-$ buck cquery root//:incompat_foo -v0 --target-platforms=//:platform2
+$ bsmr cquery root//:incompat_foo -v0 --target-platforms=//:platform2
 
-$ buck cquery root//:incompat_foo -v0 --target-platforms=//:platform3
+$ bsmr cquery root//:incompat_foo -v0 --target-platforms=//:platform3
 
-$ buck build root//:incompat_foo --console=none -v0 --target-platforms=//:platform2
+$ bsmr build root//:incompat_foo --console=none -v0 --target-platforms=//:platform2
 BUILD FAILED
 root//:incompat_foo
     is incompatible: select resolved to select_incompatible(): not supported on constraint2
 
-$ buck build root//:incompat_foo -v0 --target-platforms=//:platform2 --skip-incompatible-targets
+$ bsmr build root//:incompat_foo -v0 --target-platforms=//:platform2 --skip-incompatible-targets
 
-$ buck uquery root//:incompat_foo -v0 --output-format=starlark
+$ bsmr uquery root//:incompat_foo -v0 --output-format=starlark
 error_rule(
   name = "incompat_foo",
   data = select({
@@ -26,11 +26,11 @@ error_rule(
   within_view = ["PUBLIC"],
 )
 
-$ buck uquery root//:incompat_foo -v0 --output-format=json -B
+$ bsmr uquery root//:incompat_foo -v0 --output-format=json -B
 {
   "root//:incompat_foo": {
-    "buck.type": "error_rule",
-    "buck.package": "root//:TARGETS.fixture",
+    "bsmr.type": "error_rule",
+    "bsmr.package": "root//:TARGETS.fixture",
     "name": "incompat_foo",
     "default_target_platform": null,
     "target_compatible_with": [],
@@ -61,7 +61,7 @@ $ buck uquery root//:incompat_foo -v0 --output-format=json -B
   }
 }
 
-$ buck uquery root//:incompat_foo2 -v0 --output-format=starlark
+$ bsmr uquery root//:incompat_foo2 -v0 --output-format=starlark
 error_rule(
   name = "incompat_foo2",
   data = "",
@@ -69,7 +69,7 @@ error_rule(
   within_view = ["PUBLIC"],
 )
 
-$ buck uquery root//:incompat_foo2 --console=none -v0 --output-format=starlark -c user.check_bad_coercion_incompatible=1
+$ bsmr uquery root//:incompat_foo2 --console=none -v0 --output-format=starlark -c user.check_bad_coercion_incompatible=1
 Command failed: 
 Error evaluating expression:
     root//:incompat_foo2
@@ -95,10 +95,10 @@ Caused by:
     3: Error coercing "bad use"
     4: Expected `str`, but got `SelectIncompatible (repr: "bad use")`
 
-$ buck cquery root//:depends_on_incompat -v0 --target-platforms=//:platform1
+$ bsmr cquery root//:depends_on_incompat -v0 --target-platforms=//:platform1
 root//:depends_on_incompat (root//:platform1#<HASH>)
 
-$ buck cquery root//:depends_on_incompat --console=none -v0 --target-platforms=//:platform2
+$ bsmr cquery root//:depends_on_incompat --console=none -v0 --target-platforms=//:platform2
 Command failed: 
 Upgraded warning to failure via $BSMR_HARD_ERROR
 

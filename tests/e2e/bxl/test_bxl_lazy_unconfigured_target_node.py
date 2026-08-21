@@ -14,37 +14,37 @@
 
 # pyre-strict
 
-from bsmr.tests.e2e_util.api.buck import Buck
+from bsmr.tests.e2e_util.api.bsmr import Bsmr
 from bsmr.tests.e2e_util.asserts import expect_failure
-from bsmr.tests.e2e_util.buck_workspace import buck_test
+from bsmr.tests.e2e_util.bsmr_workspace import bsmr_test
 
 
-@buck_test(inplace=False, data_dir="bxl/simple")
-async def test_lazy_unconfigured_target(buck: Buck) -> None:
-    await buck.bxl(
+@bsmr_test(inplace=False, data_dir="bxl/simple")
+async def test_lazy_unconfigured_target(bsmr: Bsmr) -> None:
+    await bsmr.bxl(
         "//bxl/lazy_unconfigured_target_node.bxl:lazy_unconfigured_target_node_resolve",
     )
 
 
-@buck_test(inplace=False, data_dir="bxl/simple")
-async def test_lazy_unconfigured_target_error(buck: Buck) -> None:
+@bsmr_test(inplace=False, data_dir="bxl/simple")
+async def test_lazy_unconfigured_target_error(bsmr: Bsmr) -> None:
     await expect_failure(
-        buck.bxl(
+        bsmr.bxl(
             "//bxl/lazy_unconfigured_target_node.bxl:lazy_unconfigured_target_node_resolve_error"
         ),
         stderr_regex="error: Unknown target `not_exist` from package `root//bin`.",
     )
 
 
-@buck_test(inplace=False, data_dir="bxl/simple")
-async def test_lazy_unconfigured_target_catch_error(buck: Buck) -> None:
-    await buck.bxl(
+@bsmr_test(inplace=False, data_dir="bxl/simple")
+async def test_lazy_unconfigured_target_catch_error(bsmr: Bsmr) -> None:
+    await bsmr.bxl(
         "//bxl/lazy_unconfigured_target_node.bxl:lazy_unconfigured_target_node_resolve_catch_error",
     )
 
 
-@buck_test(inplace=False, data_dir="bxl/simple")
-async def test_lazy_unconfigured_target_node_pattern(buck: Buck) -> None:
-    await buck.bxl(
+@bsmr_test(inplace=False, data_dir="bxl/simple")
+async def test_lazy_unconfigured_target_node_pattern(bsmr: Bsmr) -> None:
+    await bsmr.bxl(
         "//bxl/lazy_unconfigured_target_node.bxl:lazy_unconfigured_target_node_pattern",
     )

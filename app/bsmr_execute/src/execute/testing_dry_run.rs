@@ -19,7 +19,7 @@ use std::sync::Mutex;
 
 use async_trait::async_trait;
 use bsmr_core::fs::artifact_path_resolver::ArtifactFs;
-use bsmr_hash::BuckIndexMap;
+use bsmr_hash::BsmrIndexMap;
 use bsmr_util::time_span::TimeSpan;
 use dice_futures::cancellation::CancellationContext;
 use sorted_vector_map::SortedVectorMap;
@@ -107,7 +107,7 @@ impl PreparedCommandExecutor for DryRunExecutor {
             // NOTE: This should probably be an error() but who cares.
             Err(..) => manager.failure(
                 exec_kind,
-                BuckIndexMap::default(),
+                BsmrIndexMap::default(),
                 Default::default(),
                 Some(1),
                 CommandExecutionMetadata::empty(TimeSpan::empty_now()),

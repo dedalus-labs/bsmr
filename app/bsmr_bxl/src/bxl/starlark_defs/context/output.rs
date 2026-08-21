@@ -34,11 +34,11 @@ use bsmr_build_api::interpreter::rule_defs::cmd_args::value_as::ValueAsCommandLi
 use bsmr_common::events::HasEvents;
 use bsmr_core::fs::artifact_path_resolver::ArtifactFs;
 use bsmr_core::fs::project::ProjectRoot;
-use bsmr_error::BuckErrorContext;
+use bsmr_error::BsmrErrorContext;
 use bsmr_error::bsmr_error;
 use bsmr_error::starlark_error::from_starlark_with_options;
 use bsmr_execute::path::artifact_path::ArtifactPath;
-use bsmr_hash::BuckIndexSet;
+use bsmr_hash::BsmrIndexSet;
 use bsmr_server_ctx::bxl::BxlStreamingTracker;
 use bsmr_server_ctx::bxl::GetBxlStreamingTracker;
 use derivative::Derivative;
@@ -128,11 +128,11 @@ pub(crate) struct OutputStreamState {
 pub(crate) struct OutputStreamOutcome {
     /// set of artifacts that need to be materialized, flattened from
     /// the original EnsuredArtifactOrGroup entries.
-    pub(crate) ensured_artifacts: BuckIndexSet<ArtifactGroup>,
+    pub(crate) ensured_artifacts: BsmrIndexSet<ArtifactGroup>,
     pub(crate) output: Vec<u8>,
     pub(crate) streaming: Vec<u8>,
     pub(crate) error: Vec<u8>,
-    pub(crate) pending_streaming_outputs: Vec<(BuckIndexSet<ArtifactGroup>, Vec<u8>)>,
+    pub(crate) pending_streaming_outputs: Vec<(BsmrIndexSet<ArtifactGroup>, Vec<u8>)>,
 }
 
 #[derive(
@@ -204,7 +204,7 @@ impl OutputStreamState {
             .into_iter()
             .map(EnsuredArtifactOrGroup::into_artifact_groups)
             .flatten_ok()
-            .collect::<bsmr_error::Result<BuckIndexSet<ArtifactGroup>>>()?;
+            .collect::<bsmr_error::Result<BsmrIndexSet<ArtifactGroup>>>()?;
         let pending_streaming_outputs = state
             .pending_streaming_outputs
             .into_iter()
@@ -213,10 +213,10 @@ impl OutputStreamState {
                     .into_iter()
                     .map(|ensured_artifact| ensured_artifact.into_artifact_groups())
                     .flatten_ok()
-                    .collect::<bsmr_error::Result<BuckIndexSet<ArtifactGroup>>>()?;
+                    .collect::<bsmr_error::Result<BsmrIndexSet<ArtifactGroup>>>()?;
                 Ok((artifacts, output_str))
             })
-            .collect::<bsmr_error::Result<Vec<(BuckIndexSet<ArtifactGroup>, Vec<u8>)>>>()?;
+            .collect::<bsmr_error::Result<Vec<(BsmrIndexSet<ArtifactGroup>, Vec<u8>)>>>()?;
         Ok(OutputStreamOutcome {
             ensured_artifacts: artifacts,
             output: state.output,
@@ -555,7 +555,7 @@ impl StarlarkOutputStream {
                 async_ctx: &RefCell::new(&mut BxlEvalExtra::from_context(eval)?.dice),
             },
         )
-        .buck_error_context("Error writing to JSON for `write_json`")?;
+        .bsmr_error_context("Error writing to JSON for `write_json`")?;
 
         writeln!(&mut output)?;
         output.flush()?;

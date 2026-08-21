@@ -15,17 +15,17 @@
 # pyre-strict
 
 
-from bsmr.tests.e2e_util.api.buck import Buck
+from bsmr.tests.e2e_util.api.bsmr import Bsmr
 from bsmr.tests.e2e_util.asserts import expect_failure
-from bsmr.tests.e2e_util.buck_workspace import buck_test, env
+from bsmr.tests.e2e_util.bsmr_workspace import bsmr_test, env
 
 
-@buck_test()
+@bsmr_test()
 @env("BSMR_TEST_TPX_USE_TCP", "true")
-async def test_tcp_startup_fail(buck: Buck) -> None:
+async def test_tcp_startup_fail(bsmr: Bsmr) -> None:
     # Python is a binary that will just fail when we give it our executor args
     # but works on any platform. It's a bit dumb but it'll do
     await expect_failure(
-        buck.test("...", test_executor="fbpython"),
+        bsmr.test("...", test_executor="fbpython"),
         stderr_regex="Executor exited before connecting",
     )

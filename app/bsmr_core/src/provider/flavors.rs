@@ -45,7 +45,7 @@ fn is_platform_flavor(flavor: &str) -> bool {
     regex_set.is_match(flavor)
 }
 
-/// Buck1 uses flavors for a couple different purposes. Some of those flavors have ended
+/// Legacy uses flavors for a couple different purposes. Some of those flavors have ended
 /// up being used by users. In v2, the functionality of most user-visible flavors ends up
 /// being handled by either configurations or subtargets. One common use of flavors in
 /// v1 was to have references to secondary or intermediate outputs, in v2 we can do that

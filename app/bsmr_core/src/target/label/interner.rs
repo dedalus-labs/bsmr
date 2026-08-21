@@ -19,7 +19,7 @@ use std::fmt::Formatter;
 use std::hash::BuildHasher;
 
 use allocative::Allocative;
-use bsmr_hash::BuckHasherBuilder;
+use bsmr_hash::BsmrHasherBuilder;
 use lock_free_hashtable::sharded::ShardedLockFreeRawTable;
 
 use crate::target::label::label::TargetLabel;
@@ -45,7 +45,7 @@ impl PartialEq for ConcurrentTargetLabelInterner {
 
 impl ConcurrentTargetLabelInterner {
     pub fn intern(&self, target_label: TargetLabel) -> TargetLabel {
-        let hash = BuckHasherBuilder.hash_one(&target_label);
+        let hash = BsmrHasherBuilder.hash_one(&target_label);
 
         if let Some(r) = self
             .table
@@ -58,7 +58,7 @@ impl ConcurrentTargetLabelInterner {
             hash,
             target_label,
             |a, b| a == b,
-            |a| BuckHasherBuilder.hash_one(a),
+            |a| BsmrHasherBuilder.hash_one(a),
         );
         entry.to_owned()
     }

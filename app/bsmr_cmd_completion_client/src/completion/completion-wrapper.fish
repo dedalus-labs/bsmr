@@ -55,4 +55,4 @@ function __bsmr_add_target_completions
 end
 
 complete -c bsmr -n '__bsmr_takes_target' -f -a '(__bsmr_add_target_completions)'
-complete -c buck -w bsmr
+complete -c bsmr -w bsmr

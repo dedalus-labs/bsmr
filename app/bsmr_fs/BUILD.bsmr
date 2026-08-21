@@ -16,7 +16,7 @@ rust_library(
     ),
     autocargo = {
         "cargo_toml_config": {
-            "extra_buck_dependencies": {
+            "extra_bsmr_dependencies": {
                 "dependencies": [
                     (None, "//common/rust/shed/detect_eden:detect_eden"),
                 ],

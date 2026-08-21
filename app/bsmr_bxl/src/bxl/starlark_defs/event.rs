@@ -27,7 +27,7 @@ use bsmr_data::starlark_user_metadata_value::Value::DictValue;
 use bsmr_data::starlark_user_metadata_value::Value::IntValue;
 use bsmr_data::starlark_user_metadata_value::Value::ListValue;
 use bsmr_data::starlark_user_metadata_value::Value::StringValue;
-use bsmr_hash::StdBuckHashMap;
+use bsmr_hash::StdBsmrHashMap;
 use starlark::values::UnpackValue;
 use starlark::values::Value;
 use starlark::values::dict::DictRef;
@@ -72,7 +72,7 @@ impl<'v> StarlarkUserEventParser<'v> {
     fn unpack_metadata_map(
         &self,
         metadata: Value<'v>,
-    ) -> bsmr_error::Result<StdBuckHashMap<String, StarlarkUserMetadataValue>> {
+    ) -> bsmr_error::Result<StdBsmrHashMap<String, StarlarkUserMetadataValue>> {
         let metadata = match DictRef::from_value(metadata) {
             Some(metadata) => metadata,
             None => {
@@ -98,7 +98,7 @@ impl<'v> StarlarkUserEventParser<'v> {
                 let v = self.get_metadata_value(&k, v)?;
                 Ok((k, v))
             })
-            .collect::<bsmr_error::Result<StdBuckHashMap<_, _>>>()
+            .collect::<bsmr_error::Result<StdBsmrHashMap<_, _>>>()
     }
 
     fn get_metadata_value(

@@ -19,7 +19,7 @@
 use std::sync::Arc;
 
 use bsmr_common::events::HasEvents;
-use bsmr_error::BuckErrorContext;
+use bsmr_error::BsmrErrorContext;
 use bsmr_error::conversion::from_any_with_tag;
 use bsmr_error::internal_error;
 use bsmr_events::dispatch::console_message;

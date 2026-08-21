@@ -18,9 +18,9 @@ import sys
 from os.path import exists
 from pathlib import Path
 
-from bsmr.tests.e2e_util.api.buck import Buck
+from bsmr.tests.e2e_util.api.bsmr import Bsmr
 from bsmr.tests.e2e_util.asserts import expect_failure
-from bsmr.tests.e2e_util.buck_workspace import buck_test
+from bsmr.tests.e2e_util.bsmr_workspace import bsmr_test
 
 
 # Currently installer grpc doesn't compile on Mac
@@ -30,13 +30,13 @@ def linux_only() -> bool:
 
 if linux_only():
 
-    @buck_test(inplace=True)
-    async def test_install_modifiers(buck: Buck, tmp_path: Path) -> None:
+    @bsmr_test(inplace=True)
+    async def test_install_modifiers(bsmr: Bsmr, tmp_path: Path) -> None:
         tmp_dir = tmp_path / "no_modifiers"
         tmp_dir.mkdir()
         args = ["--dst", f"{tmp_dir}/"]
 
-        await buck.install(
+        await bsmr.install(
             "root//tests/targets/rules/install:installer_modifiers_test",
             "--",
             *args,
@@ -48,7 +48,7 @@ if linux_only():
         tmp_dir.mkdir()
         args = ["--dst", f"{tmp_dir}/"]
 
-        await buck.install(
+        await bsmr.install(
             "root//tests/targets/rules/install:installer_modifiers_test?asan",
             "--",
             *args,
@@ -57,13 +57,13 @@ if linux_only():
         assert exists(f"{tmp_dir}/asan")
 
 
-@buck_test(inplace=True)
-async def test_install_fails_with_global_modifiers(buck: Buck, tmp_path: Path) -> None:
+@bsmr_test(inplace=True)
+async def test_install_fails_with_global_modifiers(bsmr: Bsmr, tmp_path: Path) -> None:
     tmp_dir = tmp_path / "install_test"
     tmp_dir.mkdir()
     args = ["--dst", f"{tmp_dir}/"]
     await expect_failure(
-        buck.install(
+        bsmr.install(
             "--modifier",
             "asan",
             "root//tests/targets/rules/install:installer_modifiers_test?asan",

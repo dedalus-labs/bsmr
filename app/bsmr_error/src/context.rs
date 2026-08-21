@@ -27,19 +27,19 @@ use crate::context_value::TypedContext;
 /// in the near future, uses of `anyhow::Context` in `bsmr/app` will be broadly replaced with use
 /// of this trait. Subsequently, additional APIs will be provided for annotating errors with
 /// structured context data.
-pub trait BuckErrorContext<T>: Sealed {
+pub trait BsmrErrorContext<T>: Sealed {
     #[track_caller]
-    fn buck_error_context<C: Into<ContextValue>>(self, context: C) -> crate::Result<T>;
+    fn bsmr_error_context<C: Into<ContextValue>>(self, context: C) -> crate::Result<T>;
 
     #[track_caller]
-    fn with_buck_error_context<C, F>(self, f: F) -> crate::Result<T>
+    fn with_bsmr_error_context<C, F>(self, f: F) -> crate::Result<T>
     where
         C: Into<ContextValue>,
         F: FnOnce() -> C;
 
     #[track_caller]
     fn tag(self, tag: crate::ErrorTag) -> crate::Result<T> {
-        self.buck_error_context(ContextValue::Tags(smallvec![tag]))
+        self.bsmr_error_context(ContextValue::Tags(smallvec![tag]))
     }
 
     #[track_caller]
@@ -52,7 +52,7 @@ pub trait BuckErrorContext<T>: Sealed {
     where
         F: FnOnce() -> String,
     {
-        self.with_buck_error_context(|| format!("{} (internal error)", f()))
+        self.with_bsmr_error_context(|| format!("{} (internal error)", f()))
             .tag(crate::ErrorTag::InternalError)
     }
 
@@ -75,11 +75,11 @@ pub trait Sealed: Sized {}
 
 impl<T, E> Sealed for std::result::Result<T, E> where crate::Error: From<E> {}
 
-impl<T, E> BuckErrorContext<T> for std::result::Result<T, E>
+impl<T, E> BsmrErrorContext<T> for std::result::Result<T, E>
 where
     crate::Error: From<E>,
 {
-    fn buck_error_context<C>(self, c: C) -> crate::Result<T>
+    fn bsmr_error_context<C>(self, c: C) -> crate::Result<T>
     where
         C: Into<ContextValue>,
     {
@@ -89,7 +89,7 @@ where
         }
     }
 
-    fn with_buck_error_context<C, F>(self, f: F) -> crate::Result<T>
+    fn with_bsmr_error_context<C, F>(self, f: F) -> crate::Result<T>
     where
         C: Into<ContextValue>,
         F: FnOnce() -> C,

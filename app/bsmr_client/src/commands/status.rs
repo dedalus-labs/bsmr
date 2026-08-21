@@ -18,9 +18,9 @@ use std::time::Duration;
 
 use bsmr_cli_proto::StatusResponse;
 use bsmr_client_ctx::client_ctx::ClientCommandContext;
-use bsmr_client_ctx::common::BuckArgMatches;
-use bsmr_client_ctx::daemon::client::connect::BuckdConnectOptions;
-use bsmr_client_ctx::daemon::client::connect::connect_buckd;
+use bsmr_client_ctx::common::BsmrArgMatches;
+use bsmr_client_ctx::daemon::client::connect::BsmrdConnectOptions;
+use bsmr_client_ctx::daemon::client::connect::connect_bsmrd;
 use bsmr_client_ctx::daemon::client::connect::establish_connection_existing;
 use bsmr_client_ctx::events_ctx::EventsCtx;
 use bsmr_client_ctx::subscribers::stdout_stderr_forwarder::StdoutStderrForwarder;
@@ -38,7 +38,7 @@ use walkdir::WalkDir;
 pub struct StatusCommand {
     #[clap(long, help = "Whether to include a state snapshot in the output.")]
     snapshot: bool,
-    #[clap(long, help = "Enable printing status for all running buckd")]
+    #[clap(long, help = "Enable printing status for all running bsmrd")]
     all: bool,
     #[clap(long, help = "Enable printing metrics from the Tokio runtime")]
     include_tokio_runtime_metrics: bool,
@@ -47,14 +47,14 @@ pub struct StatusCommand {
 impl StatusCommand {
     pub fn exec(
         self,
-        _matches: BuckArgMatches<'_>,
+        _matches: BsmrArgMatches<'_>,
         ctx: ClientCommandContext<'_>,
     ) -> bsmr_error::Result<()> {
         ctx.with_runtime(|ctx| async move {
             let mut events_ctx = EventsCtx::new(None, vec![Box::new(StdoutStderrForwarder)]);
             if self.all {
                 let mut daemon_dirs = Vec::new();
-                let root = ctx.paths()?.roots.common_buckd_dir()?;
+                let root = ctx.paths()?.roots.common_bsmrd_dir()?;
                 let walker = WalkDir::new(&root).follow_links(false).into_iter();
                 for entry in walker {
                     let entry =
@@ -64,7 +64,7 @@ impl StatusCommand {
                             path: entry.into_path().try_into()?,
                         };
 
-                        if dir.buckd_info().exists() {
+                        if dir.bsmrd_info().exists() {
                             daemon_dirs.push(dir);
                         }
                     }
@@ -89,15 +89,15 @@ impl StatusCommand {
 
                 bsmr_client_ctx::println!("{}", serde_json::to_string_pretty(&statuses)?)?;
             } else {
-                match connect_buckd(
-                    BuckdConnectOptions::ExistingOnly,
+                match connect_bsmrd(
+                    BsmrdConnectOptions::ExistingOnly,
                     &mut events_ctx,
                     ctx.paths()?,
                 )
                 .await
                 {
                     Err(_) => {
-                        bsmr_client_ctx::eprintln!("no buckd running")?;
+                        bsmr_client_ctx::eprintln!("no bsmrd running")?;
                         // Should this be an error?
                     }
                     Ok(mut client) => {
@@ -176,8 +176,8 @@ pub(crate) fn process_status(status: StatusResponse) -> bsmr_error::Result<serde
         value["valid_working_directory"] = serde_json::to_value(valid_working_directory)?;
     }
 
-    if let Some(valid_buck_out_mount) = status.valid_buck_out_mount {
-        value["valid_buck_out_mount"] = serde_json::to_value(valid_buck_out_mount)?;
+    if let Some(valid_output_mount) = status.valid_output_mount {
+        value["valid_output_mount"] = serde_json::to_value(valid_output_mount)?;
     }
 
     Ok(value)

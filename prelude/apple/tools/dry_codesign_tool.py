@@ -1,3 +1,9 @@
+# ===----------------------------------------------------------------------===
+# Upstream-Source: facebook/buck2@1560aca2002865cd73d7cafb22c705cfb640b2bc
+# Modifications Copyright (c) 2026 Dedalus Labs, Inc. and its contributors
+# SPDX-License-Identifier: Apache-2.0
+# ===----------------------------------------------------------------------===
+
 # Copyright (c) Meta Platforms, Inc. and affiliates.
 #
 # This source code is dual-licensed under either the MIT license found in the
@@ -13,15 +19,15 @@ import plistlib
 import shutil
 from pathlib import Path
 
-_CODE_SIGN_DRY_RUN_ARGS_FILE = "BUCK_code_sign_args.plist"
-_CODE_SIGN_DRY_RUN_ENTITLEMENTS_FILE = "BUCK_code_sign_entitlements.plist"
+_CODE_SIGN_DRY_RUN_ARGS_FILE = "BSMR_code_sign_args.plist"
+_CODE_SIGN_DRY_RUN_ENTITLEMENTS_FILE = "BSMR_code_sign_entitlements.plist"
 
 
 def _args_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         description="""
-            Tool which implements `DryCodeSignStep` class from buck1.
-            Instead of code signing the bundle it just creates a file named `BUCK_code_sign_args.plist` inside,
+            Tool which implements `DryCodeSignStep` class from legacy.
+            Instead of code signing the bundle it just creates a file named `BSMR_code_sign_args.plist` inside,
              which contains all parameters needed to perform a deferred signing later.
         """
     )
@@ -58,7 +64,7 @@ def _args_parser() -> argparse.ArgumentParser:
 def _main() -> None:
     args = _args_parser().parse_args()
     content = {
-        # This is always empty string if you check `DryCodeSignStep` class usages in buck1
+        # This is always empty string if you check `DryCodeSignStep` class usages in legacy
         "relative-path-to-sign": "",
         "use-entitlements": args.entitlements is not None,
         "debug-info": {
@@ -69,7 +75,7 @@ def _main() -> None:
     if args.extra_paths_to_sign:
         content["extra-paths-to-sign"] = args.extra_paths_to_sign
     with open(args.root / _CODE_SIGN_DRY_RUN_ARGS_FILE, "wb") as f:
-        # Do not sort to keep the ordering same as in buck1.
+        # Do not sort to keep the ordering same as in legacy.
         plistlib.dump(content, f, sort_keys=False, fmt=plistlib.FMT_XML)
     if args.entitlements:
         shutil.copy2(

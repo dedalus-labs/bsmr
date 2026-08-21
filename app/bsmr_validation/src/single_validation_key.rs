@@ -19,7 +19,7 @@ use async_trait::async_trait;
 use bsmr_artifact::actions::key::ActionKey;
 use bsmr_build_api::actions::artifact::get_artifact_fs::GetArtifactFs;
 use bsmr_build_api::actions::calculation::ActionCalculation;
-use bsmr_error::BuckErrorContext;
+use bsmr_error::BsmrErrorContext;
 use bsmr_error::internal_error;
 use bsmr_execute::materialize::materializer::HasMaterializer;
 use bsmr_fs::async_fs_util;
@@ -78,7 +78,7 @@ impl Key for SingleValidationKey {
         };
 
         let fs = ctx.get_artifact_fs().await?;
-        let project_relative_path = fs.buck_out_path_resolver().resolve_gen(
+        let project_relative_path = fs.output_path_resolver().resolve_gen(
             &gen_path,
             if gen_path.is_content_based_path() {
                 Some(artifact_value.content_based_path_hash())
@@ -99,7 +99,7 @@ impl Key for SingleValidationKey {
         let content = async_fs_util::read_to_string(&validation_result_path)
             .await
             .categorize_internal()
-            .buck_error_context("Reading validation result")?;
+            .bsmr_error_context("Reading validation result")?;
 
         match parse_validation_result(&content) {
             Ok(r) => Ok(CachedValidationResult::new(

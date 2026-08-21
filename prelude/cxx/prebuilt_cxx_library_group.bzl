@@ -254,7 +254,7 @@ def _get_shared_link_infos(ctx: AnalysisContext, shared_libs: dict[str, Artifact
 
 # The `prebuilt_cxx_library_group` rule is meant to provide fine user control for
 # how a group libraries of libraries are added to the link line and was added for
-# `upstream//third-party-buck/platform009/build/IntelComposerXE:mkl_lp64_iomp`, which
+# `upstream//third-party-bsmr/platform009/build/IntelComposerXE:mkl_lp64_iomp`, which
 # includes libraries with dep cycles, and so must be linked together with flags
 # like `--start-group`/`--end-group`.
 #

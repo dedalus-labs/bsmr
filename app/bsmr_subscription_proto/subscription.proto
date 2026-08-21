@@ -16,7 +16,7 @@
 
 syntax = "proto3";
 
-package buck.subscription;
+package bsmr.subscription;
 
 // Client-to-daemon interaction in a subscription. This is what the client
 // writes to `stdin` of the `subscribe` command.
@@ -51,7 +51,7 @@ message SubscribeToPaths {
   //
   // Note that while requesting notifications for source paths (i.e. paths not
   // under bsmr-out) is not an error, it will not produce notifications, since
-  // those paths are never materialized by Buck itself.
+  // those paths are never materialized by Bsmr itself.
   repeated string paths = 1;
 }
 

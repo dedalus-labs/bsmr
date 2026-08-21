@@ -150,7 +150,7 @@ class SysconfigTest(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)
             with patch.dict(
-                os.environ, {"BUCK_SCRATCH_PATH": str(root / "scratch")}, clear=True
+                os.environ, {"BSMR_SCRATCH_PATH": str(root / "scratch")}, clear=True
             ):
                 _, environment = runner._state(root / "output")
 

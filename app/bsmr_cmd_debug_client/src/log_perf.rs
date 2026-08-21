@@ -15,7 +15,7 @@
  */
 
 use bsmr_client_ctx::client_ctx::ClientCommandContext;
-use bsmr_client_ctx::common::BuckArgMatches;
+use bsmr_client_ctx::common::BsmrArgMatches;
 use bsmr_client_ctx::event_log_options::EventLogOptions;
 use bsmr_client_ctx::exit_result::ExitResult;
 use bsmr_event_log::read::ReaderStats;
@@ -33,7 +33,7 @@ pub struct LogPerfCommand {
 }
 
 impl LogPerfCommand {
-    pub fn exec(self, _matches: BuckArgMatches<'_>, ctx: ClientCommandContext<'_>) -> ExitResult {
+    pub fn exec(self, _matches: BsmrArgMatches<'_>, ctx: ClientCommandContext<'_>) -> ExitResult {
         let Self {
             event_log,
             interval,

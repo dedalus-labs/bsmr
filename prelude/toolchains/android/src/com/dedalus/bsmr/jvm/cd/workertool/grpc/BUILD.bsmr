@@ -1,0 +1,35 @@
+# ===----------------------------------------------------------------------===
+# Upstream-Source: facebook/buck2@1560aca2002865cd73d7cafb22c705cfb640b2bc
+# Modifications Copyright (c) 2026 Dedalus Labs, Inc. and its contributors
+# SPDX-License-Identifier: Apache-2.0
+# ===----------------------------------------------------------------------===
+
+load("@prelude//toolchains/android/tools:build_rules.bzl", "bsmr_java_library")
+load("@prelude//utils:source_listing.bzl", "source_listing")
+
+oncall("android_devxx")
+
+source_listing()
+
+bsmr_java_library(
+    name = "workertool_grpc",
+    srcs = glob(["*.java"]),
+    visibility = [
+        "PUBLIC",
+    ],
+    deps = [
+        "prelude//toolchains/android/src/com/dedalus/bsmr/core/util/log:log",
+        "prelude//toolchains/android/src/com/dedalus/bsmr/jvm/cd:cd",
+        "prelude//toolchains/android/src/com/dedalus/bsmr/step:step",
+        "prelude//toolchains/android/src/com/dedalus/bsmr/util:process_executor",
+        "prelude//toolchains/android/src/com/dedalus/bsmr/util/environment:environment",
+        "prelude//toolchains/android/src/com/dedalus/bsmr/util/perf:perf",
+        "prelude//toolchains/android/src/com/dedalus/bsmr/util/unit:unit",
+        "prelude//toolchains/android/src/com/dedalus/bsmr/workertool/resources/proto:worker-model",
+        "prelude//toolchains/android/third-party:args4j",
+        "prelude//toolchains/android/third-party:grpc-netty",
+        "prelude//toolchains/android/third-party:infer-annotations",
+        "prelude//toolchains/android/third-party:kotlin-annotations",
+        "prelude//toolchains/android/third-party:netty",
+    ],
+)

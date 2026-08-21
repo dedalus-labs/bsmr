@@ -700,7 +700,7 @@ def generate_shared_library_interface(
                 # However, this linking invocation does not produce any of those, it only produces the shared library interface.
                 # Passing the archive directly instead of extracting it, then passing the members between --start-lib --end-lib
                 # flags should be semantically equivalent. Note however, that we only do this in this branch where we are dealing
-                # with some kind of pre-build static archive where Buck is not aware of the contents. If we built this static archive,
+                # with some kind of pre-build static archive where Bsmr is not aware of the contents. If we built this static archive,
                 # just pass the members directly above, don't bother creating an archive for no reason.
                 lazy_objects.add(linkable.archive.artifact)
             elif isinstance(linkable, SharedLibLinkable):

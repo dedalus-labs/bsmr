@@ -31,8 +31,8 @@ use bsmr_core::global_cfg_options::GlobalCfgOptions;
 use bsmr_core::package::PackageLabelWithModifiers;
 use bsmr_core::target::configured_or_unconfigured::ConfiguredOrUnconfiguredTargetLabel;
 use bsmr_core::target::label::label::TargetLabel;
-use bsmr_hash::StdBuckHashMap;
-use bsmr_hash::StdBuckHashSet;
+use bsmr_hash::StdBsmrHashMap;
+use bsmr_hash::StdBsmrHashSet;
 use bsmr_node::nodes::configured::ConfiguredTargetNode;
 use bsmr_node::nodes::unconfigured::TargetNode;
 use bsmr_query::query::environment::QueryTarget;
@@ -57,10 +57,10 @@ use siphasher::sip128::SipHasher24;
 
 #[derive(Clone, Dupe, derive_more::Display)]
 #[display("{:032x}", _0)]
-pub struct BuckTargetHash(pub u128);
+pub struct BsmrTargetHash(pub u128);
 
-trait BuckTargetHasher: Hasher + Send + 'static {
-    fn finish_u128(&mut self) -> BuckTargetHash;
+trait BsmrTargetHasher: Hasher + Send + 'static {
+    fn finish_u128(&mut self) -> BsmrTargetHash;
 }
 
 /// siphash24 is used as the "fast" hash. There are faster hash algorithms out there,
@@ -68,9 +68,9 @@ trait BuckTargetHasher: Hasher + Send + 'static {
 /// across architectures is rarely guaranteed. We see about a 20-25% improvement relative
 /// to blake3 and so there's likely little opportunity remaining for a faster hash function
 /// to capture anyway.
-impl BuckTargetHasher for siphasher::sip128::SipHasher24 {
-    fn finish_u128(&mut self) -> BuckTargetHash {
-        BuckTargetHash(self.finish128().as_u128())
+impl BsmrTargetHasher for siphasher::sip128::SipHasher24 {
+    fn finish_u128(&mut self) -> BsmrTargetHash {
+        BsmrTargetHash(self.finish128().as_u128())
     }
 }
 
@@ -95,17 +95,17 @@ impl Hasher for Blake3Adapter {
     }
 }
 
-impl BuckTargetHasher for Blake3Adapter {
-    fn finish_u128(&mut self) -> BuckTargetHash {
+impl BsmrTargetHasher for Blake3Adapter {
+    fn finish_u128(&mut self) -> BsmrTargetHash {
         let hash = blake3::Hasher::finalize(&self.0);
         let bytes = hash.as_bytes();
-        BuckTargetHash(u128::from_le_bytes(bytes[16..].try_into().unwrap()))
+        BsmrTargetHash(u128::from_le_bytes(bytes[16..].try_into().unwrap()))
     }
 }
 
 pub enum TargetHashesFileMode {
     /// The following files have changed in some way (don't do any IO)
-    PathsOnly(StdBuckHashSet<CellPath>),
+    PathsOnly(StdBsmrHashSet<CellPath>),
     /// Use IO operations to find the paths and their contents
     PathsAndContents,
     /// Don't hash any files
@@ -119,7 +119,7 @@ trait FileHasher: Send + Sync {
 }
 
 struct PathsOnlyFileHasher {
-    pseudo_changed_paths: StdBuckHashSet<CellPath>,
+    pseudo_changed_paths: StdBsmrHashSet<CellPath>,
 }
 
 #[async_trait]
@@ -262,7 +262,7 @@ impl TargetHashingTargetNode for TargetNode {
 }
 pub struct TargetHashes {
     // key is an unconfigured target label, but the hash is generated from the configured target label.
-    target_mapping: StdBuckHashMap<TargetLabel, bsmr_error::Result<BuckTargetHash>>,
+    target_mapping: StdBsmrHashMap<TargetLabel, bsmr_error::Result<BsmrTargetHash>>,
 }
 
 #[derive(bsmr_error::Error, Debug)]
@@ -275,7 +275,7 @@ enum TargetHashError {
 }
 
 impl TargetHashes {
-    pub fn get(&self, label: &TargetLabel) -> Option<&bsmr_error::Result<BuckTargetHash>> {
+    pub fn get(&self, label: &TargetLabel) -> Option<&bsmr_error::Result<BsmrTargetHash>> {
         self.target_mapping.get(label)
     }
 
@@ -289,10 +289,10 @@ impl TargetHashes {
     where
         T::Key: ConfiguredOrUnconfiguredTargetLabel,
     {
-        let mut hashes: StdBuckHashMap<
+        let mut hashes: StdBsmrHashMap<
             T::Key,
-            Shared<DropcancelJoinHandle<bsmr_error::Result<BuckTargetHash>>>,
-        > = StdBuckHashMap::default();
+            Shared<DropcancelJoinHandle<bsmr_error::Result<BsmrTargetHash>>>,
+        > = StdBsmrHashMap::default();
 
         let visit = |target: T| {
             // this is postorder, so guaranteed that all deps have futures already.
@@ -365,8 +365,8 @@ impl TargetHashes {
             .map(|(target, fut)| async move { (target, fut.await) })
             .collect();
 
-        let mut target_mapping: StdBuckHashMap<TargetLabel, bsmr_error::Result<BuckTargetHash>> =
-            StdBuckHashMap::default();
+        let mut target_mapping: StdBsmrHashMap<TargetLabel, bsmr_error::Result<BsmrTargetHash>> =
+            StdBsmrHashMap::default();
 
         // TODO(cjhopman): FuturesOrdered/Unordered interacts poorly with tokio cooperative scheduling
         // (see https://github.com/rust-lang/futures-rs/issues/2053). Clean this up once a good
@@ -399,7 +399,7 @@ impl TargetHashes {
             .map(|target| {
                 let file_hasher = file_hasher.dupe();
                 async move {
-                    let hash_result: bsmr_error::Result<BuckTargetHash> = try {
+                    let hash_result: bsmr_error::Result<BsmrTargetHash> = try {
                         let mut hasher = TargetHashes::new_hasher(use_fast_hash);
                         TargetHashes::hash_node(&target, &mut *hasher);
 
@@ -427,12 +427,12 @@ impl TargetHashes {
             })
             .collect();
 
-        let target_mapping: StdBuckHashMap<TargetLabel, bsmr_error::Result<BuckTargetHash>> =
+        let target_mapping: StdBsmrHashMap<TargetLabel, bsmr_error::Result<BsmrTargetHash>> =
             join_all(hashing_futures).await.into_iter().collect();
         Ok(Self { target_mapping })
     }
 
-    pub fn compute_immediate_one(node: &TargetNode, use_fast_hash: bool) -> BuckTargetHash {
+    pub fn compute_immediate_one(node: &TargetNode, use_fast_hash: bool) -> BsmrTargetHash {
         let mut hasher = TargetHashes::new_hasher(use_fast_hash);
         TargetHashes::hash_node(node, &mut *hasher);
         hasher.finish_u128()
@@ -480,7 +480,7 @@ impl TargetHashes {
         }
     }
 
-    fn new_hasher(use_fast_hash: bool) -> Box<dyn BuckTargetHasher> {
+    fn new_hasher(use_fast_hash: bool) -> Box<dyn BsmrTargetHasher> {
         if use_fast_hash {
             Box::new(SipHasher24::new())
         } else {
@@ -488,13 +488,13 @@ impl TargetHashes {
         }
     }
 
-    fn hash_node<T: TargetHashingTargetNode>(node: &T, mut hasher: &mut dyn BuckTargetHasher) {
+    fn hash_node<T: TargetHashingTargetNode>(node: &T, mut hasher: &mut dyn BsmrTargetHasher) {
         node.target_hash(&mut hasher);
     }
 
     fn hash_deps(
-        dep_hashes: Vec<bsmr_error::Result<BuckTargetHash>>,
-        hasher: &mut dyn BuckTargetHasher,
+        dep_hashes: Vec<bsmr_error::Result<BsmrTargetHash>>,
+        hasher: &mut dyn BsmrTargetHasher,
     ) -> bsmr_error::Result<()> {
         for target_hash in dep_hashes {
             hasher.write_u128(target_hash?.0);
@@ -504,7 +504,7 @@ impl TargetHashes {
 
     fn hash_files(
         file_digests: Vec<(CellPath, bsmr_error::Result<Vec<u8>>)>,
-        mut hasher: &mut dyn BuckTargetHasher,
+        mut hasher: &mut dyn BsmrTargetHasher,
     ) -> bsmr_error::Result<()> {
         for (path, digest) in file_digests {
             path.hash(&mut hasher);
@@ -518,17 +518,17 @@ impl TargetHashes {
 
 #[cfg(test)]
 mod tests {
-    use crate::target_hash::BuckTargetHash;
+    use crate::target_hash::BsmrTargetHash;
 
     #[test]
     fn test_hash_display() {
         assert_eq!(
             "00000000000000000000000000000000",
-            BuckTargetHash(0).to_string()
+            BsmrTargetHash(0).to_string()
         );
         assert_eq!(
             "ffffffffffffffffffffffffffffffff",
-            BuckTargetHash(u128::MAX).to_string()
+            BsmrTargetHash(u128::MAX).to_string()
         );
     }
 }

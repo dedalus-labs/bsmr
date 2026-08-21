@@ -25,10 +25,10 @@ use bsmr_common::file_ops::metadata::FileMetadata;
 use bsmr_common::file_ops::metadata::Symlink;
 use bsmr_common::file_ops::metadata::TrackedFileDigest;
 use bsmr_core::fs::artifact_path_resolver::ArtifactFs;
-use bsmr_core::fs::buck_out_path::BuildArtifactPath;
+use bsmr_core::fs::output_path::BuildArtifactPath;
 use bsmr_core::fs::project_rel_path::ProjectRelativePathBuf;
 use bsmr_directory::directory::entry::DirectoryEntry;
-use bsmr_error::BuckErrorContext;
+use bsmr_error::BsmrErrorContext;
 use bsmr_events::dispatch::console_message;
 use bsmr_execute::artifact_value::ArtifactValue;
 use bsmr_execute::digest::CasDigestFromReExt;
@@ -60,8 +60,8 @@ use bsmr_execute::re::output_trees_download_config::OutputTreesDownloadConfig;
 use bsmr_execute::re::remote_action_result::RemoteActionResult;
 use bsmr_fs::paths::RelativePathBuf;
 use bsmr_fs::paths::forward_rel_path::ForwardRelativePath;
-use bsmr_hash::BuckIndexMap;
-use bsmr_hash::StdBuckHashSet;
+use bsmr_hash::BsmrIndexMap;
+use bsmr_hash::StdBsmrHashSet;
 use bsmr_util::time_span::TimeSpan;
 use bsmr_util::time_span::TimeSpanBuilder;
 use chrono::DateTime;
@@ -119,7 +119,7 @@ pub async fn download_action_results<'a>(
         let std_streams = std_streams.await;
         return DownloadResult::Result(manager.failure(
             response.execution_kind(details),
-            BuckIndexMap::default(),
+            BsmrIndexMap::default(),
             CommandStdStreams::Remote(std_streams),
             Some(action_exit_code),
             CommandExecutionMetadata::from_re_timing(response.timing(), TimeSpan::empty_now()),
@@ -225,7 +225,7 @@ async fn materialize_failed_build_outputs(
     artifact_fs: &ArtifactFs,
     materializer: &dyn Materializer,
     request: &CommandExecutionRequest,
-    available_outputs: &BuckIndexMap<CommandExecutionOutput, ArtifactValue>,
+    available_outputs: &BsmrIndexMap<CommandExecutionOutput, ArtifactValue>,
     materialize_failed_re_action_outputs: bool,
 ) -> bsmr_error::Result<Vec<ProjectRelativePathBuf>> {
     let mut paths = vec![];
@@ -234,7 +234,7 @@ async fn materialize_failed_build_outputs(
         return Ok(paths);
     }
 
-    let materialize_select_outputs: StdBuckHashSet<&BuildArtifactPath> =
+    let materialize_select_outputs: StdBsmrHashSet<&BuildArtifactPath> =
         request.outputs_for_error_handler().iter().collect();
 
     for output in request.outputs() {
@@ -289,7 +289,7 @@ impl CasDownloader<'_> {
         DownloadResult,
         (
             CommandExecutionManagerWithClaim,
-            BuckIndexMap<CommandExecutionOutput, ArtifactValue>,
+            BsmrIndexMap<CommandExecutionOutput, ArtifactValue>,
         ),
     > {
         let manager = manager.with_execution_kind(output_spec.execution_kind(details.clone()));
@@ -447,7 +447,7 @@ impl CasDownloader<'_> {
                 )
                 .boxed()
                 .await
-                .buck_error_context("Failed to download trees")?;
+                .bsmr_error_context("Failed to download trees")?;
 
             for (dir, tree) in output_spec.output_directories().iter().zip(trees) {
                 let entry = re_tree_to_directory(
@@ -465,7 +465,7 @@ impl CasDownloader<'_> {
         }
 
         let mut to_declare = Vec::with_capacity(output_paths.len());
-        let mut mapped_outputs = BuckIndexMap::with_capacity(output_paths.len());
+        let mut mapped_outputs = BsmrIndexMap::with_capacity(output_paths.len());
 
         for (requested, (path, _)) in requested_outputs.into_iter().zip(output_paths.iter()) {
             let value = extract_artifact_value(&input_dir, path, self.digest_config)?;
@@ -515,13 +515,13 @@ impl CasDownloader<'_> {
         &self,
         artifacts: ExtractedArtifacts,
         info: CasDownloadInfo,
-    ) -> bsmr_error::Result<BuckIndexMap<CommandExecutionOutput, ArtifactValue>> {
+    ) -> bsmr_error::Result<BsmrIndexMap<CommandExecutionOutput, ArtifactValue>> {
         // Declare the outputs to the materializer
         self.materializer
             .declare_cas_many(Arc::new(info), artifacts.to_declare)
             .boxed()
             .await
-            .buck_error_context("Failed to declare in materializer")?;
+            .bsmr_error_context("Failed to declare in materializer")?;
 
         Ok(artifacts.mapped_outputs)
     }
@@ -533,12 +533,12 @@ impl CasDownloader<'_> {
 fn re_forward_path(re_path: &str) -> bsmr_error::Result<&ForwardRelativePath> {
     // RE sends us paths with trailing slash.
     ForwardRelativePath::new_trim_trailing_slashes(re_path)
-        .buck_error_context("Path received from RE is not normalized.")
+        .bsmr_error_context("Path received from RE is not normalized.")
 }
 
 struct ExtractedArtifacts {
     to_declare: Vec<DeclareArtifactPayload>,
-    mapped_outputs: BuckIndexMap<CommandExecutionOutput, ArtifactValue>,
+    mapped_outputs: BsmrIndexMap<CommandExecutionOutput, ArtifactValue>,
     now: DateTime<Utc>,
     expires: DateTime<Utc>,
     ttl: Duration,

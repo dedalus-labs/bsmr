@@ -20,21 +20,21 @@ import json
 import signal
 from pathlib import Path
 
-from bsmr.tests.e2e_util.api.buck import Buck
+from bsmr.tests.e2e_util.api.bsmr import Bsmr
 from bsmr.tests.e2e_util.asserts import expect_failure
-from bsmr.tests.e2e_util.buck_workspace import buck_test
+from bsmr.tests.e2e_util.bsmr_workspace import bsmr_test
 from bsmr.tests.e2e_util.helper.golden import golden, sanitize_stderr
 from bsmr.tests.e2e_util.helper.utils import read_invocation_record
 
 # FIXME(JakobDegen): Flakey in CI
 if False:
 
-    @buck_test(skip_for_os=["windows"])  # TODO(T154836875)
-    async def test_has_end_of_stream_false(buck: Buck, tmp_path: Path) -> None:
+    @bsmr_test(skip_for_os=["windows"])  # TODO(T154836875)
+    async def test_has_end_of_stream_false(bsmr: Bsmr, tmp_path: Path) -> None:
         hang_path = tmp_path / "hang_path"
         record = tmp_path / "record.json"
 
-        cmd = await buck.build(
+        cmd = await bsmr.build(
             ":hang",
             "-c",
             f"test.hang_path={hang_path}",
@@ -61,34 +61,34 @@ if False:
         assert not record["has_command_result"]
 
 
-@buck_test(write_invocation_record=True)
-async def test_has_end_of_stream_true(buck: Buck) -> None:
-    res = await buck.build(":pass")
+@bsmr_test(write_invocation_record=True)
+async def test_has_end_of_stream_true(bsmr: Bsmr) -> None:
+    res = await bsmr.build(":pass")
 
     record = res.invocation_record()
 
     assert record["has_end_of_stream"]
     assert record["has_command_result"]
-    assert record["repo_path"] == str(buck.cwd)
+    assert record["repo_path"] == str(bsmr.cwd)
 
 
-@buck_test(skip_for_os=["windows"], write_invocation_record=True)  # TODO(T154836632)
-async def test_has_no_command_result(buck: Buck) -> None:
+@bsmr_test(skip_for_os=["windows"], write_invocation_record=True)  # TODO(T154836632)
+async def test_has_no_command_result(bsmr: Bsmr) -> None:
     # Start the daemon
-    await buck.build()
+    await bsmr.build()
 
-    status = json.loads((await buck.status()).stdout)
+    status = json.loads((await bsmr.status()).stdout)
     pid = status["process_info"]["pid"]
 
     result = await expect_failure(
-        buck.build(
+        bsmr.build(
             ":kill",
             "-c",
             f"test.pid={pid}",
             "--local-only",
             "--no-remote-cache",
         ),
-        stderr_regex="Buck daemon event bus encountered an error",
+        stderr_regex="Bsmr daemon event bus encountered an error",
     )
 
     record = result.invocation_record()
@@ -102,20 +102,20 @@ async def test_has_no_command_result(buck: Buck) -> None:
     )
 
 
-@buck_test(skip_for_os=["windows"], write_invocation_record=True)  # TODO(T154836632)
-async def test_metadata(buck: Buck) -> None:
+@bsmr_test(skip_for_os=["windows"], write_invocation_record=True)  # TODO(T154836632)
+async def test_metadata(bsmr: Bsmr) -> None:
     # Start the daemon
-    res = await buck.build()
+    res = await bsmr.build()
 
     record = res.invocation_record()
 
     assert "username" in record["metadata"]["strings"]
 
 
-@buck_test(skip_for_os=["windows"], write_invocation_record=True)  # TODO(T154836632)
-async def test_client_metadata(buck: Buck) -> None:
+@bsmr_test(skip_for_os=["windows"], write_invocation_record=True)  # TODO(T154836632)
+async def test_client_metadata(bsmr: Bsmr) -> None:
     # Start the daemon
-    res = await buck.build(
+    res = await bsmr.build(
         "--client-metadata=foo=bar",
         "--client-metadata=id=baz",
     )
@@ -130,10 +130,10 @@ async def test_client_metadata(buck: Buck) -> None:
     assert record["metadata"]["strings"]["client"] == "baz"
 
 
-@buck_test(skip_for_os=["windows"], write_invocation_record=True)  # TODO(T154836632)
-async def test_client_metadata_env(buck: Buck) -> None:
+@bsmr_test(skip_for_os=["windows"], write_invocation_record=True)  # TODO(T154836632)
+async def test_client_metadata_env(bsmr: Bsmr) -> None:
     # Start the daemon
-    res = await buck.build(
+    res = await bsmr.build(
         "--client-metadata=foo=bar",
         "--client-metadata=id=baz",
         env={"BSMR_CLIENT_METADATA": "env_foo=env_bar,id=foobar"},
@@ -151,9 +151,9 @@ async def test_client_metadata_env(buck: Buck) -> None:
     assert record["metadata"]["strings"]["client"] == "baz"
 
 
-@buck_test(skip_for_os=["windows"], write_invocation_record=True)
-async def test_agent_context_from_env(buck: Buck) -> None:
-    res = await buck.build(
+@bsmr_test(skip_for_os=["windows"], write_invocation_record=True)
+async def test_agent_context_from_env(bsmr: Bsmr) -> None:
+    res = await bsmr.build(
         env={
             "CODING_AGENT_METADATA": "id=test_agent,invocation_id=test_inv_123",
         },
@@ -166,10 +166,10 @@ async def test_agent_context_from_env(buck: Buck) -> None:
     assert agent_ctx["invocation_id"] == "test_inv_123"
 
 
-@buck_test(skip_for_os=["windows"], write_invocation_record=True)  # TODO(T154836632)
-async def test_client_metadata_clean(buck: Buck) -> None:
+@bsmr_test(skip_for_os=["windows"], write_invocation_record=True)  # TODO(T154836632)
+async def test_client_metadata_clean(bsmr: Bsmr) -> None:
     # Start the daemon
-    res = await buck.clean(
+    res = await bsmr.clean(
         "--client-metadata=foo=bar",
         "--client-metadata=id=baz",
     )
@@ -184,12 +184,12 @@ async def test_client_metadata_clean(buck: Buck) -> None:
     assert record["metadata"]["strings"]["client"] == "baz"
 
 
-@buck_test(skip_for_os=["windows"], write_invocation_record=True)
-async def test_client_metadata_debug(buck: Buck) -> None:
-    # buck.debug() doesn't start the daemon, so we need to start it with a build
-    await buck.build()
+@bsmr_test(skip_for_os=["windows"], write_invocation_record=True)
+async def test_client_metadata_debug(bsmr: Bsmr) -> None:
+    # bsmr.debug() doesn't start the daemon, so we need to start it with a build
+    await bsmr.build()
 
-    res = await buck.debug(
+    res = await bsmr.debug(
         "allocator-stats",
         "--client-metadata=foo=bar",
         "--client-metadata=id=baz",
@@ -205,9 +205,9 @@ async def test_client_metadata_debug(buck: Buck) -> None:
     assert record["metadata"]["strings"]["client"] == "baz"
 
 
-@buck_test(write_invocation_record=True)
-async def test_action_error_message_in_record(buck: Buck) -> None:
-    res = await expect_failure(buck.build(":fail"))
+@bsmr_test(write_invocation_record=True)
+async def test_action_error_message_in_record(bsmr: Bsmr) -> None:
+    res = await expect_failure(bsmr.build(":fail"))
 
     record = res.invocation_record()
 
@@ -219,9 +219,9 @@ async def test_action_error_message_in_record(buck: Buck) -> None:
     assert "Hi from stderr!" in record["errors"][0]["telemetry_message"]
 
 
-@buck_test(write_invocation_record=True)
-async def test_non_action_error_message_in_record(buck: Buck) -> None:
-    res = await expect_failure(buck.build(":missing_target"))
+@bsmr_test(write_invocation_record=True)
+async def test_non_action_error_message_in_record(bsmr: Bsmr) -> None:
+    res = await expect_failure(bsmr.build(":missing_target"))
 
     record = res.invocation_record()
 
@@ -231,10 +231,10 @@ async def test_non_action_error_message_in_record(buck: Buck) -> None:
     )
 
 
-@buck_test(skip_for_os=["windows"], write_invocation_record=True)  # TODO(T154836632)
-async def test_rule_type_names_ci(buck: Buck) -> None:
+@bsmr_test(skip_for_os=["windows"], write_invocation_record=True)  # TODO(T154836632)
+async def test_rule_type_names_ci(bsmr: Bsmr) -> None:
     # Start the daemon
-    res = await buck.build(
+    res = await bsmr.build(
         ":duplicate",
         ":and_a_two",
         ":last_three",
@@ -251,10 +251,10 @@ async def test_rule_type_names_ci(buck: Buck) -> None:
     ]
 
 
-@buck_test(skip_for_os=["windows"], write_invocation_record=True)  # TODO(T154836632)
-async def test_rule_type_names_sandcastle(buck: Buck) -> None:
+@bsmr_test(skip_for_os=["windows"], write_invocation_record=True)  # TODO(T154836632)
+async def test_rule_type_names_sandcastle(bsmr: Bsmr) -> None:
     # Start the daemon
-    res = await buck.build(
+    res = await bsmr.build(
         ":duplicate",
         ":and_a_two",
         ":last_three",
@@ -271,10 +271,10 @@ async def test_rule_type_names_sandcastle(buck: Buck) -> None:
     ]
 
 
-@buck_test(skip_for_os=["windows"], write_invocation_record=True)  # TODO(T154836632)
-async def test_rule_type_names_user(buck: Buck) -> None:
+@bsmr_test(skip_for_os=["windows"], write_invocation_record=True)  # TODO(T154836632)
+async def test_rule_type_names_user(bsmr: Bsmr) -> None:
     # Start the daemon
-    res = await buck.build(
+    res = await bsmr.build(
         ":and_a_two",
         ":last_three",
         ":a_one",
@@ -289,11 +289,11 @@ async def test_rule_type_names_user(buck: Buck) -> None:
     ]
 
 
-@buck_test(skip_for_os=["windows"], write_invocation_record=True)  # TODO(T154836632)
-async def test_rule_type_names_on_failure(buck: Buck) -> None:
+@bsmr_test(skip_for_os=["windows"], write_invocation_record=True)  # TODO(T154836632)
+async def test_rule_type_names_on_failure(bsmr: Bsmr) -> None:
     # Start the daemon
     res = await expect_failure(
-        buck.build(
+        bsmr.build(
             ":fail",
             ":last_three",
             ":a_one",
@@ -309,20 +309,20 @@ async def test_rule_type_names_on_failure(buck: Buck) -> None:
     ]
 
 
-@buck_test(write_invocation_record=True)
-async def test_active_networks_kinds(buck: Buck) -> None:
+@bsmr_test(write_invocation_record=True)
+async def test_active_networks_kinds(bsmr: Bsmr) -> None:
     # Start the daemon
-    res = await buck.build()
+    res = await bsmr.build()
 
     record = res.invocation_record()
 
     assert "active_networks_kinds" in record
 
 
-@buck_test(write_invocation_record=True)
-async def test_peak_memory_and_disk(buck: Buck) -> None:
+@bsmr_test(write_invocation_record=True)
+async def test_peak_memory_and_disk(bsmr: Bsmr) -> None:
     # Start the daemon
-    res = await buck.build()
+    res = await bsmr.build()
 
     record = res.invocation_record()
 
@@ -331,10 +331,10 @@ async def test_peak_memory_and_disk(buck: Buck) -> None:
     )
 
 
-@buck_test(setup_eden=True, skip_for_os=["darwin"], write_invocation_record=True)
-async def test_version_control_collector_slow(buck: Buck) -> None:
+@bsmr_test(setup_eden=True, skip_for_os=["darwin"], write_invocation_record=True)
+async def test_version_control_collector_slow(bsmr: Bsmr) -> None:
     # Force a 5 second sleep, hg commands should finish within that period of time
-    res = await buck.build(
+    res = await bsmr.build(
         ":sleep",
         "--local-only",
         "--no-remote-cache",
@@ -347,11 +347,11 @@ async def test_version_control_collector_slow(buck: Buck) -> None:
 
 
 # NOTE: Delete or disable if flaky, ran a bunch of times on my devserver and it passes fine
-@buck_test(
+@bsmr_test(
     setup_eden=True, skip_for_os=["darwin", "windows"], write_invocation_record=True
 )
-async def test_version_control_collector_fast(buck: Buck) -> None:
-    res = await buck.targets(
+async def test_version_control_collector_fast(bsmr: Bsmr) -> None:
+    res = await bsmr.targets(
         ":",
     )
 
@@ -361,9 +361,9 @@ async def test_version_control_collector_fast(buck: Buck) -> None:
     assert record["hg_revision"] is not None
 
 
-@buck_test(write_invocation_record=True)
-async def test_peak_stats(buck: Buck) -> None:
-    res = await buck.build(
+@bsmr_test(write_invocation_record=True)
+async def test_peak_stats(bsmr: Bsmr) -> None:
+    res = await bsmr.build(
         ":run",
         "--no-remote-cache",
         "--local-only",
@@ -377,14 +377,14 @@ async def test_peak_stats(buck: Buck) -> None:
     assert record["max_in_progress_remote_uploads"] == 0
 
 
-@buck_test(write_invocation_record=True)
-async def test_parallelism_logging(buck: Buck) -> None:
+@bsmr_test(write_invocation_record=True)
+async def test_parallelism_logging(bsmr: Bsmr) -> None:
     # Test multiple parallelism values
     parallelism_values = [1, 4, 8]
 
     for parallelism in parallelism_values:
         # Test with different -j values to control concurrency
-        res = await buck.build(
+        res = await bsmr.build(
             ":pass",
             "-j",
             str(parallelism),
@@ -407,7 +407,7 @@ async def test_parallelism_logging(buck: Buck) -> None:
         assert command_options["available_parallelism"] > 0
 
     # Test without -j flag - configured_parallelism should be null
-    res_no_j = await buck.build(
+    res_no_j = await bsmr.build(
         ":pass",
     )
 
@@ -431,10 +431,10 @@ async def test_parallelism_logging(buck: Buck) -> None:
     assert command_options_no_j["available_parallelism"] > 0
 
 
-@buck_test(write_invocation_record=True)
-async def test_client_metadata_vscode_fallback(buck: Buck) -> None:
+@bsmr_test(write_invocation_record=True)
+async def test_client_metadata_vscode_fallback(bsmr: Bsmr) -> None:
     # Test that vscode-fallback is set when VSCODE_PID is present
-    res = await buck.build(
+    res = await bsmr.build(
         ":pass",
         env={"VSCODE_PID": "12345"},
         stdin=None,  # Ensure stdin is not a terminal

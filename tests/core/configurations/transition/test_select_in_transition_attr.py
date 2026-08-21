@@ -14,23 +14,23 @@
 
 # pyre-strict
 
-from bsmr.tests.e2e_util.api.buck import Buck
+from bsmr.tests.e2e_util.api.bsmr import Bsmr
 from bsmr.tests.e2e_util.asserts import expect_failure
-from bsmr.tests.e2e_util.buck_workspace import buck_test
+from bsmr.tests.e2e_util.bsmr_workspace import bsmr_test
 
 
-@buck_test()
-async def test_transition_success_if_attr_value_has_not_changed(buck: Buck) -> None:
-    await buck.build("root//:target_where_transition_does_not_change_attr")
+@bsmr_test()
+async def test_transition_success_if_attr_value_has_not_changed(bsmr: Bsmr) -> None:
+    await bsmr.build("root//:target_where_transition_does_not_change_attr")
 
 
-@buck_test()
-async def test_transition_dep_success_if_attr_value_has_not_changed(buck: Buck) -> None:
-    await buck.build("root//:target_with_transition_dep")
+@bsmr_test()
+async def test_transition_dep_success_if_attr_value_has_not_changed(bsmr: Bsmr) -> None:
+    await bsmr.build("root//:target_with_transition_dep")
 
 
-@buck_test()
-async def test_transition_failed_if_attr_value_has_changed(buck: Buck) -> None:
+@bsmr_test()
+async def test_transition_failed_if_attr_value_has_changed(bsmr: Bsmr) -> None:
     err_msg = (
         r"Target root//:target_where_transition_changes_attr configuration transitioned\n"
         r"\s+old: root//:iphone#.*\n"
@@ -41,13 +41,13 @@ async def test_transition_failed_if_attr_value_has_changed(buck: Buck) -> None:
     )
 
     await expect_failure(
-        buck.build("root//:target_where_transition_changes_attr"),
+        bsmr.build("root//:target_where_transition_changes_attr"),
         stderr_regex=err_msg,
     )
 
 
-@buck_test()
-async def test_transition_failed_if_attr_value_cycle(buck: Buck) -> None:
+@bsmr_test()
+async def test_transition_failed_if_attr_value_cycle(bsmr: Bsmr) -> None:
     err_msg = (
         r"Configured target cycle detected \(`->` means \"depends on\"\):\n"
         r"\s+root//:target_where_transition_cycles_via_changed_attrs \(<transitioned-from-.*>#.*\) ->.*\n"
@@ -55,6 +55,6 @@ async def test_transition_failed_if_attr_value_cycle(buck: Buck) -> None:
     )
 
     await expect_failure(
-        buck.build("root//:target_where_transition_cycles_via_changed_attrs"),
+        bsmr.build("root//:target_where_transition_cycles_via_changed_attrs"),
         stderr_regex=err_msg,
     )

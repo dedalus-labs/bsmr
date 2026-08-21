@@ -35,14 +35,14 @@ use bsmr_core::provider::label::ConfiguredProvidersLabel;
 use bsmr_core::target::configured_target_label::ConfiguredTargetLabel;
 use bsmr_data::ToProtoMessage;
 use bsmr_data::error::ErrorTag;
-use bsmr_error::BuckErrorContext;
+use bsmr_error::BsmrErrorContext;
 use bsmr_error::internal_error;
 use bsmr_events::dispatch::async_record_root_spans;
 use bsmr_events::dispatch::record_root_spans;
 use bsmr_events::dispatch::span_async;
 use bsmr_events::dispatch::span_async_simple;
 use bsmr_events::span::SpanId;
-use bsmr_hash::StdBuckHashMap;
+use bsmr_hash::StdBsmrHashMap;
 use bsmr_interpreter::dice::starlark_provider::StarlarkEvalKind;
 use bsmr_interpreter::file_loader::LoadedModule;
 use bsmr_interpreter::load_module::InterpreterCalculation;
@@ -110,7 +110,7 @@ impl Key for AnalysisKey {
         ctx.analysis_started(&deferred_key)?;
         let res = get_analysis_result(ctx, &self.0, cancellation)
             .await
-            .with_buck_error_context(|| format!("Error running analysis for `{}`", &self.0))?;
+            .with_bsmr_error_context(|| format!("Error running analysis for `{}`", &self.0))?;
         if let MaybeCompatible::Compatible(v) = &res {
             ctx.analysis_complete(&deferred_key, &DeferredHolder::Analysis(v.dupe()))?;
         }
@@ -142,7 +142,7 @@ impl RuleAnalysisCalculationImpl for RuleAnalysisCalculationInstance {
 pub async fn resolve_queries(
     ctx: &mut DiceComputations<'_>,
     configured_node: ConfiguredTargetNodeRef<'_>,
-) -> bsmr_error::Result<StdBuckHashMap<String, Arc<AnalysisQueryResult>>> {
+) -> bsmr_error::Result<StdBsmrHashMap<String, Arc<AnalysisQueryResult>>> {
     let mut queries = configured_node.queries().peekable();
 
     if queries.peek().is_none() {
@@ -163,7 +163,7 @@ async fn resolve_queries_impl(
     ctx: &mut DiceComputations<'_>,
     configured_node: ConfiguredTargetNodeRef<'_>,
     queries: impl IntoIterator<Item = (String, ResolvedQueryLiterals<ConfiguredProvidersLabel>)>,
-) -> bsmr_error::Result<StdBuckHashMap<String, Arc<AnalysisQueryResult>>> {
+) -> bsmr_error::Result<StdBsmrHashMap<String, Arc<AnalysisQueryResult>>> {
     let deps: TargetSet<_> = configured_node.deps().duped().collect();
     let query_results = ctx
         .try_compute_join(
@@ -215,7 +215,7 @@ async fn resolve_queries_impl(
         )
         .await?;
 
-    let query_results: StdBuckHashMap<_, _> = query_results.into_iter().collect();
+    let query_results: StdBsmrHashMap<_, _> = query_results.into_iter().collect();
     Ok(query_results)
 }
 

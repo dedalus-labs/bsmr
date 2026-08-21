@@ -123,7 +123,7 @@ def get_linker_settings_from_flags(flags, bsmr_root):
         elif flag.startswith("/PDBALTPATH"):
             pass
         elif flag.startswith("/PDBSOURCEPATH"):
-            # Overwrite the /PDBSOURCEPATH to the buck root instead of using the default
+            # Overwrite the /PDBSOURCEPATH to the bsmr root instead of using the default
             additional_options.append("/PDBSOURCEPATH:" + bsmr_root)
         elif flag.startswith("/INCLUDE:"):
             if "ForceSymbolReferences" not in linker_settings:

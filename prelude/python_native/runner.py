@@ -146,9 +146,9 @@ def _required[T](value: T | None, name: str) -> T:
 
 def _state(output: Path) -> tuple[Path, dict[str, str]]:
     """Create isolated process state outside the content-addressed output."""
-    scratch_value = os.environ.get("BUCK_SCRATCH_PATH")
+    scratch_value = os.environ.get("BSMR_SCRATCH_PATH")
     if not scratch_value:
-        raise RuntimeError("BSMR did not provide BUCK_SCRATCH_PATH")
+        raise RuntimeError("BSMR did not provide BSMR_SCRATCH_PATH")
     scratch = Path(scratch_value).resolve() / "python"
     output = output.resolve()
     if scratch == output or output in scratch.parents or scratch in output.parents:

@@ -98,7 +98,7 @@ impl<'v> StarlarkValue<'v> for StarlarkPackagePath {
     }
 }
 
-/// A PackagePath represents a Buck package like package `root//foo/bar`
+/// A PackagePath represents a Bsmr package like package `root//foo/bar`
 #[starlark_module]
 fn package_path_methods(builder: &mut MethodsBuilder) {
     /// Returns the name of the cell of the package

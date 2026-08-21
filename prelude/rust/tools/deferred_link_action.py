@@ -1,4 +1,10 @@
 #!/usr/bin/env python3
+# ===----------------------------------------------------------------------===
+# Upstream-Source: facebook/buck2@1560aca2002865cd73d7cafb22c705cfb640b2bc
+# Modifications Copyright (c) 2026 Dedalus Labs, Inc. and its contributors
+# SPDX-License-Identifier: Apache-2.0
+# ===----------------------------------------------------------------------===
+
 # Copyright (c) Meta Platforms, Inc. and affiliates.
 #
 # This source code is dual-licensed under either the MIT license found in the
@@ -48,7 +54,7 @@ async def main() -> int:
         prefix="real-linker-args-",
         suffix=".txt",
         delete=False,
-        dir=os.environ.get("BUCK_SCRATCH_PATH"),
+        dir=os.environ.get("BSMR_SCRATCH_PATH"),
     ) as args_file:
         args_file.write("\n".join(args.linker[1:]).encode() + b"\n")
         args_file.flush()

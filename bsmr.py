@@ -91,17 +91,17 @@ def build_command(
         # @oss-disable[end= ]: "root//:bsmr_bundle",
         "//:bsmr_bundle", # @oss-enable
     ]
-    inner_buck_isolation_dir = (
+    inner_bsmr_isolation_dir = (
         args.run_isolation_dir if args.run_isolation_dir else "v2.self"
     )
-    inner_buck_isolation_dir_arg = [f"--isolation-dir={inner_buck_isolation_dir}"]
+    inner_bsmr_isolation_dir_arg = [f"--isolation-dir={inner_bsmr_isolation_dir}"]
 
     cmd.extend(get_extra_build_params(args))
     if cwd is not None and "--chdir" not in extra_args:
         cmd.extend(["--chdir", os.getcwd()])
 
     cmd.append("--")
-    cmd.extend(inner_buck_isolation_dir_arg)
+    cmd.extend(inner_bsmr_isolation_dir_arg)
     cmd.extend(extra_args)
 
     if args.echo_run_cmd:
@@ -152,7 +152,7 @@ def ensure_stable_tpx(stable_path: str) -> None:
 def run_with_stable_tpx(stable_path: str, extra_args: List[str]) -> None:
     ensure_stable_tpx(stable_path)
     override = ["-c", f"test.v2_test_executor={stable_path}"]
-    # Insert the override right after the buck subcommand (e.g. `test`) so it
+    # Insert the override right after the bsmr subcommand (e.g. `test`) so it
     # lands before any `--` test-runner separator.
     if extra_args:
         cmd = ["bsmr", extra_args[0], *override, *extra_args[1:]]

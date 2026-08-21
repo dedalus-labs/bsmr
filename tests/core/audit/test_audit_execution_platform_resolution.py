@@ -15,12 +15,12 @@
 # pyre-strict
 
 
-from bsmr.tests.e2e_util.api.buck import Buck
-from bsmr.tests.e2e_util.buck_workspace import buck_test
+from bsmr.tests.e2e_util.api.bsmr import Bsmr
+from bsmr.tests.e2e_util.bsmr_workspace import bsmr_test
 from bsmr.tests.e2e_util.helper.golden import golden_replace_cfg_hash
 
 
-@buck_test()
-async def test_audit_execition_platform_resolution(buck: Buck) -> None:
-    result = await buck.audit("execution-platform-resolution", "//:target")
+@bsmr_test()
+async def test_audit_execition_platform_resolution(bsmr: Bsmr) -> None:
+    result = await bsmr.audit("execution-platform-resolution", "//:target")
     golden_replace_cfg_hash(output=result.stdout, rel_path="out.txt.golden")

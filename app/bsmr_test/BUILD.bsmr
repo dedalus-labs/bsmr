@@ -17,7 +17,7 @@ rust_library(
     # the OSS rust_library directly for cargo's sake.
     autocargo = {
         "cargo_toml_config": {
-            "extra_buck_dependencies": {
+            "extra_bsmr_dependencies": {
                 "dependencies": [
                     "root//packages/rust/remote_execution/oss/re_grpc:remote_execution",
                 ],

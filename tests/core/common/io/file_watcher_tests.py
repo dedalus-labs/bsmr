@@ -20,7 +20,7 @@ from enum import Enum
 
 from bsmr.tests.core.common.io.file_watcher import FileWatcherEvent
 from bsmr.tests.core.common.io.utils import get_files
-from bsmr.tests.e2e_util.api.buck import Buck
+from bsmr.tests.e2e_util.api.bsmr import Bsmr
 
 
 class FileSystemType(Enum):
@@ -28,17 +28,17 @@ class FileSystemType(Enum):
     EDEN_FS = 1
 
 
-async def setup_file_watcher_test(buck: Buck) -> None:
+async def setup_file_watcher_test(bsmr: Bsmr) -> None:
     # Fails on eden because the repo exists, that's ok
-    subprocess.run(["sl", "init"], cwd=buck.cwd)
-    subprocess.run(["sl", "commit", "--addremove", "-m", "temp"], cwd=buck.cwd)
-    subprocess.run(["sl", "bookmark", "main"], cwd=buck.cwd, check=True)
+    subprocess.run(["sl", "init"], cwd=bsmr.cwd)
+    subprocess.run(["sl", "commit", "--addremove", "-m", "temp"], cwd=bsmr.cwd)
+    subprocess.run(["sl", "bookmark", "main"], cwd=bsmr.cwd, check=True)
 
-    sl_status = subprocess.check_output(["sl", "status"], cwd=buck.cwd)
+    sl_status = subprocess.check_output(["sl", "status"], cwd=bsmr.cwd)
     assert sl_status == b"", (
         f"Expected clean working directory, but `sl status` returned:\n{sl_status.decode(errors='replace')}"
     )
-    assert (await get_files(buck)) == ["files/abc", "files/d/empty"]
+    assert (await get_files(bsmr)) == ["files/abc", "files/d/empty"]
 
 
 def verify_results(
@@ -52,11 +52,11 @@ def verify_results(
             assert req in results, "required not in results"
 
 
-async def run_aba_test(buck: Buck) -> None:
-    await setup_file_watcher_test(buck)
+async def run_aba_test(bsmr: Bsmr) -> None:
+    await setup_file_watcher_test(bsmr)
 
-    subprocess.run(["sl", "mv", "files/abc", "files/d/"], cwd=buck.cwd, check=True)
-    assert (await get_files(buck)) == ["files/d/abc", "files/d/empty"]
+    subprocess.run(["sl", "mv", "files/abc", "files/d/"], cwd=bsmr.cwd, check=True)
+    assert (await get_files(bsmr)) == ["files/d/abc", "files/d/empty"]
 
-    subprocess.run(["sl", "shelve"], cwd=buck.cwd, check=True)
-    assert (await get_files(buck)) == ["files/abc", "files/d/empty"]
+    subprocess.run(["sl", "shelve"], cwd=bsmr.cwd, check=True)
+    assert (await get_files(bsmr)) == ["files/abc", "files/d/empty"]

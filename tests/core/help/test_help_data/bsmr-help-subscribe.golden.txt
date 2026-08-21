@@ -103,7 +103,7 @@ Starlark Options:
           Some examples identifiers: analysis/root//app/bsmr_action_impl:bsmr_action_impl
           (cfg:linux-x86_64#27ac5723e0c99706) load/cell//build_defs/json.bzl
           load/prelude//playground/test.bxl load/cell//build_defs/json.bzl@other_cell
-          load_buildfile/upstream//third-party-buck/platform010/build/ncurses
+          load_buildfile/upstream//third-party-bsmr/platform010/build/ncurses
           load_packagefile/upstream//cli/rust/cli_delegate anon_analysis/anon//:_anon_link_rule (anon:
           766183dc9b6f680a) (root//platform/execution:linux-x86_64#08961b14cfb182aa)
           bxl/prelude//playground/test.bxl:playground
@@ -158,7 +158,7 @@ Event Log Options:
 
       --command-report-path <PATH>
           Write the command report to this path. A command report is always written to
-          `bsmr-out/v2/<uuid>/command_report` even without this flag
+          `bsmr-out/default/<uuid>/command_report` even without this flag
 
 Universal Options:
       --isolation-dir <ISOLATION_DIR>
@@ -170,11 +170,11 @@ Universal Options:
           The isolation directory also influences the output paths provided by Bessemer, and as a
           result using a non-default isolation dir will cause cache misses (and slower builds).
 
-          [env: BUCK_ISOLATION_DIR=]
-          [default: v2]
+          [env: BSMR_ISOLATION_DIR=]
+          [default: default]
 
   -v, --verbose <VERBOSITY>
-          How verbose buck should be while logging.
+          How verbose bsmr should be while logging.
 
           Values: 0 = Quiet, errors only; 1 = Show status. Default; 2 = more info about errors; 3 =
           more info about everything; 4 = more info about everything + stderr;
@@ -183,7 +183,7 @@ Universal Options:
           actions, status, stats, success) to fine-tune the verbosity of the log. Example usage
           "-v=1,stderr"
 
-          [env: BUCK_VERBOSE=]
+          [env: BSMR_VERBOSE=]
           [default: 1]
 
       --oncall <ONCALL>

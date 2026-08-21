@@ -34,7 +34,7 @@ Use `reindeer` to generate build manifests for Rust dependencies:
 
 ```sh
 cd bsmr/
-./tools/bin/reindeer --third-party-dir tools/build/third-party/rust buckify
+node ci/rust-build-dependencies.mjs
 ```
 
 Verify that Bessemer can load the generated dependency graph:

@@ -1,3 +1,9 @@
+# ===----------------------------------------------------------------------===
+# Upstream-Source: facebook/buck2@1560aca2002865cd73d7cafb22c705cfb640b2bc
+# Modifications Copyright (c) 2026 Dedalus Labs, Inc. and its contributors
+# SPDX-License-Identifier: Apache-2.0
+# ===----------------------------------------------------------------------===
+
 # Copyright (c) Meta Platforms, Inc. and affiliates.
 #
 # This source code is dual-licensed under either the MIT license found in the
@@ -6,14 +12,14 @@
 # of this source tree. You may select, at your option, one of the
 # above-listed licenses.
 
-DEBUG_CMD = "BuckDebuggerCommand"
-DEBUG_ARGS = "BuckDebuggerCommandArguments"
-DEBUG_PWD = "BuckDebuggerCommandWorkingDirectory"
-DEBUG_ENV = "BuckDebuggerEnvironment"
+DEBUG_CMD = "BsmrDebuggerCommand"
+DEBUG_ARGS = "BsmrDebuggerCommandArguments"
+DEBUG_PWD = "BsmrDebuggerCommandWorkingDirectory"
+DEBUG_ENV = "BsmrDebuggerEnvironment"
 
 ADDITIONAL_TARGETS = "AdditionalTargets"
-EXTRA_BUCK_OPTIONS = "ExtraBuckOptions"
-IMMEDIATE_BUCK_OPTIONS = "ImmediateBuckOptions"
+EXTRA_BSMR_OPTIONS = "ExtraBsmrOptions"
+IMMEDIATE_BSMR_OPTIONS = "ImmediateBsmrOptions"
 
 BY_MODES = "ByModes"
 

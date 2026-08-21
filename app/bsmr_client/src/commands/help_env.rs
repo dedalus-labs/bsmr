@@ -18,7 +18,7 @@ use std::cmp;
 use std::iter;
 
 use bsmr_client_ctx::client_ctx::ClientCommandContext;
-use bsmr_client_ctx::common::BuckArgMatches;
+use bsmr_client_ctx::common::BsmrArgMatches;
 use bsmr_client_ctx::exit_result::ExitResult;
 use bsmr_core::env::registry::Applicability;
 use bsmr_core::env::registry::ENV_INFO;
@@ -36,7 +36,7 @@ pub struct HelpEnvCommand {
 }
 
 impl HelpEnvCommand {
-    pub fn exec(self, _matches: BuckArgMatches<'_>, _ctx: ClientCommandContext<'_>) -> ExitResult {
+    pub fn exec(self, _matches: BsmrArgMatches<'_>, _ctx: ClientCommandContext<'_>) -> ExitResult {
         // TODO(nga): print special bsmrconfigs too.
 
         // This command depends on `linkme` aggregating all the environment variables.

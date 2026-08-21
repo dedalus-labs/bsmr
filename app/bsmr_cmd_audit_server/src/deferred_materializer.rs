@@ -20,7 +20,7 @@ use async_trait::async_trait;
 use bsmr_cli_proto::ClientContext;
 use bsmr_cmd_audit_client::deferred_materializer::DeferredMaterializerCommand;
 use bsmr_cmd_audit_client::deferred_materializer::DeferredMaterializerSubcommand;
-use bsmr_error::BuckErrorContext;
+use bsmr_error::BsmrErrorContext;
 use bsmr_error::internal_error;
 use bsmr_execute::materialize::materializer::DeferredMaterializerIterItem;
 use bsmr_server_ctx::ctx::ServerCommandContextTrait;
@@ -48,7 +48,7 @@ impl ServerAuditSubcommand for DeferredMaterializerCommand {
             DeferredMaterializerSubcommand::List => {
                 let mut stream = deferred_materializer
                     .iterate()
-                    .buck_error_context("Failed to start iterating")?;
+                    .bsmr_error_context("Failed to start iterating")?;
 
                 while let Some(DeferredMaterializerIterItem {
                     artifact_path,
@@ -66,7 +66,7 @@ impl ServerAuditSubcommand for DeferredMaterializerCommand {
             DeferredMaterializerSubcommand::ListSubscriptions => {
                 let mut stream = deferred_materializer
                     .list_subscriptions()
-                    .buck_error_context("Failed to start listing subscriptions")?;
+                    .bsmr_error_context("Failed to start listing subscriptions")?;
 
                 while let Some(path) = stream.next().await {
                     writeln!(stdout, "{path}")?;
@@ -75,7 +75,7 @@ impl ServerAuditSubcommand for DeferredMaterializerCommand {
             DeferredMaterializerSubcommand::Fsck => {
                 let mut stream = deferred_materializer
                     .fsck()
-                    .buck_error_context("Failed to start iterating")?;
+                    .bsmr_error_context("Failed to start iterating")?;
 
                 let mut n = 0;
 
@@ -91,13 +91,13 @@ impl ServerAuditSubcommand for DeferredMaterializerCommand {
                 deferred_materializer
                     .refresh_ttls(min_ttl)
                     .await
-                    .buck_error_context("Failed to refresh")?;
+                    .bsmr_error_context("Failed to refresh")?;
             }
             DeferredMaterializerSubcommand::GetRefreshLog => {
                 let text = deferred_materializer
                     .get_ttl_refresh_log()
                     .await
-                    .buck_error_context("Failed to get_ttl_refresh_log")?;
+                    .bsmr_error_context("Failed to get_ttl_refresh_log")?;
 
                 write!(stdout, "{text}")?;
             }
@@ -105,7 +105,7 @@ impl ServerAuditSubcommand for DeferredMaterializerCommand {
                 let text = deferred_materializer
                     .test_iter(count)
                     .await
-                    .buck_error_context("Failed to test_iter")?;
+                    .bsmr_error_context("Failed to test_iter")?;
 
                 write!(stdout, "{text}")?;
             }
@@ -113,7 +113,7 @@ impl ServerAuditSubcommand for DeferredMaterializerCommand {
                 let text = deferred_materializer
                     .flush_all_access_times()
                     .await
-                    .buck_error_context("Failed to flush all access times")?;
+                    .bsmr_error_context("Failed to flush all access times")?;
 
                 write!(stdout, "{text}")?;
             }

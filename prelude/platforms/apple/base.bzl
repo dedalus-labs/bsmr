@@ -54,7 +54,7 @@ _MAC_PLATFORMS = [
     mac_catalyst_platforms.MACCATALYST_X86_64,
 ]
 
-# TODO: Drop the platform_rule when we're not longer attempting to support buck1.
+# TODO: Drop the platform_rule when we're not longer attempting to support legacy.
 def apple_generated_platforms(
     name, constraint_values, deps, platform_rule, platform = None, supported_build_modes = APPLE_BUILD_MODES, use_whatsapp_build_modes = False
 ):
@@ -72,7 +72,7 @@ def apple_generated_platforms(
             )
 
     # Create a platform without the build mode to support backwards compatibility of hardcoded platforms
-    # and with buck1 cxx platform setup.
+    # and with legacy cxx platform setup.
     # TODO(chatatap): Look to remove all hardcoded references and get rid of these
     platform_rule(
         name = name,

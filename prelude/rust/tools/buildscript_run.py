@@ -1,3 +1,9 @@
+# ===----------------------------------------------------------------------===
+# Upstream-Source: facebook/buck2@1560aca2002865cd73d7cafb22c705cfb640b2bc
+# Modifications Copyright (c) 2026 Dedalus Labs, Inc. and its contributors
+# SPDX-License-Identifier: Apache-2.0
+# ===----------------------------------------------------------------------===
+
 # Copyright (c) Meta Platforms, Inc. and affiliates.
 #
 # This source code is dual-licensed under either the MIT license found in the
@@ -74,7 +80,7 @@ def create_cwd(path: Path, manifest_dir: Path) -> Path:
     Cargo defines that build scripts run using the package's manifest directory
     as the current directory, so the rustc subprocess spawned from build.rs
     would also run in that manifest directory. But other rustc invocations
-    performed by Buck run from the repo root.
+    performed by Bsmr run from the repo root.
 
     Rustup only looks at one rust-toolchain.toml file, using the nearest one
     present in any parent directory. The file can set `channel` to control which

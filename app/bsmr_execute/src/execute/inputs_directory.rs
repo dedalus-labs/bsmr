@@ -38,7 +38,7 @@ pub fn inputs_directory(
             }
             CommandExecutionInput::ActionMetadata(metadata) => {
                 let path = fs
-                    .buck_out_path_resolver()
+                    .output_path_resolver()
                     .resolve_gen(&metadata.path, Some(&metadata.content_hash))?;
                 builder.insert(
                     path.into(),
@@ -49,7 +49,7 @@ pub fn inputs_directory(
                 )?;
             }
             CommandExecutionInput::ScratchPath(path) => {
-                let path = fs.buck_out_path_resolver().resolve_scratch(path)?;
+                let path = fs.output_path_resolver().resolve_scratch(path)?;
                 builder.insert(
                     path.into(),
                     DirectoryEntry::Dir(digest_config.empty_directory()),

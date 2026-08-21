@@ -17,18 +17,18 @@
 
 import re
 
-from bsmr.tests.e2e_util.api.buck import Buck
-from bsmr.tests.e2e_util.buck_workspace import buck_test
+from bsmr.tests.e2e_util.api.bsmr import Bsmr
+from bsmr.tests.e2e_util.bsmr_workspace import bsmr_test
 
 
 def _replace_hash(s: str) -> str:
     return re.sub(r"\b[0-9a-f]{16}\b", "<HASH>", s)
 
 
-@buck_test(data_dir="deprecated_correct")
-async def test_owner_without_universe_correct(buck: Buck) -> None:
+@bsmr_test(data_dir="deprecated_correct")
+async def test_owner_without_universe_correct(bsmr: Bsmr) -> None:
     # TODO(nga): there should be a warning.
-    result = await buck.cquery(
+    result = await bsmr.cquery(
         "owner(bin.sh)",
     )
     assert "" == result.stdout
@@ -38,9 +38,9 @@ async def test_owner_without_universe_correct(buck: Buck) -> None:
     )
 
 
-@buck_test(data_dir="deprecated_correct")
-async def test_owner_with_auto_universe_correct(buck: Buck) -> None:
-    result = await buck.cquery(
+@bsmr_test(data_dir="deprecated_correct")
+async def test_owner_with_auto_universe_correct(bsmr: Bsmr) -> None:
+    result = await bsmr.cquery(
         "deps(//:test) intersect owner(bin.sh)",
     )
     lines = result.stdout.splitlines()

@@ -16,12 +16,12 @@
 
 use async_trait::async_trait;
 use bsmr_client_ctx::client_ctx::ClientCommandContext;
-use bsmr_client_ctx::common::BuckArgMatches;
+use bsmr_client_ctx::common::BsmrArgMatches;
 use bsmr_client_ctx::common::CommonBuildConfigurationOptions;
 use bsmr_client_ctx::common::CommonEventLogOptions;
 use bsmr_client_ctx::common::CommonStarlarkOptions;
 use bsmr_client_ctx::common::ui::CommonConsoleOptions;
-use bsmr_client_ctx::daemon::client::BuckdClientConnector;
+use bsmr_client_ctx::daemon::client::BsmrdClientConnector;
 use bsmr_client_ctx::events_ctx::EventsCtx;
 use bsmr_client_ctx::exit_result::ExitResult;
 use bsmr_client_ctx::streaming::StreamingCommand;
@@ -40,7 +40,7 @@ To stop all instances, use `bsmr killall`."
 pub struct ServerCommand {
     #[clap(
         long,
-        help = "Print buckd status as JSON after ensuring the server is running."
+        help = "Print bsmrd status as JSON after ensuring the server is running."
     )]
     status: bool,
     #[clap(
@@ -57,12 +57,12 @@ impl StreamingCommand for ServerCommand {
 
     async fn exec_impl(
         self,
-        buckd: &mut BuckdClientConnector,
-        _matches: BuckArgMatches<'_>,
+        bsmrd: &mut BsmrdClientConnector,
+        _matches: BsmrArgMatches<'_>,
         _ctx: &mut ClientCommandContext<'_>,
         events_ctx: &mut EventsCtx,
     ) -> ExitResult {
-        let status = buckd
+        let status = bsmrd
             .with_flushing()
             .status(events_ctx, self.snapshot, false)
             .await?;
@@ -70,7 +70,7 @@ impl StreamingCommand for ServerCommand {
             let json_status = process_status(status)?;
             bsmr_client_ctx::println!("{}", serde_json::to_string_pretty(&json_status)?)?;
         } else {
-            bsmr_client_ctx::println!("buckd.endpoint={}", status.process_info.unwrap().endpoint)?;
+            bsmr_client_ctx::println!("bsmrd.endpoint={}", status.process_info.unwrap().endpoint)?;
         }
         ExitResult::success()
     }

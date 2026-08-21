@@ -18,7 +18,7 @@ use std::time::Duration;
 use std::time::SystemTime;
 
 use bsmr_core::fs::project_rel_path::ProjectRelativePathBuf;
-use bsmr_error::BuckErrorContext;
+use bsmr_error::BsmrErrorContext;
 use bsmr_miniperf_proto::MiniperfCounter;
 use remote_execution::ActionResultResponse;
 use remote_execution::ExecuteResponse;
@@ -239,14 +239,14 @@ fn convert_perf_count(
         count: perf_count
             .count
             .try_into()
-            .buck_error_context("Invalid count")?,
+            .bsmr_error_context("Invalid count")?,
         time_enabled: perf_count
             .time_enabled
             .try_into()
-            .buck_error_context("Invalid time_enabled")?,
+            .bsmr_error_context("Invalid time_enabled")?,
         time_running: perf_count
             .time_running
             .try_into()
-            .buck_error_context("Invalid time_running")?,
+            .bsmr_error_context("Invalid time_running")?,
     }))
 }

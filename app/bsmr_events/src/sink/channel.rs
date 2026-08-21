@@ -36,7 +36,7 @@ impl EventSink for ChannelEventSink {
     fn send(&self, event: Event) {
         let should_panic = match &event {
             // Sometimes daemon tries to send events after the clients disconnects
-            Event::Buck(..) => false,
+            Event::Bsmr(..) => false,
             Event::PartialResult(..) => true,
             Event::CommandResult(..) => true,
         };
@@ -62,11 +62,11 @@ mod tests {
 
     use bsmr_data::CommandStart;
     use bsmr_data::SpanStartEvent;
-    use bsmr_data::buck_event::Data::SpanStart;
+    use bsmr_data::bsmr_event::Data::SpanStart;
     use bsmr_data::span_start_event::Data::Command;
 
     use super::ChannelEventSink;
-    use crate::BuckEvent;
+    use crate::BsmrEvent;
     use crate::Event;
     use crate::EventSink;
     use crate::TraceId;
@@ -75,7 +75,7 @@ mod tests {
     async fn sending_event_smoke() {
         let (send, recv) = crossbeam_channel::unbounded();
         let sink = ChannelEventSink::new(send);
-        sink.send(Event::Buck(BuckEvent::new(
+        sink.send(Event::Bsmr(BsmrEvent::new(
             SystemTime::now(),
             TraceId::new(),
             None,
@@ -90,7 +90,7 @@ mod tests {
             }
             .into(),
         )));
-        let event = recv.recv().unwrap().unpack_buck().unwrap().clone();
+        let event = recv.recv().unwrap().unpack_bsmr().unwrap().clone();
         assert!(matches!(
             event.data(),
             SpanStart(SpanStartEvent {

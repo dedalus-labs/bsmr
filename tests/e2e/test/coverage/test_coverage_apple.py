@@ -18,14 +18,14 @@
 import json
 import tempfile
 
-from bsmr.tests.e2e_util.api.buck import Buck
-from bsmr.tests.e2e_util.buck_workspace import buck_test
+from bsmr.tests.e2e_util.api.bsmr import Bsmr
+from bsmr.tests.e2e_util.bsmr_workspace import bsmr_test
 
 
-@buck_test(inplace=True)
-async def test_apple_coverage(buck: Buck) -> None:
+@bsmr_test(inplace=True)
+async def test_apple_coverage(bsmr: Bsmr) -> None:
     with tempfile.NamedTemporaryFile("w") as covfile:
-        await buck.test(
+        await bsmr.test(
             "-c",
             "xplat.available_platforms=APPLE,CXX",
             "-c",
@@ -44,10 +44,10 @@ async def test_apple_coverage(buck: Buck) -> None:
     ), str(paths)
 
 
-@buck_test(inplace=True)
-async def test_apple_coverage_xplat(buck: Buck) -> None:
+@bsmr_test(inplace=True)
+async def test_apple_coverage_xplat(bsmr: Bsmr) -> None:
     with tempfile.NamedTemporaryFile("w") as covfile:
-        await buck.test(
+        await bsmr.test(
             "-c",
             "xplat.available_platforms=APPLE,CXX",
             "-c",

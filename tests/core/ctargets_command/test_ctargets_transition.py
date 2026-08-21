@@ -17,20 +17,20 @@
 
 import re
 
-from bsmr.tests.e2e_util.api.buck import Buck
-from bsmr.tests.e2e_util.buck_workspace import buck_test
+from bsmr.tests.e2e_util.api.bsmr import Bsmr
+from bsmr.tests.e2e_util.bsmr_workspace import bsmr_test
 
 
 def _replace_hash(s: str) -> str:
     return re.sub(r"\b[0-9a-f]{16}\b", "<HASH>", s)
 
 
-@buck_test()
-async def test_ctargets_transition(buck: Buck) -> None:
+@bsmr_test()
+async def test_ctargets_transition(bsmr: Bsmr) -> None:
     # This target does self-transition, and `ctargets` outputs both
     # forward node and forward target node.
 
-    result = await buck.ctargets(
+    result = await bsmr.ctargets(
         "root//:candy",
         "--target-platforms=root//:p",
     )

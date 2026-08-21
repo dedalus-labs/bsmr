@@ -14,7 +14,7 @@
  * above-listed licenses.
  */
 
-/// Errors from buck's starlark debugger
+/// Errors from bsmr's starlark debugger
 #[derive(Debug, bsmr_error::Error)]
 #[bsmr(tag = Tier0)]
 pub(crate) enum StarlarkDebuggerError {
@@ -24,7 +24,7 @@ pub(crate) enum StarlarkDebuggerError {
     DebuggerAlreadyAttached,
 }
 
-/// Internal errors from buck's starlark debugger
+/// Internal errors from bsmr's starlark debugger
 #[derive(Debug, bsmr_error::Error)]
 #[bsmr(tag = Tier0)]
 pub(crate) enum StarlarkDebuggerInternalError {

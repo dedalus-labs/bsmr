@@ -31,13 +31,13 @@ use dupe::Dupe;
 /// directly because *most* events are *not* relevant so we save the lookup in that case.
 pub(crate) fn emit_event_if_relevant(
     parent_span_id: OptionalSpanId,
-    data: &bsmr_data::buck_event::Data,
+    data: &bsmr_data::bsmr_event::Data,
     state: &impl WhatRanState,
     output: &mut impl WhatRanOutputWriter,
 ) -> bsmr_error::Result<()> {
     let options = WhatRanOptions::default();
     let options_regex = WhatRanOptionsRegex::from_options(&options)?;
-    if let Some(repro) = CommandReproducer::from_buck_data(data, options_regex.options) {
+    if let Some(repro) = CommandReproducer::from_bsmr_data(data, options_regex.options) {
         // Find and format the parent span (if any), then emit the relevant command.
         let action = parent_span_id.0.and_then(|id| state.get(id));
 
@@ -56,7 +56,7 @@ pub(crate) fn emit_event_if_relevant(
 }
 
 /// A wrapper type to make calls to emit_event_if_relevant more convenient, since parent_id is
-/// `Option<SpanId>` on BuckEvent.
+/// `Option<SpanId>` on BsmrEvent.
 #[derive(From, Copy, Clone, Dupe, Eq, PartialEq, Hash)]
 pub(crate) struct OptionalSpanId(pub Option<SpanId>);
 

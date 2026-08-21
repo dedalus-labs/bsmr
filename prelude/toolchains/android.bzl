@@ -1,3 +1,9 @@
+# ===----------------------------------------------------------------------===
+# Upstream-Source: facebook/buck2@1560aca2002865cd73d7cafb22c705cfb640b2bc
+# Modifications Copyright (c) 2026 Dedalus Labs, Inc. and its contributors
+# SPDX-License-Identifier: Apache-2.0
+# ===----------------------------------------------------------------------===
+
 # Copyright (c) Meta Platforms, Inc. and affiliates.
 #
 # This source code is dual-licensed under either the MIT license found in the
@@ -84,36 +90,36 @@ android_sdk_tools = rule(
 def system_android_toolchain(name, android_sdk_tools_target, jdk_system_image, **kwargs):
     kwargs["aapt2_filter_resources"] = "prelude//android/tools:filter_extra_resources"
     kwargs["aapt2"] = "{}[aapt2]".format(android_sdk_tools_target)
-    kwargs["aar_builder"] = "prelude//toolchains/android/src/com/facebook/buck/android/aar:aar_builder_binary"
+    kwargs["aar_builder"] = "prelude//toolchains/android/src/com/dedalus/bsmr/android/aar:aar_builder_binary"
     kwargs["adb"] = "{}[adb]".format(android_sdk_tools_target)
     kwargs["aidl"] = "{}[aidl]".format(android_sdk_tools_target)
     kwargs["android_jar"] = "{}[android.jar]".format(android_sdk_tools_target)
     kwargs["android_optional_jars"] = []
-    kwargs["apk_builder"] = "prelude//toolchains/android/src/com/facebook/buck/android/apk:apk_builder_binary"
-    kwargs["apk_module_graph"] = "prelude//toolchains/android/src/com/facebook/buck/android/apkmodule:apkmodule_binary"
+    kwargs["apk_builder"] = "prelude//toolchains/android/src/com/dedalus/bsmr/android/apk:apk_builder_binary"
+    kwargs["apk_module_graph"] = "prelude//toolchains/android/src/com/dedalus/bsmr/android/apkmodule:apkmodule_binary"
     kwargs["app_without_resources_stub"] = "prelude//android/tools:app_without_resources_stub"
-    kwargs["bundle_apks_builder"] = "prelude//toolchains/android/src/com/facebook/buck/android/bundle:bundle_apks_builder_binary"
-    kwargs["bundle_builder"] = "prelude//toolchains/android/src/com/facebook/buck/android/bundle:bundle_builder_binary"
+    kwargs["bundle_apks_builder"] = "prelude//toolchains/android/src/com/dedalus/bsmr/android/bundle:bundle_apks_builder_binary"
+    kwargs["bundle_builder"] = "prelude//toolchains/android/src/com/dedalus/bsmr/android/bundle:bundle_builder_binary"
     kwargs["combine_native_library_dirs"] = "prelude//android/tools:combine_native_library_dirs"
     kwargs["consolidate_class_names"] = "prelude//android/tools:consolidate_class_names"
-    kwargs["copy_string_resources"] = "prelude//toolchains/android/src/com/facebook/buck/android/resources/strings:copy_string_resources_binary"
+    kwargs["copy_string_resources"] = "prelude//toolchains/android/src/com/dedalus/bsmr/android/resources/strings:copy_string_resources_binary"
     kwargs["cross_module_native_deps_check"] = True
-    kwargs["d8_command"] = "prelude//toolchains/android/src/com/facebook/buck/android/dex:run_d8_binary"
+    kwargs["d8_command"] = "prelude//toolchains/android/src/com/dedalus/bsmr/android/dex:run_d8_binary"
     kwargs["duplicate_class_checker"] = "prelude//android/tools:duplicate_class_checker"
-    kwargs["exo_resources_rewriter"] = "prelude//toolchains/android/src/com/facebook/buck/android/resources:exo_resources_rewriter_binary"
+    kwargs["exo_resources_rewriter"] = "prelude//toolchains/android/src/com/dedalus/bsmr/android/resources:exo_resources_rewriter_binary"
     kwargs["filter_dex_class_names"] = "prelude//android/tools:filter_dex"
     kwargs["filter_prebuilt_native_library_dir"] = "prelude//android/tools:filter_prebuilt_native_library_dir"
-    kwargs["filter_resources"] = "prelude//toolchains/android/src/com/facebook/buck/android/resources/filter:filter_resources_binary"
+    kwargs["filter_resources"] = "prelude//toolchains/android/src/com/dedalus/bsmr/android/resources/filter:filter_resources_binary"
     kwargs["framework_aidl_file"] = "{}[framework.aidl]".format(android_sdk_tools_target)
     # @oss-disable[end= ]: kwargs["gatorade_mergemap_tool"] = "prelude//android/tools/meta_only:gatorade_mergemap_tool"
-    kwargs["generate_build_config"] = "prelude//toolchains/android/src/com/facebook/buck/android/build_config:generate_build_config_binary"
-    kwargs["generate_manifest"] = "prelude//toolchains/android/src/com/facebook/buck/android/manifest:generate_manifest_binary"
+    kwargs["generate_build_config"] = "prelude//toolchains/android/src/com/dedalus/bsmr/android/build_config:generate_build_config_binary"
+    kwargs["generate_manifest"] = "prelude//toolchains/android/src/com/dedalus/bsmr/android/manifest:generate_manifest_binary"
     kwargs["sort_pre_dexed_files"] = "prelude//android/tools:sort_pre_dexed_files"
-    kwargs["installer"] = "prelude//toolchains/android/src/com/facebook/buck/installer/android:android_installer"
+    kwargs["installer"] = "prelude//toolchains/android/src/com/dedalus/bsmr/installer/android:android_installer"
     kwargs["instrumentation_test_can_run_locally"] = True
     kwargs["collect_perfetto"] = False
     kwargs["instrumentation_test_runner_classpath"] = [
-        "prelude//toolchains/android/src/com/facebook/buck/testrunner:testrunner-bin-android-fixed",
+        "prelude//toolchains/android/src/com/dedalus/bsmr/testrunner:testrunner-bin-android-fixed",
         "prelude//toolchains/android/third-party:android-common",
         "prelude//toolchains/android/third-party:ddmlib",
         "prelude//toolchains/android/third-party:guava-jar",
@@ -125,27 +131,27 @@ def system_android_toolchain(name, android_sdk_tools_target, jdk_system_image, *
         "prelude//toolchains/android/third-party:jackson-core",
         "prelude//toolchains/android/third-party:jackson-databind-jar",
     ]
-    kwargs["instrumentation_test_runner_main_class"] = "com.facebook.buck.testrunner.InstrumentationMain"
-    kwargs["jar_splitter_command"] = "prelude//toolchains/android/src/com/facebook/buck/android/dex:jar_splitter_binary"
+    kwargs["instrumentation_test_runner_main_class"] = "com.dedalus.bsmr.testrunner.InstrumentationMain"
+    kwargs["jar_splitter_command"] = "prelude//toolchains/android/src/com/dedalus/bsmr/android/dex:jar_splitter_binary"
     kwargs["jdk_system_image"] = jdk_system_image
-    kwargs["manifest_utils"] = "prelude//toolchains/android/src/com/facebook/buck/android:manifest_utils_binary"
-    kwargs["merge_android_resource_sources"] = "prelude//toolchains/android/src/com/facebook/buck/android/aapt:merge_android_resource_sources_binary"
-    kwargs["merge_android_resources"] = "prelude//toolchains/android/src/com/facebook/buck/android/resources:merge_android_resources_binary"
-    kwargs["merge_assets"] = "prelude//toolchains/android/src/com/facebook/buck/android/resources:merge_assets_binary"
+    kwargs["manifest_utils"] = "prelude//toolchains/android/src/com/dedalus/bsmr/android:manifest_utils_binary"
+    kwargs["merge_android_resource_sources"] = "prelude//toolchains/android/src/com/dedalus/bsmr/android/aapt:merge_android_resource_sources_binary"
+    kwargs["merge_android_resources"] = "prelude//toolchains/android/src/com/dedalus/bsmr/android/resources:merge_android_resources_binary"
+    kwargs["merge_assets"] = "prelude//toolchains/android/src/com/dedalus/bsmr/android/resources:merge_assets_binary"
     kwargs["mergemap_tool"] = "prelude//android/tools:compute_merge_sequence"
-    kwargs["mini_aapt"] = "prelude//toolchains/android/src/com/facebook/buck/android/aapt:mini_aapt_binary"
-    kwargs["multi_dex_command"] = "prelude//toolchains/android/src/com/facebook/buck/android/dex:multi_dex_binary"
+    kwargs["mini_aapt"] = "prelude//toolchains/android/src/com/dedalus/bsmr/android/aapt:mini_aapt_binary"
+    kwargs["multi_dex_command"] = "prelude//toolchains/android/src/com/dedalus/bsmr/android/dex:multi_dex_binary"
     kwargs["native_libs_as_assets_metadata"] = "prelude//android/tools:native_libs_as_assets_metadata"
     kwargs["optimized_proguard_config"] = "{}[optimized_proguard_config]".format(android_sdk_tools_target)
     kwargs["package_meta_inf_version_files"] = False
-    kwargs["package_strings_as_assets"] = "prelude//toolchains/android/src/com/facebook/buck/android/resources/strings:package_strings_as_assets_binary"
+    kwargs["package_strings_as_assets"] = "prelude//toolchains/android/src/com/dedalus/bsmr/android/resources/strings:package_strings_as_assets_binary"
     kwargs["proguard_config"] = "{}[proguard_config]".format(android_sdk_tools_target)
     kwargs["proguard_jar"] = "{}[proguard.jar]".format(android_sdk_tools_target)
     kwargs["r_dot_java_weight_factor"] = 8
     kwargs["replace_application_id_placeholders"] = (
-        "prelude//toolchains/android/src/com/facebook/buck/android/manifest:replace_application_id_placeholders_binary"
+        "prelude//toolchains/android/src/com/dedalus/bsmr/android/manifest:replace_application_id_placeholders_binary"
     )
-    kwargs["secondary_dex_compression_command"] = "prelude//toolchains/android/src/com/facebook/buck/android/dex:secondary_dex_compression_binary"
+    kwargs["secondary_dex_compression_command"] = "prelude//toolchains/android/src/com/dedalus/bsmr/android/dex:secondary_dex_compression_binary"
     kwargs["secondary_dex_weight_limit"] = 1024
     kwargs["set_application_id_to_specified_package"] = True
     kwargs["should_run_sanity_check_for_placeholders"] = True

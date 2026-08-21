@@ -1,3 +1,9 @@
+//===----------------------------------------------------------------------===//
+// Upstream-Source: facebook/buck2@1560aca2002865cd73d7cafb22c705cfb640b2bc
+// Modifications Copyright (c) 2026 Dedalus Labs, Inc. and its contributors
+// SPDX-License-Identifier: Apache-2.0
+//===----------------------------------------------------------------------===//
+
 /*
  * Copyright (c) Meta Platforms, Inc. and affiliates.
  *
@@ -8,7 +14,7 @@
  * above-listed licenses.
  */
 
-use crate::daemon::client::BuckdClientConnector;
+use crate::daemon::client::BsmrdClientConnector;
 use crate::daemon::client::connect::DaemonConstraintsRequest;
 use crate::events_ctx::EventsCtx;
 
@@ -29,9 +35,9 @@ impl Restarter {
         }
     }
 
-    /// Observe our BuckdClientConnector after execution to decide whether we should be
+    /// Observe our BsmrdClientConnector after execution to decide whether we should be
     /// restarting.
-    pub fn observe(&mut self, client: &BuckdClientConnector, events_ctx: &mut EventsCtx) {
+    pub fn observe(&mut self, client: &BsmrdClientConnector, events_ctx: &mut EventsCtx) {
         for obs in events_ctx.error_observers() {
             if obs.daemon_in_memory_state_is_corrupted() {
                 self.reject_daemon = Some(client.daemon_constraints().daemon_id.clone());

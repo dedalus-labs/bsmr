@@ -20,7 +20,7 @@ use std::sync::Arc;
 use std::sync::LazyLock;
 
 use allocative::Allocative;
-use bsmr_error::BuckErrorContext;
+use bsmr_error::BsmrErrorContext;
 use bsmr_error::bsmr_error;
 use bsmr_fs::paths::forward_rel_path::ForwardRelativePath;
 use bsmr_fs::paths::relative_path::Component;
@@ -347,7 +347,7 @@ impl<T: PatternType> ParsedPattern<T> {
             },
             pattern,
         )
-        .with_buck_error_context(|| {
+        .with_bsmr_error_context(|| {
             format!("Error parsing target pattern `{pattern}`, expected an absolute pattern")
         })?;
 
@@ -383,7 +383,7 @@ impl<T: PatternType> ParsedPattern<T> {
             },
             pattern,
         )
-        .with_buck_error_context(|| format!("Parsing target pattern `{pattern}`"))?;
+        .with_bsmr_error_context(|| format!("Parsing target pattern `{pattern}`"))?;
 
         Self::from_parsed_pattern_with_modifiers(pattern_with_modifiers)
     }
@@ -404,7 +404,7 @@ impl<T: PatternType> ParsedPattern<T> {
             },
             pattern,
         )
-        .with_buck_error_context(|| format!("Error parsing target pattern `{pattern}`"))?;
+        .with_bsmr_error_context(|| format!("Error parsing target pattern `{pattern}`"))?;
 
         Self::from_parsed_pattern_with_modifiers(pattern_with_modifiers)
     }
@@ -487,7 +487,7 @@ impl<T: PatternType> ParsedPatternWithModifiers<T> {
             },
             pattern,
         )
-        .with_buck_error_context(|| {
+        .with_bsmr_error_context(|| {
             format!("Error parsing target pattern `{pattern}`, expected an absolute pattern")
         })
     }
@@ -514,7 +514,7 @@ impl<T: PatternType> ParsedPatternWithModifiers<T> {
             },
             pattern,
         )
-        .with_buck_error_context(|| format!("Parsing target pattern `{pattern}`"))
+        .with_bsmr_error_context(|| format!("Parsing target pattern `{pattern}`"))
     }
 
     pub fn parse_not_relaxed(
@@ -533,7 +533,7 @@ impl<T: PatternType> ParsedPatternWithModifiers<T> {
             },
             pattern,
         )
-        .with_buck_error_context(|| format!("Error parsing target pattern `{pattern}`"))
+        .with_bsmr_error_context(|| format!("Error parsing target pattern `{pattern}`"))
     }
 }
 
@@ -976,7 +976,7 @@ pub fn lex_target_pattern<T: PatternType>(
     let provider_pattern = lex_configured_providers_pattern(pattern, strip_package_trailing_slash)?;
     provider_pattern
         .try_map(|extra| T::from_configured_providers(extra))
-        .with_buck_error_context(|| {
+        .with_bsmr_error_context(|| {
             format!(
                 "Expecting {} pattern, got: `{}`",
                 // This can only fail when `PatternType = TargetName`, so the message is correct.
@@ -1201,7 +1201,7 @@ fn resolve_target_alias<T>(
 where
     T: PatternType,
 {
-    // Imported from Buck1
+    // Imported from Legacy
     static ALIAS_REGEX: LazyLock<Regex> =
         LazyLock::new(|| Regex::new("^[a-zA-Z_-][a-zA-Z0-9_-]*$").unwrap());
 
@@ -1248,7 +1248,7 @@ where
         },
         alias,
     )
-    .with_buck_error_context(|| format!("Error dereferencing alias `{}` -> `{}`", target, alias))?;
+    .with_bsmr_error_context(|| format!("Error dereferencing alias `{}` -> `{}`", target, alias))?;
 
     // And finally, put the `T` we were looking for back together.
     let parsed_pattern = match res.parsed_pattern {
@@ -1284,7 +1284,7 @@ mod tests {
     use std::marker::PhantomData;
 
     use assert_matches::assert_matches;
-    use bsmr_hash::StdBuckHashMap;
+    use bsmr_hash::StdBsmrHashMap;
     use dupe::Dupe;
     use gazebo::prelude::*;
     use test_case::test_case;
@@ -1438,7 +1438,7 @@ mod tests {
                     CellRootPathBuf::testing_new("cell2"),
                 ),
             ],
-            StdBuckHashMap::from_iter([
+            StdBsmrHashMap::from_iter([
                 (
                     NonEmptyCellAlias::testing_new("cell1"),
                     CellName::testing_new("cell1"),

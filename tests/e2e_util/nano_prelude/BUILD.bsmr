@@ -4,14 +4,14 @@
 # SPDX-License-Identifier: Apache-2.0
 # ===----------------------------------------------------------------------===
 
-load("@bsmr_build//rules:native_rules.bzl", "buck_filegroup")
+load("@bsmr_build//rules:native_rules.bzl", "bsmr_filegroup")
 # @oss-disable[end= ]: load("root//tests/e2e_util/api:visibility.fb.bzl", "visibility")
 
 oncall("build_infra")
 
 visibility = ["PUBLIC"] # @oss-enable
 
-buck_filegroup(
+bsmr_filegroup(
     name = "nano_prelude",
     srcs = glob(["*.bzl"]),
     visibility = visibility,

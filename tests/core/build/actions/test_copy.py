@@ -16,8 +16,8 @@
 
 
 import pytest
-from bsmr.tests.e2e_util.api.buck import Buck
-from bsmr.tests.e2e_util.buck_workspace import buck_test
+from bsmr.tests.e2e_util.api.bsmr import Bsmr
+from bsmr.tests.e2e_util.bsmr_workspace import bsmr_test
 
 
 @pytest.mark.parametrize("executable_bit_override", [None, True, False])
@@ -32,9 +32,9 @@ from bsmr.tests.e2e_util.buck_workspace import buck_test
         ("files/not_executable_scripts", False),
     ],
 )
-@buck_test(skip_for_os=["windows"])  # Exec bit and all
+@bsmr_test(skip_for_os=["windows"])  # Exec bit and all
 async def test_exec_bit_of_copied_file(
-    buck: Buck,
+    bsmr: Bsmr,
     executable_bit_override: bool | None,
     write_executable_bit: bool | None,
     src: str | None,
@@ -54,7 +54,7 @@ async def test_exec_bit_of_copied_file(
 
     name = "perms_{}_{}_{}".format(executable_bit_override, write_executable_bit, src)
 
-    res = await buck.build_without_report(
+    res = await bsmr.build_without_report(
         f":{name}", "--out=-", "--local-only", "--no-remote-cache"
     )
 
@@ -67,6 +67,6 @@ async def test_exec_bit_of_copied_file(
         assert line[9] == expected_val
 
 
-@buck_test()  # Make sure there's at least one test defined
-async def test_dummy(buck: Buck) -> None:
+@bsmr_test()  # Make sure there's at least one test defined
+async def test_dummy(bsmr: Bsmr) -> None:
     pass

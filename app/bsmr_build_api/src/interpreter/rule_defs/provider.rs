@@ -19,7 +19,7 @@
 //! provider, but most will also return either `RunInfo` (because they are executable) or some
 //! custom provider (because they are incorporated into something that is ultimately executable).
 //!
-//! Internal providers (those defined and used by buck itself) can be defined easily using the
+//! Internal providers (those defined and used by bsmr itself) can be defined easily using the
 //! #[internal_provider(creator_func)] macro. This will generate all the code needed for that
 //! provider to be used in starlark and to be treated as a provider in the various rust utilities
 //! we have for providers.

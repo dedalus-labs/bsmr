@@ -26,8 +26,8 @@ use allocative::Allocative;
 use bpfjailer_client_rs::SOCK_PATHS as BPFJAILER_SOCK_PATHS;
 use bsmr_cli_proto::DaemonProcessInfo;
 use bsmr_client_ctx::daemon_constraints::gen_daemon_constraints;
-use bsmr_client_ctx::version::BuckVersion;
-use bsmr_common::buckd_connection::ConnectionType;
+use bsmr_client_ctx::version::BsmrVersion;
+use bsmr_common::daemon_connection::ConnectionType;
 use bsmr_common::daemon_dir::DaemonDir;
 use bsmr_common::init::DaemonStartupConfig;
 use bsmr_common::invocation_paths::InvocationPaths;
@@ -35,20 +35,20 @@ use bsmr_common::memory;
 use bsmr_core::bsmr_env;
 use bsmr_core::logging::LogConfigurationReloadHandle;
 use bsmr_core::soft_error;
-use bsmr_error::BuckErrorContext;
+use bsmr_error::BsmrErrorContext;
 use bsmr_error::ErrorTag;
 use bsmr_error::bsmr_error;
-use bsmr_error::conversion::clap::buck_error_clap_parser;
+use bsmr_error::conversion::clap::bsmr_error_clap_parser;
 use bsmr_events::daemon_id::DaemonId;
 use bsmr_events::daemon_id::set_daemon_id_for_panics;
 use bsmr_fs::error::IoResultExt;
 use bsmr_fs::fs_util;
 use bsmr_fs::paths::forward_rel_path::ForwardRelativePath;
-use bsmr_resource_control::buck_cgroup_tree::PreppedBuckCgroups;
+use bsmr_resource_control::cgroup_tree::PreppedBsmrCgroups;
 use bsmr_server::daemon::daemon_tcp::create_listener;
-use bsmr_server::daemon::server::BuckdServer;
-use bsmr_server::daemon::server::BuckdServerDelegate;
-use bsmr_server::daemon::server::BuckdServerInitPreferences;
+use bsmr_server::daemon::server::BsmrdServer;
+use bsmr_server::daemon::server::BsmrdServerDelegate;
+use bsmr_server::daemon::server::BsmrdServerInitPreferences;
 use bsmr_util::threads::thread_spawn;
 use bsmr_util::tokio_runtime::new_tokio_runtime;
 use dice::DetectCycles;
@@ -71,14 +71,14 @@ const BPFJAILER_RESPONSE_FROM_SOCKET_TIMEOUT_MS: i32 = 60000;
 #[derive(Debug, bsmr_error::Error)]
 #[bsmr(tag = Tier0)]
 enum DaemonError {
-    #[error("The buckd pid file at `{}` had a mismatched pid, expected `{1}`, got `{2}`", _0.display())]
+    #[error("The bsmrd pid file at `{}` had a mismatched pid, expected `{1}`, got `{2}`", _0.display())]
     PidFileMismatch(PathBuf, u32, u32),
 }
 
-/// Start or run buck daemon.
+/// Start or run bsmr daemon.
 ///
 /// This is an internal command, not intended to be used directly.
-/// Buck client invokes it to spawn a server process.
+/// Bsmr client invokes it to spawn a server process.
 #[derive(Clone, Debug, clap::Parser)]
 pub struct DaemonCommand {
     /// Sets the interval for how often the daemon performs consistency checks.
@@ -86,7 +86,7 @@ pub struct DaemonCommand {
     /// by files in the daemon dir.
     #[clap(long, default_value("60"))]
     checker_interval_seconds: u64,
-    /// Run buck daemon but do not daemonize the process.
+    /// Run bsmr daemon but do not daemonize the process.
     #[clap(long)]
     dont_daemonize: bool,
     /// This flag is set to prevent infinite recursion when the process is restarted
@@ -95,7 +95,7 @@ pub struct DaemonCommand {
     skip_macos_qos: bool,
     /// Early configs that the daemon needs at startup. Those are read by the client then passed to
     /// the daemon. The client will restart the daemon if they mismatch.
-    #[clap(value_parser = buck_error_clap_parser(DaemonStartupConfig::deserialize))]
+    #[clap(value_parser = bsmr_error_clap_parser(DaemonStartupConfig::deserialize))]
     daemon_startup_config: DaemonStartupConfig,
 
     #[clap(env("ENABLE_TRACE_IO"), long)]
@@ -111,7 +111,7 @@ pub struct DaemonCommand {
     #[clap(long)]
     has_cgroup: bool,
 
-    /// The cgroup path of the process that launched this daemon before Buck moved the daemon into
+    /// The cgroup path of the process that launched this daemon before Bsmr moved the daemon into
     /// its managed cgroup.
     #[clap(long)]
     daemon_originating_cgroup: Option<String>,
@@ -124,7 +124,7 @@ pub struct DaemonCommand {
 }
 
 impl DaemonCommand {
-    /// Command instance for `--no-buckd`.
+    /// Command instance for `--no-bsmrd`.
     pub(crate) fn new_in_process(daemon_startup_config: DaemonStartupConfig) -> DaemonCommand {
         DaemonCommand {
             checker_interval_seconds: 60,
@@ -152,7 +152,7 @@ pub(crate) fn write_process_info(
     daemon_dir: &DaemonDir,
     process_info: &DaemonProcessInfo,
 ) -> bsmr_error::Result<()> {
-    let file = File::create(daemon_dir.buckd_info())?;
+    let file = File::create(daemon_dir.bsmrd_info())?;
     serde_json::to_writer(&file, &process_info)?;
     // Fsync so the endpoint/auth token are durable before clients race
     // to read this file; a crash here would otherwise lose them.
@@ -161,7 +161,7 @@ pub(crate) fn write_process_info(
 }
 
 fn verify_current_daemon(daemon_dir: &DaemonDir) -> bsmr_error::Result<()> {
-    let file = daemon_dir.buckd_pid();
+    let file = daemon_dir.bsmrd_pid();
     let my_pid = process::id();
 
     let recorded_pid: u32 = fs_util::read_to_string(&file)
@@ -194,11 +194,11 @@ fn terminate_on_panic() {
     }));
 }
 
-fn verify_buck_out_dir(paths: &InvocationPaths) -> bsmr_error::Result<()> {
-    let path = paths.buck_out_path();
+fn verify_output_dir(paths: &InvocationPaths) -> bsmr_error::Result<()> {
+    let path = paths.output_path();
 
     fs_util::create_dir_all(path.clone()).map_err(|e| {
-        e.tag([ErrorTag::InvalidBuckOut]).context(format!(
+        e.tag([ErrorTag::InvalidOutput]).context(format!(
             "Failed to create bsmr-out directory `{}`. \
              The path or a parent directory may be on a stale mount, \
              be a broken symlink, a file, or the project root may no longer be \
@@ -234,7 +234,7 @@ impl DaemonCommand {
         let prepped_cgroups = if self.has_cgroup {
             // Note: It's important that we do this before daemonizing, as otherwise there may be
             // stray processes laying around in this cgroup
-            Some(PreppedBuckCgroups::prep_current_process()?)
+            Some(PreppedBsmrCgroups::prep_current_process()?)
         } else {
             None
         };
@@ -246,13 +246,13 @@ impl DaemonCommand {
             self.daemon_startup_config.macos_qos_class.as_deref(),
         )?;
 
-        // TODO(nga): this breaks relative paths in `--no-buckd`.
-        //   `--no-buckd` should capture correct directories earlier.
+        // TODO(nga): this breaks relative paths in `--no-bsmrd`.
+        //   `--no-bsmrd` should capture correct directories earlier.
         //   Or even better, client should set current directory to project root,
         //   and resolve all paths relative to original cwd.
         fs_util::set_current_dir(paths.project_root().root()).categorize_internal()?;
 
-        let server_init_ctx = BuckdServerInitPreferences {
+        let server_init_ctx = BsmrdServerInitPreferences {
             detect_cycles: bsmr_env!("DICE_DETECT_CYCLES_UNSTABLE", type=DetectCycles)?,
             enable_trace_io: self.enable_trace_io,
             reject_materializer_state: self.reject_materializer_state.map(|s| s.into()),
@@ -275,9 +275,9 @@ impl DaemonCommand {
         }
 
         let daemon_dir = paths.daemon_dir()?;
-        let pid_path = daemon_dir.buckd_pid();
-        let stdout_path = daemon_dir.buckd_stdout();
-        let stderr_path = daemon_dir.buckd_stderr();
+        let pid_path = daemon_dir.bsmrd_pid();
+        let stdout_path = daemon_dir.bsmrd_stdout();
+        let stderr_path = daemon_dir.bsmrd_stderr();
         // Even if we don't redirect output, we still need to create stdout/stderr files,
         // because tailer opens them. This is untidy.
         let stdout = File::create(stdout_path)?;
@@ -302,7 +302,7 @@ impl DaemonCommand {
             let process_info = DaemonProcessInfo {
                 pid: pid as i64,
                 endpoint: endpoint.to_string(),
-                version: BuckVersion::get()?.unique_id().to_owned(),
+                version: BsmrVersion::get()?.unique_id().to_owned(),
                 auth_token,
             };
 
@@ -325,7 +325,7 @@ impl DaemonCommand {
             let process_info = DaemonProcessInfo {
                 pid: process::id() as i64,
                 endpoint: endpoint.to_string(),
-                version: BuckVersion::get()?.unique_id().to_owned(),
+                version: BsmrVersion::get()?.unique_id().to_owned(),
                 auth_token,
             };
 
@@ -343,7 +343,7 @@ impl DaemonCommand {
         set_daemon_id_for_panics(daemon_id.dupe());
 
         tracing::info!("Starting Bessemer daemon");
-        tracing::info!("Version: {}", BuckVersion::get_version()?);
+        tracing::info!("Version: {}", BsmrVersion::get_version()?);
         tracing::info!("PID: {}", process::id());
         tracing::info!("ID: {}", daemon_id);
         tracing::info!("Endpoint: {}", endpoint);
@@ -384,7 +384,7 @@ impl DaemonCommand {
         // run. However, at the point at which we're starting a daemon it does seem sensible to now
         // ensure that it always exists, primarily so that we can put a file into it to mark it as a
         // cachedir.
-        verify_buck_out_dir(&paths)?;
+        verify_output_dir(&paths)?;
 
         let mut builder = new_tokio_runtime("bsmr-rt");
         builder.enable_all();
@@ -432,7 +432,7 @@ impl DaemonCommand {
 
         let rt = builder
             .build()
-            .buck_error_context("Error creating Tokio runtime")?;
+            .bsmr_error_context("Error creating Tokio runtime")?;
         let handle = rt.handle().clone();
 
         let rt = new_tokio_runtime("bsmr-tn")
@@ -441,7 +441,7 @@ impl DaemonCommand {
             .worker_threads(2)
             .max_blocking_threads(2)
             .build()
-            .buck_error_context("Error creating Tonic Tokio runtime")?;
+            .bsmr_error_context("Error creating Tonic Tokio runtime")?;
 
         rt.block_on(async move {
             // Once any item is received on the hard_shutdown_receiver, the daemon process will exit immediately.
@@ -453,7 +453,7 @@ impl DaemonCommand {
                 hard_shutdown_sender: UnboundedSender<String>,
             }
 
-            impl BuckdServerDelegate for Delegate {
+            impl BsmrdServerDelegate for Delegate {
                 fn force_shutdown_with_timeout(&self, reason: String, timeout: Duration) {
                     let sender = self.hard_shutdown_sender.clone();
                     tokio::spawn(async move {
@@ -494,7 +494,7 @@ impl DaemonCommand {
             let daemon_constraints =
                 gen_daemon_constraints(&server_init_ctx.daemon_startup_config, &daemon_id)?;
 
-            let buckd_server = BuckdServer::run(
+            let bsmrd_server = BsmrdServer::run(
                 fb,
                 log_reload_handle,
                 paths,
@@ -509,7 +509,7 @@ impl DaemonCommand {
             )
             .fuse();
             let shutdown_future = async move { hard_shutdown_receiver.next().await }.fuse();
-            pin_mut!(buckd_server);
+            pin_mut!(bsmrd_server);
             pin_mut!(shutdown_future);
 
             let checker_interval_seconds = self.checker_interval_seconds;
@@ -524,7 +524,7 @@ impl DaemonCommand {
             })?;
 
             select! {
-                res = buckd_server => {
+                res = bsmrd_server => {
                     tracing::warn!("server shutdown");
                     res
                 }
@@ -538,7 +538,7 @@ impl DaemonCommand {
     }
 
     /// We start a dedicated thread to periodically check that the files in the daemon
-    /// dir still reflect that we are the current buckd and verify that when you connect
+    /// dir still reflect that we are the current bsmrd and verify that when you connect
     /// to the server it is our server. Also checks that the project root is still
     /// accessible.
     /// It gets a dedicated thread so that if somehow the main runtime gets all jammed up,
@@ -620,7 +620,7 @@ impl DaemonCommand {
         let res = self.run(log_reload_handle, paths, in_process, listener_created);
         if let Err(err) = res.as_ref() {
             fs_util::write(
-                daemon_dir.buckd_error_log(),
+                daemon_dir.bsmrd_error_log(),
                 serde_json::to_string(&bsmr_data::ErrorReport::from(err))?,
             )
             .categorize_internal()?;
@@ -690,7 +690,7 @@ impl DaemonCommand {
         // from all jail Role IDs (uuid=""). If the process was not in any jail
         // to begin with, this is a no-op.
         //
-        // Note that there IS a `buck` Role ID that is assigned to us based on
+        // Note that there IS a `bsmr` Role ID that is assigned to us based on
         // our cgroup name, and it's this role that allows the exit_jail request
         // here to succeed.
         let Some(sock_path) = BPFJAILER_SOCK_PATHS
@@ -740,13 +740,13 @@ mod tests {
     use bsmr_core::fs::project::ProjectRootTemp;
     use bsmr_core::fs::project_rel_path::ProjectRelativePath;
     use bsmr_core::logging::LogConfigurationReloadHandle;
-    use bsmr_error::BuckErrorContext;
+    use bsmr_error::BsmrErrorContext;
     use bsmr_events::daemon_id::DaemonId;
     use bsmr_fs::paths::file_name::FileNameBuf;
     use bsmr_server::daemon::daemon_tcp::create_listener;
-    use bsmr_server::daemon::server::BuckdServer;
-    use bsmr_server::daemon::server::BuckdServerDelegate;
-    use bsmr_server::daemon::server::BuckdServerInitPreferences;
+    use bsmr_server::daemon::server::BsmrdServer;
+    use bsmr_server::daemon::server::BsmrdServerDelegate;
+    use bsmr_server::daemon::server::BsmrdServerInitPreferences;
     use dupe::Dupe;
     use rand::Rng as _;
     use rand::SeedableRng;
@@ -791,7 +791,7 @@ mod tests {
         #[derive(Allocative)]
         struct Delegate;
 
-        impl BuckdServerDelegate for Delegate {
+        impl BsmrdServerDelegate for Delegate {
             fn force_shutdown_with_timeout(&self, _reason: String, _timeout: Duration) {}
         }
 
@@ -804,12 +804,12 @@ mod tests {
 
         let daemon_id = DaemonId::new();
 
-        let handle = tokio::spawn(BuckdServer::run(
+        let handle = tokio::spawn(BsmrdServer::run(
             fbinit,
             <dyn LogConfigurationReloadHandle>::noop(),
             invocation_paths,
             Box::new(Delegate),
-            BuckdServerInitPreferences {
+            BsmrdServerInitPreferences {
                 detect_cycles: None,
                 enable_trace_io: false,
                 reject_materializer_state: None,
@@ -854,7 +854,7 @@ mod tests {
                     ..PingRequest::default()
                 })
                 .await
-                .buck_error_context(format!("req_size={req_size}"))
+                .bsmr_error_context(format!("req_size={req_size}"))
                 .unwrap();
         }
 
@@ -865,7 +865,7 @@ mod tests {
                     ..PingRequest::default()
                 })
                 .await
-                .buck_error_context(format!("resp_size={resp_size}"))
+                .bsmr_error_context(format!("resp_size={resp_size}"))
                 .unwrap();
         }
 

@@ -32,8 +32,8 @@ on exit, which we don't want. Without `MALLOC_CONF=prof:true` set in the env
 when the daemon was started, `debug heap-dump` returns an error and you must
 restart the daemon.
 
-`--no-buckd` mode runs everything in one process that exits before you can
-ask for a heap dump. If you must heap-profile a `--no-buckd` run, set
+`--no-bsmrd` mode runs everything in one process that exits before you can
+ask for a heap dump. If you must heap-profile a `--no-bsmrd` run, set
 `MALLOC_CONF=…,prof_final:true` to dump at exit — but that captures
 post-cleanup state, not peak.
 

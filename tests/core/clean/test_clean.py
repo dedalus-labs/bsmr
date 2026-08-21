@@ -19,20 +19,20 @@ import os
 import platform
 from typing import Iterable
 
-from bsmr.tests.e2e_util.api.buck import Buck
-from bsmr.tests.e2e_util.buck_workspace import buck_test
+from bsmr.tests.e2e_util.api.bsmr import Bsmr
+from bsmr.tests.e2e_util.bsmr_workspace import bsmr_test
 
 
-@buck_test()
-async def test_clean(buck: Buck) -> None:
-    build_result = await buck.build("root//:trivial_build")
+@bsmr_test()
+async def test_clean(bsmr: Bsmr) -> None:
+    build_result = await bsmr.build("root//:trivial_build")
     build_report = build_result.get_build_report()
     build_report_outputs = [
         str(output)
         for output in build_report.outputs_for_target("root//:trivial_build")
     ]
 
-    clean_result = await buck.clean()
+    clean_result = await bsmr.clean()
     clean_paths = tuple(filter(None, clean_result.stderr.split("\n")))
 
     for output in build_report_outputs:
@@ -41,20 +41,20 @@ async def test_clean(buck: Buck) -> None:
     _assert_all_paths_do_not_exist(build_report_outputs)
 
 
-@buck_test()
-async def test_clean_dry_run(buck: Buck) -> None:
-    build_result = await buck.build("root//:trivial_build", "--show-output")
+@bsmr_test()
+async def test_clean_dry_run(bsmr: Bsmr) -> None:
+    build_result = await bsmr.build("root//:trivial_build", "--show-output")
     build_report = build_result.get_build_report()
     build_report_outputs = [
         str(output)
         for output in build_report.outputs_for_target("root//:trivial_build")
     ]
 
-    dry_clean_result = await buck.clean("--dry-run")
+    dry_clean_result = await bsmr.clean("--dry-run")
 
     dry_clean_paths = set(
         filter(
-            is_buck_path,
+            is_build_path,
             dry_clean_result.stderr.split("\n"),
         )
     )
@@ -67,10 +67,10 @@ async def test_clean_dry_run(buck: Buck) -> None:
     _assert_all_paths_exist(build_report_outputs)
 
     # Run clean without dry-run and make sure all files are removed now
-    clean_result = await buck.clean()
+    clean_result = await bsmr.clean()
     clean_paths = set(
         filter(
-            is_buck_path,
+            is_build_path,
             clean_result.stderr.split("\n"),
         )
     )
@@ -83,11 +83,11 @@ async def test_clean_dry_run(buck: Buck) -> None:
     _assert_all_paths_do_not_exist(clean_paths)
 
 
-def is_buck_path(x: str) -> bool:
+def is_build_path(x: str) -> bool:
     if platform.system() == "Windows":
-        return "\\.buck\\buckd\\" in x or "\\bsmr-out\\" in x
+        return "\\.bsmr\\bsmrd\\" in x or "\\bsmr-out\\" in x
     else:
-        return "/.buck/buckd/" in x or "/bsmr-out/" in x
+        return "/.bsmr/bsmrd/" in x or "/bsmr-out/" in x
 
 
 def _assert_all_paths_exist(paths: Iterable[str]) -> None:
@@ -97,10 +97,10 @@ def _assert_all_paths_exist(paths: Iterable[str]) -> None:
 
 def _assert_all_paths_do_not_exist(paths: Iterable[str]) -> None:
     for path in paths:
-        if os.path.exists(f"{path}/buckd.lifecycle"):
+        if os.path.exists(f"{path}/bsmrd.lifecycle"):
             # Clean keeps lifecycle file in daemon dir.
-            assert ["buckd.lifecycle"] == os.listdir(path)
-        elif path.endswith("bsmr-out/v2/log") or (
+            assert ["bsmrd.lifecycle"] == os.listdir(path)
+        elif path.endswith("bsmr-out/default/log") or (
             platform.system() == "Windows" and path.endswith("bsmr-out\\v2\\log")
         ):
             # Log dir should contain one entry, for the clean command itself.
@@ -109,10 +109,10 @@ def _assert_all_paths_do_not_exist(paths: Iterable[str]) -> None:
             assert os.path.exists(path) is False
 
 
-@buck_test()
-async def test_clean_background(buck: Buck) -> None:
+@bsmr_test()
+async def test_clean_background(bsmr: Bsmr) -> None:
     """Test that bsmr clean --background moves bsmr-out to trash and deletes it."""
-    build_result = await buck.build("root//:trivial_build")
+    build_result = await bsmr.build("root//:trivial_build")
     build_report = build_result.get_build_report()
     build_report_outputs = [
         str(output)
@@ -120,10 +120,10 @@ async def test_clean_background(buck: Buck) -> None:
     ]
 
     # Run clean with --background flag
-    clean_result = await buck.clean("--background")
+    clean_result = await bsmr.clean("--background")
 
     # Check that the output contains the expected messages
-    assert "Buck-out moved to trash. Now cleaning up..." in clean_result.stderr
+    assert "Bsmr-out moved to trash. Now cleaning up..." in clean_result.stderr
     assert "Tip: Use Ctrl-Z to put this in the background" in clean_result.stderr
     assert (
         "You can run other bsmr commands while this completes." in clean_result.stderr

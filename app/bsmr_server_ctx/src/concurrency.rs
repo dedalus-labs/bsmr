@@ -43,7 +43,7 @@ use bsmr_data::DiceSynchronizeSectionStart;
 use bsmr_data::ExclusiveCommandWaitEnd;
 use bsmr_data::ExclusiveCommandWaitStart;
 use bsmr_data::NoActiveDiceState;
-use bsmr_error::BuckErrorContext;
+use bsmr_error::BsmrErrorContext;
 use bsmr_error::internal_error;
 use bsmr_events::dispatch::EventDispatcher;
 use bsmr_util::truncate::truncate;
@@ -78,11 +78,11 @@ use crate::experiment_util::get_experiment_tags;
 #[bsmr(tag = Input)]
 enum ConcurrencyHandlerError {
     #[error(
-        "Recursive invocation of Buck, which is discouraged, but will probably work (using the same state). Trace Ids: {0}. Recursive invocation command: `{1}`"
+        "Recursive invocation of Bsmr, which is discouraged, but will probably work (using the same state). Trace Ids: {0}. Recursive invocation command: `{1}`"
     )]
     NestedInvocationWithSameStates(String, String),
     #[error(
-        "Recursive invocation of Buck, with a different state. Use `--isolation-dir` on the inner invocation to fix this. Trace Ids: {0}. Recursive invocation command: `{1}`"
+        "Recursive invocation of Bsmr, with a different state. Use `--isolation-dir` on the inner invocation to fix this. Trace Ids: {0}. Recursive invocation command: `{1}`"
     )]
     #[bsmr(input)]
     NestedInvocationWithDifferentStates(String, String),
@@ -90,11 +90,11 @@ enum ConcurrencyHandlerError {
     #[bsmr(tag = DaemonIsBusy)]
     ExitWhenDifferentState,
 
-    #[error("`--preemptible` was set, and buck daemon preempted this command as another came in.")]
+    #[error("`--preemptible` was set, and bsmr daemon preempted this command as another came in.")]
     #[bsmr(tag = DaemonPreempted)]
     ExitOnPreemption,
 
-    #[error("`--exit-when=notidle` was set, and buck daemon is not idle.")]
+    #[error("`--exit-when=notidle` was set, and bsmr daemon is not idle.")]
     #[bsmr(tag = DaemonIsBusy)]
     ExitOnDaemonNotIdle,
 }
@@ -543,9 +543,9 @@ impl ConcurrencyHandler {
                             && !data.active_commands.is_empty()
                         {
                             return Err(ConcurrencyHandlerError::ExitOnDaemonNotIdle)
-                                .with_buck_error_context(|| {
+                                .with_bsmr_error_context(|| {
                                     format!(
-                                        "Buck daemon is busy processing another command: {}",
+                                        "Bsmr daemon is busy processing another command: {}",
                                         Self::format_active_commands(&data)
                                     )
                                 });
@@ -597,9 +597,9 @@ impl ConcurrencyHandler {
                                         None
                                     };
                                 if let Some(early_exit_error) = early_exit_error {
-                                    return Err(early_exit_error).with_buck_error_context(|| {
+                                    return Err(early_exit_error).with_bsmr_error_context(|| {
                                         format!(
-                                            "Buck daemon is busy processing another command: {}",
+                                            "Bsmr daemon is busy processing another command: {}",
                                             Self::format_active_commands(&data)
                                         )
                                     });
@@ -824,7 +824,7 @@ mod tests {
     use bsmr_common::legacy_configs::dice::SetLegacyConfigs;
     use bsmr_core::fs::project::ProjectRootTemp;
     use bsmr_core::is_open_source;
-    use bsmr_events::BuckEvent;
+    use bsmr_events::BsmrEvent;
     use bsmr_events::create_source_sink_pair;
     use bsmr_events::daemon_id::DaemonId;
     use bsmr_events::sink::null::NullEventSink;
@@ -1648,15 +1648,15 @@ mod tests {
     async fn wait_for_event<F>(
         source: &mut ChannelEventSource,
         matcher: Box<F>,
-    ) -> bsmr_error::Result<BuckEvent>
+    ) -> bsmr_error::Result<BsmrEvent>
     where
-        F: Fn(&BuckEvent) -> bool + Send,
+        F: Fn(&BsmrEvent) -> bool + Send,
     {
         // Short timeouts are too flaky in OD environments under load.
         tokio::time::timeout(Duration::from_secs(10), async {
             loop {
                 if let Some(event) = source.try_receive() {
-                    if let Some(event) = event.unpack_buck() {
+                    if let Some(event) = event.unpack_bsmr() {
                         if matcher(event) {
                             break event.clone();
                         }
@@ -1666,7 +1666,7 @@ mod tests {
             }
         })
         .await
-        .buck_error_context("Time out waiting for matching buck event")
+        .bsmr_error_context("Time out waiting for matching bsmr event")
     }
 
     async fn wait_for_exclusive_span_start(
@@ -1676,7 +1676,7 @@ mod tests {
         let cmd = cmd.map(|c| c.to_owned());
         Ok(wait_for_event(
             source,
-            Box::new(|e: &BuckEvent| {
+            Box::new(|e: &BsmrEvent| {
                 if let Some(span_start) = &e.span_start_event() {
                     if let Some(bsmr_data::span_start_event::Data::ExclusiveCommandWait(data)) =
                         &span_start.data
@@ -1697,10 +1697,10 @@ mod tests {
     async fn wait_for_exclusive_span_end(
         source: &mut ChannelEventSource,
         span_id: Option<SpanId>,
-    ) -> bsmr_error::Result<BuckEvent> {
+    ) -> bsmr_error::Result<BsmrEvent> {
         wait_for_event(
             source,
-            Box::new(|e: &BuckEvent| {
+            Box::new(|e: &BsmrEvent| {
                 if let Some(span_end) = &e.span_end_event() {
                     if let Some(bsmr_data::span_end_event::Data::ExclusiveCommandWait(_)) =
                         &span_end.data

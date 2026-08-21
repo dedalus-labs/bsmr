@@ -16,19 +16,19 @@
 
 from pathlib import Path
 
-from bsmr.tests.e2e_util.api.buck import Buck
-from bsmr.tests.e2e_util.buck_workspace import buck_test
+from bsmr.tests.e2e_util.api.bsmr import Bsmr
+from bsmr.tests.e2e_util.bsmr_workspace import bsmr_test
 
 
-@buck_test()
-async def test_argfile_with_cell(buck: Buck) -> None:
-    res = await buck.audit_config("@cell1//argfile", "--cell", "root", "foo.bar")
+@bsmr_test()
+async def test_argfile_with_cell(bsmr: Bsmr) -> None:
+    res = await bsmr.audit_config("@cell1//argfile", "--cell", "root", "foo.bar")
     assert "bar = 1" in res.stdout
 
 
-@buck_test()
-async def test_argfile_from_cwd_cell(buck: Buck) -> None:
-    res = await buck.audit_config(
+@bsmr_test()
+async def test_argfile_from_cwd_cell(bsmr: Bsmr) -> None:
+    res = await bsmr.audit_config(
         "@//argfile",
         "--cell",
         "root",
@@ -38,17 +38,17 @@ async def test_argfile_from_cwd_cell(buck: Buck) -> None:
     assert "bar = 1" in res.stdout
 
 
-@buck_test()
-async def test_executable_argfile(buck: Buck) -> None:
-    res = await buck.audit_config(
+@bsmr_test()
+async def test_executable_argfile(bsmr: Bsmr) -> None:
+    res = await bsmr.audit_config(
         "@//exec_argfile.py#iphonesimulator-x86_64", "--cell", "root", "foo.bar"
     )
     assert "bar = 1" in res.stdout
 
 
-@buck_test()
-async def test_stdin_argfile(buck: Buck) -> None:
-    res = await buck.audit_config(
+@bsmr_test()
+async def test_stdin_argfile(bsmr: Bsmr) -> None:
+    res = await bsmr.audit_config(
         "@-",
         "--cell",
         "root",

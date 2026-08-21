@@ -18,16 +18,16 @@
 import platform
 
 import pytest
-from bsmr.tests.e2e_util.api.buck import Buck
-from bsmr.tests.e2e_util.buck_workspace import buck_test
+from bsmr.tests.e2e_util.api.bsmr import Bsmr
+from bsmr.tests.e2e_util.bsmr_workspace import bsmr_test
 from bsmr.tests.e2e_util.helper.utils import filter_events
 
 
-@buck_test()
-async def test_cpu_instruction_count(buck: Buck) -> None:
-    await buck.uquery("//:")
+@bsmr_test()
+async def test_cpu_instruction_count(bsmr: Bsmr) -> None:
+    await bsmr.uquery("//:")
     span_end_load_event = await filter_events(
-        buck,
+        bsmr,
         "Event",
         "data",
         "SpanEnd",

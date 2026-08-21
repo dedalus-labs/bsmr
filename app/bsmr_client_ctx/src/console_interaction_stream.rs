@@ -54,7 +54,7 @@ mod interactive_terminal {
     use std::io::IsTerminal;
     use std::os::unix::io::AsRawFd;
 
-    use bsmr_error::BuckErrorContext;
+    use bsmr_error::BsmrErrorContext;
     use termios::*;
 
     pub struct InteractiveTerminal {
@@ -75,14 +75,14 @@ mod interactive_terminal {
                 return Ok(None);
             }
 
-            // We also check for stderr, since if a user is starting a bunch of bucks in the
+            // We also check for stderr, since if a user is starting a bunch of bsmrs in the
             // background those may end up clobbering the termios state and the following can
             // happen:
             //
-            // - Process starts 1 buck, which sets noecho.
-            // - Process starts another buck, which reads the tty state, reads noecho.
-            // - The first buck exits and resets echo.
-            // - The second buck exits and resets noecho (since that's what it read)
+            // - Process starts 1 bsmr, which sets noecho.
+            // - Process starts another bsmr, which reads the tty state, reads noecho.
+            // - The first bsmr exits and resets echo.
+            // - The second bsmr exits and resets noecho (since that's what it read)
             //
             // We check stderr because if stderr is a TTY the user will see a bunch of consoles
             // interleaving and that would probably tell them something's wrong.
@@ -91,7 +91,7 @@ mod interactive_terminal {
             }
 
             let orig =
-                Termios::from_fd(fd).buck_error_context("Failed to access current termios")?;
+                Termios::from_fd(fd).bsmr_error_context("Failed to access current termios")?;
 
             let mut termios = orig;
 
@@ -102,14 +102,14 @@ mod interactive_terminal {
             termios.c_cc[VMIN] = 1;
             termios.c_cc[VTIME] = 0;
 
-            tcsetattr(fd, TCSANOW, &termios).buck_error_context("Failed to set termios")?;
+            tcsetattr(fd, TCSANOW, &termios).bsmr_error_context("Failed to set termios")?;
 
             Ok(Some(Self { orig }))
         }
 
         pub fn disable(&mut self) -> bsmr_error::Result<()> {
             let fd = std::io::stdin().as_raw_fd();
-            tcsetattr(fd, TCSANOW, &self.orig).buck_error_context("Failed to reset termios")?;
+            tcsetattr(fd, TCSANOW, &self.orig).bsmr_error_context("Failed to reset termios")?;
             Ok(())
         }
     }
@@ -120,7 +120,7 @@ mod interactive_terminal {
     use std::io::IsTerminal;
     use std::os::windows::io::AsRawHandle;
 
-    use bsmr_error::BuckErrorContext;
+    use bsmr_error::BsmrErrorContext;
     use windows_sys::Win32::Foundation::HANDLE;
     use windows_sys::Win32::System::Console::ENABLE_ECHO_INPUT;
     use windows_sys::Win32::System::Console::ENABLE_LINE_INPUT;
@@ -132,7 +132,7 @@ mod interactive_terminal {
         if unsafe { GetConsoleMode(handle, &mut mode) } != 0 {
             Ok(mode)
         } else {
-            Err(std::io::Error::last_os_error()).buck_error_context("Failed to get console mode")
+            Err(std::io::Error::last_os_error()).bsmr_error_context("Failed to get console mode")
         }
     }
 
@@ -140,7 +140,7 @@ mod interactive_terminal {
         if unsafe { SetConsoleMode(handle, mode) != 0 } {
             Ok(())
         } else {
-            Err(std::io::Error::last_os_error()).buck_error_context("Failed to set console mode")
+            Err(std::io::Error::last_os_error()).bsmr_error_context("Failed to set console mode")
         }
     }
 

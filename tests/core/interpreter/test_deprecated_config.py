@@ -16,17 +16,17 @@
 
 
 import pytest
-from bsmr.tests.e2e_util.api.buck import Buck
+from bsmr.tests.e2e_util.api.bsmr import Bsmr
 from bsmr.tests.e2e_util.asserts import expect_failure
-from bsmr.tests.e2e_util.buck_workspace import buck_test
+from bsmr.tests.e2e_util.bsmr_workspace import bsmr_test
 
 
-@buck_test()
+@bsmr_test()
 @pytest.mark.parametrize("section", ["some", "other"])
 @pytest.mark.parametrize("root", ["true", "false"])
-async def test_deprecated_config(buck: Buck, section: str, root: str) -> None:
+async def test_deprecated_config(bsmr: Bsmr, section: str, root: str) -> None:
     _ = await expect_failure(
-        buck.build(
+        bsmr.build(
             f":test_target_{section}_config1",
             "-c",
             f"test.section={section}",
@@ -39,11 +39,11 @@ async def test_deprecated_config(buck: Buck, section: str, root: str) -> None:
     )
 
 
-@buck_test()
+@bsmr_test()
 @pytest.mark.parametrize("root", ["true", "false"])
-async def test_not_deprecated_config(buck: Buck, root: str) -> None:
+async def test_not_deprecated_config(bsmr: Bsmr, root: str) -> None:
     section = "other"
-    _ = await buck.build(
+    _ = await bsmr.build(
         f":test_target_{section}_config2",
         "-c",
         f"test.section={section}",
@@ -54,10 +54,10 @@ async def test_not_deprecated_config(buck: Buck, root: str) -> None:
     )
 
 
-@buck_test()
-async def test_no_deprecated_cell_config(buck: Buck) -> None:
+@bsmr_test()
+async def test_no_deprecated_cell_config(bsmr: Bsmr) -> None:
     section = "other"
-    await buck.build(
+    await bsmr.build(
         f"cell//:test_target_{section}_config1",
         "-c",
         f"test.section={section}",
@@ -66,11 +66,11 @@ async def test_no_deprecated_cell_config(buck: Buck) -> None:
     )
 
 
-@buck_test()
-async def test_deprecated_cell_config2(buck: Buck) -> None:
+@bsmr_test()
+async def test_deprecated_cell_config2(bsmr: Bsmr) -> None:
     section = "other"
     _ = await expect_failure(
-        buck.build(
+        bsmr.build(
             f"cell//:test_target_{section}_config2",
             "-c",
             f"test.section={section}",

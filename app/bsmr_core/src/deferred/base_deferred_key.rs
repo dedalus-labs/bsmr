@@ -27,7 +27,7 @@ use bsmr_data::ToProtoMessage;
 use bsmr_data::action_key_owner::BaseDeferredKeyProto;
 use bsmr_fs::paths::forward_rel_path::ForwardRelativePath;
 use bsmr_fs::paths::forward_rel_path::ForwardRelativePathBuf;
-use bsmr_hash::BuckDefaultHasher;
+use bsmr_hash::BsmrDefaultHasher;
 use cmp_any::PartialEqAny;
 use dupe::Dupe;
 use pagable::Pagable;
@@ -37,7 +37,7 @@ use static_assertions::assert_eq_size;
 use strong_hash::StrongHash;
 
 use crate::content_hash::ContentBasedPathHash;
-use crate::fs::buck_out_path::BuckOutPathKind;
+use crate::fs::output_path::OutputPathKind;
 use crate::fs::project_rel_path::ProjectRelativePath;
 use crate::fs::project_rel_path::ProjectRelativePathBuf;
 use crate::global_cfg_options::GlobalCfgOptions;
@@ -57,7 +57,7 @@ pub trait BaseDeferredKeyDyn:
         prefix: &ForwardRelativePath,
         action_key: Option<&str>,
         path: &ForwardRelativePath,
-        path_resolution_method: BuckOutPathKind,
+        path_resolution_method: OutputPathKind,
         content_hash: Option<&ContentBasedPathHash>,
     ) -> bsmr_error::Result<ProjectRelativePathBuf>;
     /// Fake label for anon targets, `None` for BXL.
@@ -188,7 +188,7 @@ impl BaseDeferredKey {
         action_key: Option<&str>,
         path: &ForwardRelativePath,
         fully_hash_path: bool,
-        path_resolution_method: BuckOutPathKind,
+        path_resolution_method: OutputPathKind,
         content_hash: Option<&ContentBasedPathHash>,
     ) -> bsmr_error::Result<ProjectRelativePathBuf> {
         match self {
@@ -200,7 +200,7 @@ impl BaseDeferredKey {
                 // repeated calls to `join` on the path object because `join` allocates on each call,
                 // which has a significant impact.
                 let path_identifier = match path_resolution_method {
-                    BuckOutPathKind::Configuration => [
+                    OutputPathKind::Configuration => [
                         target.cfg().output_hash().as_str(),
                         if target.exec_cfg().is_some() { "-" } else { "" },
                         target
@@ -226,7 +226,7 @@ impl BaseDeferredKey {
                         action_key.unwrap_or_default(),
                         if action_key.is_none() { "" } else { "__/" },
                     ],
-                    BuckOutPathKind::ContentHash => {
+                    OutputPathKind::ContentHash => {
                         let content_hash = content_hash.as_ref().map(|x| x.as_str());
                         if let Some(content_hash) = content_hash {
                             [
@@ -260,7 +260,7 @@ impl BaseDeferredKey {
                     }
                 };
                 let path_or_hash = if fully_hash_path {
-                    let mut hasher = BuckDefaultHasher::new();
+                    let mut hasher = BsmrDefaultHasher::new();
                     path_identifier.hash(&mut hasher);
 
                     format!("{:016x}/", hasher.finish())

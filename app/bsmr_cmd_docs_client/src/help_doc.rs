@@ -205,7 +205,7 @@ The `bsmr install` command builds an installable target, typically a mobile app 
 The `InstallInfo` provider is used to make targets installable, it specifies an installer implementation (e.g. Android or Apple installer) and a set of files to install. For example (from `bsmr audit providers`):
 ```python
 InstallInfo(
-    installer = buck//src/com/facebook/buck/installer/apple:apple_installer,
+    installer = bsmr//src/com/dedalus/bsmr/installer/apple:apple_installer,
     files = {
         \"app_bundle;\": <build artifact HelloWorldBundle.app>,
         \"options\": <build artifact install_apple_data.json>
@@ -213,11 +213,11 @@ InstallInfo(
 )
 ```
 
-Buck connects to the installer using GRPC and sends individual files to install once they have finished building.
+Bsmr connects to the installer using GRPC and sends individual files to install once they have finished building.
 
 # Exopackage
 
-For Android apks, buck install supports a feature to speed up iterative development called Exopackage. An _exopackage_ is a small shell of an Android app that contains the minimal code and resources needed to bootstrap loading the code for a full-fledged Android application. Loading the application code at runtime avoids a full reinstall of the app when testing typical code changes, which dramatically reduces the length of edit/refresh cycles.
+For Android apks, bsmr install supports a feature to speed up iterative development called Exopackage. An _exopackage_ is a small shell of an Android app that contains the minimal code and resources needed to bootstrap loading the code for a full-fledged Android application. Loading the application code at runtime avoids a full reinstall of the app when testing typical code changes, which dramatically reduces the length of edit/refresh cycles.
 ".to_owned()
     } else {
         format!(

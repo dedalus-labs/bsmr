@@ -21,8 +21,8 @@ use std::time::SystemTime;
 
 use bsmr_cli_proto::*;
 use bsmr_common::argv::SanitizedArgv;
-use bsmr_error::BuckErrorContext;
-use bsmr_events::BuckEvent;
+use bsmr_error::BsmrErrorContext;
+use bsmr_events::BsmrEvent;
 use bsmr_fs::paths::abs_norm_path::AbsNormPathBuf;
 use bsmr_fs::paths::abs_path::AbsPathBuf;
 use bsmr_fs::working_dir::AbsWorkingDir;
@@ -144,14 +144,14 @@ impl WriteEventLog {
                 }
                 Err(EventLogErrors::LogNotOpen {
                     serialized_event: String::from_utf8(mem::take(&mut self.buf))
-                        .buck_error_context("Failed to serialize event for debug")?,
+                        .bsmr_error_context("Failed to serialize event for debug")?,
                 }
                 .into())
             }
         }
     }
 
-    async fn ensure_log_writers_opened(&mut self, event: &BuckEvent) -> bsmr_error::Result<()> {
+    async fn ensure_log_writers_opened(&mut self, event: &BsmrEvent) -> bsmr_error::Result<()> {
         let (logdir, maybe_extra_path, maybe_extra_user_event_log_path) = match &self.state {
             LogWriterState::Unopened {
                 logdir,
@@ -168,7 +168,7 @@ impl WriteEventLog {
         };
         tokio::fs::create_dir_all(logdir)
             .await
-            .with_buck_error_context(|| {
+            .with_bsmr_error_context(|| {
                 format!("Error creating event log directory: `{logdir}`")
             })?;
         remove_old_logs(logdir, self.retained_event_logs).await;
@@ -254,7 +254,7 @@ async fn open_event_log_for_writing(
         .append(true)
         .open(&path.path)
         .await
-        .with_buck_error_context(|| {
+        .with_bsmr_error_context(|| {
             format!(
                 "Failed to open event log for writing at `{}`",
                 path.path.display()
@@ -270,7 +270,7 @@ async fn open_event_log_for_writing(
 }
 
 impl WriteEventLog {
-    pub async fn write_events(&mut self, events: &[Arc<BuckEvent>]) -> bsmr_error::Result<()> {
+    pub async fn write_events(&mut self, events: &[Arc<BsmrEvent>]) -> bsmr_error::Result<()> {
         let mut event_refs = Vec::new();
         let mut first = true;
         for event in events {
@@ -327,7 +327,7 @@ impl WriteEventLog {
 impl SerializeForLog for Invocation {
     fn serialize_to_json(&self, buf: &mut Vec<u8>) -> bsmr_error::Result<()> {
         serde_json::to_writer(buf, &self.clone().to_proto())
-            .buck_error_context("Failed to serialize event")
+            .bsmr_error_context("Failed to serialize event")
     }
 
     fn serialize_to_protobuf_length_delimited(&self, buf: &mut Vec<u8>) -> bsmr_error::Result<()> {
@@ -338,7 +338,7 @@ impl SerializeForLog for Invocation {
     // Always log invocation record to user event log for `bsmr log show` compatibility
     fn maybe_serialize_user_event(&self, buf: &mut Vec<u8>) -> bsmr_error::Result<bool> {
         serde_json::to_writer(buf, &self.clone().to_proto())
-            .buck_error_context("Failed to serialize event")?;
+            .bsmr_error_context("Failed to serialize event")?;
         Ok(true)
     }
 }
@@ -346,16 +346,16 @@ impl SerializeForLog for Invocation {
 #[derive(Serialize)]
 pub enum StreamValueForWrite<'a> {
     Result(&'a CommandResult),
-    Event(&'a bsmr_data::BuckEvent),
+    Event(&'a bsmr_data::BsmrEvent),
 }
 
 impl SerializeForLog for StreamValueForWrite<'_> {
     fn serialize_to_json(&self, buf: &mut Vec<u8>) -> bsmr_error::Result<()> {
-        serde_json::to_writer(buf, &self).buck_error_context("Failed to serialize event")
+        serde_json::to_writer(buf, &self).bsmr_error_context("Failed to serialize event")
     }
 
     fn serialize_to_protobuf_length_delimited(&self, buf: &mut Vec<u8>) -> bsmr_error::Result<()> {
-        // We use `CommandProgressForWrite` here to avoid cloning `BuckEvent`.
+        // We use `CommandProgressForWrite` here to avoid cloning `BsmrEvent`.
         // `CommandProgressForWrite` serialization is bitwise identical to `CommandProgress`.
         // See the protobuf spec
         // https://developers.google.com/protocol-buffers/docs/encoding#length-types
@@ -375,7 +375,7 @@ impl SerializeForLog for StreamValueForWrite<'_> {
         if let StreamValueForWrite::Event(event) = self {
             if let Some(user_event) = try_get_user_event(event)? {
                 serde_json::to_writer(buf, &user_event)
-                    .buck_error_context("Failed to serialize event")?;
+                    .bsmr_error_context("Failed to serialize event")?;
                 return Ok(true);
             }
         }
@@ -398,7 +398,7 @@ pub async fn rewrite_event_log<F>(
     mut keep: F,
 ) -> bsmr_error::Result<()>
 where
-    F: FnMut(&bsmr_data::BuckEvent) -> bool,
+    F: FnMut(&bsmr_data::BsmrEvent) -> bool,
 {
     let output_log = EventLogPathBuf::infer(output_path)?;
     if !input.encoding.equivalent_to(&output_log.encoding) {
@@ -417,7 +417,7 @@ where
         .truncate(true)
         .open(&output_log.path)
         .await
-        .with_buck_error_context(|| {
+        .with_bsmr_error_context(|| {
             format!(
                 "Failed to open event log for writing at `{}`",
                 output_log.path.display()
@@ -451,7 +451,7 @@ struct OwnedStreamValueForWrite(StreamValue);
 
 impl SerializeForLog for OwnedStreamValueForWrite {
     fn serialize_to_json(&self, buf: &mut Vec<u8>) -> bsmr_error::Result<()> {
-        serde_json::to_writer(buf, &self.0).buck_error_context("Failed to serialize event")
+        serde_json::to_writer(buf, &self.0).bsmr_error_context("Failed to serialize event")
     }
 
     fn serialize_to_protobuf_length_delimited(&self, buf: &mut Vec<u8>) -> bsmr_error::Result<()> {
@@ -523,13 +523,13 @@ mod tests {
         }
     }
 
-    fn make_event() -> BuckEvent {
-        BuckEvent::new(
+    fn make_event() -> BsmrEvent {
+        BsmrEvent::new(
             SystemTime::now(),
             TraceId::new(),
             Some(SpanId::next()),
             None,
-            bsmr_data::buck_event::Data::SpanStart(SpanStartEvent {
+            bsmr_data::bsmr_event::Data::SpanStart(SpanStartEvent {
                 data: Some(bsmr_data::span_start_event::Data::Load(
                     LoadBuildFileStart {
                         module_id: "foo".to_owned(),
@@ -576,7 +576,7 @@ mod tests {
 
         //Get event
         let retrieved_event = match events.try_next().await?.expect("Failed getting log") {
-            StreamValue::Event(e) => BuckEvent::try_from(e),
+            StreamValue::Event(e) => BsmrEvent::try_from(e),
             _ => panic!("expected event"),
         }?;
 
@@ -635,7 +635,7 @@ mod tests {
         let (_invocation, mut events) = log.unpack_stream().await?;
 
         let retrieved_event = match events.try_next().await?.expect("Failed getting log") {
-            StreamValue::Event(e) => BuckEvent::try_from(e).unwrap(),
+            StreamValue::Event(e) => BsmrEvent::try_from(e).unwrap(),
             _ => panic!("expecting event"),
         };
 

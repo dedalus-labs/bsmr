@@ -23,7 +23,7 @@ use std::time::Instant;
 use allocative::Allocative;
 use bsmr_build_api::interpreter::rule_defs::context::init_action_has_content_based_path_default;
 use bsmr_build_api::interpreter::rule_defs::context::init_declare_output_has_content_based_path_default;
-use bsmr_build_api::spawner::BuckSpawner;
+use bsmr_build_api::spawner::BsmrSpawner;
 use bsmr_cli_proto::unstable_dice_dump_request::DiceDumpFormat;
 use bsmr_common::cas_digest::DigestAlgorithm;
 use bsmr_common::cas_digest::DigestAlgorithmFamily;
@@ -45,7 +45,7 @@ use bsmr_core::fs::project_rel_path::ProjectRelativePathBuf;
 use bsmr_core::is_open_source;
 use bsmr_core::rollout_percentage::RolloutPercentage;
 use bsmr_core::tag_result;
-use bsmr_error::BuckErrorContext;
+use bsmr_error::BsmrErrorContext;
 use bsmr_error::ErrorTag;
 use bsmr_error::bsmr_error;
 use bsmr_events::daemon_id::DaemonId;
@@ -53,7 +53,7 @@ use bsmr_events::dispatch::EventDispatcher;
 use bsmr_events::source::ChannelEventSource;
 use bsmr_execute::digest_config::DigestConfig;
 use bsmr_execute::execute::blocking::BlockingExecutor;
-use bsmr_execute::execute::blocking::BuckBlockingExecutor;
+use bsmr_execute::execute::blocking::BsmrBlockingExecutor;
 use bsmr_execute::execute::blocking::DirectIoExecutor;
 use bsmr_execute::materialize::materializer::MaterializationMethod;
 use bsmr_execute::materialize::materializer::Materializer;
@@ -70,12 +70,12 @@ use bsmr_execute_impl::sqlite::materializer_db::MaterializerState;
 use bsmr_execute_impl::sqlite::materializer_db::MaterializerStateSqliteDb;
 use bsmr_file_watcher::file_watcher::FileWatcher;
 use bsmr_fs::cwd::WorkingDirectory;
-use bsmr_hash::StdBuckHashMap;
+use bsmr_hash::StdBsmrHashMap;
 use bsmr_http::HttpClient;
 use bsmr_http::HttpClientBuilder;
 use bsmr_re_configuration::RemoteExecutionStaticMetadata;
 use bsmr_re_configuration::RemoteExecutionStaticMetadataImpl;
-use bsmr_resource_control::buck_cgroup_tree::BuckCgroupTree;
+use bsmr_resource_control::cgroup_tree::BsmrCgroupTree;
 use bsmr_resource_control::memory_tracker;
 use bsmr_resource_control::memory_tracker::MemoryTrackerHandle;
 use bsmr_server_ctx::concurrency::ConcurrencyHandler;
@@ -99,10 +99,10 @@ use crate::daemon::disk_state::maybe_initialize_materializer_sqlite_db;
 use crate::daemon::forkserver::maybe_launch_forkserver;
 use crate::daemon::io_provider::create_io_provider;
 use crate::daemon::panic::DaemonStatePanicDiceDump;
-use crate::daemon::server::BuckdServerInitPreferences;
+use crate::daemon::server::BsmrdServerInitPreferences;
 use crate::daemon::tenting_provider::create_tenting_acl_provider;
 
-/// For a buckd process there is a single DaemonState created at startup and never destroyed.
+/// For a bsmrd process there is a single DaemonState created at startup and never destroyed.
 #[derive(Allocative)]
 pub struct DaemonState {
     #[allocative(skip)]
@@ -182,7 +182,7 @@ pub struct DaemonStateData {
     pub paranoid: Option<ParanoidDownloader>,
 
     /// Spawner
-    pub spawner: Arc<BuckSpawner>,
+    pub spawner: Arc<BsmrSpawner>,
 
     /// Tags to be logged per command.
     pub tags: Vec<String>,
@@ -204,7 +204,7 @@ pub struct DaemonStateData {
     /// A unique identifier for this instance of the daemon
     pub daemon_id: DaemonId,
 
-    /// Cgroup path of the process that launched this daemon before Buck moved the daemon into its
+    /// Cgroup path of the process that launched this daemon before Bsmr moved the daemon into its
     /// managed cgroup.
     pub daemon_originating_cgroup: Option<String>,
 
@@ -212,7 +212,7 @@ pub struct DaemonStateData {
     #[allocative(skip)]
     pub named_semaphores_for_run_actions: Arc<NamedSemaphores>,
 
-    pub bsmrconfig_metadata: StdBuckHashMap<String, String>,
+    pub bsmrconfig_metadata: StdBsmrHashMap<String, String>,
 }
 
 impl DaemonStateData {
@@ -240,11 +240,11 @@ impl DaemonState {
     pub(crate) async fn new(
         fb: fbinit::FacebookInit,
         paths: InvocationPaths,
-        init_ctx: BuckdServerInitPreferences,
+        init_ctx: BsmrdServerInitPreferences,
         rt: &Handle,
         materializations: MaterializationMethod,
         working_directory: WorkingDirectory,
-        cgroup_tree: Option<BuckCgroupTree>,
+        cgroup_tree: Option<BsmrCgroupTree>,
         daemon_id: DaemonId,
     ) -> Result<Self, bsmr_error::Error> {
         let data = Self::init_data(
@@ -280,10 +280,10 @@ impl DaemonState {
     async fn init_data(
         fb: fbinit::FacebookInit,
         paths: InvocationPaths,
-        init_ctx: BuckdServerInitPreferences,
+        init_ctx: BsmrdServerInitPreferences,
         rt: &Handle,
         materializations: MaterializationMethod,
-        cgroup_tree: Option<BuckCgroupTree>,
+        cgroup_tree: Option<BsmrCgroupTree>,
         daemon_id: DaemonId,
     ) -> bsmr_error::Result<Arc<DaemonStateData>> {
         if bsmr_env!("BSMR_TEST_INIT_DAEMON_ERROR", bool, applicability = testing)? {
@@ -309,7 +309,7 @@ impl DaemonState {
                 .await?;
 
             let default_digest_algorithm =
-                bsmr_env!("BUCK_DEFAULT_DIGEST_ALGORITHM", type=DigestAlgorithmFamily)?;
+                bsmr_env!("BSMR_DEFAULT_DIGEST_ALGORITHM", type=DigestAlgorithmFamily)?;
 
             let default_digest_algorithm = default_digest_algorithm.unwrap_or_else(|| {
                 if bsmr_core::is_open_source() {
@@ -330,7 +330,7 @@ impl DaemonState {
                         .collect::<Result<_, _>>()
                 })
                 .transpose()
-                .buck_error_context("Invalid digest_algorithms")?
+                .bsmr_error_context("Invalid digest_algorithms")?
                 .unwrap_or_else(|| vec![default_digest_algorithm])
                 .into_try_map(convert_algorithm_kind)?;
 
@@ -340,18 +340,18 @@ impl DaemonState {
                 .as_deref()
                 .map(|a| convert_algorithm_kind(a.parse()?))
                 .transpose()
-                .buck_error_context("Invalid source_digest_algorithm")?;
+                .bsmr_error_context("Invalid source_digest_algorithm")?;
 
             let digest_config =
                 DigestConfig::leak_new(digest_algorithms, preferred_source_algorithm)
-                    .buck_error_context("Error initializing DigestConfig")?;
+                    .bsmr_error_context("Error initializing DigestConfig")?;
 
             // TODO(rafaelc): merge configs from all cells once they are consistent
             let static_metadata = Arc::new(RemoteExecutionStaticMetadata::from_legacy_config(
                 root_config,
             )?);
 
-            let mut ignore_specs: StdBuckHashMap<CellName, IgnoreSet> = StdBuckHashMap::default();
+            let mut ignore_specs: StdBsmrHashMap<CellName, IgnoreSet> = StdBsmrHashMap::default();
             for (cell, _) in cells.cells() {
                 let config = legacy_cells.parse_single_cell(cell, &fs).await?;
                 ignore_specs.insert(
@@ -374,7 +374,7 @@ impl DaemonState {
                 if cfg!(any(target_os = "macos", target_os = "windows")) {
                     Arc::new(DirectIoExecutor::new(fs.dupe())?)
                 } else {
-                    Arc::new(BuckBlockingExecutor::default_concurrency(fs.dupe())?)
+                    Arc::new(BsmrBlockingExecutor::default_concurrency(fs.dupe())?)
                 };
 
             let cache_dir_path = paths.cache_dir_path();
@@ -515,7 +515,7 @@ impl DaemonState {
 
             let http_client = http_client_from_startup_config(&init_ctx.daemon_startup_config)
                 .await
-                .buck_error_context("Error creating HTTP client")?
+                .bsmr_error_context("Error creating HTTP client")?
                 .build();
 
             let incremental_db_state = Arc::new(incremental_db_state);
@@ -529,14 +529,14 @@ impl DaemonState {
                 10,
                 static_metadata.dupe(),
                 Some(paths.re_logs_dir()),
-                paths.buck_out_path(),
+                paths.output_path(),
                 init_ctx.daemon_startup_config.paranoid,
             ));
             let daemon_dispatcher = EventDispatcher::null();
             let materializer = Self::create_materializer(
                 io.project_root().dupe(),
                 digest_config,
-                paths.buck_out_dir(),
+                paths.output_dir(),
                 re_client_manager.dupe(),
                 blocking_executor.dupe(),
                 materializations,
@@ -581,7 +581,7 @@ impl DaemonState {
                 cells.dupe(),
                 ignore_specs,
             )
-            .with_buck_error_context(|| {
+            .with_bsmr_error_context(|| {
                 format!(
                     "Error creating a FileWatcher for project root `{}`",
                     paths.project_root()
@@ -690,7 +690,7 @@ impl DaemonState {
                 enable_restarter,
                 http_client,
                 paranoid,
-                spawner: Arc::new(BuckSpawner::new(daemon_state_data_rt)),
+                spawner: Arc::new(BsmrSpawner::new(daemon_state_data_rt)),
                 tags,
                 system_warning_config,
                 memory_tracker,
@@ -709,7 +709,7 @@ impl DaemonState {
     fn create_materializer(
         fs: ProjectRoot,
         digest_config: DigestConfig,
-        buck_out_path: ProjectRelativePathBuf,
+        output_path: ProjectRelativePathBuf,
         re_client_manager: Arc<ReConnectionManager>,
         blocking_executor: Arc<dyn BlockingExecutor>,
         materializations: MaterializationMethod,
@@ -724,7 +724,7 @@ impl DaemonState {
                 Ok(Arc::new(DeferredMaterializer::new(
                     fs,
                     digest_config,
-                    buck_out_path,
+                    output_path,
                     re_client_manager,
                     blocking_executor,
                     deferred_materializer_configs,
@@ -770,10 +770,10 @@ impl DaemonState {
         )?;
 
         self.validate_cwd()
-            .buck_error_context("Error validating working directory")?;
+            .bsmr_error_context("Error validating working directory")?;
 
-        self.validate_buck_out_mount()
-            .buck_error_context("Error validating bsmr-out mount")?;
+        self.validate_output_mount()
+            .bsmr_error_context("Error validating bsmr-out mount")?;
 
         dispatcher.instant_event(bsmr_data::TagEvent {
             tags: data.tags.clone(),
@@ -805,7 +805,7 @@ impl DaemonState {
             if stale {
                 Err(bsmr_error!(
                     bsmr_error::ErrorTag::Environment,
-                    "Buck appears to be running in a stale working directory. \
+                    "Bsmr appears to be running in a stale working directory. \
                      This will likely lead to failed or slow builds. \
                      To remediate, restart Bessemer."
                 ))
@@ -825,7 +825,7 @@ impl DaemonState {
         Ok(())
     }
 
-    pub fn validate_buck_out_mount(&self) -> bsmr_error::Result<()> {
+    pub fn validate_output_mount(&self) -> bsmr_error::Result<()> {
         #[cfg(fbcode_build)]
         {
             use bsmr_core::soft_error;
@@ -837,11 +837,11 @@ impl DaemonState {
                 return Ok(());
             }
 
-            let buck_out_root = project_root.join(InvocationPaths::buck_out_dir_prefix());
+            let output_root = project_root.join(InvocationPaths::output_dir_prefix());
 
-            if let Some(buck_out_root_meta) = fs_util::symlink_metadata_if_exists(buck_out_root)? {
+            if let Some(output_root_meta) = fs_util::symlink_metadata_if_exists(output_root)? {
                 // If bsmr-out is a symlink, we'll be happy with that.
-                if buck_out_root_meta.is_symlink() {
+                if output_root_meta.is_symlink() {
                     return Ok(());
                 }
 
@@ -855,19 +855,19 @@ impl DaemonState {
                     let project_device = fs_util::symlink_metadata(project_root)
                         .categorize_internal()?
                         .dev();
-                    let buck_out_device = buck_out_root_meta.dev();
+                    let output_device = output_root_meta.dev();
 
-                    if project_device != buck_out_device {
+                    if project_device != output_device {
                         return Ok(());
                     }
                 }
             }
 
             soft_error!(
-                "eden_buck_out",
+                "eden_output",
                 bsmr_error::bsmr_error!(
                     bsmr_error::ErrorTag::Environment,
-                    "Buck is running in an Eden repository, but `bsmr-out` is not redirected. \
+                    "Bsmr is running in an Eden repository, but `bsmr-out` is not redirected. \
                      This will likely lead to failed or slow builds. \
                      To remediate, run `eden redirect fixup`."
                 ),

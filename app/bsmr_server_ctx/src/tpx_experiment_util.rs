@@ -16,7 +16,7 @@
 
 use bsmr_common::legacy_configs::dice::HasInjectedLegacyConfigs;
 use bsmr_core::fs::project::ProjectRoot;
-use bsmr_hash::StdBuckHashSet;
+use bsmr_hash::StdBsmrHashSet;
 use dice::DiceTransaction;
 
 use crate::experiment_util::get_experiment_tags;
@@ -28,10 +28,10 @@ use crate::experiment_util::get_experiment_tags;
 pub async fn get_tpx_experiments(
     mut ctx: DiceTransaction,
     project_root: &ProjectRoot,
-) -> bsmr_error::Result<StdBuckHashSet<String>> {
+) -> bsmr_error::Result<StdBsmrHashSet<String>> {
     // Get all experiments from bsmrconfig
     if !ctx.is_injected_external_bsmrconfig_data_key_set().await? {
-        return Ok(StdBuckHashSet::default());
+        return Ok(StdBsmrHashSet::default());
     }
 
     let external_configs = ctx.get_injected_external_bsmrconfig_data().await?;
@@ -44,7 +44,7 @@ pub async fn get_tpx_experiments(
         .into_iter()
         .filter(|tag| tag.starts_with("experiments.tpx_"))
         .map(|tag| tag.replace("experiments.tpx_", ""))
-        .collect::<StdBuckHashSet<String>>();
+        .collect::<StdBsmrHashSet<String>>();
 
     Ok(tpx_experiments)
 }

@@ -1,3 +1,9 @@
+# ===----------------------------------------------------------------------===
+# Upstream-Source: facebook/buck2@1560aca2002865cd73d7cafb22c705cfb640b2bc
+# Modifications Copyright (c) 2026 Dedalus Labs, Inc. and its contributors
+# SPDX-License-Identifier: Apache-2.0
+# ===----------------------------------------------------------------------===
+
 # Copyright (c) Meta Platforms, Inc. and affiliates.
 #
 # This source code is dual-licensed under either the MIT license found in the
@@ -9,8 +15,8 @@
 """
 Extra relinker outputs support (e.g., LLVM stats).
 
-Reads from ctx.attrs.extra_relinker_outputs attribute (not buck config directly).
-Buck config is read at macro level and translated to attribute value.
+Reads from ctx.attrs.extra_relinker_outputs attribute (not bsmr config directly).
+Bsmr config is read at macro level and translated to attribute value.
 """
 
 load("@prelude//linking:link_info.bzl", "ExtraLinkerOutputs")

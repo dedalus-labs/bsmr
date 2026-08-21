@@ -59,17 +59,17 @@ mod tests {
     use std::time::UNIX_EPOCH;
 
     use bsmr_data::SpanStartEvent;
-    use bsmr_events::BuckEvent;
+    use bsmr_events::BsmrEvent;
     use bsmr_events::span::SpanId;
-    use bsmr_hash::StdBuckHashMap;
+    use bsmr_hash::StdBsmrHashMap;
     use bsmr_wrapper_common::invocation_id::TraceId;
 
     use crate::dice_state::DiceState;
     use crate::pending_estimate::estimate_completion_percentage;
-    use crate::span_tracker::BuckEventSpanTracker;
+    use crate::span_tracker::BsmrEventSpanTracker;
 
-    fn setup_roots(tracker: &mut BuckEventSpanTracker) {
-        let span = Arc::new(BuckEvent::new(
+    fn setup_roots(tracker: &mut BsmrEventSpanTracker) {
+        let span = Arc::new(BsmrEvent::new(
             UNIX_EPOCH,
             TraceId::new(),
             Some(SpanId::next()),
@@ -110,7 +110,7 @@ mod tests {
     fn setup_dice_state(dice_state: &mut DiceState, finished: u32, total: u32) {
         dice_state.update(&bsmr_data::DiceStateSnapshot {
             key_states: {
-                let mut map = StdBuckHashMap::default();
+                let mut map = StdBsmrHashMap::default();
                 map.insert(
                     "BuildKey".to_owned(),
                     bsmr_data::DiceKeyState {
@@ -131,7 +131,7 @@ mod tests {
     #[test]
     fn test_completion_no_progress() -> bsmr_error::Result<()> {
         let mut dice = DiceState::new();
-        let mut tracker = BuckEventSpanTracker::new();
+        let mut tracker = BsmrEventSpanTracker::new();
 
         setup_roots(&mut tracker);
         setup_dice_state(&mut dice, 0, 100);
@@ -142,7 +142,7 @@ mod tests {
     #[test]
     fn test_completion_percentage_build_complete() -> bsmr_error::Result<()> {
         let mut dice = DiceState::new();
-        let mut tracker = BuckEventSpanTracker::new();
+        let mut tracker = BsmrEventSpanTracker::new();
 
         setup_roots(&mut tracker);
         setup_dice_state(&mut dice, 100, 100);
@@ -153,7 +153,7 @@ mod tests {
     #[test]
     fn test_completion_percentage_intermediate_state() -> bsmr_error::Result<()> {
         let mut dice = DiceState::new();
-        let mut tracker = BuckEventSpanTracker::new();
+        let mut tracker = BsmrEventSpanTracker::new();
 
         setup_roots(&mut tracker);
         // 26/101 -> 25/100 since we have 1 subtracted for the ActionExecutionStart
@@ -165,7 +165,7 @@ mod tests {
     #[test]
     fn test_completion_percentage_invalid_dice_state() -> bsmr_error::Result<()> {
         let mut dice = DiceState::new();
-        let mut tracker = BuckEventSpanTracker::new();
+        let mut tracker = BsmrEventSpanTracker::new();
 
         setup_roots(&mut tracker);
         setup_dice_state(&mut dice, 10, 0);
@@ -176,7 +176,7 @@ mod tests {
     #[test]
     fn test_completion_percentage_empty_span() -> bsmr_error::Result<()> {
         let mut dice = DiceState::new();
-        let tracker = BuckEventSpanTracker::new();
+        let tracker = BsmrEventSpanTracker::new();
 
         setup_dice_state(&mut dice, 26, 101);
         assert_eq!(estimate_completion_percentage(tracker.roots(), &dice), 25);

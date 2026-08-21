@@ -24,7 +24,7 @@ use bsmr_artifact::artifact::artifact_type::Artifact;
 use bsmr_build_api::analysis::calculation::RuleAnalysisCalculation;
 use bsmr_build_api::validation::transitive_validations::TransitiveValidations;
 use bsmr_core::target::configured_target_label::ConfiguredTargetLabel;
-use bsmr_error::BuckErrorContext;
+use bsmr_error::BsmrErrorContext;
 use bsmr_error::internal_error;
 use derivative::Derivative;
 use derive_more::Display;

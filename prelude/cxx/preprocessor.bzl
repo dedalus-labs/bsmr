@@ -217,7 +217,7 @@ def cxx_attr_exported_preprocessor_flags(ctx: AnalysisContext) -> list[typing.An
 def cxx_inherited_preprocessor_infos(first_order_deps: list[Dependency]) -> list[CPreprocessorInfo]:
     # We filter out nones because some non-cxx rule without such providers could be a dependency, for example
     # cxx_binary "upstream//one_world/cli/util/process_wrapper:process_wrapper" depends on
-    # python_library "upstream//third-party-buck/$platform/build/glibc:__project__"
+    # python_library "upstream//third-party-bsmr/$platform/build/glibc:__project__"
     return filter_and_map_idx(CPreprocessorInfo, first_order_deps)
 
 def cxx_merge_cpreprocessors(actions: AnalysisActions, own: list[CPreprocessor], xs: list[CPreprocessorInfo]) -> CPreprocessorInfo:
@@ -326,7 +326,7 @@ def get_exported_preprocessor_args(
         ctx.actions,
         cxx_toolchain_info,
         headers,
-        "buck-headers",
+        "bsmr-headers",
         map_val(HeaderMode, getattr(ctx.attrs, "header_mode", None)),
         allow_cache_upload = allow_cache_upload,
         uses_content_based_paths = True,
@@ -336,7 +336,7 @@ def get_exported_preprocessor_args(
         ctx.actions,
         cxx_toolchain_info,
         headers,
-        "buck-pre-headers",
+        "bsmr-pre-headers",
         HeaderMode("header_map_only"),
         allow_cache_upload = allow_cache_upload,
         uses_content_based_paths = True,
@@ -487,7 +487,7 @@ def _get_private_preprocessor_args(
         ctx.actions,
         cxx_toolchain_info,
         headers,
-        "buck-private-headers",
+        "bsmr-private-headers",
         header_mode = header_mode,
         allow_cache_upload = allow_cache_upload,
         uses_content_based_paths = True,
@@ -557,7 +557,7 @@ def _attr_headers_as_raw_headers_mode(ctx: AnalysisContext) -> HeadersAsRawHeade
 
 def _needs_cxx_header_tree_hack(arg: typing.Any) -> bool:
     # The macro $(cxx-header-tree) is used in exactly once place, and its a place which isn't very
-    # Buck v2 compatible. We replace $(cxx-header-tree) with HACK-CXX-HEADER-TREE at attribute time,
+    # Bsmr v2 compatible. We replace $(cxx-header-tree) with HACK-CXX-HEADER-TREE at attribute time,
     # then here we substitute in the real header tree.
     return "HACK-CXX-HEADER-TREE" in repr(arg)
 

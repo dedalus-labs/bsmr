@@ -351,7 +351,7 @@ impl<'a, Env: QueryEnvironment, A: QueryFunctionArg<'a, Env>> QueryFunctionArg<'
     }
 }
 
-// Helper for buck_query_proc_macro implementations. Evaluates an arg at an index and tries to convert it to the QueryFunctionArg type, providing decent errors on failures.
+// Helper for bsmr_query_proc_macro implementations. Evaluates an arg at an index and tries to convert it to the QueryFunctionArg type, providing decent errors on failures.
 pub async fn eval_arg<'a, Env: QueryEnvironment, A: QueryFunctionArg<'a, Env>>(
     func: &impl QueryFunction<Env>,
     evaluator: &QueryEvaluator<'a, Env>,

@@ -24,7 +24,7 @@ rust_library(
                     },
                 },
             },
-            "extra_buck_dependencies": {
+            "extra_bsmr_dependencies": {
                 "dependencies": [
                     (None, "//common/rust/shed/hostcaps:hostcaps"),
                 ],

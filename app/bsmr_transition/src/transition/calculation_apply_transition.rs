@@ -30,10 +30,10 @@ use bsmr_core::configuration::data::ConfigurationData;
 use bsmr_core::configuration::transition::applied::TransitionApplied;
 use bsmr_core::configuration::transition::id::TransitionId;
 use bsmr_core::provider::label::ProvidersLabel;
-use bsmr_error::BuckErrorContext;
+use bsmr_error::BsmrErrorContext;
 use bsmr_events::dispatch::get_dispatcher;
 use bsmr_interpreter::dice::starlark_provider::StarlarkEvalKind;
-use bsmr_interpreter::factory::BuckStarlarkModule;
+use bsmr_interpreter::factory::BsmrStarlarkModule;
 use bsmr_interpreter::factory::StarlarkEvaluatorProvider;
 use bsmr_interpreter::print_handler::EventDispatcherPrintHandler;
 use bsmr_interpreter::soft_error::BsmrStarlarkSoftErrorHandler;
@@ -154,7 +154,7 @@ async fn do_apply_transition(
     let print = EventDispatcherPrintHandler(get_dispatcher());
     let eval_kind = StarlarkEvalKind::Transition(Arc::new(transition_id.clone()));
     let provider = StarlarkEvaluatorProvider::new(ctx, eval_kind).await?;
-    BuckStarlarkModule::with_profiling(|module| {
+    BsmrStarlarkModule::with_profiling(|module| {
         let (finished_eval, res) =
             provider.with_evaluator(&module, cancellation.into(), |eval, _| {
                 eval.set_print_handler(&print);
@@ -170,7 +170,7 @@ async fn do_apply_transition(
                                     PackageLabelOption::TransitionAttr,
                                     module.heap(),
                                 )
-                                .with_buck_error_context(|| {
+                                .with_bsmr_error_context(|| {
                                     format!(
                                         "Error converting attribute `{}={}` to Starlark value",
                                         name,
@@ -194,7 +194,7 @@ async fn do_apply_transition(
                     TransitionApplied::Single(new) => {
                         let new_2 =
                             match call_transition_function(&transition, &new, refs, attrs, eval)
-                                .buck_error_context(
+                                .bsmr_error_context(
                                     "applying transition again on transition output",
                                 )? {
                                 TransitionApplied::Single(new_2) => new_2,
@@ -316,7 +316,7 @@ impl TransitionCalculation for TransitionCalculationImpl {
                     .await?
                 };
 
-                Ok(Arc::new(v.with_buck_error_context(|| {
+                Ok(Arc::new(v.with_bsmr_error_context(|| {
                     format!("Error computing transition `{__self}`")
                 })?))
             }

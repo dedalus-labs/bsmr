@@ -26,10 +26,10 @@ use tracing::info;
 
 use super::Input;
 use crate::Command;
-use crate::buck;
-use crate::buck::Buck;
-use crate::buck::select_mode;
-use crate::buck::to_project_json;
+use crate::bsmr;
+use crate::bsmr::Bsmr;
+use crate::bsmr::select_mode;
+use crate::bsmr::to_project_json;
 use crate::path::safe_canonicalize;
 use crate::project_json::ProjectJson;
 use crate::project_json::Sysroot;
@@ -40,7 +40,7 @@ use crate::target::Target;
 #[derive(Debug)]
 pub(crate) struct Develop {
     pub(crate) sysroot: SysrootConfig,
-    pub(crate) buck: buck::Buck,
+    pub(crate) bsmr: bsmr::Bsmr,
     pub(crate) check_cycles: bool,
     pub(crate) invoked_by_ra: bool,
     pub(crate) include_all_buildfiles: bool,
@@ -91,11 +91,11 @@ impl Develop {
             };
 
             let mode = select_mode(mode.as_deref());
-            let buck = buck::Buck::new(bsmr_command.clone(), mode, project_root.clone());
+            let bsmr = bsmr::Bsmr::new(bsmr_command.clone(), mode, project_root.clone());
 
             let develop = Develop {
                 sysroot,
-                buck,
+                bsmr,
                 check_cycles,
                 invoked_by_ra: false,
                 include_all_buildfiles,
@@ -141,11 +141,11 @@ impl Develop {
             };
 
             let mode = select_mode(mode.as_deref());
-            let buck = buck::Buck::new(bsmr_command.clone(), mode, project_root);
+            let bsmr = bsmr::Bsmr::new(bsmr_command.clone(), mode, project_root);
 
             let develop = Develop {
                 sysroot,
-                buck,
+                bsmr,
                 check_cycles: false,
                 invoked_by_ra: true,
                 include_all_buildfiles: false,
@@ -221,7 +221,7 @@ impl Develop {
                         .map(|p| format!("{}", p.display()))
                         .collect::<Vec<_>>()
                         .join(", ");
-                    anyhow::anyhow!("Could not find buck targets that own {}", pretty_paths)
+                    anyhow::anyhow!("Could not find bsmr targets that own {}", pretty_paths)
                 }
                 Input::Buildfile(paths) => {
                     let pretty_paths = paths
@@ -273,7 +273,7 @@ impl Develop {
     pub(crate) fn run_inner(&self, targets: Vec<Target>) -> Result<ProjectJson, anyhow::Error> {
         let Develop {
             sysroot,
-            buck,
+            bsmr,
             check_cycles,
             include_all_buildfiles,
             ..
@@ -302,7 +302,7 @@ impl Develop {
         let global_extra_cfgs: &[String] = &[];
 
         develop_with_sysroot(
-            buck,
+            bsmr,
             targets,
             sysroot,
             exclude_workspaces,
@@ -313,7 +313,7 @@ impl Develop {
         )
     }
 
-    /// For every Rust file, return the relevant buck targets that should be used to configure rust-analyzer.
+    /// For every Rust file, return the relevant bsmr targets that should be used to configure rust-analyzer.
     pub(crate) fn related_targets(
         &self,
         input: Input,
@@ -324,7 +324,7 @@ impl Develop {
         // so we don't try to load everything in very large generated buildfiles.
 
         // We always want the targets that directly own these Rust files.
-        self.buck.query_owners(input, max_extra_targets)
+        self.bsmr.query_owners(input, max_extra_targets)
     }
 }
 
@@ -340,7 +340,7 @@ fn expand_tilde(path: &Path) -> Result<PathBuf, anyhow::Error> {
 }
 
 pub(crate) fn develop_with_sysroot(
-    buck: &Buck,
+    bsmr: &Bsmr,
     targets: Vec<Target>,
     sysroot: Sysroot,
     exclude_workspaces: bool,
@@ -350,11 +350,11 @@ pub(crate) fn develop_with_sysroot(
     first_party_extra_cfgs: &[String],
 ) -> Result<ProjectJson, anyhow::Error> {
     info!(kind = "progress", "building generated code");
-    let expanded_and_resolved = buck.expand_and_resolve(&targets, exclude_workspaces)?;
+    let expanded_and_resolved = bsmr.expand_and_resolve(&targets, exclude_workspaces)?;
 
     info!(kind = "progress", "resolving aliased libraries");
     let aliased_libraries =
-        buck.query_aliased_libraries(&expanded_and_resolved.expanded_targets, &targets)?;
+        bsmr.query_aliased_libraries(&expanded_and_resolved.expanded_targets, &targets)?;
 
     info!(kind = "progress", "generating rust-project.json");
     let rust_project = to_project_json(
@@ -365,7 +365,7 @@ pub(crate) fn develop_with_sysroot(
         include_all_buildfiles,
         global_extra_cfgs,
         first_party_extra_cfgs,
-        buck,
+        bsmr,
     )?;
 
     Ok(rust_project)

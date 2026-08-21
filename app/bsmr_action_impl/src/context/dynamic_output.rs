@@ -132,7 +132,7 @@ pub(crate) fn analysis_actions_methods_dynamic_output(methods: &mut MethodsBuild
     ///   can examine the values of the dynamic variables and depends on the inputs.
     ///   * The function will usually be a `def`, as `lambda` in Starlark does not allow statements,
     /// making it quite underpowered. For full details see
-    /// https://buck2.build/docs/rule_authors/dynamic_dependencies/.
+    /// https://oss.dedaluslabs.ai/bsmr/rule_authors/dynamic_dependencies/.
     ///
     /// Besides dynamic dependencies, there is a second use case for `dynamic_output`: say that you
     /// have some output artifact, and that the analysis to produce the action that outputs that

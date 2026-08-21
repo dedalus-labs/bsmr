@@ -27,7 +27,7 @@ use bsmr_fs::fs_util;
 use bsmr_fs::paths::abs_path::AbsPathBuf;
 use bsmr_util::process_stats::process_stats;
 
-use crate::daemon::server::BuckdServerData;
+use crate::daemon::server::BsmrdServerData;
 use crate::jemalloc_stats::get_allocator_stats;
 
 /// In `FlameGraph` nodes do not have names, only child keys.
@@ -116,11 +116,11 @@ fn combined_warnings(
 }
 
 pub(crate) async fn spawn_allocative(
-    buckd_server_data: Arc<BuckdServerData>,
+    bsmrd_server_data: Arc<BsmrdServerData>,
     path: AbsPathBuf,
     dispatcher: EventDispatcher,
 ) -> bsmr_error::Result<()> {
-    let materializer = buckd_server_data.daemon_state_data().materializer.clone();
+    let materializer = bsmrd_server_data.daemon_state_data().materializer.clone();
     let deferred_materializer_profile = match materializer.as_deferred_materializer_extension() {
         Some(deferred_materializer) => {
             dispatcher.console_message("Visiting deferred materializer...".to_owned());
@@ -137,8 +137,8 @@ pub(crate) async fn spawn_allocative(
         // TODO(nga): Emit some progress.
         dispatcher.console_message("Visiting global roots...".to_owned());
         graph.visit_global_roots();
-        dispatcher.console_message("Visiting buckd...".to_owned());
-        graph.visit_root(&buckd_server_data);
+        dispatcher.console_message("Visiting bsmrd...".to_owned());
+        graph.visit_root(&bsmrd_server_data);
         let fg = graph.finish();
         let flamegraph = match deferred_materializer_profile.as_ref() {
             Some(deferred_materializer) => add_deferred_materializer_profile(

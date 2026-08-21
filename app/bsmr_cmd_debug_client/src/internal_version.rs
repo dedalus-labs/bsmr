@@ -15,16 +15,16 @@
  */
 
 use bsmr_client_ctx::client_ctx::ClientCommandContext;
-use bsmr_client_ctx::common::BuckArgMatches;
+use bsmr_client_ctx::common::BsmrArgMatches;
 use bsmr_client_ctx::exit_result::ExitResult;
-use bsmr_client_ctx::version::BuckVersion;
+use bsmr_client_ctx::version::BsmrVersion;
 
 #[derive(Debug, clap::Parser)]
 pub struct InternalVersionCommand {}
 
 impl InternalVersionCommand {
-    pub fn exec(self, _matches: BuckArgMatches<'_>, _ctx: ClientCommandContext<'_>) -> ExitResult {
-        bsmr_client_ctx::println!("bsmr internal-version {}", BuckVersion::get_unique_id()?)?;
+    pub fn exec(self, _matches: BsmrArgMatches<'_>, _ctx: ClientCommandContext<'_>) -> ExitResult {
+        bsmr_client_ctx::println!("bsmr internal-version {}", BsmrVersion::get_unique_id()?)?;
         ExitResult::success()
     }
 }

@@ -19,7 +19,7 @@ use std::sync::Arc;
 
 use bsmr_core::target::label::label::TargetLabelRef;
 use bsmr_core::target::name::TargetNameRef;
-use bsmr_error::BuckErrorContext;
+use bsmr_error::BsmrErrorContext;
 use bsmr_error::internal_error;
 use bsmr_node::attrs::attr::Attribute;
 use bsmr_node::attrs::attr::CoercedValue;
@@ -144,7 +144,7 @@ impl AttributeSpecExt for AttributeSpec {
                         internals.attr_coercion_context(),
                         v,
                     )
-                    .with_buck_error_context(|| {
+                    .with_bsmr_error_context(|| {
                         format!("Error coercing attribute `{attr_name}` of `{target_label}`",)
                     })?;
 
@@ -199,7 +199,7 @@ impl AttributeSpecExt for AttributeSpec {
                     within_view,
                     default_deps,
                 )
-                .with_buck_error_context(|| {
+                .with_bsmr_error_context(|| {
                     format!(
                         "checking `within_view` for attribute `{}` of `{}`",
                         a.name, target_label,

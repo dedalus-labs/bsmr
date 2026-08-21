@@ -18,8 +18,8 @@ import json
 from pathlib import Path
 from typing import Any, Dict
 
-from bsmr.tests.e2e_util.api.buck import Buck
-from bsmr.tests.e2e_util.buck_workspace import buck_test
+from bsmr.tests.e2e_util.api.bsmr import Bsmr
+from bsmr.tests.e2e_util.bsmr_workspace import bsmr_test
 
 
 # Uses a dependency graph like this:
@@ -36,9 +36,9 @@ from bsmr.tests.e2e_util.buck_workspace import buck_test
 #
 # `foo:a` and `bar:d` are workspaces within package `foo`
 # Skip on mac and windows to avoid having to deal with mode files
-@buck_test(inplace=True, skip_for_os=["darwin", "windows"])
-async def test_workspaces(buck: Buck) -> None:
-    result_raw = await buck.bxl(
+@bsmr_test(inplace=True, skip_for_os=["darwin", "windows"])
+async def test_workspaces(bsmr: Bsmr) -> None:
+    result_raw = await bsmr.bxl(
         "prelude//rust/rust-analyzer/resolve_deps.bxl:resolve_targets",
         "--",
         "--targets",
@@ -62,7 +62,7 @@ async def test_workspaces(buck: Buck) -> None:
     assert expected_subset.items() <= target_and_in_workspace.items()
 
     # The target being edited is not in any workspaces
-    result_raw = await buck.bxl(
+    result_raw = await bsmr.bxl(
         "prelude//rust/rust-analyzer/resolve_deps.bxl:resolve_targets",
         "--",
         "--targets",
@@ -85,9 +85,9 @@ async def test_workspaces(buck: Buck) -> None:
     assert expected_subset.items() <= target_and_in_workspace.items()
 
 
-@buck_test(inplace=True, skip_for_os=["darwin", "windows"])
-async def test_alias(buck: Buck) -> None:
-    result_raw = await buck.bxl(
+@bsmr_test(inplace=True, skip_for_os=["darwin", "windows"])
+async def test_alias(bsmr: Bsmr) -> None:
+    result_raw = await bsmr.bxl(
         "prelude//rust/rust-analyzer/resolve_deps.bxl:resolve_targets",
         "--",
         "--targets",
@@ -100,9 +100,9 @@ async def test_alias(buck: Buck) -> None:
     ]
 
 
-@buck_test(inplace=True, skip_for_os=["darwin", "windows"])
-async def test_resolve_owning_buildfile_no_extra_targets(buck: Buck) -> None:
-    result_raw = await buck.bxl(
+@bsmr_test(inplace=True, skip_for_os=["darwin", "windows"])
+async def test_resolve_owning_buildfile_no_extra_targets(bsmr: Bsmr) -> None:
+    result_raw = await bsmr.bxl(
         "prelude//rust/rust-analyzer/resolve_deps.bxl:resolve_owning_buildfile",
         "--",
         "--max_extra_targets=0",
@@ -124,9 +124,9 @@ async def test_resolve_owning_buildfile_no_extra_targets(buck: Buck) -> None:
     ]
 
 
-@buck_test(inplace=True, skip_for_os=["darwin", "windows"])
-async def test_exclude_workspaces(buck: Buck) -> None:
-    result_raw = await buck.bxl(
+@bsmr_test(inplace=True, skip_for_os=["darwin", "windows"])
+async def test_exclude_workspaces(bsmr: Bsmr) -> None:
+    result_raw = await bsmr.bxl(
         "prelude//rust/rust-analyzer/resolve_deps.bxl:resolve_targets",
         "--",
         "--targets",
@@ -139,9 +139,9 @@ async def test_exclude_workspaces(buck: Buck) -> None:
     ]
 
 
-@buck_test(inplace=True, skip_for_os=["darwin", "windows"])
-async def test_fallback_compatible_with(buck: Buck) -> None:
-    result_raw = await buck.bxl(
+@bsmr_test(inplace=True, skip_for_os=["darwin", "windows"])
+async def test_fallback_compatible_with(bsmr: Bsmr) -> None:
+    result_raw = await bsmr.bxl(
         "prelude//rust/rust-analyzer/resolve_deps.bxl:resolve_targets",
         "--",
         "--targets",
@@ -159,6 +159,6 @@ async def test_fallback_compatible_with(buck: Buck) -> None:
 
 
 # FIXME: Remove once actual tests work on mac and windows
-@buck_test(inplace=True)
-async def test_noop(buck: Buck) -> None:
+@bsmr_test(inplace=True)
+async def test_noop(bsmr: Bsmr) -> None:
     return

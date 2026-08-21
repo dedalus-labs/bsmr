@@ -33,7 +33,7 @@ The isolation directory exists as a subdirectory within the `bsmr-out` folder:
 ```
 project_root/
 └── bsmr-out/
-    ├── v2/            # Default isolation directory
+    ├── default/       # Default isolation directory
     │   ├── artifacts/
     │   ├── cache/
     │   └── ...
@@ -44,8 +44,8 @@ project_root/
     └── ...
 ```
 
-By default, Bessemer uses an isolation directory named `v2`, creating all build
-outputs and metadata within `$PROJECT_ROOT/bsmr-out/v2`.
+By default, Bessemer uses an isolation directory named `default`, creating all build
+outputs and metadata within `$PROJECT_ROOT/bsmr-out/default`.
 
 ### Important Characteristics
 
@@ -119,16 +119,16 @@ $ bsmr --isolation-dir DIRECTORY_NAME COMMAND [ARGS]
 ```
 
 **Important**: The `--isolation-dir` argument must always appear immediately
-after `bsmr`. For example, `bsmr build --isolation-dir v2 target` is not
+after `bsmr`. For example, `bsmr build --isolation-dir experiment target` is not
 valid.
 
 ### 2. Environment Variable
 
 ```sh
-$ BUCK_ISOLATION_DIR=DIRECTORY_NAME bsmr COMMAND [ARGS]
+$ BSMR_ISOLATION_DIR=DIRECTORY_NAME bsmr COMMAND [ARGS]
 ```
 
-If not specified, the default isolation directory name is `v2`.
+If not specified, the default isolation directory name is `default`.
 
 ## Command Scope and Isolation Directories
 

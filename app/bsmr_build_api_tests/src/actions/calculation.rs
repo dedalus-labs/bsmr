@@ -48,7 +48,7 @@ use bsmr_build_api::build::detailed_aggregated_metrics::dice::SetDetailedAggrega
 use bsmr_build_api::build::detailed_aggregated_metrics::events::DetailedAggregatedMetricsHandle;
 use bsmr_build_api::context::SetBuildContextData;
 use bsmr_build_api::keep_going::HasKeepGoing;
-use bsmr_build_api::spawner::BuckSpawner;
+use bsmr_build_api::spawner::BsmrSpawner;
 use bsmr_common::dice::cells::SetCellResolver;
 use bsmr_common::dice::data::testing::SetTestingIoProvider;
 use bsmr_common::external_symlink::ExternalSymlink;
@@ -104,7 +104,7 @@ use bsmr_execute::materialize::nodisk::NoDiskMaterializer;
 use bsmr_execute::re::manager::UnconfiguredRemoteExecutionClient;
 use bsmr_file_watcher::mergebase::SetMergebase;
 use bsmr_fs::paths::forward_rel_path::ForwardRelativePathBuf;
-use bsmr_hash::buck_indexset;
+use bsmr_hash::bsmr_indexset;
 use bsmr_http::HttpClientBuilder;
 use bsmr_node::nodes::configured::ConfiguredTargetNode;
 use bsmr_util::time_span::TimeSpan;
@@ -198,7 +198,7 @@ async fn make_default_dice_state(
         CellName::testing_new("cell"),
         CellRootPathBuf::new(ProjectRelativePathBuf::unchecked_new("cell-path".into())),
     );
-    let output_path = ProjectRelativePathBuf::unchecked_new("bsmr-out/v2".into());
+    let output_path = ProjectRelativePathBuf::unchecked_new("bsmr-out/default".into());
 
     let mut dice_builder = DiceBuilder::new();
     dice_builder = dice_builder.set_data(|data| {
@@ -251,7 +251,7 @@ async fn make_default_dice_state(
     extra.set_mergebase(Default::default());
     extra.data.set(EventDispatcher::null());
     extra.data.set(RunActionKnobs::default());
-    extra.spawner = Arc::new(BuckSpawner::current_runtime().unwrap());
+    extra.spawner = Arc::new(BsmrSpawner::current_runtime().unwrap());
 
     let mut computations = dice_builder.build(extra).unwrap();
     inject_legacy_config_for_test(
@@ -259,7 +259,7 @@ async fn make_default_dice_state(
         CellName::testing_new("root"),
         LegacyBsmrConfig::empty(),
     )?;
-    computations.set_buck_out_path(Some(output_path))?;
+    computations.set_output_path(Some(output_path))?;
     computations.set_cell_resolver(cell_resolver)?;
 
     Ok(computations.commit().await)
@@ -272,8 +272,8 @@ async fn test_get_action_for_artifact() -> bsmr_error::Result<()> {
     let registered_action = registered_action(
         build_artifact.dupe(),
         Box::new(SimpleAction::new(
-            buck_indexset![],
-            buck_indexset![build_artifact.dupe()],
+            bsmr_indexset![],
+            bsmr_indexset![build_artifact.dupe()],
             vec![],
             CategoryRef::new("fake_action").unwrap().to_owned(),
             None,
@@ -309,8 +309,8 @@ async fn test_build_action() -> bsmr_error::Result<()> {
     let registered_action = registered_action(
         build_artifact.dupe(),
         Box::new(SimpleAction::new(
-            buck_indexset![],
-            buck_indexset![build_artifact.dupe()],
+            bsmr_indexset![],
+            bsmr_indexset![build_artifact.dupe()],
             vec!["foo".to_owned(), "cmd".to_owned()],
             CategoryRef::new("fake_action").unwrap().to_owned(),
             None,
@@ -359,8 +359,8 @@ async fn test_build_artifact() -> bsmr_error::Result<()> {
     let registered_action = registered_action(
         build_artifact.dupe(),
         Box::new(SimpleAction::new(
-            buck_indexset![],
-            buck_indexset![build_artifact.dupe()],
+            bsmr_indexset![],
+            bsmr_indexset![build_artifact.dupe()],
             vec!["bar".to_owned(), "cmd".to_owned()],
             CategoryRef::new("fake_action").unwrap().to_owned(),
             None,
@@ -407,8 +407,8 @@ async fn test_ensure_artifact_build_artifact() -> bsmr_error::Result<()> {
     let registered_action = registered_action(
         build_artifact.dupe(),
         Box::new(SimpleAction::new(
-            buck_indexset![],
-            buck_indexset![build_artifact.dupe()],
+            bsmr_indexset![],
+            bsmr_indexset![build_artifact.dupe()],
             vec!["ensure".to_owned(), "cmd".to_owned()],
             CategoryRef::new("fake_action").unwrap().to_owned(),
             None,

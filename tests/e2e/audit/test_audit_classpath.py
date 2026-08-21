@@ -19,37 +19,37 @@
 from pathlib import Path
 from typing import Iterable, Set
 
-from bsmr.tests.e2e_util.api.buck import Buck
+from bsmr.tests.e2e_util.api.bsmr import Bsmr
 from bsmr.tests.e2e_util.asserts import expect_failure
-from bsmr.tests.e2e_util.buck_workspace import buck_test
+from bsmr.tests.e2e_util.bsmr_workspace import bsmr_test
 
 
 def _classpath_jars(classpaths: Iterable[str]) -> Set[str]:
     return {Path(p).name for p in classpaths}
 
 
-@buck_test(inplace=True, skip_for_os=["windows"])
-async def test_audit_classpath(buck: Buck) -> None:
+@bsmr_test(inplace=True, skip_for_os=["windows"])
+async def test_audit_classpath(bsmr: Bsmr) -> None:
     await expect_failure(
-        buck.audit("classpath", "upstream//fbandroid/bsmr/tests/good/classpath:top"),
+        bsmr.audit("classpath", "upstream//fbandroid/bsmr/tests/good/classpath:top"),
         stderr_regex=r"Using `audit classpath` is no longer supported. Use the `\[classpath\]` or `\[classpath_targets\]` sub-targets instead.",
     )
 
 
-@buck_test(inplace=True, skip_for_os=["windows"])
-async def test_audit_classpath_binary(buck: Buck) -> None:
+@bsmr_test(inplace=True, skip_for_os=["windows"])
+async def test_audit_classpath_binary(bsmr: Bsmr) -> None:
     await expect_failure(
-        buck.audit("classpath", "upstream//fbandroid/bsmr/tests/good/classpath:apk"),
+        bsmr.audit("classpath", "upstream//fbandroid/bsmr/tests/good/classpath:apk"),
         stderr_regex=r"Using `audit classpath` is no longer supported. Use the `\[classpath\]` or `\[classpath_targets\]` sub-targets instead.",
     )
 
 
-@buck_test(inplace=True, skip_for_os=["windows"])
-async def test_audit_classpath_json(buck: Buck) -> None:
+@bsmr_test(inplace=True, skip_for_os=["windows"])
+async def test_audit_classpath_json(bsmr: Bsmr) -> None:
     top = "upstream//fbandroid/bsmr/tests/good/classpath:top"
     direct_dep = "upstream//fbandroid/bsmr/tests/good/classpath:direct_dep"
 
     await expect_failure(
-        buck.audit("classpath", top, direct_dep, "--json"),
+        bsmr.audit("classpath", top, direct_dep, "--json"),
         stderr_regex=r"Using `audit classpath` is no longer supported. Use the `\[classpath\]` or `\[classpath_targets\]` sub-targets instead.",
     )

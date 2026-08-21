@@ -20,7 +20,7 @@ use std::sync::LazyLock;
 
 use allocative::Allocative;
 use bsmr_core::cells::cell_root_path::CellRootPath;
-use bsmr_error::BuckErrorContext;
+use bsmr_error::BsmrErrorContext;
 use bsmr_fs::paths::RelativePath;
 use bsmr_fs::paths::abs_norm_path::AbsNormPath;
 use dupe::Dupe;
@@ -131,7 +131,7 @@ impl LegacyConfigParser {
         file_parser
             .parse_file_on_stack(path, follow_includes, file_ops)
             .await
-            .with_buck_error_context(|| format!("Error parsing bsmrconfig `{path}`"))?;
+            .with_bsmr_error_context(|| format!("Error parsing bsmrconfig `{path}`"))?;
         file_parser.finish_file();
 
         Ok(())

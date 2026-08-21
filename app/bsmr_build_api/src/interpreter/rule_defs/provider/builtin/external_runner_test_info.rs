@@ -20,10 +20,10 @@ use std::iter::once;
 use allocative::Allocative;
 use bsmr_build_api_derive::internal_provider;
 use bsmr_core::provider::label::ConfiguredProvidersLabel;
-use bsmr_error::BuckErrorContext;
+use bsmr_error::BsmrErrorContext;
 use bsmr_error::bsmr_error;
 use bsmr_error::internal_error;
-use bsmr_hash::BuckIndexMap;
+use bsmr_hash::BsmrIndexMap;
 use bsmr_interpreter::types::configured_providers_label::StarlarkConfiguredProvidersLabel;
 use either::Either;
 use starlark::any::ProvidesStaticType;
@@ -59,7 +59,7 @@ use crate::interpreter::rule_defs::required_test_local_resource::StarlarkRequire
 use crate::interpreter::rule_defs::resolved_macro::ResolvedStringWithMacros;
 
 /// Provider that signals that a rule can be tested using an external runner. This is the
-/// Buck1-compatible API for tests.
+/// Legacy-compatible API for tests.
 #[internal_provider(external_runner_test_info_creator)]
 #[derive(
     Clone,
@@ -185,7 +185,7 @@ impl FrozenExternalRunnerTestInfo {
             .map(|v| StarlarkCommandExecutorConfig::from_value(v.to_value()).unwrap())
     }
 
-    pub fn local_resources(&self) -> BuckIndexMap<&str, Option<&ConfiguredProvidersLabel>> {
+    pub fn local_resources(&self) -> BsmrIndexMap<&str, Option<&ConfiguredProvidersLabel>> {
         unwrap_all(iter_local_resources(self.local_resources.get().to_value())).collect()
     }
 
@@ -293,7 +293,7 @@ pub(super) fn iter_test_command<'v>(
         }
 
         let arglike = ValueAsCommandLineLike::unpack_value_err(item)
-            .with_buck_error_context(|| format!("Invalid item in `command`: {item}"))?
+            .with_bsmr_error_context(|| format!("Invalid item in `command`: {item}"))?
             .0;
 
         Ok(TestCommandMember::Arglike(arglike))
@@ -326,7 +326,7 @@ pub(super) fn iter_test_env<'v>(
             .ok_or_else(|| internal_error!("Invalid key in `env`: Expected a str, got: `{key}`"))?;
 
         let arglike = ValueAsCommandLineLike::unpack_value_err(value)
-            .with_buck_error_context(|| format!("Invalid value in `env` for key `{key}`"))?
+            .with_bsmr_error_context(|| format!("Invalid value in `env` for key `{key}`"))?
             .0;
 
         Ok((key, arglike))
@@ -499,12 +499,12 @@ where
 
     let provided_local_resources = iter_local_resources(info.local_resources.get().to_value())
         .collect::<bsmr_error::Result<
-        BuckIndexMap<&str, Option<&ConfiguredProvidersLabel>>,
+        BsmrIndexMap<&str, Option<&ConfiguredProvidersLabel>>,
     >>()?;
 
     let required_local_resources = info.required_local_resources.get().to_value();
     if !required_local_resources.is_none() {
-        for resource_type in iter_value(required_local_resources).buck_error_context("`required_local_resources` should be a list or a tuple of `RequiredTestLocalResource` objects")? {
+        for resource_type in iter_value(required_local_resources).bsmr_error_context("`required_local_resources` should be a list or a tuple of `RequiredTestLocalResource` objects")? {
             let resource_type = StarlarkRequiredTestLocalResource::from_value(resource_type)
                 .ok_or_else(|| bsmr_error!(bsmr_error::ErrorTag::Input, "`required_local_resources` should only contain `RequiredTestLocalResource` values, got {}", resource_type))?;
             if !provided_local_resources.contains_key(&resource_type.name as &str) {
@@ -523,8 +523,8 @@ where
     NoneOr::<bool>::unpack_value(info.run_from_project_root.get().to_value())?
         .ok_or_else(|| internal_error!("`run_from_project_root` must be a bool if provided"))?;
     unpack_opt_executor(info.default_executor.get().to_value())
-        .buck_error_context("Invalid `default_executor`")?;
-    unpack_opt_worker(info.worker.get().to_value()).buck_error_context("Invalid `worker`")?;
+        .bsmr_error_context("Invalid `default_executor`")?;
+    unpack_opt_worker(info.worker.get().to_value()).bsmr_error_context("Invalid `worker`")?;
     NoneOr::<bool>::unpack_value(info.supports_test_execution_caching.get().to_value())?
         .ok_or_else(|| {
             internal_error!("`supports_test_execution_caching` must be a bool if provided")

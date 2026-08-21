@@ -53,6 +53,7 @@ test("check uses one typed command tree", async () => {
 			["node", "ci/license.ts", "generated"],
 			["pnpm", "exec", "rolldown"],
 			["node", "ci/license.ts", "check"],
+			["node", "ci/identity.ts"],
 			["node", "--check", ".github/actions/ci/cli-reference/dist/index.js"],
 			["node", "--check", ".github/actions/ci/osv-audit/dist/index.js"],
 			["node", "--check", ".github/actions/ci/release-sync/dist/index.js"],
@@ -69,12 +70,14 @@ test("check uses one typed command tree", async () => {
 		"ci/cli.test.ts",
 		"ci/dependabot.test.ts",
 		"ci/docs.test.ts",
+		"ci/identity.test.ts",
 		"ci/license-preamble.test.ts",
 		"ci/license-provenance.test.ts",
 		"ci/license.test.ts",
 		"ci/osv-audit.test.ts",
 		"ci/release-sync.test.ts",
 		"ci/release.test.ts",
+		"ci/rust-build-dependencies.test.ts",
 		"ci/verify-sha256.test.ts",
 		"benchmarks/python-build-systems/run.test.ts",
 		"benchmarks/python-conformance/run.test.ts",
@@ -83,13 +86,14 @@ test("check uses one typed command tree", async () => {
 		"prelude/toolchains/pnpm/runner.test.ts",
 		"test/contributors.test.ts",
 	]);
-	assert.deepEqual(state.invocations[12]?.args, [
+	assert.deepEqual(state.invocations[13]?.args, [
 		"diff",
 		"--exit-code",
 		"--",
 		".github/dependabot.yml",
 		".github/actions",
 		".github/workflows",
+		"ci/rust-build-dependencies.mjs",
 		"prelude/toolchains/pnpm/runner.mjs",
 		"prelude/typescript/runner.mjs",
 	]);

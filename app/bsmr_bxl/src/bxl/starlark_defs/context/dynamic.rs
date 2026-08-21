@@ -45,10 +45,10 @@ use bsmr_error::internal_error;
 use bsmr_execute::artifact_value::ArtifactValue;
 use bsmr_execute::digest_config::DigestConfig;
 use bsmr_execute::digest_config::HasDigestConfig;
-use bsmr_hash::BuckIndexMap;
-use bsmr_hash::StdBuckHashMap;
+use bsmr_hash::BsmrIndexMap;
+use bsmr_hash::StdBsmrHashMap;
 use bsmr_interpreter::dice::starlark_provider::StarlarkEvalKind;
-use bsmr_interpreter::factory::BuckStarlarkModule;
+use bsmr_interpreter::factory::BsmrStarlarkModule;
 use bsmr_interpreter::factory::StarlarkEvaluatorProvider;
 use bsmr_interpreter::print_handler::EventDispatcherPrintHandler;
 use bsmr_interpreter::soft_error::BsmrStarlarkSoftErrorHandler;
@@ -78,8 +78,8 @@ pub(crate) async fn eval_bxl_for_dynamic_output<'v>(
     dynamic_lambda: OwnedRefFrozenRef<'v, FrozenDynamicLambdaParams>,
     dice_ctx: &'v mut DiceComputations<'_>,
     input_artifacts_materialized: InputArtifactsMaterialized,
-    ensured_artifacts: &'v BuckIndexMap<&'v Artifact, &'v ArtifactValue>,
-    resolved_dynamic_values: StdBuckHashMap<DynamicValue, FrozenProviderCollectionValue>,
+    ensured_artifacts: &'v BsmrIndexMap<&'v Artifact, &'v ArtifactValue>,
+    resolved_dynamic_values: StdBsmrHashMap<DynamicValue, FrozenProviderCollectionValue>,
     _digest_config: DigestConfig,
     liveness: CancellationObserver,
 ) -> bsmr_error::Result<RecordedAnalysisValues> {
@@ -163,8 +163,8 @@ struct BxlDynamicOutputEvaluator<'f> {
     dynamic_data: DynamicBxlContextData,
     digest_config: DigestConfig,
     input_artifacts_materialized: InputArtifactsMaterialized,
-    ensured_artifacts: &'f BuckIndexMap<&'f Artifact, &'f ArtifactValue>,
-    resolved_dynamic_values: StdBuckHashMap<DynamicValue, FrozenProviderCollectionValue>,
+    ensured_artifacts: &'f BsmrIndexMap<&'f Artifact, &'f ArtifactValue>,
+    resolved_dynamic_values: StdBsmrHashMap<DynamicValue, FrozenProviderCollectionValue>,
     artifact_fs: ArtifactFs,
     print: EventDispatcherPrintHandler,
 }
@@ -175,7 +175,7 @@ impl BxlDynamicOutputEvaluator<'_> {
         provider: StarlarkEvaluatorProvider,
         dice: &mut DiceComputations<'_>,
     ) -> bsmr_error::Result<RecordedAnalysisValues> {
-        BuckStarlarkModule::with_profiling(|env| {
+        BsmrStarlarkModule::with_profiling(|env| {
             let bxl_dice = BxlDiceComputations::new(dice, self.liveness.dupe());
 
             let (finished_eval, analysis_registry) = {

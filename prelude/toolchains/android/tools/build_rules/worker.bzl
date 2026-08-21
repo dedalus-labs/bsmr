@@ -1,3 +1,9 @@
+# ===----------------------------------------------------------------------===
+# Upstream-Source: facebook/buck2@1560aca2002865cd73d7cafb22c705cfb640b2bc
+# Modifications Copyright (c) 2026 Dedalus Labs, Inc. and its contributors
+# SPDX-License-Identifier: Apache-2.0
+# ===----------------------------------------------------------------------===
+
 # Copyright (c) Meta Platforms, Inc. and affiliates.
 #
 # This source code is dual-licensed under either the MIT license found in the
@@ -63,7 +69,7 @@ def _worker_impl(ctx):
         WorkerInfo(
             exe = RunInfo(args),
             env = {
-                "BUCK_CLASSPATH": ctx.attrs.exe,
+                "BSMR_CLASSPATH": ctx.attrs.exe,
                 "JAVACD_ABSOLUTE_PATHS_ARE_RELATIVE_TO_CWD": "1",
             },
         ),
@@ -72,7 +78,7 @@ def _worker_impl(ctx):
 worker = rule(
     impl = _worker_impl,
     attrs = {
-        "class_loader_bootstrapper": attrs.source(default = "prelude//toolchains/android/src/com/facebook/buck/cli/bootstrapper:bootstrapper"),
+        "class_loader_bootstrapper": attrs.source(default = "prelude//toolchains/android/src/com/dedalus/bsmr/cli/bootstrapper:bootstrapper"),
         "concurrency": attrs.option(attrs.int(), default = None),
         "exe": attrs.source(),
         "jvm_args": attrs.list(attrs.string(), default = []),
@@ -84,7 +90,7 @@ worker = rule(
 remote_worker = rule(
     impl = _worker_impl,
     attrs = {
-        "class_loader_bootstrapper": attrs.source(default = "prelude//toolchains/android/src/com/facebook/buck/cli/bootstrapper:bootstrapper"),
+        "class_loader_bootstrapper": attrs.source(default = "prelude//toolchains/android/src/com/dedalus/bsmr/cli/bootstrapper:bootstrapper"),
         "concurrency": attrs.option(attrs.int(), default = None),
         "exe": attrs.source(),
         "jvm_args": attrs.list(attrs.string(), default = []),

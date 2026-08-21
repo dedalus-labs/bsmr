@@ -15,14 +15,14 @@
 # pyre-strict
 
 
-from bsmr.tests.e2e_util.api.buck import Buck
-from bsmr.tests.e2e_util.buck_workspace import buck_test
+from bsmr.tests.e2e_util.api.bsmr import Bsmr
+from bsmr.tests.e2e_util.bsmr_workspace import bsmr_test
 
 
-@buck_test()
-async def test_build_transition_without_target_universe(buck: Buck) -> None:
-    result = await buck.build_without_report(
-        "root//:buck",
+@bsmr_test()
+async def test_build_transition_without_target_universe(bsmr: Bsmr) -> None:
+    result = await bsmr.build_without_report(
+        "root//:bsmr",
         "--target-platforms=root//:p",
         "--show-output",
     )
@@ -30,20 +30,20 @@ async def test_build_transition_without_target_universe(buck: Buck) -> None:
     lines = result.stdout.splitlines()
     # Just a single target is built and output
     assert 1 == len(lines)
-    assert "root//:buck bsmr-out" in lines[0]
+    assert "root//:bsmr bsmr-out" in lines[0]
 
 
-@buck_test()
-async def test_build_transition_with_target_universe(buck: Buck) -> None:
-    result = await buck.build_without_report(
-        "root//:buck",
+@bsmr_test()
+async def test_build_transition_with_target_universe(bsmr: Bsmr) -> None:
+    result = await bsmr.build_without_report(
+        "root//:bsmr",
         "--target-platforms=root//:p",
         "--target-universe",
-        "root//:buck",
+        "root//:bsmr",
         "--show-output",
     )
 
     lines = result.stdout.splitlines()
     # Just a single target is built and output
     assert 1 == len(lines)
-    assert "root//:buck bsmr-out" in lines[0]
+    assert "root//:bsmr bsmr-out" in lines[0]

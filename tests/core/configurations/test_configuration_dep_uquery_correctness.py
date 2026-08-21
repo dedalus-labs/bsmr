@@ -17,26 +17,26 @@
 
 import json
 
-from bsmr.tests.e2e_util.api.buck import Buck
-from bsmr.tests.e2e_util.buck_workspace import buck_test
+from bsmr.tests.e2e_util.api.bsmr import Bsmr
+from bsmr.tests.e2e_util.bsmr_workspace import bsmr_test
 
 
 async def check_has_uquery_path(
-    buck: Buck, target: str, dep: str, expect_fail: bool = False
+    bsmr: Bsmr, target: str, dep: str, expect_fail: bool = False
 ) -> None:
-    result = await buck.uquery(
+    result = await bsmr.uquery(
         f"somepath({target}, {dep})",
     )
     path = result.stdout.splitlines()
     # Apparently, configuration deps never show up in `somepath`. Interesting.
     assert len(path) == 0
 
-    result = await buck.uquery(
+    result = await bsmr.uquery(
         f"deps({target})",
         "-a",
-        "buck.deps",
+        "bsmr.deps",
         "-a",
-        "buck.configuration_deps",
+        "bsmr.configuration_deps",
     )
     all_deps = [
         d
@@ -50,33 +50,33 @@ async def check_has_uquery_path(
         assert dep in all_deps
 
 
-@buck_test()
-async def test_default_target_platform(buck: Buck) -> None:
-    await check_has_uquery_path(buck, ":with_custom_dtp", "root//:base")
+@bsmr_test()
+async def test_default_target_platform(bsmr: Bsmr) -> None:
+    await check_has_uquery_path(bsmr, ":with_custom_dtp", "root//:base")
 
 
-@buck_test()
-async def test_configured_dep_platform(buck: Buck) -> None:
-    await check_has_uquery_path(buck, ":stub_configured", "root//:base")
+@bsmr_test()
+async def test_configured_dep_platform(bsmr: Bsmr) -> None:
+    await check_has_uquery_path(bsmr, ":stub_configured", "root//:base")
 
 
-@buck_test()
-async def test_transition_dep_refs(buck: Buck) -> None:
+@bsmr_test()
+async def test_transition_dep_refs(bsmr: Bsmr) -> None:
     # FIXME(JakobDegen): Bug.
     await check_has_uquery_path(
-        buck, ":pre_out_transition", "root//:cat", expect_fail=True
+        bsmr, ":pre_out_transition", "root//:cat", expect_fail=True
     )
 
     # FIXME(JakobDegen): Bug.
     await check_has_uquery_path(
-        buck, ":post_out_transition", "root//:cat", expect_fail=True
+        bsmr, ":post_out_transition", "root//:cat", expect_fail=True
     )
 
-    await check_has_uquery_path(buck, ":pre_out_transition_vnew", "root//:transition")
+    await check_has_uquery_path(bsmr, ":pre_out_transition_vnew", "root//:transition")
 
-    await check_has_uquery_path(buck, ":pre_inc_transition_vnew", "root//:transition")
+    await check_has_uquery_path(bsmr, ":pre_inc_transition_vnew", "root//:transition")
 
 
-@buck_test()
-async def test_select_keys(buck: Buck) -> None:
-    await check_has_uquery_path(buck, ":with_select", "root//:cat")
+@bsmr_test()
+async def test_select_keys(bsmr: Bsmr) -> None:
+    await check_has_uquery_path(bsmr, ":with_select", "root//:cat")

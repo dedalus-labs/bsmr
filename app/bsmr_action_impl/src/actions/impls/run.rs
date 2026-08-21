@@ -69,10 +69,10 @@ use bsmr_core::execution_types::executor_config::ReGangWorker;
 use bsmr_core::execution_types::executor_config::RemoteExecutorCustomImage;
 use bsmr_core::execution_types::executor_config::RemoteExecutorDependency;
 use bsmr_core::fs::artifact_path_resolver::ArtifactFs;
-use bsmr_core::fs::buck_out_path::BuckOutPathKind;
-use bsmr_core::fs::buck_out_path::BuildArtifactPath;
+use bsmr_core::fs::output_path::BuildArtifactPath;
+use bsmr_core::fs::output_path::OutputPathKind;
 use bsmr_core::fs::project_rel_path::ProjectRelativePathBuf;
-use bsmr_error::BuckErrorContext;
+use bsmr_error::BsmrErrorContext;
 use bsmr_error::bsmr_error;
 use bsmr_error::internal_error;
 use bsmr_events::dispatch::span_async_simple;
@@ -97,9 +97,9 @@ use bsmr_execute::execute::result::CommandExecutionResult;
 use bsmr_execute::materialize::materializer::WriteRequest;
 use bsmr_fs::fs_util;
 use bsmr_fs::paths::forward_rel_path::ForwardRelativePathBuf;
-use bsmr_hash::BuckIndexMap;
-use bsmr_hash::BuckIndexSet;
-use bsmr_hash::buck_indexmap;
+use bsmr_hash::BsmrIndexMap;
+use bsmr_hash::BsmrIndexSet;
+use bsmr_hash::bsmr_indexmap;
 use bsmr_util::thin_box::ThinBoxSlice;
 use derive_more::Display;
 use dupe::Dupe;
@@ -274,7 +274,7 @@ pub(crate) struct UnregisteredRunAction {
 impl UnregisteredAction for UnregisteredRunAction {
     fn register(
         self: Box<Self>,
-        outputs: BuckIndexSet<BuildArtifact>,
+        outputs: BsmrIndexSet<BuildArtifact>,
         starlark_data: Option<OwnedFrozenValue>,
         error_handler: Option<OwnedFrozenValue>,
     ) -> bsmr_error::Result<Box<dyn Action>> {
@@ -436,13 +436,13 @@ type ExpandedCommandLineDigestForDepFiles = ExpandedCommandLineDigest;
 
 /// A CommandLineArtifactVisitor that gathers non-hidden inputs.
 pub struct SkipHiddenCommandLineArtifactVisitor {
-    pub inputs: BuckIndexSet<ArtifactGroup>,
+    pub inputs: BsmrIndexSet<ArtifactGroup>,
 }
 
 impl SkipHiddenCommandLineArtifactVisitor {
     pub fn new() -> Self {
         Self {
-            inputs: BuckIndexSet::default(),
+            inputs: BsmrIndexSet::default(),
         }
     }
 }
@@ -631,7 +631,7 @@ impl RunAction {
 
             let input_paths = CommandExecutionPaths::new(
                 inputs,
-                BuckIndexSet::default(),
+                BsmrIndexSet::default(),
                 action_execution_ctx.fs(),
                 action_execution_ctx.digest_config(),
                 action_execution_ctx
@@ -733,7 +733,7 @@ impl RunAction {
 
             let input_paths = CommandExecutionPaths::new(
                 inputs,
-                BuckIndexSet::default(),
+                BsmrIndexSet::default(),
                 action_execution_ctx.fs(),
                 action_execution_ctx.digest_config(),
                 action_execution_ctx
@@ -812,7 +812,7 @@ impl RunAction {
     pub(crate) fn new(
         inner: UnregisteredRunAction,
         starlark_values: OwnedFrozenValue,
-        outputs: BuckIndexSet<BuildArtifact>,
+        outputs: BsmrIndexSet<BuildArtifact>,
         error_handler: Option<OwnedFrozenValue>,
     ) -> bsmr_error::Result<Self> {
         let starlark_values = starlark_values
@@ -874,7 +874,7 @@ impl RunAction {
 
         for output in self.outputs.iter() {
             if output.get_path().is_content_based_path() {
-                let full_path = fs.buck_out_path_resolver().resolve_gen(
+                let full_path = fs.output_path_resolver().resolve_gen(
                     output.get_path(),
                     Some(&ContentBasedPathHash::for_output_artifact()),
                 )?;
@@ -939,9 +939,9 @@ impl RunAction {
                 ctx.target().owner().dupe(),
                 metadata_param.path.clone(),
                 if self.all_outputs_are_content_based() {
-                    BuckOutPathKind::ContentHash
+                    OutputPathKind::ContentHash
                 } else {
-                    BuckOutPathKind::Configuration
+                    OutputPathKind::Configuration
                 },
             );
 
@@ -954,7 +954,7 @@ impl RunAction {
             let content_hash = ContentBasedPathHash::new(digest.raw_digest().as_bytes())?;
             let project_rel_path = fs
                 .fs()
-                .buck_out_path_resolver()
+                .output_path_resolver()
                 .resolve_gen(&path, Some(&content_hash))?;
 
             let configuration_path = ctx
@@ -971,7 +971,7 @@ impl RunAction {
                     }])
                 }))
                 .await
-                .buck_error_context("Failed to write action metadata!")?;
+                .bsmr_error_context("Failed to write action metadata!")?;
 
             inputs.push(CommandExecutionInput::ActionMetadata(ActionMetadataBlob {
                 digest,
@@ -996,14 +996,14 @@ impl RunAction {
         extra_env: &mut Vec<(String, String)>,
     ) -> bsmr_error::Result<()> {
         let scratch = ctx.target().scratch_path();
-        let scratch_path = fs.fs().buck_out_path_resolver().resolve_scratch(&scratch)?;
+        let scratch_path = fs.fs().output_path_resolver().resolve_scratch(&scratch)?;
 
         if scratch.uses_content_hash() {
             shared_content_based_paths.push(scratch_path.clone());
         }
 
         extra_env.push((
-            "BUCK_SCRATCH_PATH".to_owned(),
+            "BSMR_SCRATCH_PATH".to_owned(),
             path_format(scratch_path.as_ref(), fs.path_separator()).into_owned(),
         ));
         inputs.push(CommandExecutionInput::ScratchPath(scratch));
@@ -1449,14 +1449,14 @@ impl Action for RunAction {
         &self,
         fs: &ExecutorFs,
         artifact_path_mapping: &dyn ArtifactPathMapper,
-    ) -> BuckIndexMap<String, String> {
+    ) -> BsmrIndexMap<String, String> {
         let mut cli_rendered = Vec::<String>::new();
         let values = Self::unpack(&self.starlark_values).unwrap();
         let mut fmt = CommandLineBuilder::new(&mut cli_rendered, artifact_path_mapping, fs);
         values.exe.add_to_command_line(&mut fmt).unwrap();
         values.args.add_to_command_line(&mut fmt).unwrap();
         let cmd = format!("[{}]", cli_rendered.iter().join(", "));
-        buck_indexmap! {
+        bsmr_indexmap! {
             "cmd".to_owned() => cmd,
             "executor_preference".to_owned() => self.inner.executor_preference.to_string(),
             "always_print_stderr".to_owned() => self.inner.always_print_stderr.to_string(),
@@ -1666,7 +1666,7 @@ impl Action for RunAction {
                             value.dupe(),
                         )
                         .await?;
-                        tracer.add_buck_out_entry(offline_cache_path);
+                        tracer.add_output_entry(offline_cache_path);
                     }
                 }
             }

@@ -28,7 +28,7 @@ use bsmr_core::configuration::data::ConfigurationData;
 use bsmr_core::configuration::pair::ConfigurationNoExec;
 use bsmr_core::provider::label::ProvidersLabel;
 use bsmr_core::target::label::label::TargetLabel;
-use bsmr_error::BuckErrorContext;
+use bsmr_error::BsmrErrorContext;
 use bsmr_node::attrs::attr_type::configuration_dep::ConfigurationDepKind;
 use bsmr_node::configuration::calculation::CONFIGURATION_CALCULATION;
 use bsmr_node::configuration::calculation::CellNameForConfigurationResolution;
@@ -101,7 +101,7 @@ async fn configuration_matches(
         }
     }
 
-    // Cell used for bsmrconfigs is set to cell of target that applies select to match Buck v1 behavior.
+    // Cell used for bsmrconfigs is set to cell of target that applies select to match Bsmr v1 behavior.
     // Eventually, we want this to be the cell of the platform instead.
     for (raw_section_and_key, config_value) in &constraints_and_configs.bsmrconfigs {
         let config_section_and_key = parse_config_section_and_key(raw_section_and_key, None)?;
@@ -177,7 +177,7 @@ async fn compute_platform_configuration(
         &cell_resolver,
         &cell_alias_resolver,
     )
-    .buck_error_context(
+    .bsmr_error_context(
         "`PlatformInfo` label for `platform()` rule should be a valid target label",
     )?;
 
@@ -190,7 +190,7 @@ async fn compute_platform_configuration(
             &parsed_target,
         )
         .await
-        .buck_error_context(
+        .bsmr_error_context(
             "Checking whether label of returned `PlatformInfo` resolves to the same configuration",
         )?;
         if cfg_again != configuration_data {
@@ -259,7 +259,7 @@ async fn get_configuration_node(
         cfg_target: cfg_target.dupe(),
     })
     .await?
-    .with_buck_error_context(|| {
+    .with_bsmr_error_context(|| {
         format!(
             "Error getting configuration node of `{cfg_target}` within the `{target_cfg}` configuration",
         )

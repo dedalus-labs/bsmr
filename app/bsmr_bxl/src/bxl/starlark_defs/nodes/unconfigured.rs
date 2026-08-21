@@ -114,7 +114,7 @@ fn target_node_value_methods(builder: &mut MethodsBuilder) {
     /// Gets the attribute from the unconfigured target node.
     /// If the attribute is unset, returns the default value.
     /// If the attribute is not defined by the rule, returns `None`.
-    /// It will not return special attribute (attribute that start with 'buck.' in `bsmr uquery -A` command).
+    /// It will not return special attribute (attribute that start with 'bsmr.' in `bsmr uquery -A` command).
     ///
     /// Sample usage:
     /// ```python

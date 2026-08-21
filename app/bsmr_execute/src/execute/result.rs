@@ -27,7 +27,7 @@ use bsmr_build_signals::env::WaitingData;
 use bsmr_core::content_hash::ContentBasedPathHash;
 use bsmr_core::fs::artifact_path_resolver::ArtifactFs;
 use bsmr_data::SchedulingMode;
-use bsmr_hash::BuckIndexMap;
+use bsmr_hash::BsmrIndexMap;
 use bsmr_util::time_span::TimeSpan;
 use derivative::Derivative;
 use dupe::Dupe;
@@ -234,7 +234,7 @@ impl CommandExecutionMetadata {
 #[derivative(Debug)]
 pub struct CommandExecutionResult {
     /// The outputs produced by this command
-    pub outputs: BuckIndexMap<CommandExecutionOutput, ArtifactValue>,
+    pub outputs: BsmrIndexMap<CommandExecutionOutput, ArtifactValue>,
     /// How it executed.
     pub report: CommandExecutionReport,
     /// A previously rejected execution of this command.

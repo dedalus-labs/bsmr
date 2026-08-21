@@ -23,7 +23,7 @@ use allocative::Allocative;
 use bsmr_common::init::ResourceControlConfig;
 use bsmr_events::daemon_id::DaemonId;
 use bsmr_events::dispatch::EventDispatcher;
-use bsmr_hash::StdBuckHashMap;
+use bsmr_hash::StdBsmrHashMap;
 use bsmr_util::threads::thread_spawn;
 use dupe::Dupe;
 use futures::StreamExt as _;
@@ -32,8 +32,8 @@ use tokio::sync::mpsc;
 use tokio_util::sync::CancellationToken;
 
 use crate::action_scene::ActionScene;
-use crate::buck_cgroup_tree::BuckCgroupTree;
 use crate::cgroup::MemoryPressureHandle;
+use crate::cgroup_tree::BsmrCgroupTree;
 use crate::pool::CgroupPool;
 use crate::scheduler::SceneIdRef;
 use crate::scheduler::SceneResourceReading;
@@ -56,7 +56,7 @@ pub type MemoryTrackerHandle = Arc<MemoryTrackerSharedState>;
 #[derive(Allocative)]
 #[allocative(skip)]
 pub struct MemoryTrackerSharedState {
-    pub cgroup_tree: BuckCgroupTree,
+    pub cgroup_tree: BsmrCgroupTree,
     // Written to by executors and tracker, read by executors
     pub(crate) action_cgroups: std::sync::Mutex<Scheduler>,
     /// A pool of cgroups to be used for actions.
@@ -71,7 +71,7 @@ pub struct MemoryTrackerSharedState {
     /// The memory tracker regularly updates the scheduler with information about the memory state
     /// of the scenes. This map stores the current pairing of scenes to the actions they're
     /// associated with, and is used by the memory tracker to update the scheduler.
-    pub(crate) scene_action_mapping: tokio::sync::Mutex<StdBuckHashMap<SceneIdRef, ActionScene>>,
+    pub(crate) scene_action_mapping: tokio::sync::Mutex<StdBsmrHashMap<SceneIdRef, ActionScene>>,
 }
 
 pub struct MemoryReporter {
@@ -122,7 +122,7 @@ impl Drop for MemoryReporter {
 }
 
 pub async fn create_memory_tracker(
-    cgroup_tree: Option<BuckCgroupTree>,
+    cgroup_tree: Option<BsmrCgroupTree>,
     resource_control_config: &ResourceControlConfig,
     daemon_id: &DaemonId,
 ) -> bsmr_error::Result<Option<MemoryTrackerHandle>> {
@@ -147,7 +147,7 @@ pub async fn create_memory_tracker(
         cgroup_tree,
         action_cgroups: std::sync::Mutex::new(action_cgroups),
         pool: tokio::sync::Mutex::new(cgroup_pool),
-        scene_action_mapping: tokio::sync::Mutex::new(StdBuckHashMap::default()),
+        scene_action_mapping: tokio::sync::Mutex::new(StdBsmrHashMap::default()),
     };
     let handle = Arc::new(handle);
     let memory_tracker = MemoryTracker {
@@ -235,7 +235,7 @@ impl MemoryTracker {
 
     async fn collect_scene_readings(
         handle: &MemoryTrackerHandle,
-    ) -> StdBuckHashMap<SceneIdRef, SceneResourceReading> {
+    ) -> StdBsmrHashMap<SceneIdRef, SceneResourceReading> {
         let mut scenes = handle.scene_action_mapping.lock().await;
         scenes
             .iter_mut()
@@ -257,18 +257,18 @@ mod tests {
     use bsmr_wrapper_common::invocation_id::TraceId;
 
     use super::*;
-    use crate::buck_cgroup_tree::PreppedBuckCgroups;
+    use crate::cgroup_tree::PreppedBsmrCgroups;
 
     #[tokio::test]
     async fn test_current_memory_changes_tracked() -> bsmr_error::Result<()> {
-        let Some(prepped) = PreppedBuckCgroups::testing_new().await else {
+        let Some(prepped) = PreppedBsmrCgroups::testing_new().await else {
             return Ok(());
         };
         let config = ResourceControlConfig {
             memory_high: Some("19000000".to_owned()),
             ..ResourceControlConfig::from_config(&LegacyBsmrConfig::empty())?
         };
-        let cgroup_tree = BuckCgroupTree::set_up(prepped, &config).await?;
+        let cgroup_tree = BsmrCgroupTree::set_up(prepped, &config).await?;
         let tracker = create_memory_tracker(Some(cgroup_tree), &config, &DaemonId::new())
             .await?
             .unwrap();

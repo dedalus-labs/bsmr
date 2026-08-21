@@ -17,7 +17,7 @@
 use allocative::Allocative;
 use async_trait::async_trait;
 use bsmr_core::target_aliases::TargetAliasResolver;
-use bsmr_hash::BuckIndexSet;
+use bsmr_hash::BsmrIndexSet;
 use derive_more::Display;
 use dice::DiceComputations;
 use dice::Key;
@@ -96,7 +96,7 @@ impl BsmrConfigTargetAliasResolver {
         let mut alias = alias;
 
         let section = self.config.get_section("alias");
-        let mut stack = BuckIndexSet::<&str>::default();
+        let mut stack = BsmrIndexSet::<&str>::default();
         loop {
             if stack.contains(alias) {
                 return Err(AliasResolutionError::AliasCycle(

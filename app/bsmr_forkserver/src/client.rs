@@ -21,7 +21,7 @@ use std::sync::Arc;
 use allocative::Allocative;
 use arc_swap::ArcSwapOption;
 use bsmr_core::tag_error;
-use bsmr_error::BuckErrorContext;
+use bsmr_error::BsmrErrorContext;
 use bsmr_execute_local::CommandResult;
 use bsmr_execute_local::decode_command_event_stream;
 use bsmr_resource_control::ActionFreezeEvent;
@@ -132,7 +132,7 @@ impl ForkserverClient {
             .clone()
             .run(stream)
             .await
-            .buck_error_context("Error dispatching command to Forkserver")?
+            .bsmr_error_context("Error dispatching command to Forkserver")?
             .into_inner();
         let stream = decode_event_stream(stream);
 

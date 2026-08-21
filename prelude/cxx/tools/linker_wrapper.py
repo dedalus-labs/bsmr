@@ -27,7 +27,7 @@ def unquote(argument):
         return argument
 
 
-def is_relative_buck_out_path(argument):
+def is_relative_output_path(argument):
     return argument.startswith("bsmr-out\\")
 
 
@@ -85,7 +85,7 @@ def main():
             argument = expand_library_path(argument, full_library_paths)
 
         # Make relative paths absolute for support paths longer than 260 chars.
-        if is_relative_buck_out_path(argument):
+        if is_relative_output_path(argument):
             argument = os.path.join(working_dir, argument)
 
         new_args.append(argument)

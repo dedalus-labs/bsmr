@@ -20,7 +20,7 @@ use allocative::Allocative;
 use bsmr_core::configuration::transition::id::TransitionId;
 use bsmr_core::plugins::PluginKind;
 #[allow(unused_imports)]
-use bsmr_hash::BuckHasher;
+use bsmr_hash::BsmrHasher;
 use pagable::Pagable;
 use static_interner::interner;
 
@@ -52,4 +52,4 @@ pub struct Rule {
     pub uses_plugins: Vec<PluginKind>,
 }
 
-interner!(INTERNER, BuckHasher, Rule);
+interner!(INTERNER, BsmrHasher, Rule);

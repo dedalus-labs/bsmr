@@ -1,4 +1,4 @@
-# @lint-ignore-every BUCKFORMAT
+# @lint-ignore-every BSMRFORMAT
 
 load(<load>"@cell//s<load_click>u</load_click>b:defs.bzl"</load>, <dummy>"du<dummy_click>m</dummy_click>my_binary"</dummy>)
 

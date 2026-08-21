@@ -242,7 +242,7 @@ simple(name = "a")
 }
 
 #[tokio::test]
-async fn test_target_name_glob_in_buck_visibility() {
+async fn test_target_name_glob_in_bsmr_visibility() {
     let fs = ProjectRootTemp::new().unwrap();
 
     fs.write_file("rules.bzl", RULES_BZL);

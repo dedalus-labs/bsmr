@@ -30,7 +30,7 @@ from bsmr.tests.core.common.io.file_watcher_tests import (
     verify_results,
 )
 from bsmr.tests.core.common.io.utils import get_files
-from bsmr.tests.e2e_util.api.buck import Buck
+from bsmr.tests.e2e_util.api.bsmr import Bsmr
 
 
 def symlink_file_type(file_watcher_provider: FileWatcherProvider) -> FileWatcherKind:
@@ -43,16 +43,16 @@ def symlink_file_type(file_watcher_provider: FileWatcherProvider) -> FileWatcher
 
 
 async def run_create_symlink_test(
-    buck: Buck,
+    bsmr: Bsmr,
     file_system_type: FileSystemType,
     file_watcher_provider: FileWatcherProvider,
 ) -> None:
-    await setup_file_watcher_test(buck)
-    (buck.cwd / "target").write_text("")
+    await setup_file_watcher_test(bsmr)
+    (bsmr.cwd / "target").write_text("")
 
-    await get_files(buck)
+    await get_files(bsmr)
 
-    path = buck.cwd / "files" / "def"
+    path = bsmr.cwd / "files" / "def"
     path.symlink_to(Path("..") / "target")
 
     required = [
@@ -63,21 +63,21 @@ async def run_create_symlink_test(
         ),
     ]
 
-    is_fresh_instance, results = await get_file_watcher_events(buck)
+    is_fresh_instance, results = await get_file_watcher_events(bsmr)
     assert not is_fresh_instance
     verify_results(results, required)
 
 
 async def run_replace_file_with_symlink_test(
-    buck: Buck,
+    bsmr: Bsmr,
     file_system_type: FileSystemType,
     file_watcher_provider: FileWatcherProvider,
 ) -> None:
-    await setup_file_watcher_test(buck)
-    path = buck.cwd / "files" / "def"
+    await setup_file_watcher_test(bsmr)
+    path = bsmr.cwd / "files" / "def"
     path.write_text("")
-    (buck.cwd / "target").write_text("")
-    await get_files(buck)
+    (bsmr.cwd / "target").write_text("")
+    await get_files(bsmr)
 
     path.unlink()
     path.symlink_to(Path("..") / "target")
@@ -105,22 +105,22 @@ async def run_replace_file_with_symlink_test(
             ),
         ]
 
-    is_fresh_instance, results = await get_file_watcher_events(buck)
+    is_fresh_instance, results = await get_file_watcher_events(bsmr)
     assert not is_fresh_instance
     verify_results(results, required)
 
 
 async def run_change_symlink_target_test(
-    buck: Buck,
+    bsmr: Bsmr,
     file_system_type: FileSystemType,
     file_watcher_provider: FileWatcherProvider,
 ) -> None:
-    await setup_file_watcher_test(buck)
-    (buck.cwd / "target1").write_text("")
-    (buck.cwd / "target2").write_text("")
-    path = buck.cwd / "files" / "def"
+    await setup_file_watcher_test(bsmr)
+    (bsmr.cwd / "target1").write_text("")
+    (bsmr.cwd / "target2").write_text("")
+    path = bsmr.cwd / "files" / "def"
     path.symlink_to(Path("..") / "target1")
-    await get_files(buck)
+    await get_files(bsmr)
 
     path.unlink()
     path.symlink_to(Path("..") / "target2")
@@ -150,6 +150,6 @@ async def run_change_symlink_target_test(
             ),
         ]
 
-    is_fresh_instance, results = await get_file_watcher_events(buck)
+    is_fresh_instance, results = await get_file_watcher_events(bsmr)
     assert not is_fresh_instance
     verify_results(results, required)

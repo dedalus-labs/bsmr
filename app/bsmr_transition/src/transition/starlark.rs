@@ -23,8 +23,8 @@ use bsmr_build_api::interpreter::rule_defs::provider::builtin::platform_info::Pl
 use bsmr_core::bzl::ImportPath;
 use bsmr_core::configuration::transition::id::TransitionId;
 use bsmr_core::provider::label::ProvidersLabel;
-use bsmr_error::BuckErrorContext;
-use bsmr_hash::StdBuckHashSet;
+use bsmr_error::BsmrErrorContext;
+use bsmr_hash::StdBsmrHashSet;
 use bsmr_interpreter::build_context::starlark_path_from_build_context;
 use bsmr_interpreter::coerce::COERCE_PROVIDERS_LABEL_FOR_BZL;
 use bsmr_interpreter::downstream_crate_starlark_defs::REGISTER_BSMR_TRANSITION_GLOBALS;
@@ -311,7 +311,7 @@ fn validate_transition_impl(
             None,
             &expected_return_type,
         )
-        .buck_error_context("`impl` function signature is incorrect")
+        .bsmr_error_context("`impl` function signature is incorrect")
 }
 
 #[starlark_module]
@@ -346,7 +346,7 @@ fn register_transition_function(builder: &mut GlobalsBuilder) {
         .clone();
 
         if let Some(attrs) = &attrs {
-            let attrs_set: StdBuckHashSet<StringValue> = attrs.items.iter().copied().collect();
+            let attrs_set: StdBsmrHashSet<StringValue> = attrs.items.iter().copied().collect();
             if attrs_set.len() != attrs.items.len() {
                 return Err(bsmr_error::Error::from(TransitionError::NonUniqueAttrs).into());
             }

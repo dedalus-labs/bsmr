@@ -15,35 +15,35 @@
 # pyre-strict
 
 
-from bsmr.tests.e2e_util.api.buck import Buck
+from bsmr.tests.e2e_util.api.bsmr import Bsmr
 from bsmr.tests.e2e_util.asserts import expect_failure
-from bsmr.tests.e2e_util.buck_workspace import buck_test
+from bsmr.tests.e2e_util.bsmr_workspace import bsmr_test
 
 
-@buck_test()
-async def test_agent_context_valid_non_enforced(buck: Buck) -> None:
+@bsmr_test()
+async def test_agent_context_valid_non_enforced(bsmr: Bsmr) -> None:
     """Non-enforced client with valid agent context should succeed."""
-    await buck.build(
+    await bsmr.build(
         "//:pass",
         "--agent-context",
         "intent=build,attempt=1",
     )
 
 
-@buck_test()
-async def test_agent_context_non_enforced_no_validation(buck: Buck) -> None:
+@bsmr_test()
+async def test_agent_context_non_enforced_no_validation(bsmr: Bsmr) -> None:
     """Non-enforced client with invalid values should still succeed (stored as-is)."""
-    await buck.build(
+    await bsmr.build(
         "//:pass",
         "--agent-context",
         "intent=garbage_value,attempt=1",
     )
 
 
-@buck_test()
-async def test_agent_context_enforced_valid(buck: Buck) -> None:
+@bsmr_test()
+async def test_agent_context_enforced_valid(bsmr: Bsmr) -> None:
     """Enforced client with all required fields and valid values should succeed."""
-    await buck.build(
+    await bsmr.build(
         "//:pass",
         "--client-metadata",
         "id=test_enforced_client",
@@ -52,10 +52,10 @@ async def test_agent_context_enforced_valid(buck: Buck) -> None:
     )
 
 
-@buck_test()
-async def test_agent_context_enforced_with_optional_field(buck: Buck) -> None:
+@bsmr_test()
+async def test_agent_context_enforced_with_optional_field(bsmr: Bsmr) -> None:
     """Enforced client with required + optional fields should succeed."""
-    await buck.build(
+    await bsmr.build(
         "//:pass",
         "--client-metadata",
         "id=test_enforced_client",
@@ -64,12 +64,12 @@ async def test_agent_context_enforced_with_optional_field(buck: Buck) -> None:
     )
 
 
-@buck_test()
-async def test_agent_context_enforced_invalid_value(buck: Buck) -> None:
+@bsmr_test()
+async def test_agent_context_enforced_invalid_value(bsmr: Bsmr) -> None:
     """Enforced client with invalid value for constrained field should fail
     with the exact error message including valid values and description."""
     await expect_failure(
-        buck.build(
+        bsmr.build(
             "//:pass",
             "--client-metadata",
             "id=test_enforced_client",
@@ -84,11 +84,11 @@ async def test_agent_context_enforced_invalid_value(buck: Buck) -> None:
     )
 
 
-@buck_test()
-async def test_agent_context_enforced_unknown_key(buck: Buck) -> None:
+@bsmr_test()
+async def test_agent_context_enforced_unknown_key(bsmr: Bsmr) -> None:
     """Enforced client with unknown key should fail with sorted list of valid keys."""
     await expect_failure(
-        buck.build(
+        bsmr.build(
             "//:pass",
             "--client-metadata",
             "id=test_enforced_client",
@@ -102,11 +102,11 @@ async def test_agent_context_enforced_unknown_key(buck: Buck) -> None:
     )
 
 
-@buck_test()
-async def test_agent_context_enforced_missing_required(buck: Buck) -> None:
+@bsmr_test()
+async def test_agent_context_enforced_missing_required(bsmr: Bsmr) -> None:
     """Enforced client missing required fields should list all missing fields sorted."""
     await expect_failure(
-        buck.build(
+        bsmr.build(
             "//:pass",
             "--client-metadata",
             "id=test_enforced_client",
@@ -121,13 +121,13 @@ async def test_agent_context_enforced_missing_required(buck: Buck) -> None:
     )
 
 
-@buck_test()
+@bsmr_test()
 async def test_agent_context_enforced_empty_value_counts_as_missing(
-    buck: Buck,
+    bsmr: Bsmr,
 ) -> None:
     """Enforced client with empty value for required field should report it as missing."""
     await expect_failure(
-        buck.build(
+        bsmr.build(
             "//:pass",
             "--client-metadata",
             "id=test_enforced_client",
@@ -141,27 +141,27 @@ async def test_agent_context_enforced_empty_value_counts_as_missing(
     )
 
 
-@buck_test()
-async def test_agent_context_no_context_passes(buck: Buck) -> None:
+@bsmr_test()
+async def test_agent_context_no_context_passes(bsmr: Bsmr) -> None:
     """Build without --agent-context should always succeed."""
-    await buck.build("//:pass")
+    await bsmr.build("//:pass")
 
 
-@buck_test()
-async def test_agent_context_enforced_no_context_passes(buck: Buck) -> None:
+@bsmr_test()
+async def test_agent_context_enforced_no_context_passes(bsmr: Bsmr) -> None:
     """Enforced client without --agent-context should succeed (not required in v1)."""
-    await buck.build(
+    await bsmr.build(
         "//:pass",
         "--client-metadata",
         "id=test_enforced_client",
     )
 
 
-@buck_test()
-async def test_agent_context_invalid_format(buck: Buck) -> None:
+@bsmr_test()
+async def test_agent_context_invalid_format(bsmr: Bsmr) -> None:
     """Malformed --agent-context should fail with the exact format error."""
     await expect_failure(
-        buck.build(
+        bsmr.build(
             "//:pass",
             "--agent-context",
             "not_a_valid_format",
@@ -173,11 +173,11 @@ async def test_agent_context_invalid_format(buck: Buck) -> None:
     )
 
 
-@buck_test()
-async def test_agent_context_invalid_key_format(buck: Buck) -> None:
+@bsmr_test()
+async def test_agent_context_invalid_key_format(bsmr: Bsmr) -> None:
     """Non-snake_case key should fail with the exact key format error."""
     await expect_failure(
-        buck.build(
+        bsmr.build(
             "//:pass",
             "--agent-context",
             "InvalidKey=value",
@@ -189,10 +189,10 @@ async def test_agent_context_invalid_key_format(buck: Buck) -> None:
     )
 
 
-@buck_test(write_invocation_record=True)
-async def test_agent_context_logged_to_invocation_record(buck: Buck) -> None:
+@bsmr_test(write_invocation_record=True)
+async def test_agent_context_logged_to_invocation_record(bsmr: Bsmr) -> None:
     """Agent context should appear in the invocation record."""
-    res = await buck.build(
+    res = await bsmr.build(
         "//:pass",
         "--agent-context",
         "intent=build,attempt=1",

@@ -22,7 +22,7 @@ use std::sync::Arc;
 
 use allocative::Allocative;
 use async_trait::async_trait;
-use bsmr_hash::BuckHasher;
+use bsmr_hash::BsmrHasher;
 use cmp_any::PartialEqAny;
 use derive_more::Display;
 use dice_futures::cancellation::CancellationContext;
@@ -504,7 +504,7 @@ impl ProjectionWithBase {
     }
 
     fn hash(&self) -> u64 {
-        let mut hasher = BuckHasher::default();
+        let mut hasher = BsmrHasher::default();
 
         self.base.hash(&mut hasher);
         self.proj.hash().hash(&mut hasher);
@@ -542,7 +542,7 @@ impl ProjectionWithBaseRef<'_> {
     }
 
     fn hash(&self) -> u64 {
-        let mut hasher = BuckHasher::default();
+        let mut hasher = BsmrHasher::default();
 
         self.base.hash(&mut hasher);
         self.proj.hash().hash(&mut hasher);

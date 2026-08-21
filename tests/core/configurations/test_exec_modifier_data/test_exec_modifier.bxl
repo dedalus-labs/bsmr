@@ -28,7 +28,7 @@ def _test_binary_target(ctx: bxl.Context):
 
     node = ctx.configured_targets("//:binary")
 
-    exec_platform = getattr(node.attrs_eager(), "buck.execution_platform").value()
+    exec_platform = getattr(node.attrs_eager(), "bsmr.execution_platform").value()
     _assert_eq(exec_platform, "root//cfg:exec_linux_x86_64")
 
     labels = node.get_attr("labels")
@@ -67,7 +67,7 @@ def _test_binary_with_modifier(ctx: bxl.Context):
     _assert_eq(labels_clang, ["build_mode:release", "compiler:none", "os:macos", "cpu:arm64"])
 
     # Check execution platform - should still use exec_linux_x86_64 (no exec modifier yet)
-    exec_platform = getattr(node.attrs_eager(), "buck.execution_platform").value()
+    exec_platform = getattr(node.attrs_eager(), "bsmr.execution_platform").value()
     _assert_eq(exec_platform, "root//cfg:exec_linux_x86_64")
 
     universe = ctx.target_universe(node)
@@ -95,7 +95,7 @@ def _test_binary_with_macos_execution(ctx: bxl.Context):
 
     node = ctx.configured_targets("//:binary_with_macos_execution")
 
-    exec_platform = getattr(node.attrs_eager(), "buck.execution_platform").value()
+    exec_platform = getattr(node.attrs_eager(), "bsmr.execution_platform").value()
     _assert_eq(exec_platform, "root//cfg:exec_macos_x86_64")
 
     labels = node.get_attr("labels")
@@ -133,7 +133,7 @@ def _test_binary_with_package_modifier(ctx: bxl.Context):
     _assert_eq(labels_clang, ["build_mode:release", "compiler:none", "os:macos", "cpu:arm64"])
 
     # Check execution platform - should still use exec_linux_x86_64 (no exec modifier yet)
-    exec_platform = getattr(node.attrs_eager(), "buck.execution_platform").value()
+    exec_platform = getattr(node.attrs_eager(), "bsmr.execution_platform").value()
     _assert_eq(exec_platform, "root//cfg:exec_linux_x86_64")
 
     universe = ctx.target_universe(node)
@@ -166,7 +166,7 @@ def _test_bianry_with_tool_target_compatible_with_gcc(ctx: bxl.Context):
 
     _assert_eq(res.is_ok(), True, "Tool target should be compatible with exec platform after exec modifiers")
 
-    exec_platform = getattr(node.attrs_eager(), "buck.execution_platform").value()
+    exec_platform = getattr(node.attrs_eager(), "bsmr.execution_platform").value()
     _assert_eq(exec_platform, "root//cfg:exec_linux_x86_64")
 
     universe = ctx.target_universe(node)
@@ -183,7 +183,7 @@ def _test_binary_with_tool_containing_os_modifier(ctx: bxl.Context):
     labels_clang = node.get_attr("labels")
     _assert_eq(labels_clang, ["build_mode:debug", "compiler:none", "os:none", "cpu:none"])
 
-    exec_platform = getattr(node.attrs_eager(), "buck.execution_platform").value()
+    exec_platform = getattr(node.attrs_eager(), "bsmr.execution_platform").value()
     _assert_eq(exec_platform, "root//cfg:exec_linux_x86_64")
 
     # macos modifier will not be applied to the exec dep tool target
@@ -209,7 +209,7 @@ def _test_toolchain_with_multiple_exec_deps(ctx: bxl.Context):
 
     node = ctx.configured_targets("//:binary_with_multi_tool_toolchain")
 
-    exec_platform = getattr(node.attrs_eager(), "buck.execution_platform").value()
+    exec_platform = getattr(node.attrs_eager(), "bsmr.execution_platform").value()
     _assert_eq(exec_platform, "root//cfg:exec_linux_x86_64")
 
     universe = ctx.target_universe(node)
@@ -255,7 +255,7 @@ def _test_tool_with_os_conditional_modifier_linux(ctx: bxl.Context):
 
     node = ctx.configured_targets("//:binary_with_os_conditional_tool")
 
-    exec_platform = getattr(node.attrs_eager(), "buck.execution_platform").value()
+    exec_platform = getattr(node.attrs_eager(), "bsmr.execution_platform").value()
     _assert_eq(exec_platform, "root//cfg:exec_linux_x86_64")
 
     universe = ctx.target_universe(node)
@@ -281,7 +281,7 @@ def _test_tool_with_os_conditional_modifier_macos(ctx: bxl.Context):
 
     node = ctx.configured_targets("//:binary_with_os_conditional_tool_macos_exec")
 
-    exec_platform = getattr(node.attrs_eager(), "buck.execution_platform").value()
+    exec_platform = getattr(node.attrs_eager(), "bsmr.execution_platform").value()
     _assert_eq(exec_platform, "root//cfg:exec_macos_x86_64")
 
     universe = ctx.target_universe(node)
@@ -307,7 +307,7 @@ def _test_tool_with_cpu_conditional_modifier_arm64(ctx: bxl.Context):
 
     node = ctx.configured_targets("//:binary_with_cpu_conditional_tool_arm64")
 
-    exec_platform = getattr(node.attrs_eager(), "buck.execution_platform").value()
+    exec_platform = getattr(node.attrs_eager(), "bsmr.execution_platform").value()
     _assert_eq(exec_platform, "root//cfg:exec_linux_arm64")
 
     universe = ctx.target_universe(node)
@@ -338,7 +338,7 @@ def _test_bsmrconfig_backed_modifiers_not_applied_to_exec_deps(ctx: bxl.Context)
 
     node = ctx.configured_targets("//bsmrconfig_backed:binary_with_bsmrconfig_modifier")
 
-    exec_platform = getattr(node.attrs_eager(), "buck.execution_platform").value()
+    exec_platform = getattr(node.attrs_eager(), "bsmr.execution_platform").value()
     _assert_eq(exec_platform, "root//cfg:exec_linux_x86_64")
 
     labels = node.get_attr("labels")

@@ -114,7 +114,7 @@ def build_junit_test(
         cmd.append(
             cmd_args(
                 classpath_args_file,
-                format = "-Dbuck.classpath_file={}",
+                format = "-Dbsmr.classpath_file={}",
                 hidden = classpath_args,
             )
         )
@@ -222,4 +222,4 @@ def _get_native_libs_env(ctx: AnalysisContext) -> dict:
         shared_libs = traverse_shared_library_info(shared_library_info, transformation_provider = None),
     )
 
-    return {"BUCK_LD_SYMLINK_TREE": cxx_library_symlink_tree}
+    return {"BSMR_LD_SYMLINK_TREE": cxx_library_symlink_tree}

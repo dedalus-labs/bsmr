@@ -763,7 +763,7 @@ impl CgroupMinimal {
         use bsmr_fs::paths::abs_norm_path::AbsNormPath;
         use bsmr_util::process::background_command;
 
-        if !cfg!(buck_build) || !cfg!(target_os = "linux") {
+        if !cfg!(bsmr_build) || !cfg!(target_os = "linux") {
             return None;
         }
 
@@ -842,7 +842,7 @@ impl CgroupMinimal {
                 // The script above generates a cgroup for us to use by starting a new systemd user
                 // service. However, depending on the cgroup in which *this test* is running, we may
                 // not be able to spawn or move any processes into there. Practically, this actually
-                // depends on whether the buck that is running this test has resource control
+                // depends on whether the bsmr that is running this test has resource control
                 // enabled, since that effects the cgroup this test runs in.
                 //
                 // In case where that's an issue, work around it by attempting to use sudo perms to
@@ -850,7 +850,7 @@ impl CgroupMinimal {
                 // means that attempting to run multiple tests like this in the same process won't
                 // work, but alas this is the best we can do
                 let leaf = parent
-                    .make_child(FileNameBuf::unchecked_new("_buck_leaf"))
+                    .make_child(FileNameBuf::unchecked_new("_bsmr_leaf"))
                     .await
                     .unwrap();
                 // Move ourselves into the cgroup we just created

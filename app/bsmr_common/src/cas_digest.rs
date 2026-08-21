@@ -277,7 +277,7 @@ impl fmt::Display for CasDigestConfig {
 
 static_interner::interner!(
     CAS_DIGEST_CONFIG_INTERNER,
-    bsmr_hash::BuckDefaultHasher,
+    bsmr_hash::BsmrDefaultHasher,
     CasDigestConfigInner
 );
 

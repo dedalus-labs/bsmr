@@ -1,3 +1,9 @@
+# ===----------------------------------------------------------------------===
+# Upstream-Source: facebook/buck2@1560aca2002865cd73d7cafb22c705cfb640b2bc
+# Modifications Copyright (c) 2026 Dedalus Labs, Inc. and its contributors
+# SPDX-License-Identifier: Apache-2.0
+# ===----------------------------------------------------------------------===
+
 # Copyright (c) Meta Platforms, Inc. and affiliates.
 #
 # This source code is dual-licensed under either the MIT license found in the
@@ -247,7 +253,7 @@ def compile(ctx: AnalysisContext, link_style: LinkStyle, enable_profiling: bool,
         compile_cmd,
         category = "haskell_compile_" + artifact_suffix.replace("-", "_"),
         # We can't use no_outputs_cleanup because GHC's recompilation checking
-        # is based on file timestamps, and Buck doesn't maintain timestamps when
+        # is based on file timestamps, and Bsmr doesn't maintain timestamps when
         # artifacts may come from RE.
         # TODO: enable this for GHC 9.4 which tracks file changes using hashes
         # not timestamps.

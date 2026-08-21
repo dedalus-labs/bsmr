@@ -16,7 +16,7 @@
 
 use std::time::Duration;
 
-use bsmr_error::BuckErrorContext;
+use bsmr_error::BsmrErrorContext;
 use bsmr_error::internal_error;
 use bsmr_events::dispatch::span_async;
 use bsmr_server_ctx::commands::command_end;
@@ -53,7 +53,7 @@ pub(crate) async fn run_subscription_server_command(
             let mut materializer_subscription = materializer
                 .create_subscription()
                 .await
-                .buck_error_context("Error creating a materializer subscription")?;
+                .bsmr_error_context("Error creating a materializer subscription")?;
 
             let mut wants_active_commands = false;
 

@@ -17,14 +17,14 @@
 import csv
 import json
 
-from bsmr.tests.e2e_util.api.buck import Buck
-from bsmr.tests.e2e_util.buck_workspace import buck_test
+from bsmr.tests.e2e_util.api.bsmr import Bsmr
+from bsmr.tests.e2e_util.bsmr_workspace import bsmr_test
 
 
-@buck_test()
-async def test_what_materialized_csv(buck: Buck) -> None:
-    await buck.build("//:my_rule")
-    out = await buck.log("what-materialized", "--format", "csv")
+@bsmr_test()
+async def test_what_materialized_csv(bsmr: Bsmr) -> None:
+    await bsmr.build("//:my_rule")
+    out = await bsmr.log("what-materialized", "--format", "csv")
     header = ["path", "method", "file_count", "total_bytes"]
     out = [
         dict(zip(header, record))
@@ -40,10 +40,10 @@ async def test_what_materialized_csv(buck: Buck) -> None:
     )
 
 
-@buck_test()
-async def test_what_materialized_sorted(buck: Buck) -> None:
-    await buck.build("//:my_rule")
-    out = await buck.log("what-materialized", "--format", "json", "--sort-by-size")
+@bsmr_test()
+async def test_what_materialized_sorted(bsmr: Bsmr) -> None:
+    await bsmr.build("//:my_rule")
+    out = await bsmr.log("what-materialized", "--format", "json", "--sort-by-size")
     out = [json.loads(line) for line in out.stdout.splitlines() if line]
     assert len(out) > 0, "out should have some materializations"
     assert all(
@@ -51,12 +51,12 @@ async def test_what_materialized_sorted(buck: Buck) -> None:
     ), "should be sorted by size"
 
 
-@buck_test()
-async def test_what_materialized_aggregated(buck: Buck) -> None:
-    await buck.build("//:my_rule")
+@bsmr_test()
+async def test_what_materialized_aggregated(bsmr: Bsmr) -> None:
+    await bsmr.build("//:my_rule")
     # bsmr log what-materialized --aggregate-by-ext has the following output:
     # <empty>	cas	1	1
-    out = await buck.log("what-materialized", "--aggregate-by-ext")
+    out = await bsmr.log("what-materialized", "--aggregate-by-ext")
     out = [line.split() for line in out.stdout.splitlines() if line]
     assert len(out) > 0, "out should have some materializations"
     assert out[0][0] == "<empty>"

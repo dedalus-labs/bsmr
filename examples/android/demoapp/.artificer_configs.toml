@@ -5,7 +5,7 @@
 # Whether artifacts (jar, aar files) are stored in the repository or in a local cache directory.
 # Default cache directory: ~/.artificer/artifacts
 # Set to 'true' if you plan to check in artifacts into source control.
-# Set to 'false' otherwise. Buck will download and maintain its own cache for artifacts at build
+# Set to 'false' otherwise. Bsmr will download and maintain its own cache for artifacts at build
 # time.
 store_artifacts_locally = false
 
@@ -14,6 +14,6 @@ store_artifacts_locally = false
 central = 'https://repo1.maven.org/maven2/'
 google-maven = 'https://maven.google.com/'
 
-[buck]
+[bsmr]
 # Artificer generates BUILD.bsmr files at this location.
 base_path = "//app/libs"

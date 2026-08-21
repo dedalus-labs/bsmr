@@ -20,9 +20,9 @@ use std::fmt::Formatter;
 use std::time::Duration;
 use std::time::SystemTime;
 
-use bsmr_client_ctx::client_ctx::BuckSubcommand;
+use bsmr_client_ctx::client_ctx::BsmrSubcommand;
 use bsmr_client_ctx::client_ctx::ClientCommandContext;
-use bsmr_client_ctx::common::BuckArgMatches;
+use bsmr_client_ctx::common::BsmrArgMatches;
 use bsmr_client_ctx::event_log_options::EventLogOptions;
 use bsmr_client_ctx::events_ctx::EventsCtx;
 use bsmr_client_ctx::exit_result::ExitResult;
@@ -65,9 +65,9 @@ struct Stats {
 }
 
 impl Stats {
-    fn update_with_event(&mut self, event: &bsmr_data::BuckEvent) {
+    fn update_with_event(&mut self, event: &bsmr_data::BsmrEvent) {
         match &event.data {
-            Some(bsmr_data::buck_event::Data::SpanEnd(end)) => match end.data.as_ref() {
+            Some(bsmr_data::bsmr_event::Data::SpanEnd(end)) => match end.data.as_ref() {
                 Some(bsmr_data::span_end_event::Data::ReUpload(data)) => {
                     self.total_bytes_uploaded += data.bytes_uploaded.unwrap_or_default();
                 }
@@ -91,7 +91,7 @@ impl Stats {
                 }
                 _ => {}
             },
-            Some(bsmr_data::buck_event::Data::Instant(instant_event)) => {
+            Some(bsmr_data::bsmr_event::Data::Instant(instant_event)) => {
                 match instant_event.data.as_ref() {
                     Some(bsmr_data::instant_event::Data::Snapshot(snapshot)) => {
                         self.peak_process_memory_bytes =
@@ -143,7 +143,7 @@ impl Stats {
     }
 }
 
-fn get_event_timestamp(event: &bsmr_data::BuckEvent) -> Option<SystemTime> {
+fn get_event_timestamp(event: &bsmr_data::BsmrEvent) -> Option<SystemTime> {
     SystemTime::try_from(event.timestamp?).ok()
 }
 
@@ -319,12 +319,12 @@ pub struct SummaryCommand {
     event_log: EventLogOptions,
 }
 
-impl BuckSubcommand for SummaryCommand {
+impl BsmrSubcommand for SummaryCommand {
     const COMMAND_NAME: &'static str = "log-summary";
 
     async fn exec_impl(
         self,
-        _matches: BuckArgMatches<'_>,
+        _matches: BsmrArgMatches<'_>,
         ctx: ClientCommandContext<'_>,
         _events_ctx: &mut EventsCtx,
     ) -> ExitResult {

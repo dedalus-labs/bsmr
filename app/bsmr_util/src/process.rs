@@ -26,9 +26,9 @@ pub fn background_command<S: AsRef<OsStr>>(program: S) -> std::process::Command 
         use std::os::windows::process::CommandExt;
         cmd.creation_flags(windows_sys::Win32::System::Threading::CREATE_NO_WINDOW);
     }
-    // Prevent sub buck commands (persist-event-log, internal-test-runner, forkserver, etc.) from
+    // Prevent sub bsmr commands (persist-event-log, internal-test-runner, forkserver, etc.) from
     // reusing the UUID of the original command.
-    cmd.env_remove(bsmr_wrapper_common::BUCK_WRAPPER_UUID_ENV_VAR);
+    cmd.env_remove(bsmr_wrapper_common::BSMR_WRAPPER_UUID_ENV_VAR);
     cmd
 }
 

@@ -92,14 +92,14 @@ over `.context(...)` or `.expect(...)`.
 
 ## Adding context
 
-`bsmr_error` supports `buck_error_context` APIs akin to anyhow's context:
+`bsmr_error` supports `bsmr_error_context` APIs akin to anyhow's context:
 
 ```rust
-use bsmr_error::BuckErrorContext;
+use bsmr_error::BsmrErrorContext;
 
-result.buck_error_context("Failed to process file")?;
+result.bsmr_error_context("Failed to process file")?;
 
-result.with_buck_error_context(|| format!("Failed to process file: {}", path))?;
+result.with_bsmr_error_context(|| format!("Failed to process file: {}", path))?;
 ```
 
 Be somewhat conservative in the use of context, more is not always better.
@@ -121,7 +121,7 @@ some_result.map_err(|e| from_any_with_tag(e, ErrorTag::Tier0))?;
 ```rust
 fn process_artifact(&self, artifact: &Artifact) -> bsmr_error::Result<()> {
     let path = artifact.path()
-        .buck_error_context("Failed to get artifact path")?;
+        .bsmr_error_context("Failed to get artifact path")?;
 
     if !path.exists() {
         return Err(bsmr_error!(

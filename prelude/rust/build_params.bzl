@@ -1,3 +1,9 @@
+# ===----------------------------------------------------------------------===
+# Upstream-Source: facebook/buck2@1560aca2002865cd73d7cafb22c705cfb640b2bc
+# Modifications Copyright (c) 2026 Dedalus Labs, Inc. and its contributors
+# SPDX-License-Identifier: Apache-2.0
+# ===----------------------------------------------------------------------===
+
 # Copyright (c) Meta Platforms, Inc. and affiliates.
 #
 # This source code is dual-licensed under either the MIT license found in the
@@ -125,7 +131,7 @@ RustcFlags = record(
 RuleType = enum("binary", "library")
 
 # Controls how we build our rust libraries, largely dependent on whether rustc
-# or buck is driving the final linking and whether we are linking the artifact
+# or bsmr is driving the final linking and whether we are linking the artifact
 # into other rust targets.
 #
 # Rust: In this mode, we build standard rlibs/dylibs. This is the approach that

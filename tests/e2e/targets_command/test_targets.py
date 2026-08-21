@@ -23,16 +23,16 @@ import tempfile
 from typing import List
 
 import pytest
-from bsmr.tests.e2e_util.api.buck import Buck
-from bsmr.tests.e2e_util.api.buck_result import BuckResult
-from bsmr.tests.e2e_util.buck_workspace import buck_test
+from bsmr.tests.e2e_util.api.bsmr import Bsmr
+from bsmr.tests.e2e_util.api.bsmr_result import BsmrResult
+from bsmr.tests.e2e_util.bsmr_workspace import bsmr_test
 
 FOO_UNMODIFIED = ["4", "5", "6", "7"]
 BAR_UNMODIFIED = ["1", "2", "3", "4", "5"]
 
 
 # TODO: Make this test isolated, i.e. inplace=False.
-@buck_test(inplace=True)
+@bsmr_test(inplace=True)
 @pytest.mark.parametrize(
     "rule, unmodified, src_changed",
     [
@@ -53,13 +53,13 @@ BAR_UNMODIFIED = ["1", "2", "3", "4", "5"]
     ],
 )
 async def test_configured_target_hashing(
-    buck: Buck,
+    bsmr: Bsmr,
     rule: str,
     unmodified: List[str],
     src_changed: str,
 ) -> None:
     target = "root//tests/targets/target_hashing:rule{}".format(rule)
-    result = await buck.targets(
+    result = await bsmr.targets(
         target,
         "--show-target-hash",
         "--json",
@@ -69,7 +69,7 @@ async def test_configured_target_hashing(
     )
 
     # Modify a target
-    modified_result = await buck.targets(
+    modified_result = await bsmr.targets(
         target,
         "--show-target-hash",
         "--json",
@@ -84,27 +84,27 @@ async def test_configured_target_hashing(
 
     # Hash should change iff the target is the modified target or depends on the modified target
     if rule in unmodified:
-        assert output[0]["buck.target_hash"] == modified_output[0]["buck.target_hash"]
+        assert output[0]["bsmr.target_hash"] == modified_output[0]["bsmr.target_hash"]
     else:
-        assert output[0]["buck.target_hash"] != modified_output[0]["buck.target_hash"]
+        assert output[0]["bsmr.target_hash"] != modified_output[0]["bsmr.target_hash"]
 
 
-@buck_test(inplace=True)
-async def test_configured_ignores_unconfigured(buck: Buck) -> None:
+@bsmr_test(inplace=True)
+async def test_configured_ignores_unconfigured(bsmr: Bsmr) -> None:
     target = "root//tests/targets/target_hashing:rule8"
-    pre_unconfigured = await buck.targets(
+    pre_unconfigured = await bsmr.targets(
         target, "--show-unconfigured-target-hash", "--json"
     )
-    pre_configured = await buck.targets(target, "--show-target-hash", "--json")
+    pre_configured = await bsmr.targets(target, "--show-target-hash", "--json")
 
     config = "-ctesting.hashing=1"
-    post_unconfigured = await buck.targets(
+    post_unconfigured = await bsmr.targets(
         target, config, "--show-unconfigured-target-hash", "--json"
     )
-    post_configured = await buck.targets(target, config, "--show-target-hash", "--json")
+    post_configured = await bsmr.targets(target, config, "--show-target-hash", "--json")
 
-    def grab(x: BuckResult) -> str:
-        return json.loads(x.stdout)[0]["buck.target_hash"]
+    def grab(x: BsmrResult) -> str:
+        return json.loads(x.stdout)[0]["bsmr.target_hash"]
 
     # Hashes differ configured vs unconfigured
     assert grab(pre_unconfigured) != grab(pre_configured)
@@ -114,26 +114,26 @@ async def test_configured_ignores_unconfigured(buck: Buck) -> None:
     assert grab(pre_configured) == grab(post_configured)
 
 
-@buck_test(inplace=True)
-async def test_non_recursive_target_hash(buck: Buck) -> None:
+@bsmr_test(inplace=True)
+async def test_non_recursive_target_hash(bsmr: Bsmr) -> None:
     target = "root//tests/targets/target_hashing:rule9"
-    pre_recursive = await buck.targets(
+    pre_recursive = await bsmr.targets(
         target, "--show-target-hash", "--json", "--target-hash-recursive=true"
     )
-    pre_direct = await buck.targets(
+    pre_direct = await bsmr.targets(
         target, "--show-target-hash", "--json", "--target-hash-recursive=false"
     )
 
     config = "-ctesting.hashing=1"
-    post_recursive = await buck.targets(
+    post_recursive = await bsmr.targets(
         target, config, "--show-target-hash", "--json", "--target-hash-recursive=true"
     )
-    post_direct = await buck.targets(
+    post_direct = await bsmr.targets(
         target, config, "--show-target-hash", "--json", "--target-hash-recursive=false"
     )
 
-    def grab(x: BuckResult) -> str:
-        return json.loads(x.stdout)[0]["buck.target_hash"]
+    def grab(x: BsmrResult) -> str:
+        return json.loads(x.stdout)[0]["bsmr.target_hash"]
 
     # Hashes changed for recursive
     assert grab(pre_recursive) != grab(post_recursive)
@@ -141,30 +141,30 @@ async def test_non_recursive_target_hash(buck: Buck) -> None:
     assert grab(pre_direct) == grab(post_direct)
 
 
-@buck_test(inplace=True)
-async def test_show_inputs(buck: Buck) -> None:
+@bsmr_test(inplace=True)
+async def test_show_inputs(bsmr: Bsmr) -> None:
     target = "root//tests/targets/target_hashing:rule1"
-    result = await buck.targets(target, "--json")
+    result = await bsmr.targets(target, "--json")
     assert (
         "root//tests/targets/target_hashing:rule5"
-        in json.loads(result.stdout)[0]["buck.deps"]
+        in json.loads(result.stdout)[0]["bsmr.deps"]
     )
-    assert json.loads(result.stdout)[0]["buck.inputs"] == [
+    assert json.loads(result.stdout)[0]["bsmr.inputs"] == [
         "root//tests/targets/target_hashing/foo.txt"
     ]
 
 
-@buck_test(inplace=True)
-async def test_streaming_uncached(buck: Buck) -> None:
+@bsmr_test(inplace=True)
+async def test_streaming_uncached(bsmr: Bsmr) -> None:
     # This test aims to check the kind of things TD might do - the streaming plus other related features
     with tempfile.NamedTemporaryFile() as file:
-        await buck.targets(
+        await bsmr.targets(
             "root//:bsmr",
             "--json-lines",
             "--streaming",
             "--imports",
             "--output-attribute",
-            "^buck\\.|name",
+            "^bsmr\\.|name",
             "--no-cache",
             "--show-unconfigured-target-hash",
             "--output=" + file.name,
@@ -172,24 +172,24 @@ async def test_streaming_uncached(buck: Buck) -> None:
         found = 0
         for x in file.readlines():
             x = json.loads(x)
-            if x.get("buck.package") == "root//":
+            if x.get("bsmr.package") == "root//":
                 if x.get("name") == "bsmr":
-                    assert re.match("^[0-9a-f]+$", x["buck.target_hash"])
+                    assert re.match("^[0-9a-f]+$", x["bsmr.target_hash"])
                     found += 1
-                elif "buck.imports" in x:
-                    assert "prelude//prelude.bzl" in x["buck.imports"]
+                elif "bsmr.imports" in x:
+                    assert "prelude//prelude.bzl" in x["bsmr.imports"]
                     found += 1
         assert found == 2
 
 
-@buck_test(inplace=True)
-async def test_compression(buck: Buck) -> None:
+@bsmr_test(inplace=True)
+async def test_compression(bsmr: Bsmr) -> None:
     with tempfile.TemporaryDirectory() as name:
-        await buck.targets("root//:", "--output=" + name + "/out.txt")
-        await buck.targets(
+        await bsmr.targets("root//:", "--output=" + name + "/out.txt")
+        await bsmr.targets(
             "root//:", "--output=" + name + "/out.txt.gz", "--compression=gzip"
         )
-        await buck.targets(
+        await bsmr.targets(
             "root//:", "--output=" + name + "/out.txt.zst", "--compression=zstd"
         )
         with open(name + "/out.txt", "rb") as file:

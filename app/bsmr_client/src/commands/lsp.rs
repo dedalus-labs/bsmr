@@ -20,13 +20,13 @@ use std::time::Duration;
 use async_trait::async_trait;
 use bsmr_cli_proto::LspRequest;
 use bsmr_client_ctx::client_ctx::ClientCommandContext;
-use bsmr_client_ctx::common::BuckArgMatches;
+use bsmr_client_ctx::common::BsmrArgMatches;
 use bsmr_client_ctx::common::CommonBuildConfigurationOptions;
 use bsmr_client_ctx::common::CommonEventLogOptions;
 use bsmr_client_ctx::common::CommonStarlarkOptions;
 use bsmr_client_ctx::common::ui::CommonConsoleOptions;
 use bsmr_client_ctx::common::ui::ConsoleType;
-use bsmr_client_ctx::daemon::client::BuckdClientConnector;
+use bsmr_client_ctx::daemon::client::BsmrdClientConnector;
 use bsmr_client_ctx::events_ctx::EventsCtx;
 use bsmr_client_ctx::events_ctx::PartialResultCtx;
 use bsmr_client_ctx::events_ctx::PartialResultHandler;
@@ -56,8 +56,8 @@ impl StreamingCommand for LspCommand {
 
     async fn exec_impl(
         self,
-        buckd: &mut BuckdClientConnector,
-        matches: BuckArgMatches<'_>,
+        bsmrd: &mut BsmrdClientConnector,
+        matches: BsmrArgMatches<'_>,
         ctx: &mut ClientCommandContext<'_>,
         events_ctx: &mut EventsCtx,
     ) -> ExitResult {
@@ -77,7 +77,7 @@ impl StreamingCommand for LspCommand {
         reborrow_stream_for_static(
             stream,
             |stream| async move {
-                buckd
+                bsmrd
                     .with_flushing()
                     .lsp(
                         client_context,

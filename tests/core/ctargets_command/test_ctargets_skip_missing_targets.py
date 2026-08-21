@@ -17,19 +17,19 @@
 
 import re
 
-from bsmr.tests.e2e_util.api.buck import Buck
+from bsmr.tests.e2e_util.api.bsmr import Bsmr
 from bsmr.tests.e2e_util.asserts import expect_failure
-from bsmr.tests.e2e_util.buck_workspace import buck_test
+from bsmr.tests.e2e_util.bsmr_workspace import bsmr_test
 
 
 def _replace_hash(s: str) -> str:
     return re.sub(r"\b[0-9a-f]{16}\b", "<HASH>", s)
 
 
-@buck_test()
-async def test_ctargets_skip_missing_targets(buck: Buck) -> None:
+@bsmr_test()
+async def test_ctargets_skip_missing_targets(bsmr: Bsmr) -> None:
     await expect_failure(
-        buck.ctargets(
+        bsmr.ctargets(
             "root//:existing",
             "root//:nonexistent",
             "--target-platforms=root//:p",
@@ -37,7 +37,7 @@ async def test_ctargets_skip_missing_targets(buck: Buck) -> None:
         stderr_regex="Unknown target `nonexistent` from package",
     )
 
-    result = await buck.ctargets(
+    result = await bsmr.ctargets(
         "root//:existing",
         "root//:nonexistent",
         "--target-platforms=root//:p",

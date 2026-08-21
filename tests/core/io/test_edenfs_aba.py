@@ -16,10 +16,10 @@
 
 
 from bsmr.tests.core.common.io.file_watcher_tests import run_aba_test
-from bsmr.tests.e2e_util.api.buck import Buck
-from bsmr.tests.e2e_util.buck_workspace import buck_test
+from bsmr.tests.e2e_util.api.bsmr import Bsmr
+from bsmr.tests.e2e_util.bsmr_workspace import bsmr_test
 
 
-@buck_test(setup_eden=True)
-async def test_edenfs_aba_eden(buck: Buck) -> None:
-    await run_aba_test(buck)
+@bsmr_test(setup_eden=True)
+async def test_edenfs_aba_eden(bsmr: Bsmr) -> None:
+    await run_aba_test(bsmr)

@@ -26,7 +26,7 @@ use bsmr_core::deferred::base_deferred_key::BaseDeferredKey;
 use bsmr_core::deferred::base_deferred_key::BaseDeferredKeyBxl;
 use bsmr_core::deferred::base_deferred_key::BaseDeferredKeyDyn;
 use bsmr_core::deferred::base_deferred_key::PathResolutionError;
-use bsmr_core::fs::buck_out_path::BuckOutPathKind;
+use bsmr_core::fs::output_path::OutputPathKind;
 use bsmr_core::fs::project_rel_path::ProjectRelativePath;
 use bsmr_core::fs::project_rel_path::ProjectRelativePathBuf;
 use bsmr_core::global_cfg_options::GlobalCfgOptions;
@@ -35,7 +35,7 @@ use bsmr_data::ToProtoMessage;
 use bsmr_data::action_key_owner::BaseDeferredKeyProto;
 use bsmr_error::internal_error;
 use bsmr_fs::paths::forward_rel_path::ForwardRelativePath;
-use bsmr_hash::BuckDefaultHasher;
+use bsmr_hash::BsmrDefaultHasher;
 use bsmr_interpreter::dice::starlark_provider::DynEvalKindKey;
 use bsmr_interpreter::dice::starlark_provider::StarlarkEvalKind;
 use bsmr_util::strong_hasher::Blake3StrongHasher;
@@ -208,7 +208,7 @@ impl BaseDeferredKeyDyn for BxlDynamicKeyData {
     }
 
     fn hash(&self) -> u64 {
-        let mut hasher = BuckDefaultHasher::new();
+        let mut hasher = BsmrDefaultHasher::new();
         Hash::hash(self, &mut hasher);
         hasher.finish()
     }
@@ -225,14 +225,14 @@ impl BaseDeferredKeyDyn for BxlDynamicKeyData {
         prefix: &ForwardRelativePath,
         action_key: Option<&str>,
         path: &ForwardRelativePath,
-        path_resolution_method: BuckOutPathKind,
+        path_resolution_method: OutputPathKind,
         content_hash: Option<&ContentBasedPathHash>,
     ) -> bsmr_error::Result<ProjectRelativePathBuf> {
         let label = &self.key.spec;
         let cell_relative_path = label.bxl_path.path().path().as_str();
 
         let output_hash = {
-            let mut hasher = BuckDefaultHasher::new();
+            let mut hasher = BsmrDefaultHasher::new();
             self.key.bxl_args.hash(&mut hasher);
             self.key.global_cfg_options.hash(&mut hasher);
             let output_hash = hasher.finish();
@@ -240,7 +240,7 @@ impl BaseDeferredKeyDyn for BxlDynamicKeyData {
         };
 
         let exec_platform = {
-            let mut hasher = BuckDefaultHasher::new();
+            let mut hasher = BsmrDefaultHasher::new();
             self.execution_resolution
                 .resolved_execution
                 .hash(&mut hasher);
@@ -258,12 +258,12 @@ impl BaseDeferredKeyDyn for BxlDynamicKeyData {
             "-bxl/",
             label.bxl_path.cell().as_str(),
             "/",
-            if path_resolution_method == BuckOutPathKind::Configuration {
+            if path_resolution_method == OutputPathKind::Configuration {
                 exec_platform.as_str()
             } else {
                 ""
             },
-            if path_resolution_method == BuckOutPathKind::Configuration {
+            if path_resolution_method == OutputPathKind::Configuration {
                 "/"
             } else {
                 ""
@@ -278,7 +278,7 @@ impl BaseDeferredKeyDyn for BxlDynamicKeyData {
             "__/",
             action_key.unwrap_or_default(),
             if action_key.is_none() { "" } else { "/" },
-            if path_resolution_method == BuckOutPathKind::Configuration {
+            if path_resolution_method == OutputPathKind::Configuration {
                 output_hash.as_str()
             } else if let Some(content_hash) = content_hash {
                 content_hash.as_str()

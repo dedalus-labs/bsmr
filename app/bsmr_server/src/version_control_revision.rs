@@ -289,7 +289,7 @@ async fn repo_type(repo_root: &AbsNormPathBuf) -> bsmr_error::Result<&'static Re
         let is_hg = hg_metadata.is_ok_and(|output| output.is_dir());
         // `.git` can be a symlink or a file with contents like:
         //
-        //     gitdir: /home/dog/bsmr/.git/worktrees/buck3
+        //     gitdir: /home/dog/bsmr/.git/worktrees/bsmr3
         let is_git = git_metadata.is_ok();
 
         if is_hg {
@@ -324,10 +324,10 @@ mod tests {
     /// succeed even in environments without a global git config.
     async fn init_git_repo(repo_root: &AbsNormPathBuf) {
         git(repo_root, &["init", "-q"]).await;
-        git(repo_root, &["config", "user.name", "Buck Test"]).await;
+        git(repo_root, &["config", "user.name", "Bsmr Test"]).await;
         git(
             repo_root,
-            &["config", "user.email", "buck-test@example.com"],
+            &["config", "user.email", "bsmr-test@example.com"],
         )
         .await;
         git(repo_root, &["config", "commit.gpgsign", "false"]).await;

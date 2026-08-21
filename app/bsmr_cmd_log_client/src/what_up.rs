@@ -20,9 +20,9 @@ use std::time::Duration;
 use std::time::SystemTime;
 use std::time::SystemTimeError;
 
-use bsmr_client_ctx::client_ctx::BuckSubcommand;
+use bsmr_client_ctx::client_ctx::BsmrSubcommand;
 use bsmr_client_ctx::client_ctx::ClientCommandContext;
-use bsmr_client_ctx::common::BuckArgMatches;
+use bsmr_client_ctx::common::BsmrArgMatches;
 use bsmr_client_ctx::event_log_options::EventLogOptions;
 use bsmr_client_ctx::events_ctx::EventsCtx;
 use bsmr_client_ctx::exit_result::ExitResult;
@@ -38,7 +38,7 @@ use bsmr_client_ctx::ticker::Tick;
 use bsmr_event_log::stream_value::StreamValue;
 use bsmr_event_observer::span_tracker::EventTimestamp;
 use bsmr_event_observer::verbosity::Verbosity;
-use bsmr_events::BuckEvent;
+use bsmr_events::BsmrEvent;
 use dupe::Dupe;
 use superconsole::Component;
 use superconsole::Dimensions;
@@ -62,12 +62,12 @@ pub struct WhatUpCommand {
     pub after: Option<u64>,
 }
 
-impl BuckSubcommand for WhatUpCommand {
+impl BsmrSubcommand for WhatUpCommand {
     const COMMAND_NAME: &'static str = "log-what-up";
 
     async fn exec_impl(
         self,
-        _matches: BuckArgMatches<'_>,
+        _matches: BsmrArgMatches<'_>,
         ctx: ClientCommandContext<'_>,
         _events_ctx: &mut EventsCtx,
     ) -> ExitResult {
@@ -112,7 +112,7 @@ impl BuckSubcommand for WhatUpCommand {
         while let Ok(Some(event)) = events.try_next().await {
             match event {
                 StreamValue::Event(event) => {
-                    let e = BuckEvent::try_from(event)?;
+                    let e = BsmrEvent::try_from(event)?;
 
                     match cutoff_time {
                         Some(cutoff_time) => {

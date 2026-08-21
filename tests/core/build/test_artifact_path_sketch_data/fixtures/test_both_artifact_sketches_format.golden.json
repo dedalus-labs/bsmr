@@ -13,7 +13,7 @@
           "other_outputs": {},
           "outputs": {
             "DEFAULT": [
-              "bsmr-out/v2/art/root/<HASH>/__simple__/out.txt"
+              "bsmr-out/default/art/root/<HASH>/__simple__/out.txt"
             ]
           },
           "success": "SUCCESS"
@@ -24,7 +24,7 @@
       "other_outputs": {},
       "outputs": {
         "DEFAULT": [
-          "bsmr-out/v2/art/root/<HASH>/__simple__/out.txt"
+          "bsmr-out/default/art/root/<HASH>/__simple__/out.txt"
         ]
       },
       "success": "SUCCESS"
@@ -39,7 +39,7 @@
           "other_outputs": {},
           "outputs": {
             "DEFAULT": [
-              "bsmr-out/v2/art/root/<HASH>/__with_dep__/out.txt"
+              "bsmr-out/default/art/root/<HASH>/__with_dep__/out.txt"
             ]
           },
           "success": "SUCCESS"
@@ -50,7 +50,7 @@
       "other_outputs": {},
       "outputs": {
         "DEFAULT": [
-          "bsmr-out/v2/art/root/<HASH>/__with_dep__/out.txt"
+          "bsmr-out/default/art/root/<HASH>/__with_dep__/out.txt"
         ]
       },
       "success": "SUCCESS"

@@ -1,0 +1,43 @@
+# ===----------------------------------------------------------------------===
+# Upstream-Source: facebook/buck2@1560aca2002865cd73d7cafb22c705cfb640b2bc
+# Modifications Copyright (c) 2026 Dedalus Labs, Inc. and its contributors
+# SPDX-License-Identifier: Apache-2.0
+# ===----------------------------------------------------------------------===
+
+load("@bsmr_build//rules:rust.bzl", "rust_binary")
+load("@bsmr_build//rules:rust.bzl", "rust_library")
+
+oncall("rust_foundation")
+
+rust_library(
+    name = "bsmr_resources",
+    srcs = [
+        "src/lib.rs",
+        "src/manifest.rs",
+    ],
+    visibility = ["root//tools/testing/completion/verify:completion_verify"],
+    deps = [
+        "bsmr_build//third-party/rust:dunce",
+        "bsmr_build//third-party/rust:once_cell",
+        "bsmr_build//third-party/rust:serde",
+        "bsmr_build//third-party/rust:serde_json",
+        "bsmr_build//third-party/rust:thiserror",
+    ],
+)
+
+rust_binary(
+    name = "hello",
+    srcs = ["tests/src/hello.rs"],
+    unittests = False,
+)
+
+rust_binary(
+    name = "bsmr_resources_test",
+    srcs = ["tests/src/main.rs"],
+    resources = {
+        "hello_binary": ":hello",
+    },
+    deps = [
+        ":bsmr_resources",
+    ],
+)

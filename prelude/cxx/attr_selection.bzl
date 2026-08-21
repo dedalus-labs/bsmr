@@ -1,3 +1,9 @@
+# ===----------------------------------------------------------------------===
+# Upstream-Source: facebook/buck2@1560aca2002865cd73d7cafb22c705cfb640b2bc
+# Modifications Copyright (c) 2026 Dedalus Labs, Inc. and its contributors
+# SPDX-License-Identifier: Apache-2.0
+# ===----------------------------------------------------------------------===
+
 # Copyright (c) Meta Platforms, Inc. and affiliates.
 #
 # This source code is dual-licensed under either the MIT license found in the
@@ -11,7 +17,7 @@ def cxx_by_language_ext(x: dict[typing.Any, typing.Any], ext: str) -> list[typin
     # lang_compiler_flags is indexed by c_cpp_output/cxx_cpp_output
     # so write a function that can do either
     #
-    # === Buck v1 Compatibility ===
+    # === Bsmr v1 Compatibility ===
     #
     # `lang_compiler_flags` keys are coerced to CxxSource,
     # so the allowable values are the lowercase versions of the enum values.
@@ -29,7 +35,7 @@ def cxx_by_language_ext(x: dict[typing.Any, typing.Any], ext: str) -> list[typin
         key_pp = "c"
 
         # TODO(gabrielrc): v1 docs have other keys
-        # https://buck.build/rule/cxx_library.html#lang_compiler_flags
+        # https://oss.dedaluslabs.ai/bsmr/rule/cxx_library.html#lang_compiler_flags
         # And you can see them in java code, but somehow it works with
         # this one, which is seem across the repo. Find out what's happening.
         key_compiler = "c_cpp_output"

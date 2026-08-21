@@ -1,3 +1,9 @@
+# ===----------------------------------------------------------------------===
+# Upstream-Source: facebook/buck2@1560aca2002865cd73d7cafb22c705cfb640b2bc
+# Modifications Copyright (c) 2026 Dedalus Labs, Inc. and its contributors
+# SPDX-License-Identifier: Apache-2.0
+# ===----------------------------------------------------------------------===
+
 # Copyright (c) Meta Platforms, Inc. and affiliates.
 #
 # This source code is dual-licensed under either the MIT license found in the
@@ -68,14 +74,14 @@ def expect_type(name: str, check: typing.Callable[[typing.Any], bool], desc: str
 
     See the below functions, like expect_string, for usage examples.
     """
-    expect(check(val), 'Buck target requires "{}" to be a {}', name, desc)
+    expect(check(val), 'Bsmr target requires "{}" to be a {}', name, desc)
 
 def expect_string(name, val):
     expect_type(name, is_string, "string", val)
 
 def expect_string_starts_with(name, val, prefix):
     expect_type(name, is_string, "string", val)
-    expect(val.startswith(prefix), 'Buck target requires "{}" to start with "{}', name, prefix)
+    expect(val.startswith(prefix), 'Bsmr target requires "{}" to start with "{}', name, prefix)
 
 def expect_number(name, val):
     expect_type(name, is_number, "number", val)

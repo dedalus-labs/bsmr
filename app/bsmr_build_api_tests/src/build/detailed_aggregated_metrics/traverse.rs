@@ -40,12 +40,12 @@ mod tests {
     use bsmr_core::deferred::dynamic::DynamicLambdaResultsKey;
     use bsmr_core::deferred::key::DeferredHolderKey;
     use bsmr_core::execution_types::executor_config::CommandExecutorConfig;
-    use bsmr_core::fs::buck_out_path::BuckOutPathKind;
-    use bsmr_core::fs::buck_out_path::BuildArtifactPath;
+    use bsmr_core::fs::output_path::BuildArtifactPath;
+    use bsmr_core::fs::output_path::OutputPathKind;
     use bsmr_core::package::source_path::SourcePath;
     use bsmr_core::target::configured_target_label::ConfiguredTargetLabel;
     use bsmr_fs::paths::forward_rel_path::ForwardRelativePathBuf;
-    use bsmr_hash::buck_indexset;
+    use bsmr_hash::bsmr_indexset;
     use dupe::Dupe;
     use dupe::IterDupedExt;
     use starlark::values::OwnedFrozenValueTyped;
@@ -87,7 +87,7 @@ mod tests {
 
         fn add_to_state(
             self,
-            state: &mut bsmr_hash::BuckHashMap<DeferredHolderKey, DeferredHolder>,
+            state: &mut bsmr_hash::BsmrHashMap<DeferredHolderKey, DeferredHolder>,
         ) {
             let (key, holder) = self.build();
             state.insert(key, holder);
@@ -176,7 +176,7 @@ mod tests {
                 key.dupe(),
                 Box::new(SimpleAction::new(
                     inputs.into_iter().duped().collect(),
-                    buck_indexset! {output.dupe()},
+                    bsmr_indexset! {output.dupe()},
                     Vec::new(),
                     Category::new("category".to_owned()).unwrap(),
                     Some(format!("id-{idx}")),
@@ -193,7 +193,7 @@ mod tests {
                 BuildArtifactPath::new(
                     self.holder_key.owner().dupe(),
                     ForwardRelativePathBuf::unchecked_new(format!("output-{}", key.action_index())),
-                    BuckOutPathKind::default(),
+                    OutputPathKind::default(),
                 ),
                 key.dupe(),
                 bsmr_execute::execute::request::OutputType::File,
@@ -224,14 +224,14 @@ mod tests {
     }
 
     #[track_caller]
-    fn assert_set_eq(actions: bsmr_hash::BuckHashSet<ActionKey>, expected: Vec<ActionKey>) {
-        let expected_set: bsmr_hash::BuckHashSet<_> = expected.into_iter().collect();
+    fn assert_set_eq(actions: bsmr_hash::BsmrHashSet<ActionKey>, expected: Vec<ActionKey>) {
+        let expected_set: bsmr_hash::BsmrHashSet<_> = expected.into_iter().collect();
         assert_eq!(actions, expected_set)
     }
 
     #[test]
     fn test_empty_graph() -> bsmr_error::Result<()> {
-        let state = bsmr_hash::BuckHashMap::default();
+        let state = bsmr_hash::BsmrHashMap::default();
         let (complete, actions) = traverse_partial_action_graph(Vec::new(), &state)?;
         assert!(complete);
         assert!(actions.is_empty());
@@ -240,7 +240,7 @@ mod tests {
 
     #[test]
     fn test_single_action() -> bsmr_error::Result<()> {
-        let mut state = bsmr_hash::BuckHashMap::default();
+        let mut state = bsmr_hash::BsmrHashMap::default();
 
         let mut builder = Builder::for_analysis(create_target("root//:lib").dupe());
         let (output, action_key) =
@@ -256,7 +256,7 @@ mod tests {
 
     #[test]
     fn test_diamond() -> bsmr_error::Result<()> {
-        let mut state = bsmr_hash::BuckHashMap::default();
+        let mut state = bsmr_hash::BsmrHashMap::default();
 
         let mut builder1 = Builder::for_analysis(create_target("root//:lib").dupe());
         let mut builder2 = Builder::for_analysis(create_target("root//:bin"));
@@ -291,7 +291,7 @@ mod tests {
         // cycles can't actually occur in the action graph, but there may be bugs or races in our
         // state tracking that leads to us traversing an invalid graph. This test just ensures that
         // we still terminate if we encounter a cycle.
-        let mut state = bsmr_hash::BuckHashMap::default();
+        let mut state = bsmr_hash::BsmrHashMap::default();
 
         let mut builder1 = Builder::for_analysis(create_target("root//:lib").dupe());
 
@@ -315,7 +315,7 @@ mod tests {
     #[should_panic(expected = "assertion `left == right` failed")] // We don't currently actually have the ability to traverse this edge.
     fn test_dynamic_input() {
         fn go() -> bsmr_error::Result<()> {
-            let mut state = bsmr_hash::BuckHashMap::default();
+            let mut state = bsmr_hash::BsmrHashMap::default();
 
             let mut builder1 = Builder::for_analysis(create_target("root//:lib").dupe());
 
@@ -344,7 +344,7 @@ mod tests {
     /// Checks that we can traverse a graph where some parts are missing.
     #[test]
     fn test_dynamic_node_analysis_missing() -> bsmr_error::Result<()> {
-        let mut state = bsmr_hash::BuckHashMap::default();
+        let mut state = bsmr_hash::BsmrHashMap::default();
 
         let mut builder1 = Builder::for_analysis(create_target("root//:lib").dupe());
 
@@ -371,7 +371,7 @@ mod tests {
     /*
     #[test]
     fn test_tset() -> bsmr_error::Result<()> {
-        let mut state = bsmr_hash::BuckHashMap::default();
+        let mut state = bsmr_hash::BsmrHashMap::default();
 
         let mut builder1 = Builder::for_analysis(create_target("root//:lib").dupe());
 

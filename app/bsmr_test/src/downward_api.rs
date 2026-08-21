@@ -16,13 +16,13 @@
 
 use async_trait::async_trait;
 use bsmr_downward_api::DownwardApi;
-use bsmr_hash::StdBuckHashMap;
+use bsmr_hash::StdBsmrHashMap;
 use tracing::Level;
 
-pub struct BuckTestDownwardApi;
+pub struct BsmrTestDownwardApi;
 
 #[async_trait]
-impl DownwardApi for BuckTestDownwardApi {
+impl DownwardApi for BsmrTestDownwardApi {
     async fn console(&self, _level: Level, msg: String) -> bsmr_error::Result<()> {
         // TODO(brasselsprouts): use the level and hook it up with our superconsole
         eprintln!("{}", msg);
@@ -33,7 +33,7 @@ impl DownwardApi for BuckTestDownwardApi {
         unimplemented!("TODO(bobyf)")
     }
 
-    async fn external(&self, _data: StdBuckHashMap<String, String>) -> bsmr_error::Result<()> {
-        unimplemented!("need buck event stream to implement")
+    async fn external(&self, _data: StdBsmrHashMap<String, String>) -> bsmr_error::Result<()> {
+        unimplemented!("need bsmr event stream to implement")
     }
 }

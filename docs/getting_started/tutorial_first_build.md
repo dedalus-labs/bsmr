@@ -222,7 +222,7 @@ bsmr build :main --show-output
 ```
 ...
 BUILD SUCCEEDED
-upstream//scripts/$USER/bsmr_lab/greeter_bin:main bsmr-out/v2/gen/fbcode/c32808b9d4f0fdd0/scripts/$USER/bsmr_lab/greeter_bin/__main__/main
+upstream//scripts/$USER/bsmr_lab/greeter_bin:main bsmr-out/default/gen/fbcode/c32808b9d4f0fdd0/scripts/$USER/bsmr_lab/greeter_bin/__main__/main
 ```
 
 </FbInternalOnly>
@@ -232,7 +232,7 @@ upstream//scripts/$USER/bsmr_lab/greeter_bin:main bsmr-out/v2/gen/fbcode/c32808b
 ```
 ...
 BUILD SUCCEEDED
-root//bsmr_lab/greeter_bin:main /.../bsmr_lab/bsmr-out/v2/gen/root/200212f73efcd57d/bsmr_lab/greeter_bin/__main__/main
+root//bsmr_lab/greeter_bin:main /.../bsmr_lab/bsmr-out/default/gen/root/200212f73efcd57d/bsmr_lab/greeter_bin/__main__/main
 ```
 
 </OssOnly>

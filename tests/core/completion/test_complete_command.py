@@ -17,8 +17,8 @@
 import typing
 from pathlib import Path
 
-from bsmr.tests.e2e_util.api.buck import Buck
-from bsmr.tests.e2e_util.buck_workspace import buck_test
+from bsmr.tests.e2e_util.api.bsmr import Bsmr
+from bsmr.tests.e2e_util.bsmr_workspace import bsmr_test
 
 
 def complete_test(
@@ -27,20 +27,20 @@ def complete_test(
     expected: typing.List[str],
     cwd: str = "",
 ) -> None:
-    async def impl(buck: Buck) -> None:
-        res = await buck.complete("--target", input, rel_cwd=Path(cwd))
+    async def impl(bsmr: Bsmr) -> None:
+        res = await bsmr.complete("--target", input, rel_cwd=Path(cwd))
         assert res.stdout.splitlines() == expected
 
-    globals()[name] = buck_test()(impl)
+    globals()[name] = bsmr_test()(impl)
 
 
 complete_test(
     name="test_target_provides_targets_for_path_ending_with_a_colon",
-    input="baredir0/buckdir0b:",
+    input="baredir0/bsmrdir0b:",
     expected=[
-        "baredir0/buckdir0b:target1",
-        "baredir0/buckdir0b:target2",
-        "baredir0/buckdir0b:target3",
+        "baredir0/bsmrdir0b:target1",
+        "baredir0/bsmrdir0b:target2",
+        "baredir0/bsmrdir0b:target3",
     ],
 )
 

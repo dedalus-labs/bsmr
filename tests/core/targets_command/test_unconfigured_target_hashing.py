@@ -16,25 +16,25 @@
 
 import json
 
-from bsmr.tests.e2e_util.api.buck import Buck
-from bsmr.tests.e2e_util.buck_workspace import buck_test
+from bsmr.tests.e2e_util.api.bsmr import Bsmr
+from bsmr.tests.e2e_util.bsmr_workspace import bsmr_test
 
 
-@buck_test()
+@bsmr_test()
 async def test_unconfigured_target_hashing(
-    buck: Buck,
+    bsmr: Bsmr,
 ) -> None:
-    await assert_hashes(buck, ":foo", "foo.txt", False)
-    await assert_hashes(buck, ":foo", "bar.txt", True)
-    await assert_hashes(buck, ":foo_dep", "foo.txt", False)
-    await assert_hashes(buck, ":foo_dep", "bar.txt", True)
-    await assert_hashes(buck, ":none", "bar.txt", True)
+    await assert_hashes(bsmr, ":foo", "foo.txt", False)
+    await assert_hashes(bsmr, ":foo", "bar.txt", True)
+    await assert_hashes(bsmr, ":foo_dep", "foo.txt", False)
+    await assert_hashes(bsmr, ":foo_dep", "bar.txt", True)
+    await assert_hashes(bsmr, ":none", "bar.txt", True)
 
 
 async def assert_hashes(
-    buck: Buck, target: str, modified_path: str, same_hash: bool
+    bsmr: Bsmr, target: str, modified_path: str, same_hash: bool
 ) -> None:
-    result = await buck.targets(
+    result = await bsmr.targets(
         target,
         "--show-unconfigured-target-hash",
         "--json",
@@ -43,7 +43,7 @@ async def assert_hashes(
         "--target-hash-recursive=true",
     )
 
-    modified_result = await buck.targets(
+    modified_result = await bsmr.targets(
         target,
         "--show-unconfigured-target-hash",
         "--json",
@@ -58,24 +58,24 @@ async def assert_hashes(
 
     # Hash should change if modified path belongs to target or to any of its dependencies
     if same_hash:
-        assert output[0]["buck.target_hash"] == modified_output[0]["buck.target_hash"]
+        assert output[0]["bsmr.target_hash"] == modified_output[0]["bsmr.target_hash"]
     else:
-        assert output[0]["buck.target_hash"] != modified_output[0]["buck.target_hash"]
+        assert output[0]["bsmr.target_hash"] != modified_output[0]["bsmr.target_hash"]
 
 
-@buck_test()
-async def test_cfg_modifiers_change_target_hash(buck: Buck) -> None:
-    result = await buck.targets(
+@bsmr_test()
+async def test_cfg_modifiers_change_target_hash(bsmr: Bsmr) -> None:
+    result = await bsmr.targets(
         ":foo",
         "--show-unconfigured-target-hash",
         "--target-hash-recursive=false",
         "--json",
     )
 
-    with open(buck.cwd / "PACKAGE", "w") as package:
+    with open(bsmr.cwd / "PACKAGE", "w") as package:
         package.write("set_modifiers(['aaabbbccc'])")
 
-    modified_result = await buck.targets(
+    modified_result = await bsmr.targets(
         ":foo",
         "--show-unconfigured-target-hash",
         "--target-hash-recursive=false",
@@ -85,22 +85,22 @@ async def test_cfg_modifiers_change_target_hash(buck: Buck) -> None:
     modified_output = json.loads(modified_result.stdout)
 
     # modifiers should change target hash
-    assert output[0]["buck.target_hash"] != modified_output[0]["buck.target_hash"]
+    assert output[0]["bsmr.target_hash"] != modified_output[0]["bsmr.target_hash"]
 
 
-@buck_test()
-async def test_parent_cfg_modifiers_change_target_hash(buck: Buck) -> None:
-    result = await buck.targets(
+@bsmr_test()
+async def test_parent_cfg_modifiers_change_target_hash(bsmr: Bsmr) -> None:
+    result = await bsmr.targets(
         "foo:bar",
         "--show-unconfigured-target-hash",
         "--target-hash-recursive=false",
         "--json",
     )
 
-    with open(buck.cwd / "PACKAGE", "w") as package:
+    with open(bsmr.cwd / "PACKAGE", "w") as package:
         package.write("set_modifiers(['aaabbbccc'])")
 
-    modified_result = await buck.targets(
+    modified_result = await bsmr.targets(
         "foo:bar",
         "--show-unconfigured-target-hash",
         "--target-hash-recursive=false",
@@ -111,4 +111,4 @@ async def test_parent_cfg_modifiers_change_target_hash(buck: Buck) -> None:
 
     # parent set_modifiers value should change target hash
     # note that we merge parent modifiers and current package modifiers
-    assert output[0]["buck.target_hash"] != modified_output[0]["buck.target_hash"]
+    assert output[0]["bsmr.target_hash"] != modified_output[0]["bsmr.target_hash"]

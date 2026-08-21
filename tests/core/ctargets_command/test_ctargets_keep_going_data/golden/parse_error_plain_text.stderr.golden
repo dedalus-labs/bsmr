@@ -2,7 +2,7 @@
 
 [<TIMESTAMP>] Starting new bsmr daemon...
 [<TIMESTAMP>] Connected to new bsmr daemon.
-[<TIMESTAMP>] Buck UI: https://www.internalfb.com/bsmr/<UUID>
+[<TIMESTAMP>] Bsmr UI: https://www.internalfb.com/bsmr/<UUID>
 [<TIMESTAMP>] Error parsing root//b
 [<TIMESTAMP>] Error evaluating build file: `root//b:TARGETS.fixture`
 [<TIMESTAMP>]

@@ -36,7 +36,7 @@ use bsmr_core::fs::project::ProjectRoot;
 use bsmr_core::fs::project_rel_path::ProjectRelativePathBuf;
 use bsmr_core::io_counters::IoCounterKey;
 use bsmr_core::soft_error;
-use bsmr_error::BuckErrorContext;
+use bsmr_error::BsmrErrorContext;
 use bsmr_error::ErrorTag;
 use bsmr_error::internal_error;
 use compact_str::CompactString;
@@ -105,7 +105,7 @@ impl EdenIoProvider {
         let eden_version = manager
             .get_eden_version()
             .await
-            .buck_error_context("Error querying Eden version")?;
+            .bsmr_error_context("Error querying Eden version")?;
 
         if let Some(eden_version) = &eden_version {
             if eden_version.as_str() < min_eden_version {
@@ -178,7 +178,7 @@ impl EdenIoProvider {
                     .sourceControlType
                     .ok_or_else(|| internal_error!("Eden did not return a type"))?
                     .into_result()
-                    .buck_error_context("Eden returned an error for sourceControlType")?;
+                    .bsmr_error_context("Eden returned an error for sourceControlType")?;
 
                 if source_control_type == SourceControlType::TREE {
                     return Ok(PathMetadataResult::Result(Some(RawPathMetadata::Directory)));
@@ -197,7 +197,7 @@ impl EdenIoProvider {
                         .fs
                         .read_unchecked(path.clone(), options)
                         .await
-                        .with_buck_error_context(|| {
+                        .with_bsmr_error_context(|| {
                             format!(
                                 "Eden returned that `{path}` was a symlink, but it was not.  \
                                 This path may have changed during the build"
@@ -211,9 +211,9 @@ impl EdenIoProvider {
                     .size
                     .ok_or_else(|| internal_error!("Eden did not return a size"))?
                     .into_result()
-                    .buck_error_context("Eden returned an error for size")?
+                    .bsmr_error_context("Eden returned an error for size")?
                     .try_into()
-                    .buck_error_context("Eden returned an invalid size")?;
+                    .bsmr_error_context("Eden returned an invalid size")?;
 
                 tracing::debug!("getAttributesFromFilesV2({}): ok", path);
                 let digest = match self.digest {
@@ -222,7 +222,7 @@ impl EdenIoProvider {
                             .sha1
                             .ok_or_else(|| internal_error!("Eden did not return a sha1"))?
                             .into_result()
-                            .buck_error_context("Eden returned an error for sha1")?
+                            .bsmr_error_context("Eden returned an error for sha1")?
                             .try_into()
                             .ok()
                             .ok_or_else(|| internal_error!("Eden returned an invalid sha1"))?;
@@ -233,7 +233,7 @@ impl EdenIoProvider {
                             .blake3
                             .ok_or_else(|| internal_error!("Eden did not return a blake3"))?
                             .into_result()
-                            .buck_error_context("Eden returned an error for blake3")?
+                            .bsmr_error_context("Eden returned an error for blake3")?
                             .try_into()
                             .ok()
                             .ok_or_else(|| internal_error!("Eden returned an invalid blake3"))?;
@@ -325,7 +325,7 @@ impl EdenIoProvider {
             .into_iter()
             .map(|(file_name, attrs)| {
                 let file_name = CompactString::from_utf8(file_name)
-                    .buck_error_context("Filename is not UTF-8")?;
+                    .bsmr_error_context("Filename is not UTF-8")?;
 
                 let attr_data = match attrs.into_result() {
                     Ok(data) => data,
@@ -518,7 +518,7 @@ impl IoProvider for EdenIoProvider {
                 )
             })
             .await
-            .buck_error_context("Error synchronizing Eden working copy")
+            .bsmr_error_context("Error synchronizing Eden working copy")
             .tag(ErrorTag::IoEden)
     }
 

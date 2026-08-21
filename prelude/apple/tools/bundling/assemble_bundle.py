@@ -1,3 +1,9 @@
+# ===----------------------------------------------------------------------===
+# Upstream-Source: facebook/buck2@1560aca2002865cd73d7cafb22c705cfb640b2bc
+# Modifications Copyright (c) 2026 Dedalus Labs, Inc. and its contributors
+# SPDX-License-Identifier: Apache-2.0
+# ===----------------------------------------------------------------------===
+
 # Copyright (c) Meta Platforms, Inc. and affiliates.
 #
 # This source code is dual-licensed under either the MIT license found in the
@@ -234,7 +240,7 @@ def _filter_conflicting_paths(
     """
     Filter out conflicting paths leaving only the last item from the conflicting items. That practically means that the last item overrides all other conflicting items which makes:
     1) incremental build deterministic even when there are multiple conflicting destination paths
-    2) bundling result has the same structure as in Buck1 even when there are multiple conflicting destination paths
+    2) bundling result has the same structure as in Legacy even when there are multiple conflicting destination paths
     WARNING: This logic is tightly coupled with how spec items are sorted in `assemble_bundle` method. Don't change unless you fully understand what is going on here.
     """
     result = {}

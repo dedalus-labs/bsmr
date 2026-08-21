@@ -26,7 +26,7 @@ use bsmr_core::cells::paths::CellRelativePathBuf;
 use bsmr_fs::paths::file_name::FileNameBuf;
 use bsmr_fs::paths::forward_rel_path::ForwardRelativePath;
 use bsmr_fs::paths::forward_rel_path::ForwardRelativePathBuf;
-use bsmr_hash::StdBuckHashMap;
+use bsmr_hash::StdBsmrHashMap;
 use derive_more::Display;
 use dice::DiceComputations;
 use dice::Key;
@@ -42,21 +42,21 @@ use crate::legacy_configs::dice::HasLegacyConfigs;
 use crate::legacy_configs::key::BsmrconfigKeyRef;
 
 #[derive(PartialEq, Allocative)]
-pub struct PackageBoundaryExceptions(StdBuckHashMap<CellName, CellPackageBoundaryExceptions>);
+pub struct PackageBoundaryExceptions(StdBsmrHashMap<CellName, CellPackageBoundaryExceptions>);
 
 #[derive(PartialEq, Allocative, Pagable)]
 struct CellPackageBoundaryExceptions {
     // The reason we avoid a trie is that there's not a convenient `TrieSet` implementation to use,
     // and tries will likely have worse performance because most exception paths are very short.
     // Instead, we use a HashMap of first directory of the path to the rest of the path.
-    prefix_to_subpaths: StdBuckHashMap<FileNameBuf, Vec<ForwardRelativePathBuf>>,
+    prefix_to_subpaths: StdBsmrHashMap<FileNameBuf, Vec<ForwardRelativePathBuf>>,
     // Sometimes we want to say everything is allowed
     allow_everything: bool,
 }
 
 impl CellPackageBoundaryExceptions {
     fn new(s: &str) -> bsmr_error::Result<Self> {
-        let mut prefix_to_subpaths = StdBuckHashMap::default();
+        let mut prefix_to_subpaths = StdBsmrHashMap::default();
         let mut allow_everything = false;
         for path_str in s.split(',') {
             let path_str = path_str.trim();

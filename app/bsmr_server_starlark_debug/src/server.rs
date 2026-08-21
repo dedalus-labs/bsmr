@@ -27,7 +27,7 @@ use bsmr_error::internal_error;
 use bsmr_events::dispatch::EventDispatcher;
 use bsmr_fs::fs_util;
 use bsmr_fs::paths::abs_norm_path::AbsNormPath;
-use bsmr_hash::StdBuckHashMap;
+use bsmr_hash::StdBsmrHashMap;
 use bsmr_interpreter::starlark_debug::StarlarkDebugController;
 use debugserver_types as dap;
 use dupe::Dupe;
@@ -52,11 +52,11 @@ use tokio::time::Instant;
 use tokio_stream::wrappers::UnboundedReceiverStream;
 use tracing::debug;
 
-use crate::BuckStarlarkDebuggerHandle;
+use crate::BsmrStarlarkDebuggerHandle;
 use crate::HandleData;
 use crate::HandleId;
 use crate::HookId;
-use crate::controller::BuckStarlarkDebugController;
+use crate::controller::BsmrStarlarkDebugController;
 use crate::dap_api::ContinueArguments;
 use crate::dap_api::DebugServer;
 use crate::dap_api::dap_event;
@@ -81,7 +81,7 @@ fn capabilities() -> serde_json::Value {
         // note that some capabilities have the word "support" and some "supports" this seems to be according to the spec
         "supportTerminateDebuggee": false,
         "supportSuspendDebuggee": false,
-        // This is different from starlark's `dap_capabilities`. The buck starlark debugger treats
+        // This is different from starlark's `dap_capabilities`. The bsmr starlark debugger treats
         // each ongoing starlark Evaluation as a separate thread and handles requests appropriately.
         "supportsSingleThreadExecutionRequests": true,
 
@@ -95,24 +95,24 @@ enum DebuggerError {
     InvalidSetBreakpoints(dap::SetBreakpointsArguments),
 }
 
-/// The buck starlark debugger server. Most of the work is managed by the single-threaded server state.
+/// The bsmr starlark debugger server. Most of the work is managed by the single-threaded server state.
 ///
-/// There will be several references to the BuckStarlarkDebuggerServer instance and it will forward messages
+/// There will be several references to the BsmrStarlarkDebuggerServer instance and it will forward messages
 /// along to the state.
 #[derive(Debug)]
-pub(crate) struct BuckStarlarkDebuggerServer {
+pub(crate) struct BsmrStarlarkDebuggerServer {
     to_state: mpsc::UnboundedSender<ServerMessage>,
     next_handle_id: AtomicU32,
     /// When debugging a starlark evaluation, we wrap it in tokio::task::block_in_place (so that when it is paused
     /// it doesn't block a tokio worker thread), but we still want to ensure that we aren't over-saturating the
     /// local resources so we use this semaphore to limit how many evaluation can currently run.
-    /// TODO(cjhopman): It probably actually makes sense for this to be a more general mechanism in buck so that
+    /// TODO(cjhopman): It probably actually makes sense for this to be a more general mechanism in bsmr so that
     /// long-running things aren't holding tokio workers busy without yielding. That'd then also better integrate
     /// with user-requested resource limits (e.g. `-j 4`).
     eval_semaphore: Arc<Semaphore>,
 }
 
-impl BuckStarlarkDebuggerServer {
+impl BsmrStarlarkDebuggerServer {
     pub(crate) fn new(
         to_client: mpsc::UnboundedSender<ToClientMessage>,
         project_root: ProjectRoot,
@@ -150,13 +150,13 @@ impl BuckStarlarkDebuggerServer {
     pub(crate) fn new_handle(
         self: &Arc<Self>,
         events: EventDispatcher,
-    ) -> Option<BuckStarlarkDebuggerHandle> {
+    ) -> Option<BsmrStarlarkDebuggerHandle> {
         let handle_id = HandleId(self.next_handle_id.fetch_add(1, Ordering::Relaxed));
         self.maybe_to_state(ServerMessage::NewHandle {
             id: handle_id,
             events,
         });
-        Some(BuckStarlarkDebuggerHandle(Arc::new(HandleData {
+        Some(BsmrStarlarkDebuggerHandle(Arc::new(HandleData {
             id: handle_id,
             server: self.clone(),
         })))
@@ -169,7 +169,7 @@ impl BuckStarlarkDebuggerServer {
     /// debugger is attached and so we need to otherwise limit the concurrent ones.
     pub(crate) async fn start_eval(
         self: &Arc<Self>,
-        handle: &BuckStarlarkDebuggerHandle,
+        handle: &BsmrStarlarkDebuggerHandle,
         description: &str,
     ) -> bsmr_error::Result<Box<dyn StarlarkDebugController>> {
         debug!("starting debug-hooked eval {}", description);
@@ -190,12 +190,12 @@ impl BuckStarlarkDebuggerServer {
             Err(..) => {
                 // This indicates the state thread is shutting down (or hit an internal error).
                 // That could be due to the debugger detaching from bsmr. This does not indicate
-                // an error for other on-going buck commands, and so we'll allow starlark execution
+                // an error for other on-going bsmr commands, and so we'll allow starlark execution
                 // to continue as normal. In this case, the hook_id doesn't matter.
                 (HookId(u32::MAX), None)
             }
         };
-        Ok(Box::new(BuckStarlarkDebugController::new(
+        Ok(Box::new(BsmrStarlarkDebugController::new(
             eval_wrapper,
             hook_id,
             description,
@@ -239,7 +239,7 @@ impl BuckStarlarkDebuggerServer {
 /// Messages to the debugger server state
 enum ServerMessage {
     NewHook {
-        handle: BuckStarlarkDebuggerHandle,
+        handle: BsmrStarlarkDebuggerHandle,
         description: String,
         response_channel: oneshot::Sender<(HookId, Option<Box<dyn DapAdapterEvalHook>>)>,
     },
@@ -265,7 +265,7 @@ enum ServerMessage {
 /// The ServerState is the main thing implementing the debug adapter protocol.
 ///
 /// It runs on a single thread to more easily handle the concurrent requests and events
-/// from the DAP client and buck's multithreaded starlark evaluation.
+/// from the DAP client and bsmr's multithreaded starlark evaluation.
 #[derive(Debug)]
 struct ServerState {
     /// Sends messages back to the DAP client. Errors on this channel indicate the
@@ -274,16 +274,16 @@ struct ServerState {
     to_client: mpsc::UnboundedSender<ToClientMessage>,
 
     /// The currently set breakpoints. New hooks will be initialized with these.
-    set_breakpoints: StdBuckHashMap<String, ResolvedBreakpoints>,
+    set_breakpoints: StdBsmrHashMap<String, ResolvedBreakpoints>,
 
     /// The project root is used to get the current source code to resolve breakpoints.
     project_root: ProjectRoot,
 
-    /// Currently executing buck commands, this is primarily used to send debugger snapshots.
-    current_commands: StdBuckHashMap<HandleId, CommandState>,
+    /// Currently executing bsmr commands, this is primarily used to send debugger snapshots.
+    current_commands: StdBsmrHashMap<HandleId, CommandState>,
 
     /// Current starlark evaluation hooks.
-    current_hooks: StdBuckHashMap<HookId, HookState>,
+    current_hooks: StdBsmrHashMap<HookId, HookState>,
 
     /// HookIds are simply incrementing.
     next_hook_id: HookId,
@@ -298,7 +298,7 @@ struct ServerState {
     /// This data structure keeps track of destructured local variables obtained by debugger at breakpoint
     /// this is required to satify incremental nature of VariablesRequeste
     /// variables are lazily fetched from starlark evaluator and cached by thread id
-    variables_by_thread: StdBuckHashMap<u32, VariablesKnownPaths>,
+    variables_by_thread: StdBsmrHashMap<u32, VariablesKnownPaths>,
 }
 
 /// This type is using bitmasking to pack "frame_id, thread_id, variable_id" into an integer value
@@ -407,7 +407,7 @@ impl DebugServer for ServerState {
         &mut self,
         mut x: dap::SetBreakpointsArguments,
     ) -> bsmr_error::Result<dap::SetBreakpointsResponseBody> {
-        // buck will use the project-relative paths when parsing asts with the starlark interpreter. We need to match that.
+        // bsmr will use the project-relative paths when parsing asts with the starlark interpreter. We need to match that.
         let source = x
             .source
             .path
@@ -692,13 +692,13 @@ impl ServerState {
         Self {
             to_client,
             project_root,
-            current_commands: StdBuckHashMap::default(),
-            current_hooks: StdBuckHashMap::default(),
+            current_commands: StdBsmrHashMap::default(),
+            current_hooks: StdBsmrHashMap::default(),
             free_pseudo_threads: BTreeSet::new(),
             next_pseudo_thread: 0,
             next_hook_id: HookId(0),
-            set_breakpoints: StdBuckHashMap::default(),
-            variables_by_thread: StdBuckHashMap::default(),
+            set_breakpoints: StdBsmrHashMap::default(),
+            variables_by_thread: StdBsmrHashMap::default(),
         }
     }
 
@@ -752,9 +752,9 @@ impl ServerState {
     ///
     /// This is sent even when nothing is currently stopped but won't ever be sent if a
     /// debugger isn't attached, and so when a command receives the snapshot it can know
-    /// that a debugger is attached to the buck daemon.
+    /// that a debugger is attached to the bsmr daemon.
     fn get_snapshot(&self) -> bsmr_data::DebugAdapterSnapshot {
-        let mut current_handles = StdBuckHashMap::default();
+        let mut current_handles = StdBsmrHashMap::default();
 
         for hook_state in self.current_hooks.values() {
             if let Some(v) = &hook_state.stopped_at {
@@ -828,12 +828,12 @@ impl ServerState {
 
     fn new_hook(
         &mut self,
-        handle: BuckStarlarkDebuggerHandle,
+        handle: BsmrStarlarkDebuggerHandle,
         description: String,
     ) -> bsmr_error::Result<(HookId, Option<Box<dyn DapAdapterEvalHook>>)> {
         let (hook_id, pseudo_thread_id) = self.next_hook_id();
 
-        let client = Box::new(BuckStarlarkDapAdapterClient {
+        let client = Box::new(BsmrStarlarkDapAdapterClient {
             handle: handle.dupe(),
             hook_id,
         });
@@ -965,12 +965,12 @@ impl ServerState {
 /// forward along events to the server with the hook_id (so the server can tell
 /// which evaluation the event came from).
 #[derive(Debug)]
-struct BuckStarlarkDapAdapterClient {
-    handle: BuckStarlarkDebuggerHandle,
+struct BsmrStarlarkDapAdapterClient {
+    handle: BsmrStarlarkDebuggerHandle,
     hook_id: HookId,
 }
 
-impl DapAdapterClient for BuckStarlarkDapAdapterClient {
+impl DapAdapterClient for BsmrStarlarkDapAdapterClient {
     fn event_stopped(&self) -> starlark::Result<()> {
         self.handle.0.server.event_stopped(self.hook_id);
         Ok(())
@@ -997,7 +997,7 @@ struct HookState {
     /// of the starlark operation on the thread (e.g. "load_buildfile:some_cell//some/package").
     pseudo_thread_name: String,
     /// If the evaluation is stopped (for example, at a breakpoint) this is a description of where
-    /// it's stopped at. This is used for the debugger snapshots so that buck commands can provide
+    /// it's stopped at. This is used for the debugger snapshots so that bsmr commands can provide
     /// UI affordances for the stopped evaluations.
     stopped_at: Option<String>,
     /// The id of the corresponding handle (also used for snapshots so a command can tell if a

@@ -60,7 +60,7 @@ Here is the anatomy of a target label:
 ## Cell
 
 [Cell](../../concepts/key_concepts/#cells) defines a directory tree of one or
-more buck [packages](../../concepts/key_concepts/#packages). The root of a buck
+more bsmr [packages](../../concepts/key_concepts/#packages). The root of a bsmr
 cell contains a global configuration file called
 [**`.bsmr`**](../../concepts/bsmrconfig).
 
@@ -68,13 +68,13 @@ cell contains a global configuration file called
 
 For the lab you just did, fbcode is the cell root where .bsmr resides. If
 you are developing in other projects like ARVR, android and ios, then fbsource
-is the buck cell root.
+is the bsmr cell root.
 
 #### Tips:
 
 - Do not modify .bsmr and do not create .bsmr without consulting
-  buck or devx team!
-- Be aware that buck does enforce package boundaries, so a source file only
+  bsmr or devx team!
+- Be aware that bsmr does enforce package boundaries, so a source file only
   belongs to its nearest BUILD.bsmr file.
 
 </FbInternalOnly>
@@ -85,10 +85,10 @@ You can run `bsmr audit cell` to inspect the abs path of each cell root.
 
 The existence of a [build manifest](#build-manifest) ({ isInternal() ?
 <code>scripts/$USER/bsmr_lab/greeter_bin/BUILD.bsmr</code> :
-<code>bsmr_lab/greeter_bin/BUILD.bsmr</code> }) defines a buck
+<code>bsmr_lab/greeter_bin/BUILD.bsmr</code> }) defines a bsmr
 [package](../../concepts/key_concepts/#packages) { isInternal() ?
 <code>scripts/$USER/bsmr_lab/greeter_bin</code> :
-<code>bsmr_lab/greeter_bin</code> } isn't just a directory. If a buck target
+<code>bsmr_lab/greeter_bin</code> } isn't just a directory. If a bsmr target
 uses the source file as input, that target is regarded as the **owner** of the
 source.
 
@@ -121,8 +121,8 @@ Although configurable, the name of the build file normally is just BUILD.bsmr.
 only)</FbInternalOnly>
 
 In these BUILD.bsmr files, you’ve written a couple of
-[buck targets](../../concepts/build_target/), `:main`, `:library`,
-`:logging_lib` and `:test`. Buck targets are instances of
+[bsmr targets](../../concepts/build_target/), `:main`, `:library`,
+`:logging_lib` and `:test`. Bsmr targets are instances of
 [build rules](../../concepts/build_rule/), which defines how the target should
 be built. For example, target :main is of rule type
 [rust_binary](../../prelude/rules/rust/rust_binary/), the output artifact will
@@ -130,7 +130,7 @@ be a binary that’s runnable, while `:library`, `:logging_lib` are of rule type
 [rust_library](../../prelude/rules/rust/rust_library/), the output of which will
 be a library that can be linked to the binary.
 
-Referring to buck targets in BUILD.bsmr files and CLI commands need to follow a
+Referring to bsmr targets in BUILD.bsmr files and CLI commands need to follow a
 special [target pattern](../../concepts/target_pattern/), which looks like:
 
 <code>cell//path/to/dir:target</code> or <code>cell//path/to/dir/...</code>
@@ -141,8 +141,8 @@ you will soon become very familiar with these patterns during daily development.
 
 <!--  TODO: change link to bsmr doc once available for macros -->
 
-- Buck targets can be either build rules or
-  [macros](https://buck.build/extending/macros.html), which are
+- Bsmr targets can be either build rules or
+  [macros](https://oss.dedaluslabs.ai/bsmr/extending/macros.html), which are
   wrappers/extensions around native build rules, macros are usually defined .bzl
   files. <FbInternalOnly> The `rust_binary`, `rust_library` and `rust_unittest`
   used in the lab are actually fbcode macros, not native rules as defined in this
@@ -150,7 +150,7 @@ you will soon become very familiar with these patterns during daily development.
   [`bsmr targets`](../tutorial_first_build/#step-6-inspecting-your-target-optional)
   there are several other targets except `:main` in the outputs. These are
   defined in macros. </FbInternalOnly>
-- Buck uses [starlark](../../concepts/glossary/#starlark) language which is a
+- Bsmr uses [starlark](../../concepts/glossary/#starlark) language which is a
   dialect of python, to define build rules and macros.
 
 ## Visualizing Your Tutorial Project
@@ -368,7 +368,7 @@ syntax: <code>load("@cell//path/to/bzl:some_bzl.bzl", "some_macro")</code>
 
 </OssOnly>
 
-Each buck target has a set of attributes, which provide powerful ways to define
+Each bsmr target has a set of attributes, which provide powerful ways to define
 and customize how the build should be done, you can inspect the
 [rule definition](../../prelude/rules/rust/rust_binary/) to see what these
 attributes are and the syntax to define them. Some attributes are mandatory and
@@ -378,7 +378,7 @@ common ones such as `name`, `srcs`, `deps` and
 
 #### Tips:
 
-- Without using load function, buck will default to using native rules with the
+- Without using load function, bsmr will default to using native rules with the
   same name;
 - One load function can load multiple macros from the same `.bzl` file
 - Deps and visibility are important attributes to understand, please read the
@@ -418,74 +418,74 @@ lab renders a very simple dependency graph with maximum depth of 2, in real
 world, the graph will be much bigger and one top level target could have tens of
 thousands dependencies.
 
-Understanding and managing the dependency graph of your buck target is important
-for effective development. Buck also offers powerful query tools to explore the
+Understanding and managing the dependency graph of your bsmr target is important
+for effective development. Bsmr also offers powerful query tools to explore the
 dependency graph.
 
 #### Tips:
 
 - Dependency graph size affects build speed and memory usage greatly
 - The graph is a DAG graph. So cycles in the dependency graph (circular
-  dependency), something like `A->B->...->X->A`, are not allowed, buck will emit
+  dependency), something like `A->B->...->X->A`, are not allowed, bsmr will emit
   error when cycle is detected.
 
-## Buck Commands
+## Bsmr Commands
 
-In the lab, once buck and source files are in place, we use
+In the lab, once bsmr and source files are in place, we use
 `bsmr build :main --show-output` to build the `:main` target. This uses the
-[buck build command](../../users/commands/build/) to compile and link your rust
-code into a binary. Now let’s take a closer look at this command. A buck command
+[bsmr build command](../../users/commands/build/) to compile and link your rust
+code into a binary. Now let’s take a closer look at this command. A bsmr command
 is usually composed of a command type ( `build`, `run`, `test` ...), some
 [target pattern](../../concepts/target_pattern/), and options. Command options
 can offer extra configurations to do the build.
 
-Buck accepts multiple targets in one command, such as:
+Bsmr accepts multiple targets in one command, such as:
 
-- `buck build target1 target2 target3` builds 3 targets in one command
+- `bsmr build target1 target2 target3` builds 3 targets in one command
 
-- `buck build //path/to/dir/...` builds all targets under `path/to/dir`,
+- `bsmr build //path/to/dir/...` builds all targets under `path/to/dir`,
   including sub-dir
 
-- `buck build //path/to/dir:` build all targets under package `path/to/dir`,
+- `bsmr build //path/to/dir:` build all targets under package `path/to/dir`,
   without sub packages
 
-- `buck build @a-file` builds targets listed in a-file, which is a plain text
+- `bsmr build @a-file` builds targets listed in a-file, which is a plain text
   file
 
-Buck builds multiple targets in parallel, unless there are dependencies between
+Bsmr builds multiple targets in parallel, unless there are dependencies between
 them.
 
-Once target is built, you can use [buck run](../../users/commands/run/),
-[buck test](../../users/commands/test) and
-[buck install](../../users/commands/install) to test the code.
+Once target is built, you can use [bsmr run](../../users/commands/run/),
+[bsmr test](../../users/commands/test) and
+[bsmr install](../../users/commands/install) to test the code.
 
-As you become more adept, you can explore other powerful buck commands, such as:
+As you become more adept, you can explore other powerful bsmr commands, such as:
 
-- [`buck query`](../../users/commands/query/) with various
+- [`bsmr query`](../../users/commands/query/) with various
   [options](../../users/query/uquery/) to analyze the dependency graph, this set
-  of commands is by far the most powerful and complicated buck commands to use;
-- [`buck kill`](../../users/commands/kill/) to stop running
-  [buck daemon](../../concepts/daemon/), this is sometimes needed to recover
+  of commands is by far the most powerful and complicated bsmr commands to use;
+- [`bsmr kill`](../../users/commands/kill/) to stop running
+  [bsmr daemon](../../concepts/daemon/), this is sometimes needed to recover
   from a failed build due to bad daemon state;
-- [`buck clean`](../../users/commands/clean/) to remove build artifacts from
+- [`bsmr clean`](../../users/commands/clean/) to remove build artifacts from
   [bsmr-out](../../concepts/bsmr_out/), this is a remedy to recover from failed
   build due to either bad daemon or bad artifacts in cache;
-- [`buck log`](../../users/commands/log/) to see information about previous
+- [`bsmr log`](../../users/commands/log/) to see information about previous
   builds
-- [`buck bxl`](../../bxl/tutorial/) to run bxl scripts. BXL is a bsmr script
+- [`bsmr bxl`](../../bxl/tutorial/) to run bxl scripts. BXL is a bsmr script
   language using starlark syntax to write complex query or build logic.
 
 #### Tips:
 
-- Buck offers help menus for all commands, try the -h option, you can buck -h or
-  buck build -h to see all available commands and options
+- Bsmr offers help menus for all commands, try the -h option, you can bsmr -h or
+  bsmr build -h to see all available commands and options
 
 <FbInternalOnly>
 
 - Sometimes you’ll see options like `@mode/opt` in the command, the mode file
-  (path is `cell/mode/opt`) contains a set of buck configs that are extensions
+  (path is `cell/mode/opt`) contains a set of bsmr configs that are extensions
   of `.bsmr`, see some examples in
-  [this wiki](https://www.internalfb.com/wiki/Buck/Buck-users/fbcode-repo/C++/running-buck-in-different-modes/)
+  [this wiki](https://www.internalfb.com/wiki/Bsmr/Bsmr-users/fbcode-repo/C++/running-bsmr-in-different-modes/)
   for C++ build mode;
 
 </FbInternalOnly>
@@ -527,16 +527,16 @@ graph TD
 ## Console and Output
 
 During the lab, you’ve seen the console output during build and test process,
-these outputs give information about the execution progress and state. Buck
+these outputs give information about the execution progress and state. Bsmr
 offers different kinds of
 [consoles](../../users/build_observability/interactive_console/) for various
 purposes, and the interactive feature helps during debugging.
 
-## Buck-out
+## Bsmr-out
 
 So you’ve successfully built the target and run it. Finally, let’s briefly talk
 about [bsmr-out](../../concepts/bsmr_out/), which is an important concept yet
-hard to understand initially. We know that buck builds complicated targets with
+hard to understand initially. We know that bsmr builds complicated targets with
 big dependency graphs and generates tons of outputs for test and run. Where
 should these output artifacts be stored at? The outputs should not be stored at
 the source directory which is tracked by the source control system. The outputs
@@ -546,27 +546,27 @@ bsmr-out,it has the following characteristics:
 - It’s under repo root;
 - It has a unique file structure, some directories are hashed for caching
   purpose;
-- It stores a lot of data including output artifacts, buck log files, tmp data,
+- It stores a lot of data including output artifacts, bsmr log files, tmp data,
   etc;
-- It is managed by buck and developers normally should not manipulate;
+- It is managed by bsmr and developers normally should not manipulate;
 
 #### Tips:
 
-- **Do NOT** delete artifacts manually from bsmr-out directory and expect buck
-  to rebuild them, buck doesn’t track things under bsmr-out, use buck clean
+- **Do NOT** delete artifacts manually from bsmr-out directory and expect bsmr
+  to rebuild them, bsmr doesn’t track things under bsmr-out, use bsmr clean
   instead;
 
 <FbInternalOnly>
 
 - **Do NOT** use bsmr-out directory path in your source or BUILD.bsmr file, you should
   not assume where artifacts will be stored, see more information in
-  [this wiki](https://www.internalfb.com/wiki/Buck/Buck-users/faq_trick_tip/Dealing_with-buck-out/);
-- Buck-out can grow very big and consumes your disk space, you can run buck
-  clean or [buck clean --stale](../../users/commands/clean/) as the remedy
+  [this wiki](https://www.internalfb.com/wiki/Bsmr/Bsmr-users/faq_trick_tip/Dealing_with-bsmr-out/);
+- Bsmr-out can grow very big and consumes your disk space, you can run bsmr
+  clean or [bsmr clean --stale](../../users/commands/clean/) as the remedy
 
-<h2>Buck UI</h2>
+<h2>Bsmr UI</h2>
 
-Buck is mostly a command line tool but buck team does offer a
+Bsmr is mostly a command line tool but bsmr team does offer a
 [web-based UI](../../users/build_observability/observability/#bsmrs-web-ui) for
 users to inspect the build afterwards. To access the UI, the simplest way is to
 type “bsmr” in the browser URL and it should bring you to your latest build

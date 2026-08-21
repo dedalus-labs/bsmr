@@ -5,7 +5,7 @@ documentation = "https://docs.rs/allocative"
 edition = "2024"
 license = { workspace = true }
 name = "allocative"
-repository = "https://github.com/facebook/buck2"
+repository = "https://github.com/dedalus-labs/bsmr"
 version = "0.3.6"
 
 [dependencies]

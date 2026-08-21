@@ -16,14 +16,14 @@
 
 
 from bsmr.tests.e2e_util import asserts
-from bsmr.tests.e2e_util.api.buck import Buck
+from bsmr.tests.e2e_util.api.bsmr import Bsmr
 from bsmr.tests.e2e_util.asserts import expect_failure
-from bsmr.tests.e2e_util.buck_workspace import buck_test
+from bsmr.tests.e2e_util.bsmr_workspace import bsmr_test
 
 
-@buck_test()
-async def test_build_nested_subtargets(buck: Buck) -> None:
-    result = await buck.build(
+@bsmr_test()
+async def test_build_nested_subtargets(bsmr: Bsmr) -> None:
+    result = await bsmr.build(
         "//:nested[sub][nested_sub]",
     )
     build_report = result.get_build_report()
@@ -34,17 +34,17 @@ async def test_build_nested_subtargets(buck: Buck) -> None:
     asserts.assert_not_executable(output)
 
 
-@buck_test()
-async def test_build_nested_subtargets_errors(buck: Buck) -> None:
+@bsmr_test()
+async def test_build_nested_subtargets_errors(bsmr: Bsmr) -> None:
     await expect_failure(
-        buck.build(
+        bsmr.build(
             "//:nested[bad]",
         ),
         stderr_regex="Available subtargets are.*sub",
     )
 
     await expect_failure(
-        buck.build(
+        bsmr.build(
             "//:nested[sub][bad]",
         ),
         stderr_regex="Available subtargets are.*nested_sub",
