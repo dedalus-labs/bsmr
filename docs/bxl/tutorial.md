@@ -324,18 +324,18 @@ ctx.output.print(ensured_index_db)
 Running the script will show us where our file was created:
 
 ```
-buck-out/v2/gen-bxl/root/78ceb8c295d0ab4e/part3.bxl/__main__e0c0381aecee358a__/index.txt
+bsmr-out/v2/gen-bxl/root/78ceb8c295d0ab4e/part3.bxl/__main__e0c0381aecee358a__/index.txt
 ```
 
 We open this file and to see all the index paths:
 
 ```
-buck-out/v2/gen/root/6dd044292ff31ae1/__a__/a.index
-buck-out/v2/gen/root/6dd044292ff31ae1/__b__/b.index
-buck-out/v2/gen/root/6dd044292ff31ae1/__bin__/bin.index
-buck-out/v2/gen/root/6dd044292ff31ae1/__c__/c.index
-buck-out/v2/gen/root/6dd044292ff31ae1/__d__/d.index
-buck-out/v2/gen/root/6dd044292ff31ae1/__e__/e.index
+bsmr-out/v2/gen/root/6dd044292ff31ae1/__a__/a.index
+bsmr-out/v2/gen/root/6dd044292ff31ae1/__b__/b.index
+bsmr-out/v2/gen/root/6dd044292ff31ae1/__bin__/bin.index
+bsmr-out/v2/gen/root/6dd044292ff31ae1/__c__/c.index
+bsmr-out/v2/gen/root/6dd044292ff31ae1/__d__/d.index
+bsmr-out/v2/gen/root/6dd044292ff31ae1/__e__/e.index
 ```
 
 It shows all the index path, but if we check the content of the index, it will

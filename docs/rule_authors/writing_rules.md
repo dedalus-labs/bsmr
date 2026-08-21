@@ -112,7 +112,7 @@ most important fields are `ctx.attrs`, which picks up the attributes declared by
 the rule, and `ctx.actions`, which lets you create new actions to actually do
 something.
 
-The output of any actions performed will be materialized in `buck-out`. However,
+The output of any actions performed will be materialized in `bsmr-out`. However,
 only the defined outputs of providers are available for dependent rules to
 consume and only the actions necessary to produce those outputs being consumed
 will be run. By default, the `default_output` of the `DefaultInfo` provider is

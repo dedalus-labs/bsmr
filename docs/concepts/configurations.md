@@ -337,7 +337,7 @@ configurations, output paths cannot be derived based on just targets (as
 multiple actions would map to the same outputs). For this reason, the
 target and the configuration are encoded into output paths. The
 configuration is currently represented as a hash of its values (a
-"hashed buck-out").
+"hashed bsmr-out").
 
 ## Target platform vs execution platform
 
