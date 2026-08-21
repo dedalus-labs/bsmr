@@ -1899,6 +1899,9 @@ Common options are documented under [Global options](#global-options).
 * `-j, --num-threads <THREADS>`
     Number of threads to use during execution (default is # cores)
 
+* `--sandbox`
+    Execute every action in a fresh networkless Firecracker microVM
+
 * `--local-only`
     Enable only local execution. Will reject actions that cannot execute locally
 
@@ -2100,6 +2103,9 @@ Common options are documented under [Global options](#global-options).
 
 * `-j, --num-threads <THREADS>`
     Number of threads to use during execution (default is # cores)
+
+* `--sandbox`
+    Execute every action in a fresh networkless Firecracker microVM
 
 * `--local-only`
     Enable only local execution. Will reject actions that cannot execute locally
@@ -2336,6 +2342,9 @@ Common options are documented under [Global options](#global-options).
 
 * `-j, --num-threads <THREADS>`
     Number of threads to use during execution (default is # cores)
+
+* `--sandbox`
+    Execute every action in a fresh networkless Firecracker microVM
 
 * `--local-only`
     Enable only local execution. Will reject actions that cannot execute locally
@@ -2847,6 +2856,9 @@ Common options are documented under [Global options](#global-options).
 * `-j, --num-threads <THREADS>`
     Number of threads to use during execution (default is # cores)
 
+* `--sandbox`
+    Execute every action in a fresh networkless Firecracker microVM
+
 * `--local-only`
     Enable only local execution. Will reject actions that cannot execute locally
 
@@ -3193,6 +3205,9 @@ Common options are documented under [Global options](#global-options).
 
 * `-j, --num-threads <THREADS>`
     Number of threads to use during execution (default is # cores)
+
+* `--sandbox`
+    Execute every action in a fresh networkless Firecracker microVM
 
 * `--local-only`
     Enable only local execution. Will reject actions that cannot execute locally
@@ -4794,6 +4809,9 @@ Common options are documented under [Global options](#global-options).
 
 * `-j, --num-threads <THREADS>`
     Number of threads to use during execution (default is # cores)
+
+* `--sandbox`
+    Execute every action in a fresh networkless Firecracker microVM
 
 * `--local-only`
     Enable only local execution. Will reject actions that cannot execute locally

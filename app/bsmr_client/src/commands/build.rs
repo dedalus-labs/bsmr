@@ -549,6 +549,14 @@ mod tests {
     }
 
     #[test]
+    fn sandbox_is_one_flag_and_conflicts_with_remote_execution() -> bsmr_error::Result<()> {
+        assert!(parse(&["--sandbox"])?.build_opts.to_proto().sandbox);
+        assert_matches!(parse(&["--sandbox", "--remote-only"]), Err(..));
+        assert_matches!(parse(&["--sandbox", "--prefer-remote"]), Err(..));
+        Ok(())
+    }
+
+    #[test]
     fn infos_noop() -> bsmr_error::Result<()> {
         let opts = parse(&[
             "--skip-test-info",

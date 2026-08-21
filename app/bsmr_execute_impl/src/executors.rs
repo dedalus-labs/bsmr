@@ -18,6 +18,7 @@ pub mod action_cache;
 pub mod action_cache_upload_permission_checker;
 pub mod caching;
 pub(crate) mod empty_action_result;
+pub mod firecracker;
 pub mod hybrid;
 pub mod local;
 pub mod local_cache;

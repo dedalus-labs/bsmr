@@ -1,0 +1,73 @@
+# ===----------------------------------------------------------------------===
+# Copyright (c) 2026 Dedalus Labs, Inc. and its contributors
+# SPDX-License-Identifier: Apache-2.0
+# ===----------------------------------------------------------------------===
+
+# Defines the protocol shared by BSMR's Firecracker host and guest components.
+
+load("@bsmr_build//rules:rust.bzl", "rust_binary", "rust_library")
+
+oncall("build_infra")
+
+rust_library(
+    name = "bsmr_sandbox",
+    srcs = ["src/lib.rs"],
+    deps = [
+        "bsmr_build//third-party/rust:serde",
+        "bsmr_build//third-party/rust:serde_json",
+        "bsmr_build//third-party/rust:sha2",
+        "bsmr_build//third-party/rust:tar",
+        "bsmr_build//third-party/rust:thiserror",
+    ],
+)
+
+rust_binary(
+    name = "bsmr-sandbox-bundle",
+    srcs = ["src/bin/bsmr-sandbox-bundle.rs"],
+    crate = "bsmr_sandbox_bundle",
+    crate_root = "src/bin/bsmr-sandbox-bundle.rs",
+    deps = [
+        ":bsmr_sandbox",
+        "bsmr_build//third-party/rust:clap",
+        "bsmr_build//third-party/rust:serde_json",
+        "bsmr_build//third-party/rust:sha2",
+    ],
+)
+
+rust_binary(
+    name = "bsmr-sandbox-guest",
+    srcs = ["src/bin/bsmr-sandbox-guest.rs"],
+    crate = "bsmr_sandbox_guest",
+    crate_root = "src/bin/bsmr-sandbox-guest.rs",
+    link_style = "static",
+    deps = [
+        ":bsmr_sandbox",
+        "bsmr_build//third-party/rust:serde_json",
+        "bsmr_build//third-party/rust:tar",
+        "bsmr_build//third-party/rust:thiserror",
+    ] + select({
+        "DEFAULT": [],
+        "ovr_config//os:linux": ["bsmr_build//third-party/rust:nix"],
+    }),
+)
+
+rust_binary(
+    name = "bsmr-sandboxd",
+    srcs = ["src/bin/bsmr-sandboxd.rs"],
+    crate = "bsmr_sandboxd",
+    crate_root = "src/bin/bsmr-sandboxd.rs",
+    deps = [
+        ":bsmr_sandbox",
+        "bsmr_build//third-party/rust:serde_json",
+        "bsmr_build//third-party/rust:thiserror",
+    ] + select({
+        "DEFAULT": [],
+        "ovr_config//os:linux": [
+            "bsmr_build//third-party/rust:clap",
+            "bsmr_build//third-party/rust:httparse",
+            "bsmr_build//third-party/rust:nix",
+            "bsmr_build//third-party/rust:rustix",
+            "bsmr_build//third-party/rust:signal-hook",
+        ],
+    }),
+)

@@ -57,6 +57,8 @@ use bsmr_execute_impl::executors::action_cache::ActionCacheChecker;
 use bsmr_execute_impl::executors::action_cache::RemoteDepFileCacheChecker;
 use bsmr_execute_impl::executors::action_cache_upload_permission_checker::ActionCacheUploadPermissionChecker;
 use bsmr_execute_impl::executors::caching::CacheUploader;
+use bsmr_execute_impl::executors::firecracker::FirecrackerExecutor;
+use bsmr_execute_impl::executors::firecracker::sandbox_platform_properties;
 use bsmr_execute_impl::executors::hybrid::FallbackTracker;
 use bsmr_execute_impl::executors::hybrid::HybridExecutor;
 use bsmr_execute_impl::executors::local::ForkserverAccess;
@@ -106,6 +108,7 @@ pub struct CommandExecutorFactory {
     deduplicate_get_digests_ttl_calls: bool,
     output_trees_download_config: OutputTreesDownloadConfig,
     daemon_id: DaemonId,
+    firecracker: Option<Arc<FirecrackerExecutor>>,
 }
 
 impl CommandExecutorFactory {
@@ -132,6 +135,7 @@ impl CommandExecutorFactory {
         deduplicate_get_digests_ttl_calls: bool,
         output_trees_download_config: OutputTreesDownloadConfig,
         daemon_id: DaemonId,
+        firecracker: Option<Arc<FirecrackerExecutor>>,
     ) -> Self {
         let cache_upload_permission_checker = Arc::new(ActionCacheUploadPermissionChecker::new());
 
@@ -160,6 +164,7 @@ impl CommandExecutorFactory {
             deduplicate_get_digests_ttl_calls,
             output_trees_download_config,
             daemon_id,
+            firecracker,
         }
     }
 
@@ -239,9 +244,37 @@ impl HasCommandExecutor for CommandExecutorFactory {
                         blocking_executor: self.blocking_executor.dupe(),
                         cache,
                     })
-                };
+            };
             Ok((checker, uploader))
         };
+
+        if let Some(firecracker) = &self.firecracker {
+            if self.strategy.ban_local() {
+                return Err(ExecutorCompatibilityError::LocalIncompatible(self.strategy).into());
+            }
+            let platform = remote_execution::Platform {
+                properties: sandbox_platform_properties(firecracker.environment_digest())
+                    .into_iter()
+                    .map(|(name, value)| remote_execution::Property {
+                        name: name.to_owned(),
+                        value: value.to_owned(),
+                    })
+                    .collect(),
+            };
+            return Ok(CommandExecutorResponse {
+                executor: Arc::new(
+                    local_executor_new(&LocalExecutorOptions {
+                        use_persistent_workers: false,
+                    })
+                    .with_firecracker(firecracker.dupe()),
+                ),
+                platform,
+                action_cache_checker: Arc::new(NoOpCommandOptionalExecutor {}),
+                remote_dep_file_cache_checker: Arc::new(NoOpCommandOptionalExecutor {}),
+                cache_uploader: Arc::new(NoOpCacheUploader {}),
+                output_trees_download_config: self.output_trees_download_config.dupe(),
+            });
+        }
 
         if !bsmr_core::is_open_source() && !cfg!(fbcode_build) {
             static WARN: OnceLock<()> = OnceLock::new();

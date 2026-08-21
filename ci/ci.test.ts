@@ -15,9 +15,22 @@ import { ci } from "./ci.ts";
 import { docs } from "./docs.ts";
 
 const jobs = ci.jobs;
-const rustLanes = ["rust_audit", "rust_quality", "rust_tests", "rust_self_host"] as const;
+const rustLanes = [
+	"rust_audit",
+	"rust_quality",
+	"rust_tests",
+	"rust_self_host",
+	"rust_sandbox",
+] as const;
 const trustedCiRun =
 	"github.repository == 'dedalus-labs/bsmr' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository)";
+
+function unsafeScript(name: string): string {
+	const step = jobs.rust_sandbox?.steps.find((candidate) => candidate.name === name);
+	assert.ok(step !== undefined && "run" in step);
+	assert.equal(step.run.kind, "unsafe-shell");
+	return step.run.kind === "unsafe-shell" ? step.run.script : "";
+}
 
 test("Rust remains the required aggregate check", () => {
 	assert.equal(jobs.rust?.name, "Rust");
@@ -93,6 +106,17 @@ test("Rust compilation uses sized Blacksmith runners", () => {
 	assert.equal(jobs.rust_quality?.["runs-on"], "blacksmith-8vcpu-ubuntu-2404");
 	assert.equal(jobs.rust_tests?.["runs-on"], "blacksmith-16vcpu-ubuntu-2404");
 	assert.equal(jobs.rust_self_host?.["runs-on"], "blacksmith-8vcpu-ubuntu-2404");
+	assert.equal(jobs.rust_sandbox?.["runs-on"], "ubuntu-24.04");
+	const kvm = unsafeScript("Initialize nested KVM");
+	assert.match(kvm, /if ! test -c \/dev\/kvm/);
+	assert.match(kvm, /setfacl -m "u:\$\(id -un\):rw" \/dev\/kvm/);
+	assert.match(kvm, /sudo modprobe kvm_intel/);
+	assert.match(kvm, /sudo modprobe kvm_amd/);
+	assert.match(kvm, /test -w \/dev\/kvm/);
+	assert.match(
+		unsafeScript("Build sandbox components"),
+		/sandbox_probe\.rs -o "\$RUNNER_TEMP\/sandbox-probe"/,
+	);
 	assert.ok(
 		jobs.rust_self_host?.steps.some(
 			(step) =>
@@ -101,6 +125,34 @@ test("Rust compilation uses sized Blacksmith runners", () => {
 				step.run.args.includes("--lint-starlark-only"),
 		),
 	);
+});
+
+test("Firecracker cleanup is gated by acquired resources", () => {
+	const steps = jobs.rust_sandbox?.steps ?? [];
+	const stop = steps.find((step) => step.name === "Stop isolated launcher");
+	const verify = steps.find(
+		(step) => step.name === "Verify complete sandbox cleanup",
+	);
+	const remove = steps.find((step) => step.name === "Remove host sentinel");
+
+	assert.match(stop?.if ?? "", /steps\.sandbox_launcher\.outputs\.started == 'true'/);
+	assert.equal(stop?.if, verify?.if);
+	assert.match(remove?.if ?? "", /steps\.host_sentinel\.outputs\.created == 'true'/);
+});
+
+test("Firecracker installs its bundle beneath the immutable system prefix", () => {
+	const steps = jobs.rust_sandbox?.steps ?? [];
+	const assemble = steps.find(
+		(step) => step.name === "Assemble pinned execution bundle",
+	);
+	const launcher = steps.find((step) => step.name === "Start isolated launcher");
+
+	assert.ok(assemble !== undefined && "run" in assemble);
+	assert.equal(assemble.run.kind, "unsafe-shell");
+	assert.match(unsafeScript("Assemble pinned execution bundle"), /\/usr\/local\/share\/bsmr\/firecracker/);
+	assert.ok(launcher !== undefined && "run" in launcher);
+	assert.equal(launcher.run.kind, "unsafe-shell");
+	assert.match(unsafeScript("Start isolated launcher"), /\/usr\/local\/share\/bsmr\/firecracker/);
 });
 
 test("self-hosting keeps the CLI reference derived from clap", () => {
