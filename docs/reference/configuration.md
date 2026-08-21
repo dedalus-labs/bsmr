@@ -30,6 +30,7 @@ create a second project.
 Edit `.bsmr` when you need one of these advanced features:
 
 - remote execution or a remote cache;
+- a custom local sandbox bundle;
 - a custom execution platform;
 - an additional cell;
 - a custom Starlark prelude or toolchain; or
@@ -40,3 +41,6 @@ Configuration participates in action keys and can invalidate cached work.
 
 Run `bsmr --help` to discover advanced commands. Their exact flags and defaults
 are recorded in the [command-line reference](cli.md).
+
+The `[sandbox]` section and `--sandbox` workflow are documented in
+[Sandboxed builds](../users/sandboxing.md).

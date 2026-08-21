@@ -102,6 +102,7 @@ rust_library(
         "root//packages/rust/gazebo/dupe:dupe",
         "root//packages/rust/gazebo/gazebo:gazebo",
         "root//packages/rust/host_sharing:host_sharing",
+        "root//packages/rust/remote_execution:remote_execution",
         "root//packages/rust/starlark/starlark:starlark",
         "root//packages/rust/starlark/starlark_lsp:starlark_lsp",
         # @oss-disable[end= ]: "//common/rust/shed/detect_eden:detect_eden",

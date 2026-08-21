@@ -28,6 +28,7 @@ exclude_docs: |
   !/concepts/test-observability.md
   !/users/
   /users/*
+  !/users/sandboxing.md
   !/users/languages/
   /users/languages/*
   !/users/languages/typescript/
@@ -104,6 +105,8 @@ plugins:
           - concepts/caching.md
           - concepts/test-observability.md
           - roadmap.md
+        Execution:
+          - users/sandboxing.md
         Reference:
           - reference/cli.md
           - reference/configuration.md
@@ -152,6 +155,8 @@ nav:
   - Concepts:
       - Caching and Hermeticity: concepts/caching.md
       - Test Observability: concepts/test-observability.md
+  - Execution:
+      - Sandboxed builds: users/sandboxing.md
   - Reference:
       - Overview: reference/index.md
       - Command line: reference/cli.md

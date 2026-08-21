@@ -7,7 +7,7 @@
 
 import {
 	GitHubJobResult, always, and, command, eq, expr, format, github, job, needsOutput,
-	needsResultIs, not, or, stepOutput, uses, workflow,
+	needsResultIs, not, or, stepOutput, unsafeShell, uses, workflow,
 	type GitHubJobResultValue,
 } from "@dedalus-labs/hollywood";
 
@@ -31,6 +31,14 @@ const dotSlashUrl =
 	"https://github.com/facebook/dotslash/releases/download/v0.5.9/dotslash-linux-musl.x86_64.v0.5.9.tar.gz";
 const dotSlashSha256 =
 	"4c75c6eb7890ae35993b962073f6d9bbe78b42b81a5691303ad70f63bfbf7196";
+const firecrackerVersion = "1.16.1";
+const firecrackerArchiveUrl = `https://github.com/firecracker-microvm/firecracker/releases/download/v${firecrackerVersion}/firecracker-v${firecrackerVersion}-x86_64.tgz`;
+const firecrackerArchiveSha256 =
+	"382a02a869e4d6d5cb14c40577f9545e8458021ea8b0b2d3fc10ec14d9c242e6";
+const firecrackerKernelUrl =
+	"https://s3.amazonaws.com/spec.ccfc.min/firecracker-ci/v1.15/x86_64/vmlinux-6.1.155";
+const firecrackerKernelSha256 =
+	"e20e46d0c36c55c0d1014eb20576171b3f3d922260d9f792017aeff53af3d4f2";
 const checkout = {
 	name: "Checkout",
 	uses: "actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1",
@@ -77,7 +85,13 @@ const rustEnvironment = {
 const rustPermissions = {
 	contents: "read",
 } as const;
-const rustLaneIds = ["rust_audit", "rust_quality", "rust_tests", "rust_self_host"] as const;
+const rustLaneIds = [
+	"rust_audit",
+	"rust_quality",
+	"rust_tests",
+	"rust_self_host",
+	"rust_sandbox",
+] as const;
 const rustAffected = eq(needsOutput("affected", "rust"), "true");
 const rustLanesHave = (result: GitHubJobResultValue) =>
 	and(
@@ -85,6 +99,7 @@ const rustLanesHave = (result: GitHubJobResultValue) =>
 		needsResultIs("rust_quality", result),
 		needsResultIs("rust_tests", result),
 		needsResultIs("rust_self_host", result),
+		needsResultIs("rust_sandbox", result),
 	);
 const rustResultsAccepted = and(
 	needsResultIs("affected", GitHubJobResult.Success),
@@ -359,6 +374,124 @@ export const ci = workflow({
 					name: "Check CLI reference",
 					with: { bsmr: "target/debug/bsmr", expected: "docs/reference/cli.md" },
 				}),
+			],
+		}),
+		rust_sandbox: job({
+			name: "Rust / Firecracker sandbox",
+			needs: "affected",
+			if: and(trustedCiRun, rustAffected),
+			"runs-on": "ubuntu-24.04",
+			"timeout-minutes": 20,
+			permissions: rustPermissions,
+			env: rustEnvironment,
+			steps: [
+				checkout,
+				installRust,
+				rustCache(false),
+				{
+					name: "Initialize nested KVM",
+					run: unsafeShell([
+						'if ! test -c /dev/kvm; then sudo modprobe kvm; if grep -qw vmx /proc/cpuinfo; then sudo modprobe kvm_intel; elif grep -qw svm /proc/cpuinfo; then sudo modprobe kvm_amd; else echo "x86_64 CPU exposes neither VMX nor SVM" >&2; exit 1; fi; fi',
+						'sudo setfacl -m "u:$(id -un):rw" /dev/kvm',
+						"test -c /dev/kvm",
+						"test -r /dev/kvm",
+						"test -w /dev/kvm",
+					].join("\n")),
+				},
+				{
+					name: "Build sandbox components",
+					run: unsafeShell([
+						"rustup target add x86_64-unknown-linux-musl",
+						"cargo build --locked -p bsmr_sandbox --bin bsmr-sandboxd --bin bsmr-sandbox-bundle",
+						"cargo build --locked -p bsmr_sandbox --bin bsmr-sandbox-guest --target x86_64-unknown-linux-musl",
+						'rustc --target x86_64-unknown-linux-musl test/fixtures/sandbox_probe.rs -o "$RUNNER_TEMP/sandbox-probe"',
+					].join("\n")),
+				},
+				{
+					name: "Assemble pinned execution bundle",
+					run: unsafeShell([
+						'mkdir -p "$RUNNER_TEMP/firecracker-release" "$RUNNER_TEMP/firecracker-bundle" "$RUNNER_TEMP/firecracker-rootfs/dev" "$RUNNER_TEMP/firecracker-rootfs/proc" "$RUNNER_TEMP/firecracker-rootfs/sbin" "$RUNNER_TEMP/firecracker-rootfs/workspace"',
+						`curl --proto '=https' --tlsv1.2 --fail --location --silent --show-error ${firecrackerArchiveUrl} --output "$RUNNER_TEMP/firecracker.tgz"`,
+						`echo "${firecrackerArchiveSha256}  $RUNNER_TEMP/firecracker.tgz" | sha256sum --check`,
+						'tar -xzf "$RUNNER_TEMP/firecracker.tgz" -C "$RUNNER_TEMP/firecracker-release"',
+						`install -m 0555 "$RUNNER_TEMP/firecracker-release/release-v${firecrackerVersion}-x86_64/firecracker-v${firecrackerVersion}-x86_64" "$RUNNER_TEMP/firecracker-bundle/firecracker"`,
+						`install -m 0555 "$RUNNER_TEMP/firecracker-release/release-v${firecrackerVersion}-x86_64/jailer-v${firecrackerVersion}-x86_64" "$RUNNER_TEMP/firecracker-bundle/jailer"`,
+						`curl --proto '=https' --tlsv1.2 --fail --location --silent --show-error ${firecrackerKernelUrl} --output "$RUNNER_TEMP/firecracker-bundle/kernel"`,
+						`echo "${firecrackerKernelSha256}  $RUNNER_TEMP/firecracker-bundle/kernel" | sha256sum --check`,
+						'install -m 0555 target/x86_64-unknown-linux-musl/debug/bsmr-sandbox-guest "$RUNNER_TEMP/firecracker-rootfs/sbin/bsmr-sandbox-guest"',
+						'truncate --size 64M "$RUNNER_TEMP/firecracker-bundle/rootfs"',
+						'mkfs.ext4 -q -F -d "$RUNNER_TEMP/firecracker-rootfs" "$RUNNER_TEMP/firecracker-bundle/rootfs"',
+						`target/debug/bsmr-sandbox-bundle --directory "$RUNNER_TEMP/firecracker-bundle" --firecracker-version ${firecrackerVersion} --architecture x86_64`,
+						'sudo install -d -o root -g root -m 0755 /usr/local/share/bsmr/firecracker /usr/local/libexec',
+						'sudo install -o root -g root -m 0444 "$RUNNER_TEMP/firecracker-bundle/manifest.json" "$RUNNER_TEMP/firecracker-bundle/kernel" "$RUNNER_TEMP/firecracker-bundle/rootfs" /usr/local/share/bsmr/firecracker/',
+						'sudo install -o root -g root -m 0555 "$RUNNER_TEMP/firecracker-bundle/firecracker" "$RUNNER_TEMP/firecracker-bundle/jailer" /usr/local/share/bsmr/firecracker/',
+						"sudo install -o root -g root -m 0555 target/debug/bsmr-sandboxd /usr/local/libexec/bsmr-sandboxd",
+					].join("\n")),
+				},
+				{
+					name: "Create host sentinel",
+					id: "host_sentinel",
+					run: unsafeShell([
+						"! getent passwd 61000",
+						"! getent group 61000",
+						"sudo install -o root -g root -m 0400 /dev/null /bsmr-host-sentinel",
+						'echo "created=true" >> "$GITHUB_OUTPUT"',
+					].join("\n")),
+				},
+				{
+					name: "Start isolated launcher",
+					id: "sandbox_launcher",
+					run: unsafeShell([
+						'sudo systemd-run --unit=bsmr-sandboxd --property=KillMode=control-group -- /usr/local/libexec/bsmr-sandboxd --bundle /usr/local/share/bsmr/firecracker/manifest.json --socket /run/bsmr/sandboxd.sock --jail-root /var/lib/bsmr/jailer --uid-base 61000 --gid-base 61000 --socket-gid "$(id -g)" --max-vms 4',
+						'echo "started=true" >> "$GITHUB_OUTPUT"',
+					].join("\n")),
+				},
+				{
+					name: "Run real-microVM conformance corpus",
+					env: {
+						BSMR_SANDBOX_BUNDLE: "/usr/local/share/bsmr/firecracker/manifest.json",
+						BSMR_SANDBOX_PROBE: format("{0}/sandbox-probe", runnerTemp),
+						BSMR_SANDBOX_SOCKET: "/run/bsmr/sandboxd.sock",
+					},
+					run: command({
+						file: "cargo",
+						args: [
+							"test",
+							"--locked",
+							"-p",
+							"bsmr_sandbox",
+							"--test",
+							"firecracker",
+							"firecracker_conformance",
+							"--",
+							"--ignored",
+							"--exact",
+							"--nocapture",
+						],
+					}),
+				},
+				{
+					name: "Stop isolated launcher",
+					if: and(always(), eq(stepOutput("sandbox_launcher", "started"), "true")),
+					run: command({
+						file: "sudo",
+						args: ["systemctl", "stop", "bsmr-sandboxd.service"],
+					}),
+				},
+				{
+					name: "Verify complete sandbox cleanup",
+					if: and(always(), eq(stepOutput("sandbox_launcher", "started"), "true")),
+					run: unsafeShell([
+						"sudo journalctl --unit=bsmr-sandboxd.service --no-pager",
+						'test -z "$(sudo find /var/lib/bsmr/jailer -mindepth 2 -print -quit)"',
+						'if test -d /sys/fs/cgroup/bsmr; then test -z "$(sudo find /sys/fs/cgroup/bsmr -mindepth 1 -type d -print -quit)"; fi',
+					].join("\n")),
+				},
+				{
+					name: "Remove host sentinel",
+					if: and(always(), eq(stepOutput("host_sentinel", "created"), "true")),
+					run: command({ file: "sudo", args: ["unlink", "/bsmr-host-sentinel"] }),
+				},
 			],
 		}),
 		rust: job({

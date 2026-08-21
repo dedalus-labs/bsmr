@@ -244,6 +244,94 @@ jobs:
         with:
           bsmr: target/debug/bsmr
           expected: docs/reference/cli.md
+  rust_sandbox:
+    name: Rust / Firecracker sandbox
+    needs: affected
+    if: ${{ github.repository == 'dedalus-labs/bsmr' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository) && needs.affected.outputs.rust == 'true' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    permissions:
+      contents: read
+    env:
+      CARGO_INCREMENTAL: "0"
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - name: Install pinned Rust toolchain
+        run: rustup toolchain install nightly-2026-04-11 --profile minimal --component clippy --component llvm-tools-preview --component rust-src --no-self-update
+        shell: bash
+      - name: Restore Rust cache
+        uses: Swatinem/rust-cache@e18b497796c12c097a38f9edb9d0641fb99eee32
+        with:
+          prefix-key: bsmr-v1
+          save-if: false
+          shared-key: rust
+      - name: Initialize nested KVM
+        run: |-
+          if ! test -c /dev/kvm; then sudo modprobe kvm; if grep -qw vmx /proc/cpuinfo; then sudo modprobe kvm_intel; elif grep -qw svm /proc/cpuinfo; then sudo modprobe kvm_amd; else echo "x86_64 CPU exposes neither VMX nor SVM" >&2; exit 1; fi; fi
+          sudo setfacl -m "u:$(id -un):rw" /dev/kvm
+          test -c /dev/kvm
+          test -r /dev/kvm
+          test -w /dev/kvm
+      - name: Build sandbox components
+        run: |-
+          rustup target add x86_64-unknown-linux-musl
+          cargo build --locked -p bsmr_sandbox --bin bsmr-sandboxd --bin bsmr-sandbox-bundle
+          cargo build --locked -p bsmr_sandbox --bin bsmr-sandbox-guest --target x86_64-unknown-linux-musl
+          rustc --target x86_64-unknown-linux-musl test/fixtures/sandbox_probe.rs -o "$RUNNER_TEMP/sandbox-probe"
+      - name: Assemble pinned execution bundle
+        run: |-
+          mkdir -p "$RUNNER_TEMP/firecracker-release" "$RUNNER_TEMP/firecracker-bundle" "$RUNNER_TEMP/firecracker-rootfs/dev" "$RUNNER_TEMP/firecracker-rootfs/proc" "$RUNNER_TEMP/firecracker-rootfs/sbin" "$RUNNER_TEMP/firecracker-rootfs/workspace"
+          curl --proto '=https' --tlsv1.2 --fail --location --silent --show-error https://github.com/firecracker-microvm/firecracker/releases/download/v1.16.1/firecracker-v1.16.1-x86_64.tgz --output "$RUNNER_TEMP/firecracker.tgz"
+          echo "382a02a869e4d6d5cb14c40577f9545e8458021ea8b0b2d3fc10ec14d9c242e6  $RUNNER_TEMP/firecracker.tgz" | sha256sum --check
+          tar -xzf "$RUNNER_TEMP/firecracker.tgz" -C "$RUNNER_TEMP/firecracker-release"
+          install -m 0555 "$RUNNER_TEMP/firecracker-release/release-v1.16.1-x86_64/firecracker-v1.16.1-x86_64" "$RUNNER_TEMP/firecracker-bundle/firecracker"
+          install -m 0555 "$RUNNER_TEMP/firecracker-release/release-v1.16.1-x86_64/jailer-v1.16.1-x86_64" "$RUNNER_TEMP/firecracker-bundle/jailer"
+          curl --proto '=https' --tlsv1.2 --fail --location --silent --show-error https://s3.amazonaws.com/spec.ccfc.min/firecracker-ci/v1.15/x86_64/vmlinux-6.1.155 --output "$RUNNER_TEMP/firecracker-bundle/kernel"
+          echo "e20e46d0c36c55c0d1014eb20576171b3f3d922260d9f792017aeff53af3d4f2  $RUNNER_TEMP/firecracker-bundle/kernel" | sha256sum --check
+          install -m 0555 target/x86_64-unknown-linux-musl/debug/bsmr-sandbox-guest "$RUNNER_TEMP/firecracker-rootfs/sbin/bsmr-sandbox-guest"
+          truncate --size 64M "$RUNNER_TEMP/firecracker-bundle/rootfs"
+          mkfs.ext4 -q -F -d "$RUNNER_TEMP/firecracker-rootfs" "$RUNNER_TEMP/firecracker-bundle/rootfs"
+          target/debug/bsmr-sandbox-bundle --directory "$RUNNER_TEMP/firecracker-bundle" --firecracker-version 1.16.1 --architecture x86_64
+          sudo install -d -o root -g root -m 0755 /usr/local/share/bsmr/firecracker /usr/local/libexec
+          sudo install -o root -g root -m 0444 "$RUNNER_TEMP/firecracker-bundle/manifest.json" "$RUNNER_TEMP/firecracker-bundle/kernel" "$RUNNER_TEMP/firecracker-bundle/rootfs" /usr/local/share/bsmr/firecracker/
+          sudo install -o root -g root -m 0555 "$RUNNER_TEMP/firecracker-bundle/firecracker" "$RUNNER_TEMP/firecracker-bundle/jailer" /usr/local/share/bsmr/firecracker/
+          sudo install -o root -g root -m 0555 target/debug/bsmr-sandboxd /usr/local/libexec/bsmr-sandboxd
+      - name: Create host sentinel
+        id: host_sentinel
+        run: |-
+          ! getent passwd 61000
+          ! getent group 61000
+          sudo install -o root -g root -m 0400 /dev/null /bsmr-host-sentinel
+          echo "created=true" >> "$GITHUB_OUTPUT"
+      - name: Start isolated launcher
+        id: sandbox_launcher
+        run: |-
+          sudo systemd-run --unit=bsmr-sandboxd --property=KillMode=control-group -- /usr/local/libexec/bsmr-sandboxd --bundle /usr/local/share/bsmr/firecracker/manifest.json --socket /run/bsmr/sandboxd.sock --jail-root /var/lib/bsmr/jailer --uid-base 61000 --gid-base 61000 --socket-gid "$(id -g)" --max-vms 4
+          echo "started=true" >> "$GITHUB_OUTPUT"
+      - name: Run real-microVM conformance corpus
+        env:
+          BSMR_SANDBOX_BUNDLE: /usr/local/share/bsmr/firecracker/manifest.json
+          BSMR_SANDBOX_PROBE: ${{ format('{0}/sandbox-probe', runner.temp) }}
+          BSMR_SANDBOX_SOCKET: /run/bsmr/sandboxd.sock
+        run: cargo test --locked -p bsmr_sandbox --test firecracker firecracker_conformance -- --ignored --exact --nocapture
+        shell: bash
+      - name: Stop isolated launcher
+        if: ${{ always() && steps.sandbox_launcher.outputs.started == 'true' }}
+        run: sudo systemctl stop bsmr-sandboxd.service
+        shell: bash
+      - name: Verify complete sandbox cleanup
+        if: ${{ always() && steps.sandbox_launcher.outputs.started == 'true' }}
+        run: |-
+          sudo journalctl --unit=bsmr-sandboxd.service --no-pager
+          test -z "$(sudo find /var/lib/bsmr/jailer -mindepth 2 -print -quit)"
+          if test -d /sys/fs/cgroup/bsmr; then test -z "$(sudo find /sys/fs/cgroup/bsmr -mindepth 1 -type d -print -quit)"; fi
+      - name: Remove host sentinel
+        if: ${{ always() && steps.host_sentinel.outputs.created == 'true' }}
+        run: sudo unlink /bsmr-host-sentinel
+        shell: bash
   rust:
     name: Rust
     if: ${{ always() && github.repository == 'dedalus-labs/bsmr' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository) }}
@@ -253,15 +341,16 @@ jobs:
       - rust_quality
       - rust_tests
       - rust_self_host
+      - rust_sandbox
     runs-on: ubuntu-24.04
     timeout-minutes: 5
     permissions: {}
     steps:
       - name: Accept complete Rust CI
-        if: ${{ needs.affected.result == 'success' && (needs.rust_audit.result == 'success' && needs.rust_quality.result == 'success' && needs.rust_tests.result == 'success' && needs.rust_self_host.result == 'success' || needs.rust_audit.result == 'skipped' && needs.rust_quality.result == 'skipped' && needs.rust_tests.result == 'skipped' && needs.rust_self_host.result == 'skipped') }}
+        if: ${{ needs.affected.result == 'success' && (needs.rust_audit.result == 'success' && needs.rust_quality.result == 'success' && needs.rust_tests.result == 'success' && needs.rust_self_host.result == 'success' && needs.rust_sandbox.result == 'success' || needs.rust_audit.result == 'skipped' && needs.rust_quality.result == 'skipped' && needs.rust_tests.result == 'skipped' && needs.rust_self_host.result == 'skipped' && needs.rust_sandbox.result == 'skipped') }}
         run: "true"
         shell: bash
       - name: Reject incomplete Rust CI
-        if: ${{ !(needs.affected.result == 'success' && (needs.rust_audit.result == 'success' && needs.rust_quality.result == 'success' && needs.rust_tests.result == 'success' && needs.rust_self_host.result == 'success' || needs.rust_audit.result == 'skipped' && needs.rust_quality.result == 'skipped' && needs.rust_tests.result == 'skipped' && needs.rust_self_host.result == 'skipped')) }}
+        if: ${{ !(needs.affected.result == 'success' && (needs.rust_audit.result == 'success' && needs.rust_quality.result == 'success' && needs.rust_tests.result == 'success' && needs.rust_self_host.result == 'success' && needs.rust_sandbox.result == 'success' || needs.rust_audit.result == 'skipped' && needs.rust_quality.result == 'skipped' && needs.rust_tests.result == 'skipped' && needs.rust_self_host.result == 'skipped' && needs.rust_sandbox.result == 'skipped')) }}
         run: "false"
         shell: bash

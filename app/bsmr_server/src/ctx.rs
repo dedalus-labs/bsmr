@@ -17,6 +17,7 @@
 use std::collections::BTreeSet;
 use std::io::BufWriter;
 use std::marker::PhantomData;
+use std::path::PathBuf;
 use std::sync::Arc;
 use std::time::Duration;
 use std::time::Instant;
@@ -87,6 +88,7 @@ use bsmr_execute::re::client::RemoteExecutionClient;
 use bsmr_execute::re::manager::ReConnectionHandle;
 use bsmr_execute::re::manager::ReConnectionObserver;
 use bsmr_execute::re::output_trees_download_config::OutputTreesDownloadConfig;
+use bsmr_execute_impl::executors::firecracker::FirecrackerExecutor;
 use bsmr_execute_impl::executors::worker::WorkerPool;
 use bsmr_execute_impl::low_pass_filter::LowPassFilter;
 use bsmr_execute_impl::materializers::deferred::clean_stale::CleanStaleConfig;
@@ -432,6 +434,10 @@ impl<'a> ServerCommandContext<'a> {
             .build_options
             .as_ref()
             .is_some_and(|opts| opts.upload_all_actions);
+        let sandbox = self
+            .build_options
+            .as_ref()
+            .is_some_and(|options| options.sandbox);
 
         let (interpreter_platform, interpreter_architecture, interpreter_xcode_version) =
             host_info::get_host_info(
@@ -449,6 +455,7 @@ impl<'a> ServerCommandContext<'a> {
             re_connection,
             build_signals,
             upload_all_actions,
+            sandbox,
             skip_cache_read,
             skip_cache_write,
             keep_going: self
@@ -575,6 +582,7 @@ struct DiceCommandUpdater<'s, 'a: 's> {
     profile_event_listener: Option<Arc<FileWritingProfileEventListener>>,
     build_signals: BuildSignalsInstaller,
     upload_all_actions: bool,
+    sandbox: bool,
     run_action_knobs: RunActionKnobs,
     skip_cache_read: bool,
     skip_cache_write: bool,
@@ -887,6 +895,30 @@ impl DiceCommandUpdater<'_, '_> {
         if let Some(v) = &self.profile_event_listener {
             SetProfileEventListener::set(&mut data, v.clone());
         }
+        let firecracker = if self.sandbox {
+            let bundle = PathBuf::from(
+                root_config
+                    .get(BsmrconfigKeyRef {
+                        section: "sandbox",
+                        property: "bundle",
+                    })
+                    .unwrap_or("/usr/local/share/bsmr/firecracker/manifest.json"),
+            );
+            let launcher_socket = PathBuf::from(
+                root_config
+                    .get(BsmrconfigKeyRef {
+                        section: "sandbox",
+                        property: "launcher_socket",
+                    })
+                    .unwrap_or("/run/bsmr/sandboxd.sock"),
+            );
+            Some(Arc::new(FirecrackerExecutor::new(
+                &bundle,
+                &launcher_socket,
+            )?))
+        } else {
+            None
+        };
         data.set_command_executor(Box::new(CommandExecutorFactory::new(
             self.re_connection.dupe(),
             host_sharing_broker,
@@ -910,6 +942,7 @@ impl DiceCommandUpdater<'_, '_> {
             run_action_knobs.deduplicate_get_digests_ttl_calls,
             output_trees_download_config.dupe(),
             self.cmd_ctx.base_context.daemon.daemon_id.dupe(),
+            firecracker,
         )));
         data.set_blocking_executor(self.cmd_ctx.base_context.daemon.blocking_executor.dupe());
         data.set_http_client(self.cmd_ctx.base_context.daemon.http_client.dupe());

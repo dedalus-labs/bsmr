@@ -116,6 +116,7 @@ members = [
   "app/bsmr_query_parser",
   "app/bsmr_re_configuration",
   "app/bsmr_resource_control",
+  "app/bsmr_sandbox",
   "app/bsmr_server",
   "app/bsmr_server_commands",
   "app/bsmr_server_ctx",
@@ -266,6 +267,7 @@ bsmr_query_impls = { path = "app/bsmr_query_impls" }
 bsmr_query_parser = { path = "app/bsmr_query_parser" }
 bsmr_re_configuration = { path = "app/bsmr_re_configuration" }
 bsmr_resource_control = { path = "app/bsmr_resource_control" }
+bsmr_sandbox = { path = "app/bsmr_sandbox" }
 bsmr_server = { path = "app/bsmr_server" }
 bsmr_server_commands = { path = "app/bsmr_server_commands" }
 bsmr_server_ctx = { path = "app/bsmr_server_ctx" }
@@ -369,7 +371,7 @@ memchr = "2.8.3"
 memmap2 = "0.9.11"
 mimalloc = { version = "0.1.52", default-features = false }
 multimap = "0.8.3"
-nix = { version = "0.30.1", features = ["dir", "event", "hostname", "inotify", "ioctl", "mman", "mount", "net", "poll", "ptrace", "reboot", "resource", "sched", "signal", "term", "time", "user", "zerocopy"] }
+nix = { version = "0.30.1", features = ["dir", "event", "fs", "hostname", "inotify", "ioctl", "mman", "mount", "net", "poll", "ptrace", "reboot", "resource", "sched", "signal", "socket", "term", "time", "uio", "user", "zerocopy"] }
 nom = "8"
 nom-language = "0.1"
 notify = "8.2.0"
@@ -406,6 +408,7 @@ rustc-hash = "2.1.3"
 rustls = { version = "0.23.37", features = ["ring"] }
 rustls-native-certs = "0.8.3"
 rustls-pki-types = { version = "1.15.0", features = ["alloc", "std"] }
+rustix = { version = "1.1.4", features = ["fs", "net", "process"] }
 scopeguard = "1.2.0"
 sequence_trie = { version = "0.3.6", features = ["serde"] }
 serde = { version = "1.0.219", features = ["derive", "rc"] }
@@ -414,6 +417,7 @@ serde_path_to_error = "0.1.20"
 setsketch = { path = "packages/rust/setsketch" }
 sha1 = "0.10.7"
 sha2 = "0.10.6"
+signal-hook = "0.3.18"
 shlex = "1.3"
 similar = { version = "2.2.0", features = ["bytes", "inline"] }
 siphasher = "1.0.3"

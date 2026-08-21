@@ -124,6 +124,13 @@ pub struct CommonBuildOptions {
     #[clap(short = 'j', long = "num-threads", value_name = "THREADS")]
     pub num_threads: Option<u32>,
 
+    /// Execute every action in a fresh networkless Firecracker microVM.
+    #[clap(
+        long,
+        conflicts_with_all = ["remote_only", "prefer_local", "prefer_remote", "unstable_no_execution"]
+    )]
+    sandbox: bool,
+
     /// Enable only local execution. Will reject actions that cannot execute locally.
     #[clap(long, group = "build_strategy", env = bsmr_env_name!("BUCK_OFFLINE_BUILD"), value_parser = FalseyValueParser::new())]
     local_only: bool,
@@ -271,6 +278,7 @@ impl CommonBuildOptions {
             } else {
                 ExecutionStrategy::Default as i32
             },
+            sandbox: self.sandbox,
             unstable_print_build_report,
             unstable_build_report_filename,
             eager_dep_files: self.eager_dep_files,

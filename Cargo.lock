@@ -2052,6 +2052,7 @@ dependencies = [
  "bsmr_hash",
  "bsmr_http",
  "bsmr_resource_control",
+ "bsmr_sandbox",
  "bsmr_util",
  "bsmr_worker_proto",
  "bsmr_wrapper_common",
@@ -2065,18 +2066,24 @@ dependencies = [
  "host_sharing",
  "hostname",
  "itertools 0.15.0",
+ "nix 0.30.1",
  "parking_lot 0.12.5",
  "pin-project",
  "prost",
  "regex",
  "remote_execution",
  "rusqlite",
+ "serde_json",
+ "sha2",
  "starlark_map",
+ "tar",
+ "tempfile",
  "tokio",
  "tokio-retry",
  "tokio-stream",
  "tonic",
  "tracing",
+ "uuid",
  "zstd",
 ]
 
@@ -2723,6 +2730,24 @@ dependencies = [
 ]
 
 [[package]]
+name = "bsmr_sandbox"
+version = "0.1.0"
+dependencies = [
+ "clap",
+ "httparse",
+ "nix 0.30.1",
+ "rustix 1.1.4",
+ "serde",
+ "serde_json",
+ "sha2",
+ "signal-hook",
+ "tar",
+ "tempfile",
+ "thiserror 2.0.20",
+ "uuid",
+]
+
+[[package]]
 name = "bsmr_server"
 version = "0.1.0"
 dependencies = [
@@ -2787,6 +2812,7 @@ dependencies = [
  "prost-types",
  "psutil",
  "rand 0.10.2",
+ "remote_execution",
  "serde_json",
  "shlex 1.3.0",
  "starlark",

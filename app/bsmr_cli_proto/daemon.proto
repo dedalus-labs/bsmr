@@ -450,6 +450,9 @@ message CommonBuildOptions {
   /// Materializes outputs for failed actions which ran on RE.
   bool materialize_failed_outputs = 20;
 
+  /// Execute every action in a fresh networkless Firecracker microVM.
+  bool sandbox = 21;
+
   // These should possibly be deleted and never become real options. Let's not
   // pollute the low ids (and then forever need a comment about them). The only
   // one of these that might stick around is print_build_report, it's unclear if

@@ -62,6 +62,7 @@ use bsmr_execute::execute::manager::CommandExecutionManager;
 use bsmr_execute::execute::manager::CommandExecutionManagerExt;
 use bsmr_execute::execute::manager::CommandExecutionManagerWithClaim;
 use bsmr_execute::execute::output::CommandStdStreams;
+use bsmr_execute::execute::prepared::PreparedAction;
 use bsmr_execute::execute::prepared::PreparedCommand;
 use bsmr_execute::execute::prepared::PreparedCommandExecutor;
 use bsmr_execute::execute::request::CommandExecutionInput;
@@ -115,6 +116,7 @@ use host_sharing::host_sharing::HostSharingGuard;
 use tokio_stream::wrappers::UnboundedReceiverStream;
 use tracing::info;
 
+use crate::executors::firecracker::FirecrackerExecutor;
 use crate::executors::worker::WorkerHandle;
 use crate::executors::worker::WorkerPool;
 use crate::incremental_actions_helper::get_incremental_path_map;
@@ -152,6 +154,13 @@ pub struct LocalExecutor {
     worker_pool: Option<Arc<WorkerPool>>,
     memory_tracker: Option<MemoryTrackerHandle>,
     daemon_id: DaemonId,
+    backend: LocalExecutionBackend,
+}
+
+#[derive(Clone)]
+enum LocalExecutionBackend {
+    Host,
+    Firecracker(Arc<FirecrackerExecutor>),
 }
 
 impl LocalExecutor {
@@ -180,7 +189,14 @@ impl LocalExecutor {
             worker_pool,
             memory_tracker,
             daemon_id,
+            backend: LocalExecutionBackend::Host,
         }
+    }
+
+    /// Replaces host process execution with the fail-closed Firecracker backend.
+    pub fn with_firecracker(mut self, executor: Arc<FirecrackerExecutor>) -> Self {
+        self.backend = LocalExecutionBackend::Firecracker(executor);
+        self
     }
 
     // Compiler gets confused (on the not(unix) branch only, weirdly) if you use an async fn.
@@ -276,6 +292,7 @@ impl LocalExecutor {
     async fn exec_once(
         &self,
         action_digest: &ActionDigest,
+        prepared_action: &PreparedAction,
         request: &CommandExecutionRequest,
         manager: CommandExecutionManagerWithClaim,
         cancellations: &CancellationContext,
@@ -287,6 +304,7 @@ impl LocalExecutor {
         cgroup: Option<CgroupPathBuf>,
         freeze_rx: impl ActionFreezeEventReceiver,
         network_access: Option<NetworkAccess>,
+        digest_config: DigestConfig,
     ) -> Result<
         (
             TimeSpan,
@@ -368,20 +386,35 @@ impl LocalExecutor {
                         .exec_cmd(request.args(), env, request.timeout())
                         .await)
                 } else {
-                    self.exec(
-                        &args[0],
-                        &args[1..],
-                        env,
-                        request.working_directory(),
-                        request.timeout(),
-                        request.local_environment_inheritance(),
-                        liveliness_observer,
-                        request.disable_miniperf(),
-                        cgroup,
-                        freeze_rx,
-                        network_access,
-                    )
-                    .await
+                    match &self.backend {
+                        LocalExecutionBackend::Host => {
+                            self.exec(
+                                &args[0],
+                                &args[1..],
+                                env,
+                                request.working_directory(),
+                                request.timeout(),
+                                request.local_environment_inheritance(),
+                                liveliness_observer,
+                                request.disable_miniperf(),
+                                cgroup,
+                                freeze_rx,
+                                network_access,
+                            )
+                            .await
+                        }
+                        LocalExecutionBackend::Firecracker(executor) => {
+                            executor
+                                .execute(
+                                    prepared_action,
+                                    request,
+                                    self.root.as_path(),
+                                    digest_config,
+                                    &liveliness_observer,
+                                )
+                                .await
+                        }
+                    }
                 };
 
                 let time_span = execution_start.end_now();
@@ -401,6 +434,7 @@ impl LocalExecutor {
     async fn exec_with_resource_control(
         &self,
         action_digest: &ActionDigest,
+        prepared_action: &PreparedAction,
         request: &CommandExecutionRequest,
         mut manager: CommandExecutionManagerWithClaim,
         cancellations: &CancellationContext,
@@ -410,6 +444,7 @@ impl LocalExecutor {
         worker: Option<&WorkerHandle>,
         env: &[(&str, StrOrOsStr<'_>)],
         network_access: Option<NetworkAccess>,
+        digest_config: DigestConfig,
     ) -> Result<
         (
             TimeSpan,
@@ -419,29 +454,31 @@ impl LocalExecutor {
         ),
         CommandExecutionResult,
     > {
-        let (cgroup_session, mut start_future) =
-            if worker.is_some() || request.skip_resource_control() {
-                (None, None)
+        let (cgroup_session, mut start_future) = if worker.is_some()
+            || request.skip_resource_control()
+            || matches!(&self.backend, LocalExecutionBackend::Firecracker(_))
+        {
+            (None, None)
+        } else {
+            let command_type = if request.is_test() {
+                CommandType::Test
             } else {
-                let command_type = if request.is_test() {
-                    CommandType::Test
-                } else {
-                    CommandType::Build
-                };
-                let disable_kill_and_retry_suspend = !request.outputs_cleanup;
-                match ActionCgroupSession::maybe_create(
-                    self.memory_tracker.dupe(),
-                    command_type,
-                    Some(action_digest.to_string()),
-                    disable_kill_and_retry_suspend,
-                )
-                .await
-                {
-                    Ok(Some((session, start_future))) => (Some(session), Some(start_future)),
-                    Ok(None) => (None, None),
-                    Err(e) => return Err(manager.error("initializing_resource_control", e)),
-                }
+                CommandType::Build
             };
+            let disable_kill_and_retry_suspend = !request.outputs_cleanup;
+            match ActionCgroupSession::maybe_create(
+                self.memory_tracker.dupe(),
+                command_type,
+                Some(action_digest.to_string()),
+                disable_kill_and_retry_suspend,
+            )
+            .await
+            {
+                Ok(Some((session, start_future))) => (Some(session), Some(start_future)),
+                Ok(None) => (None, None),
+                Err(e) => return Err(manager.error("initializing_resource_control", e)),
+            }
+        };
 
         let liveliness_observer: Arc<dyn LivelinessObserver> = Arc::new(liveliness_observer);
 
@@ -488,6 +525,7 @@ impl LocalExecutor {
             let res = self
                 .exec_once(
                     action_digest,
+                    prepared_action,
                     request,
                     manager,
                     cancellations,
@@ -499,6 +537,7 @@ impl LocalExecutor {
                     cgroup_session.as_ref().map(|s| s.path.clone()),
                     freeze_rx,
                     network_access,
+                    digest_config,
                 )
                 .await;
 
@@ -532,7 +571,7 @@ impl LocalExecutor {
 
     async fn exec_request(
         &self,
-        action_digest: &ActionDigest,
+        prepared_action: &PreparedAction,
         request: &CommandExecutionRequest,
         mut manager: CommandExecutionManager,
         cancellation: CancellationObserver,
@@ -541,6 +580,7 @@ impl LocalExecutor {
         local_resource_holders: &[LocalResourceHolder],
         network_access: Option<NetworkAccess>,
     ) -> CommandExecutionResult {
+        let action_digest = prepared_action.digest();
         let args = &request.all_args_vec();
         if args.is_empty() {
             return manager.error("no_args", LocalExecutionError::NoArgs);
@@ -698,7 +738,8 @@ impl LocalExecutor {
 
         let (time_span, start_time, res, manager) = match self
             .exec_with_resource_control(
-                action_digest,
+                &action_digest,
+                prepared_action,
                 request,
                 manager,
                 cancellations,
@@ -708,6 +749,7 @@ impl LocalExecutor {
                 worker.as_deref(),
                 &env,
                 network_access,
+                digest_config,
             )
             .await
         {
@@ -1258,6 +1300,13 @@ impl PreparedCommandExecutor for LocalExecutor {
             digest_config,
         } = command;
 
+        if matches!(&self.backend, LocalExecutionBackend::Firecracker(_))
+            && let Err(error) =
+                crate::executors::firecracker::validate_action_policy(prepared_action, request)
+        {
+            return manager.error("firecracker_policy", error);
+        }
+
         // `All` makes the forkserver skip the network namespace; see
         // `CommandExecutionRequest::disable_local_network_isolation`.
         let network_access = if request.disable_local_network_isolation() {
@@ -1304,7 +1353,7 @@ impl PreparedCommandExecutor for LocalExecutor {
             .with_structured_cancellation(|cancellation| {
                 Self::exec_request(
                     self,
-                    &prepared_action.action_and_blobs.action,
+                    prepared_action,
                     request,
                     manager,
                     cancellation,

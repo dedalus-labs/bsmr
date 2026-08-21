@@ -26,6 +26,7 @@ bsmr_fs.workspace = true
 bsmr_hash.workspace = true
 bsmr_http.workspace = true
 bsmr_resource_control.workspace = true
+bsmr_sandbox.workspace = true
 bsmr_util.workspace = true
 bsmr_worker_proto.workspace = true
 bsmr_wrapper_common.workspace = true
@@ -45,24 +46,31 @@ prost.workspace = true
 regex.workspace = true
 remote_execution.workspace = true
 rusqlite.workspace = true
+serde_json.workspace = true
 starlark_map.workspace = true
+tar.workspace = true
+tempfile.workspace = true
 tokio.workspace = true
 tokio-retry.workspace = true
 tokio-stream.workspace = true
 tonic.workspace = true
 tracing.workspace = true
+uuid.workspace = true
 zstd.workspace = true
 
 [dev-dependencies]
 assert_matches.workspace = true
+sha2.workspace = true
 
 [target.'cfg(target_os = "linux")'.dependencies]
 bsmr_forkserver.workspace = true
 bsmr_forkserver_proto.workspace = true
+nix.workspace = true
 
 [target.'cfg(target_os = "macos")'.dependencies]
 bsmr_forkserver.workspace = true
 bsmr_forkserver_proto.workspace = true
+nix.workspace = true
 
 [lints]
 workspace = true
