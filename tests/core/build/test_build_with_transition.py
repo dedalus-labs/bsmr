@@ -30,7 +30,7 @@ async def test_build_transition_without_target_universe(buck: Buck) -> None:
     lines = result.stdout.splitlines()
     # Just a single target is built and output
     assert 1 == len(lines)
-    assert "root//:buck buck-out" in lines[0]
+    assert "root//:buck bsmr-out" in lines[0]
 
 
 @buck_test()
@@ -46,4 +46,4 @@ async def test_build_transition_with_target_universe(buck: Buck) -> None:
     lines = result.stdout.splitlines()
     # Just a single target is built and output
     assert 1 == len(lines)
-    assert "root//:buck buck-out" in lines[0]
+    assert "root//:buck bsmr-out" in lines[0]

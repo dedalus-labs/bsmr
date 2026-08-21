@@ -449,7 +449,7 @@ async def test_init_data_timeout(buck: Buck) -> None:
 )
 async def test_nix_errno(buck: Buck) -> None:
     await buck.build(":run_action", "--show-output")
-    shutil.rmtree(buck.cwd / "buck-out/v2")
+    shutil.rmtree(buck.cwd / "bsmr-out/v2")
 
     res = await expect_failure(
         buck.targets(":"),

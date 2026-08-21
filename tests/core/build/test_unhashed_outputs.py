@@ -26,7 +26,7 @@ from bsmr.tests.e2e_util.buck_workspace import buck_test
 async def test_unhashed_putputs(buck: Buck) -> None:
     await buck.build("//pack:trivial_build")
 
-    p = buck.cwd / "buck-out" / "v2" / "gen" / "root" / "pack" / "foo.txt"
+    p = buck.cwd / "bsmr-out" / "v2" / "gen" / "root" / "pack" / "foo.txt"
     assert p.exists()
     assert p.is_symlink()
 
@@ -35,7 +35,7 @@ async def test_unhashed_putputs(buck: Buck) -> None:
 async def test_projected_output(buck: Buck) -> None:
     await buck.build("//:projected_output")
 
-    p = buck.cwd / "buck-out" / "v2" / "gen" / "root" / "dir"
+    p = buck.cwd / "bsmr-out" / "v2" / "gen" / "root" / "dir"
     assert p.exists()
     assert p.is_symlink()
     assert (p / "file").is_file()
@@ -44,7 +44,7 @@ async def test_projected_output(buck: Buck) -> None:
 @buck_test()
 async def test_build_symlink_does_not_traverse_existing_symlinks(buck: Buck) -> None:
     await buck.build("//pack:trivial_build")
-    symlink_folder = buck.cwd / "buck-out" / "v2" / "gen" / "root" / "pack"
+    symlink_folder = buck.cwd / "bsmr-out" / "v2" / "gen" / "root" / "pack"
 
     # Now, overwrite part of the symlink path with something we cannot traverse.
     path = symlink_folder.parent
@@ -60,10 +60,10 @@ async def test_build_symlink_does_not_traverse_existing_symlinks(buck: Buck) -> 
 @buck_test()
 async def test_conflict_with_content_based_paths(buck: Buck) -> None:
     symlink_path: Path = (
-        buck.cwd / "buck-out" / "v2" / "gen" / "root" / "conflict" / "shared_name"
+        buck.cwd / "bsmr-out" / "v2" / "gen" / "root" / "conflict" / "shared_name"
     )
     content_based_path: Path = (
-        buck.cwd / "buck-out" / "v2" / "art" / "root" / "conflict" / "shared_name"
+        buck.cwd / "bsmr-out" / "v2" / "art" / "root" / "conflict" / "shared_name"
     )
     subtarget_output: Path
     # sanity check that we're starting from a clean state
