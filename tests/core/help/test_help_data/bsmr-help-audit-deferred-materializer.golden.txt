@@ -183,11 +183,11 @@ Event Log Options:
 
       --command-report-path <PATH>
           Write the command report to this path. A command report is always written to
-          `buck-out/v2/<uuid>/command_report` even without this flag
+          `bsmr-out/v2/<uuid>/command_report` even without this flag
 
 Universal Options:
       --isolation-dir <ISOLATION_DIR>
-          The name of the directory that Bessemer creates within buck-out for writing outputs and
+          The name of the directory that Bessemer creates within bsmr-out for writing outputs and
           daemon information. If one is not provided, Bessemer creates a directory with the default
           name.
 

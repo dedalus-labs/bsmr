@@ -1,6 +1,6 @@
 # This file is @generated, regenerate by re-running test with `-- --env BSMR_UPDATE_GOLDEN=1` appended to the test command
 
-Parses the buck-out path into parts that may be useful (ex: config hash, file path to artifact).
+Parses the bsmr-out path into parts that may be useful (ex: config hash, file path to artifact).
 
 Usage: bsmr audit parse [OPTIONS] <OUTPUT_PATH>
 
@@ -170,7 +170,7 @@ Event Log Options:
 
       --command-report-path <PATH>
           Write the command report to this path. A command report is always written to
-          `buck-out/v2/<uuid>/command_report` even without this flag
+          `bsmr-out/v2/<uuid>/command_report` even without this flag
 
   -m, --modifier <VALUE>
           This option is not used
@@ -182,12 +182,12 @@ Event Log Options:
 
 
   <OUTPUT_PATH>
-          The buck-out path to the build artifact, starting with `buck-out` and including the
+          The bsmr-out path to the build artifact, starting with `bsmr-out` and including the
           configuration platform.
 
 Universal Options:
       --isolation-dir <ISOLATION_DIR>
-          The name of the directory that Bessemer creates within buck-out for writing outputs and
+          The name of the directory that Bessemer creates within bsmr-out for writing outputs and
           daemon information. If one is not provided, Bessemer creates a directory with the default
           name.
 
