@@ -11,7 +11,7 @@ import test from "node:test";
 
 import { command, type ScriptExec } from "@dedalus-labs/hollywood";
 
-import { pullRequestFiles, rustAffected } from "./affected.ts";
+import { pullRequestFiles, rustAffected, rustAffectedForEvent } from "./affected.ts";
 import { ci } from "./ci.ts";
 import { docs } from "./docs.ts";
 
@@ -50,9 +50,18 @@ test("Rust lanes run only for trusted affected changes", () => {
 	assert.equal(jobs.affected?.["runs-on"], "ubuntu-24.04");
 	assert.equal(jobs.affected?.if, `\${{ ${trustedCiRun} }}`);
 	assert.equal(jobs.affected?.outputs?.rust, "${{ steps.check.outputs.rust }}");
+	const checkout = jobs.affected?.steps[0];
+	assert.ok(checkout !== undefined && "with" in checkout);
+	assert.deepEqual(checkout.with, {
+		"persist-credentials": false,
+		"fetch-depth": 0,
+		"sparse-checkout": ".github/actions/ci/rust-affected",
+	});
 	const check = jobs.affected?.steps.at(-1);
 	assert.ok(check !== undefined && "uses" in check);
 	assert.equal(check.uses, "./.github/actions/ci/rust-affected");
+	assert.equal(check.with?.["merge-group-base-sha"], "${{ github.event.merge_group.base_sha }}");
+	assert.equal(check.with?.["head-sha"], "${{ github.event.pull_request.head.sha || github.sha }}");
 	for (const id of rustLanes) {
 		assert.equal(jobs[id]?.needs, "affected");
 		assert.equal(
@@ -101,6 +110,26 @@ test("Pull request paths preserve both sides of a rename", async () => {
 test("Pull request paths require immutable commit IDs", async () => {
 	const fail: ScriptExec = async () => assert.fail("exec must not run");
 	await assert.rejects(pullRequestFiles(fail, "main", "b".repeat(40)), /base SHA/);
+});
+
+test("Merge-group paths classify the exact candidate against its base", async () => {
+	const base = "a".repeat(40);
+	const head = "b".repeat(40);
+	const calls: string[][] = [];
+	const exec: ScriptExec = async (file, args) => {
+		calls.push([file, ...args]);
+		return { exitCode: 0, stderr: "", stdout: "docs/users/getting_started.md\0" };
+	};
+	assert.equal(
+		await rustAffectedForEvent(exec, {
+			eventName: "merge_group",
+			baseSha: "",
+			mergeGroupBaseSha: base,
+			headSha: head,
+		}),
+		false,
+	);
+	assert.deepEqual(calls, [["git", "diff", "--name-only", "--no-renames", "-z", base, head]]);
 });
 
 test("Rust compilation uses sized Blacksmith runners", () => {
