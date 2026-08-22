@@ -9,6 +9,25 @@
 Notable changes to Bessemer are recorded here. Release entries are generated
 from conventional commits and reviewed before publication.
 
+## [0.0.3](https://github.com/dedalus-labs/bsmr/compare/v0.0.2...v0.0.3) (2026-08-22)
+
+
+### Features
+
+* complete Bessemer identity cutover ([#138](https://github.com/dedalus-labs/bsmr/issues/138)) ([b192ce2](https://github.com/dedalus-labs/bsmr/commit/b192ce27ab027a5527f7566d18238f4e1e6226a4))
+* **core:** rename output root ([#130](https://github.com/dedalus-labs/bsmr/issues/130)) ([8f6c745](https://github.com/dedalus-labs/bsmr/commit/8f6c745bb2369bd9b7809b86521f62ab7bcb232e))
+* **sandbox:** isolate actions with Firecracker ([#65](https://github.com/dedalus-labs/bsmr/issues/65)) ([f0ffa0e](https://github.com/dedalus-labs/bsmr/commit/f0ffa0e273110072e82e4eaea922e0cf6a5dbc4d))
+
+
+### Bug Fixes
+
+* **tools:** follow output root rename ([#131](https://github.com/dedalus-labs/bsmr/issues/131)) ([1e3b3e1](https://github.com/dedalus-labs/bsmr/commit/1e3b3e1f4cc28d8cea8ebb30e2a943137d880c58))
+
+
+### Performance Improvements
+
+* **ci:** classify exact merge groups ([#79](https://github.com/dedalus-labs/bsmr/issues/79)) ([b9c2acf](https://github.com/dedalus-labs/bsmr/commit/b9c2acfd8c12e1d71659f8ed44ae1524796ef4da))
+
 ## [0.0.2](https://github.com/dedalus-labs/bsmr/compare/v0.0.1...v0.0.2) (2026-08-20)
 
 
