@@ -6,6 +6,7 @@
 // Verifies the generated CI workflow contract.
 
 import assert from "node:assert/strict";
+import { globSync, readFileSync } from "node:fs";
 import test from "node:test";
 
 import { command, type ScriptExec } from "@dedalus-labs/hollywood";
@@ -169,6 +170,15 @@ test("workflow checks retain the provenance boundary", () => {
 	assert.ok(workflowCheckout !== undefined && "with" in workflowCheckout);
 	assert.ok("fetch-depth" in workflowCheckout.with);
 	assert.equal(workflowCheckout.with["fetch-depth"], 0);
+});
+
+test("public workflows cannot receive repository administration credentials", () => {
+	const workflows = globSync(".github/workflows/*.yml")
+		.map((path) => readFileSync(path, "utf8"))
+		.join("\n");
+
+	assert.doesNotMatch(workflows, /CIND_BOT_APP_PRIVATE_KEY/);
+	assert.doesNotMatch(workflows, /permission-administration:\s*write/);
 });
 
 test("Rust lanes share one trusted cache writer", () => {
