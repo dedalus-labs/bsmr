@@ -1,0 +1,46 @@
+# ===----------------------------------------------------------------------===
+# Copyright (c) 2026 Dedalus Labs, Inc. and its contributors
+# SPDX-License-Identifier: Apache-2.0
+# ===----------------------------------------------------------------------===
+
+# Caches trusted cargo-dist builds without exposing organization container state.
+
+name: Trusted cargo-dist cache
+description: Mount target-specific caches only for a real release from main.
+inputs:
+  target:
+    description: Rust target triple built by this matrix lane.
+    required: true
+runs:
+  using: composite
+  steps:
+    - name: Mount Cargo registry cache
+      if: ${{ github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main' && github.event.inputs.tag != 'dry-run' && runner.os == 'Linux' }}
+      uses: useblacksmith/stickydisk@13af8883542ca949a717e70fef89d15edbb29d88 # v1.2.0
+      with:
+        key: ${{ github.repository }}-cargo-dist-${{ inputs.target }}-registry-v1
+        path: ~/.cargo/registry
+    - name: Mount Cargo git cache
+      if: ${{ github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main' && github.event.inputs.tag != 'dry-run' && runner.os == 'Linux' }}
+      uses: useblacksmith/stickydisk@13af8883542ca949a717e70fef89d15edbb29d88 # v1.2.0
+      with:
+        key: ${{ github.repository }}-cargo-dist-${{ inputs.target }}-git-v1
+        path: ~/.cargo/git
+    - name: Mount Cargo target cache
+      if: ${{ github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main' && github.event.inputs.tag != 'dry-run' && runner.os == 'Linux' }}
+      uses: useblacksmith/stickydisk@13af8883542ca949a717e70fef89d15edbb29d88 # v1.2.0
+      with:
+        key: ${{ github.repository }}-cargo-dist-${{ inputs.target }}-nightly-2026-04-11-v1
+        path: target/${{ inputs.target }}
+    - name: Restore non-Linux Rust cache
+      if: ${{ github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main' && github.event.inputs.tag != 'dry-run' && runner.os != 'Linux' }}
+      uses: Swatinem/rust-cache@e18b497796c12c097a38f9edb9d0641fb99eee32 # v2.8.1
+      with:
+        prefix-key: bsmr-cargo-dist-v1
+        shared-key: ${{ inputs.target }}
+        env-vars: RUSTFLAGS
+        workspaces: . -> target/${{ inputs.target }}
+        cache-all-crates: true
+        cache-bin: false
+        cache-on-failure: false
+        save-if: true
