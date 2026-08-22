@@ -56,6 +56,7 @@ test("check uses one typed command tree", async () => {
 			["node", "ci/identity.ts"],
 			["node", "--check", ".github/actions/ci/cli-reference/dist/index.js"],
 			["node", "--check", ".github/actions/ci/osv-audit/dist/index.js"],
+			["node", "--check", ".github/actions/ci/release-state/dist/index.js"],
 			["node", "--check", ".github/actions/ci/release-sync/dist/index.js"],
 			["node", "--check", ".github/actions/ci/rust-affected/dist/index.js"],
 			["node", "--check", ".github/actions/ci/verify-sha256/dist/index.js"],
@@ -86,7 +87,7 @@ test("check uses one typed command tree", async () => {
 		"prelude/toolchains/pnpm/runner.test.ts",
 		"test/contributors.test.ts",
 	]);
-	assert.deepEqual(state.invocations[13]?.args, [
+	assert.deepEqual(state.invocations[14]?.args, [
 		"diff",
 		"--exit-code",
 		"--",

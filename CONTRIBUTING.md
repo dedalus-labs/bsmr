@@ -69,9 +69,19 @@ To correct an open release candidate:
 5. Verify those files, the changelog, the pull-request title, and all required
    checks before merging.
 
-If the incorrect release pull request already merged, inspect the tag and
-GitHub Release before changing anything. Never delete or reuse a published
-version. Correct it with a new, unused version through the same process.
+Release pull requests open as drafts. After synchronization finishes, mark the
+pull request ready to start its required checks. Merging advances the version
+files but does not create a tag or GitHub Release. The `Publish release`
+workflow builds every cargo-dist target first; cargo-dist creates the tag and
+immutable release only after every artifact succeeds.
+
+If publication fails, fix `main` and rerun `Publish release`. The same version
+remains pending until that retry succeeds. Do not merge a later release pull
+request while the current manifest version lacks an immutable release.
+
+Never delete or reuse a published version. A legacy tag with an empty,
+unpublished draft is not a release; verify `published_at` is null and the asset
+list is empty before deleting both and retrying that version.
 
 ## License
 

@@ -21,6 +21,7 @@ from conventional commits and reviewed before publication.
 
 ### Bug Fixes
 
+* **release:** compile Firecracker transport on Windows ([#143](https://github.com/dedalus-labs/bsmr/issues/143)) ([8bd3060](https://github.com/dedalus-labs/bsmr/commit/8bd30603d2d88fd27545cdd3ecbd5b74f3d5d537))
 * **tools:** follow output root rename ([#131](https://github.com/dedalus-labs/bsmr/issues/131)) ([1e3b3e1](https://github.com/dedalus-labs/bsmr/commit/1e3b3e1f4cc28d8cea8ebb30e2a943137d880c58))
 
 

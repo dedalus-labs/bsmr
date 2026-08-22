@@ -21,6 +21,7 @@ test("generated action entrypoints retain canonical preambles", () => {
 		const paths = [
 			".github/actions/ci/cli-reference/src/index.ts",
 			".github/actions/ci/osv-audit/src/index.ts",
+			".github/actions/ci/release-state/src/index.ts",
 			".github/actions/ci/release-sync/src/index.ts",
 			".github/actions/ci/rust-affected/src/index.ts",
 			".github/actions/ci/verify-sha256/src/index.ts",

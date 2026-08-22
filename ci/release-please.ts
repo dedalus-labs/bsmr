@@ -3,17 +3,18 @@
 // SPDX-License-Identifier: Apache-2.0
 //===----------------------------------------------------------------------===//
 
-// Defines release preparation and dispatch through Release Please and dist.
+// Prepares release pull requests only after the current version is immutable.
 
-import { command, eq, expr, format, job, stepOutput, uses, workflow } from "@dedalus-labs/hollywood";
+import { eq, expr, job, stepOutput, uses, workflow } from "@dedalus-labs/hollywood";
 
+import { releaseStateAction } from "./release-state.ts";
 import { releaseSyncAction } from "./release-sync.ts";
 
 const releasePleaseAction =
 	"googleapis/release-please-action@45996ed1f6d02564a971a2fa1b5860e934307cf7"; // v5.0.0
 const checkoutAction = "actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1"; // v7.0.1
-const releaseCreated = eq(stepOutput("release", "release_created"), "true");
 const pullRequestCreated = eq(stepOutput("release", "prs_created"), "true");
+const currentReleasePublished = eq(stepOutput("state", "state"), "published");
 const releaseBranch = expr<string>("fromJSON(steps.release.outputs.pr || '{}').headBranchName");
 
 export const releasePlease = workflow({
@@ -40,8 +41,22 @@ export const releasePlease = workflow({
 			},
 			steps: [
 				{
+					name: "Checkout",
+					uses: checkoutAction,
+					with: { "persist-credentials": false },
+				},
+				uses(releaseStateAction, {
+					id: "state",
+					env: { GH_TOKEN: expr<string>("github.token") },
+					with: {
+						repository: expr<string>("github.repository"),
+						workspace: expr<string>("github.workspace"),
+					},
+				}),
+				{
 					id: "release",
 					name: "Prepare release",
+					if: currentReleasePublished,
 					uses: releasePleaseAction,
 					with: {
 						"config-file": "release-please-config.json",
@@ -68,46 +83,6 @@ export const releasePlease = workflow({
 						workspace: expr<string>("github.workspace"),
 					},
 				}),
-				{
-					name: "Run release pull request checks",
-					if: pullRequestCreated,
-					env: {
-						GH_TOKEN: expr<string>("github.token"),
-					},
-					run: command({
-						file: "gh",
-						args: [
-							"workflow",
-							"run",
-							"ci.yml",
-							"--repo",
-							expr<string>("github.repository"),
-							"--ref",
-							releaseBranch,
-						],
-					}),
-				},
-				{
-					name: "Build and publish release",
-					if: releaseCreated,
-					env: {
-						GH_TOKEN: expr<string>("github.token"),
-					},
-					run: command({
-						file: "gh",
-						args: [
-							"workflow",
-							"run",
-							"release.yml",
-							"--repo",
-							expr<string>("github.repository"),
-							"--ref",
-							stepOutput("release", "tag_name"),
-							"--field",
-							format("tag={0}", stepOutput("release", "tag_name")),
-						],
-					}),
-				},
 			],
 		}),
 	},
