@@ -36,7 +36,20 @@ RustExplicitSysrootDeps = record(
 
 PanicRuntime = enum("unwind", "abort", "none")
 
+RustReleaseChannel = enum("stable", "nightly")
+
 RustSanitizer = enum("address", "cfi", "hwaddress", "kcfi", "leak", "memory", "memtag", "safestack", "shadow-call-stack", "thread")
+
+def rust_toolchain_configuration_error(
+        release_channel: RustReleaseChannel,
+        nightly_features: bool,
+        has_codegen_backend: bool) -> str | None:
+    """Returns the error for an invalid Rust toolchain configuration, if any."""
+    if nightly_features and release_channel != RustReleaseChannel("nightly"):
+        return "Rust nightly features require release_channel = \"nightly\""
+    if has_codegen_backend and release_channel != RustReleaseChannel("nightly"):
+        return "Rust codegen backends require release_channel = \"nightly\""
+    return None
 
 # FIXME(JakobDegen): These all have default values for historical reasons. Some of them certainly
 # should, but some of them probably shouldn't?
@@ -77,6 +90,9 @@ rust_toolchain_attrs = {
     "doctests": provider_field(bool, default = False),
     # The Rust compiler (rustc)
     "compiler": provider_field(RunInfo | None, default = None),
+    # Optional rustc codegen backend plugin. Its artifact digest participates in
+    # every Rust compile action key.
+    "codegen_backend": provider_field(Artifact | None, default = None),
     # Rust documentation extractor (rustdoc)
     "rustdoc": provider_field(RunInfo | None, default = None),
     # Clippy (linter) version of the compiler
@@ -139,6 +155,9 @@ rust_toolchain_attrs = {
     # Setting this allows Rust rules to use features which are only available
     # on nightly release.
     "nightly_features": provider_field(bool, default = False),
+    # Compiler release channel. Stable is the default; unstable features and
+    # codegen backend plugins must opt in to nightly explicitly.
+    "release_channel": provider_field(str, default = "stable"),
     # The `cargo llvm-lines` binary - if present, Rust targets have a
     # `llvm-lines` subtarget
     "llvm_lines_tool": provider_field(RunInfo | None, default = None),

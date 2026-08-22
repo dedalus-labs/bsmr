@@ -105,10 +105,14 @@ def _system_cxx_toolchain_impl(ctx: AnalysisContext):
 def _cxx_tools_info_toolchain_impl(ctx: AnalysisContext):
     return _cxx_toolchain_from_cxx_tools_info(ctx, ctx.attrs.cxx_tools_info[CxxToolsInfo])
 
+def default_linker_flags(os: Os, linker: typing.Any) -> list[str]:
+    """Returns platform defaults that apply to the selected linker driver."""
+    return ["-fuse-ld=lld"] if os == Os("linux") and linker in ["clang", "clang++"] else []
+
 def _cxx_toolchain_from_cxx_tools_info(ctx: AnalysisContext, cxx_tools_info: CxxToolsInfo, target_name = "x86_64"):
     os = ctx.attrs._target_os_type[OsLookup].os
     archiver_supports_argfiles = os != Os("macos")
-    additional_linker_flags = ["-fuse-ld=lld"] if os == Os("linux") and cxx_tools_info.linker != "g++" and cxx_tools_info.cxx_compiler != "g++" else []
+    additional_linker_flags = default_linker_flags(os, cxx_tools_info.linker)
 
     linker_type = cxx_tools_info.linker_type
     if os == Os("windows"):

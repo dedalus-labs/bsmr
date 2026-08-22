@@ -137,7 +137,13 @@ load(
 )
 load(":outputs.bzl", "RustcCompileOutput", "RustcLinkOutput", "RustcOutput")
 load(":resources.bzl", "rust_attr_resources")
-load(":rust_toolchain.bzl", "PanicRuntime", "RustToolchainInfo")
+load(
+    ":rust_toolchain.bzl",
+    "PanicRuntime",
+    "RustReleaseChannel",
+    "RustToolchainInfo",
+    "rust_toolchain_configuration_error",
+)
 load(
     ":sources.bzl",
     "RustSources",
@@ -1161,6 +1167,14 @@ def _compute_common_args(
         dep_args.add("--extern=proc_macro")
 
     toolchain_info = compile_ctx.toolchain_info
+    configuration_error = rust_toolchain_configuration_error(
+        RustReleaseChannel(toolchain_info.release_channel),
+        toolchain_info.nightly_features,
+        toolchain_info.codegen_backend != None,
+    )
+    if configuration_error:
+        fail(configuration_error)
+
     edition = ctx.attrs.edition or toolchain_info.default_edition or fail("missing 'edition' attribute, and there is no 'default_edition' set by the toolchain")
 
     crate = attr_crate(ctx)
@@ -1263,6 +1277,7 @@ def _compute_common_args(
         ["--error-format=json", "--json=diagnostic-rendered-ansi"] if not is_rustdoc_test else [],
         prefer_dynamic_flags,
         ["--target={}".format(toolchain_info.rustc_target_triple)] if toolchain_info.rustc_target_triple else [],
+        [cmd_args(toolchain_info.codegen_backend, format = "-Zcodegen-backend={}")] if toolchain_info.codegen_backend else [],
         split_debuginfo_flags,
         compile_ctx.sysroot_args,
         ["-Cpanic=abort", "-Zpanic-abort-tests=yes"] if toolchain_info.panic_runtime == PanicRuntime("abort") else [],
