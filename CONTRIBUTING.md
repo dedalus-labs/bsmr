@@ -75,6 +75,11 @@ files but does not create a tag or GitHub Release. The `Publish release`
 workflow builds every cargo-dist target first; cargo-dist creates the tag and
 immutable release only after every artifact succeeds.
 
+Artifact builders use target-specific Blacksmith caches only for a real
+`workflow_dispatch` release from `main`. Pull requests and `dry-run` builds
+cannot mount or update those shared caches. The release path does not mount a
+container cache because it does not build containers.
+
 If publication fails, fix `main` and rerun `Publish release`. The same version
 remains pending until that retry succeeds. Do not merge a later release pull
 request while the current manifest version lacks an immutable release.

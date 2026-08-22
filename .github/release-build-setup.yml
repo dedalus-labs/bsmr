@@ -1,0 +1,12 @@
+# ===----------------------------------------------------------------------===
+# Copyright (c) 2026 Dedalus Labs, Inc. and its contributors
+# SPDX-License-Identifier: Apache-2.0
+# ===----------------------------------------------------------------------===
+
+# Mounts release caches only after the required release approval reaches main.
+
+- name: Mount trusted release caches
+  if: ${{ github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main' && inputs.tag != 'dry-run' }}
+  uses: ./.github/actions/ci/release-cache
+  with:
+    target: ${{ join(matrix.targets, '-') }}

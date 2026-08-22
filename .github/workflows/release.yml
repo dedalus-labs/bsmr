@@ -137,6 +137,11 @@ jobs:
             curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
             echo "$HOME/.cargo/bin" >> $GITHUB_PATH
           fi
+      - name: "Mount trusted release caches"
+        uses: "./.github/actions/ci/release-cache"
+        if: "${{ github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main' && inputs.tag != 'dry-run' }}"
+        with:
+          "target": "${{ join(matrix.targets, '-') }}"
       - name: Install dist
         run: ${{ matrix.install_dist.run }}
       # Get the dist-manifest

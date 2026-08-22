@@ -153,6 +153,33 @@ test("dist release builds preserve required Rust cfg flags", () => {
 	assert.match(read(".github/workflows/release.yml"), /^env:\n  RUSTFLAGS: "--cfg tokio_unstable"$/m);
 });
 
+test("release builders use trusted Blacksmith caches", () => {
+	const config = read("dist-workspace.toml");
+	const setup = read(".github/release-build-setup.yml");
+	const cache = read(".github/actions/ci/release-cache/action.yml");
+	const workflow = read(".github/workflows/release.yml");
+	for (const runner of [
+		"blacksmith-32vcpu-ubuntu-2204",
+		"blacksmith-32vcpu-ubuntu-2204-arm",
+		"blacksmith-32vcpu-windows-2025",
+		"blacksmith-12vcpu-macos-15",
+	]) {
+		assert.match(config, new RegExp(`runner = "${runner}"|= "${runner}"`));
+	}
+	assert.match(config, /^host = "aarch64-apple-darwin"$/m);
+	assert.match(config, /^github-build-setup = "\.\.\/release-build-setup\.yml"$/m);
+	assert.match(setup, /github\.event_name == 'workflow_dispatch' && github\.ref == 'refs\/heads\/main' && inputs\.tag != 'dry-run'/);
+	assert.match(setup, /uses: \.\/\.github\/actions\/ci\/release-cache/);
+	assert.equal(cache.match(/github\.event_name == 'workflow_dispatch' && github\.ref == 'refs\/heads\/main' && github\.event\.inputs\.tag != 'dry-run'/g)?.length, 4);
+	assert.equal(cache.match(/useblacksmith\/stickydisk@13af8883542ca949a717e70fef89d15edbb29d88/g)?.length, 3);
+	assert.equal(cache.match(/\$\{\{ github\.repository \}\}/g)?.length, 3);
+	assert.match(cache, /Swatinem\/rust-cache@e18b497796c12c097a38f9edb9d0641fb99eee32/);
+	assert.match(workflow, /Mount trusted release caches/);
+	assert.doesNotMatch(cache, /useblacksmith\/(?:setup-docker-builder|build-push-action)/);
+	assert.doesNotMatch(workflow, /Docker images to be cached|setup-docker-builder|build-push-action/);
+	assert.match(read(".github/CODEOWNERS"), /^\/app\/bsmr\/ @[A-Za-z0-9_-]+$/m);
+});
+
 test("dist release publishes within the BSMR repository", () => {
 	const workflow = read(".github/workflows/release.yml");
 	const config = read("dist-workspace.toml");
