@@ -10,6 +10,7 @@ use std::collections::BTreeSet;
 use std::fs;
 use std::fs::File;
 use std::fs::OpenOptions;
+#[cfg(unix)]
 use std::io::IoSlice;
 use std::io::Read;
 use std::io::Seek;
@@ -147,6 +148,7 @@ enum FirecrackerSandboxError {
     LauncherSocket(PathBuf),
     #[error("Firecracker launcher I/O failed: {0}")]
     LauncherIo(#[source] std::io::Error),
+    #[cfg(unix)]
     #[error("Firecracker launcher socket failed: {0}")]
     LauncherSocketIo(#[source] nix::Error),
     #[error("Firecracker launcher failed: {0}")]
