@@ -3,7 +3,7 @@
 # SPDX-License-Identifier: Apache-2.0
 # ===----------------------------------------------------------------------===
 
-# Mounts release caches only after the Windsor-approved version reaches main.
+# Mounts release caches only after the required release approval reaches main.
 
 - name: Mount trusted release caches
   if: ${{ github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main' && inputs.tag != 'dry-run' }}

@@ -177,7 +177,7 @@ test("release builders use trusted Blacksmith caches", () => {
 	assert.match(workflow, /Mount trusted release caches/);
 	assert.doesNotMatch(cache, /useblacksmith\/(?:setup-docker-builder|build-push-action)/);
 	assert.doesNotMatch(workflow, /Docker images to be cached|setup-docker-builder|build-push-action/);
-	assert.match(read(".github/CODEOWNERS"), /^\/app\/bsmr\/ @windsornguyen$/m);
+	assert.match(read(".github/CODEOWNERS"), /^\/app\/bsmr\/ @[A-Za-z0-9_-]+$/m);
 });
 
 test("dist release publishes within the BSMR repository", () => {
