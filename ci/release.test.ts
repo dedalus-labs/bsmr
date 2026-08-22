@@ -14,7 +14,10 @@ import { fileURLToPath } from "node:url";
 
 import { command, expr, format, stepOutput } from "@dedalus-labs/hollywood";
 
+import { ci } from "./ci.ts";
 import { releasePlease } from "./release-please.ts";
+import { publishRelease } from "./release-publish.ts";
+import { releaseState } from "./release-state.ts";
 import { synchronizeReleaseVersion } from "./release-version.ts";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
@@ -45,8 +48,8 @@ test("one product version drives release automation", () => {
 		"include-component-in-tag": false,
 		"include-v-in-tag": true,
 		"include-v-in-release-name": true,
-		draft: true,
-		"force-tag-creation": true,
+		"draft-pull-request": true,
+		"skip-github-release": true,
 		"always-update": true,
 	});
 });
@@ -88,30 +91,49 @@ test("invariant_release_path_guards_optional_pull_request_output", () => {
 		"pull-requests": "write",
 	});
 	const steps = prepare?.steps ?? [];
-	assert.equal(steps[0]?.uses, "googleapis/release-please-action@45996ed1f6d02564a971a2fa1b5860e934307cf7");
-	assert.ok(steps[2] !== undefined && "uses" in steps[2]);
-	assert.equal(steps[2].uses, "./.github/actions/ci/release-sync");
-	assert.match(steps[2].if ?? "", /steps\.release\.outputs\.prs_created == 'true'/);
-	assert.deepEqual(steps[2].with, {
+	assert.equal(steps[1]?.uses, "./.github/actions/ci/release-state");
+	assert.equal(steps[2]?.uses, "googleapis/release-please-action@45996ed1f6d02564a971a2fa1b5860e934307cf7");
+	assert.match(steps[2]?.if ?? "", /steps\.state\.outputs\.state == 'published'/);
+	assert.ok(steps[4] !== undefined && "uses" in steps[4]);
+	assert.equal(steps[4].uses, "./.github/actions/ci/release-sync");
+	assert.match(steps[4].if ?? "", /steps\.release\.outputs\.prs_created == 'true'/);
+	assert.deepEqual(steps[4].with, {
 		branch: expr<string>("fromJSON(steps.release.outputs.pr || '{}').headBranchName"),
 		workspace: expr<string>("github.workspace"),
 	});
-	assert.ok(steps[3] !== undefined && "run" in steps[3]);
-	assert.deepEqual(steps[3].run, command({
-		file: "gh",
-		args: [
-			"workflow",
-			"run",
-			"ci.yml",
-			"--repo",
-			expr<string>("github.repository"),
-			"--ref",
-			expr<string>("fromJSON(steps.release.outputs.pr || '{}').headBranchName"),
-		],
-	}));
-	assert.match(steps[4]?.if ?? "", /steps\.release\.outputs\.release_created == 'true'/);
-	assert.ok(steps[4] !== undefined && "run" in steps[4]);
-	assert.deepEqual(steps[4].run, command({
+	assert.equal(steps.length, 5);
+});
+
+test("release pull requests run required checks when marked ready", () => {
+	assert.deepEqual(ci.on.pull_request, {
+		types: ["opened", "synchronize", "reopened", "ready_for_review"],
+	});
+});
+
+test("unpublished versions cannot advance release please", () => {
+	assert.deepEqual(releaseState("", "v0.0.3"), "absent");
+	assert.deepEqual(releaseState("false\ttrue\n", "v0.0.3"), "published");
+	assert.throws(
+		() => releaseState("true\tfalse\n", "v0.0.3"),
+		/v0\.0\.3 is still a draft/,
+	);
+	assert.throws(
+		() => releaseState("false\tfalse\n", "v0.0.3"),
+		/v0\.0\.3 is published but mutable/,
+	);
+});
+
+test("release publication retries the current product version", () => {
+	assert.deepEqual(publishRelease.on.push, {
+		branches: ["main"],
+		paths: [".release-please-manifest.json"],
+	});
+	assert.deepEqual(publishRelease.on.workflow_dispatch, {});
+	const steps = publishRelease.jobs.publish?.steps ?? [];
+	assert.deepEqual(steps[0]?.with, { ref: "main", "persist-credentials": false });
+	assert.equal(steps[1]?.uses, "./.github/actions/ci/release-state");
+	assert.ok(steps[2] !== undefined && "run" in steps[2]);
+	assert.deepEqual(steps[2].run, command({
 		file: "gh",
 		args: [
 			"workflow",
@@ -120,9 +142,9 @@ test("invariant_release_path_guards_optional_pull_request_output", () => {
 			"--repo",
 			expr<string>("github.repository"),
 			"--ref",
-			stepOutput("release", "tag_name"),
+			"main",
 			"--field",
-			format("tag={0}", stepOutput("release", "tag_name")),
+			format("tag={0}", stepOutput("state", "tag")),
 		],
 	}));
 });
@@ -133,7 +155,11 @@ test("dist release builds preserve required Rust cfg flags", () => {
 
 test("dist release publishes within the BSMR repository", () => {
 	const workflow = read(".github/workflows/release.yml");
-	assert.doesNotMatch(read("dist-workspace.toml"), /^github-releases-repo\s*=/m);
+	const config = read("dist-workspace.toml");
+	assert.doesNotMatch(config, /^github-releases-repo\s*=/m);
+	assert.match(config, /^create-release = true$/m);
 	assert.doesNotMatch(workflow, /GH_RELEASES_TOKEN|external_repo_commit/);
+	assert.match(workflow, /gh release create /);
+	assert.doesNotMatch(workflow, /gh release edit |gh release upload /);
 	assert.match(workflow, /RELEASE_COMMIT: "\$\{\{ github\.sha \}\}"/);
 });

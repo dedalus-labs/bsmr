@@ -51,12 +51,13 @@ function replaceVersion(contents: string, carrier: VersionCarrier, version: stri
 }
 
 /**
- * Synchronize every derived product-version carrier with VERSION.
+ * Read the canonical product version and require the release manifest to agree.
  *
  * @param root - Repository root.
- * @returns Paths changed by synchronization.
+ * @returns The validated product version.
+ * @throws When VERSION or the release manifest is invalid.
  */
-export function synchronizeReleaseVersion(root: string): readonly string[] {
+export function releaseVersion(root: string): string {
 	const version = readFileSync(join(root, "VERSION"), "utf8").trim();
 	if (!canonicalVersion.test(version)) throw new Error(`VERSION: invalid canonical version '${version}'`);
 
@@ -67,6 +68,17 @@ export function synchronizeReleaseVersion(root: string): readonly string[] {
 	if (manifest["."] !== version) {
 		throw new Error(`.release-please-manifest.json: expected ${version}, found ${String(manifest["."])}`);
 	}
+	return version;
+}
+
+/**
+ * Synchronize every derived product-version carrier with VERSION.
+ *
+ * @param root - Repository root.
+ * @returns Paths changed by synchronization.
+ */
+export function synchronizeReleaseVersion(root: string): readonly string[] {
+	const version = releaseVersion(root);
 
 	const changed: string[] = [];
 	for (const carrier of carriers) {

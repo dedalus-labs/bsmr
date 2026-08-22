@@ -9,8 +9,8 @@
 			"include-component-in-tag": false,
 			"include-v-in-tag": true,
 			"include-v-in-release-name": true,
-			"draft": true,
-			"force-tag-creation": true,
+			"draft-pull-request": true,
+			"skip-github-release": true,
 			"always-update": true
 		}
 	}

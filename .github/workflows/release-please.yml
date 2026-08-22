@@ -21,8 +21,21 @@ jobs:
       issues: write
       pull-requests: write
     steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - id: state
+        env:
+          GH_TOKEN: ${{ github.token }}
+        name: Inspect release state
+        uses: ./.github/actions/ci/release-state
+        with:
+          repository: ${{ github.repository }}
+          workspace: ${{ github.workspace }}
       - id: release
         name: Prepare release
+        if: ${{ steps.state.outputs.state == 'published' }}
         uses: googleapis/release-please-action@45996ed1f6d02564a971a2fa1b5860e934307cf7
         with:
           config-file: release-please-config.json
@@ -41,20 +54,3 @@ jobs:
         with:
           branch: ${{ fromJSON(steps.release.outputs.pr || '{}').headBranchName }}
           workspace: ${{ github.workspace }}
-      - name: Run release pull request checks
-        if: ${{ steps.release.outputs.prs_created == 'true' }}
-        env:
-          GH_TOKEN: ${{ github.token }}
-          HOLLYWOOD_COMMAND_ARG_4: ${{ github.repository }}
-          HOLLYWOOD_COMMAND_ARG_6: ${{ fromJSON(steps.release.outputs.pr || '{}').headBranchName }}
-        run: gh workflow run ci.yml --repo "$HOLLYWOOD_COMMAND_ARG_4" --ref "$HOLLYWOOD_COMMAND_ARG_6"
-        shell: bash
-      - name: Build and publish release
-        if: ${{ steps.release.outputs.release_created == 'true' }}
-        env:
-          GH_TOKEN: ${{ github.token }}
-          HOLLYWOOD_COMMAND_ARG_4: ${{ github.repository }}
-          HOLLYWOOD_COMMAND_ARG_6: ${{ steps.release.outputs.tag_name }}
-          HOLLYWOOD_COMMAND_ARG_8: ${{ format('tag={0}', steps.release.outputs.tag_name) }}
-        run: gh workflow run release.yml --repo "$HOLLYWOOD_COMMAND_ARG_4" --ref "$HOLLYWOOD_COMMAND_ARG_6" --field "$HOLLYWOOD_COMMAND_ARG_8"
-        shell: bash

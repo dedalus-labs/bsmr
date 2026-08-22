@@ -182,7 +182,7 @@ export const ci = workflow({
 	name: "CI",
 	on: {
 		push: { branches: ["main"] },
-		pull_request: {},
+		pull_request: { types: ["opened", "synchronize", "reopened", "ready_for_review"] },
 		merge_group: { types: ["checks_requested"] },
 		workflow_dispatch: {},
 	},
