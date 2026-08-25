@@ -18,6 +18,12 @@ type Artifact = Readonly<{
 
 const artifacts: readonly Artifact[] = [
 	{
+		input: "./.github/actions/ci/post-merge-receipts/src/index.ts",
+		output: ".github/actions/ci/post-merge-receipts/dist/index.js",
+		target: "node24",
+		define: { "import.meta.vitest": "undefined" },
+	},
+	{
 		input: "./.github/actions/ci/release-state/src/index.ts",
 		output: ".github/actions/ci/release-state/dist/index.js",
 		target: "node24",
