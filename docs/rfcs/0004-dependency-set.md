@@ -2,8 +2,8 @@
 rfc: "0004"
 title: "DependencySet"
 authors: ["@windsornguyen"]
-state: ideation
-discussion: null
+state: discussion
+discussion: https://github.com/dedalus-labs/bsmr/pull/152
 labels: ["dependency-set", "compatibility", "remote-cache", "deployment"]
 ---
 <!-- ===----------------------------------------------------------------------=== -->
