@@ -102,7 +102,7 @@ can be built in parallel. It also enables Bessemer to determine the minimal set 
 build targets that need to be rebuilt.
 
 See [Hermetic Build Core](hermetic_build_core.md) for how this DAG composes with
-Merkle input trees, action caches, and immutable dependency version sets.
+Merkle input trees, action caches, DependencySet rules, and exact dependency locks.
 
 ### Multiple Bessemer projects in a single repository
 

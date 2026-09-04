@@ -26,7 +26,12 @@ exclude_docs: |
   !/concepts/
   /concepts/*
   !/concepts/caching.md
+  !/concepts/hermetic_build_core.md
   !/concepts/test-observability.md
+  !/concepts/dependency_set.md
+  !/rfcs/
+  /rfcs/*
+  !/rfcs/0004-dependency-set.md
   !/users/
   /users/*
   !/users/sandboxing.md
@@ -104,8 +109,12 @@ plugins:
           - users/languages/go/native.md
         Concepts:
           - concepts/caching.md
+          - concepts/dependency_set.md
+          - concepts/hermetic_build_core.md
           - concepts/test-observability.md
           - roadmap.md
+        Design:
+          - rfcs/0004-dependency-set.md
         Execution:
           - users/sandboxing.md
         Reference:
@@ -155,7 +164,11 @@ nav:
       - Support status: about/language_support.md
   - Concepts:
       - Caching and Hermeticity: concepts/caching.md
+      - DependencySet: concepts/dependency_set.md
+      - Hermetic Build Core: concepts/hermetic_build_core.md
       - Test Observability: concepts/test-observability.md
+  - Design:
+      - DependencySet: rfcs/0004-dependency-set.md
   - Execution:
       - Sandboxed builds: users/sandboxing.md
   - Reference:

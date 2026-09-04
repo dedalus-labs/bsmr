@@ -7,7 +7,7 @@ title: Hermetic Build Core
 <!-- SPDX-License-Identifier: Apache-2.0 -->
 <!-- ===----------------------------------------------------------------------=== -->
 
-<!-- Defines the minimal model connecting hermetic actions, version sets, and caching. -->
+<!-- Defines the minimal model connecting hermetic actions, DependencySet, locks, and caching. -->
 
 # Hermetic build core
 
@@ -52,36 +52,43 @@ network access, and ambient environment access. The graph states the contract;
 the executor enforces it. Hermeticity is therefore an execution invariant, not
 a property conferred by hashing alone.
 
-## Version sets
+## DependencySet and locks
 
-A version set is an immutable, content-addressed dependency universe. Each
-ecosystem adapter owns its native resolution semantics and produces a canonical
-Merkle DAG preserving every resolution-affecting node and edge. For pnpm this
-includes source and integrity, patches, peer contexts, optionality, platform
-predicates, and workspace relationships, as required by
+A DependencySet is the immutable rule graph describing which components may be
+selected and which compatibility, platform, patch, and provenance constraints
+they must satisfy. Each ecosystem adapter owns its native resolution semantics.
+The resulting lock is a canonical Merkle DAG preserving every
+resolution-affecting node and edge. For pnpm this includes source and integrity,
+patches, peer contexts, optionality, platform predicates, and workspace
+relationships, as required by
 [RFC 0001](https://github.com/dedalus-labs/bsmr/discussions/12).
 
-Bessemer wraps the graph's canonical root record in one versioned CAS object:
+Bessemer's planned public identities separate the rules from their exact
+resolution:
 
 ```text
-version_set_root = "bsmr.version-set.v1\0" || canonical_graph_root
-version_set_digest = H(version_set_root)
+dependency_set_digest  = H("bsmr.dependency-set.v1\0"  || canonical_rule_graph_root)
+dependency_lock_digest = H("bsmr.dependency-lock.v1\0" || canonical_resolved_graph_root)
 ```
 
-The digest is the stable identity used by analysis, provenance, policy, and
-queries. The root and referenced graph nodes remain available from the CAS, so
-the digest is not an opaque identity disconnected from evidence. Updating one
-package rewrites only its affected Merkle ancestors rather than one monolithic
-lock-graph blob.
+The internal `VersionSet` type and `bsmr.version-set.v1` prefix predate this
+split. They have no external consumers and will be replaced before either
+format is exposed.
 
-The complete version-set digest should not salt every action indiscriminately.
+The two digests are stable identities used by analysis, provenance, policy, and
+queries. Their roots and referenced graph nodes remain available from the CAS,
+so neither digest is disconnected from evidence. Updating one package rewrites
+only its affected Merkle ancestors rather than one monolithic lock-graph blob.
+
+The complete DependencySet or lock digest should not salt every action
+indiscriminately.
 Doing so would invalidate the world when an unrelated package changes. Analysis
 selects the target's reachable dependency closure, and the selected package
 trees enter that action's input Merkle root:
 
 ```text
-closure(target, platform, version_set) -> selected package artifacts
-selected package artifacts             -> action input Merkle root
+closure(target, platform, dependency_lock) -> selected package artifacts
+selected package artifacts                -> action input Merkle root
 ```
 
 Only affected closures receive new action identities. Policy or materializer
