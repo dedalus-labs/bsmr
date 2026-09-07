@@ -11,7 +11,7 @@ import { dirname, isAbsolute, join, relative, resolve, sep } from "node:path";
 
 const requiredArguments = new Set(["--config", "--install", "--mode", "--output", "--package-root", "--source"]);
 
-type Mode = "library" | "typecheck";
+type Mode = "library" | "typecheck" | "vite";
 type RunnerOptions = Readonly<{
 	config: string;
 	install: string;
@@ -45,7 +45,7 @@ function parseArguments(arguments_: readonly string[]): RunnerOptions {
 		values.set(name, value);
 	}
 	const mode = requiredArgument(values, "--mode");
-	if (mode !== "library" && mode !== "typecheck") throw new Error(`unsupported TypeScript action mode '${mode}'`);
+	if (mode !== "library" && mode !== "typecheck" && mode !== "vite") throw new Error(`unsupported TypeScript action mode '${mode}'`);
 	const config = requiredArgument(values, "--config");
 	const install = requiredArgument(values, "--install");
 	const output = requiredArgument(values, "--output");
@@ -298,6 +298,13 @@ async function main(arguments_: readonly string[]): Promise<void> {
 		const tool = await resolveTool(packageDirectory, "typescript", "tsc");
 		runTool(tool, ["--project", options.config, "--noEmit", "--pretty", "false"], packageDirectory);
 		await writeFile(options.output, "ok\n", { flag: "wx" });
+		return;
+	}
+	if (options.mode === "vite") {
+		const tool = await resolveTool(packageDirectory, "vite", "vite");
+		runTool(tool, ["build", "--config", options.config, "--outDir", options.output], packageDirectory);
+		const files = await readdir(options.output);
+		if (files.length === 0) throw new Error(`vite produced empty output '${options.output}'`);
 		return;
 	}
 	const tool = await resolveTool(packageDirectory, "tsdown", "tsdown");
