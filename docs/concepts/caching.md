@@ -44,6 +44,11 @@ Remote caches speak the same action-cache and CAS model. Cache provenance is
 only portable when toolchain, platform, environment, and input identities are
 portable too.
 
+Restoration copies cached objects into writable outputs by default. Set
+`BSMR_LOCAL_CACHE_MATERIALIZATION=reflink` to require filesystem copy-on-write
+clones. Unsupported cloning fails the build. Modified outputs cannot change
+the stored objects in either mode.
+
 ## What “hermetic” currently means
 
 For supported pure-Go actions, Bessemer declares exact repository inputs, an

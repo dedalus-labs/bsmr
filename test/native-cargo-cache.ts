@@ -22,7 +22,7 @@ const checkouts: string[] = [];
 const env = {
 	...process.env,
 	BSMR_LOCAL_CACHE_DIR: join(root, "cache"),
-
+	BSMR_LOCAL_CACHE_MATERIALIZATION: process.platform === "darwin" ? "reflink" : "copy",
 };
 
 /** Creates a distinct checkout with the requested Rust source bytes. */

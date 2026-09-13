@@ -2020,6 +2020,7 @@ dependencies = [
  "prost",
  "prost-types",
  "ref-cast",
+ "reflink-copy",
  "remote_execution",
  "serde",
  "serde_json",

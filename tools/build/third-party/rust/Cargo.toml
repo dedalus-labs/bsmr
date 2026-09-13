@@ -183,6 +183,7 @@ rand_chacha = "0.10"
 rand_distr = "0.6"
 rand_xoshiro = "0.8"
 ref-cast = "1.0.18"
+reflink-copy = "0.1.30"
 regex = "1.12.3"
 relative-path = { version = "1.7.0", features = ["serde"] }
 ring = "=0.17.14" # Upgrading this is possible, but a pain, so we don't want to pick up every new minor version

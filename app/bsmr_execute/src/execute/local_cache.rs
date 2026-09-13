@@ -5,6 +5,7 @@
 
 // Stores action results and immutable blobs in a process-safe local AC/CAS.
 
+use std::ffi::OsString;
 use std::fs;
 use std::fs::File;
 use std::fs::OpenOptions;
@@ -85,6 +86,8 @@ enum LocalCacheError {
     MissingUserCacheDirectory,
     #[error("BSMR_LOCAL_CACHE_DIR must be absolute, got '{}'", _0.display())]
     RelativeCacheDirectory(PathBuf),
+    #[error("BSMR_LOCAL_CACHE_MATERIALIZATION must be `copy` or `reflink`, got '{value:?}'")]
+    UnsupportedMaterialization { value: OsString },
     #[error("Local cache digest has a negative size: {0}")]
     NegativeSize(i64),
     #[error("Local cache digest declares {declared}, but its hash parses as {parsed}")]
@@ -172,6 +175,28 @@ pub struct LocalActionResult {
 #[derive(Allocative, Debug)]
 pub struct LocalActionCache {
     root: PathBuf,
+    materialization: LocalCacheMaterialization,
+}
+
+/// Selects how cached objects become writable output files.
+#[derive(Allocative, Clone, Copy, Debug, Eq, PartialEq)]
+pub enum LocalCacheMaterialization {
+    Copy,
+    Reflink,
+}
+
+impl LocalCacheMaterialization {
+    /// Parses the configured policy, retaining copying as the default.
+    fn from_env() -> bsmr_error::Result<Self> {
+        let Some(value) = std::env::var_os("BSMR_LOCAL_CACHE_MATERIALIZATION") else {
+            return Ok(Self::Copy);
+        };
+        match value.to_str() {
+            Some("copy") => Ok(Self::Copy),
+            Some("reflink") => Ok(Self::Reflink),
+            _ => Err(LocalCacheError::UnsupportedMaterialization { value }.into()),
+        }
+    }
 }
 
 impl LocalActionCache {
@@ -183,15 +208,26 @@ impl LocalActionCache {
                 .ok_or(LocalCacheError::MissingUserCacheDirectory)?
                 .join("bsmr/action-v1"),
         };
-        Self::at(root)
+        Self::at_with_materialization(root, LocalCacheMaterialization::from_env()?)
     }
 
     /// Opens a cache rooted at `root`.
     pub fn at(root: PathBuf) -> bsmr_error::Result<Self> {
+        Self::at_with_materialization(root, LocalCacheMaterialization::Copy)
+    }
+
+    /// Opens a cache with the required output materialization mode.
+    pub fn at_with_materialization(
+        root: PathBuf,
+        materialization: LocalCacheMaterialization,
+    ) -> bsmr_error::Result<Self> {
         if !root.is_absolute() {
             return Err(LocalCacheError::RelativeCacheDirectory(root).into());
         }
-        Ok(Self { root })
+        Ok(Self {
+            root,
+            materialization,
+        })
     }
 
     /// Returns an action result only when every referenced CAS object exists.
@@ -324,7 +360,7 @@ impl LocalActionCache {
         Ok(Some(bytes))
     }
 
-    /// Copies one CAS object to `destination` and validates its size.
+    /// Restores one cached object and verifies its content digest.
     pub fn restore_blob(
         &self,
         digest: &TrackedFileDigest,
@@ -346,7 +382,18 @@ impl LocalActionCache {
         fs::create_dir_all(parent).map_err(|error| io_error("create directory", parent, error))?;
         let (temporary, output) = create_temporary(destination)?;
         drop(output);
-        fs::copy(&source, &temporary).map_err(|error| io_error("restore", destination, error))?;
+        if self.materialization == LocalCacheMaterialization::Reflink {
+            fs::remove_file(&temporary)
+                .map_err(|error| io_error("prepare reflink restore", &temporary, error))?;
+        }
+        let materialized = match self.materialization {
+            LocalCacheMaterialization::Copy => fs::copy(&source, &temporary).map(|_| ()),
+            LocalCacheMaterialization::Reflink => reflink_copy::reflink(&source, &temporary),
+        };
+        if let Err(error) = materialized {
+            let _ignored = fs::remove_file(&temporary);
+            return Err(io_error("materialize cache blob", destination, error));
+        }
         let obtained = fs::metadata(&temporary)
             .map_err(|error| io_error("inspect", &temporary, error))?
             .len();
@@ -633,6 +680,8 @@ mod tests {
 
     use super::LocalActionCache;
     use super::LocalActionResult;
+    #[cfg(target_os = "macos")]
+    use super::LocalCacheMaterialization;
     use super::LocalDigest;
     use super::LocalOutputDirectory;
     use super::LocalOutputFile;
@@ -696,6 +745,28 @@ mod tests {
 
         assert_eq!(fs::read(first_path)?, b"cached output");
         assert_eq!(fs::read(second_path)?, b"second output");
+        Ok(())
+    }
+
+    #[cfg(target_os = "macos")]
+    #[test]
+    fn invariant_reflink_restoration_preserves_cached_bytes() -> bsmr_error::Result<()> {
+        let temporary = tempfile::tempdir()?;
+        let cache = LocalActionCache::at_with_materialization(
+            temporary.path().join("cache"),
+            LocalCacheMaterialization::Reflink,
+        )?;
+        let digest_config = DigestConfig::testing_default();
+        let output =
+            TrackedFileDigest::from_content(b"cached output", digest_config.cas_digest_config());
+        cache.publish_bytes(&output, b"cached output", digest_config)?;
+        let restored = temporary.path().join("restored");
+        cache.restore_blob(&output, &restored, digest_config)?;
+        fs::write(&restored, b"changed output")?;
+        assert_eq!(
+            cache.read_blob(&LocalDigest::from_file(&output), digest_config)?,
+            Some(b"cached output".to_vec())
+        );
         Ok(())
     }
 
