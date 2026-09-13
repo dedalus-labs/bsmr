@@ -74,6 +74,7 @@ def _cargo_build_impl(ctx: AnalysisContext) -> list[Provider]:
             "RUSTUP_TOOLCHAIN": workspace.toolchain,
         },
         allow_cache_upload = False,
+        allow_local_cache_upload = True,
         category = "cargo_build",
         identifier = ctx.label.name,
         local_only = True,
