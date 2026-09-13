@@ -37,6 +37,7 @@ use crate::artifact_value::ArtifactValue;
 use crate::execute::claim::Claim;
 use crate::execute::dep_file_digest::DepFileDigest;
 use crate::execute::kind::CommandExecutionKind;
+use crate::execute::local_cache::LocalActionLease;
 use crate::execute::output::CommandStdStreams;
 use crate::execute::request::CommandExecutionOutput;
 use crate::execute::request::ResolvedCommandExecutionOutput;
@@ -255,6 +256,9 @@ pub struct CommandExecutionResult {
     /// to be re-used when uploading the remote dep file.
     #[derivative(Debug = "ignore")]
     pub action_result: Option<TActionResult2>,
+    /// Holds an identical-action flight until cache upload or terminal result disposal.
+    #[derivative(Debug = "ignore")]
+    pub local_action_lease: Option<LocalActionLease>,
     /// Description of how local or remote execution were scheduled (currently only set by hybrid executor)
     pub scheduling_mode: Option<SchedulingMode>,
 

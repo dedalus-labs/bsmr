@@ -32,6 +32,7 @@ use crate::artifact_value::ArtifactValue;
 use crate::execute::claim::Claim;
 use crate::execute::claim::ClaimManager;
 use crate::execute::kind::CommandExecutionKind;
+use crate::execute::local_cache::LocalActionLease;
 use crate::execute::output::CommandStdStreams;
 use crate::execute::request::CommandExecutionOutput;
 use crate::execute::result::CommandCancellationReason;
@@ -64,6 +65,7 @@ pub struct CommandExecutionManagerInner {
     pub execution_kind: Option<CommandExecutionKind>,
     pub was_result_delayed: Arc<AtomicBool>,
     pub waiting_data: WaitingData,
+    pub local_action_lease: Option<LocalActionLease>,
 }
 
 /// This tracker helps track the information that will go into the BsmrCommandExecutionMetadata
@@ -87,6 +89,7 @@ impl CommandExecutionManager {
                 execution_kind: None,
                 was_result_delayed: Arc::new(AtomicBool::new(false)),
                 waiting_data,
+                local_action_lease: None,
             }),
         }
     }
@@ -101,6 +104,7 @@ impl CommandExecutionManager {
             execution_kind,
             was_result_delayed: _,
             waiting_data,
+            local_action_lease,
         } = *self.inner;
         claim_manager
             .claim()
@@ -111,6 +115,7 @@ impl CommandExecutionManager {
                     execution_kind,
                     claim,
                     waiting_data,
+                    local_action_lease,
                 }),
             })
     }
@@ -154,6 +159,12 @@ impl CommandExecutionManager {
         self
     }
 
+    /// Keeps one identical-action lease alive through execution and cache upload.
+    pub fn with_local_action_lease(mut self, lease: LocalActionLease) -> Self {
+        self.inner.local_action_lease = Some(lease);
+        self
+    }
+
     pub fn start_waiting_category(&mut self, waiting_category: WaitingCategory) {
         self.inner
             .waiting_data
@@ -189,6 +200,7 @@ impl CommandExecutionManagerLike for CommandExecutionManager {
             eligible_for_full_hybrid: false,
             dep_file_metadata: None,
             action_result: None,
+            local_action_lease: self.inner.local_action_lease,
             scheduling_mode: None,
             waiting_data: self.inner.waiting_data,
         }
@@ -205,6 +217,7 @@ pub struct CommandExecutionManagerWithClaimInner {
     pub execution_kind: Option<CommandExecutionKind>,
     claim: Box<dyn Claim>,
     waiting_data: WaitingData,
+    local_action_lease: Option<LocalActionLease>,
 }
 
 pub struct CommandExecutionManagerWithClaim {
@@ -284,6 +297,7 @@ impl CommandExecutionManagerLike for CommandExecutionManagerWithClaim {
             eligible_for_full_hybrid: false,
             dep_file_metadata: None,
             action_result: None,
+            local_action_lease: self.inner.local_action_lease,
             scheduling_mode: None,
             waiting_data: self.inner.waiting_data,
         }

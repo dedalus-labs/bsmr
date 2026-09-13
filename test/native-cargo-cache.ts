@@ -3,7 +3,7 @@
 // SPDX-License-Identifier: Apache-2.0
 //===----------------------------------------------------------------------===//
 
-// Verifies native Cargo reuse, source invalidation, and output isolation.
+// Verifies native Cargo reuse, source invalidation, output isolation, and concurrent misses.
 
 import assert from "node:assert/strict";
 import { execFile } from "node:child_process";
@@ -23,6 +23,7 @@ const env = {
 	...process.env,
 	BSMR_LOCAL_CACHE_DIR: join(root, "cache"),
 	BSMR_LOCAL_CACHE_MATERIALIZATION: process.platform === "darwin" ? "reflink" : "copy",
+	BSMR_IO_SEMAPHORE: "1",
 };
 
 /** Creates a distinct checkout with the requested Rust source bytes. */
@@ -53,12 +54,13 @@ execution_platforms = prelude//platforms:default
 	writeFileSync(join(cwd, "Cargo.lock"), 'version = 4\n[[package]]\nname = "cache_probe"\nversion = "0.1.0"\n');
 	writeFileSync(join(cwd, "rust-toolchain.toml"), '[toolchain]\nchannel = "nightly-2026-04-11"\n');
 	writeFileSync(join(cwd, "probe/src/main.rs"), `fn main() { println!("${message}"); }\n`);
+	writeFileSync(join(cwd, "probe/build.rs"), "fn main() { std::thread::sleep(std::time::Duration::from_secs(1)); }\n");
 	return cwd;
 }
 
 /** Builds real Rust code and returns the output bytes and execution counters. */
 async function build(cwd: string, message: string) {
-	const { stdout, stderr } = await run(executable, ["build", "probe", "--show-full-json-output", "--console", "simple"], { cwd, env });
+	const { stdout, stderr } = await run(executable, ["build", "probe", "--show-full-json-output", "--console", "simple"], { cwd, env, timeout: 120_000 });
 	const outputs: Record<string, string> = JSON.parse(stdout);
 	assert.equal(Object.keys(outputs).length, 1);
 	const output = Object.values(outputs)[0];
@@ -87,7 +89,17 @@ try {
 	assert.equal(third.digest, first.digest, "mutable output must not change shared cache bytes");
 	const changed = await build(checkout("fourth", "changed"), "changed");
 	assert.equal(changed.local, 1, "changed source must execute");
-	process.stdout.write("ok: Cargo reuse, source invalidation, output isolation\n");
+	const concurrent = await Promise.all([
+		build(checkout("fifth", "concurrent"), "concurrent"),
+		build(checkout("sixth", "concurrent"), "concurrent"),
+	]);
+	assert.equal(concurrent.reduce((total, result) => total + result.local, 0), 1, "concurrent misses must execute once");
+	assert.equal(concurrent.reduce((total, result) => total + result.cached, 0), 1);
+	assert.equal(concurrent[0]?.digest, concurrent[1]?.digest);
+	for (const { cached, local, digest } of [first, second, third, changed, ...concurrent]) {
+		process.stdout.write(`${JSON.stringify({ cached, local, digest })}\n`);
+	}
+	process.stdout.write("ok: Cargo reuse, source invalidation, output isolation, concurrent deduplication\n");
 } finally {
 	await Promise.all(checkouts.map((cwd) => run(executable, ["kill"], { cwd, env })));
 	rmSync(root, { recursive: true });
