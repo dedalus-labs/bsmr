@@ -248,6 +248,9 @@ jobs:
       - name: Verify native Cargo cache
         run: node test/native-cargo-cache.ts target/debug/bsmr
         shell: bash
+      - name: Verify native TypeScript cache
+        run: node test/native-typescript-cache.ts target/debug/bsmr
+        shell: bash
       - name: Download pinned DotSlash
         run: curl --proto =https --tlsv1.2 --fail --location --silent --show-error "$HOLLYWOOD_COMMAND_ARG_7" --output "$HOLLYWOOD_COMMAND_ARG_9"
         shell: bash

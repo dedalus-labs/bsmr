@@ -1,0 +1,14 @@
+{
+  "name": "cache-probe",
+  "version": "0.0.0",
+  "type": "module",
+  "exports": "./dist/index.mjs",
+  "files": [
+    "dist"
+  ],
+  "devDependencies": {
+    "tsdown": "0.22.4",
+    "typescript": "6.0.3"
+  },
+  "license": "Apache-2.0"
+}

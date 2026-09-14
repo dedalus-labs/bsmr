@@ -369,6 +369,10 @@ export const ci = workflow({
 					name: "Verify native Cargo cache",
 					run: command({ file: "node", args: ["test/native-cargo-cache.ts", "target/debug/bsmr"] }),
 				},
+				{
+					name: "Verify native TypeScript cache",
+					run: command({ file: "node", args: ["test/native-typescript-cache.ts", "target/debug/bsmr"] }),
+				},
 				...installDotSlash,
 				{
 					name: "Generate Rust build dependencies",
