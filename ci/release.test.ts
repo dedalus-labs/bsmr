@@ -118,9 +118,17 @@ test("unpublished versions cannot advance release please", () => {
 		/v0\.0\.3 is still a draft/,
 	);
 	assert.throws(
-		() => releaseState("false\tfalse\n", "v0.0.3"),
-		/v0\.0\.3 is published but mutable/,
+		() => releaseState("false\tfalse\n", "v0.0.4"),
+		/v0\.0\.4 is published but mutable/,
 	);
+});
+
+test("the published legacy release can advance without republishing its bytes", () => {
+	assert.equal(releaseState("false\tfalse\n", "v0.0.3"), "published");
+	for (const tag of ["v0.0.2", "v0.0.4", "v1.0.0"])
+		assert.throws(() => releaseState("false\tfalse\n", tag), /published but mutable/);
+	for (const state of ["true\tfalse", "true\ttrue", "false\tfalse\nfalse\tfalse"])
+		assert.throws(() => releaseState(state, "v0.0.3"));
 });
 
 test("release publication retries the current product version", () => {
