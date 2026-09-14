@@ -41,6 +41,12 @@ pnpm run ci check
 Update tests when behavior changes. Update documentation when a public
 interface changes.
 
+CI runs Rust tests and self-host checks on native Linux x64 and ARM64 runners.
+Both architectures must pass the required `Rust` check. The self-host lane builds
+BSMR from source and verifies Cargo cache reuse, invalidation, output isolation,
+and concurrent builds with `node test/native-cargo-cache.ts target/debug/bsmr`.
+The Firecracker conformance lane remains x64-only.
+
 Repository policy is managed with Terraform from Dedalus's protected
 repository-controls stack. Do not change GitHub settings manually.
 
