@@ -1,3 +1,9 @@
+# ===----------------------------------------------------------------------===
+# Upstream-Source: facebook/buck2@1560aca2002865cd73d7cafb22c705cfb640b2bc
+# Modifications Copyright (c) 2026 Dedalus Labs, Inc. and its contributors
+# SPDX-License-Identifier: Apache-2.0
+# ===----------------------------------------------------------------------===
+
 # Copyright (c) Meta Platforms, Inc. and affiliates.
 #
 # This source code is dual-licensed under either the MIT license found in the
@@ -60,11 +66,13 @@ def is_subpackage_of(other_pkg_import_path: str, pkg_import_path: str) -> bool:
     return pkg_import_path == other_pkg_import_path or other_pkg_import_path.startswith(pkg_import_path + "/")
 
 def go_test_impl(ctx: AnalysisContext) -> list[Provider]:
+    """Build the target with the source and embed inputs required by package tests."""
     pkg_import_path = go_attr_pkg_name(ctx)
     cgo_enabled = evaluate_cgo_enabled(ctx.attrs._cgo_enabled)
 
     deps = ctx.attrs.deps
     srcs = ctx.attrs.srcs
+    embed_srcs = dict(from_named_set(ctx.attrs.embed_srcs))
     coverage_enabled = ctx.attrs.coverage_enabled
 
     # Copy the srcs, deps and pkg_import_path from the target library when set. The
@@ -72,6 +80,10 @@ def go_test_impl(ctx: AnalysisContext) -> list[Provider]:
     if ctx.attrs.target_under_test:
         lib = ctx.attrs.target_under_test[GoTestInfo]
         srcs += lib.srcs
+        for path, source in lib.embed_srcs.items():
+            if path in embed_srcs and embed_srcs[path] != source:
+                fail("Go test embed path '{}' conflicts with its target".format(path))
+            embed_srcs[path] = source
         deps += lib.deps
 
         # TODO: should we assert that pkg_import_path != None here?
@@ -91,7 +103,7 @@ def go_test_impl(ctx: AnalysisContext) -> list[Provider]:
         main = False,
         sources = GoSourceInputs(
             srcs = srcs,
-            embed_srcs = from_named_set(ctx.attrs.embed_srcs),
+            embed_srcs = embed_srcs,
             package_root = ctx.attrs.package_root,
         ),
         cgo_build_context = cgo_build_context,

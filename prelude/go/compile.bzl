@@ -1,3 +1,9 @@
+# ===----------------------------------------------------------------------===
+# Upstream-Source: facebook/buck2@1560aca2002865cd73d7cafb22c705cfb640b2bc
+# Modifications Copyright (c) 2026 Dedalus Labs, Inc. and its contributors
+# SPDX-License-Identifier: Apache-2.0
+# ===----------------------------------------------------------------------===
+
 # Copyright (c) Meta Platforms, Inc. and affiliates.
 #
 # This source code is dual-licensed under either the MIT license found in the
@@ -27,6 +33,7 @@ GoTestInfo = provider(
     fields = {
         "deps": provider_field(typing.Any, default = None),  # [Dependency]
         "srcs": provider_field(typing.Any, default = None),  # ["source"]
+        "embed_srcs": provider_field(dict[str, Artifact]),
         "pkg_import_path": provider_field(typing.Any, default = None),  # str
         "coverage_enabled": provider_field(bool),
     },

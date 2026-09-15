@@ -1,3 +1,9 @@
+# ===----------------------------------------------------------------------===
+# Upstream-Source: facebook/buck2@1560aca2002865cd73d7cafb22c705cfb640b2bc
+# Modifications Copyright (c) 2026 Dedalus Labs, Inc. and its contributors
+# SPDX-License-Identifier: Apache-2.0
+# ===----------------------------------------------------------------------===
+
 # Copyright (c) Meta Platforms, Inc. and affiliates.
 #
 # This source code is dual-licensed under either the MIT license found in the
@@ -50,6 +56,7 @@ load(":packages.bzl", "cgo_exported_preprocessor", "go_attr_pkg_name", "merge_pk
 load(":toolchain.bzl", "GoToolchainInfo", "evaluate_cgo_enabled", "get_toolchain_env_vars")
 
 def go_library_impl(ctx: AnalysisContext) -> list[Provider]:
+    """Build the target with the source and embed inputs required by package tests."""
     pkg_import_path = go_attr_pkg_name(ctx)
 
     coverage_mode = GoCoverageMode(ctx.attrs._coverage_mode) if ctx.attrs._coverage_mode else None
@@ -95,6 +102,7 @@ def go_library_impl(ctx: AnalysisContext) -> list[Provider]:
         GoTestInfo(
             deps = ctx.attrs.deps,
             srcs = ctx.attrs.srcs,
+            embed_srcs = from_named_set(ctx.attrs.embed_srcs),
             pkg_import_path = pkg_import_path,
             coverage_enabled = ctx.attrs.coverage_enabled,
         ),

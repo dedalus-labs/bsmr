@@ -40,6 +40,13 @@ The generated manifests record exact source and embed files, direct imports,
 canonical package identity, selected tags, and cgo mode. They carry an ownership
 marker, and synchronization refuses to overwrite a human-authored build file.
 
+Internal tests inherit the embedded files of their `target_under_test`. A path
+declared by both the test and its target must refer to the same source artifact.
+Run `node test/native-go-build.ts /path/to/bsmr` to compile and execute a binary
+and internal test that share an embedded file with Go 1.26.7. For local prelude
+changes, append `1.26.7 /path/to/bsmr/prelude` to exercise those rules with an
+installed BSMR binary.
+
 ## Build tags
 
 Declare every selectable tag in `.bsmr` so graph selection and action
