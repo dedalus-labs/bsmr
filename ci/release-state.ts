@@ -16,8 +16,6 @@ export function releaseState(source: string, tag: string): ReleaseState {
 	const state = source.trimEnd();
 	if (state === "") return "absent";
 	if (state === "true\tfalse") throw new Error(`${tag} is still a draft`);
-	// Preserve the historical release. Remove after immutable v0.0.4 is published.
-	if (tag === "v0.0.3" && state === "false\tfalse") return "published";
 	if (state !== "false\ttrue") throw new Error(`${tag} is published but mutable`);
 	return "published";
 }
