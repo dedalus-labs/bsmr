@@ -46,8 +46,9 @@ remain available for queries and automation.
 The current adapter executes `cargo build --locked --manifest-path ...` with an
 exact `RUSTUP_TOOLCHAIN`, isolated `CARGO_HOME` and `CARGO_TARGET_DIR`, disabled
 Cargo incrementality, and deterministic source-path remapping. BSMR records the
-complete declared output in its content-addressed store. A warm build performs
-no Cargo action, and BSMR can restore a deleted output from the local CAS.
+complete declared output in its shared local content-addressed store. Another
+checkout with the same declared inputs can restore that output without running
+Cargo. BSMR can also restore deleted outputs from this cache.
 
 The first implementation deliberately runs locally and disables remote cache
 upload. Cargo is still resolved from the host, and a cold action may fetch

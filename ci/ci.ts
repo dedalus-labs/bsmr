@@ -346,6 +346,11 @@ export const ci = workflow({
 					name: "Build BSMR",
 					run: command({ file: "cargo", args: ["build", "--locked", "--bin", "bsmr"] }),
 				},
+				setupNode,
+				{
+					name: "Verify native Cargo cache",
+					run: command({ file: "node", args: ["test/native-cargo-cache.ts", "target/debug/bsmr"] }),
+				},
 				...installDotSlash,
 				{
 					name: "Generate Rust build dependencies",

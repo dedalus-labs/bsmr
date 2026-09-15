@@ -208,6 +208,13 @@ jobs:
       - name: Build BSMR
         run: cargo build --locked --bin bsmr
         shell: bash
+      - name: Set up Node
+        uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38
+        with:
+          node-version: 26.5.1
+      - name: Verify native Cargo cache
+        run: node test/native-cargo-cache.ts target/debug/bsmr
+        shell: bash
       - name: Download pinned DotSlash
         run: curl --proto =https --tlsv1.2 --fail --location --silent --show-error https://github.com/facebook/dotslash/releases/download/v0.5.9/dotslash-linux-musl.x86_64.v0.5.9.tar.gz --output "$HOLLYWOOD_COMMAND_ARG_9"
         shell: bash
