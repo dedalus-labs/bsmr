@@ -49,6 +49,11 @@ Restoration copies cached objects into writable outputs by default. Set
 clones. Unsupported cloning fails the build. Modified outputs cannot change
 the stored objects in either mode.
 
+Processes sharing the local cache coordinate misses through 4096 process-lock
+files. One process executes a cacheable action and publishes its result; waiting
+processes restore it. Waiting releases the I/O permit, and process exit releases
+the action lock. Different actions sharing a lock shard may execute in sequence.
+
 ## What “hermetic” currently means
 
 For supported pure-Go actions, Bessemer declares exact repository inputs, an

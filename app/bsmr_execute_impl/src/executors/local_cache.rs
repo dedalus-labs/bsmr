@@ -8,6 +8,7 @@
 use std::collections::BTreeSet;
 use std::ops::ControlFlow;
 use std::sync::Arc;
+use std::time::Duration;
 
 use async_trait::async_trait;
 use bsmr_common::file_ops::metadata::FileMetadata;
@@ -35,6 +36,7 @@ use bsmr_execute::execute::cache_uploader::UploadCache;
 use bsmr_execute::execute::executor_stage_async;
 use bsmr_execute::execute::kind::CommandExecutionKind;
 use bsmr_execute::execute::local_cache::LocalActionCache;
+use bsmr_execute::execute::local_cache::LocalActionReservation;
 use bsmr_execute::execute::local_cache::LocalActionResult;
 use bsmr_execute::execute::local_cache::LocalDigest;
 use bsmr_execute::execute::local_cache::LocalOutputDirectory;
@@ -85,13 +87,25 @@ impl PreparedCommandOptionalExecutor for LocalActionCacheChecker {
                 action_digest: action.to_string(),
                 cache_type: bsmr_data::CacheType::ActionCache.into(),
             },
-            self.blocking_executor
-                .execute_io_inline(|| self.cache.action_result(&action)),
+            async {
+                loop {
+                    if let Some(reservation) = self
+                        .blocking_executor
+                        .execute_io_inline(|| self.cache.try_reserve_action(&action))
+                        .await?
+                    {
+                        break bsmr_error::Ok(reservation);
+                    }
+                    tokio::time::sleep(Duration::from_millis(10)).await;
+                }
+            },
         )
         .await
         {
-            Ok(Some(result)) => result,
-            Ok(None) => return ControlFlow::Continue(manager),
+            Ok(LocalActionReservation::Hit(result)) => result,
+            Ok(LocalActionReservation::Lease(lease)) => {
+                return ControlFlow::Continue(manager.with_local_action_lease(lease));
+            }
             Err(error) => return ControlFlow::Break(manager.error("local_action_cache", error)),
         };
 

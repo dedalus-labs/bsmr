@@ -34,6 +34,10 @@ use crate::digest::CasDigestToReExt;
 use crate::digest_config::DigestConfig;
 use crate::execute::action_digest::ActionDigest;
 
+mod flight;
+pub use flight::LocalActionLease;
+pub use flight::LocalActionReservation;
+
 static TEMPORARY_ID: AtomicU64 = AtomicU64::new(0);
 
 #[derive(Debug, bsmr_error::Error)]
