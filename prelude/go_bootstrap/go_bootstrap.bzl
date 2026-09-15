@@ -1,3 +1,9 @@
+# ===----------------------------------------------------------------------===
+# Upstream-Source: facebook/buck2@1560aca2002865cd73d7cafb22c705cfb640b2bc
+# Modifications Copyright (c) 2026 Dedalus Labs, Inc. and its contributors
+# SPDX-License-Identifier: Apache-2.0
+# ===----------------------------------------------------------------------===
+
 # Copyright (c) Meta Platforms, Inc. and affiliates.
 #
 # This source code is dual-licensed under either the MIT license found in the
@@ -17,6 +23,7 @@ GoBootstrapDistrInfo = provider(
 )
 GoBootstrapToolchainInfo = provider(
     fields = {
+        "allow_local_cache_upload": provider_field(bool, default = False),
         "env_go_arch": provider_field(str),
         "env_go_os": provider_field(str),
         "env_go_root": provider_field(Artifact | None, default = None),
@@ -27,9 +34,8 @@ GoBootstrapToolchainInfo = provider(
 
 def go_bootstrap_binary_impl(ctx: AnalysisContext) -> list[Provider]:
     """
-    Produces a Go binary for use in prelude. Similar to `python_bootstrap_binary`
-    It doesn't depend on other Go rules and uses `go build` under the hood.
-    CGo is disabled minimise dependencies.
+    Compile prelude helper tools without depending on the regular Go rules.
+    Cache eligibility comes from the SDK/wrapper toolchain, and build paths are trimmed.
     """
     go_toolchain = ctx.attrs._go_bootstrap_toolchain[GoBootstrapToolchainInfo]
 
@@ -49,6 +55,8 @@ def go_bootstrap_binary_impl(ctx: AnalysisContext) -> list[Provider]:
         go_toolchain.go,
         ["--workdir", srcs_dir],
         "build",
+        "-trimpath",
+        "-buildvcs=false",
         ["-o", cmd_args(output.as_output(), relative_to = srcs_dir)],
         ctx.attrs.build_args,
     ])
@@ -64,7 +72,7 @@ def go_bootstrap_binary_impl(ctx: AnalysisContext) -> list[Provider]:
     if go_toolchain.env_go_root != None:
         env["GOROOT"] = go_toolchain.env_go_root
 
-    ctx.actions.run(cmd, env = env, category = "go_bootstrap_binary")
+    ctx.actions.run(cmd, env = env, category = "go_bootstrap_binary", allow_local_cache_upload = go_toolchain.allow_local_cache_upload)
 
     return [
         DefaultInfo(default_output = output),

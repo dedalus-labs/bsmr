@@ -1,3 +1,9 @@
+# ===----------------------------------------------------------------------===
+# Upstream-Source: facebook/buck2@1560aca2002865cd73d7cafb22c705cfb640b2bc
+# Modifications Copyright (c) 2026 Dedalus Labs, Inc. and its contributors
+# SPDX-License-Identifier: Apache-2.0
+# ===----------------------------------------------------------------------===
+
 # Copyright (c) Meta Platforms, Inc. and affiliates.
 #
 # This source code is dual-licensed under either the MIT license found in the
@@ -10,6 +16,7 @@ load(":go_list.bzl", "GoListOut")
 load(":toolchain.bzl", "GoToolchainInfo", "get_toolchain_env_vars")
 
 def go_list_stdlib(actions: AnalysisActions, go_toolchain: GoToolchainInfo, cgo_enabled: bool) -> Artifact:
+    """Discover standard-library inputs through the toolchain's declared SDK."""
     env = get_toolchain_env_vars(go_toolchain)
 
     if go_toolchain.env_go_root == None:
@@ -33,7 +40,7 @@ def go_list_stdlib(actions: AnalysisActions, go_toolchain: GoToolchainInfo, cgo_
         ["-asan"] if go_toolchain.asan and cgo_enabled else [],
         "std",
     ]
-    actions.run(go_list_args, env = env, category = "go_list_stdlib")
+    actions.run(go_list_args, env = env, category = "go_list_stdlib", allow_local_cache_upload = go_toolchain.allow_local_cache_upload)
 
     return go_list_stdlib_out
 

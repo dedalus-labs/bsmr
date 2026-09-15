@@ -54,6 +54,7 @@ def go_list(
     cgo_enabled: bool,
     with_tests: bool,
 ) -> Artifact:
+    """Select package files with the declared analyzer and target configuration."""
     env = get_toolchain_env_vars(go_toolchain)
 
     go_list_out = actions.declare_output(paths.basename(pkg_import_path) + "_go_list.json", has_content_based_path = True)
@@ -79,7 +80,7 @@ def go_list(
     ]
 
     identifier = paths.basename(pkg_import_path)
-    actions.run(go_list_args, env = env, category = "go_list", identifier = identifier)
+    actions.run(go_list_args, env = env, category = "go_list", identifier = identifier, allow_local_cache_upload = go_toolchain.allow_local_cache_upload)
 
     return go_list_out
 
