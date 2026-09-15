@@ -1,3 +1,9 @@
+# ===----------------------------------------------------------------------===
+# Upstream-Source: facebook/buck2@1560aca2002865cd73d7cafb22c705cfb640b2bc
+# Modifications Copyright (c) 2026 Dedalus Labs, Inc. and its contributors
+# SPDX-License-Identifier: Apache-2.0
+# ===----------------------------------------------------------------------===
+
 # Copyright (c) Meta Platforms, Inc. and affiliates.
 #
 # This source code is dual-licensed under either the MIT license found in the
@@ -109,7 +115,13 @@ def link(
     linker_flags: list[typing.Any] = [],
     external_linker_flags: list[typing.Any] = [],
 ):
+    """Preserve requested link semantics and cache only a declared internal Go link."""
     go_toolchain = ctx.attrs._go_toolchain[GoToolchainInfo]
+
+    if link_mode == None:
+        link_mode = read_root_config("go", "link_mode", None)
+    if link_mode not in [None, "internal", "external"]:
+        fail("go.link_mode must be internal or external, got {}".format(link_mode))
 
     if not cgo_enabled and (go_toolchain.asan or go_toolchain.race):
         fail("`race=True` and `asan=True` are only supported when `cgo_enabled=True`")
@@ -259,6 +271,8 @@ def link(
             shared = use_shared_code,
             identifier = identifier_prefix,
             out = output.as_output(),
+            # Later raw flags could override the explicit mode and invoke host CC.
+            allow_local_cache_upload = go_toolchain.allow_local_cache_upload and not cgo_enabled and link_mode == "internal" and not linker_flags,
         )
     )
 
@@ -280,7 +294,9 @@ def _link_impl(
     shared: bool,
     identifier: str,
     out: OutputArtifact,
+    allow_local_cache_upload: bool,
 ) -> list[Provider]:
+    """Link the resolved package artifacts with the caller's cache eligibility."""
     go_stdlib_value = go_stdlib_value.providers[GoStdlibDynamicValue]
 
     deps = merge_pkgs([go_stdlib_value.pkgs, deps_pkgs])
@@ -293,7 +309,7 @@ def _link_impl(
         ["-o", out],
         main_pkg_o,
     ]
-    actions.run(cmd, env = env_vars, category = "go_link", identifier = identifier)
+    actions.run(cmd, env = env_vars, category = "go_link", identifier = identifier, allow_local_cache_upload = allow_local_cache_upload)
     return []
 
 _link = dynamic_actions(
@@ -308,5 +324,6 @@ _link = dynamic_actions(
         "shared": dynattrs.value(bool),
         "identifier": dynattrs.value(str),
         "out": dynattrs.output(),
+        "allow_local_cache_upload": dynattrs.value(bool),
     },
 )
