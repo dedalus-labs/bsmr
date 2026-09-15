@@ -42,10 +42,10 @@ marker, and synchronization refuses to overwrite a human-authored build file.
 
 Internal tests inherit the embedded files of their `target_under_test`. A path
 declared by both the test and its target must refer to the same source artifact.
-Run `node test/native-go-build.ts /path/to/bsmr` to compile and execute a binary
-and internal test that share an embedded file with Go 1.26.7. For local prelude
-changes, append `1.26.7 /path/to/bsmr/prelude` to exercise those rules with an
-installed BSMR binary.
+Run `node test/native-go-build.ts /path/to/bsmr` to verify a binary and internal
+test that share an embedded file with Go 1.26.7. The same fixture checks cache
+restoration, source-root reuse, input invalidation, and system-tool exclusion.
+Use a binary built from the same revision as the prelude and native generator.
 
 ## Build tags
 
@@ -77,6 +77,35 @@ Pure-Go builds use the existing Darwin/Linux and amd64/arm64 target-platform
 machinery. An arm64 Darwin runner can therefore execute arm64 Darwin tools that
 emit a Linux amd64 pure-Go binary without confusing execution identity with
 target identity.
+
+## Reuse compiled work
+
+A fresh checkout can reuse compiled packages when its declared source, SDK,
+helper tools, and target match a cached action. The generated native toolchain
+enables this cache for artifact-backed Go tools. Generic toolchains remain
+ineligible unless their rule author explicitly declares those inputs.
+
+Keep the shared cache outside disposable workspaces:
+
+```shell
+export BSMR_LOCAL_CACHE_DIR=/absolute/persistent/bsmr-cache
+bsmr build //cmd/server:bin -c go.link_mode=internal
+```
+
+The setting supplies a link mode only when a rule omits `link_mode`. Selecting
+`internal` makes Go's SDK linker the implementation and includes that choice
+in the action key. Cache eligibility never changes the selected mode.
+
+Automatic or external links can invoke a host C linker and remain uncached.
+Cgo links, additional rule-level linker flags, system Go, and the default
+system-Python bootstrap also remain outside this cache eligibility. Cached
+outputs are restored as writable copies, independently of their stored bytes.
+
+The fixture deletes worktree outputs and restarts the daemon before checking
+restoration. It also checks another source root, a policy-only file change,
+compiled-source and SDK-input edits, and repeated system-tool builds. These
+results establish local action-cache behavior, not remote execution or local
+filesystem isolation.
 
 ## cgo
 

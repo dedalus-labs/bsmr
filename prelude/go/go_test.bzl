@@ -33,7 +33,7 @@ load(":coverage.bzl", "GoCoverageMode")
 load(":link.bzl", "GoBuildMode", "get_inherited_link_pkgs", "link")
 load(":package_builder.bzl", "GoBuildConfig", "GoSourceInputs", "declare_package_build")
 load(":packages.bzl", "go_attr_pkg_name")
-load(":toolchain.bzl", "evaluate_cgo_enabled")
+load(":toolchain.bzl", "GoToolchainInfo", "evaluate_cgo_enabled")
 
 def _gen_test_main(
     ctx: AnalysisContext,
@@ -59,7 +59,7 @@ def _gen_test_main(
         cmd.extend(["--cover-mode", coverage_mode.value])
     cmd.append(cmd_args(cover_pkgs_argsfile, format = "@{}"))
     cmd.append(cmd_args(test_go_files_argsfile, format = "@{}"))
-    ctx.actions.run(cmd_args(cmd), category = "go_test_main_gen")
+    ctx.actions.run(cmd_args(cmd), category = "go_test_main_gen", allow_local_cache_upload = ctx.attrs._go_toolchain[GoToolchainInfo].allow_local_cache_upload)
     return output
 
 def is_subpackage_of(other_pkg_import_path: str, pkg_import_path: str) -> bool:
@@ -162,6 +162,7 @@ def go_test_impl(ctx: AnalysisContext) -> list[Provider]:
         link_style = value_or(map_val(LinkStyle, ctx.attrs.link_style), LinkStyle("static")),
         build_mode = GoBuildMode(value_or(ctx.attrs.build_mode, "exe")),
         linker_flags = ctx.attrs.linker_flags,
+        link_mode = ctx.attrs.link_mode,
         external_linker_flags = ctx.attrs.external_linker_flags,
     )
 
