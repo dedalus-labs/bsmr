@@ -9,6 +9,27 @@
 Notable changes to Bessemer are recorded here. Release entries are generated
 from conventional commits and reviewed before publication.
 
+## [0.0.4](https://github.com/dedalus-labs/bsmr/compare/v0.0.3...v0.0.4) (2026-09-15)
+
+
+### Features
+
+* **go:** cache explicit internal links ([#164](https://github.com/dedalus-labs/bsmr/issues/164)) ([139ad4b](https://github.com/dedalus-labs/bsmr/commit/139ad4b74f7e83c64dbec8671d6749c2d4b4a262))
+* **go:** cache pinned compiler actions ([#163](https://github.com/dedalus-labs/bsmr/issues/163)) ([533f8ae](https://github.com/dedalus-labs/bsmr/commit/533f8ae042ca582c7f452365724904365a0e71d1))
+
+
+### Bug Fixes
+
+* **cargo:** publish native builds to the local cache ([#156](https://github.com/dedalus-labs/bsmr/issues/156)) ([f1a4ae3](https://github.com/dedalus-labs/bsmr/commit/f1a4ae36b9b3f07eb3ad1176852fe20025f80b24))
+* **go:** retain embedded files in internal tests ([#162](https://github.com/dedalus-labs/bsmr/issues/162)) ([248aea6](https://github.com/dedalus-labs/bsmr/commit/248aea65dd76307141856d3bff44a91987b1c260))
+* **release:** advance past the historical mutable release ([#165](https://github.com/dedalus-labs/bsmr/issues/165)) ([363f228](https://github.com/dedalus-labs/bsmr/commit/363f22858b102f6aa4ee690433c920f9b46d059d))
+
+
+### Performance Improvements
+
+* **cache:** deduplicate concurrent action misses ([#158](https://github.com/dedalus-labs/bsmr/issues/158)) ([9ea30a8](https://github.com/dedalus-labs/bsmr/commit/9ea30a8a103c60426d5c8147c4b956f23a5aa888))
+* **cache:** restore outputs with filesystem clones ([#157](https://github.com/dedalus-labs/bsmr/issues/157)) ([ae0ba46](https://github.com/dedalus-labs/bsmr/commit/ae0ba461b489c4b1469c75455097698c6cc0fd50))
+
 ## [0.0.3](https://github.com/dedalus-labs/bsmr/compare/v0.0.2...v0.0.3) (2026-08-22)
 
 
