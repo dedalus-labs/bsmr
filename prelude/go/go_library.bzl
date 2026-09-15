@@ -140,6 +140,7 @@ def _get_empty_link_infos() -> dict[LibOutputStyle, LinkInfos]:
 
 # The combined package is convinient for debugging purposes, but for actual builds we use separate objects.
 def _combine_package(ctx: AnalysisContext, pkg_import_path: str, a_file: Artifact, x_file: Artifact) -> Artifact:
+    """Combine package objects with the toolchain's declared packer."""
     go_toolchain = ctx.attrs._go_toolchain[GoToolchainInfo]
     env = get_toolchain_env_vars(go_toolchain)
 
@@ -154,6 +155,6 @@ def _combine_package(ctx: AnalysisContext, pkg_import_path: str, a_file: Artifac
     ]
 
     identifier = paths.basename(pkg_import_path) + "-combined"
-    ctx.actions.run(pack_cmd, env = env, category = "go_pack", identifier = identifier)
+    ctx.actions.run(pack_cmd, env = env, category = "go_pack", identifier = identifier, allow_local_cache_upload = go_toolchain.allow_local_cache_upload)
 
     return pkg_file

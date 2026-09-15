@@ -1,3 +1,9 @@
+# ===----------------------------------------------------------------------===
+# Upstream-Source: facebook/buck2@1560aca2002865cd73d7cafb22c705cfb640b2bc
+# Modifications Copyright (c) 2026 Dedalus Labs, Inc. and its contributors
+# SPDX-License-Identifier: Apache-2.0
+# ===----------------------------------------------------------------------===
+
 # Copyright (c) Meta Platforms, Inc. and affiliates.
 #
 # This source code is dual-licensed under either the MIT license found in the
@@ -24,6 +30,7 @@ def cover_srcs(
     coverage_enabled: bool,
     coverage_mode: GoCoverageMode | None,
 ) -> (list[Artifact], list[Artifact], Artifact | None):
+    """Instrument the selected sources with the declared coverage executable."""
     if not coverage_enabled or coverage_mode == None:
         return go_files, cgo_files, None
 
@@ -67,6 +74,6 @@ def cover_srcs(
         cgo_files,
     ]
 
-    actions.run(cover_cmd, env = env, category = "go_cover", identifier = pkg_import_path)
+    actions.run(cover_cmd, env = env, category = "go_cover", identifier = pkg_import_path, allow_local_cache_upload = go_toolchain.allow_local_cache_upload)
 
     return [instrum_vars_file] + instrum_go_files, instrum_cgo_files, out_config_file

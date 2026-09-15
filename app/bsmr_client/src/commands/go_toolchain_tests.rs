@@ -102,6 +102,12 @@ fn writes_owned_cross_host_toolchain_configuration() {
     assert!(definition.contains("name = \"go_sdk_archive\""));
     assert!(definition.contains("go_root = \".bsmr-go-sdk\""));
     assert!(definition.contains("go_wrapper = \":go_bootstrap_wrapper\""));
+    assert_eq!(
+        definition
+            .matches("allow_local_cache_upload = True")
+            .count(),
+        2
+    );
     assert!(definition.contains("env_go_experiment = [\"none\"]"));
 }
 

@@ -133,7 +133,7 @@ def bsmr_go_toolchains():
     output.push_str(target_arch_select());
     output.push_str(",\n        env_go_os = ");
     output.push_str(target_os_select());
-    output.push_str(",\n        go_bootstrap_distr = \":go_bootstrap_distr\",\n        go_wrapper = \":go_bootstrap_wrapper\",\n        visibility = [\"PUBLIC\"],\n    )\n\n");
+    output.push_str(",\n        go_bootstrap_distr = \":go_bootstrap_distr\",\n        go_wrapper = \":go_bootstrap_wrapper\",\n        allow_local_cache_upload = True,\n        visibility = [\"PUBLIC\"],\n    )\n\n");
     output.push_str("    go_distr(\n        name = \"go_distr\",\n        go_os_arch = ");
     output.push_str(host_tuple_select());
     writeln!(
@@ -147,7 +147,7 @@ def bsmr_go_toolchains():
     output.push_str(",\n        env_go_os = ");
     output.push_str(target_os_select());
     output.push_str(
-        ",\n        env_go_experiment = [\"none\"],\n        go_distr = \":go_distr\",\n        visibility = [\"PUBLIC\"],\n    )\n",
+        ",\n        env_go_experiment = [\"none\"],\n        go_distr = \":go_distr\",\n        allow_local_cache_upload = True,\n        visibility = [\"PUBLIC\"],\n    )\n",
     );
     Ok(output)
 }

@@ -473,6 +473,7 @@ def _compile(
     symabis: Artifact | None = None,
     gen_asmhdr: bool = False,
 ) -> (Artifact, Artifact, Artifact | None):
+    """Compile selected package inputs with the declared compiler and configuration."""
     env = get_toolchain_env_vars(go_toolchain)
     out_a = actions.declare_output("go_compile_out_{}.a".format(build_variant_id), has_content_based_path = True)
     out_x = actions.declare_output("go_compile_out_{}.x".format(build_variant_id), has_content_based_path = True)
@@ -517,7 +518,7 @@ def _compile(
     )
 
     actions.run(
-        compile_cmd, env = env, category = "go_compile", identifier = "{} [{}]".format(pkg_import_path, build_variant_id), error_handler = go_build_error_handler
+        compile_cmd, env = env, category = "go_compile", identifier = "{} [{}]".format(pkg_import_path, build_variant_id), error_handler = go_build_error_handler, allow_local_cache_upload = go_toolchain.allow_local_cache_upload
     )
 
     return (out_x, out_a, asmhdr)
@@ -531,6 +532,7 @@ def _symabis(
     h_files: list[Artifact],
     assembler_flags: list[str],
 ) -> Artifact | None:
+    """Extract assembly symbol information through the declared assembler."""
     if len(s_files) == 0:
         return None
 
@@ -557,7 +559,7 @@ def _symabis(
         s_files,
     ]
 
-    actions.run(asm_cmd, env = env, category = "go_symabis", identifier = pkg_import_path)
+    actions.run(asm_cmd, env = env, category = "go_symabis", identifier = pkg_import_path, allow_local_cache_upload = go_toolchain.allow_local_cache_upload)
 
     return symabis
 
@@ -573,6 +575,7 @@ def _asssembly(
     shared: bool,
     build_variant_id: str,
 ) -> list[Artifact]:
+    """Assemble selected source files with declared headers and tool inputs."""
     if len(s_files) == 0:
         return []
 
@@ -598,13 +601,14 @@ def _asssembly(
             s_file,
         ]
 
-        actions.run(asm_cmd, env = env, category = "go_assembly", identifier = "{}/{} [{}]".format(pkg_import_path, s_file.short_path, build_variant_id))
+        actions.run(asm_cmd, env = env, category = "go_assembly", identifier = "{}/{} [{}]".format(pkg_import_path, s_file.short_path, build_variant_id), allow_local_cache_upload = go_toolchain.allow_local_cache_upload)
 
     return o_files
 
 def _pack(
     actions: AnalysisActions, go_toolchain: GoToolchainInfo, pkg_import_path: str, a_file: Artifact, o_files: list[Artifact], build_variant_id: str
 ) -> Artifact:
+    """Pack compiled objects with the toolchain's declared packer."""
     if len(o_files) == 0:
         # no need to repack .a file, if there are no .o files
         return a_file
@@ -621,13 +625,14 @@ def _pack(
         o_files,
     ]
 
-    actions.run(pack_cmd, env = env, category = "go_pack", identifier = "{} [{}]".format(pkg_import_path, build_variant_id))
+    actions.run(pack_cmd, env = env, category = "go_pack", identifier = "{} [{}]".format(pkg_import_path, build_variant_id), allow_local_cache_upload = go_toolchain.allow_local_cache_upload)
 
     return pkg_file
 
 def _embedcfg(
     actions: AnalysisActions, go_toolchain: GoToolchainInfo, pkg_import_path: str, package_root: str, embed_srcs: dict[str, Artifact], embed_patterns: list[str]
 ) -> Artifact | None:
+    """Generate embed configuration from the copied, declared input files."""
     if len(embed_patterns) == 0:
         return None
 
@@ -646,7 +651,7 @@ def _embedcfg(
         embed_patterns,
     ]
 
-    actions.run(embed_cmd, category = "go_embedcfg", identifier = pkg_import_path)
+    actions.run(embed_cmd, category = "go_embedcfg", identifier = pkg_import_path, allow_local_cache_upload = go_toolchain.allow_local_cache_upload)
 
     return embedcfg.with_associated_artifacts([srcs_dir])
 

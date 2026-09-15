@@ -1,3 +1,9 @@
+# ===----------------------------------------------------------------------===
+# Upstream-Source: facebook/buck2@1560aca2002865cd73d7cafb22c705cfb640b2bc
+# Modifications Copyright (c) 2026 Dedalus Labs, Inc. and its contributors
+# SPDX-License-Identifier: Apache-2.0
+# ===----------------------------------------------------------------------===
+
 # Copyright (c) Meta Platforms, Inc. and affiliates.
 #
 # This source code is dual-licensed under either the MIT license found in the
@@ -9,6 +15,7 @@
 load("@prelude//go:toolchain.bzl", "GoDistrInfo", "GoToolchainInfo", "parse_go_version")
 
 def _go_toolchain_impl(ctx):
+    """Build a Go toolchain whose executable inputs are declared artifacts."""
     # Note: It makes sense to make GoDirstrInfo an attribute of GoToolchainInfo.
     # That's a breaking change, so we'll need to notify oss users.
     go_distr = ctx.attrs.go_distr[GoDistrInfo]
@@ -30,6 +37,7 @@ def _go_toolchain_impl(ctx):
             },
         ),
         GoToolchainInfo(
+            allow_local_cache_upload = ctx.attrs.allow_local_cache_upload,
             assembler = go_distr.tool_asm,
             assembler_flags = ctx.attrs.assembler_flags,
             cxx_compiler_flags = ctx.attrs.cxx_compiler_flags,
@@ -63,6 +71,7 @@ go_toolchain = rule(
     impl = _go_toolchain_impl,
     is_toolchain_rule = True,
     attrs = {
+        "allow_local_cache_upload": attrs.bool(default = False, doc = "Require declared SDK and helper executable artifacts before enabling the local cache."),
         "asan": attrs.bool(default = False),
         "assembler_flags": attrs.list(attrs.arg(), default = []),
         "build_tags": attrs.list(attrs.string(), default = []),
