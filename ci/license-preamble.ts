@@ -41,6 +41,8 @@ function brief(path: string): string {
 		[".github/actions/ci/osv-audit/src/index.ts", "Implements the Rust dependency-audit action."],
 		[".github/actions/ci/release-cache/action.yml", "Defines trusted cargo-dist release caching."],
 		[".github/actions/ci/release-state/dist/index.js", "Runs the generated release-state action."],
+		[".github/actions/ci/release-complete/dist/index.js", "Runs the generated release completion action."],
+		[".github/actions/ci/release-complete/src/index.ts", "Implements the release completion action."],
 		[".github/actions/ci/release-state/src/index.ts", "Implements the release-state action."],
 		[".github/actions/ci/release-sync/dist/index.js", "Runs the generated release synchronization action."],
 		[".github/actions/ci/release-sync/src/index.ts", "Implements the release synchronization action."],

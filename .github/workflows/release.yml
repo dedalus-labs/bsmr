@@ -16,8 +16,6 @@
 name: Release
 permissions:
   "contents": "write"
-env:
-  RUSTFLAGS: "--cfg tokio_unstable"
 
 # This task will run whenever you workflow_dispatch with a tag that looks like a version
 # like "1.0.0", "v0.1.0-prerelease.1", "my-app/0.1.0", "releases/v1.0.0", etc.
@@ -137,6 +135,9 @@ jobs:
             curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
             echo "$HOME/.cargo/bin" >> $GITHUB_PATH
           fi
+      - name: "Configure Rust flags"
+        run: "printf '%s\\n' 'RUSTFLAGS=--cfg tokio_unstable' >> \"$GITHUB_ENV\""
+        shell: "bash"
       - name: "Mount trusted release caches"
         uses: "./.github/actions/ci/release-cache"
         if: "${{ github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main' && inputs.tag != 'dry-run' }}"
@@ -313,3 +314,15 @@ jobs:
         with:
           persist-credentials: false
           submodules: recursive
+
+  custom-release-complete:
+    needs:
+      - plan
+      - announce
+    uses: ./.github/workflows/release-complete.yml
+    with:
+      plan: ${{ needs.plan.outputs.val }}
+    secrets: inherit
+    permissions:
+      "contents": "read"
+      "pull-requests": "write"
