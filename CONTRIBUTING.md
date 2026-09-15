@@ -98,11 +98,6 @@ Never delete or reuse a published version. A legacy tag with an empty,
 unpublished draft is not a release; verify `published_at` is null and the asset
 list is empty before deleting both and retrying that version.
 
-Published v0.0.3 predates enforcement and remains unchanged. Enable repository
-release immutability before publishing v0.0.4. The release-state check temporarily
-accepts the existing published v0.0.3 so Release Please can advance without
-replacing its assets. Remove that exception after immutable v0.0.4 is verified.
-
 ## License
 
 Unless explicitly stated otherwise, contributions submitted to Bessemer are

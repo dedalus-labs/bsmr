@@ -123,11 +123,10 @@ test("unpublished versions cannot advance release please", () => {
 	);
 });
 
-test("the published legacy release can advance without republishing its bytes", () => {
-	assert.equal(releaseState("false\tfalse\n", "v0.0.3"), "published");
-	for (const tag of ["v0.0.2", "v0.0.4", "v1.0.0"])
+test("published releases must be immutable at every version", () => {
+	for (const tag of ["v0.0.2", "v0.0.3", "v0.0.4", "v1.0.0"])
 		assert.throws(() => releaseState("false\tfalse\n", tag), /published but mutable/);
-	for (const state of ["true\tfalse", "true\ttrue", "false\tfalse\nfalse\tfalse"])
+	for (const state of ["true\tfalse", "true\ttrue", "false\tfalse\nfalse\tfalse", "false\ttrue\nfalse\ttrue"])
 		assert.throws(() => releaseState(state, "v0.0.3"));
 });
 
