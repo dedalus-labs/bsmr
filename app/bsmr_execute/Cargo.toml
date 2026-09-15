@@ -54,6 +54,7 @@ pagable.workspace = true
 pathdiff.workspace = true
 prost.workspace = true
 ref-cast.workspace = true
+reflink-copy.workspace = true
 remote_execution.workspace = true
 serde.workspace = true
 serde_json.workspace = true

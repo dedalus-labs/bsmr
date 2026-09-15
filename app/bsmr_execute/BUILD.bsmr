@@ -61,6 +61,7 @@ rust_library(
         "bsmr_build//third-party/rust:pathdiff",
         "bsmr_build//third-party/rust:prost",
         "bsmr_build//third-party/rust:ref-cast",
+        "bsmr_build//third-party/rust:reflink-copy",
         "bsmr_build//third-party/rust:serde",
         "bsmr_build//third-party/rust:serde_json",
         "bsmr_build//third-party/rust:sha1",
