@@ -5,8 +5,6 @@ members = ["cargo:."]
 cargo-dist-version = "0.32.0"
 version = "0.0.5"
 dist = false
-# Preserve the required tokio_unstable environment in the generated CI workflow.
-allow-dirty = ["ci"]
 precise-builds = true
 ci = ["github"]
 dispatch-releases = true
@@ -15,6 +13,8 @@ create-release = true
 hosting = ["github"]
 github-attestations = true
 github-build-setup = "../release-build-setup.yml"
+post-announce-jobs = ["./release-complete"]
+github-custom-job-permissions = { release-complete = { contents = "read", pull-requests = "write" } }
 installers = ["shell", "powershell"]
 checksum = "sha256"
 targets = ["aarch64-apple-darwin", "aarch64-unknown-linux-gnu", "x86_64-apple-darwin", "x86_64-unknown-linux-gnu", "x86_64-pc-windows-msvc"]

@@ -94,6 +94,11 @@ If publication fails, fix `main` and rerun `Publish release`. The same version
 remains pending until that retry succeeds. Do not merge a later release pull
 request while the current manifest version lacks an immutable release.
 
+After publication, the completion job verifies the immutable release, tag, and
+version PR ancestry before moving `autorelease: pending` to `autorelease: tagged`.
+It preserves other labels and permits a retry source that descends from the
+version PR. It does not change versions, tags, or release assets.
+
 Never delete or reuse a published version. A legacy tag with an empty,
 unpublished draft is not a release; verify `published_at` is null and the asset
 list is empty before deleting both and retrying that version.

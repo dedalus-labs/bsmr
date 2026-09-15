@@ -13,6 +13,7 @@ import { tmpdir } from "node:os";
 import { fileURLToPath } from "node:url";
 
 import { command, expr, format, stepOutput } from "@dedalus-labs/hollywood";
+import { parse } from "yaml";
 
 import { ci } from "./ci.ts";
 import { releasePlease } from "./release-please.ts";
@@ -157,7 +158,13 @@ test("release publication retries the current product version", () => {
 });
 
 test("dist release builds preserve required Rust cfg flags", () => {
-	assert.match(read(".github/workflows/release.yml"), /^env:\n  RUSTFLAGS: "--cfg tokio_unstable"$/m);
+	const steps = parse(read(".github/workflows/release.yml")).jobs["build-local-artifacts"].steps;
+	const flags = steps.findIndex((step: { name: string }) => step.name === "Configure Rust flags");
+	const cache = steps.findIndex((step: { name: string }) => step.name === "Mount trusted release caches");
+	const build = steps.findIndex((step: { name: string }) => step.name === "Build artifacts");
+	assert.ok(flags >= 0 && flags < cache && cache < build);
+	assert.equal(steps[flags].shell, "bash");
+	assert.equal(steps[flags].run, "printf '%s\\n' 'RUSTFLAGS=--cfg tokio_unstable' >> \"$GITHUB_ENV\"");
 });
 
 test("release builders use trusted Blacksmith caches", () => {
