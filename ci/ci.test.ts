@@ -134,8 +134,17 @@ test("Merge-group paths classify the exact candidate against its base", async ()
 
 test("Rust compilation uses sized Blacksmith runners", () => {
 	assert.equal(jobs.rust_quality?.["runs-on"], "blacksmith-8vcpu-ubuntu-2404");
-	assert.equal(jobs.rust_tests?.["runs-on"], "blacksmith-16vcpu-ubuntu-2404");
-	assert.equal(jobs.rust_self_host?.["runs-on"], "blacksmith-8vcpu-ubuntu-2404");
+	for (const id of ["rust_tests", "rust_self_host"] as const) {
+		assert.equal(jobs[id].strategy?.["fail-fast"], false);
+		const matrix = jobs[id].strategy?.matrix;
+		assert.ok(matrix !== undefined && typeof matrix === "object");
+		assert.deepEqual(matrix.include?.map(({ architecture, testRunner, selfHostRunner }) => ({ architecture, testRunner, selfHostRunner })), [
+			{ architecture: "x64", testRunner: "blacksmith-16vcpu-ubuntu-2404", selfHostRunner: "blacksmith-8vcpu-ubuntu-2404" },
+			{ architecture: "arm64", testRunner: "blacksmith-16vcpu-ubuntu-2404-arm", selfHostRunner: "blacksmith-8vcpu-ubuntu-2404-arm" },
+		]);
+	}
+	assert.equal(jobs.rust_tests?.["runs-on"], "${{ matrix.testRunner }}");
+	assert.equal(jobs.rust_self_host?.["runs-on"], "${{ matrix.selfHostRunner }}");
 	assert.equal(jobs.rust_sandbox?.["runs-on"], "ubuntu-24.04");
 	const kvm = unsafeScript("Initialize nested KVM");
 	assert.match(kvm, /if ! test -c \/dev\/kvm/);

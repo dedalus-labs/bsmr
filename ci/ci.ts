@@ -27,10 +27,22 @@ const osvScannerUrl =
 	"https://github.com/google/osv-scanner/releases/download/v2.4.0/osv-scanner_linux_amd64";
 const osvScannerSha256 =
 	"15314940c10d26af9c6649f150b8a47c1262e8fc7e17b1d1029b0e479e8ed8a0";
-const dotSlashUrl =
-	"https://github.com/facebook/dotslash/releases/download/v0.5.9/dotslash-linux-musl.x86_64.v0.5.9.tar.gz";
-const dotSlashSha256 =
-	"4c75c6eb7890ae35993b962073f6d9bbe78b42b81a5691303ad70f63bfbf7196";
+const linuxPlatforms = [
+	{
+		architecture: "x64",
+		testRunner: "blacksmith-16vcpu-ubuntu-2404",
+		selfHostRunner: "blacksmith-8vcpu-ubuntu-2404",
+		dotSlashArchive: "dotslash-linux-musl.x86_64.v0.5.9.tar.gz",
+		dotSlashSha256: "4c75c6eb7890ae35993b962073f6d9bbe78b42b81a5691303ad70f63bfbf7196",
+	},
+	{
+		architecture: "arm64",
+		testRunner: "blacksmith-16vcpu-ubuntu-2404-arm",
+		selfHostRunner: "blacksmith-8vcpu-ubuntu-2404-arm",
+		dotSlashArchive: "dotslash-linux-musl.aarch64.tar.gz",
+		dotSlashSha256: "11323ef72fac5885d7c54bff70d666486bd800a8d908d0acd3bd838fd8a9b0db",
+	},
+];
 const firecrackerVersion = "1.16.1";
 const firecrackerArchiveUrl = `https://github.com/firecracker-microvm/firecracker/releases/download/v${firecrackerVersion}/firecracker-v${firecrackerVersion}-x86_64.tgz`;
 const firecrackerArchiveSha256 =
@@ -158,7 +170,7 @@ const installDotSlash = [
 				"--location",
 				"--silent",
 				"--show-error",
-				dotSlashUrl,
+				format("https://github.com/facebook/dotslash/releases/download/v0.5.9/{0}", expr<string>("matrix.dotSlashArchive")),
 				"--output",
 				dotSlashArchivePath,
 			],
@@ -166,7 +178,7 @@ const installDotSlash = [
 	},
 	uses(verifySha256Action, {
 		name: "Verify DotSlash",
-		with: { path: dotSlashArchivePath, expected: dotSlashSha256 },
+		with: { path: dotSlashArchivePath, expected: expr<string>("matrix.dotSlashSha256") },
 	}),
 	{
 		name: "Extract DotSlash",
@@ -313,10 +325,11 @@ export const ci = workflow({
 			],
 		}),
 		rust_tests: job({
-			name: "Rust / Tests",
+			name: format("Rust / Tests / {0}", expr<string>("matrix.architecture")),
 			needs: "affected",
 			if: and(trustedCiRun, rustAffected),
-			"runs-on": "blacksmith-16vcpu-ubuntu-2404",
+			"runs-on": expr<string>("matrix.testRunner"),
+			strategy: { "fail-fast": false, matrix: { include: linuxPlatforms } },
 			"timeout-minutes": 30,
 			permissions: rustPermissions,
 			env: rustEnvironment,
@@ -331,10 +344,11 @@ export const ci = workflow({
 			],
 		}),
 		rust_self_host: job({
-			name: "Rust / Self-host",
+			name: format("Rust / Self-host / {0}", expr<string>("matrix.architecture")),
 			needs: "affected",
 			if: and(trustedCiRun, rustAffected),
-			"runs-on": "blacksmith-8vcpu-ubuntu-2404",
+			"runs-on": expr<string>("matrix.selfHostRunner"),
+			strategy: { "fail-fast": false, matrix: { include: linuxPlatforms } },
 			"timeout-minutes": 30,
 			permissions: rustPermissions,
 			env: rustEnvironment,
@@ -348,8 +362,16 @@ export const ci = workflow({
 				},
 				setupNode,
 				{
+					name: "Verify native architecture",
+					run: command({ file: "node", args: ["-e", "require('node:assert/strict').equal(process.arch, process.argv[1])", expr<string>("matrix.architecture")] }),
+				},
+				{
 					name: "Verify native Cargo cache",
 					run: command({ file: "node", args: ["test/native-cargo-cache.ts", "target/debug/bsmr"] }),
+				},
+				{
+					name: "Verify native TypeScript cache",
+					run: command({ file: "node", args: ["test/native-typescript-cache.ts", "target/debug/bsmr"] }),
 				},
 				...installDotSlash,
 				{
