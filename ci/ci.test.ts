@@ -9,13 +9,33 @@ import assert from "node:assert/strict";
 import { globSync, readFileSync } from "node:fs";
 import test from "node:test";
 
-import { command, type ScriptExec } from "@dedalus-labs/hollywood";
+import { command, runAction, type ScriptExec } from "@dedalus-labs/hollywood";
 
 import { pullRequestFiles, rustAffected, rustAffectedForEvent } from "./affected.ts";
 import { ci } from "./ci.ts";
 import { docs } from "./docs.ts";
+import { typescriptCache } from "./typescript/cache.ts";
 
 const jobs = ci.jobs;
+
+test("TypeScript cache uses its nested action route and propagates failures", async () => {
+	const step = jobs.rust_self_host?.steps.find(
+		(step) => "uses" in step && step.uses === "./.github/actions/typescript/cache",
+	);
+	assert.ok(step && "uses" in step);
+	assert.deepEqual(step.with, { binary: "target/debug/bsmr" });
+	const failure = new Error("cache verification failed");
+	await assert.rejects(runAction(typescriptCache, {
+		with: { binary: "test path/bsmr" },
+		exec: async (file, args) => {
+			assert.equal(file, "node");
+			assert.deepEqual(args, ["test/native-typescript-cache.ts", "test path/bsmr"]);
+			throw failure;
+		},
+		fs: { readText: async () => assert.fail("action must delegate to the fixture") },
+		runner: { uidGid: "1000:1000" },
+	}), failure);
+});
 const rustLanes = [
 	"rust_audit",
 	"rust_quality",

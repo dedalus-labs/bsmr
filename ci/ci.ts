@@ -15,6 +15,7 @@ import { rustAffectedAction } from "./affected.ts";
 import { cliReferenceAction } from "./cli-reference.ts";
 import { osvAuditAction } from "./osv-audit.ts";
 import { verifySha256Action } from "./verify-sha256.ts";
+import { typescriptCache } from "./typescript/cache.ts";
 
 const trustedCiRun = expr<boolean>(
 	"github.repository == 'dedalus-labs/bsmr' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository)",
@@ -369,10 +370,7 @@ export const ci = workflow({
 					name: "Verify native Cargo cache",
 					run: command({ file: "node", args: ["test/native-cargo-cache.ts", "target/debug/bsmr"] }),
 				},
-				{
-					name: "Verify native TypeScript cache",
-					run: command({ file: "node", args: ["test/native-typescript-cache.ts", "target/debug/bsmr"] }),
-				},
+				uses(typescriptCache, { with: { binary: "target/debug/bsmr" } }),
 				{
 					name: "Verify native Go build",
 					run: command({ file: "node", args: ["test/native-go-build.ts", "target/debug/bsmr"] }),
