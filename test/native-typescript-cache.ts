@@ -82,7 +82,17 @@ async function build(expected: Executors, value: string) {
 
 try {
 	await run(executable, ["init"], options);
+	if (process.argv[3] !== undefined) {
+		cpSync(resolve(process.argv[3]), join(cwd, "prelude"), { recursive: true });
+		writeFileSync(join(cwd, ".bsmr.local"), "[external_cells]\nprelude = disabled\n");
+	}
 	const first = await build({ pnpm_install: "Local", typescript_library: "Local" }, "original");
+	const installed = await run(executable, ["build", ":__bsmr_dependencies", "--show-full-json-output", "--console", "simple"], options);
+	const installPaths = Object.values(JSON.parse(installed.stdout) as Record<string, string>);
+	assert.equal(installPaths.length, 1);
+	const installPath = installPaths[0];
+	assert.ok(installPath);
+	assert.equal(realpathSync(installPath), installPath, "publish the installed workspace in place without relocating its tree");
 	await run(executable, ["clean"], options);
 	assert.equal(existsSync(first.program), false, "clean must remove the compiled output");
 	const restored = await build({ pnpm_install: "Cache", typescript_library: "Cache" }, "original");
