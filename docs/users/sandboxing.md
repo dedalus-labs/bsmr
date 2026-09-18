@@ -8,7 +8,7 @@
 # Sandboxed builds
 
 Use `--sandbox` to execute each action in a fresh, networkless Firecracker
-microVM:
+microVM restored from an immutable pre-action snapshot:
 
 ```console
 bsmr build <path> --sandbox
@@ -16,7 +16,8 @@ bsmr test <path> --sandbox
 bsmr run <path> --sandbox
 ```
 
-Sandboxing is experimental and supported only on `x86_64` Linux hosts with KVM
+Sandboxing is experimental and supported only on `x86_64` Linux hosts with a
+Kernel-based Virtual Machine (KVM)
 and cgroup v2. It is fail-closed: an incompatible host, action, bundle, or
 launcher stops the build instead of running the action on the host.
 
@@ -24,9 +25,9 @@ launcher stops the build instead of running the action on the host.
 
 An administrator installs the root-owned Firecracker bundle and runs
 `bsmr-sandboxd` as a system service. The bundle contains a matched static
-Firecracker and jailer release, kernel, and root filesystem. The guest agent is
-inside the root filesystem. The manifest pins each of these artifacts by
-SHA-256.
+Firecracker and jailer release, kernel, and root filesystem. The bundle command
+boots the guest to its pre-action barrier and adds the resulting VM state and
+memory image. The manifest pins every artifact by SHA-256.
 
 Only the privileged launcher needs `/dev/kvm`. It verifies KVM before publishing
 its socket; the unprivileged BSMR daemon needs access only to that socket.
@@ -36,6 +37,7 @@ The default paths are:
 ```text
 /usr/local/share/bsmr/firecracker/manifest.json
 /run/bsmr/sandboxd.sock
+/var/cache/bsmr/cas
 ```
 
 Override them in the project's existing `.bsmr` file when necessary:
@@ -56,15 +58,21 @@ bsmr-sandbox-bundle \
   --firecracker-version 1.16.1
 ```
 
+The bundle, local content-addressed store (CAS), and jail root must share one
+filesystem so immutable
+objects can be hard-linked without copying. BSMR fails at launcher startup when
+this zero-copy contract cannot be met.
+
 ## v1 contract
 
-The first profile is `untrusted-v1`: one microVM per action, no network device,
-2 vCPUs, 2 GiB of memory, explicit environment variables, declared inputs only,
-declared outputs only, and complete VM teardown before the result is accepted.
+The first profile is `untrusted-v1`: one pristine snapshot clone per action, no
+network device, 2 vCPUs, 2 GiB of memory, explicit environment variables,
+declared inputs only, declared outputs only, fresh guest entropy, and complete
+VM teardown before the result is accepted.
 
 Persistent workers, inherited host environments, absolute executables,
 incremental output state, required local resources, detached processes,
-secrets, custom devices, snapshots, VM reuse, and remote execution are not
+secrets, custom devices, post-action VM reuse, and remote execution are not
 supported by this profile. BSMR reports these as compatibility errors.
 
 See the [implementation design](https://github.com/dedalus-labs/bsmr/blob/main/docs/developers/firecracker-sandbox.md)
