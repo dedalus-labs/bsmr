@@ -9,6 +9,18 @@
 Notable changes to Bessemer are recorded here. Release entries are generated
 from conventional commits and reviewed before publication.
 
+## [0.0.6](https://github.com/dedalus-labs/bsmr/compare/v0.0.5...v0.0.6) (2026-09-18)
+
+
+### Bug Fixes
+
+* **release:** complete published version metadata ([#170](https://github.com/dedalus-labs/bsmr/issues/170)) ([26dbf15](https://github.com/dedalus-labs/bsmr/commit/26dbf15cf458f42048fface2204d46d1a08a2feb))
+
+
+### Performance Improvements
+
+* **pnpm:** publish installed workspaces in place ([#174](https://github.com/dedalus-labs/bsmr/issues/174)) ([fc35d0d](https://github.com/dedalus-labs/bsmr/commit/fc35d0dd21117a1f41eb7ea558e8a87b94c2aa32))
+
 ## [0.0.5](https://github.com/dedalus-labs/bsmr/compare/v0.0.4...v0.0.5) (2026-09-15)
 
 
