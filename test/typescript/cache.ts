@@ -21,7 +21,7 @@ const run = promisify(execFile);
 const root = realpathSync(mkdtempSync(join(tmpdir(), "bsmr-typescript-cache-")));
 const cwd = join(root, "workspace");
 const options = { cwd, env: { ...process.env, BSMR_LOCAL_CACHE_DIR: join(root, "cache") }, timeout: 180_000 };
-cpSync(fileURLToPath(new URL("./fixtures/typescript-cache", import.meta.url)), cwd, { recursive: true });
+cpSync(fileURLToPath(new URL("../fixtures/typescript-cache", import.meta.url)), cwd, { recursive: true });
 
 type Action = { identity: string; reproducer: { executor: string } };
 type Executors = { pnpm_install: "Local" | "Cache"; typescript_library: "Local" | "Cache" };

@@ -7,13 +7,13 @@
 
 # TypeScript cache checks
 
-Run `node test/native-typescript-cache.ts /path/to/bsmr` from the repository root.
+Run `node test/typescript/cache.ts /path/to/bsmr` from the repository root.
 CI runs the same command through Hollywood's `typescript/cache` action, defined
 in `ci/typescript/cache.ts`. `localActionPath` sets the nested generated route.
 Use short operation names under a subject directory for new local actions.
 
 To test rule edits with an installed binary, pass the source prelude as the
-second argument: `node test/native-typescript-cache.ts /path/to/bsmr prelude`.
+second argument: `node test/typescript/cache.ts /path/to/bsmr prelude`.
 The harness copies it into its temporary workspace and selects it through
 `.bsmr.local`. Omit that argument to test the binary's bundled rules.
 

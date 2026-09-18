@@ -45,7 +45,7 @@ CI runs Rust tests and self-host checks on native Linux x64 and ARM64 runners.
 Both architectures must pass the required `Rust` check. The self-host lane builds
 BSMR from source and verifies Cargo cache reuse, invalidation, output isolation,
 and concurrent builds with `node test/native-cargo-cache.ts target/debug/bsmr`.
-`node test/native-typescript-cache.ts target/debug/bsmr` verifies a frozen pnpm
+`node test/typescript/cache.ts target/debug/bsmr` verifies a frozen pnpm
 install and real tsdown compilation. It requires cache restoration after clean,
 preserves cached bytes when writable output changes, and recompiles changed source.
 Regenerate its fixture lock with `pnpm --dir test/fixtures/typescript-cache install --lockfile-only --ignore-scripts`.

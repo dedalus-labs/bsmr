@@ -39,6 +39,7 @@ Bessemer code should be obvious to inspect, operate, and extend.
 - Keep control flow explicit, typed, and fail-fast. Do not add silent fallbacks.
 - Test behavior and invariants, not implementation details.
 - Preserve established local patterns unless this guide intentionally supersedes them.
+- Prefer short, nested paths such as `test/typescript/cache.ts`. Keep hyphens where a tool or file format requires them.
 
 ## Documentation
 
