@@ -63,6 +63,24 @@ filesystem so immutable
 objects can be hard-linked without copying. BSMR fails at launcher startup when
 this zero-copy contract cannot be met.
 
+## Cache behavior
+
+BSMR calculates the complete sandboxed action key before it contacts the
+launcher. It checks the local cache when one is configured. When an execution
+platform enables remote caching, BSMR checks its Remote Execution API action
+cache and restores missing output bytes from content-addressed storage (CAS).
+
+A valid cache hit materializes the declared outputs without starting
+Firecracker. A miss runs the action in a microVM and uploads a successful result
+only when cache uploads are enabled. The action key includes the sandbox
+profile, protocol, backend, and complete bundle digest, so another kernel,
+root filesystem, guest agent, Firecracker binary, or snapshot cannot reuse the
+result.
+
+Remote caching does not enable remote execution. CI controls cache credentials
+and write access; untrusted pull requests should use a read-only public cache
+namespace or no remote cache.
+
 ## v1 contract
 
 The first profile is `untrusted-v1`: one pristine snapshot clone per action, no

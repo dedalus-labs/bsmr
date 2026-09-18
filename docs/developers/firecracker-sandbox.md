@@ -94,7 +94,9 @@ fresh host entropy after each restore.
 
 ## Request flow
 
-The executor processes one action in this order:
+BSMR validates the sandbox policy and queries the configured action cache before
+it contacts the launcher. A cache hit restores only the declared CAS outputs and
+ends the request. A cache miss enters the executor in this order:
 
 1. The BSMR daemon validates that the action uses no inherited environment,
    persistent worker, network, local resource, incremental output, or detached

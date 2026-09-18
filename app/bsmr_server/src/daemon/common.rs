@@ -59,6 +59,7 @@ use bsmr_execute_impl::executors::action_cache::RemoteDepFileCacheChecker;
 use bsmr_execute_impl::executors::action_cache_upload_permission_checker::ActionCacheUploadPermissionChecker;
 use bsmr_execute_impl::executors::caching::CacheUploader;
 use bsmr_execute_impl::executors::firecracker::FirecrackerExecutor;
+use bsmr_execute_impl::executors::firecracker::FirecrackerPolicyCacheChecker;
 use bsmr_execute_impl::executors::firecracker::sandbox_platform_properties;
 use bsmr_execute_impl::executors::hybrid::FallbackTracker;
 use bsmr_execute_impl::executors::hybrid::HybridExecutor;
@@ -116,6 +117,21 @@ struct RemoteCacheComponents {
     action_cache_checker: Arc<dyn PreparedCommandOptionalExecutor>,
     remote_dep_file_cache_checker: Arc<dyn PreparedCommandOptionalExecutor>,
     cache_uploader: Arc<dyn UploadCache>,
+}
+
+enum SandboxCacheBackend<'a> {
+    Local,
+    Remote(&'a RemoteEnabledExecutorOptions),
+}
+
+impl<'a> SandboxCacheBackend<'a> {
+    fn from_executor(executor: &'a Executor) -> Option<Self> {
+        match executor {
+            Executor::Local(_) => Some(Self::Local),
+            Executor::RemoteEnabled(options) => Some(Self::Remote(options)),
+            Executor::None => None,
+        }
+    }
 }
 
 impl RemoteCacheComponents {
@@ -382,15 +398,41 @@ impl HasCommandExecutor for CommandExecutorFactory {
             if self.strategy.ban_local() {
                 return Err(ExecutorCompatibilityError::LocalIncompatible(self.strategy).into());
             }
-            let platform = remote_execution::Platform {
-                properties: sandbox_platform_properties(firecracker.environment_digest())
-                    .into_iter()
-                    .map(|(name, value)| remote_execution::Property {
-                        name: name.to_owned(),
-                        value: value.to_owned(),
-                    })
-                    .collect(),
+            let platform = RePlatformFields {
+                properties: Arc::new(
+                    sandbox_platform_properties(firecracker.environment_digest())
+                        .into_iter()
+                        .map(|(name, value)| (name.to_owned(), value.to_owned()))
+                        .collect(),
+                ),
             };
+            let (action_cache_checker, remote_dep_file_cache_checker, cache_uploader) =
+                match SandboxCacheBackend::from_executor(&executor_config.executor) {
+                    Some(SandboxCacheBackend::Local) => {
+                        let (checker, uploader) = local_cache_new()?;
+                        (
+                            checker,
+                            Arc::new(NoOpCommandOptionalExecutor {}) as _,
+                            uploader,
+                        )
+                    }
+                    Some(SandboxCacheBackend::Remote(options)) => {
+                        let cache =
+                            self.remote_cache_components(artifact_fs, options, platform.clone())?;
+                        (
+                            cache.action_cache_checker,
+                            cache.remote_dep_file_cache_checker,
+                            cache.cache_uploader,
+                        )
+                    }
+                    None => {
+                        return Err(ExecutorCompatibilityError::SelectedConfig(
+                            self.strategy,
+                            executor_config.clone(),
+                        )
+                        .into());
+                    }
+                };
             return Ok(CommandExecutorResponse {
                 executor: Arc::new(
                     local_executor_new(&LocalExecutorOptions {
@@ -398,10 +440,14 @@ impl HasCommandExecutor for CommandExecutorFactory {
                     })
                     .with_firecracker(firecracker.dupe()),
                 ),
-                platform,
-                action_cache_checker: Arc::new(NoOpCommandOptionalExecutor {}),
-                remote_dep_file_cache_checker: Arc::new(NoOpCommandOptionalExecutor {}),
-                cache_uploader: Arc::new(NoOpCacheUploader {}),
+                platform: platform.to_re_platform(),
+                action_cache_checker: Arc::new(FirecrackerPolicyCacheChecker::new(
+                    action_cache_checker,
+                )),
+                remote_dep_file_cache_checker: Arc::new(FirecrackerPolicyCacheChecker::new(
+                    remote_dep_file_cache_checker,
+                )),
+                cache_uploader,
                 output_trees_download_config: self.output_trees_download_config.dupe(),
             });
         }
@@ -684,5 +730,41 @@ fn get_default_path_separator(host_platform: HostPlatformOverride) -> PathSepara
         HostPlatformOverride::MacOs => PathSeparatorKind::Unix,
         HostPlatformOverride::Windows => PathSeparatorKind::Windows,
         HostPlatformOverride::DefaultPlatform => PathSeparatorKind::system_default(),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn remote_cache_executor() -> Executor {
+        Executor::RemoteEnabled(RemoteEnabledExecutorOptions {
+            executor: RemoteEnabledExecutor::Local(LocalExecutorOptions::default()),
+            re_properties: RePlatformFields::default(),
+            re_use_case: RemoteExecutorUseCase::bsmr_default(),
+            re_action_key: None,
+            cache_upload_behavior: CacheUploadBehavior::Disabled,
+            remote_cache_enabled: true,
+            remote_dep_file_cache_enabled: false,
+            dependencies: vec![],
+            gang_workers: vec![],
+            custom_image: None,
+            meta_internal_extra_params: MetaInternalExtraParams::default_arc(),
+            priority: None,
+        })
+    }
+
+    /// Sandboxing changes execution, not the selected cache backend.
+    #[test]
+    fn sandbox_preserves_cache_backend() {
+        assert!(matches!(
+            SandboxCacheBackend::from_executor(&Executor::Local(LocalExecutorOptions::default())),
+            Some(SandboxCacheBackend::Local)
+        ));
+        assert!(matches!(
+            SandboxCacheBackend::from_executor(&remote_cache_executor()),
+            Some(SandboxCacheBackend::Remote(options)) if options.remote_cache_enabled
+        ));
+        assert!(SandboxCacheBackend::from_executor(&Executor::None).is_none());
     }
 }
