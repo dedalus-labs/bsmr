@@ -3,7 +3,7 @@ members = ["cargo:."]
 
 [dist]
 cargo-dist-version = "0.32.0"
-version = "0.0.5"
+version = "0.0.6"
 dist = false
 precise-builds = true
 ci = ["github"]
