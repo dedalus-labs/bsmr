@@ -114,6 +114,12 @@ def _typescript_library_impl(ctx: AnalysisContext) -> list[Provider]:
     _run_typescript(ctx, "library", output)
     return [DefaultInfo(default_output = output)]
 
+def _typescript_vite_impl(ctx: AnalysisContext) -> list[Provider]:
+    """Run the package-local locked Vite bundler into a cached directory."""
+    output = ctx.actions.declare_output(ctx.label.name, dir = True, has_content_based_path = True)
+    _run_typescript(ctx, "vite", output)
+    return [DefaultInfo(default_output = output)]
+
 def _typescript_action_attrs(default_config: str) -> dict:
     """Return the shared closed attribute schema for TypeScript actions."""
     return {
@@ -134,4 +140,10 @@ typescript_library = rule(
     impl = _typescript_library_impl,
     attrs = _typescript_action_attrs("tsdown.config.ts"),
     doc = "Emits one pnpm workspace package with its exact locked tsdown compiler.",
+)
+
+typescript_vite = rule(
+    impl = _typescript_vite_impl,
+    attrs = _typescript_action_attrs("vite.config.ts"),
+    doc = "Builds one pnpm workspace package with its exact locked Vite bundler.",
 )

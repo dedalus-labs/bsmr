@@ -48,6 +48,7 @@ const test: ProcessSpec = {
 		"benchmarks/python-conformance/run.test.ts",
 		"benchmarks/python-conformance/snapshot.test.ts",
 		"prelude/typescript/runner.test.ts",
+		"prelude/typescript/vite.test.ts",
 		"prelude/toolchains/pnpm/runner.test.ts",
 		"test/contributors.test.ts",
 	],
