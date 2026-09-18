@@ -94,6 +94,10 @@ launch one competing installer per package. Independent compilation,
 typechecking, tests, and packaging actions run above the normalized workspace
 graph, where BSMR can schedule them concurrently and cache them independently.
 
+The installed workspace stays at its target's output path. BSMR hashes its
+contents for cache reuse without copying the whole dependency tree to a second,
+content-derived path after installation.
+
 The built-in catalog provides SHA-256-pinned Node 22.23.1, 24.18.0, 24.19.0,
 26.5.1, and 26.7.0 on macOS and Linux for arm64 and x86-64. It also provides
 exact pnpm 10.30.3 and 11.20.0 distributions. BSMR selects the newest catalog

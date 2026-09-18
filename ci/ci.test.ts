@@ -29,7 +29,7 @@ test("TypeScript cache uses its nested action route and propagates failures", as
 		with: { binary: "test path/bsmr" },
 		exec: async (file, args) => {
 			assert.equal(file, "node");
-			assert.deepEqual(args, ["test/native-typescript-cache.ts", "test path/bsmr"]);
+			assert.deepEqual(args, ["test/typescript/cache.ts", "test path/bsmr"]);
 			throw failure;
 		},
 		fs: { readText: async () => assert.fail("action must delegate to the fixture") },

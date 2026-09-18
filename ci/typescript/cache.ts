@@ -14,7 +14,7 @@ export const typescriptCache = action({
 	inputs: { binary: pathInput({ description: "BSMR executable path." }) },
 	outputs: {},
 	run: async ({ exec, input }) => {
-		await exec("node", ["test/native-typescript-cache.ts", input.binary]);
+		await exec("node", ["test/typescript/cache.ts", input.binary]);
 		return {};
 	},
 });
