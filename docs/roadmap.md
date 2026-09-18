@@ -1,52 +1,65 @@
 ---
-description: Product priorities and explicit non-claims for Bessemer.
+description: Build, cache, and execution capabilities provided by Bessemer.
 ---
 <!-- ===----------------------------------------------------------------------=== -->
 <!-- Copyright (c) 2026 Dedalus Labs, Inc. and its contributors -->
 <!-- SPDX-License-Identifier: Apache-2.0 -->
 <!-- ===----------------------------------------------------------------------=== -->
 
-<!-- Summarizes ecosystem priorities without presenting proposals as releases. -->
+<!-- States the supported build and execution contracts with verification references. -->
 
-# Roadmap
+# Capabilities
 
-Bessemer's first-class ecosystem order is TypeScript, Rust, Go, then Python.
-The shared engine should make each frontend feel native while preserving one
-graph, action identity, CAS, and provenance model across a polyglot repository.
+Bessemer builds packages from native manifests, schedules independent work,
+and restores cached outputs. TypeScript, Rust, Go and Python share the build
+graph and content-addressed store. Each frontend defines which inputs and
+toolchains it supports. See [language support](about/language_support.md).
 
-## Ecosystem contract
+## Build and cache
 
-Each frontend should:
+An action key identifies declared source files, dependencies, tools,
+configuration, environment and outputs. A matching cached result restores
+those outputs. Editing a declared input changes the key and schedules the
+affected work. [Caching and hermeticity](concepts/caching.md) explains the
+identity and storage contract.
 
-- treat native manifests and lock files as the developer interface;
-- delegate dependency semantics to the ecosystem's authoritative resolver;
-- normalize the resolved graph into Bessemer's action model;
-- pin or verify toolchains and acquired artifacts;
-- fail on drift or missing inputs instead of selecting another implementation;
-  and
-- expose generated manifests only as owned intermediate representation.
+Local caching supports output restoration across checkouts. Eligible actions
+can use remote action caches and content-addressed storage through the Remote
+Execution API. Rust's native Cargo adapter and host-dependent native-extension
+builds remain local. Cache eligibility depends on the selected frontend and
+toolchain, not merely the presence of a lockfile.
 
-## Dependency snapshots
+## Isolated execution
 
-A future cross-ecosystem dependency snapshot should record an immutable,
-content-addressed resolved universe rather than introduce a new universal
-package solver. Native resolvers remain authoritative: pnpm for Node.js, Cargo
-for Rust, uv for Python, and Minimal Version Selection for Go.
+`bsmr build`, `test` and `run` accept `--sandbox` on x86-64 Linux hosts with KVM
+and cgroup v2. The experimental Firecracker profile gives each admitted action
+a fresh networkless VM, explicit environment, declared inputs and validated
+outputs. It requires cleanup before accepting the result.
 
-Bessemer can add the layer those tools do not share: parentage, fast Merkle
-diffs, signed promotion evidence, compatibility results tied to the snapshot
-digest, CAS reachability, and atomic rollback to a retained snapshot. A version
-range alone is not compatibility evidence; successful builds and tests under
-the exact resolved universe are.
+The profile uses two vCPUs and 2 GiB of guest memory. It requires a provisioned,
+digest-verified toolchain bundle and rejects unsupported action semantics.
+Sandbox actions execute locally without action-cache lookup or upload.
+Snapshots, networked actions and secrets are unsupported. See
+[sandbox setup and limits](users/sandboxing.md).
 
-This is a proposed direction, not a released command or storage format.
+Ordinary local execution does not enforce the sandbox's filesystem boundary.
+A pinned dependency graph alone does not prevent undeclared reads or make a
+build deterministic.
 
-## Execution boundary
+## Verify a build path
 
-Local sandboxing and remote execution are deliberately separate from the
-current native-build work. Remote caching is supported; the stronger execution
-features remain proposals until their security and portability contracts are
-implemented and measured.
+Use a BSMR binary built from the same revision as the fixtures and prelude.
+These checks exercise different contracts. Passing one does not qualify the
+others.
 
-Accepted designs are tracked in the repository's
-[RFC discussions](https://github.com/dedalus-labs/bsmr/discussions?discussions_q=RFC).
+| Contract | Verification from the repository root |
+| --- | --- |
+| pnpm installation, compilation and cache restoration | `node test/native-typescript-cache.ts /path/to/bsmr` |
+| Cargo output reuse and invalidation | `node test/native-cargo-cache.ts /path/to/bsmr` |
+| Go compilation, embeds and cache eligibility | `node test/native-go-build.ts /path/to/bsmr` |
+| Python dependency and runtime behavior | `python3 -m unittest discover -s prelude/python_native -p '*_test.py'` |
+| Firecracker isolation and cleanup | `cargo test --locked -p bsmr_sandbox --test firecracker firecracker_conformance -- --ignored --exact --nocapture` with the bundle, launcher and fixture configured by [the KVM CI job](https://github.com/dedalus-labs/bsmr/blob/main/ci/ci.ts) |
+
+The Python command runs unit tests for dependency and runtime assembly.
+Native-extension reproducibility requires a real compiler fixture. The
+Firecracker test runs real VMs and requires Linux/KVM and the operator setup.

@@ -9,7 +9,7 @@ description: Fast, cached builds from native project files.
 
 # Bessemer
 
-Bessemer (`bsmr`) builds TypeScript, Rust, and Go projects from their native files.
+Bessemer (`bsmr`) builds TypeScript, Rust, Go and Python projects from native files.
 You keep the ecosystem manifests and lock files your project already uses.
 Bessemer creates the build graph, schedules work, and restores cached outputs.
 
@@ -24,9 +24,9 @@ Conventional projects do not need build files or Starlark.
 
 | Need | Bessemer behavior |
 | --- | --- |
-| Correct builds | Hashes declared inputs, tools, configuration, and dependency edges. |
+| Build identity | Hashes declared inputs, tools, configuration, and dependency edges. |
 | Fast rebuilds | Skips unchanged actions and restores missing outputs from a content-addressed store. |
-| Native setup | Reads pnpm, Cargo, and Go project files directly. |
+| Native setup | Reads pnpm, Cargo, Go and Python project files. |
 | Large repositories | Builds an explicit graph and schedules independent actions concurrently. |
 | Custom behavior | Keeps labels, Starlark rules, queries, and remote execution in the advanced interface. |
 
@@ -36,12 +36,14 @@ Conventional projects do not need build files or Starlark.
   typechecking are available.
 - **Rust and Cargo:** experimental integration. Native package builds and local
   output caching are available.
-- **Go:** experimental integration. Native package synchronization and
-  hermetic pure-Go builds are available.
-- **Python:** planned after Go.
+- **Go:** experimental integration. Package synchronization, builds and tests
+  use a verified SDK and vendored dependencies.
+- **Python:** experimental integration. Wheels, lint, typechecking, tests and
+  console scripts use `pyproject.toml`, PEP 751 locks and pinned tools.
 
-BSMR is a preview. Read each language page before treating an action as fully
-hermetic or remote-cache eligible.
+BSMR is a preview. [Language support](about/language_support.md) states each
+frontend's cache and isolation limits. [Capabilities](roadmap.md) covers the
+execution profiles and verification commands.
 
 ## Start here
 
