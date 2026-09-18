@@ -6,23 +6,24 @@
 
 # Language support
 
-BSMR distinguishes native support from inherited rules.
+BSMR reads native project files for TypeScript, Rust, Go and Python. The
+frontends share scheduling and storage, with the following build contracts.
 
-**Native support** means BSMR reads the ecosystem's normal manifests and lock
-files. **Rule support** means the prelude can build the language after explicit
-Starlark and toolchain configuration.
-
-| Ecosystem | Native status | Default interface |
+| Ecosystem | Available behavior | Boundary |
 | --- | --- | --- |
-| TypeScript and Node.js | Primary | pnpm workspace paths |
-| Rust | Experimental | Cargo package paths |
-| Go | Experimental | Native package synchronization |
-| Python | Experimental | PEP 751 locks with pinned uv |
+| [TypeScript and pnpm](../users/languages/typescript/pnpm.md) | Package builds and typechecking with pinned Node/pnpm and a frozen lockfile. | Primary integration. Cold installs access the registry. Install hooks are disabled. |
+| [Rust and Cargo](../users/languages/rust/cargo.md) | Native package builds with a locked toolchain selection and local output caching. | Experimental. Cargo comes from the host. Cold builds can fetch crates. Remote-cache upload is disabled. |
+| [Go](../users/languages/go/native.md) | Package synchronization, compilation and tests with a verified SDK and declared dependencies. | Experimental. Modules must be vendored. Host-dependent linking and cgo remain outside portable cache eligibility. |
+| [Python](https://github.com/dedalus-labs/bsmr/blob/main/docs/users/languages/python/overview.md) | Wheels, lint, typechecking, tests and console scripts from `pyproject.toml`, PEP 751 locks and pinned tools. | Experimental. Build backends lack enforced network isolation. Native extensions use local C/C++ tools and are not uploaded to a remote cache. |
+
+Ordinary local builds do not prevent undeclared filesystem reads.
+[Sandboxed execution](../users/sandboxing.md) enforces a separate, restricted
+contract on x86-64 Linux/KVM. It accepts only actions compatible with that
+profile. Native frontend support does not imply sandbox compatibility.
 
 The inherited prelude also contains rules for C, C++, Java, Kotlin, Apple
 platforms, Erlang, Haskell, OCaml, and other ecosystems. Those rules are
 advanced extension points. Their presence does not mean BSMR offers a native,
 zero-configuration workflow for that language.
 
-Read the language-specific page for exact toolchain, cache, sandbox, and remote
-execution boundaries.
+Use explicit Starlark rules and toolchain configuration for those extensions.

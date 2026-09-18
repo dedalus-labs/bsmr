@@ -30,8 +30,9 @@ claim, not merely a timestamp shortcut.
 
 ## Storage and restoration
 
-Outputs are stored by content digest in the CAS. Action results refer to those
-digests instead of duplicating output bytes. This gives Bessemer three useful
+Outputs are stored by content digest in the content-addressed store (CAS).
+Action results refer to those digests instead of duplicating output bytes.
+This gives Bessemer three useful
 warm paths:
 
 1. **No-op analysis:** DICE determines that the requested graph has not changed.
@@ -54,20 +55,23 @@ files. One process executes a cacheable action and publishes its result; waiting
 processes restore it. Waiting releases the I/O permit, and process exit releases
 the action lock. Different actions sharing a lock shard may execute in sequence.
 
-## What “hermetic” currently means
+## Input declarations and isolation
 
 For supported pure-Go actions, Bessemer declares exact repository inputs, an
 exact verified SDK, explicit environment state, and no network requirement.
 That is a hermetic input and toolchain contract.
 
-It is not yet an enforced local isolation boundary. Bessemer does not currently
-sandbox every action, so an incorrectly authored action could read an
-undeclared host path. The project will not claim that stronger property until
-the executor can prevent the read.
+Ordinary local execution can read undeclared host paths. The optional
+[Firecracker sandbox](../users/sandboxing.md) enforces declared inputs and a
+networkless environment for compatible actions on x86-64 Linux/KVM. It rejects
+unsupported semantics and bypasses action-cache lookup and upload.
 
-Host-native cgo has an additional boundary: the system C/C++ toolchain and
-sysroot must become verified inputs before its results can be shared as fully
-hermetic artifacts.
+Input declarations, enforced isolation and deterministic output are separate
+properties. A build that reads the clock can produce different bytes even in
+an isolated environment.
+
+Host-native cgo uses the system C/C++ toolchain and sysroot. Those tools are
+outside the verified input tree, so cgo links remain ineligible for this cache.
 
 ## Performance claims
 
