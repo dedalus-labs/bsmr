@@ -8,7 +8,7 @@
 import assert from "node:assert/strict";
 import { execFile } from "node:child_process";
 import { createHash } from "node:crypto";
-import { cpSync, existsSync, mkdtempSync, readFileSync, realpathSync, rmSync, writeFileSync } from "node:fs";
+import { cpSync, existsSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
@@ -25,6 +25,35 @@ cpSync(fileURLToPath(new URL("./fixtures/typescript-cache", import.meta.url)), c
 
 type Action = { identity: string; reproducer: { executor: string } };
 type Executors = { pnpm_install: "Local" | "Cache"; typescript_library: "Local" | "Cache" };
+
+/** Executes the built Hollywood action outside the checkout and installed dependencies. */
+async function verifyAction(output: string, value: string) {
+	const runtime = join(root, "action runtime");
+	rmSync(runtime, { recursive: true, force: true });
+	mkdirSync(runtime);
+	cpSync(output, join(runtime, "bundle"), { recursive: true, dereference: true });
+	writeFileSync(join(runtime, "input file.txt"), "payload\n");
+	const outputs = join(runtime, "outputs");
+	writeFileSync(outputs, "");
+	const actionOptions = {
+		cwd: runtime,
+		env: { INPUT_SOURCE: "input file.txt", GITHUB_OUTPUT: outputs },
+		timeout: 10_000,
+	};
+	const entrypoint = join(runtime, "bundle/action.mjs");
+	assert.equal(realpathSync(entrypoint), entrypoint, "action must execute the detached copy");
+	await run(process.execPath, [entrypoint], actionOptions);
+	const record = /^value<<([^\r\n]+)\r?\n([^\r\n]+)\r?\n\1\r?\n$/.exec(readFileSync(outputs, "utf8"));
+	assert.equal(record?.[2], `${value}:payload`, "bundled action must write its declared output");
+	writeFileSync(outputs, "");
+	rmSync(join(runtime, "input file.txt"));
+	await assert.rejects(run(process.execPath, [entrypoint], actionOptions), {
+		code: 1,
+		stdout: /ENOENT.*input file\.txt/,
+	});
+	assert.equal(readFileSync(outputs, "utf8"), "", "failed action must not publish an output");
+	return createHash("sha256").update(readFileSync(entrypoint)).digest("hex");
+}
 
 /** Builds a real module and verifies the executors from this exact invocation. */
 async function build(expected: Executors, value: string) {
@@ -46,8 +75,9 @@ async function build(expected: Executors, value: string) {
 	]));
 	assert.deepEqual(executors, expected);
 	const digest = createHash("sha256").update(readFileSync(program)).digest("hex");
-	process.stdout.write(`${JSON.stringify({ trace, executors, digest })}\n`);
-	return { program, digest };
+	const actionDigest = await verifyAction(output, value);
+	process.stdout.write(`${JSON.stringify({ trace, executors, digest, actionDigest })}\n`);
+	return { program, digest, actionDigest };
 }
 
 try {
@@ -57,6 +87,7 @@ try {
 	assert.equal(existsSync(first.program), false, "clean must remove the compiled output");
 	const restored = await build({ pnpm_install: "Cache", typescript_library: "Cache" }, "original");
 	assert.equal(restored.digest, first.digest);
+	assert.equal(restored.actionDigest, first.actionDigest);
 	writeFileSync(restored.program, "mutated output");
 	await run(executable, ["clean"], options);
 	const isolated = await build({ pnpm_install: "Cache", typescript_library: "Cache" }, "original");
@@ -65,7 +96,8 @@ try {
 	await run(executable, ["clean"], options);
 	const changed = await build({ pnpm_install: "Cache", typescript_library: "Local" }, "changed");
 	assert.notEqual(changed.digest, first.digest);
-	process.stdout.write("ok: TypeScript compilation, restoration, output isolation, source invalidation\n");
+	assert.notEqual(changed.actionDigest, first.actionDigest);
+	process.stdout.write("ok: TypeScript cache and standalone Hollywood action outputs\n");
 } finally {
 	await run(executable, ["kill"], options);
 	rmSync(root, { recursive: true });

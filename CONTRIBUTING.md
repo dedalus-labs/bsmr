@@ -51,6 +51,12 @@ preserves cached bytes when writable output changes, and recompiles changed sour
 Regenerate its fixture lock with `pnpm --dir test/fixtures/typescript-cache install --lockfile-only --ignore-scripts`.
 The Firecracker conformance lane remains x64-only.
 
+The TypeScript fixture also runs a bundled Hollywood action from a detached
+directory. It verifies relative file inputs, GitHub output records, failure
+status, and entrypoint bytes across cache restoration and source edits. This
+exercises the action runtime. GitHub worker lifecycle and generated action
+metadata require the connected runner tests.
+
 Repository policy is managed with Terraform from Dedalus's protected
 repository-controls stack. Do not change GitHub settings manually.
 
