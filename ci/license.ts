@@ -78,6 +78,7 @@ export function licenseGeneratedEntrypoints(root: string): void {
 		".github/actions/ci/release-sync/src/index.ts",
 		".github/actions/ci/rust-affected/src/index.ts",
 		".github/actions/ci/verify-sha256/src/index.ts",
+		".github/actions/typescript/cache/src/index.ts",
 	]) {
 		const text = readFileSync(join(root, path), "utf8");
 		writeFileSync(join(root, path), insertPreamble({ path, provenance: "dedalus", text }));

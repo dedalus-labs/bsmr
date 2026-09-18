@@ -248,9 +248,10 @@ jobs:
       - name: Verify native Cargo cache
         run: node test/native-cargo-cache.ts target/debug/bsmr
         shell: bash
-      - name: Verify native TypeScript cache
-        run: node test/native-typescript-cache.ts target/debug/bsmr
-        shell: bash
+      - name: Verify TypeScript cache
+        uses: ./.github/actions/typescript/cache
+        with:
+          binary: target/debug/bsmr
       - name: Verify native Go build
         run: node test/native-go-build.ts target/debug/bsmr
         shell: bash

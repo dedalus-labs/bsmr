@@ -82,10 +82,13 @@ const generatedDiff: ProcessSpec = {
 		"prelude/typescript/runner.mjs",
 	],
 };
-const actionNames = ["cli-reference", "osv-audit", "release-complete", "release-state", "release-sync", "rust-affected", "verify-sha256"] as const;
-const actionSyntax: readonly ProcessSpec[] = actionNames.map((name) => ({
+const actionPaths = [
+	"ci/cli-reference", "ci/osv-audit", "ci/release-complete", "ci/release-state",
+	"ci/release-sync", "ci/rust-affected", "ci/verify-sha256", "typescript/cache",
+] as const;
+const actionSyntax: readonly ProcessSpec[] = actionPaths.map((path) => ({
 	file: "node",
-	args: ["--check", `.github/actions/ci/${name}/dist/index.js`],
+	args: ["--check", `.github/actions/${path}/dist/index.js`],
 }));
 const generate: ProcessSpec = {
 	file: "pnpm",
