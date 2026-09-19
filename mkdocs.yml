@@ -37,6 +37,7 @@ exclude_docs: |
   !/users/languages/rust/
   /users/languages/rust/*
   !/users/languages/rust/cargo.md
+  !/users/languages/rust/toolchains.md
   !/users/languages/go/
   /users/languages/go/*
   !/users/languages/go/native.md
@@ -100,6 +101,7 @@ plugins:
         Languages:
           - users/languages/typescript/pnpm.md
           - users/languages/rust/cargo.md
+          - users/languages/rust/toolchains.md
           - users/languages/go/native.md
         Concepts:
           - concepts/caching.md
@@ -149,7 +151,9 @@ nav:
       - Installation: getting_started/install.md
   - Languages:
       - TypeScript and pnpm: users/languages/typescript/pnpm.md
-      - Rust and Cargo: users/languages/rust/cargo.md
+      - Rust:
+          - Cargo projects: users/languages/rust/cargo.md
+          - Toolchains: users/languages/rust/toolchains.md
       - Go: users/languages/go/native.md
       - Support status: about/language_support.md
   - Concepts:
