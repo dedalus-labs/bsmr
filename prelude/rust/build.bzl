@@ -1577,6 +1577,12 @@ def _rustc_invoke(
     for k, v in path_env.items():
         compile_cmd.add(cmd_args("--path-env=", k, "=", v, delimiter = ""))
 
+    if ctx.attrs.verify_inputs:
+        dep_info = ctx.actions.declare_output("{}-{}.d".format(prefix, diag), has_content_based_path = use_cbp)
+        compile_cmd.add(cmd_args(dep_info.as_output(), format = "--dep-info={}"))
+        compile_cmd.add(cmd_args(ctx.attrs.srcs, format = "--allowed-input={}"))
+        rustc_cmd.add(cmd_args(dep_info.as_output(), format = "--emit=dep-info={}"))
+
     build_status = None
     if infallible_diagnostics:
         # Build status for fail filter

@@ -128,10 +128,13 @@ class Args(NamedTuple):
     failure_filter: Optional[IO[bytes]]
     required_output: Optional[list[tuple[str, str]]]
     echo: Optional[IO[bytes]]
+    dep_info: Optional[Path]
+    allowed_input: list[Path]
     rustc: list[str]
 
 
 def arg_parse() -> Args:
+    """Parse compiler invocation, diagnostics and optional input verification."""
     # Command line is <action.py> [args] -- rustc command line
     parser = argparse.ArgumentParser(fromfile_prefix_chars="@")
     parser.add_argument(
@@ -193,6 +196,10 @@ def arg_parse() -> Args:
         type=argparse.FileType("wb"),
         help="Write the input command line to this file, without running it",
     )
+    parser.add_argument(
+        "--dep-info", type=Path, help="Validate rustc's source and environment reads"
+    )
+    parser.add_argument("--allowed-input", action="append", type=Path, default=[])
     parser.add_argument(
         "rustc",
         nargs=argparse.REMAINDER,
@@ -325,7 +332,49 @@ async def handle_output(  # noqa: C901
     return got_error_diag
 
 
+def verify_inputs(dep_info: Path, sources: list[Path], declared_env: set[str]) -> None:
+    """Reject unkeyed compiler reads before a successful result can be cached.
+
+    Rustc escapes spaces in filenames and emits one empty rule per source.
+    Validate the full shape, including repeated dependency lists, rather than
+    silently dropping paths that cannot be parsed. This is not a sandbox.
+    """
+    blocks = dep_info.read_text().rstrip("\n").split("\n\n")
+    if blocks[-1].startswith("# env-dep:"):
+        for line in blocks.pop().splitlines():
+            if not line.startswith("# env-dep:"):
+                raise ValueError("invalid rustc environment dependency")
+            key, separator, _ = line[len("# env-dep:") :].partition("=")
+            inherited = any(
+                key.startswith(pattern[:-1])
+                if pattern.endswith("*")
+                else key == pattern
+                for pattern in INHERITED_ENV
+            )
+            if key not in declared_env and (separator or inherited):
+                raise ValueError(f"undeclared Rust environment input: {key}")
+    if len(blocks) < 2:
+        raise ValueError("missing rustc source dependencies")
+    dependencies = blocks.pop().splitlines()
+    if (
+        not blocks
+        or not dependencies
+        or any(not line.endswith(":") for line in dependencies)
+    ):
+        raise ValueError("invalid rustc source dependencies")
+    names = [line[:-1] for line in dependencies]
+    suffix = ": " + " ".join(names)
+    if any("\n" in block or not block.endswith(suffix) for block in blocks):
+        raise ValueError("inconsistent rustc source dependencies")
+    allowed = {path.resolve(strict=True) for path in sources}
+    for name in names:
+        path = Path(name.replace("\\ ", " ")).resolve(strict=True)
+        if path not in allowed:
+            raise ValueError(f"undeclared Rust source input: {path}")
+
+
 async def main() -> int:  # noqa: C901
+    """Run the compiler and validate its result before reporting success."""
     args = arg_parse()
 
     if args.echo:
@@ -334,6 +383,7 @@ async def main() -> int:  # noqa: C901
 
     # Inherit a very limited initial environment, then add the new things
     env = inherited_env()
+    declared_env = {key for key, _ in (args.env or []) + (args.path_env or [])}
     if args.env:
         # Unescape previously escaped newlines.
         # Example: \\\\n\\n -> \\\n\n -> \\n\n
@@ -380,6 +430,7 @@ async def main() -> int:  # noqa: C901
         if arg.startswith("--env-set="):
             flag, key, value = arg.split("=", 2)
             env[key] = value
+            declared_env.add(key)
             continue
 
         rustc_args.append(arg)
@@ -433,6 +484,13 @@ async def main() -> int:  # noqa: C901
     if res == 0 and got_error_diag:
         res = 1
 
+    if res == 0 and args.dep_info:
+        try:
+            verify_inputs(args.dep_info, args.allowed_input, declared_env)
+        except (OSError, ValueError) as error:
+            eprint(str(error))
+            return 1
+
     # Check for death by signal - this is always considered a failure
     if res < 0:
         cmdline = shlex.join(rustc_cmd + rustc_args)
@@ -471,4 +529,5 @@ async def main() -> int:  # noqa: C901
     return res
 
 
-sys.exit(asyncio.run(main()))
+if __name__ == "__main__":
+    sys.exit(asyncio.run(main()))
