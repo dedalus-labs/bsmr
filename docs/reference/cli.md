@@ -1803,7 +1803,15 @@ Common options are documented under [Global options](#global-options).
 
 ## `bsmr build`
 
-Build the specified targets
+Build a package and its dependencies. Run from your project root.
+
+Examples:
+
+    bsmr build apps/api
+    bsmr build apps/api --show-output
+
+Use the package directory or an explicit target pattern.
+Project requirements: https://oss.dedaluslabs.ai/bsmr/getting_started/quickstart/
 
 **Usage**: `bsmr build [OPTIONS] [TARGET_PATTERNS]...`
 
@@ -2239,7 +2247,15 @@ Common options are documented under [Global options](#global-options).
 
 ## `bsmr test`
 
-Build and test the specified targets
+Build and run tests associated with a package.
+
+Example:
+
+    bsmr test app
+
+Use the package directory or an explicit target pattern.
+Available tests depend on your project's language and configuration.
+Language guides: https://oss.dedaluslabs.ai/bsmr/about/language_support/
 
 **Usage**: `bsmr test [OPTIONS] [TARGET_PATTERNS]... [-- <TEST_EXECUTOR_ARGS>...]`
 
@@ -2663,7 +2679,14 @@ Common options are documented under [Global options](#global-options).
 
 ## `bsmr init`
 
-Initialize a bsmr project
+Create .bsmr at your project root without replacing your language manifests.
+
+Example:
+
+    bsmr init
+    bsmr build apps/api
+
+An existing .bsmr is left unchanged.
 
 **Usage**: `bsmr init [OPTIONS] [PATH]`
 
