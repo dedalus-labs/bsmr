@@ -25,6 +25,7 @@ use pagable::Pagable;
 use pagable::pagable_typetag;
 
 use super::render;
+use super::snapshot;
 use super::toolchain::RustToolchain;
 use super::unsupported;
 use crate::file_ops::dice::DiceFileComputations;
@@ -152,7 +153,7 @@ impl RustGraphKey {
         if !manifest
             && relative != "Cargo.lock"
             && relative != "rust-toolchain.toml"
-            && !relative.ends_with(".rs")
+            && !snapshot::inferred(Path::new(relative))
         {
             return Ok(());
         }
