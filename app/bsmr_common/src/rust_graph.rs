@@ -181,6 +181,12 @@ fn render_package(
             .file_name()
             .and_then(|name| name.to_str())
             .unwrap_or(&package.name);
+        if alias.starts_with("__bsmr_") {
+            return Err(unsupported(
+                &package.name,
+                "target names beginning with `__bsmr_` are reserved",
+            ));
+        }
         let actual = if target.kind == ["lib"] {
             "lib"
         } else {
@@ -269,6 +275,12 @@ fn render_target(
         .strip_prefix(directory)
         .map_err(|_| RustGraphError::Outside(target.src_path.clone()))?;
     let is_library = target.kind == ["lib"];
+    if !is_library && target.name.starts_with("__bsmr_") {
+        return Err(unsupported(
+            &package.name,
+            "target names beginning with `__bsmr_` are reserved",
+        ));
+    }
     if !is_library && target.name == "lib" {
         return Err(unsupported(
             &package.name,
