@@ -20,6 +20,7 @@ use std::sync::Arc;
 use allocative::Allocative;
 use async_trait::async_trait;
 use bsmr_common::file_ops::metadata::FileMetadata;
+use bsmr_common::http::checksum::Checksum;
 use bsmr_core::deferred::base_deferred_key::BaseDeferredKey;
 use bsmr_core::execution_types::executor_config::RemoteExecutorUseCase;
 use bsmr_core::fs::artifact_path_resolver::ArtifactFs;
@@ -46,7 +47,6 @@ use crate::directory::ActionImmutableDirectory;
 use crate::directory::ActionSharedDirectory;
 use crate::execute::action_digest::TrackedActionDigest;
 use crate::execute::local_cache::LocalActionCache;
-use crate::materialize::http::Checksum;
 
 /// Opaque guard returned by `Materializer::register_eager_paths`.
 /// Dropping this guard releases the eager path registrations and cancels
