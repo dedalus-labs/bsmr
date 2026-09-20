@@ -269,6 +269,12 @@ fn render_target(
         .strip_prefix(directory)
         .map_err(|_| RustGraphError::Outside(target.src_path.clone()))?;
     let is_library = target.kind == ["lib"];
+    if !is_library && target.name == "lib" {
+        return Err(unsupported(
+            &package.name,
+            "binary target name `lib` is reserved",
+        ));
+    }
     let mut named_deps = dependencies.clone();
     if !is_library {
         for library in package.targets.iter().filter(|t| t.kind == ["lib"]) {
@@ -280,7 +286,7 @@ fn render_target(
         ("CARGO_PKG_VERSION", package.version.as_str()),
     ]);
     let name = if test {
-        format!("__bsmr_test_{}", target.name)
+        format!("__bsmr_test_{}_{}", target.kind[0], target.name)
     } else if is_library {
         "lib".to_owned()
     } else {
@@ -313,7 +319,7 @@ fn render_target(
 /// Associate only Cargo-enabled unit tests with a build target.
 fn test_labels(target: &Target) -> Vec<String> {
     if target.test.unwrap_or(true) {
-        vec![format!(":__bsmr_test_{}", target.name)]
+        vec![format!(":__bsmr_test_{}_{}", target.kind[0], target.name)]
     } else {
         Vec::new()
     }
@@ -356,7 +362,7 @@ mod tests {
         )
         .unwrap();
         assert!(files[Path::new("/repo/app/BUILD.bsmr")].contains(
-            "alias(name = \"app\", actual = \":probe_app\", tests = [\":__bsmr_test_probe_app\"]"
+            "alias(name = \"app\", actual = \":probe_app\", tests = [\":__bsmr_test_bin_probe_app\"]"
         ));
     }
 
@@ -372,7 +378,7 @@ mod tests {
         .unwrap();
         let core = &files[Path::new("/repo/core/BUILD.bsmr")];
         assert!(core.contains("rust_test("));
-        assert!(core.contains("tests = [\":__bsmr_test_core\"]"));
+        assert!(core.contains("tests = [\":__bsmr_test_lib_core\"]"));
         let app = &files[Path::new("/repo/app/BUILD.bsmr")];
         assert!(!app.contains("rust_test("));
         assert!(app.contains("tests = []"));
