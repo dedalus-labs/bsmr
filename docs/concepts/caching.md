@@ -44,6 +44,12 @@ Remote caches speak the same action-cache and CAS model. Cache provenance is
 only portable when toolchain, platform, environment, and input identities are
 portable too.
 
+After an action finishes, its outputs can move from a temporary execution path
+to a path derived from their content. Cache publication reads the finalized
+files. The result still records the action's original output names so another
+checkout can restore them. A later execution may reuse the temporary path
+without removing bytes that are still being published.
+
 Restoration copies cached objects into writable outputs by default. Set
 `BSMR_LOCAL_CACHE_MATERIALIZATION=reflink` to require filesystem copy-on-write
 clones. Unsupported cloning fails the build. Modified outputs cannot change
