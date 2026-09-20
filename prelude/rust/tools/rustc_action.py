@@ -484,13 +484,6 @@ async def main() -> int:  # noqa: C901
     if res == 0 and got_error_diag:
         res = 1
 
-    if res == 0 and args.dep_info:
-        try:
-            verify_inputs(args.dep_info, args.allowed_input, declared_env)
-        except (OSError, ValueError) as error:
-            eprint(str(error))
-            return 1
-
     # Check for death by signal - this is always considered a failure
     if res < 0:
         cmdline = shlex.join(rustc_cmd + rustc_args)
@@ -525,6 +518,14 @@ async def main() -> int:  # noqa: C901
                 if not path.exists():
                     path.touch()
             res = 0
+
+    # Diagnostic results become cacheable only after failure filtering.
+    if res == 0 and args.dep_info:
+        try:
+            verify_inputs(args.dep_info, args.allowed_input, declared_env)
+        except (OSError, ValueError) as error:
+            eprint(str(error))
+            return 1
 
     return res
 
