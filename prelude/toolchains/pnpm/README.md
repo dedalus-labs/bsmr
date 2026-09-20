@@ -58,6 +58,10 @@ can reuse an unchanged result, but a clean rebuild executes the task again.
 Scripts must not mutate dependency artifacts. Consumers still declare runtime
 dependencies and package metadata when their outputs require them.
 
-Validate the runner with `pnpm run ci test`.
+Validate the runner with `pnpm run ci test`. Run the real compiler/artifact test
+with `node test/pnpm/task.ts /path/to/bsmr`. It uses the binary's embedded prelude.
+Pass `prelude` as the final argument to test a source-prelude override explicitly.
+The harness reports each phase in milliseconds and native critical-path entries
+in microseconds.
 See [pnpm's script contract](https://pnpm.io/cli/run) and the
 [native workspace guide](../../../docs/users/languages/typescript/pnpm.md).

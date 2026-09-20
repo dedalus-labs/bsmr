@@ -25,3 +25,11 @@ relative file inputs, GitHub output records and missing-input failure.
 The recorded hashes identify entrypoint files. This fixture tests the action
 runtime and cache behavior. GitHub worker lifecycle and generated action
 metadata require connected runner qualification.
+
+## Package tasks
+
+Run `node test/pnpm/task.ts /path/to/bsmr` to test the binary's embedded `pnpm_task`
+rule with a real frozen install and compiler. Append `prelude` to test this
+checkout's rules explicitly. Each phase reports its elapsed time. It checks detached code and assets,
+individual output selection, warm reuse, clean rebuilds and missing-output errors.
+See the [task contract](../prelude/toolchains/pnpm/README.md).
