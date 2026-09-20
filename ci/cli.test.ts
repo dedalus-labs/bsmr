@@ -88,6 +88,7 @@ test("check uses one typed command tree", async () => {
 		"benchmarks/python-conformance/snapshot.test.ts",
 		"prelude/typescript/runner.test.ts",
 		"prelude/toolchains/pnpm/runner.test.ts",
+		"prelude/toolchains/pnpm/task.test.ts",
 		"test/contributors.test.ts",
 	]);
 	assert.deepEqual(state.invocations.find(({ file }) => file === "git")?.args, [
@@ -99,6 +100,7 @@ test("check uses one typed command tree", async () => {
 		".github/workflows",
 		"ci/rust-build-dependencies.mjs",
 		"prelude/toolchains/pnpm/runner.mjs",
+		"prelude/toolchains/pnpm/task.mjs",
 		"prelude/typescript/runner.mjs",
 	]);
 	assert.ok(state.invocations.every(({ cwd }) => cwd === "/repo"));

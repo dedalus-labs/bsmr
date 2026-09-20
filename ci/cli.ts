@@ -49,6 +49,7 @@ const test: ProcessSpec = {
 		"benchmarks/python-conformance/snapshot.test.ts",
 		"prelude/typescript/runner.test.ts",
 		"prelude/toolchains/pnpm/runner.test.ts",
+		"prelude/toolchains/pnpm/task.test.ts",
 		"test/contributors.test.ts",
 	],
 };
@@ -79,6 +80,7 @@ const generatedDiff: ProcessSpec = {
 		".github/workflows",
 		"ci/rust-build-dependencies.mjs",
 		"prelude/toolchains/pnpm/runner.mjs",
+		"prelude/toolchains/pnpm/task.mjs",
 		"prelude/typescript/runner.mjs",
 	],
 };

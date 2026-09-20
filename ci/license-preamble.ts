@@ -88,6 +88,7 @@ function brief(path: string): string {
 		["ci/verify-sha256.ts", "Verifies one downloaded artifact against its pinned SHA-256 digest."],
 		["docs/getting_started/what_is_bsmr.md", "Introduces Bessemer and its core capabilities."],
 		["prelude/toolchains/pnpm/runner.mjs", "Runs the generated hermetic pnpm install adapter."],
+		["prelude/toolchains/pnpm/task.mjs", "Runs native pnpm tasks with required outputs."],
 		["prelude/typescript/runner.mjs", "Runs the generated hermetic TypeScript action adapter."],
 		["rolldown.config.ts", "Bundles Bessemer's generated Node runtime artifacts."],
 		["test/contributors.test.ts", "Verifies the vouched-contributor trust policy."],

@@ -35,6 +35,8 @@ PnpmToolchainInfo = provider(fields = {
 })
 
 PnpmInstallInfo = provider(fields = {
+    "pnpm_cli": provider_field(Artifact),
+    "pnpm_root": provider_field(Artifact),
     "node": provider_field(RunInfo),
     "node_modules": provider_field(Artifact),
     "workspace": provider_field(Artifact),
@@ -210,7 +212,7 @@ def _pnpm_install_impl(ctx: AnalysisContext) -> list[Provider]:
     node_modules = workspace.project("node_modules", hide_prefix = True)
     return [
         DefaultInfo(default_output = node_modules, other_outputs = [workspace]),
-        PnpmInstallInfo(node = toolchain.node, node_modules = node_modules, workspace = workspace),
+        PnpmInstallInfo(node = toolchain.node, node_modules = node_modules, workspace = workspace, pnpm_cli = toolchain.pnpm_cli, pnpm_root = toolchain.pnpm_root),
     ]
 
 pnpm_install = rule(
@@ -228,4 +230,46 @@ pnpm_install = rule(
         "_runner": attrs.source(default = "prelude//toolchains/pnpm:runner"),
     },
     doc = "Materializes one cached pnpm workspace from a frozen lockfile.",
+)
+
+def _pnpm_task_impl(ctx: AnalysisContext) -> list[Provider]:
+    """Execute a package script and publish only its required outputs."""
+    if not ctx.attrs.script or ctx.attrs.script.startswith("-") or ctx.attrs.script.startswith("/"):
+        fail("script must name one package.json script")
+    if not ctx.attrs.outputs:
+        fail("pnpm_task requires at least one output")
+    for path in ctx.attrs.outputs:
+        _validate_project_path(path)
+    if ctx.attrs.package_root != ".":
+        _validate_project_path(ctx.attrs.package_root)
+    output = ctx.actions.declare_output(ctx.label.name, dir = True)
+    install = ctx.attrs.install[PnpmInstallInfo]
+    command = cmd_args([
+        install.node, ctx.attrs._runner,
+        "--source", ctx.attrs.source,
+        "--install", install.workspace,
+        "--pnpm", install.pnpm_cli,
+        "--package", ctx.attrs.package_root,
+        "--script", ctx.attrs.script,
+        "--outputs", json.encode(ctx.attrs.outputs),
+        "--output", output.as_output(),
+    ], hidden = [install.pnpm_root])
+    # The host shell is not a verified tool artifact. Do not share this action's cache.
+    ctx.actions.run(command, category = "pnpm_task", identifier = ctx.label.name, local_only = True, allow_cache_upload = False)
+    return [DefaultInfo(
+        default_output = output,
+        sub_targets = {path: [DefaultInfo(default_output = output.project(path))] for path in ctx.attrs.outputs},
+    )]
+
+pnpm_task = rule(
+    impl = _pnpm_task_impl,
+    attrs = {
+        "install": attrs.dep(providers = [PnpmInstallInfo]),
+        "package_root": attrs.string(doc = "Workspace-relative package directory, or '.' for the root."),
+        "script": attrs.string(doc = "Required package.json script. pnpm owns its interpretation."),
+        "source": attrs.source(allow_directory = True, doc = "Artifact containing the complete workspace-relative source and configuration closure."),
+        "outputs": attrs.dict(attrs.string(), attrs.enum(["file", "directory"]), doc = "Required package-relative outputs, retained at the same paths."),
+        "_runner": attrs.source(default = "prelude//toolchains/pnpm:task"),
+    },
+    doc = "Runs one native pnpm script locally over declared inputs with checked output ownership.",
 )
