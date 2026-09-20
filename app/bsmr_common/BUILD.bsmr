@@ -34,7 +34,6 @@ rust_library(
     test_deps = [
         "bsmr_build//third-party/rust:assert_matches",
         "bsmr_build//third-party/rust:indoc",
-        "bsmr_build//third-party/rust:tempfile",
         "bsmr_build//third-party/rust:test-case",
         "bsmr_build//third-party/rust:triomphe",
     ],
@@ -69,6 +68,7 @@ rust_library(
         "bsmr_build//third-party/rust:sha2",
         "bsmr_build//third-party/rust:smallvec",
         "bsmr_build//third-party/rust:strsim",
+        "bsmr_build//third-party/rust:tempfile",
         "bsmr_build//third-party/rust:tokio",
         "bsmr_build//third-party/rust:toml",
         "bsmr_build//third-party/rust:tonic",
