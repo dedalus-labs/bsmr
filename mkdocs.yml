@@ -91,8 +91,8 @@ plugins:
       full_output: llms-full.txt
       markdown_description: |
         Bessemer is a build system that reads native ecosystem manifests,
-        schedules hermetic actions, and restores outputs from a content-addressed cache.
-        TypeScript with pnpm is the primary ecosystem. Rust and Go are experimental.
+        schedules declared actions, and restores outputs from a content-addressed cache.
+        TypeScript with pnpm is the primary ecosystem. Rust, Go and Python are experimental.
       sections:
         Getting Started:
           - getting_started/quickstart.md
@@ -161,7 +161,7 @@ nav:
       - Overview: reference/index.md
       - Command line: reference/cli.md
       - Projects and configuration: reference/configuration.md
-  - Roadmap: roadmap.md
+  - Capabilities: roadmap.md
 
 extra_css:
   - assets/theme.css
