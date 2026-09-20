@@ -47,6 +47,8 @@ The generated source/install labels are a prototype integration surface.
 The task copies sources into scratch and links the frozen dependencies. Source
 manifests must match the install. pnpm's automatic pre-script installation is
 disabled because acquisition already belongs to `pnpm_install`.
+Workspace executable links point into the declared source copy. External package
+executables keep their frozen install targets, preserving pnpm's bin selection.
 Required outputs must be new paths. Missing outputs, wrong types, failed scripts
 and output symlinks fail the action. All outputs are checked before publication.
 Their paths remain relative to the package, including nested assets.
