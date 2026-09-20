@@ -3,3 +3,9 @@
 /ci/ @windsornguyen
 /app/bsmr/ @windsornguyen
 /bsmr_build/ @windsornguyen
+/docs/rfcs/0005-ecosystems.md @windsornguyen
+/prelude/toolchains/pnpm/ @windsornguyen
+/prelude/typescript/ @windsornguyen
+/test/pnpm/ @windsornguyen
+/test/README.md @windsornguyen
+/rolldown.config.ts @windsornguyen
