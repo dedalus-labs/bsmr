@@ -5,7 +5,7 @@
 
 // Creates writable package workspaces over declared sources and frozen dependencies.
 
-import { copyFile, lstat, mkdir, readdir, readFile, readlink, realpath, rm, symlink } from "node:fs/promises";
+import { chmod, copyFile, lstat, mkdir, readdir, readFile, readlink, realpath, rm, symlink, writeFile } from "node:fs/promises";
 import { dirname, isAbsolute, join, relative, resolve, sep } from "node:path";
 
 /**
@@ -123,6 +123,38 @@ async function findPackageRoots(source: string, prefix = ""): Promise<string[]> 
 	return roots;
 }
 
+/** Apply pnpm's executable mode and shebang normalization only to an owned source copy. */
+async function prepareExecutable(path: string, packages: ReadonlyMap<string, string>): Promise<void> {
+	if (!(await exists(path))) return; // A preceding package build may produce this bin later.
+	const target = await realpath(path);
+	if (![...packages.values()].some((root) => isWithin(root, target))) throw new Error(`workspace executable '${path}' escapes declared sources`);
+	await chmod(target, 0o755);
+	const bytes = await readFile(target);
+	const newline = bytes.indexOf(10);
+	if (bytes[0] === 35 && bytes[1] === 33 && newline > 0 && bytes[newline - 1] === 13) {
+		await writeFile(target, Buffer.concat([bytes.subarray(0, newline - 1), bytes.subarray(newline)]));
+	}
+}
+
+/** Preserve pnpm's selected bins, including workspace targets absent from the manifest-only install. */
+async function mirrorExecutables(input: string, output: string, packages: ReadonlyMap<string, string>): Promise<void> {
+	await mkdir(output, { recursive: true });
+	const directory = await realpath(input);
+	for (const name of await readdir(input)) {
+		const link = await readlink(join(input, name));
+		let target = resolve(directory, link);
+		for (const [installed, workspace] of packages) {
+			const suffix = relative(installed, target);
+			if (isWithin(installed, target) && !suffix.split(sep).includes("node_modules")) {
+				target = join(workspace, suffix);
+				await prepareExecutable(target, packages);
+				break;
+			}
+		}
+		await symlink(target, join(output, name));
+	}
+}
+
 /**
  * Mirror one pnpm node_modules level while rebasing workspace links to scratch.
  *
@@ -136,6 +168,10 @@ async function mirrorModules(input: string, output: string, packages: ReadonlyMa
 		if (entry.name === ".pnpm") continue;
 		const from = join(input, entry.name);
 		const to = join(output, entry.name);
+		if (entry.name === ".bin") {
+			await mirrorExecutables(from, to, packages);
+			continue;
+		}
 		if (entry.isDirectory() && entry.name.startsWith("@")) {
 			await mirrorModules(from, to, packages);
 			continue;
@@ -162,7 +198,7 @@ async function linkPackageModules(install: string, source: string, workspace: st
 		if (await readFile(join(source, manifest), "utf8") !== await readFile(join(install, manifest), "utf8")) {
 			throw new Error(`frozen install manifest differs from declared source '${manifest}'`);
 		}
-		packages.set(await realpath(installedPackage), join(workspace, root));
+		packages.set(await realpath(installedPackage), await realpath(join(workspace, root)));
 	}
 	for (const root of roots) {
 		const input = join(install, root, "node_modules");
