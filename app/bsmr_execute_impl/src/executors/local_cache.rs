@@ -13,6 +13,7 @@ use std::time::Duration;
 use async_trait::async_trait;
 use bsmr_common::file_ops::metadata::FileMetadata;
 use bsmr_common::file_ops::metadata::TrackedFileDigest;
+use bsmr_core::content_hash::ContentBasedPathHash;
 use bsmr_core::fs::artifact_path_resolver::ArtifactFs;
 use bsmr_directory::directory::directory::Directory;
 use bsmr_directory::directory::directory_iterator::DirectoryIterator;
@@ -217,7 +218,7 @@ impl UploadCache for LocalActionCacheUploader {
                     &self.artifact_fs,
                     &self.cache,
                     info.digest_config,
-                    result,
+                    &result.outputs,
                     &streams.stdout,
                     &streams.stderr,
                     &action.action,
@@ -391,11 +392,12 @@ fn read_stream(
     })
 }
 
+/// Publishes finalized output bytes under the action's original output paths.
 fn publish_result(
     artifact_fs: &ArtifactFs,
     cache: &LocalActionCache,
     digest_config: DigestConfig,
-    result: &CommandExecutionResult,
+    outputs: &BsmrIndexMap<CommandExecutionOutput, ArtifactValue>,
     stdout: &[u8],
     stderr: &[u8],
     action: &bsmr_execute::execute::action_digest::ActionDigest,
@@ -403,14 +405,23 @@ fn publish_result(
     let mut manifest = LocalActionResult::default();
     let mut files = Vec::new();
     let mut trees = Vec::new();
-    for output in result.resolve_outputs(artifact_fs) {
-        let (output, value) = output?;
+    for (requested, value) in outputs {
+        let command_hash = requested
+            .has_content_based_path()
+            .then_some(ContentBasedPathHash::OutputArtifact);
+        let output = requested
+            .as_ref()
+            .resolve(artifact_fs, command_hash.as_ref())?;
+        let content_hash = requested
+            .has_content_based_path()
+            .then(|| value.content_based_path_hash());
+        let source = requested
+            .as_ref()
+            .resolve(artifact_fs, content_hash.as_ref())?;
+        let root = artifact_fs.fs().resolve(source.path());
         match value.entry().as_ref() {
             DirectoryEntry::Leaf(ActionDirectoryMember::File(file)) => {
-                files.push((
-                    file.digest.dupe(),
-                    artifact_fs.fs().resolve(output.path()).into_path_buf(),
-                ));
+                files.push((file.digest.dupe(), root.into_path_buf()));
                 manifest.output_files.push(LocalOutputFile {
                     path: output.path().to_string(),
                     digest: LocalDigest::from_file(&file.digest),
@@ -418,7 +429,6 @@ fn publish_result(
                 });
             }
             DirectoryEntry::Dir(directory) => {
-                let root = artifact_fs.fs().resolve(output.path());
                 let mut walk =
                     unordered_entry_walk(DirectoryEntry::Dir(directory).map_dir(Directory::as_ref));
                 while let Some((relative, entry)) = walk.next() {
@@ -535,6 +545,10 @@ fn pure_python_wheel_name(name: &str) -> bool {
         && fields.next().is_some_and(|python| python.starts_with("py"))
         && fields.next().is_some()
 }
+
+#[cfg(test)]
+#[path = "local_cache/publication_tests.rs"]
+mod publication_tests;
 
 #[cfg(test)]
 mod tests {
