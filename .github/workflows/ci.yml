@@ -248,6 +248,12 @@ jobs:
       - name: Verify native Rust graph
         run: node test/native-rust-build.ts target/debug/bsmr
         shell: bash
+      - name: Install stable Rust test toolchain
+        run: rustup toolchain install 1.97.1 --profile minimal --no-self-update
+        shell: bash
+      - name: Verify stable Rust feature gates
+        run: node test/rust/stable.ts target/debug/bsmr
+        shell: bash
       - name: Verify TypeScript cache
         uses: ./.github/actions/typescript/cache
         with:
