@@ -34,6 +34,7 @@ def _toolchain(ctx):
         rustdoc = RunInfo(args = cmd_args(compiler.project("bin/rustdoc"), hidden = [compiler])),
         sysroot_path = standard,
         rustc_target_triple = ctx.attrs.triple,
+        nightly_features = ctx.attrs.nightly_features,
         panic_runtime = PanicRuntime("unwind"),
     )]
 
@@ -44,6 +45,7 @@ native_rust_toolchain = rule(
         "clippy": attrs.dep(),
         "standard_library": attrs.dep(),
         "triple": attrs.string(),
+        "nightly_features": attrs.bool(default = False),
     },
     is_toolchain_rule = True,
 )

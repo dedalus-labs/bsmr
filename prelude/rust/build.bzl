@@ -219,6 +219,7 @@ def generate_rustdoc_coverage(
     params: BuildParams,
     default_roots: list[str],
 ) -> Artifact:
+    """Generate documentation coverage with the selected compiler's capabilities."""
     toolchain_info = compile_ctx.toolchain_info
 
     common_args = _compute_common_args(
@@ -247,7 +248,8 @@ def generate_rustdoc_coverage(
         path_env["RUST_TARGET_PATH"] = toolchain_info.rust_target_path[DefaultInfo].default_outputs[0]
 
     # `--show-coverage` is unstable.
-    plain_env["RUSTC_BOOTSTRAP"] = cmd_args("1")
+    if toolchain_info.nightly_features:
+        plain_env["RUSTC_BOOTSTRAP"] = cmd_args("1")
     unstable_options = ["-Zunstable-options"]
 
     rustdoc_cmd_action = cmd_args(
@@ -284,6 +286,7 @@ def generate_rustdoc_test(
     params: BuildParams,
     default_roots: list[str],
 ) -> cmd_args:
+    """Build the doctest command without enabling unsupported compiler features."""
     toolchain_info = compile_ctx.toolchain_info
     internal_tools_info = compile_ctx.internal_tools_info
     doc_dep_ctx = DepCollectionContext(
@@ -400,7 +403,8 @@ def generate_rustdoc_test(
         path_env[k] = v
 
     # `--runtool` is unstable.
-    plain_env["RUSTC_BOOTSTRAP"] = cmd_args("1")
+    if toolchain_info.nightly_features:
+        plain_env["RUSTC_BOOTSTRAP"] = cmd_args("1")
     unstable_options = ["-Zunstable-options"]
 
     if toolchain_info.rust_target_path != None:
@@ -1406,7 +1410,6 @@ EmitOperation = record(
     profile_out = field(Artifact | None),
 )
 
-# Take a desired output and work out how to convince rustc to generate it
 def _rustc_emit(
     ctx: AnalysisContext,
     compile_ctx: CompileContext,
@@ -1418,11 +1421,13 @@ def _rustc_emit(
     predeclared_output: Artifact | None = None,
     deferred_link: bool = False,
 ) -> EmitOperation:
+    """Declare an output using the selected compiler's supported emission mode."""
     simple_crate = attr_simple_crate_for_filenames(ctx)
     crate_type = params.crate_type
 
     emit_args = cmd_args()
-    emit_env = {}
+    # Nightly's hollow and linked rlibs need identical environments for matching crate hashes.
+    emit_env = {"RUSTC_BOOTSTRAP": "1"} if compile_ctx.toolchain_info.nightly_features else {}
     extra_out = None
     profile_out = None
     use_cbp = getattr(ctx.attrs, "use_content_based_paths", False)
@@ -1446,17 +1451,11 @@ def _rustc_emit(
         emit_output = ctx.actions.declare_output(filename, has_content_based_path = emit_cbp)
 
     if emit == Emit("expand"):
-        emit_env["RUSTC_BOOTSTRAP"] = "1"
         emit_args.add(
             "-Zunpretty=expanded",
             cmd_args(emit_output.as_output(), format = "-o{}"),
         )
     else:
-        # Even though the unstable flag only appears on one of the branches, we need
-        # an identical environment between the `-Zno-codegen` and non-`-Zno-codegen`
-        # command or else there are "found possibly newer version of crate" errors.
-        emit_env["RUSTC_BOOTSTRAP"] = "1"
-
         if emit == Emit("metadata-full"):
             if crate_type not in (CrateType("rlib"), CrateType("dylib")):
                 # Nothing ever needs the metadata from these crate types, so we can

@@ -160,6 +160,7 @@ _SUB_TARGET_BUILD_LANG_STYLE = {
 }
 
 def rust_library_impl(ctx: AnalysisContext) -> list[Provider]:
+    """Compile a library and expose compatible outputs for each dependency mode."""
     compile_ctx = compile_context(ctx)
     toolchain_info = compile_ctx.toolchain_info
 
@@ -201,6 +202,7 @@ def rust_library_impl(ctx: AnalysisContext) -> list[Provider]:
 
         param_subtargets.setdefault(params, {})
         if LinkageLang("rust") in langs:
+            # Stable's linked rlib already contains the full metadata its consumers need.
             param_metadata_outputs[params] = {
                 MetadataKind("link"): link,
                 MetadataKind("full"): rust_compile(
@@ -210,7 +212,7 @@ def rust_library_impl(ctx: AnalysisContext) -> list[Provider]:
                     params = params,
                     default_roots = _DEFAULT_ROOTS,
                     incremental_enabled = ctx.attrs.incremental_enabled,
-                ),
+                ) if toolchain_info.nightly_features else link,
                 MetadataKind("fast"): meta_fast,
             }
 

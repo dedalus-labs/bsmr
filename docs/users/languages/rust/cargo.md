@@ -69,6 +69,10 @@ and custom Cargo profiles or lints fail before compilation. Cross compilation
 and Cargo command-line parity are not implemented. Shared files outside a crate
 require explicitly declared action inputs.
 
+Stable toolchain pins reject nightly-only language features. Stable builds reuse
+compiled libraries for the metadata needed by dependent crates. Nightly builds
+retain separate metadata actions so dependent compilation can start sooner.
+
 Native actions validate rustc's reported source and environment reads before
 accepting a successful compiler result. Undeclared reported inputs fail instead of
 publishing an incomplete cache entry. This check is not a filesystem sandbox.

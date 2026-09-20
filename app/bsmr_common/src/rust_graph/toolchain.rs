@@ -117,7 +117,12 @@ impl RustToolchain {
             };
             rules.push_str(&format!("http_archive(name = \"__bsmr_{component}\", urls = [{url:?}], sha256 = {hash:?}, strip_prefix = \"{prefix}/{directory}\", has_content_based_path = True)\n", url=archive.url, hash=archive.sha256));
         }
-        rules.push_str(&format!("native_rust_toolchain(name = \"__bsmr_rust\", compiler = \":__bsmr_rustc\", clippy = \":__bsmr_clippy-preview\", standard_library = \":__bsmr_rust-std\", triple = {host:?}, visibility = [\"PUBLIC\"])\n"));
+        let nightly = if toolchain.channel.starts_with("nightly-") {
+            "True"
+        } else {
+            "False"
+        };
+        rules.push_str(&format!("native_rust_toolchain(name = \"__bsmr_rust\", compiler = \":__bsmr_rustc\", clippy = \":__bsmr_clippy-preview\", standard_library = \":__bsmr_rust-std\", triple = {host:?}, nightly_features = {nightly}, visibility = [\"PUBLIC\"])\n"));
         rules.push_str(&format!("native_rust_tools(triple = {host:?})\n"));
         Ok(Self {
             cargo,
