@@ -25,8 +25,11 @@ mkdirSync(cwd);
 const options = { cwd, env, timeout: 120_000, maxBuffer: 8 * 1024 * 1024 };
 const checkouts = [cwd];
 const projects: Record<string, string> = {
-	"Cargo.toml": '[workspace]\nmembers=["app", "core", "unrelated"]\nresolver="2"\n',
+	"Cargo.toml": '[workspace]\nmembers=["app", "core", "unrelated", "both"]\nresolver="2"\n',
 	"rust-toolchain.toml": '[toolchain]\nchannel="nightly-2026-04-11"\n',
+	"both/Cargo.toml": '[package]\nname="both"\nversion="0.1.0"\nedition="2024"\n',
+	"both/src/lib.rs": 'pub fn value() -> u32 { 7 } #[test] fn library_test() { assert_eq!(value(), 7); }\n',
+	"both/src/main.rs": 'fn main() { assert_eq!(both::value(), 7); } #[test] fn binary_test() { main(); }\n',
 	"core/Cargo.toml": '[package]\nname="probe_core"\nversion="0.1.0"\nedition="2024"\n',
 	"core/src/lib.rs": 'pub fn value() -> u32 { 7 }\n',
 	"unrelated/Cargo.toml": '[package]\nname="unrelated"\nversion="0.1.0"\nedition="2024"\n',
@@ -56,6 +59,8 @@ try {
 	writeFileSync(join(cwd, ".bsmr"), config + "\n[bsmr]\ndefault_allow_cache_upload = true\n");
 	await run(cargo, ["generate-lockfile", "--offline"], options);
 	const cold = await build("cold", "7:clean");
+	await run(binary, ["build", "both"], options);
+	await run(binary, ["test", "both:lib", "both:both", "--console", "simple"], options);
 	assert.ok(cold.includes("rustc"), "must execute native rustc actions");
 	writeFileSync(join(cwd, "unrelated/src/lib.rs"), "pub fn unrelated() -> u32 { 2 }\n");
 	assert.equal(await build("unrelated", "7:clean"), "", "unrelated crate must not recompile app");
@@ -105,6 +110,10 @@ try {
 	}
 	writeFileSync(join(cwd, "app/src/main.rs"), main);
 	console.log("ok: declared input changes rebuild; undeclared source/environment reads cannot publish results");
+	const bothManifest = readFileSync(join(cwd, "both/Cargo.toml"), "utf8");
+	writeFileSync(join(cwd, "both/Cargo.toml"), bothManifest + '[[bin]]\nname="lib"\npath="src/main.rs"\n');
+	await assert.rejects(run(binary, ["build", "both:lib"], options), /binary target name `lib` is reserved/);
+	writeFileSync(join(cwd, "both/Cargo.toml"), bothManifest);
 	writeFileSync(join(cwd, "app/build.rs"), 'fn main() { panic!("must not execute during graph import"); }');
 	await assert.rejects(run(binary, ["build", "app"], options), /custom-build/);
 	console.log("ok: inferred Rust, native tests, composable recipes, manifest invalidation, cache reuse");
