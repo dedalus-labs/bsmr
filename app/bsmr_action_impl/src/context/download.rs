@@ -21,10 +21,10 @@ use bsmr_build_api::interpreter::rule_defs::artifact::output_artifact_like::Outp
 use bsmr_build_api::interpreter::rule_defs::artifact::starlark_declared_artifact::StarlarkDeclaredArtifact;
 use bsmr_build_api::interpreter::rule_defs::context::AnalysisActions;
 use bsmr_common::cas_digest::CasDigest;
+use bsmr_common::http::checksum::Checksum;
 use bsmr_core::execution_types::executor_config::RemoteExecutorUseCase;
 use bsmr_error::BsmrErrorContext;
 use bsmr_execute::execute::request::OutputType;
-use bsmr_execute::materialize::http::Checksum;
 use bsmr_hash::bsmr_indexset;
 use chrono::TimeZone;
 use chrono::Utc;

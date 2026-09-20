@@ -14,6 +14,11 @@
  * above-listed licenses.
  */
 
+/// Checksum-verified immutable blobs shared by planners and download actions.
+pub mod cache;
+/// Checksum declarations validated at acquisition boundaries.
+pub mod checksum;
+
 use bsmr_http::HttpClient;
 use dice::UserComputationData;
 use dupe::Dupe;
