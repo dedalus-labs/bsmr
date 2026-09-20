@@ -11,10 +11,22 @@ title: TypeScript and pnpm
 
 # TypeScript and pnpm
 
-BSMR builds a pnpm workspace from its native ecosystem files. You do not need a
-`BUILD.bsmr` or handwritten Starlark file for the conventional path.
-BSMR reads the authoritative workspace graph, lowers it into its internal target
-graph, and keeps that generated representation private.
+Build a TypeScript package from its existing pnpm and compiler configuration:
+
+```console
+bsmr init
+bsmr build apps/api --show-output
+```
+
+Replace `apps/api` with your package's directory. The build uses its tsdown
+configuration. To check types without emitting JavaScript, run:
+
+```console
+bsmr build apps/api:typecheck
+```
+
+Run `bsmr build --help` for build options. The requirements below describe the
+supported workspace. Conventional packages need no `BUILD.bsmr` or Starlark file.
 
 ## Workspace contract
 
@@ -60,18 +72,8 @@ useNodeVersion: 24.19.0
 }
 ```
 
-Initialize the repository once, then build by package path:
-
-```console
-bsmr init
-bsmr build apps/api
-bsmr build apps/api:typecheck
-```
-
-`bsmr build apps/api` emits the package with tsdown. The `typecheck` target runs
-TypeScript semantic checking without emission. A package-path selector resolves
-to one conventional target, while ordinary BSMR labels remain available for
-queries, automation, and advanced rules.
+A package path selects one conventional build target. Explicit target labels
+remain available for queries, automation, and custom recipes.
 
 ## Integration checklist
 
@@ -87,7 +89,10 @@ Before replacing an existing build command:
 Keep the old command authoritative until those checks agree. A successful
 compiler exit alone does not prove package or executable parity.
 
-## What BSMR owns
+## How builds run
+
+BSMR reads the authoritative workspace graph and creates its internal targets.
+That generated representation stays private.
 
 BSMR performs one frozen pnpm install for the repository lockfile. It does not
 launch one competing installer per package. Independent compilation,
@@ -155,7 +160,9 @@ layout without install-time network access, and promote lifecycle scripts into
 separately sandboxed actions. Until then, call this the pinned pnpm adapter,
 not a fully hermetic JavaScript dependency materializer.
 
-## Custom rules
+## Custom build steps
+
+[Custom recipes](../../recipes.md) explains how to connect additional actions.
 
 The native adapter deliberately runs package-local `tsc` and `tsdown`; it does
 not guess from `scripts.build`. Use an explicit Starlark rule for esbuild,

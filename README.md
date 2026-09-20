@@ -6,15 +6,12 @@
 
 # Bessemer
 
-Bessemer (`bsmr`) builds native TypeScript and Rust projects with a shared,
-content-addressed cache. It reads `package.json`, `pnpm-lock.yaml`,
-`Cargo.toml`, and `Cargo.lock`. Conventional projects do not need build files
-or Starlark.
+Bessemer (`bsmr`) builds packages from your project files and reuses unchanged
+work. Supported native packages do not need handwritten build rules.
 
-> [!NOTE]
-> Bessemer is a preview. Releases in the `0.0.x` series may change their API.
-> TypeScript with pnpm is the primary integration. Rust with Cargo is
-> experimental.
+Bessemer is a preview. Releases in the `0.0.x` series may change their API.
+TypeScript with pnpm is the primary integration. See [language support](docs/about/language_support.md)
+for Rust, Go, and Python preview requirements.
 
 ## Install
 
@@ -32,55 +29,34 @@ Windows users can download and run `bsmr-installer.ps1` from the
 Every release also includes platform archives, SHA-256 checksums, and build
 provenance attestations.
 
-## Interface
+## Build a package
 
-The beginner interface has three commands:
-
-```console
-bsmr init                 # Create .bsmr in the current project.
-bsmr build <path>         # Build one native package and its dependencies.
-bsmr clean                # Delete generated files and local build state.
-```
-
-Use package paths in normal work:
-
-```console
-bsmr build apps/api
-bsmr build packages/rust/dfa
-```
-
-`bsmr -h` shows this small surface. `bsmr --help` shows the complete command
-line, including target labels, graph queries, custom rules, and operational
-tools.
-
-## TypeScript and pnpm
-
-A buildable package needs `package.json`, `tsconfig.json`, and
-`tsdown.config.ts`. The workspace root needs `pnpm-workspace.yaml` and a frozen
-`pnpm-lock.yaml`.
+At your repository root:
 
 ```console
 bsmr init
-bsmr build apps/api
+bsmr build apps/api --show-output
 ```
 
-Bessemer installs the exact pinned pnpm workspace once. It then schedules and
-caches package builds independently.
+Replace `apps/api` with your package's directory. BSMR creates the project marker,
+builds the package and its dependencies, and prints the output path. Run the same
+build command after an edit to reuse unchanged work.
 
-## Rust and Cargo
+The [quick start](docs/getting_started/quickstart.md) covers setup.
+The [TypeScript guide](docs/users/languages/typescript/pnpm.md) lists the required
+pnpm and compiler files. The [unreleased Rust preview](docs/users/languages/rust/cargo.md)
+uses Cargo manifests and an exact toolchain pin. [Custom recipes](docs/users/recipes.md)
+connect additional steps through their inputs and outputs.
 
-A workspace needs `Cargo.toml`, `Cargo.lock`, and an exact Rust toolchain. Use
-an exact stable version such as `1.94.1` or a dated nightly such as
-`nightly-2026-04-11`.
+## Find a command
 
 ```console
-bsmr init
-bsmr build packages/rust/dfa
+bsmr --help
+bsmr build --help
 ```
 
-Bessemer caches the complete Cargo output and can restore deleted outputs
-without running Cargo again. The Cargo adapter is local-only until Rust
-toolchains and registry inputs are fully content addressed.
+Use `bsmr -h` for the shortest command list. Each command's `--help` explains its
+options. Run `bsmr clean` when you need to remove generated files and local state.
 
 ## Documentation
 
@@ -105,7 +81,7 @@ pnpm run ci check
 
 ## Provenance and license
 
-Bessemer began as a upstream fork and now has its own product interface, native
+Bessemer began as an upstream fork and now has its own product interface, native
 ecosystem adapters, cache policy, release process, and roadmap. See
 [`NOTICE`](NOTICE) and [`UPSTREAM_CHANGELOG.md`](UPSTREAM_CHANGELOG.md) for
 upstream provenance.
