@@ -164,8 +164,8 @@ test("typechecks declared sources through reconstructed pnpm workspace links", a
 	assert.equal(result.status, 0, result.stderr);
 	assert.equal(await readFile(state.output, "utf8"), "ok\n");
 	assert.equal(
-		await realpath(join(state.scratch, "typescript-workspace/packages/app/node_modules/@demo/config")),
-		await realpath(join(state.scratch, "typescript-workspace/packages/config")),
+		await realpath(join(state.scratch, "package-workspace/packages/app/node_modules/@demo/config")),
+		await realpath(join(state.scratch, "package-workspace/packages/config")),
 	);
 });
 
@@ -185,7 +185,7 @@ test("invariant_declared_directory_symlinks_are_materialized", async (context) =
 	const result = runRunner(state, "typecheck");
 
 	assert.equal(result.status, 0, result.stderr);
-	const copied = join(state.scratch, "typescript-workspace/tooling-link/preset.json");
+	const copied = join(state.scratch, "package-workspace/tooling-link/preset.json");
 	assert.equal(await readFile(copied, "utf8"), '{"strict":true}\n');
 	assert.equal((await lstat(dirname(copied))).isSymbolicLink(), true);
 });
