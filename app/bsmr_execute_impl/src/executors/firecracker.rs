@@ -491,7 +491,7 @@ pub(crate) fn validate_action_policy(
 }
 
 /// Recovers the canonical RE command already bound into the prepared action.
-fn decode_re_command(
+pub(crate) fn decode_re_command(
     prepared: &PreparedAction,
     digest_config: DigestConfig,
 ) -> bsmr_error::Result<RE::Command> {
@@ -548,6 +548,17 @@ fn guest_action(
         })
     {
         return Err(FirecrackerSandboxError::AbsoluteExecutable(executable.clone()).into());
+    }
+    sandbox_action(command, request)
+}
+
+/// Validates shared action paths while allowing executables supplied by an isolated runtime.
+pub(crate) fn sandbox_action(
+    command: &RE::Command,
+    request: &CommandExecutionRequest,
+) -> bsmr_error::Result<GuestAction> {
+    if command.arguments.is_empty() {
+        return Err(FirecrackerSandboxError::MissingExecutable.into());
     }
     let working_directory = PathBuf::from(&command.working_directory);
     if !working_directory.as_os_str().is_empty() {
@@ -624,7 +635,7 @@ fn write_guest_action(action: &GuestAction) -> bsmr_error::Result<File> {
 }
 
 /// Moves completely validated output roots from private staging into the project.
-fn import_outputs(
+pub(crate) fn import_outputs(
     staging: &Path,
     project_root: &Path,
     outputs: &[GuestOutput],
@@ -658,6 +669,90 @@ fn import_outputs(
         }
         fs::rename(&source, &destination)
             .map_err(|error| FirecrackerSandboxError::ImportOutput(destination.clone(), error))?;
+    }
+    Ok(())
+}
+
+/// Checks a stopped sandbox's declared output trees before any host import.
+#[cfg(test)]
+pub(crate) fn validate_local_outputs(
+    staging: &Path,
+    outputs: &[GuestOutput],
+) -> bsmr_error::Result<()> {
+    for output in outputs {
+        let mut ancestor = PathBuf::new();
+        for component in output
+            .path
+            .parent()
+            .expect("validated output has a parent")
+            .components()
+        {
+            ancestor.push(component);
+            match fs::symlink_metadata(staging.join(&ancestor)) {
+                Ok(metadata) if metadata.is_dir() => {}
+                Ok(_) => return Err(FirecrackerSandboxError::OutputEntryType(ancestor).into()),
+                Err(error) if error.kind() == std::io::ErrorKind::NotFound => break,
+                Err(error) => return Err(error.into()),
+            }
+        }
+    }
+    let mut pending = outputs
+        .iter()
+        .map(|output| (output.path.clone(), output))
+        .collect::<Vec<_>>();
+    let mut nodes = 0;
+    let mut bytes = 0_u64;
+    while let Some((path, declaration)) = pending.pop() {
+        let source = staging.join(&path);
+        let metadata = match fs::symlink_metadata(&source) {
+            Ok(metadata) => metadata,
+            Err(error) if error.kind() == std::io::ErrorKind::NotFound => continue,
+            Err(error) => return Err(error.into()),
+        };
+        nodes += 1;
+        if nodes > ARCHIVE_NODE_LIMIT {
+            return Err(FirecrackerSandboxError::OutputNodeLimit(ARCHIVE_NODE_LIMIT).into());
+        }
+        if path.components().count() > ARCHIVE_PATH_DEPTH_LIMIT {
+            return Err(FirecrackerSandboxError::OutputDepthLimit(ARCHIVE_PATH_DEPTH_LIMIT).into());
+        }
+        let kind = if metadata.is_dir() {
+            for entry in fs::read_dir(&source)? {
+                pending.push((path.join(entry?.file_name()), declaration));
+            }
+            ValidatedOutputType::Directory
+        } else if metadata.is_file() {
+            bytes =
+                bytes
+                    .checked_add(metadata.len())
+                    .ok_or(FirecrackerSandboxError::OutputLimit {
+                        kind: "output",
+                        limit: OUTPUT_BYTES_LIMIT,
+                    })?;
+            if bytes > OUTPUT_BYTES_LIMIT {
+                return Err(FirecrackerSandboxError::OutputLimit {
+                    kind: "output",
+                    limit: OUTPUT_BYTES_LIMIT,
+                }
+                .into());
+            }
+            #[cfg(unix)]
+            let mode = {
+                use std::os::unix::fs::PermissionsExt;
+                metadata.permissions().mode()
+            };
+            #[cfg(not(unix))]
+            let mode = 0o644;
+            set_output_executable(&source, mode)?;
+            ValidatedOutputType::File(mode)
+        } else if metadata.file_type().is_symlink() {
+            let target = fs::read_link(&source)?;
+            validate_output_symlink(&path, &target, &declaration.path)?;
+            ValidatedOutputType::Symlink(target)
+        } else {
+            return Err(FirecrackerSandboxError::OutputEntryType(path).into());
+        };
+        validate_declared_node_type(&path, declaration, kind)?;
     }
     Ok(())
 }
@@ -1420,6 +1515,26 @@ mod tests {
     #[cfg(unix)]
     use std::os::unix::net::UnixListener;
     use std::path::Path;
+
+    #[cfg(unix)]
+    #[test]
+    fn local_output_ancestors_cannot_redirect_host_import() -> bsmr_error::Result<()> {
+        let staging = tempfile::tempdir()?;
+        let outside = tempfile::tempdir()?;
+        fs::write(outside.path().join("value"), b"outside")?;
+        std::os::unix::fs::symlink(outside.path(), staging.path().join("redirect"))?;
+        let outputs = [super::GuestOutput {
+            path: "redirect/value".into(),
+            kind: super::GuestOutputKind::File,
+        }];
+        assert!(super::validate_local_outputs(staging.path(), &outputs).is_err());
+        assert_eq!(fs::read(outside.path().join("value"))?, b"outside");
+        fs::remove_file(staging.path().join("redirect"))?;
+        fs::create_dir(staging.path().join("redirect"))?;
+        fs::write(staging.path().join("redirect/value"), b"declared")?;
+        super::validate_local_outputs(staging.path(), &outputs)?;
+        Ok(())
+    }
 
     #[cfg(unix)]
     use bsmr_common::liveliness_observer::NoopLivelinessObserver;
