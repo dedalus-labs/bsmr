@@ -16,16 +16,14 @@
 
 use std::fmt;
 use std::io::Write;
-use std::sync::Arc;
 use std::time::Duration;
 
-use allocative::Allocative;
 use bsmr_common::cas_digest::CasDigestConfig;
 use bsmr_common::cas_digest::DigestAlgorithmFamily;
-use bsmr_common::cas_digest::SHA1_SIZE;
-use bsmr_common::cas_digest::SHA256_SIZE;
 use bsmr_common::file_ops::metadata::FileDigest;
 use bsmr_common::file_ops::metadata::TrackedFileDigest;
+use bsmr_common::http::cache as http_cache;
+use bsmr_common::http::checksum::Checksum;
 use bsmr_core::fs::project::ProjectRoot;
 use bsmr_core::fs::project_rel_path::ProjectRelativePath;
 use bsmr_error::BsmrErrorContext;
@@ -38,111 +36,15 @@ use bsmr_http::retries::IntoBsmrError;
 use bsmr_http::retries::http_retry;
 use bytes::Bytes;
 use digest::DynDigest;
-use dupe::Dupe;
 use futures::StreamExt;
 use futures::stream::Stream;
 use hyper::Response;
-use pagable::Pagable;
 use sha1::Digest;
 use sha1::Sha1;
 use sha2::Sha256;
 use smallvec::SmallVec;
 
-use super::http_cache;
 use crate::digest_config::DigestConfig;
-
-#[derive(Debug, Clone, Dupe, Allocative, Pagable)]
-pub enum Checksum {
-    Sha1(Arc<str>),
-    Sha256(Arc<str>),
-    Both { sha1: Arc<str>, sha256: Arc<str> },
-}
-
-#[derive(bsmr_error::Error, Debug)]
-#[bsmr(tag = Input)]
-enum DownloadFileError {
-    #[error("Must pass in at least one checksum (e.g. `sha1 = ...`)")]
-    MissingChecksum,
-    #[error("Invalid digest for `{digest_type}` argument, expected length of {expected_len} but got {}, digest `{digest}`", digest.len())]
-    InvalidDigestLength {
-        digest: String,
-        expected_len: usize,
-        digest_type: &'static str,
-    },
-    #[error(
-        "Invalid digest for `{digest_type}` argument, expected 0-9 a-z hex characters, but got `{bad_char}`, digest `{digest}`"
-    )]
-    InvalidDigestCharacter {
-        digest: String,
-        bad_char: char,
-        digest_type: &'static str,
-    },
-}
-
-impl Checksum {
-    pub fn new(sha1: Option<&str>, sha256: Option<&str>) -> bsmr_error::Result<Self> {
-        fn is_hex_digit(x: char) -> bool {
-            let x = x.to_ascii_lowercase();
-            x.is_ascii_digit() || ('a'..='f').contains(&x)
-        }
-
-        fn validate_digest(
-            digest: Option<&str>,
-            digest_len: usize,
-            digest_type: &'static str,
-        ) -> bsmr_error::Result<Option<Arc<str>>> {
-            match digest {
-                None => Ok(None),
-                Some(digest) => {
-                    let expected_len = digest_len * 2;
-                    if digest.len() != expected_len {
-                        return Err(DownloadFileError::InvalidDigestLength {
-                            digest: digest.to_owned(),
-                            expected_len,
-                            digest_type,
-                        }
-                        .into());
-                    }
-                    if let Some(bad_char) = digest.chars().find(|x| !is_hex_digit(*x)) {
-                        return Err(DownloadFileError::InvalidDigestCharacter {
-                            digest: digest.to_owned(),
-                            bad_char,
-                            digest_type,
-                        }
-                        .into());
-                    }
-                    Ok(Some(Arc::from(digest.to_ascii_lowercase())))
-                }
-            }
-        }
-
-        match (
-            validate_digest(sha1, SHA1_SIZE, "sha1")?,
-            validate_digest(sha256, SHA256_SIZE, "sha256")?,
-        ) {
-            (Some(sha1), None) => Ok(Checksum::Sha1(sha1)),
-            (None, Some(sha256)) => Ok(Checksum::Sha256(sha256)),
-            (Some(sha1), Some(sha256)) => Ok(Checksum::Both { sha1, sha256 }),
-            (None, None) => Err(DownloadFileError::MissingChecksum.into()),
-        }
-    }
-
-    pub fn sha1(&self) -> Option<&str> {
-        match self {
-            Self::Sha1(sha1) => Some(sha1),
-            Self::Sha256(..) => None,
-            Self::Both { sha1, .. } => Some(sha1),
-        }
-    }
-
-    pub fn sha256(&self) -> Option<&str> {
-        match self {
-            Self::Sha1(..) => None,
-            Self::Sha256(sha256) => Some(sha256),
-            Self::Both { sha256, .. } => Some(sha256),
-        }
-    }
-}
 
 #[derive(Debug, bsmr_error::Error)]
 #[bsmr(tag = Http)]
@@ -315,7 +217,12 @@ pub async fn http_download(
     )
     .await
     .map_err(|e| e.into_final())?;
-    http_cache::publish(&cache, &abs_path)?;
+    http_cache::import(
+        &cache,
+        &abs_path,
+        checksum,
+        digest_config.cas_digest_config(),
+    )?;
     if executable {
         fs.set_executable(path)?;
     }
@@ -531,6 +438,8 @@ impl fmt::Display for MaybeResponseDebugInfo {
 
 #[cfg(test)]
 mod tests {
+    use std::sync::Arc;
+
     use assert_matches::assert_matches;
     use bsmr_common::cas_digest::testing;
     use futures::stream;

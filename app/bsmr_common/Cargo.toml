@@ -58,6 +58,7 @@ smallvec.workspace = true
 starlark_map.workspace = true
 static_interner.workspace = true
 strsim.workspace = true
+tempfile.workspace = true
 tokio.workspace = true
 toml.workspace = true
 tonic.workspace = true
@@ -70,7 +71,6 @@ yaml-rust2.workspace = true
 [dev-dependencies]
 assert_matches.workspace = true
 indoc.workspace = true
-tempfile.workspace = true
 test-case.workspace = true
 triomphe.workspace = true
 

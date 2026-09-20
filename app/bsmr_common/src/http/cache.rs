@@ -7,26 +7,22 @@
 
 use std::fs;
 use std::fs::File;
-use std::fs::OpenOptions;
 use std::io;
 use std::io::BufReader;
 use std::io::Read;
+use std::io::Seek;
 use std::path::Path;
 use std::path::PathBuf;
-use std::sync::atomic::AtomicU64;
-use std::sync::atomic::Ordering;
 
-use bsmr_common::cas_digest::CasDigestConfig;
-use bsmr_common::file_ops::metadata::FileDigest;
-use bsmr_common::file_ops::metadata::TrackedFileDigest;
 use digest::DynDigest;
 use sha1::Digest;
 use sha1::Sha1;
 use sha2::Sha256;
 
-use super::http::Checksum;
-
-static TEMPORARY_ID: AtomicU64 = AtomicU64::new(0);
+use super::checksum::Checksum;
+use crate::cas_digest::CasDigestConfig;
+use crate::file_ops::metadata::FileDigest;
+use crate::file_ops::metadata::TrackedFileDigest;
 
 #[derive(Debug, bsmr_error::Error)]
 #[bsmr(tag = Environment)]
@@ -56,7 +52,7 @@ enum HttpCacheError {
 }
 
 /// Resolves one checksum to its repository-independent cache location.
-pub(super) fn path(checksum: &Checksum) -> bsmr_error::Result<PathBuf> {
+pub fn path(checksum: &Checksum) -> bsmr_error::Result<PathBuf> {
     let root = match std::env::var_os("BSMR_HTTP_CACHE_DIR") {
         Some(value) => PathBuf::from(value),
         None => dirs::cache_dir()
@@ -66,7 +62,8 @@ pub(super) fn path(checksum: &Checksum) -> bsmr_error::Result<PathBuf> {
     if !root.is_absolute() {
         return Err(HttpCacheError::RelativeCacheDirectory(root).into());
     }
-    Ok(path_in(&root, checksum))
+    let checksum = Checksum::new(checksum.sha1(), checksum.sha256())?;
+    Ok(path_in(&root, &checksum))
 }
 
 /// Fans immutable keys out by algorithm and leading digest bytes.
@@ -79,34 +76,41 @@ fn path_in(root: &Path, checksum: &Checksum) -> PathBuf {
     root.join(algorithm).join(&digest[..2]).join(digest)
 }
 
-/// Publishes a verified download atomically under its immutable cache key.
-pub(super) fn publish(cache: &Path, source: &Path) -> bsmr_error::Result<()> {
+/// Copies an acquired blob into an owned temporary file, verifies it, then publishes atomically.
+/// Returns the digest and byte size of the published copy. Rejection preserves the existing entry.
+pub fn import(
+    cache: &Path,
+    source: &Path,
+    checksum: &Checksum,
+    digest_config: CasDigestConfig,
+) -> bsmr_error::Result<TrackedFileDigest> {
     let parent = cache
         .parent()
         .expect("content-addressed cache keys always have a parent");
     fs::create_dir_all(parent).map_err(|source| io_error("create directory", parent, source))?;
-    let (temporary, mut output) = create_temporary(cache)?;
+    let mut temporary = tempfile::NamedTempFile::new_in(parent)
+        .map_err(|source| io_error("create temporary", parent, source))?;
     let mut input = File::open(source).map_err(|error| io_error("open", source, error))?;
-    io::copy(&mut input, &mut output).map_err(|error| io_error("write", &temporary, error))?;
-    output
+    io::copy(&mut input, &mut temporary)
+        .map_err(|error| io_error("write", temporary.path(), error))?;
+    let digest = verify(
+        temporary.path(),
+        temporary.as_file(),
+        checksum,
+        digest_config,
+    )?;
+    temporary
+        .as_file()
         .sync_all()
-        .map_err(|error| io_error("sync", &temporary, error))?;
-    drop(output);
-    match fs::rename(&temporary, cache) {
-        Ok(()) => Ok(()),
-        Err(_) if cache.is_file() => {
-            fs::remove_file(&temporary).map_err(|error| io_error("remove", &temporary, error))?;
-            Ok(())
-        }
-        Err(source) => {
-            let _ignored = fs::remove_file(&temporary);
-            Err(io_error("publish", cache, source))
-        }
-    }
+        .map_err(|error| io_error("sync", temporary.path(), error))?;
+    temporary
+        .persist(cache)
+        .map_err(|error| io_error("publish", cache, error.error))?;
+    Ok(digest)
 }
 
 /// Copies and revalidates one cached blob, returning `None` on a clean miss.
-pub(super) fn restore(
+pub fn restore(
     cache: &Path,
     destination: &Path,
     checksum: &Checksum,
@@ -121,7 +125,8 @@ pub(super) fn restore(
         return Err(HttpCacheError::NotFile(cache.to_owned()).into());
     }
     fs::copy(cache, destination).map_err(|error| io_error("restore", cache, error))?;
-    match verify(destination, checksum, digest_config) {
+    let copied = File::open(destination).map_err(|error| io_error("open", destination, error))?;
+    match verify(destination, &copied, checksum, digest_config) {
         Ok(digest) => Ok(Some(digest)),
         Err(error) => {
             fs::remove_file(destination)
@@ -133,26 +138,10 @@ pub(super) fn restore(
     }
 }
 
-/// Allocates a collision-free sibling used for atomic cache publication.
-fn create_temporary(cache: &Path) -> bsmr_error::Result<(PathBuf, File)> {
-    loop {
-        let id = TEMPORARY_ID.fetch_add(1, Ordering::Relaxed);
-        let temporary = cache.with_extension(format!("tmp.{}.{id}", std::process::id()));
-        match OpenOptions::new()
-            .write(true)
-            .create_new(true)
-            .open(&temporary)
-        {
-            Ok(file) => return Ok((temporary, file)),
-            Err(error) if error.kind() == io::ErrorKind::AlreadyExists => {}
-            Err(error) => return Err(io_error("create temporary", &temporary, error)),
-        }
-    }
-}
-
 /// Recomputes both the action digest and every declared checksum from disk.
 fn verify(
     path: &Path,
+    mut input: &File,
     checksum: &Checksum,
     digest_config: CasDigestConfig,
 ) -> bsmr_error::Result<TrackedFileDigest> {
@@ -163,8 +152,10 @@ fn verify(
     let mut sha256 = checksum
         .sha256()
         .map(|_| Box::new(Sha256::new()) as Box<dyn DynDigest>);
-    let mut input =
-        BufReader::new(File::open(path).map_err(|error| io_error("open", path, error))?);
+    input
+        .rewind()
+        .map_err(|error| io_error("seek", path, error))?;
+    let mut input = BufReader::new(input);
     let mut buffer = vec![0_u8; 64 * 1024].into_boxed_slice();
     loop {
         let length = input
@@ -223,14 +214,16 @@ mod tests {
     use std::path::Path;
     use std::sync::Arc;
 
-    use bsmr_common::cas_digest::testing;
     use bsmr_fs::paths::abs_path::AbsPath;
 
+    use super::import;
+    use super::path;
     use super::path_in;
-    use super::publish;
     use super::restore;
-    use crate::materialize::http::Checksum;
+    use crate::cas_digest::testing;
+    use crate::http::checksum::Checksum;
 
+    /// Declares both digests for the test blob.
     fn checksum() -> Checksum {
         Checksum::Both {
             sha1: Arc::from("8843d7f92416211de9ebb963ff4ce28125932878"),
@@ -238,6 +231,7 @@ mod tests {
         }
     }
 
+    /// The imported copy survives source changes and restores with its exact digest.
     #[test]
     fn verified_blob_round_trips_between_repositories() -> bsmr_error::Result<()> {
         let temporary = tempfile::tempdir()?;
@@ -247,15 +241,43 @@ mod tests {
         let destination = root.join("destination");
         fs::write(&source, b"foobar")?;
 
-        publish(&cache, &source)?;
+        let imported = import(&cache, &source, &checksum(), testing::blake3())?;
+        fs::write(&source, b"changed after import")?;
         let digest = restore(&cache, &destination, &checksum(), testing::blake3())?
             .expect("published blob must be restored");
 
         assert_eq!(fs::read(destination)?, b"foobar");
         assert_eq!(digest.size(), 6);
+        assert_eq!(digest, imported);
         Ok(())
     }
 
+    /// A rejected import preserves the last verified entry and removes its temporary file.
+    #[test]
+    fn invariant_import_rejects_corruption_before_publication() -> bsmr_error::Result<()> {
+        let temporary = tempfile::tempdir()?;
+        let source = temporary.path().join("source");
+        let cache = temporary.path().join("cache/blob");
+        fs::write(&source, b"foobar")?;
+        import(&cache, &source, &checksum(), testing::blake3())?;
+        fs::write(&source, b"corrupt acquired blob")?;
+
+        let error = import(&cache, &source, &checksum(), testing::blake3())
+            .expect_err("corruption must be rejected before publication");
+
+        assert!(error.to_string().contains("checksum"));
+        assert_eq!(fs::read(&cache)?, b"foobar");
+        assert_eq!(fs::read_dir(cache.parent().unwrap())?.count(), 1);
+        Ok(())
+    }
+
+    /// Invalid public enum values cannot become cache paths.
+    #[test]
+    fn invariant_cache_keys_require_validated_digests() {
+        assert!(path(&Checksum::Sha256(Arc::from("short"))).is_err());
+    }
+
+    /// Cached corruption fails loudly and removes the rejected bytes.
     #[test]
     fn corrupt_blob_fails_closed() -> bsmr_error::Result<()> {
         let temporary = tempfile::tempdir()?;
@@ -273,6 +295,7 @@ mod tests {
         Ok(())
     }
 
+    /// An absent immutable blob is the only clean cache miss.
     #[test]
     fn absent_blob_is_a_cache_miss() -> bsmr_error::Result<()> {
         let temporary = tempfile::tempdir()?;
@@ -290,6 +313,7 @@ mod tests {
         Ok(())
     }
 
+    /// A blob with both checksums shares the SHA-256 cache entry.
     #[test]
     fn strongest_checksum_defines_the_cache_identity() {
         assert_eq!(
