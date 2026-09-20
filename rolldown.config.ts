@@ -71,6 +71,11 @@ const artifacts: readonly Artifact[] = [
 		target: "node18",
 	},
 	{
+		input: "./prelude/toolchains/pnpm/task.ts",
+		output: "prelude/toolchains/pnpm/task.mjs",
+		target: "node18",
+	},
+	{
 		input: "./prelude/typescript/runner.ts",
 		output: "prelude/typescript/runner.mjs",
 		target: "node18",

@@ -5,7 +5,7 @@
 
 // Creates writable package workspaces over declared sources and frozen dependencies.
 
-import { copyFile, lstat, mkdir, readdir, readlink, realpath, rm, symlink } from "node:fs/promises";
+import { copyFile, lstat, mkdir, readdir, readFile, readlink, realpath, rm, symlink } from "node:fs/promises";
 import { dirname, isAbsolute, join, relative, resolve, sep } from "node:path";
 
 /**
@@ -158,6 +158,10 @@ async function linkPackageModules(install: string, source: string, workspace: st
 	for (const root of roots) {
 		const installedPackage = join(install, root);
 		if (!(await exists(installedPackage))) throw new Error(`frozen install is missing declared workspace package '${root}'`);
+		const manifest = join(root, "package.json");
+		if (await readFile(join(source, manifest), "utf8") !== await readFile(join(install, manifest), "utf8")) {
+			throw new Error(`frozen install manifest differs from declared source '${manifest}'`);
+		}
 		packages.set(await realpath(installedPackage), join(workspace, root));
 	}
 	for (const root of roots) {

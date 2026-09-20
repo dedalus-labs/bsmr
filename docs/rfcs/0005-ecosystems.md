@@ -150,6 +150,14 @@ dependency, toolchain and unrelated file independently. Check cancellation,
 missing outputs, output conflicts and prohibited access. Measure cold, warm and
 restored builds separately. Cache hits must restore every required runtime file.
 
+## Prototype
+
+The `pnpm_task` rule implements the first
+explicit adapter. It consumes existing source and install artifacts, runs a
+package script and checks declared output types before publication. It supports
+local POSIX execution with host utilities and disables cache uploads.
+Native discovery and a stable external adapter API remain proposals.
+
 ## Open questions
 
 Where should an explicit output declaration live? Prefer existing native
