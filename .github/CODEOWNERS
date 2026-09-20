@@ -9,3 +9,36 @@
 /test/pnpm/ @windsornguyen
 /test/README.md @windsornguyen
 /rolldown.config.ts @windsornguyen
+
+# Native Rust build and qualification paths.
+/README.md @windsornguyen
+/app/bsmr_client/src/commands/build.rs @windsornguyen
+/app/bsmr_client/src/commands/init.rs @windsornguyen
+/app/bsmr_client/src/commands/test.rs @windsornguyen
+/app/bsmr_common/BUILD.bsmr @windsornguyen
+/app/bsmr_common/Cargo.toml @windsornguyen
+/app/bsmr_common/src/lib.rs @windsornguyen
+/app/bsmr_common/src/rust_graph.rs @windsornguyen
+/app/bsmr_common/src/rust_graph/dice.rs @windsornguyen
+/app/bsmr_common/src/rust_graph/releases.json @windsornguyen
+/app/bsmr_common/src/rust_graph/snapshot.rs @windsornguyen
+/app/bsmr_common/src/rust_graph/toolchain.rs @windsornguyen
+/app/bsmr_interpreter_for_build/src/interpreter/dice_calculation_delegate.rs @windsornguyen
+/benchmarks/rust/README.md @windsornguyen
+/benchmarks/rust/graph.py @windsornguyen
+/docs/about/language_support.md @windsornguyen
+/docs/getting_started/index.md @windsornguyen
+/docs/getting_started/quickstart.md @windsornguyen
+/docs/index.md @windsornguyen
+/docs/reference/cli.md @windsornguyen
+/docs/reference/index.md @windsornguyen
+/docs/roadmap.md @windsornguyen
+/docs/users/languages/rust/cargo.md @windsornguyen
+/docs/users/languages/typescript/pnpm.md @windsornguyen
+/docs/users/recipes.md @windsornguyen
+/mkdocs.yml @windsornguyen
+/prelude/decls/rust_rules.bzl @windsornguyen
+/prelude/rust/build.bzl @windsornguyen
+/prelude/rust/native/toolchain.bzl @windsornguyen
+/prelude/rust/tools/rustc_action.py @windsornguyen
+/test/native-rust-build.ts @windsornguyen
