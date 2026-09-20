@@ -54,6 +54,7 @@ async function build(phase: string, expected: string, directory = cwd) {
 	return log.stdout;
 }
 try {
+	await run("python3", ["-m", "unittest", "discover", "-s", resolve(import.meta.dirname, "../prelude/rust/tools/tests"), "-p", "*_test.py"], { ...options, env: { ...env, RUSTC: rustc } });
 	await run(binary, ["init"], options);
 	const config = readFileSync(join(cwd, ".bsmr"), "utf8");
 	writeFileSync(join(cwd, ".bsmr"), config + "\n[bsmr]\ndefault_allow_cache_upload = true\n");
