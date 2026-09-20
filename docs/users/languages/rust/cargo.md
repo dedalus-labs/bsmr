@@ -11,54 +11,86 @@ title: Rust and Cargo
 
 # Rust and Cargo
 
-BSMR builds conventional Cargo workspaces directly from their native ecosystem
-files. You do not need a `BUILD.bsmr` or handwritten Starlark file.
-BSMR lowers Cargo metadata into its private action graph; `Cargo.toml` and
-`Cargo.lock` remain authoritative.
+The native Rust frontend is unreleased. These examples do not apply to the
+earlier Cargo adapter in version 0.0.5.
 
-## Workspace contract
-
-Commit these files at the repository root:
-
-- `Cargo.toml` defining a package or workspace;
-- `Cargo.lock`; and
-- exactly one `rust-toolchain.toml` or `rust-toolchain` file.
-
-The rustup channel must identify immutable compiler bits. BSMR accepts exact
-stable versions such as `1.94.1` and dated nightlies such as
-`nightly-2026-04-11`. Mutable aliases such as `stable` and `nightly` fail before
-execution.
-
-Initialize once, then address a Cargo package by its directory:
+Build a Cargo package without writing or synchronizing build rules:
 
 ```console
 bsmr init
-bsmr targets packages/rust/dfa
-bsmr build packages/rust/dfa
+bsmr build app --show-output
+bsmr test app
 ```
 
-The package path resolves to one conventional target named after the final path
-component. A virtual workspace root exposes `workspace`. Explicit BSMR labels
-remain available for queries and automation.
+Run `bsmr build --help` or `bsmr test --help` for command options.
 
-## Execution and caching
+Commit `Cargo.toml`, `Cargo.lock`, and an exact `rust-toolchain.toml` at the
+project root. The current catalog supports `1.97.1` and `nightly-2026-04-11` on
+Linux and macOS, for ARM64 and x86-64. Install the matching Cargo resolver with
+`rustup toolchain install <channel> --profile minimal` before building.
 
-The current adapter executes `cargo build --locked --manifest-path ...` with an
-exact `RUSTUP_TOOLCHAIN`, isolated `CARGO_HOME` and `CARGO_TARGET_DIR`, disabled
-Cargo incrementality, and deterministic source-path remapping. BSMR records the
-complete declared output in its shared local content-addressed store. Another
-checkout with the same declared inputs can restore that output without running
-Cargo. BSMR can also restore deleted outputs from this cache.
+```toml title="rust-toolchain.toml"
+[toolchain]
+channel = "1.97.1"
+profile = "minimal"
+```
 
-The first implementation deliberately runs locally and disables remote cache
-upload. Cargo is still resolved from the host, and a cold action may fetch
-locked crates from the registry. Remote-cache eligibility requires a
-content-addressed Rust toolchain and a separate locked dependency-fetch action;
-until those land, this is a cached native Cargo adapter rather than a fully
-remote-hermetic Rust toolchain.
+BSMR reads tracked manifests and file names into an isolated snapshot. The
+selected Cargo resolves that snapshot with `metadata --frozen`, without registry
+access or user Cargo configuration. Manifest and target-file changes invalidate
+inference automatically. BSMR keeps the resulting graph private. It writes no
+`BUILD.bsmr` files or ownership index into the checkout.
 
-## Custom rules
+```text
+Cargo files -> frozen resolution -> private targets -> native rustc actions
+                                                 -> custom recipe actions
+```
 
-An explicit Starlark build file takes precedence when a package needs a
-non-conventional target. Choosing that file makes its rule graph authoritative;
-BSMR does not silently alternate between native and custom implementations.
+Each crate uses the existing native Rust compilation, linking, and test machinery.
+A package containing one library or binary can be selected by its directory,
+even when its Cargo name differs. Libraries also expose `:lib`, binaries expose
+their Cargo target name, and dependency
+renames preserve the name used in source. Inline unit tests are associated with
+their build targets. Changing an unrelated crate does not recompile the selected
+binary. Changing a dependency invalidates its consumers.
+
+## Add another build step
+
+A [custom recipe](../../recipes.md) can consume an inferred Rust executable
+without restating its crate dependencies. Keep the recipe in its own package
+so the Rust package retains its inferred definition.
+
+## Supported boundary
+
+The preview supports local path libraries, binaries, and their inline unit
+tests. Features, build scripts, procedural macros, external sources, native
+`links`, conditional dependencies, build/dev dependencies, integration tests,
+and custom Cargo profiles or lints fail before compilation. Cross compilation
+and Cargo command-line parity are not implemented. Shared files outside a crate
+require explicitly declared action inputs.
+
+Native actions validate rustc's reported source and environment reads before
+accepting a successful compiler result. Undeclared reported inputs fail instead of
+publishing an incomplete cache entry. This check is not a filesystem sandbox.
+
+Rust compiler, Clippy, and standard-library archives have pinned SHA-256 digests.
+Their content contributes to compilation action identity. Cargo metadata uses
+the selected local rustup installation. C/C++ linking and Python bootstrap tools
+still come from the execution host. This is not a fully hermetic or remotely
+qualified toolchain. Native actions honor the existing cache-upload policy.
+
+Ambient Rust flags and user Cargo configuration do not configure native actions.
+Project `.cargo/config` files are rejected until their semantics are modeled.
+Unsupported projects can use Cargo directly. BSMR never silently switches to a
+whole-workspace Cargo build after inference or compilation fails.
+
+[RFC 0002](https://github.com/dedalus-labs/bsmr/discussions/14) specifies the
+remaining configured-unit graph, dependency acquisition, and build-script work.
+
+## Verification
+
+`test/native-rust-build.ts` exercises real compiler actions, unit-test success and
+failure, and a custom recipe consuming an inferred executable. It checks
+manifest invalidation, source invalidation, unrelated edits, cache restoration
+in a second checkout, environment isolation, and build-script rejection. It also
+checks that inference leaves the checkout free of generated build files.

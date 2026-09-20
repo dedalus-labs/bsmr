@@ -29,6 +29,7 @@ exclude_docs: |
   !/users/
   /users/*
   !/users/sandboxing.md
+  !/users/recipes.md
   !/users/languages/
   /users/languages/*
   !/users/languages/typescript/
@@ -91,7 +92,7 @@ plugins:
       full_output: llms-full.txt
       markdown_description: |
         Bessemer is a build system that reads native ecosystem manifests,
-        schedules hermetic actions, and restores outputs from a content-addressed cache.
+        schedules build steps, and reuses outputs when their declared inputs match.
         TypeScript with pnpm is the primary ecosystem. Rust and Go are experimental.
       sections:
         Getting Started:
@@ -101,6 +102,8 @@ plugins:
           - users/languages/typescript/pnpm.md
           - users/languages/rust/cargo.md
           - users/languages/go/native.md
+        Recipes:
+          - users/recipes.md
         Concepts:
           - concepts/caching.md
           - concepts/test-observability.md
@@ -144,7 +147,6 @@ markdown_extensions:
 nav:
   - Home: index.md
   - Getting Started:
-      - Overview: getting_started/index.md
       - Quick Start: getting_started/quickstart.md
       - Installation: getting_started/install.md
   - Languages:
@@ -152,6 +154,7 @@ nav:
       - Rust and Cargo: users/languages/rust/cargo.md
       - Go: users/languages/go/native.md
       - Support status: about/language_support.md
+  - Custom recipes: users/recipes.md
   - Concepts:
       - Caching and Hermeticity: concepts/caching.md
       - Test Observability: concepts/test-observability.md

@@ -14,6 +14,16 @@ Bessemer's first-class ecosystem order is TypeScript, Rust, Go, then Python.
 The shared engine should make each frontend feel native while preserving one
 graph, action identity, CAS, and provenance model across a polyglot repository.
 
+## Build from project files
+
+The intended starting point is `bsmr init`, followed by `bsmr build <package>`.
+Project files should supply the dependency and compiler configuration. Users
+should not maintain a second copy of that information in build rules.
+
+Custom recipes describe only additional work. They declare inputs and outputs
+that compose with inferred packages in the same graph. Commands should teach
+their usage through `--help`, with deeper contracts in the language guides.
+
 ## Ecosystem contract
 
 Each frontend should:
@@ -24,7 +34,26 @@ Each frontend should:
 - pin or verify toolchains and acquired artifacts;
 - fail on drift or missing inputs instead of selecting another implementation;
   and
-- expose generated manifests only as owned intermediate representation.
+- keep the generated graph private instead of requiring users to synchronize it.
+
+## Rust qualification
+
+The native Rust preview covers local path libraries, binaries, and inline unit
+tests. Production Cargo compatibility remains open. The next milestone is one
+representative application and its tests, built with its existing configuration.
+
+| Milestone | Required evidence |
+|---|---|
+| Cargo compatibility | Preserve features, profiles, platform conditions, test dependencies, build scripts and procedural macros. Compare results with Cargo on the same project. |
+| Dependency acquisition | Reproduce locked registry and Git dependencies on a fresh worker. Reject checksum and lockfile drift. |
+| Local reuse | Measure cold, warm, leaf-edit and shared-dependency builds. Verify changed inputs miss and unchanged outputs match. |
+| Shared-cache qualification | Restore on a second isolated worker with local execution. Test compiler, target, flags, environment and dependency changes. Bound storage and preserve active results during eviction. |
+| Build-system comparison | Run equivalent build and test workloads against Bazel with matched toolchains, resources, cache states and correctness checks. Report raw samples and limitations. |
+
+Matching or improving on Bazel is a goal, not a measured result. Faster target
+discovery does not establish faster compilation or production readiness.
+Remote execution is outside the current milestone. A shared cache can be
+qualified while all compiler actions continue to execute locally.
 
 ## Dependency snapshots
 

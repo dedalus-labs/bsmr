@@ -6,23 +6,21 @@
 
 # Language support
 
-BSMR distinguishes native support from inherited rules.
+Choose the guide for your project. Each guide lists the supported configuration
+and toolchain requirements.
 
-**Native support** means BSMR reads the ecosystem's normal manifests and lock
-files. **Rule support** means the prelude can build the language after explicit
-Starlark and toolchain configuration.
-
-| Ecosystem | Native status | Default interface |
+| Language | Status | Setup |
 | --- | --- | --- |
-| TypeScript and Node.js | Primary | pnpm workspace paths |
-| Rust | Experimental | Cargo package paths |
-| Go | Experimental | Native package synchronization |
-| Python | Experimental | PEP 751 locks with pinned uv |
+| [TypeScript](../users/languages/typescript/pnpm.md) | Primary | pnpm workspace and package directories |
+| [Rust](../users/languages/rust/cargo.md) | Unreleased native preview | Cargo files and an exact Rust toolchain |
+| [Go](../users/languages/go/native.md) | Experimental | Native package synchronization |
+| Python | Experimental | PEP 751 lockfiles with pinned uv |
 
-The inherited prelude also contains rules for C, C++, Java, Kotlin, Apple
-platforms, Erlang, Haskell, OCaml, and other ecosystems. Those rules are
-advanced extension points. Their presence does not mean BSMR offers a native,
-zero-configuration workflow for that language.
+For native builds, BSMR reads the language's ordinary manifests and lockfiles.
+The [Python guide is under review](https://github.com/dedalus-labs/bsmr/pull/96).
 
-Read the language-specific page for exact toolchain, cache, sandbox, and remote
-execution boundaries.
+The inherited rules also support C, C++, Java, Kotlin, Apple platforms, Erlang,
+Haskell, OCaml, and other ecosystems. These need explicit Starlark and toolchain
+configuration. An available rule does not imply a native setup for that language.
+
+See each guide for cache, sandbox, and remote execution boundaries.
