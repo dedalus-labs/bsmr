@@ -72,6 +72,17 @@ impl PackageListing {
         )
     }
 
+    /// A private Cargo package has only generated rules and references real source artifacts.
+    pub(crate) fn cargo_plan() -> Self {
+        Self::new(
+            SortedSet::new(),
+            SortedSet::new(),
+            SortedVec::new(),
+            FileNameBuf::unchecked_new("BUILD.bsmr"),
+            PackageBuildSource::CargoPlan,
+        )
+    }
+
     pub fn files(&self) -> &PackageFileListing {
         &self.listing.files
     }

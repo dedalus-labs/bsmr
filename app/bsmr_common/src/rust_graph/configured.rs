@@ -153,7 +153,13 @@ impl Renderer<'_> {
             }
             let target = &self.graph.units[dependency.index];
             if target.target.kind != ["lib"] && target.target.kind != ["rlib"] {
-                return Err(unsupported(&unit.package_name, "non-library dependency"));
+                return Err(unsupported(
+                    &unit.package_name,
+                    &format!(
+                        "dependency kind {:?} requires qualified native execution",
+                        target.target.kind
+                    ),
+                ));
             }
             if dependencies
                 .insert(
