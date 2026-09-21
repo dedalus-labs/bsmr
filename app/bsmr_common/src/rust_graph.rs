@@ -3,13 +3,14 @@
 // SPDX-License-Identifier: Apache-2.0
 //===----------------------------------------------------------------------===//
 
-// Lowers Cargo's resolved, hook-free local graph into the existing Rust prelude.
+//! Lowers Cargo's resolved, hook-free local graph into the existing Rust prelude.
 
 use std::collections::BTreeMap;
 use std::path::Path;
 use std::path::PathBuf;
 
 use serde::Deserialize;
+use serde_json::to_string as json;
 
 /// Cargo graph input or an unsupported semantic boundary.
 #[derive(Debug, bsmr_error::Error)]
@@ -18,7 +19,12 @@ pub enum RustGraphError {
     #[error("invalid cargo metadata: {0}")]
     Metadata(#[source] serde_json::Error),
     #[error("native Rust import does not support {case} in `{package}`")]
-    Unsupported { package: String, case: String },
+    Unsupported {
+        /// Package whose Cargo contract cannot yet be represented.
+        package: String,
+        /// Unsupported semantic requirement, safe to show to the user.
+        case: String,
+    },
     #[error("Cargo path `{0:?}` is outside the workspace")]
     Outside(PathBuf),
     #[error("Cargo graph is missing resolved package `{0}`")]
@@ -34,57 +40,84 @@ impl From<serde_json::Error> for RustGraphError {
 
 #[derive(Deserialize)]
 struct Metadata {
+    /// Cargo metadata schema, currently required to be version one.
     version: u32,
+    /// Absolute root used to reject inputs outside the captured workspace.
     workspace_root: PathBuf,
+    /// All resolved packages, including dependencies.
     packages: Vec<Package>,
+    /// Cargo resolution is required before any rules can be emitted.
     resolve: Option<Resolve>,
 }
 
 #[derive(Deserialize)]
 struct Package {
+    /// Opaque Cargo identity used to join packages and resolved nodes.
     id: String,
+    /// Cargo name, preserved for dependency aliases and crate names.
     name: String,
+    /// Package version exposed to compilation through CARGO_PKG_VERSION.
     version: String,
+    /// A nonempty registry or Git source is outside this local import contract.
     source: Option<String>,
+    /// Absolute manifest path that determines the package boundary.
     manifest_path: PathBuf,
+    /// Cargo-discovered targets, each checked before lowering.
     targets: Vec<Target>,
+    /// Native link ownership is unsupported by this importer.
     links: Option<String>,
 }
 
 #[derive(Deserialize)]
 struct Target {
+    /// Cargo name, preserved for dependency aliases and crate names.
     name: String,
+    /// Only ordinary library and binary targets are admitted.
     kind: Vec<String>,
+    /// Must match the admitted target kind.
     crate_types: Vec<String>,
+    /// Entry point that must remain inside its package.
     src_path: PathBuf,
+    /// Rust language edition supplied to the native rule.
     edition: String,
+    /// Absent means Cargo enables the unit test harness.
     test: Option<bool>,
     #[serde(default, rename = "required-features")]
+    /// Nonempty feature gates are unsupported.
     required_features: Vec<String>,
 }
 
 #[derive(Deserialize)]
 struct Resolve {
+    /// Dependency edges resolved by Cargo, keyed by opaque identity.
     nodes: Vec<Node>,
 }
 
 #[derive(Deserialize)]
 struct Node {
+    /// Opaque Cargo identity used to join packages and resolved nodes.
     id: String,
+    /// Resolved extern names and their owning packages.
     deps: Vec<Dependency>,
+    /// Activated features, rejected until configured units are modeled.
     features: Vec<String>,
 }
 
 #[derive(Deserialize)]
 struct Dependency {
+    /// Cargo name, preserved for dependency aliases and crate names.
     name: String,
+    /// Opaque identity of the dependency package.
     pkg: String,
+    /// Each use must be an unconditional ordinary dependency.
     dep_kinds: Vec<DependencyKind>,
 }
 
 #[derive(Deserialize)]
 struct DependencyKind {
+    /// Absent means an ordinary dependency, rather than build or dev.
     kind: Option<String>,
+    /// Nonempty target predicates are unsupported.
     target: Option<String>,
 }
 
@@ -132,10 +165,7 @@ fn render_package(
             "external sources or native links",
         ));
     }
-    let directory = package
-        .manifest_path
-        .parent()
-        .expect("Cargo manifest has a directory");
+    let directory = package.directory();
     let relative = directory
         .strip_prefix(root)
         .map_err(|_| RustGraphError::Outside(directory.to_owned()))?;
@@ -157,33 +187,35 @@ fn render_package(
          # Private Cargo graph. Do not write this representation into the repository.\n\n",
     );
     for target in &package.targets {
-        rendered.push_str(&render_target(
-            package,
-            target,
-            directory,
-            &dependencies,
-            toolchain,
-            false,
-        )?);
+        rendered.push_str(&target.render(package, &dependencies, toolchain, false)?);
         if target.test.unwrap_or(true) {
-            rendered.push_str(&render_target(
-                package,
-                target,
-                directory,
-                &dependencies,
-                toolchain,
-                true,
-            )?);
+            rendered.push_str(&target.render(package, &dependencies, toolchain, true)?);
         }
     }
-    if let [target] = package.targets.as_slice() {
+    rendered.push_str(&package.alias(relative)?);
+    Ok((root.join(relative).join("BUILD.bsmr"), rendered))
+}
+
+impl Package {
+    /// Cargo always reports an absolute manifest file inside its package directory.
+    fn directory(&self) -> &Path {
+        self.manifest_path
+            .parent()
+            .expect("Cargo manifest has a directory")
+    }
+
+    /// Add a package-path alias when a package has one ordinary target.
+    fn alias(&self, relative: &Path) -> Result<String, RustGraphError> {
+        let [target] = self.targets.as_slice() else {
+            return Ok(String::new());
+        };
         let alias = relative
             .file_name()
             .and_then(|name| name.to_str())
-            .unwrap_or(&package.name);
+            .unwrap_or(&self.name);
         if alias.starts_with("__bsmr_") {
             return Err(unsupported(
-                &package.name,
+                &self.name,
                 "target names beginning with `__bsmr_` are reserved",
             ));
         }
@@ -192,17 +224,16 @@ fn render_package(
         } else {
             &target.name
         };
-        if alias != actual {
-            rendered.push_str(&format!(
-                r#"alias(name = {}, actual = {}, tests = {}, visibility = ["PUBLIC"])
-"#,
-                serde_json::to_string(alias)?,
-                serde_json::to_string(&format!(":{actual}"))?,
-                serde_json::to_string(&test_labels(target))?,
-            ));
+        if alias == actual {
+            return Ok(String::new());
         }
+        Ok(format!(
+            "alias(name = {}, actual = {}, tests = {}, visibility = [\"PUBLIC\"])\n",
+            json(alias)?,
+            json(&format!(":{actual}"))?,
+            json(&target.test_labels())?,
+        ))
     }
-    Ok((root.join(relative).join("BUILD.bsmr"), rendered))
 }
 
 /// Preserve Cargo's dependency aliases without reconstructing its resolver.
@@ -236,9 +267,7 @@ fn resolved_dependencies(
             ));
         }
         let path = target
-            .manifest_path
-            .parent()
-            .unwrap()
+            .directory()
             .strip_prefix(root)
             .map_err(|_| RustGraphError::Outside(target.manifest_path.clone()))?;
         dependencies.insert(
@@ -249,91 +278,87 @@ fn resolved_dependencies(
     Ok(dependencies)
 }
 
-/// Reuse native Rust rules with explicit crate inputs and resolved extern names.
-fn render_target(
-    package: &Package,
-    target: &Target,
-    directory: &Path,
-    dependencies: &BTreeMap<String, String>,
-    toolchain: &str,
-    test: bool,
-) -> Result<String, RustGraphError> {
-    if target.kind != ["lib"] && target.kind != ["bin"] {
-        return Err(unsupported(
-            &package.name,
-            &format!("target kind {:?}", target.kind),
-        ));
-    }
-    if target.crate_types != target.kind || !target.required_features.is_empty() {
-        return Err(unsupported(
-            &package.name,
-            "crate types or feature-gated targets",
-        ));
-    }
-    let source = target
-        .src_path
-        .strip_prefix(directory)
-        .map_err(|_| RustGraphError::Outside(target.src_path.clone()))?;
-    let is_library = target.kind == ["lib"];
-    if !is_library && target.name.starts_with("__bsmr_") {
-        return Err(unsupported(
-            &package.name,
-            "target names beginning with `__bsmr_` are reserved",
-        ));
-    }
-    if !is_library && target.name == "lib" {
-        return Err(unsupported(
-            &package.name,
-            "binary target name `lib` is reserved",
-        ));
-    }
-    let mut named_deps = dependencies.clone();
-    if !is_library {
-        for library in package.targets.iter().filter(|t| t.kind == ["lib"]) {
-            named_deps.insert(library.name.replace('-', "_"), ":lib".to_owned());
+impl Target {
+    /// Reuse native Rust rules with explicit crate inputs and resolved extern names.
+    fn render(
+        &self,
+        package: &Package,
+        dependencies: &BTreeMap<String, String>,
+        toolchain: &str,
+        test: bool,
+    ) -> Result<String, RustGraphError> {
+        let is_library = self.validate(&package.name)?;
+        let source = self
+            .src_path
+            .strip_prefix(package.directory())
+            .map_err(|_| RustGraphError::Outside(self.src_path.clone()))?;
+        let mut named_deps = dependencies.clone();
+        if !is_library {
+            for library in package.targets.iter().filter(|t| t.kind == ["lib"]) {
+                named_deps.insert(library.name.replace('-', "_"), ":lib".to_owned());
+            }
         }
-    }
-    let environment = BTreeMap::from([
-        ("CARGO_PKG_NAME", package.name.as_str()),
-        ("CARGO_PKG_VERSION", package.version.as_str()),
-    ]);
-    let name = if test {
-        format!("__bsmr_test_{}_{}", target.kind[0], target.name)
-    } else if is_library {
-        "lib".to_owned()
-    } else {
-        target.name.clone()
-    };
-    Ok(format!(
-        "rust_{}(\n    name = {},\n    crate = {},\n    crate_root = {},\n    edition = {},\n    srcs = glob([\"**\"], exclude = [\"BUILD.bsmr\", \"target/**\", \"bsmr-out/**\", \".git/**\"]),\n    named_deps = {},\n    verify_inputs = True,\n    tests = {},\n    env = {},\n    _rust_toolchain = {},\n    visibility = [\"PUBLIC\"],\n)\n\n",
-        if test {
-            "test"
+        let environment = BTreeMap::from([
+            ("CARGO_PKG_NAME", package.name.as_str()),
+            ("CARGO_PKG_VERSION", package.version.as_str()),
+        ]);
+        let name = if test {
+            format!("__bsmr_test_{}_{}", self.kind[0], self.name)
         } else if is_library {
-            "library"
+            "lib".to_owned()
         } else {
-            "binary"
-        },
-        serde_json::to_string(&name)?,
-        serde_json::to_string(&target.name.replace('-', "_"))?,
-        serde_json::to_string(&source.to_string_lossy().replace('\\', "/"))?,
-        serde_json::to_string(&target.edition)?,
-        serde_json::to_string(&named_deps)?,
-        serde_json::to_string(&if test {
-            Vec::new()
-        } else {
-            test_labels(target)
-        })?,
-        serde_json::to_string(&environment)?,
-        serde_json::to_string(toolchain)?,
-    ))
-}
+            self.name.clone()
+        };
+        Ok(format!(
+            "rust_{}(\n    name = {},\n    crate = {},\n    crate_root = {},\n    edition = {},\n    srcs = glob([\"**\"], exclude = [\"BUILD.bsmr\", \"target/**\", \"bsmr-out/**\", \".git/**\"]),\n    named_deps = {},\n    verify_inputs = True,\n    tests = {},\n    env = {},\n    _rust_toolchain = {},\n    visibility = [\"PUBLIC\"],\n)\n\n",
+            if test {
+                "test"
+            } else if is_library {
+                "library"
+            } else {
+                "binary"
+            },
+            json(&name)?,
+            json(&self.name.replace('-', "_"))?,
+            json(&source.to_string_lossy().replace('\\', "/"))?,
+            json(&self.edition)?,
+            json(&named_deps)?,
+            json(&if test { Vec::new() } else { self.test_labels() })?,
+            json(&environment)?,
+            json(toolchain)?,
+        ))
+    }
 
-/// Associate only Cargo-enabled unit tests with a build target.
-fn test_labels(target: &Target) -> Vec<String> {
-    if target.test.unwrap_or(true) {
-        vec![format!(":__bsmr_test_{}_{}", target.kind[0], target.name)]
-    } else {
-        Vec::new()
+    /// Reject unsupported semantics and names before rendering a rule.
+    fn validate(&self, package: &str) -> Result<bool, RustGraphError> {
+        if self.kind != ["lib"] && self.kind != ["bin"] {
+            return Err(unsupported(
+                package,
+                &format!("target kind {:?}", self.kind),
+            ));
+        }
+        if self.crate_types != self.kind || !self.required_features.is_empty() {
+            return Err(unsupported(package, "crate types or feature-gated targets"));
+        }
+        let is_library = self.kind == ["lib"];
+        if !is_library && self.name.starts_with("__bsmr_") {
+            return Err(unsupported(
+                package,
+                "target names beginning with `__bsmr_` are reserved",
+            ));
+        }
+        if !is_library && self.name == "lib" {
+            return Err(unsupported(package, "binary target name `lib` is reserved"));
+        }
+        Ok(is_library)
+    }
+    /// Associate only Cargo-enabled unit tests with a build target.
+    fn test_labels(&self) -> Vec<String> {
+        if self.test.unwrap_or(true) {
+            vec![format!(":__bsmr_test_{}_{}", self.kind[0], self.name)]
+        } else {
+            Vec::new()
+        }
     }
 }
 
@@ -363,16 +388,23 @@ mod tests {
         ]}})
     }
 
+    /// Lower a captured metadata fixture with the requested toolchain label.
+    fn fixture(
+        value: &Value,
+        toolchain: &str,
+    ) -> Result<BTreeMap<PathBuf, String>, RustGraphError> {
+        render(
+            &serde_json::to_vec(value).unwrap(),
+            Path::new("/repo"),
+            toolchain,
+        )
+    }
+
     #[test]
     fn package_path_selects_a_differently_named_binary() {
         let mut metadata = metadata();
         metadata["packages"][1]["targets"][0]["name"] = "probe_app".into();
-        let files = render(
-            &serde_json::to_vec(&metadata).unwrap(),
-            Path::new("/repo"),
-            "root//:rust",
-        )
-        .unwrap();
+        let files = fixture(&metadata, "root//:rust").unwrap();
         assert!(files[Path::new("/repo/app/BUILD.bsmr")].contains(
             "alias(name = \"app\", actual = \":probe_app\", tests = [\":__bsmr_test_bin_probe_app\"]"
         ));
@@ -382,12 +414,7 @@ mod tests {
     fn associates_only_enabled_unit_tests() {
         let mut metadata = metadata();
         metadata["packages"][1]["targets"][0]["test"] = false.into();
-        let files = render(
-            &serde_json::to_vec(&metadata).unwrap(),
-            Path::new("/repo"),
-            "root//:rust",
-        )
-        .unwrap();
+        let files = fixture(&metadata, "root//:rust").unwrap();
         let core = &files[Path::new("/repo/core/BUILD.bsmr")];
         assert!(core.contains("rust_test("));
         assert!(core.contains("tests = [\":__bsmr_test_lib_core\"]"));
@@ -398,12 +425,7 @@ mod tests {
 
     #[test]
     fn imports_resolved_edges_into_native_rules() {
-        let files = render(
-            &serde_json::to_vec(&metadata()).unwrap(),
-            Path::new("/repo"),
-            "toolchains//:rust",
-        )
-        .unwrap();
+        let files = fixture(&metadata(), "toolchains//:rust").unwrap();
         let app = &files[Path::new("/repo/app/BUILD.bsmr")];
         assert!(app.contains("rust_binary("));
         assert!(app.contains("\"renamed_core\":\"root//core:lib\""));
@@ -417,12 +439,7 @@ mod tests {
     fn rejects_build_scripts_before_emitting_graph() {
         let mut value = metadata();
         value["packages"][0]["targets"][0]["kind"] = json!(["custom-build"]);
-        let error = render(
-            &serde_json::to_vec(&value).unwrap(),
-            Path::new("/repo"),
-            "toolchains//:rust",
-        )
-        .unwrap_err();
+        let error = fixture(&value, "toolchains//:rust").unwrap_err();
         assert!(error.to_string().contains("custom-build"));
     }
 
@@ -434,14 +451,7 @@ mod tests {
         ] {
             let mut value = metadata();
             value["resolve"]["nodes"][1]["deps"][0]["dep_kinds"] = json!([kind]);
-            assert!(
-                render(
-                    &serde_json::to_vec(&value).unwrap(),
-                    Path::new("/repo"),
-                    "toolchains//:rust"
-                )
-                .is_err()
-            );
+            assert!(fixture(&value, "toolchains//:rust").is_err());
         }
     }
 
@@ -449,12 +459,7 @@ mod tests {
     fn rejects_feature_unification_without_a_configured_unit_graph() {
         let mut value = metadata();
         value["resolve"]["nodes"][0]["features"] = json!(["fast"]);
-        let error = render(
-            &serde_json::to_vec(&value).unwrap(),
-            Path::new("/repo"),
-            "toolchains//:rust",
-        )
-        .unwrap_err();
+        let error = fixture(&value, "toolchains//:rust").unwrap_err();
         assert!(error.to_string().contains("feature variants"));
     }
 
@@ -462,23 +467,9 @@ mod tests {
     fn rejects_external_sources_and_escaping_crate_roots() {
         let mut value = metadata();
         value["packages"][0]["source"] = json!("registry+https://example.com/index");
-        assert!(
-            render(
-                &serde_json::to_vec(&value).unwrap(),
-                Path::new("/repo"),
-                "toolchains//:rust"
-            )
-            .is_err()
-        );
+        assert!(fixture(&value, "toolchains//:rust").is_err());
         value["packages"][0]["source"] = Value::Null;
         value["packages"][0]["targets"][0]["src_path"] = json!("/outside/lib.rs");
-        assert!(
-            render(
-                &serde_json::to_vec(&value).unwrap(),
-                Path::new("/repo"),
-                "toolchains//:rust"
-            )
-            .is_err()
-        );
+        assert!(fixture(&value, "toolchains//:rust").is_err());
     }
 }
