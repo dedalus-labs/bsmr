@@ -44,7 +44,7 @@ build command after an edit to reuse unchanged work.
 
 The [quick start](docs/getting_started/quickstart.md) covers setup.
 The [TypeScript guide](docs/users/languages/typescript/pnpm.md) lists the required
-pnpm and compiler files. The [unreleased Rust preview](docs/users/languages/rust/cargo.md)
+pnpm and compiler files. The [Rust preview](docs/users/languages/rust/cargo.md)
 uses Cargo manifests and an exact toolchain pin. [Custom recipes](docs/users/recipes.md)
 connect additional steps through their inputs and outputs.
 
