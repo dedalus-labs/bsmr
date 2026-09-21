@@ -67,7 +67,14 @@ try {
 	assert.equal(await build("unrelated", "7:clean"), "", "unrelated crate must not recompile app");
 	writeFileSync(join(cwd, "core/src/lib.rs"), "pub fn value() -> u32 { 9 }\n#[test] fn correct_value() { assert_eq!(value(), 9); }\n");
 	assert.ok((await build("dependency", "9:clean")).includes("rustc"));
-	await run(binary, ["build", "core"], options);
+	const libraryBuild = await run(binary, ["build", "core", "--show-full-json-output"], options);
+	const libraryOutput = Object.values(JSON.parse(libraryBuild.stdout) as Record<string, string>)[0]!;
+	assert.ok(libraryOutput.endsWith(".rlib"), "Cargo library builds must materialize linkable code, not only metadata");
+	writeFileSync(join(root, "consumer.rs"), 'fn main() { assert_eq!(probe_core::value(), 9); }');
+	await run(rustc, ["--edition=2024", join(root, "consumer.rs"), "--extern", `probe_core=${libraryOutput}`, "-o", join(root, "consumer")], options);
+	await run(join(root, "consumer"), [], options);
+	const metadataBuild = await run(binary, ["build", "core:lib[check]", "--show-full-json-output"], options);
+	assert.ok(Object.values(JSON.parse(metadataBuild.stdout) as Record<string, string>)[0]!.endsWith(".rmeta"));
 	// Manifest edits must invalidate inference without a synchronization command.
 	const manifest = readFileSync(join(cwd, "app/Cargo.toml"), "utf8");
 	writeFileSync(join(cwd, "app/Cargo.toml"), manifest.replace("renamed =", "changed ="));
@@ -84,6 +91,10 @@ try {
 	writeFileSync(join(cwd, "core/src/lib.rs"), library);
 	mkdirSync(join(cwd, "recipe"));
 	writeFileSync(join(cwd, "recipe/BUILD.bsmr"), 'genrule(name="report", out="report.txt", cmd="$(exe root//app:app) > $OUT")\n');
+	writeFileSync(join(cwd, "recipe/consume.rs"), 'fn main() { assert_eq!(probe_core::value(), 9); }');
+	writeFileSync(join(cwd, "recipe/BUILD.bsmr"), readFileSync(join(cwd, "recipe/BUILD.bsmr"), "utf8") + 'rust_binary(name="consume", crate="consume", edition="2024", crate_root="consume.rs", srcs=["consume.rs"], named_deps={"probe_core":"root//core:lib"}, _rust_toolchain="root//:__bsmr_rust")\n');
+	const nativeConsumer = await run(binary, ["build", "recipe:consume", "--show-full-json-output"], options);
+	await run(Object.values(JSON.parse(nativeConsumer.stdout) as Record<string, string>)[0]!, [], options);
 	const recipe = await run(binary, ["build", "recipe:report", "--show-full-json-output"], options);
 	const report = Object.values(JSON.parse(recipe.stdout) as Record<string, string>)[0]!;
 	assert.equal(readFileSync(report, "utf8").trim(), "9:clean");

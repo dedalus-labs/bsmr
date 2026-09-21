@@ -52,7 +52,8 @@ Cargo files -> locked resolution -> private targets -> native rustc actions
 
 Each crate uses the existing native Rust compilation, linking, and test machinery.
 A package containing one library or binary can be selected by its directory,
-even when its Cargo name differs. Libraries also expose `:lib`, binaries expose
+even when its Cargo name differs. Library builds materialize a linkable `.rlib`; `:lib[check]` requests metadata
+only. Libraries expose `:lib`, binaries expose
 their Cargo target name, and dependency
 renames preserve the name used in source. Package metadata enters the compiler
 as literal environment values, so text such as `$(location ...)` cannot become
