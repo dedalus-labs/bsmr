@@ -52,5 +52,12 @@ from the build engine. See [Cargo's unit graph](https://doc.rust-lang.org/cargo/
 ```console
 cargo +1.98.0 build --manifest-path tools/cargo/Cargo.toml --locked -j 2
 python3 tools/cargo/check.py tools/cargo/target/debug/bsmr-cargo
+python3 tools/cargo/verify.py tools/cargo/target/debug/bsmr-cargo <rust-1.97.1-bin-directory>
+python3 tools/cargo/verify.py tools/cargo/target/debug/bsmr-cargo <nightly-2026-04-11-bin-directory>
 python3 tools/cargo/verify_sources.py tools/cargo/target/debug/bsmr-cargo <rust-1.97.1-bin-directory>
 ```
+
+`verify.py` compares 16 configured graphs to the selected Cargo CLI. It covers
+build/test/check modes, release profiles, explicit root filters, feature
+separation, package environment, declared features, compiler hooks, storage
+ownership, and lock preservation. Its Rust sources deliberately do not compile.
