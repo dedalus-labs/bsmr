@@ -571,7 +571,7 @@ dependencies = [
 
 [[package]]
 name = "bsmr"
-version = "0.0.6"
+version = "0.0.7"
 dependencies = [
  "bsmr_action_impl",
  "bsmr_analysis",

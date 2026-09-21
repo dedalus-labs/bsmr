@@ -9,6 +9,28 @@
 Notable changes to Bessemer are recorded here. Release entries are generated
 from conventional commits and reviewed before publication.
 
+## [0.0.7](https://github.com/dedalus-labs/bsmr/compare/v0.0.6...v0.0.7) (2026-09-21)
+
+
+### Features
+
+* **rust:** describe cargo entrypoints ([#212](https://github.com/dedalus-labs/bsmr/issues/212)) ([a064213](https://github.com/dedalus-labs/bsmr/commit/a064213865287448d3d9d8573b1b19564a73c783))
+* **rust:** execute configured cargo plans ([#214](https://github.com/dedalus-labs/bsmr/issues/214)) ([55b1eac](https://github.com/dedalus-labs/bsmr/commit/55b1eacf9083847fc7c08c2702640be52700ad93))
+* **rust:** export native compiler metadata ([#207](https://github.com/dedalus-labs/bsmr/issues/207)) ([043418a](https://github.com/dedalus-labs/bsmr/commit/043418a1b3a9f35167d69a250658fc032b746794))
+* **rust:** lower configured cargo units ([#211](https://github.com/dedalus-labs/bsmr/issues/211)) ([5a4bf46](https://github.com/dedalus-labs/bsmr/commit/5a4bf460157fd40396692d6ba88b8e265e75ac3b))
+* **rust:** plan configured cargo units ([#204](https://github.com/dedalus-labs/bsmr/issues/204)) ([f0d77c3](https://github.com/dedalus-labs/bsmr/commit/f0d77c32bdce305397cb9db9e40108c74804245a))
+* **rust:** preserve literal compiler inputs ([#203](https://github.com/dedalus-labs/bsmr/issues/203)) ([d7f1124](https://github.com/dedalus-labs/bsmr/commit/d7f112478b8046c1e3e2b0b0fc9323c57c201809))
+* **rust:** verify acquired cargo sources ([#208](https://github.com/dedalus-labs/bsmr/issues/208)) ([46080cf](https://github.com/dedalus-labs/bsmr/commit/46080cfdf0343c8159fa46bb34329a566978029a))
+
+
+### Bug Fixes
+
+* **release:** commit every product version file ([#218](https://github.com/dedalus-labs/bsmr/issues/218)) ([7edcd2c](https://github.com/dedalus-labs/bsmr/commit/7edcd2c173a23654d8eb7afb268b136cab1d70dc))
+* **rust:** bound cargo compiler flags ([#205](https://github.com/dedalus-labs/bsmr/issues/205)) ([1a9abfc](https://github.com/dedalus-labs/bsmr/commit/1a9abfcb106ef7d5a2bf40ffabf2f96dcc49fcd6))
+* **rust:** isolate cargo source ownership ([#206](https://github.com/dedalus-labs/bsmr/issues/206)) ([74ced4e](https://github.com/dedalus-labs/bsmr/commit/74ced4ea12eb2944c92bd7283472089d7fce0740))
+* **rust:** materialize cargo library builds ([#217](https://github.com/dedalus-labs/bsmr/issues/217)) ([51e66aa](https://github.com/dedalus-labs/bsmr/commit/51e66aa212e640839c26426a2daaa2f7a5ed0762))
+* **rust:** validate declared source directory inputs ([#201](https://github.com/dedalus-labs/bsmr/issues/201)) ([e719f14](https://github.com/dedalus-labs/bsmr/commit/e719f14624566799c8d28d9d19ba459918a47ccd))
+
 ## [0.0.6](https://github.com/dedalus-labs/bsmr/compare/v0.0.5...v0.0.6) (2026-09-21)
 
 
