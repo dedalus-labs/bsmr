@@ -5,10 +5,11 @@
 
 // Serves one internal Cargo planning request without compiling source code.
 
+mod flags;
 mod planning;
 mod types;
 
-use std::io::{self};
+use std::io;
 
 use anyhow::Result;
 
