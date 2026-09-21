@@ -77,7 +77,11 @@ macro_rules! colored {
 mod out;
 
 #[derive(Debug, clap::Parser)]
-#[clap(name = "build", about = "Build the specified targets")]
+#[clap(
+    name = "build",
+    about = "Build a package and its dependencies",
+    long_about = "Build a package and its dependencies. Run from your project root.\n\nExamples:\n\n    bsmr build apps/api\n    bsmr build apps/api --show-output\n\nUse the package directory or an explicit target pattern.\nProject requirements: https://oss.dedaluslabs.ai/bsmr/getting_started/quickstart/"
+)]
 pub struct BuildCommand {
     #[clap(flatten)]
     show_output: CommonOutputOptions,

@@ -108,7 +108,11 @@ fn should_warn_about_flag_position(
 }
 
 #[derive(Debug, clap::Parser)]
-#[clap(name = "test", about = "Build and test the specified targets")]
+#[clap(
+    name = "test",
+    about = "Build and run a package's tests",
+    long_about = "Build and run tests associated with a package.\n\nExample:\n\n    bsmr test app\n\nUse the package directory or an explicit target pattern.\nAvailable tests depend on your project's language and configuration.\nLanguage guides: https://oss.dedaluslabs.ai/bsmr/about/language_support/"
+)]
 pub struct TestCommand {
     #[clap(
         long = "exclude",

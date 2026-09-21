@@ -189,7 +189,7 @@ pub(crate) struct Opt {
     common_opts: BeforeSubcommandOptions,
 }
 
-const BEGINNER_COMMANDS: &[&str] = &["build", "clean", "init"];
+const BEGINNER_COMMANDS: &[&str] = &["build", "clean", "init", "test"];
 
 /// Builds the complete parser or the beginner help view selected by `-h`.
 fn command_for_args(args: &[String]) -> clap::Command {
@@ -204,7 +204,9 @@ fn command_for_args(args: &[String]) -> clap::Command {
             let show = BEGINNER_COMMANDS.contains(&command.get_name());
             command.hide(!show)
         })
-        .after_help("Run `bsmr --help` to show every command and global option.")
+        .after_help(
+            "Run `bsmr build --help` for build options, or `bsmr --help` for every command.",
+        )
 }
 
 impl Opt {
@@ -646,10 +648,10 @@ mod tests {
     fn short_help_only_shows_beginner_commands() {
         let help = help(&["bsmr", "-h"]);
 
-        for command in ["build", "clean", "init"] {
+        for command in ["build", "clean", "init", "test"] {
             assert!(help.contains(&format!("  {command} ")), "{help}");
         }
-        for command in ["audit", "cquery", "run", "starlark", "targets", "test"] {
+        for command in ["audit", "cquery", "run", "starlark", "targets"] {
             assert!(!help.contains(&format!("  {command} ")), "{help}");
         }
         assert!(help.contains("bsmr --help"), "{help}");
