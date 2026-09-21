@@ -46,11 +46,18 @@ def main() -> None:
             }
             result = subprocess.run([binary], input=json.dumps(request), env=env, text=True, capture_output=True, check=True, timeout=30)
             graph = json.loads(result.stdout)
+            assert graph["schema_version"] == 1 and graph["cargo_library"] == "0.98.0"
+            assert "release: 1.97.1" in graph["rustc_version"]
             assert len(graph["roots"]) == 1
             assert graph["units"][graph["roots"][0]]["target"]["name"] == "app"
             assert any(unit["target"]["name"] == "dev" for unit in graph["units"]) == (mode == "test")
             shared = [unit for unit in graph["units"] if unit["target"]["name"] == "shared"]
             assert shared and all(unit["features"] == ["ordinary"] for unit in shared)
+            for unit in shared:
+                assert unit["declared_features"] == ["ordinary"]
+                assert unit["package_environment"]["CARGO_PKG_NAME"] == "shared"
+                assert unit["source"]["kind"] == "path"
+                assert unit["source"]["manifest"] == str(root / "shared/Cargo.toml")
             assert any(unit["mode"] == "run-custom-build" for unit in graph["units"])
             assert (root / "Cargo.lock").read_bytes() == lock
             assert not list((root / "target").rglob("*.rlib"))
