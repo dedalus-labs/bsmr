@@ -6,6 +6,7 @@
 //! Lowers Cargo's resolved, hook-free local graph into the existing Rust prelude.
 
 pub mod dice;
+mod snapshot;
 mod toolchain;
 
 use std::collections::BTreeMap;
