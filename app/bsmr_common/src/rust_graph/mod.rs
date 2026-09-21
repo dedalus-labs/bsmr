@@ -10,7 +10,6 @@ pub mod configured;
 pub mod dice;
 pub mod entry;
 mod error;
-mod metadata;
 mod planner;
 mod snapshot;
 mod toolchain;
@@ -18,4 +17,3 @@ mod units;
 
 pub use error::RustGraphError;
 use error::unsupported;
-pub use metadata::render;
