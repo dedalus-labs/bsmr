@@ -370,6 +370,14 @@ export const ci = workflow({
 					name: "Verify native Rust graph",
 					run: command({ file: "node", args: ["test/native-rust-build.ts", "target/debug/bsmr"] }),
 				},
+				{
+					name: "Install stable Rust test toolchain",
+					run: command({ file: "rustup", args: ["toolchain", "install", "1.97.1", "--profile", "minimal", "--no-self-update"] }),
+				},
+				{
+					name: "Verify stable Rust feature gates",
+					run: command({ file: "node", args: ["test/rust/stable.ts", "target/debug/bsmr"] }),
+				},
 				uses(typescriptCache, { with: { binary: "target/debug/bsmr" } }),
 				{
 					name: "Verify native Go build",
