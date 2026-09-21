@@ -15,6 +15,11 @@ test dependencies. The helper does not invoke Cargo's compilation runner.
 trusted workspace + compiler + request -> Cargo BuildContext -> unit graph
 ```
 
+The helper holds an exclusive source-home lease through graph output. Git reads
+use process-local empty system and global configuration. Executable credential
+providers, Git configuration includes, hooks, and unsafe cache paths fail before
+compiler probes. The caller must exclude programs that do not honor this lease.
+
 The caller supplies absolute `manifest`, `cargo_home`, `rustc`, and
 `target_directory` paths. It owns the files, configuration, and environment for
 the duration of the request. Planning requires an existing lockfile and frozen,

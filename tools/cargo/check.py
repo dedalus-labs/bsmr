@@ -6,6 +6,7 @@
 # Checks root selection and configured features without compiling source.
 
 import json
+import fcntl
 from pathlib import Path
 import subprocess
 import sys
@@ -53,6 +54,17 @@ def main() -> None:
             assert any(unit["mode"] == "run-custom-build" for unit in graph["units"])
             assert (root / "Cargo.lock").read_bytes() == lock
             assert not list((root / "target").rglob("*.rlib"))
+        with (root / "cargo/plan.lock").open("rb") as lease:
+            fcntl.flock(lease, fcntl.LOCK_EX)
+            with subprocess.Popen([binary], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, env=env, text=True) as waiting:
+                try:
+                    waiting.communicate(json.dumps(request), timeout=0.2)
+                    raise AssertionError("planner did not wait for source-home ownership")
+                except subprocess.TimeoutExpired:
+                    fcntl.flock(lease, fcntl.LOCK_UN)
+                    stdout, stderr = waiting.communicate(timeout=30)
+                    assert waiting.returncode == 0, stderr
+                    assert json.loads(stdout)["roots"]
         config = root / ".cargo/config.toml"
         config.parent.mkdir()
         for flags in [["--extern", "untracked=outside.rlib"], ["--cfg", "@outside.args"], ["-Zcodegen-backend=outside.so"]]:
