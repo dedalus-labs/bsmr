@@ -1,0 +1,14 @@
+# ===----------------------------------------------------------------------===
+# Copyright (c) 2026 Dedalus Labs, Inc. and its contributors
+# SPDX-License-Identifier: Apache-2.0
+# ===----------------------------------------------------------------------===
+
+# Keep local build and verification artifacts out of source control.
+
+/**/target
+/fixture
+/fixture-target
+/fixture-cargo-home
+/receipts
+/__pycache__
+!/Cargo.lock

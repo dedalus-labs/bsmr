@@ -1,0 +1,38 @@
+# ===----------------------------------------------------------------------===
+# Copyright (c) 2026 Dedalus Labs, Inc. and its contributors
+# SPDX-License-Identifier: Apache-2.0
+# ===----------------------------------------------------------------------===
+
+# Build one version-pinned Cargo planning adapter.
+
+[package]
+name = "bsmr-cargo"
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.98"
+publish = false
+license = "Apache-2.0"
+
+[[bin]]
+name = "bsmr-cargo"
+path = "src/main.rs"
+
+[dependencies]
+libc = "=0.2.189"
+git2 = "=0.20.4"
+gix-config = "=0.56.0"
+tempfile = "=3.27.0"
+anyhow = "1"
+cargo = { version = "=0.98.0", features = ["vendored-openssl"] }
+cargo-util-terminal = "=0.1.1"
+cargo-util = "=0.2.31"
+flate2 = { version = "1", default-features = false, features = ["zlib-rs"] }
+tar = { version = "0.4", default-features = false }
+thiserror = "2"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+
+[profile.dev]
+debug = 0
+
+[workspace]
