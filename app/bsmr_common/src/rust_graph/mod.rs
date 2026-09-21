@@ -5,11 +5,13 @@
 
 //! Imports Cargo workspace descriptions through native Rust rules.
 
+pub mod configured;
 pub mod dice;
 mod error;
 mod metadata;
 mod snapshot;
 mod toolchain;
+mod units;
 
 pub use error::RustGraphError;
 use error::unsupported;
