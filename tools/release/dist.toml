@@ -1,0 +1,19 @@
+# ===----------------------------------------------------------------------===
+# Copyright (c) 2026 Dedalus Labs, Inc. and its contributors
+# SPDX-License-Identifier: Apache-2.0
+# ===----------------------------------------------------------------------===
+
+# Installs the build engine and its configured Cargo planner together.
+
+[package]
+name = "bsmr"
+version = "0.0.6"
+repository = "https://github.com/dedalus-labs/bsmr"
+description = "An incremental build system"
+license = "Apache-2.0"
+binaries = ["bsmr", "bsmr-cargo"]
+build-command = ["node", "../../ci/distribute.mjs"]
+
+[dist]
+dist = true
+include = ["../../LICENSE", "../../LICENSE-APACHE", "../../LICENSE-MIT", "../../NOTICE"]

@@ -74,6 +74,8 @@ test("bundled release action starts through its runtime entrypoint", () => {
 	const workspace = mkdtempSync(join(tmpdir(), "bsmr-release-action-"));
 	try {
 		mkdirSync(join(workspace, "app", "bsmr"), { recursive: true });
+		mkdirSync(join(workspace, "tools", "release"), { recursive: true });
+		writeFileSync(join(workspace, "tools/release/dist.toml"), 'version = "0.0.1"\n');
 		writeFileSync(join(workspace, "VERSION"), "0.0.1\n");
 		writeFileSync(join(workspace, ".release-please-manifest.json"), '{".":"0.0.1"}\n');
 		writeFileSync(join(workspace, "Cargo.lock"), '[[package]]\nname = "bsmr"\nversion = "0.0.1"\n');

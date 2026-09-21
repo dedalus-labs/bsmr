@@ -99,6 +99,7 @@ test("check uses one typed command tree", async () => {
 		".github/actions",
 		".github/workflows",
 		"ci/rust-build-dependencies.mjs",
+		"ci/distribute.mjs",
 		"prelude/toolchains/pnpm/runner.mjs",
 		"prelude/toolchains/pnpm/task.mjs",
 		"prelude/typescript/runner.mjs",

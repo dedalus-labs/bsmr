@@ -17,6 +17,7 @@ type Artifact = Readonly<{
 }>;
 
 const artifacts: readonly Artifact[] = [
+	{ input: "./ci/distribute.ts", output: "ci/distribute.mjs", target: "node20" },
 	{
 		input: "./.github/actions/typescript/cache/src/index.ts",
 		output: ".github/actions/typescript/cache/dist/index.js",

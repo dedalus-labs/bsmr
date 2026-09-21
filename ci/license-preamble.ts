@@ -34,6 +34,7 @@ function commentStyle(path: string): CommentStyle {
 function brief(path: string): string {
 	if (basename(path) === "BUILD.bsmr") return `Defines build targets for ${dirname(path) === "." ? "the root" : dirname(path)}.`;
 	const known = new Map([
+		["ci/distribute.mjs", "Builds the engine and Cargo planner for one release target."],
 		[".github/actions/typescript/cache/dist/index.js", "Runs the native TypeScript cache verification action."],
 		[".github/actions/typescript/cache/src/index.ts", "Implements the native TypeScript cache verification action."],
 		[".bsmr", "Configures the root Bessemer cell."],
