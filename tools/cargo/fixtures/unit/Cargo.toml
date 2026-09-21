@@ -1,0 +1,11 @@
+[package]
+name = "native_fixture"
+version = "0.1.0"
+edition = "2024"
+authors = ["Literal $(location :absent)"]
+[lib]
+path = "lib.rs"
+[features]
+default = ["enabled"]
+enabled = []
+[workspace]

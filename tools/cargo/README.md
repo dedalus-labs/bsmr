@@ -61,3 +61,7 @@ python3 tools/cargo/verify_sources.py tools/cargo/target/debug/bsmr-cargo <rust-
 build/test/check modes, release profiles, explicit root filters, feature
 separation, package environment, declared features, compiler hooks, storage
 ownership, and lock preservation. Its Rust sources deliberately do not compile.
+
+`python3 tools/cargo/fixture.py tools/cargo/target/debug/bsmr-cargo` regenerates
+the native-lowering fixture. Only workspace placement and the diagnostic
+compiler banner are normalized.

@@ -1,0 +1,91 @@
+{
+  "schema_version": 1,
+  "cargo_library": "0.98.0",
+  "rustc_version": "release: 1.97.1\n",
+  "workspace_root": "/workspace",
+  "roots": [
+    0
+  ],
+  "units": [
+    {
+      "package_id": "path+file:///workspace#native_fixture@0.1.0",
+      "package_name": "native_fixture",
+      "package_version": "0.1.0",
+      "package_links": null,
+      "package_environment": {
+        "CARGO_PKG_AUTHORS": "Literal $(location :absent)",
+        "CARGO_PKG_DESCRIPTION": "",
+        "CARGO_PKG_HOMEPAGE": "",
+        "CARGO_PKG_LICENSE": "",
+        "CARGO_PKG_LICENSE_FILE": "",
+        "CARGO_PKG_NAME": "native_fixture",
+        "CARGO_PKG_README": "",
+        "CARGO_PKG_REPOSITORY": "",
+        "CARGO_PKG_RUST_VERSION": "",
+        "CARGO_PKG_VERSION": "0.1.0",
+        "CARGO_PKG_VERSION_MAJOR": "0",
+        "CARGO_PKG_VERSION_MINOR": "1",
+        "CARGO_PKG_VERSION_PATCH": "0",
+        "CARGO_PKG_VERSION_PRE": ""
+      },
+      "source": {
+        "kind": "path",
+        "identity": "path+file:///workspace",
+        "checksum": null,
+        "archive": null,
+        "git_revision": null,
+        "root": "/workspace",
+        "manifest": "/workspace/Cargo.toml"
+      },
+      "target": {
+        "kind": [
+          "lib"
+        ],
+        "crate_types": [
+          "lib"
+        ],
+        "name": "native_fixture",
+        "src_path": "/workspace/lib.rs",
+        "edition": "2024",
+        "doc": true,
+        "doctest": true,
+        "test": true
+      },
+      "platform": null,
+      "mode": "build",
+      "profile": {
+        "name": "dev",
+        "opt_level": "0",
+        "lto": "false",
+        "codegen_backend": null,
+        "codegen_units": null,
+        "debuginfo": 2,
+        "split_debuginfo": "unpacked",
+        "debug_assertions": true,
+        "overflow_checks": true,
+        "rpath": false,
+        "incremental": true,
+        "panic": "unwind",
+        "strip": {
+          "deferred": "None"
+        }
+      },
+      "features": [
+        "default",
+        "enabled"
+      ],
+      "declared_features": [
+        "default",
+        "enabled"
+      ],
+      "rustflags": [
+        "--cfg",
+        "tokio_unstable"
+      ],
+      "rustdocflags": [],
+      "package_lint_flags": [],
+      "linker": null,
+      "dependencies": []
+    }
+  ]
+}
