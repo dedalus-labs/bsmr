@@ -51,6 +51,13 @@ export async function distribute(root: string, target: string, exec: ScriptExec 
 async function main(): Promise<void> {
 	const target = process.env["CARGO_DIST_TARGET"];
 	if (target === undefined) throw new Error("CARGO_DIST_TARGET is required");
+	// cargo-dist injects bare cl.exe names, bypassing Cargo's MSVC toolchain discovery.
+	if (target.endsWith("windows-msvc")) {
+		delete process.env["CC"];
+		delete process.env["CXX"];
+		// Preserve the native Cargo builder's portable C runtime linkage.
+		process.env["RUSTFLAGS"] = `${process.env["RUSTFLAGS"] ?? ""} -Ctarget-feature=+crt-static`;
+	}
 	await distribute(resolve(dirname(fileURLToPath(import.meta.url)), ".."), target);
 }
 
