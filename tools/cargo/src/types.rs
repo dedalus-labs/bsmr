@@ -148,6 +148,11 @@ pub(crate) struct Source {
 #[serde(rename_all = "kebab-case")]
 pub(crate) enum SourceKind {
     Path,
+    Git,
+    Registry,
+    SparseRegistry,
+    LocalRegistry,
+    Directory,
 }
 
 #[derive(Serialize)]
