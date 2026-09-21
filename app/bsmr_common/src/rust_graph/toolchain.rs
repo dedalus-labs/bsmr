@@ -3,7 +3,7 @@
 // SPDX-License-Identifier: Apache-2.0
 //===----------------------------------------------------------------------===//
 
-// Selects pinned Rust distributions from the project's standard toolchain file.
+//! Selects pinned Rust distributions from the project's standard toolchain file.
 
 use std::collections::BTreeMap;
 use std::path::PathBuf;
@@ -14,30 +14,40 @@ use super::unsupported;
 
 #[derive(Deserialize)]
 struct ToolchainFile {
+    /// The standard rustup selection in rust-toolchain.toml.
     toolchain: Toolchain,
 }
 
 #[derive(Deserialize)]
 #[serde(deny_unknown_fields)]
 struct Toolchain {
+    /// Exact release key in the checked-in distribution catalog.
     channel: String,
+    /// Only minimal and default installations are supported.
     profile: Option<String>,
+    /// Additional tools, restricted to rustfmt and clippy.
     #[serde(default)]
     components: Vec<String>,
+    /// Requested targets must match the execution host.
     #[serde(default)]
     targets: Vec<String>,
 }
 
 #[derive(Deserialize)]
 struct Archive {
+    /// Immutable compiler component archive.
     url: String,
+    /// Expected digest before extraction.
     sha256: String,
 }
 
 /// The metadata resolver and the declared compiler distribution share one release.
 pub(super) struct RustToolchain {
+    /// Installed resolver for this exact release.
     pub cargo: PathBuf,
+    /// Matching compiler used by Cargo to inspect its host.
     pub rustc: PathBuf,
+    /// Native rules that acquire and select the same compiler.
     pub rules: String,
 }
 
@@ -98,6 +108,18 @@ impl RustToolchain {
             )
             .into());
         }
+        let rules = toolchain.rules(host, archives);
+        Ok(Self {
+            cargo,
+            rustc,
+            rules,
+        })
+    }
+}
+
+impl Toolchain {
+    /// Render pinned archives and their single native toolchain.
+    fn rules(&self, host: &str, archives: &BTreeMap<String, Archive>) -> String {
         let mut rules = String::from(
             "load(\"@prelude//rust/native:toolchain.bzl\", \"native_rust_toolchain\", \"native_rust_tools\")\n",
         );
@@ -117,17 +139,13 @@ impl RustToolchain {
             };
             rules.push_str(&format!("http_archive(name = \"__bsmr_{component}\", urls = [{url:?}], sha256 = {hash:?}, strip_prefix = \"{prefix}/{directory}\", has_content_based_path = True)\n", url=archive.url, hash=archive.sha256));
         }
-        let nightly = if toolchain.channel.starts_with("nightly-") {
+        let nightly = if self.channel.starts_with("nightly-") {
             "True"
         } else {
             "False"
         };
         rules.push_str(&format!("native_rust_toolchain(name = \"__bsmr_rust\", compiler = \":__bsmr_rustc\", clippy = \":__bsmr_clippy-preview\", standard_library = \":__bsmr_rust-std\", triple = {host:?}, nightly_features = {nightly}, visibility = [\"PUBLIC\"])\n"));
         rules.push_str(&format!("native_rust_tools(triple = {host:?})\n"));
-        Ok(Self {
-            cargo,
-            rustc,
-            rules,
-        })
+        rules
     }
 }
