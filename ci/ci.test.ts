@@ -53,10 +53,10 @@ function unsafeScript(name: string): string {
 	return step.run.kind === "unsafe-shell" ? step.run.script : "";
 }
 
-test("Rust remains the required aggregate check", () => {
+test("Rust aggregates completed runs without surviving workflow cancellation", () => {
 	assert.equal(jobs.rust?.name, "Rust");
 	assert.equal(jobs.rust?.["runs-on"], "ubuntu-24.04");
-	assert.equal(jobs.rust?.if, `\${{ always() && ${trustedCiRun} }}`);
+	assert.equal(jobs.rust?.if, `\${{ !cancelled() && ${trustedCiRun} }}`);
 	assert.deepEqual(jobs.rust?.needs, ["affected", ...rustLanes]);
 	const steps = jobs.rust?.steps ?? [];
 	assert.deepEqual(steps.map((step) => ("run" in step ? step.run : null)), [

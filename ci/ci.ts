@@ -6,7 +6,7 @@
 // Defines Bessemer's generated CI workflow.
 
 import {
-	GitHubJobResult, always, and, command, eq, expr, format, github, job, needsOutput,
+	GitHubJobResult, always, and, cancelled, command, eq, expr, format, github, job, needsOutput,
 	needsResultIs, not, or, stepOutput, unsafeShell, uses, workflow,
 	type GitHubJobResultValue,
 } from "@dedalus-labs/hollywood";
@@ -535,7 +535,7 @@ export const ci = workflow({
 		}),
 		rust: job({
 			name: "Rust",
-			if: and(always(), trustedCiRun),
+			if: and(not(cancelled()), trustedCiRun),
 			needs: ["affected", ...rustLaneIds],
 			"runs-on": "ubuntu-24.04",
 			"timeout-minutes": 5,
