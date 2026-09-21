@@ -12,3 +12,4 @@
 /receipts
 /__pycache__
 !/Cargo.lock
+!/fixtures/unit/Cargo.lock
