@@ -5,10 +5,6 @@
 
 //! Lowers Cargo's resolved, hook-free local graph into the existing Rust prelude.
 
-pub mod dice;
-mod snapshot;
-mod toolchain;
-
 use std::collections::BTreeMap;
 use std::path::Path;
 use std::path::PathBuf;
@@ -367,7 +363,7 @@ impl Target {
 }
 
 /// Names the exact unsupported package contract.
-fn unsupported(package: &str, case: &str) -> RustGraphError {
+pub(super) fn unsupported(package: &str, case: &str) -> RustGraphError {
     RustGraphError::Unsupported {
         package: package.to_owned(),
         case: case.to_owned(),
