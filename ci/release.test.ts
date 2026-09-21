@@ -34,6 +34,7 @@ test("one product version drives release automation", () => {
 	assert.match(version, /^(?:0|[1-9]\d*)\.(?:0|[1-9]\d*)\.(?:0|[1-9]\d*)$/);
 	assert.equal((JSON.parse(read(".release-please-manifest.json")) as Record<string, string>)["."], version);
 	assert.match(read("dist-workspace.toml"), new RegExp(`^version = "${version}"$`, "m"));
+	assert.match(read("tools/release/dist.toml"), new RegExp(`^version = "${version}"$`, "m"));
 	assert.match(read("app/bsmr/Cargo.toml"), new RegExp(`^version = "${version}"$`, "m"));
 	assert.match(
 		read("Cargo.lock"),
@@ -59,6 +60,8 @@ test("release version synchronization updates every derived carrier", () => {
 	const fixture = mkdtempSync(join(tmpdir(), "bsmr-release-version-"));
 	try {
 		mkdirSync(join(fixture, "app", "bsmr"), { recursive: true });
+		mkdirSync(join(fixture, "tools", "release"), { recursive: true });
+		writeFileSync(join(fixture, "tools/release/dist.toml"), '[package]\nversion = "0.0.0"\n');
 		writeFileSync(join(fixture, "VERSION"), "0.0.1\n");
 		writeFileSync(join(fixture, ".release-please-manifest.json"), '{".":"0.0.1"}\n');
 		writeFileSync(join(fixture, "Cargo.lock"), '[[package]]\nname = "bsmr"\nversion = "0.0.0"\n');
@@ -66,11 +69,12 @@ test("release version synchronization updates every derived carrier", () => {
 		writeFileSync(join(fixture, "app", "bsmr", "Cargo.toml"), 'name = "bsmr"\nversion = "0.0.0"\n');
 
 		assert.deepEqual(synchronizeReleaseVersion(fixture), [
+			"tools/release/dist.toml",
 			"app/bsmr/Cargo.toml",
 			"Cargo.lock",
 			"dist-workspace.toml",
 		]);
-		for (const path of ["app/bsmr/Cargo.toml", "Cargo.lock", "dist-workspace.toml"]) {
+		for (const path of ["tools/release/dist.toml", "app/bsmr/Cargo.toml", "Cargo.lock", "dist-workspace.toml"]) {
 			assert.match(readFileSync(join(fixture, path), "utf8"), /version = "0\.0\.1"/);
 		}
 		assert.deepEqual(synchronizeReleaseVersion(fixture), []);

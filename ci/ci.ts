@@ -361,6 +361,14 @@ export const ci = workflow({
 					name: "Build BSMR",
 					run: command({ file: "cargo", args: ["build", "--locked", "--bin", "bsmr"] }),
 				},
+				{
+					name: "Install Cargo planner compiler",
+					run: command({ file: "rustup", args: ["toolchain", "install", "1.98.0", "--profile", "minimal", "--component", "llvm-tools-preview", "--no-self-update"] }),
+				},
+				{
+					name: "Build Cargo planner",
+					run: command({ file: "rustup", args: ["run", "1.98.0", "cargo", "build", "--locked", "--manifest-path", "tools/cargo/Cargo.toml", "--target-dir", "target", "-j", "2"] }),
+				},
 				setupNode,
 				{
 					name: "Verify native architecture",
