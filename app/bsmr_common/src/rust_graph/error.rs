@@ -22,8 +22,6 @@ pub enum RustGraphError {
     },
     #[error("Cargo path `{0:?}` is outside the workspace")]
     Outside(PathBuf),
-    #[error("Cargo graph is missing resolved package `{0}`")]
-    Missing(String),
 }
 
 impl From<serde_json::Error> for RustGraphError {
