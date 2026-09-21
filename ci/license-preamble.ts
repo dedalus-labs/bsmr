@@ -142,10 +142,11 @@ export function validateSource(source: Source): string | undefined {
 	if (source.provenance === "dedalus") {
 		const style = commentStyle(source.path);
 		const responsibility = header.slice(legal.length + 2).split("\n", 1)[0] ?? "";
+		const prefix = extname(source.path) === ".rs" && responsibility.startsWith("//! ") ? "//! " : style.prefix;
 		const description = responsibility
-			.slice(style.prefix.length, responsibility.length - style.suffix.length)
+			.slice(prefix.length, responsibility.length - style.suffix.length)
 			.trim();
-		if (!responsibility.startsWith(style.prefix) || !responsibility.endsWith(style.suffix) || description === "") {
+		if (!responsibility.startsWith(prefix) || !responsibility.endsWith(style.suffix) || description === "") {
 			return `${source.path}: missing source responsibility`;
 		}
 	}

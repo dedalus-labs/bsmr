@@ -40,3 +40,14 @@ test("validation requires a leading provenance block", () => {
 	const empty = renderPreamble("app/bsmr/BUILD.bsmr", "dedalus").replace("# Defines build targets for app/bsmr.", "# ");
 	assert.match(validateSource({ path: "app/bsmr/BUILD.bsmr", provenance: "dedalus", text: empty }) ?? "", /missing source responsibility/);
 });
+
+test("Rust module documentation supplies the source responsibility", () => {
+	const path = "app/bsmr_common/src/rust_graph.rs";
+	const legal = renderPreamble("ci/license-preamble.ts", "dedalus").split("\n\n")[0];
+	for (const comment of ["//! Describes the native graph.", "// Describes the native graph."]) {
+		assert.equal(validateSource({ path, provenance: "dedalus", text: `${legal}\n\n${comment}\n` }), undefined);
+	}
+	for (const comment of ["//!", "//! ", "// "]) {
+		assert.match(validateSource({ path, provenance: "dedalus", text: `${legal}\n\n${comment}\n` }) ?? "", /missing source responsibility/);
+	}
+});
