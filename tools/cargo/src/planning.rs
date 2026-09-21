@@ -58,6 +58,7 @@ pub(crate) fn plan(request: Request) -> Result<()> {
         gctx.env_config()?.is_empty(),
         "unsupported Cargo environment configuration: [env]"
     );
+    let _git_config = crate::acquisition::isolate(&request, &gctx)?;
     let storage = serde_json::to_string(&request.target_directory)?;
     let owned_config = [
         format!("build.rustc={}", serde_json::to_string(&request.rustc)?),
