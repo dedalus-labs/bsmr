@@ -53,6 +53,7 @@ pub(crate) fn plan(request: Request) -> Result<()> {
     // cargo-as-a-library otherwise defaults to the dev channel outside its release build.
     gctx.nightly_features_allowed = false;
     compiler_ownership(&request, &gctx)?;
+    crate::flags::configure(&gctx)?;
     ensure!(
         gctx.env_config()?.is_empty(),
         "unsupported Cargo environment configuration: [env]"
@@ -95,6 +96,9 @@ pub(crate) fn plan(request: Request) -> Result<()> {
         std::fs::read(lock_path)? == lock,
         "Cargo.lock changed during planning"
     );
+    for unit in context.unit_graph.keys() {
+        crate::flags::validate(&unit.rustflags, crate::flags::Phase::Compile)?;
+    }
     cargo::core::compiler::unit_graph::emit_serialized_unit_graph(
         &context.roots,
         &context.unit_graph,

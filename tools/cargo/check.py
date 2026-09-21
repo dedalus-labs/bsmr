@@ -48,10 +48,17 @@ def main() -> None:
             assert len(graph["roots"]) == 1
             assert graph["units"][graph["roots"][0]]["target"]["name"] == "app"
             assert any(unit["target"]["name"] == "dev" for unit in graph["units"]) == (mode == "test")
-            assert all(unit["features"] == ["ordinary"] for unit in graph["units"] if unit["target"]["name"] == "shared")
+            shared = [unit for unit in graph["units"] if unit["target"]["name"] == "shared"]
+            assert shared and all(unit["features"] == ["ordinary"] for unit in shared)
             assert any(unit["mode"] == "run-custom-build" for unit in graph["units"])
             assert (root / "Cargo.lock").read_bytes() == lock
             assert not list((root / "target").rglob("*.rlib"))
+        config = root / ".cargo/config.toml"
+        config.parent.mkdir()
+        for flags in [["--extern", "untracked=outside.rlib"], ["--cfg", "@outside.args"], ["-Zcodegen-backend=outside.so"]]:
+            config.write_text("[build]\nrustflags=" + json.dumps(flags) + "\n")
+            result = subprocess.run([binary], input=json.dumps(request), env=env, text=True, capture_output=True, timeout=30)
+            assert result.returncode != 0 and "unsupported compiler flag" in result.stderr
     print("ok: configured roots, features, dev dependencies, and lock preservation without compilation")
 
 

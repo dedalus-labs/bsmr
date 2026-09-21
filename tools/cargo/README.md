@@ -24,7 +24,11 @@ offline sources. `source_policy` must be `offline`.
 `test`, and `check`. Filters are `package`, `library`, `binary` with a `name`,
 and `integration-test` with a `name`. The request also supplies `features`,
 `default_features`, `all_features`, `profile`, and a target triple or null.
-Unknown request fields and conflicting compiler overrides fail.
+Unknown request fields and conflicting compiler overrides fail. Compiler flags
+are limited to cfg values, lints, and scalar optimization settings. Response
+files, compiler extensions, and file-based overrides fail before compiler probes.
+Inactive target tables may carry linker arguments, but selected units using them
+require a declared native execution contract.
 
 The resolver pins Cargo 0.98.0 and admits Rust 1.97.1 and
 nightly-2026-04-11. Its standalone workspace isolates Cargo's native dependencies
