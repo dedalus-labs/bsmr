@@ -367,8 +367,8 @@ export const ci = workflow({
 					run: command({ file: "node", args: ["-e", "require('node:assert/strict').equal(process.arch, process.argv[1])", expr<string>("matrix.architecture")] }),
 				},
 				{
-					name: "Verify native Cargo cache",
-					run: command({ file: "node", args: ["test/native-cargo-cache.ts", "target/debug/bsmr"] }),
+					name: "Verify native Rust graph",
+					run: command({ file: "node", args: ["test/native-rust-build.ts", "target/debug/bsmr"] }),
 				},
 				uses(typescriptCache, { with: { binary: "target/debug/bsmr" } }),
 				{

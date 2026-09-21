@@ -12,7 +12,7 @@ oncall("build_infra")
 rust_library(
     name = "bsmr_common",
     srcs = glob(
-        ["src/**/*.rs"],
+        ["src/**/*.rs", "src/rust_graph/releases.json"],
     ),
     autocargo = {
         "cargo_toml_config": {

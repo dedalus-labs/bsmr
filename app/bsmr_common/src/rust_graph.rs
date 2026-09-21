@@ -5,6 +5,9 @@
 
 //! Lowers Cargo's resolved, hook-free local graph into the existing Rust prelude.
 
+pub mod dice;
+mod toolchain;
+
 use std::collections::BTreeMap;
 use std::path::Path;
 use std::path::PathBuf;

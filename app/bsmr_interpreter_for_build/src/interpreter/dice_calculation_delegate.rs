@@ -19,9 +19,6 @@ use std::sync::Arc;
 
 use allocative::Allocative;
 use async_trait::async_trait;
-use bsmr_common::cargo_workspace::parse_rust_toolchain;
-use bsmr_common::cargo_workspace::render_cargo_build_file;
-use bsmr_common::cargo_workspace::select_rust_toolchain_file;
 use bsmr_common::dice::cells::HasCellResolver;
 use bsmr_common::dice::cycles::CycleGuard;
 use bsmr_common::file_ops::dice::DiceFileComputations;
@@ -105,8 +102,6 @@ use crate::super_package::package_value::SuperPackageValuesImpl;
 #[derive(Debug, bsmr_error::Error)]
 #[bsmr(tag = Input)]
 enum NativeBuildFileError {
-    #[error("native Cargo builds require Cargo.toml at the BSMR project root")]
-    CargoWorkspaceManifestRequired,
     #[error("native Python builds require pylock.build.toml at the BSMR project root")]
     PythonBuildLockRequired,
 }
@@ -332,7 +327,9 @@ impl<'c, 'd: 'c> DiceCalculationDelegate<'c, 'd> {
                     .get_file(PackageRelativePath::new("Cargo.toml")?)
                     .is_some()
                 {
-                    source.push_str(&self.render_native_cargo(package).await?);
+                    source.push_str(
+                        &bsmr_common::rust_graph::dice::build_file(self.ctx, package).await?,
+                    );
                 }
                 if listing
                     .get_file(PackageRelativePath::new("pyproject.toml")?)
@@ -359,31 +356,6 @@ impl<'c, 'd: 'c> DiceCalculationDelegate<'c, 'd> {
             }
         };
         Ok((build_file_path, ast, deps))
-    }
-
-    /// Renders one Cargo manifest against the project root's shared workspace inputs.
-    async fn render_native_cargo(&mut self, package: PackageLabel) -> bsmr_error::Result<String> {
-        let root_path = CellRelativePathBuf::unchecked_new(String::new());
-        let root = PackageLabel::new(package.cell_name(), &root_path)?;
-        let workspace_listing = DicePackageListingResolver(self.ctx)
-            .resolve_package_listing(root)
-            .await?;
-        if workspace_listing
-            .get_file(PackageRelativePath::new("Cargo.toml")?)
-            .is_none()
-        {
-            return Err(NativeBuildFileError::CargoWorkspaceManifestRequired.into());
-        }
-        let manifest = self.read_package_file(package, "Cargo.toml").await?;
-        let toolchain_file = select_rust_toolchain_file(&workspace_listing)?;
-        let toolchain = self.read_package_file(root, toolchain_file).await?;
-        let toolchain = parse_rust_toolchain(&toolchain)?;
-        Ok(render_cargo_build_file(
-            package.cell_relative_path().to_owned(),
-            &manifest,
-            &workspace_listing,
-            &toolchain,
-        )?)
     }
 
     /// Validates root Python inputs and renders one project or workspace root.
