@@ -24,7 +24,8 @@ use dice_futures::cancellation::CancellationContext;
 use pagable::Pagable;
 use pagable::pagable_typetag;
 
-use super::render;
+use super::catalog;
+use super::entry::Entry;
 use super::snapshot;
 use super::toolchain::RustToolchain;
 use super::unsupported;
@@ -68,21 +69,7 @@ impl Key for RustGraphKey {
         })?;
         let toolchain = RustToolchain::parse(&source)?;
         let metadata = resolve(&toolchain, &root).await?;
-        let mut rules: BTreeMap<_, _> =
-            render(&metadata, &root, &format!("{}//:__bsmr_rust", self.0))?
-                .into_iter()
-                .map(|(path, text)| {
-                    (
-                        path.parent()
-                            .unwrap()
-                            .strip_prefix(&root)
-                            .unwrap()
-                            .to_string_lossy()
-                            .replace('\\', "/"),
-                        text.replace("root//", &format!("{}//", self.0)),
-                    )
-                })
-                .collect();
+        let mut rules = catalog::render(&metadata, &root, self.0.as_str())?;
         rules
             .entry(String::new())
             .or_default()
@@ -144,13 +131,13 @@ impl RustGraphKey {
         {
             return Ok(());
         }
-        if relative.ends_with(".cargo/config") || relative.ends_with(".cargo/config.toml") {
-            return Err(unsupported(relative, "Cargo configuration").into());
-        }
+        let configuration =
+            relative.ends_with(".cargo/config") || relative.ends_with(".cargo/config.toml");
         let manifest = Path::new(relative)
             .file_name()
             .is_some_and(|f| f == "Cargo.toml");
         if !manifest
+            && !configuration
             && relative != "Cargo.lock"
             && relative != "rust-toolchain.toml"
             && !snapshot::inferred(Path::new(relative))
@@ -159,7 +146,11 @@ impl RustGraphKey {
         }
         let destination = root.join(relative);
         std::fs::create_dir_all(destination.parent().expect("snapshot file has parent"))?;
-        let source = if manifest || relative == "Cargo.lock" || relative == "rust-toolchain.toml" {
+        let source = if manifest
+            || configuration
+            || relative == "Cargo.lock"
+            || relative == "rust-toolchain.toml"
+        {
             DiceFileComputations::read_file(
                 ctx,
                 CellPath::new(self.0, CellRelativePathBuf::try_from(relative.to_owned())?).as_ref(),
@@ -169,34 +160,9 @@ impl RustGraphKey {
         } else {
             String::new()
         };
-        if manifest {
-            validate_manifest(relative, &source)?;
-        }
         std::fs::write(destination, source)?;
         Ok(())
     }
-}
-
-/// Reject manifest semantics not represented by the native graph.
-fn validate_manifest(relative: &str, source: &str) -> bsmr_error::Result<()> {
-    let value: toml::Value = toml::from_str(source)?;
-    for table in ["lib", "bin", "test", "bench", "example"] {
-        if let Some(targets) = value.get(table) {
-            let targets = targets
-                .as_array()
-                .map(Vec::as_slice)
-                .unwrap_or(std::slice::from_ref(targets));
-            if targets.iter().any(|t| t.get("harness").is_some()) {
-                return Err(unsupported(relative, "custom test harness").into());
-            }
-        }
-    }
-    for key in ["profile", "lints"] {
-        if value.get(key).is_some() || value.get("workspace").and_then(|w| w.get(key)).is_some() {
-            return Err(unsupported(relative, key).into());
-        }
-    }
-    Ok(())
 }
 
 /// Resolve offline without ambient configuration or changes to the captured lockfile.
@@ -213,7 +179,7 @@ async fn resolve(toolchain: &RustToolchain, root: &Path) -> bsmr_error::Result<V
     let output = tokio::time::timeout(
         Duration::from_secs(30),
         tokio::process::Command::new(&toolchain.cargo)
-            .args(["metadata", "--format-version=1", "--frozen"])
+            .args(["metadata", "--format-version=1", "--frozen", "--no-deps"])
             .current_dir(root)
             .env_clear()
             .env("CARGO_HOME", cargo_home.path())
@@ -249,4 +215,79 @@ pub async fn build_file(
             )
             .into()
         })
+}
+
+/// A selected build/test graph has its own invalidation boundary.
+#[derive(
+    Clone,
+    Debug,
+    Eq,
+    Hash,
+    PartialEq,
+    allocative::Allocative,
+    derive_more::Display,
+    Pagable
+)]
+#[display("RustPlanKey({:?})", _0)]
+#[pagable_typetag(dice::DiceKeyDyn)]
+struct RustPlanKey(Entry);
+
+#[async_trait]
+impl Key for RustPlanKey {
+    type Value = bsmr_error::Result<Arc<String>>;
+
+    /// Capture resolver inputs through DICE before asking Cargo for configured units.
+    async fn compute(
+        &self,
+        ctx: &mut DiceComputations,
+        _cancellations: &CancellationContext,
+    ) -> Self::Value {
+        let snapshot = tempfile::tempdir()?;
+        let root = snapshot.path().canonicalize()?;
+        RustGraphKey(self.0.package.cell_name())
+            .capture(ctx, &root)
+            .await?;
+        let toolchain =
+            RustToolchain::parse(&std::fs::read_to_string(root.join("rust-toolchain.toml"))?)?;
+        let metadata = resolve(&toolchain, &root).await?;
+        let package = catalog::package_name(&metadata, &root, &self.0)?;
+        let bytes = super::planner::resolve(&root, &self.0, &package, &toolchain).await?;
+        let cell = self.0.package.cell_name();
+        Ok(Arc::new(super::configured::render(
+            &bytes,
+            &root,
+            cell.as_str(),
+            &format!("{cell}//:__bsmr_rust"),
+        )?))
+    }
+
+    /// Reuse only successful byte-identical compilation definitions.
+    fn equality(x: &Self::Value, y: &Self::Value) -> bool {
+        matches!((x, y), (Ok(x), Ok(y)) if x == y)
+    }
+
+    /// Persist successful generated graphs through the engine's normal cache.
+    fn value_serialize() -> impl ValueSerialize<Value = Self::Value> {
+        OkPagableValueSerialize::<Self::Value>::new()
+    }
+}
+
+/// Resolve the private package requested by a public Cargo alias.
+pub async fn plan_file(
+    ctx: &mut DiceComputations<'_>,
+    entry: &Entry,
+) -> bsmr_error::Result<String> {
+    Ok(ctx
+        .compute(&RustPlanKey(entry.clone()))
+        .await??
+        .as_ref()
+        .clone())
+}
+
+/// Reject nonexistent or unsupported private packages before interpreter evaluation.
+pub async fn validate_entry(
+    ctx: &mut DiceComputations<'_>,
+    entry: &Entry,
+) -> bsmr_error::Result<()> {
+    plan_file(ctx, entry).await.map(|_| ())
 }

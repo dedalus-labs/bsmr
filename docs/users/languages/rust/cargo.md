@@ -11,8 +11,8 @@ title: Rust and Cargo
 
 # Rust and Cargo
 
-The native Rust frontend is unreleased. These examples do not apply to the
-earlier Cargo adapter in version 0.0.5.
+BSMR compiles Cargo packages through native Rust actions. Configured Cargo
+planning extends the native frontend released in version 0.0.6.
 
 Build a Cargo package without writing or synchronizing build rules:
 
@@ -35,14 +35,18 @@ channel = "1.97.1"
 profile = "minimal"
 ```
 
-BSMR reads tracked manifests and file names into an isolated snapshot. The
-selected Cargo resolves that snapshot with `metadata --frozen`, without registry
-access or user Cargo configuration. Manifest and target-file changes invalidate
-inference automatically. BSMR keeps the resulting graph private. It writes no
-`BUILD.bsmr` files or ownership index into the checkout.
+BSMR reads manifests, project Cargo configuration, and target file names into an
+isolated snapshot. It discovers public targets without resolving their dependencies,
+then asks the bundled Cargo 0.98.0 planner for the selected build or test. The
+compiler pin is independent of this resolver version.
+
+Planning may acquire locked dependencies into BSMR's own Cargo home. It never
+compiles a build script or loads a procedural macro. BSMR keeps generated build
+rules in memory and writes no `BUILD.bsmr` files into the checkout. Resolver input
+changes invalidate planning. Ordinary source edits invalidate compiler actions.
 
 ```text
-Cargo files -> frozen resolution -> private targets -> native rustc actions
+Cargo files -> locked resolution -> private targets -> native rustc actions
                                                  -> custom recipe actions
 ```
 
@@ -50,7 +54,9 @@ Each crate uses the existing native Rust compilation, linking, and test machiner
 A package containing one library or binary can be selected by its directory,
 even when its Cargo name differs. Libraries also expose `:lib`, binaries expose
 their Cargo target name, and dependency
-renames preserve the name used in source. Inline unit tests are associated with
+renames preserve the name used in source. Package metadata enters the compiler
+as literal environment values, so text such as `$(location ...)` cannot become
+a build dependency. Inline unit tests are associated with
 their build targets. Changing an unrelated crate does not recompile the selected
 binary. Changing a dependency invalidates its consumers.
 
@@ -62,12 +68,23 @@ so the Rust package retains its inferred definition.
 
 ## Supported boundary
 
-The preview supports local path libraries, binaries, and their inline unit
-tests. Features, build scripts, procedural macros, external sources, native
-`links`, conditional dependencies, build/dev dependencies, integration tests,
-and custom Cargo profiles or lints fail before compilation. Cross compilation
-and Cargo command-line parity are not implemented. Shared files outside a crate
-require explicitly declared action inputs.
+The frontend supports local path libraries, binaries, and inline unit tests.
+Cargo selects default features, conditional dependencies, dev dependencies, profile
+settings, and workspace lints before native compilation. Each build or test has a
+separate configured graph, so building a library does not activate its test-only
+dependencies.
+
+Build scripts, procedural macros, external source compilation, native `links`,
+integration tests, custom harnesses, cross compilation, configured linkers, and
+cross-crate LTO remain unsupported. These requirements fail before compilation.
+Project compiler flags are limited to cfg values, lints, and scalar optimization
+settings. Response files, compiler extensions, file-based overrides, and Cargo
+CLI option parity are not implemented. Shared files outside a crate require
+explicitly declared action inputs.
+
+Repeated builds of the same entrypoint reuse unchanged actions, including across
+checkouts. Distinct entrypoints currently own separate configured graphs and may
+compile an otherwise identical shared library again.
 
 Stable toolchain pins reject nightly-only language features. Stable builds reuse
 compiled libraries for the metadata needed by dependent crates. Nightly builds
@@ -80,18 +97,20 @@ contents. Symlink targets outside those directories must be declared separately.
 This check is not a filesystem sandbox.
 
 Rust compiler, Clippy, and standard-library archives have pinned SHA-256 digests.
-Their content contributes to compilation action identity. Cargo metadata uses
-the selected local rustup installation. C/C++ linking and Python bootstrap tools
+Their content contributes to compilation action identity. Target discovery uses
+the selected local rustup installation, while configured planning uses the
+bundled resolver. C/C++ linking and Python bootstrap tools
 still come from the execution host. This is not a fully hermetic or remotely
 qualified toolchain. Native actions honor the existing cache-upload policy.
 
 Ambient Rust flags and user Cargo configuration do not configure native actions.
-Project `.cargo/config` files are rejected until their semantics are modeled.
+Project configuration supplies the planner's flags and profiles. Project `[env]`
+values and manifest-directory variables are not supported yet.
 Unsupported projects can use Cargo directly. BSMR never silently switches to a
 whole-workspace Cargo build after inference or compilation fails.
 
-[RFC 0002](https://github.com/dedalus-labs/bsmr/discussions/14) specifies the
-remaining configured-unit graph, dependency acquisition, and build-script work.
+[RFC 0002](https://github.com/dedalus-labs/bsmr/discussions/14) describes the
+broader Rust design.
 
 ## Verification
 

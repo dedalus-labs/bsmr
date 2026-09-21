@@ -304,6 +304,13 @@ impl<'c, 'd: 'c> DiceCalculationDelegate<'c, 'd> {
                 self.prepare_eval(StarlarkPath::BuildFile(&build_file_path))
                     .await?
             }
+            PackageBuildSource::CargoPlan => {
+                let entry = bsmr_common::rust_graph::entry::Entry::parse(package)?
+                    .expect("CargoPlan listing has a validated descriptor");
+                let source = bsmr_common::rust_graph::dice::plan_file(self.ctx, &entry).await?;
+                self.prepare_generated_build_file(&build_file_path, source)
+                    .await?
+            }
             PackageBuildSource::Native => {
                 let mut source = String::new();
                 if listing
@@ -343,19 +350,27 @@ impl<'c, 'd: 'c> DiceCalculationDelegate<'c, 'd> {
                         source.push_str(&python);
                     }
                 }
-                let ParseData(ast, imports) = self.prepare_eval_with_content(
-                    StarlarkPath::BuildFile(&build_file_path),
-                    source,
-                )??;
-                let deps = CycleGuard::<LoadCycleDescriptor>::new(self.ctx)?
-                    .guard_this(Self::eval_deps(self.ctx, &imports))
-                    .await
-                    .into_result(self.ctx)
-                    .await???;
-                (ast, deps)
+                self.prepare_generated_build_file(&build_file_path, source)
+                    .await?
             }
         };
         Ok((build_file_path, ast, deps))
+    }
+
+    /// Parse inferred rules through the same imports and cycle checks as native manifests.
+    async fn prepare_generated_build_file(
+        &mut self,
+        path: &BuildFilePath,
+        source: String,
+    ) -> bsmr_error::Result<(AstModule, ModuleDeps)> {
+        let ParseData(ast, imports) =
+            self.prepare_eval_with_content(StarlarkPath::BuildFile(path), source)??;
+        let deps = CycleGuard::<LoadCycleDescriptor>::new(self.ctx)?
+            .guard_this(Self::eval_deps(self.ctx, &imports))
+            .await
+            .into_result(self.ctx)
+            .await???;
+        Ok((ast, deps))
     }
 
     /// Validates root Python inputs and renders one project or workspace root.

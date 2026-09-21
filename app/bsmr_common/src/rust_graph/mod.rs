@@ -11,6 +11,7 @@ pub mod dice;
 pub mod entry;
 mod error;
 mod metadata;
+mod planner;
 mod snapshot;
 mod toolchain;
 mod units;
