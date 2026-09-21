@@ -38,6 +38,8 @@ def _rust_common_attributes(is_binary: bool):
             "default_platform": attrs.option(attrs.string(), default = None),
             "flagged_deps": attrs.list(attrs.tuple(rust_target_dep(is_binary), attrs.list(attrs.string())), default = []),
             "incremental_enabled": attrs.bool(default = False),
+            "literal_rustc_flags": attrs.list(attrs.string(), default = [], doc = "Compiler arguments without build-macro expansion."),
+            "literal_env": attrs.dict(attrs.string(), attrs.string(), default = {}, doc = "Compiler environment values without build-macro expansion. Keys must not also appear in env."),
             "resources": attrs.named_set(attrs.one_of(attrs.dep(), attrs.source()), sorted = True, default = []),
             "rustdoc_flags": attrs.list(attrs.arg(), default = []),
             "separate_debug_info": attrs.bool(default = False),
