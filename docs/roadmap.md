@@ -36,24 +36,77 @@ Each frontend should:
   and
 - keep the generated graph private instead of requiring users to synchronize it.
 
-## Rust qualification
+## Rust builds
 
-The native Rust preview covers local path libraries, binaries, and inline unit
-tests. Production Cargo compatibility remains open. The next milestone is one
-representative application and its tests, built with its existing configuration.
+The native Rust preview covers hook-free local libraries, binaries and inline
+unit tests. Production Cargo compatibility is the next gate. Qualify real
+applications with their existing manifests, lockfiles and configuration.
 
-| Milestone | Required evidence |
-|---|---|
-| Cargo compatibility | Preserve features, profiles, platform conditions, test dependencies, build scripts and procedural macros. Compare results with Cargo on the same project. |
-| Dependency acquisition | Reproduce locked registry and Git dependencies on a fresh worker. Reject checksum and lockfile drift. |
-| Local reuse | Measure cold, warm, leaf-edit and shared-dependency builds. Verify changed inputs miss and unchanged outputs match. |
-| Shared-cache qualification | Restore on a second isolated worker with local execution. Test compiler, target, flags, environment and dependency changes. Bound storage and preserve active results during eviction. |
-| Build-system comparison | Run equivalent build and test workloads against Bazel with matched toolchains, resources, cache states and correctness checks. Report raw samples and limitations. |
+### Build existing Cargo projects
 
-Matching or improving on Bazel is a goal, not a measured result. Faster target
-discovery does not establish faster compilation or production readiness.
-Remote execution is outside the current milestone. A shared cache can be
-qualified while all compiler actions continue to execute locally.
+Cargo remains the authority for dependency and feature resolution. BSMR must
+preserve the resulting configured compiler actions before optimizing them.
+
+- Model target-specific compiler flags, linkers, profiles, package overrides
+  and host build overrides. Map storage-only Cargo settings to BSMR's storage
+  policy without silently dropping compiler settings.
+- Acquire locked registry, Git and patched sources with integrity checks.
+- Resolve features per configured unit, including distinct host and target
+  dependencies. Compile procedural macros for the host.
+- Model build-script outputs, environment, rerun inputs and native-link metadata.
+  Native libraries need declared C/C++ tools and inputs.
+- Preserve conditional and development dependencies, integration tests,
+  benchmarks and examples.
+- Isolate build identity in a small final stamping action. A revision embedded
+  in an artifact must remain an input to the action producing those bytes.
+
+Qualify real applications with their existing dependencies and configuration.
+Reject unsupported behavior explicitly until its semantics are implemented and
+compared with Cargo.
+
+### Make the edit loop fast
+
+Reuse the engine's existing metadata-check actions, dependency graph, content
+cache and local incremental machinery. The CLI already exposes artifact paths,
+`--out` and JSON build reports. Extend the native frontend around those paths.
+
+Measure metadata-only checks, dependency edits, worktree changes, test selection
+and output restoration. Keep local mutable incremental state separate from
+portable cached compiler results. Preserve useful short and structured errors,
+test filters and explanations of executed work.
+
+Unchanged public signatures alone do not prove that a dependent can be skipped.
+Inline and generic bodies can affect Rust metadata. Unchanged metadata may
+permit downstream checks to be reused, while changed object code still needs
+relinking. Each claimed cutoff needs a compiled-output regression test.
+
+A shared cache should reuse identical actions across worktrees and qualified
+hosts, with bounded storage and safe eviction. Compare against Cargo with both
+fresh build directories and a deliberately shared build directory. Cargo does
+not inherently recompile every external dependency for every worktree.
+
+Linux builds initiated from macOS need an explicit worker boundary and a
+content-addressed source transfer. Keep that transport separate from scheduling
+individual remote actions. Remote execution is outside the current milestone.
+
+### Reuse expensive fixtures
+
+Recipes should compose inferred binaries with non-Rust inputs, including kernel
+sources, boot images and VM snapshots. Declare device and execution requirements
+for actions that need hardware access. Store large outputs by content reference
+and verify isolation when materializing writable copies.
+
+### Verify build results and performance
+
+Measure existing project build commands and BSMR with the same dependencies,
+profiles, toolchains and resources. Include the project's configured caches.
+Separate cold builds, warm builds, source edits, fresh checkouts and cache
+restoration. Record executed work and verify artifacts or behavior before
+comparing elapsed time.
+
+Faster target discovery does not establish faster production compilation.
+Unsupported targets have no successful-build timing. Publish README speed
+claims only after representative, reproducible comparisons pass.
 
 ## Dependency snapshots
 
