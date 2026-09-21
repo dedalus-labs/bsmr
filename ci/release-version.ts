@@ -39,6 +39,11 @@ const carriers: readonly VersionCarrier[] = [
 	},
 ];
 
+/** Files owned by product-version synchronization and its Git transaction. */
+export function versionFiles(): readonly string[] {
+	return carriers.map(({ path }) => path);
+}
+
 /**
  * Replace one version carrier and reject ambiguous metadata.
  *
