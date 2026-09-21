@@ -55,6 +55,7 @@ pub mod pnpm_workspace;
 pub mod python_lock;
 pub mod python_project;
 pub mod rlimits;
+pub mod rust_graph;
 pub mod scope;
 pub mod self_test_timeout;
 pub mod sqlite;
