@@ -8,7 +8,7 @@
 # Cargo planning
 
 `bsmr-cargo` reads one JSON request from stdin and writes Cargo's configured
-unit graph to stdout. Cargo resolves features, profiles, host/target units, and
+version-1 configured graph to stdout. Cargo resolves features, profiles, host/target units, and
 test dependencies. The helper does not invoke Cargo's compilation runner.
 
 ```text
@@ -34,6 +34,12 @@ are limited to cfg values, lints, and scalar optimization settings. Response
 files, compiler extensions, and file-based overrides fail before compiler probes.
 Inactive target tables may carry linker arguments, but selected units using them
 require a declared native execution contract.
+
+Each unit includes its source identity, package environment, declared and active
+features, compiler and documentation flags, lints, effective linker, and resolved
+dependency aliases. The response reports the resolver and actual compiler
+versions. External source verification is required before external packages can
+enter this graph.
 
 The resolver pins Cargo 0.98.0 and admits Rust 1.97.1 and
 nightly-2026-04-11. Its standalone workspace isolates Cargo's native dependencies
