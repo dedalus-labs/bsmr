@@ -438,6 +438,7 @@ def rust_library_impl(ctx: AnalysisContext) -> list[Provider]:
     incr_enabled = ctx.attrs.incremental_enabled
     providers = []
     providers += _default_providers(
+        default_output = param_output[static_library_params].output if ctx.attrs.default_output == "library" else diag_artifacts[incr_enabled].output,
         lang_style_param = lang_style_param,
         param_output = param_output,
         param_subtargets = param_subtargets,
@@ -723,6 +724,7 @@ def _handle_rust_artifact(
         )
 
 def _default_providers(
+    default_output: Artifact,
     lang_style_param: dict[(LinkageLang, LibOutputStyle), BuildParams],
     param_output: dict[BuildParams, RustcOutput],
     param_subtargets: dict[BuildParams, dict[str, RustcOutput]],
@@ -797,7 +799,7 @@ def _default_providers(
 
     providers.append(
         DefaultInfo(
-            default_output = check_artifacts["check"],
+            default_output = default_output,
             sub_targets = sub_targets,
         )
     )

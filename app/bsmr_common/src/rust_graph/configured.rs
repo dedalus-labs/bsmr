@@ -66,6 +66,11 @@ impl Renderer<'_> {
     /// Keep each unit's compiler flags, environment and dependency aliases together.
     fn unit(&self, unit: &Unit, index: usize) -> Result<String, RustGraphError> {
         let rule = unit.rule()?;
+        let output = if rule == "rust_library" {
+            ", default_output = \"library\""
+        } else {
+            ""
+        };
         let (sources, source) = self.sources(unit)?;
         let dependencies = self.dependencies(unit)?;
         let primary = self
@@ -88,7 +93,7 @@ impl Renderer<'_> {
             format!("cfg(feature, values({declared}))"),
         ]);
         Ok(format!(
-            "{rule}(name = \"unit_{index}\", crate = {}, crate_root = {}, edition = {}, mapped_srcs = {{{}: \"crate\"}}, named_deps = {}, features = {}, literal_rustc_flags = {}, literal_env = {}, verify_inputs = True, _rust_toolchain = {}, visibility = [\"PUBLIC\"])\n",
+            "{rule}(name = \"unit_{index}\", crate = {}, crate_root = {}, edition = {}, mapped_srcs = {{{}: \"crate\"}}, named_deps = {}, features = {}, literal_rustc_flags = {}, literal_env = {}, verify_inputs = True, _rust_toolchain = {}, visibility = [\"PUBLIC\"]{output})\n",
             json(&unit.target.name.replace('-', "_"))?,
             json(&source)?,
             json(&unit.target.edition)?,

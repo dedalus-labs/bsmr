@@ -218,6 +218,7 @@ rust_library = prelude_rule(
         | _rust_common_attributes(is_binary = False)
         | {
             "crate_dynamic": attrs.option(attrs.dep(), default = None),
+            "default_output": attrs.enum(["check", "library"], default = "check", doc = "Choose metadata checking or the linkable library as the default build output."),
             "doc_env": rust_common.env_arg()["env"],
             "doctests": attrs.option(attrs.bool(), default = None),
             "include_in_android_merge_map_output": attrs.bool(default = True),
