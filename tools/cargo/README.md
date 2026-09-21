@@ -22,8 +22,9 @@ compiler probes. The caller must exclude programs that do not honor this lease.
 
 The caller supplies absolute `manifest`, `cargo_home`, `rustc`, and
 `target_directory` paths. It owns the files, configuration, and environment for
-the duration of the request. Planning requires an existing lockfile and frozen,
-offline sources. `source_policy` must be `offline`.
+the duration of the request. Planning requires an existing lockfile. `source_policy` selects frozen offline
+resolution or `acquire-locked`, which fetches dependencies needed by the selected
+graph without changing the lockfile or fetching every workspace dependency.
 
 `package`, `mode`, and `target_filter` select the roots. Modes are `build`,
 `test`, and `check`. Filters are `package`, `library`, `binary` with a `name`,
@@ -38,8 +39,11 @@ require a declared native execution contract.
 Each unit includes its source identity, package environment, declared and active
 features, compiler and documentation flags, lints, effective linker, and resolved
 dependency aliases. The response reports the resolver and actual compiler
-versions. External source verification is required before external packages can
-enter this graph.
+versions. Registry archives must match their locked checksum. Cached registry manifests
+must match the verified archive. Git package and workspace manifests must match
+regular-file blobs in the locked commit. Directory source replacements fail.
+The native consumer must still materialize source bytes from this verified
+identity before compiling external packages.
 
 The resolver pins Cargo 0.98.0 and admits Rust 1.97.1 and
 nightly-2026-04-11. Its standalone workspace isolates Cargo's native dependencies
@@ -48,4 +52,5 @@ from the build engine. See [Cargo's unit graph](https://doc.rust-lang.org/cargo/
 ```console
 cargo +1.98.0 build --manifest-path tools/cargo/Cargo.toml --locked -j 2
 python3 tools/cargo/check.py tools/cargo/target/debug/bsmr-cargo
+python3 tools/cargo/verify_sources.py tools/cargo/target/debug/bsmr-cargo <rust-1.97.1-bin-directory>
 ```

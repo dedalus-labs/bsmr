@@ -80,11 +80,7 @@ pub(crate) fn plan(request: Request) -> Result<Graph> {
         format!("build.target-dir={storage}"),
         format!("build.build-dir={storage}"),
     ];
-    ensure!(
-        matches!(request.source_policy, SourcePolicy::Offline),
-        "source acquisition is not enabled"
-    );
-    let offline = true;
+    let offline = matches!(request.source_policy, SourcePolicy::Offline);
     gctx.configure(
         0,
         true,
