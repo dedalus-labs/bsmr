@@ -33,6 +33,7 @@ class RustcActionTest(unittest.TestCase):
         source: str,
         *,
         allow_data: bool = False,
+        allowed_tree: Path | None = None,
         failure_filter: bool = True,
         emit_dep_info: bool = True,
     ) -> subprocess.CompletedProcess[str]:
@@ -46,7 +47,7 @@ class RustcActionTest(unittest.TestCase):
             "--dep-info",
             str(self.dep_info),
             "--allowed-input",
-            str(self.source),
+            str(allowed_tree or self.source),
         ]
         if allow_data:
             command.extend(["--allowed-input", str(self.data)])
@@ -124,6 +125,36 @@ class RustcActionTest(unittest.TestCase):
                     json.loads(self.status.read_text())["status"], int(type_error)
                 )
                 self.assertTrue(self.output.is_file())
+
+    def test_directory_inputs_follow_resolved_containment(self) -> None:
+        """Accept files inside declared trees and reject every symlink escape."""
+        tree = self.root / "tree"
+        tree.mkdir()
+        self.source = tree / "lib.rs"
+        self.data = tree / "data.txt"
+        self.data.write_text("inside")
+        result = self.compile(self.include_source(type_error=False), allowed_tree=tree)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        tree_link = self.root / "tree-link"
+        tree_link.symlink_to(tree, target_is_directory=True)
+        result = self.compile(self.include_source(type_error=False), allowed_tree=tree_link)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        internal = tree / "internal.txt"
+        internal.symlink_to(self.data)
+        self.data = internal
+        result = self.compile(self.include_source(type_error=False), allowed_tree=tree)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        outside = self.root / "tree-neighbor"
+        outside.mkdir()
+        (outside / "data.txt").write_text("outside")
+        (tree / "escape").symlink_to(outside, target_is_directory=True)
+        (tree / "escape.txt").symlink_to(outside / "data.txt")
+        for data in [outside / "data.txt", tree / "escape/data.txt", tree / "escape.txt"]:
+            with self.subTest(data=data):
+                self.data = data
+                result = self.compile(self.include_source(type_error=False), allowed_tree=tree)
+                self.assertNotEqual(result.returncode, 0)
+                self.assertIn("undeclared Rust source input:", result.stderr)
 
     def test_diagnostic_success_requires_a_dependency_report(self) -> None:
         result = self.compile(

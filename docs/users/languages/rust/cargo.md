@@ -75,7 +75,9 @@ retain separate metadata actions so dependent compilation can start sooner.
 
 Native actions validate rustc's reported source and environment reads before
 accepting a successful compiler result. Undeclared reported inputs fail instead of
-publishing an incomplete cache entry. This check is not a filesystem sandbox.
+publishing an incomplete cache entry. Declared directories cover their resolved
+contents. Symlink targets outside those directories must be declared separately.
+This check is not a filesystem sandbox.
 
 Rust compiler, Clippy, and standard-library archives have pinned SHA-256 digests.
 Their content contributes to compilation action identity. Cargo metadata uses

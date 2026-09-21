@@ -338,6 +338,7 @@ def verify_inputs(dep_info: Path, sources: list[Path], declared_env: set[str]) -
     Rustc escapes spaces in filenames and emits one empty rule per source.
     Validate the full shape, including repeated dependency lists, rather than
     silently dropping paths that cannot be parsed. This is not a sandbox.
+    Resolve paths before containment checks so symlinks cannot extend a declared tree.
     """
     blocks = dep_info.read_text().rstrip("\n").split("\n\n")
     if blocks[-1].startswith("# env-dep:"):
@@ -367,9 +368,12 @@ def verify_inputs(dep_info: Path, sources: list[Path], declared_env: set[str]) -
     if any("\n" in block or not block.endswith(suffix) for block in blocks):
         raise ValueError("inconsistent rustc source dependencies")
     allowed = {path.resolve(strict=True) for path in sources}
+    directories = {path for path in allowed if path.is_dir()}
     for name in names:
         path = Path(name.replace("\\ ", " ")).resolve(strict=True)
-        if path not in allowed:
+        if path not in allowed and not any(
+            parent in directories for parent in path.parents
+        ):
             raise ValueError(f"undeclared Rust source input: {path}")
 
 
