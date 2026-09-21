@@ -254,6 +254,9 @@ jobs:
       - name: Verify stable Rust feature gates
         run: node test/rust/stable.ts target/debug/bsmr
         shell: bash
+      - name: Verify literal Rust inputs
+        run: node test/rust/literals.ts target/debug/bsmr
+        shell: bash
       - name: Verify TypeScript cache
         uses: ./.github/actions/typescript/cache
         with:

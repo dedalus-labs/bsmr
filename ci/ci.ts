@@ -378,6 +378,10 @@ export const ci = workflow({
 					name: "Verify stable Rust feature gates",
 					run: command({ file: "node", args: ["test/rust/stable.ts", "target/debug/bsmr"] }),
 				},
+				{
+					name: "Verify literal Rust inputs",
+					run: command({ file: "node", args: ["test/rust/literals.ts", "target/debug/bsmr"] }),
+				},
 				uses(typescriptCache, { with: { binary: "target/debug/bsmr" } }),
 				{
 					name: "Verify native Go build",

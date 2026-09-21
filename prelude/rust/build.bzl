@@ -174,7 +174,7 @@ def generate_rustdoc(
     use_cbp = getattr(ctx.attrs, "use_content_based_paths", False)
     output = ctx.actions.declare_output(subdir, has_content_based_path = use_cbp)
 
-    plain_env, path_env = process_env(compile_ctx, toolchain_info.rustdoc_env | ctx.attrs.env)
+    plain_env, path_env = process_env(compile_ctx, toolchain_info.rustdoc_env | _rule_env(ctx))
     plain_env["RUSTDOC_BSMR_TARGET"] = cmd_args(str(ctx.label.raw_target()))
 
     if toolchain_info.rust_target_path != None:
@@ -241,7 +241,7 @@ def generate_rustdoc_coverage(
     use_cbp = getattr(ctx.attrs, "use_content_based_paths", False)
     output = ctx.actions.declare_output(file, has_content_based_path = use_cbp)
 
-    plain_env, path_env = process_env(compile_ctx, ctx.attrs.env)
+    plain_env, path_env = process_env(compile_ctx, _rule_env(ctx))
     plain_env["RUSTDOC_BSMR_TARGET"] = cmd_args(str(ctx.label.raw_target()))
 
     if toolchain_info.rust_target_path != None:
@@ -393,7 +393,7 @@ def generate_rustdoc_test(
     else:
         runtool = ["--test-runtool=/usr/bin/env"]
 
-    plain_env, path_env = process_env(compile_ctx, ctx.attrs.env)
+    plain_env, path_env = process_env(compile_ctx, _rule_env(ctx))
     doc_plain_env, doc_path_env = process_env(compile_ctx, ctx.attrs.doc_env)
     for k, v in doc_plain_env.items():
         path_env.pop(k, None)
@@ -1253,8 +1253,9 @@ def _compute_common_args(
         SplitDebugMode("split"): ["-Csplit-debuginfo=unpacked"],
     }[compile_ctx.cxx_toolchain_info.split_debug_mode or SplitDebugMode("none")]
 
+    target_flags = ctx.attrs.rustc_flags + getattr(ctx.attrs, "literal_rustc_flags", [])
     if not getattr(ctx.attrs, "uses_restricted_rustc_flags", False):
-        _check_restricted_rustc_flags(ctx.attrs.rustc_flags, toolchain_info)
+        _check_restricted_rustc_flags(target_flags, toolchain_info)
 
     args = cmd_args(
         cmd_args(compile_ctx.symlinked_srcs, compile_ctx.path_sep, root, delimiter = ""),
@@ -1282,7 +1283,7 @@ def _compute_common_args(
         # only on the metadata-fast graph.
         _rustc_flags(toolchain_info.rustc_check_flags, toolchain_info) if dep_metadata_kind == MetadataKind("fast") else [],
         _rustc_flags(toolchain_info.rustc_coverage_flags, toolchain_info) if ctx.attrs.coverage else [],
-        _rustc_flags(ctx.attrs.rustc_flags, toolchain_info),
+        _rustc_flags(target_flags, toolchain_info),
         _rustc_flags(toolchain_info.extra_rustc_flags, toolchain_info),
         cmd_args(ctx.attrs.features, format = '--cfg=feature="{}"'),
         dep_args,
@@ -1549,7 +1550,7 @@ def _rustc_invoke(
 ) -> Invoke:
     toolchain_info = compile_ctx.toolchain_info
 
-    plain_env, path_env = process_env(compile_ctx, toolchain_info.rustc_env | ctx.attrs.env)
+    plain_env, path_env = process_env(compile_ctx, toolchain_info.rustc_env | _rule_env(ctx))
 
     more_plain_env, more_path_env = process_env(compile_ctx, env)
     plain_env.update(more_plain_env)
@@ -1689,6 +1690,14 @@ _DIRECTORY_ENV = [
     "CARGO_MANIFEST_DIR",
     "OUT_DIR",
 ]
+
+def _rule_env(ctx: AnalysisContext) -> dict[str, str | ResolvedStringWithMacros | Artifact]:
+    """Preserve imported metadata as literal values while keeping artifact references explicit."""
+    literal = getattr(ctx.attrs, "literal_env", {})
+    for key in literal:
+        if key in ctx.attrs.env:
+            fail("compiler environment key occurs in both env and literal_env: " + key)
+    return ctx.attrs.env | literal
 
 # Separate env settings into "plain" and "with path". Path env vars are often
 # used in Rust `include!()` and similar directives, which always interpret the
