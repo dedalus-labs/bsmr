@@ -7,7 +7,7 @@
 
 import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
-import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { chmodSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import test from "node:test";
@@ -70,12 +70,12 @@ test("release synchronization accepts GitHub's repository root verbatim", () => 
 	assert.equal(releaseSyncAction.inputs.workspace?.kind, "string");
 });
 
-test("bundled release action starts through its runtime entrypoint", () => {
+test("bundled release action commits every derived version file", () => {
 	const workspace = mkdtempSync(join(tmpdir(), "bsmr-release-action-"));
 	try {
 		mkdirSync(join(workspace, "app", "bsmr"), { recursive: true });
 		mkdirSync(join(workspace, "tools", "release"), { recursive: true });
-		writeFileSync(join(workspace, "tools/release/dist.toml"), 'version = "0.0.1"\n');
+		writeFileSync(join(workspace, "tools/release/dist.toml"), 'version = "0.0.0"\n');
 		writeFileSync(join(workspace, "VERSION"), "0.0.1\n");
 		writeFileSync(join(workspace, ".release-please-manifest.json"), '{".":"0.0.1"}\n');
 		writeFileSync(join(workspace, "Cargo.lock"), '[[package]]\nname = "bsmr"\nversion = "0.0.1"\n');
@@ -92,15 +92,24 @@ test("bundled release action starts through its runtime entrypoint", () => {
 			cwd: workspace,
 		});
 
+		execFileSync("git", ["init", "--bare", "--quiet", join(workspace, "remote.git")]);
+		execFileSync("git", ["remote", "add", "origin", join(workspace, "remote.git")], { cwd: workspace });
+		mkdirSync(join(workspace, "bin"));
+		writeFileSync(join(workspace, "bin/gh"), '#!/bin/sh\n[ "$*" = "auth setup-git" ]\n');
+		chmodSync(join(workspace, "bin/gh"), 0o700);
 		const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 		execFileSync(process.execPath, [join(root, ".github/actions/ci/release-sync/dist/index.js")], {
 			cwd: workspace,
 			env: {
-				PATH: process.env["PATH"],
+				PATH: `${join(workspace, "bin")}:${process.env["PATH"]}`,
 				INPUT_BRANCH: "release-please--branches--main",
 				INPUT_WORKSPACE: workspace,
 			},
 		});
+		const committed = execFileSync("git", ["show", "HEAD:tools/release/dist.toml"], { cwd: workspace, encoding: "utf8" });
+		assert.match(committed, /version = "0\.0\.1"/);
+		const published = execFileSync("git", ["--git-dir", join(workspace, "remote.git"), "show", "release-please--branches--main:tools/release/dist.toml"], { encoding: "utf8" });
+		assert.equal(published, committed);
 	} finally {
 		rmSync(workspace, { force: true, recursive: true });
 	}
