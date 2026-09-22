@@ -49,7 +49,8 @@ checks the restored dependency outputs before reusing them.
 
 Run `node test/rust/dependencies.ts /path/to/bsmr` with the matching
 `bsmr-cargo` beside the binary and Rust 1.97.1 installed. It builds and runs an
-executable using a locked registry crate and a nested Git package, then verifies
+executable using a locked registry crate, a nested Git package, and an excluded
+path dependency, then verifies
 that a warm build runs no compiler actions and leaves the lockfile unchanged.
 Pass `1.98.0` as the third argument to qualify that installed toolchain instead.
 

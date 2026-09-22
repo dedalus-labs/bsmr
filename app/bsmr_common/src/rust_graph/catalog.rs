@@ -80,9 +80,7 @@ pub fn render(
 impl Package {
     /// Keep unsupported helper targets out of the public catalog, not out of dependency plans.
     fn render(&self, path: &str, cell: &str) -> Result<String, RustGraphError> {
-        let mut source = String::from(
-            "filegroup(name = \"__bsmr_sources\", srcs = glob([\"**\"], exclude = [\"BUILD.bsmr\", \"target/**\", \"bsmr-out/**\", \".git/**\"]), copy = True, has_content_based_path = True, visibility = [\"PUBLIC\"])\n",
-        );
+        let mut source = sources().to_owned();
         let mut names = Vec::new();
         for target in &self.targets {
             let Some(entrypoint) = target.entrypoint(&self.name)? else {
@@ -135,6 +133,11 @@ impl Package {
         }
         Ok(source)
     }
+}
+
+/// Cargo dependencies own source inputs even when they expose no workspace entrypoints.
+pub(super) fn sources() -> &'static str {
+    "filegroup(name = \"__bsmr_sources\", srcs = glob([\"**\"], exclude = [\"BUILD.bsmr\", \"target/**\", \"bsmr-out/**\", \".git/**\"]), copy = True, has_content_based_path = True, visibility = [\"PUBLIC\"])\n"
 }
 
 /// Resolve a descriptor against Cargo's target catalog before planning its dependencies.

@@ -32,24 +32,29 @@ try {
 	mkdirSync(join(root, "app/src"), { recursive: true });
 	mkdirSync(join(root, ".cargo"));
 	writeFileSync(join(root, ".cargo/config.toml"), '[target.x86_64-pc-windows-msvc]\nrustflags=["-C", "target-feature=+crt-static"]\n');
-	writeFileSync(join(root, "Cargo.toml"), '[workspace]\nmembers=["app"]\nresolver="2"\n');
+	writeFileSync(join(root, "Cargo.toml"), '[workspace]\nmembers=["app"]\nexclude=["dep"]\nresolver="2"\n');
+	mkdirSync(join(root, "dep/src"), { recursive: true });
+	writeFileSync(join(root, "dep/Cargo.toml"), '[package]\nname="dep"\nversion="0.1.0"\nedition="2024"\n');
+	writeFileSync(join(root, "dep/src/lib.rs"), 'pub fn value() -> u32 { 0 }\n');
 	writeFileSync(join(root, "rust-toolchain.toml"), `[toolchain]\nchannel=${JSON.stringify(toolchain)}\n`);
-	writeFileSync(join(root, "app/Cargo.toml"), `[package]\nname="app"\nversion="0.1.0"\nedition="2024"\n[dependencies]\nitoa="=1.0.15"\npinned={git="${pathToFileURL(origin)}",rev="${revision}"}\n`);
-	writeFileSync(join(root, "app/src/main.rs"), 'fn main() { println!("{}", itoa::Buffer::new().format(pinned::value())); }\n');
+	writeFileSync(join(root, "app/Cargo.toml"), `[package]\nname="app"\nversion="0.1.0"\nedition="2024"\n[dependencies]\nitoa="=1.0.15"\npinned={git="${pathToFileURL(origin)}",rev="${revision}"}\ndep={path="../dep"}\n`);
+	writeFileSync(join(root, "app/src/main.rs"), 'fn main() { println!("{}", itoa::Buffer::new().format(pinned::value() + dep::value())); }\n');
 	await run("rustup", ["run", toolchain, "cargo", "generate-lockfile"], options);
 	const lock = readFileSync(join(root, "Cargo.lock"));
 	await run(binary, ["init"], options);
-	for (const phase of ["cold", "warm"]) {
+	for (const [phase, expected] of [["cold", "42"], ["warm", "42"], ["edit", "43"]]) {
+		if (phase === "edit") writeFileSync(join(root, "dep/src/lib.rs"), 'pub fn value() -> u32 { 1 }\n');
 		const { stdout, stderr } = await run(binary, ["build", "app", "--show-full-json-output", "--console", "simple"], options);
 		const executable = Object.values(JSON.parse(stdout) as Record<string, string>)[0]!;
-		assert.equal((await run(executable, [], options)).stdout.trim(), "42");
+		assert.equal((await run(executable, [], options)).stdout.trim(), expected);
 		const trace = /Build ID: ([a-f0-9-]+)/.exec(stderr)?.[1];
 		assert.ok(trace, stderr);
 		const actions = await run(binary, ["log", "what-ran", "--trace-id", trace, "--format", "json", "--filter-category", "rustc.*", "--no-remote"], options);
 		if (phase === "warm") assert.equal(actions.stdout.trim(), "");
 	}
 	assert.deepEqual(readFileSync(join(root, "Cargo.lock")), lock);
-	console.log("ok: locked registry and nested Git compilation, warm native reuse");
+	await assert.rejects(run(binary, ["build", "dep"], options), /Unknown target `dep`/);
+	console.log("ok: locked registry/Git and excluded path sources, warm reuse, edit invalidation");
 } finally {
 	await run(binary, ["kill"], options);
 	rmSync(root, { recursive: true });
