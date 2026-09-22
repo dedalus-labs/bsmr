@@ -37,7 +37,14 @@ and `all_features`. Profiles default to `dev` for builds and `test` for tests.
 Features use Cargo's comma- or space-separated syntax. Default features are enabled
 and all-features selection is disabled unless requested. Cargo validates names
 and resolves profile inheritance and dependency features. Changes invalidate the
-selected plan. Requirements such as LTO still need supported native execution.
+selected plan.
+
+Cargo profiles can select `lto = "thin"`, `"fat"`, or `true` for optimization
+across crates. Bessemer retains LLVM bitcode in dependency libraries and applies
+the selected mode when linking binaries or inline unit tests. Library artifacts
+also retain object code so they remain usable by consumers that do not use LTO.
+`false` permits optimization within one crate. `"off"` disables it entirely.
+See [Cargo's LTO settings](https://doc.rust-lang.org/cargo/reference/profiles.html#lto).
 
 Commit `Cargo.toml`, `Cargo.lock`, and an exact `rust-toolchain.toml` at the
 project root. The current catalog supports `1.97.1`, `1.98.0`, and `nightly-2026-04-11` on
@@ -96,8 +103,8 @@ separate configured graph, so building a library does not activate its test-only
 dependencies.
 
 Build scripts, procedural macros, native `links`,
-integration tests, custom harnesses, cross compilation, configured linkers, and
-cross-crate LTO remain unsupported. These requirements fail before compilation.
+integration tests, custom harnesses, cross compilation, and configured linkers
+remain unsupported. These requirements fail before compilation.
 Project compiler flags are limited to cfg values, lints, and scalar optimization
 settings. Response files, compiler extensions, file-based overrides, and Cargo
 CLI option parity are not implemented. Shared files outside a crate require
@@ -140,3 +147,6 @@ failure, and a custom recipe consuming an inferred executable. It checks
 manifest invalidation, source invalidation, unrelated edits, cache restoration
 in a second checkout, environment isolation, and build-script rejection. It also
 checks that inference leaves the checkout free of generated build files.
+
+`test/rust/lto.ts` compares release LTO with Cargo across a three-crate chain.
+It checks compiler flags, dependency edits, cached output restoration, and unit tests.

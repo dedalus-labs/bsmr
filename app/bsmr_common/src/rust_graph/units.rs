@@ -142,8 +142,8 @@ pub(super) struct Dependency {
 pub(super) struct Profile {
     /// Effective compiler optimization level.
     pub opt_level: String,
-    /// Cross-crate optimization policy, currently restricted to off.
-    pub lto: String,
+    /// Link-time optimization policy selected by Cargo.
+    pub lto: Lto,
     /// Alternate compiler backend, currently unsupported.
     pub codegen_backend: Option<String>,
     /// Number of compiler partitions.
@@ -169,6 +169,22 @@ pub(super) struct Profile {
 pub(super) enum DebugInfo {
     Level(u8),
     Named(String),
+}
+
+/// Cargo distinguishes disabled optimization from optimization within one crate.
+#[derive(Clone, Copy, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub(super) enum Lto {
+    /// Disable even optimization between one crate's codegen units.
+    Off,
+    /// Let rustc optimize within one crate when its profile permits it.
+    #[serde(rename = "false")]
+    Local,
+    /// Optimize the complete dependency graph together.
+    #[serde(alias = "true")]
+    Fat,
+    /// Optimize across crates using LLVM's thin LTO mode.
+    Thin,
 }
 
 #[derive(Deserialize)]
