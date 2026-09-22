@@ -83,8 +83,7 @@ pnpm run ci check
 
 Bessemer began as an upstream fork and now has its own product interface, native
 ecosystem adapters, cache policy, release process, and roadmap. See
-[`NOTICE`](NOTICE) and [`UPSTREAM_CHANGELOG.md`](UPSTREAM_CHANGELOG.md) for
-upstream provenance.
+[`NOTICE`](NOTICE) for upstream provenance.
 
 Except where an inherited notice states otherwise, Bessemer is licensed under
 the [Apache License 2.0](LICENSE).
