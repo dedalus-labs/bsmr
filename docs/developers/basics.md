@@ -18,34 +18,23 @@ needed.
 
 ## Validation
 
-bsmr is built with bsmr internally at Meta. Cargo builds are primarily for OSS. To validate
-changes:
+Build Bessemer with the toolchain pinned in `rust-toolchain`:
 
 ```bash
-# Check that things compile
-# Required for LLMs making changes to `bsmr/app`
-arc rust-check root//app/...
-# Run clippy
-arc rust-clippy root//app/...
-# Run lints and apply fixes
-arc lint -a
-# Format code. Usually unnecessary, performed by IDEs and hooks
-arc f
+cargo build --locked --bin bsmr
+cargo fmt --all -- --check
 ```
 
-Bessemer has standard Rust unittests and integration tests at `tests/core`.
+Run unit tests for the changed crate and the repository checks:
 
 ```bash
-# Run an integration test
-bsmr test root//tests/core/analysis:test_cmd_args
-# Discover more information about writing and executing integration tests
-cat tests/core/README.md
-# Run some unittests
-bsmr test root//app/bsmr_core:bsmr_core
+cargo test --locked -p bsmr_core
+python3 test.py --ci --git --bsmr=target/debug/bsmr
+pnpm install --frozen-lockfile --ignore-scripts
+pnpm run ci check
 ```
 
-In OSS, standard cargo tooling mostly applies. Exceptions are that integration tests do not run in
-OSS and clippy has some atypical configuration requiring use of `python3 test.py --get --lint-only`
+See [CONTRIBUTING.md](../../CONTRIBUTING.md) for CI and release requirements.
 
 ## Coding conventions
 
@@ -93,27 +82,14 @@ Bessemer uses `bsmr_error` replacing both `anyhow` and `thiserror`. The must-kno
 For more details including about defining errors, tagging, conversion, and context see [Error
 Handling](./error_handling.md).
 
-## Internal vs open source
-
-Code is generally the same internally and externally, exceptions will be locally self-explanatory.
-
 ## Rust Dependencies
 
-When modifying dependencies internally at Meta, change BUILD.bsmr files. Almost all of our Cargo.toml
-files are maintained by autocargo, run `arc autocargo -p bsmr` to update them.
-
-Autocargo is not available outside Meta. Hand-edit Cargo files if needed, we will deal with it on
-import.
-
-At Meta, common third party Rust libraries are generally just available.
+Edit the Cargo manifests and commit the resulting lockfile changes.
 
 # Debugging
 
 ```bash
-# Build bsmr
-bsmr build @upstream//mode/opt root//:bsmr --out /tmp/bsmr_dest
-# Build bsmr from source and run a command with it in a different isolation dir
-./bsmr.py build :foo
+cargo run --locked --bin bsmr -- --isolation-dir=dev --help
 ```
 
 Further information at [debugging.md](./debugging.md)
