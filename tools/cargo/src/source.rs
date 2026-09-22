@@ -14,15 +14,20 @@ use anyhow::Context;
 use anyhow::Result;
 use anyhow::ensure;
 use cargo::GlobalContext;
+use cargo::core::PackageId;
 use cargo::core::Resolve;
+use cargo::core::SourceId;
 use cargo::core::SourceKind as CargoSourceKind;
 use cargo::core::compiler::Unit;
 use cargo::sources::SourceConfigMap;
+use cargo::sources::registry::RegistrySource;
+use cargo::util::cache_lock::CacheLockMode;
 use cargo_util::Sha256;
 use flate2::read::GzDecoder;
 
 use crate::types::Archive;
 use crate::types::Source;
+use crate::types::SourceArtifact;
 use crate::types::SourceKind;
 
 #[derive(Debug, thiserror::Error)]
@@ -56,23 +61,24 @@ pub(crate) fn export(unit: &Unit, resolve: &Resolve, gctx: &GlobalContext) -> Re
     if matches!(source_id.kind(), CargoSourceKind::Directory) {
         return Err(ArchiveError::UnsupportedSource(source_id.as_url().to_string()).into());
     }
-    if source_id.is_git() {
-        git_manifests(unit, gctx)?;
-    }
     let checksum = resolve
         .checksums()
         .get(&unit.pkg.package_id())
         .cloned()
         .flatten();
-    let archive = if source_id.is_registry() {
+    let (archive, artifact) = if source_id.is_registry() {
         let checksum = checksum
             .as_deref()
             .ok_or_else(|| ArchiveError::MissingChecksum(unit.pkg.to_string()))?;
-        Some(archive(unit, checksum, gctx, resolve)?)
+        let (archive, artifact) = archive(unit, checksum, gctx, resolve)?;
+        (Some(archive), artifact)
+    } else if source_id.is_git() {
+        (None, git_manifests(unit, gctx)?)
     } else {
-        None
+        (None, SourceArtifact::Workspace)
     };
     Ok(Source {
+        artifact,
         kind: match source_id.kind() {
             CargoSourceKind::Path => SourceKind::Path,
             CargoSourceKind::Git(_) => SourceKind::Git,
@@ -95,11 +101,11 @@ fn archive(
     unit: &Unit,
     checksum: &str,
     gctx: &GlobalContext,
-    _resolve: &Resolve,
-) -> Result<Archive> {
+    resolve: &Resolve,
+) -> Result<(Archive, SourceArtifact)> {
     let package = unit.pkg.package_id();
     let source =
-        SourceConfigMap::new(gctx)?.load(package.source_id(), &_resolve.iter().collect())?;
+        SourceConfigMap::new(gctx)?.load(package.source_id(), &resolve.iter().collect())?;
     let acquired = source.replaced_source_id();
     if !acquired.is_remote_registry() {
         return Err(ArchiveError::UnsupportedSource(acquired.as_url().to_string()).into());
@@ -147,13 +153,43 @@ fn archive(
         {
             return Err(ArchiveError::Manifest(package.to_string()).into());
         }
-        return Ok(Archive { path, size });
+        let artifact = registry_artifact(package, acquired, checksum, size, gctx)?;
+        return Ok((Archive { path, size }, artifact));
     }
     Err(ArchiveError::Manifest(package.to_string()).into())
 }
 
+/// Resolve the registry's download endpoint while holding Cargo's cache ownership lock.
+fn registry_artifact(
+    package: PackageId,
+    source: SourceId,
+    checksum: &str,
+    size: u64,
+    gctx: &GlobalContext,
+) -> Result<SourceArtifact> {
+    let registry = RegistrySource::remote(source, &Default::default(), gctx)?;
+    let _lock = gctx.acquire_package_cache_lock(CacheLockMode::DownloadExclusive)?;
+    let config = futures::executor::block_on(registry.config())?
+        .context("remote registry has no download configuration")?;
+    ensure!(
+        !config.auth_required,
+        "native registry downloads require credential-free URLs"
+    );
+    Ok(SourceArtifact::Archive {
+        url: cargo_util::registry::crate_url(
+            &config.dl,
+            &package.name(),
+            &package.version().to_string(),
+            checksum,
+        ),
+        sha256: checksum.to_owned(),
+        size,
+        prefix: format!("{}-{}", package.name(), package.version()),
+    })
+}
+
 /// Verify package and ancestor manifests because workspace inheritance reads both.
-fn git_manifests(unit: &Unit, gctx: &GlobalContext) -> Result<()> {
+fn git_manifests(unit: &Unit, gctx: &GlobalContext) -> Result<SourceArtifact> {
     let checkouts = gctx
         .git_checkouts_path()
         .as_path_unlocked()
@@ -210,5 +246,9 @@ fn git_manifests(unit: &Unit, gctx: &GlobalContext) -> Result<()> {
             _ => return Err(GitManifestError(manifest).into()),
         }
     }
-    Ok(())
+    Ok(SourceArtifact::Git {
+        repository: unit.pkg.package_id().source_id().url().to_string(),
+        revision: revision.to_owned(),
+        directory: package.strip_prefix(&root)?.to_owned(),
+    })
 }

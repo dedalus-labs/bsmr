@@ -8,7 +8,7 @@
 # Cargo planning
 
 `bsmr-cargo` reads one JSON request from stdin and writes Cargo's configured
-version-1 configured graph to stdout. Cargo resolves features, profiles, host/target units, and
+version-2 graph to stdout. Cargo resolves features, profiles, host/target units, and
 test dependencies. The helper does not invoke Cargo's compilation runner.
 
 ```text
@@ -42,8 +42,10 @@ dependency aliases. The response reports the resolver and actual compiler
 versions. Registry archives must match their locked checksum. Cached registry manifests
 must match the verified archive. Git package and workspace manifests must match
 regular-file blobs in the locked commit. Directory source replacements fail.
-The native consumer must still materialize source bytes from this verified
-identity before compiling external packages.
+Each source includes an `artifact`: a workspace package, a registry download
+with its SHA-256 and length, or a Git repository with its locked revision and
+package directory. Native `http_archive` and `git_fetch` rules acquire those
+bytes. Cargo's mutable source cache is never a compiler input.
 
 The resolver pins Cargo 0.98.0 and admits Rust 1.97.1 and
 nightly-2026-04-11. Its standalone workspace isolates Cargo's native dependencies

@@ -128,6 +128,8 @@ pub(crate) struct ConfiguredUnit {
 
 #[derive(Clone, Serialize)]
 pub(crate) struct Source {
+    /// Immutable source input to materialize through native build rules.
+    pub(crate) artifact: SourceArtifact,
     /// Source or dependency classification preserved from Cargo.
     pub(crate) kind: SourceKind,
     /// Cargo's source URL, without guessing a cache location.
@@ -142,6 +144,34 @@ pub(crate) struct Source {
     pub(crate) root: PathBuf,
     /// Absolute manifest path inside the captured workspace.
     pub(crate) manifest: PathBuf,
+}
+
+/// Source ownership required by native compilation, independent of Cargo's cache paths.
+#[derive(Clone, Serialize)]
+#[serde(tag = "kind", rename_all = "kebab-case")]
+pub(crate) enum SourceArtifact {
+    /// Files already owned by the captured workspace.
+    Workspace,
+    /// A verified registry archive and its package directory.
+    Archive {
+        /// Registry download URL without credential requirements.
+        url: String,
+        /// SHA-256 recorded in Cargo.lock and verified during planning.
+        sha256: String,
+        /// Verified archive size in bytes.
+        size: u64,
+        /// Package directory inside the archive.
+        prefix: String,
+    },
+    /// A pinned Git tree with a package directory inside it.
+    Git {
+        /// Repository URL used by Cargo.
+        repository: String,
+        /// Full commit identity from Cargo.lock.
+        revision: String,
+        /// Package path relative to the repository root.
+        directory: PathBuf,
+    },
 }
 
 #[derive(Clone, Serialize)]

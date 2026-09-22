@@ -12,11 +12,11 @@ use std::path::Path;
 use serde_json::to_string as json;
 
 use super::RustGraphError;
+use super::sources::Sources;
 use super::units::DebugInfo;
 use super::units::Graph;
 use super::units::Mode;
 use super::units::Profile;
-use super::units::SourceKind;
 use super::units::Strip;
 use super::units::StripSetting;
 use super::units::Unit;
@@ -36,12 +36,13 @@ pub fn render(
     if graph.roots.len() != 1 {
         return Err(unsupported("planner", "multiple entrypoint roots"));
     }
+    let sources = Sources::render(&graph, cell)?;
     let renderer = Renderer {
         graph: &graph,
-        cell,
+        sources: &sources.targets,
         toolchain,
     };
-    let mut rules = String::new();
+    let mut rules = sources.rules;
     for (index, unit) in graph.units.iter().enumerate() {
         rules.push_str(&renderer.unit(unit, index)?);
     }
@@ -56,8 +57,8 @@ pub fn render(
 struct Renderer<'a> {
     /// Configured units from one selected Cargo entrypoint.
     graph: &'a Graph,
-    /// BSMR cell containing the captured workspace.
-    cell: &'a str,
+    /// Declared source artifacts owned by each package.
+    sources: &'a BTreeMap<&'a str, String>,
     /// Pinned compiler distribution used by every emitted rule.
     toolchain: &'a str,
 }
@@ -108,17 +109,6 @@ impl Renderer<'_> {
 
     /// Locate compiler sources inside the tracked package that owns them.
     fn sources(&self, unit: &Unit) -> Result<(String, String), RustGraphError> {
-        if !matches!(unit.source.kind, SourceKind::Path) {
-            return Err(unsupported(
-                &unit.package_name,
-                "external source artifact materialization",
-            ));
-        }
-        let package = unit
-            .source
-            .root
-            .strip_prefix(&self.graph.workspace_root)
-            .map_err(|_| RustGraphError::Outside(unit.source.root.clone()))?;
         let source = unit
             .target
             .src_path
@@ -134,11 +124,7 @@ impl Renderer<'_> {
             ));
         }
         Ok((
-            format!(
-                "{}//{}:__bsmr_sources",
-                self.cell,
-                package.to_string_lossy().replace('\\', "/")
-            ),
+            self.sources[unit.package_id.as_str()].clone(),
             format!("crate/{}", source.to_string_lossy().replace('\\', "/")),
         ))
     }
