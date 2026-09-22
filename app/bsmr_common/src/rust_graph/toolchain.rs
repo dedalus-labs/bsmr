@@ -6,6 +6,7 @@
 //! Selects pinned Rust distributions from the project's standard toolchain file.
 
 use std::collections::BTreeMap;
+use std::path::Path;
 use std::path::PathBuf;
 
 use serde::Deserialize;
@@ -44,36 +45,18 @@ struct Archive {
 /// The metadata resolver and the declared compiler distribution share one release.
 pub(super) struct RustToolchain {
     /// Installed resolver for this exact release.
-    pub cargo: PathBuf,
+    cargo: PathBuf,
     /// Matching compiler used by Cargo to inspect its host.
-    pub rustc: PathBuf,
+    rustc: PathBuf,
     /// Native rules that acquire and select the same compiler.
-    pub rules: String,
+    rules: String,
 }
 
 impl RustToolchain {
     /// Require a supported exact pin and an installed Cargo for offline resolution.
     pub fn parse(source: &str) -> bsmr_error::Result<Self> {
         let ToolchainFile { toolchain } = toml::from_str(source)?;
-        let host = match (std::env::consts::OS, std::env::consts::ARCH) {
-            ("linux", "aarch64") => "aarch64-unknown-linux-gnu",
-            ("linux", "x86_64") => "x86_64-unknown-linux-gnu",
-            ("macos", "aarch64") => "aarch64-apple-darwin",
-            ("macos", "x86_64") => "x86_64-apple-darwin",
-            _ => return Err(unsupported("toolchain", "this execution platform").into()),
-        };
-        if !toolchain.targets.iter().all(|target| target == host)
-            || !toolchain
-                .components
-                .iter()
-                .all(|c| ["rustfmt", "clippy"].contains(&c.as_str()))
-            || toolchain
-                .profile
-                .as_deref()
-                .is_some_and(|p| !["minimal", "default"].contains(&p))
-        {
-            return Err(unsupported("toolchain", "custom components or cross compilation").into());
-        }
+        let host = toolchain.host()?;
         let releases: BTreeMap<String, BTreeMap<String, BTreeMap<String, Archive>>> =
             serde_json::from_str(include_str!("releases.json"))?;
         let archives = releases
@@ -83,8 +66,9 @@ impl RustToolchain {
                 unsupported(
                     "toolchain",
                     &format!(
-                        "channel `{}`; supported pins: 1.97.1, nightly-2026-04-11",
-                        toolchain.channel
+                        "channel `{}`; supported pins: {}",
+                        toolchain.channel,
+                        releases.keys().cloned().collect::<Vec<_>>().join(", "),
                     ),
                 )
             })?;
@@ -115,9 +99,48 @@ impl RustToolchain {
             rules,
         })
     }
+
+    /// Return the installed resolver paired with the admitted compiler distribution.
+    pub fn cargo(&self) -> &Path {
+        &self.cargo
+    }
+
+    /// Return the matching compiler used for Cargo's capability probes.
+    pub fn rustc(&self) -> &Path {
+        &self.rustc
+    }
+
+    /// Return native acquisition rules for this exact compiler and standard library.
+    pub fn rules(&self) -> &str {
+        &self.rules
+    }
 }
 
 impl Toolchain {
+    /// Admit native execution without silently dropping requested targets or components.
+    fn host(&self) -> bsmr_error::Result<&'static str> {
+        let host = match (std::env::consts::OS, std::env::consts::ARCH) {
+            ("linux", "aarch64") => "aarch64-unknown-linux-gnu",
+            ("linux", "x86_64") => "x86_64-unknown-linux-gnu",
+            ("macos", "aarch64") => "aarch64-apple-darwin",
+            ("macos", "x86_64") => "x86_64-apple-darwin",
+            _ => return Err(unsupported("toolchain", "this execution platform").into()),
+        };
+        if !self.targets.iter().all(|target| target == host)
+            || !self
+                .components
+                .iter()
+                .all(|c| ["rustfmt", "clippy"].contains(&c.as_str()))
+            || self
+                .profile
+                .as_deref()
+                .is_some_and(|p| !["minimal", "default"].contains(&p))
+        {
+            return Err(unsupported("toolchain", "custom components or cross compilation").into());
+        }
+        Ok(host)
+    }
+
     /// Render pinned archives and their single native toolchain.
     fn rules(&self, host: &str, archives: &BTreeMap<String, Archive>) -> String {
         let mut rules = String::from(
