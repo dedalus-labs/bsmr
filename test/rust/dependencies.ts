@@ -15,6 +15,7 @@ import { pathToFileURL } from "node:url";
 
 const run = promisify(execFile);
 const binary = resolve(process.argv[2]!);
+const toolchain = process.argv[3] ?? "1.97.1";
 const root = realpathSync(mkdtempSync(join(tmpdir(), "rust-dependencies-")));
 const options = { cwd: root, timeout: 180_000, maxBuffer: 8 * 1024 * 1024 };
 try {
@@ -30,10 +31,10 @@ try {
 	const revision = (await run("git", ["rev-parse", "HEAD"], git)).stdout.trim();
 	mkdirSync(join(root, "app/src"), { recursive: true });
 	writeFileSync(join(root, "Cargo.toml"), '[workspace]\nmembers=["app"]\nresolver="2"\n');
-	writeFileSync(join(root, "rust-toolchain.toml"), '[toolchain]\nchannel="1.97.1"\n');
+	writeFileSync(join(root, "rust-toolchain.toml"), `[toolchain]\nchannel=${JSON.stringify(toolchain)}\n`);
 	writeFileSync(join(root, "app/Cargo.toml"), `[package]\nname="app"\nversion="0.1.0"\nedition="2024"\n[dependencies]\nitoa="=1.0.15"\npinned={git="${pathToFileURL(origin)}",rev="${revision}"}\n`);
 	writeFileSync(join(root, "app/src/main.rs"), 'fn main() { println!("{}", itoa::Buffer::new().format(pinned::value())); }\n');
-	await run("rustup", ["run", "1.97.1", "cargo", "generate-lockfile"], options);
+	await run("rustup", ["run", toolchain, "cargo", "generate-lockfile"], options);
 	const lock = readFileSync(join(root, "Cargo.lock"));
 	await run(binary, ["init"], options);
 	for (const phase of ["cold", "warm"]) {

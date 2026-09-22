@@ -25,7 +25,7 @@ bsmr test app
 Run `bsmr build --help` or `bsmr test --help` for command options.
 
 Commit `Cargo.toml`, `Cargo.lock`, and an exact `rust-toolchain.toml` at the
-project root. The current catalog supports `1.97.1` and `nightly-2026-04-11` on
+project root. The current catalog supports `1.97.1`, `1.98.0`, and `nightly-2026-04-11` on
 Linux and macOS, for ARM64 and x86-64. Install the matching Cargo resolver with
 `rustup toolchain install <channel> --profile minimal` before building.
 

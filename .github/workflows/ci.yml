@@ -279,7 +279,7 @@ jobs:
         run: node test/rust/configured.ts target/debug/bsmr
         shell: bash
       - name: Verify external Rust dependencies
-        run: node test/rust/dependencies.ts target/debug/bsmr
+        run: node test/rust/dependencies.ts target/debug/bsmr 1.98.0
         shell: bash
       - name: Verify pinned Git sources
         run: python3 -B -m unittest discover -s prelude/git/tools/tests -p '*_test.py'

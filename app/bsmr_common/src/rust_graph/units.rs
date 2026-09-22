@@ -190,10 +190,14 @@ impl Graph {
         let graph: Self = serde_json::from_slice(bytes)?;
         if graph.schema_version != 2
             || graph.cargo_library != "0.98.0"
-            || !graph
-                .rustc_version
-                .lines()
-                .any(|line| ["release: 1.97.1", "release: 1.96.0-nightly"].contains(&line))
+            || !graph.rustc_version.lines().any(|line| {
+                [
+                    "release: 1.97.1",
+                    "release: 1.98.0",
+                    "release: 1.96.0-nightly",
+                ]
+                .contains(&line)
+            })
         {
             return Err(unsupported("planner", "configured graph protocol version"));
         }
