@@ -117,6 +117,7 @@ use tokio_stream::wrappers::UnboundedReceiverStream;
 use tracing::info;
 
 use crate::executors::firecracker::FirecrackerExecutor;
+use crate::executors::namespace::NamespaceExecutor;
 use crate::executors::worker::WorkerHandle;
 use crate::executors::worker::WorkerPool;
 use crate::incremental_actions_helper::get_incremental_path_map;
@@ -157,10 +158,33 @@ pub struct LocalExecutor {
     backend: LocalExecutionBackend,
 }
 
+/// Selects one local process boundary for the complete action.
 #[derive(Clone)]
-enum LocalExecutionBackend {
+pub enum LocalExecutionBackend {
     Host,
     Firecracker(Arc<FirecrackerExecutor>),
+    Namespace(Arc<NamespaceExecutor>),
+}
+
+impl LocalExecutionBackend {
+    /// Return the complete process-boundary identity used by DICE and the action cache.
+    pub fn platform(&self) -> remote_execution::Platform {
+        match self {
+            Self::Host => remote_execution::Platform::default(),
+            Self::Namespace(executor) => executor.platform(),
+            Self::Firecracker(executor) => remote_execution::Platform {
+                properties: crate::executors::firecracker::sandbox_platform_properties(
+                    executor.environment_digest(),
+                )
+                .into_iter()
+                .map(|(name, value)| remote_execution::Property {
+                    name: name.to_owned(),
+                    value: value.to_owned(),
+                })
+                .collect(),
+            },
+        }
+    }
 }
 
 impl LocalExecutor {
@@ -193,9 +217,9 @@ impl LocalExecutor {
         }
     }
 
-    /// Replaces host process execution with the fail-closed Firecracker backend.
-    pub fn with_firecracker(mut self, executor: Arc<FirecrackerExecutor>) -> Self {
-        self.backend = LocalExecutionBackend::Firecracker(executor);
+    /// Selects the process boundary while retaining local scheduling and materialization.
+    pub fn with_backend(mut self, backend: LocalExecutionBackend) -> Self {
+        self.backend = backend;
         self
     }
 
@@ -289,6 +313,7 @@ impl LocalExecutor {
         }
     }
 
+    /// Prepare outputs and execute once through the selected process boundary.
     async fn exec_once(
         &self,
         action_digest: &ActionDigest,
@@ -413,6 +438,51 @@ impl LocalExecutor {
                                     &liveliness_observer,
                                 )
                                 .await
+                        }
+                        LocalExecutionBackend::Namespace(executor) => {
+                            async {
+                                let action = self
+                                    .blocking_executor
+                                    .execute_io_inline(|| {
+                                        executor.prepare(
+                                            prepared_action,
+                                            request,
+                                            &self.artifact_fs,
+                                            digest_config,
+                                        )
+                                    })
+                                    .await?;
+                                let launcher = executor.launcher();
+                                let result = self
+                                    .exec(
+                                        launcher.to_str().ok_or_else(|| {
+                                            bsmr_error!(
+                                                bsmr_error::ErrorTag::Input,
+                                                "namespace launcher path must be UTF-8"
+                                            )
+                                        })?,
+                                        &action.arguments,
+                                        std::iter::empty::<(&str, &str)>(),
+                                        ProjectRelativePath::empty(),
+                                        request.timeout(),
+                                        Some(&EnvironmentInheritance::empty()),
+                                        liveliness_observer,
+                                        true,
+                                        cgroup,
+                                        freeze_rx,
+                                        None,
+                                    )
+                                    .await?;
+                                if matches!(result.status, GatherOutputStatus::Finished { .. }) {
+                                    self.blocking_executor
+                                        .execute_io_inline(|| {
+                                            action.import_outputs(self.root.as_path())
+                                        })
+                                        .await?;
+                                }
+                                bsmr_error::Ok(result)
+                            }
+                            .await
                         }
                     }
                 };
@@ -1278,6 +1348,7 @@ impl LocalExecutor {
 
 #[async_trait]
 impl PreparedCommandExecutor for LocalExecutor {
+    /// Apply backend policy before materialization and local execution.
     async fn exec_cmd(
         &self,
         command: &PreparedCommand<'_, '_>,
@@ -1300,11 +1371,11 @@ impl PreparedCommandExecutor for LocalExecutor {
             digest_config,
         } = command;
 
-        if matches!(&self.backend, LocalExecutionBackend::Firecracker(_))
+        if !matches!(&self.backend, LocalExecutionBackend::Host)
             && let Err(error) =
                 crate::executors::firecracker::validate_action_policy(prepared_action, request)
         {
-            return manager.error("firecracker_policy", error);
+            return manager.error("sandbox_policy", error);
         }
 
         // `All` makes the forkserver skip the network namespace; see

@@ -90,6 +90,8 @@ use bsmr_execute::re::manager::ReConnectionHandle;
 use bsmr_execute::re::manager::ReConnectionObserver;
 use bsmr_execute::re::output_trees_download_config::OutputTreesDownloadConfig;
 use bsmr_execute_impl::executors::firecracker::FirecrackerExecutor;
+use bsmr_execute_impl::executors::local::LocalExecutionBackend;
+use bsmr_execute_impl::executors::namespace::NamespaceExecutor;
 use bsmr_execute_impl::executors::worker::WorkerPool;
 use bsmr_execute_impl::low_pass_filter::LowPassFilter;
 use bsmr_execute_impl::materializers::deferred::clean_stale::CleanStaleConfig;
@@ -903,38 +905,69 @@ impl DiceCommandUpdater<'_, '_> {
         if let Some(v) = &self.profile_event_listener {
             SetProfileEventListener::set(&mut data, v.clone());
         }
-        let firecracker = if self.sandbox {
-            let bundle = PathBuf::from(
-                root_config
-                    .get(BsmrconfigKeyRef {
-                        section: "sandbox",
-                        property: "bundle",
-                    })
-                    .unwrap_or("/usr/local/share/bsmr/firecracker/manifest.json"),
-            );
-            let launcher_socket = PathBuf::from(
-                root_config
-                    .get(BsmrconfigKeyRef {
-                        section: "sandbox",
-                        property: "launcher_socket",
-                    })
-                    .unwrap_or("/run/bsmr/sandboxd.sock"),
-            );
-            Some(Arc::new(FirecrackerExecutor::new(
-                &bundle,
-                &launcher_socket,
-            )?))
+        let backend = if !self.sandbox {
+            LocalExecutionBackend::Host
         } else {
-            None
+            match root_config
+                .get(BsmrconfigKeyRef {
+                    section: "sandbox",
+                    property: "backend",
+                })
+                .unwrap_or("firecracker")
+            {
+                "namespace" => {
+                    let manifest = root_config
+                        .get(BsmrconfigKeyRef {
+                            section: "sandbox",
+                            property: "runtime",
+                        })
+                        .ok_or_else(|| {
+                            bsmr_error::bsmr_error!(
+                                bsmr_error::ErrorTag::Input,
+                                "namespace execution requires [sandbox] runtime"
+                            )
+                        })?;
+                    LocalExecutionBackend::Namespace(Arc::new(NamespaceExecutor::new(
+                        std::path::Path::new(manifest),
+                    )?))
+                }
+                "firecracker" => {
+                    let bundle = PathBuf::from(
+                        root_config
+                            .get(BsmrconfigKeyRef {
+                                section: "sandbox",
+                                property: "bundle",
+                            })
+                            .unwrap_or("/usr/local/share/bsmr/firecracker/manifest.json"),
+                    );
+                    let launcher_socket = PathBuf::from(
+                        root_config
+                            .get(BsmrconfigKeyRef {
+                                section: "sandbox",
+                                property: "launcher_socket",
+                            })
+                            .unwrap_or("/run/bsmr/sandboxd.sock"),
+                    );
+                    LocalExecutionBackend::Firecracker(Arc::new(FirecrackerExecutor::new(
+                        &bundle,
+                        &launcher_socket,
+                    )?))
+                }
+                backend => {
+                    return Err(bsmr_error::bsmr_error!(
+                        bsmr_error::ErrorTag::Input,
+                        "unsupported sandbox backend `{}`",
+                        backend
+                    ));
+                }
+            }
         };
-        let properties = firecracker.as_ref().map_or_else(Vec::new, |executor| {
-            bsmr_execute_impl::executors::firecracker::sandbox_platform_properties(
-                executor.environment_digest(),
-            )
+        let properties = backend
+            .platform()
+            .properties
             .into_iter()
-            .map(|(name, value)| (name.to_owned(), value.to_owned()))
-            .collect()
-        });
+            .map(|property| (property.name, property.value))
+            .collect();
         ctx.changed_to([(ExecutionPlatformKey, Arc::new(properties))])?;
         data.set_command_executor(Box::new(CommandExecutorFactory::new(
             self.re_connection.dupe(),
@@ -959,7 +992,7 @@ impl DiceCommandUpdater<'_, '_> {
             run_action_knobs.deduplicate_get_digests_ttl_calls,
             output_trees_download_config.dupe(),
             self.cmd_ctx.base_context.daemon.daemon_id.dupe(),
-            firecracker,
+            backend,
         )));
         data.set_blocking_executor(self.cmd_ctx.base_context.daemon.blocking_executor.dupe());
         data.set_http_client(self.cmd_ctx.base_context.daemon.http_client.dupe());
