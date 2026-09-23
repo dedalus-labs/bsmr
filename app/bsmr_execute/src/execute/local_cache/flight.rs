@@ -33,7 +33,7 @@ pub struct LocalActionLease {
     _file: File,
 }
 
-/// A shared lock on one exact action root retained by deferred materialization.
+/// A lock on one exact action root retained by materialization or collection.
 #[derive(Debug)]
 pub struct LocalActionPin {
     _file: File,
@@ -73,6 +73,27 @@ impl LocalActionCache {
         fs4::fs_std::FileExt::lock_shared(&file)
             .map_err(|error| io_error("pin action root", path, error))?;
         Ok(Some(Arc::new(LocalActionPin { _file: file })))
+    }
+
+    /// Tries to lock one exact action root for collection.
+    pub(super) fn try_collect_action_path(
+        &self,
+        action_path: &Path,
+    ) -> bsmr_error::Result<Option<Arc<LocalActionPin>>> {
+        let file = OpenOptions::new()
+            .read(true)
+            .write(true)
+            .open(action_path)
+            .map_err(|error| io_error("open action root for collection", action_path, error))?;
+        match fs4::fs_std::FileExt::try_lock_exclusive(&file) {
+            Ok(()) => Ok(Some(Arc::new(LocalActionPin { _file: file }))),
+            Err(error) if error.kind() == std::io::ErrorKind::WouldBlock => Ok(None),
+            Err(error) => Err(io_error(
+                "lock action root for collection",
+                action_path,
+                error,
+            )),
+        }
     }
 
     /// Acquires the bounded flight shard for one action miss or hit lookup.
