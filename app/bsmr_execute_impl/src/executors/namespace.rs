@@ -58,6 +58,9 @@ impl NamespaceExecutor {
             ("linux", "aarch64") => {
                 "cd6b143283b464baf078ab09ca19dadc5bcc2423b833c4f9dd7e83f9ba1b640b"
             }
+            ("linux", "x86_64") => {
+                "e318903862396f96de3df57264e0158682b952fd3fb53ac23d876413e7b30f71"
+            }
             (os, arch) => return Err(NamespaceError::UnsupportedHost(os, arch).into()),
         };
         Ok(Self {
@@ -71,7 +74,7 @@ impl NamespaceExecutor {
             properties: [
                 ("bsmr.sandbox.backend", "namespace"),
                 ("bsmr.sandbox.environment", self.runtime.digest()),
-                ("bsmr.sandbox.profile", "declared-inputs-v1"),
+                ("bsmr.sandbox.profile", "declared-inputs-v2"),
             ]
             .into_iter()
             .map(|(name, value)| RE::Property {
@@ -241,7 +244,20 @@ impl NamespaceExecutor {
                 Path::new("/workspace").join(input).into(),
             ]);
         }
-        arguments.extend(["--tmpfs", "/tmp", "--dev", "/dev"].map(OsString::from));
+        // The linker resolves its executable through procfs in this private PID namespace.
+        arguments.extend(
+            [
+                "--tmpfs",
+                "/tmp",
+                "--dev",
+                "/dev",
+                "--proc",
+                "/proc",
+                "--remount-ro",
+                "/proc",
+            ]
+            .map(OsString::from),
+        );
         for (name, value) in [
             ("PATH", "/usr/bin:/bin"),
             ("HOME", "/tmp"),
