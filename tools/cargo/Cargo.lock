@@ -226,7 +226,9 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "cargo",
+ "cargo-platform",
  "cargo-util",
+ "cargo-util-schemas",
  "cargo-util-terminal",
  "flate2",
  "futures",
