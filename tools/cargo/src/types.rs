@@ -98,7 +98,7 @@ pub(crate) struct ConfiguredUnit {
     pub(crate) package_version: String,
     /// Native library link ownership declared by the package.
     pub(crate) package_links: Option<String>,
-    /// Cargo package variables supplied to compilation.
+    /// Cargo package variables and build-script profile variables for this unit.
     pub(crate) package_environment: BTreeMap<String, String>,
     /// Verified source ownership and acquisition metadata.
     pub(crate) source: Source,

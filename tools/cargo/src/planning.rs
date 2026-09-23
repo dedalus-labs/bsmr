@@ -20,11 +20,13 @@ use cargo::core::Workspace;
 use cargo::core::compiler::BuildContext;
 use cargo::core::compiler::Compilation;
 use cargo::core::compiler::CompileKind;
+use cargo::core::compiler::CompileMode;
 use cargo::core::compiler::Unit;
 use cargo::core::compiler::UnitInterner;
 use cargo::core::compiler::UserIntent;
 use cargo::core::compiler::unit_graph::UnitDep;
 use cargo::core::dependency::DepKind;
+use cargo::core::profiles::ProfileRoot;
 use cargo::core::resolver::CliFeatures;
 use cargo::ops::CompileFilter;
 use cargo::ops::CompileOptions;
@@ -33,6 +35,8 @@ use cargo::ops::LibRule;
 use cargo::ops::Packages;
 use cargo::ops::{self};
 use cargo::util::context::ConfigRelativePath;
+use cargo_platform::Cfg;
+use cargo_util_schemas::manifest::TomlDebugInfo;
 use cargo_util_terminal::Shell;
 
 use crate::types::ConfiguredUnit;
@@ -233,6 +237,7 @@ fn export(context: &BuildContext<'_, '_>, resolve: &Resolve) -> Result<Graph> {
             .iter()
             .map(|unit| {
                 configured_unit(
+                    context,
                     unit,
                     sources[&unit.pkg.package_id()].clone(),
                     compilation.target_linker(unit.kind).map(Path::to_owned),
@@ -296,8 +301,67 @@ fn validate_unit(unit: &Unit) -> Result<()> {
     Ok(())
 }
 
+/// Preserve Cargo's build-script environment from its resolved profile and target cfgs.
+fn unit_environment(context: &BuildContext<'_, '_>, unit: &Unit) -> BTreeMap<String, String> {
+    let mut environment = package_environment(&unit.pkg);
+    if !matches!(unit.mode, CompileMode::RunCustomBuild) {
+        return environment;
+    }
+    let mut cfgs = BTreeMap::from([(
+        "feature".to_owned(),
+        unit.features
+            .iter()
+            .map(ToString::to_string)
+            .collect::<Vec<_>>(),
+    )]);
+    if unit.profile.debug_assertions {
+        cfgs.insert("debug_assertions".into(), Vec::new());
+    }
+    for cfg in context.target_data.cfg(unit.kind) {
+        match cfg {
+            Cfg::Name(name) if name.as_str() == "debug_assertions" => {}
+            Cfg::Name(name) => {
+                cfgs.insert(name.as_str().to_owned(), Vec::new());
+            }
+            Cfg::KeyPair(name, value) => {
+                cfgs.entry(name.as_str().to_owned())
+                    .or_default()
+                    .push(value.clone());
+            }
+        }
+    }
+    environment.extend(cfgs.into_iter().map(|(key, values)| {
+        (
+            format!("CARGO_CFG_{}", key.to_uppercase().replace('-', "_")),
+            values.join(","),
+        )
+    }));
+    environment.extend([
+        ("HOST".into(), context.host_triple().to_string()),
+        (
+            "TARGET".into(),
+            context.target_data.short_name(&unit.kind).to_string(),
+        ),
+        ("OPT_LEVEL".into(), unit.profile.opt_level.to_string()),
+        (
+            "DEBUG".into(),
+            (!matches!(unit.profile.debuginfo.into_inner(), TomlDebugInfo::None)).to_string(),
+        ),
+        (
+            "PROFILE".into(),
+            match unit.profile.root {
+                ProfileRoot::Debug => "debug",
+                ProfileRoot::Release => "release",
+            }
+            .into(),
+        ),
+    ]);
+    environment
+}
+
 /// Copy resolved compiler settings without deriving new dependency or feature policy.
 fn configured_unit(
+    context: &BuildContext<'_, '_>,
     unit: &Unit,
     source: Source,
     linker: Option<PathBuf>,
@@ -308,7 +372,7 @@ fn configured_unit(
         package_name: unit.pkg.name().to_string(),
         package_version: unit.pkg.version().to_string(),
         package_links: unit.pkg.manifest().links().map(str::to_owned),
-        package_environment: package_environment(&unit.pkg),
+        package_environment: unit_environment(context, unit),
         source,
         target: unit.target.clone(),
         platform: unit.kind,
