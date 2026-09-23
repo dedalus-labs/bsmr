@@ -22,7 +22,15 @@ use thiserror::Error;
 
 #[derive(Debug, Error)]
 enum BundleBuildError {
-    #[error("version and architecture must be non-empty")]
+    #[error("failed to identify Firecracker host: {0}")]
+    Bundle(#[from] bsmr_sandbox::BundleError),
+    #[cfg(target_os = "linux")]
+    #[error("failed to create pristine Firecracker snapshot: {0}")]
+    Snapshot(#[from] bsmr_sandbox::snapshot::SnapshotError),
+    #[cfg(not(target_os = "linux"))]
+    #[error("pristine Firecracker snapshots require Linux KVM")]
+    UnsupportedHost,
+    #[error("version, architecture, and host fingerprint must be non-empty")]
     EmptyIdentity,
     #[error("failed to read bundle artifact {path}: {source}")]
     Read {
@@ -57,12 +65,40 @@ struct Args {
 /// Writes one new manifest or exits without changing an existing bundle.
 fn main() -> Result<(), BundleBuildError> {
     let args = Args::parse();
+    let host_fingerprint = current_host_fingerprint()?;
+    create_snapshot(&args.directory)?;
     write_manifest(
         &args.directory,
         &args.firecracker_version,
         &args.architecture,
+        &host_fingerprint,
     )?;
     Ok(())
+}
+
+#[cfg(target_os = "linux")]
+/// Identifies the host contract serialized into the snapshot.
+fn current_host_fingerprint() -> Result<String, BundleBuildError> {
+    Ok(bsmr_sandbox::host_fingerprint()?)
+}
+
+#[cfg(not(target_os = "linux"))]
+/// Fails rather than invent a host identity without Linux KVM.
+fn current_host_fingerprint() -> Result<String, BundleBuildError> {
+    Err(BundleBuildError::UnsupportedHost)
+}
+
+#[cfg(target_os = "linux")]
+/// Creates the pristine state bundled by the manifest on supported hosts.
+fn create_snapshot(directory: &Path) -> Result<(), BundleBuildError> {
+    bsmr_sandbox::snapshot::create(directory)?;
+    Ok(())
+}
+
+#[cfg(not(target_os = "linux"))]
+/// Fails rather than emit a manifest without a real pristine snapshot.
+fn create_snapshot(_: &Path) -> Result<(), BundleBuildError> {
+    Err(BundleBuildError::UnsupportedHost)
 }
 
 /// Hashes every required artifact and creates a stable manifest atomically.
@@ -70,25 +106,34 @@ fn write_manifest(
     directory: &Path,
     version: &str,
     architecture: &str,
+    host_fingerprint: &str,
 ) -> Result<(), BundleBuildError> {
-    if version.is_empty() || architecture.is_empty() {
+    if version.is_empty() || architecture.is_empty() || host_fingerprint.is_empty() {
         return Err(BundleBuildError::EmptyIdentity);
     }
-    let artifacts = ["firecracker", "jailer", "kernel", "rootfs"]
-        .into_iter()
-        .map(|name| {
-            Ok((
-                name.to_owned(),
-                BundleArtifact {
-                    path: name.into(),
-                    sha256: sha256_file(&directory.join(name))?,
-                },
-            ))
-        })
-        .collect::<Result<BTreeMap<_, _>, BundleBuildError>>()?;
+    let artifacts = [
+        "firecracker",
+        "jailer",
+        "kernel",
+        "rootfs",
+        "snapshot",
+        "memory",
+    ]
+    .into_iter()
+    .map(|name| {
+        Ok((
+            name.to_owned(),
+            BundleArtifact {
+                path: name.into(),
+                sha256: sha256_file(&directory.join(name))?,
+            },
+        ))
+    })
+    .collect::<Result<BTreeMap<_, _>, BundleBuildError>>()?;
     let manifest = BundleManifest {
         schema: PROTOCOL_VERSION,
         architecture: architecture.to_owned(),
+        host_fingerprint: host_fingerprint.to_owned(),
         firecracker_version: version.to_owned(),
         jailer_version: version.to_owned(),
         artifacts,
@@ -141,15 +186,28 @@ mod tests {
 
     use super::write_manifest;
 
-    /// The manifest binds all four artifacts and refuses accidental replacement.
+    /// The manifest binds the complete boot and pristine-resume state.
     #[test]
     fn manifest_is_complete_and_create_only() {
         let directory = tempfile::tempdir().unwrap();
-        for name in ["firecracker", "jailer", "kernel", "rootfs"] {
+        for name in [
+            "firecracker",
+            "jailer",
+            "kernel",
+            "rootfs",
+            "snapshot",
+            "memory",
+        ] {
             fs::write(directory.path().join(name), name).unwrap();
         }
 
-        write_manifest(directory.path(), "1.16.1", std::env::consts::ARCH).unwrap();
+        write_manifest(
+            directory.path(),
+            "1.16.1",
+            std::env::consts::ARCH,
+            "sha256:test-host",
+        )
+        .unwrap();
 
         let bundle = VerifiedBundle::load(
             &directory.path().join("manifest.json"),
@@ -158,6 +216,16 @@ mod tests {
         )
         .unwrap();
         assert!(bundle.environment_digest().starts_with("sha256:"));
-        assert!(write_manifest(directory.path(), "1.16.1", std::env::consts::ARCH).is_err());
+        assert!(bundle.artifact("snapshot").unwrap().is_file());
+        assert!(bundle.artifact("memory").unwrap().is_file());
+        assert!(
+            write_manifest(
+                directory.path(),
+                "1.16.1",
+                std::env::consts::ARCH,
+                "sha256:test-host"
+            )
+            .is_err()
+        );
     }
 }
