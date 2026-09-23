@@ -408,6 +408,10 @@ export const ci = workflow({
 					run: command({ file: "node", args: ["test/rust/tools.ts"] }),
 				},
 				{
+					name: "Verify compiler archive metadata",
+					run: command({ file: "python3", args: ["test/rust/catalog.py", "target/debug/bsmr"] }),
+				},
+				{
 					name: "Verify literal Rust inputs",
 					run: command({ file: "node", args: ["test/rust/literals.ts", "target/debug/bsmr"] }),
 				},

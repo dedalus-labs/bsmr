@@ -139,6 +139,8 @@ contents. Symlink targets outside those directories must be declared separately.
 This check is not a filesystem sandbox.
 
 Rust compiler, Clippy, and standard-library archives have pinned SHA-256 digests.
+Their pinned sizes let the download rule use cached compiler archives without
+querying their HTTP headers.
 Their content contributes to compilation action identity. Target discovery uses
 the selected local rustup installation, while configured planning uses the
 bundled resolver. C/C++ linking and Python bootstrap tools

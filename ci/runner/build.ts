@@ -98,6 +98,7 @@ export const runnerBuild = workflow({
 				{ name: "Build Cargo planner", env: buildEnvironment, run: command({ file: "rustup", args: ["run", "1.98.0", "cargo", "build", "--locked", "--manifest-path", "tools/cargo/Cargo.toml", "--target-dir", "tools/cargo/target", "-j", "2"] }) },
 				{ name: "Install Cargo planner", run: command({ file: "cp", args: ["tools/cargo/target/debug/bsmr-cargo", "target/debug/bsmr-cargo"] }) },
 				{ name: "Install qualification compiler", run: command({ file: "rustup", args: ["toolchain", "install", "1.97.1", "--profile", "minimal", "--no-self-update"] }) },
+				{ name: "Verify compiler archive metadata", run: command({ file: "python3", args: ["test/rust/catalog.py", "target/debug/bsmr"] }) },
 				{ name: "Verify native Rust builds", run: command({ file: "node", args: ["test/native-rust-build.ts", "target/debug/bsmr"] }) },
 				{ name: "Verify configured Cargo builds", run: command({ file: "node", args: ["test/rust/configured.ts", "target/debug/bsmr"] }) },
 			],
