@@ -306,9 +306,9 @@ and sysroot become declared toolchains. This distinction is an upload policy,
 not a fallback between two build implementations.
 
 BSMR validates the complete tree closure before accepting a hit and verifies
-each file's content digest while restoring it. The action cache currently has
-no automatic garbage collector. `bsmr clean` preserves it; remove the
-configured directory while no builds are running to reclaim it in full.
+each file's content digest while restoring it. Daemon initialization removes
+orphaned objects and oldest action results above the configured machine-wide
+cache budget. `bsmr clean` preserves this repository-independent cache.
 
 ## BSMR or Bazel?
 
