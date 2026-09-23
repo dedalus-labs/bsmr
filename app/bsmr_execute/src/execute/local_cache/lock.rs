@@ -38,6 +38,14 @@ impl CacheLock {
             Err(error) => Err(io_error("try lock cache for collection", root, error)),
         }
     }
+
+    /// Acquires the exclusive lease required before deleting cache entries.
+    pub(super) fn exclusive(root: &Path) -> bsmr_error::Result<Self> {
+        let file = open(root)?;
+        fs4::fs_std::FileExt::lock_exclusive(&file)
+            .map_err(|error| io_error("lock cache for collection", root, error))?;
+        Ok(Self { file })
+    }
 }
 
 impl Drop for CacheLock {

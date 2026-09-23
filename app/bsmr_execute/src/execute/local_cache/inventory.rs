@@ -10,6 +10,7 @@ use std::fs;
 use std::io;
 use std::path::Path;
 use std::path::PathBuf;
+use std::time::SystemTime;
 
 use prost::Message;
 
@@ -21,6 +22,10 @@ use super::io_error;
 use super::read_regular_file;
 use super::validate_blob_path;
 use crate::digest_config::DigestConfig;
+
+mod collection;
+
+pub use collection::LocalCacheCollection;
 
 /// Counts the action roots and CAS blobs visible to a local cache scan.
 #[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
@@ -38,6 +43,7 @@ pub struct LocalCacheInventory {
 struct CacheEntry {
     path: PathBuf,
     bytes: u64,
+    modified: SystemTime,
 }
 
 struct ResultClosure {
@@ -51,6 +57,15 @@ impl LocalActionCache {
         &self,
         digest_config: DigestConfig,
     ) -> bsmr_error::Result<LocalCacheInventory> {
+        let _lock = self.shared_lock()?;
+        self.inventory_unlocked(digest_config)
+    }
+
+    /// Scans the cache while the caller holds the shared or exclusive lock.
+    fn inventory_unlocked(
+        &self,
+        digest_config: DigestConfig,
+    ) -> bsmr_error::Result<LocalCacheInventory> {
         let actions = cache_entries(&self.root.join("ac"))?;
         let blobs = cache_entries(&self.root.join("cas"))?;
         let blob_paths = blobs
@@ -61,18 +76,7 @@ impl LocalActionCache {
         let mut complete_actions = 0;
 
         for action in &actions {
-            let bytes = read_regular_file(&action.path)?.ok_or_else(|| {
-                io_error(
-                    "read inventory action",
-                    &action.path,
-                    io::Error::from(io::ErrorKind::NotFound),
-                )
-            })?;
-            let result: LocalActionResult =
-                serde_json::from_slice(&bytes).map_err(|source| LocalCacheError::DecodeAction {
-                    path: action.path.clone(),
-                    source,
-                })?;
+            let result = read_action_result(&action.path)?;
             let closure = self.result_closure(&result, digest_config)?;
             reachable.extend(closure.paths);
             complete_actions += u64::from(closure.complete);
@@ -138,7 +142,7 @@ impl LocalActionCache {
         closure: &mut ResultClosure,
     ) -> bsmr_error::Result<()> {
         self.add_blob(digest, digest_config, closure)?;
-        let Some(tree_bytes) = self.read_blob(digest, digest_config)? else {
+        let Some(tree_bytes) = self.read_blob_unlocked(digest, digest_config)? else {
             return Ok(());
         };
         let tree = remote_execution::Tree::decode(tree_bytes.as_slice()).map_err(|source| {
@@ -208,11 +212,32 @@ fn cache_entries(root: &Path) -> bsmr_error::Result<Vec<CacheEntry>> {
             entries.push(CacheEntry {
                 path,
                 bytes: metadata.len(),
+                modified: metadata
+                    .modified()
+                    .map_err(|error| io_error("read cache entry timestamp", child.path(), error))?,
             });
         }
     }
     entries.sort_by(|left, right| left.path.cmp(&right.path));
     Ok(entries)
+}
+
+/// Decodes one durable action root without accepting a missing file as a miss.
+fn read_action_result(path: &Path) -> bsmr_error::Result<LocalActionResult> {
+    let bytes = read_regular_file(path)?.ok_or_else(|| {
+        io_error(
+            "read inventory action",
+            path,
+            io::Error::from(io::ErrorKind::NotFound),
+        )
+    })?;
+    serde_json::from_slice(&bytes).map_err(|source| {
+        LocalCacheError::DecodeAction {
+            path: path.to_owned(),
+            source,
+        }
+        .into()
+    })
 }
 
 /// Recognizes the SHA-256 filenames used for AC and CAS entry placement.

@@ -16,6 +16,7 @@ use std::path::Path;
 use std::path::PathBuf;
 use std::sync::atomic::AtomicU64;
 use std::sync::atomic::Ordering;
+use std::time::SystemTime;
 
 use allocative::Allocative;
 use bsmr_common::file_ops::metadata::FileDigest;
@@ -41,6 +42,7 @@ mod lock;
 pub use flight::LocalActionLease;
 pub use flight::LocalActionPin;
 pub use flight::LocalActionReservation;
+pub use inventory::LocalCacheCollection;
 pub use inventory::LocalCacheInventory;
 use lock::CacheLock;
 
@@ -100,6 +102,8 @@ enum LocalCacheError {
     RelativeCacheDirectory(PathBuf),
     #[error("BSMR_LOCAL_CACHE_MATERIALIZATION must be `copy` or `reflink`, got '{value:?}'")]
     UnsupportedMaterialization { value: OsString },
+    #[error("BSMR_LOCAL_CACHE_MAX_BYTES must be an unsigned integer, got '{0:?}'")]
+    InvalidMaxBytes(OsString),
     #[error("Local cache digest has a negative size: {0}")]
     NegativeSize(i64),
     #[error("Local cache digest declares {declared}, but its hash parses as {parsed}")]
@@ -221,6 +225,19 @@ impl LocalCacheMaterialization {
     }
 }
 
+/// Bounds the machine-wide action cache by aggregate logical bytes.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub struct LocalCachePolicy {
+    pub max_bytes: u64,
+}
+
+mod policy {
+    pub(super) const GIB: u64 = 1024 * 1024 * 1024;
+    pub(super) const MAX_BYTES: u64 = 100 * GIB;
+    pub(super) const MIN_BYTES: u64 = 10 * GIB;
+    pub(super) const ROUND_BYTES: u64 = 5 * GIB;
+}
+
 impl LocalActionCache {
     /// Opens the default user-level cache.
     pub fn open() -> bsmr_error::Result<Self> {
@@ -260,11 +277,29 @@ impl LocalActionCache {
         })
     }
 
+    /// Resolves the exact machine cache budget or its disk-scaled default.
+    pub fn policy(&self) -> bsmr_error::Result<LocalCachePolicy> {
+        fs::create_dir_all(&self.root)
+            .map_err(|error| io_error("create cache root", &self.root, error))?;
+        let max_bytes = match std::env::var_os("BSMR_LOCAL_CACHE_MAX_BYTES") {
+            Some(value) => value
+                .to_str()
+                .and_then(|value| value.parse().ok())
+                .ok_or_else(|| LocalCacheError::InvalidMaxBytes(value.clone()))?,
+            None => {
+                let disk = bsmr_fs::fs_util::disk_space_stats(AbsPath::new(&self.root)?)?;
+                scaled_cache_budget(disk.total_space)
+            }
+        };
+        Ok(LocalCachePolicy { max_bytes })
+    }
+
     /// Returns an action result only when every referenced CAS object exists.
     pub fn action_result(
         &self,
         action: &ActionDigest,
     ) -> bsmr_error::Result<Option<LocalActionResult>> {
+        let _lock = self.shared_lock()?;
         let path = self.action_path(action);
         let bytes = match read_regular_file(&path)? {
             Some(bytes) => bytes,
@@ -276,6 +311,7 @@ impl LocalActionCache {
                 source,
             })?;
         if self.has_complete_closure(&result)? {
+            touch(&path)?;
             Ok(Some(result))
         } else {
             Ok(None)
@@ -403,6 +439,16 @@ impl LocalActionCache {
         digest: &LocalDigest,
         digest_config: DigestConfig,
     ) -> bsmr_error::Result<Option<Vec<u8>>> {
+        let _lock = self.shared_lock()?;
+        self.read_blob_unlocked(digest, digest_config)
+    }
+
+    /// Reads and verifies one CAS object while the caller holds the cache lock.
+    fn read_blob_unlocked(
+        &self,
+        digest: &LocalDigest,
+        digest_config: DigestConfig,
+    ) -> bsmr_error::Result<Option<Vec<u8>>> {
         let bytes = self.read_blob_unverified(digest)?;
         if let Some(bytes) = &bytes {
             let expected = digest.to_file_digest(digest_config)?;
@@ -423,6 +469,17 @@ impl LocalActionCache {
 
     /// Restores one cached object and verifies its content digest.
     pub fn restore_blob(
+        &self,
+        digest: &TrackedFileDigest,
+        destination: &Path,
+        digest_config: DigestConfig,
+    ) -> bsmr_error::Result<()> {
+        let _lock = self.shared_lock()?;
+        self.restore_blob_unlocked(digest, destination, digest_config)
+    }
+
+    /// Restores one CAS object while the caller holds the cache lock.
+    fn restore_blob_unlocked(
         &self,
         digest: &TrackedFileDigest,
         destination: &Path,
@@ -479,8 +536,9 @@ impl LocalActionCache {
         files: &[(PathBuf, TrackedFileDigest, bool)],
         digest_config: DigestConfig,
     ) -> bsmr_error::Result<()> {
+        let _lock = self.shared_lock()?;
         parallel_cache_io(files, |(destination, digest, executable)| {
-            self.restore_blob(digest, destination, digest_config)?;
+            self.restore_blob_unlocked(digest, destination, digest_config)?;
             fs_util::set_executable(AbsPath::new(destination)?, *executable)
                 .categorize_internal()?;
             Ok(())
@@ -550,6 +608,22 @@ impl LocalActionCache {
             format!("{}:{}:{}", digest.algorithm, digest.hash, digest.size).as_bytes(),
         )
     }
+
+    /// Prevents collection while one cache operation reads or publishes data.
+    fn shared_lock(&self) -> bsmr_error::Result<CacheLock> {
+        CacheLock::shared(&self.root)
+    }
+
+    /// Excludes every cache operation while collection chooses and removes data.
+    fn exclusive_lock(&self) -> bsmr_error::Result<CacheLock> {
+        CacheLock::exclusive(&self.root)
+    }
+}
+
+/// Scales the default action-cache budget from ten percent of its backing disk.
+fn scaled_cache_budget(total_bytes: u64) -> u64 {
+    let bounded = (total_bytes / 10).clamp(policy::MIN_BYTES, policy::MAX_BYTES);
+    bounded / policy::ROUND_BYTES * policy::ROUND_BYTES
 }
 
 impl LocalCachePublication<'_> {
@@ -602,6 +676,16 @@ fn read_regular_file(path: &Path) -> bsmr_error::Result<Option<Vec<u8>>> {
     fs::read(path)
         .map(Some)
         .map_err(|error| io_error("read", path, error))
+}
+
+/// Records one successful action hit for oldest-first collection.
+fn touch(path: &Path) -> bsmr_error::Result<()> {
+    let file = OpenOptions::new()
+        .write(true)
+        .open(path)
+        .map_err(|error| io_error("open cache action for touch", path, error))?;
+    file.set_times(fs::FileTimes::new().set_modified(SystemTime::now()))
+        .map_err(|error| io_error("touch cache action", path, error))
 }
 
 fn validate_blob_path(path: &Path, expected: i64) -> bsmr_error::Result<bool> {
@@ -768,6 +852,10 @@ fn io_error(
 #[cfg(test)]
 mod tests {
     use std::fs;
+    use std::fs::File;
+    use std::fs::FileTimes;
+    use std::time::Duration;
+    use std::time::UNIX_EPOCH;
 
     use bsmr_common::cas_digest::DigestAlgorithm;
     use bsmr_common::file_ops::metadata::TrackedFileDigest;
@@ -775,6 +863,7 @@ mod tests {
 
     use super::CacheLock;
     use super::LocalActionCache;
+    use super::LocalActionReservation;
     use super::LocalActionResult;
     use super::LocalCacheInventory;
     #[cfg(target_os = "macos")]
@@ -878,6 +967,152 @@ mod tests {
                 blob_bytes: 26,
             }
         );
+        Ok(())
+    }
+
+    #[test]
+    fn invariant_collection_removes_only_unreachable_blobs() -> bsmr_error::Result<()> {
+        let (_temporary, cache, digest_config, action, output, result) = fixture();
+        let orphan =
+            TrackedFileDigest::from_content(b"orphan output", digest_config.cas_digest_config());
+        cache.publish_bytes(&output, b"cached output", digest_config)?;
+        cache.publish_bytes(&orphan, b"orphan output", digest_config)?;
+        cache.publish_action_result(&action, &result)?;
+
+        let collected = cache.collect(u64::MAX, false, digest_config)?;
+
+        assert_eq!(collected.removed_action_results, 0);
+        assert_eq!(collected.removed_blobs, 1);
+        assert_eq!(cache.action_result(&action)?, Some(result));
+        assert!(!cache.blob_path(&LocalDigest::from_file(&orphan)).exists());
+        Ok(())
+    }
+
+    #[test]
+    fn invariant_declared_hit_survives_collection_until_materialized() -> bsmr_error::Result<()> {
+        let (temporary, cache, digest_config, action, output, result) = fixture();
+        cache.publish_bytes(&output, b"cached output", digest_config)?;
+        cache.publish_action_result(&action, &result)?;
+        let reservation = cache
+            .try_reserve_action(&action)?
+            .expect("action lock must be available");
+        let (hit, pin) = match reservation {
+            LocalActionReservation::Hit { result, pin } => (result, pin),
+            LocalActionReservation::Lease(_) => panic!("published action must hit"),
+        };
+        assert_eq!(hit, result);
+
+        let collected = cache.collect(0, false, digest_config)?;
+
+        assert_eq!(collected.removed_action_results, 0);
+        assert_eq!(collected.removed_blobs, 0);
+        let restored = temporary.path().join("restored");
+        cache.restore_blob(&output, &restored, digest_config)?;
+        assert_eq!(fs::read(restored)?, b"cached output");
+
+        drop(pin);
+        let collected = cache.collect(0, false, digest_config)?;
+        assert_eq!(collected.removed_action_results, 1);
+        assert_eq!(collected.removed_blobs, 1);
+        Ok(())
+    }
+
+    #[test]
+    fn invariant_cache_hit_refreshes_action_age() -> bsmr_error::Result<()> {
+        let (_temporary, cache, digest_config, action, output, result) = fixture();
+        cache.publish_bytes(&output, b"cached output", digest_config)?;
+        cache.publish_action_result(&action, &result)?;
+        let action_path = cache.action_path(&action);
+        let old = UNIX_EPOCH + Duration::from_secs(1);
+        File::open(&action_path)?.set_times(FileTimes::new().set_modified(old))?;
+
+        assert_eq!(cache.action_result(&action)?, Some(result));
+
+        assert!(fs::metadata(action_path)?.modified()? > old);
+        Ok(())
+    }
+
+    #[test]
+    fn invariant_budget_evicts_the_oldest_complete_action() -> bsmr_error::Result<()> {
+        let (temporary, cache, digest_config, first_action, first_output, first_result) = fixture();
+        let second_action =
+            ActionDigest::from_content(b"second action", digest_config.cas_digest_config());
+        let second_output =
+            TrackedFileDigest::from_content(b"second output", digest_config.cas_digest_config());
+        let second_result = LocalActionResult {
+            output_files: vec![LocalOutputFile {
+                path: "bsmr-out/second".to_owned(),
+                digest: LocalDigest::from_file(&second_output),
+                executable: false,
+            }],
+            ..Default::default()
+        };
+        cache.publish_bytes(&first_output, b"cached output", digest_config)?;
+        cache.publish_action_result(&first_action, &first_result)?;
+        cache.publish_bytes(&second_output, b"second output", digest_config)?;
+        cache.publish_action_result(&second_action, &second_result)?;
+        File::open(cache.action_path(&first_action))?
+            .set_times(FileTimes::new().set_modified(UNIX_EPOCH + Duration::from_secs(1)))?;
+        let second_action_bytes = fs::metadata(cache.action_path(&second_action))?.len();
+        let max_bytes = second_action_bytes + second_output.data().size();
+
+        let collected = cache.collect(max_bytes, false, digest_config)?;
+
+        assert_eq!(collected.removed_action_results, 1);
+        assert_eq!(cache.action_result(&second_action)?, Some(second_result));
+        assert!(!cache.action_path(&first_action).exists());
+        assert!(temporary.path().exists());
+        Ok(())
+    }
+
+    #[test]
+    fn invariant_eviction_preserves_blobs_reachable_from_retained_actions() -> bsmr_error::Result<()>
+    {
+        let (_temporary, cache, digest_config, first_action, output, result) = fixture();
+        let second_action =
+            ActionDigest::from_content(b"second action", digest_config.cas_digest_config());
+        cache.publish_bytes(&output, b"cached output", digest_config)?;
+        cache.publish_action_result(&first_action, &result)?;
+        cache.publish_action_result(&second_action, &result)?;
+        File::open(cache.action_path(&first_action))?
+            .set_times(FileTimes::new().set_modified(UNIX_EPOCH + Duration::from_secs(1)))?;
+        let max_bytes =
+            fs::metadata(cache.action_path(&second_action))?.len() + output.data().size();
+
+        let collected = cache.collect(max_bytes, false, digest_config)?;
+
+        assert_eq!(collected.removed_action_results, 1);
+        assert_eq!(collected.removed_blobs, 0);
+        assert_eq!(cache.action_result(&second_action)?, Some(result));
+        Ok(())
+    }
+
+    #[test]
+    fn invariant_collection_removes_incomplete_action_roots() -> bsmr_error::Result<()> {
+        let (_temporary, cache, digest_config, action, _output, result) = fixture();
+        cache.publish_action_result(&action, &result)?;
+
+        let collected = cache.collect(u64::MAX, false, digest_config)?;
+
+        assert_eq!(collected.removed_action_results, 1);
+        assert!(!cache.action_path(&action).exists());
+        Ok(())
+    }
+
+    #[test]
+    fn invariant_collection_dry_run_does_not_change_cache_state() -> bsmr_error::Result<()> {
+        let (_temporary, cache, digest_config, action, output, result) = fixture();
+        let orphan =
+            TrackedFileDigest::from_content(b"orphan output", digest_config.cas_digest_config());
+        cache.publish_bytes(&output, b"cached output", digest_config)?;
+        cache.publish_bytes(&orphan, b"orphan output", digest_config)?;
+        cache.publish_action_result(&action, &result)?;
+
+        let collected = cache.collect(u64::MAX, true, digest_config)?;
+
+        assert_eq!(collected.removed_blobs, 1);
+        assert!(cache.blob_path(&LocalDigest::from_file(&orphan)).exists());
+        assert_eq!(cache.action_result(&action)?, Some(result));
         Ok(())
     }
 
