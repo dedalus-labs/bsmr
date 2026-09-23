@@ -75,11 +75,22 @@ python -m mkdocs serve -f mkdocs.yml
 ## Development
 
 ```console
-cargo build --locked --bin bsmr
-python3 test.py --ci --git --bsmr=target/debug/bsmr
+BSMR="$(tools/bootstrap/bsmr-dev)"
+python3 test.py --ci --git --bsmr="$BSMR"
 pnpm install --frozen-lockfile --ignore-scripts
 pnpm run ci check
 ```
+
+The bootstrap stores one pinned-LLVM development target and immutable binary
+set outside the checkout. Worktrees with identical source and build inputs
+reuse the same binary; different sources serialize access to their shared Cargo
+target. The identity includes tracked and nonignored untracked files. Ignored
+files are unsupported build inputs and must not affect the Bessemer binary.
+
+Cranelift does not yet link Bessemer's native cryptography dependencies and
+remains tracked in [issue #70](https://github.com/dedalus-labs/bsmr/issues/70).
+Production releases use the normal pinned LLVM toolchain and the optimized
+`dist` profile rather than this development bootstrap.
 
 ## Provenance and license
 
