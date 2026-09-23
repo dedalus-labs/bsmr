@@ -24,7 +24,6 @@ use std::time::Instant;
 
 use allocative::Allocative;
 use async_trait::async_trait;
-use bsmr_build_api::actions::execute::dice_data::ExecutionPlatformKey;
 use bsmr_build_api::actions::execute::dice_data::SetCommandExecutor;
 use bsmr_build_api::actions::execute::dice_data::SetReClient;
 use bsmr_build_api::actions::execute::dice_data::set_fallback_executor_config;
@@ -56,6 +55,7 @@ use bsmr_cli_proto::common_build_options::ExecutionStrategy;
 use bsmr_cli_proto::config_override::ConfigType;
 use bsmr_common::dice::cycles::CycleDetectorAdapter;
 use bsmr_common::dice::cycles::PairDiceCycleDetector;
+use bsmr_common::execution::ExecutionPlatformKey;
 use bsmr_common::file_ops::io::initialize_read_dir_cache;
 use bsmr_common::http::SetHttpClient;
 use bsmr_common::invocation_paths::InvocationPaths;
