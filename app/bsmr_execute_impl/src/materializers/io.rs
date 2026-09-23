@@ -26,6 +26,7 @@ use bsmr_execute::directory::ActionSharedDirectory;
 use bsmr_execute::execute::blocking::IoRequest;
 use bsmr_fs::error::IoResultExt;
 use bsmr_fs::fs_util;
+use bsmr_fs::paths::RelativePath;
 use bsmr_fs::paths::abs_norm_path::AbsNormPath;
 use bsmr_fs::paths::abs_norm_path::AbsNormPathBuf;
 use bsmr_hash::StdBsmrHashMap;
@@ -35,9 +36,25 @@ pub struct MaterializeTreeStructure {
     pub entry: ActionDirectoryEntry<ActionSharedDirectory>,
 }
 
+#[derive(Clone, Copy)]
+struct MaterializeOptions {
+    directories_and_symlinks: bool,
+    executable_bit_override: Option<bool>,
+    external_output_root: bool,
+}
+
 impl IoRequest for MaterializeTreeStructure {
     fn execute(self: Box<Self>, project_fs: &ProjectRoot) -> bsmr_error::Result<()> {
-        materialize_dirs_and_syms(self.entry.as_ref(), project_fs.root().join(&self.path))?;
+        let output_root = project_fs
+            .root()
+            .join(bsmr_core::fs::project_rel_path::ProjectRelativePath::unchecked_new("bsmr-out"));
+        let external_output_root = fs_util::symlink_metadata_if_exists(&output_root)?
+            .is_some_and(|metadata| metadata.file_type().is_symlink());
+        materialize_dirs_and_syms(
+            self.entry.as_ref(),
+            project_fs.root().join(&self.path),
+            external_output_root,
+        )?;
 
         Ok(())
     }
@@ -45,24 +62,21 @@ impl IoRequest for MaterializeTreeStructure {
 
 /// Materializes the entry at `dest`.
 ///
-/// - `materialize_dirs_and_syms`: if `true`, materializes directories and
-///   symlinks.
 /// - `file_src`: takes the destination path of a file, and returns its
 ///   source path (where it should be copied from). If it returns [`None`],
 ///   the file is not materialized.
 fn materialize<F, D>(
     entry: DirectoryEntry<&D, &ActionDirectoryMember>,
     dest: &AbsNormPath,
-    materialize_dirs_and_syms: bool,
     mut file_src: F,
-    executable_bit_override: Option<bool>,
+    options: MaterializeOptions,
 ) -> bsmr_error::Result<()>
 where
     F: FnMut(&AbsNormPath) -> Option<AbsNormPathBuf>,
     D: ActionDirectory,
 {
     let mut dest = dest.to_owned();
-    if materialize_dirs_and_syms {
+    if options.directories_and_symlinks {
         // create the directory where we'll materialize the entry
         if let Some(parent) = dest.parent() {
             fs_util::create_dir_all(parent)?;
@@ -71,9 +85,8 @@ where
     materialize_recursively(
         entry.map_dir(|d| Directory::as_ref(d)),
         &mut dest,
-        materialize_dirs_and_syms,
         &mut file_src,
-        executable_bit_override,
+        options,
     )
 }
 
@@ -82,12 +95,22 @@ where
 pub(crate) fn materialize_dirs_and_syms<P, D>(
     entry: DirectoryEntry<&D, &ActionDirectoryMember>,
     dest: P,
+    external_output_root: bool,
 ) -> bsmr_error::Result<()>
 where
     P: AsRef<AbsNormPath>,
     D: ActionDirectory,
 {
-    materialize(entry, dest.as_ref(), true, |_: &AbsNormPath| None, None)
+    materialize(
+        entry,
+        dest.as_ref(),
+        |_: &AbsNormPath| None,
+        MaterializeOptions {
+            directories_and_symlinks: true,
+            executable_bit_override: None,
+            external_output_root,
+        },
+    )
 }
 
 /// Materializes the files of an the entry rooted at `dest`.
@@ -117,7 +140,16 @@ where
             Some(src.join(subpath))
         }
     };
-    materialize(entry, dest, false, file_src, executable_bit_override)
+    materialize(
+        entry,
+        dest,
+        file_src,
+        MaterializeOptions {
+            directories_and_symlinks: false,
+            executable_bit_override,
+            external_output_root: false,
+        },
+    )
 }
 
 /// Materializes the files of an entry rooted at `dest`.
@@ -135,15 +167,23 @@ where
     D: ActionDirectory,
 {
     let file_src = |d: &AbsNormPath| srcs.remove(d);
-    materialize(entry, dest.as_ref(), false, file_src, None)
+    materialize(
+        entry,
+        dest.as_ref(),
+        file_src,
+        MaterializeOptions {
+            directories_and_symlinks: false,
+            executable_bit_override: None,
+            external_output_root: false,
+        },
+    )
 }
 
 fn materialize_recursively<'a, F, D>(
     entry: DirectoryEntry<D, &ActionDirectoryMember>,
     dest: &mut AbsNormPathBuf,
-    materialize_dirs_and_syms: bool,
     file_src: &mut F,
-    executable_bit_override: Option<bool>,
+    options: MaterializeOptions,
 ) -> bsmr_error::Result<()>
 where
     F: FnMut(&AbsNormPath) -> Option<AbsNormPathBuf>,
@@ -151,18 +191,12 @@ where
 {
     match entry {
         DirectoryEntry::Dir(d) => {
-            if materialize_dirs_and_syms {
+            if options.directories_and_symlinks {
                 fs_util::create_dir_all(&dest)?;
             }
             for (name, entry) in d.entries() {
                 dest.push(name);
-                materialize_recursively(
-                    entry,
-                    dest,
-                    materialize_dirs_and_syms,
-                    file_src,
-                    executable_bit_override,
-                )?;
+                materialize_recursively(entry, dest, file_src, options)?;
                 dest.pop();
             }
             Ok(())
@@ -170,7 +204,7 @@ where
         DirectoryEntry::Leaf(ActionDirectoryMember::File(_)) => {
             if let Some(src) = file_src(dest) {
                 fs_util::copy(src, &dest).categorize_internal()?;
-                if let Some(executable_bit_override) = executable_bit_override {
+                if let Some(executable_bit_override) = options.executable_bit_override {
                     fs_util::set_executable(&dest, executable_bit_override)
                         .categorize_internal()?;
                 }
@@ -178,17 +212,19 @@ where
             Ok(())
         }
         DirectoryEntry::Leaf(ActionDirectoryMember::Symlink(s)) => {
-            if materialize_dirs_and_syms
+            if options.directories_and_symlinks
                 && fs_util::symlink_metadata(&dest)
                     .categorize_internal()
                     .is_err()
             {
-                fs_util::symlink(s.target().as_str(), dest).categorize_internal()?;
+                let target =
+                    materialized_symlink_target(dest, s.target(), options.external_output_root)?;
+                fs_util::symlink(target, dest).categorize_internal()?;
             }
             Ok(())
         }
         DirectoryEntry::Leaf(ActionDirectoryMember::ExternalSymlink(s)) => {
-            if materialize_dirs_and_syms
+            if options.directories_and_symlinks
                 && fs_util::symlink_metadata(&dest)
                     .categorize_internal()
                     .is_err()
@@ -197,5 +233,84 @@ where
             }
             Ok(())
         }
+    }
+}
+
+/// Keeps portable logical links in the graph while fixing their physical managed-view target.
+fn materialized_symlink_target(
+    destination: &AbsNormPath,
+    target: &RelativePath,
+    external_output_root: bool,
+) -> bsmr_error::Result<std::path::PathBuf> {
+    if !external_output_root {
+        return Ok(target.as_str().into());
+    }
+    destination
+        .parent()
+        .expect("materialized symlinks always have a parent")
+        .join_normalized(target)
+        .map(AbsNormPathBuf::into_path_buf)
+}
+
+#[cfg(test)]
+mod tests {
+    use bsmr_fs::paths::abs_norm_path::AbsNormPath;
+    use bsmr_fs::paths::abs_norm_path::AbsNormPathBuf;
+    use bsmr_fs::paths::relative_path::RelativePath;
+
+    use super::materialized_symlink_target;
+
+    #[test]
+    fn invariant_managed_output_links_still_resolve_to_project_sources() -> bsmr_error::Result<()> {
+        let (destination, expected) = if cfg!(windows) {
+            (
+                "C:/project/bsmr-out/default/art/root/hash/dependencies/src/package.json",
+                "C:/project/package.json",
+            )
+        } else {
+            (
+                "/project/bsmr-out/default/art/root/hash/dependencies/src/package.json",
+                "/project/package.json",
+            )
+        };
+        let destination = AbsNormPath::new(destination)?;
+        let target = RelativePath::unchecked_new("../../../../../../../package.json");
+
+        let materialized = materialized_symlink_target(destination, target, true)?;
+        let ordinary = materialized_symlink_target(destination, target, false)?;
+
+        assert_eq!(materialized, std::path::Path::new(expected));
+        assert_eq!(
+            ordinary,
+            std::path::Path::new("../../../../../../../package.json")
+        );
+        Ok(())
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn invariant_materialized_link_resolves_through_external_view() -> bsmr_error::Result<()> {
+        let temporary = tempfile::tempdir()?;
+        let project = temporary.path().join("project");
+        let view = temporary.path().join("view");
+        std::fs::create_dir(&project)?;
+        std::fs::create_dir(&view)?;
+        std::os::unix::fs::symlink(&view, project.join("bsmr-out"))?;
+        std::fs::write(project.join("package.json"), b"source bytes")?;
+        let destination = AbsNormPathBuf::new(
+            project.join("bsmr-out/default/art/root/hash/dependencies/src/package.json"),
+        )?;
+        std::fs::create_dir_all(
+            destination
+                .parent()
+                .expect("materialized output always has a parent"),
+        )?;
+        let target = RelativePath::unchecked_new("../../../../../../../package.json");
+        let target = materialized_symlink_target(&destination, target, true)?;
+
+        std::os::unix::fs::symlink(target, &destination)?;
+
+        assert_eq!(std::fs::read(destination)?, b"source bytes");
+        Ok(())
     }
 }
