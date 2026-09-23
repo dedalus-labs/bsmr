@@ -49,7 +49,7 @@ export const runnerAction = action({
 						throw new Error("child workflow definition changed before dispatch");
 					await api.parent({ id: input.parent, definition, source });
 				} else {
-					await api.administrator(input.actor);
+					await api.authorize({ actor: input.actor, event: input.event });
 				}
 				const commit = z.object({ sha: revision }).parse(await api.call(`commits/${source}`));
 				if (commit.sha !== source) throw new Error("build source revision changed");

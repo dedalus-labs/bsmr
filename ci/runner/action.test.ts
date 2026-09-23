@@ -79,3 +79,14 @@ test("an administrator main push authorizes exactly its own revision", async () 
 	for (const override of [{ source: "b".repeat(40) }, { provider: "machines" }, { parent: "7" }])
 		await assert.rejects(authorize({ event: "push", ...override }));
 });
+
+test("only the protected merge queue can publish as the system principal", async () => {
+	globalThis.fetch = async (url) => {
+		assert.ok(String(url).endsWith(`/commits/${sha}`));
+		return Response.json({ sha });
+	};
+	await authorize({ event: "push", actor: "github-merge-queue[bot]" });
+	globalThis.fetch = async () => assert.fail("other bot requests must not reach source access");
+	await assert.rejects(authorize({ actor: "github-merge-queue[bot]" }));
+	await assert.rejects(authorize({ event: "push", actor: "github-actions[bot]" }));
+});

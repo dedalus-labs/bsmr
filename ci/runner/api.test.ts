@@ -69,8 +69,10 @@ test("an acknowledged run can precede its read endpoints", async () => {
 });
 
 test("a push parent delegates only its reviewed main revision", async () => {
-	const parent = { id: 7, status: "in_progress", conclusion: null, head_sha: sha, event: "push", path: `.github/workflows/${workflowFile}`, display_title: `Rust build ${sha}`, triggering_actor: { login: "administrator" } };
-	const api = new RunnerApi("fixture", async (url) => Response.json(String(url).includes("collaborators") ? { user: { permissions: { admin: true } } } : parent));
-	await api.parent({ id: "7", definition: sha, source: sha });
-	await assert.rejects(api.parent({ id: "7", definition: sha, source: other }));
+	for (const actor of ["administrator", "github-merge-queue[bot]"]) {
+		const parent = { id: 7, status: "in_progress", conclusion: null, head_sha: sha, event: "push", path: `.github/workflows/${workflowFile}`, display_title: `Rust build ${sha}`, triggering_actor: { login: actor } };
+		const api = new RunnerApi("fixture", async (url) => Response.json(String(url).includes("collaborators") ? { user: { permissions: { admin: true } } } : parent));
+		await api.parent({ id: "7", definition: sha, source: sha });
+		await assert.rejects(api.parent({ id: "7", definition: sha, source: other }));
+	}
 });
