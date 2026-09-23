@@ -39,6 +39,7 @@ mod inventory;
 mod lock;
 
 pub use flight::LocalActionLease;
+pub use flight::LocalActionPin;
 pub use flight::LocalActionReservation;
 pub use inventory::LocalCacheInventory;
 use lock::CacheLock;
@@ -91,6 +92,8 @@ enum LocalCacheError {
     },
     #[error("Local cache entry '{}' is not a regular file", _0.display())]
     NotFile(PathBuf),
+    #[error("Local cache action root '{}' appeared without a pin", _0.display())]
+    MissingActionPin(PathBuf),
     #[error("BSMR could not determine the user cache directory")]
     MissingUserCacheDirectory,
     #[error("BSMR_LOCAL_CACHE_DIR must be absolute, got '{}'", _0.display())]

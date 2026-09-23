@@ -37,6 +37,7 @@ use bsmr_execute::execute::cache_uploader::UploadCache;
 use bsmr_execute::execute::executor_stage_async;
 use bsmr_execute::execute::kind::CommandExecutionKind;
 use bsmr_execute::execute::local_cache::LocalActionCache;
+use bsmr_execute::execute::local_cache::LocalActionPin;
 use bsmr_execute::execute::local_cache::LocalActionReservation;
 use bsmr_execute::execute::local_cache::LocalActionResult;
 use bsmr_execute::execute::local_cache::LocalCachePublication;
@@ -84,7 +85,7 @@ impl PreparedCommandOptionalExecutor for LocalActionCacheChecker {
         _cancellations: &CancellationContext,
     ) -> ControlFlow<CommandExecutionResult, CommandExecutionManager> {
         let action = command.prepared_action.action_and_blobs.action.dupe();
-        let result = match executor_stage_async(
+        let (result, pin) = match executor_stage_async(
             bsmr_data::CacheQuery {
                 action_digest: action.to_string(),
                 cache_type: bsmr_data::CacheType::ActionCache.into(),
@@ -104,7 +105,7 @@ impl PreparedCommandOptionalExecutor for LocalActionCacheChecker {
         )
         .await
         {
-            Ok(LocalActionReservation::Hit(result)) => result,
+            Ok(LocalActionReservation::Hit { result, pin }) => (result, pin),
             Ok(LocalActionReservation::Lease(lease)) => {
                 return ControlFlow::Continue(manager.with_local_action_lease(lease));
             }
@@ -123,6 +124,7 @@ impl PreparedCommandOptionalExecutor for LocalActionCacheChecker {
                 &self.artifact_fs,
                 self.materializer.as_ref(),
                 self.cache.dupe(),
+                pin,
                 command,
                 result,
             ),
@@ -239,6 +241,7 @@ async fn restore_result(
     artifact_fs: &ArtifactFs,
     materializer: &dyn Materializer,
     cache: Arc<LocalActionCache>,
+    pin: Arc<LocalActionPin>,
     command: &PreparedCommand<'_, '_>,
     result: LocalActionResult,
 ) -> bsmr_error::Result<(
@@ -329,7 +332,7 @@ async fn restore_result(
     }
 
     materializer
-        .declare_local_cache_many(cache.dupe(), digest_config, declarations)
+        .declare_local_cache_many(cache.dupe(), pin, digest_config, declarations)
         .await?;
 
     let stdout = read_stream(&cache, &result.stdout, digest_config)?;

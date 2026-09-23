@@ -79,6 +79,7 @@ impl Materializer for NoDiskMaterializer {
     async fn declare_local_cache_many_impl(
         &self,
         _cache: Arc<crate::execute::local_cache::LocalActionCache>,
+        _pin: Arc<crate::execute::local_cache::LocalActionPin>,
         _digest_config: crate::digest_config::DigestConfig,
         _artifacts: Vec<DeclareArtifactPayload>,
     ) -> bsmr_error::Result<()> {

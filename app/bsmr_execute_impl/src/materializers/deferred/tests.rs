@@ -22,6 +22,7 @@ use bsmr_error::internal_error;
 use bsmr_execute::digest_config::DigestConfig;
 use bsmr_execute::directory::ActionDirectoryBuilder;
 use bsmr_execute::directory::insert_file;
+use bsmr_execute::execute::action_digest::ActionDigest;
 use bsmr_execute::materialize::materializer::CleanStaleArtifactsArgs;
 use bsmr_execute::materialize::materializer::DeclareArtifactPayload;
 use bsmr_execute::materialize::materializer::DeferredMaterializerSubscription;
@@ -631,12 +632,21 @@ mod state_machine {
             let path = make_path("foo/bar");
             let content = b"cached output";
             let digest_config = dm.io.digest_config();
+            let action = ActionDigest::from_content(b"action", digest_config.cas_digest_config());
+            cache.publish_action_result(
+                &action,
+                &bsmr_execute::execute::local_cache::LocalActionResult::default(),
+            )?;
+            let pin = cache
+                .pin_action(&action)?
+                .expect("new action lock must be available");
             let value = ArtifactValue::file(FileMetadata {
                 digest: TrackedFileDigest::from_content(content, digest_config.cas_digest_config()),
                 is_executable: false,
             });
             let local_cache = || ArtifactMaterializationMethod::LocalCache {
                 cache: cache.dupe(),
+                pin: pin.dupe(),
                 digest_config,
             };
 

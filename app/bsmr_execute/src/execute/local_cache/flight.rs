@@ -9,20 +9,33 @@ use std::fs;
 use std::fs::File;
 use std::fs::OpenOptions;
 use std::fs::TryLockError;
+use std::path::Path;
+use std::sync::Arc;
 
 use super::LocalActionCache;
 use super::LocalActionResult;
+use super::LocalCacheError;
 use super::io_error;
 use crate::execute::action_digest::ActionDigest;
 
 /// Returns a published result or ownership of the missing action.
 pub enum LocalActionReservation {
-    Hit(LocalActionResult),
+    Hit {
+        result: LocalActionResult,
+        pin: Arc<LocalActionPin>,
+    },
     Lease(LocalActionLease),
 }
 
 /// Closing this file releases the process lock, including on execution failure.
+#[derive(Debug)]
 pub struct LocalActionLease {
+    _file: File,
+}
+
+/// A shared lock on one exact action root retained by deferred materialization.
+#[derive(Debug)]
+pub struct LocalActionPin {
     _file: File,
 }
 
@@ -32,14 +45,45 @@ impl LocalActionCache {
         &self,
         action: &ActionDigest,
     ) -> bsmr_error::Result<Option<LocalActionReservation>> {
-        if let Some(result) = self.action_result(action)? {
-            return Ok(Some(LocalActionReservation::Hit(result)));
-        }
-        let directory = self.root.join("flights");
-        fs::create_dir_all(&directory)
-            .map_err(|error| io_error("create action lock directory", &directory, error))?;
-        // Three hexadecimal digits bound persistent lock files to 4096 shards.
-        let path = directory.join(&action.raw_digest().to_string()[..3]);
+        let Some(lease) = self.try_reserve_flight(action)? else {
+            return Ok(None);
+        };
+        let pin = self.pin_action(action)?;
+        let reservation = match (self.action_result(action)?, pin) {
+            (Some(result), Some(pin)) => LocalActionReservation::Hit { result, pin },
+            (None, _) => LocalActionReservation::Lease(lease),
+            (Some(_), None) => {
+                return Err(LocalCacheError::MissingActionPin(self.action_path(action)).into());
+            }
+        };
+        Ok(Some(reservation))
+    }
+
+    /// Pins one existing action root against collection.
+    pub fn pin_action(
+        &self,
+        action: &ActionDigest,
+    ) -> bsmr_error::Result<Option<Arc<LocalActionPin>>> {
+        let path = self.action_path(action);
+        let file = match OpenOptions::new().read(true).open(&path) {
+            Ok(file) => file,
+            Err(error) if error.kind() == std::io::ErrorKind::NotFound => return Ok(None),
+            Err(error) => return Err(io_error("open action root for pin", path, error)),
+        };
+        fs4::fs_std::FileExt::lock_shared(&file)
+            .map_err(|error| io_error("pin action root", path, error))?;
+        Ok(Some(Arc::new(LocalActionPin { _file: file })))
+    }
+
+    /// Acquires the bounded flight shard for one action miss or hit lookup.
+    fn try_reserve_flight(
+        &self,
+        action: &ActionDigest,
+    ) -> bsmr_error::Result<Option<LocalActionLease>> {
+        let path = action_lock_path(&self.root, &self.action_path(action));
+        let directory = path.parent().expect("action lock paths have a parent");
+        fs::create_dir_all(directory)
+            .map_err(|error| io_error("create action lock directory", directory, error))?;
         let file = OpenOptions::new()
             .read(true)
             .write(true)
@@ -54,12 +98,17 @@ impl LocalActionCache {
                 return Err(io_error("acquire action lock", &path, error));
             }
         }
-        let lease = LocalActionLease { _file: file };
-        Ok(Some(match self.action_result(action)? {
-            Some(result) => LocalActionReservation::Hit(result),
-            None => LocalActionReservation::Lease(lease),
-        }))
+        Ok(Some(LocalActionLease { _file: file }))
     }
+}
+
+/// Maps every action root to one of 4096 stable process-lock shards.
+pub(super) fn action_lock_path(root: &Path, action_path: &Path) -> std::path::PathBuf {
+    let key = action_path
+        .file_name()
+        .and_then(|name| name.to_str())
+        .expect("action paths end in a SHA-256 key");
+    root.join("flights").join(&key[..3])
 }
 
 #[cfg(test)]
@@ -85,9 +134,19 @@ mod tests {
         let next = cache.try_reserve_action(&action)?;
         assert!(matches!(next, Some(LocalActionReservation::Lease(_))));
         cache.publish_action_result(&action, &LocalActionResult::default())?;
+        drop(next);
+        let hit = cache.try_reserve_action(&action)?;
+        assert!(matches!(hit, Some(LocalActionReservation::Hit { .. })));
+        let concurrent_hit = cache.try_reserve_action(&action)?;
+        assert!(matches!(
+            concurrent_hit,
+            Some(LocalActionReservation::Hit { .. })
+        ));
+        drop(hit);
+        drop(concurrent_hit);
         assert!(matches!(
             cache.try_reserve_action(&action)?,
-            Some(LocalActionReservation::Hit(_))
+            Some(LocalActionReservation::Hit { .. })
         ));
         Ok(())
     }
