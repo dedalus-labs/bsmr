@@ -36,6 +36,21 @@ case "$platform" in
 esac
 
 cache_base="${BSMR_BOOTSTRAP_CACHE_DIR:-${XDG_CACHE_HOME:-$HOME/.cache}/bsmr/bootstrap-v2}"
+keep_targets="${BSMR_BOOTSTRAP_KEEP_TARGETS:-2}"
+keep_binaries="${BSMR_BOOTSTRAP_KEEP_BINARIES:-3}"
+minimum_age="${BSMR_BOOTSTRAP_MIN_AGE_SECS:-3600}"
+[[ "$keep_binaries" =~ ^[1-9][0-9]*$ ]] || {
+  echo "error: BSMR_BOOTSTRAP_KEEP_BINARIES must be a positive integer" >&2
+  exit 1
+}
+[[ "$keep_targets" =~ ^[1-9][0-9]*$ ]] || {
+  echo "error: BSMR_BOOTSTRAP_KEEP_TARGETS must be a positive integer" >&2
+  exit 1
+}
+[[ "$minimum_age" =~ ^(0|[1-9][0-9]*)$ ]] || {
+  echo "error: BSMR_BOOTSTRAP_MIN_AGE_SECS must be a canonical unsigned integer" >&2
+  exit 1
+}
 ensure_directory() {
   local path="$1"
   mkdir -p "$path"
@@ -223,6 +238,123 @@ cleanup_source_temporaries() {
   shopt -u nullglob
 }
 
+collect_binaries() {
+  local candidate count delete_count mtime name now removed tools_root
+  tools_root="$cache_base/tools/$target_key"
+  ensure_directory "$tools_root"
+  touch "$binary_dir"
+  shopt -s nullglob
+  candidates=()
+  eligible=()
+  now="$(date +%s)"
+  for candidate in "$tools_root"/*; do
+    name="$(basename "$candidate")"
+    if [[ -L "$candidate" || (-e "$candidate" && ! -d "$candidate") ]]; then
+      [[ "$name" =~ ^[0-9a-f]{64}$ ]] || continue
+      echo "error: unmanaged bootstrap binary entry: $candidate" >&2
+      return 1
+    fi
+    if [[ -d "$candidate" && "$name" =~ ^[0-9a-f]{64}$ ]]; then
+      candidates+=("$candidate")
+      if [[ "$candidate" != "$binary_dir" ]]; then
+        case "$platform" in
+          Darwin) mtime="$(stat -f %m "$candidate")" ;;
+          Linux) mtime="$(stat -c %Y "$candidate")" ;;
+        esac
+        ((now - mtime < minimum_age)) || eligible+=("$candidate")
+      fi
+    fi
+  done
+  shopt -u nullglob
+  count="${#candidates[@]}"
+  ((count <= keep_binaries || ${#eligible[@]} == 0)) && return
+  delete_count="$((count - keep_binaries))"
+  removed=0
+  while IFS= read -r candidate; do
+    ((removed >= delete_count)) && break
+    find "$candidate" -depth -delete
+    ((removed += 1))
+  done < <(ls -dtr "${eligible[@]}")
+}
+
+collect_target() {
+  local candidate="$1" key lock tools
+  key="$(basename "$candidate")"
+  lock="$cache_base/locks/$key.lock"
+  [[ ! -L "$lock" && -f "$lock" ]] || {
+    echo "error: bootstrap target lock is not owned: $lock" >&2
+    return 1
+  }
+  (
+    exec 8>"$lock"
+    case "$platform" in
+      Darwin) lockf -t 0 8 || exit 2 ;;
+      Linux) flock -n 8 || exit 2 ;;
+    esac
+    tools="$cache_base/tools/$key"
+    if [[ -L "$tools" || (-e "$tools" && ! -d "$tools") ]]; then
+      echo "error: unmanaged bootstrap tools entry: $tools" >&2
+      exit 1
+    fi
+    [[ ! -d "$tools" ]] || find "$tools" -depth -delete
+    find "$candidate" -depth -delete
+  )
+}
+
+collect_cache_locked() {
+  local candidate count delete_count mtime name now removed status targets_root
+  targets_root="$cache_base/targets"
+  ensure_directory "$targets_root"
+  touch "$target"
+  find "$cache_base" -maxdepth 1 -type f -name 'source-list.*' -mtime +0 -delete
+  shopt -s nullglob
+  candidates=()
+  eligible=()
+  now="$(date +%s)"
+  for candidate in "$targets_root"/*; do
+    name="$(basename "$candidate")"
+    if [[ -L "$candidate" || (-e "$candidate" && ! -d "$candidate") ]]; then
+      [[ "$name" =~ ^[0-9a-f]{64}$ ]] || continue
+      echo "error: unmanaged bootstrap target entry: $candidate" >&2
+      return 1
+    fi
+    if [[ -d "$candidate" && "$name" =~ ^[0-9a-f]{64}$ ]]; then
+      candidates+=("$candidate")
+      if [[ "$candidate" != "$target" ]]; then
+        case "$platform" in
+          Darwin) mtime="$(stat -f %m "$candidate")" ;;
+          Linux) mtime="$(stat -c %Y "$candidate")" ;;
+        esac
+        ((now - mtime < minimum_age)) || eligible+=("$candidate")
+      fi
+    fi
+  done
+  shopt -u nullglob
+  count="${#candidates[@]}"
+  ((count <= keep_targets || ${#eligible[@]} == 0)) && return
+  delete_count="$((count - keep_targets))"
+  removed=0
+  while IFS= read -r candidate; do
+    ((removed >= delete_count)) && break
+    status=0
+    collect_target "$candidate" || status=$?
+    if [[ "$status" -eq 0 ]]; then
+      ((removed += 1))
+    elif [[ "$status" -ne 2 ]]; then
+      return "$status"
+    fi
+  done < <(ls -dtr "${eligible[@]}")
+}
+
+collect_cache() {
+  local gc_lock="$cache_base/gc.lock"
+  [[ ! -L "$gc_lock" ]] || { echo "error: bootstrap GC lock is a symlink" >&2; return 1; }
+  case "$platform" in
+    Darwin) (exec 7>"$gc_lock"; lockf 7; collect_cache_locked) ;;
+    Linux) (exec 7>"$gc_lock"; flock 7; collect_cache_locked) ;;
+  esac
+}
+
 build_locked() {
   local attempt before binary current temporary
   [[ "$(tool_identity)" == "$target_key" ]] || return 75
@@ -250,6 +382,8 @@ build_locked() {
     current="$(source_identity)"
     [[ "$before" == "$current" ]] || continue
     [[ "$(tool_identity)" == "$target_key" ]] || return 75
+    collect_binaries
+    collect_cache
     printf '%s\n' "$binary"
     return
   done

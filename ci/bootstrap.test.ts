@@ -12,11 +12,13 @@ import {
 	copyFileSync,
 	mkdirSync,
 	mkdtempSync,
+	readdirSync,
 	readFileSync,
 	realpathSync,
 	rmSync,
 	statSync,
 	symlinkSync,
+	utimesSync,
 	writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
@@ -161,6 +163,24 @@ test("identical source content compiles one shared development binary", async ()
 	}
 });
 
+test("different source content serializes the shared Cargo target", async () => {
+	const fixture = createFixture();
+	try {
+		writeFileSync(join(fixture.secondRepository, "different.rs"), "different\n");
+		const [first, second] = await Promise.all([
+			runBootstrap(fixture.firstScript, fixture.firstRepository, fixture.env),
+			runBootstrap(fixture.secondScript, fixture.secondRepository, fixture.env),
+		]);
+
+		assert.notEqual(first, second);
+		const builds = readFileSync(fixture.cargoLog, "utf8").split("\n").filter(Boolean);
+		assert.equal(builds.length, 2);
+		assert.equal(builds[0]?.split("|")[0], builds[1]?.split("|")[0]);
+	} finally {
+		rmSync(fixture.root, { recursive: true, force: true });
+	}
+});
+
 test("source mutation during Cargo retries before publication", async () => {
 	const fixture = createFixture();
 	try {
@@ -178,6 +198,80 @@ test("source mutation during Cargo retries before publication", async () => {
 	}
 });
 
+test("Cargo configuration mutation reroutes publication", async () => {
+	const fixture = createFixture();
+	try {
+		const binary = await runBootstrap(fixture.firstScript, fixture.firstRepository, {
+			...fixture.env,
+			BSMR_TEST_MUTATE_TOOL_FILE: join(fixture.root, ".cargo", "config.toml"),
+			BSMR_TEST_MUTATE_ONCE: join(fixture.root, "tool.once"),
+		});
+		const targets = readFileSync(fixture.cargoLog, "utf8")
+			.split("\n")
+			.filter(Boolean)
+			.map((line) => line.split("|")[0]);
+
+		assert.equal(new Set(targets).size, 2);
+		assert.equal(binary.split("/").at(-3), targets[1]?.split("/").at(-1));
+	} finally {
+		rmSync(fixture.root, { recursive: true, force: true });
+	}
+});
+
+test("selected compiler mutation reroutes publication", async () => {
+	const fixture = createFixture();
+	try {
+		const compiler = join(fixture.root, "selected-cc");
+		writeFileSync(compiler, "#!/usr/bin/env bash\necho original\n");
+		chmodSync(compiler, 0o755);
+		const binary = await runBootstrap(fixture.firstScript, fixture.firstRepository, {
+			...fixture.env,
+			CC: compiler,
+			BSMR_TEST_MUTATE_SELECTED_TOOL: compiler,
+			BSMR_TEST_MUTATE_ONCE: join(fixture.root, "compiler.once"),
+		});
+		const targets = readFileSync(fixture.cargoLog, "utf8")
+			.split("\n")
+			.filter(Boolean)
+			.map((line) => line.split("|")[0]);
+
+		assert.equal(new Set(targets).size, 2);
+		assert.equal(binary.split("/").at(-3), targets[1]?.split("/").at(-1));
+	} finally {
+		rmSync(fixture.root, { recursive: true, force: true });
+	}
+});
+
+test("non-selector compiler controls and empty wrappers are accepted", async () => {
+	const fixture = createFixture();
+	try {
+		const binary = await runBootstrap(fixture.firstScript, fixture.firstRepository, {
+			...fixture.env,
+			CC_ENABLE_DEBUG_OUTPUT: "1",
+			CC_SHELL_ESCAPED_FLAGS: "1",
+			RUSTC_WRAPPER: "",
+		});
+
+		assert.ok(statSync(binary).isFile());
+		assert.equal(readFileSync(fixture.cargoLog, "utf8").split("\n").filter(Boolean).length, 1);
+	} finally {
+		rmSync(fixture.root, { recursive: true, force: true });
+	}
+});
+
+test("source executable mode selects a distinct binary", async () => {
+	const fixture = createFixture();
+	try {
+		const first = await runBootstrap(fixture.firstScript, fixture.firstRepository, fixture.env);
+		chmodSync(join(fixture.firstRepository, "rust-toolchain.toml"), 0o755);
+		const second = await runBootstrap(fixture.firstScript, fixture.firstRepository, fixture.env);
+
+		assert.notEqual(first, second);
+	} finally {
+		rmSync(fixture.root, { recursive: true, force: true });
+	}
+});
+
 test("source symlinks fail before Cargo execution", async () => {
 	const fixture = createFixture();
 	try {
@@ -190,6 +284,148 @@ test("source symlinks fail before Cargo execution", async () => {
 			/bootstrap source symbolic links are unsupported/,
 		);
 		assert.throws(() => statSync(fixture.cargoLog));
+	} finally {
+		rmSync(fixture.root, { recursive: true, force: true });
+	}
+});
+
+test("build environment selects a distinct target and binary", async () => {
+	const fixture = createFixture();
+	try {
+		const first = await runBootstrap(fixture.firstScript, fixture.firstRepository, {
+			...fixture.env,
+			RUSTFLAGS: "--cfg first",
+		});
+		const second = await runBootstrap(fixture.firstScript, fixture.firstRepository, {
+			...fixture.env,
+			RUSTFLAGS: "--cfg second",
+		});
+		const proto = await runBootstrap(fixture.firstScript, fixture.firstRepository, {
+			...fixture.env,
+			BSMR_PROTO_SRCS: "/different/protos",
+		});
+
+		assert.notEqual(first, second);
+		assert.notEqual(second, proto);
+		assert.equal(new Set([first, second, proto].map((path) => path.split("/").at(-3))).size, 3);
+	} finally {
+		rmSync(fixture.root, { recursive: true, force: true });
+	}
+});
+
+test("compiler identity selects a distinct target", async () => {
+	const fixture = createFixture();
+	try {
+		const first = await runBootstrap(fixture.firstScript, fixture.firstRepository, fixture.env);
+		const second = await runBootstrap(fixture.firstScript, fixture.firstRepository, {
+			...fixture.env,
+			BSMR_TEST_RUSTC_ID: "rustc 2.0.0-nightly",
+		});
+
+		assert.notEqual(first, second);
+		assert.notEqual(first.split("/").at(-3), second.split("/").at(-3));
+	} finally {
+		rmSync(fixture.root, { recursive: true, force: true });
+	}
+});
+
+test("ignored files are outside the supported source identity", async () => {
+	const fixture = createFixture();
+	try {
+		const first = await runBootstrap(fixture.firstScript, fixture.firstRepository, fixture.env);
+		writeFileSync(join(fixture.firstRepository, "ignored-input"), "not a declared input\n");
+		const second = await runBootstrap(fixture.firstScript, fixture.firstRepository, fixture.env);
+
+		assert.equal(first, second);
+		assert.equal(readFileSync(fixture.cargoLog, "utf8").split("\n").filter(Boolean).length, 1);
+	} finally {
+		rmSync(fixture.root, { recursive: true, force: true });
+	}
+});
+
+test("interrupted publication temporaries are collected", async () => {
+	const fixture = createFixture();
+	try {
+		const binary = await runBootstrap(fixture.firstScript, fixture.firstRepository, fixture.env);
+		const temporary = join(dirname(binary), "bsmr.tmp.stale");
+		const sourceTemporary = join(
+			fixture.cache,
+			"targets",
+			binary.split("/").at(-3) ?? "",
+			"source.tmp.stale",
+		);
+		writeFileSync(temporary, "partial");
+		mkdirSync(sourceTemporary);
+		writeFileSync(join(sourceTemporary, "partial.rs"), "partial");
+
+		assert.equal(await runBootstrap(fixture.firstScript, fixture.firstRepository, fixture.env), binary);
+		assert.ok(statSync(binary).isFile());
+		assert.throws(() => statSync(temporary));
+		assert.throws(() => statSync(sourceTemporary));
+	} finally {
+		rmSync(fixture.root, { recursive: true, force: true });
+	}
+});
+
+test("target retention preserves fresh leases then removes stale identities", async () => {
+	const fixture = createFixture();
+	try {
+		const first = await runBootstrap(fixture.firstScript, fixture.firstRepository, {
+			...fixture.env,
+			RUSTFLAGS: "--cfg first",
+			BSMR_BOOTSTRAP_KEEP_TARGETS: "1",
+		});
+		const secondEnv = {
+			...fixture.env,
+			RUSTFLAGS: "--cfg second",
+			BSMR_BOOTSTRAP_KEEP_TARGETS: "1",
+		};
+		const second = await runBootstrap(fixture.firstScript, fixture.firstRepository, secondEnv);
+		assert.ok(statSync(first).isFile(), "a freshly returned binary remains leased");
+
+		const firstKey = first.split("/").at(-3) ?? "";
+		utimesSync(join(fixture.cache, "targets", firstKey), 1, 1);
+		assert.equal(
+			await runBootstrap(fixture.firstScript, fixture.firstRepository, {
+				...secondEnv,
+				BSMR_BOOTSTRAP_MIN_AGE_SECS: "0",
+			}),
+			second,
+		);
+
+		assert.throws(() => statSync(first));
+		assert.ok(statSync(second).isFile());
+		assert.equal(readdirSync(join(fixture.cache, "targets")).length, 1);
+		assert.equal(readdirSync(join(fixture.cache, "tools")).length, 1);
+	} finally {
+		rmSync(fixture.root, { recursive: true, force: true });
+	}
+});
+
+test("binary retention bounds source edits within one target", async () => {
+	const fixture = createFixture();
+	try {
+		const first = await runBootstrap(fixture.firstScript, fixture.firstRepository, {
+			...fixture.env,
+			BSMR_BOOTSTRAP_KEEP_BINARIES: "1",
+		});
+		writeFileSync(join(fixture.firstRepository, "different.rs"), "different\n");
+		const secondEnv = { ...fixture.env, BSMR_BOOTSTRAP_KEEP_BINARIES: "1" };
+		const second = await runBootstrap(fixture.firstScript, fixture.firstRepository, secondEnv);
+		assert.ok(statSync(first).isFile(), "a freshly returned binary remains leased");
+
+		utimesSync(dirname(first), 1, 1);
+		assert.equal(
+			await runBootstrap(fixture.firstScript, fixture.firstRepository, {
+				...secondEnv,
+				BSMR_BOOTSTRAP_MIN_AGE_SECS: "0",
+			}),
+			second,
+		);
+
+		assert.throws(() => statSync(first));
+		assert.ok(statSync(second).isFile());
+		assert.equal(readdirSync(dirname(dirname(second))).length, 1);
 	} finally {
 		rmSync(fixture.root, { recursive: true, force: true });
 	}
