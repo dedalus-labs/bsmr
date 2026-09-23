@@ -102,8 +102,18 @@ settings, and workspace lints before native compilation. Each build or test has 
 separate configured graph, so building a library does not activate its test-only
 dependencies.
 
-Build scripts, procedural macros, native `links`,
-integration tests, custom harnesses, cross compilation, and configured linkers
+Build scripts and procedural macros require the
+[verified Linux namespace runtime](https://github.com/dedalus-labs/bsmr/blob/main/app/bsmr_execute_impl/src/executors/namespace/README.md).
+Unisolated execution rejects package code before compilation. This does not
+establish macOS package-code isolation or complete C/C++ toolchain support.
+
+Cargo's `links` metadata flows only to direct dependents' build scripts.
+Generated directory paths remain attached to their producing artifacts and are
+rebound when cached outputs are restored. Metadata emission order is preserved,
+including keys that become identical after Cargo's environment-name conversion.
+Declaring `links` does not itself require a C compilation or linker invocation.
+
+Integration tests, custom harnesses, cross compilation, and configured linkers
 remain unsupported. These requirements fail before compilation.
 Project compiler flags are limited to cfg values, lints, and scalar optimization
 settings. Response files, compiler extensions, file-based overrides, and Cargo
@@ -147,6 +157,9 @@ failure, and a custom recipe consuming an inferred executable. It checks
 manifest invalidation, source invalidation, unrelated edits, cache restoration
 in a second checkout, environment isolation, and build-script rejection. It also
 checks that inference leaves the checkout free of generated build files.
+
+`test/rust/metadata.py` compares metadata visibility and ordering with Cargo. It
+checks generated paths, cache restoration across checkouts, and source edits.
 
 `test/rust/lto.ts` compares release LTO with Cargo across a three-crate chain.
 It checks compiler flags, dependency edits, cached output restoration, and unit tests.

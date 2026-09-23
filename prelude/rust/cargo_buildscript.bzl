@@ -60,6 +60,13 @@ load(
 )
 load(":rust_toolchain.bzl", "PanicRuntime")
 
+# Cached metadata must retain the generated directories referenced by its values.
+BuildScriptInfo = provider(fields = {
+    "metadata": provider_field(Artifact),
+    "out_dir": provider_field(Artifact),
+    "cwd": provider_field(Artifact),
+})
+
 def _make_rustc_shim(ctx: AnalysisContext, cwd: Artifact) -> cmd_args:
     # Build scripts expect to receive a `rustc` which "just works." However,
     # our rustc sometimes has no sysroot available, so we need to make a shim
@@ -238,6 +245,7 @@ def _cargo_buildscript_impl(ctx: AnalysisContext) -> list[Provider]:
     cwd = ctx.actions.declare_output("cwd", dir = True, has_content_based_path = True)
     out_dir = ctx.actions.declare_output("OUT_DIR", dir = True, has_content_based_path = True)
     rustc_flags = ctx.actions.declare_output("rustc_flags", has_content_based_path = True)
+    metadata = ctx.actions.declare_output("metadata.json", has_content_based_path = True)
 
     if ctx.attrs.manifest_dir != None:
         manifest_dir = ctx.attrs.manifest_dir[DefaultInfo].default_outputs[0]
@@ -251,7 +259,11 @@ def _cargo_buildscript_impl(ctx: AnalysisContext) -> list[Provider]:
         cmd_args("--manifest-dir=", manifest_dir, delimiter = ""),
         cmd_args("--create-cwd=", cwd.as_output(), delimiter = ""),
         cmd_args("--outfile=", rustc_flags.as_output(), delimiter = ""),
+        cmd_args("--metadata-out=", metadata.as_output(), delimiter = ""),
     ]
+    for links, dependency in ctx.attrs.metadata_deps.items():
+        info = dependency[BuildScriptInfo]
+        cmd.extend(["--metadata-dependency", "DEP_" + links, info.metadata, info.out_dir, info.cwd])
 
     if ctx.attrs.rustc_link_lib:
         cmd.append("--rustc-link-lib")
@@ -373,12 +385,14 @@ def _cargo_buildscript_impl(ctx: AnalysisContext) -> list[Provider]:
     )
 
     return [
+        BuildScriptInfo(metadata = metadata, out_dir = out_dir, cwd = cwd),
         DefaultInfo(
             default_output = None,
             sub_targets = {
                 "cwd": [DefaultInfo(default_output = cwd)],
                 "out_dir": [DefaultInfo(default_output = out_dir)],
                 "rustc_flags": [DefaultInfo(default_output = rustc_flags)],
+                "metadata": [DefaultInfo(default_output = metadata)],
             },
         )
     ]
@@ -394,6 +408,7 @@ _cargo_buildscript_rule = rule(
         "features": attrs.list(attrs.string(), default = []),
         "filegroup_for_manifest_dir": attrs.option(attrs.dict(key = attrs.string(), value = attrs.source()), default = None),
         "manifest_dir": attrs.option(attrs.dep(), default = None),
+        "metadata_deps": attrs.dict(key = attrs.string(), value = attrs.dep(providers = [BuildScriptInfo]), default = {}),
         "package_name": attrs.string(),
         "runner": attrs.default_only(attrs.exec_dep(providers = [RunInfo], default = "prelude//rust/tools:buildscript_run")),
         # *IMPORTANT* rustc_cfg must be a `dep` and not an `exec_dep` because

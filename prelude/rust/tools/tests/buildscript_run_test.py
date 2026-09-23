@@ -6,6 +6,7 @@
 # Verifies build-script diagnostics through the production runner and compiler.
 
 import os
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -21,6 +22,7 @@ class BuildscriptRunTest(unittest.TestCase):
         self.root = Path(temporary.name).resolve()
         self.compiler = str(Path(os.environ['RUSTC']).resolve(strict=True))
         self.flags = self.root / 'flags'
+        self.metadata = self.root / 'metadata.json'
         self.source = self.root / 'source'
         self.source.mkdir()
         self.output = self.root / 'out'
@@ -39,7 +41,10 @@ class BuildscriptRunTest(unittest.TestCase):
         )
 
     def execute(
-        self, directives: list[str], assertions: str = ''
+        self,
+        directives: list[str],
+        assertions: str = '',
+        dependencies: tuple[str, ...] = (),
     ) -> subprocess.CompletedProcess[str]:
         """Compile and execute a real script through the inherited protocol runner."""
         source = self.source / 'build.rs'
@@ -60,6 +65,8 @@ class BuildscriptRunTest(unittest.TestCase):
             f'--manifest-dir={self.source}',
             f'--create-cwd={self.root / "cwd"}',
             f'--outfile={self.flags}',
+            f'--metadata-out={self.metadata}',
+            *dependencies,
         ]
         environment = {
             **os.environ,
@@ -108,14 +115,22 @@ class BuildscriptRunTest(unittest.TestCase):
 
     def test_invariant_script_error_prevents_flags_publication(self) -> None:
         """A successful process cannot override an explicit Cargo error directive."""
-        for prefix in ['cargo:', 'cargo::']:
-            with self.subTest(prefix=prefix):
-                result = self.execute(
-                    [f'{prefix}rustc-cfg=first', f'{prefix}error=missing generator']
-                )
-                self.assertNotEqual(result.returncode, 0)
-                self.assertIn('missing generator', result.stderr)
-                self.assertEqual(self.flags.read_text(), '')
+        result = self.execute(
+            ['cargo::rustc-cfg=first', 'cargo::error=missing generator']
+        )
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn('missing generator', result.stderr)
+        self.assertEqual(self.flags.read_text(), '')
+
+    def test_invariant_malformed_metadata_cannot_publish_flags(self) -> None:
+        """Incomplete metadata invalidates the complete script output."""
+        result = self.execute(
+            ['cargo::rustc-cfg=first', 'cargo::metadata=missing-separator']
+        )
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn('invalid build-script metadata', result.stderr)
+        self.assertEqual(self.flags.read_text(), '')
+        self.assertFalse(self.metadata.exists())
 
     def test_invariant_cfg_environment_preserves_custom_values(self) -> None:
         """Build scripts receive custom cfgs with Cargo's boolean and value semantics."""
@@ -147,6 +162,50 @@ class BuildscriptRunTest(unittest.TestCase):
         result = self.execute(['cargo::rustc-link-arg=-unknown-linker-option'])
         self.assertNotEqual(result.returncode, 0)
         self.assertIn('unsupported build-script directive', result.stderr)
+
+    def test_invariant_metadata_preserves_order_and_relocated_files(self) -> None:
+        """Dependent scripts receive ordered metadata bound to the restored outputs."""
+        result = self.execute(
+            [
+                'cargo:old-key=legacy',
+                'cargo:error=legacy metadata',
+                'cargo::metadata=a-key=first',
+                'cargo::metadata=A_KEY=second',
+                'cargo::metadata=a-key=last',
+            ],
+            """
+            let out = std::env::var("OUT_DIR").unwrap();
+            std::fs::write(format!("{out}/value"), "17").unwrap();
+            println!("cargo::metadata=include={out}/value");
+            println!("cargo::metadata=source={}", std::env::var("CARGO_MANIFEST_DIR").unwrap());
+            """,
+        )
+        self.assertEqual(result.returncode, 0, result.stderr)
+        metadata = self.root / 'producer.json'
+        self.metadata.rename(metadata)
+        output = self.root / 'restored output'
+        cwd = self.root / 'restored source'
+        shutil.move(self.output, output)
+        shutil.move(self.root / 'cwd', cwd)
+        result = self.execute(
+            [],
+            """
+            assert_eq!(std::env::var("DEP_NATIVE_API_OLD_KEY").unwrap(), "legacy");
+            assert_eq!(std::env::var("DEP_NATIVE_API_A_KEY").unwrap(), "last");
+            assert_eq!(std::env::var("DEP_NATIVE_API_ERROR").unwrap(), "legacy metadata");
+            let include = std::env::var("DEP_NATIVE_API_INCLUDE").unwrap();
+            assert_eq!(std::fs::read_to_string(include).unwrap(), "17");
+            assert!(std::path::Path::new(&std::env::var("DEP_NATIVE_API_SOURCE").unwrap()).is_dir());
+        """,
+            (
+                '--metadata-dependency',
+                'DEP_native-api',
+                str(metadata),
+                str(output),
+                str(cwd),
+            ),
+        )
+        self.assertEqual(result.returncode, 0, result.stderr)
 
 
 if __name__ == '__main__':

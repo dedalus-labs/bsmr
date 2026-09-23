@@ -17,6 +17,7 @@ Run a crate's Cargo buildscript.
 """
 
 import argparse
+import json
 import os
 import re
 import shutil
@@ -156,6 +157,90 @@ class Args(NamedTuple):
     outfile: IO[str]
     rustc_link_lib: bool
     rustc_link_search: bool
+    metadata_out: Path
+    metadata_dependency: list[list[str]]
+
+
+class Metadata(NamedTuple):
+    """Keep ordered Cargo metadata attached to the producer's generated directories."""
+
+    # Producer's private source directory.
+    cwd: str
+    # Producer's generated files directory.
+    out_dir: str
+    # Emission order decides normalized-key collisions.
+    values: tuple[tuple[str, str], ...]
+
+    @classmethod
+    def read(cls, path: Path) -> 'Metadata':
+        """Validate a cached record before exposing values to a dependent script."""
+        record = json.loads(path.read_text(encoding='utf-8'))
+        if not isinstance(record, dict) or set(record) != {'cwd', 'out_dir', 'values'}:
+            raise ValueError(f'invalid build-script metadata: {path}')
+        for field in ['cwd', 'out_dir']:
+            if (
+                not isinstance(record[field], str)
+                or not Path(record[field]).is_absolute()
+            ):
+                raise ValueError(f'invalid metadata directory {field}: {path}')
+        values = record['values']
+        if not isinstance(values, list) or not all(
+            isinstance(pair, list)
+            and len(pair) == 2
+            and all(isinstance(value, str) for value in pair)
+            for pair in values
+        ):
+            raise ValueError(f'invalid metadata values: {path}')
+        return cls(
+            record['cwd'],
+            record['out_dir'],
+            tuple((key, value) for key, value in values),
+        )
+
+    @staticmethod
+    def parse(line: str) -> tuple[str, str]:
+        """Decode modern metadata or Cargo's unreserved legacy keys."""
+        directive = line.split(":", 1)[1].lstrip(":").split("=", 1)[0]
+        if line.startswith('cargo::metadata='):
+            data = line.removeprefix('cargo::metadata=')
+        elif not line.startswith('cargo::') and directive not in [
+            'rustc-flags',
+            'rustc-link-lib',
+            'rustc-link-search',
+            'rustc-link-arg-cdylib',
+            'rustc-cdylib-link-arg',
+            'rustc-link-arg-bins',
+            'rustc-link-arg-bin',
+            'rustc-link-arg-tests',
+            'rustc-link-arg-benches',
+            'rustc-link-arg-examples',
+            'rustc-link-arg',
+            'rustc-cfg',
+            'rustc-check-cfg',
+            'rustc-env',
+        ]:
+            # Cargo's original syntax treats unreserved keys as metadata.
+            data = line.removeprefix('cargo:')
+        else:
+            sys.exit(f'unsupported build-script directive: {directive}')
+        key, separator, value = data.partition('=')
+        if not separator:
+            sys.exit(f'invalid build-script metadata: {line}')
+        return key, value
+
+    def write(self, path: Path) -> None:
+        """Publish the ordered values only after every directive was accepted."""
+        path.write_text(json.dumps(self._asdict()) + '\n', encoding='utf-8')
+
+    def environment(self, prefix: str, out_dir: Path, cwd: Path) -> dict[str, str]:
+        """Bind cached paths to the current artifacts and preserve last-write ordering."""
+        roots = {self.cwd: str(cwd.absolute()), self.out_dir: str(out_dir.absolute())}
+        pattern = re.compile('|'.join(re.escape(root) for root in roots))
+        environment = {}
+        for key, value in self.values:
+            name = f'{prefix}_{key}'.upper().replace('-', '_')
+            environment[name] = pattern.sub(lambda match: roots[match.group()], value)
+        return environment
 
 
 def arg_parse() -> Args:
@@ -168,6 +253,8 @@ def arg_parse() -> Args:
     parser.add_argument("--outfile", type=argparse.FileType("w"), required=True)
     parser.add_argument("--rustc-link-lib", action="store_true")
     parser.add_argument("--rustc-link-search", action="store_true")
+    parser.add_argument("--metadata-out", type=Path, required=True)
+    parser.add_argument("--metadata-dependency", nargs=4, action="append", default=[])
 
     return Args(**vars(parser.parse_args()))
 
@@ -187,6 +274,16 @@ def main() -> None:  # noqa: C901
     env["CARGO_MANIFEST_PATH"] = os.path.join(env["CARGO_MANIFEST_DIR"], "Cargo.toml")
 
     env = dict(os.environ, **env)
+    for (
+        prefix,
+        metadata_path,
+        dependency_out,
+        dependency_cwd,
+    ) in args.metadata_dependency:
+        metadata = Metadata.read(Path(metadata_path))
+        env.update(
+            metadata.environment(prefix, Path(dependency_out), Path(dependency_cwd))
+        )
 
     target = env.get("TARGET")
     if target is None:
@@ -213,7 +310,7 @@ def main() -> None:  # noqa: C901
     script_output = run_buildscript(args.buildscript, env=env, cwd=cwd)
 
     cargo_rustc_cfg_pattern = re.compile("^cargo::?rustc-(cfg|check-cfg)=(.*)")
-    cargo_error_pattern = re.compile("^cargo::?error=(.*)")
+    cargo_error_pattern = re.compile("^cargo::error=(.*)")
     cargo_rustc_env_pattern = re.compile("^cargo::?rustc-env=(.+?)=(.*)")
     cargo_rustc_link_lib_pattern = re.compile("^cargo::?rustc-link-lib=(.*)")
     cargo_rustc_link_search_pattern = re.compile(
@@ -230,7 +327,9 @@ def main() -> None:  # noqa: C901
         return None
 
     flags = ""
+    metadata_values: list[tuple[str, str]] = []
     for line in script_output.split("\n"):
+        line = line.strip()
         cargo_error_match = cargo_error_pattern.match(line)
         if cargo_error_match:
             sys.exit(f"build script error: {cargo_error_match.group(1)}")
@@ -272,10 +371,19 @@ def main() -> None:  # noqa: C901
             continue
         if line.startswith("cargo:"):
             directive = line.split(":", 1)[1].lstrip(":").split("=", 1)[0]
-            if directive not in ["warning", "rerun-if-changed", "rerun-if-env-changed"]:
-                sys.exit(f"unsupported build-script directive: {directive}")
+            if (
+                directive in ["warning", "rerun-if-changed", "rerun-if-env-changed"]
+                and '=' in line
+            ):
+                print(line)
+                continue
+            metadata_values.append(Metadata.parse(line))
+            continue
         print(line, end="\n")
     args.outfile.write(flags)
+    Metadata(env['CARGO_MANIFEST_DIR'], out_dir_abs, tuple(metadata_values)).write(
+        args.metadata_out
+    )
 
 
 if __name__ == "__main__":
