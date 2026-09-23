@@ -44,11 +44,26 @@ Remote caches speak the same action-cache and CAS model. Cache provenance is
 only portable when toolchain, platform, environment, and input identities are
 portable too.
 
+## Machine-wide local cache
+
 After an action finishes, its outputs can move from a temporary execution path
 to a path derived from their content. Cache publication reads the finalized
 files. The result still records the action's original output names so another
 checkout can restore them. A later execution may reuse the temporary path
 without removing bytes that are still being published.
+
+Local action results are shared across repositories and worktrees under the
+operating system's user cache. Set `BSMR_LOCAL_CACHE_DIR` to an absolute path
+to relocate it. Every hit validates the complete object closure. An action
+result becomes visible only after all referenced objects are atomically
+published.
+
+Bessemer collects orphaned objects and oldest action results while the daemon
+initializes its configured digest policy. The default budget is ten percent of
+the backing disk, rounded down to 5 GiB and clamped between 10 and 100 GiB. Set
+`BSMR_LOCAL_CACHE_MAX_BYTES` to an exact byte count to override it. Collection
+locks the cache against concurrent reads and publications, removes action roots
+before their now-unreachable objects, and fails on malformed metadata.
 
 Restoration copies cached objects into writable outputs by default. Set
 `BSMR_LOCAL_CACHE_MATERIALIZATION=reflink` to require filesystem copy-on-write

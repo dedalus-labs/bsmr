@@ -55,6 +55,7 @@ use bsmr_execute::digest_config::DigestConfig;
 use bsmr_execute::execute::blocking::BlockingExecutor;
 use bsmr_execute::execute::blocking::BsmrBlockingExecutor;
 use bsmr_execute::execute::blocking::DirectIoExecutor;
+use bsmr_execute::execute::local_cache::LocalActionCache;
 use bsmr_execute::materialize::materializer::MaterializationMethod;
 use bsmr_execute::materialize::materializer::Materializer;
 use bsmr_execute::re::manager::ReConnectionManager;
@@ -376,6 +377,20 @@ impl DaemonState {
                 } else {
                     Arc::new(BsmrBlockingExecutor::default_concurrency(fs.dupe())?)
                 };
+
+            let cache_collection = (blocking_executor.dupe() as Arc<dyn BlockingExecutor>)
+                .execute_io_inline(move || {
+                    let cache = LocalActionCache::open()?;
+                    cache.collect(cache.policy()?.max_bytes, false, digest_config)
+                })
+                .await?;
+            tracing::info!(
+                removed_action_results = cache_collection.removed_action_results,
+                removed_blobs = cache_collection.removed_blobs,
+                removed_bytes = cache_collection.removed_bytes,
+                remaining_bytes = cache_collection.remaining_bytes,
+                "collected local action cache"
+            );
 
             let cache_dir_path = paths.cache_dir_path();
             let valid_cache_dirs = paths.valid_cache_dirs();
