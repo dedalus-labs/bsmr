@@ -42,6 +42,10 @@ const test: ProcessSpec = {
 		"ci/release-complete.test.ts",
 		"ci/release-sync.test.ts",
 		"ci/release.test.ts",
+		"ci/runner/lifecycle.test.ts",
+		"ci/runner/api.test.ts",
+		"ci/runner/action.test.ts",
+		"ci/runner/build.test.ts",
 		"ci/rust-build-dependencies.test.ts",
 		"ci/verify-sha256.test.ts",
 		"benchmarks/python-build-systems/run.test.ts",
@@ -88,6 +92,7 @@ const generatedDiff: ProcessSpec = {
 const actionPaths = [
 	"ci/cli-reference", "ci/osv-audit", "ci/release-complete", "ci/release-state",
 	"ci/release-sync", "ci/rust-affected", "ci/verify-sha256", "typescript/cache",
+	"runner/build",
 ] as const;
 const actionSyntax: readonly ProcessSpec[] = actionPaths.map((path) => ({
 	file: "node",
