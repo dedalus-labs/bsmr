@@ -70,5 +70,9 @@ LTO against Cargo on a three-crate dependency chain. It checks executable
 results, compiler flags, edited dependencies, cached profile restoration, and
 inline unit tests under release LTO.
 
+Run `node test/rust/libraries.ts /path/to/bsmr` to verify that every declared
+library format materializes, including when building a dependent executable.
+The test checks Rust and C consumers, source edits, warm reuse, and restoration.
+
 `python3 -B -m unittest discover -s prelude/git/tools/tests -p '*_test.py'` checks
 that ambient Git filters and checkout hooks cannot change pinned sources.

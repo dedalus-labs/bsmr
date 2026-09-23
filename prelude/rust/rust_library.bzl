@@ -157,6 +157,7 @@ _SUB_TARGET_BUILD_LANG_STYLE = {
     "static": (LinkageLang("rust"), LibOutputStyle("archive")),
     "static_pic": (LinkageLang("rust"), LibOutputStyle("pic_archive")),
     "staticlib": (LinkageLang("native-bundled"), LibOutputStyle("archive")),
+    "staticlib_pic": (LinkageLang("native-bundled"), LibOutputStyle("pic_archive")),
 }
 
 def rust_library_impl(ctx: AnalysisContext) -> list[Provider]:

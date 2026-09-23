@@ -15,6 +15,7 @@ use std::path::Path;
 use serde_json::to_string as json;
 
 use super::RustGraphError;
+use super::libraries;
 use super::sources::Sources;
 use super::units::DebugInfo;
 use super::units::Graph;
@@ -61,8 +62,10 @@ pub(super) fn render(
         rules.push_str(&renderer.unit(unit, index)?);
     }
     rules.push_str(&format!(
-        "alias(name = \"root\", actual = \":unit_{}\", visibility = [\"PUBLIC\"])\n",
-        graph.roots[0]
+        "load(\"@prelude//rust:cargo_outputs.bzl\", \"cargo_outputs\")\n\
+         cargo_outputs(name = \"root\", actual = {}, outputs = {}, visibility = [\"PUBLIC\"])\n",
+        json(&libraries::root(&graph))?,
+        json(&libraries::outputs(&graph))?,
     ));
     Ok(rules)
 }
@@ -95,13 +98,20 @@ impl Renderer<'_> {
         if matches!(unit.mode, Mode::RunCustomBuild) {
             return self.script(unit, index);
         }
-        let output = if unit.target.kind == ["proc-macro"] {
+        let mut output = if unit.target.kind == ["proc-macro"] {
             ", proc_macro = True, default_output = \"library\""
         } else if rule == "rust_library" {
             ", default_output = \"library\""
         } else {
             ""
-        };
+        }
+        .to_owned();
+        if rule == "rust_library" {
+            output.push_str(&format!(
+                ", soname = {}",
+                json(&format!("lib{}.$(ext)", unit.target.name.replace('-', "_")))?,
+            ));
+        }
         let (sources, source) = self.sources(unit)?;
         let dependencies = self.dependencies(unit)?;
         let sources = match dependencies.script {
@@ -188,8 +198,8 @@ impl Renderer<'_> {
                 }
                 continue;
             }
-            if target.target.kind != ["lib"]
-                && target.target.kind != ["rlib"]
+            if !(libraries::is_library(&target.target.kind)
+                && libraries::has_rust_library(&target.target.kind))
                 && target.target.kind != ["proc-macro"]
             {
                 return Err(unsupported(
@@ -229,7 +239,7 @@ impl Unit {
                 "package code requires a verified declared-input executor",
             ));
         }
-        let library = self.target.kind == ["lib"] || self.target.kind == ["rlib"] || macro_target;
+        let library = libraries::is_library(&self.target.kind) || macro_target;
         if !library && !script && self.target.kind != ["bin"] {
             return Err(unsupported(
                 &self.package_name,
@@ -295,7 +305,12 @@ fn profile_flags(unit: &Unit) -> Result<Vec<String>, RustGraphError> {
         format!("-Cpanic={}", profile.panic),
         format!("-Crpath={}", profile.rpath),
     ];
-    let links = matches!(unit.mode, Mode::Test) || unit.target.kind == ["bin"];
+    let links = matches!(unit.mode, Mode::Test)
+        || unit
+            .target
+            .kind
+            .iter()
+            .any(|kind| matches!(kind.as_str(), "bin" | "cdylib" | "staticlib"));
     let optimization: &[&str] = match (profile.lto, links) {
         (Lto::Off, _) => &["-Clto=off", "-Cembed-bitcode=no"],
         (Lto::Local, _) => &["-Cembed-bitcode=no"],

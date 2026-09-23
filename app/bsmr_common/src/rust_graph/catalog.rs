@@ -16,6 +16,7 @@ use super::RustGraphError;
 use super::entry::Entry;
 use super::entry::Mode;
 use super::entry::Target;
+use super::libraries;
 use super::unsupported;
 
 #[derive(Deserialize)]
@@ -159,7 +160,7 @@ pub fn package_name(bytes: &[u8], root: &Path, entry: &Entry) -> Result<String, 
     let present = package.targets.iter().any(|target| {
         target.name == entry.target.name()
             && (target.kind == [entry.target.kind()]
-                || (entry.target.kind() == "lib" && target.kind == ["rlib"]))
+                || (entry.target.kind() == "lib" && libraries::is_library(&target.kind)))
             && (entry.mode == Mode::Build || target.test)
     });
     if !present {
@@ -175,7 +176,7 @@ impl CargoTarget {
     /// Normalize ordinary library kinds and reject names reserved by the importer.
     fn entrypoint(&self, package: &str) -> Result<Option<Target>, RustGraphError> {
         let target = match self.kind.as_slice() {
-            [kind] if kind == "lib" || kind == "rlib" => Target::Lib(self.name.clone()),
+            kinds if libraries::is_library(kinds) => Target::Lib(self.name.clone()),
             [kind] if kind == "bin" => Target::Bin(self.name.clone()),
             _ => return Ok(None),
         };

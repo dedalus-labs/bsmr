@@ -428,6 +428,10 @@ export const ci = workflow({
 					run: command({ file: "node", args: ["test/rust/lto.ts", "target/debug/bsmr"] }),
 				},
 				{
+					name: "Verify Rust library formats",
+					run: command({ file: "node", args: ["test/rust/libraries.ts", "target/debug/bsmr"] }),
+				},
+				{
 					name: "Verify external Rust dependencies",
 					run: command({ file: "node", args: ["test/rust/dependencies.ts", "target/debug/bsmr", "1.98.0"] }),
 				},
