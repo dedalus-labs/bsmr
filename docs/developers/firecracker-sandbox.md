@@ -8,6 +8,9 @@
 # Local Firecracker sandbox
 
 BSMR can run each declared action in a new, networkless Firecracker microVM.
+The launcher restores each VM from one authenticated, pristine snapshot that
+contains no action state.
+
 The `untrusted-v1` profile is available through `--sandbox` on `x86_64` Linux
 hosts with Kernel-based Virtual Machine (KVM) support.
 
@@ -29,7 +32,7 @@ Each action receives the same fixed environment contract.
 
 | Property | `untrusted-v1` value | Consequence |
 | --- | --- | --- |
-| VM lifetime | One new microVM per action. | Repository code never shares a guest with another action. |
+| VM lifetime | One pristine snapshot clone per action. | Repository code never shares a guest with another action. |
 | Virtual CPUs | 2 virtual CPUs (vCPUs). | The launcher rejects a request for another machine shape. |
 | Memory | 2 gibibytes (GiB). | The launcher rejects a request for another memory size. |
 | Network | No emulated network device. | The action cannot use a network policy other than `none`. |
@@ -37,9 +40,11 @@ Each action receives the same fixed environment contract.
 | Outputs | One private writable output volume. | The host imports only validated, declared outputs. |
 | Environment | The declared action environment only. | The action cannot inherit host environment variables. |
 | Firecracker process | Same-version Firecracker and jailer binaries. | The launcher rejects a mismatched or mutable bundle. |
+| Snapshot | One paused pre-action VM state and memory image. | A VM that runs repository code can never become a snapshot source. |
+| Entropy | Fresh kernel entropy before action state is read. | Two clones do not start with the same kernel random state. |
 | Terminal state | Complete VM cleanup before response. | Guest exit alone never proves that host resources are gone. |
 
-Protocol v1 does not support snapshots, VM reuse, persistent workers, networked
+Protocol v2 does not support post-action VM reuse, persistent workers, networked
 actions, secrets, custom devices, or remote execution. Each feature changes the
 security or cache contract and requires separate conformance evidence.
 
@@ -63,9 +68,9 @@ privileged bsmr-sandboxd launcher
     |
     | same-version jailer, private cgroup, immutable bundle
     v
-unprivileged Firecracker process
+unprivileged Firecracker process with private snapshot memory
     |
-    | KVM and four virtio block devices
+    | KVM, four virtio block devices, private vsock, and virtio-rng
     v
 BSMR guest agent as process ID 1
     |
@@ -83,6 +88,10 @@ Only the launcher needs `/dev/kvm`. The launcher verifies KVM before it
 publishes the Unix socket. The unprivileged BSMR daemon needs permission to
 connect to that socket, but it does not need KVM access.
 
+The virtual socket (vsock) carries one private wake byte from the launcher to
+the restored guest. The virtio random-number device (`virtio-rng`) supplies
+fresh host entropy after each restore.
+
 ## Request flow
 
 The executor processes one action in this order:
@@ -92,22 +101,32 @@ The executor processes one action in this order:
    process behavior.
 2. The daemon decodes the canonical Remote Execution `Action` and `Command`.
 3. The daemon reads every declared input and verifies its analyzed digest.
-4. The daemon writes the inputs to a deterministic tar archive.
+4. The daemon writes the inputs to a deterministic tar archive, then calculates
+   SHA-256 digests for the action and input transport files.
 5. The daemon sends the request and three file descriptors to
    `bsmr-sandboxd` over a group-restricted Unix socket.
 6. The launcher validates the request, descriptor types, access modes, sizes,
-   machine shape, timeout, and execution-bundle digest.
+   content digests, machine shape, timeout, and execution-bundle digest.
 7. The launcher creates a unique user ID, group ID, jail, process ID namespace,
    and cgroup for the action.
-8. The launcher copies the immutable bundle and private transport files into
-   the jail.
-9. The jailer creates `/dev/kvm`, enters the jail, drops privileges, and starts
+8. The launcher hard-links the immutable kernel, root filesystem, VM state, and
+   memory image from its local content-addressed store into the jail.
+9. The launcher copies the authenticated action and input bytes into private,
+   fixed-capacity block files.
+10. The jailer creates `/dev/kvm`, enters the jail, drops privileges, and starts
    Firecracker.
-10. The guest agent mounts a private temporary filesystem at `/workspace`,
-    unpacks the declared inputs, and starts the action as user 1000.
-11. The guest writes the result envelope, standard output, standard error, and
+11. Firecracker maps the pristine memory image with private copy-on-write pages
+    and resumes the paused VM.
+12. The launcher connects to the guest's pre-action vsock listener, waits for a
+    guest readiness byte after any restore-time transport reset, and then sends
+    one action-release byte.
+13. The guest mixes 256 fresh bits from `virtio-rng` into the kernel random
+    pool before it reads the action request.
+14. The guest mounts a private temporary filesystem at `/workspace`, unpacks
+    the declared inputs, and starts the action as user 1000.
+15. The guest writes the result envelope, standard output, standard error, and
     declared output trees to the output volume.
-12. The launcher terminates the complete VM boundary. The daemon then validates
+16. The launcher terminates the complete VM boundary. The daemon then validates
     and imports the output archive.
 
 No step can select a host-execution fallback. A failure returns an error from
@@ -135,6 +154,14 @@ It does not protect against a malicious host administrator, host-kernel
 compromise, hardware side channels, or a vulnerability in the trusted computing
 base.
 
+Restoring one snapshot more than once can duplicate random state and identifiers.
+Firecracker changes the Virtual Machine Generation Identifier (VMGenID) on
+restore, which causes supported Linux kernels to reseed their random pool. The
+guest also reads 256 fresh bits from `virtio-rng` before it reads action state.
+
+The pristine guest image must not contain a precomputed token, cached random
+number, userspace pseudorandom number generator, or action-specific identifier.
+
 ## Action and environment identity
 
 The Remote Execution `Action` and `Command` remain the execution application
@@ -145,13 +172,16 @@ calculates the action digest:
 bsmr.sandbox.profile = untrusted-v1
 bsmr.sandbox.backend = firecracker
 bsmr.sandbox.environment = sha256:<bundle-manifest-digest>
-bsmr.sandbox.protocol = 1
+bsmr.sandbox.protocol = 2
 ```
 
 The bundle manifest records the architecture and SHA-256 digest of Firecracker,
-the jailer, the guest kernel, and the read-only root filesystem. The root
-filesystem contains the guest agent. A change to any artifact changes the
-environment digest and therefore changes the action key.
+the jailer, the guest kernel, the read-only root filesystem, the paused VM state,
+and the pristine memory image. The root filesystem contains the guest agent.
+
+The manifest also records a fingerprint of the snapshot source's CPU features,
+microcode, and host-kernel release. A change to any artifact or host fingerprint
+changes the environment digest and therefore changes the action key.
 
 A file path, mutable tag, or version string is not an environment identity.
 The launcher verifies artifact bytes and also verifies that the Firecracker and
@@ -188,6 +218,10 @@ The input encoder enforces these rules:
 
 The launcher exposes the archive as a read-only virtio block device. The guest
 unpacks it into a new temporary filesystem for each action.
+
+The launcher copies the exact admitted byte range with Linux `sendfile(2)` and
+verifies its SHA-256 digest before it extends the private block file to its fixed
+capacity. A same-size descriptor mutation therefore fails before VM startup.
 
 ## Command environment
 
@@ -236,6 +270,25 @@ cgroup. The action identifier is a random lowercase universally unique
 identifier (UUID), so two executions of the same action cannot select the same
 jail path.
 
+At launcher startup, the launcher hard-links each verified kernel, root
+filesystem, VM-state, and memory artifact beneath its SHA-256 name in a local
+CAS. The bundle, CAS, and jail root must share one filesystem because a hard
+link cannot cross a filesystem boundary.
+
+Each action jail hard-links those immutable objects again. Firecracker maps the
+shared memory image with `MAP_PRIVATE`, the Linux private memory-mapping mode.
+Unchanged pages remain shared through the host page cache. A guest write creates
+an anonymous copy-on-write page and does not change the source memory file.
+
+The snapshot source stops at the guest listener before it reads an action or
+input byte. The bundle builder pauses that VM, writes the state and memory
+artifacts, and terminates the source process. It never resumes the source VM.
+
+Firecracker resets vsock during snapshot restoration. The launcher may replace
+a connection only before the guest reports readiness and before the launcher
+sends the action-release byte. Once release starts, an I/O failure fails the
+action; the launcher never retries an ambiguous release.
+
 The launcher applies a parent-death signal to the supervisor. It also applies
 an outer action deadline. Cancellation or daemon disconnect closes the client
 socket, which tells the launcher to stop the VM.
@@ -261,6 +314,9 @@ The launcher must reject work unless all of these conditions are true:
 - The Firecracker and jailer files are static musl executables from the same
   release.
 - Every bundle artifact matches its manifest digest and architecture.
+- The source and target CPU features, microcode, and host-kernel release have
+  the same fingerprint.
+- The bundle, local CAS, and jail root share one filesystem.
 - Root owns the bundle and its path chain.
 - Action identities cannot write the bundle, launcher path, jail root, or Unix
   socket directory.
@@ -277,8 +333,11 @@ error. They do not select another VMM under `--sandbox`.
 | Unsupported host or missing cgroup v2 | BSMR daemon and launcher startup. | The command fails before action execution. |
 | Missing or invalid `/dev/kvm` | Launcher startup. | The launcher does not publish its socket. |
 | Bundle digest or ownership mismatch | Daemon or launcher startup. | The command fails before action execution. |
+| Snapshot host fingerprint mismatch | Launcher startup. | The launcher does not publish its socket. |
+| Bundle and jail filesystems differ | Launcher startup. | The launcher does not publish its socket. |
 | Unsupported action semantics | Daemon policy validation. | The action does not run in the VM or on the host. |
 | Input mutation after analysis | Input archive construction. | The VM does not start. |
+| Guest listener does not reach the pre-action barrier | Launcher startup. | The action fails before the guest reads action state. |
 | Client cancellation or disconnect | Launcher socket monitoring. | The launcher kills and cleans the VM. |
 | Guest timeout | Guest deadline and launcher deadline. | The action reports a timeout after cleanup. |
 | Invalid or undeclared output | Host output validation. | The daemon discards staging and fails the action. |
@@ -310,38 +369,40 @@ The conformance corpus must prove these properties:
 8. A second clean run produces the same output digest.
 9. `--sandbox` never invokes the ordinary host executor.
 10. Successful, timed-out, and canceled actions complete launcher cleanup.
+11. Fresh boot and snapshot restore pass the same action corpus.
+12. Two clones observe different kernel random bytes before action code runs.
 
 Unit tests use a fake launcher only at the protocol boundary. They complement
 the KVM test but do not replace it.
 
 ## Performance evidence
 
-Protocol v1 uses a fresh boot as its correctness baseline. CI must report setup
-and execution latency without hiding a regression against ordinary local
-execution.
+CI compares snapshot restore with a fresh boot on the same nested-KVM runner.
+Both modes run the same conformance action before the benchmark starts.
 
-Performance measurements must separate these phases:
+Each mode records 30 environment-start samples and 30 complete client-roundtrip
+samples. Environment-start time ends after the launcher releases the guest's
+pre-action barrier. Roundtrip time includes transport preparation, action
+execution, output extraction, and verified cleanup.
 
-- input archive construction;
-- microVM boot;
-- action execution;
-- output extraction;
-- output hashing; and
-- launcher cleanup.
+CI reports the 50th, 95th, and 99th percentiles (p50, p95, and p99). Snapshot
+restore must be at least four times faster than fresh boot at both p50 and p95
+for environment-start time.
 
-Report the 50th, 95th, and 99th percentiles with the runner type, sample count,
-action fixture, and bundle identity. Do not generalize from one action fixture.
+The machine-readable artifact retains all raw samples, the bundle environment
+digest, and the host fingerprint. The gate does not generalize this result to
+another host, bundle, action fixture, or workload.
 
 ## Future work
 
-Future versions can evaluate CAS-backed block images, reflinks, shared read-only
-layers, or pristine pre-action snapshots. Each optimized path must bind all
-reused state into the environment digest. It must also pass the same
-conformance corpus as a fresh microVM.
+Protocol v2 does not use a userfaultfd memory pager, asynchronous block engine,
+network device, remote direct memory access (RDMA) path, post-action VM pool, or
+remote executor. These mechanisms add contracts that the current profile does
+not test.
 
-A snapshot source must stop before it reads action state. A VM that executes
-repository code must never become a snapshot source or return to a reusable
-pool.
+Future work can add a mechanism only when the action identity binds its complete
+state and the existing conformance corpus cannot distinguish it from the
+current implementation.
 
 ## Reference implementations
 

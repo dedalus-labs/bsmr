@@ -10,6 +10,8 @@ mod linux {
     use std::fs;
     use std::fs::File;
     use std::io::Read;
+    use std::io::Write;
+    use std::os::fd::AsRawFd;
     use std::os::unix::process::CommandExt;
     use std::os::unix::process::ExitStatusExt;
     use std::path::Component;
@@ -27,6 +29,10 @@ mod linux {
     use bsmr_sandbox::MAX_STREAM_BYTES;
     use bsmr_sandbox::MAX_TIMEOUT_MS;
     use bsmr_sandbox::PROTOCOL_VERSION;
+    use bsmr_sandbox::snapshot::GUEST_READY_BYTE;
+    use bsmr_sandbox::snapshot::READY_MARKER;
+    use bsmr_sandbox::snapshot::WAKE_BYTE;
+    use bsmr_sandbox::snapshot::WAKE_PORT;
     use nix::errno::Errno;
     use nix::mount::MsFlags;
     use nix::mount::mount;
@@ -34,6 +40,14 @@ mod linux {
     use nix::sys::reboot::reboot;
     use nix::sys::signal::Signal;
     use nix::sys::signal::kill;
+    use nix::sys::socket::AddressFamily;
+    use nix::sys::socket::Backlog;
+    use nix::sys::socket::SockFlag;
+    use nix::sys::socket::SockType;
+    use nix::sys::socket::VsockAddr;
+    use nix::sys::socket::bind;
+    use nix::sys::socket::listen;
+    use nix::sys::socket::socket;
     use nix::sys::wait::WaitStatus;
     use nix::sys::wait::waitpid;
     use nix::unistd::Gid;
@@ -74,6 +88,8 @@ mod linux {
         Spawn(#[source] std::io::Error),
         #[error("action stream {path:?} has {actual} bytes, limit {MAX_STREAM_BYTES}")]
         StreamTooLarge { path: PathBuf, actual: u64 },
+        #[error("invalid host wake signal")]
+        Wake,
     }
 
     /// Runs the PID 1 lifecycle and reboots through Firecracker's x86 reset exit.
@@ -103,6 +119,8 @@ mod linux {
             MsFlags::MS_NOSUID | MsFlags::MS_NODEV,
             Some("size=1536m,mode=0755"),
         )?;
+
+        wait_for_host()?;
 
         let action = read_action()?;
         if action.protocol != PROTOCOL_VERSION {
@@ -161,6 +179,54 @@ mod linux {
         };
 
         write_result(&action, exit_code, timed_out, &stdout_path, &stderr_path)
+    }
+
+    /// Snapshots only after this listener exists, then releases one restored clone.
+    fn wait_for_host() -> Result<(), GuestError> {
+        let listener = socket(
+            AddressFamily::Vsock,
+            SockType::Stream,
+            SockFlag::SOCK_CLOEXEC,
+            None,
+        )?;
+        bind(
+            listener.as_raw_fd(),
+            &VsockAddr::new(nix::libc::VMADDR_CID_ANY, WAKE_PORT),
+        )?;
+        listen(&listener, Backlog::new(1)?)?;
+        eprintln!("{READY_MARKER}");
+        loop {
+            let connection = rustix::net::accept_with(&listener, rustix::net::SocketFlags::CLOEXEC)
+                .map_err(|source| io_error("vsock accept", source.into()))?;
+            let mut connection = File::from(connection);
+            if connection.write_all(&[GUEST_READY_BYTE]).is_err() {
+                continue;
+            }
+            let mut wake = [0u8; 1];
+            if connection.read_exact(&mut wake).is_err() {
+                continue;
+            }
+            if wake != [WAKE_BYTE] {
+                return Err(GuestError::Wake);
+            }
+            break;
+        }
+        reseed_kernel()
+    }
+
+    /// Mixes fresh host entropy after every restore and before untrusted code.
+    fn reseed_kernel() -> Result<(), GuestError> {
+        let mut entropy = [0u8; 32];
+        File::open("/dev/hwrng")
+            .and_then(|mut source| source.read_exact(&mut entropy))
+            .map_err(|source| io_error("/dev/hwrng", source))?;
+        File::options()
+            .write(true)
+            .open("/dev/random")
+            .and_then(|mut random| random.write_all(&entropy))
+            .map_err(|source| io_error("/dev/random", source))?;
+        entropy.fill(0);
+        Ok(())
     }
 
     /// Reads one bounded length-prefixed action from its read-only device.
