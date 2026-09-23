@@ -57,6 +57,7 @@ prost.workspace = true
 ref-cast.workspace = true
 reflink-copy.workspace = true
 remote_execution.workspace = true
+rustix.workspace = true
 serde.workspace = true
 serde_json.workspace = true
 sha1.workspace = true

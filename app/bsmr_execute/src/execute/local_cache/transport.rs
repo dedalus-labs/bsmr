@@ -53,6 +53,14 @@ enum TransportError {
     Unexpected(PathBuf),
     #[error("Cache transport path must be absolute: '{}'", _0.display())]
     Relative(PathBuf),
+    #[error("Cache transport is unsupported on this platform")]
+    UnsupportedPlatform,
+    #[error("Cache transport activated '{}' but could not sync its parent: {source}", path.display())]
+    ActivatedDurability {
+        path: PathBuf,
+        #[source]
+        source: io::Error,
+    },
     #[error("System clock is earlier than the Unix epoch: {0}")]
     SystemTime(#[source] std::time::SystemTimeError),
 }
@@ -86,6 +94,7 @@ impl LocalActionCache {
         engine_sha256: &str,
         digest_config: DigestConfig,
     ) -> bsmr_error::Result<LocalCacheExportManifest> {
+        require_supported()?;
         if !is_hex(engine_sha256, 64) {
             return Err(TransportError::Manifest("engine SHA-256 is invalid".to_owned()).into());
         }
@@ -122,8 +131,7 @@ impl LocalActionCache {
             };
             write_manifest(&staging.join(MANIFEST), &manifest)?;
             sync_tree(&staging)?;
-            fs::rename(&staging, output)
-                .map_err(|error| io_error("publish cache export", output, error))?;
+            publish_directory(&staging, output)?;
             sync_parent(output)?;
             Ok(manifest)
         })();
@@ -140,6 +148,7 @@ impl LocalActionCache {
         engine_sha256: &str,
         digest_config: DigestConfig,
     ) -> bsmr_error::Result<LocalCacheExportManifest> {
+        require_supported()?;
         require_absolute(input)?;
         require_absent(&self.root)?;
         let manifest = read_manifest(&input.join(MANIFEST))?;
@@ -160,15 +169,13 @@ impl LocalActionCache {
                 let expected = declared
                     .get(&path)
                     .ok_or_else(|| TransportError::Unexpected(source.clone()))?;
-                validate_file(&source, expected)?;
                 let destination = staging.join(cache_relative(&path)?);
-                copy_file(&source, &destination)?;
-                set_mtime(&destination, expected)?;
+                import_file(&source, &destination, expected)?;
+                validate_file(&destination, expected)?;
             }
             validate_actions(&LocalActionCache::at(staging.clone())?, digest_config)?;
             sync_tree(&staging)?;
-            fs::rename(&staging, &self.root)
-                .map_err(|error| io_error("activate imported cache", &self.root, error))?;
+            publish_directory(&staging, &self.root)?;
             sync_parent(&self.root)?;
             Ok(manifest)
         })();
@@ -501,13 +508,91 @@ fn copy_file(source: &Path, destination: &Path) -> bsmr_error::Result<()> {
         .map_err(|error| io_error("sync copied file", destination, error))
 }
 
-fn set_mtime(path: &Path, file: &LocalCacheExportFile) -> bsmr_error::Result<()> {
-    let modified = UNIX_EPOCH + std::time::Duration::new(file.modified_secs, file.modified_nanos);
-    File::options()
+fn import_file(
+    source: &Path,
+    destination: &Path,
+    expected: &LocalCacheExportFile,
+) -> bsmr_error::Result<()> {
+    let mut input = open_package_file(source)?;
+    if input
+        .metadata()
+        .map_err(|error| io_error("inspect package file", source, error))?
+        .len()
+        != expected.size
+    {
+        return Err(
+            TransportError::Manifest(format!("payload size mismatch: {}", expected.path)).into(),
+        );
+    }
+    let parent = destination.parent().expect("imported files have a parent");
+    fs::create_dir_all(parent)
+        .map_err(|error| io_error("create import directory", parent, error))?;
+    let mut output = OpenOptions::new()
         .write(true)
-        .open(path)
-        .and_then(|output| output.set_times(fs::FileTimes::new().set_modified(modified)))
-        .map_err(|error| io_error("restore cache mtime", path, error))
+        .create_new(true)
+        .open(destination)
+        .map_err(|error| io_error("create imported cache file", destination, error))?;
+    let mut sha256 = Sha256::new();
+    let mut size = 0_u64;
+    let mut buffer = [0_u8; 64 * 1024];
+    loop {
+        let length = input
+            .read(&mut buffer)
+            .map_err(|error| io_error("read package file", source, error))?;
+        if length == 0 {
+            break;
+        }
+        output
+            .write_all(&buffer[..length])
+            .map_err(|error| io_error("write imported cache file", destination, error))?;
+        sha256.update(&buffer[..length]);
+        size += length as u64;
+    }
+    if size != expected.size || hex::encode(sha256.finalize()) != expected.sha256 {
+        return Err(
+            TransportError::Manifest(format!("payload mismatch: {}", expected.path)).into(),
+        );
+    }
+    let modified = UNIX_EPOCH
+        .checked_add(std::time::Duration::new(
+            expected.modified_secs,
+            expected.modified_nanos,
+        ))
+        .ok_or_else(|| TransportError::Manifest("file timestamp is out of range".to_owned()))?;
+    output
+        .set_times(fs::FileTimes::new().set_modified(modified))
+        .map_err(|error| io_error("restore cache mtime", destination, error))?;
+    output
+        .sync_all()
+        .map_err(|error| io_error("sync imported cache file", destination, error))
+}
+
+#[cfg(any(target_os = "linux", target_os = "macos"))]
+fn open_package_file(path: &Path) -> bsmr_error::Result<File> {
+    use std::os::unix::fs::MetadataExt;
+
+    use rustix::fs::Mode;
+    use rustix::fs::OFlags;
+
+    let fd = rustix::fs::open(
+        path,
+        OFlags::RDONLY | OFlags::CLOEXEC | OFlags::NOFOLLOW | OFlags::NONBLOCK,
+        Mode::empty(),
+    )
+    .map_err(|error| io_error("open package file", path, error.into()))?;
+    let file = File::from(fd);
+    let metadata = file
+        .metadata()
+        .map_err(|error| io_error("inspect package file", path, error))?;
+    if !metadata.file_type().is_file() || metadata.nlink() != 1 {
+        return Err(TransportError::Unexpected(path.to_owned()).into());
+    }
+    Ok(file)
+}
+
+#[cfg(not(any(target_os = "linux", target_os = "macos")))]
+fn open_package_file(_path: &Path) -> bsmr_error::Result<File> {
+    Err(TransportError::UnsupportedPlatform.into())
 }
 
 fn write_manifest(path: &Path, manifest: &LocalCacheExportManifest) -> bsmr_error::Result<()> {
@@ -527,8 +612,11 @@ fn write_manifest(path: &Path, manifest: &LocalCacheExportManifest) -> bsmr_erro
 }
 
 fn read_manifest(path: &Path) -> bsmr_error::Result<LocalCacheExportManifest> {
-    let bytes = read_regular_file(path)?
-        .ok_or_else(|| TransportError::Manifest("manifest is missing".to_owned()))?;
+    let mut input = open_package_file(path)?;
+    let mut bytes = Vec::new();
+    input
+        .read_to_end(&mut bytes)
+        .map_err(|error| io_error("read transport manifest", path, error))?;
     serde_json::from_slice(&bytes)
         .map_err(|error| TransportError::Manifest(error.to_string()).into())
 }
@@ -562,6 +650,14 @@ fn require_absolute(path: &Path) -> bsmr_error::Result<()> {
     }
 }
 
+fn require_supported() -> bsmr_error::Result<()> {
+    if cfg!(any(target_os = "linux", target_os = "macos")) {
+        Ok(())
+    } else {
+        Err(TransportError::UnsupportedPlatform.into())
+    }
+}
+
 fn create_staging(path: &Path, kind: &str) -> bsmr_error::Result<PathBuf> {
     let parent = path.parent().expect("transport destinations have a parent");
     loop {
@@ -573,6 +669,28 @@ fn create_staging(path: &Path, kind: &str) -> bsmr_error::Result<PathBuf> {
             Err(error) => return Err(io_error("create transport staging", staging, error)),
         }
     }
+}
+
+#[cfg(any(target_os = "linux", target_os = "macos"))]
+fn publish_directory(staging: &Path, destination: &Path) -> bsmr_error::Result<()> {
+    use rustix::fs::CWD;
+    use rustix::fs::RenameFlags;
+
+    rustix::fs::renameat_with(CWD, staging, CWD, destination, RenameFlags::NOREPLACE).map_err(
+        |error| {
+            let error: io::Error = error.into();
+            if error.kind() == io::ErrorKind::AlreadyExists {
+                TransportError::Exists(destination.to_owned()).into()
+            } else {
+                io_error("publish cache transport", destination, error)
+            }
+        },
+    )
+}
+
+#[cfg(not(any(target_os = "linux", target_os = "macos")))]
+fn publish_directory(_staging: &Path, _destination: &Path) -> bsmr_error::Result<()> {
+    Err(TransportError::UnsupportedPlatform.into())
 }
 
 fn sync_tree(root: &Path) -> bsmr_error::Result<()> {
@@ -606,7 +724,13 @@ fn sync_parent(path: &Path) -> bsmr_error::Result<()> {
     let parent = path.parent().expect("transport paths have a parent");
     File::open(parent)
         .and_then(|file| file.sync_all())
-        .map_err(|error| io_error("sync transport parent", parent, error))
+        .map_err(|source| {
+            TransportError::ActivatedDurability {
+                path: path.to_owned(),
+                source,
+            }
+            .into()
+        })
 }
 
 fn remove_entry(path: &Path) -> io::Result<()> {
@@ -626,6 +750,7 @@ mod tests {
     use std::path::Path;
     use std::path::PathBuf;
 
+    use bsmr_common::cas_digest::DigestAlgorithm;
     use bsmr_common::file_ops::metadata::TrackedFileDigest;
 
     use super::super::LocalOutputFile;
@@ -770,6 +895,40 @@ mod tests {
     }
 
     #[test]
+    fn invariant_failed_retry_keeps_successful_prerequisite_only() -> bsmr_error::Result<()> {
+        let temporary = tempfile::tempdir()?;
+        let source = LocalActionCache::at(temporary.path().join("source"))?;
+        let destination = LocalActionCache::at(temporary.path().join("destination"))?;
+        let package = temporary.path().join("package");
+        let digest_config = DigestConfig::testing_default();
+        let prerequisite =
+            ActionDigest::from_content(b"prerequisite", digest_config.cas_digest_config());
+        let failed = ActionDigest::from_content(b"failed", digest_config.cas_digest_config());
+        let output = TrackedFileDigest::from_content(
+            b"prerequisite output",
+            digest_config.cas_digest_config(),
+        );
+        let result = LocalActionResult {
+            output_files: vec![LocalOutputFile {
+                path: "bsmr-out/prerequisite".to_owned(),
+                digest: LocalDigest::from_file(&output),
+                executable: false,
+            }],
+            ..Default::default()
+        };
+        source.publish_bytes(&output, b"prerequisite output", digest_config)?;
+        source.publish_action_result(&prerequisite, &result)?;
+        let engine = "a".repeat(64);
+        source.export_package(&package, &engine, digest_config)?;
+
+        destination.import_package(&package, &engine, digest_config)?;
+
+        assert_eq!(destination.action_result(&prerequisite)?, Some(result));
+        assert_eq!(destination.action_result(&failed)?, None);
+        Ok(())
+    }
+
+    #[test]
     fn import_rejects_same_size_payload_mutation() -> bsmr_error::Result<()> {
         let (_temporary, package, destination, digest_config, engine) = exported_fixture()?;
         let payload = package.join(&manifest(&package)?.files[0].path);
@@ -787,6 +946,16 @@ mod tests {
         let payload = package.join(&manifest(&package)?.files[0].path);
         let file = fs::OpenOptions::new().write(true).open(payload)?;
         file.set_len(file.metadata()?.len() - 1)?;
+
+        assert_import_rejected(&package, &destination, &engine, digest_config);
+        Ok(())
+    }
+
+    #[test]
+    fn import_rejects_incomplete_package() -> bsmr_error::Result<()> {
+        let (_temporary, package, destination, digest_config, engine) = exported_fixture()?;
+        let payload = package.join(&manifest(&package)?.files[0].path);
+        fs::remove_file(payload)?;
 
         assert_import_rejected(&package, &destination, &engine, digest_config);
         Ok(())
@@ -831,6 +1000,136 @@ mod tests {
         let (_temporary, package, destination, digest_config, engine) = exported_fixture()?;
         let payload = package.join(&manifest(&package)?.files[0].path);
         fs::write(payload.with_extension("tmp.123.0"), b"temporary")?;
+
+        assert_import_rejected(&package, &destination, &engine, digest_config);
+        Ok(())
+    }
+
+    #[test]
+    fn atomic_activation_never_replaces_an_existing_destination() -> bsmr_error::Result<()> {
+        let temporary = tempfile::tempdir()?;
+        let staging = temporary.path().join("staging");
+        let destination = temporary.path().join("destination");
+        fs::create_dir(&staging)?;
+        fs::write(staging.join("new"), b"new")?;
+        fs::create_dir(&destination)?;
+        fs::write(destination.join("existing"), b"existing")?;
+
+        super::publish_directory(&staging, &destination)
+            .expect_err("activation must not replace an existing directory");
+
+        assert_eq!(fs::read(destination.join("existing"))?, b"existing");
+        assert_eq!(fs::read(staging.join("new"))?, b"new");
+        Ok(())
+    }
+
+    #[test]
+    fn competing_activations_publish_exactly_one_directory() -> bsmr_error::Result<()> {
+        let temporary = tempfile::tempdir()?;
+        let first = temporary.path().join("first");
+        let second = temporary.path().join("second");
+        let destination = temporary.path().join("destination");
+        fs::create_dir(&first)?;
+        fs::create_dir(&second)?;
+        fs::write(first.join("winner"), b"first")?;
+        fs::write(second.join("winner"), b"second")?;
+        let barrier = std::sync::Barrier::new(3);
+
+        let outcomes = std::thread::scope(|scope| {
+            let first = scope.spawn(|| {
+                barrier.wait();
+                super::publish_directory(&first, &destination)
+            });
+            let second = scope.spawn(|| {
+                barrier.wait();
+                super::publish_directory(&second, &destination)
+            });
+            barrier.wait();
+            [
+                first.join().expect("first activation"),
+                second.join().expect("second activation"),
+            ]
+        });
+
+        assert_eq!(outcomes.iter().filter(|outcome| outcome.is_ok()).count(), 1);
+        assert!(matches!(
+            fs::read(destination.join("winner"))?.as_slice(),
+            b"first" | b"second"
+        ));
+        Ok(())
+    }
+
+    #[test]
+    fn import_rejects_wrong_digest_policy() -> bsmr_error::Result<()> {
+        let (_temporary, package, destination, _digest_config, engine) = exported_fixture()?;
+        let sha256 = DigestConfig::leak_new(vec![DigestAlgorithm::Sha256], None)?;
+
+        assert_import_rejected(&package, &destination, &engine, sha256);
+        Ok(())
+    }
+
+    #[test]
+    fn import_rejects_unsupported_schema() -> bsmr_error::Result<()> {
+        let (_temporary, package, destination, digest_config, engine) = exported_fixture()?;
+        let mut manifest = manifest(&package)?;
+        manifest.schema = "future".to_owned();
+        fs::write(
+            package.join(super::MANIFEST),
+            serde_json::to_vec_pretty(&manifest)?,
+        )?;
+
+        assert_import_rejected(&package, &destination, &engine, digest_config);
+        Ok(())
+    }
+
+    #[test]
+    fn import_rejects_timestamp_overflow() -> bsmr_error::Result<()> {
+        let (_temporary, package, destination, digest_config, engine) = exported_fixture()?;
+        let mut manifest = manifest(&package)?;
+        manifest.files[0].modified_secs = u64::MAX;
+        fs::write(
+            package.join(super::MANIFEST),
+            serde_json::to_vec_pretty(&manifest)?,
+        )?;
+
+        assert_import_rejected(&package, &destination, &engine, digest_config);
+        Ok(())
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn import_rejects_hard_linked_payload() -> bsmr_error::Result<()> {
+        let (temporary, package, destination, digest_config, engine) = exported_fixture()?;
+        let payload = package.join(&manifest(&package)?.files[0].path);
+        fs::hard_link(&payload, temporary.path().join("outside-alias"))?;
+
+        assert_import_rejected(&package, &destination, &engine, digest_config);
+        Ok(())
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn import_rejects_symlinked_payload_parent() -> bsmr_error::Result<()> {
+        let (temporary, package, destination, digest_config, engine) = exported_fixture()?;
+        let payload = package.join(&manifest(&package)?.files[0].path);
+        let prefix = payload.parent().expect("payload has a prefix");
+        let outside = temporary.path().join("outside-prefix");
+        fs::rename(prefix, &outside)?;
+        std::os::unix::fs::symlink(&outside, prefix)?;
+
+        assert_import_rejected(&package, &destination, &engine, digest_config);
+        Ok(())
+    }
+
+    #[test]
+    fn import_rejects_duplicate_manifest_paths() -> bsmr_error::Result<()> {
+        let (_temporary, package, destination, digest_config, engine) = exported_fixture()?;
+        let mut manifest = manifest(&package)?;
+        manifest.files.insert(1, manifest.files[0].clone());
+        fs::write(
+            package.join(super::MANIFEST),
+            serde_json::to_vec_pretty(&manifest)?,
+        )?;
 
         assert_import_rejected(&package, &destination, &engine, digest_config);
         Ok(())

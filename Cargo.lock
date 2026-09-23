@@ -2023,6 +2023,7 @@ dependencies = [
  "ref-cast",
  "reflink-copy",
  "remote_execution",
+ "rustix 1.1.4",
  "serde",
  "serde_json",
  "sha1",
