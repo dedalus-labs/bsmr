@@ -80,6 +80,7 @@ rust_library(
         ":bsmr_client_only_build": [],
         "DEFAULT": [
             "root//app/bsmr_daemon:bsmr_daemon",
+            "root//app/bsmr_execute:bsmr_execute",
             "root//app/bsmr_server:bsmr_server",
             "root//app/bsmr_test_runner:bsmr_test_runner",
         ],

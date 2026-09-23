@@ -604,6 +604,7 @@ dependencies = [
  "bsmr_event_log",
  "bsmr_event_observer",
  "bsmr_events",
+ "bsmr_execute",
  "bsmr_external_cells",
  "bsmr_forkserver",
  "bsmr_fs",

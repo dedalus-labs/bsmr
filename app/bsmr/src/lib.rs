@@ -75,6 +75,8 @@ use clap::FromArgMatches;
 use dupe::Dupe;
 
 use crate::check_user_allowed::check_user_allowed;
+#[cfg(not(client_only))]
+use crate::commands::cache::CacheCommand;
 use crate::process_context::ProcessContext;
 
 mod check_user_allowed;
@@ -380,6 +382,8 @@ pub(crate) enum CommandKind {
     Aquery(AqueryCommand),
     Build(BuildCommand),
     Bxl(BxlCommand),
+    #[cfg(not(client_only))]
+    Cache(CacheCommand),
     // TODO(nga): implement `bsmr help-bsmrconfig` too
     //   https://www.internalfb.com/tasks/?t=183528129
     HelpEnv(HelpEnvCommand),
@@ -548,6 +552,8 @@ impl CommandKind {
             CommandKind::Aquery(cmd) => command_ctx.exec(cmd, matches, events_ctx),
             CommandKind::Build(cmd) => command_ctx.exec(cmd, matches, events_ctx),
             CommandKind::Bxl(cmd) => command_ctx.exec(cmd, matches, events_ctx),
+            #[cfg(not(client_only))]
+            CommandKind::Cache(cmd) => cmd.exec().into(),
             CommandKind::Test(cmd) => command_ctx.exec(cmd, matches, events_ctx),
             CommandKind::Cquery(cmd) => command_ctx.exec(cmd, matches, events_ctx),
             CommandKind::HelpEnv(cmd) => cmd.exec(matches, command_ctx),
@@ -596,6 +602,8 @@ impl CommandKind {
             CommandKind::Aquery(cmd) => cmd.logging_name(),
             CommandKind::Build(cmd) => cmd.logging_name(),
             CommandKind::Bxl(cmd) => cmd.logging_name(),
+            #[cfg(not(client_only))]
+            CommandKind::Cache(_) => "cache",
             CommandKind::Test(cmd) => cmd.logging_name(),
             CommandKind::Cquery(cmd) => cmd.logging_name(),
             CommandKind::HelpEnv(_) => "help-env",
@@ -662,9 +670,18 @@ mod tests {
     fn long_help_shows_the_complete_interface() {
         let help = help(&["bsmr", "--help"]);
 
-        for command in ["audit", "build", "cquery", "starlark", "targets"] {
+        for command in ["audit", "build", "cache", "cquery", "starlark", "targets"] {
             assert!(help.contains(&format!("  {command} ")), "{help}");
         }
         assert!(help.contains("--isolation-dir"), "{help}");
+    }
+
+    #[cfg(not(client_only))]
+    #[test]
+    fn cache_help_exposes_only_explicit_transport_operations() {
+        let help = help(&["bsmr", "cache", "--help"]);
+
+        assert!(help.contains("  export"), "{help}");
+        assert!(help.contains("  import"), "{help}");
     }
 }

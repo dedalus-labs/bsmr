@@ -42,6 +42,7 @@ bsmr_core.workspace = true
 bsmr_daemon.workspace = true
 bsmr_data.workspace = true
 bsmr_error.workspace = true
+bsmr_execute.workspace = true
 bsmr_event_log.workspace = true
 bsmr_event_observer.workspace = true
 bsmr_events.workspace = true

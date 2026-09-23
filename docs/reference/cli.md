@@ -2228,6 +2228,51 @@ Common options are documented under [Global options](#global-options).
         * `none`
 
 
+## `bsmr cache`
+
+Move verified local cache state between roots
+
+**Usage**: `bsmr cache <COMMAND>`
+
+### Subcommands:
+* `export`: Export the configured local cache into a new package directory
+* `import`: Import a verified package into the absent configured local cache root
+
+### Common Options:
+
+Common options are documented under [Global options](#global-options).
+## `bsmr cache export`
+
+Export the configured local cache into a new package directory
+
+**Usage**: `bsmr cache export --output <OUTPUT>`
+
+### Common Options:
+
+Common options are documented under [Global options](#global-options).
+
+### Options:
+* `--output <OUTPUT>`
+    New directory to publish atomically
+
+
+## `bsmr cache import`
+
+Import a verified package into the absent configured local cache root
+
+**Usage**: `bsmr cache import --input <INPUT>`
+
+### Common Options:
+
+Common options are documented under [Global options](#global-options).
+
+### Options:
+* `--input <INPUT>`
+    Package directory created by `bsmr cache export`
+
+
+
+
 ## `bsmr help-env`
 
 Print help for environment variables used by bsmr
