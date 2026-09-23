@@ -29,6 +29,7 @@ const test: ProcessSpec = {
 	file: "node",
 	args: [
 		"--test",
+		"ci/bootstrap.test.ts",
 		"ci/ci.test.ts",
 		"ci/cli-reference.test.ts",
 		"ci/cli.test.ts",

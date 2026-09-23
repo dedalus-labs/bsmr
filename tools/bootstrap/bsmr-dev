@@ -1,0 +1,278 @@
+#!/usr/bin/env bash
+# ===----------------------------------------------------------------------===
+# Copyright (c) 2026 Dedalus Labs, Inc. and its contributors
+# SPDX-License-Identifier: Apache-2.0
+# ===----------------------------------------------------------------------===
+
+# Builds one shared LLVM development binary per source and build identity.
+
+set -euo pipefail
+
+usage() {
+  echo "usage: tools/bootstrap/bsmr-dev" >&2
+  exit 2
+}
+
+[[ $# -eq 0 ]] || usage
+root="$(git rev-parse --show-toplevel)"
+if [[ -f "$root/rust-toolchain" && -f "$root/rust-toolchain.toml" ]]; then
+  echo "error: BSMR requires exactly one rust-toolchain file" >&2
+  exit 1
+elif [[ -f "$root/rust-toolchain" ]]; then
+  toolchain_file="$root/rust-toolchain"
+elif [[ -f "$root/rust-toolchain.toml" ]]; then
+  toolchain_file="$root/rust-toolchain.toml"
+else
+  echo "error: BSMR requires rust-toolchain or rust-toolchain.toml" >&2
+  exit 1
+fi
+toolchain="$(sed -n 's/^channel = "\(.*\)"/\1/p' "$toolchain_file")"
+[[ -n "$toolchain" ]] || { echo "error: $toolchain_file has no exact channel" >&2; exit 1; }
+
+platform="$(uname -s)"
+case "$platform" in
+  Linux|Darwin) ;;
+  *) usage ;;
+esac
+
+cache_base="${BSMR_BOOTSTRAP_CACHE_DIR:-${XDG_CACHE_HOME:-$HOME/.cache}/bsmr/bootstrap-v2}"
+ensure_directory() {
+  local path="$1"
+  mkdir -p "$path"
+  [[ -d "$path" && ! -L "$path" ]] || {
+    echo "error: bootstrap directory is not owned: $path" >&2
+    return 1
+  }
+}
+ensure_directory "$cache_base"
+cache_base="$(cd "$cache_base" && pwd -P)"
+
+emit_build_environment() {
+  local name
+  while IFS= read -r name; do
+    case "$name" in
+      PATH|RUSTFLAGS|RUSTDOCFLAGS|RUSTC|RUSTDOC|RUSTC_BOOTSTRAP|RUSTC_WRAPPER|RUSTC_WORKSPACE_WRAPPER|CARGO_ENCODED_RUSTFLAGS|CARGO_BUILD_*|CARGO_INCREMENTAL|CARGO_HOME|CARGO_PROFILE_*|CARGO_TARGET_*|CC|CC_*|CXX|CXX_*|AR|AR_*|CFLAGS|CFLAGS_*|CXXFLAGS|CXXFLAGS_*|CPATH|LIBRARY_PATH|LDFLAGS|SDKROOT|DEVELOPER_DIR|MACOSX_DEPLOYMENT_TARGET|PKG_CONFIG*|BSMR_PROTO_SRCS)
+        printf '%s\0%s\0' "$name" "${!name}"
+        ;;
+    esac
+  done < <(compgen -e | LC_ALL=C sort)
+}
+
+emit_selected_tools() {
+  local executable name resolved value
+  while IFS= read -r name; do
+    case "$name" in
+      RUSTC|RUSTDOC|RUSTC_WRAPPER|RUSTC_WORKSPACE_WRAPPER|CC|CC_*|CXX|CXX_*|AR|AR_*|CARGO_BUILD_RUSTC|CARGO_BUILD_RUSTDOC|CARGO_BUILD_RUSTC_WRAPPER|CARGO_BUILD_RUSTC_WORKSPACE_WRAPPER|CARGO_TARGET_*_LINKER|CARGO_TARGET_*_RUNNER)
+        value="${!name}"
+        [[ -n "$value" ]] || continue
+        executable="${value%%[[:space:]]*}"
+        resolved="$(command -v "$executable" 2>/dev/null || true)"
+        [[ -n "$resolved" && -f "$resolved" ]] || continue
+        printf '%s\0%s\0' "$name" "$resolved"
+        shasum -a 256 "$resolved" | awk '{print $1}'
+        ;;
+    esac
+  done < <(compgen -e | LC_ALL=C sort)
+}
+
+tool_identity() {
+  local cargo_home config directory label tool
+  cargo_home="${CARGO_HOME:-$HOME/.cargo}"
+  {
+    printf '%s\0%s\0%s\0' "llvm-dev-v2" "$platform" "$toolchain"
+    emit_build_environment
+    emit_selected_tools
+    rustc "+$toolchain" --version --verbose
+    cargo "+$toolchain" --version --verbose
+    directory="$root"
+    while true; do
+      for config in "$directory/.cargo/config" "$directory/.cargo/config.toml"; do
+        if [[ -f "$config" && ! -L "$config" ]]; then
+          if [[ "$directory" == "$root" ]]; then
+            label="repo:${config#"$root"/}"
+          else
+            label="$config"
+          fi
+          printf '%s\0' "$label"
+          cat "$config"
+        elif [[ -e "$config" || -L "$config" ]]; then
+          echo "error: Cargo config must be a regular file: $config" >&2
+          return 1
+        fi
+      done
+      [[ "$directory" == "/" ]] && break
+      directory="$(dirname "$directory")"
+    done
+    for config in "$cargo_home/config" "$cargo_home/config.toml"; do
+      if [[ -f "$config" && ! -L "$config" ]]; then
+        printf '%s\0' "$config"
+        cat "$config"
+      elif [[ -e "$config" || -L "$config" ]]; then
+        echo "error: Cargo config must be a regular file: $config" >&2
+        return 1
+      fi
+    done
+    for tool in cc clang gcc ld ar ranlib cmake ninja make pkg-config; do
+      if command -v "$tool" >/dev/null 2>&1; then
+        command -v "$tool"
+        "$tool" --version 2>&1 || true
+      fi
+    done
+  } | shasum -a 256 | awk '{print $1}'
+}
+
+write_source_list() {
+  local destination="$1" source_path
+  while IFS= read -r -d '' source_path; do
+    if [[ -e "$root/$source_path" || -L "$root/$source_path" ]]; then
+      printf '%s\0' "$source_path"
+    fi
+  done < <(git -C "$root" ls-files -co --exclude-standard --deduplicate -z) \
+    | LC_ALL=C sort -z > "$destination"
+}
+
+hash_inventory() {
+  local base="$1" source_list="$2" mode source_path
+  {
+    printf '%s\n' "$target_key"
+    cat "$source_list"
+    while IFS= read -r -d '' source_path; do
+      printf '%s\0' "$source_path"
+      if [[ -L "$base/$source_path" ]]; then
+        echo "error: bootstrap source symbolic links are unsupported: $source_path" >&2
+        return 1
+      elif [[ -f "$base/$source_path" ]]; then
+        case "$platform" in
+          Darwin) mode="$(stat -f %Lp "$base/$source_path")" ;;
+          Linux) mode="$(stat -c %a "$base/$source_path")" ;;
+        esac
+        printf 'file\0%s\0' "$mode"
+        shasum -a 256 "$base/$source_path" | awk '{print $1}'
+      else
+        return 1
+      fi
+    done < "$source_list"
+  } | shasum -a 256 | awk '{print $1}'
+}
+
+source_identity() {
+  local result source_list
+  source_list="$(mktemp "$cache_base/source-list.XXXXXX")"
+  write_source_list "$source_list"
+  result="$(hash_inventory "$root" "$source_list")"
+  rm -f -- "$source_list"
+  printf '%s\n' "$result"
+}
+
+prepare_source_snapshot() {
+  local copied destination result snapshot source_list source_path
+  source_list="$(mktemp "$cache_base/source-list.XXXXXX")"
+  write_source_list "$source_list"
+  result="$(hash_inventory "$root" "$source_list")"
+  snapshot="$target/source.tmp.$$"
+  [[ ! -e "$snapshot" && ! -L "$snapshot" ]] || find "$snapshot" -depth -delete
+  mkdir -p "$snapshot"
+  copied=true
+  while IFS= read -r -d '' source_path; do
+    destination="$snapshot/$source_path"
+    mkdir -p "$(dirname "$destination")"
+    if [[ -f "$root/$source_path" && ! -L "$root/$source_path" ]]; then
+      cp -p "$root/$source_path" "$destination" || copied=false
+    else
+      copied=false
+    fi
+    [[ "$copied" == true ]] || break
+  done < "$source_list"
+  local snapshot_result
+  snapshot_result="$(hash_inventory "$snapshot" "$source_list")"
+  if [[ "$copied" != true || "$snapshot_result" != "$result" ]]; then
+    find "$snapshot" -depth -delete
+    rm -f -- "$source_list"
+    return 1
+  fi
+  rm -f -- "$source_list"
+  [[ ! -e "$source_root" && ! -L "$source_root" ]] || find "$source_root" -depth -delete
+  mv "$snapshot" "$source_root"
+  printf '%s\n' "$result"
+}
+
+cleanup_temporaries() {
+  local temporary
+  shopt -s nullglob
+  for temporary in "$binary_dir"/bsmr.tmp.*; do
+    if [[ -f "$temporary" && ! -L "$temporary" ]]; then
+      rm -f -- "$temporary"
+    fi
+  done
+  shopt -u nullglob
+}
+
+cleanup_source_temporaries() {
+  local snapshot
+  shopt -s nullglob
+  for snapshot in "$target"/source.tmp.*; do
+    if [[ -L "$snapshot" ]]; then
+      rm -f -- "$snapshot"
+    elif [[ -d "$snapshot" ]]; then
+      find "$snapshot" -depth -delete
+    else
+      echo "error: unmanaged bootstrap source temporary: $snapshot" >&2
+      return 1
+    fi
+  done
+  shopt -u nullglob
+}
+
+build_locked() {
+  local attempt before binary current temporary
+  [[ "$(tool_identity)" == "$target_key" ]] || return 75
+  source_root="$target/source"
+  cleanup_source_temporaries
+  for attempt in 1 2 3 4; do
+    if ! before="$(prepare_source_snapshot)"; then
+      continue
+    fi
+    binary_dir="$cache_base/tools/$target_key/$before"
+    binary="$binary_dir/bsmr"
+    ensure_directory "$binary_dir"
+    cleanup_temporaries
+    if [[ ! -x "$binary" ]]; then
+      (cd "$root" && CARGO_TARGET_DIR="$target" cargo "+$toolchain" build --locked \
+        --manifest-path "$source_root/Cargo.toml" --bin bsmr)
+      if [[ "$(tool_identity)" != "$target_key" ]]; then
+        find "$target" -mindepth 1 -depth -delete
+        return 75
+      fi
+      temporary="$(mktemp "$binary_dir/bsmr.tmp.XXXXXX")"
+      install -m 0555 "$target/debug/bsmr" "$temporary"
+      mv -f "$temporary" "$binary"
+    fi
+    current="$(source_identity)"
+    [[ "$before" == "$current" ]] || continue
+    [[ "$(tool_identity)" == "$target_key" ]] || return 75
+    printf '%s\n' "$binary"
+    return
+  done
+  echo "error: BSMR sources changed during four bootstrap attempts" >&2
+  return 1
+}
+
+while true; do
+  target_key="$(tool_identity)"
+  ensure_directory "$cache_base/targets"
+  ensure_directory "$cache_base/tools"
+  ensure_directory "$cache_base/locks"
+  target="$cache_base/targets/$target_key"
+  ensure_directory "$target"
+  lock="$cache_base/locks/$target_key.lock"
+  [[ ! -L "$lock" && (! -e "$lock" || -f "$lock") ]] || {
+    echo "error: bootstrap target lock is not owned: $lock" >&2
+    exit 1
+  }
+  status=0
+  case "$platform" in
+    Darwin) (exec 9>"$lock"; lockf 9; build_locked) || status=$? ;;
+    Linux) (exec 9>"$lock"; flock 9; build_locked) || status=$? ;;
+  esac
+  [[ "$status" -eq 75 ]] || exit "$status"
+done
