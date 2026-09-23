@@ -281,6 +281,9 @@ jobs:
       - name: Verify Rust tool contracts
         run: node test/rust/tools.ts
         shell: bash
+      - name: Verify compiler archive metadata
+        run: python3 test/rust/catalog.py target/debug/bsmr
+        shell: bash
       - name: Verify literal Rust inputs
         run: node test/rust/literals.ts target/debug/bsmr
         shell: bash

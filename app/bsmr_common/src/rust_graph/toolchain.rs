@@ -6,6 +6,7 @@
 //! Selects pinned Rust distributions from the project's standard toolchain file.
 
 use std::collections::BTreeMap;
+use std::num::NonZeroU64;
 use std::path::Path;
 use std::path::PathBuf;
 
@@ -40,6 +41,8 @@ struct Archive {
     url: String,
     /// Expected digest before extraction.
     sha256: String,
+    /// Pinned archive length avoids network discovery before cached materialization.
+    size_bytes: NonZeroU64,
 }
 
 /// The metadata resolver and the declared compiler distribution share one release.
@@ -160,7 +163,7 @@ impl Toolchain {
             } else {
                 format!("rust-std-{host}")
             };
-            rules.push_str(&format!("http_archive(name = \"__bsmr_{component}\", urls = [{url:?}], sha256 = {hash:?}, strip_prefix = \"{prefix}/{directory}\", has_content_based_path = True)\n", url=archive.url, hash=archive.sha256));
+            rules.push_str(&format!("http_archive(name = \"__bsmr_{component}\", urls = [{url:?}], sha256 = {hash:?}, size_bytes = {size}, strip_prefix = \"{prefix}/{directory}\", has_content_based_path = True)\n", url=archive.url, hash=archive.sha256, size=archive.size_bytes));
         }
         let nightly = if self.channel.starts_with("nightly-") {
             "True"
