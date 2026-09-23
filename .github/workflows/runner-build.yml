@@ -172,7 +172,7 @@ jobs:
     name: Build Rust
     needs: authorize
     if: ${{ github.repository == 'dedalus-labs/bsmr' && github.ref == 'refs/heads/main' && inputs.provider != 'auto' }}
-    runs-on: ${{ fromJSON('{"machines":["self-hosted","macOS","ARM64","dedalus-machines"],"blacksmith":"blacksmith-12vcpu-macos-15","github":"macos-15"}')[inputs.provider] }}
+    runs-on: ${{ fromJSON('{"machines":{"group":"Dedalus Machines","labels":["self-hosted","macOS","ARM64","dedalus-machines"]},"blacksmith":"blacksmith-12vcpu-macos-15","github":"macos-15"}')[inputs.provider] }}
     timeout-minutes: 60
     permissions:
       contents: read

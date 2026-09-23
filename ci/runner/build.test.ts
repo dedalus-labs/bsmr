@@ -20,6 +20,7 @@ test("invariant_office_builds_require_a_dispatch_of_the_trusted_definition", () 
 
 test("invariant_provider_handoff_keeps_mac_arm64_placement", () => {
 	const placement = String(runnerBuild.jobs.build?.["runs-on"]);
+	assert.match(placement, /"group":"Dedalus Machines"/);
 	assert.match(placement, /macOS.*ARM64.*dedalus-machines/);
 	assert.match(placement, /blacksmith-12vcpu-macos-15/);
 	assert.match(placement, /macos-15/);

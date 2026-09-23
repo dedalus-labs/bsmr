@@ -15,7 +15,7 @@ const token = { GH_TOKEN: expr<string>("github.token") };
 const source = input<string>("revision");
 const provider = input<string>("provider");
 const names = { machines: "Dedalus Machines", blacksmith: "Blacksmith", github: "GitHub" };
-const placement = { machines: ["self-hosted", "macOS", "ARM64", "dedalus-machines"], blacksmith: "blacksmith-12vcpu-macos-15", github: "macos-15" };
+const placement = { machines: { group: "Dedalus Machines", labels: ["self-hosted", "macOS", "ARM64", "dedalus-machines"] }, blacksmith: "blacksmith-12vcpu-macos-15", github: "macos-15" };
 const trustedDefinition = expr<boolean>("github.repository == 'dedalus-labs/bsmr' && github.ref == 'refs/heads/main'");
 const authorize = uses(runnerAction, {
 	name: "Verify build ownership",
