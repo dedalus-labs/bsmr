@@ -28,6 +28,7 @@ test("generated action entrypoints retain canonical preambles", () => {
 			".github/actions/ci/verify-sha256/src/index.ts",
 			".github/actions/typescript/cache/src/index.ts",
 			".github/actions/runner/build/src/index.ts",
+			".github/actions/rust/install/src/index.ts",
 		];
 		for (const path of paths) {
 			mkdirSync(join(root, path, ".."), { recursive: true });

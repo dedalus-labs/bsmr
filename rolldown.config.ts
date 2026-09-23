@@ -17,6 +17,7 @@ type Artifact = Readonly<{
 }>;
 
 const artifacts: readonly Artifact[] = [
+	{ input: "./.github/actions/rust/install/src/index.ts", output: ".github/actions/rust/install/dist/index.js", target: "node24" },
 	{ input: "./.github/actions/runner/build/src/index.ts", output: ".github/actions/runner/build/dist/index.js", target: "node24" },
 	{ input: "./ci/distribute.ts", output: "ci/distribute.mjs", target: "node20" },
 	{

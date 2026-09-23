@@ -8,6 +8,7 @@
 import { always, and, command, eq, expr, github, input, job, ne, stepOutput, uses, workflow } from "@dedalus-labs/hollywood";
 import { runnerAction } from "./action.ts";
 import { providers } from "./api.ts";
+import { installRust } from "./rust.ts";
 
 const checkout = "actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1";
 const token = { GH_TOKEN: expr<string>("github.token") };
@@ -73,10 +74,23 @@ export const runnerBuild = workflow({
 				{ uses: checkout, with: { ref: source, "persist-credentials": false } },
 				{ uses: "actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38", with: { "node-version": "26.5.1" } },
 				{ name: "Verify native Mac architecture", run: command({ file: "node", args: ["-e", "const a = require('node:assert/strict'); a.equal(process.platform, 'darwin'); a.equal(process.arch, 'arm64');"] }) },
+				uses(installRust, { with: {} }),
 				{ name: "Install pinned Rust compiler", run: command({ file: "rustup", args: ["toolchain", "install", "nightly-2026-04-11", "--profile", "minimal", "--no-self-update"] }) },
+				{
+					name: "Restore engine cache",
+					uses: "Swatinem/rust-cache@e18b497796c12c097a38f9edb9d0641fb99eee32",
+					with: { "prefix-key": "bsmr-v1", "shared-key": "rust", "save-if": eq(source, github.sha) },
+				},
 				{ name: "Build BSMR", run: command({ file: "cargo", args: ["build", "--locked", "--bin", "bsmr", "-j", "2"] }) },
 				{ name: "Install planner compiler", run: command({ file: "rustup", args: ["toolchain", "install", "1.98.0", "--profile", "minimal", "--no-self-update"] }) },
-				{ name: "Build Cargo planner", run: command({ file: "rustup", args: ["run", "1.98.0", "cargo", "build", "--locked", "--manifest-path", "tools/cargo/Cargo.toml", "--target-dir", "target", "-j", "2"] }) },
+				{
+					name: "Restore planner cache",
+					uses: "Swatinem/rust-cache@e18b497796c12c097a38f9edb9d0641fb99eee32",
+					env: { RUSTUP_TOOLCHAIN: "1.98.0" },
+					with: { "prefix-key": "bsmr-v1", "shared-key": "planner", workspaces: "tools/cargo -> target", "save-if": eq(source, github.sha) },
+				},
+				{ name: "Build Cargo planner", run: command({ file: "rustup", args: ["run", "1.98.0", "cargo", "build", "--locked", "--manifest-path", "tools/cargo/Cargo.toml", "--target-dir", "tools/cargo/target", "-j", "2"] }) },
+				{ name: "Install Cargo planner", run: command({ file: "cp", args: ["tools/cargo/target/debug/bsmr-cargo", "target/debug/bsmr-cargo"] }) },
 				{ name: "Install qualification compiler", run: command({ file: "rustup", args: ["toolchain", "install", "1.97.1", "--profile", "minimal", "--no-self-update"] }) },
 				{ name: "Verify native Rust builds", run: command({ file: "node", args: ["test/native-rust-build.ts", "target/debug/bsmr"] }) },
 				{ name: "Verify configured Cargo builds", run: command({ file: "node", args: ["test/rust/configured.ts", "target/debug/bsmr"] }) },

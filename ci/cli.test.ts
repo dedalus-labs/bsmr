@@ -63,6 +63,7 @@ test("check uses one typed command tree", async () => {
 			["node", "--check", ".github/actions/ci/verify-sha256/dist/index.js"],
 			["node", "--check", ".github/actions/typescript/cache/dist/index.js"],
 			["node", "--check", ".github/actions/runner/build/dist/index.js"],
+			["node", "--check", ".github/actions/rust/install/dist/index.js"],
 			["git", "diff", "--exit-code"],
 			["pnpm", "exec", "hollywood"],
 		],

@@ -34,6 +34,23 @@ test("invariant_payload_rechecks_ownership_after_queueing", () => {
 	assert.ok(source > guard, "check out only trusted code before revalidating the parent");
 });
 
+test("a fresh runner installs Rust tooling before selecting a compiler", () => {
+	const steps: readonly GitHubWorkflowStep[] = runnerBuild.jobs.build.steps;
+	const install = steps.findIndex((step) => "uses" in step && step.uses === "./.github/actions/rust/install");
+	const compiler = steps.findIndex((step) => step.name === "Install pinned Rust compiler");
+	assert.ok(install >= 0 && compiler > install);
+});
+
+test("only the reviewed workflow revision writes native compiler caches", () => {
+	const steps: readonly GitHubWorkflowStep[] = runnerBuild.jobs.build.steps;
+	const caches = steps.filter((step) => "uses" in step && step.uses.startsWith("Swatinem/rust-cache@"));
+	assert.equal(caches.length, 2);
+	for (const cache of caches) {
+		assert.ok("uses" in cache);
+		assert.equal(cache.with?.["save-if"], "${{ inputs.revision == github.sha }}");
+	}
+});
+
 test("invariant_every_dispatch_has_independent_cancellation_cleanup", () => {
 	const steps: readonly GitHubWorkflowStep[] = runnerBuild.jobs.dispatch?.steps ?? [];
 	for (const provider of ["machines", "blacksmith", "github"]) {

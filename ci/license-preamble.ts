@@ -38,6 +38,8 @@ function brief(path: string): string {
 		[".github/actions/typescript/cache/dist/index.js", "Runs the native TypeScript cache verification action."],
 		[".github/actions/typescript/cache/src/index.ts", "Implements the native TypeScript cache verification action."],
 		[".github/actions/runner/build/src/index.ts", "Implements the approved runner lifecycle action."],
+		[".github/actions/rust/install/src/index.ts", "Installs verified native Rust tooling."],
+		[".github/actions/rust/install/dist/index.js", "Runs verified native Rust tooling installation."],
 		[".github/actions/runner/build/dist/index.js", "Runs the approved runner lifecycle action."],
 		[".bsmr", "Configures the root Bessemer cell."],
 		[".github/actions/ci/cli-reference/dist/index.js", "Runs the generated CLI-reference action."],

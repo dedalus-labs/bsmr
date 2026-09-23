@@ -92,7 +92,7 @@ const generatedDiff: ProcessSpec = {
 const actionPaths = [
 	"ci/cli-reference", "ci/osv-audit", "ci/release-complete", "ci/release-state",
 	"ci/release-sync", "ci/rust-affected", "ci/verify-sha256", "typescript/cache",
-	"runner/build",
+	"runner/build", "rust/install",
 ] as const;
 const actionSyntax: readonly ProcessSpec[] = actionPaths.map((path) => ({
 	file: "node",

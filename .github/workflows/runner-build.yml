@@ -210,17 +210,37 @@ jobs:
       - name: Verify native Mac architecture
         run: node -e 'const a = require('"'"'node:assert/strict'"'"'); a.equal(process.platform, '"'"'darwin'"'"'); a.equal(process.arch, '"'"'arm64'"'"');'
         shell: bash
+      - name: Install Rust tooling
+        uses: ./.github/actions/rust/install
       - name: Install pinned Rust compiler
         run: rustup toolchain install nightly-2026-04-11 --profile minimal --no-self-update
         shell: bash
+      - name: Restore engine cache
+        uses: Swatinem/rust-cache@e18b497796c12c097a38f9edb9d0641fb99eee32
+        with:
+          prefix-key: bsmr-v1
+          shared-key: rust
+          save-if: ${{ inputs.revision == github.sha }}
       - name: Build BSMR
         run: cargo build --locked --bin bsmr -j 2
         shell: bash
       - name: Install planner compiler
         run: rustup toolchain install 1.98.0 --profile minimal --no-self-update
         shell: bash
+      - name: Restore planner cache
+        uses: Swatinem/rust-cache@e18b497796c12c097a38f9edb9d0641fb99eee32
+        env:
+          RUSTUP_TOOLCHAIN: 1.98.0
+        with:
+          prefix-key: bsmr-v1
+          shared-key: planner
+          workspaces: tools/cargo -> target
+          save-if: ${{ inputs.revision == github.sha }}
       - name: Build Cargo planner
-        run: rustup run 1.98.0 cargo build --locked --manifest-path tools/cargo/Cargo.toml --target-dir target -j 2
+        run: rustup run 1.98.0 cargo build --locked --manifest-path tools/cargo/Cargo.toml --target-dir tools/cargo/target -j 2
+        shell: bash
+      - name: Install Cargo planner
+        run: cp tools/cargo/target/debug/bsmr-cargo target/debug/bsmr-cargo
         shell: bash
       - name: Install qualification compiler
         run: rustup toolchain install 1.97.1 --profile minimal --no-self-update
