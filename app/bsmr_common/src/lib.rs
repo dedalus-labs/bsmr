@@ -23,6 +23,7 @@ pub mod argv;
 pub mod build_count;
 pub mod buildfiles;
 pub mod cas_digest;
+pub mod checkout_views;
 pub mod client_utils;
 pub mod convert;
 pub mod daemon_connection;
