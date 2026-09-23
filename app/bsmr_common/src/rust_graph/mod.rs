@@ -12,6 +12,7 @@ pub mod entry;
 mod error;
 mod planner;
 mod snapshot;
+mod sources;
 mod toolchain;
 mod units;
 

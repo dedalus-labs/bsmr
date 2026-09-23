@@ -409,6 +409,14 @@ export const ci = workflow({
 					name: "Verify configured Cargo builds",
 					run: command({ file: "node", args: ["test/rust/configured.ts", "target/debug/bsmr"] }),
 				},
+				{
+					name: "Verify external Rust dependencies",
+					run: command({ file: "node", args: ["test/rust/dependencies.ts", "target/debug/bsmr"] }),
+				},
+				{
+					name: "Verify pinned Git sources",
+					run: command({ file: "python3", args: ["-B", "-m", "unittest", "discover", "-s", "prelude/git/tools/tests", "-p", "*_test.py"] }),
+				},
 				uses(typescriptCache, { with: { binary: "target/debug/bsmr" } }),
 				{
 					name: "Verify native Go build",

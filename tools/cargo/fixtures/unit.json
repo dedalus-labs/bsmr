@@ -1,5 +1,5 @@
 {
-  "schema_version": 1,
+  "schema_version": 2,
   "cargo_library": "0.98.0",
   "rustc_version": "release: 1.97.1\n",
   "workspace_root": "/workspace",
@@ -29,6 +29,9 @@
         "CARGO_PKG_VERSION_PRE": ""
       },
       "source": {
+        "artifact": {
+          "kind": "workspace"
+        },
         "kind": "path",
         "identity": "path+file:///workspace",
         "checksum": null,

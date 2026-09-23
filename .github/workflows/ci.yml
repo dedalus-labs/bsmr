@@ -278,6 +278,12 @@ jobs:
       - name: Verify configured Cargo builds
         run: node test/rust/configured.ts target/debug/bsmr
         shell: bash
+      - name: Verify external Rust dependencies
+        run: node test/rust/dependencies.ts target/debug/bsmr
+        shell: bash
+      - name: Verify pinned Git sources
+        run: python3 -B -m unittest discover -s prelude/git/tools/tests -p '*_test.py'
+        shell: bash
       - name: Verify TypeScript cache
         uses: ./.github/actions/typescript/cache
         with:

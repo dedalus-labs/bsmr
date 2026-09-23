@@ -46,7 +46,7 @@ def main() -> None:
             }
             result = subprocess.run([binary], input=json.dumps(request), env=env, text=True, capture_output=True, check=True, timeout=30)
             graph = json.loads(result.stdout)
-            assert graph["schema_version"] == 1 and graph["cargo_library"] == "0.98.0"
+            assert graph["schema_version"] == 2 and graph["cargo_library"] == "0.98.0"
             assert "release: 1.97.1" in graph["rustc_version"]
             assert len(graph["roots"]) == 1
             assert graph["units"][graph["roots"][0]]["target"]["name"] == "app"

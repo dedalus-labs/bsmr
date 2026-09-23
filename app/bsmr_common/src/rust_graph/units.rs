@@ -76,21 +76,37 @@ pub(super) enum Mode {
 
 #[derive(Deserialize)]
 pub(super) struct Source {
-    /// Source or dependency classification preserved from Cargo.
-    pub kind: SourceKind,
     /// Package root whose relative files belong to one source tree.
     pub root: PathBuf,
+    /// Immutable source ownership exported by the planner.
+    pub artifact: SourceArtifact,
 }
 
 #[derive(Deserialize)]
-#[serde(rename_all = "kebab-case")]
-pub(super) enum SourceKind {
-    Path,
-    Git,
-    Registry,
-    SparseRegistry,
-    LocalRegistry,
-    Directory,
+#[serde(tag = "kind", rename_all = "kebab-case")]
+pub(super) enum SourceArtifact {
+    /// A package inside the captured workspace.
+    Workspace,
+    /// Registry bytes verified against Cargo.lock.
+    Archive {
+        /// Credential-free archive endpoint.
+        url: String,
+        /// Expected SHA-256 before extraction.
+        sha256: String,
+        /// Expected archive length in bytes.
+        size: u64,
+        /// Package directory inside the archive.
+        prefix: String,
+    },
+    /// Repository content pinned by Cargo.lock.
+    Git {
+        /// Repository endpoint used by Cargo.
+        repository: String,
+        /// Full Git commit identity.
+        revision: String,
+        /// Package directory inside the checkout.
+        directory: PathBuf,
+    },
 }
 
 #[derive(Deserialize)]
@@ -172,7 +188,7 @@ impl Graph {
     /// Check the protocol and index boundary without recreating Cargo's resolver.
     pub fn parse(bytes: &[u8]) -> Result<Self, RustGraphError> {
         let graph: Self = serde_json::from_slice(bytes)?;
-        if graph.schema_version != 1
+        if graph.schema_version != 2
             || graph.cargo_library != "0.98.0"
             || !graph
                 .rustc_version

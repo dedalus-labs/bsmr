@@ -229,6 +229,7 @@ dependencies = [
  "cargo-util",
  "cargo-util-terminal",
  "flate2",
+ "futures",
  "git2",
  "gix-config",
  "libc",

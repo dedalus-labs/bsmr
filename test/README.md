@@ -44,3 +44,13 @@ The job copies the built planner beside the engine before running tests.
 Successful pushes to `main` save these caches. Pull requests and merge groups
 only restore them. A missing planner cache requires a cold compile. Cargo still
 checks the restored dependency outputs before reusing them.
+
+## Rust dependencies
+
+Run `node test/rust/dependencies.ts /path/to/bsmr` with the matching
+`bsmr-cargo` beside the binary and Rust 1.97.1 installed. It builds and runs an
+executable using a locked registry crate and a nested Git package, then verifies
+that a warm build runs no compiler actions and leaves the lockfile unchanged.
+
+`python3 -B -m unittest discover -s prelude/git/tools/tests -p '*_test.py'` checks
+that ambient Git filters and checkout hooks cannot change pinned sources.

@@ -69,13 +69,17 @@ so the Rust package retains its inferred definition.
 
 ## Supported boundary
 
-The frontend supports local path libraries, binaries, and inline unit tests.
+The frontend supports local path, public registry, and pinned Git libraries,
+binaries, and inline unit tests. Registry archives are verified against
+`Cargo.lock`. Git packages are read from the locked commit without ambient
+Git filters or hooks. Compilation reads native source artifacts, not Cargo's
+mutable checkout cache. Authenticated registries remain unsupported.
 Cargo selects default features, conditional dependencies, dev dependencies, profile
 settings, and workspace lints before native compilation. Each build or test has a
 separate configured graph, so building a library does not activate its test-only
 dependencies.
 
-Build scripts, procedural macros, external source compilation, native `links`,
+Build scripts, procedural macros, native `links`,
 integration tests, custom harnesses, cross compilation, configured linkers, and
 cross-crate LTO remain unsupported. These requirements fail before compilation.
 Project compiler flags are limited to cfg values, lints, and scalar optimization

@@ -62,6 +62,10 @@ def main() -> None:
     archive_bytes, manifest_bytes = archive.read_bytes(), manifest.read_bytes()
     assert source["archive"]["size"] == len(archive_bytes)
     assert source["checksum"] == hashlib.sha256(archive_bytes).hexdigest()
+    assert source["artifact"] == {
+        "kind": "archive", "url": "https://static.crates.io/crates/itoa/1.0.18/download",
+        "sha256": source["checksum"], "size": len(archive_bytes), "prefix": "itoa-1.0.18",
+    }
     try:
         manifest.write_bytes(manifest_bytes + b'\n[package.metadata]\nplanner_corruption=true\n')
         result = plan("manifest-corrupt")
@@ -153,6 +157,10 @@ def verify_git(binary: Path, toolchain: Path, root: Path, env: dict) -> None:
         graph = json.loads(acquired.stdout)
         source = next(unit["source"] for unit in graph["units"] if unit["package_name"] == "git-dependency")
         assert source["git_revision"] == revision
+        assert source["artifact"] == {
+            "kind": "git", "repository": repository.as_uri(),
+            "revision": revision, "directory": "crates/member",
+        }
     request["source_policy"] = "offline"
     replay = subprocess.run([binary], input=json.dumps(request), env=env, text=True, capture_output=True, check=True)
     assert json.loads(replay.stdout) == graph
