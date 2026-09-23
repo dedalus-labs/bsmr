@@ -58,5 +58,10 @@ Run `node test/rust/selection.ts /path/to/bsmr` to switch profile and feature
 settings on one warm target. It checks actual executable behavior, invalid
 configuration, lock preservation, and cache reuse when restoring the defaults.
 
+Run `node test/rust/lto.ts /path/to/bsmr` to compare fat, thin, local, and disabled
+LTO against Cargo on a three-crate dependency chain. It checks executable
+results, compiler flags, edited dependencies, cached profile restoration, and
+inline unit tests under release LTO.
+
 `python3 -B -m unittest discover -s prelude/git/tools/tests -p '*_test.py'` checks
 that ambient Git filters and checkout hooks cannot change pinned sources.

@@ -15,8 +15,8 @@ use super::RustGraphError;
 use super::sources::Sources;
 use super::units::DebugInfo;
 use super::units::Graph;
+use super::units::Lto;
 use super::units::Mode;
-use super::units::Profile;
 use super::units::Strip;
 use super::units::StripSetting;
 use super::units::Unit;
@@ -80,7 +80,7 @@ impl Renderer<'_> {
             .iter()
             .any(|root| self.graph.units[*root].package_id == unit.package_id);
         let environment = unit.environment(primary);
-        let mut flags = profile_flags(&unit.profile, &unit.package_name)?;
+        let mut flags = profile_flags(unit)?;
         flags.extend(unit.package_lint_flags.iter().cloned());
         flags.extend(unit.rustflags.iter().cloned());
         let declared = unit
@@ -222,10 +222,11 @@ impl Unit {
     }
 }
 
-/// Translate effective profiles whose linker requirements need no graph-wide propagation.
-fn profile_flags(profile: &Profile, package: &str) -> Result<Vec<String>, RustGraphError> {
-    if profile.codegen_backend.is_some() || !["off", "false"].contains(&profile.lto.as_str()) {
-        return Err(unsupported(package, "codegen backend or cross-crate LTO"));
+/// Keep bitcode in libraries for cross-crate optimization at the executable link.
+fn profile_flags(unit: &Unit) -> Result<Vec<String>, RustGraphError> {
+    let profile = &unit.profile;
+    if profile.codegen_backend.is_some() {
+        return Err(unsupported(&unit.package_name, "codegen backend"));
     }
     let mut flags = vec![
         format!("-Copt-level={}", profile.opt_level),
@@ -233,11 +234,17 @@ fn profile_flags(profile: &Profile, package: &str) -> Result<Vec<String>, RustGr
         format!("-Coverflow-checks={}", profile.overflow_checks),
         format!("-Cpanic={}", profile.panic),
         format!("-Crpath={}", profile.rpath),
-        "-Cembed-bitcode=no".into(),
     ];
-    if profile.lto == "off" {
-        flags.push("-Clto=off".into());
-    }
+    let links = matches!(unit.mode, Mode::Test) || unit.target.kind == ["bin"];
+    let optimization: &[&str] = match (profile.lto, links) {
+        (Lto::Off, _) => &["-Clto=off", "-Cembed-bitcode=no"],
+        (Lto::Local, _) => &["-Cembed-bitcode=no"],
+        // Libraries retain object code too, so their rlibs also work without LTO.
+        (Lto::Fat | Lto::Thin, false) => &["-Cembed-bitcode=yes"],
+        (Lto::Fat, true) => &["-Clto=fat", "-Cembed-bitcode=yes"],
+        (Lto::Thin, true) => &["-Clto=thin", "-Cembed-bitcode=yes"],
+    };
+    flags.extend(optimization.iter().map(|flag| (*flag).to_owned()));
     if let Some(units) = profile.codegen_units {
         flags.push(format!("-Ccodegen-units={units}"));
     }
@@ -261,6 +268,13 @@ fn profile_flags(profile: &Profile, package: &str) -> Result<Vec<String>, RustGr
 mod tests {
     use super::*;
     const GRAPH: &[u8] = include_bytes!("../../../../tools/cargo/fixtures/unit.json");
+
+    #[test]
+    fn invariant_unknown_lto_policy_is_rejected() {
+        let mut graph: serde_json::Value = serde_json::from_slice(GRAPH).unwrap();
+        graph["units"][0]["profile"]["lto"] = "unknown".into();
+        assert!(Graph::parse(&serde_json::to_vec(&graph).unwrap()).is_err());
+    }
 
     #[test]
     fn configured_inputs_preserve_literal_metadata() {
