@@ -22,8 +22,7 @@ pub mod firecracker;
 pub mod hybrid;
 pub mod local;
 pub mod local_cache;
-#[cfg(test)]
-pub(crate) mod namespace;
+pub mod namespace;
 pub mod re;
 pub mod stacked;
 pub mod to_re_platform;

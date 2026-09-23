@@ -7,6 +7,11 @@
 
 # Namespace runtime
 
+Set `[sandbox] backend = namespace` and an absolute `runtime` manifest path,
+then run `bsmr build --sandbox TARGET`. Linux aarch64 requires unprivileged
+namespaces and Ubuntu Bubblewrap 0.9.0-1ubuntu0.3. Inputs are read-only, outputs
+are private, and descendants end with the action. Runtime and policy key reuse.
+
 The runtime loader verifies and copies the launcher and root filesystem before
 an executor can use them. The caller supplies a trusted launcher digest
 independently of the manifest. A project cannot authorize a different launcher

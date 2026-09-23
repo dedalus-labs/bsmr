@@ -674,7 +674,6 @@ pub(crate) fn import_outputs(
 }
 
 /// Checks a stopped sandbox's declared output trees before any host import.
-#[cfg(test)]
 pub(crate) fn validate_local_outputs(
     staging: &Path,
     outputs: &[GuestOutput],
@@ -908,7 +907,7 @@ pub fn validate_launcher_response(response: &LauncherResponse) -> bsmr_error::Re
 }
 
 /// Accepts only non-empty normalized project-relative guest paths.
-fn validate_guest_path(path: &Path) -> bsmr_error::Result<()> {
+pub(crate) fn validate_guest_path(path: &Path) -> bsmr_error::Result<()> {
     let valid = !path.as_os_str().is_empty()
         && !path.as_os_str().to_string_lossy().contains('\\')
         && path
