@@ -6,8 +6,10 @@
 
 # Bessemer
 
-Bessemer (`bsmr`) builds packages from your project files and reuses unchanged
-work. Supported native packages do not need handwritten build rules.
+Bessemer (`bsmr`) is a worktree-aware build system. It builds supported native
+packages from project files and reuses identical work across checkouts without
+duplicating one Cargo target tree per worktree. Supported packages do not need
+handwritten build rules.
 
 Bessemer is a preview. Releases in the `0.0.x` series may change their API.
 TypeScript with pnpm is the primary integration. See [language support](docs/about/language_support.md)

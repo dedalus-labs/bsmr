@@ -14,6 +14,7 @@
  * above-listed licenses.
  */
 
+use std::path::PathBuf;
 use std::str::FromStr;
 use std::time::Duration;
 
@@ -531,6 +532,9 @@ pub struct DaemonStartupConfig {
     pub retained_event_logs: usize,
     pub macos_qos_class: Option<String>,
     pub daemon_idle_timeout_s: Option<u64>,
+    pub checkout_view_dir: Option<PathBuf>,
+    pub checkout_view_max_bytes: Option<u64>,
+    pub checkout_view_max_age_secs: Option<u64>,
 }
 
 impl DaemonStartupConfig {
@@ -625,6 +629,12 @@ impl DaemonStartupConfig {
                 section: "bsmr",
                 property: "daemon_idle_timeout_s",
             })?,
+            checkout_view_dir: std::env::var_os("BSMR_CHECKOUT_VIEW_DIR").map(PathBuf::from),
+            checkout_view_max_bytes: bsmr_env!("BSMR_CHECKOUT_VIEW_MAX_BYTES", type=u64)?,
+            checkout_view_max_age_secs: bsmr_env!(
+                "BSMR_CHECKOUT_VIEW_MAX_AGE_SECS",
+                type=u64
+            )?,
         })
     }
 
@@ -652,6 +662,9 @@ impl DaemonStartupConfig {
             retained_event_logs: DEFAULT_RETAINED_EVENT_LOGS,
             macos_qos_class: None,
             daemon_idle_timeout_s: None,
+            checkout_view_dir: None,
+            checkout_view_max_bytes: None,
+            checkout_view_max_age_secs: None,
         }
     }
 }
