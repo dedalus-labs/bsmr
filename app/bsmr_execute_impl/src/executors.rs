@@ -20,6 +20,7 @@ pub mod caching;
 pub(crate) mod empty_action_result;
 pub mod firecracker;
 pub mod hybrid;
+mod inputs;
 pub mod local;
 pub mod local_cache;
 pub mod namespace;

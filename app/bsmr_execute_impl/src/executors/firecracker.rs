@@ -21,10 +21,7 @@ use std::path::Path;
 use std::path::PathBuf;
 use std::time::Duration;
 
-use bsmr_common::cas_digest::DigestAlgorithmFamily;
-use bsmr_common::cas_digest::Digester;
 use bsmr_common::file_ops::metadata::FileDigest;
-use bsmr_common::file_ops::metadata::FileDigestKind;
 use bsmr_common::liveliness_observer::LivelinessObserver;
 use bsmr_directory::directory::directory::Directory;
 use bsmr_directory::directory::directory_iterator::DirectoryIterator;
@@ -57,6 +54,8 @@ use bsmr_sandbox::VCPU_COUNT;
 use bsmr_sandbox::VerifiedBundle;
 use prost::Message;
 use remote_execution as RE;
+
+use super::inputs;
 
 const SANDBOX_PROFILE: &str = "untrusted-v1";
 const SANDBOX_PROTOCOL: &str = "1";
@@ -124,16 +123,6 @@ enum FirecrackerSandboxError {
     StagingNotEmpty(PathBuf),
     #[error("failed to materialize Firecracker guest output `{0:?}`: {1}")]
     WriteOutput(PathBuf, std::io::Error),
-    #[error("failed to read Firecracker input `{0:?}`: {1}")]
-    ReadInput(PathBuf, std::io::Error),
-    #[error(
-        "Firecracker input `{path:?}` changed after analysis: expected {expected}, got {actual}"
-    )]
-    InputMutation {
-        path: PathBuf,
-        expected: String,
-        actual: String,
-    },
     #[error("Firecracker input `{path:?}` is an external symlink to `{target:?}`")]
     ExternalInputSymlink { path: PathBuf, target: PathBuf },
     #[error("Firecracker input symlink `{path:?}` -> `{target:?}` escapes the action root")]
@@ -879,8 +868,8 @@ struct ValidatedOutput {
 
 const OUTPUT_BYTES_LIMIT: u64 = MAX_OUTPUT_ARCHIVE_BYTES;
 const STREAM_BYTES_LIMIT: u64 = bsmr_sandbox::MAX_STREAM_BYTES;
-const ARCHIVE_NODE_LIMIT: usize = 100_000;
-const ARCHIVE_PATH_DEPTH_LIMIT: usize = 128;
+pub(super) const ARCHIVE_NODE_LIMIT: usize = 100_000;
+pub(super) const ARCHIVE_PATH_DEPTH_LIMIT: usize = 128;
 const RESULT_PATH: &str = ".bsmr/result.json";
 const STDOUT_PATH: &str = ".bsmr/stdout";
 const STDERR_PATH: &str = ".bsmr/stderr";
@@ -943,35 +932,6 @@ fn admit_output<'a>(
     Err(FirecrackerSandboxError::UndeclaredOutput(path.to_owned()).into())
 }
 
-struct DigestingReader<R> {
-    inner: R,
-    digester: Digester<FileDigestKind>,
-}
-
-impl<R> DigestingReader<R> {
-    /// Wraps one input reader with the analyzed digest algorithm.
-    fn new(inner: R, algorithm: bsmr_common::cas_digest::DigestAlgorithm) -> Self {
-        Self {
-            inner,
-            digester: FileDigest::digester_for_algorithm(algorithm),
-        }
-    }
-
-    /// Finalizes the digest of the exact bytes read by the tar encoder.
-    fn finish(self) -> FileDigest {
-        self.digester.finalize()
-    }
-}
-
-impl<R: Read> Read for DigestingReader<R> {
-    /// Hashes exactly the bytes returned to the archive encoder.
-    fn read(&mut self, buffer: &mut [u8]) -> std::io::Result<usize> {
-        let read = self.inner.read(buffer)?;
-        self.digester.update(&buffer[..read]);
-        Ok(read)
-    }
-}
-
 /// Rejects a guest-produced symlink that escapes its declared output root.
 fn validate_output_symlink(path: &Path, target: &Path, root: &Path) -> bsmr_error::Result<()> {
     validate_guest_path(path)?;
@@ -988,7 +948,7 @@ fn validate_output_symlink(path: &Path, target: &Path, root: &Path) -> bsmr_erro
 }
 
 /// Resolves a relative symlink lexically and proves it remains below `root`.
-fn relative_symlink_stays_within(path: &Path, target: &Path, root: &Path) -> bool {
+pub(super) fn relative_symlink_stays_within(path: &Path, target: &Path, root: &Path) -> bool {
     if target.is_absolute() || target.as_os_str().to_string_lossy().contains('\\') {
         return false;
     }
@@ -1122,48 +1082,12 @@ fn append_input_file<W: Write>(
     metadata: &bsmr_common::file_ops::metadata::FileMetadata,
     digest_config: DigestConfig,
 ) -> bsmr_error::Result<()> {
-    let source = project_root.join(path);
-    let inspected = fs::symlink_metadata(&source)
-        .map_err(|error| FirecrackerSandboxError::ReadInput(source.clone(), error))?;
-    if !inspected.file_type().is_file() {
-        return Err(FirecrackerSandboxError::InputMutation {
-            path: source,
-            expected: metadata.digest.to_string(),
-            actual: "non-file".to_owned(),
-        }
-        .into());
-    }
-
-    let file = File::open(&source)
-        .map_err(|error| FirecrackerSandboxError::ReadInput(source.clone(), error))?;
-    let algorithm = match metadata.digest.raw_digest().algorithm() {
-        DigestAlgorithmFamily::Sha1 => digest_config.cas_digest_config().digest160(),
-        DigestAlgorithmFamily::Sha256
-        | DigestAlgorithmFamily::Blake3
-        | DigestAlgorithmFamily::Blake3Keyed => digest_config.cas_digest_config().digest256(),
-    }
-    .expect("an input digest algorithm must be enabled in the action digest configuration");
-    let mut verified = DigestingReader::new(file, algorithm);
     let mode = if metadata.is_executable { 0o755 } else { 0o644 };
     let mut header =
         deterministic_tar_header(tar::EntryType::Regular, metadata.digest.size(), mode);
-    archive
-        .append_data(&mut header, path, &mut verified)
-        .map_err(FirecrackerSandboxError::WriteInputArchive)?;
-    let mut remainder = [0u8; 1];
-    verified
-        .read(&mut remainder)
-        .map_err(|error| FirecrackerSandboxError::ReadInput(source.clone(), error))?;
-    let actual = verified.finish();
-    if &actual != metadata.digest.data() {
-        return Err(FirecrackerSandboxError::InputMutation {
-            path: source,
-            expected: metadata.digest.to_string(),
-            actual: actual.to_string(),
-        }
-        .into());
-    }
-    Ok(())
+    inputs::with_file(project_root, path, metadata, digest_config, |reader| {
+        archive.append_data(&mut header, path, reader)
+    })
 }
 
 /// Appends one relative input symlink after proving it cannot escape the action root.
@@ -2110,6 +2034,7 @@ mod tests {
     /// Hashing includes bytes read past the declared size so growth is never truncated silently.
     #[test]
     fn digesting_reader_detects_a_declared_size_mismatch() {
+        use crate::executors::inputs::DigestingReader;
         let digest_config = DigestConfig::testing_default();
         let algorithm = digest_config.cas_digest_config().preferred_algorithm();
         let expected = FileDigest::from_content_for_algorithm(b"declared", algorithm);
