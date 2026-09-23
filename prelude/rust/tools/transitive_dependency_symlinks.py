@@ -17,19 +17,18 @@
 # flag for simple and dynamically named crates.
 #
 # Rustc needs all the .rlib files which are transitive dependencies of the crate
-# being built. Importantly, the filename for each rlib must contain the correct
+# being built. The filename for each rlib must contain the correct
 # crate name or else rustc won't find the file.
 #
 # Most crates have a crate name determined during analysis: value of the `crate`
 # attribute, or derived using a simple heuristic from the rust_library target's
 # `name` attribute. For these it's easy to give the rlib a correct filename up
-# front and use bsmr's `ctx.actions.symlinked_dir` to collect them into a
-# directory. These do not go through this tool.
+# front. The input manifest declares their contents as action inputs.
 #
 # Crates that use `crate_dynamic` have a crate name computed at build time, for
 # example by extracting the name from a .thrift file. Bsmr needs a filename at
 # analysis time for all artifacts, so we name those rlib files using a
-# provisional name and then this tool at build time will symlink them under the
+# provisional name and then this tool at build time will copy them under the
 # real crate name that rustc will recognize.
 #
 # Example:
@@ -49,11 +48,11 @@
 #     ]
 #
 # The tool reads the crate name from the file at "path/to/cratename". Suppose it's
-# "thriftgenerated". It symlinks the given artifact as "0/libthriftgenerated.rlib"
+# "thriftgenerated". It copies the given artifact as "0/libthriftgenerated.rlib"
 # within the specified output directory. In the event of collisions, there might
 # be multiple dirs created.
 #
-# If the cratename is null, then the artifact is simply symlinked from the basename
+# If the cratename is null, then the artifact keeps its basename
 # (e.g., "0/libprovisional.rlib").
 #
 # --out-dir-relative-to-cwd is an optional path to the output directory that is relative to
@@ -63,6 +62,7 @@
 import argparse
 import json
 import os
+import shutil
 from pathlib import Path
 from typing import IO, NamedTuple, Optional
 
@@ -72,15 +72,6 @@ class Args(NamedTuple):
     out_dir: Path
     out_dir_relative_to_cwd: Optional[Path]
     artifacts: IO[str]
-
-
-def symlink_relative(link: Path, target: Path) -> None:
-    """Create a symlink from link_name to target.
-
-    The link is created by constructing a path to the target that is relative to link_name's parent.
-    """
-    target_relative = os.path.relpath(target, start=os.path.dirname(link))
-    os.symlink(target_relative, link)
 
 
 def main():
@@ -146,9 +137,8 @@ def main():
 
             flags += "-Ldependency={}\n".format(dependency_path)
             for filename, artifact in srcs.items():
-                # Create the symlinks in the directory (i.e., not the relative path)
-                # because this script is NOT executing relative to the cwd.
-                symlink_relative(directory.joinpath(filename), artifact)
+                # Cached outputs must retain their contents after the producer's inputs disappear.
+                shutil.copyfile(artifact, directory.joinpath(filename))
 
     args.out_dir.joinpath("dirs").write_text(flags)
 

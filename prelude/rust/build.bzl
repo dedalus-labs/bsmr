@@ -919,6 +919,7 @@ def symlinked_dirs(
     artifacts_json = ctx.actions.write_json(
         "{}-symlinked_dirs.json".format(prefix),
         artifacts,
+        with_inputs = True,
         pretty = True,
         has_content_based_path = getattr(ctx.attrs, "use_content_based_paths", False),
     )
@@ -930,10 +931,6 @@ def symlinked_dirs(
         cmd_args(
             artifacts_json,
             format = "--artifacts={}",
-            # Don't take a dependency on all the artifacts in here, just the dynamic names; the
-            # rmetas/rlibs we only want to create symlinks to, so there's no need for them to
-            # actually be available
-            hidden = transitive_deps.project_as_args("dynamic_name_args"),
         ),
     ]
 
@@ -958,7 +955,6 @@ def symlinked_dirs(
         # Reference the directory Artifact (not the dirs file), so all of its children are included.
         transitive_dependency_dir,
         format = "@{}/dirs",
-        hidden = transitive_deps.project_as_args("artifacts_args"),
     )
 
 def _lintify(flag: str, clippy: bool, lints: list[str | ResolvedStringWithMacros]) -> cmd_args:
