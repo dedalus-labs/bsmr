@@ -12,8 +12,8 @@ import { installRust } from "./rust.ts";
 
 const checkout = "actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1";
 const token = { GH_TOKEN: expr<string>("github.token") };
-const source = input<string>("revision");
-const provider = input<string>("provider");
+const source = expr<string>("github.event_name == 'push' && github.sha || inputs.revision");
+const provider = expr<string>("github.event_name == 'push' && 'auto' || inputs.provider");
 const names = { machines: "Dedalus Machines", blacksmith: "Blacksmith", github: "GitHub" };
 const placement = { machines: { group: "Dedalus Machines", labels: ["self-hosted", "macOS", "ARM64", "dedalus-machines"] }, blacksmith: "blacksmith-12vcpu-macos-15", github: "macos-15" };
 const buildEnvironment = { CARGO_PROFILE_DEV_DEBUG: "0", CARGO_INCREMENTAL: "0" };
@@ -30,8 +30,12 @@ const authorize = uses(runnerAction, {
 
 export const runnerBuild = workflow({
 	name: "Build Rust on Mac",
-	"run-name": expr<string>("format('Rust build {0}', inputs.revision)"),
-	on: { workflow_dispatch: { inputs: {
+	"run-name": expr<string>("format('Rust build {0}', github.event_name == 'push' && github.sha || inputs.revision)"),
+	concurrency: {
+		group: expr<string>("github.event_name == 'push' && 'rust-mac-main' || format('rust-mac-{0}', github.run_id)"),
+		"cancel-in-progress": true,
+	},
+	on: { push: { branches: ["main"] }, workflow_dispatch: { inputs: {
 		revision: { description: "Exact source SHA approved by the administrator.", type: "string", required: true },
 		provider: { description: "Capacity provider, or automatic selection.", type: "choice", options: ["auto", ...providers], default: "auto" },
 		definition: { description: "Parent workflow definition SHA for owned child dispatches.", type: "string", default: "" },

@@ -38,16 +38,18 @@ export const runnerAction = action({
 		const empty = { id: "", url: "", result: "" };
 		switch (input.operation) {
 			case "authorize": {
-				if (input.repository !== "dedalus-labs/bsmr" || input.event !== "workflow_dispatch" || input.ref !== "refs/heads/main")
-					throw new Error("runner builds require a dispatch of the main workflow");
+				if (input.repository !== "dedalus-labs/bsmr" || !["workflow_dispatch", "push"].includes(input.event) || input.ref !== "refs/heads/main")
+					throw new Error("runner builds require the reviewed main workflow");
 				const source = revision.parse(input.source);
 				const definition = revision.parse(input.actualDefinition);
+				if (input.event === "push" && (source !== definition || input.provider !== "auto" || input.parent !== ""))
+					throw new Error("a main push builds only its own revision");
 				if (input.parent !== "") {
 					if (input.provider === "auto" || revision.parse(input.definition) !== definition)
 						throw new Error("child workflow definition changed before dispatch");
 					await api.parent({ id: input.parent, definition, source });
 				} else {
-					await api.administrator(input.actor);
+					await api.authorize({ actor: input.actor, event: input.event });
 				}
 				const commit = z.object({ sha: revision }).parse(await api.call(`commits/${source}`));
 				if (commit.sha !== source) throw new Error("build source revision changed");

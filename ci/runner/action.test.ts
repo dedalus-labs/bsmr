@@ -39,14 +39,16 @@ test("invariant_only_main_dispatches_can_authorize_builds", async () => {
 });
 
 test("invariant_administrator_permission_is_checked_before_source_access", async () => {
-	let requests = 0;
-	globalThis.fetch = async (url) => {
-		requests++;
-		assert.match(String(url), /collaborators\/administrator\/permission$/);
-		return Response.json({ user: { permissions: { admin: false } } });
-	};
-	await assert.rejects(authorize(), /administrator/);
-	assert.equal(requests, 1);
+	for (const event of ["workflow_dispatch", "push"]) {
+		let requests = 0;
+		globalThis.fetch = async (url) => {
+			requests++;
+			assert.match(String(url), /collaborators\/administrator\/permission$/);
+			return Response.json({ user: { permissions: { admin: false } } });
+		};
+		await assert.rejects(authorize({ event }), /administrator/);
+		assert.equal(requests, 1);
+	}
 });
 
 test("invariant_approved_source_is_an_exact_commit", async () => {
@@ -63,4 +65,28 @@ test("invariant_approved_source_is_an_exact_commit", async () => {
 test("invariant_changed_child_definition_cannot_run", async () => {
 	globalThis.fetch = async () => assert.fail("changed child definition reached GitHub");
 	await assert.rejects(authorize({ provider: "machines", parent: "7", definition: "b".repeat(40) }), /definition changed/);
+});
+
+test("an administrator main push authorizes exactly its own revision", async () => {
+	const paths: string[] = [];
+	globalThis.fetch = async (url) => {
+		paths.push(String(url));
+		return Response.json(paths.length === 1 ? { user: { permissions: { admin: true } } } : { sha });
+	};
+	await authorize({ event: "push" });
+	assert.equal(paths.length, 2);
+	globalThis.fetch = async () => assert.fail("a push cannot choose a different workload");
+	for (const override of [{ source: "b".repeat(40) }, { provider: "machines" }, { parent: "7" }])
+		await assert.rejects(authorize({ event: "push", ...override }));
+});
+
+test("only the protected merge queue can publish as the system principal", async () => {
+	globalThis.fetch = async (url) => {
+		assert.ok(String(url).endsWith(`/commits/${sha}`));
+		return Response.json({ sha });
+	};
+	await authorize({ event: "push", actor: "github-merge-queue[bot]" });
+	globalThis.fetch = async () => assert.fail("other bot requests must not reach source access");
+	await assert.rejects(authorize({ actor: "github-merge-queue[bot]" }));
+	await assert.rejects(authorize({ event: "push", actor: "github-actions[bot]" }));
 });

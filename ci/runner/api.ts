@@ -16,6 +16,7 @@ export const providers = ["machines", "blacksmith", "github"] as const;
 type Dispatch = Readonly<{ provider: typeof providers[number]; source: string; definition: string; parent: string }>;
 const runId = z.coerce.number().int().positive();
 const login = z.string().regex(/^[A-Za-z0-9][A-Za-z0-9-]*$/);
+const queuePublisher = "github-merge-queue[bot]";
 const runSchema = z.object({
 	id: runId,
 	status: z.enum(["queued", "in_progress", "requested", "waiting", "pending", "completed"]),
@@ -88,16 +89,22 @@ export class RunnerApi {
 		if (!user.user.permissions.admin) throw new Error("office build dispatch requires a repository administrator");
 	}
 
+	/** Protected queue publication carries review approval. Human requests still require an admin. */
+	async authorize(input: Readonly<{ actor: string; event: string }>): Promise<void> {
+		if (input.event === "push" && input.actor === queuePublisher) return;
+		await this.administrator(input.actor);
+	}
+
 	/** An unfinished parent must own the same workflow definition and source before a child can run. */
 	async parent(input: Readonly<{ id: string; definition: string; source: string }>): Promise<void> {
 		const parent = z.object({
 			id: runId, status: z.literal("in_progress"), conclusion: z.null(),
-			head_sha: revision, event: z.literal("workflow_dispatch"), path: z.literal(`.github/workflows/${workflowFile}`),
-			display_title: z.string(), triggering_actor: z.object({ login }),
+			head_sha: revision, event: z.enum(["workflow_dispatch", "push"]), path: z.literal(`.github/workflows/${workflowFile}`),
+			display_title: z.string(), triggering_actor: z.object({ login: z.union([login, z.literal(queuePublisher)]) }),
 		}).parse(await this.call(`actions/runs/${runId.parse(input.id)}`));
-		if (parent.head_sha !== input.definition || parent.display_title !== `Rust build ${input.source}`)
+		if (parent.head_sha !== input.definition || parent.display_title !== `Rust build ${input.source}` || (parent.event === "push" && parent.head_sha !== input.source))
 			throw new Error("parent workflow does not own this source and definition");
-		await this.administrator(parent.triggering_actor.login);
+		await this.authorize({ actor: parent.triggering_actor.login, event: parent.event });
 	}
 
 	/** Return only after GitHub identifies the single run created by this dispatch. */

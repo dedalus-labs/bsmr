@@ -11,6 +11,13 @@ The `Build Rust on Mac` workflow builds one administrator-approved source SHA.
 Its controller tries Dedalus Machines, Blacksmith, then GitHub capacity.
 Each route runs the same macOS ARM64 compiler and qualification commands.
 
+An administrator or GitHub's protected merge queue publishing `main` starts the
+workflow for that exact revision. Queue publication follows the repository's
+required review and check rules. Other bot identities cannot authorize a build.
+A newer main push cancels the preceding automatic run and its owned attempt.
+Manual requests and child attempts have distinct concurrency groups, so a child
+cannot cancel its parent. Pull requests cannot start this workflow directly.
+
 ```text
 main workflow + administrator + exact source
   -> one provider dispatch
