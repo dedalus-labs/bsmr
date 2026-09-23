@@ -105,3 +105,38 @@ test("invariant_api_failure_cannot_authorize_overflow", async () => {
 	await assert.rejects(waitForRun(1, { ...io, readRun: async () => { throw new Error("API unavailable"); } }, deadline), /API unavailable/);
 	assert.equal(state.cancellations, 0);
 });
+
+test("delayed run or job visibility does not cancel a successful payload", async () => {
+	for (const missing of ["run", "jobs", "terminal jobs"]) {
+		const { state, io } = fixture();
+		if (missing === "terminal jobs") state.run = { ...cancelled, conclusion: "success" };
+		const result = await waitForRun(1, {
+			...io,
+			readRun: async () => state.now === 0 && missing === "run" ? undefined : state.run,
+			readJobs: async () => state.now === 0 && missing !== "run" ? undefined : state.jobs,
+			sleep: async () => {
+				state.now += 15;
+				state.run = { ...cancelled, conclusion: "success" };
+				state.jobs = [{ ...cancelledJob, conclusion: "success", runner_id: 31 }];
+			},
+		}, deadline);
+		assert.equal(result, "passed");
+		assert.equal(state.cancellations, 0);
+	}
+});
+
+test("missing observations never prove completion or permit handoff", async () => {
+	const { state, io } = fixture();
+	await assert.rejects(waitForRun(1, { ...io, readRun: async () => undefined }, deadline), /not confirmed/);
+	assert.equal(state.now, 90);
+	assert.equal(state.cancellations, 1);
+	assert.equal(canHandoff(cancelled, undefined), false);
+});
+
+test("a terminal run still requires its payload inventory", async () => {
+	const { state, io } = fixture();
+	state.run = { ...cancelled, conclusion: "success" };
+	await assert.rejects(waitForRun(1, { ...io, readJobs: async () => undefined }, deadline), /inventory is unavailable/);
+	assert.equal(state.now, 60);
+	assert.equal(state.cancellations, 0);
+});

@@ -18,8 +18,8 @@ export type Job = Readonly<{
 	steps: readonly Readonly<{ status: string }>[];
 }>;
 export type RunIo = Readonly<{
-	readRun: (id: number) => Promise<Run>;
-	readJobs: (id: number) => Promise<readonly Job[]>;
+	readRun: (id: number) => Promise<Run | undefined>;
+	readJobs: (id: number) => Promise<readonly Job[] | undefined>;
 	cancel: (id: number) => Promise<void>;
 	now: () => number;
 	sleep: () => Promise<void>;
@@ -27,19 +27,19 @@ export type RunIo = Readonly<{
 export type Deadline = Readonly<{ queueSeconds: number; totalSeconds: number }>;
 
 /** Retain assignment evidence even if the workflow still reports queued. */
-export const wasAssigned = (jobs: readonly Job[]): boolean => jobs.some((job) =>
+export const wasAssigned = (jobs: readonly Job[] | undefined): boolean => jobs?.some((job) =>
 	(job.runner_id !== null && job.runner_id > 0) || job.status === "in_progress" ||
-	job.steps.some((step) => step.status !== "queued" && step.status !== "pending"));
+	job.steps.some((step) => step.status !== "queued" && step.status !== "pending")) ?? false;
 
 /** An empty or incomplete inventory cannot authorize another attempt. */
-export const canHandoff = (run: Run, jobs: readonly Job[]): boolean =>
-	run.status === "completed" && run.conclusion === "cancelled" && jobs.length > 0 &&
+export const canHandoff = (run: Run, jobs: readonly Job[] | undefined): boolean =>
+	run.status === "completed" && run.conclusion === "cancelled" && jobs !== undefined && jobs.length > 0 &&
 	!wasAssigned(jobs) && jobs.every((job) => job.status === "completed" && job.conclusion === "cancelled");
 
 /** Require the one expected payload to succeed, not merely the workflow wrapper. */
-const passed = (run: Run, jobs: readonly Job[]): boolean =>
+const passed = (run: Run, jobs: readonly Job[] | undefined): boolean =>
 	run.status === "completed" && run.conclusion === "success" &&
-	jobs.length === 1 && jobs[0]?.status === "completed" && jobs[0]?.conclusion === "success";
+	jobs?.length === 1 && jobs[0]?.status === "completed" && jobs[0]?.conclusion === "success";
 
 /** Resolve cancellation from terminal state even if its HTTP response was lost. */
 async function cancelAndConfirm(id: number, io: RunIo): Promise<Run> {
@@ -48,7 +48,7 @@ async function cancelAndConfirm(id: number, io: RunIo): Promise<Run> {
 	const deadline = io.now() + 30;
 	while (io.now() < deadline) {
 		const run = await io.readRun(id);
-		if (run.status === "completed") return run;
+		if (run?.status === "completed") return run;
 		await io.sleep();
 	}
 	throw new Error(`runner cancellation was not confirmed for ${id}`, { cause });
@@ -62,12 +62,14 @@ export async function waitForRun(id: number, io: RunIo, deadline: Deadline): Pro
 	let assigned = false;
 	while (io.now() - start < deadline.totalSeconds) {
 		const run = await io.readRun(id);
-		if (run.status === "completed") {
-			if (!passed(run, await io.readJobs(id))) throw new Error(`runner payload ${run.conclusion}: ${run.html_url}`);
+		const jobs = run === undefined ? undefined : await io.readJobs(id);
+		if (run?.status === "completed" && jobs !== undefined) {
+			if (!passed(run, jobs)) throw new Error(`runner payload ${run.conclusion}: ${run.html_url}`);
 			return "passed";
 		}
-		assigned ||= wasAssigned(await io.readJobs(id));
+		assigned ||= wasAssigned(jobs);
 		if (!assigned && io.now() - start >= deadline.queueSeconds) {
+			if (run?.status === "completed") throw new Error(`runner ${id} payload inventory is unavailable`);
 			const terminal = await cancelAndConfirm(id, io);
 			const jobs = await io.readJobs(id);
 			if (passed(terminal, jobs)) return "passed";
@@ -81,5 +83,5 @@ export async function waitForRun(id: number, io: RunIo, deadline: Deadline): Pro
 
 /** Call from a separate cleanup step, including when the parent is cancelled. */
 export async function cancelActiveRun(id: number, io: RunIo): Promise<void> {
-	if ((await io.readRun(id)).status !== "completed") await cancelAndConfirm(id, io);
+	if ((await io.readRun(id))?.status !== "completed") await cancelAndConfirm(id, io);
 }
