@@ -16,7 +16,8 @@ const source = expr<string>("github.event_name == 'push' && github.sha || inputs
 const provider = expr<string>("github.event_name == 'push' && 'auto' || inputs.provider");
 const names = { machines: "Dedalus Machines", blacksmith: "Blacksmith", github: "GitHub" };
 const placement = { machines: { group: "Dedalus Machines", labels: ["self-hosted", "macOS", "ARM64", "dedalus-machines"] }, blacksmith: "blacksmith-12vcpu-macos-15", github: "macos-15" };
-const buildEnvironment = { CARGO_PROFILE_DEV_DEBUG: "0", CARGO_INCREMENTAL: "0" };
+/** Engine compilation settings that must not reach consumer qualification. */
+export const buildEnvironment = { CARGO_PROFILE_DEV_DEBUG: "0", CARGO_INCREMENTAL: "0" };
 const trustedDefinition = expr<boolean>("github.repository == 'dedalus-labs/bsmr' && github.ref == 'refs/heads/main'");
 const authorize = uses(runnerAction, {
 	name: "Verify build ownership",

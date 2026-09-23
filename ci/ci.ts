@@ -16,6 +16,7 @@ import { cliReferenceAction } from "./cli-reference.ts";
 import { osvAuditAction } from "./osv-audit.ts";
 import { verifySha256Action } from "./verify-sha256.ts";
 import { typescriptCache } from "./typescript/cache.ts";
+import { buildEnvironment } from "./runner/build.ts";
 
 const trustedCiRun = expr<boolean>(
 	"github.repository == 'dedalus-labs/bsmr' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository)",
@@ -82,14 +83,14 @@ const installRust = {
 		],
 	}),
 } as const;
-const rustCache = (save: boolean | typeof saveRustCache) =>
+const rustCache = (save: boolean | typeof saveRustCache, sharedKey = "rust") =>
 	({
 		name: "Restore Rust cache",
 		uses: "Swatinem/rust-cache@e18b497796c12c097a38f9edb9d0641fb99eee32",
 		with: {
 			"prefix-key": "bsmr-v1",
 			"save-if": save,
-			"shared-key": "rust",
+			"shared-key": sharedKey,
 		},
 	}) as const;
 const rustEnvironment = {
@@ -356,9 +357,10 @@ export const ci = workflow({
 			steps: [
 				checkout,
 				installRust,
-				rustCache(false),
+				{ ...rustCache(saveRustCache, "engine"), env: buildEnvironment },
 				{
 					name: "Build BSMR",
+					env: buildEnvironment,
 					run: command({ file: "cargo", args: ["build", "--locked", "--bin", "bsmr"] }),
 				},
 				{
