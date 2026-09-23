@@ -38,7 +38,9 @@ test("a fresh runner installs Rust tooling before selecting a compiler", () => {
 	const steps: readonly GitHubWorkflowStep[] = runnerBuild.jobs.build.steps;
 	const install = steps.findIndex((step) => "uses" in step && step.uses === "./.github/actions/rust/install");
 	const compiler = steps.findIndex((step) => step.name === "Install pinned Rust compiler");
+	const source = steps.findIndex((step) => "with" in step && step.with?.["ref"] === "${{ inputs.revision }}");
 	assert.ok(install >= 0 && compiler > install);
+	assert.ok(install < source, "the approved source need not contain the workflow's installer action");
 });
 
 test("only the reviewed workflow revision writes native compiler caches", () => {

@@ -200,10 +200,6 @@ jobs:
           ref: ${{ github.ref }}
           actor: ${{ github.triggering_actor }}
           parent: ${{ inputs.parent }}
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
-        with:
-          ref: ${{ inputs.revision }}
-          persist-credentials: false
       - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38
         with:
           node-version: 26.5.1
@@ -212,6 +208,10 @@ jobs:
         shell: bash
       - name: Install Rust tooling
         uses: ./.github/actions/rust/install
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: ${{ inputs.revision }}
+          persist-credentials: false
       - name: Install pinned Rust compiler
         run: rustup toolchain install nightly-2026-04-11 --profile minimal --no-self-update
         shell: bash

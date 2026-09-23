@@ -71,10 +71,10 @@ export const runnerBuild = workflow({
 			steps: [
 				{ uses: checkout, with: { ref: github.sha, "persist-credentials": false } },
 				authorize,
-				{ uses: checkout, with: { ref: source, "persist-credentials": false } },
 				{ uses: "actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38", with: { "node-version": "26.5.1" } },
 				{ name: "Verify native Mac architecture", run: command({ file: "node", args: ["-e", "const a = require('node:assert/strict'); a.equal(process.platform, 'darwin'); a.equal(process.arch, 'arm64');"] }) },
 				uses(installRust, { with: {} }),
+				{ uses: checkout, with: { ref: source, "persist-credentials": false } },
 				{ name: "Install pinned Rust compiler", run: command({ file: "rustup", args: ["toolchain", "install", "nightly-2026-04-11", "--profile", "minimal", "--no-self-update"] }) },
 				{
 					name: "Restore engine cache",
