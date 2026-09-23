@@ -96,6 +96,9 @@ impl Runtime {
         let root = directory.path().join("rootfs");
         fs::create_dir(&root)?;
         unpack_runtime(archive, &root)?;
+        for mount in ["workspace", "tmp", "dev", "proc"] {
+            fs::create_dir_all(root.join(mount))?;
+        }
         let mut digest = CasDigestData::digester_for_algorithm(DigestAlgorithm::Sha256);
         digest.update(manifest["bubblewrap"].sha256.as_bytes());
         digest.update(manifest["rootfs"].sha256.as_bytes());
