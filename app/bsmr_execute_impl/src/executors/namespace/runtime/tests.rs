@@ -1,0 +1,127 @@
+//===----------------------------------------------------------------------===//
+// Copyright (c) 2026 Dedalus Labs, Inc. and its contributors
+// SPDX-License-Identifier: Apache-2.0
+//===----------------------------------------------------------------------===//
+
+// Verifies runtime snapshots preserve pinned bytes and reject invalid archive inputs.
+
+use super::*;
+
+const LAUNCHER_DIGEST: &str = "ec9a6e9fe278eb1a471fbab6f40367d8548078b651d9c71581c57c2a6ca379e0";
+
+/// Write a minimal pinned runtime with one executable or symlink archive member.
+fn manifest(directory: &Path, symlink: bool) -> bsmr_error::Result<PathBuf> {
+    fs::write(directory.join("bwrap"), b"launcher")?;
+    let mut archive = tar::Builder::new(File::create(directory.join("rootfs.tar"))?);
+    let mut header = tar::Header::new_gnu();
+    header.set_mode(0o755);
+    if symlink {
+        header.set_entry_type(tar::EntryType::Symlink);
+        header.set_size(0);
+        header.set_link_name("../../outside")?;
+        header.set_cksum();
+        archive.append_data(&mut header, "bin/tool", std::io::empty())?;
+    } else {
+        header.set_size(4);
+        header.set_cksum();
+        archive.append_data(&mut header, "bin/tool", &b"tool"[..])?;
+    }
+    archive.finish()?;
+    let mut manifest = BTreeMap::new();
+    for (name, file) in [("bubblewrap", "bwrap"), ("rootfs", "rootfs.tar")] {
+        let mut digest = CasDigestData::digester_for_algorithm(DigestAlgorithm::Sha256);
+        digest.update(&fs::read(directory.join(file))?);
+        manifest.insert(
+            name,
+            BundleArtifact {
+                path: file.into(),
+                sha256: digest.finalize().raw_digest().to_string(),
+            },
+        );
+    }
+    let path = directory.join("runtime.json");
+    fs::write(&path, serde_json::to_vec(&manifest)?)?;
+    Ok(path)
+}
+
+#[test]
+fn runtime_identity_and_bytes_survive_relocation_and_source_changes() -> bsmr_error::Result<()> {
+    let first = tempfile::tempdir()?;
+    let second = tempfile::tempdir()?;
+    let loaded = Runtime::load(&manifest(first.path(), false)?, LAUNCHER_DIGEST)?;
+    let relocated = Runtime::load(&manifest(second.path(), false)?, LAUNCHER_DIGEST)?;
+    assert_eq!(loaded.digest(), relocated.digest());
+    fs::write(first.path().join("bwrap"), b"changed")?;
+    fs::write(first.path().join("rootfs.tar"), b"changed")?;
+    assert_eq!(fs::read(loaded.launcher())?, b"launcher");
+    assert_eq!(fs::read(loaded.root().join("bin/tool"))?, b"tool");
+    assert!(Runtime::load(&first.path().join("runtime.json"), LAUNCHER_DIGEST).is_err());
+    Ok(())
+}
+
+#[test]
+fn pinned_archives_cannot_redirect_extraction_through_symlinks() -> bsmr_error::Result<()> {
+    let directory = tempfile::tempdir()?;
+    let error = Runtime::load(&manifest(directory.path(), true)?, LAUNCHER_DIGEST).unwrap_err();
+    assert!(
+        error
+            .to_string()
+            .contains("unique regular file or directory")
+    );
+    Ok(())
+}
+
+#[test]
+fn every_runtime_artifact_must_match_its_pin() -> bsmr_error::Result<()> {
+    for file in ["bwrap", "rootfs.tar"] {
+        let directory = tempfile::tempdir()?;
+        let path = manifest(directory.path(), false)?;
+        fs::write(directory.path().join(file), b"corrupted")?;
+        assert!(
+            Runtime::load(&path, LAUNCHER_DIGEST)
+                .unwrap_err()
+                .to_string()
+                .contains("has digest")
+        );
+    }
+    Ok(())
+}
+
+#[test]
+fn a_manifest_cannot_authorize_its_own_launcher() -> bsmr_error::Result<()> {
+    let directory = tempfile::tempdir()?;
+    let path = manifest(directory.path(), false)?;
+    fs::write(directory.path().join("bwrap"), b"untrusted")?;
+    let mut manifest: BTreeMap<String, BundleArtifact> = serde_json::from_slice(&fs::read(&path)?)?;
+    let mut digest = CasDigestData::digester_for_algorithm(DigestAlgorithm::Sha256);
+    digest.update(b"untrusted");
+    manifest.get_mut("bubblewrap").unwrap().sha256 = digest.finalize().raw_digest().to_string();
+    fs::write(&path, serde_json::to_vec(&manifest)?)?;
+    assert!(
+        Runtime::load(&path, LAUNCHER_DIGEST)
+            .unwrap_err()
+            .to_string()
+            .contains("trusted launcher")
+    );
+    Ok(())
+}
+
+#[test]
+fn oversized_runtime_entries_fail_before_payload_materialization() -> bsmr_error::Result<()> {
+    let mut archive = tempfile::tempfile()?;
+    let mut header = tar::Header::new_gnu();
+    header.set_path("oversized")?;
+    header.set_size(MAX_RUNTIME_BYTES + 1);
+    header.set_cksum();
+    archive.write_all(header.as_bytes())?;
+    archive.seek(SeekFrom::Start(0))?;
+    let directory = tempfile::tempdir()?;
+    assert!(
+        unpack_runtime(archive, directory.path())
+            .unwrap_err()
+            .to_string()
+            .contains("exceeds")
+    );
+    assert!(!directory.path().join("oversized").exists());
+    Ok(())
+}
