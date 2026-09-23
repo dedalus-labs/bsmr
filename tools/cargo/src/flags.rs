@@ -37,9 +37,11 @@ const SCALAR_CODEGEN: &[&str] = &[
     "debug-assertions",
     "overflow-checks",
 ];
+/// Probes inspect these settings without linking or executing a compiler extension.
+const PROBE_CODEGEN: &[&str] = &["link-arg", "target-feature"];
 
 /// Compiler probes never link. Native compilation needs declared linker inputs.
-#[derive(Clone, Copy, PartialEq)]
+#[derive(Clone, Copy, Debug, PartialEq)]
 pub(crate) enum Phase {
     Probe,
     Compile,
@@ -80,6 +82,7 @@ pub(crate) fn validate(flags: &[String], phase: Phase) -> Result<()> {
     );
     let mut arguments = flags.iter();
     while let Some(flag) = arguments.next() {
+        let mut rejected = flag.as_str();
         let (name, inline) = flag
             .split_once('=')
             .map_or((flag.as_str(), None), |(name, value)| (name, Some(value)));
@@ -112,12 +115,15 @@ pub(crate) fn validate(flags: &[String], phase: Phase) -> Result<()> {
                 .split('=')
                 .next()
                 .expect("split returns the first component");
-            if SCALAR_CODEGEN.contains(&key) || (phase == Phase::Probe && key == "link-arg") {
+            if SCALAR_CODEGEN.contains(&key)
+                || (phase == Phase::Probe && PROBE_CODEGEN.contains(&key))
+            {
                 continue;
             }
+            rejected = codegen;
         }
         bail!(
-            "unsupported compiler flag `{flag}`: requires declared inputs or a qualified execution contract"
+            "unsupported compiler flag `{rejected}` during {phase:?}: requires declared inputs or a qualified execution contract"
         );
     }
     Ok(())

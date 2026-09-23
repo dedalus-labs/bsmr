@@ -30,6 +30,8 @@ try {
 	await run("git", ["-c", "user.name=Fixture", "-c", "user.email=fixture@example.invalid", "-c", "commit.gpgsign=false", "commit", "--quiet", "-m", "fixture"], git);
 	const revision = (await run("git", ["rev-parse", "HEAD"], git)).stdout.trim();
 	mkdirSync(join(root, "app/src"), { recursive: true });
+	mkdirSync(join(root, ".cargo"));
+	writeFileSync(join(root, ".cargo/config.toml"), '[target.x86_64-pc-windows-msvc]\nrustflags=["-C", "target-feature=+crt-static"]\n');
 	writeFileSync(join(root, "Cargo.toml"), '[workspace]\nmembers=["app"]\nresolver="2"\n');
 	writeFileSync(join(root, "rust-toolchain.toml"), `[toolchain]\nchannel=${JSON.stringify(toolchain)}\n`);
 	writeFileSync(join(root, "app/Cargo.toml"), `[package]\nname="app"\nversion="0.1.0"\nedition="2024"\n[dependencies]\nitoa="=1.0.15"\npinned={git="${pathToFileURL(origin)}",rev="${revision}"}\n`);

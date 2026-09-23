@@ -33,7 +33,7 @@ and `integration-test` with a `name`. The request also supplies `features`,
 Unknown request fields and conflicting compiler overrides fail. Compiler flags
 are limited to cfg values, lints, and scalar optimization settings. Response
 files, compiler extensions, and file-based overrides fail before compiler probes.
-Inactive target tables may carry linker arguments, but selected units using them
+Inactive target tables may carry linker arguments or target features, but selected units using them
 require a declared native execution contract.
 
 Each unit includes its source identity, package environment, declared and active

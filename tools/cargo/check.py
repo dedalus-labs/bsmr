@@ -74,10 +74,12 @@ def main() -> None:
                     assert json.loads(stdout)["roots"]
         config = root / ".cargo/config.toml"
         config.parent.mkdir()
-        for flags in [["--extern", "untracked=outside.rlib"], ["--cfg", "@outside.args"], ["-Zcodegen-backend=outside.so"]]:
+        for flags in [["--extern", "untracked=outside.rlib"], ["--cfg", "@outside.args"], ["-Zcodegen-backend=outside.so"], ["-C", "target-feature=+crt-static"]]:
             config.write_text("[build]\nrustflags=" + json.dumps(flags) + "\n")
             result = subprocess.run([binary], input=json.dumps(request), env=env, text=True, capture_output=True, timeout=30)
             assert result.returncode != 0 and "unsupported compiler flag" in result.stderr
+            if flags[0] == "-C":
+                assert flags[1] in result.stderr and "Compile" in result.stderr
     print("ok: configured roots, features, dev dependencies, and lock preservation without compilation")
 
 
