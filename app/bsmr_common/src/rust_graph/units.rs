@@ -37,6 +37,8 @@ pub(super) struct Unit {
     pub package_id: String,
     /// Original package name before crate-name normalization.
     pub package_name: String,
+    /// Cargo version passed literally to the build-script rule.
+    pub package_version: String,
     /// Native library link ownership declared by the package.
     pub package_links: Option<String>,
     /// Cargo package variables supplied to compilation.
