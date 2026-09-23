@@ -34,6 +34,13 @@ checkout's rules explicitly. Each phase reports its elapsed time. It checks deta
 individual output selection, warm reuse, clean rebuilds and missing-output errors.
 See the [task contract](../prelude/toolchains/pnpm/README.md).
 
+## Rust tool contracts
+
+Run `node test/rust/tools.ts` to exercise the native compiler wrappers
+and build-script runner. Real Rust programs verify cfg declarations, error
+directives, declared input checks, and failure propagation. This tool-level
+suite does not establish automatic Cargo script or macro admission.
+
 ## Rust CI caches
 
 The self-host qualification job builds the engine with its pinned nightly

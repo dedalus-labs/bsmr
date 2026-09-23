@@ -272,6 +272,9 @@ jobs:
       - name: Verify stable Rust feature gates
         run: node test/rust/stable.ts target/debug/bsmr
         shell: bash
+      - name: Verify Rust tool contracts
+        run: node test/rust/tools.ts
+        shell: bash
       - name: Verify literal Rust inputs
         run: node test/rust/literals.ts target/debug/bsmr
         shell: bash
