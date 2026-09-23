@@ -38,6 +38,8 @@ pub struct LocalCacheInventory {
     pub orphan_blobs: u64,
     pub action_bytes: u64,
     pub blob_bytes: u64,
+    pub temporary_files: u64,
+    pub temporary_bytes: u64,
 }
 
 struct CacheEntry {
@@ -68,6 +70,10 @@ impl LocalActionCache {
     ) -> bsmr_error::Result<LocalCacheInventory> {
         let actions = cache_entries(&self.root.join("ac"))?;
         let blobs = cache_entries(&self.root.join("cas"))?;
+        let temporary = temporary_entries(&self.root.join("ac"))?
+            .into_iter()
+            .chain(temporary_entries(&self.root.join("cas"))?)
+            .collect::<Vec<_>>();
         let blob_paths = blobs
             .iter()
             .map(|entry| entry.path.clone())
@@ -92,6 +98,8 @@ impl LocalActionCache {
             orphan_blobs: blobs.len() as u64 - reachable_blobs,
             action_bytes: actions.iter().map(|entry| entry.bytes).sum(),
             blob_bytes: blobs.iter().map(|entry| entry.bytes).sum(),
+            temporary_files: temporary.len() as u64,
+            temporary_bytes: temporary.iter().map(|entry| entry.bytes).sum(),
         })
     }
 
@@ -180,6 +188,18 @@ impl LocalActionCache {
 
 /// Lists immutable cache entries while excluding interrupted temporary writes.
 fn cache_entries(root: &Path) -> bsmr_error::Result<Vec<CacheEntry>> {
+    matching_entries(root, is_cache_key)
+}
+
+/// Lists interrupted writes that cannot be active while collection holds its lock.
+fn temporary_entries(root: &Path) -> bsmr_error::Result<Vec<CacheEntry>> {
+    matching_entries(root, is_temporary_key)
+}
+
+fn matching_entries(
+    root: &Path,
+    matches: impl Fn(&Path) -> bool,
+) -> bsmr_error::Result<Vec<CacheEntry>> {
     let prefixes = match fs::read_dir(root) {
         Ok(prefixes) => prefixes,
         Err(error) if error.kind() == io::ErrorKind::NotFound => return Ok(Vec::new()),
@@ -201,7 +221,7 @@ fn cache_entries(root: &Path) -> bsmr_error::Result<Vec<CacheEntry>> {
             let child =
                 child.map_err(|error| io_error("list cache prefix", prefix.path(), error))?;
             let path = child.path();
-            if !is_cache_key(&path) {
+            if !matches(&path) {
                 continue;
             }
             let metadata = fs::symlink_metadata(&path)
@@ -220,6 +240,38 @@ fn cache_entries(root: &Path) -> bsmr_error::Result<Vec<CacheEntry>> {
     }
     entries.sort_by(|left, right| left.path.cmp(&right.path));
     Ok(entries)
+}
+
+/// Recognizes temporary files created beside one immutable cache key.
+fn is_temporary_key(path: &Path) -> bool {
+    path.file_name()
+        .and_then(|name| name.to_str())
+        .and_then(|name| name.split_once(".tmp."))
+        .is_some_and(|(key, suffix)| {
+            let mut parts = suffix.split('.');
+            let pid = parts.next();
+            let counter = parts.next();
+            key.len() == 64
+                && key
+                    .bytes()
+                    .all(|byte| byte.is_ascii_digit() || (b'a'..=b'f').contains(&byte))
+                && pid.is_some_and(|value| {
+                    is_canonical_decimal(value, false) && value.parse::<u32>().is_ok()
+                })
+                && counter.is_some_and(|value| {
+                    is_canonical_decimal(value, true) && value.parse::<u64>().is_ok()
+                })
+                && parts.next().is_none()
+        })
+}
+
+/// Accepts the decimal spelling emitted by unsigned integer formatting.
+fn is_canonical_decimal(value: &str, allow_zero: bool) -> bool {
+    match value.as_bytes() {
+        b"0" => allow_zero,
+        [first, rest @ ..] => (b'1'..=b'9').contains(first) && rest.iter().all(u8::is_ascii_digit),
+        [] => false,
+    }
 }
 
 /// Decodes one durable action root without accepting a missing file as a miss.
@@ -245,4 +297,24 @@ fn is_cache_key(path: &Path) -> bool {
     path.file_name()
         .and_then(|name| name.to_str())
         .is_some_and(|name| name.len() == 64 && name.bytes().all(|byte| byte.is_ascii_hexdigit()))
+}
+
+#[cfg(test)]
+mod tests {
+    use std::path::Path;
+
+    use super::is_temporary_key;
+
+    #[test]
+    fn temporary_key_requires_canonical_writer_spelling() {
+        let key = "a".repeat(64);
+        assert!(is_temporary_key(Path::new(&format!("{key}.tmp.1.0"))));
+        for suffix in ["+1.+0", "01.0", "0.0", "1.00", "1.0.keep"] {
+            assert!(!is_temporary_key(Path::new(&format!("{key}.tmp.{suffix}"))));
+        }
+        assert!(!is_temporary_key(Path::new(&format!(
+            "{}.tmp.1.0",
+            key.to_ascii_uppercase()
+        ))));
+    }
 }

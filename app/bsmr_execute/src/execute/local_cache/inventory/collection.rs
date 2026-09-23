@@ -14,6 +14,7 @@ use std::sync::Arc;
 use super::CacheEntry;
 use super::cache_entries;
 use super::read_action_result;
+use super::temporary_entries;
 use crate::digest_config::DigestConfig;
 use crate::execute::local_cache::LocalActionCache;
 use crate::execute::local_cache::LocalActionPin;
@@ -26,6 +27,7 @@ pub struct LocalCacheCollection {
     pub removed_blobs: u64,
     pub removed_bytes: u64,
     pub remaining_bytes: u64,
+    pub removed_temporary_files: u64,
 }
 
 struct ActionRecord {
@@ -53,6 +55,10 @@ impl LocalActionCache {
         let _lock = self.exclusive_lock()?;
         let actions = cache_entries(&self.root.join("ac"))?;
         let blobs = cache_entries(&self.root.join("cas"))?;
+        let temporary = temporary_entries(&self.root.join("ac"))?
+            .into_iter()
+            .chain(temporary_entries(&self.root.join("cas"))?)
+            .collect::<Vec<_>>();
         let blob_bytes = blobs
             .iter()
             .map(|entry| (entry.path.clone(), entry.bytes))
@@ -124,6 +130,10 @@ impl LocalActionCache {
         if !dry_run {
             remove_entries(&removed_actions, "remove cache action")?;
             remove_entries(&removed_blobs, "remove cache blob")?;
+            remove_entries(
+                &temporary.iter().map(|entry| entry.path.clone()).collect(),
+                "remove interrupted cache write",
+            )?;
         }
         let removed_bytes = removed_actions
             .iter()
@@ -132,12 +142,14 @@ impl LocalActionCache {
             + removed_blobs
                 .iter()
                 .filter_map(|path| blob_bytes.get(path))
-                .sum::<u64>();
+                .sum::<u64>()
+            + temporary.iter().map(|entry| entry.bytes).sum::<u64>();
         Ok(LocalCacheCollection {
             removed_action_results: removed_actions.len() as u64,
             removed_blobs: removed_blobs.len() as u64,
             removed_bytes,
             remaining_bytes,
+            removed_temporary_files: temporary.len() as u64,
         })
     }
 }

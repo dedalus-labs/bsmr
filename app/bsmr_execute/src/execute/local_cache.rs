@@ -981,6 +981,8 @@ mod tests {
                 orphan_blobs: 1,
                 action_bytes,
                 blob_bytes: 26,
+                temporary_files: 0,
+                temporary_bytes: 0,
             }
         );
         Ok(())
@@ -1063,6 +1065,66 @@ mod tests {
 
         assert_eq!(collected.removed_action_results, 2);
         assert_eq!(collected.removed_blobs, 1);
+        Ok(())
+    }
+
+    #[test]
+    fn invariant_collection_removes_interrupted_writes() -> bsmr_error::Result<()> {
+        let (_temporary, cache, digest_config, action, _output, _result) = fixture();
+        let action_path = cache.action_path(&action);
+        fs::create_dir_all(action_path.parent().expect("action prefix"))?;
+        let interrupted = action_path.with_extension("tmp.1.0");
+        fs::write(&interrupted, b"partial")?;
+        let retained = [
+            action_path.with_extension("tmp.backup"),
+            action_path.with_extension("tmp.1"),
+            action_path.with_extension("tmp.1.0.keep"),
+            action_path.with_extension("tmp.x.0"),
+            action_path.with_extension("tmp.1.x"),
+            action_path.with_extension("tmp.+1.+0"),
+            action_path.with_extension("tmp.01.0"),
+            action_path.with_extension("tmp.0.0"),
+            action_path.with_extension("tmp.1.00"),
+            action_path.with_extension("backup"),
+        ];
+        for path in &retained {
+            fs::write(path, b"retain")?;
+        }
+        assert!(retained.iter().all(|path| path != &interrupted));
+        assert_eq!(fs::metadata(&interrupted)?.len(), 7);
+
+        let inventory = cache.inventory(digest_config)?;
+        let dry_run = cache.collect(u64::MAX, true, digest_config)?;
+
+        assert_eq!(inventory.temporary_files, 1);
+        assert_eq!(inventory.temporary_bytes, 7);
+        assert_eq!(dry_run.removed_temporary_files, 1);
+        assert!(interrupted.exists());
+
+        let collected = cache.collect(u64::MAX, false, digest_config)?;
+
+        assert_eq!(collected.removed_temporary_files, 1);
+        assert_eq!(collected.removed_bytes, 7);
+        assert!(!interrupted.exists());
+        assert!(retained.iter().all(|path| path.exists()));
+        Ok(())
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn inventory_rejects_interrupted_write_symlinks() -> bsmr_error::Result<()> {
+        let (temporary, cache, digest_config, action, _output, _result) = fixture();
+        let action_path = cache.action_path(&action);
+        fs::create_dir_all(action_path.parent().expect("action prefix"))?;
+        let target = temporary.path().join("target");
+        fs::write(&target, b"target")?;
+        std::os::unix::fs::symlink(target, action_path.with_extension("tmp.1.0"))?;
+
+        let error = cache
+            .inventory(digest_config)
+            .expect_err("temporary symlinks must fail closed");
+
+        assert!(error.to_string().contains("not a regular file"));
         Ok(())
     }
 
