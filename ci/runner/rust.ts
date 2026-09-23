@@ -25,12 +25,16 @@ export const installRust = action({
 		const cargo = join(temporary, "rust-cargo");
 		const rustup = join(temporary, "rust-tools");
 		const installer = join(temporary, "rustup-init");
+		const python = join(temporary, "python.tar.gz");
+		await exec("curl", ["--fail", "--location", "--silent", "--show-error", "--proto", "=https", "--tlsv1.2", "https://github.com/astral-sh/python-build-standalone/releases/download/20260901/cpython-3.13.15%2B20260901-aarch64-apple-darwin-install_only_stripped.tar.gz", "--output", python]);
+		await verifySha256(python, "d3904bd6a072246e07aa0bdadee9a14e80521e42a943c0848059feb16a2816dc");
+		await exec("tar", ["-xzf", python, "-C", temporary]);
 		await exec("curl", ["--fail", "--location", "--silent", "--show-error", "--proto", "=https", "--tlsv1.2", "https://static.rust-lang.org/rustup/archive/1.29.1/aarch64-apple-darwin/rustup-init", "--output", installer]);
 		await verifySha256(installer, "ec1b9233e7f72990ecd8e62063fa7f6c3dfc2bec8e97f88bff165f9100ac696a");
 		await exec("chmod", ["u+x", installer]);
 		await exec(installer, ["-y", "--no-modify-path", "--profile", "minimal", "--default-toolchain", "none"], { env: { CARGO_HOME: cargo, RUSTUP_HOME: rustup } });
 		await appendFile(environment, `CARGO_HOME=${cargo}\nRUSTUP_HOME=${rustup}\n`);
-		await appendFile(path, `${join(cargo, "bin")}\n`);
+		await appendFile(path, `${join(cargo, "bin")}\n${join(temporary, "python/bin")}\n`);
 		return {};
 	},
 });

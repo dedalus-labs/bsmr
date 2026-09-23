@@ -45,8 +45,9 @@ GitHub-hosted control jobs. The build uses two Cargo jobs, disables development
 debug data and incremental compiler state for building BSMR itself, and then
 runs the native qualification harnesses. This does not alter consumer profiles.
 
-Each job installs checksum-verified Rust tooling into private temporary
-directories. Engine and planner dependencies have separate compiler caches.
+Each job installs checksum-verified Rustup and CPython into private temporary
+directories. The Rust wrappers require Python newer than the system copy on
+some Macs. Engine and planner dependencies have separate compiler caches.
 Only a build whose source equals the reviewed workflow revision writes those
 caches. Builds of other approved commits can restore them.
 

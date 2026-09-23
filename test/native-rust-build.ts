@@ -23,7 +23,7 @@ delete env["CARGO_ENCODED_RUSTFLAGS"];
 const cwd = join(root, "project");
 mkdirSync(cwd);
 const options = { cwd, env, timeout: 120_000, maxBuffer: 8 * 1024 * 1024 };
-const checkouts = [cwd];
+const checkouts: string[] = [];
 const projects: Record<string, string> = {
 	"Cargo.toml": '[workspace]\nmembers=["app", "core", "unrelated", "both"]\nresolver="2"\n',
 	"rust-toolchain.toml": '[toolchain]\nchannel="nightly-2026-04-11"\n',
@@ -56,6 +56,7 @@ async function build(phase: string, expected: string, directory = cwd) {
 try {
 	await run("python3", ["-m", "unittest", "discover", "-s", resolve(import.meta.dirname, "../prelude/rust/tools/tests"), "-p", "*_test.py"], { ...options, env: { ...env, RUSTC: rustc } });
 	await run(binary, ["init"], options);
+	checkouts.push(cwd);
 	const config = readFileSync(join(cwd, ".bsmr"), "utf8");
 	writeFileSync(join(cwd, ".bsmr"), config + "\n[bsmr]\ndefault_allow_cache_upload = true\n");
 	await run(cargo, ["generate-lockfile", "--offline"], options);
