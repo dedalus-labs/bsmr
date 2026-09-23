@@ -367,6 +367,13 @@ fn configured_unit(
     linker: Option<PathBuf>,
     dependencies: Vec<Dependency>,
 ) -> ConfiguredUnit {
+    let mut package_lint_flags = unit.pkg.manifest().lint_rustflags().to_vec();
+    // Match Cargo's compiler policy without weakening local package lints.
+    if !unit.show_warnings(context.gctx) {
+        package_lint_flags.push("--cap-lints=allow".into());
+    } else if !unit.is_local() {
+        package_lint_flags.push("--cap-lints=warn".into());
+    }
     ConfiguredUnit {
         package_id: unit.pkg.package_id().to_spec().to_string(),
         package_name: unit.pkg.name().to_string(),
@@ -388,7 +395,7 @@ fn configured_unit(
             .collect(),
         rustflags: unit.rustflags.to_vec(),
         rustdocflags: unit.rustdocflags.to_vec(),
-        package_lint_flags: unit.pkg.manifest().lint_rustflags().to_vec(),
+        package_lint_flags,
         linker,
         dependencies,
     }
