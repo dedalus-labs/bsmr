@@ -97,6 +97,8 @@ def _make_rustc_shim(ctx: AnalysisContext, cwd: Artifact) -> cmd_args:
             # add dep_argsfiles as a separate argument because rustc does NOT support nested @argsfiles
             dep_argsfiles,
         )
+    elif toolchain_info.sysroot_path != None:
+        sysroot_args = cmd_args("--sysroot", toolchain_info.sysroot_path)
     else:
         sysroot_args = cmd_args()
 
@@ -358,6 +360,7 @@ def _cargo_buildscript_impl(ctx: AnalysisContext) -> list[Provider]:
 
     # Environment variables specified in the target's attributes get priority
     # over all the above.
+    env.update(ctx.attrs.literal_env)
     for k, v in ctx.attrs.env.items():
         env[k] = cmd_args(v, relative_to = cwd)
 
@@ -371,6 +374,7 @@ def _cargo_buildscript_impl(ctx: AnalysisContext) -> list[Provider]:
         DefaultInfo(
             default_output = None,
             sub_targets = {
+                "cwd": [DefaultInfo(default_output = cwd)],
                 "out_dir": [DefaultInfo(default_output = out_dir)],
                 "rustc_flags": [DefaultInfo(default_output = rustc_flags)],
             },
@@ -384,6 +388,7 @@ _cargo_buildscript_rule = rule(
         "cxx_deps": attrs.list(attrs.dep(), default = []),
         "cxx_flags": attrs.list(attrs.arg(), default = []),
         "env": attrs.dict(key = attrs.string(), value = attrs.arg(), default = {}),
+        "literal_env": attrs.dict(key = attrs.string(), value = attrs.string(), default = {}),
         "features": attrs.list(attrs.string(), default = []),
         "filegroup_for_manifest_dir": attrs.option(attrs.dict(key = attrs.string(), value = attrs.source()), default = None),
         "manifest_dir": attrs.option(attrs.dep(), default = None),

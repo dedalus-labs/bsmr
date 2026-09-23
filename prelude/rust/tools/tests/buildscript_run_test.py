@@ -38,11 +38,13 @@ class BuildscriptRunTest(unittest.TestCase):
             if line.startswith('host: ')
         )
 
-    def execute(self, directives: list[str]) -> subprocess.CompletedProcess[str]:
+    def execute(
+        self, directives: list[str], assertions: str = ''
+    ) -> subprocess.CompletedProcess[str]:
         """Compile and execute a real script through the inherited protocol runner."""
         source = self.source / 'build.rs'
         statements = [f'println!(r##"{line}"##);' for line in directives]
-        source.write_text('fn main() {' + ''.join(statements) + '}\n')
+        source.write_text('fn main() {' + assertions + ''.join(statements) + '}\n')
         script = self.root / 'build_script'
         subprocess.run(
             [self.compiler, str(source), '-o', str(script)],
@@ -114,6 +116,37 @@ class BuildscriptRunTest(unittest.TestCase):
                 self.assertNotEqual(result.returncode, 0)
                 self.assertIn('missing generator', result.stderr)
                 self.assertEqual(self.flags.read_text(), '')
+
+    def test_invariant_cfg_environment_preserves_custom_values(self) -> None:
+        """Build scripts receive custom cfgs with Cargo's boolean and value semantics."""
+        cfg = subprocess.run(
+            [
+                self.compiler,
+                '--print=cfg',
+                '--cfg',
+                'input_cfg',
+                '--cfg',
+                'label="a=b"',
+            ],
+            capture_output=True,
+            text=True,
+            check=True,
+        )
+        self.cfg.write_text(cfg.stdout)
+        result = self.execute(
+            [],
+            """
+            assert_eq!(std::env::var("CARGO_CFG_INPUT_CFG").unwrap(), "");
+            assert_eq!(std::env::var("CARGO_CFG_LABEL").unwrap(), "a=b");
+        """,
+        )
+        self.assertEqual(result.returncode, 0, result.stderr)
+
+    def test_invariant_unmodeled_directives_cannot_publish_success(self) -> None:
+        """A requested compiler effect must be represented or rejected."""
+        result = self.execute(['cargo::rustc-link-arg=-unknown-linker-option'])
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn('unsupported build-script directive', result.stderr)
 
 
 if __name__ == '__main__':
