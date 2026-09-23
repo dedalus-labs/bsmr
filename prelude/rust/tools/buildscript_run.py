@@ -19,6 +19,7 @@ Run a crate's Cargo buildscript.
 import argparse
 import os
 import re
+import shutil
 import subprocess
 import sys
 from pathlib import Path
@@ -38,83 +39,40 @@ def eprint(*args: Any, **kwargs: Any) -> None:
 
 
 def cfg_env(rustc_cfg: Path) -> dict[str, str]:
+    """Convert compiler cfgs to Cargo environment values, including empty flags."""
     with rustc_cfg.open(encoding="utf-8") as f:
         lines = f.readlines()
 
-    cfgs: dict[str, str] = {}
+    cfgs: dict[str, list[str]] = {}
     for line in lines:
-        if (
-            line.startswith("unix")
-            or line.startswith("windows")
-            or line.startswith("target_")
-        ):
-            keyval = line.strip().split("=")
-            key = keyval[0]
-            val = keyval[1].replace('"', "") if len(keyval) > 1 else "1"
-
-            key = "CARGO_CFG_" + key.upper()
-            if key in cfgs:
-                cfgs[key] = cfgs[key] + "," + val
-            else:
-                cfgs[key] = val
-
-    return cfgs
+        key, separator, value = line.strip().partition("=")
+        values = cfgs.setdefault("CARGO_CFG_" + key.upper().replace("-", "_"), [])
+        if separator:
+            values.append(value[1:-1])
+    return {key: ",".join(values) for key, values in cfgs.items()}
 
 
 def create_cwd(path: Path, manifest_dir: Path) -> Path:
-    """Create a directory with most of the same contents as manifest_dir, but
-    excluding Rustup's rust-toolchain.toml configuration file.
+    """Copy package sources into a self-contained cached output directory.
 
-    Keeping rust-toolchain.toml goes wrong in the situation that all of the
-    following happen:
-
-      1. toolchains//:rust uses compiler = "rustc", like the
-         system_rust_toolchain.
-
-      2. The rustc in $PATH is rustup's rustc shim.
-
-      3. A third-party dependency has both a rust-toolchain.toml and a build.rs
-         that runs "rustc" or env::var_os("RUSTC"), such as to inspect `rustc
-         --version` or to compile autocfg-style probe code.
-
-    Cargo defines that build scripts run using the package's manifest directory
-    as the current directory, so the rustc subprocess spawned from build.rs
-    would also run in that manifest directory. But other rustc invocations
-    performed by Bsmr run from the repo root.
-
-    Rustup only looks at one rust-toolchain.toml file, using the nearest one
-    present in any parent directory. The file can set `channel` to control which
-    installed version of rustc to run.
-
-    It is bad if it's possible for the rustc run by a build script vs rustc run
-    by the rest of the build to be different toolchains. In order to configure
-    their crate appropriately, build scripts rely on using the same rustc that
-    their crate will be later compiled by.
-
-    This problem doesn't happen during Cargo-based builds because rustup
-    installs both a cargo shim and a rustc shim. When you run a rustup-managed
-    Cargo, one of the first things it does is define a RUSTUP_TOOLCHAIN
-    environment variable pointing to the rustup channel id of the currently
-    selected cargo. Subsequent invocations of the rustup cargo shim or rustc
-    shim with this variable in the environment no longer pay attention to any
-    rust-toolchain.toml file.
-
-    We cannot follow the same approach because there is no API in rustup for
-    finding out a suitable RUSTUP_TOOLCHAIN value consistent with which
-    toolchain "rustc" currently refers to, and even if there were, it isn't
-    guaranteed that "rustc" refers to a rustup-managed toolchain in the first
-    place.
+    Consumers compile this directory, including source changes made by the script.
+    Excluding package toolchain files prevents Rustup probes from selecting a
+    different compiler than the one declared by the build.
     """
 
-    path.mkdir(exist_ok=True)
+    if path.is_symlink():
+        path.unlink()
+    elif path.exists():
+        shutil.rmtree(path)
+    path.mkdir()
 
     for dir_entry in manifest_dir.iterdir():
         if dir_entry.name not in ["rust-toolchain", "rust-toolchain.toml"]:
-            link = path.joinpath(dir_entry.name)
-            link.unlink(missing_ok=True)
-            link.symlink_to(
-                os.path.relpath(dir_entry, path), target_is_directory=dir_entry.is_dir()
-            )
+            destination = path.joinpath(dir_entry.name)
+            if dir_entry.is_dir() and not dir_entry.is_symlink():
+                shutil.copytree(dir_entry, destination, symlinks=True)
+            else:
+                shutil.copy2(dir_entry, destination, follow_symlinks=False)
 
     return path
 
@@ -226,6 +184,7 @@ def main() -> None:  # noqa: C901
 
     cwd = create_cwd(args.create_cwd, args.manifest_dir)
     env["CARGO_MANIFEST_DIR"] = os.path.abspath(cwd)
+    env["CARGO_MANIFEST_PATH"] = os.path.join(env["CARGO_MANIFEST_DIR"], "Cargo.toml")
 
     env = dict(os.environ, **env)
 
@@ -309,9 +268,12 @@ def main() -> None:  # noqa: C901
                 relative_path = path[len(TOOL_CWD) :]
                 flags += f"-L{kind}$(abspath {relative_path})\n"
             else:
-                # Disregard link search not located within the build script's out dir.
-                pass
+                sys.exit(f"build script link search is outside declared inputs: {path}")
             continue
+        if line.startswith("cargo:"):
+            directive = line.split(":", 1)[1].lstrip(":").split("=", 1)[0]
+            if directive not in ["warning", "rerun-if-changed", "rerun-if-env-changed"]:
+                sys.exit(f"unsupported build-script directive: {directive}")
         print(line, end="\n")
     args.outfile.write(flags)
 
