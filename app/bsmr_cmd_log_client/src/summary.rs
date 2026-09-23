@@ -79,7 +79,10 @@ impl Stats {
                     match ActionExecutionKind::try_from(data.execution_kind) {
                         Ok(ActionExecutionKind::Local) => self.total_local_actions += 1,
                         Ok(ActionExecutionKind::Remote) => self.total_remote_actions += 1,
-                        Ok(ActionExecutionKind::ActionCache) => self.total_cached_actions += 1,
+                        Ok(
+                            ActionExecutionKind::ActionCache
+                            | ActionExecutionKind::LocalActionCache,
+                        ) => self.total_cached_actions += 1,
                         _ => self.total_other_actions += 1,
                     }
                 }
@@ -360,5 +363,41 @@ impl BsmrSubcommand for SummaryCommand {
         }
         bsmr_client_ctx::println!("{}", stats)?;
         ExitResult::success()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use bsmr_data::ActionExecutionEnd;
+    use bsmr_data::BsmrEvent;
+    use bsmr_data::SpanEndEvent;
+
+    use super::Stats;
+
+    /// Builds the minimal completed action event consumed by the summary.
+    fn action(kind: bsmr_data::ActionExecutionKind) -> BsmrEvent {
+        BsmrEvent {
+            data: Some(bsmr_data::bsmr_event::Data::SpanEnd(SpanEndEvent {
+                data: Some(bsmr_data::span_end_event::Data::ActionExecution(Box::new(
+                    ActionExecutionEnd {
+                        execution_kind: kind as i32,
+                        ..Default::default()
+                    },
+                ))),
+                ..Default::default()
+            })),
+            ..Default::default()
+        }
+    }
+
+    #[test]
+    fn local_action_cache_hits_count_as_cached() {
+        let mut stats = Stats::default();
+
+        stats.update_with_event(&action(bsmr_data::ActionExecutionKind::ActionCache));
+        stats.update_with_event(&action(bsmr_data::ActionExecutionKind::LocalActionCache));
+
+        assert_eq!(stats.total_cached_actions, 2);
+        assert_eq!(stats.total_other_actions, 0);
     }
 }
