@@ -51,6 +51,23 @@ with open(f + "/hello", "w") as f:
     )
     return [DefaultInfo(out)]
 
+def _cacheable_outputs_impl(ctx):
+    outputs = [ctx.actions.declare_output(name, has_content_based_path = False) for name in ["one.txt", "two.txt"]]
+    ctx.actions.run(
+        cmd_args(
+            "fbpython",
+            "-c",
+            "import pathlib, sys; [pathlib.Path(path).write_text(path) for path in sys.argv[1:]]",
+            [output.as_output() for output in outputs],
+        ),
+        category = "cacheable_outputs",
+        allow_cache_upload = True,
+    )
+    return [DefaultInfo(default_outputs = outputs)]
+
+def _source_output_impl(ctx):
+    return [DefaultInfo(default_output = ctx.attrs.src)]
+
 touch_file = rule(
     impl = _touch_file_impl,
     attrs = {
@@ -62,3 +79,10 @@ touch_file = rule(
 )
 
 mkdir = rule(impl = _mkdir_impl, attrs = {})
+
+cacheable_outputs = rule(impl = _cacheable_outputs_impl, attrs = {})
+
+source_output = rule(
+    impl = _source_output_impl,
+    attrs = {"src": attrs.source()},
+)

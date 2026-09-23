@@ -6,8 +6,17 @@
     "root//:dir1": {
       "configured": {
         "<unspecified>": {
+          "artifact_action_digests": {
+            "bsmr-out/default/art/root/<HASH>/__dir1__/out": "<DIGEST>"
+          },
           "artifact_info": {
             "DEFAULT": {
+              "digest": "<DIGEST>",
+              "kind": "directory"
+            }
+          },
+          "artifact_info_by_path": {
+            "bsmr-out/default/art/root/<HASH>/__dir1__/out": {
               "digest": "<DIGEST>",
               "kind": "directory"
             }
@@ -43,6 +52,13 @@
               "kind": "file"
             }
           },
+          "artifact_info_by_path": {
+            "bsmr-out/default/art/root/<HASH>/__rule1__/out.txt": {
+              "digest": "<DIGEST>",
+              "is_exec": false,
+              "kind": "file"
+            }
+          },
           "configured_graph_size": null,
           "errors": [],
           "other_outputs": {},
@@ -69,6 +85,13 @@
         "<unspecified>": {
           "artifact_info": {
             "DEFAULT": {
+              "digest": "<DIGEST>",
+              "is_exec": false,
+              "kind": "file"
+            }
+          },
+          "artifact_info_by_path": {
+            "bsmr-out/default/art/root/<HASH>/subdir/__rule__/out.txt": {
               "digest": "<DIGEST>",
               "is_exec": false,
               "kind": "file"

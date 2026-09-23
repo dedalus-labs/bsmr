@@ -152,6 +152,12 @@ pub(crate) struct ConfiguredBuildReportEntry {
     /// Remote artifact information, including hashes, etc.
     #[serde(skip_serializing_if = "HashMap::is_empty")]
     artifact_info: HashMap<Arc<str>, ArtifactInfo>,
+    /// Artifact information keyed by reported artifact path.
+    #[serde(skip_serializing_if = "BTreeMap::is_empty")]
+    artifact_info_by_path: BTreeMap<ProjectRelativePathBuf, ArtifactInfo>,
+    /// Canonical command action digests keyed by their reported artifact paths.
+    #[serde(skip_serializing_if = "BTreeMap::is_empty")]
+    artifact_action_digests: BTreeMap<ProjectRelativePathBuf, String>,
     #[serde(flatten)]
     inner: MaybeConfiguredBuildReportEntry,
     /// The serialized graph sketch for this target, if it was produced.
@@ -838,23 +844,32 @@ impl<'a> BuildReportCollector<'a> {
                 Ok(artifacts) => {
                     if artifacts.provider_type == BuildProviderType::Default {
                         for (artifact, value) in artifacts.values.iter() {
+                            let output_path = artifact
+                                .resolve_configuration_hash_path(self.artifact_fs)
+                                .unwrap();
                             if self.include_artifact_hash_information {
-                                update_artifact_info(
-                                    &mut configured_report.artifact_info,
-                                    provider_name.dupe(),
-                                    value.entry(),
-                                );
+                                let artifact_info = create_artifact_info(value.entry());
+                                configured_report
+                                    .artifact_info
+                                    .insert(provider_name.dupe(), artifact_info.clone());
+                                configured_report
+                                    .artifact_info_by_path
+                                    .insert(output_path.clone(), artifact_info);
+                                if let Some(action_key) = artifact.action_key()
+                                    && let Some(action_digest) =
+                                        artifacts.action_digests.get(action_key)
+                                {
+                                    configured_report
+                                        .artifact_action_digests
+                                        .insert(output_path.clone(), action_digest.clone());
+                                }
                             }
                             configured_report
                                 .inner
                                 .outputs
                                 .entry(provider_name.dupe())
                                 .or_default()
-                                .insert({
-                                    artifact
-                                        .resolve_configuration_hash_path(self.artifact_fs)
-                                        .unwrap()
-                                });
+                                .insert(output_path);
                         }
                     }
                 }
@@ -1067,50 +1082,32 @@ impl<'a> BuildReportCollector<'a> {
     }
 }
 
-fn update_artifact_info(
-    artifact_info: &mut HashMap<Arc<str>, ArtifactInfo>,
-    provider_name: Arc<str>,
-    entry: &ActionDirectoryEntry<ActionSharedDirectory>,
-) {
+fn create_artifact_info(entry: &ActionDirectoryEntry<ActionSharedDirectory>) -> ArtifactInfo {
     match entry {
-        DirectoryEntry::Dir(dir) => {
-            artifact_info.insert(
-                provider_name,
-                ArtifactInfo::Directory(DirectoryInfo {
-                    digest: dir.fingerprint().clone(),
-                }),
-            );
-        }
+        DirectoryEntry::Dir(dir) => ArtifactInfo::Directory(DirectoryInfo {
+            digest: dir.fingerprint().clone(),
+        }),
         DirectoryEntry::Leaf(ActionDirectoryMember::File(metadata)) => {
             let cas_digest = metadata.digest.data();
-            artifact_info.insert(
-                provider_name,
-                ArtifactInfo::File(FileInfo {
-                    digest: *cas_digest,
-                    is_exec: metadata.is_executable,
-                }),
-            );
+            ArtifactInfo::File(FileInfo {
+                digest: *cas_digest,
+                is_exec: metadata.is_executable,
+            })
         }
         DirectoryEntry::Leaf(ActionDirectoryMember::Symlink(symlink_target)) => {
-            artifact_info.insert(
-                provider_name,
-                ArtifactInfo::Symlink(SymlinkInfo {
-                    symlink_rel_path: symlink_target.target().into(),
-                }),
-            );
+            ArtifactInfo::Symlink(SymlinkInfo {
+                symlink_rel_path: symlink_target.target().into(),
+            })
         }
         DirectoryEntry::Leaf(ActionDirectoryMember::ExternalSymlink(external_symlink)) => {
-            artifact_info.insert(
-                provider_name,
-                ArtifactInfo::ExternalSymlink(ExternalSymlinkInfo {
-                    target: external_symlink.target().into(),
-                    remaining_path: if external_symlink.remaining_path().is_empty() {
-                        None
-                    } else {
-                        Some(external_symlink.remaining_path().to_owned())
-                    },
-                }),
-            );
+            ArtifactInfo::ExternalSymlink(ExternalSymlinkInfo {
+                target: external_symlink.target().into(),
+                remaining_path: if external_symlink.remaining_path().is_empty() {
+                    None
+                } else {
+                    Some(external_symlink.remaining_path().to_owned())
+                },
+            })
         }
     }
 }

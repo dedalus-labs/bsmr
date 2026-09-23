@@ -16,13 +16,14 @@
 
 
 import json
+import re
 from pathlib import Path
 from typing import Any
 
 from bsmr.tests.e2e_util.api.bsmr import Bsmr
 from bsmr.tests.e2e_util.bsmr_workspace import bsmr_test
 from bsmr.tests.e2e_util.helper.golden import golden
-from bsmr.tests.e2e_util.helper.utils import replace_digest, replace_hash
+from bsmr.tests.e2e_util.helper.utils import read_what_ran, replace_digest, replace_hash
 
 
 def _sanitize_timing_fields(obj: Any) -> None:
@@ -108,6 +109,67 @@ build_report_test(
         "include-artifact-hash-information",
     ],
 )
+
+
+@bsmr_test()
+async def test_build_report_action_digests_are_stable(
+    bsmr: Bsmr, tmp_path: Path
+) -> None:
+    reports: list[dict[str, Any]] = []
+    for name in ["first.json", "second.json"]:
+        report_path = tmp_path / name
+        await bsmr.build(
+            "//:cacheable_outputs",
+            "//:rule1",
+            "//:source_output",
+            "--remote-only",
+            "--build-report",
+            str(report_path),
+            "--build-report-options",
+            "include-artifact-hash-information",
+        )
+        with open(report_path) as report_file:
+            reports.append(json.load(report_file))
+
+        if name == "first.json":
+            await bsmr.clean()
+
+    what_ran = await read_what_ran(bsmr)
+    assert [entry["reproducer"]["executor"] for entry in what_ran] == ["Cache"]
+
+    digests: list[str] = []
+    for report in reports:
+        command_entry = report["results"]["root//:cacheable_outputs"]["configured"][
+            "<unspecified>"
+        ]
+        outputs = command_entry["outputs"]["DEFAULT"]
+        artifact_info = command_entry["artifact_info_by_path"]
+        action_digests = command_entry["artifact_action_digests"]
+        assert set(artifact_info) == set(outputs)
+        assert set(action_digests) == set(outputs)
+        assert len(outputs) == 2
+        assert all(info["kind"] == "file" for info in artifact_info.values())
+        assert all(
+            re.fullmatch(r"[0-9a-f]+:\d+", info["digest"])
+            for info in artifact_info.values()
+        )
+        assert len(set(action_digests.values())) == 1
+        action_digest = next(iter(action_digests.values()))
+        assert re.fullmatch(r"[0-9a-f]+:\d+", action_digest)
+        digests.append(action_digest)
+
+        write_entry = report["results"]["root//:rule1"]["configured"][
+            "<unspecified>"
+        ]
+        assert "artifact_action_digests" not in write_entry
+
+        source_entry = report["results"]["root//:source_output"]["configured"][
+            "<unspecified>"
+        ]
+        assert "artifact_action_digests" not in source_entry
+
+    assert digests[0] == digests[1]
+
 
 build_report_test(
     "test_build_report_format_configured_graph_sketch",
