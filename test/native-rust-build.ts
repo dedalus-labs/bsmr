@@ -128,7 +128,7 @@ try {
 	await assert.rejects(run(binary, ["build", "both:lib"], options), /binary target name `lib` is reserved/);
 	writeFileSync(join(cwd, "both/Cargo.toml"), bothManifest);
 	writeFileSync(join(cwd, "app/build.rs"), 'fn main() { panic!("must not execute during graph import"); }');
-	await assert.rejects(run(binary, ["build", "app"], options), /custom-build/);
+	await assert.rejects(run(binary, ["build", "app"], options), /verified declared-input executor/, "package code must not run without verified isolation");
 	console.log("ok: inferred Rust, native tests, composable recipes, manifest invalidation, cache reuse");
 } finally {
 	await Promise.all(checkouts.map((directory) => run(binary, ["kill"], { ...options, cwd: directory })));
