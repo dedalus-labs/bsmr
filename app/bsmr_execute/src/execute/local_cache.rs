@@ -35,8 +35,11 @@ use crate::digest_config::DigestConfig;
 use crate::execute::action_digest::ActionDigest;
 
 mod flight;
+mod inventory;
+
 pub use flight::LocalActionLease;
 pub use flight::LocalActionReservation;
+pub use inventory::LocalCacheInventory;
 
 static TEMPORARY_ID: AtomicU64 = AtomicU64::new(0);
 
@@ -103,7 +106,8 @@ enum LocalCacheError {
 }
 
 /// A content digest persisted in the local action-result format.
-#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
+#[derive(Clone, Debug, Deserialize, Eq, Hash, PartialEq, Serialize)]
+#[serde(deny_unknown_fields)]
 pub struct LocalDigest {
     pub algorithm: String,
     pub hash: String,
@@ -153,6 +157,7 @@ impl LocalDigest {
 
 /// A file output contained directly in an action result.
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
+#[serde(deny_unknown_fields)]
 pub struct LocalOutputFile {
     pub path: String,
     pub digest: LocalDigest,
@@ -161,6 +166,7 @@ pub struct LocalOutputFile {
 
 /// A directory output represented by an RE Tree blob in the CAS.
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
+#[serde(deny_unknown_fields)]
 pub struct LocalOutputDirectory {
     pub path: String,
     pub tree_digest: LocalDigest,
@@ -168,6 +174,7 @@ pub struct LocalOutputDirectory {
 
 /// The local action-cache manifest. All byte payloads live in the CAS.
 #[derive(Clone, Debug, Default, Deserialize, Eq, PartialEq, Serialize)]
+#[serde(deny_unknown_fields)]
 pub struct LocalActionResult {
     pub output_files: Vec<LocalOutputFile>,
     pub output_directories: Vec<LocalOutputDirectory>,
@@ -679,11 +686,13 @@ fn io_error(
 mod tests {
     use std::fs;
 
+    use bsmr_common::cas_digest::DigestAlgorithm;
     use bsmr_common::file_ops::metadata::TrackedFileDigest;
     use prost::Message;
 
     use super::LocalActionCache;
     use super::LocalActionResult;
+    use super::LocalCacheInventory;
     #[cfg(target_os = "macos")]
     use super::LocalCacheMaterialization;
     use super::LocalDigest;
@@ -726,6 +735,87 @@ mod tests {
         cache.publish_action_result(&action, &result)?;
 
         assert_eq!(cache.action_result(&action)?, Some(result));
+        Ok(())
+    }
+
+    #[test]
+    fn invariant_inventory_distinguishes_reachable_and_orphan_blobs() -> bsmr_error::Result<()> {
+        let (_temporary, cache, digest_config, action, output, result) = fixture();
+        let orphan =
+            TrackedFileDigest::from_content(b"orphan output", digest_config.cas_digest_config());
+        cache.publish_bytes(&output, b"cached output", digest_config)?;
+        cache.publish_bytes(&orphan, b"orphan output", digest_config)?;
+        cache.publish_action_result(&action, &result)?;
+        let shared_action =
+            ActionDigest::from_content(b"shared action", digest_config.cas_digest_config());
+        cache.publish_action_result(&shared_action, &result)?;
+        let missing_action =
+            ActionDigest::from_content(b"missing action", digest_config.cas_digest_config());
+        let missing_output =
+            TrackedFileDigest::from_content(b"missing output", digest_config.cas_digest_config());
+        let missing_result = LocalActionResult {
+            output_files: vec![LocalOutputFile {
+                path: "bsmr-out/missing".to_owned(),
+                digest: LocalDigest::from_file(&missing_output),
+                executable: false,
+            }],
+            ..Default::default()
+        };
+        cache.publish_action_result(&missing_action, &missing_result)?;
+        let action_bytes = [action, shared_action, missing_action]
+            .iter()
+            .map(|action| fs::metadata(cache.action_path(action)).map(|metadata| metadata.len()))
+            .sum::<Result<u64, _>>()?;
+
+        assert_eq!(
+            cache.inventory(digest_config)?,
+            LocalCacheInventory {
+                action_results: 3,
+                complete_actions: 2,
+                incomplete_actions: 1,
+                blobs: 2,
+                reachable_blobs: 1,
+                orphan_blobs: 1,
+                action_bytes,
+                blob_bytes: 26,
+            }
+        );
+        Ok(())
+    }
+
+    #[test]
+    fn inventory_rejects_invalid_digest_metadata() -> bsmr_error::Result<()> {
+        let (_temporary, cache, digest_config, action, _output, mut result) = fixture();
+        result.output_files[0].digest.algorithm = "not-a-digest".to_owned();
+        let action_path = cache.action_path(&action);
+        fs::create_dir_all(action_path.parent().expect("action parent"))?;
+        fs::write(action_path, serde_json::to_vec(&result)?)?;
+
+        let error = cache
+            .inventory(digest_config)
+            .expect_err("invalid digest metadata must fail");
+
+        assert!(error.to_string().contains("declares not-a-digest"));
+        Ok(())
+    }
+
+    #[test]
+    fn inventory_rejects_unknown_action_fields() -> bsmr_error::Result<()> {
+        let (_temporary, cache, digest_config, action, _output, result) = fixture();
+        let mut value = serde_json::to_value(result)?;
+        value
+            .as_object_mut()
+            .expect("action result serializes as an object")
+            .insert("future_outputs".to_owned(), serde_json::json!([]));
+        let action_path = cache.action_path(&action);
+        fs::create_dir_all(action_path.parent().expect("action parent"))?;
+        fs::write(action_path, serde_json::to_vec(&value)?)?;
+
+        let error = cache
+            .inventory(digest_config)
+            .expect_err("unknown action fields must fail");
+
+        assert!(error.to_string().contains("decode"));
         Ok(())
     }
 
@@ -864,8 +954,70 @@ mod tests {
 
         assert_eq!(cache.action_result(&action)?, Some(result));
 
+        let poison =
+            TrackedFileDigest::from_content(b"poison output", digest_config.cas_digest_config());
+        let poison_tree = remote_execution::Tree {
+            root: Some(remote_execution::Directory {
+                files: vec![remote_execution::FileNode {
+                    name: "nested.txt".to_owned(),
+                    digest: Some(poison.to_grpc()),
+                    ..Default::default()
+                }],
+                ..Default::default()
+            }),
+            ..Default::default()
+        }
+        .encode_to_vec();
+        assert_eq!(poison_tree.len(), tree_bytes.len());
+        let tree_path = cache.blob_path(&LocalDigest::from_file(&tree_digest));
+        fs::write(&tree_path, poison_tree)?;
+        let error = cache
+            .inventory(digest_config)
+            .expect_err("same-size tree corruption must fail");
+        assert!(error.to_string().contains("digest mismatch"));
+        fs::write(&tree_path, tree_bytes)?;
+
         fs::remove_file(cache.blob_path(&LocalDigest::from_file(&file)))?;
         assert!(cache.action_result(&action)?.is_none());
+        Ok(())
+    }
+
+    #[test]
+    fn inventory_verifies_keyed_tree_digests() -> bsmr_error::Result<()> {
+        let temporary = tempfile::tempdir()?;
+        let cache = LocalActionCache::at(temporary.path().to_owned())?;
+        let digest_config = DigestConfig::leak_new(vec![DigestAlgorithm::Blake3KeyedTest], None)?;
+        let action = ActionDigest::from_content(b"action", digest_config.cas_digest_config());
+        let file = TrackedFileDigest::from_content(b"file", digest_config.cas_digest_config());
+        let tree = remote_execution::Tree {
+            root: Some(remote_execution::Directory {
+                files: vec![remote_execution::FileNode {
+                    name: "file".to_owned(),
+                    digest: Some(file.to_grpc()),
+                    ..Default::default()
+                }],
+                ..Default::default()
+            }),
+            ..Default::default()
+        }
+        .encode_to_vec();
+        let tree_digest = TrackedFileDigest::from_content(&tree, digest_config.cas_digest_config());
+        let result = LocalActionResult {
+            output_directories: vec![LocalOutputDirectory {
+                path: "bsmr-out/directory".to_owned(),
+                tree_digest: LocalDigest::from_file(&tree_digest),
+            }],
+            ..Default::default()
+        };
+        cache.publish_bytes(&file, b"file", digest_config)?;
+        cache.publish_bytes(&tree_digest, &tree, digest_config)?;
+        cache.publish_action_result(&action, &result)?;
+
+        let inventory = cache.inventory(digest_config)?;
+
+        assert_eq!(inventory.complete_actions, 1);
+        assert_eq!(inventory.reachable_blobs, 2);
+        assert_eq!(inventory.orphan_blobs, 0);
         Ok(())
     }
 
