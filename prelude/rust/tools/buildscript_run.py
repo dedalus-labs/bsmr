@@ -253,7 +253,8 @@ def main() -> None:  # noqa: C901
 
     script_output = run_buildscript(args.buildscript, env=env, cwd=cwd)
 
-    cargo_rustc_cfg_pattern = re.compile("^cargo::?rustc-cfg=(.*)")
+    cargo_rustc_cfg_pattern = re.compile("^cargo::?rustc-(cfg|check-cfg)=(.*)")
+    cargo_error_pattern = re.compile("^cargo::?error=(.*)")
     cargo_rustc_env_pattern = re.compile("^cargo::?rustc-env=(.+?)=(.*)")
     cargo_rustc_link_lib_pattern = re.compile("^cargo::?rustc-link-lib=(.*)")
     cargo_rustc_link_search_pattern = re.compile(
@@ -271,10 +272,13 @@ def main() -> None:  # noqa: C901
 
     flags = ""
     for line in script_output.split("\n"):
+        cargo_error_match = cargo_error_pattern.match(line)
+        if cargo_error_match:
+            sys.exit(f"build script error: {cargo_error_match.group(1)}")
         cargo_rustc_cfg_match = cargo_rustc_cfg_pattern.match(line)
         if cargo_rustc_cfg_match:
-            value = cargo_rustc_cfg_match.group(1)
-            flags += f"--cfg={value}\n"
+            flag, value = cargo_rustc_cfg_match.groups()
+            flags += f"--{flag}={value}\n"
             continue
         cargo_rustc_env_match = cargo_rustc_env_pattern.match(line)
         if cargo_rustc_env_match:

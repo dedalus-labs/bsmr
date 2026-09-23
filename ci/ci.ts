@@ -402,6 +402,10 @@ export const ci = workflow({
 					run: command({ file: "node", args: ["test/rust/stable.ts", "target/debug/bsmr"] }),
 				},
 				{
+					name: "Verify Rust tool contracts",
+					run: command({ file: "node", args: ["test/rust/tools.ts"] }),
+				},
+				{
 					name: "Verify literal Rust inputs",
 					run: command({ file: "node", args: ["test/rust/literals.ts", "target/debug/bsmr"] }),
 				},
