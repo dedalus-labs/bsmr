@@ -256,6 +256,7 @@ impl DefaultIoHandler {
             }
             ArtifactMaterializationMethod::LocalCache {
                 cache,
+                pin,
                 digest_config,
             } => {
                 let mut files = Vec::new();
@@ -273,9 +274,13 @@ impl DefaultIoHandler {
                         }
                     }
                 }
-                self.io_executor
+                let pin = pin.dupe();
+                let restored = self
+                    .io_executor
                     .execute_io_inline(|| cache.restore_files(&files, *digest_config))
-                    .await?;
+                    .await;
+                drop(pin);
+                restored?;
             }
             ArtifactMaterializationMethod::HttpDownload { info } => {
                 async {

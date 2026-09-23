@@ -47,6 +47,7 @@ use crate::directory::ActionImmutableDirectory;
 use crate::directory::ActionSharedDirectory;
 use crate::execute::action_digest::TrackedActionDigest;
 use crate::execute::local_cache::LocalActionCache;
+use crate::execute::local_cache::LocalActionPin;
 
 /// Opaque guard returned by `Materializer::register_eager_paths`.
 /// Dropping this guard releases the eager path registrations and cancels
@@ -205,6 +206,7 @@ pub trait Materializer: Allocative + Send + Sync + 'static {
     async fn declare_local_cache_many_impl(
         &self,
         cache: Arc<LocalActionCache>,
+        pin: Arc<LocalActionPin>,
         digest_config: DigestConfig,
         artifacts: Vec<DeclareArtifactPayload>,
     ) -> bsmr_error::Result<()>;
@@ -442,6 +444,7 @@ impl dyn Materializer {
     pub async fn declare_local_cache_many(
         &self,
         cache: Arc<LocalActionCache>,
+        pin: Arc<LocalActionPin>,
         digest_config: DigestConfig,
         artifacts: Vec<DeclareArtifactPayload>,
     ) -> bsmr_error::Result<()> {
@@ -451,7 +454,7 @@ impl dyn Materializer {
         {
             self.check_declared_external_symlink(value)?;
         }
-        self.declare_local_cache_many_impl(cache, digest_config, artifacts)
+        self.declare_local_cache_many_impl(cache, pin, digest_config, artifacts)
             .await
     }
 

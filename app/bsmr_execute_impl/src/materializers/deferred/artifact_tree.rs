@@ -30,6 +30,7 @@ use bsmr_execute::directory::ActionDirectoryEntry;
 use bsmr_execute::directory::ActionDirectoryMember;
 use bsmr_execute::directory::ActionSharedDirectory;
 use bsmr_execute::execute::local_cache::LocalActionCache;
+use bsmr_execute::execute::local_cache::LocalActionPin;
 use bsmr_execute::materialize::materializer::ArtifactNotMaterializedReason;
 use bsmr_execute::materialize::materializer::CasDownloadInfo;
 use bsmr_execute::materialize::materializer::CopiedArtifact;
@@ -235,6 +236,7 @@ pub enum ArtifactMaterializationMethod {
     #[display("local cache")]
     LocalCache {
         cache: Arc<LocalActionCache>,
+        pin: Arc<LocalActionPin>,
         digest_config: DigestConfig,
     },
 
