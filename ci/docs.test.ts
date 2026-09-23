@@ -51,4 +51,13 @@ test("documentation uses pinned actions and strict MkDocs validation", () => {
 				step.run.args.join(" ") === "-m mkdocs build --strict -f mkdocs.yml",
 		),
 	);
+	assert.ok(
+		steps.some(
+			(step) =>
+				"run" in step &&
+				step.run.kind === "command" &&
+				step.run.file === "test" &&
+				step.run.args.join(" ") === "-f site/assets/theme.css",
+		),
+	);
 });
