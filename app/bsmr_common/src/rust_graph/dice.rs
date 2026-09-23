@@ -26,6 +26,8 @@ use pagable::pagable_typetag;
 
 use super::catalog;
 use super::entry::Entry;
+use super::planner::Planner;
+use super::selection::Selection;
 use super::snapshot;
 use super::toolchain::RustToolchain;
 use super::unsupported;
@@ -248,8 +250,11 @@ impl Key for RustPlanKey {
             RustToolchain::parse(&std::fs::read_to_string(root.join("rust-toolchain.toml"))?)?;
         let metadata = resolve(&toolchain, &root).await?;
         let package = catalog::package_name(&metadata, &root, &self.0)?;
-        let bytes = super::planner::resolve(&root, &self.0, &package, &toolchain).await?;
         let cell = self.0.package.cell_name();
+        let selection = Selection::read(ctx, cell, self.0.mode).await?;
+        let bytes = Planner::new(&root, &toolchain, selection)
+            .resolve(&self.0, &package)
+            .await?;
         Ok(Arc::new(super::configured::render(
             &bytes,
             &root,

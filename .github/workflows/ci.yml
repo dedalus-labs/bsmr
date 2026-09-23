@@ -278,6 +278,9 @@ jobs:
       - name: Verify configured Cargo builds
         run: node test/rust/configured.ts target/debug/bsmr
         shell: bash
+      - name: Verify Cargo build selections
+        run: node test/rust/selection.ts target/debug/bsmr
+        shell: bash
       - name: Verify external Rust dependencies
         run: node test/rust/dependencies.ts target/debug/bsmr 1.98.0
         shell: bash

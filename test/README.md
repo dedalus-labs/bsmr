@@ -54,5 +54,9 @@ path dependency, then verifies
 that a warm build runs no compiler actions and leaves the lockfile unchanged.
 Pass `1.98.0` as the third argument to qualify that installed toolchain instead.
 
+Run `node test/rust/selection.ts /path/to/bsmr` to switch profile and feature
+settings on one warm target. It checks actual executable behavior, invalid
+configuration, lock preservation, and cache reuse when restoring the defaults.
+
 `python3 -B -m unittest discover -s prelude/git/tools/tests -p '*_test.py'` checks
 that ambient Git filters and checkout hooks cannot change pinned sources.
