@@ -23,7 +23,7 @@ try {
 	mkdirSync(join(origin, "library/src"), { recursive: true });
 	writeFileSync(join(origin, "Cargo.toml"), '[workspace]\nmembers=["library"]\nresolver="2"\n');
 	writeFileSync(join(origin, "library/Cargo.toml"), '[package]\nname="pinned"\nversion="0.1.0"\nedition="2024"\n');
-	writeFileSync(join(origin, "library/src/lib.rs"), 'pub fn value() -> u32 { 42 }\n');
+	writeFileSync(join(origin, "library/src/lib.rs"), '#![deny(dead_code)]\nfn unused() {}\npub fn value() -> u32 { 42 }\n');
 	const git = { ...options, cwd: origin, env: { ...process.env, GIT_CONFIG_GLOBAL: "/dev/null", GIT_CONFIG_NOSYSTEM: "1" } };
 	await run("git", ["init", "--quiet", "--template="], git);
 	await run("git", ["add", "."], git);
@@ -41,6 +41,8 @@ try {
 	writeFileSync(join(root, "app/src/main.rs"), 'fn main() { println!("{}", itoa::Buffer::new().format(pinned::value() + dep::value())); }\n');
 	await run("rustup", ["run", toolchain, "cargo", "generate-lockfile"], options);
 	const lock = readFileSync(join(root, "Cargo.lock"));
+	const reference = await run("rustup", ["run", toolchain, "cargo", "run", "--locked", "-p", "app"], options);
+	assert.equal(reference.stdout.trim(), "42", "Cargo caps lints in external dependencies");
 	await run(binary, ["init"], options);
 	for (const [phase, expected] of [["cold", "42"], ["warm", "42"], ["edit", "43"]]) {
 		if (phase === "edit") writeFileSync(join(root, "dep/src/lib.rs"), 'pub fn value() -> u32 { 1 }\n');
@@ -53,6 +55,9 @@ try {
 		if (phase === "warm") assert.equal(actions.stdout.trim(), "");
 	}
 	assert.deepEqual(readFileSync(join(root, "Cargo.lock")), lock);
+	writeFileSync(join(root, "dep/src/lib.rs"), '#![deny(dead_code)]\nfn unused() {}\npub fn value() -> u32 { 1 }\n');
+	await assert.rejects(run("rustup", ["run", toolchain, "cargo", "build", "--locked", "-p", "app"], options), /never used|dead_code/);
+	await assert.rejects(run(binary, ["build", "app"], options), /never used|dead_code/, "local path dependencies must retain their lint errors");
 	await assert.rejects(run(binary, ["build", "dep"], options), /Unknown target `dep`/);
 	console.log("ok: locked registry/Git and excluded path sources, warm reuse, edit invalidation");
 } finally {
