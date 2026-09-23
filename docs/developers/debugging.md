@@ -21,13 +21,19 @@ audit` and `bsmr debug`, which can be helpful.
 
 ## Running builds
 
-`./bsmr.py <command>` builds bsmr from source and runs `<command>` using that bsmr. The command
-is run in a different isolation dir, to prevent the command from stepping on your existing bsmr
-daemon. This means large builds will get no cache hits and be very slow.
+Run the source build through Cargo from the repository root:
 
-Alternatively, `bsmr build @upstream//mode/opt root//:bsmr --out /tmp/bsmr` to build bsmr
-on its own. Then, use `/tmp/bsmr` to run builds in a *different* checkout of fbsource from the one
-you're editing code in.
+```sh
+cargo run --locked --bin bsmr -- --isolation-dir=dev --help
+```
+
+Replace `--help` with the command you want to debug. Keep `--isolation-dir=dev`
+to give this build its own daemon and output directory. This separates it from
+your installed Bessemer daemon and changes cache keys that contain output paths.
+
+To run the binary in another checkout, use `cargo build --locked --bin bsmr`,
+then invoke the absolute path to `target/debug/bsmr` from that checkout.
+On Windows, the binary is `target/debug/bsmr.exe`.
 
 ## Logging
 
@@ -45,7 +51,8 @@ BSMR_LOG=starlark=trace bsmr uquery cell//path/to:target
 BSMR_LOG=bsmr_execute_impl::materializers=trace bsmr build cell//path/to:target
 ```
 
-Or use `./bsmr.py` instead of `bsmr` to run local changes
+Use `cargo run --locked --bin bsmr -- --isolation-dir=dev <command>` to run local
+changes. Restart only that daemon with the same prefix followed by `kill`.
 
 See
 [tracing-subscriber docs](https://docs.rs/tracing-subscriber/0.2.17/tracing_subscriber/filter/struct.EnvFilter.html)
@@ -73,12 +80,6 @@ bsmr build @upstream//mode/opt root//bsmr_tpx_cli:bsmr_tpx_cli --out /tmp/tpx
 
 # Use Tpx
 bsmr test -c test.v2_test_executor=/tmp/tpx
-```
-
-Alternatively, you can build bsmr and tpx in one go with `fbcode/bsmr/bsmr.py` and use it like bsmr:
-
-```sh
-fbcode/bsmr/bsmr.py test ...
 ```
 
 To get access to Tpx's stderr and stdout if you are print-debugging, you need to also get Bessemer to have the right log level for it:
