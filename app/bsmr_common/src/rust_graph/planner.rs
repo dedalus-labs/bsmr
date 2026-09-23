@@ -50,7 +50,7 @@ pub(super) async fn resolve(
         "mode": entry.mode.as_str(), "target_filter": target_filter,
         "source_policy": "acquire-locked", "features": [],
         "default_features": true, "all_features": false, "target": null,
-        "profile": profile, "cargo_home": cargo_home, "rustc": toolchain.rustc,
+        "profile": profile, "cargo_home": cargo_home, "rustc": toolchain.rustc(),
         "target_directory": root.join(".bsmr-planner"),
     });
     let bytes = serde_json::to_vec(&request)?;
@@ -60,7 +60,10 @@ pub(super) async fn resolve(
             .current_dir(root)
             .env_clear()
             .env("CARGO_HOME", &cargo_home)
-            .env("PATH", toolchain.cargo.parent().expect("Cargo has parent"))
+            .env(
+                "PATH",
+                toolchain.cargo().parent().expect("Cargo has parent"),
+            )
             .stdin(Stdio::piped())
             .stdout(Stdio::piped())
             .stderr(Stdio::piped())

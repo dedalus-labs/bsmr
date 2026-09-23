@@ -73,7 +73,7 @@ impl Key for RustGraphKey {
         rules
             .entry(String::new())
             .or_default()
-            .push_str(&toolchain.rules);
+            .push_str(toolchain.rules());
         Ok(Arc::new(rules))
     }
 
@@ -178,13 +178,16 @@ async fn resolve(toolchain: &RustToolchain, root: &Path) -> bsmr_error::Result<V
     let cargo_home = tempfile::tempdir()?;
     let output = tokio::time::timeout(
         Duration::from_secs(30),
-        tokio::process::Command::new(&toolchain.cargo)
+        tokio::process::Command::new(toolchain.cargo())
             .args(["metadata", "--format-version=1", "--frozen", "--no-deps"])
             .current_dir(root)
             .env_clear()
             .env("CARGO_HOME", cargo_home.path())
-            .env("PATH", toolchain.cargo.parent().expect("Cargo has parent"))
-            .env("RUSTC", &toolchain.rustc)
+            .env(
+                "PATH",
+                toolchain.cargo().parent().expect("Cargo has parent"),
+            )
+            .env("RUSTC", toolchain.rustc())
             .kill_on_drop(true)
             .output(),
     )
