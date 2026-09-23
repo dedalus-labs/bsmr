@@ -41,9 +41,14 @@ import sys
 import os
 
 f = sys.argv[1]
-os.mkdir(f)
-with open(f + "/hello", "w") as f:
-    f.write("hello")
+os.makedirs(f + "/nested/empty")
+with open(f + "/hello", "w") as out:
+    out.write("hello")
+with open(f + "/nested/executable", "w") as out:
+    out.write("#!/bin/sh")
+os.chmod(f + "/nested/executable", 0o755)
+os.symlink("../hello", f + "/nested/relative-link")
+os.symlink("/dev/null", f + "/nested/external-link")
 """,
             out.as_output(),
         ),

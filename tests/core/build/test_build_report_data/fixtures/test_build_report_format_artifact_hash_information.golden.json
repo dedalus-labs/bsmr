@@ -19,6 +19,33 @@
             "bsmr-out/default/art/root/<HASH>/__dir1__/out": {
               "digest": "<DIGEST>",
               "kind": "directory"
+            },
+            "bsmr-out/default/art/root/<HASH>/__dir1__/out/hello": {
+              "digest": "<DIGEST>",
+              "is_exec": false,
+              "kind": "file"
+            },
+            "bsmr-out/default/art/root/<HASH>/__dir1__/out/nested": {
+              "digest": "<DIGEST>",
+              "kind": "directory"
+            },
+            "bsmr-out/default/art/root/<HASH>/__dir1__/out/nested/empty": {
+              "digest": "<DIGEST>",
+              "kind": "directory"
+            },
+            "bsmr-out/default/art/root/<HASH>/__dir1__/out/nested/executable": {
+              "digest": "<DIGEST>",
+              "is_exec": true,
+              "kind": "file"
+            },
+            "bsmr-out/default/art/root/<HASH>/__dir1__/out/nested/external-link": {
+              "kind": "external_symlink",
+              "remaining_path": null,
+              "target": "/dev/null"
+            },
+            "bsmr-out/default/art/root/<HASH>/__dir1__/out/nested/relative-link": {
+              "kind": "symlink",
+              "symlink_rel_path": "../hello"
             }
           },
           "configured_graph_size": null,

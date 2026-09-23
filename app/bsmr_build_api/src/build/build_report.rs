@@ -50,7 +50,12 @@ use bsmr_core::provider::label::ProvidersLabel;
 use bsmr_core::provider::label::ProvidersName;
 use bsmr_core::target::configured_target_label::ConfiguredTargetLabel;
 use bsmr_data::ErrorReport;
+use bsmr_directory::directory::directory::Directory;
+use bsmr_directory::directory::directory_iterator::DirectoryIterator;
+use bsmr_directory::directory::directory_iterator::DirectoryIteratorPathStack;
+use bsmr_directory::directory::directory_ref::FingerprintedDirectoryRef;
 use bsmr_directory::directory::entry::DirectoryEntry;
+use bsmr_directory::directory::walk::unordered_entry_walk;
 use bsmr_error::BsmrErrorContext;
 use bsmr_error::UniqueRootId;
 use bsmr_error::classify::ErrorLike;
@@ -852,9 +857,12 @@ impl<'a> BuildReportCollector<'a> {
                                 configured_report
                                     .artifact_info
                                     .insert(provider_name.dupe(), artifact_info.clone());
-                                configured_report
-                                    .artifact_info_by_path
-                                    .insert(output_path.clone(), artifact_info);
+                                insert_artifact_info_by_path(
+                                    &mut configured_report.artifact_info_by_path,
+                                    &output_path,
+                                    value.entry(),
+                                    artifact_info,
+                                );
                                 if let Some(action_key) = artifact.action_key()
                                     && let Some(action_digest) =
                                         artifacts.action_digests.get(action_key)
@@ -1087,19 +1095,24 @@ fn create_artifact_info(entry: &ActionDirectoryEntry<ActionSharedDirectory>) -> 
         DirectoryEntry::Dir(dir) => ArtifactInfo::Directory(DirectoryInfo {
             digest: dir.fingerprint().clone(),
         }),
-        DirectoryEntry::Leaf(ActionDirectoryMember::File(metadata)) => {
+        DirectoryEntry::Leaf(member) => create_leaf_artifact_info(member),
+    }
+}
+
+/// Convert one stored leaf without reading or rehashing its materialized output.
+fn create_leaf_artifact_info(member: &ActionDirectoryMember) -> ArtifactInfo {
+    match member {
+        ActionDirectoryMember::File(metadata) => {
             let cas_digest = metadata.digest.data();
             ArtifactInfo::File(FileInfo {
                 digest: *cas_digest,
                 is_exec: metadata.is_executable,
             })
         }
-        DirectoryEntry::Leaf(ActionDirectoryMember::Symlink(symlink_target)) => {
-            ArtifactInfo::Symlink(SymlinkInfo {
-                symlink_rel_path: symlink_target.target().into(),
-            })
-        }
-        DirectoryEntry::Leaf(ActionDirectoryMember::ExternalSymlink(external_symlink)) => {
+        ActionDirectoryMember::Symlink(symlink_target) => ArtifactInfo::Symlink(SymlinkInfo {
+            symlink_rel_path: symlink_target.target().into(),
+        }),
+        ActionDirectoryMember::ExternalSymlink(external_symlink) => {
             ArtifactInfo::ExternalSymlink(ExternalSymlinkInfo {
                 target: external_symlink.target().into(),
                 remaining_path: if external_symlink.remaining_path().is_empty() {
@@ -1109,6 +1122,29 @@ fn create_artifact_info(entry: &ActionDirectoryEntry<ActionSharedDirectory>) -> 
                 },
             })
         }
+    }
+}
+
+/// Index an output root and every canonical descendant without recomputing directory digests.
+fn insert_artifact_info_by_path(
+    artifact_info: &mut BTreeMap<ProjectRelativePathBuf, ArtifactInfo>,
+    output_path: &ProjectRelativePathBuf,
+    entry: &ActionDirectoryEntry<ActionSharedDirectory>,
+    root_info: ArtifactInfo,
+) {
+    artifact_info.insert(output_path.clone(), root_info);
+    let DirectoryEntry::Dir(directory) = entry else {
+        return;
+    };
+    let mut walk = unordered_entry_walk(DirectoryEntry::Dir(directory.as_ref()));
+    while let Some((relative, entry)) = walk.next() {
+        let info = match entry {
+            DirectoryEntry::Dir(directory) => ArtifactInfo::Directory(DirectoryInfo {
+                digest: directory.as_fingerprinted_dyn().fingerprint().clone(),
+            }),
+            DirectoryEntry::Leaf(member) => create_leaf_artifact_info(member),
+        };
+        artifact_info.insert(output_path.join(relative.get()), info);
     }
 }
 
