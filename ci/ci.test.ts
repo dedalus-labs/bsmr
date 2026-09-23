@@ -239,7 +239,7 @@ test("public workflows cannot receive repository administration credentials", ()
 	assert.doesNotMatch(workflows, /permission-administration:\s*write/);
 });
 
-test("Rust lanes share one trusted cache writer", () => {
+test("each Rust profile has one trusted cache writer", () => {
 	for (const id of ["rust_quality", "rust_tests", "rust_self_host"] as const) {
 		const cache = jobs[id].steps.find(
 			(step) => "uses" in step && step.uses.startsWith("Swatinem/rust-cache@"),
@@ -248,13 +248,23 @@ test("Rust lanes share one trusted cache writer", () => {
 		assert.ok(cache !== undefined);
 		assert.ok("with" in cache);
 		assert.ok("shared-key" in cache.with);
-		assert.equal(cache.with["shared-key"], "rust");
+		assert.equal(cache.with["shared-key"], id === "rust_self_host" ? "engine" : "rust");
 		assert.equal(
 			cache.with["save-if"],
-			id === "rust_tests"
+			id !== "rust_quality"
 				? "${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}"
 				: false,
 		);
+	}
+});
+
+test("engine compiler settings cannot change consumer qualification", () => {
+	assert.ok(!Object.hasOwn(jobs.rust_self_host.env, "CARGO_PROFILE_DEV_DEBUG"));
+	for (const step of jobs.rust_self_host.steps) {
+		const engine = step.name === "Build BSMR" || step.name === "Restore Rust cache";
+		const environment = "env" in step ? step.env : undefined;
+		const profile = Object.entries(environment ?? {}).filter(([key]) => key.startsWith("CARGO_PROFILE_"));
+		assert.deepEqual(profile, engine ? [["CARGO_PROFILE_DEV_DEBUG", "0"]] : []);
 	}
 });
 
