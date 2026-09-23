@@ -44,6 +44,7 @@ either.workspace = true
 faccess.workspace = true
 fbinit.workspace = true
 futures.workspace = true
+fs4.workspace = true
 gazebo.workspace = true
 hex.workspace = true
 host_sharing.workspace = true

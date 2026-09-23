@@ -54,6 +54,7 @@ rust_library(
         "bsmr_build//third-party/rust:either",
         "bsmr_build//third-party/rust:faccess",
         "bsmr_build//third-party/rust:futures",
+        "bsmr_build//third-party/rust:fs4",
         "bsmr_build//third-party/rust:hex",
         "bsmr_build//third-party/rust:http",
         "bsmr_build//third-party/rust:hyper",
