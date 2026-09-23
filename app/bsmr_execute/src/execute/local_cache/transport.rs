@@ -623,6 +623,8 @@ fn remove_entry(path: &Path) -> io::Result<()> {
 #[cfg(test)]
 mod tests {
     use std::fs;
+    use std::path::Path;
+    use std::path::PathBuf;
 
     use bsmr_common::file_ops::metadata::TrackedFileDigest;
 
@@ -632,6 +634,54 @@ mod tests {
     use super::LocalDigest;
     use crate::digest_config::DigestConfig;
     use crate::execute::action_digest::ActionDigest;
+
+    fn exported_fixture() -> bsmr_error::Result<(
+        tempfile::TempDir,
+        PathBuf,
+        LocalActionCache,
+        DigestConfig,
+        String,
+    )> {
+        let temporary = tempfile::tempdir()?;
+        let source = LocalActionCache::at(temporary.path().join("source"))?;
+        let package = temporary.path().join("export");
+        let destination = LocalActionCache::at(temporary.path().join("destination"))?;
+        let digest_config = DigestConfig::testing_default();
+        let action = ActionDigest::from_content(b"action", digest_config.cas_digest_config());
+        let output =
+            TrackedFileDigest::from_content(b"cached output", digest_config.cas_digest_config());
+        let result = LocalActionResult {
+            output_files: vec![LocalOutputFile {
+                path: "bsmr-out/output".to_owned(),
+                digest: LocalDigest::from_file(&output),
+                executable: false,
+            }],
+            ..Default::default()
+        };
+        source.publish_bytes(&output, b"cached output", digest_config)?;
+        source.publish_action_result(&action, &result)?;
+        let engine = "a".repeat(64);
+        source.export_package(&package, &engine, digest_config)?;
+        Ok((temporary, package, destination, digest_config, engine))
+    }
+
+    fn manifest(package: &Path) -> bsmr_error::Result<super::LocalCacheExportManifest> {
+        Ok(serde_json::from_slice(&fs::read(
+            package.join(super::MANIFEST),
+        )?)?)
+    }
+
+    fn assert_import_rejected(
+        package: &Path,
+        destination: &LocalActionCache,
+        engine: &str,
+        digest_config: DigestConfig,
+    ) {
+        destination
+            .import_package(package, engine, digest_config)
+            .expect_err("invalid package must be rejected");
+        assert!(!destination.root.exists());
+    }
 
     #[test]
     fn invariant_export_contains_only_complete_durable_cache_state() -> bsmr_error::Result<()> {
@@ -716,6 +766,73 @@ mod tests {
                 .iter()
                 .all(|entry| entry == "ac" || entry == "cas" || entry == "cache.lock")
         );
+        Ok(())
+    }
+
+    #[test]
+    fn import_rejects_same_size_payload_mutation() -> bsmr_error::Result<()> {
+        let (_temporary, package, destination, digest_config, engine) = exported_fixture()?;
+        let payload = package.join(&manifest(&package)?.files[0].path);
+        let mut bytes = fs::read(&payload)?;
+        bytes[0] ^= 1;
+        fs::write(payload, bytes)?;
+
+        assert_import_rejected(&package, &destination, &engine, digest_config);
+        Ok(())
+    }
+
+    #[test]
+    fn import_rejects_truncated_payload() -> bsmr_error::Result<()> {
+        let (_temporary, package, destination, digest_config, engine) = exported_fixture()?;
+        let payload = package.join(&manifest(&package)?.files[0].path);
+        let file = fs::OpenOptions::new().write(true).open(payload)?;
+        file.set_len(file.metadata()?.len() - 1)?;
+
+        assert_import_rejected(&package, &destination, &engine, digest_config);
+        Ok(())
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn import_rejects_payload_symlink() -> bsmr_error::Result<()> {
+        let (_temporary, package, destination, digest_config, engine) = exported_fixture()?;
+        let payload = package.join(&manifest(&package)?.files[0].path);
+        fs::remove_file(&payload)?;
+        std::os::unix::fs::symlink(package.join(super::MANIFEST), payload)?;
+
+        assert_import_rejected(&package, &destination, &engine, digest_config);
+        Ok(())
+    }
+
+    #[test]
+    fn import_rejects_traversal_manifest_path() -> bsmr_error::Result<()> {
+        let (_temporary, package, destination, digest_config, engine) = exported_fixture()?;
+        let mut manifest = manifest(&package)?;
+        manifest.files[0].path = "payload/ac/../../escape".to_owned();
+        fs::write(
+            package.join(super::MANIFEST),
+            serde_json::to_vec_pretty(&manifest)?,
+        )?;
+
+        assert_import_rejected(&package, &destination, &engine, digest_config);
+        Ok(())
+    }
+
+    #[test]
+    fn import_rejects_mismatched_engine() -> bsmr_error::Result<()> {
+        let (_temporary, package, destination, digest_config, _engine) = exported_fixture()?;
+
+        assert_import_rejected(&package, &destination, &"b".repeat(64), digest_config);
+        Ok(())
+    }
+
+    #[test]
+    fn import_rejects_operational_temporary_file() -> bsmr_error::Result<()> {
+        let (_temporary, package, destination, digest_config, engine) = exported_fixture()?;
+        let payload = package.join(&manifest(&package)?.files[0].path);
+        fs::write(payload.with_extension("tmp.123.0"), b"temporary")?;
+
+        assert_import_rejected(&package, &destination, &engine, digest_config);
         Ok(())
     }
 }
