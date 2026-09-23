@@ -3,7 +3,7 @@
 // SPDX-License-Identifier: Apache-2.0
 //===----------------------------------------------------------------------===//
 
-//! Moves one complete local action cache across ephemeral execution roots.
+//! Moves one complete SHA-256 local action cache across ephemeral execution roots.
 
 use std::path::Path;
 use std::path::PathBuf;
@@ -11,13 +11,13 @@ use std::path::PathBuf;
 use bsmr_common::cas_digest::DigestAlgorithm;
 use bsmr_execute::digest_config::DigestConfig;
 use bsmr_execute::execute::local_cache::LocalActionCache;
-use bsmr_execute::execute::local_cache::sha256_file;
+use bsmr_execute::execute::local_cache::transport::sha256_file;
 
 /// Offline local-cache transport commands.
 #[derive(Debug, clap::Parser)]
 #[clap(
     name = "cache",
-    about = "Move verified local cache state between roots"
+    about = "Move verified SHA-256 local cache state between roots"
 )]
 pub(crate) struct CacheCommand {
     #[clap(subcommand)]

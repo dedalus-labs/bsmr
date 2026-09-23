@@ -88,5 +88,8 @@ windows-sys.workspace = true
 [lints.rust]
 unexpected_cfgs = { level = "allow", check-cfg = ["cfg(fbcode_build)", "cfg(bsmr_build)", "cfg(client_only)", "cfg(tokio_unstable)", "cfg(bsmr_memfrag)"]}
 
+[dev-dependencies]
+tempfile.workspace = true
+
 [package.metadata.dist]
 dist = true

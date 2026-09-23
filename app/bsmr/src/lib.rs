@@ -432,6 +432,13 @@ impl CommandKind {
         argv: Argv,
         common_opts: BeforeSubcommandOptions,
     ) -> ExitResult {
+        // Cache transport is deliberately independent of projects, runtimes, and daemons.
+        #[cfg(not(client_only))]
+        if let CommandKind::Cache(cmd) = self {
+            process.events_ctx.log_invocation_record = false;
+            return cmd.exec().into();
+        }
+
         let paths_result = get_invocation_paths_result(
             &process.shared.working_dir,
             common_opts.isolation_dir.clone(),
@@ -553,7 +560,7 @@ impl CommandKind {
             CommandKind::Build(cmd) => command_ctx.exec(cmd, matches, events_ctx),
             CommandKind::Bxl(cmd) => command_ctx.exec(cmd, matches, events_ctx),
             #[cfg(not(client_only))]
-            CommandKind::Cache(cmd) => cmd.exec().into(),
+            CommandKind::Cache(..) => unreachable!("Checked before invocation path discovery"),
             CommandKind::Test(cmd) => command_ctx.exec(cmd, matches, events_ctx),
             CommandKind::Cquery(cmd) => command_ctx.exec(cmd, matches, events_ctx),
             CommandKind::HelpEnv(cmd) => cmd.exec(matches, command_ctx),

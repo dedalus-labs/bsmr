@@ -2230,7 +2230,7 @@ Common options are documented under [Global options](#global-options).
 
 ## `bsmr cache`
 
-Move verified local cache state between roots
+Move verified SHA-256 local cache state between roots
 
 **Usage**: `bsmr cache <COMMAND>`
 

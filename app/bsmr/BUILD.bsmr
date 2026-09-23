@@ -50,6 +50,7 @@ rust_library(
         ":bsmr_client_only_build": ["--cfg=client_only"],
         "DEFAULT": [],
     }),
+    test_deps = ["bsmr_build//third-party/rust:tempfile"],
     deps = [
         "bsmr_build//third-party/rust:clap",
         "bsmr_build//third-party/rust:tokio",
