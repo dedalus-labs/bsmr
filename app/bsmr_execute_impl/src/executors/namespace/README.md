@@ -86,6 +86,27 @@ local dependency-file reuse and action-cache identity. Policy semantic changes
 must bump `declared-inputs-v2`. Host paths and temporary snapshot names do not
 participate in this identity.
 
+## Native Rust macros
+
+Configured Cargo graphs admit procedural macros only with the verified
+`declared-inputs-v2` namespace profile. They use the inherited Rust library and
+macro-alias rules with the selected compiler. Build-script units remain unsupported.
+
+Graph analysis depends on the same verified execution identity as action reuse.
+Changing back to host execution rejects the macro graph before an earlier
+isolated result can be reused. The runtime must contain Python, the linker
+driver and its libraries, plus `tar` and `gzip` for compiler archive extraction.
+
+The real Cargo regression covers declared macro inputs, edits, warm builds,
+reuse in a new checkout, rejection of host execution after a cached isolated
+build, and repeated rejection of undeclared external reads:
+
+```console
+python3 test/rust/macros.py target/debug/bsmr /absolute/path/runtime.json
+```
+
+## Verification
+
 ```console
 cargo build --locked -p bsmr_execute_impl
 cargo test --locked -p bsmr_execute_impl executors::namespace::runtime::tests
