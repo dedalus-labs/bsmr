@@ -45,6 +45,7 @@ test("a fresh runner installs Rust tooling before selecting a compiler", () => {
 });
 
 test("only the reviewed workflow revision writes native compiler caches", () => {
+	assert.ok(!Object.hasOwn(runnerBuild.jobs.build, "env"), "engine profile overrides must not reach consumer qualification");
 	const steps: readonly GitHubWorkflowStep[] = runnerBuild.jobs.build.steps;
 	const caches = steps.filter((step) => "uses" in step && step.uses.startsWith("Swatinem/rust-cache@"));
 	assert.equal(caches.length, 2);

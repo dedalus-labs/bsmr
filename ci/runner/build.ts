@@ -16,6 +16,7 @@ const source = input<string>("revision");
 const provider = input<string>("provider");
 const names = { machines: "Dedalus Machines", blacksmith: "Blacksmith", github: "GitHub" };
 const placement = { machines: { group: "Dedalus Machines", labels: ["self-hosted", "macOS", "ARM64", "dedalus-machines"] }, blacksmith: "blacksmith-12vcpu-macos-15", github: "macos-15" };
+const buildEnvironment = { CARGO_PROFILE_DEV_DEBUG: "0", CARGO_INCREMENTAL: "0" };
 const trustedDefinition = expr<boolean>("github.repository == 'dedalus-labs/bsmr' && github.ref == 'refs/heads/main'");
 const authorize = uses(runnerAction, {
 	name: "Verify build ownership",
@@ -67,7 +68,6 @@ export const runnerBuild = workflow({
 			name: "Build Rust", needs: "authorize", if: and(trustedDefinition, ne(provider, "auto")),
 			"runs-on": expr(`fromJSON('${JSON.stringify(placement)}')[inputs.provider]`), "timeout-minutes": 60,
 			permissions: { contents: "read", actions: "read" },
-			env: { CARGO_PROFILE_DEV_DEBUG: "0", CARGO_INCREMENTAL: "0" },
 			steps: [
 				{ uses: checkout, with: { ref: github.sha, "persist-credentials": false } },
 				authorize,
@@ -79,17 +79,18 @@ export const runnerBuild = workflow({
 				{
 					name: "Restore engine cache",
 					uses: "Swatinem/rust-cache@e18b497796c12c097a38f9edb9d0641fb99eee32",
+					env: buildEnvironment,
 					with: { "prefix-key": "bsmr-v1", "shared-key": "rust", "save-if": eq(source, github.sha) },
 				},
-				{ name: "Build BSMR", run: command({ file: "cargo", args: ["build", "--locked", "--bin", "bsmr", "-j", "2"] }) },
+				{ name: "Build BSMR", env: buildEnvironment, run: command({ file: "cargo", args: ["build", "--locked", "--bin", "bsmr", "-j", "2"] }) },
 				{ name: "Install planner compiler", run: command({ file: "rustup", args: ["toolchain", "install", "1.98.0", "--profile", "minimal", "--no-self-update"] }) },
 				{
 					name: "Restore planner cache",
 					uses: "Swatinem/rust-cache@e18b497796c12c097a38f9edb9d0641fb99eee32",
-					env: { RUSTUP_TOOLCHAIN: "1.98.0" },
+					env: { ...buildEnvironment, RUSTUP_TOOLCHAIN: "1.98.0" },
 					with: { "prefix-key": "bsmr-v1", "shared-key": "planner", workspaces: "tools/cargo -> target", "save-if": eq(source, github.sha) },
 				},
-				{ name: "Build Cargo planner", run: command({ file: "rustup", args: ["run", "1.98.0", "cargo", "build", "--locked", "--manifest-path", "tools/cargo/Cargo.toml", "--target-dir", "tools/cargo/target", "-j", "2"] }) },
+				{ name: "Build Cargo planner", env: buildEnvironment, run: command({ file: "rustup", args: ["run", "1.98.0", "cargo", "build", "--locked", "--manifest-path", "tools/cargo/Cargo.toml", "--target-dir", "tools/cargo/target", "-j", "2"] }) },
 				{ name: "Install Cargo planner", run: command({ file: "cp", args: ["tools/cargo/target/debug/bsmr-cargo", "target/debug/bsmr-cargo"] }) },
 				{ name: "Install qualification compiler", run: command({ file: "rustup", args: ["toolchain", "install", "1.97.1", "--profile", "minimal", "--no-self-update"] }) },
 				{ name: "Verify native Rust builds", run: command({ file: "node", args: ["test/native-rust-build.ts", "target/debug/bsmr"] }) },
