@@ -38,6 +38,9 @@ exclude_docs: |
   !/users/languages/rust/
   /users/languages/rust/*
   !/users/languages/rust/cargo.md
+  !/users/languages/python/
+  /users/languages/python/*
+  !/users/languages/python/overview.md
   !/users/languages/go/
   /users/languages/go/*
   !/users/languages/go/native.md
@@ -101,6 +104,7 @@ plugins:
         Languages:
           - users/languages/typescript/pnpm.md
           - users/languages/rust/cargo.md
+          - users/languages/python/overview.md
           - users/languages/go/native.md
         Recipes:
           - users/recipes.md
@@ -152,6 +156,7 @@ nav:
   - Languages:
       - TypeScript and pnpm: users/languages/typescript/pnpm.md
       - Rust and Cargo: users/languages/rust/cargo.md
+      - Python: users/languages/python/overview.md
       - Go: users/languages/go/native.md
       - Support status: about/language_support.md
   - Custom recipes: users/recipes.md
