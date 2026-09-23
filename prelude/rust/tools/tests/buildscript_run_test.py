@@ -159,7 +159,7 @@ class BuildscriptRunTest(unittest.TestCase):
 
     def test_invariant_unmodeled_directives_cannot_publish_success(self) -> None:
         """A requested compiler effect must be represented or rejected."""
-        result = self.execute(['cargo::rustc-link-arg=-unknown-linker-option'])
+        result = self.execute(['cargo::rustc-link-arg-bins=-unknown-linker-option'])
         self.assertNotEqual(result.returncode, 0)
         self.assertIn('unsupported build-script directive', result.stderr)
 

@@ -313,6 +313,7 @@ def main() -> None:  # noqa: C901
     cargo_error_pattern = re.compile("^cargo::error=(.*)")
     cargo_rustc_env_pattern = re.compile("^cargo::?rustc-env=(.+?)=(.*)")
     cargo_rustc_link_lib_pattern = re.compile("^cargo::?rustc-link-lib=(.*)")
+    cargo_rustc_link_arg_pattern = re.compile("^cargo::?rustc-link-arg=(.*)")
     cargo_rustc_link_search_pattern = re.compile(
         "^cargo::?rustc-link-search=([a-z]+=)?(.+)"
     )
@@ -352,6 +353,11 @@ def main() -> None:  # noqa: C901
                 flags += f"--env-set={key}={value}\n"
             continue
         cargo_rustc_link_lib_match = cargo_rustc_link_lib_pattern.match(line)
+        cargo_rustc_link_arg_match = cargo_rustc_link_arg_pattern.match(line)
+        if cargo_rustc_link_arg_match:
+            value = cargo_rustc_link_arg_match.group(1).replace(out_dir_abs, OUT_DIR_SENTINEL)
+            flags += f"-Clink-arg={value}\n"
+            continue
         if args.rustc_link_lib and cargo_rustc_link_lib_match:
             value = cargo_rustc_link_lib_match.group(1)
             flags += f"-l{value}\n"

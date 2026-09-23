@@ -113,6 +113,10 @@ rebound when cached outputs are restored. Metadata emission order is preserved,
 including keys that become identical after Cargo's environment-name conversion.
 Declaring `links` does not itself require a C compilation or linker invocation.
 
+Generic `rustc-link-arg` directives reach the package's compiler actions through
+the existing argument file. Rustc applies them when linking and ignores them for
+`rlib` compilation. Target-specific linker directives remain unsupported.
+
 Integration tests, custom harnesses, cross compilation, and configured linkers
 remain unsupported. These requirements fail before compilation.
 Project compiler flags are limited to cfg values, lints, and scalar optimization
