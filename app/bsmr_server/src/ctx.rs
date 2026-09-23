@@ -24,6 +24,7 @@ use std::time::Instant;
 
 use allocative::Allocative;
 use async_trait::async_trait;
+use bsmr_build_api::actions::execute::dice_data::ExecutionPlatformKey;
 use bsmr_build_api::actions::execute::dice_data::SetCommandExecutor;
 use bsmr_build_api::actions::execute::dice_data::SetReClient;
 use bsmr_build_api::actions::execute::dice_data::set_fallback_executor_config;
@@ -411,6 +412,10 @@ impl<'a> ServerCommandContext<'a> {
         };
 
         let run_action_knobs = RunActionKnobs {
+            sandboxed: self
+                .build_options
+                .as_ref()
+                .is_some_and(|options| options.sandbox),
             use_network_action_output_cache: self
                 .base_context
                 .daemon
@@ -668,7 +673,7 @@ impl DiceUpdater for DiceCommandUpdater<'_, '_> {
         )?;
 
         early_timings.start_span(FILE_WATCHER_WAIT.to_owned());
-        let (ctx, mergebase) = self
+        let (mut ctx, mergebase) = self
             .cmd_ctx
             .base_context
             .daemon
@@ -677,7 +682,8 @@ impl DiceUpdater for DiceCommandUpdater<'_, '_> {
             .await?;
         early_timings.end_known_span();
 
-        let mut user_data = self.make_user_computation_data(&cells_and_configs.root_config)?;
+        let mut user_data =
+            self.make_user_computation_data(&cells_and_configs.root_config, &mut ctx)?;
         user_data.set_mergebase(mergebase);
 
         Ok((ctx, user_data))
@@ -685,9 +691,11 @@ impl DiceUpdater for DiceCommandUpdater<'_, '_> {
 }
 
 impl DiceCommandUpdater<'_, '_> {
+    /// Register isolation before DICE can reuse completed actions.
     fn make_user_computation_data(
         &self,
         root_config: &LegacyBsmrConfig,
+        ctx: &mut DiceTransactionUpdater,
     ) -> bsmr_error::Result<UserComputationData> {
         let config_threads = root_config
             .parse(BsmrconfigKeyRef {
@@ -919,6 +927,15 @@ impl DiceCommandUpdater<'_, '_> {
         } else {
             None
         };
+        let properties = firecracker.as_ref().map_or_else(Vec::new, |executor| {
+            bsmr_execute_impl::executors::firecracker::sandbox_platform_properties(
+                executor.environment_digest(),
+            )
+            .into_iter()
+            .map(|(name, value)| (name.to_owned(), value.to_owned()))
+            .collect()
+        });
+        ctx.changed_to([(ExecutionPlatformKey, Arc::new(properties))])?;
         data.set_command_executor(Box::new(CommandExecutorFactory::new(
             self.re_connection.dupe(),
             host_sharing_broker,

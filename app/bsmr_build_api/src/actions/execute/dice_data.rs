@@ -18,6 +18,7 @@
 
 use std::sync::Arc;
 
+use allocative::Allocative;
 use async_trait::async_trait;
 use bsmr_core::execution_types::executor_config::CommandExecutorConfig;
 use bsmr_core::fs::artifact_path_resolver::ArtifactFs;
@@ -28,14 +29,40 @@ use bsmr_execute::execute::prepared::PreparedCommandExecutor;
 use bsmr_execute::execute::prepared::PreparedCommandOptionalExecutor;
 use bsmr_execute::re::manager::UnconfiguredRemoteExecutionClient;
 use bsmr_execute::re::output_trees_download_config::OutputTreesDownloadConfig;
+use derive_more::Display;
 use dice::DiceComputations;
 use dice::DiceData;
 use dice::DiceDataBuilder;
+use dice::InjectedKey;
+use dice::PagableValueSerialize;
 use dice::UserComputationData;
+use dice::ValueSerialize;
 use dupe::Dupe;
+use pagable::Pagable;
+use pagable::pagable_typetag;
 use remote_execution as RE;
 
 use crate::actions::artifact::get_artifact_fs::GetArtifactFs;
+
+/// Invalidates completed actions when verified runtime bytes or execution policy change.
+#[derive(Clone, Dupe, Display, Debug, Eq, Hash, PartialEq, Allocative, Pagable)]
+#[display("{:?}", self)]
+#[pagable_typetag(dice::DiceKeyDyn)]
+pub struct ExecutionPlatformKey;
+
+impl InjectedKey for ExecutionPlatformKey {
+    type Value = Arc<Vec<(String, String)>>;
+
+    /// Reuse an action only when every execution property matches.
+    fn equality(x: &Self::Value, y: &Self::Value) -> bool {
+        x == y
+    }
+
+    /// Preserve the execution dependency when DICE pages its graph.
+    fn value_serialize() -> impl ValueSerialize<Value = Self::Value> {
+        PagableValueSerialize::<Self::Value>::new()
+    }
+}
 
 pub struct CommandExecutorResponse {
     pub executor: Arc<dyn PreparedCommandExecutor>,
@@ -77,10 +104,12 @@ pub trait DiceHasCommandExecutor {
 
 #[async_trait]
 impl DiceHasCommandExecutor for DiceComputations<'_> {
+    /// Track execution identity before reading the per-command executor factory.
     async fn get_command_executor_from_dice(
         &mut self,
         config: &CommandExecutorConfig,
     ) -> bsmr_error::Result<CommandExecutorResponse> {
+        drop(self.compute(&ExecutionPlatformKey).await?);
         let artifact_fs = self.get_artifact_fs().await?;
         let holder = self
             .per_transaction_data()

@@ -23,6 +23,9 @@ use dupe::Dupe;
 /// Knobs controlling how RunAction works.
 #[derive(Clone, Dupe, Default)]
 pub struct RunActionKnobs {
+    /// Require isolated execution with only the action's explicit environment.
+    pub sandboxed: bool,
+
     /// Process dep files as they are generated.
     pub eager_dep_files: bool,
 
