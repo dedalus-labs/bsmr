@@ -47,7 +47,7 @@ test("check uses one typed command tree", async () => {
 		state.invocations.map(({ file, args }) => [file, ...args.slice(0, 2)]),
 		[
 			["pnpm", "exec", "tsc"],
-			["node", "--test", "ci/ci.test.ts"],
+			["node", "--test", "ci/bootstrap.test.ts"],
 			["pnpm", "exec", "hollywood"],
 			["node", "ci/dependabot.ts"],
 			["node", "ci/license.ts", "generated"],
@@ -68,6 +68,7 @@ test("check uses one typed command tree", async () => {
 	);
 	assert.deepEqual(state.invocations[1]?.args, [
 		"--test",
+		"ci/bootstrap.test.ts",
 		"ci/ci.test.ts",
 		"ci/cli-reference.test.ts",
 		"ci/cli.test.ts",
