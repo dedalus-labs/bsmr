@@ -33,3 +33,14 @@ rule with a real frozen install and compiler. Append `prelude` to test this
 checkout's rules explicitly. Each phase reports its elapsed time. It checks detached code and assets,
 individual output selection, warm reuse, clean rebuilds and missing-output errors.
 See the [task contract](../prelude/toolchains/pnpm/README.md).
+
+## Rust CI caches
+
+The self-host qualification job builds the engine with its pinned nightly
+compiler and the Cargo planner with stable Rust. Each compiler has a separate
+target directory and cache key. The planner cache owns `tools/cargo/target`.
+The job copies the built planner beside the engine before running tests.
+
+Successful pushes to `main` save these caches. Pull requests and merge groups
+only restore them. A missing planner cache requires a cold compile. Cargo still
+checks the restored dependency outputs before reusing them.

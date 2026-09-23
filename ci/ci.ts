@@ -366,8 +366,23 @@ export const ci = workflow({
 					run: command({ file: "rustup", args: ["toolchain", "install", "1.98.0", "--profile", "minimal", "--component", "llvm-tools-preview", "--no-self-update"] }),
 				},
 				{
+					name: "Restore Cargo planner cache",
+					uses: "Swatinem/rust-cache@e18b497796c12c097a38f9edb9d0641fb99eee32",
+					env: { RUSTUP_TOOLCHAIN: "1.98.0" },
+					with: {
+						"prefix-key": "bsmr-v1",
+						"shared-key": "planner",
+						workspaces: "tools/cargo -> target",
+						"save-if": saveRustCache,
+					},
+				},
+				{
 					name: "Build Cargo planner",
-					run: command({ file: "rustup", args: ["run", "1.98.0", "cargo", "build", "--locked", "--manifest-path", "tools/cargo/Cargo.toml", "--target-dir", "target", "-j", "2"] }),
+					run: command({ file: "rustup", args: ["run", "1.98.0", "cargo", "build", "--locked", "--manifest-path", "tools/cargo/Cargo.toml", "--target-dir", "tools/cargo/target", "-j", "2"] }),
+				},
+				{
+					name: "Install Cargo planner",
+					run: command({ file: "cp", args: ["tools/cargo/target/debug/bsmr-cargo", "target/debug/bsmr-cargo"] }),
 				},
 				setupNode,
 				{

@@ -258,6 +258,32 @@ test("Rust lanes share one trusted cache writer", () => {
 	}
 });
 
+test("the Cargo planner has a main-owned cache for its compiler and output directory", () => {
+	const steps = jobs.rust_self_host.steps;
+	const cacheIndex = steps.findIndex((step) => step.name === "Restore Cargo planner cache");
+	assert.ok(cacheIndex > steps.findIndex((step) => step.name === "Install Cargo planner compiler"));
+	const cache = steps[cacheIndex];
+	assert.deepEqual(cache, {
+		name: "Restore Cargo planner cache",
+		uses: "Swatinem/rust-cache@e18b497796c12c097a38f9edb9d0641fb99eee32",
+		env: { RUSTUP_TOOLCHAIN: "1.98.0" },
+		with: {
+			"prefix-key": "bsmr-v1", "shared-key": "planner", workspaces: "tools/cargo -> target",
+			"save-if": "${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}",
+		},
+	});
+	const build = steps[cacheIndex + 1];
+	const install = steps[cacheIndex + 2];
+	assert.ok(build && "run" in build && install && "run" in install);
+	assert.deepEqual(build.run, command({
+		file: "rustup",
+		args: ["run", "1.98.0", "cargo", "build", "--locked", "--manifest-path", "tools/cargo/Cargo.toml", "--target-dir", "tools/cargo/target", "-j", "2"],
+	}));
+	assert.deepEqual(install.run, command({
+		file: "cp", args: ["tools/cargo/target/debug/bsmr-cargo", "target/debug/bsmr-cargo"],
+	}));
+});
+
 test("docs deploy only from a trusted main build", () => {
 	assert.deepEqual(docs.on.pull_request, {
 		branches: ["main"],
