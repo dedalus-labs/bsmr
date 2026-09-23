@@ -29,6 +29,7 @@ pub mod daemon_connection;
 pub mod daemon_dir;
 pub mod dice;
 pub mod events;
+pub mod execution;
 pub mod external_cells;
 pub mod external_symlink;
 pub mod fbinit;
