@@ -38,7 +38,10 @@ Both files must match their recorded SHA-256 digests.
 The root filesystem is an uncompressed tar archive containing regular files
 and directories. Links, duplicate entries and non-relative paths are rejected.
 The packager must copy selected symlink targets as regular files. Each pinned
-file and the extracted contents are limited to 256 MiB. The archive is limited
+file and the extracted contents are limited to 1 GiB. This admits complete
+native compiler distributions with their headers and build utilities. Verification
+streams through a 64 KiB buffer rather than loading the archive into memory.
+The archive is limited
 to 50,000 entries. The loader creates mount directories at `/workspace`, `/tmp`,
 `/dev` and `/proc` before the root becomes read-only.
 

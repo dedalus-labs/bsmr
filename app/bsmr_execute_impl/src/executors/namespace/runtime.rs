@@ -21,7 +21,7 @@ use bsmr_common::cas_digest::CasDigestData;
 use bsmr_common::cas_digest::DigestAlgorithm;
 use bsmr_sandbox::BundleArtifact;
 
-const MAX_RUNTIME_BYTES: u64 = 256 * 1024 * 1024;
+const MAX_RUNTIME_BYTES: u64 = 1024 * 1024 * 1024;
 const MAX_RUNTIME_ENTRIES: usize = 50_000;
 
 /// A private runtime snapshot whose identity excludes its host filesystem location.
