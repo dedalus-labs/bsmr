@@ -60,3 +60,10 @@ test("invariant_api_errors_remain_visible", async () => {
 	const api = new RunnerApi("fixture", async () => new Response(null, { status: 403 }));
 	await assert.rejects(api.jobs(1), /HTTP 403/);
 });
+
+test("an acknowledged run can precede its read endpoints", async () => {
+	const api = new RunnerApi("fixture", async () => new Response(null, { status: 404 }));
+	assert.equal(await api.jobs(7), undefined);
+	assert.equal(await api.io().readRun(7), undefined);
+	await assert.rejects(api.administrator("administrator"), /HTTP 404/);
+});

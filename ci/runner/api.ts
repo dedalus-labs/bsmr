@@ -27,6 +27,16 @@ const jobSchema = z.object({
 	runner_id: z.number().nullable(), steps: z.array(z.object({ status: z.string() })),
 });
 
+/** Retain the HTTP status so observation lag cannot hide authorization failures. */
+class ApiError extends Error {
+	readonly status: number;
+	/** Keep the endpoint and status available without exposing response credentials. */
+	constructor(path: string, status: number) {
+		super(`runner API ${path}: HTTP ${status}`);
+		this.status = status;
+	}
+}
+
 /** Bind every operation to this repository, with authentication supplied only through GH_TOKEN. */
 export class RunnerApi {
 	private readonly token: string;
@@ -40,8 +50,10 @@ export class RunnerApi {
 
 	/** Reject incomplete job lists before applying the one-payload lifecycle policy. */
 	async jobs(id: number) {
+		const response = await this.observe(`actions/runs/${runId.parse(id)}/jobs?per_page=100`);
+		if (response === undefined) return undefined;
 		const result = z.object({ total_count: z.number().int(), jobs: z.array(jobSchema) })
-			.parse(await this.call(`actions/runs/${runId.parse(id)}/jobs?per_page=100`));
+			.parse(response);
 		if (result.total_count !== result.jobs.length) throw new Error("incomplete runner job inventory");
 		return result.jobs.filter((job) => job.name === payloadName);
 	}
@@ -49,12 +61,24 @@ export class RunnerApi {
 	/** Expose the same bounded observation and cancellation operations as the monorepo controller. */
 	io(): RunIo {
 		return {
-			readRun: async (id) => runSchema.parse(await this.call(`actions/runs/${runId.parse(id)}`)),
+			readRun: async (id) => {
+				const response = await this.observe(`actions/runs/${runId.parse(id)}`);
+				return response === undefined ? undefined : runSchema.parse(response);
+			},
 			readJobs: async (id) => this.jobs(id),
 			cancel: async (id) => { await this.call(`actions/runs/${runId.parse(id)}/cancel`, {}); },
 			now: () => Date.now() / 1000,
 			sleep: async () => { await setTimeout(15_000); },
 		};
+	}
+
+	/** A dispatch receipt may precede readable state. The lifecycle owns its deadline. */
+	private async observe(path: string): Promise<unknown> {
+		try { return await this.call(path); }
+		catch (error: unknown) {
+			if (error instanceof ApiError && error.status === 404) return undefined;
+			throw error;
+		}
 	}
 
 	/** Verify fresh administrator permission rather than trusting a user-controlled workflow input. */
@@ -93,7 +117,7 @@ export class RunnerApi {
 			signal: AbortSignal.timeout(10_000),
 			...(fields === undefined ? {} : { body: JSON.stringify(fields) }),
 		});
-		if (!response.ok) throw new Error(`runner API ${path}: HTTP ${response.status}`);
+		if (!response.ok) throw new ApiError(path, response.status);
 		if (response.status === 204) return null;
 		return response.json();
 	}

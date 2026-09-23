@@ -39,6 +39,11 @@ the payload never received a runner permits handoff. GitHub's final queue gets
 300 seconds. A started, failed, or ambiguously cancelled build is not replayed.
 Separate cleanup steps retain child IDs when the parent is cancelled.
 
+GitHub can acknowledge a dispatch before its run or job records are readable.
+A read returning 404 remains unknown while the existing observation deadline
+runs. It cannot prove completion or unassigned cancellation. Other API failures
+remain errors, and a lost dispatch response is never retried.
+
 Payloads recheck ownership after leaving the queue and before checking out the
 approved source. They receive read-only repository and Actions access. Dispatch credentials stay in
 GitHub-hosted control jobs. The build uses two Cargo jobs, disables development
