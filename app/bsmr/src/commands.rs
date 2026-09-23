@@ -9,6 +9,8 @@
  */
 
 #[cfg(not(client_only))]
+pub(crate) mod cache;
+#[cfg(not(client_only))]
 pub(crate) mod forkserver;
 #[cfg(not(client_only))]
 pub(crate) mod internal_test_runner;
