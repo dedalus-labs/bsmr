@@ -39,6 +39,7 @@ use bsmr_execute::execute::kind::CommandExecutionKind;
 use bsmr_execute::execute::local_cache::LocalActionCache;
 use bsmr_execute::execute::local_cache::LocalActionReservation;
 use bsmr_execute::execute::local_cache::LocalActionResult;
+use bsmr_execute::execute::local_cache::LocalCachePublication;
 use bsmr_execute::execute::local_cache::LocalDigest;
 use bsmr_execute::execute::local_cache::LocalOutputDirectory;
 use bsmr_execute::execute::local_cache::LocalOutputFile;
@@ -460,19 +461,20 @@ fn publish_result(
             }
         }
     }
+    let publication = cache.begin_publication()?;
     parallel_cache_io(&files, |(digest, source)| {
-        cache.publish_file(digest, source, digest_config)
+        publication.publish_file(digest, source, digest_config)
     })?;
     for (digest, bytes) in trees {
-        cache.publish_bytes(&digest, &bytes, digest_config)?;
+        publication.publish_bytes(&digest, &bytes, digest_config)?;
     }
-    manifest.stdout = publish_stream(cache, stdout, digest_config)?;
-    manifest.stderr = publish_stream(cache, stderr, digest_config)?;
-    cache.publish_action_result(action, &manifest)
+    manifest.stdout = publish_stream(&publication, stdout, digest_config)?;
+    manifest.stderr = publish_stream(&publication, stderr, digest_config)?;
+    publication.finish(action, &manifest)
 }
 
 fn publish_stream(
-    cache: &LocalActionCache,
+    publication: &LocalCachePublication<'_>,
     bytes: &[u8],
     digest_config: DigestConfig,
 ) -> bsmr_error::Result<Option<LocalDigest>> {
@@ -480,7 +482,7 @@ fn publish_stream(
         return Ok(None);
     }
     let digest = TrackedFileDigest::from_content(bytes, digest_config.cas_digest_config());
-    cache.publish_bytes(&digest, bytes, digest_config)?;
+    publication.publish_bytes(&digest, bytes, digest_config)?;
     Ok(Some(LocalDigest::from_file(&digest)))
 }
 

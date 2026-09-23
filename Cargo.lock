@@ -2008,6 +2008,7 @@ dependencies = [
  "either",
  "faccess",
  "fbinit",
+ "fs4",
  "futures 0.3.34",
  "gazebo",
  "hex",

@@ -36,10 +36,12 @@ use crate::execute::action_digest::ActionDigest;
 
 mod flight;
 mod inventory;
+mod lock;
 
 pub use flight::LocalActionLease;
 pub use flight::LocalActionReservation;
 pub use inventory::LocalCacheInventory;
+use lock::CacheLock;
 
 static TEMPORARY_ID: AtomicU64 = AtomicU64::new(0);
 
@@ -189,6 +191,12 @@ pub struct LocalActionCache {
     materialization: LocalCacheMaterialization,
 }
 
+/// Holds the shared cache lock across one complete CAS and action-root publication.
+pub struct LocalCachePublication<'a> {
+    cache: &'a LocalActionCache,
+    _lock: CacheLock,
+}
+
 /// Selects how cached objects become writable output files.
 #[derive(Allocative, Clone, Copy, Debug, Eq, PartialEq)]
 pub enum LocalCacheMaterialization {
@@ -241,6 +249,14 @@ impl LocalActionCache {
         })
     }
 
+    /// Starts one publication that collection cannot interrupt.
+    pub fn begin_publication(&self) -> bsmr_error::Result<LocalCachePublication<'_>> {
+        Ok(LocalCachePublication {
+            cache: self,
+            _lock: CacheLock::shared(&self.root)?,
+        })
+    }
+
     /// Returns an action result only when every referenced CAS object exists.
     pub fn action_result(
         &self,
@@ -269,6 +285,15 @@ impl LocalActionCache {
         action: &ActionDigest,
         result: &LocalActionResult,
     ) -> bsmr_error::Result<()> {
+        self.begin_publication()?.finish(action, result)
+    }
+
+    /// Publishes an action root while the caller holds the shared cache lock.
+    fn publish_action_result_unlocked(
+        &self,
+        action: &ActionDigest,
+        result: &LocalActionResult,
+    ) -> bsmr_error::Result<()> {
         let path = self.action_path(action);
         let bytes = serde_json::to_vec(result).map_err(|source| LocalCacheError::DecodeAction {
             path: path.clone(),
@@ -283,6 +308,17 @@ impl LocalActionCache {
 
     /// Atomically publishes verified bytes under their content digest.
     pub fn publish_bytes(
+        &self,
+        digest: &TrackedFileDigest,
+        bytes: &[u8],
+        digest_config: DigestConfig,
+    ) -> bsmr_error::Result<()> {
+        self.begin_publication()?
+            .publish_bytes(digest, bytes, digest_config)
+    }
+
+    /// Publishes verified bytes while the caller holds the shared cache lock.
+    fn publish_bytes_unlocked(
         &self,
         digest: &TrackedFileDigest,
         bytes: &[u8],
@@ -308,6 +344,17 @@ impl LocalActionCache {
 
     /// Atomically publishes a verified file under its content digest.
     pub fn publish_file(
+        &self,
+        digest: &TrackedFileDigest,
+        source: &Path,
+        digest_config: DigestConfig,
+    ) -> bsmr_error::Result<()> {
+        self.begin_publication()?
+            .publish_file(digest, source, digest_config)
+    }
+
+    /// Publishes one verified file while the caller holds the shared cache lock.
+    fn publish_file_unlocked(
         &self,
         digest: &TrackedFileDigest,
         source: &Path,
@@ -502,6 +549,39 @@ impl LocalActionCache {
     }
 }
 
+impl LocalCachePublication<'_> {
+    /// Finishes the transaction by publishing its action root last.
+    pub fn finish(
+        self,
+        action: &ActionDigest,
+        result: &LocalActionResult,
+    ) -> bsmr_error::Result<()> {
+        self.cache.publish_action_result_unlocked(action, result)
+    }
+
+    /// Publishes verified bytes inside this transaction.
+    pub fn publish_bytes(
+        &self,
+        digest: &TrackedFileDigest,
+        bytes: &[u8],
+        digest_config: DigestConfig,
+    ) -> bsmr_error::Result<()> {
+        self.cache
+            .publish_bytes_unlocked(digest, bytes, digest_config)
+    }
+
+    /// Publishes one verified file inside this transaction.
+    pub fn publish_file(
+        &self,
+        digest: &TrackedFileDigest,
+        source: &Path,
+        digest_config: DigestConfig,
+    ) -> bsmr_error::Result<()> {
+        self.cache
+            .publish_file_unlocked(digest, source, digest_config)
+    }
+}
+
 fn keyed_path(root: &Path, key: &[u8]) -> PathBuf {
     let digest = hex::encode(Sha256::digest(key));
     root.join(&digest[..2]).join(digest)
@@ -690,6 +770,7 @@ mod tests {
     use bsmr_common::file_ops::metadata::TrackedFileDigest;
     use prost::Message;
 
+    use super::CacheLock;
     use super::LocalActionCache;
     use super::LocalActionResult;
     use super::LocalCacheInventory;
@@ -734,6 +815,20 @@ mod tests {
         cache.publish_bytes(&output, b"cached output", digest_config)?;
         cache.publish_action_result(&action, &result)?;
 
+        assert_eq!(cache.action_result(&action)?, Some(result));
+        Ok(())
+    }
+
+    #[test]
+    fn invariant_publication_holds_collection_lock_until_action_root() -> bsmr_error::Result<()> {
+        let (_temporary, cache, digest_config, action, output, result) = fixture();
+        let publication = cache.begin_publication()?;
+        publication.publish_bytes(&output, b"cached output", digest_config)?;
+
+        assert!(CacheLock::try_exclusive(&cache.root)?.is_none());
+
+        publication.finish(&action, &result)?;
+        assert!(CacheLock::try_exclusive(&cache.root)?.is_some());
         assert_eq!(cache.action_result(&action)?, Some(result));
         Ok(())
     }
