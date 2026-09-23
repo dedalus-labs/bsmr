@@ -22,12 +22,22 @@ use super::units::StripSetting;
 use super::units::Unit;
 use super::unsupported;
 
+/// Whether the selected executor isolates code that runs inside the compiler.
+#[derive(Clone, Copy)]
+pub(super) enum CodeExecution {
+    /// Compilation may not execute code supplied by a package.
+    CompilerOnly,
+    /// Package code sees frozen inputs and its descendants end with the action.
+    DeclaredInputs,
+}
+
 /// Reject an unsupported execution contract before returning any build rules.
-pub fn render(
+pub(super) fn render(
     bytes: &[u8],
     root: &Path,
     cell: &str,
     toolchain: &str,
+    execution: CodeExecution,
 ) -> Result<String, RustGraphError> {
     let graph = Graph::parse(bytes)?;
     if graph.workspace_root != root {
@@ -41,6 +51,7 @@ pub fn render(
         graph: &graph,
         sources: &sources.targets,
         toolchain,
+        execution,
     };
     let mut rules = sources.rules;
     for (index, unit) in graph.units.iter().enumerate() {
@@ -61,13 +72,17 @@ struct Renderer<'a> {
     sources: &'a BTreeMap<&'a str, String>,
     /// Pinned compiler distribution used by every emitted rule.
     toolchain: &'a str,
+    /// Verified execution policy captured before analysis reuse.
+    execution: CodeExecution,
 }
 
 impl Renderer<'_> {
     /// Keep each unit's compiler flags, environment and dependency aliases together.
     fn unit(&self, unit: &Unit, index: usize) -> Result<String, RustGraphError> {
-        let rule = unit.rule()?;
-        let output = if rule == "rust_library" {
+        let rule = unit.rule(self.execution)?;
+        let output = if unit.target.kind == ["proc-macro"] {
+            ", proc_macro = True, default_output = \"library\""
+        } else if rule == "rust_library" {
             ", default_output = \"library\""
         } else {
             ""
@@ -143,7 +158,10 @@ impl Renderer<'_> {
                 ));
             }
             let target = &self.graph.units[dependency.index];
-            if target.target.kind != ["lib"] && target.target.kind != ["rlib"] {
+            if target.target.kind != ["lib"]
+                && target.target.kind != ["rlib"]
+                && target.target.kind != ["proc-macro"]
+            {
                 return Err(unsupported(
                     &unit.package_name,
                     &format!(
@@ -171,8 +189,15 @@ impl Renderer<'_> {
 
 impl Unit {
     /// Admit only compiler modes whose execution requirements are represented natively.
-    fn rule(&self) -> Result<&'static str, RustGraphError> {
-        let library = self.target.kind == ["lib"] || self.target.kind == ["rlib"];
+    fn rule(&self, execution: CodeExecution) -> Result<&'static str, RustGraphError> {
+        let macro_target = self.target.kind == ["proc-macro"];
+        if macro_target && matches!(execution, CodeExecution::CompilerOnly) {
+            return Err(unsupported(
+                &self.package_name,
+                "procedural macros require a verified declared-input executor",
+            ));
+        }
+        let library = self.target.kind == ["lib"] || self.target.kind == ["rlib"] || macro_target;
         if !library && self.target.kind != ["bin"] {
             return Err(unsupported(
                 &self.package_name,
@@ -278,7 +303,14 @@ mod tests {
 
     #[test]
     fn configured_inputs_preserve_literal_metadata() {
-        let rules = render(GRAPH, Path::new("/workspace"), "root", "root//:rust").unwrap();
+        let rules = render(
+            GRAPH,
+            Path::new("/workspace"),
+            "root",
+            "root//:rust",
+            CodeExecution::CompilerOnly,
+        )
+        .unwrap();
         assert!(rules.contains("literal_env ="));
         assert!(rules.contains("Literal $(location :absent)"));
         assert!(rules.contains("\"enabled\""));
@@ -287,7 +319,16 @@ mod tests {
     #[test]
     fn configured_inputs_cannot_escape_the_captured_graph() {
         let mut graph: serde_json::Value = serde_json::from_slice(GRAPH).unwrap();
-        assert!(render(GRAPH, Path::new("/other"), "root", "root//:rust").is_err());
+        assert!(
+            render(
+                GRAPH,
+                Path::new("/other"),
+                "root",
+                "root//:rust",
+                CodeExecution::CompilerOnly
+            )
+            .is_err()
+        );
         for path in [
             "/outside/lib.rs",
             "/workspace-neighbor/lib.rs",
@@ -299,12 +340,41 @@ mod tests {
                     &serde_json::to_vec(&graph).unwrap(),
                     Path::new("/workspace"),
                     "root",
-                    "root//:rust"
+                    "root//:rust",
+                    CodeExecution::CompilerOnly,
                 )
                 .is_err()
             );
         }
         graph["roots"] = serde_json::json!([999]);
         assert!(Graph::parse(&serde_json::to_vec(&graph).unwrap()).is_err());
+    }
+
+    #[test]
+    fn invariant_generated_code_requires_declared_input_execution() {
+        let mut graph: serde_json::Value = serde_json::from_slice(GRAPH).unwrap();
+        graph["units"][0]["target"]["kind"] = serde_json::json!(["proc-macro"]);
+        graph["units"][0]["target"]["crate_types"] = serde_json::json!(["proc-macro"]);
+        let bytes = serde_json::to_vec(&graph).unwrap();
+        let render = |execution| {
+            render(
+                &bytes,
+                Path::new("/workspace"),
+                "root",
+                "root//:rust",
+                execution,
+            )
+        };
+        assert!(
+            render(CodeExecution::CompilerOnly)
+                .unwrap_err()
+                .to_string()
+                .contains("verified declared-input executor")
+        );
+        assert!(
+            render(CodeExecution::DeclaredInputs)
+                .unwrap()
+                .contains("proc_macro = True")
+        );
     }
 }

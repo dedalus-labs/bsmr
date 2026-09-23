@@ -255,11 +255,23 @@ impl Key for RustPlanKey {
         let bytes = Planner::new(&root, &toolchain, selection)
             .resolve(&self.0, &package)
             .await?;
+        let platform = ctx.compute(&crate::execution::ExecutionPlatformKey).await?;
+        let execution = if platform
+            .iter()
+            .any(|(name, value)| name == "bsmr.sandbox.backend" && value == "namespace")
+            && platform.iter().any(|(name, value)| {
+                name == "bsmr.sandbox.profile" && value == "declared-inputs-v2"
+            }) {
+            super::configured::CodeExecution::DeclaredInputs
+        } else {
+            super::configured::CodeExecution::CompilerOnly
+        };
         Ok(Arc::new(super::configured::render(
             &bytes,
             &root,
             cell.as_str(),
             &format!("{cell}//:__bsmr_rust"),
+            execution,
         )?))
     }
 

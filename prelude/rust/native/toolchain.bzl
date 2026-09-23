@@ -29,9 +29,9 @@ def _toolchain(ctx):
     library_path = "DYLD_LIBRARY_PATH" if ctx.attrs.triple.endswith("apple-darwin") else "LD_LIBRARY_PATH"
     standard = ctx.attrs.standard_library[DefaultInfo].default_outputs[0]
     return [DefaultInfo(), RustToolchainInfo(
-        compiler = RunInfo(args = cmd_args(compiler.project("bin/rustc"), hidden = [compiler])),
+        compiler = RunInfo(args = cmd_args("/usr/bin/env", cmd_args(compiler.project("lib"), format = library_path + "={}"), compiler.project("bin/rustc"), hidden = [compiler])),
         clippy_driver = RunInfo(args = cmd_args("/usr/bin/env", cmd_args(compiler.project("lib"), format = library_path + "={}"), clippy.project("bin/clippy-driver"), hidden = [compiler, clippy])),
-        rustdoc = RunInfo(args = cmd_args(compiler.project("bin/rustdoc"), hidden = [compiler])),
+        rustdoc = RunInfo(args = cmd_args("/usr/bin/env", cmd_args(compiler.project("lib"), format = library_path + "={}"), compiler.project("bin/rustdoc"), hidden = [compiler])),
         sysroot_path = standard,
         rustc_target_triple = ctx.attrs.triple,
         nightly_features = ctx.attrs.nightly_features,

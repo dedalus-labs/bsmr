@@ -1195,12 +1195,15 @@ def rust_library_macro_wrapper(rust_library: typing.Callable) -> typing.Callable
             if kwargs.get("crate", None) == None and kwargs.get("crate_dynamic", None) == None:
                 kwargs["crate"] = name.replace("-", "_")
 
+            # The alias must use the same compiler selection as its backing library.
+            toolchain = {"_rust_toolchain": kwargs["_rust_toolchain"]} if "_rust_toolchain" in kwargs else {}
             rust_proc_macro_alias(
                 name = name,
                 actual_exec = ":_" + name,
                 actual_plugin = ":_" + name,
                 default_target_platform = kwargs.get("default_target_platform", None),
                 visibility = kwargs.pop("visibility", []),
+                **toolchain
             )
             kwargs["name"] = "_" + name
 
