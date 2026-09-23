@@ -411,7 +411,7 @@ export const ci = workflow({
 				},
 				{
 					name: "Verify external Rust dependencies",
-					run: command({ file: "node", args: ["test/rust/dependencies.ts", "target/debug/bsmr"] }),
+					run: command({ file: "node", args: ["test/rust/dependencies.ts", "target/debug/bsmr", "1.98.0"] }),
 				},
 				{
 					name: "Verify pinned Git sources",

@@ -100,7 +100,7 @@ pub(crate) fn plan(request: Request) -> Result<Graph> {
     let interner = UnitInterner::new();
     let context = ops::create_bcx(&workspace, &options, &interner, None)?;
     ensure!(
-        ["1.97.1", "1.96.0-nightly"]
+        ["1.97.1", "1.98.0", "1.96.0-nightly"]
             .contains(&context.target_data.rustc.version.to_string().as_str()),
         "unsupported planner compiler: {}",
         context.target_data.rustc.version

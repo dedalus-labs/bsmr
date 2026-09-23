@@ -47,7 +47,7 @@ with its SHA-256 and length, or a Git repository with its locked revision and
 package directory. Native `http_archive` and `git_fetch` rules acquire those
 bytes. Cargo's mutable source cache is never a compiler input.
 
-The resolver pins Cargo 0.98.0 and admits Rust 1.97.1 and
+The resolver pins Cargo 0.98.0 and admits Rust 1.97.1, 1.98.0, and
 nightly-2026-04-11. Its standalone workspace isolates Cargo's native dependencies
 from the build engine. See [Cargo's unit graph](https://doc.rust-lang.org/cargo/reference/unstable.html#unit-graph).
 
