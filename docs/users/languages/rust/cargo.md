@@ -24,6 +24,21 @@ bsmr test app
 
 Run `bsmr build --help` or `bsmr test --help` for command options.
 
+Select Cargo profiles and features through the existing configuration interface:
+
+```console
+bsmr build app -c rust.profile=release
+bsmr test app -c rust.features=app/test-hooks
+bsmr build app -c rust.default_features=false -c rust.all_features=true
+```
+
+The `rust` configuration section accepts `profile`, `features`, `default_features`,
+and `all_features`. Profiles default to `dev` for builds and `test` for tests.
+Features use Cargo's comma- or space-separated syntax. Default features are enabled
+and all-features selection is disabled unless requested. Cargo validates names
+and resolves profile inheritance and dependency features. Changes invalidate the
+selected plan. Requirements such as LTO still need supported native execution.
+
 Commit `Cargo.toml`, `Cargo.lock`, and an exact `rust-toolchain.toml` at the
 project root. The current catalog supports `1.97.1`, `1.98.0`, and `nightly-2026-04-11` on
 Linux and macOS, for ARM64 and x86-64. Install the matching Cargo resolver with
@@ -75,7 +90,7 @@ binaries, and inline unit tests. Registry archives are verified against
 Git filters or hooks. Compilation reads native source artifacts, not Cargo's
 mutable checkout cache. Authenticated registries remain unsupported.
 Excluded path dependencies provide source inputs without becoming public workspace targets.
-Cargo selects default features, conditional dependencies, dev dependencies, profile
+Cargo resolves requested features, conditional dependencies, dev dependencies, profile
 settings, and workspace lints before native compilation. Each build or test has a
 separate configured graph, so building a library does not activate its test-only
 dependencies.
