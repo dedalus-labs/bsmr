@@ -5,6 +5,9 @@
 
 //! Maps configured Cargo units to native rules without resolving features again.
 
+#[path = "scripts.rs"]
+mod scripts;
+
 use std::collections::BTreeMap;
 use std::path::Component;
 use std::path::Path;
@@ -76,10 +79,22 @@ struct Renderer<'a> {
     execution: CodeExecution,
 }
 
+/// A compiler consumes extern crates and at most one output from its own build script.
+#[derive(Default)]
+struct Dependencies<'a> {
+    /// Cargo's compiler-visible names for library dependencies.
+    crates: BTreeMap<&'a str, String>,
+    /// Graph index of this package's script execution, when present.
+    script: Option<usize>,
+}
+
 impl Renderer<'_> {
     /// Keep each unit's compiler flags, environment and dependency aliases together.
     fn unit(&self, unit: &Unit, index: usize) -> Result<String, RustGraphError> {
         let rule = unit.rule(self.execution)?;
+        if matches!(unit.mode, Mode::RunCustomBuild) {
+            return self.script(unit, index);
+        }
         let output = if unit.target.kind == ["proc-macro"] {
             ", proc_macro = True, default_output = \"library\""
         } else if rule == "rust_library" {
@@ -89,6 +104,13 @@ impl Renderer<'_> {
         };
         let (sources, source) = self.sources(unit)?;
         let dependencies = self.dependencies(unit)?;
+        let sources = match dependencies.script {
+            Some(script) => format!(":unit_{script}[cwd]"),
+            None => sources,
+        };
+        let generated = dependencies.script.map(|script| format!(
+            ", srcs = [\":unit_{script}[out_dir]\"], rustc_flags = [\"@$(location :unit_{script}[rustc_flags])\"], env = {{\"OUT_DIR\": \"$(location :unit_{script}[out_dir])\"}}"
+        )).unwrap_or_default();
         let primary = self
             .graph
             .roots
@@ -109,12 +131,12 @@ impl Renderer<'_> {
             format!("cfg(feature, values({declared}))"),
         ]);
         Ok(format!(
-            "{rule}(name = \"unit_{index}\", crate = {}, crate_root = {}, edition = {}, mapped_srcs = {{{}: \"crate\"}}, named_deps = {}, features = {}, literal_rustc_flags = {}, literal_env = {}, verify_inputs = True, _rust_toolchain = {}, visibility = [\"PUBLIC\"]{output})\n",
+            "{rule}(name = \"unit_{index}\", crate = {}, crate_root = {}, edition = {}, mapped_srcs = {{{}: \"crate\"}}, named_deps = {}, features = {}, literal_rustc_flags = {}, literal_env = {}, verify_inputs = True, _rust_toolchain = {}, visibility = [\"PUBLIC\"]{output}{generated})\n",
             json(&unit.target.name.replace('-', "_"))?,
             json(&source)?,
             json(&unit.target.edition)?,
             json(&sources)?,
-            json(&dependencies)?,
+            json(&dependencies.crates)?,
             json(&unit.features)?,
             json(&flags)?,
             json(&environment)?,
@@ -145,11 +167,8 @@ impl Renderer<'_> {
     }
 
     /// Preserve Cargo's extern names while rejecting unsupported native dependency kinds.
-    fn dependencies<'a>(
-        &self,
-        unit: &'a Unit,
-    ) -> Result<BTreeMap<&'a str, String>, RustGraphError> {
-        let mut dependencies = BTreeMap::new();
+    fn dependencies<'a>(&self, unit: &'a Unit) -> Result<Dependencies<'a>, RustGraphError> {
+        let mut dependencies = Dependencies::default();
         for dependency in &unit.dependencies {
             if dependency.public || dependency.noprelude || dependency.nounused {
                 return Err(unsupported(
@@ -158,6 +177,17 @@ impl Renderer<'_> {
                 ));
             }
             let target = &self.graph.units[dependency.index];
+            if matches!(target.mode, Mode::RunCustomBuild) {
+                if target.package_id != unit.package_id
+                    || dependencies.script.replace(dependency.index).is_some()
+                {
+                    return Err(unsupported(
+                        &unit.package_name,
+                        "build-script output ownership",
+                    ));
+                }
+                continue;
+            }
             if target.target.kind != ["lib"]
                 && target.target.kind != ["rlib"]
                 && target.target.kind != ["proc-macro"]
@@ -171,6 +201,7 @@ impl Renderer<'_> {
                 ));
             }
             if dependencies
+                .crates
                 .insert(
                     dependency.extern_crate_name.as_str(),
                     format!(":unit_{}", dependency.index),
@@ -191,14 +222,15 @@ impl Unit {
     /// Admit only compiler modes whose execution requirements are represented natively.
     fn rule(&self, execution: CodeExecution) -> Result<&'static str, RustGraphError> {
         let macro_target = self.target.kind == ["proc-macro"];
-        if macro_target && matches!(execution, CodeExecution::CompilerOnly) {
+        let script = self.target.kind == ["custom-build"];
+        if (macro_target || script) && matches!(execution, CodeExecution::CompilerOnly) {
             return Err(unsupported(
                 &self.package_name,
-                "procedural macros require a verified declared-input executor",
+                "package code requires a verified declared-input executor",
             ));
         }
         let library = self.target.kind == ["lib"] || self.target.kind == ["rlib"] || macro_target;
-        if !library && self.target.kind != ["bin"] {
+        if !library && !script && self.target.kind != ["bin"] {
             return Err(unsupported(
                 &self.package_name,
                 &format!(
@@ -213,7 +245,12 @@ impl Unit {
                 "configured target or linker requires qualified native execution",
             ));
         }
-        if self.package_links.is_some() || self.target.crate_types != self.target.kind {
+        let crate_types_match = if script {
+            self.target.crate_types == ["bin"]
+        } else {
+            self.target.crate_types == self.target.kind
+        };
+        if self.package_links.is_some() || !crate_types_match {
             return Err(unsupported(
                 &self.package_name,
                 "native links or additional crate types",
@@ -223,6 +260,7 @@ impl Unit {
             Mode::Build if library => Ok("rust_library"),
             Mode::Build => Ok("rust_binary"),
             Mode::Test => Ok("rust_test"),
+            Mode::RunCustomBuild if script => Ok("buildscript_run"),
             Mode::Check | Mode::RunCustomBuild => Err(unsupported(
                 &self.package_name,
                 "compiler mode requires qualified native execution",

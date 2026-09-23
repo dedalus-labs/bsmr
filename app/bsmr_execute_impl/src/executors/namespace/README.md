@@ -86,11 +86,19 @@ local dependency-file reuse and action-cache identity. Policy semantic changes
 must bump `declared-inputs-v2`. Host paths and temporary snapshot names do not
 participate in this identity.
 
-## Native Rust macros
+## Native Rust package code
 
-Configured Cargo graphs admit procedural macros only with the verified
+Configured Cargo graphs admit procedural macros and build scripts only with the verified
 `declared-inputs-v2` namespace profile. They use the inherited Rust library and
-macro-alias rules with the selected compiler. Build-script units remain unsupported.
+macro-alias and build-script rules with the selected compiler. Native link metadata
+dependencies and unimplemented script directives produce explicit errors.
+
+The planner exports Cargo's resolved profile and target configuration. Scripts
+receive literal package metadata, declared source files and `NUM_JOBS=1`.
+Each script owns a copied working directory and `OUT_DIR`. Consumers compile
+that returned source tree, so script changes remain isolated from the checkout.
+Compiler probes receive the selected standard library. Workspace-wide Git
+context is not included in the package source tree.
 
 Graph analysis depends on the same verified execution identity as action reuse.
 Changing back to host execution rejects the macro graph before an earlier
@@ -103,6 +111,7 @@ build, and repeated rejection of undeclared external reads:
 
 ```console
 python3 test/rust/macros.py target/debug/bsmr /absolute/path/runtime.json
+python3 test/rust/scripts.py target/debug/bsmr /absolute/path/runtime.json
 ```
 
 ## Verification
