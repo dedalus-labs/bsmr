@@ -202,22 +202,16 @@ async fn resolve(toolchain: &RustToolchain, root: &Path) -> bsmr_error::Result<V
     Ok(output.stdout)
 }
 
-/// Return the inferred source for one package without writing build files.
+/// Workspace members expose entrypoints. Other Cargo packages expose only source inputs.
 pub async fn build_file(
     ctx: &mut DiceComputations<'_>,
     package: PackageLabel,
 ) -> bsmr_error::Result<String> {
     let rules = ctx.compute(&RustGraphKey(package.cell_name())).await??;
-    rules
-        .get(package.as_cell_path().path().as_str())
-        .cloned()
-        .ok_or_else(|| {
-            unsupported(
-                &package.to_string(),
-                "package absent from Cargo's resolved workspace",
-            )
-            .into()
-        })
+    match rules.get(package.as_cell_path().path().as_str()) {
+        Some(member) => Ok(member.clone()),
+        None => Ok(catalog::sources().to_owned()),
+    }
 }
 
 /// A selected build/test graph has its own invalidation boundary.

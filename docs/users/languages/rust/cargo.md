@@ -74,6 +74,7 @@ binaries, and inline unit tests. Registry archives are verified against
 `Cargo.lock`. Git packages are read from the locked commit without ambient
 Git filters or hooks. Compilation reads native source artifacts, not Cargo's
 mutable checkout cache. Authenticated registries remain unsupported.
+Excluded path dependencies provide source inputs without becoming public workspace targets.
 Cargo selects default features, conditional dependencies, dev dependencies, profile
 settings, and workspace lints before native compilation. Each build or test has a
 separate configured graph, so building a library does not activate its test-only
