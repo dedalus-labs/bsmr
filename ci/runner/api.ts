@@ -92,10 +92,10 @@ export class RunnerApi {
 	async parent(input: Readonly<{ id: string; definition: string; source: string }>): Promise<void> {
 		const parent = z.object({
 			id: runId, status: z.literal("in_progress"), conclusion: z.null(),
-			head_sha: revision, event: z.literal("workflow_dispatch"), path: z.literal(`.github/workflows/${workflowFile}`),
+			head_sha: revision, event: z.enum(["workflow_dispatch", "push"]), path: z.literal(`.github/workflows/${workflowFile}`),
 			display_title: z.string(), triggering_actor: z.object({ login }),
 		}).parse(await this.call(`actions/runs/${runId.parse(input.id)}`));
-		if (parent.head_sha !== input.definition || parent.display_title !== `Rust build ${input.source}`)
+		if (parent.head_sha !== input.definition || parent.display_title !== `Rust build ${input.source}` || (parent.event === "push" && parent.head_sha !== input.source))
 			throw new Error("parent workflow does not own this source and definition");
 		await this.administrator(parent.triggering_actor.login);
 	}

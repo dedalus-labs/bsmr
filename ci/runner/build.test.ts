@@ -10,8 +10,10 @@ import { test } from "node:test";
 import type { GitHubWorkflowStep } from "@dedalus-labs/hollywood";
 import { runnerBuild } from "./build.ts";
 
-test("invariant_office_builds_require_a_dispatch_of_the_trusted_definition", () => {
-	assert.deepEqual(Object.keys(runnerBuild.on), ["workflow_dispatch"]);
+test("office builds use main pushes or explicit administrator dispatches", () => {
+	assert.deepEqual(Object.keys(runnerBuild.on), ["push", "workflow_dispatch"]);
+	assert.deepEqual(runnerBuild.on.push, { branches: ["main"] });
+	assert.match(String(runnerBuild.concurrency?.group), /github.event_name == 'push'.*github.run_id/);
 	assert.match(runnerBuild.jobs.authorize?.if ?? "", /refs\/heads\/main/);
 	assert.equal(runnerBuild.jobs.build?.needs, "authorize");
 	assert.match(runnerBuild.jobs.build?.if ?? "", /refs\/heads\/main/);
@@ -30,7 +32,7 @@ test("invariant_provider_handoff_keeps_mac_arm64_placement", () => {
 test("invariant_payload_rechecks_ownership_after_queueing", () => {
 	const steps: readonly GitHubWorkflowStep[] = runnerBuild.jobs.build.steps;
 	const guard = steps.findIndex((step) => "with" in step && step.with?.["operation"] === "authorize");
-	const source = steps.findIndex((step) => "with" in step && step.with?.["ref"] === "${{ inputs.revision }}");
+	const source = steps.findIndex((step) => "with" in step && step.with?.["ref"] === "${{ github.event_name == 'push' && github.sha || inputs.revision }}");
 	assert.ok(guard >= 0, "a hosted authorization before queueing cannot authorize delayed execution");
 	assert.ok(source > guard, "check out only trusted code before revalidating the parent");
 });
@@ -39,7 +41,7 @@ test("a fresh runner installs Rust tooling before selecting a compiler", () => {
 	const steps: readonly GitHubWorkflowStep[] = runnerBuild.jobs.build.steps;
 	const install = steps.findIndex((step) => "uses" in step && step.uses === "./.github/actions/rust/install");
 	const compiler = steps.findIndex((step) => step.name === "Install pinned Rust compiler");
-	const source = steps.findIndex((step) => "with" in step && step.with?.["ref"] === "${{ inputs.revision }}");
+	const source = steps.findIndex((step) => "with" in step && step.with?.["ref"] === "${{ github.event_name == 'push' && github.sha || inputs.revision }}");
 	assert.ok(install >= 0 && compiler > install);
 	assert.ok(install < source, "the approved source need not contain the workflow's installer action");
 });
@@ -51,7 +53,7 @@ test("only the reviewed workflow revision writes native compiler caches", () => 
 	assert.equal(caches.length, 2);
 	for (const cache of caches) {
 		assert.ok("uses" in cache);
-		assert.equal(cache.with?.["save-if"], "${{ inputs.revision == github.sha }}");
+		assert.equal(cache.with?.["save-if"], "${{ (github.event_name == 'push' && github.sha || inputs.revision) == github.sha }}");
 	}
 });
 
