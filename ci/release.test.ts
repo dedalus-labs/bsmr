@@ -16,6 +16,7 @@ import { command, expr, format, stepOutput } from "@dedalus-labs/hollywood";
 import { parse } from "yaml";
 
 import { ci } from "./ci.ts";
+import { releaseCommands } from "./distribute.ts";
 import { releasePlease } from "./release-please.ts";
 import { publishRelease } from "./release-publish.ts";
 import { releaseState } from "./release-state.ts";
@@ -169,6 +170,23 @@ test("dist release builds preserve required Rust cfg flags", () => {
 	assert.ok(flags >= 0 && flags < cache && cache < build);
 	assert.equal(steps[flags].shell, "bash");
 	assert.equal(steps[flags].run, "printf '%s\\n' 'RUSTFLAGS=--cfg tokio_unstable' >> \"$GITHUB_ENV\"");
+});
+
+test("production binaries use the pinned LLVM release boundary", () => {
+	const commands = releaseCommands("x86_64-unknown-linux-gnu", {
+		engine: "nightly-engine",
+		planner: "nightly-planner",
+	});
+	assert.deepEqual(commands[4], {
+		file: "rustup",
+		args: [
+			"run", "nightly-engine", "cargo", "build", "--locked", "--bin", "bsmr",
+			"--profile", "dist", "--target", "x86_64-unknown-linux-gnu",
+		],
+	});
+	assert.match(read("Cargo.toml"), /\[profile\.dist\]\ninherits = "release"\nlto = "thin"/);
+	for (const path of ["Cargo.toml", ".cargo/config.toml", "ci/distribute.ts"])
+		assert.doesNotMatch(read(path), /codegen-backend|cranelift/i);
 });
 
 test("release builders use trusted Blacksmith caches", () => {
