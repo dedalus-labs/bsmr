@@ -63,6 +63,12 @@ some Macs. Engine and planner dependencies have separate compiler caches.
 Only a build whose source equals the reviewed workflow revision writes those
 caches. Builds of other approved commits can restore them.
 
+Compiler caches exclude `CARGO_HOME/bin`. The planner's cache saves first and
+must leave Cargo available for the engine cache's dependency query. Otherwise
+cleanup removes the installed tools, the query fails, and the engine cache is
+saved without its compiled dependencies. The engine's `bsmr-v2` prefix excludes
+archives previously saved in that state.
+
 ## Fleet prerequisite
 
 Before enabling office routing, restrict the runner group to this repository

@@ -224,8 +224,9 @@ jobs:
           CARGO_PROFILE_DEV_DEBUG: "0"
           CARGO_INCREMENTAL: "0"
         with:
-          prefix-key: bsmr-v1
+          prefix-key: bsmr-v2
           shared-key: rust
+          cache-bin: false
           save-if: ${{ (github.event_name == 'push' && github.sha || inputs.revision) == github.sha }}
       - name: Build BSMR
         env:
@@ -245,6 +246,7 @@ jobs:
         with:
           prefix-key: bsmr-v1
           shared-key: planner
+          cache-bin: false
           workspaces: tools/cargo -> target
           save-if: ${{ (github.event_name == 'push' && github.sha || inputs.revision) == github.sha }}
       - name: Build Cargo planner

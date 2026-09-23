@@ -54,6 +54,7 @@ test("only the reviewed workflow revision writes native compiler caches", () => 
 	for (const cache of caches) {
 		assert.ok("uses" in cache);
 		assert.equal(cache.with?.["save-if"], "${{ (github.event_name == 'push' && github.sha || inputs.revision) == github.sha }}");
+		assert.equal(cache.with?.["cache-bin"], false, "cache cleanup must retain Cargo for the next cache's metadata query");
 	}
 });
 
