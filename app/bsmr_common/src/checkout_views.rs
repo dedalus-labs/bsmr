@@ -112,7 +112,7 @@ pub struct CheckoutViewPolicy {
 }
 
 impl CheckoutViewPolicy {
-    /// Resolves disk-scaled defaults and exact optional environment overrides.
+    /// Resolves disk-scaled defaults and exact optional caller overrides.
     pub fn for_root(
         root: &Path,
         max_bytes: Option<u64>,
@@ -266,7 +266,7 @@ impl Drop for CheckoutViewLease {
     }
 }
 
-/// Writes the checkout record while the exclusive view lock is held.
+/// Writes the record while the registry excludes collection and the view lease is held.
 fn write_record(path: &Path, project_root: &Path) -> bsmr_error::Result<()> {
     let record = ViewRecord {
         version: RECORD_VERSION,

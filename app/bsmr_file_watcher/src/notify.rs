@@ -14,7 +14,9 @@
  * above-listed licenses.
  */
 
+use std::collections::HashSet;
 use std::mem;
+use std::path::Path;
 use std::path::PathBuf;
 use std::sync::Arc;
 use std::sync::Condvar;
@@ -54,6 +56,9 @@ use crate::file_watcher::FileWatcher;
 use crate::mergebase::Mergebase;
 use crate::stats::FileWatcherStats;
 
+const NOTIFY_BARRIER_PREFIX: &str = ".bsmr-notify-barrier-";
+const MAX_RETIRED_BARRIERS: usize = 8;
+
 fn ignore_event_kind(event_kind: EventKind) -> bool {
     match event_kind {
         EventKind::Access(_) => true,
@@ -90,10 +95,14 @@ impl NotifyFileData {
         root: &ProjectRoot,
         cells: &CellResolver,
         ignore_specs: &StdBsmrHashMap<CellName, IgnoreSet>,
+        notify_barriers: &HashSet<PathBuf>,
     ) -> bsmr_error::Result<()> {
         let event = event.map_err(|e| from_any_with_tag(e, bsmr_error::ErrorTag::NotifyWatcher))?;
 
         for path in &event.paths {
+            if is_notify_barrier(path, notify_barriers) {
+                continue;
+            }
             // Testing shows that we get absolute paths back from the `notify` library.
             // It's not documented though.
             let path = root.relativize(AbsNormPath::new(&path)?)?;
@@ -278,7 +287,49 @@ impl NotifyFileData {
 #[derive(Default)]
 struct NotifyEventBarrier {
     expected: Option<PathBuf>,
-    observed: bool,
+    created: bool,
+    removed: bool,
+    owned: HashSet<PathBuf>,
+    retired: HashSet<PathBuf>,
+}
+
+impl NotifyEventBarrier {
+    fn begin(&mut self, marker: PathBuf) {
+        assert!(self.expected.is_none());
+        assert!(self.owned.insert(marker.clone()));
+        self.expected = Some(marker);
+        self.created = false;
+        self.removed = false;
+    }
+
+    fn observe(&mut self, marker: &Path, present: bool) -> bool {
+        if self.expected.as_deref() != Some(marker) {
+            return false;
+        }
+        if present {
+            self.created = true;
+        } else {
+            self.removed = true;
+        }
+        true
+    }
+
+    fn complete_create_fence(&mut self) {
+        let retired = std::mem::take(&mut self.retired);
+        self.owned.retain(|path| !retired.contains(path));
+    }
+
+    fn retire(&mut self, marker: PathBuf) {
+        assert_eq!(self.expected.as_ref(), Some(&marker));
+        self.expected = None;
+        self.retired.insert(marker);
+    }
+
+    fn abandon_uncreated(&mut self, marker: &Path) {
+        assert_eq!(self.expected.as_deref(), Some(marker));
+        self.expected = None;
+        self.owned.remove(marker);
+    }
 }
 
 #[derive(Allocative)]
@@ -307,34 +358,37 @@ impl NotifyFileWatcher {
         let root2 = root.dupe();
         let barrier = Arc::new((Mutex::new(NotifyEventBarrier::default()), Condvar::new()));
         let barrier2 = barrier.dupe();
-        let barrier_dir = root
-            .root()
-            .as_path()
-            .join(InvocationPaths::output_dir_prefix().as_str());
-        std::fs::create_dir_all(&barrier_dir)
-            .map_err(|e| from_any_with_tag(e, bsmr_error::ErrorTag::NotifyWatcher))?;
+        let barrier_dir = root.root().as_path().to_owned();
         let mut watcher =
             notify::recommended_watcher(move |event: notify::Result<notify::Event>| {
-                let observed_barrier = event.as_ref().ok().and_then(|event| {
+                let event_paths = event
+                    .as_ref()
+                    .map(|event| event.paths.clone())
+                    .unwrap_or_default();
+                let owned_barriers = {
                     let barrier = barrier2.0.lock().unwrap();
-                    barrier
-                        .expected
-                        .as_ref()
-                        .filter(|expected| event.paths.iter().any(|path| path == *expected))
-                        .cloned()
-                });
+                    barrier.owned.clone()
+                };
                 let mut guard = data2.lock().unwrap();
                 if let Ok(state) = &mut *guard {
-                    if let Err(e) = state.process(event, &root2, &cells, &ignore_specs) {
+                    if let Err(e) =
+                        state.process(event, &root2, &cells, &ignore_specs, &owned_barriers)
+                    {
                         *guard = Err(e);
                     }
                 }
                 drop(guard);
 
-                if let Some(observed_barrier) = observed_barrier {
-                    let mut barrier = barrier2.0.lock().unwrap();
-                    if barrier.expected.as_ref() == Some(&observed_barrier) {
-                        barrier.observed = true;
+                let mut barrier = barrier2.0.lock().unwrap();
+                if let Some(expected) = barrier.expected.clone()
+                    && event_paths.iter().any(|path| path == &expected)
+                {
+                    let present = match std::fs::symlink_metadata(&expected) {
+                        Ok(_) => Some(true),
+                        Err(error) if error.kind() == std::io::ErrorKind::NotFound => Some(false),
+                        Err(_) => None,
+                    };
+                    if present.is_some_and(|present| barrier.observe(&expected, present)) {
                         barrier2.1.notify_all();
                     }
                 }
@@ -352,15 +406,41 @@ impl NotifyFileWatcher {
         })
     }
 
+    fn retry_retired_barrier_cleanup(&self) -> bsmr_error::Result<()> {
+        let retired = self.barrier.0.lock().unwrap().retired.clone();
+        for marker in &retired {
+            match std::fs::remove_file(marker) {
+                Ok(()) => {}
+                Err(error) if error.kind() == std::io::ErrorKind::NotFound => {}
+                Err(error) => {
+                    return Err(from_any_with_tag(
+                        error,
+                        bsmr_error::ErrorTag::NotifyWatcher,
+                    ));
+                }
+            }
+        }
+        if retired.len() >= MAX_RETIRED_BARRIERS {
+            return Err(from_any_with_tag(
+                std::io::Error::other(format!(
+                    "notify retained {} synchronization markers without a successful fence",
+                    retired.len()
+                )),
+                bsmr_error::ErrorTag::NotifyWatcher,
+            ));
+        }
+        Ok(())
+    }
+
     /// Waits until the watcher callback has processed every event queued before this call.
     fn synchronize_events(&self) -> bsmr_error::Result<()> {
+        self.retry_retired_barrier_cleanup()?;
         let marker = self
             .barrier_dir
-            .join(format!(".bsmr-notify-barrier-{}", Uuid::new_v4()));
+            .join(format!("{NOTIFY_BARRIER_PREFIX}{}", Uuid::new_v4()));
         {
             let mut barrier = self.barrier.0.lock().unwrap();
-            barrier.expected = Some(marker.clone());
-            barrier.observed = false;
+            barrier.begin(marker.clone());
         }
 
         if let Err(error) = std::fs::OpenOptions::new()
@@ -368,7 +448,8 @@ impl NotifyFileWatcher {
             .create_new(true)
             .open(&marker)
         {
-            self.barrier.0.lock().unwrap().expected = None;
+            let mut barrier = self.barrier.0.lock().unwrap();
+            barrier.abandon_uncreated(&marker);
             return Err(from_any_with_tag(
                 error,
                 bsmr_error::ErrorTag::NotifyWatcher,
@@ -376,31 +457,39 @@ impl NotifyFileWatcher {
         }
 
         let barrier = self.barrier.0.lock().unwrap();
-        let (mut barrier, timeout) = self
+        let (mut barrier, create_timeout) = self
             .barrier
             .1
-            .wait_timeout_while(barrier, Duration::from_secs(10), |state| !state.observed)
+            .wait_timeout_while(barrier, Duration::from_secs(10), |state| !state.created)
             .unwrap();
-        let observed = barrier.observed;
-        barrier.expected = None;
-        barrier.observed = false;
+        if create_timeout.timed_out() && !barrier.created {
+            barrier.retire(marker.clone());
+            drop(barrier);
+            drop(std::fs::remove_file(&marker));
+            return Err(notify_barrier_timeout("create", &marker));
+        }
+        barrier.complete_create_fence();
         drop(barrier);
 
-        let remove_result = std::fs::remove_file(&marker)
-            .map_err(|e| from_any_with_tag(e, bsmr_error::ErrorTag::NotifyWatcher));
-        if timeout.timed_out() && !observed {
+        if let Err(error) = std::fs::remove_file(&marker) {
+            self.barrier.0.lock().unwrap().retire(marker);
             return Err(from_any_with_tag(
-                std::io::Error::new(
-                    std::io::ErrorKind::TimedOut,
-                    format!(
-                        "notify did not observe its synchronization marker `{}`",
-                        marker.display()
-                    ),
-                ),
+                error,
                 bsmr_error::ErrorTag::NotifyWatcher,
             ));
         }
-        remove_result
+        let barrier = self.barrier.0.lock().unwrap();
+        let (mut barrier, remove_timeout) = self
+            .barrier
+            .1
+            .wait_timeout_while(barrier, Duration::from_secs(10), |state| !state.removed)
+            .unwrap();
+        if remove_timeout.timed_out() && !barrier.removed {
+            barrier.retire(marker.clone());
+            return Err(notify_barrier_timeout("remove", &marker));
+        }
+        barrier.retire(marker);
+        Ok(())
     }
 
     fn sync2(
@@ -422,6 +511,24 @@ impl NotifyFileWatcher {
         }
         Ok((stats, dice))
     }
+}
+
+/// Recognizes only synchronization markers created by this watcher.
+fn is_notify_barrier(path: &Path, owned: &HashSet<PathBuf>) -> bool {
+    owned.contains(path)
+}
+
+fn notify_barrier_timeout(operation: &str, marker: &Path) -> bsmr_error::Error {
+    from_any_with_tag(
+        std::io::Error::new(
+            std::io::ErrorKind::TimedOut,
+            format!(
+                "notify did not observe its synchronization marker {operation} `{}`",
+                marker.display()
+            ),
+        ),
+        bsmr_error::ErrorTag::NotifyWatcher,
+    )
 }
 
 #[async_trait]
@@ -446,5 +553,58 @@ impl FileWatcher for NotifyFileWatcher {
             },
         )
         .await
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use std::collections::HashSet;
+    use std::path::Path;
+    use std::path::PathBuf;
+
+    use super::NotifyEventBarrier;
+    use super::is_notify_barrier;
+
+    #[test]
+    fn invariant_only_the_owned_notify_barrier_is_ignored() {
+        let marker =
+            Path::new("/project/.bsmr-notify-barrier-550e8400-e29b-41d4-a716-446655440000");
+        let owned = HashSet::from([marker.to_owned()]);
+        assert!(is_notify_barrier(marker, &owned));
+        assert!(!is_notify_barrier(
+            Path::new("/project/src/.bsmr-notify-barrier-550e8400-e29b-41d4-a716-446655440000"),
+            &owned
+        ));
+        assert!(!is_notify_barrier(
+            Path::new("/project/.bsmr-notify-barrier-550e8400-e29b-41d4-a716-446655440001"),
+            &owned
+        ));
+    }
+
+    #[test]
+    fn invariant_stale_remove_cannot_complete_the_next_barrier() {
+        let first = PathBuf::from("/project/.bsmr-notify-barrier-first");
+        let second = PathBuf::from("/project/.bsmr-notify-barrier-second");
+        let mut barrier = NotifyEventBarrier::default();
+        barrier.begin(first.clone());
+        assert!(barrier.observe(&first, true));
+        assert!(barrier.created);
+        barrier.complete_create_fence();
+        assert!(barrier.observe(&first, false));
+        assert!(barrier.removed);
+        barrier.retire(first.clone());
+
+        barrier.begin(second.clone());
+        assert!(is_notify_barrier(&first, &barrier.owned));
+        assert!(!barrier.observe(&first, false));
+        assert!(!barrier.created);
+        assert!(!barrier.removed);
+        assert!(barrier.observe(&second, true));
+        assert!(barrier.created);
+        barrier.complete_create_fence();
+
+        assert!(!barrier.owned.contains(&first));
+        assert!(barrier.owned.contains(&second));
+        assert!(barrier.retired.is_empty());
     }
 }

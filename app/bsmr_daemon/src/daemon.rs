@@ -27,6 +27,8 @@ use bpfjailer_client_rs::SOCK_PATHS as BPFJAILER_SOCK_PATHS;
 use bsmr_cli_proto::DaemonProcessInfo;
 use bsmr_client_ctx::daemon_constraints::gen_daemon_constraints;
 use bsmr_client_ctx::version::BsmrVersion;
+use bsmr_common::checkout_views::CheckoutViewPolicy;
+use bsmr_common::checkout_views::CheckoutViews;
 use bsmr_common::daemon_connection::ConnectionType;
 use bsmr_common::daemon_dir::DaemonDir;
 use bsmr_common::init::DaemonStartupConfig;
@@ -376,6 +378,26 @@ impl DaemonCommand {
                 .expect("failed to set gflag --cgroup2_reader_update_interval_ms");
             }
         }
+
+        let checkout_views = &server_init_ctx.daemon_startup_config;
+        let _checkout_view_lease = if let Some(root) = &checkout_views.checkout_view_dir {
+            let views = CheckoutViews::at(root.clone())?;
+            let policy = CheckoutViewPolicy::for_root(
+                root,
+                checkout_views.checkout_view_max_bytes,
+                checkout_views.checkout_view_max_age_secs,
+            )?;
+            let lease = views.prepare(paths.project_root().root())?;
+            let collection = views.collect(policy)?;
+            tracing::info!(
+                removed_views = collection.removed_views,
+                removed_bytes = collection.removed_bytes,
+                "collected inactive checkout output views"
+            );
+            Some(lease)
+        } else {
+            None
+        };
 
         // Unfortunately, bsmr-out doesn't really have a well-defined place/time at which it creates
         // the bsmr-out dir, instead just creating it whenever it first wants to write something to
