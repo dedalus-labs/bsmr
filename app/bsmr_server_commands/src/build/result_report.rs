@@ -143,6 +143,7 @@ impl<'a> ResultReporter<'a> {
             let ProviderArtifacts {
                 values,
                 provider_type,
+                ..
             } = output;
 
             if !self.options.return_outputs && !matches!(provider_type, BuildProviderType::Run) {

@@ -17,6 +17,7 @@
 use std::collections::BTreeMap;
 use std::collections::BTreeSet;
 use std::collections::HashMap;
+use std::collections::HashSet;
 use std::fmt::Debug;
 use std::fmt::Formatter;
 use std::future::Future;
@@ -26,6 +27,7 @@ use std::time::Duration;
 use std::time::Instant;
 
 use allocative::Allocative;
+use bsmr_artifact::actions::key::ActionKey;
 use bsmr_common::liveliness_observer::LivelinessObserver;
 use bsmr_core::configuration::compatibility::IncompatiblePlatformReason;
 use bsmr_core::configuration::compatibility::MaybeCompatible;
@@ -554,6 +556,8 @@ pub struct BuildConfiguredLabelOptions {
     pub graph_properties: GraphPropertiesOptions,
     /// Resolve the target's run command line (`run_args`). Set only by `bsmr run`;
     pub return_run_args: bool,
+    /// Collect command action digests for the build report.
+    pub collect_action_digests: bool,
 }
 
 pub async fn build_configured_label(
@@ -692,25 +696,34 @@ async fn build_configured_label_inner<'a>(
         .enumerate()
         .map(|(index, (output, provider_type))| {
             let queue_tracker = queue_tracker.dupe();
+            let collect_action_digests =
+                opts.collect_action_digests && provider_type == BuildProviderType::Default;
 
             let fut = ctx.spawned(move |ctx, _cancellations| {
                 async move {
-                    materialize_and_upload_artifact_group(
+                    let values = materialize_and_upload_artifact_group(
                         ctx,
                         &output,
                         materialization_and_upload,
                         &queue_tracker,
                     )
-                    .await
+                    .await?;
+                    let action_digests = if collect_action_digests {
+                        collect_action_digests_for_artifacts(ctx, &values).await?
+                    } else {
+                        HashMap::new()
+                    };
+                    bsmr_error::Ok((values, action_digests))
                 }
                 .boxed()
             });
 
             Either::Left(fut.map(move |v| {
                 let res = match v {
-                    Ok(values) => Ok(ProviderArtifacts {
+                    Ok((values, action_digests)) => Ok(ProviderArtifacts {
                         values,
                         provider_type,
+                        action_digests,
                     }),
                     Err(e) => Err(e),
                 };
@@ -790,10 +803,38 @@ async fn build_configured_label_inner<'a>(
     Ok(())
 }
 
+/// Collects canonical digests for the actions that directly produced a provider's artifacts.
+async fn collect_action_digests_for_artifacts(
+    ctx: &mut dice::DiceComputations<'_>,
+    values: &ArtifactGroupValues,
+) -> bsmr_error::Result<HashMap<ActionKey, String>> {
+    let mut seen = HashSet::new();
+    let mut action_digests = HashMap::new();
+    for (artifact, _) in values.iter() {
+        let Some(action_key) = artifact.action_key() else {
+            continue;
+        };
+        if !seen.insert(action_key.dupe()) {
+            continue;
+        }
+        if let Some(action_digest) = ctx.current_action_digest(action_key)? {
+            action_digests.insert(action_key.dupe(), action_digest);
+            continue;
+        }
+        let outputs =
+            crate::actions::calculation::ActionCalculation::build_action(ctx, action_key).await?;
+        if let Some(action_digest) = outputs.action_digest() {
+            action_digests.insert(action_key.dupe(), action_digest.to_owned());
+        }
+    }
+    Ok(action_digests)
+}
+
 #[derive(Clone, Allocative)]
 pub struct ProviderArtifacts {
     pub values: ArtifactGroupValues,
     pub provider_type: BuildProviderType,
+    pub action_digests: HashMap<ActionKey, String>,
 }
 
 // what type of artifacts to build based on the provider it came from
@@ -813,6 +854,7 @@ impl Debug for ProviderArtifacts {
         f.debug_struct("ProviderArtifacts")
             .field("values", &self.values.iter().collect::<Vec<_>>())
             .field("provider_type", &self.provider_type)
+            .field("action_digests", &self.action_digests)
             .finish()
     }
 }

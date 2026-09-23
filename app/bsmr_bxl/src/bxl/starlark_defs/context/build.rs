@@ -233,6 +233,7 @@ pub(crate) fn build<'v>(
                                             graph_properties: Default::default(),
                                             // bxl does not need the build result's RunInfo command line.
                                             return_run_args: false,
+                                            collect_action_digests: false,
                                         },
                                         None, // TODO: support timeouts?
                                     )
