@@ -537,7 +537,7 @@ impl RunAction {
         })
     }
 
-    /// Get the command line expansion for this RunAction.
+    /// Expand command artifacts and bind execution policy into dependency-file cache identity.
     fn expand_command_line_and_worker<'v>(
         &'v self,
         action_execution_ctx: &dyn ActionExecutionCtx,
@@ -569,6 +569,17 @@ impl RunAction {
             ))?;
 
         let mut command_line_digest_for_dep_files = ExpandedCommandLineFingerprinter::new();
+        for (name, value) in action_execution_ctx
+            .re_platform()
+            .properties
+            .iter()
+            .map(|property| (&property.name, &property.value))
+            .sorted()
+        {
+            command_line_digest_for_dep_files.push_arg(Cow::Borrowed(name));
+            command_line_digest_for_dep_files.push_arg(Cow::Borrowed(value));
+        }
+        command_line_digest_for_dep_files.push_count();
         let artifact_path_mapping_for_dep_files = DepFilesPlaceholderArtifactPathMapper {};
         values
             .exe
@@ -1229,6 +1240,7 @@ impl RunAction {
             .unwrap_or_default())
     }
 
+    /// Construct a request with explicit environment under isolated execution.
     fn command_execution_request(
         &self,
         ctx: &mut dyn ActionExecutionCtx,
@@ -1243,7 +1255,6 @@ impl RunAction {
             .with_host_sharing_requirements(host_sharing_requirements.into())
             .with_low_pass_filter(self.inner.low_pass_filter)
             .with_outputs_cleanup(!self.inner.no_outputs_cleanup)
-            .with_local_environment_inheritance(EnvironmentInheritance::local_command_exclusions())
             .with_force_full_hybrid_if_capable(self.inner.force_full_hybrid_if_capable)
             .with_unique_input_inodes(self.inner.unique_input_inodes)
             .with_remote_execution_dependencies(self.inner.remote_execution_dependencies.to_vec())
@@ -1253,6 +1264,12 @@ impl RunAction {
             )
             .with_meta_internal_extra_params(self.inner.meta_internal_extra_params.clone())
             .with_outputs_for_error_handler(outputs_for_error_handler);
+
+        if !ctx.run_action_knobs().sandboxed {
+            req = req.with_local_environment_inheritance(
+                EnvironmentInheritance::local_command_exclusions(),
+            );
+        }
 
         if let Some(timeout) = self.inner.timeout {
             req = req.with_timeout(timeout);
