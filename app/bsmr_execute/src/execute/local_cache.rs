@@ -851,6 +851,7 @@ fn io_error(
 
 #[cfg(test)]
 mod tests {
+    use std::collections::HashMap;
     use std::fs;
     use std::fs::File;
     use std::fs::FileTimes;
@@ -871,6 +872,8 @@ mod tests {
     use super::LocalDigest;
     use super::LocalOutputDirectory;
     use super::LocalOutputFile;
+    use super::flight::action_lock_path;
+    use super::scaled_cache_budget;
     use crate::digest::CasDigestToReExt;
     use crate::digest_config::DigestConfig;
     use crate::execute::action_digest::ActionDigest;
@@ -898,6 +901,19 @@ mod tests {
             ..Default::default()
         };
         (temporary, cache, digest_config, action, output, result)
+    }
+
+    #[test]
+    fn action_cache_budget_scales_within_fixed_bounds() {
+        assert_eq!(
+            scaled_cache_budget(20 * 1024 * 1024 * 1024),
+            10 * 1024 * 1024 * 1024
+        );
+        assert_eq!(
+            scaled_cache_budget(500 * 1024 * 1024 * 1024),
+            50 * 1024 * 1024 * 1024
+        );
+        assert_eq!(scaled_cache_budget(u64::MAX), 100 * 1024 * 1024 * 1024);
     }
 
     #[test]
@@ -1013,6 +1029,39 @@ mod tests {
         drop(pin);
         let collected = cache.collect(0, false, digest_config)?;
         assert_eq!(collected.removed_action_results, 1);
+        assert_eq!(collected.removed_blobs, 1);
+        Ok(())
+    }
+
+    #[test]
+    fn invariant_same_flight_shard_actions_are_collected_together() -> bsmr_error::Result<()> {
+        let (_temporary, cache, digest_config, _action, output, result) = fixture();
+        let mut shards = HashMap::new();
+        let (first_value, second_value) = (0_u64..10_000)
+            .find_map(|value| {
+                let action = ActionDigest::from_content(
+                    &value.to_le_bytes(),
+                    digest_config.cas_digest_config(),
+                );
+                let shard = action_lock_path(&cache.root, &cache.action_path(&action));
+                shards.insert(shard, value).map(|first| (first, value))
+            })
+            .expect("4096 shards must collide across 10000 actions");
+        let first = ActionDigest::from_content(
+            &first_value.to_le_bytes(),
+            digest_config.cas_digest_config(),
+        );
+        let second = ActionDigest::from_content(
+            &second_value.to_le_bytes(),
+            digest_config.cas_digest_config(),
+        );
+        cache.publish_bytes(&output, b"cached output", digest_config)?;
+        cache.publish_action_result(&first, &result)?;
+        cache.publish_action_result(&second, &result)?;
+
+        let collected = cache.collect(0, false, digest_config)?;
+
+        assert_eq!(collected.removed_action_results, 2);
         assert_eq!(collected.removed_blobs, 1);
         Ok(())
     }
