@@ -250,11 +250,8 @@ impl Unit {
         } else {
             self.target.crate_types == self.target.kind
         };
-        if self.package_links.is_some() || !crate_types_match {
-            return Err(unsupported(
-                &self.package_name,
-                "native links or additional crate types",
-            ));
+        if !crate_types_match {
+            return Err(unsupported(&self.package_name, "additional crate types"));
         }
         match self.mode {
             Mode::Build if library => Ok("rust_library"),
