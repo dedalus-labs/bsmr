@@ -18,6 +18,7 @@ INTEGRATION = '''
 fn declared_inputs() {
     assert_eq!(value::number(), 9);
     assert_eq!(std::fs::read_to_string("value.txt").unwrap(), "fixture");
+    assert_eq!(std::fs::read_to_string("../value/fixture.txt").unwrap(), "dependency");
     let manifest = std::path::Path::new(env!("CARGO_MANIFEST_DIR"));
     assert!(manifest.is_absolute());
     assert!(manifest.join("tests/cli.rs").ends_with(file!()), "{}", file!());
@@ -39,7 +40,7 @@ fn main() {
 '''
 
 
-def initialize(project: Path, binary: str, runtime: Path | None) -> None:
+def initialize(project: Path, binary: str, runtime: Path | None, package: str) -> None:
     """Create one normal binary and two test entrypoints sharing a dev feature."""
     files = {
         'Cargo.toml': '[workspace]\nmembers=["app", "value"]\nresolver="2"\n',
@@ -62,7 +63,20 @@ value={path="../value",features=["testing"]}
         'app/value.txt': 'fixture',
         'value/Cargo.toml': '[package]\nname="value"\nversion="0.1.0"\nedition="2024"\n[features]\ntesting=[]\n',
         'value/src/lib.rs': 'pub fn number()->u32 { if cfg!(feature="testing") {9} else {7} }\n',
+        'value/fixture.txt': 'dependency',
     }
+    if runtime is not None:
+        files['app/build.rs'] = 'fn main() { std::fs::write("generated.txt", "generated").unwrap(); }\n'
+        files['app/generated.txt'] = 'stale'
+        files['app/tests/cli.rs'] = files['app/tests/cli.rs'].replace(
+            'fn declared_inputs() {',
+            'fn declared_inputs() { assert_eq!(std::fs::read_to_string("generated.txt").unwrap(), "generated");',
+        )
+    if not package:
+        manifest = files.pop('app/Cargo.toml').replace('path="../value"', 'path="value"')
+        files['Cargo.toml'] = manifest + '\n[workspace]\nmembers=["value"]\nresolver="2"\n'
+        files = {name.removeprefix('app/'): content for name, content in files.items()}
+        files['tests/cli.rs'] = files['tests/cli.rs'].replace('../value/', 'value/')
     for name, content in files.items():
         destination = project / name
         destination.parent.mkdir(parents=True, exist_ok=True)
@@ -77,9 +91,9 @@ value={path="../value",features=["testing"]}
         )
 
 
-def ordinary(project: Path, binary: str, execution: tuple[str, ...]) -> None:
+def ordinary(project: Path, binary: str, execution: tuple[str, ...], target: str) -> None:
     """The normal binary must not inherit the test graph's dependency features."""
-    result = run(project, binary, 'build', 'app', *execution, '--show-full-json-output')
+    result = run(project, binary, 'build', target, *execution, '--show-full-json-output')
     assert result.returncode == 0, result.stderr
     executable = next(iter(json.loads(result.stdout).values()))
     output = run(project, executable)
@@ -87,21 +101,33 @@ def ordinary(project: Path, binary: str, execution: tuple[str, ...]) -> None:
     assert output.stdout.strip() == '7', output.stdout
 
 
-def qualify(project: Path, binary: str, execution: tuple[str, ...]) -> None:
+def qualify(project: Path, binary: str, execution: tuple[str, ...], package: str) -> None:
     """Run the same tests with Cargo and BSMR, including observable failures."""
+    target = package if package else '//:app'
+    prefix = f'{package}:' if package else '//:'
     reference = run(project, 'cargo', 'test', '--locked', '--offline', '-p', 'app')
     assert reference.returncode == 0, reference.stderr
     assert 'CUSTOM_HARNESS_RAN' in reference.stdout, reference.stdout
-    ordinary(project, binary, execution)
-    for target in ['app:__bsmr_test_test_cli', 'app:__bsmr_test_test_custom', 'app']:
-        result = run(project, binary, 'test', target, *execution, '--console', 'simple')
+    if (project / package / 'build.rs').exists():
+        (project / package / 'generated.txt').write_text('stale')
+    ordinary(project, binary, execution, target)
+    for selected in [prefix + '__bsmr_test_test_cli', prefix + '__bsmr_test_test_custom', target]:
+        result = run(project, binary, 'test', selected, *execution, '--console', 'simple')
         assert result.returncode == 0, result.stderr
         assert 'NO TESTS RAN' not in result.stderr, result.stderr
-    ordinary(project, binary, execution)
-    (project / 'app/tests/custom.rs').write_text('fn main() { panic!("CUSTOM_FAILURE"); }')
-    result = run(project, binary, 'test', 'app', *execution, '--console', 'simple')
+    ordinary(project, binary, execution, target)
+    fixture = project / 'value/fixture.txt'
+    fixture.write_text('changed')
+    changed = run(project, binary, 'test', prefix + '__bsmr_test_test_cli', *execution, '--console', 'simple')
+    assert changed.returncode != 0, 'dependency fixture edits must invalidate the test view'
+    assert '"changed"' in changed.stderr, changed.stderr
+    fixture.write_text('dependency')
+    (project / package / 'tests/custom.rs').write_text('fn main() { panic!("CUSTOM_FAILURE"); }')
+    result = run(project, binary, 'test', target, *execution, '--console', 'simple')
     assert result.returncode != 0, 'package selection must execute its custom harness'
     assert 'CUSTOM_FAILURE' in result.stderr, result.stderr
+    if (project / package / 'build.rs').exists():
+        assert (project / package / 'generated.txt').read_text() == 'stale'
     print('ok: Cargo test features, native binaries, declared files, custom harnesses and failures')
 
 
@@ -113,15 +139,16 @@ def main() -> None:
     args = parser.parse_args()
     binary = str(args.binary.resolve(strict=True))
     with tempfile.TemporaryDirectory(prefix='bsmr-tests-') as temporary:
-        project = Path(temporary) / 'project'
-        project.mkdir()
-        try:
-            initialize(project, binary, args.runtime.resolve(strict=True) if args.runtime else None)
-            qualify(project, binary, ('--sandbox',) if args.runtime else ())
-        finally:
-            if (project / '.bsmr').exists():
-                stopped = run(project, binary, 'kill')
-                assert stopped.returncode == 0, stopped.stderr
+        for package in ['app', '']:
+            project = Path(temporary) / ('member' if package else 'root')
+            project.mkdir()
+            try:
+                initialize(project, binary, args.runtime.resolve(strict=True) if args.runtime else None, package)
+                qualify(project, binary, ('--sandbox',) if args.runtime else (), package)
+            finally:
+                if (project / '.bsmr').exists():
+                    stopped = run(project, binary, 'kill')
+                    assert stopped.returncode == 0, stopped.stderr
 
 
 if __name__ == '__main__':
