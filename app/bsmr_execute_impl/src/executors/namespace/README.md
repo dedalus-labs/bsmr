@@ -124,6 +124,11 @@ python3 test/rust/scripts.py target/debug/bsmr /absolute/path/runtime.json
 
 ## Verification
 
+Sandboxed tests receive only their declared environment and the runtime's
+standard paths. The test orchestrator does not request host-environment
+inheritance for sandbox execution. Ordinary local tests retain their existing
+host allowlist. The namespace regression exercises the real test runner.
+
 ```console
 cargo build --locked -p bsmr_execute_impl
 cargo test --locked -p bsmr_execute_impl executors::namespace::runtime::tests
