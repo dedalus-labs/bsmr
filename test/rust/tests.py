@@ -20,6 +20,7 @@ fn declared_inputs() {
     assert_eq!(std::fs::read_to_string("value.txt").unwrap(), "fixture");
     let manifest = std::path::Path::new(env!("CARGO_MANIFEST_DIR"));
     assert!(manifest.is_absolute());
+    assert!(manifest.join("tests/cli.rs").ends_with(file!()), "{}", file!());
     assert_eq!(std::fs::read_to_string(manifest.join("value.txt")).unwrap(), "fixture");
     let binary = std::path::Path::new(env!("CARGO_BIN_EXE_app"));
     assert!(binary.is_absolute());
