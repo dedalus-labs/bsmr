@@ -43,6 +43,9 @@ impl Renderer<'_> {
             }
         }
         environment.insert("NUM_JOBS".into(), "1".into());
+        if let Some(linker) = &unit.linker {
+            environment.insert("RUSTC_LINKER".into(), linker.to_string_lossy().into_owned());
+        }
         environment.insert(
             "CARGO_ENCODED_RUSTFLAGS".into(),
             unit.rustflags.join("\x1f"),

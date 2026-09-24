@@ -80,6 +80,11 @@ def main() -> None:
             assert result.returncode != 0 and "unsupported compiler flag" in result.stderr
             if flags[0] == "-C":
                 assert flags[1] in result.stderr and "Compile" in result.stderr
+        flags = ["-C", "link-arg=-fuse-ld=experimental"]
+        config.write_text('[target.\'cfg(unix)\']\nlinker="clang"\nrustflags=' + json.dumps(flags) + '\n')
+        result = subprocess.run([binary], input=json.dumps(request), env=env, text=True, capture_output=True, check=True, timeout=30)
+        units = json.loads(result.stdout)["units"]
+        assert all(unit["linker"] == "clang" and unit["rustflags"] == flags for unit in units)
     print("ok: configured roots, features, dev dependencies, and lock preservation without compilation")
 
 
