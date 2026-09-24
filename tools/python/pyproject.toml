@@ -1,0 +1,30 @@
+# ===----------------------------------------------------------------------===
+# Copyright (c) 2026 Dedalus Labs, Inc. and its contributors
+# SPDX-License-Identifier: Apache-2.0
+# ===----------------------------------------------------------------------===
+
+# Pin developer checks without changing the build runtime's Python version.
+
+[project]
+name = "bsmr-python-style"
+version = "0.0.0"
+requires-python = ">=3.14"
+dependencies = ["ruff==0.16.5", "ty==0.0.79"]
+
+[tool.uv]
+package = false
+
+[tool.ruff]
+required-version = "==0.16.5"
+line-length = 100
+target-version = "py312"
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+docstring-code-format = true
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "UP", "B", "SIM", "RUF", "ANN", "RET", "PT018"]
+# The guide requires a named return value for inspection in a debugger.
+ignore = ["RET504"]
