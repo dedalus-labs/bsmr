@@ -466,7 +466,7 @@ def rust_compile(
     incremental_enabled: bool,
     extra_link_args: list[typing.Any] = [],
     predeclared_output: Artifact | None = None,
-    extra_flags: list[str | ResolvedStringWithMacros | Artifact] = [],
+    extra_flags: list[str | ResolvedStringWithMacros | Artifact | cmd_args] = [],
     allow_cache_upload: bool = False,
     # Setting this to true causes the diagnostic outputs that are generated
     # from this action to always be successfully generated, even if

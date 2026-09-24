@@ -174,6 +174,9 @@ checks generated paths, cache restoration across checkouts, and source edits.
 dev dependencies and the binaries exposed through `CARGO_BIN_EXE_<name>`.
 Tests run from their declared package source directory. Artifact-backed
 environment paths remain absolute when a test changes its working directory.
+When that directory is a mapped source root, `file!()` paths are relative to it.
+Snapshot readers can locate the checked-in files without exposing the generated
+target directory or making source inputs writable.
 Custom harnesses use their own `main` with Cargo's `cfg(test)` setting.
 
 `python3 test/rust/tests.py /path/to/bsmr` compares these contracts with Cargo.

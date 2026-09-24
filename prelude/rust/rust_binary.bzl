@@ -141,7 +141,7 @@ def _strategy_params(ctx: AnalysisContext, compile_ctx: CompileContext) -> dict[
     return params
 
 def _rust_binary_common(
-    ctx: AnalysisContext, compile_ctx: CompileContext, default_roots: list[str], extra_flags: list[str], allow_cache_upload: bool
+    ctx: AnalysisContext, compile_ctx: CompileContext, default_roots: list[str], extra_flags: list[str | cmd_args], allow_cache_upload: bool
 ) -> (list[Provider], cmd_args):
     toolchain_info = compile_ctx.toolchain_info
 
@@ -566,6 +566,17 @@ def rust_test_impl(ctx: AnalysisContext) -> list[Provider]:
     extra_flags = toolchain_info.rustc_test_flags or []
     if ctx.attrs.framework:
         extra_flags += ["--test"]
+    if ctx.attrs.run_cwd in ctx.attrs.mapped_srcs:
+        # Keep file!() relative to declared test sources so snapshots resolve.
+        extra_flags += [cmd_args(
+            "--remap-path-prefix=",
+            compile_ctx.symlinked_srcs,
+            compile_ctx.path_sep,
+            ctx.attrs.mapped_srcs[ctx.attrs.run_cwd],
+            compile_ctx.path_sep,
+            "=",
+            delimiter = "",
+        )]
 
     providers, args = _rust_binary_common(
         ctx = ctx,
