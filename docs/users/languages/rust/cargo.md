@@ -174,6 +174,10 @@ checks generated paths, cache restoration across checkouts, and source edits.
 dev dependencies and the binaries exposed through `CARGO_BIN_EXE_<name>`.
 Tests run from their declared package source directory. Artifact-backed
 environment paths remain absolute when a test changes its working directory.
+Local packages in the selected dependency graph retain their workspace layout
+in a declared test resource. A test can read a sibling package's fixtures through
+the same relative path used by Cargo. The primary package retains source changes
+produced by its build script. The view remains read-only and tracks fixture edits.
 When that directory is a mapped source root, `file!()` paths are relative to it.
 Snapshot readers can locate the checked-in files without exposing the generated
 target directory or making source inputs writable.

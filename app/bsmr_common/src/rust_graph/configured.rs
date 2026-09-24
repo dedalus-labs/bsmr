@@ -21,6 +21,7 @@ use super::units::DebugInfo;
 use super::units::Graph;
 use super::units::Lto;
 use super::units::Mode;
+use super::units::SourceArtifact;
 use super::units::Strip;
 use super::units::StripSetting;
 use super::units::Unit;
@@ -93,6 +94,16 @@ struct Dependencies<'a> {
     binaries: BTreeMap<String, String>,
 }
 
+/// One declared workspace view and the package projected from it.
+struct TestSources {
+    /// Native rule which assembles the selected workspace package inputs.
+    rule: String,
+    /// Complete view retained as a test resource.
+    root: String,
+    /// Package directory used for compilation and test execution.
+    package: String,
+}
+
 impl Renderer<'_> {
     /// Keep each unit's compiler flags, environment and dependency aliases together.
     fn unit(&self, unit: &Unit, index: usize) -> Result<String, RustGraphError> {
@@ -104,7 +115,7 @@ impl Renderer<'_> {
         let (sources, source) = self.sources(unit)?;
         let dependencies = self.dependencies(unit)?;
         let mut artifact_env = dependencies.binaries;
-        let sources = match dependencies.script {
+        let mut sources = match dependencies.script {
             Some(script) => format!(":unit_{script}[cwd]"),
             None => sources,
         };
@@ -117,7 +128,12 @@ impl Renderer<'_> {
                 format!("$(location :unit_{script}[out_dir])"),
             );
         }
+        let mut declarations = String::new();
         if rule == "rust_test" {
+            let view = self.test_sources(unit, index, &sources)?;
+            declarations = view.rule;
+            sources = view.package;
+            output.push_str(&format!(", resources = [{}]", json(&view.root)?));
             output.push_str(if unit.harness {
                 ", framework = True"
             } else {
@@ -136,24 +152,9 @@ impl Renderer<'_> {
             .iter()
             .any(|root| self.graph.units[*root].package_id == unit.package_id);
         let environment = unit.environment(primary);
-        let mut flags = profile_flags(unit)?;
-        if matches!(unit.mode, Mode::Test) && !unit.harness {
-            flags.push("--cfg=test".into());
-        }
-        flags.extend(unit.package_lint_flags.iter().cloned());
-        flags.extend(unit.rustflags.iter().cloned());
-        let declared = unit
-            .declared_features
-            .iter()
-            .map(json)
-            .collect::<Result<Vec<_>, _>>()?
-            .join(",");
-        flags.extend([
-            "--check-cfg".into(),
-            format!("cfg(feature, values({declared}))"),
-        ]);
+        let flags = unit.flags()?;
         Ok(format!(
-            "{rule}(name = \"unit_{index}\", crate = {}, crate_root = {}, edition = {}, mapped_srcs = {{{}: \"crate\"}}, named_deps = {}, features = {}, literal_rustc_flags = {}, literal_env = {}, verify_inputs = True, _rust_toolchain = {}, visibility = [\"PUBLIC\"]{output}{generated})\n",
+            "{declarations}{rule}(name = \"unit_{index}\", crate = {}, crate_root = {}, edition = {}, mapped_srcs = {{{}: \"crate\"}}, named_deps = {}, features = {}, literal_rustc_flags = {}, literal_env = {}, verify_inputs = True, _rust_toolchain = {}, visibility = [\"PUBLIC\"]{output}{generated})\n",
             json(&unit.target.name.replace('-', "_"))?,
             json(&source)?,
             json(&unit.target.edition)?,
@@ -249,9 +250,72 @@ impl Renderer<'_> {
         }
         Ok(dependencies)
     }
+
+    /// Retain local dependency fixtures while preserving the primary script's source output.
+    fn test_sources(
+        &self,
+        unit: &Unit,
+        index: usize,
+        primary: &str,
+    ) -> Result<TestSources, RustGraphError> {
+        let mut packages = BTreeMap::new();
+        for dependency in &self.graph.units {
+            if matches!(&dependency.source.artifact, SourceArtifact::Workspace) {
+                let path = dependency
+                    .source
+                    .root
+                    .strip_prefix(&self.graph.workspace_root)
+                    .map_err(|_| RustGraphError::Outside(dependency.source.root.clone()))?;
+                packages.insert(
+                    path.to_string_lossy().replace('\\', "/"),
+                    self.sources[dependency.package_id.as_str()].as_str(),
+                );
+            }
+        }
+        let path = unit
+            .source
+            .root
+            .strip_prefix(&self.graph.workspace_root)
+            .map_err(|_| RustGraphError::Outside(unit.source.root.clone()))?;
+        let path = path.to_string_lossy().replace('\\', "/");
+        packages.insert(path.clone(), primary);
+        let name = format!("test_sources_{index}");
+        Ok(TestSources {
+            rule: format!(
+                "load(\"@prelude//rust:cargo_test_sources.bzl\", \"cargo_test_sources\")\n\
+                 cargo_test_sources(name = {}, packages = {}, package = {})\n",
+                json(&name)?,
+                json(&packages)?,
+                json(&path)?,
+            ),
+            root: format!(":{name}"),
+            package: format!(":{name}[package]"),
+        })
+    }
 }
 
 impl Unit {
+    /// Preserve profile, package lint and project flag order for one compiler action.
+    fn flags(&self) -> Result<Vec<String>, RustGraphError> {
+        let mut flags = profile_flags(self)?;
+        if matches!(self.mode, Mode::Test) && !self.harness {
+            flags.push("--cfg=test".into());
+        }
+        flags.extend(self.package_lint_flags.iter().cloned());
+        flags.extend(self.rustflags.iter().cloned());
+        let declared = self
+            .declared_features
+            .iter()
+            .map(json)
+            .collect::<Result<Vec<_>, _>>()?
+            .join(",");
+        flags.extend([
+            "--check-cfg".into(),
+            format!("cfg(feature, values({declared}))"),
+        ]);
+        Ok(flags)
+    }
+
     /// Preserve native library providers and the Cargo library file name.
     fn output(&self, rule: &str) -> Result<String, RustGraphError> {
         let mut output = if self.target.kind == ["proc-macro"] {
