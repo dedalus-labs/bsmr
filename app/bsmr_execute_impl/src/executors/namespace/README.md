@@ -54,7 +54,10 @@ to 50,000 entries. The loader creates mount directories at `/workspace`, `/tmp`,
 
 The snapshot lasts until its `Runtime` owner is dropped. Each action receives
 the runtime as its read-only root and a verified copy of its declared inputs
-at `/workspace`. The executor mounts private writable directories at output
+at `/workspace`. Input files stream directly into a private tree through the
+same digest verifier used by VM transport. There is no intermediate tar archive.
+Executable modes and modification times retain the transport's normalized values.
+The executor mounts private writable directories at output
 parents and the declared scratch path. Input files and trees beneath these
 parents receive read-only mounts. Input and output artifacts cannot overlap.
 An input symlink that would lie in a writable directory is rejected.
@@ -80,9 +83,11 @@ that escape a declared output root are rejected before import.
 
 The existing local scheduler and optional cgroup controls remain responsible
 for resource allocation. This backend does not impose its own aggregate CPU,
-memory, process-count or live disk quota. Input archives and imported output
-trees have the existing 1 GiB byte limit, 100,000-node limit and 128-component
-path limit. Output validation runs after execution and does not cap live writes.
+memory, process-count or live disk quota. Namespace inputs retain the
+100,000-node and 128-component path limits, but do not use the VM input device's
+1 GiB byte ceiling. Input storage comes from the worker's filesystem and a
+failed transfer prevents execution. Imported outputs retain the 1 GiB limit.
+Output validation runs after execution and does not cap live writes.
 
 Runtime digests and canonical execution properties participate in DICE reuse,
 local dependency-file reuse and action-cache identity. Policy semantic changes

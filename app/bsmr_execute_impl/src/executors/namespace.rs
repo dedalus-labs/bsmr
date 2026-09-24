@@ -5,11 +5,11 @@
 
 // Stages declared actions for execution in a verified Linux namespace runtime.
 
+mod inputs;
 pub(crate) mod runtime;
 
 use std::ffi::OsString;
 use std::fs;
-use std::io::Seek;
 use std::path::Path;
 use std::path::PathBuf;
 
@@ -111,17 +111,13 @@ impl NamespaceExecutor {
             .tempdir_in(staging)?;
         let inputs = directory.path().join("inputs");
         let outputs = directory.path().join("outputs");
-        fs::create_dir(&inputs)?;
         fs::create_dir(&outputs)?;
-        let mut archive = tempfile::tempfile()?;
-        firecracker::write_input_archive(
-            &mut archive,
+        inputs::stage(
             project,
+            &inputs,
             request.paths().input_directory(),
             digest_config,
         )?;
-        archive.rewind()?;
-        tar::Archive::new(archive).unpack(&inputs)?;
 
         let mut parents = Vec::<PathBuf>::new();
         let scratch = action.environment.get("BSMR_SCRATCH_PATH").map(Path::new);
