@@ -59,7 +59,14 @@ pub(super) fn render(
         execution,
     };
     let mut rules = sources.rules;
+    rules.push_str("load(\"@prelude//toolchains:cxx.bzl\", \"system_cxx_toolchain\")\n");
     for (index, unit) in graph.units.iter().enumerate() {
+        if let Some(linker) = &unit.linker {
+            rules.push_str(&format!(
+                "system_cxx_toolchain(name = \"linker_{index}\", linker = {})\n",
+                json(linker)?,
+            ));
+        }
         rules.push_str(&renderer.unit(unit, index)?);
     }
     rules.push_str(&format!(
@@ -111,7 +118,7 @@ impl Renderer<'_> {
         if matches!(unit.mode, Mode::RunCustomBuild) {
             return self.script(unit, index);
         }
-        let mut output = unit.output(rule)?;
+        let mut output = unit.output(rule, index)?;
         let (sources, source) = self.sources(unit)?;
         let dependencies = self.dependencies(unit)?;
         let mut artifact_env = dependencies.binaries;
@@ -317,7 +324,7 @@ impl Unit {
     }
 
     /// Preserve native library providers and the Cargo library file name.
-    fn output(&self, rule: &str) -> Result<String, RustGraphError> {
+    fn output(&self, rule: &str, index: usize) -> Result<String, RustGraphError> {
         let mut output = if self.target.kind == ["proc-macro"] {
             ", proc_macro = True, default_output = \"library\""
         } else if rule == "rust_library" {
@@ -326,6 +333,9 @@ impl Unit {
             ""
         }
         .to_owned();
+        if self.linker.is_some() {
+            output.push_str(&format!(", _cxx_toolchain = \":linker_{index}\""));
+        }
         if rule == "rust_library" {
             output.push_str(&format!(
                 ", soname = {}",
@@ -339,10 +349,16 @@ impl Unit {
     fn rule(&self, execution: CodeExecution) -> Result<&'static str, RustGraphError> {
         let macro_target = self.target.kind == ["proc-macro"];
         let script = self.target.kind == ["custom-build"];
-        if (macro_target || script) && matches!(execution, CodeExecution::CompilerOnly) {
+        let linker = self.linker.is_some()
+            || self.rustflags.iter().any(|flag| {
+                ["link-arg=", "-Clink-arg=", "--codegen=link-arg="]
+                    .iter()
+                    .any(|prefix| flag.starts_with(prefix))
+            });
+        if (macro_target || script || linker) && matches!(execution, CodeExecution::CompilerOnly) {
             return Err(unsupported(
                 &self.package_name,
-                "package code requires a verified declared-input executor",
+                "package code or configured linking requires a verified declared-input executor",
             ));
         }
         let library = libraries::is_library(&self.target.kind) || macro_target;
@@ -356,10 +372,10 @@ impl Unit {
                 ),
             ));
         }
-        if self.platform.is_some() || self.linker.is_some() {
+        if self.platform.is_some() {
             return Err(unsupported(
                 &self.package_name,
-                "configured target or linker requires qualified native execution",
+                "configured target requires qualified native execution",
             ));
         }
         let crate_types_match = if script || integration {
@@ -533,5 +549,30 @@ mod tests {
                 .unwrap()
                 .contains("proc_macro = True")
         );
+    }
+
+    #[test]
+    fn configured_linking_requires_declared_tools() {
+        let mut graph: serde_json::Value = serde_json::from_slice(GRAPH).unwrap();
+        graph["units"][0]["rustflags"] =
+            serde_json::json!(["-C", "link-arg=-fuse-ld=experimental"]);
+        for linker in [
+            serde_json::json!("experimental-driver"),
+            serde_json::Value::Null,
+        ] {
+            graph["units"][0]["linker"] = linker;
+            let bytes = serde_json::to_vec(&graph).unwrap();
+            let render = |execution| {
+                render(
+                    &bytes,
+                    Path::new("/workspace"),
+                    "root",
+                    "root//:rust",
+                    execution,
+                )
+            };
+            assert!(render(CodeExecution::CompilerOnly).is_err());
+            assert!(render(CodeExecution::DeclaredInputs).is_ok());
+        }
     }
 }

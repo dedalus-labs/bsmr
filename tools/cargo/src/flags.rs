@@ -38,7 +38,7 @@ const SCALAR_CODEGEN: &[&str] = &[
     "overflow-checks",
 ];
 /// Probes inspect these settings without linking or executing a compiler extension.
-const PROBE_CODEGEN: &[&str] = &["link-arg", "target-feature"];
+const PROBE_CODEGEN: &[&str] = &["target-feature"];
 
 /// Compiler probes never link. Native compilation needs declared linker inputs.
 #[derive(Clone, Copy, Debug, PartialEq)]
@@ -51,6 +51,9 @@ pub(crate) enum Phase {
 struct Config {
     /// Cargo expands array and whitespace-separated forms through the same type.
     rustflags: Option<StringList>,
+    /// Cargo resolves the driver separately through its target configuration.
+    #[serde(rename = "linker")]
+    _linker: Option<String>,
 }
 
 /// Reject response files and executable compiler extensions before Cargo probes rustc.
@@ -74,7 +77,7 @@ pub(crate) fn configure(context: &GlobalContext) -> Result<()> {
     Ok(())
 }
 
-/// Admit scalar flags only. File and output overrides must become graph inputs first.
+/// Admit scalar and linker arguments. Native analysis owns linker execution policy.
 pub(crate) fn validate(flags: &[String], phase: Phase) -> Result<()> {
     ensure!(
         flags.iter().all(|flag| !flag.starts_with('@')),
@@ -116,6 +119,7 @@ pub(crate) fn validate(flags: &[String], phase: Phase) -> Result<()> {
                 .next()
                 .expect("split returns the first component");
             if SCALAR_CODEGEN.contains(&key)
+                || key == "link-arg"
                 || (phase == Phase::Probe && PROBE_CODEGEN.contains(&key))
             {
                 continue;

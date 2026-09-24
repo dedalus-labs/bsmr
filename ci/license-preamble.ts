@@ -147,11 +147,14 @@ export function validateSource(source: Source): string | undefined {
 	if (source.provenance === "dedalus") {
 		const style = commentStyle(source.path);
 		const responsibility = header.slice(legal.length + 2).split("\n", 1)[0] ?? "";
-		const prefix = extname(source.path) === ".rs" && responsibility.startsWith("//! ") ? "//! " : style.prefix;
+		const docstring = extname(source.path) === ".py" ? /^[rRuU]?(?:"""|''')/.exec(responsibility)?.[0] : undefined;
+		const prefix = docstring ?? (extname(source.path) === ".rs" && responsibility.startsWith("//! ") ? "//! " : style.prefix);
+		const quote = docstring?.slice(-3);
+		const suffix = quote !== undefined && responsibility.endsWith(quote) ? quote : style.suffix;
 		const description = responsibility
-			.slice(prefix.length, responsibility.length - style.suffix.length)
+			.slice(prefix.length, responsibility.length - suffix.length)
 			.trim();
-		if (!responsibility.startsWith(prefix) || !responsibility.endsWith(style.suffix) || description === "") {
+		if (!responsibility.startsWith(prefix) || !responsibility.endsWith(suffix) || description === "") {
 			return `${source.path}: missing source responsibility`;
 		}
 	}

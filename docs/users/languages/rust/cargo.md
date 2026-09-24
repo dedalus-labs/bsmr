@@ -120,10 +120,29 @@ Generic `rustc-link-arg` directives reach the package's compiler actions through
 the existing argument file. Rustc applies them when linking and ignores them for
 `rlib` compilation. Target-specific linker directives remain unsupported.
 
-Cross compilation and configured linkers
-remain unsupported. These requirements fail before compilation.
-Project compiler flags are limited to cfg values, lints, and scalar optimization
-settings. Response files, compiler extensions, file-based overrides, and Cargo
+Cargo's `target.<triple>.linker` and `target.'cfg(...)'.linker` select the driver.
+`-C link-arg=...` passes arguments unchanged. For example:
+
+```toml title=".cargo/config.toml"
+[target.'cfg(target_os = "linux")']
+linker = "clang"
+rustflags = ["-C", "link-arg=-fuse-ld=wild"]
+```
+
+Configured linking requires the verified namespace runtime. Include the driver,
+linker and their libraries in that pinned runtime. Its content digest enters
+action identity. BSMR preserves `RUSTC_LINKER` for build scripts and uses the
+existing native C++ toolchain for linking. A missing driver or linker fails.
+There is no linker-name allowlist or automatic replacement.
+
+Experimental linkers use the same explicit configuration and do not change the
+default. The [mold Mach-O port](https://github.com/rui314/mold-macho) accepts
+Clang's `--ld-path` selection. Native macOS configured-linker execution remains
+unqualified, as does macOS package-code isolation.
+
+Cross compilation remains unsupported. Project compiler flags otherwise support
+cfg values, lints, and scalar optimization settings.
+Response files, compiler extensions, file-based overrides, and Cargo
 CLI option parity are not implemented. Shared files outside a crate require
 explicitly declared action inputs.
 
@@ -166,6 +185,10 @@ failure, and a custom recipe consuming an inferred executable. It checks
 manifest invalidation, source invalidation, unrelated edits, cache restoration
 in a second checkout, environment isolation, and build-script rejection. It also
 checks that inference leaves the checkout free of generated build files.
+
+`python3 test/rust/linker.py /path/to/bsmr /path/to/runtime.json clang -- -fuse-ld=wild`
+compares the selected driver with Cargo. It checks build-script environment,
+warm reuse, changed linker arguments and missing tools without substitution.
 
 `test/rust/metadata.py` compares metadata visibility and ordering with Cargo. It
 checks generated paths, cache restoration across checkouts, and source edits.
