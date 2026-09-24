@@ -83,6 +83,12 @@ impl Package {
     fn render(&self, path: &str, cell: &str) -> Result<String, RustGraphError> {
         let mut source = sources().to_owned();
         let mut names = Vec::new();
+        let integration_tests: Vec<_> = self
+            .targets
+            .iter()
+            .filter(|target| target.kind == ["test"] && target.test)
+            .map(|target| format!(":__bsmr_test_test_{}", target.name))
+            .collect();
         for target in &self.targets {
             let Some(entrypoint) = target.entrypoint(&self.name)? else {
                 continue;
@@ -90,13 +96,12 @@ impl Package {
             let kind = entrypoint.kind();
             let name = if kind == "lib" { "lib" } else { &target.name };
             let test = format!("__bsmr_test_{kind}_{}", target.name);
-            let tests = if target.test {
-                vec![format!(":{test}")]
-            } else {
-                Vec::new()
-            };
+            let mut tests = integration_tests.clone();
+            if target.test {
+                tests.push(format!(":{test}"));
+            }
             for (mode, alias) in [(Mode::Build, name), (Mode::Test, test.as_str())] {
-                if mode == Mode::Test && !target.test {
+                if (mode == Mode::Test && !target.test) || (mode == Mode::Build && kind == "test") {
                     continue;
                 }
                 let directory = if path.is_empty() {
@@ -116,7 +121,9 @@ impl Package {
                     })?
                 ));
             }
-            names.push((name, tests));
+            if kind != "test" {
+                names.push((name, tests));
+            }
         }
         if let [(actual, tests)] = names.as_slice() {
             let alias = Path::new(path)
@@ -178,6 +185,7 @@ impl CargoTarget {
         let target = match self.kind.as_slice() {
             kinds if libraries::is_library(kinds) => Target::Lib(self.name.clone()),
             [kind] if kind == "bin" => Target::Bin(self.name.clone()),
+            [kind] if kind == "test" => Target::Test(self.name.clone()),
             _ => return Ok(None),
         };
         if self.name.starts_with("__bsmr_") {
@@ -212,5 +220,21 @@ mod tests {
         assert!(app.contains("__bsmr_test_lib_same"));
         assert!(app.contains("__bsmr_test_bin_same"));
         assert!(!app.contains("custom-build"));
+    }
+
+    #[test]
+    fn integration_names_do_not_replace_build_targets() {
+        let metadata = serde_json::json!({"version":1,"workspace_root":"/workspace","packages":[{"name":"app","manifest_path":"/workspace/app/Cargo.toml","targets":[{"name":"app","kind":["bin"],"test":false},{"name":"app","kind":["test"],"test":true}]}]});
+        let rules = render(
+            &serde_json::to_vec(&metadata).unwrap(),
+            Path::new("/workspace"),
+            "root",
+        )
+        .unwrap();
+        let app = &rules["app"];
+        assert!(app.contains("__bsmr_cargo_test_test_app"));
+        assert!(!app.contains("__bsmr_cargo_build_test_app"));
+        assert!(app.contains("tests = [\":__bsmr_test_test_app\"]"));
+        assert_eq!(app.matches("alias(name = \"app\"").count(), 1);
     }
 }

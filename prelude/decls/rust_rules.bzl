@@ -295,6 +295,7 @@ rust_test = prelude_rule(
         | _rust_common_attributes(is_binary = True)
         | _RUST_EXECUTABLE_ATTRIBUTES
         | {
+            "run_cwd": attrs.option(attrs.source(), default = None, doc = "Declared directory used as the test's working directory."),
             "framework": attrs.bool(
                 default = True,
                 doc = """

@@ -35,6 +35,7 @@ impl Mode {
 pub enum Target {
     Lib(String),
     Bin(String),
+    Test(String),
 }
 
 impl Target {
@@ -43,13 +44,14 @@ impl Target {
         match self {
             Self::Lib(_) => "lib",
             Self::Bin(_) => "bin",
+            Self::Test(_) => "test",
         }
     }
 
     /// Return the original Cargo target name without normalizing its punctuation.
     pub fn name(&self) -> &str {
         match self {
-            Self::Lib(name) | Self::Bin(name) => name,
+            Self::Lib(name) | Self::Bin(name) | Self::Test(name) => name,
         }
     }
 
@@ -101,6 +103,7 @@ impl Entry {
         let target = match kind {
             Some("lib") => Target::Lib(name.to_owned()),
             Some("bin") => Target::Bin(name.to_owned()),
+            Some("test") if mode == Mode::Test => Target::Test(name.to_owned()),
             _ => return Err(invalid().into()),
         };
         Ok(Some(Self {
@@ -114,7 +117,9 @@ impl Entry {
     pub fn package_label(&self) -> bsmr_error::Result<PackageLabel> {
         FileName::new(self.target.name())?;
         let leaf = self.target.child_name(self.mode);
-        if self.target.name().is_empty() {
+        if self.target.name().is_empty()
+            || (matches!(self.target, Target::Test(_)) && self.mode != Mode::Test)
+        {
             return Err(EntryError::Invalid(self.package).into());
         }
         FileName::new(&leaf)?;
@@ -157,6 +162,7 @@ mod tests {
             "__bsmr_cargo_check_lib_app",
             "__bsmr_cargo_build_example_app",
             "__bsmr_cargo_test_bin_",
+            "__bsmr_cargo_build_test_integration",
         ] {
             assert!(
                 Entry::parse(PackageLabel::testing_parse(&format!("root//app/{leaf}"))).is_err()
@@ -170,5 +176,20 @@ mod tests {
             };
             assert!(entry.package_label().is_err());
         }
+    }
+
+    #[test]
+    fn integration_tests_have_only_test_entrypoints() {
+        let mut entry = Entry {
+            package: PackageLabel::testing_parse("root//app"),
+            mode: Mode::Test,
+            target: Target::Test("integration_test".into()),
+        };
+        assert_eq!(
+            Entry::parse(entry.package_label().unwrap()).unwrap(),
+            Some(entry.clone())
+        );
+        entry.mode = Mode::Build;
+        assert!(entry.package_label().is_err());
     }
 }

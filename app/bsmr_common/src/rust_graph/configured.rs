@@ -89,6 +89,8 @@ struct Dependencies<'a> {
     crates: BTreeMap<&'a str, String>,
     /// Graph index of this package's script execution, when present.
     script: Option<usize>,
+    /// Executables Cargo builds for integration tests, separate from extern crates.
+    binaries: BTreeMap<String, String>,
 }
 
 impl Renderer<'_> {
@@ -98,29 +100,36 @@ impl Renderer<'_> {
         if matches!(unit.mode, Mode::RunCustomBuild) {
             return self.script(unit, index);
         }
-        let mut output = if unit.target.kind == ["proc-macro"] {
-            ", proc_macro = True, default_output = \"library\""
-        } else if rule == "rust_library" {
-            ", default_output = \"library\""
-        } else {
-            ""
-        }
-        .to_owned();
-        if rule == "rust_library" {
-            output.push_str(&format!(
-                ", soname = {}",
-                json(&format!("lib{}.$(ext)", unit.target.name.replace('-', "_")))?,
-            ));
-        }
+        let mut output = unit.output(rule)?;
         let (sources, source) = self.sources(unit)?;
         let dependencies = self.dependencies(unit)?;
+        let mut artifact_env = dependencies.binaries;
         let sources = match dependencies.script {
             Some(script) => format!(":unit_{script}[cwd]"),
             None => sources,
         };
         let generated = dependencies.script.map(|script| format!(
-            ", srcs = [\":unit_{script}[out_dir]\"], rustc_flags = [\"@$(location :unit_{script}[rustc_flags])\"], env = {{\"OUT_DIR\": \"$(location :unit_{script}[out_dir])\"}}"
+            ", srcs = [\":unit_{script}[out_dir]\"], rustc_flags = [\"@$(location :unit_{script}[rustc_flags])\"]"
         )).unwrap_or_default();
+        if let Some(script) = dependencies.script {
+            artifact_env.insert(
+                "OUT_DIR".into(),
+                format!("$(location :unit_{script}[out_dir])"),
+            );
+        }
+        if rule == "rust_test" {
+            output.push_str(if unit.harness {
+                ", framework = True"
+            } else {
+                ", framework = False"
+            });
+            artifact_env.insert(
+                "CARGO_MANIFEST_DIR".into(),
+                format!("$(location {sources})"),
+            );
+            output.push_str(&format!(", run_cwd = {}", json(&sources)?));
+        }
+        output.push_str(&format!(", env = {}", json(&artifact_env)?));
         let primary = self
             .graph
             .roots
@@ -128,6 +137,9 @@ impl Renderer<'_> {
             .any(|root| self.graph.units[*root].package_id == unit.package_id);
         let environment = unit.environment(primary);
         let mut flags = profile_flags(unit)?;
+        if matches!(unit.mode, Mode::Test) && !unit.harness {
+            flags.push("--cfg=test".into());
+        }
         flags.extend(unit.package_lint_flags.iter().cloned());
         flags.extend(unit.rustflags.iter().cloned());
         let declared = unit
@@ -187,6 +199,17 @@ impl Renderer<'_> {
                 ));
             }
             let target = &self.graph.units[dependency.index];
+            if matches!(unit.mode, Mode::Test)
+                && matches!(target.mode, Mode::Build)
+                && target.target.kind == ["bin"]
+                && target.package_id == unit.package_id
+            {
+                dependencies.binaries.insert(
+                    format!("CARGO_BIN_EXE_{}", target.target.name),
+                    format!("$(location :unit_{})", dependency.index),
+                );
+                continue;
+            }
             if matches!(target.mode, Mode::RunCustomBuild) {
                 if target.package_id != unit.package_id
                     || dependencies.script.replace(dependency.index).is_some()
@@ -229,6 +252,25 @@ impl Renderer<'_> {
 }
 
 impl Unit {
+    /// Preserve native library providers and the Cargo library file name.
+    fn output(&self, rule: &str) -> Result<String, RustGraphError> {
+        let mut output = if self.target.kind == ["proc-macro"] {
+            ", proc_macro = True, default_output = \"library\""
+        } else if rule == "rust_library" {
+            ", default_output = \"library\""
+        } else {
+            ""
+        }
+        .to_owned();
+        if rule == "rust_library" {
+            output.push_str(&format!(
+                ", soname = {}",
+                json(&format!("lib{}.$(ext)", self.target.name.replace('-', "_")))?,
+            ));
+        }
+        Ok(output)
+    }
+
     /// Admit only compiler modes whose execution requirements are represented natively.
     fn rule(&self, execution: CodeExecution) -> Result<&'static str, RustGraphError> {
         let macro_target = self.target.kind == ["proc-macro"];
@@ -240,7 +282,8 @@ impl Unit {
             ));
         }
         let library = libraries::is_library(&self.target.kind) || macro_target;
-        if !library && !script && self.target.kind != ["bin"] {
+        let integration = self.target.kind == ["test"] && matches!(self.mode, Mode::Test);
+        if !library && !script && !integration && self.target.kind != ["bin"] {
             return Err(unsupported(
                 &self.package_name,
                 &format!(
@@ -255,7 +298,7 @@ impl Unit {
                 "configured target or linker requires qualified native execution",
             ));
         }
-        let crate_types_match = if script {
+        let crate_types_match = if script || integration {
             self.target.crate_types == ["bin"]
         } else {
             self.target.crate_types == self.target.kind

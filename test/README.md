@@ -74,5 +74,10 @@ Run `node test/rust/libraries.ts /path/to/bsmr` to verify that every declared
 library format materializes, including when building a dependent executable.
 The test checks Rust and C consumers, source edits, warm reuse, and restoration.
 
+Run `python3 test/rust/tests.py /path/to/bsmr` to compare integration tests and
+custom harnesses with Cargo. A second `/path/to/runtime.json` argument selects
+the Linux namespace sandbox. The fixture checks
+dev features, the newly built binary, package-relative files and test failures.
+
 `python3 -B -m unittest discover -s prelude/git/tools/tests -p '*_test.py'` checks
 that ambient Git filters and checkout hooks cannot change pinned sources.

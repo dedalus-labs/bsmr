@@ -299,6 +299,9 @@ jobs:
       - name: Verify Rust library formats
         run: node test/rust/libraries.ts target/debug/bsmr
         shell: bash
+      - name: Verify Cargo integration tests
+        run: python3 test/rust/tests.py target/debug/bsmr
+        shell: bash
       - name: Verify external Rust dependencies
         run: node test/rust/dependencies.ts target/debug/bsmr 1.98.0
         shell: bash

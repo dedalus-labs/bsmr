@@ -254,8 +254,10 @@ def main() -> None:
     app_manifest.write_text(original_app + '\n[lib]\nharness = false\n')
     output = subprocess.run([binary], input=json.dumps(request | {"mode": "test"}), text=True, capture_output=True, env=env)
     app_manifest.write_text(original_app)
-    (RECEIPTS / "reject-custom-harness.stderr").write_text(output.stderr)
-    assert output.returncode != 0 and "custom test harness" in output.stderr, output.stderr
+    assert output.returncode == 0, output.stderr
+    custom = json.loads(output.stdout)
+    assert not custom["units"][custom["roots"][0]]["harness"]
+    summary["custom_harness_preserved"] = True
     (RECEIPTS / "summary.json").write_text(json.dumps(summary, indent=2) + "\n")
     print(json.dumps(summary, indent=2))
 
