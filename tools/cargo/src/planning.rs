@@ -228,7 +228,7 @@ fn export(context: &BuildContext<'_, '_>, resolve: &Resolve) -> Result<Graph> {
         .map(|(i, unit)| (*unit, i))
         .collect();
     Ok(Graph {
-        schema_version: 2,
+        schema_version: 3,
         cargo_library: crate::CARGO_LIBRARY,
         rustc_version: context.target_data.rustc.verbose_version.clone(),
         workspace_root: context.ws.root().to_owned(),
@@ -278,11 +278,6 @@ fn package_environment(package: &Package) -> BTreeMap<String, String> {
 /// Reject Cargo units whose execution requirements are outside the native contract.
 fn validate_unit(unit: &Unit) -> Result<()> {
     crate::flags::validate(&unit.rustflags, crate::flags::Phase::Compile)?;
-    ensure!(
-        unit.target.harness() || !unit.mode.is_any_test(),
-        "unsupported custom test harness: {}",
-        unit.pkg
-    );
     ensure!(
         unit.links_overrides.is_empty(),
         "unsupported links override: {}",
@@ -382,6 +377,7 @@ fn configured_unit(
         package_environment: unit_environment(context, unit),
         source,
         target: unit.target.clone(),
+        harness: unit.target.harness(),
         platform: unit.kind,
         mode: unit.mode,
         profile: unit.profile.clone(),

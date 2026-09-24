@@ -47,6 +47,8 @@ pub(super) struct Unit {
     pub source: Source,
     /// Cargo-discovered crate target.
     pub target: Target,
+    /// Whether this target uses rustc's test harness rather than its own main.
+    pub harness: bool,
     /// Host or target context selected by Cargo.
     pub platform: Option<String>,
     /// Compiler operation whose dependency context Cargo must resolve.
@@ -206,7 +208,7 @@ impl Graph {
     /// Check the protocol and index boundary without recreating Cargo's resolver.
     pub fn parse(bytes: &[u8]) -> Result<Self, RustGraphError> {
         let graph: Self = serde_json::from_slice(bytes)?;
-        if graph.schema_version != 2
+        if graph.schema_version != 3
             || graph.cargo_library != "0.98.0"
             || !graph.rustc_version.lines().any(|line| {
                 [

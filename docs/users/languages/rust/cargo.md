@@ -82,7 +82,7 @@ metadata only. Libraries expose `:lib`, binaries expose
 their Cargo target name, and dependency
 renames preserve the name used in source. Package metadata enters the compiler
 as literal environment values, so text such as `$(location ...)` cannot become
-a build dependency. Inline unit tests are associated with
+a build dependency. Inline unit tests and integration tests are associated with
 their build targets. Changing an unrelated crate does not recompile the selected
 binary. Changing a dependency invalidates its consumers.
 
@@ -95,7 +95,7 @@ so the Rust package retains its inferred definition.
 ## Supported boundary
 
 The frontend supports local path, public registry, and pinned Git libraries,
-binaries, and inline unit tests. Registry archives are verified against
+binaries, inline unit tests, and integration tests. Registry archives are verified against
 `Cargo.lock`. Git packages are read from the locked commit without ambient
 Git filters or hooks. Compilation reads native source artifacts, not Cargo's
 mutable checkout cache. Authenticated registries remain unsupported.
@@ -120,7 +120,7 @@ Generic `rustc-link-arg` directives reach the package's compiler actions through
 the existing argument file. Rustc applies them when linking and ignores them for
 `rlib` compilation. Target-specific linker directives remain unsupported.
 
-Integration tests, custom harnesses, cross compilation, and configured linkers
+Cross compilation and configured linkers
 remain unsupported. These requirements fail before compilation.
 Project compiler flags are limited to cfg values, lints, and scalar optimization
 settings. Response files, compiler extensions, file-based overrides, and Cargo
@@ -152,7 +152,7 @@ qualified toolchain. Native actions honor the existing cache-upload policy.
 
 Ambient Rust flags and user Cargo configuration do not configure native actions.
 Project configuration supplies the planner's flags and profiles. Project `[env]`
-values and manifest-directory variables are not supported yet.
+values are not supported yet.
 Unsupported projects can use Cargo directly. BSMR never silently switches to a
 whole-workspace Cargo build after inference or compilation fails.
 
@@ -169,6 +169,18 @@ checks that inference leaves the checkout free of generated build files.
 
 `test/rust/metadata.py` compares metadata visibility and ordering with Cargo. It
 checks generated paths, cache restoration across checkouts, and source edits.
+
+`bsmr test app` includes the package's integration tests. Cargo supplies their
+dev dependencies and the binaries exposed through `CARGO_BIN_EXE_<name>`.
+Tests run from their declared package source directory. Artifact-backed
+environment paths remain absolute when a test changes its working directory.
+Custom harnesses use their own `main` with Cargo's `cfg(test)` setting.
+
+`python3 test/rust/tests.py /path/to/bsmr` compares these contracts with Cargo.
+Supply `/path/to/runtime.json` as a second argument to select the Linux namespace
+runtime explicitly. The fixture checks test-only
+features, binary execution, fixture reads and failing custom harnesses. It
+does not qualify macOS package-code isolation or arbitrary host dependencies.
 
 `test/rust/lto.ts` compares release LTO with Cargo across a three-crate chain.
 It checks compiler flags, dependency edits, cached output restoration, and unit tests.

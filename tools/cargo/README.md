@@ -8,7 +8,7 @@
 # Cargo planning
 
 `bsmr-cargo` reads one JSON request from stdin and writes Cargo's configured
-version-2 graph to stdout. Cargo resolves features, profiles, host/target units, and
+version-3 graph to stdout. Cargo resolves features, profiles, host/target units, and
 test dependencies. The helper does not invoke Cargo's compilation runner.
 
 ```text
@@ -38,7 +38,8 @@ require a declared native execution contract.
 
 Each unit includes its source identity, package environment, declared and active
 features, compiler and documentation flags, lints, effective linker, and resolved
-dependency aliases. The response reports the resolver and actual compiler
+dependency aliases. Each unit's `harness` preserves Cargo's choice between
+rustc's test runner and a custom `main`. The response reports the resolver and actual compiler
 versions. Registry archives must match their locked checksum. Cached registry manifests
 must match the verified archive. Git package and workspace manifests must match
 regular-file blobs in the locked commit. Directory source replacements fail.

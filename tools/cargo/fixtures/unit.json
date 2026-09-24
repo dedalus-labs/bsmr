@@ -1,5 +1,5 @@
 {
-  "schema_version": 2,
+  "schema_version": 3,
   "cargo_library": "0.98.0",
   "rustc_version": "release: 1.97.1\n",
   "workspace_root": "/workspace",
@@ -54,6 +54,7 @@
         "doctest": true,
         "test": true
       },
+      "harness": true,
       "platform": null,
       "mode": "build",
       "profile": {

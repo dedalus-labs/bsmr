@@ -104,6 +104,8 @@ pub(crate) struct ConfiguredUnit {
     pub(crate) source: Source,
     /// Explicit compilation platform, or the compiler host.
     pub(crate) target: Target,
+    /// Whether rustc supplies libtest or the target supplies its own entrypoint.
+    pub(crate) harness: bool,
     /// Host or target context selected by Cargo.
     pub(crate) platform: CompileKind,
     /// Compiler operation whose dependency context Cargo must resolve.

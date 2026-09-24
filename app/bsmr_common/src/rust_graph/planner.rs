@@ -93,6 +93,7 @@ impl<'a> Planner<'a> {
         let target_filter = match &entry.target {
             Target::Lib(_) => json!({"kind": "library"}),
             Target::Bin(name) => json!({"kind": "binary", "name": name}),
+            Target::Test(name) => json!({"kind": "integration-test", "name": name}),
         };
         json!({
             "manifest": self.root.join("Cargo.toml"), "package": package,
