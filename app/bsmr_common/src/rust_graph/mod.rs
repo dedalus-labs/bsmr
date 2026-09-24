@@ -10,6 +10,7 @@ pub mod configured;
 pub mod dice;
 pub mod entry;
 mod error;
+mod libraries;
 mod planner;
 mod selection;
 mod snapshot;

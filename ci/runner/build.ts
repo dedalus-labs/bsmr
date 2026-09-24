@@ -101,6 +101,7 @@ export const runnerBuild = workflow({
 				{ name: "Verify compiler archive metadata", run: command({ file: "python3", args: ["test/rust/catalog.py", "target/debug/bsmr"] }) },
 				{ name: "Verify native Rust builds", run: command({ file: "node", args: ["test/native-rust-build.ts", "target/debug/bsmr"] }) },
 				{ name: "Verify configured Cargo builds", run: command({ file: "node", args: ["test/rust/configured.ts", "target/debug/bsmr"] }) },
+				{ name: "Verify Rust library formats", run: command({ file: "node", args: ["test/rust/libraries.ts", "target/debug/bsmr"] }) },
 			],
 		}),
 	},

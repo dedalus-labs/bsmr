@@ -41,7 +41,7 @@ selected plan.
 
 Cargo profiles can select `lto = "thin"`, `"fat"`, or `true` for optimization
 across crates. Bessemer retains LLVM bitcode in dependency libraries and applies
-the selected mode when linking binaries or inline unit tests. Library artifacts
+the selected mode when linking binaries, C libraries, or inline unit tests. Rust library artifacts
 also retain object code so they remain usable by consumers that do not use LTO.
 `false` permits optimization within one crate. `"off"` disables it entirely.
 See [Cargo's LTO settings](https://doc.rust-lang.org/cargo/reference/profiles.html#lto).
@@ -74,8 +74,11 @@ Cargo files -> locked resolution -> private targets -> native rustc actions
 
 Each crate uses the existing native Rust compilation, linking, and test machinery.
 A package containing one library or binary can be selected by its directory,
-even when its Cargo name differs. Library builds materialize a linkable `.rlib`; `:lib[check]` requests metadata
-only. Libraries expose `:lib`, binaries expose
+even when its Cargo name differs. Library builds preserve `lib`, `rlib`, `cdylib`,
+and `staticlib` declarations. All declared formats materialize even when the
+library is only a dependency of the selected executable. `:lib[cdylib]` and
+`:lib[staticlib]` select individual C-compatible artifacts. `:lib[check]` requests
+metadata only. Libraries expose `:lib`, binaries expose
 their Cargo target name, and dependency
 renames preserve the name used in source. Package metadata enters the compiler
 as literal environment values, so text such as `$(location ...)` cannot become
@@ -169,3 +172,7 @@ checks generated paths, cache restoration across checkouts, and source edits.
 
 `test/rust/lto.ts` compares release LTO with Cargo across a three-crate chain.
 It checks compiler flags, dependency edits, cached output restoration, and unit tests.
+
+`test/rust/libraries.ts` compares Cargo's multiple-output behavior with native
+builds. It runs a Rust consumer and loads the generated C library before and after
+a source edit, then checks warm reuse and restoration after cleaning outputs.
