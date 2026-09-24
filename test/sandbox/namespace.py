@@ -114,6 +114,12 @@ def _impl(ctx):
     ctx.actions.run(cmd_args("/usr/bin/python3", ctx.attrs.program, ctx.attrs.mode, ctx.attrs.source, out.as_output(), ctx.attrs.outside, ctx.attrs.port, generated, tree), category = "namespace_conformance", allow_cache_upload = True, env = {"DECLARED": "visible"}, timeout_seconds = ctx.attrs.timeout)
     return [DefaultInfo(default_output = out)]
 probe = rule(impl = _impl, attrs = {"program": attrs.source(), "source": attrs.source(allow_directory = True), "mode": attrs.string(), "outside": attrs.string(), "port": attrs.string(), "timeout": attrs.int(default = 20)})
+
+def _test(ctx):
+    """Tests use explicit runtime inputs rather than the host's environment."""
+    return [DefaultInfo(), ExternalRunnerTestInfo(type = "simple", command = [cmd_args("/usr/bin/python3", ctx.attrs.program)], env = {"DECLARED": "visible"}, run_from_project_root = True, use_project_relative_paths = True)]
+
+probe_test = rule(impl = _test, attrs = {"program": attrs.source()})
 '''
 
 
@@ -213,6 +219,12 @@ def main() -> None:
         outside.write_text("outside")
         assert subprocess.check_output(["/bin/cat", str(outside)]) == b"outside"
         (root / "probe.py").write_text(PROGRAM)
+        (root / "test.py").write_text(
+            'import os\n'
+            'assert os.environ["HOME"] == "/tmp"\n'
+            'assert os.environ["DECLARED"] == "visible"\n'
+            'assert "NAMESPACE_AMBIENT_SECRET" not in os.environ\n'
+        )
         (root / "rule.bzl").write_text(RULES)
         with socket.socket() as listener:
             listener.bind(("127.0.0.1", 0))
@@ -235,9 +247,15 @@ def main() -> None:
                 for mode in modes
             ]
             (root / "BUILD.bsmr").write_text(
-                'load(":rule.bzl", "probe")\n' + "\n".join(definitions) + "\n"
+                'load(":rule.bzl", "probe", "probe_test")\n'
+                'probe_test(name="test", program="test.py")\n'
+                + "\n".join(definitions) + "\n"
             )
             try:
+                tested = run("test", "//:test", "--sandbox", "--console", "simple")
+                assert tested.returncode == 0, tested.stderr
+                assert "NO TESTS RAN" not in tested.stderr, tested.stderr
+                print("  ok  isolated tests use explicit environment", flush=True)
                 assert (
                     output(build("directory", False)) / "result"
                 ).read_text() == str(root)
