@@ -19,6 +19,7 @@ use bsmr_build_api::interpreter::rule_defs::artifact::output_artifact_like::Outp
 use bsmr_build_api::interpreter::rule_defs::artifact::starlark_artifact_like::ValueAsInputArtifactLike;
 use bsmr_build_api::interpreter::rule_defs::artifact::starlark_declared_artifact::StarlarkDeclaredArtifact;
 use bsmr_build_api::interpreter::rule_defs::context::AnalysisActions;
+use bsmr_execute::artifact_utils::CopySymlinks;
 use bsmr_execute::execute::request::OutputType;
 use bsmr_hash::bsmr_indexset;
 use dupe::OptionDupedExt;
@@ -105,6 +106,7 @@ pub(crate) fn analysis_actions_methods_copy(methods: &mut MethodsBuilder) {
             src,
             CopyMode::Copy {
                 executable_bit_override: executable_bit_override.into_option(),
+                symlinks: CopySymlinks::Rebase,
             },
             OutputType::FileOrDirectory,
             has_content_based_path.into_option(),
@@ -150,6 +152,7 @@ pub(crate) fn analysis_actions_methods_copy(methods: &mut MethodsBuilder) {
             src,
             CopyMode::Copy {
                 executable_bit_override: executable_bit_override.into_option(),
+                symlinks: CopySymlinks::Rebase,
             },
             OutputType::Directory,
             has_content_based_path.into_option(),
@@ -177,14 +180,27 @@ pub(crate) fn analysis_actions_methods_copy(methods: &mut MethodsBuilder) {
 
     /// Returns an `artifact` which is a directory containing copied files.
     /// The srcs must be a dictionary of path (as string, relative to the result directory) to the bound `artifact`, which will be laid out in the directory.
+    /// `symlinks = "preserve"` retains relative link text when reconstructing a source tree.
     fn copied_dir<'v>(
         this: &AnalysisActions<'v>,
         #[starlark(require = pos)] output: OutputArtifactArg<'v>,
         #[starlark(require = pos)] srcs: UnpackDictEntries<&'v str, ValueAsInputArtifactLike<'v>>,
         #[starlark(require = named, default = NoneOr::None)] has_content_based_path: NoneOr<bool>,
         #[starlark(require = named, default = NoneOr::None)] executable_bit_override: NoneOr<bool>,
+        #[starlark(require = named, default = "rebase")] symlinks: &str,
         eval: &mut Evaluator<'v, '_, '_>,
     ) -> starlark::Result<ValueTyped<'v, StarlarkDeclaredArtifact<'v>>> {
+        let symlinks = match symlinks {
+            "rebase" => CopySymlinks::Rebase,
+            "preserve" => CopySymlinks::Preserve,
+            _ => {
+                return Err(bsmr_error::bsmr_error!(
+                    bsmr_error::ErrorTag::Input,
+                    "copied_dir symlinks must be rebase or preserve"
+                )
+                .into());
+            }
+        };
         Ok(create_dir_tree(
             eval,
             this,
@@ -192,6 +208,7 @@ pub(crate) fn analysis_actions_methods_copy(methods: &mut MethodsBuilder) {
             srcs,
             CopyMode::Copy {
                 executable_bit_override: executable_bit_override.into_option(),
+                symlinks,
             },
             has_content_based_path.into_option(),
         )?)
