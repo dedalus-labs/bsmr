@@ -67,6 +67,14 @@ warm reuse and restoration after the Git origin becomes unavailable. The fixture
 changes the original checkout after committing, so compilation must use the
 locked object bytes rather than those mutable files.
 
+Run `python3 test/rust/identity.py /path/to/bsmr /path/to/runtime.json` to compare
+build-script Git queries with the source checkout. It covers hidden files,
+relative symlinks, staged and untracked changes, commit-only changes and linked
+worktrees. `python3 test/rust/snapshot.py /path/to/bsmr` isolates native symlink
+materialization without invoking a compiler.
+`python3 test/rust/checkout.py /path/to/bsmr` checks Git recognition with loose
+and packed references. Pass `--prelude prelude` to test local rule changes.
+
 Run `node test/rust/selection.ts /path/to/bsmr` to switch profile and feature
 settings on one warm target. It checks actual executable behavior, invalid
 configuration, lock preservation, and cache reuse when restoring the defaults.
