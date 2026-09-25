@@ -684,6 +684,23 @@ impl DiceUpdater for DiceCommandUpdater<'_, '_> {
             .await?;
         early_timings.end_known_span();
 
+        early_timings.start_span("Git metadata snapshot".to_owned());
+        let root = self
+            .cmd_ctx
+            .base_context
+            .project_root
+            .root()
+            .as_path()
+            .to_owned();
+        let git = if self.sandbox {
+            tokio::task::spawn_blocking(move || bsmr_common::rust_graph::git::capture(&root))
+                .await??
+        } else {
+            Default::default()
+        };
+        ctx.changed_to([(bsmr_common::rust_graph::git::GitInputs, Arc::new(git))])?;
+        early_timings.end_known_span();
+
         let mut user_data =
             self.make_user_computation_data(&cells_and_configs.root_config, &mut ctx)?;
         user_data.set_mergebase(mergebase);

@@ -38,6 +38,7 @@ rust_library(
         "bsmr_build//third-party/rust:triomphe",
     ],
     deps = [
+        "bsmr_build//third-party/rust:url",
         "bsmr_build//third-party/rust:async-scoped",
         "bsmr_build//third-party/rust:async-trait",
         "bsmr_build//third-party/rust:blake3",
