@@ -6,15 +6,15 @@
 # Verifies Cargo metadata visibility and generated paths across cached native actions.
 
 import argparse
-from pathlib import Path
 import shutil
 import tempfile
+from pathlib import Path
 
 from macros import build, initialize, run
 
-
 PRODUCER = """
 fn main() {
+    assert_eq!(std::env::var("CARGO_MANIFEST_LINKS").unwrap(), "native-api");
     let value = std::fs::read_to_string("value.txt").unwrap();
     let out = std::env::var("OUT_DIR").unwrap();
     std::fs::write(format!("{out}/value.txt"), &value).unwrap();
@@ -46,23 +46,36 @@ fn main() {
 def qualify(project: Path, binary: str) -> None:
     """Compare direct dependency metadata with Cargo, including cache restoration."""
     files = {
-        'Cargo.toml': '[workspace]\nmembers=["app","calc","native","middle","guard"]\nresolver="2"\n',
-        'native/Cargo.toml': '[package]\nname="native_sys"\nversion="0.1.0"\nedition="2024"\nlinks="native-api"\n',
+        'Cargo.toml': (
+            '[workspace]\nmembers=["app","calc","native","middle","guard"]\nresolver="2"\n'
+        ),
+        'native/Cargo.toml': (
+            '[package]\nname="native_sys"\nversion="0.1.0"\nedition="2024"\nlinks="native-api"\n'
+        ),
         'native/build.rs': PRODUCER,
         'native/src/lib.rs': '',
         'native/value.txt': '11',
-        'middle/Cargo.toml': '[package]\nname="middle"\nversion="0.1.0"\nedition="2024"\nlinks="middle-api"\n[dependencies]\nnative_sys={path="../native"}\nguard={path="../guard"}\n',
+        'middle/Cargo.toml': (
+            '[package]\nname="middle"\nversion="0.1.0"\nedition="2024"\nlinks="middle-api"\n'
+            '[dependencies]\nnative_sys={path="../native"}\nguard={path="../guard"}\n'
+        ),
         'middle/build.rs': CONSUMER,
         'middle/src/lib.rs': 'pub fn value() -> &\'static str { env!("COMPUTED") }\n',
-        'guard/Cargo.toml': '[package]\nname="guard"\nversion="0.1.0"\nedition="2024"\nlinks="unique-runtime"\n',
+        'guard/Cargo.toml': (
+            '[package]\nname="guard"\nversion="0.1.0"\nedition="2024"\nlinks="unique-runtime"\n'
+        ),
         'guard/build.rs': 'fn main() { println!("cargo:rerun-if-changed=build.rs"); }\n',
         'guard/src/lib.rs': '',
         'app/build.rs': """fn main() {
+            assert!(std::env::var("CARGO_MANIFEST_LINKS").is_err());
             assert!(std::env::var("DEP_NATIVE_API_INCLUDE").is_err());
             let value = std::env::var("DEP_MIDDLE_API_VALUE").unwrap();
             println!("cargo::rustc-env=APP_VALUE={value}");
         }""",
-        'app/src/main.rs': 'fn main() { println!("{}:{}:{}", calc::value!(), middle::value(), env!("APP_VALUE")); }\n',
+        'app/src/main.rs': (
+            'fn main() { println!("{}:{}:{}", '
+            'calc::value!(), middle::value(), env!("APP_VALUE")); }\n'
+        ),
     }
     for path, contents in files.items():
         destination = project / path
@@ -102,7 +115,8 @@ def qualify(project: Path, binary: str) -> None:
     (project / 'native/value.txt').write_text('13')
     assert build(project, binary, '7:13:13')
     print(
-        'ok  Cargo metadata: direct visibility, ordering, generated paths, empty links, cache restoration, edits'
+        'ok  Cargo metadata: direct visibility, ordering, generated paths, '
+        'empty links, cache restoration, edits'
     )
 
 
