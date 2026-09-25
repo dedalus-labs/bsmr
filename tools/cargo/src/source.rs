@@ -246,9 +246,10 @@ fn git_manifests(unit: &Unit, gctx: &GlobalContext) -> Result<SourceArtifact> {
             _ => return Err(GitManifestError(manifest).into()),
         }
     }
-    Ok(SourceArtifact::Git {
-        repository: unit.pkg.package_id().source_id().url().to_string(),
-        revision: revision.to_owned(),
-        directory: package.strip_prefix(&root)?.to_owned(),
-    })
+    crate::git::archive(
+        &repository,
+        &tree,
+        gctx.home().as_path_unlocked(),
+        package.strip_prefix(&root)?,
+    )
 }

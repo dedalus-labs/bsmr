@@ -61,6 +61,12 @@ path dependency, then verifies
 that a warm build runs no compiler actions and leaves the lockfile unchanged.
 Pass `1.98.0` as the third argument to qualify that installed toolchain instead.
 
+Run `python3 test/rust/git.py /path/to/bsmr /path/to/runtime.json` on Linux to
+check the same boundary with isolated compiler actions. It checks cold execution,
+warm reuse and restoration after the Git origin becomes unavailable. The fixture
+changes the original checkout after committing, so compilation must use the
+locked object bytes rather than those mutable files.
+
 Run `node test/rust/selection.ts /path/to/bsmr` to switch profile and feature
 settings on one warm target. It checks actual executable behavior, invalid
 configuration, lock preservation, and cache reuse when restoring the defaults.

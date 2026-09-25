@@ -2036,6 +2036,7 @@ dependencies = [
  "tokio",
  "tokio-util 0.7.19",
  "tracing",
+ "url",
 ]
 
 [[package]]
