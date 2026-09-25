@@ -142,6 +142,7 @@ load(
     ":sources.bzl",
     "RustSources",
     "RustSourcesTSet",
+    "source_inputs",
 )
 
 def generate_rustdoc(
@@ -1576,7 +1577,7 @@ def _rustc_invoke(
     if ctx.attrs.verify_inputs:
         dep_info = ctx.actions.declare_output("{}-{}.d".format(prefix, diag), has_content_based_path = use_cbp)
         compile_cmd.add(cmd_args(dep_info.as_output(), format = "--dep-info={}"))
-        compile_cmd.add(cmd_args(ctx.attrs.srcs, ctx.attrs.mapped_srcs.keys(), format = "--allowed-input={}"))
+        compile_cmd.add(cmd_args(source_inputs(ctx), format = "--allowed-input={}"))
         rustc_cmd.add(cmd_args(dep_info.as_output(), format = "--emit=dep-info={}"))
 
     build_status = None

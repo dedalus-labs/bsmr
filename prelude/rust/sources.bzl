@@ -27,8 +27,17 @@ RustSourcesTSet = transitive_set(
 RustSources = provider(
     fields = {
         "tset": RustSourcesTSet,
+        # Original artifacts remain the authority for dep-info validation after path mapping.
+        "inputs": provider_field(list[Artifact]),
     }
 )
+
+def source_inputs(ctx: AnalysisContext) -> list[Artifact]:
+    """Return the declared inputs before a filegroup maps them through symlinks."""
+    filegroup = getattr(ctx.attrs, "srcs_filegroup", None)
+    if filegroup:
+        return filegroup[RustSources].inputs
+    return ctx.attrs.srcs + ctx.attrs.mapped_srcs.keys()
 
 def srcs_arg():
     return {
@@ -76,6 +85,9 @@ def srcs_filegroup_arg():
 
     When using `srcs_filegroup`, the attributes `srcs` and `mapped_srcs` cannot
     also be passed, and `crate_root` must be passed.
+
+    With `verify_inputs`, compiler reads are checked against the filegroup's
+    original declared artifacts, including sources renamed by `mapped_srcs`.
 """,
         ),
     }
@@ -137,7 +149,7 @@ def _rust_filegroup_impl(ctx: AnalysisContext) -> list[Provider]:
     )
     return [
         DefaultInfo(default_output = srcs),
-        RustSources(tset = tset),
+        RustSources(tset = tset, inputs = source_inputs(ctx)),
     ]
 
 rust_filegroup = rule(
