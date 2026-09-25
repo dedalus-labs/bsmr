@@ -42,10 +42,10 @@ const files: Record<string, string> = {
 files["app/src/main.rs"] += 'const _: &str = include_str!("../fixture/Cargo.toml");\n';
 
 /** Run the selected binary and count compiler invocations in its exact trace. */
-async function build(): Promise<string[]> {
+async function build(asset = "asset"): Promise<string[]> {
 	const { stdout, stderr } = await run(binary, ["build", "app", "--show-full-json-output", "--console", "simple"], options);
 	const executable = Object.values(JSON.parse(stdout) as Record<string, string>)[0]!;
-	assert.equal((await run(executable, [], options)).stdout.trim(), "7:Example $(location :never):asset");
+	assert.equal((await run(executable, [], options)).stdout.trim(), `7:Example $(location :never):${asset}`);
 	const trace = /Build ID: ([a-f0-9-]+)/.exec(stderr)?.[1];
 	assert.ok(trace, stderr);
 	const log = await run(binary, ["log", "what-ran", "--trace-id", trace, "--format", "json", "--filter-category", "rustc.*", "--no-remote"], options);
@@ -68,6 +68,24 @@ try {
 	assert.deepEqual(await build(), [], "unchanged build must execute no compiler actions");
 	writeFileSync(join(root, "unrelated/src/lib.rs"), 'compile_error!("still unrelated");\n');
 	assert.deepEqual(await build(), [], "unrelated edits must not replan or compile app");
+	const local = readFileSync(join(root, ".bsmr.local"), "utf8");
+	const sharedInput = join(root, "unrelated/shared.txt");
+	writeFileSync(sharedInput, "shared");
+	writeFileSync(join(root, "app/src/main.rs"), files["app/src/main.rs"]!.replace("../data.txt", "../../unrelated/shared.txt"));
+	await assert.rejects(build("shared"), /couldn't read|No such file/);
+	writeFileSync(join(root, ".bsmr.local"), local + '\n[rust.sources]\napp = ["unrelated/shared.txt"]\n');
+	await build("shared");
+	assert.deepEqual(await build("shared"), [], "declared extra sources must support warm reuse");
+	writeFileSync(sharedInput, "changed");
+	assert.ok((await build("changed")).length > 0, "extra-source edits must invalidate compilation");
+	writeFileSync(join(root, "unrelated/src/lib.rs"), 'compile_error!("provider source stays unrelated");\n');
+	assert.deepEqual(await build("changed"), [], "declaring a file must not include its whole package");
+	for (const input of ["unrelated/missing.txt", "../outside.txt"]) {
+		writeFileSync(join(root, ".bsmr.local"), local + `\n[rust.sources]\napp = ${JSON.stringify([input])}\n`);
+		await assert.rejects(build(), /extra source .* is not a declared workspace file/);
+	}
+	writeFileSync(join(root, "app/src/main.rs"), files["app/src/main.rs"]!);
+	writeFileSync(join(root, ".bsmr.local"), local);
 	await run(cargo, ["test", "--locked", "--offline", "-p", "app", "--bin", "app", "--target-dir", "target/reference", "--config", 'build.build-dir="target/reference"'], { ...options, env: { ...env, RUSTC: resolve(cargo, "../rustc") } });
 	await run(binary, ["test", "app", "--console", "simple"], options);
 	writeFileSync(join(root, "shared/src/lib.rs"), files["shared/src/lib.rs"]! + 'fn unused() {}\n');
