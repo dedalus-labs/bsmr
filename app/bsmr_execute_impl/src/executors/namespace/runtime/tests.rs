@@ -63,11 +63,7 @@ fn runtime_identity_and_bytes_survive_relocation_and_source_changes() -> bsmr_er
 fn pinned_archives_cannot_redirect_extraction_through_symlinks() -> bsmr_error::Result<()> {
     let directory = tempfile::tempdir()?;
     let error = Runtime::load(&manifest(directory.path(), true)?, LAUNCHER_DIGEST).unwrap_err();
-    assert!(
-        error
-            .to_string()
-            .contains("unique regular file or directory")
-    );
+    assert!(error.to_string().contains("unique regular file, directory"));
     Ok(())
 }
 
@@ -123,5 +119,57 @@ fn oversized_runtime_entries_fail_before_payload_materialization() -> bsmr_error
             .contains("exceeds")
     );
     assert!(!directory.path().join("oversized").exists());
+    Ok(())
+}
+
+/// File aliases may reference an earlier payload, never a directory or another alias.
+#[test]
+fn invariant_runtime_links_share_only_verified_payloads() -> bsmr_error::Result<()> {
+    for (target, size, valid) in [
+        ("bin/tool", 0, true),
+        ("bin/tool", 1, false),
+        ("../outside", 0, false),
+        ("/outside", 0, false),
+        ("missing", 0, false),
+        ("", 0, false),
+        ("bin", 0, false),
+        ("bin/first", 0, false),
+        ("bin/alias", 0, false),
+    ] {
+        let mut archive = tar::Builder::new(tempfile::tempfile()?);
+        let mut header = tar::Header::new_gnu();
+        header.set_mode(0o755);
+        header.set_size(4);
+        header.set_cksum();
+        archive.append_data(&mut header, "bin/tool", &b"tool"[..])?;
+        for (name, link, size) in [("bin/first", "bin/tool", 0), ("bin/alias", target, size)] {
+            let mut header = tar::Header::new_gnu();
+            header.set_entry_type(tar::EntryType::Link);
+            header.set_mode(0o600);
+            header.set_size(size);
+            if !link.is_empty() {
+                header.set_link_name(link)?;
+            }
+            header.set_cksum();
+            archive.append_data(&mut header, name, std::io::repeat(b'x').take(size))?;
+        }
+        let mut archive = archive.into_inner()?;
+        archive.seek(SeekFrom::Start(0))?;
+        let root = tempfile::tempdir()?;
+        let result = unpack_runtime(archive, root.path());
+        assert_eq!(result.is_ok(), valid, "{target}: {result:?}");
+        assert_eq!(fs::read(root.path().join("bin/tool"))?, b"tool");
+        if result.is_ok() {
+            assert_eq!(fs::read(root.path().join("bin/alias"))?, b"tool");
+            #[cfg(unix)]
+            {
+                use std::os::unix::fs::MetadataExt;
+                let original = fs::metadata(root.path().join("bin/tool"))?;
+                let alias = fs::metadata(root.path().join("bin/alias"))?;
+                assert_eq!(original.ino(), alias.ino());
+                assert_eq!(original.mode() & 0o777, 0o755);
+            }
+        }
+    }
     Ok(())
 }
