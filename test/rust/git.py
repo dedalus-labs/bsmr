@@ -53,7 +53,14 @@ class Io:
         (library / "Cargo.toml").write_text(
             '[package]\nname="value"\nversion="0.1.0"\nedition="2024"\n'
         )
-        (library / "src/lib.rs").write_text("pub fn value() -> u8 { 17 }\n")
+        (origin / "LICENSE").write_text("17")
+        (library / "LICENSE").symlink_to("../../LICENSE")
+        (library / "build.rs").write_text(
+            'fn main() { assert_eq!(std::fs::read_to_string("../../LICENSE").unwrap(), "17"); }\n'
+        )
+        (library / "src/lib.rs").write_text(
+            'pub fn value() -> u8 { include_str!("../LICENSE").parse().unwrap() }\n'
+        )
         self.git(origin, "init", "-b", "main")
         self.git(origin, "add", ".")
         self.git(origin, "commit", "-m", "fixture")

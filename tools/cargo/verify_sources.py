@@ -65,7 +65,7 @@ def main() -> None:
     assert source["checksum"] == hashlib.sha256(archive_bytes).hexdigest()
     assert source["artifact"] == {
         "kind": "archive", "url": "https://static.crates.io/crates/itoa/1.0.18/download",
-        "sha256": source["checksum"], "size": len(archive_bytes), "prefix": "itoa-1.0.18",
+        "sha256": source["checksum"], "size": len(archive_bytes), "prefix": "itoa-1.0.18", "package": "",
     }
     try:
         manifest.write_bytes(manifest_bytes + b'\n[package.metadata]\nplanner_corruption=true\n')
@@ -160,7 +160,8 @@ def verify_git(binary: Path, toolchain: Path, root: Path, env: dict) -> None:
         assert source["git_revision"] == revision
         artifact = source["artifact"]
         assert artifact["kind"] == "archive"
-        assert artifact["prefix"] == "source/crates/member"
+        assert artifact["prefix"] == "source"
+        assert artifact["package"] == "crates/member"
         archive = Path(unquote(urlparse(artifact["url"]).path))
         assert hashlib.sha256(archive.read_bytes()).hexdigest() == artifact["sha256"]
         assert archive.stat().st_size == artifact["size"]

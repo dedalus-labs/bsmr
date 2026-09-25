@@ -44,8 +44,10 @@ versions. Registry archives must match their locked checksum. Cached registry ma
 must match the verified archive. Git package and workspace manifests must match
 regular-file blobs in the locked commit. Directory source replacements fail.
 Each source includes an `artifact`: a workspace package or an archive with its
-SHA-256, length and package prefix. Registry archives use their locked checksum.
-Git archives contain the locked object's bytes, executable bits and symlinks.
+SHA-256, length, tree prefix and package path. Registry archives use their locked checksum.
+Git archives retain the complete locked tree, including executable bits and
+symlinks. Package projections keep the tree as an action input, so links and
+relative reads can reach sibling files without escaping the declared source.
 The planner writes them into its source home and returns a local file URL.
 Native archive materialization verifies the checksum before compilation. It
 does not fetch Git again or give compiler actions network access. Checkout

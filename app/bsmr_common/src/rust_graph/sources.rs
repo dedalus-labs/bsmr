@@ -18,7 +18,15 @@ pub(super) struct Sources<'a> {
     /// Rules which acquire immutable external source trees.
     pub rules: String,
     /// One artifact target for each Cargo package identity.
-    pub targets: BTreeMap<&'a str, String>,
+    pub targets: BTreeMap<&'a str, Source>,
+}
+
+/// A package projection retains the source tree that owns its relative links.
+pub(super) struct Source {
+    /// Complete source-tree artifact, retained by each consuming action.
+    pub root: String,
+    /// Package artifact selected inside the tree.
+    pub package: String,
 }
 
 impl<'a> Sources<'a> {
@@ -40,22 +48,30 @@ impl<'a> Sources<'a> {
                         .root
                         .strip_prefix(&graph.workspace_root)
                         .map_err(|_| RustGraphError::Outside(unit.source.root.clone()))?;
-                    format!(
+                    let root = format!(
                         "{cell}//{}:__bsmr_sources",
                         package.to_string_lossy().replace('\\', "/")
-                    )
+                    );
+                    Source {
+                        package: root.clone(),
+                        root,
+                    }
                 }
                 SourceArtifact::Archive {
                     url,
                     sha256,
                     size,
                     prefix,
+                    package,
                 } => {
                     sources.rules.push_str(&format!(
-                        "http_archive(name = {}, urls = [{}], sha256 = {}, size_bytes = {size}, strip_prefix = {}, type = \"tar.gz\", has_content_based_path = True)\n",
-                        json(&name)?, json(url)?, json(sha256)?, json(prefix)?,
+                        "http_archive(name = {}, urls = [{}], sha256 = {}, size_bytes = {size}, strip_prefix = {}, sub_targets = {{\"package\": [{}]}}, type = \"tar.gz\", has_content_based_path = True)\n",
+                        json(&name)?, json(url)?, json(sha256)?, json(prefix)?, json(package)?,
                     ));
-                    format!(":{name}")
+                    Source {
+                        root: format!(":{name}"),
+                        package: format!(":{name}[package]"),
+                    }
                 }
             };
             sources.targets.insert(&unit.package_id, target);
