@@ -84,8 +84,9 @@ that escape a declared output root are rejected before import.
 The existing local scheduler and optional cgroup controls remain responsible
 for resource allocation. This backend does not impose its own aggregate CPU,
 memory, process-count or live disk quota. Namespace inputs retain the
-100,000-node and 128-component path limits, but do not use the VM input device's
-1 GiB byte ceiling. Input storage comes from the worker's filesystem and a
+128-component path limit. They stream the already analyzed directory tree
+without the VM archive transport's entry or byte ceilings. Input storage comes
+from the worker's filesystem and a
 failed transfer prevents execution. Imported outputs retain the 1 GiB limit.
 Output validation runs after execution and does not cap live writes.
 

@@ -30,8 +30,6 @@ use crate::executors::inputs;
 #[derive(Debug, bsmr_error::Error)]
 #[bsmr(tag = Input)]
 enum StagingError {
-    #[error("namespace input exceeds its node limit")]
-    Nodes,
     #[error("namespace input path exceeds its depth limit: {0:?}")]
     Depth(PathBuf),
     #[error("namespace input symlink {path:?} -> {target:?} escapes the action root")]
@@ -52,12 +50,9 @@ pub(super) fn stage(
 ) -> bsmr_error::Result<()> {
     fs::create_dir(root)?;
     let mut directories = Vec::new();
-    for (index, (path, entry)) in directory.ordered_walk().with_paths().enumerate() {
+    for (path, entry) in directory.ordered_walk().with_paths() {
         let path = Path::new(path.as_str());
         firecracker::validate_guest_path(path)?;
-        if index == firecracker::ARCHIVE_NODE_LIMIT {
-            return Err(StagingError::Nodes.into());
-        }
         if path.components().count() > firecracker::ARCHIVE_PATH_DEPTH_LIMIT {
             return Err(StagingError::Depth(path.to_owned()).into());
         }

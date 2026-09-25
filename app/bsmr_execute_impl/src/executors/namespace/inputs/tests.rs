@@ -7,6 +7,7 @@
 
 use std::fs;
 use std::os::unix::fs::PermissionsExt;
+use std::path::Path;
 use std::sync::Arc;
 use std::time::UNIX_EPOCH;
 
@@ -93,4 +94,32 @@ fn invariant_input_links_cannot_leave_the_snapshot() {
         "{error}"
     );
     assert!(!staged.path().join("outside").exists());
+}
+
+/// A native source graph is not constrained by the VM archive's entry budget.
+#[test]
+fn invariant_native_inputs_accept_large_declared_trees() {
+    let temporary = tempfile::tempdir().unwrap();
+    let config = DigestConfig::testing_default();
+    let mut builder = ActionDirectoryBuilder::empty();
+    for index in 0..100_001 {
+        insert_entry(
+            &mut builder,
+            ProjectRelativePath::new(&format!("alias{index}"))
+                .unwrap()
+                .to_buf(),
+            DirectoryEntry::Leaf(ActionDirectoryMember::Symlink(Arc::new(Symlink::new(
+                "declared".into(),
+            )))),
+        )
+        .unwrap();
+    }
+    let tree = builder.fingerprint(config.as_directory_serializer());
+    let inputs = temporary.path().join("inputs");
+    stage(temporary.path(), &inputs, &tree, config).unwrap();
+    assert_eq!(fs::read_dir(&inputs).unwrap().count(), 100_001);
+    assert_eq!(
+        fs::read_link(inputs.join("alias100000")).unwrap(),
+        Path::new("declared")
+    );
 }
