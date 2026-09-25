@@ -35,14 +35,14 @@ existing `BundleArtifact` shape: `path` and `sha256`. Each path names one file
 beside the manifest. The launcher must match the caller's trusted digest.
 Both files must match their recorded SHA-256 digests.
 
-The root filesystem is an uncompressed tar archive containing regular files
-and directories. Links, duplicate entries and non-relative paths are rejected.
-The packager must copy selected symlink targets as regular files. Each pinned
-file and the extracted contents are limited to 1 GiB. This admits complete
-native compiler distributions with their headers and build utilities. Verification
-streams through a 64 KiB buffer rather than loading the archive into memory.
-The archive is limited
-to 50,000 entries. The loader creates mount directories at `/workspace`, `/tmp`,
+The root filesystem is an uncompressed tar archive containing regular files,
+directories and hard links to earlier regular files. Hard links give multiple
+paths one file's immutable bytes. Their headers cannot change its permissions.
+Symlinks, links to other links, duplicate entries and non-relative paths are rejected.
+The packager must materialize selected symlink targets inside the archive.
+Each pinned file and the total regular-file payload are limited to 1 GiB.
+Verification streams through a 64 KiB buffer. The archive is limited to 50,000
+entries, including hard links. The loader creates mount directories at `/workspace`, `/tmp`,
 `/dev` and `/proc` before the root becomes read-only.
 
 | Interface | Contract |
@@ -105,8 +105,9 @@ The planner exports Cargo's resolved profile and target configuration. Scripts
 receive literal package metadata, declared source files and `NUM_JOBS=1`.
 Each script owns a copied working directory and `OUT_DIR`. Consumers compile
 that returned source tree, so script changes remain isolated from the checkout.
-Compiler probes receive the selected standard library. Workspace-wide Git
-context is not included in the package source tree.
+Compiler probes receive the selected standard library. First-party scripts use
+the [captured checkout](../../../../../docs/users/languages/rust/checkout.md),
+including its declared Git inputs.
 
 Graph analysis depends on the same verified execution identity as action reuse.
 Changing back to host execution rejects the macro graph before an earlier

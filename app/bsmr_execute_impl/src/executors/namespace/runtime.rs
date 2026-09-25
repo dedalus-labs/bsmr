@@ -54,8 +54,14 @@ enum RuntimeError {
         "namespace runtime exceeds its {MAX_RUNTIME_BYTES}-byte or {MAX_RUNTIME_ENTRIES}-entry limit"
     )]
     Limit,
-    #[error("namespace runtime entry must be a unique regular file or directory: {0:?}")]
+    #[error(
+        "namespace runtime entry must be a unique regular file, directory, or hard link: {0:?}"
+    )]
     Entry(PathBuf),
+    #[error(
+        "namespace runtime hard link must name an earlier regular file and have no payload: {0:?}"
+    )]
+    Link(PathBuf),
 }
 
 impl Runtime {
@@ -170,6 +176,7 @@ fn copy_verified(
 fn unpack_runtime(archive: File, root: &Path) -> bsmr_error::Result<()> {
     let mut archive = tar::Archive::new(archive);
     let mut paths = BTreeSet::new();
+    let mut files = BTreeSet::new();
     let mut bytes = 0_u64;
     for entry in archive.entries()? {
         let mut entry = entry?;
@@ -179,7 +186,7 @@ fn unpack_runtime(archive: File, root: &Path) -> bsmr_error::Result<()> {
             || !path
                 .components()
                 .all(|component| matches!(component, Component::Normal(_)))
-            || (!kind.is_file() && !kind.is_dir())
+            || (!kind.is_file() && !kind.is_dir() && !kind.is_hard_link())
             || !paths.insert(path.clone())
         {
             return Err(RuntimeError::Entry(path).into());
@@ -188,9 +195,23 @@ fn unpack_runtime(archive: File, root: &Path) -> bsmr_error::Result<()> {
         if bytes > MAX_RUNTIME_BYTES || paths.len() > MAX_RUNTIME_ENTRIES {
             return Err(RuntimeError::Limit.into());
         }
-        let destination = root.join(path);
+        let destination = root.join(&path);
         fs::create_dir_all(destination.parent().expect("runtime entry has a parent"))?;
-        entry.unpack(destination)?;
+        if kind.is_hard_link() {
+            let target = entry
+                .link_name()?
+                .ok_or_else(|| RuntimeError::Link(path.clone()))?;
+            if entry.size() != 0 || !files.contains(target.as_ref()) {
+                return Err(RuntimeError::Link(path).into());
+            }
+            // Alias headers cannot change the verified payload's bytes or permissions.
+            fs::hard_link(root.join(target), destination)?;
+        } else {
+            entry.unpack(&destination)?;
+            if kind.is_file() {
+                files.insert(path);
+            }
+        }
     }
     Ok(())
 }
