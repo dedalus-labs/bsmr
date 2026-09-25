@@ -6,12 +6,13 @@
 # Assembles the declared workspace without exposing Git configuration or hooks.
 
 # Paths are relative to the package that provides these immutable source artifacts.
-CheckoutSources = provider(fields = {"files": provider_field(dict[str, Artifact])})
+CheckoutSources = provider(fields = {
+    "files": provider_field(dict[str, Artifact]),
+    "unavailable": provider_field(list[str], default = []),
+})
 
 def _impl(ctx: AnalysisContext) -> list[Provider]:
     """Keep the real HEAD, index, refs and objects beside the captured working files."""
-    if ctx.attrs.unavailable:
-        fail("workspace script inputs require native source packages: {}".format(ctx.attrs.unavailable))
     files = {path: package[DefaultInfo].default_outputs[0] for path, package in ctx.attrs.packages.items()}
     declared = {
         (path + "/" if path else "") + name: source
@@ -26,7 +27,7 @@ def _impl(ctx: AnalysisContext) -> list[Provider]:
     if ctx.attrs.git:
         files[".git/config"] = ctx.actions.write("config", "[core]\nrepositoryformatversion=0\nbare=false\n")
     root = ctx.actions.copied_dir("checkout", files, symlinks = "preserve", has_content_based_path = True)
-    return [DefaultInfo(default_output = root), CheckoutSources(files = declared)]
+    return [DefaultInfo(default_output = root), CheckoutSources(files = declared, unavailable = ctx.attrs.unavailable)]
 
 cargo_checkout = rule(
     impl = _impl,
