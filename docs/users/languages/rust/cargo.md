@@ -109,6 +109,8 @@ Cargo resolves requested features, conditional dependencies, dev dependencies, p
 settings, and workspace lints before native compilation. Each build or test has a
 separate configured graph, so building a library does not activate its test-only
 dependencies.
+The native compiler checks Cargo's `docsrs` and `test` cfg names without enabling
+them. Other undeclared cfg names still follow the package's lint policy.
 
 Build scripts and procedural macros require the
 [verified Linux namespace runtime](https://github.com/dedalus-labs/bsmr/blob/main/app/bsmr_execute_impl/src/executors/namespace/README.md).
