@@ -28,16 +28,19 @@ RustSources = provider(
     fields = {
         "tset": RustSourcesTSet,
         # Original artifacts remain the authority for dep-info validation after path mapping.
-        "inputs": provider_field(list[Artifact]),
+        "inputs": RustSourcesTSet,
     }
 )
 
-def source_inputs(ctx: AnalysisContext) -> list[Artifact]:
+def source_inputs(ctx: AnalysisContext) -> RustSourcesTSet:
     """Return the declared inputs before a filegroup maps them through symlinks."""
     filegroup = getattr(ctx.attrs, "srcs_filegroup", None)
     if filegroup:
         return filegroup[RustSources].inputs
-    return ctx.attrs.srcs + ctx.attrs.mapped_srcs.keys()
+    return ctx.actions.tset(
+        RustSourcesTSet,
+        children = [ctx.actions.tset(RustSourcesTSet, value = source) for source in ctx.attrs.srcs + ctx.attrs.mapped_srcs.keys()],
+    )
 
 def srcs_arg():
     return {

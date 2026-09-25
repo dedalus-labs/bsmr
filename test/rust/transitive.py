@@ -6,23 +6,43 @@
 # Verifies that isolated compiler actions receive complete transitive dependency files.
 
 import argparse
-from pathlib import Path
 import shutil
 import tempfile
+from pathlib import Path
 
 from macros import build, initialize, run
 
 
 def qualify(project: Path, binary: str) -> None:
-    """Build a three-crate chain and observe a changed transitive dependency."""
+    """Retain transitive source files and generated macro inputs across cache restores."""
     files = {
         'Cargo.toml': '[workspace]\nmembers=["app","middle","leaf"]\nresolver="2"\n',
-        'app/Cargo.toml': '[package]\nname="app"\nversion="0.1.0"\nedition="2024"\n[dependencies]\nmiddle={path="../middle"}\n',
+        'app/Cargo.toml': (
+            '[package]\nname="app"\nversion="0.1.0"\nedition="2024"\n'
+            '[dependencies]\nmiddle={path="../middle"}\n'
+        ),
         'app/src/main.rs': 'fn main() { println!("{}", middle::value()); }\n',
-        'middle/Cargo.toml': '[package]\nname="middle"\nversion="0.1.0"\nedition="2024"\n[dependencies]\nleaf={path="../leaf"}\n',
-        'middle/src/lib.rs': 'pub fn value() -> u32 { leaf::value() }\n',
+        'middle/Cargo.toml': (
+            '[package]\nname="middle"\nversion="0.1.0"\nedition="2024"\n'
+            '[dependencies]\nleaf={path="../leaf"}\n'
+        ),
+        'middle/src/lib.rs': 'pub fn value() -> u32 { leaf::value() + leaf::offset!() }\n',
         'leaf/Cargo.toml': '[package]\nname="leaf"\nversion="0.1.0"\nedition="2024"\n',
-        'leaf/src/lib.rs': 'pub fn value() -> u32 { 7 }\n',
+        'leaf/offset.txt': '0',
+        'leaf/build.rs': '''fn main() {
+    let out = std::path::PathBuf::from(std::env::var_os("OUT_DIR").unwrap());
+    std::fs::write(out.join("offset.rs"), std::fs::read("offset.txt").unwrap()).unwrap();
+    let code = format!(
+        "#[macro_export] macro_rules! offset {{ () => {{ include!({:?}) }} }}",
+        out.join("offset.rs"),
+    );
+    std::fs::write(out.join("macros.rs"), code).unwrap();
+}
+''',
+        'leaf/src/lib.rs': (
+            'include!(concat!(env!("OUT_DIR"), "/macros.rs"));\n'
+            'pub fn value() -> u32 { 7 }\n'
+        ),
     }
     for path, contents in files.items():
         destination = project / path
@@ -43,8 +63,10 @@ def qualify(project: Path, binary: str) -> None:
     finally:
         result = run(clone, binary, 'kill')
         assert result.returncode == 0, result.stderr
-    (project / 'leaf/src/lib.rs').write_text('pub fn value() -> u32 { 9 }\n')
+    (project / 'leaf/src/lib.rs').write_text(files['leaf/src/lib.rs'].replace('{ 7 }', '{ 9 }'))
     assert build(project, binary, '9')
+    (project / 'leaf/offset.txt').write_text('2')
+    assert build(project, binary, '11'), 'generated macro input edits must rebuild consumers'
     print(
         'ok  transitive dependencies: isolation, warm reuse, restored inputs, edited leaf'
     )
