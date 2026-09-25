@@ -83,11 +83,11 @@ try {
 	await build();
 	assert.deepEqual(readFileSync(join(root, "Cargo.lock")), lock);
 	mkdirSync(join(root, "recipe"));
-	writeFileSync(join(root, "recipe/main.rs"), 'fn main() { print!("{}", include_str!("../data/value.txt")); }');
+	writeFileSync(join(root, "recipe/main.rs"), 'fn main() { assert_eq!(file!(), "display/src/main.rs"); print!("{}", include_str!("../data/value.txt")); }');
 	writeFileSync(join(root, "recipe/BUILD.bsmr"), [
 		'load("@prelude//rust:sources.bzl", "rust_filegroup")',
 		'rust_filegroup(name="sources", mapped_srcs={"main.rs":"src/main.rs", "value.txt":"data/value.txt"})',
-		'rust_binary(name="read", crate="read", edition="2024", crate_root="src/main.rs", srcs_filegroup=":sources", verify_inputs=True, _rust_toolchain="root//:__bsmr_rust")',
+		'rust_binary(name="read", crate="read", edition="2024", crate_root="src/main.rs", srcs_filegroup=":sources", rustc_flags=["--remap-path-prefix=$(location :sources)=display"], verify_inputs=True, _rust_toolchain="root//:__bsmr_rust")',
 	].join("\n"));
 	for (const value of ["alpha", "beta", "alpha"]) {
 		writeFileSync(join(root, "recipe/value.txt"), value);
