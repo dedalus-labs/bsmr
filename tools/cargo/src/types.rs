@@ -82,6 +82,8 @@ pub(crate) struct Graph {
     pub(crate) rustc_version: String,
     /// Captured root used to rebase path-package sources.
     pub(crate) workspace_root: PathBuf,
+    /// Cargo package boundaries, including unselected workspace members.
+    pub(crate) workspace_packages: Vec<PathBuf>,
     /// Indices of the selected entrypoint units.
     pub(crate) roots: Vec<usize>,
     /// Configured compilation units with graph-local dependency indices.

@@ -32,6 +32,15 @@ pub(super) struct Source {
 impl<'a> Sources<'a> {
     /// Share source acquisition across differently configured units of the same package.
     pub fn render(graph: &'a Graph, cell: &str) -> Result<Self, RustGraphError> {
+        let boundaries = graph
+            .workspace_packages
+            .iter()
+            .map(|path| {
+                path.strip_prefix(&graph.workspace_root)
+                    .map(|path| path.to_string_lossy().replace('\\', "/"))
+                    .map_err(|_| RustGraphError::Outside(path.clone()))
+            })
+            .collect::<Result<Vec<_>, _>>()?;
         let mut sources = Self {
             rules: String::new(),
             targets: BTreeMap::new(),
@@ -48,13 +57,17 @@ impl<'a> Sources<'a> {
                         .root
                         .strip_prefix(&graph.workspace_root)
                         .map_err(|_| RustGraphError::Outside(unit.source.root.clone()))?;
-                    let root = format!(
-                        "{cell}//{}:__bsmr_sources",
-                        package.to_string_lossy().replace('\\', "/")
-                    );
+                    sources.rules.push_str(&format!(
+                        "load(\"@prelude//rust:checkout.bzl\", \"cargo_source\")\n\
+                         cargo_source(name = {}, checkout = {}, package = {}, boundaries = {})\n",
+                        json(&name)?,
+                        json(&format!("{cell}//:__bsmr_checkout"))?,
+                        json(&package.to_string_lossy().replace('\\', "/"))?,
+                        json(&boundaries)?,
+                    ));
                     Source {
-                        package: root.clone(),
-                        root,
+                        root: format!(":{name}"),
+                        package: format!(":{name}[package]"),
                     }
                 }
                 SourceArtifact::Archive {

@@ -24,6 +24,15 @@ deleted directory as a dirty checkout even before the submodule is initialized.
 Ordinary `copied_dir` calls still rebase links to retain their original referent.
 Source reconstruction explicitly uses `symlinks = "preserve"` instead.
 
+Compilers that do not run a build script receive their package's files and
+ancestor-owned data in the same relative layout. Cargo supplies the package
+boundaries, including unselected workspace members. An unrelated package's
+source edit therefore stays outside that compiler's inputs. A fixture containing
+`Cargo.toml` remains data unless Cargo declares it as a package.
+
+Keep build caches outside the source tree or list their directories in
+`project.ignore`. An unignored cache inside the workspace becomes an input.
+
 At command start, BSMR hashes the Git inputs that read-only identity queries use:
 HEAD, the real staging index, shared indexes, refs, packed refs, shallow history,
 object stores and repository-local exclude rules. Linked worktrees contribute

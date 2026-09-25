@@ -24,6 +24,8 @@ pub(super) struct Graph {
     pub rustc_version: String,
     /// Captured root used to rebase path-package sources.
     pub workspace_root: PathBuf,
+    /// Cargo package boundaries, including unselected workspace members.
+    pub workspace_packages: Vec<PathBuf>,
     /// Indices of the selected entrypoint units.
     pub roots: Vec<usize>,
     /// Configured compilation units with graph-local dependency indices.
@@ -201,7 +203,7 @@ impl Graph {
     /// Check the protocol and index boundary without recreating Cargo's resolver.
     pub fn parse(bytes: &[u8]) -> Result<Self, RustGraphError> {
         let graph: Self = serde_json::from_slice(bytes)?;
-        if graph.schema_version != 4
+        if graph.schema_version != 5
             || graph.cargo_library != "0.98.0"
             || !graph.rustc_version.lines().any(|line| {
                 [
