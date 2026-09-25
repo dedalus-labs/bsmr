@@ -82,6 +82,14 @@ try {
 	writeFileSync(join(root, ".cargo/config.toml"), config);
 	await build();
 	assert.deepEqual(readFileSync(join(root, "Cargo.lock")), lock);
+	const literal = join(root, "literal$(path)/crate");
+	mkdirSync(join(literal, "src"), { recursive: true });
+	writeFileSync(join(literal, "Cargo.toml"), '[package]\nname="literal"\nversion="0.1.0"\nedition="2024"\n');
+	writeFileSync(join(literal, "src/main.rs"), 'fn main() { assert_eq!(file!(), "src/main.rs"); }');
+	writeFileSync(join(root, "Cargo.toml"), files["Cargo.toml"]!.replace("members=[", 'members=["literal$(path)/crate",'));
+	await run(cargo, ["generate-lockfile", "--offline"], { ...options, env: { ...env, RUSTC: resolve(cargo, "../rustc") } });
+	const literalBuild = await run(binary, ["build", "literal$(path)/crate:literal", "--show-full-json-output"], options);
+	await run(Object.values(JSON.parse(literalBuild.stdout) as Record<string, string>)[0]!, [], options);
 	mkdirSync(join(root, "recipe"));
 	writeFileSync(join(root, "recipe/main.rs"), 'fn main() { assert_eq!(file!(), "display/src/main.rs"); print!("{}", include_str!("../data/value.txt")); }');
 	writeFileSync(join(root, "recipe/BUILD.bsmr"), [

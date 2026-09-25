@@ -9,13 +9,13 @@
 mod scripts;
 
 use std::collections::BTreeMap;
-use std::path::Component;
 use std::path::Path;
 
 use serde_json::to_string as json;
 
 use super::RustGraphError;
 use super::libraries;
+use super::sources::CrateLayout;
 use super::sources::Source;
 use super::sources::Sources;
 use super::units::DebugInfo;
@@ -120,91 +120,66 @@ impl Renderer<'_> {
             return self.script(unit, index);
         }
         let mut output = unit.output(rule, index)?;
-        let (sources, source) = self.sources(unit)?;
+        let layout = CrateLayout::new(unit, &self.graph.workspace_root, index)?;
+        let mut source_flags = vec![layout.remap];
         let dependencies = self.dependencies(unit)?;
         let mut artifact_env = dependencies.binaries;
-        let mut sources = match dependencies.script {
-            Some(script) => format!(":unit_{script}[cwd]"),
-            None => sources,
+        let (mut root, mut sources) = match dependencies.script {
+            Some(script) => (
+                format!(":unit_{script}[workspace]"),
+                format!(":unit_{script}[cwd]"),
+            ),
+            None => {
+                let source = &self.sources[unit.package_id.as_str()];
+                (source.root.clone(), source.package.clone())
+            }
         };
-        let generated = if let Some(script) = dependencies.script {
-            format!(
-                ", srcs = [\":unit_{script}[out_dir]\", \":unit_{script}[workspace]\"], rustc_flags = [\"@$(location :unit_{script}[rustc_flags])\"]"
-            )
-        } else {
-            format!(
-                ", srcs = [{}]",
-                json(&self.sources[unit.package_id.as_str()].root)?
-            )
-        };
+        let mut inputs = BTreeMap::new();
         if let Some(script) = dependencies.script {
+            inputs.insert(format!(":unit_{script}[out_dir]"), "generated");
             artifact_env.insert(
                 "OUT_DIR".into(),
                 format!("$(location :unit_{script}[out_dir])"),
             );
+            source_flags.push(format!("@$(location :unit_{script}[rustc_flags])"));
         }
         let mut declarations = String::new();
         if rule == "rust_test" {
             let view = self.test_sources(unit, index, &sources)?;
             declarations = view.rule;
             sources = view.package;
-            output.push_str(&format!(", resources = [{}]", json(&view.root)?));
-            output.push_str(if unit.harness {
-                ", framework = True"
-            } else {
-                ", framework = False"
-            });
-            output.push_str(&format!(", run_cwd = {}", json(&sources)?));
+            output.push_str(&format!(
+                ", resources = [{}], framework = {}, run_cwd = {}",
+                json(&view.root)?,
+                if unit.harness { "True" } else { "False" },
+                json(&sources)?,
+            ));
+            root = view.root;
         }
-        artifact_env.insert(
-            "CARGO_MANIFEST_DIR".into(),
-            format!("$(location {sources})"),
-        );
-        artifact_env.insert(
-            "CARGO_MANIFEST_PATH".into(),
-            format!("$(location {sources})/Cargo.toml"),
-        );
+        inputs.insert(root, "workspace");
+        declarations.push_str(&format!(
+            "load(\"@prelude//rust:sources.bzl\", \"rust_filegroup\")\n\
+             rust_filegroup(name = \"sources_{index}\", mapped_srcs = {})\n",
+            json(&inputs)?,
+        ));
+        let manifest_dir = format!("$(location {sources})");
+        let manifest_path = format!("{manifest_dir}/Cargo.toml");
+        artifact_env.insert("CARGO_MANIFEST_DIR".into(), manifest_dir);
+        artifact_env.insert("CARGO_MANIFEST_PATH".into(), manifest_path);
         output.push_str(&format!(", env = {}", json(&artifact_env)?));
-        let primary = self
-            .graph
-            .roots
-            .iter()
-            .any(|root| self.graph.units[*root].package_id == unit.package_id);
+        output.push_str(&format!(", rustc_flags = {}", json(&source_flags)?));
+        let primary = self.graph.units[self.graph.roots[0]].package_id == unit.package_id;
         let environment = unit.environment(primary);
-        let flags = unit.flags()?;
         Ok(format!(
-            "{declarations}{rule}(name = \"unit_{index}\", crate = {}, crate_root = {}, edition = {}, mapped_srcs = {{{}: \"crate\"}}, named_deps = {}, features = {}, literal_rustc_flags = {}, literal_env = {}, verify_inputs = True, _rust_toolchain = {}, visibility = [\"PUBLIC\"]{output}{generated})\n",
+            "{declarations}{rule}(name = \"unit_{index}\", crate = {}, crate_root = {}, edition = {}, srcs_filegroup = \":sources_{index}\", named_deps = {}, features = {}, literal_rustc_flags = {}, literal_env = {}, verify_inputs = True, _rust_toolchain = {}, visibility = [\"PUBLIC\"]{output})\n",
             json(&unit.target.name.replace('-', "_"))?,
-            json(&source)?,
+            json(&layout.root)?,
             json(&unit.target.edition)?,
-            json(&sources)?,
             json(&dependencies.crates)?,
             json(&unit.features)?,
-            json(&flags)?,
+            json(&unit.flags()?)?,
             json(&environment)?,
             json(self.toolchain)?,
-        ))
-    }
-
-    /// Locate compiler sources inside the tracked package that owns them.
-    fn sources(&self, unit: &Unit) -> Result<(String, String), RustGraphError> {
-        let source = unit
-            .target
-            .src_path
-            .strip_prefix(&unit.source.root)
-            .map_err(|_| RustGraphError::Outside(unit.target.src_path.clone()))?;
-        if source
-            .components()
-            .any(|part| matches!(part, Component::ParentDir))
-        {
-            return Err(unsupported(
-                &unit.package_name,
-                "source outside its declared package tree",
-            ));
-        }
-        Ok((
-            self.sources[unit.package_id.as_str()].package.clone(),
-            format!("crate/{}", source.to_string_lossy().replace('\\', "/")),
         ))
     }
 

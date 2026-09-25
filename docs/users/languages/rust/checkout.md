@@ -30,6 +30,17 @@ boundaries, including unselected workspace members. An unrelated package's
 source edit therefore stays outside that compiler's inputs. A fixture containing
 `Cargo.toml` remains data unless Cargo declares it as a package.
 
+Each compiler consumes one native `rust_filegroup` through `srcs_filegroup`.
+The group retains the source tree's relative layout and the build script's
+generated directory when present. Native Rust rules retain that group for
+dependent compilers too, so generated macro sources remain available.
+Build-script directories use stable artifact paths because generated Rust can
+embed them. Their contents still participate in action cache keys.
+
+Every declared file remains part of the action's cache key. Rustc's dependency
+report omits arbitrary filesystem reads made by procedural macros. Using only
+that report could reuse old macro output after its grammar file changes.
+
 Keep build caches outside the source tree or list their directories in
 `project.ignore`. An unignored cache inside the workspace becomes an input.
 
