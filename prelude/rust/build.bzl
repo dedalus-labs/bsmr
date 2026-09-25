@@ -142,7 +142,6 @@ load(
     ":sources.bzl",
     "RustSources",
     "RustSourcesTSet",
-    "source_inputs",
 )
 
 def generate_rustdoc(
@@ -421,7 +420,6 @@ def generate_rustdoc_test(
         cmd_args("--test-builder=", toolchain_info.compiler, delimiter = ""),
         toolchain_info.rustdoc_flags,
         ctx.attrs.rustdoc_flags,
-        common_args.args,
         extern_arg([], attr_crate(ctx), rlib),
         "--extern=proc_macro" if ctx.attrs.proc_macro else [],
         cmd_args(compile_ctx.linker_with_pre_args, format = "-Clinker={}"),
@@ -440,6 +438,7 @@ def generate_rustdoc_test(
             compile_ctx.path_sep,
             delimiter = "",
         ),
+        common_args.args,
         hidden = [
             transitive_srcs.project_as_args("artifacts"),
             link_args_output.hidden,
@@ -509,7 +508,6 @@ def rust_compile(
         lints,
         # Report unused --extern crates in the notification stream.
         ["--json=unused-externs-silent", "-Wunused-crate-dependencies"] if toolchain_info.report_unused_deps else [],
-        common_args.args,
         cmd_args(
             "--remap-path-prefix=",
             compile_ctx.symlinked_srcs,
@@ -519,6 +517,8 @@ def rust_compile(
             compile_ctx.path_sep,
             delimiter = "",
         ),
+        # Caller mappings take precedence over the default source path above.
+        common_args.args,
         ["-Zremap-cwd-prefix=."] if toolchain_info.nightly_features else [],
         extra_flags,
     )
@@ -1577,7 +1577,7 @@ def _rustc_invoke(
     if ctx.attrs.verify_inputs:
         dep_info = ctx.actions.declare_output("{}-{}.d".format(prefix, diag), has_content_based_path = use_cbp)
         compile_cmd.add(cmd_args(dep_info.as_output(), format = "--dep-info={}"))
-        compile_cmd.add(cmd_args(source_inputs(ctx), format = "--allowed-input={}"))
+        compile_cmd.add(cmd_args(compile_ctx.transitive_inputs.project_as_args("artifacts"), format = "--allowed-input={}"))
         rustc_cmd.add(cmd_args(dep_info.as_output(), format = "--emit=dep-info={}"))
 
     build_status = None

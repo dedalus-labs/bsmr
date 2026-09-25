@@ -141,7 +141,6 @@ load(":rust_toolchain.bzl", "RustToolchainInfo")
 load(
     ":sources.bzl",
     "RustSources",
-    "source_inputs",
 )
 load(":targets.bzl", "targets")
 
@@ -455,7 +454,7 @@ def rust_library_impl(ctx: AnalysisContext) -> list[Provider]:
         named_deps_names = write_named_deps_names(ctx, compile_ctx),
         profiles = profiles,
     )
-    providers.append(RustSources(tset = compile_ctx.transitive_srcs, inputs = source_inputs(ctx)))
+    providers.append(RustSources(tset = compile_ctx.transitive_srcs, inputs = compile_ctx.transitive_inputs))
     providers += _rust_metadata_providers(
         diag_artifacts = diag_artifacts,
         clippy_artifacts = clippy_artifacts,

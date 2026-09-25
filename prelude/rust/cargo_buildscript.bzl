@@ -247,9 +247,10 @@ def _cargo_buildscript_impl(ctx: AnalysisContext) -> list[Provider]:
     cxx_toolchain_info = ctx.attrs._cxx_toolchain[CxxToolchainInfo]
     rust_toolchain_info = ctx.attrs._rust_toolchain[RustToolchainInfo]
 
-    workspace = ctx.actions.declare_output("cwd", dir = True, has_content_based_path = True)
+    # Build scripts may embed these paths in generated sources consumed by other crates.
+    workspace = ctx.actions.declare_output("cwd", dir = True, has_content_based_path = False)
     cwd = workspace.project(ctx.attrs.package_path) if ctx.attrs.checkout != None and ctx.attrs.package_path else workspace
-    out_dir = ctx.actions.declare_output("OUT_DIR", dir = True, has_content_based_path = True)
+    out_dir = ctx.actions.declare_output("OUT_DIR", dir = True, has_content_based_path = False)
     rustc_flags = ctx.actions.declare_output("rustc_flags", has_content_based_path = True)
     metadata = ctx.actions.declare_output("metadata.json", has_content_based_path = True)
 
