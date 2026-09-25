@@ -7,6 +7,8 @@ title: Build-script checkout inputs
 <!-- SPDX-License-Identifier: Apache-2.0 -->
 <!-- ===----------------------------------------------------------------------=== -->
 
+<!-- Explains source and Git ownership for native build scripts. -->
+
 # Build-script checkout inputs
 
 A build script that embeds a Git revision must observe the checkout used by its
