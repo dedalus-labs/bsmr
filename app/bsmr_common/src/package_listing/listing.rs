@@ -109,6 +109,18 @@ impl PackageListing {
         self.listing.files.files_within(dir)
     }
 
+    /// Retain empty source directories without treating another package as empty.
+    pub fn empty_directories(&self) -> impl Iterator<Item = &PackageRelativePath> {
+        self.listing
+            .directories
+            .iter()
+            .map(|path| path.as_ref())
+            .filter(|path| {
+                self.files_within(path).next().is_none()
+                    && self.subpackages_within(path).next().is_none()
+            })
+    }
+
     pub fn subpackages_within<'a>(
         &'a self,
         dir: &'a PackageRelativePath,

@@ -68,6 +68,9 @@ value={path="../value",features=["testing"]}
     if runtime is not None:
         files['app/build.rs'] = 'fn main() { std::fs::write("generated.txt", "generated").unwrap(); }\n'
         files['app/generated.txt'] = 'stale'
+        files['data/value.txt'] = 'sibling'
+        files['value/src/lib.rs'] += 'const _: &str = include_str!("../../data/value.txt");\n'
+        files['value/build.rs'] = 'fn main() {}\n'
         files['app/tests/cli.rs'] = files['app/tests/cli.rs'].replace(
             'fn declared_inputs() {',
             'fn declared_inputs() { assert_eq!(std::fs::read_to_string("generated.txt").unwrap(), "generated");',
