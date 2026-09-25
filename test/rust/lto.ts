@@ -14,8 +14,10 @@ import { promisify } from "node:util";
 
 const run = promisify(execFile);
 const binary = resolve(process.argv[2]!);
-const root = realpathSync(mkdtempSync(join(tmpdir(), "rust-lto-")));
-const options = { cwd: root, env: { ...process.env, BSMR_LOCAL_CACHE_DIR: join(root, "cache") }, timeout: 120_000, maxBuffer: 8 * 1024 * 1024 };
+const base = realpathSync(mkdtempSync(join(tmpdir(), "rust-lto-")));
+const root = join(base, "project");
+mkdirSync(root);
+const options = { cwd: root, env: { ...process.env, BSMR_LOCAL_CACHE_DIR: join(base, "cache") }, timeout: 120_000, maxBuffer: 8 * 1024 * 1024 };
 const manifest = '[workspace]\nmembers=["app","shared","leaf"]\nresolver="2"\n';
 try {
 	for (const name of ["app", "shared", "leaf"]) {
@@ -62,5 +64,5 @@ try {
 	assert.deepEqual(readFileSync(join(root, "Cargo.lock")), lock);
 } finally {
 	await run(binary, ["kill"], options);
-	rmSync(root, { recursive: true });
+	rmSync(base, { recursive: true });
 }
