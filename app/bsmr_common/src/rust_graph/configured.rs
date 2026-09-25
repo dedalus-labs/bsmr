@@ -325,6 +325,8 @@ impl Unit {
             .join(",");
         flags.extend([
             "--check-cfg".into(),
+            "cfg(docsrs,test)".into(),
+            "--check-cfg".into(),
             format!("cfg(feature, values({declared}))"),
         ]);
         Ok(flags)

@@ -61,8 +61,8 @@ value={path="../value",features=["testing"]}
         'app/tests/cli.rs': INTEGRATION,
         'app/tests/custom.rs': CUSTOM,
         'app/value.txt': 'fixture',
-        'value/Cargo.toml': '[package]\nname="value"\nversion="0.1.0"\nedition="2024"\n[features]\ntesting=[]\n',
-        'value/src/lib.rs': 'pub fn number()->u32 { if cfg!(feature="testing") {9} else {7} }\n',
+        'value/Cargo.toml': '[package]\nname="value"\nversion="0.1.0"\nedition="2024"\n[features]\ntesting=[]\n[lints.rust]\nunexpected_cfgs="deny"\n',
+        'value/src/lib.rs': '#[cfg(docsrs)] pub fn documentation() {}\n#[cfg(test)] mod tests {}\npub fn number()->u32 { if cfg!(feature="testing") {9} else {7} }\n',
         'value/fixture.txt': 'dependency',
     }
     if runtime is not None:
