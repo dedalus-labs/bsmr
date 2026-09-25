@@ -43,10 +43,14 @@ rustc's test runner and a custom `main`. The response reports the resolver and a
 versions. Registry archives must match their locked checksum. Cached registry manifests
 must match the verified archive. Git package and workspace manifests must match
 regular-file blobs in the locked commit. Directory source replacements fail.
-Each source includes an `artifact`: a workspace package, a registry download
-with its SHA-256 and length, or a Git repository with its locked revision and
-package directory. Native `http_archive` and `git_fetch` rules acquire those
-bytes. Cargo's mutable source cache is never a compiler input.
+Each source includes an `artifact`: a workspace package or an archive with its
+SHA-256, length and package prefix. Registry archives use their locked checksum.
+Git archives contain the locked object's bytes, executable bits and symlinks.
+The planner writes them into its source home and returns a local file URL.
+Native archive materialization verifies the checksum before compilation. It
+does not fetch Git again or give compiler actions network access. Checkout
+filters and export attributes cannot rewrite these bytes. Git submodules are
+rejected explicitly. Cargo's mutable checkout is never a compiler input.
 
 The resolver pins Cargo 0.98.0 and admits Rust 1.97.1, 1.98.0, and
 nightly-2026-04-11. Its standalone workspace isolates Cargo's native dependencies

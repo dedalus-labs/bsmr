@@ -13,6 +13,7 @@ import tempfile
 from pathlib import Path
 import subprocess
 import sys
+from urllib.parse import unquote, urlparse
 
 
 def main() -> None:
@@ -157,10 +158,12 @@ def verify_git(binary: Path, toolchain: Path, root: Path, env: dict) -> None:
         graph = json.loads(acquired.stdout)
         source = next(unit["source"] for unit in graph["units"] if unit["package_name"] == "git-dependency")
         assert source["git_revision"] == revision
-        assert source["artifact"] == {
-            "kind": "git", "repository": repository.as_uri(),
-            "revision": revision, "directory": "crates/member",
-        }
+        artifact = source["artifact"]
+        assert artifact["kind"] == "archive"
+        assert artifact["prefix"] == "source/crates/member"
+        archive = Path(unquote(urlparse(artifact["url"]).path))
+        assert hashlib.sha256(archive.read_bytes()).hexdigest() == artifact["sha256"]
+        assert archive.stat().st_size == artifact["size"]
     request["source_policy"] = "offline"
     replay = subprocess.run([binary], input=json.dumps(request), env=env, text=True, capture_output=True, check=True)
     assert json.loads(replay.stdout) == graph

@@ -102,15 +102,6 @@ pub(super) enum SourceArtifact {
         /// Package directory inside the archive.
         prefix: String,
     },
-    /// Repository content pinned by Cargo.lock.
-    Git {
-        /// Repository endpoint used by Cargo.
-        repository: String,
-        /// Full Git commit identity.
-        revision: String,
-        /// Package directory inside the checkout.
-        directory: PathBuf,
-    },
 }
 
 #[derive(Deserialize)]

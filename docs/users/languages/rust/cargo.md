@@ -98,7 +98,9 @@ The frontend supports local path, public registry, and pinned Git libraries,
 binaries, inline unit tests, and integration tests. Registry archives are verified against
 `Cargo.lock`. Git packages are read from the locked commit without ambient
 Git filters or hooks. Compilation reads native source artifacts, not Cargo's
-mutable checkout cache. Authenticated registries remain unsupported.
+mutable checkout cache. The planner exports pinned Git objects to checksum-verified
+archives, so compiler actions need no Git fetch or network access. Git submodules
+and authenticated registries remain unsupported.
 Excluded path dependencies provide source inputs without becoming public workspace targets.
 Cargo resolves requested features, conditional dependencies, dev dependencies, profile
 settings, and workspace lints before native compilation. Each build or test has a

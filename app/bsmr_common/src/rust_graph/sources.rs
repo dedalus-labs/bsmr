@@ -6,15 +6,12 @@
 //! Gives each Cargo package one source artifact through existing native acquisition rules.
 
 use std::collections::BTreeMap;
-use std::path::Component;
-use std::path::Path;
 
 use serde_json::to_string as json;
 
 use super::RustGraphError;
 use super::units::Graph;
 use super::units::SourceArtifact;
-use super::unsupported;
 
 /// Native source declarations and the package identities that own them.
 pub(super) struct Sources<'a> {
@@ -60,54 +57,9 @@ impl<'a> Sources<'a> {
                     ));
                     format!(":{name}")
                 }
-                SourceArtifact::Git {
-                    repository,
-                    revision,
-                    directory,
-                } => {
-                    let (rule, target) = git(repository, revision, directory, &name)?;
-                    sources.rules.push_str(&rule);
-                    target
-                }
             };
             sources.targets.insert(&unit.package_id, target);
         }
         Ok(sources)
     }
-}
-
-/// Acquire a pinned repository and select its package without allowing path traversal.
-fn git(
-    repository: &str,
-    revision: &str,
-    directory: &Path,
-    name: &str,
-) -> Result<(String, String), RustGraphError> {
-    if directory
-        .components()
-        .any(|part| !matches!(part, Component::Normal(_)))
-    {
-        return Err(unsupported(
-            repository,
-            "Git package path escapes its source tree",
-        ));
-    }
-    let directory = directory.to_string_lossy().replace('\\', "/");
-    let subtargets: Vec<_> = (!directory.is_empty())
-        .then_some(&directory)
-        .into_iter()
-        .collect();
-    let rule = format!(
-        "git_fetch(name = {}, repo = {}, rev = {}, sub_targets = {})\n",
-        json(name)?,
-        json(repository)?,
-        json(revision)?,
-        json(&subtargets)?,
-    );
-    let target = if directory.is_empty() {
-        format!(":{name}")
-    } else {
-        format!(":{name}[{directory}]")
-    };
-    Ok((rule, target))
 }

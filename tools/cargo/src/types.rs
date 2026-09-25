@@ -165,15 +165,6 @@ pub(crate) enum SourceArtifact {
         /// Package directory inside the archive.
         prefix: String,
     },
-    /// A pinned Git tree with a package directory inside it.
-    Git {
-        /// Repository URL used by Cargo.
-        repository: String,
-        /// Full commit identity from Cargo.lock.
-        revision: String,
-        /// Package path relative to the repository root.
-        directory: PathBuf,
-    },
 }
 
 #[derive(Clone, Serialize)]
