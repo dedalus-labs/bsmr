@@ -3,15 +3,19 @@
 // SPDX-License-Identifier: Apache-2.0
 //===----------------------------------------------------------------------===//
 
-//! Gives each Cargo package one source artifact through existing native acquisition rules.
+//! Maps Cargo packages to native source artifacts and compiler paths.
 
 use std::collections::BTreeMap;
+use std::path::Component;
+use std::path::Path;
 
 use serde_json::to_string as json;
 
 use super::RustGraphError;
 use super::units::Graph;
 use super::units::SourceArtifact;
+use super::units::Unit;
+use super::unsupported;
 
 /// Native source declarations and the package identities that own them.
 pub(super) struct Sources<'a> {
@@ -90,5 +94,53 @@ impl<'a> Sources<'a> {
             sources.targets.insert(&unit.package_id, target);
         }
         Ok(sources)
+    }
+}
+
+/// A crate's entrypoint and diagnostics share one staged package prefix.
+pub(super) struct CrateLayout {
+    /// Entrypoint relative to the native source group.
+    pub root: String,
+    /// Compiler flag that preserves package-relative source paths.
+    pub remap: String,
+}
+
+impl CrateLayout {
+    /// Locate compiler sources inside the tracked package that owns them.
+    pub fn new(unit: &Unit, workspace: &Path, index: usize) -> Result<CrateLayout, RustGraphError> {
+        let source = unit
+            .target
+            .src_path
+            .strip_prefix(&unit.source.root)
+            .map_err(|_| RustGraphError::Outside(unit.target.src_path.clone()))?;
+        if source
+            .components()
+            .any(|part| matches!(part, Component::ParentDir))
+        {
+            return Err(unsupported(
+                &unit.package_name,
+                "source outside its declared package tree",
+            ));
+        }
+        let package = match &unit.source.artifact {
+            SourceArtifact::Workspace => unit
+                .source
+                .root
+                .strip_prefix(workspace)
+                .map_err(|_| RustGraphError::Outside(unit.source.root.clone()))?,
+            SourceArtifact::Archive { package, .. } => Path::new(package),
+        };
+        let root = format!(
+            "workspace/{}",
+            package.join(source).to_string_lossy().replace('\\', "/")
+        );
+        let package = package
+            .to_string_lossy()
+            .replace('\\', "/")
+            .replace("$(", "\\$(");
+        Ok(CrateLayout {
+            root,
+            remap: format!("--remap-path-prefix=$(location :sources_{index})/workspace/{package}="),
+        })
     }
 }
