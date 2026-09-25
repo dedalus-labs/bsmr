@@ -14,6 +14,7 @@ from macros import build, initialize, run
 
 PRODUCER = """
 fn main() {
+    assert_eq!(std::env::var("CARGO_MANIFEST_LINKS").unwrap(), "native-api");
     let value = std::fs::read_to_string("value.txt").unwrap();
     let out = std::env::var("OUT_DIR").unwrap();
     std::fs::write(format!("{out}/value.txt"), &value).unwrap();
@@ -66,6 +67,7 @@ def qualify(project: Path, binary: str) -> None:
         'guard/build.rs': 'fn main() { println!("cargo:rerun-if-changed=build.rs"); }\n',
         'guard/src/lib.rs': '',
         'app/build.rs': """fn main() {
+            assert!(std::env::var("CARGO_MANIFEST_LINKS").is_err());
             assert!(std::env::var("DEP_NATIVE_API_INCLUDE").is_err());
             let value = std::env::var("DEP_MIDDLE_API_VALUE").unwrap();
             println!("cargo::rustc-env=APP_VALUE={value}");

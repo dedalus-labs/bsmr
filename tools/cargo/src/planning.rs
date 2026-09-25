@@ -302,6 +302,9 @@ fn unit_environment(context: &BuildContext<'_, '_>, unit: &Unit) -> BTreeMap<Str
     if !matches!(unit.mode, CompileMode::RunCustomBuild) {
         return environment;
     }
+    if let Some(links) = unit.pkg.manifest().links() {
+        environment.insert("CARGO_MANIFEST_LINKS".into(), links.into());
+    }
     let mut cfgs = BTreeMap::from([(
         "feature".to_owned(),
         unit.features
