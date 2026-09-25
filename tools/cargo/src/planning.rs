@@ -228,7 +228,7 @@ fn export(context: &BuildContext<'_, '_>, resolve: &Resolve) -> Result<Graph> {
         .map(|(i, unit)| (*unit, i))
         .collect();
     Ok(Graph {
-        schema_version: 3,
+        schema_version: 4,
         cargo_library: crate::CARGO_LIBRARY,
         rustc_version: context.target_data.rustc.verbose_version.clone(),
         workspace_root: context.ws.root().to_owned(),

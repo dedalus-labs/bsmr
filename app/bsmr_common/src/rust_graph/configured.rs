@@ -16,6 +16,7 @@ use serde_json::to_string as json;
 
 use super::RustGraphError;
 use super::libraries;
+use super::sources::Source;
 use super::sources::Sources;
 use super::units::DebugInfo;
 use super::units::Graph;
@@ -83,7 +84,7 @@ struct Renderer<'a> {
     /// Configured units from one selected Cargo entrypoint.
     graph: &'a Graph,
     /// Declared source artifacts owned by each package.
-    sources: &'a BTreeMap<&'a str, String>,
+    sources: &'a BTreeMap<&'a str, Source>,
     /// Pinned compiler distribution used by every emitted rule.
     toolchain: &'a str,
     /// Verified execution policy captured before analysis reuse.
@@ -126,16 +127,16 @@ impl Renderer<'_> {
             Some(script) => format!(":unit_{script}[cwd]"),
             None => sources,
         };
-        let generated = dependencies.script.map(|script| {
-            let inputs = if matches!(unit.source.artifact, SourceArtifact::Workspace) {
-                format!(", \":unit_{script}[workspace]\"")
-            } else {
-                String::new()
-            };
+        let generated = if let Some(script) = dependencies.script {
             format!(
-                ", srcs = [\":unit_{script}[out_dir]\"{inputs}], rustc_flags = [\"@$(location :unit_{script}[rustc_flags])\"]"
+                ", srcs = [\":unit_{script}[out_dir]\", \":unit_{script}[workspace]\"], rustc_flags = [\"@$(location :unit_{script}[rustc_flags])\"]"
             )
-        }).unwrap_or_default();
+        } else {
+            format!(
+                ", srcs = [{}]",
+                json(&self.sources[unit.package_id.as_str()].root)?
+            )
+        };
         if let Some(script) = dependencies.script {
             artifact_env.insert(
                 "OUT_DIR".into(),
@@ -198,7 +199,7 @@ impl Renderer<'_> {
             ));
         }
         Ok((
-            self.sources[unit.package_id.as_str()].clone(),
+            self.sources[unit.package_id.as_str()].package.clone(),
             format!("crate/{}", source.to_string_lossy().replace('\\', "/")),
         ))
     }
@@ -282,7 +283,9 @@ impl Renderer<'_> {
                     .map_err(|_| RustGraphError::Outside(dependency.source.root.clone()))?;
                 packages.insert(
                     path.to_string_lossy().replace('\\', "/"),
-                    self.sources[dependency.package_id.as_str()].as_str(),
+                    self.sources[dependency.package_id.as_str()]
+                        .package
+                        .as_str(),
                 );
             }
         }

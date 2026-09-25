@@ -59,23 +59,30 @@ impl Renderer<'_> {
             cfgs.push(format!("{}=\"{}\"", key.to_lowercase(), value));
             false
         });
-        let checkout = if matches!(unit.source.artifact, SourceArtifact::Workspace) {
-            let root = self
-                .toolchain
-                .strip_suffix(":__bsmr_rust")
-                .expect("root Rust toolchain");
-            let package = unit
-                .source
-                .root
-                .strip_prefix(&self.graph.workspace_root)
-                .map_err(|_| RustGraphError::Outside(unit.source.root.clone()))?;
-            format!(
-                ", checkout = {}, package_path = {}",
-                json(&format!("{root}:__bsmr_checkout"))?,
-                json(package)?
-            )
-        } else {
-            String::new()
+        let checkout = match &unit.source.artifact {
+            SourceArtifact::Workspace => {
+                let root = self
+                    .toolchain
+                    .strip_suffix(":__bsmr_rust")
+                    .expect("root Rust toolchain");
+                let package = unit
+                    .source
+                    .root
+                    .strip_prefix(&self.graph.workspace_root)
+                    .map_err(|_| RustGraphError::Outside(unit.source.root.clone()))?;
+                format!(
+                    ", checkout = {}, package_path = {}",
+                    json(&format!("{root}:__bsmr_checkout"))?,
+                    json(package)?
+                )
+            }
+            SourceArtifact::Archive { package, .. } => {
+                format!(
+                    ", checkout = {}, package_path = {}",
+                    json(&self.sources[unit.package_id.as_str()].root)?,
+                    json(package)?
+                )
+            }
         };
         Ok(format!(
             "load(\"@prelude//rust:cargo_buildscript.bzl\", \"buildscript_run\")\n\
@@ -89,7 +96,7 @@ impl Renderer<'_> {
             metadata = json(&dependencies.metadata)?,
             package = json(&unit.package_name)?,
             version = json(&unit.package_version)?,
-            sources = json(&self.sources[unit.package_id.as_str()])?,
+            sources = json(&self.sources[unit.package_id.as_str()].package)?,
             features = json(&unit.features)?,
             environment = json(&environment)?,
         ))

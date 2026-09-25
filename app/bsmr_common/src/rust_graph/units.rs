@@ -99,8 +99,10 @@ pub(super) enum SourceArtifact {
         sha256: String,
         /// Expected archive length in bytes.
         size: u64,
-        /// Package directory inside the archive.
+        /// Source-tree directory inside the archive.
         prefix: String,
+        /// Package directory relative to that source tree.
+        package: String,
     },
 }
 
@@ -199,7 +201,7 @@ impl Graph {
     /// Check the protocol and index boundary without recreating Cargo's resolver.
     pub fn parse(bytes: &[u8]) -> Result<Self, RustGraphError> {
         let graph: Self = serde_json::from_slice(bytes)?;
-        if graph.schema_version != 3
+        if graph.schema_version != 4
             || graph.cargo_library != "0.98.0"
             || !graph.rustc_version.lines().any(|line| {
                 [

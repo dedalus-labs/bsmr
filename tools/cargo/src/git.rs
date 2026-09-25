@@ -47,10 +47,8 @@ pub(crate) fn archive(
         url: url.into(),
         sha256,
         size,
-        prefix: Path::new("source")
-            .join(package)
-            .to_string_lossy()
-            .into_owned(),
+        prefix: "source".into(),
+        package: package.to_string_lossy().into_owned(),
     })
 }
 
@@ -134,6 +132,7 @@ mod tests {
             sha256,
             size,
             prefix,
+            package: _,
         } = archive(&repository, &tree, home.path(), Path::new(""))?
         else {
             anyhow::bail!("expected source archive");

@@ -185,6 +185,7 @@ fn registry_artifact(
         sha256: checksum.to_owned(),
         size,
         prefix: format!("{}-{}", package.name(), package.version()),
+        package: String::new(),
     })
 }
 

@@ -162,8 +162,10 @@ pub(crate) enum SourceArtifact {
         sha256: String,
         /// Verified archive size in bytes.
         size: u64,
-        /// Package directory inside the archive.
+        /// Source-tree directory inside the archive.
         prefix: String,
+        /// Package directory relative to that source tree.
+        package: String,
     },
 }
 
