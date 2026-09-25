@@ -9,6 +9,7 @@ pub mod catalog;
 pub mod configured;
 pub mod dice;
 pub mod entry;
+pub mod git;
 mod error;
 mod libraries;
 mod planner;

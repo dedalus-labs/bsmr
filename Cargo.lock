@@ -1599,6 +1599,7 @@ dependencies = [
  "tower",
  "tracing",
  "triomphe",
+ "url",
  "uv-distribution-filename",
  "uv-pep508",
  "uv-platform-tags",
