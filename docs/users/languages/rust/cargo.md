@@ -94,6 +94,9 @@ so the Rust package retains its inferred definition.
 
 ## Supported boundary
 
+First-party scripts can read [captured checkout identity](checkout.md) inside
+the verified Linux runtime. The captured Git inputs participate in cache identity.
+
 The frontend supports local path, public registry, and pinned Git libraries,
 binaries, inline unit tests, and integration tests. Registry archives are verified against
 `Cargo.lock`. Git packages are read from the locked commit without ambient
