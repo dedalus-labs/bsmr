@@ -82,6 +82,23 @@ try {
 	writeFileSync(join(root, ".cargo/config.toml"), config);
 	await build();
 	assert.deepEqual(readFileSync(join(root, "Cargo.lock")), lock);
+	mkdirSync(join(root, "recipe"));
+	writeFileSync(join(root, "recipe/main.rs"), 'fn main() { print!("{}", include_str!("../data/value.txt")); }');
+	writeFileSync(join(root, "recipe/BUILD.bsmr"), [
+		'load("@prelude//rust:sources.bzl", "rust_filegroup")',
+		'rust_filegroup(name="sources", mapped_srcs={"main.rs":"src/main.rs", "value.txt":"data/value.txt"})',
+		'rust_binary(name="read", crate="read", edition="2024", crate_root="src/main.rs", srcs_filegroup=":sources", verify_inputs=True, _rust_toolchain="root//:__bsmr_rust")',
+	].join("\n"));
+	for (const value of ["alpha", "beta", "alpha"]) {
+		writeFileSync(join(root, "recipe/value.txt"), value);
+		const result = await run(binary, ["build", "recipe:read", "--show-full-json-output"], options);
+		const executable = Object.values(JSON.parse(result.stdout) as Record<string, string>)[0]!;
+		assert.equal((await run(executable, [], options)).stdout, value);
+	}
+	const outside = join(base, "outside.txt");
+	writeFileSync(outside, "outside");
+	writeFileSync(join(root, "recipe/main.rs"), `fn main() { print!("{}", include_str!(${JSON.stringify(outside)})); }`);
+	await assert.rejects(run(binary, ["build", "recipe:read"], options), /undeclared Rust source input/);
 	console.log("ok: configured features, target flags, workspace lints, declared data inputs, dev dependencies, invalidation, and warm reuse");
 } finally {
 	await run(binary, ["kill"], options);
