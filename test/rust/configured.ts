@@ -14,8 +14,10 @@ import { promisify } from "node:util";
 
 const run = promisify(execFile);
 const binary = resolve(process.argv[2]!);
-const root = realpathSync(mkdtempSync(join(tmpdir(), "rust-configured-")));
-const env: NodeJS.ProcessEnv = { ...process.env, BSMR_LOCAL_CACHE_DIR: join(root, "cache") };
+const base = realpathSync(mkdtempSync(join(tmpdir(), "rust-configured-")));
+const root = join(base, "project");
+mkdirSync(root);
+const env: NodeJS.ProcessEnv = { ...process.env, BSMR_LOCAL_CACHE_DIR: join(base, "cache") };
 delete env["RUSTFLAGS"];
 delete env["CARGO_ENCODED_RUSTFLAGS"];
 const options = { cwd: root, env, timeout: 120_000, maxBuffer: 8 * 1024 * 1024 };
@@ -29,12 +31,15 @@ const files: Record<string, string> = {
 	"app/Cargo.toml": '[package]\nname="app"\nversion="0.1.0"\nedition="2024"\nauthors=["Example $(location :never)"]\n[dependencies]\nrenamed={package="shared", path="../shared"}\n[dev-dependencies]\ntest_support={path="../tests"}\n',
 	"app/src/main.rs": 'fn main() { println!("{}:{}:{}", renamed::value(), env!("CARGO_PKG_AUTHORS"), include_str!("../data.txt")); }\n#[test] fn configured_test() { assert!(!cfg!(debug_assertions)); assert_eq!(renamed::value(), test_support::expected()); }\n',
 	"app/data.txt": "asset",
+	"app/fixture/Cargo.toml": '[package]\nname="fixture"\nversion="0.1.0"\n[workspace]\n',
+	"app/fixture/src/lib.rs": 'compile_error!("fixture source is data");\n',
 	"tests/Cargo.toml": '[package]\nname="test_support"\nversion="0.1.0"\nedition="2024"\n',
 	"tests/src/lib.rs": 'pub fn expected() -> u32 { 7 }\n',
 	"unrelated/Cargo.toml": '[package]\nname="unrelated"\nversion="0.1.0"\nedition="2024"\n',
 	"unrelated/src/lib.rs": 'compile_error!("unrelated source must not compile");\n',
 	"unrelated/build.rs": 'compile_error!("unrelated build script must not compile");\n',
 };
+files["app/src/main.rs"] += 'const _: &str = include_str!("../fixture/Cargo.toml");\n';
 
 /** Run the selected binary and count compiler invocations in its exact trace. */
 async function build(): Promise<string[]> {
@@ -80,5 +85,5 @@ try {
 	console.log("ok: configured features, target flags, workspace lints, declared data inputs, dev dependencies, invalidation, and warm reuse");
 } finally {
 	await run(binary, ["kill"], options);
-	rmSync(root, { recursive: true });
+	rmSync(base, { recursive: true });
 }

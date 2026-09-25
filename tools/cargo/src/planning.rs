@@ -228,10 +228,23 @@ fn export(context: &BuildContext<'_, '_>, resolve: &Resolve) -> Result<Graph> {
         .map(|(i, unit)| (*unit, i))
         .collect();
     Ok(Graph {
-        schema_version: 4,
+        schema_version: 5,
         cargo_library: crate::CARGO_LIBRARY,
         rustc_version: context.target_data.rustc.verbose_version.clone(),
         workspace_root: context.ws.root().to_owned(),
+        workspace_packages: context
+            .ws
+            .members()
+            .map(|package| package.root().to_owned())
+            .chain(
+                units
+                    .iter()
+                    .filter(|unit| unit.pkg.package_id().source_id().is_path())
+                    .map(|unit| unit.pkg.root().to_owned()),
+            )
+            .collect::<std::collections::BTreeSet<_>>()
+            .into_iter()
+            .collect(),
         roots: context.roots.iter().map(|unit| indices[unit]).collect(),
         units: units
             .iter()

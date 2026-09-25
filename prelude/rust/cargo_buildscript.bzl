@@ -44,6 +44,7 @@ load("@prelude//utils:cmd_script.bzl", "cmd_script")
 load("@prelude//utils:selects.bzl", "selects")
 load(":build.bzl", "dependency_args")
 load(":build_params.bzl", "MetadataKind")
+load(":checkout.bzl", "CheckoutSources")
 load(
     ":cargo_package.bzl",
     "apply_platform_attrs",
@@ -239,6 +240,10 @@ def _make_cc_shim(ctx: AnalysisContext, name: str, cmd: cmd_args) -> cmd_args:
     return cmd_args(wrapper, hidden = [internal_tools_info.from_any_dir, cmd])
 
 def _cargo_buildscript_impl(ctx: AnalysisContext) -> list[Provider]:
+    if ctx.attrs.checkout != None and CheckoutSources in ctx.attrs.checkout:
+        unavailable = ctx.attrs.checkout[CheckoutSources].unavailable
+        if unavailable:
+            fail("workspace script inputs require native source packages: {}".format(unavailable))
     cxx_toolchain_info = ctx.attrs._cxx_toolchain[CxxToolchainInfo]
     rust_toolchain_info = ctx.attrs._rust_toolchain[RustToolchainInfo]
 

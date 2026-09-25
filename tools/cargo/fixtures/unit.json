@@ -1,8 +1,9 @@
 {
-  "schema_version": 4,
+  "schema_version": 5,
   "cargo_library": "0.98.0",
   "rustc_version": "release: 1.97.1\n",
   "workspace_root": "/workspace",
+  "workspace_packages": ["/workspace"],
   "roots": [
     0
   ],

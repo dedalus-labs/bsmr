@@ -39,8 +39,11 @@ require a declared native execution contract.
 Each unit includes its source identity, package environment, declared and active
 features, compiler and documentation flags, lints, effective linker, and resolved
 dependency aliases. Each unit's `harness` preserves Cargo's choice between
-rustc's test runner and a custom `main`. The response reports the resolver and actual compiler
-versions. Registry archives must match their locked checksum. Cached registry manifests
+rustc's test runner and a custom `main`. The graph records Cargo's workspace
+package boundaries and selected path dependencies, so compiler source views
+retain ancestor data without importing unrelated crates.
+The response reports the resolver and actual compiler versions.
+Registry archives must match their locked checksum. Cached registry manifests
 must match the verified archive. Git package and workspace manifests must match
 regular-file blobs in the locked commit. Directory source replacements fail.
 Each source includes an `artifact`: a workspace package or an archive with its

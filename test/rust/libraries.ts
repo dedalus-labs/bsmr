@@ -14,8 +14,10 @@ import { promisify } from "node:util";
 
 const run = promisify(execFile);
 const binary = resolve(process.argv[2]!);
-const root = realpathSync(mkdtempSync(join(tmpdir(), "rust-libraries-")));
-const env: NodeJS.ProcessEnv = { ...process.env, BSMR_LOCAL_CACHE_DIR: join(root, "cache") };
+const base = realpathSync(mkdtempSync(join(tmpdir(), "rust-libraries-")));
+const root = join(base, "project");
+mkdirSync(root);
+const env: NodeJS.ProcessEnv = { ...process.env, BSMR_LOCAL_CACHE_DIR: join(base, "cache") };
 delete env["RUSTFLAGS"];
 delete env["CARGO_ENCODED_RUSTFLAGS"];
 const options = { cwd: root, env, timeout: 180_000, maxBuffer: 8 * 1024 * 1024 };
@@ -62,7 +64,7 @@ async function build(expected: string, cached: boolean, nativeLibraries: string[
 
 /** Link a real C consumer with the platform libraries reported by Cargo's compiler. */
 async function link(archive: string, expected: string, nativeLibraries: string[]): Promise<void> {
-	const output = join(root, "c-consumer");
+	const output = join(base, "c-consumer");
 	await run("cc", [join(root, "consumer.c"), archive, ...nativeLibraries, "-o", output], options);
 	assert.equal((await run(output, [], options)).stdout.trim(), expected);
 }
@@ -111,5 +113,5 @@ try {
 	console.log("ok: multiple library outputs, Rust and C consumers, warm reuse, restoration, source edits");
 } finally {
 	await run(binary, ["kill"], options);
-	rmSync(root, { recursive: true });
+	rmSync(base, { recursive: true });
 }

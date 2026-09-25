@@ -143,6 +143,11 @@ class Io:
             self.git(linked, "add", "linked.txt")
             self.check(linked)
             self.check(source)
+            (source / "recipe").mkdir()
+            (source / "recipe/BUILD.bsmr").write_text("# Explicit package boundary.\n")
+            rejected = run(source, self.binary, "build", "app", "--sandbox")
+            assert rejected.returncode != 0, "partial checkout must not reach a build script"
+            assert "workspace script inputs require native source packages" in rejected.stderr
             print("ok: checkout identity, hidden files, symlinks, linked worktrees, warm reuse")
         finally:
             for project in (source, linked):

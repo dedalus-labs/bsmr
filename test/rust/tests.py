@@ -70,7 +70,8 @@ value={path="../value",features=["testing"]}
         files['app/generated.txt'] = 'stale'
         files['data/value.txt'] = 'sibling'
         files['value/src/lib.rs'] += 'const _: &str = include_str!("../../data/value.txt");\n'
-        files['value/build.rs'] = 'fn main() {}\n'
+        if package:
+            files['value/build.rs'] = 'fn main() {}\n'
         files['app/tests/cli.rs'] = files['app/tests/cli.rs'].replace(
             'fn declared_inputs() {',
             'fn declared_inputs() { assert_eq!(std::fs::read_to_string("generated.txt").unwrap(), "generated");',
