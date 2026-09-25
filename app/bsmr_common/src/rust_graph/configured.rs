@@ -154,12 +154,16 @@ impl Renderer<'_> {
             } else {
                 ", framework = False"
             });
-            artifact_env.insert(
-                "CARGO_MANIFEST_DIR".into(),
-                format!("$(location {sources})"),
-            );
             output.push_str(&format!(", run_cwd = {}", json(&sources)?));
         }
+        artifact_env.insert(
+            "CARGO_MANIFEST_DIR".into(),
+            format!("$(location {sources})"),
+        );
+        artifact_env.insert(
+            "CARGO_MANIFEST_PATH".into(),
+            format!("$(location {sources})/Cargo.toml"),
+        );
         output.push_str(&format!(", env = {}", json(&artifact_env)?));
         let primary = self
             .graph

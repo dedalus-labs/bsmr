@@ -8,11 +8,11 @@
 import argparse
 import json
 import os
-from pathlib import Path
 import re
 import shutil
 import subprocess
 import tempfile
+from pathlib import Path
 
 
 def run(project: Path, *arguments: str) -> subprocess.CompletedProcess[str]:
@@ -82,9 +82,14 @@ def initialize(project: Path, binary: str, runtime: Path) -> None:
     files = {
         'Cargo.toml': '[workspace]\nmembers=["app", "calc"]\nresolver="2"\n',
         'rust-toolchain.toml': '[toolchain]\nchannel="1.97.1"\n',
-        'app/Cargo.toml': '[package]\nname="app"\nversion="0.1.0"\nedition="2024"\n[dependencies]\ncalc={path="../calc"}\n',
+        'app/Cargo.toml': (
+            '[package]\nname="app"\nversion="0.1.0"\nedition="2024"\n'
+            '[dependencies]\ncalc={path="../calc"}\n'
+        ),
         'app/src/main.rs': 'fn main() { println!("{}", calc::value!()); }\n',
-        'calc/Cargo.toml': '[package]\nname="calc"\nversion="0.1.0"\nedition="2024"\n[lib]\nproc-macro=true\n',
+        'calc/Cargo.toml': (
+            '[package]\nname="calc"\nversion="0.1.0"\nedition="2024"\n[lib]\nproc-macro=true\n'
+        ),
         'calc/src/value.txt': '7',
     }
     for path, contents in files.items():
@@ -127,6 +132,24 @@ def qualify(project: Path, binary: str) -> None:
         assert result.returncode == 0, result.stderr
     (project / 'calc/src/value.txt').write_text('9')
     assert build(project, binary, '9'), 'a macro input change must rebuild the consumer'
+    grammar = project / 'app/grammar.txt'
+    grammar.write_text('17')
+    macro(project, '''{
+        let root = std::path::PathBuf::from(std::env::var("CARGO_MANIFEST_DIR").unwrap());
+        assert!(root.is_absolute());
+        assert_eq!(root.join("Cargo.toml"),
+            std::path::PathBuf::from(std::env::var("CARGO_MANIFEST_PATH").unwrap()));
+        std::fs::read_to_string(root.join("grammar.txt")).unwrap()
+    }''')
+    reference = run(
+        project, 'rustup', 'run', '1.97.1', 'cargo', 'run', '--locked', '--offline', '-p', 'app'
+    )
+    assert reference.returncode == 0, reference.stderr
+    assert reference.stdout.strip() == '17', reference.stdout
+    assert build(project, binary, '17'), 'macros must read their caller package files'
+    grammar.write_text('19')
+    assert build(project, binary, '19'), 'a caller file edit must invalidate expansion'
+    assert build(project, binary, '19') == [], 'unchanged caller files must reuse expansion'
     outside = project.parent / 'outside'
     macro(
         project,
@@ -140,7 +163,8 @@ def qualify(project: Path, binary: str) -> None:
         assert result.returncode != 0, 'an external read must fail on every invocation'
         assert 'undeclared read' in result.stderr, result.stderr
     print(
-        'ok  Cargo macros: native execution, warm reuse, input edits, host refusal, denied external reads'
+        'ok  Cargo macros: native execution, warm reuse, input edits, '
+        'host refusal, denied external reads'
     )
 
 

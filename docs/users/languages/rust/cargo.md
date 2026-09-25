@@ -112,6 +112,10 @@ dependencies.
 The native compiler checks Cargo's `docsrs` and `test` cfg names without enabling
 them. Other undeclared cfg names still follow the package's lint policy.
 
+Every compiler invocation receives absolute `CARGO_MANIFEST_DIR` and
+`CARGO_MANIFEST_PATH` values for its declared package. Procedural macros can
+read package files, such as grammar definitions, and edits invalidate expansion.
+
 Build scripts and procedural macros require the
 [verified Linux namespace runtime](https://github.com/dedalus-labs/bsmr/blob/main/app/bsmr_execute_impl/src/executors/namespace/README.md).
 Unisolated execution rejects package code before compilation. This does not
