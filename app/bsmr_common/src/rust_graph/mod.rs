@@ -6,11 +6,12 @@
 //! Imports Cargo workspace descriptions through native Rust rules.
 
 pub mod catalog;
+pub mod checkout;
 pub mod configured;
 pub mod dice;
 pub mod entry;
-pub mod git;
 mod error;
+pub mod git;
 mod libraries;
 mod planner;
 mod selection;

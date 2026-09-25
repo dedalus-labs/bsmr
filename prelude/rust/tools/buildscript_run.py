@@ -53,7 +53,7 @@ def cfg_env(rustc_cfg: Path) -> dict[str, str]:
     return {key: ",".join(values) for key, values in cfgs.items()}
 
 
-def create_cwd(path: Path, manifest_dir: Path) -> Path:
+def create_cwd(path: Path, manifest_dir: Path, *, preserve_toolchain: bool = False) -> Path:
     """Copy package sources into a self-contained cached output directory.
 
     Consumers compile this directory, including source changes made by the script.
@@ -68,7 +68,7 @@ def create_cwd(path: Path, manifest_dir: Path) -> Path:
     path.mkdir()
 
     for dir_entry in manifest_dir.iterdir():
-        if dir_entry.name not in ["rust-toolchain", "rust-toolchain.toml"]:
+        if preserve_toolchain or dir_entry.name not in ["rust-toolchain", "rust-toolchain.toml"]:
             destination = path.joinpath(dir_entry.name)
             if dir_entry.is_dir() and not dir_entry.is_symlink():
                 shutil.copytree(dir_entry, destination, symlinks=True)
@@ -154,6 +154,8 @@ class Args(NamedTuple):
     rustc_host_tuple: Optional[Path]
     manifest_dir: Path
     create_cwd: Path
+    package_path: str
+    workspace: bool
     outfile: IO[str]
     rustc_link_lib: bool
     rustc_link_search: bool
@@ -250,6 +252,8 @@ def arg_parse() -> Args:
     parser.add_argument("--rustc-host-tuple", type=Path)
     parser.add_argument("--manifest-dir", type=Path, required=True)
     parser.add_argument("--create-cwd", type=Path, required=True)
+    parser.add_argument("--package-path", default="")
+    parser.add_argument("--workspace", action="store_true")
     parser.add_argument("--outfile", type=argparse.FileType("w"), required=True)
     parser.add_argument("--rustc-link-lib", action="store_true")
     parser.add_argument("--rustc-link-search", action="store_true")
@@ -269,11 +273,18 @@ def main() -> None:  # noqa: C901
     os.makedirs(out_dir, exist_ok=True)
     env["OUT_DIR"] = os.path.abspath(out_dir)
 
-    cwd = create_cwd(args.create_cwd, args.manifest_dir)
+    package = Path(args.package_path)
+    if package.is_absolute() or ".." in package.parts:
+        sys.exit("build-script package path must stay within its workspace")
+    root = create_cwd(args.create_cwd, args.manifest_dir, preserve_toolchain=args.workspace)
+    cwd = root / package
     env["CARGO_MANIFEST_DIR"] = os.path.abspath(cwd)
     env["CARGO_MANIFEST_PATH"] = os.path.join(env["CARGO_MANIFEST_DIR"], "Cargo.toml")
 
     env = dict(os.environ, **env)
+    env["GIT_CONFIG_GLOBAL"] = os.devnull
+    env["GIT_CONFIG_NOSYSTEM"] = "1"
+    env["GIT_OPTIONAL_LOCKS"] = "0"
     for (
         prefix,
         metadata_path,

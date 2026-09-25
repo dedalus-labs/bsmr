@@ -242,12 +242,15 @@ def _cargo_buildscript_impl(ctx: AnalysisContext) -> list[Provider]:
     cxx_toolchain_info = ctx.attrs._cxx_toolchain[CxxToolchainInfo]
     rust_toolchain_info = ctx.attrs._rust_toolchain[RustToolchainInfo]
 
-    cwd = ctx.actions.declare_output("cwd", dir = True, has_content_based_path = True)
+    workspace = ctx.actions.declare_output("cwd", dir = True, has_content_based_path = True)
+    cwd = workspace.project(ctx.attrs.package_path) if ctx.attrs.checkout != None and ctx.attrs.package_path else workspace
     out_dir = ctx.actions.declare_output("OUT_DIR", dir = True, has_content_based_path = True)
     rustc_flags = ctx.actions.declare_output("rustc_flags", has_content_based_path = True)
     metadata = ctx.actions.declare_output("metadata.json", has_content_based_path = True)
 
-    if ctx.attrs.manifest_dir != None:
+    if ctx.attrs.checkout != None:
+        manifest_dir = ctx.attrs.checkout[DefaultInfo].default_outputs[0]
+    elif ctx.attrs.manifest_dir != None:
         manifest_dir = ctx.attrs.manifest_dir[DefaultInfo].default_outputs[0]
     else:
         manifest_dir = ctx.actions.symlinked_dir("manifest_dir", ctx.attrs.filegroup_for_manifest_dir, has_content_based_path = True)
@@ -257,10 +260,13 @@ def _cargo_buildscript_impl(ctx: AnalysisContext) -> list[Provider]:
         cmd_args("--buildscript=", ctx.attrs.buildscript[RunInfo], delimiter = ""),
         cmd_args("--rustc-cfg=", ctx.attrs.rustc_cfg[DefaultInfo].default_outputs[0], delimiter = ""),
         cmd_args("--manifest-dir=", manifest_dir, delimiter = ""),
-        cmd_args("--create-cwd=", cwd.as_output(), delimiter = ""),
+        cmd_args("--create-cwd=", workspace.as_output(), delimiter = ""),
+        "--package-path=" + ctx.attrs.package_path,
         cmd_args("--outfile=", rustc_flags.as_output(), delimiter = ""),
         cmd_args("--metadata-out=", metadata.as_output(), delimiter = ""),
     ]
+    if ctx.attrs.checkout != None:
+        cmd.append("--workspace")
     for links, dependency in ctx.attrs.metadata_deps.items():
         info = dependency[BuildScriptInfo]
         cmd.extend(["--metadata-dependency", "DEP_" + links, info.metadata, info.out_dir, info.cwd])
@@ -390,6 +396,7 @@ def _cargo_buildscript_impl(ctx: AnalysisContext) -> list[Provider]:
             default_output = None,
             sub_targets = {
                 "cwd": [DefaultInfo(default_output = cwd)],
+                "workspace": [DefaultInfo(default_output = workspace)],
                 "out_dir": [DefaultInfo(default_output = out_dir)],
                 "rustc_flags": [DefaultInfo(default_output = rustc_flags)],
                 "metadata": [DefaultInfo(default_output = metadata)],
@@ -408,6 +415,8 @@ _cargo_buildscript_rule = rule(
         "features": attrs.list(attrs.string(), default = []),
         "filegroup_for_manifest_dir": attrs.option(attrs.dict(key = attrs.string(), value = attrs.source()), default = None),
         "manifest_dir": attrs.option(attrs.dep(), default = None),
+        "checkout": attrs.option(attrs.dep(), default = None),
+        "package_path": attrs.string(default = ""),
         "metadata_deps": attrs.dict(key = attrs.string(), value = attrs.dep(providers = [BuildScriptInfo]), default = {}),
         "package_name": attrs.string(),
         "runner": attrs.default_only(attrs.exec_dep(providers = [RunInfo], default = "prelude//rust/tools:buildscript_run")),

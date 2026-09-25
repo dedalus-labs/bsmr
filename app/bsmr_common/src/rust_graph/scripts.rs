@@ -13,6 +13,7 @@ use super::Unit;
 use super::json;
 use super::unsupported;
 use crate::rust_graph::units::Mode;
+use crate::rust_graph::units::SourceArtifact;
 
 /// Cargo selects the script executable and the direct native metadata producers.
 struct ScriptDependencies<'a> {
@@ -58,11 +59,29 @@ impl Renderer<'_> {
             cfgs.push(format!("{}=\"{}\"", key.to_lowercase(), value));
             false
         });
+        let checkout = if matches!(unit.source.artifact, SourceArtifact::Workspace) {
+            let root = self
+                .toolchain
+                .strip_suffix(":__bsmr_rust")
+                .expect("root Rust toolchain");
+            let package = unit
+                .source
+                .root
+                .strip_prefix(&self.graph.workspace_root)
+                .map_err(|_| RustGraphError::Outside(unit.source.root.clone()))?;
+            format!(
+                ", checkout = {}, package_path = {}",
+                json(&format!("{root}:__bsmr_checkout"))?,
+                json(package)?
+            )
+        } else {
+            String::new()
+        };
         Ok(format!(
             "load(\"@prelude//rust:cargo_buildscript.bzl\", \"buildscript_run\")\n\
              write_file(name = \"cfg_{index}\", out = \"rustc.cfg\", content = {cfgs}, newline = \"unix\")\n\
              write_file(name = \"host_{index}\", out = \"rustc.host\", content = {host}, newline = \"unix\")\n\
-             buildscript_run(name = \"unit_{index}\", buildscript_rule = \":unit_{binary}\", metadata_deps = {metadata}, package_name = {package}, version = {version}, manifest_dir = {sources}, features = {features}, literal_env = {environment}, rustc_cfg = \":cfg_{index}\", rustc_host_tuple = \":host_{index}\", _rust_toolchain = {toolchain}, rustc_link_lib = True, rustc_link_search = True, visibility = [\"PUBLIC\"])\n",
+             buildscript_run(name = \"unit_{index}\", buildscript_rule = \":unit_{binary}\", metadata_deps = {metadata}, package_name = {package}, version = {version}, manifest_dir = {sources}, features = {features}, literal_env = {environment}, rustc_cfg = \":cfg_{index}\", rustc_host_tuple = \":host_{index}\", _rust_toolchain = {toolchain}, rustc_link_lib = True, rustc_link_search = True{checkout}, visibility = [\"PUBLIC\"])\n",
             toolchain = json(self.toolchain)?,
             cfgs = json(&cfgs)?,
             host = json(&[&environment["HOST"]])?,

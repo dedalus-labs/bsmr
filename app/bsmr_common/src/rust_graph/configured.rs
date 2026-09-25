@@ -126,9 +126,16 @@ impl Renderer<'_> {
             Some(script) => format!(":unit_{script}[cwd]"),
             None => sources,
         };
-        let generated = dependencies.script.map(|script| format!(
-            ", srcs = [\":unit_{script}[out_dir]\"], rustc_flags = [\"@$(location :unit_{script}[rustc_flags])\"]"
-        )).unwrap_or_default();
+        let generated = dependencies.script.map(|script| {
+            let inputs = if matches!(unit.source.artifact, SourceArtifact::Workspace) {
+                format!(", \":unit_{script}[workspace]\"")
+            } else {
+                String::new()
+            };
+            format!(
+                ", srcs = [\":unit_{script}[out_dir]\"{inputs}], rustc_flags = [\"@$(location :unit_{script}[rustc_flags])\"]"
+            )
+        }).unwrap_or_default();
         if let Some(script) = dependencies.script {
             artifact_env.insert(
                 "OUT_DIR".into(),

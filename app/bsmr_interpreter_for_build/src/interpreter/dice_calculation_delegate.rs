@@ -313,6 +313,33 @@ impl<'c, 'd: 'c> DiceCalculationDelegate<'c, 'd> {
             }
             PackageBuildSource::Native => {
                 let mut source = String::new();
+                let files: Vec<_> = listing
+                    .files()
+                    .files()
+                    .filter(|file| {
+                        !file
+                            .as_str()
+                            .split('/')
+                            .any(|part| [".git", "target", "bsmr-out"].contains(&part))
+                    })
+                    .map(|file| file.as_str())
+                    .collect();
+                let directories: Vec<_> = listing
+                    .empty_directories()
+                    .filter(|path| {
+                        !path
+                            .as_str()
+                            .split('/')
+                            .any(|part| [".git", "target", "bsmr-out"].contains(&part))
+                    })
+                    .map(|path| path.as_str())
+                    .collect();
+                source.push_str(&format!(
+                    "load(\"@prelude//rust:checkout.bzl\", \"checkout_files\")\n\
+                     checkout_files(name = \"__bsmr_checkout_sources\", srcs = {}, directories = {}, visibility = [\"PUBLIC\"])\n",
+                    serde_json::to_string(&files)?,
+                    serde_json::to_string(&directories)?,
+                ));
                 if listing
                     .get_file(PackageRelativePath::new("package.json")?)
                     .is_some()
@@ -337,6 +364,11 @@ impl<'c, 'd: 'c> DiceCalculationDelegate<'c, 'd> {
                     source.push_str(
                         &bsmr_common::rust_graph::dice::build_file(self.ctx, package).await?,
                     );
+                    if package.cell_relative_path().is_empty() {
+                        source.push_str(
+                            &bsmr_common::rust_graph::checkout::render(self.ctx, package).await?,
+                        );
+                    }
                 }
                 if listing
                     .get_file(PackageRelativePath::new("pyproject.toml")?)
