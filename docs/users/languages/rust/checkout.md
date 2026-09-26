@@ -30,6 +30,21 @@ boundaries, including unselected workspace members. An unrelated package's
 source edit therefore stays outside that compiler's inputs. A fixture containing
 `Cargo.toml` remains data unless Cargo declares it as a package.
 
+When a package includes a file owned by another Cargo package, declare that file
+in `.bsmr` or `.bsmr.local`. Both sides use paths relative to the workspace root.
+Use `.` as the key for a package at the workspace root.
+
+```ini
+[rust]
+sources = {"app": ["schema/version.txt"]}
+```
+
+`sources` maps package paths to lists of existing source files in JSON. BSMR
+preserves their relative paths and tracks their contents as compiler inputs.
+It does not compile the packages that own those files. Missing or undeclared
+paths fail during analysis. The same map can be passed with
+`-c 'rust.sources={"app":["schema/version.txt"]}'`.
+
 Each compiler consumes one native `rust_filegroup` through `srcs_filegroup`.
 The group retains the source tree's relative layout and the build script's
 generated directory when present. Native Rust rules retain that group for

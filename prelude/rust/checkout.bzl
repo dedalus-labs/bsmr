@@ -39,11 +39,12 @@ cargo_checkout = rule(
 )
 
 def _source(ctx: AnalysisContext) -> list[Provider]:
-    """Keep a package and ancestor-owned files at their original relative paths."""
+    """Keep the package, ancestor files and declared extras at their original paths."""
     package = ctx.attrs.package
     boundaries = {path: True for path in ctx.attrs.boundaries}
+    declared = ctx.attrs.checkout[CheckoutSources].files
     sources = {}
-    for path, source in ctx.attrs.checkout[CheckoutSources].files.items():
+    for path, source in declared.items():
         owner = ""
         parts = path.split("/")
         for end in range(1, len(parts)):
@@ -52,20 +53,30 @@ def _source(ctx: AnalysisContext) -> list[Provider]:
                 owner = prefix
         if not owner or owner == package or package.startswith(owner + "/"):
             sources[path] = source
+    for path in ctx.attrs.extra_srcs:
+        if path not in declared:
+            fail("extra source {} is not a declared workspace file".format(path))
+        sources[path] = declared[path]
     root = ctx.actions.copied_dir("source", sources, symlinks = "preserve", has_content_based_path = True)
     return [DefaultInfo(
         default_output = root,
         sub_targets = {"package": [DefaultInfo(default_output = root.project(package))]},
     )]
 
-cargo_source = rule(
+_cargo_source = rule(
     impl = _source,
     attrs = {
         "checkout": attrs.dep(providers = [CheckoutSources]),
         "package": attrs.string(),
         "boundaries": attrs.list(attrs.string(), doc = "Cargo-declared package paths relative to the workspace."),
+        "extra_srcs": attrs.list(attrs.string(), doc = "Workspace-relative files declared by the consuming package."),
     },
 )
+
+def cargo_source(name: str, package: str, **kwargs):
+    """Track explicit cross-package files through the workspace's native configuration."""
+    extra = json.decode(read_root_config("rust", "sources", "{}")).get(package or ".", [])
+    _cargo_source(name = name, package = package, extra_srcs = extra, **kwargs)
 
 def _files(ctx: AnalysisContext) -> list[Provider]:
     """Keep each package's source bytes and relative links until workspace assembly."""
