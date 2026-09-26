@@ -12,6 +12,7 @@ use std::ffi::OsString;
 use std::fs;
 use std::path::Path;
 use std::path::PathBuf;
+use std::sync::Arc;
 
 use bsmr_core::fs::artifact_path_resolver::ArtifactFs;
 use bsmr_directory::directory::directory::Directory;
@@ -22,14 +23,23 @@ use bsmr_execute::directory::ActionDirectoryMember;
 use bsmr_execute::execute::prepared::PreparedAction;
 use bsmr_execute::execute::request::CommandExecutionRequest;
 use bsmr_sandbox::GuestOutput;
+use parking_lot::Mutex;
 use remote_execution as RE;
 
 use self::runtime::Runtime;
 use super::firecracker;
 
+/// Keeps one verified runtime warm while active commands retain their own owners.
+#[derive(Default)]
+pub struct NamespaceCache {
+    /// The most recently requested snapshot. File verification never holds this lock.
+    current: Mutex<Option<Arc<Runtime>>>,
+}
+
 /// Owns the verified runtime shared by one command's isolated local actions.
 pub struct NamespaceExecutor {
-    runtime: Runtime,
+    /// Remains alive through execution, descendant cleanup, and output import.
+    runtime: Arc<Runtime>,
 }
 
 /// Holds private action trees until execution, descendant cleanup and output import finish.
@@ -50,9 +60,18 @@ enum NamespaceError {
     WritableSymlink(PathBuf),
 }
 
-impl NamespaceExecutor {
-    /// Load a runtime whose launcher matches the independent platform catalog.
-    pub fn new(manifest: &Path) -> bsmr_error::Result<Self> {
+impl NamespaceCache {
+    /// Release the retained snapshot without revoking references held by active commands.
+    pub fn clear(&self) {
+        let retired = self.current.lock().take();
+        drop(retired);
+    }
+
+    /// Verify current source bytes before reusing or replacing the retained snapshot.
+    ///
+    /// A failed load leaves the prior snapshot untouched. Concurrent loads can each
+    /// prepare a private copy, and running commands keep their snapshots after replacement.
+    pub fn load(&self, manifest: &Path) -> bsmr_error::Result<NamespaceExecutor> {
         // Ubuntu bubblewrap 0.9.0-1ubuntu0.3, independently pinned before reading project data.
         let launcher = match (std::env::consts::OS, std::env::consts::ARCH) {
             ("linux", "aarch64") => {
@@ -63,11 +82,15 @@ impl NamespaceExecutor {
             }
             (os, arch) => return Err(NamespaceError::UnsupportedHost(os, arch).into()),
         };
-        Ok(Self {
-            runtime: Runtime::load(manifest, launcher)?,
-        })
+        let previous = self.current.lock().clone();
+        let runtime = Runtime::load(manifest, launcher, previous.as_ref())?;
+        let retired = self.current.lock().replace(Arc::clone(&runtime));
+        drop(retired);
+        Ok(NamespaceExecutor { runtime })
     }
+}
 
+impl NamespaceExecutor {
     /// Bind runtime bytes and the execution policy into the action identity before cache lookup.
     pub fn platform(&self) -> RE::Platform {
         RE::Platform {

@@ -16,6 +16,7 @@ use std::io::Write;
 use std::path::Component;
 use std::path::Path;
 use std::path::PathBuf;
+use std::sync::Arc;
 
 use bsmr_common::cas_digest::CasDigestData;
 use bsmr_common::cas_digest::DigestAlgorithm;
@@ -68,7 +69,11 @@ impl Runtime {
     /// Verify both pinned files and retain a private runtime snapshot.
     ///
     /// The caller must supply a trusted launcher digest independently of the manifest.
-    pub(crate) fn load(manifest_path: &Path, launcher_digest: &str) -> bsmr_error::Result<Self> {
+    pub(crate) fn load(
+        manifest_path: &Path,
+        launcher_digest: &str,
+        previous: Option<&Arc<Self>>,
+    ) -> bsmr_error::Result<Arc<Self>> {
         let manifest: BTreeMap<String, BundleArtifact> =
             serde_json::from_slice(&fs::read(manifest_path)?)?;
         if manifest.keys().map(String::as_str).collect::<Vec<_>>() != ["bubblewrap", "rootfs"] {
@@ -84,6 +89,18 @@ impl Runtime {
         let parent = manifest_path
             .parent()
             .expect("runtime manifest file has a parent");
+        let mut digest = CasDigestData::digester_for_algorithm(DigestAlgorithm::Sha256);
+        digest.update(manifest["bubblewrap"].sha256.as_bytes());
+        digest.update(manifest["rootfs"].sha256.as_bytes());
+        let digest = digest.finalize().raw_digest().to_string();
+        if let Some(previous) = previous.filter(|runtime| runtime.digest == digest) {
+            // Recheck current bytes, even when the manifest has not changed. The retained
+            // snapshot is private, so successful verification needs no copy or extraction.
+            for artifact in manifest.values() {
+                copy_verified(parent, artifact, &mut std::io::sink())?;
+            }
+            return Ok(Arc::clone(previous));
+        }
         let directory = tempfile::Builder::new().prefix("bsmr-runtime-").tempdir()?;
         let launcher = directory.path().join("bubblewrap");
         copy_verified(
@@ -105,13 +122,7 @@ impl Runtime {
         for mount in ["workspace", "tmp", "dev", "proc"] {
             fs::create_dir_all(root.join(mount))?;
         }
-        let mut digest = CasDigestData::digester_for_algorithm(DigestAlgorithm::Sha256);
-        digest.update(manifest["bubblewrap"].sha256.as_bytes());
-        digest.update(manifest["rootfs"].sha256.as_bytes());
-        Ok(Self {
-            directory,
-            digest: digest.finalize().raw_digest().to_string(),
-        })
+        Ok(Arc::new(Self { directory, digest }))
     }
 
     /// Return the verified launcher retained for this runtime's lifetime.
@@ -134,7 +145,7 @@ impl Runtime {
 fn copy_verified(
     parent: &Path,
     artifact: &BundleArtifact,
-    destination: &mut File,
+    destination: &mut impl Write,
 ) -> bsmr_error::Result<()> {
     let mut components = artifact.path.components();
     if !matches!(components.next(), Some(Component::Normal(_))) || components.next().is_some() {

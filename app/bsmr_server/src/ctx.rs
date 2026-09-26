@@ -91,7 +91,6 @@ use bsmr_execute::re::manager::ReConnectionObserver;
 use bsmr_execute::re::output_trees_download_config::OutputTreesDownloadConfig;
 use bsmr_execute_impl::executors::firecracker::FirecrackerExecutor;
 use bsmr_execute_impl::executors::local::LocalExecutionBackend;
-use bsmr_execute_impl::executors::namespace::NamespaceExecutor;
 use bsmr_execute_impl::executors::worker::WorkerPool;
 use bsmr_execute_impl::low_pass_filter::LowPassFilter;
 use bsmr_execute_impl::materializers::deferred::clean_stale::CleanStaleConfig;
@@ -701,8 +700,11 @@ impl DiceUpdater for DiceCommandUpdater<'_, '_> {
         ctx.changed_to([(bsmr_common::rust_graph::git::GitInputs, Arc::new(git))])?;
         early_timings.end_known_span();
 
-        let mut user_data =
-            self.make_user_computation_data(&cells_and_configs.root_config, &mut ctx)?;
+        early_timings.start_span("Execution setup".to_owned());
+        let mut user_data = self
+            .make_user_computation_data(&cells_and_configs.root_config, &mut ctx)
+            .await?;
+        early_timings.end_known_span();
         user_data.set_mergebase(mergebase);
 
         Ok((ctx, user_data))
@@ -711,7 +713,7 @@ impl DiceUpdater for DiceCommandUpdater<'_, '_> {
 
 impl DiceCommandUpdater<'_, '_> {
     /// Register isolation before DICE can reuse completed actions.
-    fn make_user_computation_data(
+    async fn make_user_computation_data(
         &self,
         root_config: &LegacyBsmrConfig,
         ctx: &mut DiceTransactionUpdater,
@@ -944,9 +946,11 @@ impl DiceCommandUpdater<'_, '_> {
                                 "namespace execution requires [sandbox] runtime"
                             )
                         })?;
-                    LocalExecutionBackend::Namespace(Arc::new(NamespaceExecutor::new(
-                        std::path::Path::new(manifest),
-                    )?))
+                    let manifest = PathBuf::from(manifest);
+                    let cache = self.cmd_ctx.base_context.daemon.namespace_cache.clone();
+                    let executor =
+                        tokio::task::spawn_blocking(move || cache.load(&manifest)).await??;
+                    LocalExecutionBackend::Namespace(Arc::new(executor))
                 }
                 "firecracker" => {
                     let bundle = PathBuf::from(

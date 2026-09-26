@@ -341,6 +341,9 @@ impl BsmrdServer {
             }
         }
 
+        // Panic diagnostics retain DaemonStateData globally, so shutdown must release
+        // the private runtime explicitly after the server has drained its requests.
+        let namespace_cache = daemon_state.data().namespace_cache.clone();
         let auth_token = process_info.auth_token.clone();
         let api_server = BsmrdServer(Arc::new(BsmrdServerData {
             stop_accepting_requests: AtomicBool::new(false),
@@ -384,7 +387,9 @@ impl BsmrdServer {
             tokio::time::sleep(Duration::from_secs(sleep_secs)).await;
         }
 
-        server.await?;
+        let result = server.await;
+        tokio::task::spawn_blocking(move || namespace_cache.clear()).await?;
+        result?;
 
         Ok(())
     }

@@ -121,6 +121,10 @@ Build scripts and procedural macros require the
 Unisolated execution rejects package code before compilation. This does not
 establish macOS package-code isolation or complete C/C++ toolchain support.
 
+The daemon retains one verified namespace runtime between commands. Each
+command rechecks both pinned files before reuse. Matching bytes avoid another
+copy and extraction. A replacement does not change an active action's runtime.
+
 Cargo's `links` metadata flows only to direct dependents' build scripts.
 Generated directory paths remain attached to their producing artifacts and are
 rebound when cached outputs are restored. Metadata emission order is preserved,
