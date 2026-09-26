@@ -47,6 +47,11 @@ The `[sandbox]` section and `--sandbox` workflow are documented in
 
 ## Watch source changes on Linux
 
+The native watcher discards its incremental dependency graph when the operating
+system reports lost events. This also applies when the notification has no file
+paths or only names ignored outputs. The next build rereads source state before
+reusing results.
+
 For projects with large build-output trees, use the existing Watchman backend.
 Watchman can exclude `bsmr-out` before walking its directories or registering
 file watches. Install [Watchman](https://facebook.github.io/watchman/docs/install)
