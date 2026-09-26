@@ -44,9 +44,9 @@ appear in `packages`. The graph retains these roots in request order and only
 their reachable dependencies. Equal target names in separate packages remain
 distinct. Cargo still resolves features jointly before this root projection.
 
-The graph can contain multiple roots. This planner contract does not yet make
-the native CLI combine its independently selected entrypoints. The caller must
-carry the complete selection to this boundary and preserve it during lowering.
+The native CLI carries its complete root selection through a tracked DICE input.
+Selected roots share a plan and native compilation units. Each public target
+retains its own outputs through an alias into that graph.
 
 Each unit includes its source identity, package environment, declared and active
 features, compiler and documentation flags, lints, effective linker, and resolved

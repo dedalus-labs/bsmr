@@ -12,6 +12,7 @@ pub mod dice;
 pub mod entry;
 mod error;
 pub mod git;
+pub mod invocation;
 mod libraries;
 mod planner;
 mod selection;

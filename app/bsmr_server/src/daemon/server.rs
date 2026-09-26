@@ -603,7 +603,7 @@ impl BsmrdServer {
                             &base_context.events,
                         )?;
 
-                        let context = ServerCommandContext::new(
+                        let mut context = ServerCommandContext::new(
                             base_context,
                             client_ctx,
                             profiling_manager,
@@ -614,6 +614,7 @@ impl BsmrdServer {
                             cancellations,
                             command_start,
                         )?;
+                        context.target_patterns = opts.target_patterns(&req).map(<[_]>::to_vec);
 
                         let res = func(
                             &context,
@@ -1147,7 +1148,7 @@ impl DaemonApi for BsmrdServer {
     async fn build(&self, req: Request<BuildRequest>) -> Result<Response<ResponseStream>, Status> {
         self.run_streaming(
             req,
-            DefaultCommandOptions,
+            TargetCommandOptions,
             |ctx, partial_result_dispatcher, req| {
                 Box::pin(async {
                     OTHER_SERVER_COMMANDS
@@ -1181,7 +1182,7 @@ impl DaemonApi for BsmrdServer {
     async fn test(&self, req: Request<TestRequest>) -> Result<Response<ResponseStream>, Status> {
         self.run_streaming(
             req,
-            DefaultCommandOptions,
+            TargetCommandOptions,
             |ctx, partial_result_dispatcher, req| {
                 Box::pin(async { (TEST_COMMAND.get()?)(ctx, partial_result_dispatcher, req).await })
             },
@@ -1705,11 +1706,32 @@ trait OneshotCommandOptions: Send + Sync + 'static {
 
 /// Options to configure the execution of a streaming command (i.e. what happens in `run_streaming()`).
 trait StreamingCommandOptions<Req>: OneshotCommandOptions {
+    /// Return structured build roots when the command owns a native root selection.
+    fn target_patterns<'a>(&self, _req: &'a Req) -> Option<&'a [String]> {
+        None
+    }
     fn starlark_profiler_instrumentation_override(
         &self,
         _req: &Req,
     ) -> bsmr_error::Result<StarlarkProfilerConfiguration> {
         Ok(StarlarkProfilerConfiguration::None)
+    }
+}
+
+/// Build and test commands pass their structured roots into analysis.
+struct TargetCommandOptions;
+
+impl OneshotCommandOptions for TargetCommandOptions {}
+
+impl StreamingCommandOptions<BuildRequest> for TargetCommandOptions {
+    fn target_patterns<'a>(&self, req: &'a BuildRequest) -> Option<&'a [String]> {
+        Some(&req.target_patterns)
+    }
+}
+
+impl StreamingCommandOptions<TestRequest> for TargetCommandOptions {
+    fn target_patterns<'a>(&self, req: &'a TestRequest) -> Option<&'a [String]> {
+        Some(&req.target_patterns)
     }
 }
 

@@ -26,6 +26,8 @@ use pagable::pagable_typetag;
 
 use super::catalog;
 use super::entry::Entry;
+use super::entry::Mode;
+use super::invocation::Invocation;
 use super::planner::Planner;
 use super::selection::Selection;
 use super::snapshot;
@@ -229,7 +231,7 @@ pub async fn build_file(
 )]
 #[display("RustPlanKey({:?})", _0)]
 #[pagable_typetag(dice::DiceKeyDyn)]
-struct RustPlanKey(Entry);
+struct RustPlanKey(Vec<Entry>);
 
 #[async_trait]
 impl Key for RustPlanKey {
@@ -243,17 +245,22 @@ impl Key for RustPlanKey {
     ) -> Self::Value {
         let snapshot = tempfile::tempdir()?;
         let root = snapshot.path().canonicalize()?;
-        RustGraphKey(self.0.package.cell_name())
+        let first = &self.0[0];
+        RustGraphKey(first.package.cell_name())
             .capture(ctx, &root)
             .await?;
         let toolchain =
             RustToolchain::parse(&std::fs::read_to_string(root.join("rust-toolchain.toml"))?)?;
         let metadata = resolve(&toolchain, &root).await?;
-        let package = catalog::package_name(&metadata, &root, &self.0)?;
-        let cell = self.0.package.cell_name();
-        let selection = Selection::read(ctx, cell, self.0.mode).await?;
+        let packages = self
+            .0
+            .iter()
+            .map(|entry| catalog::package_name(&metadata, &root, entry))
+            .collect::<Result<Vec<_>, _>>()?;
+        let cell = first.package.cell_name();
+        let selection = Selection::read(ctx, cell, first.mode).await?;
         let bytes = Planner::new(&root, &toolchain, selection)
-            .resolve(&self.0, &package)
+            .resolve(&self.0, &packages)
             .await?;
         let platform = ctx.compute(&crate::execution::ExecutionPlatformKey).await?;
         let execution = if platform
@@ -286,16 +293,88 @@ impl Key for RustPlanKey {
     }
 }
 
+/// Share one parsed invocation across every requested entry in the same workspace and mode.
+#[derive(
+    Clone,
+    Debug,
+    Eq,
+    Hash,
+    PartialEq,
+    allocative::Allocative,
+    Pagable,
+    derive_more::Display
+)]
+#[display("CargoRoots({:?})", self)]
+#[pagable_typetag(dice::DiceKeyDyn)]
+struct CargoRoots(CellName, Mode);
+
+#[async_trait]
+impl Key for CargoRoots {
+    type Value = bsmr_error::Result<Arc<Vec<Entry>>>;
+
+    /// Resolve command roots from tracked metadata with the native pattern parser.
+    async fn compute(&self, ctx: &mut DiceComputations, _: &CancellationContext) -> Self::Value {
+        let invocation = ctx.compute(&Invocation).await?;
+        let Some(invocation) = invocation.as_ref() else {
+            return Ok(Arc::new(Vec::new()));
+        };
+        let patterns = crate::pattern::parse_from_cli::parse_patterns_with_modifiers_from_cli_args(
+            ctx,
+            invocation.patterns(),
+            invocation.working_dir(),
+        )
+        .await?
+        .into_iter()
+        .map(|pattern| pattern.parsed_pattern)
+        .collect::<Vec<_>>();
+        let snapshot = tempfile::tempdir()?;
+        let root = snapshot.path().canonicalize()?;
+        RustGraphKey(self.0).capture(ctx, &root).await?;
+        let toolchain =
+            RustToolchain::parse(&std::fs::read_to_string(root.join("rust-toolchain.toml"))?)?;
+        let metadata = resolve(&toolchain, &root).await?;
+        Ok(Arc::new(catalog::selected(
+            &metadata, &root, self.0, self.1, &patterns,
+        )?))
+    }
+
+    /// Pattern spelling changes can reuse a plan when the selected entries agree.
+    fn equality(x: &Self::Value, y: &Self::Value) -> bool {
+        matches!((x, y), (Ok(x), Ok(y)) if x == y)
+    }
+
+    /// Preserve only successful selections through DICE paging.
+    fn value_serialize() -> impl ValueSerialize<Value = Self::Value> {
+        OkPagableValueSerialize::<Self::Value>::new()
+    }
+}
+
 /// Resolve the private package requested by a public Cargo alias.
 pub async fn plan_file(
     ctx: &mut DiceComputations<'_>,
     entry: &Entry,
 ) -> bsmr_error::Result<String> {
-    Ok(ctx
-        .compute(&RustPlanKey(entry.clone()))
-        .await??
-        .as_ref()
-        .clone())
+    let selected = ctx
+        .compute(&CargoRoots(entry.package.cell_name(), entry.mode))
+        .await??;
+    let entries = if selected.contains(entry) {
+        selected.as_ref().clone()
+    } else {
+        vec![entry.clone()]
+    };
+    let owner = &entries[0];
+    if entry != owner {
+        let index = entries
+            .iter()
+            .position(|selected| selected == entry)
+            .expect("selected entry is in its plan");
+        let label = format!("{}:root_{index}", owner.package_label()?);
+        return Ok(format!(
+            "alias(name = \"root\", actual = {}, visibility = [\"PUBLIC\"])\n",
+            serde_json::to_string(&label)?
+        ));
+    }
+    Ok(ctx.compute(&RustPlanKey(entries)).await??.as_ref().clone())
 }
 
 /// Reject nonexistent or unsupported private packages before interpreter evaluation.

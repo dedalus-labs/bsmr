@@ -39,6 +39,18 @@ and all-features selection is disabled unless requested. Cargo validates names
 and resolves profile inheritance and dependency features. Changes invalidate the
 selected plan.
 
+Select several packages or named targets in one command to resolve their shared
+features together, as Cargo does. For example, `bsmr build app worker` compiles
+one shared dependency with the union of features requested by both packages.
+Building `worker` alone resolves its own feature set. Changing the requested
+roots invalidates the cached plan, even in a warm daemon. Reordering the same
+roots does not duplicate compiler work.
+
+The selected roots share one native graph per workspace and build/test mode.
+Targets retain their owning package, so equally named binaries remain distinct.
+Run `python3 test/rust/roots.py /path/to/bsmr` to verify these transitions against
+Cargo and inspect the actual number of compiler actions.
+
 Cargo profiles can select `lto = "thin"`, `"fat"`, or `true` for optimization
 across crates. Bessemer retains LLVM bitcode in dependency libraries and applies
 the selected mode when linking binaries, C libraries, or inline unit tests. Rust library artifacts

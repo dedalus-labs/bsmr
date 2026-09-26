@@ -49,9 +49,6 @@ pub(super) fn render(
     if graph.workspace_root != root {
         return Err(unsupported("planner", "workspace root mismatch"));
     }
-    if graph.roots.len() != 1 {
-        return Err(unsupported("planner", "multiple entrypoint roots"));
-    }
     let sources = Sources::render(&graph, cell)?;
     let renderer = Renderer {
         graph: &graph,
@@ -70,12 +67,14 @@ pub(super) fn render(
         }
         rules.push_str(&renderer.unit(unit, index)?);
     }
-    rules.push_str(&format!(
-        "load(\"@prelude//rust:cargo_outputs.bzl\", \"cargo_outputs\")\n\
-         cargo_outputs(name = \"root\", actual = {}, outputs = {}, visibility = [\"PUBLIC\"])\n",
-        json(&libraries::root(&graph))?,
-        json(&libraries::outputs(&graph))?,
-    ));
+    rules.push_str("load(\"@prelude//rust:cargo_outputs.bzl\", \"cargo_outputs\")\n");
+    for (ordinal, &root) in graph.roots.iter().enumerate() {
+        rules.push_str(&format!(
+            "cargo_outputs(name = \"root_{ordinal}\", actual = {}, outputs = {}, visibility = [\"PUBLIC\"])\n",
+            json(&libraries::root(&graph, root))?, json(&libraries::outputs(&graph))?,
+        ));
+    }
+    rules.push_str("alias(name = \"root\", actual = \":root_0\", visibility = [\"PUBLIC\"])\n");
     Ok(rules)
 }
 
@@ -168,7 +167,11 @@ impl Renderer<'_> {
         artifact_env.insert("CARGO_MANIFEST_PATH".into(), manifest_path);
         output.push_str(&format!(", env = {}", json(&artifact_env)?));
         output.push_str(&format!(", rustc_flags = {}", json(&source_flags)?));
-        let primary = self.graph.units[self.graph.roots[0]].package_id == unit.package_id;
+        let primary = self
+            .graph
+            .roots
+            .iter()
+            .any(|&root| self.graph.units[root].package_id == unit.package_id);
         let environment = unit.environment(primary);
         Ok(format!(
             "{declarations}{rule}(name = \"unit_{index}\", crate = {}, crate_root = {}, edition = {}, srcs_filegroup = \":sources_{index}\", named_deps = {}, features = {}, literal_rustc_flags = {}, literal_env = {}, verify_inputs = True, _rust_toolchain = {}, visibility = [\"PUBLIC\"]{output})\n",
