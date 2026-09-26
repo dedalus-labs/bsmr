@@ -13,6 +13,7 @@ edit_uri: edit/main/docs/
 # files are retained as upstream engineering reference until they are curated.
 exclude_docs: |
   /*
+  !/assets/
   !/index.md
   !/getting_started/
   /getting_started/*
