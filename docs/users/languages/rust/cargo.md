@@ -17,7 +17,6 @@ planning extends the native frontend released in version 0.0.6.
 Build a Cargo package without writing or synchronizing build rules:
 
 ```console
-bsmr init
 bsmr build --show-output
 bsmr build app --show-output
 bsmr test app
@@ -34,6 +33,12 @@ Directory selections skip binaries and tests with disabled `required-features`,
 using Cargo's resolved features across all selected packages. Naming a disabled
 target explicitly is an error. A skipped target has no artifact or compiler
 action. JSON output represents that target with an empty output path.
+
+Cargo workspaces do not need `bsmr init`. BSMR uses the pinned Cargo to locate
+the owning workspace and loads its bundled build rules without writing `.bsmr`.
+An enclosing explicit BSMR project keeps ownership. Use `bsmr init` when you
+want to write and customize that configuration. Existing `.bsmr.local` settings
+can configure the native workspace without changing its Cargo files.
 
 Run `bsmr build --help` or `bsmr test --help` for command options.
 

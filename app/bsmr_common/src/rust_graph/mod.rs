@@ -15,6 +15,7 @@ pub mod git;
 pub mod invocation;
 mod libraries;
 mod planner;
+pub(crate) mod project;
 mod selection;
 mod snapshot;
 mod sources;

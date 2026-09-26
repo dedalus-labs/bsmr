@@ -11,9 +11,14 @@
 1. `[project] root = .` marks the root.
 2. Other sections override advanced defaults.
 
-Most native TypeScript and Rust projects should keep the generated file
-unchanged. Their ecosystem manifests remain authoritative for packages,
-dependencies, and tool versions.
+Cargo workspaces can build without this file. BSMR asks the pinned Cargo to
+locate the owning workspace and loads bundled rules in memory. An enclosing
+explicit `.bsmr` project takes precedence. Creating or removing configuration
+is observed on the next command. Use `.bsmr.local` for local settings, or run
+`bsmr init` to write the complete configuration before customizing it.
+
+Native TypeScript projects still use the generated marker. Ecosystem manifests
+remain authoritative for packages, dependencies, and tool versions.
 
 ## Minimal project marker
 

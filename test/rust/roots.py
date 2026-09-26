@@ -62,8 +62,9 @@ def qualify(binary: Path, base: Path) -> None:
         run("cargo", "generate-lockfile", "--offline")
         run("cargo", "build", "--locked", "--offline", "-j", "2")
         assert [run(str(root / "target/debug" / package)).stdout.strip() for package in ("a", "b")] == ["9", "9"]
-        run(str(binary), "init")
         values, actions = build()
+        assert not (root / ".bsmr").exists(), "build initialized the checkout"
+        assert all((root / path).read_text() == content for path, content in files.items()), "build changed source inputs"
         assert values == ["9", "9"], f"joint selection differs from Cargo: {values}"
         assert len(actions) == 3, f"shared crate compiled more than once: {len(actions)}"
         assert build(".") == (["9", "9"], []), "directory differs from default selection"
@@ -127,12 +128,23 @@ def qualify(binary: Path, base: Path) -> None:
         assert "NO TESTS RAN" in skipped.stderr
         enabled = run(str(binary), "test", "only", "-c", "rust.features=only/extra", "--console", "simple")
         assert "Pass 2" in enabled.stderr, enabled.stderr
+        run(str(binary), "init")
         config = root / ".bsmr"
         config.write_text(config.read_text() + '\n[alias]\nb = root//a:same\n')
         assert build("b")[0] == ["9"], "directory shadowed an explicit alias"
         (root / "BUILD.bsmr").write_text('filegroup(name="manual", srcs=[])\n')
         explicit = subprocess.run([binary, "build"], cwd=root, env=env, capture_output=True, text=True, timeout=180)
         assert explicit.returncode != 0, "Cargo defaults overrode an explicit build file"
+        (root / "BUILD.bsmr").unlink()
+        config.unlink()
+        manifest = root / "Cargo.toml"
+        manifest.write_text(manifest.read_text().replace('default-members=["a","b"]\n', '') + '\n[package]\nname="central"\nversion="0.1.0"\nedition="2024"\n')
+        (root / "src").mkdir()
+        (root / "src/main.rs").write_text('fn main(){println!("17");}\n')
+        run("cargo", "generate-lockfile", "--offline")
+        run("cargo", "build", "--locked", "--offline")
+        assert build()[0] == ["17"], "non-virtual workspace did not select its root package"
+        assert not config.exists(), "build recreated removed configuration"
         print("ok: joint features, shared compiler work, warm selection changes, named roots, duplicate binary names")
     finally:
         run(str(binary), "kill")
