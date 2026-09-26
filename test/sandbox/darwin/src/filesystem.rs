@@ -55,9 +55,14 @@ fn shared_cache(root: &Path) -> Result<()> {
     let prefix = cache
         .file_name()
         .context("OS shared cache has no filename")?;
+    println!(
+        "{}",
+        serde_json::json!({"case": "cache_source", "path": cache, "bytes": cache.metadata()?.len()})
+    );
     let destination = root.join("System/Library/dyld");
     fs::create_dir_all(&destination)?;
     let mut bytes = 0;
+    let mut files = 0;
     for entry in fs::read_dir(source)? {
         let entry = entry?;
         if entry
@@ -70,9 +75,13 @@ fn shared_cache(root: &Path) -> Result<()> {
                 "shared cache entry must be a file"
             );
             bytes += fs::copy(entry.path(), destination.join(entry.file_name()))?;
+            files += 1;
         }
     }
-    ensure!(bytes > 0, "the OS shared cache must not be empty");
+    ensure!(
+        bytes > 0,
+        "the OS shared cache must not be empty: {files} files"
+    );
     println!("{{\"case\":\"runtime\",\"shared_cache_bytes\":{bytes}}}");
     Ok(())
 }
