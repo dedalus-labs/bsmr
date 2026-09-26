@@ -111,7 +111,8 @@ even when its Cargo name differs. Library builds preserve `lib`, `rlib`, `cdylib
 and `staticlib` declarations. All declared formats materialize even when the
 library is only a dependency of the selected executable. `:lib[cdylib]` and
 `:lib[staticlib]` select individual C-compatible artifacts. `:lib[check]` requests
-metadata only. Libraries expose `:lib`, binaries expose
+metadata only. Shared libraries use `.dylib` on macOS and `.so` on Linux.
+Libraries expose `:lib`, binaries expose
 their Cargo target name, and dependency
 renames preserve the name used in source. Package metadata enters the compiler
 as literal environment values, so text such as `$(location ...)` cannot become
