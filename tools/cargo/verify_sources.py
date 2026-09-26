@@ -32,7 +32,7 @@ def main() -> None:
     (workspace / "src/lib.rs").write_text('compile_error!("PLANNING_MUST_NOT_COMPILE");\n')
     env = {"PATH": f"{toolchain}:/usr/bin:/bin", "CARGO_HOME": str(cargo_home), "RUSTC": str(toolchain / "rustc")}
     subprocess.run([toolchain / "cargo", "generate-lockfile"], cwd=workspace, env=env, check=True)
-    request = {"manifest": str(workspace / "Cargo.toml"), "package": "source-verification",
+    request = {"manifest": str(workspace / "Cargo.toml"), "packages": ["source-verification"],
                "mode": "build", "target_filter": {"kind": "package"}, "source_policy": "offline", "features": [], "default_features": True, "all_features": False,
                "target": None, "profile": "dev", "cargo_home": str(cargo_home),
                "rustc": str(toolchain / "rustc"), "target_directory": str(root / "planner-target")}
@@ -149,7 +149,7 @@ def verify_git(binary: Path, toolchain: Path, root: Path, env: dict) -> None:
         subprocess.run([toolchain / "cargo", "generate-lockfile"], cwd=workspace, env=git_env, check=True)
         shutil.rmtree(Path(env["CARGO_HOME"]) / "git")
         lock = (workspace / "Cargo.lock").read_bytes()
-        request = {"manifest": str(manifest), "package": "git-verification", "mode": "build",
+        request = {"manifest": str(manifest), "packages": ["git-verification"], "mode": "build",
                    "target_filter": {"kind": "library"}, "source_policy": "acquire-locked",
                    "features": [], "default_features": True, "all_features": False,
                    "target": None, "profile": "dev", "cargo_home": env["CARGO_HOME"],
