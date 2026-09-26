@@ -1819,6 +1819,7 @@ Project requirements: https://oss.dedaluslabs.ai/bsmr/getting_started/quickstart
 * `<TARGET_PATTERNS>`
     Patterns to build
 
+    * Default value: `.`
 
 ### Common Options:
 
@@ -2263,6 +2264,7 @@ Language guides: https://oss.dedaluslabs.ai/bsmr/about/language_support/
 * `<TARGET_PATTERNS>`
     Patterns to test
 
+    * Default value: `.`
 * `<TEST_EXECUTOR_ARGS>`
     Additional arguments passed to the test executor.
 
