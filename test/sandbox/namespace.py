@@ -239,6 +239,7 @@ def main() -> None:
                 "directory",
                 "runtime",
                 "declared",
+                "shared",
                 "exit",
                 "timeout",
                 "cancel",
@@ -275,6 +276,14 @@ def main() -> None:
                     runtime_value(value)
                     assert (output(build("runtime")) / "result").read_text() == value
                 print("  ok  runtime-content invalidation", flush=True)
+
+                shared = run("build", "//:declared", "//:shared", "--sandbox", "-j", "2", "--show-full-json-output", "--console", "simple")
+                assert shared.returncode == 0, shared.stderr
+                outputs = json.loads(shared.stdout)
+                assert len(outputs) == 2
+                assert all((Path(path) / "result").read_text() == "7" for path in outputs.values())
+                assert (root / "input/value").read_text() == "7"
+                print("  ok  shared input snapshots remain read-only across actions", flush=True)
 
                 assert (
                     output(build("directory")) / "result"

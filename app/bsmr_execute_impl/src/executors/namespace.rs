@@ -40,6 +40,8 @@ pub struct NamespaceCache {
 pub struct NamespaceExecutor {
     /// Remains alive through execution, descendant cleanup, and output import.
     runtime: Arc<Runtime>,
+    /// A command shares verified input bytes. Every action receives read-only links.
+    inputs: Mutex<Option<Arc<inputs::Cache>>>,
 }
 
 /// Holds private action trees until execution, descendant cleanup and output import finish.
@@ -86,7 +88,10 @@ impl NamespaceCache {
         let runtime = Runtime::load(manifest, launcher, previous.as_ref())?;
         let retired = self.current.lock().replace(Arc::clone(&runtime));
         drop(retired);
-        Ok(NamespaceExecutor { runtime })
+        Ok(NamespaceExecutor {
+            runtime,
+            inputs: Mutex::new(None),
+        })
     }
 }
 
@@ -131,11 +136,18 @@ impl NamespaceExecutor {
         fs::create_dir_all(&staging)?;
         let directory = tempfile::Builder::new()
             .prefix(".bsmr-namespace-")
-            .tempdir_in(staging)?;
+            .tempdir_in(&staging)?;
         let inputs = directory.path().join("inputs");
         let outputs = directory.path().join("outputs");
         fs::create_dir(&outputs)?;
-        inputs::stage(
+        let cache = {
+            let mut cache = self.inputs.lock();
+            if cache.is_none() {
+                *cache = Some(Arc::new(inputs::Cache::new(&staging)?));
+            }
+            Arc::clone(cache.as_ref().expect("input cache initialized"))
+        };
+        cache.stage(
             project,
             &inputs,
             request.paths().input_directory(),
