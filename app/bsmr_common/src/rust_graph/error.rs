@@ -7,10 +7,14 @@
 
 use std::path::PathBuf;
 
+use bsmr_core::cells::cell_path::CellPath;
+
 /// Cargo graph input or an unsupported semantic boundary.
 #[derive(Debug, bsmr_error::Error)]
 #[bsmr(tag = Input)]
 pub enum RustGraphError {
+    #[error("Cargo directory `{0}` is not a workspace member")]
+    NotWorkspaceMember(CellPath),
     #[error("invalid cargo metadata: {0}")]
     Metadata(#[source] serde_json::Error),
     #[error("native Rust import does not support {case} in `{package}`")]

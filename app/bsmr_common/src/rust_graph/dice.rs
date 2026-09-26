@@ -5,7 +5,6 @@
 
 //! Infers private Rust targets from a frozen snapshot of tracked Cargo inputs.
 
-use std::collections::BTreeMap;
 use std::path::Path;
 use std::sync::Arc;
 use std::time::Duration;
@@ -27,6 +26,8 @@ use pagable::pagable_typetag;
 use super::catalog;
 use super::entry::Entry;
 use super::entry::Mode;
+use super::entry::Origin;
+use super::entry::Requested;
 use super::invocation::Invocation;
 use super::planner::Planner;
 use super::selection::Selection;
@@ -54,7 +55,7 @@ struct RustGraphKey(CellName);
 
 #[async_trait]
 impl Key for RustGraphKey {
-    type Value = bsmr_error::Result<Arc<BTreeMap<String, String>>>;
+    type Value = bsmr_error::Result<Arc<catalog::Catalog>>;
 
     /// Recompute only when tracked resolver inputs or target names change.
     async fn compute(
@@ -73,12 +74,13 @@ impl Key for RustGraphKey {
         })?;
         let toolchain = RustToolchain::parse(&source)?;
         let metadata = resolve(&toolchain, &root).await?;
-        let mut rules = catalog::render(&metadata, &root, self.0.as_str())?;
-        rules
+        let mut catalog = catalog::render(&metadata, &root, self.0.as_str())?;
+        catalog
+            .rules
             .entry(String::new())
             .or_default()
             .push_str(toolchain.rules());
-        Ok(Arc::new(rules))
+        Ok(Arc::new(catalog))
     }
 
     /// Reuse only successful, byte-identical generated graphs.
@@ -237,11 +239,43 @@ pub async fn build_file(
     ctx: &mut DiceComputations<'_>,
     package: PackageLabel,
 ) -> bsmr_error::Result<String> {
-    let rules = ctx.compute(&RustGraphKey(package.cell_name())).await??;
-    match rules.get(package.as_cell_path().path().as_str()) {
+    let catalog = ctx.compute(&RustGraphKey(package.cell_name())).await??;
+    match catalog.rules.get(package.as_cell_path().path().as_str()) {
         Some(member) => Ok(member.clone()),
         None => Ok(catalog::sources().to_owned()),
     }
+}
+
+/// Expand a Cargo directory using the same metadata that defines its public targets.
+pub async fn directory(
+    ctx: &mut DiceComputations<'_>,
+    path: CellPath,
+) -> bsmr_error::Result<Option<Vec<String>>> {
+    use bsmr_fs::paths::forward_rel_path::ForwardRelativePath;
+
+    use crate::package_listing::PackageBuildSource;
+    use crate::package_listing::find_build_source;
+
+    let manifest = path.join(ForwardRelativePath::unchecked_new("Cargo.toml"));
+    if !DiceFileComputations::exists_matching_exact_case(ctx, manifest.as_ref()).await? {
+        return Ok(None);
+    }
+    let listing = DiceFileComputations::read_dir(ctx, path.as_ref()).await?;
+    let buildfiles = DiceFileComputations::buildfiles(ctx, path.cell()).await?;
+    if find_build_source(&buildfiles, &listing.included, true)
+        .is_none_or(|(_, source)| source != PackageBuildSource::Native)
+    {
+        return Ok(None);
+    }
+    let catalog = ctx.compute(&RustGraphKey(path.cell())).await??;
+    let labels = catalog
+        .directories
+        .get(path.path().as_str())
+        .ok_or_else(|| super::RustGraphError::NotWorkspaceMember(path.clone()))?;
+    if labels.is_empty() {
+        return Err(unsupported(&path.to_string(), "empty default target selection").into());
+    }
+    Ok(Some(labels.clone()))
 }
 
 /// A selected build/test graph has its own invalidation boundary.
@@ -257,11 +291,20 @@ pub async fn build_file(
 )]
 #[display("RustPlanKey({:?})", _0)]
 #[pagable_typetag(dice::DiceKeyDyn)]
-struct RustPlanKey(Vec<Entry>);
+struct RustPlanKey(Vec<Requested>);
+
+/// The resolver owns both enabled roots and their compiler definitions.
+#[derive(Debug, Eq, PartialEq, allocative::Allocative, Pagable)]
+struct Plan {
+    /// Enabled roots in the exact order returned by Cargo.
+    roots: Vec<Entry>,
+    /// Native definitions for those roots and their reachable dependencies.
+    source: String,
+}
 
 #[async_trait]
 impl Key for RustPlanKey {
-    type Value = bsmr_error::Result<Arc<String>>;
+    type Value = bsmr_error::Result<Arc<Plan>>;
 
     /// Capture resolver inputs through DICE before asking Cargo for configured units.
     async fn compute(
@@ -271,7 +314,7 @@ impl Key for RustPlanKey {
     ) -> Self::Value {
         let snapshot = tempfile::tempdir()?;
         let root = snapshot.path().canonicalize()?;
-        let first = &self.0[0];
+        let first = &self.0[0].entry;
         RustGraphKey(first.package.cell_name())
             .capture(ctx, &root)
             .await?;
@@ -284,13 +327,39 @@ impl Key for RustPlanKey {
         let packages = self
             .0
             .iter()
-            .map(|entry| catalog::package_name(&metadata, &root, entry))
+            .map(|entry| catalog::package_name(&metadata, &root, &entry.entry))
             .collect::<Result<Vec<_>, _>>()?;
         let cell = first.package.cell_name();
         let selection = Selection::read(ctx, cell, first.mode).await?;
         let bytes = Planner::new(&root, &toolchain, selection)
             .resolve(&self.0, &packages)
             .await?;
+        let graph = super::units::Graph::parse(&bytes)?;
+        let roots = graph
+            .roots
+            .iter()
+            .map(|index| {
+                let unit = &graph.units[*index];
+                self.0
+                    .iter()
+                    .zip(&packages)
+                    .find(|(request, package)| {
+                        **package == unit.package_name
+                            && request.entry.target.name() == unit.target.name
+                            && (unit.target.kind == [request.entry.target.kind()]
+                                || (request.entry.target.kind() == "lib"
+                                    && super::libraries::is_library(&unit.target.kind)))
+                    })
+                    .map(|(request, _)| request.entry.clone())
+                    .ok_or_else(|| unsupported("planner", "returned an unrequested root"))
+            })
+            .collect::<Result<Vec<_>, _>>()?;
+        if roots.is_empty() {
+            return Ok(Arc::new(Plan {
+                roots,
+                source: String::new(),
+            }));
+        }
         let platform = ctx.compute(&crate::execution::ExecutionPlatformKey).await?;
         let execution = if platform
             .iter()
@@ -302,13 +371,14 @@ impl Key for RustPlanKey {
         } else {
             super::configured::CodeExecution::CompilerOnly
         };
-        Ok(Arc::new(super::configured::render(
+        let source = super::configured::render(
             &bytes,
             &root,
             cell.as_str(),
             &format!("{cell}//:__bsmr_rust"),
             execution,
-        )?))
+        )?;
+        Ok(Arc::new(Plan { roots, source }))
     }
 
     /// Reuse only successful byte-identical compilation definitions.
@@ -339,7 +409,7 @@ struct CargoRoots(CellName, Mode);
 
 #[async_trait]
 impl Key for CargoRoots {
-    type Value = bsmr_error::Result<Arc<Vec<Entry>>>;
+    type Value = bsmr_error::Result<Arc<Vec<Requested>>>;
 
     /// Resolve command roots from tracked metadata with the native pattern parser.
     async fn compute(&self, ctx: &mut DiceComputations, _: &CancellationContext) -> Self::Value {
@@ -347,15 +417,12 @@ impl Key for CargoRoots {
         let Some(invocation) = invocation.as_ref() else {
             return Ok(Arc::new(Vec::new()));
         };
-        let patterns = crate::pattern::parse_from_cli::parse_patterns_with_modifiers_from_cli_args(
+        let patterns = crate::pattern::parse_from_cli::cargo_patterns(
             ctx,
             invocation.patterns(),
             invocation.working_dir(),
         )
-        .await?
-        .into_iter()
-        .map(|pattern| pattern.parsed_pattern)
-        .collect::<Vec<_>>();
+        .await?;
         let snapshot = tempfile::tempdir()?;
         let root = snapshot.path().canonicalize()?;
         RustGraphKey(self.0).capture(ctx, &root).await?;
@@ -386,11 +453,19 @@ pub async fn plan_file(
     let selected = ctx
         .compute(&CargoRoots(entry.package.cell_name(), entry.mode))
         .await??;
-    let entries = if selected.contains(entry) {
+    let requests = if selected.iter().any(|request| request.entry == *entry) {
         selected.as_ref().clone()
     } else {
-        vec![entry.clone()]
+        vec![Requested {
+            entry: entry.clone(),
+            origin: Origin::Explicit,
+        }]
     };
+    let plan = ctx.compute(&RustPlanKey(requests)).await??;
+    if !plan.roots.contains(entry) {
+        return Ok("load(\"@prelude//rust:cargo_outputs.bzl\", \"cargo_outputs\")\ncargo_outputs(name = \"root\", outputs = [], visibility = [\"PUBLIC\"])\n".to_owned());
+    }
+    let entries = &plan.roots;
     let owner = &entries[0];
     if entry != owner {
         let index = entries
@@ -403,7 +478,7 @@ pub async fn plan_file(
             serde_json::to_string(&label)?
         ));
     }
-    Ok(ctx.compute(&RustPlanKey(entries)).await??.as_ref().clone())
+    Ok(plan.source.clone())
 }
 
 /// Reject nonexistent or unsupported private packages before interpreter evaluation.

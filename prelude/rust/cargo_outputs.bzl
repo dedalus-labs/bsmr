@@ -8,6 +8,8 @@
 def _cargo_outputs_impl(ctx: AnalysisContext) -> list[Provider]:
     """Preserve the root's providers and require all declared companion artifacts."""
     actual = ctx.attrs.actual
+    if actual == None:
+        return [DefaultInfo()]
     default = actual[DefaultInfo]
     sub_targets = {name: actual.sub_target(name).providers for name in default.sub_targets}
     if "staticlib_pic" in sub_targets:
@@ -23,7 +25,7 @@ def _cargo_outputs_impl(ctx: AnalysisContext) -> list[Provider]:
 cargo_outputs = rule(
     impl = _cargo_outputs_impl,
     attrs = {
-        "actual": attrs.dep(),
+        "actual": attrs.option(attrs.dep(), default = None),
         "outputs": attrs.list(attrs.source()),
     },
 )

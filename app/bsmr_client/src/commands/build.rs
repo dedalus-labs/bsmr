@@ -154,7 +154,7 @@ pub struct BuildCommand {
     )]
     output_path: Option<OutputDestinationArg>,
 
-    #[clap(name = "TARGET_PATTERNS", help = "Patterns to build", value_hint = clap::ValueHint::Other)]
+    #[clap(name = "TARGET_PATTERNS", default_value = ".", help = "Patterns to build", value_hint = clap::ValueHint::Other)]
     patterns: Vec<String>,
 
     #[clap(flatten)]

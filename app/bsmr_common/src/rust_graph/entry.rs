@@ -10,8 +10,29 @@ use bsmr_core::package::PackageLabel;
 use bsmr_fs::paths::file_name::FileName;
 use bsmr_fs::paths::forward_rel_path::ForwardRelativePath;
 use pagable::Pagable;
+use serde::Serialize;
 
 const PREFIX: &str = "__bsmr_cargo_";
+
+/// Explicit roots must exist and win when both forms select the same target.
+/// Directory roots may be disabled by Cargo's feature rules.
+#[derive(
+    Clone, Copy, Debug, Eq, PartialEq, Ord, PartialOrd, Hash, Allocative, Pagable, Serialize
+)]
+#[serde(rename_all = "kebab-case")]
+pub enum Origin {
+    Explicit,
+    Directory,
+}
+
+/// Preserve the user's selection contract until Cargo resolves the root set.
+#[derive(Clone, Debug, Eq, PartialEq, Hash, Allocative, Pagable)]
+pub struct Requested {
+    /// Physical package, target, and compiler operation.
+    pub entry: Entry,
+    /// Whether missing required features are an error or exclude this target.
+    pub origin: Origin,
+}
 
 /// The Cargo operation intrinsic to one public entrypoint.
 #[derive(Clone, Copy, Debug, Eq, Hash, PartialEq, Allocative, Pagable)]

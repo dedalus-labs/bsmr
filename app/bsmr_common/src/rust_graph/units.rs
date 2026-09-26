@@ -216,8 +216,7 @@ impl Graph {
         {
             return Err(unsupported("planner", "configured graph protocol version"));
         }
-        if graph.roots.is_empty()
-            || graph.roots.iter().any(|index| *index >= graph.units.len())
+        if graph.roots.iter().any(|index| *index >= graph.units.len())
             || graph.units.iter().any(|unit| {
                 unit.dependencies
                     .iter()

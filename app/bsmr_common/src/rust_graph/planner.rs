@@ -12,7 +12,7 @@ use std::time::Duration;
 use serde_json::json;
 use tokio::io::AsyncWriteExt;
 
-use super::entry::Entry;
+use super::entry::Requested;
 use super::entry::Target;
 use super::selection::Selection;
 use super::toolchain::RustToolchain;
@@ -41,7 +41,7 @@ impl<'a> Planner<'a> {
     /// Resolve one entrypoint without allowing Cargo to compile source code.
     pub async fn resolve(
         &self,
-        entries: &[Entry],
+        entries: &[Requested],
         packages: &[String],
     ) -> bsmr_error::Result<Vec<u8>> {
         let executable = std::env::current_exe()?.with_file_name("bsmr-cargo");
@@ -95,25 +95,26 @@ impl<'a> Planner<'a> {
     /// Preserve Cargo's request fields while sourcing choices from tracked configuration.
     fn request(
         &self,
-        entries: &[Entry],
+        entries: &[Requested],
         packages: &[String],
         cargo_home: &Path,
     ) -> serde_json::Value {
         let targets: Vec<_> = entries
             .iter()
             .zip(packages)
-            .map(|(entry, package)| {
+            .map(|(request, package)| {
+                let entry = &request.entry;
                 let kind = match entry.target {
                     Target::Lib(_) => "library",
                     Target::Bin(_) => "binary",
                     Target::Test(_) => "integration-test",
                 };
-                json!({"package": package, "kind": kind, "name": entry.target.name(), "origin": "explicit"})
+                json!({"package": package, "kind": kind, "name": entry.target.name(), "origin": request.origin})
             })
             .collect();
         json!({
             "manifest": self.root.join("Cargo.toml"), "packages": packages.iter().collect::<std::collections::BTreeSet<_>>(),
-            "mode": entries[0].mode.as_str(), "target_filter": {"kind": "targets", "targets": targets},
+            "mode": entries[0].entry.mode.as_str(), "target_filter": {"kind": "targets", "targets": targets},
             "source_policy": "acquire-locked", "features": self.selection.features(),
             "default_features": self.selection.default_features(),
             "all_features": self.selection.all_features(), "target": null,
