@@ -27,6 +27,8 @@ With no target, `build` and `test` select the current Cargo directory. At the
 workspace root, Cargo's `default-members` controls the selection. A package
 directory selects its libraries and binaries. `bsmr build .` makes the current
 directory explicit. Named targets and configured aliases retain their meaning.
+Only workspace members expose build targets. Excluded path dependencies remain
+available to their consumers, but direct directory builds report a membership error.
 An explicit build file owns its directory and requires an explicit target.
 Directory selections skip binaries and tests with disabled `required-features`,
 using Cargo's resolved features across all selected packages. Naming a disabled

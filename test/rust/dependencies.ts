@@ -58,7 +58,7 @@ try {
 	writeFileSync(join(root, "dep/src/lib.rs"), '#![deny(dead_code)]\nfn unused() {}\npub fn value() -> u32 { 1 }\n');
 	await assert.rejects(run("rustup", ["run", toolchain, "cargo", "build", "--locked", "-p", "app"], options), /never used|dead_code/);
 	await assert.rejects(run(binary, ["build", "app"], options), /never used|dead_code/, "local path dependencies must retain their lint errors");
-	await assert.rejects(run(binary, ["build", "dep"], options), /Unknown target `dep`/);
+	await assert.rejects(run(binary, ["build", "dep"], options), /Cargo directory `root\/\/dep` is not a workspace member/, "dependency-only packages cannot become public build roots");
 	console.log("ok: locked registry/Git and excluded path sources, warm reuse, edit invalidation");
 } finally {
 	await run(binary, ["kill"], options);

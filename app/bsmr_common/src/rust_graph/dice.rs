@@ -271,7 +271,7 @@ pub async fn directory(
     let labels = catalog
         .directories
         .get(path.path().as_str())
-        .ok_or_else(|| unsupported(&path.to_string(), "directory absent from Cargo workspace"))?;
+        .ok_or_else(|| super::RustGraphError::NotWorkspaceMember(path.clone()))?;
     if labels.is_empty() {
         return Err(unsupported(&path.to_string(), "empty default target selection").into());
     }
