@@ -5,6 +5,7 @@
 
 //! Run bounded Darwin process-ownership checks without installing a service.
 
+mod filesystem;
 mod identity;
 mod workload;
 
@@ -34,6 +35,7 @@ fn main() -> Result<()> {
         }
         Some("kill") if args.len() == 1 => broadcast(),
         Some("writer") if args.len() == 2 => writer(&PathBuf::from(&args[1])),
+        Some("view") if args.len() == 2 => filesystem::view(&PathBuf::from(&args[1])),
         Some("normal" | "cancel") if args.len() == 2 => {
             workload(&PathBuf::from(&args[1]), args[0] == "cancel")
         }

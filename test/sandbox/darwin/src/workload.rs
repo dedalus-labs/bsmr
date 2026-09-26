@@ -136,5 +136,6 @@ pub(crate) fn run(root: &Path) -> Result<()> {
         case(&lease, root, name)?;
     }
     lease.drain()?;
+    crate::filesystem::check(root)?;
     Ok(())
 }
