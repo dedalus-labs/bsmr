@@ -81,6 +81,16 @@ try {
 	assert.ok((await build("changed")).length > 0, "extra-source edits must invalidate compilation");
 	writeFileSync(join(root, "unrelated/src/lib.rs"), 'compile_error!("provider source stays unrelated");\n');
 	assert.deepEqual(await build("changed"), [], "declaring a file must not include its whole package");
+	assert.deepEqual(
+		await build("changed", "-c", 'rust.sources={"app":["unrelated/shared.txt"],"unrelated":["unrelated/shared.txt"]}'),
+		[],
+		"another package's source selection must not recompile app",
+	);
+	await assert.rejects(
+		build("changed", "-c", 'rust.sources={"app":["unrelated/shared.txt"],"unrelated":3}'),
+		/expected.*list|Expected.*list/,
+		"the source map must validate every package's path list",
+	);
 	for (const input of ["unrelated/missing.txt", "../outside.txt"]) {
 		writeFileSync(join(root, ".bsmr.local"), local + `\n[rust]\nsources = ${JSON.stringify({ app: [input] })}\n`);
 		await assert.rejects(build(), /extra source .* is not a declared workspace file/);

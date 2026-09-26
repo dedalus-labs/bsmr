@@ -63,6 +63,7 @@ const setupNode = {
 	uses: "actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38",
 	with: { "node-version": "26.5.1" },
 } as const;
+const rustToolchain = "nightly-2026-04-11";
 const installRust = {
 	name: "Install pinned Rust toolchain",
 	run: command({
@@ -70,7 +71,7 @@ const installRust = {
 		args: [
 			"toolchain",
 			"install",
-			"nightly-2026-04-11",
+			rustToolchain,
 			"--profile",
 			"minimal",
 			"--component",
@@ -261,10 +262,18 @@ export const ci = workflow({
 			"runs-on": "ubuntu-24.04",
 			"timeout-minutes": 10,
 			permissions: { contents: "read" },
+			env: { RUSTUP_TOOLCHAIN: rustToolchain, RUSTUP_AUTO_INSTALL: "0" },
 			steps: [
 				{
 					...checkout,
 					with: { ...checkout.with, "fetch-depth": 0 },
+				},
+				{
+					name: "Install Cargo metadata toolchain",
+					run: command({
+						file: "rustup",
+						args: ["toolchain", "install", rustToolchain, "--profile", "minimal", "--no-self-update"],
+					}),
 				},
 				setupNode,
 				{

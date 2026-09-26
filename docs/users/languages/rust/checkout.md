@@ -45,6 +45,10 @@ It does not compile the packages that own those files. Missing or undeclared
 paths fail during analysis. The same map can be passed with
 `-c 'rust.sources={"app":["schema/version.txt"]}'`.
 
+The native rule validates the complete dictionary's string keys and lists of
+strings. Selected paths resolve to the checkout's declared artifacts before
+compilation. Individual rule calls cannot override this configuration attribute.
+
 Each compiler consumes one native `rust_filegroup` through `srcs_filegroup`.
 The group retains the source tree's relative layout and the build script's
 generated directory when present. Native Rust rules retain that group for

@@ -53,7 +53,7 @@ def _source(ctx: AnalysisContext) -> list[Provider]:
                 owner = prefix
         if not owner or owner == package or package.startswith(owner + "/"):
             sources[path] = source
-    for path in ctx.attrs.extra_srcs:
+    for path in ctx.attrs.sources.get(package or ".", []):
         if path not in declared:
             fail("extra source {} is not a declared workspace file".format(path))
         sources[path] = declared[path]
@@ -63,20 +63,19 @@ def _source(ctx: AnalysisContext) -> list[Provider]:
         sub_targets = {"package": [DefaultInfo(default_output = root.project(package))]},
     )]
 
-_cargo_source = rule(
+cargo_source = rule(
     impl = _source,
     attrs = {
         "checkout": attrs.dep(providers = [CheckoutSources]),
         "package": attrs.string(),
         "boundaries": attrs.list(attrs.string(), doc = "Cargo-declared package paths relative to the workspace."),
-        "extra_srcs": attrs.list(attrs.string(), doc = "Workspace-relative files declared by the consuming package."),
+        "sources": attrs.default_only(attrs.dict(
+            attrs.string(),
+            attrs.list(attrs.string()),
+            default = json.decode(read_root_config("rust", "sources", "{}")),
+        ), doc = "Workspace-relative files declared for each consuming package."),
     },
 )
-
-def cargo_source(name: str, package: str, **kwargs):
-    """Track explicit cross-package files through the workspace's native configuration."""
-    extra = json.decode(read_root_config("rust", "sources", "{}")).get(package or ".", [])
-    _cargo_source(name = name, package = package, extra_srcs = extra, **kwargs)
 
 def _files(ctx: AnalysisContext) -> list[Provider]:
     """Keep each package's source bytes and relative links until workspace assembly."""
