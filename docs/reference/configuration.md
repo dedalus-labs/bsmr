@@ -44,3 +44,30 @@ are recorded in the [command-line reference](cli.md).
 
 The `[sandbox]` section and `--sandbox` workflow are documented in
 [Sandboxed builds](../users/sandboxing.md).
+
+## Watch source changes on Linux
+
+For projects with large build-output trees, use the existing Watchman backend.
+Watchman can exclude `bsmr-out` before walking its directories or registering
+file watches. Install [Watchman](https://facebook.github.io/watchman/docs/install)
+and make its CLI available on `PATH`.
+
+Set the backend in the project's `.bsmr` or `.bsmr.local`:
+
+```ini
+[bsmr]
+file_watcher = watchman
+```
+
+Add `bsmr-out` to `ignore_dirs` in the project's `.watchmanconfig`. Preserve
+any other settings or exclusions in that file.
+
+```json
+{"ignore_dirs": ["bsmr-out"]}
+```
+
+After any builds finish, run `bsmr kill` in the project. The next build starts
+a daemon with the selected backend. Daemon startup reads configuration files,
+so a one-off `-c bsmr.file_watcher=watchman` does not select this backend.
+A failed Watchman connection fails the build. Do not exclude source directories
+whose changes must invalidate build results.
