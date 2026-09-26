@@ -96,7 +96,7 @@ impl<'a> Planner<'a> {
             Target::Test(name) => json!({"kind": "integration-test", "name": name}),
         };
         json!({
-            "manifest": self.root.join("Cargo.toml"), "package": package,
+            "manifest": self.root.join("Cargo.toml"), "packages": [package],
             "mode": entry.mode.as_str(), "target_filter": target_filter,
             "source_policy": "acquire-locked", "features": self.selection.features(),
             "default_features": self.selection.default_features(),

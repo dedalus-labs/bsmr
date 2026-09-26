@@ -24,7 +24,7 @@ def write_fixture() -> None:
     """Create a resolver-2 workspace with target, host, macro and dev features."""
     files = {
         "Cargo.toml": '''[workspace]
-members = ["app", "shared", "derive", "foreign"]
+members = ["app", "shared", "derive", "foreign", "client"]
 resolver = "2"
 [profile.dev]
 opt-level = 1
@@ -84,6 +84,7 @@ host = []
 dev = []
 macro = []
 requested = []
+joint = []
 [lints.rust]
 unused = "deny"
 ''',
@@ -104,6 +105,14 @@ version = "0.1.0"
 edition = "2024"
 ''',
         "foreign/src/lib.rs": 'compile_error!("INACTIVE_TARGET_MUST_NOT_COMPILE");\n',
+        "client/Cargo.toml": '''[package]
+name = "client"
+version = "0.1.0"
+edition = "2024"
+[dependencies]
+shared = { path = "../shared", features = ["joint"] }
+''',
+        "client/src/main.rs": 'compile_error!("SECOND_ROOT_MUST_NOT_COMPILE");\n',
     }
     for name, content in files.items():
         destination = FIXTURE / name
@@ -134,18 +143,22 @@ def main() -> None:
         ({"kind": "binary", "name": "runner"}, ["--bin", "runner"]),
         ({"kind": "integration-test", "name": "integration"}, ["--test", "integration"]),
     ]
-    cases = [(mode, profile, selection, flags)
+    cases = [(mode, profile, selection, flags, ["app"])
              for mode, profile in [("build", "dev"), ("test", "dev"), ("build", "release"), ("check", "dev")]
              for selection, flags in selections]
-    for mode, profile, selection, flags in cases:
+    cases += [(mode, profile, {"kind": "package"}, [], ["app", "client"])
+              for mode, profile in [("build", "dev"), ("test", "dev"), ("build", "release")]]
+    for mode, profile, selection, flags, packages in cases:
         request = {
-            "manifest": str(FIXTURE / "Cargo.toml"), "package": "app", "mode": mode, "target_filter": selection, "source_policy": "offline",
+            "manifest": str(FIXTURE / "Cargo.toml"), "packages": packages, "mode": mode, "target_filter": selection, "source_policy": "offline",
             "features": ["shared/requested"], "default_features": True, "all_features": False,
             "target": "aarch64-apple-darwin", "profile": profile,
             "cargo_home": str(cargo_home), "rustc": str(toolchain / "rustc"),
             "target_directory": str(ROOT / "fixture-target"),
         }
         name = f"{mode}-{profile}-{selection['kind']}"
+        if len(packages) > 1:
+            name += "-joint"
         (RECEIPTS / f"{name}.request.json").write_text(json.dumps(request, indent=2))
         output = subprocess.run([binary], input=json.dumps(request), text=True, capture_output=True, env=env)
         assert output.returncode == 0, (name, output.stderr)
@@ -153,7 +166,8 @@ def main() -> None:
         (RECEIPTS / f"{name}.stderr").write_text(output.stderr)
         graph = json.loads(output.stdout)
         command = [str(toolchain / "cargo"), mode, "--unit-graph", "-Z", "unstable-options", "--frozen",
-                   "-p", "app", "--target", request["target"], "--profile", profile, "--features", "shared/requested", *flags]
+                   *[arg for package in packages for arg in ("-p", package)],
+                   "--target", request["target"], "--profile", profile, "--features", "shared/requested", *flags]
         reference = subprocess.run(command, cwd=FIXTURE, env=env | {"RUSTC_BOOTSTRAP": "1"}, capture_output=True, text=True, check=True)
         (RECEIPTS / f"{name}.cargo.json").write_text(reference.stdout)
         cargo_graph = json.loads(reference.stdout)
@@ -168,6 +182,8 @@ def main() -> None:
         assert host[0]["features"] == ["host", "macro", "requested"]
         needs_dev = mode == "test" or selection["kind"] == "integration-test"
         expected_features = ["dev", "requested", "target"] if needs_dev else ["requested", "target"]
+        if "client" in packages:
+            expected_features = sorted([*expected_features, "joint"])
         assert all(unit["features"] == expected_features for unit in target)
         assert host[0]["rustflags"] == []
         assert target[0]["rustflags"] == ["--cfg", "target_marker"]
@@ -200,7 +216,10 @@ def main() -> None:
         assert not any((ROOT / "fixture-target").rglob("*.rlib"))
         results.append({"case": name, "units": len(graph["units"]), "cargo_parity": True,
                         "host_features": host[0]["features"], "target_features": target[0]["features"]})
-    request["target_filter"] = {"kind": "package"}
+    request.update(packages=["app"], mode="check", profile="dev", target_filter={"kind": "package"})
+    rejected = subprocess.run([binary], input=json.dumps(request | {"packages": []}),
+                              text=True, capture_output=True, env=env)
+    assert rejected.returncode != 0 and "at least one package" in rejected.stderr
     output = subprocess.run([binary], input=json.dumps(request), text=True, capture_output=True, env=env, check=True)
     graph = json.loads(output.stdout)
     summary = {"cases": results, "lock_sha256": hashlib.sha256(lock).hexdigest(), "source_compilation": False}
@@ -362,7 +381,7 @@ def verify_package_environment(binary: Path, toolchain: Path, request: dict, env
     (workspace / "src/main.rs").write_text(source)
     subprocess.run([toolchain / "cargo", "generate-lockfile", "--offline"], cwd=workspace, env=env, check=True)
     lock = (workspace / "Cargo.lock").read_bytes()
-    request = request | {"manifest": str(manifest), "package": "package-env", "mode": "build",
+    request = request | {"manifest": str(manifest), "packages": ["package-env"], "mode": "build",
                          "target_filter": {"kind": "binary", "name": "package-env"}, "features": [],
                          "target": None, "target_directory": str(workspace / "planner-target")}
     planned = subprocess.run([binary], input=json.dumps(request), env=env, text=True, capture_output=True, check=True)

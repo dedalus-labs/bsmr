@@ -20,8 +20,8 @@ use serde::Serialize;
 pub(crate) struct Request {
     /// Absolute manifest path inside the captured workspace.
     pub(crate) manifest: PathBuf,
-    /// Cargo package selector for the requested entrypoint.
-    pub(crate) package: String,
+    /// Nonempty package selection resolved together through Cargo's feature rules.
+    pub(crate) packages: Vec<String>,
     /// Compiler operation whose dependency context Cargo must resolve.
     pub(crate) mode: Mode,
     /// Cargo target selection, independent of the compiler operation.

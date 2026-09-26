@@ -176,7 +176,11 @@ fn options(request: &Request, gctx: &GlobalContext) -> Result<CompileOptions> {
         Mode::Check => UserIntent::Check { test: false },
     };
     let mut options = CompileOptions::new(gctx, intent)?;
-    options.spec = Packages::Packages(vec![request.package.clone()]);
+    ensure!(
+        !request.packages.is_empty(),
+        "at least one package must be selected"
+    );
+    options.spec = Packages::Packages(request.packages.clone());
     options.filter = match &request.target_filter {
         TargetFilter::Package => CompileFilter::Default {
             required_features_filterable: true,

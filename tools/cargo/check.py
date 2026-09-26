@@ -38,7 +38,7 @@ def main() -> None:
         lock = (root / "Cargo.lock").read_bytes()
         for mode in ["build", "test"]:
             request = {
-                "manifest": str(root / "Cargo.toml"), "package": "app", "mode": mode,
+                "manifest": str(root / "Cargo.toml"), "packages": ["app"], "mode": mode,
                 "target_filter": {"kind": "library"}, "source_policy": "offline",
                 "features": [], "default_features": True, "all_features": False,
                 "target": None, "profile": "dev", "cargo_home": str(root / "cargo"),
