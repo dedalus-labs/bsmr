@@ -44,6 +44,7 @@ use crate::types::Dependency;
 use crate::types::DependencyKind;
 use crate::types::Graph;
 use crate::types::Mode;
+use crate::types::Origin;
 use crate::types::Request;
 use crate::types::Source;
 use crate::types::SourcePolicy;
@@ -107,24 +108,33 @@ pub(crate) fn plan(request: Request) -> Result<Graph> {
     if let TargetFilter::Targets { targets } = &request.target_filter {
         let mut selected = Vec::new();
         for target in targets {
-            let root = context
-                .roots
-                .iter()
-                .find(|unit| {
-                    unit.pkg.name().as_str() == target.package
-                        && unit.target.name() == target.name
-                        && match target.kind {
-                            TargetKind::Library => unit.target.is_lib(),
-                            TargetKind::Binary => unit.target.is_bin(),
-                            TargetKind::IntegrationTest => unit.target.is_test(),
-                        }
-                })
-                .with_context(|| {
-                    format!(
-                        "selected target {}:{} is absent from Cargo roots",
-                        target.package, target.name
-                    )
-                })?;
+            let root = context.roots.iter().find(|unit| {
+                unit.pkg.name().as_str() == target.package && target.matches(&unit.target)
+            });
+            if root.is_none() && target.origin == Origin::Directory {
+                let candidate = workspace
+                    .members()
+                    .find(|package| package.name().as_str() == target.package)
+                    .and_then(|package| {
+                        package
+                            .targets()
+                            .iter()
+                            .find(|candidate| target.matches(candidate))
+                    });
+                ensure!(
+                    candidate.is_some_and(|candidate| candidate.required_features().is_some()),
+                    "directory target {}:{} is absent from Cargo roots",
+                    target.package,
+                    target.name
+                );
+                continue;
+            }
+            let root = root.with_context(|| {
+                format!(
+                    "selected target {}:{} is absent from Cargo roots",
+                    target.package, target.name
+                )
+            })?;
             selected.push(root.clone());
         }
         context.roots = selected;
@@ -229,6 +239,12 @@ fn options(request: &Request, gctx: &GlobalContext) -> Result<CompileOptions> {
                 "selected target package is absent from packages"
             );
             let names = |kind| {
+                if targets
+                    .iter()
+                    .any(|target| target.kind == kind && target.origin == Origin::Directory)
+                {
+                    return FilterRule::All;
+                }
                 FilterRule::Just(
                     targets
                         .iter()
