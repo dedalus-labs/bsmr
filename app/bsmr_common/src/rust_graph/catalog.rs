@@ -14,12 +14,15 @@ use bsmr_core::cells::paths::CellRelativePathBuf;
 use bsmr_core::package::PackageLabel;
 use bsmr_core::pattern::pattern::ParsedPattern;
 use bsmr_core::pattern::pattern_type::ConfiguredProvidersPatternExtra;
+use pagable::Pagable;
 use serde::Deserialize;
 use serde_json::to_string as json;
 
 use super::RustGraphError;
 use super::entry::Entry;
 use super::entry::Mode;
+use super::entry::Origin;
+use super::entry::Requested;
 use super::entry::Target;
 use super::libraries;
 use super::unsupported;
@@ -32,16 +35,29 @@ struct Metadata {
     workspace_root: PathBuf,
     /// Workspace members discovered without resolving their dependencies.
     packages: Vec<Package>,
+    /// Cargo's exact default selection, including virtual-workspace semantics.
+    workspace_default_members: Vec<String>,
 }
 
 #[derive(Deserialize)]
 struct Package {
+    /// Opaque identity shared with Cargo's workspace member lists.
+    id: String,
     /// Name used by Cargo's package selector.
     name: String,
     /// Manifest that defines the physical package boundary.
     manifest_path: PathBuf,
     /// Cargo's discovered targets, including non-entrypoint helper targets.
     targets: Vec<CargoTarget>,
+}
+
+/// Inferred rules and directory entrypoints from the same tracked Cargo metadata.
+#[derive(Debug, Eq, PartialEq, allocative::Allocative, Pagable)]
+pub(super) struct Catalog {
+    /// Native definitions keyed by their physical package directory.
+    pub rules: BTreeMap<String, String>,
+    /// Public build targets selected by a package or workspace directory.
+    pub directories: BTreeMap<String, Vec<String>>,
 }
 
 #[derive(Deserialize)]
@@ -68,11 +84,7 @@ pub(super) fn entrypoints(bytes: &[u8]) -> Result<Vec<PathBuf>, RustGraphError> 
 }
 
 /// Render public aliases and source trees. Compilation planning remains demand-driven.
-pub fn render(
-    bytes: &[u8],
-    root: &Path,
-    cell: &str,
-) -> Result<BTreeMap<String, String>, RustGraphError> {
+pub(super) fn render(bytes: &[u8], root: &Path, cell: &str) -> Result<Catalog, RustGraphError> {
     let metadata: Metadata = serde_json::from_slice(bytes)?;
     if metadata.version != 1 || metadata.workspace_root != root {
         return Err(unsupported(
@@ -80,20 +92,36 @@ pub fn render(
             "metadata version or workspace root mismatch",
         ));
     }
-    metadata
-        .packages
-        .iter()
-        .map(|package| {
-            let path = package
-                .manifest_path
-                .parent()
-                .expect("Cargo manifest has a parent")
-                .strip_prefix(root)
-                .map_err(|_| RustGraphError::Outside(package.manifest_path.clone()))?;
-            let path = path.to_string_lossy().replace('\\', "/");
-            Ok((path.clone(), package.render(&path, cell)?))
-        })
-        .collect()
+    let mut rules = BTreeMap::new();
+    let mut directories = BTreeMap::new();
+    let mut defaults = Vec::new();
+    for package in &metadata.packages {
+        let path = package
+            .manifest_path
+            .parent()
+            .expect("manifest has a parent")
+            .strip_prefix(root)
+            .map_err(|_| RustGraphError::Outside(package.manifest_path.clone()))?;
+        let path = path.to_string_lossy().replace('\\', "/");
+        rules.insert(path.clone(), package.render(&path, cell)?);
+        let mut labels = Vec::new();
+        for target in &package.targets {
+            if let Some(entry) = target.entrypoint(&package.name)? {
+                let name = match entry {
+                    Target::Lib(_) => "lib",
+                    Target::Bin(_) => &target.name,
+                    Target::Test(_) => continue,
+                };
+                labels.push(format!("{cell}//{path}:{name}"));
+            }
+        }
+        if metadata.workspace_default_members.contains(&package.id) {
+            defaults.extend(labels.iter().cloned());
+        }
+        directories.insert(path, labels);
+    }
+    directories.insert(String::new(), defaults);
+    Ok(Catalog { rules, directories })
 }
 
 impl Package {
@@ -167,8 +195,8 @@ pub(super) fn selected(
     root: &Path,
     cell: CellName,
     mode: Mode,
-    patterns: &[ParsedPattern<ConfiguredProvidersPatternExtra>],
-) -> Result<Vec<Entry>, RustGraphError> {
+    patterns: &[(ParsedPattern<ConfiguredProvidersPatternExtra>, Origin)],
+) -> Result<Vec<Requested>, RustGraphError> {
     let metadata: Metadata = serde_json::from_slice(bytes)?;
     let mut entries = Vec::new();
     for package in &metadata.packages {
@@ -189,12 +217,13 @@ pub(super) fn selected(
     }
     entries.sort_by_key(|entry| {
         (
-            entry.package.to_string(),
-            entry.target.kind().to_owned(),
-            entry.target.name().to_owned(),
+            entry.entry.package.to_string(),
+            entry.entry.target.kind().to_owned(),
+            entry.entry.target.name().to_owned(),
+            entry.origin,
         )
     });
-    entries.dedup();
+    entries.dedup_by(|a, b| a.entry == b.entry);
     Ok(entries)
 }
 
@@ -205,8 +234,8 @@ impl Package {
         label: PackageLabel,
         path: &str,
         mode: Mode,
-        patterns: &[ParsedPattern<ConfiguredProvidersPatternExtra>],
-    ) -> Result<Vec<Entry>, RustGraphError> {
+        patterns: &[(ParsedPattern<ConfiguredProvidersPatternExtra>, Origin)],
+    ) -> Result<Vec<Requested>, RustGraphError> {
         let mut entries = Vec::new();
         let mut normal = Vec::new();
         for target in &self.targets {
@@ -242,28 +271,37 @@ impl Package {
                 &target.name
             };
             let test = format!("__bsmr_test_{}_{}", entrypoint.kind(), target.name);
-            let matches = patterns.iter().any(|pattern| match pattern {
-                ParsedPattern::Target(owner, name, _) => {
-                    *owner == label
-                        && (name.as_str() == alias
-                            || (mode == Mode::Test && name.as_str() == test)
-                            || (mode == Mode::Test
-                                && entrypoint.kind() == "test"
-                                && normal.iter().any(|alias| alias == name.as_str()))
-                            || package_alias
-                                .as_ref()
-                                .is_some_and(|alias| alias == name.as_str()))
-                }
-                ParsedPattern::Package(owner) => *owner == label,
-                ParsedPattern::Recursive(prefix) => {
-                    label.as_cell_path().starts_with(prefix.as_ref())
-                }
-            });
-            if matches {
-                entries.push(Entry {
-                    package: label,
-                    mode,
-                    target: entrypoint,
+            let origin = patterns
+                .iter()
+                .filter_map(|(pattern, origin)| {
+                    (match pattern {
+                        ParsedPattern::Target(owner, name, _) => {
+                            *owner == label
+                                && (name.as_str() == alias
+                                    || (mode == Mode::Test && name.as_str() == test)
+                                    || (mode == Mode::Test
+                                        && entrypoint.kind() == "test"
+                                        && normal.iter().any(|alias| alias == name.as_str()))
+                                    || package_alias
+                                        .as_ref()
+                                        .is_some_and(|alias| alias == name.as_str()))
+                        }
+                        ParsedPattern::Package(owner) => *owner == label,
+                        ParsedPattern::Recursive(prefix) => {
+                            label.as_cell_path().starts_with(prefix.as_ref())
+                        }
+                    })
+                    .then_some(*origin)
+                })
+                .min();
+            if let Some(origin) = origin {
+                entries.push(Requested {
+                    entry: Entry {
+                        package: label,
+                        mode,
+                        target: entrypoint,
+                    },
+                    origin,
                 });
             }
         }
@@ -335,14 +373,14 @@ mod tests {
 
     #[test]
     fn catalog_preserves_target_names_without_planning_dependencies() {
-        let metadata = serde_json::json!({"version":1,"workspace_root":"/workspace","packages":[{"name":"same","manifest_path":"/workspace/app/Cargo.toml","targets":[{"name":"same","src_path":"/workspace/app/source.rs","kind":["rlib"],"test":true},{"name":"same","src_path":"/workspace/app/source.rs","kind":["bin"],"test":true},{"name":"build-script-build","src_path":"/workspace/app/source.rs","kind":["custom-build"],"test":false}]}]});
+        let metadata = serde_json::json!({"version":1,"workspace_root":"/workspace","workspace_default_members":["same"],"packages":[{"id":"same","name":"same","manifest_path":"/workspace/app/Cargo.toml","targets":[{"name":"same","src_path":"/workspace/app/source.rs","kind":["rlib"],"test":true},{"name":"same","src_path":"/workspace/app/source.rs","kind":["bin"],"test":true},{"name":"build-script-build","src_path":"/workspace/app/source.rs","kind":["custom-build"],"test":false}]}]});
         let rules = render(
             &serde_json::to_vec(&metadata).unwrap(),
             Path::new("/workspace"),
             "root",
         )
         .unwrap();
-        let app = &rules["app"];
+        let app = &rules.rules["app"];
         assert!(app.contains("__bsmr_cargo_build_lib_same"));
         assert!(app.contains("__bsmr_cargo_build_bin_same"));
         assert!(app.contains("__bsmr_test_lib_same"));
@@ -352,14 +390,14 @@ mod tests {
 
     #[test]
     fn integration_names_do_not_replace_build_targets() {
-        let metadata = serde_json::json!({"version":1,"workspace_root":"/workspace","packages":[{"name":"app","manifest_path":"/workspace/app/Cargo.toml","targets":[{"name":"app","src_path":"/workspace/app/source.rs","kind":["bin"],"test":false},{"name":"app","src_path":"/workspace/app/source.rs","kind":["test"],"test":true}]}]});
+        let metadata = serde_json::json!({"version":1,"workspace_root":"/workspace","workspace_default_members":["app"],"packages":[{"id":"app","name":"app","manifest_path":"/workspace/app/Cargo.toml","targets":[{"name":"app","src_path":"/workspace/app/source.rs","kind":["bin"],"test":false},{"name":"app","src_path":"/workspace/app/source.rs","kind":["test"],"test":true}]}]});
         let rules = render(
             &serde_json::to_vec(&metadata).unwrap(),
             Path::new("/workspace"),
             "root",
         )
         .unwrap();
-        let app = &rules["app"];
+        let app = &rules.rules["app"];
         assert!(app.contains("__bsmr_cargo_test_test_app"));
         assert!(!app.contains("__bsmr_cargo_build_test_app"));
         assert!(app.contains("tests = [\":__bsmr_test_test_app\"]"));

@@ -18,9 +18,20 @@ Build a Cargo package without writing or synchronizing build rules:
 
 ```console
 bsmr init
+bsmr build --show-output
 bsmr build app --show-output
 bsmr test app
 ```
+
+With no target, `build` and `test` select the current Cargo directory. At the
+workspace root, Cargo's `default-members` controls the selection. A package
+directory selects its libraries and binaries. `bsmr build .` makes the current
+directory explicit. Named targets and configured aliases retain their meaning.
+An explicit build file owns its directory and requires an explicit target.
+Directory selections skip binaries and tests with disabled `required-features`,
+using Cargo's resolved features across all selected packages. Naming a disabled
+target explicitly is an error. A skipped target has no artifact or compiler
+action. JSON output represents that target with an empty output path.
 
 Run `bsmr build --help` or `bsmr test --help` for command options.
 
@@ -88,7 +99,7 @@ Cargo files -> locked resolution -> private targets -> native rustc actions
 ```
 
 Each crate uses the existing native Rust compilation, linking, and test machinery.
-A package containing one library or binary can be selected by its directory,
+A package containing libraries or binaries can be selected by its directory,
 even when its Cargo name differs. Library builds preserve `lib`, `rlib`, `cdylib`,
 and `staticlib` declarations. All declared formats materialize even when the
 library is only a dependency of the selected executable. `:lib[cdylib]` and

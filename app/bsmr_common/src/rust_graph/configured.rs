@@ -46,6 +46,12 @@ pub(super) fn render(
     execution: CodeExecution,
 ) -> Result<String, RustGraphError> {
     let graph = Graph::parse(bytes)?;
+    if graph.roots.is_empty() {
+        return Err(unsupported(
+            "planner",
+            "cannot render a graph without roots",
+        ));
+    }
     if graph.workspace_root != root {
         return Err(unsupported("planner", "workspace root mismatch"));
     }
