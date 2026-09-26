@@ -60,8 +60,37 @@ pub(crate) enum SourcePolicy {
 pub(crate) enum TargetFilter {
     Package,
     Library,
-    Binary { name: String },
-    IntegrationTest { name: String },
+    Binary {
+        name: String,
+    },
+    IntegrationTest {
+        name: String,
+    },
+    /// Explicit package-qualified roots selected by the native build interface.
+    Targets {
+        targets: Vec<SelectedTarget>,
+    },
+}
+
+/// Target names need their owning package because workspaces may repeat binary names.
+#[derive(Deserialize)]
+#[serde(deny_unknown_fields)]
+pub(crate) struct SelectedTarget {
+    /// Cargo package name admitted by the workspace catalog.
+    pub(crate) package: String,
+    /// Cargo target class, excluding build scripts and automatic dependencies.
+    pub(crate) kind: TargetKind,
+    /// Original Cargo target name.
+    pub(crate) name: String,
+}
+
+/// Entrypoint classes exposed by native build and test commands.
+#[derive(Clone, Copy, Deserialize, Eq, PartialEq)]
+#[serde(rename_all = "kebab-case")]
+pub(crate) enum TargetKind {
+    Library,
+    Binary,
+    IntegrationTest,
 }
 
 #[derive(Clone, Copy, Deserialize)]

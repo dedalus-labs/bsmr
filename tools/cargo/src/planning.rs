@@ -48,6 +48,7 @@ use crate::types::Request;
 use crate::types::Source;
 use crate::types::SourcePolicy;
 use crate::types::TargetFilter;
+use crate::types::TargetKind;
 
 /// Cargo resolves locked dependencies and probes rustc without compiling source.
 pub(crate) fn plan(request: Request) -> Result<Graph> {
@@ -102,7 +103,32 @@ pub(crate) fn plan(request: Request) -> Result<Graph> {
     let resolve = ops::load_pkg_lockfile(&workspace)?.context("Cargo.lock has no resolution")?;
     let options = options(&request, &gctx)?;
     let interner = UnitInterner::new();
-    let context = ops::create_bcx(&workspace, &options, &interner, None)?;
+    let mut context = ops::create_bcx(&workspace, &options, &interner, None)?;
+    if let TargetFilter::Targets { targets } = &request.target_filter {
+        let mut selected = Vec::new();
+        for target in targets {
+            let root = context
+                .roots
+                .iter()
+                .find(|unit| {
+                    unit.pkg.name().as_str() == target.package
+                        && unit.target.name() == target.name
+                        && match target.kind {
+                            TargetKind::Library => unit.target.is_lib(),
+                            TargetKind::Binary => unit.target.is_bin(),
+                            TargetKind::IntegrationTest => unit.target.is_test(),
+                        }
+                })
+                .with_context(|| {
+                    format!(
+                        "selected target {}:{} is absent from Cargo roots",
+                        target.package, target.name
+                    )
+                })?;
+            selected.push(root.clone());
+        }
+        context.roots = selected;
+    }
     ensure!(
         ["1.97.1", "1.98.0", "1.96.0-nightly"]
             .contains(&context.target_data.rustc.version.to_string().as_str()),
@@ -194,6 +220,38 @@ fn options(request: &Request, gctx: &GlobalContext) -> Result<CompileOptions> {
             FilterRule::none(),
             FilterRule::none(),
         ),
+        TargetFilter::Targets { targets } => {
+            ensure!(!targets.is_empty(), "at least one target must be selected");
+            ensure!(
+                targets
+                    .iter()
+                    .all(|target| request.packages.contains(&target.package)),
+                "selected target package is absent from packages"
+            );
+            let names = |kind| {
+                FilterRule::Just(
+                    targets
+                        .iter()
+                        .filter(|target| target.kind == kind)
+                        .map(|target| target.name.clone())
+                        .collect(),
+                )
+            };
+            CompileFilter::new(
+                if targets
+                    .iter()
+                    .any(|target| target.kind == TargetKind::Library)
+                {
+                    LibRule::True
+                } else {
+                    LibRule::False
+                },
+                names(TargetKind::Binary),
+                names(TargetKind::IntegrationTest),
+                FilterRule::none(),
+                FilterRule::none(),
+            )
+        }
     };
     options.cli_features = CliFeatures::from_command_line(
         &request.features,
@@ -215,7 +273,18 @@ fn export(context: &BuildContext<'_, '_>, resolve: &Resolve) -> Result<Graph> {
         context.extra_compiler_args.values().all(Vec::is_empty),
         "unsupported extra compiler arguments"
     );
-    let mut units: Vec<&Unit> = context.unit_graph.keys().collect();
+    let mut reachable = BTreeSet::new();
+    let mut pending: Vec<_> = context.roots.iter().collect();
+    while let Some(unit) = pending.pop() {
+        if reachable.insert(unit) {
+            pending.extend(
+                context.unit_graph[unit]
+                    .iter()
+                    .map(|dependency| &dependency.unit),
+            );
+        }
+    }
+    let mut units: Vec<&Unit> = reachable.into_iter().collect();
     let compilation = Compilation::new(context)?;
     let mut sources = BTreeMap::new();
     for unit in &units {
