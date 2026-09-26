@@ -46,12 +46,25 @@ struct Package {
 
 #[derive(Deserialize)]
 struct CargoTarget {
+    /// Manifest-declared or conventionally discovered source entrypoint.
+    src_path: PathBuf,
     /// Original target name, before Rust identifier normalization.
     name: String,
     /// Cargo target classification.
     kind: Vec<String>,
     /// Whether Cargo enables this target's unit test harness.
     test: bool,
+}
+
+/// Cargo metadata discovers explicit paths even before checking that they exist.
+pub(super) fn entrypoints(bytes: &[u8]) -> Result<Vec<PathBuf>, RustGraphError> {
+    let metadata: Metadata = serde_json::from_slice(bytes)?;
+    Ok(metadata
+        .packages
+        .into_iter()
+        .flat_map(|package| package.targets)
+        .map(|target| target.src_path)
+        .collect())
 }
 
 /// Render public aliases and source trees. Compilation planning remains demand-driven.
@@ -322,7 +335,7 @@ mod tests {
 
     #[test]
     fn catalog_preserves_target_names_without_planning_dependencies() {
-        let metadata = serde_json::json!({"version":1,"workspace_root":"/workspace","packages":[{"name":"same","manifest_path":"/workspace/app/Cargo.toml","targets":[{"name":"same","kind":["rlib"],"test":true},{"name":"same","kind":["bin"],"test":true},{"name":"build-script-build","kind":["custom-build"],"test":false}]}]});
+        let metadata = serde_json::json!({"version":1,"workspace_root":"/workspace","packages":[{"name":"same","manifest_path":"/workspace/app/Cargo.toml","targets":[{"name":"same","src_path":"/workspace/app/source.rs","kind":["rlib"],"test":true},{"name":"same","src_path":"/workspace/app/source.rs","kind":["bin"],"test":true},{"name":"build-script-build","src_path":"/workspace/app/source.rs","kind":["custom-build"],"test":false}]}]});
         let rules = render(
             &serde_json::to_vec(&metadata).unwrap(),
             Path::new("/workspace"),
@@ -339,7 +352,7 @@ mod tests {
 
     #[test]
     fn integration_names_do_not_replace_build_targets() {
-        let metadata = serde_json::json!({"version":1,"workspace_root":"/workspace","packages":[{"name":"app","manifest_path":"/workspace/app/Cargo.toml","targets":[{"name":"app","kind":["bin"],"test":false},{"name":"app","kind":["test"],"test":true}]}]});
+        let metadata = serde_json::json!({"version":1,"workspace_root":"/workspace","packages":[{"name":"app","manifest_path":"/workspace/app/Cargo.toml","targets":[{"name":"app","src_path":"/workspace/app/source.rs","kind":["bin"],"test":false},{"name":"app","src_path":"/workspace/app/source.rs","kind":["test"],"test":true}]}]});
         let rules = render(
             &serde_json::to_vec(&metadata).unwrap(),
             Path::new("/workspace"),

@@ -71,7 +71,10 @@ profile = "minimal"
 
 BSMR reads manifests, project Cargo configuration, and target file names into an
 isolated snapshot. It discovers public targets without resolving their dependencies,
-then asks the bundled Cargo 0.98.0 planner for the selected build or test. The
+then asks the bundled Cargo 0.98.0 planner for the selected build or test.
+The snapshot retains existing manifest-declared entrypoint paths, including
+custom tests outside conventional directories. Missing files remain missing
+so Cargo reports them. Source contents still belong to native compiler inputs. The
 compiler pin is independent of this resolver version.
 
 Planning may acquire locked dependencies into BSMR's own Cargo home. It never

@@ -93,6 +93,32 @@ impl Key for RustGraphKey {
 }
 
 impl RustGraphKey {
+    /// Preserve existing custom entrypoint paths without making absent source files exist.
+    async fn entrypoints(
+        &self,
+        ctx: &mut DiceComputations<'_>,
+        root: &Path,
+        metadata: &[u8],
+    ) -> bsmr_error::Result<()> {
+        for source in catalog::entrypoints(metadata)? {
+            let relative = source
+                .strip_prefix(root)
+                .map_err(|_| super::RustGraphError::Outside(source.clone()))?;
+            let path = CellPath::new(
+                self.0,
+                CellRelativePathBuf::try_from(relative.to_string_lossy().replace('\\', "/"))?,
+            );
+            if source.try_exists()? {
+                continue;
+            }
+            if DiceFileComputations::exists_matching_exact_case(ctx, path.as_ref()).await? {
+                std::fs::create_dir_all(source.parent().expect("target source has a parent"))?;
+                std::fs::write(source, "")?;
+            }
+        }
+        Ok(())
+    }
+
     /// Track package listings and materialize the resolver's private source view.
     async fn capture(&self, ctx: &mut DiceComputations<'_>, root: &Path) -> bsmr_error::Result<()> {
         let mut pending = vec![String::new()];
@@ -252,6 +278,9 @@ impl Key for RustPlanKey {
         let toolchain =
             RustToolchain::parse(&std::fs::read_to_string(root.join("rust-toolchain.toml"))?)?;
         let metadata = resolve(&toolchain, &root).await?;
+        RustGraphKey(first.package.cell_name())
+            .entrypoints(ctx, &root, &metadata)
+            .await?;
         let packages = self
             .0
             .iter()
