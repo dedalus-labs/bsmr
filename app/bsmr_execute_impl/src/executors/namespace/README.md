@@ -52,7 +52,19 @@ entries, including hard links. The loader creates mount directories at `/workspa
 | `Runtime::root` | Return the root filesystem for a read-only mount. |
 | `Runtime::digest` | Return an identity derived from both file digests, independent of host paths. |
 
-The snapshot lasts until its `Runtime` owner is dropped. Each action receives
+The daemon retains its most recently verified snapshot between commands. Each
+command rereads and hashes both pinned input files before reusing it. Changed
+or corrupted bytes cannot pass through an unchanged manifest. Matching bytes
+reuse the private extracted tree without another copy or extraction.
+
+A new runtime replaces the retained reference only after verification succeeds.
+Commands already using the previous runtime keep their own references through
+descendant cleanup and output import. Verification and extraction run outside
+the async command thread and without holding the cache lock. Concurrent cold
+loads can prepare separate snapshots. The cache retains only the latest one.
+Graceful daemon shutdown drains requests and releases the retained snapshot.
+
+The snapshot lasts until its final `Runtime` owner is dropped. Each action receives
 the runtime as its read-only root and a verified copy of its declared inputs
 at `/workspace`. Input files stream directly into a private tree through the
 same digest verifier used by VM transport. There is no intermediate tar archive.

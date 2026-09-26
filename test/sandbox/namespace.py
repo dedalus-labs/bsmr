@@ -144,9 +144,12 @@ def main() -> None:
         manifest.write_text(json.dumps(pins))
         root = base / "first"
         root.mkdir()
+        temporary_root = base / "tmp"
+        temporary_root.mkdir()
         checkouts = [root]
         env = {
             **os.environ,
+            "TMPDIR": str(temporary_root),
             "BSMR_LOCAL_CACHE_DIR": str(base / "cache"),
             "NAMESPACE_AMBIENT_SECRET": "outside",
         }
@@ -263,6 +266,11 @@ def main() -> None:
                     output(build("directory")) / "result"
                 ).read_text() == "/workspace"
                 print("  ok  host-to-namespace invalidation", flush=True)
+                snapshots = set(temporary_root.glob("bsmr-runtime-*"))
+                assert len(snapshots) == 1, "daemon must retain one runtime snapshot"
+                output(build("directory"))
+                assert set(temporary_root.glob("bsmr-runtime-*")) == snapshots
+                print("  ok  warm commands retain the verified runtime", flush=True)
                 for value in ["7", "9"]:
                     runtime_value(value)
                     assert (output(build("runtime")) / "result").read_text() == value
@@ -357,6 +365,9 @@ def main() -> None:
             finally:
                 for checkout in checkouts:
                     run("kill", cwd=checkout)
+                assert not list(temporary_root.glob("bsmr-runtime-*")), (
+                    "runtime snapshot survived daemon shutdown"
+                )
 
 
 if __name__ == "__main__":
