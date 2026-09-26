@@ -10,6 +10,7 @@ use std::os::unix::fs::PermissionsExt;
 use std::path::Path;
 use std::process::Command;
 
+use anyhow::Context;
 use anyhow::Result;
 use anyhow::ensure;
 
@@ -49,7 +50,11 @@ pub(crate) fn check(parent: &Path) -> Result<()> {
 
 /// Supply the OS libraries that modern macOS stores only in its shared cache.
 fn shared_cache(root: &Path) -> Result<()> {
-    let source = Path::new("/System/Volumes/Preboot/Cryptexes/OS/System/Library/dyld");
+    let cache = crate::system::cache()?;
+    let source = cache.parent().context("OS shared cache has no directory")?;
+    let prefix = cache
+        .file_name()
+        .context("OS shared cache has no filename")?;
     let destination = root.join("System/Library/dyld");
     fs::create_dir_all(&destination)?;
     let mut bytes = 0;
@@ -58,7 +63,7 @@ fn shared_cache(root: &Path) -> Result<()> {
         if entry
             .file_name()
             .as_encoded_bytes()
-            .starts_with(b"dyld_shared_cache_")
+            .starts_with(prefix.as_encoded_bytes())
         {
             ensure!(
                 entry.file_type()?.is_file(),
