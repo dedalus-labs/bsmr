@@ -113,6 +113,7 @@ edition = "2024"
 shared = { path = "../shared", features = ["joint"] }
 ''',
         "client/src/main.rs": 'compile_error!("SECOND_ROOT_MUST_NOT_COMPILE");\n',
+        "client/src/bin/runner.rs": 'compile_error!("SAME_NAME_ROOT_MUST_NOT_COMPILE");\n',
     }
     for name, content in files.items():
         destination = FIXTURE / name
@@ -148,6 +149,10 @@ def main() -> None:
              for selection, flags in selections]
     cases += [(mode, profile, {"kind": "package"}, [], ["app", "client"])
               for mode, profile in [("build", "dev"), ("test", "dev"), ("build", "release")]]
+    cases += [(mode, "dev", {"kind": "targets", "targets": [
+        {"package": package, "kind": "binary", "name": "runner"}
+        for package in ("app", "client")
+    ]}, ["--bin", "runner"], ["app", "client"]) for mode in ("build", "test")]
     for mode, profile, selection, flags, packages in cases:
         request = {
             "manifest": str(FIXTURE / "Cargo.toml"), "packages": packages, "mode": mode, "target_filter": selection, "source_policy": "offline",
@@ -200,9 +205,12 @@ def main() -> None:
         has_integration = selection["kind"] == "integration-test" or (selection["kind"] == "package" and mode == "test")
         assert any(u["target"]["kind"] == ["test"] for u in graph["units"]) == has_integration
         roots = [graph["units"][index] for index in graph["roots"]]
-        if selection["kind"] != "package":
+        if selection["kind"] not in ("package", "targets"):
             expected_name = selection.get("name", "app")
             assert len(roots) == 1 and roots[0]["target"]["name"] == expected_name, (name, roots)
+        if selection["kind"] == "targets":
+            assert {(unit["package_name"], unit["target"]["name"]) for unit in roots} == {("app", "runner"), ("client", "runner")}
+            assert not any(unit["target"]["name"] in ("unrelated", "client") for unit in graph["units"])
         if mode != "test" and selection["kind"] in ["library", "binary"]:
             assert not any(u["target"]["name"] == "unrelated" for u in graph["units"]), name
         assert all(u["target"]["name"] != "gated" for u in graph["units"])
@@ -216,10 +224,20 @@ def main() -> None:
         assert not any((ROOT / "fixture-target").rglob("*.rlib"))
         results.append({"case": name, "units": len(graph["units"]), "cargo_parity": True,
                         "host_features": host[0]["features"], "target_features": target[0]["features"]})
+    projection = request | {"mode": "build", "target_filter": {"kind": "targets", "targets": [
+        {"package": "app", "kind": "binary", "name": "runner"},
+        {"package": "client", "kind": "binary", "name": "client"},
+    ]}}
+    projected = json.loads(subprocess.run([binary], input=json.dumps(projection), text=True, capture_output=True, env=env, check=True).stdout)
+    assert [(projected["units"][index]["package_name"], projected["units"][index]["target"]["name"]) for index in projected["roots"]] == [("app", "runner"), ("client", "client")]
+    assert not any(unit["package_name"] == "client" and unit["target"]["name"] == "runner" for unit in projected["units"])
     request.update(packages=["app"], mode="check", profile="dev", target_filter={"kind": "package"})
     rejected = subprocess.run([binary], input=json.dumps(request | {"packages": []}),
                               text=True, capture_output=True, env=env)
     assert rejected.returncode != 0 and "at least one package" in rejected.stderr
+    for targets in ([], [{"package": "absent", "kind": "binary", "name": "runner"}]):
+        rejected = subprocess.run([binary], input=json.dumps(request | {"target_filter": {"kind": "targets", "targets": targets}}), text=True, capture_output=True, env=env)
+        assert rejected.returncode != 0 and ("at least one target" in rejected.stderr or "absent from packages" in rejected.stderr)
     output = subprocess.run([binary], input=json.dumps(request), text=True, capture_output=True, env=env, check=True)
     graph = json.loads(output.stdout)
     summary = {"cases": results, "lock_sha256": hashlib.sha256(lock).hexdigest(), "source_compilation": False}

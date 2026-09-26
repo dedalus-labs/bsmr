@@ -38,6 +38,12 @@ files, compiler extensions, and file-based overrides fail before compiler probes
 Inactive target tables may carry linker arguments or target features, but selected units using them
 require a declared native execution contract.
 
+The `targets` filter takes a nonempty `targets` array of package, kind and name
+records. Kinds are `library`, `binary` and `integration-test`. Every package must
+appear in `packages`. The graph retains these roots in request order and only
+their reachable dependencies. Equal target names in separate packages remain
+distinct. Cargo still resolves features jointly before this root projection.
+
 The graph can contain multiple roots. This planner contract does not yet make
 the native CLI combine its independently selected entrypoints. The caller must
 carry the complete selection to this boundary and preserve it during lowering.
@@ -75,12 +81,14 @@ python3 tools/cargo/verify.py tools/cargo/target/debug/bsmr-cargo <nightly-2026-
 python3 tools/cargo/verify_sources.py tools/cargo/target/debug/bsmr-cargo <rust-1.97.1-bin-directory>
 ```
 
-`verify.py` compares 19 configured graphs to the selected Cargo CLI. It covers
+`verify.py` compares 21 configured graphs to the selected Cargo CLI. It covers
 build/test/check modes, release profiles, explicit root filters, feature
 separation, package environment, declared features, compiler hooks, storage
 ownership, and lock preservation. Its Rust sources deliberately do not compile.
 Three cases select two packages together and require shared features to match
 Cargo in development, test, and release profiles. Empty package lists fail.
+Two more cases select equally named binaries from two packages without including
+their unrequested roots. Empty target lists and mismatched packages fail.
 
 `python3 tools/cargo/fixture.py tools/cargo/target/debug/bsmr-cargo` regenerates
 the native-lowering fixture. Only workspace placement and the diagnostic
