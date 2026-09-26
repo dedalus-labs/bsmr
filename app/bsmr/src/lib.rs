@@ -428,25 +428,35 @@ impl CommandKind {
         argv: Argv,
         common_opts: BeforeSubcommandOptions,
     ) -> ExitResult {
-        let paths_result = get_invocation_paths_result(
-            &process.shared.working_dir,
-            common_opts.isolation_dir.clone(),
-        );
-
         // Handle the daemon command earlier: it wants to fork, but the things we do below might
         // want to create threads.
         #[cfg(not(client_only))]
         if let CommandKind::Daemon(cmd) = self {
             process.events_ctx.log_invocation_record = false;
+            // The client starts this internal command in its resolved project root.
+            // Rediscovering Cargo here would create threads before daemonization.
+            let paths = bsmr_common::invocation_paths::InvocationPaths {
+                roots: bsmr_common::invocation_roots::InvocationRoots {
+                    project_root: bsmr_core::fs::project::ProjectRoot::new_unchecked(
+                        process.shared.working_dir.path().to_owned(),
+                    ),
+                    cwd: bsmr_core::fs::project_rel_path::ProjectRelativePathBuf::default(),
+                },
+                isolation: common_opts.isolation_dir.clone(),
+            };
             return cmd
                 .exec(
                     process.shared.log_reload_handle.dupe(),
-                    paths_result.get_result()?,
+                    paths,
                     false,
                     || {},
                 )
                 .into();
         }
+        let paths_result = get_invocation_paths_result(
+            &process.shared.working_dir,
+            common_opts.isolation_dir.clone(),
+        );
         thread::scope(|scope| {
             // Spawn a thread to have stack size independent on linker/environment.
             match thread_spawn_scoped("bsmr-main", scope, move || {
