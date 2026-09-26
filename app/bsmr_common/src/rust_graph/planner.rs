@@ -108,7 +108,7 @@ impl<'a> Planner<'a> {
                     Target::Bin(_) => "binary",
                     Target::Test(_) => "integration-test",
                 };
-                json!({"package": package, "kind": kind, "name": entry.target.name()})
+                json!({"package": package, "kind": kind, "name": entry.target.name(), "origin": "explicit"})
             })
             .collect();
         json!({

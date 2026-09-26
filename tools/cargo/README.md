@@ -38,8 +38,11 @@ files, compiler extensions, and file-based overrides fail before compiler probes
 Inactive target tables may carry linker arguments or target features, but selected units using them
 require a declared native execution contract.
 
-The `targets` filter takes a nonempty `targets` array of package, kind and name
-records. Kinds are `library`, `binary` and `integration-test`. Every package must
+The `targets` filter takes a nonempty `targets` array of package, kind, name, and `origin`
+records. An `explicit` origin requires the named target. A `directory` origin
+lets Cargo omit a target whose required features are disabled. Feature resolution
+remains joint across the full package selection. If every target is disabled,
+the graph contains no roots or compilation units. Kinds are `library`, `binary` and `integration-test`. Every package must
 appear in `packages`. The graph retains these roots in request order and only
 their reachable dependencies. Equal target names in separate packages remain
 distinct. Cargo still resolves features jointly before this root projection.

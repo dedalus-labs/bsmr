@@ -150,7 +150,7 @@ def main() -> None:
     cases += [(mode, profile, {"kind": "package"}, [], ["app", "client"])
               for mode, profile in [("build", "dev"), ("test", "dev"), ("build", "release")]]
     cases += [(mode, "dev", {"kind": "targets", "targets": [
-        {"package": package, "kind": "binary", "name": "runner"}
+        {"origin": "explicit", "package": package, "kind": "binary", "name": "runner"}
         for package in ("app", "client")
     ]}, ["--bin", "runner"], ["app", "client"]) for mode in ("build", "test")]
     for mode, profile, selection, flags, packages in cases:
@@ -225,17 +225,31 @@ def main() -> None:
         results.append({"case": name, "units": len(graph["units"]), "cargo_parity": True,
                         "host_features": host[0]["features"], "target_features": target[0]["features"]})
     projection = request | {"mode": "build", "target_filter": {"kind": "targets", "targets": [
-        {"package": "app", "kind": "binary", "name": "runner"},
-        {"package": "client", "kind": "binary", "name": "client"},
+        {"origin": "explicit", "package": "app", "kind": "binary", "name": "runner"},
+        {"origin": "explicit", "package": "client", "kind": "binary", "name": "client"},
     ]}}
     projected = json.loads(subprocess.run([binary], input=json.dumps(projection), text=True, capture_output=True, env=env, check=True).stdout)
     assert [(projected["units"][index]["package_name"], projected["units"][index]["target"]["name"]) for index in projected["roots"]] == [("app", "runner"), ("client", "client")]
     assert not any(unit["package_name"] == "client" and unit["target"]["name"] == "runner" for unit in projected["units"])
+    conditional = projection | {"packages": ["app"], "target_filter": {"kind": "targets", "targets": [
+        {"origin": "directory", "package": "app", "kind": "binary", "name": "gated"},
+        {"origin": "explicit", "package": "app", "kind": "binary", "name": "runner"},
+    ]}}
+    for features, expected in [(request["features"], ["runner"]), ([*request["features"], "app/extra"], ["gated", "runner"])]:
+        output = subprocess.run([binary], input=json.dumps(conditional | {"features": features}), text=True, capture_output=True, env=env, check=True)
+        graph = json.loads(output.stdout)
+        assert [graph["units"][i]["target"]["name"] for i in graph["roots"]] == expected
+    disabled = conditional | {"target_filter": {"kind": "targets", "targets": conditional["target_filter"]["targets"][:1]}}
+    graph = json.loads(subprocess.run([binary], input=json.dumps(disabled), text=True, capture_output=True, env=env, check=True).stdout)
+    assert graph["roots"] == [] and graph["units"] == []
+    for name in ["gated", "absent"]:
+        required = conditional | {"target_filter": {"kind": "targets", "targets": [{"origin": "explicit", "package": "app", "kind": "binary", "name": name}]}}
+        assert subprocess.run([binary], input=json.dumps(required), text=True, capture_output=True, env=env).returncode != 0
     request.update(packages=["app"], mode="check", profile="dev", target_filter={"kind": "package"})
     rejected = subprocess.run([binary], input=json.dumps(request | {"packages": []}),
                               text=True, capture_output=True, env=env)
     assert rejected.returncode != 0 and "at least one package" in rejected.stderr
-    for targets in ([], [{"package": "absent", "kind": "binary", "name": "runner"}]):
+    for targets in ([], [{"origin": "explicit", "package": "absent", "kind": "binary", "name": "runner"}]):
         rejected = subprocess.run([binary], input=json.dumps(request | {"target_filter": {"kind": "targets", "targets": targets}}), text=True, capture_output=True, env=env)
         assert rejected.returncode != 0 and ("at least one target" in rejected.stderr or "absent from packages" in rejected.stderr)
     output = subprocess.run([binary], input=json.dumps(request), text=True, capture_output=True, env=env, check=True)

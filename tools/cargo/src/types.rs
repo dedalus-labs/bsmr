@@ -76,12 +76,34 @@ pub(crate) enum TargetFilter {
 #[derive(Deserialize)]
 #[serde(deny_unknown_fields)]
 pub(crate) struct SelectedTarget {
+    /// Directory selections permit Cargo to skip targets with disabled required features.
+    pub(crate) origin: Origin,
     /// Cargo package name admitted by the workspace catalog.
     pub(crate) package: String,
     /// Cargo target class, excluding build scripts and automatic dependencies.
     pub(crate) kind: TargetKind,
     /// Original Cargo target name.
     pub(crate) name: String,
+}
+
+impl SelectedTarget {
+    /// Match Cargo's target identity without conflating equal names of different kinds.
+    pub(crate) fn matches(&self, target: &Target) -> bool {
+        target.name() == self.name
+            && match self.kind {
+                TargetKind::Library => target.is_lib(),
+                TargetKind::Binary => target.is_bin(),
+                TargetKind::IntegrationTest => target.is_test(),
+            }
+    }
+}
+
+/// Naming a target requires it. A directory selects only enabled targets.
+#[derive(Clone, Copy, Deserialize, Eq, PartialEq)]
+#[serde(rename_all = "kebab-case")]
+pub(crate) enum Origin {
+    Explicit,
+    Directory,
 }
 
 /// Entrypoint classes exposed by native build and test commands.
