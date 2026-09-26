@@ -51,6 +51,7 @@ version="0.1.0"
 edition="2024"
 [[test]]
 name="custom"
+path="checks/custom.rs"
 harness=false
 [dependencies]
 value={path="../value"}
@@ -59,7 +60,7 @@ value={path="../value",features=["testing"]}
 ''',
         'app/src/main.rs': 'fn main() { println!("{}", value::number()); }\n',
         'app/tests/cli.rs': INTEGRATION,
-        'app/tests/custom.rs': CUSTOM,
+        'app/checks/custom.rs': CUSTOM,
         'app/value.txt': 'fixture',
         'value/Cargo.toml': '[package]\nname="value"\nversion="0.1.0"\nedition="2024"\n[features]\ntesting=[]\n[lints.rust]\nunexpected_cfgs="deny"\n',
         'value/src/lib.rs': '#[cfg(docsrs)] pub fn documentation() {}\n#[cfg(test)] mod tests {}\npub fn number()->u32 { if cfg!(feature="testing") {9} else {7} }\n',
@@ -126,10 +127,13 @@ def qualify(project: Path, binary: str, execution: tuple[str, ...], package: str
     assert changed.returncode != 0, 'dependency fixture edits must invalidate the test view'
     assert '"changed"' in changed.stderr, changed.stderr
     fixture.write_text('dependency')
-    (project / package / 'tests/custom.rs').write_text('fn main() { panic!("CUSTOM_FAILURE"); }')
+    (project / package / 'checks/custom.rs').write_text('fn main() { panic!("CUSTOM_FAILURE"); }')
     result = run(project, binary, 'test', target, *execution, '--console', 'simple')
     assert result.returncode != 0, 'package selection must execute its custom harness'
     assert 'CUSTOM_FAILURE' in result.stderr, result.stderr
+    (project / package / 'checks/custom.rs').unlink()
+    missing = run(project, binary, 'test', target, *execution, '--console', 'simple')
+    assert missing.returncode != 0 and 'custom.rs' in missing.stderr, 'missing entrypoint was fabricated'
     if (project / package / 'build.rs').exists():
         assert (project / package / 'generated.txt').read_text() == 'stale'
     print('ok: Cargo test features, native binaries, declared files, custom harnesses and failures')
