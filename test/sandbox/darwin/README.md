@@ -40,9 +40,12 @@ evidence path is rejected. `normal` and `cancel` must both report `empty: true`
 and `stable_output: true`.
 
 The filesystem check executes the native binary in a new root with its dynamic
-loader and one declared input. After dropping privileges, it must read that input
+loader, the host OS shared-library cache, and one declared input. After dropping privileges, it must read that input
 and fail to read a known host file. This tests the native loader boundary before
 constructing a compiler runtime. It does not establish network isolation.
+The cache is copied from the host's OS image into dyld's documented system-cache
+directory inside the root. Copying the loader alone fails on modern macOS because
+libraries such as `libiconv` no longer exist as separate files.
 
 The credential-scoped broadcast follows the mechanism in
 [Nix's process cleanup](https://github.com/NixOS/nix/blob/209d2bc4428841d4446a3c3b6f75bb5bbfa0f71a/src/libutil/unix/processes.cc#L172).
