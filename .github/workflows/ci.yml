@@ -69,12 +69,18 @@ jobs:
     timeout-minutes: 10
     permissions:
       contents: read
+    env:
+      RUSTUP_TOOLCHAIN: nightly-2026-04-11
+      RUSTUP_AUTO_INSTALL: "0"
     steps:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           persist-credentials: false
           fetch-depth: 0
+      - name: Install Cargo metadata toolchain
+        run: rustup toolchain install nightly-2026-04-11 --profile minimal --no-self-update
+        shell: bash
       - name: Set up Node
         uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38
         with:
