@@ -41,8 +41,7 @@ pub(super) fn outputs(graph: &Graph) -> Vec<String> {
 }
 
 /// Preserve the requested primary format for libraries without a Rust output.
-pub(super) fn root(graph: &Graph) -> String {
-    let index = graph.roots[0];
+pub(super) fn root(graph: &Graph, index: usize) -> String {
     let unit = &graph.units[index];
     let kinds = &unit.target.kind;
     if matches!(unit.mode, Mode::Build) && is_library(kinds) && !has_rust_library(kinds) {

@@ -299,6 +299,9 @@ jobs:
       - name: Verify Cargo build selections
         run: node test/rust/selection.ts target/debug/bsmr
         shell: bash
+      - name: Verify joint Cargo selections
+        run: python3 test/rust/roots.py target/debug/bsmr
+        shell: bash
       - name: Verify Rust link-time optimization
         run: node test/rust/lto.ts target/debug/bsmr
         shell: bash

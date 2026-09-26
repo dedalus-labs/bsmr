@@ -233,6 +233,9 @@ pub struct ServerCommandContext<'a> {
     /// Common build options associated with this command.
     build_options: Option<CommonBuildOptions>,
 
+    /// Complete native target selection, kept separate from diagnostic argv.
+    pub(crate) target_patterns: Option<Vec<String>>,
+
     /// Keep emitting heartbeat events while the ServerCommandContext is alive  We put this in an
     /// Option so that we can ensure heartbeat events are cancelled before everything else is
     /// dropped.
@@ -365,6 +368,7 @@ impl<'a> ServerCommandContext<'a> {
             output_dir: paths.output_dir(),
             isolation_prefix: paths.isolation.clone(),
             build_options: build_options.cloned(),
+            target_patterns: None,
             record_target_call_stacks: client_context.target_call_stacks,
             skip_targets_with_duplicate_names: client_context.skip_targets_with_duplicate_names,
             disable_starlark_types: client_context.disable_starlark_types,
@@ -698,6 +702,16 @@ impl DiceUpdater for DiceCommandUpdater<'_, '_> {
             Default::default()
         };
         ctx.changed_to([(bsmr_common::rust_graph::git::GitInputs, Arc::new(git))])?;
+        let invocation = self.cmd_ctx.target_patterns.as_ref().map(|patterns| {
+            bsmr_core::pattern::unparsed::UnparsedPatterns::new(
+                patterns.clone(),
+                self.cmd_ctx.working_dir.as_ref().to_buf(),
+            )
+        });
+        ctx.changed_to([(
+            bsmr_common::rust_graph::invocation::Invocation,
+            Arc::new(invocation),
+        )])?;
         early_timings.end_known_span();
 
         early_timings.start_span("Execution setup".to_owned());

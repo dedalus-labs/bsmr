@@ -9,6 +9,11 @@ use std::collections::BTreeMap;
 use std::path::Path;
 use std::path::PathBuf;
 
+use bsmr_core::cells::name::CellName;
+use bsmr_core::cells::paths::CellRelativePathBuf;
+use bsmr_core::package::PackageLabel;
+use bsmr_core::pattern::pattern::ParsedPattern;
+use bsmr_core::pattern::pattern_type::ConfiguredProvidersPatternExtra;
 use serde::Deserialize;
 use serde_json::to_string as json;
 
@@ -140,6 +145,116 @@ impl Package {
             }
         }
         Ok(source)
+    }
+}
+
+/// Resolve invocation patterns against Cargo metadata without evaluating generated rules.
+pub(super) fn selected(
+    bytes: &[u8],
+    root: &Path,
+    cell: CellName,
+    mode: Mode,
+    patterns: &[ParsedPattern<ConfiguredProvidersPatternExtra>],
+) -> Result<Vec<Entry>, RustGraphError> {
+    let metadata: Metadata = serde_json::from_slice(bytes)?;
+    let mut entries = Vec::new();
+    for package in &metadata.packages {
+        let path = package
+            .manifest_path
+            .parent()
+            .expect("manifest has a parent")
+            .strip_prefix(root)
+            .map_err(|_| RustGraphError::Outside(package.manifest_path.clone()))?;
+        let path = path.to_string_lossy().replace('\\', "/");
+        let label = PackageLabel::new(
+            cell,
+            &CellRelativePathBuf::try_from(path.clone())
+                .map_err(|_| unsupported(&package.name, "invalid package path"))?,
+        )
+        .map_err(|_| unsupported(&package.name, "invalid package label"))?;
+        entries.extend(package.selected(label, &path, mode, patterns)?);
+    }
+    entries.sort_by_key(|entry| {
+        (
+            entry.package.to_string(),
+            entry.target.kind().to_owned(),
+            entry.target.name().to_owned(),
+        )
+    });
+    entries.dedup();
+    Ok(entries)
+}
+
+impl Package {
+    /// Apply public aliases to metadata targets without resolving dependencies.
+    fn selected(
+        &self,
+        label: PackageLabel,
+        path: &str,
+        mode: Mode,
+        patterns: &[ParsedPattern<ConfiguredProvidersPatternExtra>],
+    ) -> Result<Vec<Entry>, RustGraphError> {
+        let mut entries = Vec::new();
+        let mut normal = Vec::new();
+        for target in &self.targets {
+            if let Some(entry) = target.entrypoint(&self.name)? {
+                if entry.kind() != "test" {
+                    normal.push(if entry.kind() == "lib" {
+                        "lib".to_owned()
+                    } else {
+                        target.name.clone()
+                    });
+                }
+            }
+        }
+        let package_alias = (normal.len() == 1).then(|| {
+            Path::new(&path)
+                .file_name()
+                .and_then(|name| name.to_str())
+                .unwrap_or(&self.name)
+                .to_owned()
+        });
+        for target in &self.targets {
+            let Some(entrypoint) = target.entrypoint(&self.name)? else {
+                continue;
+            };
+            if (mode == Mode::Test && !target.test)
+                || (mode == Mode::Build && entrypoint.kind() == "test")
+            {
+                continue;
+            }
+            let alias = if entrypoint.kind() == "lib" {
+                "lib"
+            } else {
+                &target.name
+            };
+            let test = format!("__bsmr_test_{}_{}", entrypoint.kind(), target.name);
+            let matches = patterns.iter().any(|pattern| match pattern {
+                ParsedPattern::Target(owner, name, _) => {
+                    *owner == label
+                        && (name.as_str() == alias
+                            || (mode == Mode::Test && name.as_str() == test)
+                            || (mode == Mode::Test
+                                && entrypoint.kind() == "test"
+                                && normal.iter().any(|alias| alias == name.as_str()))
+                            || package_alias
+                                .as_ref()
+                                .is_some_and(|alias| alias == name.as_str()))
+                }
+                ParsedPattern::Package(owner) => *owner == label,
+                ParsedPattern::Recursive(prefix) => {
+                    label.as_cell_path().starts_with(prefix.as_ref())
+                }
+            });
+            if matches {
+                entries.push(Entry {
+                    package: label,
+                    mode,
+                    target: entrypoint,
+                });
+            }
+        }
+        Ok(entries)
     }
 }
 

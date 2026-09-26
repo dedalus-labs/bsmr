@@ -270,6 +270,9 @@ jobs:
       - name: Verify configured Cargo builds
         run: node test/rust/configured.ts target/debug/bsmr
         shell: bash
+      - name: Verify joint Cargo selections
+        run: python3 test/rust/roots.py target/debug/bsmr
+        shell: bash
       - name: Verify Rust library formats
         run: node test/rust/libraries.ts target/debug/bsmr
         shell: bash

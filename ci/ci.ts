@@ -433,6 +433,10 @@ export const ci = workflow({
 					run: command({ file: "node", args: ["test/rust/selection.ts", "target/debug/bsmr"] }),
 				},
 				{
+					name: "Verify joint Cargo selections",
+					run: command({ file: "python3", args: ["test/rust/roots.py", "target/debug/bsmr"] }),
+				},
+				{
 					name: "Verify Rust link-time optimization",
 					run: command({ file: "node", args: ["test/rust/lto.ts", "target/debug/bsmr"] }),
 				},

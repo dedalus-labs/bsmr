@@ -39,7 +39,11 @@ impl<'a> Planner<'a> {
     }
 
     /// Resolve one entrypoint without allowing Cargo to compile source code.
-    pub async fn resolve(&self, entry: &Entry, package: &str) -> bsmr_error::Result<Vec<u8>> {
+    pub async fn resolve(
+        &self,
+        entries: &[Entry],
+        packages: &[String],
+    ) -> bsmr_error::Result<Vec<u8>> {
         let executable = std::env::current_exe()?.with_file_name("bsmr-cargo");
         if !executable.is_file() {
             return Err(unsupported(
@@ -52,7 +56,7 @@ impl<'a> Planner<'a> {
             .ok_or_else(|| unsupported("planner", "missing cache directory"))?
             .join("bsmr/cargo/0.98.0");
         std::fs::create_dir_all(&cargo_home)?;
-        let request = self.request(entry, package, &cargo_home);
+        let request = self.request(entries, packages, &cargo_home);
         let bytes = serde_json::to_vec(&request)?;
         let lock = std::fs::read(self.root.join("Cargo.lock"))?;
         let output = tokio::time::timeout(Duration::from_secs(300), async {
@@ -78,26 +82,38 @@ impl<'a> Planner<'a> {
             child.wait_with_output().await
         })
         .await
-        .map_err(|_| unsupported(package, "configured Cargo planning exceeded 300 seconds"))??;
+        .map_err(|_| unsupported("planner", "configured Cargo planning exceeded 300 seconds"))??;
         if !output.status.success() {
-            return Err(unsupported(package, &String::from_utf8_lossy(&output.stderr)).into());
+            return Err(unsupported("planner", &String::from_utf8_lossy(&output.stderr)).into());
         }
         if std::fs::read(self.root.join("Cargo.lock"))? != lock {
-            return Err(unsupported(package, "Cargo.lock changed during frozen planning").into());
+            return Err(unsupported("planner", "Cargo.lock changed during frozen planning").into());
         }
         Ok(output.stdout)
     }
 
     /// Preserve Cargo's request fields while sourcing choices from tracked configuration.
-    fn request(&self, entry: &Entry, package: &str, cargo_home: &Path) -> serde_json::Value {
-        let target_filter = match &entry.target {
-            Target::Lib(_) => json!({"kind": "library"}),
-            Target::Bin(name) => json!({"kind": "binary", "name": name}),
-            Target::Test(name) => json!({"kind": "integration-test", "name": name}),
-        };
+    fn request(
+        &self,
+        entries: &[Entry],
+        packages: &[String],
+        cargo_home: &Path,
+    ) -> serde_json::Value {
+        let targets: Vec<_> = entries
+            .iter()
+            .zip(packages)
+            .map(|(entry, package)| {
+                let kind = match entry.target {
+                    Target::Lib(_) => "library",
+                    Target::Bin(_) => "binary",
+                    Target::Test(_) => "integration-test",
+                };
+                json!({"package": package, "kind": kind, "name": entry.target.name()})
+            })
+            .collect();
         json!({
-            "manifest": self.root.join("Cargo.toml"), "packages": [package],
-            "mode": entry.mode.as_str(), "target_filter": target_filter,
+            "manifest": self.root.join("Cargo.toml"), "packages": packages.iter().collect::<std::collections::BTreeSet<_>>(),
+            "mode": entries[0].mode.as_str(), "target_filter": {"kind": "targets", "targets": targets},
             "source_policy": "acquire-locked", "features": self.selection.features(),
             "default_features": self.selection.default_features(),
             "all_features": self.selection.all_features(), "target": null,
