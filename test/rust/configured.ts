@@ -42,8 +42,8 @@ const files: Record<string, string> = {
 files["app/src/main.rs"] += 'const _: &str = include_str!("../fixture/Cargo.toml");\n';
 
 /** Run the selected binary and count compiler invocations in its exact trace. */
-async function build(asset = "asset"): Promise<string[]> {
-	const { stdout, stderr } = await run(binary, ["build", "app", "--show-full-json-output", "--console", "simple"], options);
+async function build(asset = "asset", ...args: string[]): Promise<string[]> {
+	const { stdout, stderr } = await run(binary, ["build", "app", "--show-full-json-output", "--console", "simple", ...args], options);
 	const executable = Object.values(JSON.parse(stdout) as Record<string, string>)[0]!;
 	assert.equal((await run(executable, [], options)).stdout.trim(), `7:Example $(location :never):${asset}`);
 	const trace = /Build ID: ([a-f0-9-]+)/.exec(stderr)?.[1];
@@ -73,7 +73,8 @@ try {
 	writeFileSync(sharedInput, "shared");
 	writeFileSync(join(root, "app/src/main.rs"), files["app/src/main.rs"]!.replace("../data.txt", "../../unrelated/shared.txt"));
 	await assert.rejects(build("shared"), /couldn't read|No such file/);
-	writeFileSync(join(root, ".bsmr.local"), local + '\n[rust.sources]\napp = ["unrelated/shared.txt"]\n');
+	await build("shared", "-c", 'rust.sources={"app":["unrelated/shared.txt"]}');
+	writeFileSync(join(root, ".bsmr.local"), local + '\n[rust]\nsources = {"app":["unrelated/shared.txt"]}\n');
 	await build("shared");
 	assert.deepEqual(await build("shared"), [], "declared extra sources must support warm reuse");
 	writeFileSync(sharedInput, "changed");
@@ -81,7 +82,7 @@ try {
 	writeFileSync(join(root, "unrelated/src/lib.rs"), 'compile_error!("provider source stays unrelated");\n');
 	assert.deepEqual(await build("changed"), [], "declaring a file must not include its whole package");
 	for (const input of ["unrelated/missing.txt", "../outside.txt"]) {
-		writeFileSync(join(root, ".bsmr.local"), local + `\n[rust.sources]\napp = ${JSON.stringify([input])}\n`);
+		writeFileSync(join(root, ".bsmr.local"), local + `\n[rust]\nsources = ${JSON.stringify({ app: [input] })}\n`);
 		await assert.rejects(build(), /extra source .* is not a declared workspace file/);
 	}
 	writeFileSync(join(root, "app/src/main.rs"), files["app/src/main.rs"]!);

@@ -74,8 +74,8 @@ _cargo_source = rule(
 )
 
 def cargo_source(name: str, package: str, **kwargs):
-    """Track explicit cross-package files through the caller's native configuration."""
-    extra = json.decode(read_config("rust.sources", package or ".", "[]"))
+    """Track explicit cross-package files through the workspace's native configuration."""
+    extra = json.decode(read_root_config("rust", "sources", "{}")).get(package or ".", [])
     _cargo_source(name = name, package = package, extra_srcs = extra, **kwargs)
 
 def _files(ctx: AnalysisContext) -> list[Provider]:
