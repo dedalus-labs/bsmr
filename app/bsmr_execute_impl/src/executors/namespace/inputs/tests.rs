@@ -23,7 +23,17 @@ use bsmr_execute::directory::ActionImmutableDirectory;
 use bsmr_execute::directory::insert_entry;
 use bsmr_execute::directory::insert_file;
 
-use super::stage;
+use super::Cache;
+
+/// Independent commands must independently verify their source bytes.
+fn stage(
+    project: &Path,
+    root: &Path,
+    tree: &ActionImmutableDirectory,
+    config: DigestConfig,
+) -> bsmr_error::Result<()> {
+    Cache::new(root.parent().unwrap())?.stage(project, root, tree, config)
+}
 
 /// Declare a real executable input and one alias without inspecting host symlink targets.
 fn directory(config: DigestConfig, target: &str) -> ActionImmutableDirectory {
@@ -122,4 +132,87 @@ fn invariant_native_inputs_accept_large_declared_trees() {
         fs::read_link(inputs.join("alias100000")).unwrap(),
         Path::new("declared")
     );
+}
+
+/// A command keeps one verified version, even if its mutable origin changes later.
+#[test]
+fn invariant_shared_snapshots_preserve_analyzed_bytes() {
+    use std::os::unix::fs::MetadataExt;
+    let temporary = tempfile::tempdir().unwrap();
+    let project = temporary.path().join("project");
+    fs::create_dir_all(project.join("src")).unwrap();
+    fs::write(project.join("src/tool"), b"original").unwrap();
+    let config = DigestConfig::testing_default();
+    let tree = directory(config, "src/tool");
+    let cache = Cache::new(temporary.path()).unwrap();
+    let a = temporary.path().join("a");
+    let b = temporary.path().join("b");
+    cache.stage(&project, &a, &tree, config).unwrap();
+    fs::remove_file(project.join("src/tool")).unwrap();
+    cache.stage(&project, &b, &tree, config).unwrap();
+    assert_eq!(
+        fs::metadata(a.join("src/tool")).unwrap().ino(),
+        fs::metadata(b.join("src/tool")).unwrap().ino()
+    );
+    drop(cache);
+    fs::remove_dir_all(a).unwrap();
+    assert_eq!(fs::read(b.join("alias")).unwrap(), b"original");
+}
+
+#[test]
+fn invariant_failed_verification_cannot_seed_a_shared_snapshot() {
+    let temporary = tempfile::tempdir().unwrap();
+    let project = temporary.path().join("project");
+    fs::create_dir_all(project.join("src")).unwrap();
+    fs::write(project.join("src/tool"), b"changed!").unwrap();
+    let config = DigestConfig::testing_default();
+    let tree = directory(config, "src/tool");
+    let cache = Cache::new(temporary.path()).unwrap();
+    assert!(
+        cache
+            .stage(&project, &temporary.path().join("bad"), &tree, config)
+            .is_err()
+    );
+    fs::write(project.join("src/tool"), b"original").unwrap();
+    let good = temporary.path().join("good");
+    cache.stage(&project, &good, &tree, config).unwrap();
+    assert_eq!(fs::read(good.join("src/tool")).unwrap(), b"original");
+}
+
+#[test]
+fn invariant_executable_modes_do_not_alias_shared_bytes() {
+    let temporary = tempfile::tempdir().unwrap();
+    fs::write(temporary.path().join("input"), b"original").unwrap();
+    let config = DigestConfig::testing_default();
+    let cache = Cache::new(temporary.path()).unwrap();
+    for is_executable in [false, true] {
+        let mut builder = ActionDirectoryBuilder::empty();
+        insert_file(
+            &mut builder,
+            ProjectRelativePath::new("input").unwrap().to_buf(),
+            FileMetadata {
+                digest: TrackedFileDigest::from_content(b"original", config.cas_digest_config()),
+                is_executable,
+            },
+        )
+        .unwrap();
+        cache
+            .stage(
+                temporary.path(),
+                &temporary.path().join(is_executable.to_string()),
+                &builder.fingerprint(config.as_directory_serializer()),
+                config,
+            )
+            .unwrap();
+    }
+    for (name, mode) in [("false", 0o644), ("true", 0o755)] {
+        assert_eq!(
+            fs::metadata(temporary.path().join(name).join("input"))
+                .unwrap()
+                .permissions()
+                .mode()
+                & 0o777,
+            mode
+        );
+    }
 }

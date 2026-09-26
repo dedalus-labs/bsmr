@@ -159,6 +159,11 @@ The daemon retains one verified namespace runtime between commands. Each
 command rechecks both pinned files before reuse. Matching bytes avoid another
 copy and extraction. A replacement does not change an active action's runtime.
 
+Within a command, actions reuse private input files verified against the same
+digest and executable bit. Their input mounts stay read-only. Each action keeps
+its own writable outputs. A new command verifies inputs again, so this storage
+does not accumulate historical source versions between commands.
+
 Cargo's `links` metadata flows only to direct dependents' build scripts.
 Generated directory paths remain attached to their producing artifacts and are
 rebound when cached outputs are restored. Metadata emission order is preserved,

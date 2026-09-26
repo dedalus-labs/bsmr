@@ -74,6 +74,13 @@ parents and the declared scratch path. Input files and trees beneath these
 parents receive read-only mounts. Input and output artifacts cannot overlap.
 An input symlink that would lie in a writable directory is rejected.
 
+Input staging verifies each distinct file once per command. The executor owns
+the verified copies in a private directory on the output filesystem. Later
+actions link those copies into their read-only input mounts. The key includes
+the content digest and executable bit. Unverified files never enter this index.
+These links cannot reach mutable project files or writable action outputs.
+Dropping the command's cache does not revoke an active action's inode references.
+
 The action receives its declared environment plus fixed `PATH`, `HOME` and
 temporary-directory defaults. It cannot inherit the daemon environment or use
 persistent workers, incremental outputs, local resources or host networking.
