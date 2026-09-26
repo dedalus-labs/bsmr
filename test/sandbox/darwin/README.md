@@ -1,3 +1,10 @@
+<!-- ===----------------------------------------------------------------------=== -->
+<!-- Copyright (c) 2026 Dedalus Labs, Inc. and its contributors -->
+<!-- SPDX-License-Identifier: Apache-2.0 -->
+<!-- ===----------------------------------------------------------------------=== -->
+
+<!-- Defines Darwin process-lifetime qualification. -->
+
 # Darwin process ownership
 
 A build can exit while a detached child keeps changing its output. This check
