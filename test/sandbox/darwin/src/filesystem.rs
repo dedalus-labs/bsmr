@@ -74,7 +74,15 @@ fn shared_cache(root: &Path) -> Result<()> {
                 entry.file_type()?.is_file(),
                 "shared cache entry must be a file"
             );
-            bytes += fs::copy(entry.path(), destination.join(entry.file_name()))?;
+            let size = entry.metadata()?.len();
+            let copied = destination.join(entry.file_name());
+            // APFS copies can report zero bytes. Validate the destination's logical size.
+            fs::copy(entry.path(), &copied)?;
+            ensure!(
+                copied.metadata()?.len() == size,
+                "shared cache copy is truncated"
+            );
+            bytes += size;
             files += 1;
         }
     }
