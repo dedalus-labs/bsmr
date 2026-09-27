@@ -55,6 +55,11 @@ with the reserved UID have stopped. The trusted launcher inherits the same lease
 until credential drop, then closes it at payload exec. This prevents a surviving
 root launcher from entering an identity that has already been reassigned.
 
+`output::write` consumes that completed view and emits the existing result archive.
+It bounds standard streams and total archive bytes, walks output trees once,
+preserves links without following them, and rejects devices, pipes and sockets.
+The caller still validates declared output kinds and link targets before cache admission.
+
 `run` owns the direct child until exit, cancellation, or timeout and checks
 descendant cleanup before returning. It uses Tokio's process and socket notifications, including when
 the caller disconnects. The caller keeps its identity lease through output
