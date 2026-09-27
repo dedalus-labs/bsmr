@@ -9,7 +9,10 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 from pathlib import Path
+import re
+import shutil
 import subprocess
 
 
@@ -20,6 +23,7 @@ def command(
     result = subprocess.run(
         [str(binary), *arguments],
         cwd=directory,
+        env={**os.environ, 'BSMR_LOCAL_CACHE_DIR': str(directory.parent / 'cache')},
         capture_output=True,
         text=True,
         timeout=60,
@@ -28,6 +32,57 @@ def command(
     if result.returncode != 0:
         raise RuntimeError(f'native engine failed: {result.stdout}{result.stderr}')
     return result
+
+
+def build(binary: Path, directory: Path, phase: str, value: str) -> None:
+    """Check the artifact and actual execution trace, including zero-action DICE reuse."""
+    result = command(
+        binary=binary,
+        arguments=[
+            'build',
+            '//:copy',
+            '--sandbox',
+            '--console',
+            'simple',
+            '--show-full-json-output',
+        ],
+        directory=directory,
+    )
+    outputs = json.loads(result.stdout)
+    assert len(outputs) == 1
+    path = Path(next(iter(outputs.values())))
+    assert path.read_text() == value, phase
+    trace = re.search(r'Build ID: ([a-f0-9-]+)', result.stderr)
+    assert trace is not None, result.stderr
+    actions = command(
+        binary=binary,
+        arguments=[
+            'log',
+            'what-ran',
+            '--trace-id',
+            trace[1],
+            '--format',
+            'json',
+            '--filter-category',
+            'native_copy',
+            '--no-remote',
+        ],
+        directory=directory,
+    )
+    executors = [json.loads(line)['executor'] for line in actions.stdout.splitlines()]
+    expected = {'cold': ['Local'], 'warm': [], 'edit': ['Local'], 'clone': ['Cache']}
+    assert executors == expected[phase], (phase, executors)
+    print(
+        json.dumps(
+            {
+                'case': 'native_engine',
+                'phase': phase,
+                'value': value,
+                'executors': executors,
+            }
+        ),
+        flush=True,
+    )
 
 
 def main() -> None:
@@ -55,33 +110,19 @@ copy = rule(impl = impl, attrs = {"source": attrs.source()})
     )
     source = root / 'input'
     source.write_text('first')
+    clone = root.with_name('clone')
     try:
         for phase, value in [('cold', 'first'), ('warm', 'first'), ('edit', 'second')]:
             source.write_text(value)
-            result = command(
-                binary=binary,
-                arguments=[
-                    'build',
-                    '//:copy',
-                    '--sandbox',
-                    '--console',
-                    'simple',
-                    '--show-full-json-output',
-                ],
-                directory=root,
-            )
-            outputs = json.loads(result.stdout)
-            assert len(outputs) == 1
-            path = Path(next(iter(outputs.values())))
-            assert path.read_text() == value, phase
-            if phase == 'warm':
-                assert 'cached: 1' in result.stderr, result.stderr
-            print(
-                json.dumps({'case': 'native_engine', 'phase': phase, 'value': value}),
-                flush=True,
-            )
+            build(binary=binary, directory=root, phase=phase, value=value)
+        shutil.copytree(
+            root, clone, symlinks=True, ignore=shutil.ignore_patterns('bsmr-out')
+        )
+        build(binary=binary, directory=clone, phase='clone', value='second')
     finally:
-        command(binary=binary, arguments=['kill'], directory=root)
+        for directory in [root, clone]:
+            if directory.exists():
+                command(binary=binary, arguments=['kill'], directory=directory)
 
 
 if __name__ == '__main__':
