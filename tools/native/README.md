@@ -13,24 +13,13 @@ The supervisor stops every process with that identity before accepting outputs.
 Compilation runs without root privileges.
 
 ```text
-administrator-selected identity + protected lease
-    -> private unprivileged action
-    -> stop descendants and observe an empty UID
-    -> validate outputs
-    -> release lease
+lease -> unprivileged action -> empty UID -> validate outputs -> release
 ```
 
-| Interface | Contract |
-| --- | --- |
-| `Identity::acquire` | Reject accounts, existing processes, unsafe locks, and concurrent owners. |
-| `Identity::drain` | Signal only this UID and require the kernel to report no members. |
-| `occupied` | Distinguish an empty UID from a failed kernel query. |
-
-The administrator creates the lease files and reserves their identities. Action
-requests cannot choose either. A crashed worker may leave processes behind.
-Acquisition refuses that occupied UID until an administrator recovers it.
-Dropping an owner attempts cleanup, but callers must explicitly check `drain`
-before publishing anything.
+`Identity::acquire` requires administrator-created leases and unused identities.
+Action requests cannot choose either. `Identity::drain` stops detached children
+and checks kernel membership. Callers must check its result before publishing.
+Acquisition refuses a crashed worker's occupied UID until an administrator recovers it.
 
 This crate currently provides process ownership. It does not yet install a
 service, construct runtime images, or enable a macOS BSMR execution backend.

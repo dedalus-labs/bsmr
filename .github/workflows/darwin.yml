@@ -6,12 +6,14 @@ on:
     paths:
       - ci/darwin.ts
       - test/sandbox/darwin/**
+      - tools/native/**
   push:
     branches:
       - main
     paths:
       - ci/darwin.ts
       - test/sandbox/darwin/**
+      - tools/native/**
   workflow_dispatch: {}
 permissions:
   contents: read
@@ -28,6 +30,9 @@ jobs:
           persist-credentials: false
       - name: Install Rust
         run: rustup toolchain install 1.98.0 --profile minimal
+        shell: bash
+      - name: Check native identity ownership
+        run: cargo +1.98.0 test --locked --manifest-path tools/native/Cargo.toml
         shell: bash
       - name: Check unprivileged refusal
         run: cargo +1.98.0 test --locked --manifest-path test/sandbox/darwin/Cargo.toml

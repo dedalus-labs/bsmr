@@ -7,7 +7,7 @@
 
 import { command, expr, job, workflow } from "@dedalus-labs/hollywood";
 
-const paths = ["ci/darwin.ts", "test/sandbox/darwin/**"] as const;
+const paths = ["ci/darwin.ts", "test/sandbox/darwin/**", "tools/native/**"] as const;
 
 export const darwin = workflow({
 	name: "macOS isolation",
@@ -26,6 +26,7 @@ export const darwin = workflow({
 			steps: [
 				{ name: "Checkout", uses: "actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1", with: { "persist-credentials": false } },
 				{ name: "Install Rust", run: command({ file: "rustup", args: ["toolchain", "install", "1.98.0", "--profile", "minimal"] }) },
+				{ name: "Check native identity ownership", run: command({ file: "cargo", args: ["+1.98.0", "test", "--locked", "--manifest-path", "tools/native/Cargo.toml"] }) },
 				{ name: "Check unprivileged refusal", run: command({ file: "cargo", args: ["+1.98.0", "test", "--locked", "--manifest-path", "test/sandbox/darwin/Cargo.toml"] }) },
 				{ name: "Build process check", run: command({ file: "cargo", args: ["+1.98.0", "build", "--locked", "--manifest-path", "test/sandbox/darwin/Cargo.toml"] }) },
 				{ name: "Check detached process cleanup", run: command({ file: "sudo", args: ["-n", "test/sandbox/darwin/target/debug/bsmr-darwin-check", "run", "/private/var/tmp/bsmr-darwin-check"] }) },
