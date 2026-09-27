@@ -8,6 +8,7 @@
 use std::fs::File;
 use std::fs::{self};
 use std::io::Write;
+use std::os::fd::AsRawFd;
 use std::os::unix::fs::PermissionsExt;
 use std::os::unix::process::CommandExt;
 use std::path::Path;
@@ -19,10 +20,13 @@ use std::thread;
 use std::time::Duration;
 use std::time::Instant;
 
+use anyhow::Context;
 use anyhow::Result;
 use anyhow::ensure;
 use bsmr_native::identity::Identity;
 use bsmr_native::identity::occupied;
+use nix::sys::event::{EvFlags, EventFilter, FilterFlag, KEvent, Kqueue};
+use nix::sys::time::TimeSpec;
 use nix::unistd::Gid;
 use nix::unistd::Uid;
 use nix::unistd::chown;
@@ -101,11 +105,8 @@ fn case(lease: &Identity, root: &Path, name: &str) -> Result<()> {
     }
     child.wait()?;
     let before = fs::metadata(path.join("heartbeat"))?.len();
-    thread::sleep(Duration::from_millis(100));
-    ensure!(
-        fs::metadata(path.join("heartbeat"))?.len() > before,
-        "detached-writer control did not reproduce"
-    );
+    progress(&path.join("heartbeat"), before)
+        .with_context(|| format!("control {name}: reserved UID occupied={:?}", occupied(ID)))?;
     let started = Instant::now();
     lease.drain()?;
     let elapsed = started.elapsed();
@@ -121,6 +122,65 @@ fn case(lease: &Identity, root: &Path, name: &str) -> Result<()> {
         serde_json::json!({"case": name, "uid": ID, "cleanup_ms": elapsed.as_secs_f64()*1000.0, "empty": true, "stable_output": true})
     );
     Ok(())
+}
+
+/// Observe another write after the launching process has exited.
+fn progress(path: &Path, before: u64) -> Result<()> {
+    let file = File::open(path)?;
+    let queue = Kqueue::new()?;
+    let change = KEvent::new(
+        usize::try_from(file.as_raw_fd())?,
+        EventFilter::EVFILT_VNODE,
+        EvFlags::EV_ADD | EvFlags::EV_CLEAR,
+        FilterFlag::NOTE_WRITE,
+        0,
+        0,
+    );
+    queue.kevent(
+        &[change],
+        &mut [],
+        Some(*TimeSpec::from_duration(Duration::ZERO).as_ref()),
+    )?;
+    let deadline = Instant::now() + Duration::from_secs(3);
+    while file.metadata()?.len() <= before {
+        let remaining = deadline.saturating_duration_since(Instant::now());
+        let mut events = [change];
+        let count = queue.kevent(
+            &[],
+            &mut events,
+            Some(*TimeSpec::from_duration(remaining).as_ref()),
+        )?;
+        ensure!(
+            count != 0 && !remaining.is_zero(),
+            "detached writer did not advance: before={before}, after={}",
+            file.metadata()?.len()
+        );
+        ensure!(
+            !events[0].flags().contains(EvFlags::EV_ERROR),
+            "heartbeat event failed: {}",
+            events[0].data()
+        );
+    }
+    Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn scheduling_delay_does_not_hide_a_live_writer() {
+        let mut file = tempfile::NamedTempFile::new().unwrap();
+        file.write_all(b".").unwrap();
+        let mut writer = file.as_file().try_clone().unwrap();
+        let child = thread::spawn(move || {
+            thread::sleep(Duration::from_millis(250));
+            writer.write_all(b".").unwrap();
+        });
+        let result = progress(file.path(), 1);
+        child.join().unwrap();
+        result.unwrap();
+    }
 }
 
 /// Exercise the production supervisor while a detached writer is still running.
