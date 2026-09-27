@@ -168,6 +168,24 @@ class Service:
     def qualify(self) -> None:
         """Compile through the authenticated service using user-owned file capabilities."""
         directory = self.request()
+        result = self.exchange(directory=directory, timeout_seconds=30)
+        assert json.loads(result) == 'completed', result
+        with tarfile.open(directory / 'output.tar') as archive:
+            stream = archive.extractfile('.bsmr/result.json')
+            assert stream is not None
+            envelope = json.load(stream)
+            assert envelope['exit_code'] == 0, envelope
+            assert archive.getmember('outputs/result.rmeta').size > 0
+        print(
+            json.dumps(
+                {'case': 'service', 'unprivileged_client': True, 'compiled': True}
+            ),
+            flush=True,
+        )
+        self.cancellation(directory=directory)
+
+    def exchange(self, directory: Path, timeout_seconds: int) -> str:
+        """Submit the prepared files through the ordinary caller's credentials."""
         result = self.command(
             arguments=[
                 'sudo',
@@ -182,22 +200,56 @@ class Service:
                 str(directory / 'input.tar'),
                 str(directory / 'output.tar'),
                 '--timeout-seconds',
-                '30',
+                str(timeout_seconds),
             ]
         )
+        return result
+
+    def cancellation(self, directory: Path) -> None:
+        """Require timeout cleanup to complete before the identity serves another compiler."""
+        path = directory / 'action.json'
+        original = path.read_bytes()
+        action = json.loads(original)
+        action['action']['arguments'] = ['/probe', 'wait']
+        action['action']['outputs'] = []
+        path.write_text(json.dumps(action))
+        try:
+            result = self.exchange(directory=directory, timeout_seconds=1)
+            assert json.loads(result) == 'timed_out', result
+        finally:
+            path.write_bytes(original)
+        result = self.exchange(directory=directory, timeout_seconds=30)
         assert json.loads(result) == 'completed', result
-        with tarfile.open(directory / 'output.tar') as archive:
-            stream = archive.extractfile('.bsmr/result.json')
-            assert stream is not None
-            envelope = json.load(stream)
-            assert envelope['exit_code'] == 0, envelope
-            assert archive.getmember('outputs/result.rmeta').size > 0
         print(
             json.dumps(
-                {'case': 'service', 'unprivileged_client': True, 'compiled': True}
+                {
+                    'case': 'service_timeout',
+                    'cleanup_acknowledged': True,
+                    'identity_reused': True,
+                }
             ),
             flush=True,
         )
+
+    def engine(self, binary: Path) -> None:
+        """Exercise the actual build executor under the ordinary client account."""
+        project = self.root / 'client' / 'project'
+        script = Path(__file__).with_name('native.py').resolve()
+        output = self.command(
+            arguments=[
+                'sudo',
+                '-n',
+                '-u',
+                f'#{self.uid}',
+                '--',
+                'python3',
+                str(script),
+                str(binary.resolve()),
+                str(self.socket),
+                str(project),
+            ]
+        )
+        print(output, flush=True)
 
     def stop(self) -> None:
         """Unregister exactly the owned label before its private files are removed."""
@@ -233,6 +285,7 @@ def main() -> None:
     parser.add_argument('worker', type=Path)
     parser.add_argument('fixture', type=Path)
     parser.add_argument('compiler', type=Path)
+    parser.add_argument('--engine', type=Path)
     args = parser.parse_args()
     directory = Path(tempfile.mkdtemp(prefix='bsmr-service-', dir='/private/var/db'))
     service = Service(
@@ -244,6 +297,8 @@ def main() -> None:
     try:
         service.start()
         service.qualify()
+        if args.engine is not None:
+            service.engine(binary=args.engine)
     finally:
         service.stop()
         shutil.rmtree(directory)

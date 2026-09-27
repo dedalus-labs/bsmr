@@ -28,7 +28,13 @@ async fn ordinary_processes_cannot_impersonate_the_worker() {
         output: tempfile::tempfile().unwrap(),
     };
     assert!(matches!(
-        client::execute(&socket, &files, Duration::from_secs(5)).await,
+        client::execute(
+            &socket,
+            &files,
+            Duration::from_secs(5),
+            std::future::pending()
+        )
+        .await,
         Err(Error::Peer)
     ));
 }

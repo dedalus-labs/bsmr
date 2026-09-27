@@ -5,16 +5,23 @@
 
 //! Authenticate the privileged worker and retain cancellation ownership through its response.
 
+use std::future::Future;
 use std::io;
+use std::net::Shutdown;
+use std::os::fd::AsFd;
 use std::path::Path;
 use std::time::Duration;
 
-use crate::{LauncherResponse, LauncherStatus, MAX_TIMEOUT_MS, PROTOCOL_VERSION};
 use thiserror::Error;
-use tokio::io::{AsyncReadExt, Interest};
+use tokio::io::AsyncReadExt;
+use tokio::io::Interest;
 use tokio::net::UnixStream;
 
 use super::files::Files;
+use crate::LauncherResponse;
+use crate::LauncherStatus;
+use crate::MAX_TIMEOUT_MS;
+use crate::PROTOCOL_VERSION;
 
 /// A failed exchange never authorizes importing the result file.
 #[derive(Debug, Error)]
@@ -37,18 +44,40 @@ pub enum Error {
     Encoding(#[from] serde_json::Error),
 }
 
-/// Bound the entire exchange. Dropping or timing out this future closes the cancellation socket.
+/// Keep the connection through cancellation until the worker confirms cleanup.
+///
+/// A failed or missing acknowledgement never permits output import. Dropping
+/// this future closes the connection, so the worker still receives cancellation.
 pub async fn execute(
     path: &Path,
     files: &Files,
     timeout: Duration,
+    cancellation: impl Future<Output = ()>,
 ) -> Result<LauncherStatus, Error> {
     if timeout > Duration::from_millis(MAX_TIMEOUT_MS) {
         return Err(Error::Budget);
     }
-    tokio::time::timeout(timeout, exchange(path, files))
+    let deadline = tokio::time::sleep(timeout);
+    tokio::pin!(deadline, cancellation);
+    let stream = tokio::select! {
+        result = start(path, files) => result?,
+        () = &mut deadline => return Ok(LauncherStatus::TimedOut),
+        () = &mut cancellation => return Ok(LauncherStatus::Cancelled),
+    };
+    let control = std::os::unix::net::UnixStream::from(stream.as_fd().try_clone_to_owned()?);
+    let response = receive(stream);
+    tokio::pin!(response);
+    let reason = tokio::select! {
+        result = &mut response => return result,
+        () = &mut deadline => LauncherStatus::TimedOut,
+        () = &mut cancellation => LauncherStatus::Cancelled,
+    };
+    control.shutdown(Shutdown::Write)?;
+    // Child reaping and UID drain each have a four-second bound.
+    tokio::time::timeout(Duration::from_secs(10), response)
         .await
-        .map_err(|_| Error::Deadline)?
+        .map_err(|_| Error::Deadline)??;
+    Ok(reason)
 }
 
 /// Require the kernel peer to be root before disclosing any caller-owned descriptor.
@@ -60,8 +89,8 @@ async fn connect(path: &Path) -> Result<UnixStream, Error> {
     Ok(stream)
 }
 
-/// Send once and read a bounded terminal response, clearing false writable readiness hints.
-async fn exchange(path: &Path, files: &Files) -> Result<LauncherStatus, Error> {
+/// Complete the one-byte descriptor transfer without accepting false writable readiness.
+async fn start(path: &Path, files: &Files) -> Result<UnixStream, Error> {
     let stream = connect(path).await?;
     loop {
         stream.writable().await?;
@@ -71,6 +100,11 @@ async fn exchange(path: &Path, files: &Files) -> Result<LauncherStatus, Error> {
             Err(error) => return Err(error.into()),
         }
     }
+    Ok(stream)
+}
+
+/// Accept only a bounded response with compatible protocol and confirmed cleanup.
+async fn receive(stream: UnixStream) -> Result<LauncherStatus, Error> {
     let mut bytes = Vec::new();
     stream.take(64 * 1024 + 1).read_to_end(&mut bytes).await?;
     if bytes.len() > 64 * 1024 {

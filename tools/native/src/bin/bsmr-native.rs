@@ -59,6 +59,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 &socket,
                 &files,
                 std::time::Duration::from_secs(timeout_seconds),
+                std::future::pending(),
             ))?;
             println!("{}", serde_json::to_string(&status)?);
         }

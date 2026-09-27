@@ -28,6 +28,14 @@ use workload::writer;
 fn main() -> Result<()> {
     let args: Vec<_> = std::env::args_os().skip(1).collect();
     match args.first().and_then(|arg| arg.to_str()) {
+        Some("copy") if args.len() == 3 => {
+            std::fs::copy(&args[1], &args[2])?;
+            Ok(())
+        }
+        Some("wait") if args.len() == 1 => {
+            std::thread::sleep(std::time::Duration::from_secs(60));
+            Ok(())
+        }
         Some("seed") if args.len() == 3 => {
             filesystem::seed(&PathBuf::from(&args[1]), &PathBuf::from(&args[2]))
         }
