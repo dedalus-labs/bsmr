@@ -16,10 +16,20 @@ use std::os::fd::OwnedFd;
 use std::os::unix::net::UnixStream;
 
 use nix::errno::Errno;
-use nix::fcntl::{FcntlArg, FdFlag, OFlag, fcntl};
-use nix::poll::{PollFd, PollFlags, poll};
-use nix::sys::socket::{ControlMessage, ControlMessageOwned, MsgFlags, recvmsg, sendmsg};
-use nix::unistd::{Uid, getpeereid};
+use nix::fcntl::FcntlArg;
+use nix::fcntl::FdFlag;
+use nix::fcntl::OFlag;
+use nix::fcntl::fcntl;
+use nix::poll::PollFd;
+use nix::poll::PollFlags;
+use nix::poll::poll;
+use nix::sys::socket::ControlMessage;
+use nix::sys::socket::ControlMessageOwned;
+use nix::sys::socket::MsgFlags;
+use nix::sys::socket::recvmsg;
+use nix::sys::socket::sendmsg;
+use nix::unistd::Uid;
+use nix::unistd::getpeereid;
 use thiserror::Error;
 
 /// Three file capabilities. The receiver owns its descriptors independently of the sender.

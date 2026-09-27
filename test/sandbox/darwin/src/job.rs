@@ -11,10 +11,10 @@ use std::path::Path;
 use std::time::Instant;
 
 use anyhow::{Result, ensure};
-use bsmr_sandbox::native::files::Files;
 use bsmr_native::job::Job;
-use bsmr_sandbox::native::protocol::Wire;
 use bsmr_native::run::Outcome;
+use bsmr_sandbox::native::files::Files;
+use bsmr_sandbox::native::protocol::Wire;
 use bsmr_sandbox::{GuestAction, GuestOutput, PROTOCOL_VERSION};
 use sha2::{Digest, Sha256};
 

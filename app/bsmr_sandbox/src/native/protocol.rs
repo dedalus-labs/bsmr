@@ -5,7 +5,9 @@
 
 //! Describe the native worker without importing privileged implementation code.
 
-use serde::{Deserialize, Serialize};
+use serde::Deserialize;
+use serde::Serialize;
+
 use crate::GuestAction;
 
 /// Untrusted wire data. The worker accepts it only through `Request::read`.
@@ -30,4 +32,3 @@ pub struct Info {
     /// Maximum simultaneous executions in this worker.
     pub slots: usize,
 }
-
