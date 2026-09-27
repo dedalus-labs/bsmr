@@ -186,6 +186,8 @@ class Service:
 
     def exchange(self, directory: Path, timeout_seconds: int) -> str:
         """Submit the prepared files through the ordinary caller's credentials."""
+        (directory / 'output.tar').write_bytes(b'')
+        started = time.monotonic()
         result = self.command(
             arguments=[
                 'sudo',
@@ -203,6 +205,36 @@ class Service:
                 str(timeout_seconds),
             ]
         )
+        print(
+            json.dumps(
+                {
+                    'case': 'exchange',
+                    'status': json.loads(result),
+                    'elapsed_seconds': time.monotonic() - started,
+                }
+            ),
+            flush=True,
+        )
+        if (
+            json.loads(result) != 'completed'
+            and (directory / 'output.tar').stat().st_size
+        ):
+            with tarfile.open(directory / 'output.tar') as archive:
+                for name in ['result.json', 'stdout', 'stderr']:
+                    stream = archive.extractfile(f'.bsmr/{name}')
+                    assert stream is not None
+                    print(
+                        json.dumps(
+                            {
+                                'case': 'action_diagnostic',
+                                'stream': name,
+                                'content': stream.read(65536).decode(
+                                    'utf-8', errors='replace'
+                                ),
+                            }
+                        ),
+                        flush=True,
+                    )
         return result
 
     def cancellation(self, directory: Path) -> None:
