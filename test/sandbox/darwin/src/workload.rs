@@ -246,5 +246,8 @@ pub(crate) fn run(root: &Path, compiler: &Path) -> Result<()> {
     }
     lease.drain()?;
     crate::filesystem::check(root, compiler)?;
+    lease.drain()?;
+    drop(lease);
+    crate::job::check(root, compiler)?;
     Ok(())
 }

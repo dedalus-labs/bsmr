@@ -6,9 +6,16 @@
 //! Confine the trusted launcher before it executes an action's code.
 
 use std::ffi::CStr;
+use std::fs::File;
 use std::io;
+use std::io::Read;
+use std::os::fd::FromRawFd;
+use std::os::unix::fs::MetadataExt;
+use std::os::unix::process::CommandExt;
 use std::path::Path;
+use std::process::Command;
 
+use bsmr_sandbox::{GuestAction, MAX_ACTION_BYTES};
 use nix::errno::Errno;
 use nix::unistd::Gid;
 use nix::unistd::Uid;
@@ -36,6 +43,51 @@ pub enum Error {
     Kernel(#[from] Errno),
     #[error("native sandbox policy was refused: {0}")]
     Policy(String),
+    #[error("native launch I/O failed: {0}")]
+    Io(#[from] io::Error),
+    #[error("native launch action is invalid: {0}")]
+    Action(#[from] serde_json::Error),
+    #[error("native launcher did not inherit a protected identity lease")]
+    Lease,
+}
+
+/// Read the supervisor's private action, confine this child, then replace it with the payload.
+///
+/// The supervisor wrote this bounded file from a validated request. Action
+/// environment variables are applied only after root credentials are gone.
+pub fn action(root: &Path, uid: u32, descriptor: i32) -> Result<std::convert::Infallible, Error> {
+    let _lease = inherited(descriptor)?;
+    let file = File::open(root.join(".bsmr/action.json"))?;
+    let action: GuestAction = serde_json::from_reader(file.take(MAX_ACTION_BYTES))?;
+    enter(root, uid)?;
+    let mut command = Command::new(&action.arguments[0]);
+    command
+        .args(&action.arguments[1..])
+        .current_dir(Path::new("/workspace").join(action.working_directory))
+        .env_clear()
+        .env("PATH", "/usr/bin:/bin")
+        .env("HOME", "/tmp")
+        .env("TMPDIR", "/tmp")
+        .env("BSMR_SCRATCH_PATH", "/tmp")
+        .envs(action.environment);
+    Err(command.exec().into())
+}
+
+/// Adopt the supervisor's duplicate, closing it automatically at payload exec.
+fn inherited(descriptor: i32) -> Result<File, Error> {
+    if !Uid::current().is_root() || !Uid::effective().is_root() || descriptor < 3 {
+        return Err(Error::Identity);
+    }
+    // SAFETY: this runs in the single-threaded launcher before any action code.
+    // A successful fcntl proves the inherited descriptor exists and remains open.
+    Errno::result(unsafe { libc::fcntl(descriptor, libc::F_SETFD, libc::FD_CLOEXEC) })?;
+    // SAFETY: the parent deliberately transferred this descriptor across exec.
+    let lease = unsafe { File::from_raw_fd(descriptor) };
+    let metadata = lease.metadata()?;
+    if !metadata.is_file() || metadata.uid() != 0 || metadata.mode() & 0o777 != 0o600 {
+        return Err(Error::Lease);
+    }
+    Ok(lease)
 }
 
 /// Enter an administrator-owned private root, then permanently drop privileges.

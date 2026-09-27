@@ -8,6 +8,7 @@
 mod compiler;
 mod filesystem;
 mod identity;
+mod job;
 mod system;
 mod workload;
 mod workspace;
@@ -26,6 +27,14 @@ use workload::writer;
 fn main() -> Result<()> {
     let args: Vec<_> = std::env::args_os().skip(1).collect();
     match args.first().and_then(|arg| arg.to_str()) {
+        Some("enter") if args.len() == 4 => {
+            let uid = args[2].to_str().context("UID must be UTF-8")?.parse()?;
+            let fd = args[3]
+                .to_str()
+                .context("descriptor must be UTF-8")?
+                .parse()?;
+            match bsmr_native::launch::action(&PathBuf::from(&args[1]), uid, fd)? {}
+        }
         Some("prepare") if args.len() == 2 => compiler::record(&PathBuf::from(&args[1])),
         Some("observe") if args.len() == 2 => {
             let uid = args[1].to_str().context("UID must be UTF-8")?.parse()?;

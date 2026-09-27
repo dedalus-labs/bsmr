@@ -21,6 +21,9 @@ pub mod channel;
 pub mod identity;
 
 #[cfg(target_os = "macos")]
+pub mod job;
+
+#[cfg(target_os = "macos")]
 pub mod launch;
 
 #[cfg(target_os = "macos")]
