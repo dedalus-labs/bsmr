@@ -6,9 +6,13 @@
 //! Check whether native executables can use a private Darwin root filesystem.
 
 use std::fs;
+use std::net::SocketAddr;
+use std::net::TcpListener;
+use std::net::TcpStream;
 use std::os::unix::fs::PermissionsExt;
 use std::path::Path;
 use std::process::Command;
+use std::time::Duration;
 
 use anyhow::Context;
 use anyhow::Result;
@@ -25,17 +29,33 @@ pub(crate) fn check(parent: &Path) -> Result<()> {
         fs::set_permissions(directory, fs::Permissions::from_mode(0o755))?;
     }
     fs::copy("/usr/lib/dyld", root.join("usr/lib/dyld"))?;
+    fs::create_dir(root.join("bin"))?;
+    fs::copy("/usr/bin/sandbox-exec", root.join("bin/sandbox-exec"))?;
     shared_cache(&root)?;
     fs::copy(std::env::current_exe()?, root.join("probe"))?;
     fs::write(root.join("input"), b"declared input")?;
     fs::set_permissions(root.join("input"), fs::Permissions::from_mode(0o644))?;
+    fs::create_dir(root.join("output"))?;
+    fs::set_permissions(root.join("output"), fs::Permissions::from_mode(0o1777))?;
+    fs::write(root.join("output/input"), b"nested input")?;
+    fs::set_permissions(root.join("output/input"), fs::Permissions::from_mode(0o444))?;
     let outside = parent.join("outside");
     fs::write(&outside, b"host input")?;
+    let listener = TcpListener::bind("127.0.0.1:0")?;
+    let address = listener.local_addr()?;
+    let connection = TcpStream::connect(address)?;
+    drop(connection);
     let output = Command::new("/usr/sbin/chroot")
         .arg(&root)
+        .arg("/bin/sandbox-exec")
+        .args([
+            "-p",
+            "(version 1)(deny default)(allow file* process* sysctl-read system-socket)(allow signal (target same-sandbox))",
+        ])
         .arg("/probe")
         .arg("view")
         .arg(&outside)
+        .arg(address.to_string())
         .env_clear()
         .output()?;
     ensure!(
@@ -44,7 +64,9 @@ pub(crate) fn check(parent: &Path) -> Result<()> {
         String::from_utf8_lossy(&output.stderr)
     );
     ensure!(output.stdout == b"private root passed\n");
-    println!("{{\"case\":\"filesystem\",\"host_read_denied\":true}}");
+    println!(
+        "{{\"case\":\"filesystem\",\"host_read_denied\":true,\"network_denied\":true,\"inputs_readonly\":true}}"
+    );
     Ok(())
 }
 
@@ -95,13 +117,30 @@ fn shared_cache(root: &Path) -> Result<()> {
 }
 
 /// Require both the declared input and denial of a known host file after credential drop.
-pub(crate) fn view(outside: &Path) -> Result<()> {
+pub(crate) fn view(outside: &Path, address: SocketAddr) -> Result<()> {
     identity::enter()?;
     ensure!(fs::read("/input")? == b"declared input");
+    ensure!(fs::read("/output/input")? == b"nested input");
     let result = fs::read(outside);
     ensure!(
         matches!(result, Err(error) if error.kind() == std::io::ErrorKind::NotFound),
         "host path must be absent from the private root"
+    );
+    for result in [
+        fs::write("/input", b"changed"),
+        fs::write("/output/input", b"changed"),
+        fs::remove_file("/output/input"),
+    ] {
+        ensure!(
+            matches!(result, Err(error) if error.kind() == std::io::ErrorKind::PermissionDenied),
+            "declared inputs must remain read-only under a writable parent"
+        );
+    }
+    fs::write("/output/result", b"produced output")?;
+    let network = TcpStream::connect_timeout(&address, Duration::from_secs(1));
+    ensure!(
+        matches!(network, Err(error) if error.kind() == std::io::ErrorKind::PermissionDenied),
+        "sandbox must deny a reachable network peer"
     );
     println!("private root passed");
     Ok(())
