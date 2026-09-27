@@ -63,7 +63,7 @@ pub(crate) fn seed(root: &Path, compiler: &Path) -> Result<()> {
     fs::copy("/usr/lib/dyld", root.join("usr/lib/dyld"))?;
     shared_cache(root)?;
     crate::compiler::stage(root, compiler)?;
-    fs::copy(std::env::current_exe()?, root.join("probe"))?;
+    crate::compiler::copy(&std::env::current_exe()?, &root.join("probe"))?;
     Ok(())
 }
 

@@ -37,8 +37,8 @@ pub(crate) fn stage(root: &Path, record: &Path) -> Result<()> {
     Ok(())
 }
 
-/// Preserve trusted toolchain links and bytes while removing all write and privilege bits.
-fn copy(source: &Path, destination: &Path) -> Result<()> {
+/// Copy trusted runtime bytes as root-owned files without write or privilege bits.
+pub(crate) fn copy(source: &Path, destination: &Path) -> Result<()> {
     let metadata = fs::symlink_metadata(source)?;
     if metadata.is_dir() {
         fs::create_dir(destination)?;
@@ -49,6 +49,8 @@ fn copy(source: &Path, destination: &Path) -> Result<()> {
         fs::set_permissions(destination, fs::Permissions::from_mode(0o555))?;
     } else if metadata.is_file() {
         fs::copy(source, destination)?;
+        // Privileged APFS clones otherwise retain the original user's ownership.
+        std::os::unix::fs::chown(destination, Some(0), Some(0))?;
         ensure!(
             destination.metadata()?.len() == metadata.len(),
             "truncated toolchain file"

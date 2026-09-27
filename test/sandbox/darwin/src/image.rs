@@ -6,7 +6,7 @@
 //! Hold one trusted runtime snapshot for all privileged qualification jobs.
 
 use std::fs;
-use std::os::unix::fs::{MetadataExt, PermissionsExt};
+use std::os::unix::fs::MetadataExt;
 use std::path::{Path, PathBuf};
 use std::time::Instant;
 
@@ -27,8 +27,7 @@ impl Image {
         let seed = tempfile::tempdir_in(state.path())?;
         crate::filesystem::seed(seed.path(), compiler)?;
         let launcher = state.path().join("launcher");
-        fs::copy(std::env::current_exe()?, &launcher)?;
-        fs::set_permissions(&launcher, fs::Permissions::from_mode(0o555))?;
+        crate::compiler::copy(&std::env::current_exe()?, &launcher)?;
         let started = Instant::now();
         let runtime = Runtime::capture(seed.path(), state.path(), &launcher)?;
         let capture_ms = started.elapsed().as_secs_f64() * 1000.0;
