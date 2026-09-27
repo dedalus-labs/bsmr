@@ -41,12 +41,9 @@ pub(crate) fn check(parent: &Path, compiler: &Path) -> Result<()> {
     shared_cache(&root)?;
     crate::compiler::stage(&root, compiler)?;
     fs::copy(std::env::current_exe()?, root.join("probe"))?;
-    fs::write(root.join("input"), b"declared input")?;
-    fs::set_permissions(root.join("input"), fs::Permissions::from_mode(0o644))?;
+    crate::workspace::stage(&root)?;
     fs::create_dir(root.join("output"))?;
     fs::set_permissions(root.join("output"), fs::Permissions::from_mode(0o1777))?;
-    fs::write(root.join("output/input"), b"nested input")?;
-    fs::set_permissions(root.join("output/input"), fs::Permissions::from_mode(0o444))?;
     let outside = parent.join("outside");
     fs::write(&outside, b"host input")?;
     let listener = TcpListener::bind("127.0.0.1:0")?;
@@ -129,24 +126,12 @@ pub(crate) fn view(root: &Path, outside: &Path, address: SocketAddr) -> Result<(
     ensure!(nix::unistd::Gid::current().as_raw() == crate::identity::ID);
     ensure!(nix::unistd::setuid(nix::unistd::Uid::from_raw(0)).is_err());
     crate::compiler::run()?;
-    ensure!(fs::read("/input")? == b"declared input");
-    ensure!(fs::read("/output/input")? == b"nested input");
+    crate::workspace::check()?;
     let result = fs::read(outside);
     ensure!(
         matches!(result, Err(error) if error.kind() == std::io::ErrorKind::NotFound),
         "host path must be absent from the private root"
     );
-    for result in [
-        fs::write("/input", b"changed"),
-        fs::write("/output/input", b"changed"),
-        fs::remove_file("/output/input"),
-    ] {
-        ensure!(
-            matches!(result, Err(error) if error.kind() == std::io::ErrorKind::PermissionDenied),
-            "declared inputs must remain read-only under a writable parent"
-        );
-    }
-    fs::write("/output/result", b"produced output")?;
     let network = TcpStream::connect_timeout(&address, Duration::from_secs(1));
     ensure!(
         matches!(network, Err(error) if error.kind() == std::io::ErrorKind::PermissionDenied),

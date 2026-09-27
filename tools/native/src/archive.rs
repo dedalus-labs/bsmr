@@ -149,7 +149,7 @@ impl Archive {
 }
 
 /// Accept a nonempty relative path with no dot components or platform escapes.
-fn normal(path: &Path) -> bool {
+pub(crate) fn normal(path: &Path) -> bool {
     !path.as_os_str().is_empty()
         && path
             .components()
