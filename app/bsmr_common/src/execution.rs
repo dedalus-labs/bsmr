@@ -18,6 +18,8 @@ use pagable::pagable_typetag;
 
 /// Cache identity and native package admission must agree on this exact policy.
 pub const NAMESPACE_PROFILE: &str = "declared-inputs-v3";
+/// Native macOS actions use the privileged worker's declared-input contract.
+pub const NATIVE_PROFILE: &str = "declared-inputs-macos-v1";
 
 /// Invalidates analysis and completed actions when runtime bytes or policy change.
 #[derive(Clone, Dupe, Display, Debug, Eq, Hash, PartialEq, Allocative, Pagable)]

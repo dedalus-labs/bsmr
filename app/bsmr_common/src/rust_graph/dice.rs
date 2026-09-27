@@ -361,12 +361,19 @@ impl Key for RustPlanKey {
             }));
         }
         let platform = ctx.compute(&crate::execution::ExecutionPlatformKey).await?;
-        let execution = if platform
+        let namespace = platform
             .iter()
             .any(|(name, value)| name == "bsmr.sandbox.backend" && value == "namespace")
             && platform.iter().any(|(name, value)| {
                 name == "bsmr.sandbox.profile" && value == crate::execution::NAMESPACE_PROFILE
-            }) {
+            });
+        let native = platform
+            .iter()
+            .any(|(name, value)| name == "bsmr.sandbox.backend" && value == "native")
+            && platform.iter().any(|(name, value)| {
+                name == "bsmr.sandbox.profile" && value == crate::execution::NATIVE_PROFILE
+            });
+        let execution = if namespace || native {
             super::configured::CodeExecution::DeclaredInputs
         } else {
             super::configured::CodeExecution::CompilerOnly

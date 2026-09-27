@@ -254,6 +254,8 @@ impl HasCommandExecutor for CommandExecutorFactory {
             }
             let (action_cache_checker, cache_uploader) = match &self.backend {
                 LocalExecutionBackend::Namespace(_) => local_cache_new()?,
+                #[cfg(target_os = "macos")]
+                LocalExecutionBackend::Native(_) => local_cache_new()?,
                 LocalExecutionBackend::Firecracker(_) => (
                     Arc::new(NoOpCommandOptionalExecutor {})
                         as Arc<dyn PreparedCommandOptionalExecutor>,

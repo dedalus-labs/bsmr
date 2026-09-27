@@ -119,6 +119,8 @@ use tracing::info;
 
 use crate::executors::firecracker::FirecrackerExecutor;
 use crate::executors::namespace::NamespaceExecutor;
+#[cfg(target_os = "macos")]
+use crate::executors::native::NativeExecutor;
 use crate::executors::worker::WorkerHandle;
 use crate::executors::worker::WorkerPool;
 use crate::incremental_actions_helper::get_incremental_path_map;
@@ -165,6 +167,8 @@ pub enum LocalExecutionBackend {
     Host,
     Firecracker(Arc<FirecrackerExecutor>),
     Namespace(Arc<NamespaceExecutor>),
+    #[cfg(target_os = "macos")]
+    Native(Arc<NativeExecutor>),
 }
 
 impl LocalExecutionBackend {
@@ -173,6 +177,8 @@ impl LocalExecutionBackend {
         match self {
             Self::Host => remote_execution::Platform::default(),
             Self::Namespace(executor) => executor.platform(),
+            #[cfg(target_os = "macos")]
+            Self::Native(executor) => executor.platform(),
             Self::Firecracker(executor) => remote_execution::Platform {
                 properties: crate::executors::firecracker::sandbox_platform_properties(
                     executor.environment_digest(),
@@ -439,6 +445,39 @@ impl LocalExecutor {
                                     &liveliness_observer,
                                 )
                                 .await
+                        }
+                        #[cfg(target_os = "macos")]
+                        LocalExecutionBackend::Native(executor) => {
+                            async {
+                                let Some(_claim) = executor.claim(&liveliness_observer).await?
+                                else {
+                                    return bsmr_error::Ok(CommandResult {
+                                        status: GatherOutputStatus::Cancelled,
+                                        stdout: Vec::new(),
+                                        stderr: Vec::new(),
+                                        cgroup_result: None,
+                                        orphan_processes: Vec::new(),
+                                    });
+                                };
+                                let action = self
+                                    .blocking_executor
+                                    .execute_io_inline(|| {
+                                        executor.prepare(
+                                            prepared_action,
+                                            request,
+                                            self.root.as_path(),
+                                            digest_config,
+                                        )
+                                    })
+                                    .await?;
+                                let status = executor.run(&action, &liveliness_observer).await?;
+                                self.blocking_executor
+                                    .execute_io_inline(|| {
+                                        action.result(status, self.root.as_path())
+                                    })
+                                    .await
+                            }
+                            .await
                         }
                         LocalExecutionBackend::Namespace(executor) => {
                             async {

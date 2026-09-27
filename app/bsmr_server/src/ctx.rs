@@ -948,6 +948,27 @@ impl DiceCommandUpdater<'_, '_> {
                 })
                 .unwrap_or("firecracker")
             {
+                "native" => {
+                    #[cfg(target_os = "macos")]
+                    {
+                        let socket = PathBuf::from(
+                            root_config
+                                .get(BsmrconfigKeyRef {
+                                    section: "sandbox",
+                                    property: "launcher_socket",
+                                })
+                                .unwrap_or("/private/var/db/bsmr/control.sock"),
+                        );
+                        let executor =
+                            bsmr_execute_impl::executors::native::NativeExecutor::new(&socket)?;
+                        LocalExecutionBackend::Native(Arc::new(executor))
+                    }
+                    #[cfg(not(target_os = "macos"))]
+                    return Err(bsmr_error::bsmr_error!(
+                        bsmr_error::ErrorTag::Input,
+                        "native sandbox execution requires macOS"
+                    ));
+                }
                 "namespace" => {
                     let manifest = root_config
                         .get(BsmrconfigKeyRef {

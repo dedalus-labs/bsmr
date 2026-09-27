@@ -254,7 +254,7 @@ fn verify_static_elf(path: &Path, architecture: &str) -> Result<(), BundleError>
 }
 
 /// Calculates one artifact's lowercase SHA-256 digest.
-fn sha256_file(path: &Path) -> Result<String, BundleError> {
+pub fn sha256_file(path: &Path) -> Result<String, BundleError> {
     let mut file = File::open(path).map_err(|source| BundleError::Read {
         path: path.to_owned(),
         source,
@@ -291,7 +291,7 @@ fn verify_root_owned(path: &Path) -> Result<(), BundleError> {
 
 #[cfg(unix)]
 /// Applies the immutable ownership rule to a path and every ancestor.
-fn verify_root_owned_chain(path: &Path) -> Result<(), BundleError> {
+pub fn verify_root_owned_chain(path: &Path) -> Result<(), BundleError> {
     for ancestor in path.ancestors() {
         verify_root_owned(ancestor)?;
     }

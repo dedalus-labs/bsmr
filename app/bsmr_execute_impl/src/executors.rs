@@ -24,6 +24,8 @@ mod inputs;
 pub mod local;
 pub mod local_cache;
 pub mod namespace;
+#[cfg(target_os = "macos")]
+pub mod native;
 pub mod re;
 pub mod stacked;
 pub mod to_re_platform;
