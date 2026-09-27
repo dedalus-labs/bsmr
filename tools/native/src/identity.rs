@@ -11,6 +11,7 @@ use std::io;
 use std::os::unix::fs::MetadataExt;
 use std::os::unix::fs::OpenOptionsExt;
 use std::path::Path;
+use std::path::PathBuf;
 use std::thread;
 use std::time::Duration;
 use std::time::Instant;
@@ -34,8 +35,8 @@ pub enum Error {
     Root,
     #[error("UID/GID {0} belongs to an account, group, or existing process")]
     Occupied(u32),
-    #[error("identity lease must be a root-owned regular file with mode 0600")]
-    Lease,
+    #[error("identity lease path lacks protected root ownership: {0:?}")]
+    Lease(PathBuf),
     #[error("identity lease is already held")]
     Busy,
     #[error("UID {0} still has processes after the cleanup deadline")]
@@ -78,7 +79,7 @@ impl Identity {
         for ancestor in path.ancestors().skip(1) {
             let metadata = std::fs::symlink_metadata(ancestor)?;
             if !metadata.is_dir() || metadata.uid() != 0 || metadata.mode() & 0o022 != 0 {
-                return Err(Error::Lease);
+                return Err(Error::Lease(ancestor.to_owned()));
             }
         }
         let file = OpenOptions::new()
@@ -88,7 +89,7 @@ impl Identity {
             .open(path)?;
         let metadata = file.metadata()?;
         if !metadata.is_file() || metadata.uid() != 0 || metadata.mode() & 0o777 != 0o600 {
-            return Err(Error::Lease);
+            return Err(Error::Lease(path.to_owned()));
         }
         let lease = Flock::lock(file, FlockArg::LockExclusiveNonblock).map_err(|(_, error)| {
             if error == Errno::EWOULDBLOCK {
