@@ -28,6 +28,9 @@ use workload::writer;
 fn main() -> Result<()> {
     let args: Vec<_> = std::env::args_os().skip(1).collect();
     match args.first().and_then(|arg| arg.to_str()) {
+        Some("seed") if args.len() == 3 => {
+            filesystem::seed(&PathBuf::from(&args[1]), &PathBuf::from(&args[2]))
+        }
         Some("enter") if args.len() == 4 => {
             let uid = args[2].to_str().context("UID must be UTF-8")?.parse()?;
             let fd = args[3]
