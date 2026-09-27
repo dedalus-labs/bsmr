@@ -9,6 +9,7 @@ use std::fs;
 use std::net::SocketAddr;
 use std::net::TcpListener;
 use std::net::TcpStream;
+use std::os::unix::fs::MetadataExt;
 use std::os::unix::fs::PermissionsExt;
 use std::path::Path;
 use std::process::Command;
@@ -17,6 +18,9 @@ use std::time::Duration;
 use anyhow::Context;
 use anyhow::Result;
 use anyhow::ensure;
+use nix::sys::stat::Mode;
+use nix::sys::stat::SFlag;
+use nix::sys::stat::mknod;
 
 use crate::identity;
 
@@ -24,6 +28,13 @@ use crate::identity;
 pub(crate) fn check(parent: &Path, compiler: &Path) -> Result<()> {
     let root = parent.join("root");
     fs::create_dir(&root)?;
+    fs::create_dir(root.join("dev"))?;
+    mknod(
+        &root.join("dev/null"),
+        SFlag::S_IFCHR,
+        Mode::from_bits_truncate(0o666),
+        fs::metadata("/dev/null")?.rdev().try_into()?,
+    )?;
     fs::create_dir_all(root.join("usr/lib"))?;
     for directory in [&root, &root.join("usr"), &root.join("usr/lib")] {
         fs::set_permissions(directory, fs::Permissions::from_mode(0o755))?;
