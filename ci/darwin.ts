@@ -14,14 +14,17 @@ export const darwin = workflow({
 	on: {
 		pull_request: { paths },
 		push: { branches: ["main"], paths },
-		workflow_dispatch: { inputs: { engine: { type: "boolean", default: false, description: "Build the engine and qualify native action caching." } } },
+		workflow_dispatch: { inputs: {
+			engine: { type: "boolean", default: false, description: "Build the engine and qualify native action caching." },
+			runner: { type: "choice", options: ["macos-15", "macos-26"], default: "macos-15", description: "Select the macOS version for qualification." },
+		} },
 	},
 	permissions: { contents: "read" },
 	jobs: {
 		lifetime: job({
 			name: "Stop detached processes",
 			if: expr<boolean>("github.repository == 'dedalus-labs/bsmr' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository)"),
-			"runs-on": "macos-15",
+			"runs-on": expr<string>("github.event_name == 'workflow_dispatch' && inputs.runner || 'macos-15'"),
 			"timeout-minutes": 30,
 			steps: [
 				{ name: "Checkout", uses: "actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1", with: { "persist-credentials": false } },
