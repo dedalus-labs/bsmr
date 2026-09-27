@@ -114,13 +114,13 @@ Output validation runs after execution and does not cap live writes.
 
 Runtime digests and canonical execution properties participate in DICE reuse,
 local dependency-file reuse and action-cache identity. Policy semantic changes
-must bump `declared-inputs-v2`. Host paths and temporary snapshot names do not
+must bump `declared-inputs-v3`. Host paths and temporary snapshot names do not
 participate in this identity.
 
 ## Native Rust package code
 
 Configured Cargo graphs admit procedural macros and build scripts only with the verified
-`declared-inputs-v2` namespace profile. They use the inherited Rust library and
+`declared-inputs-v3` namespace profile. They use the inherited Rust library and
 macro-alias and build-script rules with the selected compiler. Native link metadata
 dependencies and unimplemented script directives produce explicit errors.
 

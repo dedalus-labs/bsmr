@@ -16,6 +16,9 @@ use dupe::Dupe;
 use pagable::Pagable;
 use pagable::pagable_typetag;
 
+/// Cache identity and native package admission must agree on this exact policy.
+pub const NAMESPACE_PROFILE: &str = "declared-inputs-v3";
+
 /// Invalidates analysis and completed actions when runtime bytes or policy change.
 #[derive(Clone, Dupe, Display, Debug, Eq, Hash, PartialEq, Allocative, Pagable)]
 #[display("{:?}", self)]

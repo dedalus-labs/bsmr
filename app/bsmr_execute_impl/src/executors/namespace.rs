@@ -14,6 +14,7 @@ use std::path::Path;
 use std::path::PathBuf;
 use std::sync::Arc;
 
+use bsmr_common::execution::NAMESPACE_PROFILE;
 use bsmr_core::fs::artifact_path_resolver::ArtifactFs;
 use bsmr_directory::directory::directory::Directory;
 use bsmr_directory::directory::directory_iterator::DirectoryIterator;
@@ -102,7 +103,7 @@ impl NamespaceExecutor {
             properties: [
                 ("bsmr.sandbox.backend", "namespace"),
                 ("bsmr.sandbox.environment", self.runtime.digest()),
-                ("bsmr.sandbox.profile", "declared-inputs-v3"),
+                ("bsmr.sandbox.profile", NAMESPACE_PROFILE),
             ]
             .into_iter()
             .map(|(name, value)| RE::Property {
