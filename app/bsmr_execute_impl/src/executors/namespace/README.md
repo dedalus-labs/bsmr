@@ -85,8 +85,11 @@ The action receives its declared environment plus fixed `PATH`, `HOME` and
 temporary-directory defaults. It cannot inherit the daemon environment or use
 persistent workers, incremental outputs, local resources or host networking.
 No host library directories are mounted. Programs such as `/usr/bin/env`
-resolve inside the verified runtime. A fresh read-only `/proc` mount exposes
-only the action's PID namespace. Rust's linker uses `/proc/self/exe` to find
+resolve inside the verified runtime. A fresh `/proc` mount exposes only the
+action's PID namespace. A child may update its own OOM score, while `/proc/sys`,
+`/proc/sysrq-trigger`, `/proc/irq`, `/proc/bus`, and `/proc/fs` remain read-only.
+The `declared-inputs-v3` profile separates these results from the earlier mount policy.
+Rust's linker uses `/proc/self/exe` to find
 its executable. Process root links refer to the action's filesystem. Standard
 streams are the executor's capture pipes. Host processes are not exposed.
 

@@ -102,7 +102,7 @@ impl NamespaceExecutor {
             properties: [
                 ("bsmr.sandbox.backend", "namespace"),
                 ("bsmr.sandbox.environment", self.runtime.digest()),
-                ("bsmr.sandbox.profile", "declared-inputs-v2"),
+                ("bsmr.sandbox.profile", "declared-inputs-v3"),
             ]
             .into_iter()
             .map(|(name, value)| RE::Property {
@@ -276,19 +276,18 @@ impl NamespaceExecutor {
             ]);
         }
         // The linker resolves its executable through procfs in this private PID namespace.
-        arguments.extend(
-            [
-                "--tmpfs",
-                "/tmp",
-                "--dev",
-                "/dev",
-                "--proc",
-                "/proc",
-                "--remount-ro",
-                "/proc",
-            ]
-            .map(OsString::from),
-        );
+        arguments
+            .extend(["--tmpfs", "/tmp", "--dev", "/dev", "--proc", "/proc"].map(OsString::from));
+        // A process may configure its own OOM score. Kernel control trees stay immutable.
+        for control in [
+            "/proc/sys",
+            "/proc/sysrq-trigger",
+            "/proc/irq",
+            "/proc/bus",
+            "/proc/fs",
+        ] {
+            arguments.extend(["--ro-bind", control, control].map(OsString::from));
+        }
         for (name, value) in [
             ("PATH", "/usr/bin:/bin"),
             ("HOME", "/tmp"),
