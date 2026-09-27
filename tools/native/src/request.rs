@@ -12,22 +12,10 @@ use std::path::PathBuf;
 use std::time::Duration;
 
 use bsmr_sandbox::{GuestAction, MAX_ACTION_BYTES, MAX_TIMEOUT_MS, PROTOCOL_VERSION};
-use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
 use crate::archive;
-
-/// Untrusted wire data. The worker accepts it only through `Request::read`.
-#[derive(Deserialize, Serialize)]
-#[serde(deny_unknown_fields)]
-pub struct Wire {
-    /// Installed runtime identity supplied by the unprivileged executor.
-    pub environment: String,
-    /// SHA-256 of the complete input archive passed on the second descriptor.
-    pub input: String,
-    /// Existing BSMR action schema, shared with the other execution backends.
-    pub action: GuestAction,
-}
+use bsmr_sandbox::native::protocol::Wire;
 
 /// A bounded action bound to the administrator's installed runtime.
 pub struct Request(Wire);

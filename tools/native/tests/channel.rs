@@ -11,7 +11,7 @@ use std::fs::File;
 use std::io::{Read, Write};
 use std::os::unix::net::UnixStream;
 
-use bsmr_native::channel::{Error, Files};
+use bsmr_sandbox::native::files::{Error, Files};
 use nix::fcntl::{FcntlArg, FdFlag, fcntl};
 use nix::unistd::Uid;
 

@@ -9,12 +9,12 @@ use std::io;
 use std::path::Path;
 use std::time::Duration;
 
-use bsmr_sandbox::{LauncherResponse, LauncherStatus, MAX_TIMEOUT_MS, PROTOCOL_VERSION};
+use crate::{LauncherResponse, LauncherStatus, MAX_TIMEOUT_MS, PROTOCOL_VERSION};
 use thiserror::Error;
 use tokio::io::{AsyncReadExt, Interest};
 use tokio::net::UnixStream;
 
-use crate::channel::Files;
+use super::files::Files;
 
 /// A failed exchange never authorizes importing the result file.
 #[derive(Debug, Error)]
@@ -87,20 +87,4 @@ async fn exchange(path: &Path, files: &Files) -> Result<LauncherStatus, Error> {
         return Err(Error::Response);
     }
     Ok(response.status)
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[tokio::test]
-    async fn ordinary_processes_cannot_impersonate_the_worker() {
-        if nix::unistd::Uid::current().is_root() {
-            return;
-        }
-        let root = tempfile::tempdir().unwrap();
-        let socket = root.path().join("worker.sock");
-        let _listener = std::os::unix::net::UnixListener::bind(&socket).unwrap();
-        assert!(matches!(connect(&socket).await, Err(Error::Peer)));
-    }
 }

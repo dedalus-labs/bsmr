@@ -11,7 +11,8 @@ use std::path::Path;
 
 use anyhow::{Result, ensure};
 use bsmr_native::archive::Archive;
-use bsmr_native::request::{Request, Wire};
+use bsmr_native::request::Request;
+use bsmr_sandbox::native::protocol::Wire;
 use bsmr_native::workspace::Workspace;
 use bsmr_sandbox::{GuestAction, GuestOutput, PROTOCOL_VERSION};
 use sha2::{Digest, Sha256};

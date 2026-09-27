@@ -15,9 +15,6 @@ pub mod request;
 pub mod workspace;
 
 #[cfg(target_os = "macos")]
-pub mod channel;
-
-#[cfg(target_os = "macos")]
 pub mod identity;
 
 #[cfg(target_os = "macos")]
@@ -37,6 +34,3 @@ pub mod runtime;
 
 #[cfg(target_os = "macos")]
 pub mod worker;
-
-#[cfg(target_os = "macos")]
-pub mod client;

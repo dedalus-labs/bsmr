@@ -20,11 +20,12 @@ use nix::unistd::{Uid, User};
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
-use crate::channel::Files;
 use crate::identity::Identity;
 use crate::job::Job;
 use crate::run::Outcome;
 use crate::runtime::Runtime;
+use bsmr_sandbox::native::files::Files;
+use bsmr_sandbox::native::protocol::Info;
 
 unsafe extern "C" {
     fn launch_activate_socket(
@@ -48,17 +49,6 @@ pub struct Config {
     pub state: PathBuf,
     /// Socket path configured in the launchd service.
     pub socket: PathBuf,
-}
-
-/// Published before admission so the executor can bind its cache key to actual bytes.
-#[derive(Deserialize, Serialize)]
-pub struct Info {
-    /// Protocol understood by the installed worker.
-    pub protocol: u32,
-    /// Digest of the retained runtime snapshot and trusted launcher.
-    pub environment: String,
-    /// Maximum simultaneous executions in this worker.
-    pub slots: usize,
 }
 
 /// Startup failures do not admit requests or select another executor.

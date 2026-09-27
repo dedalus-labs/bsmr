@@ -27,7 +27,7 @@ Action requests cannot choose either. `Identity::drain` stops detached children
 and checks kernel membership. Callers must check its result before publishing.
 Acquisition refuses a crashed worker's occupied UID until an administrator recovers it.
 
-`channel::Files` passes three open files over a Unix socket: the action description,
+`bsmr_sandbox::native::files::Files` passes three open files over a Unix socket: the action description,
 input archive and result archive. The receiver checks the kernel's peer UID against
 administrator configuration before reading the packet. It rejects devices and
 incorrect access modes. Reception runs before the service starts threads or children,
@@ -50,7 +50,7 @@ at a time. Administrator-owned configuration selects the client account, reserve
 identity, runtime seed and state directory. The identity lease must already exist
 with mode `0600`. Requests cannot choose these values.
 
-`client::execute` authenticates the worker's root credentials before sending any
+`bsmr_sandbox::native::client::execute` authenticates the worker's root credentials before sending any
 file descriptor. One deadline covers connection, transfer and response. Cancelling
 the future closes the socket, which requests job cleanup. A result is admissible
 only after the worker confirms cleanup. The serial lane is reported as one slot.

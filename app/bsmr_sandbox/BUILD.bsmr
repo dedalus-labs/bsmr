@@ -11,14 +11,20 @@ oncall("build_infra")
 
 rust_library(
     name = "bsmr_sandbox",
-    srcs = ["src/lib.rs"],
+    srcs = ["src/lib.rs", "src/native.rs", "src/native/client.rs", "src/native/files.rs", "src/native/protocol.rs"],
     deps = [
         "bsmr_build//third-party/rust:serde",
         "bsmr_build//third-party/rust:serde_json",
         "bsmr_build//third-party/rust:sha2",
         "bsmr_build//third-party/rust:tar",
         "bsmr_build//third-party/rust:thiserror",
-    ],
+    ] + select({
+        "DEFAULT": [],
+        "ovr_config//os:macos": [
+            "bsmr_build//third-party/rust:nix",
+            "bsmr_build//third-party/rust:tokio",
+        ],
+    }),
 )
 
 rust_binary(

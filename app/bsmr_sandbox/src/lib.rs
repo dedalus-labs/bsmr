@@ -3,7 +3,9 @@
 // SPDX-License-Identifier: Apache-2.0
 //===----------------------------------------------------------------------===//
 
-// Defines the versioned protocol shared by BSMR's Firecracker components.
+// Defines the versioned protocols shared by isolated execution backends.
+
+pub mod native;
 
 use std::collections::BTreeMap;
 use std::fs;

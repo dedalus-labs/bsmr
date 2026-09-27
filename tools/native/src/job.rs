@@ -18,11 +18,11 @@ use thiserror::Error;
 use tokio::net::UnixStream;
 
 use crate::archive::{self, Archive};
-use crate::channel::Files;
 use crate::identity::Identity;
 use crate::request::{self, Request};
 use crate::run::{self, Outcome};
 use crate::workspace::{self, Workspace};
+use bsmr_sandbox::native::files::Files;
 
 /// The lease outlives execution and output inspection. Fields drop in this order.
 pub struct Job {

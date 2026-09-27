@@ -44,7 +44,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             output,
             timeout_seconds,
         } => {
-            let files = bsmr_native::channel::Files {
+            let files = bsmr_sandbox::native::files::Files {
                 action: std::fs::File::open(action)?,
                 input: std::fs::File::open(input)?,
                 output: std::fs::File::options()
@@ -55,7 +55,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             let runtime = tokio::runtime::Builder::new_current_thread()
                 .enable_all()
                 .build()?;
-            let status = runtime.block_on(bsmr_native::client::execute(
+            let status = runtime.block_on(bsmr_sandbox::native::client::execute(
                 &socket,
                 &files,
                 std::time::Duration::from_secs(timeout_seconds),
