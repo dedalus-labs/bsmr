@@ -122,3 +122,47 @@ fn sparse_oversized_input_is_rejected_before_reading() {
     source.set_len((1 << 30) + 1).unwrap();
     assert!(matches!(Archive::capture(&source, ""), Err(Error::Limit)));
 }
+
+#[test]
+fn scratch_placeholder_is_writable_without_replacing_declared_inputs() {
+    use bsmr_native::request::Request;
+    use bsmr_native::workspace::Workspace;
+    use serde_json::json;
+
+    for (entries, accepted) in [
+        (vec![], true),
+        (vec![("scratch", tar::EntryType::Directory, "")], true),
+        (vec![("scratch/file", tar::EntryType::Regular, "")], false),
+        (vec![("scratch", tar::EntryType::Regular, "")], false),
+        (vec![("scratch", tar::EntryType::Symlink, "other")], false),
+    ] {
+        let (source, digest) = input(&entries);
+        let mut archive = Archive::capture(&source, &digest).unwrap();
+        let mut action = tempfile::tempfile().unwrap();
+        serde_json::to_writer(
+            &mut action,
+            &json!({
+                "environment": "runtime", "input": digest,
+                "action": {"protocol": 1, "arguments": ["/tool"],
+                    "environment": {"BSMR_SCRATCH_PATH": "scratch"},
+                    "working_directory": "", "outputs": []}
+            }),
+        )
+        .unwrap();
+        let request = Request::read(&action, "runtime").unwrap();
+        let root = Root(tempfile::tempdir().unwrap());
+        let result = Workspace::prepare(root.0.path(), &request, &mut archive);
+        let workspace = root.0.path().join("workspace");
+        let scratch = workspace.join("scratch");
+        if accepted {
+            assert!(result.is_ok(), "{entries:?}: {}", result.err().unwrap());
+            fs::write(scratch.join("output"), b"writable").unwrap();
+        } else {
+            assert!(result.is_err(), "{entries:?}");
+        }
+        fs::set_permissions(workspace, fs::Permissions::from_mode(0o700)).unwrap();
+        if fs::symlink_metadata(&scratch).is_ok_and(|metadata| metadata.is_dir()) {
+            fs::set_permissions(scratch, fs::Permissions::from_mode(0o700)).unwrap();
+        }
+    }
+}

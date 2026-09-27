@@ -52,11 +52,14 @@ impl Workspace {
             workspace.parent(scratch)?;
             let path = workspace.0.join(scratch);
             match fs::symlink_metadata(&path) {
+                // The engine declares scratch as an empty input directory.
+                // Existing files or aliases never become writable scratch.
+                Ok(metadata)
+                    if metadata.is_dir() && fs::read_dir(&path)?.next().transpose()?.is_none() => {}
                 Ok(_) => return Err(Error::Overlap(scratch.to_owned())),
-                Err(error) if error.kind() == io::ErrorKind::NotFound => {}
+                Err(error) if error.kind() == io::ErrorKind::NotFound => fs::create_dir(&path)?,
                 Err(error) => return Err(error.into()),
             }
-            fs::create_dir(&path)?;
             fs::set_permissions(path, fs::Permissions::from_mode(0o1777))?;
         }
         Ok(workspace)
