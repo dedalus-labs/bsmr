@@ -9,12 +9,12 @@ use std::fs::File;
 use std::fs::{self};
 use std::io::Write;
 use std::os::unix::fs::PermissionsExt;
-use std::os::unix::net::UnixStream;
 use std::os::unix::process::CommandExt;
 use std::path::Path;
 use std::process::Child;
 use std::process::Command;
 use std::process::Stdio;
+use std::sync::Arc;
 use std::thread;
 use std::time::Duration;
 use std::time::Instant;
@@ -124,28 +124,38 @@ fn case(lease: &Identity, root: &Path, name: &str) -> Result<()> {
 }
 
 /// Exercise the production supervisor while a detached writer is still running.
-fn supervised(lease: &Identity, root: &Path, disconnect: bool) -> Result<()> {
+fn supervised(lease: &Arc<Identity>, root: &Path, round: usize, disconnect: bool) -> Result<()> {
     let name = if disconnect { "disconnect" } else { "timeout" };
-    let path = root.join(name);
+    let path = root.join(format!("{name}-{round}"));
     fs::create_dir(&path)?;
     fs::set_permissions(&path, fs::Permissions::from_mode(0o700))?;
     chown(&path, Some(Uid::from_raw(ID)), Some(Gid::from_raw(ID)))?;
-    let child = Command::new(root.join("probe"))
-        .arg("cancel")
-        .arg(&path)
-        .env_clear()
-        .stdin(Stdio::null())
-        .spawn()?;
-    ready(&path)?;
-    let (caller, control) = UnixStream::pair()?;
-    if disconnect {
-        caller.shutdown(std::net::Shutdown::Both)?;
-    }
-    let outcome = bsmr_native::run::run(child, lease, &control, Duration::from_millis(20))?;
+    let runtime = tokio::runtime::Builder::new_current_thread()
+        .enable_all()
+        .build()?;
+    let outcome = runtime.block_on(async {
+        let child = tokio::process::Command::new(root.join("probe"))
+            .arg("cancel")
+            .arg(&path)
+            .env_clear()
+            .stdin(Stdio::null())
+            .kill_on_drop(true)
+            .spawn()?;
+        ready(&path)?;
+        let (caller, control) = tokio::net::UnixStream::pair()?;
+        let _caller = (!disconnect).then_some(caller);
+        let outcome = bsmr_native::run::run(
+            child,
+            Arc::clone(lease),
+            &control,
+            Duration::from_millis(20),
+        )
+        .await?;
+        Ok::<_, anyhow::Error>(outcome)
+    })?;
     ensure!(matches!(
         (outcome, disconnect),
-        (bsmr_native::wait::Outcome::Cancelled, true)
-            | (bsmr_native::wait::Outcome::TimedOut, false)
+        (bsmr_native::run::Outcome::Cancelled, true) | (bsmr_native::run::Outcome::TimedOut, false)
     ));
     ensure!(!occupied(ID)?, "supervisor returned with live descendants");
     let size = fs::metadata(path.join("heartbeat"))?.len();
@@ -161,7 +171,7 @@ pub(crate) fn run(root: &Path) -> Result<()> {
         root.parent() == Some(Path::new("/private/var/tmp")),
         "evidence must be directly under /private/var/tmp"
     );
-    let lease = acquire()?;
+    let lease = Arc::new(acquire()?);
     fs::create_dir(root)?;
     fs::set_permissions(root, fs::Permissions::from_mode(0o711))?;
     fs::copy(std::env::current_exe()?, root.join("probe"))?;
@@ -169,8 +179,10 @@ pub(crate) fn run(root: &Path) -> Result<()> {
     for name in ["normal", "cancel"] {
         case(&lease, root, name)?;
     }
-    for disconnect in [false, true] {
-        supervised(&lease, root, disconnect)?;
+    for round in 0..16 {
+        for disconnect in [false, true] {
+            supervised(&lease, root, round, disconnect)?;
+        }
     }
     lease.drain()?;
     crate::filesystem::check(root)?;

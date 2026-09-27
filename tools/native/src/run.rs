@@ -3,97 +3,198 @@
 // SPDX-License-Identifier: Apache-2.0
 //===----------------------------------------------------------------------===//
 
-//! Supervise one privileged launcher until its isolated process population is empty.
+//! Reap the native child through Tokio before draining its isolated process population.
 
-use std::os::unix::net::UnixStream;
-use std::process::Child;
+use std::io;
+use std::process::ExitStatus;
+use std::sync::Arc;
 use std::time::Duration;
 
 use thiserror::Error;
+use tokio::net::UnixStream;
+use tokio::process::Child;
 
 use crate::identity::Identity;
 use crate::identity::{self};
-use crate::wait::Outcome;
-use crate::wait::{self};
 
-/// Completion failures prevent the caller from accepting action outputs.
+/// Why the remaining action processes must stop.
+#[derive(Debug)]
+pub enum Outcome {
+    /// The direct child has exited and was reaped.
+    Exited(ExitStatus),
+    /// The caller sent cancellation data or closed its connection.
+    Cancelled,
+    /// The action deadline elapsed.
+    TimedOut,
+}
+
+/// Failure to confirm that the direct child is gone.
 #[derive(Debug, Error)]
-pub enum Error {
-    #[error("native child completion failed: {0}")]
-    Child(#[from] wait::Error),
-    #[error("native descendant cleanup failed: {0}")]
-    Identity(#[from] identity::Error),
-    #[error("native child completion failed: {child}; descendant cleanup failed: {identity}")]
-    Cleanup {
-        child: wait::Error,
-        identity: identity::Error,
+pub enum StopError {
+    #[error("child did not become waitable before its cleanup deadline; signal: {signal:?}")]
+    Deadline { signal: Option<io::Error> },
+    #[error("child wait failed: {source}; signal: {signal:?}")]
+    Wait {
+        source: io::Error,
+        signal: Option<io::Error>,
     },
 }
 
-/// Own the child across every return, while the caller retains the identity through output import.
-struct Running<'a> {
-    child: Child,
-    identity: &'a Identity,
-    cleanup_attempted: bool,
+/// Completion failures never authorize output publication.
+#[derive(Debug, Error)]
+pub enum Error {
+    #[error("native child observation failed: {0}")]
+    Observe(#[from] io::Error),
+    #[error("native child cleanup failed: {0}")]
+    Child(#[source] StopError),
+    #[error("native descendant cleanup failed: {0}")]
+    Identity(#[source] identity::Error),
+    #[error("native child cleanup failed: {child}; descendant cleanup failed: {identity}")]
+    Cleanup {
+        #[source]
+        child: StopError,
+        identity: identity::Error,
+    },
+    #[error("native cleanup worker failed: {0}")]
+    Worker(#[from] tokio::task::JoinError),
 }
 
-/// Wait for exit, cancellation, or timeout, then stop and reap all action processes.
+/// Keep direct-child termination owned if observation is cancelled or unwinds.
+struct Running(Child);
+
+impl Drop for Running {
+    /// Tokio retains the child for reaping after this best-effort stop request.
+    fn drop(&mut self) {
+        if let Err(error) = self.0.start_kill() {
+            eprintln!("native child stop request failed: {error}");
+        }
+    }
+}
+
+/// Observe completion, then reap the child and require an empty reserved UID.
 ///
-/// The caller must start only its trusted credential-dropping launcher under this
-/// identity. The workload must not inherit `cancel`. Retain `identity` until
-/// output validation finishes. An error never authorizes publication.
-pub fn run(
+/// Start only the trusted credential-dropping launcher under this identity.
+/// The payload must not inherit `cancel`. Keep another identity owner through
+/// output validation. Dropping this future never produces an acceptable result.
+pub async fn run(
     child: Child,
-    identity: &Identity,
+    identity: Arc<Identity>,
     cancel: &UnixStream,
     timeout: Duration,
 ) -> Result<Outcome, Error> {
-    let mut running = Running {
-        child,
-        identity,
-        cleanup_attempted: false,
-    };
-    let observed = wait::wait(&mut running.child, Some(cancel), timeout);
-    // Cleanup also runs after a kernel observation error.
-    running.stop()?;
-    Ok(observed?)
-}
-
-impl Running<'_> {
-    /// Attempt both cleanup operations even when reaping the direct child fails.
-    fn stop(&mut self) -> Result<(), Error> {
-        self.cleanup_attempted = true;
-        let child = self.reap();
-        let identity = self.identity.drain();
-        match (child, identity) {
-            (Ok(()), Ok(())) => Ok(()),
-            (Err(child), Ok(())) => Err(Error::Child(child)),
-            (Ok(()), Err(identity)) => Err(Error::Identity(identity)),
-            (Err(child), Err(identity)) => Err(Error::Cleanup { child, identity }),
-        }
-    }
-
-    /// Give the direct child one bounded stop interval before draining detached descendants.
-    fn reap(&mut self) -> Result<(), wait::Error> {
-        if self.child.try_wait()?.is_some() {
-            return Ok(());
-        }
-        self.child.kill()?;
-        match wait::wait(&mut self.child, None, Duration::from_secs(4))? {
-            Outcome::Exited(_) => Ok(()),
-            Outcome::TimedOut => Err(wait::Error::MissingExit),
-            Outcome::Cancelled => unreachable!("reaping has no cancellation descriptor"),
-        }
+    let mut running = Running(child);
+    let observed = observe(&mut running.0, cancel, timeout).await;
+    let child = stop(&mut running.0).await;
+    // Cleanup retains the lease and runs outside the async I/O driver.
+    let identity = tokio::task::spawn_blocking(move || identity.drain()).await?;
+    match (child, identity) {
+        (Ok(()), Ok(())) => Ok(observed?),
+        (Err(child), Ok(())) => Err(Error::Child(child)),
+        (Ok(()), Err(identity)) => Err(Error::Identity(identity)),
+        (Err(child), Err(identity)) => Err(Error::Cleanup { child, identity }),
     }
 }
 
-impl Drop for Running<'_> {
-    /// Keep early returns from leaving the direct child or its detached writers running.
-    fn drop(&mut self) {
-        if !self.cleanup_attempted
-            && let Err(error) = self.stop()
-        {
-            eprintln!("native action cleanup incomplete: {error}");
+/// Use Tokio's SIGCHLD handling rather than assuming a process event is already waitable.
+async fn observe(child: &mut Child, cancel: &UnixStream, timeout: Duration) -> io::Result<Outcome> {
+    tokio::select! {
+        result = child.wait() => result.map(Outcome::Exited),
+        result = cancel.readable() => result.map(|()| Outcome::Cancelled),
+        () = tokio::time::sleep(timeout) => Ok(Outcome::TimedOut),
+    }
+}
+
+/// Confirm exit even if the signal raced a process that was already leaving.
+async fn stop(child: &mut Child) -> Result<(), StopError> {
+    let signal = child.start_kill().err();
+    match tokio::time::timeout(Duration::from_secs(4), child.wait()).await {
+        Ok(Ok(_)) => Ok(()),
+        Ok(Err(source)) => Err(StopError::Wait { source, signal }),
+        Err(_) => Err(StopError::Deadline { signal }),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use tokio::io::AsyncWriteExt;
+    use tokio::process::Command;
+
+    use super::*;
+
+    /// A finite real process bounds cleanup even if a test fails.
+    fn sleeper() -> Running {
+        Running(
+            Command::new("/bin/sleep")
+                .arg("5")
+                .kill_on_drop(true)
+                .spawn()
+                .unwrap(),
+        )
+    }
+
+    #[tokio::test]
+    async fn child_exit_preserves_its_status() {
+        for _ in 0..32 {
+            let mut child = Running(
+                Command::new("/bin/sh")
+                    .args(["-c", "exit 7"])
+                    .kill_on_drop(true)
+                    .spawn()
+                    .unwrap(),
+            );
+            let (_caller, cancel) = UnixStream::pair().unwrap();
+            let Outcome::Exited(status) = observe(&mut child.0, &cancel, Duration::from_secs(2))
+                .await
+                .unwrap()
+            else {
+                panic!("expected exit")
+            };
+            assert_eq!(status.code(), Some(7));
+            stop(&mut child.0).await.unwrap();
+        }
+    }
+
+    #[tokio::test]
+    async fn caller_disconnect_wakes_the_supervisor() {
+        let mut child = sleeper();
+        let (caller, cancel) = UnixStream::pair().unwrap();
+        drop(caller);
+        assert!(matches!(
+            observe(&mut child.0, &cancel, Duration::from_secs(2))
+                .await
+                .unwrap(),
+            Outcome::Cancelled
+        ));
+        stop(&mut child.0).await.unwrap();
+    }
+
+    #[tokio::test]
+    async fn cancellation_data_wakes_the_supervisor() {
+        let mut child = sleeper();
+        let (mut caller, cancel) = UnixStream::pair().unwrap();
+        caller.write_all(&[1]).await.unwrap();
+        assert!(matches!(
+            observe(&mut child.0, &cancel, Duration::from_secs(2))
+                .await
+                .unwrap(),
+            Outcome::Cancelled
+        ));
+        stop(&mut child.0).await.unwrap();
+    }
+
+    #[tokio::test]
+    async fn deadline_wakes_the_supervisor_without_io() {
+        for _ in 0..32 {
+            let mut child = sleeper();
+            let (_caller, cancel) = UnixStream::pair().unwrap();
+            assert!(matches!(
+                observe(&mut child.0, &cancel, Duration::ZERO)
+                    .await
+                    .unwrap(),
+                Outcome::TimedOut
+            ));
+            stop(&mut child.0).await.unwrap();
+            assert!(child.0.try_wait().unwrap().is_some());
         }
     }
 }
