@@ -10,6 +10,7 @@ mod filesystem;
 mod identity;
 mod system;
 mod workload;
+mod workspace;
 
 use std::path::PathBuf;
 

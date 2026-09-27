@@ -8,6 +8,12 @@
 #[cfg(unix)]
 pub mod archive;
 
+#[cfg(unix)]
+pub mod request;
+
+#[cfg(unix)]
+pub mod workspace;
+
 #[cfg(target_os = "macos")]
 pub mod channel;
 

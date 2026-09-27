@@ -34,6 +34,11 @@ alter that captured copy. `unpack` accepts bounded regular files, directories an
 internal links in a new private directory. It installs links last and removes
 write and privilege bits. The supervisor owns the destination and its cleanup.
 
+`Request::read` admits the existing `GuestAction` protocol only after matching the
+installed runtime identity, bounding the message and deadline, and rejecting invalid
+paths, overlapping outputs and malformed commands. Admission grants no host-file
+authority. Filesystem paths are interpreted only inside the prepared root.
+
 This crate provides process ownership and the confined launch transition. It does not yet install a
 service, construct runtime images, or enable a macOS BSMR execution backend.
 
