@@ -24,6 +24,9 @@ pub mod identity;
 pub mod job;
 
 #[cfg(target_os = "macos")]
+pub mod output;
+
+#[cfg(target_os = "macos")]
 pub mod launch;
 
 #[cfg(target_os = "macos")]
