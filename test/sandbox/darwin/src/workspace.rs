@@ -12,8 +12,8 @@ use std::path::Path;
 use anyhow::{Result, ensure};
 use bsmr_native::archive::Archive;
 use bsmr_native::request::Request;
-use bsmr_sandbox::native::protocol::Wire;
 use bsmr_native::workspace::Workspace;
+use bsmr_sandbox::native::protocol::Wire;
 use bsmr_sandbox::{GuestAction, GuestOutput, PROTOCOL_VERSION};
 use sha2::{Digest, Sha256};
 
@@ -41,7 +41,7 @@ pub(crate) fn stage(root: &Path) -> Result<()> {
         action: GuestAction {
             protocol: PROTOCOL_VERSION,
             arguments: vec!["/probe".into()],
-            environment: Default::default(),
+            environment: [("BSMR_SCRATCH_PATH".into(), "scratch".into())].into(),
             working_directory: "".into(),
             outputs: vec![GuestOutput::file("output/result")],
             timeout_ms: Some(5000),
@@ -68,5 +68,6 @@ pub(crate) fn check() -> Result<()> {
         );
     }
     fs::write("/workspace/output/result", b"produced output")?;
+    fs::write("/workspace/scratch/temporary", b"scratch")?;
     Ok(())
 }

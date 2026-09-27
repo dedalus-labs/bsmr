@@ -47,6 +47,18 @@ impl Workspace {
                 Err(error) => return Err(error.into()),
             }
         }
+        if let Some(scratch) = request.action().environment.get("BSMR_SCRATCH_PATH") {
+            let scratch = Path::new(scratch);
+            workspace.parent(scratch)?;
+            let path = workspace.0.join(scratch);
+            match fs::symlink_metadata(&path) {
+                Ok(_) => return Err(Error::Overlap(scratch.to_owned())),
+                Err(error) if error.kind() == io::ErrorKind::NotFound => {}
+                Err(error) => return Err(error.into()),
+            }
+            fs::create_dir(&path)?;
+            fs::set_permissions(path, fs::Permissions::from_mode(0o1777))?;
+        }
         Ok(workspace)
     }
 

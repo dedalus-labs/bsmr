@@ -56,6 +56,14 @@ fn invalid_commands_paths_and_overlaps_cannot_enter_the_worker() {
         ),
         ("/action/arguments", json!([])),
         ("/action/environment", json!({"INVALID=KEY":"value"})),
+        (
+            "/action/environment",
+            json!({"BSMR_SCRATCH_PATH":"../outside"}),
+        ),
+        (
+            "/action/environment",
+            json!({"BSMR_SCRATCH_PATH":"out/file/nested"}),
+        ),
         ("/action/arguments", json!(["tool\u{0}other"])),
         ("/action/timeout_ms", json!(u64::MAX)),
         ("/input", json!("not a digest")),

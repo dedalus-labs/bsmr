@@ -109,6 +109,17 @@ fn validate(action: &GuestAction) -> Result<(), Error> {
     {
         return Err(Error::Path(action.working_directory.clone()));
     }
+    if let Some(scratch) = action.environment.get("BSMR_SCRATCH_PATH") {
+        let scratch = std::path::Path::new(scratch);
+        if !archive::normal(scratch)
+            || action
+                .outputs
+                .iter()
+                .any(|output| output.path.starts_with(scratch) || scratch.starts_with(&output.path))
+        {
+            return Err(Error::Path(scratch.to_owned()));
+        }
+    }
     let mut outputs: Vec<_> = action.outputs.iter().map(|output| &output.path).collect();
     outputs.sort();
     for (index, path) in outputs.iter().enumerate() {
