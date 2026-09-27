@@ -69,7 +69,10 @@ def build(binary: Path, directory: Path, phase: str, value: str) -> None:
         ],
         directory=directory,
     )
-    executors = [json.loads(line)['executor'] for line in actions.stdout.splitlines()]
+    executors = [
+        json.loads(line)['reproducer']['executor']
+        for line in actions.stdout.splitlines()
+    ]
     expected = {'cold': ['Local'], 'warm': [], 'edit': ['Local'], 'clone': ['Cache']}
     assert executors == expected[phase], (phase, executors)
     print(
