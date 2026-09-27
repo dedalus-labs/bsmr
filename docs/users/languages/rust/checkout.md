@@ -60,6 +60,10 @@ Every declared file remains part of the action's cache key. Rustc's dependency
 report omits arbitrary filesystem reads made by procedural macros. Using only
 that report could reuse old macro output after its grammar file changes.
 
+Tests retain the same complete source view, including declared files outside
+their package. Dependency fixtures are added at their original workspace paths.
+The selected build script's source output remains authoritative for the primary package.
+
 Keep build caches outside the source tree or list their directories in
 `project.ignore`. An unignored cache inside the workspace becomes an input.
 

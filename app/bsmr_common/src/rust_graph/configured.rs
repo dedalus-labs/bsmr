@@ -111,10 +111,8 @@ struct Dependencies<'a> {
 struct TestSources {
     /// Native rule which assembles the selected workspace package inputs.
     rule: String,
-    /// Complete view retained as a test resource.
-    root: String,
-    /// Package directory used for compilation and test execution.
-    package: String,
+    /// Complete view and selected package used for compilation and execution.
+    source: Source,
 }
 
 impl Renderer<'_> {
@@ -129,15 +127,12 @@ impl Renderer<'_> {
         let mut source_flags = vec![layout.remap];
         let dependencies = self.dependencies(unit)?;
         let mut artifact_env = dependencies.binaries;
-        let (mut root, mut sources) = match dependencies.script {
-            Some(script) => (
-                format!(":unit_{script}[workspace]"),
-                format!(":unit_{script}[cwd]"),
-            ),
-            None => {
-                let source = &self.sources[unit.package_id.as_str()];
-                (source.root.clone(), source.package.clone())
-            }
+        let mut source = match dependencies.script {
+            Some(script) => Source {
+                root: format!(":unit_{script}[workspace]"),
+                package: format!(":unit_{script}[cwd]"),
+            },
+            None => self.sources[unit.package_id.as_str()].clone(),
         };
         let mut inputs = BTreeMap::new();
         if let Some(script) = dependencies.script {
@@ -150,24 +145,23 @@ impl Renderer<'_> {
         }
         let mut declarations = String::new();
         if rule == "rust_test" {
-            let view = self.test_sources(unit, index, &sources)?;
+            let view = self.test_sources(unit, index, &source)?;
             declarations = view.rule;
-            sources = view.package;
+            source = view.source;
             output.push_str(&format!(
                 ", resources = [{}], framework = {}, run_cwd = {}",
-                json(&view.root)?,
+                json(&source.root)?,
                 if unit.harness { "True" } else { "False" },
-                json(&sources)?,
+                json(&source.package)?,
             ));
-            root = view.root;
         }
-        inputs.insert(root, "workspace");
+        inputs.insert(source.root, "workspace");
         declarations.push_str(&format!(
             "load(\"@prelude//rust:sources.bzl\", \"rust_filegroup\")\n\
              rust_filegroup(name = \"sources_{index}\", mapped_srcs = {})\n",
             json(&inputs)?,
         ));
-        let manifest_dir = format!("$(location {sources})");
+        let manifest_dir = format!("$(location {})", source.package);
         let manifest_path = format!("{manifest_dir}/Cargo.toml");
         artifact_env.insert("CARGO_MANIFEST_DIR".into(), manifest_dir);
         artifact_env.insert("CARGO_MANIFEST_PATH".into(), manifest_path);
@@ -259,7 +253,7 @@ impl Renderer<'_> {
         &self,
         unit: &Unit,
         index: usize,
-        primary: &str,
+        primary: &Source,
     ) -> Result<TestSources, RustGraphError> {
         let mut packages = BTreeMap::new();
         for dependency in &self.graph.units {
@@ -283,18 +277,21 @@ impl Renderer<'_> {
             .strip_prefix(&self.graph.workspace_root)
             .map_err(|_| RustGraphError::Outside(unit.source.root.clone()))?;
         let path = path.to_string_lossy().replace('\\', "/");
-        packages.insert(path.clone(), primary);
+        packages.insert(path.clone(), primary.package.as_str());
         let name = format!("test_sources_{index}");
         Ok(TestSources {
             rule: format!(
                 "load(\"@prelude//rust:cargo_test_sources.bzl\", \"cargo_test_sources\")\n\
-                 cargo_test_sources(name = {}, packages = {}, package = {})\n",
+                 cargo_test_sources(name = {}, workspace = {}, packages = {}, package = {})\n",
                 json(&name)?,
+                json(&primary.root)?,
                 json(&packages)?,
                 json(&path)?,
             ),
-            root: format!(":{name}"),
-            package: format!(":{name}[package]"),
+            source: Source {
+                root: format!(":{name}"),
+                package: format!(":{name}[package]"),
+            },
         })
     }
 }

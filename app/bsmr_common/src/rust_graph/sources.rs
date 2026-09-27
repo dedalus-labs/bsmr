@@ -26,6 +26,7 @@ pub(super) struct Sources<'a> {
 }
 
 /// A package projection retains the source tree that owns its relative links.
+#[derive(Clone)]
 pub(super) struct Source {
     /// Complete source-tree artifact, retained by each consuming action.
     pub root: String,
