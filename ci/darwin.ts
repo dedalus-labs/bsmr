@@ -27,6 +27,7 @@ export const darwin = workflow({
 			"runs-on": expr<string>("github.event_name == 'workflow_dispatch' && inputs.runner || 'macos-15'"),
 			"timeout-minutes": 30,
 			steps: [
+				{ name: "Report system protection", run: command({ file: "/usr/bin/csrutil", args: ["status"] }) },
 				{ name: "Checkout", uses: "actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1", with: { "persist-credentials": false } },
 				{ name: "Install Rust", run: command({ file: "rustup", args: ["toolchain", "install", "1.98.0", "--profile", "minimal"] }) },
 				{ name: "Restore engine build cache", if: expr<boolean>("github.event_name == 'workflow_dispatch' && inputs.engine"), uses: "Swatinem/rust-cache@e18b497796c12c097a38f9edb9d0641fb99eee32", env: { CARGO_PROFILE_DEV_DEBUG: "0" }, with: { "prefix-key": "bsmr-native-v1", "shared-key": "engine", "cache-bin": false, "cache-on-failure": true, "cache-workspace-crates": true } },
