@@ -21,6 +21,13 @@ Action requests cannot choose either. `Identity::drain` stops detached children
 and checks kernel membership. Callers must check its result before publishing.
 Acquisition refuses a crashed worker's occupied UID until an administrator recovers it.
 
+`channel::Files` passes three open files over a Unix socket: the action description,
+input archive and result archive. The receiver checks the kernel's peer UID against
+administrator configuration before reading the packet. It rejects devices and
+incorrect access modes. Reception runs before the service starts threads or children,
+so received descriptors become close-on-exec before any child can inherit them.
+The worker must still bound, snapshot and validate file contents before execution.
+
 This crate provides process ownership and the confined launch transition. It does not yet install a
 service, construct runtime images, or enable a macOS BSMR execution backend.
 
