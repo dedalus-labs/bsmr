@@ -26,21 +26,7 @@ use nix::sys::stat::mknod;
 pub(crate) fn check(parent: &Path, compiler: &Path) -> Result<()> {
     let root = parent.join("root");
     fs::create_dir(&root)?;
-    fs::create_dir(root.join("dev"))?;
-    mknod(
-        &root.join("dev/null"),
-        SFlag::S_IFCHR,
-        Mode::from_bits_truncate(0o666),
-        fs::metadata("/dev/null")?.rdev().try_into()?,
-    )?;
-    fs::create_dir_all(root.join("usr/lib"))?;
-    for directory in [&root, &root.join("usr"), &root.join("usr/lib")] {
-        fs::set_permissions(directory, fs::Permissions::from_mode(0o755))?;
-    }
-    fs::copy("/usr/lib/dyld", root.join("usr/lib/dyld"))?;
-    shared_cache(&root)?;
-    crate::compiler::stage(&root, compiler)?;
-    fs::copy(std::env::current_exe()?, root.join("probe"))?;
+    runtime(&root, compiler)?;
     crate::workspace::stage(&root)?;
     fs::create_dir(root.join("output"))?;
     fs::set_permissions(root.join("output"), fs::Permissions::from_mode(0o1777))?;
@@ -70,6 +56,28 @@ pub(crate) fn check(parent: &Path, compiler: &Path) -> Result<()> {
     println!(
         "{{\"case\":\"filesystem\",\"host_read_denied\":true,\"network_denied\":true,\"inputs_readonly\":true}}"
     );
+    Ok(())
+}
+
+/// Prepare only the trusted runtime bytes in an already-created private root.
+pub(crate) fn runtime(root: &Path, compiler: &Path) -> Result<()> {
+    fs::create_dir(root.join("dev"))?;
+    mknod(
+        &root.join("dev/null"),
+        SFlag::S_IFCHR,
+        Mode::from_bits_truncate(0o666),
+        fs::metadata("/dev/null")?.rdev().try_into()?,
+    )?;
+    fs::create_dir_all(root.join("usr/lib"))?;
+    for directory in [root.to_path_buf(), root.join("usr"), root.join("usr/lib")] {
+        fs::set_permissions(directory, fs::Permissions::from_mode(0o755))?;
+    }
+    fs::copy("/usr/lib/dyld", root.join("usr/lib/dyld"))?;
+    shared_cache(root)?;
+    crate::compiler::stage(root, compiler)?;
+    fs::copy(std::env::current_exe()?, root.join("probe"))?;
+    fs::create_dir(root.join("tmp"))?;
+    fs::set_permissions(root.join("tmp"), fs::Permissions::from_mode(0o1777))?;
     Ok(())
 }
 

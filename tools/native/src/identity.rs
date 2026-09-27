@@ -8,6 +8,7 @@
 use std::fs::File;
 use std::fs::OpenOptions;
 use std::io;
+use std::os::fd::{AsFd, BorrowedFd};
 use std::os::unix::fs::MetadataExt;
 use std::os::unix::fs::OpenOptionsExt;
 use std::path::Path;
@@ -108,6 +109,11 @@ impl Identity {
     #[must_use]
     pub fn id(&self) -> u32 {
         self.id
+    }
+
+    /// Keep the same kernel lease alive across the trusted launcher's privilege transition.
+    pub(crate) fn descriptor(&self) -> BorrowedFd<'_> {
+        self._lease.as_fd()
     }
 
     /// Stop all detached descendants and require an empty kernel process set.

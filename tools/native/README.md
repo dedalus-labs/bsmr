@@ -48,6 +48,13 @@ then denies network and host-service access through Seatbelt. The supervisor
 owns the prepared root and UID lease. No action code runs until every step succeeds.
 Any error terminates that child. This function must not run in a `pre_exec` hook.
 
+`Job` binds the checked request, captured inputs, private root and identity lease.
+Its owned execution task retains those resources if its waiter disappears. Only
+`Completed` exposes output paths and streams, after the child and every process
+with the reserved UID have stopped. The trusted launcher inherits the same lease
+until credential drop, then closes it at payload exec. This prevents a surviving
+root launcher from entering an identity that has already been reassigned.
+
 `run` owns the direct child until exit, cancellation, or timeout and checks
 descendant cleanup before returning. It uses Tokio's process and socket notifications, including when
 the caller disconnects. The caller keeps its identity lease through output
