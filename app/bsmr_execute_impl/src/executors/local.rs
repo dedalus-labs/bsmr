@@ -78,6 +78,7 @@ use bsmr_execute::materialize::materializer::CopiedArtifact;
 use bsmr_execute::materialize::materializer::DeclareArtifactPayload;
 use bsmr_execute::materialize::materializer::MaterializationError;
 use bsmr_execute::materialize::materializer::Materializer;
+use bsmr_execute_local::CommandIo;
 use bsmr_execute_local::CommandResult;
 use bsmr_execute_local::DefaultKillProcess;
 use bsmr_execute_local::GatherOutputStatus;
@@ -285,7 +286,7 @@ impl LocalExecutor {
                         alive,
                         DefaultStatusDecoder,
                         DefaultKillProcess::default(),
-                        None,
+                        CommandIo::default(),
                         true,
                         cgroup,
                         freeze_rx,
