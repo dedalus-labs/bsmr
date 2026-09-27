@@ -9,7 +9,6 @@ use std::fs;
 use std::net::SocketAddr;
 use std::net::TcpListener;
 use std::net::TcpStream;
-use std::os::unix::fs::MetadataExt;
 use std::os::unix::fs::PermissionsExt;
 use std::path::Path;
 use std::process::Command;
@@ -18,16 +17,12 @@ use std::time::Duration;
 use anyhow::Context;
 use anyhow::Result;
 use anyhow::ensure;
-use nix::sys::stat::Mode;
-use nix::sys::stat::SFlag;
-use nix::sys::stat::mknod;
 
 /// Execute the same binary below a new root with only its loader and one input.
-pub(crate) fn check(parent: &Path, compiler: &Path) -> Result<()> {
-    let root = parent.join("root");
-    fs::create_dir(&root)?;
-    runtime(&root, compiler)?;
-    crate::workspace::stage(&root)?;
+pub(crate) fn check(parent: &Path, image: &crate::image::Image) -> Result<()> {
+    let owned = image.root()?;
+    let root = owned.path();
+    crate::workspace::stage(root)?;
     fs::create_dir(root.join("output"))?;
     fs::set_permissions(root.join("output"), fs::Permissions::from_mode(0o1777))?;
     let outside = parent.join("outside");
@@ -38,7 +33,7 @@ pub(crate) fn check(parent: &Path, compiler: &Path) -> Result<()> {
     drop(connection);
     let output = Command::new(std::env::current_exe()?)
         .arg("view")
-        .arg(&root)
+        .arg(root)
         .arg(&outside)
         .arg(address.to_string())
         .env_clear()
@@ -60,14 +55,7 @@ pub(crate) fn check(parent: &Path, compiler: &Path) -> Result<()> {
 }
 
 /// Prepare only the trusted runtime bytes in an already-created private root.
-pub(crate) fn runtime(root: &Path, compiler: &Path) -> Result<()> {
-    fs::create_dir(root.join("dev"))?;
-    mknod(
-        &root.join("dev/null"),
-        SFlag::S_IFCHR,
-        Mode::from_bits_truncate(0o666),
-        fs::metadata("/dev/null")?.rdev().try_into()?,
-    )?;
+pub(crate) fn seed(root: &Path, compiler: &Path) -> Result<()> {
     fs::create_dir_all(root.join("usr/lib"))?;
     for directory in [root.to_path_buf(), root.join("usr"), root.join("usr/lib")] {
         fs::set_permissions(directory, fs::Permissions::from_mode(0o755))?;
@@ -75,9 +63,7 @@ pub(crate) fn runtime(root: &Path, compiler: &Path) -> Result<()> {
     fs::copy("/usr/lib/dyld", root.join("usr/lib/dyld"))?;
     shared_cache(root)?;
     crate::compiler::stage(root, compiler)?;
-    fs::copy(std::env::current_exe()?, root.join("probe"))?;
-    fs::create_dir(root.join("tmp"))?;
-    fs::set_permissions(root.join("tmp"), fs::Permissions::from_mode(0o1777))?;
+    crate::compiler::copy(&std::env::current_exe()?, &root.join("probe"))?;
     Ok(())
 }
 
@@ -135,6 +121,12 @@ pub(crate) fn view(root: &Path, outside: &Path, address: SocketAddr) -> Result<(
     ensure!(nix::unistd::setuid(nix::unistd::Uid::from_raw(0)).is_err());
     crate::compiler::run()?;
     crate::workspace::check()?;
+    fs::OpenOptions::new()
+        .read(true)
+        .write(true)
+        .open("/dev/null")?;
+    ensure!(fs::write("/source.rs", b"changed").is_err());
+    ensure!(fs::set_permissions("/source.rs", fs::Permissions::from_mode(0o666)).is_err());
     let result = fs::read(outside);
     ensure!(
         matches!(result, Err(error) if error.kind() == std::io::ErrorKind::NotFound),

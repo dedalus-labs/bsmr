@@ -245,9 +245,11 @@ pub(crate) fn run(root: &Path, compiler: &Path) -> Result<()> {
         }
     }
     lease.drain()?;
-    crate::filesystem::check(root, compiler)?;
+    let image = crate::image::Image::new(compiler)?;
+    crate::filesystem::check(root, &image)?;
     lease.drain()?;
     drop(lease);
-    crate::job::check(root, compiler)?;
+    crate::job::check(&image)?;
+    crate::job::check(&image)?;
     Ok(())
 }

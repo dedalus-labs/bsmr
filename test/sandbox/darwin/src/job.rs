@@ -19,10 +19,9 @@ use bsmr_sandbox::{GuestAction, GuestOutput, PROTOCOL_VERSION};
 use sha2::{Digest, Sha256};
 
 /// Compile an archived source, then inspect outputs only through completed ownership.
-pub(crate) fn check(parent: &Path, compiler: &Path) -> Result<()> {
-    let root = tempfile::tempdir_in(parent)?;
+pub(crate) fn check(image: &crate::image::Image) -> Result<()> {
     let started = Instant::now();
-    crate::filesystem::runtime(root.path(), compiler)?;
+    let root = image.root()?;
     let runtime_ms = started.elapsed().as_secs_f64() * 1000.0;
     let source = b"pub fn answer() -> u64 { 42 }\n";
     let mut archive = tar::Builder::new(Vec::new());
@@ -35,7 +34,7 @@ pub(crate) fn check(parent: &Path, compiler: &Path) -> Result<()> {
     let mut input = tempfile::NamedTempFile::new()?;
     input.write_all(&bytes)?;
     let wire = Wire {
-        environment: "qualification".into(),
+        environment: image.digest().to_owned(),
         input: format!("{:x}", Sha256::digest(&bytes)),
         action: GuestAction {
             protocol: PROTOCOL_VERSION,
@@ -63,7 +62,7 @@ pub(crate) fn check(parent: &Path, compiler: &Path) -> Result<()> {
         output: tempfile::tempfile()?,
     };
     let started = Instant::now();
-    let job = Job::prepare(crate::identity::acquire()?, root, files, "qualification")?;
+    let job = Job::prepare(crate::identity::acquire()?, root, files, image.digest())?;
     let prepare_ms = started.elapsed().as_secs_f64() * 1000.0;
     let runtime = tokio::runtime::Builder::new_current_thread()
         .enable_all()
@@ -71,7 +70,7 @@ pub(crate) fn check(parent: &Path, compiler: &Path) -> Result<()> {
     let started = Instant::now();
     let mut completed = runtime.block_on(async {
         let (_client, control) = tokio::net::UnixStream::pair()?;
-        job.run(std::env::current_exe()?, control).await
+        job.run(image.launcher().to_owned(), control).await
     })?;
     let execute_ms = started.elapsed().as_secs_f64() * 1000.0;
     let (_, mut stderr) = completed.streams()?;

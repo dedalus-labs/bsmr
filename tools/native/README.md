@@ -12,6 +12,12 @@ macOS action therefore needs an unused UID/GID and an exclusive kernel lock.
 The supervisor stops every process with that identity before accepting outputs.
 Compilation runs without root privileges.
 
+`Runtime` captures administrator-owned runtime files once and fingerprints the
+retained bytes with the trusted launcher. Each job gets private directories and
+scratch space, while immutable runtime files share hard links. The action UID
+cannot write those files or change their permissions. Replacing the source seed
+does not alter a captured runtime or a running job's files.
+
 ```text
 lease -> unprivileged action -> empty UID -> validate outputs -> release
 ```
