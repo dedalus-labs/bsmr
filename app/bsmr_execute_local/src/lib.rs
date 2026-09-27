@@ -59,6 +59,9 @@ use crate::status_decoder::StatusDecoder;
 mod interruptible_async_read;
 pub mod process_group;
 pub mod status_decoder;
+mod stdio;
+
+pub use stdio::CommandIo;
 
 #[cfg(unix)]
 mod unix;
@@ -219,7 +222,7 @@ pub async fn spawn_command_and_stream_events<T>(
     cancellation: T,
     decoder: impl StatusDecoder,
     kill_process: impl KillProcess,
-    std_redirects: Option<StdRedirectPaths>,
+    io: CommandIo,
     retry_on_txt_busy: bool,
     cgroup_path: Option<CgroupPathBuf>,
     freeze_rx: impl ActionFreezeEventReceiver,
@@ -227,7 +230,8 @@ pub async fn spawn_command_and_stream_events<T>(
 where
     T: Future<Output = bsmr_error::Result<GatherOutputStatus>> + Send + Unpin,
 {
-    cmd.stdin(Stdio::null());
+    cmd.stdin(io.stdin);
+    let std_redirects = io.redirects;
     if let Some(std_redirects) = &std_redirects {
         cmd.stdout(File::create(std_redirects.stdout.as_path())?);
         cmd.stderr(File::create(std_redirects.stderr.as_path())?);
@@ -511,7 +515,7 @@ mod tests {
             futures::future::pending(),
             DefaultStatusDecoder,
             DefaultKillProcess::default(),
-            None,
+            CommandIo::default(),
             true,
             None,
             futures::stream::pending(),
@@ -539,6 +543,42 @@ mod tests {
         assert_eq!(str::from_utf8(&stdout)?.trim(), "hello");
         assert_eq!(stderr, b"");
 
+        Ok(())
+    }
+
+    /// The child must receive its caller-owned request descriptor, not an empty input.
+    #[cfg(unix)]
+    #[tokio::test]
+    async fn invariant_command_receives_owned_input() -> bsmr_error::Result<()> {
+        use std::io::Write;
+        use std::os::fd::OwnedFd;
+        use std::os::unix::net::UnixStream;
+
+        let (input, mut writer) = UnixStream::pair()?;
+        writer.write_all(b"declared request\n")?;
+        writer.shutdown(std::net::Shutdown::Write)?;
+        let command = background_command("cat");
+        let stream = spawn_command_and_stream_events(
+            command,
+            Some(Duration::from_secs(5)),
+            futures::future::pending(),
+            DefaultStatusDecoder,
+            DefaultKillProcess::default(),
+            CommandIo {
+                stdin: Stdio::from(OwnedFd::from(input)),
+                redirects: None,
+            },
+            false,
+            None,
+            futures::stream::pending(),
+        )
+        .await?;
+        let result = decode_command_event_stream(stream).await?;
+        assert_eq!(result.stdout, b"declared request\n");
+        assert!(matches!(
+            result.status,
+            GatherOutputStatus::Finished { exit_code: 0, .. }
+        ));
         Ok(())
     }
 
@@ -722,7 +762,7 @@ mod tests {
             futures::future::pending(),
             DefaultStatusDecoder,
             DefaultKillProcess::default(),
-            None,
+            CommandIo::default(),
             true,
             None,
             futures::stream::pending(),
@@ -807,7 +847,7 @@ mod tests {
             Kill {
                 killed: killed.dupe(),
             },
-            None,
+            CommandIo::default(),
             true,
             None,
             futures::stream::pending(),
@@ -839,10 +879,13 @@ mod tests {
             futures::future::pending(),
             DefaultStatusDecoder,
             DefaultKillProcess::default(),
-            Some(StdRedirectPaths {
-                stdout: stdout.clone(),
-                stderr: stderr.clone(),
-            }),
+            CommandIo {
+                stdin: Stdio::null(),
+                redirects: Some(StdRedirectPaths {
+                    stdout: stdout.clone(),
+                    stderr: stderr.clone(),
+                }),
+            },
             false,
             None,
             futures::stream::pending(),

@@ -29,6 +29,7 @@ use bsmr_common::convert::ProstDurationExt;
 use bsmr_core::logging::LogConfigurationReloadHandle;
 use bsmr_error::BsmrErrorContext;
 use bsmr_error::internal_error;
+use bsmr_execute_local::CommandIo;
 use bsmr_execute_local::DefaultKillProcess;
 use bsmr_execute_local::GatherOutputStatus;
 use bsmr_execute_local::StdRedirectPaths;
@@ -277,7 +278,10 @@ impl UnixForkserverService {
                 DefaultKillProcess {
                     graceful_shutdown_timeout_s,
                 },
-                std_redirects,
+                CommandIo {
+                    stdin: std::process::Stdio::null(),
+                    redirects: std_redirects,
+                },
                 false,
                 cgroup,
                 freeze_rx,
@@ -292,7 +296,10 @@ impl UnixForkserverService {
                 DefaultKillProcess {
                     graceful_shutdown_timeout_s,
                 },
-                std_redirects,
+                CommandIo {
+                    stdin: std::process::Stdio::null(),
+                    redirects: std_redirects,
+                },
                 false,
                 cgroup,
                 freeze_rx,
