@@ -24,7 +24,8 @@ exclusive identity -> detached writer -> launcher exits or is cancelled
                                                        -> stable output
 ```
 
-`identity.rs` owns the lock, credential change and kernel membership check.
+`tools/native` owns the lock and kernel membership check. `identity.rs` drops
+the qualification workload's credentials.
 `workload.rs` supplies a writer that starts a new session and ignores SIGTERM.
 The control must observe continued writes after the launcher exits. The final
 check must observe no processes and no further writes after cleanup.
@@ -32,18 +33,20 @@ check must observe no processes and no further writes after cleanup.
 ```sh
 cargo +1.98.0 test --locked --manifest-path test/sandbox/darwin/Cargo.toml
 cargo +1.98.0 build --locked --manifest-path test/sandbox/darwin/Cargo.toml
-sudo test/sandbox/darwin/target/debug/bsmr-darwin-check run /private/var/tmp/bsmr-darwin-check
+test/sandbox/darwin/target/debug/bsmr-darwin-check prepare test/sandbox/darwin/target/runtime.txt
+sudo test/sandbox/darwin/target/debug/bsmr-darwin-check run /private/var/tmp/bsmr-darwin-check test/sandbox/darwin/target/runtime.txt
 ```
 
 Use a disposable macOS host. The GitHub-hosted job runs this exact path.
-It leaves its inert lock and small evidence directory for inspection. A reused
+It leaves its inert lock and runtime evidence directory for inspection. A reused
 evidence path is rejected. `normal` and `cancel` must both report `empty: true`
 and `stable_output: true`.
 
 The filesystem check executes the native binary in a new root with its dynamic
 loader, the host OS shared-library cache, and one declared input. After dropping privileges, it must read that input
-and fail to read a known host file. This tests the native loader boundary before
-constructing a compiler runtime. It does not enable a compiler executor.
+and fail to read a known host file. It also compiles real Rust metadata with the
+pinned toolchain inside this root. This checks compiler loading and source/output
+access. It does not qualify linking, procedural macros, or complete consumers.
 The cache is copied from the host's OS image into dyld's documented system-cache
 directory inside the root. Copying the loader alone fails on modern macOS because
 libraries such as `libiconv` no longer exist as separate files.

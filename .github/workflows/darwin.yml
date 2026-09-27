@@ -40,6 +40,9 @@ jobs:
       - name: Build process check
         run: cargo +1.98.0 build --locked --manifest-path test/sandbox/darwin/Cargo.toml
         shell: bash
+      - name: Record compiler runtime
+        run: test/sandbox/darwin/target/debug/bsmr-darwin-check prepare test/sandbox/darwin/target/runtime.txt
+        shell: bash
       - name: Check detached process cleanup
-        run: sudo -n test/sandbox/darwin/target/debug/bsmr-darwin-check run /private/var/tmp/bsmr-darwin-check
+        run: sudo -n test/sandbox/darwin/target/debug/bsmr-darwin-check run /private/var/tmp/bsmr-darwin-check test/sandbox/darwin/target/runtime.txt
         shell: bash

@@ -21,7 +21,7 @@ use anyhow::ensure;
 use crate::identity;
 
 /// Execute the same binary below a new root with only its loader and one input.
-pub(crate) fn check(parent: &Path) -> Result<()> {
+pub(crate) fn check(parent: &Path, compiler: &Path) -> Result<()> {
     let root = parent.join("root");
     fs::create_dir(&root)?;
     fs::create_dir_all(root.join("usr/lib"))?;
@@ -32,6 +32,7 @@ pub(crate) fn check(parent: &Path) -> Result<()> {
     fs::create_dir(root.join("bin"))?;
     fs::copy("/usr/bin/sandbox-exec", root.join("bin/sandbox-exec"))?;
     shared_cache(&root)?;
+    crate::compiler::stage(&root, compiler)?;
     fs::copy(std::env::current_exe()?, root.join("probe"))?;
     fs::write(root.join("input"), b"declared input")?;
     fs::set_permissions(root.join("input"), fs::Permissions::from_mode(0o644))?;
@@ -64,6 +65,10 @@ pub(crate) fn check(parent: &Path) -> Result<()> {
         String::from_utf8_lossy(&output.stderr)
     );
     ensure!(output.stdout == b"private root passed\n");
+    println!(
+        "{{\"case\":\"compiler\",\"metadata_bytes\":{}}}",
+        fs::metadata(root.join("output/libsource.rmeta"))?.len()
+    );
     println!(
         "{{\"case\":\"filesystem\",\"host_read_denied\":true,\"network_denied\":true,\"inputs_readonly\":true}}"
     );
@@ -119,6 +124,7 @@ fn shared_cache(root: &Path) -> Result<()> {
 /// Require both the declared input and denial of a known host file after credential drop.
 pub(crate) fn view(outside: &Path, address: SocketAddr) -> Result<()> {
     identity::enter()?;
+    crate::compiler::run()?;
     ensure!(fs::read("/input")? == b"declared input");
     ensure!(fs::read("/output/input")? == b"nested input");
     let result = fs::read(outside);
