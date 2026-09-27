@@ -99,8 +99,20 @@ pub async fn run(
 async fn observe(child: &mut Child, cancel: &UnixStream, timeout: Duration) -> io::Result<Outcome> {
     tokio::select! {
         result = child.wait() => result.map(Outcome::Exited),
-        result = cancel.readable() => result.map(|()| Outcome::Cancelled),
+        result = cancellation(cancel) => result.map(|()| Outcome::Cancelled),
         () = tokio::time::sleep(timeout) => Ok(Outcome::TimedOut),
+    }
+}
+
+/// Read cancellation data or EOF. A cached readiness hint alone is not cancellation.
+async fn cancellation(stream: &UnixStream) -> io::Result<()> {
+    loop {
+        stream.readable().await?;
+        match stream.try_read(&mut [0]) {
+            Ok(_) => return Ok(()),
+            Err(error) if error.kind() == io::ErrorKind::WouldBlock => continue,
+            Err(error) => return Err(error),
+        }
     }
 }
 
@@ -180,6 +192,20 @@ mod tests {
             Outcome::Cancelled
         ));
         stop(&mut child.0).await.unwrap();
+    }
+
+    #[tokio::test]
+    async fn drained_readiness_is_not_a_cancellation_request() {
+        let mut child = sleeper();
+        let (mut caller, cancel) = UnixStream::pair().unwrap();
+        caller.write_all(&[1]).await.unwrap();
+        cancel.readable().await.unwrap();
+        assert_eq!(cancel.try_read(&mut [0]).unwrap(), 1);
+        let outcome = observe(&mut child.0, &cancel, Duration::from_millis(10))
+            .await
+            .unwrap();
+        stop(&mut child.0).await.unwrap();
+        assert!(matches!(outcome, Outcome::TimedOut), "{outcome:?}");
     }
 
     #[tokio::test]
