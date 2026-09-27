@@ -83,6 +83,9 @@ pub fn wait(
             return Ok(Outcome::Exited(status));
         }
         let remaining = deadline.saturating_duration_since(Instant::now());
+        if remaining.is_zero() {
+            return Ok(Outcome::TimedOut);
+        }
         let seconds = remaining
             .as_secs()
             .try_into()
@@ -98,9 +101,6 @@ pub fn wait(
         pending = &[];
         if let Some(event) = events[..count].first() {
             return decode(event, child);
-        }
-        if Instant::now() >= deadline {
-            return Ok(Outcome::TimedOut);
         }
     }
 }
