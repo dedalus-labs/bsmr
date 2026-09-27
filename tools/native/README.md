@@ -24,6 +24,11 @@ Acquisition refuses a crashed worker's occupied UID until an administrator recov
 This crate currently provides process ownership. It does not yet install a
 service, construct runtime images, or enable a macOS BSMR execution backend.
 
+`run` owns the direct child until exit, cancellation, or timeout and checks
+descendant cleanup before returning. It waits through `kqueue`, including when
+the caller disconnects. The caller keeps its identity lease through output
+validation. Kernel failures and cleanup failures never authorize publication.
+
 ```console
 cargo +1.98.0 test --locked --manifest-path tools/native/Cargo.toml
 cargo +1.98.0 clippy --locked --manifest-path tools/native/Cargo.toml -- -D warnings

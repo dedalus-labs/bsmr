@@ -9,6 +9,7 @@ use std::fs::File;
 use std::fs::{self};
 use std::io::Write;
 use std::os::unix::fs::PermissionsExt;
+use std::os::unix::net::UnixStream;
 use std::os::unix::process::CommandExt;
 use std::path::Path;
 use std::process::Child;
@@ -122,6 +123,38 @@ fn case(lease: &Identity, root: &Path, name: &str) -> Result<()> {
     Ok(())
 }
 
+/// Exercise the production supervisor while a detached writer is still running.
+fn supervised(lease: &Identity, root: &Path, disconnect: bool) -> Result<()> {
+    let name = if disconnect { "disconnect" } else { "timeout" };
+    let path = root.join(name);
+    fs::create_dir(&path)?;
+    fs::set_permissions(&path, fs::Permissions::from_mode(0o700))?;
+    chown(&path, Some(Uid::from_raw(ID)), Some(Gid::from_raw(ID)))?;
+    let child = Command::new(root.join("probe"))
+        .arg("cancel")
+        .arg(&path)
+        .env_clear()
+        .stdin(Stdio::null())
+        .spawn()?;
+    ready(&path)?;
+    let (caller, control) = UnixStream::pair()?;
+    if disconnect {
+        caller.shutdown(std::net::Shutdown::Both)?;
+    }
+    let outcome = bsmr_native::run::run(child, lease, &control, Duration::from_millis(20))?;
+    ensure!(matches!(
+        (outcome, disconnect),
+        (bsmr_native::wait::Outcome::Cancelled, true)
+            | (bsmr_native::wait::Outcome::TimedOut, false)
+    ));
+    ensure!(!occupied(ID)?, "supervisor returned with live descendants");
+    let size = fs::metadata(path.join("heartbeat"))?.len();
+    thread::sleep(Duration::from_millis(100));
+    ensure!(fs::metadata(path.join("heartbeat"))?.len() == size);
+    println!("{{\"case\":\"{name}\",\"empty\":true,\"stable_output\":true}}");
+    Ok(())
+}
+
 /// Keep the root operation bounded to an unused UID and a newly created evidence directory.
 pub(crate) fn run(root: &Path) -> Result<()> {
     ensure!(
@@ -135,6 +168,9 @@ pub(crate) fn run(root: &Path) -> Result<()> {
     fs::set_permissions(root.join("probe"), fs::Permissions::from_mode(0o555))?;
     for name in ["normal", "cancel"] {
         case(&lease, root, name)?;
+    }
+    for disconnect in [false, true] {
+        supervised(&lease, root, disconnect)?;
     }
     lease.drain()?;
     crate::filesystem::check(root)?;

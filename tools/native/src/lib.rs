@@ -7,3 +7,9 @@
 
 #[cfg(target_os = "macos")]
 pub mod identity;
+
+#[cfg(target_os = "macos")]
+pub mod run;
+
+#[cfg(target_os = "macos")]
+pub mod wait;
