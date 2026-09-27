@@ -5,6 +5,9 @@
 
 //! Native macOS process ownership for the privileged build supervisor.
 
+#[cfg(unix)]
+pub mod archive;
+
 #[cfg(target_os = "macos")]
 pub mod channel;
 

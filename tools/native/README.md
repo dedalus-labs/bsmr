@@ -26,7 +26,13 @@ input archive and result archive. The receiver checks the kernel's peer UID agai
 administrator configuration before reading the packet. It rejects devices and
 incorrect access modes. Reception runs before the service starts threads or children,
 so received descriptors become close-on-exec before any child can inherit them.
-The worker must still bound, snapshot and validate file contents before execution.
+The worker must still validate file contents before execution.
+
+`Archive::capture` copies input bytes into a private file with a 64 KiB buffer and
+checks their SHA-256 identity. Sender writes and descriptor-offset changes cannot
+alter that captured copy. `unpack` accepts bounded regular files, directories and
+internal links in a new private directory. It installs links last and removes
+write and privilege bits. The supervisor owns the destination and its cleanup.
 
 This crate provides process ownership and the confined launch transition. It does not yet install a
 service, construct runtime images, or enable a macOS BSMR execution backend.
