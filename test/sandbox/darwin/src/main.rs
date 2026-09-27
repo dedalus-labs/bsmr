@@ -35,9 +35,10 @@ fn main() -> Result<()> {
             Ok(())
         }
         Some("writer") if args.len() == 2 => writer(&PathBuf::from(&args[1])),
-        Some("view") if args.len() == 3 => filesystem::view(
+        Some("view") if args.len() == 4 => filesystem::view(
             &PathBuf::from(&args[1]),
-            args[2].to_str().context("address must be UTF-8")?.parse()?,
+            &PathBuf::from(&args[2]),
+            args[3].to_str().context("address must be UTF-8")?.parse()?,
         ),
         Some("normal" | "cancel") if args.len() == 2 => {
             workload(&PathBuf::from(&args[1]), args[0] == "cancel")
