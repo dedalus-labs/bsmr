@@ -19,7 +19,7 @@ use nix::unistd::setgid;
 use nix::unistd::setuid;
 
 pub(crate) const ID: u32 = 60_000;
-const LOCK: &str = "/private/var/run/bsmr-darwin-60000.lock";
+const LOCK: &str = "/private/var/root/bsmr-darwin-60000.lock";
 
 /// Create the disposable runner's administrator-owned lease, then use the real owner.
 pub(crate) fn acquire() -> Result<Identity> {
