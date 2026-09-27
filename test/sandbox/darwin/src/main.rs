@@ -8,6 +8,7 @@
 mod compiler;
 mod filesystem;
 mod identity;
+mod image;
 mod job;
 mod system;
 mod workload;
