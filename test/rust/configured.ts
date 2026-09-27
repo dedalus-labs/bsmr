@@ -76,9 +76,11 @@ try {
 	await build("shared", "-c", 'rust.sources={"app":["unrelated/shared.txt"]}');
 	writeFileSync(join(root, ".bsmr.local"), local + '\n[rust]\nsources = {"app":["unrelated/shared.txt"]}\n');
 	await build("shared");
+	await run(binary, ["test", "app", "--console", "simple"], options);
 	assert.deepEqual(await build("shared"), [], "declared extra sources must support warm reuse");
 	writeFileSync(sharedInput, "changed");
 	assert.ok((await build("changed")).length > 0, "extra-source edits must invalidate compilation");
+	await run(binary, ["test", "app", "--console", "simple"], options);
 	writeFileSync(join(root, "unrelated/src/lib.rs"), 'compile_error!("provider source stays unrelated");\n');
 	assert.deepEqual(await build("changed"), [], "declaring a file must not include its whole package");
 	assert.deepEqual(
