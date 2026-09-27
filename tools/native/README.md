@@ -21,8 +21,14 @@ Action requests cannot choose either. `Identity::drain` stops detached children
 and checks kernel membership. Callers must check its result before publishing.
 Acquisition refuses a crashed worker's occupied UID until an administrator recovers it.
 
-This crate currently provides process ownership. It does not yet install a
+This crate provides process ownership and the confined launch transition. It does not yet install a
 service, construct runtime images, or enable a macOS BSMR execution backend.
+
+`launch::enter` runs in a dedicated trusted child. It changes the filesystem root,
+resets the working directory, drops supplementary groups and root credentials,
+then denies network and host-service access through Seatbelt. The supervisor
+owns the prepared root and UID lease. No action code runs until every step succeeds.
+Any error terminates that child. This function must not run in a `pre_exec` hook.
 
 `run` owns the direct child until exit, cancellation, or timeout and checks
 descendant cleanup before returning. It uses Tokio's process and socket notifications, including when

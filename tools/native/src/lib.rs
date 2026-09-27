@@ -9,4 +9,7 @@
 pub mod identity;
 
 #[cfg(target_os = "macos")]
+pub mod launch;
+
+#[cfg(target_os = "macos")]
 pub mod run;
