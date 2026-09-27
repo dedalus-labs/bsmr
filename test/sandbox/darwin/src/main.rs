@@ -5,6 +5,7 @@
 
 //! Run bounded Darwin process-ownership checks without installing a service.
 
+mod compiler;
 mod filesystem;
 mod identity;
 mod system;
@@ -24,6 +25,7 @@ use workload::writer;
 fn main() -> Result<()> {
     let args: Vec<_> = std::env::args_os().skip(1).collect();
     match args.first().and_then(|arg| arg.to_str()) {
+        Some("prepare") if args.len() == 2 => compiler::record(&PathBuf::from(&args[1])),
         Some("observe") if args.len() == 2 => {
             let uid = args[1].to_str().context("UID must be UTF-8")?.parse()?;
             println!(
@@ -40,7 +42,9 @@ fn main() -> Result<()> {
         Some("normal" | "cancel") if args.len() == 2 => {
             workload(&PathBuf::from(&args[1]), args[0] == "cancel")
         }
-        Some("run") if args.len() == 2 => run(&PathBuf::from(&args[1])),
-        _ => bail!("usage: bsmr-darwin-check observe UID | run /private/var/tmp/NEW-DIRECTORY"),
+        Some("run") if args.len() == 3 => run(&PathBuf::from(&args[1]), &PathBuf::from(&args[2])),
+        _ => bail!(
+            "usage: bsmr-darwin-check observe UID | prepare FILE | run /private/var/tmp/NEW-DIRECTORY FILE"
+        ),
     }
 }

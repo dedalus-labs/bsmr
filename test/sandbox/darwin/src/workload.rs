@@ -166,7 +166,7 @@ fn supervised(lease: &Arc<Identity>, root: &Path, round: usize, disconnect: bool
 }
 
 /// Keep the root operation bounded to an unused UID and a newly created evidence directory.
-pub(crate) fn run(root: &Path) -> Result<()> {
+pub(crate) fn run(root: &Path, compiler: &Path) -> Result<()> {
     ensure!(
         root.parent() == Some(Path::new("/private/var/tmp")),
         "evidence must be directly under /private/var/tmp"
@@ -185,6 +185,6 @@ pub(crate) fn run(root: &Path) -> Result<()> {
         }
     }
     lease.drain()?;
-    crate::filesystem::check(root)?;
+    crate::filesystem::check(root, compiler)?;
     Ok(())
 }
