@@ -365,7 +365,7 @@ impl Key for RustPlanKey {
             .iter()
             .any(|(name, value)| name == "bsmr.sandbox.backend" && value == "namespace")
             && platform.iter().any(|(name, value)| {
-                name == "bsmr.sandbox.profile" && value == "declared-inputs-v2"
+                name == "bsmr.sandbox.profile" && value == crate::execution::NAMESPACE_PROFILE
             }) {
             super::configured::CodeExecution::DeclaredInputs
         } else {

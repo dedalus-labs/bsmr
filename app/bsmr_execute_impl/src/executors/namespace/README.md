@@ -85,8 +85,11 @@ The action receives its declared environment plus fixed `PATH`, `HOME` and
 temporary-directory defaults. It cannot inherit the daemon environment or use
 persistent workers, incremental outputs, local resources or host networking.
 No host library directories are mounted. Programs such as `/usr/bin/env`
-resolve inside the verified runtime. A fresh read-only `/proc` mount exposes
-only the action's PID namespace. Rust's linker uses `/proc/self/exe` to find
+resolve inside the verified runtime. A fresh `/proc` mount exposes only the
+action's PID namespace. A child may update its own OOM score, while `/proc/sys`,
+`/proc/sysrq-trigger`, `/proc/irq`, `/proc/bus`, and `/proc/fs` remain read-only.
+The `declared-inputs-v3` profile separates these results from the earlier mount policy.
+Rust's linker uses `/proc/self/exe` to find
 its executable. Process root links refer to the action's filesystem. Standard
 streams are the executor's capture pipes. Host processes are not exposed.
 
@@ -111,13 +114,13 @@ Output validation runs after execution and does not cap live writes.
 
 Runtime digests and canonical execution properties participate in DICE reuse,
 local dependency-file reuse and action-cache identity. Policy semantic changes
-must bump `declared-inputs-v2`. Host paths and temporary snapshot names do not
+must bump `declared-inputs-v3`. Host paths and temporary snapshot names do not
 participate in this identity.
 
 ## Native Rust package code
 
 Configured Cargo graphs admit procedural macros and build scripts only with the verified
-`declared-inputs-v2` namespace profile. They use the inherited Rust library and
+`declared-inputs-v3` namespace profile. They use the inherited Rust library and
 macro-alias and build-script rules with the selected compiler. Native link metadata
 dependencies and unimplemented script directives produce explicit errors.
 

@@ -14,6 +14,7 @@ use std::path::Path;
 use std::path::PathBuf;
 use std::sync::Arc;
 
+use bsmr_common::execution::NAMESPACE_PROFILE;
 use bsmr_core::fs::artifact_path_resolver::ArtifactFs;
 use bsmr_directory::directory::directory::Directory;
 use bsmr_directory::directory::directory_iterator::DirectoryIterator;
@@ -102,7 +103,7 @@ impl NamespaceExecutor {
             properties: [
                 ("bsmr.sandbox.backend", "namespace"),
                 ("bsmr.sandbox.environment", self.runtime.digest()),
-                ("bsmr.sandbox.profile", "declared-inputs-v2"),
+                ("bsmr.sandbox.profile", NAMESPACE_PROFILE),
             ]
             .into_iter()
             .map(|(name, value)| RE::Property {
@@ -276,19 +277,18 @@ impl NamespaceExecutor {
             ]);
         }
         // The linker resolves its executable through procfs in this private PID namespace.
-        arguments.extend(
-            [
-                "--tmpfs",
-                "/tmp",
-                "--dev",
-                "/dev",
-                "--proc",
-                "/proc",
-                "--remount-ro",
-                "/proc",
-            ]
-            .map(OsString::from),
-        );
+        arguments
+            .extend(["--tmpfs", "/tmp", "--dev", "/dev", "--proc", "/proc"].map(OsString::from));
+        // A process may configure its own OOM score. Kernel control trees stay immutable.
+        for control in [
+            "/proc/sys",
+            "/proc/sysrq-trigger",
+            "/proc/irq",
+            "/proc/bus",
+            "/proc/fs",
+        ] {
+            arguments.extend(["--ro-bind", control, control].map(OsString::from));
+        }
         for (name, value) in [
             ("PATH", "/usr/bin:/bin"),
             ("HOME", "/tmp"),

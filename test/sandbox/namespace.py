@@ -71,7 +71,11 @@ processes = {path.name for path in Path("/proc").iterdir() if path.name.isdecima
 assert processes == {"1", str(os.getpid())}
 assert Path("/proc/1/root/workspace").is_dir()
 assert not (Path("/proc/1/root") / outside.lstrip("/")).exists()
-assert os.statvfs("/proc").f_flag & os.ST_RDONLY
+score = Path("/proc/self/oom_score_adj")
+score.write_text(score.read_text())
+for control in ["/proc/sys", "/proc/sysrq-trigger", "/proc/irq", "/proc/bus", "/proc/fs"]:
+    assert os.statvfs(control).f_flag & os.ST_RDONLY
+assert Path("/proc/sys/kernel/hostname").read_text().strip() == "bsmr-action"
 assert os.environ["DECLARED"] == "visible"
 assert "NAMESPACE_AMBIENT_SECRET" not in os.environ
 assert (source / "value").read_text() == (source / "link").read_text()
