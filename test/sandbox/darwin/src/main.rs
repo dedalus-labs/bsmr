@@ -15,9 +15,7 @@ use std::path::PathBuf;
 use anyhow::Context;
 use anyhow::Result;
 use anyhow::bail;
-use identity::broadcast;
-use identity::member;
-use nix::unistd::Pid;
+use bsmr_native::identity::occupied;
 use workload::run;
 use workload::workload;
 use workload::writer;
@@ -30,11 +28,10 @@ fn main() -> Result<()> {
             let uid = args[1].to_str().context("UID must be UTF-8")?.parse()?;
             println!(
                 "{}",
-                serde_json::json!({"uid": uid, "pid": member(uid)?.map(Pid::as_raw)})
+                serde_json::json!({"uid": uid, "occupied": occupied(uid)?})
             );
             Ok(())
         }
-        Some("kill") if args.len() == 1 => broadcast(),
         Some("writer") if args.len() == 2 => writer(&PathBuf::from(&args[1])),
         Some("view") if args.len() == 3 => filesystem::view(
             &PathBuf::from(&args[1]),

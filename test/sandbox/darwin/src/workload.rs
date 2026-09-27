@@ -20,15 +20,16 @@ use std::time::Instant;
 
 use anyhow::Result;
 use anyhow::ensure;
+use bsmr_native::identity::Identity;
+use bsmr_native::identity::occupied;
 use nix::unistd::Gid;
 use nix::unistd::Uid;
 use nix::unistd::chown;
 use nix::unistd::setsid;
 
 use crate::identity::ID;
-use crate::identity::Lease;
+use crate::identity::acquire;
 use crate::identity::enter;
-use crate::identity::member;
 
 /// Every writer exits even if the supervising test fails.
 const WRITER_LIFETIME: Duration = Duration::from_secs(12);
@@ -81,7 +82,7 @@ fn ready(path: &Path) -> Result<()> {
 }
 
 /// Observe a writer after its launcher exits, then require UID cleanup to stop it.
-fn case(lease: &Lease, root: &Path, name: &str) -> Result<()> {
+fn case(lease: &Identity, root: &Path, name: &str) -> Result<()> {
     let path = root.join(name);
     fs::create_dir(&path)?;
     fs::set_permissions(&path, fs::Permissions::from_mode(0o700))?;
@@ -113,7 +114,7 @@ fn case(lease: &Lease, root: &Path, name: &str) -> Result<()> {
         fs::metadata(path.join("heartbeat"))?.len() == final_size,
         "output changed after UID drained"
     );
-    ensure!(member(ID)?.is_none(), "UID membership returned after drain");
+    ensure!(!occupied(ID)?, "UID membership returned after drain");
     println!(
         "{}",
         serde_json::json!({"case": name, "uid": ID, "cleanup_ms": elapsed.as_secs_f64()*1000.0, "empty": true, "stable_output": true})
@@ -127,7 +128,7 @@ pub(crate) fn run(root: &Path) -> Result<()> {
         root.parent() == Some(Path::new("/private/var/tmp")),
         "evidence must be directly under /private/var/tmp"
     );
-    let lease = Lease::acquire()?;
+    let lease = acquire()?;
     fs::create_dir(root)?;
     fs::set_permissions(root, fs::Permissions::from_mode(0o711))?;
     fs::copy(std::env::current_exe()?, root.join("probe"))?;

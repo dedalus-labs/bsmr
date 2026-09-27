@@ -9,7 +9,8 @@
 
 A build can exit while a detached child keeps changing its output. This check
 requires all processes using one reserved identity to stop before accepting
-the output. It does not yet provide a macOS build executor or filesystem policy.
+the output. It exercises the owner in `tools/native`, not a separate test
+implementation. It does not yet provide a macOS build executor.
 
 The test refuses root identity, an existing account or group, an occupied
 identity, and a lock that is not private and root-owned. It reserves UID and GID
