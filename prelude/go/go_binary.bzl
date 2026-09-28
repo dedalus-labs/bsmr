@@ -69,6 +69,7 @@ def go_binary_impl(ctx: AnalysisContext) -> list[Provider]:
         linker_flags = ctx.attrs.linker_flags,
         link_mode = ctx.attrs.link_mode,
         external_linker_flags = ctx.attrs.external_linker_flags,
+        build_info = ["path\t" + pkg_import_path] + ctx.attrs.modules,
     )
 
     # runtime_files are all the artifacts that must be present in order for this

@@ -337,6 +337,7 @@ fn render_build_target(
     }
     if package.target_name() == "bin" {
         render_list(output, "build_tags", build_tags)?;
+        render_list(output, "modules", package.modules())?;
     }
     render_list(output, "deps", package.dependencies())?;
     render_bool(

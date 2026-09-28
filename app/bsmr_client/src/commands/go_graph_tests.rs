@@ -115,3 +115,64 @@ fn rejects_unsupported_source_kinds() {
     assert!(error.to_string().contains("unsupported source files"));
     assert!(error.to_string().contains("native.m"));
 }
+
+const MODULE_GRAPH: &str = r#"
+{"Dir":"/repo/cmd/app","ImportPath":"example.com/repo/cmd/app","Name":"main","GoFiles":["main.go"],"Imports":["example.com/dep/api","example.com/repo/lib","fmt"],"Module":{"Path":"example.com/repo","Main":true}}
+{"Dir":"/repo/lib","ImportPath":"example.com/repo/lib","Name":"lib","GoFiles":["lib.go"],"Imports":["example.com/leaf"],"TestImports":["example.com/testonly"],"Module":{"Path":"example.com/repo","Main":true}}
+{"Dir":"/repo/vendor/example.com/dep/api","ImportPath":"example.com/dep/api","Name":"api","GoFiles":["api.go"],"Imports":["example.com/leaf"],"DepOnly":true,"Module":{"Path":"example.com/dep","Version":"v1.2.0"}}
+{"Dir":"/repo/vendor/example.com/leaf","ImportPath":"example.com/leaf","Name":"leaf","GoFiles":["leaf.go"],"DepOnly":true,"Module":{"Path":"example.com/leaf","Version":"v0.1.0","Replace":{"Path":"example.com/fork","Version":"v0.1.1"}}}
+{"Dir":"/repo/vendor/example.com/testonly","ImportPath":"example.com/testonly","Name":"testonly","GoFiles":["testonly.go"],"DepOnly":true,"Module":{"Path":"example.com/testonly","Version":"v3.0.0"}}
+{"Dir":"/goroot/src/fmt","ImportPath":"fmt","Name":"fmt","Goroot":true,"Standard":true}
+"#;
+
+/// Invariant: an executable's module lines are those `go build` records in
+/// `debug.BuildInfo`: its own module as `mod`, `(devel)` when Go reports no version,
+/// then each other module reachable through production imports as `dep` in path
+/// order, a replaced module followed by its `=>` line, and no sums under vendoring.
+///
+/// Witness: `cmd/app` reaches `example.com/leaf` through two paths and
+/// `example.com/testonly` only through a test import; the first appears once with its
+/// replacement, the second not at all, and the library records no module lines.
+#[test]
+fn invariant_executable_records_linked_modules() {
+    let graph = GoGraph::from_go_list(MODULE_GRAPH.as_bytes(), Path::new("/repo"), "")
+        .expect("valid graph");
+    let binary = graph
+        .packages()
+        .iter()
+        .find(|package| package.import_path() == "example.com/repo/cmd/app")
+        .expect("binary package");
+    let library = graph
+        .packages()
+        .iter()
+        .find(|package| package.import_path() == "example.com/repo/lib")
+        .expect("library package");
+
+    assert_eq!(
+        binary.modules(),
+        [
+            "mod\texample.com/repo\t(devel)\t",
+            "dep\texample.com/dep\tv1.2.0\t",
+            "dep\texample.com/leaf\tv0.1.0",
+            "=>\texample.com/fork\tv0.1.1\t",
+        ]
+    );
+    assert!(library.modules().is_empty());
+}
+
+/// Invariant: a tool built from a vendored module records that module, with its
+/// version, as the main module, matching `go build` of a `tool` directive.
+///
+/// Witness: `example.com/greeter/cmd/greet` from `example.com/greeter v1.0.0` in the
+/// `example.com/tools` module records `mod example.com/greeter v1.0.0`.
+#[test]
+fn invariant_tool_records_its_module_as_main() {
+    let graph = r#"{"Dir":"/repo/vendor/example.com/greeter/cmd/greet","ImportPath":"example.com/greeter/cmd/greet","Name":"main","GoFiles":["main.go"],"Module":{"Path":"example.com/greeter","Version":"v1.0.0"}}"#;
+    let graph =
+        GoGraph::from_go_list(graph.as_bytes(), Path::new("/repo"), "").expect("valid graph");
+
+    assert_eq!(
+        graph.packages()[0].modules(),
+        ["mod\texample.com/greeter\tv1.0.0\t"]
+    );
+}

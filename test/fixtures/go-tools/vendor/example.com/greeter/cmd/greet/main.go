@@ -1,5 +1,16 @@
 package main
 
-import "fmt"
+import (
+	"fmt"
+	"runtime/debug"
 
-func main() { fmt.Println("greeter v1.0.0") }
+	"example.com/greeting"
+)
+
+func main() {
+	info, ok := debug.ReadBuildInfo()
+	if !ok {
+		panic("binary carries no build info")
+	}
+	fmt.Printf("%s\n%s", greeting.Subject, info)
+}

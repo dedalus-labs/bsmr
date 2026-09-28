@@ -116,6 +116,15 @@ go_binary = prelude_rule(
         | go_common.cxx_preprocessor_flags_arg()
         | go_common.cxx_compiler_flags_arg()
         | {
+            "modules": attrs.list(
+                attrs.string(),
+                default = [],
+                doc = """
+                The `mod`, `dep`, and `=>` lines of the binary's `debug.BuildInfo`, in the
+                 tab-separated form of `debug.BuildInfo.String`. `bsmr go sync` writes them from the
+                 module graph `go list` selects; the link adds the package path and build settings.
+            """,
+            ),
             "platform": attrs.option(attrs.string(), default = None),
             "resources": attrs.list(
                 attrs.source(),

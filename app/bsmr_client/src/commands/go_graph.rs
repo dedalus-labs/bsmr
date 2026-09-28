@@ -11,6 +11,7 @@
 //! `go list`. It rejects unsafe or non-vendored inputs, preserves distinct internal
 //! and external test packages, and orders local nodes for stable manifest output.
 
+mod build_info;
 mod metadata;
 
 use std::collections::BTreeMap;
@@ -54,6 +55,8 @@ pub(crate) struct GoPackage {
     test_embed_files: Vec<String>,
     /// Makes external-test `go:embed` content explicit action inputs.
     external_test_embed_files: Vec<String>,
+    /// Carries an executable's `debug.BuildInfo` module lines into its link action.
+    modules: Vec<String>,
 }
 
 impl GoPackage {
@@ -115,6 +118,11 @@ impl GoPackage {
     /// Returns files selected for external test embed directives.
     pub(crate) fn external_test_embed_files(&self) -> &[String] {
         &self.external_test_embed_files
+    }
+
+    /// Returns the `debug.BuildInfo` module lines of an executable package.
+    pub(crate) fn modules(&self) -> &[String] {
+        &self.modules
     }
 }
 
@@ -187,6 +195,11 @@ fn lower_package(
     let relative_dir = relative_package_directory(package, root.root)?;
     let sources = package_sources(package);
     validate_package_sources(package, &sources)?;
+    let modules = if package.name == "main" {
+        build_info::module_lines(package, listed)?
+    } else {
+        Vec::new()
+    };
     Ok(GoPackage {
         relative_dir,
         label: target_label(&package.dir, &package.name, root)?,
@@ -209,6 +222,7 @@ fn lower_package(
         embed_files: package.embed_files.clone(),
         test_embed_files: selected_files(package, &package.test_embed_files),
         external_test_embed_files: selected_files(package, &package.x_test_embed_files),
+        modules,
     })
 }
 

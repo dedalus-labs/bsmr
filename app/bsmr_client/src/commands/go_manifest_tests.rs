@@ -223,3 +223,24 @@ fn invariant_empty_graph_retires_owned_manifests() {
 
     sync(&empty, SyncMode::Check).expect("empty graph is current");
 }
+
+/// Invariant: a binary's module lines reach its manifest as a Starlark list whose
+/// strings decode to the exact tab-separated `debug.BuildInfo` text.
+///
+/// Witness: a binary in `example.com/repo` renders
+/// `modules = ["mod\texample.com/repo\t(devel)\t"]` with a JSON (and Starlark) tab escape.
+#[test]
+fn invariant_binary_manifest_carries_module_lines() {
+    let root = tempfile::tempdir().expect("temporary repository");
+    let display = root.path().display();
+    let json = format!(
+        "{{\"Dir\":\"{display}\",\"ImportPath\":\"example.com/repo\",\"Name\":\"main\",\"GoFiles\":[\"main.go\"],\"Module\":{{\"Path\":\"example.com/repo\",\"Main\":true}}}}\n"
+    );
+    let graph = GoGraph::from_go_list(json.as_bytes(), root.path(), "").expect("valid graph");
+
+    let manifest = render_manifest(&graph.packages()[0], &[], false).expect("binary manifest");
+
+    assert!(
+        manifest.contains("modules = [\n        \"mod\\texample.com/repo\\t(devel)\\t\",\n    ],")
+    );
+}

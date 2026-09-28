@@ -56,6 +56,21 @@ test that share an embedded file with Go 1.26.7. The same fixture checks cache
 restoration, source-root reuse, input invalidation, and system-tool exclusion.
 Use a binary built from the same revision as the prelude and native generator.
 
+## Build info
+
+A synchronized `go_binary` embeds the `debug.BuildInfo` that `go build
+-trimpath` records for the same vendored graph: the package path, its module as
+`mod`, each linked module as `dep` with its replacement, and the build mode,
+compiler, tags, cgo mode, and target platform. A tool such as `controller-gen`
+therefore reports its release version. `bsmr go sync` writes the module lines into
+the generated `modules` attribute, so a dependency version change relinks the
+binary.
+
+Two settings are left out. VCS stamps (`vcs.revision`, `vcs.time`,
+`vcs.modified`) depend on repository state that is not an action input, so
+recording them would break cache reuse. `DefaultGODEBUG` is omitted because
+the link does not yet apply the module's GODEBUG defaults.
+
 ## Build tags
 
 Declare every selectable tag in `.bsmr` so graph selection and action
