@@ -126,6 +126,7 @@ struct ReleaseFile {
 /// Updates or verifies the native toolchain configuration.
 pub(crate) async fn configure(
     root: &Path,
+    toolchains: &Path,
     requested: Option<&str>,
     update: bool,
     check: bool,
@@ -147,7 +148,7 @@ pub(crate) async fn configure(
     } else {
         resolve_release(requested).await?
     };
-    write_configuration(root, &lock, check)?;
+    write_configuration(root, toolchains, &lock, check)?;
     Ok(lock)
 }
 
@@ -383,6 +384,10 @@ pub(crate) enum GoToolchainError {
     Write { path: PathBuf, message: String },
     #[error("refusing to overwrite user-owned toolchain file `{0:?}`")]
     UserOwned(PathBuf),
+    #[error(
+        "`{0:?}` defines the `toolchains//` package natively; declare a separate `toolchains` cell in `.bsmr` for the generated Go toolchain"
+    )]
+    NativePackage(PathBuf),
     #[error("generated Go toolchain files are stale: {0:?}")]
     Stale(Vec<PathBuf>),
 }

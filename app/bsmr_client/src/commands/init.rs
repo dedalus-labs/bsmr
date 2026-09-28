@@ -210,7 +210,12 @@ fn set_up_gitignore(repo_root: &AbsPath) -> bsmr_error::Result<()> {
     Ok(())
 }
 
-fn set_up_project(repo_root: &AbsPath, git: bool, prelude: bool) -> bsmr_error::Result<()> {
+/// Creates the project marker, and optionally a Git repository, at `repo_root`.
+pub(crate) fn set_up_project(
+    repo_root: &AbsPath,
+    git: bool,
+    prelude: bool,
+) -> bsmr_error::Result<()> {
     if git {
         if !background_command("git")
             .arg("init")

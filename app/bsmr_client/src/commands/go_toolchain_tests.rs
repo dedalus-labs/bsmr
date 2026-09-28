@@ -7,12 +7,18 @@
 
 use std::fs;
 
+use bsmr_core::fs::project::ProjectRoot;
+use bsmr_fs::paths::abs_norm_path::AbsNormPathBuf;
+use bsmr_fs::paths::abs_path::AbsPath;
+
+use crate::commands::go::toolchains_directory;
 use crate::commands::go_toolchain::GoToolchainError;
 use crate::commands::go_toolchain::acquired_go;
 use crate::commands::go_toolchain::configure;
 use crate::commands::go_toolchain::prepare_acquisition;
 use crate::commands::go_toolchain::select_release;
 use crate::commands::go_toolchain::write_configuration;
+use crate::commands::init::set_up_project;
 
 const RELEASES: &[u8] = br#"
 [
@@ -87,7 +93,8 @@ fn writes_owned_cross_host_toolchain_configuration() {
     .expect("initial toolchains");
     let lock = select_release(RELEASES, None).expect("release");
 
-    write_configuration(root.path(), &lock, false).expect("generated configuration");
+    write_configuration(root.path(), &root.path().join("toolchains"), &lock, false)
+        .expect("generated configuration");
 
     let manifest =
         fs::read_to_string(root.path().join("toolchains/BUILD.bsmr")).expect("toolchain manifest");
@@ -123,7 +130,8 @@ fn refuses_user_owned_toolchain_configuration() {
     .expect("custom toolchain");
     let lock = select_release(RELEASES, None).expect("release");
 
-    let error = write_configuration(root.path(), &lock, false).expect_err("must fail closed");
+    let error = write_configuration(root.path(), &root.path().join("toolchains"), &lock, false)
+        .expect_err("must fail closed");
 
     assert!(matches!(error, GoToolchainError::UserOwned(_)));
 }
@@ -140,8 +148,8 @@ fn rejects_forged_toolchain_marker() {
     .expect("forged toolchain marker");
     let lock = select_release(RELEASES, None).expect("release");
 
-    let error =
-        write_configuration(root.path(), &lock, false).expect_err("forged marker must fail closed");
+    let error = write_configuration(root.path(), &root.path().join("toolchains"), &lock, false)
+        .expect_err("forged marker must fail closed");
 
     assert!(matches!(error, GoToolchainError::UserOwned(_)));
 }
@@ -170,13 +178,15 @@ fn check_detects_toolchain_drift() {
     )
     .expect("initial toolchains");
     let lock = select_release(RELEASES, None).expect("release");
-    write_configuration(root.path(), &lock, false).expect("generated configuration");
-    let definition = root.path().join("toolchains/bsmr_go_toolchain.bzl");
+    let toolchains = root.path().join("toolchains");
+    write_configuration(root.path(), &toolchains, &lock, false).expect("generated configuration");
+    let definition = toolchains.join("bsmr_go_toolchain.bzl");
     let mut drift = fs::read_to_string(&definition).expect("generated definition");
     drift.push_str("# drift\n");
     fs::write(definition, drift).expect("drift");
 
-    let error = write_configuration(root.path(), &lock, true).expect_err("must detect drift");
+    let error =
+        write_configuration(root.path(), &toolchains, &lock, true).expect_err("must detect drift");
 
     assert!(matches!(error, GoToolchainError::Stale(_)));
 }
@@ -231,7 +241,8 @@ fn rejects_mismatched_bootstrap_acquisition() {
     )
     .expect("tools metadata file");
 
-    let error = acquired_go(root.path(), &lock).expect_err("must reject partial acquisition");
+    let error = acquired_go(&root.path().join("toolchains"), &lock)
+        .expect_err("must reject partial acquisition");
 
     assert!(matches!(error, GoToolchainError::NotAcquired));
 }
@@ -249,7 +260,8 @@ fn rejects_forged_acquisition_marker() {
     .expect("forged ownership marker");
     let lock = select_release(RELEASES, None).expect("release");
 
-    let error = prepare_acquisition(root.path(), &lock).expect_err("forgery must fail closed");
+    let error = prepare_acquisition(&root.path().join("toolchains"), &lock)
+        .expect_err("forgery must fail closed");
 
     assert!(matches!(error, GoToolchainError::UserOwned(_)));
 }
@@ -259,10 +271,13 @@ fn rejects_forged_acquisition_marker() {
 fn reacquires_existing_lock_without_resolving_latest() {
     let root = tempfile::tempdir().expect("temporary repository");
     let expected = select_release(RELEASES, Some("1.26.5")).expect("release");
-    write_configuration(root.path(), &expected, false).expect("generated configuration");
+    let toolchains = root.path().join("toolchains");
+    write_configuration(root.path(), &toolchains, &expected, false)
+        .expect("generated configuration");
 
-    let actual = futures::executor::block_on(configure(root.path(), None, false, false))
-        .expect("existing lock");
+    let actual =
+        futures::executor::block_on(configure(root.path(), &toolchains, None, false, false))
+            .expect("existing lock");
 
     assert_eq!(actual, expected);
 }
@@ -282,4 +297,43 @@ fn gates_tool_directives_on_sdk_version() {
             .supports_tool_directives()
             .expect("valid version")
     );
+}
+
+/// Confirms the toolchain lands in the package `toolchains//` names in a project from `bsmr init`.
+///
+/// `bsmr init` aliases `toolchains` to the root cell, so `toolchains//:go_sdk_archive` is only
+/// buildable when the generated manifest is the root package's build file.
+#[test]
+fn writes_toolchain_where_init_configuration_resolves_toolchains() {
+    let directory = tempfile::tempdir().expect("temporary repository");
+    let path = AbsNormPathBuf::new(directory.path().canonicalize().expect("canonical root"))
+        .expect("absolute root");
+    set_up_project(AbsPath::new(&path).expect("absolute root"), false, true)
+        .expect("initialized project");
+    let project_root = ProjectRoot::new(path.clone()).expect("project root");
+    let lock = select_release(RELEASES, None).expect("release");
+
+    let toolchains = toolchains_directory(&project_root).expect("configured toolchains");
+    write_configuration(path.as_path(), &toolchains, &lock, false)
+        .expect("generated configuration");
+
+    assert_eq!(toolchains, path.as_path());
+    let manifest = fs::read_to_string(path.as_path().join("BUILD.bsmr")).expect("root manifest");
+    assert!(manifest.contains("bsmr_go_toolchains()"));
+    assert!(path.as_path().join("bsmr_go_toolchain.bzl").is_file());
+    assert!(!path.as_path().join("toolchains").exists());
+}
+
+/// Confirms the generator refuses to hide a native package that defines `toolchains//`.
+#[test]
+fn refuses_native_toolchains_package() {
+    let root = tempfile::tempdir().expect("temporary repository");
+    fs::write(root.path().join("package.json"), "{}\n").expect("native manifest");
+    let lock = select_release(RELEASES, None).expect("release");
+
+    let error = write_configuration(root.path(), root.path(), &lock, false)
+        .expect_err("native package must fail closed");
+
+    assert!(matches!(error, GoToolchainError::NativePackage(_)));
+    assert!(!root.path().join("BUILD.bsmr").exists());
 }

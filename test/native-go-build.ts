@@ -91,7 +91,6 @@ try {
 	const configPath = join(cwd, ".bsmr");
 	const config = readFileSync(configPath, "utf8");
 	assert.match(config, /toolchains = root/);
-	writeFileSync(configPath, config.replace("  none = none\n", "  none = none\n  toolchains = toolchains\n").replace("  toolchains = root\n", ""));
 	await run(executable, ["go", "toolchain", "--version", version], options);
 	await run(executable, ["kill"], options);
 	await run(executable, ["go", "sync"], options);
@@ -127,7 +126,7 @@ try {
 	const compiled = await build(second, "compiled-source", "compiled:original\n");
 	assert.ok(compiled.local.some(({ identity }) => identity.includes("go_compile") && identity.includes("cmd/probe")));
 	assert.notEqual(compiled.digest, cold.digest);
-	const sdkSource = join(second, "toolchains/.bsmr-go-sdk/src/fmt/print.go");
+	const sdkSource = join(second, ".bsmr-go-sdk/src/fmt/print.go");
 	writeFileSync(sdkSource, `${readFileSync(sdkSource, "utf8")}\n// changed SDK input\n`);
 	await clean(second);
 	const sdk = await build(second, "sdk-input", "compiled:original\n");
@@ -136,12 +135,12 @@ try {
 	const automatic = await build(second, "automatic-link", "compiled:original\n", false);
 	assert.ok(automatic.local.filter(({ identity }) => identity.includes("(go_link ")).length === 2);
 	assert.equal(automatic.cached.filter(({ identity }) => identity.includes("(go_link ")).length, 0);
-	writeFileSync(join(second, "toolchains/BUILD.bsmr"), 'load("@prelude//toolchains:demo.bzl", "system_demo_toolchains")\nsystem_demo_toolchains()\n');
-	env["PATH"] = `${join(second, "toolchains/.bsmr-go-sdk/bin")}${delimiter}${process.env["PATH"]}`;
+	writeFileSync(join(second, "BUILD.bsmr"), 'load("@prelude//toolchains:demo.bzl", "system_demo_toolchains")\nsystem_demo_toolchains()\n');
+	env["PATH"] = `${join(second, ".bsmr-go-sdk/bin")}${delimiter}${process.env["PATH"]}`;
 	await systemBootstrap(second, "system-go");
 	const os = process.platform === "darwin" ? "darwin" : "linux";
 	const arch = process.arch === "arm64" ? "arm64" : "amd64";
-	writeFileSync(join(second, "toolchains/BUILD.bsmr"), `load("@prelude//toolchains:demo.bzl", "system_demo_toolchains")
+	writeFileSync(join(second, "BUILD.bsmr"), `load("@prelude//toolchains:demo.bzl", "system_demo_toolchains")
 load("@prelude//toolchains/go:go_bootstrap_toolchain.bzl", "go_bootstrap_distr", "go_bootstrap_toolchain")
 system_demo_toolchains(include_go = False)
 go_bootstrap_distr(name = "sdk", go_root = ".bsmr-go-sdk", go_os_arch = ("${os}", "${arch}"))

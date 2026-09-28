@@ -23,6 +23,9 @@ pub enum PackageBuildSource {
     CargoPlan,
 }
 
+/// Native manifests that define a package root without a Starlark build file, in precedence order.
+pub const NATIVE_MANIFESTS: [&str; 3] = ["pyproject.toml", "Cargo.toml", "package.json"];
+
 /// Selects an explicit build file or, at a requested package root, a native manifest.
 pub(crate) fn find_build_source(
     buildfile_candidates: &[FileNameBuf],
@@ -35,14 +38,12 @@ pub(crate) fn find_build_source(
     if !allow_native {
         return None;
     }
-    ["pyproject.toml", "Cargo.toml", "package.json"]
-        .into_iter()
-        .find_map(|name| {
-            dir_listing
-                .iter()
-                .any(|entry| entry.file_name == name)
-                .then(|| (FileNameBuf::unchecked_new(name), PackageBuildSource::Native))
-        })
+    NATIVE_MANIFESTS.into_iter().find_map(|name| {
+        dir_listing
+            .iter()
+            .any(|entry| entry.file_name == name)
+            .then(|| (FileNameBuf::unchecked_new(name), PackageBuildSource::Native))
+    })
 }
 
 /// Returns whether a directory is the root of a standard Python virtual environment.

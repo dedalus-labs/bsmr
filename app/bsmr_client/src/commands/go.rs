@@ -26,6 +26,7 @@ use bsmr_common::argv::SanitizedArgv;
 use bsmr_common::legacy_configs::cells::BsmrConfigBasedCells;
 use bsmr_common::legacy_configs::key::BsmrconfigKeyRef;
 use bsmr_core::fs::output_path::BSMR_OUTPUT_ROOT;
+use bsmr_core::fs::project::ProjectRoot;
 
 use crate::commands::go_graph::GoGraph;
 use crate::commands::go_manifest::SyncMode;
@@ -106,25 +107,28 @@ impl GoCommand {
     }
 }
 
-/// Pins or verifies the generated toolchain at the Bessemer project root.
+/// Pins or verifies the generated toolchain in the package that `toolchains//` names.
 async fn configure_toolchain(
     command: GoToolchainCommand,
     ctx: &ClientCommandContext<'_>,
 ) -> bsmr_error::Result<()> {
-    let root = ctx.paths()?.project_root().root().as_path();
+    let project_root = ctx.paths()?.project_root();
+    let root = project_root.root().as_path();
+    let toolchains = toolchains_directory(project_root)?;
     let lock = go_toolchain::configure(
         root,
+        &toolchains,
         command.version.as_deref(),
         command.update,
         command.check,
     )
     .await?;
     if command.check {
-        go_toolchain::acquired_go(root, &lock)?;
+        go_toolchain::acquired_go(&toolchains, &lock)?;
     } else {
-        go_toolchain::prepare_acquisition(root, &lock)?;
+        go_toolchain::prepare_acquisition(&toolchains, &lock)?;
         let sdk = materialize_sdk_archive(root)?;
-        go_toolchain::install_sdk(root, &sdk, &lock)?;
+        go_toolchain::install_sdk(&toolchains, &sdk, &lock)?;
     }
     bsmr_client_ctx::println!(
         "Go SDK {}: {}",
@@ -148,9 +152,10 @@ fn sync(mut command: GoSyncCommand, ctx: &ClientCommandContext<'_>) -> bsmr_erro
     if !root.join("go.mod").is_file() && !root.join("go.work").is_file() {
         return Err(GoCommandError::NoModule(root).into());
     }
-    let project_root = ctx.paths()?.project_root().root().as_path();
-    let lock = go_toolchain::read_lock(project_root)?;
-    let go = go_toolchain::acquired_go(project_root, &lock)?;
+    let project_root = ctx.paths()?.project_root();
+    let toolchains = toolchains_directory(project_root)?;
+    let lock = go_toolchain::read_lock(project_root.root().as_path())?;
+    let go = go_toolchain::acquired_go(&toolchains, &lock)?;
     let mut patterns = discover_patterns(&root)?;
     // Tool directives are part of the module's graph, so their packages are roots even
     // when they live only in the vendor tree that directory discovery skips.
@@ -165,6 +170,13 @@ fn sync(mut command: GoSyncCommand, ctx: &ClientCommandContext<'_>) -> bsmr_erro
         run_go_list(&command, &root, &go, &patterns)?
     };
     let graph = GoGraph::from_go_list(&output, &root, &root_package(ctx)?)?;
+    if graph
+        .packages()
+        .iter()
+        .any(|package| root.join(package.relative_dir()) == toolchains)
+    {
+        return Err(GoCommandError::ToolchainsPackage(toolchains).into());
+    }
     let mode = if command.check {
         SyncMode::Check
     } else {
@@ -178,6 +190,23 @@ fn sync(mut command: GoSyncCommand, ctx: &ClientCommandContext<'_>) -> bsmr_erro
         report.removed()
     )?;
     Ok(())
+}
+
+/// Resolves the directory of the package `toolchains//` names in the project configuration.
+///
+/// `bsmr init` aliases `toolchains` to the root cell so native frontends can declare toolchains
+/// in the root package; a project may instead declare a dedicated `toolchains` cell.
+pub(super) fn toolchains_directory(project_root: &ProjectRoot) -> bsmr_error::Result<PathBuf> {
+    let cells = futures::executor::block_on(BsmrConfigBasedCells::parse_with_config_args(
+        project_root,
+        &[],
+    ))?;
+    let resolver = &cells.cell_resolver;
+    let cell = resolver
+        .root_cell_cell_alias_resolver()
+        .resolve("toolchains")?;
+    let path = resolver.get(cell)?.path().as_project_relative_path();
+    Ok(project_root.resolve(path).into_path_buf())
 }
 
 /// Resolves the generator destination from the active cell configuration.
@@ -467,6 +496,10 @@ fn validate_buildfile(buildfile: &str) -> Result<(), GoCommandError> {
 pub(super) enum GoCommandError {
     #[error("Go synchronization root `{0:?}` has neither go.mod nor go.work")]
     NoModule(PathBuf),
+    #[error(
+        "Go package `{0:?}` is the `toolchains//` package that holds the generated Go toolchain; declare a separate `toolchains` cell in `.bsmr`"
+    )]
+    ToolchainsPackage(PathBuf),
     #[error("Go synchronization root contains a non-UTF-8 entry `{0:?}`")]
     NonUtf8Entry(PathBuf),
     #[error("Go build-file name must be a single non-empty path component, got `{0}`")]

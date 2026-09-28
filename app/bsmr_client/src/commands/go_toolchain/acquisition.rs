@@ -25,8 +25,8 @@ use super::GoToolchainError;
 use super::GoToolchainLock;
 
 const GO_BOOTSTRAP_WRAPPER_SOURCE: &str = include_str!("go_bootstrap_wrapper.go");
-const SDK_DIRECTORY: &str = "toolchains/.bsmr-go-sdk";
-const TOOLS_DIRECTORY: &str = "toolchains/.bsmr-go-tools";
+const SDK_DIRECTORY: &str = ".bsmr-go-sdk";
+const TOOLS_DIRECTORY: &str = ".bsmr-go-tools";
 
 /// Identity marker required on every frontend-owned acquisition directory.
 #[derive(Debug, Deserialize, Serialize)]
@@ -47,7 +47,7 @@ struct AcquiredSdk {
 
 /// Creates only the owned source placeholders needed to analyze the acquisition target.
 pub(crate) fn prepare_acquisition(
-    root: &Path,
+    toolchains: &Path,
     lock: &GoToolchainLock,
 ) -> Result<(), GoToolchainError> {
     let archive = host_archive(lock)?;
@@ -60,7 +60,7 @@ pub(crate) fn prepare_acquisition(
         sha256: archive.sha256.clone(),
     };
     for directory in [SDK_DIRECTORY, TOOLS_DIRECTORY] {
-        let path = root.join(directory);
+        let path = toolchains.join(directory);
         if path.exists() {
             validate_owned_acquisition(&path)?;
             continue;
@@ -68,7 +68,7 @@ pub(crate) fn prepare_acquisition(
         fs::create_dir(&path).map_err(|error| write_error(&path, error))?;
         write_acquisition_metadata(&path, &metadata)?;
     }
-    let wrapper = root.join(TOOLS_DIRECTORY).join("go_wrapper");
+    let wrapper = toolchains.join(TOOLS_DIRECTORY).join("go_wrapper");
     if !wrapper.exists() {
         fs::write(&wrapper, []).map_err(|error| write_error(&wrapper, error))?;
     }
@@ -77,17 +77,16 @@ pub(crate) fn prepare_acquisition(
 
 /// Installs one verified extracted SDK and bootstrap wrapper as repository-local inputs.
 pub(crate) fn install_sdk(
-    root: &Path,
+    toolchains: &Path,
     extracted: &Path,
     lock: &GoToolchainLock,
 ) -> Result<(), GoToolchainError> {
     let archive = host_archive(lock)?;
     verify_sdk_version(extracted, &lock.version)?;
-    let toolchains = root.join("toolchains");
     let sdk_stage = tempfile::Builder::new()
         .prefix(".bsmr-go-sdk-stage-")
-        .tempdir_in(&toolchains)
-        .map_err(|error| write_error(&toolchains, error))?;
+        .tempdir_in(toolchains)
+        .map_err(|error| write_error(toolchains, error))?;
     copy_tree(extracted, sdk_stage.path())?;
     let metadata = AcquiredSdk {
         generated_by: GENERATED_BY.to_owned(),
@@ -100,22 +99,22 @@ pub(crate) fn install_sdk(
     write_acquisition_metadata(sdk_stage.path(), &metadata)?;
     let tools_stage = tempfile::Builder::new()
         .prefix(".bsmr-go-tools-stage-")
-        .tempdir_in(&toolchains)
-        .map_err(|error| write_error(&toolchains, error))?;
+        .tempdir_in(toolchains)
+        .map_err(|error| write_error(toolchains, error))?;
     compile_bootstrap_wrapper(sdk_stage.path(), tools_stage.path(), archive)?;
     write_acquisition_metadata(tools_stage.path(), &metadata)?;
-    replace_generated_directory(sdk_stage, &root.join(SDK_DIRECTORY))?;
-    replace_generated_directory(tools_stage, &root.join(TOOLS_DIRECTORY))?;
+    replace_generated_directory(sdk_stage, &toolchains.join(SDK_DIRECTORY))?;
+    replace_generated_directory(tools_stage, &toolchains.join(TOOLS_DIRECTORY))?;
     Ok(())
 }
 
 /// Returns the acquired SDK executable only when it matches the committed lock.
 pub(crate) fn acquired_go(
-    root: &Path,
+    toolchains: &Path,
     lock: &GoToolchainLock,
 ) -> Result<PathBuf, GoToolchainError> {
-    let sdk = root.join(SDK_DIRECTORY);
-    let tools = root.join(TOOLS_DIRECTORY);
+    let sdk = toolchains.join(SDK_DIRECTORY);
+    let tools = toolchains.join(TOOLS_DIRECTORY);
     let archive = host_archive(lock)?;
     validate_acquired_directory(&sdk, lock, archive)?;
     validate_acquired_directory(&tools, lock, archive)?;
