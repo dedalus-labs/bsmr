@@ -107,7 +107,7 @@ impl GoCommand {
     }
 }
 
-/// Pins or verifies the generated toolchain in the package that `toolchains//` names.
+/// Pins or verifies the SDK lock and the acquisition beside the `toolchains//` package.
 async fn configure_toolchain(
     command: GoToolchainCommand,
     ctx: &ClientCommandContext<'_>,
@@ -117,7 +117,6 @@ async fn configure_toolchain(
     let toolchains = toolchains_directory(project_root).await?;
     let lock = go_toolchain::configure(
         root,
-        &toolchains,
         command.version.as_deref(),
         command.update,
         command.check,
@@ -126,7 +125,7 @@ async fn configure_toolchain(
     if command.check {
         go_toolchain::acquired_go(&toolchains, &lock)?;
     } else {
-        go_toolchain::prepare_acquisition(&toolchains, &lock)?;
+        go_toolchain::validate_acquisition_owners(&toolchains)?;
         let sdk = materialize_sdk_archive(root)?;
         go_toolchain::install_sdk(&toolchains, &sdk, &lock)?;
     }
@@ -170,13 +169,6 @@ fn sync(mut command: GoSyncCommand, ctx: &ClientCommandContext<'_>) -> bsmr_erro
         run_go_list(&command, &root, &go, &patterns)?
     };
     let graph = GoGraph::from_go_list(&output, &root, &root_package(ctx)?)?;
-    if graph
-        .packages()
-        .iter()
-        .any(|package| root.join(package.relative_dir()) == toolchains)
-    {
-        return Err(GoCommandError::ToolchainsPackage(toolchains).into());
-    }
     let mode = if command.check {
         SyncMode::Check
     } else {
@@ -194,8 +186,9 @@ fn sync(mut command: GoSyncCommand, ctx: &ClientCommandContext<'_>) -> bsmr_erro
 
 /// Resolves the directory of the package `toolchains//` names in the project configuration.
 ///
-/// `bsmr init` aliases `toolchains` to the root cell so native frontends can declare toolchains
-/// in the root package; a project may instead declare a dedicated `toolchains` cell.
+/// The locked Go toolchain targets join that package when it is evaluated and read the SDK and
+/// bootstrap wrapper from these package-relative directories. `bsmr init` aliases `toolchains`
+/// to the root cell, so this is the project root unless a project declares its own cell.
 pub(super) async fn toolchains_directory(
     project_root: &ProjectRoot,
 ) -> bsmr_error::Result<PathBuf> {
@@ -495,10 +488,6 @@ fn validate_buildfile(buildfile: &str) -> Result<(), GoCommandError> {
 pub(super) enum GoCommandError {
     #[error("Go synchronization root `{0:?}` has neither go.mod nor go.work")]
     NoModule(PathBuf),
-    #[error(
-        "Go package `{0:?}` is the `toolchains//` package that holds the generated Go toolchain; declare a separate `toolchains` cell in `.bsmr`"
-    )]
-    ToolchainsPackage(PathBuf),
     #[error("Go synchronization root contains a non-UTF-8 entry `{0:?}`")]
     NonUtf8Entry(PathBuf),
     #[error("Go build-file name must be a single non-empty path component, got `{0}`")]

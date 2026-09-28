@@ -22,7 +22,6 @@ pub(crate) mod interpreter;
 pub mod listing;
 pub mod resolver;
 
-pub use build_source::NATIVE_MANIFESTS;
 pub use build_source::PackageBuildSource;
 pub(crate) use build_source::find_build_source;
 pub(crate) use build_source::is_python_virtual_environment;

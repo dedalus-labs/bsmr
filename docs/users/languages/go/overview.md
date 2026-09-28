@@ -73,7 +73,7 @@ Synchronization has one directional contract:
 4. `bsmr go sync --check` reruns the same import and fails if committed output
    differs, without changing the repository.
 
-The generated and acquired artifacts have deliberately different lifetimes.
+The committed and acquired artifacts have deliberately different lifetimes.
 `<toolchains>` is the directory of the `toolchains//` package: the project root
 in a project created by `bsmr init`, or the directory of a declared
 `toolchains` cell.
@@ -81,24 +81,33 @@ in a project created by `bsmr init`, or the directory of a declared
 | Artifact | Commit? | Why it exists |
 | --- | --- | --- |
 | `.bsmr-go-toolchain.json` | yes | Pins the SDK semantics and authenticated archives for every supported execution host. |
-| `<toolchains>/bsmr_go_toolchain.bzl` | yes | Lowers the lock into execution-host archive and target-platform selections. |
-| `<toolchains>/BUILD.bsmr` | yes | Activates the generated Go toolchains without replacing the other language toolchains. |
 | `.bsmr-go-manifests` | yes | Records the exact manifest paths Bessemer may later remove as stale. |
 | `<package>/<buildfile>` | yes | Carries the validated native graph into ordinary Bessemer rules and action keys. |
 | `<toolchains>/.bsmr-go-sdk` | no | Holds the verified SDK executable and standard library for the current host. |
 | `<toolchains>/.bsmr-go-tools` | no | Holds the bootstrap wrapper compiled by that SDK for the current host. |
 
-The generated toolchain needs the `toolchains//` package to itself. A root Go
-package, or a root `Cargo.toml`, `package.json`, or `pyproject.toml`, already
-defines the root package, so a project with one declares a separate
-`toolchains` cell:
+### Where the toolchain lives
 
-```ini
-[cells]
-  toolchains = toolchains
-```
+The lock is the only committed toolchain file. When Bessemer evaluates the
+package that `toolchains//` names, it adds `go`, `go_bootstrap`, and
+`go_sdk_archive` from the lock to that package's own targets. Anything may
+define the package: a `Cargo.toml`, `package.json`, or `pyproject.toml`, a
+synchronized Go package, a handwritten build file, or the lock alone.
 
-Remove `toolchains = root` from `[cell_aliases]` in the same edit.
+In a project created by `bsmr init`, `toolchains` is an alias of the root cell,
+so the Go toolchain joins the project root package. Bessemer declares `cxx`,
+`python_bootstrap`, `genrule`, `test`, and `remote_test_execution` there once
+for every native frontend, so a Go-only project needs no other toolchain
+configuration.
+
+A project that declares its own `toolchains` cell owns that package. Bessemer
+adds only the Go targets there, and the cell declares the other toolchains its
+builds use, for example with `system_demo_toolchains(include_go = False)`.
+
+In both layouts the lock owns the names `go`, `go_bootstrap`, and
+`go_sdk_archive`; a build file that also declares one fails to load. Until
+`bsmr go toolchain` acquires the SDK on a machine, the package still loads and
+only a build that uses Go fails, naming the command to run.
 
 Generated manifests carry their source files, embed files, direct imports,
 build tags, cgo mode, canonical import path, and a strict ownership marker.

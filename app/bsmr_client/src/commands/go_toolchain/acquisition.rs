@@ -16,6 +16,8 @@ use std::path::Path;
 use std::path::PathBuf;
 use std::process::Command;
 
+use bsmr_common::native_toolchains::GO_SDK_DIRECTORY as SDK_DIRECTORY;
+use bsmr_common::native_toolchains::GO_TOOLS_DIRECTORY as TOOLS_DIRECTORY;
 use serde::Deserialize;
 use serde::Serialize;
 
@@ -25,15 +27,13 @@ use super::GoToolchainError;
 use super::GoToolchainLock;
 
 const GO_BOOTSTRAP_WRAPPER_SOURCE: &str = include_str!("go_bootstrap_wrapper.go");
-const SDK_DIRECTORY: &str = ".bsmr-go-sdk";
-const TOOLS_DIRECTORY: &str = ".bsmr-go-tools";
 
 /// Identity marker required on every frontend-owned acquisition directory.
 #[derive(Debug, Deserialize, Serialize)]
 struct AcquiredSdk {
     /// Proves directory ownership before replacement.
     generated_by: String,
-    /// Distinguishes analysis placeholders from complete, usable acquisitions.
+    /// Distinguishes a complete, usable acquisition from an interrupted one.
     state: String,
     /// Ties the installed compiler and tools to the locked Go semantics.
     version: String,
@@ -45,32 +45,13 @@ struct AcquiredSdk {
     sha256: String,
 }
 
-/// Creates only the owned source placeholders needed to analyze the acquisition target.
-pub(crate) fn prepare_acquisition(
-    toolchains: &Path,
-    lock: &GoToolchainLock,
-) -> Result<(), GoToolchainError> {
-    let archive = host_archive(lock)?;
-    let metadata = AcquiredSdk {
-        generated_by: GENERATED_BY.to_owned(),
-        state: "acquiring".to_owned(),
-        version: lock.version.clone(),
-        os: archive.os.clone(),
-        arch: archive.arch.clone(),
-        sha256: archive.sha256.clone(),
-    };
+/// Refuses, before any download, to replace acquisition directories Bessemer does not own.
+pub(crate) fn validate_acquisition_owners(toolchains: &Path) -> Result<(), GoToolchainError> {
     for directory in [SDK_DIRECTORY, TOOLS_DIRECTORY] {
         let path = toolchains.join(directory);
         if path.exists() {
             validate_owned_acquisition(&path)?;
-            continue;
         }
-        fs::create_dir(&path).map_err(|error| write_error(&path, error))?;
-        write_acquisition_metadata(&path, &metadata)?;
-    }
-    let wrapper = toolchains.join(TOOLS_DIRECTORY).join("go_wrapper");
-    if !wrapper.exists() {
-        fs::write(&wrapper, []).map_err(|error| write_error(&wrapper, error))?;
     }
     Ok(())
 }
@@ -83,6 +64,7 @@ pub(crate) fn install_sdk(
 ) -> Result<(), GoToolchainError> {
     let archive = host_archive(lock)?;
     verify_sdk_version(extracted, &lock.version)?;
+    fs::create_dir_all(toolchains).map_err(|error| write_error(toolchains, error))?;
     let sdk_stage = tempfile::Builder::new()
         .prefix(".bsmr-go-sdk-stage-")
         .tempdir_in(toolchains)

@@ -12,7 +12,7 @@
 //! every supported execution host.
 
 mod acquisition;
-mod manifest;
+mod lock;
 
 use std::fs;
 use std::path::Path;
@@ -20,14 +20,14 @@ use std::path::PathBuf;
 
 pub(crate) use acquisition::acquired_go;
 pub(crate) use acquisition::install_sdk;
-pub(crate) use acquisition::prepare_acquisition;
-pub(crate) use manifest::write_configuration;
+pub(crate) use acquisition::validate_acquisition_owners;
+pub(crate) use lock::write_lock;
 use serde::Deserialize;
 use serde::Serialize;
 
 pub(super) const GENERATED_BY: &str = "bsmr go toolchain";
 const GO_RELEASES_URL: &str = "https://go.dev/dl/?mode=json&include=all";
-pub(super) const LOCK_FILE: &str = ".bsmr-go-toolchain.json";
+pub(super) use bsmr_common::native_toolchains::GO_TOOLCHAIN_LOCK as LOCK_FILE;
 const SCHEMA: u32 = 1;
 /// First Go release with `go.mod` `tool` directives and the `tool` meta-pattern.
 const TOOL_DIRECTIVES: (u64, u64, u64) = (1, 24, 0);
@@ -126,7 +126,6 @@ struct ReleaseFile {
 /// Updates or verifies the native toolchain configuration.
 pub(crate) async fn configure(
     root: &Path,
-    toolchains: &Path,
     requested: Option<&str>,
     update: bool,
     check: bool,
@@ -148,7 +147,7 @@ pub(crate) async fn configure(
     } else {
         resolve_release(requested).await?
     };
-    write_configuration(root, toolchains, &lock, check)?;
+    write_lock(root, &lock, check)?;
     Ok(lock)
 }
 
@@ -313,7 +312,7 @@ pub(super) fn validate_lock(lock: &GoToolchainLock) -> Result<(), GoToolchainErr
     Ok(())
 }
 
-/// Validates every release-controlled value interpolated into generated Starlark.
+/// Validates every release-controlled value that selects the downloaded archive.
 fn validate_archive(archive: &GoSdkArchive, version: &str) -> Result<(), GoToolchainError> {
     let expected = format!("go{version}.{}-{}.tar.gz", archive.os, archive.arch);
     if archive.filename != expected {
@@ -376,18 +375,12 @@ pub(crate) enum GoToolchainError {
     Wrapper(String),
     #[error("Go toolchain lock is invalid: {0}")]
     Lock(String),
-    #[error("failed to render generated Go toolchain: {0}")]
-    Render(String),
     #[error("failed to read `{path:?}`: {message}")]
     Read { path: PathBuf, message: String },
     #[error("failed to write `{path:?}`: {message}")]
     Write { path: PathBuf, message: String },
     #[error("refusing to overwrite user-owned toolchain file `{0:?}`")]
     UserOwned(PathBuf),
-    #[error(
-        "`{0:?}` defines the `toolchains//` package natively; declare a separate `toolchains` cell in `.bsmr` for the generated Go toolchain"
-    )]
-    NativePackage(PathBuf),
-    #[error("generated Go toolchain files are stale: {0:?}")]
-    Stale(Vec<PathBuf>),
+    #[error("Go toolchain lock `{0:?}` differs from its generated form; run `bsmr go toolchain`")]
+    Stale(PathBuf),
 }

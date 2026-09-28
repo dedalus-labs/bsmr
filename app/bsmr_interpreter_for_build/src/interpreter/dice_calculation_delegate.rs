@@ -227,6 +227,17 @@ pub struct DiceCalculationDelegate<'c, 'd> {
     configs: Arc<InterpreterForDir>,
 }
 
+/// Directory names whose contents never enter a native package's workspace checkout.
+///
+/// Version control state, build outputs, and the host-specific Go SDK and bootstrap tools that
+/// `bsmr go toolchain` installs in `toolchains//` are local state, not workspace sources.
+fn excluded_from_checkout(path: &str) -> bool {
+    path.split('/').any(|part| {
+        [".git", "target", "bsmr-out"].contains(&part)
+            || bsmr_common::native_toolchains::is_go_acquisition(part)
+    })
+}
+
 impl<'c, 'd: 'c> DiceCalculationDelegate<'c, 'd> {
     async fn get_legacy_bsmr_config_for_starlark(
         &mut self,
@@ -301,7 +312,15 @@ impl<'c, 'd: 'c> DiceCalculationDelegate<'c, 'd> {
         let build_file_path = BuildFilePath::new(package.dupe(), listing.buildfile().to_owned());
         let (ast, deps) = match listing.build_source() {
             PackageBuildSource::Starlark => {
-                self.prepare_eval(StarlarkPath::BuildFile(&build_file_path))
+                let path = build_file_path.path();
+                let mut source = DiceFileComputations::read_file(self.ctx, path.as_ref())
+                    .await
+                    .with_package_context_information(path.path().to_string())?;
+                source.push('\n');
+                source.push_str(
+                    &bsmr_common::native_toolchains::render(self.ctx, package, listing).await?,
+                );
+                self.prepare_generated_build_file(&build_file_path, source)
                     .await?
             }
             PackageBuildSource::CargoPlan => {
@@ -316,22 +335,12 @@ impl<'c, 'd: 'c> DiceCalculationDelegate<'c, 'd> {
                 let files: Vec<_> = listing
                     .files()
                     .files()
-                    .filter(|file| {
-                        !file
-                            .as_str()
-                            .split('/')
-                            .any(|part| [".git", "target", "bsmr-out"].contains(&part))
-                    })
+                    .filter(|file| !excluded_from_checkout(file.as_str()))
                     .map(|file| file.as_str())
                     .collect();
                 let directories: Vec<_> = listing
                     .empty_directories()
-                    .filter(|path| {
-                        !path
-                            .as_str()
-                            .split('/')
-                            .any(|part| [".git", "target", "bsmr-out"].contains(&part))
-                    })
+                    .filter(|path| !excluded_from_checkout(path.as_str()))
                     .map(|path| path.as_str())
                     .collect();
                 source.push_str(&format!(
@@ -382,7 +391,9 @@ impl<'c, 'd: 'c> DiceCalculationDelegate<'c, 'd> {
                         source.push_str(&python);
                     }
                 }
-                source.push_str(&bsmr_common::native_toolchains::render(package, listing)?);
+                source.push_str(
+                    &bsmr_common::native_toolchains::render(self.ctx, package, listing).await?,
+                );
                 self.prepare_generated_build_file(&build_file_path, source)
                     .await?
             }

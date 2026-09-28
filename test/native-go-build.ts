@@ -3,7 +3,7 @@
 // SPDX-License-Identifier: Apache-2.0
 //===----------------------------------------------------------------------===//
 
-// Verifies pinned native Go compilation, cache restoration, input invalidation, and tool roots.
+// Verifies pinned native Go compilation, cache restoration, input invalidation, tool roots, and shared toolchains.
 
 import assert from "node:assert/strict";
 import { execFile } from "node:child_process";
@@ -37,6 +37,36 @@ writeFileSync(join(cwd, "cmd/probe/main_test.go"), `package main
 import "testing"
 func TestMessage(t *testing.T) { if message == "" { t.Fatal("empty embedded message") } }
 `);
+
+/** Build Go beside the Cargo and pnpm manifests that already define the root `toolchains//` package. */
+async function monorepo() {
+	const directory = join(root, "monorepo");
+	workspaces.push(directory);
+	cpSync(resolve(import.meta.dirname, "fixtures/go-tools"), directory, { recursive: true });
+	const files: Record<string, string> = {
+		"go.mod": "module example.com/monorepo\n\ngo 1.24\n\ntool example.com/greeter/cmd/greet\n\nrequire example.com/greeter v1.0.0\n",
+		"svc/main.go": 'package main\nimport "fmt"\nfunc main() { fmt.Print("go beside rust\\n") }\n',
+		"Cargo.toml": '[package]\nname = "monorepo"\nversion = "0.1.0"\nedition = "2024"\n',
+		"Cargo.lock": 'version = 4\n\n[[package]]\nname = "monorepo"\nversion = "0.1.0"\n',
+		"rust-toolchain.toml": '[toolchain]\nchannel = "1.97.1"\n',
+		"src/main.rs": 'fn main() { println!("rust beside go"); }\n',
+		"package.json": '{ "name": "monorepo", "private": true }\n',
+	};
+	for (const [path, text] of Object.entries(files)) {
+		mkdirSync(resolve(directory, path, ".."), { recursive: true });
+		writeFileSync(join(directory, path), text);
+	}
+	const context = { ...options, cwd: directory };
+	await run(executable, ["init"], context);
+	await run(executable, ["go", "toolchain", "--version", version], context);
+	await run(executable, ["go", "sync"], context);
+	assert.equal((await run(executable, ["run", "//svc:bin", "--console", "none"], context)).stdout, "go beside rust\n");
+	assert.equal((await run(executable, ["run", "//vendor/example.com/greeter/cmd/greet:bin", "--console", "none"], context)).stdout, "greeter v1.0.0\n");
+	assert.equal((await run(executable, ["run", ".", "--console", "none"], context)).stdout, "rust beside go\n");
+	// The Rust frontend's host tools stay the `toolchains//` defaults; Go adds none of its own.
+	const bootstrap = await run(executable, ["uquery", "toolchains//:python_bootstrap", "--output-attribute", "bsmr.type"], context);
+	assert.match(bootstrap.stdout, /"system_python_bootstrap_toolchain"/);
+}
 
 type Action = { identity: string; reproducer: { executor: string } };
 
@@ -135,6 +165,8 @@ try {
 	const automatic = await build(second, "automatic-link", "compiled:original\n", false);
 	assert.ok(automatic.local.filter(({ identity }) => identity.includes("(go_link ")).length === 2);
 	assert.equal(automatic.cached.filter(({ identity }) => identity.includes("(go_link ")).length, 0);
+	// Without the lock, the root build file alone declares the toolchains the system phases select.
+	rmSync(join(second, ".bsmr-go-toolchain.json"));
 	writeFileSync(join(second, "BUILD.bsmr"), 'load("@prelude//toolchains:demo.bzl", "system_demo_toolchains")\nsystem_demo_toolchains()\n');
 	env["PATH"] = `${join(second, ".bsmr-go-sdk/bin")}${delimiter}${process.env["PATH"]}`;
 	await systemBootstrap(second, "system-go");
@@ -188,7 +220,8 @@ build\t${arch === "arm64" ? "GOARM64=v8.0" : "GOAMD64=v1"}
 	assert.match(retired.stdout, /0 packages, 0 manifests written, 2 removed/);
 	await run(executable, ["go", "sync", "--check"], { ...options, cwd: tools });
 	assert.ok(!existsSync(join(tools, "vendor/example.com/greeter/cmd/greet/BUILD.bsmr")));
-	process.stdout.write(`ok: Go ${version} embeds, restoration, source roots, policy isolation, source/SDK invalidation, system-tool exclusion, tool directives, build info, tool retirement\n`);
+	await monorepo();
+	process.stdout.write(`ok: Go ${version} embeds, restoration, source roots, policy isolation, source/SDK invalidation, system-tool exclusion, tool directives, build info, tool retirement, Go beside Cargo and pnpm roots\n`);
 } finally {
 	await Promise.all(workspaces.map((directory) => run(executable, ["kill"], { ...options, cwd: directory })));
 	rmSync(root, { recursive: true });

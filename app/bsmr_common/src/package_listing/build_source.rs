@@ -11,6 +11,7 @@ use pagable::Pagable;
 
 use crate::file_ops::metadata::SimpleDirEntry;
 use crate::find_buildfile::find_buildfile;
+use crate::native_toolchains::GO_TOOLCHAIN_LOCK;
 
 /// The authoritative source used to define a package's build graph.
 #[derive(Clone, Copy, Debug, Eq, PartialEq, Allocative, Pagable)]
@@ -24,7 +25,15 @@ pub enum PackageBuildSource {
 }
 
 /// Native manifests that define a package root without a Starlark build file, in precedence order.
-pub const NATIVE_MANIFESTS: [&str; 3] = ["pyproject.toml", "Cargo.toml", "package.json"];
+///
+/// The Go toolchain lock defines the project root package, so `toolchains//`, which `bsmr init`
+/// aliases to the root cell, exists in a project that has no other root manifest.
+const NATIVE_MANIFESTS: [&str; 4] = [
+    "pyproject.toml",
+    "Cargo.toml",
+    "package.json",
+    GO_TOOLCHAIN_LOCK,
+];
 
 /// Selects an explicit build file or, at a requested package root, a native manifest.
 pub(crate) fn find_build_source(
@@ -123,6 +132,30 @@ mod tests {
             source,
             Some((
                 FileNameBuf::unchecked_new("pyproject.toml"),
+                PackageBuildSource::Native,
+            ))
+        );
+    }
+
+    /// Invariant: the Go toolchain lock defines a package, and yields to every other manifest.
+    ///
+    /// A Go-only project from `bsmr init` has no root build file, yet `toolchains//` must exist
+    /// there; a root that Cargo already defines keeps Cargo as its source.
+    ///
+    /// Witness:
+    /// a lock alone selects the lock, and a lock beside `Cargo.toml` selects `Cargo.toml`.
+    #[test]
+    fn invariant_go_toolchain_lock_defines_a_requested_package_last() {
+        let lock = ".bsmr-go-toolchain.json";
+
+        assert_eq!(
+            find_build_source(&[], &listing(&[lock]), true),
+            Some((FileNameBuf::unchecked_new(lock), PackageBuildSource::Native))
+        );
+        assert_eq!(
+            find_build_source(&[], &listing(&[lock, "Cargo.toml"]), true),
+            Some((
+                FileNameBuf::unchecked_new("Cargo.toml"),
                 PackageBuildSource::Native,
             ))
         );

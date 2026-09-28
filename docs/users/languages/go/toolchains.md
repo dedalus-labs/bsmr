@@ -27,14 +27,14 @@ or `1.26.5`. It
 commits the official archive names, SHA-256 digests, and byte lengths for
 supported hosts, then materializes and verifies the current host SDK as a
 repository-local ignored input. The check command is offline and rejects lock,
-generated IR, acquisition-metadata, or SDK-version drift.
+acquisition-metadata, or SDK-version drift.
 
 The committed `.bsmr-go-toolchain.json` is intentionally small. Each field
 protects a different part of the toolchain contract:
 
 | Field | Purpose |
 | --- | --- |
-| `generated_by` | Establishes ownership before Bessemer overwrites generated configuration; it is not an artifact digest. |
+| `generated_by` | Establishes ownership before Bessemer overwrites the lock; it is not an artifact digest. |
 | `schema` | Prevents a lock written with newer semantics from being accepted by an incompatible reader. |
 | `version` | Fixes the Go language, package-selection, compiler, linker, and standard-library behavior. |
 | `archives[].os` / `archives[].arch` | Selects runnable SDK bytes for the execution host, independently of the build target. |
@@ -44,7 +44,7 @@ protects a different part of the toolchain contract:
 
 Execution host and build target are separate dimensions. A Darwin arm64 runner,
 for example, must execute the Darwin arm64 SDK tools even when those tools emit a
-pure-Go Linux amd64 binary. The generated toolchain therefore selects the archive
+pure-Go Linux amd64 binary. The locked toolchain therefore selects the archive
 from the execution platform and derives `GOOS` and `GOARCH` from the target
 platform. Host-native cgo cannot cross that boundary because its C/C++ toolchain
 and sysroot are host inputs.

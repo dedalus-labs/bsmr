@@ -105,7 +105,7 @@ target identity.
 ## Reuse compiled work
 
 A fresh checkout can reuse compiled packages when its declared source, SDK,
-helper tools, and target match a cached action. The generated native toolchain
+helper tools, and target match a cached action. The locked native toolchain
 enables this cache for artifact-backed Go tools. Generic toolchains remain
 ineligible unless their rule author explicitly declares those inputs.
 
