@@ -382,6 +382,7 @@ impl<'c, 'd: 'c> DiceCalculationDelegate<'c, 'd> {
                         source.push_str(&python);
                     }
                 }
+                source.push_str(&bsmr_common::native_toolchains::render(package, listing)?);
                 self.prepare_generated_build_file(&build_file_path, source)
                     .await?
             }
