@@ -39,6 +39,7 @@ load(
     "@prelude//utils:utils.bzl",
     "filter_and_map_idx",
 )
+load(":build_info.bzl", "go_modinfo")
 load(
     ":packages.bzl",
     "GoPkg",  # @Unused used as type
@@ -114,8 +115,13 @@ def link(
     link_style: LinkStyle = LinkStyle("static"),
     linker_flags: list[typing.Any] = [],
     external_linker_flags: list[typing.Any] = [],
+    build_info: list[str] | None = None,
 ):
-    """Preserve requested link semantics and cache only a declared internal Go link."""
+    """Preserve requested link semantics and cache only a declared internal Go link.
+
+    `build_info` holds the main package's `debug.BuildInfo` path and module lines;
+    when given, the link embeds them with the configuration's build settings.
+    """
     go_toolchain = ctx.attrs._go_toolchain[GoToolchainInfo]
 
     if link_mode == None:
@@ -261,6 +267,16 @@ def link(
 
     env = get_toolchain_env_vars(go_toolchain)
 
+    modinfo = None
+    if build_info != None:
+        modinfo = go_modinfo(
+            go_toolchain,
+            build_info,
+            _build_mode_param(build_mode),
+            go_toolchain.build_tags + ctx.attrs._build_tags,
+            cgo_enabled,
+        )
+
     ctx.actions.dynamic_output_new(
         _link(
             go_stdlib_value = go_stdlib.dynamic_value,
@@ -268,6 +284,7 @@ def link(
             link_args = cmd,
             main_pkg = main,
             deps_pkgs = all_pkgs,
+            modinfo = modinfo,
             shared = use_shared_code,
             identifier = identifier_prefix,
             out = output.as_output(),
@@ -291,6 +308,7 @@ def _link_impl(
     link_args: cmd_args,
     main_pkg: GoPkg,
     deps_pkgs: dict[str, GoPkg],
+    modinfo: str | None,
     shared: bool,
     identifier: str,
     out: OutputArtifact,
@@ -300,7 +318,7 @@ def _link_impl(
     go_stdlib_value = go_stdlib_value.providers[GoStdlibDynamicValue]
 
     deps = merge_pkgs([go_stdlib_value.pkgs, deps_pkgs])
-    importcfg = make_link_importcfg(actions, deps, shared)
+    importcfg = make_link_importcfg(actions, deps, modinfo, shared)
     main_pkg_o = main_pkg.archive_file_shared if shared else main_pkg.archive_file
 
     cmd = [
@@ -321,6 +339,7 @@ _link = dynamic_actions(
         "link_args": dynattrs.value(cmd_args),
         "main_pkg": dynattrs.value(GoPkg),
         "deps_pkgs": dynattrs.value(dict[str, GoPkg]),
+        "modinfo": dynattrs.value(str | None),
         "shared": dynattrs.value(bool),
         "identifier": dynattrs.value(str),
         "out": dynattrs.output(),

@@ -11,6 +11,7 @@
 //! `go list`. It rejects unsafe or non-vendored inputs, preserves distinct internal
 //! and external test packages, and orders local nodes for stable manifest output.
 
+mod build_info;
 mod metadata;
 
 use std::collections::BTreeMap;
@@ -30,6 +31,8 @@ use crate::commands::go_graph_error::GoGraphError;
 pub(crate) struct GoPackage {
     /// Chooses the manifest destination without exposing an absolute host path.
     relative_dir: PathBuf,
+    /// Names this package's target the way its consumers' `deps` name it.
+    label: String,
     /// Preserves Go's canonical package identity for compiler import configuration.
     import_path: String,
     /// Gives every package a predictable `:lib` or `:bin` Bessemer label.
@@ -52,6 +55,8 @@ pub(crate) struct GoPackage {
     test_embed_files: Vec<String>,
     /// Makes external-test `go:embed` content explicit action inputs.
     external_test_embed_files: Vec<String>,
+    /// Carries an executable's `debug.BuildInfo` module lines into its link action.
+    modules: Vec<String>,
 }
 
 impl GoPackage {
@@ -114,6 +119,11 @@ impl GoPackage {
     pub(crate) fn external_test_embed_files(&self) -> &[String] {
         &self.external_test_embed_files
     }
+
+    /// Returns the `debug.BuildInfo` module lines of an executable package.
+    pub(crate) fn modules(&self) -> &[String] {
+        &self.modules
+    }
 }
 
 /// A validated, topologically ordered Go package graph.
@@ -125,11 +135,19 @@ pub(crate) struct GoGraph {
 
 impl GoGraph {
     /// Parses concatenated `go list -deps -json -test` objects.
-    pub(crate) fn from_go_list(bytes: &[u8], root: &Path) -> Result<Self, GoGraphError> {
+    ///
+    /// `root_package` is the synchronization root's package path within its cell, such
+    /// as `tools` for a module in `<cell>/tools`. Labels are cell-relative, so every
+    /// generated dependency label starts from it.
+    pub(crate) fn from_go_list(
+        bytes: &[u8],
+        root: &Path,
+        root_package: &str,
+    ) -> Result<Self, GoGraphError> {
         let listed = deserialize_packages(bytes)?;
         reject_package_errors(&listed)?;
         let base = base_packages(listed)?;
-        let packages = lower_packages(&base, root)?;
+        let packages = lower_packages(&base, &SyncRoot { root, root_package })?;
         Ok(Self {
             packages: topological_order(packages)?,
         })
@@ -141,15 +159,23 @@ impl GoGraph {
     }
 }
 
+/// Locates the synchronization root on disk and in the cell's package namespace.
+struct SyncRoot<'a> {
+    /// Bounds which SDK packages are repository-local.
+    root: &'a Path,
+    /// Prefixes every generated label; empty when the root is the cell root.
+    root_package: &'a str,
+}
+
 /// Lowers repository-local packages and resolves their direct dependency labels.
 fn lower_packages(
     listed: &BTreeMap<String, ListedPackage>,
-    root: &Path,
+    root: &SyncRoot<'_>,
 ) -> Result<BTreeMap<String, GoPackage>, GoGraphError> {
     let mut lowered = BTreeMap::new();
     for package in listed
         .values()
-        .filter(|package| !package.standard && package.dir.starts_with(root))
+        .filter(|package| !package.standard && package.dir.starts_with(root.root))
     {
         lowered.insert(
             package.import_path.clone(),
@@ -163,14 +189,20 @@ fn lower_packages(
 fn lower_package(
     package: &ListedPackage,
     listed: &BTreeMap<String, ListedPackage>,
-    root: &Path,
+    root: &SyncRoot<'_>,
 ) -> Result<GoPackage, GoGraphError> {
     reject_unsupported_sources(package)?;
-    let relative_dir = relative_package_directory(package, root)?;
+    let relative_dir = relative_package_directory(package, root.root)?;
     let sources = package_sources(package);
     validate_package_sources(package, &sources)?;
+    let modules = if package.name == "main" {
+        build_info::module_lines(package, listed)?
+    } else {
+        Vec::new()
+    };
     Ok(GoPackage {
         relative_dir,
+        label: target_label(&package.dir, &package.name, root)?,
         import_path: package.import_path.clone(),
         target_name: if package.name == "main" { "bin" } else { "lib" },
         sources,
@@ -190,6 +222,7 @@ fn lower_package(
         embed_files: package.embed_files.clone(),
         test_embed_files: selected_files(package, &package.test_embed_files),
         external_test_embed_files: selected_files(package, &package.x_test_embed_files),
+        modules,
     })
 }
 
@@ -307,7 +340,7 @@ fn dependency_labels(
     package: &ListedPackage,
     imports: &[String],
     listed: &BTreeMap<String, ListedPackage>,
-    root: &Path,
+    root: &SyncRoot<'_>,
 ) -> Result<Vec<String>, GoGraphError> {
     let mut labels = BTreeSet::new();
     for import in imports.iter().filter(|import| import.as_str() != "C") {
@@ -320,7 +353,7 @@ fn dependency_labels(
         if dependency.standard {
             continue;
         }
-        if !dependency.dir.starts_with(root) {
+        if !dependency.dir.starts_with(root.root) {
             return Err(GoGraphError::NonVendoredDependency {
                 package: package.import_path.clone(),
                 dependency: import.clone(),
@@ -331,24 +364,25 @@ fn dependency_labels(
     Ok(labels.into_iter().collect())
 }
 
-/// Constructs the conventional `//package:lib` or `//package:bin` label.
-fn target_label(dir: &Path, name: &str, root: &Path) -> Result<String, GoGraphError> {
+/// Constructs the conventional cell-relative `//package:lib` or `//package:bin` label.
+fn target_label(dir: &Path, name: &str, root: &SyncRoot<'_>) -> Result<String, GoGraphError> {
     let relative = dir
-        .strip_prefix(root)
+        .strip_prefix(root.root)
         .map_err(|_| GoGraphError::PackageOutsideRoot {
             package: dir.to_owned(),
-            root: root.to_owned(),
+            root: root.root.to_owned(),
         })?;
-    let path = relative
+    let relative = relative
         .to_str()
         .ok_or_else(|| GoGraphError::NonUtf8Directory(relative.to_owned()))?
         .replace(std::path::MAIN_SEPARATOR, "/");
+    let path = [root.root_package, relative.as_str()]
+        .into_iter()
+        .filter(|part| !part.is_empty())
+        .collect::<Vec<_>>()
+        .join("/");
     let target = if name == "main" { "bin" } else { "lib" };
-    Ok(if path.is_empty() {
-        format!("//:{target}")
-    } else {
-        format!("//{path}:{target}")
-    })
+    Ok(format!("//{path}:{target}"))
 }
 
 /// Orders packages with Kahn's algorithm and fails if the SDK graph is cyclic.
@@ -357,10 +391,7 @@ fn topological_order(
 ) -> Result<Vec<GoPackage>, GoGraphError> {
     let label_to_import = packages
         .iter()
-        .map(|(import, package)| {
-            let label = package_label(package);
-            (label, import.clone())
-        })
+        .map(|(import, package)| (package.label.clone(), import.clone()))
         .collect::<BTreeMap<_, _>>();
     let mut incoming = packages
         .keys()
@@ -409,17 +440,4 @@ fn topological_order(
         return Err(GoGraphError::Cycle(cycle));
     }
     Ok(ordered)
-}
-
-/// Returns a package's own stable target label.
-fn package_label(package: &GoPackage) -> String {
-    let path = package
-        .relative_dir
-        .to_string_lossy()
-        .replace(std::path::MAIN_SEPARATOR, "/");
-    if path.is_empty() {
-        format!("//:{}", package.target_name)
-    } else {
-        format!("//{path}:{}", package.target_name)
-    }
 }

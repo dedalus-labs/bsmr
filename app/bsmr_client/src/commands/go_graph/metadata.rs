@@ -94,8 +94,23 @@ pub(super) struct ListedPackage {
     /// Prevents transitive-only packages from acquiring unintended test targets.
     #[serde(default)]
     pub(super) dep_only: bool,
+    /// Names the module that supplies this package, which `debug.BuildInfo` records.
+    pub(super) module: Option<ListedModule>,
     /// Preserves SDK load failures until they can become package-specific errors.
     error: Option<ListedPackageError>,
+}
+
+/// The module identity `go list` reports for a package.
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "PascalCase")]
+pub(super) struct ListedModule {
+    /// Identifies the module in `debug.BuildInfo`.
+    pub(super) path: String,
+    /// Holds the selected version; Go leaves it empty for main and workspace modules.
+    #[serde(default)]
+    pub(super) version: String,
+    /// Names the module that `replace` substitutes for this one.
+    pub(super) replace: Option<Box<ListedModule>>,
 }
 
 #[derive(Debug, Deserialize)]

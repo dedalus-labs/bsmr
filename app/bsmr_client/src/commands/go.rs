@@ -164,7 +164,7 @@ fn sync(mut command: GoSyncCommand, ctx: &ClientCommandContext<'_>) -> bsmr_erro
     } else {
         run_go_list(&command, &root, &go, &patterns)?
     };
-    let graph = GoGraph::from_go_list(&output, &root)?;
+    let graph = GoGraph::from_go_list(&output, &root, &root_package(ctx)?)?;
     let mode = if command.check {
         SyncMode::Check
     } else {
@@ -214,6 +214,17 @@ fn resolve_buildfile(
             property: "name",
         })?,
     )?)
+}
+
+/// Returns the working directory's package path within its cell, where generated labels start.
+fn root_package(ctx: &ClientCommandContext<'_>) -> bsmr_error::Result<String> {
+    let paths = ctx.paths()?;
+    let cells = futures::executor::block_on(BsmrConfigBasedCells::parse_with_config_args(
+        paths.project_root(),
+        &[],
+    ))?;
+    let package = cells.cell_resolver.get_cell_path(&paths.roots.cwd);
+    Ok(package.path().as_str().to_owned())
 }
 
 /// Requires every graph-selection tag to exist in Bessemer's configuration space.

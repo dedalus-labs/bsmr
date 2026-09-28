@@ -152,17 +152,44 @@ go_bootstrap_toolchain(name = "go_bootstrap", go_bootstrap_distr = ":sdk", env_g
 	const tools = join(cwd, "tools");
 	cpSync(resolve(import.meta.dirname, "fixtures/go-tools"), tools, { recursive: true });
 	await run(executable, ["go", "sync"], { ...options, cwd: tools });
-	const tool = await run(executable, ["run", "//tools/vendor/example.com/greeter/cmd/greet:bin", "--console", "none"], options);
-	assert.equal(tool.stdout, "greeter v1.0.0\n");
+	// The tool prints its debug.BuildInfo, which must match `go build -trimpath` for the same
+	// vendored graph, less VCS stamps and DefaultGODEBUG that Bessemer does not record. The
+	// generated toolchain builds with GOEXPERIMENT=none, which suffixes the runtime version.
+	const buildInfo = (greeting: string) => `path\texample.com/greeter/cmd/greet
+mod\texample.com/greeter\tv1.0.0\t
+dep\texample.com/greeting\t${greeting}\t
+build\t-buildmode=exe
+build\t-compiler=gc
+build\t-trimpath=true
+build\tCGO_ENABLED=0
+build\tGOARCH=${arch}
+build\tGOEXPERIMENT=none
+build\tGOOS=${os}
+build\t${arch === "arm64" ? "GOARM64=v8.0" : "GOAMD64=v1"}
+`;
+	const greet = async (greeting: string) => {
+		const { stdout } = await run(executable, ["run", "//tools/vendor/example.com/greeter/cmd/greet:bin", "--console", "none"], options);
+		const [subject, runtime, ...info] = stdout.split("\n");
+		assert.equal(subject, "greeter");
+		assert.match(runtime ?? "", new RegExp(`^go\tgo${version.replaceAll(".", "\\.")}(?!\\d)`));
+		assert.equal(info.join("\n"), buildInfo(greeting));
+	};
+	await greet("v0.3.0");
+	// A dependency version lives only in the module graph, so bumping it must relink the tool.
+	for (const file of ["go.mod", "vendor/modules.txt"]) {
+		writeFileSync(join(tools, file), readFileSync(join(tools, file), "utf8").replace("greeting v0.3.0", "greeting v0.3.1"));
+	}
+	await run(executable, ["go", "sync"], { ...options, cwd: tools });
+	await greet("v0.3.1");
 	// Removing the last tool directive empties the graph, so sync must retire the tool's manifest.
 	const toolModule = join(tools, "go.mod");
 	writeFileSync(toolModule, readFileSync(toolModule, "utf8").replace("tool example.com/greeter/cmd/greet\n", ""));
 	await assert.rejects(run(executable, ["go", "sync", "--check"], { ...options, cwd: tools }), /cmd\/greet\/BUILD\.bsmr/);
 	const retired = await run(executable, ["go", "sync"], { ...options, cwd: tools });
-	assert.match(retired.stdout, /0 packages, 0 manifests written, 1 removed/);
+	assert.match(retired.stdout, /0 packages, 0 manifests written, 2 removed/);
 	await run(executable, ["go", "sync", "--check"], { ...options, cwd: tools });
 	assert.ok(!existsSync(join(tools, "vendor/example.com/greeter/cmd/greet/BUILD.bsmr")));
-	process.stdout.write(`ok: Go ${version} embeds, restoration, source roots, policy isolation, source/SDK invalidation, system-tool exclusion, tool directives, tool retirement\n`);
+	process.stdout.write(`ok: Go ${version} embeds, restoration, source roots, policy isolation, source/SDK invalidation, system-tool exclusion, tool directives, build info, tool retirement\n`);
 } finally {
 	await Promise.all(workspaces.map((directory) => run(executable, ["kill"], { ...options, cwd: directory })));
 	rmSync(root, { recursive: true });
