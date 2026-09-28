@@ -266,3 +266,20 @@ fn reacquires_existing_lock_without_resolving_latest() {
 
     assert_eq!(actual, expected);
 }
+
+/// Confirms `tool` roots are requested only from SDKs that define the meta-pattern.
+#[test]
+fn gates_tool_directives_on_sdk_version() {
+    let supported = select_release(RELEASES, Some("1.26.5")).expect("release");
+    let releases = String::from_utf8(RELEASES.to_vec())
+        .expect("UTF-8 fixture")
+        .replace("1.26.5", "1.23.4");
+    let unsupported = select_release(releases.as_bytes(), Some("1.23.4")).expect("release");
+
+    assert!(supported.supports_tool_directives().expect("valid version"));
+    assert!(
+        !unsupported
+            .supports_tool_directives()
+            .expect("valid version")
+    );
+}

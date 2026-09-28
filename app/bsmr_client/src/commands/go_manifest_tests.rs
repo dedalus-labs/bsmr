@@ -198,3 +198,28 @@ fn migrates_untouched_init_manifest() {
             .contains("go_binary(")
     );
 }
+
+/// Invariant: generated manifests mirror the SDK graph, so a graph that loses its last
+/// package retires every manifest the ownership index records, and `--check` names each
+/// retired manifest as stale.
+///
+/// Witness: after a two-package sync, checking an empty graph fails naming
+/// `lib/BUILD.bsmr`, writing it removes both manifests, and a second check passes.
+#[test]
+fn invariant_empty_graph_retires_owned_manifests() {
+    let root = tempfile::tempdir().expect("temporary repository");
+    let sync =
+        |graph: &GoGraph, mode| sync_manifests(root.path(), graph, "BUILD.bsmr", &[], false, mode);
+    sync(&graph(root.path()), SyncMode::Write).expect("initial sync");
+    let empty = GoGraph::from_go_list(b"", root.path()).expect("empty graph");
+
+    let error = sync(&empty, SyncMode::Check).expect_err("owned manifests are stale");
+    assert!(matches!(&error, GoManifestError::Stale(drift) if drift.contains("lib/BUILD.bsmr")));
+
+    let report = sync(&empty, SyncMode::Write).expect("retire owned manifests");
+    assert_eq!((report.written(), report.removed()), (0, 2));
+    assert!(!root.path().join("lib/BUILD.bsmr").exists());
+    assert!(!root.path().join("cmd/app/BUILD.bsmr").exists());
+
+    sync(&empty, SyncMode::Check).expect("empty graph is current");
+}

@@ -29,6 +29,11 @@ module writes, network access, ambient `go env -w` state, and automatic
 toolchain switching disabled. A dependency must be in the repository, the
 vendor tree, or the selected standard library.
 
+Every package named by a `go.mod` `tool` directive is also a root. A tool
+vendored as `sigs.k8s.io/controller-tools/cmd/controller-gen` becomes
+`//vendor/sigs.k8s.io/controller-tools/cmd/controller-gen:bin`, which
+`bsmr run` executes. Tool directives require Go 1.24 or later.
+
 | Go package | Generated target |
 | --- | --- |
 | library | `//path/to/package:lib` |
@@ -39,6 +44,10 @@ vendor tree, or the selected standard library.
 The generated manifests record exact source and embed files, direct imports,
 canonical package identity, selected tags, and cgo mode. They carry an ownership
 marker, and synchronization refuses to overwrite a human-authored build file.
+When a package leaves the graph, synchronization deletes its generated
+manifest, and `bsmr go sync --check` reports that manifest as stale. This
+includes the last package of a module, such as a tool whose `tool` directive
+was removed.
 
 Internal tests inherit the embedded files of their `target_under_test`. A path
 declared by both the test and its target must refer to the same source artifact.

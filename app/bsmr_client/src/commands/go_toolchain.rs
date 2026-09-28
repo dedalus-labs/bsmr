@@ -29,6 +29,8 @@ pub(super) const GENERATED_BY: &str = "bsmr go toolchain";
 const GO_RELEASES_URL: &str = "https://go.dev/dl/?mode=json&include=all";
 pub(super) const LOCK_FILE: &str = ".bsmr-go-toolchain.json";
 const SCHEMA: u32 = 1;
+/// First Go release with `go.mod` `tool` directives and the `tool` meta-pattern.
+const TOOL_DIRECTIVES: (u64, u64, u64) = (1, 24, 0);
 const SUPPORTED_HOSTS: [(&str, &str); 4] = [
     ("darwin", "amd64"),
     ("darwin", "arm64"),
@@ -76,6 +78,14 @@ impl GoToolchainLock {
     /// Returns the normalized SDK version without Go's `go` prefix.
     pub(crate) fn version(&self) -> &str {
         &self.version
+    }
+
+    /// Reports whether the locked SDK understands `go.mod` `tool` directives.
+    ///
+    /// Go 1.24 introduced the directives with the `tool` package meta-pattern; older
+    /// SDKs would read `tool` as an import path.
+    pub(crate) fn supports_tool_directives(&self) -> Result<bool, GoToolchainError> {
+        Ok(version_key(&self.version)? >= TOOL_DIRECTIVES)
     }
 
     /// Returns host archives in deterministic platform order.

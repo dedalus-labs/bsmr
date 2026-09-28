@@ -3,12 +3,12 @@
 // SPDX-License-Identifier: Apache-2.0
 //===----------------------------------------------------------------------===//
 
-// Verifies pinned native Go compilation, cache restoration, and input invalidation.
+// Verifies pinned native Go compilation, cache restoration, input invalidation, and tool roots.
 
 import assert from "node:assert/strict";
 import { execFile } from "node:child_process";
 import { createHash } from "node:crypto";
-import { cpSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, writeFileSync } from "node:fs";
+import { cpSync, existsSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { basename, delimiter, join, resolve } from "node:path";
 import { promisify } from "node:util";
@@ -148,7 +148,21 @@ go_bootstrap_distr(name = "sdk", go_root = ".bsmr-go-sdk", go_os_arch = ("${os}"
 go_bootstrap_toolchain(name = "go_bootstrap", go_bootstrap_distr = ":sdk", env_go_os = "${os}", env_go_arch = "${arch}", visibility = ["PUBLIC"])
 `);
 	await systemBootstrap(second, "system-python");
-	process.stdout.write(`ok: Go ${version} embeds, restoration, source roots, policy isolation, source/SDK invalidation, system-tool exclusion\n`);
+	// A module whose only packages come from `tool` directives must still sync its tool binaries.
+	const tools = join(cwd, "tools");
+	cpSync(resolve(import.meta.dirname, "fixtures/go-tools"), tools, { recursive: true });
+	await run(executable, ["go", "sync"], { ...options, cwd: tools });
+	const tool = await run(executable, ["run", "//tools/vendor/example.com/greeter/cmd/greet:bin", "--console", "none"], options);
+	assert.equal(tool.stdout, "greeter v1.0.0\n");
+	// Removing the last tool directive empties the graph, so sync must retire the tool's manifest.
+	const toolModule = join(tools, "go.mod");
+	writeFileSync(toolModule, readFileSync(toolModule, "utf8").replace("tool example.com/greeter/cmd/greet\n", ""));
+	await assert.rejects(run(executable, ["go", "sync", "--check"], { ...options, cwd: tools }), /cmd\/greet\/BUILD\.bsmr/);
+	const retired = await run(executable, ["go", "sync"], { ...options, cwd: tools });
+	assert.match(retired.stdout, /0 packages, 0 manifests written, 1 removed/);
+	await run(executable, ["go", "sync", "--check"], { ...options, cwd: tools });
+	assert.ok(!existsSync(join(tools, "vendor/example.com/greeter/cmd/greet/BUILD.bsmr")));
+	process.stdout.write(`ok: Go ${version} embeds, restoration, source roots, policy isolation, source/SDK invalidation, system-tool exclusion, tool directives, tool retirement\n`);
 } finally {
 	await Promise.all(workspaces.map((directory) => run(executable, ["kill"], { ...options, cwd: directory })));
 	rmSync(root, { recursive: true });
