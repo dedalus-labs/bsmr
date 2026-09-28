@@ -20,7 +20,7 @@ fn graph(root: &std::path::Path) -> GoGraph {
         "{{\"Dir\":\"{display}/lib\",\"ImportPath\":\"example.com/repo/lib\",\"Name\":\"lib\",\"GoFiles\":[\"lib.go\"],\"TestGoFiles\":[\"lib_test.go\"]}}\n\
          {{\"Dir\":\"{display}/cmd/app\",\"ImportPath\":\"example.com/repo/cmd/app\",\"Name\":\"main\",\"GoFiles\":[\"main.go\"],\"Imports\":[\"example.com/repo/lib\"]}}\n"
     );
-    GoGraph::from_go_list(json.as_bytes(), root).expect("valid graph")
+    GoGraph::from_go_list(json.as_bytes(), root, "").expect("valid graph")
 }
 
 /// Builds SDK metadata for a package with an external-package test.
@@ -29,7 +29,7 @@ fn external_test_graph(root: &std::path::Path) -> GoGraph {
     let json = format!(
         "{{\"Dir\":\"{display}/lib\",\"ImportPath\":\"example.com/repo/lib\",\"Name\":\"lib\",\"GoFiles\":[\"lib.go\"],\"XTestGoFiles\":[\"external_test.go\"],\"XTestImports\":[\"example.com/repo/lib\"]}}\n"
     );
-    GoGraph::from_go_list(json.as_bytes(), root).expect("valid external test graph")
+    GoGraph::from_go_list(json.as_bytes(), root, "").expect("valid external test graph")
 }
 
 /// Builds SDK metadata for a package that includes a C implementation and local header.
@@ -38,7 +38,7 @@ fn cgo_graph(root: &std::path::Path) -> GoGraph {
     let json = format!(
         "{{\"Dir\":\"{display}/native\",\"ImportPath\":\"example.com/repo/native\",\"Name\":\"native\",\"CgoFiles\":[\"native.go\"],\"CFiles\":[\"native.c\"],\"HFiles\":[\"native.h\"]}}\n"
     );
-    GoGraph::from_go_list(json.as_bytes(), root).expect("valid cgo graph")
+    GoGraph::from_go_list(json.as_bytes(), root, "").expect("valid cgo graph")
 }
 
 /// Builds SDK metadata for a package at the repository root.
@@ -47,7 +47,7 @@ fn root_graph(root: &std::path::Path) -> GoGraph {
     let json = format!(
         "{{\"Dir\":\"{display}\",\"ImportPath\":\"example.com/repo\",\"Name\":\"main\",\"GoFiles\":[\"main.go\"]}}\n"
     );
-    GoGraph::from_go_list(json.as_bytes(), root).expect("valid root graph")
+    GoGraph::from_go_list(json.as_bytes(), root, "").expect("valid root graph")
 }
 
 /// Confirms native metadata renders conventional Go rules without a handwritten DSL.
@@ -211,7 +211,7 @@ fn invariant_empty_graph_retires_owned_manifests() {
     let sync =
         |graph: &GoGraph, mode| sync_manifests(root.path(), graph, "BUILD.bsmr", &[], false, mode);
     sync(&graph(root.path()), SyncMode::Write).expect("initial sync");
-    let empty = GoGraph::from_go_list(b"", root.path()).expect("empty graph");
+    let empty = GoGraph::from_go_list(b"", root.path(), "").expect("empty graph");
 
     let error = sync(&empty, SyncMode::Check).expect_err("owned manifests are stale");
     assert!(matches!(&error, GoManifestError::Stale(drift) if drift.contains("lib/BUILD.bsmr")));

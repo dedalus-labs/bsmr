@@ -30,8 +30,8 @@ const CYCLE_GRAPH: &str = r#"
 /// Confirms SDK test variants are discarded and internal imports become labels.
 #[test]
 fn lowers_sdk_graph_deterministically() {
-    let graph =
-        GoGraph::from_go_list(PACKAGE_GRAPH.as_bytes(), Path::new("/repo")).expect("valid graph");
+    let graph = GoGraph::from_go_list(PACKAGE_GRAPH.as_bytes(), Path::new("/repo"), "")
+        .expect("valid graph");
 
     assert_eq!(graph.packages().len(), 2);
     assert_eq!(graph.packages()[0].import_path(), "example.com/repo/lib");
@@ -39,10 +39,26 @@ fn lowers_sdk_graph_deterministically() {
     assert_eq!(graph.packages()[1].target_name(), "bin");
 }
 
+/// Invariant: labels are cell-relative, so a module synchronized below its cell root
+/// names every target through that root's package path, and a package's own label
+/// matches the label its consumers depend on.
+///
+/// Witness: synchronizing `/repo` as cell package `tools`, `cmd/app` depends on
+/// `//tools/lib:lib`, and `lib` still orders before `cmd/app` although its import
+/// path sorts after it.
+#[test]
+fn invariant_labels_start_at_the_cell_package() {
+    let graph = GoGraph::from_go_list(PACKAGE_GRAPH.as_bytes(), Path::new("/repo"), "tools")
+        .expect("valid graph");
+
+    assert_eq!(graph.packages()[0].import_path(), "example.com/repo/lib");
+    assert_eq!(graph.packages()[1].dependencies(), ["//tools/lib:lib"]);
+}
+
 /// Confirms module-cache dependencies fail instead of silently escaping the repository.
 #[test]
 fn rejects_non_vendored_dependencies() {
-    let error = GoGraph::from_go_list(EXTERNAL_GRAPH.as_bytes(), Path::new("/repo"))
+    let error = GoGraph::from_go_list(EXTERNAL_GRAPH.as_bytes(), Path::new("/repo"), "")
         .expect_err("external package must be vendored");
 
     assert!(error.to_string().contains("go mod vendor"));
@@ -52,7 +68,7 @@ fn rejects_non_vendored_dependencies() {
 /// Confirms an impossible package cycle fails at the graph boundary.
 #[test]
 fn rejects_package_cycles() {
-    let error = GoGraph::from_go_list(CYCLE_GRAPH.as_bytes(), Path::new("/repo"))
+    let error = GoGraph::from_go_list(CYCLE_GRAPH.as_bytes(), Path::new("/repo"), "")
         .expect_err("cycle must fail");
 
     assert!(error.to_string().contains("cycle"));
@@ -62,7 +78,7 @@ fn rejects_package_cycles() {
 #[test]
 fn rejects_unsafe_source_paths() {
     let graph = r#"{"Dir":"/repo/lib","ImportPath":"example.com/repo/lib","Name":"lib","GoFiles":["../secret.go"]}"#;
-    let error = GoGraph::from_go_list(graph.as_bytes(), Path::new("/repo"))
+    let error = GoGraph::from_go_list(graph.as_bytes(), Path::new("/repo"), "")
         .expect_err("parent traversal must fail");
 
     assert!(error.to_string().contains("unsafe source path"));
@@ -72,7 +88,7 @@ fn rejects_unsafe_source_paths() {
 #[test]
 fn lowers_only_selected_external_tests() {
     let dependency = r#"{"Dir":"/repo/vendor/example.com/dep","ImportPath":"example.com/dep","Name":"dep","DepOnly":true,"TestGoFiles":["dep_internal_test.go"],"XTestGoFiles":["dep_test.go"],"TestImports":["example.com/test-only"]}"#;
-    let graph = GoGraph::from_go_list(dependency.as_bytes(), Path::new("/repo"))
+    let graph = GoGraph::from_go_list(dependency.as_bytes(), Path::new("/repo"), "")
         .expect("dependency tests are not selected");
     assert!(graph.packages()[0].test_files().is_empty());
     assert!(graph.packages()[0].test_dependencies().is_empty());
@@ -81,7 +97,7 @@ fn lowers_only_selected_external_tests() {
 {"Dir":"/repo/pkg","ImportPath":"example.com/repo/pkg","Name":"pkg","GoFiles":["pkg.go"],"XTestGoFiles":["pkg_test.go"],"XTestImports":["example.com/repo/helper"],"XTestEmbedFiles":["fixture.txt"]}
 {"Dir":"/repo/helper","ImportPath":"example.com/repo/helper","Name":"helper","GoFiles":["helper.go"]}
 "#;
-    let graph = GoGraph::from_go_list(selected.as_bytes(), Path::new("/repo"))
+    let graph = GoGraph::from_go_list(selected.as_bytes(), Path::new("/repo"), "")
         .expect("selected external tests lower into their own package");
     let package = &graph.packages()[1];
     assert_eq!(package.external_test_files(), ["pkg_test.go"]);
@@ -93,7 +109,7 @@ fn lowers_only_selected_external_tests() {
 #[test]
 fn rejects_unsupported_source_kinds() {
     let graph = r#"{"Dir":"/repo/pkg","ImportPath":"example.com/repo/pkg","Name":"pkg","MFiles":["native.m"]}"#;
-    let error = GoGraph::from_go_list(graph.as_bytes(), Path::new("/repo"))
+    let error = GoGraph::from_go_list(graph.as_bytes(), Path::new("/repo"), "")
         .expect_err("Objective-C sources are unsupported");
 
     assert!(error.to_string().contains("unsupported source files"));
