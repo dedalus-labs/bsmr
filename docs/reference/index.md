@@ -6,11 +6,17 @@
 
 # Reference
 
-Use reference pages when the native defaults are not enough.
+Find a command or look up its options from your terminal:
 
-- [Command line](cli.md) lists every public command, flag, and default.
-- [Projects and configuration](configuration.md) explains when to edit `.bsmr`.
+```console
+bsmr --help
+bsmr build --help
+bsmr test --help
+```
 
-The complete parser surface is generated from the binary. Advanced concepts
-will enter this site only after their inherited documentation has been verified
-against BSMR's native project model.
+The [command-line reference](cli.md) is generated from the binary's parser.
+It lists the same commands, flags, and defaults.
+
+Use [configuration](configuration.md) for project settings such as caches and
+execution platforms. Use [custom recipes](../users/recipes.md) to connect
+additional build steps through their inputs and outputs.

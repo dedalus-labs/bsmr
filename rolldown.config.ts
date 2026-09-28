@@ -17,6 +17,9 @@ type Artifact = Readonly<{
 }>;
 
 const artifacts: readonly Artifact[] = [
+	{ input: "./.github/actions/rust/install/src/index.ts", output: ".github/actions/rust/install/dist/index.js", target: "node24" },
+	{ input: "./.github/actions/runner/build/src/index.ts", output: ".github/actions/runner/build/dist/index.js", target: "node24" },
+	{ input: "./ci/distribute.ts", output: "ci/distribute.mjs", target: "node20" },
 	{
 		input: "./.github/actions/typescript/cache/src/index.ts",
 		output: ".github/actions/typescript/cache/dist/index.js",
@@ -68,6 +71,11 @@ const artifacts: readonly Artifact[] = [
 	{
 		input: "./prelude/toolchains/pnpm/runner.ts",
 		output: "prelude/toolchains/pnpm/runner.mjs",
+		target: "node18",
+	},
+	{
+		input: "./prelude/toolchains/pnpm/task.ts",
+		output: "prelude/toolchains/pnpm/task.mjs",
 		target: "node18",
 	},
 	{

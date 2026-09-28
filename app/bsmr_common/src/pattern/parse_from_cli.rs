@@ -20,14 +20,16 @@ use bsmr_core::cells::cell_path::CellPath;
 use bsmr_core::fs::project_rel_path::ProjectRelativePath;
 use bsmr_core::pattern::pattern::ParsedPattern;
 use bsmr_core::pattern::pattern::ParsedPatternWithModifiers;
+use bsmr_core::pattern::pattern_type::ConfiguredProvidersPatternExtra;
 use bsmr_core::pattern::pattern_type::PatternType;
 use bsmr_core::pattern::unparsed::UnparsedPatterns;
+use bsmr_fs::paths::RelativePath;
 use dice::DiceComputations;
-use gazebo::prelude::*;
 
 use crate::dice::cells::HasCellResolver;
 use crate::pattern::resolve::ResolveTargetPatterns;
 use crate::pattern::resolve::ResolvedPattern;
+use crate::rust_graph::entry::Origin;
 use crate::target_aliases::BsmrConfigTargetAliasResolver;
 use crate::target_aliases::HasTargetAliasResolver;
 
@@ -39,6 +41,35 @@ struct PatternParser {
 }
 
 impl PatternParser {
+    /// Directory shorthand belongs to Cargo only when no explicit alias or build file owns it.
+    async fn expand(
+        &self,
+        ctx: &mut DiceComputations<'_>,
+        values: &[String],
+    ) -> bsmr_error::Result<Vec<(String, Origin)>> {
+        use bsmr_core::target_aliases::TargetAliasResolver;
+        let mut expanded = Vec::new();
+        for value in values {
+            if !value.contains([':', '[', ']', '(', ')'])
+                && !value.contains("//")
+                && !value.contains("...")
+                && self.target_alias_resolver.get(value)?.is_none()
+            {
+                let cwd = self.cell_resolver.resolve_path(self.cwd.as_ref())?;
+                let path = cwd.join_normalized(RelativePath::new(value)?)?;
+                if let Some(labels) =
+                    crate::rust_graph::dice::directory(ctx, self.cell_resolver.get_cell_path(&path))
+                        .await?
+                {
+                    expanded.extend(labels.into_iter().map(|label| (label, Origin::Directory)));
+                    continue;
+                }
+            }
+            expanded.push((value.to_owned(), Origin::Explicit));
+        }
+        Ok(expanded)
+    }
+
     async fn new(
         ctx: &mut DiceComputations<'_>,
         cwd: &ProjectRelativePath,
@@ -95,7 +126,12 @@ pub async fn parse_patterns_from_cli_args<T: PatternType>(
 ) -> bsmr_error::Result<Vec<ParsedPattern<T>>> {
     let parser = PatternParser::new(ctx, cwd).await?;
 
-    target_patterns.try_map(|value| parser.parse_pattern(value))
+    parser
+        .expand(ctx, target_patterns)
+        .await?
+        .into_iter()
+        .map(|(value, _)| parser.parse_pattern(&value))
+        .collect()
 }
 
 pub async fn parse_patterns_with_modifiers_from_cli_args<T: PatternType>(
@@ -105,7 +141,32 @@ pub async fn parse_patterns_with_modifiers_from_cli_args<T: PatternType>(
 ) -> bsmr_error::Result<Vec<ParsedPatternWithModifiers<T>>> {
     let parser = PatternParser::new(ctx, cwd).await?;
 
-    target_patterns.try_map(|value| parser.parse_pattern_with_modifiers(value))
+    parser
+        .expand(ctx, target_patterns)
+        .await?
+        .into_iter()
+        .map(|(value, _)| parser.parse_pattern_with_modifiers(&value))
+        .collect()
+}
+
+/// Retain directory selection while using the same native syntax and alias resolution.
+pub(crate) async fn cargo_patterns(
+    ctx: &mut DiceComputations<'_>,
+    target_patterns: &[String],
+    cwd: &ProjectRelativePath,
+) -> bsmr_error::Result<Vec<(ParsedPattern<ConfiguredProvidersPatternExtra>, Origin)>> {
+    let parser = PatternParser::new(ctx, cwd).await?;
+    parser
+        .expand(ctx, target_patterns)
+        .await?
+        .into_iter()
+        .map(|(value, origin)| {
+            Ok((
+                parser.parse_pattern_with_modifiers(&value)?.parsed_pattern,
+                origin,
+            ))
+        })
+        .collect()
 }
 
 pub async fn parse_patterns_from_cli_args_typed<T: PatternType>(

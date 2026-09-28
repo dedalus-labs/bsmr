@@ -44,6 +44,7 @@ load("@prelude//utils:cmd_script.bzl", "cmd_script")
 load("@prelude//utils:selects.bzl", "selects")
 load(":build.bzl", "dependency_args")
 load(":build_params.bzl", "MetadataKind")
+load(":checkout.bzl", "CheckoutSources")
 load(
     ":cargo_package.bzl",
     "apply_platform_attrs",
@@ -59,6 +60,13 @@ load(
     "resolve_rust_deps_inner",
 )
 load(":rust_toolchain.bzl", "PanicRuntime")
+
+# Cached metadata must retain the generated directories referenced by its values.
+BuildScriptInfo = provider(fields = {
+    "metadata": provider_field(Artifact),
+    "out_dir": provider_field(Artifact),
+    "cwd": provider_field(Artifact),
+})
 
 def _make_rustc_shim(ctx: AnalysisContext, cwd: Artifact) -> cmd_args:
     # Build scripts expect to receive a `rustc` which "just works." However,
@@ -97,6 +105,8 @@ def _make_rustc_shim(ctx: AnalysisContext, cwd: Artifact) -> cmd_args:
             # add dep_argsfiles as a separate argument because rustc does NOT support nested @argsfiles
             dep_argsfiles,
         )
+    elif toolchain_info.sysroot_path != None:
+        sysroot_args = cmd_args("--sysroot", toolchain_info.sysroot_path)
     else:
         sysroot_args = cmd_args()
 
@@ -230,14 +240,23 @@ def _make_cc_shim(ctx: AnalysisContext, name: str, cmd: cmd_args) -> cmd_args:
     return cmd_args(wrapper, hidden = [internal_tools_info.from_any_dir, cmd])
 
 def _cargo_buildscript_impl(ctx: AnalysisContext) -> list[Provider]:
+    if ctx.attrs.checkout != None and CheckoutSources in ctx.attrs.checkout:
+        unavailable = ctx.attrs.checkout[CheckoutSources].unavailable
+        if unavailable:
+            fail("workspace script inputs require native source packages: {}".format(unavailable))
     cxx_toolchain_info = ctx.attrs._cxx_toolchain[CxxToolchainInfo]
     rust_toolchain_info = ctx.attrs._rust_toolchain[RustToolchainInfo]
 
-    cwd = ctx.actions.declare_output("cwd", dir = True, has_content_based_path = True)
-    out_dir = ctx.actions.declare_output("OUT_DIR", dir = True, has_content_based_path = True)
+    # Build scripts may embed these paths in generated sources consumed by other crates.
+    workspace = ctx.actions.declare_output("cwd", dir = True, has_content_based_path = False)
+    cwd = workspace.project(ctx.attrs.package_path) if ctx.attrs.checkout != None and ctx.attrs.package_path else workspace
+    out_dir = ctx.actions.declare_output("OUT_DIR", dir = True, has_content_based_path = False)
     rustc_flags = ctx.actions.declare_output("rustc_flags", has_content_based_path = True)
+    metadata = ctx.actions.declare_output("metadata.json", has_content_based_path = True)
 
-    if ctx.attrs.manifest_dir != None:
+    if ctx.attrs.checkout != None:
+        manifest_dir = ctx.attrs.checkout[DefaultInfo].default_outputs[0]
+    elif ctx.attrs.manifest_dir != None:
         manifest_dir = ctx.attrs.manifest_dir[DefaultInfo].default_outputs[0]
     else:
         manifest_dir = ctx.actions.symlinked_dir("manifest_dir", ctx.attrs.filegroup_for_manifest_dir, has_content_based_path = True)
@@ -247,9 +266,16 @@ def _cargo_buildscript_impl(ctx: AnalysisContext) -> list[Provider]:
         cmd_args("--buildscript=", ctx.attrs.buildscript[RunInfo], delimiter = ""),
         cmd_args("--rustc-cfg=", ctx.attrs.rustc_cfg[DefaultInfo].default_outputs[0], delimiter = ""),
         cmd_args("--manifest-dir=", manifest_dir, delimiter = ""),
-        cmd_args("--create-cwd=", cwd.as_output(), delimiter = ""),
+        cmd_args("--create-cwd=", workspace.as_output(), delimiter = ""),
+        "--package-path=" + ctx.attrs.package_path,
         cmd_args("--outfile=", rustc_flags.as_output(), delimiter = ""),
+        cmd_args("--metadata-out=", metadata.as_output(), delimiter = ""),
     ]
+    if ctx.attrs.checkout != None:
+        cmd.append("--workspace")
+    for links, dependency in ctx.attrs.metadata_deps.items():
+        info = dependency[BuildScriptInfo]
+        cmd.extend(["--metadata-dependency", "DEP_" + links, info.metadata, info.out_dir, info.cwd])
 
     if ctx.attrs.rustc_link_lib:
         cmd.append("--rustc-link-lib")
@@ -310,6 +336,8 @@ def _cargo_buildscript_impl(ctx: AnalysisContext) -> list[Provider]:
     )
     deps_link = deps_tset.project_as_args("default")
     sanitizer_flags = ["-fno-sanitize=all"]
+    cc_is_clang = cxx_toolchain_info.c_compiler_info.compiler_type.startswith("clang")
+    cxx_is_clang = cxx_toolchain_info.cxx_compiler_info.compiler_type.startswith("clang")
     env["LD"] = _make_cc_shim(
         ctx = ctx,
         name = "__ld_shim",
@@ -325,7 +353,7 @@ def _cargo_buildscript_impl(ctx: AnalysisContext) -> list[Provider]:
         name = "__cc_shim",
         cmd = cmd_args(
             cxx_toolchain_info.c_compiler_info.compiler,
-            cmd_args(env["LD"], format = "--ld-path={}"),
+            cmd_args(env["LD"], format = "--ld-path={}") if cc_is_clang else cmd_args(),
             cxx_toolchain_info.c_compiler_info.preprocessor_flags,
             cxx_toolchain_info.c_compiler_info.compiler_flags,
             deps_preprocessor_flags,
@@ -340,7 +368,7 @@ def _cargo_buildscript_impl(ctx: AnalysisContext) -> list[Provider]:
         name = "__cxx_shim",
         cmd = cmd_args(
             cxx_toolchain_info.cxx_compiler_info.compiler,
-            cmd_args(env["LD"], format = "--ld-path={}"),
+            cmd_args(env["LD"], format = "--ld-path={}") if cxx_is_clang else cmd_args(),
             cxx_toolchain_info.cxx_compiler_info.preprocessor_flags,
             cxx_toolchain_info.cxx_compiler_info.compiler_flags,
             deps_preprocessor_flags,
@@ -358,6 +386,7 @@ def _cargo_buildscript_impl(ctx: AnalysisContext) -> list[Provider]:
 
     # Environment variables specified in the target's attributes get priority
     # over all the above.
+    env.update(ctx.attrs.literal_env)
     for k, v in ctx.attrs.env.items():
         env[k] = cmd_args(v, relative_to = cwd)
 
@@ -368,11 +397,15 @@ def _cargo_buildscript_impl(ctx: AnalysisContext) -> list[Provider]:
     )
 
     return [
+        BuildScriptInfo(metadata = metadata, out_dir = out_dir, cwd = cwd),
         DefaultInfo(
             default_output = None,
             sub_targets = {
+                "cwd": [DefaultInfo(default_output = cwd)],
+                "workspace": [DefaultInfo(default_output = workspace)],
                 "out_dir": [DefaultInfo(default_output = out_dir)],
                 "rustc_flags": [DefaultInfo(default_output = rustc_flags)],
+                "metadata": [DefaultInfo(default_output = metadata)],
             },
         )
     ]
@@ -384,9 +417,13 @@ _cargo_buildscript_rule = rule(
         "cxx_deps": attrs.list(attrs.dep(), default = []),
         "cxx_flags": attrs.list(attrs.arg(), default = []),
         "env": attrs.dict(key = attrs.string(), value = attrs.arg(), default = {}),
+        "literal_env": attrs.dict(key = attrs.string(), value = attrs.string(), default = {}),
         "features": attrs.list(attrs.string(), default = []),
         "filegroup_for_manifest_dir": attrs.option(attrs.dict(key = attrs.string(), value = attrs.source()), default = None),
         "manifest_dir": attrs.option(attrs.dep(), default = None),
+        "checkout": attrs.option(attrs.dep(), default = None),
+        "package_path": attrs.string(default = ""),
+        "metadata_deps": attrs.dict(key = attrs.string(), value = attrs.dep(providers = [BuildScriptInfo]), default = {}),
         "package_name": attrs.string(),
         "runner": attrs.default_only(attrs.exec_dep(providers = [RunInfo], default = "prelude//rust/tools:buildscript_run")),
         # *IMPORTANT* rustc_cfg must be a `dep` and not an `exec_dep` because

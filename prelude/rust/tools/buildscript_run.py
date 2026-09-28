@@ -17,8 +17,10 @@ Run a crate's Cargo buildscript.
 """
 
 import argparse
+import json
 import os
 import re
+import shutil
 import subprocess
 import sys
 from pathlib import Path
@@ -38,83 +40,40 @@ def eprint(*args: Any, **kwargs: Any) -> None:
 
 
 def cfg_env(rustc_cfg: Path) -> dict[str, str]:
+    """Convert compiler cfgs to Cargo environment values, including empty flags."""
     with rustc_cfg.open(encoding="utf-8") as f:
         lines = f.readlines()
 
-    cfgs: dict[str, str] = {}
+    cfgs: dict[str, list[str]] = {}
     for line in lines:
-        if (
-            line.startswith("unix")
-            or line.startswith("windows")
-            or line.startswith("target_")
-        ):
-            keyval = line.strip().split("=")
-            key = keyval[0]
-            val = keyval[1].replace('"', "") if len(keyval) > 1 else "1"
-
-            key = "CARGO_CFG_" + key.upper()
-            if key in cfgs:
-                cfgs[key] = cfgs[key] + "," + val
-            else:
-                cfgs[key] = val
-
-    return cfgs
+        key, separator, value = line.strip().partition("=")
+        values = cfgs.setdefault("CARGO_CFG_" + key.upper().replace("-", "_"), [])
+        if separator:
+            values.append(value[1:-1])
+    return {key: ",".join(values) for key, values in cfgs.items()}
 
 
-def create_cwd(path: Path, manifest_dir: Path) -> Path:
-    """Create a directory with most of the same contents as manifest_dir, but
-    excluding Rustup's rust-toolchain.toml configuration file.
+def create_cwd(path: Path, manifest_dir: Path, *, preserve_toolchain: bool = False) -> Path:
+    """Copy package sources into a self-contained cached output directory.
 
-    Keeping rust-toolchain.toml goes wrong in the situation that all of the
-    following happen:
-
-      1. toolchains//:rust uses compiler = "rustc", like the
-         system_rust_toolchain.
-
-      2. The rustc in $PATH is rustup's rustc shim.
-
-      3. A third-party dependency has both a rust-toolchain.toml and a build.rs
-         that runs "rustc" or env::var_os("RUSTC"), such as to inspect `rustc
-         --version` or to compile autocfg-style probe code.
-
-    Cargo defines that build scripts run using the package's manifest directory
-    as the current directory, so the rustc subprocess spawned from build.rs
-    would also run in that manifest directory. But other rustc invocations
-    performed by Bsmr run from the repo root.
-
-    Rustup only looks at one rust-toolchain.toml file, using the nearest one
-    present in any parent directory. The file can set `channel` to control which
-    installed version of rustc to run.
-
-    It is bad if it's possible for the rustc run by a build script vs rustc run
-    by the rest of the build to be different toolchains. In order to configure
-    their crate appropriately, build scripts rely on using the same rustc that
-    their crate will be later compiled by.
-
-    This problem doesn't happen during Cargo-based builds because rustup
-    installs both a cargo shim and a rustc shim. When you run a rustup-managed
-    Cargo, one of the first things it does is define a RUSTUP_TOOLCHAIN
-    environment variable pointing to the rustup channel id of the currently
-    selected cargo. Subsequent invocations of the rustup cargo shim or rustc
-    shim with this variable in the environment no longer pay attention to any
-    rust-toolchain.toml file.
-
-    We cannot follow the same approach because there is no API in rustup for
-    finding out a suitable RUSTUP_TOOLCHAIN value consistent with which
-    toolchain "rustc" currently refers to, and even if there were, it isn't
-    guaranteed that "rustc" refers to a rustup-managed toolchain in the first
-    place.
+    Consumers compile this directory, including source changes made by the script.
+    Excluding package toolchain files prevents Rustup probes from selecting a
+    different compiler than the one declared by the build.
     """
 
-    path.mkdir(exist_ok=True)
+    if path.is_symlink():
+        path.unlink()
+    elif path.exists():
+        shutil.rmtree(path)
+    path.mkdir()
 
     for dir_entry in manifest_dir.iterdir():
-        if dir_entry.name not in ["rust-toolchain", "rust-toolchain.toml"]:
-            link = path.joinpath(dir_entry.name)
-            link.unlink(missing_ok=True)
-            link.symlink_to(
-                os.path.relpath(dir_entry, path), target_is_directory=dir_entry.is_dir()
-            )
+        if preserve_toolchain or dir_entry.name not in ["rust-toolchain", "rust-toolchain.toml"]:
+            destination = path.joinpath(dir_entry.name)
+            if dir_entry.is_dir() and not dir_entry.is_symlink():
+                shutil.copytree(dir_entry, destination, symlinks=True)
+            else:
+                shutil.copy2(dir_entry, destination, follow_symlinks=False)
 
     return path
 
@@ -195,9 +154,95 @@ class Args(NamedTuple):
     rustc_host_tuple: Optional[Path]
     manifest_dir: Path
     create_cwd: Path
+    package_path: str
+    workspace: bool
     outfile: IO[str]
     rustc_link_lib: bool
     rustc_link_search: bool
+    metadata_out: Path
+    metadata_dependency: list[list[str]]
+
+
+class Metadata(NamedTuple):
+    """Keep ordered Cargo metadata attached to the producer's generated directories."""
+
+    # Producer's private source directory.
+    cwd: str
+    # Producer's generated files directory.
+    out_dir: str
+    # Emission order decides normalized-key collisions.
+    values: tuple[tuple[str, str], ...]
+
+    @classmethod
+    def read(cls, path: Path) -> 'Metadata':
+        """Validate a cached record before exposing values to a dependent script."""
+        record = json.loads(path.read_text(encoding='utf-8'))
+        if not isinstance(record, dict) or set(record) != {'cwd', 'out_dir', 'values'}:
+            raise ValueError(f'invalid build-script metadata: {path}')
+        for field in ['cwd', 'out_dir']:
+            if (
+                not isinstance(record[field], str)
+                or not Path(record[field]).is_absolute()
+            ):
+                raise ValueError(f'invalid metadata directory {field}: {path}')
+        values = record['values']
+        if not isinstance(values, list) or not all(
+            isinstance(pair, list)
+            and len(pair) == 2
+            and all(isinstance(value, str) for value in pair)
+            for pair in values
+        ):
+            raise ValueError(f'invalid metadata values: {path}')
+        return cls(
+            record['cwd'],
+            record['out_dir'],
+            tuple((key, value) for key, value in values),
+        )
+
+    @staticmethod
+    def parse(line: str) -> tuple[str, str]:
+        """Decode modern metadata or Cargo's unreserved legacy keys."""
+        directive = line.split(":", 1)[1].lstrip(":").split("=", 1)[0]
+        if line.startswith('cargo::metadata='):
+            data = line.removeprefix('cargo::metadata=')
+        elif not line.startswith('cargo::') and directive not in [
+            'rustc-flags',
+            'rustc-link-lib',
+            'rustc-link-search',
+            'rustc-link-arg-cdylib',
+            'rustc-cdylib-link-arg',
+            'rustc-link-arg-bins',
+            'rustc-link-arg-bin',
+            'rustc-link-arg-tests',
+            'rustc-link-arg-benches',
+            'rustc-link-arg-examples',
+            'rustc-link-arg',
+            'rustc-cfg',
+            'rustc-check-cfg',
+            'rustc-env',
+        ]:
+            # Cargo's original syntax treats unreserved keys as metadata.
+            data = line.removeprefix('cargo:')
+        else:
+            sys.exit(f'unsupported build-script directive: {directive}')
+        key, separator, value = data.partition('=')
+        if not separator:
+            sys.exit(f'invalid build-script metadata: {line}')
+        return key, value
+
+    def write(self, path: Path) -> None:
+        """Publish the ordered values only after every directive was accepted."""
+        path.write_text(json.dumps(self._asdict()) + '\n', encoding='utf-8')
+
+    def environment(self, prefix: str, out_dir: Path, cwd: Path) -> dict[str, str]:
+        """Bind cached paths to the current artifacts and preserve last-write ordering."""
+        roots = {self.cwd: str(cwd.absolute()), self.out_dir: str(out_dir.absolute())}
+        pattern = re.compile('|'.join(re.escape(root) for root in roots))
+        environment = {}
+        for key, value in self.values:
+            name = f'{prefix}_{key}'.upper().replace('-', '_')
+            environment[name] = pattern.sub(lambda match: roots[match.group()], value)
+        return environment
 
 
 def arg_parse() -> Args:
@@ -207,9 +252,13 @@ def arg_parse() -> Args:
     parser.add_argument("--rustc-host-tuple", type=Path)
     parser.add_argument("--manifest-dir", type=Path, required=True)
     parser.add_argument("--create-cwd", type=Path, required=True)
+    parser.add_argument("--package-path", default="")
+    parser.add_argument("--workspace", action="store_true")
     parser.add_argument("--outfile", type=argparse.FileType("w"), required=True)
     parser.add_argument("--rustc-link-lib", action="store_true")
     parser.add_argument("--rustc-link-search", action="store_true")
+    parser.add_argument("--metadata-out", type=Path, required=True)
+    parser.add_argument("--metadata-dependency", nargs=4, action="append", default=[])
 
     return Args(**vars(parser.parse_args()))
 
@@ -224,10 +273,28 @@ def main() -> None:  # noqa: C901
     os.makedirs(out_dir, exist_ok=True)
     env["OUT_DIR"] = os.path.abspath(out_dir)
 
-    cwd = create_cwd(args.create_cwd, args.manifest_dir)
+    package = Path(args.package_path)
+    if package.is_absolute() or ".." in package.parts:
+        sys.exit("build-script package path must stay within its workspace")
+    root = create_cwd(args.create_cwd, args.manifest_dir, preserve_toolchain=args.workspace)
+    cwd = root / package
     env["CARGO_MANIFEST_DIR"] = os.path.abspath(cwd)
+    env["CARGO_MANIFEST_PATH"] = os.path.join(env["CARGO_MANIFEST_DIR"], "Cargo.toml")
 
     env = dict(os.environ, **env)
+    env["GIT_CONFIG_GLOBAL"] = os.devnull
+    env["GIT_CONFIG_NOSYSTEM"] = "1"
+    env["GIT_OPTIONAL_LOCKS"] = "0"
+    for (
+        prefix,
+        metadata_path,
+        dependency_out,
+        dependency_cwd,
+    ) in args.metadata_dependency:
+        metadata = Metadata.read(Path(metadata_path))
+        env.update(
+            metadata.environment(prefix, Path(dependency_out), Path(dependency_cwd))
+        )
 
     target = env.get("TARGET")
     if target is None:
@@ -253,9 +320,11 @@ def main() -> None:  # noqa: C901
 
     script_output = run_buildscript(args.buildscript, env=env, cwd=cwd)
 
-    cargo_rustc_cfg_pattern = re.compile("^cargo::?rustc-cfg=(.*)")
+    cargo_rustc_cfg_pattern = re.compile("^cargo::?rustc-(cfg|check-cfg)=(.*)")
+    cargo_error_pattern = re.compile("^cargo::error=(.*)")
     cargo_rustc_env_pattern = re.compile("^cargo::?rustc-env=(.+?)=(.*)")
     cargo_rustc_link_lib_pattern = re.compile("^cargo::?rustc-link-lib=(.*)")
+    cargo_rustc_link_arg_pattern = re.compile("^cargo::?rustc-link-arg=(.*)")
     cargo_rustc_link_search_pattern = re.compile(
         "^cargo::?rustc-link-search=([a-z]+=)?(.+)"
     )
@@ -270,11 +339,16 @@ def main() -> None:  # noqa: C901
         return None
 
     flags = ""
+    metadata_values: list[tuple[str, str]] = []
     for line in script_output.split("\n"):
+        line = line.strip()
+        cargo_error_match = cargo_error_pattern.match(line)
+        if cargo_error_match:
+            sys.exit(f"build script error: {cargo_error_match.group(1)}")
         cargo_rustc_cfg_match = cargo_rustc_cfg_pattern.match(line)
         if cargo_rustc_cfg_match:
-            value = cargo_rustc_cfg_match.group(1)
-            flags += f"--cfg={value}\n"
+            flag, value = cargo_rustc_cfg_match.groups()
+            flags += f"--{flag}={value}\n"
             continue
         cargo_rustc_env_match = cargo_rustc_env_pattern.match(line)
         if cargo_rustc_env_match:
@@ -290,6 +364,11 @@ def main() -> None:  # noqa: C901
                 flags += f"--env-set={key}={value}\n"
             continue
         cargo_rustc_link_lib_match = cargo_rustc_link_lib_pattern.match(line)
+        cargo_rustc_link_arg_match = cargo_rustc_link_arg_pattern.match(line)
+        if cargo_rustc_link_arg_match:
+            value = cargo_rustc_link_arg_match.group(1).replace(out_dir_abs, OUT_DIR_SENTINEL)
+            flags += f"-Clink-arg={value}\n"
+            continue
         if args.rustc_link_lib and cargo_rustc_link_lib_match:
             value = cargo_rustc_link_lib_match.group(1)
             flags += f"-l{value}\n"
@@ -305,11 +384,23 @@ def main() -> None:  # noqa: C901
                 relative_path = path[len(TOOL_CWD) :]
                 flags += f"-L{kind}$(abspath {relative_path})\n"
             else:
-                # Disregard link search not located within the build script's out dir.
-                pass
+                sys.exit(f"build script link search is outside declared inputs: {path}")
+            continue
+        if line.startswith("cargo:"):
+            directive = line.split(":", 1)[1].lstrip(":").split("=", 1)[0]
+            if (
+                directive in ["warning", "rerun-if-changed", "rerun-if-env-changed"]
+                and '=' in line
+            ):
+                print(line)
+                continue
+            metadata_values.append(Metadata.parse(line))
             continue
         print(line, end="\n")
     args.outfile.write(flags)
+    Metadata(env['CARGO_MANIFEST_DIR'], out_dir_abs, tuple(metadata_values)).write(
+        args.metadata_out
+    )
 
 
 if __name__ == "__main__":

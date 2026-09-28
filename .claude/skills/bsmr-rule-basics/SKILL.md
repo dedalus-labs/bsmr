@@ -136,12 +136,8 @@ Use TodoWrite to show:
 
 ## Important: Use System Bessemer Command
 
-This tutorial uses the **system `bsmr` command**, NOT `./bsmr.py`.
-
-- Use: `bsmr build`, `bsmr test`, `bsmr cquery`, etc.
-- Do NOT use: `./bsmr.py` (that's for Bessemer development/self-bootstrap)
-
-This ensures the tutorial works for all users with Bessemer installed.
+Use the installed `bsmr` command throughout this tutorial: `bsmr build`,
+`bsmr test`, and `bsmr cquery`.
 
 ## Tutorial Structure
 

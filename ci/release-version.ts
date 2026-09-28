@@ -18,6 +18,11 @@ type VersionCarrier = Readonly<{
 
 const carriers: readonly VersionCarrier[] = [
 	{
+		path: "tools/release/dist.toml",
+		pattern: /^version = "\d+\.\d+\.\d+"$/m,
+		replacement: (version) => `version = "${version}"`,
+	},
+	{
 		path: "app/bsmr/Cargo.toml",
 		pattern: /^name = "bsmr"\nversion = "\d+\.\d+\.\d+"$/m,
 		replacement: (version) => `name = "bsmr"\nversion = "${version}"`,
@@ -33,6 +38,11 @@ const carriers: readonly VersionCarrier[] = [
 		replacement: (version) => `version = "${version}"`,
 	},
 ];
+
+/** Files owned by product-version synchronization and its Git transaction. */
+export function versionFiles(): readonly string[] {
+	return carriers.map(({ path }) => path);
+}
 
 /**
  * Replace one version carrier and reject ambiguous metadata.

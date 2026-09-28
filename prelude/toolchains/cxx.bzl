@@ -128,6 +128,8 @@ def _cxx_toolchain_from_cxx_tools_info(ctx: AnalysisContext, cxx_tools_info: Cxx
         shared_library_versioned_name_format = "{}.so.{}"
 
         if os == Os("macos"):
+            shared_library_name_format = "{}.dylib"
+            shared_library_versioned_name_format = "{}.{}.dylib"
             pic_behavior = PicBehavior("always_enabled")
         else:
             pic_behavior = PicBehavior("supported")

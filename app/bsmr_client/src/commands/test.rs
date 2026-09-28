@@ -108,7 +108,11 @@ fn should_warn_about_flag_position(
 }
 
 #[derive(Debug, clap::Parser)]
-#[clap(name = "test", about = "Build and test the specified targets")]
+#[clap(
+    name = "test",
+    about = "Build and run a package's tests",
+    long_about = "Build and run tests associated with a package.\n\nExample:\n\n    bsmr test app\n\nUse the package directory or an explicit target pattern.\nAvailable tests depend on your project's language and configuration.\nLanguage guides: https://oss.dedaluslabs.ai/bsmr/about/language_support/"
+)]
 pub struct TestCommand {
     #[clap(
         long = "exclude",
@@ -149,7 +153,7 @@ If include patterns are present, regardless of whether exclude patterns are pres
     #[clap(long, group = "re_options", alias = "unstable-force-tests-on-re")]
     unstable_allow_all_tests_on_re: bool,
 
-    #[clap(name = "TARGET_PATTERNS", help = "Patterns to test", value_hint = clap::ValueHint::Other)]
+    #[clap(name = "TARGET_PATTERNS", default_value = ".", help = "Patterns to test", value_hint = clap::ValueHint::Other)]
     patterns: Vec<String>,
 
     /// Writes the test executor stdout to the provided path

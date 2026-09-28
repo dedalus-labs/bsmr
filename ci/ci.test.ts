@@ -53,10 +53,10 @@ function unsafeScript(name: string): string {
 	return step.run.kind === "unsafe-shell" ? step.run.script : "";
 }
 
-test("Rust remains the required aggregate check", () => {
+test("Rust aggregates completed runs without surviving workflow cancellation", () => {
 	assert.equal(jobs.rust?.name, "Rust");
 	assert.equal(jobs.rust?.["runs-on"], "ubuntu-24.04");
-	assert.equal(jobs.rust?.if, `\${{ always() && ${trustedCiRun} }}`);
+	assert.equal(jobs.rust?.if, `\${{ !cancelled() && ${trustedCiRun} }}`);
 	assert.deepEqual(jobs.rust?.needs, ["affected", ...rustLanes]);
 	const steps = jobs.rust?.steps ?? [];
 	assert.deepEqual(steps.map((step) => ("run" in step ? step.run : null)), [
@@ -239,7 +239,7 @@ test("public workflows cannot receive repository administration credentials", ()
 	assert.doesNotMatch(workflows, /permission-administration:\s*write/);
 });
 
-test("Rust lanes share one trusted cache writer", () => {
+test("each Rust profile has one trusted cache writer", () => {
 	for (const id of ["rust_quality", "rust_tests", "rust_self_host"] as const) {
 		const cache = jobs[id].steps.find(
 			(step) => "uses" in step && step.uses.startsWith("Swatinem/rust-cache@"),
@@ -248,14 +248,50 @@ test("Rust lanes share one trusted cache writer", () => {
 		assert.ok(cache !== undefined);
 		assert.ok("with" in cache);
 		assert.ok("shared-key" in cache.with);
-		assert.equal(cache.with["shared-key"], "rust");
+		assert.equal(cache.with["shared-key"], id === "rust_self_host" ? "engine" : "rust");
 		assert.equal(
 			cache.with["save-if"],
-			id === "rust_tests"
+			id !== "rust_quality"
 				? "${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}"
 				: false,
 		);
 	}
+});
+
+test("engine compiler settings cannot change consumer qualification", () => {
+	assert.ok(!Object.hasOwn(jobs.rust_self_host.env, "CARGO_PROFILE_DEV_DEBUG"));
+	for (const step of jobs.rust_self_host.steps) {
+		const engine = step.name === "Build BSMR" || step.name === "Restore Rust cache";
+		const environment = "env" in step ? step.env : undefined;
+		const profile = Object.entries(environment ?? {}).filter(([key]) => key.startsWith("CARGO_PROFILE_"));
+		assert.deepEqual(profile, engine ? [["CARGO_PROFILE_DEV_DEBUG", "0"]] : []);
+	}
+});
+
+test("the Cargo planner has a main-owned cache for its compiler and output directory", () => {
+	const steps = jobs.rust_self_host.steps;
+	const cacheIndex = steps.findIndex((step) => step.name === "Restore Cargo planner cache");
+	assert.ok(cacheIndex > steps.findIndex((step) => step.name === "Install Cargo planner compiler"));
+	const cache = steps[cacheIndex];
+	assert.deepEqual(cache, {
+		name: "Restore Cargo planner cache",
+		uses: "Swatinem/rust-cache@e18b497796c12c097a38f9edb9d0641fb99eee32",
+		env: { RUSTUP_TOOLCHAIN: "1.98.0" },
+		with: {
+			"prefix-key": "bsmr-v1", "shared-key": "planner", workspaces: "tools/cargo -> target",
+			"save-if": "${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}",
+		},
+	});
+	const build = steps[cacheIndex + 1];
+	const install = steps[cacheIndex + 2];
+	assert.ok(build && "run" in build && install && "run" in install);
+	assert.deepEqual(build.run, command({
+		file: "rustup",
+		args: ["run", "1.98.0", "cargo", "build", "--locked", "--manifest-path", "tools/cargo/Cargo.toml", "--target-dir", "tools/cargo/target", "-j", "2"],
+	}));
+	assert.deepEqual(install.run, command({
+		file: "cp", args: ["tools/cargo/target/debug/bsmr-cargo", "target/debug/bsmr-cargo"],
+	}));
 });
 
 test("docs deploy only from a trusted main build", () => {

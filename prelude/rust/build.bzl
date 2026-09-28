@@ -174,7 +174,7 @@ def generate_rustdoc(
     use_cbp = getattr(ctx.attrs, "use_content_based_paths", False)
     output = ctx.actions.declare_output(subdir, has_content_based_path = use_cbp)
 
-    plain_env, path_env = process_env(compile_ctx, toolchain_info.rustdoc_env | ctx.attrs.env)
+    plain_env, path_env = process_env(compile_ctx, toolchain_info.rustdoc_env | _rule_env(ctx))
     plain_env["RUSTDOC_BSMR_TARGET"] = cmd_args(str(ctx.label.raw_target()))
 
     if toolchain_info.rust_target_path != None:
@@ -219,6 +219,7 @@ def generate_rustdoc_coverage(
     params: BuildParams,
     default_roots: list[str],
 ) -> Artifact:
+    """Generate documentation coverage with the selected compiler's capabilities."""
     toolchain_info = compile_ctx.toolchain_info
 
     common_args = _compute_common_args(
@@ -240,14 +241,15 @@ def generate_rustdoc_coverage(
     use_cbp = getattr(ctx.attrs, "use_content_based_paths", False)
     output = ctx.actions.declare_output(file, has_content_based_path = use_cbp)
 
-    plain_env, path_env = process_env(compile_ctx, ctx.attrs.env)
+    plain_env, path_env = process_env(compile_ctx, _rule_env(ctx))
     plain_env["RUSTDOC_BSMR_TARGET"] = cmd_args(str(ctx.label.raw_target()))
 
     if toolchain_info.rust_target_path != None:
         path_env["RUST_TARGET_PATH"] = toolchain_info.rust_target_path[DefaultInfo].default_outputs[0]
 
     # `--show-coverage` is unstable.
-    plain_env["RUSTC_BOOTSTRAP"] = cmd_args("1")
+    if toolchain_info.nightly_features:
+        plain_env["RUSTC_BOOTSTRAP"] = cmd_args("1")
     unstable_options = ["-Zunstable-options"]
 
     rustdoc_cmd_action = cmd_args(
@@ -284,6 +286,7 @@ def generate_rustdoc_test(
     params: BuildParams,
     default_roots: list[str],
 ) -> cmd_args:
+    """Build the doctest command without enabling unsupported compiler features."""
     toolchain_info = compile_ctx.toolchain_info
     internal_tools_info = compile_ctx.internal_tools_info
     doc_dep_ctx = DepCollectionContext(
@@ -390,7 +393,7 @@ def generate_rustdoc_test(
     else:
         runtool = ["--test-runtool=/usr/bin/env"]
 
-    plain_env, path_env = process_env(compile_ctx, ctx.attrs.env)
+    plain_env, path_env = process_env(compile_ctx, _rule_env(ctx))
     doc_plain_env, doc_path_env = process_env(compile_ctx, ctx.attrs.doc_env)
     for k, v in doc_plain_env.items():
         path_env.pop(k, None)
@@ -400,7 +403,8 @@ def generate_rustdoc_test(
         path_env[k] = v
 
     # `--runtool` is unstable.
-    plain_env["RUSTC_BOOTSTRAP"] = cmd_args("1")
+    if toolchain_info.nightly_features:
+        plain_env["RUSTC_BOOTSTRAP"] = cmd_args("1")
     unstable_options = ["-Zunstable-options"]
 
     if toolchain_info.rust_target_path != None:
@@ -416,7 +420,6 @@ def generate_rustdoc_test(
         cmd_args("--test-builder=", toolchain_info.compiler, delimiter = ""),
         toolchain_info.rustdoc_flags,
         ctx.attrs.rustdoc_flags,
-        common_args.args,
         extern_arg([], attr_crate(ctx), rlib),
         "--extern=proc_macro" if ctx.attrs.proc_macro else [],
         cmd_args(compile_ctx.linker_with_pre_args, format = "-Clinker={}"),
@@ -435,6 +438,7 @@ def generate_rustdoc_test(
             compile_ctx.path_sep,
             delimiter = "",
         ),
+        common_args.args,
         hidden = [
             transitive_srcs.project_as_args("artifacts"),
             link_args_output.hidden,
@@ -462,7 +466,7 @@ def rust_compile(
     incremental_enabled: bool,
     extra_link_args: list[typing.Any] = [],
     predeclared_output: Artifact | None = None,
-    extra_flags: list[str | ResolvedStringWithMacros | Artifact] = [],
+    extra_flags: list[str | ResolvedStringWithMacros | Artifact | cmd_args] = [],
     allow_cache_upload: bool = False,
     # Setting this to true causes the diagnostic outputs that are generated
     # from this action to always be successfully generated, even if
@@ -504,7 +508,6 @@ def rust_compile(
         lints,
         # Report unused --extern crates in the notification stream.
         ["--json=unused-externs-silent", "-Wunused-crate-dependencies"] if toolchain_info.report_unused_deps else [],
-        common_args.args,
         cmd_args(
             "--remap-path-prefix=",
             compile_ctx.symlinked_srcs,
@@ -514,6 +517,8 @@ def rust_compile(
             compile_ctx.path_sep,
             delimiter = "",
         ),
+        # Caller mappings take precedence over the default source path above.
+        common_args.args,
         ["-Zremap-cwd-prefix=."] if toolchain_info.nightly_features else [],
         extra_flags,
     )
@@ -915,6 +920,7 @@ def symlinked_dirs(
     artifacts_json = ctx.actions.write_json(
         "{}-symlinked_dirs.json".format(prefix),
         artifacts,
+        with_inputs = True,
         pretty = True,
         has_content_based_path = getattr(ctx.attrs, "use_content_based_paths", False),
     )
@@ -926,10 +932,6 @@ def symlinked_dirs(
         cmd_args(
             artifacts_json,
             format = "--artifacts={}",
-            # Don't take a dependency on all the artifacts in here, just the dynamic names; the
-            # rmetas/rlibs we only want to create symlinks to, so there's no need for them to
-            # actually be available
-            hidden = transitive_deps.project_as_args("dynamic_name_args"),
         ),
     ]
 
@@ -954,7 +956,6 @@ def symlinked_dirs(
         # Reference the directory Artifact (not the dirs file), so all of its children are included.
         transitive_dependency_dir,
         format = "@{}/dirs",
-        hidden = transitive_deps.project_as_args("artifacts_args"),
     )
 
 def _lintify(flag: str, clippy: bool, lints: list[str | ResolvedStringWithMacros]) -> cmd_args:
@@ -1249,8 +1250,9 @@ def _compute_common_args(
         SplitDebugMode("split"): ["-Csplit-debuginfo=unpacked"],
     }[compile_ctx.cxx_toolchain_info.split_debug_mode or SplitDebugMode("none")]
 
+    target_flags = ctx.attrs.rustc_flags + getattr(ctx.attrs, "literal_rustc_flags", [])
     if not getattr(ctx.attrs, "uses_restricted_rustc_flags", False):
-        _check_restricted_rustc_flags(ctx.attrs.rustc_flags, toolchain_info)
+        _check_restricted_rustc_flags(target_flags, toolchain_info)
 
     args = cmd_args(
         cmd_args(compile_ctx.symlinked_srcs, compile_ctx.path_sep, root, delimiter = ""),
@@ -1278,7 +1280,7 @@ def _compute_common_args(
         # only on the metadata-fast graph.
         _rustc_flags(toolchain_info.rustc_check_flags, toolchain_info) if dep_metadata_kind == MetadataKind("fast") else [],
         _rustc_flags(toolchain_info.rustc_coverage_flags, toolchain_info) if ctx.attrs.coverage else [],
-        _rustc_flags(ctx.attrs.rustc_flags, toolchain_info),
+        _rustc_flags(target_flags, toolchain_info),
         _rustc_flags(toolchain_info.extra_rustc_flags, toolchain_info),
         cmd_args(ctx.attrs.features, format = '--cfg=feature="{}"'),
         dep_args,
@@ -1406,7 +1408,6 @@ EmitOperation = record(
     profile_out = field(Artifact | None),
 )
 
-# Take a desired output and work out how to convince rustc to generate it
 def _rustc_emit(
     ctx: AnalysisContext,
     compile_ctx: CompileContext,
@@ -1418,11 +1419,13 @@ def _rustc_emit(
     predeclared_output: Artifact | None = None,
     deferred_link: bool = False,
 ) -> EmitOperation:
+    """Declare an output using the selected compiler's supported emission mode."""
     simple_crate = attr_simple_crate_for_filenames(ctx)
     crate_type = params.crate_type
 
     emit_args = cmd_args()
-    emit_env = {}
+    # Nightly's hollow and linked rlibs need identical environments for matching crate hashes.
+    emit_env = {"RUSTC_BOOTSTRAP": "1"} if compile_ctx.toolchain_info.nightly_features else {}
     extra_out = None
     profile_out = None
     use_cbp = getattr(ctx.attrs, "use_content_based_paths", False)
@@ -1446,17 +1449,11 @@ def _rustc_emit(
         emit_output = ctx.actions.declare_output(filename, has_content_based_path = emit_cbp)
 
     if emit == Emit("expand"):
-        emit_env["RUSTC_BOOTSTRAP"] = "1"
         emit_args.add(
             "-Zunpretty=expanded",
             cmd_args(emit_output.as_output(), format = "-o{}"),
         )
     else:
-        # Even though the unstable flag only appears on one of the branches, we need
-        # an identical environment between the `-Zno-codegen` and non-`-Zno-codegen`
-        # command or else there are "found possibly newer version of crate" errors.
-        emit_env["RUSTC_BOOTSTRAP"] = "1"
-
         if emit == Emit("metadata-full"):
             if crate_type not in (CrateType("rlib"), CrateType("dylib")):
                 # Nothing ever needs the metadata from these crate types, so we can
@@ -1550,7 +1547,7 @@ def _rustc_invoke(
 ) -> Invoke:
     toolchain_info = compile_ctx.toolchain_info
 
-    plain_env, path_env = process_env(compile_ctx, toolchain_info.rustc_env | ctx.attrs.env)
+    plain_env, path_env = process_env(compile_ctx, toolchain_info.rustc_env | _rule_env(ctx))
 
     more_plain_env, more_path_env = process_env(compile_ctx, env)
     plain_env.update(more_plain_env)
@@ -1576,6 +1573,12 @@ def _rustc_invoke(
         compile_cmd.add(cmd_args("--env=", k, "=", v, delimiter = ""))
     for k, v in path_env.items():
         compile_cmd.add(cmd_args("--path-env=", k, "=", v, delimiter = ""))
+
+    if ctx.attrs.verify_inputs:
+        dep_info = ctx.actions.declare_output("{}-{}.d".format(prefix, diag), has_content_based_path = use_cbp)
+        compile_cmd.add(cmd_args(dep_info.as_output(), format = "--dep-info={}"))
+        compile_cmd.add(cmd_args(compile_ctx.transitive_inputs.project_as_args("artifacts"), format = "--allowed-input={}"))
+        rustc_cmd.add(cmd_args(dep_info.as_output(), format = "--emit=dep-info={}"))
 
     build_status = None
     if infallible_diagnostics:
@@ -1684,6 +1687,14 @@ _DIRECTORY_ENV = [
     "CARGO_MANIFEST_DIR",
     "OUT_DIR",
 ]
+
+def _rule_env(ctx: AnalysisContext) -> dict[str, str | ResolvedStringWithMacros | Artifact]:
+    """Preserve imported metadata as literal values while keeping artifact references explicit."""
+    literal = getattr(ctx.attrs, "literal_env", {})
+    for key in literal:
+        if key in ctx.attrs.env:
+            fail("compiler environment key occurs in both env and literal_env: " + key)
+    return ctx.attrs.env | literal
 
 # Separate env settings into "plain" and "with path". Path env vars are often
 # used in Rust `include!()` and similar directives, which always interpret the

@@ -38,11 +38,14 @@ def _rust_common_attributes(is_binary: bool):
             "default_platform": attrs.option(attrs.string(), default = None),
             "flagged_deps": attrs.list(attrs.tuple(rust_target_dep(is_binary), attrs.list(attrs.string())), default = []),
             "incremental_enabled": attrs.bool(default = False),
+            "literal_rustc_flags": attrs.list(attrs.string(), default = [], doc = "Compiler arguments without build-macro expansion."),
+            "literal_env": attrs.dict(attrs.string(), attrs.string(), default = {}, doc = "Compiler environment values without build-macro expansion. Keys must not also appear in env."),
             "resources": attrs.named_set(attrs.one_of(attrs.dep(), attrs.source()), sorted = True, default = []),
             "rustdoc_flags": attrs.list(attrs.arg(), default = []),
             "separate_debug_info": attrs.bool(default = False),
             "use_content_based_paths": attrs.bool(default = True),
             "uses_restricted_rustc_flags": attrs.bool(default = False),
+            "verify_inputs": attrs.bool(default = False),
             "_exec_os_type": bsmr.exec_os_type_arg(),
             "_target_os_type": bsmr.target_os_type_arg(),
         }
@@ -215,6 +218,7 @@ rust_library = prelude_rule(
         | _rust_common_attributes(is_binary = False)
         | {
             "crate_dynamic": attrs.option(attrs.dep(), default = None),
+            "default_output": attrs.enum(["check", "library"], default = "check", doc = "Choose metadata checking or the linkable library as the default build output."),
             "doc_env": rust_common.env_arg()["env"],
             "doctests": attrs.option(attrs.bool(), default = None),
             "include_in_android_merge_map_output": attrs.bool(default = True),
@@ -291,6 +295,7 @@ rust_test = prelude_rule(
         | _rust_common_attributes(is_binary = True)
         | _RUST_EXECUTABLE_ATTRIBUTES
         | {
+            "run_cwd": attrs.option(attrs.source(), default = None, doc = "Declared directory used as the test's working directory."),
             "framework": attrs.bool(
                 default = True,
                 doc = """

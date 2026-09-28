@@ -19,6 +19,8 @@ pub enum PackageBuildSource {
     Starlark,
     /// A supported native ecosystem manifest interpreted by BSMR.
     Native,
+    /// An inferred private Cargo graph with no directory or build file on disk.
+    CargoPlan,
 }
 
 /// Selects an explicit build file or, at a requested package root, a native manifest.

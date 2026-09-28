@@ -59,6 +59,7 @@ use bsmr_execute::materialize::materializer::MaterializationMethod;
 use bsmr_execute::materialize::materializer::Materializer;
 use bsmr_execute::re::manager::ReConnectionManager;
 use bsmr_execute_impl::executors::local::ForkserverAccess;
+use bsmr_execute_impl::executors::namespace::NamespaceCache;
 use bsmr_execute_impl::materializers::deferred::AccessTimesUpdates;
 use bsmr_execute_impl::materializers::deferred::DeferredMaterializer;
 use bsmr_execute_impl::materializers::deferred::DeferredMaterializerConfigs;
@@ -149,6 +150,10 @@ pub struct DaemonStateData {
     pub(crate) materializer: Arc<dyn Materializer>,
 
     pub(crate) forkserver: ForkserverAccess,
+
+    /// Retains one private namespace runtime across commands without trusting source paths.
+    #[allocative(skip)]
+    pub(crate) namespace_cache: Arc<NamespaceCache>,
 
     /// Whether to consult the offline-cache bsmr-out dir for network action
     /// outputs prior to running them. If no cached output exists, the action
@@ -682,6 +687,7 @@ impl DaemonState {
                 blocking_executor,
                 materializer,
                 forkserver,
+                namespace_cache: Arc::new(NamespaceCache::default()),
                 use_network_action_output_cache,
                 disk_state_options,
                 start_time: std::time::Instant::now(),

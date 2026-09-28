@@ -5244,6 +5244,7 @@ dependencies = [
  "twox-hash",
  "typed-arena",
  "unicode-segmentation",
+ "url",
  "uuid",
  "uv-distribution-filename",
  "uv-pep508",

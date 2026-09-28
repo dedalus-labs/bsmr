@@ -8,6 +8,7 @@ repository.workspace = true
 license.workspace = true
 
 [dependencies]
+url.workspace = true
 allocative.workspace = true
 async-scoped.workspace = true
 async-trait.workspace = true

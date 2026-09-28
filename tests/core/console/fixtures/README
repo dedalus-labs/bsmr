@@ -4,13 +4,14 @@ often, we should only need to do this when our daemon / cli protocol changes.
 Those fixtures are event logs, so they should be possible to re-generate by
 just re-running the corresponding build.
 
-Regenerate `my_genrule0` using, from the `bsmr` path:
+Build the CLI with `cargo build --locked --bin bsmr`, then regenerate
+`my_genrule0` from the repository root:
 
 ```
 rm "$(hg root)/fbcode/bsmr/tests/core/console/fixtures/my_genrule0.proto" && \
-./bsmr.py build root//tests/targets/rules/genrule:my_genrule0 --prefer-remote && \
-./bsmr.py kill && \
-./bsmr.py build root//tests/targets/rules/genrule:my_genrule0 --prefer-remote --event-log "$(hg root)/fbcode/bsmr/tests/core/console/fixtures/my_genrule0.proto"
+target/debug/bsmr --isolation-dir=dev build root//tests/targets/rules/genrule:my_genrule0 --prefer-remote && \
+target/debug/bsmr --isolation-dir=dev kill && \
+target/debug/bsmr --isolation-dir=dev build root//tests/targets/rules/genrule:my_genrule0 --prefer-remote --event-log "$(hg root)/fbcode/bsmr/tests/core/console/fixtures/my_genrule0.proto"
 ```
 
 (this runs Bsmr twice to ensure we get a cache hit)
@@ -19,7 +20,7 @@ You also need to update the action digests in `test_whatran` and `test_whatran_n
 To find the new digest, run:
 
 ```
-./bsmr.py log whatran "$(hg root)/fbcode/bsmr/tests/core/console/fixtures/my_genrule0.proto"
+target/debug/bsmr --isolation-dir=dev log whatran "$(hg root)/fbcode/bsmr/tests/core/console/fixtures/my_genrule0.proto"
 ```
 
 and you will see a line like:

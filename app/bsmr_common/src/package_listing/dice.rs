@@ -31,9 +31,18 @@ use pagable::Pagable;
 use pagable::pagable_typetag;
 use smallvec::SmallVec;
 
+use crate::file_ops::dice::DiceFileComputations;
 use crate::package_listing::interpreter::InterpreterPackageListingResolver;
 use crate::package_listing::listing::PackageListing;
 use crate::package_listing::resolver::PackageListingResolver;
+use crate::rust_graph::entry::Entry;
+
+#[derive(Debug, bsmr_error::Error)]
+#[bsmr(tag = Input)]
+enum PrivatePackageError {
+    #[error("reserved private Cargo package path exists on disk: `{0}`")]
+    Collision(PackageLabel),
+}
 
 #[derive(
     Clone,
@@ -64,9 +73,21 @@ impl Key for PackageListingKey {
     ) -> Self::Value {
         let now = TimeSpan::start_now();
 
-        let (result, spans) = async_record_root_spans(
-            InterpreterPackageListingResolver::new(ctx).resolve(self.0.dupe()),
-        )
+        let (result, spans) = async_record_root_spans(async {
+            if let Some(entry) = Entry::parse(self.0)? {
+                if DiceFileComputations::read_path_metadata_if_exists(ctx, self.0.as_cell_path())
+                    .await?
+                    .is_some()
+                {
+                    return Err(PrivatePackageError::Collision(self.0).into());
+                }
+                crate::rust_graph::dice::validate_entry(ctx, &entry).await?;
+                return Ok(PackageListing::cargo_plan());
+            }
+            InterpreterPackageListingResolver::new(ctx)
+                .resolve(self.0.dupe())
+                .await
+        })
         .await;
 
         ctx.store_evaluation_data(PackageListingKeyActivationData {

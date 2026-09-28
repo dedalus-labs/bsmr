@@ -53,7 +53,11 @@ system_demo_toolchains()"#;
 
 /// Initializes a bsmr project at the provided path.
 #[derive(Debug, clap::Parser)]
-#[clap(name = "init", about = "Initialize a bsmr project")]
+#[clap(
+    name = "init",
+    about = "Create a project marker",
+    long_about = "Create .bsmr at your project root without replacing your language manifests.\n\nExample:\n\n    bsmr init\n    bsmr build apps/api\n\nAn existing .bsmr is left unchanged."
+)]
 pub struct InitCommand {
     /// The path to initialize the project in. The folder does not need to exist.
     #[clap(default_value = ".")]

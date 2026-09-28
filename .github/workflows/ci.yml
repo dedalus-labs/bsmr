@@ -69,12 +69,18 @@ jobs:
     timeout-minutes: 10
     permissions:
       contents: read
+    env:
+      RUSTUP_TOOLCHAIN: nightly-2026-04-11
+      RUSTUP_AUTO_INSTALL: "0"
     steps:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           persist-credentials: false
           fetch-depth: 0
+      - name: Install Cargo metadata toolchain
+        run: rustup toolchain install nightly-2026-04-11 --profile minimal --no-self-update
+        shell: bash
       - name: Set up Node
         uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38
         with:
@@ -231,10 +237,34 @@ jobs:
         uses: Swatinem/rust-cache@e18b497796c12c097a38f9edb9d0641fb99eee32
         with:
           prefix-key: bsmr-v1
-          save-if: false
-          shared-key: rust
+          save-if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
+          shared-key: engine
+        env:
+          CARGO_PROFILE_DEV_DEBUG: "0"
+          CARGO_INCREMENTAL: "0"
       - name: Build BSMR
+        env:
+          CARGO_PROFILE_DEV_DEBUG: "0"
+          CARGO_INCREMENTAL: "0"
         run: cargo build --locked --bin bsmr
+        shell: bash
+      - name: Install Cargo planner compiler
+        run: rustup toolchain install 1.98.0 --profile minimal --component llvm-tools-preview --no-self-update
+        shell: bash
+      - name: Restore Cargo planner cache
+        uses: Swatinem/rust-cache@e18b497796c12c097a38f9edb9d0641fb99eee32
+        env:
+          RUSTUP_TOOLCHAIN: 1.98.0
+        with:
+          prefix-key: bsmr-v1
+          shared-key: planner
+          workspaces: tools/cargo -> target
+          save-if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
+      - name: Build Cargo planner
+        run: rustup run 1.98.0 cargo build --locked --manifest-path tools/cargo/Cargo.toml --target-dir tools/cargo/target -j 2
+        shell: bash
+      - name: Install Cargo planner
+        run: cp tools/cargo/target/debug/bsmr-cargo target/debug/bsmr-cargo
         shell: bash
       - name: Set up Node
         uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38
@@ -245,8 +275,47 @@ jobs:
         shell: bash
         env:
           HOLLYWOOD_COMMAND_ARG_2: ${{ matrix.architecture }}
-      - name: Verify native Cargo cache
-        run: node test/native-cargo-cache.ts target/debug/bsmr
+      - name: Verify native Rust graph
+        run: node test/native-rust-build.ts target/debug/bsmr
+        shell: bash
+      - name: Install stable Rust test toolchain
+        run: rustup toolchain install 1.97.1 --profile minimal --no-self-update
+        shell: bash
+      - name: Verify stable Rust feature gates
+        run: node test/rust/stable.ts target/debug/bsmr
+        shell: bash
+      - name: Verify Rust tool contracts
+        run: node test/rust/tools.ts
+        shell: bash
+      - name: Verify compiler archive metadata
+        run: python3 test/rust/catalog.py target/debug/bsmr
+        shell: bash
+      - name: Verify literal Rust inputs
+        run: node test/rust/literals.ts target/debug/bsmr
+        shell: bash
+      - name: Verify configured Cargo builds
+        run: node test/rust/configured.ts target/debug/bsmr
+        shell: bash
+      - name: Verify Cargo build selections
+        run: node test/rust/selection.ts target/debug/bsmr
+        shell: bash
+      - name: Verify joint Cargo selections
+        run: python3 test/rust/roots.py target/debug/bsmr
+        shell: bash
+      - name: Verify Rust link-time optimization
+        run: node test/rust/lto.ts target/debug/bsmr
+        shell: bash
+      - name: Verify Rust library formats
+        run: node test/rust/libraries.ts target/debug/bsmr
+        shell: bash
+      - name: Verify Cargo integration tests
+        run: python3 test/rust/tests.py target/debug/bsmr
+        shell: bash
+      - name: Verify external Rust dependencies
+        run: node test/rust/dependencies.ts target/debug/bsmr 1.98.0
+        shell: bash
+      - name: Verify pinned Git sources
+        run: python3 -B -m unittest discover -s prelude/git/tools/tests -p '*_test.py'
         shell: bash
       - name: Verify TypeScript cache
         uses: ./.github/actions/typescript/cache
@@ -389,7 +458,7 @@ jobs:
         shell: bash
   rust:
     name: Rust
-    if: ${{ always() && github.repository == 'dedalus-labs/bsmr' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository) }}
+    if: ${{ !cancelled() && github.repository == 'dedalus-labs/bsmr' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository) }}
     needs:
       - affected
       - rust_audit

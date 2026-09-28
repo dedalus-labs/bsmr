@@ -77,7 +77,11 @@ macro_rules! colored {
 mod out;
 
 #[derive(Debug, clap::Parser)]
-#[clap(name = "build", about = "Build the specified targets")]
+#[clap(
+    name = "build",
+    about = "Build a package and its dependencies",
+    long_about = "Build a package and its dependencies. Run from your project root.\n\nExamples:\n\n    bsmr build apps/api\n    bsmr build apps/api --show-output\n\nUse the package directory or an explicit target pattern.\nProject requirements: https://oss.dedaluslabs.ai/bsmr/getting_started/quickstart/"
+)]
 pub struct BuildCommand {
     #[clap(flatten)]
     show_output: CommonOutputOptions,
@@ -150,7 +154,7 @@ pub struct BuildCommand {
     )]
     output_path: Option<OutputDestinationArg>,
 
-    #[clap(name = "TARGET_PATTERNS", help = "Patterns to build", value_hint = clap::ValueHint::Other)]
+    #[clap(name = "TARGET_PATTERNS", default_value = ".", help = "Patterns to build", value_hint = clap::ValueHint::Other)]
     patterns: Vec<String>,
 
     #[clap(flatten)]

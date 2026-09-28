@@ -34,6 +34,7 @@ use bsmr_core::content_hash::ContentBasedPathHash;
 use bsmr_error::internal_error;
 use bsmr_execute::artifact::artifact_dyn::ArtifactDyn;
 use bsmr_execute::artifact_utils::ArtifactValueBuilder;
+use bsmr_execute::artifact_utils::CopySymlinks;
 use bsmr_execute::execute::command_executor::ActionExecutionTimingData;
 use bsmr_execute::materialize::materializer::CopiedArtifact;
 use bsmr_hash::BsmrIndexSet;
@@ -58,6 +59,8 @@ pub(crate) enum CopyMode {
     Copy {
         // Override the destination executable bit to +x (true) or -x (false)
         executable_bit_override: Option<bool>,
+        /// Whether relative links retain their referents or their literal targets.
+        symlinks: CopySymlinks,
     },
     Symlink,
 }
@@ -191,12 +194,14 @@ impl Action for CopyAction {
             match self.copy {
                 CopyMode::Copy {
                     executable_bit_override,
+                    symlinks,
                 } => {
                     builder.add_copied(
                         src_value,
                         src.as_ref(),
                         tmp_dest.as_ref(),
                         executable_bit_override,
+                        symlinks,
                     )?;
                 }
                 CopyMode::Symlink => {
@@ -234,6 +239,7 @@ impl Action for CopyAction {
                     match self.copy {
                         CopyMode::Copy {
                             executable_bit_override,
+                            ..
                         } => executable_bit_override,
                         CopyMode::Symlink => None,
                     },

@@ -93,6 +93,12 @@ impl NotifyFileData {
     ) -> bsmr_error::Result<()> {
         let event = event.map_err(|e| from_any_with_tag(e, bsmr_error::ErrorTag::NotifyWatcher))?;
 
+        // Overflow can have no paths or only ignored paths. Neither permits incremental reuse.
+        if event.need_rescan() {
+            self.missed_events = true;
+            debug!("FileWatcher: File change events were missed");
+        }
+
         for path in &event.paths {
             // Testing shows that we get absolute paths back from the `notify` library.
             // It's not documented though.
@@ -119,11 +125,6 @@ impl NotifyFileData {
                 "FileWatcher: {:?} {:?} (ignore = {})",
                 path, &event.kind, ignore
             );
-
-            if event.need_rescan() {
-                self.missed_events = true;
-                debug!("FileWatcher: File change events were missed");
-            }
 
             if ignore || ignore_event_kind(event.kind) {
                 self.ignored += 1;
@@ -446,5 +447,41 @@ impl FileWatcher for NotifyFileWatcher {
             },
         )
         .await
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use bsmr_core::cells::cell_root_path::CellRootPathBuf;
+    use bsmr_fs::paths::abs_norm_path::AbsNormPathBuf;
+    use notify::event::Flag;
+
+    use super::*;
+
+    /// Lost events invalidate the graph even without a source path to record.
+    #[test]
+    fn invariant_rescan_discards_partial_change_history() -> bsmr_error::Result<()> {
+        let directory = tempfile::tempdir()?;
+        let root = ProjectRoot::new(AbsNormPathBuf::new(directory.path().canonicalize()?)?)?;
+        let cells = CellResolver::testing_with_name_and_path(
+            CellName::testing_new("root"),
+            CellRootPathBuf::testing_new(""),
+        );
+        for path in [None, Some("bsmr-out/ignored"), Some("source.rs")] {
+            let mut data = NotifyFileData::new();
+            let mut event = notify::Event::new(EventKind::Other).set_flag(Flag::Rescan);
+            if let Some(path) = path {
+                event = event.add_path(root.root().as_path().join(path));
+            }
+            data.process(Ok(event), &root, &cells, &StdBsmrHashMap::default())?;
+            let (stats, changes) = data.sync();
+            assert!(
+                changes.is_none(),
+                "rescan with {path:?} reused partial history"
+            );
+            assert!(stats.fresh_instance);
+            assert!(stats.fresh_instance_data.unwrap().cleared_dice);
+        }
+        Ok(())
     }
 }

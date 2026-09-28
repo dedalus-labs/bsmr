@@ -25,3 +25,73 @@ relative file inputs, GitHub output records and missing-input failure.
 The recorded hashes identify entrypoint files. This fixture tests the action
 runtime and cache behavior. GitHub worker lifecycle and generated action
 metadata require connected runner qualification.
+
+## Package tasks
+
+Run `node test/pnpm/task.ts /path/to/bsmr` to test the binary's embedded `pnpm_task`
+rule with a real frozen install and compiler. Append `prelude` to test this
+checkout's rules explicitly. Each phase reports its elapsed time. It checks detached code and assets,
+individual output selection, warm reuse, clean rebuilds and missing-output errors.
+See the [task contract](../prelude/toolchains/pnpm/README.md).
+
+## Rust tool contracts
+
+Run `node test/rust/tools.ts` to exercise the native compiler wrappers
+and build-script runner. Real Rust programs verify cfg declarations, error
+directives, declared input checks, and failure propagation. This tool-level
+suite does not establish automatic Cargo script or macro admission.
+
+## Rust CI caches
+
+The self-host qualification job builds the engine with its pinned nightly
+compiler and the Cargo planner with stable Rust. Each compiler has a separate
+target directory and cache key. The planner cache owns `tools/cargo/target`.
+The job copies the built planner beside the engine before running tests.
+
+Successful pushes to `main` save these caches. Pull requests and merge groups
+only restore them. A missing planner cache requires a cold compile. Cargo still
+checks the restored dependency outputs before reusing them.
+
+## Rust dependencies
+
+Run `node test/rust/dependencies.ts /path/to/bsmr` with the matching
+`bsmr-cargo` beside the binary and Rust 1.97.1 installed. It builds and runs an
+executable using a locked registry crate, a nested Git package, and an excluded
+path dependency, then verifies
+that a warm build runs no compiler actions and leaves the lockfile unchanged.
+Pass `1.98.0` as the third argument to qualify that installed toolchain instead.
+
+Run `python3 test/rust/git.py /path/to/bsmr /path/to/runtime.json` on Linux to
+check the same boundary with isolated compiler actions. It checks cold execution,
+warm reuse and restoration after the Git origin becomes unavailable. The fixture
+changes the original checkout after committing, so compilation must use the
+locked object bytes rather than those mutable files.
+
+Run `python3 test/rust/identity.py /path/to/bsmr /path/to/runtime.json` to compare
+build-script Git queries with the source checkout. It covers hidden files,
+relative symlinks, staged and untracked changes, commit-only changes and linked
+worktrees. `python3 test/rust/snapshot.py /path/to/bsmr` isolates native symlink
+materialization without invoking a compiler.
+`python3 test/rust/checkout.py /path/to/bsmr` checks Git recognition with loose
+and packed references. Pass `--prelude prelude` to test local rule changes.
+
+Run `node test/rust/selection.ts /path/to/bsmr` to switch profile and feature
+settings on one warm target. It checks actual executable behavior, invalid
+configuration, lock preservation, and cache reuse when restoring the defaults.
+
+Run `node test/rust/lto.ts /path/to/bsmr` to compare fat, thin, local, and disabled
+LTO against Cargo on a three-crate dependency chain. It checks executable
+results, compiler flags, edited dependencies, cached profile restoration, and
+inline unit tests under release LTO.
+
+Run `node test/rust/libraries.ts /path/to/bsmr` to verify that every declared
+library format materializes, including when building a dependent executable.
+The test checks Rust and C consumers, source edits, warm reuse, and restoration.
+
+Run `python3 test/rust/tests.py /path/to/bsmr` to compare integration tests and
+custom harnesses with Cargo. A second `/path/to/runtime.json` argument selects
+the Linux namespace sandbox. The fixture checks
+dev features, the newly built binary, package-relative files and test failures.
+
+`python3 -B -m unittest discover -s prelude/git/tools/tests -p '*_test.py'` checks
+that ambient Git filters and checkout hooks cannot change pinned sources.

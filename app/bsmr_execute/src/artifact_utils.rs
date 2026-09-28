@@ -16,6 +16,7 @@
 
 use std::sync::Arc;
 
+use allocative::Allocative;
 use bsmr_core::fs::project::ProjectRoot;
 use bsmr_core::fs::project_rel_path::ProjectRelativePath;
 use bsmr_core::fs::project_rel_path::ProjectRelativePathBuf;
@@ -23,6 +24,7 @@ use bsmr_directory::directory::entry::DirectoryEntry;
 use bsmr_error::internal_error;
 use bsmr_fs::paths::RelativePathBuf;
 use dupe::Dupe;
+use pagable::Pagable;
 
 use crate::artifact_value::ArtifactValue;
 use crate::digest_config::DigestConfig;
@@ -37,6 +39,15 @@ use crate::directory::insert_entry;
 use crate::directory::new_symlink;
 use crate::directory::override_executable_bit;
 use crate::directory::relativize_directory;
+
+/// Ordinary copies retain link referents. Source snapshots retain relative link text.
+#[derive(Clone, Copy, Debug, Allocative, Pagable)]
+pub enum CopySymlinks {
+    /// Keep pointing at the original artifact after moving the link.
+    Rebase,
+    /// Retain the link's location-independent spelling inside a reconstructed tree.
+    Preserve,
+}
 
 pub struct ArtifactValueBuilder<'a> {
     /// Only used to relativize paths; no disk operations performed!
@@ -98,13 +109,16 @@ impl<'a> ArtifactValueBuilder<'a> {
         src: &ProjectRelativePath,
         dest: &ProjectRelativePath,
         executable_bit_override: Option<bool>,
+        symlinks: CopySymlinks,
     ) -> bsmr_error::Result<ActionDirectoryEntry<ActionSharedDirectory>> {
         insert_artifact(&mut self.builder, src.to_buf(), src_value)?;
 
         let entry = match src_value.entry() {
             DirectoryEntry::Dir(directory) => {
                 let mut builder = directory.dupe().into_builder();
-                relativize_directory(&mut builder, src, dest)?;
+                if matches!(symlinks, CopySymlinks::Rebase) {
+                    relativize_directory(&mut builder, src, dest)?;
+                }
                 if let Some(executable_bit_override) = executable_bit_override {
                     override_executable_bit(&mut builder, executable_bit_override)?;
                 }
@@ -112,7 +126,9 @@ impl<'a> ArtifactValueBuilder<'a> {
                     builder.fingerprint(self.digest_config.as_directory_serializer()),
                 )
             }
-            DirectoryEntry::Leaf(ActionDirectoryMember::Symlink(s)) => {
+            DirectoryEntry::Leaf(ActionDirectoryMember::Symlink(s))
+                if matches!(symlinks, CopySymlinks::Rebase) =>
+            {
                 // TODO: This seems like it normally shouldn't need to be normalizing anything.
                 let reldest = self.project_fs.relative_path(
                     src.parent()
@@ -128,6 +144,9 @@ impl<'a> ArtifactValueBuilder<'a> {
                 DirectoryEntry::Leaf(ActionDirectoryMember::ExternalSymlink(
                     s.with_full_target()?,
                 ))
+            }
+            DirectoryEntry::Leaf(ActionDirectoryMember::Symlink(s)) => {
+                DirectoryEntry::Leaf(ActionDirectoryMember::Symlink(s.dupe()))
             }
             DirectoryEntry::Leaf(ActionDirectoryMember::File(f)) => {
                 let file_metadata = if let Some(executable_bit_override) = executable_bit_override {
@@ -202,6 +221,7 @@ mod tests {
                 path("d1/d2/d3/d4/link"),
                 path("d1/d5/new_link"),
                 None,
+                CopySymlinks::Rebase,
             )?
         };
 
@@ -216,6 +236,27 @@ mod tests {
             "Symlinks are different"
         );
 
+        Ok(())
+    }
+
+    /// Reconstructing a checkout must preserve links, including their non-normalized spelling.
+    #[test]
+    fn invariant_snapshot_preserves_relative_symlink_text() -> bsmr_error::Result<()> {
+        let fs = ProjectRootTemp::new()?;
+        for target in [".agents", "./.agents", "../shared/data"] {
+            let mut builder = ArtifactValueBuilder::new(fs.path(), DigestConfig::testing_default());
+            let entry = builder.add_copied(
+                &get_symlink_artifact_value(target),
+                path("source/pkg/link"),
+                path("snapshot/pkg/link"),
+                None,
+                CopySymlinks::Preserve,
+            )?;
+            let DirectoryEntry::Leaf(ActionDirectoryMember::Symlink(link)) = entry.as_ref() else {
+                panic!("snapshot changed the source entry type");
+            };
+            assert_eq!(link.target().as_str(), target);
+        }
         Ok(())
     }
 }

@@ -40,6 +40,7 @@ rust_library(
         "bsmr_build//third-party/rust:tempfile",
     ],
     deps = [
+        "bsmr_build//third-party/rust:url",
         "bsmr_build//third-party/rust:anyhow",
         "bsmr_build//third-party/rust:async-recursion",
         "bsmr_build//third-party/rust:async-trait",

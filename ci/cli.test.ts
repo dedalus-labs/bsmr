@@ -62,6 +62,8 @@ test("check uses one typed command tree", async () => {
 			["node", "--check", ".github/actions/ci/rust-affected/dist/index.js"],
 			["node", "--check", ".github/actions/ci/verify-sha256/dist/index.js"],
 			["node", "--check", ".github/actions/typescript/cache/dist/index.js"],
+			["node", "--check", ".github/actions/runner/build/dist/index.js"],
+			["node", "--check", ".github/actions/rust/install/dist/index.js"],
 			["git", "diff", "--exit-code"],
 			["pnpm", "exec", "hollywood"],
 		],
@@ -81,6 +83,10 @@ test("check uses one typed command tree", async () => {
 		"ci/release-complete.test.ts",
 		"ci/release-sync.test.ts",
 		"ci/release.test.ts",
+		"ci/runner/lifecycle.test.ts",
+		"ci/runner/api.test.ts",
+		"ci/runner/action.test.ts",
+		"ci/runner/build.test.ts",
 		"ci/rust-build-dependencies.test.ts",
 		"ci/verify-sha256.test.ts",
 		"benchmarks/python-build-systems/run.test.ts",
@@ -88,6 +94,7 @@ test("check uses one typed command tree", async () => {
 		"benchmarks/python-conformance/snapshot.test.ts",
 		"prelude/typescript/runner.test.ts",
 		"prelude/toolchains/pnpm/runner.test.ts",
+		"prelude/toolchains/pnpm/task.test.ts",
 		"test/contributors.test.ts",
 	]);
 	assert.deepEqual(state.invocations.find(({ file }) => file === "git")?.args, [
@@ -98,7 +105,9 @@ test("check uses one typed command tree", async () => {
 		".github/actions",
 		".github/workflows",
 		"ci/rust-build-dependencies.mjs",
+		"ci/distribute.mjs",
 		"prelude/toolchains/pnpm/runner.mjs",
+		"prelude/toolchains/pnpm/task.mjs",
 		"prelude/typescript/runner.mjs",
 	]);
 	assert.ok(state.invocations.every(({ cwd }) => cwd === "/repo"));

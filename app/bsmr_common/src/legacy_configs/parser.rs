@@ -299,8 +299,24 @@ impl<'p> LegacyConfigFileParser<'p> {
         file_ops: &'a mut dyn ConfigParserFileOps,
     ) -> BoxFuture<'a, bsmr_error::Result<bool>> {
         async move {
-            let Some(file_lines) = file_ops.read_file_lines_if_exists(config_path).await? else {
-                return Ok(false);
+            let file_lines = match file_ops.read_file_lines_if_exists(config_path).await? {
+                Some(lines) => lines,
+                None if matches!(config_path, ConfigPath::Project(path) if path.as_str() == ".bsmr")
+                    && file_ops
+                        .read_file_lines_if_exists(&ConfigPath::Project(
+                            bsmr_core::fs::project_rel_path::ProjectRelativePathBuf::try_from(
+                                "Cargo.toml".to_owned(),
+                            )?,
+                        ))
+                        .await?
+                        .is_some() =>
+                {
+                    crate::rust_graph::project::CONFIG
+                        .lines()
+                        .map(str::to_owned)
+                        .collect()
+                }
+                None => return Ok(false),
             };
             self.parse_lines(config_path, file_lines, parse_includes, file_ops)
                 .await?;

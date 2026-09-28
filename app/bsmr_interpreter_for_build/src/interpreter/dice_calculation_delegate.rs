@@ -19,9 +19,6 @@ use std::sync::Arc;
 
 use allocative::Allocative;
 use async_trait::async_trait;
-use bsmr_common::cargo_workspace::parse_rust_toolchain;
-use bsmr_common::cargo_workspace::render_cargo_build_file;
-use bsmr_common::cargo_workspace::select_rust_toolchain_file;
 use bsmr_common::dice::cells::HasCellResolver;
 use bsmr_common::dice::cycles::CycleGuard;
 use bsmr_common::file_ops::dice::DiceFileComputations;
@@ -105,8 +102,6 @@ use crate::super_package::package_value::SuperPackageValuesImpl;
 #[derive(Debug, bsmr_error::Error)]
 #[bsmr(tag = Input)]
 enum NativeBuildFileError {
-    #[error("native Cargo builds require Cargo.toml at the BSMR project root")]
-    CargoWorkspaceManifestRequired,
     #[error("native Python builds require pylock.build.toml at the BSMR project root")]
     PythonBuildLockRequired,
 }
@@ -309,8 +304,42 @@ impl<'c, 'd: 'c> DiceCalculationDelegate<'c, 'd> {
                 self.prepare_eval(StarlarkPath::BuildFile(&build_file_path))
                     .await?
             }
+            PackageBuildSource::CargoPlan => {
+                let entry = bsmr_common::rust_graph::entry::Entry::parse(package)?
+                    .expect("CargoPlan listing has a validated descriptor");
+                let source = bsmr_common::rust_graph::dice::plan_file(self.ctx, &entry).await?;
+                self.prepare_generated_build_file(&build_file_path, source)
+                    .await?
+            }
             PackageBuildSource::Native => {
                 let mut source = String::new();
+                let files: Vec<_> = listing
+                    .files()
+                    .files()
+                    .filter(|file| {
+                        !file
+                            .as_str()
+                            .split('/')
+                            .any(|part| [".git", "target", "bsmr-out"].contains(&part))
+                    })
+                    .map(|file| file.as_str())
+                    .collect();
+                let directories: Vec<_> = listing
+                    .empty_directories()
+                    .filter(|path| {
+                        !path
+                            .as_str()
+                            .split('/')
+                            .any(|part| [".git", "target", "bsmr-out"].contains(&part))
+                    })
+                    .map(|path| path.as_str())
+                    .collect();
+                source.push_str(&format!(
+                    "load(\"@prelude//rust:checkout.bzl\", \"checkout_files\")\n\
+                     checkout_files(name = \"__bsmr_checkout_sources\", srcs = {}, directories = {}, visibility = [\"PUBLIC\"])\n",
+                    serde_json::to_string(&files)?,
+                    serde_json::to_string(&directories)?,
+                ));
                 if listing
                     .get_file(PackageRelativePath::new("package.json")?)
                     .is_some()
@@ -332,7 +361,14 @@ impl<'c, 'd: 'c> DiceCalculationDelegate<'c, 'd> {
                     .get_file(PackageRelativePath::new("Cargo.toml")?)
                     .is_some()
                 {
-                    source.push_str(&self.render_native_cargo(package).await?);
+                    source.push_str(
+                        &bsmr_common::rust_graph::dice::build_file(self.ctx, package).await?,
+                    );
+                    if package.cell_relative_path().is_empty() {
+                        source.push_str(
+                            &bsmr_common::rust_graph::checkout::render(self.ctx, package).await?,
+                        );
+                    }
                 }
                 if listing
                     .get_file(PackageRelativePath::new("pyproject.toml")?)
@@ -346,44 +382,27 @@ impl<'c, 'd: 'c> DiceCalculationDelegate<'c, 'd> {
                         source.push_str(&python);
                     }
                 }
-                let ParseData(ast, imports) = self.prepare_eval_with_content(
-                    StarlarkPath::BuildFile(&build_file_path),
-                    source,
-                )??;
-                let deps = CycleGuard::<LoadCycleDescriptor>::new(self.ctx)?
-                    .guard_this(Self::eval_deps(self.ctx, &imports))
-                    .await
-                    .into_result(self.ctx)
-                    .await???;
-                (ast, deps)
+                self.prepare_generated_build_file(&build_file_path, source)
+                    .await?
             }
         };
         Ok((build_file_path, ast, deps))
     }
 
-    /// Renders one Cargo manifest against the project root's shared workspace inputs.
-    async fn render_native_cargo(&mut self, package: PackageLabel) -> bsmr_error::Result<String> {
-        let root_path = CellRelativePathBuf::unchecked_new(String::new());
-        let root = PackageLabel::new(package.cell_name(), &root_path)?;
-        let workspace_listing = DicePackageListingResolver(self.ctx)
-            .resolve_package_listing(root)
-            .await?;
-        if workspace_listing
-            .get_file(PackageRelativePath::new("Cargo.toml")?)
-            .is_none()
-        {
-            return Err(NativeBuildFileError::CargoWorkspaceManifestRequired.into());
-        }
-        let manifest = self.read_package_file(package, "Cargo.toml").await?;
-        let toolchain_file = select_rust_toolchain_file(&workspace_listing)?;
-        let toolchain = self.read_package_file(root, toolchain_file).await?;
-        let toolchain = parse_rust_toolchain(&toolchain)?;
-        Ok(render_cargo_build_file(
-            package.cell_relative_path().to_owned(),
-            &manifest,
-            &workspace_listing,
-            &toolchain,
-        )?)
+    /// Parse inferred rules through the same imports and cycle checks as native manifests.
+    async fn prepare_generated_build_file(
+        &mut self,
+        path: &BuildFilePath,
+        source: String,
+    ) -> bsmr_error::Result<(AstModule, ModuleDeps)> {
+        let ParseData(ast, imports) =
+            self.prepare_eval_with_content(StarlarkPath::BuildFile(path), source)??;
+        let deps = CycleGuard::<LoadCycleDescriptor>::new(self.ctx)?
+            .guard_this(Self::eval_deps(self.ctx, &imports))
+            .await
+            .into_result(self.ctx)
+            .await???;
+        Ok((ast, deps))
     }
 
     /// Validates root Python inputs and renders one project or workspace root.

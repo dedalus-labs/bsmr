@@ -1,0 +1,10 @@
+# ===----------------------------------------------------------------------===
+# Copyright (c) 2026 Dedalus Labs, Inc. and its contributors
+# SPDX-License-Identifier: Apache-2.0
+# ===----------------------------------------------------------------------===
+
+# Compile the pinned Cargo planner with Rust 1.98.0.
+
+[toolchain]
+channel = "1.98.0"
+profile = "minimal"

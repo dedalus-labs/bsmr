@@ -4,51 +4,48 @@
 <!-- SPDX-License-Identifier: Apache-2.0 -->
 <!-- ===----------------------------------------------------------------------=== -->
 
-# Quick Start
+# Build your first package
 
-## 1. Initialize the workspace
-
-Run this once at the repository root:
+[Install Bessemer](install.md), then run these commands at your repository root:
 
 ```console
 bsmr init
+bsmr build apps/api --show-output
 ```
 
-This creates `.bsmr`. The file marks the project root and stores advanced
-configuration. Most projects do not need to edit it.
+Replace `apps/api` with the directory of the package you want to build.
+`bsmr init` creates `.bsmr` to mark the project root. The build command includes
+the package's dependencies and prints the output path.
 
-## 2. Build one package
+## Choose your project
 
-=== "TypeScript"
+For **TypeScript**, the package needs `package.json`, `tsconfig.json`, and
+`tsdown.config.ts`. The workspace root needs its package manifest, pnpm workspace
+file, and committed lockfile. The [TypeScript guide](../users/languages/typescript/pnpm.md)
+explains the required tool versions and configuration.
 
-    ```console
-    bsmr build apps/api
-    ```
+**Rust, Go, and Python** have separate preview requirements. Check
+[language support](../about/language_support.md) before using this workflow.
+The [Rust preview](../users/languages/rust/cargo.md) infers packages directly.
+[Go](../users/languages/go/native.md) currently requires a synchronization step.
 
-    Bessemer reads the pnpm workspace and frozen lockfile. It builds the selected
-    package and the workspace packages it depends on.
+## Build again
 
-=== "Rust"
+Run the same build command after an edit. BSMR reuses work whose inputs have
+not changed. You do not need to clean the project between builds.
 
-    ```console
-    bsmr build packages/rust/dfa
-    ```
+## Find an option
 
-    Bessemer reads the Cargo workspace, lockfile, and exact Rust toolchain. It
-    builds the selected package with `cargo build --locked`.
+```console
+bsmr --help
+bsmr build --help
+```
 
-## 3. Build again
+The first command lists commands and global options. The second explains build
+options, including `--show-output`. Use `bsmr -h` for a shorter command list.
+The [command-line reference](../reference/cli.md) contains the same parser's
+commands and defaults.
 
-Run the same command. Unchanged actions use cached results. If a declared output
-was deleted, Bessemer restores it from the local content-addressed store.
-
-## Learn more only when needed
-
-- Run `bsmr -h` for the beginner interface.
-- Run `bsmr --help` for every command and global option.
-- Read [TypeScript and pnpm](../users/languages/typescript/pnpm.md) for the exact
-  workspace contract.
-- Read [Rust and Cargo](../users/languages/rust/cargo.md) for the current local
-  hermeticity boundary.
-- Read [Command-line reference](../reference/cli.md) before using labels, graph
-  queries, or custom rules.
+When your build needs an extra step, add a [custom recipe](../users/recipes.md).
+For cache behavior or advanced setup, see [caching](../concepts/caching.md) and
+[configuration](../reference/configuration.md).

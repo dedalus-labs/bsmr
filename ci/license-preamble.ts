@@ -34,8 +34,13 @@ function commentStyle(path: string): CommentStyle {
 function brief(path: string): string {
 	if (basename(path) === "BUILD.bsmr") return `Defines build targets for ${dirname(path) === "." ? "the root" : dirname(path)}.`;
 	const known = new Map([
+		["ci/distribute.mjs", "Builds the engine and Cargo planner for one release target."],
 		[".github/actions/typescript/cache/dist/index.js", "Runs the native TypeScript cache verification action."],
 		[".github/actions/typescript/cache/src/index.ts", "Implements the native TypeScript cache verification action."],
+		[".github/actions/runner/build/src/index.ts", "Implements the approved runner lifecycle action."],
+		[".github/actions/rust/install/src/index.ts", "Installs verified native Rust tooling."],
+		[".github/actions/rust/install/dist/index.js", "Runs verified native Rust tooling installation."],
+		[".github/actions/runner/build/dist/index.js", "Runs the approved runner lifecycle action."],
 		[".bsmr", "Configures the root Bessemer cell."],
 		[".github/actions/ci/cli-reference/dist/index.js", "Runs the generated CLI-reference action."],
 		[".github/actions/ci/cli-reference/src/index.ts", "Implements the CLI-reference action."],
@@ -88,6 +93,7 @@ function brief(path: string): string {
 		["ci/verify-sha256.ts", "Verifies one downloaded artifact against its pinned SHA-256 digest."],
 		["docs/getting_started/what_is_bsmr.md", "Introduces Bessemer and its core capabilities."],
 		["prelude/toolchains/pnpm/runner.mjs", "Runs the generated hermetic pnpm install adapter."],
+		["prelude/toolchains/pnpm/task.mjs", "Runs native pnpm tasks with required outputs."],
 		["prelude/typescript/runner.mjs", "Runs the generated hermetic TypeScript action adapter."],
 		["rolldown.config.ts", "Bundles Bessemer's generated Node runtime artifacts."],
 		["test/contributors.test.ts", "Verifies the vouched-contributor trust policy."],
@@ -141,10 +147,14 @@ export function validateSource(source: Source): string | undefined {
 	if (source.provenance === "dedalus") {
 		const style = commentStyle(source.path);
 		const responsibility = header.slice(legal.length + 2).split("\n", 1)[0] ?? "";
+		const docstring = extname(source.path) === ".py" ? /^[rRuU]?(?:"""|''')/.exec(responsibility)?.[0] : undefined;
+		const prefix = docstring ?? (extname(source.path) === ".rs" && responsibility.startsWith("//! ") ? "//! " : style.prefix);
+		const quote = docstring?.slice(-3);
+		const suffix = quote !== undefined && responsibility.endsWith(quote) ? quote : style.suffix;
 		const description = responsibility
-			.slice(style.prefix.length, responsibility.length - style.suffix.length)
+			.slice(prefix.length, responsibility.length - suffix.length)
 			.trim();
-		if (!responsibility.startsWith(style.prefix) || !responsibility.endsWith(style.suffix) || description === "") {
+		if (!responsibility.startsWith(prefix) || !responsibility.endsWith(suffix) || description === "") {
 			return `${source.path}: missing source responsibility`;
 		}
 	}

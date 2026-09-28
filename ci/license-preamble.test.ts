@@ -40,3 +40,27 @@ test("validation requires a leading provenance block", () => {
 	const empty = renderPreamble("app/bsmr/BUILD.bsmr", "dedalus").replace("# Defines build targets for app/bsmr.", "# ");
 	assert.match(validateSource({ path: "app/bsmr/BUILD.bsmr", provenance: "dedalus", text: empty }) ?? "", /missing source responsibility/);
 });
+
+test("Rust module documentation supplies the source responsibility", () => {
+	const path = "app/bsmr_common/src/rust_graph.rs";
+	const legal = renderPreamble("ci/license-preamble.ts", "dedalus").split("\n\n")[0];
+	for (const comment of ["//! Describes the native graph.", "// Describes the native graph."]) {
+		assert.equal(validateSource({ path, provenance: "dedalus", text: `${legal}\n\n${comment}\n` }), undefined);
+	}
+	for (const comment of ["//!", "//! ", "// "]) {
+		assert.match(validateSource({ path, provenance: "dedalus", text: `${legal}\n\n${comment}\n` }) ?? "", /missing source responsibility/);
+	}
+});
+
+test("Python module docstrings supply the source responsibility", () => {
+	const path = "tool.py";
+	const legal = renderPreamble("app/bsmr/BUILD.bsmr", "dedalus").split("\n\n")[0];
+	for (const doc of ['"""Describe the command."""', "'''Describe the command.'''", 'r"""Describe the command.\n\nMore detail.\n"""']) {
+		const source = { path, provenance: "dedalus" as const, text: `${legal}\n\n${doc}\n` };
+		assert.equal(validateSource(source), undefined);
+		assert.equal(insertPreamble(source), source.text);
+	}
+	for (const doc of ['""""""', "''''''", '"""   """', 'f"""Not a module docstring."""', "print('no responsibility')"]) {
+		assert.match(validateSource({ path, provenance: "dedalus", text: `${legal}\n\n${doc}\n` }) ?? "", /missing source responsibility/);
+	}
+});

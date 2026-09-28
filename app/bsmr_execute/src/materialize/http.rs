@@ -53,6 +53,17 @@ enum HttpHeadError {
     Client(#[source] HttpError),
 }
 
+#[derive(Debug, bsmr_error::Error)]
+#[bsmr(tag = Input)]
+enum LocalSourceError {
+    #[error("invalid local source URL: {0}")]
+    Url(#[source] bsmr_error::Error),
+    #[error("local source URL must name an absolute file")]
+    Path,
+    #[error("imported source archive disappeared")]
+    Missing,
+}
+
 impl From<HttpError> for HttpHeadError {
     fn from(e: HttpError) -> Self {
         Self::Client(e)
@@ -180,6 +191,30 @@ pub async fn http_download(
         checksum,
         digest_config.cas_digest_config(),
     )? {
+        if executable {
+            fs.set_executable(path)?;
+        }
+        return Ok(digest);
+    }
+
+    if url.starts_with("file:") {
+        let source = url::Url::parse(url)
+            .map_err(|error| {
+                LocalSourceError::Url(bsmr_error::conversion::from_any_with_tag(
+                    error,
+                    bsmr_error::ErrorTag::Input,
+                ))
+            })?
+            .to_file_path()
+            .map_err(|()| LocalSourceError::Path)?;
+        http_cache::import(&cache, &source, checksum, digest_config.cas_digest_config())?;
+        let digest = http_cache::restore(
+            &cache,
+            &abs_path,
+            checksum,
+            digest_config.cas_digest_config(),
+        )?
+        .ok_or(LocalSourceError::Missing)?;
         if executable {
             fs.set_executable(path)?;
         }

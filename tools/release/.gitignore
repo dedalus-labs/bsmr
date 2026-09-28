@@ -1,0 +1,10 @@
+# ===----------------------------------------------------------------------===
+# Copyright (c) 2026 Dedalus Labs, Inc. and its contributors
+# SPDX-License-Identifier: Apache-2.0
+# ===----------------------------------------------------------------------===
+
+# Keep locally staged release executables out of source control.
+
+/bsmr
+/bsmr-cargo
+/*.exe

@@ -141,7 +141,6 @@ load(":rust_toolchain.bzl", "RustToolchainInfo")
 load(
     ":sources.bzl",
     "RustSources",
-    "RustSourcesTSet",
 )
 load(":targets.bzl", "targets")
 
@@ -157,9 +156,11 @@ _SUB_TARGET_BUILD_LANG_STYLE = {
     "static": (LinkageLang("rust"), LibOutputStyle("archive")),
     "static_pic": (LinkageLang("rust"), LibOutputStyle("pic_archive")),
     "staticlib": (LinkageLang("native-bundled"), LibOutputStyle("archive")),
+    "staticlib_pic": (LinkageLang("native-bundled"), LibOutputStyle("pic_archive")),
 }
 
 def rust_library_impl(ctx: AnalysisContext) -> list[Provider]:
+    """Compile a library and expose compatible outputs for each dependency mode."""
     compile_ctx = compile_context(ctx)
     toolchain_info = compile_ctx.toolchain_info
 
@@ -201,6 +202,7 @@ def rust_library_impl(ctx: AnalysisContext) -> list[Provider]:
 
         param_subtargets.setdefault(params, {})
         if LinkageLang("rust") in langs:
+            # Stable's linked rlib already contains the full metadata its consumers need.
             param_metadata_outputs[params] = {
                 MetadataKind("link"): link,
                 MetadataKind("full"): rust_compile(
@@ -210,7 +212,7 @@ def rust_library_impl(ctx: AnalysisContext) -> list[Provider]:
                     params = params,
                     default_roots = _DEFAULT_ROOTS,
                     incremental_enabled = ctx.attrs.incremental_enabled,
-                ),
+                ) if toolchain_info.nightly_features else link,
                 MetadataKind("fast"): meta_fast,
             }
 
@@ -436,6 +438,7 @@ def rust_library_impl(ctx: AnalysisContext) -> list[Provider]:
     incr_enabled = ctx.attrs.incremental_enabled
     providers = []
     providers += _default_providers(
+        default_output = param_output[static_library_params].output if ctx.attrs.default_output == "library" else diag_artifacts[incr_enabled].output,
         lang_style_param = lang_style_param,
         param_output = param_output,
         param_subtargets = param_subtargets,
@@ -447,11 +450,11 @@ def rust_library_impl(ctx: AnalysisContext) -> list[Provider]:
         check_artifacts = output_as_diag_subtargets(diag_artifacts[incr_enabled], clippy_artifacts[incr_enabled]),
         expand = expand.output,
         sources = compile_ctx.symlinked_srcs,
-        transitive_srcs = compile_ctx.transitive_srcs,
         rustdoc_coverage = rustdoc_coverage,
         named_deps_names = write_named_deps_names(ctx, compile_ctx),
         profiles = profiles,
     )
+    providers.append(RustSources(tset = compile_ctx.transitive_srcs, inputs = compile_ctx.transitive_inputs))
     providers += _rust_metadata_providers(
         diag_artifacts = diag_artifacts,
         clippy_artifacts = clippy_artifacts,
@@ -721,6 +724,7 @@ def _handle_rust_artifact(
         )
 
 def _default_providers(
+    default_output: Artifact,
     lang_style_param: dict[(LinkageLang, LibOutputStyle), BuildParams],
     param_output: dict[BuildParams, RustcOutput],
     param_subtargets: dict[BuildParams, dict[str, RustcOutput]],
@@ -732,7 +736,6 @@ def _default_providers(
     check_artifacts: dict[str, Artifact | None],
     expand: Artifact,
     sources: Artifact,
-    transitive_srcs: RustSourcesTSet,
     rustdoc_coverage: Artifact,
     named_deps_names: Artifact | None,
     profiles: list[Provider],
@@ -795,14 +798,8 @@ def _default_providers(
 
     providers.append(
         DefaultInfo(
-            default_output = check_artifacts["check"],
+            default_output = default_output,
             sub_targets = sub_targets,
-        )
-    )
-
-    providers.append(
-        RustSources(
-            tset = transitive_srcs,
         )
     )
 
@@ -1191,12 +1188,15 @@ def rust_library_macro_wrapper(rust_library: typing.Callable) -> typing.Callable
             if kwargs.get("crate", None) == None and kwargs.get("crate_dynamic", None) == None:
                 kwargs["crate"] = name.replace("-", "_")
 
+            # The alias must use the same compiler selection as its backing library.
+            toolchain = {"_rust_toolchain": kwargs["_rust_toolchain"]} if "_rust_toolchain" in kwargs else {}
             rust_proc_macro_alias(
                 name = name,
                 actual_exec = ":_" + name,
                 actual_plugin = ":_" + name,
                 default_target_platform = kwargs.get("default_target_platform", None),
                 visibility = kwargs.pop("visibility", []),
+                **toolchain
             )
             kwargs["name"] = "_" + name
 

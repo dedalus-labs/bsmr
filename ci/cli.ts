@@ -42,6 +42,10 @@ const test: ProcessSpec = {
 		"ci/release-complete.test.ts",
 		"ci/release-sync.test.ts",
 		"ci/release.test.ts",
+		"ci/runner/lifecycle.test.ts",
+		"ci/runner/api.test.ts",
+		"ci/runner/action.test.ts",
+		"ci/runner/build.test.ts",
 		"ci/rust-build-dependencies.test.ts",
 		"ci/verify-sha256.test.ts",
 		"benchmarks/python-build-systems/run.test.ts",
@@ -49,6 +53,7 @@ const test: ProcessSpec = {
 		"benchmarks/python-conformance/snapshot.test.ts",
 		"prelude/typescript/runner.test.ts",
 		"prelude/toolchains/pnpm/runner.test.ts",
+		"prelude/toolchains/pnpm/task.test.ts",
 		"test/contributors.test.ts",
 	],
 };
@@ -78,13 +83,16 @@ const generatedDiff: ProcessSpec = {
 		".github/actions",
 		".github/workflows",
 		"ci/rust-build-dependencies.mjs",
+		"ci/distribute.mjs",
 		"prelude/toolchains/pnpm/runner.mjs",
+		"prelude/toolchains/pnpm/task.mjs",
 		"prelude/typescript/runner.mjs",
 	],
 };
 const actionPaths = [
 	"ci/cli-reference", "ci/osv-audit", "ci/release-complete", "ci/release-state",
 	"ci/release-sync", "ci/rust-affected", "ci/verify-sha256", "typescript/cache",
+	"runner/build", "rust/install",
 ] as const;
 const actionSyntax: readonly ProcessSpec[] = actionPaths.map((path) => ({
 	file: "node",

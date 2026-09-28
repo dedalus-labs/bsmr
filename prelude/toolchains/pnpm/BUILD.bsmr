@@ -14,3 +14,9 @@ export_file(
     src = "runner.mjs",
     visibility = ["PUBLIC"],
 )
+
+export_file(
+    name = "task",
+    src = "task.mjs",
+    visibility = ["PUBLIC"],
+)

@@ -14,15 +14,13 @@ import {
 	type ScriptExec,
 } from "@dedalus-labs/hollywood/action-runtime";
 
-import { synchronizeReleaseVersion } from "./release-version.ts";
+import { synchronizeReleaseVersion, versionFiles } from "./release-version.ts";
 import { renderPreamble } from "./license-preamble.ts";
 
 const releasePaths = [
 	"VERSION",
 	".release-please-manifest.json",
-	"app/bsmr/Cargo.toml",
-	"Cargo.lock",
-	"dist-workspace.toml",
+	...versionFiles(),
 	"release-please-config.json",
 	"CHANGELOG.md",
 ] as const;

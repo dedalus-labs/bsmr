@@ -6,14 +6,9 @@
 
 # Getting started
 
-Use Bessemer with an existing pnpm, Cargo, or Go workspace.
+[Build your first package](quickstart.md) covers installation, initialization,
+and the first build. Use your package's directory, such as `apps/api`, to select
+what to build.
 
-1. [Install Bessemer](install.md).
-2. Run `bsmr init` at the workspace root.
-3. Run `bsmr build <path>` for one package.
-
-The package path is a normal repository-relative directory such as `apps/api`
-or `packages/rust/dfa`. Bessemer reads the native manifest and includes the
-package's dependencies.
-
-Continue with the [Quick Start](quickstart.md).
+For the requirements of a specific language, see [language support](../about/language_support.md).
+Run `bsmr --help` to find a command, then `bsmr build --help` for its build options.

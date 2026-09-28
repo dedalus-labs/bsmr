@@ -72,6 +72,17 @@ impl PackageListing {
         )
     }
 
+    /// A private Cargo package has only generated rules and references real source artifacts.
+    pub(crate) fn cargo_plan() -> Self {
+        Self::new(
+            SortedSet::new(),
+            SortedSet::new(),
+            SortedVec::new(),
+            FileNameBuf::unchecked_new("BUILD.bsmr"),
+            PackageBuildSource::CargoPlan,
+        )
+    }
+
     pub fn files(&self) -> &PackageFileListing {
         &self.listing.files
     }
@@ -96,6 +107,18 @@ impl PackageListing {
         dir: &PackageRelativePath,
     ) -> impl Iterator<Item = &'a ArcS<PackageRelativePath>> + use<'a> {
         self.listing.files.files_within(dir)
+    }
+
+    /// Retain empty source directories without treating another package as empty.
+    pub fn empty_directories(&self) -> impl Iterator<Item = &PackageRelativePath> {
+        self.listing
+            .directories
+            .iter()
+            .map(|path| path.as_ref())
+            .filter(|path| {
+                self.files_within(path).next().is_none()
+                    && self.subpackages_within(path).next().is_none()
+            })
     }
 
     pub fn subpackages_within<'a>(

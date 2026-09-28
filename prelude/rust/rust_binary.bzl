@@ -1,3 +1,9 @@
+# ===----------------------------------------------------------------------===
+# Upstream-Source: facebook/buck2@1560aca2002865cd73d7cafb22c705cfb640b2bc
+# Modifications Copyright (c) 2026 Dedalus Labs, Inc. and its contributors
+# SPDX-License-Identifier: Apache-2.0
+# ===----------------------------------------------------------------------===
+
 # Copyright (c) Meta Platforms, Inc. and affiliates.
 #
 # This source code is dual-licensed under either the MIT license found in the
@@ -74,6 +80,7 @@ load("@prelude//utils:utils.bzl", "flatten_dict")
 load(
     ":build.bzl",
     "generate_rustdoc",
+    "process_env",
     "rust_compile",
 )
 load(
@@ -134,7 +141,7 @@ def _strategy_params(ctx: AnalysisContext, compile_ctx: CompileContext) -> dict[
     return params
 
 def _rust_binary_common(
-    ctx: AnalysisContext, compile_ctx: CompileContext, default_roots: list[str], extra_flags: list[str], allow_cache_upload: bool
+    ctx: AnalysisContext, compile_ctx: CompileContext, default_roots: list[str], extra_flags: list[str | cmd_args], allow_cache_upload: bool
 ) -> (list[Provider], cmd_args):
     toolchain_info = compile_ctx.toolchain_info
 
@@ -559,6 +566,17 @@ def rust_test_impl(ctx: AnalysisContext) -> list[Provider]:
     extra_flags = toolchain_info.rustc_test_flags or []
     if ctx.attrs.framework:
         extra_flags += ["--test"]
+    if ctx.attrs.run_cwd in ctx.attrs.mapped_srcs:
+        # Keep file!() relative to declared test sources so snapshots resolve.
+        extra_flags += [cmd_args(
+            "--remap-path-prefix=",
+            compile_ctx.symlinked_srcs,
+            compile_ctx.path_sep,
+            ctx.attrs.mapped_srcs[ctx.attrs.run_cwd],
+            compile_ctx.path_sep,
+            "=",
+            delimiter = "",
+        )]
 
     providers, args = _rust_binary_common(
         ctx = ctx,
@@ -573,6 +591,16 @@ def rust_test_impl(ctx: AnalysisContext) -> list[Provider]:
 
     # Setup RE executors based on the `remote_execution` param.
     re_executors = get_re_executors_from_props(ctx)
+    test_env = ctx.attrs.env | ctx.attrs.run_env
+    if ctx.attrs.run_cwd != None:
+        plain_env, path_env = process_env(compile_ctx, test_env, escape_for_rustc_action = False)
+        test_env = plain_env | path_env
+        args = cmd_args(
+            compile_ctx.internal_tools_info.cd_run,
+            [cmd_args("--path-env", key) for key in path_env],
+            ctx.attrs.run_cwd,
+            cmd_args(args, relative_to = ctx.attrs.run_cwd),
+        )
 
     return (
         inject_test_run_info(
@@ -580,7 +608,7 @@ def rust_test_impl(ctx: AnalysisContext) -> list[Provider]:
             ExternalRunnerTestInfo(
                 type = "rust",
                 command = [args],
-                env = ctx.attrs.env | ctx.attrs.run_env,
+                env = test_env,
                 labels = ctx.attrs.labels,
                 contacts = ctx.attrs.contacts,
                 default_executor = re_executors.default_executor,

@@ -13,7 +13,7 @@ import { nodeExec, type ScriptExec } from "@dedalus-labs/hollywood";
 
 const upstreamProduct = ["bu", "ck"].join("");
 const prohibited = new RegExp(upstreamProduct, "ig");
-const legalFiles = new Set(["NOTICE", "UPSTREAM_CHANGELOG.md"]);
+const legalFiles = new Set(["NOTICE"]);
 
 export type TrackedText = Readonly<{ path: string; text: string }>;
 
