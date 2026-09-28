@@ -3,7 +3,7 @@
 // SPDX-License-Identifier: Apache-2.0
 //===----------------------------------------------------------------------===//
 
-// Verifies pinned native Go compilation, cache restoration, and input invalidation.
+// Verifies pinned native Go compilation, cache restoration, input invalidation, and tool roots.
 
 import assert from "node:assert/strict";
 import { execFile } from "node:child_process";
@@ -148,7 +148,13 @@ go_bootstrap_distr(name = "sdk", go_root = ".bsmr-go-sdk", go_os_arch = ("${os}"
 go_bootstrap_toolchain(name = "go_bootstrap", go_bootstrap_distr = ":sdk", env_go_os = "${os}", env_go_arch = "${arch}", visibility = ["PUBLIC"])
 `);
 	await systemBootstrap(second, "system-python");
-	process.stdout.write(`ok: Go ${version} embeds, restoration, source roots, policy isolation, source/SDK invalidation, system-tool exclusion\n`);
+	// A module whose only packages come from `tool` directives must still sync its tool binaries.
+	const tools = join(cwd, "tools");
+	cpSync(resolve(import.meta.dirname, "fixtures/go-tools"), tools, { recursive: true });
+	await run(executable, ["go", "sync"], { ...options, cwd: tools });
+	const tool = await run(executable, ["run", "//tools/vendor/example.com/greeter/cmd/greet:bin", "--console", "none"], options);
+	assert.equal(tool.stdout, "greeter v1.0.0\n");
+	process.stdout.write(`ok: Go ${version} embeds, restoration, source roots, policy isolation, source/SDK invalidation, system-tool exclusion, tool directives\n`);
 } finally {
 	await Promise.all(workspaces.map((directory) => run(executable, ["kill"], { ...options, cwd: directory })));
 	rmSync(root, { recursive: true });

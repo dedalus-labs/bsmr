@@ -151,7 +151,16 @@ fn sync(mut command: GoSyncCommand, ctx: &ClientCommandContext<'_>) -> bsmr_erro
     let project_root = ctx.paths()?.project_root().root().as_path();
     let lock = go_toolchain::read_lock(project_root)?;
     let go = go_toolchain::acquired_go(project_root, &lock)?;
-    let output = run_go_list(&command, &root, &go)?;
+    let mut patterns = discover_patterns(&root)?;
+    // Tool directives are part of the module's graph, so their packages are roots even
+    // when they live only in the vendor tree that directory discovery skips.
+    if lock.supports_tool_directives()? {
+        patterns.push("tool".to_owned());
+    }
+    if patterns.is_empty() {
+        return Err(GoCommandError::NoPackages(root).into());
+    }
+    let output = run_go_list(&command, &root, &go, &patterns)?;
     let graph = GoGraph::from_go_list(&output, &root)?;
     if graph.packages().is_empty() {
         return Err(GoCommandError::NoPackages(root).into());
@@ -244,7 +253,12 @@ pub(super) fn select_buildfile(
 }
 
 /// Runs the exact Go SDK in offline, non-auto-upgrading mode.
-fn run_go_list(command: &GoSyncCommand, root: &Path, go: &Path) -> Result<Vec<u8>, GoCommandError> {
+fn run_go_list(
+    command: &GoSyncCommand,
+    root: &Path,
+    go: &Path,
+    patterns: &[String],
+) -> Result<Vec<u8>, GoCommandError> {
     let scratch = tempfile::Builder::new()
         .prefix("bsmr-go-list-")
         .tempdir()
@@ -263,7 +277,7 @@ fn run_go_list(command: &GoSyncCommand, root: &Path, go: &Path) -> Result<Vec<u8
     if !command.tags.is_empty() {
         process.args(["-tags", &command.tags.join(",")]);
     }
-    process.args(discover_patterns(root)?);
+    process.args(patterns);
     process
         .current_dir(root)
         .env_clear()
@@ -374,9 +388,6 @@ pub(super) fn discover_patterns(root: &Path) -> Result<Vec<String>, GoCommandErr
     }
     directories.sort();
     patterns.extend(directories.into_iter().map(|name| format!("./{name}/...")));
-    if patterns.is_empty() {
-        return Err(GoCommandError::NoPackages(root.to_owned()));
-    }
     Ok(patterns)
 }
 

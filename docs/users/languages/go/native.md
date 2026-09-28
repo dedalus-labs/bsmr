@@ -29,6 +29,11 @@ module writes, network access, ambient `go env -w` state, and automatic
 toolchain switching disabled. A dependency must be in the repository, the
 vendor tree, or the selected standard library.
 
+Every package named by a `go.mod` `tool` directive is also a root. A tool
+vendored as `sigs.k8s.io/controller-tools/cmd/controller-gen` becomes
+`//vendor/sigs.k8s.io/controller-tools/cmd/controller-gen:bin`, which
+`bsmr run` executes. Tool directives require Go 1.24 or later.
+
 | Go package | Generated target |
 | --- | --- |
 | library | `//path/to/package:lib` |
