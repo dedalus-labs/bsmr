@@ -114,7 +114,7 @@ async fn configure_toolchain(
 ) -> bsmr_error::Result<()> {
     let project_root = ctx.paths()?.project_root();
     let root = project_root.root().as_path();
-    let toolchains = toolchains_directory(project_root)?;
+    let toolchains = toolchains_directory(project_root).await?;
     let lock = go_toolchain::configure(
         root,
         &toolchains,
@@ -153,7 +153,7 @@ fn sync(mut command: GoSyncCommand, ctx: &ClientCommandContext<'_>) -> bsmr_erro
         return Err(GoCommandError::NoModule(root).into());
     }
     let project_root = ctx.paths()?.project_root();
-    let toolchains = toolchains_directory(project_root)?;
+    let toolchains = futures::executor::block_on(toolchains_directory(project_root))?;
     let lock = go_toolchain::read_lock(project_root.root().as_path())?;
     let go = go_toolchain::acquired_go(&toolchains, &lock)?;
     let mut patterns = discover_patterns(&root)?;
@@ -196,11 +196,10 @@ fn sync(mut command: GoSyncCommand, ctx: &ClientCommandContext<'_>) -> bsmr_erro
 ///
 /// `bsmr init` aliases `toolchains` to the root cell so native frontends can declare toolchains
 /// in the root package; a project may instead declare a dedicated `toolchains` cell.
-pub(super) fn toolchains_directory(project_root: &ProjectRoot) -> bsmr_error::Result<PathBuf> {
-    let cells = futures::executor::block_on(BsmrConfigBasedCells::parse_with_config_args(
-        project_root,
-        &[],
-    ))?;
+pub(super) async fn toolchains_directory(
+    project_root: &ProjectRoot,
+) -> bsmr_error::Result<PathBuf> {
+    let cells = BsmrConfigBasedCells::parse_with_config_args(project_root, &[]).await?;
     let resolver = &cells.cell_resolver;
     let cell = resolver
         .root_cell_cell_alias_resolver()

@@ -313,7 +313,8 @@ fn writes_toolchain_where_init_configuration_resolves_toolchains() {
     let project_root = ProjectRoot::new(path.clone()).expect("project root");
     let lock = select_release(RELEASES, None).expect("release");
 
-    let toolchains = toolchains_directory(&project_root).expect("configured toolchains");
+    let toolchains = futures::executor::block_on(toolchains_directory(&project_root))
+        .expect("configured toolchains");
     write_configuration(path.as_path(), &toolchains, &lock, false)
         .expect("generated configuration");
 
