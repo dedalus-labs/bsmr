@@ -115,6 +115,11 @@ async fn configure_toolchain(
     let project_root = ctx.paths()?.project_root();
     let root = project_root.root().as_path();
     let toolchains = toolchains_directory(project_root).await?;
+    if command.check {
+        go_toolchain::reject_leftovers(root, &toolchains)?;
+    } else {
+        go_toolchain::remove_leftovers(root, &toolchains)?;
+    }
     let lock = go_toolchain::configure(
         root,
         command.version.as_deref(),
@@ -153,6 +158,7 @@ fn sync(mut command: GoSyncCommand, ctx: &ClientCommandContext<'_>) -> bsmr_erro
     }
     let project_root = ctx.paths()?.project_root();
     let toolchains = futures::executor::block_on(toolchains_directory(project_root))?;
+    go_toolchain::reject_leftovers(project_root.root().as_path(), &toolchains)?;
     let lock = go_toolchain::read_lock(project_root.root().as_path())?;
     let go = go_toolchain::acquired_go(&toolchains, &lock)?;
     let mut patterns = discover_patterns(&root)?;

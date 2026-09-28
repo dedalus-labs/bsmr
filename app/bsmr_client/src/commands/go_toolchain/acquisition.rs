@@ -16,8 +16,8 @@ use std::path::Path;
 use std::path::PathBuf;
 use std::process::Command;
 
-use bsmr_common::native_toolchains::GO_SDK_DIRECTORY as SDK_DIRECTORY;
-use bsmr_common::native_toolchains::GO_TOOLS_DIRECTORY as TOOLS_DIRECTORY;
+pub(super) use bsmr_common::native_toolchains::GO_SDK_DIRECTORY as SDK_DIRECTORY;
+pub(super) use bsmr_common::native_toolchains::GO_TOOLS_DIRECTORY as TOOLS_DIRECTORY;
 use serde::Deserialize;
 use serde::Serialize;
 
@@ -293,6 +293,11 @@ fn replace_generated_directory(
     let stage = stage.keep();
     fs::rename(&stage, destination).map_err(|error| write_error(destination, error))?;
     Ok(())
+}
+
+/// Reports whether an acquisition directory carries Bessemer's ownership marker.
+pub(super) fn owns_acquisition(path: &Path) -> bool {
+    read_owned_acquisition(path).is_ok()
 }
 
 /// Ensures an acquisition directory belongs to Bessemer before any mutation.

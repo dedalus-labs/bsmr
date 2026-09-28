@@ -109,6 +109,15 @@ In both layouts the lock owns the names `go`, `go_bootstrap`, and
 `bsmr go toolchain` acquires the SDK on a machine, the package still loads and
 only a build that uses Go fails, naming the command to run.
 
+Earlier releases generated `toolchains/BUILD.bsmr` and
+`toolchains/bsmr_go_toolchain.bzl` and acquired the SDK under `toolchains/`,
+whatever `toolchains//` named. `bsmr go toolchain` removes each of those files
+that still carries the generator's exact marker, and until it runs,
+`bsmr go toolchain --check` and `bsmr go sync` fail and name them. In a
+declared `toolchains` cell at `toolchains/`, the generated `BUILD.bsmr` defines
+the cell's package, so the command rewrites it to the toolchains it declared
+besides Go: `system_demo_toolchains(include_go = False)`.
+
 Generated manifests carry their source files, embed files, direct imports,
 build tags, cgo mode, canonical import path, and a strict ownership marker.
 Synchronization refuses to overwrite a human-owned build file. The

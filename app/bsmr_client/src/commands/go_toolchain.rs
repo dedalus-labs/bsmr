@@ -12,6 +12,7 @@
 //! every supported execution host.
 
 mod acquisition;
+mod legacy;
 mod lock;
 
 use std::fs;
@@ -21,6 +22,12 @@ use std::path::PathBuf;
 pub(crate) use acquisition::acquired_go;
 pub(crate) use acquisition::install_sdk;
 pub(crate) use acquisition::validate_acquisition_owners;
+#[cfg(test)]
+pub(crate) use legacy::GENERATED_DEFINITION_PREFIX as LEGACY_DEFINITION_PREFIX;
+#[cfg(test)]
+pub(crate) use legacy::GENERATED_MANIFEST as LEGACY_MANIFEST;
+pub(crate) use legacy::reject_leftovers;
+pub(crate) use legacy::remove_leftovers;
 pub(crate) use lock::write_lock;
 use serde::Deserialize;
 use serde::Serialize;
@@ -381,6 +388,10 @@ pub(crate) enum GoToolchainError {
     Write { path: PathBuf, message: String },
     #[error("refusing to overwrite user-owned toolchain file `{0:?}`")]
     UserOwned(PathBuf),
+    #[error(
+        "an earlier `bsmr go toolchain` generated {0:?}, which the lock now replaces; run `bsmr go toolchain` to retire them"
+    )]
+    Leftover(Vec<PathBuf>),
     #[error("Go toolchain lock `{0:?}` differs from its generated form; run `bsmr go toolchain`")]
     Stale(PathBuf),
 }

@@ -6,6 +6,7 @@
 // Verifies exact Go SDK selection, lock ownership, and acquisition ownership.
 
 use std::fs;
+use std::path::Path;
 
 use bsmr_core::fs::project::ProjectRoot;
 use bsmr_fs::paths::abs_norm_path::AbsNormPathBuf;
@@ -13,8 +14,12 @@ use bsmr_fs::paths::abs_path::AbsPath;
 
 use crate::commands::go::toolchains_directory;
 use crate::commands::go_toolchain::GoToolchainError;
+use crate::commands::go_toolchain::LEGACY_DEFINITION_PREFIX;
+use crate::commands::go_toolchain::LEGACY_MANIFEST;
 use crate::commands::go_toolchain::acquired_go;
 use crate::commands::go_toolchain::configure;
+use crate::commands::go_toolchain::reject_leftovers;
+use crate::commands::go_toolchain::remove_leftovers;
 use crate::commands::go_toolchain::select_release;
 use crate::commands::go_toolchain::validate_acquisition_owners;
 use crate::commands::go_toolchain::write_lock;
@@ -296,4 +301,98 @@ fn resolves_toolchains_to_the_root_in_an_init_project() {
         .expect("configured toolchains");
 
     assert_eq!(toolchains, path.as_path());
+}
+
+/// Writes the files an earlier release generated under `<root>/toolchains/`.
+fn write_legacy_toolchains(root: &Path) {
+    let legacy = root.join("toolchains");
+    for directory in [".bsmr-go-sdk", ".bsmr-go-tools"] {
+        fs::create_dir_all(legacy.join(directory)).expect("acquisition directory");
+        fs::write(
+            legacy.join(directory).join(".bsmr-metadata.json"),
+            r#"{"generated_by":"bsmr go toolchain","state":"acquiring","version":"1.26.5","os":"darwin","arch":"arm64","sha256":"b"}"#,
+        )
+        .expect("acquisition marker");
+    }
+    fs::write(legacy.join("BUILD.bsmr"), LEGACY_MANIFEST).expect("generated manifest");
+    fs::write(
+        legacy.join("bsmr_go_toolchain.bzl"),
+        format!("{LEGACY_DEFINITION_PREFIX}\ndef bsmr_go_toolchains():\n    pass\n"),
+    )
+    .expect("generated definition");
+}
+
+/// Invariant: the migration deletes only files that carry the generator's exact marker.
+///
+/// Under the `toolchains = root` alias, earlier releases left a full toolchain package in
+/// `<root>/toolchains/` that no cell names; a user file beside it must survive.
+///
+/// Witness:
+/// check mode names the four generated paths and keeps them; removal deletes them and keeps
+/// `toolchains/notes.txt` and its directory.
+#[test]
+fn removes_owned_leftovers_outside_the_toolchains_package() {
+    let root = tempfile::tempdir().expect("temporary repository");
+    write_legacy_toolchains(root.path());
+    fs::write(root.path().join("toolchains/notes.txt"), "mine\n").expect("user file");
+
+    let error = reject_leftovers(root.path(), root.path()).expect_err("leftovers must fail");
+    let GoToolchainError::Leftover(paths) = error else {
+        panic!("expected leftovers, got {error:?}");
+    };
+    assert_eq!(paths.len(), 4);
+    assert!(root.path().join("toolchains/BUILD.bsmr").is_file());
+
+    remove_leftovers(root.path(), root.path()).expect("removal");
+
+    let remaining = fs::read_dir(root.path().join("toolchains"))
+        .expect("user directory")
+        .map(|entry| entry.expect("entry").file_name())
+        .collect::<Vec<_>>();
+    assert_eq!(remaining, ["notes.txt"]);
+    reject_leftovers(root.path(), root.path()).expect("nothing left");
+}
+
+/// Invariant: a manifest the user edited is never a leftover, even with the marker line.
+///
+/// Witness:
+/// a generated manifest with one appended target stays, and removal leaves the directory.
+#[test]
+fn keeps_edited_generated_manifest() {
+    let root = tempfile::tempdir().expect("temporary repository");
+    fs::create_dir(root.path().join("toolchains")).expect("legacy directory");
+    let edited = format!("{LEGACY_MANIFEST}custom_toolchain()\n");
+    fs::write(root.path().join("toolchains/BUILD.bsmr"), &edited).expect("edited manifest");
+
+    remove_leftovers(root.path(), root.path()).expect("nothing owned");
+
+    assert_eq!(
+        fs::read_to_string(root.path().join("toolchains/BUILD.bsmr")).expect("manifest"),
+        edited
+    );
+}
+
+/// Invariant: in a declared `toolchains` cell, the migration keeps the cell's package and SDK.
+///
+/// The generated manifest there defines `toolchains//`; deleting it would undefine the cell,
+/// and keeping `bsmr_go_toolchains()` would declare `go` twice beside the injected targets.
+///
+/// Witness:
+/// the manifest keeps only `system_demo_toolchains(include_go = False)`, the definition is
+/// removed, and both acquisition directories remain.
+#[test]
+fn rewrites_the_generated_manifest_of_a_declared_cell() {
+    let root = tempfile::tempdir().expect("temporary repository");
+    write_legacy_toolchains(root.path());
+    let toolchains = root.path().join("toolchains");
+
+    remove_leftovers(root.path(), &toolchains).expect("migration");
+
+    let manifest = fs::read_to_string(toolchains.join("BUILD.bsmr")).expect("manifest");
+    assert!(manifest.contains("system_demo_toolchains(include_go = False)"));
+    assert!(!manifest.contains("bsmr_go_toolchains"));
+    assert!(!toolchains.join("bsmr_go_toolchain.bzl").exists());
+    assert!(toolchains.join(".bsmr-go-sdk").is_dir());
+    assert!(toolchains.join(".bsmr-go-tools").is_dir());
+    reject_leftovers(root.path(), &toolchains).expect("nothing left");
 }
