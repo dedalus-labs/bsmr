@@ -157,14 +157,14 @@ fn sync(mut command: GoSyncCommand, ctx: &ClientCommandContext<'_>) -> bsmr_erro
     if lock.supports_tool_directives()? {
         patterns.push("tool".to_owned());
     }
-    if patterns.is_empty() {
-        return Err(GoCommandError::NoPackages(root).into());
-    }
-    let output = run_go_list(&command, &root, &go, &patterns)?;
+    // An empty graph is a valid SDK answer: synchronization then retires every manifest it
+    // owns. `go list` without patterns would list `.`, which fails in a root without Go files.
+    let output = if patterns.is_empty() {
+        Vec::new()
+    } else {
+        run_go_list(&command, &root, &go, &patterns)?
+    };
     let graph = GoGraph::from_go_list(&output, &root)?;
-    if graph.packages().is_empty() {
-        return Err(GoCommandError::NoPackages(root).into());
-    }
     let mode = if command.check {
         SyncMode::Check
     } else {
@@ -456,8 +456,6 @@ fn validate_buildfile(buildfile: &str) -> Result<(), GoCommandError> {
 pub(super) enum GoCommandError {
     #[error("Go synchronization root `{0:?}` has neither go.mod nor go.work")]
     NoModule(PathBuf),
-    #[error("Go synchronization root `{0:?}` contains no package roots")]
-    NoPackages(PathBuf),
     #[error("Go synchronization root contains a non-UTF-8 entry `{0:?}`")]
     NonUtf8Entry(PathBuf),
     #[error("Go build-file name must be a single non-empty path component, got `{0}`")]

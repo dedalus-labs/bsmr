@@ -8,7 +8,7 @@
 import assert from "node:assert/strict";
 import { execFile } from "node:child_process";
 import { createHash } from "node:crypto";
-import { cpSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, writeFileSync } from "node:fs";
+import { cpSync, existsSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { basename, delimiter, join, resolve } from "node:path";
 import { promisify } from "node:util";
@@ -154,7 +154,15 @@ go_bootstrap_toolchain(name = "go_bootstrap", go_bootstrap_distr = ":sdk", env_g
 	await run(executable, ["go", "sync"], { ...options, cwd: tools });
 	const tool = await run(executable, ["run", "//tools/vendor/example.com/greeter/cmd/greet:bin", "--console", "none"], options);
 	assert.equal(tool.stdout, "greeter v1.0.0\n");
-	process.stdout.write(`ok: Go ${version} embeds, restoration, source roots, policy isolation, source/SDK invalidation, system-tool exclusion, tool directives\n`);
+	// Removing the last tool directive empties the graph, so sync must retire the tool's manifest.
+	const toolModule = join(tools, "go.mod");
+	writeFileSync(toolModule, readFileSync(toolModule, "utf8").replace("tool example.com/greeter/cmd/greet\n", ""));
+	await assert.rejects(run(executable, ["go", "sync", "--check"], { ...options, cwd: tools }), /cmd\/greet\/BUILD\.bsmr/);
+	const retired = await run(executable, ["go", "sync"], { ...options, cwd: tools });
+	assert.match(retired.stdout, /0 packages, 0 manifests written, 1 removed/);
+	await run(executable, ["go", "sync", "--check"], { ...options, cwd: tools });
+	assert.ok(!existsSync(join(tools, "vendor/example.com/greeter/cmd/greet/BUILD.bsmr")));
+	process.stdout.write(`ok: Go ${version} embeds, restoration, source roots, policy isolation, source/SDK invalidation, system-tool exclusion, tool directives, tool retirement\n`);
 } finally {
 	await Promise.all(workspaces.map((directory) => run(executable, ["kill"], { ...options, cwd: directory })));
 	rmSync(root, { recursive: true });

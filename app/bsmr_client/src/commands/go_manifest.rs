@@ -179,6 +179,11 @@ fn check_manifests(
             drift.push(path.display().to_string());
         }
     }
+    for path in stale {
+        if path.exists() {
+            drift.push(path.display().to_string());
+        }
+    }
     if !stale.is_empty() || previous.len() != expected.len() {
         drift.push(INDEX_FILE.to_owned());
     }

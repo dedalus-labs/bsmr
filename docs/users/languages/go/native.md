@@ -44,6 +44,10 @@ vendored as `sigs.k8s.io/controller-tools/cmd/controller-gen` becomes
 The generated manifests record exact source and embed files, direct imports,
 canonical package identity, selected tags, and cgo mode. They carry an ownership
 marker, and synchronization refuses to overwrite a human-authored build file.
+When a package leaves the graph, synchronization deletes its generated
+manifest, and `bsmr go sync --check` reports that manifest as stale. This
+includes the last package of a module, such as a tool whose `tool` directive
+was removed.
 
 Internal tests inherit the embedded files of their `target_under_test`. A path
 declared by both the test and its target must refer to the same source artifact.
