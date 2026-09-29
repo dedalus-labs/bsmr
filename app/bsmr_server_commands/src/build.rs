@@ -406,11 +406,12 @@ async fn build(
             build_opts.skip_incompatible_targets,
             graph_properties.dupe(),
             return_run_args,
-            build_opts.unstable_include_artifact_hash_information
-                && (build_opts.unstable_print_build_report
-                    || !build_opts
-                        .unstable_streaming_build_report_filename
-                        .is_empty()),
+            !request.snapshot_filename.is_empty()
+                || build_opts.unstable_include_artifact_hash_information
+                    && (build_opts.unstable_print_build_report
+                        || !build_opts
+                            .unstable_streaming_build_report_filename
+                            .is_empty()),
             timeout_observer.as_ref(),
             build_command_streaming_build_result_tx,
             build_start,
@@ -678,7 +679,19 @@ async fn process_build_result(
     )
     .await?;
 
-    let serialized_build_report = if build_opts.unstable_print_build_report {
+    let serialized_build_report = if build_opts.unstable_print_build_report
+        || !request.snapshot_filename.is_empty()
+    {
+        if !request.snapshot_filename.is_empty()
+            && !build_result.build_failed
+            && (build_result.configured.is_empty()
+                || build_result.configured.values().any(Option::is_none))
+        {
+            return Err(bsmr_error::bsmr_error!(
+                bsmr_error::ErrorTag::Input,
+                "snapshot requires a successful build with no skipped targets"
+            ));
+        }
         let build_report_opts =
             build_report_opts(&mut ctx, &cell_resolver, build_opts, graph_properties_opts).await?;
 
@@ -695,7 +708,13 @@ async fn process_build_result(
             detailed_metrics,
             action_graph_sketch_result,
             artifact_path_sketch_result,
+            if build_result.build_failed {
+                ""
+            } else {
+                &request.snapshot_filename
+            },
         )?
+        .filter(|_| build_opts.unstable_print_build_report)
     } else {
         None
     };
