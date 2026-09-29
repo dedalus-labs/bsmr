@@ -133,8 +133,11 @@ ConfiguredBuildReportEntry {
     # executable, etc.
     artifact_info: dict[str, ArtifactInfoDirectory | ArtifactInfoFile | ArtifactInfoSymlink | ArtifactInfoExternalSymlink],
 
-    # Artifact metadata keyed by reported artifact path. Unlike the legacy
-    # provider-keyed `artifact_info`, this preserves every output independently.
+    # Artifact metadata keyed by output root or descendant path. Directory
+    # outputs include the root, every nested directory (including empty
+    # directories), and every leaf, so report size grows linearly with entry
+    # count. Unlike the legacy provider-keyed `artifact_info`, this preserves
+    # every output independently.
     artifact_info_by_path: Optional[dict[Path, ArtifactInfoDirectory | ArtifactInfoFile | ArtifactInfoSymlink | ArtifactInfoExternalSymlink]],
 
     # Canonical executor action digests keyed by reported artifact path. Each
