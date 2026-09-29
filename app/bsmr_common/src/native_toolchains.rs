@@ -59,7 +59,15 @@ pub async fn render(
     let go_root = listing
         .get_file(PackageRelativePath::new(GO_TOOLCHAIN_LOCK)?)
         .is_some();
-    if cargo_root || go_root {
+    // A dedicated toolchain cell owns these names. Injecting them into a Go
+    // source root as well collides with ordinary targets such as `:test`.
+    let cells = ctx.get_cell_resolver().await?;
+    let go_tools_here = go_root
+        && package.cell_name()
+            == cells
+                .root_cell_cell_alias_resolver()
+                .resolve("toolchains")?;
+    if cargo_root || go_tools_here {
         source.push_str(NATIVE_TOOLS);
     }
     source.push_str(&go_toolchain(ctx, package, listing).await?);
