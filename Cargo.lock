@@ -882,7 +882,9 @@ dependencies = [
  "starlark_map",
  "static_assertions",
  "strong_hash",
+ "tempfile",
  "tokio",
+ "toml",
  "tracing",
 ]
 

@@ -154,6 +154,7 @@ impl StreamingCommand for RunCommand {
                     target_universe: self.target_cfg.target_universe,
                     timeout: None, // TODO: maybe it shouild be supported here?
                     run_args_missing_separator,
+                    snapshot_filename: String::new(),
                 },
                 events_ctx,
                 ctx.console_interaction_stream(&self.common_opts.console_opts),

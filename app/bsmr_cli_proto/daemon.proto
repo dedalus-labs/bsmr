@@ -526,6 +526,9 @@ message BuildRequest {
 
   // Set by `bsmr run` when extra args are passed without `--` separator.
   bool run_args_missing_separator = 13;
+
+  // Explicit, experimental capture of successful file outputs.
+  string snapshot_filename = 14;
 }
 
 message TestSessionOptions {

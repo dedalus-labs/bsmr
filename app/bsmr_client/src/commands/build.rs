@@ -83,6 +83,10 @@ mod out;
     long_about = "Build a package and its dependencies. Run from your project root.\n\nExamples:\n\n    bsmr build apps/api\n    bsmr build apps/api --show-output\n\nUse the package directory or an explicit target pattern.\nProject requirements: https://oss.dedaluslabs.ai/bsmr/getting_started/quickstart/"
 )]
 pub struct BuildCommand {
+    /// Capture an experimental file-only dependency lock without replacing an existing file.
+    #[clap(long, value_name = "PATH", value_parser = clap::builder::NonEmptyStringValueParser::new(), conflicts_with_all = ["build_report", "streaming_build_report"])]
+    snapshot: Option<String>,
+
     #[clap(flatten)]
     show_output: CommonOutputOptions,
 
@@ -281,6 +285,7 @@ impl StreamingCommand for BuildCommand {
                     target_universe: self.target_cfg.target_universe,
                     timeout: self.timeout_options.overall_timeout()?,
                     run_args_missing_separator: false,
+                    snapshot_filename: self.snapshot.clone().unwrap_or_default(),
                 },
                 events_ctx,
                 ctx.console_interaction_stream(&self.common_opts.console_opts),

@@ -16,6 +16,8 @@
 
 //! Processing and reporting the results of the build
 
+mod snapshot;
+
 use std::collections::BTreeMap;
 use std::collections::BTreeSet;
 use std::collections::HashMap;
@@ -1198,6 +1200,7 @@ pub fn write_build_report(
     detailed_metrics: Option<DetailedAggregatedMetrics>,
     action_graph_sketch_result: Option<ActionGraphSketchResult>,
     artifact_path_sketch_result: Option<ArtifactPathSketchResult>,
+    snapshot_filename: &str,
 ) -> Result<Option<String>, bsmr_error::Error> {
     let build_report = BuildReportCollector::convert(
         trace_id,
@@ -1207,7 +1210,7 @@ pub fn write_build_report(
         opts.print_unconfigured_section,
         opts.unstable_include_failures_build_report,
         opts.unstable_include_package_project_relative_paths,
-        opts.unstable_include_artifact_hash_information,
+        opts.unstable_include_artifact_hash_information || !snapshot_filename.is_empty(),
         opts.unstable_exclude_action_error_diagnostics,
         opts.unstable_truncate_error_content,
         configured,
@@ -1218,6 +1221,10 @@ pub fn write_build_report(
         artifact_path_sketch_result,
         opts.graph_properties_opts,
     )?;
+
+    if !snapshot_filename.is_empty() {
+        snapshot::write(&build_report, project_root, cwd, snapshot_filename)?;
+    }
 
     write_or_serialize_build_report(
         &build_report,
