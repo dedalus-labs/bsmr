@@ -44,7 +44,7 @@ async function monorepo() {
 	workspaces.push(directory);
 	cpSync(resolve(import.meta.dirname, "fixtures/go-tools"), directory, { recursive: true });
 	const files: Record<string, string> = {
-		"go.mod": "module example.com/monorepo\n\ngo 1.24\n\ntool example.com/greeter/cmd/greet\n\nrequire example.com/greeter v1.0.0\n",
+		"go.mod": readFileSync(join(directory, "go.mod"), "utf8").replace("module example.com/tools", "module example.com/monorepo"),
 		"svc/main.go": 'package main\nimport "fmt"\nfunc main() { fmt.Print("go beside rust\\n") }\n',
 		"Cargo.toml": '[package]\nname = "monorepo"\nversion = "0.1.0"\nedition = "2024"\n',
 		"Cargo.lock": 'version = 4\n\n[[package]]\nname = "monorepo"\nversion = "0.1.0"\n',
@@ -61,7 +61,10 @@ async function monorepo() {
 	await run(executable, ["go", "toolchain", "--version", version], context);
 	await run(executable, ["go", "sync"], context);
 	assert.equal((await run(executable, ["run", "//svc:bin", "--console", "none"], context)).stdout, "go beside rust\n");
-	assert.equal((await run(executable, ["run", "//vendor/example.com/greeter/cmd/greet:bin", "--console", "none"], context)).stdout, "greeter v1.0.0\n");
+	const greeting = (await run(executable, ["run", "//vendor/example.com/greeter/cmd/greet:bin", "--console", "none"], context)).stdout;
+	assert.match(greeting, /^greeter\n/);
+	assert.ok(greeting.includes("\nmod\texample.com/greeter\tv1.0.0\t\n"));
+	assert.ok(greeting.includes("\ndep\texample.com/greeting\tv0.3.0\t\n"));
 	assert.equal((await run(executable, ["run", ".", "--console", "none"], context)).stdout, "rust beside go\n");
 	// The Rust frontend's host tools stay the `toolchains//` defaults; Go adds none of its own.
 	const bootstrap = await run(executable, ["uquery", "toolchains//:python_bootstrap", "--output-attribute", "bsmr.type"], context);
