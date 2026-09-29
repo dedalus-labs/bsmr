@@ -14,6 +14,7 @@ import { promisify } from "node:util";
 
 const run = promisify(execFile);
 const binary = resolve(process.argv[2]!);
+const prelude = process.argv[3];
 const root = realpathSync(mkdtempSync(join(tmpdir(), "native-rust-")));
 const rustc = (await run("rustup", ["which", "--toolchain", "nightly-2026-04-11", "rustc"])).stdout.trim();
 const cargo = (await run("rustup", ["which", "--toolchain", "nightly-2026-04-11", "cargo"])).stdout.trim();
@@ -56,6 +57,10 @@ async function build(phase: string, expected: string, directory = cwd) {
 try {
 	await run("python3", ["-m", "unittest", "discover", "-s", resolve(import.meta.dirname, "../prelude/rust/tools/tests"), "-p", "*_test.py"], { ...options, env: { ...env, RUSTC: rustc } });
 	await run(binary, ["init"], options);
+	if (prelude !== undefined) {
+		cpSync(resolve(prelude), join(cwd, "prelude"), { recursive: true });
+		writeFileSync(join(cwd, ".bsmr.local"), "[external_cells]\nprelude = disabled\n");
+	}
 	checkouts.push(cwd);
 	const config = readFileSync(join(cwd, ".bsmr"), "utf8");
 	writeFileSync(join(cwd, ".bsmr"), config + "\n[bsmr]\ndefault_allow_cache_upload = true\n");
