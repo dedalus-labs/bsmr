@@ -42,3 +42,8 @@
 /prelude/rust/native/toolchain.bzl @windsornguyen
 /prelude/rust/tools/rustc_action.py @windsornguyen
 /test/native-rust-build.ts @windsornguyen
+
+# Go toolchain-cell ownership.
+/app/bsmr_common/src/native_toolchains.rs @windsornguyen
+/docs/users/languages/go/native.md @windsornguyen
+/test/go-dedicated-toolchains.ts @windsornguyen
