@@ -58,3 +58,9 @@
 /app/bsmr_test/src/command.rs @windsornguyen
 /docs/users/build_observability/snapshot.md @windsornguyen
 /test/build-snapshot.py @windsornguyen
+
+# Retained build-report metadata and cache summary.
+/app/bsmr_cmd_log_client/src/summary.rs @windsornguyen
+/docs/users/build_observability/build_report.md @windsornguyen
+/tests/core/build/test_build_report_data/fixtures/test_build_report_format_artifact_hash_information.golden.json @windsornguyen
+/tests/core/build/test_build_report_data/rules.bzl @windsornguyen
