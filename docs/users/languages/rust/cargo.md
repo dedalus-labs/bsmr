@@ -272,3 +272,8 @@ It checks compiler flags, dependency edits, cached output restoration, and unit 
 `test/rust/libraries.ts` compares Cargo's multiple-output behavior with native
 builds. It runs a Rust consumer and loads the generated C library before and after
 a source edit, then checks warm reuse and restoration after cleaning outputs.
+
+The native toolchain reports the release channel selected by the verified compiler
+pin. Nightly features require the nightly channel. For local rule development,
+`node test/native-rust-build.ts /path/to/bsmr prelude` tests the source prelude
+without rebuilding the CLI. Omitting the third argument tests its bundled rules.

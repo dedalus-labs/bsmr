@@ -35,32 +35,32 @@ where
     serializer.collect_str(value)
 }
 
-#[derive(Serialize, Debug)]
+#[derive(Clone, Serialize, Debug)]
 pub struct DirectoryInfo {
     #[serde(serialize_with = "stringify")]
     pub digest: TrackedCasDigest<FileDigestKind>,
 }
 
-#[derive(Serialize, Debug)]
+#[derive(Clone, Serialize, Debug)]
 pub struct FileInfo {
     #[serde(serialize_with = "stringify")]
     pub digest: CasDigest<FileDigestKind>,
     pub is_exec: bool,
 }
 
-#[derive(Serialize, Debug)]
+#[derive(Clone, Serialize, Debug)]
 pub struct SymlinkInfo {
     #[serde(serialize_with = "stringify")]
     pub symlink_rel_path: RelativePathBuf,
 }
 
-#[derive(Serialize, Debug)]
+#[derive(Clone, Serialize, Debug)]
 pub struct ExternalSymlinkInfo {
     pub target: PathBuf,
     pub remaining_path: Option<ForwardRelativePathBuf>,
 }
 
-#[derive(Serialize, Debug)]
+#[derive(Clone, Serialize, Debug)]
 #[serde(tag = "kind")]
 #[serde(rename_all = "snake_case")]
 pub enum ArtifactInfo {

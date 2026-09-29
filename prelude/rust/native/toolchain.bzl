@@ -20,6 +20,7 @@ def _toolchain(ctx):
         sysroot_path = standard,
         rustc_target_triple = ctx.attrs.triple,
         nightly_features = ctx.attrs.nightly_features,
+        release_channel = "nightly" if ctx.attrs.nightly_features else "stable",
         panic_runtime = PanicRuntime("unwind"),
     )]
 

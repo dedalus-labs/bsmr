@@ -26,7 +26,8 @@ options to customize the build report:
 - `package-project-relative-paths`: Include the project-relative path of
   packages for built targets.
 - `include-artifact-hash-information`: Include artifact hash information in the
-  output.
+  output, including path-keyed artifact metadata and canonical command action
+  digests.
 - `exclude-action-error-diagnostics`: Exclude the `error_diagnostics` field from
   action errors in the build report. This can reduce the size of build reports
   when detailed error diagnostic information from action error handlers is not
@@ -130,7 +131,17 @@ ConfiguredBuildReportEntry {
 
     # Information about this particular artifact. Includes things like its hash, whether it is
     # executable, etc.
-    artifact_info: dict[str, ArtifactInfoFile | ArtifactInfoSymlink | ArtifactInfoExternalSymlink],
+    artifact_info: dict[str, ArtifactInfoDirectory | ArtifactInfoFile | ArtifactInfoSymlink | ArtifactInfoExternalSymlink],
+
+    # Artifact metadata keyed by reported artifact path. Unlike the legacy
+    # provider-keyed `artifact_info`, this preserves every output independently.
+    artifact_info_by_path: Optional[dict[Path, ArtifactInfoDirectory | ArtifactInfoFile | ArtifactInfoSymlink | ArtifactInfoExternalSymlink]],
+
+    # Canonical executor action digests keyed by reported artifact path. Each
+    # digest has the form `<hex>:<size>`. Present only with
+    # `include-artifact-hash-information` and omitted for source artifacts and
+    # inline actions such as `write` that have no command action digest.
+    artifact_action_digests: Optional[dict[Path, str]],
 
     # Set sketch of configured target graph stored in a hex string.
     # Enabled by setting `-c bsmr.log_configured_graph_sketch=true`.
@@ -348,6 +359,14 @@ ActionSubError {
     remediation: Optional[str],
 }
 
+ArtifactInfoDirectory {
+    # The type of this artifact info. This will always be "directory".
+    kind: str,
+
+    # CAS digest for this directory tree.
+    digest: str,
+}
+
 ArtifactInfoFile {
     # The type of this artifact info. This will always be "file".
     kind: str,
@@ -377,6 +396,10 @@ ArtifactInfoExternalSymlink {
     remaining_path: Optional[str],
 }
 ```
+
+An action digest identifies cache inputs; it is not an attestation. Consumers
+must authenticate the producing run separately and verify the reported CAS
+bytes before trusting an artifact.
 
 ### On Compatibility
 

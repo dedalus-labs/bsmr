@@ -1473,6 +1473,7 @@ async fn build_target_result(
                     skippable: false,
                     graph_properties: Default::default(),
                     return_run_args: false,
+                    collect_action_digests: false,
                 },
                 None, // TODO: is this right?
             ),
