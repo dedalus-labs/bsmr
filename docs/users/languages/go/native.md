@@ -158,3 +158,8 @@ pin and verify the native toolchain and sysroot.
 
 The full design, consequences, benchmarks, and release gates live in
 [RFC 0003](https://github.com/dedalus-labs/bsmr/blob/main/docs/rfcs/0003-native-go-builds.md).
+
+When `toolchains` names a separate cell, declare its shared tools there. Native
+Go synchronization must not also add those names to the source root, where
+`:test` belongs to the package's tests. Run
+`node test/go-dedicated-toolchains.ts /path/to/bsmr` to exercise that layout.
