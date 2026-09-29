@@ -1,3 +1,10 @@
+<!-- ===----------------------------------------------------------------------=== -->
+<!-- Copyright (c) 2026 Dedalus Labs, Inc. and its contributors -->
+<!-- SPDX-License-Identifier: Apache-2.0 -->
+<!-- ===----------------------------------------------------------------------=== -->
+
+<!-- Defines experimental file snapshots and their verification boundary. -->
+
 # Experimental build snapshot
 
 `bsmr build --snapshot PATH` captures successful file outputs without changing
