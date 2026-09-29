@@ -114,7 +114,7 @@ extracted SDK's `VERSION`, and installs a repository-local ignored SDK plus
 bootstrap wrapper.
 The installed tree is hard-linked from Bessemer's materialized archive, so the
 immutable bytes are not duplicated. `bsmr go toolchain --check` performs the
-offline lock, generated-IR, acquisition-metadata, and SDK-version drift gate.
+offline lock, acquisition-metadata, and SDK-version drift gate.
 
 Every repository resolves to an exact committed version. Configured mirrors may
 eventually serve identical bytes but cannot change artifact identity.

@@ -26,6 +26,7 @@ use bsmr_common::argv::SanitizedArgv;
 use bsmr_common::legacy_configs::cells::BsmrConfigBasedCells;
 use bsmr_common::legacy_configs::key::BsmrconfigKeyRef;
 use bsmr_core::fs::output_path::BSMR_OUTPUT_ROOT;
+use bsmr_core::fs::project::ProjectRoot;
 
 use crate::commands::go_graph::GoGraph;
 use crate::commands::go_manifest::SyncMode;
@@ -106,12 +107,19 @@ impl GoCommand {
     }
 }
 
-/// Pins or verifies the generated toolchain at the Bessemer project root.
+/// Pins or verifies the SDK lock and the acquisition beside the `toolchains//` package.
 async fn configure_toolchain(
     command: GoToolchainCommand,
     ctx: &ClientCommandContext<'_>,
 ) -> bsmr_error::Result<()> {
-    let root = ctx.paths()?.project_root().root().as_path();
+    let project_root = ctx.paths()?.project_root();
+    let root = project_root.root().as_path();
+    let toolchains = toolchains_directory(project_root).await?;
+    if command.check {
+        go_toolchain::reject_leftovers(root, &toolchains)?;
+    } else {
+        go_toolchain::remove_leftovers(root, &toolchains)?;
+    }
     let lock = go_toolchain::configure(
         root,
         command.version.as_deref(),
@@ -120,11 +128,11 @@ async fn configure_toolchain(
     )
     .await?;
     if command.check {
-        go_toolchain::acquired_go(root, &lock)?;
+        go_toolchain::acquired_go(&toolchains, &lock)?;
     } else {
-        go_toolchain::prepare_acquisition(root, &lock)?;
+        go_toolchain::validate_acquisition_owners(&toolchains)?;
         let sdk = materialize_sdk_archive(root)?;
-        go_toolchain::install_sdk(root, &sdk, &lock)?;
+        go_toolchain::install_sdk(&toolchains, &sdk, &lock)?;
     }
     bsmr_client_ctx::println!(
         "Go SDK {}: {}",
@@ -148,9 +156,11 @@ fn sync(mut command: GoSyncCommand, ctx: &ClientCommandContext<'_>) -> bsmr_erro
     if !root.join("go.mod").is_file() && !root.join("go.work").is_file() {
         return Err(GoCommandError::NoModule(root).into());
     }
-    let project_root = ctx.paths()?.project_root().root().as_path();
-    let lock = go_toolchain::read_lock(project_root)?;
-    let go = go_toolchain::acquired_go(project_root, &lock)?;
+    let project_root = ctx.paths()?.project_root();
+    let toolchains = futures::executor::block_on(toolchains_directory(project_root))?;
+    go_toolchain::reject_leftovers(project_root.root().as_path(), &toolchains)?;
+    let lock = go_toolchain::read_lock(project_root.root().as_path())?;
+    let go = go_toolchain::acquired_go(&toolchains, &lock)?;
     let mut patterns = discover_patterns(&root)?;
     // Tool directives are part of the module's graph, so their packages are roots even
     // when they live only in the vendor tree that directory discovery skips.
@@ -178,6 +188,23 @@ fn sync(mut command: GoSyncCommand, ctx: &ClientCommandContext<'_>) -> bsmr_erro
         report.removed()
     )?;
     Ok(())
+}
+
+/// Resolves the directory of the package `toolchains//` names in the project configuration.
+///
+/// The locked Go toolchain targets join that package when it is evaluated and read the SDK and
+/// bootstrap wrapper from these package-relative directories. `bsmr init` aliases `toolchains`
+/// to the root cell, so this is the project root unless a project declares its own cell.
+pub(super) async fn toolchains_directory(
+    project_root: &ProjectRoot,
+) -> bsmr_error::Result<PathBuf> {
+    let cells = BsmrConfigBasedCells::parse_with_config_args(project_root, &[]).await?;
+    let resolver = &cells.cell_resolver;
+    let cell = resolver
+        .root_cell_cell_alias_resolver()
+        .resolve("toolchains")?;
+    let path = resolver.get(cell)?.path().as_project_relative_path();
+    Ok(project_root.resolve(path).into_path_buf())
 }
 
 /// Resolves the generator destination from the active cell configuration.

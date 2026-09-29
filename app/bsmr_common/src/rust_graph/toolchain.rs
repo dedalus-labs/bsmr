@@ -147,7 +147,7 @@ impl Toolchain {
     /// Render pinned archives and their single native toolchain.
     fn rules(&self, host: &str, archives: &BTreeMap<String, Archive>) -> String {
         let mut rules = String::from(
-            "load(\"@prelude//rust/native:toolchain.bzl\", \"native_rust_toolchain\", \"native_rust_tools\")\n",
+            "load(\"@prelude//rust/native:toolchain.bzl\", \"native_rust_toolchain\")\n",
         );
         for (component, archive) in archives {
             let filename = archive
@@ -171,7 +171,6 @@ impl Toolchain {
             "False"
         };
         rules.push_str(&format!("native_rust_toolchain(name = \"__bsmr_rust\", compiler = \":__bsmr_rustc\", clippy = \":__bsmr_clippy-preview\", standard_library = \":__bsmr_rust-std\", triple = {host:?}, nightly_features = {nightly}, visibility = [\"PUBLIC\"])\n"));
-        rules.push_str(&format!("native_rust_tools(triple = {host:?})\n"));
         rules
     }
 }

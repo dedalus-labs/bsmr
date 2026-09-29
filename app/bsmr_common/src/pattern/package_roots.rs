@@ -33,6 +33,7 @@ use tokio::sync::Semaphore;
 
 use crate::file_ops::trait_::DiceFileOps;
 use crate::file_ops::trait_::FileOps;
+use crate::native_toolchains::is_go_acquisition;
 use crate::package_listing::find_build_source;
 use crate::package_listing::is_python_virtual_environment;
 
@@ -152,7 +153,8 @@ pub async fn collect_package_roots<E>(
         // things in order and we've encountered a specific case that benefits a lot from it
         // (due to having some huge things in an `apps/` dir).
         for entry in listing.iter().rev() {
-            if entry.file_type.is_dir() {
+            // An acquired Go SDK is local state whose vendored sources carry native manifests.
+            if entry.file_type.is_dir() && !is_go_acquisition(entry.file_name.as_str()) {
                 let child = path.join(&entry.file_name);
                 if seen.insert(child.clone()) {
                     queue.push(list_dir(child));

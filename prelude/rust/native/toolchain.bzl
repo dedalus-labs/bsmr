@@ -7,21 +7,6 @@
 
 load("@prelude//rust:rust_toolchain.bzl", "PanicRuntime", "RustToolchainInfo")
 
-load("@prelude//toolchains:cxx.bzl", "system_cxx_toolchain")
-load("@prelude//toolchains:python.bzl", "system_python_bootstrap_toolchain")
-load("@prelude//toolchains:genrule.bzl", "system_genrule_toolchain")
-load("@prelude//toolchains:remote_test_execution.bzl", "remote_test_execution_toolchain")
-load("@prelude//tests:test_toolchain.bzl", "noop_test_toolchain")
-
-def native_rust_tools(triple):
-    """Declare the local bootstrap tools used by native Rust and custom recipes."""
-    cxx = {"compiler": "gcc", "cxx_compiler": "g++", "compiler_type": "gcc", "linker": "g++"} if triple.endswith("linux-gnu") else {}
-    system_cxx_toolchain(name = "cxx", visibility = ["PUBLIC"], **cxx)
-    system_python_bootstrap_toolchain(name = "python_bootstrap", visibility = ["PUBLIC"])
-    system_genrule_toolchain(name = "genrule", visibility = ["PUBLIC"])
-    remote_test_execution_toolchain(name = "remote_test_execution", visibility = ["PUBLIC"])
-    noop_test_toolchain(name = "test", visibility = ["PUBLIC"])
-
 def _toolchain(ctx):
     """Keep the compiler tree and sysroot in every consuming action's inputs."""
     compiler = ctx.attrs.compiler[DefaultInfo].default_outputs[0]

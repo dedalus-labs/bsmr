@@ -48,6 +48,7 @@ pub mod legacy_configs;
 pub mod liveliness_observer;
 pub mod local_resource_state;
 pub mod memory;
+pub mod native_toolchains;
 pub mod package_boundary;
 pub mod package_listing;
 pub mod pattern;
