@@ -9,6 +9,24 @@
 Notable changes to Bessemer are recorded here. Release entries are generated
 from conventional commits and reviewed before publication.
 
+## [0.0.9](https://github.com/dedalus-labs/bsmr/compare/v0.0.8...v0.0.9) (2026-09-29)
+
+
+### Features
+
+* **build-report:** expose producer action digests ([#221](https://github.com/dedalus-labs/bsmr/issues/221)) ([71c2659](https://github.com/dedalus-labs/bsmr/commit/71c26599dbe1beec4203301d4bc856ba2638ed37))
+* **build:** capture experimental file snapshots ([#374](https://github.com/dedalus-labs/bsmr/issues/374)) ([4fecc68](https://github.com/dedalus-labs/bsmr/commit/4fecc686d7bab8420a7ecd621e0db371e597cf77))
+* **go:** sync packages named by go.mod tool directives ([#364](https://github.com/dedalus-labs/bsmr/issues/364)) ([e3f0efc](https://github.com/dedalus-labs/bsmr/commit/e3f0efc0693b09265acf69d65dce2a485f8484ff))
+* **rust:** add pluggable compiler backends ([#56](https://github.com/dedalus-labs/bsmr/issues/56)) ([934595a](https://github.com/dedalus-labs/bsmr/commit/934595adf9a67aa0d6476ac57120cb1207ddbcf9))
+
+
+### Bug Fixes
+
+* **go:** contribute the Go toolchain to toolchains// instead of owning a package ([#363](https://github.com/dedalus-labs/bsmr/issues/363)) ([2f962af](https://github.com/dedalus-labs/bsmr/commit/2f962afb6532d01ae1131512f24fe89075b94914))
+* **go:** embed debug.BuildInfo and use cell-relative labels for nested sync roots ([#370](https://github.com/dedalus-labs/bsmr/issues/370)) ([979bb18](https://github.com/dedalus-labs/bsmr/commit/979bb18eca27bd287ce26931594c99988cfa3ef4))
+* **go:** keep shared tools in the selected cell ([#373](https://github.com/dedalus-labs/bsmr/issues/373)) ([6e83e78](https://github.com/dedalus-labs/bsmr/commit/6e83e788262baf6ea04979bd8fb77ecb09be65aa))
+* **release:** retain merged build report changes ([#375](https://github.com/dedalus-labs/bsmr/issues/375)) ([cff6b55](https://github.com/dedalus-labs/bsmr/commit/cff6b558ed1d63c45c8c60787d40cb225f203ae3))
+
 ## [0.0.8](https://github.com/dedalus-labs/bsmr/compare/v0.0.7...v0.0.8) (2026-09-28)
 
 
