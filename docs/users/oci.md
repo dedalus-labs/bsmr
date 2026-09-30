@@ -5,29 +5,30 @@
 
 <!-- Introduces experimental OCI image assembly from native build outputs. -->
 
-# OCI image preview
+# Build an OCI image
 
-The v0.0.10 preview packages existing build outputs into OCI images. Build your
-application with its language adapter, place its output in a layer, then choose
-image configuration and export a complete image directory. Unchanged compiler
-and layer work uses BSMR's existing shared cache.
+Build an OCI container image from your application's BSMR outputs. The image
+recipe describes where the files go and how the container starts. Compilation,
+layer packing, and image configuration are separate build actions, so changing
+the entrypoint can reuse the same binary and packed layers.
 
-The rule attributes and providers are experimental and may change before the
-public API is stabilized. Pin the BSMR release used by your project. Install one
-engine for the machine; image packaging does not compile BSMR in each worktree.
+These rules are experimental. Their attributes and provider contracts may change.
+Pin the BSMR version used by your project and use the documentation for that
+revision. Reuse the same installed engine across worktrees.
 
 ## Configure the tools
 
-The installed engine includes the rules and their helper modules. Create an
-`oci_toolchain` using a checksum-pinned `img` v0.3.22 executable and a pinned
-Node distribution. Existing `http_file`, `http_archive`, and `node_distribution`
-rules acquire these tools through the normal artifact graph.
+The engine bundles the OCI rules and their JavaScript helpers. Create an
+`oci_toolchain` with a checksum-pinned `img` v0.3.22 executable and a pinned
+Node distribution. BSMR acquires these tools through `http_file`, `http_archive`,
+and `node_distribution` targets, so the tool bytes participate in build identity.
 
 The [toolchain reference](https://github.com/dedalus-labs/bsmr/blob/main/prelude/oci/README.md#tools-and-imported-content)
 contains a complete setup recipe. The bundled
 [tool catalogue](https://github.com/dedalus-labs/bsmr/blob/main/prelude/oci/tools.json)
-holds the qualified encoder URLs and checksums. Select tools for the execution
-host; an arm64 macOS toolchain can package a Linux image.
+holds the encoder URLs and checksums. Select tools for the machine that runs
+the packaging actions. For example, macOS arm64 tools can package a Linux binary
+that was cross-compiled by the language adapter.
 
 ## Package a native binary
 
@@ -69,31 +70,44 @@ bsmr build //images/api:image --target-platforms //images/api:linux_arm64
 bsmr build //images/api:layout --target-platforms //images/api:linux_arm64
 ```
 
-The first target returns image metadata. The second exports all required
-payloads into a verified OCI directory. Neither command publishes to a registry.
-Changing image configuration reuses the existing layers. Changing a binary
-rebuilds its affected compiler work and layer. Failed or incomplete actions
-cannot become successful cache results.
+The `image` target builds the binary and produces the image configuration and
+manifest. The `layout` target exports a complete OCI directory and verifies its
+contents. Application source edits rebuild the affected compiler actions, whose
+outputs become the layer's inputs. If you change only the entrypoint, BSMR
+reuses the binary and packed layer and writes new image metadata. A requested
+layout export runs again to include that metadata. Registry publication is a
+separate step.
 
-The target platform configures native compilation. The image's platform field
-checks that contract; it cannot convert a host executable into a Linux binary.
-Include required shared libraries and resources explicitly, then qualify the
-image in a Linux runtime. ELF architecture checks alone do not prove that a
-program runs.
+Use `--target-platforms` to configure native compilation for Linux. The image's
+`platform` field checks the expected platform, and the layer checks each
+executable's ELF header for its processor type. Include the application's
+required shared libraries and resources explicitly, then test the image in a
+Linux runtime.
 
 ## Select an external builder
 
-`dockerfile_image` accepts an explicit `managed_buildkit` launcher and returns
-the same image provider. The current adapter uses a pinned, disposable local
-worker with fresh state. Its qualified scope is trusted COPY assembly from
-scratch and declared context files. External base images and Dockerfile
-frontends are rejected; networking is disabled.
+If your image recipe uses a Dockerfile, give `dockerfile_image` a declared build
+context and a `builder` target. The bundled `managed_buildkit` adapter runs
+BuildKit in a temporary container on a local Docker daemon. It returns the same
+OCI image provider as native assembly, so either path can feed `oci_layout`.
+
+Use this adapter for trusted recipes that copy local files into a scratch image
+or between local stages. The worker disables networking and rejects external
+base images, downloaded frontends, and Git or HTTP sources. A Dockerfile that
+downloads packages during the build needs a different input contract.
 
 See the [builder reference](https://github.com/dedalus-labs/bsmr/blob/main/prelude/oci/README.md#explicit-buildkit-selection)
-for setup and its local privilege requirements. There is no automatic switch
-between native assembly and an external builder after an error.
+for setup and its local privilege requirements. The
+[builder contract](https://github.com/dedalus-labs/bsmr/blob/main/prelude/oci/README.md#builder-contract)
+accepts a build specification and produces a complete OCI layout. Adding a
+Docker/buildx or Buildah backend would mean implementing this boundary and
+tracking the inputs that determine its output. Builder selection is part of
+the recipe. BSMR runs that builder and reports its failures.
 
-The preview uses ordinary gzip layers. Compact retention, registry acquisition
-and publication, multi-platform indexes, and directory-shaped runtime bundles
-are future work. Exported images follow the OCI format; this preview
-does not yet promise a stable BSMR programming interface.
+## Scope
+
+Native layers contain regular files, Linux executables, and literal symlinks,
+packed into ordinary gzip archives. Supply base images as complete, independently
+acquired OCI layouts. Registry downloads and publication, multi-platform indexes,
+compact layer retention, and directory-shaped runtime bundles are outside these
+rules. See the reference for supported platforms and configuration inheritance.

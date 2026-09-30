@@ -9,7 +9,7 @@
 Bessemer (`bsmr`) builds packages from your project files and reuses unchanged
 work. Supported native packages do not need handwritten build rules.
 
-Bessemer is a preview. Releases in the `0.0.x` series may change their API.
+Bessemer is a preview, and its interfaces may change.
 TypeScript with pnpm is the primary integration. See [language support](docs/about/language_support.md)
 for Rust, Go, and Python preview requirements.
 
@@ -48,10 +48,10 @@ pnpm and compiler files. The [Rust preview](docs/users/languages/rust/cargo.md)
 uses Cargo manifests and an exact toolchain pin. [Custom recipes](docs/users/recipes.md)
 connect additional steps through their inputs and outputs.
 
-The [OCI preview](docs/users/oci.md) packages native build outputs into cached
-image layers and verified OCI layouts. Its rules ship as an experimental API
-for v0.0.10; a selected local BuildKit adapter supports declared-context COPY
-recipes. Registry publication and compact layer retention are not included.
+Use the [OCI rules](docs/users/oci.md) to package a built application and its
+runtime files into a container image. Changing the entrypoint reuses the packed
+layers. For Dockerfile recipes that copy local files, select the BuildKit
+adapter. These interfaces are experimental.
 
 ## Find a command
 
