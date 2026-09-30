@@ -30,6 +30,7 @@ exclude_docs: |
   /users/*
   !/users/sandboxing.md
   !/users/recipes.md
+  !/users/oci.md
   !/users/languages/
   /users/languages/*
   !/users/languages/typescript/
@@ -106,6 +107,7 @@ plugins:
           - users/languages/go/native.md
         Recipes:
           - users/recipes.md
+          - users/oci.md
         Concepts:
           - concepts/caching.md
           - concepts/test-observability.md
@@ -159,6 +161,7 @@ nav:
       - Go: users/languages/go/native.md
       - Support status: about/language_support.md
   - Custom recipes: users/recipes.md
+  - OCI image preview: users/oci.md
   - Concepts:
       - Caching and Hermeticity: concepts/caching.md
       - Test Observability: concepts/test-observability.md
