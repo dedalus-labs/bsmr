@@ -94,7 +94,24 @@ jobs:
       - name: Audit dependencies
         run: pnpm audit --audit-level high
         shell: bash
+      - name: Download pinned OCI encoder
+        run: curl --proto =https --tlsv1.2 --fail --location --silent --show-error https://github.com/bazel-contrib/rules_img/releases/download/v0.3.22/img_linux_amd64 --output "$HOLLYWOOD_COMMAND_ARG_9"
+        shell: bash
+        env:
+          HOLLYWOOD_COMMAND_ARG_9: ${{ format('{0}/oci-img', runner.temp) }}
+      - name: Verify OCI encoder
+        uses: ./.github/actions/ci/verify-sha256
+        with:
+          path: ${{ format('{0}/oci-img', runner.temp) }}
+          expected: 1c536a1e42bacd07fb6a7afaff2da3d0039fb291ef8e94d6ac91ff32ee0b5ebc
+      - name: Make OCI encoder executable
+        run: chmod 500 "$HOLLYWOOD_COMMAND_ARG_1"
+        shell: bash
+        env:
+          HOLLYWOOD_COMMAND_ARG_1: ${{ format('{0}/oci-img', runner.temp) }}
       - name: Check workflow source
+        env:
+          BSMR_OCI_IMG: ${{ format('{0}/oci-img', runner.temp) }}
         run: pnpm run ci check
         shell: bash
   rust_audit:
@@ -324,6 +341,31 @@ jobs:
       - name: Verify native Go build
         run: node test/native-go-build.ts target/debug/bsmr
         shell: bash
+      - name: Download pinned OCI encoder
+        run: curl --proto =https --tlsv1.2 --fail --location --silent --show-error https://github.com/bazel-contrib/rules_img/releases/download/v0.3.22/img_linux_amd64 --output "$HOLLYWOOD_COMMAND_ARG_9"
+        if: ${{ matrix.architecture == 'x64' }}
+        shell: bash
+        env:
+          HOLLYWOOD_COMMAND_ARG_9: ${{ format('{0}/oci-img', runner.temp) }}
+      - name: Verify OCI encoder
+        uses: ./.github/actions/ci/verify-sha256
+        with:
+          path: ${{ format('{0}/oci-img', runner.temp) }}
+          expected: 1c536a1e42bacd07fb6a7afaff2da3d0039fb291ef8e94d6ac91ff32ee0b5ebc
+        if: ${{ matrix.architecture == 'x64' }}
+      - name: Make OCI encoder executable
+        run: chmod 500 "$HOLLYWOOD_COMMAND_ARG_1"
+        if: ${{ matrix.architecture == 'x64' }}
+        shell: bash
+        env:
+          HOLLYWOOD_COMMAND_ARG_1: ${{ format('{0}/oci-img', runner.temp) }}
+      - if: ${{ matrix.architecture == 'x64' }}
+        name: Verify native OCI cache
+        uses: ./.github/actions/oci/cache
+        with:
+          binary: target/debug/bsmr
+          img: ${{ format('{0}/oci-img', runner.temp) }}
+          platform: linux/amd64
       - name: Download pinned DotSlash
         run: curl --proto =https --tlsv1.2 --fail --location --silent --show-error "$HOLLYWOOD_COMMAND_ARG_7" --output "$HOLLYWOOD_COMMAND_ARG_9"
         shell: bash

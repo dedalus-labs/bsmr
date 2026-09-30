@@ -62,6 +62,7 @@ test("check uses one typed command tree", async () => {
 			["node", "--check", ".github/actions/ci/rust-affected/dist/index.js"],
 			["node", "--check", ".github/actions/ci/verify-sha256/dist/index.js"],
 			["node", "--check", ".github/actions/typescript/cache/dist/index.js"],
+			["node", "--check", ".github/actions/oci/cache/dist/index.js"],
 			["node", "--check", ".github/actions/runner/build/dist/index.js"],
 			["node", "--check", ".github/actions/rust/install/dist/index.js"],
 			["git", "diff", "--exit-code"],
@@ -96,6 +97,9 @@ test("check uses one typed command tree", async () => {
 		"prelude/toolchains/pnpm/runner.test.ts",
 		"prelude/toolchains/pnpm/task.test.ts",
 		"test/contributors.test.ts",
+		"test/oci/closure.test.mjs",
+		"test/oci/operations.test.mjs",
+		"test/oci/image.test.mjs",
 	]);
 	assert.deepEqual(state.invocations.find(({ file }) => file === "git")?.args, [
 		"diff",

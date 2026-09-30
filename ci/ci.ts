@@ -17,6 +17,8 @@ import { osvAuditAction } from "./osv-audit.ts";
 import { verifySha256Action } from "./verify-sha256.ts";
 import { typescriptCache } from "./typescript/cache.ts";
 import { buildEnvironment } from "./runner/build.ts";
+import ociTools from "../prelude/oci/tools.json" with { type: "json" };
+import { ociCache } from "./oci/cache.ts";
 
 const trustedCiRun = expr<boolean>(
 	"github.repository == 'dedalus-labs/bsmr' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository)",
@@ -127,6 +129,7 @@ const runnerTemp = expr<string>("runner.temp");
 const osvScannerPath = format("{0}/osv-scanner", runnerTemp);
 const osvReportPath = format("{0}/osv.json", runnerTemp);
 const dotSlashArchivePath = format("{0}/dotslash.tar.gz", runnerTemp);
+const imgPath = format("{0}/oci-img", runnerTemp);
 const addPathProgram = String.raw`const fs = require("node:fs");
 const path = process.argv[1];
 const output = process.env.GITHUB_PATH;
@@ -158,6 +161,23 @@ const installOsvScanner = [
 	{
 		name: "Make OSV Scanner executable",
 		run: command({ file: "chmod", args: ["500", osvScannerPath] }),
+	},
+] as const;
+const installImg = [
+	{
+		name: "Download pinned OCI encoder",
+		run: command({ file: "curl", args: [
+			"--proto", "=https", "--tlsv1.2", "--fail", "--location", "--silent", "--show-error",
+			ociTools.img.assets["linux-amd64"].url, "--output", imgPath,
+		] }),
+	},
+	uses(verifySha256Action, {
+		name: "Verify OCI encoder",
+		with: { path: imgPath, expected: ociTools.img.assets["linux-amd64"].sha256 },
+	}),
+	{
+		name: "Make OCI encoder executable",
+		run: command({ file: "chmod", args: ["500", imgPath] }),
 	},
 ] as const;
 const installDotSlash = [
@@ -291,8 +311,10 @@ export const ci = workflow({
 					name: "Audit dependencies",
 					run: command({ file: "pnpm", args: ["audit", "--audit-level", "high"] }),
 				},
+				...installImg,
 				{
 					name: "Check workflow source",
+					env: { BSMR_OCI_IMG: imgPath },
 					run: command({ file: "pnpm", args: ["run", "ci", "check"] }),
 				},
 			],
@@ -461,6 +483,11 @@ export const ci = workflow({
 					name: "Verify native Go build",
 					run: command({ file: "node", args: ["test/native-go-build.ts", "target/debug/bsmr"] }),
 				},
+				...installImg.map((step) => ({ ...step, if: eq(expr<string>("matrix.architecture"), "x64") })),
+				uses(ociCache, {
+					if: eq(expr<string>("matrix.architecture"), "x64"),
+					with: { binary: "target/debug/bsmr", img: imgPath, platform: "linux/amd64" },
+				}),
 				...installDotSlash,
 				{
 					name: "Generate Rust build dependencies",

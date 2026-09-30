@@ -15,8 +15,52 @@ import { pullRequestFiles, rustAffected, rustAffectedForEvent } from "./affected
 import { ci } from "./ci.ts";
 import { docs } from "./docs.ts";
 import { typescriptCache } from "./typescript/cache.ts";
+import ociTools from "../prelude/oci/tools.json" with { type: "json" };
+import { ociCache } from "./oci/cache.ts";
+import { releaseVersion } from "./release-version.ts";
 
 const jobs = ci.jobs;
+
+test("OCI qualification verifies its shared encoder pin before running mandatory image tests", () => {
+	const steps = jobs.workflows.steps;
+	const download = steps.findIndex((step) => step.name === "Download pinned OCI encoder");
+	const verify = steps.findIndex((step) => step.name === "Verify OCI encoder");
+	const execute = steps.findIndex((step) => step.name === "Check workflow source");
+	assert.ok(download >= 0 && download < verify && verify < execute);
+	const verification = steps[verify];
+	assert.ok(verification && "uses" in verification);
+	assert.deepEqual(verification.with, {
+		path: "${{ format('{0}/oci-img', runner.temp) }}",
+		expected: ociTools.img.assets["linux-amd64"].sha256,
+	});
+	const execution = steps[execute];
+	assert.ok(execution && "env" in execution);
+	assert.deepEqual(execution.env, { BSMR_OCI_IMG: "${{ format('{0}/oci-img', runner.temp) }}" });
+	assert.match(ociTools.img.assets["linux-amd64"].url, /\/v0\.3\.22\/img_linux_amd64$/);
+	assert.match(ociTools.img.assets["linux-amd64"].sha256, /^[0-9a-f]{64}$/);
+});
+
+test("native OCI cache qualification consumes the existing source-built Linux amd64 engine", async () => {
+	const step = jobs.rust_self_host.steps.find((candidate) => "uses" in candidate && candidate.uses === "./.github/actions/oci/cache");
+	assert.ok(step && "uses" in step && "if" in step);
+	assert.equal(step.if, "${{ matrix.architecture == 'x64' }}");
+	assert.deepEqual(step.with, { binary: "target/debug/bsmr", img: "${{ format('{0}/oci-img', runner.temp) }}", platform: "linux/amd64" });
+	const download = jobs.rust_self_host.steps.find((candidate) => candidate.name === "Download pinned OCI encoder");
+	assert.ok(download && "if" in download);
+	assert.equal(download.if, step.if);
+	const failure = new Error("OCI qualification failed");
+	await assert.rejects(runAction(ociCache, {
+		with: { binary: "test path/bsmr", img: "test path/img", platform: "linux/amd64" },
+		exec: async (file, args) => {
+			assert.equal(file, "node");
+			assert.deepEqual(args, ["test/oci/cache.ts", "test path/bsmr", "test path/img", "prelude", "prelude/oci/operations.mjs",
+				"--platform", "linux/amd64", "--engine-version", releaseVersion(process.cwd()), "--bundled-prelude"]);
+			throw failure;
+		},
+		fs: { readText: async () => assert.fail("action delegates to the real fixture") },
+		runner: { uidGid: "1000:1000" },
+	}), failure);
+});
 
 test("TypeScript cache uses its nested action route and propagates failures", async () => {
 	const step = jobs.rust_self_host?.steps.find(

@@ -79,6 +79,7 @@ export function licenseGeneratedEntrypoints(root: string): void {
 		".github/actions/ci/rust-affected/src/index.ts",
 		".github/actions/ci/verify-sha256/src/index.ts",
 		".github/actions/typescript/cache/src/index.ts",
+		".github/actions/oci/cache/src/index.ts",
 	".github/actions/runner/build/src/index.ts",
 	".github/actions/rust/install/src/index.ts",
 	]) {
