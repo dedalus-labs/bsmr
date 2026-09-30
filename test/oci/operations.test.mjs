@@ -15,6 +15,7 @@ import test from "node:test";
 import { stageContext } from "../../prelude/oci/operations.mjs";
 
 const operations = resolve(import.meta.dirname, "../../prelude/oci/operations.mjs");
+const worker = resolve(import.meta.dirname, "../../prelude/oci/worker.mjs");
 
 /** Own each real filesystem fixture and remove only that fixture afterward. */
 async function fixture(t) {
@@ -168,4 +169,26 @@ test("unsafe placement paths fail before reading sources or encoding", async (t)
 	for (const path of ["app/file", "/app/../file", "/app//file", "/app\\file", "/app=bad", "/app/.wh.file"]) {
 		await invalidLayer(root, { files: { [path]: join(root, "absent") }, executables: {}, symlinks: {} }, "OCI_INVALID_PATH");
 	}
+});
+
+test("the qualified worker rejects nonlocal hosts and duplicated CLI options before invoking Docker", async (t) => {
+	const root = await fixture(t);
+	const contract = join(root, "daemon.json");
+	const source = join(root, "source");
+	const spec = join(root, "spec.json");
+	await mkdir(source);
+	await writeFile(spec, JSON.stringify({ context: source, dockerfile: "Dockerfile", platform: "linux/arm64",
+		build_args: {}, target: null, source_date_epoch: 0 }));
+	const args = [worker, "--docker", join(root, "absent-docker"), "--daemon-contract", contract,
+		"--buildkit-image", `docker.io/moby/buildkit@sha256:${"0".repeat(64)}`, "--spec", spec, "--output", join(root, "output")];
+	for (const host of ["tcp://localhost:2375", "ssh://local", "unix://relative/path"]) {
+		await writeFile(contract, JSON.stringify({ host, version: "fixture", api_version: "1", os: "linux", architecture: "arm64", kernel_version: "fixture" }));
+		const result = spawnSync(process.execPath, args, { encoding: "utf8", timeout: 5000 });
+		assert.equal(result.status, 1, result.stderr);
+		assert.ok(result.stderr.startsWith("UnsupportedDockerHost:"), result.stderr);
+		assert.equal(existsSync(join(root, "output")), false);
+	}
+	const duplicated = spawnSync(process.execPath, [...args, "--docker", "another-client"], { encoding: "utf8", timeout: 5000 });
+	assert.equal(duplicated.status, 1, duplicated.stderr);
+	assert.ok(duplicated.stderr.startsWith("InvalidWorkerArguments:"), duplicated.stderr);
 });
