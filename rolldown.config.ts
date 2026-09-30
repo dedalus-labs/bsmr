@@ -27,6 +27,12 @@ const artifacts: readonly Artifact[] = [
 		define: { "import.meta.vitest": "undefined" },
 	},
 	{
+		input: "./.github/actions/oci/cache/src/index.ts",
+		output: ".github/actions/oci/cache/dist/index.js",
+		target: "node24",
+		define: { "import.meta.vitest": "undefined" },
+	},
+	{
 		input: "./.github/actions/ci/release-complete/src/index.ts",
 		output: ".github/actions/ci/release-complete/dist/index.js",
 		target: "node24",

@@ -1,0 +1,23 @@
+{
+  "img": {
+    "version": "v0.3.22",
+    "assets": {
+      "darwin-amd64": {
+        "url": "https://github.com/bazel-contrib/rules_img/releases/download/v0.3.22/img_darwin_amd64",
+        "sha256": "bb30f726902078aa61c4954882413f20cde994ce138b3ef9de682b05d3e2e8f1"
+      },
+      "darwin-arm64": {
+        "url": "https://github.com/bazel-contrib/rules_img/releases/download/v0.3.22/img_darwin_arm64",
+        "sha256": "17ad63b99b716f1ea3d7fc0da5924e95e3865b9abd1ef272a2d0482d2f9dba77"
+      },
+      "linux-amd64": {
+        "url": "https://github.com/bazel-contrib/rules_img/releases/download/v0.3.22/img_linux_amd64",
+        "sha256": "1c536a1e42bacd07fb6a7afaff2da3d0039fb291ef8e94d6ac91ff32ee0b5ebc"
+      },
+      "linux-arm64": {
+        "url": "https://github.com/bazel-contrib/rules_img/releases/download/v0.3.22/img_linux_arm64",
+        "sha256": "79d77672e980a5be4fd7d2b18b24d7548786299494cb28d7bbcdbf930f546086"
+      }
+    }
+  }
+}

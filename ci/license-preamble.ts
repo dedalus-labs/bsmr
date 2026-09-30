@@ -37,6 +37,8 @@ function brief(path: string): string {
 		["ci/distribute.mjs", "Builds the engine and Cargo planner for one release target."],
 		[".github/actions/typescript/cache/dist/index.js", "Runs the native TypeScript cache verification action."],
 		[".github/actions/typescript/cache/src/index.ts", "Implements the native TypeScript cache verification action."],
+		[".github/actions/oci/cache/dist/index.js", "Runs native OCI cache qualification."],
+		[".github/actions/oci/cache/src/index.ts", "Implements native OCI cache qualification."],
 		[".github/actions/runner/build/src/index.ts", "Implements the approved runner lifecycle action."],
 		[".github/actions/rust/install/src/index.ts", "Installs verified native Rust tooling."],
 		[".github/actions/rust/install/dist/index.js", "Runs verified native Rust tooling installation."],
