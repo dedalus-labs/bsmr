@@ -7,13 +7,15 @@
 
 import { execFile } from "node:child_process";
 import { constants } from "node:fs";
-import { chmod, copyFile, lstat, lutimes, mkdir, open, readFile, readdir, readlink, realpath, symlink, utimes } from "node:fs/promises";
+import { chmod, copyFile, lstat, lutimes, mkdir, mkdtemp, open, readFile, readdir, readlink, realpath, rm, symlink, utimes, writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
 import { basename, dirname, isAbsolute, join, relative, resolve, sep } from "node:path";
 import { pathToFileURL } from "node:url";
 import { parseArgs, promisify } from "node:util";
-import { exportLayout, importLayout, layerMetadata } from "./closure.mjs";
+import { exportLayout, imageMetadata, importLayout, layerMetadata } from "./closure.mjs";
 
 const execute = promisify(execFile);
+const inherit = "<inherit from base>";
 const epoch = "1970-01-01T00:00:00Z";
 
 class OciError extends Error {
@@ -226,12 +228,95 @@ export async function stageContext(source, destination, timestamp) {
 	await copy(root, destination);
 }
 
+/** Validate config list values, reserving the encoder's inheritance marker. */
+function configList(value, name) {
+	if (value === null) return [inherit];
+	if (!Array.isArray(value)) throw new OciError("OCI_INVALID_SPEC", name + " must be a string list or null");
+	for (const item of value) {
+		string(item, name, true);
+		if (item === inherit) throw new OciError("OCI_RESERVED_VALUE", name + " contains the encoder's inheritance marker");
+	}
+	return value;
+}
+
+/** Compose all base/new layer metadata explicitly, preserving Docker config semantics. */
+async function image(values, spec) {
+	object(spec, ["base_manifest", "base_config", "base_descriptor", "layers", "entrypoint", "cmd", "env", "labels", "user", "working_dir"], "image specification");
+	const arch = architecture(values.platform);
+	if (!Array.isArray(spec.layers)) throw new OciError("OCI_INVALID_SPEC", "layers must be metadata paths");
+	const baseFields = [spec.base_manifest, spec.base_config, spec.base_descriptor];
+	if (baseFields.some((value) => value === null) && !baseFields.every((value) => value === null)) {
+		throw new OciError("OCI_INVALID_SPEC", "base metadata must be all present or all absent");
+	}
+	const scratch = await mkdtemp(join(tmpdir(), "bsmr-oci-image-"));
+	try {
+		await parents([values.manifest, values.config, values.descriptor]);
+		const args = ["manifest", "--os", "linux", "--architecture", arch, "--created-timestamp", epoch,
+			"--manifest", values.manifest, "--config", values.config, "--descriptor", values.descriptor];
+		// img v0.3.22 declares --base-manifest but does not consume it. Its rootfs
+		// is built solely from --layer-from-metadata, including the base layers.
+		// https://github.com/bazel-contrib/rules_img/blob/v0.3.22/img_tool/cmd/manifest/manifest.go
+		if (spec.base_manifest !== null) {
+			const base = await imageMetadata({ platform: values.platform, manifest: spec.base_manifest,
+				config: spec.base_config, descriptor: spec.base_descriptor });
+			const history = base.config.history ?? base.manifest.layers.map(() => ({ created_by: "history missing" }));
+			if (!Array.isArray(history) || history.some((entry) => entry === null || typeof entry !== "object" || Array.isArray(entry))
+				|| history.filter((entry) => entry.empty_layer !== true).length !== base.manifest.layers.length) {
+				throw new OciError("OCI_INVALID_HISTORY", "base history must describe every nonempty base layer exactly once");
+			}
+			if (base.manifest.layers.length === 0 && history.length !== 0) {
+				throw new OciError("OCI_UNSUPPORTED_BASE_HISTORY", "history-only scratch bases are not qualified by this encoder");
+			}
+			args.push("--base-config", spec.base_config, "--base-descriptor", spec.base_descriptor, "--stop-signal=" + inherit);
+			for (let i = 0; i < base.manifest.layers.length; i++) {
+				const path = join(scratch, "base-" + i + ".json");
+				const descriptor = base.manifest.layers[i];
+				await writeFile(path, JSON.stringify({ mediaType: descriptor.mediaType, digest: descriptor.digest,
+					size: descriptor.size, annotations: descriptor.annotations, diff_id: base.config.rootfs.diff_ids[i],
+					// The encoder also omits base-config history. Attach it once so its
+					// original empty/nonempty entry order precedes every new layer.
+					history: i === 0 ? history : [] }));
+				args.push("--layer-from-metadata", path);
+			}
+		}
+		for (const path of spec.layers) {
+			string(path, "layer metadata path");
+			await layerMetadata(path);
+			args.push("--layer-from-metadata", path);
+		}
+		for (const field of ["entrypoint", "cmd"]) {
+			for (const item of configList(spec[field], field)) args.push("--" + field + "=" + item);
+		}
+		for (const [key, flag] of [["user", "user"], ["working_dir", "working-dir"]]) {
+			const value = spec[key];
+			if (value !== null) {
+				string(value, key, true);
+				if (value === inherit) throw new OciError("OCI_RESERVED_VALUE", key + " contains the encoder's inheritance marker");
+			}
+			args.push("--" + flag + "=" + (value === null ? inherit : value));
+		}
+		if (![null, "", "/"].includes(spec.working_dir)) imagePath(spec.working_dir);
+		for (const [field, flag] of [["env", "env"], ["labels", "label"]]) {
+			const entries = stringMap(spec[field], field);
+			for (const key of Object.keys(entries).sort()) {
+				if (key.includes("=")) throw new OciError("OCI_INVALID_SPEC", field + " key must not contain =");
+				args.push("--" + flag + "=" + key + "=" + entries[key]);
+			}
+		}
+		await img(values.img, args);
+		await imageMetadata({ platform: values.platform, manifest: values.manifest, config: values.config, descriptor: values.descriptor });
+	} finally {
+		await rm(scratch, { recursive: true });
+	}
+}
+
 /** Dispatch one recipe through a strict, nonduplicated command argument schema. */
 async function main() {
 	const [command, ...args] = process.argv.slice(2);
 	const fields = {
 		layer: ["img", "platform", "spec", "metadata", "blob"],
 		context: ["platform", "spec", "output"],
+		image: ["img", "platform", "spec", "manifest", "config", "descriptor"],
 		layout: ["platform", "spec", "output"],
 		import: ["platform", "layout", "manifest", "config", "descriptor"],
 	}[command];
@@ -243,6 +328,7 @@ async function main() {
 	const spec = values.spec ? JSON.parse(await readFile(values.spec, "utf8")) : undefined;
 	if (command === "layer") await layer(values, spec);
 	else if (command === "context") await context(values, spec);
+	else if (command === "image") await image(values, spec);
 	else if (command === "layout") await exportLayout({ platform: values.platform, spec, output: values.output });
 	else await importLayout(values);
 }
