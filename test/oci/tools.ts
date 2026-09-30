@@ -12,7 +12,11 @@ import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { parseArgs, promisify } from "node:util";
 
-const { positionals, values } = parseArgs({ allowPositionals: true, options: { platform: { type: "string", default: "linux/arm64" } } });
+const { positionals, values } = parseArgs({ allowPositionals: true, options: {
+	platform: { type: "string", default: "linux/arm64" },
+	"engine-version": { type: "string", default: "0.0.9" },
+	"bundled-prelude": { type: "boolean", default: false },
+} });
 const [binary, img, prelude, bundle] = positionals;
 const platform = values.platform;
 assert.ok(platform === "linux/arm64" || platform === "linux/amd64", "test platform must be linux/arm64 or linux/amd64");
@@ -52,10 +56,13 @@ async function layer(phase: string) {
 }
 
 try {
+	assert.equal((await run(executable, ["--version"], { env })).stdout.trim(), `bsmr ${values["engine-version"]}`);
 	await run(executable, ["init"], options);
 	initialized = true;
-	cpSync(resolve(prelude), join(root, "prelude"), { recursive: true });
-	writeFileSync(join(root, ".bsmr.local"), "[external_cells]\nprelude = disabled\n");
+	if (!values["bundled-prelude"]) {
+		cpSync(resolve(prelude), join(root, "prelude"), { recursive: true });
+		writeFileSync(join(root, ".bsmr.local"), "[external_cells]\nprelude = disabled\n");
+	}
 	cpSync(resolve(img), join(root, "img"));
 	cpSync(process.execPath, join(root, "node"));
 	cpSync(join(resolve(bundle), "docker"), join(root, "docker"));
@@ -86,7 +93,7 @@ dockerfile_image(name = "physical_context", context = "context-dir", builder = "
 	const warm = await layer("warm");
 	assert.equal(warm.actions.length, 0);
 	assert.deepEqual(warm.metadata, cold.metadata);
-	process.stdout.write(`${JSON.stringify({ evidence, physicalContextAnalysis: true, helperModuleResolution: true })}\n`);
+	process.stdout.write(`${JSON.stringify({ evidence, bundledPrelude: values["bundled-prelude"], physicalContextAnalysis: true, helperModuleResolution: true })}\n`);
 } finally {
 	if (initialized) await run(executable, ["kill"], options);
 	rmSync(root, { recursive: true });
