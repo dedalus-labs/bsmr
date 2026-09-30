@@ -232,11 +232,10 @@ missing imports. Its optional managed-worker fixture uses independent BuildKit
 COPY encoding and compares filesystem/config semantics with a separate stdlib
 tar reader. See [test setup](../../test/oci/README.md).
 
-The earlier [packaging measurements](../../docs/developers/perf/oci_packaging.md)
-measure different primitives, including hardlinked export. They do not prove an
-8.3x gain for these verified-copy wrappers or full native compilation. Measure
-the actual rules before extending that claim.
+Cache reuse checks do not establish an end-to-end speedup. Measure compilation,
+layer packing, and verified export on the same workload and cache state before
+making a performance comparison.
 
 References: [OCI image specification](https://github.com/opencontainers/image-spec/tree/v1.1.1),
 [pinned img manifest implementation](https://github.com/bazel-contrib/rules_img/blob/v0.3.22/img_tool/cmd/manifest/manifest.go),
-[BuildKit source policy](https://github.com/moby/buildkit/blob/v0.32.2/docs/source-policy.md).
+[BuildKit source policy](https://github.com/moby/buildkit/blob/v0.32.2/docs/build-repro.md).
