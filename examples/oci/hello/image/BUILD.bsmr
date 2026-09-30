@@ -1,0 +1,35 @@
+# ===----------------------------------------------------------------------===
+# Copyright (c) 2026 Dedalus Labs, Inc. and its contributors
+# SPDX-License-Identifier: Apache-2.0
+# ===----------------------------------------------------------------------===
+
+# Packages the hello program as an image that Docker can load.
+
+load("@prelude//oci:defs.bzl", "oci_image", "oci_layer")
+
+platform(
+    name = "linux",
+    constraint_values = ["config//os/constraints:linux", "config//cpu/constraints:arm64"],
+)
+oci_layer(
+    name = "program",
+    platform = "linux/arm64",
+    executables = {"/hello": "//cmd/hello:bin"},
+    toolchain = "//tools:oci",
+)
+oci_image(
+    name = "image",
+    platform = "linux/arm64",
+    layers = [":program"],
+    entrypoint = ["/hello"],
+    toolchain = "//tools:oci",
+)
+genrule(
+    name = "hello",
+    out = "hello.tar",
+    cmd = "$(exe //tools:img) docker-save " +
+          "--manifest $(location :image[manifest]) " +
+          "--config $(location :image[config]) " +
+          "--layer $(location :program)=$(location :program[blob]) " +
+          "--repo-tag docker.io/library/bsmr-hello:local --output \"$OUT\"",
+)
