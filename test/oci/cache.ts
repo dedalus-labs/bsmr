@@ -24,7 +24,8 @@ const architecture = platform === "linux/amd64" ? "amd64" : "arm64";
 const cpu = architecture === "amd64" ? "x86_64" : "arm64";
 const otherPlatform = architecture === "amd64" ? "linux/arm64" : "linux/amd64";
 assert.ok(binary && img && prelude && operations, "pass BSMR, img, checkout prelude, and OCI operations.mjs");
-assert.equal(realpathSync(operations), realpathSync(join(prelude, "oci/operations.mjs")), "operations must belong to the selected source prelude");
+const operationsPath = realpathSync(operations);
+assert.equal(operationsPath, realpathSync(join(prelude, "oci/operations.mjs")), "operations must belong to the selected source prelude");
 if (builderBundle !== undefined) {
 	const daemon = JSON.parse(readFileSync(join(builderBundle, "daemon-contract.json"), "utf8"));
 	assert.equal(daemon.os, "linux");
@@ -136,7 +137,7 @@ async function corruptInputs(output: string, expected: string) {
 	assert.ok(finalByte !== undefined, "encoded layer must contain bytes");
 	corrupt[corrupt.length - 1] = finalByte ^ 1;
 	const imported = join(root, "imported.json");
-	const helper = values["bundled-prelude"] ? resolve(operations) : join(cwd, "prelude/oci/operations.mjs");
+	const helper = values["bundled-prelude"] ? operationsPath : join(cwd, "prelude/oci/operations.mjs");
 	const args = [helper, "import", "--layout", broken, "--platform", platform,
 		"--manifest", join(root, "imported-manifest.json"), "--config", join(root, "imported-config.json"), "--descriptor", imported];
 	writeFileSync(layer, corrupt);
