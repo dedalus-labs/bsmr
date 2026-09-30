@@ -48,6 +48,11 @@ pnpm and compiler files. The [Rust preview](docs/users/languages/rust/cargo.md)
 uses Cargo manifests and an exact toolchain pin. [Custom recipes](docs/users/recipes.md)
 connect additional steps through their inputs and outputs.
 
+The [OCI preview](docs/users/oci.md) packages native build outputs into cached
+image layers and verified OCI layouts. Its rules ship as an experimental API
+for v0.0.10; a selected local BuildKit adapter supports declared-context COPY
+recipes. Registry publication and compact layer retention are not included.
+
 ## Find a command
 
 ```console
