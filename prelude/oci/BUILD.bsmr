@@ -1,0 +1,15 @@
+# ===----------------------------------------------------------------------===
+# Copyright (c) 2026 Dedalus Labs, Inc. and its contributors
+# SPDX-License-Identifier: Apache-2.0
+# ===----------------------------------------------------------------------===
+
+# Exposes the complete OCI helper module closure as tracked source artifacts.
+
+load("@prelude//utils:source_listing.bzl", "source_listing")
+
+source_listing()
+
+# Keep imported modules adjacent; separately copied export targets do not retain
+# their relative module paths. The constructors track every referenced source.
+export_file(name = "operations", src = "operations.mjs", mode = "reference", visibility = ["PUBLIC"])
+export_file(name = "closure", src = "closure.mjs", mode = "reference", visibility = ["PUBLIC"])
