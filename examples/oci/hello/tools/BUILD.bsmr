@@ -1,0 +1,41 @@
+# ===----------------------------------------------------------------------===
+# Copyright (c) 2026 Dedalus Labs, Inc. and its contributors
+# SPDX-License-Identifier: Apache-2.0
+# ===----------------------------------------------------------------------===
+
+# Acquires the image tools for the example's macOS arm64 host.
+
+load("@prelude//oci:toolchain.bzl", "oci_toolchain")
+load("@prelude//oci:tools.json", tools = "value")
+load("@prelude//toolchains/pnpm:defs.bzl", "node_distribution")
+
+img = tools["img"]["assets"]["darwin-arm64"]
+http_file(
+    name = "img",
+    urls = [img["url"]],
+    sha256 = img["sha256"],
+    executable = True,
+    has_content_based_path = True,
+    visibility = ["PUBLIC"],
+)
+
+http_archive(
+    name = "node_archive",
+    urls = ["https://nodejs.org/dist/v26.5.1/node-v26.5.1-darwin-arm64.tar.gz"],
+    sha256 = "f4387df0b46556516d19abf2f2d6806481ac8368aa7f9d96bafed422a56a1d01",
+    strip_prefix = "node-v26.5.1-darwin-arm64",
+    has_content_based_path = True,
+)
+node_distribution(
+    name = "node",
+    root = ":node_archive",
+    node_requirement = "26.5.1",
+    version = "26.5.1",
+)
+oci_toolchain(
+    name = "oci",
+    img = ":img",
+    node = ":node",
+    version = tools["img"]["version"],
+    visibility = ["PUBLIC"],
+)

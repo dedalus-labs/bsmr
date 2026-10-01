@@ -3,97 +3,90 @@
 <!-- SPDX-License-Identifier: Apache-2.0 -->
 <!-- ===----------------------------------------------------------------------=== -->
 
-<!-- Introduces experimental OCI image assembly from native build outputs. -->
+<!-- Builds and runs the complete hello-world image example. -->
 
-# OCI image preview
+# Build and run a hello-world image
 
-The v0.0.10 preview packages existing build outputs into OCI images. Build your
-application with its language adapter, place its output in a layer, then choose
-image configuration and export a complete image directory. Unchanged compiler
-and layer work uses BSMR's existing shared cache.
+Build a program that prints `hello`, put it in a container image, and run it.
+BSMR builds the program and image archive. Docker loads the archive and starts
+the container.
 
-The rule attributes and providers are experimental and may change before the
-public API is stabilized. Pin the BSMR release used by your project. Install one
-engine for the machine; image packaging does not compile BSMR in each worktree.
+## Get the example
 
-## Configure the tools
+The complete project is in `examples/oci/hello`. It includes the program,
+image recipe, and pinned tools. This walkthrough uses an Apple Silicon Mac,
+a BSMR build with OCI rules, Python 3, and Docker Desktop running Linux containers.
+It produces a Linux arm64 image.
 
-The installed engine includes the rules and their helper modules. Create an
-`oci_toolchain` using a checksum-pinned `img` v0.3.22 executable and a pinned
-Node distribution. Existing `http_file`, `http_archive`, and `node_distribution`
-rules acquire these tools through the normal artifact graph.
-
-The [toolchain reference](https://github.com/dedalus-labs/bsmr/blob/main/prelude/oci/README.md#tools-and-imported-content)
-contains a complete setup recipe. The bundled
-[tool catalogue](https://github.com/dedalus-labs/bsmr/blob/main/prelude/oci/tools.json)
-holds the qualified encoder URLs and checksums. Select tools for the execution
-host; an arm64 macOS toolchain can package a Linux image.
-
-## Package a native binary
-
-This example assumes the [Go adapter](languages/go/native.md) exposes a complete
-Linux executable at `//cmd/api:bin`, and `//tools:oci` is configured as above.
-Put the image recipe in `images/api/BUILD.bsmr` so the application's package
-keeps its native build definition.
-
-```python
-load("@prelude//oci:defs.bzl", "oci_layer", "oci_image", "oci_layout")
-
-platform(
-    name = "linux_arm64",
-    constraint_values = ["config//os/constraints:linux", "config//cpu/constraints:arm64"],
-)
-
-oci_layer(
-    name = "application",
-    platform = "linux/arm64",
-    executables = {"/app/api": "//cmd/api:bin"},
-    toolchain = "//tools:oci",
-)
-
-oci_image(
-    name = "image",
-    layers = [":application"],
-    platform = "linux/arm64",
-    entrypoint = ["/app/api"],
-    user = "65532:65532",
-    working_dir = "/app",
-    toolchain = "//tools:oci",
-)
-
-oci_layout(name = "layout", image = ":image", toolchain = "//tools:oci")
+```sh
+git clone https://github.com/dedalus-labs/bsmr.git
+cd bsmr/examples/oci/hello
 ```
 
-```console
-bsmr build //images/api:image --target-platforms //images/api:linux_arm64
-bsmr build //images/api:layout --target-platforms //images/api:linux_arm64
+Here is the program in `cmd/hello/main.go`:
+
+```go
+package main
+
+import "fmt"
+
+func main() {
+    fmt.Println("hello")
+}
 ```
 
-The first target returns image metadata. The second exports all required
-payloads into a verified OCI directory. Neither command publishes to a registry.
-Changing image configuration reuses the existing layers. Changing a binary
-rebuilds its affected compiler work and layer. Failed or incomplete actions
-cannot become successful cache results.
+## Build the image
 
-The target platform configures native compilation. The image's platform field
-checks that contract; it cannot convert a host executable into a Linux binary.
-Include required shared libraries and resources explicitly, then qualify the
-image in a Linux runtime. ELF architecture checks alone do not prove that a
-program runs.
+Acquire the pinned Go SDK and let BSMR discover the program:
 
-## Select an external builder
+```sh
+bsmr go toolchain --version 1.26.7
+bsmr go sync
+```
 
-`dockerfile_image` accepts an explicit `managed_buildkit` launcher and returns
-the same image provider. The current adapter uses a pinned, disposable local
-worker with fresh state. Its qualified scope is trusted COPY assembly from
-scratch and declared context files. External base images and Dockerfile
-frontends are rejected; networking is disabled.
+Keep cached build results outside the checkout, then build the image archive:
 
-See the [builder reference](https://github.com/dedalus-labs/bsmr/blob/main/prelude/oci/README.md#explicit-buildkit-selection)
-for setup and its local privilege requirements. There is no automatic switch
-between native assembly and an external builder after an error.
+```sh
+export BSMR_LOCAL_CACHE_DIR="$HOME/.cache/bsmr"
+bsmr build //image:hello --target-platforms //image:linux --out hello.tar
+```
 
-The preview uses ordinary gzip layers. Compact retention, registry acquisition
-and publication, multi-platform indexes, and directory-shaped runtime bundles
-are future work. Exported images follow the OCI format; this preview
-does not yet promise a stable BSMR programming interface.
+`//image:hello` names the `hello` target in `image/BUILD.bsmr`. Its recipe builds
+the program for Linux, places it at `/hello` inside the image, and selects it
+as the startup command. The target exports `hello.tar` for Docker to load.
+
+## Run it
+
+```sh
+docker --context desktop-linux load --input hello.tar
+docker --context desktop-linux run --rm --pull=never bsmr-hello:local
+```
+
+The container prints:
+
+```text
+hello
+```
+
+Change the greeting in `cmd/hello/main.go`, then repeat the build, load, and run
+commands. BSMR rebuilds the affected compiler work and image layer. An
+image-configuration edit, such as changing the entrypoint, can reuse the
+compiled program and packed layer.
+
+## Use your own application
+
+Replace the program target in `image/BUILD.bsmr`. Include the files and shared
+libraries your application needs, then test it in a Linux runtime. The
+[rule reference](https://github.com/dedalus-labs/bsmr/blob/main/prelude/oci/README.md)
+covers platforms, base images, configuration inheritance, and tool setup on
+other hosts. The rule API is experimental. Pin your project's engine version.
+
+For Dockerfiles, `dockerfile_image` supports an explicit `managed_buildkit`
+builder. It runs BuildKit in a temporary local Docker container and supports
+trusted, offline recipes that copy local files into scratch or context-local
+stages. It returns the same OCI image provider as native assembly.
+
+The [builder contract](https://github.com/dedalus-labs/bsmr/blob/main/prelude/oci/README.md#builder-contract)
+can also support a future Docker/buildx or Buildah adapter. Each adapter must
+declare its build inputs and return a complete OCI layout. BSMR runs the
+selected builder and reports its failures.
