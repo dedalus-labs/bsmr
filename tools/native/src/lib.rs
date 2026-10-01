@@ -34,3 +34,9 @@ pub mod run;
 
 #[cfg(target_os = "macos")]
 pub mod runtime;
+
+#[cfg(target_os = "macos")]
+pub mod worker;
+
+#[cfg(target_os = "macos")]
+pub mod client;
