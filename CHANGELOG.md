@@ -9,6 +9,17 @@
 Notable changes to Bessemer are recorded here. Release entries are generated
 from conventional commits and reviewed before publication.
 
+## [0.0.10](https://github.com/dedalus-labs/bsmr/compare/v0.0.9...v0.0.10) (2026-10-01)
+
+
+### Features
+
+* **oci:** add explicit BuildKit worker ([#380](https://github.com/dedalus-labs/bsmr/issues/380)) ([ef4ac7e](https://github.com/dedalus-labs/bsmr/commit/ef4ac7e6a6755e987c7ef5154ab6537a225abe88))
+* **oci:** compose images from layer metadata ([#378](https://github.com/dedalus-labs/bsmr/issues/378)) ([72cb28e](https://github.com/dedalus-labs/bsmr/commit/72cb28e23d676c3ddf70d57b4304d0c8e6e82d35))
+* **oci:** expose native image rules ([#379](https://github.com/dedalus-labs/bsmr/issues/379)) ([4126c68](https://github.com/dedalus-labs/bsmr/commit/4126c6891ec3e3aa9a517868168804050c170e84))
+* **oci:** pack declared artifact layers ([#377](https://github.com/dedalus-labs/bsmr/issues/377)) ([785d715](https://github.com/dedalus-labs/bsmr/commit/785d715799c0eda6a78996fbc077a31e03a66d7b))
+* **oci:** verify complete image layouts ([#376](https://github.com/dedalus-labs/bsmr/issues/376)) ([8454829](https://github.com/dedalus-labs/bsmr/commit/84548297867130dc9b1e64e2fda1d63b844e767f))
+
 ## [0.0.9](https://github.com/dedalus-labs/bsmr/compare/v0.0.8...v0.0.9) (2026-09-29)
 
 
