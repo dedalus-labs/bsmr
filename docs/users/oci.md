@@ -81,8 +81,50 @@ libraries your application needs, then test it in a Linux runtime. The
 covers platforms, base images, configuration inheritance, and tool setup on
 other hosts. The rule API is experimental. Pin your project's engine version.
 
+## Install Debian packages
+
+Use an engine built from this revision so its bundled rules include native
+filesystem actions. The complete `examples/oci/debian` project downloads a locked Debian base and
+verified package files, installs `curl` and `ca-certificates` in a private image
+root, and checks the result. Docker and BuildKit are not used. This example
+requires a trusted rootful Linux arm64 worker with network access for acquisition,
+trusted TLS certificates, and the ordinary BSMR shell/tar bootstrap tools.
+Its image commands run with networking disabled.
+
+BSMR downloads the locked package files over HTTPS before installation. Inside
+the image, `apt-get` installs those local files and runs their installation
+scripts. An online `apt-get update && apt-get install` command is not supported
+inside `oci_run`.
+
+From the BSMR checkout on that worker:
+
+```sh
+cd examples/oci/debian
+export BSMR_LOCAL_CACHE_DIR="$HOME/.cache/bsmr"
+bsmr build //:check --show-output
+bsmr build //:layout --show-output
+```
+
+The check runs the installed `curl`, checks the certificate bundle created by
+package installation, and queries the installed package database. The second
+command exports the image as a complete OCI directory. The project includes
+the base and package locks and all tool pins.
+
+`oci_run` executes commands against a private writable copy of the base image.
+It mounts declared inputs read-only below `/inputs`, preserves the original
+image's startup configuration, and rejects failed commands. Use `oci_image`
+to change the entrypoint or other startup configuration afterward. Linux arm64
+execution and local cache restoration are qualified. Rootless execution,
+cross-host reproducibility, and remote cache upload for filesystem commands
+are not qualified.
+
 ## Compact layers
 
-Native file and directory layers retain compact streams and their original
-inputs. Export reconstructs standard OCI layer bytes. Imported archives retain
-their ordinary blobs. Complete exports still require the full image bytes.
+Native file and directory layers retain a compact stream and their original
+inputs. They do not retain a second full tar blob during metadata-only builds.
+Export reconstructs and verifies standard OCI layer bytes. Imported archives
+and filesystem-command results retain their ordinary blobs. This optimization
+does not squash layers or remove the storage required by a complete export.
+
+See the [rule reference](https://github.com/dedalus-labs/bsmr/blob/main/prelude/oci/README.md)
+for the acquisition, execution, publication, and cache contracts.

@@ -1,0 +1,33 @@
+# ===----------------------------------------------------------------------===
+# Copyright (c) 2026 Dedalus Labs, Inc. and its contributors
+# SPDX-License-Identifier: Apache-2.0
+# ===----------------------------------------------------------------------===
+
+# Pins the native Linux arm64 tools used by the Debian image example.
+
+load("@prelude//oci:toolchain.bzl", "oci_toolchain")
+load("@prelude//oci:tools.json", tools = "value")
+load("@prelude//toolchains/pnpm:defs.bzl", "node_distribution")
+
+img = tools["img"]["assets"]["linux-arm64"]
+http_file(name = "img", urls = [img["url"]], sha256 = img["sha256"], executable = True, has_content_based_path = True)
+http_archive(
+    name = "node_archive",
+    urls = ["https://nodejs.org/dist/v24.7.0/node-v24.7.0-linux-arm64.tar.gz"],
+    sha256 = "04df0283d2a8a06271a690fbe2528661527b3a09f0f28c8bb63327d8888be184",
+    strip_prefix = "node-v24.7.0-linux-arm64",
+    has_content_based_path = True,
+)
+node_distribution(name = "node", root = ":node_archive", node_requirement = "24.7.0", version = "24.7.0")
+umoci = tools["umoci"]["assets"]["linux-arm64"]
+http_file(name = "umoci", urls = [umoci["url"]], sha256 = umoci["sha256"], executable = True, has_content_based_path = True)
+runc = tools["runc"]["assets"]["linux-arm64"]
+http_file(name = "runc", urls = [runc["url"]], sha256 = runc["sha256"], executable = True, has_content_based_path = True)
+oci_toolchain(
+    name = "oci",
+    img = ":img",
+    node = ":node",
+    umoci = ":umoci",
+    runc = ":runc",
+    visibility = ["PUBLIC"],
+)
