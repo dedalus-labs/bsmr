@@ -32,6 +32,7 @@ OciToolchainInfo = provider(
     doc = "Pinned img executable and the checked OCI operations on the execution platform.",
     fields = {
         "img": provider_field(Artifact),
+        "node": provider_field(Artifact),
         "operations": provider_field(RunInfo),
     },
 )
