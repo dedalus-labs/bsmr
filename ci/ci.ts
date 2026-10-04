@@ -65,6 +65,16 @@ const setupNode = {
 	uses: "actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38",
 	with: { "node-version": "26.5.1" },
 } as const;
+const installCiDependencies = [
+	{
+		name: "Set up pnpm",
+		run: command({ file: "npm", args: ["install", "--global", "pnpm@10.30.3"] }),
+	},
+	{
+		name: "Install dependencies",
+		run: command({ file: "pnpm", args: ["install", "--frozen-lockfile", "--ignore-scripts"] }),
+	},
+];
 const rustToolchain = "nightly-2026-04-11";
 const installRust = {
 	name: "Install pinned Rust toolchain",
@@ -296,17 +306,7 @@ export const ci = workflow({
 					}),
 				},
 				setupNode,
-				{
-					name: "Set up pnpm",
-					run: command({ file: "npm", args: ["install", "--global", "pnpm@10.30.3"] }),
-				},
-				{
-					name: "Install dependencies",
-					run: command({
-						file: "pnpm",
-						args: ["install", "--frozen-lockfile", "--ignore-scripts"],
-					}),
-				},
+				...installCiDependencies,
 				{
 					name: "Audit dependencies",
 					run: command({ file: "pnpm", args: ["audit", "--audit-level", "high"] }),
@@ -418,6 +418,7 @@ export const ci = workflow({
 					run: command({ file: "cp", args: ["tools/cargo/target/debug/bsmr-cargo", "target/debug/bsmr-cargo"] }),
 				},
 				setupNode,
+				...installCiDependencies,
 				{
 					name: "Verify native architecture",
 					run: command({ file: "node", args: ["-e", "require('node:assert/strict').equal(process.arch, process.argv[1])", expr<string>("matrix.architecture")] }),

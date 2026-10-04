@@ -5,7 +5,7 @@
 
 # Builds OCI metadata separately from immutable layer payloads and full exports.
 
-load(":providers.bzl", "OciImageInfo", "OciLayerInfo", "OciToolchainInfo", "oci_platform")
+load(":providers.bzl", "OciImageInfo", "OciLayerInfo", "OciToolchainInfo", "oci_layout_spec", "oci_platform")
 
 def _path(value: str) -> None:
     """Require an absolute normalized image path without placement delimiters."""
@@ -45,32 +45,42 @@ def _placements(ctx: AnalysisContext):
     }, with_inputs = True)
 
 def _oci_layer_impl(ctx: AnalysisContext) -> list[Provider]:
-    """Pack explicitly placed files, Linux executables, and literal symlinks."""
+    """Retain compact layer metadata and original payload inputs until export."""
     platform = oci_platform(ctx.attrs.platform)
     spec = _placements(ctx)
     metadata = ctx.actions.declare_output("layer.json")
+    compact = ctx.actions.declare_output("layer.cstream")
     blob = ctx.actions.declare_output("layer.tgz")
     toolchain = ctx.attrs.toolchain[OciToolchainInfo]
     ctx.actions.run(cmd_args(
         toolchain.operations, "layer", "--img", toolchain.img, "--platform", platform, "--spec", spec,
-        "--metadata", metadata.as_output(), "--blob", blob.as_output(),
+        "--metadata", metadata.as_output(), "--compact", compact.as_output(),
     ), category = "oci_layer", allow_cache_upload = True)
+    ctx.actions.run(cmd_args(
+        toolchain.operations, "materialize", "--img", toolchain.img, "--platform", platform, "--spec", spec,
+        "--metadata", metadata, "--compact", compact, "--blob", blob.as_output(),
+    ), category = "oci_materialize", allow_cache_upload = False, allow_local_cache_upload = False)
     return [
-        DefaultInfo(default_output = metadata, sub_targets = {"blob": [DefaultInfo(default_output = blob)]}),
-        OciLayerInfo(metadata = metadata, blob = blob, platform = platform),
+        DefaultInfo(default_output = metadata, sub_targets = {
+            "blob": [DefaultInfo(default_output = blob)],
+            "compact": [DefaultInfo(default_output = compact)],
+        }),
+        OciLayerInfo(metadata = metadata, compact = compact, inputs = spec, platform = platform),
     ]
 
-def _oci_context_impl(ctx: AnalysisContext) -> list[Provider]:
-    """Materialize a normalized independent context from declared native artifacts."""
+def _oci_layer_from_tar_impl(ctx: AnalysisContext) -> list[Provider]:
+    """Retain an existing archive as the exact layer without unpacking or repacking."""
     platform = oci_platform(ctx.attrs.platform)
-    spec = _placements(ctx)
-    output = ctx.actions.declare_output("context", dir = True)
+    metadata = ctx.actions.declare_output("layer.json")
     toolchain = ctx.attrs.toolchain[OciToolchainInfo]
     ctx.actions.run(cmd_args(
-        toolchain.operations, "context", "--platform", platform, "--spec", spec,
-        "--output", output.as_output(),
-    ), category = "oci_context", allow_cache_upload = True)
-    return [DefaultInfo(default_output = output)]
+        toolchain.operations, "layer-from-tar", "--img", toolchain.img, "--platform", platform,
+        "--archive", ctx.attrs.src, "--metadata", metadata.as_output(),
+    ), category = "oci_layer_from_tar", allow_cache_upload = True)
+    return [
+        DefaultInfo(default_output = metadata, sub_targets = {"blob": [DefaultInfo(default_output = ctx.attrs.src)]}),
+        OciLayerInfo(metadata = metadata, blob = ctx.attrs.src, platform = platform),
+    ]
 
 def _oci_image_impl(ctx: AnalysisContext) -> list[Provider]:
     """Compose checked small metadata without reading or copying layer payloads."""
@@ -143,17 +153,11 @@ def _oci_import_impl(ctx: AnalysisContext) -> list[Provider]:
 def _oci_layout_impl(ctx: AnalysisContext) -> list[Provider]:
     """Export and verify every referenced blob into an independent complete layout."""
     image = ctx.attrs.image[OciImageInfo]
-    spec = ctx.actions.write_json("layout-inputs.json", {
-        "manifest": image.manifest,
-        "config": image.config,
-        "descriptor": image.descriptor,
-        "layers": [{"metadata": layer.metadata, "blob": layer.blob} for layer in image.layers],
-        "base_layouts": image.layouts,
-    }, with_inputs = True)
+    spec = ctx.actions.write_json("layout-inputs.json", oci_layout_spec(image), with_inputs = True)
     output = ctx.actions.declare_output("layout", dir = True)
     toolchain = ctx.attrs.toolchain[OciToolchainInfo]
     ctx.actions.run(cmd_args(
-        toolchain.operations, "layout", "--platform", image.platform, "--spec", spec,
+        toolchain.operations, "layout", "--img", toolchain.img, "--platform", image.platform, "--spec", spec,
         "--output", output.as_output(),
     ), category = "oci_layout", allow_cache_upload = True)
     return [DefaultInfo(default_output = output)]
@@ -161,7 +165,7 @@ def _oci_layout_impl(ctx: AnalysisContext) -> list[Provider]:
 _toolchain = attrs.toolchain_dep(providers = [OciToolchainInfo])
 
 _placement_attrs = {
-    "files": attrs.dict(key = attrs.string(), value = attrs.source(), default = {}),
+    "files": attrs.dict(key = attrs.string(), value = attrs.source(allow_directory = True), default = {}),
     "executables": attrs.dict(key = attrs.string(), value = attrs.source(), default = {}),
     "symlinks": attrs.dict(key = attrs.string(), value = attrs.string(), default = {}),
     "platform": attrs.string(),
@@ -169,10 +173,13 @@ _placement_attrs = {
 }
 
 oci_layer = rule(impl = _oci_layer_impl, attrs = _placement_attrs,
-    doc = "Creates an ordinary gzip layer from explicitly placed regular files and Linux executables.")
+    doc = "Creates a compact layer from placed files, directories, Linux executables, and literal symlinks.")
 
-oci_context = rule(impl = _oci_context_impl, attrs = _placement_attrs,
-    doc = "Creates a deterministic independent context from explicitly placed native artifacts.")
+oci_layer_from_tar = rule(impl = _oci_layer_from_tar_impl, attrs = {
+    "src": attrs.source(),
+    "platform": attrs.string(),
+    "toolchain": _toolchain,
+}, doc = "Uses a declared tar or gzip archive as an unchanged OCI layer payload.")
 
 oci_image = rule(impl = _oci_image_impl, attrs = {
     "layers": attrs.list(attrs.dep(providers = [OciLayerInfo]), default = []),

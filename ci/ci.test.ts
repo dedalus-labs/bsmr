@@ -21,6 +21,16 @@ import { releaseVersion } from "./release-version.ts";
 
 const jobs = ci.jobs;
 
+test("OCI fixture dependencies are installed before native qualification", () => {
+	const steps = jobs.rust_self_host.steps;
+	const installed = steps.findIndex((step) => step.name === "Install dependencies");
+	const qualified = steps.findIndex((step) => "uses" in step && step.uses === "./.github/actions/oci/cache");
+	assert.ok(installed >= 0 && installed < qualified);
+	const installation = steps[installed];
+	assert.ok(installation && "run" in installation);
+	assert.deepEqual(installation.run, command({ file: "pnpm", args: ["install", "--frozen-lockfile", "--ignore-scripts"] }));
+});
+
 test("OCI qualification verifies its shared encoder pin before running mandatory image tests", () => {
 	const steps = jobs.workflows.steps;
 	const download = steps.findIndex((step) => step.name === "Download pinned OCI encoder");
