@@ -76,7 +76,27 @@ It can also compare the filesystem of a separate builder's exported layout:
 python3 test/oci/verify.py /path/to/layout
 ```
 
-These local checks establish output composition and local cache restoration.
-They do not establish container runtime execution, external registry
-publication, remote cache behavior, or guest rootfs construction. Those require
-their own receipts and authorized workers.
+## Native filesystem execution
+
+Run the real runtime contract on a trusted rootful Linux worker. Select its
+native architecture and provide a complete verified Debian base layout:
+
+```sh
+BSMR_OCI_REQUIRE_NATIVE=1 BSMR_OCI_PLATFORM=linux/arm64 \
+BSMR_OCI_UMOCI=/path/to/umoci BSMR_OCI_RUNC=/path/to/runc \
+BSMR_OCI_RUN_BASE=/path/to/base-layout node --test test/oci/run.test.mjs
+```
+
+The strict flag rejects missing tools, the wrong host, and emulation. The tests
+execute installation scripts, verify filesystem metadata and read-only inputs,
+and check failure, cancellation, concurrent cgroups, and cleanup. Ordinary
+non-root unit runs skip these runtime cases explicitly.
+
+The helper uses private writable roots and isolated namespaces. It preserves
+the base image's startup configuration. Its image commands have no network.
+Rootless execution and cross-host reproducibility are not qualified.
+
+The file-layer fixtures establish composition and local cache restoration.
+The native checks additionally qualify the supplied Linux runtime and base.
+Other runtime environments, external registry publication, and remote caching
+require their own receipts and authorized workers.
