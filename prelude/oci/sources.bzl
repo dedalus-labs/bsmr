@@ -24,7 +24,7 @@ def _oci_pull_impl(ctx: AnalysisContext) -> list[Provider]:
         toolchain.node, ctx.attrs._source, "--img", toolchain.img, "--spec", spec,
         "--output", layout.as_output(), "--manifest", manifest.as_output(),
         "--config", config.as_output(), "--descriptor", descriptor.as_output(),
-        hidden = [ctx.attrs._closure, ctx.attrs._auth],
+        hidden = [ctx.attrs._closure, ctx.attrs._auth, ctx.attrs._client],
     ), category = "oci_pull", local_only = True, allow_cache_upload = True, allow_local_cache_upload = True)
     return [
         DefaultInfo(default_output = descriptor, sub_targets = {
@@ -36,6 +36,21 @@ def _oci_pull_impl(ctx: AnalysisContext) -> list[Provider]:
             platform = platform, layers = [], layouts = [layout]),
     ]
 
+def _oci_fetch_impl(ctx: AnalysisContext) -> list[Provider]:
+    """Prepare a locked request; acquire authenticated bytes only when explicitly run."""
+    toolchain = ctx.attrs.toolchain[OciToolchainInfo]
+    request = ctx.actions.declare_output("fetch.json")
+    spec = ctx.actions.write_json(request, {
+        "image": ctx.attrs.image,
+        "platform": oci_platform(ctx.attrs.platform),
+        "lock": ctx.attrs.lock,
+    }, with_inputs = True)
+    return [
+        DefaultInfo(default_output = request),
+        RunInfo(args = cmd_args(toolchain.node, ctx.attrs._source, "fetch", "--img", toolchain.img,
+            "--spec", spec, hidden = [ctx.attrs._closure, ctx.attrs._auth, ctx.attrs._client])),
+    ]
+
 _source_attrs = {
     "image": attrs.string(),
     "platform": attrs.string(),
@@ -44,7 +59,11 @@ _source_attrs = {
     "_source": attrs.default_only(attrs.source(default = "prelude//oci:sources")),
     "_closure": attrs.default_only(attrs.source(default = "prelude//oci:closure")),
     "_auth": attrs.default_only(attrs.source(default = "prelude//oci:auth")),
+    "_client": attrs.default_only(attrs.source(default = "prelude//oci:client")),
 }
 
 oci_pull = rule(impl = _oci_pull_impl, attrs = _source_attrs,
     doc = "Acquires a digest-locked public image anonymously as a verified OCI provider.")
+
+oci_fetch = rule(impl = _oci_fetch_impl, attrs = _source_attrs,
+    doc = "Explicitly acquires a digest-locked image with runtime credentials; pass --output to bsmr run, then use oci_import.")
