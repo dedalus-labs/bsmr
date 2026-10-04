@@ -14,6 +14,7 @@ import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import test from "node:test";
 import { promisify } from "node:util";
+import { gzipSync } from "node:zlib";
 import { imageMetadata } from "../../prelude/oci/closure.mjs";
 import { lockedImage } from "../../prelude/oci/sources.mjs";
 
@@ -93,6 +94,57 @@ test("invariant registry acquisition receives isolated anonymous credentials and
 	assert.equal(captured.cwd, captured.configDir);
 	assert.equal(existsSync(captured.env.DOCKER_CONFIG), false);
 	assert.equal(existsSync(f.values.output), false);
+});
+
+/** Serve deterministic registry bytes while delegating conversion to the real pinned encoder. */
+async function imageFixture(t, { docker = false, corruptConfig = false, corruptLayer = false, extraManifest = {} } = {}) {
+	const f = await fixture(t);
+	const hash = (bytes) => `sha256:${createHash("sha256").update(bytes).digest("hex")}`;
+	const tar = Buffer.alloc(1024), compressed = gzipSync(tar, { level: 1 });
+	const config = Buffer.from(JSON.stringify({ os: "linux", architecture: "arm64", rootfs: { type: "layers", diff_ids: [hash(tar)] },
+		config: { Env: ["A=B"], Healthcheck: { Test: ["CMD", "true"] }, Extension: { retained: true } }, history: [{ created_by: "fixture" }] }));
+	const manifest = { schemaVersion: 2,
+		mediaType: docker ? "application/vnd.docker.distribution.manifest.v2+json" : "application/vnd.oci.image.manifest.v1+json",
+		config: { mediaType: docker ? "application/vnd.docker.container.image.v1+json" : "application/vnd.oci.image.config.v1+json", digest: hash(config), size: config.length },
+		layers: [{ mediaType: docker ? "application/vnd.docker.image.rootfs.diff.tar.gzip" : "application/vnd.oci.image.layer.v1.tar+gzip", digest: hash(compressed), size: compressed.length }], ...extraManifest };
+	const bytes = Buffer.from(JSON.stringify(manifest));
+	const source = { ...pin, manifest_digest: hash(bytes) };
+	await writeFile(f.lock, JSON.stringify(source));
+	const fake = join(f.root, "img");
+	const blobs = { [manifest.config.digest.slice(7)]: (corruptConfig ? Buffer.from("{}") : config).toString("base64"),
+		[manifest.layers[0].digest.slice(7)]: (corruptLayer ? Buffer.from("bad layer") : compressed).toString("base64") };
+	await writeFile(fake, `#!${process.execPath}\nconst fs=require('node:fs'), path=require('node:path'), cp=require('node:child_process');
+const command=process.argv[2], output=process.argv[process.argv.indexOf('--output')+1];
+if(command==='manifest') { const result=cp.spawnSync(${JSON.stringify(process.env.BSMR_OCI_IMG ?? "missing-encoder")},process.argv.slice(2),{stdio:'inherit'}); process.exit(result.status??1); }
+if(command==='download-manifest') { fs.mkdirSync(path.dirname(output),{recursive:true}); fs.writeFileSync(output,Buffer.from(${JSON.stringify(bytes.toString("base64"))},'base64')); }
+else if(command==='pull') { const dir=path.join(output,'blobs/sha256'); fs.mkdirSync(dir,{recursive:true}); for(const [name,data] of Object.entries(${JSON.stringify(blobs)})) fs.writeFileSync(path.join(dir,name),Buffer.from(data,'base64')); }
+else process.exit(99);\n`);
+	await chmod(fake, 0o755);
+	return { ...f, values: { ...f.values, img: fake }, source, manifest, config, compressed };
+}
+
+test("invariant Docker schema 2 normalization preserves exact config and compressed content identities", { skip: !process.env.BSMR_OCI_IMG }, async (t) => {
+	const f = await imageFixture(t, { docker: true });
+	await invoke(f.values);
+	const metadata = await imageMetadata({ platform: pin.platform, ...f.values });
+	assert.notEqual(metadata.descriptor.digest, f.source.manifest_digest);
+	assert.equal(metadata.manifest.mediaType, "application/vnd.oci.image.manifest.v1+json");
+	assert.equal(metadata.manifest.config.mediaType, "application/vnd.oci.image.config.v1+json");
+	assert.equal(metadata.manifest.config.digest, f.manifest.config.digest);
+	assert.deepEqual(await readFile(f.values.config), f.config);
+	assert.equal(metadata.manifest.layers[0].digest, f.manifest.layers[0].digest);
+	assert.equal(metadata.manifest.layers[0].mediaType, "application/vnd.oci.image.layer.v1.tar+gzip");
+	assert.deepEqual(await readFile(join(f.values.output, "blobs/sha256", f.manifest.layers[0].digest.slice(7))), f.compressed);
+});
+
+test("invariant corrupt Docker content and unsupported metadata cannot produce an imported image", { skip: !process.env.BSMR_OCI_IMG }, async (t) => {
+	for (const [options, code] of [[{ corruptConfig: true }, "OCI_DIGEST_MISMATCH"],
+		[{ corruptLayer: true }, "OCI_INVALID_LAYER"], [{ extraManifest: { subject: {} } }, "OCI_INVALID_LOCK"]]) {
+		const f = await imageFixture(t, { docker: true, ...options });
+		await assert.rejects(invoke(f.values), (error) => error.stderr.startsWith(code + ":"));
+		assert.equal(existsSync(f.values.output), false);
+		assert.equal(existsSync(f.values.descriptor), false);
+	}
 });
 
 test("invariant a pull never overwrites an existing output directory", async (t) => {
