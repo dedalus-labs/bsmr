@@ -101,8 +101,9 @@ test("invariant_offline_apt_executes_postinst_and_preserves_filesystem_metadata"
 	const deb = join(root, "proof.deb");
 	await execute("/usr/bin/dpkg-deb", ["--build", packageRoot, deb]);
 	const before = await digestDirectory(base), inputBefore = await readFile(deb);
-	await runImage({ umoci, runc, output, spec: recipe({ user: "0:0", inputs: { "proof.deb": deb },
-		command: ["/bin/sh", "-ec", "apt-get -o Dir::Etc::sourcelist=/dev/null -o Dir::Etc::sourceparts=- -y --no-install-recommends install /inputs/proof.deb; test -z \"$(ls /sys/class/net | sed '/^lo$/d')\"; test -e /proc/self/status; ! touch /inputs/forbidden"] }) });
+	await runImage({ umoci, runc, output, spec: recipe({ user: "0:0", inputs: {
+		"proof.deb": deb, "offline.sh": resolve(import.meta.dirname, "fixtures/offline.sh"),
+	}, command: ["/bin/sh", "-exc", "apt-get -o Dir::Etc::sourcelist=/dev/null -o Dir::Etc::sourceparts=- -y --no-install-recommends install /inputs/proof.deb; /bin/sh /inputs/offline.sh; test -e /proc/self/status; ! touch /inputs/forbidden"] }) });
 	assert.equal(await digestDirectory(base), before);
 	assert.deepEqual(await readFile(deb), inputBefore);
 	const original = await inspect(base, join(root, "original")), result = await inspect(output, join(root, "result"));

@@ -16,7 +16,9 @@ import { ci } from "./ci.ts";
 import { docs } from "./docs.ts";
 import { typescriptCache } from "./typescript/cache.ts";
 import ociTools from "../prelude/oci/tools.json" with { type: "json" };
+import registryFixture from "../test/oci/registry.json" with { type: "json" };
 import { ociCache } from "./oci/cache.ts";
+import { nativeCommands } from "./oci/native.ts";
 import { releaseVersion } from "./release-version.ts";
 
 const jobs = ci.jobs;
@@ -50,17 +52,32 @@ test("OCI qualification verifies its shared encoder pin before running mandatory
 	assert.match(ociTools.img.assets["linux-amd64"].sha256, /^[0-9a-f]{64}$/);
 });
 
-test("native OCI cache qualification consumes the existing source-built Linux amd64 engine", async () => {
+test("native OCI qualification covers both architectures with pinned tools and bundled rules", async () => {
 	const step = jobs.rust_self_host.steps.find((candidate) => "uses" in candidate && candidate.uses === "./.github/actions/oci/cache");
-	assert.ok(step && "uses" in step && "if" in step);
-	assert.equal(step.if, "${{ matrix.architecture == 'x64' }}");
-	assert.deepEqual(step.with, { binary: "target/debug/bsmr", img: "${{ format('{0}/oci-img', runner.temp) }}", platform: "linux/amd64" });
+	assert.ok(step && "uses" in step);
+	assert.equal("if" in step, false);
+	assert.deepEqual(step.with, { binary: "target/debug/bsmr", img: "${{ format('{0}/oci-img', runner.temp) }}",
+		umoci: "${{ format('{0}/oci-umoci', runner.temp) }}", runc: "${{ format('{0}/oci-runc', runner.temp) }}",
+		"registry-archive": "${{ format('{0}/oci-registry.tar.gz', runner.temp) }}",
+		platform: "${{ matrix.ociPlatform }}", evidence: "${{ format('{0}/oci-evidence', runner.temp) }}" });
 	const download = jobs.rust_self_host.steps.find((candidate) => candidate.name === "Download pinned OCI encoder");
-	assert.ok(download && "if" in download);
-	assert.equal(download.if, step.if);
+	assert.ok(download);
+	assert.equal("if" in download, false);
+	for (const tool of ["umoci", "runc", "registry fixture archive"]) {
+		const steps = jobs.rust_self_host.steps;
+		assert.ok(steps.findIndex((candidate) => candidate.name === `Download pinned ${tool}`)
+			< steps.findIndex((candidate) => candidate.name === `Verify ${tool}`));
+	}
+	for (const entry of jobs.rust_self_host.strategy.matrix.include) {
+		const key = entry.ociPlatform.replace("/", "-") as "linux-amd64" | "linux-arm64";
+		assert.deepEqual({ url: entry.imgUrl, sha256: entry.imgSha256 }, ociTools.img.assets[key]);
+		assert.deepEqual({ url: entry.umociUrl, sha256: entry.umociSha256 }, ociTools.umoci.assets[key]);
+		assert.deepEqual({ url: entry.runcUrl, sha256: entry.runcSha256 }, ociTools.runc.assets[key]);
+		assert.deepEqual({ url: entry.registryUrl, sha256: entry.registrySha256 }, registryFixture.assets[key]);
+	}
 	const failure = new Error("OCI qualification failed");
 	await assert.rejects(runAction(ociCache, {
-		with: { binary: "test path/bsmr", img: "test path/img", platform: "linux/amd64" },
+		with: { binary: "test path/bsmr", img: "test path/img", umoci: "umoci", runc: "runc", registryArchive: "registry.tar.gz", evidence: "evidence", platform: "linux/amd64" },
 		exec: async (file, args) => {
 			assert.equal(file, "node");
 			assert.deepEqual(args, ["test/oci/cache.ts", "test path/bsmr", "test path/img", "prelude", "prelude/oci/operations.mjs",
@@ -70,6 +87,35 @@ test("native OCI cache qualification consumes the existing source-built Linux am
 		fs: { readText: async () => assert.fail("action delegates to the real fixture") },
 		runner: { uidGid: "1000:1000" },
 	}), failure);
+});
+
+test("native qualification cannot silently skip runtime tests or replace the bundled prelude", () => {
+	const commands = nativeCommands({ binary: "bsmr", img: "img", umoci: "umoci", runc: "runc", platform: "linux/amd64",
+		base: "base", lock: "lock", evidence: "evidence", registryArchive: "registry.tar.gz", bind: "10.0.0.2" });
+	assert.equal(commands.length, 3);
+	for (const command of commands) {
+		assert.equal(command.file, "sudo");
+		assert.deepEqual(command.args.slice(0, 2), ["-n", "env"]);
+	}
+	assert.deepEqual(commands[0]?.args, ["-n", "env", "BSMR_OCI_REQUIRE_NATIVE=1", "BSMR_OCI_PLATFORM=linux/amd64",
+		"BSMR_OCI_RUN_BASE=base", "BSMR_OCI_UMOCI=umoci", "BSMR_OCI_RUNC=runc", process.execPath, "--test", "test/oci/run.test.mjs"]);
+	assert.deepEqual(commands[1]?.args.slice(-5), ["--platform", "linux/amd64", "--engine-version", releaseVersion(process.cwd()), "--bundled-prelude"]);
+	assert.ok(commands[2]?.args.includes("test/oci/registry.mjs"));
+	assert.deepEqual(commands[2]?.args.slice(-9), ["--bind", "10.0.0.2", "--evidence", "evidence", "--platform", "linux/amd64",
+		"--engine-version", releaseVersion(process.cwd()), "--bundled-prelude"]);
+});
+
+test("OCI action reaches bundled compact and native qualification after Go composition", async () => {
+	const calls: { file: string; args: readonly string[] }[] = [];
+	await runAction(ociCache, {
+		with: { binary: "bsmr", img: "img", umoci: "umoci", runc: "runc", registryArchive: "registry.tar.gz", evidence: "evidence", platform: "linux/arm64" },
+		exec: async (file, args) => { calls.push({ file, args }); return { exitCode: 0, stdout: "", stderr: "" }; },
+		fs: { readText: async () => assert.fail("action delegates to real fixtures") }, runner: { uidGid: "1000:1000" },
+	});
+	assert.equal(calls.length, 3);
+	assert.deepEqual(calls[1], { file: "node", args: ["test/oci/graph.ts", "bsmr", "img", "prelude", "--platform", "linux/arm64",
+		"--engine-version", releaseVersion(process.cwd()), "--bundled-prelude", "--artifacts", "evidence"] });
+	assert.deepEqual(calls[2], { file: "node", args: ["ci/oci/native.ts", "bsmr", "img", "umoci", "runc", "registry.tar.gz", "linux/arm64", "evidence"] });
 });
 
 test("TypeScript cache uses its nested action route and propagates failures", async () => {

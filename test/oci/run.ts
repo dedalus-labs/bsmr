@@ -102,6 +102,7 @@ try {
 	cpSync(resolve(base), join(root, "base"), { recursive: true });
 	cpSync(resolve(lock), join(root, "packages.lock.json"));
 	cpSync(resolve(import.meta.dirname, "fixtures/artifact.bzl"), join(root, "artifact.bzl"));
+	cpSync(resolve(import.meta.dirname, "fixtures/offline.sh"), join(root, "offline.sh"));
 	writeFileSync(join(root, "marker"), "initial\n");
 	writeFileSync(join(root, "BUILD.bsmr"), `load("@prelude//oci:defs.bzl", "oci_import", "oci_layout", "oci_run")
 load("@prelude//oci:toolchain.bzl", "oci_toolchain")
@@ -115,7 +116,7 @@ oci_toolchain(name = "oci", img = ":encoder", node = ":runtime", umoci = ":unpac
 oci_import(name = "base", layout = "base", platform = "${platform}", toolchain = ":oci")
 deb_packages(name = "packages", base = ":base", packages = ["ca-certificates", "curl"], lock = "packages.lock.json")
 oci_run(name = "installed", base = ":base", inputs = {"packages": ":packages", "marker": "marker"}, user = "0:0", env = {"DEBIAN_FRONTEND": "noninteractive"}, command = ["/bin/sh", "-ec", "apt-get -o Dir::Etc::sourcelist=/dev/null -o Dir::Etc::sourceparts=- -y --no-install-recommends install /inputs/packages/*.deb; cp /inputs/marker /image-marker"], toolchain = ":oci")
-oci_run(name = "verified", base = ":installed", command = ["/bin/sh", "-ec", "curl --version; test -s /etc/ssl/certs/ca-certificates.crt; dpkg-query -W ca-certificates curl; test -z \\"$(ls /sys/class/net | sed '/^lo$/d')\\""], toolchain = ":oci")
+oci_run(name = "verified", base = ":installed", inputs = {"offline.sh": "offline.sh"}, command = ["/bin/sh", "-ec", "curl --version; test -s /etc/ssl/certs/ca-certificates.crt; dpkg-query -W ca-certificates curl; /bin/sh /inputs/offline.sh"], toolchain = ":oci")
 oci_layout(name = "layout", image = ":verified", toolchain = ":oci")
 `);
 	const cold = await build("//:layout", "cold");

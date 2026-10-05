@@ -53,6 +53,19 @@ skipped. With that flag, missing root privileges, tools, or base inputs fail.
 
 ## Actual BSMR graph
 
+Use a compatible engine, pinned rules_img v0.3.22, and this source prelude:
+
+```sh
+node test/oci/graph.ts /path/to/bsmr /path/to/img prelude \
+  --artifacts /absolute/evidence
+```
+
+This checks compact-only metadata builds, zero-action warm builds, config and
+source edits, archive/directory exports, explicit blob materialization, output
+deletion plus daemon restart, and local publication sinks. It records exact
+source/tool hashes, build reports, actions, and cleanup. Full blob subtargets
+reconstruct after cleaning rather than uploading a duplicated tar to cache.
+
 For the native Debian pipeline:
 
 ```sh
@@ -69,7 +82,7 @@ output deletion and daemon restart, changed inputs/commands, stale locks, and
 corrupt package checksums.
 
 Source-prelude mode defaults to released BSMR 0.0.9. That establishes source-rule
-behavior, not a newly packaged engine. The graph fixture accepts
+behavior, not a newly packaged engine. Both graph fixtures accept
 `--engine-version` and `--bundled-prelude` for a source-built engine:
 
 ```sh
