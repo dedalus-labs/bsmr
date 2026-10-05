@@ -7,6 +7,10 @@
 
 load(":providers.bzl", "OciImageInfo", "OciLayerInfo", "OciToolchainInfo", "oci_layout_spec", "oci_platform")
 
+load(":sources.bzl", _oci_pull = "oci_pull")
+
+oci_pull = _oci_pull
+
 def _path(value: str) -> None:
     """Require an absolute normalized image path without placement delimiters."""
     parts = value[1:].split("/")
