@@ -81,12 +81,8 @@ libraries your application needs, then test it in a Linux runtime. The
 covers platforms, base images, configuration inheritance, and tool setup on
 other hosts. The rule API is experimental. Pin your project's engine version.
 
-For Dockerfiles, `dockerfile_image` supports an explicit `managed_buildkit`
-builder. It runs BuildKit in a temporary local Docker container and supports
-trusted, offline recipes that copy local files into scratch or context-local
-stages. It returns the same OCI image provider as native assembly.
+## Compact layers
 
-The [builder contract](https://github.com/dedalus-labs/bsmr/blob/main/prelude/oci/README.md#builder-contract)
-can also support a future Docker/buildx or Buildah adapter. Each adapter must
-declare its build inputs and return a complete OCI layout. BSMR runs the
-selected builder and reports its failures.
+Native file and directory layers retain compact streams and their original
+inputs. Export reconstructs standard OCI layer bytes. Imported archives retain
+their ordinary blobs. Complete exports still require the full image bytes.
