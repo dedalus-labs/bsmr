@@ -206,7 +206,7 @@ oci_pull(
 ```
 
 The lock contains exactly `version` (1), `image`, `platform`, and
-`manifest_digest`. The digest must identify a direct OCI image manifest.
+`manifest_digest`. The digest must identify a direct OCI or Docker schema-2 image manifest.
 Image spelling and platform must match the rule. Index locks are rejected;
 select and pin the platform's child manifest explicitly.
 
@@ -217,6 +217,12 @@ be DNS names. IP literals, `localhost`, and `.localhost` names are rejected
 because the pinned client can retry those addresses over plaintext HTTP.
 All config and layer bytes are verified before an image provider is returned.
 Tag refresh is not part of a cached build.
+
+Docker schema-2 manifests with ordinary gzip layers are normalized by the
+pinned `img` tool. The config bytes and compressed layer digests stay unchanged.
+The manifest receives a new digest because its media types change. The returned
+image descriptor identifies that normalized manifest. Unknown Docker descriptor
+fields, foreign layers, and unsupported image formats fail explicitly.
 
 ## Verification
 

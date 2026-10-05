@@ -18,6 +18,10 @@ import { registryEnvironment } from "./auth.mjs";
 const execute = promisify(execFile);
 const manifestType = "application/vnd.oci.image.manifest.v1+json";
 const indexType = "application/vnd.oci.image.index.v1+json";
+const configType = "application/vnd.oci.image.config.v1+json";
+const dockerManifestType = "application/vnd.docker.distribution.manifest.v2+json";
+const dockerConfigType = "application/vnd.docker.container.image.v1+json";
+const dockerLayerType = "application/vnd.docker.image.rootfs.diff.tar.gzip";
 const digestPattern = /^sha256:[0-9a-f]{64}$/u;
 
 /** Name the unsupported or mismatched acquisition contract. */
@@ -76,6 +80,55 @@ async function registryCommand(binary, args, scratch, env) {
 	}
 }
 
+/** Validate descriptors before using their digest as a local blob path. */
+function dockerDescriptor(value, mediaType) {
+	object(value, ["mediaType", "digest", "size"], "Docker descriptor");
+	if (value.mediaType !== mediaType || typeof value.digest !== "string" || !digestPattern.test(value.digest)
+		|| !Number.isSafeInteger(value.size) || value.size < 0) {
+		fail("OCI_UNSUPPORTED_DOCKER_DESCRIPTOR", "Docker schema 2 requires SHA-256 config and gzip layer descriptors");
+	}
+}
+
+/** Reuse img's media-type normalization while retaining exact config and layer bytes. */
+async function normalizeDocker(values, selected, manifest, scratch) {
+	object(manifest, ["schemaVersion", "mediaType", "config", "layers"], "Docker manifest");
+	dockerDescriptor(manifest.config, dockerConfigType);
+	if (!Array.isArray(manifest.layers)) fail("OCI_INVALID_METADATA", "Docker manifest requires a layers array");
+	for (const layer of manifest.layers) dockerDescriptor(layer, dockerLayerType);
+	const configPath = join(values.output, "blobs", "sha256", manifest.config.digest.slice(7));
+	const configBytes = await readMetadata(configPath);
+	if (configBytes.length !== manifest.config.size || `sha256:${createHash("sha256").update(configBytes).digest("hex")}` !== manifest.config.digest) {
+		fail("OCI_DIGEST_MISMATCH", "Docker config does not match the locked manifest");
+	}
+	const config = decode(configBytes);
+	if (config?.rootfs?.type !== "layers" || !Array.isArray(config.rootfs.diff_ids) || config.rootfs.diff_ids.length !== manifest.layers.length
+		|| config.rootfs.diff_ids.some((digest) => typeof digest !== "string" || !digestPattern.test(digest))) {
+		fail("OCI_INVALID_METADATA", "Docker config requires one SHA-256 diffID per layer");
+	}
+	const converted = Object.fromEntries(["manifest", "config", "descriptor"].map((name) => [name, join(scratch, "normalized-" + name + ".json")]));
+	// Explicit --config-media-type makes this pinned img version copy the config
+	// fragment verbatim. Its manifest writer promotes Docker gzip descriptors.
+	const args = ["manifest", "--os", "linux", "--architecture", selected.platform.split("/")[1],
+		"--config-media-type", configType, "--config-fragment", configPath];
+	for (const [index, layer] of manifest.layers.entries()) {
+		const path = join(scratch, "layer-" + index + ".json");
+		await writeFile(path, JSON.stringify({ ...layer, diff_id: config.rootfs.diff_ids[index] }), { flag: "wx" });
+		args.push("--layer-from-metadata", path);
+	}
+	for (const [name, path] of Object.entries(converted)) args.push("--" + name, path);
+	await registryCommand(values.img, args, scratch, { LANG: "C", TZ: "UTC" });
+	const bytes = await readMetadata(converted.manifest);
+	const normalized = decode(bytes);
+	if (!(await readMetadata(converted.config)).equals(configBytes) || normalized.config.digest !== manifest.config.digest
+		|| normalized.config.size !== manifest.config.size || normalized.layers.length !== manifest.layers.length
+		|| normalized.layers.some((layer, i) => layer.digest !== manifest.layers[i].digest || layer.size !== manifest.layers[i].size)) {
+		fail("OCI_NORMALIZATION_CHANGED_CONTENT", "Docker normalization must preserve config and compressed layer bytes");
+	}
+	const descriptor = { mediaType: manifestType, digest: `sha256:${createHash("sha256").update(bytes).digest("hex")}`, size: bytes.length };
+	await writeFile(join(values.output, "blobs", "sha256", descriptor.digest.slice(7)), bytes, { flag: "wx" });
+	return descriptor;
+}
+
 /** Materialize a complete verified public image from one immutable manifest. */
 async function pull(values) {
 	const spec = decode(await readMetadata(values.spec));
@@ -97,12 +150,13 @@ async function pull(values) {
 				fail("OCI_DIGEST_MISMATCH", "downloaded manifest does not match the locked digest");
 			}
 			const manifest = decode(manifestBytes);
-			if (manifest?.mediaType !== manifestType || manifest.schemaVersion !== 2) {
-				fail("OCI_DIRECT_MANIFEST_REQUIRED", "image lock must pin a direct OCI image manifest, not an index");
+			if (![manifestType, dockerManifestType].includes(manifest?.mediaType) || manifest.schemaVersion !== 2) {
+				fail("OCI_DIRECT_MANIFEST_REQUIRED", "image lock must pin a direct OCI or Docker schema 2 image manifest, not an index");
 			}
 			await registryCommand(values.img, ["pull", "--registry", selected.registry, "--repository", selected.repository,
 				"--reference", selected.digest, "--platform", selected.platform, "--layer-handling", "eager", "--output", values.output], scratch, env);
-			const descriptor = { mediaType: manifestType, digest: selected.digest, size: manifestBytes.length };
+			const descriptor = manifest.mediaType === dockerManifestType ? await normalizeDocker(values, selected, manifest, scratch)
+				: { mediaType: manifestType, digest: selected.digest, size: manifestBytes.length };
 			await writeFile(join(values.output, "oci-layout"), '{"imageLayoutVersion":"1.0.0"}', { flag: "wx" });
 			await writeFile(join(values.output, "index.json"), JSON.stringify({ schemaVersion: 2, mediaType: indexType, manifests: [descriptor] }), { flag: "wx" });
 			const metadata = { manifest: values.manifest, config: values.config, descriptor: values.descriptor };
