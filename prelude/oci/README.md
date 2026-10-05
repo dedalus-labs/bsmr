@@ -23,8 +23,7 @@ worktrees reuse matching action results.
 Native file and directory layers retain compact streams and their original
 inputs. Metadata-only builds do not retain a second full tar blob. Export
 reconstructs and verifies ordinary OCI bytes. Imported archives retain their
-original bytes. Authenticated registry operations, filesystem execution, and multi-platform
-indexes are outside this rule set.
+original bytes. Filesystem execution and multi-platform indexes are outside this rule set.
 
 ~~~text
 native compiler outputs -> oci_layer -> layer metadata -> oci_image
@@ -40,6 +39,8 @@ native compiler outputs -> oci_layer -> layer metadata -> oci_image
 | Rule | Result |
 | --- | --- |
 | oci_pull | A public image acquired anonymously from a direct manifest lock |
+| oci_fetch | An explicit authenticated acquisition command |
+| oci_push | An explicit publication command |
 | oci_layer | Files, directories, Linux executables, and literal links in a compact layer |
 | oci_layer_from_tar | An unchanged tar or gzip archive with verified layer metadata |
 | oci_image | Configuration, manifest, and descriptor assembled from layer metadata |
@@ -223,6 +224,92 @@ pinned `img` tool. The config bytes and compressed layer digests stay unchanged.
 The manifest receives a new digest because its media types change. The returned
 image descriptor identifies that normalized manifest. Unknown Docker descriptor
 fields, foreign layers, and unsupported image formats fail explicitly.
+
+## Acquire a private image
+
+Authenticated acquisition is an explicit command. Credentials never enter a
+rule attribute, declared action environment, or cached acquisition output:
+
+```python
+# acquire/BUILD.bsmr
+load("@prelude//oci:defs.bzl", "oci_fetch")
+
+oci_fetch(
+    name = "base",
+    image = "registry.example.com/team/base:release",
+    platform = "linux/arm64",
+    lock = "image.lock.json",
+    toolchain = "//tools:oci",
+)
+```
+
+Keep the consumer in a separate package. Its layout source does not exist until
+the fetch completes, so its BUILD file cannot load during initial acquisition:
+
+```python
+# images/BUILD.bsmr
+load("@prelude//oci:defs.bzl", "oci_import")
+
+oci_import(
+    name = "base",
+    layout = "base",
+    platform = "linux/arm64",
+    toolchain = "//tools:oci",
+)
+```
+
+Set `IMG_REGISTRY_AUTH_HOST` to the exact registry host, including its port if
+present. Supply either `IMG_REGISTRY_AUTH_USERNAME` and
+`IMG_REGISTRY_AUTH_PASSWORD`, or a ready-to-send
+`IMG_REGISTRY_AUTH_BEARER_TOKEN`. Obtain short-lived credentials through your
+registry's normal login process. Pass them through the runtime environment,
+not command arguments or checked-in files.
+
+```sh
+bsmr run //acquire:base -- --output images/base
+bsmr build //images:base
+```
+
+The output directory must not exist. The fetch validates the complete layout
+before reporting success. `oci_import` then tracks its bytes as ordinary build
+inputs. Keep private layouts out of source control and use a private action
+cache for private-image targets. A cache hit is not a fresh
+registry authorization check.
+
+Custom registry trust roots use absolute `SSL_CERT_FILE` or `SSL_CERT_DIR` paths
+in the explicit command's environment. Registries must use DNS hostnames.
+IP literals, `localhost`, and `.localhost` names are rejected because the pinned
+client can retry those addresses over plaintext HTTP. TLS verification stays
+enabled. Do not use shell tracing or `bsmr run --command-args-file` with credentials: that option
+records the calling process's environment.
+
+## Publish explicitly
+
+```python
+oci_push(
+    name = "publish",
+    image = ":image",
+    repository = "ghcr.io/example/service",
+    tags = ["release"],
+    toolchain = "//tools:oci",
+)
+```
+
+`bsmr build //images:publish` prepares bytes and a publication request.
+`bsmr run //images:publish` performs the registry mutation, even when preparation
+came from cache. Empty tags publish by immutable digest. Credentials are supplied
+only to the explicit run process, using the same host-scoped variables as
+`oci_fetch`. Without explicit credentials, publication is anonymous. Ambient
+cloud credentials, Docker configuration, and credential helpers are not used.
+
+For an owned local test destination:
+
+```sh
+bsmr run //images:publish -- --sink oci:/absolute/new/test-layout
+```
+
+The local sink verifies publication preparation and complete output bytes.
+It does not qualify live registry authentication or upload behavior.
 
 ## Verification
 
