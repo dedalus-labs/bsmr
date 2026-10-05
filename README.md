@@ -48,10 +48,11 @@ pnpm and compiler files. The [Rust preview](docs/users/languages/rust/cargo.md)
 uses Cargo manifests and an exact toolchain pin. [Custom recipes](docs/users/recipes.md)
 connect additional steps through their inputs and outputs.
 
-Use the [OCI rules](docs/users/oci.md) to package a built application and its
-runtime files into a container image. Changing the entrypoint reuses the packed
-layers. Native file and directory layers retain compact streams until export.
-These interfaces are experimental.
+Use the [OCI rules](docs/users/oci.md) to acquire pinned images, install locked
+packages with native Linux filesystem actions, and package application outputs.
+Native file layers retain compact streams until export. Changing the entrypoint
+reuses those layers. Publication is an explicit command. These interfaces are
+experimental.
 
 ## Find a command
 

@@ -1,0 +1,55 @@
+# ===----------------------------------------------------------------------===
+# Copyright (c) 2026 Dedalus Labs, Inc. and its contributors
+# SPDX-License-Identifier: Apache-2.0
+# ===----------------------------------------------------------------------===
+
+# Builds and tests a Debian curl image without Docker or BuildKit.
+
+load("@prelude//debian:defs.bzl", "deb_packages")
+load("@prelude//oci:defs.bzl", "oci_image", "oci_layout", "oci_pull", "oci_push", "oci_run")
+
+oci_pull(
+    name = "debian",
+    image = "docker.io/library/debian:bookworm-slim",
+    platform = "linux/arm64",
+    lock = "image.lock.json",
+    toolchain = "//tools:oci",
+)
+deb_packages(
+    name = "packages",
+    base = ":debian",
+    packages = ["curl", "ca-certificates"],
+    lock = "debian.lock.json",
+)
+oci_run(
+    name = "runtime",
+    base = ":debian",
+    inputs = {"packages": ":packages"},
+    command = [
+        "/bin/sh", "-ec",
+        "apt-get -o Dir::Etc::sourcelist=/dev/null -o Dir::Etc::sourceparts=- -y --no-install-recommends install /inputs/packages/*.deb",
+    ],
+    env = {"DEBIAN_FRONTEND": "noninteractive"},
+    user = "0:0",
+    toolchain = "//tools:oci",
+)
+oci_image(
+    name = "curl",
+    base = ":runtime",
+    entrypoint = ["/usr/bin/curl"],
+    platform = "linux/arm64",
+    toolchain = "//tools:oci",
+)
+oci_run(
+    name = "check",
+    base = ":curl",
+    command = [
+        "/bin/sh", "-ec",
+        "curl --version; test -s /etc/ssl/certs/ca-certificates.crt; dpkg-query -W curl ca-certificates",
+    ],
+    toolchain = "//tools:oci",
+)
+oci_layout(name = "layout", image = ":curl", toolchain = "//tools:oci")
+
+# This destination is reserved for the local publication sink example.
+oci_push(name = "publish", image = ":curl", repository = "example.invalid/bsmr/curl", tags = ["test"], toolchain = "//tools:oci")
