@@ -1,0 +1,1 @@
+printf command > /command-marker

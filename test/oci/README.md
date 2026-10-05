@@ -7,16 +7,23 @@
 
 # OCI qualification
 
-Install the checkout's locked JavaScript dependencies before running fixtures:
+Install the checkout's locked JavaScript dependencies and build the runners:
 
 ```sh
 pnpm install --frozen-lockfile --ignore-scripts
+pnpm run ci build fixtures
 ```
 
 TypeScript fixtures use Hollywood's `nodeExec` for commands and GNU coreutils
 `timeout` for deadlines. Linux CI provides coreutils; macOS needs `timeout` on
 `PATH`. The registry harness retains isolated credential environments and its
 own cancellable process lifetime.
+
+Recipes, scripts, and sample programs live under `fixtures/`. Rolldown embeds
+their text into the standalone runners in `dist/`; those generated files are
+not committed. Runtime values such as platform and registry address are JSON
+inputs to the recipes. Static recipes use `recipe.bsmr` so they do not create
+packages in the source checkout; the tests materialize them as `BUILD.bsmr`.
 
 The helper tests check metadata, compact streams, input validation, and failures:
 
@@ -56,7 +63,7 @@ skipped. With that flag, missing root privileges, tools, or base inputs fail.
 Use a compatible engine, pinned rules_img v0.3.22, and this source prelude:
 
 ```sh
-node test/oci/graph.ts /path/to/bsmr /path/to/img prelude \
+node test/oci/dist/graph.mjs /path/to/bsmr /path/to/img prelude \
   --artifacts /absolute/evidence
 ```
 
@@ -70,7 +77,7 @@ For the native Debian pipeline:
 
 ```sh
 BSMR_OCI_TEST_EVIDENCE=/absolute/evidence \
-  node test/oci/run.ts /path/to/bsmr /path/to/img /path/to/umoci /path/to/runc \
+  node test/oci/dist/run.mjs /path/to/bsmr /path/to/img /path/to/umoci /path/to/runc \
   /path/to/base-layout /path/to/debian.lock.json prelude
 ```
 
@@ -87,7 +94,7 @@ behavior, not a newly packaged engine. Both graph fixtures accept
 
 ```sh
 BSMR_OCI_TEST_EVIDENCE=/absolute/evidence \
-  node test/oci/run.ts /path/to/source-built/bsmr /path/to/img /path/to/umoci /path/to/runc \
+  node test/oci/dist/run.mjs /path/to/source-built/bsmr /path/to/img /path/to/umoci /path/to/runc \
   /path/to/base-layout test/oci/fixtures/linux-amd64.debian.lock.json prelude \
   --platform linux/amd64 --engine-version 0.0.10 --bundled-prelude
 ```
@@ -115,14 +122,14 @@ prelude before running the checked-in example.
 The small helper fixture accepts files and directories without a compiler:
 
 ```sh
-node test/oci/tools.ts /path/to/bsmr /path/to/img prelude
+node test/oci/dist/tools.mjs /path/to/bsmr /path/to/img prelude
 ```
 
 The compiler fixture builds a real Linux Go executable and packages its output:
 
 ```sh
 BSMR_OCI_TEST_EVIDENCE=/absolute/evidence \
-  node test/oci/cache.ts /path/to/bsmr /path/to/img prelude prelude/oci/operations.mjs
+  node test/oci/dist/cache.mjs /path/to/bsmr /path/to/img prelude prelude/oci/operations.mjs
 ```
 
 The default platform is Linux arm64 and default engine version is 0.0.9.
@@ -145,7 +152,7 @@ apache2-utils, and ca-certificates. Download the architecture-specific archive
 listed in `registry.json`; the harness verifies its SHA-256 before execution.
 
 ```sh
-node test/oci/registry.mjs \
+node test/oci/dist/registry.mjs \
   --bsmr /path/to/bsmr --img /path/to/img \
   --registry-archive /path/to/registry.tar.gz \
   --layout /path/to/base-layout --prelude prelude \

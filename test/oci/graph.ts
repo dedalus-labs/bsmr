@@ -12,6 +12,11 @@ import { join, relative, resolve } from "node:path";
 import { parseArgs } from "node:util";
 import { verifyBundledPrelude } from "./bundled.ts";
 import { timedExec } from "./exec.ts";
+import artifactRule from "./fixtures/artifact.bzl";
+import graphBuild from "./fixtures/graph/recipe.bsmr";
+import archiveBuild from "./fixtures/graph/archive.bsmr";
+import treeScript from "./fixtures/graph/script.sh";
+import verifyScript from "./verify.py";
 
 const { positionals, values } = parseArgs({ allowPositionals: true, options: {
 	platform: { type: "string", default: "linux/arm64" },
@@ -79,7 +84,7 @@ function artifacts(phase: string) {
 
 /** Verify standard exported bytes using the independent standard-library tar reader. */
 async function verify(path: string, phase: string): Promise<Image> {
-	const result = await run("python3", [resolve(import.meta.dirname, "verify.py"), path], options);
+	const result = await run("python3", ["-c", verifyScript, path], options);
 	writeFileSync(join(root, `${phase}-image.json`), result.stdout);
 	return JSON.parse(result.stdout);
 }
@@ -111,28 +116,17 @@ try {
 	}
 	cpSync(resolve(img), join(cwd, "img"));
 	cpSync(process.execPath, join(cwd, "node"));
-	cpSync(resolve(import.meta.dirname, "fixtures/artifact.bzl"), join(cwd, "defs.bzl"));
+	writeFileSync(join(cwd, "defs.bzl"), artifactRule);
 	writeFileSync(join(cwd, "payload.txt"), "native payload one\n");
 	mkdirSync(join(cwd, "tree/empty"), { recursive: true });
 	writeFileSync(join(cwd, "tree/data"), "directory content\n");
-	writeFileSync(join(cwd, "tree/script"), "#!/bin/sh\nexit 0\n");
+	writeFileSync(join(cwd, "tree/script"), treeScript);
 	chmodSync(join(cwd, "tree/script"), 0o755);
 	symlinkSync("/app/payload", join(cwd, "tree/current"));
 	const definition = join(cwd, "BUILD.bsmr");
-	writeFileSync(definition, `load("@prelude//oci:defs.bzl", "oci_layer", "oci_layer_from_tar", "oci_image", "oci_layout", "oci_push")
-load("@prelude//oci:toolchain.bzl", "oci_toolchain")
-load(":defs.bzl", "artifact")
-artifact(name = "imgtool", binary = "img")
-artifact(name = "runtime", binary = "node")
-oci_toolchain(name = "oci", img = ":imgtool", node = ":runtime")
-export_file(name = "payload", src = "payload.txt", mode = "copy")
-oci_layer(name = "layer", platform = "${platform}", files = {"/app/payload": ":payload"}, toolchain = ":oci")
-oci_layer(name = "tree_layer", platform = "${platform}", files = {"/tree": "tree"}, toolchain = ":oci")
-oci_image(name = "image", platform = "${platform}", layers = [":layer", ":tree_layer"], labels = {"phase": "one"}, toolchain = ":oci")
-oci_layout(name = "layout", image = ":image", toolchain = ":oci")
-oci_push(name = "publish", image = ":image", repository = "example.invalid/team/image", tags = ["test"], toolchain = ":oci")
-oci_push(name = "publish_digest", image = ":image", repository = "example.invalid/team/image", toolchain = ":oci")
-`);
+	writeFileSync(definition, graphBuild);
+	const fixture = join(cwd, "fixture.json");
+	writeFileSync(fixture, JSON.stringify({ platform, labels: { phase: "one" } }));
 	const cold = await build("metadata-cold", "image");
 	const originalDaemon = await daemon("metadata-cold");
 	assert.ok(originalDaemon !== null);
@@ -145,7 +139,7 @@ oci_push(name = "publish_digest", image = ":image", repository = "example.invali
 	const original: Layer = JSON.parse(readFileSync(layer.output, "utf8"));
 	assert.equal(layer.actions.length, 0);
 	assert.equal((await build("metadata-warm", "image")).actions.length, 0);
-	writeFileSync(definition, readFileSync(definition, "utf8").replace('"phase": "one"', '"phase": "two"'));
+	writeFileSync(fixture, JSON.stringify({ platform, labels: { phase: "two" } }));
 	assert.deepEqual(categories((await build("configuration-edit", "image")).local), ["oci_image"]);
 	assert.equal(artifacts("configuration-edit").some((path) => path.endsWith(".tgz")), false);
 	const layout = await build("layout-cold", "layout");
@@ -160,11 +154,7 @@ oci_push(name = "publish_digest", image = ":image", repository = "example.invali
 	assert.deepEqual(readFileSync(blob.output), readFileSync(join(layout.output, "blobs/sha256", original.digest.slice(7))));
 	assert.equal((await build("blob-warm", "layer[blob]")).actions.length, 0);
 	cpSync(blob.output, join(cwd, "archive.tgz"));
-	writeFileSync(definition, readFileSync(definition, "utf8") + `
-oci_layer_from_tar(name = "archive", src = "archive.tgz", platform = "${platform}", toolchain = ":oci")
-oci_image(name = "archive_image", platform = "${platform}", layers = [":archive", ":tree_layer"], toolchain = ":oci")
-oci_layout(name = "archive_layout", image = ":archive_image", toolchain = ":oci")
-`);
+	writeFileSync(definition, graphBuild + archiveBuild);
 	const archiveLayout = await build("archive-layout", "archive_layout");
 	assert.deepEqual(categories(archiveLayout.local), ["oci_image", "oci_layer_from_tar", "oci_layout"]);
 	assert.deepEqual((await verify(archiveLayout.output, "archive-layout")).files, image.files);

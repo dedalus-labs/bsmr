@@ -11,6 +11,14 @@ import { tmpdir } from "node:os";
 import { basename, join, resolve } from "node:path";
 import { parseArgs } from "node:util";
 import { timedExec } from "./exec.ts";
+import artifactRule from "./fixtures/artifact.bzl";
+import probeSource from "./fixtures/cache/cmd/probe/main.go";
+import goModule from "./fixtures/cache/go.mod";
+import imagesBuild from "./fixtures/cache/images/recipe.bsmr";
+import missingBuild from "./fixtures/cache/images/missing/recipe.bsmr";
+import invalidSource from "./fixtures/cache/invalid.go";
+import toolsBuild from "./fixtures/cache/tools/recipe.bsmr";
+import verifyScript from "./verify.py";
 
 const { positionals, values } = parseArgs({ allowPositionals: true, options: {
 	platform: { type: "string", default: "linux/arm64" },
@@ -59,7 +67,7 @@ type Image = {
 
 /** Verify the real exported layout using a separate standard-library tar reader. */
 async function verify(path: string): Promise<Image> {
-	return JSON.parse((await run("python3", [resolve(import.meta.dirname, "verify.py"), path], options)).stdout);
+	return JSON.parse((await run("python3", ["-c", verifyScript, path], options)).stdout);
 }
 
 /** Build one image and retain this invocation's machine-readable cache evidence. */
@@ -150,18 +158,8 @@ async function corruptInputs(output: string, expected: string) {
 try {
 	assert.equal((await run(executable, ["--version"], { env })).stdout.trim(), `bsmr ${values["engine-version"]}`);
 	mkdirSync(join(cwd, "cmd/probe"), { recursive: true });
-	writeFileSync(join(cwd, "go.mod"), "module example.com/oci-probe\n\ngo 1.26.0\n");
-	writeFileSync(join(cwd, "cmd/probe/main.go"), `package main
-import ("fmt"; "os"; "strings")
-const version = "v1"
-func main() {
-    content, err := os.ReadFile("/app/message.txt")
-    if err != nil { panic(err) }
-    directory, err := os.Getwd()
-    if err != nil { panic(err) }
-    fmt.Printf("%s %s %s %d %s\\n", version, os.Getenv("OCI_PROBE"), strings.TrimSpace(string(content)), os.Getuid(), directory)
-}
-`);
+	writeFileSync(join(cwd, "go.mod"), goModule);
+	writeFileSync(join(cwd, "cmd/probe/main.go"), probeSource);
 	if (resumed === undefined) {
 		await run(executable, ["init"], options);
 		workspaces.push(cwd);
@@ -178,30 +176,17 @@ func main() {
 	mkdirSync(join(cwd, "tools"), { recursive: true });
 	cpSync(resolve(img), join(cwd, "tools/img"));
 	cpSync(process.execPath, join(cwd, "tools/node"));
-	cpSync(resolve(import.meta.dirname, "fixtures/artifact.bzl"), join(cwd, "tools/defs.bzl"));
-	writeFileSync(join(cwd, "tools/BUILD.bsmr"), `load("@prelude//oci:toolchain.bzl", "oci_toolchain")
-load(":defs.bzl", "artifact")
-artifact(name = "img", binary = "img", visibility = ["PUBLIC"])
-artifact(name = "node", binary = "node", visibility = ["PUBLIC"])
-oci_toolchain(name = "oci", img = ":img", node = ":node", visibility = ["PUBLIC"])
-`);
+	writeFileSync(join(cwd, "tools/defs.bzl"), artifactRule);
+	writeFileSync(join(cwd, "tools/BUILD.bsmr"), toolsBuild);
 	mkdirSync(join(cwd, "images"), { recursive: true });
 	writeFileSync(join(cwd, "images/message.txt"), "fixture\n");
-	const imageBuild = join(cwd, "images/BUILD.bsmr");
-	writeFileSync(imageBuild, `load("@prelude//oci:defs.bzl", "oci_layer", "oci_image", "oci_layout")
-platform(name = "linux_target", constraint_values = ["config//os/constraints:linux", "config//cpu/constraints:${cpu}"])
-oci_layer(name = "application", platform = "${platform}", executables = {"/app/probe": "//cmd/probe:bin"},
-    files = {"/app/message.txt": "message.txt"}, symlinks = {"/app/current": "probe"}, toolchain = "//tools:oci")
-oci_image(name = "image", platform = "${platform}", layers = [":application"],
-    entrypoint = ["/app/current"], env = {"OCI_PROBE": "original", "PATH": "/app"}, user = "65532:65532", working_dir = "/app", toolchain = "//tools:oci")
-oci_layout(name = "layout", image = ":image", toolchain = "//tools:oci")
-oci_image(name = "wrong_platform", platform = "${otherPlatform}", layers = [":application"], toolchain = "//tools:oci")
-oci_layer(name = "unsafe_path", platform = "${platform}", files = {"/app/../escape": "message.txt"}, toolchain = "//tools:oci")
-`);
+	writeFileSync(join(cwd, "images/BUILD.bsmr"), imagesBuild);
+	const fixture = join(cwd, "images/fixture.json");
+	const imageConfig = { platform, cpu, otherPlatform, env: { OCI_PROBE: "original", PATH: "/app" } };
+	writeFileSync(fixture, JSON.stringify(imageConfig));
 	mkdirSync(join(cwd, "images/missing"), { recursive: true });
-	writeFileSync(join(cwd, "images/missing/BUILD.bsmr"), `load("@prelude//oci:defs.bzl", "oci_layer")
-oci_layer(name = "layer", platform = "${platform}", files = {"/app/missing": "missing.txt"}, toolchain = "//tools:oci")
-`);
+	writeFileSync(join(cwd, "images/missing/BUILD.bsmr"), missingBuild);
+	writeFileSync(join(cwd, "images/missing/fixture.json"), JSON.stringify({ platform }));
 	for (const [target, error] of [["//images:wrong_platform", /platform mismatch/i], ["//images:unsafe_path", /normalized/i], ["//images/missing:layer", /missing\.txt/i]] as const) {
 		await assert.rejects(run(executable, ["build", target, "--target-platforms", "//images:linux_target", "--console", "none"], options), error);
 	}
@@ -214,7 +199,8 @@ oci_layer(name = "layer", platform = "${platform}", files = {"/app/missing": "mi
 		assert.equal(cold.local.length, cold.ociLocal.length, "preserved compiler outputs must restore without recompilation");
 	}
 	assert.equal((await build(cwd, "warm")).actions.length, 0);
-	writeFileSync(imageBuild, readFileSync(imageBuild, "utf8").replace('"original"', '"changed"'));
+	imageConfig.env.OCI_PROBE = "changed";
+	writeFileSync(fixture, JSON.stringify(imageConfig));
 	const config = await build(cwd, "config-only");
 	assert.notEqual(config.image.digest, cold.image.digest);
 	assert.deepEqual(config.image.layers, cold.image.layers);
@@ -245,7 +231,7 @@ oci_layer(name = "layer", platform = "${platform}", files = {"/app/missing": "mi
 	assert.equal(fresh.image.digest, changed.image.digest);
 	const invalid = join(second, "cmd/probe/main.go");
 	const validSource = readFileSync(invalid, "utf8");
-	writeFileSync(invalid, validSource + "invalid Go source\n");
+	writeFileSync(invalid, validSource + invalidSource);
 	await assert.rejects(build(second, "failed-build"), /syntax error|non-declaration/i);
 	writeFileSync(invalid, validSource);
 	assert.equal((await build(second, "failed-retry")).image.digest, fresh.image.digest);

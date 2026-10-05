@@ -13,6 +13,12 @@ import { join, resolve } from "node:path";
 import { parseArgs } from "node:util";
 import { verifyBundledPrelude } from "./bundled.ts";
 import { timedExec } from "./exec.ts";
+import artifact from "./fixtures/artifact.bzl";
+import offline from "./fixtures/offline.sh";
+import buildFile from "./fixtures/run/recipe.bsmr";
+import installCommand from "./fixtures/run/install.sh";
+import markerCommand from "./fixtures/run/marker.sh";
+import verifyCommand from "./fixtures/run/verify.sh";
 
 const { positionals, values } = parseArgs({ allowPositionals: true, options: {
 	platform: { type: "string", default: `linux/${process.arch === "x64" ? "amd64" : process.arch}` },
@@ -101,24 +107,12 @@ try {
 	for (const [name, source] of Object.entries({ img, umoci, runc, node: process.execPath })) cpSync(resolve(source), join(root, name));
 	cpSync(resolve(base), join(root, "base"), { recursive: true });
 	cpSync(resolve(lock), join(root, "packages.lock.json"));
-	cpSync(resolve(import.meta.dirname, "fixtures/artifact.bzl"), join(root, "artifact.bzl"));
-	cpSync(resolve(import.meta.dirname, "fixtures/offline.sh"), join(root, "offline.sh"));
+	writeFileSync(join(root, "artifact.bzl"), artifact);
+	writeFileSync(join(root, "offline.sh"), offline);
 	writeFileSync(join(root, "marker"), "initial\n");
-	writeFileSync(join(root, "BUILD.bsmr"), `load("@prelude//oci:defs.bzl", "oci_import", "oci_layout", "oci_run")
-load("@prelude//oci:toolchain.bzl", "oci_toolchain")
-load("@prelude//debian:defs.bzl", "deb_packages")
-load(":artifact.bzl", "artifact")
-artifact(name = "encoder", binary = "img")
-artifact(name = "runtime", binary = "node")
-artifact(name = "unpacker", binary = "umoci")
-artifact(name = "container_runtime", binary = "runc")
-oci_toolchain(name = "oci", img = ":encoder", node = ":runtime", umoci = ":unpacker", runc = ":container_runtime")
-oci_import(name = "base", layout = "base", platform = "${platform}", toolchain = ":oci")
-deb_packages(name = "packages", base = ":base", packages = ["ca-certificates", "curl"], lock = "packages.lock.json")
-oci_run(name = "installed", base = ":base", inputs = {"packages": ":packages", "marker": "marker"}, user = "0:0", env = {"DEBIAN_FRONTEND": "noninteractive"}, command = ["/bin/sh", "-ec", "apt-get -o Dir::Etc::sourcelist=/dev/null -o Dir::Etc::sourceparts=- -y --no-install-recommends install /inputs/packages/*.deb; cp /inputs/marker /image-marker"], toolchain = ":oci")
-oci_run(name = "verified", base = ":installed", inputs = {"offline.sh": "offline.sh"}, command = ["/bin/sh", "-ec", "curl --version; test -s /etc/ssl/certs/ca-certificates.crt; dpkg-query -W ca-certificates curl; /bin/sh /inputs/offline.sh"], toolchain = ":oci")
-oci_layout(name = "layout", image = ":verified", toolchain = ":oci")
-`);
+	writeFileSync(join(root, "BUILD.bsmr"), buildFile);
+	const fixture = { platform, install: installCommand, verify: verifyCommand };
+	writeFileSync(join(root, "fixture.json"), JSON.stringify(fixture));
 	const cold = await build("//:layout", "cold");
 	assert.ok(cold.actions.length > 0);
 	const config = await build("//:verified[config]", "config");
@@ -134,8 +128,7 @@ oci_layout(name = "layout", image = ":verified", toolchain = ":oci")
 	writeFileSync(join(root, "marker"), "changed\n");
 	const edited = await build("//:layout", "input-change");
 	assert.ok(edited.actions.some((action) => action.reproducer.executor === "Local"));
-	const buildFile = readFileSync(join(root, "BUILD.bsmr"), "utf8");
-	writeFileSync(join(root, "BUILD.bsmr"), buildFile.replace("cp /inputs/marker /image-marker", "cp /inputs/marker /image-marker; printf command > /command-marker"));
+	writeFileSync(join(root, "fixture.json"), JSON.stringify({ ...fixture, install: installCommand + markerCommand }));
 	const command = await build("//:layout", "command-change");
 	assert.ok(command.actions.some((action) => action.reproducer.executor === "Local"));
 	await execute(resolve(umoci), ["unpack", "--image", `${command.output}:run`, join(root, "unpacked")], options);
@@ -144,6 +137,7 @@ oci_layout(name = "layout", image = ":verified", toolchain = ":oci")
 	if (evidence) {
 		await execute("/bin/tar", ["-cf", join(evidence, "layout.tar"), "-C", command.output, "."], options);
 		cpSync(join(root, "BUILD.bsmr"), join(evidence, "BUILD.bsmr"));
+		cpSync(join(root, "fixture.json"), join(evidence, "fixture.json"));
 		cpSync(join(root, "packages.lock.json"), join(evidence, "packages.lock.json"));
 	}
 	await rejectInvalidLocks();

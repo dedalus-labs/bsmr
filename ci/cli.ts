@@ -23,6 +23,10 @@ const buildActions: ProcessSpec = {
 	file: "pnpm",
 	args: ["exec", "rolldown", "--config", "rolldown.config.ts"],
 };
+const buildFixtures: ProcessSpec = {
+	file: "pnpm",
+	args: ["exec", "rolldown", "--config", "test/oci/rolldown.config.ts"],
+};
 const dependabot: ProcessSpec = { file: "node", args: ["ci/dependabot.ts"] };
 const typecheck: ProcessSpec = { file: "pnpm", args: ["exec", "tsc", "--noEmit"] };
 const test: ProcessSpec = {
@@ -115,6 +119,7 @@ const generate: ProcessSpec = {
 
 const commands = {
 	"build actions": [buildActions],
+	"build fixtures": [buildFixtures],
 	"check actions": [buildActions, ...actionSyntax, generatedDiff],
 	"check generated": [generate, dependabot, licenseGenerated, buildActions, generatedDiff],
 	"check license": [license],
@@ -125,7 +130,7 @@ const commands = {
 	typecheck: [typecheck],
 } as const satisfies Record<string, readonly ProcessSpec[]>;
 
-const usage = `Usage: pnpm run ci <command>\n\nCommands:\n  build actions\n  check\n  check actions\n  check generated\n  check license\n  check security\n  generate\n  test\n  typecheck\n`;
+const usage = `Usage: pnpm run ci <command>\n\nCommands:\n  build actions\n  build fixtures\n  check\n  check actions\n  check generated\n  check license\n  check security\n  generate\n  test\n  typecheck\n`;
 
 /**
  * Create the process execution context rooted at the repository.

@@ -18,6 +18,11 @@ import { setTimeout as delay } from "node:timers/promises";
 import { parseArgs, promisify } from "node:util";
 import { importLayout } from "../../prelude/oci/closure.mjs";
 import { verifyBundledPrelude } from "./bundled.ts";
+import artifact from "./fixtures/artifact.bzl";
+import buildFile from "./fixtures/registry/recipe.bsmr";
+import acquireBuild from "./fixtures/registry/acquire/recipe.bsmr";
+import imagesBuild from "./fixtures/registry/images/recipe.bsmr";
+import pins from "./registry.json" with { type: "json" };
 
 const execute = promisify(execFile);
 const harnessSha256 = createHash("sha256").update(await readFile(import.meta.filename)).digest("hex");
@@ -32,7 +37,6 @@ assert.equal(platform, `linux/${process.arch === "x64" ? "amd64" : process.arch}
 assert.equal(machine(), process.arch === "x64" ? "x86_64" : "aarch64");
 assert.ok(isIPv4(values.bind) && Object.values(networkInterfaces()).flat().some((entry) => entry?.address === values.bind && !entry.internal),
 	"--bind must name this worker's non-loopback IPv4 address");
-const pins = JSON.parse(await readFile(new URL("registry.json", import.meta.url), "utf8"));
 const asset = pins.assets[platform.replace("/", "-")];
 assert.ok(asset, "registry fixture has no archive pin for this platform");
 const archive = resolve(values["registry-archive"]), engine = resolve(values.bsmr), img = resolve(values.img);
@@ -188,29 +192,17 @@ try {
 	}
 	for (const [name, source] of Object.entries({ img, node: process.execPath })) await copyFile(source, join(workspace, name));
 	await cp(resolve(values.layout), join(workspace, "base"), { recursive: true });
-	await copyFile(new URL("fixtures/artifact.bzl", import.meta.url), join(workspace, "artifact.bzl"));
+	await writeFile(join(workspace, "artifact.bzl"), artifact);
 	const original = await metadata(join(workspace, "base"), "original");
 	const repository = "fixture/image", image = `${hostname}:${port}/${repository}:proof`;
 	await mkdir(join(workspace, "acquire"));
 	await mkdir(join(workspace, "images"));
 	await writeFile(join(workspace, "acquire/image.lock.json"), JSON.stringify({ version: 1, image, platform, manifest_digest: original.descriptor.digest }));
-	await writeFile(join(workspace, "BUILD.bsmr"), `load("@prelude//oci:defs.bzl", "oci_import", "oci_push")
-load("@prelude//oci:toolchain.bzl", "oci_toolchain")
-load(":artifact.bzl", "artifact")
-artifact(name = "encoder", binary = "img")
-artifact(name = "runtime", binary = "node")
-oci_toolchain(name = "oci", img = ":encoder", node = ":runtime", visibility = ["PUBLIC"])
-oci_import(name = "base", layout = "base", platform = "${platform}", toolchain = ":oci")
-oci_push(name = "publish", image = ":base", repository = "${hostname}:${port}/${repository}", tags = ["proof"], toolchain = ":oci")
-`);
-	await writeFile(join(workspace, "acquire/BUILD.bsmr"), `load("@prelude//oci:defs.bzl", "oci_fetch", "oci_pull")
-oci_fetch(name = "base", image = "${image}", platform = "${platform}", lock = "image.lock.json", toolchain = "//:oci")
-oci_pull(name = "anonymous", image = "${image}", platform = "${platform}", lock = "image.lock.json", toolchain = "//:oci")
-`);
-	await writeFile(join(workspace, "images/BUILD.bsmr"), `load("@prelude//oci:defs.bzl", "oci_import", "oci_layout")
-oci_import(name = "base", layout = "base", platform = "${platform}", toolchain = "//:oci")
-oci_layout(name = "roundtrip", image = ":base", toolchain = "//:oci")
-`);
+	await writeFile(join(workspace, "BUILD.bsmr"), buildFile);
+	await writeFile(join(workspace, "fixture.json"), JSON.stringify({ platform, repository: `${hostname}:${port}/${repository}` }));
+	await writeFile(join(workspace, "acquire/BUILD.bsmr"), acquireBuild);
+	await writeFile(join(workspace, "images/BUILD.bsmr"), imagesBuild);
+	await writeFile(join(workspace, "images/fixture.json"), JSON.stringify({ platform }));
 	const beforePrepare = requests();
 	await graph("fetch-prepared", "//acquire:base");
 	await graph("publish-prepared", "//:publish");
@@ -283,7 +275,7 @@ oci_layout(name = "roundtrip", image = ":base", toolchain = "//:oci")
 	}
 	if (!complete && initialized) {
 		const entries = [];
-		for (const name of [".bsmr", ".bsmr.local", "BUILD.bsmr", "artifact.bzl", "prelude", "acquire", "images"]) {
+		for (const name of [".bsmr", ".bsmr.local", "BUILD.bsmr", "fixture.json", "artifact.bzl", "prelude", "acquire", "images"]) {
 			try { await lstat(join(workspace, name)); entries.push(name); } catch (error) { if (error.code !== "ENOENT") throw error; }
 		}
 		await run("/bin/tar", ["-cf", join(evidence, "failed-workspace.tar"), "-C", workspace, ...entries], {}, false);

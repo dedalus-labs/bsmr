@@ -1,0 +1,5 @@
+load("@prelude//oci:toolchain.bzl", "oci_toolchain")
+load(":defs.bzl", "artifact")
+artifact(name = "img", binary = "img", visibility = ["PUBLIC"])
+artifact(name = "node", binary = "node", visibility = ["PUBLIC"])
+oci_toolchain(name = "oci", img = ":img", node = ":node", visibility = ["PUBLIC"])

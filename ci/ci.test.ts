@@ -79,8 +79,12 @@ test("native OCI qualification covers both architectures with pinned tools and b
 	await assert.rejects(runAction(ociCache, {
 		with: { binary: "test path/bsmr", img: "test path/img", umoci: "umoci", runc: "runc", registryArchive: "registry.tar.gz", evidence: "evidence", platform: "linux/amd64" },
 		exec: async (file, args) => {
+			if (file === "pnpm") {
+				assert.deepEqual(args, ["run", "ci", "build", "fixtures"]);
+				return { exitCode: 0, stdout: "", stderr: "" };
+			}
 			assert.equal(file, "node");
-			assert.deepEqual(args, ["test/oci/cache.ts", "test path/bsmr", "test path/img", "prelude", "prelude/oci/operations.mjs",
+			assert.deepEqual(args, ["test/oci/dist/cache.mjs", "test path/bsmr", "test path/img", "prelude", "prelude/oci/operations.mjs",
 				"--platform", "linux/amd64", "--engine-version", releaseVersion(process.cwd()), "--bundled-prelude"]);
 			throw failure;
 		},
@@ -100,7 +104,8 @@ test("native qualification cannot silently skip runtime tests or replace the bun
 	assert.deepEqual(commands[0]?.args, ["-n", "env", "BSMR_OCI_REQUIRE_NATIVE=1", "BSMR_OCI_PLATFORM=linux/amd64",
 		"BSMR_OCI_RUN_BASE=base", "BSMR_OCI_UMOCI=umoci", "BSMR_OCI_RUNC=runc", process.execPath, "--test", "test/oci/run.test.mjs"]);
 	assert.deepEqual(commands[1]?.args.slice(-5), ["--platform", "linux/amd64", "--engine-version", releaseVersion(process.cwd()), "--bundled-prelude"]);
-	assert.ok(commands[2]?.args.includes("test/oci/registry.mjs"));
+	assert.ok(commands[1]?.args.includes("test/oci/dist/run.mjs"));
+	assert.ok(commands[2]?.args.includes("test/oci/dist/registry.mjs"));
 	assert.deepEqual(commands[2]?.args.slice(-9), ["--bind", "10.0.0.2", "--evidence", "evidence", "--platform", "linux/amd64",
 		"--engine-version", releaseVersion(process.cwd()), "--bundled-prelude"]);
 });
@@ -112,10 +117,12 @@ test("OCI action reaches bundled compact and native qualification after Go compo
 		exec: async (file, args) => { calls.push({ file, args }); return { exitCode: 0, stdout: "", stderr: "" }; },
 		fs: { readText: async () => assert.fail("action delegates to real fixtures") }, runner: { uidGid: "1000:1000" },
 	});
-	assert.equal(calls.length, 3);
-	assert.deepEqual(calls[1], { file: "node", args: ["test/oci/graph.ts", "bsmr", "img", "prelude", "--platform", "linux/arm64",
+	assert.equal(calls.length, 4);
+	assert.deepEqual(calls[0], { file: "pnpm", args: ["run", "ci", "build", "fixtures"] });
+	assert.equal(calls[1]?.args[0], "test/oci/dist/cache.mjs");
+	assert.deepEqual(calls[2], { file: "node", args: ["test/oci/dist/graph.mjs", "bsmr", "img", "prelude", "--platform", "linux/arm64",
 		"--engine-version", releaseVersion(process.cwd()), "--bundled-prelude", "--artifacts", "evidence"] });
-	assert.deepEqual(calls[2], { file: "node", args: ["ci/oci/native.ts", "bsmr", "img", "umoci", "runc", "registry.tar.gz", "linux/arm64", "evidence"] });
+	assert.deepEqual(calls[3], { file: "node", args: ["ci/oci/native.ts", "bsmr", "img", "umoci", "runc", "registry.tar.gz", "linux/arm64", "evidence"] });
 });
 
 test("TypeScript cache uses its nested action route and propagates failures", async () => {
