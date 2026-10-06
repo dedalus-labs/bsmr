@@ -35,6 +35,7 @@ load(
 )
 load("@prelude//linking:stamp_build_info.bzl", "stamp_build_info")
 load("@prelude//os_lookup:defs.bzl", "Os", "OsLookup")
+load("@prelude//utils:bsmrconfig.bzl", "read_bool")
 load(
     "@prelude//utils:utils.bzl",
     "filter_and_map_idx",
@@ -49,6 +50,9 @@ load(
     "merge_pkgs",
 )
 load(":toolchain.bzl", "GoToolchainInfo", "get_toolchain_env_vars")
+
+# Read root policy while loading the rule, before action analysis.
+_STRIP = read_bool("go", "strip", default = False, root_cell = True)
 
 # Provider wrapping packages used for linking.
 GoPkgLinkInfo = provider(
@@ -168,6 +172,9 @@ def link(
 
     cmd.add("-buildmode=" + _build_mode_param(build_mode))
     cmd.add("-buildid=")  # Setting to a static buildid helps make the binary reproducible.
+    if _STRIP:
+        # These fixed SDK flags preserve the declared internal-link cache contract.
+        cmd.add("-s", "-w")
 
     if go_toolchain.race:
         cmd.add("-race")
