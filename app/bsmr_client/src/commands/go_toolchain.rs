@@ -20,6 +20,7 @@ use std::path::Path;
 use std::path::PathBuf;
 
 pub(crate) use acquisition::acquired_go;
+pub(crate) use acquisition::host_archive;
 pub(crate) use acquisition::install_sdk;
 pub(crate) use acquisition::validate_acquisition_owners;
 #[cfg(test)]

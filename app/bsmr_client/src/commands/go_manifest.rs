@@ -18,6 +18,7 @@ use std::io::Write;
 use std::path::Path;
 use std::path::PathBuf;
 
+use crate::commands::go::GoTarget;
 use crate::commands::go_graph::GoGraph;
 use crate::commands::go_graph::GoPackage;
 
@@ -77,6 +78,7 @@ pub(crate) fn render_manifest(
     package: &GoPackage,
     build_tags: &[String],
     cgo_enabled: bool,
+    target: GoTarget,
 ) -> Result<String, GoManifestError> {
     let mut output = String::from(
         "# ===----------------------------------------------------------------------===\n\
@@ -86,14 +88,14 @@ pub(crate) fn render_manifest(
     );
     output.push_str(GENERATED_MARKER);
     output.push_str("\n\n");
-    render_build_target(&mut output, package, build_tags, cgo_enabled)?;
+    render_build_target(&mut output, package, build_tags, cgo_enabled, target)?;
     if !package.test_files().is_empty() {
         output.push('\n');
-        render_test_target(&mut output, package, build_tags, cgo_enabled)?;
+        render_test_target(&mut output, package, build_tags, cgo_enabled, target)?;
     }
     if !package.external_test_files().is_empty() {
         output.push('\n');
-        render_external_test_target(&mut output, package, build_tags, cgo_enabled)?;
+        render_external_test_target(&mut output, package, build_tags, cgo_enabled, target)?;
     }
     Ok(output)
 }
@@ -105,9 +107,10 @@ pub(crate) fn sync_manifests(
     buildfile: &str,
     build_tags: &[String],
     cgo_enabled: bool,
+    target: GoTarget,
     mode: SyncMode,
 ) -> Result<SyncReport, GoManifestError> {
-    let expected = expected_manifests(root, graph, buildfile, build_tags, cgo_enabled)?;
+    let expected = expected_manifests(root, graph, buildfile, build_tags, cgo_enabled, target)?;
     let index_path = root.join(INDEX_FILE);
     let previous = read_index(&index_path)?;
     validate_existing(&expected)?;
@@ -132,11 +135,15 @@ fn expected_manifests(
     buildfile: &str,
     build_tags: &[String],
     cgo_enabled: bool,
+    target: GoTarget,
 ) -> Result<BTreeMap<PathBuf, String>, GoManifestError> {
     let mut expected = BTreeMap::new();
     for package in graph.packages() {
         let path = root.join(package.relative_dir()).join(buildfile);
-        expected.insert(path, render_manifest(package, build_tags, cgo_enabled)?);
+        expected.insert(
+            path,
+            render_manifest(package, build_tags, cgo_enabled, target)?,
+        );
     }
     Ok(expected)
 }
@@ -320,6 +327,7 @@ fn render_build_target(
     package: &GoPackage,
     build_tags: &[String],
     cgo_enabled: bool,
+    target: GoTarget,
 ) -> Result<(), GoManifestError> {
     let rule = if package.target_name() == "bin" {
         "go_binary"
@@ -350,6 +358,7 @@ fn render_build_target(
         cgo_enabled,
     );
     render_list(output, "visibility", &["PUBLIC".to_owned()])?;
+    render_list(output, "target_compatible_with", &target.constraints())?;
     output.push_str(")\n");
     Ok(())
 }
@@ -360,6 +369,7 @@ fn render_test_target(
     package: &GoPackage,
     build_tags: &[String],
     cgo_enabled: bool,
+    target: GoTarget,
 ) -> Result<(), GoManifestError> {
     output.push_str("go_test(\n");
     render_scalar(output, "name", "test")?;
@@ -376,6 +386,7 @@ fn render_test_target(
     render_list(output, "build_tags", build_tags)?;
     render_list(output, "deps", package.test_dependencies())?;
     render_bool(output, "cgo_enabled", cgo_enabled);
+    render_list(output, "target_compatible_with", &target.constraints())?;
     output.push_str(")\n");
     Ok(())
 }
@@ -386,6 +397,7 @@ fn render_external_test_target(
     package: &GoPackage,
     build_tags: &[String],
     cgo_enabled: bool,
+    target: GoTarget,
 ) -> Result<(), GoManifestError> {
     output.push_str("go_test(\n");
     render_scalar(output, "name", "external_test")?;
@@ -402,6 +414,7 @@ fn render_external_test_target(
     render_list(output, "build_tags", build_tags)?;
     render_list(output, "deps", package.external_test_dependencies())?;
     render_bool(output, "cgo_enabled", cgo_enabled);
+    render_list(output, "target_compatible_with", &target.constraints())?;
     output.push_str(")\n");
     Ok(())
 }
