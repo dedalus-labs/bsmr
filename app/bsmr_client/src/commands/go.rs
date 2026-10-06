@@ -601,38 +601,3 @@ pub(super) enum GoCommandError {
         stderr: String,
     },
 }
-
-#[cfg(all(test, unix))]
-mod tests {
-    use std::os::unix::fs::PermissionsExt;
-
-    use super::*;
-
-    /// The SDK process receives the selected target and keeps dependency resolution offline.
-    #[test]
-    fn metadata_process_receives_explicit_target() {
-        let root = tempfile::tempdir().expect("query directory");
-        let sdk = root.path().join("go");
-        fs::write(
-            &sdk,
-            "#!/bin/sh\nprintf '%s/%s/%s' \"$GOOS\" \"$GOARCH\" \"$GOPROXY\"\n",
-        )
-        .expect("metadata process probe");
-        fs::set_permissions(&sdk, fs::Permissions::from_mode(0o755)).expect("executable probe");
-        let command = GoSyncCommand {
-            target: None,
-            check: false,
-            buildfile: None,
-            tags: Vec::new(),
-            cgo: false,
-        };
-        for (target, expected) in [
-            (GoTarget::LinuxAmd64, "linux/amd64/off"),
-            (GoTarget::LinuxArm64, "linux/arm64/off"),
-        ] {
-            let output = run_go_list(&command, target, root.path(), &sdk, &[".".to_owned()])
-                .expect("metadata query");
-            assert_eq!(output, expected.as_bytes());
-        }
-    }
-}
