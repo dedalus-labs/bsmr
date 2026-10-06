@@ -29,14 +29,24 @@ const workspaces = [cwd];
 mkdirSync(join(cwd, "cmd/probe"), { recursive: true });
 writeFileSync(join(cwd, "go.mod"), "module example.com/cache-probe\n\ngo 1.26.0\n");
 writeFileSync(join(cwd, "cmd/probe/main.go"), `package main
-import ("fmt"; _ "embed"; "debug/elf"; "encoding/json"; "os"; "example.com/cache-probe/platform")
+import ("fmt"; _ "embed"; "debug/elf"; "debug/macho"; "encoding/json"; "os"; "strings"; "example.com/cache-probe/platform")
 //go:embed message.txt
 var message string
 var _ = platform.Name
 func main() {
- if len(os.Args) == 2 {
-  file, err := elf.Open(os.Args[1]); if err != nil { panic(err) }; defer file.Close()
-  if err := json.NewEncoder(os.Stdout).Encode(map[string]any{"machine": file.Machine}); err != nil { panic(err) }
+ if len(os.Args) == 3 {
+  machine, dwarf := uint16(0), uint64(0)
+  switch os.Args[1] {
+  case "linux":
+   file, err := elf.Open(os.Args[2]); if err != nil { panic(err) }; defer file.Close()
+   machine = uint16(file.Machine)
+   for _, section := range file.Sections { if strings.HasPrefix(section.Name, ".debug_") || strings.HasPrefix(section.Name, ".zdebug_") { dwarf += section.Size } }
+  case "darwin":
+   file, err := macho.Open(os.Args[2]); if err != nil { panic(err) }; defer file.Close()
+   for _, section := range file.Sections { if section.Seg == "__DWARF" { dwarf += section.Size } }
+  default: panic("unsupported binary format")
+  }
+  if err := json.NewEncoder(os.Stdout).Encode(map[string]any{"machine": machine, "dwarf_bytes": dwarf}); err != nil { panic(err) }
   return
  }
  fmt.Print(message)
@@ -87,12 +97,13 @@ async function monorepo() {
 }
 
 type Action = { identity: string; reproducer: { executor: string } };
-type BuildOptions = Readonly<{ internal?: boolean; target?: "amd64" | "arm64" }>;
+type BuildOptions = Readonly<{ internal?: boolean; target?: "amd64" | "arm64"; strip?: boolean }>;
 
 /** Execute native outputs or inspect foreign ELF outputs, then read this build's actions. */
-async function build(directory: string, phase: string, message = "original\n", { internal = true, target }: BuildOptions = {}) {
+async function build(directory: string, phase: string, message = "original\n", { internal = true, target, strip = false }: BuildOptions = {}) {
 	const flags = internal ? ["-c", "go.link_mode=internal"] : [];
 	if (target !== undefined) flags.push("--target-platforms", `//platforms:linux_${target}`);
+	if (strip) flags.push("-c", "go.strip=true");
 	const context = { ...options, cwd: directory };
 	const { stdout, stderr } = await run(executable, ["build", "//cmd/probe:bin", "//cmd/probe:test", ...flags, "--show-full-json-output", "--console", "simple"], context);
 	const outputs: Record<string, string> = JSON.parse(stdout);
@@ -103,7 +114,7 @@ async function build(directory: string, phase: string, message = "original\n", {
 		assert.equal((await run(program, [])).stdout, message);
 		assert.match((await run(test, ["-test.run=^TestMessage$", "-test.v"])).stdout, /--- PASS: TestMessage/);
 	} else for (const output of [program, test]) {
-		const inspected = JSON.parse((await run(join(root, "elf-probe"), [output])).stdout);
+		const inspected = JSON.parse((await run(join(root, "elf-probe"), ["linux", output])).stdout);
 		assert.equal(inspected.machine, target === "arm64" ? 183 : 62);
 	}
 	const trace = /Build ID: ([a-f0-9-]+)/.exec(stderr)?.[1];
@@ -193,6 +204,19 @@ try {
 	assert.ok(restored.cached.length > 0);
 	assert.equal(restored.digest, cold.digest);
 	await crossTargets(restored.program);
+	const inspect = async (program: string) => JSON.parse((await run(join(root, "elf-probe"), [os, program])).stdout);
+	const originalSize = readFileSync(restored.program).length;
+	assert.ok((await inspect(restored.program)).dwarf_bytes > 0, "default links retain DWARF");
+	const stripped = await build(cwd, "stripped", "original\n", { strip: true });
+	assert.equal((await inspect(stripped.program)).dwarf_bytes, 0);
+	assert.ok(readFileSync(stripped.program).length < originalSize);
+	assert.notEqual(stripped.digest, cold.digest);
+	await clean(cwd);
+	const strippedRestored = await build(cwd, "stripped-restored", "original\n", { strip: true });
+	assert.equal(strippedRestored.local.length, 0, "stripped outputs retain internal-link cache eligibility");
+	assert.ok(strippedRestored.cached.length > 0);
+	assert.equal(strippedRestored.digest, stripped.digest);
+	await assert.rejects(run(executable, ["build", "//cmd/probe:bin", "-c", "go.strip=invalid"], options), /cannot coerce.*bool/);
 	await clean(cwd);
 	const second = join(root, "second");
 	cpSync(cwd, second, { recursive: true, filter: (path) => basename(path) !== "bsmr-out" });
@@ -272,7 +296,7 @@ build\t${arch === "arm64" ? "GOARM64=v8.0" : "GOAMD64=v1"}
 	await run(executable, ["go", "sync", "--check"], { ...options, cwd: tools });
 	assert.ok(!existsSync(join(tools, "vendor/example.com/greeter/cmd/greet/BUILD.bsmr")));
 	await monorepo();
-	process.stdout.write(`ok: Go ${version} embeds, target selection, restoration, source roots, policy isolation, source/SDK invalidation, system-tool exclusion, tool directives, build info, tool retirement, Go beside Cargo and pnpm roots\n`);
+	process.stdout.write(`ok: Go ${version} embeds, target selection, stripping, restoration, source roots, policy isolation, source/SDK invalidation, system-tool exclusion, tool directives, build info, tool retirement, Go beside Cargo and pnpm roots\n`);
 } finally {
 	await Promise.all(workspaces.map((directory) => run(executable, ["kill"], { ...options, cwd: directory })));
 	rmSync(root, { recursive: true });

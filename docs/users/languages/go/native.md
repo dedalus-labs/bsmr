@@ -132,6 +132,19 @@ The setting supplies a link mode only when a rule omits `link_mode`. Selecting
 `internal` makes Go's SDK linker the implementation and includes that choice
 in the action key. Cache eligibility never changes the selected mode.
 
+Set `go.strip` to remove symbol tables and DWARF debug information with the SDK
+linker's `-s -w` options:
+
+```ini
+[go]
+link_mode = internal
+strip = true
+```
+
+`strip` defaults to `false`. These fixed linker options participate in the action
+key and preserve internal-link cache eligibility. The SDK strips the binary during
+linking. No separate host strip tool runs.
+
 Automatic or external links can invoke a host C linker and remain uncached.
 Cgo links, additional rule-level linker flags, system Go, and the default
 system-Python bootstrap also remain outside this cache eligibility. Cached
