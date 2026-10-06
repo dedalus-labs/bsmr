@@ -35,6 +35,12 @@ do not belong in these files. These fixtures use Python-compatible syntax:
 ruff format --isolated --line-length 100 --extension bzl:python test/oci/fixtures
 ```
 
+Embedded shell fixtures follow the monorepo's `shell.mdx`: Bash strict mode,
+documented inputs, named read-only constants, two-space indentation, and comments
+that explain each block. Their callers select Bash explicitly; a shebang inside
+an embedded command cannot select the interpreter. Check each script with
+`bash -n` and `shellcheck`.
+
 The helper tests check metadata, compact streams, input validation, and failures:
 
 ```sh

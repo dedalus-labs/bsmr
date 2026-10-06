@@ -21,14 +21,14 @@ oci_run(
     inputs={"packages": ":packages", "marker": "marker"},
     user="0:0",
     env={"DEBIAN_FRONTEND": "noninteractive"},
-    command=["/bin/sh", "-ec", fixture["install"]],
+    command=["/bin/bash", "-c", fixture["install"]],
     toolchain=":oci",
 )
 oci_run(
     name="verified",
     base=":installed",
     inputs={"offline.sh": "offline.sh"},
-    command=["/bin/sh", "-ec", fixture["verify"]],
+    command=["/bin/bash", "-c", fixture["verify"]],
     toolchain=":oci",
 )
 oci_layout(name="layout", image=":verified", toolchain=":oci")
