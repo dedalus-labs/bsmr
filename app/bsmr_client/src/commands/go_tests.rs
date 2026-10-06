@@ -7,6 +7,9 @@
 
 use std::fs;
 
+use clap::Parser;
+
+use crate::commands::go::GoCommand;
 use crate::commands::go::discover_patterns;
 use crate::commands::go::parse_sdk_output;
 use crate::commands::go::select_buildfile;
@@ -75,4 +78,16 @@ fn parses_materialized_sdk_output() {
     );
     assert!(parse_sdk_output(b"BUILD SUCCEEDED\n").is_err());
     assert!(parse_sdk_output(b"{\"one\":\"a\",\"two\":\"b\"}\n").is_err());
+}
+
+/// Target parsing accepts the SDK-supported tuples and rejects implicit spellings.
+#[test]
+fn synchronization_accepts_explicit_go_target_tuples() {
+    for target in ["linux/amd64", "linux/arm64", "darwin/amd64", "darwin/arm64"] {
+        GoCommand::try_parse_from(["go", "sync", "--target", target, "--check"])
+            .expect("supported target");
+    }
+    for target in ["linux", "linux/aarch64", "windows/amd64"] {
+        assert!(GoCommand::try_parse_from(["go", "sync", "--target", target]).is_err());
+    }
 }

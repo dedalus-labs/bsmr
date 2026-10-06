@@ -18,6 +18,8 @@ assert.ok(binary, "pass the BSMR binary under test");
 const executable = resolve(binary);
 const version = process.argv[3] ?? "1.26.7";
 const prelude = process.argv[4];
+const os = process.platform === "darwin" ? "darwin" : "linux";
+const arch = process.arch === "arm64" ? "arm64" : "amd64";
 const run = promisify(execFile);
 const root = realpathSync(mkdtempSync(join(tmpdir(), "bsmr-go-build-")));
 const cwd = join(root, "workspace");
@@ -27,16 +29,29 @@ const workspaces = [cwd];
 mkdirSync(join(cwd, "cmd/probe"), { recursive: true });
 writeFileSync(join(cwd, "go.mod"), "module example.com/cache-probe\n\ngo 1.26.0\n");
 writeFileSync(join(cwd, "cmd/probe/main.go"), `package main
-import ("fmt"; _ "embed")
+import ("fmt"; _ "embed"; "debug/elf"; "encoding/json"; "os"; "example.com/cache-probe/platform")
 //go:embed message.txt
 var message string
-func main() { fmt.Print(message) }
+var _ = platform.Name
+func main() {
+ if len(os.Args) == 2 {
+  file, err := elf.Open(os.Args[1]); if err != nil { panic(err) }; defer file.Close()
+  if err := json.NewEncoder(os.Stdout).Encode(map[string]any{"machine": file.Machine}); err != nil { panic(err) }
+  return
+ }
+ fmt.Print(message)
+}
 `);
 writeFileSync(join(cwd, "cmd/probe/message.txt"), "original\n");
 writeFileSync(join(cwd, "cmd/probe/main_test.go"), `package main
 import "testing"
 func TestMessage(t *testing.T) { if message == "" { t.Fatal("empty embedded message") } }
 `);
+mkdirSync(join(cwd, "platform"));
+writeFileSync(join(cwd, "platform/platform.go"), "package platform\nconst Name = name\n");
+for (const os of ["linux", "darwin"]) for (const arch of ["amd64", "arm64"]) {
+	writeFileSync(join(cwd, `platform/target_${os}_${arch}.go`), `package platform\nconst name = "${os}/${arch}"\n`);
+}
 
 /** Build Go beside the Cargo and pnpm manifests that already define the root `toolchains//` package. */
 async function monorepo() {
@@ -72,18 +87,25 @@ async function monorepo() {
 }
 
 type Action = { identity: string; reproducer: { executor: string } };
+type BuildOptions = Readonly<{ internal?: boolean; target?: "amd64" | "arm64" }>;
 
-/** Execute the resulting program and internal test, then inspect this build's actions. */
-async function build(directory: string, phase: string, message = "original\n", internal = true) {
+/** Execute native outputs or inspect foreign ELF outputs, then read this build's actions. */
+async function build(directory: string, phase: string, message = "original\n", { internal = true, target }: BuildOptions = {}) {
 	const flags = internal ? ["-c", "go.link_mode=internal"] : [];
+	if (target !== undefined) flags.push("--target-platforms", `//platforms:linux_${target}`);
 	const context = { ...options, cwd: directory };
 	const { stdout, stderr } = await run(executable, ["build", "//cmd/probe:bin", "//cmd/probe:test", ...flags, "--show-full-json-output", "--console", "simple"], context);
 	const outputs: Record<string, string> = JSON.parse(stdout);
 	const program = outputs["root//cmd/probe:bin"];
 	const test = outputs["root//cmd/probe:test"];
 	assert.ok(program && test, stdout);
-	assert.equal((await run(program, [])).stdout, message);
-	assert.match((await run(test, ["-test.run=^TestMessage$", "-test.v"])).stdout, /--- PASS: TestMessage/);
+	if (target === undefined) {
+		assert.equal((await run(program, [])).stdout, message);
+		assert.match((await run(test, ["-test.run=^TestMessage$", "-test.v"])).stdout, /--- PASS: TestMessage/);
+	} else for (const output of [program, test]) {
+		const inspected = JSON.parse((await run(join(root, "elf-probe"), [output])).stdout);
+		assert.equal(inspected.machine, target === "arm64" ? 183 : 62);
+	}
 	const trace = /Build ID: ([a-f0-9-]+)/.exec(stderr)?.[1];
 	assert.ok(trace, stderr);
 	const log = await run(executable, ["log", "what-ran", "--trace-id", trace, "--format", "json", "--filter-category", "go_.*", "--no-remote"], context);
@@ -93,7 +115,34 @@ async function build(directory: string, phase: string, message = "original\n", i
 	assert.equal(actions.length, local.length + cached.length);
 	const digest = createHash("sha256").update(readFileSync(program)).digest("hex");
 	process.stdout.write(`${JSON.stringify({ phase, trace, local: local.length, cached: cached.length, digest })}\n`);
-	return { digest, local, cached, actions };
+	return { digest, local, cached, actions, program };
+}
+
+/** Select tagged sources for each Linux target and reject a graph used for another target. */
+async function crossTargets(program: string) {
+	cpSync(program, join(root, "elf-probe"));
+	const directory = join(root, "cross");
+	mkdirSync(directory);
+	workspaces.push(directory);
+	for (const name of ["go.mod", "cmd", "platform", ".bsmr-go-toolchain.json", ".bsmr-go-sdk", ".bsmr-go-tools"])
+		cpSync(join(cwd, name), join(directory, name), { recursive: true });
+	const context = { ...options, cwd: directory };
+	await run(executable, ["init"], context);
+	mkdirSync(join(directory, "platforms"));
+	writeFileSync(join(directory, "platforms/BUILD.bsmr"), ["amd64", "arm64"].map((target) =>
+		`platform(name = "linux_${target}", constraint_values = ["config//os/constraints:linux", "config//cpu/constraints:${target === "amd64" ? "x86_64" : "arm64"}"])\n`).join(""));
+	for (const target of ["amd64", "arm64"] as const) {
+		await run(executable, ["go", "sync", "--target", `linux/${target}`], context);
+		await run(executable, ["go", "sync", "--target", `linux/${target}`, "--check"], context);
+		const manifest = readFileSync(join(directory, "platform/BUILD.bsmr"), "utf8");
+		assert.ok(manifest.includes(`target_linux_${target}.go`));
+		assert.ok(!manifest.includes("target_darwin"));
+		const other = target === "amd64" ? "arm64" : "amd64";
+		await assert.rejects(run(executable, ["go", "sync", "--target", `linux/${other}`, "--check"], context), /stale/);
+		assert.equal(readFileSync(join(directory, "platform/BUILD.bsmr"), "utf8"), manifest);
+		await assert.rejects(run(executable, ["build", "//cmd/probe:bin", "--target-platforms", `//platforms:linux_${other}`], context), /incompatible/);
+		await build(directory, `target-linux-${target}`, "original\n", { target });
+	}
 }
 
 /** Drop this workspace's outputs and daemon while retaining the independent shared cache. */
@@ -143,6 +192,7 @@ try {
 	assert.equal(restored.local.length, 0, "deleted outputs must restore after a daemon restart");
 	assert.ok(restored.cached.length > 0);
 	assert.equal(restored.digest, cold.digest);
+	await crossTargets(restored.program);
 	await clean(cwd);
 	const second = join(root, "second");
 	cpSync(cwd, second, { recursive: true, filter: (path) => basename(path) !== "bsmr-out" });
@@ -165,7 +215,7 @@ try {
 	const sdk = await build(second, "sdk-input", "compiled:original\n");
 	assert.ok(sdk.local.some(({ identity }) => identity.includes("go_bootstrap_binary")));
 	await clean(second);
-	const automatic = await build(second, "automatic-link", "compiled:original\n", false);
+	const automatic = await build(second, "automatic-link", "compiled:original\n", { internal: false });
 	assert.ok(automatic.local.filter(({ identity }) => identity.includes("(go_link ")).length === 2);
 	assert.equal(automatic.cached.filter(({ identity }) => identity.includes("(go_link ")).length, 0);
 	// Without the lock, the root build file alone declares the toolchains the system phases select.
@@ -173,8 +223,6 @@ try {
 	writeFileSync(join(second, "BUILD.bsmr"), 'load("@prelude//toolchains:demo.bzl", "system_demo_toolchains")\nsystem_demo_toolchains()\n');
 	env["PATH"] = `${join(second, ".bsmr-go-sdk/bin")}${delimiter}${process.env["PATH"]}`;
 	await systemBootstrap(second, "system-go");
-	const os = process.platform === "darwin" ? "darwin" : "linux";
-	const arch = process.arch === "arm64" ? "arm64" : "amd64";
 	writeFileSync(join(second, "BUILD.bsmr"), `load("@prelude//toolchains:demo.bzl", "system_demo_toolchains")
 load("@prelude//toolchains/go:go_bootstrap_toolchain.bzl", "go_bootstrap_distr", "go_bootstrap_toolchain")
 system_demo_toolchains(include_go = False)
@@ -224,7 +272,7 @@ build\t${arch === "arm64" ? "GOARM64=v8.0" : "GOAMD64=v1"}
 	await run(executable, ["go", "sync", "--check"], { ...options, cwd: tools });
 	assert.ok(!existsSync(join(tools, "vendor/example.com/greeter/cmd/greet/BUILD.bsmr")));
 	await monorepo();
-	process.stdout.write(`ok: Go ${version} embeds, restoration, source roots, policy isolation, source/SDK invalidation, system-tool exclusion, tool directives, build info, tool retirement, Go beside Cargo and pnpm roots\n`);
+	process.stdout.write(`ok: Go ${version} embeds, target selection, restoration, source roots, policy isolation, source/SDK invalidation, system-tool exclusion, tool directives, build info, tool retirement, Go beside Cargo and pnpm roots\n`);
 } finally {
 	await Promise.all(workspaces.map((directory) => run(executable, ["kill"], { ...options, cwd: directory })));
 	rmSync(root, { recursive: true });
