@@ -1,3 +1,0 @@
-oci_layer_from_tar(name = "archive", src = "archive.tgz", platform = fixture["platform"], toolchain = ":oci")
-oci_image(name = "archive_image", platform = fixture["platform"], layers = [":archive", ":tree_layer"], toolchain = ":oci")
-oci_layout(name = "archive_layout", image = ":archive_image", toolchain = ":oci")

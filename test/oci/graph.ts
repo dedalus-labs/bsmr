@@ -13,8 +13,8 @@ import { parseArgs } from "node:util";
 import { verifyBundledPrelude } from "./bundled.ts";
 import { timedExec } from "./exec.ts";
 import artifactRule from "./fixtures/artifact.bzl";
-import graphBuild from "./fixtures/graph/recipe.bsmr";
-import archiveBuild from "./fixtures/graph/archive.bsmr";
+import graphBuild from "./fixtures/graph/recipe.bzl";
+import archiveBuild from "./fixtures/graph/archive.bzl";
 import treeScript from "./fixtures/graph/script.sh";
 import verifyScript from "./verify.py";
 

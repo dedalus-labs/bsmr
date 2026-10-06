@@ -19,9 +19,9 @@ import { parseArgs, promisify } from "node:util";
 import { importLayout } from "../../prelude/oci/closure.mjs";
 import { verifyBundledPrelude } from "./bundled.ts";
 import artifact from "./fixtures/artifact.bzl";
-import buildFile from "./fixtures/registry/recipe.bsmr";
-import acquireBuild from "./fixtures/registry/acquire/recipe.bsmr";
-import imagesBuild from "./fixtures/registry/images/recipe.bsmr";
+import buildFile from "./fixtures/registry/recipe.bzl";
+import acquireBuild from "./fixtures/registry/acquire/recipe.bzl";
+import imagesBuild from "./fixtures/registry/images/recipe.bzl";
 import pins from "./registry.json" with { type: "json" };
 
 const execute = promisify(execFile);

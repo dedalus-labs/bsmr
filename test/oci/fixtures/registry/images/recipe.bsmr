@@ -1,5 +1,0 @@
-load("@prelude//oci:defs.bzl", "oci_import", "oci_layout")
-load(":fixture.json", fixture = "value")
-
-oci_import(name = "base", layout = "base", platform = fixture["platform"], toolchain = "//:oci")
-oci_layout(name = "roundtrip", image = ":base", toolchain = "//:oci")

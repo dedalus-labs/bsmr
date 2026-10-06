@@ -15,7 +15,7 @@ import { verifyBundledPrelude } from "./bundled.ts";
 import { timedExec } from "./exec.ts";
 import artifact from "./fixtures/artifact.bzl";
 import offline from "./fixtures/offline.sh";
-import buildFile from "./fixtures/run/recipe.bsmr";
+import buildFile from "./fixtures/run/recipe.bzl";
 import installCommand from "./fixtures/run/install.sh";
 import markerCommand from "./fixtures/run/marker.sh";
 import verifyCommand from "./fixtures/run/verify.sh";

@@ -16,7 +16,7 @@ export default defineConfig([
 ].map(([name, source]): RolldownOptions => ({
 	input: `test/oci/${source}`,
 	platform: "node",
-	moduleTypes: { ".bsmr": "text", ".bzl": "text", ".sh": "text", ".go": "text", ".py": "text", ".mod": "text" },
+	moduleTypes: { ".bzl": "text", ".sh": "text", ".go": "text", ".py": "text", ".mod": "text" },
 	transform: { target: "node24" },
 	output: { file: `test/oci/dist/${name}.mjs`, format: "esm" },
 })));

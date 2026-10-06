@@ -14,10 +14,10 @@ import { timedExec } from "./exec.ts";
 import artifactRule from "./fixtures/artifact.bzl";
 import probeSource from "./fixtures/cache/cmd/probe/main.go";
 import goModule from "./fixtures/cache/go.mod";
-import imagesBuild from "./fixtures/cache/images/recipe.bsmr";
-import missingBuild from "./fixtures/cache/images/missing/recipe.bsmr";
+import imagesBuild from "./fixtures/cache/images/recipe.bzl";
+import missingBuild from "./fixtures/cache/images/missing/recipe.bzl";
 import invalidSource from "./fixtures/cache/invalid.go";
-import toolsBuild from "./fixtures/cache/tools/recipe.bsmr";
+import toolsBuild from "./fixtures/cache/tools/recipe.bzl";
 import verifyScript from "./verify.py";
 
 const { positionals, values } = parseArgs({ allowPositionals: true, options: {

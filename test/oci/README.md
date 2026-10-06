@@ -22,8 +22,18 @@ own cancellable process lifetime.
 Recipes, scripts, and sample programs live under `fixtures/`. Rolldown embeds
 their text into the standalone runners in `dist/`; those generated files are
 not committed. Runtime values such as platform and registry address are JSON
-inputs to the recipes. Static recipes use `recipe.bsmr` so they do not create
+inputs to the recipes. Static recipes use `recipe.bzl` so they do not create
 packages in the source checkout; the tests materialize them as `BUILD.bsmr`.
+
+Use the standard `.bzl` extension for syntax highlighting. Follow the compatible
+Python conventions: four-space indentation, double quotes, a 100-character line
+width, trailing commas, and named rule arguments. Keep Starlark's `load` statements
+and native rule/provider types; Python classes, imports, and exception handling
+do not belong in these files. These fixtures use Python-compatible syntax:
+
+```sh
+ruff format --isolated --line-length 100 --extension bzl:python test/oci/fixtures
+```
 
 The helper tests check metadata, compact streams, input validation, and failures:
 

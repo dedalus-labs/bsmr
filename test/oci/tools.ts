@@ -12,7 +12,7 @@ import { join, resolve } from "node:path";
 import { parseArgs } from "node:util";
 import { timedExec } from "./exec.ts";
 import artifactRule from "./fixtures/artifact.bzl";
-import toolsBuild from "./fixtures/tools/recipe.bsmr";
+import toolsBuild from "./fixtures/tools/recipe.bzl";
 
 const { positionals, values } = parseArgs({ allowPositionals: true, options: {
 	platform: { type: "string", default: "linux/arm64" },
