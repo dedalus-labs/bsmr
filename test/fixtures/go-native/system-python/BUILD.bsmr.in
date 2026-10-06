@@ -1,0 +1,5 @@
+load("@prelude//toolchains:demo.bzl", "system_demo_toolchains")
+load("@prelude//toolchains/go:go_bootstrap_toolchain.bzl", "go_bootstrap_distr", "go_bootstrap_toolchain")
+system_demo_toolchains(include_go = False)
+go_bootstrap_distr(name = "sdk", go_root = ".bsmr-go-sdk", go_os_arch = ("@OS@", "@ARCH@"))
+go_bootstrap_toolchain(name = "go_bootstrap", go_bootstrap_distr = ":sdk", env_go_os = "@OS@", env_go_arch = "@ARCH@", visibility = ["PUBLIC"])
