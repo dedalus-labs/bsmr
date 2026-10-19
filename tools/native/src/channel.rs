@@ -51,21 +51,22 @@ pub enum Error {
 
 impl Files {
     /// Send one bounded descriptor packet. Keep the connection open through completion.
-    pub fn send(&self, stream: &UnixStream) -> Result<(), Error> {
+    pub fn send(&self, stream: &impl AsFd) -> io::Result<()> {
         let descriptors = [
             self.action.as_raw_fd(),
             self.input.as_raw_fd(),
             self.output.as_raw_fd(),
         ];
         let count = sendmsg::<()>(
-            stream.as_raw_fd(),
+            stream.as_fd().as_raw_fd(),
             &[IoSlice::new(&[1])],
             &[ControlMessage::ScmRights(&descriptors)],
             MsgFlags::empty(),
             None,
-        )?;
+        )
+        .map_err(io::Error::from)?;
         if count != 1 {
-            return Err(Error::Frame);
+            return Err(io::ErrorKind::WriteZero.into());
         }
         Ok(())
     }
