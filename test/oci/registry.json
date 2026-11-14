@@ -1,0 +1,13 @@
+{
+  "version": "3.1.2",
+  "assets": {
+    "linux-amd64": {
+      "url": "https://github.com/distribution/distribution/releases/download/v3.1.2/registry_3.1.2_linux_amd64.tar.gz",
+      "sha256": "40df2224d410f72ae425c3371873b078bbdbda3b8b612be9571f0e6751f3acc8"
+    },
+    "linux-arm64": {
+      "url": "https://github.com/distribution/distribution/releases/download/v3.1.2/registry_3.1.2_linux_arm64.tar.gz",
+      "sha256": "09d26f88d2c0f161bd1b8bfc6c123571cc3d291dcca8af5477b3cacc4ec95e73"
+    }
+  }
+}
