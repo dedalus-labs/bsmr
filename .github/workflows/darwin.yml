@@ -6,14 +6,20 @@ on:
     paths:
       - ci/darwin.ts
       - test/sandbox/darwin/**
+      - test/sandbox/service.py
       - tools/native/**
+      - app/bsmr_sandbox/**
+      - Cargo.toml
   push:
     branches:
       - main
     paths:
       - ci/darwin.ts
       - test/sandbox/darwin/**
+      - test/sandbox/service.py
       - tools/native/**
+      - app/bsmr_sandbox/**
+      - Cargo.toml
   workflow_dispatch: {}
 permissions:
   contents: read
@@ -37,12 +43,18 @@ jobs:
       - name: Check unprivileged refusal
         run: cargo +1.98.0 test --locked --manifest-path test/sandbox/darwin/Cargo.toml
         shell: bash
+      - name: Build native worker
+        run: cargo +1.98.0 build --release --locked --manifest-path tools/native/Cargo.toml --bin bsmr-native
+        shell: bash
       - name: Build process check
-        run: cargo +1.98.0 build --locked --manifest-path test/sandbox/darwin/Cargo.toml
+        run: cargo +1.98.0 build --release --locked --manifest-path test/sandbox/darwin/Cargo.toml
         shell: bash
       - name: Record compiler runtime
-        run: test/sandbox/darwin/target/debug/bsmr-darwin-check prepare test/sandbox/darwin/target/runtime.txt
+        run: test/sandbox/darwin/target/release/bsmr-darwin-check prepare test/sandbox/darwin/target/runtime.txt
         shell: bash
       - name: Check detached process cleanup
-        run: sudo -n test/sandbox/darwin/target/debug/bsmr-darwin-check run /private/var/tmp/bsmr-darwin-check test/sandbox/darwin/target/runtime.txt
+        run: sudo -n test/sandbox/darwin/target/release/bsmr-darwin-check run /private/var/tmp/bsmr-darwin-check test/sandbox/darwin/target/runtime.txt
+        shell: bash
+      - name: Check native service
+        run: sudo -n python3 test/sandbox/service.py tools/native/target/release/bsmr-native test/sandbox/darwin/target/release/bsmr-darwin-check test/sandbox/darwin/target/runtime.txt
         shell: bash
