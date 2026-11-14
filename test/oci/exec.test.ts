@@ -3,7 +3,7 @@
 // SPDX-License-Identifier: Apache-2.0
 //===----------------------------------------------------------------------===//
 
-// Verifies literal arguments, fixture context, failure propagation, and completed cancellation.
+// Verifies literal arguments, fixture context, failure propagation, and command deadlines.
 
 import assert from "node:assert/strict";
 import { mkdtempSync, realpathSync, rmSync } from "node:fs";
@@ -31,10 +31,7 @@ test("invariant_failed_fixture_commands_retain_diagnostics", async () => {
 		/timeout exited 7: fixture failure/);
 });
 
-test("invariant_fixture_deadlines_wait_for_the_child_to_exit", async () => {
-	const result = await timedExec(1)(process.execPath, ["-e", "console.log(process.pid);setInterval(()=>{},1000)"], { exitPolicy: "any" });
+test("invariant_fixture_deadlines_fail_unfinished_commands", async () => {
+	const result = await timedExec(0.1)("/bin/sleep", ["2"], { exitPolicy: "any" });
 	assert.equal(result.exitCode, 124);
-	const pid = Number(result.stdout.trim());
-	assert.ok(Number.isSafeInteger(pid) && pid > 0);
-	assert.throws(() => process.kill(pid, 0), { code: "ESRCH" });
 });

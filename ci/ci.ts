@@ -18,6 +18,7 @@ import { verifySha256Action } from "./verify-sha256.ts";
 import { typescriptCache } from "./typescript/cache.ts";
 import { buildEnvironment } from "./runner/build.ts";
 import ociTools from "../prelude/oci/tools.json" with { type: "json" };
+import registryFixture from "../test/oci/registry.json" with { type: "json" };
 import { ociCache } from "./oci/cache.ts";
 
 const trustedCiRun = expr<boolean>(
@@ -36,6 +37,15 @@ const linuxPlatforms = [
 		architecture: "x64",
 		testRunner: "blacksmith-16vcpu-ubuntu-2404",
 		selfHostRunner: "blacksmith-8vcpu-ubuntu-2404",
+		ociPlatform: "linux/amd64",
+		imgUrl: ociTools.img.assets["linux-amd64"].url,
+		imgSha256: ociTools.img.assets["linux-amd64"].sha256,
+		umociUrl: ociTools.umoci.assets["linux-amd64"].url,
+		umociSha256: ociTools.umoci.assets["linux-amd64"].sha256,
+		runcUrl: ociTools.runc.assets["linux-amd64"].url,
+		runcSha256: ociTools.runc.assets["linux-amd64"].sha256,
+		registryUrl: registryFixture.assets["linux-amd64"].url,
+		registrySha256: registryFixture.assets["linux-amd64"].sha256,
 		dotSlashArchive: "dotslash-linux-musl.x86_64.v0.5.9.tar.gz",
 		dotSlashSha256: "4c75c6eb7890ae35993b962073f6d9bbe78b42b81a5691303ad70f63bfbf7196",
 	},
@@ -43,6 +53,15 @@ const linuxPlatforms = [
 		architecture: "arm64",
 		testRunner: "blacksmith-16vcpu-ubuntu-2404-arm",
 		selfHostRunner: "blacksmith-8vcpu-ubuntu-2404-arm",
+		ociPlatform: "linux/arm64",
+		imgUrl: ociTools.img.assets["linux-arm64"].url,
+		imgSha256: ociTools.img.assets["linux-arm64"].sha256,
+		umociUrl: ociTools.umoci.assets["linux-arm64"].url,
+		umociSha256: ociTools.umoci.assets["linux-arm64"].sha256,
+		runcUrl: ociTools.runc.assets["linux-arm64"].url,
+		runcSha256: ociTools.runc.assets["linux-arm64"].sha256,
+		registryUrl: registryFixture.assets["linux-arm64"].url,
+		registrySha256: registryFixture.assets["linux-arm64"].sha256,
 		dotSlashArchive: "dotslash-linux-musl.aarch64.tar.gz",
 		dotSlashSha256: "11323ef72fac5885d7c54bff70d666486bd800a8d908d0acd3bd838fd8a9b0db",
 	},
@@ -140,6 +159,10 @@ const osvScannerPath = format("{0}/osv-scanner", runnerTemp);
 const osvReportPath = format("{0}/osv.json", runnerTemp);
 const dotSlashArchivePath = format("{0}/dotslash.tar.gz", runnerTemp);
 const imgPath = format("{0}/oci-img", runnerTemp);
+const umociPath = format("{0}/oci-umoci", runnerTemp);
+const runcPath = format("{0}/oci-runc", runnerTemp);
+const registryArchive = format("{0}/oci-registry.tar.gz", runnerTemp);
+const ociEvidence = format("{0}/oci-evidence", runnerTemp);
 const addPathProgram = String.raw`const fs = require("node:fs");
 const path = process.argv[1];
 const output = process.env.GITHUB_PATH;
@@ -173,23 +196,27 @@ const installOsvScanner = [
 		run: command({ file: "chmod", args: ["500", osvScannerPath] }),
 	},
 ] as const;
-const installImg = [
-	{
-		name: "Download pinned OCI encoder",
-		run: command({ file: "curl", args: [
-			"--proto", "=https", "--tlsv1.2", "--fail", "--location", "--silent", "--show-error",
-			ociTools.img.assets["linux-amd64"].url, "--output", imgPath,
-		] }),
-	},
-	uses(verifySha256Action, {
-		name: "Verify OCI encoder",
-		with: { path: imgPath, expected: ociTools.img.assets["linux-amd64"].sha256 },
-	}),
-	{
-		name: "Make OCI encoder executable",
-		run: command({ file: "chmod", args: ["500", imgPath] }),
-	},
-] as const;
+/** Verify each execution-platform tool against the shared catalog before running it. */
+function installOciTool(name: string, asset: { url: string; sha256: string }, path: string, executable = true) {
+	return [
+		{
+			name: `Download pinned ${name}`,
+			run: command({ file: "curl", args: [
+				"--proto", "=https", "--tlsv1.2", "--fail", "--location", "--silent", "--show-error",
+				asset.url, "--output", path,
+			] }),
+		},
+		uses(verifySha256Action, {
+			name: `Verify ${name}`,
+			with: { path, expected: asset.sha256 },
+		}),
+		...(executable ? [{
+			name: `Make ${name} executable`,
+			run: command({ file: "chmod", args: ["500", path] }),
+		}] : []),
+	] as const;
+}
+const installImg = installOciTool("OCI encoder", ociTools.img.assets["linux-amd64"], imgPath);
 const installDotSlash = [
 	{
 		name: "Download pinned DotSlash",
@@ -484,11 +511,28 @@ export const ci = workflow({
 					name: "Verify native Go build",
 					run: command({ file: "node", args: ["test/native-go-build.ts", "target/debug/bsmr"] }),
 				},
-				...installImg.map((step) => ({ ...step, if: eq(expr<string>("matrix.architecture"), "x64") })),
+				...installOciTool("OCI encoder", { url: expr<string>("matrix.imgUrl"), sha256: expr<string>("matrix.imgSha256") }, imgPath),
+				...installOciTool("umoci", { url: expr<string>("matrix.umociUrl"), sha256: expr<string>("matrix.umociSha256") }, umociPath),
+				...installOciTool("runc", { url: expr<string>("matrix.runcUrl"), sha256: expr<string>("matrix.runcSha256") }, runcPath),
+				...installOciTool("registry fixture archive", { url: expr<string>("matrix.registryUrl"), sha256: expr<string>("matrix.registrySha256") }, registryArchive, false),
+				{
+					name: "Refresh registry fixture package indexes",
+					run: command({ file: "sudo", args: ["-n", "apt-get", "update"] }),
+				},
+				{
+					name: "Install registry fixture dependencies",
+					run: command({ file: "sudo", args: ["-n", "apt-get", "install", "-y", "--no-install-recommends", "openssl", "apache2-utils", "ca-certificates"] }),
+				},
 				uses(ociCache, {
-					if: eq(expr<string>("matrix.architecture"), "x64"),
-					with: { binary: "target/debug/bsmr", img: imgPath, platform: "linux/amd64" },
+					with: { binary: "target/debug/bsmr", img: imgPath, umoci: umociPath, runc: runcPath,
+						registryArchive, platform: expr<"linux/amd64" | "linux/arm64">("matrix.ociPlatform"), evidence: ociEvidence },
 				}),
+				{
+					name: "Preserve OCI qualification receipts",
+					if: always(),
+					uses: "actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a",
+					with: { name: format("oci-{0}", expr<string>("matrix.architecture")), path: ociEvidence, "if-no-files-found": "ignore" },
+				},
 				...installDotSlash,
 				{
 					name: "Generate Rust build dependencies",

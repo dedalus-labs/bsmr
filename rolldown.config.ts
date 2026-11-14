@@ -8,6 +8,7 @@
 import { defineConfig, type RolldownOptions } from "rolldown";
 
 import { renderPreamble } from "./ci/license-preamble.ts";
+import ociFixtures from "./test/oci/rolldown.config.ts";
 
 type Artifact = Readonly<{
 	input: string;
@@ -117,4 +118,4 @@ function nodeArtifact(artifact: Artifact): RolldownOptions {
 	};
 }
 
-export default defineConfig(artifacts.map(nodeArtifact));
+export default defineConfig([...artifacts.map(nodeArtifact), ...ociFixtures]);

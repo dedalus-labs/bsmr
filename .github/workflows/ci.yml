@@ -189,11 +189,29 @@ jobs:
           - architecture: x64
             testRunner: blacksmith-16vcpu-ubuntu-2404
             selfHostRunner: blacksmith-8vcpu-ubuntu-2404
+            ociPlatform: linux/amd64
+            imgUrl: https://github.com/bazel-contrib/rules_img/releases/download/v0.3.22/img_linux_amd64
+            imgSha256: 1c536a1e42bacd07fb6a7afaff2da3d0039fb291ef8e94d6ac91ff32ee0b5ebc
+            umociUrl: https://github.com/opencontainers/umoci/releases/download/v0.6.0/umoci.linux.amd64
+            umociSha256: b51c267ec394499e42c6fde47f240b7b7dba57ea49df0b5acd304378b82a3b71
+            runcUrl: https://github.com/opencontainers/runc/releases/download/v1.5.2/runc.amd64
+            runcSha256: 599f6f94ff8c5057241eff0d54c3c74f95c34935b6457b33fe545defc61e9488
+            registryUrl: https://github.com/distribution/distribution/releases/download/v3.1.2/registry_3.1.2_linux_amd64.tar.gz
+            registrySha256: 40df2224d410f72ae425c3371873b078bbdbda3b8b612be9571f0e6751f3acc8
             dotSlashArchive: dotslash-linux-musl.x86_64.v0.5.9.tar.gz
             dotSlashSha256: 4c75c6eb7890ae35993b962073f6d9bbe78b42b81a5691303ad70f63bfbf7196
           - architecture: arm64
             testRunner: blacksmith-16vcpu-ubuntu-2404-arm
             selfHostRunner: blacksmith-8vcpu-ubuntu-2404-arm
+            ociPlatform: linux/arm64
+            imgUrl: https://github.com/bazel-contrib/rules_img/releases/download/v0.3.22/img_linux_arm64
+            imgSha256: 79d77672e980a5be4fd7d2b18b24d7548786299494cb28d7bbcdbf930f546086
+            umociUrl: https://github.com/opencontainers/umoci/releases/download/v0.6.0/umoci.linux.arm64
+            umociSha256: 5cfd17f2e7a4bcf9ed67ea1b955ca893d200349b9ce6a3d3707dba415f458a1f
+            runcUrl: https://github.com/opencontainers/runc/releases/download/v1.5.2/runc.arm64
+            runcSha256: d10ecae898361832a059be2089bab92d158aec54661b18ed7346ed79628b46b0
+            registryUrl: https://github.com/distribution/distribution/releases/download/v3.1.2/registry_3.1.2_linux_arm64.tar.gz
+            registrySha256: 09d26f88d2c0f161bd1b8bfc6c123571cc3d291dcca8af5477b3cacc4ec95e73
             dotSlashArchive: dotslash-linux-musl.aarch64.tar.gz
             dotSlashSha256: 11323ef72fac5885d7c54bff70d666486bd800a8d908d0acd3bd838fd8a9b0db
     timeout-minutes: 30
@@ -230,11 +248,29 @@ jobs:
           - architecture: x64
             testRunner: blacksmith-16vcpu-ubuntu-2404
             selfHostRunner: blacksmith-8vcpu-ubuntu-2404
+            ociPlatform: linux/amd64
+            imgUrl: https://github.com/bazel-contrib/rules_img/releases/download/v0.3.22/img_linux_amd64
+            imgSha256: 1c536a1e42bacd07fb6a7afaff2da3d0039fb291ef8e94d6ac91ff32ee0b5ebc
+            umociUrl: https://github.com/opencontainers/umoci/releases/download/v0.6.0/umoci.linux.amd64
+            umociSha256: b51c267ec394499e42c6fde47f240b7b7dba57ea49df0b5acd304378b82a3b71
+            runcUrl: https://github.com/opencontainers/runc/releases/download/v1.5.2/runc.amd64
+            runcSha256: 599f6f94ff8c5057241eff0d54c3c74f95c34935b6457b33fe545defc61e9488
+            registryUrl: https://github.com/distribution/distribution/releases/download/v3.1.2/registry_3.1.2_linux_amd64.tar.gz
+            registrySha256: 40df2224d410f72ae425c3371873b078bbdbda3b8b612be9571f0e6751f3acc8
             dotSlashArchive: dotslash-linux-musl.x86_64.v0.5.9.tar.gz
             dotSlashSha256: 4c75c6eb7890ae35993b962073f6d9bbe78b42b81a5691303ad70f63bfbf7196
           - architecture: arm64
             testRunner: blacksmith-16vcpu-ubuntu-2404-arm
             selfHostRunner: blacksmith-8vcpu-ubuntu-2404-arm
+            ociPlatform: linux/arm64
+            imgUrl: https://github.com/bazel-contrib/rules_img/releases/download/v0.3.22/img_linux_arm64
+            imgSha256: 79d77672e980a5be4fd7d2b18b24d7548786299494cb28d7bbcdbf930f546086
+            umociUrl: https://github.com/opencontainers/umoci/releases/download/v0.6.0/umoci.linux.arm64
+            umociSha256: 5cfd17f2e7a4bcf9ed67ea1b955ca893d200349b9ce6a3d3707dba415f458a1f
+            runcUrl: https://github.com/opencontainers/runc/releases/download/v1.5.2/runc.arm64
+            runcSha256: d10ecae898361832a059be2089bab92d158aec54661b18ed7346ed79628b46b0
+            registryUrl: https://github.com/distribution/distribution/releases/download/v3.1.2/registry_3.1.2_linux_arm64.tar.gz
+            registrySha256: 09d26f88d2c0f161bd1b8bfc6c123571cc3d291dcca8af5477b3cacc4ec95e73
             dotSlashArchive: dotslash-linux-musl.aarch64.tar.gz
             dotSlashSha256: 11323ef72fac5885d7c54bff70d666486bd800a8d908d0acd3bd838fd8a9b0db
     timeout-minutes: 30
@@ -348,30 +384,87 @@ jobs:
         run: node test/native-go-build.ts target/debug/bsmr
         shell: bash
       - name: Download pinned OCI encoder
-        run: curl --proto =https --tlsv1.2 --fail --location --silent --show-error https://github.com/bazel-contrib/rules_img/releases/download/v0.3.22/img_linux_amd64 --output "$HOLLYWOOD_COMMAND_ARG_9"
-        if: ${{ matrix.architecture == 'x64' }}
+        run: curl --proto =https --tlsv1.2 --fail --location --silent --show-error "$HOLLYWOOD_COMMAND_ARG_7" --output "$HOLLYWOOD_COMMAND_ARG_9"
         shell: bash
         env:
+          HOLLYWOOD_COMMAND_ARG_7: ${{ matrix.imgUrl }}
           HOLLYWOOD_COMMAND_ARG_9: ${{ format('{0}/oci-img', runner.temp) }}
       - name: Verify OCI encoder
         uses: ./.github/actions/ci/verify-sha256
         with:
           path: ${{ format('{0}/oci-img', runner.temp) }}
-          expected: 1c536a1e42bacd07fb6a7afaff2da3d0039fb291ef8e94d6ac91ff32ee0b5ebc
-        if: ${{ matrix.architecture == 'x64' }}
+          expected: ${{ matrix.imgSha256 }}
       - name: Make OCI encoder executable
         run: chmod 500 "$HOLLYWOOD_COMMAND_ARG_1"
-        if: ${{ matrix.architecture == 'x64' }}
         shell: bash
         env:
           HOLLYWOOD_COMMAND_ARG_1: ${{ format('{0}/oci-img', runner.temp) }}
-      - if: ${{ matrix.architecture == 'x64' }}
-        name: Verify native OCI cache
+      - name: Download pinned umoci
+        run: curl --proto =https --tlsv1.2 --fail --location --silent --show-error "$HOLLYWOOD_COMMAND_ARG_7" --output "$HOLLYWOOD_COMMAND_ARG_9"
+        shell: bash
+        env:
+          HOLLYWOOD_COMMAND_ARG_7: ${{ matrix.umociUrl }}
+          HOLLYWOOD_COMMAND_ARG_9: ${{ format('{0}/oci-umoci', runner.temp) }}
+      - name: Verify umoci
+        uses: ./.github/actions/ci/verify-sha256
+        with:
+          path: ${{ format('{0}/oci-umoci', runner.temp) }}
+          expected: ${{ matrix.umociSha256 }}
+      - name: Make umoci executable
+        run: chmod 500 "$HOLLYWOOD_COMMAND_ARG_1"
+        shell: bash
+        env:
+          HOLLYWOOD_COMMAND_ARG_1: ${{ format('{0}/oci-umoci', runner.temp) }}
+      - name: Download pinned runc
+        run: curl --proto =https --tlsv1.2 --fail --location --silent --show-error "$HOLLYWOOD_COMMAND_ARG_7" --output "$HOLLYWOOD_COMMAND_ARG_9"
+        shell: bash
+        env:
+          HOLLYWOOD_COMMAND_ARG_7: ${{ matrix.runcUrl }}
+          HOLLYWOOD_COMMAND_ARG_9: ${{ format('{0}/oci-runc', runner.temp) }}
+      - name: Verify runc
+        uses: ./.github/actions/ci/verify-sha256
+        with:
+          path: ${{ format('{0}/oci-runc', runner.temp) }}
+          expected: ${{ matrix.runcSha256 }}
+      - name: Make runc executable
+        run: chmod 500 "$HOLLYWOOD_COMMAND_ARG_1"
+        shell: bash
+        env:
+          HOLLYWOOD_COMMAND_ARG_1: ${{ format('{0}/oci-runc', runner.temp) }}
+      - name: Download pinned registry fixture archive
+        run: curl --proto =https --tlsv1.2 --fail --location --silent --show-error "$HOLLYWOOD_COMMAND_ARG_7" --output "$HOLLYWOOD_COMMAND_ARG_9"
+        shell: bash
+        env:
+          HOLLYWOOD_COMMAND_ARG_7: ${{ matrix.registryUrl }}
+          HOLLYWOOD_COMMAND_ARG_9: ${{ format('{0}/oci-registry.tar.gz', runner.temp) }}
+      - name: Verify registry fixture archive
+        uses: ./.github/actions/ci/verify-sha256
+        with:
+          path: ${{ format('{0}/oci-registry.tar.gz', runner.temp) }}
+          expected: ${{ matrix.registrySha256 }}
+      - name: Refresh registry fixture package indexes
+        run: sudo -n apt-get update
+        shell: bash
+      - name: Install registry fixture dependencies
+        run: sudo -n apt-get install -y --no-install-recommends openssl apache2-utils ca-certificates
+        shell: bash
+      - name: Verify native OCI cache
         uses: ./.github/actions/oci/cache
         with:
           binary: target/debug/bsmr
           img: ${{ format('{0}/oci-img', runner.temp) }}
-          platform: linux/amd64
+          umoci: ${{ format('{0}/oci-umoci', runner.temp) }}
+          runc: ${{ format('{0}/oci-runc', runner.temp) }}
+          registry-archive: ${{ format('{0}/oci-registry.tar.gz', runner.temp) }}
+          platform: ${{ matrix.ociPlatform }}
+          evidence: ${{ format('{0}/oci-evidence', runner.temp) }}
+      - name: Preserve OCI qualification receipts
+        if: ${{ always() }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: ${{ format('oci-{0}', matrix.architecture) }}
+          path: ${{ format('{0}/oci-evidence', runner.temp) }}
+          if-no-files-found: ignore
       - name: Download pinned DotSlash
         run: curl --proto =https --tlsv1.2 --fail --location --silent --show-error "$HOLLYWOOD_COMMAND_ARG_7" --output "$HOLLYWOOD_COMMAND_ARG_9"
         shell: bash

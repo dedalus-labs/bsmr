@@ -5,8 +5,11 @@
 
 # Exposes exact executable bytes for OCI integration fixtures.
 
-def _artifact(ctx):
-    """Track one executable artifact without an ambient command lookup."""
-    return [DefaultInfo(default_output = ctx.attrs.binary), RunInfo(args = [ctx.attrs.binary])]
 
-artifact = rule(impl = _artifact, attrs = {"binary": attrs.source()})
+def _artifact(ctx: AnalysisContext) -> list[Provider]:
+    """Track one executable artifact without an ambient command lookup."""
+    providers = [DefaultInfo(default_output=ctx.attrs.binary), RunInfo(args=[ctx.attrs.binary])]
+    return providers
+
+
+artifact = rule(impl=_artifact, attrs={"binary": attrs.source()})

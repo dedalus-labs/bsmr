@@ -137,6 +137,12 @@ test("words select nested commands", async () => {
 	assert.deepEqual(state.invocations.map(({ file }) => file), ["pnpm"]);
 });
 
+test("fixture bundles use the checked-in Rolldown configuration", async () => {
+	const state = harness();
+	await runCli(["build", "fixtures"], state.context);
+	assert.deepEqual(state.invocations, [{ file: "pnpm", args: ["exec", "rolldown", "--config", "test/oci/rolldown.config.ts"], cwd: "/repo" }]);
+});
+
 test("license check uses the provenance verifier", async () => {
 	const state = harness();
 	await runCli(["check", "license"], state.context);

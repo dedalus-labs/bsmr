@@ -1,0 +1,34 @@
+load("@prelude//oci:defs.bzl", "oci_import", "oci_layout", "oci_run")
+load("@prelude//oci:toolchain.bzl", "oci_toolchain")
+load("@prelude//debian:defs.bzl", "deb_packages")
+load(":artifact.bzl", "artifact")
+load(":fixture.json", fixture="value")
+
+artifact(name="encoder", binary="img")
+artifact(name="runtime", binary="node")
+artifact(name="unpacker", binary="umoci")
+artifact(name="container_runtime", binary="runc")
+oci_toolchain(
+    name="oci", img=":encoder", node=":runtime", umoci=":unpacker", runc=":container_runtime"
+)
+oci_import(name="base", layout="base", platform=fixture["platform"], toolchain=":oci")
+deb_packages(
+    name="packages", base=":base", packages=["ca-certificates", "curl"], lock="packages.lock.json"
+)
+oci_run(
+    name="installed",
+    base=":base",
+    inputs={"packages": ":packages", "marker": "marker"},
+    user="0:0",
+    env={"DEBIAN_FRONTEND": "noninteractive"},
+    command=["/bin/bash", "-c", fixture["install"]],
+    toolchain=":oci",
+)
+oci_run(
+    name="verified",
+    base=":installed",
+    inputs={"offline.sh": "offline.sh"},
+    command=["/bin/bash", "-c", fixture["verify"]],
+    toolchain=":oci",
+)
+oci_layout(name="layout", image=":verified", toolchain=":oci")

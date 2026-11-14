@@ -7,16 +7,39 @@
 
 # OCI qualification
 
-Install the checkout's locked JavaScript dependencies before running fixtures:
+Install the checkout's locked JavaScript dependencies and build the runners:
 
 ```sh
 pnpm install --frozen-lockfile --ignore-scripts
+pnpm run ci build fixtures
 ```
 
 TypeScript fixtures use Hollywood's `nodeExec` for commands and GNU coreutils
 `timeout` for deadlines. Linux CI provides coreutils; macOS needs `timeout` on
 `PATH`. The registry harness retains isolated credential environments and its
 own cancellable process lifetime.
+
+Recipes, scripts, and sample programs live under `fixtures/`. Rolldown embeds
+their text into the standalone runners in `dist/`; those generated files are
+not committed. Runtime values such as platform and registry address are JSON
+inputs to the recipes. Static recipes use `recipe.bzl` so they do not create
+packages in the source checkout; the tests materialize them as `BUILD.bsmr`.
+
+Use the standard `.bzl` extension for syntax highlighting. Follow the compatible
+Python conventions: four-space indentation, double quotes, a 100-character line
+width, trailing commas, and named rule arguments. Keep Starlark's `load` statements
+and native rule/provider types; Python classes, imports, and exception handling
+do not belong in these files. These fixtures use Python-compatible syntax:
+
+```sh
+ruff format --isolated --line-length 100 --extension bzl:python test/oci/fixtures
+```
+
+Embedded shell fixtures follow the monorepo's `shell.mdx`: Bash strict mode,
+documented inputs, named read-only constants, two-space indentation, and comments
+that explain each block. Their callers select Bash explicitly; a shebang inside
+an embedded command cannot select the interpreter. Check each script with
+`bash -n` and `shellcheck`.
 
 The helper tests check metadata, compact streams, input validation, and failures:
 
@@ -53,11 +76,24 @@ skipped. With that flag, missing root privileges, tools, or base inputs fail.
 
 ## Actual BSMR graph
 
+Use a compatible engine, pinned rules_img v0.3.22, and this source prelude:
+
+```sh
+node test/oci/dist/graph.mjs /path/to/bsmr /path/to/img prelude \
+  --artifacts /absolute/evidence
+```
+
+This checks compact-only metadata builds, zero-action warm builds, config and
+source edits, archive/directory exports, explicit blob materialization, output
+deletion plus daemon restart, and local publication sinks. It records exact
+source/tool hashes, build reports, actions, and cleanup. Full blob subtargets
+reconstruct after cleaning rather than uploading a duplicated tar to cache.
+
 For the native Debian pipeline:
 
 ```sh
 BSMR_OCI_TEST_EVIDENCE=/absolute/evidence \
-  node test/oci/run.ts /path/to/bsmr /path/to/img /path/to/umoci /path/to/runc \
+  node test/oci/dist/run.mjs /path/to/bsmr /path/to/img /path/to/umoci /path/to/runc \
   /path/to/base-layout /path/to/debian.lock.json prelude
 ```
 
@@ -69,12 +105,12 @@ output deletion and daemon restart, changed inputs/commands, stale locks, and
 corrupt package checksums.
 
 Source-prelude mode defaults to released BSMR 0.0.9. That establishes source-rule
-behavior, not a newly packaged engine. The graph fixture accepts
+behavior, not a newly packaged engine. Both graph fixtures accept
 `--engine-version` and `--bundled-prelude` for a source-built engine:
 
 ```sh
 BSMR_OCI_TEST_EVIDENCE=/absolute/evidence \
-  node test/oci/run.ts /path/to/source-built/bsmr /path/to/img /path/to/umoci /path/to/runc \
+  node test/oci/dist/run.mjs /path/to/source-built/bsmr /path/to/img /path/to/umoci /path/to/runc \
   /path/to/base-layout test/oci/fixtures/linux-amd64.debian.lock.json prelude \
   --platform linux/amd64 --engine-version 0.0.10 --bundled-prelude
 ```
@@ -102,14 +138,14 @@ prelude before running the checked-in example.
 The small helper fixture accepts files and directories without a compiler:
 
 ```sh
-node test/oci/tools.ts /path/to/bsmr /path/to/img prelude
+node test/oci/dist/tools.mjs /path/to/bsmr /path/to/img prelude
 ```
 
 The compiler fixture builds a real Linux Go executable and packages its output:
 
 ```sh
 BSMR_OCI_TEST_EVIDENCE=/absolute/evidence \
-  node test/oci/cache.ts /path/to/bsmr /path/to/img prelude prelude/oci/operations.mjs
+  node test/oci/dist/cache.mjs /path/to/bsmr /path/to/img prelude prelude/oci/operations.mjs
 ```
 
 The default platform is Linux arm64 and default engine version is 0.0.9.
@@ -132,7 +168,7 @@ apache2-utils, and ca-certificates. Download the architecture-specific archive
 listed in `registry.json`; the harness verifies its SHA-256 before execution.
 
 ```sh
-node test/oci/registry.mjs \
+node test/oci/dist/registry.mjs \
   --bsmr /path/to/bsmr --img /path/to/img \
   --registry-archive /path/to/registry.tar.gz \
   --layout /path/to/base-layout --prelude prelude \
