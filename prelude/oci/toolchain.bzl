@@ -16,6 +16,7 @@ def _oci_toolchain_impl(ctx: AnalysisContext) -> list[Provider]:
         DefaultInfo(),
         OciToolchainInfo(
             img = single_artifact(ctx.attrs.img).default_output,
+            node = single_artifact(ctx.attrs.node).default_output,
             operations = RunInfo(args = cmd_args(
                 single_artifact(ctx.attrs.node).default_output, ctx.attrs._main, hidden = [ctx.attrs._closure],
             )),
