@@ -2786,6 +2786,14 @@ Synchronize Go SDK metadata into generated Bessemer manifests
 Common options are documented under [Global options](#global-options).
 
 ### Options:
+* `--target <TARGET>`
+    Target GOOS/GOARCH for package selection. Defaults to the SDK execution host
+
+    * Possible values:
+        * `darwin/amd64`
+        * `darwin/arm64`
+        * `linux/amd64`
+        * `linux/arm64`
 * `--check`
     Verify generated manifests and their ownership index without changing files
 

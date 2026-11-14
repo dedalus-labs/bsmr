@@ -7,6 +7,7 @@
 
 use std::fs;
 
+use crate::commands::go::GoTarget;
 use crate::commands::go_graph::GoGraph;
 use crate::commands::go_manifest::GoManifestError;
 use crate::commands::go_manifest::SyncMode;
@@ -58,8 +59,13 @@ fn renders_library_binary_and_test_targets() {
     let library = &graph.packages()[0];
     let binary = &graph.packages()[1];
 
-    let library_manifest =
-        render_manifest(library, &["integration".to_owned()], false).expect("library manifest");
+    let library_manifest = render_manifest(
+        library,
+        &["integration".to_owned()],
+        false,
+        GoTarget::LinuxAmd64,
+    )
+    .expect("library manifest");
     assert!(library_manifest.contains("go_library("));
     assert!(library_manifest.contains("name = \"lib\""));
     assert!(library_manifest.contains("go_test("));
@@ -74,8 +80,13 @@ fn renders_library_binary_and_test_targets() {
     );
     assert!(library_manifest.contains("override_cgo_enabled = False"));
 
-    let binary_manifest =
-        render_manifest(binary, &["integration".to_owned()], false).expect("binary manifest");
+    let binary_manifest = render_manifest(
+        binary,
+        &["integration".to_owned()],
+        false,
+        GoTarget::LinuxAmd64,
+    )
+    .expect("binary manifest");
     assert!(binary_manifest.contains("go_binary("));
     assert!(binary_manifest.contains("build_tags = [\n        \"integration\","));
     assert!(binary_manifest.contains("cgo_enabled = False"));
@@ -88,7 +99,8 @@ fn renders_external_test_target() {
     let root = tempfile::tempdir().expect("temporary repository");
     let graph = external_test_graph(root.path());
 
-    let manifest = render_manifest(&graph.packages()[0], &[], false).expect("manifest");
+    let manifest =
+        render_manifest(&graph.packages()[0], &[], false, GoTarget::LinuxAmd64).expect("manifest");
 
     assert!(manifest.contains("name = \"external_test\""));
     assert!(manifest.contains("package_name = \"example.com/repo/lib_test\""));
@@ -102,7 +114,8 @@ fn invariant_cgo_headers_are_addressable_by_package_local_name() {
     let root = tempfile::tempdir().expect("temporary repository");
     let graph = cgo_graph(root.path());
 
-    let manifest = render_manifest(&graph.packages()[0], &[], true).expect("cgo manifest");
+    let manifest = render_manifest(&graph.packages()[0], &[], true, GoTarget::LinuxAmd64)
+        .expect("cgo manifest");
 
     assert!(manifest.contains("\"native.c\""));
     assert!(manifest.contains("\"native.go\""));
@@ -122,6 +135,7 @@ fn synchronizes_owned_manifests_only() {
         "BUILD.bsmr",
         &[],
         false,
+        GoTarget::LinuxAmd64,
         SyncMode::Write,
     )
     .expect("initial sync");
@@ -133,6 +147,7 @@ fn synchronizes_owned_manifests_only() {
         "BUILD.bsmr",
         &[],
         false,
+        GoTarget::LinuxAmd64,
         SyncMode::Check,
     )
     .expect("generated files are current");
@@ -146,6 +161,7 @@ fn synchronizes_owned_manifests_only() {
         "BUILD.bsmr",
         &[],
         false,
+        GoTarget::LinuxAmd64,
         SyncMode::Write,
     )
     .expect_err("human-owned manifest must not be overwritten");
@@ -165,6 +181,7 @@ fn rejects_user_owned_manifest_index() {
         "BUILD.bsmr",
         &[],
         false,
+        GoTarget::LinuxAmd64,
         SyncMode::Write,
     )
     .expect_err("user-owned index must fail closed");
@@ -188,6 +205,7 @@ fn migrates_untouched_init_manifest() {
         "BUILD.bsmr",
         &[],
         false,
+        GoTarget::LinuxAmd64,
         SyncMode::Write,
     )
     .expect("migrate init manifest");
@@ -208,8 +226,17 @@ fn migrates_untouched_init_manifest() {
 #[test]
 fn invariant_empty_graph_retires_owned_manifests() {
     let root = tempfile::tempdir().expect("temporary repository");
-    let sync =
-        |graph: &GoGraph, mode| sync_manifests(root.path(), graph, "BUILD.bsmr", &[], false, mode);
+    let sync = |graph: &GoGraph, mode| {
+        sync_manifests(
+            root.path(),
+            graph,
+            "BUILD.bsmr",
+            &[],
+            false,
+            GoTarget::LinuxAmd64,
+            mode,
+        )
+    };
     sync(&graph(root.path()), SyncMode::Write).expect("initial sync");
     let empty = GoGraph::from_go_list(b"", root.path(), "").expect("empty graph");
 
@@ -238,9 +265,64 @@ fn invariant_binary_manifest_carries_module_lines() {
     );
     let graph = GoGraph::from_go_list(json.as_bytes(), root.path(), "").expect("valid graph");
 
-    let manifest = render_manifest(&graph.packages()[0], &[], false).expect("binary manifest");
+    let manifest = render_manifest(&graph.packages()[0], &[], false, GoTarget::LinuxAmd64)
+        .expect("binary manifest");
 
     assert!(
         manifest.contains("modules = [\n        \"mod\\texample.com/repo\\t(devel)\\t\",\n    ],")
     );
+}
+
+/// A platform change is graph drift even when Go selected the same source files.
+#[test]
+fn synchronization_check_binds_the_selected_target() {
+    let root = tempfile::tempdir().expect("temporary repository");
+    let graph = graph(root.path());
+    sync_manifests(
+        root.path(),
+        &graph,
+        "BUILD.bsmr",
+        &[],
+        false,
+        GoTarget::LinuxArm64,
+        SyncMode::Write,
+    )
+    .expect("arm64 synchronization");
+    sync_manifests(
+        root.path(),
+        &graph,
+        "BUILD.bsmr",
+        &[],
+        false,
+        GoTarget::LinuxArm64,
+        SyncMode::Check,
+    )
+    .expect("same target is current");
+    let error = sync_manifests(
+        root.path(),
+        &graph,
+        "BUILD.bsmr",
+        &[],
+        false,
+        GoTarget::LinuxAmd64,
+        SyncMode::Check,
+    )
+    .expect_err("another target requires synchronization");
+    assert!(matches!(error, GoManifestError::Stale(_)));
+    for (graph, rule_count) in [(graph, 2), (external_test_graph(root.path()), 2)] {
+        let manifest = render_manifest(&graph.packages()[0], &[], false, GoTarget::LinuxArm64)
+            .expect("constrained Go rules");
+        assert_eq!(
+            manifest.matches("target_compatible_with = [").count(),
+            rule_count
+        );
+        assert_eq!(
+            manifest.matches("config//os/constraints:linux").count(),
+            rule_count
+        );
+        assert_eq!(
+            manifest.matches("config//cpu/constraints:arm64").count(),
+            rule_count
+        );
+    }
 }

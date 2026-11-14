@@ -97,10 +97,22 @@ archive name, SHA-256 digest, and byte length for Darwin and Linux on amd64 and
 arm64. The execution host selects runnable SDK tools independently of the
 target platform.
 
-Pure-Go builds use the existing Darwin/Linux and amd64/arm64 target-platform
-machinery. An arm64 Darwin runner can therefore execute arm64 Darwin tools that
-emit a Linux amd64 pure-Go binary without confusing execution identity with
-target identity.
+Select the same target when synchronizing package metadata and building the
+binary. For example, a Darwin host can build pure-Go Linux arm64 code:
+
+```shell
+bsmr go sync --target linux/arm64
+bsmr go sync --target linux/arm64 --check
+bsmr build --target-platforms //platforms:linux_arm64 //cmd/server:bin
+```
+
+Declare the build platform as described in [Go target platforms](overview.md#envs-goos-and-goarch).
+`--target` accepts `linux/amd64`, `linux/arm64`, `darwin/amd64`, and `darwin/arm64`.
+It defaults to the acquired SDK's execution host. It selects source files and
+imports through the official SDK, then constrains generated targets to that
+platform. `--check` rejects a different target even when source files are equal.
+SDK acquisition and bootstrap tools still use the execution host. `--cgo` requires
+that host target because the C/C++ toolchain is host-native.
 
 ## Reuse compiled work
 

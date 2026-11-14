@@ -131,7 +131,7 @@ fn validate_acquired_directory(
 }
 
 /// Selects the official archive for the current execution host.
-fn host_archive(lock: &GoToolchainLock) -> Result<&GoSdkArchive, GoToolchainError> {
+pub(crate) fn host_archive(lock: &GoToolchainLock) -> Result<&GoSdkArchive, GoToolchainError> {
     let os = match std::env::consts::OS {
         "macos" => "darwin",
         "linux" => "linux",
