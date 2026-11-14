@@ -113,7 +113,7 @@ impl Runtime {
 }
 
 /// Require protected ownership before privileged path traversal begins.
-fn protected(path: &Path) -> Result<(), Error> {
+pub(crate) fn protected(path: &Path) -> Result<(), Error> {
     if !path.is_absolute() {
         return Err(Error::Ownership(path.to_owned()));
     }
