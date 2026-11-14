@@ -840,8 +840,9 @@ def rust_compile(
 # -Ldependency=<dir> for transitive dependencies
 # For native dependencies, we use -Clink-arg=@argsfile
 #
-# Second element of returned tuple is an @argsfile containing the -Ldependency=<dir> for transitive dependencies.
-# It is separate from the first element because some commands (e.g., rustc) do NOT support nested @argsfiles.
+# Second element of returned tuple holds the -Ldependency=<dir> flags for transitive dependencies, including an
+# @argsfile for crates with dynamic names. It is separate from the first element because some commands (e.g.,
+# rustc) do NOT support nested @argsfiles.
 #
 # Third element of returned tuple is a mapping from crate names back to target
 # label, needed for applying autofixes for rustc's unused_crate_dependencies
@@ -914,18 +915,57 @@ def symlinked_dirs(
     transitive_deps: TransitiveDeps,
     cwd: Artifact | None,
 ) -> cmd_args:
+    """Link transitive rlibs into -Ldependency directories, one more for each repeated basename."""
     name = "{}-symlinked_dirs".format(prefix)
+    static_dirs = [{}]
+    dynamic = []
+    for dep in transitive_deps.traverse():
+        if dep.crate.dynamic:
+            dynamic.append((dep.artifact, dep.crate.dynamic))
+            continue
+        filename = dep.artifact.basename
+        if filename in static_dirs[-1]:
+            static_dirs.append({})
+        static_dirs[-1][filename] = dep.artifact
+
+    flags = cmd_args()
+    if static_dirs[0]:
+        static_dir = ctx.actions.symlinked_dir(
+            name,
+            {
+                "{}/{}".format(idx, filename): artifact
+                for idx, srcs in enumerate(static_dirs)
+                for filename, artifact in srcs.items()
+            },
+            has_content_based_path = False,
+        )
+        for idx in range(len(static_dirs)):
+            flags.add(cmd_args(static_dir, format = "-Ldependency={{}}/{}".format(idx)))
+
+    if dynamic:
+        flags.add(_dynamic_dirs(ctx, internal_tools_info, transitive_dependency_dirs, prefix, dynamic, cwd))
+
+    return flags
+
+def _dynamic_dirs(
+    ctx: AnalysisContext,
+    internal_tools_info: RustInternalToolsInfo,
+    transitive_dependency_dirs: set,
+    prefix: str,
+    dynamic: list[(Artifact, Artifact)],
+    cwd: Artifact | None,
+) -> cmd_args:
+    """Copy `crate_dynamic` rlibs under the crate names their build computes."""
+    name = "{}-dynamic_dirs".format(prefix)
 
     transitive_dependency_dir = ctx.actions.declare_output(name, dir = True, has_content_based_path = False)
-
-    artifacts = transitive_deps.project_as_json("artifacts")
 
     # Pass the list of rlibs to transitive_dependency_symlinks.py through a file
     # because there can be a lot of them. This avoids running out of command
     # line length, particularly on Windows.
     artifacts_json = ctx.actions.write_json(
-        "{}-symlinked_dirs.json".format(prefix),
-        artifacts,
+        "{}.json".format(name),
+        dynamic,
         with_inputs = True,
         pretty = True,
         has_content_based_path = getattr(ctx.attrs, "use_content_based_paths", False),
