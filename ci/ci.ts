@@ -224,7 +224,8 @@ export const ci = workflow({
 	permissions: {},
 	concurrency: {
 		group: format("{0}-{1}", github.workflow, github.ref),
-		"cancel-in-progress": true,
+		// Only a completed push run on main saves Rust caches, so only pull requests cancel.
+		"cancel-in-progress": eq(github.eventName, "pull_request"),
 	},
 	env: {
 		FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true,
@@ -252,6 +253,7 @@ export const ci = workflow({
 						eventName: github.eventName,
 						baseSha: expr<string>("github.event.pull_request.base.sha"),
 						mergeGroupBaseSha: expr<string>("github.event.merge_group.base_sha"),
+						beforeSha: expr<string>("github.event.before"),
 						headSha: expr<string>("github.event.pull_request.head.sha || github.sha"),
 					},
 				}),

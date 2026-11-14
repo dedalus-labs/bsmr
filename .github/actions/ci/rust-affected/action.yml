@@ -14,6 +14,10 @@ inputs:
     description: Merge-group base commit.
     required: false
     default: ""
+  before-sha:
+    description: Commit a push replaced.
+    required: false
+    default: ""
   head-sha:
     description: Candidate head commit.
     required: false

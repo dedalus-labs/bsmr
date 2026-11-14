@@ -18,7 +18,7 @@ on:
 permissions: {}
 concurrency:
   group: ${{ format('{0}-{1}', github.workflow, github.ref) }}
-  cancel-in-progress: true
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 jobs:
@@ -45,6 +45,7 @@ jobs:
           event-name: ${{ github.event_name }}
           base-sha: ${{ github.event.pull_request.base.sha }}
           merge-group-base-sha: ${{ github.event.merge_group.base_sha }}
+          before-sha: ${{ github.event.before }}
           head-sha: ${{ github.event.pull_request.head.sha || github.sha }}
   dependencies:
     name: Dependency review

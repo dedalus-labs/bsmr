@@ -97,6 +97,13 @@ function unsafeScript(name: string): string {
 	return step.run.kind === "unsafe-shell" ? step.run.script : "";
 }
 
+test("only pull requests cancel an in-progress run, so main runs save Rust caches", () => {
+	assert.deepEqual(ci.concurrency, {
+		group: "${{ format('{0}-{1}', github.workflow, github.ref) }}",
+		"cancel-in-progress": "${{ github.event_name == 'pull_request' }}",
+	});
+});
+
 test("Rust aggregates completed runs without surviving workflow cancellation", () => {
 	assert.equal(jobs.rust?.name, "Rust");
 	assert.equal(jobs.rust?.["runs-on"], "ubuntu-24.04");
@@ -125,6 +132,7 @@ test("Rust lanes run only for trusted affected changes", () => {
 	assert.ok(check !== undefined && "uses" in check);
 	assert.equal(check.uses, "./.github/actions/ci/rust-affected");
 	assert.equal(check.with?.["merge-group-base-sha"], "${{ github.event.merge_group.base_sha }}");
+	assert.equal(check.with?.["before-sha"], "${{ github.event.before }}");
 	assert.equal(check.with?.["head-sha"], "${{ github.event.pull_request.head.sha || github.sha }}");
 	for (const id of rustLanes) {
 		assert.equal(jobs[id]?.needs, "affected");
@@ -139,6 +147,9 @@ test("Rust affected paths fail closed", () => {
 	assert.equal(rustAffected([".github/dependabot.yml"]), false);
 	assert.equal(rustAffected(["docs/users/getting_started.md"]), false);
 	assert.equal(rustAffected(["README.md", ".github/CODEOWNERS"]), false);
+	assert.equal(rustAffected(["docs/users/getting_started.md", "mkdocs.yml"]), false);
+	assert.equal(rustAffected([".agents/skills/release/SKILL.md"]), false);
+	assert.equal(rustAffected(["docs/mkdocs.yml", "app/.agents/notes.md"]), true);
 	assert.equal(rustAffected(["Cargo.lock"]), true);
 	assert.equal(rustAffected(["app/bsmr/src/main.rs"]), true);
 	assert.equal(rustAffected(["app/bsmr_core/src/pattern/target_pattern.md"]), true);
@@ -189,11 +200,41 @@ test("Merge-group paths classify the exact candidate against its base", async ()
 			eventName: "merge_group",
 			baseSha: "",
 			mergeGroupBaseSha: base,
+			beforeSha: "",
 			headSha: head,
 		}),
 		false,
 	);
 	assert.deepEqual(calls, [["git", "diff", "--name-only", "--no-renames", "-z", base, head]]);
+});
+
+test("Push paths classify the pushed head against its previous commit", async () => {
+	const before = "a".repeat(40);
+	const head = "b".repeat(40);
+	const calls: string[][] = [];
+	const exec: ScriptExec = async (file, args) => {
+		calls.push([file, ...args]);
+		return { exitCode: 0, stderr: "", stdout: "docs/users/getting_started.md\0mkdocs.yml\0" };
+	};
+	const push = { eventName: "push", baseSha: "", mergeGroupBaseSha: "", beforeSha: before, headSha: head } as const;
+	assert.equal(await rustAffectedForEvent(exec, push), false);
+	assert.deepEqual(calls, [["git", "diff", "--name-only", "--no-renames", "-z", before, head]]);
+	const fail: ScriptExec = async () => assert.fail("exec must not run");
+	await assert.rejects(rustAffectedForEvent(fail, { ...push, beforeSha: "" }), /push base SHA/);
+});
+
+test("A push that creates a ref runs Rust CI without a comparison", async () => {
+	const fail: ScriptExec = async () => assert.fail("exec must not run");
+	assert.equal(
+		await rustAffectedForEvent(fail, {
+			eventName: "push",
+			baseSha: "",
+			mergeGroupBaseSha: "",
+			beforeSha: "0".repeat(40),
+			headSha: "b".repeat(40),
+		}),
+		true,
+	);
 });
 
 test("Rust compilation uses sized Blacksmith runners", () => {
