@@ -10,4 +10,4 @@
 - Read and follow [@STYLE.md](STYLE.md) before changing code or documentation.
 - Preserve upstream and third-party copyright, license, and attribution notices.
 - Keep changes minimal, document their invariants, and run the narrowest relevant checks.
-- For Python, also read [the Python guide](docs/style/python.md).
+- For Python, also read [the Python guide](docs/style/python.md) and [errors and tests](docs/style/python/errors.md).

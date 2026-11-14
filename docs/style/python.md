@@ -427,6 +427,8 @@ class TransferCode(IntEnum):
 # fmt: on
 ```
 
+Continue with [errors, constants, tests and imports](python/errors.md).
+
 ## Check Python
 
 Run these from the repository root, replacing `path/to/file.py` with the files you
