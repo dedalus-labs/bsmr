@@ -7,12 +7,12 @@
 
 import { execFile } from "node:child_process";
 import { constants } from "node:fs";
-import { chmod, copyFile, lstat, lutimes, mkdir, mkdtemp, open, readFile, readdir, readlink, realpath, rm, symlink, utimes, writeFile } from "node:fs/promises";
+import { copyFile, lstat, mkdir, mkdtemp, open, readFile, readdir, readlink, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
-import { basename, dirname, isAbsolute, join, relative, resolve, sep } from "node:path";
+import { dirname, join, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 import { parseArgs, promisify } from "node:util";
-import { exportLayout, imageMetadata, importLayout, layerMetadata } from "./closure.mjs";
+import { exportLayout, imageMetadata, importLayout, layerMetadata, verifyLayer } from "./closure.mjs";
 
 const execute = promisify(execFile);
 const inherit = "<inherit from base>";
@@ -95,7 +95,7 @@ async function regularFile(path, executable, platform) {
 	}
 }
 
-/** Validate complete placements once for both archives and independent contexts. */
+/** Validate every native layer placement before invoking the encoder. */
 async function placements(spec, platform) {
 	object(spec, ["files", "executables", "symlinks"], "placements");
 	architecture(platform);
@@ -119,10 +119,29 @@ async function placements(spec, platform) {
 			if (seen.has(parent)) throw new OciError("OCI_PLACEMENT_CONFLICT", "placed file or symlink is an ancestor: " + parent);
 		}
 	}
-	for (const entry of entries) {
-		if (entry.kind !== "symlinks") await regularFile(entry.source, entry.kind === "executables", platform);
+	const expanded = [];
+	/** Preserve target symlinks as text; never inspect their referents on the host. */
+	async function tree(path, source) {
+		imagePath(path);
+		const info = await lstat(source);
+		if (info.isDirectory()) {
+			expanded.push({ path, source, kind: "directories" });
+			for (const name of (await readdir(source)).sort()) await tree(path + "/" + name, join(source, name));
+		} else if (info.isSymbolicLink()) {
+			const target = await readlink(source);
+			string(target, "directory symlink target");
+			expanded.push({ path, source: target, kind: "symlinks" });
+		} else if (info.isFile()) expanded.push({ path, source, kind: "files", mode: info.mode & 0o111 ? "0755" : "0644" });
+		else throw new OciError("OCI_NONREGULAR_INPUT", "directory contains a special file: " + source);
 	}
-	return entries;
+	for (const entry of entries) {
+		if (entry.kind === "files" && (await lstat(entry.source)).isDirectory()) await tree(entry.path, entry.source);
+		else {
+			if (entry.kind !== "symlinks") await regularFile(entry.source, entry.kind === "executables", platform);
+			expanded.push(entry);
+		}
+	}
+	return expanded;
 }
 
 /** Make declared output parents without following an existing output leaf. */
@@ -141,91 +160,74 @@ async function img(binary, args) {
 	}
 }
 
-/** Encode explicit regular files and symlinks as one ordinary deterministic layer. */
+/** Retain only compact headers and references; the encoder discards full gzip bytes. */
 async function layer(values, spec) {
 	const entries = await placements(spec, values.platform);
-	await parents([values.metadata, values.blob]);
+	await parents([values.metadata, values.compact]);
 	const args = ["layer", "--format", "gzip", "--compression-level", "1", "--compressor-jobs", "1",
-		"--create-parent-directories", "--default-metadata", JSON.stringify({ uid: 0, gid: 0, uname: "", gname: "", mtime: epoch }),
-		"--metadata", values.metadata];
-	for (const { path, source, kind } of entries) {
-		if (kind === "symlinks") args.push("--symlink", path + "=" + source);
-		else args.push("--add", path + "=" + source, "--file-metadata",
-			path.slice(1) + "=" + JSON.stringify({ mode: kind === "executables" ? "0755" : "0644" }));
+		"--create-parent-directories", "--default-metadata", JSON.stringify({ mode: "0644", uid: 0, gid: 0, uname: "", gname: "", mtime: epoch }),
+		"--metadata", values.metadata, "--compact-stream", values.compact, "--compact-stream-only"];
+	const scratch = await mkdtemp(join(tmpdir(), "bsmr-oci-layer-"));
+	try {
+		// Upstream's tree reader dereferences links. Enumerate leaves ourselves and
+		// use its directory entry support only for empty, normalized scaffolding.
+		const empty = join(scratch, "empty");
+		await mkdir(empty);
+		const files = [];
+		for (const { path, source, kind, mode } of entries) {
+			if (kind === "directories") files.push(path.slice(1) + "\0d" + empty);
+			else if (kind === "symlinks") args.push("--symlink", path + "=" + source);
+			else {
+				files.push(path.slice(1) + "\0f" + source);
+				if (kind === "executables" || mode === "0755") args.push("--file-metadata", path.slice(1) + '={"mode":"0755"}');
+			}
+		}
+		if (files.length) {
+			const params = join(scratch, "files");
+			await writeFile(params, files.join("\n") + "\n");
+			args.push("--add-from-file", params);
+		}
+		await img(values.img, args);
+		await layerMetadata(values.metadata);
+	} finally {
+		await rm(scratch, { recursive: true });
 	}
-	args.push(values.blob);
-	await img(values.img, args);
-	await layerMetadata(values.metadata);
 }
 
-/** Materialize explicit placements without sharing writable payload inodes. */
-async function context(values, spec) {
+/** Reconstruct through a temporary symlink CAS over declared regular payload leaves. */
+async function materialize(values, spec) {
 	const entries = await placements(spec, values.platform);
-	const output = resolve(values.output);
-	await parents([output]);
-	await mkdir(output);
-	const directories = new Set([output]);
-	for (const { path, source, kind } of entries) {
-		const destination = join(output, path.slice(1));
-		await mkdir(dirname(destination), { recursive: true });
-		for (let dir = dirname(destination); dir.startsWith(output); dir = dirname(dir)) {
-			directories.add(dir);
-			if (dir === output) break;
-		}
-		if (kind === "symlinks") {
-			await symlink(source, destination);
-			await lutimes(destination, 0, 0);
-		} else {
-			await copyFile(source, destination, constants.COPYFILE_EXCL);
-			await chmod(destination, kind === "executables" ? 0o755 : 0o644);
-			await utimes(destination, 0, 0);
-		}
-	}
-	for (const dir of directories) {
-		await chmod(dir, 0o755);
-		await utimes(dir, 0, 0);
+	const metadata = await layerMetadata(values.metadata);
+	await parents([values.blob]);
+	const scratch = await mkdtemp(join(tmpdir(), "bsmr-oci-materialize-"));
+	try {
+		const inputs = join(scratch, "inputs");
+		await writeFile(inputs, entries.filter(({ kind }) => kind === "files" || kind === "executables")
+			.map(({ source }) => resolve(source)).join("\n") + "\n");
+		const cas = join(scratch, "cas");
+		await img(values.img, ["cas-dir", "--symlink", "--output", cas, "--from-file", inputs]);
+		const reconstructed = join(scratch, "layer.tgz");
+		await img(values.img, ["compact-stream", "reconstruct", "--compact-stream", values.compact, "--cas-dir", cas, "--output", reconstructed]);
+		await verifyLayer(reconstructed, metadata, metadata.diff_id);
+		await copyFile(reconstructed, values.blob, constants.COPYFILE_EXCL);
+	} finally {
+		await rm(scratch, { recursive: true });
 	}
 }
 
-/** Copy and normalize a closed context; links may resolve only within that tree. */
-export async function stageContext(source, destination, timestamp) {
-	if (!Number.isSafeInteger(timestamp) || timestamp < 0) throw new OciError("OCI_INVALID_TIMESTAMP", "context timestamp must be nonnegative");
-	const root = await realpath(source);
-	if (!(await lstat(root)).isDirectory()) throw new OciError("OCI_INVALID_CONTEXT", "context must be a directory");
-	const destinationRoot = join(await realpath(dirname(destination)), basename(destination));
-	const destinationOffset = relative(root, destinationRoot);
-	if (destinationOffset === "" || (!destinationOffset.startsWith(".." + sep) && destinationOffset !== ".." && !isAbsolute(destinationOffset))) {
-		throw new OciError("OCI_CONTEXT_OVERLAP", "context staging destination must be outside its source tree");
+/** Validate and hash an existing tar layer without rewriting its filesystem metadata. */
+async function layerFromTar(values) {
+	await regularFile(values.archive, false, values.platform);
+	const scratch = await mkdtemp(join(tmpdir(), "bsmr-oci-archive-"));
+	try {
+		await img(values.img, ["mtree", "--tar", values.archive, "--options", "type", "--output", join(scratch, "archive.mtree")]);
+		await parents([values.metadata]);
+		await img(values.img, ["hash", "--encoding", "layer-metadata", values.archive, values.metadata]);
+		const metadata = await layerMetadata(values.metadata);
+		await verifyLayer(values.archive, metadata, metadata.diff_id);
+	} finally {
+		await rm(scratch, { recursive: true });
 	}
-	await mkdir(destination);
-	/** Walk declared inputs without dereferencing links into the host filesystem. */
-	async function copy(from, to) {
-		for (const name of (await readdir(from)).sort()) {
-			const input = join(from, name);
-			const output = join(to, name);
-			const info = await lstat(input);
-			if (info.isDirectory()) {
-				await mkdir(output);
-				await copy(input, output);
-			} else if (info.isFile()) {
-				await copyFile(input, output, constants.COPYFILE_EXCL);
-				await chmod(output, info.mode & 0o111 ? 0o755 : 0o644);
-				await utimes(output, timestamp, timestamp);
-			} else if (info.isSymbolicLink()) {
-				const target = await readlink(input);
-				const lexical = relative(root, resolve(dirname(input), target));
-				const offset = relative(root, await realpath(input));
-				if (isAbsolute(target) || [lexical, offset].some((path) => path === ".." || path.startsWith(".." + sep) || isAbsolute(path))) {
-					throw new OciError("OCI_EXTERNAL_CONTEXT_LINK", "context symlink escapes declared inputs: " + input);
-				}
-				await symlink(target, output);
-				await lutimes(output, timestamp, timestamp);
-			} else throw new OciError("OCI_NONREGULAR_INPUT", "context contains a special file: " + input);
-		}
-		await chmod(to, 0o755);
-		await utimes(to, timestamp, timestamp);
-	}
-	await copy(root, destination);
 }
 
 /** Validate config list values, reserving the encoder's inheritance marker. */
@@ -314,10 +316,11 @@ async function image(values, spec) {
 async function main() {
 	const [command, ...args] = process.argv.slice(2);
 	const fields = {
-		layer: ["img", "platform", "spec", "metadata", "blob"],
-		context: ["platform", "spec", "output"],
+		layer: ["img", "platform", "spec", "metadata", "compact"],
+		materialize: ["img", "platform", "spec", "metadata", "compact", "blob"],
+		"layer-from-tar": ["img", "platform", "archive", "metadata"],
 		image: ["img", "platform", "spec", "manifest", "config", "descriptor"],
-		layout: ["platform", "spec", "output"],
+		layout: ["img", "platform", "spec", "output"],
 		import: ["platform", "layout", "manifest", "config", "descriptor"],
 	}[command];
 	if (!fields) throw new OciError("OCI_INVALID_COMMAND", "unknown OCI operation");
@@ -327,9 +330,12 @@ async function main() {
 	architecture(values.platform);
 	const spec = values.spec ? JSON.parse(await readFile(values.spec, "utf8")) : undefined;
 	if (command === "layer") await layer(values, spec);
-	else if (command === "context") await context(values, spec);
+	else if (command === "materialize") await materialize(values, spec);
+	else if (command === "layer-from-tar") await layerFromTar(values);
 	else if (command === "image") await image(values, spec);
-	else if (command === "layout") await exportLayout({ platform: values.platform, spec, output: values.output });
+	else if (command === "layout") await exportLayout({ platform: values.platform, spec, output: values.output,
+		materialize: async (payload, blob) => materialize({ ...values, metadata: payload.metadata, compact: payload.compact, blob },
+			JSON.parse(await readFile(payload.inputs, "utf8"))) });
 	else await importLayout(values);
 }
 

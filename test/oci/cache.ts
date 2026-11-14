@@ -6,33 +6,29 @@
 // Qualifies OCI rules consuming native Go outputs with shared cache restoration.
 
 import assert from "node:assert/strict";
-import { execFile } from "node:child_process";
 import { cpSync, existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, realpathSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { basename, join, resolve } from "node:path";
-import { parseArgs, promisify } from "node:util";
+import { parseArgs } from "node:util";
+import { timedExec } from "./exec.ts";
 
 const { positionals, values } = parseArgs({ allowPositionals: true, options: {
 	platform: { type: "string", default: "linux/arm64" },
 	"engine-version": { type: "string", default: "0.0.9" },
 	"bundled-prelude": { type: "boolean", default: false },
 } });
-const [binary, img, prelude, operations, goVersion = "1.26.7", builderBundle] = positionals;
+const [binary, img, prelude, operations, goVersion = "1.26.7"] = positionals;
 const platform = values.platform;
 assert.ok(platform === "linux/arm64" || platform === "linux/amd64", "test platform must be linux/arm64 or linux/amd64");
 const architecture = platform === "linux/amd64" ? "amd64" : "arm64";
 const cpu = architecture === "amd64" ? "x86_64" : "arm64";
 const otherPlatform = architecture === "amd64" ? "linux/arm64" : "linux/amd64";
 assert.ok(binary && img && prelude && operations, "pass BSMR, img, checkout prelude, and OCI operations.mjs");
+assert.ok(positionals.length <= 5, "only an optional Go version may follow OCI operations.mjs");
 const operationsPath = realpathSync(operations);
 assert.equal(operationsPath, realpathSync(join(prelude, "oci/operations.mjs")), "operations must belong to the selected source prelude");
-if (builderBundle !== undefined) {
-	const daemon = JSON.parse(readFileSync(join(builderBundle, "daemon-contract.json"), "utf8"));
-	assert.equal(daemon.os, "linux");
-	assert.equal(daemon.architecture, architecture, "the selected test platform must match the declared native daemon");
-}
 const executable = resolve(binary);
-const run = promisify(execFile);
+const run = timedExec(300);
 const resumed = process.env["BSMR_OCI_TEST_RESUME"];
 const root = realpathSync(resumed ?? mkdtempSync(join(tmpdir(), "bsmr-oci-cache-")));
 assert.ok(basename(root).startsWith("bsmr-oci-cache-"), "resume must name an owned OCI fixture root");
@@ -47,8 +43,8 @@ if (resumed !== undefined) {
 	if (values["bundled-prelude"]) assert.equal(existsSync(join(cwd, ".bsmr.local")), false, "bundled qualification must not resume a source overlay");
 }
 const workspaces: string[] = [];
-const env = { ...process.env, BSMR_LOCAL_CACHE_DIR: join(root, "cache") };
-const options = { cwd, env, timeout: 300_000, maxBuffer: 16 * 1024 * 1024 };
+const env = { BSMR_LOCAL_CACHE_DIR: join(root, "cache") };
+const options = { cwd, env };
 const evidenceRoot = process.env["BSMR_OCI_TEST_EVIDENCE"];
 if (evidenceRoot !== undefined) mkdirSync(resolve(evidenceRoot), { recursive: true });
 const evidence = evidenceRoot === undefined ? undefined : mkdtempSync(join(resolve(evidenceRoot), "cache-"));
@@ -67,10 +63,10 @@ async function verify(path: string): Promise<Image> {
 }
 
 /** Build one image and retain this invocation's machine-readable cache evidence. */
-async function build(directory: string, phase: string, target = "layout") {
+async function build(directory: string, phase: string) {
 	const context = { ...options, cwd: directory };
 	const report = join(root, `${phase}.json`);
-	await run(executable, ["build", `//images:${target}`, "--build-report", report,
+	await run(executable, ["build", "//images:layout", "--build-report", report,
 		"--build-report-options", "include-artifact-hash-information", "--console", "simple", "-v=1,stderr,full_failed_command",
 		"--target-platforms", "//images:linux_target", "-c", "go.link_mode=internal"], context).catch((error) => {
 		if (evidence !== undefined) {
@@ -81,7 +77,7 @@ async function build(directory: string, phase: string, target = "layout") {
 	});
 	const result = JSON.parse(readFileSync(report, "utf8"));
 	assert.equal(result.success, true);
-	const output = result.results[`root//images:${target}`].outputs.DEFAULT[0];
+	const output = result.results["root//images:layout"].outputs.DEFAULT[0];
 	const log = await run(executable, ["log", "what-ran", "--trace-id", result.trace_id,
 		"--format", "json", "--no-remote"], context);
 	const actions: Action[] = log.stdout.trim() === "" ? [] : log.stdout.trim().split("\n").map((line) => JSON.parse(line));
@@ -151,21 +147,6 @@ async function corruptInputs(output: string, expected: string) {
 	assert.equal(JSON.parse(readFileSync(imported, "utf8")).digest, expected);
 }
 
-/** Compare runtime filesystem/configuration, allowing representational differences between exporters. */
-function equivalent(native: Image, external: Image) {
-	const files = (image: Image) => Object.fromEntries(Object.entries(image.files).map(([path, entry]) => [path,
-		entry.type === "symlink" ? { ...entry, mode: 0o777 } : entry]));
-	assert.deepEqual(files(external), files(native));
-	const config = (image: Image) => ({
-		Entrypoint: image.config.config.Entrypoint,
-		Env: [...image.config.config.Env].sort(),
-		Cmd: image.config.config.Cmd ?? [],
-		User: image.config.config.User,
-		WorkingDir: image.config.config.WorkingDir || "/",
-	});
-	assert.deepEqual(config(external), config(native));
-}
-
 try {
 	assert.equal((await run(executable, ["--version"], { env })).stdout.trim(), `bsmr ${values["engine-version"]}`);
 	mkdirSync(join(cwd, "cmd/probe"), { recursive: true });
@@ -204,30 +185,10 @@ artifact(name = "img", binary = "img", visibility = ["PUBLIC"])
 artifact(name = "node", binary = "node", visibility = ["PUBLIC"])
 oci_toolchain(name = "oci", img = ":img", node = ":node", visibility = ["PUBLIC"])
 `);
-	if (builderBundle !== undefined) {
-		mkdirSync(join(cwd, "tools/buildkit"), { recursive: true });
-		for (const file of ["docker", "daemon-contract.json", "buildkit-image.txt"]) {
-			cpSync(join(resolve(builderBundle), file), join(cwd, "tools/buildkit", file));
-		}
-		const pin = readFileSync(join(cwd, "tools/buildkit/buildkit-image.txt"), "utf8").trim();
-		assert.match(pin, /@sha256:[0-9a-f]{64}$/);
-		writeFileSync(join(cwd, "tools/buildkit/BUILD.bsmr"), `load("@prelude//oci:buildkit.bzl", "managed_buildkit")
-managed_buildkit(name = "buildkit", node = "//tools:node", docker = "docker",
-    daemon_contract = "daemon-contract.json", image = ${JSON.stringify(pin)}, visibility = ["PUBLIC"])
-`);
-	}
 	mkdirSync(join(cwd, "images"), { recursive: true });
 	writeFileSync(join(cwd, "images/message.txt"), "fixture\n");
-	writeFileSync(join(cwd, "images/Dockerfile"), `FROM scratch
-COPY app /app
-ENV PATH=/app OCI_PROBE=changed
-USER 65532:65532
-WORKDIR /app
-ENTRYPOINT ["/app/current"]
-`);
 	const imageBuild = join(cwd, "images/BUILD.bsmr");
-	writeFileSync(imageBuild, `load("@prelude//oci:defs.bzl", "oci_layer", "oci_image", "oci_layout", "oci_context")
-load("@prelude//oci:buildkit.bzl", "dockerfile_image")
+	writeFileSync(imageBuild, `load("@prelude//oci:defs.bzl", "oci_layer", "oci_image", "oci_layout")
 platform(name = "linux_target", constraint_values = ["config//os/constraints:linux", "config//cpu/constraints:${cpu}"])
 oci_layer(name = "application", platform = "${platform}", executables = {"/app/probe": "//cmd/probe:bin"},
     files = {"/app/message.txt": "message.txt"}, symlinks = {"/app/current": "probe"}, toolchain = "//tools:oci")
@@ -236,10 +197,6 @@ oci_image(name = "image", platform = "${platform}", layers = [":application"],
 oci_layout(name = "layout", image = ":image", toolchain = "//tools:oci")
 oci_image(name = "wrong_platform", platform = "${otherPlatform}", layers = [":application"], toolchain = "//tools:oci")
 oci_layer(name = "unsafe_path", platform = "${platform}", files = {"/app/../escape": "message.txt"}, toolchain = "//tools:oci")
-${builderBundle === undefined ? "" : `oci_context(name = "context", platform = "${platform}", executables = {"/app/probe": "//cmd/probe:bin"},
-    files = {"/Dockerfile": "Dockerfile", "/app/message.txt": "message.txt"}, symlinks = {"/app/current": "probe"}, toolchain = "//tools:oci")
-dockerfile_image(name = "buildkit", context = ":context", builder = "//tools/buildkit:buildkit", platform = "${platform}", toolchain = "//tools:oci")
-oci_layout(name = "buildkit_layout", image = ":buildkit", toolchain = "//tools:oci")`}
 `);
 	mkdirSync(join(cwd, "images/missing"), { recursive: true });
 	writeFileSync(join(cwd, "images/missing/BUILD.bsmr"), `load("@prelude//oci:defs.bzl", "oci_layer")
@@ -274,25 +231,6 @@ oci_layer(name = "layer", platform = "${platform}", files = {"/app/missing": "mi
 	assert.ok(changed.local.some(({ identity }) => identity.includes("oci_layer")));
 	await corruptInputs(changed.output, changed.image.digest);
 	if (evidence !== undefined) cpSync(changed.output, join(evidence, "native-layout"), { recursive: true });
-	if (builderBundle !== undefined) {
-		const external = await build(cwd, "buildkit-cold", "buildkit_layout");
-		assert.ok(external.local.some(({ identity }) => identity.includes("oci_buildkit")));
-		equivalent(changed.image, external.image);
-		if (evidence !== undefined) cpSync(external.output, join(evidence, "buildkit-layout"), { recursive: true });
-		assert.equal((await build(cwd, "buildkit-warm", "buildkit_layout")).actions.length, 0);
-		await clean(cwd);
-		const reused = await build(cwd, "buildkit-restored", "buildkit_layout");
-		assert.equal(reused.local.length, 0);
-		assert.equal(reused.image.digest, external.image.digest);
-		const dockerfile = join(cwd, "images/Dockerfile");
-		const original = readFileSync(dockerfile, "utf8");
-		writeFileSync(dockerfile, "FROM docker.io/library/alpine:latest\n");
-		await assert.rejects(build(cwd, "external-base", "buildkit_layout"), /BuildkitSolveFailed/);
-		writeFileSync(dockerfile, "# syntax=docker/dockerfile:1\nFROM scratch\n");
-		await assert.rejects(build(cwd, "external-frontend", "buildkit_layout"), /BuildkitSolveFailed/);
-		writeFileSync(dockerfile, original);
-		assert.equal((await build(cwd, "external-retry", "buildkit_layout")).image.digest, external.image.digest);
-	}
 	await clean(cwd);
 	const restored = await build(cwd, "restored");
 	assert.equal(restored.local.length, 0);

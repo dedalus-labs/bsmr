@@ -58,6 +58,7 @@ const test: ProcessSpec = {
 		"test/oci/closure.test.mjs",
 		"test/oci/operations.test.mjs",
 		"test/oci/image.test.mjs",
+		"test/oci/compact.test.mjs",
 	],
 };
 const license: ProcessSpec = { file: "node", args: ["ci/license.ts", "check"] };

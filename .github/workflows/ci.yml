@@ -287,6 +287,12 @@ jobs:
         uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38
         with:
           node-version: 26.5.1
+      - name: Set up pnpm
+        run: npm install --global pnpm@10.30.3
+        shell: bash
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile --ignore-scripts
+        shell: bash
       - name: Verify native architecture
         run: node -e 'require('"'"'node:assert/strict'"'"').equal(process.arch, process.argv[1])' "$HOLLYWOOD_COMMAND_ARG_2"
         shell: bash
