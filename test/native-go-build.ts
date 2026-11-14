@@ -18,6 +18,7 @@ assert.ok(binary, "pass the BSMR binary under test");
 const executable = resolve(binary);
 const version = process.argv[3] ?? "1.26.7";
 const prelude = process.argv[4];
+const fixtures = resolve(import.meta.dirname, "fixtures/go-native");
 const os = process.platform === "darwin" ? "darwin" : "linux";
 const arch = process.arch === "arm64" ? "arm64" : "amd64";
 const run = promisify(execFile);
@@ -26,51 +27,16 @@ const cwd = join(root, "workspace");
 const env: NodeJS.ProcessEnv = { ...process.env, BSMR_LOCAL_CACHE_DIR: join(root, "cache") };
 const options = { cwd, env, timeout: 300_000, maxBuffer: 16 * 1024 * 1024 };
 const workspaces = [cwd];
-mkdirSync(join(cwd, "cmd/probe"), { recursive: true });
-writeFileSync(join(cwd, "go.mod"), "module example.com/cache-probe\n\ngo 1.26.0\n");
-writeFileSync(join(cwd, "cmd/probe/main.go"), `package main
-import ("fmt"; _ "embed"; "debug/elf"; "encoding/json"; "os"; "example.com/cache-probe/platform")
-//go:embed message.txt
-var message string
-var _ = platform.Name
-func main() {
- if len(os.Args) == 2 {
-  file, err := elf.Open(os.Args[1]); if err != nil { panic(err) }; defer file.Close()
-  if err := json.NewEncoder(os.Stdout).Encode(map[string]any{"machine": file.Machine}); err != nil { panic(err) }
-  return
- }
- fmt.Print(message)
-}
-`);
-writeFileSync(join(cwd, "cmd/probe/message.txt"), "original\n");
-writeFileSync(join(cwd, "cmd/probe/main_test.go"), `package main
-import "testing"
-func TestMessage(t *testing.T) { if message == "" { t.Fatal("empty embedded message") } }
-`);
-mkdirSync(join(cwd, "platform"));
-writeFileSync(join(cwd, "platform/platform.go"), "package platform\nconst Name = name\n");
-for (const os of ["linux", "darwin"]) for (const arch of ["amd64", "arm64"]) {
-	writeFileSync(join(cwd, `platform/target_${os}_${arch}.go`), `package platform\nconst name = "${os}/${arch}"\n`);
-}
+cpSync(join(fixtures, "workspace"), cwd, { recursive: true });
 
 /** Build Go beside the Cargo and pnpm manifests that already define the root `toolchains//` package. */
 async function monorepo() {
 	const directory = join(root, "monorepo");
 	workspaces.push(directory);
 	cpSync(resolve(import.meta.dirname, "fixtures/go-tools"), directory, { recursive: true });
-	const files: Record<string, string> = {
-		"go.mod": readFileSync(join(directory, "go.mod"), "utf8").replace("module example.com/tools", "module example.com/monorepo"),
-		"svc/main.go": 'package main\nimport "fmt"\nfunc main() { fmt.Print("go beside rust\\n") }\n',
-		"Cargo.toml": '[package]\nname = "monorepo"\nversion = "0.1.0"\nedition = "2024"\n',
-		"Cargo.lock": 'version = 4\n\n[[package]]\nname = "monorepo"\nversion = "0.1.0"\n',
-		"rust-toolchain.toml": '[toolchain]\nchannel = "1.97.1"\n',
-		"src/main.rs": 'fn main() { println!("rust beside go"); }\n',
-		"package.json": '{ "name": "monorepo", "private": true }\n',
-	};
-	for (const [path, text] of Object.entries(files)) {
-		mkdirSync(resolve(directory, path, ".."), { recursive: true });
-		writeFileSync(join(directory, path), text);
-	}
+	cpSync(join(fixtures, "monorepo"), directory, { recursive: true });
+	const module = join(directory, "go.mod");
+	writeFileSync(module, readFileSync(module, "utf8").replace("module example.com/tools", "module example.com/monorepo"));
 	const context = { ...options, cwd: directory };
 	await run(executable, ["init"], context);
 	await run(executable, ["go", "toolchain", "--version", version], context);
@@ -87,12 +53,13 @@ async function monorepo() {
 }
 
 type Action = { identity: string; reproducer: { executor: string } };
-type BuildOptions = Readonly<{ internal?: boolean; target?: "amd64" | "arm64" }>;
+type BuildOptions = Readonly<{ internal?: boolean; target?: "amd64" | "arm64"; strip?: boolean }>;
 
 /** Execute native outputs or inspect foreign ELF outputs, then read this build's actions. */
-async function build(directory: string, phase: string, message = "original\n", { internal = true, target }: BuildOptions = {}) {
+async function build(directory: string, phase: string, message = "original\n", { internal = true, target, strip = false }: BuildOptions = {}) {
 	const flags = internal ? ["-c", "go.link_mode=internal"] : [];
 	if (target !== undefined) flags.push("--target-platforms", `//platforms:linux_${target}`);
+	if (strip) flags.push("-c", "go.strip=true");
 	const context = { ...options, cwd: directory };
 	const { stdout, stderr } = await run(executable, ["build", "//cmd/probe:bin", "//cmd/probe:test", ...flags, "--show-full-json-output", "--console", "simple"], context);
 	const outputs: Record<string, string> = JSON.parse(stdout);
@@ -103,7 +70,7 @@ async function build(directory: string, phase: string, message = "original\n", {
 		assert.equal((await run(program, [])).stdout, message);
 		assert.match((await run(test, ["-test.run=^TestMessage$", "-test.v"])).stdout, /--- PASS: TestMessage/);
 	} else for (const output of [program, test]) {
-		const inspected = JSON.parse((await run(join(root, "elf-probe"), [output])).stdout);
+		const inspected = JSON.parse((await run(join(root, "elf-probe"), ["linux", output])).stdout);
 		assert.equal(inspected.machine, target === "arm64" ? 183 : 62);
 	}
 	const trace = /Build ID: ([a-f0-9-]+)/.exec(stderr)?.[1];
@@ -128,9 +95,7 @@ async function crossTargets(program: string) {
 		cpSync(join(cwd, name), join(directory, name), { recursive: true });
 	const context = { ...options, cwd: directory };
 	await run(executable, ["init"], context);
-	mkdirSync(join(directory, "platforms"));
-	writeFileSync(join(directory, "platforms/BUILD.bsmr"), ["amd64", "arm64"].map((target) =>
-		`platform(name = "linux_${target}", constraint_values = ["config//os/constraints:linux", "config//cpu/constraints:${target === "amd64" ? "x86_64" : "arm64"}"])\n`).join(""));
+	cpSync(join(fixtures, "platforms"), join(directory, "platforms"), { recursive: true });
 	for (const target of ["amd64", "arm64"] as const) {
 		await run(executable, ["go", "sync", "--target", `linux/${target}`], context);
 		await run(executable, ["go", "sync", "--target", `linux/${target}`, "--check"], context);
@@ -193,6 +158,19 @@ try {
 	assert.ok(restored.cached.length > 0);
 	assert.equal(restored.digest, cold.digest);
 	await crossTargets(restored.program);
+	const inspect = async (program: string) => JSON.parse((await run(join(root, "elf-probe"), [os, program])).stdout);
+	const originalSize = readFileSync(restored.program).length;
+	assert.ok((await inspect(restored.program)).dwarf_bytes > 0, "default links retain DWARF");
+	const stripped = await build(cwd, "stripped", "original\n", { strip: true });
+	assert.equal((await inspect(stripped.program)).dwarf_bytes, 0);
+	assert.ok(readFileSync(stripped.program).length < originalSize);
+	assert.notEqual(stripped.digest, cold.digest);
+	await clean(cwd);
+	const strippedRestored = await build(cwd, "stripped-restored", "original\n", { strip: true });
+	assert.equal(strippedRestored.local.length, 0, "stripped outputs retain internal-link cache eligibility");
+	assert.ok(strippedRestored.cached.length > 0);
+	assert.equal(strippedRestored.digest, stripped.digest);
+	await assert.rejects(run(executable, ["build", "//cmd/probe:bin", "-c", "go.strip=invalid"], options), /cannot coerce.*bool/);
 	await clean(cwd);
 	const second = join(root, "second");
 	cpSync(cwd, second, { recursive: true, filter: (path) => basename(path) !== "bsmr-out" });
@@ -203,8 +181,7 @@ try {
 	writeFileSync(join(second, "furl-policy.yaml"), "readiness: healthy\n");
 	await clean(second);
 	assert.equal((await build(second, "policy-only")).local.length, 0);
-	const sourcePath = join(second, "cmd/probe/main.go");
-	writeFileSync(sourcePath, readFileSync(sourcePath, "utf8").replace("fmt.Print(message)", 'fmt.Print("compiled:" + message)'));
+	cpSync(join(fixtures, "compiled-prefix.go"), join(second, "cmd/probe/prefix.go"));
 	await clean(second);
 	const compiled = await build(second, "compiled-source", "compiled:original\n");
 	assert.ok(compiled.local.some(({ identity }) => identity.includes("go_compile") && identity.includes("cmd/probe")));
@@ -220,15 +197,11 @@ try {
 	assert.equal(automatic.cached.filter(({ identity }) => identity.includes("(go_link ")).length, 0);
 	// Without the lock, the root build file alone declares the toolchains the system phases select.
 	rmSync(join(second, ".bsmr-go-toolchain.json"));
-	writeFileSync(join(second, "BUILD.bsmr"), 'load("@prelude//toolchains:demo.bzl", "system_demo_toolchains")\nsystem_demo_toolchains()\n');
+	cpSync(join(fixtures, "system-go/BUILD.bsmr"), join(second, "BUILD.bsmr"));
 	env["PATH"] = `${join(second, ".bsmr-go-sdk/bin")}${delimiter}${process.env["PATH"]}`;
 	await systemBootstrap(second, "system-go");
-	writeFileSync(join(second, "BUILD.bsmr"), `load("@prelude//toolchains:demo.bzl", "system_demo_toolchains")
-load("@prelude//toolchains/go:go_bootstrap_toolchain.bzl", "go_bootstrap_distr", "go_bootstrap_toolchain")
-system_demo_toolchains(include_go = False)
-go_bootstrap_distr(name = "sdk", go_root = ".bsmr-go-sdk", go_os_arch = ("${os}", "${arch}"))
-go_bootstrap_toolchain(name = "go_bootstrap", go_bootstrap_distr = ":sdk", env_go_os = "${os}", env_go_arch = "${arch}", visibility = ["PUBLIC"])
-`);
+	writeFileSync(join(second, "BUILD.bsmr"), readFileSync(join(fixtures, "system-python/BUILD.bsmr.in"), "utf8")
+		.replaceAll("@OS@", os).replaceAll("@ARCH@", arch));
 	await systemBootstrap(second, "system-python");
 	// A module whose only packages come from `tool` directives must still sync its tool binaries.
 	const tools = join(cwd, "tools");
@@ -272,7 +245,7 @@ build\t${arch === "arm64" ? "GOARM64=v8.0" : "GOAMD64=v1"}
 	await run(executable, ["go", "sync", "--check"], { ...options, cwd: tools });
 	assert.ok(!existsSync(join(tools, "vendor/example.com/greeter/cmd/greet/BUILD.bsmr")));
 	await monorepo();
-	process.stdout.write(`ok: Go ${version} embeds, target selection, restoration, source roots, policy isolation, source/SDK invalidation, system-tool exclusion, tool directives, build info, tool retirement, Go beside Cargo and pnpm roots\n`);
+	process.stdout.write(`ok: Go ${version} embeds, target selection, stripping, restoration, source roots, policy isolation, source/SDK invalidation, system-tool exclusion, tool directives, build info, tool retirement, Go beside Cargo and pnpm roots\n`);
 } finally {
 	await Promise.all(workspaces.map((directory) => run(executable, ["kill"], { ...options, cwd: directory })));
 	rmSync(root, { recursive: true });

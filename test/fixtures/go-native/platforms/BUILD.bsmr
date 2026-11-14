@@ -1,0 +1,15 @@
+platform(
+    name = "linux_amd64",
+    constraint_values = [
+        "config//os/constraints:linux",
+        "config//cpu/constraints:x86_64",
+    ],
+)
+
+platform(
+    name = "linux_arm64",
+    constraint_values = [
+        "config//os/constraints:linux",
+        "config//cpu/constraints:arm64",
+    ],
+)
