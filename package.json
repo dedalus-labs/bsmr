@@ -12,7 +12,7 @@
 		"rolldown": "1.2.1",
 		"typescript": "6.0.3",
 		"yaml": "2.8.4",
-		"zod": "4.4.3"
+		"zod": "4.6.6"
 	},
 	"engines": {
 		"node": "26.5.1"
