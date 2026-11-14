@@ -155,7 +155,7 @@ num-bigint = { version = "0.4.6", features = ["rand", "serde"] }
 num-traits = "0.2.19"
 num_cpus = "1.16"
 num_enum = "0.7.6"
-object = { version = "0.36.7", features = ["read", "write"] }
+object = { version = "0.40.0", features = ["read", "write"] }
 oid-registry = "0.4"
 once_cell = "1.21.4"
 os_str_bytes = { version = "6.6.1", features = ["conversions"] }
@@ -187,7 +187,7 @@ reflink-copy = "0.1.30"
 regex = "1.12.3"
 relative-path = { version = "1.7.0", features = ["serde"] }
 ring = "=0.17.14" # Upgrading this is possible, but a pain, so we don't want to pick up every new minor version
-rusqlite = { version = "0.37.0", features = ["backup", "blob", "bundled", "column_decltype", "functions", "limits", "modern_sqlite", "serde_json"] }
+rusqlite = { version = "0.41.0", features = ["backup", "blob", "bundled", "column_decltype", "fallible_uint", "functions", "limits", "modern_sqlite", "serde_json"] }
 rustc-hash = "2.1.2"
 rustls = { version = "0.23.37", features = ["logging", "ring", "std", "tls12"], default-features = false }
 rustls-native-certs = "0.8.3"
@@ -265,7 +265,7 @@ windows_x86_64_msvc = "=0.48.0" # our fixup only works if we are on precisely 0.
 x509-parser = "0.18.1"
 xattr = "1.6.1"
 yaml-rust2 = { version = "0.10.4", default-features = false }
-zip = { version = "8.5.1", features = ["aes-crypto", "bzip2", "deflate", "time"] }
+zip = { version = "9.0.5", features = ["aes-crypto", "bzip2", "deflate", "time"] }
 zstd = { version = "0.13.3", features = ["experimental", "zstdmt"] }
 
 [patch.crates-io]
