@@ -57,6 +57,10 @@ export const docs = workflow({
 					name: "Build documentation",
 					run: command({ file: "python", args: ["-m", "mkdocs", "build", "--strict", "-f", "mkdocs.yml"] }),
 				},
+				{
+					name: "Verify documentation assets",
+					run: command({ file: "test", args: ["-f", "site/assets/theme.css"] }),
+				},
 				{ name: "Upload Pages artifact", uses: uploadPagesArtifactAction, with: { path: "site" } },
 			],
 		}),
