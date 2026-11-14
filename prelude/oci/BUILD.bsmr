@@ -17,3 +17,4 @@ export_file(name = "sources", src = "sources.mjs", mode = "reference", visibilit
 export_file(name = "auth", src = "auth.mjs", mode = "reference", visibility = ["PUBLIC"])
 export_file(name = "client", src = "client.mjs", mode = "reference", visibility = ["PUBLIC"])
 export_file(name = "push", src = "push.mjs", mode = "reference", visibility = ["PUBLIC"])
+export_file(name = "run", src = "run.mjs", mode = "reference", visibility = ["PUBLIC"])
