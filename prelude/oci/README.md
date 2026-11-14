@@ -41,6 +41,7 @@ native compiler outputs -> oci_layer -> layer metadata -> oci_image
 | oci_pull | A public image acquired anonymously from a direct manifest lock |
 | oci_fetch | An explicit authenticated acquisition command |
 | oci_push | An explicit publication command |
+| deb_packages | An APT-resolved package transaction acquired by checksum |
 | oci_layer | Files, directories, Linux executables, and literal links in a compact layer |
 | oci_layer_from_tar | An unchanged tar or gzip archive with verified layer metadata |
 | oci_image | Configuration, manifest, and descriptor assembled from layer metadata |
@@ -310,6 +311,49 @@ bsmr run //images:publish -- --sink oci:/absolute/new/test-layout
 
 The local sink verifies publication preparation and complete output bytes.
 It does not qualify live registry authentication or upload behavior.
+
+## Resolve and acquire Debian packages
+
+Acquire a package transaction for a verified base image:
+
+```python
+load("@prelude//debian:defs.bzl", "deb_packages")
+
+deb_packages(
+    name = "packages",
+    base = ":base",
+    packages = ["curl", "ca-certificates"],
+    lock = "debian.lock.json",
+)
+```
+
+The rule verifies each HTTPS URL, SHA-256, and size. Its lock binds the base
+manifest digest, target platform, requested package set, and no-recommends
+policy. Stale bindings fail before download. The result is a directory of
+verified `.deb` files. Acquisition does not install packages or run their scripts.
+
+Generate the lock explicitly with APT in a trusted Linux resolver environment
+containing `python3-apt`. Supply a pristine unpack of the selected base:
+
+```sh
+python3 prelude/debian/lock.py \
+  --root /path/to/pristine-base/rootfs \
+  --base-digest sha256:<base-manifest-digest> \
+  --platform linux/arm64 \
+  --repository https://snapshot.debian.org/archive/debian/<snapshot>/ \
+  --suite bookworm \
+  --output debian.new.lock.json curl ca-certificates
+```
+
+The resolver copies only the base's package status and Debian archive keyring.
+It does not load the image's APT configuration or hooks, execute image programs,
+or accept ambient `APT_CONFIG`. It uses APT's dependency solver and authenticated
+indexes, not a hand-written dependency list. It never installs into the base.
+
+Review the new lock before replacing the committed one. The generator refuses
+to overwrite an existing output. Resolution currently supports one Debian
+suite's main component and rejects removals and downgrades. Snapshot archives
+keep package URLs available for long-lived pins.
 
 ## Verification
 
