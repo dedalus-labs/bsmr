@@ -5,17 +5,16 @@
 
 // Acquires digest-locked images without persisting registry credentials in artifacts.
 
-import { execFile } from "node:child_process";
 import { createHash } from "node:crypto";
 import { lstat, mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
-import { parseArgs, promisify } from "node:util";
+import { parseArgs } from "node:util";
 import { importLayout } from "./closure.mjs";
 import { registryEnvironment } from "./auth.mjs";
+import { executeClient } from "./client.mjs";
 
-const execute = promisify(execFile);
 const manifestType = "application/vnd.oci.image.manifest.v1+json";
 const indexType = "application/vnd.oci.image.index.v1+json";
 const configType = "application/vnd.oci.image.config.v1+json";
@@ -69,15 +68,23 @@ function decode(bytes) {
 	try { return JSON.parse(bytes); } catch { fail("OCI_INVALID_METADATA", "acquisition metadata must be valid JSON"); }
 }
 
-/** Run the maintained client with isolated anonymous registry access. */
-async function registryCommand(binary, args, scratch, env) {
+/** Prevent a cancelled operation from starting another stage or publishing success. */
+function checkCancelled(signal) {
+	if (signal?.aborted) fail("OCI_PULL_CANCELLED", "image acquisition was interrupted");
+}
+
+/** Run the maintained client without exposing authenticated diagnostics to build logs. */
+async function registryCommand({ binary, args, scratch, env, authenticated, signal }) {
+	checkCancelled(signal);
 	try {
-		await execute(resolve(binary), args, { cwd: scratch, timeout: 300_000, maxBuffer: 4 * 1024 * 1024,
-			env });
+		await executeClient(resolve(binary), args, { cwd: scratch, timeout: 300_000, maxBuffer: 4 * 1024 * 1024,
+			env, signal, killSignal: "SIGKILL" });
 	} catch (error) {
-		if (error.stderr) process.stderr.write(error.stderr);
+		checkCancelled(signal);
+		if (!authenticated && error.stderr) process.stderr.write(error.stderr);
 		fail("OCI_PULL_FAILED", "pinned img could not acquire the locked image");
 	}
+	checkCancelled(signal);
 }
 
 /** Validate descriptors before using their digest as a local blob path. */
@@ -90,7 +97,8 @@ function dockerDescriptor(value, mediaType) {
 }
 
 /** Reuse img's media-type normalization while retaining exact config and layer bytes. */
-async function normalizeDocker(values, selected, manifest, scratch) {
+async function normalizeDocker({ values, selected, manifest, scratch, signal }) {
+	checkCancelled(signal);
 	object(manifest, ["schemaVersion", "mediaType", "config", "layers"], "Docker manifest");
 	dockerDescriptor(manifest.config, dockerConfigType);
 	if (!Array.isArray(manifest.layers)) fail("OCI_INVALID_METADATA", "Docker manifest requires a layers array");
@@ -116,7 +124,7 @@ async function normalizeDocker(values, selected, manifest, scratch) {
 		args.push("--layer-from-metadata", path);
 	}
 	for (const [name, path] of Object.entries(converted)) args.push("--" + name, path);
-	await registryCommand(values.img, args, scratch, { LANG: "C", TZ: "UTC" });
+	await registryCommand({ binary: values.img, args, scratch, env: { LANG: "C", TZ: "UTC" }, authenticated: true, signal });
 	const bytes = await readMetadata(converted.manifest);
 	const normalized = decode(bytes);
 	if (!(await readMetadata(converted.config)).equals(configBytes) || normalized.config.digest !== manifest.config.digest
@@ -126,25 +134,30 @@ async function normalizeDocker(values, selected, manifest, scratch) {
 	}
 	const descriptor = { mediaType: manifestType, digest: `sha256:${createHash("sha256").update(bytes).digest("hex")}`, size: bytes.length };
 	await writeFile(join(values.output, "blobs", "sha256", descriptor.digest.slice(7)), bytes, { flag: "wx" });
+	checkCancelled(signal);
 	return descriptor;
 }
 
-/** Materialize a complete verified public image from one immutable manifest. */
-async function pull(values) {
+/** Materialize a verified layout, using runtime credentials only for explicit fetch. */
+async function pull(values, { credentials = null, signal } = {}) {
+	checkCancelled(signal);
 	const spec = decode(await readMetadata(values.spec));
 	object(spec, ["image", "platform", "lock"], "pull specification");
 	if (typeof spec.lock !== "string" || !spec.lock || /[\0\r\n]/u.test(spec.lock)) fail("OCI_INVALID_LOCK", "pull specification requires a lock artifact path");
 	const selected = lockedImage(decode(await readMetadata(spec.lock)), spec.image, spec.platform);
 	await mkdir(dirname(values.output), { recursive: true });
 	const scratch = await mkdtemp(join(tmpdir(), "bsmr-oci-pull-auth-"));
+	let ownsOutput = false;
 	try {
-		await writeFile(join(scratch, "config.json"), "{}", { mode: 0o600, flag: "wx" });
-		const env = registryEnvironment(selected.registry, scratch);
-		await mkdir(values.output);
 		try {
+			await writeFile(join(scratch, "config.json"), "{}", { mode: 0o600, flag: "wx" });
+			const env = registryEnvironment(selected.registry, scratch, credentials);
+			checkCancelled(signal);
+			await mkdir(values.output);
+			ownsOutput = true;
 			const manifestPath = join(values.output, "blobs", "sha256", selected.digest.slice(7));
-			await registryCommand(values.img, ["download-manifest", "--digest", selected.digest,
-				"--source", selected.repository + "@" + selected.registry, "--output", manifestPath], scratch, env);
+			await registryCommand({ binary: values.img, args: ["download-manifest", "--digest", selected.digest,
+				"--source", selected.repository + "@" + selected.registry, "--output", manifestPath], scratch, env, authenticated: credentials !== null, signal });
 			const manifestBytes = await readMetadata(manifestPath);
 			if (`sha256:${createHash("sha256").update(manifestBytes).digest("hex")}` !== selected.digest) {
 				fail("OCI_DIGEST_MISMATCH", "downloaded manifest does not match the locked digest");
@@ -153,31 +166,49 @@ async function pull(values) {
 			if (![manifestType, dockerManifestType].includes(manifest?.mediaType) || manifest.schemaVersion !== 2) {
 				fail("OCI_DIRECT_MANIFEST_REQUIRED", "image lock must pin a direct OCI or Docker schema 2 image manifest, not an index");
 			}
-			await registryCommand(values.img, ["pull", "--registry", selected.registry, "--repository", selected.repository,
-				"--reference", selected.digest, "--platform", selected.platform, "--layer-handling", "eager", "--output", values.output], scratch, env);
-			const descriptor = manifest.mediaType === dockerManifestType ? await normalizeDocker(values, selected, manifest, scratch)
+			await registryCommand({ binary: values.img, args: ["pull", "--registry", selected.registry, "--repository", selected.repository,
+				"--reference", selected.digest, "--platform", selected.platform, "--layer-handling", "eager", "--output", values.output], scratch, env, authenticated: credentials !== null, signal });
+			const descriptor = manifest.mediaType === dockerManifestType ? await normalizeDocker({ values, selected, manifest, scratch, signal })
 				: { mediaType: manifestType, digest: selected.digest, size: manifestBytes.length };
 			await writeFile(join(values.output, "oci-layout"), '{"imageLayoutVersion":"1.0.0"}', { flag: "wx" });
 			await writeFile(join(values.output, "index.json"), JSON.stringify({ schemaVersion: 2, mediaType: indexType, manifests: [descriptor] }), { flag: "wx" });
-			const metadata = { manifest: values.manifest, config: values.config, descriptor: values.descriptor };
+			const metadata = values.manifest === undefined
+				? Object.fromEntries(["manifest", "config", "descriptor"].map((name) => [name, join(scratch, "verified-" + name + ".json")]))
+				: { manifest: values.manifest, config: values.config, descriptor: values.descriptor };
+			checkCancelled(signal);
 			await importLayout({ platform: selected.platform, layout: values.output, ...metadata });
-		} catch (error) {
-			await rm(values.output, { recursive: true, force: true });
-			throw error;
+		} finally {
+			await rm(scratch, { recursive: true });
 		}
-	} finally {
-		await rm(scratch, { recursive: true });
+		checkCancelled(signal);
+	} catch (error) {
+		if (ownsOutput) await rm(values.output, { recursive: true, force: true });
+		throw error;
 	}
 }
 
 /** Require every declared output and tool exactly once before making network requests. */
 async function main() {
-	const fields = ["img", "spec", "output", "manifest", "config", "descriptor"];
-	const { values, tokens } = parseArgs({ tokens: true, options: Object.fromEntries(fields.map((name) => [name, { type: "string" }])) });
+	const args = process.argv.slice(2);
+	const fetch = args[0] === "fetch";
+	if (fetch || args[0] === "pull") args.shift();
+	const fields = fetch ? ["img", "spec", "output"] : ["img", "spec", "output", "manifest", "config", "descriptor"];
+	const { values, tokens } = parseArgs({ args, tokens: true, options: Object.fromEntries(fields.map((name) => [name, { type: "string" }])) });
 	if (tokens.length !== fields.length || fields.some((name) => typeof values[name] !== "string" || !values[name] || /[\0\r\n]/u.test(values[name]))) {
 		fail("OCI_INVALID_ARGUMENTS", "each pull tool, input, and output must be specified exactly once");
 	}
-	await pull(Object.fromEntries(fields.map((name) => [name, resolve(values[name])])));
+	const controller = new AbortController();
+	const cancel = () => controller.abort();
+	process.on("SIGINT", cancel);
+	process.on("SIGTERM", cancel);
+	try {
+		await pull(Object.fromEntries(fields.map((name) => [name, resolve(values[name])])), {
+			credentials: fetch ? process.env : null, signal: controller.signal,
+		});
+	} finally {
+		process.off("SIGINT", cancel);
+		process.off("SIGTERM", cancel);
+	}
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(resolve(process.argv[1])).href) {

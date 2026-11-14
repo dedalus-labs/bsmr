@@ -6,13 +6,14 @@
 // Verifies pinned acquisition, explicit runtime authentication, and image normalization.
 
 import assert from "node:assert/strict";
-import { execFile } from "node:child_process";
+import { execFile, spawn } from "node:child_process";
 import { createHash } from "node:crypto";
 import { existsSync } from "node:fs";
-import { chmod, mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { chmod, mkdir, mkdtemp, readFile, readdir, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import test from "node:test";
+import { setTimeout } from "node:timers/promises";
 import { promisify } from "node:util";
 import { gzipSync } from "node:zlib";
 import { imageMetadata } from "../../prelude/oci/closure.mjs";
@@ -123,6 +124,79 @@ else process.exit(99);\n`);
 	return { ...f, values: { ...f.values, img: fake }, source, manifest, config, compressed };
 }
 
+test("invariant explicit fetch exposes a complete layout without runtime credentials or verification scratch files", async (t) => {
+	const f = await imageFixture(t);
+	const env = { ...process.env, IMG_REGISTRY_AUTH_HOST: "docker.io", IMG_REGISTRY_AUTH_USERNAME: "fixture-user", IMG_REGISTRY_AUTH_PASSWORD: "fixture-private-password" };
+	await invoke({ img: f.values.img, spec: f.values.spec, output: f.values.output }, env, "fetch");
+	assert.deepEqual((await readdir(f.values.output)).sort(), ["blobs", "index.json", "oci-layout"]);
+	const index = JSON.parse(await readFile(join(f.values.output, "index.json"), "utf8"));
+	assert.equal(index.manifests[0].digest, f.source.manifest_digest);
+	for (const name of await readdir(join(f.values.output, "blobs/sha256"))) {
+		const bytes = await readFile(join(f.values.output, "blobs/sha256", name));
+		assert.equal(bytes.includes(Buffer.from(env.IMG_REGISTRY_AUTH_PASSWORD)), false);
+	}
+	assert.equal(existsSync(f.values.manifest), false);
+});
+
+test("invariant authenticated failures do not print upstream credential diagnostics", async (t) => {
+	const f = await fixture(t);
+	const fake = join(f.root, "img");
+	await writeFile(fake, `#!${process.execPath}\nprocess.stderr.write(process.env.IMG_REGISTRY_AUTH_PASSWORD); process.exit(42);\n`);
+	await chmod(fake, 0o755);
+	const env = { ...process.env, IMG_REGISTRY_AUTH_HOST: "docker.io", IMG_REGISTRY_AUTH_USERNAME: "user", IMG_REGISTRY_AUTH_PASSWORD: "never-print-this-credential" };
+	await assert.rejects(invoke({ img: fake, spec: f.values.spec, output: f.values.output }, env, "fetch"), (error) => {
+		assert.match(error.stderr, /OCI_PULL_FAILED/u);
+		assert.equal(error.stderr.includes(env.IMG_REGISTRY_AUTH_PASSWORD), false);
+		assert.equal(error.stdout.includes(env.IMG_REGISTRY_AUTH_PASSWORD), false);
+		return true;
+	});
+	assert.equal(existsSync(f.values.output), false);
+});
+
+test("invariant cancelling only the fetch helper reaps its client before removing owned state", async (t) => {
+	const f = await fixture(t), ready = join(f.root, "ready.json"), fake = join(f.root, "img");
+	await writeFile(fake, `#!${process.execPath}\nconst fs=require('node:fs'), path=require('node:path');
+const output=process.argv[process.argv.indexOf('--output')+1]; fs.mkdirSync(path.dirname(output),{recursive:true}); fs.writeFileSync(output,'partial');
+process.on('SIGTERM',()=>{}); fs.writeFileSync(${JSON.stringify(ready)},JSON.stringify({pid:process.pid,ppid:process.ppid,scratch:process.cwd()}));
+setInterval(()=>fs.appendFileSync(output,'partial'),50);\n`);
+	await chmod(fake, 0o755);
+	const helper = spawn(process.execPath, [operation, "fetch", "--img", fake, "--spec", f.values.spec, "--output", f.values.output], {
+		env: { TMPDIR: f.root, IMG_REGISTRY_AUTH_HOST: "docker.io", IMG_REGISTRY_AUTH_USERNAME: "fixture", IMG_REGISTRY_AUTH_PASSWORD: "fixture-password" },
+		stdio: ["ignore", "pipe", "pipe"],
+	});
+	let stderr = "", client;
+	helper.stderr.on("data", (chunk) => { stderr += chunk; });
+	const closed = new Promise((resolve, reject) => {
+		helper.once("error", reject);
+		helper.once("close", (code, signal) => resolve({ code, signal }));
+	});
+	/** Detect a surviving owned process, including one reparented after helper exit. */
+	function alive(pid) {
+		try { process.kill(pid, 0); return true; } catch (error) { if (error.code === "ESRCH") return false; throw error; }
+	}
+	try {
+		for (let i = 0; i < 100 && !existsSync(ready); i++) await setTimeout(25);
+		assert.equal(existsSync(ready), true, `client must be running before cancellation (helper exit ${helper.exitCode}; ${stderr})`);
+		client = JSON.parse(await readFile(ready, "utf8"));
+		assert.equal(client.ppid, helper.pid);
+		helper.kill("SIGTERM");
+		const result = await Promise.race([closed, setTimeout(5000, null, { ref: false }).then(() => { throw new Error("fetch helper did not close"); })]);
+		assert.deepEqual(result, { code: 1, signal: null }, stderr);
+		assert.match(stderr, /^OCI_PULL_CANCELLED:/u);
+		assert.equal(alive(client.pid), false, "client must be reaped before helper exit");
+		assert.equal(existsSync(f.values.output), false);
+		assert.equal(existsSync(client.scratch), false);
+	} finally {
+		if (alive(helper.pid)) helper.kill("SIGKILL");
+		await closed;
+		if (client && alive(client.pid)) {
+			process.kill(client.pid, "SIGKILL");
+			for (let i = 0; i < 100 && alive(client.pid); i++) await setTimeout(20);
+			assert.equal(alive(client.pid), false, "test must not leave its client running");
+		}
+	}
+});
+
 test("invariant Docker schema 2 normalization preserves exact config and compressed content identities", { skip: !process.env.BSMR_OCI_IMG }, async (t) => {
 	const f = await imageFixture(t, { docker: true });
 	await invoke(f.values);
@@ -152,6 +226,9 @@ test("invariant a pull never overwrites an existing output directory", async (t)
 	await mkdir(f.values.output);
 	await writeFile(join(f.values.output, "owned"), "existing\n");
 	await assert.rejects(invoke(f.values), (error) => /EEXIST/u.test(error.stderr));
+	await assert.rejects(invoke({ img: f.values.img, spec: f.values.spec, output: f.values.output }, {
+		IMG_REGISTRY_AUTH_HOST: "docker.io", IMG_REGISTRY_AUTH_USERNAME: "fixture", IMG_REGISTRY_AUTH_PASSWORD: "fixture-password",
+	}, "fetch"), (error) => /EEXIST/u.test(error.stderr));
 	assert.equal(await readFile(join(f.values.output, "owned"), "utf8"), "existing\n");
 });
 
