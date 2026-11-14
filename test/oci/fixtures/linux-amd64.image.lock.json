@@ -1,0 +1,6 @@
+{
+  "version": 1,
+  "image": "docker.io/library/debian:bookworm-slim",
+  "platform": "linux/amd64",
+  "manifest_digest": "sha256:f3034a6ec3c1205360777c4aae76234998866ad18806ae62b63a3f84ccad782b"
+}
