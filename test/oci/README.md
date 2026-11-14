@@ -96,6 +96,22 @@ The helper uses private writable roots and isolated namespaces. It preserves
 the base image's startup configuration. Its image commands have no network.
 Rootless execution and cross-host reproducibility are not qualified.
 
+The language-graph fixture connects locked package downloads to installation,
+runtime checks, and complete export. It verifies warm reuse, clean/restart cache
+restoration, input/command invalidation, and invalid lock rejection:
+
+```sh
+BSMR_OCI_TEST_EVIDENCE=/path/to/evidence node test/oci/run.ts \
+  /path/to/bsmr /path/to/img /path/to/umoci /path/to/runc \
+  /path/to/base-layout /path/to/debian.lock.json prelude \
+  --platform linux/arm64 --engine-version 0.0.10 --bundled-prelude
+```
+
+Bundled qualification compares every embedded prelude file's bytes and executable
+bit against the selected source. It then removes the inspection copy before
+building, so the graph cannot accidentally use a source overlay. An old binary
+fails this check even if its version label matches.
+
 The file-layer fixtures establish composition and local cache restoration.
 The native checks additionally qualify the supplied Linux runtime and base.
 Other runtime environments, external registry publication, and remote caching

@@ -23,7 +23,7 @@ worktrees reuse matching action results.
 Native file and directory layers retain compact streams and their original
 inputs. Metadata-only builds do not retain a second full tar blob. Export
 reconstructs and verifies ordinary OCI bytes. Imported archives retain their
-original bytes. Filesystem execution and multi-platform indexes are outside this rule set.
+original bytes. Multi-platform indexes are outside this rule set.
 
 ~~~text
 native compiler outputs -> oci_layer -> layer metadata -> oci_image
@@ -42,6 +42,7 @@ native compiler outputs -> oci_layer -> layer metadata -> oci_image
 | oci_fetch | An explicit authenticated acquisition command |
 | oci_push | An explicit publication command |
 | deb_packages | An APT-resolved package transaction acquired by checksum |
+| oci_run | A native Linux filesystem command over an independent image root |
 | oci_layer | Files, directories, Linux executables, and literal links in a compact layer |
 | oci_layer_from_tar | An unchanged tar or gzip archive with verified layer metadata |
 | oci_image | Configuration, manifest, and descriptor assembled from layer metadata |
@@ -354,6 +355,43 @@ Review the new lock before replacing the committed one. The generator refuses
 to overwrite an existing output. Resolution currently supports one Debian
 suite's main component and rejects removals and downgrades. Snapshot archives
 keep package URLs available for long-lived pins.
+
+## Run a native filesystem command
+
+```python
+load("@prelude//oci:defs.bzl", "oci_run")
+
+oci_run(
+    name = "runtime",
+    base = ":base",
+    inputs = {"packages": ":packages"},
+    command = ["/bin/sh", "-ec", "apt-get -o Dir::Etc::sourcelist=/dev/null -o Dir::Etc::sourceparts=- -y --no-install-recommends install /inputs/packages/*.deb"],
+    env = {"DEBIAN_FRONTEND": "noninteractive"},
+    user = "0:0",
+    toolchain = "//tools:oci",
+)
+```
+
+`oci_run` requires a rootful Linux worker of the image's native architecture.
+Add declared `umoci` and `runc` executable targets to `oci_toolchain`; the shared
+`tools.json` catalog pins both Linux architectures. Missing tools or the wrong
+host fail. There is no alternate builder or automatic Linux VM.
+
+The command receives immutable inputs under `/inputs` in a private writable
+image root. Its network namespace has no uplink. Package scripts run normally,
+but online `apt-get update` and arbitrary internet access are unavailable.
+The local package command disables repository sources instead of passing
+`--no-download`, which also prevents APT's required local-file acquisition.
+
+Process `env`, numeric `user`, and `working_dir` overrides do not change the
+image's startup configuration. Use `oci_image` for those changes. Failed or
+cancelled commands publish no successful image. Cleanup failure retains state.
+
+Use trusted deterministic recipes. Clocks, randomness, and kernel/proc observations
+are not declared inputs. Local action-cache restoration is qualified. Remote
+upload of filesystem actions is disabled; cross-host reproducibility and
+rootless execution are not qualified. Filesystem results retain ordinary OCI
+blobs rather than compact file-placement streams.
 
 ## Verification
 

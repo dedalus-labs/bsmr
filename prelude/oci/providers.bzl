@@ -33,6 +33,8 @@ OciToolchainInfo = provider(
     fields = {
         "img": provider_field(Artifact),
         "node": provider_field(Artifact),
+        "umoci": provider_field(Artifact | None, default = None),
+        "runc": provider_field(Artifact | None, default = None),
         "operations": provider_field(RunInfo),
     },
 )
