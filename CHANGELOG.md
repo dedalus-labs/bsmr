@@ -9,6 +9,14 @@
 Notable changes to Bessemer are recorded here. Release entries are generated
 from conventional commits and reviewed before publication.
 
+## [0.0.11](https://github.com/dedalus-labs/bsmr/compare/v0.0.10...v0.0.11) (2026-11-14)
+
+
+### Bug Fixes
+
+* **deps:** unblock merge queue dependency audits ([#411](https://github.com/dedalus-labs/bsmr/issues/411)) ([ed7e7aa](https://github.com/dedalus-labs/bsmr/commit/ed7e7aaf4e3aa203d2c0d5c436d6e7e694bfa3cf))
+* **docs:** retain generated site assets ([#151](https://github.com/dedalus-labs/bsmr/issues/151)) ([d2196e9](https://github.com/dedalus-labs/bsmr/commit/d2196e94540475280d2c02a4322ed23ca1fd3a0a))
+
 ## [0.0.10](https://github.com/dedalus-labs/bsmr/compare/v0.0.9...v0.0.10) (2026-10-01)
 
 
