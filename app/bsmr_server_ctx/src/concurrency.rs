@@ -33,6 +33,7 @@ use bsmr_build_signals::env::EXCLUSIVE_COMMAND_WAIT;
 use bsmr_build_signals::env::EarlyCommandTimingBuilder;
 use bsmr_cli_proto::client_context::ExitWhen;
 use bsmr_cli_proto::client_context::PreemptibleWhen;
+use bsmr_common::execution::ActionObservation;
 use bsmr_common::legacy_configs::dice::HasInjectedLegacyConfigs;
 use bsmr_core::fs::project::ProjectRoot;
 use bsmr_core::soft_error;
@@ -126,6 +127,7 @@ pub struct ConcurrencyHandler {
     #[allocative(skip)]
     cond: Condvar,
     dice: Arc<Dice>,
+    observation: ActionObservation,
     /// Used to prevent commands (clean --stale) from running in parallel with dice commands
     exclusive_command_lock: ExclusiveCommandLock,
 }
@@ -355,6 +357,7 @@ impl ConcurrencyHandler {
             }),
             cond: Condvar::new(),
             dice,
+            observation: ActionObservation::default(),
             exclusive_command_lock: ExclusiveCommandLock::new(),
         })
     }
@@ -523,10 +526,17 @@ impl ConcurrencyHandler {
                     let transaction = async {
                         let updater = self.dice.updater();
 
-                        let (mut transaction, user_data) =
+                        let (mut transaction, mut user_data) =
                             updates.update(updater, early_timings).await?;
+                        user_data.data.set(self.observation.dupe());
                         if data.active_commands.is_empty() {
-                            transaction.changed_to([(bsmr_common::execution::CommandEpoch, ())])?;
+                            let epoch = if self.observation.was_observed() {
+                                command_id.0 + 1
+                            } else {
+                                0
+                            };
+                            transaction
+                                .changed_to([(bsmr_common::execution::CommandEpoch, epoch)])?;
                         }
 
                         let transaction = event_dispatcher

@@ -103,6 +103,11 @@ async fn build_action_impl(
     let action = ActionCalculation::get_action(ctx, key).await?;
 
     if action.always_run() {
+        ctx.per_transaction_data()
+            .data
+            .get::<bsmr_common::execution::ActionObservation>()
+            .map_err(|error| bsmr_error::internal_error!("{error}"))?
+            .mark_observed();
         ctx.compute(&bsmr_common::execution::CommandEpoch).await?;
     }
 

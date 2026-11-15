@@ -6,6 +6,8 @@
 //! Shares verified execution identity between analysis and action reuse.
 
 use std::sync::Arc;
+use std::sync::atomic::AtomicBool;
+use std::sync::atomic::Ordering;
 
 use allocative::Allocative;
 use derive_more::Display;
@@ -39,18 +41,34 @@ impl InjectedKey for ExecutionPlatformKey {
     }
 }
 
-/// Refreshes discovery after idle admission while overlapping commands share one observation.
+/// Remembers graph usage across commands without storing mutable state in paged DICE values.
+#[derive(Clone, Dupe, Default, Allocative)]
+pub struct ActionObservation(Arc<AtomicBool>);
+
+impl ActionObservation {
+    /// Mark the graph as depending on external state before discovery executes.
+    pub fn mark_observed(&self) {
+        self.0.store(true, Ordering::Release);
+    }
+
+    /// Keep refreshing a graph that has ever observed external state.
+    pub fn was_observed(&self) -> bool {
+        self.0.load(Ordering::Acquire)
+    }
+}
+
+/// Refreshes observed graphs after idle admission while overlapping commands share one observation.
 #[derive(Clone, Dupe, Display, Debug, Eq, Hash, PartialEq, Allocative, Pagable)]
 #[display("CommandEpoch")]
 #[pagable_typetag(dice::DiceKeyDyn)]
 pub struct CommandEpoch;
 
 impl InjectedKey for CommandEpoch {
-    type Value = ();
+    type Value = usize;
 
-    /// Each idle admission starts a new observation of external state.
-    fn equality(_: &Self::Value, _: &Self::Value) -> bool {
-        false
+    /// Unobserved graphs retain their initial epoch and in-flight computations.
+    fn equality(x: &Self::Value, y: &Self::Value) -> bool {
+        x == y
     }
 
     /// Retain the command dependency when DICE pages its graph.
