@@ -21,6 +21,7 @@ class Project:
     """A fresh project driven through one bsmr binary and one isolated daemon."""
 
     def __init__(self, binary: Path, root: Path) -> None:
+        """Drive `binary` in the project at `root` and locate its isolated daemon directory."""
         self.binary = binary
         self.root = root
         self.daemon = Path.home() / ".bsmr" / "bsmrd" / root.relative_to("/") / ISOLATION
@@ -34,7 +35,8 @@ class Project:
 
     def daemon_pid(self) -> int:
         """Read the PID the current daemon recorded for itself."""
-        return int(json.loads((self.daemon / "bsmrd.info").read_text())["pid"])
+        pid = int(json.loads((self.daemon / "bsmrd.info").read_text())["pid"])
+        return pid
 
     def forge(self, pid: int) -> None:
         """Kill the daemon without cleanup, then point its surviving record at `pid`."""
@@ -52,7 +54,8 @@ def foreign_pid() -> int:
     """Find a live process another user owns, so signalling it fails with EPERM."""
     for entry in Path("/proc").iterdir():
         if entry.name.isdigit() and entry.stat().st_uid != os.getuid():
-            return int(entry.name)
+            pid = int(entry.name)
+            return pid
     raise AssertionError("no process owned by another user; run this test as a non-root user")
 
 

@@ -197,11 +197,15 @@ impl BsmrdLifecycleLock {
         &self.daemon_dir
     }
 
-    /// Whether a live daemon holds `bsmrd.lock`. Only a held lock makes the recorded PID ours.
+    /// Whether the recorded daemon may still be running, so its PID may be signalled.
+    ///
+    /// A daemon creates `bsmrd.lock` before it writes its record and holds the lock until it
+    /// exits, so an unheld lock means the recorded PID is stale. A record without the file was
+    /// written by a bsmr that predates the lock, and its PID stays trusted as before.
     pub fn daemon_is_running(&self) -> bsmr_error::Result<bool> {
         let file = match File::open(self.daemon_dir.bsmrd_lock()) {
             Ok(file) => file,
-            Err(e) if e.kind() == std::io::ErrorKind::NotFound => return Ok(false),
+            Err(e) if e.kind() == std::io::ErrorKind::NotFound => return Ok(true),
             Err(e) => return Err(e.into()),
         };
         match fs4::fs_std::FileExt::try_lock_shared(&file) {
