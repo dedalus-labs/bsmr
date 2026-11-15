@@ -9,7 +9,7 @@
 import assert from "node:assert/strict";
 import { execFile } from "node:child_process";
 import { createHash } from "node:crypto";
-import { globSync, lstatSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, writeFileSync } from "node:fs";
+import { globSync, linkSync, lstatSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { promisify } from "node:util";
@@ -104,6 +104,22 @@ try {
 	writeFileSync(join(root, ".bsmr.local"), "[bsmr]\ndefault_allow_cache_upload=true\n");
 	await build("7", false, nativeLibraries);
 	await build("7", true, nativeLibraries);
+	const retained = new Map<string, string>();
+	for (const path of globSync("bsmr-out/**/libshared*.rlib", { cwd: root })) {
+		if (path.includes("/output_artifacts/") || !lstatSync(join(root, path)).isFile()) continue;
+		const saved = join(base, `retained-${retained.size}.rlib`);
+		linkSync(join(root, path), saved);
+		retained.set(saved, createHash("sha256").update(readFileSync(saved)).digest("hex"));
+	}
+	assert.ok(retained.size > 0, "retain a content-addressed rlib inode before rebuilding");
+	writeFileSync(join(root, "shared/src/lib.rs"), files["shared/src/lib.rs"]!.replace("7", "8"));
+	const rebuilt = await run(binary, ["build", "app", "--show-full-json-output"], options);
+	const rebuiltExecutable = Object.values(JSON.parse(rebuilt.stdout) as Record<string, string>)[0]!;
+	assert.equal((await run(rebuiltExecutable, [], options)).stdout.trim(), "8");
+	for (const [path, digest] of retained) {
+		assert.equal(createHash("sha256").update(readFileSync(path)).digest("hex"), digest, "rebuilding must not overwrite an old content-addressed inode");
+	}
+	writeFileSync(join(root, "shared/src/lib.rs"), files["shared/src/lib.rs"]!);
 	await run(binary, ["clean"], options);
 	await build("7", true, nativeLibraries);
 	await run(binary, ["clean"], options);
