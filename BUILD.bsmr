@@ -4,10 +4,14 @@
 # SPDX-License-Identifier: Apache-2.0
 # ===----------------------------------------------------------------------===
 
+load("@bsmr_build//rules:export_files.bzl", "export_file")
 load("@bsmr_build//rules:native_rules.bzl", "alias")
 load(":defs.bzl", "bsmr_bundle", "pagable_transition_alias")
 
 oncall("build_infra")
+
+# Release Please owns this version; bsmr_build_info embeds it in every build.
+export_file(name = "VERSION")
 
 # Need a custom transition here so that bsmr is always built with pagable enabled,
 # even if its parent does not have pagable enabled.
