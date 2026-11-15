@@ -38,3 +38,23 @@ impl InjectedKey for ExecutionPlatformKey {
         PagableValueSerialize::<Self::Value>::new()
     }
 }
+
+/// Refreshes discovery after idle admission while overlapping commands share one observation.
+#[derive(Clone, Dupe, Display, Debug, Eq, Hash, PartialEq, Allocative, Pagable)]
+#[display("CommandEpoch")]
+#[pagable_typetag(dice::DiceKeyDyn)]
+pub struct CommandEpoch;
+
+impl InjectedKey for CommandEpoch {
+    type Value = ();
+
+    /// Each idle admission starts a new observation of external state.
+    fn equality(_: &Self::Value, _: &Self::Value) -> bool {
+        false
+    }
+
+    /// Retain the command dependency when DICE pages its graph.
+    fn value_serialize() -> impl ValueSerialize<Value = Self::Value> {
+        PagableValueSerialize::<Self::Value>::new()
+    }
+}

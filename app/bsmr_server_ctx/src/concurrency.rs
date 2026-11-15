@@ -23,6 +23,8 @@
 use std::collections::VecDeque;
 use std::fmt::Debug;
 use std::sync::Arc;
+use std::sync::atomic::AtomicBool;
+use std::sync::atomic::Ordering;
 
 use allocative::Allocative;
 use async_condvar_fair::Condvar;
@@ -161,6 +163,8 @@ struct CommandData {
     argv: Vec<String>,
     dispatcher: EventDispatcher,
     preemption_setting: PreemptibleWhen,
+    /// Admission observes completion before the asynchronous removal task runs.
+    finished: Arc<AtomicBool>,
     #[allocative(skip)]
     preempt: Option<oneshot::Sender<()>>,
 }
@@ -482,10 +486,13 @@ impl ConcurrencyHandler {
             argv: sanitized_argv,
             dispatcher: event_dispatcher.dupe(),
             preemption_setting: preemptible,
+            finished: Arc::new(AtomicBool::new(false)),
             preempt: Some(preempt_sender),
         };
 
         let (mut transaction, tainted) = loop {
+            data.active_commands
+                .retain(|_, command| !command.finished.load(Ordering::Acquire));
             match &data.dice_status {
                 DiceStatus::Cleanup { future, epoch } => {
                     tracing::debug!("ActiveDice is in cleanup");
@@ -516,8 +523,11 @@ impl ConcurrencyHandler {
                     let transaction = async {
                         let updater = self.dice.updater();
 
-                        let (transaction, user_data) =
+                        let (mut transaction, user_data) =
                             updates.update(updater, early_timings).await?;
+                        if data.active_commands.is_empty() {
+                            transaction.changed_to([(bsmr_common::execution::CommandEpoch, ())])?;
+                        }
 
                         let transaction = event_dispatcher
                             .span_async(bsmr_data::DiceStateUpdateStart {}, async {
@@ -764,7 +774,7 @@ fn format_traces(
 
 /// Held to execute a command so that when the command is canceled, we properly remove its state
 /// from the handler so that it's no longer registered as a ongoing command.
-struct OnExecExit(Option<(Arc<ConcurrencyHandler>, CommandId)>);
+struct OnExecExit(Option<(Arc<ConcurrencyHandler>, CommandId, Arc<AtomicBool>)>);
 
 impl OnExecExit {
     pub fn new(
@@ -773,26 +783,26 @@ impl OnExecExit {
         data: CommandData,
         mut guard: MutexGuard<'_, ConcurrencyHandlerData>,
     ) -> bsmr_error::Result<Self> {
+        let finished = data.finished.dupe();
         let prev = guard.active_commands.insert(command, data);
         if prev.is_some() {
             return Err(internal_error!(
                 "command id `{command}` is already registered"
             ));
         }
-        Ok(OnExecExit(Some((handler, command))))
+        Ok(OnExecExit(Some((handler, command, finished))))
     }
 }
 
 impl Drop for OnExecExit {
     fn drop(&mut self) {
         let this = self.0.take().expect("dropped twice");
+        this.2.store(true, Ordering::Release);
         tracing::info!("Command has exited: {}", this.1);
 
         tokio::task::spawn(async move {
             let mut data = this.0.data.lock().await;
-            data.active_commands
-                .shift_remove(&this.1)
-                .expect("command was active but not in active_commands");
+            data.active_commands.shift_remove(&this.1);
             tracing::info!("Active command was removed: {}", this.1);
 
             if data.has_no_active_commands() {

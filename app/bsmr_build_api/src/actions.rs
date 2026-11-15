@@ -169,6 +169,11 @@ pub trait Action: PagableTagged + Allocative + Debug + Send + Sync + 'static {
         false
     }
 
+    /// Reobserve external state after idle admission, before dependent results can be reused.
+    fn always_run(&self) -> bool {
+        false
+    }
+
     /// Provides a string name for this action, obtained by combining the provided category and identifier.
     fn name(&self) -> String {
         if let Some(identifier) = self.identifier() {

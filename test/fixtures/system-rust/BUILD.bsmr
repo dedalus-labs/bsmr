@@ -1,0 +1,9 @@
+load("@prelude//toolchains:demo.bzl", "system_demo_toolchains")
+
+system_demo_toolchains(include_go = False, verify_rust_compiler = True)
+
+rust_library(
+    name = "leaf",
+    srcs = ["leaf.rs"],
+    crate_root = "leaf.rs",
+)
