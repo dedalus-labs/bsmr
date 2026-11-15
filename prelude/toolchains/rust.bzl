@@ -19,7 +19,6 @@ load(
     "RustToolchainInfo",
     "rust_toolchain_configuration_error",
 )
-load("@prelude//utils:cmd_script.bzl", "cmd_script")
 
 _DEFAULT_TRIPLE = select({
     "prelude//os:linux": select({
@@ -59,8 +58,7 @@ def _system_rust_toolchain_impl(ctx):
         fail(configuration_error)
 
     # Resolve `rustc` once per daemon and pin every compile to that compiler,
-    # so each action key names the exact compiler and sysroot that ran. The
-    # compiler is one script because rustdoc's --test-builder takes one path.
+    # so each action key names the exact compiler and sysroot that ran.
     identity = ctx.actions.declare_output("rustc-identity.json")
     ctx.actions.run(
         cmd_args(ctx.attrs._compiler_identity[RunInfo], "record", "--target", ctx.attrs.rustc_target_triple, identity.as_output()),
@@ -78,11 +76,7 @@ def _system_rust_toolchain_impl(ctx):
             clippy_driver = RunInfo(args = ["clippy-driver"]),
             clippy_toml = ctx.attrs.clippy_toml[DefaultInfo].default_outputs[0] if ctx.attrs.clippy_toml else None,
             codegen_backend = ctx.attrs.codegen_backend,
-            compiler = RunInfo(args = cmd_script(
-                actions = ctx.actions,
-                name = "rustc",
-                cmd = cmd_args(ctx.attrs._compiler_identity[RunInfo], "run", identity),
-            )),
+            compiler = RunInfo(args = cmd_args(ctx.attrs._compiler_identity[RunInfo], "run", identity)),
             default_edition = ctx.attrs.default_edition,
             panic_runtime = PanicRuntime("unwind"),
             deny_lints = ctx.attrs.deny_lints,

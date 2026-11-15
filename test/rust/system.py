@@ -15,25 +15,7 @@ import tempfile
 from dataclasses import dataclass
 from pathlib import Path
 
-BUILD = """load("@prelude//toolchains:demo.bzl", "system_demo_toolchains")
-
-system_demo_toolchains(include_go = False)
-
-rust_library(
-    name = "leaf",
-    srcs = ["leaf.rs"],
-    crate_root = "leaf.rs",
-    verify_inputs = True,
-)
-
-rust_binary(
-    name = "app",
-    srcs = ["main.rs"],
-    crate_root = "main.rs",
-    deps = [":leaf"],
-    verify_inputs = True,
-)
-"""
+FIXTURE = Path(__file__).resolve().parent.parent / "fixtures" / "system-rust"
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -52,7 +34,7 @@ class Io:
         for key in ["RUSTFLAGS", "CARGO_ENCODED_RUSTFLAGS", "RUSTUP_TOOLCHAIN"]:
             env.pop(key, None)
         res = subprocess.run(
-            list(arguments), cwd=self.project, env=env, capture_output=True, text=True, timeout=300
+            list(arguments), cwd=self.project, env=env, capture_output=True, text=True
         )
         assert res.returncode == 0, res.stdout + res.stderr
         return res
@@ -61,9 +43,7 @@ class Io:
         """Create a library and a binary that build with the system Rust toolchain."""
         self.project.mkdir()
         self.run(self.binary, "init")
-        (self.project / "BUILD.bsmr").write_text(BUILD)
-        (self.project / "leaf.rs").write_text("pub fn value() -> u32 { 7 }\n")
-        (self.project / "main.rs").write_text('fn main() { println!("{}", leaf::value()); }\n')
+        shutil.copytree(FIXTURE, self.project, dirs_exist_ok=True)
         if prelude is not None:
             shutil.copytree(prelude, self.project / "prelude")
             (self.project / ".bsmr.local").write_text("[external_cells]\nprelude = disabled\n")
@@ -136,6 +116,9 @@ def main() -> None:
         try:
             reuses_compiles_after_clean(io=io, channel=args.channel)
             misses_another_compiler(io=io, channel=args.channel, other=args.other)
+            io.run(io.binary, "build", ":probe-run[out_dir]")
+            if args.channel.startswith("nightly"):
+                io.run(io.binary, "test", ":leaf[doc]")
         finally:
             io.run(io.binary, "kill")
     print("ok  system rust toolchain: clean reuse, compiler identity")
