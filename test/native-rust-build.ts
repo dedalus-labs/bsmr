@@ -15,6 +15,7 @@ import { promisify } from "node:util";
 const run = promisify(execFile);
 const binary = resolve(process.argv[2]!);
 const prelude = process.argv[3];
+await run("node", [resolve(import.meta.dirname, "rust/observation.ts"), binary, ...(prelude === undefined ? [] : [prelude])]);
 const root = realpathSync(mkdtempSync(join(tmpdir(), "native-rust-")));
 const rustc = (await run("rustup", ["which", "--toolchain", "nightly-2026-04-11", "rustc"])).stdout.trim();
 const cargo = (await run("rustup", ["which", "--toolchain", "nightly-2026-04-11", "cargo"])).stdout.trim();

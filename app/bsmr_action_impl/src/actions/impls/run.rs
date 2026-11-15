@@ -247,6 +247,7 @@ pub(crate) fn new_executor_preference(
 pub(crate) struct UnregisteredRunAction {
     pub(crate) executor_preference: ExecutorPreference,
     pub(crate) always_print_stderr: bool,
+    pub(crate) always_run: bool,
     pub(crate) eager_materialization_enabled: bool,
     pub(crate) weight: WeightClass,
     pub(crate) low_pass_filter: bool,
@@ -1094,9 +1095,13 @@ impl RunAction {
         // First, check in the local dep file cache if an identical action can be found there.
         // Do this before checking the action cache as we can avoid a potentially large download.
         // Once the action cache lookup misses, we will do the full dep file cache look up.
-        let (outputs, should_fully_check_dep_file_cache) = dep_file_bundle
-            .check_local_dep_file_cache_for_identical_action(ctx, self.outputs.as_slice())
-            .await?;
+        let (outputs, should_fully_check_dep_file_cache) = if self.inner.always_run {
+            (None, false)
+        } else {
+            dep_file_bundle
+                .check_local_dep_file_cache_for_identical_action(ctx, self.outputs.as_slice())
+                .await?
+        };
         if let Some((outputs, metadata)) = outputs {
             return Ok(ExecuteResult::LocalDepFileHit(outputs, metadata));
         }
@@ -1106,6 +1111,17 @@ impl RunAction {
 
         // Prepare the action, check the action cache, fully check the local dep file cache if needed, then execute the command
         let prepared_action = ctx.prepare_action(&req, true)?;
+        if self.inner.always_run {
+            let manager = ctx.command_execution_manager(waiting_data);
+            let result = ctx.exec_cmd(manager, &req, &prepared_action).await;
+            return Ok(ExecuteResult::ExecutedOrReHit {
+                result,
+                dep_file_bundle,
+                executor_preference: req.executor_preference,
+                action_and_blobs: prepared_action.action_and_blobs,
+                input_files_bytes: req.paths().input_files_bytes(),
+            });
+        }
         waiting_data.start_waiting_category_now(WaitingCategory::CheckingCaches);
         let manager = ctx.command_execution_manager(waiting_data);
 
@@ -1450,6 +1466,11 @@ impl Action for RunAction {
         self.inner.always_print_stderr
     }
 
+    /// Discovery must be revalidated before any dependent cache can return a result.
+    fn always_run(&self) -> bool {
+        self.inner.always_run
+    }
+
     fn is_expected_eligible_for_dedupe(&self) -> Option<bool> {
         self.inner.expected_eligible_for_dedupe
     }
@@ -1477,6 +1498,7 @@ impl Action for RunAction {
             "cmd".to_owned() => cmd,
             "executor_preference".to_owned() => self.inner.executor_preference.to_string(),
             "always_print_stderr".to_owned() => self.inner.always_print_stderr.to_string(),
+            "always_run".to_owned() => self.inner.always_run.to_string(),
             "weight".to_owned() => self.inner.weight.to_string(),
             "dep_files".to_owned() => self.inner.dep_files.to_string(),
             "metadata_param".to_owned() => match &self.inner.metadata_param {
@@ -1603,19 +1625,22 @@ impl Action for RunAction {
             ),
         };
 
-        let allow_cache_upload = self
-            .inner
-            .allow_cache_upload
-            .unwrap_or_else(|| ctx.run_action_knobs().default_allow_cache_upload);
-        let allow_local_cache_upload = self
-            .inner
-            .allow_local_cache_upload
-            .unwrap_or(allow_cache_upload);
+        let allow_cache_upload = !self.inner.always_run
+            && self
+                .inner
+                .allow_cache_upload
+                .unwrap_or_else(|| ctx.run_action_knobs().default_allow_cache_upload);
+        let allow_local_cache_upload = !self.inner.always_run
+            && self
+                .inner
+                .allow_local_cache_upload
+                .unwrap_or(allow_cache_upload);
         let local_cache_upload = allow_local_cache_upload
             && result.was_locally_executed()
             && ctx.uses_local_action_cache();
-        let supports_remote_dep_files =
-            self.inner.allow_dep_file_cache_upload && dep_file_bundle.has_dep_files();
+        let supports_remote_dep_files = !self.inner.always_run
+            && self.inner.allow_dep_file_cache_upload
+            && dep_file_bundle.has_dep_files();
         let incremental_kind = match (
             self.inner.no_outputs_cleanup,
             self.inner.incremental_remote_outputs,
@@ -1628,6 +1653,7 @@ impl Action for RunAction {
 
         // If there is a dep file entry AND if dep file cache upload is enabled, upload it
         if result.was_success()
+            && !self.inner.always_run
             && !result.was_served_by_remote_dep_file_cache()
             && (allow_cache_upload
                 || local_cache_upload
@@ -1689,7 +1715,9 @@ impl Action for RunAction {
             }
         }
 
-        populate_dep_files(ctx, dep_file_bundle, &outputs, was_locally_executed).await?;
+        if !self.inner.always_run {
+            populate_dep_files(ctx, dep_file_bundle, &outputs, was_locally_executed).await?;
+        }
 
         Ok((outputs, metadata))
     }

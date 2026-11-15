@@ -48,13 +48,14 @@ android_hack_alias = rule(
     },
 )
 
-def system_demo_toolchains(include_go = True):
+def system_demo_toolchains(include_go = True, verify_rust_compiler = False):
     """
     All the default toolchains, suitable for a quick demo or early prototyping.
     Most real projects should copy/paste the implementation to configure them.
 
     Args:
         include_go: Whether to register host-discovered Go toolchains.
+        verify_rust_compiler: Whether to require a verified Linux rustup compiler identity.
     """
     android_sdk_tools(
         name = "android_sdk_tools",
@@ -254,6 +255,7 @@ def system_demo_toolchains(include_go = True):
 
     system_rust_toolchain(
         name = "rust",
+        verify_compiler = verify_rust_compiler,
         default_edition = "2021",
         visibility = ["PUBLIC"],
     )

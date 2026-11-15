@@ -66,6 +66,30 @@ action environment. It does not download or pin the latest stable toolchain and
 is therefore intended for bootstrapping and local evaluation rather than
 hermetic production builds.
 
+Set `verify_compiler = True` to observe a Linux rustup compiler before reusing
+build results. With `system_demo_toolchains`, use `verify_rust_compiler = True`.
+Both default to false, preserving existing uncached system-toolchain behavior on
+all platforms. An unsupported compiler in verified mode fails explicitly.
+
+Discovery resolves `rustc` from `PATH` and hashes its runtime files. Overlapping
+commands share one observation. The next command after they finish refreshes it
+before graph or action-cache reuse. Unchanged identity bytes preserve reuse.
+Compiler and library changes invalidate results without restarting the daemon,
+even when size and modification time stay the same. This mode does not enable
+local compiler cache uploads.
+
+Verified mode supports the official Linux rustup layout and copies of it. It hashes
+`bin/rustc`, all files directly in `lib`, and host/target trees under `lib/rustlib`.
+It records content, names, symlink resolutions, and `rustc -vV`. The ELF loader must
+resolve compiler dependencies to hashed files, except for named OS runtime libraries
+in system directories. Escaping symlinks, loader overrides, missing dependencies,
+and unsupported layouts fail explicitly. macOS and Windows verification are not supported.
+
+The toolchain must stay unchanged while commands run. Observation is not an immutable
+snapshot. Allowlisted OS runtime libraries, loader configuration, SDK, and native
+linker must remain unchanged while reusing results. Rustdoc and Clippy are outside
+this identity.
+
 Features that depend on unstable compiler behavior must declare the nightly
 channel explicitly. Bessemer rejects nightly-only features under stable rather
 than silently selecting another compiler:

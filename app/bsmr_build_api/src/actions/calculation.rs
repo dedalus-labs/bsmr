@@ -102,6 +102,10 @@ async fn build_action_impl(
 
     let action = ActionCalculation::get_action(ctx, key).await?;
 
+    if action.always_run() {
+        ctx.compute(&bsmr_common::execution::CommandEpoch).await?;
+    }
+
     if action.key() != key {
         // The action key we start with is on the DICE graph, and thus cached
         // and properly deduplicated. But if the underlying has a different key,

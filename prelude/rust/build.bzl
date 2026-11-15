@@ -423,7 +423,12 @@ def generate_rustdoc_test(
         "--rustc-action-separator",
         "--test",
         unstable_options,
-        cmd_args("--test-builder=", toolchain_info.compiler, delimiter = ""),
+        cmd_args(cmd_script(
+            actions = ctx.actions,
+            name = "rustdoc_test_builder",
+            cmd = cmd_args(toolchain_info.compiler),
+            language = ctx.attrs._exec_os_type[OsLookup].script,
+        ), format = "--test-builder={}"),
         toolchain_info.rustdoc_flags,
         ctx.attrs.rustdoc_flags,
         extern_arg([], attr_crate(ctx), rlib),
