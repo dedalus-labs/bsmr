@@ -31,6 +31,7 @@ jobs:
       contents: read
     outputs:
       rust: ${{ steps.check.outputs.rust }}
+      selfBuild: ${{ steps.check.outputs.selfBuild }}
     steps:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
@@ -414,6 +415,102 @@ jobs:
         with:
           bsmr: target/debug/bsmr
           expected: docs/reference/cli.md
+  rust_self_build:
+    name: Rust / Self-build
+    needs: affected
+    if: ${{ github.repository == 'dedalus-labs/bsmr' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository) && needs.affected.outputs.selfBuild == 'true' }}
+    runs-on: ${{ matrix.selfHostRunner }}
+    strategy:
+      matrix:
+        include:
+          - architecture: x64
+            testRunner: blacksmith-16vcpu-ubuntu-2404
+            selfHostRunner: blacksmith-8vcpu-ubuntu-2404
+            dotSlashArchive: dotslash-linux-musl.x86_64.v0.5.9.tar.gz
+            dotSlashSha256: 4c75c6eb7890ae35993b962073f6d9bbe78b42b81a5691303ad70f63bfbf7196
+    timeout-minutes: 60
+    permissions:
+      contents: read
+    env:
+      CARGO_INCREMENTAL: "0"
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - name: Install pinned Rust toolchain
+        run: rustup toolchain install nightly-2026-04-11 --profile minimal --component clippy --component llvm-tools-preview --component rust-src --no-self-update
+        shell: bash
+      - name: Restore Rust cache
+        uses: Swatinem/rust-cache@e18b497796c12c097a38f9edb9d0641fb99eee32
+        with:
+          prefix-key: bsmr-v1
+          save-if: false
+          shared-key: engine
+        env:
+          CARGO_PROFILE_DEV_DEBUG: "0"
+          CARGO_INCREMENTAL: "0"
+      - name: Build BSMR
+        env:
+          CARGO_PROFILE_DEV_DEBUG: "0"
+          CARGO_INCREMENTAL: "0"
+        run: cargo build --locked --bin bsmr
+        shell: bash
+      - name: Install Cargo planner compiler
+        run: rustup toolchain install 1.98.0 --profile minimal --component llvm-tools-preview --no-self-update
+        shell: bash
+      - name: Restore Cargo planner cache
+        uses: Swatinem/rust-cache@e18b497796c12c097a38f9edb9d0641fb99eee32
+        env:
+          RUSTUP_TOOLCHAIN: 1.98.0
+        with:
+          prefix-key: bsmr-v1
+          shared-key: planner
+          workspaces: tools/cargo -> target
+          save-if: false
+      - name: Build Cargo planner
+        run: rustup run 1.98.0 cargo build --locked --manifest-path tools/cargo/Cargo.toml --target-dir tools/cargo/target -j 2
+        shell: bash
+      - name: Install Cargo planner
+        run: cp tools/cargo/target/debug/bsmr-cargo target/debug/bsmr-cargo
+        shell: bash
+      - name: Set up Node
+        uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38
+        with:
+          node-version: 26.5.1
+      - name: Download pinned DotSlash
+        run: curl --proto =https --tlsv1.2 --fail --location --silent --show-error "$HOLLYWOOD_COMMAND_ARG_7" --output "$HOLLYWOOD_COMMAND_ARG_9"
+        shell: bash
+        env:
+          HOLLYWOOD_COMMAND_ARG_7: ${{ format('https://github.com/facebook/dotslash/releases/download/v0.5.9/{0}', matrix.dotSlashArchive) }}
+          HOLLYWOOD_COMMAND_ARG_9: ${{ format('{0}/dotslash.tar.gz', runner.temp) }}
+      - name: Verify DotSlash
+        uses: ./.github/actions/ci/verify-sha256
+        with:
+          path: ${{ format('{0}/dotslash.tar.gz', runner.temp) }}
+          expected: ${{ matrix.dotSlashSha256 }}
+      - name: Extract DotSlash
+        run: tar -xzf "$HOLLYWOOD_COMMAND_ARG_1" -C "$HOLLYWOOD_COMMAND_ARG_3"
+        shell: bash
+        env:
+          HOLLYWOOD_COMMAND_ARG_1: ${{ format('{0}/dotslash.tar.gz', runner.temp) }}
+          HOLLYWOOD_COMMAND_ARG_3: ${{ runner.temp }}
+      - name: Add DotSlash to PATH
+        run: |-
+          node -e 'const fs = require("node:fs");
+          const path = process.argv[1];
+          const output = process.env.GITHUB_PATH;
+          if (!path || !output) throw new Error("path and GITHUB_PATH are required");
+          fs.appendFileSync(output, path + "\n");' "$HOLLYWOOD_COMMAND_ARG_2"
+        shell: bash
+        env:
+          HOLLYWOOD_COMMAND_ARG_2: ${{ runner.temp }}
+      - name: Generate Rust build dependencies
+        run: node ci/rust-build-dependencies.mjs
+        shell: bash
+      - name: Build BSMR with BSMR
+        run: target/debug/bsmr --isolation-dir=ci build //:bsmr
+        shell: bash
   rust_sandbox:
     name: Rust / Firecracker sandbox
     needs: affected
@@ -512,15 +609,16 @@ jobs:
       - rust_tests
       - rust_self_host
       - rust_sandbox
+      - rust_self_build
     runs-on: ubuntu-24.04
     timeout-minutes: 5
     permissions: {}
     steps:
       - name: Accept complete Rust CI
-        if: ${{ needs.affected.result == 'success' && (needs.rust_audit.result == 'success' && needs.rust_quality.result == 'success' && needs.rust_tests.result == 'success' && needs.rust_self_host.result == 'success' && needs.rust_sandbox.result == 'success' || needs.rust_audit.result == 'skipped' && needs.rust_quality.result == 'skipped' && needs.rust_tests.result == 'skipped' && needs.rust_self_host.result == 'skipped' && needs.rust_sandbox.result == 'skipped') }}
+        if: ${{ needs.affected.result == 'success' && (needs.rust_audit.result == 'success' && needs.rust_quality.result == 'success' && needs.rust_tests.result == 'success' && needs.rust_self_host.result == 'success' && needs.rust_sandbox.result == 'success' || needs.rust_audit.result == 'skipped' && needs.rust_quality.result == 'skipped' && needs.rust_tests.result == 'skipped' && needs.rust_self_host.result == 'skipped' && needs.rust_sandbox.result == 'skipped') && (needs.rust_self_build.result == 'success' || needs.rust_self_build.result == 'skipped') }}
         run: "true"
         shell: bash
       - name: Reject incomplete Rust CI
-        if: ${{ !(needs.affected.result == 'success' && (needs.rust_audit.result == 'success' && needs.rust_quality.result == 'success' && needs.rust_tests.result == 'success' && needs.rust_self_host.result == 'success' && needs.rust_sandbox.result == 'success' || needs.rust_audit.result == 'skipped' && needs.rust_quality.result == 'skipped' && needs.rust_tests.result == 'skipped' && needs.rust_self_host.result == 'skipped' && needs.rust_sandbox.result == 'skipped')) }}
+        if: ${{ !(needs.affected.result == 'success' && (needs.rust_audit.result == 'success' && needs.rust_quality.result == 'success' && needs.rust_tests.result == 'success' && needs.rust_self_host.result == 'success' && needs.rust_sandbox.result == 'success' || needs.rust_audit.result == 'skipped' && needs.rust_quality.result == 'skipped' && needs.rust_tests.result == 'skipped' && needs.rust_self_host.result == 'skipped' && needs.rust_sandbox.result == 'skipped') && (needs.rust_self_build.result == 'success' || needs.rust_self_build.result == 'skipped')) }}
         run: "false"
         shell: bash

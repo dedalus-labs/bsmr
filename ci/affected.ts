@@ -3,7 +3,7 @@
 // SPDX-License-Identifier: Apache-2.0
 //===----------------------------------------------------------------------===//
 
-// Determines whether a change requires Rust CI.
+// Determines whether a change requires Rust CI and the BSMR self-build.
 
 import {
 	action, choiceInput, stringInput, stringOutput,
@@ -33,6 +33,16 @@ const rustNeutralPaths = [
 export const rustAffected = (files: readonly string[]): boolean =>
 	files.length === 0 ||
 	files.some((file) => !rustNeutralPaths.some((pattern) => pattern.test(file)));
+
+const selfBuildPaths = [
+	/(?:^|\/)(?:Cargo\.toml|Cargo\.lock|BUILD\.bsmr|PACKAGE)$/,
+	/^(?:prelude|tools\/build|tools\/cargo)\//,
+	/^ci\/rust-build-dependencies/,
+];
+
+export const selfBuildAffected = (files: readonly string[]): boolean =>
+	files.length === 0 ||
+	files.some((file) => selfBuildPaths.some((pattern) => pattern.test(file)));
 
 const requireSha = (name: string, value: string): string => {
 	if (!/^[0-9a-f]{40}$/.test(value)) throw new Error(`${name} must be a full commit SHA`);
@@ -80,30 +90,42 @@ const commitRangeFiles = async (
 };
 
 /**
- * Decide whether the changes behind a workflow event can affect Rust.
+ * List the files a workflow event changes.
  *
  * @param exec - Process runner for git.
  * @param input - Event name and the commits it supplies.
- * @returns Whether the Rust lanes must run.
+ * @returns Changed paths, or undefined when the event has no comparison base.
  * @throws An error when a compared commit is not a full SHA.
  */
-export const rustAffectedForEvent = async (exec: ScriptExec, input: Inputs): Promise<boolean> => {
-	if (input.eventName === "pull_request") {
-		return rustAffected(await pullRequestFiles(exec, input.baseSha, input.headSha));
-	}
+const eventFiles = async (exec: ScriptExec, input: Inputs): Promise<readonly string[] | undefined> => {
+	if (input.eventName === "pull_request") return pullRequestFiles(exec, input.baseSha, input.headSha);
 	if (input.eventName === "merge_group") {
-		return rustAffected(
-			await commitRangeFiles(exec, "merge-group base SHA", input.mergeGroupBaseSha, input.headSha),
-		);
+		return commitRangeFiles(exec, "merge-group base SHA", input.mergeGroupBaseSha, input.headSha);
 	}
-	if (input.eventName === "push") {
-		// A push that creates a ref has no previous commit to compare, so it runs Rust CI.
-		if (input.beforeSha === newRefSha) return true;
-		return rustAffected(
-			await commitRangeFiles(exec, "push base SHA", input.beforeSha, input.headSha),
-		);
+	if (input.eventName === "push" && input.beforeSha !== newRefSha) {
+		return commitRangeFiles(exec, "push base SHA", input.beforeSha, input.headSha);
 	}
-	return true;
+	return undefined;
+};
+
+/**
+ * Decide which Rust lanes the changes behind a workflow event require.
+ *
+ * Without a comparison base every lane runs. Every push runs the self-build, so
+ * main always proves that BSMR builds itself.
+ *
+ * @param exec - Process runner for git.
+ * @param input - Event name and the commits it supplies.
+ * @returns Whether the Rust lanes and the self-build must run.
+ * @throws An error when a compared commit is not a full SHA.
+ */
+export const affectedForEvent = async (
+	exec: ScriptExec,
+	input: Inputs,
+): Promise<{ rust: boolean; selfBuild: boolean }> => {
+	const files = await eventFiles(exec, input);
+	if (files === undefined) return { rust: true, selfBuild: true };
+	return { rust: rustAffected(files), selfBuild: input.eventName === "push" || selfBuildAffected(files) };
 };
 
 export const rustAffectedAction = action({
@@ -111,10 +133,14 @@ export const rustAffectedAction = action({
 	description: "Determine whether a workflow must run the Rust CI lanes.",
 	localActionPath: "ci/rust-affected",
 	inputs,
-	outputs: { rust: stringOutput({ description: "Whether Rust CI must run." }) },
+	outputs: {
+		rust: stringOutput({ description: "Whether Rust CI must run." }),
+		selfBuild: stringOutput({ description: "Whether BSMR must build itself." }),
+	},
 	run: async ({ exec, input, log }) => {
-		const affected = await rustAffectedForEvent(exec, input);
-		log.info(`Rust CI: ${affected ? "run" : "skip"}`);
-		return { rust: String(affected) };
+		const { rust, selfBuild } = await affectedForEvent(exec, input);
+		log.info(`Rust CI: ${rust ? "run" : "skip"}`);
+		log.info(`Self-build: ${selfBuild ? "run" : "skip"}`);
+		return { rust: String(rust), selfBuild: String(selfBuild) };
 	},
 });
