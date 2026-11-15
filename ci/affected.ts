@@ -38,6 +38,7 @@ const selfBuildPaths = [
 	/(?:^|\/)(?:Cargo\.toml|Cargo\.lock|BUILD\.bsmr|PACKAGE)$/,
 	/^(?:prelude|tools\/build|tools\/cargo)\//,
 	/^ci\/rust-build-dependencies/,
+	/^(?:\.github\/workflows\/ci\.yml|ci\/affected\.ts)$/,
 ];
 
 export const selfBuildAffected = (files: readonly string[]): boolean =>
