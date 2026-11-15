@@ -25,6 +25,8 @@ inputs:
 outputs:
   rust:
     description: Whether Rust CI must run.
+  self-build:
+    description: Whether BSMR must build itself.
 runs:
   using: node24
   main: dist/index.js
