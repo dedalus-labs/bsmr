@@ -22,6 +22,7 @@ def _toolchain(ctx):
         nightly_features = ctx.attrs.nightly_features,
         release_channel = "nightly" if ctx.attrs.nightly_features else "stable",
         panic_runtime = PanicRuntime("unwind"),
+        allow_local_cache_upload = True,
     )]
 
 native_rust_toolchain = rule(

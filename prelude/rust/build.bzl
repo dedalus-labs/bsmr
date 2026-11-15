@@ -1700,6 +1700,12 @@ def _rustc_invoke(
         identifier = identifier,
         no_outputs_cleanup = incremental_enabled,
         allow_cache_upload = action_allow_cache_upload,
+        allow_local_cache_upload = True if (
+            toolchain_info.allow_local_cache_upload and
+            ctx.attrs.verify_inputs and
+            not is_clippy and
+            not (crate_type_linked(common_args.crate_type) and common_args.emit == Emit("link"))
+        ) else None,
         error_handler = toolchain_info.rust_error_handler,
     )
 
