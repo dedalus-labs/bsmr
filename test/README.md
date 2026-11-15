@@ -95,3 +95,10 @@ dev features, the newly built binary, package-relative files and test failures.
 
 `python3 -B -m unittest discover -s prelude/git/tools/tests -p '*_test.py'` checks
 that ambient Git filters and checkout hooks cannot change pinned sources.
+
+## Daemon records
+
+Run `python3 test/daemon/stale.py /path/to/bsmr` as a non-root Linux user. It
+kills the daemon without cleanup and points its record at a live process: one
+owned by this user, then one owned by another user. `bsmr build` must start a
+new daemon and `bsmr kill` must succeed without signalling either process.
