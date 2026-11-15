@@ -11,6 +11,7 @@ oncall("build_infra")
 rust_library(
     name = "bsmr_build_info",
     srcs = glob(["src/**/*.rs"]),
+    mapped_srcs = {"root//:VERSION": "src/VERSION"},
     deps = [
         "root//app/bsmr_util:bsmr_util",
         # @oss-disable[end= ]: "//common/rust/build_info:build_info",

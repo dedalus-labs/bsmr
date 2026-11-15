@@ -18,6 +18,8 @@ use bsmr_util::late_binding::LateBinding;
 
 #[cfg(not(bsmr_build))]
 const RELEASE_VERSION: &str = include_str!("../../../VERSION");
+#[cfg(bsmr_build)]
+const RELEASE_VERSION: &str = include_str!("VERSION");
 
 pub struct BsmrBuildInfo {
     pub revision: Option<&'static str>,
@@ -27,16 +29,14 @@ pub struct BsmrBuildInfo {
 
 pub static BSMR_BUILD_INFO: LateBinding<BsmrBuildInfo> = LateBinding::new("BSMR_BUILD_INFO");
 
-/// Get the externally supplied revision or the canonical Cargo release version.
+/// Get the externally supplied revision or the canonical release version.
 pub fn revision() -> Option<&'static str> {
-    let revision = BSMR_BUILD_INFO
+    BSMR_BUILD_INFO
         .get()
         .ok()
         .and_then(|i| i.revision)
-        .filter(|s| !s.is_empty());
-    #[cfg(not(bsmr_build))]
-    let revision = revision.or(Some(RELEASE_VERSION.trim()));
-    revision
+        .filter(|s| !s.is_empty())
+        .or(Some(RELEASE_VERSION.trim()))
 }
 
 /// Get the generated version for the windows binary. We use this for defining bsmrs internal version
@@ -74,7 +74,7 @@ pub fn release_timestamp() -> Option<&'static str> {
         .filter(|s| !s.is_empty())
 }
 
-#[cfg(all(test, not(bsmr_build)))]
+#[cfg(test)]
 mod tests {
     use super::RELEASE_VERSION;
 
