@@ -11,6 +11,7 @@ import os
 import re
 import shutil
 import subprocess
+import sys
 import tempfile
 from dataclasses import dataclass
 from pathlib import Path
@@ -135,6 +136,13 @@ def main() -> None:
                     "--case",
                     case,
                 )
+            io.run(
+                sys.executable,
+                str(Path(__file__).with_name("inputs.py").resolve()),
+                io.binary,
+                str(Path(__file__).resolve().parents[2]),
+                args.channel,
+            )
         finally:
             io.run(io.binary, "kill")
     print("ok  system rust toolchain: clean reuse, compiler identity")
