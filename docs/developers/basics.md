@@ -18,10 +18,13 @@ needed.
 
 ## Validation
 
-Build Bessemer with the toolchain pinned in `rust-toolchain`:
+Build Bessemer with the toolchain pinned in `rust-toolchain`, and its Cargo
+planner with Rust 1.98.0. `target/debug/bsmr` runs `target/debug/bsmr-cargo`
+for Rust builds:
 
 ```bash
 cargo build --locked --bin bsmr
+cargo +1.98.0 build --locked --manifest-path tools/cargo/Cargo.toml --target-dir target
 cargo fmt --all -- --check
 ```
 
