@@ -101,10 +101,13 @@ pub fn render_typescript_build_file(
     let package_files = package_files(graph, &package_root, listing);
     let has_tsconfig = package_files.contains(&"tsconfig.json");
     let has_tsdown = package_files.contains(&"tsdown.config.ts");
+    // The root's vitest is workspace-wide tooling, and its package shares names such as
+    // `:test` with the native toolchains.
+    let test = (project.declares_vitest() && !package_root.is_empty()).then_some(TEST_TARGET);
     if matches!(
         target_name.as_str(),
         SOURCES_TARGET | INSTALL_TARGET | "typecheck"
-    ) || (has_tsdown && project.declares_vitest() && target_name == TEST_TARGET)
+    ) || (has_tsdown && test == Some(target_name.as_str()))
     {
         return Err(NativeTypeScriptBuildError::ReservedTargetName(
             package_root,
@@ -161,9 +164,6 @@ pub fn render_typescript_build_file(
     } else {
         package_root.as_str()
     };
-    // The root's vitest is workspace-wide tooling, and its package shares names such as
-    // `:test` with the native toolchains.
-    let test = (project.declares_vitest() && !package_root.is_empty()).then_some(TEST_TARGET);
     let mut rules = Vec::new();
     if has_tsdown {
         rules.push(("typescript_library", target_name.as_str(), test));
@@ -571,6 +571,50 @@ mod tests {
         assert_eq!(
             error.to_string(),
             "unsupported packageManager `pnpm@12.0.0`; BSMR supports exact pnpm 10.30.3 and 11.20.0 pins"
+        );
+    }
+
+    /// Only a package that receives a `:test` target can collide with it.
+    #[test]
+    fn invariant_test_name_is_reserved_only_where_a_test_target_is_emitted() {
+        let graph = WorkspaceGraph::build([
+            package(
+                "",
+                r#"{"name":"@acme/test","engines":{"node":"26.5.1"},"packageManager":"pnpm@11.20.0+sha512.9a6f330a95b66446ea088faf1521405a8a01f07fde7124cc9958dfed52d4bb436737e65b08f85f37b46fcba375092558ac51262b816844b22f63406ed166bfee","devDependencies":{"vitest":"4.0.0"}}"#,
+            ),
+            package(
+                "packages/test",
+                r#"{"name":"@acme/nested","devDependencies":{"vitest":"4.0.0"}}"#,
+            ),
+        ])
+        .unwrap();
+        let listing = PackageListing::testing_files(&[
+            "package.json",
+            "pnpm-lock.yaml",
+            "src/index.ts",
+            "tsconfig.json",
+            "tsdown.config.ts",
+        ]);
+
+        let build = render_typescript_build_file(
+            &graph,
+            CellRelativePathBuf::unchecked_new(String::new()),
+            &listing,
+        )
+        .unwrap()
+        .unwrap();
+        assert!(build.contains("name = \"test\""));
+        assert!(!build.contains("typescript_test("));
+
+        let error = render_typescript_build_file(
+            &graph,
+            CellRelativePathBuf::unchecked_new("packages/test".to_owned()),
+            &listing,
+        )
+        .unwrap_err();
+        assert_eq!(
+            error.to_string(),
+            "package `packages/test` conflicts with BSMR's reserved target name `test`"
         );
     }
 }

@@ -40,6 +40,9 @@ declare vitest has no test target, and `bsmr test` reports that no tests ran.
 A package without `tsdown.config.ts` has no package target, so name its test
 target directly: `bsmr test apps/api:test`.
 
+Pass vitest options after `--test-arg`, for example
+`bsmr test apps/api -- --test-arg --testNamePattern adds`.
+
 vitest runs with a fixed environment: `CI=1`, `TZ=UTC`, the C locale, and no
 `PATH`, `HOME` or user variables. A workspace dependency is available as
 source only, so a test cannot import a dependency whose `exports` points at

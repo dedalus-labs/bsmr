@@ -135,6 +135,7 @@ def _typescript_test_impl(ctx: AnalysisContext) -> list[Provider]:
         ctx.attrs.package_root,
         "--source",
         source_tree,
+        "--",
     ])
     test = ExternalRunnerTestInfo(
         type = "vitest",

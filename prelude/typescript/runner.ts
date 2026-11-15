@@ -20,8 +20,9 @@ type SourceOptions = Readonly<{
 	packageRoot: string;
 	source: string;
 }>;
+type TestOptions = SourceOptions & Readonly<{ mode: "test"; vitest: readonly string[] }>;
 type RunnerOptions =
-	| (SourceOptions & Readonly<{ mode: "test" }>)
+	| TestOptions
 	| (SourceOptions & Readonly<{ config: string; mode: "library" | "typecheck"; output: string }>);
 
 /** Return one required value from the validated command-line map. */
@@ -34,14 +35,19 @@ function requiredArgument(values: ReadonlyMap<string, string>, name: string): st
 /**
  * Parse the runner's closed command-line schema.
  *
+ * Words after the first `--` belong to vitest, so test-mode commands end with
+ * `--` and the test executor's forwarded arguments land after it.
+ *
  * @param arguments_ - Command-line words after the entrypoint.
  * @returns Validated runner options.
  */
 function parseArguments(arguments_: readonly string[]): RunnerOptions {
+	const separator = arguments_.indexOf("--");
+	const named = separator === -1 ? arguments_ : arguments_.slice(0, separator);
 	const values = new Map<string, string>();
-	for (let index = 0; index < arguments_.length; index += 2) {
-		const name = arguments_[index];
-		const value = arguments_[index + 1];
+	for (let index = 0; index < named.length; index += 2) {
+		const name = named[index];
+		const value = named[index + 1];
 		if (name === undefined || !actionArguments.has(name)) throw new Error(`unknown argument '${name ?? ""}'`);
 		if (value === undefined || value === "") throw new Error(`argument '${name}' requires a value`);
 		if (values.has(name)) throw new Error(`argument '${name}' was provided more than once`);
@@ -59,8 +65,9 @@ function parseArguments(arguments_: readonly string[]): RunnerOptions {
 		for (const name of values.keys()) {
 			if (!testArguments.has(name)) throw new Error(`argument '${name}' is not valid in test mode`);
 		}
-		return { ...sources, mode };
+		return { ...sources, mode, vitest: separator === -1 ? [] : arguments_.slice(separator + 1) };
 	}
+	if (separator !== -1) throw new Error("forwarded arguments are only valid in test mode");
 	return {
 		...sources,
 		config: requireRelativePath("config", requiredArgument(values, "--config")),
@@ -132,12 +139,12 @@ function runTool(executable: string, arguments_: readonly string[], cwd: string)
  * @param options - Validated test-mode options.
  * @throws When vitest reports a failure, including a suite with no test files.
  */
-async function runTests(options: SourceOptions): Promise<void> {
+async function runTests(options: TestOptions): Promise<void> {
 	const workspace = await mkdtemp(join(tmpdir(), "bsmr-vitest-"));
 	try {
 		await overlayWorkspace(options.install, options.source, workspace);
 		const packageDirectory = join(workspace, options.packageRoot);
-		runTool(await resolveTool(packageDirectory, "vitest", "vitest"), ["run"], packageDirectory);
+		runTool(await resolveTool(packageDirectory, "vitest", "vitest"), ["run", ...options.vitest], packageDirectory);
 	} finally {
 		await rm(workspace, { force: true, recursive: true });
 	}

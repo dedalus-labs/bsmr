@@ -28,12 +28,13 @@ type Outcome = Readonly<{ code: number; output: string }>;
  * Run bsmr test on one selector and capture its exit code and combined output.
  *
  * @param target - Package path or label to test.
+ * @param executorArguments - Words after `--` for the test executor.
  * @returns The command's exit code and output.
  */
-async function test(target: string): Promise<Outcome> {
+async function test(target: string, ...executorArguments: readonly string[]): Promise<Outcome> {
 	const started = performance.now();
 	try {
-		const { stdout, stderr } = await run(executable, ["test", target, "--console", "simple"], options);
+		const { stdout, stderr } = await run(executable, ["test", target, "--console", "simple", "--", ...executorArguments], options);
 		return { code: 0, output: stdout + stderr };
 	} catch (error) {
 		const failure = error as { code?: unknown; stdout?: string; stderr?: string };
@@ -54,6 +55,10 @@ try {
 	const failing = await test("failing");
 	assert.notEqual(failing.code, 0, "a failing vitest test must fail the command:\n" + failing.output);
 	assert.match(failing.output, /Tests\s+1 failed \| 1 passed \(2\)/, "both tests must run:\n" + failing.output);
+
+	const filtered = await test("failing", "--test-arg", "--testNamePattern", "adds");
+	assert.equal(filtered.code, 0, "forwarded vitest arguments must reach vitest:\n" + filtered.output);
+	assert.match(filtered.output, /Tests\s+1 passed \| 1 skipped \(2\)/, filtered.output);
 
 	const passing = await test("passing");
 	assert.equal(passing.code, 0, passing.output);
