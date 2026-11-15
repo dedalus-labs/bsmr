@@ -3,25 +3,26 @@
 // SPDX-License-Identifier: Apache-2.0
 //===----------------------------------------------------------------------===//
 
-// Executes pinned TypeScript tools in a source overlay over a frozen pnpm install.
+// Executes pinned TypeScript tools and tests in a source overlay over a frozen pnpm install.
 
 import { spawnSync } from "node:child_process";
-import { readdir, readFile, realpath, writeFile } from "node:fs/promises";
+import { mkdtemp, readdir, readFile, realpath, rm, writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 
-import { isWithin, prepareWorkspace, requireRelativePath } from "../toolchains/pnpm/workspace.ts";
+import { isWithin, overlayWorkspace, prepareWorkspace, requireRelativePath } from "../toolchains/pnpm/workspace.ts";
 
-const requiredArguments = new Set(["--config", "--install", "--mode", "--output", "--package-root", "--source"]);
+const actionArguments = new Set(["--config", "--install", "--mode", "--output", "--package-root", "--source"]);
+const testArguments = new Set(["--install", "--mode", "--package-root", "--source"]);
 
-type Mode = "library" | "typecheck";
-type RunnerOptions = Readonly<{
-	config: string;
+type SourceOptions = Readonly<{
 	install: string;
-	mode: Mode;
-	output: string;
 	packageRoot: string;
 	source: string;
 }>;
+type RunnerOptions =
+	| (SourceOptions & Readonly<{ mode: "test" }>)
+	| (SourceOptions & Readonly<{ config: string; mode: "library" | "typecheck"; output: string }>);
 
 /** Return one required value from the validated command-line map. */
 function requiredArgument(values: ReadonlyMap<string, string>, name: string): string {
@@ -41,25 +42,30 @@ function parseArguments(arguments_: readonly string[]): RunnerOptions {
 	for (let index = 0; index < arguments_.length; index += 2) {
 		const name = arguments_[index];
 		const value = arguments_[index + 1];
-		if (name === undefined || !requiredArguments.has(name)) throw new Error(`unknown argument '${name ?? ""}'`);
+		if (name === undefined || !actionArguments.has(name)) throw new Error(`unknown argument '${name ?? ""}'`);
 		if (value === undefined || value === "") throw new Error(`argument '${name}' requires a value`);
 		if (values.has(name)) throw new Error(`argument '${name}' was provided more than once`);
 		values.set(name, value);
 	}
 	const mode = requiredArgument(values, "--mode");
-	if (mode !== "library" && mode !== "typecheck") throw new Error(`unsupported TypeScript action mode '${mode}'`);
-	const config = requiredArgument(values, "--config");
-	const install = requiredArgument(values, "--install");
-	const output = requiredArgument(values, "--output");
+	if (mode !== "library" && mode !== "test" && mode !== "typecheck") throw new Error(`unsupported TypeScript action mode '${mode}'`);
 	const packageRoot = requiredArgument(values, "--package-root");
-	const source = requiredArgument(values, "--source");
-	return {
-		config: requireRelativePath("config", config),
-		install: resolve(install),
-		mode,
-		output: resolve(output),
+	const sources = {
+		install: resolve(requiredArgument(values, "--install")),
 		packageRoot: packageRoot === "." ? "" : requireRelativePath("package root", packageRoot),
-		source: resolve(source),
+		source: resolve(requiredArgument(values, "--source")),
+	};
+	if (mode === "test") {
+		for (const name of values.keys()) {
+			if (!testArguments.has(name)) throw new Error(`argument '${name}' is not valid in test mode`);
+		}
+		return { ...sources, mode };
+	}
+	return {
+		...sources,
+		config: requireRelativePath("config", requiredArgument(values, "--config")),
+		mode,
+		output: resolve(requiredArgument(values, "--output")),
 	};
 }
 
@@ -121,12 +127,33 @@ function runTool(executable: string, arguments_: readonly string[], cwd: string)
 }
 
 /**
- * Execute one hermetic TypeScript action.
+ * Run the package-local vitest suite in a disposable overlay.
+ *
+ * @param options - Validated test-mode options.
+ * @throws When vitest reports a failure, including a suite with no test files.
+ */
+async function runTests(options: SourceOptions): Promise<void> {
+	const workspace = await mkdtemp(join(tmpdir(), "bsmr-vitest-"));
+	try {
+		await overlayWorkspace(options.install, options.source, workspace);
+		const packageDirectory = join(workspace, options.packageRoot);
+		runTool(await resolveTool(packageDirectory, "vitest", "vitest"), ["run"], packageDirectory);
+	} finally {
+		await rm(workspace, { force: true, recursive: true });
+	}
+}
+
+/**
+ * Execute one hermetic TypeScript action or test run.
  *
  * @param arguments_ - Command-line words after the entrypoint.
  */
 async function main(arguments_: readonly string[]): Promise<void> {
 	const options = parseArguments(arguments_);
+	if (options.mode === "test") {
+		await runTests(options);
+		return;
+	}
 	const workspace = await prepareWorkspace(options.install, options.source, options.output);
 	const packageDirectory = join(workspace, options.packageRoot);
 	if (options.mode === "typecheck") {

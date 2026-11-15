@@ -25,6 +25,27 @@ configuration. To check types without emitting JavaScript, run:
 bsmr build apps/api:typecheck
 ```
 
+To run the package's vitest suite, run:
+
+```console
+bsmr test apps/api
+```
+
+A package gets a `test` target when its `package.json` declares `vitest`. The
+workspace root has none, because its dependencies are shared workspace tooling.
+BSMR runs the package-local `vitest run` over the frozen install and the
+declared sources. The vitest exit status decides the result, so a failing test
+or a suite without test files fails `bsmr test`. A package that does not
+declare vitest has no test target, and `bsmr test` reports that no tests ran.
+A package without `tsdown.config.ts` has no package target, so name its test
+target directly: `bsmr test apps/api:test`.
+
+vitest runs with a fixed environment: `CI=1`, `TZ=UTC`, the C locale, and no
+`PATH`, `HOME` or user variables. A workspace dependency is available as
+source only, so a test cannot import a dependency whose `exports` points at
+unbuilt output such as `dist`. BSMR caches a passing result and replays it
+until the package's sources or install change.
+
 Run `bsmr build --help` for build options. The requirements below describe the
 supported workspace. Conventional packages need no `BUILD.bsmr` or Starlark file.
 

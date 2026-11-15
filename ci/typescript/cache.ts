@@ -15,6 +15,7 @@ export const typescriptCache = action({
 	outputs: {},
 	run: async ({ exec, input }) => {
 		await exec("node", ["test/typescript/cache.ts", input.binary]);
+		await exec("node", ["test/typescript/test.ts", input.binary]);
 		await exec("node", ["test/pnpm/task.ts", input.binary]);
 		return {};
 	},

@@ -3,7 +3,7 @@
 # SPDX-License-Identifier: Apache-2.0
 # ===----------------------------------------------------------------------===
 
-# Defines cache-separable TypeScript source, typecheck, and library actions.
+# Defines cache-separable TypeScript source, typecheck, library, and test targets.
 
 load("@prelude//toolchains/pnpm:defs.bzl", "PnpmInstallInfo")
 
@@ -66,17 +66,23 @@ def _require_declared_config(files: dict[str, Artifact], package_root: str, conf
         if path not in files:
             fail("TypeScript action source closure does not declare '{}'".format(path))
 
-def _run_typescript(ctx: AnalysisContext, mode: str, output: Artifact) -> None:
-    """Register one TypeScript action over a frozen install and source closure."""
-    sources = ctx.attrs.sources[TypescriptSourcesInfo]
+def _source_tree(ctx: AnalysisContext) -> Artifact:
+    """Validate the package root and lay out its declared source closure."""
     if ctx.attrs.package_root != ".":
         _validate_workspace_path(ctx.attrs.package_root)
-    _validate_workspace_path(ctx.attrs.config)
-    _require_declared_config(sources.files, ctx.attrs.package_root, ctx.attrs.config)
-    source_tree = ctx.actions.symlinked_dir(
+    return ctx.actions.symlinked_dir(
         "__{}_typescript_srcs__".format(ctx.label.name),
-        sources.files,
+        ctx.attrs.sources[TypescriptSourcesInfo].files,
         has_content_based_path = False,
+    )
+
+def _run_typescript(ctx: AnalysisContext, mode: str, output: Artifact) -> None:
+    """Register one TypeScript action over a frozen install and source closure."""
+    _validate_workspace_path(ctx.attrs.config)
+    _require_declared_config(
+        ctx.attrs.sources[TypescriptSourcesInfo].files,
+        ctx.attrs.package_root,
+        ctx.attrs.config,
     )
     install = ctx.attrs.install[PnpmInstallInfo]
     command = cmd_args([
@@ -93,7 +99,7 @@ def _run_typescript(ctx: AnalysisContext, mode: str, output: Artifact) -> None:
         "--package-root",
         ctx.attrs.package_root,
         "--source",
-        source_tree,
+        _source_tree(ctx),
     ])
     ctx.actions.run(
         command,
@@ -114,15 +120,47 @@ def _typescript_library_impl(ctx: AnalysisContext) -> list[Provider]:
     _run_typescript(ctx, "library", output)
     return [DefaultInfo(default_output = output)]
 
-def _typescript_action_attrs(default_config: str) -> dict:
+def _typescript_test_impl(ctx: AnalysisContext) -> list[Provider]:
+    """Expose the package-local locked vitest suite through BSMR's test protocol."""
+    install = ctx.attrs.install[PnpmInstallInfo]
+    source_tree = _source_tree(ctx)
+    command = cmd_args([
+        install.node,
+        ctx.attrs._runner,
+        "--install",
+        install.workspace,
+        "--mode",
+        "test",
+        "--package-root",
+        ctx.attrs.package_root,
+        "--source",
+        source_tree,
+    ])
+    test = ExternalRunnerTestInfo(
+        type = "vitest",
+        command = [command],
+        contacts = [],
+        labels = [],
+        run_from_project_root = True,
+        supports_test_execution_caching = True,
+    )
+    return [
+        test,
+        RunInfo(args = test.command),
+        DefaultInfo(other_outputs = [source_tree, install.workspace]),
+    ]
+
+def _typescript_action_attrs(default_config: str | None = None) -> dict:
     """Return the shared closed attribute schema for TypeScript actions."""
-    return {
-        "config": attrs.string(default = default_config),
+    result = {
         "install": attrs.dep(providers = [PnpmInstallInfo]),
         "package_root": attrs.string(),
         "sources": attrs.dep(providers = [TypescriptSourcesInfo]),
         "_runner": attrs.source(default = "prelude//typescript:runner"),
     }
+    if default_config != None:
+        result["config"] = attrs.string(default = default_config)
+    return result
 
 typescript_typecheck = rule(
     impl = _typescript_typecheck_impl,
@@ -134,4 +172,10 @@ typescript_library = rule(
     impl = _typescript_library_impl,
     attrs = _typescript_action_attrs("tsdown.config.ts"),
     doc = "Emits one pnpm workspace package with its exact locked tsdown compiler.",
+)
+
+typescript_test = rule(
+    impl = _typescript_test_impl,
+    attrs = _typescript_action_attrs(),
+    doc = "Runs one pnpm workspace package's tests with its exact locked vitest.",
 )

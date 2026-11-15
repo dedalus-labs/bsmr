@@ -17,6 +17,7 @@ use crate::package_listing::listing::PackageListing;
 
 const SOURCES_TARGET: &str = "__bsmr_sources";
 const INSTALL_TARGET: &str = "__bsmr_dependencies";
+const TEST_TARGET: &str = "test";
 
 /// Returns whether the root declares pnpm's authoritative frozen input.
 #[must_use]
@@ -94,19 +95,22 @@ pub fn render_typescript_build_file(
     let target_name = default_target_name(&package_root, package_name)
         .ok_or_else(|| NativeTypeScriptBuildError::MissingTargetName(package_root.clone()))?;
     let target_name = target_name.to_owned();
+    let project = graph
+        .package(package_name)
+        .expect("package indexed by root");
+    let package_files = package_files(graph, &package_root, listing);
+    let has_tsconfig = package_files.contains(&"tsconfig.json");
+    let has_tsdown = package_files.contains(&"tsdown.config.ts");
     if matches!(
         target_name.as_str(),
         SOURCES_TARGET | INSTALL_TARGET | "typecheck"
-    ) {
+    ) || (has_tsdown && project.declares_vitest() && target_name == TEST_TARGET)
+    {
         return Err(NativeTypeScriptBuildError::ReservedTargetName(
             package_root,
             target_name.clone(),
         ));
     }
-
-    let package_files = package_files(graph, &package_root, listing);
-    let has_tsconfig = package_files.contains(&"tsconfig.json");
-    let has_tsdown = package_files.contains(&"tsdown.config.ts");
     if has_tsdown && !has_tsconfig {
         return Err(NativeTypeScriptBuildError::MissingCompilerConfig(
             package_root,
@@ -120,7 +124,7 @@ pub fn render_typescript_build_file(
 
     writeln!(
         output,
-        "load(\"@prelude//typescript:defs.bzl\", \"typescript_library\", \"typescript_sources\", \"typescript_typecheck\")"
+        "load(\"@prelude//typescript:defs.bzl\", \"typescript_library\", \"typescript_sources\", \"typescript_test\", \"typescript_typecheck\")"
     )
     .map_err(NativeTypeScriptBuildError::Render)?;
     writeln!(output).map_err(NativeTypeScriptBuildError::Render)?;
@@ -135,9 +139,6 @@ pub fn render_typescript_build_file(
     }
     writeln!(output, "    }},").map_err(NativeTypeScriptBuildError::Render)?;
     writeln!(output, "    deps = [").map_err(NativeTypeScriptBuildError::Render)?;
-    let project = graph
-        .package(package_name)
-        .expect("package indexed by root");
     for dependency in project.dependencies() {
         let root = graph
             .package(dependency)
@@ -155,21 +156,29 @@ pub fn render_typescript_build_file(
         .map_err(NativeTypeScriptBuildError::Render)?;
     writeln!(output, ")\n").map_err(NativeTypeScriptBuildError::Render)?;
 
-    if !has_tsdown {
-        return Ok(Some(output));
-    }
-
     let package_root_arg = if package_root.is_empty() {
         "."
     } else {
         package_root.as_str()
     };
-    for (rule, name) in [
-        ("typescript_library", target_name.as_str()),
-        ("typescript_typecheck", "typecheck"),
-    ] {
+    // The root's vitest is workspace-wide tooling, and its package shares names such as
+    // `:test` with the native toolchains.
+    let test = (project.declares_vitest() && !package_root.is_empty()).then_some(TEST_TARGET);
+    let mut rules = Vec::new();
+    if has_tsdown {
+        rules.push(("typescript_library", target_name.as_str(), test));
+        rules.push(("typescript_typecheck", "typecheck", None));
+    }
+    if let Some(test) = test {
+        rules.push(("typescript_test", test, None));
+    }
+    for (rule, name, tests) in rules {
         writeln!(output, "{rule}(").map_err(NativeTypeScriptBuildError::Render)?;
         writeln!(output, "    name = {name:?},").map_err(NativeTypeScriptBuildError::Render)?;
+        if let Some(test) = tests {
+            writeln!(output, "    tests = [\":{test}\"],")
+                .map_err(NativeTypeScriptBuildError::Render)?;
+        }
         writeln!(output, "    install = \"root//:{INSTALL_TARGET}\",")
             .map_err(NativeTypeScriptBuildError::Render)?;
         writeln!(output, "    package_root = {package_root_arg:?},")
