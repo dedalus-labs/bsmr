@@ -12,7 +12,8 @@
 # of this source tree. You may select, at your option, one of the
 # above-listed licenses.
 
-def _get_artifacts(sources: Artifact) -> list[Artifact]:
+def _get_artifacts(sources: Artifact | cmd_args) -> list[Artifact | cmd_args]:
+    """Project source artifacts and hidden compiler environment dependencies."""
     return [sources]
 
 RustSourcesTSet = transitive_set(
@@ -27,7 +28,7 @@ RustSourcesTSet = transitive_set(
 RustSources = provider(
     fields = {
         "tset": RustSourcesTSet,
-        # Original artifacts remain the authority for dep-info validation after path mapping.
+        # Original sources and compiler environment dependencies remain keyed transitively.
         "inputs": RustSourcesTSet,
     }
 )

@@ -81,7 +81,7 @@ CompileContext = record(
     symlinked_srcs = field(Artifact),
     # All sources of transitive Rust dependencies, not including doc dependencies.
     transitive_srcs = field(RustSourcesTSet),
-    # Original source artifacts remain declared when dependency macros read them.
+    # Declared source trees and environment artifacts stay keyed for dependency macros.
     transitive_inputs = field(RustSourcesTSet),
     # Linker args to pass the linker wrapper to rustc.
     sysroot_args = field(cmd_args),
@@ -90,6 +90,7 @@ CompileContext = record(
 )
 
 def compile_context(ctx: AnalysisContext, binary: bool = False) -> CompileContext:
+    """Collect compiler settings and transitive declared inputs for Rust actions."""
     toolchain_info = ctx.attrs._rust_toolchain[RustToolchainInfo]
     internal_tools_info = ctx.attrs._rust_internal_tools_toolchain[RustInternalToolsInfo]
     cxx_toolchain_info = get_cxx_toolchain_info(ctx)
@@ -115,6 +116,7 @@ def compile_context(ctx: AnalysisContext, binary: bool = False) -> CompileContex
     )
     transitive_inputs = ctx.actions.tset(
         RustSourcesTSet,
+        value = cmd_args(hidden = ctx.attrs.env.values()),
         children = [source_inputs(ctx)] + [dep.inputs for dep in source_deps],
     )
 
