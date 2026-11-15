@@ -31,7 +31,7 @@ jobs:
       contents: read
     outputs:
       rust: ${{ steps.check.outputs.rust }}
-      selfBuild: ${{ steps.check.outputs.selfBuild }}
+      selfBuild: ${{ steps.check.outputs.self-build }}
     steps:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1

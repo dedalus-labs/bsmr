@@ -289,7 +289,7 @@ export const ci = workflow({
 			permissions: rustPermissions,
 			outputs: {
 				rust: stepOutput<string>("check", "rust"),
-				selfBuild: stepOutput<string>("check", "selfBuild"),
+				selfBuild: stepOutput<string>("check", "self-build"),
 			},
 			steps: [
 				{

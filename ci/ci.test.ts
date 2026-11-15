@@ -9,9 +9,9 @@ import assert from "node:assert/strict";
 import { globSync, readFileSync } from "node:fs";
 import test from "node:test";
 
-import { command, runAction, type ScriptExec } from "@dedalus-labs/hollywood";
+import { command, generateActionMetadata, runAction, type ScriptExec } from "@dedalus-labs/hollywood";
 
-import { affectedForEvent, pullRequestFiles, rustAffected, selfBuildAffected } from "./affected.ts";
+import { affectedForEvent, pullRequestFiles, rustAffected, rustAffectedAction, selfBuildAffected } from "./affected.ts";
 import { ci } from "./ci.ts";
 import { docs } from "./docs.ts";
 import { typescriptCache } from "./typescript/cache.ts";
@@ -171,6 +171,8 @@ test("Self-build paths select the build inputs only the self-build checks", () =
 	assert.equal(selfBuildAffected(["tools/build/third-party/rust/reindeer.toml"]), true);
 	assert.equal(selfBuildAffected(["tools/cargo/src/main.rs"]), true);
 	assert.equal(selfBuildAffected(["ci/rust-build-dependencies.ts"]), true);
+	assert.equal(selfBuildAffected([".github/workflows/ci.yml"]), true);
+	assert.equal(selfBuildAffected(["ci/affected.ts"]), true);
 	assert.equal(selfBuildAffected([]), true);
 });
 
@@ -343,7 +345,11 @@ test("the self-build runs beside self-hosting on x64 with the engine it just com
 	const selfBuild = jobs.rust_self_build;
 	assert.equal(selfBuild.needs, "affected");
 	assert.equal(selfBuild.if, `\${{ ${trustedCiRun} && needs.affected.outputs.selfBuild == 'true' }}`);
-	assert.equal(jobs.affected?.outputs?.selfBuild, "${{ steps.check.outputs.selfBuild }}");
+	const declared = Object.keys(generateActionMetadata(rustAffectedAction).outputs ?? {});
+	for (const output of Object.values(jobs.affected?.outputs ?? {})) {
+		const [, name] = /^\$\{\{ steps\.check\.outputs\.([\w-]+) \}\}$/.exec(output) ?? [];
+		assert.ok(name !== undefined && declared.includes(name), `${output} reads an output the action never sets`);
+	}
 	assert.equal(selfBuild["runs-on"], "${{ matrix.selfHostRunner }}");
 	assert.deepEqual(selfBuild.strategy?.matrix?.include?.map(({ architecture, selfHostRunner }) => ({ architecture, selfHostRunner })), [
 		{ architecture: "x64", selfHostRunner: "blacksmith-8vcpu-ubuntu-2404" },
