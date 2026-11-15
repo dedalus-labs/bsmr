@@ -29,6 +29,17 @@ Windows users can download and run `bsmr-installer.ps1` from the
 Every release also includes platform archives, SHA-256 checksums, and build
 provenance attestations.
 
+To build from source, build both `bsmr` and its Cargo planner `bsmr-cargo`, then
+install them in one directory:
+
+```console
+cargo build --locked --release --bin bsmr
+cargo +1.98.0 build --locked --release --manifest-path tools/cargo/Cargo.toml --target-dir target
+install target/release/bsmr target/release/bsmr-cargo ~/.local/bin/
+```
+
+See [installation](docs/getting_started/install.md) for the toolchain setup.
+
 ## Build a package
 
 At your repository root:
@@ -77,8 +88,12 @@ python -m mkdocs serve -f mkdocs.yml
 
 ## Development
 
+Build the engine and its Cargo planner into `target/debug`. `bsmr` needs
+`bsmr-cargo` in its own directory to build Rust.
+
 ```console
 cargo build --locked --bin bsmr
+cargo +1.98.0 build --locked --manifest-path tools/cargo/Cargo.toml --target-dir target
 python3 test.py --ci --git --bsmr=target/debug/bsmr
 pnpm install --frozen-lockfile --ignore-scripts
 pnpm run ci check
