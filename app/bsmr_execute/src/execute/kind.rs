@@ -43,6 +43,9 @@ pub enum CommandExecutionKind {
     /// This action was restored from the user-level local action cache.
     #[display("local_action_cache")]
     LocalActionCache { digest: ActionDigest },
+    /// The outputs already on disk matched this action's local cache result.
+    #[display("up_to_date")]
+    UpToDate { digest: ActionDigest },
     /// This action was executed via a remote executor.
     #[display("remote")]
     Remote {
@@ -89,6 +92,7 @@ impl CommandExecutionKind {
         match self {
             Self::Local { .. } => bsmr_data::ActionExecutionKind::Local,
             Self::LocalActionCache { .. } => bsmr_data::ActionExecutionKind::LocalActionCache,
+            Self::UpToDate { .. } => bsmr_data::ActionExecutionKind::UpToDate,
             Self::LocalWorker { .. } | Self::LocalWorkerInit { .. } => {
                 bsmr_data::ActionExecutionKind::LocalWorker
             }
@@ -113,6 +117,7 @@ impl CommandExecutionKind {
             | Self::RemoteDepFileCache { details } => details,
             Self::Local { .. }
             | Self::LocalActionCache { .. }
+            | Self::UpToDate { .. }
             | Self::LocalWorkerInit { .. }
             | Self::LocalWorker { .. } => return None,
         };
@@ -146,7 +151,7 @@ impl CommandExecutionKind {
                     })
                 }
             }
-            Self::LocalActionCache { digest } => {
+            Self::LocalActionCache { digest } | Self::UpToDate { digest } => {
                 Command::OmittedLocalCommand(bsmr_data::OmittedLocalCommand {
                     action_digest: digest.to_string(),
                 })

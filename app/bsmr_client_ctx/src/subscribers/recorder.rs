@@ -1461,7 +1461,7 @@ impl InvocationRecorder {
                 LastCommandExecutionKind::Remote => {
                     self.run_remote_count += 1;
                 }
-                LastCommandExecutionKind::NoCommand => {
+                LastCommandExecutionKind::UpToDate | LastCommandExecutionKind::NoCommand => {
                     self.run_skipped_count += 1;
                 }
             }

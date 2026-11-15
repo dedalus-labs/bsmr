@@ -165,9 +165,9 @@ pub enum ActionExecutionKind {
     #[display("local_dep_files")]
     LocalDepFile,
 
-    /// This action was served by the local action cache and not executed.
-    #[display("local_action_cache")]
-    LocalActionCache,
+    /// This action's outputs already matched its last local result and were reused unchanged.
+    #[display("up_to_date")]
+    UpToDate,
 }
 
 pub struct CommandExecutionRef<'a> {
@@ -205,9 +205,7 @@ impl ActionExecutionKind {
             ActionExecutionKind::Simple => bsmr_data::ActionExecutionKind::Simple,
             ActionExecutionKind::Deferred => bsmr_data::ActionExecutionKind::Deferred,
             ActionExecutionKind::LocalDepFile => bsmr_data::ActionExecutionKind::LocalDepFile,
-            ActionExecutionKind::LocalActionCache => {
-                bsmr_data::ActionExecutionKind::LocalActionCache
-            }
+            ActionExecutionKind::UpToDate => bsmr_data::ActionExecutionKind::UpToDate,
         }
     }
 
@@ -239,7 +237,7 @@ impl ActionExecutionKind {
                 scheduling_mode: *scheduling_mode.dupe(),
                 incremental_kind: *incremental_kind,
             }),
-            Self::Simple | Self::Deferred | Self::LocalDepFile | Self::LocalActionCache => None,
+            Self::Simple | Self::Deferred | Self::LocalDepFile | Self::UpToDate => None,
         }
     }
 }
