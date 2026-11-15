@@ -44,6 +44,13 @@ prelude.python_bootstrap_binary(
 )
 
 prelude.python_bootstrap_binary(
+    name = "compiler_identity",
+    has_content_based_path = True,
+    main = "compiler_identity.py",
+    visibility = ["PUBLIC"],
+)
+
+prelude.python_bootstrap_binary(
     name = "rustc_action",
     has_content_based_path = True,
     main = "rustc_action.py",
@@ -148,6 +155,7 @@ prelude.python_library(
     srcs = [
         "buildscript_run.py",
         "cd_run.py",
+        "compiler_identity.py",
         "deferred_link_action.py",
         "extract_link_action.py",
         "failure_filter_action.py",

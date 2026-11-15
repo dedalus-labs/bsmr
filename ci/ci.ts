@@ -437,6 +437,10 @@ export const ci = workflow({
 					run: command({ file: "node", args: ["test/rust/stable.ts", "target/debug/bsmr"] }),
 				},
 				{
+					name: "Verify system Rust compile cache",
+					run: command({ file: "python3", args: ["test/rust/system.py", "target/debug/bsmr", "1.98.0", "1.97.1"] }),
+				},
+				{
 					name: "Verify Rust tool contracts",
 					run: command({ file: "node", args: ["test/rust/tools.ts"] }),
 				},

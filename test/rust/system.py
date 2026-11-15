@@ -1,0 +1,145 @@
+# ===----------------------------------------------------------------------===
+# Copyright (c) 2026 Dedalus Labs, Inc. and its contributors
+# SPDX-License-Identifier: Apache-2.0
+# ===----------------------------------------------------------------------===
+
+"""Reuse system-toolchain compiles from the local cache only under the same compiler."""
+
+import argparse
+import json
+import os
+import re
+import shutil
+import subprocess
+import tempfile
+from dataclasses import dataclass
+from pathlib import Path
+
+BUILD = """load("@prelude//toolchains:demo.bzl", "system_demo_toolchains")
+
+system_demo_toolchains(include_go = False)
+
+rust_library(
+    name = "leaf",
+    srcs = ["leaf.rs"],
+    crate_root = "leaf.rs",
+    verify_inputs = True,
+)
+
+rust_binary(
+    name = "app",
+    srcs = ["main.rs"],
+    crate_root = "main.rs",
+    deps = [":leaf"],
+    verify_inputs = True,
+)
+"""
+
+
+@dataclass(frozen=True, slots=True, kw_only=True)
+class Io:
+    """Own one project, its private local cache and the engine under test."""
+
+    binary: str
+    project: Path
+
+    def run(self, *arguments: str) -> subprocess.CompletedProcess[str]:
+        """Run one bounded command in the project and require success."""
+        env: dict[str, str] = {
+            **os.environ,
+            "BSMR_LOCAL_CACHE_DIR": str(self.project.parent / "cache"),
+        }
+        for key in ["RUSTFLAGS", "CARGO_ENCODED_RUSTFLAGS", "RUSTUP_TOOLCHAIN"]:
+            env.pop(key, None)
+        res = subprocess.run(
+            list(arguments), cwd=self.project, env=env, capture_output=True, text=True, timeout=300
+        )
+        assert res.returncode == 0, res.stdout + res.stderr
+        return res
+
+    def initialize(self, prelude: Path | None) -> None:
+        """Create a library and a binary that build with the system Rust toolchain."""
+        self.project.mkdir()
+        self.run(self.binary, "init")
+        (self.project / "BUILD.bsmr").write_text(BUILD)
+        (self.project / "leaf.rs").write_text("pub fn value() -> u32 { 7 }\n")
+        (self.project / "main.rs").write_text('fn main() { println!("{}", leaf::value()); }\n')
+        if prelude is not None:
+            shutil.copytree(prelude, self.project / "prelude")
+            (self.project / ".bsmr.local").write_text("[external_cells]\nprelude = disabled\n")
+
+    def build(self, channel: str) -> dict[str, str]:
+        """Build with one rustup channel and return each compile's executor."""
+        (self.project / "rust-toolchain.toml").write_text(f'[toolchain]\nchannel="{channel}"\n')
+        res = self.run(
+            self.binary, "build", ":app", "--console", "simple", "--show-full-json-output"
+        )
+        output = self.run(next(iter(json.loads(res.stdout).values())))
+        assert output.stdout.strip() == "7", output.stdout
+        trace = re.search(r"Build ID: ([a-f0-9-]+)", res.stderr)
+        assert trace, res.stderr
+        log = self.run(
+            self.binary,
+            "log",
+            "what-ran",
+            "--trace-id",
+            trace[1],
+            "--format",
+            "json",
+            "--filter-category",
+            "rustc",
+            "--no-remote",
+        )
+        actions = [json.loads(line) for line in log.stdout.splitlines() if line.startswith("{")]
+        ret = {
+            action["identity"].split(" ")[0]: action["reproducer"]["executor"] for action in actions
+        }
+        return ret
+
+
+def reuses_compiles_after_clean(io: Io, channel: str) -> None:
+    """A clean must not discard compiles the local cache stored for the same compiler.
+
+    Breaks if the system toolchain keeps its compiles out of the local cache.
+    """
+    cold = io.build(channel)
+    assert cold == {"root//:leaf": "Local", "root//:app": "Local"}, cold
+    io.run(io.binary, "clean")
+    restored = io.build(channel)
+    assert restored == {"root//:leaf": "Cache", "root//:app": "Local"}, restored
+
+
+def misses_another_compiler(io: Io, channel: str, other: str) -> None:
+    """A compile stored by one compiler must never serve a build with another.
+
+    Breaks if the action key omits the compiler that rustc resolves to.
+    """
+    io.run(io.binary, "kill")
+    switched = io.build(other)
+    assert switched == {"root//:leaf": "Local", "root//:app": "Local"}, switched
+    io.run(io.binary, "kill")
+    restored = io.build(channel)
+    assert restored == {"root//:leaf": "Cache", "root//:app": "Local"}, restored
+
+
+def main() -> None:
+    """Qualify the supplied engine with two installed rustup channels."""
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("binary", type=Path)
+    parser.add_argument("channel")
+    parser.add_argument("other")
+    parser.add_argument("prelude", type=Path, nargs="?")
+    args = parser.parse_args()
+    with tempfile.TemporaryDirectory() as directory:
+        io = Io(binary=str(args.binary.resolve()), project=Path(directory) / "project")
+        io.initialize(prelude=args.prelude.resolve() if args.prelude else None)
+        try:
+            reuses_compiles_after_clean(io=io, channel=args.channel)
+            misses_another_compiler(io=io, channel=args.channel, other=args.other)
+        finally:
+            io.run(io.binary, "kill")
+    print("ok  system rust toolchain: clean reuse, compiler identity")
+
+
+if __name__ == "__main__":
+    main()

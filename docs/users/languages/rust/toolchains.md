@@ -66,6 +66,13 @@ action environment. It does not download or pin the latest stable toolchain and
 is therefore intended for bootstrapping and local evaluation rather than
 hermetic production builds.
 
+The daemon resolves `rustc` from `PATH` when it starts and runs that compiler
+for every compile. The compiler's path, its `rustc -vV` report and the digests
+of its sysroot libraries are an input of each compile, so the local action
+cache reuses a compile only for the same compiler. Restart the daemon with
+`bsmr kill` after you change the toolchain. A compile fails if the recorded
+compiler changes on disk while the daemon runs.
+
 Features that depend on unstable compiler behavior must declare the nightly
 channel explicitly. Bessemer rejects nightly-only features under stable rather
 than silently selecting another compiler:
