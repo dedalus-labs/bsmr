@@ -1063,6 +1063,8 @@ impl LocalExecutor {
                         //     (for any users/tooling that only has access to the configuration-based path)
                         // (2) Declare an existing artifact at the "placeholder" output path that the action wrote to.
                         // (3) Then we declare a copy from the "placeholder" output path to the content-based path.
+                        //     The copy hard-links files, so both paths share one inode. This is safe because every
+                        //     later run of the action cleans the placeholder before it writes there.
                         // (4) Finally, we ensure everything is materialized.
                         // (5) Note that we don't need to invalidate the "placeholder" output path, as that is
                         //     the responsibility of any action that subsequently uses it.
@@ -1104,6 +1106,7 @@ impl LocalExecutor {
                                     dest: hashed_path,
                                     dest_entry: value.entry().dupe().map_dir(|d| d.as_immutable()),
                                     executable_bit_override: None,
+                                    hard_link: true,
                                 }],
                                 cfg_path,
                             ));
