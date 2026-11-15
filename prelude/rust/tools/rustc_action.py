@@ -130,6 +130,7 @@ class Args(NamedTuple):
     echo: Optional[IO[bytes]]
     dep_info: Optional[Path]
     allowed_input: list[Path]
+    input_metadata_env: str | None
     rustc: list[str]
 
 
@@ -200,6 +201,9 @@ def arg_parse() -> Args:
         "--dep-info", type=Path, help="Validate rustc's source and environment reads"
     )
     parser.add_argument("--allowed-input", action="append", type=Path, default=[])
+    parser.add_argument(
+        "--input-metadata-env", help="Environment variable naming the action input manifest"
+    )
     parser.add_argument(
         "rustc",
         nargs=argparse.REMAINDER,
@@ -332,13 +336,19 @@ async def handle_output(  # noqa: C901
     return got_error_diag
 
 
-def verify_inputs(dep_info: Path, sources: list[Path], declared_env: set[str]) -> None:
+def verify_inputs(
+    dep_info: Path,
+    sources: list[Path],
+    declared_env: set[str],
+    input_metadata: Path | None = None,
+) -> None:
     """Reject unkeyed compiler reads before a successful result can be cached.
 
     Rustc escapes spaces in filenames and emits one empty rule per source.
     Validate the full shape, including repeated dependency lists, rather than
     silently dropping paths that cannot be parsed. This is not a sandbox.
-    Resolve paths before containment checks so symlinks cannot extend a declared tree.
+    Engine manifests admit only hashed files, matching canonical reads exactly.
+    Direct callers can supply source artifacts instead, resolving paths before containment checks.
     """
     blocks = dep_info.read_text().rstrip("\n").split("\n\n")
     if blocks[-1].startswith("# env-dep:"):
@@ -367,8 +377,15 @@ def verify_inputs(dep_info: Path, sources: list[Path], declared_env: set[str]) -
     suffix = ": " + " ".join(names)
     if any("\n" in block or not block.endswith(suffix) for block in blocks):
         raise ValueError("inconsistent rustc source dependencies")
-    allowed = {path.resolve(strict=True) for path in sources}
-    directories = {path for path in allowed if path.is_dir()}
+    if input_metadata is None:
+        allowed = {path.resolve(strict=True) for path in sources}
+        directories = {path for path in allowed if path.is_dir()}
+    else:
+        metadata = json.loads(input_metadata.read_text())
+        if metadata["version"] != 1:
+            raise ValueError("unsupported action input manifest version")
+        allowed = {Path(entry["path"]).absolute() for entry in metadata["digests"]}
+        directories = set()
     for name in names:
         path = Path(name.replace("\\ ", " ")).resolve(strict=True)
         if path not in allowed and not any(
@@ -532,7 +549,10 @@ async def main() -> int:  # noqa: C901
     # Diagnostic results become cacheable only after failure filtering.
     if res == 0 and args.dep_info:
         try:
-            verify_inputs(args.dep_info, args.allowed_input, declared_env)
+            input_metadata = None
+            if args.input_metadata_env is not None:
+                input_metadata = Path(os.environ[args.input_metadata_env])
+            verify_inputs(args.dep_info, args.allowed_input, declared_env, input_metadata)
         except (OSError, ValueError) as error:
             eprint(str(error))
             return 1
