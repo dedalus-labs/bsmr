@@ -1637,7 +1637,8 @@ def _rustc_invoke(
     if ctx.attrs.verify_inputs:
         dep_info = ctx.actions.declare_output("{}-{}.d".format(prefix, diag), has_content_based_path = use_cbp)
         compile_cmd.add(cmd_args(dep_info.as_output(), format = "--dep-info={}"))
-        compile_cmd.add(cmd_args(compile_ctx.transitive_inputs.project_as_args("artifacts"), format = "--allowed-input={}"))
+        compile_cmd.add("--input-metadata-env=BSMR_RUST_INPUTS")
+        compile_cmd.add(cmd_args(hidden = compile_ctx.transitive_inputs.project_as_args("artifacts")))
         rustc_cmd.add(cmd_args(dep_info.as_output(), format = "--emit=dep-info={}"))
 
     build_status = None
@@ -1712,6 +1713,10 @@ def _rustc_invoke(
             not (crate_type_linked(common_args.crate_type) and common_args.emit == Emit("link"))
         ) else None,
         error_handler = toolchain_info.rust_error_handler,
+        **({
+            "metadata_env_var": "BSMR_RUST_INPUTS",
+            "metadata_path": "{}-inputs.json".format(prefix),
+        } if ctx.attrs.verify_inputs else {}),
     )
 
     if deferred_link_cmd:

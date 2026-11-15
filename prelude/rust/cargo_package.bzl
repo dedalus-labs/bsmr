@@ -221,6 +221,7 @@ def _cargo_rust_library(name, platform = {}, **kwargs):
     kwargs["rustc_flags"] = ["--cap-lints=allow"] + rustc_flags
 
     kwargs.setdefault("doctests", False)
+    kwargs.setdefault("verify_inputs", True)
 
     # Support for reindeer's `python_ext` fixup is not implemented yet.
     kwargs.pop("dlopen_enable", None)
