@@ -56,6 +56,7 @@ fn materialize<F, D>(
     materialize_dirs_and_syms: bool,
     mut file_src: F,
     executable_bit_override: Option<bool>,
+    hard_link: bool,
 ) -> bsmr_error::Result<()>
 where
     F: FnMut(&AbsNormPath) -> Option<AbsNormPathBuf>,
@@ -74,6 +75,7 @@ where
         materialize_dirs_and_syms,
         &mut file_src,
         executable_bit_override,
+        hard_link,
     )
 }
 
@@ -87,18 +89,26 @@ where
     P: AsRef<AbsNormPath>,
     D: ActionDirectory,
 {
-    materialize(entry, dest.as_ref(), true, |_: &AbsNormPath| None, None)
+    materialize(
+        entry,
+        dest.as_ref(),
+        true,
+        |_: &AbsNormPath| None,
+        None,
+        false,
+    )
 }
 
 /// Materializes the files of an the entry rooted at `dest`.
 ///
-/// Files are copied from `src`. In other words, if a file would be
-/// materialized at `dest/p`, then it's copied from `src/p`.
+/// Files are copied from `src`, or hard-linked when `hard_link` is set. In other words, if a
+/// file would be materialized at `dest/p`, then it's copied from `src/p`.
 pub(crate) fn materialize_files<P, D>(
     entry: DirectoryEntry<&D, &ActionDirectoryMember>,
     src: P,
     dest: P,
     executable_bit_override: Option<bool>,
+    hard_link: bool,
 ) -> bsmr_error::Result<()>
 where
     P: AsRef<AbsNormPath>,
@@ -117,7 +127,14 @@ where
             Some(src.join(subpath))
         }
     };
-    materialize(entry, dest, false, file_src, executable_bit_override)
+    materialize(
+        entry,
+        dest,
+        false,
+        file_src,
+        executable_bit_override,
+        hard_link,
+    )
 }
 
 /// Materializes the files of an entry rooted at `dest`.
@@ -135,7 +152,7 @@ where
     D: ActionDirectory,
 {
     let file_src = |d: &AbsNormPath| srcs.remove(d);
-    materialize(entry, dest.as_ref(), false, file_src, None)
+    materialize(entry, dest.as_ref(), false, file_src, None, false)
 }
 
 fn materialize_recursively<'a, F, D>(
@@ -144,6 +161,7 @@ fn materialize_recursively<'a, F, D>(
     materialize_dirs_and_syms: bool,
     file_src: &mut F,
     executable_bit_override: Option<bool>,
+    hard_link: bool,
 ) -> bsmr_error::Result<()>
 where
     F: FnMut(&AbsNormPath) -> Option<AbsNormPathBuf>,
@@ -162,6 +180,7 @@ where
                     materialize_dirs_and_syms,
                     file_src,
                     executable_bit_override,
+                    hard_link,
                 )?;
                 dest.pop();
             }
@@ -169,7 +188,11 @@ where
         }
         DirectoryEntry::Leaf(ActionDirectoryMember::File(_)) => {
             if let Some(src) = file_src(dest) {
-                fs_util::copy(src, &dest).categorize_internal()?;
+                if hard_link {
+                    fs_util::hard_link(src, &dest).categorize_internal()?;
+                } else {
+                    fs_util::copy(src, &dest).categorize_internal()?;
+                }
                 if let Some(executable_bit_override) = executable_bit_override {
                     fs_util::set_executable(&dest, executable_bit_override)
                         .categorize_internal()?;

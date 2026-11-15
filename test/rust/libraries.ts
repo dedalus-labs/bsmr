@@ -3,11 +3,13 @@
 // SPDX-License-Identifier: Apache-2.0
 //===----------------------------------------------------------------------===//
 
-// Verifies every declared library format, including outputs of dependency units.
+// Verifies every declared library format, including outputs of dependency units, and that
+// the output tree stores each library's bytes once.
 
 import assert from "node:assert/strict";
 import { execFile } from "node:child_process";
-import { globSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, writeFileSync } from "node:fs";
+import { createHash } from "node:crypto";
+import { globSync, lstatSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { promisify } from "node:util";
@@ -37,6 +39,19 @@ async function load(path: string, expected: string): Promise<void> {
 	assert.equal(result.stdout.trim(), expected);
 }
 
+/** Every path holding one library's bytes must name the same inode, so a second path costs no disk. */
+function assertStoredOnce(): void {
+	const inodes = new Map<string, Set<number>>();
+	for (const path of globSync(["bsmr-out/**/libshared*.rlib", "bsmr-out/**/libshared*.a", `bsmr-out/**/libshared*.${extension}`], { cwd: root })) {
+		const file = lstatSync(join(root, path));
+		if (!file.isFile()) continue;
+		const digest = createHash("sha256").update(readFileSync(join(root, path))).digest("hex");
+		inodes.set(digest, (inodes.get(digest) ?? new Set<number>()).add(file.ino));
+	}
+	assert.ok(inodes.size > 0, "the build must materialize library files");
+	for (const [digest, files] of inodes) assert.equal(files.size, 1, `library bytes ${digest} are stored in ${files.size} files`);
+}
+
 /** Building the executable must also produce its dependency's declared C library. */
 async function build(expected: string, cached: boolean, nativeLibraries: string[], lto?: string): Promise<void> {
 	const profile = lto ? ["-c", "rust.profile=release"] : [];
@@ -49,6 +64,7 @@ async function build(expected: string, cached: boolean, nativeLibraries: string[
 	const archives = [...new Set(globSync("bsmr-out/**/libshared*.a", { cwd: root }).filter((path) => !path.includes("/output_artifacts/")).map((path) => realpathSync(join(root, path))))];
 	assert.equal(archives.length, 1, "static C libraries must also materialize");
 	await link(archives[0]!, expected, nativeLibraries);
+	assertStoredOnce();
 	const trace = /Build ID: ([a-f0-9-]+)/.exec(stderr)?.[1];
 	assert.ok(trace, stderr);
 	const log = await run(binary, ["log", "what-ran", "--trace-id", trace, "--format", "json", "--filter-category", "rustc.*", "--no-remote"], options);
