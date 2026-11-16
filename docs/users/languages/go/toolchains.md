@@ -49,11 +49,12 @@ from the execution platform and derives `GOOS` and `GOARCH` from the target
 platform. Host-native cgo cannot cross that boundary because its C/C++ toolchain
 and sysroot are host inputs.
 
-The ignored SDK and wrapper directories each contain a
-`.bsmr-metadata.json` marker with the generator identity, acquisition state,
-version, host tuple, and archive digest. Bessemer requires the complete marker to
-match the lock before using the tools, and requires its ownership identity before
-replacing either directory.
+The ignored SDK directory contains a `.bsmr-metadata.json` marker with the
+generator identity, acquisition state, version, host tuple, and archive digest.
+Bessemer requires the complete marker to match the lock before using the SDK, and
+requires its ownership identity before replacing the directory. Builds compile the
+bootstrap wrapper from the locked archive as a cached action, so no wrapper lives
+in the source tree.
 
 The remaining sections document the underlying rules for custom toolchains.
 

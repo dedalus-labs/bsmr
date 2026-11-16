@@ -110,8 +110,8 @@ existing lock to the latest stable release, while `--version` selects one exact
 stable release such as `1.26` or `1.26.5`. The command records the official
 archive name, SHA-256
 digest, and byte length for Darwin and Linux on amd64 and arm64, verifies the
-extracted SDK's `VERSION`, and installs a repository-local ignored SDK plus
-bootstrap wrapper.
+extracted SDK's `VERSION`, and installs a repository-local ignored SDK. Builds
+compile the bootstrap wrapper from that archive as a cached action.
 The installed tree is hard-linked from Bessemer's materialized archive, so the
 immutable bytes are not duplicated. `bsmr go toolchain --check` performs the
 offline lock, acquisition-metadata, and SDK-version drift gate.

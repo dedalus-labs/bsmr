@@ -6,29 +6,35 @@
 # Declares the official Go SDK that `.bsmr-go-toolchain.json` pins.
 
 load("@prelude//:prelude.bzl", "native")
+load("@prelude//go_bootstrap:go_bootstrap.bzl", "GoBootstrapDistrInfo")
 load("@prelude//toolchains/go:go_bootstrap_toolchain.bzl", "go_bootstrap_distr", "go_bootstrap_toolchain")
 load("@prelude//toolchains/go:go_toolchain.bzl", "go_distr", "go_toolchain")
 
 _SDK = ":go_sdk_archive"
-_WRAPPER = ".bsmr-go-tools/go_wrapper"
 
-def _prebuilt_tool_impl(ctx):
-    return [DefaultInfo(default_output = ctx.attrs.binary), RunInfo(args = [ctx.attrs.binary])]
+# Go requires absolute cache and root paths, while actions receive project-relative ones.
+_COMPILE_WRAPPER = 'scratch="$(cd "$BSMR_SCRATCH_PATH" && pwd)" && GOROOT="$(cd "$2" && pwd)" GOCACHE="$scratch" TMPDIR="$scratch" exec "$1" build -trimpath -buildvcs=false -o "$3" "$4"'
 
-_prebuilt_tool = rule(
-    impl = _prebuilt_tool_impl,
-    attrs = {"binary": attrs.source()},
-)
+def _bootstrap_wrapper_impl(ctx):
+    """Compiles the bootstrap wrapper with the locked SDK, which no wrapper runs yet."""
+    distr = ctx.attrs.go_bootstrap_distr[GoBootstrapDistrInfo]
+    go_os, go_arch = ctx.attrs.go_os_arch
+    output = ctx.actions.declare_output("go_wrapper", has_content_based_path = True)
+    ctx.actions.run(
+        cmd_args("/bin/sh", "-c", _COMPILE_WRAPPER, "go_wrapper", distr.bin_go, distr.go_root, output.as_output(), ctx.attrs.src),
+        env = {"CGO_ENABLED": "0", "GOARCH": go_arch, "GOENV": "off", "GOEXPERIMENT": "", "GOFLAGS": "", "GOOS": go_os, "GOTOOLCHAIN": "local"},
+        category = "go_bootstrap_wrapper",
+        allow_local_cache_upload = True,
+    )
+    return [DefaultInfo(default_output = output), RunInfo(args = [output])]
 
-def _unacquired_impl(_ctx):
-    fail("the Go SDK pinned by .bsmr-go-toolchain.json is not acquired; run `bsmr go toolchain`")
-
-# Stands in for `go` and `go_bootstrap` until acquisition, so the package that also holds
-# the other languages' toolchains evaluates, and only a Go build reports the missing SDK.
-_unacquired = rule(
-    impl = _unacquired_impl,
-    attrs = {},
-    is_toolchain_rule = True,
+_bootstrap_wrapper = rule(
+    impl = _bootstrap_wrapper_impl,
+    attrs = {
+        "go_bootstrap_distr": attrs.exec_dep(providers = [GoBootstrapDistrInfo]),
+        "go_os_arch": attrs.tuple(attrs.string(), attrs.string()),
+        "src": attrs.source(default = "prelude//go_bootstrap/tools:go_wrapper.go"),
+    },
 )
 
 def _by_execution_host(values):
@@ -52,12 +58,11 @@ def _target_goarch():
     """Selects `GOARCH` from the platform of the artifact being built, not the host running it."""
     return select({"config//cpu:arm64": "arm64", "config//cpu:x86_64": "amd64"})
 
-def native_go_toolchains(lock: str, acquired: bool):
-    """Declares `go`, `go_bootstrap`, and the verified archive `bsmr go toolchain` installs.
+def native_go_toolchains(lock: str):
+    """Declares `go`, `go_bootstrap`, and the verified archive both build with.
 
     Args:
         lock: The contents of `.bsmr-go-toolchain.json`.
-        acquired: Whether the bootstrap wrapper exists in this package.
     """
     lock = json.decode(lock)
     if lock["generated_by"] != "bsmr go toolchain" or lock["schema"] != 1:
@@ -71,13 +76,9 @@ def native_go_toolchains(lock: str, acquired: bool):
         urls = [_by_execution_host({host: "https://go.dev/dl/" + archive["filename"] for host, archive in archives.items()})],
         visibility = ["PUBLIC"],
     )
-    if not acquired:
-        _unacquired(name = "go_bootstrap", visibility = ["PUBLIC"])
-        _unacquired(name = "go", visibility = ["PUBLIC"])
-        return
     host = _by_execution_host({host: tuple(host.split("-")) for host in archives})
-    _prebuilt_tool(name = "go_bootstrap_wrapper", binary = _WRAPPER)
     go_bootstrap_distr(name = "go_bootstrap_distr", go_os_arch = host, go_root = _SDK)
+    _bootstrap_wrapper(name = "go_bootstrap_wrapper", go_bootstrap_distr = ":go_bootstrap_distr", go_os_arch = host)
     go_bootstrap_toolchain(
         name = "go_bootstrap",
         env_go_arch = _target_goarch(),
