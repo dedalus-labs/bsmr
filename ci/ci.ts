@@ -397,6 +397,11 @@ export const ci = workflow({
 					run: command({ file: "cargo", args: ["build", "--locked", "--bin", "bsmr"] }),
 				},
 				{
+					name: "Verify persistent worker logs",
+					env: { BSMR_BINARY: "target/debug/bsmr" },
+					run: command({ file: "pipx", args: ["run", "--spec", "uv==0.13.4", "uv", "run", "--python", "3.12", "--with", "pytest==9.0.2", "--with", "grpcio==1.76.0", "--with", "grpcio-tools==1.76.0", "pytest", "-q", "test/stores/test_workers.py"] }),
+				},
+				{
 					name: "Install Cargo planner compiler",
 					run: command({ file: "rustup", args: ["toolchain", "install", "1.98.0", "--profile", "minimal", "--component", "llvm-tools-preview", "--no-self-update"] }),
 				},
