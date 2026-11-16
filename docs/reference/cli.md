@@ -2766,10 +2766,10 @@ Common options are documented under [Global options](#global-options).
 
 ### Options:
 * `--version <VERSION>`
-    Exact stable release to select and acquire
+    Require this version to match the exact toolchain pin in go.mod
 
 * `--update`
-    Update an existing lock to the latest stable release from go.dev
+    Rejected: edit the toolchain directive in go.mod instead
 
 * `--check`
     Verify the committed lock and generated toolchain without network access

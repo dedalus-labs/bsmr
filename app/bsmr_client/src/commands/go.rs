@@ -54,11 +54,11 @@ enum GoSubcommand {
 /// Options controlling exact official Go SDK selection.
 #[derive(Debug, clap::Parser)]
 struct GoToolchainCommand {
-    /// Exact stable release to select and acquire.
+    /// Require this version to match the exact toolchain pin in go.mod.
     #[clap(long)]
     version: Option<String>,
 
-    /// Update an existing lock to the latest stable release from go.dev.
+    /// Rejected: edit the toolchain directive in go.mod instead.
     #[clap(long, conflicts_with_all = ["check", "version"])]
     update: bool,
 
@@ -115,6 +115,7 @@ async fn configure_toolchain(
 ) -> bsmr_error::Result<()> {
     let project_root = ctx.paths()?.project_root();
     let root = project_root.root().as_path();
+    let pinned = go_toolchain::module_pin(ctx.working_dir.path().as_path())?;
     let toolchains = toolchains_directory(project_root).await?;
     if command.check {
         go_toolchain::reject_leftovers(root, &toolchains)?;
@@ -123,6 +124,7 @@ async fn configure_toolchain(
     }
     let lock = go_toolchain::configure(
         root,
+        &pinned,
         command.version.as_deref(),
         command.update,
         command.check,
@@ -159,9 +161,11 @@ fn sync(mut command: GoSyncCommand, ctx: &ClientCommandContext<'_>) -> bsmr_erro
         return Err(GoCommandError::NoModule(root).into());
     }
     let project_root = ctx.paths()?.project_root();
+    let pinned = go_toolchain::module_pin(&root)?;
     let toolchains = futures::executor::block_on(toolchains_directory(project_root))?;
     go_toolchain::reject_leftovers(project_root.root().as_path(), &toolchains)?;
     let lock = go_toolchain::read_lock(project_root.root().as_path())?;
+    lock.check_version(&pinned)?;
     let go = go_toolchain::acquired_go(&toolchains, &lock)?;
     let mut patterns = discover_patterns(&root)?;
     // Tool directives are part of the module's graph, so their packages are roots even

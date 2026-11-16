@@ -169,7 +169,7 @@ function equivalent(native: Image, external: Image) {
 try {
 	assert.equal((await run(executable, ["--version"], { env })).stdout.trim(), `bsmr ${values["engine-version"]}`);
 	mkdirSync(join(cwd, "cmd/probe"), { recursive: true });
-	writeFileSync(join(cwd, "go.mod"), "module example.com/oci-probe\n\ngo 1.26.0\n");
+	writeFileSync(join(cwd, "go.mod"), `module example.com/oci-probe\n\ngo 1.26.0\ntoolchain go${goVersion}\n`);
 	writeFileSync(join(cwd, "cmd/probe/main.go"), `package main
 import ("fmt"; "os"; "strings")
 const version = "v1"
