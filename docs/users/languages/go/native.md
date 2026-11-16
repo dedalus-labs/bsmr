@@ -102,12 +102,12 @@ CI. An undeclared tag is an error.
 
 ## Toolchain identity
 
-The `go.mod` toolchain directive selects the exact SDK. Acquisition still writes
-a committed toolchain lock with the Go version plus the official
-archive name, SHA-256 digest, and byte length for Darwin and Linux on amd64 and
-arm64. The execution host selects runnable SDK tools independently of the
-target platform. `go toolchain --check` and `go sync` reject a lock that differs
-from the module pin. Neither command repairs that mismatch implicitly.
+The `go.mod` toolchain directive selects the exact SDK. Acquisition records the
+Go version plus the official archive name, SHA-256 digest, and byte length for
+Darwin and Linux on amd64 and arm64 in `~/.bsmr/bootstrap/go/go<version>.json`.
+The execution host selects runnable SDK tools independently of the target
+platform. `go toolchain --check` and `go sync` fail when no valid record exists
+for the module pin. Neither command fetches one implicitly.
 
 Pure-Go builds use the existing Darwin/Linux and amd64/arm64 target-platform
 machinery. An arm64 Darwin runner can therefore execute arm64 Darwin tools that

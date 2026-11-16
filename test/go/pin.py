@@ -80,12 +80,12 @@ def project(tmp_path: Path, cache: Path) -> Iterator[Project]:
 )
 @pytest.mark.parametrize("command", ["toolchain", "sync"])
 def test_requires_exact_module_pin(project: Project, directive: str, command: str) -> None:
-    """Missing or ambiguous pins must fail before reading a lock or acquiring an SDK."""
+    """Missing or ambiguous pins must fail before reading metadata or acquiring an SDK."""
     project.pin(directive=directive)
     result = project.run("go", command, "--check")
     assert result.returncode != 0
     assert "requires exactly one `toolchain goX.Y.Z`" in result.stderr
-    assert not (project.root / ".bsmr-go-toolchain.json").exists()
+    assert not (project.home / ".bsmr/bootstrap").exists()
 
 
 def test_acquisition_uses_module_pin(project: Project) -> None:
@@ -93,9 +93,10 @@ def test_acquisition_uses_module_pin(project: Project) -> None:
     project.pin(directive="toolchain go1.26.1 // exact SDK")
     assert "Go SDK pinned: 1.26.1" in project.succeed("go", "toolchain")
     assert "Go SDK verified: 1.26.1" in project.succeed("go", "toolchain", "--check")
-    lock = (project.root / ".bsmr-go-toolchain.json").read_bytes()
+    record = project.home / ".bsmr/bootstrap/go/go1.26.1.json"
+    recorded = record.read_bytes()
     assert "Go SDK pinned: 1.26.1" in project.succeed("go", "toolchain")
-    assert (project.root / ".bsmr-go-toolchain.json").read_bytes() == lock
+    assert record.read_bytes() == recorded
     conflict = project.run("go", "toolchain", "--version", "1.26.2")
     assert conflict.returncode != 0
     assert "does not match go.mod toolchain go1.26.1" in conflict.stderr
@@ -106,8 +107,8 @@ def test_acquisition_uses_module_pin(project: Project) -> None:
     for command in [("toolchain", "--check"), ("sync", "--check")]:
         result = project.run("go", *command)
         assert result.returncode != 0
-        assert "does not match go.mod toolchain go1.26.2" in result.stderr
-    assert (project.root / ".bsmr-go-toolchain.json").read_bytes() == lock
+        assert 'go1.26.2.json" is missing or invalid' in result.stderr
+    assert record.read_bytes() == recorded
     assert "Go SDK pinned: 1.26.2" in project.succeed("go", "toolchain")
     assert "Go SDK verified: 1.26.2" in project.succeed("go", "toolchain", "--check")
 
@@ -163,10 +164,12 @@ def test_running_daemon_reads_user_root_metadata(project: Project) -> None:
     invalid = project.run(*build)
     assert invalid.returncode != 0
     assert "is invalid; run `bsmr go toolchain`" in invalid.stderr
-    metadata.write_bytes(recorded.replace(b'"size": ', b'"size": 1', 1))
-    conflict = project.run("go", "toolchain")
-    assert conflict.returncode != 0
-    assert "different archive identity for the same version" in conflict.stderr
+    tampered = recorded.replace(b'"size": ', b'"size": 1')
+    metadata.write_bytes(tampered)
+    corrupt = project.run("go", "toolchain")
+    assert corrupt.returncode != 0
+    assert "failed to materialize the locked Go SDK" in corrupt.stderr
+    assert metadata.read_bytes() == tampered
     metadata.write_bytes(recorded)
     project.succeed(*build)
 
@@ -180,7 +183,6 @@ def test_module_root_defines_the_toolchains_package(project: Project) -> None:
     )
     project.succeed("go", "toolchain")
     project.succeed("go", "sync")
-    (project.root / ".bsmr-go-toolchain.json").unlink()
     outputs = json.loads(
         project.succeed(
             "build", "//cmd:bin", "-c", "go.link_mode=internal", "--show-full-json-output"
@@ -188,6 +190,25 @@ def test_module_root_defines_the_toolchains_package(project: Project) -> None:
     )
     result = subprocess.run([outputs["root//cmd:bin"]], capture_output=True, text=True, check=True)
     assert result.stdout.strip().split("-X:", 1)[0] == "go1.26.1"
+
+
+def test_toolchain_commits_no_project_lock(project: Project) -> None:
+    """Acquire without a project lock, and retire only an earlier release's marked lock."""
+    project.pin(directive="toolchain go1.26.1")
+    project.succeed("go", "toolchain")
+    lock = project.root / ".bsmr-go-toolchain.json"
+    assert not lock.exists()
+    lock.write_text(json.dumps({"generated_by": "bsmr go toolchain", "schema": 1}))
+    for command in [("toolchain", "--check"), ("sync", "--check")]:
+        result = project.run("go", *command)
+        assert result.returncode != 0
+        assert "run `bsmr go toolchain` to retire them" in result.stderr
+    project.succeed("go", "toolchain")
+    assert not lock.exists()
+    lock.write_text('{"note": "bsmr go toolchain"}\n')
+    assert "Go SDK verified: 1.26.1" in project.succeed("go", "toolchain", "--check")
+    project.succeed("go", "toolchain")
+    assert lock.read_text() == '{"note": "bsmr go toolchain"}\n'
 
 
 def test_sdk_is_an_action_input(project: Project) -> None:

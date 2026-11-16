@@ -3,7 +3,7 @@
 # SPDX-License-Identifier: Apache-2.0
 # ===----------------------------------------------------------------------===
 
-# Declares the official Go SDK that `.bsmr-go-toolchain.json` pins.
+# Declares the official Go SDK that the user-root record for the `go.mod` pin identifies.
 
 load("@prelude//:prelude.bzl", "native")
 load("@prelude//go_bootstrap:go_bootstrap.bzl", "GoBootstrapDistrInfo")
@@ -62,11 +62,11 @@ def native_go_toolchains(lock: str):
     """Declares `go`, `go_bootstrap`, and the verified archive both build with.
 
     Args:
-        lock: The contents of `.bsmr-go-toolchain.json`.
+        lock: The verified record for the `go.mod` toolchain pin.
     """
     lock = json.decode(lock)
     if lock["generated_by"] != "bsmr go toolchain" or lock["schema"] != 1:
-        fail(".bsmr-go-toolchain.json has an unsupported ownership marker or schema")
+        fail("Go SDK metadata has an unsupported ownership marker or schema")
     archives = {"{}-{}".format(archive["os"], archive["arch"]): archive for archive in lock["archives"]}
     native.http_archive(
         name = "go_sdk_archive",
