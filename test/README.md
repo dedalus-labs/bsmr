@@ -26,6 +26,15 @@ The recorded hashes identify entrypoint files. This fixture tests the action
 runtime and cache behavior. GitHub worker lifecycle and generated action
 metadata require connected runner qualification.
 
+## Package tests
+
+Run `node test/typescript/test.ts /path/to/bsmr` to check that `bsmr test` runs a
+native package's vitest suite. Failing, passing and empty suites must each decide
+the exit code. A package without vitest and the workspace root must report
+that no tests ran.
+Append `prelude` to test this checkout's rules. CI runs it in the same
+`typescript/cache` action.
+
 ## Package tasks
 
 Run `node test/pnpm/task.ts /path/to/bsmr` to test the binary's embedded `pnpm_task`
