@@ -7,17 +7,15 @@
 
 //! Owns the repository-local lifecycle of a locked official Go SDK.
 //!
-//! Acquisition hard-links verified archive output into ignored SDK and tool
-//! directories. A structured marker binds both directories to the committed lock and
-//! is required before replacement, preventing generated cleanup from deleting user data.
+//! Acquisition hard-links verified archive output into an ignored SDK directory. A
+//! structured marker binds it to the committed lock and is required before replacement,
+//! preventing generated cleanup from deleting user data.
 
 use std::fs;
 use std::path::Path;
 use std::path::PathBuf;
-use std::process::Command;
 
 pub(super) use bsmr_common::native_toolchains::GO_SDK_DIRECTORY as SDK_DIRECTORY;
-pub(super) use bsmr_common::native_toolchains::GO_TOOLS_DIRECTORY as TOOLS_DIRECTORY;
 use serde::Deserialize;
 use serde::Serialize;
 
@@ -27,7 +25,8 @@ use super::GoToolchainError;
 use super::GoToolchainLock;
 use super::legacy::DEMO_TOOLCHAINS;
 
-const GO_BOOTSTRAP_WRAPPER_SOURCE: &str = include_str!("go_bootstrap_wrapper.go");
+/// The directory earlier releases compiled the bootstrap wrapper into, before it was an action.
+pub(super) const LEGACY_TOOLS_DIRECTORY: &str = ".bsmr-go-tools";
 
 /// Identity marker required on every frontend-owned acquisition directory.
 #[derive(Debug, Deserialize, Serialize)]
@@ -67,7 +66,7 @@ pub(crate) fn create_toolchains_package(toolchains: &Path) -> Result<(), GoToolc
 
 /// Refuses, before any download, to replace acquisition directories Bessemer does not own.
 pub(crate) fn validate_acquisition_owners(toolchains: &Path) -> Result<(), GoToolchainError> {
-    for directory in [SDK_DIRECTORY, TOOLS_DIRECTORY] {
+    for directory in [SDK_DIRECTORY, LEGACY_TOOLS_DIRECTORY] {
         let path = toolchains.join(directory);
         if path.exists() {
             validate_owned_acquisition(&path)?;
@@ -76,7 +75,7 @@ pub(crate) fn validate_acquisition_owners(toolchains: &Path) -> Result<(), GoToo
     Ok(())
 }
 
-/// Installs one verified extracted SDK and bootstrap wrapper as repository-local inputs.
+/// Installs one verified extracted SDK as a repository-local input.
 pub(crate) fn install_sdk(
     toolchains: &Path,
     extracted: &Path,
@@ -99,14 +98,12 @@ pub(crate) fn install_sdk(
         sha256: archive.sha256.clone(),
     };
     write_acquisition_metadata(sdk_stage.path(), &metadata)?;
-    let tools_stage = tempfile::Builder::new()
-        .prefix(".bsmr-go-tools-stage-")
-        .tempdir_in(toolchains)
-        .map_err(|error| write_error(toolchains, error))?;
-    compile_bootstrap_wrapper(sdk_stage.path(), tools_stage.path(), archive)?;
-    write_acquisition_metadata(tools_stage.path(), &metadata)?;
     replace_generated_directory(sdk_stage, &toolchains.join(SDK_DIRECTORY))?;
-    replace_generated_directory(tools_stage, &toolchains.join(TOOLS_DIRECTORY))?;
+    let legacy_tools = toolchains.join(LEGACY_TOOLS_DIRECTORY);
+    if legacy_tools.exists() {
+        validate_owned_acquisition(&legacy_tools)?;
+        fs::remove_dir_all(&legacy_tools).map_err(|error| write_error(&legacy_tools, error))?;
+    }
     Ok(())
 }
 
@@ -116,13 +113,10 @@ pub(crate) fn acquired_go(
     lock: &GoToolchainLock,
 ) -> Result<PathBuf, GoToolchainError> {
     let sdk = toolchains.join(SDK_DIRECTORY);
-    let tools = toolchains.join(TOOLS_DIRECTORY);
-    let archive = host_archive(lock)?;
-    validate_acquired_directory(&sdk, lock, archive)?;
-    validate_acquired_directory(&tools, lock, archive)?;
+    validate_acquired_directory(&sdk, lock, host_archive(lock)?)?;
     verify_sdk_version(&sdk, &lock.version)?;
     let executable = sdk.join("bin/go");
-    if !executable.is_file() || !tools.join("go_wrapper").is_file() {
+    if !executable.is_file() {
         return Err(GoToolchainError::NotAcquired);
     }
     Ok(executable)
@@ -248,45 +242,6 @@ fn copy_symlink(_source: &Path, destination: &Path) -> Result<(), GoToolchainErr
         std::env::consts::OS,
         destination.display()
     )))
-}
-
-/// Builds the bootstrap wrapper with only the acquired SDK and explicit temporary state.
-fn compile_bootstrap_wrapper(
-    sdk: &Path,
-    destination: &Path,
-    archive: &GoSdkArchive,
-) -> Result<(), GoToolchainError> {
-    let source = destination.join("go_wrapper.go");
-    let output = destination.join("go_wrapper");
-    let cache = destination.join("cache");
-    let temporary = destination.join("tmp");
-    fs::write(&source, GO_BOOTSTRAP_WRAPPER_SOURCE).map_err(|error| write_error(&source, error))?;
-    fs::create_dir(&cache).map_err(|error| write_error(&cache, error))?;
-    fs::create_dir(&temporary).map_err(|error| write_error(&temporary, error))?;
-    let result = Command::new(sdk.join("bin/go"))
-        .args(["build", "-trimpath", "-buildvcs=false", "-o"])
-        .arg(&output)
-        .arg(&source)
-        .env_clear()
-        .env("CGO_ENABLED", "0")
-        .env("GOARCH", &archive.arch)
-        .env("GOCACHE", &cache)
-        .env("GOENV", "off")
-        .env("GOOS", &archive.os)
-        .env("GOROOT", sdk)
-        .env("GOTOOLCHAIN", "local")
-        .env("TMPDIR", &temporary)
-        .output()
-        .map_err(|error| GoToolchainError::Wrapper(error.to_string()))?;
-    if !result.status.success() {
-        return Err(GoToolchainError::Wrapper(
-            String::from_utf8_lossy(&result.stderr).trim().to_owned(),
-        ));
-    }
-    fs::remove_file(&source).map_err(|error| write_error(&source, error))?;
-    fs::remove_dir_all(&cache).map_err(|error| write_error(&cache, error))?;
-    fs::remove_dir_all(&temporary).map_err(|error| write_error(&temporary, error))?;
-    Ok(())
 }
 
 /// Records ownership and keeps generated payloads out of version control.

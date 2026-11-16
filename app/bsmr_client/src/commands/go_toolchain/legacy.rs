@@ -16,8 +16,8 @@ use std::path::Path;
 use std::path::PathBuf;
 
 use super::GoToolchainError;
+use super::acquisition::LEGACY_TOOLS_DIRECTORY;
 use super::acquisition::SDK_DIRECTORY;
-use super::acquisition::TOOLS_DIRECTORY;
 use super::acquisition::owns_acquisition;
 
 /// The directory earlier releases wrote regardless of the configured `toolchains` cell.
@@ -111,7 +111,7 @@ fn find_leftovers(root: &Path, toolchains: &Path) -> Result<Vec<PathBuf>, GoTool
         leftovers.push(definition);
     }
     if legacy != toolchains {
-        for name in [SDK_DIRECTORY, TOOLS_DIRECTORY] {
+        for name in [SDK_DIRECTORY, LEGACY_TOOLS_DIRECTORY] {
             let path = legacy.join(name);
             if path.is_dir() && owns_acquisition(&path) {
                 leftovers.push(path);

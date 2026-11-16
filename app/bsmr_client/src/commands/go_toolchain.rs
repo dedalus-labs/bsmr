@@ -433,8 +433,6 @@ pub(crate) enum GoToolchainError {
     SdkVersion { locked: String, declared: String },
     #[error("failed to copy acquired Go SDK: {0}")]
     Copy(String),
-    #[error("failed to compile the Go bootstrap wrapper: {0}")]
-    Wrapper(String),
     #[error("Go toolchain lock is invalid: {0}")]
     Lock(String),
     #[error("failed to read `{}`: {message}", path.display())]

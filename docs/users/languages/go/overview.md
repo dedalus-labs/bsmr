@@ -36,9 +36,10 @@ bsmr go toolchain --check
 otherwise acquires the committed release. It records the exact official archive
 identities for Darwin and Linux on amd64 and arm64. Pass `--update` to move an
 existing lock to the latest stable release, or `--version` with an exact release
-such as `1.26` or `1.26.5`. The acquired SDK and bootstrap tools are verified,
-repository-local ignored inputs; synchronization and builds do not depend on an
-ambient `go` executable.
+such as `1.26` or `1.26.5`. The acquired SDK is a verified, repository-local
+ignored input, and builds compile the bootstrap wrapper with the locked archive
+as a cached action; synchronization and builds do not depend on an ambient `go`
+executable.
 
 Synchronization invokes that SDK's `go list -deps -json -test` with module
 writes, network-backed dependency resolution, ambient `go env -w` state, and
@@ -84,7 +85,6 @@ in a project created by `bsmr init`, or the directory of a declared
 | `.bsmr-go-manifests` | yes | Records the exact manifest paths Bessemer may later remove as stale. |
 | `<package>/<buildfile>` | yes | Carries the validated native graph into ordinary Bessemer rules and action keys. |
 | `<toolchains>/.bsmr-go-sdk` | no | Holds the verified SDK executable and standard library for the current host. |
-| `<toolchains>/.bsmr-go-tools` | no | Holds the bootstrap wrapper compiled by that SDK for the current host. |
 
 ### Where the toolchain lives
 

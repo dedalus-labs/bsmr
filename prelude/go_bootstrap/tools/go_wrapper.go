@@ -16,7 +16,7 @@ import (
 	"path/filepath"
 )
 
-// main runs the acquired Go SDK with repository-local cache and output paths.
+// main runs the locked Go SDK with the action's scratch cache and output paths.
 func main() {
 	if len(os.Args) < 2 {
 		fmt.Fprintln(os.Stderr, "usage: go_bootstrap_wrapper <go> [options] <args>")
