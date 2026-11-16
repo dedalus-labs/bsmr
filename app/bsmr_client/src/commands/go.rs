@@ -26,6 +26,7 @@ use bsmr_common::argv::Argv;
 use bsmr_common::argv::SanitizedArgv;
 use bsmr_common::legacy_configs::cells::BsmrConfigBasedCells;
 use bsmr_common::legacy_configs::key::BsmrconfigKeyRef;
+use bsmr_common::native_toolchains::go_sdk_metadata_directory;
 use bsmr_core::fs::output_path::BSMR_OUTPUT_ROOT;
 use bsmr_core::fs::project::ProjectRoot;
 
@@ -130,6 +131,7 @@ async fn configure_toolchain(
         command.check,
     )
     .await?;
+    go_toolchain::write_metadata(&go_sdk_metadata_directory()?, &lock, command.check)?;
     if !command.check {
         go_toolchain::create_toolchains_package(&toolchains)?;
         go_toolchain::sdk_go(&materialize_sdk_archive(root)?, &lock)?;

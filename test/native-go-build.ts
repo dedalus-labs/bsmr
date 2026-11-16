@@ -181,8 +181,9 @@ try {
 	const lockPath = join(second, ".bsmr-go-toolchain.json");
 	const host = (JSON.parse(readFileSync(lockPath, "utf8")) as { archives: { os: string; arch: string; filename: string; sha256: string }[] }).archives.find((entry) => entry.os === os && entry.arch === arch);
 	assert.ok(host);
-	// Without the lock, the root build file alone declares the toolchains the system phases select.
+	// Without the lock or pin, the root build file alone declares the toolchains the system phases select.
 	rmSync(lockPath);
+	writeFileSync(module, readFileSync(module, "utf8").replace(`toolchain go${nextVersion}\n`, ""));
 	writeFileSync(join(second, "BUILD.bsmr"), 'load("@prelude//toolchains:demo.bzl", "system_demo_toolchains")\nsystem_demo_toolchains()\n');
 	env["PATH"] = `${join(sdkRoot, "bin")}${delimiter}${process.env["PATH"]}`;
 	await systemBootstrap(second, "system-go");

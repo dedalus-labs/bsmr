@@ -21,6 +21,7 @@ use std::path::PathBuf;
 
 pub(crate) use acquisition::create_toolchains_package;
 pub(crate) use acquisition::sdk_go;
+use bsmr_common::native_toolchains::go_toolchain_pin;
 #[cfg(test)]
 pub(crate) use legacy::GENERATED_DEFINITION_PREFIX as LEGACY_DEFINITION_PREFIX;
 #[cfg(test)]
@@ -28,6 +29,7 @@ pub(crate) use legacy::GENERATED_MANIFEST as LEGACY_MANIFEST;
 pub(crate) use legacy::reject_leftovers;
 pub(crate) use legacy::remove_leftovers;
 pub(crate) use lock::write_lock;
+pub(crate) use lock::write_metadata;
 use serde::Deserialize;
 use serde::Serialize;
 
@@ -147,31 +149,10 @@ pub(crate) fn module_pin(root: &Path) -> Result<String, GoToolchainError> {
         path: path.clone(),
         message: error.to_string(),
     })?;
-    let mut pin = None;
-    for line in source.lines() {
-        let mut words = line
-            .split("//")
-            .next()
-            .unwrap_or_default()
-            .split_whitespace();
-        if words.next() != Some("toolchain") {
-            continue;
-        }
-        let version = words.next().and_then(|word| word.strip_prefix("go"));
-        let Some(version) = version else {
-            return Err(GoToolchainError::ModulePin(path));
-        };
-        let canonical = version.split('.').count() == 3
-            && version.split('.').all(|part| {
-                part.parse::<u64>()
-                    .is_ok_and(|number| number.to_string() == part)
-            });
-        if !canonical || words.next().is_some() || pin.is_some() {
-            return Err(GoToolchainError::ModulePin(path));
-        }
-        pin = Some(version.to_owned());
+    match go_toolchain_pin(&source) {
+        Ok(Some(version)) => Ok(version.to_owned()),
+        _ => Err(GoToolchainError::ModulePin(path)),
     }
-    pin.ok_or(GoToolchainError::ModulePin(path))
 }
 
 /// Acquires or verifies only the release named by the module's exact pin.
@@ -437,6 +418,8 @@ pub(crate) enum GoToolchainError {
         "an earlier `bsmr go toolchain` generated {0:?}, which the lock now replaces; run `bsmr go toolchain` to retire them"
     )]
     Leftover(Vec<PathBuf>),
-    #[error("Go toolchain lock `{0:?}` differs from its generated form; run `bsmr go toolchain`")]
+    #[error("Go toolchain file `{0:?}` differs from its generated form; run `bsmr go toolchain`")]
     Stale(PathBuf),
+    #[error("Go SDK metadata {0:?} records a different archive identity for the same version")]
+    Conflict(PathBuf),
 }
