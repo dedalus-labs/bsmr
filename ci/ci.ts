@@ -486,6 +486,11 @@ export const ci = workflow({
 				},
 				uses(typescriptCache, { with: { binary: "target/debug/bsmr" } }),
 				{
+					name: "Verify exact Go toolchain pins",
+					env: { BSMR_BINARY: "target/debug/bsmr" },
+					run: command({ file: "pipx", args: ["run", "--spec", "pytest==9.0.2", "pytest", "-q", "test/go/pin.py"] }),
+				},
+				{
 					name: "Verify native Go build",
 					run: command({ file: "node", args: ["test/native-go-build.ts", "target/debug/bsmr"] }),
 				},
