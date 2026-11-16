@@ -2833,7 +2833,6 @@ dependencies = [
  "starlark",
  "starlark_lsp",
  "sync_wrapper",
- "tar",
  "tempfile",
  "tokio",
  "tokio-stream",

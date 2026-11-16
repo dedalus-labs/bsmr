@@ -71,7 +71,6 @@ shlex.workspace = true
 starlark.workspace = true
 starlark_lsp.workspace = true
 sync_wrapper.workspace = true
-tar.workspace = true
 tokio.workspace = true
 tokio-stream.workspace = true
 tonic.workspace = true
