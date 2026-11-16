@@ -9,9 +9,7 @@ load("@prelude//:prelude.bzl", "native")
 load("@prelude//toolchains/go:go_bootstrap_toolchain.bzl", "go_bootstrap_distr", "go_bootstrap_toolchain")
 load("@prelude//toolchains/go:go_toolchain.bzl", "go_distr", "go_toolchain")
 
-# `bsmr go toolchain` installs the host SDK and bootstrap wrapper beside these rules, in
-# the directory of the `toolchains//` package, so the paths are the same in every layout.
-_SDK = ".bsmr-go-sdk"
+_SDK = ":go_sdk_archive"
 _WRAPPER = ".bsmr-go-tools/go_wrapper"
 
 def _prebuilt_tool_impl(ctx):
@@ -59,7 +57,7 @@ def native_go_toolchains(lock: str, acquired: bool):
 
     Args:
         lock: The contents of `.bsmr-go-toolchain.json`.
-        acquired: Whether the host SDK and bootstrap wrapper exist in this package.
+        acquired: Whether the bootstrap wrapper exists in this package.
     """
     lock = json.decode(lock)
     if lock["generated_by"] != "bsmr go toolchain" or lock["schema"] != 1:

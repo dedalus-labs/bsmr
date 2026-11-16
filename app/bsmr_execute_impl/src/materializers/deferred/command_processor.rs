@@ -1015,6 +1015,7 @@ impl<T: IoHandler> DeferredMaterializerCommandProcessor<T> {
                     method: None,
                     last_access_time: Utc::now(),
                     active: true,
+                    checked_by: None,
                 },
                 processing: Processing::Done(self.version_tracker.next()),
             }),
@@ -1065,6 +1066,7 @@ impl<T: IoHandler> DeferredMaterializerCommandProcessor<T> {
                             method: Some(Arc::from(method)),
                             last_access_time: *last_access_time,
                             active: true,
+                            checked_by: None,
                         };
                         data.deps = deps;
 
@@ -1386,11 +1388,23 @@ impl<T: IoHandler> DeferredMaterializerCommandProcessor<T> {
                 last_access_time,
                 metadata,
                 method,
+                checked_by,
                 ..
             } => match match method.as_deref() {
                 #[cfg(test)]
                 Some(ArtifactMaterializationMethod::Test) => ArtifactPresence::Present,
-                _ => Self::artifact_presence(&io, path, metadata)?,
+                _ if checked_by.as_ref() == Some(event_dispatcher.trace_id()) => {
+                    ArtifactPresence::Present
+                }
+                _ => {
+                    let presence = Self::artifact_presence(&io, path, metadata)?;
+                    if matches!(presence, ArtifactPresence::Present)
+                        && *event_dispatcher.trace_id() != TraceId::null()
+                    {
+                        *checked_by = Some(event_dispatcher.trace_id().dupe());
+                    }
+                    presence
+                }
             } {
                 ArtifactPresence::Missing => {
                     let method = method.dupe().ok_or_else(|| {
@@ -1741,6 +1755,7 @@ impl<T: IoHandler> DeferredMaterializerCommandProcessor<T> {
                                 method: Some(method.dupe()),
                                 last_access_time: timestamp,
                                 active: true,
+                                checked_by: None,
                             })
                         }
                     };

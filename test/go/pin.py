@@ -5,7 +5,9 @@
 
 """Require native Go acquisition and synchronization to honor the module's exact pin."""
 
+import json
 import os
+import shutil
 import subprocess
 from collections.abc import Iterator
 from pathlib import Path
@@ -93,3 +95,31 @@ def test_acquisition_uses_module_pin(project: Project) -> None:
     assert (project.root / ".bsmr-go-toolchain.json").read_bytes() == lock
     assert "Go SDK pinned: 1.26.2" in project.succeed("go", "toolchain")
     assert "Go SDK verified: 1.26.2" in project.succeed("go", "toolchain", "--check")
+
+
+def test_sdk_is_an_action_input(project: Project) -> None:
+    """Build and restore without a source-tree SDK, then observe a changed SDK pin."""
+    shutil.copyfile(
+        Path(__file__).parents[1] / "fixtures/go-action/main.go", project.root / "main.go"
+    )
+    for version in ["1.26.1", "1.26.2"]:
+        project.pin(directive=f"toolchain go{version}")
+        project.succeed("go", "toolchain", "--version", version)
+        project.succeed("go", "sync")
+        shutil.rmtree(project.root / ".bsmr-go-sdk")
+        previous = None
+        for _ in range(2):
+            outputs = json.loads(
+                project.succeed(
+                    "build", "//:bin", "-c", "go.link_mode=internal", "--show-full-json-output"
+                )
+            )
+            binary = Path(outputs["root//:bin"])
+            result = subprocess.run([binary], capture_output=True, text=True, check=True)
+            assert result.stdout.strip().split("-X:", 1)[0] == f"go{version}"
+            content = binary.read_bytes()
+            if previous is not None:
+                assert content == previous
+            previous = content
+            assert not (project.root / ".bsmr-go-sdk").exists()
+            project.succeed("clean")
