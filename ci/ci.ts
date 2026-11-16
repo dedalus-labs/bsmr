@@ -397,6 +397,11 @@ export const ci = workflow({
 					run: command({ file: "cargo", args: ["build", "--locked", "--bin", "bsmr"] }),
 				},
 				{
+					name: "Verify shared user stores",
+					env: { BSMR_BINARY: "target/debug/bsmr" },
+					run: command({ file: "pipx", args: ["run", "--spec", "pytest==9.0.2", "pytest", "-q", "test/stores/test_user.py"] }),
+				},
+				{
 					name: "Install Cargo planner compiler",
 					run: command({ file: "rustup", args: ["toolchain", "install", "1.98.0", "--profile", "minimal", "--component", "llvm-tools-preview", "--no-self-update"] }),
 				},
