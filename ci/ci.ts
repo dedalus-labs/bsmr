@@ -477,6 +477,14 @@ export const ci = workflow({
 					run: command({ file: "python3", args: ["test/daemon/stale.py", "target/debug/bsmr"] }),
 				},
 				{
+					name: "Inspect file watcher tracing policy",
+					run: unsafeShell("if test -f /proc/sys/kernel/yama/ptrace_scope; then cat /proc/sys/kernel/yama/ptrace_scope; else echo 'Yama absent'; fi"),
+				},
+				{
+					name: "Verify file watcher overflow",
+					run: command({ file: "python3", args: ["test/watcher/overflow.py", "target/debug/bsmr"] }),
+				},
+				{
 					name: "Verify external Rust dependencies",
 					run: command({ file: "node", args: ["test/rust/dependencies.ts", "target/debug/bsmr", "1.98.0"] }),
 				},

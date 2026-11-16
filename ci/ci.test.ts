@@ -155,6 +155,7 @@ test("Rust affected paths fail closed", () => {
 	assert.equal(rustAffected(["app/bsmr_core/src/pattern/target_pattern.md"]), true);
 	assert.equal(rustAffected(["prelude/rust/rust_binary.bzl"]), true);
 	assert.equal(rustAffected(["ci/ci.ts"]), true);
+	assert.equal(rustAffected(["test/watcher/overflow.py"]), true);
 	assert.equal(rustAffected([]), true);
 });
 
