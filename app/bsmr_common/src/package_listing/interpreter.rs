@@ -63,7 +63,14 @@ impl PackageListingResolver for InterpreterPackageListingResolver<'_, '_> {
                 let listing = DiceFileComputations::read_dir(self.ctx, path)
                     .await?
                     .included;
-                if find_build_source(&buildfile_candidates, &listing, true).is_some() {
+                if find_build_source(
+                    &buildfile_candidates,
+                    &listing,
+                    true,
+                    path.path().is_empty(),
+                )
+                .is_some()
+                {
                     return PackageLabel::from_cell_path(path);
                 }
             }
@@ -91,7 +98,14 @@ impl PackageListingResolver for InterpreterPackageListingResolver<'_, '_> {
                 let listing = DiceFileComputations::read_dir(self.ctx, path.dupe())
                     .await?
                     .included;
-                if find_build_source(&buildfile_candidates, &listing, true).is_some() {
+                if find_build_source(
+                    &buildfile_candidates,
+                    &listing,
+                    true,
+                    path.path().is_empty(),
+                )
+                .is_some()
+                {
                     packages.push(PackageLabel::from_cell_path(path)?);
                 }
             }
@@ -413,7 +427,8 @@ impl Directory {
         if !is_root && is_python_virtual_environment(&entries) {
             return Ok(None);
         }
-        let buildfile = find_build_source(buildfile_candidates, &entries, is_root);
+        let cell_root = root.path().is_empty() && path.is_empty();
+        let buildfile = find_build_source(buildfile_candidates, &entries, is_root, cell_root);
 
         match (is_root, buildfile.as_ref()) {
             (true, None) => {
