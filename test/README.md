@@ -119,6 +119,11 @@ and XDG cache directories. Both stores must live under `~/.bsmr` and survive
 clean. The download restores with its server stopped, and the copy restores
 without another command execution.
 
+Run `BSMR_BINARY=target/debug/bsmr uv run --with pytest==9.0.2 pytest -q test/stores/test_cargo.py`
+with `bsmr-cargo` beside the binary and Rust 1.98.0 installed. A native build
+acquires its locked registry crate under `~/.bsmr/cargo/0.98.0`. A fresh plan
+after clean reuses that archive without rewriting it.
+
 ## Daemon records
 
 Run `python3 test/daemon/stale.py /path/to/bsmr` as a non-root Linux user. It
