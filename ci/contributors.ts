@@ -79,7 +79,7 @@ const checkoutTrustedBase = {
 	name: "Checkout trusted base",
 	uses: "actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1",
 	with: {
-		ref: "${{ github.event.pull_request.base.sha }}",
+		ref: "refs/heads/${{ github.event.pull_request.base.ref }}",
 		"persist-credentials": false,
 	},
 } as const;
