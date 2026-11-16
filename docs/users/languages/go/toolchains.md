@@ -25,9 +25,9 @@ otherwise acquires the committed release. `--update` moves an existing lock to
 the latest stable release; `--version` selects an exact release such as `1.26`
 or `1.26.5`. It
 commits the official archive names, SHA-256 digests, and byte lengths for
-supported hosts, then materializes and verifies the current host SDK as a
-repository-local ignored input. The check command is offline and rejects lock,
-acquisition-metadata, or SDK-version drift.
+supported hosts, then builds the verified archive for the current host and checks
+its SDK version. The check command is offline and rejects lock drift and SDK
+copies that earlier releases left in the source tree.
 
 The committed `.bsmr-go-toolchain.json` is intentionally small. Each field
 protects a different part of the toolchain contract:
@@ -49,12 +49,10 @@ from the execution platform and derives `GOOS` and `GOARCH` from the target
 platform. Host-native cgo cannot cross that boundary because its C/C++ toolchain
 and sysroot are host inputs.
 
-The ignored SDK directory contains a `.bsmr-metadata.json` marker with the
-generator identity, acquisition state, version, host tuple, and archive digest.
-Bessemer requires the complete marker to match the lock before using the SDK, and
-requires its ownership identity before replacing the directory. Builds compile the
-bootstrap wrapper from the locked archive as a cached action, so no wrapper lives
-in the source tree.
+The SDK is the output of the `go_sdk_archive` action, which verifies the download
+against the lock, and synchronization runs `go list` from that output. Builds
+compile the bootstrap wrapper from the same archive as a cached action, so neither
+the SDK nor the wrapper lives in the source tree.
 
 The remaining sections document the underlying rules for custom toolchains.
 

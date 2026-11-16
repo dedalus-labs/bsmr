@@ -19,10 +19,8 @@ use std::fs;
 use std::path::Path;
 use std::path::PathBuf;
 
-pub(crate) use acquisition::acquired_go;
 pub(crate) use acquisition::create_toolchains_package;
-pub(crate) use acquisition::install_sdk;
-pub(crate) use acquisition::validate_acquisition_owners;
+pub(crate) use acquisition::sdk_go;
 #[cfg(test)]
 pub(crate) use legacy::GENERATED_DEFINITION_PREFIX as LEGACY_DEFINITION_PREFIX;
 #[cfg(test)]
@@ -425,14 +423,8 @@ pub(crate) enum GoToolchainError {
     UnexpectedArchiveName { expected: String, actual: String },
     #[error("official Go archive `{0}` has no byte length")]
     MissingSize(String),
-    #[error("Go SDK acquisition does not support host {0}-{1}")]
-    UnsupportedHost(String, String),
-    #[error("locked Go SDK is not acquired; run `bsmr go toolchain`")]
-    NotAcquired,
     #[error("locked Go {locked} does not match acquired SDK `{declared}`")]
     SdkVersion { locked: String, declared: String },
-    #[error("failed to copy acquired Go SDK: {0}")]
-    Copy(String),
     #[error("Go toolchain lock is invalid: {0}")]
     Lock(String),
     #[error("failed to read `{}`: {message}", path.display())]
