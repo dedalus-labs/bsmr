@@ -50,9 +50,9 @@ impl<'a> Planner<'a> {
             let directory = executable.parent().expect("executable has parent");
             return Err(RustGraphError::MissingPlanner(directory.to_owned()).into());
         }
-        let cargo_home = dirs::cache_dir()
-            .ok_or_else(|| unsupported("planner", "missing cache directory"))?
-            .join("bsmr/cargo/0.98.0");
+        let cargo_home = crate::invocation_roots::home_bsmr_dir()?
+            .as_path()
+            .join("cargo/0.98.0");
         std::fs::create_dir_all(&cargo_home)?;
         let request = self.request(entries, packages, &cargo_home);
         let bytes = serde_json::to_vec(&request)?;
