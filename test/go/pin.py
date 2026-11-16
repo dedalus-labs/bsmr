@@ -18,15 +18,21 @@ import pytest
 class Project:
     """Drive the real binary in one initialized Go module."""
 
-    def __init__(self, root: Path) -> None:
-        """Select the candidate binary explicitly instead of using PATH."""
+    def __init__(self, root: Path, home: Path) -> None:
+        """Select the candidate binary explicitly and give it a private user root."""
         self.root = root
+        self.home = home
         self.binary = Path(os.environ["BSMR_BINARY"]).resolve(strict=True)
 
     def run(self, *args: str) -> subprocess.CompletedProcess[str]:
         """Retain the exit status and diagnostics of a real CLI invocation."""
         result = subprocess.run(
-            [self.binary, *args], cwd=self.root, capture_output=True, text=True, check=False
+            [self.binary, *args],
+            cwd=self.root,
+            env={**os.environ, "HOME": str(self.home)},
+            capture_output=True,
+            text=True,
+            check=False,
         )
         return result
 
@@ -41,10 +47,16 @@ class Project:
         (self.root / "go.mod").write_text(f"module example.com/pin\n\ngo 1.26.0\n{directive}\n")
 
 
+@pytest.fixture(scope="module")
+def home(tmp_path_factory: pytest.TempPathFactory) -> Path:
+    """Share one private user root, and its caches, across this module's projects."""
+    return tmp_path_factory.mktemp("home")
+
+
 @pytest.fixture
-def project(tmp_path: Path) -> Iterator[Project]:
+def project(tmp_path: Path, home: Path) -> Iterator[Project]:
     """Provide an initialized module and stop its real daemon after each test."""
-    project = Project(root=tmp_path)
+    project = Project(root=tmp_path, home=home)
     project.succeed("init")
     try:
         yield project
@@ -124,6 +136,36 @@ def test_acquisition_writes_no_sdk_copy(project: Project) -> None:
     assert (user / "notes.txt").read_bytes() == b"user-owned\n"
     assert "Go SDK verified: 1.26.1" in project.succeed("go", "toolchain", "--check")
     project.succeed("go", "sync", "--check")
+
+
+def test_running_daemon_reads_user_root_metadata(project: Project) -> None:
+    """Evaluate from user-root metadata that a running daemon sees appear, break, and recover."""
+    project.pin(directive="toolchain go1.26.1")
+    shutil.copyfile(
+        Path(__file__).parents[1] / "fixtures/go-action/main.go", project.root / "main.go"
+    )
+    project.succeed("go", "toolchain")
+    project.succeed("go", "sync")
+    metadata = project.home / ".bsmr/bootstrap/go/go1.26.1.json"
+    recorded = metadata.read_bytes()
+    build = ("build", "//:bin", "-c", "go.link_mode=internal")
+    metadata.unlink()
+    missing = project.run(*build)
+    assert missing.returncode != 0
+    assert "is missing; run `bsmr go toolchain`" in missing.stderr
+    project.succeed("go", "toolchain")
+    assert metadata.read_bytes() == recorded
+    project.succeed(*build)
+    metadata.write_text("{}")
+    invalid = project.run(*build)
+    assert invalid.returncode != 0
+    assert "is invalid; run `bsmr go toolchain`" in invalid.stderr
+    metadata.write_bytes(recorded.replace(b'"size": ', b'"size": 1', 1))
+    conflict = project.run("go", "toolchain")
+    assert conflict.returncode != 0
+    assert "different archive identity for the same version" in conflict.stderr
+    metadata.write_bytes(recorded)
+    project.succeed(*build)
 
 
 def test_sdk_is_an_action_input(project: Project) -> None:

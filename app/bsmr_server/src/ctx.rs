@@ -702,6 +702,10 @@ impl DiceUpdater for DiceCommandUpdater<'_, '_> {
             Default::default()
         };
         ctx.changed_to([(bsmr_common::rust_graph::git::GitInputs, Arc::new(git))])?;
+        ctx.changed_to([(
+            bsmr_common::native_toolchains::GoSdkMetadata,
+            Arc::new(bsmr_common::native_toolchains::capture_go_sdk_metadata()?),
+        )])?;
         let invocation = self.cmd_ctx.target_patterns.as_ref().map(|patterns| {
             bsmr_core::pattern::unparsed::UnparsedPatterns::new(
                 patterns.clone(),
