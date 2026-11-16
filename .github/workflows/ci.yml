@@ -332,8 +332,6 @@ jobs:
       - name: Verify stale daemon records
         run: python3 test/daemon/stale.py target/debug/bsmr
         shell: bash
-      - name: Inspect file watcher tracing policy
-        run: if test -f /proc/sys/kernel/yama/ptrace_scope; then cat /proc/sys/kernel/yama/ptrace_scope; else echo 'Yama absent'; fi
       - name: Verify file watcher overflow
         run: python3 test/watcher/overflow.py target/debug/bsmr
         shell: bash
