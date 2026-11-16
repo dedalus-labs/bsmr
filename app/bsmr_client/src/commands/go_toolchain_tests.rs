@@ -20,7 +20,6 @@ use crate::commands::go_toolchain::create_toolchains_package;
 use crate::commands::go_toolchain::reject_leftovers;
 use crate::commands::go_toolchain::remove_leftovers;
 use crate::commands::go_toolchain::select_release;
-use crate::commands::go_toolchain::validate_acquisition_owners;
 use crate::commands::go_toolchain::write_lock;
 use crate::commands::init::set_up_project;
 
@@ -176,24 +175,6 @@ fn check_detects_lock_drift() {
     assert_eq!(fs::read_to_string(&path).expect("lock"), drift);
 }
 
-/// Confirms a substring collision cannot claim ownership of an SDK directory.
-#[test]
-fn rejects_forged_acquisition_marker() {
-    let root = tempfile::tempdir().expect("temporary repository");
-    let sdk = root.path().join("toolchains/.bsmr-go-sdk");
-    fs::create_dir_all(&sdk).expect("SDK directory");
-    fs::write(
-        sdk.join(".bsmr-metadata.json"),
-        r#"{"note":"bsmr go toolchain"}"#,
-    )
-    .expect("forged ownership marker");
-
-    let error = validate_acquisition_owners(&root.path().join("toolchains"))
-        .expect_err("forgery must fail closed");
-
-    assert!(matches!(error, GoToolchainError::UserOwned(_)));
-}
-
 /// Confirms `tool` roots are requested only from SDKs that define the meta-pattern.
 #[test]
 fn gates_tool_directives_on_sdk_version() {
@@ -211,10 +192,9 @@ fn gates_tool_directives_on_sdk_version() {
     );
 }
 
-/// Invariant: acquisition lands in the directory of the package `toolchains//` names.
+/// Invariant: the locked toolchain joins the package `toolchains//` names.
 ///
-/// The injected toolchain reads `.bsmr-go-sdk` relative to that package.
-/// `bsmr init` aliases `toolchains` to the root cell, so a new project acquires at its root.
+/// `bsmr init` aliases `toolchains` to the root cell, so a new project's toolchain is at its root.
 ///
 /// Witness:
 /// the configuration `bsmr init` writes resolves `toolchains` to the project root.
@@ -270,7 +250,6 @@ fn creates_a_missing_declared_toolchains_package() {
     assert!(!toolchains.exists());
 
     remove_leftovers(root, &toolchains).expect("nothing to retire");
-    validate_acquisition_owners(&toolchains).expect("nothing acquired");
     create_toolchains_package(&toolchains).expect("toolchains package");
 
     let manifest = toolchains.join("BUILD.bsmr");
@@ -374,14 +353,14 @@ fn keeps_edited_generated_manifest() {
     );
 }
 
-/// Invariant: in a declared `toolchains` cell, the migration keeps the cell's package and SDK.
+/// Invariant: in a declared `toolchains` cell, the migration keeps the cell's package.
 ///
 /// The generated manifest there defines `toolchains//`; deleting it would undefine the cell,
 /// and keeping `bsmr_go_toolchains()` would declare `go` twice beside the injected targets.
 ///
 /// Witness:
-/// the manifest keeps only `system_demo_toolchains(include_go = False)`, the definition is
-/// removed, and both acquisition directories remain.
+/// the manifest keeps only `system_demo_toolchains(include_go = False)`, and the definition and
+/// both acquisition directories are removed.
 #[test]
 fn rewrites_the_generated_manifest_of_a_declared_cell() {
     let root = tempfile::tempdir().expect("temporary repository");
@@ -394,7 +373,7 @@ fn rewrites_the_generated_manifest_of_a_declared_cell() {
     assert!(manifest.contains("system_demo_toolchains(include_go = False)"));
     assert!(!manifest.contains("bsmr_go_toolchains"));
     assert!(!toolchains.join("bsmr_go_toolchain.bzl").exists());
-    assert!(toolchains.join(".bsmr-go-sdk").is_dir());
-    assert!(toolchains.join(".bsmr-go-tools").is_dir());
+    assert!(!toolchains.join(".bsmr-go-sdk").exists());
+    assert!(!toolchains.join(".bsmr-go-tools").exists());
     reject_leftovers(root.path(), &toolchains).expect("nothing left");
 }

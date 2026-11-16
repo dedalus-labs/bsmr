@@ -171,17 +171,26 @@ try {
 	const automatic = await build(second, "automatic-link", "compiled:original\n", false);
 	assert.ok(automatic.local.filter(({ identity }) => identity.includes("(go_link ")).length === 2);
 	assert.equal(automatic.cached.filter(({ identity }) => identity.includes("(go_link ")).length, 0);
-	// Without the lock, the root build file alone declares the toolchains the system phases select.
-	rmSync(join(second, ".bsmr-go-toolchain.json"));
-	writeFileSync(join(second, "BUILD.bsmr"), 'load("@prelude//toolchains:demo.bzl", "system_demo_toolchains")\nsystem_demo_toolchains()\n');
-	env["PATH"] = `${join(second, ".bsmr-go-sdk/bin")}${delimiter}${process.env["PATH"]}`;
-	await systemBootstrap(second, "system-go");
+	// The system phases run the locked SDK from outside the source tree, which never holds a copy.
 	const os = process.platform === "darwin" ? "darwin" : "linux";
 	const arch = process.arch === "arm64" ? "arm64" : "amd64";
+	const archive = await run(executable, ["build", "toolchains//:go_sdk_archive", "--show-full-json-output", "--console", "none"], { ...options, cwd: second });
+	const sdkRoot = join(root, "sdk");
+	cpSync(Object.values(JSON.parse(archive.stdout) as Record<string, string>)[0] ?? "", sdkRoot, { recursive: true, verbatimSymlinks: true });
+	assert.equal(existsSync(join(second, ".bsmr-go-sdk")), false);
+	const lockPath = join(second, ".bsmr-go-toolchain.json");
+	const host = (JSON.parse(readFileSync(lockPath, "utf8")) as { archives: { os: string; arch: string; filename: string; sha256: string }[] }).archives.find((entry) => entry.os === os && entry.arch === arch);
+	assert.ok(host);
+	// Without the lock, the root build file alone declares the toolchains the system phases select.
+	rmSync(lockPath);
+	writeFileSync(join(second, "BUILD.bsmr"), 'load("@prelude//toolchains:demo.bzl", "system_demo_toolchains")\nsystem_demo_toolchains()\n');
+	env["PATH"] = `${join(sdkRoot, "bin")}${delimiter}${process.env["PATH"]}`;
+	await systemBootstrap(second, "system-go");
 	writeFileSync(join(second, "BUILD.bsmr"), `load("@prelude//toolchains:demo.bzl", "system_demo_toolchains")
 load("@prelude//toolchains/go:go_bootstrap_toolchain.bzl", "go_bootstrap_distr", "go_bootstrap_toolchain")
 system_demo_toolchains(include_go = False)
-go_bootstrap_distr(name = "sdk", go_root = ".bsmr-go-sdk", go_os_arch = ("${os}", "${arch}"))
+http_archive(name = "sdk_archive", urls = ["https://go.dev/dl/${host.filename}"], sha256 = "${host.sha256}", strip_prefix = "go")
+go_bootstrap_distr(name = "sdk", go_root = ":sdk_archive", go_os_arch = ("${os}", "${arch}"))
 go_bootstrap_toolchain(name = "go_bootstrap", go_bootstrap_distr = ":sdk", env_go_os = "${os}", env_go_arch = "${arch}", visibility = ["PUBLIC"])
 `);
 	await systemBootstrap(second, "system-python");
