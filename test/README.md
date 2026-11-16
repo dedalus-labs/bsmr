@@ -119,6 +119,12 @@ and XDG cache directories. Both stores must live under `~/.bsmr` and survive
 clean. The download restores with its server stopped, and the copy restores
 without another command execution.
 
+## Worker logs
+
+Run `BSMR_BINARY=target/debug/bsmr uv run --python 3.12 --with pytest==9.0.2 --with grpcio==1.76.0 --with grpcio-tools==1.76.0 pytest -q test/stores/test_workers.py`.
+It generates the worker protocol modules, then builds through a real Python
+persistent worker. The worker's logs must live under `~/.bsmr/workers`.
+
 ## Daemon records
 
 Run `python3 test/daemon/stale.py /path/to/bsmr` as a non-root Linux user. It

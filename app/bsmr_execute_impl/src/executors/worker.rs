@@ -22,6 +22,7 @@ use std::time::Duration;
 
 use bsmr_common::client_utils::get_channel_uds;
 use bsmr_common::client_utils::retrying;
+use bsmr_common::invocation_roots::home_bsmr_dir;
 use bsmr_common::liveliness_observer::LivelinessGuard;
 use bsmr_common::liveliness_observer::LivelinessObserver;
 use bsmr_error::ErrorTag;
@@ -200,10 +201,9 @@ fn spawn_via_forkserver(
             .await
             .map(|CommandResult { status, .. }| status);
 
-        // Socket is created by worker so won't exist if initialization fails.
-        if fs_util::try_exists(&socket_path)? {
-            // TODO(ctolliday) delete directory (after logs are moved to bsmr-out)
-            fs_util::remove_file(&socket_path).categorize_internal()?;
+        // The directory holds only the socket; logs live under the user state root.
+        if let Some(socket_dir) = socket_path.parent() {
+            fs_util::remove_all(socket_dir).categorize_internal()?;
         }
         res
     })
@@ -234,29 +234,36 @@ async fn spawn_worker(
     dispatcher: EventDispatcher,
     graceful_shutdown_timeout_s: Option<u32>,
 ) -> Result<WorkerHandle, WorkerInitError> {
-    // Use fixed length path at /tmp to avoid 108 character limit for unix domain sockets
     let dir_name = format!("{}-{}", dispatcher.trace_id(), worker_id);
-    let worker_dir = AbsNormPathBuf::from("/tmp/bsmr_worker".to_owned())
+    let dir_name = FileName::unchecked_new(&dir_name);
+    // Use fixed length path at /tmp to avoid 108 character limit for unix domain sockets
+    let socket_dir = AbsNormPathBuf::from("/tmp/bsmr_worker".to_owned())
         .map_err(WorkerInitError::InternalError)?
-        .join(FileName::unchecked_new(&dir_name));
-    let socket_path = worker_dir.join(FileName::unchecked_new("socket"));
-    if fs_util::try_exists(&worker_dir).map_err(|e| WorkerInitError::InternalError(e.into()))? {
-        return Err(WorkerInitError::InternalError(bsmr_error!(
-            bsmr_error::ErrorTag::WorkerDirectoryExists,
-            "Directory for worker already exists: {:?}",
-            worker_dir
-        )));
+        .join(dir_name);
+    let socket_path = socket_dir.join(FileName::unchecked_new("socket"));
+    let log_dir = home_bsmr_dir()
+        .map_err(WorkerInitError::InternalError)?
+        .join(FileName::unchecked_new("workers"))
+        .join(dir_name);
+    // Create the socket directory last: an earlier failure would leak it before cleanup exists.
+    for dir in [&log_dir, &socket_dir] {
+        if fs_util::try_exists(dir).map_err(|e| WorkerInitError::InternalError(e.into()))? {
+            return Err(WorkerInitError::InternalError(bsmr_error!(
+                bsmr_error::ErrorTag::WorkerDirectoryExists,
+                "Directory for worker already exists: {:?}",
+                dir
+            )));
+        }
+        fs_util::create_dir_all(dir).map_err(|e| WorkerInitError::InternalError(e.into()))?;
     }
-    // TODO(ctolliday) put these in bsmr-out/<iso>/workers and only use /tmp dir for sockets
     let std_redirects = StdRedirectPaths {
-        stdout: worker_dir.join(FileName::unchecked_new("stdout")),
-        stderr: worker_dir.join(FileName::unchecked_new("stderr")),
+        stdout: log_dir.join(FileName::unchecked_new("stdout")),
+        stderr: log_dir.join(FileName::unchecked_new("stderr")),
     };
-    fs_util::create_dir_all(&worker_dir).map_err(|e| WorkerInitError::InternalError(e.into()))?;
 
     tracing::info!(
         "Starting worker with logs at {}:\n$ {}\n",
-        worker_dir,
+        log_dir,
         args.join(" ")
     );
 
