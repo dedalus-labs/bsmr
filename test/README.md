@@ -111,3 +111,11 @@ Run `python3 test/daemon/stale.py /path/to/bsmr` as a non-root Linux user. It
 kills the daemon without cleanup and points its record at a live process: one
 owned by this user, then one owned by another user. `bsmr build` must start a
 new daemon and `bsmr kill` must succeed without signalling either process.
+
+## Directory artifact presence
+
+Run `BSMR_BINARY=/path/to/bsmr python3 -m pytest test/materializer` on Linux with
+`strace` installed. Sixteen actions consume one 2,000-file directory artifact.
+One command must not stat each file once per consumer. A file deleted between
+commands must be restored, on the same daemon and after a restart, and a
+directory in place of a file must fail.

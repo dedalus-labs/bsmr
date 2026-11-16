@@ -36,6 +36,7 @@ use bsmr_execute::materialize::materializer::CopiedArtifact;
 use bsmr_execute::materialize::materializer::HttpDownloadInfo;
 use bsmr_execute::materialize::utils::dynamic_priority_handle::DynamicPriorityHandle;
 use bsmr_execute::output_size::OutputSize;
+use bsmr_wrapper_common::invocation_id::TraceId;
 use chrono::DateTime;
 use chrono::Utc;
 use derive_more::Display;
@@ -204,6 +205,9 @@ pub enum ArtifactMaterializationStage {
         /// Should not be deleted without invalidating DICE nodes, which currently
         /// means killing the daemon.
         active: bool,
+        /// Command whose presence check found every declared entry on disk. Later
+        /// requests from that command trust it; the next command checks again.
+        checked_by: Option<TraceId>,
     },
 }
 
@@ -322,6 +326,7 @@ impl ArtifactTree {
                             method: None,
                             last_access_time,
                             active: false,
+                            checked_by: None,
                         },
                         processing: Processing::Done(Version(0)),
                     }),
