@@ -27,6 +27,12 @@ bsmr targets --show-output <target>
 bsmr build --show-output <target>
 ```
 
+To locate the selected isolation's output directory without starting a daemon,
+run `bsmr root --kind output`. Add `--dir PATH` to select another project, or
+use `bsmr --isolation-dir NAME root --kind output` for a different isolation.
+The command prints an absolute path even when the directory does not exist.
+Continue to use `build --show-full-json-output` for individual artifacts.
+
 ## Upgrade from the old output root
 
 Bessemer does not read or migrate the former `bsmr-out` directory. Stop older
