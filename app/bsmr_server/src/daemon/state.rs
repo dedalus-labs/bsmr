@@ -99,7 +99,6 @@ use crate::daemon::disk_state::maybe_initialize_incremental_sqlite_db;
 use crate::daemon::disk_state::maybe_initialize_materializer_sqlite_db;
 use crate::daemon::forkserver::maybe_launch_forkserver;
 use crate::daemon::io_provider::create_io_provider;
-use crate::daemon::panic::DaemonStatePanicDiceDump;
 use crate::daemon::server::BsmrdServerInitPreferences;
 use crate::daemon::tenting_provider::create_tenting_acl_provider;
 
@@ -221,10 +220,6 @@ pub struct DaemonStateData {
 }
 
 impl DaemonStateData {
-    pub fn dice_dump(&self, path: &Path, format: DiceDumpFormat) -> bsmr_error::Result<()> {
-        crate::daemon::dice_dump::dice_dump(self.dice_manager.unsafe_dice(), path, format)
-    }
-
     pub async fn spawn_dice_dump(
         &self,
         path: &Path,
@@ -232,12 +227,6 @@ impl DaemonStateData {
     ) -> bsmr_error::Result<()> {
         crate::daemon::dice_dump::dice_dump_spawn(self.dice_manager.unsafe_dice(), path, format)
             .await
-    }
-}
-
-impl DaemonStatePanicDiceDump for DaemonStateData {
-    fn dice_dump(&self, path: &Path, format: DiceDumpFormat) -> bsmr_error::Result<()> {
-        self.dice_dump(path, format)
     }
 }
 
@@ -266,8 +255,6 @@ impl DaemonState {
             e.context("Error initializing DaemonStateData")
                 .tag([ErrorTag::DaemonStateInitFailed])
         })?;
-
-        crate::daemon::panic::initialize(data.dupe());
 
         tracing::info!("Daemon state is ready.");
 
