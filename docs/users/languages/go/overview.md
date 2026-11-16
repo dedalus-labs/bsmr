@@ -88,7 +88,8 @@ The lock is the only committed toolchain file. When Bessemer evaluates the
 package that `toolchains//` names, it adds `go`, `go_bootstrap`, and
 `go_sdk_archive` from the lock to that package's own targets. Anything may
 define the package: a `Cargo.toml`, `package.json`, or `pyproject.toml`, a
-synchronized Go package, a handwritten build file, or the lock alone.
+synchronized Go package, a handwritten build file, or a `go.mod` at the cell
+root. A nested module's `go.mod` does not start a package.
 
 In a project created by `bsmr init`, `toolchains` is an alias of the root cell,
 so the Go toolchain joins the project root package. Bessemer declares `cxx`,

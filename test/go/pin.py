@@ -18,10 +18,11 @@ import pytest
 class Project:
     """Drive the real binary in one initialized Go module."""
 
-    def __init__(self, root: Path, home: Path) -> None:
-        """Select the candidate binary explicitly and give it a private user root."""
+    def __init__(self, root: Path, home: Path, cache: Path) -> None:
+        """Select the candidate binary and give it a private user root over shared caches."""
         self.root = root
         self.home = home
+        self.cache = cache
         self.binary = Path(os.environ["BSMR_BINARY"]).resolve(strict=True)
 
     def run(self, *args: str) -> subprocess.CompletedProcess[str]:
@@ -29,7 +30,7 @@ class Project:
         result = subprocess.run(
             [self.binary, *args],
             cwd=self.root,
-            env={**os.environ, "HOME": str(self.home)},
+            env={**os.environ, "HOME": str(self.home), "XDG_CACHE_HOME": str(self.cache)},
             capture_output=True,
             text=True,
             check=False,
@@ -48,15 +49,17 @@ class Project:
 
 
 @pytest.fixture(scope="module")
-def home(tmp_path_factory: pytest.TempPathFactory) -> Path:
-    """Share one private user root, and its caches, across this module's projects."""
-    return tmp_path_factory.mktemp("home")
+def cache(tmp_path_factory: pytest.TempPathFactory) -> Path:
+    """Share downloads and action outputs across this module's projects."""
+    return tmp_path_factory.mktemp("cache")
 
 
 @pytest.fixture
-def project(tmp_path: Path, home: Path) -> Iterator[Project]:
+def project(tmp_path: Path, cache: Path) -> Iterator[Project]:
     """Provide an initialized module and stop its real daemon after each test."""
-    project = Project(root=tmp_path, home=home)
+    (tmp_path / "home").mkdir()
+    (tmp_path / "module").mkdir()
+    project = Project(root=tmp_path / "module", home=tmp_path / "home", cache=cache)
     project.succeed("init")
     try:
         yield project
@@ -166,6 +169,25 @@ def test_running_daemon_reads_user_root_metadata(project: Project) -> None:
     assert "different archive identity for the same version" in conflict.stderr
     metadata.write_bytes(recorded)
     project.succeed(*build)
+
+
+def test_module_root_defines_the_toolchains_package(project: Project) -> None:
+    """Build without the project lock when the module root itself holds no Go package."""
+    project.pin(directive="toolchain go1.26.1")
+    (project.root / "cmd").mkdir()
+    shutil.copyfile(
+        Path(__file__).parents[1] / "fixtures/go-action/main.go", project.root / "cmd/main.go"
+    )
+    project.succeed("go", "toolchain")
+    project.succeed("go", "sync")
+    (project.root / ".bsmr-go-toolchain.json").unlink()
+    outputs = json.loads(
+        project.succeed(
+            "build", "//cmd:bin", "-c", "go.link_mode=internal", "--show-full-json-output"
+        )
+    )
+    result = subprocess.run([outputs["root//cmd:bin"]], capture_output=True, text=True, check=True)
+    assert result.stdout.strip().split("-X:", 1)[0] == "go1.26.1"
 
 
 def test_sdk_is_an_action_input(project: Project) -> None:

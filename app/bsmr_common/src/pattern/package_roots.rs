@@ -145,7 +145,14 @@ pub async fn collect_package_roots<E>(
             continue;
         }
 
-        if find_build_source(&buildfile_candidates, &listing, true).is_some() {
+        if find_build_source(
+            &buildfile_candidates,
+            &listing,
+            true,
+            path.path().is_empty(),
+        )
+        .is_some()
+        {
             collector(PackageLabel::from_cell_path(path.as_ref()))?;
         }
 
