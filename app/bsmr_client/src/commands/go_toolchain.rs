@@ -83,6 +83,17 @@ pub(crate) struct GoToolchainLock {
 }
 
 impl GoToolchainLock {
+    /// Rejects frozen use when the acquired identity disagrees with the module pin.
+    pub(crate) fn check_version(&self, pinned: &str) -> Result<(), GoToolchainError> {
+        if self.version != pinned {
+            return Err(GoToolchainError::PinMismatch {
+                selected: self.version.clone(),
+                pinned: pinned.to_owned(),
+            });
+        }
+        Ok(())
+    }
+
     /// Returns the normalized SDK version without Go's `go` prefix.
     pub(crate) fn version(&self) -> &str {
         &self.version
@@ -131,30 +142,69 @@ struct ReleaseFile {
     kind: String,
 }
 
-/// Updates or verifies the native toolchain configuration.
+/// Reads one canonical stable SDK pin without invoking an ambient Go executable.
+pub(crate) fn module_pin(root: &Path) -> Result<String, GoToolchainError> {
+    let path = root.join("go.mod");
+    let source = fs::read_to_string(&path).map_err(|error| GoToolchainError::Read {
+        path: path.clone(),
+        message: error.to_string(),
+    })?;
+    let mut pin = None;
+    for line in source.lines() {
+        let mut words = line
+            .split("//")
+            .next()
+            .unwrap_or_default()
+            .split_whitespace();
+        if words.next() != Some("toolchain") {
+            continue;
+        }
+        let version = words.next().and_then(|word| word.strip_prefix("go"));
+        let Some(version) = version else {
+            return Err(GoToolchainError::ModulePin(path));
+        };
+        let canonical = version.split('.').count() == 3
+            && version.split('.').all(|part| {
+                part.parse::<u64>()
+                    .is_ok_and(|number| number.to_string() == part)
+            });
+        if !canonical || words.next().is_some() || pin.is_some() {
+            return Err(GoToolchainError::ModulePin(path));
+        }
+        pin = Some(version.to_owned());
+    }
+    pin.ok_or(GoToolchainError::ModulePin(path))
+}
+
+/// Acquires or verifies only the release named by the module's exact pin.
 pub(crate) async fn configure(
     root: &Path,
+    pinned: &str,
     requested: Option<&str>,
     update: bool,
     check: bool,
 ) -> Result<GoToolchainLock, GoToolchainError> {
-    let lock = if check {
-        let lock = read_lock(root)?;
-        if let Some(requested) = requested {
-            let requested = normalize_version(requested)?;
-            if lock.version != requested {
-                return Err(GoToolchainError::VersionMismatch {
-                    locked: lock.version,
-                    requested,
-                });
-            }
+    if update {
+        return Err(GoToolchainError::ImplicitUpdate);
+    }
+    if let Some(requested) = requested {
+        let selected = normalize_version(requested)?;
+        if selected != pinned {
+            return Err(GoToolchainError::PinMismatch {
+                selected,
+                pinned: pinned.to_owned(),
+            });
         }
-        lock
-    } else if requested.is_none() && !update && root.join(LOCK_FILE).is_file() {
-        read_lock(root)?
-    } else {
-        resolve_release(requested).await?
-    };
+    }
+    if check || root.join(LOCK_FILE).is_file() {
+        let lock = read_lock(root)?;
+        if check || lock.version == pinned {
+            lock.check_version(pinned)?;
+            write_lock(root, &lock, check)?;
+            return Ok(lock);
+        }
+    }
+    let lock = resolve_release(Some(pinned)).await?;
     write_lock(root, &lock, check)?;
     Ok(lock)
 }
@@ -353,8 +403,12 @@ pub(crate) enum GoToolchainError {
     ReleaseMetadata(String),
     #[error("official stable Go release {0:?} was not found")]
     ReleaseNotFound(Option<String>),
-    #[error("requested Go {requested} does not match locked Go {locked}")]
-    VersionMismatch { locked: String, requested: String },
+    #[error("{0:?} requires exactly one `toolchain goX.Y.Z` directive with a stable release")]
+    ModulePin(PathBuf),
+    #[error("Go {selected} does not match go.mod toolchain go{pinned}")]
+    PinMismatch { selected: String, pinned: String },
+    #[error("implicit Go updates are disabled; edit the toolchain directive in go.mod")]
+    ImplicitUpdate,
     #[error("failed to fetch official Go release metadata: {0}")]
     Network(String),
     #[error("Go {version} has no official {os}-{arch} archive")]

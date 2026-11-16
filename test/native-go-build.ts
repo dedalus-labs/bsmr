@@ -25,7 +25,7 @@ const env: NodeJS.ProcessEnv = { ...process.env, BSMR_LOCAL_CACHE_DIR: join(root
 const options = { cwd, env, timeout: 300_000, maxBuffer: 16 * 1024 * 1024 };
 const workspaces = [cwd];
 mkdirSync(join(cwd, "cmd/probe"), { recursive: true });
-writeFileSync(join(cwd, "go.mod"), "module example.com/cache-probe\n\ngo 1.26.0\n");
+writeFileSync(join(cwd, "go.mod"), `module example.com/cache-probe\n\ngo 1.26.0\ntoolchain go${version}\n`);
 writeFileSync(join(cwd, "cmd/probe/main.go"), `package main
 import ("fmt"; _ "embed")
 //go:embed message.txt
@@ -44,7 +44,7 @@ async function monorepo() {
 	workspaces.push(directory);
 	cpSync(resolve(import.meta.dirname, "fixtures/go-tools"), directory, { recursive: true });
 	const files: Record<string, string> = {
-		"go.mod": readFileSync(join(directory, "go.mod"), "utf8").replace("module example.com/tools", "module example.com/monorepo"),
+		"go.mod": readFileSync(join(directory, "go.mod"), "utf8").replace("module example.com/tools", "module example.com/monorepo") + `\ntoolchain go${version}\n`,
 		"svc/main.go": 'package main\nimport "fmt"\nfunc main() { fmt.Print("go beside rust\\n") }\n',
 		"Cargo.toml": '[package]\nname = "monorepo"\nversion = "0.1.0"\nedition = "2024"\n',
 		"Cargo.lock": 'version = 4\n\n[[package]]\nname = "monorepo"\nversion = "0.1.0"\n',
@@ -185,6 +185,7 @@ go_bootstrap_toolchain(name = "go_bootstrap", go_bootstrap_distr = ":sdk", env_g
 	// A module whose only packages come from `tool` directives must still sync its tool binaries.
 	const tools = join(cwd, "tools");
 	cpSync(resolve(import.meta.dirname, "fixtures/go-tools"), tools, { recursive: true });
+	writeFileSync(join(tools, "go.mod"), readFileSync(join(tools, "go.mod"), "utf8") + `\ntoolchain go${version}\n`);
 	await run(executable, ["go", "sync"], { ...options, cwd: tools });
 	// The tool prints its debug.BuildInfo, which must match `go build -trimpath` for the same
 	// vendored graph, less VCS stamps and DefaultGODEBUG that Bessemer does not record. The

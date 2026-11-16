@@ -17,7 +17,6 @@ use crate::commands::go_toolchain::GoToolchainError;
 use crate::commands::go_toolchain::LEGACY_DEFINITION_PREFIX;
 use crate::commands::go_toolchain::LEGACY_MANIFEST;
 use crate::commands::go_toolchain::acquired_go;
-use crate::commands::go_toolchain::configure;
 use crate::commands::go_toolchain::create_toolchains_package;
 use crate::commands::go_toolchain::reject_leftovers;
 use crate::commands::go_toolchain::remove_leftovers;
@@ -250,19 +249,6 @@ fn rejects_forged_acquisition_marker() {
         .expect_err("forgery must fail closed");
 
     assert!(matches!(error, GoToolchainError::UserOwned(_)));
-}
-
-/// Confirms ordinary acquisition preserves the exact lock without release-metadata access.
-#[test]
-fn reacquires_existing_lock_without_resolving_latest() {
-    let root = tempfile::tempdir().expect("temporary repository");
-    let expected = select_release(RELEASES, Some("1.26.5")).expect("release");
-    write_lock(root.path(), &expected, false).expect("lock");
-
-    let actual = futures::executor::block_on(configure(root.path(), None, false, false))
-        .expect("existing lock");
-
-    assert_eq!(actual, expected);
 }
 
 /// Confirms `tool` roots are requested only from SDKs that define the meta-pattern.

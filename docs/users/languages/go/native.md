@@ -16,6 +16,16 @@ and lowers it into ordinary Bessemer targets backed by DICE and the CAS.
 
 ## Native package discovery
 
+Add an exact stable SDK pin to the module's `go.mod` before acquisition:
+
+```go
+toolchain go1.26.7
+```
+
+Run the Go commands from that module directory. Missing, partial and prerelease
+pins are errors. `--version`, if supplied, must match the pin; `--update` is
+rejected. Change `go.mod` and run `bsmr go toolchain` to acquire another release.
+
 ```shell
 go mod vendor
 bsmr go toolchain
@@ -92,10 +102,12 @@ CI. An undeclared tag is an error.
 
 ## Toolchain identity
 
-The committed toolchain lock records the exact Go version plus the official
+The `go.mod` toolchain directive selects the exact SDK. Acquisition still writes
+a committed toolchain lock with the Go version plus the official
 archive name, SHA-256 digest, and byte length for Darwin and Linux on amd64 and
 arm64. The execution host selects runnable SDK tools independently of the
-target platform.
+target platform. `go toolchain --check` and `go sync` reject a lock that differs
+from the module pin. Neither command repairs that mismatch implicitly.
 
 Pure-Go builds use the existing Darwin/Linux and amd64/arm64 target-platform
 machinery. An arm64 Darwin runner can therefore execute arm64 Darwin tools that
