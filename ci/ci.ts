@@ -399,10 +399,7 @@ export const ci = workflow({
 				{
 					name: "Verify materializer presence checks",
 					env: { BSMR_BINARY: "target/debug/bsmr" },
-					run: unsafeShell([
-						"time (sudo apt-get update -qq && sudo apt-get install --yes --no-install-recommends strace=6.8-0ubuntu2)",
-						"pipx run --spec uv==0.13.4 uv run --python 3.12 --with pytest==9.0.2 pytest -q test/materializer/test_presence.py",
-					].join("\n")),
+					run: command({ file: "pipx", args: ["run", "--spec", "uv==0.13.4", "uv", "run", "--python", "3.12", "--with", "pytest==9.0.2", "pytest", "-q", "test/materializer/test_presence.py"] }),
 				},
 				{
 					name: "Install Cargo planner compiler",
