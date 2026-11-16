@@ -43,7 +43,7 @@ if (resumed === undefined) {
 }
 if (resumed !== undefined) {
 	assert.match(readFileSync(join(cwd, "go.mod"), "utf8"), /^module example\.com\/oci-probe\n/);
-	assert.ok(existsSync(join(cwd, ".bsmr-go-toolchain.json")) && existsSync(join(root, "cache")));
+	assert.ok(existsSync(join(root, "cache")));
 	if (values["bundled-prelude"]) assert.equal(existsSync(join(cwd, ".bsmr.local")), false, "bundled qualification must not resume a source overlay");
 }
 const workspaces: string[] = [];

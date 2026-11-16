@@ -3,11 +3,11 @@
 // SPDX-License-Identifier: Apache-2.0
 //===----------------------------------------------------------------------===//
 
-// Selects and locks exact official Go SDK releases for the native frontend.
+// Selects and records exact official Go SDK releases for the native frontend.
 
 //! Defines the exact SDK identity used by the native Go frontend.
 //!
-//! Network access exists only at the explicit selection boundary. The committed lock
+//! Network access exists only at the explicit selection boundary. The user-root record
 //! then gives graph import and execution one offline-verifiable SDK identity across
 //! every supported execution host.
 
@@ -28,14 +28,12 @@ pub(crate) use legacy::GENERATED_DEFINITION_PREFIX as LEGACY_DEFINITION_PREFIX;
 pub(crate) use legacy::GENERATED_MANIFEST as LEGACY_MANIFEST;
 pub(crate) use legacy::reject_leftovers;
 pub(crate) use legacy::remove_leftovers;
-pub(crate) use lock::write_lock;
-pub(crate) use lock::write_metadata;
+pub(crate) use lock::require_metadata;
 use serde::Deserialize;
 use serde::Serialize;
 
 pub(super) const GENERATED_BY: &str = "bsmr go toolchain";
 const GO_RELEASES_URL: &str = "https://go.dev/dl/?mode=json&include=all";
-pub(super) use bsmr_common::native_toolchains::GO_TOOLCHAIN_LOCK as LOCK_FILE;
 const SCHEMA: u32 = 1;
 /// First Go release with `go.mod` `tool` directives and the `tool` meta-pattern.
 const TOOL_DIRECTIVES: (u64, u64, u64) = (1, 24, 0);
@@ -69,7 +67,7 @@ impl GoSdkArchive {
     }
 }
 
-/// Committed identity of the Go SDK used for graph import and execution.
+/// Recorded identity of the Go SDK used for graph import and execution.
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
 pub(crate) struct GoToolchainLock {
     /// Proves file ownership before Bessemer replaces generated configuration.
@@ -78,22 +76,11 @@ pub(crate) struct GoToolchainLock {
     schema: u32,
     /// Fixes the Go language and tool behavior used for graph import and execution.
     pub(super) version: String,
-    /// Lets one committed lock select verified bytes on every supported host.
+    /// Lets one record select verified bytes on every supported host.
     pub(super) archives: Vec<GoSdkArchive>,
 }
 
 impl GoToolchainLock {
-    /// Rejects frozen use when the acquired identity disagrees with the module pin.
-    pub(crate) fn check_version(&self, pinned: &str) -> Result<(), GoToolchainError> {
-        if self.version != pinned {
-            return Err(GoToolchainError::PinMismatch {
-                selected: self.version.clone(),
-                pinned: pinned.to_owned(),
-            });
-        }
-        Ok(())
-    }
-
     /// Returns the normalized SDK version without Go's `go` prefix.
     pub(crate) fn version(&self) -> &str {
         &self.version
@@ -157,7 +144,7 @@ pub(crate) fn module_pin(root: &Path) -> Result<String, GoToolchainError> {
 
 /// Acquires or verifies only the release named by the module's exact pin.
 pub(crate) async fn configure(
-    root: &Path,
+    directory: &Path,
     pinned: &str,
     requested: Option<&str>,
     update: bool,
@@ -175,20 +162,18 @@ pub(crate) async fn configure(
             });
         }
     }
-    if check || root.join(LOCK_FILE).is_file() {
-        let lock = read_lock(root)?;
-        if check || lock.version == pinned {
-            lock.check_version(pinned)?;
-            write_lock(root, &lock, check)?;
-            return Ok(lock);
-        }
+    if check {
+        return lock::require_metadata(directory, pinned);
+    }
+    if let Some(lock) = lock::read_metadata(directory, pinned)? {
+        return Ok(lock);
     }
     let lock = resolve_release(Some(pinned)).await?;
-    write_lock(root, &lock, check)?;
+    lock::write_metadata(directory, &lock)?;
     Ok(lock)
 }
 
-/// Fetches official metadata only when selection cannot use the committed lock.
+/// Fetches official metadata only when the user root holds no valid record for the pin.
 async fn resolve_release(requested: Option<&str>) -> Result<GoToolchainLock, GoToolchainError> {
     let client = bsmr_http::HttpClientBuilder::oss()
         .await
@@ -268,19 +253,6 @@ fn select_archives(
             Ok(archive)
         })
         .collect()
-}
-
-/// Reads and validates the committed toolchain identity without network access.
-pub(crate) fn read_lock(root: &Path) -> Result<GoToolchainLock, GoToolchainError> {
-    let path = root.join(LOCK_FILE);
-    let bytes = fs::read(&path).map_err(|error| GoToolchainError::Read {
-        path: path.clone(),
-        message: error.to_string(),
-    })?;
-    let lock = serde_json::from_slice::<GoToolchainLock>(&bytes)
-        .map_err(|error| GoToolchainError::Lock(error.to_string()))?;
-    validate_lock(&lock)?;
-    Ok(lock)
 }
 
 /// Normalizes and validates a release version.
@@ -406,20 +378,16 @@ pub(crate) enum GoToolchainError {
     MissingSize(String),
     #[error("locked Go {locked} does not match acquired SDK `{declared}`")]
     SdkVersion { locked: String, declared: String },
-    #[error("Go toolchain lock is invalid: {0}")]
+    #[error("Go SDK metadata is invalid: {0}")]
     Lock(String),
     #[error("failed to read `{}`: {message}", path.display())]
     Read { path: PathBuf, message: String },
     #[error("failed to write `{}`: {message}", path.display())]
     Write { path: PathBuf, message: String },
-    #[error("refusing to overwrite user-owned toolchain file `{0:?}`")]
-    UserOwned(PathBuf),
     #[error(
-        "an earlier `bsmr go toolchain` generated {0:?}, which the lock now replaces; run `bsmr go toolchain` to retire them"
+        "an earlier `bsmr go toolchain` generated {0:?}, which the current layout replaces; run `bsmr go toolchain` to retire them"
     )]
     Leftover(Vec<PathBuf>),
-    #[error("Go toolchain file `{0:?}` differs from its generated form; run `bsmr go toolchain`")]
-    Stale(PathBuf),
-    #[error("Go SDK metadata {0:?} records a different archive identity for the same version")]
-    Conflict(PathBuf),
+    #[error("Go SDK metadata {0:?} is missing or invalid; run `bsmr go toolchain`")]
+    Metadata(PathBuf),
 }
