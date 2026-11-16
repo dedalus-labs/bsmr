@@ -1,0 +1,10 @@
+load(":rules.bzl", "copy")
+
+copy(name = "copy", src = "payload.txt")
+
+http_file(
+    name = "download",
+    urls = [read_config("test", "url", "http://127.0.0.1/unused")],
+    sha256 = read_config("test", "sha256", "0" * 64),
+    size_bytes = int(read_config("test", "size_bytes", "0")),
+)

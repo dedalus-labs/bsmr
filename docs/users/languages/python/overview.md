@@ -282,15 +282,17 @@ never cached. A changed test input produces a new action identity and executes
 the selected command normally.
 
 Digest-pinned HTTP artifacts, including the built-in Python tools, are shared
-across repositories in the operating system's user cache under
-`bsmr/http-v1`. Set `BSMR_HTTP_CACHE_DIR` to an absolute path to relocate it.
+across repositories under `~/.bsmr/http-v1`.
+Set `BSMR_HTTP_CACHE_DIR` to an absolute path to relocate it.
+The former platform user-cache directory is not imported or removed. A build
+populates the new location when the requested artifact is absent.
 Every restoration revalidates the declared checksum before the artifact enters
 an action. `bsmr clean` preserves this repository-independent cache, and BSMR
 does not currently evict it automatically; remove the configured directory
 while no builds are running to reclaim it in full.
 
 Successful actions are also shared across repositories and worktrees through a
-local action cache and content-addressed store under `bsmr/action-v1`. Set
+local action cache and content-addressed store under `~/.bsmr/action-v1`. Set
 `BSMR_LOCAL_CACHE_DIR` to an absolute path to relocate it. Each action manifest
 is published only after its complete file and directory-tree closure. A missing
 object is a cache miss; malformed metadata, an unexpected digest family, and a

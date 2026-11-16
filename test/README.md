@@ -111,6 +111,14 @@ Run `BSMR_BINARY=target/debug/bsmr uv run --with pytest==9.0.2 pytest -q test/ou
 from the repository root. The real CLI must resolve the selected isolation from
 nested paths, symlink aliases and `--dir` without creating output or daemon state.
 
+## Shared stores
+
+Run `BSMR_BINARY=target/debug/bsmr uv run --with pytest==9.0.2 pytest -q test/stores/test_user.py`
+to exercise verified HTTP acquisition and a real copy action with isolated HOME
+and XDG cache directories. Both stores must live under `~/.bsmr` and survive
+clean. The download restores with its server stopped, and the copy restores
+without another command execution.
+
 ## Daemon records
 
 Run `python3 test/daemon/stale.py /path/to/bsmr` as a non-root Linux user. It

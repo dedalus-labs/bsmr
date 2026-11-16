@@ -45,8 +45,6 @@ enum HttpCacheError {
     },
     #[error("HTTP cache entry '{}' is not a regular file", _0.display())]
     NotFile(PathBuf),
-    #[error("BSMR could not determine the user cache directory")]
-    MissingUserCacheDirectory,
     #[error("BSMR_HTTP_CACHE_DIR must be absolute, got '{}'", _0.display())]
     RelativeCacheDirectory(PathBuf),
 }
@@ -55,9 +53,9 @@ enum HttpCacheError {
 pub fn path(checksum: &Checksum) -> bsmr_error::Result<PathBuf> {
     let root = match std::env::var_os("BSMR_HTTP_CACHE_DIR") {
         Some(value) => PathBuf::from(value),
-        None => dirs::cache_dir()
-            .ok_or(HttpCacheError::MissingUserCacheDirectory)?
-            .join("bsmr/http-v1"),
+        None => crate::invocation_roots::home_bsmr_dir()?
+            .as_path()
+            .join("http-v1"),
     };
     if !root.is_absolute() {
         return Err(HttpCacheError::RelativeCacheDirectory(root).into());

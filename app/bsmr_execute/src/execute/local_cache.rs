@@ -86,8 +86,6 @@ enum LocalCacheError {
     },
     #[error("Local cache entry '{}' is not a regular file", _0.display())]
     NotFile(PathBuf),
-    #[error("BSMR could not determine the user cache directory")]
-    MissingUserCacheDirectory,
     #[error("BSMR_LOCAL_CACHE_DIR must be absolute, got '{}'", _0.display())]
     RelativeCacheDirectory(PathBuf),
     #[error("BSMR_LOCAL_CACHE_MATERIALIZATION must be `copy` or `reflink`, got '{value:?}'")]
@@ -208,9 +206,9 @@ impl LocalActionCache {
     pub fn open() -> bsmr_error::Result<Self> {
         let root = match std::env::var_os("BSMR_LOCAL_CACHE_DIR") {
             Some(root) => PathBuf::from(root),
-            None => dirs::cache_dir()
-                .ok_or(LocalCacheError::MissingUserCacheDirectory)?
-                .join("bsmr/action-v1"),
+            None => bsmr_common::invocation_roots::home_bsmr_dir()?
+                .as_path()
+                .join("action-v1"),
         };
         Self::at_with_materialization(root, LocalCacheMaterialization::from_env()?)
     }
