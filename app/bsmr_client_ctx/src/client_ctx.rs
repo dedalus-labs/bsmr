@@ -125,6 +125,11 @@ impl<'a> ClientCommandContext<'a> {
         self.init
     }
 
+    /// Returns the selected isolation even when invoked outside a project.
+    pub fn isolation(&self) -> &FileNameBuf {
+        &self.isolation
+    }
+
     pub fn paths(&self) -> bsmr_error::Result<&InvocationPaths> {
         match &self.paths {
             InvocationPathsResult::Paths(p) => Ok(p),

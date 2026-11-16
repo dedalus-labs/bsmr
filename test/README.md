@@ -105,6 +105,12 @@ dev features, the newly built binary, package-relative files and test failures.
 `python3 -B -m unittest discover -s prelude/git/tools/tests -p '*_test.py'` checks
 that ambient Git filters and checkout hooks cannot change pinned sources.
 
+## Output-root discovery
+
+Run `BSMR_BINARY=target/debug/bsmr uv run --with pytest==9.0.2 pytest -q test/output/test_root.py`
+from the repository root. The real CLI must resolve the selected isolation from
+nested paths, symlink aliases and `--dir` without creating output or daemon state.
+
 ## Daemon records
 
 Run `python3 test/daemon/stale.py /path/to/bsmr` as a non-root Linux user. It
