@@ -57,14 +57,26 @@ def _system_rust_toolchain_impl(ctx):
     if configuration_error:
         fail(configuration_error)
 
+    # Resolve `rustc` once per daemon and pin every compile to that compiler,
+    # so each action key names the exact compiler and sysroot that ran.
+    identity = ctx.actions.declare_output("rustc-identity.json")
+    ctx.actions.run(
+        cmd_args(ctx.attrs._compiler_identity[RunInfo], "record", "--target", ctx.attrs.rustc_target_triple, identity.as_output()),
+        category = "rustc_identity",
+        local_only = True,
+        allow_cache_upload = False,
+        allow_local_cache_upload = False,
+    )
+
     return [
         DefaultInfo(),
         RustToolchainInfo(
             allow_lints = ctx.attrs.allow_lints,
+            allow_local_cache_upload = True,
             clippy_driver = RunInfo(args = ["clippy-driver"]),
             clippy_toml = ctx.attrs.clippy_toml[DefaultInfo].default_outputs[0] if ctx.attrs.clippy_toml else None,
             codegen_backend = ctx.attrs.codegen_backend,
-            compiler = RunInfo(args = ["rustc"]),
+            compiler = RunInfo(args = cmd_args(ctx.attrs._compiler_identity[RunInfo], "run", identity)),
             default_edition = ctx.attrs.default_edition,
             panic_runtime = PanicRuntime("unwind"),
             deny_lints = ctx.attrs.deny_lints,
@@ -100,6 +112,7 @@ system_rust_toolchain = rule(
         "rustc_test_flags": attrs.list(attrs.arg(), default = []),
         "rustdoc_flags": attrs.list(attrs.arg(), default = []),
         "warn_lints": attrs.list(attrs.string(), default = []),
+        "_compiler_identity": attrs.exec_dep(providers = [RunInfo], default = "prelude//rust/tools:compiler_identity"),
     },
     is_toolchain_rule = True,
 )
