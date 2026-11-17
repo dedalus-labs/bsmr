@@ -377,6 +377,7 @@ async fn build_action_inner(
                     | bsmr_data::ActionExecutionKind::LocalWorker
                     | bsmr_data::ActionExecutionKind::LocalDepFile
                     | bsmr_data::ActionExecutionKind::LocalActionCache
+                    | bsmr_data::ActionExecutionKind::UpToDate
             ) {
                 hostname = bsmr_events::metadata::hostname();
             }

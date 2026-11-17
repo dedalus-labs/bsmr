@@ -42,6 +42,13 @@ for (const [path, text] of Object.entries(projects)) {
 	mkdirSync(resolve(cwd, path, ".."), { recursive: true });
 	writeFileSync(join(cwd, path), text);
 }
+/** Rebuild and read the summary's cache-hit and up-to-date command counts. */
+async function summary(phase: string) {
+	const { stderr } = await run(binary, ["build", "app", "--console", "simple"], options);
+	const counts = { cached: Number(/Commands: \d+ \(cached: (\d+)/.exec(stderr)?.[1] ?? 0), upToDate: Number(/Up-to-date: (\d+)/.exec(stderr)?.[1] ?? 0) };
+	console.log(JSON.stringify({ phase, ...counts }));
+	return counts;
+}
 /** Build and inspect actual native compiler commands. */
 async function build(phase: string, expected: string, directory = cwd) {
 	const context = { ...options, cwd: directory };
@@ -69,6 +76,14 @@ try {
 	await run(binary, ["build", "both"], options);
 	await run(binary, ["test", "both:lib", "both:both", "--console", "simple"], options);
 	assert.ok(cold.includes("rustc"), "must execute native rustc actions");
+	// A restarted daemon finds unchanged outputs on disk; only a clean forces restores.
+	await run(binary, ["kill"], options);
+	const unchanged = await summary("restarted");
+	await run(binary, ["clean"], options);
+	const cleaned = await summary("cleaned");
+	assert.equal(unchanged.cached, 0, "unchanged outputs must not count as cache hits");
+	assert.ok(cleaned.cached > 0 && cleaned.upToDate === 0, "outputs restored after clean must count as cache hits");
+	assert.equal(unchanged.upToDate, cleaned.cached, "every reused unchanged action must count as up to date");
 	writeFileSync(join(cwd, "unrelated/src/lib.rs"), "pub fn unrelated() -> u32 { 2 }\n");
 	assert.equal(await build("unrelated", "7:clean"), "", "unrelated crate must not recompile app");
 	writeFileSync(join(cwd, "core/src/lib.rs"), "pub fn value() -> u32 { 9 }\n#[test] fn correct_value() { assert_eq!(value(), 9); }\n");

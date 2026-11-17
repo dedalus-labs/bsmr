@@ -506,7 +506,7 @@ impl DepFileBundle {
             (
                 o,
                 ActionExecutionMetadata {
-                    execution_kind: ActionExecutionKind::LocalActionCache,
+                    execution_kind: ActionExecutionKind::UpToDate,
                     timing: Default::default(),
                     input_files_bytes: None,
                     waiting_data: WaitingData::new(),

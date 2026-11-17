@@ -38,7 +38,7 @@ ACTION_EXECUTION_KIND_ACTION_CACHE = 3
 ACTION_EXECUTION_KIND_SIMPLE = 4
 ACTION_EXECUTION_KIND_LOCAL_DEP_FILE = 7
 ACTION_EXECUTION_KIND_REMOTE_DEP_FILE_CACHE = 9
-ACTION_EXECUTION_KIND_LOCAL_ACTION_CACHE = 10
+ACTION_EXECUTION_KIND_UP_TO_DATE = 12
 
 CACHE_UPLOAD_REASON_LOCAL_EXECUTION = 0
 CACHE_UPLOAD_REASON_DEP_FILE = 1
@@ -407,7 +407,7 @@ async def test_dep_file_hit_identical_action(bsmr: Bsmr) -> None:
     # Not sure why but this feels like a DICE bug triggered by the bsmrconfig change.
     await check_execution_kind(
         bsmr,
-        [ACTION_EXECUTION_KIND_LOCAL_ACTION_CACHE],
+        [ACTION_EXECUTION_KIND_UP_TO_DATE],
         ignored=[ACTION_EXECUTION_KIND_SIMPLE],
     )
     # The MatchDepFilesStart span should indicate we only checked the depfile cache once
@@ -447,7 +447,7 @@ async def test_dep_file_hit_with_action_key_change(bsmr: Bsmr) -> None:
         "-c",
         "test.num_preceding_actions=1",
     )
-    # TODO(T237527198): The dep-file action should get a LOCAL_ACTION_CACHE hit
+    # TODO(T237527198): The dep-file action should be UP_TO_DATE
     # here since it is identical, but the ActionKey index shift causes the dep
     # file cache to report "Dep files declaration has changed".
     await check_execution_kind(

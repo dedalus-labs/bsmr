@@ -214,6 +214,7 @@ fn execution_kind(kind: i32) -> bsmr_error::Result<ExecutionKind> {
         bsmr_data::ActionExecutionKind::RemoteDepFileCache => ExecutionKind::RemoteDepFileCache,
         bsmr_data::ActionExecutionKind::LocalActionCache => ExecutionKind::LocalActionCache,
         bsmr_data::ActionExecutionKind::RemoteWorker => ExecutionKind::RemoteWorker,
+        bsmr_data::ActionExecutionKind::UpToDate => ExecutionKind::UpToDate,
         bsmr_data::ActionExecutionKind::NotSet => {
             return Err(BuildEventError::InvalidExecutionKind(kind.into()).into());
         }

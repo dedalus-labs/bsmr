@@ -490,6 +490,10 @@ where
                 )?;
             }
         }
+        let up_to_date_actions = self.observer().action_stats().up_to_date_actions;
+        if self.verbosity.print_status() && up_to_date_actions > 0 {
+            echo!("Up-to-date: {}", up_to_date_actions)?;
+        }
 
         if let Some(re) = &self
             .observer()
