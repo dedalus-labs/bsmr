@@ -55,7 +55,8 @@ async function build(phase: string, expected: string, directory = cwd) {
 	return log.stdout;
 }
 try {
-	await run("python3", ["-m", "unittest", "discover", "-s", resolve(import.meta.dirname, "../prelude/rust/tools/tests"), "-p", "*_test.py"], { ...options, env: { ...env, RUSTC: rustc } });
+	// Keep the source prelude identical to the bytes already embedded in the engine.
+	await run("python3", ["-B", "-m", "unittest", "discover", "-s", resolve(import.meta.dirname, "../prelude/rust/tools/tests"), "-p", "*_test.py"], { ...options, env: { ...env, RUSTC: rustc } });
 	await run(binary, ["init"], options);
 	if (prelude !== undefined) {
 		cpSync(resolve(prelude), join(cwd, "prelude"), { recursive: true });
