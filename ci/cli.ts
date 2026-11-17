@@ -60,6 +60,7 @@ const test: ProcessSpec = {
 		"test/oci/image.test.mjs",
 		"test/oci/compact.test.mjs",
 		"test/oci/auth.test.mjs",
+		"test/oci/push.test.mjs",
 		"test/oci/sources.test.mjs",
 	],
 };
