@@ -6,10 +6,12 @@
 # Carries OCI metadata independently of the content needed for complete exports.
 
 OciLayerInfo = provider(
-    doc = "An ordinary compressed layer and its img metadata for one Linux platform.",
+    doc = "Layer metadata with either a retained archive or compact stream and original inputs.",
     fields = {
         "metadata": provider_field(Artifact),
-        "blob": provider_field(Artifact),
+        "blob": provider_field(Artifact | None, default = None),
+        "compact": provider_field(Artifact | None, default = None),
+        "inputs": provider_field(WriteJsonCliArgs | None, default = None),
         "platform": provider_field(str),
     },
 )
@@ -33,6 +35,20 @@ OciToolchainInfo = provider(
         "operations": provider_field(RunInfo),
     },
 )
+
+def oci_layout_spec(image: OciImageInfo) -> dict:
+    """Carry every retained payload into complete exports and filesystem actions."""
+    return {
+        "manifest": image.manifest,
+        "config": image.config,
+        "descriptor": image.descriptor,
+        "layers": [
+            {"metadata": layer.metadata, "blob": layer.blob} if layer.blob != None else
+            {"metadata": layer.metadata, "compact": layer.compact, "inputs": cmd_args(layer.inputs, delimiter = "")}
+            for layer in image.layers
+        ],
+        "base_layouts": image.layouts,
+    }
 
 def oci_platform(value: str) -> str:
     """Normalize qualified Linux platforms without inferring the build host."""

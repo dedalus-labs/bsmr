@@ -10,13 +10,12 @@
 Run the narrow helper and source-directory check before the compiler fixture:
 
 ```shell
-node test/oci/tools.ts /path/to/bsmr /path/to/img prelude /path/to/provisioned-builder
+node test/oci/tools.ts /path/to/bsmr /path/to/img prelude
 ```
 
-It executes a real file layer through `oci_toolchain` and checks warm reuse.
-It also analyzes `dockerfile_image` with a literal source directory and the
-canonical `managed_buildkit` constructor, without starting its worker. This
-proves helper module adjacency and directory acceptance independently of Go.
+It executes a real directory layer through `oci_toolchain` and checks warm
+reuse. This proves helper module adjacency and directory acceptance without
+a compiler.
 
 Run this fixture with release BSMR v0.0.9, the qualified rules_img v0.3.22
 executable for the execution host, and this checkout's prelude:
@@ -34,8 +33,7 @@ an external directory to retain build reports, action logs, and the verified
 native image layout after temporary workspaces are removed.
 The default target is `linux/arm64`. Pass `--platform linux/amd64` on the Linux
 amd64 CI lane. The target constraints select Linux plus `arm64` or `x86_64`;
-the execution host independently selects its SDK tools. When a builder bundle
-is supplied, its native daemon architecture must match the selected platform.
+the execution host independently selects its SDK tools.
 `tools.ts` accepts the same platform option. A source engine for the preview
 release is selected explicitly with `--engine-version 0.0.10`; the default
 qualification engine remains the released `0.0.9`.
@@ -58,23 +56,6 @@ that a warm build executes nothing, a config edit changes only image and layout
 actions, a binary edit changes its layer, and deleted outputs or another source
 root restore the same image from the independent shared cache. Invalid Go source
 must fail; repairing it must recover the previously verified image.
-
-To compare a private BuildKit worker, append the Go version and a provisioned
-builder bundle directory. The bundle must contain a Docker client executable
-named `docker`, `daemon-contract.json`, and `buildkit-image.txt`
-containing the worker's exact locally available repository digest. The harness
-tracks those artifacts, builds a separate normalized context from the same
-native outputs, and compares a real `COPY` solve's filesystem and runtime
-configuration. It also checks BuildKit action restoration and retains the
-verified exported image when an evidence directory is selected.
-The canonical constructors track worker, operations, and closure modules from
-the selected prelude; the bundle does not supply copies of those modules.
-
-```shell
-BSMR_OCI_TEST_EVIDENCE=/path/to/evidence node test/oci/cache.ts \
-  /path/to/bsmr /path/to/img prelude prelude/oci/operations.mjs \
-  1.26.7 /path/to/provisioned-builder
-```
 
 For diagnosis, `BSMR_OCI_TEST_PRESERVE_FAILURE=1` retains a failed compiler
 fixture after stopping its daemons. `BSMR_OCI_TEST_RESUME` may name that fixture
