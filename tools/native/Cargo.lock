@@ -78,6 +78,7 @@ name = "bsmr-native"
 version = "0.1.0"
 dependencies = [
  "bsmr_sandbox",
+ "clap",
  "libc",
  "nix",
  "serde",
