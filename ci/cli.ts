@@ -64,6 +64,7 @@ const test: ProcessSpec = {
 		"test/oci/sources.test.mjs",
 		"test/oci/debian.test.mjs",
 		"test/oci/run.test.mjs",
+		"test/oci/exec.test.ts",
 	],
 };
 const license: ProcessSpec = { file: "node", args: ["ci/license.ts", "check"] };

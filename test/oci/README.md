@@ -3,116 +3,161 @@
 <!-- SPDX-License-Identifier: Apache-2.0 -->
 <!-- ===----------------------------------------------------------------------=== -->
 
-<!-- Documents qualification of OCI rules consuming native build outputs. -->
+<!-- Documents the exact proof boundaries of native OCI integration tests. -->
 
 # OCI qualification
 
-Run the narrow helper and source-directory check before the compiler fixture:
+Install the checkout's locked JavaScript dependencies before running fixtures:
 
-```shell
-node test/oci/tools.ts /path/to/bsmr /path/to/img prelude
+```sh
+pnpm install --frozen-lockfile --ignore-scripts
 ```
 
-It executes a real directory layer through `oci_toolchain` and checks warm
-reuse. This proves helper module adjacency and directory acceptance without
-a compiler.
+TypeScript fixtures use Hollywood's `nodeExec` for commands and GNU coreutils
+`timeout` for deadlines. Linux CI provides coreutils; macOS needs `timeout` on
+`PATH`. The registry harness retains isolated credential environments and its
+own cancellable process lifetime.
 
-Run this fixture with release BSMR v0.0.9, the qualified rules_img v0.3.22
-executable for the execution host, and this checkout's prelude:
+The helper tests check metadata, compact streams, input validation, and failures:
 
-```shell
-node test/oci/cache.ts /path/to/bsmr /path/to/img prelude prelude/oci/operations.mjs
+```sh
+BSMR_OCI_IMG=/path/to/pinned/img node --test test/oci/*.test.mjs
 ```
 
-The fixture acquires the official Go 1.26.7 SDK and synchronizes its real native
-build graph. It compiles a Linux arm64 executable through that graph and passes
-the tracked output to `oci_layer`. Packaging does not invoke another compiler.
-The fixture declares its Node executable and operations helper as tool inputs.
-Imported helper modules are declared inputs too. Set `BSMR_OCI_TEST_EVIDENCE` to
-an external directory to retain build reports, action logs, and the verified
-native image layout after temporary workspaces are removed.
-The default target is `linux/arm64`. Pass `--platform linux/amd64` on the Linux
-amd64 CI lane. The target constraints select Linux plus `arm64` or `x86_64`;
-the execution host independently selects its SDK tools.
-`tools.ts` accepts the same platform option. A source engine for the preview
-release is selected explicitly with `--engine-version 0.0.10`; the default
-qualification engine remains the released `0.0.9`.
+The public registry test is opt-in:
 
-Pass `--bundled-prelude` to either fixture to qualify the OCI files actually
-embedded in the engine. This mode does not copy the source prelude or disable
-its bundled external cell. CI uses this mode for the source-built engine, and
-the published preview must pass it too. The source checkout and matching
-operations path remain required for the independent direct corruption checks;
-the native image build consumes the bundle.
+```sh
+BSMR_OCI_IMG=/path/to/pinned/img BSMR_OCI_PULL_TEST=1 \
+  node --test test/oci/sources.test.mjs
+```
 
-```shell
-node test/oci/cache.ts /path/to/bsmr /path/to/img prelude prelude/oci/operations.mjs \
+The native runtime tests require a trusted rootful Linux worker and a complete
+Debian image layout. No Docker or BuildKit socket is used:
+
+```sh
+BSMR_OCI_REQUIRE_NATIVE=1 \
+BSMR_OCI_PLATFORM=linux/arm64 \
+BSMR_OCI_RUN_BASE=/path/to/base-layout \
+BSMR_OCI_UMOCI=/path/to/pinned/umoci \
+BSMR_OCI_RUNC=/path/to/pinned/runc \
+  node --test test/oci/run.test.mjs
+```
+
+These tests execute a real package post-installation script and verify
+permissions, numeric ownership, hard links, symlinks, deletions, immutable base
+and input bytes, unchanged image configuration, cancellation, concurrency, and
+cleanup. Set `BSMR_OCI_PLATFORM=linux/amd64` on an amd64 worker. The selected
+platform, Node architecture, and Linux kernel architecture must agree; emulated
+execution is rejected. Without `BSMR_OCI_REQUIRE_NATIVE=1`, the native cases are
+skipped. With that flag, missing root privileges, tools, or base inputs fail.
+
+## Actual BSMR graph
+
+For the native Debian pipeline:
+
+```sh
+BSMR_OCI_TEST_EVIDENCE=/absolute/evidence \
+  node test/oci/run.ts /path/to/bsmr /path/to/img /path/to/umoci /path/to/runc \
+  /path/to/base-layout /path/to/debian.lock.json prelude
+```
+
+The lock must be APT-resolved for curl and ca-certificates against that exact
+base. The graph acquires those archives through BSMR download actions, installs
+them offline with `oci_run`, executes curl, checks the generated certificate
+bundle, and queries dpkg. It verifies cold/warm builds, cache restoration after
+output deletion and daemon restart, changed inputs/commands, stale locks, and
+corrupt package checksums.
+
+Source-prelude mode defaults to released BSMR 0.0.9. That establishes source-rule
+behavior, not a newly packaged engine. The graph fixture accepts
+`--engine-version` and `--bundled-prelude` for a source-built engine:
+
+```sh
+BSMR_OCI_TEST_EVIDENCE=/absolute/evidence \
+  node test/oci/run.ts /path/to/source-built/bsmr /path/to/img /path/to/umoci /path/to/runc \
+  /path/to/base-layout test/oci/fixtures/linux-amd64.debian.lock.json prelude \
   --platform linux/amd64 --engine-version 0.0.10 --bundled-prelude
 ```
 
-Each successful invocation emits a JSON receipt with its trace ID, local and
-cached action counts, image digest, and executed action identities. It checks
-that a warm build executes nothing, a config edit changes only image and layout
-actions, a binary edit changes its layer, and deleted outputs or another source
-root restore the same image from the independent shared cache. Invalid Go source
-must fail; repairing it must recover the previously verified image.
+Bundled mode expands the engine's actual embedded prelude, compares every
+regular file's bytes and executable bit with the selected source, then removes
+the inspection copy before building. A matching version string alone is not
+enough. The receipt records the bundle hash, tool hashes, architecture, and
+kernel release. `test/oci/fixtures/linux-amd64.image.lock.json` identifies the
+amd64 base; arm64 uses the locks in `examples/oci/debian`.
 
-For diagnosis, `BSMR_OCI_TEST_PRESERVE_FAILURE=1` retains a failed compiler
-fixture after stopping its daemons. `BSMR_OCI_TEST_RESUME` may name that fixture
-root to reuse its acquired SDK and cache. A resumed baseline is reported as
-`seed-restored`, not as a successful cold build. The warm, config, changed-input,
-restoration and fresh-root assertions still run.
-Release qualification starts without either diagnostic variable and verifies
-an explicitly empty action cache. Its initial cold build must execute real
-compiler and packaging actions with zero cache hits.
-
-`verify.py` independently reads complete OCI layouts with Python's standard
-library. It checks descriptor SHA-256 and sizes, decompressed layer digests,
-paths, effective file bytes and metadata, symlinks, and runtime configuration.
-Whiteouts and special filesystem entries require separate qualification.
-It can also compare the filesystem of a separate builder's exported layout:
-
-```shell
-python3 test/oci/verify.py /path/to/layout
-```
-
-## Native filesystem execution
-
-Run the real runtime contract on a trusted rootful Linux worker. Select its
-native architecture and provide a complete verified Debian base layout:
+The complete checked-in Linux arm64 example has its own acquisition proof:
 
 ```sh
-BSMR_OCI_REQUIRE_NATIVE=1 BSMR_OCI_PLATFORM=linux/arm64 \
-BSMR_OCI_UMOCI=/path/to/umoci BSMR_OCI_RUNC=/path/to/runc \
-BSMR_OCI_RUN_BASE=/path/to/base-layout node --test test/oci/run.test.mjs
+node test/oci/example.ts /path/to/bsmr /path/to/repository /absolute/evidence
 ```
 
-The strict flag rejects missing tools, the wrong host, and emulation. The tests
-execute installation scripts, verify filesystem metadata and read-only inputs,
-and check failure, cancellation, concurrent cgroups, and cleanup. Ordinary
-non-root unit runs skip these runtime cases explicitly.
+It copies `examples/oci/debian`, acquires its actual pinned tools, builds the
+runtime check, verifies zero actions when warm, and saves the exported OCI tar.
+It also accepts `--engine-version 0.0.10 --bundled-prelude` to verify the embedded
+prelude before running the checked-in example.
 
-The helper uses private writable roots and isolated namespaces. It preserves
-the base image's startup configuration. Its image commands have no network.
-Rootless execution and cross-host reproducibility are not qualified.
+## Native Go composition
 
-The language-graph fixture connects locked package downloads to installation,
-runtime checks, and complete export. It verifies warm reuse, clean/restart cache
-restoration, input/command invalidation, and invalid lock rejection:
+The small helper fixture accepts files and directories without a compiler:
 
 ```sh
-BSMR_OCI_TEST_EVIDENCE=/path/to/evidence node test/oci/run.ts \
-  /path/to/bsmr /path/to/img /path/to/umoci /path/to/runc \
-  /path/to/base-layout /path/to/debian.lock.json prelude \
-  --platform linux/arm64 --engine-version 0.0.10 --bundled-prelude
+node test/oci/tools.ts /path/to/bsmr /path/to/img prelude
 ```
 
-Bundled qualification compares every embedded prelude file's bytes and executable
-bit against the selected source. It then removes the inspection copy before
-building, so the graph cannot accidentally use a source overlay. An old binary
-fails this check even if its version label matches.
+The compiler fixture builds a real Linux Go executable and packages its output:
 
-The file-layer fixtures establish composition and local cache restoration.
-The native checks additionally qualify the supplied Linux runtime and base.
-Other runtime environments, external registry publication, and remote caching
-require their own receipts and authorized workers.
+```sh
+BSMR_OCI_TEST_EVIDENCE=/absolute/evidence \
+  node test/oci/cache.ts /path/to/bsmr /path/to/img prelude prelude/oci/operations.mjs
+```
+
+The default platform is Linux arm64 and default engine version is 0.0.9.
+Pass `--platform linux/amd64 --engine-version 0.0.10 --bundled-prelude`
+to test a matching embedded engine bundle. Source and matching helper paths
+remain required for independent corruption checks.
+
+The fixture verifies configuration and binary edits, failed compilation,
+restoration across output deletion and a fresh source root, and corrupt/missing
+content. It uses the official Go 1.26.7 SDK. `BSMR_OCI_TEST_RESUME` and
+`BSMR_OCI_TEST_PRESERVE_FAILURE` are diagnosis-only; a resumed run is not a
+cold-cache proof.
+
+## Private registry round-trip
+
+Use only a disposable, rootful Linux worker. The harness installs a temporary
+fixture CA and hosts entry, runs the pinned Distribution registry over verified
+TLS, then removes its trust changes and processes. It requires openssl,
+apache2-utils, and ca-certificates. Download the architecture-specific archive
+listed in `registry.json`; the harness verifies its SHA-256 before execution.
+
+```sh
+node test/oci/registry.mjs \
+  --bsmr /path/to/bsmr --img /path/to/img \
+  --registry-archive /path/to/registry.tar.gz \
+  --layout /path/to/base-layout --prelude prelude \
+  --bind WORKER_IPV4 --evidence /absolute/evidence
+```
+
+The bind address must belong to this worker and must not be loopback. The test
+prepares real `oci_fetch` and `oci_push` targets without contacting the registry,
+publishes with explicit credentials, removes its own manifest, restores cached
+preparation, and explicitly republishes. It fetches and imports the image again,
+checks its digest and contents, rejects missing/wrong credentials, checks logs
+for credential leaks, and rejects anonymous access to the private image.
+Add `--engine-version 0.0.10 --bundled-prelude` for a source-built engine.
+
+## What the evidence does not prove
+
+Local receipts qualify Linux arm64 native execution and same-worker local
+restoration using a source-prelude overlay. Native amd64 and current bundled
+engine qualification require their own completed hosted-run receipts.
+Rootless execution, cross-host reproducibility, and remote cache upload of
+filesystem commands are not qualified. The private-registry harness qualifies
+real TLS authentication and upload against a disposable registry. It does not
+prove access to a particular external registry account or cloud credential helper.
+
+`verify.py` independently checks ordinary exported images. Native whiteout
+and full filesystem semantics are tested by real `umoci` unpacking in the
+runtime suite. A successful helper test is not a published binary, deployment,
+or production acceptance receipt.
