@@ -7,7 +7,7 @@
 
 import { command, expr, job, workflow } from "@dedalus-labs/hollywood";
 
-const paths = ["ci/darwin.ts", "test/sandbox/darwin/**", "tools/native/**"] as const;
+const paths = ["ci/darwin.ts", "test/sandbox/darwin/**", "test/sandbox/service.py", "tools/native/**", "app/bsmr_sandbox/**", "Cargo.toml"] as const;
 
 export const darwin = workflow({
 	name: "macOS isolation",
@@ -28,9 +28,11 @@ export const darwin = workflow({
 				{ name: "Install Rust", run: command({ file: "rustup", args: ["toolchain", "install", "1.98.0", "--profile", "minimal"] }) },
 				{ name: "Check native identity ownership", run: command({ file: "cargo", args: ["+1.98.0", "test", "--locked", "--manifest-path", "tools/native/Cargo.toml"] }) },
 				{ name: "Check unprivileged refusal", run: command({ file: "cargo", args: ["+1.98.0", "test", "--locked", "--manifest-path", "test/sandbox/darwin/Cargo.toml"] }) },
-				{ name: "Build process check", run: command({ file: "cargo", args: ["+1.98.0", "build", "--locked", "--manifest-path", "test/sandbox/darwin/Cargo.toml"] }) },
-				{ name: "Record compiler runtime", run: command({ file: "test/sandbox/darwin/target/debug/bsmr-darwin-check", args: ["prepare", "test/sandbox/darwin/target/runtime.txt"] }) },
-				{ name: "Check detached process cleanup", run: command({ file: "sudo", args: ["-n", "test/sandbox/darwin/target/debug/bsmr-darwin-check", "run", "/private/var/tmp/bsmr-darwin-check", "test/sandbox/darwin/target/runtime.txt"] }) },
+				{ name: "Build native worker", run: command({ file: "cargo", args: ["+1.98.0", "build", "--release", "--locked", "--manifest-path", "tools/native/Cargo.toml", "--bin", "bsmr-native"] }) },
+				{ name: "Build process check", run: command({ file: "cargo", args: ["+1.98.0", "build", "--release", "--locked", "--manifest-path", "test/sandbox/darwin/Cargo.toml"] }) },
+				{ name: "Record compiler runtime", run: command({ file: "test/sandbox/darwin/target/release/bsmr-darwin-check", args: ["prepare", "test/sandbox/darwin/target/runtime.txt"] }) },
+				{ name: "Check detached process cleanup", run: command({ file: "sudo", args: ["-n", "test/sandbox/darwin/target/release/bsmr-darwin-check", "run", "/private/var/tmp/bsmr-darwin-check", "test/sandbox/darwin/target/runtime.txt"] }) },
+				{ name: "Check native service", run: command({ file: "sudo", args: ["-n", "python3", "test/sandbox/service.py", "tools/native/target/release/bsmr-native", "test/sandbox/darwin/target/release/bsmr-darwin-check", "test/sandbox/darwin/target/runtime.txt"] }) },
 			],
 		}),
 	},
