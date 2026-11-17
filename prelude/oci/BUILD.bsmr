@@ -13,3 +13,5 @@ source_listing()
 # their relative module paths. The constructors track every referenced source.
 export_file(name = "operations", src = "operations.mjs", mode = "reference", visibility = ["PUBLIC"])
 export_file(name = "closure", src = "closure.mjs", mode = "reference", visibility = ["PUBLIC"])
+export_file(name = "sources", src = "sources.mjs", mode = "reference", visibility = ["PUBLIC"])
+export_file(name = "auth", src = "auth.mjs", mode = "reference", visibility = ["PUBLIC"])

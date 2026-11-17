@@ -23,7 +23,7 @@ worktrees reuse matching action results.
 Native file and directory layers retain compact streams and their original
 inputs. Metadata-only builds do not retain a second full tar blob. Export
 reconstructs and verifies ordinary OCI bytes. Imported archives retain their
-original bytes. Registry operations, filesystem execution, and multi-platform
+original bytes. Authenticated registry operations, filesystem execution, and multi-platform
 indexes are outside this rule set.
 
 ~~~text
@@ -39,6 +39,7 @@ native compiler outputs -> oci_layer -> layer metadata -> oci_image
 
 | Rule | Result |
 | --- | --- |
+| oci_pull | A public image acquired anonymously from a direct manifest lock |
 | oci_layer | Files, directories, Linux executables, and literal links in a compact layer |
 | oci_layer_from_tar | An unchanged tar or gzip archive with verified layer metadata |
 | oci_image | Configuration, manifest, and descriptor assembled from layer metadata |
@@ -189,6 +190,33 @@ and Docker media-type layouts are unsupported. Acquire bases from trusted
 sources and test their unpacked contents and runtime behavior. Digest validation
 checks byte integrity, while the base image still determines what files and
 programs enter the container.
+
+## Acquire a locked public base
+
+```python
+load("@prelude//oci:defs.bzl", "oci_pull")
+
+oci_pull(
+    name = "base",
+    image = "docker.io/library/debian:bookworm-slim",
+    platform = "linux/arm64",
+    lock = "image.lock.json",
+    toolchain = "//tools:oci",
+)
+```
+
+The lock contains exactly `version` (1), `image`, `platform`, and
+`manifest_digest`. The digest must identify a direct OCI image manifest.
+Image spelling and platform must match the rule. Index locks are rejected;
+select and pin the platform's child manifest explicitly.
+
+`oci_pull` supports public anonymous registries, including ECR and GCR.
+The client receives an empty Docker configuration and cannot discover cloud
+credentials, metadata identity, or host credential helpers. Registry hosts must
+be DNS names. IP literals, `localhost`, and `.localhost` names are rejected
+because the pinned client can retry those addresses over plaintext HTTP.
+All config and layer bytes are verified before an image provider is returned.
+Tag refresh is not part of a cached build.
 
 ## Verification
 
