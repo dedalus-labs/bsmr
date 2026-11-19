@@ -172,12 +172,24 @@ test("Self-build paths select the build inputs only the self-build checks", () =
 	assert.equal(selfBuildAffected([]), true);
 });
 
-test("A Rust-only pull request runs Rust CI without the self-build", async () => {
-	const exec: ScriptExec = async (_file, args) => ({
-		exitCode: 0, stderr: "", stdout: args[0] === "merge-base" ? "c".repeat(40) : "app/bsmr/src/main.rs\0",
+test("Pull requests and merge groups run the self-build only for build-input changes", async () => {
+	const changes = (file: string): ScriptExec => async (_file, args) => ({
+		exitCode: 0, stderr: "", stdout: args[0] === "merge-base" ? "c".repeat(40) : `${file}\0`,
 	});
 	const pullRequest = { eventName: "pull_request", baseSha: "a".repeat(40), mergeGroupBaseSha: "", beforeSha: "", headSha: "b".repeat(40) } as const;
-	assert.deepEqual(await affectedForEvent(exec, pullRequest), { rust: true, selfBuild: false });
+	const mergeGroup = { ...pullRequest, eventName: "merge_group", baseSha: "", mergeGroupBaseSha: "a".repeat(40) } as const;
+	for (const input of [pullRequest, mergeGroup]) {
+		const outputs = (file: string) => runAction(rustAffectedAction, {
+			with: input,
+			exec: changes(file),
+			fs: { readText: async () => assert.fail("the action reads git, not files") },
+			runner: { uidGid: "1000:1000" },
+		});
+		assert.deepEqual(await outputs("app/bsmr/src/main.rs"), { rust: "true", selfBuild: "false" });
+		for (const file of ["app/bsmr_build_api/Cargo.toml", "tools/build/third-party/rust/reindeer.toml", "tools/cargo/src/main.rs"]) {
+			assert.deepEqual(await outputs(file), { rust: "true", selfBuild: "true" });
+		}
+	}
 });
 
 test("Pull request paths preserve both sides of a rename", async () => {
@@ -334,6 +346,11 @@ test("the self-build runs only when its declared gate output says so", () => {
 	const selfBuild = jobs.rust_self_build;
 	assert.equal(selfBuild.needs, "affected");
 	assert.equal(selfBuild.if, `\${{ ${trustedCiRun} && needs.affected.outputs.selfBuild == 'true' }}`);
+	assert.equal(jobs.affected?.outputs?.selfBuild, "${{ steps.check.outputs.self-build }}");
+	assert.deepEqual(selfBuild.steps.at(-1), {
+		name: "Build BSMR with BSMR",
+		run: command({ file: "target/debug/bsmr", args: ["--isolation-dir=ci", "build", "//:bsmr"] }),
+	});
 	const declared = Object.keys(generateActionMetadata(rustAffectedAction).outputs ?? {});
 	for (const output of Object.values(jobs.affected?.outputs ?? {})) {
 		const [, name] = /^\$\{\{ steps\.check\.outputs\.([\w-]+) \}\}$/.exec(output) ?? [];
