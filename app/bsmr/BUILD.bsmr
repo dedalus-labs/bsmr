@@ -50,6 +50,7 @@ rust_library(
         ":bsmr_client_only_build": ["--cfg=client_only"],
         "DEFAULT": [],
     }),
+    test_deps = ["bsmr_build//third-party/rust:tempfile"],
     deps = [
         "bsmr_build//third-party/rust:clap",
         "bsmr_build//third-party/rust:tokio",
@@ -80,6 +81,7 @@ rust_library(
         ":bsmr_client_only_build": [],
         "DEFAULT": [
             "root//app/bsmr_daemon:bsmr_daemon",
+            "root//app/bsmr_execute:bsmr_execute",
             "root//app/bsmr_server:bsmr_server",
             "root//app/bsmr_test_runner:bsmr_test_runner",
         ],
