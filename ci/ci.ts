@@ -110,6 +110,7 @@ const rustLaneIds = [
 	"rust_sandbox",
 ] as const;
 const rustAffected = eq(needsOutput("affected", "rust"), "true");
+const selfBuildAffected = eq(needsOutput("affected", "selfBuild"), "true");
 const rustLanesHave = (result: GitHubJobResultValue) =>
 	and(
 		needsResultIs("rust_audit", result),
@@ -123,6 +124,10 @@ const rustResultsAccepted = and(
 	or(
 		rustLanesHave(GitHubJobResult.Success),
 		rustLanesHave(GitHubJobResult.Skipped),
+	),
+	or(
+		needsResultIs("rust_self_build", GitHubJobResult.Success),
+		needsResultIs("rust_self_build", GitHubJobResult.Skipped),
 	),
 );
 const runnerTemp = expr<string>("runner.temp");
@@ -213,6 +218,51 @@ const installDotSlash = [
 	},
 ] as const;
 
+/**
+ * Build the BSMR engine with Cargo and install its Cargo planner beside it.
+ *
+ * @param save - Whether the job writes the engine and planner caches.
+ * @returns Steps that leave `target/debug/bsmr` and `target/debug/bsmr-cargo` ready.
+ */
+const buildEngine = (save: boolean | typeof saveRustCache) =>
+	[
+		checkout,
+		installRust,
+		{ ...rustCache(save, "engine"), env: buildEnvironment },
+		{
+			name: "Build BSMR",
+			env: buildEnvironment,
+			run: command({ file: "cargo", args: ["build", "--locked", "--bin", "bsmr"] }),
+		},
+		{
+			name: "Install Cargo planner compiler",
+			run: command({ file: "rustup", args: ["toolchain", "install", "1.98.0", "--profile", "minimal", "--component", "llvm-tools-preview", "--no-self-update"] }),
+		},
+		{
+			name: "Restore Cargo planner cache",
+			uses: "Swatinem/rust-cache@e18b497796c12c097a38f9edb9d0641fb99eee32",
+			env: { RUSTUP_TOOLCHAIN: "1.98.0" },
+			with: {
+				"prefix-key": "bsmr-v1",
+				"shared-key": "planner",
+				workspaces: "tools/cargo -> target",
+				"save-if": save,
+			},
+		},
+		{
+			name: "Build Cargo planner",
+			run: command({ file: "rustup", args: ["run", "1.98.0", "cargo", "build", "--locked", "--manifest-path", "tools/cargo/Cargo.toml", "--target-dir", "tools/cargo/target", "-j", "2"] }),
+		},
+		{
+			name: "Install Cargo planner",
+			run: command({ file: "cp", args: ["tools/cargo/target/debug/bsmr-cargo", "target/debug/bsmr-cargo"] }),
+		},
+	] as const;
+const generateRustBuildDependencies = {
+	name: "Generate Rust build dependencies",
+	run: command({ file: "node", args: ["ci/rust-build-dependencies.mjs"] }),
+} as const;
+
 export const ci = workflow({
 	name: "CI",
 	on: {
@@ -237,7 +287,10 @@ export const ci = workflow({
 			"runs-on": "ubuntu-24.04",
 			"timeout-minutes": 5,
 			permissions: rustPermissions,
-			outputs: { rust: stepOutput<string>("check", "rust") },
+			outputs: {
+				rust: stepOutput<string>("check", "rust"),
+				selfBuild: stepOutput<string>("check", "self-build"),
+			},
 			steps: [
 				{
 					...checkout,
@@ -388,37 +441,7 @@ export const ci = workflow({
 			permissions: rustPermissions,
 			env: rustEnvironment,
 			steps: [
-				checkout,
-				installRust,
-				{ ...rustCache(saveRustCache, "engine"), env: buildEnvironment },
-				{
-					name: "Build BSMR",
-					env: buildEnvironment,
-					run: command({ file: "cargo", args: ["build", "--locked", "--bin", "bsmr"] }),
-				},
-				{
-					name: "Install Cargo planner compiler",
-					run: command({ file: "rustup", args: ["toolchain", "install", "1.98.0", "--profile", "minimal", "--component", "llvm-tools-preview", "--no-self-update"] }),
-				},
-				{
-					name: "Restore Cargo planner cache",
-					uses: "Swatinem/rust-cache@e18b497796c12c097a38f9edb9d0641fb99eee32",
-					env: { RUSTUP_TOOLCHAIN: "1.98.0" },
-					with: {
-						"prefix-key": "bsmr-v1",
-						"shared-key": "planner",
-						workspaces: "tools/cargo -> target",
-						"save-if": saveRustCache,
-					},
-				},
-				{
-					name: "Build Cargo planner",
-					run: command({ file: "rustup", args: ["run", "1.98.0", "cargo", "build", "--locked", "--manifest-path", "tools/cargo/Cargo.toml", "--target-dir", "tools/cargo/target", "-j", "2"] }),
-				},
-				{
-					name: "Install Cargo planner",
-					run: command({ file: "cp", args: ["tools/cargo/target/debug/bsmr-cargo", "target/debug/bsmr-cargo"] }),
-				},
+				...buildEngine(saveRustCache),
 				setupNode,
 				{
 					name: "Verify native architecture",
@@ -495,10 +518,7 @@ export const ci = workflow({
 					with: { binary: "target/debug/bsmr", img: imgPath, platform: "linux/amd64" },
 				}),
 				...installDotSlash,
-				{
-					name: "Generate Rust build dependencies",
-					run: command({ file: "node", args: ["ci/rust-build-dependencies.mjs"] }),
-				},
+				generateRustBuildDependencies,
 				{
 					name: "Check Starlark",
 					run: command({
@@ -524,6 +544,29 @@ export const ci = workflow({
 					name: "Check CLI reference",
 					with: { bsmr: "target/debug/bsmr", expected: "docs/reference/cli.md" },
 				}),
+			],
+		}),
+		rust_self_build: job({
+			name: "Rust / Self-build",
+			needs: "affected",
+			if: and(trustedCiRun, selfBuildAffected),
+			"runs-on": expr<string>("matrix.selfHostRunner"),
+			strategy: { matrix: { include: linuxPlatforms.filter(({ architecture }) => architecture === "x64") } },
+			"timeout-minutes": 60,
+			permissions: rustPermissions,
+			env: rustEnvironment,
+			steps: [
+				...buildEngine(false),
+				setupNode,
+				...installDotSlash,
+				generateRustBuildDependencies,
+				{
+					name: "Build BSMR with BSMR",
+					run: command({
+						file: "target/debug/bsmr",
+						args: ["--isolation-dir=ci", "build", "//:bsmr"],
+					}),
+				},
 			],
 		}),
 		rust_sandbox: job({
@@ -647,7 +690,7 @@ export const ci = workflow({
 		rust: job({
 			name: "Rust",
 			if: and(not(cancelled()), trustedCiRun),
-			needs: ["affected", ...rustLaneIds],
+			needs: ["affected", ...rustLaneIds, "rust_self_build"],
 			"runs-on": "ubuntu-24.04",
 			"timeout-minutes": 5,
 			permissions: {},
