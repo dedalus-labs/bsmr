@@ -20,8 +20,8 @@ use serde::Serialize;
 pub(crate) struct Request {
     /// Absolute manifest path inside the captured workspace.
     pub(crate) manifest: PathBuf,
-    /// Cargo package selector for the requested entrypoint.
-    pub(crate) package: String,
+    /// Nonempty package selection resolved together through Cargo's feature rules.
+    pub(crate) packages: Vec<String>,
     /// Compiler operation whose dependency context Cargo must resolve.
     pub(crate) mode: Mode,
     /// Cargo target selection, independent of the compiler operation.
@@ -60,8 +60,59 @@ pub(crate) enum SourcePolicy {
 pub(crate) enum TargetFilter {
     Package,
     Library,
-    Binary { name: String },
-    IntegrationTest { name: String },
+    Binary {
+        name: String,
+    },
+    IntegrationTest {
+        name: String,
+    },
+    /// Explicit package-qualified roots selected by the native build interface.
+    Targets {
+        targets: Vec<SelectedTarget>,
+    },
+}
+
+/// Target names need their owning package because workspaces may repeat binary names.
+#[derive(Deserialize)]
+#[serde(deny_unknown_fields)]
+pub(crate) struct SelectedTarget {
+    /// Directory selections permit Cargo to skip targets with disabled required features.
+    pub(crate) origin: Origin,
+    /// Cargo package name admitted by the workspace catalog.
+    pub(crate) package: String,
+    /// Cargo target class, excluding build scripts and automatic dependencies.
+    pub(crate) kind: TargetKind,
+    /// Original Cargo target name.
+    pub(crate) name: String,
+}
+
+impl SelectedTarget {
+    /// Match Cargo's target identity without conflating equal names of different kinds.
+    pub(crate) fn matches(&self, target: &Target) -> bool {
+        target.name() == self.name
+            && match self.kind {
+                TargetKind::Library => target.is_lib(),
+                TargetKind::Binary => target.is_bin(),
+                TargetKind::IntegrationTest => target.is_test(),
+            }
+    }
+}
+
+/// Naming a target requires it. A directory selects only enabled targets.
+#[derive(Clone, Copy, Deserialize, Eq, PartialEq)]
+#[serde(rename_all = "kebab-case")]
+pub(crate) enum Origin {
+    Explicit,
+    Directory,
+}
+
+/// Entrypoint classes exposed by native build and test commands.
+#[derive(Clone, Copy, Deserialize, Eq, PartialEq)]
+#[serde(rename_all = "kebab-case")]
+pub(crate) enum TargetKind {
+    Library,
+    Binary,
+    IntegrationTest,
 }
 
 #[derive(Clone, Copy, Deserialize)]
@@ -82,6 +133,8 @@ pub(crate) struct Graph {
     pub(crate) rustc_version: String,
     /// Captured root used to rebase path-package sources.
     pub(crate) workspace_root: PathBuf,
+    /// Cargo package boundaries, including unselected workspace members.
+    pub(crate) workspace_packages: Vec<PathBuf>,
     /// Indices of the selected entrypoint units.
     pub(crate) roots: Vec<usize>,
     /// Configured compilation units with graph-local dependency indices.
@@ -98,12 +151,14 @@ pub(crate) struct ConfiguredUnit {
     pub(crate) package_version: String,
     /// Native library link ownership declared by the package.
     pub(crate) package_links: Option<String>,
-    /// Cargo package variables supplied to compilation.
+    /// Cargo package variables and build-script profile variables for this unit.
     pub(crate) package_environment: BTreeMap<String, String>,
     /// Verified source ownership and acquisition metadata.
     pub(crate) source: Source,
     /// Explicit compilation platform, or the compiler host.
     pub(crate) target: Target,
+    /// Whether rustc supplies libtest or the target supplies its own entrypoint.
+    pub(crate) harness: bool,
     /// Host or target context selected by Cargo.
     pub(crate) platform: CompileKind,
     /// Compiler operation whose dependency context Cargo must resolve.
@@ -128,6 +183,8 @@ pub(crate) struct ConfiguredUnit {
 
 #[derive(Clone, Serialize)]
 pub(crate) struct Source {
+    /// Immutable source input to materialize through native build rules.
+    pub(crate) artifact: SourceArtifact,
     /// Source or dependency classification preserved from Cargo.
     pub(crate) kind: SourceKind,
     /// Cargo's source URL, without guessing a cache location.
@@ -142,6 +199,27 @@ pub(crate) struct Source {
     pub(crate) root: PathBuf,
     /// Absolute manifest path inside the captured workspace.
     pub(crate) manifest: PathBuf,
+}
+
+/// Source ownership required by native compilation, independent of Cargo's cache paths.
+#[derive(Clone, Serialize)]
+#[serde(tag = "kind", rename_all = "kebab-case")]
+pub(crate) enum SourceArtifact {
+    /// Files already owned by the captured workspace.
+    Workspace,
+    /// A verified registry archive and its package directory.
+    Archive {
+        /// Registry download URL without credential requirements.
+        url: String,
+        /// SHA-256 recorded in Cargo.lock and verified during planning.
+        sha256: String,
+        /// Verified archive size in bytes.
+        size: u64,
+        /// Source-tree directory inside the archive.
+        prefix: String,
+        /// Package directory relative to that source tree.
+        package: String,
+    },
 }
 
 #[derive(Clone, Serialize)]

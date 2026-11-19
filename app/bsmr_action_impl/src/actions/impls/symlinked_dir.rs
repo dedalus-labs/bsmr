@@ -264,12 +264,14 @@ impl Action for SymlinkedDirAction {
             match self.copy {
                 CopyMode::Copy {
                     executable_bit_override,
+                    symlinks,
                 } => {
                     let dest_entry = builder.add_copied(
                         value,
                         src.as_ref(),
                         temp_dest.as_ref(),
                         executable_bit_override,
+                        symlinks,
                     )?;
                     srcs.push((src, relative_dest, dest_entry.map_dir(|d| d.as_immutable())));
                 }
@@ -299,6 +301,7 @@ impl Action for SymlinkedDirAction {
                     match self.copy {
                         CopyMode::Copy {
                             executable_bit_override,
+                            ..
                         } => executable_bit_override,
                         CopyMode::Symlink => None,
                     },

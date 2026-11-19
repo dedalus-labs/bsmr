@@ -16,6 +16,8 @@ use std::path::Path;
 use std::path::PathBuf;
 use std::process::Command;
 
+pub(super) use bsmr_common::native_toolchains::GO_SDK_DIRECTORY as SDK_DIRECTORY;
+pub(super) use bsmr_common::native_toolchains::GO_TOOLS_DIRECTORY as TOOLS_DIRECTORY;
 use serde::Deserialize;
 use serde::Serialize;
 
@@ -23,17 +25,16 @@ use super::GENERATED_BY;
 use super::GoSdkArchive;
 use super::GoToolchainError;
 use super::GoToolchainLock;
+use super::legacy::DEMO_TOOLCHAINS;
 
 const GO_BOOTSTRAP_WRAPPER_SOURCE: &str = include_str!("go_bootstrap_wrapper.go");
-const SDK_DIRECTORY: &str = "toolchains/.bsmr-go-sdk";
-const TOOLS_DIRECTORY: &str = "toolchains/.bsmr-go-tools";
 
 /// Identity marker required on every frontend-owned acquisition directory.
 #[derive(Debug, Deserialize, Serialize)]
 struct AcquiredSdk {
     /// Proves directory ownership before replacement.
     generated_by: String,
-    /// Distinguishes analysis placeholders from complete, usable acquisitions.
+    /// Distinguishes a complete, usable acquisition from an interrupted one.
     state: String,
     /// Ties the installed compiler and tools to the locked Go semantics.
     version: String,
@@ -45,49 +46,49 @@ struct AcquiredSdk {
     sha256: String,
 }
 
-/// Creates only the owned source placeholders needed to analyze the acquisition target.
-pub(crate) fn prepare_acquisition(
-    root: &Path,
-    lock: &GoToolchainLock,
-) -> Result<(), GoToolchainError> {
-    let archive = host_archive(lock)?;
-    let metadata = AcquiredSdk {
-        generated_by: GENERATED_BY.to_owned(),
-        state: "acquiring".to_owned(),
-        version: lock.version.clone(),
-        os: archive.os.clone(),
-        arch: archive.arch.clone(),
-        sha256: archive.sha256.clone(),
-    };
+/// Creates an absent `toolchains//` package directory with the default manifest.
+///
+/// An existing directory is left untouched, so a user's manifest or a cell aliased to the
+/// project root keeps its own package definition.
+pub(crate) fn create_toolchains_package(toolchains: &Path) -> Result<(), GoToolchainError> {
+    match fs::read_dir(toolchains) {
+        Ok(_) => Ok(()),
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => {
+            fs::create_dir_all(toolchains).map_err(|error| write_error(toolchains, error))?;
+            let manifest = toolchains.join("BUILD.bsmr");
+            fs::write(&manifest, DEMO_TOOLCHAINS).map_err(|error| write_error(&manifest, error))
+        }
+        Err(error) => Err(GoToolchainError::Read {
+            path: toolchains.to_owned(),
+            message: error.to_string(),
+        }),
+    }
+}
+
+/// Refuses, before any download, to replace acquisition directories Bessemer does not own.
+pub(crate) fn validate_acquisition_owners(toolchains: &Path) -> Result<(), GoToolchainError> {
     for directory in [SDK_DIRECTORY, TOOLS_DIRECTORY] {
-        let path = root.join(directory);
+        let path = toolchains.join(directory);
         if path.exists() {
             validate_owned_acquisition(&path)?;
-            continue;
         }
-        fs::create_dir(&path).map_err(|error| write_error(&path, error))?;
-        write_acquisition_metadata(&path, &metadata)?;
-    }
-    let wrapper = root.join(TOOLS_DIRECTORY).join("go_wrapper");
-    if !wrapper.exists() {
-        fs::write(&wrapper, []).map_err(|error| write_error(&wrapper, error))?;
     }
     Ok(())
 }
 
 /// Installs one verified extracted SDK and bootstrap wrapper as repository-local inputs.
 pub(crate) fn install_sdk(
-    root: &Path,
+    toolchains: &Path,
     extracted: &Path,
     lock: &GoToolchainLock,
 ) -> Result<(), GoToolchainError> {
     let archive = host_archive(lock)?;
     verify_sdk_version(extracted, &lock.version)?;
-    let toolchains = root.join("toolchains");
+    fs::create_dir_all(toolchains).map_err(|error| write_error(toolchains, error))?;
     let sdk_stage = tempfile::Builder::new()
         .prefix(".bsmr-go-sdk-stage-")
-        .tempdir_in(&toolchains)
-        .map_err(|error| write_error(&toolchains, error))?;
+        .tempdir_in(toolchains)
+        .map_err(|error| write_error(toolchains, error))?;
     copy_tree(extracted, sdk_stage.path())?;
     let metadata = AcquiredSdk {
         generated_by: GENERATED_BY.to_owned(),
@@ -100,22 +101,22 @@ pub(crate) fn install_sdk(
     write_acquisition_metadata(sdk_stage.path(), &metadata)?;
     let tools_stage = tempfile::Builder::new()
         .prefix(".bsmr-go-tools-stage-")
-        .tempdir_in(&toolchains)
-        .map_err(|error| write_error(&toolchains, error))?;
+        .tempdir_in(toolchains)
+        .map_err(|error| write_error(toolchains, error))?;
     compile_bootstrap_wrapper(sdk_stage.path(), tools_stage.path(), archive)?;
     write_acquisition_metadata(tools_stage.path(), &metadata)?;
-    replace_generated_directory(sdk_stage, &root.join(SDK_DIRECTORY))?;
-    replace_generated_directory(tools_stage, &root.join(TOOLS_DIRECTORY))?;
+    replace_generated_directory(sdk_stage, &toolchains.join(SDK_DIRECTORY))?;
+    replace_generated_directory(tools_stage, &toolchains.join(TOOLS_DIRECTORY))?;
     Ok(())
 }
 
 /// Returns the acquired SDK executable only when it matches the committed lock.
 pub(crate) fn acquired_go(
-    root: &Path,
+    toolchains: &Path,
     lock: &GoToolchainLock,
 ) -> Result<PathBuf, GoToolchainError> {
-    let sdk = root.join(SDK_DIRECTORY);
-    let tools = root.join(TOOLS_DIRECTORY);
+    let sdk = toolchains.join(SDK_DIRECTORY);
+    let tools = toolchains.join(TOOLS_DIRECTORY);
     let archive = host_archive(lock)?;
     validate_acquired_directory(&sdk, lock, archive)?;
     validate_acquired_directory(&tools, lock, archive)?;
@@ -312,6 +313,11 @@ fn replace_generated_directory(
     let stage = stage.keep();
     fs::rename(&stage, destination).map_err(|error| write_error(destination, error))?;
     Ok(())
+}
+
+/// Reports whether an acquisition directory carries Bessemer's ownership marker.
+pub(super) fn owns_acquisition(path: &Path) -> bool {
+    read_owned_acquisition(path).is_ok()
 }
 
 /// Ensures an acquisition directory belongs to Bessemer before any mutation.

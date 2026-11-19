@@ -42,3 +42,25 @@
 /prelude/rust/native/toolchain.bzl @windsornguyen
 /prelude/rust/tools/rustc_action.py @windsornguyen
 /test/native-rust-build.ts @windsornguyen
+
+# Go toolchain-cell ownership.
+/app/bsmr_common/src/native_toolchains.rs @windsornguyen
+/docs/users/languages/go/native.md @windsornguyen
+/test/go-dedicated-toolchains.ts @windsornguyen
+# Experimental build snapshot ownership.
+/Cargo.lock @windsornguyen
+/app/bsmr_build_api/Cargo.toml @windsornguyen
+/app/bsmr_build_api/src/build/build_report.rs @windsornguyen
+/app/bsmr_build_api/src/build/build_report/snapshot.rs @windsornguyen
+/app/bsmr_cli_proto/daemon.proto @windsornguyen
+/app/bsmr_client/src/commands/run.rs @windsornguyen
+/app/bsmr_server_commands/src/build.rs @windsornguyen
+/app/bsmr_test/src/command.rs @windsornguyen
+/docs/users/build_observability/snapshot.md @windsornguyen
+/test/build-snapshot.py @windsornguyen
+
+# Retained build-report metadata and cache summary.
+/app/bsmr_cmd_log_client/src/summary.rs @windsornguyen
+/docs/users/build_observability/build_report.md @windsornguyen
+/tests/core/build/test_build_report_data/fixtures/test_build_report_format_artifact_hash_information.golden.json @windsornguyen
+/tests/core/build/test_build_report_data/rules.bzl @windsornguyen

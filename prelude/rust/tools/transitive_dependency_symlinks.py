@@ -14,23 +14,18 @@
 # above-listed licenses.
 
 # A tool to produce a directory structure compatible with rustc's `-Ldependency`
-# flag for simple and dynamically named crates.
+# flag for dynamically named crates.
 #
 # Rustc needs all the .rlib files which are transitive dependencies of the crate
-# being built. Importantly, the filename for each rlib must contain the correct
+# being built. The filename for each rlib must contain the correct
 # crate name or else rustc won't find the file.
-#
-# Most crates have a crate name determined during analysis: value of the `crate`
-# attribute, or derived using a simple heuristic from the rust_library target's
-# `name` attribute. For these it's easy to give the rlib a correct filename up
-# front and use bsmr's `ctx.actions.symlinked_dir` to collect them into a
-# directory. These do not go through this tool.
 #
 # Crates that use `crate_dynamic` have a crate name computed at build time, for
 # example by extracting the name from a .thrift file. Bsmr needs a filename at
 # analysis time for all artifacts, so we name those rlib files using a
-# provisional name and then this tool at build time will symlink them under the
-# real crate name that rustc will recognize.
+# provisional name and then this tool at build time will copy them under the
+# real crate name that rustc will recognize. Crates named during analysis are
+# collected with `ctx.actions.symlinked_dir` and do not go through this tool.
 #
 # Example:
 #
@@ -39,22 +34,18 @@
 #         --artifacts path/to/artifacts.json
 #
 # The input file artifacts.json is an array of pairs.
-# The first element is the rlib paths, the second element is an optional path to a file containing
+# The first element is the rlib path, the second element is the path to a file containing
 # the build-time crate name for the corresponding rlib.
 #
 #     [
 #         [ "../../libprovisional.rlib", "path/to/cratename" ],
-#         [ "../../libfoo.rlib", null ],
 #         ...
 #     ]
 #
 # The tool reads the crate name from the file at "path/to/cratename". Suppose it's
-# "thriftgenerated". It symlinks the given artifact as "0/libthriftgenerated.rlib"
+# "thriftgenerated". It copies the given artifact as "0/libthriftgenerated.rlib"
 # within the specified output directory. In the event of collisions, there might
 # be multiple dirs created.
-#
-# If the cratename is null, then the artifact is simply symlinked from the basename
-# (e.g., "0/libprovisional.rlib").
 #
 # --out-dir-relative-to-cwd is an optional path to the output directory that is relative to
 #                           the current working directory (cwd) of the tool that consumes this script's output.
@@ -63,6 +54,7 @@
 import argparse
 import json
 import os
+import shutil
 from pathlib import Path
 from typing import IO, NamedTuple, Optional
 
@@ -72,15 +64,6 @@ class Args(NamedTuple):
     out_dir: Path
     out_dir_relative_to_cwd: Optional[Path]
     artifacts: IO[str]
-
-
-def symlink_relative(link: Path, target: Path) -> None:
-    """Create a symlink from link_name to target.
-
-    The link is created by constructing a path to the target that is relative to link_name's parent.
-    """
-    target_relative = os.path.relpath(target, start=os.path.dirname(link))
-    os.symlink(target_relative, link)
 
 
 def main():
@@ -113,17 +96,11 @@ def main():
     deps_dirs = [{}]
 
     for artifact, crate_name in json.load(args.artifacts):
-        is_dynamic = crate_name is not None
-        if is_dynamic:
-            crate_name = Path(crate_name).read_text().strip()
-            original_filename = os.path.basename(artifact)
-            new_filename = "lib{}-{}".format(
-                crate_name,
-                original_filename.rsplit("-", 1)[1],
-            )
-            filename = new_filename
-        else:
-            filename = os.path.basename(artifact)
+        crate_name = Path(crate_name).read_text().strip()
+        filename = "lib{}-{}".format(
+            crate_name,
+            os.path.basename(artifact).rsplit("-", 1)[1],
+        )
 
         if filename in deps_dirs[-1]:
             deps_dirs.append({})
@@ -146,9 +123,8 @@ def main():
 
             flags += "-Ldependency={}\n".format(dependency_path)
             for filename, artifact in srcs.items():
-                # Create the symlinks in the directory (i.e., not the relative path)
-                # because this script is NOT executing relative to the cwd.
-                symlink_relative(directory.joinpath(filename), artifact)
+                # Cached outputs must retain their contents after the producer's inputs disappear.
+                shutil.copyfile(artifact, directory.joinpath(filename))
 
     args.out_dir.joinpath("dirs").write_text(flags)
 

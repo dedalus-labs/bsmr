@@ -38,6 +38,7 @@ use crate::execute::action_digest::ActionDigest;
 mod flight;
 mod inventory;
 mod lock;
+pub mod transport;
 
 pub use flight::LocalActionLease;
 pub use flight::LocalActionPin;

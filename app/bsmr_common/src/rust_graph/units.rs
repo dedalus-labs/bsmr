@@ -24,6 +24,8 @@ pub(super) struct Graph {
     pub rustc_version: String,
     /// Captured root used to rebase path-package sources.
     pub workspace_root: PathBuf,
+    /// Cargo package boundaries, including unselected workspace members.
+    pub workspace_packages: Vec<PathBuf>,
     /// Indices of the selected entrypoint units.
     pub roots: Vec<usize>,
     /// Configured compilation units with graph-local dependency indices.
@@ -37,6 +39,8 @@ pub(super) struct Unit {
     pub package_id: String,
     /// Original package name before crate-name normalization.
     pub package_name: String,
+    /// Cargo version passed literally to the build-script rule.
+    pub package_version: String,
     /// Native library link ownership declared by the package.
     pub package_links: Option<String>,
     /// Cargo package variables supplied to compilation.
@@ -45,6 +49,8 @@ pub(super) struct Unit {
     pub source: Source,
     /// Cargo-discovered crate target.
     pub target: Target,
+    /// Whether this target uses rustc's test harness rather than its own main.
+    pub harness: bool,
     /// Host or target context selected by Cargo.
     pub platform: Option<String>,
     /// Compiler operation whose dependency context Cargo must resolve.
@@ -76,21 +82,30 @@ pub(super) enum Mode {
 
 #[derive(Deserialize)]
 pub(super) struct Source {
-    /// Source or dependency classification preserved from Cargo.
-    pub kind: SourceKind,
     /// Package root whose relative files belong to one source tree.
     pub root: PathBuf,
+    /// Immutable source ownership exported by the planner.
+    pub artifact: SourceArtifact,
 }
 
 #[derive(Deserialize)]
-#[serde(rename_all = "kebab-case")]
-pub(super) enum SourceKind {
-    Path,
-    Git,
-    Registry,
-    SparseRegistry,
-    LocalRegistry,
-    Directory,
+#[serde(tag = "kind", rename_all = "kebab-case")]
+pub(super) enum SourceArtifact {
+    /// A package inside the captured workspace.
+    Workspace,
+    /// Registry bytes verified against Cargo.lock.
+    Archive {
+        /// Credential-free archive endpoint.
+        url: String,
+        /// Expected SHA-256 before extraction.
+        sha256: String,
+        /// Expected archive length in bytes.
+        size: u64,
+        /// Source-tree directory inside the archive.
+        prefix: String,
+        /// Package directory relative to that source tree.
+        package: String,
+    },
 }
 
 #[derive(Deserialize)]
@@ -126,8 +141,8 @@ pub(super) struct Dependency {
 pub(super) struct Profile {
     /// Effective compiler optimization level.
     pub opt_level: String,
-    /// Cross-crate optimization policy, currently restricted to off.
-    pub lto: String,
+    /// Link-time optimization policy selected by Cargo.
+    pub lto: Lto,
     /// Alternate compiler backend, currently unsupported.
     pub codegen_backend: Option<String>,
     /// Number of compiler partitions.
@@ -155,6 +170,22 @@ pub(super) enum DebugInfo {
     Named(String),
 }
 
+/// Cargo distinguishes disabled optimization from optimization within one crate.
+#[derive(Clone, Copy, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub(super) enum Lto {
+    /// Disable even optimization between one crate's codegen units.
+    Off,
+    /// Let rustc optimize within one crate when its profile permits it.
+    #[serde(rename = "false")]
+    Local,
+    /// Optimize the complete dependency graph together.
+    #[serde(alias = "true")]
+    Fat,
+    /// Optimize across crates using LLVM's thin LTO mode.
+    Thin,
+}
+
 #[derive(Deserialize)]
 #[serde(rename_all = "lowercase")]
 pub(super) enum StripSetting {
@@ -172,17 +203,20 @@ impl Graph {
     /// Check the protocol and index boundary without recreating Cargo's resolver.
     pub fn parse(bytes: &[u8]) -> Result<Self, RustGraphError> {
         let graph: Self = serde_json::from_slice(bytes)?;
-        if graph.schema_version != 1
+        if graph.schema_version != 5
             || graph.cargo_library != "0.98.0"
-            || !graph
-                .rustc_version
-                .lines()
-                .any(|line| ["release: 1.97.1", "release: 1.96.0-nightly"].contains(&line))
+            || !graph.rustc_version.lines().any(|line| {
+                [
+                    "release: 1.97.1",
+                    "release: 1.98.0",
+                    "release: 1.96.0-nightly",
+                ]
+                .contains(&line)
+            })
         {
             return Err(unsupported("planner", "configured graph protocol version"));
         }
-        if graph.roots.is_empty()
-            || graph.roots.iter().any(|index| *index >= graph.units.len())
+        if graph.roots.iter().any(|index| *index >= graph.units.len())
             || graph.units.iter().any(|unit| {
                 unit.dependencies
                     .iter()

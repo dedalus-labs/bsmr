@@ -19,6 +19,7 @@
 use std::sync::Arc;
 
 use async_trait::async_trait;
+use bsmr_common::execution::ExecutionPlatformKey;
 use bsmr_core::execution_types::executor_config::CommandExecutorConfig;
 use bsmr_core::fs::artifact_path_resolver::ArtifactFs;
 use bsmr_error::BsmrErrorContext;
@@ -77,10 +78,12 @@ pub trait DiceHasCommandExecutor {
 
 #[async_trait]
 impl DiceHasCommandExecutor for DiceComputations<'_> {
+    /// Track execution identity before reading the per-command executor factory.
     async fn get_command_executor_from_dice(
         &mut self,
         config: &CommandExecutorConfig,
     ) -> bsmr_error::Result<CommandExecutorResponse> {
+        drop(self.compute(&ExecutionPlatformKey).await?);
         let artifact_fs = self.get_artifact_fs().await?;
         let holder = self
             .per_transaction_data()

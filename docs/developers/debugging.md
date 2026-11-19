@@ -35,6 +35,9 @@ To run the binary in another checkout, use `cargo build --locked --bin bsmr`,
 then invoke the absolute path to `target/debug/bsmr` from that checkout.
 On Windows, the binary is `target/debug/bsmr.exe`.
 
+Rust builds also need the Cargo planner in `target/debug`. Build it once with
+`cargo +1.98.0 build --locked --manifest-path tools/cargo/Cargo.toml --target-dir target`.
+
 ## Logging
 
 bsmr emits most of its logs in a structured form that is best interacted with via `bsmr logs`

@@ -1,0 +1,164 @@
+<!-- ===----------------------------------------------------------------------=== -->
+<!-- Copyright (c) 2026 Dedalus Labs, Inc. and its contributors -->
+<!-- SPDX-License-Identifier: Apache-2.0 -->
+<!-- ===----------------------------------------------------------------------=== -->
+
+<!-- Documents namespace execution, verified runtime snapshots and their limits. -->
+
+# Namespace runtime
+
+Select the namespace backend explicitly and provide its runtime manifest:
+
+```ini
+[sandbox]
+backend = namespace
+runtime = /absolute/path/runtime.json
+```
+
+Then run `bsmr build --sandbox TARGET`. The launcher catalog supports Linux
+aarch64 and x86-64 with Ubuntu Bubblewrap 0.9.0-1ubuntu0.3. The host must permit
+unprivileged user, mount, PID, network, IPC and UTS namespaces.
+
+The runtime loader verifies and copies the launcher and root filesystem before
+an executor can use them. The caller supplies a trusted launcher digest
+independently of the manifest. A project cannot authorize a different launcher
+by changing both the file and its recorded digest.
+
+```text
+trusted launcher digest + manifest + pinned files
+    -> verify bytes while copying
+    -> private launcher and root filesystem
+```
+
+The JSON manifest maps exactly two names, `bubblewrap` and `rootfs`, to the
+existing `BundleArtifact` shape: `path` and `sha256`. Each path names one file
+beside the manifest. The launcher must match the caller's trusted digest.
+Both files must match their recorded SHA-256 digests.
+
+The root filesystem is an uncompressed tar archive containing regular files,
+directories and hard links to earlier regular files. Hard links give multiple
+paths one file's immutable bytes. Their headers cannot change its permissions.
+Symlinks, links to other links, duplicate entries and non-relative paths are rejected.
+The packager must materialize selected symlink targets inside the archive.
+Each pinned file and the total regular-file payload are limited to 1 GiB.
+Verification streams through a 64 KiB buffer. The archive is limited to 50,000
+entries, including hard links. The loader creates mount directories at `/workspace`, `/tmp`,
+`/dev` and `/proc` before the root becomes read-only.
+
+| Interface | Contract |
+| --- | --- |
+| `Runtime::load` | Verify pins and retain a private snapshot. |
+| `Runtime::launcher` | Return the verified launcher path. |
+| `Runtime::root` | Return the root filesystem for a read-only mount. |
+| `Runtime::digest` | Return an identity derived from both file digests, independent of host paths. |
+
+The daemon retains its most recently verified snapshot between commands. Each
+command rereads and hashes both pinned input files before reusing it. Changed
+or corrupted bytes cannot pass through an unchanged manifest. Matching bytes
+reuse the private extracted tree without another copy or extraction.
+
+A new runtime replaces the retained reference only after verification succeeds.
+Commands already using the previous runtime keep their own references through
+descendant cleanup and output import. Verification and extraction run outside
+the async command thread and without holding the cache lock. Concurrent cold
+loads can prepare separate snapshots. The cache retains only the latest one.
+Graceful daemon shutdown drains requests and releases the retained snapshot.
+
+The snapshot lasts until its final `Runtime` owner is dropped. Each action receives
+the runtime as its read-only root and a verified copy of its declared inputs
+at `/workspace`. Input files stream directly into a private tree through the
+same digest verifier used by VM transport. There is no intermediate tar archive.
+Executable modes and modification times retain the transport's normalized values.
+The executor mounts private writable directories at output
+parents and the declared scratch path. Input files and trees beneath these
+parents receive read-only mounts. Input and output artifacts cannot overlap.
+An input symlink that would lie in a writable directory is rejected.
+
+Input staging verifies each distinct file once per command. The executor owns
+the verified copies in a private directory on the output filesystem. Later
+actions link those copies into their read-only input mounts. The key includes
+the content digest and executable bit. Unverified files never enter this index.
+These links cannot reach mutable project files or writable action outputs.
+Dropping the command's cache does not revoke an active action's inode references.
+
+The action receives its declared environment plus fixed `PATH`, `HOME` and
+temporary-directory defaults. It cannot inherit the daemon environment or use
+persistent workers, incremental outputs, local resources or host networking.
+No host library directories are mounted. Programs such as `/usr/bin/env`
+resolve inside the verified runtime. A fresh `/proc` mount exposes only the
+action's PID namespace. A child may update its own OOM score, while `/proc/sys`,
+`/proc/sysrq-trigger`, `/proc/irq`, `/proc/bus`, and `/proc/fs` remain read-only.
+The `declared-inputs-v3` profile separates these results from the earlier mount policy.
+Rust's linker uses `/proc/self/exe` to find
+its executable. Process root links refer to the action's filesystem. Standard
+streams are the executor's capture pipes. Host processes are not exposed.
+
+Namespaces isolate filesystem inputs and process lifetime. They do not make
+kernel observations deterministic. Clocks, randomness and procfs resource
+statistics are not declared file inputs. Build tools must not use those values
+to select different output contents for an otherwise identical action.
+
+Bubblewrap owns the PID namespace and terminates its descendants when the
+action finishes or the existing local process runner cancels it. Only validated
+declared outputs move back into the project. Output ancestor symlinks and links
+that escape a declared output root are rejected before import.
+
+The existing local scheduler and optional cgroup controls remain responsible
+for resource allocation. This backend does not impose its own aggregate CPU,
+memory, process-count or live disk quota. Namespace inputs retain the
+128-component path limit. They stream the already analyzed directory tree
+without the VM archive transport's entry or byte ceilings. Input storage comes
+from the worker's filesystem and a
+failed transfer prevents execution. Imported outputs retain the 1 GiB limit.
+Output validation runs after execution and does not cap live writes.
+
+Runtime digests and canonical execution properties participate in DICE reuse,
+local dependency-file reuse and action-cache identity. Policy semantic changes
+must bump `declared-inputs-v3`. Host paths and temporary snapshot names do not
+participate in this identity.
+
+## Native Rust package code
+
+Configured Cargo graphs admit procedural macros and build scripts only with the verified
+`declared-inputs-v3` namespace profile. They use the inherited Rust library and
+macro-alias and build-script rules with the selected compiler. Native link metadata
+dependencies and unimplemented script directives produce explicit errors.
+
+The planner exports Cargo's resolved profile and target configuration. Scripts
+receive literal package metadata, declared source files and `NUM_JOBS=1`.
+Each script owns a copied working directory and `OUT_DIR`. Consumers compile
+that returned source tree, so script changes remain isolated from the checkout.
+Compiler probes receive the selected standard library. First-party scripts use
+the [captured checkout](../../../../../docs/users/languages/rust/checkout.md),
+including its declared Git inputs.
+
+Graph analysis depends on the same verified execution identity as action reuse.
+Changing back to host execution rejects the macro graph before an earlier
+isolated result can be reused. The runtime must contain Python, the linker
+driver and its libraries, plus `tar` and `gzip` for compiler archive extraction.
+
+The real Cargo regression covers declared macro inputs, edits, warm builds,
+reuse in a new checkout, rejection of host execution after a cached isolated
+build, and repeated rejection of undeclared external reads:
+
+```console
+python3 test/rust/macros.py target/debug/bsmr /absolute/path/runtime.json
+python3 test/rust/scripts.py target/debug/bsmr /absolute/path/runtime.json
+```
+
+## Verification
+
+Sandboxed tests receive only their declared environment and the runtime's
+standard paths. The test orchestrator does not request host-environment
+inheritance for sandbox execution. Ordinary local tests retain their existing
+host allowlist. The namespace regression exercises the real test runner.
+
+```console
+cargo build --locked -p bsmr_execute_impl
+cargo test --locked -p bsmr_execute_impl executors::namespace::runtime::tests
+python3 test/sandbox/namespace.py target/debug/bsmr /absolute/path/runtime.json
+```
+
+The executor reuses the declared input and output contracts in
+[Firecracker execution](../firecracker.rs) and the
+[Bubblewrap namespace interface](https://github.com/containers/bubblewrap/blob/main/bwrap.xml).

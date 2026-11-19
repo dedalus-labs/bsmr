@@ -57,11 +57,10 @@ use bsmr_execute_impl::executors::action_cache::ActionCacheChecker;
 use bsmr_execute_impl::executors::action_cache::RemoteDepFileCacheChecker;
 use bsmr_execute_impl::executors::action_cache_upload_permission_checker::ActionCacheUploadPermissionChecker;
 use bsmr_execute_impl::executors::caching::CacheUploader;
-use bsmr_execute_impl::executors::firecracker::FirecrackerExecutor;
-use bsmr_execute_impl::executors::firecracker::sandbox_platform_properties;
 use bsmr_execute_impl::executors::hybrid::FallbackTracker;
 use bsmr_execute_impl::executors::hybrid::HybridExecutor;
 use bsmr_execute_impl::executors::local::ForkserverAccess;
+use bsmr_execute_impl::executors::local::LocalExecutionBackend;
 use bsmr_execute_impl::executors::local::LocalExecutor;
 use bsmr_execute_impl::executors::local_cache::LocalActionCacheChecker;
 use bsmr_execute_impl::executors::local_cache::LocalActionCacheUploader;
@@ -108,7 +107,7 @@ pub struct CommandExecutorFactory {
     deduplicate_get_digests_ttl_calls: bool,
     output_trees_download_config: OutputTreesDownloadConfig,
     daemon_id: DaemonId,
-    firecracker: Option<Arc<FirecrackerExecutor>>,
+    backend: LocalExecutionBackend,
 }
 
 impl CommandExecutorFactory {
@@ -135,7 +134,7 @@ impl CommandExecutorFactory {
         deduplicate_get_digests_ttl_calls: bool,
         output_trees_download_config: OutputTreesDownloadConfig,
         daemon_id: DaemonId,
-        firecracker: Option<Arc<FirecrackerExecutor>>,
+        backend: LocalExecutionBackend,
     ) -> Self {
         let cache_upload_permission_checker = Arc::new(ActionCacheUploadPermissionChecker::new());
 
@@ -164,7 +163,7 @@ impl CommandExecutorFactory {
             deduplicate_get_digests_ttl_calls,
             output_trees_download_config,
             daemon_id,
-            firecracker,
+            backend,
         }
     }
 
@@ -190,6 +189,7 @@ enum ExecutorCompatibilityError {
 }
 
 impl HasCommandExecutor for CommandExecutorFactory {
+    /// Bind the selected backend and its cache policy to one executor.
     fn get_command_executor(
         &self,
         artifact_fs: &ArtifactFs,
@@ -248,30 +248,31 @@ impl HasCommandExecutor for CommandExecutorFactory {
             Ok((checker, uploader))
         };
 
-        if let Some(firecracker) = &self.firecracker {
+        if !matches!(self.backend, LocalExecutionBackend::Host) {
             if self.strategy.ban_local() {
                 return Err(ExecutorCompatibilityError::LocalIncompatible(self.strategy).into());
             }
-            let platform = remote_execution::Platform {
-                properties: sandbox_platform_properties(firecracker.environment_digest())
-                    .into_iter()
-                    .map(|(name, value)| remote_execution::Property {
-                        name: name.to_owned(),
-                        value: value.to_owned(),
-                    })
-                    .collect(),
+            let (action_cache_checker, cache_uploader) = match &self.backend {
+                LocalExecutionBackend::Namespace(_) => local_cache_new()?,
+                LocalExecutionBackend::Firecracker(_) => (
+                    Arc::new(NoOpCommandOptionalExecutor {})
+                        as Arc<dyn PreparedCommandOptionalExecutor>,
+                    Arc::new(NoOpCacheUploader {})
+                        as Arc<dyn bsmr_execute::execute::cache_uploader::UploadCache>,
+                ),
+                LocalExecutionBackend::Host => unreachable!("host executor handled below"),
             };
             return Ok(CommandExecutorResponse {
                 executor: Arc::new(
                     local_executor_new(&LocalExecutorOptions {
                         use_persistent_workers: false,
                     })
-                    .with_firecracker(firecracker.dupe()),
+                    .with_backend(self.backend.clone()),
                 ),
-                platform,
-                action_cache_checker: Arc::new(NoOpCommandOptionalExecutor {}),
+                platform: self.backend.platform(),
+                action_cache_checker,
                 remote_dep_file_cache_checker: Arc::new(NoOpCommandOptionalExecutor {}),
-                cache_uploader: Arc::new(NoOpCacheUploader {}),
+                cache_uploader,
                 output_trees_download_config: self.output_trees_download_config.dupe(),
             });
         }

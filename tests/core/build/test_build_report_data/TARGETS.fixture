@@ -1,4 +1,4 @@
-load(":rules.bzl", "mkdir", "touch_file")
+load(":rules.bzl", "cacheable_outputs", "mkdir", "source_output", "touch_file")
 
 constraint_setting(
     name = "constraint",
@@ -37,4 +37,13 @@ touch_file(
 
 mkdir(
     name = "dir1",
+)
+
+cacheable_outputs(
+    name = "cacheable_outputs",
+)
+
+source_output(
+    name = "source_output",
+    src = "input.txt",
 )

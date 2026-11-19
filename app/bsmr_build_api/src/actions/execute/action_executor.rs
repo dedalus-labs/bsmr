@@ -119,10 +119,14 @@ impl OutputSize for ActionOutputs {
     }
 }
 
-#[derive(Derivative, Debug, Allocative, pagable::Pagable)]
+#[derive(Clone, Derivative, Debug, Allocative, pagable::Pagable)]
 #[derivative(PartialEq, Eq)]
 struct ActionOutputsData {
     outputs: BsmrIndexMap<BuildArtifactPath, ArtifactValue>,
+    // This persisted digest is a fallback for cache hits. Current executions are read from the
+    // per-build event holder, so diagnostic identity does not invalidate byte-identical outputs.
+    #[derivative(PartialEq = "ignore")]
+    action_digest: Option<String>,
 }
 
 /// Metadata associated with the execution of this action.
@@ -242,7 +246,10 @@ impl ActionExecutionKind {
 
 impl ActionOutputs {
     pub fn new(outputs: BsmrIndexMap<BuildArtifactPath, ArtifactValue>) -> Self {
-        Self(Arc::new(ActionOutputsData { outputs }))
+        Self(Arc::new(ActionOutputsData {
+            outputs,
+            action_digest: None,
+        }))
     }
 
     pub fn from_single(artifact: BuildArtifactPath, value: ArtifactValue) -> Self {
@@ -266,6 +273,17 @@ impl ActionOutputs {
 
     pub fn values(&self) -> impl Iterator<Item = &ArtifactValue> {
         self.0.outputs.values()
+    }
+
+    /// Returns the canonical digest of the command action that produced these outputs.
+    pub fn action_digest(&self) -> Option<&str> {
+        self.0.action_digest.as_deref()
+    }
+
+    /// Attaches the canonical action identity to the cached output value.
+    pub fn with_action_digest(mut self, action_digest: Option<String>) -> Self {
+        Arc::make_mut(&mut self.0).action_digest = action_digest;
+        self
     }
 }
 
@@ -1126,6 +1144,16 @@ mod tests {
             })
             .collect();
         assert_eq!(res.0, ActionOutputs::new(outputs));
+    }
+
+    #[test]
+    fn action_digest_does_not_affect_output_equality() {
+        let first =
+            ActionOutputs::new(Default::default()).with_action_digest(Some("aaaa:1".to_owned()));
+        let second =
+            ActionOutputs::new(Default::default()).with_action_digest(Some("bbbb:1".to_owned()));
+
+        assert_eq!(first, second);
     }
 
     #[test]

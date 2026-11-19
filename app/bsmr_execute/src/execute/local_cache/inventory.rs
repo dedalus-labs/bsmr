@@ -64,7 +64,7 @@ impl LocalActionCache {
     }
 
     /// Scans the cache while the caller holds the shared or exclusive lock.
-    fn inventory_unlocked(
+    pub(super) fn inventory_unlocked(
         &self,
         digest_config: DigestConfig,
     ) -> bsmr_error::Result<LocalCacheInventory> {
@@ -243,7 +243,7 @@ fn matching_entries(
 }
 
 /// Recognizes temporary files created beside one immutable cache key.
-fn is_temporary_key(path: &Path) -> bool {
+pub(super) fn is_temporary_key(path: &Path) -> bool {
     path.file_name()
         .and_then(|name| name.to_str())
         .and_then(|name| name.split_once(".tmp."))

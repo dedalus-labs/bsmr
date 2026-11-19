@@ -219,20 +219,39 @@ pub enum PerBuildEvent {
 
 pub(crate) struct DetailedAggregatedMetricsPerBuildEventsHolder {
     events: Mutex<Vec<PerBuildEvent>>,
+    action_digests: Mutex<bsmr_hash::BsmrHashMap<ActionKey, String>>,
 }
 
 impl DetailedAggregatedMetricsPerBuildEventsHolder {
     pub(crate) fn new() -> Self {
         Self {
             events: Mutex::new(Vec::new()),
+            action_digests: Mutex::new(bsmr_hash::BsmrHashMap::default()),
         }
     }
 
-    pub(crate) fn action_executed(&self, key: &ActionKey) {
+    /// Records the action event and its current digest even when metrics are disabled.
+    pub(crate) fn action_executed(&self, metrics: &ActionExecutionMetrics) {
+        {
+            let mut action_digests = self.action_digests.lock().unwrap();
+            match &metrics.action_digest {
+                Some(action_digest) => {
+                    action_digests.insert(metrics.key.dupe(), action_digest.clone());
+                }
+                None => {
+                    action_digests.remove(&metrics.key);
+                }
+            }
+        }
         self.events
             .lock()
             .unwrap()
-            .push(PerBuildEvent::ActionExecuted(key.dupe()));
+            .push(PerBuildEvent::ActionExecuted(metrics.key.dupe()));
+    }
+
+    /// Returns the digest observed for this action in the current transaction.
+    pub(crate) fn current_action_digest(&self, key: &ActionKey) -> Option<String> {
+        self.action_digests.lock().unwrap().get(key).cloned()
     }
 
     pub(crate) fn top_level_target(&self, spec: TopLevelTargetSpec) {
@@ -258,5 +277,50 @@ impl DetailedAggregatedMetricsPerBuildEventsHolder {
         }
 
         Ok(events)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use bsmr_artifact::actions::key::ActionIndex;
+    use bsmr_core::deferred::key::DeferredHolderKey;
+
+    use super::*;
+
+    /// Constructs the minimal action metrics needed by the holder test.
+    fn metrics(key: ActionKey, action_digest: Option<&str>) -> ActionExecutionMetrics {
+        ActionExecutionMetrics {
+            key,
+            action_digest: action_digest.map(str::to_owned),
+            execution_time_ms: 0,
+            execution_kind: bsmr_data::ActionExecutionKind::Simple,
+            output_size_bytes: 0,
+            memory_peak: None,
+            re_platform_name: None,
+        }
+    }
+
+    #[test]
+    fn records_current_action_digest_without_metrics_tracker() {
+        let holder = DetailedAggregatedMetricsPerBuildEventsHolder::new();
+        let key = ActionKey::new(
+            DeferredHolderKey::testing_new("root//pkg:target"),
+            ActionIndex::new(0),
+        );
+
+        holder.action_executed(&metrics(key.dupe(), Some("aaaa:1")));
+        assert_eq!(
+            holder.current_action_digest(&key).as_deref(),
+            Some("aaaa:1")
+        );
+
+        holder.action_executed(&metrics(key.dupe(), Some("bbbb:1")));
+        assert_eq!(
+            holder.current_action_digest(&key).as_deref(),
+            Some("bbbb:1")
+        );
+
+        holder.action_executed(&metrics(key.dupe(), None));
+        assert_eq!(holder.current_action_digest(&key), None);
     }
 }

@@ -37,7 +37,7 @@ use crate::invocation_paths_result::InvocationPathsResult;
 #[derive(Debug, bsmr_error::Error)]
 enum BsmrCliError {
     #[error(
-        "Couldn't find a Bessemer project root for directory `{}`. Expected to find a .bsmr file.", _0.path().display()
+        "Couldn't find a Bessemer project root for directory `{}`. Expected .bsmr or Cargo.toml.", _0.path().display()
     )]
     #[bsmr(tag = NoBsmrRoot)]
     NoBsmrRoot(AbsWorkingDir),
@@ -72,12 +72,14 @@ impl InvocationRoots {
 /// The nearest `.bsmr` with `[project] root = .` is both config and root marker.
 fn get_roots(from: &AbsWorkingDir) -> bsmr_error::Result<Option<InvocationRoots>> {
     let home_dir = dirs::home_dir();
+    let mut cargo = false;
     for curr in from.path().ancestors() {
         // Never treat a user's home-level configuration as a project.
         if home_dir.as_ref().is_some_and(|home| home == curr.as_path()) {
             break;
         }
         let project_file = curr.join(FileName::unchecked_new(".bsmr"));
+        cargo |= fs_util::try_exists(curr.join(FileName::unchecked_new("Cargo.toml")))?;
         if fs_util::try_exists(&project_file)?
             && has_project_marker(&fs_util::read_to_string(&project_file).categorize_internal()?)
         {
@@ -91,6 +93,14 @@ fn get_roots(from: &AbsWorkingDir) -> bsmr_error::Result<Option<InvocationRoots>
                 cwd: rel_cwd.into(),
             }));
         }
+    }
+    if cargo {
+        let root = AbsNormPathBuf::new(crate::rust_graph::project::root(from.path().as_path())?)?;
+        let cwd = from.path().strip_prefix(&root)?.into_owned().into();
+        return Ok(Some(InvocationRoots {
+            project_root: ProjectRoot::new_unchecked(root),
+            cwd,
+        }));
     }
     Ok(None)
 }
