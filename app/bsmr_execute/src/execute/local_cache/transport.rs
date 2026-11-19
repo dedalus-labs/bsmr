@@ -189,7 +189,7 @@ impl LocalActionCache {
 pub fn sha256_file(path: &Path) -> bsmr_error::Result<String> {
     let mut input = File::open(path).map_err(|error| io_error("open for sha256", path, error))?;
     let mut digest = Sha256::new();
-    let mut buffer = [0_u8; 64 * 1024];
+    let mut buffer = vec![0_u8; 64 * 1024].into_boxed_slice();
     loop {
         let length = input
             .read(&mut buffer)
@@ -534,7 +534,7 @@ fn import_file(
         .map_err(|error| io_error("create imported cache file", destination, error))?;
     let mut sha256 = Sha256::new();
     let mut size = 0_u64;
-    let mut buffer = [0_u8; 64 * 1024];
+    let mut buffer = vec![0_u8; 64 * 1024].into_boxed_slice();
     loop {
         let length = input
             .read(&mut buffer)
@@ -614,9 +614,16 @@ fn write_manifest(path: &Path, manifest: &LocalCacheExportManifest) -> bsmr_erro
 fn read_manifest(path: &Path) -> bsmr_error::Result<LocalCacheExportManifest> {
     let mut input = open_package_file(path)?;
     let mut bytes = Vec::new();
-    input
-        .read_to_end(&mut bytes)
-        .map_err(|error| io_error("read transport manifest", path, error))?;
+    let mut buffer = vec![0_u8; 64 * 1024].into_boxed_slice();
+    loop {
+        let length = input
+            .read(&mut buffer)
+            .map_err(|error| io_error("read transport manifest", path, error))?;
+        if length == 0 {
+            break;
+        }
+        bytes.extend_from_slice(&buffer[..length]);
+    }
     serde_json::from_slice(&bytes)
         .map_err(|error| TransportError::Manifest(error.to_string()).into())
 }
