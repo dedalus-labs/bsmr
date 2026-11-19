@@ -134,7 +134,7 @@ impl LocalActionCache {
 pub fn sha256_file(path: &Path) -> bsmr_error::Result<String> {
     let mut input = File::open(path).map_err(|error| io_error("open for sha256", path, error))?;
     let mut digest = Sha256::new();
-    let mut buffer = [0_u8; 64 * 1024];
+    let mut buffer = vec![0_u8; 64 * 1024].into_boxed_slice();
     loop {
         let length = input
             .read(&mut buffer)
