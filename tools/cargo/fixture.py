@@ -19,7 +19,7 @@ def main() -> None:
     with tempfile.TemporaryDirectory(prefix="cargo-fixture-") as temporary:
         env = {"PATH": f"{rustc.parent}:/usr/bin:/bin", "CARGO_HOME": temporary, "RUSTC": str(rustc)}
         subprocess.run([rustc.parent / "cargo", "generate-lockfile", "--offline"], cwd=root, env=env, check=True, capture_output=True)
-        request = {"manifest": str(root / "Cargo.toml"), "package": "native_fixture", "mode": "build", "target_filter": {"kind": "library"}, "source_policy": "offline", "features": [], "default_features": True, "all_features": False, "target": None, "profile": "dev", "cargo_home": temporary, "rustc": str(rustc), "target_directory": str(Path(temporary) / "target")}
+        request = {"manifest": str(root / "Cargo.toml"), "packages": ["native_fixture"], "mode": "build", "target_filter": {"kind": "library"}, "source_policy": "offline", "features": [], "default_features": True, "all_features": False, "target": None, "profile": "dev", "cargo_home": temporary, "rustc": str(rustc), "target_directory": str(Path(temporary) / "target")}
         result = subprocess.run([str(Path(sys.argv[1]).resolve())], input=json.dumps(request), text=True, capture_output=True, check=True, env=env)
         graph = json.loads(result.stdout.replace(str(root), "/workspace"))
         graph["rustc_version"] = "release: 1.97.1\n"

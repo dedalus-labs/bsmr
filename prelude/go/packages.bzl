@@ -169,11 +169,13 @@ def make_compile_importcfg(
 
     return importcfg.with_associated_artifacts(a_files)
 
-def make_link_importcfg(actions: AnalysisActions, deps: dict[str, GoPkg], shared: bool) -> Artifact:
+def make_link_importcfg(actions: AnalysisActions, deps: dict[str, GoPkg], modinfo: str | None, shared: bool) -> Artifact:
     content, a_files = [], []
     for name_, pkg_ in pkg_artifacts(deps, shared).items():
         content.append(cmd_args("packagefile ", name_, "=", pkg_, delimiter = "", hidden = [pkg_]))
         a_files.append(pkg_)
+    if modinfo != None:
+        content.append(modinfo)
 
     importcfg = actions.declare_output("{}.importcfg".format("shared" if shared else "non_shared"), has_content_based_path = True)
     actions.write(importcfg, content)

@@ -1816,7 +1816,6 @@ impl BsmrTestOrchestrator<'_> {
             .0;
         request = request
             .with_working_directory(cwd)
-            .with_local_environment_inheritance(EnvironmentInheritance::test_allowlist())
             .with_disable_miniperf(!has_resource_control)
             .with_worker(worker)
             .with_remote_execution_custom_image(re_dynamic_image)
@@ -1824,6 +1823,10 @@ impl BsmrTestOrchestrator<'_> {
             .with_required_local_resources(required_local_resources)?
             .with_disable_local_network_isolation(disable_local_network_isolation)
             .with_is_test();
+        if !dice.per_transaction_data().get_run_action_knobs().sandboxed {
+            request = request
+                .with_local_environment_inheritance(EnvironmentInheritance::test_allowlist());
+        }
         if let Some(timeout) = timeout {
             request = request.with_timeout(timeout)
         }

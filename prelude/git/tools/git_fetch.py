@@ -1,3 +1,9 @@
+# ===----------------------------------------------------------------------===
+# Upstream-Source: facebook/buck2@1560aca2002865cd73d7cafb22c705cfb640b2bc
+# Modifications Copyright (c) 2026 Dedalus Labs, Inc. and its contributors
+# SPDX-License-Identifier: Apache-2.0
+# ===----------------------------------------------------------------------===
+
 # Copyright (c) Meta Platforms, Inc. and affiliates.
 #
 # This source code is dual-licensed under either the MIT license found in the
@@ -7,6 +13,7 @@
 # above-listed licenses.
 
 import argparse
+import os
 import shutil
 import subprocess
 import sys
@@ -37,6 +44,7 @@ def _find_git(explicit: Optional[str] = None) -> str:
 
 
 def run(cmd: List[str], check: bool, retries: int = MAX_RETRIES) -> str:
+    """Fetch pinned sources without ambient Git filters, hooks, or config overrides."""
     print(f"Running {cmd}", file=sys.stderr)
     try:
         proc = subprocess.run(
@@ -45,6 +53,13 @@ def run(cmd: List[str], check: bool, retries: int = MAX_RETRIES) -> str:
             stderr=subprocess.PIPE,
             encoding="utf-8",
             check=check,
+            env={
+                **{key: value for key, value in os.environ.items() if not key.startswith("GIT_")},
+                "GIT_CONFIG_GLOBAL": os.devnull,
+                "GIT_CONFIG_SYSTEM": os.devnull,
+                "GIT_ATTR_NOSYSTEM": "1",
+                "GIT_TERMINAL_PROMPT": "0",
+            },
         )
     except OSError as ex:
         print(ex, file=sys.stderr)
@@ -92,6 +107,7 @@ def git_configure(git: List[str]):
 
 
 def main() -> None:
+    """Materialize one exact commit using only repository-owned checkout settings."""
     args = arg_parse()
 
     args.work_tree.mkdir(exist_ok=True)
@@ -103,7 +119,7 @@ def main() -> None:
     else:
         object_format_args = ["--object-format", args.object_format]
 
-    run([*git, "init"] + object_format_args, check=True)
+    run([*git, "init", "--template="] + object_format_args, check=True)
     git_configure(git)
     run([*git, "remote", "remove", "origin"], check=False)
     run([*git, "remote", "add", "origin", args.repo], check=True)

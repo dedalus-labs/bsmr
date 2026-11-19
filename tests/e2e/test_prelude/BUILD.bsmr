@@ -4,14 +4,20 @@
 # SPDX-License-Identifier: Apache-2.0
 # ===----------------------------------------------------------------------===
 
+load(":cxx_toolchain_tests.bzl", "test_default_linker_flags")
 load(":graph_utils_tests.bzl", "test_find_cycle")
 load(":headers_tests.bzl", "test_infer_include_prefix")
 load(":link_info_tests.bzl", "test_get_lib_output_style")
+load(":rust_toolchain_tests.bzl", "test_rust_toolchain_configuration")
 
 oncall("build_infra")
+
+test_default_linker_flags()
 
 test_get_lib_output_style()
 
 test_find_cycle()
 
 test_infer_include_prefix()
+
+test_rust_toolchain_configuration()

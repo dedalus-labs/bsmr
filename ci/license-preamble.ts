@@ -37,6 +37,12 @@ function brief(path: string): string {
 		["ci/distribute.mjs", "Builds the engine and Cargo planner for one release target."],
 		[".github/actions/typescript/cache/dist/index.js", "Runs the native TypeScript cache verification action."],
 		[".github/actions/typescript/cache/src/index.ts", "Implements the native TypeScript cache verification action."],
+		[".github/actions/oci/cache/dist/index.js", "Runs native OCI cache qualification."],
+		[".github/actions/oci/cache/src/index.ts", "Implements native OCI cache qualification."],
+		[".github/actions/runner/build/src/index.ts", "Implements the approved runner lifecycle action."],
+		[".github/actions/rust/install/src/index.ts", "Installs verified native Rust tooling."],
+		[".github/actions/rust/install/dist/index.js", "Runs verified native Rust tooling installation."],
+		[".github/actions/runner/build/dist/index.js", "Runs the approved runner lifecycle action."],
 		[".bsmr", "Configures the root Bessemer cell."],
 		[".github/actions/ci/cli-reference/dist/index.js", "Runs the generated CLI-reference action."],
 		[".github/actions/ci/cli-reference/src/index.ts", "Implements the CLI-reference action."],
@@ -143,11 +149,14 @@ export function validateSource(source: Source): string | undefined {
 	if (source.provenance === "dedalus") {
 		const style = commentStyle(source.path);
 		const responsibility = header.slice(legal.length + 2).split("\n", 1)[0] ?? "";
-		const prefix = extname(source.path) === ".rs" && responsibility.startsWith("//! ") ? "//! " : style.prefix;
+		const docstring = extname(source.path) === ".py" ? /^[rRuU]?(?:"""|''')/.exec(responsibility)?.[0] : undefined;
+		const prefix = docstring ?? (extname(source.path) === ".rs" && responsibility.startsWith("//! ") ? "//! " : style.prefix);
+		const quote = docstring?.slice(-3);
+		const suffix = quote !== undefined && responsibility.endsWith(quote) ? quote : style.suffix;
 		const description = responsibility
-			.slice(prefix.length, responsibility.length - style.suffix.length)
+			.slice(prefix.length, responsibility.length - suffix.length)
 			.trim();
-		if (!responsibility.startsWith(prefix) || !responsibility.endsWith(style.suffix) || description === "") {
+		if (!responsibility.startsWith(prefix) || !responsibility.endsWith(suffix) || description === "") {
 			return `${source.path}: missing source responsibility`;
 		}
 	}

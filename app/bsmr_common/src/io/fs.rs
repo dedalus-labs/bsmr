@@ -331,11 +331,17 @@ impl ExactPathMetadata {
                             format!("Invalid symlink at `{}`: `{}`", curr.path, dest.display())
                         })?;
 
-                    // FIXME(JakobDegen): Remove the `unwrap`.
-                    ExactPathSymlinkMetadata::InternalSymlink(
-                        link_path,
-                        RelativePathBuf::from_system_path(dest).unwrap(),
-                    )
+                    // Unix symlink contents are bytes, not normalized Path components.
+                    #[cfg(unix)]
+                    let literal = RelativePathBuf::from(dest.to_str().ok_or_else(|| {
+                        bsmr_error::bsmr_error!(
+                            bsmr_error::ErrorTag::Input,
+                            "non-UTF-8 source symlink"
+                        )
+                    })?);
+                    #[cfg(not(unix))]
+                    let literal = RelativePathBuf::from_system_path(dest)?;
+                    ExactPathSymlinkMetadata::InternalSymlink(link_path, literal)
                 };
 
                 ExactPathMetadata::Symlink(out)
@@ -470,6 +476,21 @@ mod tests {
             }
         );
 
+        Ok(())
+    }
+
+    /// Git compares the literal link contents, even when two spellings resolve identically.
+    #[test]
+    fn invariant_source_symlink_retains_literal_target() -> bsmr_error::Result<()> {
+        let root = TempDir::new()?;
+        unix::fs::symlink("./target", root.path().join("link"))?;
+        assert_matches!(
+            read_path_metadata(AbsPath::new(root.path())?, ForwardRelativePath::new("link")?, FileDigestConfig::source(CasDigestConfig::testing_default())),
+            Ok(Some(RawPathMetadata::Symlink { to: RawSymlink::Relative(resolved, literal), .. })) => {
+                assert_eq!(resolved.as_str(), "target");
+                assert_eq!(literal.target().as_str(), "./target");
+            }
+        );
         Ok(())
     }
 

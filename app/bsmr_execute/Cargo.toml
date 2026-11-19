@@ -8,6 +8,7 @@ repository.workspace = true
 license.workspace = true
 
 [dependencies]
+url.workspace = true
 allocative.workspace = true
 anyhow.workspace = true
 async-recursion.workspace = true
@@ -57,6 +58,7 @@ prost.workspace = true
 ref-cast.workspace = true
 reflink-copy.workspace = true
 remote_execution.workspace = true
+rustix.workspace = true
 serde.workspace = true
 serde_json.workspace = true
 sha1.workspace = true

@@ -14,6 +14,7 @@ import { promisify } from "node:util";
 
 const run = promisify(execFile);
 const binary = resolve(process.argv[2]!);
+const prelude = process.argv[3];
 const root = realpathSync(mkdtempSync(join(tmpdir(), "native-rust-")));
 const rustc = (await run("rustup", ["which", "--toolchain", "nightly-2026-04-11", "rustc"])).stdout.trim();
 const cargo = (await run("rustup", ["which", "--toolchain", "nightly-2026-04-11", "cargo"])).stdout.trim();
@@ -23,7 +24,7 @@ delete env["CARGO_ENCODED_RUSTFLAGS"];
 const cwd = join(root, "project");
 mkdirSync(cwd);
 const options = { cwd, env, timeout: 120_000, maxBuffer: 8 * 1024 * 1024 };
-const checkouts = [cwd];
+const checkouts: string[] = [];
 const projects: Record<string, string> = {
 	"Cargo.toml": '[workspace]\nmembers=["app", "core", "unrelated", "both"]\nresolver="2"\n',
 	"rust-toolchain.toml": '[toolchain]\nchannel="nightly-2026-04-11"\n',
@@ -56,6 +57,11 @@ async function build(phase: string, expected: string, directory = cwd) {
 try {
 	await run("python3", ["-m", "unittest", "discover", "-s", resolve(import.meta.dirname, "../prelude/rust/tools/tests"), "-p", "*_test.py"], { ...options, env: { ...env, RUSTC: rustc } });
 	await run(binary, ["init"], options);
+	if (prelude !== undefined) {
+		cpSync(resolve(prelude), join(cwd, "prelude"), { recursive: true });
+		writeFileSync(join(cwd, ".bsmr.local"), "[external_cells]\nprelude = disabled\n");
+	}
+	checkouts.push(cwd);
 	const config = readFileSync(join(cwd, ".bsmr"), "utf8");
 	writeFileSync(join(cwd, ".bsmr"), config + "\n[bsmr]\ndefault_allow_cache_upload = true\n");
 	await run(cargo, ["generate-lockfile", "--offline"], options);
@@ -127,7 +133,7 @@ try {
 	await assert.rejects(run(binary, ["build", "both:lib"], options), /binary target name `lib` is reserved/);
 	writeFileSync(join(cwd, "both/Cargo.toml"), bothManifest);
 	writeFileSync(join(cwd, "app/build.rs"), 'fn main() { panic!("must not execute during graph import"); }');
-	await assert.rejects(run(binary, ["build", "app"], options), /custom-build/);
+	await assert.rejects(run(binary, ["build", "app"], options), /verified declared-input executor/, "package code must not run without verified isolation");
 	console.log("ok: inferred Rust, native tests, composable recipes, manifest invalidation, cache reuse");
 } finally {
 	await Promise.all(checkouts.map((directory) => run(binary, ["kill"], { ...options, cwd: directory })));

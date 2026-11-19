@@ -17,16 +17,17 @@ const inputs = {
 	}),
 	baseSha: stringInput({ description: "Pull request base commit.", default: "" }),
 	mergeGroupBaseSha: stringInput({ description: "Merge-group base commit.", default: "" }),
+	beforeSha: stringInput({ description: "Commit a push replaced.", default: "" }),
 	headSha: stringInput({ description: "Candidate head commit.", default: "" }),
 } as const;
 
 type Inputs = ActionInputValues<typeof inputs>;
 
 const rustNeutralPaths = [
-	/^(?:docs|\.claude|\.vscode)\//,
+	/^(?:docs|\.agents|\.claude|\.vscode)\//,
 	/^[^/]+\.md$/,
 	/^\.github\/(?:CODEOWNERS|dependabot\.yml|pull_request_template\.md)$/,
-	/^(?:LICENSE-(?:APACHE|MIT)|NOTICE)$/,
+	/^(?:LICENSE-(?:APACHE|MIT)|NOTICE|mkdocs\.yml)$/,
 ];
 
 export const rustAffected = (files: readonly string[]): boolean =>
@@ -53,23 +54,54 @@ export const pullRequestFiles = async (
 	return diff.stdout.split("\0").filter(Boolean);
 };
 
-const mergeGroupFiles = async (
+/** GitHub's `before` commit for a push that created its ref. */
+const newRefSha = "0".repeat(40);
+
+/**
+ * List the files that differ between two exact commits.
+ *
+ * @param exec - Process runner for git.
+ * @param baseName - Name of the base commit in validation errors.
+ * @param baseSha - Commit the candidate is compared against.
+ * @param headSha - Candidate commit.
+ * @returns Changed paths, with both sides of each rename.
+ * @throws An error when either commit is not a full SHA.
+ */
+const commitRangeFiles = async (
 	exec: ScriptExec,
+	baseName: string,
 	baseSha: string,
 	headSha: string,
 ): Promise<readonly string[]> => {
-	const base = requireSha("merge-group base SHA", baseSha);
+	const base = requireSha(baseName, baseSha);
 	const head = requireSha("head SHA", headSha);
 	const diff = await exec("git", ["diff", "--name-only", "--no-renames", "-z", base, head]);
 	return diff.stdout.split("\0").filter(Boolean);
 };
 
+/**
+ * Decide whether the changes behind a workflow event can affect Rust.
+ *
+ * @param exec - Process runner for git.
+ * @param input - Event name and the commits it supplies.
+ * @returns Whether the Rust lanes must run.
+ * @throws An error when a compared commit is not a full SHA.
+ */
 export const rustAffectedForEvent = async (exec: ScriptExec, input: Inputs): Promise<boolean> => {
 	if (input.eventName === "pull_request") {
 		return rustAffected(await pullRequestFiles(exec, input.baseSha, input.headSha));
 	}
 	if (input.eventName === "merge_group") {
-		return rustAffected(await mergeGroupFiles(exec, input.mergeGroupBaseSha, input.headSha));
+		return rustAffected(
+			await commitRangeFiles(exec, "merge-group base SHA", input.mergeGroupBaseSha, input.headSha),
+		);
+	}
+	if (input.eventName === "push") {
+		// A push that creates a ref has no previous commit to compare, so it runs Rust CI.
+		if (input.beforeSha === newRefSha) return true;
+		return rustAffected(
+			await commitRangeFiles(exec, "push base SHA", input.beforeSha, input.headSha),
+		);
 	}
 	return true;
 };

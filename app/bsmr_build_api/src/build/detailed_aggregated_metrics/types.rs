@@ -34,6 +34,8 @@ use crate::build::sketch_impl::MergeableGraphSketch;
 #[derive(Clone)]
 pub struct ActionExecutionMetrics {
     pub key: ActionKey,
+    /// Canonical executor digest for this action execution, if it ran a command.
+    pub action_digest: Option<String>,
     pub execution_time_ms: u64,
     pub execution_kind: bsmr_data::ActionExecutionKind,
     pub output_size_bytes: u64,

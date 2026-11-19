@@ -7,6 +7,7 @@
 
 mod acquisition;
 mod flags;
+mod git;
 mod planning;
 mod source;
 mod types;

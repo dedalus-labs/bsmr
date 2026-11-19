@@ -12,23 +12,33 @@
 //! every supported execution host.
 
 mod acquisition;
-mod manifest;
+mod legacy;
+mod lock;
 
 use std::fs;
 use std::path::Path;
 use std::path::PathBuf;
 
 pub(crate) use acquisition::acquired_go;
+pub(crate) use acquisition::create_toolchains_package;
 pub(crate) use acquisition::install_sdk;
-pub(crate) use acquisition::prepare_acquisition;
-pub(crate) use manifest::write_configuration;
+pub(crate) use acquisition::validate_acquisition_owners;
+#[cfg(test)]
+pub(crate) use legacy::GENERATED_DEFINITION_PREFIX as LEGACY_DEFINITION_PREFIX;
+#[cfg(test)]
+pub(crate) use legacy::GENERATED_MANIFEST as LEGACY_MANIFEST;
+pub(crate) use legacy::reject_leftovers;
+pub(crate) use legacy::remove_leftovers;
+pub(crate) use lock::write_lock;
 use serde::Deserialize;
 use serde::Serialize;
 
 pub(super) const GENERATED_BY: &str = "bsmr go toolchain";
 const GO_RELEASES_URL: &str = "https://go.dev/dl/?mode=json&include=all";
-pub(super) const LOCK_FILE: &str = ".bsmr-go-toolchain.json";
+pub(super) use bsmr_common::native_toolchains::GO_TOOLCHAIN_LOCK as LOCK_FILE;
 const SCHEMA: u32 = 1;
+/// First Go release with `go.mod` `tool` directives and the `tool` meta-pattern.
+const TOOL_DIRECTIVES: (u64, u64, u64) = (1, 24, 0);
 const SUPPORTED_HOSTS: [(&str, &str); 4] = [
     ("darwin", "amd64"),
     ("darwin", "arm64"),
@@ -76,6 +86,14 @@ impl GoToolchainLock {
     /// Returns the normalized SDK version without Go's `go` prefix.
     pub(crate) fn version(&self) -> &str {
         &self.version
+    }
+
+    /// Reports whether the locked SDK understands `go.mod` `tool` directives.
+    ///
+    /// Go 1.24 introduced the directives with the `tool` package meta-pattern; older
+    /// SDKs would read `tool` as an import path.
+    pub(crate) fn supports_tool_directives(&self) -> Result<bool, GoToolchainError> {
+        Ok(version_key(&self.version)? >= TOOL_DIRECTIVES)
     }
 
     /// Returns host archives in deterministic platform order.
@@ -137,7 +155,7 @@ pub(crate) async fn configure(
     } else {
         resolve_release(requested).await?
     };
-    write_configuration(root, &lock, check)?;
+    write_lock(root, &lock, check)?;
     Ok(lock)
 }
 
@@ -302,7 +320,7 @@ pub(super) fn validate_lock(lock: &GoToolchainLock) -> Result<(), GoToolchainErr
     Ok(())
 }
 
-/// Validates every release-controlled value interpolated into generated Starlark.
+/// Validates every release-controlled value that selects the downloaded archive.
 fn validate_archive(archive: &GoSdkArchive, version: &str) -> Result<(), GoToolchainError> {
     let expected = format!("go{version}.{}-{}.tar.gz", archive.os, archive.arch);
     if archive.filename != expected {
@@ -365,14 +383,16 @@ pub(crate) enum GoToolchainError {
     Wrapper(String),
     #[error("Go toolchain lock is invalid: {0}")]
     Lock(String),
-    #[error("failed to render generated Go toolchain: {0}")]
-    Render(String),
-    #[error("failed to read `{path:?}`: {message}")]
+    #[error("failed to read `{}`: {message}", path.display())]
     Read { path: PathBuf, message: String },
-    #[error("failed to write `{path:?}`: {message}")]
+    #[error("failed to write `{}`: {message}", path.display())]
     Write { path: PathBuf, message: String },
     #[error("refusing to overwrite user-owned toolchain file `{0:?}`")]
     UserOwned(PathBuf),
-    #[error("generated Go toolchain files are stale: {0:?}")]
-    Stale(Vec<PathBuf>),
+    #[error(
+        "an earlier `bsmr go toolchain` generated {0:?}, which the lock now replaces; run `bsmr go toolchain` to retire them"
+    )]
+    Leftover(Vec<PathBuf>),
+    #[error("Go toolchain lock `{0:?}` differs from its generated form; run `bsmr go toolchain`")]
+    Stale(PathBuf),
 }

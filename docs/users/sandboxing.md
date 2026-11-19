@@ -3,12 +3,11 @@
 <!-- SPDX-License-Identifier: Apache-2.0 -->
 <!-- ===----------------------------------------------------------------------=== -->
 
-<!-- Explains the supported local Firecracker sandbox and its operator contract. -->
+<!-- Explains the configured Linux sandbox backends and VM execution from macOS. -->
 
 # Sandboxed builds
 
-Use `--sandbox` to execute each action in a fresh, networkless Firecracker
-microVM:
+Use `--sandbox` with an explicitly configured execution backend:
 
 ```console
 bsmr build <path> --sandbox
@@ -16,11 +15,63 @@ bsmr test <path> --sandbox
 bsmr run <path> --sandbox
 ```
 
-Sandboxing is experimental and supported only on `x86_64` Linux hosts with KVM
+## Linux namespaces
+
+The [namespace backend](https://github.com/dedalus-labs/bsmr/blob/main/app/bsmr_execute_impl/src/executors/namespace/README.md)
+runs on Linux ARM64 and x86-64. Each action receives a private process tree,
+read-only declared inputs, writable outputs and no network access. This backend
+supports the native Cargo frontend's build scripts and procedural macros.
+
+Configure the verified runtime inside the Linux worker:
+
+```ini
+[sandbox]
+backend = namespace
+runtime = /opt/bsmr/runtime/runtime.json
+```
+
+The runtime must contain the required build tools. Native Rust builds use
+Python, a linker, `tar` and `gzip` in addition to the downloaded Rust toolchain.
+The runtime manifest pins the actual file bytes that participate in cache identity.
+
+## Linux builds from macOS
+
+Run the Linux BSMR binary and its matching `bsmr-cargo` planner inside an existing
+Apple-virtualized Linux VM. Keep the checkout, outputs and cache on the VM's
+persistent disk. The namespace backend isolates individual actions inside that VM.
+
+For an existing Apple `container` VM named `build-vm` with a Docker worker named
+`bsmr-worker`, an installed Linux binary pair and a staged project, invoke it from macOS:
+
+```console
+container exec build-vm docker exec --workdir /work/project bsmr-worker \
+  /opt/bsmr/bin/bsmr build app --sandbox --show-output
+```
+
+The worker uses a non-root UID and needs a writable `/tmp` directory. A minimal
+worker image can provide it with Docker's `--tmpfs /tmp:rw,exec,nosuid,mode=1777`.
+Docker must permit its nested namespaces with
+`seccomp=unconfined`, `apparmor=unconfined` and `systempaths=unconfined` security
+options. The last option permits each action to mount its private `/proc`.
+This is the same outer-worker requirement documented for
+[rootless BuildKit](https://github.com/moby/buildkit/blob/master/docs/rootless.md).
+The action's own namespace policy still restricts process visibility and kernel controls.
+
+This command produces Linux artifacts for the guest architecture. BSMR does not
+automatically forward a macOS invocation into a VM or produce native macOS binaries
+through this path. Guest setup, source staging and copying final artifacts back to
+macOS remain explicit operations.
+
+## Firecracker
+
+The default sandbox backend executes each action in a fresh, networkless
+Firecracker microVM.
+
+This backend is experimental and supported only on `x86_64` Linux hosts with KVM
 and cgroup v2. It is fail-closed: an incompatible host, action, bundle, or
 launcher stops the build instead of running the action on the host.
 
-## Operator setup
+### Operator setup
 
 An administrator installs the root-owned Firecracker bundle and runs
 `bsmr-sandboxd` as a system service. The bundle contains a matched static
@@ -56,7 +107,7 @@ bsmr-sandbox-bundle \
   --firecracker-version 1.16.1
 ```
 
-## v1 contract
+### v1 contract
 
 The first profile is `untrusted-v1`: one microVM per action, no network device,
 2 vCPUs, 2 GiB of memory, explicit environment variables, declared inputs only,
