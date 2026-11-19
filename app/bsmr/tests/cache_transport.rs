@@ -3,6 +3,8 @@
 // SPDX-License-Identifier: Apache-2.0
 //===----------------------------------------------------------------------===//
 
+// Drives the offline cache transport commands through the real bsmr binary.
+
 use std::process::Command;
 
 #[test]
