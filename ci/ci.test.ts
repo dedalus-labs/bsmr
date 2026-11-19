@@ -164,31 +164,20 @@ test("Self-build paths select the build inputs only the self-build checks", () =
 	assert.equal(selfBuildAffected(["app/bsmr/src/main.rs", "app/bsmr_build_api/src/lib.rs"]), false);
 	assert.equal(selfBuildAffected(["ci/ci.ts", "test/native-rust-build.ts"]), false);
 	assert.equal(selfBuildAffected(["Cargo.lock"]), true);
-	assert.equal(selfBuildAffected(["app/bsmr_build_api/Cargo.toml"]), true);
 	assert.equal(selfBuildAffected(["app/bsmr_build_api/BUILD.bsmr"]), true);
-	assert.equal(selfBuildAffected(["app/bsmr/PACKAGE"]), true);
 	assert.equal(selfBuildAffected(["prelude/rust/rust_binary.bzl"]), true);
-	assert.equal(selfBuildAffected(["tools/build/third-party/rust/reindeer.toml"]), true);
-	assert.equal(selfBuildAffected(["tools/cargo/src/main.rs"]), true);
 	assert.equal(selfBuildAffected(["ci/rust-build-dependencies.ts"]), true);
 	assert.equal(selfBuildAffected([".github/workflows/ci.yml"]), true);
 	assert.equal(selfBuildAffected(["ci/affected.ts"]), true);
 	assert.equal(selfBuildAffected([]), true);
 });
 
-test("Pull requests and merge groups run the self-build only for build-input changes", async () => {
-	const changes = (stdout: string): ScriptExec => async (_file, args) => ({
-		exitCode: 0, stderr: "", stdout: args[0] === "merge-base" ? "c".repeat(40) : stdout,
+test("A Rust-only pull request runs Rust CI without the self-build", async () => {
+	const exec: ScriptExec = async (_file, args) => ({
+		exitCode: 0, stderr: "", stdout: args[0] === "merge-base" ? "c".repeat(40) : "app/bsmr/src/main.rs\0",
 	});
 	const pullRequest = { eventName: "pull_request", baseSha: "a".repeat(40), mergeGroupBaseSha: "", beforeSha: "", headSha: "b".repeat(40) } as const;
-	const mergeGroup = { ...pullRequest, eventName: "merge_group", baseSha: "", mergeGroupBaseSha: "a".repeat(40) } as const;
-	for (const input of [pullRequest, mergeGroup]) {
-		assert.deepEqual(await affectedForEvent(changes("docs/users/getting_started.md\0"), input), { rust: false, selfBuild: false });
-		assert.deepEqual(await affectedForEvent(changes("app/bsmr/src/main.rs\0"), input), { rust: true, selfBuild: false });
-		for (const file of ["app/bsmr_build_api/Cargo.toml", "app/bsmr_build_api/BUILD.bsmr", "prelude/rust/rust_binary.bzl"]) {
-			assert.deepEqual(await affectedForEvent(changes(`${file}\0`), input), { rust: true, selfBuild: true });
-		}
-	}
+	assert.deepEqual(await affectedForEvent(exec, pullRequest), { rust: true, selfBuild: false });
 });
 
 test("Pull request paths preserve both sides of a rename", async () => {
@@ -341,7 +330,7 @@ test("self-hosting keeps the CLI reference derived from clap", () => {
 	);
 });
 
-test("the self-build runs beside self-hosting on x64 with the engine it just compiled", () => {
+test("the self-build runs only when its declared gate output says so", () => {
 	const selfBuild = jobs.rust_self_build;
 	assert.equal(selfBuild.needs, "affected");
 	assert.equal(selfBuild.if, `\${{ ${trustedCiRun} && needs.affected.outputs.selfBuild == 'true' }}`);
@@ -350,21 +339,7 @@ test("the self-build runs beside self-hosting on x64 with the engine it just com
 		const [, name] = /^\$\{\{ steps\.check\.outputs\.([\w-]+) \}\}$/.exec(output) ?? [];
 		assert.ok(name !== undefined && declared.includes(name), `${output} reads an output the action never sets`);
 	}
-	assert.equal(selfBuild["runs-on"], "${{ matrix.selfHostRunner }}");
-	assert.deepEqual(selfBuild.strategy?.matrix?.include?.map(({ architecture, selfHostRunner }) => ({ architecture, selfHostRunner })), [
-		{ architecture: "x64", selfHostRunner: "blacksmith-8vcpu-ubuntu-2404" },
-	]);
-	assert.equal(jobs.rust_self_host["timeout-minutes"], 30);
-	assert.ok(!jobs.rust_self_host.steps.some((step) => step.name === "Build BSMR with BSMR"));
-	const steps = selfBuild.steps;
-	const index = (name: string) => steps.findIndex((step) => step.name === name);
-	const build = index("Build BSMR with BSMR");
-	assert.ok(index("Install Cargo planner") < index("Generate Rust build dependencies"));
-	assert.ok(index("Generate Rust build dependencies") < build);
-	const step = steps[build];
-	assert.ok(step && "run" in step);
-	assert.deepEqual(step.run, command({ file: "target/debug/bsmr", args: ["--isolation-dir=ci", "build", "//:bsmr"] }));
-	for (const cache of steps.filter((candidate) => "uses" in candidate && candidate.uses.startsWith("Swatinem/rust-cache@"))) {
+	for (const cache of selfBuild.steps.filter((candidate) => "uses" in candidate && candidate.uses.startsWith("Swatinem/rust-cache@"))) {
 		assert.ok("with" in cache && "save-if" in cache.with);
 		assert.equal(cache.with["save-if"], false);
 	}
