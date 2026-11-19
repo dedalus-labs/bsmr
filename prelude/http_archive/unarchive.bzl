@@ -104,6 +104,8 @@ def _unarchive_cmd(ext_type: str, exec_is_windows: bool, archive: Artifact, stri
             _TAR_FLAGS[ext_type],
             os_flags,
             "-x",
+            # Source artifacts belong to the worker, not the archive's original user.
+            "--no-same-owner",
             "-f",
             archive,
             _tar_strip_prefix_flags(strip_prefix),

@@ -13,6 +13,7 @@ import tempfile
 from pathlib import Path
 import subprocess
 import sys
+from urllib.parse import unquote, urlparse
 
 
 def main() -> None:
@@ -31,7 +32,7 @@ def main() -> None:
     (workspace / "src/lib.rs").write_text('compile_error!("PLANNING_MUST_NOT_COMPILE");\n')
     env = {"PATH": f"{toolchain}:/usr/bin:/bin", "CARGO_HOME": str(cargo_home), "RUSTC": str(toolchain / "rustc")}
     subprocess.run([toolchain / "cargo", "generate-lockfile"], cwd=workspace, env=env, check=True)
-    request = {"manifest": str(workspace / "Cargo.toml"), "package": "source-verification",
+    request = {"manifest": str(workspace / "Cargo.toml"), "packages": ["source-verification"],
                "mode": "build", "target_filter": {"kind": "package"}, "source_policy": "offline", "features": [], "default_features": True, "all_features": False,
                "target": None, "profile": "dev", "cargo_home": str(cargo_home),
                "rustc": str(toolchain / "rustc"), "target_directory": str(root / "planner-target")}
@@ -62,6 +63,10 @@ def main() -> None:
     archive_bytes, manifest_bytes = archive.read_bytes(), manifest.read_bytes()
     assert source["archive"]["size"] == len(archive_bytes)
     assert source["checksum"] == hashlib.sha256(archive_bytes).hexdigest()
+    assert source["artifact"] == {
+        "kind": "archive", "url": "https://static.crates.io/crates/itoa/1.0.18/download",
+        "sha256": source["checksum"], "size": len(archive_bytes), "prefix": "itoa-1.0.18", "package": "",
+    }
     try:
         manifest.write_bytes(manifest_bytes + b'\n[package.metadata]\nplanner_corruption=true\n')
         result = plan("manifest-corrupt")
@@ -144,7 +149,7 @@ def verify_git(binary: Path, toolchain: Path, root: Path, env: dict) -> None:
         subprocess.run([toolchain / "cargo", "generate-lockfile"], cwd=workspace, env=git_env, check=True)
         shutil.rmtree(Path(env["CARGO_HOME"]) / "git")
         lock = (workspace / "Cargo.lock").read_bytes()
-        request = {"manifest": str(manifest), "package": "git-verification", "mode": "build",
+        request = {"manifest": str(manifest), "packages": ["git-verification"], "mode": "build",
                    "target_filter": {"kind": "library"}, "source_policy": "acquire-locked",
                    "features": [], "default_features": True, "all_features": False,
                    "target": None, "profile": "dev", "cargo_home": env["CARGO_HOME"],
@@ -153,6 +158,13 @@ def verify_git(binary: Path, toolchain: Path, root: Path, env: dict) -> None:
         graph = json.loads(acquired.stdout)
         source = next(unit["source"] for unit in graph["units"] if unit["package_name"] == "git-dependency")
         assert source["git_revision"] == revision
+        artifact = source["artifact"]
+        assert artifact["kind"] == "archive"
+        assert artifact["prefix"] == "source"
+        assert artifact["package"] == "crates/member"
+        archive = Path(unquote(urlparse(artifact["url"]).path))
+        assert hashlib.sha256(archive.read_bytes()).hexdigest() == artifact["sha256"]
+        assert archive.stat().st_size == artifact["size"]
     request["source_policy"] = "offline"
     replay = subprocess.run([binary], input=json.dumps(request), env=env, text=True, capture_output=True, check=True)
     assert json.loads(replay.stdout) == graph

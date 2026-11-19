@@ -1819,12 +1819,16 @@ Project requirements: https://oss.dedaluslabs.ai/bsmr/getting_started/quickstart
 * `<TARGET_PATTERNS>`
     Patterns to build
 
+    * Default value: `.`
 
 ### Common Options:
 
 Common options are documented under [Global options](#global-options).
 
 ### Options:
+* `--snapshot <PATH>`
+    Capture an experimental file-only dependency lock without replacing an existing file
+
 * `--show-output`
     Print the path to the output for each of the rules relative to the project root
 
@@ -2308,6 +2312,7 @@ Language guides: https://oss.dedaluslabs.ai/bsmr/about/language_support/
 * `<TARGET_PATTERNS>`
     Patterns to test
 
+    * Default value: `.`
 * `<TEST_EXECUTOR_ARGS>`
     Additional arguments passed to the test executor.
 

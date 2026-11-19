@@ -137,7 +137,13 @@ load(
 )
 load(":outputs.bzl", "RustcCompileOutput", "RustcLinkOutput", "RustcOutput")
 load(":resources.bzl", "rust_attr_resources")
-load(":rust_toolchain.bzl", "PanicRuntime", "RustToolchainInfo")
+load(
+    ":rust_toolchain.bzl",
+    "PanicRuntime",
+    "RustReleaseChannel",
+    "RustToolchainInfo",
+    "rust_toolchain_configuration_error",
+)
 load(
     ":sources.bzl",
     "RustSources",
@@ -420,7 +426,6 @@ def generate_rustdoc_test(
         cmd_args("--test-builder=", toolchain_info.compiler, delimiter = ""),
         toolchain_info.rustdoc_flags,
         ctx.attrs.rustdoc_flags,
-        common_args.args,
         extern_arg([], attr_crate(ctx), rlib),
         "--extern=proc_macro" if ctx.attrs.proc_macro else [],
         cmd_args(compile_ctx.linker_with_pre_args, format = "-Clinker={}"),
@@ -439,6 +444,7 @@ def generate_rustdoc_test(
             compile_ctx.path_sep,
             delimiter = "",
         ),
+        common_args.args,
         hidden = [
             transitive_srcs.project_as_args("artifacts"),
             link_args_output.hidden,
@@ -466,7 +472,7 @@ def rust_compile(
     incremental_enabled: bool,
     extra_link_args: list[typing.Any] = [],
     predeclared_output: Artifact | None = None,
-    extra_flags: list[str | ResolvedStringWithMacros | Artifact] = [],
+    extra_flags: list[str | ResolvedStringWithMacros | Artifact | cmd_args] = [],
     allow_cache_upload: bool = False,
     # Setting this to true causes the diagnostic outputs that are generated
     # from this action to always be successfully generated, even if
@@ -508,7 +514,6 @@ def rust_compile(
         lints,
         # Report unused --extern crates in the notification stream.
         ["--json=unused-externs-silent", "-Wunused-crate-dependencies"] if toolchain_info.report_unused_deps else [],
-        common_args.args,
         cmd_args(
             "--remap-path-prefix=",
             compile_ctx.symlinked_srcs,
@@ -518,6 +523,8 @@ def rust_compile(
             compile_ctx.path_sep,
             delimiter = "",
         ),
+        # Caller mappings take precedence over the default source path above.
+        common_args.args,
         ["-Zremap-cwd-prefix=."] if toolchain_info.nightly_features else [],
         extra_flags,
     )
@@ -833,8 +840,9 @@ def rust_compile(
 # -Ldependency=<dir> for transitive dependencies
 # For native dependencies, we use -Clink-arg=@argsfile
 #
-# Second element of returned tuple is an @argsfile containing the -Ldependency=<dir> for transitive dependencies.
-# It is separate from the first element because some commands (e.g., rustc) do NOT support nested @argsfiles.
+# Second element of returned tuple holds the -Ldependency=<dir> flags for transitive dependencies, including an
+# @argsfile for crates with dynamic names. It is separate from the first element because some commands (e.g.,
+# rustc) do NOT support nested @argsfiles.
 #
 # Third element of returned tuple is a mapping from crate names back to target
 # label, needed for applying autofixes for rustc's unused_crate_dependencies
@@ -907,18 +915,58 @@ def symlinked_dirs(
     transitive_deps: TransitiveDeps,
     cwd: Artifact | None,
 ) -> cmd_args:
+    """Link transitive rlibs into -Ldependency directories, one more for each repeated basename."""
     name = "{}-symlinked_dirs".format(prefix)
+    static_dirs = [{}]
+    dynamic = []
+    for dep in transitive_deps.traverse():
+        if dep.crate.dynamic:
+            dynamic.append((dep.artifact, dep.crate.dynamic))
+            continue
+        filename = dep.artifact.basename
+        if filename in static_dirs[-1]:
+            static_dirs.append({})
+        static_dirs[-1][filename] = dep.artifact
+
+    flags = cmd_args()
+    if static_dirs[0]:
+        static_dir = ctx.actions.symlinked_dir(
+            name,
+            {
+                "{}/{}".format(idx, filename): artifact
+                for idx, srcs in enumerate(static_dirs)
+                for filename, artifact in srcs.items()
+            },
+            has_content_based_path = False,
+        )
+        for idx in range(len(static_dirs)):
+            flags.add(cmd_args(static_dir, format = "-Ldependency={{}}/{}".format(idx)))
+
+    if dynamic:
+        flags.add(_dynamic_dirs(ctx, internal_tools_info, transitive_dependency_dirs, prefix, dynamic, cwd))
+
+    return flags
+
+def _dynamic_dirs(
+    ctx: AnalysisContext,
+    internal_tools_info: RustInternalToolsInfo,
+    transitive_dependency_dirs: set,
+    prefix: str,
+    dynamic: list[(Artifact, Artifact)],
+    cwd: Artifact | None,
+) -> cmd_args:
+    """Copy `crate_dynamic` rlibs under the crate names their build computes."""
+    name = "{}-dynamic_dirs".format(prefix)
 
     transitive_dependency_dir = ctx.actions.declare_output(name, dir = True, has_content_based_path = False)
-
-    artifacts = transitive_deps.project_as_json("artifacts")
 
     # Pass the list of rlibs to transitive_dependency_symlinks.py through a file
     # because there can be a lot of them. This avoids running out of command
     # line length, particularly on Windows.
     artifacts_json = ctx.actions.write_json(
-        "{}-symlinked_dirs.json".format(prefix),
-        artifacts,
+        "{}.json".format(name),
+        dynamic,
+        with_inputs = True,
         pretty = True,
         has_content_based_path = getattr(ctx.attrs, "use_content_based_paths", False),
     )
@@ -930,10 +978,6 @@ def symlinked_dirs(
         cmd_args(
             artifacts_json,
             format = "--artifacts={}",
-            # Don't take a dependency on all the artifacts in here, just the dynamic names; the
-            # rmetas/rlibs we only want to create symlinks to, so there's no need for them to
-            # actually be available
-            hidden = transitive_deps.project_as_args("dynamic_name_args"),
         ),
     ]
 
@@ -958,7 +1002,6 @@ def symlinked_dirs(
         # Reference the directory Artifact (not the dirs file), so all of its children are included.
         transitive_dependency_dir,
         format = "@{}/dirs",
-        hidden = transitive_deps.project_as_args("artifacts_args"),
     )
 
 def _lintify(flag: str, clippy: bool, lints: list[str | ResolvedStringWithMacros]) -> cmd_args:
@@ -1165,6 +1208,14 @@ def _compute_common_args(
         dep_args.add("--extern=proc_macro")
 
     toolchain_info = compile_ctx.toolchain_info
+    configuration_error = rust_toolchain_configuration_error(
+        RustReleaseChannel(toolchain_info.release_channel),
+        toolchain_info.nightly_features,
+        toolchain_info.codegen_backend != None,
+    )
+    if configuration_error:
+        fail(configuration_error)
+
     edition = ctx.attrs.edition or toolchain_info.default_edition or fail("missing 'edition' attribute, and there is no 'default_edition' set by the toolchain")
 
     crate = attr_crate(ctx)
@@ -1268,6 +1319,7 @@ def _compute_common_args(
         ["--error-format=json", "--json=diagnostic-rendered-ansi"] if not is_rustdoc_test else [],
         prefer_dynamic_flags,
         ["--target={}".format(toolchain_info.rustc_target_triple)] if toolchain_info.rustc_target_triple else [],
+        [cmd_args(toolchain_info.codegen_backend, format = "-Zcodegen-backend={}")] if toolchain_info.codegen_backend else [],
         split_debuginfo_flags,
         compile_ctx.sysroot_args,
         ["-Cpanic=abort", "-Zpanic-abort-tests=yes"] if toolchain_info.panic_runtime == PanicRuntime("abort") else [],
@@ -1580,7 +1632,7 @@ def _rustc_invoke(
     if ctx.attrs.verify_inputs:
         dep_info = ctx.actions.declare_output("{}-{}.d".format(prefix, diag), has_content_based_path = use_cbp)
         compile_cmd.add(cmd_args(dep_info.as_output(), format = "--dep-info={}"))
-        compile_cmd.add(cmd_args(ctx.attrs.srcs, ctx.attrs.mapped_srcs.keys(), format = "--allowed-input={}"))
+        compile_cmd.add(cmd_args(compile_ctx.transitive_inputs.project_as_args("artifacts"), format = "--allowed-input={}"))
         rustc_cmd.add(cmd_args(dep_info.as_output(), format = "--emit=dep-info={}"))
 
     build_status = None
@@ -1648,6 +1700,12 @@ def _rustc_invoke(
         identifier = identifier,
         no_outputs_cleanup = incremental_enabled,
         allow_cache_upload = action_allow_cache_upload,
+        allow_local_cache_upload = True if (
+            toolchain_info.allow_local_cache_upload and
+            ctx.attrs.verify_inputs and
+            not is_clippy and
+            not (crate_type_linked(common_args.crate_type) and common_args.emit == Emit("link"))
+        ) else None,
         error_handler = toolchain_info.rust_error_handler,
     )
 

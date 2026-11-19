@@ -20,7 +20,7 @@ fn graph(root: &std::path::Path) -> GoGraph {
         "{{\"Dir\":\"{display}/lib\",\"ImportPath\":\"example.com/repo/lib\",\"Name\":\"lib\",\"GoFiles\":[\"lib.go\"],\"TestGoFiles\":[\"lib_test.go\"]}}\n\
          {{\"Dir\":\"{display}/cmd/app\",\"ImportPath\":\"example.com/repo/cmd/app\",\"Name\":\"main\",\"GoFiles\":[\"main.go\"],\"Imports\":[\"example.com/repo/lib\"]}}\n"
     );
-    GoGraph::from_go_list(json.as_bytes(), root).expect("valid graph")
+    GoGraph::from_go_list(json.as_bytes(), root, "").expect("valid graph")
 }
 
 /// Builds SDK metadata for a package with an external-package test.
@@ -29,7 +29,7 @@ fn external_test_graph(root: &std::path::Path) -> GoGraph {
     let json = format!(
         "{{\"Dir\":\"{display}/lib\",\"ImportPath\":\"example.com/repo/lib\",\"Name\":\"lib\",\"GoFiles\":[\"lib.go\"],\"XTestGoFiles\":[\"external_test.go\"],\"XTestImports\":[\"example.com/repo/lib\"]}}\n"
     );
-    GoGraph::from_go_list(json.as_bytes(), root).expect("valid external test graph")
+    GoGraph::from_go_list(json.as_bytes(), root, "").expect("valid external test graph")
 }
 
 /// Builds SDK metadata for a package that includes a C implementation and local header.
@@ -38,7 +38,7 @@ fn cgo_graph(root: &std::path::Path) -> GoGraph {
     let json = format!(
         "{{\"Dir\":\"{display}/native\",\"ImportPath\":\"example.com/repo/native\",\"Name\":\"native\",\"CgoFiles\":[\"native.go\"],\"CFiles\":[\"native.c\"],\"HFiles\":[\"native.h\"]}}\n"
     );
-    GoGraph::from_go_list(json.as_bytes(), root).expect("valid cgo graph")
+    GoGraph::from_go_list(json.as_bytes(), root, "").expect("valid cgo graph")
 }
 
 /// Builds SDK metadata for a package at the repository root.
@@ -47,7 +47,7 @@ fn root_graph(root: &std::path::Path) -> GoGraph {
     let json = format!(
         "{{\"Dir\":\"{display}\",\"ImportPath\":\"example.com/repo\",\"Name\":\"main\",\"GoFiles\":[\"main.go\"]}}\n"
     );
-    GoGraph::from_go_list(json.as_bytes(), root).expect("valid root graph")
+    GoGraph::from_go_list(json.as_bytes(), root, "").expect("valid root graph")
 }
 
 /// Confirms native metadata renders conventional Go rules without a handwritten DSL.
@@ -196,5 +196,51 @@ fn migrates_untouched_init_manifest() {
         fs::read_to_string(root.path().join("BUILD.bsmr"))
             .expect("generated manifest")
             .contains("go_binary(")
+    );
+}
+
+/// Invariant: generated manifests mirror the SDK graph, so a graph that loses its last
+/// package retires every manifest the ownership index records, and `--check` names each
+/// retired manifest as stale.
+///
+/// Witness: after a two-package sync, checking an empty graph fails naming
+/// `lib/BUILD.bsmr`, writing it removes both manifests, and a second check passes.
+#[test]
+fn invariant_empty_graph_retires_owned_manifests() {
+    let root = tempfile::tempdir().expect("temporary repository");
+    let sync =
+        |graph: &GoGraph, mode| sync_manifests(root.path(), graph, "BUILD.bsmr", &[], false, mode);
+    sync(&graph(root.path()), SyncMode::Write).expect("initial sync");
+    let empty = GoGraph::from_go_list(b"", root.path(), "").expect("empty graph");
+
+    let error = sync(&empty, SyncMode::Check).expect_err("owned manifests are stale");
+    assert!(matches!(&error, GoManifestError::Stale(drift) if drift.contains("lib/BUILD.bsmr")));
+
+    let report = sync(&empty, SyncMode::Write).expect("retire owned manifests");
+    assert_eq!((report.written(), report.removed()), (0, 2));
+    assert!(!root.path().join("lib/BUILD.bsmr").exists());
+    assert!(!root.path().join("cmd/app/BUILD.bsmr").exists());
+
+    sync(&empty, SyncMode::Check).expect("empty graph is current");
+}
+
+/// Invariant: a binary's module lines reach its manifest as a Starlark list whose
+/// strings decode to the exact tab-separated `debug.BuildInfo` text.
+///
+/// Witness: a binary in `example.com/repo` renders
+/// `modules = ["mod\texample.com/repo\t(devel)\t"]` with a JSON (and Starlark) tab escape.
+#[test]
+fn invariant_binary_manifest_carries_module_lines() {
+    let root = tempfile::tempdir().expect("temporary repository");
+    let display = root.path().display();
+    let json = format!(
+        "{{\"Dir\":\"{display}\",\"ImportPath\":\"example.com/repo\",\"Name\":\"main\",\"GoFiles\":[\"main.go\"],\"Module\":{{\"Path\":\"example.com/repo\",\"Main\":true}}}}\n"
+    );
+    let graph = GoGraph::from_go_list(json.as_bytes(), root.path(), "").expect("valid graph");
+
+    let manifest = render_manifest(&graph.packages()[0], &[], false).expect("binary manifest");
+
+    assert!(
+        manifest.contains("modules = [\n        \"mod\\texample.com/repo\\t(devel)\\t\",\n    ],")
     );
 }

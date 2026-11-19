@@ -16,6 +16,9 @@ import { cliReferenceAction } from "./cli-reference.ts";
 import { osvAuditAction } from "./osv-audit.ts";
 import { verifySha256Action } from "./verify-sha256.ts";
 import { typescriptCache } from "./typescript/cache.ts";
+import { buildEnvironment } from "./runner/build.ts";
+import ociTools from "../prelude/oci/tools.json" with { type: "json" };
+import { ociCache } from "./oci/cache.ts";
 
 const trustedCiRun = expr<boolean>(
 	"github.repository == 'dedalus-labs/bsmr' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository)",
@@ -62,6 +65,7 @@ const setupNode = {
 	uses: "actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38",
 	with: { "node-version": "26.5.1" },
 } as const;
+const rustToolchain = "nightly-2026-04-11";
 const installRust = {
 	name: "Install pinned Rust toolchain",
 	run: command({
@@ -69,7 +73,7 @@ const installRust = {
 		args: [
 			"toolchain",
 			"install",
-			"nightly-2026-04-11",
+			rustToolchain,
 			"--profile",
 			"minimal",
 			"--component",
@@ -82,14 +86,14 @@ const installRust = {
 		],
 	}),
 } as const;
-const rustCache = (save: boolean | typeof saveRustCache) =>
+const rustCache = (save: boolean | typeof saveRustCache, sharedKey = "rust") =>
 	({
 		name: "Restore Rust cache",
 		uses: "Swatinem/rust-cache@e18b497796c12c097a38f9edb9d0641fb99eee32",
 		with: {
 			"prefix-key": "bsmr-v1",
 			"save-if": save,
-			"shared-key": "rust",
+			"shared-key": sharedKey,
 		},
 	}) as const;
 const rustEnvironment = {
@@ -125,6 +129,7 @@ const runnerTemp = expr<string>("runner.temp");
 const osvScannerPath = format("{0}/osv-scanner", runnerTemp);
 const osvReportPath = format("{0}/osv.json", runnerTemp);
 const dotSlashArchivePath = format("{0}/dotslash.tar.gz", runnerTemp);
+const imgPath = format("{0}/oci-img", runnerTemp);
 const addPathProgram = String.raw`const fs = require("node:fs");
 const path = process.argv[1];
 const output = process.env.GITHUB_PATH;
@@ -156,6 +161,23 @@ const installOsvScanner = [
 	{
 		name: "Make OSV Scanner executable",
 		run: command({ file: "chmod", args: ["500", osvScannerPath] }),
+	},
+] as const;
+const installImg = [
+	{
+		name: "Download pinned OCI encoder",
+		run: command({ file: "curl", args: [
+			"--proto", "=https", "--tlsv1.2", "--fail", "--location", "--silent", "--show-error",
+			ociTools.img.assets["linux-amd64"].url, "--output", imgPath,
+		] }),
+	},
+	uses(verifySha256Action, {
+		name: "Verify OCI encoder",
+		with: { path: imgPath, expected: ociTools.img.assets["linux-amd64"].sha256 },
+	}),
+	{
+		name: "Make OCI encoder executable",
+		run: command({ file: "chmod", args: ["500", imgPath] }),
 	},
 ] as const;
 const installDotSlash = [
@@ -202,7 +224,8 @@ export const ci = workflow({
 	permissions: {},
 	concurrency: {
 		group: format("{0}-{1}", github.workflow, github.ref),
-		"cancel-in-progress": true,
+		// Only a completed push run on main saves Rust caches, so only pull requests cancel.
+		"cancel-in-progress": eq(github.eventName, "pull_request"),
 	},
 	env: {
 		FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true,
@@ -230,6 +253,7 @@ export const ci = workflow({
 						eventName: github.eventName,
 						baseSha: expr<string>("github.event.pull_request.base.sha"),
 						mergeGroupBaseSha: expr<string>("github.event.merge_group.base_sha"),
+						beforeSha: expr<string>("github.event.before"),
 						headSha: expr<string>("github.event.pull_request.head.sha || github.sha"),
 					},
 				}),
@@ -260,10 +284,18 @@ export const ci = workflow({
 			"runs-on": "ubuntu-24.04",
 			"timeout-minutes": 10,
 			permissions: { contents: "read" },
+			env: { RUSTUP_TOOLCHAIN: rustToolchain, RUSTUP_AUTO_INSTALL: "0" },
 			steps: [
 				{
 					...checkout,
 					with: { ...checkout.with, "fetch-depth": 0 },
+				},
+				{
+					name: "Install Cargo metadata toolchain",
+					run: command({
+						file: "rustup",
+						args: ["toolchain", "install", rustToolchain, "--profile", "minimal", "--no-self-update"],
+					}),
 				},
 				setupNode,
 				{
@@ -281,8 +313,10 @@ export const ci = workflow({
 					name: "Audit dependencies",
 					run: command({ file: "pnpm", args: ["audit", "--audit-level", "high"] }),
 				},
+				...installImg,
 				{
 					name: "Check workflow source",
+					env: { BSMR_OCI_IMG: imgPath },
 					run: command({ file: "pnpm", args: ["run", "ci", "check"] }),
 				},
 			],
@@ -356,9 +390,10 @@ export const ci = workflow({
 			steps: [
 				checkout,
 				installRust,
-				rustCache(false),
+				{ ...rustCache(saveRustCache, "engine"), env: buildEnvironment },
 				{
 					name: "Build BSMR",
+					env: buildEnvironment,
 					run: command({ file: "cargo", args: ["build", "--locked", "--bin", "bsmr"] }),
 				},
 				{
@@ -402,6 +437,14 @@ export const ci = workflow({
 					run: command({ file: "node", args: ["test/rust/stable.ts", "target/debug/bsmr"] }),
 				},
 				{
+					name: "Verify Rust tool contracts",
+					run: command({ file: "node", args: ["test/rust/tools.ts"] }),
+				},
+				{
+					name: "Verify compiler archive metadata",
+					run: command({ file: "python3", args: ["test/rust/catalog.py", "target/debug/bsmr"] }),
+				},
+				{
 					name: "Verify literal Rust inputs",
 					run: command({ file: "node", args: ["test/rust/literals.ts", "target/debug/bsmr"] }),
 				},
@@ -409,11 +452,48 @@ export const ci = workflow({
 					name: "Verify configured Cargo builds",
 					run: command({ file: "node", args: ["test/rust/configured.ts", "target/debug/bsmr"] }),
 				},
+				{
+					name: "Verify Cargo build selections",
+					run: command({ file: "node", args: ["test/rust/selection.ts", "target/debug/bsmr"] }),
+				},
+				{
+					name: "Verify joint Cargo selections",
+					run: command({ file: "python3", args: ["test/rust/roots.py", "target/debug/bsmr"] }),
+				},
+				{
+					name: "Verify Rust link-time optimization",
+					run: command({ file: "node", args: ["test/rust/lto.ts", "target/debug/bsmr"] }),
+				},
+				{
+					name: "Verify Rust library formats",
+					run: command({ file: "node", args: ["test/rust/libraries.ts", "target/debug/bsmr"] }),
+				},
+				{
+					name: "Verify Cargo integration tests",
+					run: command({ file: "python3", args: ["test/rust/tests.py", "target/debug/bsmr"] }),
+				},
+				{
+					name: "Verify stale daemon records",
+					run: command({ file: "python3", args: ["test/daemon/stale.py", "target/debug/bsmr"] }),
+				},
+				{
+					name: "Verify external Rust dependencies",
+					run: command({ file: "node", args: ["test/rust/dependencies.ts", "target/debug/bsmr", "1.98.0"] }),
+				},
+				{
+					name: "Verify pinned Git sources",
+					run: command({ file: "python3", args: ["-B", "-m", "unittest", "discover", "-s", "prelude/git/tools/tests", "-p", "*_test.py"] }),
+				},
 				uses(typescriptCache, { with: { binary: "target/debug/bsmr" } }),
 				{
 					name: "Verify native Go build",
 					run: command({ file: "node", args: ["test/native-go-build.ts", "target/debug/bsmr"] }),
 				},
+				...installImg.map((step) => ({ ...step, if: eq(expr<string>("matrix.architecture"), "x64") })),
+				uses(ociCache, {
+					if: eq(expr<string>("matrix.architecture"), "x64"),
+					with: { binary: "target/debug/bsmr", img: imgPath, platform: "linux/amd64" },
+				}),
 				...installDotSlash,
 				{
 					name: "Generate Rust build dependencies",

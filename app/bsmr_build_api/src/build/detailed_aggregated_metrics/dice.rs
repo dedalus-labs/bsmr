@@ -17,6 +17,7 @@
 use std::collections::HashSet;
 use std::future::Future;
 
+use bsmr_artifact::actions::key::ActionKey;
 use bsmr_common::legacy_configs::configs::LegacyBsmrConfig;
 use bsmr_common::legacy_configs::key::BsmrconfigKeyRef;
 use bsmr_core::deferred::key::DeferredHolderKey;
@@ -47,6 +48,8 @@ use crate::deferred::calculation::DeferredHolder;
 
 pub trait HasDetailedAggregatedMetrics {
     fn action_executed(&self, ev: ActionExecutionMetrics) -> bsmr_error::Result<()>;
+    /// Returns the canonical digest observed for an action in this transaction.
+    fn current_action_digest(&self, key: &ActionKey) -> bsmr_error::Result<Option<String>>;
     fn analysis_started(&self, key: &DeferredHolderKey) -> bsmr_error::Result<()>;
     fn analysis_complete(
         &self,
@@ -87,8 +90,12 @@ impl HasDetailedAggregatedMetrics for DiceComputations<'_> {
     }
 
     fn action_executed(&self, ev: ActionExecutionMetrics) -> bsmr_error::Result<()> {
-        get_per_build_events_holder(self)?.action_executed(&ev.key);
+        get_per_build_events_holder(self)?.action_executed(&ev);
         get_detailed_aggregated_metrics_handle(self)?.action_executed(ev)
+    }
+
+    fn current_action_digest(&self, key: &ActionKey) -> bsmr_error::Result<Option<String>> {
+        Ok(get_per_build_events_holder(self)?.current_action_digest(key))
     }
 
     fn analysis_started(&self, key: &DeferredHolderKey) -> bsmr_error::Result<()> {

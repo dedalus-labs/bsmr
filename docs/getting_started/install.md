@@ -24,23 +24,31 @@ On Windows, download `bsmr-installer.ps1` from the
 it in PowerShell. Each release includes platform archives, SHA-256 checksums,
 and build provenance attestations.
 
-To build the pinned source toolchain instead:
+To build from source instead, build the engine and the Cargo planner:
 
 ```console
 git clone https://github.com/dedalus-labs/bsmr.git
 cd bsmr
 cargo build --locked --release --bin bsmr
-install target/release/bsmr ~/.local/bin/bsmr
+rustup toolchain install 1.98.0 --profile minimal
+cargo +1.98.0 build --locked --release --manifest-path tools/cargo/Cargo.toml --target-dir target
+install target/release/bsmr target/release/bsmr-cargo ~/.local/bin/
 bsmr --version
 ```
 
-The repository's `rust-toolchain` file selects the compiler and components.
-`cargo` installs that toolchain through rustup.
+Install both binaries in one directory. `bsmr` runs `bsmr-cargo` from its own
+directory to plan Rust builds, and Rust builds fail without it. Release
+installers include both binaries.
 
-For Bessemer development, keep the debug binary in the repository:
+The repository's `rust-toolchain` file selects the engine's compiler, and
+`cargo` installs it through rustup. The planner is a separate Cargo workspace
+pinned to Rust 1.98.0 in `tools/cargo/rust-toolchain.toml`.
+
+For Bessemer development, keep both debug binaries in `target/debug`:
 
 ```console
 cargo build --locked --bin bsmr
+cargo +1.98.0 build --locked --manifest-path tools/cargo/Cargo.toml --target-dir target
 target/debug/bsmr -h
 ```
 
