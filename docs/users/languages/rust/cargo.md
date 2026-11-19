@@ -17,15 +17,67 @@ planning extends the native frontend released in version 0.0.6.
 Build a Cargo package without writing or synchronizing build rules:
 
 ```console
-bsmr init
+bsmr build --show-output
 bsmr build app --show-output
 bsmr test app
 ```
 
+With no target, `build` and `test` select the current Cargo directory. At the
+workspace root, Cargo's `default-members` controls the selection. A package
+directory selects its libraries and binaries. `bsmr build .` makes the current
+directory explicit. Named targets and configured aliases retain their meaning.
+Only workspace members expose build targets. Excluded path dependencies remain
+available to their consumers, but direct directory builds report a membership error.
+An explicit build file owns its directory and requires an explicit target.
+Directory selections skip binaries and tests with disabled `required-features`,
+using Cargo's resolved features across all selected packages. Naming a disabled
+target explicitly is an error. A skipped target has no artifact or compiler
+action. JSON output represents that target with an empty output path.
+
+Cargo workspaces do not need `bsmr init`. BSMR uses the pinned Cargo to locate
+the owning workspace and loads its bundled build rules without writing `.bsmr`.
+An enclosing explicit BSMR project keeps ownership. Use `bsmr init` when you
+want to write and customize that configuration. Existing `.bsmr.local` settings
+can configure the native workspace without changing its Cargo files.
+
 Run `bsmr build --help` or `bsmr test --help` for command options.
 
+Select Cargo profiles and features through the existing configuration interface:
+
+```console
+bsmr build app -c rust.profile=release
+bsmr test app -c rust.features=app/test-hooks
+bsmr build app -c rust.default_features=false -c rust.all_features=true
+```
+
+The `rust` configuration section accepts `profile`, `features`, `default_features`,
+and `all_features`. Profiles default to `dev` for builds and `test` for tests.
+Features use Cargo's comma- or space-separated syntax. Default features are enabled
+and all-features selection is disabled unless requested. Cargo validates names
+and resolves profile inheritance and dependency features. Changes invalidate the
+selected plan.
+
+Select several packages or named targets in one command to resolve their shared
+features together, as Cargo does. For example, `bsmr build app worker` compiles
+one shared dependency with the union of features requested by both packages.
+Building `worker` alone resolves its own feature set. Changing the requested
+roots invalidates the cached plan, even in a warm daemon. Reordering the same
+roots does not duplicate compiler work.
+
+The selected roots share one native graph per workspace and build/test mode.
+Targets retain their owning package, so equally named binaries remain distinct.
+Run `python3 test/rust/roots.py /path/to/bsmr` to verify these transitions against
+Cargo and inspect the actual number of compiler actions.
+
+Cargo profiles can select `lto = "thin"`, `"fat"`, or `true` for optimization
+across crates. Bessemer retains LLVM bitcode in dependency libraries and applies
+the selected mode when linking binaries, C libraries, or inline unit tests. Rust library artifacts
+also retain object code so they remain usable by consumers that do not use LTO.
+`false` permits optimization within one crate. `"off"` disables it entirely.
+See [Cargo's LTO settings](https://doc.rust-lang.org/cargo/reference/profiles.html#lto).
+
 Commit `Cargo.toml`, `Cargo.lock`, and an exact `rust-toolchain.toml` at the
-project root. The current catalog supports `1.97.1` and `nightly-2026-04-11` on
+project root. The current catalog supports `1.97.1`, `1.98.0`, and `nightly-2026-04-11` on
 Linux and macOS, for ARM64 and x86-64. Install the matching Cargo resolver with
 `rustup toolchain install <channel> --profile minimal` before building.
 
@@ -37,7 +89,12 @@ profile = "minimal"
 
 BSMR reads manifests, project Cargo configuration, and target file names into an
 isolated snapshot. It discovers public targets without resolving their dependencies,
-then asks the bundled Cargo 0.98.0 planner for the selected build or test. The
+then asks the Cargo 0.98.0 planner, `bsmr-cargo`, for the selected build or test.
+Release installers bundle the planner beside `bsmr`. From-source installs build it
+from `tools/cargo`; see [installation](../../../getting_started/install.md).
+The snapshot retains existing manifest-declared entrypoint paths, including
+custom tests outside conventional directories. Missing files remain missing
+so Cargo reports them. Source contents still belong to native compiler inputs. The
 compiler pin is independent of this resolver version.
 
 Planning may acquire locked dependencies into BSMR's own Cargo home. It never
@@ -51,13 +108,17 @@ Cargo files -> locked resolution -> private targets -> native rustc actions
 ```
 
 Each crate uses the existing native Rust compilation, linking, and test machinery.
-A package containing one library or binary can be selected by its directory,
-even when its Cargo name differs. Library builds materialize a linkable `.rlib`; `:lib[check]` requests metadata
-only. Libraries expose `:lib`, binaries expose
+A package containing libraries or binaries can be selected by its directory,
+even when its Cargo name differs. Library builds preserve `lib`, `rlib`, `cdylib`,
+and `staticlib` declarations. All declared formats materialize even when the
+library is only a dependency of the selected executable. `:lib[cdylib]` and
+`:lib[staticlib]` select individual C-compatible artifacts. `:lib[check]` requests
+metadata only. Shared libraries use `.dylib` on macOS and `.so` on Linux.
+Libraries expose `:lib`, binaries expose
 their Cargo target name, and dependency
 renames preserve the name used in source. Package metadata enters the compiler
 as literal environment values, so text such as `$(location ...)` cannot become
-a build dependency. Inline unit tests are associated with
+a build dependency. Inline unit tests and integration tests are associated with
 their build targets. Changing an unrelated crate does not recompile the selected
 binary. Changing a dependency invalidates its consumers.
 
@@ -69,17 +130,75 @@ so the Rust package retains its inferred definition.
 
 ## Supported boundary
 
-The frontend supports local path libraries, binaries, and inline unit tests.
-Cargo selects default features, conditional dependencies, dev dependencies, profile
+First-party scripts can read [captured checkout identity](checkout.md) inside
+the verified Linux runtime. The captured Git inputs participate in cache identity.
+
+The frontend supports local path, public registry, and pinned Git libraries,
+binaries, inline unit tests, and integration tests. Registry archives are verified against
+`Cargo.lock`. Git packages are read from the locked commit without ambient
+Git filters or hooks. Compilation reads native source artifacts, not Cargo's
+mutable checkout cache. The planner exports pinned Git objects to checksum-verified
+archives, so compiler actions need no Git fetch or network access. Git submodules
+and authenticated registries remain unsupported.
+Excluded path dependencies provide source inputs without becoming public workspace targets.
+Cargo resolves requested features, conditional dependencies, dev dependencies, profile
 settings, and workspace lints before native compilation. Each build or test has a
 separate configured graph, so building a library does not activate its test-only
 dependencies.
+The native compiler checks Cargo's `docsrs` and `test` cfg names without enabling
+them. Other undeclared cfg names still follow the package's lint policy.
 
-Build scripts, procedural macros, external source compilation, native `links`,
-integration tests, custom harnesses, cross compilation, configured linkers, and
-cross-crate LTO remain unsupported. These requirements fail before compilation.
-Project compiler flags are limited to cfg values, lints, and scalar optimization
-settings. Response files, compiler extensions, file-based overrides, and Cargo
+Every compiler invocation receives absolute `CARGO_MANIFEST_DIR` and
+`CARGO_MANIFEST_PATH` values for its declared package. Procedural macros can
+read package files, such as grammar definitions, and edits invalidate expansion.
+
+Build scripts and procedural macros require the
+[verified Linux namespace runtime](https://github.com/dedalus-labs/bsmr/blob/main/app/bsmr_execute_impl/src/executors/namespace/README.md).
+Unisolated execution rejects package code before compilation. This does not
+establish macOS package-code isolation or complete C/C++ toolchain support.
+
+The daemon retains one verified namespace runtime between commands. Each
+command rechecks both pinned files before reuse. Matching bytes avoid another
+copy and extraction. A replacement does not change an active action's runtime.
+
+Within a command, actions reuse private input files verified against the same
+digest and executable bit. Their input mounts stay read-only. Each action keeps
+its own writable outputs. A new command verifies inputs again, so this storage
+does not accumulate historical source versions between commands.
+
+Cargo's `links` metadata flows only to direct dependents' build scripts.
+Generated directory paths remain attached to their producing artifacts and are
+rebound when cached outputs are restored. Metadata emission order is preserved,
+including keys that become identical after Cargo's environment-name conversion.
+Declaring `links` does not itself require a C compilation or linker invocation.
+
+Generic `rustc-link-arg` directives reach the package's compiler actions through
+the existing argument file. Rustc applies them when linking and ignores them for
+`rlib` compilation. Target-specific linker directives remain unsupported.
+
+Cargo's `target.<triple>.linker` and `target.'cfg(...)'.linker` select the driver.
+`-C link-arg=...` passes arguments unchanged. For example:
+
+```toml title=".cargo/config.toml"
+[target.'cfg(target_os = "linux")']
+linker = "clang"
+rustflags = ["-C", "link-arg=-fuse-ld=wild"]
+```
+
+Configured linking requires the verified namespace runtime. Include the driver,
+linker and their libraries in that pinned runtime. Its content digest enters
+action identity. BSMR preserves `RUSTC_LINKER` for build scripts and uses the
+existing native C++ toolchain for linking. A missing driver or linker fails.
+There is no linker-name allowlist or automatic replacement.
+
+Experimental linkers use the same explicit configuration and do not change the
+default. The [mold Mach-O port](https://github.com/rui314/mold-macho) accepts
+Clang's `--ld-path` selection. Native macOS configured-linker execution remains
+unqualified, as does macOS package-code isolation.
+
+Cross compilation remains unsupported. Project compiler flags otherwise support
+cfg values, lints, and scalar optimization settings.
+Response files, compiler extensions, file-based overrides, and Cargo
 CLI option parity are not implemented. Shared files outside a crate require
 explicitly declared action inputs.
 
@@ -98,15 +217,18 @@ contents. Symlink targets outside those directories must be declared separately.
 This check is not a filesystem sandbox.
 
 Rust compiler, Clippy, and standard-library archives have pinned SHA-256 digests.
+Their pinned sizes let the download rule use cached compiler archives without
+querying their HTTP headers.
 Their content contributes to compilation action identity. Target discovery uses
 the selected local rustup installation, while configured planning uses the
-bundled resolver. C/C++ linking and Python bootstrap tools
+Cargo planner beside `bsmr`. Releases bundle the planner, and from-source
+installs build it. C/C++ linking and Python bootstrap tools
 still come from the execution host. This is not a fully hermetic or remotely
 qualified toolchain. Native actions honor the existing cache-upload policy.
 
 Ambient Rust flags and user Cargo configuration do not configure native actions.
 Project configuration supplies the planner's flags and profiles. Project `[env]`
-values and manifest-directory variables are not supported yet.
+values are not supported yet.
 Unsupported projects can use Cargo directly. BSMR never silently switches to a
 whole-workspace Cargo build after inference or compilation fails.
 
@@ -120,3 +242,41 @@ failure, and a custom recipe consuming an inferred executable. It checks
 manifest invalidation, source invalidation, unrelated edits, cache restoration
 in a second checkout, environment isolation, and build-script rejection. It also
 checks that inference leaves the checkout free of generated build files.
+
+`python3 test/rust/linker.py /path/to/bsmr /path/to/runtime.json clang -- -fuse-ld=wild`
+compares the selected driver with Cargo. It checks build-script environment,
+warm reuse, changed linker arguments and missing tools without substitution.
+
+`test/rust/metadata.py` compares metadata visibility and ordering with Cargo. It
+checks generated paths, cache restoration across checkouts, and source edits.
+
+`bsmr test app` includes the package's integration tests. Cargo supplies their
+dev dependencies and the binaries exposed through `CARGO_BIN_EXE_<name>`.
+Tests run from their declared package source directory. Artifact-backed
+environment paths remain absolute when a test changes its working directory.
+Local packages in the selected dependency graph retain their workspace layout
+in a declared test resource. A test can read a sibling package's fixtures through
+the same relative path used by Cargo. The primary package retains source changes
+produced by its build script. The view remains read-only and tracks fixture edits.
+When that directory is a mapped source root, `file!()` paths are relative to it.
+Snapshot readers can locate the checked-in files without exposing the generated
+target directory or making source inputs writable.
+Custom harnesses use their own `main` with Cargo's `cfg(test)` setting.
+
+`python3 test/rust/tests.py /path/to/bsmr` compares these contracts with Cargo.
+Supply `/path/to/runtime.json` as a second argument to select the Linux namespace
+runtime explicitly. The fixture checks test-only
+features, binary execution, fixture reads and failing custom harnesses. It
+does not qualify macOS package-code isolation or arbitrary host dependencies.
+
+`test/rust/lto.ts` compares release LTO with Cargo across a three-crate chain.
+It checks compiler flags, dependency edits, cached output restoration, and unit tests.
+
+`test/rust/libraries.ts` compares Cargo's multiple-output behavior with native
+builds. It runs a Rust consumer and loads the generated C library before and after
+a source edit, then checks warm reuse and restoration after cleaning outputs.
+
+The native toolchain reports the release channel selected by the verified compiler
+pin. Nightly features require the nightly channel. For local rule development,
+`node test/native-rust-build.ts /path/to/bsmr prelude` tests the source prelude
+without rebuilding the CLI. Omitting the third argument tests its bundled rules.

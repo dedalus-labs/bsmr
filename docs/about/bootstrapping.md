@@ -18,11 +18,16 @@ For dependencies on Rust crates from [crates.io](https://crates.io), we use
 [reindeer](https://github.com/facebookincubator/reindeer) to automatically
 generate `BUILD.bsmr` files.
 
-First, build `bsmr` with Cargo:
+First, build `bsmr` and its Cargo planner with Cargo:
 
 ```sh
 cargo build --locked --bin bsmr
+cargo +1.98.0 build --locked --manifest-path tools/cargo/Cargo.toml --target-dir target
 ```
+
+Both binaries land in `target/debug`. `bsmr` runs `bsmr-cargo` from its own
+directory for Rust builds. The planner is a separate workspace pinned to Rust
+1.98.0, which isolates Cargo's native dependencies from the engine.
 
 Next, install [DotSlash](https://dotslash-cli.com) with Cargo:
 

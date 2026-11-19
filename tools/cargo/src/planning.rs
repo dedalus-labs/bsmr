@@ -20,11 +20,13 @@ use cargo::core::Workspace;
 use cargo::core::compiler::BuildContext;
 use cargo::core::compiler::Compilation;
 use cargo::core::compiler::CompileKind;
+use cargo::core::compiler::CompileMode;
 use cargo::core::compiler::Unit;
 use cargo::core::compiler::UnitInterner;
 use cargo::core::compiler::UserIntent;
 use cargo::core::compiler::unit_graph::UnitDep;
 use cargo::core::dependency::DepKind;
+use cargo::core::profiles::ProfileRoot;
 use cargo::core::resolver::CliFeatures;
 use cargo::ops::CompileFilter;
 use cargo::ops::CompileOptions;
@@ -33,6 +35,8 @@ use cargo::ops::LibRule;
 use cargo::ops::Packages;
 use cargo::ops::{self};
 use cargo::util::context::ConfigRelativePath;
+use cargo_platform::Cfg;
+use cargo_util_schemas::manifest::TomlDebugInfo;
 use cargo_util_terminal::Shell;
 
 use crate::types::ConfiguredUnit;
@@ -40,10 +44,12 @@ use crate::types::Dependency;
 use crate::types::DependencyKind;
 use crate::types::Graph;
 use crate::types::Mode;
+use crate::types::Origin;
 use crate::types::Request;
 use crate::types::Source;
 use crate::types::SourcePolicy;
 use crate::types::TargetFilter;
+use crate::types::TargetKind;
 
 /// Cargo resolves locked dependencies and probes rustc without compiling source.
 pub(crate) fn plan(request: Request) -> Result<Graph> {
@@ -98,9 +104,43 @@ pub(crate) fn plan(request: Request) -> Result<Graph> {
     let resolve = ops::load_pkg_lockfile(&workspace)?.context("Cargo.lock has no resolution")?;
     let options = options(&request, &gctx)?;
     let interner = UnitInterner::new();
-    let context = ops::create_bcx(&workspace, &options, &interner, None)?;
+    let mut context = ops::create_bcx(&workspace, &options, &interner, None)?;
+    if let TargetFilter::Targets { targets } = &request.target_filter {
+        let mut selected = Vec::new();
+        for target in targets {
+            let root = context.roots.iter().find(|unit| {
+                unit.pkg.name().as_str() == target.package && target.matches(&unit.target)
+            });
+            if root.is_none() && target.origin == Origin::Directory {
+                let candidate = workspace
+                    .members()
+                    .find(|package| package.name().as_str() == target.package)
+                    .and_then(|package| {
+                        package
+                            .targets()
+                            .iter()
+                            .find(|candidate| target.matches(candidate))
+                    });
+                ensure!(
+                    candidate.is_some_and(|candidate| candidate.required_features().is_some()),
+                    "directory target {}:{} is absent from Cargo roots",
+                    target.package,
+                    target.name
+                );
+                continue;
+            }
+            let root = root.with_context(|| {
+                format!(
+                    "selected target {}:{} is absent from Cargo roots",
+                    target.package, target.name
+                )
+            })?;
+            selected.push(root.clone());
+        }
+        context.roots = selected;
+    }
     ensure!(
-        ["1.97.1", "1.96.0-nightly"]
+        ["1.97.1", "1.98.0", "1.96.0-nightly"]
             .contains(&context.target_data.rustc.version.to_string().as_str()),
         "unsupported planner compiler: {}",
         context.target_data.rustc.version
@@ -172,7 +212,11 @@ fn options(request: &Request, gctx: &GlobalContext) -> Result<CompileOptions> {
         Mode::Check => UserIntent::Check { test: false },
     };
     let mut options = CompileOptions::new(gctx, intent)?;
-    options.spec = Packages::Packages(vec![request.package.clone()]);
+    ensure!(
+        !request.packages.is_empty(),
+        "at least one package must be selected"
+    );
+    options.spec = Packages::Packages(request.packages.clone());
     options.filter = match &request.target_filter {
         TargetFilter::Package => CompileFilter::Default {
             required_features_filterable: true,
@@ -186,6 +230,44 @@ fn options(request: &Request, gctx: &GlobalContext) -> Result<CompileOptions> {
             FilterRule::none(),
             FilterRule::none(),
         ),
+        TargetFilter::Targets { targets } => {
+            ensure!(!targets.is_empty(), "at least one target must be selected");
+            ensure!(
+                targets
+                    .iter()
+                    .all(|target| request.packages.contains(&target.package)),
+                "selected target package is absent from packages"
+            );
+            let names = |kind| {
+                if targets
+                    .iter()
+                    .any(|target| target.kind == kind && target.origin == Origin::Directory)
+                {
+                    return FilterRule::All;
+                }
+                FilterRule::Just(
+                    targets
+                        .iter()
+                        .filter(|target| target.kind == kind)
+                        .map(|target| target.name.clone())
+                        .collect(),
+                )
+            };
+            CompileFilter::new(
+                if targets
+                    .iter()
+                    .any(|target| target.kind == TargetKind::Library)
+                {
+                    LibRule::True
+                } else {
+                    LibRule::False
+                },
+                names(TargetKind::Binary),
+                names(TargetKind::IntegrationTest),
+                FilterRule::none(),
+                FilterRule::none(),
+            )
+        }
     };
     options.cli_features = CliFeatures::from_command_line(
         &request.features,
@@ -207,7 +289,18 @@ fn export(context: &BuildContext<'_, '_>, resolve: &Resolve) -> Result<Graph> {
         context.extra_compiler_args.values().all(Vec::is_empty),
         "unsupported extra compiler arguments"
     );
-    let mut units: Vec<&Unit> = context.unit_graph.keys().collect();
+    let mut reachable = BTreeSet::new();
+    let mut pending: Vec<_> = context.roots.iter().collect();
+    while let Some(unit) = pending.pop() {
+        if reachable.insert(unit) {
+            pending.extend(
+                context.unit_graph[unit]
+                    .iter()
+                    .map(|dependency| &dependency.unit),
+            );
+        }
+    }
+    let mut units: Vec<&Unit> = reachable.into_iter().collect();
     let compilation = Compilation::new(context)?;
     let mut sources = BTreeMap::new();
     for unit in &units {
@@ -224,15 +317,29 @@ fn export(context: &BuildContext<'_, '_>, resolve: &Resolve) -> Result<Graph> {
         .map(|(i, unit)| (*unit, i))
         .collect();
     Ok(Graph {
-        schema_version: 1,
+        schema_version: 5,
         cargo_library: crate::CARGO_LIBRARY,
         rustc_version: context.target_data.rustc.verbose_version.clone(),
         workspace_root: context.ws.root().to_owned(),
+        workspace_packages: context
+            .ws
+            .members()
+            .map(|package| package.root().to_owned())
+            .chain(
+                units
+                    .iter()
+                    .filter(|unit| unit.pkg.package_id().source_id().is_path())
+                    .map(|unit| unit.pkg.root().to_owned()),
+            )
+            .collect::<std::collections::BTreeSet<_>>()
+            .into_iter()
+            .collect(),
         roots: context.roots.iter().map(|unit| indices[unit]).collect(),
         units: units
             .iter()
             .map(|unit| {
                 configured_unit(
+                    context,
                     unit,
                     sources[&unit.pkg.package_id()].clone(),
                     compilation.target_linker(unit.kind).map(Path::to_owned),
@@ -274,11 +381,6 @@ fn package_environment(package: &Package) -> BTreeMap<String, String> {
 fn validate_unit(unit: &Unit) -> Result<()> {
     crate::flags::validate(&unit.rustflags, crate::flags::Phase::Compile)?;
     ensure!(
-        unit.target.harness() || !unit.mode.is_any_test(),
-        "unsupported custom test harness: {}",
-        unit.pkg
-    );
-    ensure!(
         unit.links_overrides.is_empty(),
         "unsupported links override: {}",
         unit.pkg
@@ -296,21 +398,91 @@ fn validate_unit(unit: &Unit) -> Result<()> {
     Ok(())
 }
 
+/// Preserve Cargo's build-script environment from its resolved profile and target cfgs.
+fn unit_environment(context: &BuildContext<'_, '_>, unit: &Unit) -> BTreeMap<String, String> {
+    let mut environment = package_environment(&unit.pkg);
+    if !matches!(unit.mode, CompileMode::RunCustomBuild) {
+        return environment;
+    }
+    if let Some(links) = unit.pkg.manifest().links() {
+        environment.insert("CARGO_MANIFEST_LINKS".into(), links.into());
+    }
+    let mut cfgs = BTreeMap::from([(
+        "feature".to_owned(),
+        unit.features
+            .iter()
+            .map(ToString::to_string)
+            .collect::<Vec<_>>(),
+    )]);
+    if unit.profile.debug_assertions {
+        cfgs.insert("debug_assertions".into(), Vec::new());
+    }
+    for cfg in context.target_data.cfg(unit.kind) {
+        match cfg {
+            Cfg::Name(name) if name.as_str() == "debug_assertions" => {}
+            Cfg::Name(name) => {
+                cfgs.insert(name.as_str().to_owned(), Vec::new());
+            }
+            Cfg::KeyPair(name, value) => {
+                cfgs.entry(name.as_str().to_owned())
+                    .or_default()
+                    .push(value.clone());
+            }
+        }
+    }
+    environment.extend(cfgs.into_iter().map(|(key, values)| {
+        (
+            format!("CARGO_CFG_{}", key.to_uppercase().replace('-', "_")),
+            values.join(","),
+        )
+    }));
+    environment.extend([
+        ("HOST".into(), context.host_triple().to_string()),
+        (
+            "TARGET".into(),
+            context.target_data.short_name(&unit.kind).to_string(),
+        ),
+        ("OPT_LEVEL".into(), unit.profile.opt_level.to_string()),
+        (
+            "DEBUG".into(),
+            (!matches!(unit.profile.debuginfo.into_inner(), TomlDebugInfo::None)).to_string(),
+        ),
+        (
+            "PROFILE".into(),
+            match unit.profile.root {
+                ProfileRoot::Debug => "debug",
+                ProfileRoot::Release => "release",
+            }
+            .into(),
+        ),
+    ]);
+    environment
+}
+
 /// Copy resolved compiler settings without deriving new dependency or feature policy.
 fn configured_unit(
+    context: &BuildContext<'_, '_>,
     unit: &Unit,
     source: Source,
     linker: Option<PathBuf>,
     dependencies: Vec<Dependency>,
 ) -> ConfiguredUnit {
+    let mut package_lint_flags = unit.pkg.manifest().lint_rustflags().to_vec();
+    // Match Cargo's compiler policy without weakening local package lints.
+    if !unit.show_warnings(context.gctx) {
+        package_lint_flags.push("--cap-lints=allow".into());
+    } else if !unit.is_local() {
+        package_lint_flags.push("--cap-lints=warn".into());
+    }
     ConfiguredUnit {
         package_id: unit.pkg.package_id().to_spec().to_string(),
         package_name: unit.pkg.name().to_string(),
         package_version: unit.pkg.version().to_string(),
         package_links: unit.pkg.manifest().links().map(str::to_owned),
-        package_environment: package_environment(&unit.pkg),
+        package_environment: unit_environment(context, unit),
         source,
         target: unit.target.clone(),
+        harness: unit.target.harness(),
         platform: unit.kind,
         mode: unit.mode,
         profile: unit.profile.clone(),
@@ -324,7 +496,7 @@ fn configured_unit(
             .collect(),
         rustflags: unit.rustflags.to_vec(),
         rustdocflags: unit.rustdocflags.to_vec(),
-        package_lint_flags: unit.pkg.manifest().lint_rustflags().to_vec(),
+        package_lint_flags,
         linker,
         dependencies,
     }

@@ -1,3 +1,9 @@
+# ===----------------------------------------------------------------------===
+# Upstream-Source: facebook/buck2@1560aca2002865cd73d7cafb22c705cfb640b2bc
+# Modifications Copyright (c) 2026 Dedalus Labs, Inc. and its contributors
+# SPDX-License-Identifier: Apache-2.0
+# ===----------------------------------------------------------------------===
+
 # Copyright (c) Meta Platforms, Inc. and affiliates.
 #
 # This source code is dual-licensed under either the MIT license found in the
@@ -32,6 +38,7 @@ load(
     ":sources.bzl",
     "RustSources",
     "RustSourcesTSet",
+    "source_inputs",
     "symlinked_srcs",
 )
 
@@ -74,6 +81,8 @@ CompileContext = record(
     symlinked_srcs = field(Artifact),
     # All sources of transitive Rust dependencies, not including doc dependencies.
     transitive_srcs = field(RustSourcesTSet),
+    # Original source artifacts remain declared when dependency macros read them.
+    transitive_inputs = field(RustSourcesTSet),
     # Linker args to pass the linker wrapper to rustc.
     sysroot_args = field(cmd_args),
     toolchain_info = field(RustToolchainInfo),
@@ -98,10 +107,15 @@ def compile_context(ctx: AnalysisContext, binary: bool = False) -> CompileContex
         panic_runtime = toolchain_info.panic_runtime,
     )
 
+    source_deps = [d.dep[RustSources] for d in resolve_deps(ctx, dep_ctx) if RustSources in d.dep]
     transitive_srcs = ctx.actions.tset(
         RustSourcesTSet,
         value = srcs,
-        children = [d.dep[RustSources].tset for d in resolve_deps(ctx, dep_ctx) if RustSources in d.dep],
+        children = [dep.tset for dep in source_deps],
+    )
+    transitive_inputs = ctx.actions.tset(
+        RustSourcesTSet,
+        children = [source_inputs(ctx)] + [dep.inputs for dep in source_deps],
     )
 
     # When we pass explicit sysroot deps, we need to override the default
@@ -140,6 +154,7 @@ def compile_context(ctx: AnalysisContext, binary: bool = False) -> CompileContex
         soname = _attr_soname(ctx),
         symlinked_srcs = srcs,
         transitive_srcs = transitive_srcs,
+        transitive_inputs = transitive_inputs,
         sysroot_args = sysroot_args,
         toolchain_info = toolchain_info,
         transitive_dependency_dirs = set(),

@@ -71,7 +71,7 @@ def main():
 
     os.chdir(args.cwd)
     try:
-        os.execl(cc[0], cc[0], *cc[1:])
+        os.execvp(cc[0], cc)
     except Exception:
         print(f"exec failed: {pformat(cc)}", file=sys.stderr)
         raise

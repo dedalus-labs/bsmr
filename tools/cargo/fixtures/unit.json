@@ -1,8 +1,9 @@
 {
-  "schema_version": 1,
+  "schema_version": 5,
   "cargo_library": "0.98.0",
   "rustc_version": "release: 1.97.1\n",
   "workspace_root": "/workspace",
+  "workspace_packages": ["/workspace"],
   "roots": [
     0
   ],
@@ -29,6 +30,9 @@
         "CARGO_PKG_VERSION_PRE": ""
       },
       "source": {
+        "artifact": {
+          "kind": "workspace"
+        },
         "kind": "path",
         "identity": "path+file:///workspace",
         "checksum": null,
@@ -51,6 +55,7 @@
         "doctest": true,
         "test": true
       },
+      "harness": true,
       "platform": null,
       "mode": "build",
       "profile": {

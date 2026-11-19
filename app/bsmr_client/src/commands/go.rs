@@ -18,6 +18,7 @@ use std::fs;
 use std::path::Path;
 use std::path::PathBuf;
 use std::process::Command;
+use std::process::ExitStatus;
 
 use bsmr_client_ctx::client_ctx::ClientCommandContext;
 use bsmr_client_ctx::common::BsmrArgMatches;
@@ -26,6 +27,7 @@ use bsmr_common::argv::SanitizedArgv;
 use bsmr_common::legacy_configs::cells::BsmrConfigBasedCells;
 use bsmr_common::legacy_configs::key::BsmrconfigKeyRef;
 use bsmr_core::fs::output_path::BSMR_OUTPUT_ROOT;
+use bsmr_core::fs::project::ProjectRoot;
 
 use crate::commands::go_graph::GoGraph;
 use crate::commands::go_manifest::SyncMode;
@@ -106,12 +108,19 @@ impl GoCommand {
     }
 }
 
-/// Pins or verifies the generated toolchain at the Bessemer project root.
+/// Pins or verifies the SDK lock and the acquisition beside the `toolchains//` package.
 async fn configure_toolchain(
     command: GoToolchainCommand,
     ctx: &ClientCommandContext<'_>,
 ) -> bsmr_error::Result<()> {
-    let root = ctx.paths()?.project_root().root().as_path();
+    let project_root = ctx.paths()?.project_root();
+    let root = project_root.root().as_path();
+    let toolchains = toolchains_directory(project_root).await?;
+    if command.check {
+        go_toolchain::reject_leftovers(root, &toolchains)?;
+    } else {
+        go_toolchain::remove_leftovers(root, &toolchains)?;
+    }
     let lock = go_toolchain::configure(
         root,
         command.version.as_deref(),
@@ -120,11 +129,12 @@ async fn configure_toolchain(
     )
     .await?;
     if command.check {
-        go_toolchain::acquired_go(root, &lock)?;
+        go_toolchain::acquired_go(&toolchains, &lock)?;
     } else {
-        go_toolchain::prepare_acquisition(root, &lock)?;
+        go_toolchain::validate_acquisition_owners(&toolchains)?;
+        go_toolchain::create_toolchains_package(&toolchains)?;
         let sdk = materialize_sdk_archive(root)?;
-        go_toolchain::install_sdk(root, &sdk, &lock)?;
+        go_toolchain::install_sdk(&toolchains, &sdk, &lock)?;
     }
     bsmr_client_ctx::println!(
         "Go SDK {}: {}",
@@ -148,14 +158,25 @@ fn sync(mut command: GoSyncCommand, ctx: &ClientCommandContext<'_>) -> bsmr_erro
     if !root.join("go.mod").is_file() && !root.join("go.work").is_file() {
         return Err(GoCommandError::NoModule(root).into());
     }
-    let project_root = ctx.paths()?.project_root().root().as_path();
-    let lock = go_toolchain::read_lock(project_root)?;
-    let go = go_toolchain::acquired_go(project_root, &lock)?;
-    let output = run_go_list(&command, &root, &go)?;
-    let graph = GoGraph::from_go_list(&output, &root)?;
-    if graph.packages().is_empty() {
-        return Err(GoCommandError::NoPackages(root).into());
+    let project_root = ctx.paths()?.project_root();
+    let toolchains = futures::executor::block_on(toolchains_directory(project_root))?;
+    go_toolchain::reject_leftovers(project_root.root().as_path(), &toolchains)?;
+    let lock = go_toolchain::read_lock(project_root.root().as_path())?;
+    let go = go_toolchain::acquired_go(&toolchains, &lock)?;
+    let mut patterns = discover_patterns(&root)?;
+    // Tool directives are part of the module's graph, so their packages are roots even
+    // when they live only in the vendor tree that directory discovery skips.
+    if lock.supports_tool_directives()? {
+        patterns.push("tool".to_owned());
     }
+    // An empty graph is a valid SDK answer: synchronization then retires every manifest it
+    // owns. `go list` without patterns would list `.`, which fails in a root without Go files.
+    let output = if patterns.is_empty() {
+        Vec::new()
+    } else {
+        run_go_list(&command, &root, &go, &patterns)?
+    };
+    let graph = GoGraph::from_go_list(&output, &root, &root_package(ctx)?)?;
     let mode = if command.check {
         SyncMode::Check
     } else {
@@ -169,6 +190,23 @@ fn sync(mut command: GoSyncCommand, ctx: &ClientCommandContext<'_>) -> bsmr_erro
         report.removed()
     )?;
     Ok(())
+}
+
+/// Resolves the directory of the package `toolchains//` names in the project configuration.
+///
+/// The locked Go toolchain targets join that package when it is evaluated and read the SDK and
+/// bootstrap wrapper from these package-relative directories. `bsmr init` aliases `toolchains`
+/// to the root cell, so this is the project root unless a project declares its own cell.
+pub(super) async fn toolchains_directory(
+    project_root: &ProjectRoot,
+) -> bsmr_error::Result<PathBuf> {
+    let cells = BsmrConfigBasedCells::parse_with_config_args(project_root, &[]).await?;
+    let resolver = &cells.cell_resolver;
+    let cell = resolver
+        .root_cell_cell_alias_resolver()
+        .resolve("toolchains")?;
+    let path = resolver.get(cell)?.path().as_project_relative_path();
+    Ok(project_root.resolve(path).into_path_buf())
 }
 
 /// Resolves the generator destination from the active cell configuration.
@@ -205,6 +243,17 @@ fn resolve_buildfile(
             property: "name",
         })?,
     )?)
+}
+
+/// Returns the working directory's package path within its cell, where generated labels start.
+fn root_package(ctx: &ClientCommandContext<'_>) -> bsmr_error::Result<String> {
+    let paths = ctx.paths()?;
+    let cells = futures::executor::block_on(BsmrConfigBasedCells::parse_with_config_args(
+        paths.project_root(),
+        &[],
+    ))?;
+    let package = cells.cell_resolver.get_cell_path(&paths.roots.cwd);
+    Ok(package.path().as_str().to_owned())
 }
 
 /// Requires every graph-selection tag to exist in Bessemer's configuration space.
@@ -244,7 +293,12 @@ pub(super) fn select_buildfile(
 }
 
 /// Runs the exact Go SDK in offline, non-auto-upgrading mode.
-fn run_go_list(command: &GoSyncCommand, root: &Path, go: &Path) -> Result<Vec<u8>, GoCommandError> {
+fn run_go_list(
+    command: &GoSyncCommand,
+    root: &Path,
+    go: &Path,
+    patterns: &[String],
+) -> Result<Vec<u8>, GoCommandError> {
     let scratch = tempfile::Builder::new()
         .prefix("bsmr-go-list-")
         .tempdir()
@@ -263,7 +317,7 @@ fn run_go_list(command: &GoSyncCommand, root: &Path, go: &Path) -> Result<Vec<u8
     if !command.tags.is_empty() {
         process.args(["-tags", &command.tags.join(",")]);
     }
-    process.args(discover_patterns(root)?);
+    process.args(patterns);
     process
         .current_dir(root)
         .env_clear()
@@ -313,8 +367,7 @@ fn materialize_sdk_archive(root: &Path) -> Result<PathBuf, GoCommandError> {
         })?;
     if !output.status.success() {
         return Err(GoCommandError::SdkBuild {
-            status: output.status.code(),
-            stdout: String::from_utf8_lossy(&output.stdout).trim().to_owned(),
+            status: output.status,
             stderr: String::from_utf8_lossy(&output.stderr).trim().to_owned(),
         });
     }
@@ -374,9 +427,6 @@ pub(super) fn discover_patterns(root: &Path) -> Result<Vec<String>, GoCommandErr
     }
     directories.sort();
     patterns.extend(directories.into_iter().map(|name| format!("./{name}/...")));
-    if patterns.is_empty() {
-        return Err(GoCommandError::NoPackages(root.to_owned()));
-    }
     Ok(patterns)
 }
 
@@ -445,8 +495,6 @@ fn validate_buildfile(buildfile: &str) -> Result<(), GoCommandError> {
 pub(super) enum GoCommandError {
     #[error("Go synchronization root `{0:?}` has neither go.mod nor go.work")]
     NoModule(PathBuf),
-    #[error("Go synchronization root `{0:?}` contains no package roots")]
-    NoPackages(PathBuf),
     #[error("Go synchronization root contains a non-UTF-8 entry `{0:?}`")]
     NonUtf8Entry(PathBuf),
     #[error("Go build-file name must be a single non-empty path component, got `{0}`")]
@@ -470,12 +518,8 @@ pub(super) enum GoCommandError {
     },
     #[error("failed to resolve the Bessemer executable: {message}")]
     CurrentExecutable { message: String },
-    #[error("failed to materialize the locked Go SDK with status {status:?}: {stdout} {stderr}")]
-    SdkBuild {
-        status: Option<i32>,
-        stdout: String,
-        stderr: String,
-    },
+    #[error("failed to materialize the locked Go SDK ({status}): {stderr}")]
+    SdkBuild { status: ExitStatus, stderr: String },
     #[error("Bessemer emitted no unique output for `toolchains//:go_sdk_archive`")]
     SdkOutput,
     #[error("`{executable:?} list` failed with status {status:?}: {stderr}")]

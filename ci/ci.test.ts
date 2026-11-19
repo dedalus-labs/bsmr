@@ -15,8 +15,52 @@ import { pullRequestFiles, rustAffected, rustAffectedForEvent } from "./affected
 import { ci } from "./ci.ts";
 import { docs } from "./docs.ts";
 import { typescriptCache } from "./typescript/cache.ts";
+import ociTools from "../prelude/oci/tools.json" with { type: "json" };
+import { ociCache } from "./oci/cache.ts";
+import { releaseVersion } from "./release-version.ts";
 
 const jobs = ci.jobs;
+
+test("OCI qualification verifies its shared encoder pin before running mandatory image tests", () => {
+	const steps = jobs.workflows.steps;
+	const download = steps.findIndex((step) => step.name === "Download pinned OCI encoder");
+	const verify = steps.findIndex((step) => step.name === "Verify OCI encoder");
+	const execute = steps.findIndex((step) => step.name === "Check workflow source");
+	assert.ok(download >= 0 && download < verify && verify < execute);
+	const verification = steps[verify];
+	assert.ok(verification && "uses" in verification);
+	assert.deepEqual(verification.with, {
+		path: "${{ format('{0}/oci-img', runner.temp) }}",
+		expected: ociTools.img.assets["linux-amd64"].sha256,
+	});
+	const execution = steps[execute];
+	assert.ok(execution && "env" in execution);
+	assert.deepEqual(execution.env, { BSMR_OCI_IMG: "${{ format('{0}/oci-img', runner.temp) }}" });
+	assert.match(ociTools.img.assets["linux-amd64"].url, /\/v0\.3\.22\/img_linux_amd64$/);
+	assert.match(ociTools.img.assets["linux-amd64"].sha256, /^[0-9a-f]{64}$/);
+});
+
+test("native OCI cache qualification consumes the existing source-built Linux amd64 engine", async () => {
+	const step = jobs.rust_self_host.steps.find((candidate) => "uses" in candidate && candidate.uses === "./.github/actions/oci/cache");
+	assert.ok(step && "uses" in step && "if" in step);
+	assert.equal(step.if, "${{ matrix.architecture == 'x64' }}");
+	assert.deepEqual(step.with, { binary: "target/debug/bsmr", img: "${{ format('{0}/oci-img', runner.temp) }}", platform: "linux/amd64" });
+	const download = jobs.rust_self_host.steps.find((candidate) => candidate.name === "Download pinned OCI encoder");
+	assert.ok(download && "if" in download);
+	assert.equal(download.if, step.if);
+	const failure = new Error("OCI qualification failed");
+	await assert.rejects(runAction(ociCache, {
+		with: { binary: "test path/bsmr", img: "test path/img", platform: "linux/amd64" },
+		exec: async (file, args) => {
+			assert.equal(file, "node");
+			assert.deepEqual(args, ["test/oci/cache.ts", "test path/bsmr", "test path/img", "prelude", "prelude/oci/operations.mjs",
+				"--platform", "linux/amd64", "--engine-version", releaseVersion(process.cwd()), "--bundled-prelude"]);
+			throw failure;
+		},
+		fs: { readText: async () => assert.fail("action delegates to the real fixture") },
+		runner: { uidGid: "1000:1000" },
+	}), failure);
+});
 
 test("TypeScript cache uses its nested action route and propagates failures", async () => {
 	const step = jobs.rust_self_host?.steps.find(
@@ -53,6 +97,13 @@ function unsafeScript(name: string): string {
 	return step.run.kind === "unsafe-shell" ? step.run.script : "";
 }
 
+test("only pull requests cancel an in-progress run, so main runs save Rust caches", () => {
+	assert.deepEqual(ci.concurrency, {
+		group: "${{ format('{0}-{1}', github.workflow, github.ref) }}",
+		"cancel-in-progress": "${{ github.event_name == 'pull_request' }}",
+	});
+});
+
 test("Rust aggregates completed runs without surviving workflow cancellation", () => {
 	assert.equal(jobs.rust?.name, "Rust");
 	assert.equal(jobs.rust?.["runs-on"], "ubuntu-24.04");
@@ -81,6 +132,7 @@ test("Rust lanes run only for trusted affected changes", () => {
 	assert.ok(check !== undefined && "uses" in check);
 	assert.equal(check.uses, "./.github/actions/ci/rust-affected");
 	assert.equal(check.with?.["merge-group-base-sha"], "${{ github.event.merge_group.base_sha }}");
+	assert.equal(check.with?.["before-sha"], "${{ github.event.before }}");
 	assert.equal(check.with?.["head-sha"], "${{ github.event.pull_request.head.sha || github.sha }}");
 	for (const id of rustLanes) {
 		assert.equal(jobs[id]?.needs, "affected");
@@ -95,6 +147,9 @@ test("Rust affected paths fail closed", () => {
 	assert.equal(rustAffected([".github/dependabot.yml"]), false);
 	assert.equal(rustAffected(["docs/users/getting_started.md"]), false);
 	assert.equal(rustAffected(["README.md", ".github/CODEOWNERS"]), false);
+	assert.equal(rustAffected(["docs/users/getting_started.md", "mkdocs.yml"]), false);
+	assert.equal(rustAffected([".agents/skills/release/SKILL.md"]), false);
+	assert.equal(rustAffected(["docs/mkdocs.yml", "app/.agents/notes.md"]), true);
 	assert.equal(rustAffected(["Cargo.lock"]), true);
 	assert.equal(rustAffected(["app/bsmr/src/main.rs"]), true);
 	assert.equal(rustAffected(["app/bsmr_core/src/pattern/target_pattern.md"]), true);
@@ -145,11 +200,41 @@ test("Merge-group paths classify the exact candidate against its base", async ()
 			eventName: "merge_group",
 			baseSha: "",
 			mergeGroupBaseSha: base,
+			beforeSha: "",
 			headSha: head,
 		}),
 		false,
 	);
 	assert.deepEqual(calls, [["git", "diff", "--name-only", "--no-renames", "-z", base, head]]);
+});
+
+test("Push paths classify the pushed head against its previous commit", async () => {
+	const before = "a".repeat(40);
+	const head = "b".repeat(40);
+	const calls: string[][] = [];
+	const exec: ScriptExec = async (file, args) => {
+		calls.push([file, ...args]);
+		return { exitCode: 0, stderr: "", stdout: "docs/users/getting_started.md\0mkdocs.yml\0" };
+	};
+	const push = { eventName: "push", baseSha: "", mergeGroupBaseSha: "", beforeSha: before, headSha: head } as const;
+	assert.equal(await rustAffectedForEvent(exec, push), false);
+	assert.deepEqual(calls, [["git", "diff", "--name-only", "--no-renames", "-z", before, head]]);
+	const fail: ScriptExec = async () => assert.fail("exec must not run");
+	await assert.rejects(rustAffectedForEvent(fail, { ...push, beforeSha: "" }), /push base SHA/);
+});
+
+test("A push that creates a ref runs Rust CI without a comparison", async () => {
+	const fail: ScriptExec = async () => assert.fail("exec must not run");
+	assert.equal(
+		await rustAffectedForEvent(fail, {
+			eventName: "push",
+			baseSha: "",
+			mergeGroupBaseSha: "",
+			beforeSha: "0".repeat(40),
+			headSha: "b".repeat(40),
+		}),
+		true,
+	);
 });
 
 test("Rust compilation uses sized Blacksmith runners", () => {
@@ -239,7 +324,7 @@ test("public workflows cannot receive repository administration credentials", ()
 	assert.doesNotMatch(workflows, /permission-administration:\s*write/);
 });
 
-test("Rust lanes share one trusted cache writer", () => {
+test("each Rust profile has one trusted cache writer", () => {
 	for (const id of ["rust_quality", "rust_tests", "rust_self_host"] as const) {
 		const cache = jobs[id].steps.find(
 			(step) => "uses" in step && step.uses.startsWith("Swatinem/rust-cache@"),
@@ -248,13 +333,23 @@ test("Rust lanes share one trusted cache writer", () => {
 		assert.ok(cache !== undefined);
 		assert.ok("with" in cache);
 		assert.ok("shared-key" in cache.with);
-		assert.equal(cache.with["shared-key"], "rust");
+		assert.equal(cache.with["shared-key"], id === "rust_self_host" ? "engine" : "rust");
 		assert.equal(
 			cache.with["save-if"],
-			id === "rust_tests"
+			id !== "rust_quality"
 				? "${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}"
 				: false,
 		);
+	}
+});
+
+test("engine compiler settings cannot change consumer qualification", () => {
+	assert.ok(!Object.hasOwn(jobs.rust_self_host.env, "CARGO_PROFILE_DEV_DEBUG"));
+	for (const step of jobs.rust_self_host.steps) {
+		const engine = step.name === "Build BSMR" || step.name === "Restore Rust cache";
+		const environment = "env" in step ? step.env : undefined;
+		const profile = Object.entries(environment ?? {}).filter(([key]) => key.startsWith("CARGO_PROFILE_"));
+		assert.deepEqual(profile, engine ? [["CARGO_PROFILE_DEV_DEBUG", "0"]] : []);
 	}
 });
 

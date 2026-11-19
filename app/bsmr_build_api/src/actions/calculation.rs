@@ -217,6 +217,7 @@ async fn build_action_no_redirect(
 
     let execution_metrics = ActionExecutionMetrics {
         key: action.key().dupe(),
+        action_digest: action_execution_data.extra_data.action_digest.clone(),
         execution_time_ms: action_execution_data
             .extra_data
             .execution_time_ms
@@ -368,7 +369,7 @@ async fn build_action_inner(
     let error_diagnostics = match execute_result {
         Ok((outputs, meta)) => {
             output_size = outputs.calc_output_count_and_bytes(false).bytes;
-            action_result = Ok(outputs);
+            action_result = Ok(outputs.with_action_digest(action_digest.clone()));
             execution_kind = Some(meta.execution_kind.as_enum());
             if matches!(
                 meta.execution_kind.as_enum(),

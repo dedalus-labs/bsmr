@@ -55,6 +55,7 @@ use bsmr_cli_proto::common_build_options::ExecutionStrategy;
 use bsmr_cli_proto::config_override::ConfigType;
 use bsmr_common::dice::cycles::CycleDetectorAdapter;
 use bsmr_common::dice::cycles::PairDiceCycleDetector;
+use bsmr_common::execution::ExecutionPlatformKey;
 use bsmr_common::file_ops::io::initialize_read_dir_cache;
 use bsmr_common::http::SetHttpClient;
 use bsmr_common::invocation_paths::InvocationPaths;
@@ -89,6 +90,7 @@ use bsmr_execute::re::manager::ReConnectionHandle;
 use bsmr_execute::re::manager::ReConnectionObserver;
 use bsmr_execute::re::output_trees_download_config::OutputTreesDownloadConfig;
 use bsmr_execute_impl::executors::firecracker::FirecrackerExecutor;
+use bsmr_execute_impl::executors::local::LocalExecutionBackend;
 use bsmr_execute_impl::executors::worker::WorkerPool;
 use bsmr_execute_impl::low_pass_filter::LowPassFilter;
 use bsmr_execute_impl::materializers::deferred::clean_stale::CleanStaleConfig;
@@ -231,6 +233,9 @@ pub struct ServerCommandContext<'a> {
     /// Common build options associated with this command.
     build_options: Option<CommonBuildOptions>,
 
+    /// Complete native target selection, kept separate from diagnostic argv.
+    pub(crate) target_patterns: Option<Vec<String>>,
+
     /// Keep emitting heartbeat events while the ServerCommandContext is alive  We put this in an
     /// Option so that we can ensure heartbeat events are cancelled before everything else is
     /// dropped.
@@ -363,6 +368,7 @@ impl<'a> ServerCommandContext<'a> {
             output_dir: paths.output_dir(),
             isolation_prefix: paths.isolation.clone(),
             build_options: build_options.cloned(),
+            target_patterns: None,
             record_target_call_stacks: client_context.target_call_stacks,
             skip_targets_with_duplicate_names: client_context.skip_targets_with_duplicate_names,
             disable_starlark_types: client_context.disable_starlark_types,
@@ -411,6 +417,10 @@ impl<'a> ServerCommandContext<'a> {
         };
 
         let run_action_knobs = RunActionKnobs {
+            sandboxed: self
+                .build_options
+                .as_ref()
+                .is_some_and(|options| options.sandbox),
             use_network_action_output_cache: self
                 .base_context
                 .daemon
@@ -668,7 +678,7 @@ impl DiceUpdater for DiceCommandUpdater<'_, '_> {
         )?;
 
         early_timings.start_span(FILE_WATCHER_WAIT.to_owned());
-        let (ctx, mergebase) = self
+        let (mut ctx, mergebase) = self
             .cmd_ctx
             .base_context
             .daemon
@@ -677,7 +687,38 @@ impl DiceUpdater for DiceCommandUpdater<'_, '_> {
             .await?;
         early_timings.end_known_span();
 
-        let mut user_data = self.make_user_computation_data(&cells_and_configs.root_config)?;
+        early_timings.start_span("Git metadata snapshot".to_owned());
+        let root = self
+            .cmd_ctx
+            .base_context
+            .project_root
+            .root()
+            .as_path()
+            .to_owned();
+        let git = if self.sandbox {
+            tokio::task::spawn_blocking(move || bsmr_common::rust_graph::git::capture(&root))
+                .await??
+        } else {
+            Default::default()
+        };
+        ctx.changed_to([(bsmr_common::rust_graph::git::GitInputs, Arc::new(git))])?;
+        let invocation = self.cmd_ctx.target_patterns.as_ref().map(|patterns| {
+            bsmr_core::pattern::unparsed::UnparsedPatterns::new(
+                patterns.clone(),
+                self.cmd_ctx.working_dir.as_ref().to_buf(),
+            )
+        });
+        ctx.changed_to([(
+            bsmr_common::rust_graph::invocation::Invocation,
+            Arc::new(invocation),
+        )])?;
+        early_timings.end_known_span();
+
+        early_timings.start_span("Execution setup".to_owned());
+        let mut user_data = self
+            .make_user_computation_data(&cells_and_configs.root_config, &mut ctx)
+            .await?;
+        early_timings.end_known_span();
         user_data.set_mergebase(mergebase);
 
         Ok((ctx, user_data))
@@ -685,9 +726,11 @@ impl DiceUpdater for DiceCommandUpdater<'_, '_> {
 }
 
 impl DiceCommandUpdater<'_, '_> {
-    fn make_user_computation_data(
+    /// Register isolation before DICE can reuse completed actions.
+    async fn make_user_computation_data(
         &self,
         root_config: &LegacyBsmrConfig,
+        ctx: &mut DiceTransactionUpdater,
     ) -> bsmr_error::Result<UserComputationData> {
         let config_threads = root_config
             .parse(BsmrconfigKeyRef {
@@ -895,30 +938,72 @@ impl DiceCommandUpdater<'_, '_> {
         if let Some(v) = &self.profile_event_listener {
             SetProfileEventListener::set(&mut data, v.clone());
         }
-        let firecracker = if self.sandbox {
-            let bundle = PathBuf::from(
-                root_config
-                    .get(BsmrconfigKeyRef {
-                        section: "sandbox",
-                        property: "bundle",
-                    })
-                    .unwrap_or("/usr/local/share/bsmr/firecracker/manifest.json"),
-            );
-            let launcher_socket = PathBuf::from(
-                root_config
-                    .get(BsmrconfigKeyRef {
-                        section: "sandbox",
-                        property: "launcher_socket",
-                    })
-                    .unwrap_or("/run/bsmr/sandboxd.sock"),
-            );
-            Some(Arc::new(FirecrackerExecutor::new(
-                &bundle,
-                &launcher_socket,
-            )?))
+        let backend = if !self.sandbox {
+            LocalExecutionBackend::Host
         } else {
-            None
+            match root_config
+                .get(BsmrconfigKeyRef {
+                    section: "sandbox",
+                    property: "backend",
+                })
+                .unwrap_or("firecracker")
+            {
+                "namespace" => {
+                    let manifest = root_config
+                        .get(BsmrconfigKeyRef {
+                            section: "sandbox",
+                            property: "runtime",
+                        })
+                        .ok_or_else(|| {
+                            bsmr_error::bsmr_error!(
+                                bsmr_error::ErrorTag::Input,
+                                "namespace execution requires [sandbox] runtime"
+                            )
+                        })?;
+                    let manifest = PathBuf::from(manifest);
+                    let cache = self.cmd_ctx.base_context.daemon.namespace_cache.clone();
+                    let executor =
+                        tokio::task::spawn_blocking(move || cache.load(&manifest)).await??;
+                    LocalExecutionBackend::Namespace(Arc::new(executor))
+                }
+                "firecracker" => {
+                    let bundle = PathBuf::from(
+                        root_config
+                            .get(BsmrconfigKeyRef {
+                                section: "sandbox",
+                                property: "bundle",
+                            })
+                            .unwrap_or("/usr/local/share/bsmr/firecracker/manifest.json"),
+                    );
+                    let launcher_socket = PathBuf::from(
+                        root_config
+                            .get(BsmrconfigKeyRef {
+                                section: "sandbox",
+                                property: "launcher_socket",
+                            })
+                            .unwrap_or("/run/bsmr/sandboxd.sock"),
+                    );
+                    LocalExecutionBackend::Firecracker(Arc::new(FirecrackerExecutor::new(
+                        &bundle,
+                        &launcher_socket,
+                    )?))
+                }
+                backend => {
+                    return Err(bsmr_error::bsmr_error!(
+                        bsmr_error::ErrorTag::Input,
+                        "unsupported sandbox backend `{}`",
+                        backend
+                    ));
+                }
+            }
         };
+        let properties = backend
+            .platform()
+            .properties
+            .into_iter()
+            .map(|property| (property.name, property.value))
+            .collect();
+        ctx.changed_to([(ExecutionPlatformKey, Arc::new(properties))])?;
         data.set_command_executor(Box::new(CommandExecutorFactory::new(
             self.re_connection.dupe(),
             host_sharing_broker,
@@ -942,7 +1027,7 @@ impl DiceCommandUpdater<'_, '_> {
             run_action_knobs.deduplicate_get_digests_ttl_calls,
             output_trees_download_config.dupe(),
             self.cmd_ctx.base_context.daemon.daemon_id.dupe(),
-            firecracker,
+            backend,
         )));
         data.set_blocking_executor(self.cmd_ctx.base_context.daemon.blocking_executor.dupe());
         data.set_http_client(self.cmd_ctx.base_context.daemon.http_client.dupe());
