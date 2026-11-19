@@ -14,3 +14,9 @@ The code in `tools/testing/completion/verify/src/runtime` is adapted from `compl
 (https://crates.io/crates/completest_pty).
 
 The code in `packages/rust/setsketch/src` is adapted from `probminhash` (https://github.com/jean-pierreBoth/probminhash).
+
+The generated SQLite bindings in
+`tools/build/third-party/rust/fixups/libsqlite3-sys/bindgen.rs` are copied from
+`libsqlite3-sys` 0.39.1 (`sqlite3/bindgen_bundled_version.rs`), part of
+rusqlite (https://github.com/rusqlite/rusqlite), copyright 2014 the rusqlite
+developers. Its MIT license is reproduced alongside the binding.

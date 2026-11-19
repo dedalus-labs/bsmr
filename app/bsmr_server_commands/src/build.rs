@@ -406,6 +406,12 @@ async fn build(
             build_opts.skip_incompatible_targets,
             graph_properties.dupe(),
             return_run_args,
+            !request.snapshot_filename.is_empty()
+                || build_opts.unstable_include_artifact_hash_information
+                    && (build_opts.unstable_print_build_report
+                        || !build_opts
+                            .unstable_streaming_build_report_filename
+                            .is_empty()),
             timeout_observer.as_ref(),
             build_command_streaming_build_result_tx,
             build_start,
@@ -673,7 +679,19 @@ async fn process_build_result(
     )
     .await?;
 
-    let serialized_build_report = if build_opts.unstable_print_build_report {
+    let serialized_build_report = if build_opts.unstable_print_build_report
+        || !request.snapshot_filename.is_empty()
+    {
+        if !request.snapshot_filename.is_empty()
+            && !build_result.build_failed
+            && (build_result.configured.is_empty()
+                || build_result.configured.values().any(Option::is_none))
+        {
+            return Err(bsmr_error::bsmr_error!(
+                bsmr_error::ErrorTag::Input,
+                "snapshot requires a successful build with no skipped targets"
+            ));
+        }
         let build_report_opts =
             build_report_opts(&mut ctx, &cell_resolver, build_opts, graph_properties_opts).await?;
 
@@ -690,7 +708,13 @@ async fn process_build_result(
             detailed_metrics,
             action_graph_sketch_result,
             artifact_path_sketch_result,
+            if build_result.build_failed {
+                ""
+            } else {
+                &request.snapshot_filename
+            },
         )?
+        .filter(|_| build_opts.unstable_print_build_report)
     } else {
         None
     };
@@ -760,6 +784,7 @@ async fn build_targets(
     skip_incompatible_targets: bool,
     graph_properties: GraphPropertiesOptions,
     return_run_args: bool,
+    collect_action_digests: bool,
     timeout_observer: Option<&Arc<dyn LivelinessObserver>>,
     streaming_build_result_tx: Option<UnboundedSender<BuildTargetResult>>,
     build_start: Instant,
@@ -782,6 +807,7 @@ async fn build_targets(
                 skip_incompatible_targets,
                 graph_properties,
                 return_run_args,
+                collect_action_digests,
                 timeout_observer,
             )
             .left_future()
@@ -795,6 +821,7 @@ async fn build_targets(
             materialization_and_upload,
             graph_properties,
             return_run_args,
+            collect_action_digests,
             timeout_observer,
         )
         .right_future(),
@@ -812,6 +839,7 @@ async fn build_targets_in_universe(
     materialization_and_upload: MaterializationAndUploadContext,
     graph_properties: GraphPropertiesOptions,
     return_run_args: bool,
+    collect_action_digests: bool,
     timeout_observer: Option<&Arc<dyn LivelinessObserver>>,
 ) {
     let providers_to_build = build_providers_to_providers_to_build(&build_providers);
@@ -836,6 +864,7 @@ async fn build_targets_in_universe(
                         skippable: false,
                         graph_properties,
                         return_run_args,
+                        collect_action_digests,
                     },
                     timeout_observer,
                 )
@@ -858,6 +887,7 @@ async fn build_targets_with_global_target_platform<'a>(
     skip_incompatible_targets: bool,
     graph_properties: GraphPropertiesOptions,
     return_run_args: bool,
+    collect_action_digests: bool,
     timeout_observer: Option<&'a Arc<dyn LivelinessObserver>>,
 ) {
     let global_cfg_options = &global_cfg_options;
@@ -877,6 +907,7 @@ async fn build_targets_with_global_target_platform<'a>(
                 skip_incompatible_targets,
                 graph_properties,
                 return_run_args,
+                collect_action_digests,
                 timeout_observer,
             )
             .await
@@ -896,6 +927,7 @@ struct TargetBuildSpec {
     skippable: bool,
     graph_properties: GraphPropertiesOptions,
     return_run_args: bool,
+    collect_action_digests: bool,
 }
 
 fn build_providers_to_providers_to_build(build_providers: &BuildProviders) -> ProvidersToBuild {
@@ -929,6 +961,7 @@ async fn build_targets_for_spec(
     skip_incompatible_targets: bool,
     graph_properties: GraphPropertiesOptions,
     return_run_args: bool,
+    collect_action_digests: bool,
     timeout_observer: Option<&Arc<dyn LivelinessObserver>>,
 ) {
     let skippable = match spec {
@@ -995,6 +1028,7 @@ async fn build_targets_for_spec(
             skippable,
             graph_properties,
             return_run_args,
+            collect_action_digests,
         })
         .collect();
 
@@ -1068,6 +1102,7 @@ async fn build_target(
             skippable: spec.skippable,
             graph_properties: spec.graph_properties,
             return_run_args: spec.return_run_args,
+            collect_action_digests: spec.collect_action_digests,
         },
         timeout_observer,
     )

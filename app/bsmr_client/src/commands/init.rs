@@ -44,13 +44,6 @@ genrule(
 )
 "#;
 
-/// Legacy toolchain manifest that native frontends may replace only when byte-identical.
-pub(crate) const INITIAL_TOOLCHAINS_MANIFEST: &str = r#"load("@prelude//toolchains:demo.bzl", "system_demo_toolchains")
-
-# All the default toolchains, suitable for a quick demo or early prototyping.
-# Most real projects should copy/paste the implementation to configure them.
-system_demo_toolchains()"#;
-
 /// Initializes a bsmr project at the provided path.
 #[derive(Debug, clap::Parser)]
 #[clap(
@@ -210,7 +203,12 @@ fn set_up_gitignore(repo_root: &AbsPath) -> bsmr_error::Result<()> {
     Ok(())
 }
 
-fn set_up_project(repo_root: &AbsPath, git: bool, prelude: bool) -> bsmr_error::Result<()> {
+/// Creates the project marker, and optionally a Git repository, at `repo_root`.
+pub(crate) fn set_up_project(
+    repo_root: &AbsPath,
+    git: bool,
+    prelude: bool,
+) -> bsmr_error::Result<()> {
     if git {
         if !background_command("git")
             .arg("init")

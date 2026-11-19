@@ -16,6 +16,8 @@
 
 //! Processing and reporting the results of the build
 
+mod snapshot;
+
 use std::collections::BTreeMap;
 use std::collections::BTreeSet;
 use std::collections::HashMap;
@@ -50,7 +52,12 @@ use bsmr_core::provider::label::ProvidersLabel;
 use bsmr_core::provider::label::ProvidersName;
 use bsmr_core::target::configured_target_label::ConfiguredTargetLabel;
 use bsmr_data::ErrorReport;
+use bsmr_directory::directory::directory::Directory;
+use bsmr_directory::directory::directory_iterator::DirectoryIterator;
+use bsmr_directory::directory::directory_iterator::DirectoryIteratorPathStack;
+use bsmr_directory::directory::directory_ref::FingerprintedDirectoryRef;
 use bsmr_directory::directory::entry::DirectoryEntry;
+use bsmr_directory::directory::walk::unordered_entry_walk;
 use bsmr_error::BsmrErrorContext;
 use bsmr_error::UniqueRootId;
 use bsmr_error::classify::ErrorLike;
@@ -152,6 +159,12 @@ pub(crate) struct ConfiguredBuildReportEntry {
     /// Remote artifact information, including hashes, etc.
     #[serde(skip_serializing_if = "HashMap::is_empty")]
     artifact_info: HashMap<Arc<str>, ArtifactInfo>,
+    /// Artifact information keyed by reported artifact path.
+    #[serde(skip_serializing_if = "BTreeMap::is_empty")]
+    artifact_info_by_path: BTreeMap<ProjectRelativePathBuf, ArtifactInfo>,
+    /// Canonical command action digests keyed by their reported artifact paths.
+    #[serde(skip_serializing_if = "BTreeMap::is_empty")]
+    artifact_action_digests: BTreeMap<ProjectRelativePathBuf, String>,
     #[serde(flatten)]
     inner: MaybeConfiguredBuildReportEntry,
     /// The serialized graph sketch for this target, if it was produced.
@@ -838,23 +851,35 @@ impl<'a> BuildReportCollector<'a> {
                 Ok(artifacts) => {
                     if artifacts.provider_type == BuildProviderType::Default {
                         for (artifact, value) in artifacts.values.iter() {
+                            let output_path = artifact
+                                .resolve_configuration_hash_path(self.artifact_fs)
+                                .unwrap();
                             if self.include_artifact_hash_information {
-                                update_artifact_info(
-                                    &mut configured_report.artifact_info,
-                                    provider_name.dupe(),
+                                let artifact_info = create_artifact_info(value.entry());
+                                configured_report
+                                    .artifact_info
+                                    .insert(provider_name.dupe(), artifact_info.clone());
+                                insert_artifact_info_by_path(
+                                    &mut configured_report.artifact_info_by_path,
+                                    &output_path,
                                     value.entry(),
+                                    artifact_info,
                                 );
+                                if let Some(action_key) = artifact.action_key()
+                                    && let Some(action_digest) =
+                                        artifacts.action_digests.get(action_key)
+                                {
+                                    configured_report
+                                        .artifact_action_digests
+                                        .insert(output_path.clone(), action_digest.clone());
+                                }
                             }
                             configured_report
                                 .inner
                                 .outputs
                                 .entry(provider_name.dupe())
                                 .or_default()
-                                .insert({
-                                    artifact
-                                        .resolve_configuration_hash_path(self.artifact_fs)
-                                        .unwrap()
-                                });
+                                .insert(output_path);
                         }
                     }
                 }
@@ -1067,51 +1092,61 @@ impl<'a> BuildReportCollector<'a> {
     }
 }
 
-fn update_artifact_info(
-    artifact_info: &mut HashMap<Arc<str>, ArtifactInfo>,
-    provider_name: Arc<str>,
-    entry: &ActionDirectoryEntry<ActionSharedDirectory>,
-) {
+fn create_artifact_info(entry: &ActionDirectoryEntry<ActionSharedDirectory>) -> ArtifactInfo {
     match entry {
-        DirectoryEntry::Dir(dir) => {
-            artifact_info.insert(
-                provider_name,
-                ArtifactInfo::Directory(DirectoryInfo {
-                    digest: dir.fingerprint().clone(),
-                }),
-            );
-        }
-        DirectoryEntry::Leaf(ActionDirectoryMember::File(metadata)) => {
+        DirectoryEntry::Dir(dir) => ArtifactInfo::Directory(DirectoryInfo {
+            digest: dir.fingerprint().clone(),
+        }),
+        DirectoryEntry::Leaf(member) => create_leaf_artifact_info(member),
+    }
+}
+
+/// Convert one stored leaf without reading or rehashing its materialized output.
+fn create_leaf_artifact_info(member: &ActionDirectoryMember) -> ArtifactInfo {
+    match member {
+        ActionDirectoryMember::File(metadata) => {
             let cas_digest = metadata.digest.data();
-            artifact_info.insert(
-                provider_name,
-                ArtifactInfo::File(FileInfo {
-                    digest: *cas_digest,
-                    is_exec: metadata.is_executable,
-                }),
-            );
+            ArtifactInfo::File(FileInfo {
+                digest: *cas_digest,
+                is_exec: metadata.is_executable,
+            })
         }
-        DirectoryEntry::Leaf(ActionDirectoryMember::Symlink(symlink_target)) => {
-            artifact_info.insert(
-                provider_name,
-                ArtifactInfo::Symlink(SymlinkInfo {
-                    symlink_rel_path: symlink_target.target().into(),
-                }),
-            );
+        ActionDirectoryMember::Symlink(symlink_target) => ArtifactInfo::Symlink(SymlinkInfo {
+            symlink_rel_path: symlink_target.target().into(),
+        }),
+        ActionDirectoryMember::ExternalSymlink(external_symlink) => {
+            ArtifactInfo::ExternalSymlink(ExternalSymlinkInfo {
+                target: external_symlink.target().into(),
+                remaining_path: if external_symlink.remaining_path().is_empty() {
+                    None
+                } else {
+                    Some(external_symlink.remaining_path().to_owned())
+                },
+            })
         }
-        DirectoryEntry::Leaf(ActionDirectoryMember::ExternalSymlink(external_symlink)) => {
-            artifact_info.insert(
-                provider_name,
-                ArtifactInfo::ExternalSymlink(ExternalSymlinkInfo {
-                    target: external_symlink.target().into(),
-                    remaining_path: if external_symlink.remaining_path().is_empty() {
-                        None
-                    } else {
-                        Some(external_symlink.remaining_path().to_owned())
-                    },
-                }),
-            );
-        }
+    }
+}
+
+/// Index an output root and every canonical descendant without recomputing directory digests.
+fn insert_artifact_info_by_path(
+    artifact_info: &mut BTreeMap<ProjectRelativePathBuf, ArtifactInfo>,
+    output_path: &ProjectRelativePathBuf,
+    entry: &ActionDirectoryEntry<ActionSharedDirectory>,
+    root_info: ArtifactInfo,
+) {
+    artifact_info.insert(output_path.clone(), root_info);
+    let DirectoryEntry::Dir(directory) = entry else {
+        return;
+    };
+    let mut walk = unordered_entry_walk(DirectoryEntry::Dir(directory.as_ref()));
+    while let Some((relative, entry)) = walk.next() {
+        let info = match entry {
+            DirectoryEntry::Dir(directory) => ArtifactInfo::Directory(DirectoryInfo {
+                digest: directory.as_fingerprinted_dyn().fingerprint().clone(),
+            }),
+            DirectoryEntry::Leaf(member) => create_leaf_artifact_info(member),
+        };
+        artifact_info.insert(output_path.join(relative.get()), info);
     }
 }
 
@@ -1201,6 +1236,7 @@ pub fn write_build_report(
     detailed_metrics: Option<DetailedAggregatedMetrics>,
     action_graph_sketch_result: Option<ActionGraphSketchResult>,
     artifact_path_sketch_result: Option<ArtifactPathSketchResult>,
+    snapshot_filename: &str,
 ) -> Result<Option<String>, bsmr_error::Error> {
     let build_report = BuildReportCollector::convert(
         trace_id,
@@ -1210,7 +1246,7 @@ pub fn write_build_report(
         opts.print_unconfigured_section,
         opts.unstable_include_failures_build_report,
         opts.unstable_include_package_project_relative_paths,
-        opts.unstable_include_artifact_hash_information,
+        opts.unstable_include_artifact_hash_information || !snapshot_filename.is_empty(),
         opts.unstable_exclude_action_error_diagnostics,
         opts.unstable_truncate_error_content,
         configured,
@@ -1221,6 +1257,10 @@ pub fn write_build_report(
         artifact_path_sketch_result,
         opts.graph_properties_opts,
     )?;
+
+    if !snapshot_filename.is_empty() {
+        snapshot::write(&build_report, project_root, cwd, snapshot_filename)?;
+    }
 
     write_or_serialize_build_report(
         &build_report,

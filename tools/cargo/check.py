@@ -38,7 +38,7 @@ def main() -> None:
         lock = (root / "Cargo.lock").read_bytes()
         for mode in ["build", "test"]:
             request = {
-                "manifest": str(root / "Cargo.toml"), "package": "app", "mode": mode,
+                "manifest": str(root / "Cargo.toml"), "packages": ["app"], "mode": mode,
                 "target_filter": {"kind": "library"}, "source_policy": "offline",
                 "features": [], "default_features": True, "all_features": False,
                 "target": None, "profile": "dev", "cargo_home": str(root / "cargo"),
@@ -46,7 +46,7 @@ def main() -> None:
             }
             result = subprocess.run([binary], input=json.dumps(request), env=env, text=True, capture_output=True, check=True, timeout=30)
             graph = json.loads(result.stdout)
-            assert graph["schema_version"] == 1 and graph["cargo_library"] == "0.98.0"
+            assert graph["schema_version"] == 5 and graph["cargo_library"] == "0.98.0"
             assert "release: 1.97.1" in graph["rustc_version"]
             assert len(graph["roots"]) == 1
             assert graph["units"][graph["roots"][0]]["target"]["name"] == "app"
@@ -74,10 +74,12 @@ def main() -> None:
                     assert json.loads(stdout)["roots"]
         config = root / ".cargo/config.toml"
         config.parent.mkdir()
-        for flags in [["--extern", "untracked=outside.rlib"], ["--cfg", "@outside.args"], ["-Zcodegen-backend=outside.so"]]:
+        for flags in [["--extern", "untracked=outside.rlib"], ["--cfg", "@outside.args"], ["-Zcodegen-backend=outside.so"], ["-C", "target-feature=+crt-static"]]:
             config.write_text("[build]\nrustflags=" + json.dumps(flags) + "\n")
             result = subprocess.run([binary], input=json.dumps(request), env=env, text=True, capture_output=True, timeout=30)
             assert result.returncode != 0 and "unsupported compiler flag" in result.stderr
+            if flags[0] == "-C":
+                assert flags[1] in result.stderr and "Compile" in result.stderr
     print("ok: configured roots, features, dev dependencies, and lock preservation without compilation")
 
 

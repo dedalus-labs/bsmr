@@ -5,7 +5,6 @@
 
 //! Infers private Rust targets from a frozen snapshot of tracked Cargo inputs.
 
-use std::collections::BTreeMap;
 use std::path::Path;
 use std::sync::Arc;
 use std::time::Duration;
@@ -26,6 +25,12 @@ use pagable::pagable_typetag;
 
 use super::catalog;
 use super::entry::Entry;
+use super::entry::Mode;
+use super::entry::Origin;
+use super::entry::Requested;
+use super::invocation::Invocation;
+use super::planner::Planner;
+use super::selection::Selection;
 use super::snapshot;
 use super::toolchain::RustToolchain;
 use super::unsupported;
@@ -50,7 +55,7 @@ struct RustGraphKey(CellName);
 
 #[async_trait]
 impl Key for RustGraphKey {
-    type Value = bsmr_error::Result<Arc<BTreeMap<String, String>>>;
+    type Value = bsmr_error::Result<Arc<catalog::Catalog>>;
 
     /// Recompute only when tracked resolver inputs or target names change.
     async fn compute(
@@ -69,12 +74,13 @@ impl Key for RustGraphKey {
         })?;
         let toolchain = RustToolchain::parse(&source)?;
         let metadata = resolve(&toolchain, &root).await?;
-        let mut rules = catalog::render(&metadata, &root, self.0.as_str())?;
-        rules
+        let mut catalog = catalog::render(&metadata, &root, self.0.as_str())?;
+        catalog
+            .rules
             .entry(String::new())
             .or_default()
-            .push_str(&toolchain.rules);
-        Ok(Arc::new(rules))
+            .push_str(toolchain.rules());
+        Ok(Arc::new(catalog))
     }
 
     /// Reuse only successful, byte-identical generated graphs.
@@ -89,6 +95,32 @@ impl Key for RustGraphKey {
 }
 
 impl RustGraphKey {
+    /// Preserve existing custom entrypoint paths without making absent source files exist.
+    async fn entrypoints(
+        &self,
+        ctx: &mut DiceComputations<'_>,
+        root: &Path,
+        metadata: &[u8],
+    ) -> bsmr_error::Result<()> {
+        for source in catalog::entrypoints(metadata)? {
+            let relative = source
+                .strip_prefix(root)
+                .map_err(|_| super::RustGraphError::Outside(source.clone()))?;
+            let path = CellPath::new(
+                self.0,
+                CellRelativePathBuf::try_from(relative.to_string_lossy().replace('\\', "/"))?,
+            );
+            if source.try_exists()? {
+                continue;
+            }
+            if DiceFileComputations::exists_matching_exact_case(ctx, path.as_ref()).await? {
+                std::fs::create_dir_all(source.parent().expect("target source has a parent"))?;
+                std::fs::write(source, "")?;
+            }
+        }
+        Ok(())
+    }
+
     /// Track package listings and materialize the resolver's private source view.
     async fn capture(&self, ctx: &mut DiceComputations<'_>, root: &Path) -> bsmr_error::Result<()> {
         let mut pending = vec![String::new()];
@@ -178,13 +210,16 @@ async fn resolve(toolchain: &RustToolchain, root: &Path) -> bsmr_error::Result<V
     let cargo_home = tempfile::tempdir()?;
     let output = tokio::time::timeout(
         Duration::from_secs(30),
-        tokio::process::Command::new(&toolchain.cargo)
+        tokio::process::Command::new(toolchain.cargo())
             .args(["metadata", "--format-version=1", "--frozen", "--no-deps"])
             .current_dir(root)
             .env_clear()
             .env("CARGO_HOME", cargo_home.path())
-            .env("PATH", toolchain.cargo.parent().expect("Cargo has parent"))
-            .env("RUSTC", &toolchain.rustc)
+            .env(
+                "PATH",
+                toolchain.cargo().parent().expect("Cargo has parent"),
+            )
+            .env("RUSTC", toolchain.rustc())
             .kill_on_drop(true)
             .output(),
     )
@@ -199,22 +234,48 @@ async fn resolve(toolchain: &RustToolchain, root: &Path) -> bsmr_error::Result<V
     Ok(output.stdout)
 }
 
-/// Return the inferred source for one package without writing build files.
+/// Workspace members expose entrypoints. Other Cargo packages expose only source inputs.
 pub async fn build_file(
     ctx: &mut DiceComputations<'_>,
     package: PackageLabel,
 ) -> bsmr_error::Result<String> {
-    let rules = ctx.compute(&RustGraphKey(package.cell_name())).await??;
-    rules
-        .get(package.as_cell_path().path().as_str())
-        .cloned()
-        .ok_or_else(|| {
-            unsupported(
-                &package.to_string(),
-                "package absent from Cargo's resolved workspace",
-            )
-            .into()
-        })
+    let catalog = ctx.compute(&RustGraphKey(package.cell_name())).await??;
+    match catalog.rules.get(package.as_cell_path().path().as_str()) {
+        Some(member) => Ok(member.clone()),
+        None => Ok(catalog::sources().to_owned()),
+    }
+}
+
+/// Expand a Cargo directory using the same metadata that defines its public targets.
+pub async fn directory(
+    ctx: &mut DiceComputations<'_>,
+    path: CellPath,
+) -> bsmr_error::Result<Option<Vec<String>>> {
+    use bsmr_fs::paths::forward_rel_path::ForwardRelativePath;
+
+    use crate::package_listing::PackageBuildSource;
+    use crate::package_listing::find_build_source;
+
+    let manifest = path.join(ForwardRelativePath::unchecked_new("Cargo.toml"));
+    if !DiceFileComputations::exists_matching_exact_case(ctx, manifest.as_ref()).await? {
+        return Ok(None);
+    }
+    let listing = DiceFileComputations::read_dir(ctx, path.as_ref()).await?;
+    let buildfiles = DiceFileComputations::buildfiles(ctx, path.cell()).await?;
+    if find_build_source(&buildfiles, &listing.included, true)
+        .is_none_or(|(_, source)| source != PackageBuildSource::Native)
+    {
+        return Ok(None);
+    }
+    let catalog = ctx.compute(&RustGraphKey(path.cell())).await??;
+    let labels = catalog
+        .directories
+        .get(path.path().as_str())
+        .ok_or_else(|| super::RustGraphError::NotWorkspaceMember(path.clone()))?;
+    if labels.is_empty() {
+        return Err(unsupported(&path.to_string(), "empty default target selection").into());
+    }
+    Ok(Some(labels.clone()))
 }
 
 /// A selected build/test graph has its own invalidation boundary.
@@ -230,11 +291,20 @@ pub async fn build_file(
 )]
 #[display("RustPlanKey({:?})", _0)]
 #[pagable_typetag(dice::DiceKeyDyn)]
-struct RustPlanKey(Entry);
+struct RustPlanKey(Vec<Requested>);
+
+/// The resolver owns both enabled roots and their compiler definitions.
+#[derive(Debug, Eq, PartialEq, allocative::Allocative, Pagable)]
+struct Plan {
+    /// Enabled roots in the exact order returned by Cargo.
+    roots: Vec<Entry>,
+    /// Native definitions for those roots and their reachable dependencies.
+    source: String,
+}
 
 #[async_trait]
 impl Key for RustPlanKey {
-    type Value = bsmr_error::Result<Arc<String>>;
+    type Value = bsmr_error::Result<Arc<Plan>>;
 
     /// Capture resolver inputs through DICE before asking Cargo for configured units.
     async fn compute(
@@ -244,21 +314,71 @@ impl Key for RustPlanKey {
     ) -> Self::Value {
         let snapshot = tempfile::tempdir()?;
         let root = snapshot.path().canonicalize()?;
-        RustGraphKey(self.0.package.cell_name())
+        let first = &self.0[0].entry;
+        RustGraphKey(first.package.cell_name())
             .capture(ctx, &root)
             .await?;
         let toolchain =
             RustToolchain::parse(&std::fs::read_to_string(root.join("rust-toolchain.toml"))?)?;
         let metadata = resolve(&toolchain, &root).await?;
-        let package = catalog::package_name(&metadata, &root, &self.0)?;
-        let bytes = super::planner::resolve(&root, &self.0, &package, &toolchain).await?;
-        let cell = self.0.package.cell_name();
-        Ok(Arc::new(super::configured::render(
+        RustGraphKey(first.package.cell_name())
+            .entrypoints(ctx, &root, &metadata)
+            .await?;
+        let packages = self
+            .0
+            .iter()
+            .map(|entry| catalog::package_name(&metadata, &root, &entry.entry))
+            .collect::<Result<Vec<_>, _>>()?;
+        let cell = first.package.cell_name();
+        let selection = Selection::read(ctx, cell, first.mode).await?;
+        let bytes = Planner::new(&root, &toolchain, selection)
+            .resolve(&self.0, &packages)
+            .await?;
+        let graph = super::units::Graph::parse(&bytes)?;
+        let roots = graph
+            .roots
+            .iter()
+            .map(|index| {
+                let unit = &graph.units[*index];
+                self.0
+                    .iter()
+                    .zip(&packages)
+                    .find(|(request, package)| {
+                        **package == unit.package_name
+                            && request.entry.target.name() == unit.target.name
+                            && (unit.target.kind == [request.entry.target.kind()]
+                                || (request.entry.target.kind() == "lib"
+                                    && super::libraries::is_library(&unit.target.kind)))
+                    })
+                    .map(|(request, _)| request.entry.clone())
+                    .ok_or_else(|| unsupported("planner", "returned an unrequested root"))
+            })
+            .collect::<Result<Vec<_>, _>>()?;
+        if roots.is_empty() {
+            return Ok(Arc::new(Plan {
+                roots,
+                source: String::new(),
+            }));
+        }
+        let platform = ctx.compute(&crate::execution::ExecutionPlatformKey).await?;
+        let execution = if platform
+            .iter()
+            .any(|(name, value)| name == "bsmr.sandbox.backend" && value == "namespace")
+            && platform.iter().any(|(name, value)| {
+                name == "bsmr.sandbox.profile" && value == crate::execution::NAMESPACE_PROFILE
+            }) {
+            super::configured::CodeExecution::DeclaredInputs
+        } else {
+            super::configured::CodeExecution::CompilerOnly
+        };
+        let source = super::configured::render(
             &bytes,
             &root,
             cell.as_str(),
             &format!("{cell}//:__bsmr_rust"),
-        )?))
+            execution,
+        )?;
+        Ok(Arc::new(Plan { roots, source }))
     }
 
     /// Reuse only successful byte-identical compilation definitions.
@@ -272,16 +392,93 @@ impl Key for RustPlanKey {
     }
 }
 
+/// Share one parsed invocation across every requested entry in the same workspace and mode.
+#[derive(
+    Clone,
+    Debug,
+    Eq,
+    Hash,
+    PartialEq,
+    allocative::Allocative,
+    Pagable,
+    derive_more::Display
+)]
+#[display("CargoRoots({:?})", self)]
+#[pagable_typetag(dice::DiceKeyDyn)]
+struct CargoRoots(CellName, Mode);
+
+#[async_trait]
+impl Key for CargoRoots {
+    type Value = bsmr_error::Result<Arc<Vec<Requested>>>;
+
+    /// Resolve command roots from tracked metadata with the native pattern parser.
+    async fn compute(&self, ctx: &mut DiceComputations, _: &CancellationContext) -> Self::Value {
+        let invocation = ctx.compute(&Invocation).await?;
+        let Some(invocation) = invocation.as_ref() else {
+            return Ok(Arc::new(Vec::new()));
+        };
+        let patterns = crate::pattern::parse_from_cli::cargo_patterns(
+            ctx,
+            invocation.patterns(),
+            invocation.working_dir(),
+        )
+        .await?;
+        let snapshot = tempfile::tempdir()?;
+        let root = snapshot.path().canonicalize()?;
+        RustGraphKey(self.0).capture(ctx, &root).await?;
+        let toolchain =
+            RustToolchain::parse(&std::fs::read_to_string(root.join("rust-toolchain.toml"))?)?;
+        let metadata = resolve(&toolchain, &root).await?;
+        Ok(Arc::new(catalog::selected(
+            &metadata, &root, self.0, self.1, &patterns,
+        )?))
+    }
+
+    /// Pattern spelling changes can reuse a plan when the selected entries agree.
+    fn equality(x: &Self::Value, y: &Self::Value) -> bool {
+        matches!((x, y), (Ok(x), Ok(y)) if x == y)
+    }
+
+    /// Preserve only successful selections through DICE paging.
+    fn value_serialize() -> impl ValueSerialize<Value = Self::Value> {
+        OkPagableValueSerialize::<Self::Value>::new()
+    }
+}
+
 /// Resolve the private package requested by a public Cargo alias.
 pub async fn plan_file(
     ctx: &mut DiceComputations<'_>,
     entry: &Entry,
 ) -> bsmr_error::Result<String> {
-    Ok(ctx
-        .compute(&RustPlanKey(entry.clone()))
-        .await??
-        .as_ref()
-        .clone())
+    let selected = ctx
+        .compute(&CargoRoots(entry.package.cell_name(), entry.mode))
+        .await??;
+    let requests = if selected.iter().any(|request| request.entry == *entry) {
+        selected.as_ref().clone()
+    } else {
+        vec![Requested {
+            entry: entry.clone(),
+            origin: Origin::Explicit,
+        }]
+    };
+    let plan = ctx.compute(&RustPlanKey(requests)).await??;
+    if !plan.roots.contains(entry) {
+        return Ok("load(\"@prelude//rust:cargo_outputs.bzl\", \"cargo_outputs\")\ncargo_outputs(name = \"root\", outputs = [], visibility = [\"PUBLIC\"])\n".to_owned());
+    }
+    let entries = &plan.roots;
+    let owner = &entries[0];
+    if entry != owner {
+        let index = entries
+            .iter()
+            .position(|selected| selected == entry)
+            .expect("selected entry is in its plan");
+        let label = format!("{}:root_{index}", owner.package_label()?);
+        return Ok(format!(
+            "alias(name = \"root\", actual = {}, visibility = [\"PUBLIC\"])\n",
+            serde_json::to_string(&label)?
+        ));
+    }
+    Ok(plan.source.clone())
 }
 
 /// Reject nonexistent or unsupported private packages before interpreter evaluation.

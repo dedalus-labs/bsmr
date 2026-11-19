@@ -25,12 +25,19 @@
 //!   <https://github.com/rust-lang/cargo/issues/5026>
 
 pub mod catalog;
+pub mod checkout;
 pub mod configured;
 pub mod dice;
 pub mod entry;
 mod error;
+pub mod git;
+pub mod invocation;
+mod libraries;
 mod planner;
+pub(crate) mod project;
+mod selection;
 mod snapshot;
+mod sources;
 mod toolchain;
 mod units;
 
