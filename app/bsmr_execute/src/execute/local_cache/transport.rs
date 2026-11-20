@@ -5,6 +5,7 @@
 
 //! Authoritative offline transport for a finalized local action cache.
 
+use std::collections::BTreeMap;
 use std::fs;
 use std::fs::File;
 use std::fs::OpenOptions;
@@ -44,6 +45,8 @@ static STAGING_ID: AtomicU64 = AtomicU64::new(0);
 enum TransportError {
     #[error("Cache transport output already exists: '{}'", _0.display())]
     Exists(PathBuf),
+    #[error("Cache transport engine mismatch: archive {archive}, current {current}")]
+    Engine { archive: String, current: String },
     #[error("Cache transport manifest is invalid: {0}")]
     Manifest(String),
     #[error("Cache transport package has an unexpected entry: '{}'", _0.display())]
@@ -96,7 +99,7 @@ impl LocalActionCache {
         let result = (|| {
             let mut files = Vec::new();
             for area in ["ac", "cas"] {
-                for source in finalized_files(&self.root.join(area))? {
+                for source in durable_files(&self.root.join(area), true)? {
                     let relative = source
                         .strip_prefix(&self.root)
                         .expect("cache entries are below their root");
@@ -122,6 +125,51 @@ impl LocalActionCache {
             fs::rename(&staging, output)
                 .map_err(|error| io_error("publish cache export", output, error))?;
             sync_parent(output)?;
+            Ok(manifest)
+        })();
+        if result.is_err() {
+            let _ignored = remove_entry(&staging);
+        }
+        result
+    }
+
+    /// Imports one verified package into an absent cache root and activates it atomically.
+    pub fn import_package(
+        &self,
+        input: &Path,
+        engine_sha256: &str,
+        digest_config: DigestConfig,
+    ) -> bsmr_error::Result<LocalCacheExportManifest> {
+        require_absolute(input)?;
+        require_absent(&self.root)?;
+        let manifest = read_manifest(&input.join(MANIFEST))?;
+        validate_manifest(&manifest, engine_sha256, digest_config)?;
+        let package_files = package_files(input)?;
+        let declared = manifest
+            .files
+            .iter()
+            .cloned()
+            .map(|file| (file.path.clone(), file))
+            .collect::<BTreeMap<_, _>>();
+        if package_files.len() != declared.len() {
+            return Err(TransportError::Manifest("package file count differs".to_owned()).into());
+        }
+        let staging = create_staging(&self.root, "import")?;
+        let result = (|| {
+            for (path, source) in package_files {
+                let expected = declared
+                    .get(&path)
+                    .ok_or_else(|| TransportError::Unexpected(source.clone()))?;
+                validate_file(&source, expected)?;
+                let destination = staging.join(cache_relative(&path)?);
+                copy_file(&source, &destination)?;
+                set_mtime(&destination, expected)?;
+            }
+            validate_actions(&LocalActionCache::at(staging.clone())?, digest_config)?;
+            sync_tree(&staging)?;
+            fs::rename(&staging, &self.root)
+                .map_err(|error| io_error("activate imported cache", &self.root, error))?;
+            sync_parent(&self.root)?;
             Ok(manifest)
         })();
         if result.is_err() {
@@ -159,7 +207,7 @@ fn validate_actions(
         ))
         .into());
     }
-    for action in finalized_files(&cache.root.join("ac"))? {
+    for action in durable_files(&cache.root.join("ac"), true)? {
         let bytes = read_regular_file(&action)?.expect("finalized action exists");
         let result: LocalActionResult =
             serde_json::from_slice(&bytes).map_err(|source| LocalCacheError::DecodeAction {
@@ -226,7 +274,7 @@ fn validate_result(
     Ok(())
 }
 
-fn finalized_files(root: &Path) -> bsmr_error::Result<Vec<PathBuf>> {
+fn durable_files(root: &Path, ignore_temporary: bool) -> bsmr_error::Result<Vec<PathBuf>> {
     let prefixes = match fs::read_dir(root) {
         Ok(entries) => entries,
         Err(error) if error.kind() == io::ErrorKind::NotFound => return Ok(Vec::new()),
@@ -252,7 +300,7 @@ fn finalized_files(root: &Path) -> bsmr_error::Result<Vec<PathBuf>> {
         {
             let file = file.map_err(|error| io_error("list cache prefix", prefix.path(), error))?;
             let path = file.path();
-            if super::inventory::is_temporary_key(&path) {
+            if ignore_temporary && super::inventory::is_temporary_key(&path) {
                 continue;
             }
             let key = file.file_name();
@@ -273,6 +321,114 @@ fn finalized_files(root: &Path) -> bsmr_error::Result<Vec<PathBuf>> {
     }
     files.sort();
     Ok(files)
+}
+
+fn package_files(root: &Path) -> bsmr_error::Result<BTreeMap<String, PathBuf>> {
+    let root_type = fs::symlink_metadata(root)
+        .map_err(|error| io_error("inspect cache package", root, error))?
+        .file_type();
+    if !root_type.is_dir() {
+        return Err(TransportError::Unexpected(root.to_owned()).into());
+    }
+    let mut top = fs::read_dir(root)
+        .map_err(|error| io_error("list cache package", root, error))?
+        .map(|entry| entry.map(|entry| entry.file_name()))
+        .collect::<Result<Vec<_>, _>>()
+        .map_err(|error| io_error("list cache package", root, error))?;
+    top.sort();
+    if top
+        != vec![
+            std::ffi::OsString::from(MANIFEST),
+            std::ffi::OsString::from(PAYLOAD),
+        ]
+    {
+        return Err(TransportError::Manifest(
+            "package root must contain only manifest.json and payload".to_owned(),
+        )
+        .into());
+    }
+    let payload = root.join(PAYLOAD);
+    let payload_type = fs::symlink_metadata(&payload)
+        .map_err(|error| io_error("inspect cache package payload", &payload, error))?
+        .file_type();
+    if !payload_type.is_dir() {
+        return Err(TransportError::Unexpected(payload).into());
+    }
+    for entry in fs::read_dir(&payload)
+        .map_err(|error| io_error("list cache package payload", &payload, error))?
+    {
+        let entry =
+            entry.map_err(|error| io_error("list cache package payload", &payload, error))?;
+        let name = entry.file_name();
+        if (name != "ac" && name != "cas")
+            || !entry
+                .file_type()
+                .map_err(|error| io_error("inspect cache package area", entry.path(), error))?
+                .is_dir()
+        {
+            return Err(TransportError::Unexpected(entry.path()).into());
+        }
+    }
+    let mut files = BTreeMap::new();
+    for area in ["ac", "cas"] {
+        for path in durable_files(&root.join(PAYLOAD).join(area), false)? {
+            let relative = path
+                .strip_prefix(root)
+                .expect("package files are below root");
+            let relative = slash_path(relative)?;
+            if files.insert(relative, path.clone()).is_some() {
+                return Err(TransportError::Unexpected(path).into());
+            }
+        }
+    }
+    Ok(files)
+}
+
+fn validate_manifest(
+    manifest: &LocalCacheExportManifest,
+    engine: &str,
+    digest: DigestConfig,
+) -> bsmr_error::Result<()> {
+    if manifest.schema != PACKAGE_SCHEMA || manifest.cache_schema != CACHE_SCHEMA {
+        return Err(TransportError::Manifest("unsupported schema".to_owned()).into());
+    }
+    if !is_hex(&manifest.engine_sha256, 64) || manifest.engine_sha256 != engine {
+        return Err(TransportError::Engine {
+            archive: manifest.engine_sha256.clone(),
+            current: engine.to_owned(),
+        }
+        .into());
+    }
+    if manifest.digest_config != digest.to_string() {
+        return Err(TransportError::Manifest("digest policy mismatch".to_owned()).into());
+    }
+    let mut previous = None;
+    for file in &manifest.files {
+        cache_relative(&file.path)?;
+        if !is_hex(&file.sha256, 64) || file.modified_nanos >= 1_000_000_000 {
+            return Err(
+                TransportError::Manifest(format!("invalid file record: {}", file.path)).into(),
+            );
+        }
+        if previous.as_ref().is_some_and(|path| path >= &file.path) {
+            return Err(
+                TransportError::Manifest("file paths are not strictly sorted".to_owned()).into(),
+            );
+        }
+        previous = Some(file.path.clone());
+    }
+    Ok(())
+}
+
+fn cache_relative(path: &str) -> bsmr_error::Result<PathBuf> {
+    let parts = path.split('/').collect::<Vec<_>>();
+    let valid = matches!(parts.as_slice(), [payload, area, prefix, key]
+        if *payload == PAYLOAD && (*area == "ac" || *area == "cas")
+            && is_hex(prefix, 2) && is_hex(key, 64) && key.starts_with(prefix));
+    if !valid {
+        return Err(TransportError::Manifest(format!("invalid payload path: {path}")).into());
+    }
+    Ok(PathBuf::from(parts[1]).join(parts[2]).join(parts[3]))
 }
 
 fn is_hex(value: &str, length: usize) -> bool {
@@ -300,6 +456,20 @@ fn export_file(path: &Path, root: &Path) -> bsmr_error::Result<LocalCacheExportF
         modified_secs: modified.as_secs(),
         modified_nanos: modified.subsec_nanos(),
     })
+}
+
+fn validate_file(path: &Path, expected: &LocalCacheExportFile) -> bsmr_error::Result<()> {
+    let metadata = fs::symlink_metadata(path)
+        .map_err(|error| io_error("inspect package file", path, error))?;
+    if !metadata.file_type().is_file()
+        || metadata.len() != expected.size
+        || sha256_file(path)? != expected.sha256
+    {
+        return Err(
+            TransportError::Manifest(format!("payload mismatch: {}", expected.path)).into(),
+        );
+    }
+    Ok(())
 }
 
 fn copy_file(source: &Path, destination: &Path) -> bsmr_error::Result<()> {
@@ -331,6 +501,15 @@ fn copy_file(source: &Path, destination: &Path) -> bsmr_error::Result<()> {
         .map_err(|error| io_error("sync copied file", destination, error))
 }
 
+fn set_mtime(path: &Path, file: &LocalCacheExportFile) -> bsmr_error::Result<()> {
+    let modified = UNIX_EPOCH + std::time::Duration::new(file.modified_secs, file.modified_nanos);
+    File::options()
+        .write(true)
+        .open(path)
+        .and_then(|output| output.set_times(fs::FileTimes::new().set_modified(modified)))
+        .map_err(|error| io_error("restore cache mtime", path, error))
+}
+
 fn write_manifest(path: &Path, manifest: &LocalCacheExportManifest) -> bsmr_error::Result<()> {
     let mut output = OpenOptions::new()
         .write(true)
@@ -345,6 +524,13 @@ fn write_manifest(path: &Path, manifest: &LocalCacheExportManifest) -> bsmr_erro
     output
         .sync_all()
         .map_err(|error| io_error("sync transport manifest", path, error))
+}
+
+fn read_manifest(path: &Path) -> bsmr_error::Result<LocalCacheExportManifest> {
+    let bytes = read_regular_file(path)?
+        .ok_or_else(|| TransportError::Manifest("manifest is missing".to_owned()))?;
+    serde_json::from_slice(&bytes)
+        .map_err(|error| TransportError::Manifest(error.to_string()).into())
 }
 
 fn slash_path(path: &Path) -> bsmr_error::Result<String> {
@@ -487,6 +673,48 @@ mod tests {
                 package.join(super::MANIFEST)
             )?)?,
             manifest
+        );
+        Ok(())
+    }
+
+    #[test]
+    fn invariant_import_recreates_the_verified_hit_in_an_absent_root() -> bsmr_error::Result<()> {
+        let temporary = tempfile::tempdir()?;
+        let source = LocalActionCache::at(temporary.path().join("source"))?;
+        let package = temporary.path().join("export");
+        let destination = LocalActionCache::at(temporary.path().join("destination"))?;
+        let digest_config = DigestConfig::testing_default();
+        let action = ActionDigest::from_content(b"action", digest_config.cas_digest_config());
+        let output =
+            TrackedFileDigest::from_content(b"cached output", digest_config.cas_digest_config());
+        let result = LocalActionResult {
+            output_files: vec![LocalOutputFile {
+                path: "bsmr-out/output".to_owned(),
+                digest: LocalDigest::from_file(&output),
+                executable: false,
+            }],
+            ..Default::default()
+        };
+        source.publish_bytes(&output, b"cached output", digest_config)?;
+        source.publish_action_result(&action, &result)?;
+        let engine = "a".repeat(64);
+        let exported = source.export_package(&package, &engine, digest_config)?;
+
+        let imported = destination.import_package(&package, &engine, digest_config)?;
+
+        assert_eq!(imported, exported);
+        assert_eq!(destination.action_result(&action)?, Some(result));
+        assert_eq!(
+            destination.read_blob(&LocalDigest::from_file(&output), digest_config)?,
+            Some(b"cached output".to_vec())
+        );
+        let root_entries = fs::read_dir(temporary.path().join("destination"))?
+            .map(|entry| entry.map(|entry| entry.file_name()))
+            .collect::<Result<Vec<_>, _>>()?;
+        assert!(
+            root_entries
+                .iter()
+                .all(|entry| entry == "ac" || entry == "cas" || entry == "cache.lock")
         );
         Ok(())
     }
