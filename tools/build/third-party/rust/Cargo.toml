@@ -166,7 +166,7 @@ perf-event = "0.4"
 perf-event-open-sys = "5.0"
 pin-project = "1.1.11"
 plist = "1.8.0"
-postcard = { version = "1.0.8", features = ["use-crc", "use-std"] }
+postcard = { version = "1.0.8", default-features = false, features = ["use-crc", "use-std"] }
 pretty_assertions = "1.4.1"
 proc-macro2 = { version = "1.0.106", features = ["span-locations"] }
 prost = { version = "0.14.3", default-features = false }
@@ -249,7 +249,7 @@ triomphe = "0.1.11"
 twox-hash = "1.6.1"
 typed-arena = "2"
 unicode-segmentation = "1.13.2"
-url = "2.5.8"
+url = "2.5.9"
 uv-distribution-filename = "=0.0.71"
 uv-pep508 = "=0.0.71"
 uv-platform-tags = "=0.0.71"
