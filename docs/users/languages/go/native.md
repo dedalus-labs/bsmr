@@ -22,8 +22,10 @@ Add an exact stable SDK pin to the module's `go.mod` before acquisition:
 toolchain go1.26.7
 ```
 
-Run the Go commands from that module directory. Missing, partial and prerelease
-pins are errors. `--version`, if supplied, must match the pin; `--update` is
+Run the Go commands from that module directory. At a workspace root, put the pin
+in `go.work` instead: in workspace mode Go reads the workspace's `toolchain`
+directive and ignores the members' directives. Missing, partial and prerelease
+pins are errors, and a `toolchain` entry inside a block is not a directive. `--version`, if supplied, must match the pin; `--update` is
 rejected. Change `go.mod` and run `bsmr go toolchain` to acquire another release.
 
 ```shell
