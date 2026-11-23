@@ -439,6 +439,12 @@ async def main() -> int:  # noqa: C901
 
         rustc_args.append(arg)
 
+    if args.dep_info:
+        for key in sorted(env):
+            if key.startswith(("LD_", "DYLD_")):
+                eprint(f"unsupported Rust compiler environment: loader override is set: {key}")
+                return 1
+
     if args.remap_cwd_prefix is not None:
         rustc_args.append(f"--remap-path-prefix={os.getcwd()}={args.remap_cwd_prefix}")
         rustc_args.append(

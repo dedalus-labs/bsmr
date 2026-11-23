@@ -3,7 +3,7 @@
 // SPDX-License-Identifier: Apache-2.0
 //===----------------------------------------------------------------------===//
 
-// Proves system compiler replacement invalidates a warm daemon without enabling disk caching.
+// Proves system compiler replacement invalidates a warm daemon before cache reuse.
 
 import assert from "node:assert/strict";
 import { execFile } from "node:child_process";
@@ -50,7 +50,7 @@ try {
 	assert.deepEqual(await build(), ["Local"]);
 	console.log("ok: compiler content replacement invalidates same-daemon results");
 	await exec(binary, ["clean"], options);
-	assert.deepEqual(await build(), ["Local"]);
+	assert.deepEqual(await build(), ["Cache"]);
 } finally {
 	await exec(binary, ["kill"], options);
 	rmSync(root, { recursive: true });

@@ -1,3 +1,4 @@
+load("@prelude//rust:cargo_buildscript.bzl", "buildscript_run")
 load("@prelude//toolchains:demo.bzl", "system_demo_toolchains")
 
 system_demo_toolchains(include_go = False, verify_rust_compiler = True)
@@ -6,4 +7,35 @@ rust_library(
     name = "leaf",
     srcs = ["leaf.rs"],
     crate_root = "leaf.rs",
+    verify_inputs = True,
+)
+
+rust_library(
+    name = "loader-override",
+    srcs = ["leaf.rs"],
+    crate_root = "leaf.rs",
+    env = {"LD_BIND_NOW": "1"},
+    verify_inputs = True,
+)
+
+rust_binary(
+    name = "app",
+    srcs = ["main.rs"],
+    crate_root = "main.rs",
+    deps = [":leaf"],
+    verify_inputs = True,
+)
+
+rust_binary(
+    name = "probe",
+    srcs = ["probe/build.rs"],
+    crate_root = "probe/build.rs",
+)
+
+buildscript_run(
+    name = "probe-run",
+    buildscript_rule = ":probe",
+    package_name = "probe",
+    version = "0.1.0",
+    local_manifest_dir = "probe",
 )

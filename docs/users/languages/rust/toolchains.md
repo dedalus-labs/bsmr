@@ -75,8 +75,8 @@ Discovery resolves `rustc` from `PATH` and hashes its runtime files. Overlapping
 commands share one observation. The next command after they finish refreshes it
 before graph or action-cache reuse. Unchanged identity bytes preserve reuse.
 Compiler and library changes invalidate results without restarting the daemon,
-even when size and modification time stay the same. This mode does not enable
-local compiler cache uploads.
+even when size and modification time stay the same. Verified compiles are eligible
+for local cache uploads when their target also enables `verify_inputs`.
 
 Verified mode supports the official Linux rustup layout and copies of it. It hashes
 `bin/rustc`, all files directly in `lib`, and host/target trees under `lib/rustlib`.
