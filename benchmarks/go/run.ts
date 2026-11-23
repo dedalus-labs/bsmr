@@ -94,7 +94,7 @@ const setup = (runner: Runner, iteration: number): RunnerConfig => {
 		root,
 		runner,
 	};
-	generateFixture(root, runner, repository, remoteCache, config.instance, `${runId}-cold-${iteration}`, mode);
+	generateFixture(root, runner, repository, remoteCache, config.instance, `${runId}-cold-${iteration}`, mode, hostGoVersion);
 	if (runner === "bsmr") {
 		execute(bsmr, ["go", "toolchain", "--version", hostGoVersion], root);
 		execute(bsmr, ["go", "sync", ...(mode === "cgo" ? ["--cgo"] : [])], root);
@@ -114,7 +114,7 @@ const setupRemoteHit = (runner: Runner, iteration: number, source: RunnerConfig,
 		root,
 		runner,
 	};
-	generateFixture(root, runner, repository, remoteCache, config.instance, `${runId}-cold-${runs}`, mode);
+	generateFixture(root, runner, repository, remoteCache, config.instance, `${runId}-cold-${runs}`, mode, hostGoVersion);
 	setExportedAbi(root, mode, abi, seed);
 	setDocumentation(root, `${runId}-${runs}`);
 	if (runner === "bsmr") {
