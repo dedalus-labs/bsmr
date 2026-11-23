@@ -4,7 +4,7 @@ load("@prelude//rust:cargo_package.bzl", "cargo")
 load("@prelude//rust:linkable_symbol.bzl", "rust_linkable_symbol")
 load("@prelude//toolchains:demo.bzl", "system_demo_toolchains")
 
-system_demo_toolchains(include_go = False)
+system_demo_toolchains(include_go = False, verify_rust_compiler = True)
 
 rust_library(
     name = "copied",
