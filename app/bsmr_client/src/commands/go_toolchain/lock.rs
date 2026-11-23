@@ -41,6 +41,42 @@ pub(crate) fn write_lock(
     atomic_write(&path, content.as_bytes())
 }
 
+/// Publishes `lock` while `install` acquires it, restoring the previous lock if that fails.
+///
+/// The `toolchains//` package reads the lock to materialize the SDK archive, so the lock must be
+/// on disk during installation. A failed installation must not leave a new lock advertising tools
+/// that were never installed; consumers then still see the previous, consistent state.
+pub(crate) fn publish_lock<E: From<GoToolchainError>>(
+    root: &Path,
+    lock: &GoToolchainLock,
+    install: impl FnOnce() -> Result<(), E>,
+) -> Result<(), E> {
+    let path = root.join(LOCK_FILE);
+    let previous = match fs::read(&path) {
+        Ok(bytes) => Some(bytes),
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => None,
+        Err(error) => {
+            return Err(GoToolchainError::Read {
+                path,
+                message: error.to_string(),
+            }
+            .into());
+        }
+    };
+    write_lock(root, lock, false)?;
+    let installed = install();
+    if installed.is_err() {
+        match previous {
+            Some(bytes) => atomic_write(&path, &bytes)?,
+            None => fs::remove_file(&path).map_err(|error| GoToolchainError::Write {
+                path: path.clone(),
+                message: error.to_string(),
+            })?,
+        }
+    }
+    installed
+}
+
 /// Allows only a missing or parseable Bessemer-owned lock.
 fn validate_owned_lock(path: &Path) -> Result<(), GoToolchainError> {
     match fs::read(path) {

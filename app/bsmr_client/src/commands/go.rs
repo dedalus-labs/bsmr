@@ -109,35 +109,40 @@ impl GoCommand {
 }
 
 /// Pins or verifies the SDK lock and the acquisition beside the `toolchains//` package.
+///
+/// Every flag and ownership check runs before the checkout changes, so a rejected request
+/// leaves earlier generated files and the lock in place.
 async fn configure_toolchain(
     command: GoToolchainCommand,
     ctx: &ClientCommandContext<'_>,
 ) -> bsmr_error::Result<()> {
+    if command.update {
+        return Err(go_toolchain::GoToolchainError::ImplicitUpdate.into());
+    }
+    let pinned = go_toolchain::module_pin(ctx.working_dir.path().as_path())?;
+    if let Some(requested) = command.version.as_deref() {
+        go_toolchain::require_pin(&pinned, requested)?;
+    }
     let project_root = ctx.paths()?.project_root();
     let root = project_root.root().as_path();
-    let pinned = go_toolchain::module_pin(ctx.working_dir.path().as_path())?;
     let toolchains = toolchains_directory(project_root).await?;
-    if command.check {
+    let lock = if command.check {
         go_toolchain::reject_leftovers(root, &toolchains)?;
-    } else {
-        go_toolchain::remove_leftovers(root, &toolchains)?;
-    }
-    let lock = go_toolchain::configure(
-        root,
-        &pinned,
-        command.version.as_deref(),
-        command.update,
-        command.check,
-    )
-    .await?;
-    if command.check {
+        let lock = go_toolchain::verify_lock(root, &pinned)?;
         go_toolchain::acquired_go(&toolchains, &lock)?;
+        lock
     } else {
         go_toolchain::validate_acquisition_owners(&toolchains)?;
-        go_toolchain::create_toolchains_package(&toolchains)?;
-        let sdk = materialize_sdk_archive(root)?;
-        go_toolchain::install_sdk(&toolchains, &sdk, &lock)?;
-    }
+        go_toolchain::remove_leftovers(root, &toolchains)?;
+        let lock = go_toolchain::select_lock(root, &pinned).await?;
+        go_toolchain::publish_lock(root, &lock, || -> bsmr_error::Result<()> {
+            go_toolchain::create_toolchains_package(&toolchains)?;
+            let sdk = materialize_sdk_archive(root)?;
+            go_toolchain::install_sdk(&toolchains, &sdk, &lock)?;
+            Ok(())
+        })?;
+        lock
+    };
     bsmr_client_ctx::println!(
         "Go SDK {}: {}",
         if command.check { "verified" } else { "pinned" },
