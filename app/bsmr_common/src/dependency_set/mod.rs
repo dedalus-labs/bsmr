@@ -13,6 +13,7 @@
 //! A ReleaseReceipt certifies one verified lock and its produced artifacts
 //! under `bsmr.release-receipt.v1`.
 
+mod explain;
 mod lock;
 mod manifest;
 mod range;
@@ -23,6 +24,9 @@ mod verify;
 use sha2::Digest;
 use sha2::Sha256;
 
+pub use self::explain::ContractExplanation;
+pub use self::explain::ExplainReport;
+pub use self::explain::explain;
 pub use self::lock::DependencyLock;
 pub use self::lock::LockedArtifact;
 pub use self::lock::LockedComponent;
