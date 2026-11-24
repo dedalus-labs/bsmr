@@ -2716,6 +2716,113 @@ Common options are documented under [Global options](#global-options).
     Also initialize a git repository at the given path, and set up an appropriate `.gitignore` file
 
 
+## `bsmr deps`
+
+Verify, explain, update, and certify DependencySet lockfiles
+
+**Usage**: `bsmr deps <COMMAND>`
+
+### Subcommands:
+* `verify`: Verify `bsmr.lock` against component manifests without network access
+* `explain`: Explain contract intersections, closures, and conflicts
+* `update`: Explicitly update locked components from an ordered TOML candidate catalog
+
+### Common Options:
+
+Common options are documented under [Global options](#global-options).
+## `bsmr deps verify`
+
+Verify `bsmr.lock` against component manifests without network access
+
+**Usage**: `bsmr deps verify [OPTIONS]`
+
+### Common Options:
+
+Common options are documented under [Global options](#global-options).
+
+### Options:
+* `--manifest <PATH>`
+    Override path to `bsmr.component.toml`
+
+* `--lock <PATH>`
+    Override path to `bsmr.lock`
+
+* `--json`
+    Print machine-readable JSON output
+
+
+## `bsmr deps explain`
+
+Explain contract intersections, closures, and conflicts
+
+**Usage**: `bsmr deps explain [OPTIONS] [COMPONENT]`
+
+### Arguments:
+* `<COMPONENT>`
+    Optional component name to filter contracts and closures
+
+
+### Common Options:
+
+Common options are documented under [Global options](#global-options).
+
+### Options:
+* `--manifest <PATH>`
+    Override path to `bsmr.component.toml`
+
+* `--lock <PATH>`
+    Override path to `bsmr.lock`
+
+* `--catalog <PATH>`
+    Optional TOML candidate catalog to evaluate against current requirements
+
+* `--catalog-digest <SHA256>`
+    Expected `sha256:<64hex>` digest of `--catalog`
+
+* `--json`
+    Print machine-readable JSON output
+
+
+## `bsmr deps update`
+
+Explicitly update locked components from an ordered TOML candidate catalog
+
+**Usage**: `bsmr deps update [OPTIONS] [COMPONENTS]...`
+
+### Arguments:
+* `<COMPONENTS>`
+    Component names to update. Updates all cataloged components when omitted
+
+
+### Common Options:
+
+Common options are documented under [Global options](#global-options).
+
+### Options:
+* `--catalog <PATH>`
+    Path to an immutable or authenticated TOML candidate catalog
+
+* `--catalog-digest <SHA256>`
+    Expected `sha256:<64hex>` digest of `--catalog`
+
+* `--refresh-lockfiles`
+    Rehash committed native ecosystem lockfiles on disk
+
+* `--manifest <PATH>`
+    Override path to `bsmr.component.toml`
+
+* `--lock <PATH>`
+    Override path to `bsmr.lock`
+
+* `--dry-run`
+    Evaluate and print candidate decisions without writing `bsmr.lock`
+
+* `--json`
+    Print machine-readable JSON output
+
+
+
+
 ## `bsmr expand-external-cell`
 
 Expand the contents of an external cell into the repo.
