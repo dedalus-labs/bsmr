@@ -13,11 +13,16 @@
 //! A ReleaseReceipt certifies one verified lock and its produced artifacts
 //! under `bsmr.release-receipt.v1`.
 
+mod manifest;
 mod range;
 
 use sha2::Digest;
 use sha2::Sha256;
 
+pub use self::manifest::ComponentManifest;
+pub use self::manifest::DependencySet;
+pub use self::manifest::PatchPolicy;
+pub use self::manifest::ProvenancePolicy;
 pub use self::range::ContractRange;
 pub use self::range::ContractRangeSet;
 use crate::cas_digest::CasDigest;
