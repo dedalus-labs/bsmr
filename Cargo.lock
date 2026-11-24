@@ -1532,6 +1532,7 @@ version = "0.1.0"
 dependencies = [
  "allocative",
  "assert_matches",
+ "astral-version-ranges",
  "async-scoped",
  "async-trait",
  "blake3",

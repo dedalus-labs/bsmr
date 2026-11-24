@@ -39,6 +39,7 @@ anymap3 = "1.0.1"
 arc-swap = "1.9.0"
 argfile = "0.2.1"
 assert_matches = "1.5"
+astral-version-ranges = "=0.2.2"
 async-compression = { version = "0.4.41", features = ["brotli", "bzip2", "deflate", "futures-io", "gzip", "tokio", "zlib", "zstd", "zstdmt"] }
 async-condvar-fair = { version = "1.0.1", features = ["parking_lot_0_12", "tokio"] }
 async-recursion = "1.1.1"

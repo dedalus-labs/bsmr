@@ -5027,6 +5027,7 @@ dependencies = [
  "arc-swap",
  "argfile",
  "assert_matches",
+ "astral-version-ranges",
  "async-compression",
  "async-condvar-fair",
  "async-recursion",
