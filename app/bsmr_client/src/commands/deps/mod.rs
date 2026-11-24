@@ -5,6 +5,8 @@
 
 // Implements the `bsmr deps` CLI for verifying, explaining, updating, and certifying DependencySets.
 
+mod receipt;
+
 use std::path::Path;
 use std::path::PathBuf;
 
@@ -20,6 +22,8 @@ use bsmr_common::dependency_set::load_project_state;
 use bsmr_common::dependency_set::refresh_lockfiles;
 use bsmr_common::dependency_set::update;
 use bsmr_common::dependency_set::verify_in_root;
+
+use self::receipt::DepsReceiptCommand;
 
 /// Manage cross-repository DependencySet rules and exact locks.
 #[derive(Debug, clap::Parser)]
@@ -42,6 +46,9 @@ enum DepsSubcommand {
 
     /// Explicitly update locked components from an ordered TOML candidate catalog.
     Update(DepsUpdateCommand),
+
+    /// Create or verify an immutable RFC 0004 release receipt.
+    Receipt(DepsReceiptCommand),
 }
 
 /// Options for offline DependencySet lockfile verification.
@@ -138,6 +145,7 @@ impl DepsCommand {
             DepsSubcommand::Verify(cmd) => run_verify(&root, cmd),
             DepsSubcommand::Explain(cmd) => run_explain(&root, cmd),
             DepsSubcommand::Update(cmd) => run_update(&root, cmd),
+            DepsSubcommand::Receipt(cmd) => cmd.exec(&root),
         }
     }
 
