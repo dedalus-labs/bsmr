@@ -156,7 +156,8 @@ function blobPath(layout, value) {
 }
 
 /** Stream and optionally copy exact compressed bytes while verifying the uncompressed diffID. */
-export async function verifyLayer(path, expected, diffID, destination) {
+export async function verifyLayer(path, expected, diffID, destination, signal) {
+	signal?.throwIfAborted();
 	const source = await regular(path);
 	const compressed = createHash("sha256");
 	const uncompressed = createHash("sha256");
@@ -180,7 +181,7 @@ export async function verifyLayer(path, expected, diffID, destination) {
 		const streams = [source.createReadStream({ autoClose: false }), tee];
 		if (expected.mediaType === gzipType) streams.push(createGunzip());
 		streams.push(sink);
-		try { await pipeline(streams); } catch (error) {
+		try { await (signal ? pipeline(streams, { signal }) : pipeline(streams)); } catch (error) {
 			if (error.code?.startsWith("Z_")) fail("OCI_INVALID_LAYER", "a gzip layer is invalid or its checksum failed");
 			throw error;
 		}
@@ -212,7 +213,8 @@ async function layoutMarker(layout) {
 }
 
 /** Import one direct platform image after verifying all compressed and uncompressed content. */
-export async function importLayout({ platform, layout, manifest, config, descriptor: descriptorPath }) {
+export async function importLayout({ platform, layout, manifest, config, descriptor: descriptorPath, signal }) {
+	signal?.throwIfAborted();
 	const expected = platformParts(platform);
 	await layoutMarker(layout);
 	const index = json(await bytes(join(layout, "index.json")), "OCI layout index");
@@ -234,7 +236,7 @@ export async function importLayout({ platform, layout, manifest, config, descrip
 	const configBytes = await bytes(blobPath(layout, manifestValue.config));
 	const metadata = image(platform, manifestBytes, configBytes, selected);
 	for (const [position, layer] of metadata.manifest.layers.entries()) {
-		await verifyLayer(blobPath(layout, layer), layer, metadata.config.rootfs.diff_ids[position]);
+		await verifyLayer(blobPath(layout, layer), layer, metadata.config.rootfs.diff_ids[position], undefined, signal);
 	}
 	await Promise.all([manifest, config, descriptorPath].map((path) => mkdir(dirname(path), { recursive: true })));
 	await Promise.all([
