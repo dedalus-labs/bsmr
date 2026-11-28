@@ -1,0 +1,5 @@
+load(":rules.bzl", "tree", "use")
+
+tree(name = "tree", script = "tree.sh")
+
+[use(name = "use%d" % index, tree = ":tree") for index in range(16)]

@@ -159,8 +159,11 @@ try {
 	const compiled = await build(second, "compiled-source", "compiled:original\n");
 	assert.ok(compiled.local.some(({ identity }) => identity.includes("go_compile") && identity.includes("cmd/probe")));
 	assert.notEqual(compiled.digest, cold.digest);
-	const sdkSource = join(second, ".bsmr-go-sdk/src/fmt/print.go");
-	writeFileSync(sdkSource, `${readFileSync(sdkSource, "utf8")}\n// changed SDK input\n`);
+	const nextVersion = version === "1.26.1" ? "1.26.2" : "1.26.1";
+	const module = join(second, "go.mod");
+	writeFileSync(module, readFileSync(module, "utf8").replace(`toolchain go${version}`, `toolchain go${nextVersion}`));
+	await run(executable, ["go", "toolchain"], { ...options, cwd: second });
+	await run(executable, ["go", "sync"], { ...options, cwd: second });
 	await clean(second);
 	const sdk = await build(second, "sdk-input", "compiled:original\n");
 	assert.ok(sdk.local.some(({ identity }) => identity.includes("go_bootstrap_binary")));

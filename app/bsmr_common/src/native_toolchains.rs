@@ -77,8 +77,8 @@ pub async fn render(
 /// Declares the locked Go SDK when `package` is the one `toolchains//` names.
 ///
 /// The lock is read before the `toolchains` alias is resolved, so projects without Go never
-/// depend on that alias. The SDK and bootstrap wrapper are ignored local state; until
-/// `bsmr go toolchain` installs them, `go` and `go_bootstrap` fail only when a build uses them.
+/// depend on that alias. The SDK is an archive action output. Until `bsmr go toolchain`
+/// installs the bootstrap wrapper, `go` and `go_bootstrap` fail only when a build uses them.
 async fn go_toolchain(
     ctx: &mut DiceComputations<'_>,
     package: PackageLabel,
@@ -97,13 +97,10 @@ async fn go_toolchain(
         return Ok(String::new());
     }
     let acquired = listing
-        .get_dir(PackageRelativePath::new(GO_SDK_DIRECTORY)?)
-        .is_some()
-        && listing
-            .get_file(PackageRelativePath::new(&format!(
-                "{GO_TOOLS_DIRECTORY}/go_wrapper"
-            ))?)
-            .is_some();
+        .get_file(PackageRelativePath::new(&format!(
+            "{GO_TOOLS_DIRECTORY}/go_wrapper"
+        ))?)
+        .is_some();
     Ok(format!(
         "load(\"@prelude//go/native:toolchain.bzl\", __bsmr_native_go_toolchains = \"native_go_toolchains\")\n__bsmr_native_go_toolchains(lock = {}, acquired = {})\n",
         serde_json::to_string(&lock)?,

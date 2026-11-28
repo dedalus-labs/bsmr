@@ -105,6 +105,41 @@ def test_acquisition_uses_module_pin(project: Project) -> None:
     assert "Go SDK verified: 1.26.2" in project.succeed("go", "toolchain", "--check")
 
 
+def test_sdk_is_an_action_input(project: Project) -> None:
+    """Build and restore without a source-tree SDK, then observe a changed SDK pin."""
+    shutil.copyfile(
+        Path(__file__).parents[1] / "fixtures/go-action/main.go",
+        project.root / "main.go",
+    )
+    for version in ["1.26.1", "1.26.2"]:
+        project.pin(directive=f"toolchain go{version}", go_line="go 1.26.0")
+        project.succeed("go", "toolchain", "--version", version)
+        project.succeed("go", "sync")
+        shutil.rmtree(project.root / ".bsmr-go-sdk")
+        previous = None
+        for _ in range(2):
+            outputs = json.loads(
+                project.succeed(
+                    "build",
+                    "//:bin",
+                    "-c",
+                    "go.link_mode=internal",
+                    "--show-full-json-output",
+                )
+            )
+            binary = Path(outputs["root//:bin"])
+            result = subprocess.run(
+                [binary], capture_output=True, text=True, check=True
+            )
+            assert result.stdout.strip().split("-X:", 1)[0] == f"go{version}"
+            content = binary.read_bytes()
+            if previous is not None:
+                assert content == previous
+            previous = content
+            assert not (project.root / ".bsmr-go-sdk").exists()
+            project.succeed("clean")
+
+
 def write_lock(root: Path, version: str) -> bytes:
     """Write a well-formed generated lock whose invented digests no download can match."""
     archives = [
