@@ -5,12 +5,19 @@
 
 """Locate isolation output directories through the real CLI without starting a daemon."""
 
+import hashlib
 import os
 import shutil
 import subprocess
 from pathlib import Path
 
 import pytest
+
+
+def expected_output_root(home: Path, project_root: Path, isolation: str) -> Path:
+    """Return the user-state output directory corresponding to a canonical project root."""
+    key = hashlib.sha256(os.fsencode(project_root.resolve())).hexdigest()[:32]
+    return home.resolve() / ".bsmr" / "checkouts" / key / isolation
 
 
 class Project:
@@ -59,7 +66,7 @@ def test_output_root(project: Project, isolation: str, location: str) -> None:
     else:
         cwd = {"root": project.root, "nested": project.nested, "alias": project.alias}[location]
         output = project.query(cwd=cwd, isolation=isolation)
-    assert output == project.root / "bsmr-out" / isolation
+    assert output == expected_output_root(project.home, project.root, isolation)
     assert not output.exists()
     assert list(project.home.iterdir()) == []
     assert sorted(path.name for path in project.root.iterdir()) == [".bsmr", "nested"]
@@ -70,6 +77,6 @@ def test_directory_selects_another_project(project: Project) -> None:
     other = project.root.parent / "other"
     shutil.copytree(project.root, other)
     output = project.query(cwd=project.nested, isolation="selected", directory=other / "nested")
-    assert output == other / "bsmr-out" / "selected"
+    assert output == expected_output_root(project.home, other, "selected")
     assert not output.exists()
     assert list(project.home.iterdir()) == []

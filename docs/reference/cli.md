@@ -2713,7 +2713,7 @@ Common options are documented under [Global options](#global-options).
     Initialize the project even if the git repo at \[PATH\] has uncommitted changes
 
 * `--git`
-    Also initialize a git repository at the given path, and set up an appropriate `.gitignore` file
+    Also initialize a git repository at the given path
 
 
 ## `bsmr deps`

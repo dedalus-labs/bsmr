@@ -184,6 +184,7 @@ impl BsmrSubcommand for InnerCleanCommand {
     ) -> ExitResult {
         let paths = ctx.paths()?;
         let output_dir = paths.output_path();
+        let exec_root = paths.exec_root()?;
         let daemon_dir = paths.daemon_dir()?;
         let trash_dir = paths.trash_dir();
         let console = &self.common_opts.console_opts.final_console();
@@ -191,6 +192,7 @@ impl BsmrSubcommand for InnerCleanCommand {
         if self.dry_run {
             return clean(
                 output_dir,
+                exec_root,
                 daemon_dir,
                 trash_dir,
                 console,
@@ -214,6 +216,7 @@ impl BsmrSubcommand for InnerCleanCommand {
 
         clean(
             output_dir,
+            exec_root,
             daemon_dir,
             trash_dir,
             console,
@@ -232,6 +235,7 @@ impl BsmrSubcommand for InnerCleanCommand {
 
 async fn clean(
     output_dir: AbsNormPathBuf,
+    exec_root: AbsNormPathBuf,
     daemon_dir: DaemonDir,
     trash_dir: AbsNormPathBuf,
     console: &FinalConsole,
@@ -240,6 +244,9 @@ async fn clean(
     lifecycle_lock: Option<&BsmrdLifecycleLock>,
     background: bool,
 ) -> bsmr_error::Result<()> {
+    if lifecycle_lock.is_some() && exec_root.exists() {
+        fs_util::remove_dir_all(&exec_root).categorize_internal()?;
+    }
     let paths_to_clean = if background {
         let trash_uuid = Uuid::new_v4();
         let trash_target = trash_dir.as_abs_path().join(trash_uuid.to_string());

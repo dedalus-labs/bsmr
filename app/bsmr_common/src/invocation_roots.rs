@@ -30,6 +30,8 @@ use bsmr_fs::paths::abs_path::AbsPathBuf;
 use bsmr_fs::paths::file_name::FileName;
 use bsmr_fs::paths::file_name::FileNameBuf;
 use bsmr_fs::working_dir::AbsWorkingDir;
+use sha2::Digest;
+use sha2::Sha256;
 
 use crate::invocation_paths::InvocationPaths;
 use crate::invocation_paths_result::InvocationPathsResult;
@@ -88,8 +90,10 @@ fn get_roots(from: &AbsWorkingDir) -> bsmr_error::Result<Option<InvocationRoots>
                 .strip_prefix(curr)
                 .expect("ancestor must prefix working directory")
                 .into_owned();
+            let output_root = checkout_output_root(curr)?;
             return Ok(Some(InvocationRoots {
-                project_root: ProjectRoot::new_unchecked(curr.to_owned()),
+                project_root: ProjectRoot::new_unchecked(curr.to_owned())
+                    .with_output_root(output_root),
                 cwd: rel_cwd.into(),
             }));
         }
@@ -97,8 +101,9 @@ fn get_roots(from: &AbsWorkingDir) -> bsmr_error::Result<Option<InvocationRoots>
     if cargo {
         let root = AbsNormPathBuf::new(crate::rust_graph::project::root(from.path().as_path())?)?;
         let cwd = from.path().strip_prefix(&root)?.into_owned().into();
+        let output_root = checkout_output_root(&root)?;
         return Ok(Some(InvocationRoots {
-            project_root: ProjectRoot::new_unchecked(root),
+            project_root: ProjectRoot::new_unchecked(root).with_output_root(output_root),
             cwd,
         }));
     }
@@ -166,12 +171,43 @@ pub fn home_bsmr_dir() -> bsmr_error::Result<&'static AbsNormPath> {
             .ok_or_else(|| internal_error!("Expected a HOME directory to be available"))?;
         let home =
             AbsNormPathBuf::new(home).bsmr_error_context("Expected an absolute HOME directory")?;
+        let home = if fs_util::try_exists(&home)? {
+            fs_util::canonicalize(&home).categorize_internal()?
+        } else {
+            home
+        };
         Ok(home.join(FileName::new(".bsmr")?))
     }
 
     static DIR: LazyLock<bsmr_error::Result<AbsNormPathBuf>> = LazyLock::new(find_dir);
 
     Ok(LazyLock::force(&DIR).as_ref().map_err(dupe::Dupe::dupe)?)
+}
+
+/// Returns a deterministic 32-hex-character key identifying a canonical project root.
+pub fn project_state_key(project_root: &AbsNormPath) -> String {
+    let mut hasher = Sha256::new();
+    hasher.update(project_root.as_path().as_os_str().as_encoded_bytes());
+    let digest = hex::encode(hasher.finalize());
+    digest[..32].to_owned()
+}
+
+/// Returns the user-root directory backing `bsmr-out` for `project_root` without creating it.
+pub fn checkout_output_root(project_root: &AbsNormPath) -> bsmr_error::Result<AbsNormPathBuf> {
+    let key = project_state_key(project_root);
+    Ok(home_bsmr_dir()?
+        .join(FileName::unchecked_new("checkouts"))
+        .join(FileName::unchecked_new(&key)))
+}
+
+/// Returns the per-isolation execution view directory for local host actions in `project_root`.
+pub fn checkout_exec_root(
+    project_root: &AbsNormPath,
+    isolation: &FileName,
+) -> bsmr_error::Result<AbsNormPathBuf> {
+    Ok(checkout_output_root(project_root)?
+        .join(FileName::unchecked_new(".execroot"))
+        .join(isolation))
 }
 
 #[cfg(test)]

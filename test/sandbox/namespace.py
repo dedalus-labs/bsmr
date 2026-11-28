@@ -339,12 +339,20 @@ def main() -> None:
                         stderr=subprocess.PIPE,
                         text=True,
                     ) as process:
+                        output_root = Path(
+                            subprocess.check_output(
+                                [str(binary), "--isolation-dir", isolation, "root", "--kind", "output"],
+                                cwd=root,
+                                env=env,
+                                text=True,
+                            ).strip()
+                        )
                         deadline = time.monotonic() + 10
                         heartbeats: list[Path] = []
                         while time.monotonic() < deadline and process.poll() is None:
                             heartbeats = list(
-                                root.glob(
-                                    "bsmr-out/**/.bsmr-namespace-*/outputs/**/heartbeat"
+                                output_root.glob(
+                                    "**/.bsmr-namespace-*/outputs/**/heartbeat"
                                 )
                             )
                             if heartbeats:

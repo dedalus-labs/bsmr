@@ -25,7 +25,6 @@ use bsmr_client_ctx::final_console::FinalConsole;
 use bsmr_client_ctx::path_arg::PathArg;
 use bsmr_common::argv::Argv;
 use bsmr_common::argv::SanitizedArgv;
-use bsmr_core::fs::output_path::BSMR_OUTPUT_ROOT;
 use bsmr_error::BsmrErrorContext;
 use bsmr_error::ErrorTag;
 use bsmr_error::bsmr_error;
@@ -64,8 +63,7 @@ pub struct InitCommand {
     #[clap(long)]
     allow_dirty: bool,
 
-    /// Also initialize a git repository at the given path, and set up an appropriate `.gitignore`
-    /// file.
+    /// Also initialize a git repository at the given path.
     #[clap(long)]
     git: bool,
 
@@ -194,15 +192,6 @@ fn initialize_bsmrconfig(repo_root: &AbsPath, prelude: bool, git: bool) -> bsmr_
     Ok(())
 }
 
-fn set_up_gitignore(repo_root: &AbsPath) -> bsmr_error::Result<()> {
-    let gitignore = repo_root.join(".gitignore");
-    // A new repository must not expose Bessemer's generated state to Git.
-    if !gitignore.exists() || fs_util::metadata(&gitignore).categorize_internal()?.len() == 0 {
-        fs_util::write(gitignore, format!("/{BSMR_OUTPUT_ROOT}\n")).categorize_internal()?;
-    }
-    Ok(())
-}
-
 /// Creates the project marker, and optionally a Git repository, at `repo_root`.
 pub(crate) fn set_up_project(
     repo_root: &AbsPath,
@@ -221,7 +210,6 @@ pub(crate) fn set_up_project(
                 "Failure when running `git init`."
             ));
         };
-        set_up_gitignore(repo_root)?;
     }
 
     // If the project already contains a .bsmr, leave it alone.
@@ -239,7 +227,6 @@ mod tests {
     use bsmr_fs::paths::abs_path::AbsPath;
 
     use crate::commands::init::initialize_bsmrconfig;
-    use crate::commands::init::set_up_gitignore;
     use crate::commands::init::set_up_project;
 
     #[test]
@@ -254,40 +241,9 @@ mod tests {
         assert!(tempdir_path.join(".bsmr").exists());
         assert!(!tempdir_path.join(".bsmrconfig").exists());
         assert!(!tempdir_path.join(".bsmrroot").exists());
+        assert!(!tempdir_path.join(".gitignore").exists());
         assert!(!tempdir_path.join("toolchains").exists());
         assert!(!tempdir_path.join("BUILD.bsmr").exists());
-        Ok(())
-    }
-
-    #[test]
-    fn test_default_gitignore() -> bsmr_error::Result<()> {
-        let tempdir = tempfile::tempdir()?;
-        let tempdir_path = tempdir.path();
-        let tempdir_path = AbsPath::new(tempdir_path)?;
-        fs_util::create_dir_all(tempdir_path)?;
-
-        // .gitignore does not exist yet
-        set_up_gitignore(tempdir_path)?;
-        let gitignore_path = tempdir_path.join(".gitignore");
-        assert!(gitignore_path.exists());
-        let actual = fs_util::read_to_string(&gitignore_path)?;
-        let expected = "/bsmr-out\n";
-        assert_eq!(actual, expected);
-
-        // If an empty .gitignore exists (this is the case after running `git init`), add `bsmr-out`.
-        fs_util::write(&gitignore_path, "")?;
-        set_up_gitignore(tempdir_path)?;
-        assert!(gitignore_path.exists());
-        let actual = fs_util::read_to_string(&gitignore_path)?;
-        assert_eq!(actual, expected);
-
-        // If a non-empty .gitignore exists, don't touch it.
-        fs_util::write(&gitignore_path, "foo\nbar\n")?;
-        set_up_gitignore(tempdir_path)?;
-        assert!(gitignore_path.exists());
-        let actual = fs_util::read_to_string(&gitignore_path)?;
-        let expected = "foo\nbar\n";
-        assert_eq!(actual, expected);
         Ok(())
     }
 

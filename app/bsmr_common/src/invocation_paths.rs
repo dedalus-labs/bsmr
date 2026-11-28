@@ -192,6 +192,11 @@ impl InvocationPaths {
                 .join(ForwardRelativePath::unchecked_new("tmp/stale-bsmr-out")),
         )
     }
+
+    /// Per-isolation execution view directory for local host actions when outputs live outside the project tree.
+    pub fn exec_root(&self) -> bsmr_error::Result<AbsNormPathBuf> {
+        crate::invocation_roots::checkout_exec_root(self.roots.project_root.root(), &self.isolation)
+    }
 }
 
 #[cfg(test)]
