@@ -111,3 +111,10 @@ Run `python3 test/daemon/stale.py /path/to/bsmr` as a non-root Linux user. It
 kills the daemon without cleanup and points its record at a live process: one
 owned by this user, then one owned by another user. `bsmr build` must start a
 new daemon and `bsmr kill` must succeed without signalling either process.
+
+## File watcher overflow
+
+Run `python3 test/watcher/overflow.py /path/to/bsmr` on Linux as a user who may
+ptrace the daemon. It pauses the daemon's inotify thread, overflows its queue,
+and edits a source file before the next build. That build must succeed and read
+the edit, even though the kernel dropped its synchronization marker.

@@ -344,15 +344,21 @@ impl NotifyFileWatcher {
                         *guard = Err(e);
                     }
                 }
-                drop(guard);
-
-                if let Some(observed_barrier) = observed_barrier {
+                // Pending state that cannot apply incrementally makes `sync2` fail or discard the
+                // graph after the marker exists, so it completes the barrier. This is what keeps
+                // an overflow that dropped the marker's own event from stranding the waiter.
+                // Holding the data lock keeps a later barrier from taking this state's release.
+                let incremental = matches!(&*guard, Ok(state) if state.missed_events.is_none());
+                if observed_barrier.is_some() || !incremental {
                     let mut barrier = barrier2.0.lock().unwrap();
-                    if barrier.expected.as_ref() == Some(&observed_barrier) {
+                    if barrier.expected.is_some()
+                        && (!incremental || barrier.expected == observed_barrier)
+                    {
                         barrier.observed = true;
                         barrier2.1.notify_all();
                     }
                 }
+                drop(guard);
             })
             .map_err(|e| from_any_with_tag(e, bsmr_error::ErrorTag::NotifyWatcher))?;
         watcher
@@ -367,7 +373,8 @@ impl NotifyFileWatcher {
         })
     }
 
-    /// Waits until the watcher callback has processed every event queued before this call.
+    /// Waits until the watcher callback has processed every event queued before this call, or
+    /// until pending state already forces `sync2` to discard the graph.
     fn synchronize_events(&self) -> bsmr_error::Result<()> {
         let marker = self
             .barrier_dir
