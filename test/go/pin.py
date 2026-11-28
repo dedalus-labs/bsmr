@@ -105,6 +105,35 @@ def test_acquisition_uses_module_pin(project: Project) -> None:
     assert "Go SDK verified: 1.26.2" in project.succeed("go", "toolchain", "--check")
 
 
+def test_acquisition_writes_no_sdk_copy(project: Project) -> None:
+    """Acquire and sync from the archive output, retiring only a marked earlier SDK copy."""
+    project.pin(directive="toolchain go1.26.1")
+    shutil.copyfile(
+        Path(__file__).parents[1] / "fixtures/go-action/main.go", project.root / "main.go"
+    )
+    user = project.root / ".bsmr-go-sdk"
+    user.mkdir()
+    (user / "notes.txt").write_bytes(b"user-owned\n")
+    project.succeed("go", "toolchain")
+    assert "Go graph: 1 packages" in project.succeed("go", "sync")
+    assert [path.name for path in user.iterdir()] == ["notes.txt"]
+    earlier = project.root / ".bsmr-go-tools"
+    assert not earlier.exists()
+    earlier.mkdir()
+    (earlier / ".bsmr-metadata.json").write_text(
+        json.dumps({"generated_by": "bsmr go toolchain", "state": "acquired"})
+    )
+    for command in [("toolchain", "--check"), ("sync", "--check")]:
+        result = project.run("go", *command)
+        assert result.returncode != 0
+        assert "run `bsmr go toolchain` to retire them" in result.stderr
+    project.succeed("go", "toolchain")
+    assert not earlier.exists()
+    assert (user / "notes.txt").read_bytes() == b"user-owned\n"
+    assert "Go SDK verified: 1.26.1" in project.succeed("go", "toolchain", "--check")
+    project.succeed("go", "sync", "--check")
+
+
 def test_sdk_is_an_action_input(project: Project) -> None:
     """Build and restore without a source-tree SDK or wrapper, then observe a changed SDK pin."""
     shutil.copyfile(
@@ -115,7 +144,6 @@ def test_sdk_is_an_action_input(project: Project) -> None:
         project.pin(directive=f"toolchain go{version}", go_line="go 1.26.0")
         project.succeed("go", "toolchain", "--version", version)
         project.succeed("go", "sync")
-        shutil.rmtree(project.root / ".bsmr-go-sdk")
         previous = None
         for _ in range(2):
             outputs = json.loads(
@@ -182,15 +210,6 @@ def test_rejected_requests_and_workspace_pin(project: Project, tmp_path: Path) -
         project.run("go", "toolchain").returncode != 0
         and (project.root / "toolchains").is_dir()
     )
-    project.pin(directive="toolchain go1.26.2", go_line="go 1.26.0")
-    lock = write_lock(project.root, version="1.26.1")
-    (project.root / ".bsmr-go-tools").mkdir()
-    owned = project.run("go", "toolchain")
-    assert (
-        owned.returncode != 0
-        and "refusing to overwrite user-owned toolchain file" in owned.stderr
-    )
-    assert (project.root / ".bsmr-go-toolchain.json").read_bytes() == lock
     (project.root / "go.work").write_text("go 1.26.1\n\nuse ./app\n")
     (project.root / "app").mkdir()
     (project.root / "app/go.mod").write_text("module example.com/app\n\ngo 1.26\n")

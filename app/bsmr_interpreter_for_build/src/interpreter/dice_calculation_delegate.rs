@@ -229,8 +229,8 @@ pub struct DiceCalculationDelegate<'c, 'd> {
 
 /// Directory names whose contents never enter a native package's workspace checkout.
 ///
-/// Version control state, build outputs, and the host-specific Go SDK and bootstrap tools that
-/// `bsmr go toolchain` installs in `toolchains//` are local state, not workspace sources.
+/// Version control state, build outputs, and the host-specific Go SDK that earlier releases of
+/// `bsmr go toolchain` copied into `toolchains//` are local state, not workspace sources.
 fn excluded_from_checkout(path: &str) -> bool {
     path.split('/').any(|part| {
         [".git", "target", "bsmr-out"].contains(&part)

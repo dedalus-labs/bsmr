@@ -38,10 +38,10 @@ in `go.mod`, or in `go.work` at a workspace root. A missing, partial or
 prerelease pin is an error. The command records the exact official archive
 identities for Darwin and Linux on amd64 and arm64. To move to another release,
 change the directive and run `bsmr go toolchain` again. `--update` is rejected,
-and `--version`, if supplied, must match the pin. The acquired SDK is a
-verified, repository-local ignored input, and builds compile the bootstrap
-wrapper with the locked archive as a cached action; synchronization and builds
-do not depend on an ambient `go` executable.
+and `--version`, if supplied, must match the pin. The SDK is the verified
+archive's action output rather than a source-tree copy, and builds compile the
+bootstrap wrapper with the locked archive as a cached action; synchronization
+and builds do not depend on an ambient `go` executable.
 
 Synchronization invokes that SDK's `go list -deps -json -test` with module
 writes, network-backed dependency resolution, ambient `go env -w` state, and
@@ -76,17 +76,13 @@ Synchronization has one directional contract:
 4. `bsmr go sync --check` reruns the same import and fails if committed output
    differs, without changing the repository.
 
-The committed and acquired artifacts have deliberately different lifetimes.
-`<toolchains>` is the directory of the `toolchains//` package: the project root
-in a project created by `bsmr init`, or the directory of a declared
-`toolchains` cell.
+The Go frontend commits these artifacts:
 
 | Artifact | Commit? | Why it exists |
 | --- | --- | --- |
 | `.bsmr-go-toolchain.json` | yes | Pins the SDK semantics and authenticated archives for every supported execution host. |
 | `.bsmr-go-manifests` | yes | Records the exact manifest paths Bessemer may later remove as stale. |
 | `<package>/<buildfile>` | yes | Carries the validated native graph into ordinary Bessemer rules and action keys. |
-| `<toolchains>/.bsmr-go-sdk` | no | Holds the verified SDK executable and standard library for the current host. |
 
 ### Where the toolchain lives
 
@@ -107,13 +103,12 @@ adds only the Go targets there, and the cell declares the other toolchains its
 builds use, for example with `system_demo_toolchains(include_go = False)`.
 
 In both layouts the lock owns the names `go`, `go_bootstrap`, and
-`go_sdk_archive`; a build file that also declares one fails to load. Until
-`bsmr go toolchain` acquires the SDK on a machine, the package still loads and
-only a build that uses Go fails, naming the command to run.
+`go_sdk_archive`; a build file that also declares one fails to load.
 
 Earlier releases generated `toolchains/BUILD.bsmr` and
 `toolchains/bsmr_go_toolchain.bzl` and acquired the SDK under `toolchains/`,
-whatever `toolchains//` named. `bsmr go toolchain` removes each of those files
+whatever `toolchains//` named; later ones copied it into `.bsmr-go-sdk` beside
+the `toolchains//` package. `bsmr go toolchain` removes each of those files
 that still carries the generator's exact marker, and until it runs,
 `bsmr go toolchain --check` and `bsmr go sync` fail and name them. In a
 declared `toolchains` cell at `toolchains/`, the generated `BUILD.bsmr` defines

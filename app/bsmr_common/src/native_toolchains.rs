@@ -23,10 +23,10 @@ use crate::package_listing::listing::PackageListing;
 /// The committed Go SDK lock, at the project root, that `bsmr go toolchain` writes.
 pub const GO_TOOLCHAIN_LOCK: &str = ".bsmr-go-toolchain.json";
 
-/// The ignored directory, beside the `toolchains//` package, that holds the acquired host SDK.
+/// The directory, beside the `toolchains//` package, where earlier releases copied the host SDK.
 pub const GO_SDK_DIRECTORY: &str = ".bsmr-go-sdk";
 
-/// Reports whether a directory name is the Go acquisition, which is local host state.
+/// Reports whether a directory name is an earlier release's Go acquisition, which is host state.
 pub fn is_go_acquisition(name: &str) -> bool {
     name == GO_SDK_DIRECTORY
 }

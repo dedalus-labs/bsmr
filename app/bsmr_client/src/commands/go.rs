@@ -108,9 +108,9 @@ impl GoCommand {
     }
 }
 
-/// Pins or verifies the SDK lock and the acquisition beside the `toolchains//` package.
+/// Pins or verifies the SDK lock; pinning also materializes and verifies the archive output.
 ///
-/// Every flag and ownership check runs before the checkout changes, so a rejected request
+/// Every flag and lock check runs before the checkout changes, so a rejected request
 /// leaves earlier generated files and the lock in place.
 async fn configure_toolchain(
     command: GoToolchainCommand,
@@ -134,17 +134,13 @@ async fn configure_toolchain(
     let toolchains = toolchains_directory(project_root).await?;
     let lock = if command.check {
         go_toolchain::reject_leftovers(root, &toolchains)?;
-        let lock = go_toolchain::verify_lock(root, &pinned)?;
-        go_toolchain::acquired_go(&toolchains, &lock)?;
-        lock
+        go_toolchain::verify_lock(root, &pinned)?
     } else {
-        go_toolchain::validate_acquisition_owners(&toolchains)?;
         let lock = go_toolchain::select_lock(root, pinned.version()).await?;
         go_toolchain::remove_leftovers(root, &toolchains)?;
         go_toolchain::write_lock(root, &lock, false)?;
         go_toolchain::create_toolchains_package(&toolchains)?;
-        let sdk = materialize_sdk_archive(root)?;
-        go_toolchain::install_sdk(&toolchains, &sdk, &lock)?;
+        go_toolchain::sdk_go(&materialize_sdk_archive(root)?, &lock)?;
         lock
     };
     bsmr_client_ctx::println!(
@@ -175,7 +171,8 @@ fn sync(mut command: GoSyncCommand, ctx: &ClientCommandContext<'_>) -> bsmr_erro
     go_toolchain::reject_leftovers(project_root.root().as_path(), &toolchains)?;
     let lock = go_toolchain::read_lock(project_root.root().as_path())?;
     lock.check_version(&pinned)?;
-    let go = go_toolchain::acquired_go(&toolchains, &lock)?;
+    let sdk = materialize_sdk_archive(project_root.root().as_path())?;
+    let go = go_toolchain::sdk_go(&sdk, &lock)?;
     let mut patterns = discover_patterns(&root)?;
     // Tool directives are part of the module's graph, so their packages are roots even
     // when they live only in the vendor tree that directory discovery skips.
@@ -207,8 +204,8 @@ fn sync(mut command: GoSyncCommand, ctx: &ClientCommandContext<'_>) -> bsmr_erro
 
 /// Resolves the directory of the package `toolchains//` names in the project configuration.
 ///
-/// The locked Go toolchain targets join that package when it is evaluated, and acquisition
-/// installs the SDK beside them. `bsmr init` aliases `toolchains` to the root cell, so this is
+/// The locked Go toolchain targets join that package when it is evaluated, and earlier releases
+/// acquired the SDK beside them. `bsmr init` aliases `toolchains` to the root cell, so this is
 /// the project root unless a project declares its own cell.
 pub(super) async fn toolchains_directory(
     project_root: &ProjectRoot,
@@ -359,7 +356,7 @@ fn run_go_list(
     Ok(output.stdout)
 }
 
-/// Materializes the selected official archive during the explicit acquisition command.
+/// Materializes the locked official archive, which the build verifies against the lock.
 fn materialize_sdk_archive(root: &Path) -> Result<PathBuf, GoCommandError> {
     let executable =
         std::env::current_exe().map_err(|error| GoCommandError::CurrentExecutable {
