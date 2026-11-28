@@ -14,22 +14,18 @@
 # above-listed licenses.
 
 # A tool to produce a directory structure compatible with rustc's `-Ldependency`
-# flag for simple and dynamically named crates.
+# flag for dynamically named crates.
 #
 # Rustc needs all the .rlib files which are transitive dependencies of the crate
 # being built. The filename for each rlib must contain the correct
 # crate name or else rustc won't find the file.
 #
-# Most crates have a crate name determined during analysis: value of the `crate`
-# attribute, or derived using a simple heuristic from the rust_library target's
-# `name` attribute. For these it's easy to give the rlib a correct filename up
-# front. The input manifest declares their contents as action inputs.
-#
 # Crates that use `crate_dynamic` have a crate name computed at build time, for
 # example by extracting the name from a .thrift file. Bsmr needs a filename at
 # analysis time for all artifacts, so we name those rlib files using a
 # provisional name and then this tool at build time will copy them under the
-# real crate name that rustc will recognize.
+# real crate name that rustc will recognize. Crates named during analysis are
+# collected with `ctx.actions.symlinked_dir` and do not go through this tool.
 #
 # Example:
 #
@@ -38,12 +34,11 @@
 #         --artifacts path/to/artifacts.json
 #
 # The input file artifacts.json is an array of pairs.
-# The first element is the rlib paths, the second element is an optional path to a file containing
+# The first element is the rlib path, the second element is the path to a file containing
 # the build-time crate name for the corresponding rlib.
 #
 #     [
 #         [ "../../libprovisional.rlib", "path/to/cratename" ],
-#         [ "../../libfoo.rlib", null ],
 #         ...
 #     ]
 #
@@ -51,9 +46,6 @@
 # "thriftgenerated". It copies the given artifact as "0/libthriftgenerated.rlib"
 # within the specified output directory. In the event of collisions, there might
 # be multiple dirs created.
-#
-# If the cratename is null, then the artifact keeps its basename
-# (e.g., "0/libprovisional.rlib").
 #
 # --out-dir-relative-to-cwd is an optional path to the output directory that is relative to
 #                           the current working directory (cwd) of the tool that consumes this script's output.
@@ -104,17 +96,11 @@ def main():
     deps_dirs = [{}]
 
     for artifact, crate_name in json.load(args.artifacts):
-        is_dynamic = crate_name is not None
-        if is_dynamic:
-            crate_name = Path(crate_name).read_text().strip()
-            original_filename = os.path.basename(artifact)
-            new_filename = "lib{}-{}".format(
-                crate_name,
-                original_filename.rsplit("-", 1)[1],
-            )
-            filename = new_filename
-        else:
-            filename = os.path.basename(artifact)
+        crate_name = Path(crate_name).read_text().strip()
+        filename = "lib{}-{}".format(
+            crate_name,
+            os.path.basename(artifact).rsplit("-", 1)[1],
+        )
 
         if filename in deps_dirs[-1]:
             deps_dirs.append({})

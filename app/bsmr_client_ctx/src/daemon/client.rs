@@ -60,6 +60,27 @@ use crate::startup_deadline::StartupDeadline;
 enum LifecycleError {
     #[error("Missing `{}` file in `{}` directory", BsmrdLifecycleLock::BSMRD_LIFECYCLE, _0.display())]
     MissingLifecycle(AbsNormPathBuf),
+    #[error("Another bsmr daemon holds `{}`", _0.display())]
+    DaemonLockHeld(AbsNormPathBuf),
+}
+
+/// Lock `bsmrd.lock` for the calling daemon. Keep the file open until the daemon exits.
+///
+/// A recorded PID can name an unrelated process once the OS reuses it. The kernel
+/// releases this lock when the daemon exits, so the lock proves the daemon is alive.
+pub fn lock_daemon(daemon_dir: &DaemonDir) -> bsmr_error::Result<File> {
+    let path = daemon_dir.bsmrd_lock();
+    let file = File::create(&path)?;
+    match fs4::fs_std::FileExt::try_lock_exclusive(&file) {
+        Ok(()) => Ok(file),
+        Err(e) if is_contended(&e) => Err(LifecycleError::DaemonLockHeld(path).into()),
+        Err(e) => Err(e.into()),
+    }
+}
+
+/// Whether a failed non-blocking lock means another process holds the lock.
+fn is_contended(error: &std::io::Error) -> bool {
+    error.raw_os_error() == fs4::lock_contended_error().raw_os_error()
 }
 
 /// We need to make sure that all calls to the daemon in bsmrd flush the tailers after completion.
@@ -174,6 +195,24 @@ impl BsmrdLifecycleLock {
 
     pub fn daemon_dir(&self) -> &DaemonDir {
         &self.daemon_dir
+    }
+
+    /// Whether the recorded daemon may still be running, so its PID may be signalled.
+    ///
+    /// A daemon creates `bsmrd.lock` before it writes its record and holds the lock until it
+    /// exits, so an unheld lock means the recorded PID is stale. A record without the file was
+    /// written by a bsmr that predates the lock, and its PID stays trusted as before.
+    pub fn daemon_is_running(&self) -> bsmr_error::Result<bool> {
+        let file = match File::open(self.daemon_dir.bsmrd_lock()) {
+            Ok(file) => file,
+            Err(e) if e.kind() == std::io::ErrorKind::NotFound => return Ok(true),
+            Err(e) => return Err(e.into()),
+        };
+        match fs4::fs_std::FileExt::try_lock_shared(&file) {
+            Ok(()) => Ok(false),
+            Err(e) if is_contended(&e) => Ok(true),
+            Err(e) => Err(e.into()),
+        }
     }
 }
 

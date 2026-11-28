@@ -18,6 +18,7 @@ use std::fs;
 use std::path::Path;
 use std::path::PathBuf;
 use std::process::Command;
+use std::process::ExitStatus;
 
 use bsmr_client_ctx::client_ctx::ClientCommandContext;
 use bsmr_client_ctx::common::BsmrArgMatches;
@@ -131,6 +132,7 @@ async fn configure_toolchain(
         go_toolchain::acquired_go(&toolchains, &lock)?;
     } else {
         go_toolchain::validate_acquisition_owners(&toolchains)?;
+        go_toolchain::create_toolchains_package(&toolchains)?;
         let sdk = materialize_sdk_archive(root)?;
         go_toolchain::install_sdk(&toolchains, &sdk, &lock)?;
     }
@@ -365,8 +367,7 @@ fn materialize_sdk_archive(root: &Path) -> Result<PathBuf, GoCommandError> {
         })?;
     if !output.status.success() {
         return Err(GoCommandError::SdkBuild {
-            status: output.status.code(),
-            stdout: String::from_utf8_lossy(&output.stdout).trim().to_owned(),
+            status: output.status,
             stderr: String::from_utf8_lossy(&output.stderr).trim().to_owned(),
         });
     }
@@ -517,12 +518,8 @@ pub(super) enum GoCommandError {
     },
     #[error("failed to resolve the Bessemer executable: {message}")]
     CurrentExecutable { message: String },
-    #[error("failed to materialize the locked Go SDK with status {status:?}: {stdout} {stderr}")]
-    SdkBuild {
-        status: Option<i32>,
-        stdout: String,
-        stderr: String,
-    },
+    #[error("failed to materialize the locked Go SDK ({status}): {stderr}")]
+    SdkBuild { status: ExitStatus, stderr: String },
     #[error("Bessemer emitted no unique output for `toolchains//:go_sdk_archive`")]
     SdkOutput,
     #[error("`{executable:?} list` failed with status {status:?}: {stderr}")]

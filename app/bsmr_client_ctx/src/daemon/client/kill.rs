@@ -87,6 +87,11 @@ pub async fn kill_command_impl(
 
             None
         }
+        Err(e) if !lifecycle_lock.daemon_is_running()? => {
+            tracing::debug!("Connect timed out without a live daemon: {:#}", e);
+            crate::eprintln!("no bsmrd server running")?;
+            None
+        }
         Err(e) => {
             tracing::debug!("Connect timed out: {:#}", e);
 
