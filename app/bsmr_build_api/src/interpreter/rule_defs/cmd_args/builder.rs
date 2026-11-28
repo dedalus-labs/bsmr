@@ -498,13 +498,8 @@ pub(crate) fn path_format_absolute<'p>(
     sep: PathSeparatorKind,
     root: &ProjectRoot,
 ) -> Cow<'p, str> {
-    let mut p = root.root().to_path_buf();
-    p.extend(path.iter());
-    // FIXME(JakobDegen): Seriously?
-    let s = p.to_string_lossy();
-    // FIXME(JakobDegen): This is pretty confused. `PathBuf` and our absolute path types
-    // use the host's path separators. Fix, and also write a test, and also fix the path
-    // types to make these sorts of bugs not possible
+    let p = root.resolve(path);
+    let s = p.as_path().to_string_lossy();
     if sep == PathSeparatorKind::Windows {
         Cow::Owned(s.as_ref().replace('/', "\\"))
     } else {
@@ -535,6 +530,49 @@ mod tests {
         assert_eq!(
             path_format(RelativePath::unchecked_new("a/b"), windows),
             "a\\b"
+        );
+    }
+
+    #[test]
+    fn test_path_format_absolute_uses_external_output_root() {
+        use bsmr_fs::paths::abs_norm_path::AbsNormPathBuf;
+
+        let (root_str, out_str, expected_src, expected_out, sep) = if cfg!(windows) {
+            (
+                "C:\\work\\project",
+                "C:\\state\\checkouts\\abc",
+                "C:\\work\\project\\src\\main.rs",
+                "C:\\state\\checkouts\\abc\\default\\art\\app",
+                PathSeparatorKind::Windows,
+            )
+        } else {
+            (
+                "/work/project",
+                "/state/checkouts/abc",
+                "/work/project/src/main.rs",
+                "/state/checkouts/abc/default/art/app",
+                PathSeparatorKind::Unix,
+            )
+        };
+        let root =
+            ProjectRoot::new_unchecked(AbsNormPathBuf::try_from(root_str.to_owned()).unwrap())
+                .with_output_root(AbsNormPathBuf::try_from(out_str.to_owned()).unwrap());
+
+        assert_eq!(
+            path_format_absolute(
+                ProjectRelativePath::unchecked_new("src/main.rs"),
+                sep,
+                &root
+            ),
+            expected_src
+        );
+        assert_eq!(
+            path_format_absolute(
+                ProjectRelativePath::unchecked_new("bsmr-out/default/art/app"),
+                sep,
+                &root,
+            ),
+            expected_out
         );
     }
 }

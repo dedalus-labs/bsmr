@@ -23,6 +23,7 @@ use bsmr_cli_proto::build_target::BuildOutput;
 use bsmr_client_ctx::exit_result::ClientIoError;
 use bsmr_client_ctx::output_destination_arg::OutputDestinationArg;
 use bsmr_core::fs::project::ProjectRoot;
+use bsmr_core::fs::project_rel_path::ProjectRelativePath;
 use bsmr_error::BsmrErrorContext;
 use bsmr_error::bsmr_error;
 use bsmr_error::internal_error;
@@ -32,7 +33,6 @@ use bsmr_fs::fs_util;
 use bsmr_fs::paths::abs_norm_path::AbsNormPathBuf;
 use bsmr_fs::paths::abs_path::AbsPath;
 use bsmr_fs::paths::abs_path::AbsPathBuf;
-use bsmr_fs::paths::forward_rel_path::ForwardRelativePath;
 use bsmr_fs::working_dir::AbsWorkingDir;
 use futures::TryStreamExt;
 
@@ -104,9 +104,7 @@ pub(super) async fn copy_to_out(
             }
         };
 
-        let output_path = root_path
-            .root()
-            .join(ForwardRelativePath::new(&single_default_output.path)?);
+        let output_path = root_path.resolve(ProjectRelativePath::new(&single_default_output.path)?);
         let output_meta = tokio::fs::metadata(&output_path)
             .await
             .bsmr_error_context("Error inspecting file metadata")?;
@@ -305,6 +303,7 @@ mod tests {
     use std::path::PathBuf;
 
     use bsmr_fs::fs_util::uncategorized as fs_util;
+    use bsmr_fs::paths::forward_rel_path::ForwardRelativePath;
     use tempfile::TempDir;
 
     use super::*;

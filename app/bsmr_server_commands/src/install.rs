@@ -157,9 +157,7 @@ async fn get_installer_log_directory(
 ) -> bsmr_error::Result<AbsNormPathBuf> {
     let out_path = ctx.get_output_path().await?;
     let filesystem = server_ctx.project_root();
-    let output_path = filesystem
-        .root()
-        .join(out_path.root().as_forward_relative_path());
+    let output_path = filesystem.resolve(out_path.root());
     let install_log_dir = output_path.join(ForwardRelativePathBuf::unchecked_new(
         "installer".to_owned(),
     ));

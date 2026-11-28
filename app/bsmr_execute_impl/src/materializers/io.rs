@@ -37,7 +37,7 @@ pub struct MaterializeTreeStructure {
 
 impl IoRequest for MaterializeTreeStructure {
     fn execute(self: Box<Self>, project_fs: &ProjectRoot) -> bsmr_error::Result<()> {
-        materialize_dirs_and_syms(self.entry.as_ref(), project_fs.root().join(&self.path))?;
+        materialize_dirs_and_syms(self.entry.as_ref(), project_fs, &self.path)?;
 
         Ok(())
     }
@@ -53,6 +53,7 @@ impl IoRequest for MaterializeTreeStructure {
 fn materialize<F, D>(
     entry: DirectoryEntry<&D, &ActionDirectoryMember>,
     dest: &AbsNormPath,
+    logical_context: Option<(&ProjectRoot, ProjectRelativePathBuf)>,
     materialize_dirs_and_syms: bool,
     mut file_src: F,
     executable_bit_override: Option<bool>,
@@ -62,6 +63,7 @@ where
     D: ActionDirectory,
 {
     let mut dest = dest.to_owned();
+    let mut logical_context = logical_context;
     if materialize_dirs_and_syms {
         // create the directory where we'll materialize the entry
         if let Some(parent) = dest.parent() {
@@ -71,23 +73,32 @@ where
     materialize_recursively(
         entry.map_dir(|d| Directory::as_ref(d)),
         &mut dest,
+        &mut logical_context,
         materialize_dirs_and_syms,
         &mut file_src,
         executable_bit_override,
     )
 }
 
-/// Materializes the directories and symlinks of an entry at `dest`. Files
+/// Materializes the directories and symlinks of an entry at `logical_dest`. Files
 /// are not materialized.
-pub(crate) fn materialize_dirs_and_syms<P, D>(
+pub(crate) fn materialize_dirs_and_syms<D>(
     entry: DirectoryEntry<&D, &ActionDirectoryMember>,
-    dest: P,
+    project_fs: &ProjectRoot,
+    logical_dest: &ProjectRelativePathBuf,
 ) -> bsmr_error::Result<()>
 where
-    P: AsRef<AbsNormPath>,
     D: ActionDirectory,
 {
-    materialize(entry, dest.as_ref(), true, |_: &AbsNormPath| None, None)
+    let dest = project_fs.resolve(logical_dest);
+    materialize(
+        entry,
+        &dest,
+        Some((project_fs, logical_dest.clone())),
+        true,
+        |_: &AbsNormPath| None,
+        None,
+    )
 }
 
 /// Materializes the files of an the entry rooted at `dest`.
@@ -117,7 +128,7 @@ where
             Some(src.join(subpath))
         }
     };
-    materialize(entry, dest, false, file_src, executable_bit_override)
+    materialize(entry, dest, None, false, file_src, executable_bit_override)
 }
 
 /// Materializes the files of an entry rooted at `dest`.
@@ -135,12 +146,13 @@ where
     D: ActionDirectory,
 {
     let file_src = |d: &AbsNormPath| srcs.remove(d);
-    materialize(entry, dest.as_ref(), false, file_src, None)
+    materialize(entry, dest.as_ref(), None, false, file_src, None)
 }
 
 fn materialize_recursively<'a, F, D>(
     entry: DirectoryEntry<D, &ActionDirectoryMember>,
     dest: &mut AbsNormPathBuf,
+    logical_context: &mut Option<(&ProjectRoot, ProjectRelativePathBuf)>,
     materialize_dirs_and_syms: bool,
     file_src: &mut F,
     executable_bit_override: Option<bool>,
@@ -156,14 +168,21 @@ where
             }
             for (name, entry) in d.entries() {
                 dest.push(name);
+                if let Some((_, logical_dest)) = logical_context.as_mut() {
+                    logical_dest.push(name);
+                }
                 materialize_recursively(
                     entry,
                     dest,
+                    logical_context,
                     materialize_dirs_and_syms,
                     file_src,
                     executable_bit_override,
                 )?;
                 dest.pop();
+                if let Some((_, logical_dest)) = logical_context.as_mut() {
+                    logical_dest.pop();
+                }
             }
             Ok(())
         }
@@ -183,7 +202,13 @@ where
                     .categorize_internal()
                     .is_err()
             {
-                fs_util::symlink(s.target().as_str(), dest).categorize_internal()?;
+                let target = match logical_context.as_ref() {
+                    Some((project_fs, logical_dest)) => {
+                        project_fs.resolve_symlink_target(logical_dest, s.target())
+                    }
+                    None => std::path::PathBuf::from(s.target().as_str()),
+                };
+                fs_util::symlink(target, dest).categorize_internal()?;
             }
             Ok(())
         }

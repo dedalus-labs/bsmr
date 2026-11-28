@@ -16,6 +16,7 @@ use std::sync::Arc;
 
 use bsmr_common::execution::NAMESPACE_PROFILE;
 use bsmr_core::fs::artifact_path_resolver::ArtifactFs;
+use bsmr_core::fs::project::ProjectRoot;
 use bsmr_directory::directory::directory::Directory;
 use bsmr_directory::directory::directory_iterator::DirectoryIterator;
 use bsmr_directory::directory::entry::DirectoryEntry;
@@ -128,7 +129,7 @@ impl NamespaceExecutor {
         digest_config: DigestConfig,
     ) -> bsmr_error::Result<NamespaceAction> {
         firecracker::validate_action_policy(prepared, request)?;
-        let project = artifact_fs.fs().root().as_path();
+        let project = artifact_fs.fs();
         let command = firecracker::decode_re_command(prepared, digest_config)?;
         let action = firecracker::sandbox_action(&command, request)?;
         let staging = artifact_fs
@@ -321,7 +322,7 @@ impl NamespaceExecutor {
 
 impl NamespaceAction {
     /// Import only validated declared outputs after the namespace's complete process tree exits.
-    pub(crate) fn import_outputs(&self, project: &Path) -> bsmr_error::Result<()> {
+    pub(crate) fn import_outputs(&self, project: &ProjectRoot) -> bsmr_error::Result<()> {
         let outputs = self.directory.path().join("outputs");
         firecracker::validate_local_outputs(&outputs, &self.outputs)?;
         firecracker::import_outputs(&outputs, project, &self.outputs)

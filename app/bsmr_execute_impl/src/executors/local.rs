@@ -438,7 +438,7 @@ impl LocalExecutor {
                                 .execute(
                                     prepared_action,
                                     request,
-                                    self.root.as_path(),
+                                    self.artifact_fs.fs(),
                                     staging_root.as_path(),
                                     digest_config,
                                     &liveliness_observer,
@@ -482,7 +482,7 @@ impl LocalExecutor {
                                 if matches!(result.status, GatherOutputStatus::Finished { .. }) {
                                     self.blocking_executor
                                         .execute_io_inline(|| {
-                                            action.import_outputs(self.root.as_path())
+                                            action.import_outputs(self.artifact_fs.fs())
                                         })
                                         .await?;
                                 }
@@ -1030,7 +1030,7 @@ impl LocalExecutor {
                     Some(&ContentBasedPathHash::for_output_artifact()),
                 )?
                 .into_path();
-            let abspath = self.root.join(&path);
+            let abspath = self.artifact_fs.fs().resolve(&path);
             let (entry, hashing_info) = build_entry_from_disk(
                 abspath,
                 FileDigestConfig::build(digest_config.cas_digest_config()),

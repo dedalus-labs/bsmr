@@ -15,6 +15,7 @@ use std::path::PathBuf;
 use std::time::UNIX_EPOCH;
 
 use bsmr_common::file_ops::metadata::FileMetadata;
+use bsmr_core::fs::project::ProjectRoot;
 use bsmr_directory::directory::directory::Directory;
 use bsmr_directory::directory::directory_iterator::DirectoryIterator;
 use bsmr_directory::directory::entry::DirectoryEntry;
@@ -65,7 +66,7 @@ impl Cache {
     /// Create a private input snapshot whose files match the analyzed action digests.
     pub(super) fn stage(
         &self,
-        project: &Path,
+        project: &ProjectRoot,
         root: &Path,
         directory: &ActionImmutableDirectory,
         digest_config: DigestConfig,
@@ -117,7 +118,7 @@ impl Cache {
     /// Preserve the archive transport's contents, executable bit and normalized mtime.
     fn copy_file(
         &self,
-        project: &Path,
+        project: &ProjectRoot,
         root: &Path,
         path: &Path,
         metadata: &FileMetadata,
