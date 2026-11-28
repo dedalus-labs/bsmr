@@ -33,7 +33,11 @@ class Project:
         return subprocess.run(
             [self.binary, *args],
             cwd=self.root,
-            env={**os.environ, "HOME": str(self.home), "XDG_CACHE_HOME": str(self.cache)},
+            env={
+                **os.environ,
+                "HOME": str(self.home),
+                "XDG_CACHE_HOME": str(self.cache),
+            },
             capture_output=True,
             text=True,
             check=False,
@@ -182,17 +186,24 @@ def test_module_root_defines_the_toolchains_package(project: Project) -> None:
     project.pin(directive="toolchain go1.26.1")
     (project.root / "cmd").mkdir()
     shutil.copyfile(
-        Path(__file__).parents[1] / "fixtures/go-action/main.go", project.root / "cmd/main.go"
+        Path(__file__).parents[1] / "fixtures/go-action/main.go",
+        project.root / "cmd/main.go",
     )
     project.succeed("go", "toolchain")
     project.succeed("go", "sync")
     (project.root / ".bsmr-go-toolchain.json").unlink()
     outputs = json.loads(
         project.succeed(
-            "build", "//cmd:bin", "-c", "go.link_mode=internal", "--show-full-json-output"
+            "build",
+            "//cmd:bin",
+            "-c",
+            "go.link_mode=internal",
+            "--show-full-json-output",
         )
     )
-    result = subprocess.run([outputs["root//cmd:bin"]], capture_output=True, text=True, check=True)
+    result = subprocess.run(
+        [outputs["root//cmd:bin"]], capture_output=True, text=True, check=True
+    )
     assert result.stdout.strip().split("-X:", 1)[0] == "go1.26.1"
 
 
@@ -291,6 +302,7 @@ def test_rejected_requests_and_workspace_pin(project: Project, tmp_path: Path) -
     oci = Project(
         root=shutil.copytree(repo / "examples/oci/hello", tmp_path / "hello"),
         home=project.home,
+        cache=project.cache,
     )
     oci.succeed("init")
     try:
