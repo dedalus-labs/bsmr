@@ -17,6 +17,7 @@ import argparse
 import hashlib
 import json
 import os
+import pwd
 import re
 import shutil
 import tempfile
@@ -108,6 +109,17 @@ def base_file(root: Path, relative: str) -> Path:
     return path
 
 
+def source_entry(repository: str, suite: str, keyring: Path) -> str:
+    """Format one APT source line, disabling Valid-Until only for timestamped Debian snapshots."""
+    uri = urlsplit(repository)
+    options = [f"signed-by={keyring}"]
+    if uri.hostname == "snapshot.debian.org" and re.match(
+        r"^/archive/[^/]+/\d{8}T\d{6}Z(?:/|$)", uri.path
+    ):
+        options.append("check-valid-until=no")
+    return f"deb [{' '.join(options)}] {repository} {suite} main\n"
+
+
 def open_cache(args: argparse.Namespace, private: Path) -> apt.Cache:
     """Load authenticated indexes without inheriting resolver or image configuration."""
     if "APT_CONFIG" in os.environ:
@@ -123,6 +135,7 @@ def open_cache(args: argparse.Namespace, private: Path) -> apt.Cache:
         ) from error
 
     architecture = args.platform.removeprefix("linux/")
+    os.chmod(private, 0o755)
     for path in (
         "etc/apt/sources.list.d",
         "etc/apt/apt.conf.d",
@@ -139,8 +152,23 @@ def open_cache(args: argparse.Namespace, private: Path) -> apt.Cache:
     shutil.copyfile(
         base_file(args.root, "usr/share/keyrings/debian-archive-keyring.gpg"), keyring
     )
-    source = f"deb [signed-by={keyring}] {args.repository} {args.suite} main\n"
-    (private / "etc/apt/sources.list").write_text(source)
+    os.chmod(keyring, 0o644)
+    if os.geteuid() == 0:
+        try:
+            apt_uid = pwd.getpwnam("_apt").pw_uid
+        except KeyError:
+            apt_uid = None
+        if apt_uid is not None:
+            for writable in (
+                "var/lib/apt/lists",
+                "var/lib/apt/lists/partial",
+                "var/cache/apt/archives",
+                "var/cache/apt/archives/partial",
+            ):
+                os.chown(private / writable, apt_uid, 0)
+    (private / "etc/apt/sources.list").write_text(
+        source_entry(args.repository, args.suite, keyring)
+    )
     # Discard environment-specific policy and hooks before reading any base state.
     for key in list(apt_pkg.config.keys()):
         apt_pkg.config.clear(key)
