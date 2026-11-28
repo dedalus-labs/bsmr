@@ -12,6 +12,12 @@ source_listing()
 
 prelude = native
 
+prelude.export_file(
+    name = "go_wrapper.go",
+    src = "go_wrapper.go",
+    visibility = ["PUBLIC"],
+)
+
 prelude.python_bootstrap_binary(
     name = "go_wrapper_py",
     main = "go_wrapper.py",

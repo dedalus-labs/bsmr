@@ -106,7 +106,7 @@ def test_acquisition_uses_module_pin(project: Project) -> None:
 
 
 def test_sdk_is_an_action_input(project: Project) -> None:
-    """Build and restore without a source-tree SDK, then observe a changed SDK pin."""
+    """Build and restore without a source-tree SDK or wrapper, then observe a changed SDK pin."""
     shutil.copyfile(
         Path(__file__).parents[1] / "fixtures/go-action/main.go",
         project.root / "main.go",
@@ -137,6 +137,7 @@ def test_sdk_is_an_action_input(project: Project) -> None:
                 assert content == previous
             previous = content
             assert not (project.root / ".bsmr-go-sdk").exists()
+            assert not (project.root / ".bsmr-go-tools").exists()
             project.succeed("clean")
 
 

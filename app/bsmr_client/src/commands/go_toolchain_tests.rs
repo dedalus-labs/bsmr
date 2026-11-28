@@ -16,7 +16,6 @@ use crate::commands::go::toolchains_directory;
 use crate::commands::go_toolchain::GoToolchainError;
 use crate::commands::go_toolchain::LEGACY_DEFINITION_PREFIX;
 use crate::commands::go_toolchain::LEGACY_MANIFEST;
-use crate::commands::go_toolchain::acquired_go;
 use crate::commands::go_toolchain::create_toolchains_package;
 use crate::commands::go_toolchain::module_pin;
 use crate::commands::go_toolchain::reject_leftovers;
@@ -179,62 +178,6 @@ fn check_detects_lock_drift() {
     assert_eq!(fs::read_to_string(&path).expect("lock"), drift);
 }
 
-/// Confirms a partially replaced SDK and bootstrap wrapper cannot pass acquisition checks.
-#[test]
-fn rejects_mismatched_bootstrap_acquisition() {
-    let root = tempfile::tempdir().expect("temporary repository");
-    let sdk = root.path().join("toolchains/.bsmr-go-sdk");
-    let tools = root.path().join("toolchains/.bsmr-go-tools");
-    fs::create_dir_all(sdk.join("bin")).expect("SDK directory");
-    fs::create_dir_all(&tools).expect("tools directory");
-    fs::write(sdk.join("VERSION"), "go1.26.5\n").expect("SDK version");
-    fs::write(sdk.join("bin/go"), []).expect("Go executable");
-    fs::write(tools.join("go_wrapper"), []).expect("wrapper executable");
-    let lock = select_release(RELEASES, None).expect("release");
-    let lock_value = serde_json::to_value(&lock).expect("serialized lock");
-    let host_os = if std::env::consts::OS == "macos" {
-        "darwin"
-    } else {
-        std::env::consts::OS
-    };
-    let host_arch = if std::env::consts::ARCH == "aarch64" {
-        "arm64"
-    } else {
-        "amd64"
-    };
-    let archive = lock_value["archives"]
-        .as_array()
-        .expect("archives")
-        .iter()
-        .find(|archive| archive["os"] == host_os && archive["arch"] == host_arch)
-        .expect("host archive");
-    let metadata = serde_json::json!({
-        "generated_by": "bsmr go toolchain",
-        "state": "acquired",
-        "version": "1.26.5",
-        "os": host_os,
-        "arch": host_arch,
-        "sha256": archive["sha256"],
-    });
-    fs::write(
-        sdk.join(".bsmr-metadata.json"),
-        serde_json::to_vec(&metadata).expect("SDK metadata"),
-    )
-    .expect("SDK metadata file");
-    let mut stale_tools = metadata;
-    stale_tools["state"] = serde_json::Value::String("acquiring".to_owned());
-    fs::write(
-        tools.join(".bsmr-metadata.json"),
-        serde_json::to_vec(&stale_tools).expect("tools metadata"),
-    )
-    .expect("tools metadata file");
-
-    let error = acquired_go(&root.path().join("toolchains"), &lock)
-        .expect_err("must reject partial acquisition");
-
-    assert!(matches!(error, GoToolchainError::NotAcquired));
-}
-
 /// Confirms a substring collision cannot claim ownership of an SDK directory.
 #[test]
 fn rejects_forged_acquisition_marker() {
@@ -341,7 +284,7 @@ fn gates_tool_directives_on_sdk_version() {
 
 /// Invariant: acquisition lands in the directory of the package `toolchains//` names.
 ///
-/// The injected toolchain reads `.bsmr-go-sdk` and `.bsmr-go-tools` relative to that package.
+/// The injected toolchain reads `.bsmr-go-sdk` relative to that package.
 /// `bsmr init` aliases `toolchains` to the root cell, so a new project acquires at its root.
 ///
 /// Witness:

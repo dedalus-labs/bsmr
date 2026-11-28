@@ -35,12 +35,13 @@ bsmr go toolchain --check
 `bsmr go toolchain` acquires the exact stable release pinned by `toolchain
 go1.X.Y` (or an exact `go 1.X.Y` line when no `toolchain` directive is present)
 in `go.mod`, or in `go.work` at a workspace root. A missing, partial or
-prerelease pin is an error. The command records the exact official
-archive identities for Darwin and Linux on amd64 and arm64. To move to another
-release, change the directive and run `bsmr go toolchain` again. `--update` is
-rejected, and `--version`, if supplied, must match the pin. The acquired SDK and bootstrap tools are verified,
-repository-local ignored inputs; synchronization and builds do not depend on an
-ambient `go` executable.
+prerelease pin is an error. The command records the exact official archive
+identities for Darwin and Linux on amd64 and arm64. To move to another release,
+change the directive and run `bsmr go toolchain` again. `--update` is rejected,
+and `--version`, if supplied, must match the pin. The acquired SDK is a
+verified, repository-local ignored input, and builds compile the bootstrap
+wrapper with the locked archive as a cached action; synchronization and builds
+do not depend on an ambient `go` executable.
 
 Synchronization invokes that SDK's `go list -deps -json -test` with module
 writes, network-backed dependency resolution, ambient `go env -w` state, and
@@ -86,7 +87,6 @@ in a project created by `bsmr init`, or the directory of a declared
 | `.bsmr-go-manifests` | yes | Records the exact manifest paths Bessemer may later remove as stale. |
 | `<package>/<buildfile>` | yes | Carries the validated native graph into ordinary Bessemer rules and action keys. |
 | `<toolchains>/.bsmr-go-sdk` | no | Holds the verified SDK executable and standard library for the current host. |
-| `<toolchains>/.bsmr-go-tools` | no | Holds the bootstrap wrapper compiled by that SDK for the current host. |
 
 ### Where the toolchain lives
 

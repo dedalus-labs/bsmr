@@ -207,9 +207,9 @@ fn sync(mut command: GoSyncCommand, ctx: &ClientCommandContext<'_>) -> bsmr_erro
 
 /// Resolves the directory of the package `toolchains//` names in the project configuration.
 ///
-/// The locked Go toolchain targets join that package when it is evaluated and read the SDK and
-/// bootstrap wrapper from these package-relative directories. `bsmr init` aliases `toolchains`
-/// to the root cell, so this is the project root unless a project declares its own cell.
+/// The locked Go toolchain targets join that package when it is evaluated, and acquisition
+/// installs the SDK beside them. `bsmr init` aliases `toolchains` to the root cell, so this is
+/// the project root unless a project declares its own cell.
 pub(super) async fn toolchains_directory(
     project_root: &ProjectRoot,
 ) -> bsmr_error::Result<PathBuf> {
