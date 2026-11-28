@@ -13,27 +13,15 @@ use bsmr_artifact::artifact::artifact_dump::FileInfo;
 use bsmr_common::cas_digest::CasDigest;
 use bsmr_common::cas_digest::DigestAlgorithm;
 use bsmr_common::cas_digest::RawDigest;
+use bsmr_common::dependency_set::ComponentManifest;
 use bsmr_common::file_ops::metadata::FileDigestKind;
 use bsmr_core::fs::project::ProjectRoot;
 use bsmr_core::fs::project_rel_path::ProjectRelativePath;
-use serde::Deserialize;
 use serde::Serialize;
 
 use super::BuildOutcome;
 use super::BuildReport;
 use super::EntryLabel;
-
-/// One local component declaration. External dependency selection is not implemented.
-#[derive(Clone, Debug, Deserialize, Serialize)]
-#[serde(deny_unknown_fields)]
-struct ComponentManifest {
-    schema: u32,
-    name: String,
-    #[serde(default)]
-    provides: BTreeMap<String, u64>,
-    #[serde(default)]
-    requires: BTreeMap<String, String>,
-}
 
 /// An experimental output snapshot, not a certification or a complete RFC 0004 lock.
 #[derive(Serialize)]
@@ -56,26 +44,7 @@ struct LockedArtifact {
 
 /// Reject declarations whose semantics this prototype cannot fulfill.
 fn manifest(text: &str) -> bsmr_error::Result<ComponentManifest> {
-    let value: ComponentManifest = toml::from_str(text).map_err(|e| {
-        bsmr_error::bsmr_error!(
-            bsmr_error::ErrorTag::Input,
-            "invalid component manifest: {}",
-            e
-        )
-    })?;
-    if value.schema != 1
-        || value.name.is_empty()
-        || !value
-            .name
-            .bytes()
-            .all(|c| c.is_ascii_alphanumeric() || c == b'-' || c == b'_')
-    {
-        return Err(bsmr_error::bsmr_error!(
-            bsmr_error::ErrorTag::Input,
-            "component requires schema 1 and a simple nonempty name"
-        ));
-    }
-    // TODO(resolver, RFC 0004): verify contract ranges and exact external selections.
+    let value = ComponentManifest::from_toml_str(text)?;
     if !value.requires.is_empty() {
         return Err(bsmr_error::bsmr_error!(
             bsmr_error::ErrorTag::Input,
@@ -226,7 +195,7 @@ mod tests {
     fn rejects_unimplemented_contracts_and_unknown_fields() {
         assert!(manifest("schema=2\nname='hello'").is_err());
         assert!(manifest("schema=1\nname='hello'\nunknown=true").is_err());
-        assert!(manifest("schema=1\nname='hello'\n[requires]\nhttp='>=1,<2'").is_err());
+        assert!(manifest("schema=1\nname='hello'\n[requires]\nhttp={ min = 1, max = 1 }").is_err());
     }
 
     #[test]
