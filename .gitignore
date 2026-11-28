@@ -4,6 +4,7 @@ Cargo.lock
 !/tools/build/third-party/rust/Cargo.lock
 bsmr-out
 /node_modules/
+/test/oci/dist/
 /site/
 __pycache__/
 *.py[cod]

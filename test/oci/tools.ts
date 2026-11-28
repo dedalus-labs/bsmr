@@ -11,6 +11,8 @@ import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { parseArgs } from "node:util";
 import { timedExec } from "./exec.ts";
+import artifactRule from "./fixtures/artifact.bzl";
+import toolsBuild from "./fixtures/tools/recipe.bzl";
 
 const { positionals, values } = parseArgs({ allowPositionals: true, options: {
 	platform: { type: "string", default: "linux/arm64" },
@@ -65,17 +67,11 @@ try {
 	}
 	cpSync(resolve(img), join(root, "img"));
 	cpSync(process.execPath, join(root, "node"));
-	cpSync(resolve(import.meta.dirname, "fixtures/artifact.bzl"), join(root, "defs.bzl"));
+	writeFileSync(join(root, "defs.bzl"), artifactRule);
 	mkdirSync(join(root, "fixture-dir"));
 	writeFileSync(join(root, "fixture-dir/message.txt"), "fixture\n");
-	writeFileSync(join(root, "BUILD.bsmr"), `load("@prelude//oci:defs.bzl", "oci_layer")
-load("@prelude//oci:toolchain.bzl", "oci_toolchain")
-load(":defs.bzl", "artifact")
-artifact(name = "imgtool", binary = "img")
-artifact(name = "runtime", binary = "node")
-oci_toolchain(name = "oci", img = ":imgtool", node = ":runtime")
-oci_layer(name = "layer", platform = "${platform}", files = {"/fixture": "fixture-dir"}, toolchain = ":oci")
-`);
+	writeFileSync(join(root, "BUILD.bsmr"), toolsBuild);
+	writeFileSync(join(root, "fixture.json"), JSON.stringify({ platform }));
 	const providers = await run(executable, ["audit", "providers", "//:layer", "--console", "simple"], options);
 	assert.match(providers.stdout + providers.stderr, /OciLayerInfo/);
 	if (evidence !== undefined) writeFileSync(join(evidence, "directory-layer-analysis.log"), providers.stdout + providers.stderr);
