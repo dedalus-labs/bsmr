@@ -73,7 +73,7 @@ function requests() {
 	return new Set(logs.split("\n").map((line) => {
 		try {
 			const entry = JSON.parse(line);
-			if (typeof entry["http.request.uri"] === "string" && entry["http.request.uri"].startsWith("/v2/_bsmr_sync_")) return undefined;
+			if (typeof entry["http.request.useragent"] === "string" && entry["http.request.useragent"].startsWith("bsmr-sync-")) return undefined;
 			return entry["http.request.id"];
 		} catch { return undefined; }
 	}).filter(Boolean)).size;
@@ -81,8 +81,8 @@ function requests() {
 
 /** Flush Distribution's asynchronous log stream with a unique probe before counting requests. */
 async function syncedRequests() {
-	const marker = `/v2/_bsmr_sync_${randomBytes(8).toString("hex")}`;
-	await http("GET", marker);
+	const marker = `bsmr-sync-${randomBytes(8).toString("hex")}`;
+	assert.equal((await http("GET", "/v2/", false, { "User-Agent": marker })).status, 401);
 	for (let attempt = 0; attempt < 100; attempt++) {
 		if (logs.includes(marker)) return requests();
 		await delay(20, undefined, { signal: controller.signal });
@@ -91,10 +91,10 @@ async function syncedRequests() {
 }
 
 /** Use verified TLS directly for readiness, manifest readback, and fixture-only deletion. */
-function http(method, path, credentials = false) {
+function http(method, path, credentials = false, extraHeaders = {}) {
 	return new Promise((resolveResult, reject) => {
 		const req = request({ hostname, port, method, path, ca,
-			headers: { Accept: "application/vnd.oci.image.manifest.v1+json",
+			headers: { Accept: "application/vnd.oci.image.manifest.v1+json", ...extraHeaders,
 				...(credentials ? { Authorization: `Basic ${Buffer.from(`${user}:${password}`).toString("base64")}` } : {}) } }, (response) => {
 			const chunks = [];
 			response.on("data", (chunk) => chunks.push(chunk));
