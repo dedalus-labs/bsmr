@@ -2716,6 +2716,201 @@ Common options are documented under [Global options](#global-options).
     Also initialize a git repository at the given path, and set up an appropriate `.gitignore` file
 
 
+## `bsmr deps`
+
+Verify, explain, update, and certify DependencySet lockfiles
+
+**Usage**: `bsmr deps <COMMAND>`
+
+### Subcommands:
+* `verify`: Verify `bsmr.lock` against component manifests without network access
+* `explain`: Explain contract intersections, closures, and conflicts
+* `update`: Explicitly update locked components from an ordered TOML candidate catalog
+* `receipt`: Create or verify an immutable RFC 0004 release receipt
+
+### Common Options:
+
+Common options are documented under [Global options](#global-options).
+## `bsmr deps verify`
+
+Verify `bsmr.lock` against component manifests without network access
+
+**Usage**: `bsmr deps verify [OPTIONS]`
+
+### Common Options:
+
+Common options are documented under [Global options](#global-options).
+
+### Options:
+* `--manifest <PATH>`
+    Override path to `bsmr.component.toml`
+
+* `--lock <PATH>`
+    Override path to `bsmr.lock`
+
+* `--json`
+    Print machine-readable JSON output
+
+
+## `bsmr deps explain`
+
+Explain contract intersections, closures, and conflicts
+
+**Usage**: `bsmr deps explain [OPTIONS] [COMPONENT]`
+
+### Arguments:
+* `<COMPONENT>`
+    Optional component name to filter contracts and closures
+
+
+### Common Options:
+
+Common options are documented under [Global options](#global-options).
+
+### Options:
+* `--manifest <PATH>`
+    Override path to `bsmr.component.toml`
+
+* `--lock <PATH>`
+    Override path to `bsmr.lock`
+
+* `--catalog <PATH>`
+    Optional TOML candidate catalog to evaluate against current requirements
+
+* `--catalog-digest <SHA256>`
+    Expected `sha256:<64hex>` digest of `--catalog`
+
+* `--json`
+    Print machine-readable JSON output
+
+
+## `bsmr deps update`
+
+Explicitly update locked components from an ordered TOML candidate catalog
+
+**Usage**: `bsmr deps update [OPTIONS] [COMPONENTS]...`
+
+### Arguments:
+* `<COMPONENTS>`
+    Component names to update. Updates all cataloged components when omitted
+
+
+### Common Options:
+
+Common options are documented under [Global options](#global-options).
+
+### Options:
+* `--catalog <PATH>`
+    Path to an immutable or authenticated TOML candidate catalog
+
+* `--catalog-digest <SHA256>`
+    Expected `sha256:<64hex>` digest of `--catalog`
+
+* `--refresh-lockfiles`
+    Rehash committed native ecosystem lockfiles on disk
+
+* `--manifest <PATH>`
+    Override path to `bsmr.component.toml`
+
+* `--lock <PATH>`
+    Override path to `bsmr.lock`
+
+* `--dry-run`
+    Evaluate and print candidate decisions without writing `bsmr.lock`
+
+* `--json`
+    Print machine-readable JSON output
+
+
+## `bsmr deps receipt`
+
+Create or verify an immutable RFC 0004 release receipt
+
+**Usage**: `bsmr deps receipt <COMMAND>`
+
+### Subcommands:
+* `create`: Emit an immutable release receipt for a verified lock without local overlays
+* `verify`: Verify an existing release receipt against policy and expected digests
+
+### Common Options:
+
+Common options are documented under [Global options](#global-options).
+## `bsmr deps receipt create`
+
+Emit an immutable release receipt for a verified lock without local overlays
+
+**Usage**: `bsmr deps receipt create [OPTIONS] --artifacts <PATH> --source-commit <SHA> --builder <IDENTITY> --workflow <WORKFLOW>`
+
+### Common Options:
+
+Common options are documented under [Global options](#global-options).
+
+### Options:
+* `--manifest <PATH>`
+    Override path to `bsmr.component.toml`
+
+* `--lock <PATH>`
+    Override path to `bsmr.lock`
+
+* `--artifacts <PATH>`
+    Path to a JSON array of produced artifacts (`[{target, digest, image?, task_definition?, action_digest?}]`)
+
+* `--actions <PATH>`
+    Optional path to a JSON array of build/test action evidence
+
+* `--source-commit <SHA>`
+    Full 40-character lowercase Git commit SHA for the certified source revision
+
+* `--builder <IDENTITY>`
+    Builder identity or runner principal
+
+* `--workflow <WORKFLOW>`
+    Certification workflow identifier
+
+* `--run-attempt <RUN_ATTEMPT>`
+    1-based execution run attempt
+
+    * Default value: `1`
+* `--build-url <URL>`
+    Optional URL linking to the build execution log
+
+* `--attestation <REF>`
+    Optional provenance or attestation references (repeatable)
+
+* `--output <PATH>`
+    Destination path to write the immutable receipt (never overwrites an existing file)
+
+
+## `bsmr deps receipt verify`
+
+Verify an existing release receipt against policy and expected digests
+
+**Usage**: `bsmr deps receipt verify [OPTIONS] <RECEIPT>`
+
+### Arguments:
+* `<RECEIPT>`
+    Path to the release receipt JSON file
+
+
+### Common Options:
+
+Common options are documented under [Global options](#global-options).
+
+### Options:
+* `--expected-set-digest <SHA256>`
+    Optional expected `bsmr.dependency-set.v1` SHA-256 digest
+
+* `--expected-lock-digest <SHA256>`
+    Optional expected `bsmr.dependency-lock.v1` SHA-256 digest
+
+* `--json`
+    Print machine-readable JSON output
+
+
+
+
+
+
 ## `bsmr expand-external-cell`
 
 Expand the contents of an external cell into the repo.
@@ -2766,10 +2961,10 @@ Common options are documented under [Global options](#global-options).
 
 ### Options:
 * `--version <VERSION>`
-    Require this version to match the exact toolchain pin in go.mod
+    Require this version to match the exact Go pin in go.mod or go.work
 
 * `--update`
-    Rejected: edit the toolchain directive in go.mod instead
+    Rejected: edit the Go pin in go.mod or go.work instead
 
 * `--check`
     Verify the committed lock and generated toolchain without network access
