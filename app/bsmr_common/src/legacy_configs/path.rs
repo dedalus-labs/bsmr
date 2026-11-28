@@ -14,30 +14,4 @@
  * above-listed licenses.
  */
 
-pub(crate) enum ExternalConfigSource {
-    // Bsmrconfig file in the user's home directory
-    UserFile(&'static str),
-}
-
-pub(crate) enum ProjectConfigSource {
-    // The cell's `.bsmr` configuration file.
-    CellConfigFile,
-
-    // Additional config file relative to the cell root, such as .bsmr.local
-    CellRelativeFile(&'static str),
-}
-
-/// The default places from which bsmrconfigs are sourced.
-///
-/// Later entries take precedence over earlier ones, and project configs take precedence over
-/// external configs.
-pub(crate) static DEFAULT_EXTERNAL_CONFIG_SOURCES: &[ExternalConfigSource] =
-    &[ExternalConfigSource::UserFile(DOT_BSMRCONFIG_LOCAL)];
-
-pub(crate) static DEFAULT_PROJECT_CONFIG_SOURCES: &[ProjectConfigSource] = &[
-    ProjectConfigSource::CellConfigFile,
-    ProjectConfigSource::CellRelativeFile(DOT_BSMRCONFIG_LOCAL),
-];
-
 pub(crate) static DOT_BSMR: &str = ".bsmr";
-pub(crate) static DOT_BSMRCONFIG_LOCAL: &str = ".bsmr.local";

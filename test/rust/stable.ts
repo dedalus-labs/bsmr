@@ -7,7 +7,7 @@
 
 import assert from "node:assert/strict";
 import { execFile } from "node:child_process";
-import { cpSync, mkdirSync, mkdtempSync, realpathSync, rmSync, writeFileSync } from "node:fs";
+import { appendFileSync, cpSync, mkdirSync, mkdtempSync, realpathSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { promisify } from "node:util";
@@ -54,7 +54,7 @@ async function build(): Promise<string[]> {
 try {
 	await run(binary, ["init"], options);
 	cpSync(resolve(import.meta.dirname, "../../prelude"), join(cwd, "prelude"), { recursive: true });
-	writeFileSync(join(cwd, ".bsmr.local"), "[external_cells]\nprelude = disabled\n");
+	appendFileSync(join(cwd, ".bsmr"), "\n[external_cells]\nprelude = disabled\n");
 	const cargo = (await run("rustup", ["which", "--toolchain", "1.97.1", "cargo"])).stdout.trim();
 	const cargoOptions = { ...options, env: { ...env, RUSTC: resolve(cargo, "../rustc") } };
 	await run(cargo, ["generate-lockfile", "--offline"], cargoOptions);

@@ -61,17 +61,18 @@ class Io:
         """Select the same verified runtime for each independent checkout."""
         result = run(project, self.binary, "init")
         assert result.returncode == 0, result.stderr
-        (project / ".bsmr.local").write_text(
-            "[bsmr]\ndefault_allow_cache_upload=true\n"
-            f"[sandbox]\nbackend=namespace\nruntime={self.runtime}\n"
-        )
+        with (project / ".bsmr").open("a") as config:
+            config.write(
+                "\n[bsmr]\ndefault_allow_cache_upload=true\n"
+                f"[sandbox]\nbackend=namespace\nruntime={self.runtime}\n"
+            )
 
     def seed(self, project: Path) -> None:
         """Create a nested package with tracked hidden files and a relative link."""
         files = {
             "Cargo.toml": '[workspace]\nmembers=["app"]\nresolver="2"\n',
             "rust-toolchain.toml": '[toolchain]\nchannel="1.97.1"\n',
-            ".gitignore": "/.bsmr\n/.bsmr.local\n/bsmr-out/\n/target/\n",
+            ".gitignore": "/.bsmr\n/bsmr-out/\n/target/\n",
             ".settings/value": "tracked hidden data\n",
             "app/Cargo.toml": '[package]\nname="app"\nversion="0.1.0"\nedition="2024"\n',
             "app/build.rs": SCRIPT,

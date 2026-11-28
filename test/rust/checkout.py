@@ -57,7 +57,8 @@ def qualify(binary: str, root: Path, prelude: Path | None, *, packed: bool) -> N
     assert initialized.returncode == 0, initialized.stderr
     if prelude is not None:
         shutil.copytree(prelude, root / "prelude")
-        (root / ".bsmr.local").write_text("[external_cells]\nprelude=disabled\n")
+        with (root / ".bsmr").open("a") as config:
+            config.write("\n[external_cells]\nprelude=disabled\n")
     (root / "BUILD.bsmr").write_text(
         'load("@prelude//rust:checkout.bzl", "cargo_checkout")\n'
         f'cargo_checkout(name="tree", packages={{}}, git={json.dumps(inputs)}, unavailable=[])\n'

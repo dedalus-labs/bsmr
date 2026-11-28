@@ -7,7 +7,7 @@
 
 import assert from "node:assert/strict";
 import { execFile } from "node:child_process";
-import { cpSync, mkdirSync, mkdtempSync, realpathSync, rmSync, writeFileSync } from "node:fs";
+import { appendFileSync, cpSync, mkdirSync, mkdtempSync, realpathSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { promisify } from "node:util";
@@ -31,7 +31,7 @@ try {
 	await run(cargo, ["generate-lockfile", "--offline"], { ...options, env: { ...process.env, RUSTC: resolve(cargo, "../rustc") } });
 	await run(binary, ["init"], options);
 	cpSync(resolve(import.meta.dirname, "../../prelude"), join(root, "prelude"), { recursive: true });
-	writeFileSync(join(root, ".bsmr.local"), "[external_cells]\nprelude = disabled\n");
+	appendFileSync(join(root, ".bsmr"), "\n[external_cells]\nprelude = disabled\n");
 	const build = await run(binary, ["build", "probe:probe", "--show-full-json-output", "--console", "simple"], options);
 	const executable = Object.values(JSON.parse(build.stdout) as Record<string, string>)[0]!;
 	assert.equal((await run(executable, [], options)).stdout.trim(), value);

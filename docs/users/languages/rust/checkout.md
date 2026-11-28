@@ -31,7 +31,7 @@ source edit therefore stays outside that compiler's inputs. A fixture containing
 `Cargo.toml` remains data unless Cargo declares it as a package.
 
 When a package includes a file owned by another Cargo package, declare that file
-in `.bsmr` or `.bsmr.local`. Both sides use paths relative to the workspace root.
+in `.bsmr`. Both sides use paths relative to the workspace root.
 Use `.` as the key for a package at the workspace root.
 
 ```ini

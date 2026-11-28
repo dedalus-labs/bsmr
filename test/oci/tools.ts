@@ -64,7 +64,7 @@ try {
 	initialized = true;
 	if (!values["bundled-prelude"]) {
 		cpSync(resolve(prelude), join(root, "prelude"), { recursive: true });
-		writeFileSync(join(root, ".bsmr.local"), "[external_cells]\nprelude = disabled\n");
+		writeFileSync(join(root, ".bsmr"), readFileSync(join(root, ".bsmr"), "utf8") + "\n[external_cells]\nprelude = disabled\n");
 	}
 	cpSync(resolve(img), join(root, "img"));
 	cpSync(process.execPath, join(root, "node"));

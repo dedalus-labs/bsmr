@@ -27,7 +27,7 @@ try {
 	await run("rustup", ["run", "1.97.1", "cargo", "generate-lockfile", "--offline"], options);
 	const lock = readFileSync(join(root, "Cargo.lock"));
 	await run(binary, ["init"], options);
-	writeFileSync(join(root, ".bsmr.local"), "[bsmr]\ndefault_allow_cache_upload=true\n");
+	writeFileSync(join(root, ".bsmr"), readFileSync(join(root, ".bsmr"), "utf8") + "\n[bsmr]\ndefault_allow_cache_upload=true\n");
 	const cases = [
 		{ selection: [], expected: "1:true", cached: false },
 		{ selection: ["rust.profile=release"], expected: "1:false", cached: false },

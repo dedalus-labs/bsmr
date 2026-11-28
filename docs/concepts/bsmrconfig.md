@@ -119,26 +119,9 @@ For example, to use the `[go].vendor_path` in a custom setting:
 In addition to the semicolon (`;`), you can use the pound sign (`#`), as a
 comment character in `.bsmr`.
 
-## .bsmr.local
-
-The root of your [project](glossary.md#project) may contain a second
-configuration file named `.bsmr.local`. Its format is the same as that of
-`.bsmr`, but settings in `.bsmr.local` override those in
-`.bsmr`. In practice, `.bsmr` is a version-controlled file that
-contains settings that are applicable to all team members, whereas
-`.bsmr.local` is excluded from version control to allow users to define
-personal settings, such as personal aliases.
-
-## Other initialization files
-
-In addition to the `.bsmr` and `.bsmr.local` files in the project
-root, Bessemer reads configuration settings from `.bsmr.local` in the current
-user's home directory, which on Unix-like systems is available from the `HOME`
-environment variable or through the `~` symbol.
-
 ## Command-line control of configuration
 
-In addition to the above configuration files, Bessemer supports specifying
+In addition to `.bsmr`, Bessemer supports specifying
 additional configuration files from the Bessemer command line using the
 `--config-file` parameter. You can also specify configuration settings
 _individually_ on the Bessemer command line using the `--config` (`-c`) parameter.
@@ -157,9 +140,7 @@ list.
 1. Configuration specified on the command line using `--config` (`-c`),
    `--config-file` and `--flagfile`. Configuration specified later on the
    command line overrides configuration specified earlier.
-1. `.bsmr.local` in the repo.
 1. `.bsmr` in the repo.
-1. `.bsmr.local` in user's `HOME` directory.
 
 ## Configuration files can include other files
 

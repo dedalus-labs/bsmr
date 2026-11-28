@@ -78,10 +78,11 @@ class Io:
         assert locked.returncode == 0, locked.stderr
         initialized = self.run(project, self.binary, "init")
         assert initialized.returncode == 0, initialized.stderr
-        (project / ".bsmr.local").write_text(
-            "[bsmr]\ndefault_allow_cache_upload=true\n"
-            f"[sandbox]\nbackend=namespace\nruntime={self.runtime}\n"
-        )
+        with (project / ".bsmr").open("a") as config:
+            config.write(
+                "\n[bsmr]\ndefault_allow_cache_upload=true\n"
+                f"[sandbox]\nbackend=namespace\nruntime={self.runtime}\n"
+            )
         (library / "src/lib.rs").write_text('compile_error!("mutable origin must not compile");\n')
         return project
 

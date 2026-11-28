@@ -91,9 +91,8 @@ value={path="../value",features=["testing"]}
     result = run(project, binary, 'init')
     assert result.returncode == 0, result.stderr
     if runtime is not None:
-        (project / '.bsmr.local').write_text(
-            f'[sandbox]\nbackend=namespace\nruntime={runtime}\n'
-        )
+        with (project / '.bsmr').open('a') as config:
+            config.write(f'\n[sandbox]\nbackend=namespace\nruntime={runtime}\n')
 
 
 def ordinary(project: Path, binary: str, execution: tuple[str, ...], target: str) -> None:

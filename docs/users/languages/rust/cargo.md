@@ -37,8 +37,8 @@ action. JSON output represents that target with an empty output path.
 Cargo workspaces do not need `bsmr init`. BSMR uses the pinned Cargo to locate
 the owning workspace and loads its bundled build rules without writing `.bsmr`.
 An enclosing explicit BSMR project keeps ownership. Use `bsmr init` when you
-want to write and customize that configuration. Existing `.bsmr.local` settings
-can configure the native workspace without changing its Cargo files.
+want to write and customize that configuration, or pass `-c` / `--config-file`
+to configure a native workspace without changing its Cargo files.
 
 Run `bsmr build --help` or `bsmr test --help` for command options.
 

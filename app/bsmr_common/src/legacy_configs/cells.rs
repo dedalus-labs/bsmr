@@ -54,18 +54,13 @@ use crate::legacy_configs::file_ops::DefaultConfigParserFileOps;
 use crate::legacy_configs::file_ops::DiceConfigFileOps;
 use crate::legacy_configs::key::BsmrconfigKeyRef;
 use crate::legacy_configs::parser::LegacyConfigParser;
-use crate::legacy_configs::path::DEFAULT_EXTERNAL_CONFIG_SOURCES;
-use crate::legacy_configs::path::DEFAULT_PROJECT_CONFIG_SOURCES;
 use crate::legacy_configs::path::DOT_BSMR;
-use crate::legacy_configs::path::DOT_BSMRCONFIG_LOCAL;
-use crate::legacy_configs::path::ExternalConfigSource;
-use crate::legacy_configs::path::ProjectConfigSource;
 
 /// Bsmrconfigs can partially be loaded from within dice. However, some parts of what makes up the
 /// bsmrconfig comes from outside the buildgraph, and this type represents those parts.
 #[derive(Clone, PartialEq, Eq, Allocative, Pagable)]
 pub struct ExternalBsmrconfigData {
-    // The result of parsing user bsmrconfigs (e.g. $home_dir/.bsmr.local) outside of the repo.
+    // The result of parsing external bsmrconfig files outside of the repo.
     external_path_configs: Vec<ExternalPathBsmrconfigData>,
     // The result of parsing the bsmrconfigs coming from command line args (e.g. --config or --config-file)
     args: Vec<ResolvedLegacyConfigArg>,
@@ -115,51 +110,9 @@ impl ExternalBsmrconfigData {
         }
     }
 
-    async fn get_local_config_components(
-        project_root: &ProjectRoot,
-    ) -> Vec<bsmr_data::BsmrconfigComponent> {
-        use bsmr_data::bsmrconfig_component::Data::GlobalExternalConfigFile;
-        let file_ops = &mut DefaultConfigParserFileOps {
-            project_fs: project_root.dupe(),
-        };
-        let mut local_config_components = Vec::new();
-        if let Ok(legacy_cells) =
-            BsmrConfigBasedCells::parse_with_config_args(project_root, &[]).await
-        {
-            let path = ForwardRelativePath::new(DOT_BSMRCONFIG_LOCAL).expect(
-                "Internal error: .bsmr.local should always be a valid forward relative path",
-            );
-            for (_cell, cell_instance) in legacy_cells.cell_resolver.cells() {
-                let relative_path = cell_instance.path().as_project_relative_path().join(path);
-                let origin_path = relative_path.to_string();
-                let local_config = ConfigPath::Project(relative_path);
-
-                let mut parser = LegacyConfigParser::new();
-                if parser
-                    .parse_file(&local_config, None, true, file_ops)
-                    .await
-                    .is_ok()
-                {
-                    let values = parser.to_proto_external_config_values(false);
-                    if values.is_empty() {
-                        // Don't create an empty component for cells with non-existing .bsmr.local
-                        continue;
-                    }
-                    local_config_components.push(bsmr_data::BsmrconfigComponent {
-                        data: Some(GlobalExternalConfigFile(bsmr_data::GlobalExternalConfig {
-                            values,
-                            origin_path,
-                        })),
-                    });
-                }
-            }
-        }
-        local_config_components
-    }
-
     pub async fn get_bsmrconfig_components(
         &self,
-        project_root: &ProjectRoot,
+        _project_root: &ProjectRoot,
     ) -> Vec<bsmr_data::BsmrconfigComponent> {
         use bsmr_data::bsmrconfig_component::Data::GlobalExternalConfigFile;
         let mut res: Vec<bsmr_data::BsmrconfigComponent> = self
@@ -177,7 +130,6 @@ impl ExternalBsmrconfigData {
             })
             .collect();
 
-        res.extend(Self::get_local_config_components(project_root).await);
         res.extend(to_proto_config_args(&self.args));
         res
     }
@@ -537,29 +489,7 @@ impl BsmrConfigBasedCells {
 }
 
 fn get_external_bsmrconfig_paths() -> bsmr_error::Result<Vec<ConfigPath>> {
-    let skip_default_external_config = bsmr_env!(
-        "BSMR_TEST_SKIP_DEFAULT_EXTERNAL_CONFIG",
-        bool,
-        applicability = testing
-    )?;
-
     let mut bsmrconfig_paths: Vec<ConfigPath> = Vec::new();
-
-    if !skip_default_external_config {
-        for bsmrconfig in DEFAULT_EXTERNAL_CONFIG_SOURCES {
-            match bsmrconfig {
-                ExternalConfigSource::UserFile(file) => {
-                    let home_dir = dirs::home_dir();
-                    if let Some(home_dir_path) = home_dir {
-                        let bsmrconfig_path = ForwardRelativePath::new(file)?;
-                        bsmrconfig_paths.push(ConfigPath::Global(
-                            AbsPath::new(&home_dir_path)?.join(bsmrconfig_path.as_str()),
-                        ));
-                    }
-                }
-            }
-        }
-    }
 
     let extra_external_config =
         bsmr_env!("BSMR_TEST_EXTRA_EXTERNAL_CONFIG", applicability = testing)?;
@@ -572,26 +502,10 @@ fn get_external_bsmrconfig_paths() -> bsmr_error::Result<Vec<ConfigPath>> {
 }
 
 fn get_project_bsmrconfig_paths(path: &CellRootPath) -> bsmr_error::Result<Vec<ConfigPath>> {
-    let mut bsmrconfig_paths: Vec<ConfigPath> = Vec::new();
-
-    for bsmrconfig in DEFAULT_PROJECT_CONFIG_SOURCES {
-        match bsmrconfig {
-            ProjectConfigSource::CellConfigFile => {
-                bsmrconfig_paths.push(ConfigPath::Project(
-                    path.as_project_relative_path()
-                        .join(ForwardRelativePath::new(DOT_BSMR)?),
-                ));
-            }
-            ProjectConfigSource::CellRelativeFile(file) => {
-                let bsmrconfig_path = ForwardRelativePath::new(file)?;
-                bsmrconfig_paths.push(ConfigPath::Project(
-                    path.as_project_relative_path().join(bsmrconfig_path),
-                ));
-            }
-        }
-    }
-
-    Ok(bsmrconfig_paths)
+    Ok(vec![ConfigPath::Project(
+        path.as_project_relative_path()
+            .join(ForwardRelativePath::new(DOT_BSMR)?),
+    )])
 }
 
 #[cfg(test)]
@@ -896,7 +810,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_local_config_file_overwrite_config_file() -> bsmr_error::Result<()> {
+    async fn test_local_config_file_is_ignored() -> bsmr_error::Result<()> {
         let mut file_ops = TestConfigParserFileOps::new(&[
             (
                 ".bsmr",
@@ -929,99 +843,22 @@ mod tests {
         let config = cells
             .parse_single_cell_with_file_ops(CellName::testing_new("root"), &mut file_ops)
             .await?;
-        // No local override
         assert_config_value(&config, "apple", "key", "value1");
-        // local override to new value
-        assert_config_value(&config, "apple", "key2", "value5");
-        // local override new field
-        assert_config_value(&config, "apple", "key3", "value4");
-        // local override new section
-        assert_config_value(&config, "orange", "key", "value3");
-
-        Ok(())
-    }
-
-    #[tokio::test]
-    async fn test_multi_cell_local_config_file_overwrite_config_file() -> bsmr_error::Result<()> {
-        let mut file_ops = TestConfigParserFileOps::new(&[
-            (
-                ".bsmr",
-                indoc!(
-                    r#"
-                            [cells]
-                                root = .
-                                other = other/
-                            [apple]
-                                key = value1
-                                key2 = value2
-                        "#
-                ),
-            ),
-            (
-                ".bsmr.local",
-                indoc!(
-                    r#"
-                            [orange]
-                                key = value3
-                            [apple]
-                                key2 = value5
-                                key3 = value4
-                        "#
-                ),
-            ),
-            (
-                "other/.bsmr",
-                indoc!(
-                    r#"
-                            [cells]
-                                root = ..
-                                other = .
-                            [apple]
-                                key = othervalue1
-                                key2 = othervalue2
-                        "#
-                ),
-            ),
-            (
-                "other/.bsmr.local",
-                indoc!(
-                    r#"
-                            [orange]
-                                key = othervalue3
-                            [apple]
-                                key2 = othervalue5
-                                key3 = othervalue4
-                        "#
-                ),
-            ),
-        ])?;
-
-        let cells = BsmrConfigBasedCells::testing_parse_with_file_ops(&mut file_ops, &[]).await?;
-
-        let root_config = cells
-            .parse_single_cell_with_file_ops(CellName::testing_new("root"), &mut file_ops)
-            .await?;
-        let other_config = cells
-            .parse_single_cell_with_file_ops(CellName::testing_new("other"), &mut file_ops)
-            .await?;
-
-        // No local override
-        assert_config_value(&root_config, "apple", "key", "value1");
-        // local override to new value
-        assert_config_value(&root_config, "apple", "key2", "value5");
-        // local override new field
-        assert_config_value(&root_config, "apple", "key3", "value4");
-        // local override new section
-        assert_config_value(&root_config, "orange", "key", "value3");
-
-        // No local override
-        assert_config_value(&other_config, "apple", "key", "othervalue1");
-        // local override to new value
-        assert_config_value(&other_config, "apple", "key2", "othervalue5");
-        // local override new field
-        assert_config_value(&other_config, "apple", "key3", "othervalue4");
-        // local override new section
-        assert_config_value(&other_config, "orange", "key", "othervalue3");
+        assert_config_value(&config, "apple", "key2", "value2");
+        assert_eq!(
+            config.get(BsmrconfigKeyRef {
+                section: "apple",
+                property: "key3"
+            }),
+            None
+        );
+        assert_eq!(
+            config.get(BsmrconfigKeyRef {
+                section: "orange",
+                property: "key"
+            }),
+            None
+        );
 
         Ok(())
     }
