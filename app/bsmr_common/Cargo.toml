@@ -10,6 +10,7 @@ license.workspace = true
 [dependencies]
 url.workspace = true
 allocative.workspace = true
+astral-version-ranges.workspace = true
 async-scoped.workspace = true
 async-trait.workspace = true
 blake3.workspace = true

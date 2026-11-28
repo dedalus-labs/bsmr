@@ -20,7 +20,7 @@ def _oci_run_impl(ctx: AnalysisContext) -> list[Provider]:
     ctx.actions.run(cmd_args(
         toolchain.operations, "layout", "--img", toolchain.img, "--platform", image.platform,
         "--spec", closure, "--output", base.as_output(),
-    ), category = "oci_run_base", allow_cache_upload = True)
+    ), category = "oci_run_base", local_only = image.local_only, allow_cache_upload = not image.local_only, allow_local_cache_upload = True)
     spec = ctx.actions.write_json("run-inputs.json", {
         "layout": base,
         "platform": image.platform,
@@ -41,7 +41,7 @@ def _oci_run_impl(ctx: AnalysisContext) -> list[Provider]:
     ctx.actions.run(cmd_args(
         toolchain.operations, "import", "--platform", image.platform, "--layout", output,
         "--manifest", manifest.as_output(), "--config", config.as_output(), "--descriptor", descriptor.as_output(),
-    ), category = "oci_run_import", allow_cache_upload = True)
+    ), category = "oci_run_import", local_only = True, allow_cache_upload = False, allow_local_cache_upload = True)
     return [
         DefaultInfo(default_output = descriptor, sub_targets = {
             "layout": [DefaultInfo(default_output = output)],
@@ -49,7 +49,7 @@ def _oci_run_impl(ctx: AnalysisContext) -> list[Provider]:
             "config": [DefaultInfo(default_output = config)],
         }),
         OciImageInfo(manifest = manifest, config = config, descriptor = descriptor,
-            platform = image.platform, layers = [], layouts = [output]),
+            platform = image.platform, layers = [], layouts = [output], local_only = True),
     ]
 
 oci_run = rule(impl = _oci_run_impl, attrs = {

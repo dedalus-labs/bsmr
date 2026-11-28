@@ -15,7 +15,7 @@ import test from "node:test";
 import { promisify } from "node:util";
 import { setTimeout } from "node:timers/promises";
 import { importLayout } from "../../prelude/oci/closure.mjs";
-import { processConfig, runImage, validateRunSpec } from "../../prelude/oci/run.mjs";
+import { processConfig, runImage, runTool, stageInputs, validateRunSpec } from "../../prelude/oci/run.mjs";
 
 const execute = promisify(execFile);
 const umoci = process.env.BSMR_OCI_UMOCI, runc = process.env.BSMR_OCI_RUNC;
@@ -93,6 +93,29 @@ test("invariant_runtime_overrides_keep_namespaces_and_readonly_inputs", () => {
 	assert.throws(() => processConfig(result, recipe(), "/private/inputs"), { code: "OCI_RUN_ISOLATION" });
 });
 
+test("invariant_staged_inputs_are_traversable_under_restrictive_umask", async (t) => {
+	const root = await fixture(t), source = join(root, "payload");
+	await writeFile(source, "data", { mode: 0o644 });
+	await mkdir(join(root, "work"), { recursive: true });
+	await mkdir(join(root, "bundle/rootfs"), { recursive: true });
+	const previous = process.umask(0o077);
+	let inputs;
+	try {
+		inputs = await stageInputs(recipe({ inputs: { "nested/dir/file": source } }), join(root, "work"), join(root, "bundle"));
+	} finally {
+		process.umask(previous);
+	}
+	assert.equal((await lstat(inputs)).mode & 0o777, 0o755);
+	assert.equal((await lstat(join(inputs, "nested"))).mode & 0o777, 0o755);
+	assert.equal((await lstat(join(inputs, "nested/dir"))).mode & 0o777, 0o755);
+});
+
+test("invariant_tool_execution_closes_stdin_and_streams_large_output", async () => {
+	const eof = await runTool(process.execPath, ["-e", "process.stdin.resume(); process.stdin.on('end', () => process.stdout.write('eof'))"], { captureStdout: true });
+	assert.equal(eof.stdout, "eof");
+	await runTool(process.execPath, ["-e", "const chunk = Buffer.alloc(1024 * 1024, 97); for (let i = 0; i < 18; i++) process.stdout.write(chunk);"], { stream: false });
+});
+
 test("invariant_offline_apt_executes_postinst_and_preserves_filesystem_metadata", { skip: !native }, async (t) => {
 	const root = await fixture(t), packageRoot = join(root, "package"), output = join(root, "output");
 	await mkdir(join(packageRoot, "DEBIAN"), { recursive: true });
@@ -132,13 +155,21 @@ test("invariant_failed_command_publishes_no_layout_or_changed_input", { skip: !n
 
 test("invariant_concurrent_runs_have_independent_cgroups_and_users", { skip: !native }, async (t) => {
 	const root = await fixture(t);
-	await Promise.all(["123:456", "321:654"].map(async (user, index) => {
+	const observed = await Promise.all(["123:456", "321:654"].map(async (user, index) => {
 		const output = join(root, `image-${index}`);
 		await runImage({ umoci, runc, output, spec: recipe({ user, working_dir: "/tmp", env: { EXPECTED_UID: user.split(":")[0] },
-			command: ["/bin/sh", "-ec", 'test "$(id -u)" = "$EXPECTED_UID"; test "$(pwd)" = /tmp; sleep 1; printf owned > receipt'] }) });
+			command: ["/bin/sh", "-ec", 'test "$(id -u)" = "$EXPECTED_UID"; test "$(pwd)" = /tmp; test -z "$(cat)"; readlink /proc/self/ns/cgroup > cgroup-ns; cat /proc/self/cgroup > cgroup-path; sleep 1; printf owned > receipt'] }) });
 		await execute(umoci, ["unpack", "--image", `${output}:run`, join(root, `bundle-${index}`)]);
 		assert.equal((await lstat(join(root, `bundle-${index}/rootfs/tmp/receipt`))).uid, Number(user.split(":")[0]));
+		return {
+			ns: (await readFile(join(root, `bundle-${index}/rootfs/tmp/cgroup-ns`), "utf8")).trim(),
+			path: (await readFile(join(root, `bundle-${index}/rootfs/tmp/cgroup-path`), "utf8")).trim(),
+		};
 	}));
+	assert.match(observed[0].ns, /^cgroup:\[\d+\]$/u);
+	assert.match(observed[1].ns, /^cgroup:\[\d+\]$/u);
+	assert.notEqual(observed[0].ns, observed[1].ns, "concurrent runs must have distinct cgroup namespaces");
+	assert.ok(observed[0].path.length > 0 && observed[1].path.length > 0);
 });
 
 test("invariant_cancelled_command_removes_its_container_and_work_directory", { skip: !native }, async (t) => {
