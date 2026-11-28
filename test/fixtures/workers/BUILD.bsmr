@@ -1,0 +1,7 @@
+load(":rules.bzl", "worker", "workers", "write")
+
+workers(name = "workers")
+
+worker(name = "worker", src = "worker.py")
+
+write(name = "output", worker = ":worker")
