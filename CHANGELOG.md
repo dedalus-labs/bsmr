@@ -9,6 +9,35 @@
 Notable changes to Bessemer are recorded here. Release entries are generated
 from conventional commits and reviewed before publication.
 
+## [0.0.11](https://github.com/dedalus-labs/bsmr/compare/v0.0.10...v0.0.11) (2026-11-28)
+
+
+### Features
+
+* **cli:** add bsmr deps receipt create and verify commands ([#467](https://github.com/dedalus-labs/bsmr/issues/467)) ([9228527](https://github.com/dedalus-labs/bsmr/commit/92285272b6ce8f8d34ce74ca926952d318889014))
+* **cli:** add bsmr deps verify, explain, and update commands ([#466](https://github.com/dedalus-labs/bsmr/issues/466)) ([14d14a0](https://github.com/dedalus-labs/bsmr/commit/14d14a09835d9da2b38e16038ef95e85eb69195a))
+* **deps:** add catalog-driven dependency-set update ([#463](https://github.com/dedalus-labs/bsmr/issues/463)) ([3a6d919](https://github.com/dedalus-labs/bsmr/commit/3a6d919bc4c2bd51e53297b18f2c9668887f2314))
+* **deps:** add component manifest and dependency-set model ([#459](https://github.com/dedalus-labs/bsmr/issues/459)) ([f60fee3](https://github.com/dedalus-labs/bsmr/commit/f60fee340f678222fa069c5c34cfb5ef5b0f8d85))
+* **deps:** add contract conflict and closure explanation ([#464](https://github.com/dedalus-labs/bsmr/issues/464)) ([f8943e1](https://github.com/dedalus-labs/bsmr/commit/f8943e186895d80ba6582ab1b55f3219963e8d8c))
+* **deps:** add dependency lockfile model and native lockfile bindings ([#460](https://github.com/dedalus-labs/bsmr/issues/460)) ([82088f1](https://github.com/dedalus-labs/bsmr/commit/82088f16d3a365656b315fdd430aee3c0e923109))
+* **deps:** add dependency-set digest kinds, errors, and contract ranges ([#458](https://github.com/dedalus-labs/bsmr/issues/458)) ([224d628](https://github.com/dedalus-labs/bsmr/commit/224d628115833ee1d880bf9bbe1d61daccf59b30))
+* **deps:** add immutable release receipt model and verifier ([#462](https://github.com/dedalus-labs/bsmr/issues/462)) ([726ac43](https://github.com/dedalus-labs/bsmr/commit/726ac43340702b3d1a5fd52da7e3d6da0dede216))
+* **deps:** add offline lockfile verifier and build gate ([#461](https://github.com/dedalus-labs/bsmr/issues/461)) ([8b279cc](https://github.com/dedalus-labs/bsmr/commit/8b279cc7bdf2a92dc4661b0dbd9793d2c7cb8e03))
+
+
+### Bug Fixes
+
+* **build:** declare tempfile and toml in the build API manifest ([#422](https://github.com/dedalus-labs/bsmr/issues/422)) ([43d40f2](https://github.com/dedalus-labs/bsmr/commit/43d40f25bfa76991144ccf8340e1da0955b0981a))
+* **daemon:** identify the daemon by a held lock, not a reusable PID ([#425](https://github.com/dedalus-labs/bsmr/issues/425)) ([44310d8](https://github.com/dedalus-labs/bsmr/commit/44310d89227d9fed625fffeaa8479c18d9850957))
+* **deps:** restore canonical Cargo.lock order ([#421](https://github.com/dedalus-labs/bsmr/issues/421)) ([da2b5af](https://github.com/dedalus-labs/bsmr/commit/da2b5afcadb37f3b1f9f10930d736672f29aa1b2))
+* **deps:** unblock merge queue dependency audits ([#411](https://github.com/dedalus-labs/bsmr/issues/411)) ([ed7e7aa](https://github.com/dedalus-labs/bsmr/commit/ed7e7aaf4e3aa203d2c0d5c436d6e7e694bfa3cf))
+* **docs:** retain generated site assets ([#151](https://github.com/dedalus-labs/bsmr/issues/151)) ([d2196e9](https://github.com/dedalus-labs/bsmr/commit/d2196e94540475280d2c02a4322ed23ca1fd3a0a))
+* **go:** create a missing toolchains// package before the SDK build ([#416](https://github.com/dedalus-labs/bsmr/issues/416)) ([72bcf53](https://github.com/dedalus-labs/bsmr/commit/72bcf53cddc818aa8ab7e4ee12dc91b6c6d52f76))
+* **rust:** link transitive dependencies and cache native compiles ([#418](https://github.com/dedalus-labs/bsmr/issues/418)) ([7230a04](https://github.com/dedalus-labs/bsmr/commit/7230a04085d22314a8058985c0aed0d31b6e5386))
+* **status:** omit the daemon auth token from status output ([#417](https://github.com/dedalus-labs/bsmr/issues/417)) ([563a168](https://github.com/dedalus-labs/bsmr/commit/563a168995806689c24b8249323054f6e77ae0c9))
+* **typescript:** run vitest suites in bsmr test ([#427](https://github.com/dedalus-labs/bsmr/issues/427)) ([132eca7](https://github.com/dedalus-labs/bsmr/commit/132eca75fadaebc62881dc1880a96b7c2eae4ff7))
+* **watcher:** scope notify rescans to source paths ([#420](https://github.com/dedalus-labs/bsmr/issues/420)) ([5413e61](https://github.com/dedalus-labs/bsmr/commit/5413e6117579f0d106ab13747594adb27f215c24))
+
 ## [0.0.10](https://github.com/dedalus-labs/bsmr/compare/v0.0.9...v0.0.10) (2026-10-01)
 
 
