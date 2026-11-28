@@ -19,6 +19,7 @@ use std::ffi::OsString;
 use std::ops::ControlFlow;
 use std::process::Command;
 use std::sync::Arc;
+use std::sync::LazyLock;
 use std::time::Duration;
 use std::time::Instant;
 use std::time::SystemTime;
@@ -224,6 +225,89 @@ impl LocalExecutor {
         self
     }
 
+    /// Returns the execution root for local host processes.
+    ///
+    /// When `bsmr-out` lives outside the project tree, local host commands run inside a
+    /// per-isolation view under `~/.bsmr/checkouts/<hash>/.execroot/<isolation>` that exposes
+    /// `bsmr-out` alongside symlinks to the project root's top-level entries, keeping the
+    /// project tree clean.
+    fn ensure_execroot(&self) -> bsmr_error::Result<AbsNormPathBuf> {
+        let Some(output_root) = self.artifact_fs.fs().output_root() else {
+            return Ok(self.root.clone());
+        };
+        static EXECROOT_LOCK: LazyLock<parking_lot::Mutex<()>> =
+            LazyLock::new(|| parking_lot::Mutex::new(()));
+        let _guard = EXECROOT_LOCK.lock();
+
+        let isolation = self
+            .artifact_fs
+            .output_path_resolver()
+            .root()
+            .file_name()
+            .ok_or_else(|| {
+                bsmr_error::internal_error!("Output path resolver root has no isolation component")
+            })?;
+        let execroot = bsmr_common::invocation_roots::checkout_exec_root(&self.root, isolation)?;
+        fs_util::create_dir_all(&execroot)?;
+        fs_util::create_dir_all(output_root)?;
+
+        let output_name = OsStr::new(bsmr_core::fs::output_path::BSMR_OUTPUT_ROOT);
+        let mut desired: std::collections::HashMap<OsString, std::path::PathBuf> =
+            std::collections::HashMap::new();
+        desired.insert(output_name.to_owned(), output_root.as_path().to_path_buf());
+
+        for entry in std::fs::read_dir(self.root.as_path())? {
+            let entry = entry?;
+            let name = entry.file_name();
+            if name == output_name {
+                continue;
+            }
+            desired.insert(name, entry.path());
+        }
+
+        let mut existing: std::collections::HashMap<OsString, std::path::PathBuf> =
+            std::collections::HashMap::new();
+        for entry in std::fs::read_dir(execroot.as_path())? {
+            let entry = entry?;
+            let name = entry.file_name();
+            let path = entry.path();
+            if !desired.contains_key(&name) {
+                let meta = std::fs::symlink_metadata(&path)?;
+                if meta.file_type().is_dir() {
+                    std::fs::remove_dir_all(&path)?;
+                } else {
+                    std::fs::remove_file(&path)?;
+                }
+            } else {
+                existing.insert(name, path);
+            }
+        }
+
+        for (name, target) in desired {
+            let link_path = execroot.as_path().join(&name);
+            let needs_create = match existing.get(&name) {
+                Some(path) => match std::fs::read_link(path) {
+                    Ok(current) if current == target => false,
+                    _ => {
+                        let meta = std::fs::symlink_metadata(path)?;
+                        if meta.file_type().is_dir() {
+                            std::fs::remove_dir_all(path)?;
+                        } else {
+                            std::fs::remove_file(path)?;
+                        }
+                        true
+                    }
+                },
+                None => true,
+            };
+            if needs_create {
+                fs_util::symlink(&target, AbsPath::new(&link_path)?).categorize_internal()?;
+            }
+        }
+
+        Ok(execroot)
+    }
+
     // Compiler gets confused (on the not(unix) branch only, weirdly) if you use an async fn.
     #[allow(clippy::manual_async_fn)]
     fn exec<'a>(
@@ -241,7 +325,8 @@ impl LocalExecutor {
         network_access: Option<NetworkAccess>,
     ) -> impl futures::future::Future<Output = bsmr_error::Result<CommandResult>> + Send + 'a {
         async move {
-            let working_directory = self.root.join_cow(working_directory);
+            let execroot = self.ensure_execroot()?;
+            let working_directory = execroot.join_cow(working_directory);
 
             let result = match &self.forkserver {
                 #[cfg(unix)]
@@ -1218,10 +1303,14 @@ impl LocalExecutor {
                 .env
                 .iter()
                 .map(|(k, v)| (OsString::from(k), OsString::from(v)));
+            let execroot = match self.ensure_execroot() {
+                Ok(root) => root,
+                Err(e) => return ControlFlow::Break(manager.error("prepare_execroot_failed", e)),
+            };
             let (new_worker, worker_fut) = worker_pool.get_or_create_worker(
                 worker_spec,
                 env,
-                &self.root,
+                &execroot,
                 self.forkserver.dupe(),
                 dispatcher,
             );

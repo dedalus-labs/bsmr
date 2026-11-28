@@ -530,8 +530,10 @@ impl ProjectRoot {
     /// Translates a logical project-relative symlink target for on-disk materialization at `dest`.
     ///
     /// When `bsmr-out` lives outside the project tree, a symlink inside `bsmr-out` pointing at
-    /// another `bsmr-out` path keeps the same relative spelling, while one targeting a source file
-    /// under the project root is rebased to the physical source path.
+    /// another `bsmr-out` path keeps the same relative spelling. One targeting a source file under
+    /// the project root resolves to the absolute source path so both kernel traversal and
+    /// userspace `readlink` from a symlinked execroot view reach the same file regardless of
+    /// directory depth.
     pub fn resolve_symlink_target(
         &self,
         dest: &ProjectRelativePath,
@@ -543,7 +545,7 @@ impl ProjectRoot {
             && let Ok(logical_target) = parent.join_normalized(target)
             && strip_output_root_prefix(&logical_target).is_none()
         {
-            return Self::find_relative_path(&self.resolve(&logical_target), &self.resolve(dest));
+            return self.resolve(&logical_target).as_path().to_path_buf();
         }
         PathBuf::from(target.as_str())
     }
@@ -1104,10 +1106,7 @@ mod tests {
         assert_eq!(logical_link, PathBuf::from("../../../../src/lib.rs"));
 
         let rebased = fs.resolve_symlink_target(out2, RelativePath::new("../../../../src/lib.rs")?);
-        assert_eq!(
-            rebased,
-            ProjectRoot::find_relative_path(&fs.resolve(src), &fs.resolve(out2))
-        );
+        assert_eq!(rebased, fs.resolve(src).as_path().to_path_buf());
         let same_tree = fs.resolve_symlink_target(out2, RelativePath::new("../out.o")?);
         assert_eq!(same_tree, PathBuf::from("../out.o"));
         Ok(())

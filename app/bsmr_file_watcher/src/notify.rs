@@ -322,12 +322,18 @@ impl NotifyFileWatcher {
         let root2 = root.dupe();
         let barrier = Arc::new((Mutex::new(NotifyEventBarrier::default()), Condvar::new()));
         let barrier2 = barrier.dupe();
-        let barrier_dir = root
-            .root()
-            .as_path()
-            .join(InvocationPaths::output_dir_prefix().as_str());
+        let barrier_dir = match root.output_root() {
+            Some(output_root) => output_root.as_path().join(".notify-barrier"),
+            None => root
+                .root()
+                .as_path()
+                .join(InvocationPaths::output_dir_prefix().as_str()),
+        };
         std::fs::create_dir_all(&barrier_dir)
             .map_err(|e| from_any_with_tag(e, bsmr_error::ErrorTag::NotifyWatcher))?;
+        let barrier_dir = std::fs::canonicalize(&barrier_dir)
+            .map_err(|e| from_any_with_tag(e, bsmr_error::ErrorTag::NotifyWatcher))?;
+        let external_barrier = root.output_root().is_some();
         let mut watcher =
             notify::recommended_watcher(move |event: notify::Result<notify::Event>| {
                 let observed_barrier = event.as_ref().ok().and_then(|event| {
@@ -358,6 +364,11 @@ impl NotifyFileWatcher {
         watcher
             .watch(root.root().as_path(), notify::RecursiveMode::Recursive)
             .map_err(|e| from_any_with_tag(e, bsmr_error::ErrorTag::NotifyWatcher))?;
+        if external_barrier {
+            watcher
+                .watch(&barrier_dir, notify::RecursiveMode::NonRecursive)
+                .map_err(|e| from_any_with_tag(e, bsmr_error::ErrorTag::NotifyWatcher))?;
+        }
         Ok(Self {
             watcher,
             data,

@@ -38,15 +38,15 @@ async function load(path: string, expected: string): Promise<void> {
 }
 
 /** Building the executable must also produce its dependency's declared C library. */
-async function build(expected: string, cached: boolean, nativeLibraries: string[], lto?: string): Promise<void> {
+async function build(outputRoot: string, expected: string, cached: boolean, nativeLibraries: string[], lto?: string): Promise<void> {
 	const profile = lto ? ["-c", "rust.profile=release"] : [];
 	const { stdout, stderr } = await run(binary, ["build", "app", ...profile, "--show-full-json-output", "--console", "simple"], options);
 	const executable = Object.values(JSON.parse(stdout) as Record<string, string>)[0]!;
 	assert.equal((await run(executable, [], options)).stdout.trim(), expected);
-	const libraries = [...new Set(globSync(`bsmr-out/**/libshared*.${extension}`, { cwd: root }).filter((path) => !path.includes("/output_artifacts/")).map((path) => realpathSync(join(root, path))))];
+	const libraries = [...new Set(globSync(`**/libshared*.${extension}`, { cwd: outputRoot }).filter((path) => !path.includes("/output_artifacts/")).map((path) => realpathSync(join(outputRoot, path))))];
 	assert.equal(libraries.length, 1, "all declared formats must materialize when building a dependent executable");
 	await load(libraries[0]!, expected);
-	const archives = [...new Set(globSync("bsmr-out/**/libshared*.a", { cwd: root }).filter((path) => !path.includes("/output_artifacts/")).map((path) => realpathSync(join(root, path))))];
+	const archives = [...new Set(globSync("**/libshared*.a", { cwd: outputRoot }).filter((path) => !path.includes("/output_artifacts/")).map((path) => realpathSync(join(outputRoot, path))))];
 	assert.equal(archives.length, 1, "static C libraries must also materialize");
 	await link(archives[0]!, expected, nativeLibraries);
 	const trace = /Build ID: ([a-f0-9-]+)/.exec(stderr)?.[1];
@@ -56,7 +56,12 @@ async function build(expected: string, cached: boolean, nativeLibraries: string[
 	if (lto) {
 		const commands = log.stdout.trim().split("\n").map((line) => JSON.parse(line) as { reproducer: { details: { command: string[] } } });
 		for (const action of commands) {
-			const arguments_ = action.reproducer.details.command.flatMap((argument) => argument.startsWith("@") ? readFileSync(resolve(root, argument.slice(1)), "utf8") : argument).join("\n");
+			const arguments_ = action.reproducer.details.command.flatMap((argument) => {
+				if (!argument.startsWith("@")) return argument;
+				const rel = argument.slice(1);
+				const file = rel.startsWith("bsmr-out/") ? join(outputRoot, "..", rel.slice("bsmr-out/".length)) : resolve(root, rel);
+				return readFileSync(file, "utf8");
+			}).join("\n");
 			assert.ok(arguments_.includes(`-Clto=${lto}`), arguments_);
 		}
 	}
@@ -85,14 +90,15 @@ try {
 	await link(join(root, "target/debug/deps/libshared.a"), "7", nativeLibraries);
 	const lock = readFileSync(join(root, "Cargo.lock"));
 	await run(binary, ["init"], options);
+	const outputRoot = (await run(binary, ["root", "--kind", "output"], options)).stdout.trim();
 	writeFileSync(join(root, ".bsmr.local"), "[bsmr]\ndefault_allow_cache_upload=true\n");
-	await build("7", false, nativeLibraries);
-	await build("7", true, nativeLibraries);
+	await build(outputRoot, "7", false, nativeLibraries);
+	await build(outputRoot, "7", true, nativeLibraries);
 	await run(binary, ["clean"], options);
-	await build("7", true, nativeLibraries);
+	await build(outputRoot, "7", true, nativeLibraries);
 	await run(binary, ["clean"], options);
 	writeFileSync(join(root, "shared/src/lib.rs"), files["shared/src/lib.rs"]!.replace("7", "9"));
-	await build("9", false, nativeLibraries);
+	await build(outputRoot, "9", false, nativeLibraries);
 	const library = await run(binary, ["build", "shared:lib[cdylib]", "--show-full-json-output"], options);
 	await load(Object.values(JSON.parse(library.stdout) as Record<string, string>)[0]!, "9");
 	for (const lto of ["thin", "fat"]) {
@@ -100,7 +106,7 @@ try {
 		const reference = await run("rustup", ["run", "1.97.1", "cargo", "run", "--locked", "--offline", "--release", "-p", "app"], options);
 		assert.equal(reference.stdout.trim(), "9");
 		await run(binary, ["clean"], options);
-		await build("9", false, nativeLibraries, lto);
+		await build(outputRoot, "9", false, nativeLibraries, lto);
 	}
 	for (const kind of ["cdylib", "staticlib"]) {
 		writeFileSync(join(root, "shared/Cargo.toml"), files["shared/Cargo.toml"]!.replace('["rlib","cdylib","staticlib"]', JSON.stringify([kind])));

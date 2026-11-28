@@ -437,22 +437,21 @@ impl CommandKind {
             process.events_ctx.log_invocation_record = false;
             // The client starts this internal command in its resolved project root.
             // Rediscovering Cargo here would create threads before daemonization.
+            let root = process.shared.working_dir.path().to_owned();
+            let output_root = match bsmr_common::invocation_roots::checkout_output_root(&root) {
+                Ok(output_root) => output_root,
+                Err(e) => return ExitResult::err(e),
+            };
             let paths = bsmr_common::invocation_paths::InvocationPaths {
                 roots: bsmr_common::invocation_roots::InvocationRoots {
-                    project_root: bsmr_core::fs::project::ProjectRoot::new_unchecked(
-                        process.shared.working_dir.path().to_owned(),
-                    ),
+                    project_root: bsmr_core::fs::project::ProjectRoot::new_unchecked(root)
+                        .with_output_root(output_root),
                     cwd: bsmr_core::fs::project_rel_path::ProjectRelativePathBuf::default(),
                 },
                 isolation: common_opts.isolation_dir.clone(),
             };
             return cmd
-                .exec(
-                    process.shared.log_reload_handle.dupe(),
-                    paths,
-                    false,
-                    || {},
-                )
+                .exec(process.shared.log_reload_handle.dupe(), paths, false, || {})
                 .into();
         }
         let paths_result = get_invocation_paths_result(
