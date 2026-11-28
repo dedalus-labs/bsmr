@@ -26,12 +26,12 @@ pub enum PackageBuildSource {
 /// Native manifests that define a package root without a Starlark build file, in precedence order.
 const NATIVE_MANIFESTS: [&str; 3] = ["pyproject.toml", "Cargo.toml", "package.json"];
 
-/// The Go module file, which defines a package last and only at a cell root.
+/// Go root files that define a package last and only at a cell root.
 ///
-/// A pinned module declares `toolchains//`, which `bsmr init` aliases to the root cell, so that
-/// package must exist without another root manifest. Nested and `testdata` modules stay inside
-/// their enclosing package.
-const GO_MODULE: &str = "go.mod";
+/// A pinned module or workspace declares `toolchains//`, which `bsmr init` aliases to the root
+/// cell, so that package must exist without another root manifest. Nested and `testdata` modules
+/// stay inside their enclosing package.
+const GO_ROOT_MANIFESTS: [&str; 2] = ["go.work", "go.mod"];
 
 /// Selects an explicit build file or, at a requested package root, a native manifest.
 pub(crate) fn find_build_source(
@@ -46,10 +46,14 @@ pub(crate) fn find_build_source(
     if !allow_native {
         return None;
     }
-    let go_module = cell_root.then_some(GO_MODULE);
+    let go_roots = if cell_root {
+        GO_ROOT_MANIFESTS.as_slice()
+    } else {
+        &[]
+    };
     NATIVE_MANIFESTS
         .into_iter()
-        .chain(go_module)
+        .chain(go_roots.iter().copied())
         .find_map(|name| {
             dir_listing
                 .iter()
@@ -152,16 +156,19 @@ mod tests {
     /// `Cargo.toml` selects `Cargo.toml`.
     #[test]
     fn invariant_go_module_defines_only_a_cell_root_package_last() {
+        for file in ["go.work", "go.mod"] {
+            assert_eq!(
+                find_build_source(&[], &listing(&[file]), true, true),
+                Some((FileNameBuf::unchecked_new(file), PackageBuildSource::Native))
+            );
+            assert_eq!(find_build_source(&[], &listing(&[file]), true, false), None);
+        }
         assert_eq!(
-            find_build_source(&[], &listing(&["go.mod"]), true, true),
+            find_build_source(&[], &listing(&["go.mod", "go.work"]), true, true),
             Some((
-                FileNameBuf::unchecked_new("go.mod"),
-                PackageBuildSource::Native
+                FileNameBuf::unchecked_new("go.work"),
+                PackageBuildSource::Native,
             ))
-        );
-        assert_eq!(
-            find_build_source(&[], &listing(&["go.mod"]), true, false),
-            None
         );
         assert_eq!(
             find_build_source(&[], &listing(&["go.mod", "Cargo.toml"]), true, true),

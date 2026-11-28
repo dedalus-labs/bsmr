@@ -20,15 +20,19 @@ bsmr go toolchain
 bsmr go toolchain --check
 ```
 
-The command acquires the release named by the `go.mod` toolchain pin. It records
-the official archive names, SHA-256 digests, and byte lengths for supported hosts
-outside every checkout, in `~/.bsmr/bootstrap/go/go<version>.json`, then builds
-the verified archive for the current host and checks its SDK version. A valid
-record is reused without network access and never replaced. The check command is
-offline: it requires a valid record for the pin and rejects the lock and SDK
-copies that earlier releases left in the source tree. Package evaluation reads
-the record for the root `go.mod` pin, and a missing or invalid record fails and
-names `bsmr go toolchain`.
+The command acquires the exact stable release pinned by `toolchain go1.X.Y` (or
+an exact `go 1.X.Y` line when no `toolchain` directive is present) in `go.mod`,
+or in `go.work` at a workspace root. A missing, partial or prerelease pin is an
+error. Change the pin to select another release; `--update` is rejected, and
+`--version`, if supplied, must match the pin. It records the official archive
+names, SHA-256 digests, and byte lengths for supported hosts outside every
+checkout, in `~/.bsmr/bootstrap/go/go<version>.json`, then builds the verified
+archive for the current host and checks its SDK version. A valid record is
+reused without network access and never replaced. The check command is offline:
+it requires a valid record for the pin and rejects the lock and SDK copies that
+earlier releases left in the source tree. Package evaluation reads the record
+for the root `go.work` or `go.mod` pin, and a missing or invalid record fails
+and names `bsmr go toolchain`.
 
 The record is intentionally small. Each field
 protects a different part of the toolchain contract:

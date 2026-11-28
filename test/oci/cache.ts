@@ -44,6 +44,7 @@ if (resumed === undefined) {
 if (resumed !== undefined) {
 	assert.match(readFileSync(join(cwd, "go.mod"), "utf8"), /^module example\.com\/oci-probe\n/);
 	assert.ok(existsSync(join(root, "cache")));
+	assert.ok(readFileSync(join(cwd, "go.mod"), "utf8").includes(`toolchain go${goVersion}`), "resume skips acquisition, so it must keep the fixture's Go SDK");
 	if (values["bundled-prelude"]) assert.equal(existsSync(join(cwd, ".bsmr.local")), false, "bundled qualification must not resume a source overlay");
 }
 const workspaces: string[] = [];

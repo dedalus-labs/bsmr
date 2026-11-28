@@ -182,8 +182,8 @@ try {
 	const record = join(homedir(), ".bsmr/bootstrap/go", `go${nextVersion}.json`);
 	const host = (JSON.parse(readFileSync(record, "utf8")) as { archives: { os: string; arch: string; filename: string; sha256: string }[] }).archives.find((entry) => entry.os === os && entry.arch === arch);
 	assert.ok(host);
-	// Without the pin, the root build file alone declares the toolchains the system phases select.
-	writeFileSync(module, readFileSync(module, "utf8").replace(`toolchain go${nextVersion}\n`, ""));
+	// Without an exact pin, the root build file alone declares the toolchains the system phases select.
+	writeFileSync(module, readFileSync(module, "utf8").replace(`go 1.26.0\ntoolchain go${nextVersion}\n`, "go 1.26\n"));
 	writeFileSync(join(second, "BUILD.bsmr"), 'load("@prelude//toolchains:demo.bzl", "system_demo_toolchains")\nsystem_demo_toolchains()\n');
 	env["PATH"] = `${join(sdkRoot, "bin")}${delimiter}${process.env["PATH"]}`;
 	await systemBootstrap(second, "system-go");
