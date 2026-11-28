@@ -18,6 +18,7 @@ use crate::commands::go_toolchain::LEGACY_DEFINITION_PREFIX;
 use crate::commands::go_toolchain::LEGACY_MANIFEST;
 use crate::commands::go_toolchain::acquired_go;
 use crate::commands::go_toolchain::configure;
+use crate::commands::go_toolchain::create_toolchains_package;
 use crate::commands::go_toolchain::reject_leftovers;
 use crate::commands::go_toolchain::remove_leftovers;
 use crate::commands::go_toolchain::select_release;
@@ -301,6 +302,78 @@ fn resolves_toolchains_to_the_root_in_an_init_project() {
         .expect("configured toolchains");
 
     assert_eq!(toolchains, path.as_path());
+}
+
+/// Initializes a project whose `.bsmr` declares a `toolchains` cell at `<root>/toolchains`.
+fn declared_toolchains_project(directory: &Path) -> ProjectRoot {
+    let path = AbsNormPathBuf::new(directory.canonicalize().expect("canonical root"))
+        .expect("absolute root");
+    set_up_project(AbsPath::new(&path).expect("absolute root"), false, true)
+        .expect("initialized project");
+    let config = path.as_path().join(".bsmr");
+    let declared = fs::read_to_string(&config)
+        .expect("project configuration")
+        .replace("  toolchains = root\n", "")
+        .replace("  none = none", "  none = none\n  toolchains = toolchains");
+    fs::write(&config, declared).expect("declared toolchains cell");
+    ProjectRoot::new(path).expect("project root")
+}
+
+/// Invariant: acquisition creates a declared `toolchains//` package whose directory is absent.
+///
+/// The SDK archive is a target of that package, so its directory must exist and define the
+/// package before `bsmr go toolchain` builds it; `bsmr` 0.0.8 created it the same way.
+///
+/// Witness:
+/// a project that declares `toolchains = toolchains` and has only the lock gains
+/// `toolchains/BUILD.bsmr` with the default toolchains other than Go, and a rerun keeps an
+/// edited manifest.
+#[test]
+fn creates_a_missing_declared_toolchains_package() {
+    let directory = tempfile::tempdir().expect("temporary repository");
+    let project_root = declared_toolchains_project(directory.path());
+    let root = project_root.root().as_path();
+    let lock = select_release(RELEASES, None).expect("release");
+    write_lock(root, &lock, false).expect("lock");
+    let toolchains = futures::executor::block_on(toolchains_directory(&project_root))
+        .expect("configured toolchains");
+    assert_eq!(toolchains, root.join("toolchains"));
+    assert!(!toolchains.exists());
+
+    remove_leftovers(root, &toolchains).expect("nothing to retire");
+    validate_acquisition_owners(&toolchains).expect("nothing acquired");
+    create_toolchains_package(&toolchains).expect("toolchains package");
+
+    let manifest = toolchains.join("BUILD.bsmr");
+    assert_eq!(
+        fs::read_to_string(&manifest).expect("manifest"),
+        "load(\"@prelude//toolchains:demo.bzl\", \"system_demo_toolchains\")\n\nsystem_demo_toolchains(include_go = False)\n"
+    );
+    fs::write(&manifest, "custom_toolchain()\n").expect("edited manifest");
+    create_toolchains_package(&toolchains).expect("existing package");
+    assert_eq!(
+        fs::read_to_string(&manifest).expect("manifest"),
+        "custom_toolchain()\n"
+    );
+}
+
+/// Invariant: a `toolchains//` directory that cannot be listed fails before the SDK build.
+///
+/// Witness:
+/// a regular file at `<root>/toolchains` yields one message naming the path and the I/O cause.
+#[test]
+fn names_an_unlistable_toolchains_directory() {
+    let root = tempfile::tempdir().expect("temporary repository");
+    let toolchains = root.path().join("toolchains");
+    fs::write(&toolchains, "").expect("regular file");
+    let cause = fs::read_dir(&toolchains).expect_err("a file is not a directory");
+
+    let error = create_toolchains_package(&toolchains).expect_err("must fail closed");
+
+    assert_eq!(
+        error.to_string(),
+        format!("failed to read `{}`: {cause}", toolchains.display())
+    );
 }
 
 /// Writes the files an earlier release generated under `<root>/toolchains/`.

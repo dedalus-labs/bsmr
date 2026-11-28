@@ -46,7 +46,6 @@ use notify::event::MetadataKind;
 use notify::event::ModifyKind;
 use notify::event::RemoveKind;
 use starlark_map::ordered_set::OrderedSet;
-use tracing::debug;
 use tracing::info;
 use uuid::Uuid;
 
@@ -71,8 +70,8 @@ struct NotifyFileData {
     ignored: u64,
     #[allocative(skip)]
     events: OrderedSet<(CellPath, EventKind)>,
-    /// Whether file system changes were missed
-    missed_events: bool,
+    /// Why file system changes were missed, if they were
+    missed_events: Option<String>,
 }
 
 impl NotifyFileData {
@@ -80,7 +79,7 @@ impl NotifyFileData {
         Self {
             ignored: 0,
             events: OrderedSet::new(),
-            missed_events: false,
+            missed_events: None,
         }
     }
 
@@ -93,10 +92,17 @@ impl NotifyFileData {
     ) -> bsmr_error::Result<()> {
         let event = event.map_err(|e| from_any_with_tag(e, bsmr_error::ErrorTag::NotifyWatcher))?;
 
-        // Overflow can have no paths or only ignored paths. Neither permits incremental reuse.
-        if event.need_rescan() {
-            self.missed_events = true;
-            debug!("FileWatcher: File change events were missed");
+        // A dropped-events notice can lose changes outside its path, and a pathless rescan can
+        // cover any path. Neither permits incremental reuse.
+        let dropped = matches!(
+            event.info(),
+            Some("rescan: user dropped" | "rescan: kernel dropped")
+        );
+        if event.need_rescan() && (dropped || event.paths.is_empty()) {
+            self.miss(format!(
+                "notify rescan ({})",
+                event.info().unwrap_or("no path")
+            ));
         }
 
         for path in &event.paths {
@@ -126,6 +132,10 @@ impl NotifyFileData {
                 path, &event.kind, ignore
             );
 
+            if event.need_rescan() && !ignore {
+                self.miss(format!("notify rescan of `{path}`"));
+            }
+
             if ignore || ignore_event_kind(event.kind) {
                 self.ignored += 1;
             } else {
@@ -135,13 +145,19 @@ impl NotifyFileData {
         Ok(())
     }
 
+    /// Records that events were missed, keeping the first reason.
+    fn miss(&mut self, reason: String) {
+        info!("FileWatcher: {reason}, clearing graph state");
+        self.missed_events.get_or_insert(reason);
+    }
+
     fn sync(self) -> (bsmr_data::FileWatcherStats, Option<FileChangeTracker>) {
         // The changes that go into the DICE transaction
         let mut changed = FileChangeTracker::new();
         // If we missed events, sync2() will drop the entire DICE graph. Surface that to
         // telemetry/UI by reusing the fresh-instance fields the watchman path uses for
         // the equivalent wipe.
-        let base = if self.missed_events {
+        let base = if let Some(reason) = &self.missed_events {
             bsmr_data::FileWatcherStats {
                 fresh_instance: true,
                 fresh_instance_data: Some(bsmr_data::FreshInstance {
@@ -149,9 +165,7 @@ impl NotifyFileData {
                     cleared_dice: true,
                     cleared_dep_files: false,
                 }),
-                incomplete_events_reason: Some(
-                    "notify dropped events (kernel queue overflow)".to_owned(),
-                ),
+                incomplete_events_reason: Some(reason.clone()),
                 ..Default::default()
             }
         } else {
@@ -266,7 +280,7 @@ impl NotifyFileData {
         }
 
         let stats = stats.finish();
-        let changed = if self.missed_events {
+        let changed = if self.missed_events.is_some() {
             None
         } else {
             Some(changed)
@@ -458,30 +472,75 @@ mod tests {
 
     use super::*;
 
-    /// Lost events invalidate the graph even without a source path to record.
-    #[test]
-    fn invariant_rescan_discards_partial_change_history() -> bsmr_error::Result<()> {
+    /// Processes one notify event and reports whether the sync clears graph state.
+    fn rescan_clears(info: Option<&str>, path: Option<&str>) -> bsmr_error::Result<bool> {
         let directory = tempfile::tempdir()?;
         let root = ProjectRoot::new(AbsNormPathBuf::new(directory.path().canonicalize()?)?)?;
         let cells = CellResolver::testing_with_name_and_path(
             CellName::testing_new("root"),
             CellRootPathBuf::testing_new(""),
         );
-        for path in [None, Some("bsmr-out/ignored"), Some("source.rs")] {
-            let mut data = NotifyFileData::new();
-            let mut event = notify::Event::new(EventKind::Other).set_flag(Flag::Rescan);
-            if let Some(path) = path {
-                event = event.add_path(root.root().as_path().join(path));
-            }
-            data.process(Ok(event), &root, &cells, &StdBsmrHashMap::default())?;
-            let (stats, changes) = data.sync();
-            assert!(
-                changes.is_none(),
-                "rescan with {path:?} reused partial history"
-            );
-            assert!(stats.fresh_instance);
-            assert!(stats.fresh_instance_data.unwrap().cleared_dice);
+        let ignore_specs = StdBsmrHashMap::from_iter([(
+            CellName::testing_new("root"),
+            IgnoreSet::from_ignore_spec("ignored", true)?,
+        )]);
+        let mut event = notify::Event::new(EventKind::Other).set_flag(Flag::Rescan);
+        if let Some(info) = info {
+            event = event.set_info(info);
         }
+        if let Some(path) = path {
+            event = event.add_path(root.root().as_path().join(path));
+        }
+        let mut data = NotifyFileData::new();
+        data.process(Ok(event), &root, &cells, &ignore_specs)?;
+        let (stats, changes) = data.sync();
+        let cleared = stats
+            .fresh_instance_data
+            .is_some_and(|fresh| fresh.cleared_dice);
+        assert_eq!(changes.is_none(), cleared);
+        assert_eq!(stats.fresh_instance, cleared);
+        Ok(cleared)
+    }
+
+    /// A rescan without a path may cover any source, so it clears graph state.
+    #[test]
+    fn invariant_pathless_rescan_clears() -> bsmr_error::Result<()> {
+        assert!(rescan_clears(None, None)?);
+        Ok(())
+    }
+
+    /// A dropped-events notice loses events outside its path, so it clears graph state.
+    #[test]
+    fn invariant_dropped_rescan_clears() -> bsmr_error::Result<()> {
+        assert!(rescan_clears(
+            Some("rescan: kernel dropped"),
+            Some("bsmr-out/v2/gen")
+        )?);
+        assert!(rescan_clears(
+            Some("rescan: user dropped"),
+            Some("ignored/cache")
+        )?);
+        Ok(())
+    }
+
+    /// A rescan scoped to build output names no source, so it keeps graph state.
+    #[test]
+    fn invariant_output_rescan_keeps_state() -> bsmr_error::Result<()> {
+        assert!(!rescan_clears(None, Some("bsmr-out/v2/gen"))?);
+        Ok(())
+    }
+
+    /// A rescan scoped to an ignored directory names no source, so it keeps graph state.
+    #[test]
+    fn invariant_ignored_rescan_keeps_state() -> bsmr_error::Result<()> {
+        assert!(!rescan_clears(None, Some("ignored/cache"))?);
+        Ok(())
+    }
+
+    /// A rescan of a source directory may hide source changes, so it clears graph state.
+    #[test]
+    fn invariant_source_rescan_clears() -> bsmr_error::Result<()> {
+        assert!(rescan_clears(None, Some("src"))?);
         Ok(())
     }
 }
