@@ -16,6 +16,8 @@ use bsmr_common::cas_digest::Digester;
 use bsmr_common::file_ops::metadata::FileDigest;
 use bsmr_common::file_ops::metadata::FileDigestKind;
 use bsmr_common::file_ops::metadata::FileMetadata;
+use bsmr_core::fs::project::ProjectRoot;
+use bsmr_core::fs::project_rel_path::ProjectRelativePath;
 use bsmr_execute::digest_config::DigestConfig;
 
 #[derive(Debug, bsmr_error::Error)]
@@ -75,13 +77,19 @@ impl<R: Read> Read for DigestingReader<R> {
 
 /// Transfer one file and reject changed, truncated or extended contents before success.
 pub(super) fn with_file<T>(
-    project: &Path,
+    project: &ProjectRoot,
     path: &Path,
     metadata: &FileMetadata,
     digest_config: DigestConfig,
     transfer: impl FnOnce(&mut DigestingReader<File>) -> std::io::Result<T>,
 ) -> bsmr_error::Result<T> {
-    let source = project.join(path);
+    let rel = path
+        .to_str()
+        .ok_or_else(|| InputError::FileType(path.to_owned()))
+        .and_then(|s| {
+            ProjectRelativePath::new(s).map_err(|_| InputError::FileType(path.to_owned()))
+        })?;
+    let source = project.resolve(rel).into_path_buf();
     let io_error = |error| InputError::Transfer {
         path: source.clone(),
         error,

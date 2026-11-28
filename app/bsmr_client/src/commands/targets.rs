@@ -38,7 +38,7 @@ use bsmr_client_ctx::exit_result::ExitResult;
 use bsmr_client_ctx::path_arg::PathArg;
 use bsmr_client_ctx::query_args::CommonAttributeArgs;
 use bsmr_client_ctx::streaming::StreamingCommand;
-use bsmr_fs::paths::abs_norm_path::AbsNormPath;
+use bsmr_core::fs::project::ProjectRoot;
 use dupe::Dupe;
 use gazebo::prelude::*;
 
@@ -375,7 +375,7 @@ impl StreamingCommand for TargetsCommand {
                 bsmrd,
                 events_ctx,
                 target_request,
-                self.show_output.is_full().then(|| project_root.root()),
+                self.show_output.is_full().then_some(project_root),
                 format,
             )
             .await
@@ -412,7 +412,7 @@ async fn targets_show_outputs(
     bsmrd: &mut BsmrdClientConnector,
     events_ctx: &mut EventsCtx,
     target_request: TargetsRequest,
-    root_path: Option<&AbsNormPath>,
+    root_path: Option<ProjectRoot>,
     format: PrintOutputsFormat,
 ) -> ExitResult {
     let response = bsmrd
@@ -426,7 +426,6 @@ async fn targets_show_outputs(
         .await??;
 
     bsmr_client_ctx::stdio::print_with_writer::<ClientIoError, _>(async move |w| {
-        let root_path = root_path.map(|root| root.to_path_buf());
         let mut print = PrintOutputs::new(w, root_path, format)?;
         for target_paths in response.targets_paths {
             for path in target_paths.paths {

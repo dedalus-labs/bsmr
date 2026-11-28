@@ -59,6 +59,8 @@ enum ProjectRootError {
 #[display("{root}")]
 pub struct ProjectRoot {
     root: Arc<AbsNormPathBuf>,
+    /// External directory backing `bsmr-out` when outputs live outside the project tree.
+    output_root: Option<Arc<AbsNormPathBuf>>,
 }
 
 pub struct ProjectRootTemp {
@@ -99,13 +101,26 @@ impl ProjectRoot {
             // We store the canonicalized path here because even if path
             // is equal to the canonicalized path, it may differ in the slashes or the case.
             root: Arc::new(canon),
+            output_root: None,
         })
     }
 
     pub fn new_unchecked(root: AbsNormPathBuf) -> ProjectRoot {
         ProjectRoot {
             root: Arc::new(root),
+            output_root: None,
         }
+    }
+
+    /// Associates an external directory with the logical `bsmr-out` prefix.
+    pub fn with_output_root(mut self, output_root: AbsNormPathBuf) -> Self {
+        self.output_root = Some(Arc::new(output_root));
+        self
+    }
+
+    /// Returns the external output root when `bsmr-out` lives outside the project tree.
+    pub fn output_root(&self) -> Option<&AbsNormPath> {
+        self.output_root.as_deref().map(|p| &**p)
     }
 
     pub fn root(&self) -> &AbsNormPath {
@@ -146,7 +161,13 @@ impl ProjectRoot {
     /// # bsmr_error::Ok(())
     /// ```
     pub fn resolve(&self, path: impl AsRef<ProjectRelativePath>) -> AbsNormPathBuf {
-        self.root().join(path.as_ref())
+        let path = path.as_ref();
+        if let Some(output_root) = &self.output_root
+            && let Some(rel) = strip_output_root_prefix(path)
+        {
+            return output_root.join(rel);
+        }
+        self.root().join(path)
     }
 
     ///
@@ -226,18 +247,25 @@ impl ProjectRoot {
         &self,
         p: &'a P,
     ) -> bsmr_error::Result<Cow<'a, ProjectRelativePath>> {
-        let relative_path = p.as_ref().strip_prefix(self.root()).map_err(|_| {
-            bsmr_error::bsmr_error!(
-                bsmr_error::ErrorTag::Tier0,
-                "Error relativizing: `{}` is not relative to project root `{}`",
-                p.as_ref(),
-                self.root()
-            )
-        })?;
-        match relative_path {
-            Cow::Borrowed(p) => Ok(Cow::Borrowed(ProjectRelativePath::ref_cast(p))),
-            Cow::Owned(p) => Ok(Cow::Owned(ProjectRelativePathBuf::from(p))),
+        if let Ok(relative_path) = p.as_ref().strip_prefix(self.root()) {
+            return match relative_path {
+                Cow::Borrowed(p) => Ok(Cow::Borrowed(ProjectRelativePath::ref_cast(p))),
+                Cow::Owned(p) => Ok(Cow::Owned(ProjectRelativePathBuf::from(p))),
+            };
         }
+        if let Some(output_root) = &self.output_root
+            && let Ok(relative_path) = p.as_ref().strip_prefix(&**output_root)
+        {
+            return Ok(Cow::Owned(
+                ProjectRelativePath::unchecked_new(BSMR_OUTPUT_ROOT).join(relative_path.as_ref()),
+            ));
+        }
+        Err(bsmr_error::bsmr_error!(
+            bsmr_error::ErrorTag::Tier0,
+            "Error relativizing: `{}` is not relative to project root `{}`",
+            p.as_ref(),
+            self.root()
+        ))
     }
 
     /// Remove project root prefix from path (even if path is not canonical)
@@ -250,6 +278,11 @@ impl ProjectRoot {
         if let Ok(rem) = Path::strip_prefix(path, &*self.root) {
             // Fast code path.
             return Ok(rem.to_path_buf());
+        }
+        if let Some(output_root) = &self.output_root
+            && let Ok(rem) = Path::strip_prefix(path, output_root.as_path())
+        {
+            return Ok(Path::new(BSMR_OUTPUT_ROOT).join(rem));
         }
 
         // Now try to canonicalize the path. We cannot call `canonicalize` on the full path
@@ -282,6 +315,15 @@ impl ProjectRoot {
             {
                 // We found the project root.
                 return Ok(rem.join(components.as_path()));
+            }
+            if let Some(output_root) = &self.output_root
+                && let Ok(rem) = canonicalized_current_prefix
+                    .as_path()
+                    .strip_prefix(output_root.as_path())
+            {
+                return Ok(Path::new(BSMR_OUTPUT_ROOT)
+                    .join(rem)
+                    .join(components.as_path()));
             }
         }
 
@@ -320,7 +362,7 @@ impl ProjectRoot {
         contents: impl AsRef<[u8]>,
         executable: bool,
     ) -> bsmr_error::Result<()> {
-        let abs_path = self.root().join(path.as_ref());
+        let abs_path = self.resolve(path);
         if let Some(parent) = abs_path.parent() {
             fs_util::create_dir_all(parent).with_bsmr_error_context(|| {
                 format!("`write_file` for `{abs_path}` creating directory `{parent}`")
@@ -338,7 +380,7 @@ impl ProjectRoot {
         path: impl AsRef<ProjectRelativePath>,
         executable: bool,
     ) -> bsmr_error::Result<File> {
-        let abs_path = self.root().join(path.as_ref());
+        let abs_path = self.resolve(path);
         if let Some(parent) = abs_path.parent() {
             fs_util::create_dir_all(parent).with_bsmr_error_context(|| {
                 format!("`create_file` for `{abs_path}` creating directory `{parent}`")
@@ -361,7 +403,7 @@ impl ProjectRoot {
 
     // TODO(nga): refactor this to global function.
     pub fn set_executable(&self, path: impl AsRef<ProjectRelativePath>) -> bsmr_error::Result<()> {
-        let path = self.root().join(path.as_ref());
+        let path = self.resolve(path);
         fs_util::set_executable(path, true).categorize_internal()
     }
 
@@ -470,13 +512,40 @@ impl ProjectRoot {
         }
     }
 
-    /// Find the relative path between two paths within the project
+    /// Find the logical relative path between two paths within the project tree.
+    ///
+    /// This deliberately ignores external `output_root` indirection so logical action directories,
+    /// digests, and sandboxed workspaces keep checkout-independent relative symlinks.
     pub fn relative_path(
         &self,
         target: impl AsRef<ProjectRelativePath>,
         dest: impl AsRef<ProjectRelativePath>,
     ) -> PathBuf {
-        Self::find_relative_path(&self.resolve(target), &self.resolve(dest))
+        Self::find_relative_path(
+            &self.root().join(target.as_ref()),
+            &self.root().join(dest.as_ref()),
+        )
+    }
+
+    /// Translates a logical project-relative symlink target for on-disk materialization at `dest`.
+    ///
+    /// When `bsmr-out` lives outside the project tree, a symlink inside `bsmr-out` pointing at
+    /// another `bsmr-out` path keeps the same relative spelling, while one targeting a source file
+    /// under the project root is rebased to the physical source path.
+    pub fn resolve_symlink_target(
+        &self,
+        dest: &ProjectRelativePath,
+        target: &RelativePath,
+    ) -> PathBuf {
+        if self.output_root.is_some()
+            && strip_output_root_prefix(dest).is_some()
+            && let Some(parent) = dest.parent()
+            && let Ok(logical_target) = parent.join_normalized(target)
+            && strip_output_root_prefix(&logical_target).is_none()
+        {
+            return Self::find_relative_path(&self.resolve(&logical_target), &self.resolve(dest));
+        }
+        PathBuf::from(target.as_str())
     }
 
     /// Find the relative path between two absolute ones
@@ -563,8 +632,21 @@ use allocative::Allocative;
 use bsmr_fs::paths::abs_path::AbsPath;
 use bsmr_fs::paths::abs_path::AbsPathBuf;
 
+use crate::fs::output_path::BSMR_OUTPUT_ROOT;
 use crate::fs::project_rel_path::ProjectRelativePath;
 use crate::fs::project_rel_path::ProjectRelativePathBuf;
+
+/// Strips the leading `bsmr-out` component when `path` targets the output tree.
+fn strip_output_root_prefix(path: &ProjectRelativePath) -> Option<&ForwardRelativePath> {
+    let raw = path.as_str();
+    if raw == BSMR_OUTPUT_ROOT {
+        Some(ForwardRelativePath::empty())
+    } else {
+        raw.strip_prefix(BSMR_OUTPUT_ROOT)
+            .and_then(|rest| rest.strip_prefix('/'))
+            .map(ForwardRelativePath::unchecked_new)
+    }
+}
 
 #[cfg(test)]
 mod tests {
@@ -981,5 +1063,53 @@ mod tests {
                 )
                 .unwrap()
         );
+    }
+
+    #[test]
+    fn external_output_root_routes_bsmr_out_and_rebases_source_symlinks() -> bsmr_error::Result<()>
+    {
+        use bsmr_fs::paths::abs_norm_path::AbsNormPathBuf;
+        use bsmr_fs::paths::relative_path::RelativePath;
+
+        let (root_str, out_str, expected_src, expected_out) = if cfg!(windows) {
+            (
+                "C:\\work\\project",
+                "C:\\state\\checkouts\\abc",
+                "C:\\work\\project\\src\\lib.rs",
+                "C:\\state\\checkouts\\abc\\default\\art\\out.o",
+            )
+        } else {
+            (
+                "/work/project",
+                "/state/checkouts/abc",
+                "/work/project/src/lib.rs",
+                "/state/checkouts/abc/default/art/out.o",
+            )
+        };
+        let fs = ProjectRoot::new_unchecked(AbsNormPathBuf::try_from(root_str.to_owned())?)
+            .with_output_root(AbsNormPathBuf::try_from(out_str.to_owned())?);
+
+        let src = ProjectRelativePath::new("src/lib.rs")?;
+        let out = ProjectRelativePath::new("bsmr-out/default/art/out.o")?;
+        let out2 = ProjectRelativePath::new("bsmr-out/default/art/dir/link.o")?;
+
+        let resolved_src = fs.resolve(src);
+        let resolved_out = fs.resolve(out);
+        assert_eq!(resolved_src.as_os_str(), expected_src);
+        assert_eq!(resolved_out.as_os_str(), expected_out);
+        assert_eq!(fs.relativize(&resolved_src)?.as_ref(), src);
+        assert_eq!(fs.relativize(&resolved_out)?.as_ref(), out);
+
+        let logical_link = fs.relative_path(src, out2);
+        assert_eq!(logical_link, PathBuf::from("../../../../src/lib.rs"));
+
+        let rebased = fs.resolve_symlink_target(out2, RelativePath::new("../../../../src/lib.rs")?);
+        assert_eq!(
+            rebased,
+            ProjectRoot::find_relative_path(&fs.resolve(src), &fs.resolve(out2))
+        );
+        let same_tree = fs.resolve_symlink_target(out2, RelativePath::new("../out.o")?);
+        assert_eq!(same_tree, PathBuf::from("../out.o"));
+        Ok(())
     }
 }

@@ -40,7 +40,11 @@ use crate::provider::label::ConfiguredProvidersLabel;
 use crate::provider::label::NonDefaultProvidersName;
 use crate::provider::label::ProvidersName;
 
-/// Root directory for all Bessemer outputs and daemon state.
+/// Logical project-relative root prefix for Bessemer outputs and daemon state.
+///
+/// When [`crate::fs::project::ProjectRoot::output_root`] is configured, paths under this prefix
+/// resolve to the checkout's directory inside the user state root rather than inside the project
+/// tree.
 pub const BSMR_OUTPUT_ROOT: &str = "bsmr-out";
 
 #[derive(

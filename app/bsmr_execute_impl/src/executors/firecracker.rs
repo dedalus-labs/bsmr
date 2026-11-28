@@ -23,6 +23,8 @@ use std::time::Duration;
 
 use bsmr_common::file_ops::metadata::FileDigest;
 use bsmr_common::liveliness_observer::LivelinessObserver;
+use bsmr_core::fs::project::ProjectRoot;
+use bsmr_core::fs::project_rel_path::ProjectRelativePath;
 use bsmr_directory::directory::directory::Directory;
 use bsmr_directory::directory::directory_iterator::DirectoryIterator;
 use bsmr_directory::directory::entry::DirectoryEntry;
@@ -339,7 +341,7 @@ impl FirecrackerExecutor {
         &self,
         prepared: &PreparedAction,
         request: &CommandExecutionRequest,
-        project_root: &Path,
+        project_root: &ProjectRoot,
         staging_root: &Path,
         digest_config: DigestConfig,
         liveliness: &dyn LivelinessObserver,
@@ -629,7 +631,7 @@ fn write_guest_action(action: &GuestAction) -> bsmr_error::Result<File> {
 /// Moves completely validated output roots from private staging into the project.
 pub(crate) fn import_outputs(
     staging: &Path,
-    project_root: &Path,
+    project_root: &ProjectRoot,
     outputs: &[GuestOutput],
 ) -> bsmr_error::Result<()> {
     let mut ready = Vec::new();
@@ -642,7 +644,15 @@ pub(crate) fn import_outputs(
                 return Err(FirecrackerSandboxError::ImportOutput(source, error).into());
             }
         }
-        let destination = project_root.join(&output.path);
+        let rel = output
+            .path
+            .to_str()
+            .ok_or_else(|| FirecrackerSandboxError::GuestPath(output.path.clone()))
+            .and_then(|s| {
+                ProjectRelativePath::new(s)
+                    .map_err(|_| FirecrackerSandboxError::GuestPath(output.path.clone()))
+            })?;
+        let destination = project_root.resolve(rel).into_path_buf();
         match fs::symlink_metadata(&destination) {
             Ok(_) => {
                 return Err(FirecrackerSandboxError::OutputDestinationExists(destination).into());
@@ -970,7 +980,7 @@ pub(super) fn relative_symlink_stays_within(path: &Path, target: &Path, root: &P
 /// Encodes exactly the analyzed action input tree into a deterministic guest archive.
 pub fn write_input_archive<W: Write>(
     writer: W,
-    project_root: &Path,
+    project_root: &ProjectRoot,
     input_directory: &ActionImmutableDirectory,
     digest_config: DigestConfig,
 ) -> bsmr_error::Result<()> {
@@ -1023,7 +1033,7 @@ impl<W: Write> Write for BoundedWriter<W> {
 /// Builds an input archive under explicit limits used by production and tests.
 fn write_input_archive_with_limits<W: Write>(
     writer: W,
-    project_root: &Path,
+    project_root: &ProjectRoot,
     input_directory: &ActionImmutableDirectory,
     digest_config: DigestConfig,
     max_bytes: u64,
@@ -1080,7 +1090,7 @@ fn append_input_directory<W: Write>(
 /// Streams and re-hashes one declared file into the deterministic archive.
 fn append_input_file<W: Write>(
     archive: &mut tar::Builder<W>,
-    project_root: &Path,
+    project_root: &ProjectRoot,
     path: &Path,
     metadata: &bsmr_common::file_ops::metadata::FileMetadata,
     digest_config: DigestConfig,
@@ -1877,6 +1887,9 @@ mod tests {
     #[test]
     fn output_import_fails_closed_on_existing_destination() {
         let project = tempfile::tempdir().unwrap();
+        let project_root = ProjectRoot::new_unchecked(
+            bsmr_fs::paths::abs_norm_path::AbsNormPathBuf::new(project.path().to_owned()).unwrap(),
+        );
         let staging = tempfile::tempdir().unwrap();
         fs::create_dir_all(project.path().join("bsmr-out")).unwrap();
         fs::create_dir_all(staging.path().join("bsmr-out")).unwrap();
@@ -1886,7 +1899,7 @@ mod tests {
         assert!(
             import_outputs(
                 staging.path(),
-                project.path(),
+                &project_root,
                 &[GuestOutput::file("bsmr-out/app.js")],
             )
             .is_err()
@@ -1901,6 +1914,9 @@ mod tests {
     #[test]
     fn output_import_preflight_prevents_partial_materialization() {
         let project = tempfile::tempdir().unwrap();
+        let project_root = ProjectRoot::new_unchecked(
+            bsmr_fs::paths::abs_norm_path::AbsNormPathBuf::new(project.path().to_owned()).unwrap(),
+        );
         let staging = tempfile::tempdir().unwrap();
         fs::create_dir_all(project.path().join("bsmr-out")).unwrap();
         fs::create_dir_all(staging.path().join("bsmr-out")).unwrap();
@@ -1911,7 +1927,7 @@ mod tests {
         assert!(
             import_outputs(
                 staging.path(),
-                project.path(),
+                &project_root,
                 &[
                     GuestOutput::file("bsmr-out/a.js"),
                     GuestOutput::file("bsmr-out/b.js"),
@@ -1988,15 +2004,18 @@ mod tests {
         .unwrap();
         let directory = builder.fingerprint(digest_config.as_directory_serializer());
 
+        let temp_root = ProjectRoot::new_unchecked(
+            bsmr_fs::paths::abs_norm_path::AbsNormPathBuf::new(temp.path().to_owned()).unwrap(),
+        );
         let mut first = Vec::new();
-        write_input_archive(&mut first, temp.path(), &directory, digest_config).unwrap();
+        write_input_archive(&mut first, &temp_root, &directory, digest_config).unwrap();
         let mut second = Vec::new();
-        write_input_archive(&mut second, temp.path(), &directory, digest_config).unwrap();
+        write_input_archive(&mut second, &temp_root, &directory, digest_config).unwrap();
         assert_eq!(first, second);
         assert!(
             write_input_archive_with_limits(
                 Vec::new(),
-                temp.path(),
+                &temp_root,
                 &directory,
                 digest_config,
                 511,
@@ -2008,7 +2027,7 @@ mod tests {
         assert!(
             write_input_archive_with_limits(
                 Vec::new(),
-                temp.path(),
+                &temp_root,
                 &directory,
                 digest_config,
                 MAX_INPUT_BYTES,
@@ -2020,7 +2039,7 @@ mod tests {
         assert!(
             write_input_archive_with_limits(
                 Vec::new(),
-                temp.path(),
+                &temp_root,
                 &directory,
                 digest_config,
                 MAX_INPUT_BYTES,
@@ -2031,7 +2050,7 @@ mod tests {
         );
 
         fs::write(temp.path().join("src/main.ts"), b"mutated\n").unwrap();
-        assert!(write_input_archive(Vec::new(), temp.path(), &directory, digest_config).is_err());
+        assert!(write_input_archive(Vec::new(), &temp_root, &directory, digest_config).is_err());
     }
 
     /// Hashing includes bytes read past the declared size so growth is never truncated silently.

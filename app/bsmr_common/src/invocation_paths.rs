@@ -114,11 +114,6 @@ impl InvocationPaths {
             .join(ForwardRelativePath::unchecked_new("build_count"))
     }
 
-    pub fn dice_dump_dir(&self) -> AbsNormPathBuf {
-        self.output_path()
-            .join(ForwardRelativePath::unchecked_new("dice_dump"))
-    }
-
     pub fn output_dir_prefix() -> &'static ProjectRelativePath {
         ProjectRelativePath::unchecked_new(BSMR_OUTPUT_ROOT)
     }
@@ -128,7 +123,7 @@ impl InvocationPaths {
     }
 
     pub fn output_path(&self) -> AbsNormPathBuf {
-        self.roots.project_root.root().join(self.output_dir())
+        self.roots.project_root.resolve(self.output_dir())
     }
 
     /// Directory containing on-disk cache
@@ -144,7 +139,7 @@ impl InvocationPaths {
     }
 
     pub fn cache_dir_path(&self) -> AbsNormPathBuf {
-        self.roots.project_root.root().join(self.cache_dir())
+        self.roots.project_root.resolve(self.cache_dir())
     }
 
     /// Subdirectory of `cache_dir` responsible for storing materializer state
@@ -190,13 +185,12 @@ impl InvocationPaths {
 
     /// Trash directory for background clean operations.
     /// Files moved here can be deleted asynchronously without blocking the main clean operation.
-    /// This points to bsmr-out/tmp/stale-bsmr-out which is used as the trash directory.
+    /// This points to `tmp/stale-bsmr-out` under the checkout's output root.
     pub fn trash_dir(&self) -> AbsNormPathBuf {
-        self.roots
-            .project_root
-            .root()
-            .join(Self::output_dir_prefix())
-            .join(ForwardRelativePath::unchecked_new("tmp/stale-bsmr-out"))
+        self.roots.project_root.resolve(
+            Self::output_dir_prefix()
+                .join(ForwardRelativePath::unchecked_new("tmp/stale-bsmr-out")),
+        )
     }
 }
 
@@ -274,12 +268,6 @@ mod tests {
             "/my/project/bsmr-out/isolation/log"
         };
         assert_eq!(paths.log_dir().as_os_str(), OsStr::new(expected_path));
-        let expected_path = if cfg!(windows) {
-            "C:\\my\\project\\bsmr-out\\isolation\\dice_dump"
-        } else {
-            "/my/project/bsmr-out/isolation/dice_dump"
-        };
-        assert_eq!(paths.dice_dump_dir().as_os_str(), OsStr::new(expected_path));
 
         assert_eq!(
             paths.cache_dir(),
@@ -305,5 +293,57 @@ mod tests {
             paths.health_check_state_dir().as_os_str(),
             OsStr::new(expected_path),
         );
+    }
+
+    #[test]
+    fn test_paths_with_external_output_root() {
+        let (
+            project_root,
+            external_out,
+            expected_out,
+            expected_log,
+            expected_cache,
+            expected_trash,
+        ) = if cfg!(windows) {
+            (
+                "C:\\my\\project",
+                "C:\\state\\checkouts\\abc",
+                "C:\\state\\checkouts\\abc\\isolation",
+                "C:\\state\\checkouts\\abc\\isolation\\log",
+                "C:\\state\\checkouts\\abc\\isolation\\cache",
+                "C:\\state\\checkouts\\abc\\tmp\\stale-bsmr-out",
+            )
+        } else {
+            (
+                "/my/project",
+                "/state/checkouts/abc",
+                "/state/checkouts/abc/isolation",
+                "/state/checkouts/abc/isolation/log",
+                "/state/checkouts/abc/isolation/cache",
+                "/state/checkouts/abc/tmp/stale-bsmr-out",
+            )
+        };
+        let paths = InvocationPaths {
+            roots: InvocationRoots {
+                project_root: ProjectRoot::new_unchecked(
+                    AbsNormPathBuf::try_from(project_root.to_owned()).unwrap(),
+                )
+                .with_output_root(AbsNormPathBuf::try_from(external_out.to_owned()).unwrap()),
+                cwd: ProjectRelativePath::empty().to_buf(),
+            },
+            isolation: FileNameBuf::unchecked_new("isolation"),
+        };
+
+        assert_eq!(
+            paths.output_dir(),
+            ProjectRelativePathBuf::unchecked_new("bsmr-out/isolation".to_owned())
+        );
+        assert_eq!(paths.output_path().as_os_str(), OsStr::new(expected_out));
+        assert_eq!(paths.log_dir().as_os_str(), OsStr::new(expected_log));
+        assert_eq!(
+            paths.cache_dir_path().as_os_str(),
+            OsStr::new(expected_cache)
+        );
+        assert_eq!(paths.trash_dir().as_os_str(), OsStr::new(expected_trash));
     }
 }

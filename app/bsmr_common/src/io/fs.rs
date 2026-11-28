@@ -91,11 +91,12 @@ impl FsIoProvider {
         options: ReadUncheckedOptions,
     ) -> bsmr_error::Result<RawPathMetadata<ProjectRelativePathBuf>> {
         let fs = self.fs.dupe();
+        let abspath = fs.resolve(&path).into_abs_path_buf();
         let path = path.into_forward_relative_path_buf();
         let file_digest_config = FileDigestConfig::source(self.cas_digest_config);
         tokio::task::spawn_blocking(move || {
             Ok(
-                read_unchecked(fs.root(), path, file_digest_config, options)?
+                read_unchecked_abspath(abspath, path, file_digest_config, options)?
                     .map(ProjectRelativePathBuf::from),
             )
         })
@@ -184,9 +185,33 @@ impl IoProvider for FsIoProvider {
         let path = path.into_forward_relative_path_buf();
         let file_digest_config = FileDigestConfig::source(self.cas_digest_config);
         tokio::task::spawn_blocking(move || {
-            let meta = read_path_metadata(fs.root(), &path, file_digest_config)?.map(
-                |raw_meta_or_redirection| raw_meta_or_redirection.map(ProjectRelativePathBuf::from),
-            );
+            let output_prefix =
+                ForwardRelativePath::unchecked_new(bsmr_core::fs::output_path::BSMR_OUTPUT_ROOT);
+            let meta = if let Some(output_root) = fs.output_root()
+                && let Ok(rel) = path.strip_prefix(output_prefix)
+            {
+                if rel.is_empty() {
+                    fs_util::symlink_metadata_if_exists(output_root)?
+                        .map(|m| {
+                            let curr = PathAndAbsPath {
+                                path: output_prefix.to_owned(),
+                                abspath: output_root.as_abs_path().to_owned(),
+                            };
+                            convert_metadata(&curr, m, file_digest_config)
+                        })
+                        .transpose()?
+                        .map(|raw| raw.map(ProjectRelativePathBuf::from))
+                } else {
+                    read_path_metadata(output_root, rel, file_digest_config)?
+                        .map(|raw| raw.map(|p| ProjectRelativePathBuf::from(output_prefix.join(p))))
+                }
+            } else {
+                read_path_metadata(fs.root(), &path, file_digest_config)?.map(
+                    |raw_meta_or_redirection| {
+                        raw_meta_or_redirection.map(ProjectRelativePathBuf::from)
+                    },
+                )
+            };
 
             Ok(meta)
         })
@@ -395,14 +420,12 @@ pub enum ReadUncheckedOptions {
     Anything,
 }
 
-fn read_unchecked<P: AsRef<AbsPath>>(
-    root: P,
+fn read_unchecked_abspath(
+    abspath: AbsPathBuf,
     relpath: ForwardRelativePathBuf,
     file_digest_config: FileDigestConfig,
     options: ReadUncheckedOptions,
 ) -> bsmr_error::Result<RawPathMetadata<ForwardRelativePathBuf>> {
-    let abspath = root.as_ref().join(relpath.as_path());
-
     let curr = PathAndAbsPath {
         path: relpath,
         abspath,
@@ -418,6 +441,17 @@ fn read_unchecked<P: AsRef<AbsPath>>(
             link.into_raw_path_metadata(curr, ForwardRelativePathBuf::default())
         }
     }
+}
+
+#[cfg(test)]
+fn read_unchecked<P: AsRef<AbsPath>>(
+    root: P,
+    relpath: ForwardRelativePathBuf,
+    file_digest_config: FileDigestConfig,
+    options: ReadUncheckedOptions,
+) -> bsmr_error::Result<RawPathMetadata<ForwardRelativePathBuf>> {
+    let abspath = root.as_ref().join(relpath.as_path());
+    read_unchecked_abspath(abspath, relpath, file_digest_config, options)
 }
 
 #[cfg(unix)]

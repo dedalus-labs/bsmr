@@ -14,6 +14,7 @@ use std::time::UNIX_EPOCH;
 use bsmr_common::file_ops::metadata::FileMetadata;
 use bsmr_common::file_ops::metadata::Symlink;
 use bsmr_common::file_ops::metadata::TrackedFileDigest;
+use bsmr_core::fs::project::ProjectRoot;
 use bsmr_core::fs::project_rel_path::ProjectRelativePath;
 use bsmr_directory::directory::entry::DirectoryEntry;
 use bsmr_execute::digest_config::DigestConfig;
@@ -22,8 +23,14 @@ use bsmr_execute::directory::ActionDirectoryMember;
 use bsmr_execute::directory::ActionImmutableDirectory;
 use bsmr_execute::directory::insert_entry;
 use bsmr_execute::directory::insert_file;
+use bsmr_fs::paths::abs_norm_path::AbsNormPathBuf;
 
 use super::Cache;
+
+/// Wraps a temporary test directory as an unchecked project root.
+fn project_root(path: &Path) -> ProjectRoot {
+    ProjectRoot::new_unchecked(AbsNormPathBuf::new(path.to_owned()).unwrap())
+}
 
 /// Independent commands must independently verify their source bytes.
 fn stage(
@@ -32,7 +39,7 @@ fn stage(
     tree: &ActionImmutableDirectory,
     config: DigestConfig,
 ) -> bsmr_error::Result<()> {
-    Cache::new(root.parent().unwrap())?.stage(project, root, tree, config)
+    Cache::new(root.parent().unwrap())?.stage(&project_root(project), root, tree, config)
 }
 
 /// Declare a real executable input and one alias without inspecting host symlink targets.
@@ -147,9 +154,10 @@ fn invariant_shared_snapshots_preserve_analyzed_bytes() {
     let cache = Cache::new(temporary.path()).unwrap();
     let a = temporary.path().join("a");
     let b = temporary.path().join("b");
-    cache.stage(&project, &a, &tree, config).unwrap();
+    let root = project_root(&project);
+    cache.stage(&root, &a, &tree, config).unwrap();
     fs::remove_file(project.join("src/tool")).unwrap();
-    cache.stage(&project, &b, &tree, config).unwrap();
+    cache.stage(&root, &b, &tree, config).unwrap();
     assert_eq!(
         fs::metadata(a.join("src/tool")).unwrap().ino(),
         fs::metadata(b.join("src/tool")).unwrap().ino()
@@ -168,14 +176,15 @@ fn invariant_failed_verification_cannot_seed_a_shared_snapshot() {
     let config = DigestConfig::testing_default();
     let tree = directory(config, "src/tool");
     let cache = Cache::new(temporary.path()).unwrap();
+    let root = project_root(&project);
     assert!(
         cache
-            .stage(&project, &temporary.path().join("bad"), &tree, config)
+            .stage(&root, &temporary.path().join("bad"), &tree, config)
             .is_err()
     );
     fs::write(project.join("src/tool"), b"original").unwrap();
     let good = temporary.path().join("good");
-    cache.stage(&project, &good, &tree, config).unwrap();
+    cache.stage(&root, &good, &tree, config).unwrap();
     assert_eq!(fs::read(good.join("src/tool")).unwrap(), b"original");
 }
 
@@ -185,6 +194,7 @@ fn invariant_executable_modes_do_not_alias_shared_bytes() {
     fs::write(temporary.path().join("input"), b"original").unwrap();
     let config = DigestConfig::testing_default();
     let cache = Cache::new(temporary.path()).unwrap();
+    let root = project_root(temporary.path());
     for is_executable in [false, true] {
         let mut builder = ActionDirectoryBuilder::empty();
         insert_file(
@@ -198,7 +208,7 @@ fn invariant_executable_modes_do_not_alias_shared_bytes() {
         .unwrap();
         cache
             .stage(
-                temporary.path(),
+                &root,
                 &temporary.path().join(is_executable.to_string()),
                 &builder.fingerprint(config.as_directory_serializer()),
                 config,

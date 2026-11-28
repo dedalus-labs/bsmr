@@ -15,7 +15,6 @@
  */
 
 use std::io::Write;
-use std::path::PathBuf;
 
 use async_trait::async_trait;
 use bsmr_cli_proto::BuildRequest;
@@ -45,6 +44,7 @@ use bsmr_client_ctx::final_console::FinalConsole;
 use bsmr_client_ctx::output_destination_arg::OutputDestinationArg;
 use bsmr_client_ctx::streaming::StreamingCommand;
 use bsmr_core::bsmr_env;
+use bsmr_core::fs::project::ProjectRoot;
 use bsmr_error::BsmrErrorContext;
 use bsmr_error::bsmr_error;
 use bsmr_wrapper_common::invocation_id::TraceId;
@@ -333,12 +333,12 @@ impl StreamingCommand for BuildCommand {
         }
 
         if let Some(format) = self.show_output.format() {
-            print_outputs(
-                &mut stdout,
-                &response.build_targets,
-                self.show_output.is_full().then_some(response.project_root),
-                format,
-            )?;
+            let root_path = if self.show_output.is_full() {
+                Some(ctx.paths()?.project_root().clone())
+            } else {
+                None
+            };
+            print_outputs(&mut stdout, &response.build_targets, root_path, format)?;
         }
 
         let res = if success {
@@ -498,10 +498,9 @@ fn print_build_rating(
 pub(crate) fn print_outputs(
     out: impl Write,
     targets: &[BuildTarget],
-    root_path: Option<String>,
+    root_path: Option<ProjectRoot>,
     format: PrintOutputsFormat,
 ) -> Result<(), ClientIoError> {
-    let root_path = root_path.map(PathBuf::from);
     let mut print = PrintOutputs::new(out, root_path, format)?;
 
     for build_target in targets {

@@ -15,14 +15,15 @@
  */
 
 use std::io::Write;
-use std::path::PathBuf;
 
 use bsmr_client_ctx::common::PrintOutputsFormat;
 use bsmr_client_ctx::exit_result::ClientIoError;
+use bsmr_core::fs::project::ProjectRoot;
+use bsmr_core::fs::project_rel_path::ProjectRelativePath;
 
 pub struct PrintOutputs<W> {
     out: W,
-    root_path: Option<PathBuf>,
+    root_path: Option<ProjectRoot>,
     format: PrintOutputsFormat,
     empty: bool,
 }
@@ -30,7 +31,7 @@ pub struct PrintOutputs<W> {
 impl<W: Write> PrintOutputs<W> {
     pub fn new(
         mut out: W,
-        root_path: Option<PathBuf>,
+        root_path: Option<ProjectRoot>,
         format: PrintOutputsFormat,
     ) -> Result<Self, ClientIoError> {
         if format == PrintOutputsFormat::Json {
@@ -49,15 +50,16 @@ impl<W: Write> PrintOutputs<W> {
         let absolute_path;
         let absolute_path_lossy;
         let path = if let Some(mut path) = path {
-            if cfg!(windows) {
-                windows_path = path.replace('/', "\\");
-                path = &windows_path;
-            }
             if let Some(root_path) = &self.root_path {
-                absolute_path = root_path.join(path);
+                let rel = ProjectRelativePath::new(path)?;
+                absolute_path = root_path.resolve(rel).into_path_buf();
                 absolute_path_lossy = absolute_path.to_string_lossy();
                 &absolute_path_lossy
             } else {
+                if cfg!(windows) {
+                    windows_path = path.replace('/', "\\");
+                    path = &windows_path;
+                }
                 path
             }
         } else {
@@ -95,8 +97,10 @@ impl<W: Write> PrintOutputs<W> {
 
 #[cfg(test)]
 mod tests {
-    use std::path::PathBuf;
     use std::str;
+
+    use bsmr_core::fs::project::ProjectRoot;
+    use bsmr_fs::paths::abs_norm_path::AbsNormPathBuf;
 
     use super::PrintOutputs;
     use super::PrintOutputsFormat;
@@ -165,7 +169,9 @@ mod tests {
             ),
         ] {
             let mut out = Vec::new();
-            let root_path = root_path.map(PathBuf::from);
+            let root_path = root_path.map(|p| {
+                ProjectRoot::new_unchecked(AbsNormPathBuf::try_from(p.to_owned()).unwrap())
+            });
             let mut print = PrintOutputs::new(&mut out, root_path, format)?;
             print.output(
                 "fb//third-party/rust:syn",
