@@ -45,6 +45,11 @@ impl DaemonDir {
         self.path.join(FileName::new("bsmrd.pid").unwrap())
     }
 
+    /// Path to `bsmrd.lock`, which the running daemon locks exclusively until it exits.
+    pub fn bsmrd_lock(&self) -> AbsNormPathBuf {
+        self.path.join(FileName::new("bsmrd.lock").unwrap())
+    }
+
     pub fn bsmrd_error_log(&self) -> AbsNormPathBuf {
         self.path.join(FileName::new("bsmrd.error.log").unwrap())
     }

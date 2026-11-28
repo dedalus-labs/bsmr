@@ -39,6 +39,7 @@ anymap3 = "1.0.1"
 arc-swap = "1.9.0"
 argfile = "0.2.1"
 assert_matches = "1.5"
+astral-version-ranges = "=0.2.2"
 async-compression = { version = "0.4.41", features = ["brotli", "bzip2", "deflate", "futures-io", "gzip", "tokio", "zlib", "zstd", "zstdmt"] }
 async-condvar-fair = { version = "1.0.1", features = ["parking_lot_0_12", "tokio"] }
 async-recursion = "1.1.1"
@@ -166,7 +167,7 @@ perf-event = "0.4"
 perf-event-open-sys = "5.0"
 pin-project = "1.1.11"
 plist = "1.8.0"
-postcard = { version = "1.0.8", features = ["use-crc", "use-std"] }
+postcard = { version = "1.0.8", default-features = false, features = ["use-crc", "use-std"] }
 pretty_assertions = "1.4.1"
 proc-macro2 = { version = "1.0.106", features = ["span-locations"] }
 prost = { version = "0.14.3", default-features = false }
@@ -249,7 +250,7 @@ triomphe = "0.1.11"
 twox-hash = "1.6.1"
 typed-arena = "2"
 unicode-segmentation = "1.13.2"
-url = "2.5.8"
+url = "2.5.9"
 uv-distribution-filename = "=0.0.71"
 uv-pep508 = "=0.0.71"
 uv-platform-tags = "=0.0.71"

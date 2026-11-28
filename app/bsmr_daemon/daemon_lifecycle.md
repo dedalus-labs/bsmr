@@ -23,12 +23,12 @@ version of bsmr and may restart bsmrd to ensure that's the case.
 
 The daemon process is started with the (hidden) `bsmr daemon` command.
 
-The daemon process has a simple startup. It will first daemonize itself and
-write its pid to a locked file "bsmrd.pid" in the "daemon directory" (a
-directory in `$HOME/.bsmr` specific to that repository+output directory). The
-file is locked exclusively by the daemon process until it exits. This means that
-only a single daemon is allowed at a time. It redirects its stdout and stderr to
-files in the daemon directory.
+The daemon process has a simple startup. It will first daemonize itself, lock
+"bsmrd.lock" exclusively and write its pid to "bsmrd.pid" in the "daemon
+directory" (a directory in `$HOME/.bsmr` specific to that repository+output
+directory). The daemon holds the lock until it exits, and the kernel releases it
+however the daemon exits. This means that only a single daemon is allowed at a
+time. It redirects its stdout and stderr to files in the daemon directory.
 
 The daemon then starts up the grpc DaemonApi server. Once that is running, it
 will write the port it is running on (along with some other information) to the
@@ -63,7 +63,8 @@ To start/restart the bsmrd process, the client does:
 
 1. lock the "lifecycle.lock" file
 2. send a kill command to the existing bsmrd
-3. ensure the bsmrd process has exited (based on pid)
+3. ensure the bsmrd process has exited (based on pid), signalling that pid only
+   while "bsmrd.lock" is held, because the OS may have reused a stale pid
 4. run a `bsmr daemon` command to start bsmrd
 5. wait for the daemon to start up and the grpc server to be ready
 6. release the "lifecycle.lock" file

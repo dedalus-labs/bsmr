@@ -206,6 +206,18 @@ async function linkPackageModules(install: string, source: string, workspace: st
 	}
 }
 
+/**
+ * Copy declared sources into an empty directory and link their frozen dependencies.
+ *
+ * @param install - Frozen pnpm installation workspace.
+ * @param source - Declared source tree.
+ * @param workspace - Writable directory that receives the overlay.
+ */
+export async function overlayWorkspace(install: string, source: string, workspace: string): Promise<void> {
+	await copySourceTree(source, workspace);
+	await linkPackageModules(install, source, workspace);
+}
+
 /** Create an owned source overlay without writing to source or dependency artifacts. */
 export async function prepareWorkspace(install: string, source: string, output: string): Promise<string> {
 	if (await exists(output)) throw new Error(`action output '${output}' already exists`);
@@ -216,7 +228,6 @@ export async function prepareWorkspace(install: string, source: string, output: 
 		if (isWithin(input, workspace) || isWithin(workspace, input)) throw new Error(`scratch workspace '${workspace}' overlaps '${input}'`);
 	}
 	await rm(workspace, { force: true, recursive: true });
-	await copySourceTree(source, workspace);
-	await linkPackageModules(install, source, workspace);
+	await overlayWorkspace(install, source, workspace);
 	return workspace;
 }
