@@ -27,15 +27,11 @@ use bsmr_fs::fs_util;
 use bsmr_fs::fs_util::IoError;
 use bsmr_fs::paths::RelativePath;
 use bsmr_fs::paths::abs_path::AbsPathBuf;
-use bsmr_fs::paths::file_name::FileNameBuf;
-use bsmr_fs::paths::forward_rel_path::ForwardRelativePath;
 use dice::DiceComputations;
 use dupe::Dupe;
 use pagable::Pagable;
 
 use crate::file_ops::dice::DiceFileComputations;
-use crate::file_ops::metadata::FileType;
-use crate::file_ops::metadata::RawPathMetadata;
 
 #[derive(
     Debug,
@@ -76,18 +72,6 @@ impl ConfigPath {
             )),
         }
     }
-
-    pub(crate) fn join(&self, p: impl AsRef<ForwardRelativePath>) -> Self {
-        match self {
-            ConfigPath::Project(path) => ConfigPath::Project(path.join(p)),
-            ConfigPath::Global(path) => ConfigPath::Global(path.join(p.as_ref().as_path())),
-        }
-    }
-}
-
-pub struct ConfigDirEntry {
-    pub(crate) name: FileNameBuf,
-    pub(crate) is_dir: bool,
 }
 
 #[async_trait::async_trait]
@@ -97,15 +81,6 @@ pub trait ConfigParserFileOps: Send + Sync {
         &mut self,
         path: &ConfigPath,
     ) -> bsmr_error::Result<Option<Vec<String>>>;
-
-    async fn read_dir(&mut self, path: &ConfigPath) -> bsmr_error::Result<Vec<ConfigDirEntry>>;
-}
-
-#[derive(bsmr_error::Error, Debug)]
-#[bsmr(tag = Input)]
-enum ReadDirError {
-    #[error("Non-utf8 entry `{0}` in directory `{1}`")]
-    NotUtf8(String, String),
 }
 
 pub(crate) struct DefaultConfigParserFileOps {
@@ -133,47 +108,6 @@ impl ConfigParserFileOps for DefaultConfigParserFileOps {
             .categorize_internal()?;
 
         Ok(Some(lines))
-    }
-
-    async fn read_dir(&mut self, path: &ConfigPath) -> bsmr_error::Result<Vec<ConfigDirEntry>> {
-        let path = path.resolve_absolute(&self.project_fs);
-        let read_dir = match std::fs::read_dir(path.as_path()) {
-            Ok(read_dir) => read_dir,
-            Err(e) if e.kind() == std::io::ErrorKind::NotFound => return Ok(Vec::new()),
-            Err(e) if e.kind() == std::io::ErrorKind::NotADirectory => {
-                tracing::warn!("Expected a directory of bsmrconfig files at: `{}`", path);
-                return Ok(Vec::new());
-            }
-            Err(e) => return Err(e.into()),
-        };
-        let mut entries = Vec::new();
-        for entry in read_dir {
-            let entry = entry?;
-            let name = entry.file_name().into_string().map_err(|s| {
-                ReadDirError::NotUtf8(
-                    std::path::Path::display(s.as_ref()).to_string(),
-                    path.to_string(),
-                )
-            })?;
-            let name = FileNameBuf::try_from(name)?;
-            let file_type = entry.file_type()?;
-            if file_type.is_file() {
-                entries.push(ConfigDirEntry {
-                    name,
-                    is_dir: false,
-                });
-            } else if file_type.is_dir() {
-                entries.push(ConfigDirEntry { name, is_dir: true });
-            } else {
-                tracing::warn!(
-                    "Expected a directory of bsmrconfig files at `{}`, but this entry was not a file or directory: `{}`",
-                    path,
-                    name,
-                );
-            }
-        }
-        entries.sort_by(|a, b| a.name.cmp(&b.name));
-        Ok(entries)
     }
 }
 
@@ -216,37 +150,5 @@ impl ConfigParserFileOps for DiceConfigFileOps<'_, '_> {
         };
         let lines = data.lines().map(ToOwned::to_owned).collect::<Vec<_>>();
         Ok(Some(lines))
-    }
-
-    async fn read_dir(&mut self, path: &ConfigPath) -> bsmr_error::Result<Vec<ConfigDirEntry>> {
-        let ConfigPath::Project(path) = path else {
-            return self.io_ops.read_dir(path).await;
-        };
-        let path = self.cell_resolver.get_cell_path(path);
-
-        // This trait expects some slightly non-standard behavior wrt errors, so make sure
-        // to match what the `DefaultConfigParserFileOps` do
-        match DiceFileComputations::read_path_metadata_if_exists(self.ctx, path.as_ref()).await? {
-            Some(RawPathMetadata::Directory) => {}
-            Some(_) | None => return Ok(Vec::new()),
-        }
-
-        let out = DiceFileComputations::read_dir_include_ignores(self.ctx, path.as_ref())
-            .await?
-            .included
-            .iter()
-            .filter_map(|e| match e.file_type {
-                FileType::Directory => Some(ConfigDirEntry {
-                    name: e.file_name.clone(),
-                    is_dir: true,
-                }),
-                FileType::File => Some(ConfigDirEntry {
-                    name: e.file_name.clone(),
-                    is_dir: false,
-                }),
-                FileType::Symlink | FileType::Unknown => None,
-            })
-            .collect();
-        Ok(out)
     }
 }
