@@ -45,8 +45,20 @@ installed runtime identity, bounding the message and deadline, and rejecting inv
 paths, overlapping outputs and malformed commands. Admission grants no host-file
 authority. Filesystem paths are interpreted only inside the prepared root.
 
-This crate provides process ownership and the confined launch transition. It does not yet install a
-service, construct runtime images, or enable a macOS BSMR execution backend.
+The `bsmr-native` worker receives its listener from launchd and admits one action
+at a time. Administrator-owned configuration selects the client account, reserved
+identity, runtime seed and state directory. The identity lease must already exist
+with mode `0600`. Requests cannot choose these values.
+
+`client::execute` authenticates the worker's root credentials before sending any
+file descriptor. One deadline covers connection, transfer and response. Cancelling
+the future closes the socket, which requests job cleanup. A result is admissible
+only after the worker confirms cleanup. The serial lane is reported as one slot.
+
+The worker is not yet installed by the build tool, and the macOS BSMR executor
+integration is still separate work. `serve CONFIG` requires launchd socket
+activation. `exchange SOCKET ACTION INPUT OUTPUT` exercises the same protocol
+from an ordinary account.
 
 `launch::enter` runs in a dedicated trusted child. It changes the filesystem root,
 resets the working directory, drops supplementary groups and root credentials,
