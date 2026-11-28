@@ -21,6 +21,9 @@ mod receipt;
 mod update;
 mod verify;
 
+#[cfg(test)]
+mod tests;
+
 use sha2::Digest;
 use sha2::Sha256;
 
