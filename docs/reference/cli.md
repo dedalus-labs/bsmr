@@ -3225,7 +3225,7 @@ Common options are documented under [Global options](#global-options).
 
 ## `bsmr root`
 
-Find a Bessemer cell, project, or package root
+Find a Bessemer cell, project, daemon, or output root
 
 **Usage**: `bsmr root [OPTIONS]`
 
@@ -3242,6 +3242,7 @@ Common options are documented under [Global options](#global-options).
         * `cell`
         * `project`
         * `daemon`
+        * `output`
 * `--dir <PATH>`
     determine the root for a specific directory (if not provided, finds the root for the current directory)
 

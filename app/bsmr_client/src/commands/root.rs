@@ -22,6 +22,7 @@ use bsmr_client_ctx::immediate_config::ImmediateConfigContext;
 use bsmr_client_ctx::path_arg::PathArg;
 use bsmr_common::argv::Argv;
 use bsmr_common::argv::SanitizedArgv;
+use bsmr_common::invocation_paths::InvocationPaths;
 use bsmr_common::invocation_roots::find_invocation_roots;
 use bsmr_fs::error::IoResultExt;
 use bsmr_fs::fs_util;
@@ -32,22 +33,25 @@ enum RootKind {
     Cell,
     Project,
     Daemon,
+    Output,
 }
 
 impl FromStr for RootKind {
     type Err = String;
+    /// Parses the root kinds exposed by the command-line interface.
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s {
             "cell" => Ok(Self::Cell),
             "project" => Ok(Self::Project),
             "daemon" => Ok(Self::Daemon),
-            _ => Err("expected one of `package`, `cell`, `project`, or `daemon`".to_owned()),
+            "output" => Ok(Self::Output),
+            _ => Err("expected one of `cell`, `project`, `daemon`, or `output`".to_owned()),
         }
     }
 }
 
 #[derive(Debug, clap::Parser)]
-#[clap(about = "Find a Bessemer cell, project, or package root")]
+#[clap(about = "Find a Bessemer cell, project, daemon, or output root")]
 pub struct RootCommand {
     #[clap(
         short,
@@ -68,6 +72,7 @@ pub struct RootCommand {
 }
 
 impl RootCommand {
+    /// Prints the selected root without creating directories or starting a daemon.
     pub fn exec(
         self,
         _matches: BsmrArgMatches<'_>,
@@ -98,6 +103,11 @@ impl RootCommand {
                     roots.project_root.resolve(&*root)
                 }
                 RootKind::Project => roots.project_root.root().to_owned(),
+                RootKind::Output => InvocationPaths {
+                    roots,
+                    isolation: ctx.isolation().clone(),
+                }
+                .output_path(),
                 // Handled above
                 RootKind::Daemon => unreachable!(),
             }
