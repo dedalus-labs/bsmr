@@ -25,6 +25,7 @@ use allocative::Allocative;
 #[cfg(all(fbcode_build, target_os = "linux"))]
 use bpfjailer_client_rs::SOCK_PATHS as BPFJAILER_SOCK_PATHS;
 use bsmr_cli_proto::DaemonProcessInfo;
+use bsmr_client_ctx::daemon::client::lock_daemon;
 use bsmr_client_ctx::daemon_constraints::gen_daemon_constraints;
 use bsmr_client_ctx::version::BsmrVersion;
 use bsmr_common::daemon_connection::ConnectionType;
@@ -285,7 +286,7 @@ impl DaemonCommand {
 
         let auth_token = gen_auth_token();
 
-        let (listener, process_info, endpoint) = if !self.dont_daemonize {
+        let (listener, process_info, endpoint, _daemon_lock) = if !self.dont_daemonize {
             // We must create stdout/stderr before creating a listener,
             // otherwise it is race:
             // * daemon parent process exits
@@ -296,6 +297,7 @@ impl DaemonCommand {
             Self::daemonize(stdout, stderr)?;
             Self::exit_bpfjailer();
 
+            let daemon_lock = lock_daemon(&daemon_dir)?;
             fs_util::write(&pid_path, format!("{}", process::id())).categorize_internal()?;
 
             let pid = process::id();
@@ -312,8 +314,9 @@ impl DaemonCommand {
 
             tracing::info!("Daemonized.");
 
-            (listener, process_info, endpoint)
+            (listener, process_info, endpoint, daemon_lock)
         } else {
+            let daemon_lock = lock_daemon(&daemon_dir)?;
             fs_util::write(&pid_path, format!("{}", process::id())).categorize_internal()?;
 
             if !in_process {
@@ -331,7 +334,7 @@ impl DaemonCommand {
 
             write_process_info(&daemon_dir, &process_info)?;
 
-            (listener, process_info, endpoint)
+            (listener, process_info, endpoint, daemon_lock)
         };
 
         // Start the fragmentation dump watcher now that we are in the final

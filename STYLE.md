@@ -49,3 +49,7 @@ Bessemer code should be obvious to inspect, operate, and extend.
 - Put one concept on each page. Link to details instead of repeating them.
 - State support and hermeticity boundaries exactly. Do not advertise planned behavior as available.
 - Keep CLI reference derived from the real parser so commands, flags, and defaults cannot drift.
+
+## Python
+
+Follow [the Python guide](docs/style/python.md) for new and changed Python.

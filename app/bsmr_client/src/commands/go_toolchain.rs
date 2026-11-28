@@ -20,7 +20,7 @@ use std::path::Path;
 use std::path::PathBuf;
 
 pub(crate) use acquisition::acquired_go;
-pub(crate) use acquisition::host_archive;
+pub(crate) use acquisition::create_toolchains_package;
 pub(crate) use acquisition::install_sdk;
 pub(crate) use acquisition::validate_acquisition_owners;
 #[cfg(test)]
@@ -383,9 +383,9 @@ pub(crate) enum GoToolchainError {
     Wrapper(String),
     #[error("Go toolchain lock is invalid: {0}")]
     Lock(String),
-    #[error("failed to read `{path:?}`: {message}")]
+    #[error("failed to read `{}`: {message}", path.display())]
     Read { path: PathBuf, message: String },
-    #[error("failed to write `{path:?}`: {message}")]
+    #[error("failed to write `{}`: {message}", path.display())]
     Write { path: PathBuf, message: String },
     #[error("refusing to overwrite user-owned toolchain file `{0:?}`")]
     UserOwned(PathBuf),
