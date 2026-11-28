@@ -845,8 +845,20 @@ mod tests {
             .await?;
         assert_config_value(&config, "apple", "key", "value1");
         assert_config_value(&config, "apple", "key2", "value2");
-        assert_eq!(config.get(BsmrconfigKeyRef { section: "apple", property: "key3" }), None);
-        assert_eq!(config.get(BsmrconfigKeyRef { section: "orange", property: "key" }), None);
+        assert_eq!(
+            config.get(BsmrconfigKeyRef {
+                section: "apple",
+                property: "key3"
+            }),
+            None
+        );
+        assert_eq!(
+            config.get(BsmrconfigKeyRef {
+                section: "orange",
+                property: "key"
+            }),
+            None
+        );
 
         Ok(())
     }
