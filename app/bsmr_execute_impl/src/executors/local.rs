@@ -430,11 +430,16 @@ impl LocalExecutor {
                             .await
                         }
                         LocalExecutionBackend::Firecracker(executor) => {
+                            let staging_root = self
+                                .artifact_fs
+                                .fs()
+                                .resolve(self.artifact_fs.output_path_resolver().root());
                             executor
                                 .execute(
                                     prepared_action,
                                     request,
                                     self.root.as_path(),
+                                    staging_root.as_path(),
                                     digest_config,
                                     &liveliness_observer,
                                 )

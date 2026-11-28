@@ -340,6 +340,7 @@ impl FirecrackerExecutor {
         prepared: &PreparedAction,
         request: &CommandExecutionRequest,
         project_root: &Path,
+        staging_root: &Path,
         digest_config: DigestConfig,
         liveliness: &dyn LivelinessObserver,
     ) -> bsmr_error::Result<CommandResult> {
@@ -394,9 +395,11 @@ impl FirecrackerExecutor {
                 output
                     .seek(SeekFrom::Start(0))
                     .map_err(FirecrackerSandboxError::CreateTransport)?;
+                fs::create_dir_all(staging_root)
+                    .map_err(FirecrackerSandboxError::CreateTransport)?;
                 let staging = tempfile::Builder::new()
                     .prefix(".bsmr-firecracker-")
-                    .tempdir_in(project_root)
+                    .tempdir_in(staging_root)
                     .map_err(FirecrackerSandboxError::CreateTransport)?;
                 let result = extract_guest_outputs(&mut output, staging.path(), &action.outputs)?;
                 import_outputs(staging.path(), project_root, &action.outputs)?;
