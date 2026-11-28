@@ -473,6 +473,10 @@ export const ci = workflow({
 					run: command({ file: "python3", args: ["test/rust/tests.py", "target/debug/bsmr"] }),
 				},
 				{
+					name: "Verify stale daemon records",
+					run: command({ file: "python3", args: ["test/daemon/stale.py", "target/debug/bsmr"] }),
+				},
+				{
 					name: "Verify external Rust dependencies",
 					run: command({ file: "node", args: ["test/rust/dependencies.ts", "target/debug/bsmr", "1.98.0"] }),
 				},
