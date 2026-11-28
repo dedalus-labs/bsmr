@@ -25,7 +25,6 @@ bsmr_hash.workspace = true
 bsmr_node.workspace = true
 bsmr_util.workspace = true
 bsmr_wrapper_common.workspace = true
-const_format.workspace = true
 derive_more.workspace = true
 dice.workspace = true
 dice_futures.workspace = true

@@ -36,7 +36,6 @@ pub mod external_symlink;
 pub mod fbinit;
 pub mod file_ops;
 pub mod find_buildfile;
-pub mod home_temp;
 pub mod http;
 pub mod ignores;
 pub mod init;

@@ -27,17 +27,11 @@ use bsmr_fs::fs_util;
 use bsmr_fs::fs_util::IoError;
 use bsmr_fs::paths::RelativePath;
 use bsmr_fs::paths::abs_path::AbsPathBuf;
-use bsmr_fs::paths::file_name::FileNameBuf;
-use bsmr_fs::paths::forward_rel_path::ForwardRelativePath;
 use dice::DiceComputations;
 use dupe::Dupe;
-use futures::FutureExt;
-use futures::future::BoxFuture;
 use pagable::Pagable;
 
 use crate::file_ops::dice::DiceFileComputations;
-use crate::file_ops::metadata::FileType;
-use crate::file_ops::metadata::RawPathMetadata;
 
 #[derive(
     Debug,
@@ -78,18 +72,6 @@ impl ConfigPath {
             )),
         }
     }
-
-    pub(crate) fn join(&self, p: impl AsRef<ForwardRelativePath>) -> Self {
-        match self {
-            ConfigPath::Project(path) => ConfigPath::Project(path.join(p)),
-            ConfigPath::Global(path) => ConfigPath::Global(path.join(p.as_ref().as_path())),
-        }
-    }
-}
-
-pub struct ConfigDirEntry {
-    pub(crate) name: FileNameBuf,
-    pub(crate) is_dir: bool,
 }
 
 #[async_trait::async_trait]
@@ -99,15 +81,6 @@ pub trait ConfigParserFileOps: Send + Sync {
         &mut self,
         path: &ConfigPath,
     ) -> bsmr_error::Result<Option<Vec<String>>>;
-
-    async fn read_dir(&mut self, path: &ConfigPath) -> bsmr_error::Result<Vec<ConfigDirEntry>>;
-}
-
-#[derive(bsmr_error::Error, Debug)]
-#[bsmr(tag = Input)]
-enum ReadDirError {
-    #[error("Non-utf8 entry `{0}` in directory `{1}`")]
-    NotUtf8(String, String),
 }
 
 pub(crate) struct DefaultConfigParserFileOps {
@@ -135,47 +108,6 @@ impl ConfigParserFileOps for DefaultConfigParserFileOps {
             .categorize_internal()?;
 
         Ok(Some(lines))
-    }
-
-    async fn read_dir(&mut self, path: &ConfigPath) -> bsmr_error::Result<Vec<ConfigDirEntry>> {
-        let path = path.resolve_absolute(&self.project_fs);
-        let read_dir = match std::fs::read_dir(path.as_path()) {
-            Ok(read_dir) => read_dir,
-            Err(e) if e.kind() == std::io::ErrorKind::NotFound => return Ok(Vec::new()),
-            Err(e) if e.kind() == std::io::ErrorKind::NotADirectory => {
-                tracing::warn!("Expected a directory of bsmrconfig files at: `{}`", path);
-                return Ok(Vec::new());
-            }
-            Err(e) => return Err(e.into()),
-        };
-        let mut entries = Vec::new();
-        for entry in read_dir {
-            let entry = entry?;
-            let name = entry.file_name().into_string().map_err(|s| {
-                ReadDirError::NotUtf8(
-                    std::path::Path::display(s.as_ref()).to_string(),
-                    path.to_string(),
-                )
-            })?;
-            let name = FileNameBuf::try_from(name)?;
-            let file_type = entry.file_type()?;
-            if file_type.is_file() {
-                entries.push(ConfigDirEntry {
-                    name,
-                    is_dir: false,
-                });
-            } else if file_type.is_dir() {
-                entries.push(ConfigDirEntry { name, is_dir: true });
-            } else {
-                tracing::warn!(
-                    "Expected a directory of bsmrconfig files at `{}`, but this entry was not a file or directory: `{}`",
-                    path,
-                    name,
-                );
-            }
-        }
-        entries.sort_by(|a, b| a.name.cmp(&b.name));
-        Ok(entries)
     }
 }
 
@@ -218,196 +150,5 @@ impl ConfigParserFileOps for DiceConfigFileOps<'_, '_> {
         };
         let lines = data.lines().map(ToOwned::to_owned).collect::<Vec<_>>();
         Ok(Some(lines))
-    }
-
-    async fn read_dir(&mut self, path: &ConfigPath) -> bsmr_error::Result<Vec<ConfigDirEntry>> {
-        let ConfigPath::Project(path) = path else {
-            return self.io_ops.read_dir(path).await;
-        };
-        let path = self.cell_resolver.get_cell_path(path);
-
-        // This trait expects some slightly non-standard behavior wrt errors, so make sure
-        // to match what the `DefaultConfigParserFileOps` do
-        match DiceFileComputations::read_path_metadata_if_exists(self.ctx, path.as_ref()).await? {
-            Some(RawPathMetadata::Directory) => {}
-            Some(_) | None => return Ok(Vec::new()),
-        }
-
-        let out = DiceFileComputations::read_dir_include_ignores(self.ctx, path.as_ref())
-            .await?
-            .included
-            .iter()
-            .filter_map(|e| match e.file_type {
-                FileType::Directory => Some(ConfigDirEntry {
-                    name: e.file_name.clone(),
-                    is_dir: true,
-                }),
-                FileType::File => Some(ConfigDirEntry {
-                    name: e.file_name.clone(),
-                    is_dir: false,
-                }),
-                FileType::Symlink | FileType::Unknown => None,
-            })
-            .collect();
-        Ok(out)
-    }
-}
-
-pub(crate) fn push_all_files_from_a_directory<'a>(
-    bsmrconfig_paths: &'a mut Vec<ConfigPath>,
-    folder_path: &'a ConfigPath,
-    file_ops: &'a mut dyn ConfigParserFileOps,
-) -> BoxFuture<'a, bsmr_error::Result<()>> {
-    async move {
-        for entry in file_ops.read_dir(folder_path).await? {
-            let entry_path = folder_path.join(&entry.name);
-            if entry.is_dir {
-                push_all_files_from_a_directory(bsmrconfig_paths, &entry_path, file_ops).await?;
-            } else {
-                bsmrconfig_paths.push(entry_path);
-            }
-        }
-
-        Ok(())
-    }
-    .boxed()
-}
-
-#[cfg(test)]
-mod tests {
-    use bsmr_fs::fs_util::uncategorized as fs_util;
-    use bsmr_fs::paths::abs_norm_path::AbsNormPathBuf;
-    use bsmr_fs::paths::abs_path::AbsPath;
-
-    use super::*;
-
-    fn create_project_filesystem() -> ProjectRoot {
-        #[cfg(not(windows))]
-        let root_path = "/".to_owned();
-        #[cfg(windows)]
-        let root_path = "C:/".to_owned();
-        ProjectRoot::new_unchecked(AbsNormPathBuf::try_from(root_path).unwrap())
-    }
-
-    #[test]
-    fn dir_with_file() -> bsmr_error::Result<()> {
-        let mut v = vec![];
-        let dir = tempfile::tempdir()?;
-        let root = AbsPath::new(dir.path())?;
-        let file = root.join("foo");
-        fs_util::write(&file, "")?;
-
-        let file = AbsPath::new(&file)?;
-        let dir = AbsPath::new(dir.path())?;
-
-        futures::executor::block_on(push_all_files_from_a_directory(
-            &mut v,
-            &ConfigPath::Global(dir.to_owned()),
-            &mut DefaultConfigParserFileOps {
-                project_fs: create_project_filesystem(),
-            },
-        ))?;
-        assert_eq!(v, vec![ConfigPath::Global(file.to_owned())]);
-
-        Ok(())
-    }
-
-    #[test]
-    fn empty_dir() -> bsmr_error::Result<()> {
-        let mut v = vec![];
-        let dir = tempfile::tempdir()?;
-        let dir = AbsPath::new(dir.path())?;
-
-        futures::executor::block_on(push_all_files_from_a_directory(
-            &mut v,
-            &ConfigPath::Global(dir.to_owned()),
-            &mut DefaultConfigParserFileOps {
-                project_fs: create_project_filesystem(),
-            },
-        ))?;
-        assert_eq!(v, vec![]);
-
-        Ok(())
-    }
-
-    #[test]
-    fn non_existent_dir() -> bsmr_error::Result<()> {
-        let mut v = vec![];
-        let dir = tempfile::tempdir()?;
-        let dir = dir.path().join("bad");
-        let dir = AbsPath::new(&dir)?;
-
-        futures::executor::block_on(push_all_files_from_a_directory(
-            &mut v,
-            &ConfigPath::Global(dir.to_owned()),
-            &mut DefaultConfigParserFileOps {
-                project_fs: create_project_filesystem(),
-            },
-        ))?;
-        assert_eq!(v, vec![]);
-
-        Ok(())
-    }
-
-    #[test]
-    fn dir_in_dir() -> bsmr_error::Result<()> {
-        let mut v = vec![];
-        let dir = tempfile::tempdir()?;
-        let dir = AbsPath::new(dir.path())?;
-        fs_util::create_dir_all(dir.join("bad"))?;
-
-        futures::executor::block_on(push_all_files_from_a_directory(
-            &mut v,
-            &ConfigPath::Global(AbsPath::new(dir)?.to_owned()),
-            &mut DefaultConfigParserFileOps {
-                project_fs: create_project_filesystem(),
-            },
-        ))?;
-        assert_eq!(v, vec![]);
-
-        Ok(())
-    }
-
-    #[test]
-    fn file() -> bsmr_error::Result<()> {
-        let mut v = vec![];
-        let file = tempfile::NamedTempFile::new()?;
-        let file = AbsPath::new(file.path())?;
-
-        futures::executor::block_on(push_all_files_from_a_directory(
-            &mut v,
-            &ConfigPath::Global(file.to_owned()),
-            &mut DefaultConfigParserFileOps {
-                project_fs: create_project_filesystem(),
-            },
-        ))?;
-        assert_eq!(v, vec![]);
-
-        Ok(())
-    }
-
-    #[test]
-    fn dir_with_file_in_dir() -> bsmr_error::Result<()> {
-        let mut v = vec![];
-        let dir = tempfile::tempdir()?;
-        let dir = AbsPath::new(dir.path())?;
-        let nested_dir = dir.join("nested");
-        fs_util::create_dir_all(&nested_dir)?;
-        let file = nested_dir.join("foo");
-        fs_util::write(&file, "")?;
-
-        let file = AbsPath::new(&file)?;
-        let dir = AbsPath::new(&dir)?;
-
-        futures::executor::block_on(push_all_files_from_a_directory(
-            &mut v,
-            &ConfigPath::Global(dir.to_owned()),
-            &mut DefaultConfigParserFileOps {
-                project_fs: create_project_filesystem(),
-            },
-        ))?;
-        assert_eq!(v, vec![ConfigPath::Global(file.to_owned())]);
-
-        Ok(())
     }
 }

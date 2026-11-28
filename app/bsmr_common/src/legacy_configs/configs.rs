@@ -341,7 +341,6 @@ pub mod testing {
 
     use super::*;
     use crate::legacy_configs::args::resolve_config_args;
-    use crate::legacy_configs::file_ops::ConfigDirEntry;
 
     pub fn parse(data: &[(&str, &str)], path: &str) -> bsmr_error::Result<LegacyBsmrConfig> {
         parse_with_config_args(data, path, &[])
@@ -417,15 +416,6 @@ pub mod testing {
                     .collect::<Result<Vec<_>, _>>()
                     .map_err(bsmr_error::Error::from)?,
             ))
-        }
-
-        async fn read_dir(
-            &mut self,
-            _path: &ConfigPath,
-        ) -> bsmr_error::Result<Vec<ConfigDirEntry>> {
-            // This is only used for listing files in `bsmrconfig.d` directories, which we can just
-            // say are always empty in tests
-            Ok(Vec::new())
         }
     }
 }

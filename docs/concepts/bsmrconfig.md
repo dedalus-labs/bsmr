@@ -132,25 +132,9 @@ personal settings, such as personal aliases.
 ## Other initialization files
 
 In addition to the `.bsmr` and `.bsmr.local` files in the project
-root, Bessemer reads configuration settings from the following additional
-locations, some of which are actually directories:
-
-1. Directory `.bsmr.d` located in the project root directory.
-2. File `.bsmr` and directory `.bsmr.d` located in the current
-   user's home directory which, on Unix-like systems, is available from the
-   `HOME` environment variable or through the `~` symbol.
-3. File `bsmrconfig` and directory `bsmrconfig.d` located in system directory
-   `/etc/`.
-
-Bessemer treats _any_ file—irrespective of name—in a
-`.bsmr.d`(`bsmrconfig.d`) directory (excluding files found in
-subdirectories) as a Bessemer configuration file, provided that it adheres to
-`.bsmr` syntax. Note that a `.bsmr.d` directory is distinct from the
-similarly-named `.bsmrd` directory which is used by the
-[Bessemer Daemon (`bsmrd`)](daemon.md) . For a description of how Bessemer resolves
-collisions between settings in these configuration files, see the section
-[**Precedence of Bessemer configuration specifications**](#precedence-of-bsmr-configuration-specifications)
-below.
+root, Bessemer reads configuration settings from `.bsmr.local` in the current
+user's home directory, which on Unix-like systems is available from the `HOME`
+environment variable or through the `~` symbol.
 
 ## Command-line control of configuration
 
@@ -168,23 +152,14 @@ _mode files_ or _at_ (`@`) files.
 The following list shows the order of precedence for how Bessemer interprets its
 configuration specifications. Settings specified using a method closer to the
 top of the list have higher precedence and will override those lower on the
-list. For example, the `.bsmr` file in the repo overrides a `.bsmr`
-file in the user's `HOME` directory.
+list.
 
 1. Configuration specified on the command line using `--config` (`-c`),
    `--config-file` and `--flagfile`. Configuration specified later on the
    command line overrides configuration specified earlier.
 1. `.bsmr.local` in the repo.
 1. `.bsmr` in the repo.
-1. Files in a `.bsmr.d` folder of the repo.
 1. `.bsmr.local` in user's `HOME` directory.
-1. Files in a `.bsmr.d` folder in user's `HOME` directory.
-1. The global file `/etc/bsmrconfig`
-1. Files in the global directory `/etc/bsmrconfig.d`
-
-Files in a `.bsmr.d` (`bsmrconfig.d`) directory have precedence according
-to the lexicographical order of their file names. Files _later_ in the
-lexicographical order have precedence over files earlier in that order.
 
 ## Configuration files can include other files
 

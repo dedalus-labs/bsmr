@@ -1,3 +1,9 @@
+//===----------------------------------------------------------------------===//
+// Upstream-Source: facebook/buck2@1560aca2002865cd73d7cafb22c705cfb640b2bc
+// Modifications Copyright (c) 2026 Dedalus Labs, Inc. and its contributors
+// SPDX-License-Identifier: Apache-2.0
+//===----------------------------------------------------------------------===//
+
 /*
  * Copyright (c) Meta Platforms, Inc. and affiliates.
  *
@@ -15,7 +21,6 @@ pub mod bxl;
 pub mod commands;
 pub mod concurrency;
 pub mod ctx;
-pub mod experiment_util;
 pub mod global_cfg_options;
 pub mod late_bindings;
 pub mod partial_result_dispatcher;
@@ -26,4 +31,3 @@ pub mod streaming_request_handler;
 pub mod target_resolution_config;
 pub mod template;
 pub mod test_command;
-pub mod tpx_experiment_util;

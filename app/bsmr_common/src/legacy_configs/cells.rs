@@ -48,12 +48,10 @@ use crate::legacy_configs::args::resolve_config_args;
 use crate::legacy_configs::args::to_proto_config_args;
 use crate::legacy_configs::configs::LegacyBsmrConfig;
 use crate::legacy_configs::dice::HasInjectedLegacyConfigs;
-use crate::legacy_configs::file_ops::ConfigDirEntry;
 use crate::legacy_configs::file_ops::ConfigParserFileOps;
 use crate::legacy_configs::file_ops::ConfigPath;
 use crate::legacy_configs::file_ops::DefaultConfigParserFileOps;
 use crate::legacy_configs::file_ops::DiceConfigFileOps;
-use crate::legacy_configs::file_ops::push_all_files_from_a_directory;
 use crate::legacy_configs::key::BsmrconfigKeyRef;
 use crate::legacy_configs::parser::LegacyConfigParser;
 use crate::legacy_configs::path::DEFAULT_EXTERNAL_CONFIG_SOURCES;
@@ -67,10 +65,7 @@ use crate::legacy_configs::path::ProjectConfigSource;
 /// bsmrconfig comes from outside the buildgraph, and this type represents those parts.
 #[derive(Clone, PartialEq, Eq, Allocative, Pagable)]
 pub struct ExternalBsmrconfigData {
-    // The result of parsing the bsmrconfigs coming from either global (e.g. /etc/bsmrconfig.d) or
-    // user (e.g. ~/.bsmr.d or $home_dir/.bsmr.local) files/dirs outside of the repo
-    // The order matters here and reflects the same order these are processed in bsmr, see
-    // https://fburl.com/code/8ue78p1j
+    // The result of parsing user bsmrconfigs (e.g. $home_dir/.bsmr.local) outside of the repo.
     external_path_configs: Vec<ExternalPathBsmrconfigData>,
     // The result of parsing the bsmrconfigs coming from command line args (e.g. --config or --config-file)
     args: Vec<ResolvedLegacyConfigArg>,
@@ -234,7 +229,7 @@ impl BsmrConfigBasedCells {
 
         let follow_includes = false;
 
-        let config_paths = get_project_bsmrconfig_paths(cell_path, file_ops).await?;
+        let config_paths = get_project_bsmrconfig_paths(cell_path)?;
         let config = LegacyBsmrConfig::finish_parse(
             self.external_data.external_path_configs.clone(),
             &config_paths,
@@ -313,13 +308,6 @@ impl BsmrConfigBasedCells {
 
                 Ok(res)
             }
-
-            async fn read_dir(
-                &mut self,
-                path: &ConfigPath,
-            ) -> bsmr_error::Result<Vec<ConfigDirEntry>> {
-                self.inner.read_dir(path).await
-            }
         }
 
         let mut file_ops = TracingFileOps {
@@ -330,7 +318,7 @@ impl BsmrConfigBasedCells {
         // NOTE: This will _not_ perform IO unless it needs to.
         let processed_config_args = resolve_config_args(config_args, &mut file_ops).await?;
 
-        let external_paths = get_external_bsmrconfig_paths(&mut file_ops).await?;
+        let external_paths = get_external_bsmrconfig_paths()?;
         let started_parse = LegacyBsmrConfig::start_parse_for_external_files(
             &external_paths,
             &mut file_ops,
@@ -340,7 +328,7 @@ impl BsmrConfigBasedCells {
 
         let root_path = CellRootPathBuf::new(ProjectRelativePath::empty().to_owned());
 
-        let bsmrconfig_paths = get_project_bsmrconfig_paths(&root_path, &mut file_ops).await?;
+        let bsmrconfig_paths = get_project_bsmrconfig_paths(&root_path)?;
 
         let root_config = LegacyBsmrConfig::finish_parse(
             started_parse.clone(),
@@ -482,7 +470,7 @@ impl BsmrConfigBasedCells {
         file_ops: &mut dyn ConfigParserFileOps,
         cell_path: &CellRootPath,
     ) -> bsmr_error::Result<LegacyBsmrConfig> {
-        let config_paths = get_project_bsmrconfig_paths(cell_path, file_ops).await?;
+        let config_paths = get_project_bsmrconfig_paths(cell_path)?;
         LegacyBsmrConfig::finish_parse(
             external_data.external_path_configs.clone(),
             &config_paths,
@@ -548,9 +536,7 @@ impl BsmrConfigBasedCells {
     }
 }
 
-async fn get_external_bsmrconfig_paths(
-    file_ops: &mut dyn ConfigParserFileOps,
-) -> bsmr_error::Result<Vec<ConfigPath>> {
+fn get_external_bsmrconfig_paths() -> bsmr_error::Result<Vec<ConfigPath>> {
     let skip_default_external_config = bsmr_env!(
         "BSMR_TEST_SKIP_DEFAULT_EXTERNAL_CONFIG",
         bool,
@@ -571,32 +557,6 @@ async fn get_external_bsmrconfig_paths(
                         ));
                     }
                 }
-                ExternalConfigSource::UserFolder(folder) => {
-                    let home_dir = dirs::home_dir();
-                    if let Some(home_dir_path) = home_dir {
-                        let bsmrconfig_path = ForwardRelativePath::new(folder)?;
-                        let bsmrconfig_folder_abs_path =
-                            AbsPath::new(&home_dir_path)?.join(bsmrconfig_path.as_str());
-                        push_all_files_from_a_directory(
-                            &mut bsmrconfig_paths,
-                            &ConfigPath::Global(bsmrconfig_folder_abs_path),
-                            file_ops,
-                        )
-                        .await?;
-                    }
-                }
-                ExternalConfigSource::GlobalFile(file) => {
-                    bsmrconfig_paths.push(ConfigPath::Global(AbsPath::new(*file)?.to_owned()));
-                }
-                ExternalConfigSource::GlobalFolder(folder) => {
-                    let bsmrconfig_folder_abs_path = AbsPath::new(*folder)?.to_owned();
-                    push_all_files_from_a_directory(
-                        &mut bsmrconfig_paths,
-                        &ConfigPath::Global(bsmrconfig_folder_abs_path),
-                        file_ops,
-                    )
-                    .await?;
-                }
             }
         }
     }
@@ -611,10 +571,7 @@ async fn get_external_bsmrconfig_paths(
     Ok(bsmrconfig_paths)
 }
 
-async fn get_project_bsmrconfig_paths(
-    path: &CellRootPath,
-    file_ops: &mut dyn ConfigParserFileOps,
-) -> bsmr_error::Result<Vec<ConfigPath>> {
+fn get_project_bsmrconfig_paths(path: &CellRootPath) -> bsmr_error::Result<Vec<ConfigPath>> {
     let mut bsmrconfig_paths: Vec<ConfigPath> = Vec::new();
 
     for bsmrconfig in DEFAULT_PROJECT_CONFIG_SOURCES {
@@ -630,17 +587,6 @@ async fn get_project_bsmrconfig_paths(
                 bsmrconfig_paths.push(ConfigPath::Project(
                     path.as_project_relative_path().join(bsmrconfig_path),
                 ));
-            }
-            ProjectConfigSource::CellRelativeFolder(folder) => {
-                let bsmrconfig_folder_path = ForwardRelativePath::new(folder)?;
-                let bsmrconfig_folder_path =
-                    path.as_project_relative_path().join(bsmrconfig_folder_path);
-                push_all_files_from_a_directory(
-                    &mut bsmrconfig_paths,
-                    &ConfigPath::Project(bsmrconfig_folder_path),
-                    file_ops,
-                )
-                .await?;
             }
         }
     }
