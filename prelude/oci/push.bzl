@@ -21,7 +21,7 @@ def _oci_push_impl(ctx: AnalysisContext) -> list[Provider]:
     ctx.actions.run(cmd_args(
         toolchain.operations, "layout", "--img", toolchain.img, "--platform", image.platform,
         "--spec", spec, "--output", layout.as_output(),
-    ), category = "oci_push_layout", allow_cache_upload = False, allow_local_cache_upload = False)
+    ), category = "oci_push_layout", local_only = image.local_only, allow_cache_upload = False, allow_local_cache_upload = False)
     config = ctx.actions.write_json("destination.json", {
         "registry": parts[0], "repository": parts[1], "tags": ctx.attrs.tags,
     })
@@ -30,7 +30,7 @@ def _oci_push_impl(ctx: AnalysisContext) -> list[Provider]:
         toolchain.img, "deploy-metadata", "--command", "push", "--root-kind", "manifest",
         "--root-path", image.manifest, "--manifest-path", cmd_args(image.manifest, format = "0={}"),
         "--configuration-file", config, "--strategy", "eager", request.as_output(),
-    ), category = "oci_push_metadata", allow_cache_upload = True)
+    ), category = "oci_push_metadata", local_only = image.local_only, allow_cache_upload = not image.local_only, allow_local_cache_upload = True)
     return [
         DefaultInfo(default_output = request, other_outputs = [layout]),
         RunInfo(args = cmd_args(toolchain.node, ctx.attrs._push, "--img", toolchain.img,

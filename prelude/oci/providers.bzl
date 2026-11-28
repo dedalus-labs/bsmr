@@ -25,6 +25,7 @@ OciImageInfo = provider(
         "platform": provider_field(str),
         "layers": provider_field(list[OciLayerInfo]),
         "layouts": provider_field(list[Artifact], default = []),
+        "local_only": provider_field(bool, default = False),
     },
 )
 
@@ -33,6 +34,8 @@ OciToolchainInfo = provider(
     fields = {
         "img": provider_field(Artifact),
         "node": provider_field(Artifact),
+        "umoci": provider_field(Artifact | None, default = None),
+        "runc": provider_field(Artifact | None, default = None),
         "operations": provider_field(RunInfo),
     },
 )
