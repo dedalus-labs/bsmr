@@ -266,7 +266,10 @@ def test_rejected_requests_and_workspace_pin(project: Project, tmp_path: Path) -
         r"bsmr go toolchain --version (\S+)", (repo / "docs/users/oci.md").read_text()
     )
     assert match is not None
-    oci = Project(root=shutil.copytree(repo / "examples/oci/hello", tmp_path / "hello"))
+    oci = Project(
+        root=shutil.copytree(repo / "examples/oci/hello", tmp_path / "hello"),
+        home=project.home,
+    )
     oci.succeed("init")
     try:
         res = oci.run("go", "toolchain", "--check", "--version", match.group(1))
