@@ -89,12 +89,17 @@ function dockerDescriptor(value, mediaType) {
 	}
 }
 
-/** Reuse img's media-type normalization while retaining exact config and layer bytes. */
-async function normalizeDocker(values, selected, manifest, scratch) {
+/** Validate Docker schema 2 manifest structure before fetching any layer blobs. */
+function validateDockerManifest(manifest) {
 	object(manifest, ["schemaVersion", "mediaType", "config", "layers"], "Docker manifest");
 	dockerDescriptor(manifest.config, dockerConfigType);
 	if (!Array.isArray(manifest.layers)) fail("OCI_INVALID_METADATA", "Docker manifest requires a layers array");
 	for (const layer of manifest.layers) dockerDescriptor(layer, dockerLayerType);
+}
+
+/** Reuse img's media-type normalization while retaining exact config and layer bytes. */
+async function normalizeDocker(values, selected, manifest, scratch) {
+	validateDockerManifest(manifest);
 	const configPath = join(values.output, "blobs", "sha256", manifest.config.digest.slice(7));
 	const configBytes = await readMetadata(configPath);
 	if (configBytes.length !== manifest.config.size || `sha256:${createHash("sha256").update(configBytes).digest("hex")}` !== manifest.config.digest) {
@@ -153,6 +158,7 @@ async function pull(values) {
 			if (![manifestType, dockerManifestType].includes(manifest?.mediaType) || manifest.schemaVersion !== 2) {
 				fail("OCI_DIRECT_MANIFEST_REQUIRED", "image lock must pin a direct OCI or Docker schema 2 image manifest, not an index");
 			}
+			if (manifest.mediaType === dockerManifestType) validateDockerManifest(manifest);
 			await registryCommand(values.img, ["pull", "--registry", selected.registry, "--repository", selected.repository,
 				"--reference", selected.digest, "--platform", selected.platform, "--layer-handling", "eager", "--output", values.output], scratch, env);
 			const descriptor = manifest.mediaType === dockerManifestType ? await normalizeDocker(values, selected, manifest, scratch)
