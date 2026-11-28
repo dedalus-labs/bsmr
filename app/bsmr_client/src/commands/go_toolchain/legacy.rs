@@ -52,7 +52,7 @@ pub(crate) const GENERATED_DEFINITION_PREFIX: &str = r#"# ===-------------------
 "#;
 
 /// The generated manifest's toolchains other than Go, which a declared cell keeps.
-const DEMO_TOOLCHAINS: &str = r#"load("@prelude//toolchains:demo.bzl", "system_demo_toolchains")
+pub(super) const DEMO_TOOLCHAINS: &str = r#"load("@prelude//toolchains:demo.bzl", "system_demo_toolchains")
 
 system_demo_toolchains(include_go = False)
 "#;

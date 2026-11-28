@@ -16,6 +16,7 @@
 
 use std::time::Duration;
 
+use bsmr_cli_proto::DaemonProcessInfo;
 use bsmr_cli_proto::StatusResponse;
 use bsmr_client_ctx::client_ctx::ClientCommandContext;
 use bsmr_client_ctx::common::BsmrArgMatches;
@@ -156,7 +157,14 @@ pub(crate) fn process_status(status: StatusResponse) -> bsmr_error::Result<serde
     let mut value = serde_json::json!({
         "start_time": timestamp,
         "uptime": uptime,
-        "process_info": serde_json::to_value(status.process_info)?,
+        "process_info": status.process_info.map(
+            |DaemonProcessInfo {
+                 pid,
+                 endpoint,
+                 version,
+                 auth_token: _,
+             }| serde_json::json!({ "pid": pid, "endpoint": endpoint, "version": version })
+        ),
         "daemon_constraints": serde_json::to_value(status.daemon_constraints)?,
         "snapshot": serde_json::to_value(status.snapshot)?,
         "project_root": status.project_root,
@@ -187,8 +195,60 @@ pub(crate) fn process_status(status: StatusResponse) -> bsmr_error::Result<serde
 mod tests {
     use std::time::Duration;
 
+    use bsmr_cli_proto::DaemonProcessInfo;
+    use bsmr_cli_proto::StatusResponse;
+
     use crate::commands::status::duration_to_string;
+    use crate::commands::status::process_status;
     use crate::commands::status::timestamp_to_string;
+
+    const AUTH_TOKEN: &str = "status-test-auth-token";
+
+    fn status_with_auth_token(pid: i64) -> StatusResponse {
+        StatusResponse {
+            process_info: Some(DaemonProcessInfo {
+                pid,
+                endpoint: "tcp:12345".to_owned(),
+                version: "test-version".to_owned(),
+                auth_token: AUTH_TOKEN.to_owned(),
+            }),
+            ..Default::default()
+        }
+    }
+
+    fn assert_no_auth_token(output: &str) {
+        assert!(!output.contains("auth_token"), "{output}");
+        assert!(!output.contains(AUTH_TOKEN), "{output}");
+    }
+
+    #[test]
+    fn test_status_output_omits_auth_token() {
+        let status = process_status(status_with_auth_token(1)).unwrap();
+        let output = serde_json::to_string_pretty(&status).unwrap();
+
+        assert_no_auth_token(&output);
+        assert_eq!(
+            serde_json::json!({
+                "pid": 1,
+                "endpoint": "tcp:12345",
+                "version": "test-version",
+            }),
+            status["process_info"],
+        );
+    }
+
+    #[test]
+    fn test_status_all_output_omits_auth_token() {
+        let statuses = [1, 2]
+            .into_iter()
+            .map(|pid| process_status(status_with_auth_token(pid)))
+            .collect::<bsmr_error::Result<Vec<_>>>()
+            .unwrap();
+        let output = serde_json::to_string_pretty(&statuses).unwrap();
+
+        assert_no_auth_token(&output);
+        assert_eq!(2, statuses.len());
+    }
 
     #[test]
     fn test_timestamp_to_string() {
