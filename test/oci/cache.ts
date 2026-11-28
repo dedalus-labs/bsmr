@@ -9,7 +9,7 @@ import assert from "node:assert/strict";
 import { execFile } from "node:child_process";
 import { cpSync, existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, realpathSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { basename, join, resolve } from "node:path";
+import { basename, dirname, join, resolve } from "node:path";
 import { parseArgs, promisify } from "node:util";
 
 const { positionals, values } = parseArgs({ allowPositionals: true, options: {
@@ -96,7 +96,9 @@ async function build(directory: string, phase: string, target = "layout") {
 		cpSync(report, join(evidence, `${phase}-build.json`));
 		writeFileSync(join(evidence, `${phase}-actions.json`), JSON.stringify(actions, null, 2) + "\n");
 	}
-	const image = await verify(resolve(directory, output));
+	const outputRoot = (await run(executable, ["root", "--kind=output"], context)).stdout.trim();
+	const outputPath = output.startsWith("bsmr-out/") ? join(dirname(outputRoot), output.slice("bsmr-out/".length)) : resolve(directory, output);
+	const image = await verify(outputPath);
 	if (evidence !== undefined) {
 		writeFileSync(join(evidence, `${phase}-image.json`), JSON.stringify(image, null, 2) + "\n");
 	}
@@ -116,7 +118,7 @@ async function build(directory: string, phase: string, target = "layout") {
 	assert.equal(current.target, "probe");
 	process.stdout.write(`${JSON.stringify({ phase, trace: result.trace_id, local: local.length, cached: cached.length,
 		digest: image.digest, localActions: local.map(({ identity }) => identity) })}\n`);
-	return { image, actions, local, cached, ociLocal, output: resolve(directory, output) };
+	return { image, actions, local, cached, ociLocal, output: outputPath };
 }
 
 /** Restart a workspace without dropping its independent persistent cache. */
