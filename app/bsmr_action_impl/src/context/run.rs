@@ -75,6 +75,10 @@ use crate::actions::impls::run::new_executor_preference;
 #[derive(Debug, bsmr_error::Error)]
 #[bsmr(tag = Input)]
 pub(crate) enum RunActionError {
+    #[error(
+        "`always_run` requires `local_only` and does not support depfiles, offline caching, or incremental outputs"
+    )]
+    InvalidAlwaysRun,
     #[error("expected at least one output artifact, did not get any")]
     NoOutputsSpecified,
     #[error("`weight` must be a positive integer, got `{0}`")]
@@ -133,6 +137,10 @@ pub(crate) fn analysis_actions_methods_run(methods: &mut MethodsBuilder) {
     /// * `arguments`: must be of type `cmd_args`, or a type convertible to such (such as a list of
     ///   strings and artifacts). See below for detailed description of artifact arguments.
     /// * `env`: environment variables to set when the command is executed.
+    /// * `always_run`: reobserve external state after idle admission, bypassing all result caches
+    ///   and uploads. Requires `local_only` and forbids depfiles, offline caching and incremental
+    ///   outputs. Unchanged output bytes still allow dependent actions to reuse their results.
+    ///   Overlapping commands share one observation and must not mutate the external state.
     /// * `category`: category and identifier - when used together, identify the action in Bessemer's
     ///   event stream, and must be unique for a given target
     /// * `weight`: used to note how heavy the command is and will typically be set to a higher
@@ -262,6 +270,7 @@ pub(crate) fn analysis_actions_methods_run(methods: &mut MethodsBuilder) {
         #[starlark(require = named, default = false)] prefer_remote: bool,
         #[starlark(require = named, default = true)] low_pass_filter: bool,
         #[starlark(require = named, default = false)] always_print_stderr: bool,
+        #[starlark(require = named, default = false)] always_run: bool,
         #[starlark(require = named)] weight: Option<u32>,
         #[starlark(require = named)] weight_percentage: Option<u32>,
         #[starlark(require = named)] dep_files: Option<SmallMap<&'v str, &'v ArtifactTag>>,
@@ -305,6 +314,15 @@ pub(crate) fn analysis_actions_methods_run(methods: &mut MethodsBuilder) {
         >,
         #[starlark(require = named, default = false)] eager_materialization_enabled: bool,
     ) -> starlark::Result<NoneType> {
+        if always_run
+            && (!local_only
+                || dep_files.is_some()
+                || allow_offline_output_cache
+                || no_outputs_cleanup
+                || incremental_remote_outputs)
+        {
+            return Err(bsmr_error::Error::from(RunActionError::InvalidAlwaysRun).into());
+        }
         if incremental_remote_outputs && !no_outputs_cleanup {
             // Precaution to make sure content-based paths are not involved.
             return Err(bsmr_error::Error::from(
@@ -604,6 +622,7 @@ pub(crate) fn analysis_actions_methods_run(methods: &mut MethodsBuilder) {
         let action = UnregisteredRunAction {
             executor_preference,
             always_print_stderr,
+            always_run,
             eager_materialization_enabled,
             weight,
             low_pass_filter,
