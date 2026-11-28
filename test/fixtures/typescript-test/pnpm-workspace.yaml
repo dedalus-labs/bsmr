@@ -1,0 +1,6 @@
+packages:
+  - empty
+  - failing
+  - passing
+  - plain
+  - test
