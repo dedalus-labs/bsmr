@@ -369,6 +369,32 @@ pub fn copy<P: AsRef<AbsPath>, Q: AsRef<AbsPath>>(from: P, to: Q) -> Result<u64,
     })
 }
 
+/// Creates `link` as another name for the file at `original`.
+pub fn hard_link<P: AsRef<AbsPath>, Q: AsRef<AbsPath>>(
+    original: P,
+    link: Q,
+) -> Result<(), IoError> {
+    let _guard = IoCounterKey::Hardlink.guard();
+    let original_ref = original.as_ref();
+    let link_ref = link.as_ref();
+    with_retries(|| {
+        fs::hard_link(
+            original_ref.as_maybe_relativized(),
+            link_ref.as_maybe_relativized(),
+        )
+    })
+    .map_err(|e| {
+        IoError::new(e)
+            .context(format!(
+                "hard_link(original={}, link={})",
+                original_ref.display(),
+                link_ref.display(),
+            ))
+            .check_eden(original_ref)
+            .check_eden(link_ref)
+    })
+}
+
 pub fn read_link<P: AsRef<AbsPath>>(path: P) -> Result<PathBuf, IoError> {
     let _guard = IoCounterKey::ReadLink.guard();
     with_retries(|| fs::read_link(path.as_ref().as_maybe_relativized()))
