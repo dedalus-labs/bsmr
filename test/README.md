@@ -111,6 +111,11 @@ Run `BSMR_BINARY=target/debug/bsmr uv run --with pytest==9.0.2 pytest -q test/ou
 from the repository root. The real CLI must resolve the selected isolation from
 nested paths, symlink aliases and `--dir` without creating output or daemon state.
 
+Run `BSMR_BINARY=target/debug/bsmr uv run --with pytest==9.0.2 pytest -q test/output/test_clean_checkout.py`
+with `bsmr-cargo` beside the binary and Rust 1.98.0 installed. `bsmr build`,
+`bsmr test`, `bsmr run`, and `bsmr clean` must leave a fresh Git checkout clean
+under `git status --ignored --porcelain`.
+
 ## Shared stores
 
 Run `BSMR_BINARY=target/debug/bsmr uv run --with pytest==9.0.2 pytest -q test/stores/test_user.py`

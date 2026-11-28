@@ -50,30 +50,23 @@ are recorded in the [command-line reference](cli.md).
 The `[sandbox]` section and `--sandbox` workflow are documented in
 [Sandboxed builds](../users/sandboxing.md).
 
+## Output root and user state
+
+Bessemer stores checkout outputs and daemon state under `~/.bsmr/checkouts/<project-key>/<isolation>` instead of inside the project tree. Shared caches live alongside them under `~/.bsmr/action-v1`, `~/.bsmr/http-v1`, `~/.bsmr/cargo`, and `~/.bsmr/workers`.
+
+Run `bsmr root --kind output` to print the absolute output directory for the active isolation without starting a daemon. Because Bessemer does not write `bsmr-out` into the checkout, repositories do not need a `/bsmr-out` entry in `.gitignore`.
+
 ## Watch source changes on Linux
 
-The native watcher discards its incremental dependency graph when the operating
-system reports lost events, or asks for a rescan without a path or of a source
-path. A rescan confined to `bsmr-out` or ignored paths keeps the graph. After a
-discard, the next build rereads source state before reusing results.
+The native watcher monitors the project tree without observing checkout outputs under `~/.bsmr/checkouts`. It discards its incremental dependency graph when the operating system reports lost events, or asks for a rescan without a path or of a source path. A rescan confined to ignored paths keeps the graph. After a discard, the next build rereads source state before reusing results.
 
-For projects with large build-output trees, use the existing Watchman backend.
-Watchman can exclude `bsmr-out` before walking its directories or registering
-file watches. Install [Watchman](https://facebook.github.io/watchman/docs/install)
-and make its CLI available on `PATH`.
+For projects that prefer Watchman, install [Watchman](https://facebook.github.io/watchman/docs/install) and make its CLI available on `PATH`.
 
-Set the backend in the project's `.bsmr` or `.bsmr.local`:
+Set the backend in the project's `.bsmr`:
 
 ```ini
 [bsmr]
 file_watcher = watchman
-```
-
-Add `bsmr-out` to `ignore_dirs` in the project's `.watchmanconfig`. Preserve
-any other settings or exclusions in that file.
-
-```json
-{"ignore_dirs": ["bsmr-out"]}
 ```
 
 After any builds finish, run `bsmr kill` in the project. The next build starts

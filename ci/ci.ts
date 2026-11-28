@@ -419,6 +419,11 @@ export const ci = workflow({
 					name: "Install Cargo planner",
 					run: command({ file: "cp", args: ["tools/cargo/target/debug/bsmr-cargo", "target/debug/bsmr-cargo"] }),
 				},
+				{
+					name: "Verify clean checkout outputs",
+					env: { BSMR_BINARY: "target/debug/bsmr" },
+					run: command({ file: "pipx", args: ["run", "--spec", "pytest==9.0.2", "pytest", "-q", "test/output/test_clean_checkout.py"] }),
+				},
 				setupNode,
 				{
 					name: "Verify native architecture",

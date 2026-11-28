@@ -284,6 +284,11 @@ jobs:
       - name: Install Cargo planner
         run: cp tools/cargo/target/debug/bsmr-cargo target/debug/bsmr-cargo
         shell: bash
+      - name: Verify clean checkout outputs
+        env:
+          BSMR_BINARY: target/debug/bsmr
+        run: pipx run --spec pytest==9.0.2 pytest -q test/output/test_clean_checkout.py
+        shell: bash
       - name: Set up Node
         uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38
         with:
