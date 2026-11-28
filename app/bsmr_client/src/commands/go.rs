@@ -67,9 +67,65 @@ struct GoToolchainCommand {
     check: bool,
 }
 
+/// A supported Go source-selection target, independent of the SDK execution host.
+#[derive(Clone, Copy, Debug, Eq, PartialEq, clap::ValueEnum)]
+pub(crate) enum GoTarget {
+    #[clap(name = "darwin/amd64")]
+    DarwinAmd64,
+    #[clap(name = "darwin/arm64")]
+    DarwinArm64,
+    #[clap(name = "linux/amd64")]
+    LinuxAmd64,
+    #[clap(name = "linux/arm64")]
+    LinuxArm64,
+}
+
+impl GoTarget {
+    /// Selects the Go target matching the current execution host.
+    fn host() -> Result<Self, GoCommandError> {
+        match (std::env::consts::OS, std::env::consts::ARCH) {
+            ("macos", "x86_64") => Ok(Self::DarwinAmd64),
+            ("macos", "aarch64") => Ok(Self::DarwinArm64),
+            ("linux", "x86_64") => Ok(Self::LinuxAmd64),
+            ("linux", "aarch64") => Ok(Self::LinuxArm64),
+            (os, arch) => Err(GoCommandError::UnsupportedTarget(format!("{os}/{arch}"))),
+        }
+    }
+
+    /// Returns the target names understood by the official Go SDK.
+    pub(crate) fn platform(self) -> (&'static str, &'static str) {
+        match self {
+            Self::DarwinAmd64 => ("darwin", "amd64"),
+            Self::DarwinArm64 => ("darwin", "arm64"),
+            Self::LinuxAmd64 => ("linux", "amd64"),
+            Self::LinuxArm64 => ("linux", "arm64"),
+        }
+    }
+
+    /// Constrains generated rules to the platform that selected their source files.
+    pub(crate) fn constraints(self) -> [String; 2] {
+        let os = match self {
+            Self::DarwinAmd64 | Self::DarwinArm64 => "macos",
+            Self::LinuxAmd64 | Self::LinuxArm64 => "linux",
+        };
+        let cpu = match self {
+            Self::DarwinAmd64 | Self::LinuxAmd64 => "x86_64",
+            Self::DarwinArm64 | Self::LinuxArm64 => "arm64",
+        };
+        [
+            format!("config//os/constraints:{os}"),
+            format!("config//cpu/constraints:{cpu}"),
+        ]
+    }
+}
+
 /// Options controlling deterministic Go package-graph synchronization.
 #[derive(Debug, clap::Parser)]
 struct GoSyncCommand {
+    /// Target GOOS/GOARCH for package selection. Defaults to the SDK execution host.
+    #[clap(long, value_enum)]
+    target: Option<GoTarget>,
+
     /// Verify generated manifests and their ownership index without changing files.
     #[clap(long)]
     check: bool,
@@ -162,6 +218,11 @@ fn sync(mut command: GoSyncCommand, ctx: &ClientCommandContext<'_>) -> bsmr_erro
     let toolchains = futures::executor::block_on(toolchains_directory(project_root))?;
     go_toolchain::reject_leftovers(project_root.root().as_path(), &toolchains)?;
     let lock = go_toolchain::read_lock(project_root.root().as_path())?;
+    let host_target = GoTarget::host()?;
+    let target = command.target.unwrap_or(host_target);
+    if command.cgo && target != host_target {
+        return Err(GoCommandError::CrossCgoTarget.into());
+    }
     let go = go_toolchain::acquired_go(&toolchains, &lock)?;
     let mut patterns = discover_patterns(&root)?;
     // Tool directives are part of the module's graph, so their packages are roots even
@@ -174,7 +235,7 @@ fn sync(mut command: GoSyncCommand, ctx: &ClientCommandContext<'_>) -> bsmr_erro
     let output = if patterns.is_empty() {
         Vec::new()
     } else {
-        run_go_list(&command, &root, &go, &patterns)?
+        run_go_list(&command, target, &root, &go, &patterns)?
     };
     let graph = GoGraph::from_go_list(&output, &root, &root_package(ctx)?)?;
     let mode = if command.check {
@@ -182,7 +243,15 @@ fn sync(mut command: GoSyncCommand, ctx: &ClientCommandContext<'_>) -> bsmr_erro
     } else {
         SyncMode::Write
     };
-    let report = sync_manifests(&root, &graph, &buildfile, &command.tags, command.cgo, mode)?;
+    let report = sync_manifests(
+        &root,
+        &graph,
+        &buildfile,
+        &command.tags,
+        command.cgo,
+        target,
+        mode,
+    )?;
     bsmr_client_ctx::println!(
         "Go graph: {} packages, {} manifests written, {} removed",
         graph.packages().len(),
@@ -295,6 +364,7 @@ pub(super) fn select_buildfile(
 /// Runs the exact Go SDK in offline, non-auto-upgrading mode.
 fn run_go_list(
     command: &GoSyncCommand,
+    target: GoTarget,
     root: &Path,
     go: &Path,
     patterns: &[String],
@@ -318,10 +388,13 @@ fn run_go_list(
         process.args(["-tags", &command.tags.join(",")]);
     }
     process.args(patterns);
+    let (os, arch) = target.platform();
     process
         .current_dir(root)
         .env_clear()
         .env("CGO_ENABLED", if command.cgo { "1" } else { "0" })
+        .env("GOOS", os)
+        .env("GOARCH", arch)
         .env("GOCACHE", scratch.path().join("cache"))
         .env("GOENV", "off")
         .env("GOFLAGS", "")
@@ -493,6 +566,10 @@ fn validate_buildfile(buildfile: &str) -> Result<(), GoCommandError> {
 #[derive(Debug, bsmr_error::Error)]
 #[bsmr(tag = Input)]
 pub(super) enum GoCommandError {
+    #[error("unsupported Go synchronization target: {0}")]
+    UnsupportedTarget(String),
+    #[error("Go synchronization with --cgo requires the SDK execution host target")]
+    CrossCgoTarget,
     #[error("Go synchronization root `{0:?}` has neither go.mod nor go.work")]
     NoModule(PathBuf),
     #[error("Go synchronization root contains a non-UTF-8 entry `{0:?}`")]
