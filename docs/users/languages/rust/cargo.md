@@ -97,7 +97,10 @@ custom tests outside conventional directories. Missing files remain missing
 so Cargo reports them. Source contents still belong to native compiler inputs. The
 compiler pin is independent of this resolver version.
 
-Planning may acquire locked dependencies into BSMR's own Cargo home. It never
+Planning may acquire locked dependencies into `~/.bsmr/cargo/0.98.0` and keeps
+its planner target directory under `~/.bsmr/cargo-planner`. This Cargo
+home is shared across checkouts and survives `bsmr clean`. The former platform
+cache is not imported or removed. Planning never
 compiles a build script or loads a procedural macro. BSMR keeps generated build
 rules in memory and writes no `BUILD.bsmr` files into the checkout. Resolver input
 changes invalidate planning. Ordinary source edits invalidate compiler actions.
