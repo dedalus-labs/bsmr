@@ -266,6 +266,11 @@ jobs:
           CARGO_INCREMENTAL: "0"
         run: cargo build --locked --bin bsmr
         shell: bash
+      - name: Verify persistent worker logs
+        env:
+          BSMR_BINARY: target/debug/bsmr
+        run: pipx run --spec uv==0.13.4 uv run --python 3.12 --with pytest==9.0.2 --with grpcio==1.76.0 --with grpcio-tools==1.76.0 pytest -q test/stores/test_workers.py
+        shell: bash
       - name: Install Cargo planner compiler
         run: rustup toolchain install 1.98.0 --profile minimal --component llvm-tools-preview --no-self-update
         shell: bash
