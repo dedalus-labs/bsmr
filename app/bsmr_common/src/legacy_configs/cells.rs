@@ -48,7 +48,6 @@ use crate::legacy_configs::args::resolve_config_args;
 use crate::legacy_configs::args::to_proto_config_args;
 use crate::legacy_configs::configs::LegacyBsmrConfig;
 use crate::legacy_configs::dice::HasInjectedLegacyConfigs;
-use crate::legacy_configs::file_ops::ConfigDirEntry;
 use crate::legacy_configs::file_ops::ConfigParserFileOps;
 use crate::legacy_configs::file_ops::ConfigPath;
 use crate::legacy_configs::file_ops::DefaultConfigParserFileOps;
@@ -260,13 +259,6 @@ impl BsmrConfigBasedCells {
                 }
 
                 Ok(res)
-            }
-
-            async fn read_dir(
-                &mut self,
-                path: &ConfigPath,
-            ) -> bsmr_error::Result<Vec<ConfigDirEntry>> {
-                self.inner.read_dir(path).await
             }
         }
 
