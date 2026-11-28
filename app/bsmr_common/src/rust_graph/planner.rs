@@ -12,6 +12,7 @@ use std::time::Duration;
 use serde_json::json;
 use tokio::io::AsyncWriteExt;
 
+use super::RustGraphError;
 use super::entry::Requested;
 use super::entry::Target;
 use super::selection::Selection;
@@ -46,11 +47,8 @@ impl<'a> Planner<'a> {
     ) -> bsmr_error::Result<Vec<u8>> {
         let executable = std::env::current_exe()?.with_file_name("bsmr-cargo");
         if !executable.is_file() {
-            return Err(unsupported(
-                "planner",
-                "missing bsmr-cargo beside the installed bsmr binary",
-            )
-            .into());
+            let directory = executable.parent().expect("executable has parent");
+            return Err(RustGraphError::MissingPlanner(directory.to_owned()).into());
         }
         let cargo_home = dirs::cache_dir()
             .ok_or_else(|| unsupported("planner", "missing cache directory"))?
