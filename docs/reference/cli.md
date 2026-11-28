@@ -2961,10 +2961,10 @@ Common options are documented under [Global options](#global-options).
 
 ### Options:
 * `--version <VERSION>`
-    Require this version to match the exact toolchain pin in go.mod
+    Require this version to match the exact Go pin in go.mod or go.work
 
 * `--update`
-    Rejected: edit the toolchain directive in go.mod instead
+    Rejected: edit the Go pin in go.mod or go.work instead
 
 * `--check`
     Verify the committed lock and generated toolchain without network access

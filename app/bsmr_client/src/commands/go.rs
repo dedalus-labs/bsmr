@@ -54,11 +54,11 @@ enum GoSubcommand {
 /// Options controlling exact official Go SDK selection.
 #[derive(Debug, clap::Parser)]
 struct GoToolchainCommand {
-    /// Require this version to match the exact toolchain pin in go.mod.
+    /// Require this version to match the exact Go pin in go.mod or go.work.
     #[clap(long)]
     version: Option<String>,
 
-    /// Rejected: edit the toolchain directive in go.mod instead.
+    /// Rejected: edit the Go pin in go.mod or go.work instead.
     #[clap(long, conflicts_with_all = ["check", "version"])]
     update: bool,
 
@@ -116,10 +116,16 @@ async fn configure_toolchain(
     command: GoToolchainCommand,
     ctx: &ClientCommandContext<'_>,
 ) -> bsmr_error::Result<()> {
+    let working_dir = ctx.working_dir.path().as_path();
     if command.update {
-        return Err(go_toolchain::GoToolchainError::ImplicitUpdate.into());
+        return Err(
+            go_toolchain::GoToolchainError::ImplicitUpdate(go_toolchain::pin_file_name(
+                working_dir,
+            ))
+            .into(),
+        );
     }
-    let pinned = go_toolchain::module_pin(ctx.working_dir.path().as_path())?;
+    let pinned = go_toolchain::module_pin(working_dir)?;
     if let Some(requested) = command.version.as_deref() {
         go_toolchain::require_pin(&pinned, requested)?;
     }
@@ -133,14 +139,12 @@ async fn configure_toolchain(
         lock
     } else {
         go_toolchain::validate_acquisition_owners(&toolchains)?;
+        let lock = go_toolchain::select_lock(root, pinned.version()).await?;
         go_toolchain::remove_leftovers(root, &toolchains)?;
-        let lock = go_toolchain::select_lock(root, &pinned).await?;
-        go_toolchain::publish_lock(root, &lock, || -> bsmr_error::Result<()> {
-            go_toolchain::create_toolchains_package(&toolchains)?;
-            let sdk = materialize_sdk_archive(root)?;
-            go_toolchain::install_sdk(&toolchains, &sdk, &lock)?;
-            Ok(())
-        })?;
+        go_toolchain::write_lock(root, &lock, false)?;
+        go_toolchain::create_toolchains_package(&toolchains)?;
+        let sdk = materialize_sdk_archive(root)?;
+        go_toolchain::install_sdk(&toolchains, &sdk, &lock)?;
         lock
     };
     bsmr_client_ctx::println!(

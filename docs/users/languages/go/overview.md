@@ -32,9 +32,10 @@ bsmr go sync --check
 bsmr go toolchain --check
 ```
 
-`bsmr go toolchain` acquires exactly the release named by the `toolchain
-goX.Y.Z` directive in `go.mod`, or in `go.work` at a workspace root. A missing,
-partial or prerelease pin is an error. The command records the exact official
+`bsmr go toolchain` acquires the exact stable release pinned by `toolchain
+go1.X.Y` (or an exact `go 1.X.Y` line when no `toolchain` directive is present)
+in `go.mod`, or in `go.work` at a workspace root. A missing, partial or
+prerelease pin is an error. The command records the exact official
 archive identities for Darwin and Linux on amd64 and arm64. To move to another
 release, change the directive and run `bsmr go toolchain` again. `--update` is
 rejected, and `--version`, if supplied, must match the pin. The acquired SDK and bootstrap tools are verified,

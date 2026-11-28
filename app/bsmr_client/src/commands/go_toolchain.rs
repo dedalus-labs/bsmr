@@ -30,9 +30,10 @@ pub(crate) use legacy::GENERATED_DEFINITION_PREFIX as LEGACY_DEFINITION_PREFIX;
 pub(crate) use legacy::GENERATED_MANIFEST as LEGACY_MANIFEST;
 pub(crate) use legacy::reject_leftovers;
 pub(crate) use legacy::remove_leftovers;
-pub(crate) use lock::publish_lock;
 pub(crate) use lock::write_lock;
+pub(crate) use pin::ModulePin;
 pub(crate) use pin::module_pin;
+pub(crate) use pin::pin_file_name;
 use serde::Deserialize;
 use serde::Serialize;
 
@@ -87,11 +88,12 @@ pub(crate) struct GoToolchainLock {
 
 impl GoToolchainLock {
     /// Rejects frozen use when the acquired identity disagrees with the module pin.
-    pub(crate) fn check_version(&self, pinned: &str) -> Result<(), GoToolchainError> {
-        if self.version != pinned {
+    pub(crate) fn check_version(&self, pinned: &ModulePin) -> Result<(), GoToolchainError> {
+        if self.version != pinned.version() {
             return Err(GoToolchainError::PinMismatch {
+                file: pinned.file(),
                 selected: self.version.clone(),
-                pinned: pinned.to_owned(),
+                pinned: pinned.version().to_owned(),
             });
         }
         Ok(())
@@ -146,19 +148,23 @@ struct ReleaseFile {
 }
 
 /// Rejects a requested version that differs from the module pin, before anything changes.
-pub(crate) fn require_pin(pinned: &str, requested: &str) -> Result<(), GoToolchainError> {
+pub(crate) fn require_pin(pinned: &ModulePin, requested: &str) -> Result<(), GoToolchainError> {
     let selected = normalize_version(requested)?;
-    if selected != pinned {
+    if selected != pinned.version() {
         return Err(GoToolchainError::PinMismatch {
+            file: pinned.file(),
             selected,
-            pinned: pinned.to_owned(),
+            pinned: pinned.version().to_owned(),
         });
     }
     Ok(())
 }
 
 /// Verifies the committed lock against the module pin without network access.
-pub(crate) fn verify_lock(root: &Path, pinned: &str) -> Result<GoToolchainLock, GoToolchainError> {
+pub(crate) fn verify_lock(
+    root: &Path,
+    pinned: &ModulePin,
+) -> Result<GoToolchainLock, GoToolchainError> {
     let lock = read_lock(root)?;
     lock.check_version(pinned)?;
     write_lock(root, &lock, true)?;
@@ -376,14 +382,18 @@ pub(crate) enum GoToolchainError {
     ReleaseMetadata(String),
     #[error("official stable Go release {0:?} was not found")]
     ReleaseNotFound(Option<String>),
-    #[error("{0:?} requires exactly one `toolchain goX.Y.Z` directive with a stable release")]
+    #[error("{0:?} requires an exact stable Go pin (`toolchain go1.X.Y` or `go 1.X.Y`)")]
     ModulePin(PathBuf),
     #[error("{path:?} is not valid Go module syntax: {message}")]
     ModuleSyntax { path: PathBuf, message: String },
-    #[error("Go {selected} does not match go.mod toolchain go{pinned}")]
-    PinMismatch { selected: String, pinned: String },
-    #[error("implicit Go updates are disabled; edit the toolchain directive in go.mod")]
-    ImplicitUpdate,
+    #[error("Go {selected} does not match {file} pin go{pinned}")]
+    PinMismatch {
+        file: &'static str,
+        selected: String,
+        pinned: String,
+    },
+    #[error("implicit Go updates are disabled; edit the Go pin in {0}")]
+    ImplicitUpdate(&'static str),
     #[error("failed to fetch official Go release metadata: {0}")]
     Network(String),
     #[error("Go {version} has no official {os}-{arch} archive")]

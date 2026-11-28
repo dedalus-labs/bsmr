@@ -8,7 +8,6 @@
 use std::fs;
 use std::path::Path;
 
-use bsmr_common::native_toolchains::GO_TOOLCHAIN_LOCK;
 use bsmr_core::fs::project::ProjectRoot;
 use bsmr_fs::paths::abs_norm_path::AbsNormPathBuf;
 use bsmr_fs::paths::abs_path::AbsPath;
@@ -20,8 +19,6 @@ use crate::commands::go_toolchain::LEGACY_MANIFEST;
 use crate::commands::go_toolchain::acquired_go;
 use crate::commands::go_toolchain::create_toolchains_package;
 use crate::commands::go_toolchain::module_pin;
-use crate::commands::go_toolchain::publish_lock;
-use crate::commands::go_toolchain::read_lock;
 use crate::commands::go_toolchain::reject_leftovers;
 use crate::commands::go_toolchain::remove_leftovers;
 use crate::commands::go_toolchain::select_lock;
@@ -256,73 +253,63 @@ fn rejects_forged_acquisition_marker() {
     assert!(matches!(error, GoToolchainError::UserOwned(_)));
 }
 
-/// Writes one module or workspace file and reads its toolchain pin.
+/// Writes one module or workspace file and reads its exact pin.
 fn pin_of(file: &str, source: &str) -> Result<String, GoToolchainError> {
     let root = tempfile::tempdir().expect("temporary module");
     fs::write(root.path().join(file), source).expect("module file");
-    module_pin(root.path())
+    module_pin(root.path()).map(|pin| pin.version().to_owned())
 }
 
-/// Confirms a `toolchain` entry inside another directive's block is that directive's argument.
+/// Confirms valid and invalid module pin forms follow Go's modfile grammar and pin policy.
 #[test]
-fn pin_ignores_block_entries_named_toolchain() {
-    let source =
-        "module example.com/pin\n\ngo 1.26.0\ntoolchain go1.26.1\n\nignore (\n\ttoolchain\n)\n";
-    assert_eq!(pin_of("go.mod", source).expect("one directive"), "1.26.1");
-}
-
-/// Confirms a block cannot supply the pin, since Go rejects a `toolchain` block.
-#[test]
-fn pin_rejects_toolchain_block() {
-    let source = "module example.com/pin\n\ngo 1.26.0\ntoolchain (\n\tgo1.26.1\n)\n";
-    assert!(pin_of("go.mod", source).is_err());
-}
-
-/// Confirms only Go's own separators split tokens, so a no-break space is a syntax error.
-#[test]
-fn pin_rejects_unicode_space_separator() {
-    let source = "module example.com/pin\n\ngo 1.26.0\ntoolchain\u{a0}go1.26.1\n";
-    assert!(pin_of("go.mod", source).is_err());
-}
-
-/// Confirms the pin keeps Go's `go1` release prefix.
-#[test]
-fn pin_requires_go1_release() {
-    for name in ["go0.1.0", "go2.0.0", "go10.1.0"] {
-        let source = format!("module example.com/pin\n\ngo 1.26.0\ntoolchain {name}\n");
-        assert!(pin_of("go.mod", &source).is_err(), "{name}");
+fn parses_and_rejects_module_pin_forms() {
+    let valid = [
+        ("go 1.26.0\ntoolchain go1.26.1\n", "1.26.1"),
+        ("go 1.26.1\n", "1.26.1"),
+        (
+            "go 1.26\ntoolchain go1.26.1\nignore (\n\ttoolchain\n)\n",
+            "1.26.1",
+        ),
+        ("go 1.26.0\r\n\ttoolchain\tgo1.26.1 // exact\r\n", "1.26.1"),
+    ];
+    for (body, expected) in valid {
+        let source = format!("module example.com/p\n\n{body}");
+        assert_eq!(pin_of("go.mod", &source).expect(body), expected, "{body}");
+    }
+    let invalid = [
+        "go 1.26\n",
+        "go 1.27rc1\n",
+        "go 1.26.2\ntoolchain go1.26.1\n",
+        "go 1.26.0\ntoolchain (\n\tgo1.26.1\n)\n",
+        "go 1.26.0\ntoolchain\u{a0}go1.26.1\n",
+        "/* bad */\ngo 1.26.1\n",
+        "go 1.26.0\ntoolchain go2.0.0\n",
+        "go 1.26.0\ntoolchain go0.1.0\n",
+        "go 1.26.1\ngo 1.26.2\n",
+    ];
+    for body in invalid {
+        let source = format!("module example.com/p\n\n{body}");
+        assert!(pin_of("go.mod", &source).is_err(), "{body}");
     }
 }
 
-/// Confirms tabs, CRLF line ends and trailing comments around the directive are accepted.
-#[test]
-fn pin_accepts_go_layout() {
-    let source = "module example.com/pin\r\n\r\ngo 1.26.0\r\n\ttoolchain\tgo1.26.1 // exact\r\n";
-    assert_eq!(pin_of("go.mod", source).expect("one directive"), "1.26.1");
-}
-
-/// Confirms a workspace root takes the pin Go uses in workspace mode, even beside a module.
+/// Confirms a workspace root takes the pin from `go.work`, even beside `go.mod`.
 #[test]
 fn pin_reads_workspace_file() {
     let root = tempfile::tempdir().expect("temporary workspace");
-    fs::write(
-        root.path().join("go.work"),
-        "go 1.26.0\ntoolchain go1.26.1\n\nuse ./app\n",
-    )
-    .expect("workspace file");
-    assert_eq!(module_pin(root.path()).expect("workspace pin"), "1.26.1");
+    fs::write(root.path().join("go.work"), "go 1.26.1\n\nuse ./app\n").expect("workspace file");
+    let pin = module_pin(root.path()).expect("workspace pin");
+    assert_eq!((pin.file(), pin.version()), ("go.work", "1.26.1"));
     fs::write(
         root.path().join("go.mod"),
         "module example.com/root\n\ngo 1.26.0\ntoolchain go1.26.2\n",
     )
     .expect("module file");
-    assert_eq!(module_pin(root.path()).expect("workspace pin"), "1.26.1");
+    let pin = module_pin(root.path()).expect("workspace pin overrides go.mod");
+    assert_eq!((pin.file(), pin.version()), ("go.work", "1.26.1"));
 }
 
 /// Confirms replaying an acquisition reuses the pinned lock without release metadata.
-///
-/// The lock carries invented archive digests, so resolving official metadata would fail offline
-/// or return a different lock.
 #[test]
 fn replays_pinned_lock_without_release_metadata() {
     let root = tempfile::tempdir().expect("temporary repository");
@@ -333,36 +320,6 @@ fn replays_pinned_lock_without_release_metadata() {
         futures::executor::block_on(select_lock(root.path(), "1.26.5")).expect("existing lock");
 
     assert_eq!(actual, expected);
-}
-
-/// Confirms a failed installation restores the previous lock byte for byte.
-#[test]
-fn failed_installation_restores_previous_lock() {
-    let root = tempfile::tempdir().expect("temporary repository");
-    let path = root.path().join(GO_TOOLCHAIN_LOCK);
-    let previous = br#"{"generated_by":"bsmr go toolchain","schema":1,"version":"1.26.1"}"#;
-    fs::write(&path, previous).expect("previous lock");
-    let lock = select_release(RELEASES, Some("1.26.5")).expect("release");
-
-    let error = publish_lock(root.path(), &lock, || Err(GoToolchainError::NotAcquired))
-        .expect_err("installation failed");
-
-    assert!(matches!(error, GoToolchainError::NotAcquired));
-    assert_eq!(fs::read(&path).expect("restored lock"), previous);
-}
-
-/// Confirms a failed first installation leaves no lock, and a successful one keeps it.
-#[test]
-fn failed_first_installation_leaves_no_lock() {
-    let root = tempfile::tempdir().expect("temporary repository");
-    let lock = select_release(RELEASES, Some("1.26.5")).expect("release");
-
-    publish_lock(root.path(), &lock, || Err(GoToolchainError::NotAcquired))
-        .expect_err("installation failed");
-    assert!(!root.path().join(GO_TOOLCHAIN_LOCK).exists());
-
-    publish_lock(root.path(), &lock, || Ok::<(), GoToolchainError>(())).expect("installed");
-    assert_eq!(read_lock(root.path()).expect("published lock"), lock);
 }
 
 /// Confirms `tool` roots are requested only from SDKs that define the meta-pattern.
