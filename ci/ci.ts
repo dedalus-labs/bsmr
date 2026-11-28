@@ -477,6 +477,11 @@ export const ci = workflow({
 					run: command({ file: "python3", args: ["test/daemon/stale.py", "target/debug/bsmr"] }),
 				},
 				{
+					name: "Verify output root queries",
+					env: { BSMR_BINARY: "target/debug/bsmr" },
+					run: command({ file: "pipx", args: ["run", "--spec", "pytest==9.0.2", "pytest", "-q", "test/output/test_root.py"] }),
+				},
+				{
 					name: "Verify external Rust dependencies",
 					run: command({ file: "node", args: ["test/rust/dependencies.ts", "target/debug/bsmr", "1.98.0"] }),
 				},

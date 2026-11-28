@@ -80,6 +80,17 @@ test("TypeScript cache uses its nested action route and propagates failures", as
 		runner: { uidGid: "1000:1000" },
 	}), failure);
 });
+test("native qualification runs the output root CLI tests against the built engine", () => {
+	const steps = jobs.rust_self_host.steps;
+	const build = steps.findIndex((step) => step.name === "Build BSMR");
+	const verify = steps.findIndex((step) => step.name === "Verify output root queries");
+	assert.ok(build >= 0 && verify > build);
+	const step = steps[verify];
+	assert.ok(step && "run" in step && "env" in step);
+	assert.deepEqual(step.env, { BSMR_BINARY: "target/debug/bsmr" });
+	assert.deepEqual(step.run, command({ file: "pipx", args: ["run", "--spec", "pytest==9.0.2", "pytest", "-q", "test/output/test_root.py"] }));
+	assert.equal(rustAffected(["test/output/test_root.py"]), true);
+});
 const rustLanes = [
 	"rust_audit",
 	"rust_quality",
