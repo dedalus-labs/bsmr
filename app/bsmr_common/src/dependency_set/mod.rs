@@ -16,6 +16,7 @@
 mod lock;
 mod manifest;
 mod range;
+mod receipt;
 mod verify;
 
 use sha2::Digest;
@@ -32,6 +33,11 @@ pub use self::manifest::PatchPolicy;
 pub use self::manifest::ProvenancePolicy;
 pub use self::range::ContractRange;
 pub use self::range::ContractRangeSet;
+pub use self::receipt::ActionEvidence;
+pub use self::receipt::ActionOutcome;
+pub use self::receipt::BuilderProvenance;
+pub use self::receipt::ReceiptArtifact;
+pub use self::receipt::ReleaseReceipt;
 pub use self::verify::ContractRequirer;
 pub use self::verify::ContractResolution;
 pub use self::verify::VerifiedResolution;
