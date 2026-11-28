@@ -183,8 +183,8 @@ def verify_build_gate_and_explain(cli: CliRunner) -> None:
     )
 
 
-def verify_update_and_receipt(cli: CliRunner, baseline_web_closure: str) -> None:
-    """Prove catalog update selects newest compatible release and receipts reject overlays."""
+def verify_catalog_update(cli: CliRunner, baseline_web_closure: str) -> None:
+    """Prove catalog update selects newest compatible release and isolates unrelated closures."""
     (cli.root / "bsmr.component.toml").write_text(manifest_text())
     (cli.root / "bsmr.lock").write_text(lock_text())
     catalog_path, catalog_digest = write_catalog(cli.root)
@@ -201,11 +201,11 @@ def verify_update_and_receipt(cli: CliRunner, baseline_web_closure: str) -> None
         expect_ok=False,
     )
 
+    # Omitting component names updates only cataloged components and preserves web.
     updated = json.loads(
         cli.run(
             "deps",
             "update",
-            "kernel",
             "--catalog",
             str(catalog_path),
             "--catalog-digest",
@@ -220,6 +220,9 @@ def verify_update_and_receipt(cli: CliRunner, baseline_web_closure: str) -> None
     # Updating kernel must not change the unrelated web component's closure digest.
     assert updated["verification"]["component_closures"]["web"] == baseline_web_closure
 
+
+def verify_release_receipt(cli: CliRunner) -> None:
+    """Prove receipts reject uncommitted overlays, write once, and verify cleanly."""
     artifacts_path = cli.root / "artifacts.json"
     artifacts_path.write_text(
         json.dumps(
@@ -232,59 +235,30 @@ def verify_update_and_receipt(cli: CliRunner, baseline_web_closure: str) -> None
             ]
         )
     )
+    create_args = (
+        "deps",
+        "receipt",
+        "create",
+        "--artifacts",
+        str(artifacts_path),
+        "--source-commit",
+        SHA_A,
+        "--builder",
+        "ci-runner",
+        "--workflow",
+        "build",
+    )
 
     # Local overlay builds succeed, but receipt creation rejects uncommitted overlays.
     (cli.root / "bsmr.lock").write_text(lock_text(kernel_rev=SHA_B, overlay="../kernel-local"))
     cli.run("build", "//:ok")
-    cli.run(
-        "deps",
-        "receipt",
-        "create",
-        "--artifacts",
-        str(artifacts_path),
-        "--source-commit",
-        SHA_A,
-        "--builder",
-        "ci-runner",
-        "--workflow",
-        "build",
-        expect_ok=False,
-    )
+    cli.run(*create_args, expect_ok=False)
 
     # Clean lock certifies once and refuses overwrite on second write.
     (cli.root / "bsmr.lock").write_text(lock_text(kernel_rev=SHA_B, kernel_tree=DIGEST_3))
     receipt_path = cli.root / "release-receipt.json"
-    cli.run(
-        "deps",
-        "receipt",
-        "create",
-        "--artifacts",
-        str(artifacts_path),
-        "--source-commit",
-        SHA_A,
-        "--builder",
-        "ci-runner",
-        "--workflow",
-        "build",
-        "--output",
-        str(receipt_path),
-    )
-    cli.run(
-        "deps",
-        "receipt",
-        "create",
-        "--artifacts",
-        str(artifacts_path),
-        "--source-commit",
-        SHA_A,
-        "--builder",
-        "ci-runner",
-        "--workflow",
-        "build",
-        "--output",
-        str(receipt_path),
-        expect_ok=False,
-    )
+    cli.run(*create_args, "--output", str(receipt_path))
+    cli.run(*create_args, "--output", str(receipt_path), expect_ok=False)
     verified = json.loads(cli.run("deps", "receipt", "verify", str(receipt_path), "--json").stdout)
     assert verified["source_commit"] == SHA_A
     assert len(verified["artifacts"]) == 1
@@ -344,7 +318,8 @@ def main() -> None:
             web_closure = closures["web"]
             assert isinstance(web_closure, str)
             verify_build_gate_and_explain(cli)
-            verify_update_and_receipt(cli, web_closure)
+            verify_catalog_update(cli, web_closure)
+            verify_release_receipt(cli)
             verify_native_lockfile_binding(cli)
             print(
                 "PASS: canonical identity, build gate, explain, update, "
