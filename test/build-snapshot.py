@@ -34,13 +34,18 @@ with tempfile.TemporaryDirectory(prefix="bsmr-snapshot-") as temporary:
         lock = tomllib.loads(data.decode())
         assert lock["schema"] == "bsmr.dependency-lock.experimental.v0"
         assert lock["digest_algorithm"] == "sha256"
+        output_root = Path(run("root", "--kind=output").stdout.strip())
         digests = {}
         for target, configurations in lock["targets"].items():
             assert len(configurations) == 1
             artifacts = next(iter(configurations.values()))
             assert len(artifacts) == 1
             for path, artifact in artifacts.items():
-                output = root / path
+                output = (
+                    output_root.parent / path.removeprefix("bsmr-out/")
+                    if path.startswith("bsmr-out/")
+                    else root / path
+                )
                 digest, size = artifact["digest"].split(":")
                 assert output.stat().st_size == int(size)
                 assert hashlib.sha256(output.read_bytes()).hexdigest() == digest

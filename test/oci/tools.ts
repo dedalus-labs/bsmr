@@ -9,7 +9,7 @@ import assert from "node:assert/strict";
 import { execFile } from "node:child_process";
 import { cpSync, existsSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { join, resolve } from "node:path";
+import { dirname, join, resolve } from "node:path";
 import { parseArgs, promisify } from "node:util";
 
 const { positionals, values } = parseArgs({ allowPositionals: true, options: {
@@ -42,7 +42,10 @@ async function layer(phase: string) {
 	}
 	const result = JSON.parse(readFileSync(report, "utf8"));
 	assert.equal(result.success, true);
-	const metadata = JSON.parse(readFileSync(resolve(root, result.results["root//:layer"].outputs.DEFAULT[0]), "utf8"));
+	const outputRoot = (await run(executable, ["root", "--kind=output"], options)).stdout.trim();
+	const rawOutput: string = result.results["root//:layer"].outputs.DEFAULT[0];
+	const outputPath = rawOutput.startsWith("bsmr-out/") ? join(dirname(outputRoot), rawOutput.slice("bsmr-out/".length)) : resolve(root, rawOutput);
+	const metadata = JSON.parse(readFileSync(outputPath, "utf8"));
 	assert.match(metadata.digest, /^sha256:[a-f0-9]{64}$/);
 	assert.match(metadata.diff_id, /^sha256:[a-f0-9]{64}$/);
 	const log = await run(executable, ["log", "what-ran", "--trace-id", result.trace_id, "--format", "json"], options);

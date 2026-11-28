@@ -9,7 +9,7 @@ import assert from "node:assert/strict";
 import { execFile } from "node:child_process";
 import { mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { join, resolve } from "node:path";
+import { dirname, join, resolve } from "node:path";
 import { promisify } from "node:util";
 
 const run = promisify(execFile);
@@ -33,6 +33,7 @@ try {
 	await run("rustup", ["run", "1.97.1", "cargo", "generate-lockfile", "--offline"], options);
 	const lock = readFileSync(join(root, "Cargo.lock"));
 	await run(binary, ["init"], options);
+	const outputRoot = (await run(binary, ["root", "--kind=output"], options)).stdout.trim();
 	writeFileSync(join(root, ".bsmr.local"), "[bsmr]\ndefault_allow_cache_upload=true\n");
 	for (const [lto, expected, cached] of [['"thin"', "42", false], ['"fat"', "42", false], ["true", "42", false], ["false", "42", false], ['"off"', "42", false], ['"thin"', "42", true], ['"thin"', "43", false]] as const) {
 		writeFileSync(join(root, "Cargo.toml"), `${manifest}[profile.release]\nlto=${lto}\ncodegen-units=16\n[profile.release.package.leaf]\ncodegen-units=1\n`);
@@ -53,7 +54,12 @@ try {
 			const commands = executions.filter((action) => action.reproducer.executor === "Local").flatMap((action) => {
 				const command = action.reproducer.details.command;
 				assert.ok(command, actions.stdout);
-				return command.map((argument) => argument.startsWith("@") ? readFileSync(resolve(root, argument.slice(1)), "utf8") : argument);
+				return command.map((argument) => {
+					if (!argument.startsWith("@")) return argument;
+					const rel = argument.slice(1);
+					const file = rel.startsWith("bsmr-out/") ? join(dirname(outputRoot), rel.slice("bsmr-out/".length)) : resolve(root, rel);
+					return readFileSync(file, "utf8");
+				});
 			}).join("\n");
 			assert.ok(commands.includes(`-Clto=${lto.slice(1, -1)}`), commands);
 			assert.ok(commands.includes("-Cembed-bitcode=yes"), commands);
