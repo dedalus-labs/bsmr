@@ -19,6 +19,7 @@ pub mod bxl;
 pub mod clean;
 pub mod clean_stale;
 pub mod ctargets;
+pub mod deps;
 pub mod expand_external_cell;
 pub mod go;
 pub(crate) mod go_graph;
