@@ -91,7 +91,7 @@ try {
 	const lock = readFileSync(join(root, "Cargo.lock"));
 	await run(binary, ["init"], options);
 	const outputRoot = (await run(binary, ["root", "--kind", "output"], options)).stdout.trim();
-	writeFileSync(join(root, ".bsmr.local"), "[bsmr]\ndefault_allow_cache_upload=true\n");
+	writeFileSync(join(root, ".bsmr"), readFileSync(join(root, ".bsmr"), "utf8") + "\n[bsmr]\ndefault_allow_cache_upload=true\n");
 	await build(outputRoot, "7", false, nativeLibraries);
 	await build(outputRoot, "7", true, nativeLibraries);
 	await run(binary, ["clean"], options);

@@ -34,7 +34,7 @@ try {
 	const lock = readFileSync(join(root, "Cargo.lock"));
 	await run(binary, ["init"], options);
 	const outputRoot = (await run(binary, ["root", "--kind=output"], options)).stdout.trim();
-	writeFileSync(join(root, ".bsmr.local"), "[bsmr]\ndefault_allow_cache_upload=true\n");
+	writeFileSync(join(root, ".bsmr"), readFileSync(join(root, ".bsmr"), "utf8") + "\n[bsmr]\ndefault_allow_cache_upload=true\n");
 	for (const [lto, expected, cached] of [['"thin"', "42", false], ['"fat"', "42", false], ["true", "42", false], ["false", "42", false], ['"off"', "42", false], ['"thin"', "42", true], ['"thin"', "43", false]] as const) {
 		writeFileSync(join(root, "Cargo.toml"), `${manifest}[profile.release]\nlto=${lto}\ncodegen-units=16\n[profile.release.package.leaf]\ncodegen-units=1\n`);
 		if (expected === "43") writeFileSync(join(root, "leaf/src/lib.rs"), 'pub fn value() -> u32 { 42 }\n');

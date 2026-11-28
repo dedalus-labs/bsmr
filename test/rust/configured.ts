@@ -62,19 +62,19 @@ try {
 	const lock = readFileSync(join(root, "Cargo.lock"));
 	await run(binary, ["init"], options);
 	cpSync(resolve(import.meta.dirname, "../../prelude"), join(root, "prelude"), { recursive: true });
-	writeFileSync(join(root, ".bsmr.local"), "[external_cells]\nprelude = disabled\n[bsmr]\ndefault_allow_cache_upload = true\n");
+	writeFileSync(join(root, ".bsmr"), readFileSync(join(root, ".bsmr"), "utf8") + "\n[external_cells]\nprelude = disabled\n[bsmr]\ndefault_allow_cache_upload = true\n");
 	const cold = await build();
 	assert.equal(cold.length, 2, "build must compile only app and its ordinary dependency");
 	assert.deepEqual(await build(), [], "unchanged build must execute no compiler actions");
 	writeFileSync(join(root, "unrelated/src/lib.rs"), 'compile_error!("still unrelated");\n');
 	assert.deepEqual(await build(), [], "unrelated edits must not replan or compile app");
-	const local = readFileSync(join(root, ".bsmr.local"), "utf8");
+	const bsmrConfig = readFileSync(join(root, ".bsmr"), "utf8");
 	const sharedInput = join(root, "unrelated/shared.txt");
 	writeFileSync(sharedInput, "shared");
 	writeFileSync(join(root, "app/src/main.rs"), files["app/src/main.rs"]!.replace("../data.txt", "../../unrelated/shared.txt"));
 	await assert.rejects(build("shared"), /couldn't read|No such file/);
 	await build("shared", "-c", 'rust.sources={"app":["unrelated/shared.txt"]}');
-	writeFileSync(join(root, ".bsmr.local"), local + '\n[rust]\nsources = {"app":["unrelated/shared.txt"]}\n');
+	writeFileSync(join(root, ".bsmr"), bsmrConfig + '\n[rust]\nsources = {"app":["unrelated/shared.txt"]}\n');
 	await build("shared");
 	await run(binary, ["test", "app", "--console", "simple"], options);
 	assert.deepEqual(await build("shared"), [], "declared extra sources must support warm reuse");
@@ -94,11 +94,11 @@ try {
 		"the source map must validate every package's path list",
 	);
 	for (const input of ["unrelated/missing.txt", "../outside.txt"]) {
-		writeFileSync(join(root, ".bsmr.local"), local + `\n[rust]\nsources = ${JSON.stringify({ app: [input] })}\n`);
+		writeFileSync(join(root, ".bsmr"), bsmrConfig + `\n[rust]\nsources = ${JSON.stringify({ app: [input] })}\n`);
 		await assert.rejects(build(), /extra source .* is not a declared workspace file/);
 	}
 	writeFileSync(join(root, "app/src/main.rs"), files["app/src/main.rs"]!);
-	writeFileSync(join(root, ".bsmr.local"), local);
+	writeFileSync(join(root, ".bsmr"), bsmrConfig);
 	await run(cargo, ["test", "--locked", "--offline", "-p", "app", "--bin", "app", "--target-dir", "target/reference", "--config", 'build.build-dir="target/reference"'], { ...options, env: { ...env, RUSTC: resolve(cargo, "../rustc") } });
 	await run(binary, ["test", "app", "--console", "simple"], options);
 	writeFileSync(join(root, "shared/src/lib.rs"), files["shared/src/lib.rs"]! + 'fn unused() {}\n');

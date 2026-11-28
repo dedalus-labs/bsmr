@@ -80,11 +80,11 @@ class Io:
         assert reference.stdout.strip() == "17", reference.stdout
         initialized = self.run(self.binary, "init")
         assert initialized.returncode == 0, initialized.stderr
-        config = self.project / ".bsmr.local"
-        config.write_text(
-            "[bsmr]\ndefault_allow_cache_upload=true\n"
-            f"[sandbox]\nbackend=namespace\nruntime={self.runtime}\n"
-        )
+        with (self.project / ".bsmr").open("a") as config:
+            config.write(
+                "\n[bsmr]\ndefault_allow_cache_upload=true\n"
+                f"[sandbox]\nbackend=namespace\nruntime={self.runtime}\n"
+            )
 
     def build(self) -> list[str]:
         """Build and run the fixture, returning its compiler execution records."""

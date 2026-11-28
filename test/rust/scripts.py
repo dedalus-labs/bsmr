@@ -130,7 +130,7 @@ def profile(project: Path, binary: str) -> None:
     assert reference.returncode == 0, reference.stderr
     assert reference.stdout.strip() == '7:13', reference.stdout
     (project / 'app/src/generated.rs').write_text('const GENERATED:u32=0;')
-    config = project / '.bsmr.local'
+    config = project / '.bsmr'
     config.write_text(config.read_text() + '\n[rust]\nprofile=probe\n')
     assert build(project, binary, '7:13')
     assert build(project, binary, '7:13') == []

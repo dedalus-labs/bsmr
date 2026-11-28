@@ -103,10 +103,11 @@ def initialize(project: Path, binary: str, runtime: Path) -> None:
     assert result.returncode == 0, result.stderr
     result = run(project, binary, 'init')
     assert result.returncode == 0, result.stderr
-    (project / '.bsmr.local').write_text(
-        '[bsmr]\ndefault_allow_cache_upload = true\n'
-        f'[sandbox]\nbackend = namespace\nruntime = {runtime}\n'
-    )
+    with (project / '.bsmr').open('a') as config:
+        config.write(
+            '\n[bsmr]\ndefault_allow_cache_upload = true\n'
+            f'[sandbox]\nbackend = namespace\nruntime = {runtime}\n'
+        )
 
 
 def qualify(project: Path, binary: str) -> None:

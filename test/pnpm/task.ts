@@ -85,7 +85,7 @@ try {
 	if (prelude !== undefined) {
 		await phase("source-prelude", async () => {
 			cpSync(resolve(prelude), join(cwd, "prelude"), { recursive: true });
-			writeFileSync(join(cwd, ".bsmr.local"), "[external_cells]\nprelude = disabled\n");
+			writeFileSync(join(cwd, ".bsmr"), readFileSync(join(cwd, ".bsmr"), "utf8") + "\n[external_cells]\nprelude = disabled\n");
 		});
 	}
 	await build("cold", true);

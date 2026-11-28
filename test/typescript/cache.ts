@@ -84,7 +84,7 @@ try {
 	await run(executable, ["init"], options);
 	if (process.argv[3] !== undefined) {
 		cpSync(resolve(process.argv[3]), join(cwd, "prelude"), { recursive: true });
-		writeFileSync(join(cwd, ".bsmr.local"), "[external_cells]\nprelude = disabled\n");
+		writeFileSync(join(cwd, ".bsmr"), readFileSync(join(cwd, ".bsmr"), "utf8") + "\n[external_cells]\nprelude = disabled\n");
 	}
 	const first = await build({ pnpm_install: "Local", typescript_library: "Local" }, "original");
 	const installed = await run(executable, ["build", ":__bsmr_dependencies", "--show-full-json-output", "--console", "simple"], options);

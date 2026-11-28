@@ -44,7 +44,7 @@ if (resumed === undefined) {
 if (resumed !== undefined) {
 	assert.match(readFileSync(join(cwd, "go.mod"), "utf8"), /^module example\.com\/oci-probe\n/);
 	assert.ok(existsSync(join(cwd, ".bsmr-go-toolchain.json")) && existsSync(join(cwd, ".bsmr-go-sdk")) && existsSync(join(root, "cache")));
-	if (values["bundled-prelude"]) assert.equal(existsSync(join(cwd, ".bsmr.local")), false, "bundled qualification must not resume a source overlay");
+	if (values["bundled-prelude"]) assert.equal(readFileSync(join(cwd, ".bsmr"), "utf8").includes("prelude = disabled"), false, "bundled qualification must not resume a source overlay");
 }
 const workspaces: string[] = [];
 const env = { ...process.env, BSMR_LOCAL_CACHE_DIR: join(root, "cache") };
@@ -194,7 +194,7 @@ func main() {
 	await run(executable, ["kill"], options);
 	if (!values["bundled-prelude"]) {
 		cpSync(resolve(prelude), join(cwd, "prelude"), { recursive: true });
-		writeFileSync(join(cwd, ".bsmr.local"), "[external_cells]\nprelude = disabled\n");
+		writeFileSync(join(cwd, ".bsmr"), readFileSync(join(cwd, ".bsmr"), "utf8") + "\n[external_cells]\nprelude = disabled\n");
 	}
 	mkdirSync(join(cwd, "tools"), { recursive: true });
 	cpSync(resolve(img), join(cwd, "tools/img"));

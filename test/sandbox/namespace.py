@@ -216,9 +216,8 @@ def main() -> None:
 
         initialized = run("init")
         assert initialized.returncode == 0, initialized.stderr
-        (root / ".bsmr.local").write_text(
-            f"[sandbox]\nbackend = namespace\nruntime = {manifest}\n"
-        )
+        with (root / ".bsmr").open("a") as config:
+            config.write(f"\n[sandbox]\nbackend = namespace\nruntime = {manifest}\n")
         (root / "input").mkdir()
         (root / "input/value").write_text("7")
         (root / "input/link").symlink_to("value")
