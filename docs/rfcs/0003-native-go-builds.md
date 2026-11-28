@@ -104,10 +104,11 @@ overwrite user-authored build files. `bsmr go sync --check` is the CI drift gate
 
 ### Acquire exact toolchains and modules
 
-`bsmr go toolchain` resolves the latest stable Go SDK for a new repository or
-acquires the exact committed lock in an existing repository. `--update` moves an
-existing lock to the latest stable release, while `--version` selects one exact
-stable release such as `1.26` or `1.26.5`. The command records the official
+`bsmr go toolchain` acquires the exact stable release pinned in `go.mod`, or in
+`go.work` at a workspace root, by `toolchain go1.X.Y` (or an exact `go 1.X.Y`
+directive when no `toolchain` directive is present). A missing, partial or
+prerelease pin is an error. `--update` is rejected, and `--version` only
+confirms the pin. The command records the official
 archive name, SHA-256
 digest, and byte length for Darwin and Linux on amd64 and arm64, verifies the
 extracted SDK's `VERSION`, and installs a repository-local ignored SDK plus

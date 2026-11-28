@@ -14,6 +14,7 @@
 mod acquisition;
 mod legacy;
 mod lock;
+mod pin;
 
 use std::fs;
 use std::path::Path;
@@ -30,6 +31,9 @@ pub(crate) use legacy::GENERATED_MANIFEST as LEGACY_MANIFEST;
 pub(crate) use legacy::reject_leftovers;
 pub(crate) use legacy::remove_leftovers;
 pub(crate) use lock::write_lock;
+pub(crate) use pin::ModulePin;
+pub(crate) use pin::module_pin;
+pub(crate) use pin::pin_file_name;
 use serde::Deserialize;
 use serde::Serialize;
 
@@ -83,6 +87,18 @@ pub(crate) struct GoToolchainLock {
 }
 
 impl GoToolchainLock {
+    /// Rejects frozen use when the acquired identity disagrees with the module pin.
+    pub(crate) fn check_version(&self, pinned: &ModulePin) -> Result<(), GoToolchainError> {
+        if self.version != pinned.version() {
+            return Err(GoToolchainError::PinMismatch {
+                file: pinned.file(),
+                selected: self.version.clone(),
+                pinned: pinned.version().to_owned(),
+            });
+        }
+        Ok(())
+    }
+
     /// Returns the normalized SDK version without Go's `go` prefix.
     pub(crate) fn version(&self) -> &str {
         &self.version
@@ -131,32 +147,45 @@ struct ReleaseFile {
     kind: String,
 }
 
-/// Updates or verifies the native toolchain configuration.
-pub(crate) async fn configure(
+/// Rejects a requested version that differs from the module pin, before anything changes.
+pub(crate) fn require_pin(pinned: &ModulePin, requested: &str) -> Result<(), GoToolchainError> {
+    let selected = normalize_version(requested)?;
+    if selected != pinned.version() {
+        return Err(GoToolchainError::PinMismatch {
+            file: pinned.file(),
+            selected,
+            pinned: pinned.version().to_owned(),
+        });
+    }
+    Ok(())
+}
+
+/// Verifies the committed lock against the module pin without network access.
+pub(crate) fn verify_lock(
     root: &Path,
-    requested: Option<&str>,
-    update: bool,
-    check: bool,
+    pinned: &ModulePin,
 ) -> Result<GoToolchainLock, GoToolchainError> {
-    let lock = if check {
-        let lock = read_lock(root)?;
-        if let Some(requested) = requested {
-            let requested = normalize_version(requested)?;
-            if lock.version != requested {
-                return Err(GoToolchainError::VersionMismatch {
-                    locked: lock.version,
-                    requested,
-                });
-            }
-        }
-        lock
-    } else if requested.is_none() && !update && root.join(LOCK_FILE).is_file() {
-        read_lock(root)?
-    } else {
-        resolve_release(requested).await?
-    };
-    write_lock(root, &lock, check)?;
+    let lock = read_lock(root)?;
+    lock.check_version(pinned)?;
+    write_lock(root, &lock, true)?;
     Ok(lock)
+}
+
+/// Reuses a committed lock that names the pinned release; otherwise resolves the pin.
+///
+/// Only a lock for another release reaches the official metadata, so replaying an acquisition
+/// needs no network access.
+pub(crate) async fn select_lock(
+    root: &Path,
+    pinned: &str,
+) -> Result<GoToolchainLock, GoToolchainError> {
+    if root.join(LOCK_FILE).is_file() {
+        let lock = read_lock(root)?;
+        if lock.version == pinned {
+            return Ok(lock);
+        }
+    }
+    resolve_release(Some(pinned)).await
 }
 
 /// Fetches official metadata only when selection cannot use the committed lock.
@@ -353,8 +382,18 @@ pub(crate) enum GoToolchainError {
     ReleaseMetadata(String),
     #[error("official stable Go release {0:?} was not found")]
     ReleaseNotFound(Option<String>),
-    #[error("requested Go {requested} does not match locked Go {locked}")]
-    VersionMismatch { locked: String, requested: String },
+    #[error("{0:?} requires an exact stable Go pin (`toolchain go1.X.Y` or `go 1.X.Y`)")]
+    ModulePin(PathBuf),
+    #[error("{path:?} is not valid Go module syntax: {message}")]
+    ModuleSyntax { path: PathBuf, message: String },
+    #[error("Go {selected} does not match {file} pin go{pinned}")]
+    PinMismatch {
+        file: &'static str,
+        selected: String,
+        pinned: String,
+    },
+    #[error("implicit Go updates are disabled; edit the Go pin in {0}")]
+    ImplicitUpdate(&'static str),
     #[error("failed to fetch official Go release metadata: {0}")]
     Network(String),
     #[error("Go {version} has no official {os}-{arch} archive")]

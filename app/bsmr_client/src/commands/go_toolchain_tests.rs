@@ -17,10 +17,11 @@ use crate::commands::go_toolchain::GoToolchainError;
 use crate::commands::go_toolchain::LEGACY_DEFINITION_PREFIX;
 use crate::commands::go_toolchain::LEGACY_MANIFEST;
 use crate::commands::go_toolchain::acquired_go;
-use crate::commands::go_toolchain::configure;
 use crate::commands::go_toolchain::create_toolchains_package;
+use crate::commands::go_toolchain::module_pin;
 use crate::commands::go_toolchain::reject_leftovers;
 use crate::commands::go_toolchain::remove_leftovers;
+use crate::commands::go_toolchain::select_lock;
 use crate::commands::go_toolchain::select_release;
 use crate::commands::go_toolchain::validate_acquisition_owners;
 use crate::commands::go_toolchain::write_lock;
@@ -252,15 +253,71 @@ fn rejects_forged_acquisition_marker() {
     assert!(matches!(error, GoToolchainError::UserOwned(_)));
 }
 
-/// Confirms ordinary acquisition preserves the exact lock without release-metadata access.
+/// Writes one module or workspace file and reads its exact pin.
+fn pin_of(file: &str, source: &str) -> Result<String, GoToolchainError> {
+    let root = tempfile::tempdir().expect("temporary module");
+    fs::write(root.path().join(file), source).expect("module file");
+    module_pin(root.path()).map(|pin| pin.version().to_owned())
+}
+
+/// Confirms valid and invalid module pin forms follow Go's modfile grammar and pin policy.
 #[test]
-fn reacquires_existing_lock_without_resolving_latest() {
+fn parses_and_rejects_module_pin_forms() {
+    let valid = [
+        ("go 1.26.0\ntoolchain go1.26.1\n", "1.26.1"),
+        ("go 1.26.1\n", "1.26.1"),
+        (
+            "go 1.26\ntoolchain go1.26.1\nignore (\n\ttoolchain\n)\n",
+            "1.26.1",
+        ),
+        ("go 1.26.0\r\n\ttoolchain\tgo1.26.1 // exact\r\n", "1.26.1"),
+    ];
+    for (body, expected) in valid {
+        let source = format!("module example.com/p\n\n{body}");
+        assert_eq!(pin_of("go.mod", &source).expect(body), expected, "{body}");
+    }
+    let invalid = [
+        "go 1.26\n",
+        "go 1.27rc1\n",
+        "go 1.26.2\ntoolchain go1.26.1\n",
+        "go 1.26.0\ntoolchain (\n\tgo1.26.1\n)\n",
+        "go 1.26.0\ntoolchain\u{a0}go1.26.1\n",
+        "/* bad */\ngo 1.26.1\n",
+        "go 1.26.0\ntoolchain go2.0.0\n",
+        "go 1.26.0\ntoolchain go0.1.0\n",
+        "go 1.26.1\ngo 1.26.2\n",
+    ];
+    for body in invalid {
+        let source = format!("module example.com/p\n\n{body}");
+        assert!(pin_of("go.mod", &source).is_err(), "{body}");
+    }
+}
+
+/// Confirms a workspace root takes the pin from `go.work`, even beside `go.mod`.
+#[test]
+fn pin_reads_workspace_file() {
+    let root = tempfile::tempdir().expect("temporary workspace");
+    fs::write(root.path().join("go.work"), "go 1.26.1\n\nuse ./app\n").expect("workspace file");
+    let pin = module_pin(root.path()).expect("workspace pin");
+    assert_eq!((pin.file(), pin.version()), ("go.work", "1.26.1"));
+    fs::write(
+        root.path().join("go.mod"),
+        "module example.com/root\n\ngo 1.26.0\ntoolchain go1.26.2\n",
+    )
+    .expect("module file");
+    let pin = module_pin(root.path()).expect("workspace pin overrides go.mod");
+    assert_eq!((pin.file(), pin.version()), ("go.work", "1.26.1"));
+}
+
+/// Confirms replaying an acquisition reuses the pinned lock without release metadata.
+#[test]
+fn replays_pinned_lock_without_release_metadata() {
     let root = tempfile::tempdir().expect("temporary repository");
     let expected = select_release(RELEASES, Some("1.26.5")).expect("release");
     write_lock(root.path(), &expected, false).expect("lock");
 
-    let actual = futures::executor::block_on(configure(root.path(), None, false, false))
-        .expect("existing lock");
+    let actual =
+        futures::executor::block_on(select_lock(root.path(), "1.26.5")).expect("existing lock");
 
     assert_eq!(actual, expected);
 }

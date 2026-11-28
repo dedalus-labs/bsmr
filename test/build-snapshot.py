@@ -55,7 +55,7 @@ with tempfile.TemporaryDirectory(prefix="bsmr-snapshot-") as temporary:
         return data, digests
 
     try:
-        (root / "go.mod").write_text("module example.com/snapshot\n\ngo 1.26.0\n")
+        (root / "go.mod").write_text("module example.com/snapshot\n\ngo 1.26.0\ntoolchain go1.26.1\n")
         (root / "bsmr.component.toml").write_text("schema=1\nname='example'\n")
         for name, message in (("api", "api-v1"), ("worker", "worker")):
             (root / name).mkdir()

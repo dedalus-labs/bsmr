@@ -44,6 +44,7 @@ if (resumed === undefined) {
 if (resumed !== undefined) {
 	assert.match(readFileSync(join(cwd, "go.mod"), "utf8"), /^module example\.com\/oci-probe\n/);
 	assert.ok(existsSync(join(cwd, ".bsmr-go-toolchain.json")) && existsSync(join(cwd, ".bsmr-go-sdk")) && existsSync(join(root, "cache")));
+	assert.equal(JSON.parse(readFileSync(join(cwd, ".bsmr-go-toolchain.json"), "utf8")).version, goVersion, "resume skips acquisition, so it must keep the fixture's Go SDK");
 	if (values["bundled-prelude"]) assert.equal(existsSync(join(cwd, ".bsmr.local")), false, "bundled qualification must not resume a source overlay");
 }
 const workspaces: string[] = [];
@@ -169,7 +170,7 @@ function equivalent(native: Image, external: Image) {
 try {
 	assert.equal((await run(executable, ["--version"], { env })).stdout.trim(), `bsmr ${values["engine-version"]}`);
 	mkdirSync(join(cwd, "cmd/probe"), { recursive: true });
-	writeFileSync(join(cwd, "go.mod"), "module example.com/oci-probe\n\ngo 1.26.0\n");
+	writeFileSync(join(cwd, "go.mod"), `module example.com/oci-probe\n\ngo 1.26.0\ntoolchain go${goVersion}\n`);
 	writeFileSync(join(cwd, "cmd/probe/main.go"), `package main
 import ("fmt"; "os"; "strings")
 const version = "v1"

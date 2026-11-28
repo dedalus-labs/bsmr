@@ -2961,10 +2961,10 @@ Common options are documented under [Global options](#global-options).
 
 ### Options:
 * `--version <VERSION>`
-    Exact stable release to select and acquire
+    Require this version to match the exact Go pin in go.mod or go.work
 
 * `--update`
-    Update an existing lock to the latest stable release from go.dev
+    Rejected: edit the Go pin in go.mod or go.work instead
 
 * `--check`
     Verify the committed lock and generated toolchain without network access

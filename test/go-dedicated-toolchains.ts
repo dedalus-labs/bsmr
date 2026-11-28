@@ -16,7 +16,7 @@ const binary = resolve(process.argv[2]);
 const cwd = mkdtempSync(join(tmpdir(), "bsmr-go-cell-"));
 const run = (args: string[]) => execFileSync(binary, args, { cwd, encoding: "utf8", stdio: ["ignore", "pipe", "pipe"], timeout: 180_000 });
 try {
-	writeFileSync(join(cwd, "go.mod"), "module example.com/probe\n\ngo 1.26.0\n");
+	writeFileSync(join(cwd, "go.mod"), "module example.com/probe\n\ngo 1.26.0\ntoolchain go1.26.1\n");
 	writeFileSync(join(cwd, "main.go"), "package main\nfunc main() {}\n");
 	writeFileSync(join(cwd, "main_test.go"), 'package main\nimport "testing"\nfunc TestRoot(t *testing.T) {}\n');
 	run(["init"]);
