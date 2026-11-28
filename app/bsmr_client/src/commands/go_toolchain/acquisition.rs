@@ -25,6 +25,7 @@ use super::GENERATED_BY;
 use super::GoSdkArchive;
 use super::GoToolchainError;
 use super::GoToolchainLock;
+use super::legacy::DEMO_TOOLCHAINS;
 
 const GO_BOOTSTRAP_WRAPPER_SOURCE: &str = include_str!("go_bootstrap_wrapper.go");
 
@@ -43,6 +44,25 @@ struct AcquiredSdk {
     arch: String,
     /// Ties the installed bytes to the authenticated official archive.
     sha256: String,
+}
+
+/// Creates an absent `toolchains//` package directory with the default manifest.
+///
+/// An existing directory is left untouched, so a user's manifest or a cell aliased to the
+/// project root keeps its own package definition.
+pub(crate) fn create_toolchains_package(toolchains: &Path) -> Result<(), GoToolchainError> {
+    match fs::read_dir(toolchains) {
+        Ok(_) => Ok(()),
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => {
+            fs::create_dir_all(toolchains).map_err(|error| write_error(toolchains, error))?;
+            let manifest = toolchains.join("BUILD.bsmr");
+            fs::write(&manifest, DEMO_TOOLCHAINS).map_err(|error| write_error(&manifest, error))
+        }
+        Err(error) => Err(GoToolchainError::Read {
+            path: toolchains.to_owned(),
+            message: error.to_string(),
+        }),
+    }
 }
 
 /// Refuses, before any download, to replace acquisition directories Bessemer does not own.

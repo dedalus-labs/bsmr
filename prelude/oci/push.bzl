@@ -32,7 +32,7 @@ def _oci_push_impl(ctx: AnalysisContext) -> list[Provider]:
         "--configuration-file", config, "--strategy", "eager", request.as_output(),
     ), category = "oci_push_metadata", allow_cache_upload = True)
     return [
-        DefaultInfo(default_output = request),
+        DefaultInfo(default_output = request, other_outputs = [layout]),
         RunInfo(args = cmd_args(toolchain.node, ctx.attrs._push, "--img", toolchain.img,
             "--request", request, "--layout", layout, hidden = [ctx.attrs._auth, ctx.attrs._client])),
     ]

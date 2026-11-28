@@ -198,6 +198,7 @@ enum WorkspaceGraphError {
 struct WorkspaceProject {
     root: CellRelativePathBuf,
     dependencies: BTreeMap<String, WorkspaceDependency>,
+    declares_vitest: bool,
 }
 
 /// One internal edge with its exact manifest declarations.
@@ -216,6 +217,12 @@ impl WorkspaceProject {
     /// Returns internal dependencies in canonical npm-name order.
     fn dependencies(&self) -> impl ExactSizeIterator<Item = &str> {
         self.dependencies.keys().map(String::as_str)
+    }
+
+    /// Returns whether the manifest declares vitest, the package's test runner.
+    #[must_use]
+    fn declares_vitest(&self) -> bool {
+        self.declares_vitest
     }
 }
 
@@ -349,6 +356,7 @@ fn resolve_projects(
                 WorkspaceProject {
                     root: package.root.clone(),
                     dependencies,
+                    declares_vitest: package.dependencies.contains_key("vitest"),
                 },
             ))
         })

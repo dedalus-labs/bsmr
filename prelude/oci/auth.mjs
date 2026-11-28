@@ -16,7 +16,7 @@ function fail(message) {
 }
 
 /** Keep host files, cloud metadata, helpers, and transport overrides outside registry operations. */
-export function registryEnvironment(registry, scratch, credentials = null) {
+export function registryEnvironment(registry, scratch, credentials = null, trust = credentials) {
 	let url;
 	try { url = new URL(`https://${registry}/`); } catch { fail("registry must be a host with an optional port"); }
 	if (url.host !== registry || url.pathname !== "/" || url.username || url.password || url.search || url.hash) {
@@ -33,6 +33,15 @@ export function registryEnvironment(registry, scratch, credentials = null) {
 		GOOGLE_APPLICATION_CREDENTIALS: "/dev/null", AWS_EC2_METADATA_DISABLED: "true",
 		AWS_SHARED_CREDENTIALS_FILE: "/dev/null", AWS_CONFIG_FILE: "/dev/null", AWS_ECR_DISABLE_CACHE: "true",
 	};
+	if (trust !== null) {
+		// Explicit runtime acquisition/publication may use a private registry's CA, never insecure TLS.
+		for (const name of ["SSL_CERT_FILE", "SSL_CERT_DIR"]) {
+			const value = trust[name];
+			if (value === undefined) continue;
+			if (typeof value !== "string" || !isAbsolute(value) || /[\0\r\n]/u.test(value)) fail("TLS trust paths must be absolute");
+			env[name] = value;
+		}
+	}
 	if (credentials === null) return env;
 	if (Object.keys(credentials).some((name) => name.startsWith("IMG_REGISTRY_AUTH_") && !authFields.includes(name))) {
 		fail("unknown IMG_REGISTRY_AUTH_ field");
@@ -46,13 +55,6 @@ export function registryEnvironment(registry, scratch, credentials = null) {
 		const value = credentials[name];
 		if (value === undefined || value === "") continue;
 		if (typeof value !== "string" || /[\0\r\n]/u.test(value)) fail("credential fields must be single-line strings");
-		env[name] = value;
-	}
-	// Explicit runtime acquisition/publication may use a private registry's CA, never insecure TLS.
-	for (const name of ["SSL_CERT_FILE", "SSL_CERT_DIR"]) {
-		const value = credentials[name];
-		if (value === undefined) continue;
-		if (typeof value !== "string" || !isAbsolute(value) || /[\0\r\n]/u.test(value)) fail("TLS trust paths must be absolute");
 		env[name] = value;
 	}
 	return env;

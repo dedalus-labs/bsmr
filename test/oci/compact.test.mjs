@@ -164,7 +164,30 @@ test("invariant directory layers preserve every entry and literal target symlink
 	await execute("tar", ["-xf", f.blob, "-C", extracted]);
 	assert.equal(await readFile(join(extracted, "app/data"), "utf8"), "directory payload\n");
 	assert.equal(existsSync(join(extracted, "app/empty")), true);
+	assert.equal((await lstat(join(extracted, "app"))).mode & 0o777, 0o755);
+	assert.equal((await lstat(join(extracted, "app/empty"))).mode & 0o777, 0o755);
 	assert.equal((await lstat(join(extracted, "app/script"))).mode & 0o777, 0o755);
 	const { stdout } = await execute("python3", ["-c", "import json,sys,tarfile; print(json.dumps({m.name:m.linkname for m in tarfile.open(sys.argv[1]) if m.issym()}))", f.blob]);
 	assert.deepEqual(JSON.parse(stdout), { "app/absolute": "/etc/passwd", "app/outside": "../source", "app/dangling": "missing" });
+});
+
+test("invariant imported tar layers reject duplicate and unsafe member paths", async (t) => {
+	const f = await fixture(t);
+	for (const [name, members, expected] of [
+		["duplicate", ["dup.txt", "dup.txt"], /OCI_DUPLICATE_TAR_PATH/u],
+		["absolute", ["/etc/config"], /OCI_INVALID_TAR_PATH/u],
+		["traversal", ["../../escape"], /OCI_INVALID_TAR_PATH/u],
+	]) {
+		const archive = join(f.root, `${name}.tar`);
+		const metadata = join(f.root, `${name}.json`);
+		await execute("python3", ["-c", [
+			"import io,json,sys,tarfile",
+			"with tarfile.open(sys.argv[1], 'w') as tf:",
+			"  for member in json.loads(sys.argv[2]):",
+			"    info=tarfile.TarInfo(member); info.size=1; tf.addfile(info, io.BytesIO(b'x'))",
+		].join("\n"), archive, JSON.stringify(members)]);
+		await assert.rejects(invoke("layer-from-tar", { img: encoder, platform: "linux/arm64", archive, metadata }),
+			(error) => expected.test(error.stderr));
+		assert.equal(existsSync(metadata), false);
+	}
 });
