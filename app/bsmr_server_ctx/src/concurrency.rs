@@ -72,7 +72,6 @@ use tokio::sync::oneshot;
 use tokio::sync::oneshot::error::RecvError;
 
 use crate::ctx::LockedPreviousCommandData;
-use crate::experiment_util::get_experiment_tags;
 
 #[derive(bsmr_error::Error, Debug)]
 #[bsmr(tag = Input)]
@@ -673,9 +672,6 @@ impl ConcurrencyHandler {
                 trace,
             );
 
-            event_dispatcher.instant_event(bsmr_data::TagEvent {
-                tags: get_experiment_tags(&current_external_and_local_configs),
-            });
             event_dispatcher.instant_event(bsmr_data::BsmrconfigInputValues {
                 components: current_external_and_local_configs,
             });

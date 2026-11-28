@@ -99,7 +99,6 @@ use bsmr_server_ctx::partial_result_dispatcher::PartialResultDispatcher;
 use bsmr_server_ctx::template::ServerCommandTemplate;
 use bsmr_server_ctx::template::run_server_command;
 use bsmr_server_ctx::test_command::TEST_COMMAND;
-use bsmr_server_ctx::tpx_experiment_util::get_tpx_experiments;
 use bsmr_test_api::data::TestResult;
 use bsmr_test_api::data::TestStatus;
 use bsmr_test_api::protocol::TestExecutor;
@@ -447,8 +446,7 @@ async fn test(
         .transpose()
         .bsmr_error_context("Invalid `duration`")?;
 
-    let project_root = server_ctx.project_root();
-    let tpx_experiments = get_tpx_experiments(ctx.dupe(), project_root).await?;
+    let tpx_experiments = bsmr_hash::StdBsmrHashSet::default();
 
     // Forward AI agent identity to TPX as run tags (e.g. ai_agent_id=claude_code).
     #[allow(unused_mut)]

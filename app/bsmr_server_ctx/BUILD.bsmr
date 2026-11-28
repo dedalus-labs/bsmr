@@ -21,7 +21,6 @@ rust_library(
     deps = [
         "bsmr_build//third-party/rust:async-condvar-fair",
         "bsmr_build//third-party/rust:async-trait",
-        "bsmr_build//third-party/rust:const_format",
         "bsmr_build//third-party/rust:derive_more",
         "bsmr_build//third-party/rust:futures",
         "bsmr_build//third-party/rust:itertools",
