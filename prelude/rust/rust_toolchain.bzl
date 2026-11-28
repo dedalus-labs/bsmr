@@ -55,6 +55,10 @@ def rust_toolchain_configuration_error(
 # should, but some of them probably shouldn't?
 # @unsorted-dict-items
 rust_toolchain_attrs = {
+    # Store compiles that verify their inputs and do not link in the local
+    # action cache. Set only by toolchains whose compiler and sysroot are
+    # declared artifacts.
+    "allow_local_cache_upload": provider_field(bool, default = False),
     # Report unused dependencies
     "report_unused_deps": provider_field(bool, default = False),
     # Rustc target triple to use

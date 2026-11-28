@@ -3,7 +3,11 @@
 # SPDX-License-Identifier: Apache-2.0
 # ===----------------------------------------------------------------------===
 
-# Defines pnpm 11 dependency-build trust policy for BSMR's development tools.
+# Defines pnpm 11 dependency resolution and build trust for BSMR's development tools.
+
+# Hollywood pins an affected Zod release; use BSMR's patched version throughout.
+overrides:
+  '@dedalus-labs/hollywood>zod': 4.6.6
 
 allowBuilds:
   esbuild: false
