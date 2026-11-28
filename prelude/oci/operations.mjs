@@ -7,7 +7,7 @@
 
 import { execFile } from "node:child_process";
 import { constants } from "node:fs";
-import { copyFile, lstat, mkdir, mkdtemp, open, readFile, readdir, readlink, rm, writeFile } from "node:fs/promises";
+import { chmod, copyFile, lstat, mkdir, mkdtemp, open, readFile, readdir, readlink, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
@@ -165,21 +165,23 @@ async function layer(values, spec) {
 	const entries = await placements(spec, values.platform);
 	await parents([values.metadata, values.compact]);
 	const args = ["layer", "--format", "gzip", "--compression-level", "1", "--compressor-jobs", "1",
-		"--create-parent-directories", "--default-metadata", JSON.stringify({ mode: "0644", uid: 0, gid: 0, uname: "", gname: "", mtime: epoch }),
+		"--create-parent-directories", "--default-metadata", JSON.stringify({ uid: 0, gid: 0, uname: "", gname: "", mtime: epoch }),
 		"--metadata", values.metadata, "--compact-stream", values.compact, "--compact-stream-only"];
 	const scratch = await mkdtemp(join(tmpdir(), "bsmr-oci-layer-"));
 	try {
 		// Upstream's tree reader dereferences links. Enumerate leaves ourselves and
 		// use its directory entry support only for empty, normalized scaffolding.
 		const empty = join(scratch, "empty");
-		await mkdir(empty);
+		await mkdir(empty, { mode: 0o755 });
+		await chmod(empty, 0o755);
 		const files = [];
 		for (const { path, source, kind, mode } of entries) {
 			if (kind === "directories") files.push(path.slice(1) + "\0d" + empty);
 			else if (kind === "symlinks") args.push("--symlink", path + "=" + source);
 			else {
 				files.push(path.slice(1) + "\0f" + source);
-				if (kind === "executables" || mode === "0755") args.push("--file-metadata", path.slice(1) + '={"mode":"0755"}');
+				const fileMode = kind === "executables" || mode === "0755" ? "0755" : "0644";
+				args.push("--file-metadata", path.slice(1) + `={"mode":"${fileMode}"}`);
 			}
 		}
 		if (files.length) {
@@ -215,12 +217,35 @@ async function materialize(values, spec) {
 	}
 }
 
+/** Reject unsafe or duplicate member paths emitted by img mtree for an imported tar. */
+function validateTarEntries(mtree) {
+	const seen = new Set();
+	for (const line of mtree.split("\n")) {
+		if (!line || line.startsWith("#") || line.startsWith("/")) continue;
+		const raw = line.split(/\s+/u, 1)[0];
+		const decoded = raw.replace(/\\([0-7]{3})/gu, (_, oct) => String.fromCharCode(parseInt(oct, 8)));
+		if (decoded === "." || decoded === "./") continue;
+		const stripped = decoded.startsWith("./") ? decoded.slice(2) : decoded;
+		const normalized = stripped.replace(/\/+$/u, "");
+		if (stripped.startsWith("/") || normalized === "" || normalized.includes("\\")
+			|| normalized.split("/").some((part) => ["", ".", ".."].includes(part))) {
+			throw new OciError("OCI_INVALID_TAR_PATH", "imported tar member must be root-relative and normalized: " + stripped);
+		}
+		if (seen.has(normalized)) {
+			throw new OciError("OCI_DUPLICATE_TAR_PATH", "imported tar contains duplicate member: " + normalized);
+		}
+		seen.add(normalized);
+	}
+}
+
 /** Validate and hash an existing tar layer without rewriting its filesystem metadata. */
 async function layerFromTar(values) {
 	await regularFile(values.archive, false, values.platform);
 	const scratch = await mkdtemp(join(tmpdir(), "bsmr-oci-archive-"));
 	try {
-		await img(values.img, ["mtree", "--tar", values.archive, "--options", "type", "--output", join(scratch, "archive.mtree")]);
+		const mtree = join(scratch, "archive.mtree");
+		await img(values.img, ["mtree", "--tar", values.archive, "--options", "type", "--output", mtree]);
+		validateTarEntries(await readFile(mtree, "utf8"));
 		await parents([values.metadata]);
 		await img(values.img, ["hash", "--encoding", "layer-metadata", values.archive, values.metadata]);
 		const metadata = await layerMetadata(values.metadata);

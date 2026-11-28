@@ -38,7 +38,7 @@ async function main() {
 	process.on("SIGTERM", cancel);
 	try {
 		const hasAuth = Object.keys(process.env).some((name) => name.startsWith("IMG_REGISTRY_AUTH_"));
-		const env = registryEnvironment(request.operations[0].registry, scratch, hasAuth ? process.env : null);
+		const env = registryEnvironment(request.operations[0].registry, scratch, hasAuth ? process.env : null, process.env);
 		await writeFile(join(scratch, "config.json"), "{}", { mode: 0o600, flag: "wx" });
 		let result;
 		try {
