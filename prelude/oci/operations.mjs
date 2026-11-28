@@ -6,7 +6,7 @@
 // Adapts declared native artifacts to pinned img operations and verified layouts.
 
 import { execFile } from "node:child_process";
-import { constants } from "node:fs";
+import { constants, realpathSync } from "node:fs";
 import { chmod, copyFile, lstat, lutimes, mkdir, mkdtemp, open, readFile, readdir, readlink, realpath, rm, symlink, utimes, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { basename, dirname, isAbsolute, join, relative, resolve, sep } from "node:path";
@@ -333,7 +333,7 @@ async function main() {
 	else await importLayout(values);
 }
 
-if (process.argv[1] && import.meta.url === pathToFileURL(resolve(process.argv[1])).href) {
+if (process.argv[1] && import.meta.url === pathToFileURL(realpathSync(process.argv[1])).href) {
 	main().catch((error) => {
 		process.stderr.write((error.code ?? error.name) + ": " + error.message + "\n");
 		process.exitCode = 1;
