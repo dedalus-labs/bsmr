@@ -11,7 +11,6 @@ use pagable::Pagable;
 
 use crate::file_ops::metadata::SimpleDirEntry;
 use crate::find_buildfile::find_buildfile;
-use crate::native_toolchains::GO_TOOLCHAIN_LOCK;
 
 /// The authoritative source used to define a package's build graph.
 #[derive(Clone, Copy, Debug, Eq, PartialEq, Allocative, Pagable)]
@@ -25,21 +24,21 @@ pub enum PackageBuildSource {
 }
 
 /// Native manifests that define a package root without a Starlark build file, in precedence order.
+const NATIVE_MANIFESTS: [&str; 3] = ["pyproject.toml", "Cargo.toml", "package.json"];
+
+/// Go root files that define a package last and only at a cell root.
 ///
-/// The Go toolchain lock defines the project root package, so `toolchains//`, which `bsmr init`
-/// aliases to the root cell, exists in a project that has no other root manifest.
-const NATIVE_MANIFESTS: [&str; 4] = [
-    "pyproject.toml",
-    "Cargo.toml",
-    "package.json",
-    GO_TOOLCHAIN_LOCK,
-];
+/// A pinned module or workspace declares `toolchains//`, which `bsmr init` aliases to the root
+/// cell, so that package must exist without another root manifest. Nested and `testdata` modules
+/// stay inside their enclosing package.
+const GO_ROOT_MANIFESTS: [&str; 2] = ["go.work", "go.mod"];
 
 /// Selects an explicit build file or, at a requested package root, a native manifest.
 pub(crate) fn find_build_source(
     buildfile_candidates: &[FileNameBuf],
     dir_listing: &[SimpleDirEntry],
     allow_native: bool,
+    cell_root: bool,
 ) -> Option<(FileNameBuf, PackageBuildSource)> {
     if let Some(buildfile) = find_buildfile(buildfile_candidates, dir_listing) {
         return Some((buildfile.to_owned(), PackageBuildSource::Starlark));
@@ -47,12 +46,20 @@ pub(crate) fn find_build_source(
     if !allow_native {
         return None;
     }
-    NATIVE_MANIFESTS.into_iter().find_map(|name| {
-        dir_listing
-            .iter()
-            .any(|entry| entry.file_name == name)
-            .then(|| (FileNameBuf::unchecked_new(name), PackageBuildSource::Native))
-    })
+    let go_roots = if cell_root {
+        GO_ROOT_MANIFESTS.as_slice()
+    } else {
+        &[]
+    };
+    NATIVE_MANIFESTS
+        .into_iter()
+        .chain(go_roots.iter().copied())
+        .find_map(|name| {
+            dir_listing
+                .iter()
+                .any(|entry| entry.file_name == name)
+                .then(|| (FileNameBuf::unchecked_new(name), PackageBuildSource::Native))
+        })
 }
 
 /// Returns whether a directory is the root of a standard Python virtual environment.
@@ -90,6 +97,7 @@ mod tests {
             &candidates,
             &listing(&["Cargo.toml", "package.json", "BUILD.bsmr"]),
             true,
+            false,
         );
 
         assert_eq!(
@@ -100,7 +108,7 @@ mod tests {
 
     #[test]
     fn invariant_package_json_defines_a_requested_package() {
-        let source = find_build_source(&[], &listing(&["package.json"]), true);
+        let source = find_build_source(&[], &listing(&["package.json"]), true, false);
 
         assert_eq!(
             source,
@@ -113,7 +121,7 @@ mod tests {
 
     #[test]
     fn invariant_cargo_toml_defines_a_requested_package() {
-        let source = find_build_source(&[], &listing(&["Cargo.toml"]), true);
+        let source = find_build_source(&[], &listing(&["Cargo.toml"]), true, false);
 
         assert_eq!(
             source,
@@ -126,7 +134,7 @@ mod tests {
 
     #[test]
     fn invariant_pyproject_toml_defines_a_requested_package() {
-        let source = find_build_source(&[], &listing(&["pyproject.toml"]), true);
+        let source = find_build_source(&[], &listing(&["pyproject.toml"]), true, false);
 
         assert_eq!(
             source,
@@ -137,23 +145,33 @@ mod tests {
         );
     }
 
-    /// Invariant: the Go toolchain lock defines a package, and yields to every other manifest.
+    /// Invariant: `go.mod` defines a package only at a cell root, after every other manifest.
     ///
     /// A Go-only project from `bsmr init` has no root build file, yet `toolchains//` must exist
-    /// there; a root that Cargo already defines keeps Cargo as its source.
+    /// there; a root that Cargo already defines keeps Cargo, and a nested module stays inside
+    /// its enclosing package.
     ///
     /// Witness:
-    /// a lock alone selects the lock, and a lock beside `Cargo.toml` selects `Cargo.toml`.
+    /// `go.mod` alone selects `go.mod` at a cell root and nothing below it, and `go.mod` beside
+    /// `Cargo.toml` selects `Cargo.toml`.
     #[test]
-    fn invariant_go_toolchain_lock_defines_a_requested_package_last() {
-        let lock = ".bsmr-go-toolchain.json";
-
+    fn invariant_go_module_defines_only_a_cell_root_package_last() {
+        for file in ["go.work", "go.mod"] {
+            assert_eq!(
+                find_build_source(&[], &listing(&[file]), true, true),
+                Some((FileNameBuf::unchecked_new(file), PackageBuildSource::Native))
+            );
+            assert_eq!(find_build_source(&[], &listing(&[file]), true, false), None);
+        }
         assert_eq!(
-            find_build_source(&[], &listing(&[lock]), true),
-            Some((FileNameBuf::unchecked_new(lock), PackageBuildSource::Native))
+            find_build_source(&[], &listing(&["go.mod", "go.work"]), true, true),
+            Some((
+                FileNameBuf::unchecked_new("go.work"),
+                PackageBuildSource::Native,
+            ))
         );
         assert_eq!(
-            find_build_source(&[], &listing(&[lock, "Cargo.toml"]), true),
+            find_build_source(&[], &listing(&["go.mod", "Cargo.toml"]), true, true),
             Some((
                 FileNameBuf::unchecked_new("Cargo.toml"),
                 PackageBuildSource::Native,
@@ -164,7 +182,7 @@ mod tests {
     #[test]
     fn invariant_native_manifests_do_not_create_recursive_package_boundaries() {
         assert_eq!(
-            find_build_source(&[], &listing(&["Cargo.toml", "package.json"]), false),
+            find_build_source(&[], &listing(&["Cargo.toml", "package.json"]), false, true),
             None
         );
     }

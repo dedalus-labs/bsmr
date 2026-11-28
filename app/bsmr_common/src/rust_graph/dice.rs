@@ -262,7 +262,7 @@ pub async fn directory(
     }
     let listing = DiceFileComputations::read_dir(ctx, path.as_ref()).await?;
     let buildfiles = DiceFileComputations::buildfiles(ctx, path.cell()).await?;
-    if find_build_source(&buildfiles, &listing.included, true)
+    if find_build_source(&buildfiles, &listing.included, true, path.path().is_empty())
         .is_none_or(|(_, source)| source != PackageBuildSource::Native)
     {
         return Ok(None);
