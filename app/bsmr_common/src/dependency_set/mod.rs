@@ -16,6 +16,7 @@
 mod lock;
 mod manifest;
 mod range;
+mod verify;
 
 use sha2::Digest;
 use sha2::Sha256;
@@ -31,6 +32,14 @@ pub use self::manifest::PatchPolicy;
 pub use self::manifest::ProvenancePolicy;
 pub use self::range::ContractRange;
 pub use self::range::ContractRangeSet;
+pub use self::verify::ContractRequirer;
+pub use self::verify::ContractResolution;
+pub use self::verify::VerifiedResolution;
+pub use self::verify::load_project_state;
+pub use self::verify::refresh_lockfiles;
+pub use self::verify::verify;
+pub use self::verify::verify_in_root;
+pub use self::verify::verify_project_before_build;
 use crate::cas_digest::CasDigest;
 use crate::cas_digest::CasDigestConfig;
 use crate::cas_digest::CasDigestKind;
