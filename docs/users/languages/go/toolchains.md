@@ -24,25 +24,23 @@ The command acquires the exact stable release pinned by `toolchain go1.X.Y` (or
 an exact `go 1.X.Y` line when no `toolchain` directive is present) in `go.mod`,
 or in `go.work` at a workspace root. A missing, partial or prerelease pin is an
 error. Change the pin to select another release; `--update` is rejected, and
-`--version`, if supplied, must match the pin. It
-commits the official archive names, SHA-256 digests, and byte lengths for
-supported hosts, then builds the verified archive for the current host and checks
-its SDK version. The check command is offline and rejects lock drift and SDK
-copies that earlier releases left in the source tree.
+`--version`, if supplied, must match the pin. It records the official archive
+names, SHA-256 digests, and byte lengths for supported hosts outside every
+checkout, in `~/.bsmr/bootstrap/go/go<version>.json`, then builds the verified
+archive for the current host and checks its SDK version. A valid record is
+reused without network access and never replaced. The check command is offline:
+it requires a valid record for the pin and rejects the lock and SDK copies that
+earlier releases left in the source tree. Package evaluation reads the record
+for the root `go.work` or `go.mod` pin, and a missing or invalid record fails
+and names `bsmr go toolchain`.
 
-Acquisition also records the verified archive identities outside every checkout,
-in `~/.bsmr/bootstrap/go/go<version>.json`. Package evaluation reads the record
-for the root `go.mod` pin. A missing or invalid record fails and names
-`bsmr go toolchain`. That command never replaces a valid record of different
-archives for the same version.
-
-The committed `.bsmr-go-toolchain.json` is intentionally small. Each field
+The record is intentionally small. Each field
 protects a different part of the toolchain contract:
 
 | Field | Purpose |
 | --- | --- |
-| `generated_by` | Establishes ownership before Bessemer overwrites the lock; it is not an artifact digest. |
-| `schema` | Prevents a lock written with newer semantics from being accepted by an incompatible reader. |
+| `generated_by` | Establishes Bessemer's ownership of the record; it is not an artifact digest. |
+| `schema` | Prevents a record written with newer semantics from being accepted by an incompatible reader. |
 | `version` | Fixes the Go language, package-selection, compiler, linker, and standard-library behavior. |
 | `archives[].os` / `archives[].arch` | Selects runnable SDK bytes for the execution host, independently of the build target. |
 | `archives[].filename` | Constrains the go.dev URL to the canonical archive name for the locked version and host. |
@@ -57,7 +55,7 @@ platform. Host-native cgo cannot cross that boundary because its C/C++ toolchain
 and sysroot are host inputs.
 
 The SDK is the output of the `go_sdk_archive` action, which verifies the download
-against the lock, and synchronization runs `go list` from that output. Builds
+against the record, and synchronization runs `go list` from that output. Builds
 compile the bootstrap wrapper from the same archive as a cached action, so neither
 the SDK nor the wrapper lives in the source tree.
 

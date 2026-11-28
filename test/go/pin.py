@@ -15,8 +15,6 @@ from pathlib import Path
 
 import pytest
 
-HOSTS = ("darwin-amd64", "darwin-arm64", "linux-amd64", "linux-arm64")
-
 
 class Project:
     """Drive the real binary in one initialized Go module."""
@@ -92,11 +90,11 @@ def project(tmp_path: Path, cache: Path) -> Iterator[Project]:
 def test_requires_exact_module_pin(
     project: Project, go_line: str, directive: str, command: str
 ) -> None:
-    """Missing or ambiguous pins fail before reading a lock or acquiring an SDK."""
+    """Missing or ambiguous pins fail before reading metadata or acquiring an SDK."""
     project.pin(directive=directive, go_line=go_line)
     result = project.run("go", command, "--check")
     assert result.returncode != 0 and "requires an exact stable Go pin" in result.stderr
-    assert not (project.root / ".bsmr-go-toolchain.json").exists()
+    assert not (project.home / ".bsmr/bootstrap").exists()
 
 
 def test_acquisition_uses_module_pin(project: Project) -> None:
@@ -104,18 +102,19 @@ def test_acquisition_uses_module_pin(project: Project) -> None:
     project.pin(directive="toolchain go1.26.1 // exact SDK", go_line="go 1.26.0")
     assert "Go SDK pinned: 1.26.1" in project.succeed("go", "toolchain")
     assert "Go SDK verified: 1.26.1" in project.succeed("go", "toolchain", "--check")
-    lock = (project.root / ".bsmr-go-toolchain.json").read_bytes()
+    record = project.home / ".bsmr/bootstrap/go/go1.26.1.json"
+    recorded = record.read_bytes()
     assert "Go SDK pinned: 1.26.1" in project.succeed("go", "toolchain")
-    assert (project.root / ".bsmr-go-toolchain.json").read_bytes() == lock
+    assert record.read_bytes() == recorded
     project.pin(directive="", go_line="go 1.26.1")
     assert "Go SDK verified: 1.26.1" in project.succeed("go", "toolchain", "--check")
     project.pin(directive="toolchain go1.26.2", go_line="go 1.26.0")
     for cmd in [("toolchain", "--check"), ("sync", "--check")]:
         res = project.run("go", *cmd)
         assert (
-            res.returncode != 0 and "does not match go.mod pin go1.26.2" in res.stderr
+            res.returncode != 0 and 'go1.26.2.json" is missing or invalid' in res.stderr
         )
-    assert (project.root / ".bsmr-go-toolchain.json").read_bytes() == lock
+    assert record.read_bytes() == recorded
     assert "Go SDK pinned: 1.26.2" in project.succeed("go", "toolchain")
     assert "Go SDK verified: 1.26.2" in project.succeed("go", "toolchain", "--check")
 
@@ -173,10 +172,12 @@ def test_running_daemon_reads_user_root_metadata(project: Project) -> None:
     invalid = project.run(*build)
     assert invalid.returncode != 0
     assert "is invalid; run `bsmr go toolchain`" in invalid.stderr
-    metadata.write_bytes(recorded.replace(b'"size": ', b'"size": 1', 1))
-    conflict = project.run("go", "toolchain")
-    assert conflict.returncode != 0
-    assert "different archive identity for the same version" in conflict.stderr
+    tampered = recorded.replace(b'"size": ', b'"size": 1')
+    metadata.write_bytes(tampered)
+    corrupt = project.run("go", "toolchain")
+    assert corrupt.returncode != 0
+    assert "failed to materialize the locked Go SDK" in corrupt.stderr
+    assert metadata.read_bytes() == tampered
     metadata.write_bytes(recorded)
     project.succeed(*build)
 
@@ -191,7 +192,6 @@ def test_module_root_defines_the_toolchains_package(project: Project) -> None:
     )
     project.succeed("go", "toolchain")
     project.succeed("go", "sync")
-    (project.root / ".bsmr-go-toolchain.json").unlink()
     outputs = json.loads(
         project.succeed(
             "build",
@@ -205,6 +205,25 @@ def test_module_root_defines_the_toolchains_package(project: Project) -> None:
         [outputs["root//cmd:bin"]], capture_output=True, text=True, check=True
     )
     assert result.stdout.strip().split("-X:", 1)[0] == "go1.26.1"
+
+
+def test_toolchain_commits_no_project_lock(project: Project) -> None:
+    """Acquire without a project lock, and retire only an earlier release's marked lock."""
+    project.pin(directive="toolchain go1.26.1")
+    project.succeed("go", "toolchain")
+    lock = project.root / ".bsmr-go-toolchain.json"
+    assert not lock.exists()
+    lock.write_text(json.dumps({"generated_by": "bsmr go toolchain", "schema": 1}))
+    for command in [("toolchain", "--check"), ("sync", "--check")]:
+        result = project.run("go", *command)
+        assert result.returncode != 0
+        assert "run `bsmr go toolchain` to retire them" in result.stderr
+    project.succeed("go", "toolchain")
+    assert not lock.exists()
+    lock.write_text('{"note": "bsmr go toolchain"}\n')
+    assert "Go SDK verified: 1.26.1" in project.succeed("go", "toolchain", "--check")
+    project.succeed("go", "toolchain")
+    assert lock.read_text() == '{"note": "bsmr go toolchain"}\n'
 
 
 def test_sdk_is_an_action_input(project: Project) -> None:
@@ -242,34 +261,10 @@ def test_sdk_is_an_action_input(project: Project) -> None:
             project.succeed("clean")
 
 
-def write_lock(root: Path, version: str) -> bytes:
-    """Write a well-formed generated lock whose invented digests no download can match."""
-    archives = [
-        {
-            "os": h.split("-")[0],
-            "arch": h.split("-")[1],
-            "filename": f"go{version}.{h}.tar.gz",
-            "sha256": d * 64,
-            "size": 1,
-        }
-        for h, d in zip(HOSTS, "abcd", strict=True)
-    ]
-    data = {
-        "generated_by": "bsmr go toolchain",
-        "schema": 1,
-        "version": version,
-        "archives": archives,
-    }
-    content = (json.dumps(data, indent=2) + "\n").encode()
-    (root / ".bsmr-go-toolchain.json").write_bytes(content)
-    return content
-
-
 def test_rejected_requests_and_workspace_pin(project: Project, tmp_path: Path) -> None:
     """Rejections leave files intact; workspaces name `go.work`; OCI example matches its doc."""
     project.pin(directive="toolchain go1.26.1", go_line="go 1.26.0")
     (project.root / "toolchains").mkdir()
-    lock = write_lock(project.root, version="1.26.1")
     for args, expected in [
         (("--update",), "edit the Go pin in go.mod"),
         (("--version", "1.26.2"), "does not match go.mod pin go1.26.1"),
@@ -277,12 +272,6 @@ def test_rejected_requests_and_workspace_pin(project: Project, tmp_path: Path) -
         res = project.run("go", "toolchain", *args)
         assert res.returncode != 0 and expected in res.stderr
         assert (project.root / "toolchains").is_dir()
-        assert (project.root / ".bsmr-go-toolchain.json").read_bytes() == lock
-    (project.root / ".bsmr-go-toolchain.json").write_text("{invalid")
-    assert (
-        project.run("go", "toolchain").returncode != 0
-        and (project.root / "toolchains").is_dir()
-    )
     (project.root / "go.work").write_text("go 1.26.1\n\nuse ./app\n")
     (project.root / "app").mkdir()
     (project.root / "app/go.mod").write_text("module example.com/app\n\ngo 1.26\n")
@@ -309,4 +298,4 @@ def test_rejected_requests_and_workspace_pin(project: Project, tmp_path: Path) -
         res = oci.run("go", "toolchain", "--check", "--version", match.group(1))
     finally:
         oci.succeed("kill")
-    assert res.returncode != 0 and ".bsmr-go-toolchain.json" in res.stderr
+    assert res.returncode != 0 and "is missing or invalid" in res.stderr

@@ -37,9 +37,6 @@ use crate::invocation_roots::home_bsmr_dir;
 use crate::package_listing::PackageBuildSource;
 use crate::package_listing::listing::PackageListing;
 
-/// The committed Go SDK lock, at the project root, that `bsmr go toolchain` writes.
-pub const GO_TOOLCHAIN_LOCK: &str = ".bsmr-go-toolchain.json";
-
 /// The directory, beside the `toolchains//` package, where earlier releases copied the host SDK.
 pub const GO_SDK_DIRECTORY: &str = ".bsmr-go-sdk";
 

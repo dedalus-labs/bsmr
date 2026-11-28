@@ -9,7 +9,7 @@ import assert from "node:assert/strict";
 import { execFile } from "node:child_process";
 import { createHash } from "node:crypto";
 import { cpSync, existsSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, writeFileSync } from "node:fs";
-import { tmpdir } from "node:os";
+import { homedir, tmpdir } from "node:os";
 import { basename, delimiter, join, resolve } from "node:path";
 import { promisify } from "node:util";
 
@@ -178,11 +178,11 @@ try {
 	const sdkRoot = join(root, "sdk");
 	cpSync(Object.values(JSON.parse(archive.stdout) as Record<string, string>)[0] ?? "", sdkRoot, { recursive: true, verbatimSymlinks: true });
 	assert.equal(existsSync(join(second, ".bsmr-go-sdk")), false);
-	const lockPath = join(second, ".bsmr-go-toolchain.json");
-	const host = (JSON.parse(readFileSync(lockPath, "utf8")) as { archives: { os: string; arch: string; filename: string; sha256: string }[] }).archives.find((entry) => entry.os === os && entry.arch === arch);
+	assert.equal(existsSync(join(second, ".bsmr-go-toolchain.json")), false);
+	const record = join(homedir(), ".bsmr/bootstrap/go", `go${nextVersion}.json`);
+	const host = (JSON.parse(readFileSync(record, "utf8")) as { archives: { os: string; arch: string; filename: string; sha256: string }[] }).archives.find((entry) => entry.os === os && entry.arch === arch);
 	assert.ok(host);
-	// Without the lock or exact pin, the root build file alone declares the toolchains the system phases select.
-	rmSync(lockPath);
+	// Without an exact pin, the root build file alone declares the toolchains the system phases select.
 	writeFileSync(module, readFileSync(module, "utf8").replace(`go 1.26.0\ntoolchain go${nextVersion}\n`, "go 1.26\n"));
 	writeFileSync(join(second, "BUILD.bsmr"), 'load("@prelude//toolchains:demo.bzl", "system_demo_toolchains")\nsystem_demo_toolchains()\n');
 	env["PATH"] = `${join(sdkRoot, "bin")}${delimiter}${process.env["PATH"]}`;

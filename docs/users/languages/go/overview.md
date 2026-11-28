@@ -36,12 +36,13 @@ bsmr go toolchain --check
 go1.X.Y` (or an exact `go 1.X.Y` line when no `toolchain` directive is present)
 in `go.mod`, or in `go.work` at a workspace root. A missing, partial or
 prerelease pin is an error. The command records the exact official archive
-identities for Darwin and Linux on amd64 and arm64. To move to another release,
-change the directive and run `bsmr go toolchain` again. `--update` is rejected,
-and `--version`, if supplied, must match the pin. The SDK is the verified
-archive's action output rather than a source-tree copy, and builds compile the
-bootstrap wrapper with the locked archive as a cached action; synchronization
-and builds do not depend on an ambient `go` executable.
+identities for Darwin and Linux on amd64 and arm64 in
+`~/.bsmr/bootstrap/go/go<version>.json`, outside the checkout. To move to
+another release, change the pin and run `bsmr go toolchain` again. `--update`
+is rejected, and `--version`, if supplied, must match the pin. The SDK is the
+verified archive's action output rather than a source-tree copy, and builds
+compile the bootstrap wrapper with the locked archive as a cached action;
+synchronization and builds do not depend on an ambient `go` executable.
 
 Synchronization invokes that SDK's `go list -deps -json -test` with module
 writes, network-backed dependency resolution, ambient `go env -w` state, and
@@ -80,18 +81,17 @@ The Go frontend commits these artifacts:
 
 | Artifact | Commit? | Why it exists |
 | --- | --- | --- |
-| `.bsmr-go-toolchain.json` | yes | Pins the SDK semantics and authenticated archives for every supported execution host. |
 | `.bsmr-go-manifests` | yes | Records the exact manifest paths Bessemer may later remove as stale. |
 | `<package>/<buildfile>` | yes | Carries the validated native graph into ordinary Bessemer rules and action keys. |
 
 ### Where the toolchain lives
 
-The lock is the only committed toolchain file. When Bessemer evaluates the
-package that `toolchains//` names, it adds `go`, `go_bootstrap`, and
-`go_sdk_archive` from the lock to that package's own targets. Anything may
-define the package: a `Cargo.toml`, `package.json`, or `pyproject.toml`, a
-synchronized Go package, a handwritten build file, or a `go.mod` at the cell
-root. A nested module's `go.mod` does not start a package.
+No toolchain file is committed. When Bessemer evaluates the package that
+`toolchains//` names, it adds `go`, `go_bootstrap`, and `go_sdk_archive` from
+the user-root record for the root `go.mod` pin to that package's own targets.
+Anything may define the package: a `Cargo.toml`, `package.json`, or
+`pyproject.toml`, a synchronized Go package, a handwritten build file, or a
+`go.mod` at the cell root. A nested module's `go.mod` does not start a package.
 
 In a project created by `bsmr init`, `toolchains` is an alias of the root cell,
 so the Go toolchain joins the project root package. Bessemer declares `cxx`,
@@ -103,13 +103,14 @@ A project that declares its own `toolchains` cell owns that package. Bessemer
 adds only the Go targets there, and the cell declares the other toolchains its
 builds use, for example with `system_demo_toolchains(include_go = False)`.
 
-In both layouts the lock owns the names `go`, `go_bootstrap`, and
+In both layouts the pin owns the names `go`, `go_bootstrap`, and
 `go_sdk_archive`; a build file that also declares one fails to load.
 
 Earlier releases generated `toolchains/BUILD.bsmr` and
 `toolchains/bsmr_go_toolchain.bzl` and acquired the SDK under `toolchains/`,
 whatever `toolchains//` named; later ones copied it into `.bsmr-go-sdk` beside
-the `toolchains//` package. `bsmr go toolchain` removes each of those files
+the `toolchains//` package and committed `.bsmr-go-toolchain.json`. Add the
+`toolchain` pin to `go.mod` first. `bsmr go toolchain` then removes each of those files
 that still carries the generator's exact marker, and until it runs,
 `bsmr go toolchain --check` and `bsmr go sync` fail and name them. In a
 declared `toolchains` cell at `toolchains/`, the generated `BUILD.bsmr` defines

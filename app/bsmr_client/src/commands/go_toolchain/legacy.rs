@@ -8,8 +8,9 @@
 //! Earlier releases wrote a generated `toolchains/BUILD.bsmr`, its `bsmr_go_toolchain.bzl`,
 //! and the SDK acquisition under `<root>/toolchains/`, whatever `toolchains//` named. Later ones
 //! copied the SDK beside the `toolchains//` package. The Go toolchain now joins that package from
-//! the lock and builds from the archive action output, so those files either sit unused or declare
-//! `go` a second time. Only files that carry the generator's exact ownership marker are touched.
+//! the user-root record and builds from the archive action output, so those files and the project
+//! lock either sit unused or declare `go` a second time. Only files that carry the generator's
+//! exact ownership marker are touched.
 
 use std::fs;
 use std::path::Path;
@@ -25,10 +26,12 @@ use super::GoToolchainError;
 const LEGACY_DIRECTORY: &str = "toolchains";
 const LEGACY_MANIFEST: &str = "BUILD.bsmr";
 const LEGACY_DEFINITION: &str = "bsmr_go_toolchain.bzl";
+/// The project lock earlier releases committed before the SDK record moved to the user root.
+const LEGACY_LOCK: &str = ".bsmr-go-toolchain.json";
 /// The directory earlier releases compiled the bootstrap wrapper into, before it was an action.
 const LEGACY_TOOLS_DIRECTORY: &str = ".bsmr-go-tools";
 
-/// The ownership field of the marker earlier releases wrote into each acquisition directory.
+/// The ownership field earlier releases wrote into each lock and acquisition marker.
 #[derive(Deserialize)]
 struct AcquisitionMarker {
     /// Distinguishes a generated acquisition from a user directory with the same name.
@@ -105,8 +108,8 @@ pub(crate) fn remove_leftovers(root: &Path, toolchains: &Path) -> Result<(), GoT
     Ok(())
 }
 
-/// Lists the generator-owned files under `<root>/toolchains` and the acquisition directories
-/// beside the `toolchains//` package, none of which the current layout uses.
+/// Lists the generator-owned project lock, files under `<root>/toolchains`, and acquisition
+/// directories beside the `toolchains//` package, none of which the current layout uses.
 fn find_leftovers(root: &Path, toolchains: &Path) -> Result<Vec<PathBuf>, GoToolchainError> {
     let legacy = root.join(LEGACY_DIRECTORY);
     let mut leftovers = Vec::new();
@@ -120,6 +123,10 @@ fn find_leftovers(root: &Path, toolchains: &Path) -> Result<Vec<PathBuf>, GoTool
     {
         leftovers.push(definition);
     }
+    let lock = root.join(LEGACY_LOCK);
+    if lock.is_file() && carries_marker(&lock) {
+        leftovers.push(lock);
+    }
     let mut directories = vec![toolchains];
     if legacy != toolchains {
         directories.push(&legacy);
@@ -127,7 +134,7 @@ fn find_leftovers(root: &Path, toolchains: &Path) -> Result<Vec<PathBuf>, GoTool
     for directory in directories {
         for name in [GO_SDK_DIRECTORY, LEGACY_TOOLS_DIRECTORY] {
             let path = directory.join(name);
-            if path.is_dir() && owns_acquisition(&path) {
+            if path.is_dir() && carries_marker(&path.join(".bsmr-metadata.json")) {
                 leftovers.push(path);
             }
         }
@@ -135,9 +142,9 @@ fn find_leftovers(root: &Path, toolchains: &Path) -> Result<Vec<PathBuf>, GoTool
     Ok(leftovers)
 }
 
-/// Reports whether an acquisition directory carries Bessemer's exact ownership marker.
-fn owns_acquisition(path: &Path) -> bool {
-    fs::read(path.join(".bsmr-metadata.json"))
+/// Reports whether a JSON file carries Bessemer's exact ownership field.
+fn carries_marker(path: &Path) -> bool {
+    fs::read(path)
         .ok()
         .and_then(|bytes| serde_json::from_slice::<AcquisitionMarker>(&bytes).ok())
         .is_some_and(|marker| marker.generated_by == GENERATED_BY)

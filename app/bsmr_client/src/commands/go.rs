@@ -109,10 +109,10 @@ impl GoCommand {
     }
 }
 
-/// Pins or verifies the SDK lock; pinning also materializes and verifies the archive output.
+/// Records or verifies the pinned SDK's metadata; recording also materializes the archive.
 ///
-/// Every flag and lock check runs before the checkout changes, so a rejected request
-/// leaves earlier generated files and the lock in place.
+/// Every flag check runs before the checkout changes, so a rejected request leaves
+/// earlier generated files in place.
 async fn configure_toolchain(
     command: GoToolchainCommand,
     ctx: &ClientCommandContext<'_>,
@@ -135,14 +135,11 @@ async fn configure_toolchain(
     let toolchains = toolchains_directory(project_root).await?;
     let lock = if command.check {
         go_toolchain::reject_leftovers(root, &toolchains)?;
-        let lock = go_toolchain::verify_lock(root, &pinned)?;
-        go_toolchain::write_metadata(&go_sdk_metadata_directory()?, &lock, true)?;
-        lock
+        go_toolchain::require_metadata(&go_sdk_metadata_directory()?, pinned.version())?
     } else {
-        let lock = go_toolchain::select_lock(root, pinned.version()).await?;
-        go_toolchain::write_metadata(&go_sdk_metadata_directory()?, &lock, false)?;
+        let lock =
+            go_toolchain::select_metadata(&go_sdk_metadata_directory()?, pinned.version()).await?;
         go_toolchain::remove_leftovers(root, &toolchains)?;
-        go_toolchain::write_lock(root, &lock, false)?;
         go_toolchain::create_toolchains_package(&toolchains)?;
         go_toolchain::sdk_go(&materialize_sdk_archive(root)?, &lock)?;
         lock
@@ -173,8 +170,7 @@ fn sync(mut command: GoSyncCommand, ctx: &ClientCommandContext<'_>) -> bsmr_erro
     let pinned = go_toolchain::module_pin(&root)?;
     let toolchains = futures::executor::block_on(toolchains_directory(project_root))?;
     go_toolchain::reject_leftovers(project_root.root().as_path(), &toolchains)?;
-    let lock = go_toolchain::read_lock(project_root.root().as_path())?;
-    lock.check_version(&pinned)?;
+    let lock = go_toolchain::require_metadata(&go_sdk_metadata_directory()?, pinned.version())?;
     let sdk = materialize_sdk_archive(project_root.root().as_path())?;
     let go = go_toolchain::sdk_go(&sdk, &lock)?;
     let mut patterns = discover_patterns(&root)?;

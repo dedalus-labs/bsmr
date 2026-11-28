@@ -20,9 +20,7 @@ use crate::commands::go_toolchain::create_toolchains_package;
 use crate::commands::go_toolchain::module_pin;
 use crate::commands::go_toolchain::reject_leftovers;
 use crate::commands::go_toolchain::remove_leftovers;
-use crate::commands::go_toolchain::select_lock;
 use crate::commands::go_toolchain::select_release;
-use crate::commands::go_toolchain::write_lock;
 use crate::commands::init::set_up_project;
 
 const RELEASES: &[u8] = br#"
@@ -86,64 +84,6 @@ fn selects_exact_complete_release() {
     assert_eq!(lock.archives()[3].sha256(), "d".repeat(64));
 }
 
-/// Invariant: the lock is the only file `bsmr go toolchain` commits.
-///
-/// Package evaluation lowers the lock into `toolchains//` targets, so no generated build file
-/// or Starlark definition exists to drift from it or to claim a package another source defines.
-///
-/// Witness:
-/// in a root that Cargo and pnpm define, writing the lock adds exactly `.bsmr-go-toolchain.json`,
-/// which records every supported host archive.
-#[test]
-fn writes_only_the_lock() {
-    let root = tempfile::tempdir().expect("temporary repository");
-    fs::write(root.path().join("Cargo.toml"), "[workspace]\n").expect("Cargo manifest");
-    fs::write(root.path().join("package.json"), "{}\n").expect("pnpm manifest");
-    let lock = select_release(RELEASES, None).expect("release");
-
-    write_lock(root.path(), &lock, false).expect("lock");
-
-    let mut entries = fs::read_dir(root.path())
-        .expect("repository listing")
-        .map(|entry| {
-            entry
-                .expect("entry")
-                .file_name()
-                .into_string()
-                .expect("UTF-8")
-        })
-        .collect::<Vec<_>>();
-    entries.sort();
-    assert_eq!(
-        entries,
-        [".bsmr-go-toolchain.json", "Cargo.toml", "package.json"]
-    );
-    let written = fs::read_to_string(root.path().join(".bsmr-go-toolchain.json")).expect("lock");
-    assert!(written.contains("go1.26.5.darwin-amd64.tar.gz"));
-    assert!(written.contains("go1.26.5.linux-arm64.tar.gz"));
-}
-
-/// Invariant: the generator replaces only a lock that carries its exact ownership field.
-///
-/// A quoted marker elsewhere in a JSON file must not let the generator overwrite it.
-///
-/// Witness:
-/// a lock whose `note` quotes the generator name is refused as user-owned.
-#[test]
-fn rejects_forged_lock_marker() {
-    let root = tempfile::tempdir().expect("temporary repository");
-    fs::write(
-        root.path().join(".bsmr-go-toolchain.json"),
-        r#"{"note":"bsmr go toolchain"}"#,
-    )
-    .expect("forged lock");
-    let lock = select_release(RELEASES, None).expect("release");
-
-    let error = write_lock(root.path(), &lock, false).expect_err("forged marker must fail closed");
-
-    assert!(matches!(error, GoToolchainError::UserOwned(_)));
-}
-
 /// Confirms release metadata cannot inject an invalid digest into generated Starlark.
 #[test]
 fn rejects_malformed_release_digest() {
@@ -155,26 +95,6 @@ fn rejects_malformed_release_digest() {
         .expect_err("malformed digest must fail closed");
 
     assert!(error.to_string().contains("SHA-256"));
-}
-
-/// Invariant: check mode is offline and never rewrites a lock that drifted from its form.
-///
-/// Witness:
-/// a lock with a trailing edit fails the check as stale and keeps the edit.
-#[test]
-fn check_detects_lock_drift() {
-    let root = tempfile::tempdir().expect("temporary repository");
-    let lock = select_release(RELEASES, None).expect("release");
-    write_lock(root.path(), &lock, false).expect("lock");
-    let path = root.path().join(".bsmr-go-toolchain.json");
-    let mut drift = fs::read_to_string(&path).expect("lock");
-    drift.push('\n');
-    fs::write(&path, &drift).expect("drift");
-
-    let error = write_lock(root.path(), &lock, true).expect_err("must detect drift");
-
-    assert!(matches!(error, GoToolchainError::Stale(_)));
-    assert_eq!(fs::read_to_string(&path).expect("lock"), drift);
 }
 
 /// Writes one module or workspace file and reads its exact pin.
@@ -232,20 +152,6 @@ fn pin_reads_workspace_file() {
     let pin = module_pin(root.path()).expect("workspace pin overrides go.mod");
     assert_eq!((pin.file(), pin.version()), ("go.work", "1.26.1"));
 }
-
-/// Confirms replaying an acquisition reuses the pinned lock without release metadata.
-#[test]
-fn replays_pinned_lock_without_release_metadata() {
-    let root = tempfile::tempdir().expect("temporary repository");
-    let expected = select_release(RELEASES, Some("1.26.5")).expect("release");
-    write_lock(root.path(), &expected, false).expect("lock");
-
-    let actual =
-        futures::executor::block_on(select_lock(root.path(), "1.26.5")).expect("existing lock");
-
-    assert_eq!(actual, expected);
-}
-
 /// Confirms `tool` roots are requested only from SDKs that define the meta-pattern.
 #[test]
 fn gates_tool_directives_on_sdk_version() {
@@ -305,7 +211,7 @@ fn declared_toolchains_project(directory: &Path) -> ProjectRoot {
 /// package before `bsmr go toolchain` builds it; `bsmr` 0.0.8 created it the same way.
 ///
 /// Witness:
-/// a project that declares `toolchains = toolchains` and has only the lock gains
+/// a project that declares `toolchains = toolchains` and has no such directory gains
 /// `toolchains/BUILD.bsmr` with the default toolchains other than Go, and a rerun keeps an
 /// edited manifest.
 #[test]
@@ -313,8 +219,6 @@ fn creates_a_missing_declared_toolchains_package() {
     let directory = tempfile::tempdir().expect("temporary repository");
     let project_root = declared_toolchains_project(directory.path());
     let root = project_root.root().as_path();
-    let lock = select_release(RELEASES, None).expect("release");
-    write_lock(root, &lock, false).expect("lock");
     let toolchains = futures::executor::block_on(toolchains_directory(&project_root))
         .expect("configured toolchains");
     assert_eq!(toolchains, root.join("toolchains"));

@@ -3,108 +3,72 @@
 // SPDX-License-Identifier: Apache-2.0
 //===----------------------------------------------------------------------===//
 
-// Persists the committed lock for one official Go SDK.
+// Persists verified official Go SDK identities in the user root.
 
-//! Writes or verifies the lock that package evaluation lowers into Go toolchain targets.
+//! Reads and writes the per-version records that package evaluation lowers into Go toolchain
+//! targets.
 //!
-//! The lock is the only committed toolchain artifact: `toolchains//` reads it when it is
-//! evaluated, so no generated Starlark can drift from it.
+//! Records live outside every checkout, and a valid record is never replaced, so later official
+//! metadata for the same version cannot silently change the SDK identity.
 
 use std::fs;
 use std::io::Write as _;
 use std::path::Path;
+use std::path::PathBuf;
 
 use super::GoToolchainError;
 use super::GoToolchainLock;
-use super::LOCK_FILE;
 use super::validate_lock;
 
-/// Writes or verifies the lock at the project root without touching a user-owned file.
-pub(crate) fn write_lock(
-    root: &Path,
-    lock: &GoToolchainLock,
-    check: bool,
-) -> Result<(), GoToolchainError> {
-    let path = root.join(LOCK_FILE);
-    let content = render(lock)?;
-    validate_owned_lock(&path)?;
-    let current = fs::read(&path).ok();
-    if current.as_deref() == Some(content.as_bytes()) {
-        return Ok(());
-    }
-    if check {
-        return Err(GoToolchainError::Stale(path));
-    }
-    atomic_write(&path, content.as_bytes())
-}
-
-/// Writes or verifies the user-root metadata for the locked version.
-///
-/// Metadata outlives every checkout, so a valid file recording other archives for the same
-/// version is refused rather than replaced.
-pub(crate) fn write_metadata(
+/// Returns the valid record for `version`, or `None` when it is absent or invalid.
+pub(crate) fn read_metadata(
     directory: &Path,
-    lock: &GoToolchainLock,
-    check: bool,
-) -> Result<(), GoToolchainError> {
-    let path = directory.join(format!("go{}.json", lock.version));
-    let content = render(lock)?;
-    match fs::read(&path) {
-        Ok(current) if current == content.as_bytes() => return Ok(()),
-        Ok(current) => {
-            if serde_json::from_slice::<GoToolchainLock>(&current).is_ok_and(|current| {
-                current.version == lock.version && validate_lock(&current).is_ok()
-            }) {
-                return Err(GoToolchainError::Conflict(path));
-            }
-        }
-        Err(error) if error.kind() == std::io::ErrorKind::NotFound => {}
+    version: &str,
+) -> Result<Option<GoToolchainLock>, GoToolchainError> {
+    let path = metadata_path(directory, version);
+    let bytes = match fs::read(&path) {
+        Ok(bytes) => bytes,
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => return Ok(None),
         Err(error) => {
             return Err(GoToolchainError::Read {
                 path,
                 message: error.to_string(),
             });
         }
-    }
-    if check {
-        return Err(GoToolchainError::Stale(path));
-    }
-    fs::create_dir_all(directory).map_err(|error| GoToolchainError::Write {
-        path: directory.to_owned(),
-        message: error.to_string(),
-    })?;
-    atomic_write(&path, content.as_bytes())
+    };
+    Ok(serde_json::from_slice::<GoToolchainLock>(&bytes)
+        .ok()
+        .filter(|lock| lock.version == version && validate_lock(lock).is_ok()))
 }
 
-/// Renders the canonical bytes shared by the lock and the user-root metadata.
-fn render(lock: &GoToolchainLock) -> Result<String, GoToolchainError> {
+/// Returns the valid record for `version` and fails closed, naming the file, without one.
+pub(crate) fn require_metadata(
+    directory: &Path,
+    version: &str,
+) -> Result<GoToolchainLock, GoToolchainError> {
+    read_metadata(directory, version)?
+        .ok_or_else(|| GoToolchainError::Metadata(metadata_path(directory, version)))
+}
+
+/// Records verified official metadata for one version in the user root.
+pub(crate) fn write_metadata(
+    directory: &Path,
+    lock: &GoToolchainLock,
+) -> Result<(), GoToolchainError> {
     validate_lock(lock)?;
     let mut content = serde_json::to_string_pretty(lock)
         .map_err(|error| GoToolchainError::Lock(error.to_string()))?;
     content.push('\n');
-    Ok(content)
+    fs::create_dir_all(directory).map_err(|error| GoToolchainError::Write {
+        path: directory.to_owned(),
+        message: error.to_string(),
+    })?;
+    atomic_write(&metadata_path(directory, &lock.version), content.as_bytes())
 }
 
-/// Allows only a missing or parseable Bessemer-owned lock.
-fn validate_owned_lock(path: &Path) -> Result<(), GoToolchainError> {
-    match fs::read(path) {
-        Ok(bytes) => {
-            let lock = serde_json::from_slice::<serde_json::Value>(&bytes)
-                .map_err(|_| GoToolchainError::UserOwned(path.to_owned()))?;
-            if lock.get("generated_by").and_then(serde_json::Value::as_str)
-                == Some(super::GENERATED_BY)
-            {
-                Ok(())
-            } else {
-                Err(GoToolchainError::UserOwned(path.to_owned()))
-            }
-        }
-        Err(error) if error.kind() == std::io::ErrorKind::NotFound => Ok(()),
-        Err(error) => Err(GoToolchainError::Read {
-            path: path.to_owned(),
-            message: error.to_string(),
-        }),
-    }
+/// Names the record that package evaluation selects for the `go.mod` pin `version`.
+fn metadata_path(directory: &Path, version: &str) -> PathBuf {
+    directory.join(format!("go{version}.json"))
 }
 
 /// Atomically persists one generated file beside its final destination.
