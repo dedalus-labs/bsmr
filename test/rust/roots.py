@@ -112,7 +112,8 @@ def qualify(binary: Path, base: Path) -> None:
         app = root / "a/Cargo.toml"
         app.write_text(app.read_text() + '\n[dependencies.b]\npath="../b"\nfeatures=["extra"]\n')
         run("cargo", "generate-lockfile", "--offline")
-        run("cargo", "build", "--locked", "--offline", "-p", "a", "-p", "b")
+        run("cargo", "build", "--locked", "--offline", "-p", "a", "-p", "b", "--bin=optional")
+        assert run(str(root / "target/debug/optional")).stdout.strip() == "9"
         assert build("a", "b")[0] == ["9", "9", "9", "9"], "joint dependency features failed to enable optional target"
         assert build("b")[0] == ["7", "7"], "single selection retained optional target"
         manifest = root / "Cargo.toml"
