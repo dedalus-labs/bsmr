@@ -217,7 +217,8 @@ impl TopLevelTargetAggregatedData {
             | ActionExecutionKind::Deferred
             | ActionExecutionKind::LocalDepFile
             | ActionExecutionKind::RemoteDepFileCache
-            | ActionExecutionKind::LocalActionCache => {
+            | ActionExecutionKind::LocalActionCache
+            | ActionExecutionKind::UpToDate => {
                 // ignore
             }
         }
@@ -273,7 +274,8 @@ impl AggregatedBuildMetrics {
                 | bsmr_data::ActionExecutionKind::Simple
                 | bsmr_data::ActionExecutionKind::Deferred
                 | bsmr_data::ActionExecutionKind::LocalDepFile
-                | bsmr_data::ActionExecutionKind::LocalActionCache => {
+                | bsmr_data::ActionExecutionKind::LocalActionCache
+                | bsmr_data::ActionExecutionKind::UpToDate => {
                     // ignored.
                 }
             }

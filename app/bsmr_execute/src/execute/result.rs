@@ -313,7 +313,8 @@ impl CommandExecutionResult {
             self.report.status,
             CommandExecutionStatus::Success {
                 execution_kind: CommandExecutionKind::ActionCache { .. }
-                    | CommandExecutionKind::LocalActionCache { .. },
+                    | CommandExecutionKind::LocalActionCache { .. }
+                    | CommandExecutionKind::UpToDate { .. },
             }
         )
     }

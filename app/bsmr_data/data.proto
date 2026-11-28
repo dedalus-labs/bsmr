@@ -1620,6 +1620,9 @@ enum ActionExecutionKind {
   ACTION_EXECUTION_KIND_LOCAL_ACTION_CACHE = 10;
   // This action was executed remotely via a persistent worker.
   ACTION_EXECUTION_KIND_REMOTE_WORKER = 11;
+  // This action's outputs already matched an earlier result for the same
+  // action, so nothing ran or was restored.
+  ACTION_EXECUTION_KIND_UP_TO_DATE = 12;
 }
 
 // A name for a particular action, suitable for offline analytics and user

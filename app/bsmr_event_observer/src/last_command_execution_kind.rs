@@ -20,6 +20,7 @@ pub enum LastCommandExecutionKind {
     Remote,
     Cached,
     RemoteDepFileCached,
+    UpToDate,
     NoCommand,
 }
 
@@ -29,8 +30,12 @@ pub enum LastCommandExecutionKind {
 pub fn get_last_command_execution_kind(
     action: &bsmr_data::ActionExecutionEnd,
 ) -> LastCommandExecutionKind {
-    if action.execution_kind() == bsmr_data::ActionExecutionKind::LocalActionCache {
-        return LastCommandExecutionKind::Cached;
+    match action.execution_kind() {
+        bsmr_data::ActionExecutionKind::LocalActionCache => {
+            return LastCommandExecutionKind::Cached;
+        }
+        bsmr_data::ActionExecutionKind::UpToDate => return LastCommandExecutionKind::UpToDate,
+        _ => {}
     }
     let last_command_kind = action
         .commands

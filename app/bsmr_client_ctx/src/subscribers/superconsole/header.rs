@@ -369,6 +369,12 @@ impl ProgressHeader<'_> {
                         if compact { "" } else { " hit" }
                     ));
                 }
+                if self.action_stats.up_to_date_actions > 0 {
+                    res_types.push(format!(
+                        "{} up-to-date",
+                        self.action_stats.up_to_date_actions
+                    ));
+                }
 
                 if res_types.is_empty() {
                     String::new()
@@ -642,6 +648,7 @@ mod tests {
             cached_actions: 133,
             fallback_actions: 0,
             remote_dep_file_cached_actions: 0,
+            up_to_date_actions: 0,
             excess_cache_misses: 0,
         }
     }
@@ -850,6 +857,7 @@ mod tests {
             cached_actions: 1,
             fallback_actions: 0,
             remote_dep_file_cached_actions: 0,
+            up_to_date_actions: 0,
             excess_cache_misses: 0,
         };
         let output = SimpleHeader::new_for_data(HeaderData {
@@ -881,6 +889,7 @@ mod tests {
             cached_actions: 0,
             fallback_actions: 0,
             remote_dep_file_cached_actions: 0,
+            up_to_date_actions: 0,
             excess_cache_misses: 0,
         };
         let output = SimpleHeader::new_for_data(HeaderData {
@@ -913,6 +922,7 @@ mod tests {
             cached_actions: 1,
             fallback_actions: 0,
             remote_dep_file_cached_actions: 0,
+            up_to_date_actions: 0,
             excess_cache_misses: 0,
         };
         let output = SimpleHeader::new_for_data(HeaderData {
@@ -946,6 +956,7 @@ mod tests {
             cached_actions: 1,
             fallback_actions: 0,
             remote_dep_file_cached_actions: 0,
+            up_to_date_actions: 0,
             excess_cache_misses: 0,
         };
         let output = SimpleHeader::new_for_data(HeaderData {

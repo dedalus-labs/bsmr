@@ -52,6 +52,7 @@ use bsmr_execute::execute::request::CommandExecutionOutput;
 use bsmr_execute::execute::result::CommandExecutionMetadata;
 use bsmr_execute::execute::result::CommandExecutionResult;
 use bsmr_execute::materialize::materializer::DeclareArtifactPayload;
+use bsmr_execute::materialize::materializer::DeclareMatchOutcome;
 use bsmr_execute::materialize::materializer::Materializer;
 use bsmr_fs::paths::forward_rel_path::ForwardRelativePath;
 use bsmr_hash::BsmrIndexMap;
@@ -127,17 +128,21 @@ impl PreparedCommandOptionalExecutor for LocalActionCacheChecker {
             ),
         )
         .await;
-        let (outputs, streams) = match restored {
+        let (outputs, streams, freshness) = match restored {
             Ok(restored) => restored,
             Err(error) => {
                 return ControlFlow::Break(manager.error("local_action_cache_restore", error));
             }
         };
+        let digest = action.dupe();
+        let kind = if freshness.is_match() {
+            CommandExecutionKind::UpToDate { digest }
+        } else {
+            CommandExecutionKind::LocalActionCache { digest }
+        };
 
         let mut result = manager.success(
-            CommandExecutionKind::LocalActionCache {
-                digest: action.dupe(),
-            },
+            kind,
             outputs,
             streams,
             CommandExecutionMetadata::empty(start.end_now()),
@@ -243,6 +248,7 @@ async fn restore_result(
 ) -> bsmr_error::Result<(
     BsmrIndexMap<CommandExecutionOutput, ArtifactValue>,
     CommandStdStreams,
+    DeclareMatchOutcome,
 )> {
     let digest_config = command.digest_config;
     validate_output_paths(
@@ -327,13 +333,26 @@ async fn restore_result(
         }
     }
 
+    // Checked before declaring, which would otherwise make every output match.
+    let freshness = materializer
+        .declare_match(
+            declarations
+                .iter()
+                .map(|declaration| (declaration.path.clone(), declaration.artifact.dupe()))
+                .collect(),
+        )
+        .await?;
     materializer
         .declare_local_cache_many(cache.dupe(), digest_config, declarations)
         .await?;
 
     let stdout = read_stream(&cache, &result.stdout, digest_config)?;
     let stderr = read_stream(&cache, &result.stderr, digest_config)?;
-    Ok((outputs, CommandStdStreams::Local { stdout, stderr }))
+    Ok((
+        outputs,
+        CommandStdStreams::Local { stdout, stderr },
+        freshness,
+    ))
 }
 
 fn validate_output_paths(

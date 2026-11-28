@@ -28,7 +28,9 @@ use crate::last_command_execution_kind::get_last_command_execution_kind;
 /// gives the total number of actions. `local_actions` + `remote_actions`
 /// provides the total number of actually executed actions while
 /// `cached_actions` provides number of actions which we found
-/// in the action cache.  `fallback_actions` provides the number of actions
+/// in the action cache after their outputs were needed, and `up_to_date_actions`
+/// counts actions whose outputs already matched on disk, so nothing ran or was
+/// restored. `fallback_actions` provides the number of actions
 /// that had its command run more than once (hence, using fallback to run).
 ///
 /// These stats only track executions/commands.
@@ -39,6 +41,7 @@ pub struct ActionStats {
     pub cached_actions: u64,
     pub fallback_actions: u64,
     pub remote_dep_file_cached_actions: u64,
+    pub up_to_date_actions: u64,
     pub excess_cache_misses: u64,
 }
 
@@ -102,6 +105,9 @@ impl ActionStats {
             LastCommandExecutionKind::RemoteDepFileCached => {
                 self.remote_dep_file_cached_actions += 1;
             }
+            LastCommandExecutionKind::UpToDate => {
+                self.up_to_date_actions += 1;
+            }
             LastCommandExecutionKind::NoCommand => {}
         }
         if let Some(v) = &action.invalidation_info {
@@ -133,6 +139,9 @@ impl fmt::Display for ActionStats {
                 self.total_executed_actions()
             )
             .as_str();
+        }
+        if self.up_to_date_actions > 0 {
+            action_stats_message += format!(". Up-to-date: {}", self.up_to_date_actions).as_str();
         }
         write!(f, "{action_stats_message}")
     }
