@@ -156,7 +156,7 @@ function blobPath(layout, value) {
 }
 
 /** Stream and optionally copy exact compressed bytes while verifying the uncompressed diffID. */
-async function verifyLayer(path, expected, diffID, destination) {
+export async function verifyLayer(path, expected, diffID, destination) {
 	const source = await regular(path);
 	const compressed = createHash("sha256");
 	const uncompressed = createHash("sha256");
@@ -258,7 +258,7 @@ async function layerSource(value, native, layouts) {
 }
 
 /** Export independently owned standard OCI bytes, rejecting missing or inconsistent content. */
-export async function exportLayout({ platform, spec, output }) {
+export async function exportLayout({ platform, spec, output, materialize }) {
 	object(spec, "layout specification");
 	if (!Array.isArray(spec.layers) || !Array.isArray(spec.base_layouts)) fail("OCI_INVALID_METADATA", "layout specification requires layers and base_layouts arrays");
 	const metadata = await imageMetadata({ platform, manifest: spec.manifest, config: spec.config, descriptor: spec.descriptor });
@@ -270,7 +270,12 @@ export async function exportLayout({ platform, spec, output }) {
 		if (previous && (previous.metadata.size !== layer.size || previous.metadata.mediaType !== layer.mediaType || previous.metadata.diff_id !== layer.diff_id)) {
 			fail("OCI_LAYER_METADATA_MISMATCH", "the same digest has conflicting declared layer metadata");
 		}
-		native.set(layer.digest, { metadata: layer, blob: placement.blob });
+		const fields = Object.keys(placement).sort();
+		if (!["blob,metadata", "compact,inputs,metadata"].includes(fields.join(","))
+			|| fields.some((field) => typeof placement[field] !== "string" || placement[field] === "")) {
+			fail("OCI_INVALID_METADATA", "a layer requires exactly one archive blob or compact stream with retained inputs");
+		}
+		native.set(layer.digest, { metadata: layer, blob: placement.blob, payload: placement });
 	}
 	for (const layout of spec.base_layouts) await layoutMarker(layout);
 	const referenced = new Set(metadata.manifest.layers.map((layer) => layer.digest));
@@ -293,7 +298,11 @@ export async function exportLayout({ platform, spec, output }) {
 				}
 				continue;
 			}
-			await verifyLayer(await layerSource(layer, native, spec.base_layouts), layer, diffID, blobPath(output, layer));
+			const payload = native.get(layer.digest)?.payload;
+			if (payload?.compact !== undefined) {
+				if (!materialize) fail("OCI_COMPACT_MATERIALIZER_REQUIRED", "compact layers require the pinned img materializer");
+				await materialize(payload, blobPath(output, layer));
+			} else await verifyLayer(await layerSource(layer, native, spec.base_layouts), layer, diffID, blobPath(output, layer));
 			exported.set(layer.digest, { diffID, mediaType: layer.mediaType, size: layer.size });
 		}
 		const [manifestBytes, configBytes] = await Promise.all([bytes(spec.manifest), bytes(spec.config)]);

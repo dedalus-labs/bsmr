@@ -8,6 +8,7 @@
 import assert from "node:assert/strict";
 import { execFile } from "node:child_process";
 import { createHash } from "node:crypto";
+import { existsSync } from "node:fs";
 import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
@@ -56,9 +57,10 @@ async function fixture(t) {
 		await writeFile(input, `${name} content\n`);
 		const metadata = join(root, `${name}-layer.json`);
 		const blob = join(root, `${name}-layer.tgz`);
+		const compact = join(root, `${name}-layer.cstream`);
 		const spec = await specification(root, `${name}-placements`, { files: { [imagePath]: input }, executables: {}, symlinks: {} });
-		await invoke("layer", { img: encoder, platform: "linux/arm64", spec, metadata, blob });
-		layers.push({ metadata, blob, value: await layerMetadata(metadata) });
+		await invoke("layer", { img: encoder, platform: "linux/arm64", spec, metadata, compact });
+		layers.push({ metadata, compact, inputs: spec, blob, value: await layerMetadata(metadata) });
 	}
 	const base = outputs(root, "base");
 	const spec = await specification(root, "base-image", imageSpec(null, [layers[0].metadata], {
@@ -112,6 +114,18 @@ test("real image composition preserves base layers, ordered diffIDs and inherite
 	assert.deepEqual(config.Labels, { stable: "base" });
 });
 
+test("invariant image configuration needs only metadata and never reconstructs layer blobs", async (t) => {
+	const f = await fixture(t);
+	await rm(join(f.root, "sources"), { recursive: true });
+	for (const layer of f.layers) {
+		assert.equal(existsSync(layer.blob), false);
+		await rm(layer.compact);
+	}
+	const result = await derived(f, "metadata-only", { labels: { changed: "configuration" } });
+	assert.deepEqual(result.metadata.manifest.layers.map(({ digest }) => digest), f.layers.map(({ value }) => value.digest));
+	for (const layer of f.layers) assert.equal(existsSync(layer.blob), false);
+});
+
 test("real img supports explicit clearing and setting entrypoint clears inherited cmd", async (t) => {
 	const f = await fixture(t);
 	const cleared = (await derived(f, "cleared", { entrypoint: [], cmd: [], user: "", working_dir: "" })).metadata.config.config;
@@ -144,16 +158,18 @@ test("complete derived export retains base bytes from its declared layout", asyn
 	const f = await fixture(t);
 	const baseLayout = join(f.root, "base-layout");
 	const baseSpec = await specification(f.root, "base-export", { ...f.base,
-		layers: [{ metadata: f.layers[0].metadata, blob: f.layers[0].blob }], base_layouts: [] });
-	await invoke("layout", { platform: "linux/arm64", spec: baseSpec, output: baseLayout });
+		layers: [{ metadata: f.layers[0].metadata, compact: f.layers[0].compact, inputs: f.layers[0].inputs }], base_layouts: [] });
+	await invoke("layout", { img: encoder, platform: "linux/arm64", spec: baseSpec, output: baseLayout });
 	const result = await derived(f, "derived");
 	const layout = join(f.root, "derived-layout");
 	const spec = await specification(f.root, "derived-export", { ...result.paths,
-		layers: [{ metadata: f.layers[1].metadata, blob: f.layers[1].blob }], base_layouts: [baseLayout] });
-	await invoke("layout", { platform: "linux/arm64", spec, output: layout });
+		layers: [{ metadata: f.layers[1].metadata, compact: f.layers[1].compact, inputs: f.layers[1].inputs }], base_layouts: [baseLayout] });
+	await invoke("layout", { img: encoder, platform: "linux/arm64", spec, output: layout });
 	const imported = await importLayout({ platform: "linux/arm64", layout, ...outputs(f.root, "imported") });
 	assert.deepEqual(imported, result.metadata);
 	for (const layer of f.layers) {
+		await invoke("materialize", { img: encoder, platform: "linux/arm64", spec: layer.inputs,
+			metadata: layer.metadata, compact: layer.compact, blob: layer.blob });
 		assert.deepEqual(await readFile(join(layout, "blobs/sha256", layer.value.digest.slice(7))), await readFile(layer.blob));
 	}
 	await assert.rejects(importLayout({ platform: "linux/amd64", layout, ...outputs(f.root, "wrong-platform") }),
@@ -168,4 +184,24 @@ test("base platform mismatch and tampered base manifest fail before img composit
 	await writeFile(f.base.manifest, "{}\n");
 	await assert.rejects(invoke("image", { img: encoder, platform: "linux/arm64", spec, ...outputs(f.root, "tampered") }),
 		(error) => /OCI_DIGEST_MISMATCH/u.test(error.stderr));
+});
+
+test("invariant an export can combine compact native content with unchanged archive layers", async (t) => {
+	const f = await fixture(t);
+	const archive = f.layers[0];
+	const native = f.layers[1];
+	await invoke("materialize", { img: encoder, platform: "linux/arm64", spec: archive.inputs,
+		metadata: archive.metadata, compact: archive.compact, blob: archive.blob });
+	const metadata = join(f.root, "archive-metadata.json");
+	await invoke("layer-from-tar", { img: encoder, platform: "linux/arm64", archive: archive.blob, metadata });
+	const paths = outputs(f.root, "mixed");
+	const image = await specification(f.root, "mixed-image", imageSpec(null, [metadata, native.metadata]));
+	await invoke("image", { img: encoder, platform: "linux/arm64", spec: image, ...paths });
+	const spec = await specification(f.root, "mixed-export", { ...paths, base_layouts: [], layers: [
+		{ metadata, blob: archive.blob }, { metadata: native.metadata, compact: native.compact, inputs: native.inputs },
+	] });
+	const output = join(f.root, "mixed-layout");
+	await invoke("layout", { img: encoder, platform: "linux/arm64", spec, output });
+	await importLayout({ platform: "linux/arm64", layout: output, ...outputs(f.root, "mixed-imported") });
+	assert.deepEqual(await readFile(join(output, "blobs/sha256", archive.value.digest.slice(7))), await readFile(archive.blob));
 });

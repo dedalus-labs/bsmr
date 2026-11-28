@@ -100,6 +100,7 @@ test("check uses one typed command tree", async () => {
 		"test/oci/closure.test.mjs",
 		"test/oci/operations.test.mjs",
 		"test/oci/image.test.mjs",
+		"test/oci/compact.test.mjs",
 	]);
 	assert.deepEqual(state.invocations.find(({ file }) => file === "git")?.args, [
 		"diff",
