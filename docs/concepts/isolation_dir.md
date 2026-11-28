@@ -28,24 +28,26 @@ The isolation directory serves as a fundamental boundary that:
 
 ### Physical Structure
 
-The isolation directory exists as a subdirectory within the `bsmr-out` folder:
+The isolation directory exists as a subdirectory under the checkout's directory
+in the user state root:
 
 ```
-project_root/
-└── bsmr-out/
-    ├── default/       # Default isolation directory
-    │   ├── artifacts/
-    │   ├── cache/
-    │   └── ...
-    ├── custom_name/   # Custom isolation directory
-    │   ├── artifacts/
-    │   ├── cache/
-    │   └── ...
-    └── ...
+~/.bsmr/checkouts/<project-key>/
+├── default/       # Default isolation directory
+│   ├── art/
+│   ├── cache/
+│   └── ...
+├── custom_name/   # Custom isolation directory
+│   ├── art/
+│   ├── cache/
+│   └── ...
+└── ...
 ```
 
-By default, Bessemer uses an isolation directory named `default`, creating all build
-outputs and metadata within `$PROJECT_ROOT/bsmr-out/default`.
+By default, Bessemer uses an isolation directory named `default`, creating all
+build outputs and metadata under `~/.bsmr/checkouts/<project-key>/default`.
+Run `bsmr root --kind output` to print the exact directory for the current
+project and isolation.
 
 ### Important Characteristics
 
