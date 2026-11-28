@@ -20,10 +20,11 @@ bsmr go toolchain
 bsmr go toolchain --check
 ```
 
-The command selects the latest stable Go release when no lock exists and
-otherwise acquires the committed release. `--update` moves an existing lock to
-the latest stable release; `--version` selects an exact release such as `1.26`
-or `1.26.5`. It
+The command acquires the exact stable release pinned by `toolchain go1.X.Y` (or
+an exact `go 1.X.Y` line when no `toolchain` directive is present) in `go.mod`,
+or in `go.work` at a workspace root. A missing, partial or prerelease pin is an
+error. Change the pin to select another release; `--update` is rejected, and
+`--version`, if supplied, must match the pin. It
 commits the official archive names, SHA-256 digests, and byte lengths for
 supported hosts, then materializes and verifies the current host SDK as a
 repository-local ignored input. The check command is offline and rejects lock,

@@ -32,11 +32,13 @@ bsmr go sync --check
 bsmr go toolchain --check
 ```
 
-`bsmr go toolchain` selects the latest stable release when no lock exists and
-otherwise acquires the committed release. It records the exact official archive
-identities for Darwin and Linux on amd64 and arm64. Pass `--update` to move an
-existing lock to the latest stable release, or `--version` with an exact release
-such as `1.26` or `1.26.5`. The acquired SDK and bootstrap tools are verified,
+`bsmr go toolchain` acquires the exact stable release pinned by `toolchain
+go1.X.Y` (or an exact `go 1.X.Y` line when no `toolchain` directive is present)
+in `go.mod`, or in `go.work` at a workspace root. A missing, partial or
+prerelease pin is an error. The command records the exact official
+archive identities for Darwin and Linux on amd64 and arm64. To move to another
+release, change the directive and run `bsmr go toolchain` again. `--update` is
+rejected, and `--version`, if supplied, must match the pin. The acquired SDK and bootstrap tools are verified,
 repository-local ignored inputs; synchronization and builds do not depend on an
 ambient `go` executable.
 
