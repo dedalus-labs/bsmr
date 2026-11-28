@@ -302,6 +302,9 @@ jobs:
       - name: Verify stable Rust feature gates
         run: node test/rust/stable.ts target/debug/bsmr
         shell: bash
+      - name: Verify system Rust compile cache
+        run: python3 test/rust/system.py target/debug/bsmr 1.98.0 1.97.1
+        shell: bash
       - name: Verify Rust tool contracts
         run: node test/rust/tools.ts
         shell: bash

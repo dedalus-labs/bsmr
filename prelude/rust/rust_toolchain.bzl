@@ -57,7 +57,7 @@ def rust_toolchain_configuration_error(
 rust_toolchain_attrs = {
     # Store compiles that verify their inputs and do not link in the local
     # action cache. Set only by toolchains whose compiler and sysroot are
-    # declared artifacts.
+    # declared artifacts or a recorded identity that every compile reads.
     "allow_local_cache_upload": provider_field(bool, default = False),
     # Report unused dependencies
     "report_unused_deps": provider_field(bool, default = False),

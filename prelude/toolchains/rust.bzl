@@ -72,6 +72,7 @@ def _system_rust_toolchain_impl(ctx):
         DefaultInfo(),
         RustToolchainInfo(
             allow_lints = ctx.attrs.allow_lints,
+            allow_local_cache_upload = ctx.attrs.verify_compiler,
             clippy_driver = RunInfo(args = ["clippy-driver"]),
             clippy_toml = ctx.attrs.clippy_toml[DefaultInfo].default_outputs[0] if ctx.attrs.clippy_toml else None,
             codegen_backend = ctx.attrs.codegen_backend,
