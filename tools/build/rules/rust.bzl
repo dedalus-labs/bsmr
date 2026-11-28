@@ -40,6 +40,7 @@ def rust_library(
     **kwargs,
 ):
     _unused = (test_deps, test_env, named_deps, autocargo, unittests, visibility, cpp_deps, cxx_bridge)  # @unused
+    kwargs.setdefault("verify_inputs", True)
 
     prelude.rust_library(
         name = name,

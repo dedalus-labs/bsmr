@@ -1,0 +1,69 @@
+load("@bsmr_build//rules:rust.bzl", first_party_library = "rust_library")
+load("@prelude//rust:cargo_buildscript.bzl", "buildscript_run")
+load("@prelude//rust:cargo_package.bzl", "cargo")
+load("@prelude//rust:linkable_symbol.bzl", "rust_linkable_symbol")
+load("@prelude//toolchains:demo.bzl", "system_demo_toolchains")
+
+system_demo_toolchains(include_go = False, verify_rust_compiler = True)
+
+rust_library(
+    name = "copied",
+    srcs = ["copied.rs"],
+    crate_root = "copied.rs",
+    labels = ["generated"],
+    verify_inputs = True,
+)
+
+rust_linkable_symbol(
+    name = "symbol",
+    content_str = "value.txt",
+    rust_library_macro = first_party_library,
+)
+
+rust_binary(name = "generator", srcs = ["build.rs"], crate_root = "build.rs")
+filegroup(name = "manifest", srcs = ["value.txt"])
+
+buildscript_run(
+    name = "generated",
+    buildscript_rule = ":generator",
+    package_name = "generated",
+    version = "0.1.0",
+    manifest_dir = ":manifest",
+)
+
+cargo.rust_library(
+    name = "bindings",
+    srcs = ["bindings.rs"],
+    crate_root = "bindings.rs",
+    env = {"OUT_DIR": "$(location :generated[out_dir])"},
+)
+
+rust_binary(
+    name = "app",
+    srcs = ["main.rs"],
+    crate_root = "main.rs",
+    deps = [":bindings", ":symbol"],
+    verify_inputs = True,
+)
+
+first_party_library(
+    name = "undeclared",
+    srcs = ["escape.rs"],
+    crate_root = "escape.rs",
+    env = {"INPUT": read_config("fixture", "undeclared_input")},
+)
+
+filegroup(name = "escape-tree", srcs = ["tree"], copy = False)
+
+cargo.rust_library(
+    name = "symlink_escape",
+    srcs = ["escape.rs"],
+    crate_root = "escape.rs",
+    env = {"INPUT": "$(location :escape-tree)/tree/value.txt"},
+)
+
+first_party_library(
+    name = "undeclared_env",
+    srcs = ["escape_env.rs"],
+    crate_root = "escape_env.rs",
+)

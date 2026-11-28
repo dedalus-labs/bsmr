@@ -1,0 +1,8 @@
+[external_cells]
+prelude = disabled
+
+[cells]
+bsmr_build = build
+
+[rust]
+default_edition = 2024
