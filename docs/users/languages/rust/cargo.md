@@ -89,7 +89,9 @@ profile = "minimal"
 
 BSMR reads manifests, project Cargo configuration, and target file names into an
 isolated snapshot. It discovers public targets without resolving their dependencies,
-then asks the bundled Cargo 0.98.0 planner for the selected build or test.
+then asks the Cargo 0.98.0 planner, `bsmr-cargo`, for the selected build or test.
+Release installers bundle the planner beside `bsmr`. From-source installs build it
+from `tools/cargo`; see [installation](../../../getting_started/install.md).
 The snapshot retains existing manifest-declared entrypoint paths, including
 custom tests outside conventional directories. Missing files remain missing
 so Cargo reports them. Source contents still belong to native compiler inputs. The
@@ -219,7 +221,8 @@ Their pinned sizes let the download rule use cached compiler archives without
 querying their HTTP headers.
 Their content contributes to compilation action identity. Target discovery uses
 the selected local rustup installation, while configured planning uses the
-bundled resolver. C/C++ linking and Python bootstrap tools
+Cargo planner beside `bsmr`. Releases bundle the planner, and from-source
+installs build it. C/C++ linking and Python bootstrap tools
 still come from the execution host. This is not a fully hermetic or remotely
 qualified toolchain. Native actions honor the existing cache-upload policy.
 
