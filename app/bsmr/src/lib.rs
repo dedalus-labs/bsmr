@@ -22,6 +22,7 @@ use bsmr_client::commands::build::BuildCommand;
 use bsmr_client::commands::bxl::BxlCommand;
 use bsmr_client::commands::clean::CleanCommand;
 use bsmr_client::commands::ctargets::ConfiguredTargetsCommand;
+use bsmr_client::commands::deps::DepsCommand;
 use bsmr_client::commands::expand_external_cell::ExpandExternalCellsCommand;
 use bsmr_client::commands::go::GoCommand;
 use bsmr_client::commands::help_env::HelpEnvCommand;
@@ -386,6 +387,7 @@ pub(crate) enum CommandKind {
     Test(TestCommand),
     Cquery(CqueryCommand),
     Init(InitCommand),
+    Deps(DepsCommand),
     ExpandExternalCell(ExpandExternalCellsCommand),
     Go(GoCommand),
     Install(InstallCommand),
@@ -591,6 +593,7 @@ impl CommandKind {
             CommandKind::Lsp(cmd) => command_ctx.exec(cmd, matches, events_ctx),
             CommandKind::Subscribe(cmd) => command_ctx.exec(cmd, matches, events_ctx),
             CommandKind::ExpandExternalCell(cmd) => command_ctx.exec(cmd, matches, events_ctx),
+            CommandKind::Deps(cmd) => cmd.exec(matches, command_ctx).into(),
             CommandKind::Go(cmd) => cmd.exec(matches, command_ctx).into(),
         }
     }
@@ -634,6 +637,7 @@ impl CommandKind {
             CommandKind::Lsp(cmd) => cmd.logging_name(),
             CommandKind::Subscribe(cmd) => cmd.logging_name(),
             CommandKind::ExpandExternalCell(cmd) => cmd.logging_name(),
+            CommandKind::Deps(_) => "deps",
             CommandKind::Go(_) => "go",
         }
     }
