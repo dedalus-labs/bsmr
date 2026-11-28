@@ -211,13 +211,15 @@ pub fn update(
     validated_catalog.validate()?;
 
     let targets: Vec<String> = if selected_components.is_empty() {
-        let mut names: BTreeSet<String> = updated_lock
-            .components
+        let names: BTreeSet<String> = validated_catalog
+            .candidates
             .iter()
-            .map(|c| c.name.clone())
+            .map(|entry| entry.component.clone())
             .collect();
-        for entry in &validated_catalog.candidates {
-            names.insert(entry.component.clone());
+        if names.is_empty() {
+            return Err(DependencySetError::InvalidCatalog(
+                "catalog contains no candidates".to_owned(),
+            ));
         }
         names.into_iter().collect()
     } else {
