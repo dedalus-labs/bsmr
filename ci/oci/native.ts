@@ -30,7 +30,7 @@ type NativeOptions = Readonly<{
 
 /** Keep rootful qualification mandatory and execute the source-built engine's bundled rules. */
 export function nativeCommands({ binary, img, umoci, runc, platform, base, lock, evidence, registryArchive, bind }: NativeOptions): readonly Command[] {
-	return [
+	const commands: Command[] = [
 		{ file: "sudo", args: ["-n", "env", "BSMR_OCI_REQUIRE_NATIVE=1", `BSMR_OCI_PLATFORM=${platform}`,
 			`BSMR_OCI_RUN_BASE=${base}`, `BSMR_OCI_UMOCI=${umoci}`, `BSMR_OCI_RUNC=${runc}`,
 			process.execPath, "--test", "test/oci/run.test.mjs"] },
@@ -42,6 +42,11 @@ export function nativeCommands({ binary, img, umoci, runc, platform, base, lock,
 			"--bind", bind, "--evidence", evidence, "--platform", platform,
 			"--engine-version", releaseVersion(process.cwd()), "--bundled-prelude"] },
 	];
+	if (platform === "linux/arm64") {
+		commands.push({ file: "sudo", args: ["-n", "env", process.execPath, "test/oci/example.ts", binary, resolve("."),
+			join(evidence, "debian-example"), "--engine-version", releaseVersion(process.cwd()), "--bundled-prelude"] });
+	}
+	return commands;
 }
 
 /** Save each command's bounded receipt while propagating acquisition or runtime failures. */
@@ -80,7 +85,7 @@ async function main() {
 		"--spec", spec, "--output", base, "--manifest", join(root, "manifest.json"),
 		"--config", join(root, "config.json"), "--descriptor", join(root, "descriptor.json")] });
 	try {
-		const phases = ["runtime-contracts", "bundled-package-graph", "private-registry"];
+		const phases = ["runtime-contracts", "bundled-package-graph", "private-registry", "debian-example"];
 		const commands = nativeCommands({ binary: resolve(binary), img: resolve(img), umoci: resolve(umoci), runc: resolve(runc),
 			platform, base, lock: packageLock, evidence: root, registryArchive: resolve(registryArchive), bind });
 		for (const [index, command] of commands.entries()) {

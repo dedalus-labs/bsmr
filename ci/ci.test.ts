@@ -108,21 +108,27 @@ test("native qualification cannot silently skip runtime tests or replace the bun
 	assert.ok(commands[2]?.args.includes("test/oci/dist/registry.mjs"));
 	assert.deepEqual(commands[2]?.args.slice(-9), ["--bind", "10.0.0.2", "--evidence", "evidence", "--platform", "linux/amd64",
 		"--engine-version", releaseVersion(process.cwd()), "--bundled-prelude"]);
+	const arm64 = nativeCommands({ binary: "bsmr", img: "img", umoci: "umoci", runc: "runc", platform: "linux/arm64",
+		base: "base", lock: "lock", evidence: "evidence", registryArchive: "registry.tar.gz", bind: "10.0.0.2" });
+	assert.equal(arm64.length, 4);
+	assert.ok(arm64[3]?.args.includes("test/oci/example.ts"));
+	assert.deepEqual(arm64[3]?.args.slice(-3), ["--engine-version", releaseVersion(process.cwd()), "--bundled-prelude"]);
 });
 
 test("OCI action reaches bundled compact and native qualification after Go composition", async () => {
-	const calls: { file: string; args: readonly string[] }[] = [];
+	const calls: { file: string; args: readonly string[]; env: unknown }[] = [];
 	await runAction(ociCache, {
 		with: { binary: "bsmr", img: "img", umoci: "umoci", runc: "runc", registryArchive: "registry.tar.gz", evidence: "evidence", platform: "linux/arm64" },
-		exec: async (file, args) => { calls.push({ file, args }); return { exitCode: 0, stdout: "", stderr: "" }; },
+		exec: async (file, args, options) => { calls.push({ file, args, env: options?.env }); return { exitCode: 0, stdout: "", stderr: "" }; },
 		fs: { readText: async () => assert.fail("action delegates to real fixtures") }, runner: { uidGid: "1000:1000" },
 	});
 	assert.equal(calls.length, 4);
-	assert.deepEqual(calls[0], { file: "pnpm", args: ["run", "ci", "build", "fixtures"] });
+	assert.deepEqual(calls[0], { file: "pnpm", args: ["run", "ci", "build", "fixtures"], env: undefined });
 	assert.equal(calls[1]?.args[0], "test/oci/dist/cache.mjs");
+	assert.deepEqual(calls[1]?.env, { BSMR_OCI_TEST_EVIDENCE: "evidence" });
 	assert.deepEqual(calls[2], { file: "node", args: ["test/oci/dist/graph.mjs", "bsmr", "img", "prelude", "--platform", "linux/arm64",
-		"--engine-version", releaseVersion(process.cwd()), "--bundled-prelude", "--artifacts", "evidence"] });
-	assert.deepEqual(calls[3], { file: "node", args: ["ci/oci/native.ts", "bsmr", "img", "umoci", "runc", "registry.tar.gz", "linux/arm64", "evidence"] });
+		"--engine-version", releaseVersion(process.cwd()), "--bundled-prelude", "--artifacts", "evidence"], env: undefined });
+	assert.deepEqual(calls[3], { file: "node", args: ["ci/oci/native.ts", "bsmr", "img", "umoci", "runc", "registry.tar.gz", "linux/arm64", "evidence"], env: undefined });
 });
 
 test("TypeScript cache uses its nested action route and propagates failures", async () => {

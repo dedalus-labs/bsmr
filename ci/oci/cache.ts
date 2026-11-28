@@ -25,7 +25,8 @@ export const ociCache = action({
 	run: async ({ exec, input }) => {
 		await exec("pnpm", ["run", "ci", "build", "fixtures"]);
 		await exec("node", ["test/oci/dist/cache.mjs", input.binary, input.img, "prelude", "prelude/oci/operations.mjs",
-			"--platform", input.platform, "--engine-version", releaseVersion(process.cwd()), "--bundled-prelude"]);
+			"--platform", input.platform, "--engine-version", releaseVersion(process.cwd()), "--bundled-prelude"],
+			{ env: { BSMR_OCI_TEST_EVIDENCE: input.evidence } });
 		await exec("node", ["test/oci/dist/graph.mjs", input.binary, input.img, "prelude", "--platform", input.platform,
 			"--engine-version", releaseVersion(process.cwd()), "--bundled-prelude", "--artifacts", input.evidence]);
 		await exec("node", ["ci/oci/native.ts", input.binary, input.img, input.umoci, input.runc, input.registryArchive, input.platform, input.evidence]);

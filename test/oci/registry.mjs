@@ -228,33 +228,12 @@ try {
 	await mkdir(join(workspace, "acquire"));
 	await mkdir(join(workspace, "images"));
 	await writeFile(join(workspace, "acquire/image.lock.json"), JSON.stringify({ version: 1, image, platform, manifest_digest: original.descriptor.digest }));
-<<<<<<< HEAD
 	await writeFile(join(workspace, "BUILD.bsmr"), buildFile);
 	await writeFile(join(workspace, "fixture.json"), JSON.stringify({ platform, repository: `${hostname}:${port}/${repository}` }));
 	await writeFile(join(workspace, "acquire/BUILD.bsmr"), acquireBuild);
 	await writeFile(join(workspace, "images/BUILD.bsmr"), imagesBuild);
 	await writeFile(join(workspace, "images/fixture.json"), JSON.stringify({ platform }));
-	const beforePrepare = requests();
-=======
-	await writeFile(join(workspace, "BUILD.bsmr"), `load("@prelude//oci:defs.bzl", "oci_import", "oci_push")
-load("@prelude//oci:toolchain.bzl", "oci_toolchain")
-load(":artifact.bzl", "artifact")
-artifact(name = "encoder", binary = "img")
-artifact(name = "runtime", binary = "node")
-oci_toolchain(name = "oci", img = ":encoder", node = ":runtime", visibility = ["PUBLIC"])
-oci_import(name = "base", layout = "base", platform = "${platform}", toolchain = ":oci")
-oci_push(name = "publish", image = ":base", repository = "${hostname}:${port}/${repository}", tags = ["proof"], toolchain = ":oci")
-`);
-	await writeFile(join(workspace, "acquire/BUILD.bsmr"), `load("@prelude//oci:defs.bzl", "oci_fetch", "oci_pull")
-oci_fetch(name = "base", image = "${image}", platform = "${platform}", lock = "image.lock.json", toolchain = "//:oci")
-oci_pull(name = "anonymous", image = "${image}", platform = "${platform}", lock = "image.lock.json", toolchain = "//:oci")
-`);
-	await writeFile(join(workspace, "images/BUILD.bsmr"), `load("@prelude//oci:defs.bzl", "oci_import", "oci_layout")
-oci_import(name = "base", layout = "base", platform = "${platform}", toolchain = "//:oci")
-oci_layout(name = "roundtrip", image = ":base", toolchain = "//:oci")
-`);
 	const beforePrepare = await syncedRequests();
->>>>>>> work/oci-395
 	await graph("fetch-prepared", "//acquire:base");
 	await graph("publish-prepared", "//:publish");
 	assert.equal(await syncedRequests(), beforePrepare, "build preparation contacted the registry");
