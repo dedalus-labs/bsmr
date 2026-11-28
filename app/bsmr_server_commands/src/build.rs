@@ -175,6 +175,11 @@ async fn build(
 
     let cwd = server_ctx.working_dir();
 
+    // Enforce RFC 0004 lockfile verification before target resolution or build analysis.
+    bsmr_common::dependency_set::verify_project_before_build(
+        server_ctx.project_root().root().as_path(),
+    )?;
+
     let build_opts: &CommonBuildOptions = expect_build_opts(request);
 
     let timeout = request
