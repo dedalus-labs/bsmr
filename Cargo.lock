@@ -1596,7 +1596,7 @@ dependencies = [
  "url",
  "uv-distribution-filename",
  "uv-pep508",
- "uv-platform-tags",
+ "uv-platform-tags 0.0.102",
  "xattr",
  "yaml-rust2",
 ]
@@ -4134,7 +4134,7 @@ dependencies = [
  "libc",
  "option-ext",
  "redox_users",
- "windows-sys 0.59.0",
+ "windows-sys 0.61.2",
 ]
 
 [[package]]
@@ -4353,7 +4353,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "39cab71617ae0d63f51a36d69f866391735b51691dbda63cf6f96d042b63efeb"
 dependencies = [
  "libc",
- "windows-sys 0.52.0",
+ "windows-sys 0.61.2",
 ]
 
 [[package]]
@@ -5362,7 +5362,7 @@ version = "1.0.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "82cb6a9f675da968c63b6208c641b9dca58fc0133ae53375736b1767b0cab8bd"
 dependencies = [
- "windows-sys 0.59.0",
+ "windows-sys 0.61.2",
 ]
 
 [[package]]
@@ -5432,7 +5432,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "160f2eade097f30263b548aae5deb12ad349c909baa710fa24b92c9090b2e006"
 dependencies = [
  "scopeguard",
- "windows-sys 0.59.0",
+ "windows-sys 0.61.2",
 ]
 
 [[package]]
@@ -6020,7 +6020,7 @@ version = "0.50.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7957b9740744892f114936ab4a57b3f487491bbeafaf8083688b16841a4240e5"
 dependencies = [
- "windows-sys 0.59.0",
+ "windows-sys 0.61.2",
 ]
 
 [[package]]
@@ -7247,7 +7247,7 @@ dependencies = [
  "errno",
  "libc",
  "linux-raw-sys 0.12.1",
- "windows-sys 0.52.0",
+ "windows-sys 0.61.2",
 ]
 
 [[package]]
@@ -8140,10 +8140,10 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "32497e9a4c7b38532efcdebeef879707aa9f794296a4f0244f6f69e9bc8574bd"
 dependencies = [
  "fastrand",
- "getrandom 0.3.4",
+ "getrandom 0.4.3",
  "once_cell",
  "rustix 1.1.6",
- "windows-sys 0.52.0",
+ "windows-sys 0.61.2",
 ]
 
 [[package]]
@@ -8169,7 +8169,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "230a1b821ccbd75b185820a1f1ff7b14d21da1e442e22c0863ea5f08771a8874"
 dependencies = [
  "rustix 1.1.6",
- "windows-sys 0.59.0",
+ "windows-sys 0.61.2",
 ]
 
 [[package]]
@@ -8990,8 +8990,8 @@ dependencies = [
  "uv-cache-key",
  "uv-normalize",
  "uv-pep440",
- "uv-platform-tags",
- "uv-small-str",
+ "uv-platform-tags 0.0.71",
+ "uv-small-str 0.0.71",
 ]
 
 [[package]]
@@ -9050,7 +9050,20 @@ dependencies = [
  "quote",
  "syn 3.0.3",
  "textwrap 0.16.2",
- "uv-version",
+ "uv-version 0.12.5",
+]
+
+[[package]]
+name = "uv-macros"
+version = "0.0.102"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e9786f30ff2dc7abac6e5b617c6c734c8b22df90df02642709195686675ebff6"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn 3.0.3",
+ "textwrap 0.16.2",
+ "uv-version 0.13.10",
 ]
 
 [[package]]
@@ -9061,7 +9074,7 @@ checksum = "f7d13ccc1e6eb664b3fe66d4b53730e3f5b481f42535e15b2037f92374e09eba"
 dependencies = [
  "rkyv",
  "serde",
- "uv-small-str",
+ "uv-small-str 0.0.71",
 ]
 
 [[package]]
@@ -9117,7 +9130,23 @@ dependencies = [
  "rustc-hash",
  "serde",
  "thiserror 2.0.21",
- "uv-small-str",
+ "uv-small-str 0.0.71",
+]
+
+[[package]]
+name = "uv-platform-tags"
+version = "0.0.102"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f9ea332f0605c51ea550cd7b5387d704c106608ea9023e87f3d3b6e882c080ac"
+dependencies = [
+ "bitflags 2.13.1",
+ "memchr",
+ "rkyv",
+ "rustc-hash",
+ "serde",
+ "thiserror 2.0.21",
+ "uv-macros 0.0.102",
+ "uv-small-str 0.0.102",
 ]
 
 [[package]]
@@ -9144,13 +9173,24 @@ dependencies = [
 ]
 
 [[package]]
+name = "uv-small-str"
+version = "0.0.102"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "550b83e2806a0001d256d8dfc0565ae6c300b2cc79b7edd2721097dea1bf9125"
+dependencies = [
+ "arcstr",
+ "rkyv",
+ "serde",
+]
+
+[[package]]
 name = "uv-static"
 version = "0.0.71"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c0d7eeb32bf30ec84247a19a457cd170e413b6e7dd17b4e4b2cafea1d9aea6f6"
 dependencies = [
  "thiserror 2.0.21",
- "uv-macros",
+ "uv-macros 0.0.71",
 ]
 
 [[package]]
@@ -9158,6 +9198,12 @@ name = "uv-version"
 version = "0.12.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "2b4a1ffd143b939846248996721d6b7a48dc4b522b507c8e16f78aea21f54fae"
+
+[[package]]
+name = "uv-version"
+version = "0.13.10"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c4435accc14be0b597563ce22fe4cb242271bcf5f8fb3869bb0a74086571de1d"
 
 [[package]]
 name = "uv-warnings"
@@ -9473,7 +9519,7 @@ version = "0.1.11"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c2a7b1c03c876122aa43f3020e6c3c3ee5c05081c9a00739faf7503aeba10d22"
 dependencies = [
- "windows-sys 0.52.0",
+ "windows-sys 0.61.2",
 ]
 
 [[package]]
