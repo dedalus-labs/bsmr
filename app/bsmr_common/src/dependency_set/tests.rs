@@ -57,6 +57,14 @@ fn component(
     }
 }
 
+/// Wraps locked components in a schema-1 [`DependencyLock`].
+fn lock_with(components: Vec<LockedComponent>) -> DependencyLock {
+    DependencyLock {
+        schema: 1,
+        components,
+    }
+}
+
 #[test]
 fn structured_contract_ranges_validate_canonicalize_and_intersect() {
     let cases = [
@@ -140,30 +148,24 @@ fn equivalent_manifests_and_locks_share_canonical_digests() {
         set_b.digest(digest_config()).unwrap()
     );
 
-    let lock_a = DependencyLock {
-        schema: 1,
-        components: vec![
-            component("kernel", SHA_B, &[("example.kernel.uapi", 7)], &[]),
-            component(
-                "app",
-                SHA_A,
-                &[],
-                &[("example.kernel.uapi", ContractRange::exact(7))],
-            ),
-        ],
-    };
-    let lock_b = DependencyLock {
-        schema: 1,
-        components: vec![
-            component(
-                "app",
-                SHA_A,
-                &[],
-                &[("example.kernel.uapi", ContractRange::versions(vec![7]))],
-            ),
-            component("kernel", SHA_B, &[("example.kernel.uapi", 7)], &[]),
-        ],
-    };
+    let lock_a = lock_with(vec![
+        component("kernel", SHA_B, &[("example.kernel.uapi", 7)], &[]),
+        component(
+            "app",
+            SHA_A,
+            &[],
+            &[("example.kernel.uapi", ContractRange::exact(7))],
+        ),
+    ]);
+    let lock_b = lock_with(vec![
+        component(
+            "app",
+            SHA_A,
+            &[],
+            &[("example.kernel.uapi", ContractRange::versions(vec![7]))],
+        ),
+        component("kernel", SHA_B, &[("example.kernel.uapi", 7)], &[]),
+    ]);
     assert_eq!(
         lock_a.digest(digest_config()).unwrap(),
         lock_b.digest(digest_config()).unwrap()
@@ -177,14 +179,8 @@ fn patch_order_is_semantic_in_lock_identity() {
     let mut second = first.clone();
     second.patches = vec![DIGEST_2.to_owned(), DIGEST_1.to_owned()];
 
-    let lock_a = DependencyLock {
-        schema: 1,
-        components: vec![first],
-    };
-    let lock_b = DependencyLock {
-        schema: 1,
-        components: vec![second],
-    };
+    let lock_a = lock_with(vec![first]);
+    let lock_b = lock_with(vec![second]);
     assert_ne!(
         lock_a.sha256_digest().unwrap(),
         lock_b.sha256_digest().unwrap()
@@ -211,10 +207,7 @@ fn verify_covers_exact_match_compatible_range_and_every_conflict() {
     let kernel = component("kernel", SHA_B, &[("example.kernel.uapi", 7)], &[]);
 
     // Compatible intersection: [7..=8] ∩ [7..=7] = {7}, satisfied by 7.
-    let ok_lock = DependencyLock {
-        schema: 1,
-        components: vec![app.clone(), runtime.clone(), kernel.clone()],
-    };
+    let ok_lock = lock_with(vec![app.clone(), runtime.clone(), kernel.clone()]);
     let verified = verify(&set, &ok_lock).unwrap();
     assert_eq!(
         verified.contracts["example.kernel.uapi"].required_range,
@@ -223,57 +216,45 @@ fn verify_covers_exact_match_compatible_range_and_every_conflict() {
     assert_eq!(verified.contracts["example.kernel.uapi"].version, 7);
 
     // Incompatible version: kernel provides 8 outside {7}.
-    let bad_version = DependencyLock {
-        schema: 1,
-        components: vec![
-            app.clone(),
-            runtime.clone(),
-            component("kernel", SHA_B, &[("example.kernel.uapi", 8)], &[]),
-        ],
-    };
+    let bad_version = lock_with(vec![
+        app.clone(),
+        runtime.clone(),
+        component("kernel", SHA_B, &[("example.kernel.uapi", 8)], &[]),
+    ]);
     assert!(matches!(
         verify(&set, &bad_version),
         Err(DependencySetError::IncompatibleVersion { .. })
     ));
 
     // Empty intersection: app requires 7..=8, runtime requires 10..=10.
-    let empty_intersection = DependencyLock {
-        schema: 1,
-        components: vec![
-            app.clone(),
-            component(
-                "runtime",
-                SHA_C,
-                &[],
-                &[("example.kernel.uapi", ContractRange::exact(10))],
-            ),
-            kernel.clone(),
-        ],
-    };
+    let empty_intersection = lock_with(vec![
+        app.clone(),
+        component(
+            "runtime",
+            SHA_C,
+            &[],
+            &[("example.kernel.uapi", ContractRange::exact(10))],
+        ),
+        kernel.clone(),
+    ]);
     assert!(matches!(
         verify(&set, &empty_intersection),
         Err(DependencySetError::EmptyRangeIntersection { .. })
     ));
 
     // Missing provider.
-    let missing_provider = DependencyLock {
-        schema: 1,
-        components: vec![app.clone(), runtime],
-    };
+    let missing_provider = lock_with(vec![app.clone(), runtime]);
     assert!(matches!(
         verify(&set, &missing_provider),
         Err(DependencySetError::MissingProvider { .. })
     ));
 
     // Duplicate provider.
-    let duplicate_provider = DependencyLock {
-        schema: 1,
-        components: vec![
-            app.clone(),
-            kernel.clone(),
-            component("kernel_alt", SHA_C, &[("example.kernel.uapi", 7)], &[]),
-        ],
-    };
+    let duplicate_provider = lock_with(vec![
+        app.clone(),
+        kernel.clone(),
+        component("kernel_alt", SHA_C, &[("example.kernel.uapi", 7)], &[]),
+    ]);
     assert!(matches!(
         verify(&set, &duplicate_provider),
         Err(DependencySetError::DuplicateProvider { .. })
@@ -282,10 +263,7 @@ fn verify_covers_exact_match_compatible_range_and_every_conflict() {
     // Stale manifest digest.
     let mut stale_app = app;
     stale_app.manifest = DIGEST_4.to_owned();
-    let stale_lock = DependencyLock {
-        schema: 1,
-        components: vec![stale_app, kernel],
-    };
+    let stale_lock = lock_with(vec![stale_app, kernel]);
     assert!(matches!(
         verify(&set, &stale_lock),
         Err(DependencySetError::StaleManifest { .. })
@@ -294,19 +272,16 @@ fn verify_covers_exact_match_compatible_range_and_every_conflict() {
 
 #[test]
 fn unrelated_component_change_does_not_invalidate_closure_digest() {
-    let lock_before = DependencyLock {
-        schema: 1,
-        components: vec![
-            component("web", SHA_A, &[("example.web", 1)], &[]),
-            component("kernel", SHA_B, &[("example.kernel.uapi", 7)], &[]),
-            component(
-                "host",
-                SHA_C,
-                &[],
-                &[("example.kernel.uapi", ContractRange::exact(7))],
-            ),
-        ],
-    };
+    let lock_before = lock_with(vec![
+        component("web", SHA_A, &[("example.web", 1)], &[]),
+        component("kernel", SHA_B, &[("example.kernel.uapi", 7)], &[]),
+        component(
+            "host",
+            SHA_C,
+            &[],
+            &[("example.kernel.uapi", ContractRange::exact(7))],
+        ),
+    ]);
     let mut lock_after = lock_before.clone();
     lock_after.component_mut("kernel").unwrap().tree = DIGEST_4.to_owned();
 
@@ -327,15 +302,10 @@ fn update_selects_newest_compatible_release_and_rejects_non_toml_catalogs() {
     )
     .unwrap();
     let set = DependencySet::from_manifest(manifest).unwrap();
-    let lock = DependencyLock {
-        schema: 1,
-        components: vec![component(
-            "kernel",
-            SHA_A,
-            &[("example.kernel.uapi", 7)],
-            &[],
-        )],
-    };
+    let lock = lock_with(vec![
+        component("kernel", SHA_A, &[("example.kernel.uapi", 7)], &[]),
+        component("web", SHA_C, &[("example.web", 1)], &[]),
+    ]);
 
     // Catalogs are strictly TOML; JSON input is rejected without sniffing.
     let dir = tempfile::tempdir().unwrap();
@@ -364,8 +334,10 @@ fn update_selects_newest_compatible_release_and_rejects_non_toml_catalogs() {
         candidates: vec![entry(12, SHA_C, DIGEST_4, 8), entry(11, SHA_B, DIGEST_3, 7)],
     };
 
-    let outcome = update(&set, &lock, &["kernel".to_owned()], &catalog).unwrap();
+    // Omitting component names updates only cataloged components and preserves uncataloged ones.
+    let outcome = update(&set, &lock, &[], &catalog).unwrap();
     assert_eq!(outcome.lock.component("kernel").unwrap().revision, SHA_B);
+    assert_eq!(outcome.lock.component("web").unwrap().revision, SHA_C);
     assert_eq!(outcome.reports[0].selected_release, 11);
     assert_eq!(
         outcome.reports[0].decisions[0].deciding_contract.as_deref(),
@@ -373,6 +345,15 @@ fn update_selects_newest_compatible_release_and_rejects_non_toml_catalogs() {
     );
     assert!(!outcome.reports[0].decisions[0].selected);
     assert!(outcome.reports[0].decisions[1].selected);
+
+    let empty_catalog = CandidateCatalog {
+        schema: 1,
+        candidates: vec![],
+    };
+    assert!(matches!(
+        update(&set, &lock, &[], &empty_catalog),
+        Err(DependencySetError::InvalidCatalog(_))
+    ));
 }
 
 #[test]
@@ -385,10 +366,7 @@ fn receipt_rejects_uncommitted_overlay_and_verifies_clean_lock() {
     let mut kernel = component("kernel", SHA_B, &[("example.kernel.uapi", 7)], &[]);
     kernel.overlay = Some("../local-kernel".to_owned());
 
-    let overlay_lock = DependencyLock {
-        schema: 1,
-        components: vec![kernel.clone()],
-    };
+    let overlay_lock = lock_with(vec![kernel.clone()]);
     let builder = BuilderProvenance {
         identity: "ci-runner".to_owned(),
         workflow: "build".to_owned(),
@@ -417,10 +395,7 @@ fn receipt_rejects_uncommitted_overlay_and_verifies_clean_lock() {
     ));
 
     kernel.overlay = None;
-    let clean_lock = DependencyLock {
-        schema: 1,
-        components: vec![kernel],
-    };
+    let clean_lock = lock_with(vec![kernel]);
     let receipt = ReleaseReceipt::create(
         &set,
         &clean_lock,
@@ -466,10 +441,7 @@ fn native_lockfile_binding_verifies_disk_bytes_and_isolates_ecosystems() {
     });
 
     let set = DependencySet::default();
-    let lock = DependencyLock {
-        schema: 1,
-        components: vec![rust_comp, web_comp],
-    };
+    let lock = lock_with(vec![rust_comp, web_comp]);
 
     let before = verify_in_root(&set, &lock, Some(root)).unwrap();
 
