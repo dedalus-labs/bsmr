@@ -849,7 +849,7 @@ async fn establish_connection_inner(
 
                         reason.to_daemon_was_started_reason()
                     }
-                    Err(reason) => {
+                    Err(reason) if lifecycle_lock.lock.daemon_is_running()? => {
                         events_ctx
                             .eprintln(&format!(
                                 "Could not connect to bsmr daemon ({}), killing daemon..",
@@ -860,6 +860,11 @@ async fn establish_connection_inner(
                         hard_kill_until(&bsmrd_info.info, &deadline)
                             .await
                             .map_err(|error| BsmrdConnectError::DaemonKillFailed { error })?;
+
+                        reason
+                    }
+                    Err(reason) => {
+                        events_ctx.eprintln("Starting new bsmr daemon...").await?;
 
                         reason
                     }
@@ -988,7 +993,7 @@ async fn try_connect_existing_before_acquiring_lifecycle_lock(
 async fn try_connect_existing(
     bsmrd_info: &BsmrdProcessInfo<'_>,
     timeout: &StartupDeadline,
-    _lock: &BsmrdLifecycle<'_>,
+    lifecycle: &BsmrdLifecycle<'_>,
 ) -> Result<BsmrdChannel, bsmr_data::DaemonWasStartedReason> {
     let timeout: bsmr_error::Result<_> = try { timeout.min(bsmrd_startup_timeout()?)? };
     let Ok(timeout) = timeout else {
@@ -1000,16 +1005,10 @@ async fn try_connect_existing(
     match tokio::time::timeout(rem_duration, bsmrd_info.create_channel()).await {
         Ok(Ok(channel)) => Ok(channel),
         Ok(Err(_)) => {
-            let Ok(pid) = bsmrd_info.pid() else {
-                return Err(bsmr_data::DaemonWasStartedReason::CouldNotLoadBsmrdInfo);
-            };
-            let bsmrd_process_exists = process_exists(pid).unwrap_or(true);
-            if !bsmrd_process_exists {
-                // We don't delete the `bsmrd.info` file, and if we failed to connect,
-                // the most likely reason is that the daemon process doesn't exist.
-                Err(bsmr_data::DaemonWasStartedReason::NoDaemonProcess)
-            } else {
+            if lifecycle.lock.daemon_is_running().unwrap_or(true) {
                 Err(bsmr_data::DaemonWasStartedReason::CouldNotConnectToDaemon)
+            } else {
+                Err(bsmr_data::DaemonWasStartedReason::NoDaemonProcess)
             }
         }
         Err(e) => {

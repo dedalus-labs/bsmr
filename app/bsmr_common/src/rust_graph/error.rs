@@ -26,6 +26,13 @@ pub enum RustGraphError {
     },
     #[error("Cargo path `{0:?}` is outside the workspace")]
     Outside(PathBuf),
+    /// The planner is a separate executable that must share the `bsmr` directory.
+    #[error(
+        "Cargo planner `bsmr-cargo` is missing from `{}`. From a Bessemer checkout, run `cargo +1.98.0 build --locked --release --manifest-path tools/cargo/Cargo.toml --target-dir target && install target/release/bsmr-cargo '{}'`",
+        .0.display(),
+        .0.display()
+    )]
+    MissingPlanner(PathBuf),
 }
 
 impl From<serde_json::Error> for RustGraphError {
@@ -40,5 +47,24 @@ pub(super) fn unsupported(package: &str, case: &str) -> RustGraphError {
     RustGraphError::Unsupported {
         package: package.to_owned(),
         case: case.to_owned(),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// A missing planner names the searched directory and the pinned build and install command.
+    #[test]
+    fn missing_planner_names_directory_and_fix() {
+        let message = RustGraphError::MissingPlanner(PathBuf::from("/opt/bsmr/bin")).to_string();
+        assert!(
+            message.contains("missing from `/opt/bsmr/bin`"),
+            "{message}"
+        );
+        assert!(
+            message.contains("cargo +1.98.0 build --locked --release --manifest-path tools/cargo/Cargo.toml --target-dir target && install target/release/bsmr-cargo '/opt/bsmr/bin'"),
+            "{message}"
+        );
     }
 }
