@@ -70,6 +70,8 @@ def test_cargo_store(project: Project) -> None:
     archive = archives[0]
     before = archive.stat()
     assert not (project.platform_cache / "bsmr" / "cargo").exists()
+    assert not (project.root / ".bsmr-planner").exists()
+    assert list((project.home / ".bsmr" / "cargo-planner").iterdir())
     project.run("clean")
     project.run("build", "--show-full-json-output")
     after = archive.stat()
