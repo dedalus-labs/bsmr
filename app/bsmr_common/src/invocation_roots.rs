@@ -142,7 +142,7 @@ pub fn get_invocation_paths_result(
     }
 }
 
-/// `~/.bsmr`.
+/// Returns the absolute per-user state root `~/.bsmr` without creating it.
 /// TODO(cjhopman): We currently place all bsmrd info into a directory owned by the user.
 /// This is broken when multiple users try to share the same checkout.
 ///
@@ -160,7 +160,7 @@ pub fn get_invocation_paths_result(
 ///
 /// 2. Keep user-owned .bsmrd directory, use some other mechanism to move ownership of
 ///    output directories between different bsmrd instances.
-pub(crate) fn home_bsmr_dir() -> bsmr_error::Result<&'static AbsNormPath> {
+pub fn home_bsmr_dir() -> bsmr_error::Result<&'static AbsNormPath> {
     fn find_dir() -> bsmr_error::Result<AbsNormPathBuf> {
         let home = dirs::home_dir()
             .ok_or_else(|| internal_error!("Expected a HOME directory to be available"))?;
