@@ -5,16 +5,16 @@
 
 // Executes a declared command in an independent Linux rootfs and commits its OCI delta.
 
-import { execFile } from "node:child_process";
+import { spawn } from "node:child_process";
 import { createHash } from "node:crypto";
-import { cp, lstat, mkdir, mkdtemp, readFile, rename, rm, writeFile } from "node:fs/promises";
+import { chmod, cp, lstat, mkdir, mkdtemp, readFile, rename, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { basename, dirname, join, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
-import { parseArgs, promisify } from "node:util";
+import { parseArgs } from "node:util";
 import { exportLayout, importLayout } from "./closure.mjs";
 
-const execute = promisify(execFile);
+const stderrLimit = 64 * 1024;
 const capabilities = ["CAP_CHOWN", "CAP_DAC_OVERRIDE", "CAP_FOWNER", "CAP_FSETID",
 	"CAP_SETGID", "CAP_SETUID", "CAP_SETFCAP", "CAP_KILL"];
 
@@ -87,15 +87,55 @@ export function validateRunSpec(spec) {
 	return spec;
 }
 
-/** Bound every external invocation and propagate cancellation to the owned process. */
-async function tool(binary, args, signal) {
+/** Run an external tool with closed stdin, streamed output, and signal cancellation. */
+export async function runTool(binary, args, { signal, stream = false, captureStdout = false } = {}) {
+	if (signal?.aborted) throw new OciRunError("OCI_RUN_CANCELLED", `${binary} cancelled before start`);
+	const child = spawn(resolve(binary), args, {
+		env: { LANG: "C", TZ: "UTC" },
+		stdio: ["ignore", captureStdout || stream ? "pipe" : "ignore", "pipe"],
+	});
+	let stdout = "";
+	let stderr = "";
+	if (child.stdout) {
+		child.stdout.on("data", (chunk) => {
+			if (stream) process.stdout.write(chunk);
+			if (captureStdout) stdout += chunk.toString("utf8");
+		});
+	}
+	child.stderr.on("data", (chunk) => {
+		if (stream) process.stderr.write(chunk);
+		stderr += chunk.toString("utf8");
+		if (stderr.length > stderrLimit) stderr = stderr.slice(-stderrLimit);
+	});
+	const cancel = () => child.kill("SIGKILL");
+	signal?.addEventListener("abort", cancel, { once: true });
 	try {
-		return await execute(resolve(binary), args, { signal, timeout: 300_000, killSignal: "SIGKILL",
-			maxBuffer: 16 * 1024 * 1024, env: { LANG: "C", TZ: "UTC" } });
+		const outcome = await new Promise((resolveOutcome, rejectOutcome) => {
+			child.once("error", rejectOutcome);
+			child.once("close", (code, exitSignal) => resolveOutcome({ code, exitSignal }));
+		});
+		if (outcome.code === 0 && outcome.exitSignal === null) return { stdout, stderr };
+		const detail = outcome.code ?? outcome.exitSignal;
+		const cause = Object.assign(new Error(`${binary} exited with ${detail}`), {
+			code: detail,
+			stderr,
+		});
+		if (!stream && stderr) process.stderr.write(stderr);
+		throw new OciRunError(
+			signal?.aborted ? "OCI_RUN_CANCELLED" : "OCI_RUN_TOOL_FAILED",
+			`${binary} failed${detail === null ? "" : ` (${detail})`}`,
+			{ cause },
+		);
 	} catch (cause) {
-		if (cause.stderr) process.stderr.write(cause.stderr);
-		throw new OciRunError(signal?.aborted ? "OCI_RUN_CANCELLED" : "OCI_RUN_TOOL_FAILED",
-			`${binary} failed${cause.code === undefined ? "" : ` (${cause.code})`}`, { cause });
+		if (cause instanceof OciRunError) throw cause;
+		if (!stream && stderr) process.stderr.write(stderr);
+		throw new OciRunError(
+			signal?.aborted ? "OCI_RUN_CANCELLED" : "OCI_RUN_TOOL_FAILED",
+			`${binary} failed${cause.code === undefined ? "" : ` (${cause.code})`}`,
+			{ cause },
+		);
+	} finally {
+		signal?.removeEventListener("abort", cancel);
 	}
 }
 
@@ -136,16 +176,22 @@ export function processConfig(config, spec, inputs) {
 }
 
 /** Copy declared inputs into a private directory so the runtime never mounts source artifacts. */
-async function stageInputs(spec, work, bundle) {
+export async function stageInputs(spec, work, bundle) {
 	const inputs = join(work, "inputs");
-	await mkdir(inputs);
+	await mkdir(inputs, { mode: 0o755 });
+	await chmod(inputs, 0o755);
 	for (const [name, source] of Object.entries(spec.inputs)) {
 		const destination = join(inputs, name);
-		await mkdir(dirname(destination), { recursive: true });
+		let current = inputs;
+		for (const segment of name.split("/").slice(0, -1)) {
+			current = join(current, segment);
+			await mkdir(current, { recursive: true, mode: 0o755 });
+			await chmod(current, 0o755);
+		}
 		await cp(resolve(source), destination, { recursive: true, dereference: false, verbatimSymlinks: true, errorOnExist: true, force: false });
 	}
 	// The reserved mountpoint cannot hide an existing image entry or follow a base symlink.
-	try { await mkdir(join(bundle, "rootfs/inputs")); } catch (cause) {
+	try { await mkdir(join(bundle, "rootfs/inputs"), { mode: 0o755 }); } catch (cause) {
 		throw new OciRunError("OCI_RUN_INPUT_CONFLICT", "base image must leave /inputs absent", { cause });
 	}
 	return inputs;
@@ -154,10 +200,10 @@ async function stageInputs(spec, work, bundle) {
 /** Kill and delete only the container in this action's private runtime state directory. */
 async function deleteContainer(runc, state, id) {
 	try {
-		const listed = await tool(runc, ["--root", state, "list", "--format", "json"]);
+		const listed = await runTool(runc, ["--root", state, "list", "--format", "json"], { captureStdout: true });
 		const containers = JSON.parse(listed.stdout) ?? [];
 		if (containers.some((container) => container.id === id)) {
-			await tool(runc, ["--root", state, "delete", "--force", id]);
+			await runTool(runc, ["--root", state, "delete", "--force", id]);
 		}
 	} catch (cause) {
 		throw new OciRunError("OCI_RUN_CLEANUP", `runtime cleanup failed; state retained at ${state}`, { cause });
@@ -211,22 +257,20 @@ export async function runImage({ spec, umoci, runc, output, signal }) {
 		const index = JSON.parse(await readFile(join(layout, "index.json"), "utf8"));
 		index.manifests[0].annotations = { ...index.manifests[0].annotations, "org.opencontainers.image.ref.name": "run" };
 		await writeFile(join(layout, "index.json"), JSON.stringify(index));
-		await tool(umoci, ["unpack", "--image", `${layout}:run`, bundle], signal);
+		await runTool(umoci, ["unpack", "--image", `${layout}:run`, bundle], { signal });
 		const inputs = await stageInputs(spec, work, bundle);
 		const config = processConfig(JSON.parse(await readFile(join(bundle, "config.json"), "utf8")), spec, inputs);
 		await writeFile(join(bundle, "config.json"), JSON.stringify(config));
 		removable = false;
 		try {
-			const result = await tool(runc, ["--root", state, "run", "--keep", "--bundle", bundle, id], signal);
-			process.stdout.write(result.stdout);
-			process.stderr.write(result.stderr);
+			await runTool(runc, ["--root", state, "run", "--keep", "--bundle", bundle, id], { signal, stream: true });
 		} finally {
 			await deleteContainer(runc, state, id);
 			removable = true;
 		}
 		await rm(join(bundle, "rootfs/inputs"), { recursive: true });
-		await tool(umoci, ["repack", "--image", `${layout}:run`, "--no-mask-volumes",
-			"--history.created", "1970-01-01T00:00:00Z", "--history.created_by", "oci_run", bundle], signal);
+		await runTool(umoci, ["repack", "--image", `${layout}:run`, "--no-mask-volumes",
+			"--history.created", "1970-01-01T00:00:00Z", "--history.created_by", "oci_run", bundle], { signal });
 		const result = metadata(join(work, "result"));
 		const packed = await importLayout({ platform: spec.platform, layout, ...result });
 		await preserveConfig(original, packed, result);
@@ -237,6 +281,10 @@ export async function runImage({ spec, umoci, runc, output, signal }) {
 			await exportLayout({ platform: spec.platform, spec: { ...result, layers: [], base_layouts: [layout] }, output: join(staged, "layout") });
 			if (signal?.aborted) throw new OciRunError("OCI_RUN_CANCELLED", "oci_run cancelled before publication");
 			await rename(join(staged, "layout"), output);
+			if (signal?.aborted) {
+				await rm(output, { recursive: true, force: true });
+				throw new OciRunError("OCI_RUN_CANCELLED", "oci_run cancelled during publication");
+			}
 		} finally { await rm(staged, { recursive: true, force: true }); }
 	} finally { if (removable) await rm(work, { recursive: true, force: true }); }
 }

@@ -25,6 +25,7 @@ OciImageInfo = provider(
         "platform": provider_field(str),
         "layers": provider_field(list[OciLayerInfo]),
         "layouts": provider_field(list[Artifact], default = []),
+        "local_only": provider_field(bool, default = False),
     },
 )
 

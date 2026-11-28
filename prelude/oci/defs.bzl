@@ -118,12 +118,13 @@ def _oci_image_impl(ctx: AnalysisContext) -> list[Provider]:
         "user": ctx.attrs.user,
         "working_dir": ctx.attrs.working_dir,
     }, with_inputs = True)
+    local_only = base.local_only if base != None else False
     toolchain = ctx.attrs.toolchain[OciToolchainInfo]
     ctx.actions.run(cmd_args(
         toolchain.operations, "image", "--img", toolchain.img, "--platform", platform, "--spec", spec,
         "--manifest", manifest.as_output(), "--config", config.as_output(),
         "--descriptor", descriptor.as_output(),
-    ), category = "oci_image", allow_cache_upload = True)
+    ), category = "oci_image", local_only = local_only, allow_cache_upload = not local_only, allow_local_cache_upload = True)
     return [
         DefaultInfo(default_output = descriptor, sub_targets = {
             "manifest": [DefaultInfo(default_output = manifest)],
@@ -133,6 +134,7 @@ def _oci_image_impl(ctx: AnalysisContext) -> list[Provider]:
             manifest = manifest, config = config, descriptor = descriptor, platform = platform,
             layers = (base.layers if base != None else []) + layers,
             layouts = base.layouts if base != None else [],
+            local_only = local_only,
         ),
     ]
 
@@ -168,7 +170,7 @@ def _oci_layout_impl(ctx: AnalysisContext) -> list[Provider]:
     ctx.actions.run(cmd_args(
         toolchain.operations, "layout", "--img", toolchain.img, "--platform", image.platform, "--spec", spec,
         "--output", output.as_output(),
-    ), category = "oci_layout", allow_cache_upload = True)
+    ), category = "oci_layout", local_only = image.local_only, allow_cache_upload = not image.local_only, allow_local_cache_upload = True)
     return [DefaultInfo(default_output = output)]
 
 _toolchain = attrs.toolchain_dep(providers = [OciToolchainInfo])
