@@ -29,6 +29,7 @@ pub(crate) use legacy::GENERATED_MANIFEST as LEGACY_MANIFEST;
 pub(crate) use legacy::reject_leftovers;
 pub(crate) use legacy::remove_leftovers;
 pub(crate) use lock::write_lock;
+pub(crate) use lock::write_metadata;
 pub(crate) use pin::ModulePin;
 pub(crate) use pin::module_pin;
 pub(crate) use pin::pin_file_name;
@@ -422,6 +423,8 @@ pub(crate) enum GoToolchainError {
         "an earlier `bsmr go toolchain` generated {0:?}, which the lock now replaces; run `bsmr go toolchain` to retire them"
     )]
     Leftover(Vec<PathBuf>),
-    #[error("Go toolchain lock `{0:?}` differs from its generated form; run `bsmr go toolchain`")]
+    #[error("Go toolchain file `{0:?}` differs from its generated form; run `bsmr go toolchain`")]
     Stale(PathBuf),
+    #[error("Go SDK metadata {0:?} records a different archive identity for the same version")]
+    Conflict(PathBuf),
 }

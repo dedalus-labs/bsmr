@@ -26,6 +26,7 @@ use bsmr_common::argv::Argv;
 use bsmr_common::argv::SanitizedArgv;
 use bsmr_common::legacy_configs::cells::BsmrConfigBasedCells;
 use bsmr_common::legacy_configs::key::BsmrconfigKeyRef;
+use bsmr_common::native_toolchains::go_sdk_metadata_directory;
 use bsmr_core::fs::output_path::BSMR_OUTPUT_ROOT;
 use bsmr_core::fs::project::ProjectRoot;
 
@@ -134,9 +135,12 @@ async fn configure_toolchain(
     let toolchains = toolchains_directory(project_root).await?;
     let lock = if command.check {
         go_toolchain::reject_leftovers(root, &toolchains)?;
-        go_toolchain::verify_lock(root, &pinned)?
+        let lock = go_toolchain::verify_lock(root, &pinned)?;
+        go_toolchain::write_metadata(&go_sdk_metadata_directory()?, &lock, true)?;
+        lock
     } else {
         let lock = go_toolchain::select_lock(root, pinned.version()).await?;
+        go_toolchain::write_metadata(&go_sdk_metadata_directory()?, &lock, false)?;
         go_toolchain::remove_leftovers(root, &toolchains)?;
         go_toolchain::write_lock(root, &lock, false)?;
         go_toolchain::create_toolchains_package(&toolchains)?;

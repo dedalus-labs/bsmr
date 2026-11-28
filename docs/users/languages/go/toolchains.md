@@ -30,6 +30,12 @@ supported hosts, then builds the verified archive for the current host and check
 its SDK version. The check command is offline and rejects lock drift and SDK
 copies that earlier releases left in the source tree.
 
+Acquisition also records the verified archive identities outside every checkout,
+in `~/.bsmr/bootstrap/go/go<version>.json`. Package evaluation reads the record
+for the root `go.mod` pin. A missing or invalid record fails and names
+`bsmr go toolchain`. That command never replaces a valid record of different
+archives for the same version.
+
 The committed `.bsmr-go-toolchain.json` is intentionally small. Each field
 protects a different part of the toolchain contract:
 

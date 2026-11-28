@@ -25,11 +25,8 @@ pub(crate) fn write_lock(
     lock: &GoToolchainLock,
     check: bool,
 ) -> Result<(), GoToolchainError> {
-    validate_lock(lock)?;
     let path = root.join(LOCK_FILE);
-    let mut content = serde_json::to_string_pretty(lock)
-        .map_err(|error| GoToolchainError::Lock(error.to_string()))?;
-    content.push('\n');
+    let content = render(lock)?;
     validate_owned_lock(&path)?;
     let current = fs::read(&path).ok();
     if current.as_deref() == Some(content.as_bytes()) {
@@ -39,6 +36,53 @@ pub(crate) fn write_lock(
         return Err(GoToolchainError::Stale(path));
     }
     atomic_write(&path, content.as_bytes())
+}
+
+/// Writes or verifies the user-root metadata for the locked version.
+///
+/// Metadata outlives every checkout, so a valid file recording other archives for the same
+/// version is refused rather than replaced.
+pub(crate) fn write_metadata(
+    directory: &Path,
+    lock: &GoToolchainLock,
+    check: bool,
+) -> Result<(), GoToolchainError> {
+    let path = directory.join(format!("go{}.json", lock.version));
+    let content = render(lock)?;
+    match fs::read(&path) {
+        Ok(current) if current == content.as_bytes() => return Ok(()),
+        Ok(current) => {
+            if serde_json::from_slice::<GoToolchainLock>(&current).is_ok_and(|current| {
+                current.version == lock.version && validate_lock(&current).is_ok()
+            }) {
+                return Err(GoToolchainError::Conflict(path));
+            }
+        }
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => {}
+        Err(error) => {
+            return Err(GoToolchainError::Read {
+                path,
+                message: error.to_string(),
+            });
+        }
+    }
+    if check {
+        return Err(GoToolchainError::Stale(path));
+    }
+    fs::create_dir_all(directory).map_err(|error| GoToolchainError::Write {
+        path: directory.to_owned(),
+        message: error.to_string(),
+    })?;
+    atomic_write(&path, content.as_bytes())
+}
+
+/// Renders the canonical bytes shared by the lock and the user-root metadata.
+fn render(lock: &GoToolchainLock) -> Result<String, GoToolchainError> {
+    validate_lock(lock)?;
+    let mut content = serde_json::to_string_pretty(lock)
+        .map_err(|error| GoToolchainError::Lock(error.to_string()))?;
+    content.push('\n');
+    Ok(content)
 }
 
 /// Allows only a missing or parseable Bessemer-owned lock.
