@@ -53,7 +53,7 @@ const badPassword = randomBytes(24).toString("hex");
 const credentialValues = [user, password, badPassword, ...[password, badPassword].map((value) => Buffer.from(`${user}:${value}`).toString("base64"))];
 const installedCA = `/usr/local/share/ca-certificates/${basename(root)}.crt`;
 let registry, registryClosed, logs = "", trusted = false, initialized = false, complete = false, hostsEntry;
-let port, authenticated, ca, originalTrust;
+let port, authenticated, ca, originalTrust, primaryError;
 
 /** Run one bounded executable without placing credentials on its command line. */
 async function run(binary, args, overrides = {}, cancellable = true) {
@@ -71,8 +71,23 @@ async function saveOutput(phase, result) {
 /** Count unique requests, including denied authentication, from Distribution's structured log. */
 function requests() {
 	return new Set(logs.split("\n").map((line) => {
-		try { return JSON.parse(line)["http.request.id"]; } catch { return undefined; }
+		try {
+			const entry = JSON.parse(line);
+			if (typeof entry["http.request.uri"] === "string" && entry["http.request.uri"].startsWith("/v2/_bsmr_sync_")) return undefined;
+			return entry["http.request.id"];
+		} catch { return undefined; }
 	}).filter(Boolean)).size;
+}
+
+/** Flush Distribution's asynchronous log stream with a unique probe before counting requests. */
+async function syncedRequests() {
+	const marker = `/v2/_bsmr_sync_${randomBytes(8).toString("hex")}`;
+	await http("GET", marker);
+	for (let attempt = 0; attempt < 100; attempt++) {
+		if (logs.includes(marker)) return requests();
+		await delay(20, undefined, { signal: controller.signal });
+	}
+	throw new Error(`registry log stream did not flush ${marker}`);
 }
 
 /** Use verified TLS directly for readiness, manifest readback, and fixture-only deletion. */
@@ -141,20 +156,34 @@ async function startRegistry() {
 	await writeFile(join(evidence, "registry-process.json"), JSON.stringify({ pid: registry.pid, address: `${values.bind}:${port}`, hostname, version: pins.version }));
 }
 
+/** Inspect a build report and its action log for leaked credentials, including after failures. */
+async function inspectBuildReport(phase, report, required = true) {
+	let reportText;
+	try { reportText = await readFile(report, "utf8"); } catch (error) {
+		if (!required && error.code === "ENOENT") return null;
+		throw error;
+	}
+	for (const credential of credentialValues) assert.equal(reportText.includes(credential), false, `${phase} build report leaked a fixture credential`);
+	const build = JSON.parse(reportText);
+	let actions = [];
+	if (typeof build.trace_id === "string" && build.trace_id.length > 0) {
+		const logged = await run(engine, ["log", "what-ran", "--trace-id", build.trace_id, "--format", "json"]);
+		const traceOutput = (logged.stdout ?? "") + (logged.stderr ?? "");
+		for (const credential of credentialValues) assert.equal(traceOutput.includes(credential), false, `${phase} action log leaked a fixture credential`);
+		actions = logged.stdout.trim() ? logged.stdout.trim().split("\n").map((line) => JSON.parse(line)) : [];
+		await writeFile(join(evidence, `${phase}-actions.json`), JSON.stringify(actions, null, 2));
+	}
+	return { build, actions };
+}
+
 /** Exercise the actual language target and save its separate preparation-action receipt. */
 async function graph(phase, target, runArgs, credentials = env) {
 	const report = join(evidence, `${phase}-build.json`);
 	const result = await run(engine, [runArgs === undefined ? "build" : "run", target, "--build-report", report,
 		"--console", "simple", ...(runArgs === undefined ? [] : ["--", ...runArgs])], { env: credentials });
 	await saveOutput(phase, result);
-	const reportText = await readFile(report, "utf8");
-	for (const credential of credentialValues) assert.equal(reportText.includes(credential), false, `${phase} build report leaked a fixture credential`);
-	const build = JSON.parse(reportText);
+	const { build, actions } = await inspectBuildReport(phase, report, true);
 	assert.equal(build.success, true);
-	const logged = await run(engine, ["log", "what-ran", "--trace-id", build.trace_id, "--format", "json"]);
-	for (const credential of credentialValues) assert.equal(logged.stdout.includes(credential), false, `${phase} action log leaked a fixture credential`);
-	const actions = logged.stdout.trim() ? logged.stdout.trim().split("\n").map((line) => JSON.parse(line)) : [];
-	await writeFile(join(evidence, `${phase}-actions.json`), JSON.stringify(actions, null, 2));
 	if (runArgs !== undefined) return { actions };
 	return { actions, output: resolve(workspace, build.results[`root${target}`].outputs.DEFAULT[0]) };
 }
@@ -165,6 +194,7 @@ async function denied(phase, target, runArgs, credentials, expected) {
 	try { await graph(phase, target, runArgs, credentials); } catch (error) { failure = error; }
 	assert.ok(failure, `${phase} unexpectedly succeeded`);
 	await saveOutput(phase, failure);
+	await inspectBuildReport(phase, join(evidence, `${phase}-build.json`), false);
 	assert.match(failure.stderr ?? failure.message, expected);
 	if (runArgs?.includes("--output")) await assert.rejects(lstat(runArgs.at(-1)), { code: "ENOENT" });
 }
@@ -211,10 +241,10 @@ oci_pull(name = "anonymous", image = "${image}", platform = "${platform}", lock 
 oci_import(name = "base", layout = "base", platform = "${platform}", toolchain = "//:oci")
 oci_layout(name = "roundtrip", image = ":base", toolchain = "//:oci")
 `);
-	const beforePrepare = requests();
+	const beforePrepare = await syncedRequests();
 	await graph("fetch-prepared", "//acquire:base");
 	await graph("publish-prepared", "//:publish");
-	assert.equal(requests(), beforePrepare, "build preparation contacted the registry");
+	assert.equal(await syncedRequests(), beforePrepare, "build preparation contacted the registry");
 	assert.equal((await graph("publish-warm", "//:publish")).actions.length, 0);
 	await graph("published", "//:publish", [], authenticated);
 	const manifestPath = `/v2/${repository}/manifests/${original.descriptor.digest}`;
@@ -224,10 +254,10 @@ oci_layout(name = "roundtrip", image = ":base", toolchain = "//:oci")
 	assert.equal((await http("DELETE", manifestPath, true)).status, 202);
 	assert.equal((await http("GET", manifestPath, true)).status, 404);
 	await run(engine, ["clean"]);
-	const beforeRestore = requests();
+	const beforeRestore = await syncedRequests();
 	const restored = await graph("prepare-restored", "//:publish");
 	assert.ok(restored.actions.some((action) => action.identity.includes("oci_push_metadata") && action.reproducer.executor === "Cache"));
-	assert.equal(requests(), beforeRestore, "cached preparation contacted the registry");
+	assert.equal(await syncedRequests(), beforeRestore, "cached preparation contacted the registry");
 	await graph("republished", "//:publish", [], authenticated);
 	assert.equal((await http("GET", manifestPath, true)).status, 200, "explicit publication was skipped after preparation cache restoration");
 	assert.equal(`sha256:${createHash("sha256").update((await http("GET", `/v2/${repository}/manifests/proof`, true)).body).digest("hex")}`,
@@ -243,9 +273,9 @@ oci_layout(name = "roundtrip", image = ":base", toolchain = "//:oci")
 	assert.deepEqual(fetched.manifest, original.manifest);
 	const imported = await graph("imported", "//images:roundtrip");
 	assert.equal((await metadata(imported.output, "roundtrip")).descriptor.digest, original.descriptor.digest);
-	const beforeAnonymous = requests();
+	const beforeAnonymous = await syncedRequests();
 	await denied("anonymous-private-pull", "//acquire:anonymous", undefined, authenticated, /UNAUTHORIZED: authentication required/u);
-	assert.ok(requests() > beforeAnonymous, "anonymous failure did not reach the TLS-trusted private registry");
+	assert.ok((await syncedRequests()) > beforeAnonymous, "anonymous failure did not reach the TLS-trusted private registry");
 	await run("/bin/tar", ["-cf", join(evidence, "roundtrip.tar"), "-C", imported.output, "."]);
 	await writeFile(join(evidence, "receipt.json"), JSON.stringify({ platform, kernel: release(), registryVersion: pins.version,
 		registryArchiveSha256: asset.sha256, imageDigest: original.descriptor.digest, harnessSha256,
@@ -259,38 +289,64 @@ oci_layout(name = "roundtrip", image = ":base", toolchain = "//:oci")
 	complete = true;
 	process.stdout.write(`${JSON.stringify({ evidence, digest: original.descriptor.digest, authenticatedRoundtrip: true })}\n`);
 } catch (error) {
-	await saveOutput("failure", { stderr: String(error) });
+	primaryError = error;
+	try { await saveOutput("failure", { stderr: String(error) }); } catch {}
 	throw error;
 } finally {
+	const cleanupErrors = [];
+	/** Run one restoration step without letting a failure skip remaining host cleanup. */
+	async function cleanupStep(fn) {
+		try { await fn(); return true; } catch (error) { cleanupErrors.push(error); return false; }
+	}
 	controller.abort();
-	if (registry && registry.exitCode === null) {
-		registry.kill("SIGTERM");
-		const timer = setTimeout(() => registry.kill("SIGKILL"), 5000);
-		await registryClosed;
-		clearTimeout(timer);
-	}
-	await writeFile(join(evidence, "registry.log"), credentialValues.reduce((value, secret) => value.replaceAll(secret, "<fixture-credential>"), logs));
-	if (initialized) await run(engine, ["kill"], {}, false);
+	await cleanupStep(async () => {
+		if (registry && registry.exitCode === null) {
+			registry.kill("SIGTERM");
+			const timer = setTimeout(() => registry.kill("SIGKILL"), 5000);
+			await registryClosed;
+			clearTimeout(timer);
+		}
+	});
+	await cleanupStep(() => writeFile(join(evidence, "registry.log"),
+		credentialValues.reduce((value, secret) => value.replaceAll(secret, "<fixture-credential>"), logs)));
+	if (initialized) await cleanupStep(() => run(engine, ["kill"], {}, false));
+	let fixtureCARemoved = false;
 	if (trusted) {
-		await rm(installedCA);
-		await run("/usr/sbin/update-ca-certificates", [], {}, false);
-		assert.equal(createHash("sha256").update(await readFile("/etc/ssl/certs/ca-certificates.crt")).digest("hex"), originalTrust, "fixture CA cleanup changed unrelated trust roots");
+		const removed = await cleanupStep(() => rm(installedCA, { force: true }));
+		const updated = await cleanupStep(() => run("/usr/sbin/update-ca-certificates", [], {}, false));
+		const verified = await cleanupStep(async () => {
+			assert.equal(createHash("sha256").update(await readFile("/etc/ssl/certs/ca-certificates.crt")).digest("hex"), originalTrust, "fixture CA cleanup changed unrelated trust roots");
+		});
+		fixtureCARemoved = removed && updated && verified;
 	}
+	let fixtureHostsEntryRemoved = false;
 	if (hostsEntry) {
-		const hosts = await readFile("/etc/hosts", "utf8");
-		assert.equal(hosts.split(hostsEntry).length, 2, "the fixture hosts entry must remain unique");
-		await writeFile("/etc/hosts", hosts.replace(hostsEntry, ""));
+		fixtureHostsEntryRemoved = await cleanupStep(async () => {
+			const hosts = await readFile("/etc/hosts", "utf8");
+			assert.equal(hosts.split(hostsEntry).length, 2, "the fixture hosts entry must remain unique");
+			await writeFile("/etc/hosts", hosts.replace(hostsEntry, ""));
+		});
 	}
 	if (!complete && initialized) {
-		const entries = [];
-		for (const name of [".bsmr", ".bsmr.local", "BUILD.bsmr", "artifact.bzl", "prelude", "acquire", "images"]) {
-			try { await lstat(join(workspace, name)); entries.push(name); } catch (error) { if (error.code !== "ENOENT") throw error; }
-		}
-		await run("/bin/tar", ["-cf", join(evidence, "failed-workspace.tar"), "-C", workspace, ...entries], {}, false);
+		await cleanupStep(async () => {
+			const entries = [];
+			for (const name of [".bsmr", ".bsmr.local", "BUILD.bsmr", "artifact.bzl", "prelude", "acquire", "images"]) {
+				try { await lstat(join(workspace, name)); entries.push(name); } catch (error) { if (error.code !== "ENOENT") throw error; }
+			}
+			await run("/bin/tar", ["-cf", join(evidence, "failed-workspace.tar"), "-C", workspace, ...entries], {}, false);
+		});
 	}
-	if (complete) await rm(root, { recursive: true, force: true });
-	await writeFile(join(evidence, "cleanup.json"), JSON.stringify({ registryExited: registry?.exitCode !== null || registry?.signalCode !== null,
-		fixtureCARemoved: trusted, fixtureHostsEntryRemoved: Boolean(hostsEntry), workspaceRemoved: complete, failedWorkspace: complete ? null : root }));
+	let workspaceRemoved = false;
+	if (complete) workspaceRemoved = await cleanupStep(() => rm(root, { recursive: true, force: true }));
+	await cleanupStep(() => writeFile(join(evidence, "cleanup.json"), JSON.stringify({
+		registryExited: registry?.exitCode !== null || registry?.signalCode !== null,
+		fixtureCARemoved, fixtureHostsEntryRemoved, workspaceRemoved,
+		failedWorkspace: complete ? null : root, cleanupErrors: cleanupErrors.map(String),
+	})));
 	process.off("SIGINT", cancel);
 	process.off("SIGTERM", cancel);
+	if (cleanupErrors.length > 0) {
+		if (primaryError) throw new AggregateError([primaryError, ...cleanupErrors], "registry qualification and cleanup failed");
+		throw cleanupErrors.length === 1 ? cleanupErrors[0] : new AggregateError(cleanupErrors, "registry cleanup failed");
+	}
 }
